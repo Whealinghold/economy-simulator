@@ -1005,8 +1005,8 @@ Three decisions in the table:
 9.8.1. **The refusal `open_contract`.** With the module on, this spec registers the `region_bound` refusal
 `open_contract` that `spec-regions.md` 6.5.2 foresaw for "CAR, MER", open for an agent that is the payer or the
 deliverer of an open contract. The public relocation (MIG, INT) returns `ErrRegionBound` naming it, and changes
-nothing. A payer or a self-carried deliverer is already refused by `open_shipment` (`spec-transport.md` 5.5.3),
-since both are parties to the shipment of the contract; the refusal is registered all the same, because the contract
+nothing. The payer (the consignee) and the deliverer (the shipper) are already refused by `open_shipment`
+(`spec-transport.md` 5.5.3), since both are parties to the shipment of the contract; the refusal is registered all the same, because the contract
 is the obligation and a later change of the transport rule must not free a party to it. This answers the CAR/MER part
 of N-090.
 
