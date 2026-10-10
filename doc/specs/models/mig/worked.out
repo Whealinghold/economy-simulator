@@ -1,0 +1,21 @@
+# Example A: a river valley, a cultivator of `upper` (agent 1042)
+weyl(1042) = 4258099970  u = 0.991416156757623  margin g_a = 5957 bp
+journey k: {('upper', 'middle'): 2, ('upper', 'lower'): 4}
+news lag to upper: {'lower': 4, 'middle': 3}
+home upkeep cost 1001  observed wage 640  V_a = 6393
+middle: k 2  value 3852  cost 160  net 3692  per tick 923  upkeep 642  V_hat 14376  V_eff 14216  needed 10201  passes True  viable True
+lower: k 4  value 5270  cost 164  net 5106  per tick 1276  upkeep 732  V_hat 17431  V_eff 17043  needed 10201  passes True  viable True
+ranking: [('lower', 17043, 4), ('middle', 14216, 2)]
+provisioning (upper's upkeep is 2 staple and 1 fuel a tick, the account stays in upper):
+  to lower: k 4 needs 8 staple and 4 fuel; the household holds 6 staple and 3 fuel -> unprovisioned
+  to middle: k 2 needs 4 staple and 2 fuel; the household holds 6 staple and 3 fuel -> ok
+caps: upper households 600, out cap ceil(600*50/10000) = 3 ; middle households 1000, on-road cap ceil(1000*100/10000) = 10
+a departure at the end of tick t arrives in the first phase of tick t + 1 + k: {'lower': 't+5', 'middle': 't+3'}
+review partition example: 40 reviewed, 12 pushed = NoGain 3 + Unprovisioned 2 + OutCap 4 + Started 3 = 12
+
+# Example B: an orbital colony, the asymmetry of the well
+journey k: {'belt>orbital': 1, 'belt>surface': 2, 'orbital>belt': 1, 'orbital>surface': 1, 'surface>belt': 5, 'surface>orbital': 4}
+horizon discount (H - k)/H in bp: {'belt>orbital': 8333, 'belt>surface': 6666, 'orbital>belt': 8333, 'orbital>surface': 8333, 'surface>belt': 1666, 'surface>orbital': 3333}
+technician of orbital (2203) orbital>surface: k 1  V_hat 15000  V_eff 12500  g_a 3086  needed 11777  passes True
+technician of surface (2204) surface>orbital: k 4  V_hat 21000  V_eff 7000  g_a 1940  needed 10746  passes False
+technician of surface (2204) surface>belt: k 5  V_hat 30000  V_eff 5000  g_a 1940  needed 10746  passes False
