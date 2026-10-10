@@ -1,0 +1,27 @@
+[region.north]
+reference_basket = 1000
+[region.north.yield.cut_fuel]
+all = 10000
+[region.north.yield.dig_mineral]
+all = 10000
+[region.north.yield.gather_seed]
+all = 10000
+[region.north.yield.grow_staple]
+seasons = { spring = 10000 }
+[region.north.group.comfort_maker]
+households = 23
+[region.north.group.cook]
+households = 117
+[region.north.group.digger]
+households = 39
+[region.north.group.forester]
+households = 79
+[region.north.group.grower]
+households = 219
+[region.north.group.maker]
+households = 48
+[region.north.group.refiner]
+households = 46
+[region.north.group.treat_maker]
+households = 29
+

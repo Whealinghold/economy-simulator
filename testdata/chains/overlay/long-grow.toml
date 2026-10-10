@@ -1,0 +1,5 @@
+# S12: a delay near the length of the planting season (92 ticks). The job takes 85 ticks and
+# yields more to keep the realm viable (the output per labour tick must keep the depth of the chain).
+[recipe.grow_staple]
+duration = 85
+outputs = [ { commodity = "staple", quantity = 2500, cost_share = 10000 } ]

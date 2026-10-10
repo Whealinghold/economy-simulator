@@ -1,0 +1,48 @@
+== (1) production-delay cobweb, demand elasticity ed=0.5; amplitude = max/min price over last 200 of 600 ticks after a +10% kick
+naive expectations: es<ed stable, es>ed unstable (bounded only by price bounds 0.1..10)
+delay d= 1 naive     es=0.25:   1.00  es=0.5:   1.21  es=0.75: 100.00  es=1.0: 100.00  es=2.0: 100.00
+delay d= 5 naive     es=0.25:   1.00  es=0.5:   1.21  es=0.75: 100.00  es=1.0: 100.00  es=2.0: 100.00
+delay d=20 naive     es=0.25:   1.00  es=0.5:   1.21  es=0.75: 100.00  es=1.0: 100.00  es=2.0: 100.00
+Nerlove adaptive expectations (lam), es=2.0 (unstable under naive)
+delay d= 1 nerlove   lam=0.5: 100.00  lam=0.2:   1.00  lam=0.05:   1.00  lam=0.02:   1.00
+delay d= 5 nerlove   lam=0.5: 100.00  lam=0.2: 100.00  lam=0.05:   1.00  lam=0.02:   1.00
+delay d=20 nerlove   lam=0.5: 100.00  lam=0.2: 100.00  lam=0.05: 100.00  lam=0.02:   1.14
+BEL-like bounded asynchronous expectations (step 2%, gate 1/2), es=2.0; median over 10 seeds
+delay d= 1 bel       step=0.05:   1.87  step=0.02:   1.29  step=0.005:   1.06
+delay d= 5 bel       step=0.05:   4.87  step=0.02:   1.83  step=0.005:   1.16
+delay d=20 bel       step=0.05:  52.06  step=0.02:   5.56  step=0.005:   1.51
+entry limit (slew of starts per tick) on top of naive expectations, es=2.0
+delay d= 1 naive+slew slew=None: 100.00  slew=0.2:   3.41  slew=0.05:   1.38  slew=0.01:   1.06  slew=0.002:   1.01
+delay d= 5 naive+slew slew=None: 100.00  slew=0.2:  40.73  slew=0.05:   2.55  slew=0.01:   1.20  slew=0.002:   1.04
+delay d=20 naive+slew slew=None: 100.00  slew=0.2: 100.00  slew=0.05:  27.27  slew=0.01:   1.95  slew=0.002:   1.14
+combined: bel step 2% + slew 1%, es=2.0
+d=1: 1.20
+d=5: 1.40
+d=20: 2.43
+
+== (2) occupation-choice cobweb, mean-field. amplitude of share x (max-min over last 1000 of 3000 ticks)
+  e  T   r    h   -> amp(x)
+ 0.5   1  0.20 0.00  0.111  (x in [0.444,0.556])
+ 0.5   1  0.20 0.10  0.111  (x in [0.444,0.556])
+ 0.5   1  0.05 0.00  0.026  (x in [0.487,0.513])
+ 0.5   1  0.05 0.10  0.000  (x in [0.523,0.523])
+ 0.5   1  0.01 0.00  0.005  (x in [0.497,0.503])
+ 0.5   1  0.01 0.10  0.000  (x in [0.523,0.523])
+ 0.5  30  0.20 0.00  0.577  (x in [0.272,0.849])
+ 0.5  30  0.20 0.10  0.831  (x in [0.168,0.998])
+ 0.5  30  0.05 0.00  0.547  (x in [0.282,0.829])
+ 0.5  30  0.05 0.10  0.000  (x in [0.496,0.496])
+ 0.5  30  0.01 0.00  0.147  (x in [0.431,0.578])
+ 0.5  30  0.01 0.10  0.000  (x in [0.502,0.502])
+ 2.0   1  0.20 0.00  0.111  (x in [0.444,0.556])
+ 2.0   1  0.20 0.10  0.000  (x in [0.550,0.550])
+ 2.0   1  0.05 0.00  0.026  (x in [0.487,0.513])
+ 2.0   1  0.05 0.10  0.000  (x in [0.550,0.550])
+ 2.0   1  0.01 0.00  0.005  (x in [0.497,0.503])
+ 2.0   1  0.01 0.10  0.000  (x in [0.550,0.550])
+ 2.0  30  0.20 0.00  0.929  (x in [0.069,0.997])
+ 2.0  30  0.20 0.10  0.000  (x in [0.550,0.550])
+ 2.0  30  0.05 0.00  0.545  (x in [0.260,0.805])
+ 2.0  30  0.05 0.10  0.000  (x in [0.550,0.550])
+ 2.0  30  0.01 0.00  0.147  (x in [0.429,0.576])
+ 2.0  30  0.01 0.10  0.000  (x in [0.550,0.550])

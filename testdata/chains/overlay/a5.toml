@@ -1,0 +1,3 @@
+# A region that cannot make a staple: south has no positive staple yield in any season.
+[region.south.yield.grow_staple]
+seasons = { spring = 0, autumn = 0 }

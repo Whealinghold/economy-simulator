@@ -1,0 +1,18 @@
+== elastic flows ed=es=0.5, 20+20 agents, shock +50% consumption ticks 400-500; stats ticks 400-900
+old rule (centre, step delta)              mean    971 [963,977] unmet  275.4 relsd 0.183 peak 1.69 return 23.5 (8/8)
+revised, EvShare 5000                      mean   1008 [1002,1012] unmet  186.0 relsd 0.135 peak 1.56 return 30.5 (8/8)
+revised, EvShare 10000                     mean    986 [974,990] unmet  245.4 relsd 0.165 peak 1.68 return 24.0 (8/8)
+revised, EvShare 2500                      mean   1031 [1027,1035] unmet  135.7 relsd 0.133 peak 1.56 return 40.5 (8/8)
+evidence off                               mean   1097 [1074,1099] unmet   38.2 relsd 0.186 peak 1.62 return 99.0 (8/8)
+== inelastic flows Q=D=10, revised rule share 5000
+cover_s=1 halt=None: mean 132 [126,137] relsd 0.181 unmet 1.2
+cover_s=1 halt=30000: mean 4023 [2964,4763] relsd 0.262 unmet 22.7
+== N-039 freeze, unit cost 1100, buyers capped 1000, shelf life 3, revised rule
+CostFloor=10000 floor  1100 trade ticks 0.00 spoiled 0.99 price 1000
+CostFloor= 9000 floor   990 trade ticks 0.07 spoiled 0.98 price 995
+CostFloor= 7000 floor   770 trade ticks 1.00 spoiled 0.45 price 895
+CostFloor= 5000 floor   550 trade ticks 1.00 spoiled 0.29 price 822
+== cohorts (revised rule)
+w=1 agents/side=20 relsd 0.036
+w=4 agents/side=5 relsd 0.070
+w=10 agents/side=2 relsd 0.097

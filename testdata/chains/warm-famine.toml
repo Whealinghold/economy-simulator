@@ -1,0 +1,32 @@
+[warm_start.region.north]
+wage = 1624
+[warm_start.region.north.price]
+fuel = 116
+mineral = 541
+prepared = 445
+refined = 2062
+seed = 301
+staple = 219
+tool_a = 8998
+tool_b = 11060
+[warm_start.region.north.group.cook]
+money = 11543
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 }, { commodity = "tool_b", quantity = 1 } ]
+[warm_start.region.north.group.digger]
+money = 10989
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+[warm_start.region.north.group.forester]
+money = 10989
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+[warm_start.region.north.group.grower]
+money = 81970
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 393 }, { commodity = "tool_a", quantity = 1 } ]
+[warm_start.region.north.group.maker]
+money = 19173
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]
+jobs = [ { recipe = "make_tool_a", in_progress = 2272 }, { recipe = "make_tool_b", in_progress = 8522 } ]
+[warm_start.region.north.group.refiner]
+money = 14925
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "mineral", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+jobs = [ { recipe = "refine", in_progress = 10000 } ]
+

@@ -1,0 +1,3 @@
+# Defect 2: an upkeep good no region can make (rule unproducible_in_realm).
+[region.north.yield.cut_fuel]
+all = 0

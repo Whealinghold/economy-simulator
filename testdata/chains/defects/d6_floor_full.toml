@@ -1,0 +1,3 @@
+# Not an error: the floor at the full unit cost (warning cost_floor_at_full_cost).
+[world]
+cost_floor = 10000

@@ -1,0 +1,5 @@
+old rule (as in 6.2)               mean    888 [883,894] unmet  242.4 relsd 0.048
+revised, EvShare 5000 (default)    mean    944 [940,949] unmet  118.0 relsd 0.036
+revised, EvShare 10000             mean    903 [895,906] unmet  217.6 relsd 0.045
+revised, EvShare 2500              mean    966 [964,970] unmet   72.5 relsd 0.036
+evidence off                       mean   1001 [1000,1002] unmet    0.0 relsd 0.048

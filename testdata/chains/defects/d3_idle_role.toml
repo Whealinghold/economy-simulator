@@ -1,0 +1,8 @@
+# Defect 3: a role with a recipe that can run nowhere (rule role_cannot_work).
+[recipe.gather_never]
+sited = true
+outputs = [ { commodity = "fuel", quantity = 1, cost_share = 10000 } ]
+[role.idle]
+recipes = [ "gather_never" ]
+[region.north.group.idle]
+households = 10

@@ -1,0 +1,6 @@
+# Defect 1: the seed cycle returns less than it takes and has no outside source (rule cycle_not_productive;
+# the wild source is switched off, or a source would make the cycle productive).
+[recipe.grow_staple]
+outputs = [ { commodity = "staple", quantity = 30, cost_share = 10000 } ]
+[region.north.yield.gather_seed]
+all = 0

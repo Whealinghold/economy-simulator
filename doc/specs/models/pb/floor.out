@@ -1,0 +1,20 @@
+N-055 knock-on: seller unit cost C (labour counted, so equilibrium price = 1000 = C when the wage is exact), buyers capped at 1000 (budget stand-in), shelf life 3, 6 seeds, ticks 100-300
+C        f      | ticks with a trade / share spoiled / mean price
+1000     10000  | 0.00  0.99   1000   floor=1000
+1000     9000   | 0.94  0.74    949   floor=900
+1000     8000   | 1.00  0.50    907   floor=800
+1000     7000   | 1.00  0.36    870   floor=700
+1000     6000   | 1.00  0.31    834   floor=600
+1000     5000   | 1.00  0.28    807   floor=500
+1100     10000  | 0.00  0.99   1000   floor=1100
+1100     9000   | 0.07  0.98    995   floor=990
+1100     8000   | 0.97  0.68    941   floor=880
+1100     7000   | 1.00  0.45    895   floor=770
+1100     6000   | 1.00  0.33    853   floor=660
+1100     5000   | 1.00  0.29    822   floor=550
+1250     10000  | 0.00  0.99   1000   floor=1250
+1250     9000   | 0.00  0.99   1000   floor=1125
+1250     8000   | 0.00  0.99   1000   floor=1000
+1250     7000   | 0.98  0.67    939   floor=875
+1250     6000   | 1.00  0.42    887   floor=750
+1250     5000   | 1.00  0.31    842   floor=625

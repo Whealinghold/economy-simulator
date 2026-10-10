@@ -1,0 +1,13 @@
+# S10 (spec-scale.md 7.2): 200 households in every role; the test sets world.scale to 1, 4 and 10.
+[region.north.group.cook]
+households = 200
+[region.north.group.digger]
+households = 200
+[region.north.group.forester]
+households = 200
+[region.north.group.grower]
+households = 200
+[region.north.group.maker]
+households = 200
+[region.north.group.refiner]
+households = 200

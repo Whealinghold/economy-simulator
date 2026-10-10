@@ -1,0 +1,8 @@
+== N-039: perishable glut / hard cost floor. 20+20 agents, ref 1000, seller unit cost 1100, buyer willingness-to-pay cap 1000, shelf life 3 ticks
+   (buyer cap stands in for a budget; trades need a bid >= an ask >= the seller floor)
+CostFloor=10000 (floor 1100) ticks with a trade 0.00  share of output spoiled 0.99  mean price 1000
+CostFloor= 9000 (floor 990) ticks with a trade 0.07  share of output spoiled 0.98  mean price 995
+CostFloor= 8000 (floor 880) ticks with a trade 0.97  share of output spoiled 0.69  mean price 941
+CostFloor= 5000 (floor 550) ticks with a trade 1.00  share of output spoiled 0.21  mean price 780
+== same with WTP 1200 (buyers can pay cost): no freeze expected
+ticks with trade 0.835 spoiled 0.7893333333333333

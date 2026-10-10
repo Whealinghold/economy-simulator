@@ -1,0 +1,5 @@
+# S06: a census 20% off the balanced one: more cooks (136 to 163) and fewer growers (253 to 226).
+[region.north.group.cook]
+households = 163
+[region.north.group.grower]
+households = 226

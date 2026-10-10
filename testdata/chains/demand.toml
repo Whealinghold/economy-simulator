@@ -1,0 +1,64 @@
+# The demand overlay (spec-demand.md): a luxury chain, two wants (one with two alternatives)
+# and a taste table. Layered over base; its region document is one-demand.toml.
+[commodity.treat_a]
+reference_price = 664
+classes = [ "luxury" ]
+[commodity.treat_b]
+reference_price = 1079
+classes = [ "luxury" ]
+[commodity.comfort]
+reference_price = 1425
+classes = [ "luxury" ]
+
+[recipe.make_treat_a]
+inputs  = [ { commodity = "prepared", quantity = 1 }, { commodity = "fuel", quantity = 1 } ]
+outputs = [ { commodity = "treat_a", quantity = 5, cost_share = 10000 } ]
+[recipe.make_treat_b]
+duration = 2
+inputs  = [ { commodity = "staple", quantity = 2 }, { commodity = "fuel", quantity = 1 } ]
+outputs = [ { commodity = "treat_b", quantity = 5, cost_share = 10000 } ]
+[recipe.make_comfort]
+inputs  = [ { commodity = "refined", quantity = 1 } ]
+outputs = [ { commodity = "comfort", quantity = 4, cost_share = 10000 } ]
+
+[role.treat_maker]
+recipes = [ "make_treat_a", "make_treat_b" ]
+[role.comfort_maker]
+recipes = [ "make_comfort" ]
+
+[demand.want.comfort]
+items = [ { commodity = "comfort", weight = 10000 } ]
+quantity = 1
+period = 10
+rank = 1
+elasticity = 15000
+[demand.want.treat]
+items = [ { commodity = "treat_a", weight = 10000 }, { commodity = "treat_b", weight = 10000 } ]
+quantity = 1
+period = 5
+rank = 2
+elasticity = 20000
+substitution = 2
+
+[demand.taste.comfort_maker.comfort]
+scale = 10000
+[demand.taste.cook.comfort]
+scale = 10000
+[demand.taste.cook.treat]
+scale = 5000
+[demand.taste.digger.comfort]
+scale = 10000
+[demand.taste.forester.comfort]
+scale = 10000
+[demand.taste.grower.comfort]
+scale = 10000
+[demand.taste.grower.treat]
+scale = 10000
+[demand.taste.maker.comfort]
+scale = 10000
+[demand.taste.refiner.comfort]
+scale = 10000
+[demand.taste.treat_maker.comfort]
+scale = 10000
+[demand.taste.treat_maker.treat]
+scale = 10000

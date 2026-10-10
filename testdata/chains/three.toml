@@ -1,0 +1,69 @@
+[region.north]
+reference_basket = 1000
+[region.north.yield.cut_fuel]
+all = 10000
+[region.north.yield.dig_mineral]
+all = 10000
+[region.north.yield.gather_seed]
+all = 10000
+[region.north.yield.grow_staple]
+seasons = { spring = 10000 }
+[region.north.group.cook]
+households = 136
+[region.north.group.digger]
+households = 30
+[region.north.group.forester]
+households = 90
+[region.north.group.grower]
+households = 253
+[region.north.group.maker]
+households = 55
+[region.north.group.refiner]
+households = 36
+
+[region.south]
+reference_basket = 1000
+[region.south.yield.cut_fuel]
+all = 6000
+[region.south.yield.dig_mineral]
+all = 5000
+[region.south.yield.gather_seed]
+all = 10000
+[region.south.yield.grow_staple]
+seasons = { spring = 12000, autumn = 7000 }
+[region.south.group.cook]
+households = 143
+[region.south.group.digger]
+households = 63
+[region.south.group.forester]
+households = 158
+[region.south.group.grower]
+households = 140
+[region.south.group.maker]
+households = 58
+[region.south.group.refiner]
+households = 38
+
+[region.far_south]
+reference_basket = 1000
+[region.far_south.yield.cut_fuel]
+all = 12000
+[region.far_south.yield.dig_mineral]
+all = 15000
+[region.far_south.yield.gather_seed]
+all = 10000
+[region.far_south.yield.grow_staple]
+seasons = { autumn = 10000 }
+[region.far_south.group.cook]
+households = 142
+[region.far_south.group.digger]
+households = 21
+[region.far_south.group.forester]
+households = 78
+[region.far_south.group.grower]
+households = 265
+[region.far_south.group.maker]
+households = 57
+[region.far_south.group.refiner]
+households = 37
+

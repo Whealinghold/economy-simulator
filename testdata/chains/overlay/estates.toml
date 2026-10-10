@@ -1,0 +1,3 @@
+# Turns the estates module on: the regional pool, starting money from the pool, relief.
+# The region fields (estate_markdown, pool_release, relief_below) keep their defaults.
+[module.estates]

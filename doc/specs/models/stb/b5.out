@@ -1,0 +1,20 @@
+== demand +50% for 100 ticks (ticks 400-500), ed=es=0.5, 20+20 agents
+as written                               base    883 peak/base 1.69 recovered 6/6 median ticks 23.5 relsd(pre) 0.047
+stock only (evidence off)                base   1004 peak/base 1.61 recovered 6/6 median ticks 98.0 relsd(pre) 0.044
+== sweep BeliefAdjustProb (as written)
+AdjustProb=1000                          base    872 peak/base 1.37 recovered 6/6 median ticks 82.0 relsd(pre) 0.032
+AdjustProb=2500                          base    872 peak/base 1.64 recovered 6/6 median ticks 46.5 relsd(pre) 0.038
+AdjustProb=5000                          base    883 peak/base 1.69 recovered 6/6 median ticks 23.5 relsd(pre) 0.047
+AdjustProb=7500                          base    886 peak/base 1.74 recovered 6/6 median ticks 28.5 relsd(pre) 0.052
+AdjustProb=10000                         base    885 peak/base 1.74 recovered 6/6 median ticks 15.5 relsd(pre) 0.054
+== sweep BeliefStep (as written)
+BeliefStep=50                            base    877 peak/base 1.54 recovered 6/6 median ticks 41.5 relsd(pre) 0.042
+BeliefStep=100                           base    879 peak/base 1.68 recovered 6/6 median ticks 36.0 relsd(pre) 0.043
+BeliefStep=200                           base    883 peak/base 1.69 recovered 6/6 median ticks 23.5 relsd(pre) 0.047
+BeliefStep=500                           base    883 peak/base 1.76 recovered 6/6 median ticks 40.5 relsd(pre) 0.051
+BeliefStep=1000                          base    890 peak/base 1.78 recovered 6/6 median ticks 27.5 relsd(pre) 0.056
+== cohorts: 20 households per side-group fixed; weight w, agents = 20/w x2 groups (as written)
+w=1 agents/side=20                       base    883 peak/base 1.69 recovered 6/6 median ticks 23.5 relsd(pre) 0.047
+w=2 agents/side=10                       base    907 peak/base 1.72 recovered 6/6 median ticks 63.0 relsd(pre) 0.055
+w=4 agents/side=5                        base    942 peak/base 1.78 recovered 6/6 median ticks 103.0 relsd(pre) 0.069
+w=10 agents/side=2                       base    974 peak/base 1.83 recovered 6/6 median ticks 169.0 relsd(pre) 0.091

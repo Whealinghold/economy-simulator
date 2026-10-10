@@ -1,0 +1,247 @@
+# the seven product lines a to g: raw, semi and good, five recipes and two roles each
+[commodity.raw_a]
+reference_price = 127
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_a]
+reference_price = 509
+classes = [ "semi_line" ]
+[commodity.good_a]
+reference_price = 107
+classes = [ "good_line" ]
+
+[commodity.raw_b]
+reference_price = 111
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_b]
+reference_price = 460
+classes = [ "semi_line" ]
+[commodity.good_b]
+reference_price = 101
+classes = [ "good_line" ]
+
+[commodity.raw_c]
+reference_price = 121
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_c]
+reference_price = 486
+classes = [ "semi_line" ]
+[commodity.good_c]
+reference_price = 103
+classes = [ "good_line" ]
+
+[commodity.raw_d]
+reference_price = 116
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_d]
+reference_price = 512
+classes = [ "semi_line" ]
+[commodity.good_d]
+reference_price = 109
+classes = [ "good_line" ]
+
+[commodity.raw_e]
+reference_price = 104
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_e]
+reference_price = 465
+classes = [ "semi_line" ]
+[commodity.good_e]
+reference_price = 100
+classes = [ "good_line" ]
+
+[commodity.raw_f]
+reference_price = 100
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_f]
+reference_price = 446
+classes = [ "semi_line" ]
+[commodity.good_f]
+reference_price = 98
+classes = [ "good_line" ]
+
+[commodity.raw_g]
+reference_price = 141
+raw = true
+classes = [ "raw_line" ]
+[commodity.semi_g]
+reference_price = 496
+classes = [ "semi_line" ]
+[commodity.good_g]
+reference_price = 104
+classes = [ "good_line" ]
+
+[recipe.gather_a]
+sited = true
+outputs  = [ { commodity = "raw_a", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_a_deep]
+sited = true
+outputs  = [ { commodity = "raw_a", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_a]
+duration = 2
+inputs   = [ { commodity = "raw_a", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_a", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_a]
+inputs   = [ { commodity = "semi_a", quantity = 12 } ]
+outputs  = [ { commodity = "good_a", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_a_basic]
+trainee_eligible = true
+trainee_yield = 3000
+inputs   = [ { commodity = "semi_a", quantity = 12 } ]
+outputs  = [ { commodity = "good_a", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_b]
+sited = true
+outputs  = [ { commodity = "raw_b", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_b_deep]
+sited = true
+outputs  = [ { commodity = "raw_b", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_b]
+duration = 2
+inputs   = [ { commodity = "raw_b", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_b", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_b]
+inputs   = [ { commodity = "semi_b", quantity = 12 } ]
+outputs  = [ { commodity = "good_b", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_b_basic]
+inputs   = [ { commodity = "semi_b", quantity = 12 } ]
+outputs  = [ { commodity = "good_b", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_c]
+sited = true
+outputs  = [ { commodity = "raw_c", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_c_deep]
+sited = true
+outputs  = [ { commodity = "raw_c", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_c]
+duration = 2
+inputs   = [ { commodity = "raw_c", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_c", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_c]
+inputs   = [ { commodity = "semi_c", quantity = 12 } ]
+outputs  = [ { commodity = "good_c", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_c_basic]
+inputs   = [ { commodity = "semi_c", quantity = 12 } ]
+outputs  = [ { commodity = "good_c", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_d]
+sited = true
+outputs  = [ { commodity = "raw_d", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_d_deep]
+sited = true
+outputs  = [ { commodity = "raw_d", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_d]
+duration = 2
+inputs   = [ { commodity = "raw_d", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_d", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_d]
+inputs   = [ { commodity = "semi_d", quantity = 12 } ]
+outputs  = [ { commodity = "good_d", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_d_basic]
+inputs   = [ { commodity = "semi_d", quantity = 12 } ]
+outputs  = [ { commodity = "good_d", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_e]
+sited = true
+outputs  = [ { commodity = "raw_e", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_e_deep]
+sited = true
+outputs  = [ { commodity = "raw_e", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_e]
+duration = 2
+inputs   = [ { commodity = "raw_e", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_e", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_e]
+inputs   = [ { commodity = "semi_e", quantity = 12 } ]
+outputs  = [ { commodity = "good_e", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_e_basic]
+inputs   = [ { commodity = "semi_e", quantity = 12 } ]
+outputs  = [ { commodity = "good_e", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_f]
+sited = true
+outputs  = [ { commodity = "raw_f", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_f_deep]
+sited = true
+outputs  = [ { commodity = "raw_f", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_f]
+duration = 2
+inputs   = [ { commodity = "raw_f", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_f", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_f]
+inputs   = [ { commodity = "semi_f", quantity = 12 } ]
+outputs  = [ { commodity = "good_f", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_f_basic]
+inputs   = [ { commodity = "semi_f", quantity = 12 } ]
+outputs  = [ { commodity = "good_f", quantity = 30, cost_share = 10000 } ]
+
+[recipe.gather_g]
+sited = true
+outputs  = [ { commodity = "raw_g", quantity = 20, cost_share = 10000 } ]
+[recipe.gather_g_deep]
+sited = true
+outputs  = [ { commodity = "raw_g", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+[recipe.process_g]
+duration = 2
+inputs   = [ { commodity = "raw_g", quantity = 8 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "semi_g", quantity = 12, cost_share = 10000 } ]
+[recipe.finish_g]
+inputs   = [ { commodity = "semi_g", quantity = 12 } ]
+outputs  = [ { commodity = "good_g", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.finish_g_basic]
+inputs   = [ { commodity = "semi_g", quantity = 12 } ]
+outputs  = [ { commodity = "good_g", quantity = 30, cost_share = 10000 } ]
+
+[role.gatherer_a]
+recipes = [ "gather_a", "gather_a_deep" ]
+[role.crafter_a]
+recipes = [ "process_a", "finish_a", "finish_a_basic" ]
+
+[role.gatherer_b]
+recipes = [ "gather_b", "gather_b_deep" ]
+[role.crafter_b]
+recipes = [ "process_b", "finish_b", "finish_b_basic" ]
+
+[role.gatherer_c]
+recipes = [ "gather_c", "gather_c_deep" ]
+[role.crafter_c]
+recipes = [ "process_c", "finish_c", "finish_c_basic" ]
+
+[role.gatherer_d]
+recipes = [ "gather_d", "gather_d_deep" ]
+[role.crafter_d]
+recipes = [ "process_d", "finish_d", "finish_d_basic" ]
+
+[role.gatherer_e]
+recipes = [ "gather_e", "gather_e_deep" ]
+[role.crafter_e]
+recipes = [ "process_e", "finish_e", "finish_e_basic" ]
+
+[role.gatherer_f]
+recipes = [ "gather_f", "gather_f_deep" ]
+[role.crafter_f]
+recipes = [ "process_f", "finish_f", "finish_f_basic" ]
+
+[role.gatherer_g]
+recipes = [ "gather_g", "gather_g_deep" ]
+[role.crafter_g]
+recipes = [ "process_g", "finish_g", "finish_g_basic" ]

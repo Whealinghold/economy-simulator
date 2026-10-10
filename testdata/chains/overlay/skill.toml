@@ -1,0 +1,10 @@
+# Traineeship on two skilled roles, one eligible recipe above break-even and one below
+# (spec-production.md 8.4). A role with training_ticks above 0 needs groups of scale 1.
+[role.cook]
+training_ticks = 120
+max_trainees = 3
+teaching_load = 1000
+[role.crafter_a]
+training_ticks = 120
+max_trainees = 3
+teaching_load = 1000

@@ -1,0 +1,3 @@
+# S22: a chain the warm-start table was not solved for: the cook's batch falls from 8 to 6.
+[recipe.prepare]
+outputs = [ { commodity = "prepared", quantity = 6, cost_share = 10000 } ]

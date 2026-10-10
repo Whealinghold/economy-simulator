@@ -1,0 +1,14 @@
+# S20: starting money far below the reserve (ReserveTicks 3 times a basket of 1 000 is 3 000
+# for a household that needs no job money; the growers also need seed).
+[warm_start.region.north.group.cook]
+money = 1000
+[warm_start.region.north.group.digger]
+money = 1000
+[warm_start.region.north.group.forester]
+money = 1000
+[warm_start.region.north.group.grower]
+money = 1000
+[warm_start.region.north.group.maker]
+money = 1000
+[warm_start.region.north.group.refiner]
+money = 1000

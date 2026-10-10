@@ -1,0 +1,3 @@
+# S16: an initial overhang: the growers start with three times the staple of the warm start.
+[warm_start.region.north.group.grower]
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 1992 }, { commodity = "tool_a", quantity = 1 } ]

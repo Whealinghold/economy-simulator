@@ -1,0 +1,4 @@
+# Defect 4: a job so long (and so poor) that the realm cannot feed itself (rule labour_short).
+# The first draft of spec-production.md 12.1 was of this kind (6 grain per 120 ticks).
+[recipe.grow_staple]
+outputs = [ { commodity = "staple", quantity = 90, cost_share = 10000 } ]

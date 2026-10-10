@@ -1,0 +1,3 @@
+# Defect 5: a staple that spoils before the next harvest (rule storage_gap).
+[commodity.staple]
+shelf_life = 200

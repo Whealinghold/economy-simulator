@@ -1,0 +1,3 @@
+# S06: the cook's tool switched off (the tool barrier removed); the list is replaced by an empty one.
+[recipe.prepare]
+requires = []

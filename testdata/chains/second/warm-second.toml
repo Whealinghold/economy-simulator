@@ -1,0 +1,30 @@
+[warm_start.region.crater_rim]
+wage = 1966
+[warm_start.region.crater_rim.price]
+biomass = 327
+board = 12364
+drill = 14330
+fabricator = 41155
+ice = 112
+regolith = 66
+solder = 2097
+wafer = 2163
+water = 346
+[warm_start.region.crater_rim.group.algae_tender]
+money = 23384
+stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "water", quantity = 5 } ]
+jobs = [ { recipe = "grow_algae", in_progress = 5163 } ]
+[warm_start.region.crater_rim.group.driller]
+money = 11112
+stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "drill", quantity = 1 }, { commodity = "ice", quantity = 1 }, { commodity = "water", quantity = 5 } ]
+[warm_start.region.crater_rim.group.fabber]
+money = 19423
+stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "board", quantity = 4 }, { commodity = "fabricator", quantity = 1 }, { commodity = "solder", quantity = 2 }, { commodity = "wafer", quantity = 2 }, { commodity = "water", quantity = 5 } ]
+jobs = [ { recipe = "fab_board", in_progress = 246 } ]
+[warm_start.region.crater_rim.group.regolith_miner]
+money = 11000
+stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "water", quantity = 5 } ]
+[warm_start.region.crater_rim.group.smelter]
+money = 11198
+stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "regolith", quantity = 5 }, { commodity = "water", quantity = 5 } ]
+

@@ -1,0 +1,100 @@
+# The second setting (A4, the configuration-only chain test): a crater colony.
+# Setting-specific content, a pack of spec-production.md 12.2 completed and rescaled by
+# spec-viability.md 15, with a source for the tool cycle added (see spec-reference-chain.md 6.2).
+schema = 1
+
+[world]
+upkeep = [ { commodity = "biomass", quantity = 2 }, { commodity = "water", quantity = 1 } ]
+
+[calendar]
+seasons = [ { id = "lit", days = 184 }, { id = "dark", days = 181 } ]
+season_start = 59
+
+[commodity.ice]
+reference_price = 100
+raw = true
+[commodity.water]
+reference_price = 100
+[commodity.biomass]
+reference_price = 100
+shelf_life = 60
+[commodity.regolith]
+reference_price = 100
+raw = true
+[commodity.wafer]
+reference_price = 100
+[commodity.solder]
+reference_price = 100
+[commodity.board]
+reference_price = 100
+[commodity.slag]
+reference_price = 50
+[commodity.drill]
+reference_price = 100
+durability = 500
+[commodity.fabricator]
+reference_price = 100
+durability = 1000
+
+[recipe.cut_ice]
+sited = true
+outputs  = [ { commodity = "ice", quantity = 30, cost_share = 10000 } ]
+requires = [ { commodity = "drill", wear_per_use = 2 } ]
+[recipe.melt]
+inputs  = [ { commodity = "ice", quantity = 1 } ]
+outputs = [ { commodity = "water", quantity = 6, cost_share = 10000 } ]
+[recipe.grow_algae]
+duration = 12
+sited = true
+inputs  = [ { commodity = "water", quantity = 4 } ]
+outputs = [ { commodity = "biomass", quantity = 120, cost_share = 10000 } ]
+[recipe.dig_regolith]
+outputs = [ { commodity = "regolith", quantity = 30, cost_share = 10000 } ]
+[recipe.refine_wafer]
+inputs  = [ { commodity = "regolith", quantity = 3 } ]
+outputs = [ { commodity = "wafer", quantity = 1, cost_share = 10000 } ]
+[recipe.refine_solder]
+inputs  = [ { commodity = "regolith", quantity = 2 } ]
+outputs = [ { commodity = "solder", quantity = 1, cost_share = 10000 } ]
+[recipe.fab_board]
+duration = 3
+inputs   = [ { commodity = "wafer", quantity = 2 }, { commodity = "solder", quantity = 1 } ]
+outputs  = [ { commodity = "board", quantity = 1, cost_share = 10000 }, { commodity = "slag", quantity = 1, cost_share = 0, discard = true } ]
+requires = [ { commodity = "fabricator", wear_per_use = 1 } ]
+[recipe.make_drill]
+inputs  = [ { commodity = "board", quantity = 1 } ]
+outputs = [ { commodity = "drill", quantity = 1, cost_share = 10000 } ]
+[recipe.make_fabricator]
+inputs  = [ { commodity = "board", quantity = 3 }, { commodity = "solder", quantity = 1 } ]
+outputs = [ { commodity = "fabricator", quantity = 1, cost_share = 10000 } ]
+[recipe.salvage]
+duration = 50
+outputs = [ { commodity = "fabricator", quantity = 1, cost_share = 10000 } ]
+
+[role.driller]
+recipes = [ "cut_ice", "melt" ]
+[role.algae_tender]
+recipes = [ "grow_algae" ]
+[role.regolith_miner]
+recipes = [ "dig_regolith" ]
+[role.smelter]
+recipes = [ "refine_wafer", "refine_solder" ]
+[role.fabber]
+recipes = [ "fab_board", "make_drill", "make_fabricator", "salvage" ]
+
+[region.crater_rim]
+reference_basket = 1000
+[region.crater_rim.yield.cut_ice]
+all = 6000
+[region.crater_rim.yield.grow_algae]
+seasons = { lit = 10000, dark = 2500 }
+[region.crater_rim.group.driller]
+households = 385
+[region.crater_rim.group.algae_tender]
+households = 600
+[region.crater_rim.group.regolith_miner]
+households = 5
+[region.crater_rim.group.smelter]
+households = 5
+[region.crater_rim.group.fabber]
+households = 5
