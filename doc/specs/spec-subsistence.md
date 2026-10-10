@@ -85,7 +85,7 @@ the rule.
 | 7 | Where does it sit in the failure ladder? | Rung 0, the household's own response. It changes none of the ladder's rules: `Privation` counts unfed ticks whatever fed the household, and a role change abandons an own-use job like any job (8) | The ladder is SPN's. The mode lowers the pressure that reaches it by feeding the household |
 | 8 | How does it count in the welfare ratio and the observed wage? | The units created by an own-use job are an in-kind receipt in `income_t`, valued at creation at the prices used for `cost_t`; they and the job's ticks are **excluded** from the observed wage (7) | Without it a household that feeds itself reads a ratio of 0 and draws relief and a migration signal; with it counted in the wage, the occupation signal and the cost anchor would be polluted by labour that is not market labour |
 | 9 | How does it draw on an endowment? | Through `Draws` like any recipe: open access, the ration of `spec-resources.md` 5.3, no priority. LND's hooks apply to its requests as to any (9) | N-108; RES 10 |
-| 10 | What does it do to markets? | It makes the demand of a household that cannot afford a staple leave the market for its own production: the tail of demand is cut, not unit-elastic. In a stylised model it removes the shortage pin and 97% to 100% of the unfed household-ticks when it can feed a household; it does not anchor the interior and it can turn the pinned shortage into the pinned glut (11) | The first price-responsive flow for a staple that is not invented demand (N-043, N-052); the cost is stated |
+| 10 | What does it do to markets? | A household that cannot afford a staple feeds itself and its bids shrink with its stock, so the demand of the cash-bound falls faster than a fixed expenditure. In a stylised model it removes the shortage pin and 97% to 100% of the unfed household-ticks when it can feed a household; it does not anchor the interior and it can turn the pinned shortage into the pinned glut (11) | The first price-responsive flow for a staple that is not invented demand (N-043, N-052); the cost is stated |
 | 11 | Can it interrupt a job? | No. It is chosen at a free decision. A household in a long job cannot take it until the job ends (5.7) | `spec-production.md` 5.2.2: a job is not interruptible by choice. The lean season of a long-job role is open question 1 |
 | 12 | What happens at a relocation? | The mode and its counter are dropped; the first evaluation is in the new region (5.8) | The own-use recipe, its yield and its endowment are the old region's |
 | 13 | Does it draw a random number? | No. Every rule is a function of the household's state with a total order | Determinism (architecture.md 7.3, 7.4) |
@@ -419,8 +419,8 @@ overrides `Work` as for any recipe (`spec-agents.md` 10.4); the fallback is the 
 
 The flag is evaluated for an agent that: is not an estate or other pseudo-agent; is not a
 trainee (its board comes from the trainer, `spec-skill-barriers.md` 4.2, as for the ladder,
-`spec-spawner.md` 5.2.3); is not away on a trip (`spec-transport.md` 5.5.2: an away agent has
-no `Work` and no view); has an effective own-use list with a non-empty covered set; and has
+`spec-spawner.md` 5.2.3); is not away (on a transport trip, `spec-transport.md` 5.5.2, or on a migration journey,
+`spec-migration.md`): such an agent has no `Work` and no view; has an effective own-use list with a non-empty covered set; and has
 a positive effective upkeep. For any other agent `OwnUse` is false and its counter 0. An
 external agent is evaluated like any other (its fallback strategy is the default).
 
@@ -440,8 +440,8 @@ the inputs of the job are lost (`spec-production.md` 5.4.1).
 | Role change (`spec-spawner.md` 4.2) | `OwnUseJobs` reset to 0; `OwnUse` kept, then re-evaluated at the next phase 2 against the new role's list and covered set | an own-use job in progress is abandoned with `role_changed` like any job |
 | Weight change (`spec-agents.md` 3.7) | unchanged | cover, cost and afford are totals and follow the new weight at once |
 | Removal | dropped | the job is abandoned with `agent_removed` |
-| **Relocation** (`spec-regions.md` 6) | **dropped: `OwnUse` false, `OwnUseJobs` 0** | the own-use recipe, its yield and its endowment are the old region's. MIG abandons an own-use job first, as for any job (`spec-regions.md` 6.3, `region_changed` proposed in `spec-production.md` 5.4). The first evaluation is in the new region at its next phase 2, from the household's stock, money and the new region's prices |
-| A shipment (`spec-transport.md`) | the agent is away and not evaluated; its flag is kept | evaluated at the first phase 2 after the arrival |
+| **Relocation** (`spec-regions.md` 6), and the departure of a timed move (`spec-migration.md`) | **dropped: `OwnUse` false, `OwnUseJobs` 0**, at the departure and again at the relocation | the own-use recipe, its yield and its endowment are the old region's. MIG abandons an own-use job first, as for any job (`spec-regions.md` 6.3, `region_changed` of `spec-production.md` 5.4). SUB has no reason and no event of its own for the drop. The first evaluation is in the new region at its next phase 2, from the household's stock, money and the new region's prices |
+| A shipment (`spec-transport.md`), or a journey while it lasts | the agent is away and not evaluated; its flag is kept (a journey dropped it at departure) | evaluated at the first phase 2 after the arrival |
 
 The seam with MIG (`spec-migration.md`, N-090, N-110): MIG's trigger reads the household's
 welfare ratio (WEL), which includes the own-use receipts (7), so a household that feeds
@@ -1048,8 +1048,8 @@ good; fuel is not made by it and the cutter makes its own). `Cov(glean, grain) =
 (1 * 3) = 12 500` basis points: one tick of gleaning makes 1.25 ticks of grain. The market:
 `farm_grain` makes 8 grain, `cut_fuel` 3 fuel; the labour that makes the basket is `3/8 + 1/3 =
 17/24` of a tick per household-tick, so `lambda* = 24/17` and `SurplusBP = 14 117`. The bound
-holds, `12 500 < 14 117` (the floor is 89% of the market chain), and the warning `own_use_beats_market` is silent. The labour
-share to subsist is `ceil(10^8 / 14 117) = 7 084` basis points in the market and `ceil(10^8 /
+holds, `12 500 < 14 117` (the floor covers 89% of what the market chain does), and the warning
+`own_use_beats_market` is silent. The labour share to subsist is `ceil(10^8 / 14 117) = 7 084` basis points in the market and `ceil(10^8 /
 12 500) = 8 000` on the floor.
 
 **A household in a failed fuel market (checked in `worked.out`).** A `cutter` household cannot
