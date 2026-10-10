@@ -156,6 +156,17 @@ constants in an internal package and reused. The standard keys are:
 | `commodities`, `recipes`, `roles`, `regions` | counts of the entities of each kind, in the construction summary (`region`, an ID, is a different key) |
 | `modules`    | the names of the modules that are on, in the construction summary |
 | `warm_start` | whether a warm start was present, in the construction summary (a bool) |
+| `edges`, `components` | counts of the directed edges and of the strongly connected components of the region graph, in the construction summary |
+| `from_region`, `to_region` | region IDs of the two ends of a relocation or an edge (`region` stays the key for a single region) |
+| `distance` | an edge length, `int64`, in the pack's distance unit |
+| `closed` | whether an edge is closed (a bool) |
+| `flow` | money flow ID |
+| `due`, `applied` | money, in minor units: the amount a money flow computed for a recipient or region, and the amount actually applied |
+| `births`, `deaths` | counts of households born and of households that died |
+| `shipment` | shipment ID |
+| `mode` | transport mode ID |
+| `dest` | destination region ID of a shipment (`region` is the origin) |
+| `modes` | a count of transport modes, in the construction summary |
 
 Add a key to this table in the same PR that introduces it. Prices, money and
 quantities are logged as the integers they are (architecture.md 3.5), with
@@ -221,6 +232,15 @@ in the PR. **[project]**
 | `RoleChanged`             | an agent changes role (agent, region, `From`, `To`, weight, `Cause`, `GoodsListed`) |
 | `EntryLimited`            | once per region per tick in which a limit or refusal of the spawner acted; never when all counts are zero (counts of role changes, entrants, removals, unfunded households, households with no viable role, and each cap, cooldown, hysteresis, exit-cap and refusal that acted) |
 | `WantShortfall`           | once per region, role and want per tick in which a want was choked or unfunded for at least one household, after the trade phase (households, choked households, planned and funded units) |
+| `AgentRelocated`          | an agent's account changes region, once per relocation, after it is complete (agent, role, `From`, `To`, weight, money, units of goods, `Cause`) |
+| `EdgeStatusChanged`       | an edge's status changed, once per changed edge in edge order after the new graph is in place (`From`, `To`, `Closed`, `FactorBP`, `Cause`); only when something sets a status |
+| `MoneyFlowLimited`        | once per money flow and region per tick in which any amount due was not applied; never when all was applied (flow, region, due, applied, and the households short, cut at the balance bound and cut by the limit) |
+| `MoneyFlowEnded`          | a money flow reaches its effective limit and ends, once (flow, `Cause`: `limit` or `cap`, total) |
+| `MoneyFlowScaled`         | a money flow's scale is changed between steps, once per change (flow, from, to) |
+| `PopulationChanged`       | once per region and role per tick in which the population module is on and any count other than the exposed, unfed and no-ratio households is non-zero, after the region's plan and after `EntryLimited`; never when all are zero (region, role, exposed, unfed and no-ratio households, births and deaths due, deaths cut, deaths held, births capped, births unfunded, rates clamped, births and deaths done) |
+| `ShipmentDispatched`      | a shipment is dispatched (shipment, mode, origin region, destination, shipper, traveller and whether hired, consignee, arrival tick, carrying units, haul units redeemed, lines) |
+| `ShipmentArrived`         | a shipment arrives, after its delivery (shipment, mode, origin, destination, receiver, whether diverted, and per line the units shipped, delivered, diverted and spoiled) |
+| `ShipmentRejected`        | a shipment request is refused (origin region, agent, mode, destination, `reason`) |
 
 The parentheses name the main fields; the fields of each event, and the order
 in which the events of one step are emitted, are fixed by the spec that owns
@@ -228,14 +248,14 @@ the transition (`doc/specs/`: production for the recipe events, agents for
 `AgentSpawned`, the removal event and `UpkeepShortfall`, beliefs, clearing,
 ledger, estates, skill barriers and configuration for the rest). Every field
 obeys 4.1: no map, no pointer, fixed-point values. `BoundaryFlow`,
-`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited` and `WantShortfall` are aggregates: each is bounded by
-regions, commodities, reasons, roles or wants in the configuration, so none is per
-agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall` and the events of any later module appear only when it is on.
+`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited`, `WantShortfall`, `MoneyFlowLimited` and `PopulationChanged` are aggregates: each is bounded by
+regions, commodities, reasons, roles, wants or money flows in the configuration, so none is per
+agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. `AgentRelocated` is per agent too. `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` are per shipment or request, like `OrderPlaced` and `OrderRejected`: their `Lines` are copies in commodity order, bounded by `MaxShipmentLines`. `EdgeStatusChanged`, `MoneyFlowEnded` and `MoneyFlowScaled` are per edge or flow. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall`, `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled`, `PopulationChanged`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected` and the events of any later module appear only when it is on; `AgentRelocated` and `EdgeStatusChanged` depend on no module. The order of the events of a step follows the phases: arrivals of shipments in shipment order in phase 1, and in phase 3 each agent's shipment events in plan order before its `OrderPlaced` events.
 
 Because observers are supplied as options to `NewWorld`, they receive
 `WorldCreated` and the initial `AgentSpawned` events. A consumer can rebuild
 the total live agent count from `AgentSpawned` and `AgentBankrupted` alone. The
-household count also needs `WeightChanged` (`To` less `From`) besides the `Weight` those two carry, and a count by role also needs `RoleChanged` (the agent and its weight leave `From` and join `To`). Estate pseudo-agents are not
+household count also needs `WeightChanged` (`To` less `From`) besides the `Weight` those two carry, and a count by role also needs `RoleChanged` (the agent and its weight leave `From` and join `To`). A count of households by region also needs `AgentRelocated` (the weight leaves `From` and joins `To`). Estate pseudo-agents are not
 agents and are not counted in any of them.
 
 4.4. Observers are called synchronously on the stepping goroutine and **MUST
@@ -315,6 +335,14 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.household.unfed`        | UpDownCounter   | `{household}`   | `economysim.role` |
 | `economysim.role.changes`           | Counter         | `{change}`      | `economysim.role` (the destination role) |
 | `economysim.want.unfunded`          | Counter         | `{unit}`        | `economysim.want`, `economysim.role` |
+| `economysim.household.relocations`  | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to` |
+| `economysim.money.flow`             | Counter         | `{minor_unit}`  | `economysim.reason`, `economysim.kind` (`faucet` or `sink`) |
+| `economysim.money.flow.unapplied`   | Counter         | `{minor_unit}`  | `economysim.reason` |
+| `economysim.household.births`       | Counter         | `{household}`   | `economysim.role` |
+| `economysim.household.deaths`       | Counter         | `{household}`   | `economysim.role` |
+| `economysim.transport.shipments`    | Counter         | `{shipment}`    | `economysim.mode` |
+| `economysim.transport.in_transit`   | UpDownCounter   | `{unit}`        | `economysim.commodity` |
+| `economysim.transport.cargo.spoiled`| Counter         | `{unit}`        | `economysim.commodity` |
 
 ### 5.3.1 Which event feeds which metric
 
@@ -332,11 +360,19 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.household.unfed`         | `UpkeepShortfall` (`Unfed`, by role; see below) |
 | `economysim.role.changes`            | `RoleChanged` (by `To`)                 |
 | `economysim.want.unfunded`           | `WantShortfall` (`Planned` less `Funded`, by want and role) |
+| `economysim.household.relocations`   | `AgentRelocated` (`Weight`, by `From` and `To`) |
+| `economysim.money.flow`              | `BoundaryFlow` (money, by the reason and whether it is a faucet or a sink) |
+| `economysim.money.flow.unapplied`    | `MoneyFlowLimited` (`Due` less `Applied`, by flow) |
+| `economysim.household.births`        | `PopulationChanged` (`BirthsDone`, by role) |
+| `economysim.household.deaths`        | `PopulationChanged` (`DeathsDone`, by role) |
+| `economysim.transport.shipments`     | `ShipmentDispatched` |
+| `economysim.transport.in_transit`    | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line'"'"'s units shipped) |
+| `economysim.transport.cargo.spoiled` | `ShipmentArrived` (units spoiled, by line) |
 
 `UpkeepShortfall` is not emitted for a region and role whose households are all
 fed, so the adapter treats a tick with no such event for a region and role as
 zero unfed there. `economysim.household.count` and `economysim.household.unfed`
-count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded.
+count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.relocations`, `economysim.household.births` and `economysim.household.deaths` count households (the sum of weights), never agents.
 
 A new metric **MUST** be derivable from the existing events or come with the
 event it needs. Do not add event fields only to avoid a lookup in the adapter.
@@ -348,7 +384,7 @@ the time spent in every observer during the step.
 
 5.4.1. Metric attributes **MUST** have a number of values bounded by the
 configuration: `economysim.commodity`, `economysim.role`, `economysim.recipe`,
-`economysim.side`, `economysim.want`. Metric attributes **MUST NOT** include agent IDs, order IDs,
+`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the built-in reasons, and faucet or sink) and `economysim.mode` (transport modes). Metric attributes **MUST NOT** include agent IDs, order IDs,
 ticks, prices, quantities or any other unbounded or per-entity value. Put those
 in logs, traces or events.
 
@@ -499,4 +535,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 6c1750ec7e9f8717696c4b5f
+RULE-TAG: 39dcae114800d7b1165cd2bb

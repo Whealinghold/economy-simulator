@@ -95,7 +95,7 @@ price >= ceil(10_000 / s)
 3.1. The **resolution floor** is `ceil(10_000 / BeliefStep)` minor units; the
 default `BeliefStep` of 200 gives a floor of 50. Configuration validation
 (architecture.md 8.5) **MUST** reject a chain whose cheapest tradable commodity
-has an effective reference price, in any region, below the resolution floor.
+has an effective reference price, in any region, below the resolution floor. The effective reference price is the region's override or, absent one, the commodity's (`spec-regions.md` 5.2, `spec-goods.md` 6.3).
 **Tradable** is defined by `spec-agents.md` 3.4: a commodity in the tradable set
 of at least one role (N-048). The floor is a documented rule derived from a
 named parameter, not a heuristic and not a constant of its own: it moves when
@@ -195,9 +195,9 @@ because regions differ, the anchor is per region.
 
 5.1. `B_r` is the **reference basket** cost of region `r`: the cost in minor
 units of one household's subsistence for one tick in that region, at that
-region's effective reference prices (`spec-goods.md` 6.3). It is the sum, over
+region's effective reference prices (`spec-goods.md` 6.3; the override is `spec-regions.md` 5.2). It is the sum, over
 the **baseline upkeep** of the household, of quantity times effective reference
-price. The baseline upkeep is the world's upkeep list plus the region's extra
+price. The basket itself is a field of the region, one of the region-keyed values of `spec-regions.md` 5.1.3 (replace mode); its meaning, default and check stay here. The baseline upkeep is the world's upkeep list plus the region's extra
 upkeep, and the upkeep itself (the list of goods a household must consume each
 tick to stay alive, a "day" being a tick) is defined by `spec-agents.md` 5.1 and
 5.2, which owns the **effective upkeep** an agent actually consumes. A role with

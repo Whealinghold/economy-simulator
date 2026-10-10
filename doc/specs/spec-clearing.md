@@ -574,7 +574,7 @@ Original entries (each to be given its sign, delay, damper and test):
    `spec-world.md`. The rules favour a returned error (architecture.md 8.1).
 6. **The reference price's owner.** Settled in `spec-goods.md` 6.3: the
    commodity owns the default `ReferencePrice`, and a region may override it
-   (the override field is `spec-regions.md`'s). The price before the first trade
+   (the override field is `RegionPrices`, `spec-regions.md` 5.2). The price before the first trade
    is the seed price of `spec-beliefs.md` 8.1 (5.4), which is that effective
    reference price unless a warm start supplies one.
 7. **`MarketCleared` for markets with no orders.** Emitting it every tick costs

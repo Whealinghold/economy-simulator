@@ -589,6 +589,8 @@ overlay has `Wref / U` of about 0.32 (`spec-reference-chain.md` 4.4.6), so its e
 ceiling is about 1.32 against the default target 1.5, and `target_above_demand` is the
 expected warning there.
 
+The ceiling `1 + Wmax / U` also bounds the replacement ratio of the population module: births cannot be sustained at a ratio the economy cannot show (`spec-population.md` 5.3, warning `replacement_above_closed_ceiling`).
+
 ### 7.2 What was run
 
 Model B2 (14.2): 400 households, 200 farmers and 200 artisans, fixed reference
@@ -635,7 +637,7 @@ it:
    `Recipes` list and no income runs down its money to the reserve and then to 0,
    and buys no want. The transfer is a ledger transfer from a boundary or another
    account, with a reason registered by the owning spec (`spec-ledger.md` 7.2):
-   EXT for income from the outside world, MON for a stipend, FIS for pay or relief
+   EXT for income from the outside world, MON for a stipend (a grant to households of the role, counted as income by default, `spec-money-supply.md` 4.2, 7.3), FIS for pay or relief
    from a treasury, LND for rent, EMP for wages. DEM requires only that the transfer
    exists, is a named reason and arrives before the household's `Trade` of the next
    tick (`spec-clearing.md` 3.3.1).
@@ -643,7 +645,7 @@ it:
    households with a stipend of 300 a tick and no sink make household money grow
    without bound (47 700 per household at the end against 2 700 at the start; ratio
    1.47) and the mean ratio rises only because the money keeps growing. Money
-   creation without a named sink is STB-L30 and MON's. DEM neither creates nor
+   creation without a named sink is STB-L30 and MON's: `spec-money-supply.md` answers it with a levy (a fixed amount per household, or a rate on the balance above an exemption, whose class is bounded by `E + g/rho`, 9.3), a check that fixed grants and levies match (`pair_unbalanced`, 9.2, 12.2) and the boundary balance per reason as the measure. DEM neither creates nor
    destroys money (FR-DEM-023).
 4. **Growth of wants over time** (rising incomes, new tastes) is not modelled. A
    consumer who wants it changes the data between runs or uses the player.
@@ -757,7 +759,7 @@ Warnings never fail validation (`spec-config.md` 7.2).
 | `want_inelastic` | a want with `Elasticity` of 10 000 or less whose item is made by a role under the target-income rule (the stability condition of 6.3 fails) |
 | `wants_exceed_spend_cap` | a role's `Wmax` per tick (7.1) is at least `SpendMaxShare * SpendHalfTicks * UpkeepCost / 10 000`: the wants can never be fully funded (5.1) |
 | `target_above_demand` | the mean `TargetRatio` of a role is above `10 000 + 10 000 * Wref / UpkeepCost`: the target is not reachable at reference prices and the target-income rule is expected not to rest (7.2, the 20 000 row); it can still be reached if prices fall, up to the hard bound `Wmax` |
-| `class_without_income` | a role with a ladder, an empty `Recipes` list, no `Trades` and a `StartMoney` below `ReserveTicks` times its upkeep cost plus a year of its wants: it can fund no want unless another module pays it (7.3) |
+| `class_without_income` | a role with a ladder, an empty `Recipes` list, no `Trades` and a `StartMoney` below `ReserveTicks` times its upkeep cost plus a year of its wants: it can fund no want unless another module pays it (7.3). Not raised for a role that a grant to households with `NotIncome` false targets (`spec-money-supply.md` 4.3, 7.3) |
 | `region_taste_without_taste` | a region taste for a want that no role has a taste for |
 
 The checks that a chain can supply the wants' goods are `spec-viability.md`'s (open

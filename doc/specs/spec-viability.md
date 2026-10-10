@@ -339,7 +339,7 @@ role economics check is a **report and never an error** (`WageBelowTarget`, 10.3
 default `TargetRatio` stays 15 000 and is read as an aspiration that the whole
 population cannot meet until spending beyond upkeep or a money faucet exists, and
 whether the default should fall to 10 000 meanwhile is left open there. AGT accepts the
-glut and bounds it by the production halt (`spec-agents.md` 11.7).
+glut and bounds it by the production halt (`spec-agents.md` 11.7). The money-supply module now exists (`spec-money-supply.md`): a balanced pair of grant and levy moves money between classes and leaves the mean ratio unchanged, and an unbalanced faucet raises it only while the money supply grows (`spec-money-supply.md` 8.2, 9.1); the finding is otherwise unchanged.
 
 ## 5. The steady state
 
@@ -675,7 +675,7 @@ job. The welfare ratio itself no longer misreads a long job, because a role's wi
 is never shorter than twice its longest job (`spec-welfare-and-wages.md` 2.3.3; the
 warning `job_longer_than_window` is replaced by the informational `window_extended`,
 2.3.5, 11.4), but the cash to live through it is still the household's. The money is
-capped at `MaxMoney`.
+capped at `MaxMoney`. A money flow adds no real demand or supply, so the warm table of quantities, jobs and relative prices stands; a balanced pair is neutral on the money supply and an unbalanced faucet has no nominal steady state (`spec-money-supply.md` 15). A class that a rate levy bounds holds at most `E + g/rho` (`spec-money-supply.md` 9.3), and a warm `Money` above that decays toward it; seeding such a hoarder class at the smaller of the two is optional.
 
 8.3.2. The sum over all households is the amount created by the ledger reason
 `initial` (`spec-ledger.md` 7.2), and that is the only money created at construction
@@ -852,8 +852,7 @@ type Lane struct {
 
 Each lane becomes an activity with net vector (`-1` at `From`, `+ (10 000 - LossBP) / 10 000`
 at `To`) and labour `Labour / 10 000` in `From`. Nothing else in the programme
-changes. `spec-transport.md` and `spec-carriage.md` will decide who supplies lanes
-(the chargeable size of `spec-goods.md` 3.3 is the natural unit). The default is no
+changes. Lanes are supplied by `transport.Lanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with loss 0 until RSK exists and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
 lanes: autarky. The option `WithFreeTrade()` adds a lane of labour 0 and loss 0
 between every pair of regions for every commodity. It is a bound for comparison and
 the case `Validate` checks (4.6); it is not a model of any world.
@@ -861,9 +860,9 @@ the case `Validate` checks (4.6); it is not a model of any world.
 9.5. **Import-dependent regions.** A region producible in the realm and not alone
 gets the warning `region_not_self_sufficient` with the list of commodities it
 imports (the first consumer's regions where a crop does not grow). Under autarky the
-region has `lambda* < 1`; under lanes it may not. The simulation does not move goods
-between regions until TRN and MER exist, so such a region would starve in a run. The
-warning is the author's cue.
+region has `lambda* < 1`; under lanes it may not. The simulation moves goods
+between regions only when the transport module is on and an agent ships (`spec-transport.md`; the merchants are MER's), so such a region may starve in a run. The
+warning is the author's cue. With edges (`spec-regions.md` 4), free trade is meaningful only within a strongly connected component of the graph (`Graph.Components`, `spec-regions.md` 4.3.5, 4.5.3): a pair of regions in different components has no route, so no lane. Whether the check should use the components is VIA's decision (`spec-regions.md` open question 2).
 
 9.6. **Prices across regions.** With lanes, a seed price differs between regions by
 no more than the lane cost in value; without lanes there is no relation, and each
@@ -1258,8 +1257,7 @@ spec is written):
 4. **More than one recipe per role.** The solver lets households pick any recipe of
    the region; AGT's rule picks by expected net value. If the two disagree the warm
    start's jobs are not what the strategy would start. Check once AGT exists.
-5. **Lanes.** Their units, who supplies them and how a lane's labour is charged
-   belong to TRN, CAR and MER.
+5. **Lanes.** Answered for transport: `transport.Lanes` supplies them (`spec-transport.md` 9.4; labour only, loss 0 until RSK). Who uses them for a merchant's decision belongs to MER.
 6. **A default pool.** Whether the warm start seeds the estate pool by default
    (8.3.3) so the first replacements have money.
 7. **Exact arithmetic in Go.** `math/big` is standard library and exact; whether its
