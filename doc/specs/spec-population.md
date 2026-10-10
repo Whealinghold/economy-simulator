@@ -69,7 +69,7 @@ is (`spec-stylised-facts.md`).
 | 7 | Rate to whole households | The exact carried remainder of `spec-scale.md` 4.6 with the denominator `10 000 * TicksPerYear`: per agent for deaths, per (region, role) for births. No random draw. The start of an agent's carry is a fixed function of its ID | Exact in expectation, deterministic, cheap, and it spreads deaths in time without a draw. A per-agent carry is needed because poorest-first allocation of a role count is fatal to pool-funded births (5.5, 13.2) |
 | 8 | The hook | Per role a number of births (`PopBirths`) and per agent a number of deaths (`PopDeaths`), both at least 0. This replaces the single signed `PopDelta` per role of `spec-spawner.md` 3.2 and 8.2 | A signed net hides the gross flows and the money they move (4.2); an allocation by privation and poverty kills the poorest and starves the pool. Contract conflict C1 in the handoff |
 | 9 | Funding of births | From the regional pool, in whole households, within the spawner's budget `EntryPoolShare` (`spec-spawner.md` 7.3). Each household receives a **stake**, `Role.StartMoney * BirthStake / 10 000` | Money is never created (N-073). A closed region's population is then bounded by its money, `M / stake` (5.5): a finding, not a design wish, so the stake is a parameter |
-| 10 | `Renewal` | Ignored while the module is on (effective 0). The warning `renewal_with_population` stays | A refill of every ladder removal would cancel the positive check. Births are the only replacement (4.6) |
+| 10 | `Renewal` | Ignored while the module is on (effective 0). A configured non-default `Renewal` above 0 is warned (`renewal_with_population`); the default is only noted (4.6.1) | A refill of every ladder removal would cancel the positive check. Births are the only replacement (4.6) |
 | 11 | The fixed point | A replacement ratio `r*` where births equal deaths. It is stable if net growth rises with the ratio and the ratio falls with households. POP owns the first, RES the second. Without a fixed factor nothing bounds growth except the pool's money and `HouseholdCap` | Clark's three assumptions (16). The library has no fixed factor until RES exists (5.2) |
 | 12 | Collapse | No state, no regime flag. Collapse is a fall in households that the measures show; recovery is births funded by the pool the dead filled. Floors: `MinHouseholds` stops the schedule's deaths from emptying a role; the ladder alone can end a role | Macro is measured, never set. A smooth schedule must not extinguish a small group by arithmetic (6.4) |
 | 13 | Closed region | There is no immigrant. A region's households change by births, deaths and the ladder only, until MIG | Stated so the closed behaviour is testable (6.5) |
@@ -385,8 +385,9 @@ default). After the deaths of the tick, a birth is allowed only while the househ
 the region stay at or below the cap; the births that would exceed it are dropped and
 counted (`BirthsCapped`). It is a bound, in the sense of STB 2.3, not a damper: it stops
 a runaway where nothing else does (5.2), and a market pinned at it is a failure regime
-that the counter shows. It reads the region's household count, which is a configured
-constraint and not a rule that reacts to a measure (it never changes the rates).
+that the counter shows. It is a configured constraint, like `ExitShare`: no agent
+decision and no rate reads the household count through it, so it is not a rule that
+reacts to an aggregate.
 
 4.4.3. **The per-agent cap.** The households taken from an agent are at most its fed
 households, `Weight - Unfed`. A cut is counted (`DeathsCut`). After the ladder's
@@ -424,10 +425,12 @@ removal of an unfed household is the check that brings a population back to its
 carrying level; a refill would cancel it and the population would be held where it was
 by the pool's money (5.5). Births are the only replacement.
 
-4.6.1. Validation warns when the module is on and `Renewal` is above 0
-(`renewal_with_population`, `spec-spawner.md` 8.3, 12): the field is ignored. Because
-the default of `Renewal` is 10 000, a pack that turns the module on sets `Renewal` to 0
-to be silent; the warning is the reminder. When the module is off nothing changes.
+4.6.1. With the module on and `Renewal` equal to its default (10 000) validation reports
+only the informational diagnostic `renewal_ignored` (same level as `replacement_ratio`,
+5.7): a pack need not set `Renewal` to 0 to be silent. The warning
+`renewal_with_population` (`spec-spawner.md` 8.3, 12) fires only when `Renewal` is set to a
+non-default value above 0, which is a deliberate setting that has no effect. When the
+module is off nothing changes.
 
 4.6.2. This answers N-083 and `spec-spawner.md` 8.3, and closes the question of
 "net of renewal": births are never netted.
@@ -812,7 +815,7 @@ Never fail validation (`spec-config.md` 7.2).
 
 | Warning | Condition |
 |---------|-----------|
-| `renewal_with_population` | the module is on and `Renewal` is above 0 (4.6). Named by `spec-spawner.md` 8.3, 12 |
+| `renewal_with_population` | the module is on and `Renewal` is set to a non-default value above 0 (4.6.1). Named by `spec-spawner.md` 8.3, 12. At the default it is only the informational `renewal_ignored` |
 | `no_replacement_ratio` | `birth - death` is never negative or never positive over the knots (5.7): the population always grows or always shrinks |
 | `schedule_direction` | a birth schedule falls, or a death schedule rises, anywhere (3.5.4) |
 | `replacement_above_closed_ceiling` | `r*` is above 10 000 and the demand module is off (5.3) |
@@ -820,7 +823,7 @@ Never fail validation (`spec-config.md` 7.2).
 | `no_fixed_factor` | no recipe has `Draws` and no region has a `HouseholdCap` (5.2). Until RES exists this is true of every pack |
 | `population_without_upkeep` | no role has an upkeep (the `no_upkeep` case of `spec-agents.md` 13): the module is inert |
 
-The informational diagnostic `replacement_ratio` (5.7) names `r*` and the knot segment it
+The informational diagnostics `replacement_ratio` (5.7) and `renewal_ignored` (4.6.1) never fail validation. `replacement_ratio` names `r*` and the knot segment it
 lies on, once at validation, and never fails.
 
 ## 10. Observability
@@ -1080,7 +1083,7 @@ specs written at once do not collide. **Status is `model` where section 13 suppo
 |----|--------|------|--------|
 | POP-D1 | Bounded gain: the slopes of the two schedules set the gain `k`; the validator warns when the half-window alone makes `k * tau` exceed 1/2 (`population_gain`) | POP 3.5, 5.4 | specified (a warning; the economy's lag is not known to it) |
 | POP-D2 | Disjoint rules: the schedule acts only on fed households and the ladder only on unfed ones, so no household is counted twice and the positive check is graded | POP 3.7, 4.5 | specified (a rule constant; counted by `Unfed` and `NoRatio` of `PopulationChanged`) |
-| POP-D3 | No renewal: `Renewal` is 0 while the module is on, so the ladder's removals are not refilled | POP 4.6 | specified (a rule constant; warned) |
+| POP-D3 | No renewal: `Renewal` is 0 while the module is on, so the ladder's removals are not refilled | POP 4.6 | specified (a rule constant; a non-default value is warned) |
 | POP-D4 | Floor of households: `MinHouseholds` against the schedule's deaths. Cost: a small group never dies out by the schedule | POP 4.4.1 | specified (counted by `DeathsHeld`) |
 | POP-D5 | Cap of households: `HouseholdCap`. Cost: births dropped at the cap | POP 4.4.2 | specified (counted by `BirthsCapped`) |
 | POP-D6 | Funding limit by the stake: births only as the pool pays, `BirthStake`. Cost: the money-limited population of 5.5 | POP 4.3, 5.5 | specified (counted by `BirthsUnfunded`) |
@@ -1166,7 +1169,7 @@ Numbers are assigned by the register owner; `POP-Sn` stands for them.
 | POP-S1 | A region with a fixed factor (RES, or a test double that makes the ratio a function of households), the demand module on, started at 0.6 and at 1.6 times `N*` | the population approaches `N*` within a band and, for `k * tau` below 0.5, without crossing it more than once; the mean ratio at the end is within a band of `r*` | A1, A4, A6 |
 | POP-S2 | A yield shock that cuts the region's income for a time, then restores it, with the pool, relief and the ladder on | households fall and regrow; the ratio rises while they are low; the extinct-region `Warn` does not fire; and with a chain whose role disappears the run is reported as F3 and the trap is visible | A3, A8 |
 | POP-S3 | A closed region with the pool empty, `BirthStake` 10 000, 5 000 and 0, and births above deaths | the population stops at about `M / stake`; `BirthsUnfunded` is non-zero when it does | A2 |
-| POP-S4 | The default schedules with the demand module off and `r*` above 10 000, and with `r*` just below it; and a pack with `Renewal` above 0 | the first dies out or is flagged; the second sits at a bounded hunger and the ladder's counters show it; `Renewal` is ignored and warned | A5, A7 |
+| POP-S4 | The default schedules with the demand module off and `r*` above 10 000, and with `r*` just below it; and a pack with `Renewal` set to a non-default value above 0 | the first dies out or is flagged; the second sits at a bounded hunger and the ladder's counters show it; `Renewal` is ignored, and warned only at the non-default value | A5, A7 |
 
 ## 15. Requirements
 
@@ -1195,7 +1198,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-017 | Each born household MUST bring `trunc(Role.StartMoney * BirthStake / 10 000)` from the pool with the ledger reason `births`, whether it joins an existing agent or becomes a new one, and no goods; the funded number MUST be `min(n, floor(budget / stake))`, a stake of 0 being unlimited, and the unfunded MUST NOT be created or deferred (4.3). |
 | FR-POP-018 | A death that leaves households in an agent MUST scale its money and each good to `floor(x * w' / w)` with the difference to the estate and the ledger reason `deaths` (4.7). |
 | FR-POP-019 | In a region's plan the module's deaths MUST follow the ladder's reductions and removals and precede the budget of the entry step, and its births MUST be the last operation (4.8). |
-| FR-POP-020 | While the module is on the effective `Renewal` MUST be 0, and validation MUST warn `renewal_with_population` if the configured value is above 0 (4.6). |
+| FR-POP-020 | While the module is on the effective `Renewal` MUST be 0, and validation MUST warn `renewal_with_population` only if the configured value is a non-default value above 0, reporting the informational `renewal_ignored` when it equals the default (4.6.1). |
 | FR-POP-021 | A born household MUST be placed by the rule of `spec-spawner.md` 4.3 in the role of the households it grows from, and MUST have the newcomer's state of `spec-spawner.md` 7.4 (3.2). |
 | FR-POP-022 | Every birth and death MUST conserve money and goods exactly, the module MUST have no faucet and no sink, and no household MUST be created except by a funded birth (3.2, 4.7). |
 | FR-POP-023 | An external agent MUST NOT be exposed for births or deaths (3.7.2). |
@@ -1303,6 +1306,10 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
    agents is untested. Next step: a test with 10^5 agents.
 8. **The shock call.** The call that sets `DeathScale` and `BirthScale` is INT's;
    if INT prefers a different shape the fields stay and the call follows.
+
+9. **`Renewal` and its default.** Ignored while the module is on, informational at the
+   default and a warning only at a non-default value above 0 (4.6.1). Whether the
+   spawner should drop `Renewal` as a field when the module is on is left to SPN.
 
 ## 19. Where this lives in the code
 
