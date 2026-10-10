@@ -27,6 +27,10 @@ The scripts use only the Python standard library (the viability solver uses
 | `via/` | `spec-viability.md` section 15 | The exact steady-state solver prototype (`proto.py`, `proto2.py`, `proto3.py`), the three-region check (`ricardo.py`), the rescaled chains (`round.py`) and the labour-inclusive seed check (`sweep.py`) |
 | `pb/` | `spec-beliefs.md` 3.2.2 and 5.4, `spec-production.md` 9 | The cost-floor freeze runs (`floor.py`, `floor.out`), the evidence-rule variants (`ev.py` to `ev5.py`, `repro.py`, `trace.py`), the labour-inclusive cost check (`cost.py`) and the belief model (`b_bel.py`) |
 | `agt/` | `spec-agents.md` section 16 | The integer arithmetic of the worked examples (`check.py`) |
+| `reg/` | `spec-regions.md` sections 4, 12 and 14 | The path definitions check on random directed graphs and the tables of the worked examples (`paths.py`, `paths.out`) |
+| `mon/` | `spec-money-supply.md` sections 9, 17 and 18 | The integer rules of the money flows: carry, rate levy, conservation, a balanced pair (`flows.py`, `flows.out`) |
+| `pop/` | `spec-population.md` sections 5, 13 | The Malthusian fixed point, the gain-times-delay sweep, the stake loop and the arithmetic of the worked examples (`fixed_point.py`, `sweep.py`, `stake.py`, `worked.py`) |
+| `trn/` | `spec-transport.md` sections 16 and 17 | The price-gap shipping delay model (`pipeline.py`, `pipeline.out`) and the arithmetic of the three-region example (`worked.py`, `worked.out`) |
 
 ## Rules for this folder
 

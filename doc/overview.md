@@ -200,12 +200,12 @@ are decided in INT and bear on AGT and LED, so settle them before AGT.
 
 - **Status:** design only. There is no code. The documents are drafts, and none
   of the behaviour has been run or validated.
-- **Written:** the rules (`rules/`), nineteen economy specs (currency, goods,
-  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage), the evidence file, the
+- **Written:** the rules (`rules/`), twenty-three economy specs (currency, goods,
+  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport), the evidence file, the
   bazaarBot reference, the roadmap, a draft vision and scope
   ([vision.md](vision.md)), ADR 0001 (accepted), ADR 0002 (proposed) and ADR 0003 (accepted). Only
   every economy spec has a Requirements section.
-- **Planned:** 32 more specs, listed in the roadmap with layers and
+- **Planned:** 28 more specs, listed in the roadmap with layers and
   dependencies, and a dependency picture of the first tier.
 - **Known gaps:** an accepted vision and version-1 scope (a draft proposal
   exists); demand beyond subsistence; services, land and labour as goods; the player's place in the
