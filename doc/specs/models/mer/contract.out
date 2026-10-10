@@ -1,0 +1,33 @@
+the matching on one lane (destination lower, commodity fuel)
+  offer agent 31: limit 244, 150 units
+  offer agent 32: limit 263, 150 units
+  offer agent 34: limit 250, 100 units
+  take  agent 61: limit 270, up to 200 units
+  take  agent 62: limit 255, up to 150 units
+  take  agent 63: limit 240, up to 150 units
+  contract: deliverer 31 payer 61 150 units at 257
+  contract: deliverer 34 payer 62 100 units at 252
+  by limit the offers are 31, 34, 32: offer 31 takes 150 of take 61 (200 units) at the midpoint (244 + 270) / 2 = 257, leaving 50;
+  offer 34 (100 units, indivisible) does not fit the 50 left of take 61 and goes to take 62 at (250 + 255) / 2 = 252.5, half to even 252;
+  offer 32 (limit 263) finds no take: take 61 has 50 left and take 62 is below its limit
+
+delivered in full
+  escrowed 38550; reached 150, not reached 0
+  balances after: buyer1 41450, buyer2 30000, estate 0, seller1 43550, seller2 5000
+  money before/after: 120000/120000; escrow account empty: True
+
+22 units spoiled in transit
+  escrowed 38550; reached 128, not reached 22
+  balances after: buyer1 47104, buyer2 30000, estate 0, seller1 37896, seller2 5000
+  money before/after: 120000/120000; escrow account empty: True
+
+the payer is removed in transit: cargo diverted to the estate
+  escrowed 38550; reached 150, not reached 0
+  balances after: buyer2 30000, estate 41450, seller1 43550, seller2 5000
+  money before/after: 120000/120000; escrow account empty: True
+
+the deliverer is removed in transit
+  escrowed 38550; reached 0, not reached 150
+  balances after: buyer1 80000, buyer2 30000, estate 0, seller1 5000, seller2 5000
+  money before/after: 120000/120000; escrow account empty: True
+

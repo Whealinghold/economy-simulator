@@ -1,0 +1,51 @@
+== Example A: a river valley (hired mode, contract) ==
+travel time upper to lower k = ceil(60 / 30)                   2
+haul units per carrying unit s = ceil(60 / 10)                 6
+lag of the news from lower to upper = 1 + ceil(70 / 40)        3
+fuel per carrying unit = min(1200 / 2, 900 / 6)                150
+carrying units for a lot of 150 fuel                           1
+rumour (price 310, mean 305, source age 0): Rhat = min         305
+hired: Rnet = Rhat * (10 000 - 500) / 10 000, floor            289
+local fuel price Pacq                                          200
+freight Cm = n * s * 700                                       4200
+gross margin G = 150 * (289 - 200)                             13350
+  agent 31: u =  7770 bp, share phi =  6385 bp, test Cm*10000 <= phi*G: True, per haul unit 2225, haul bid ceiling 1420, break-even buy 245, offer limit 244
+  agent 32: u =  3951 bp, share phi =  4476 bp, test Cm*10000 <= phi*G: True, per haul unit 2225, haul bid ceiling 995, break-even buy 226, offer limit 263
+  agent 33: u =   131 bp, share phi =  2566 bp, test Cm*10000 <= phi*G: False, per haul unit 2225, haul bid ceiling 570, break-even buy 179, offer limit 310
+  agent 34: u =  6311 bp, share phi =  5655 bp, test Cm*10000 <= phi*G: True, per haul unit 2225, haul bid ceiling 1258, break-even buy 239, offer limit 250
+agent 31: offer limit L                                        244
+consignee: take limit b = 300 * (10 000 - 1 000) / 10 000      270
+contract price = midpoint half to even of (L + b) / 2          257
+escrow = price * 150                                           38550
+deliverer outcome: escrow - 150 * 205 - freight                3600
+
+A perishable on the same lane (ShelfLife 3): fresh lot bought at t, shipped at t + 1 (age 1)
+delivered iff k <= ShelfLife - 1 - age = 3 - 1 - 1             2 <= 1: False
+with ShelfLife 4                                               2 <= 2: True
+
+Settlement of the contract of agent 31 (price 257 a unit, 150 units, escrow 38550)
+  all reached: escrow_out to the deliverer / escrow_refund to the payer 38550 / 0  (sum 38550)
+  128 reached, 22 spoiled: escrow_out to the deliverer / escrow_refund to the payer 32896 / 5654  (sum 38550)
+  none reached: escrow_out to the deliverer / escrow_refund to the payer 0 / 38550  (sum 38550)
+
+The cost comparison on the same lane: a self-carried 'porter' (speed 20, unit (60, 40), crew 1) against the barge
+porter: travel time ceil(60 / 20), fuel per unit min(60 / 2, 40 / 6) 3, 6
+porter: lot, gross margin G = 6 * (305 - 200), time cost 3 * 200 6, 630, 600
+porter: cost <= phi * G / 10 000 ?                             600 <= 402: False
+
+== Example B: a mining colony (self-carried mode, a gate) ==
+travel time hub to pit ceil(250 / 100)                         3
+lag of the news from pit to hub = 1 + ceil(250 / 100)          4
+rations per carrying unit                                      1500
+lot affordable: floor((6 000 - 3 * 35) / 58)                   101
+wear: ceil(5 * 3 * 4 000 / 400)                                150
+feed: 1 * 1 * 3 cells at 30                                    90
+time: 3 * (1 * 56) * 10 000 / 10 000                           168
+trip cost Cs                                                   408
+gross margin G = 100 * (78 - 56)                               2200
+agent 17: u, phi                                               1246, 3123
+test Cs * 10 000 <= phi * G                                    4080000 <= 6870600: True
+break-even buy price                                           64
+share of the gross margin the trip costs, bp                   1854
+
+Weyl u(a) of the first 12 agent IDs from 1 (bp): [2360, 8541, 4721, 901, 7082, 3262, 9442, 5623, 1803, 7983, 4164, 344]
