@@ -729,6 +729,7 @@ PR description.
 - **Update (2026-10-10, MIG):** MIG's part is applied in `spec-migration.md` 7.2 and 8.2 to 8.5: the job is abandoned at departure with `region_changed` (adopted in `spec-production.md` 5.4); the beliefs are reseeded at arrival; `Privation` and `Hunger` are kept and `RoleSince` is set at arrival, which gives the ladder's grace of `spec-spawner.md` 5.2; a trainer or a trainee, an away traveller and a party to an open contract are refused by the guard, the read-only query `World.RelocationRefusal(agent, to, skip...)` (`spec-migration.md` 7.2.1; REG 6.1), run again at arrival with `skip` = `on_journey`, where a refusal HOLDS the arrival; the region then changes by the ledger-level `Relocate`, cause `migration`. MIG registers the `region_bound` refusal `on_journey`. Still open: SKL (register `in_traineeship`), INT (the public face of `relocate` for an external agent, and the cancel of a journey before a forced move, `spec-migration.md` 8.4.1).
 - **Update (2026-10-10, MER):** MER registers the `region_bound` refusal `open_contract` (open for the payer and the deliverer of an open contract, `spec-merchants.md` 9.8.1). A merchant on a trip is away, is refused by `open_shipment` and `open_contract`, and is not a migrant (12.4.1). Removal of a party: 9.8.2.
 - **Update (2026-10-10, wave 4 integration, X2):** the full list of region-bound refusals is `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER) and `in_traineeship` (SKL). A timed move has the shape of TRN's traveller: the account stays in the origin while away and the region changes at arrival through the ledger-level `Relocate`; REG gains a read-only dry run of the relocate refusals with an optional `skip` of one named refusal.
+- **Update (2026-10-10, supervisor, wave 4):** a rule for every later spec, found when MIG's first draft lacked it: any module that keeps an agent's account in a region while the agent is away or committed (a journey, a trip, a contract, a traineeship, a garrison, a voyage) MUST register a `region_bound` refusal for it, or another caller (INT's forced move, a later module) can relocate the account and break the module's invariant. The module's own arrival then re-runs the dry run with `skip` set to its own refusal and changes the region by the ledger-level `Relocate`. RSK, CAP and ORG are the likely next users. Add the new name to the list above in the same change.
 
 ### N-091 The world slots INT must expose
 
@@ -1482,4 +1483,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 1d6d3f4df410c8c96211b65e
+NOTES-TAG: 92f2fd16017d2d64fb29b5f0
