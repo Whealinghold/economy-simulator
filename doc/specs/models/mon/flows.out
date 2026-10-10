@@ -1,0 +1,15 @@
+hoarder balance per household at tick t (rate 5000 bp/year, stipend 300/tick, 365 ticks/year):
+  t=    1  balance=300
+  t=  100  balance=28016
+  t=  365  balance=86098
+  t=  730  balance=138300
+  t= 1460  balance=189143
+  t= 2920  balance=214705
+  t= 6000  balance=218641
+  predicted bound exempt + stipend/rho = 219000
+with exempt 1000: final (6000, 219641) predicted 220000
+carry example (account, first payment tick, total in a year): [(0, 53, 7), (100, 38, 7)]
+weight check (weight, paid, w*7): [(1, 7, 7), (3, 21, 21), (40, 280, 280)]
+pair (grant boundary, levy boundary, net, money in the economy): (-6000000, 5940000, -60000, 1410000)
+trace (tick, grant, levy, balance, levy carry): [(0, 600, 0, 1600, 30000000000), (1, 600, 2, 2198, 17000000000), (2, 600, 2, 2796, 33900000000), (3, 600, 4, 3392, 7700000000)]
+topup and sweep (balance, topup, sweep): [(3800, 1200, 0), (6300, 0, 1300)]
