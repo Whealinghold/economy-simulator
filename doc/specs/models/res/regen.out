@@ -1,0 +1,14 @@
+== 1. cumulative units added equal floor((carry0 + sum of numerators) / D), for 400 random runs
+   violations: 0
+
+== 2. logistic, 5% a year, capacity 1 000 000, 20 years, with draws of nothing
+   start stock | final stock without a carry | final stock with the carry (round-up factor)
+             1 |                           1 |            2
+             2 |                           2 |            4
+             5 |                           5 |           12
+            20 |                          20 |           53
+           100 |                         100 |          270
+
+== 3. bounds of 4.6: the largest numerator and denominator
+   largest numerator (RateBP 1e5, capacity 1e15, scales 1e5): 1.000e+30 < 2^127 = 1.701e+38: True
+   largest denominator 1e12 * 100 000 = 1.000e+17 < 2^63 = 9.223e+18: True

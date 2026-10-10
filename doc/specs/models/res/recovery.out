@@ -1,0 +1,15 @@
+== 1. a blight at year 100 sets the stock to 5% of the capacity; start at the fixed point; each cell is N/N* / S/C
+                                               y90         y100         y110         y150         y250         y400         y599
+   refill 0.5/yr                        1.00/ 0.60   1.00/ 0.05   0.94/ 0.62   0.99/ 0.61   1.00/ 0.60   1.00/ 0.60   1.00/ 0.60
+   logistic 1/yr, no refuge             1.00/ 0.60   1.00/ 0.05   0.82/ 0.00   0.37/ 0.00   0.05/ 0.00   0.00/ 0.00   0.00/ 0.00
+   logistic 1/yr, refuge 1% of C        1.00/ 0.60   1.00/ 0.05   0.82/ 0.00   0.37/ 0.00   0.05/ 0.00   0.35/ 0.91   1.00/ 0.60
+   constant inflow                      1.00/ 0.60   1.00/ 0.05   0.82/ 0.08   0.46/ 0.70   1.01/ 0.20   0.76/ 0.26   1.01/ 1.00
+   (the shock function ignores its resource argument and acts on the run's own; the rows are separate runs)
+
+== 2. a non-renewable deposit (constant shape, rate 0): capacity 1e9 units, start N = 0.5 N*; abundance proportional to the share left
+   year:N/N*:S/C  0:0.50:1.00  10:0.61:0.80  20:0.66:0.56  30:0.57:0.33  40:0.47:0.14  50:0.38:0.00  60:0.31:0.00  80:0.21:0.00  100:0.14:0.00  150:0.05:0.00  250:0.01:0.00  399:0.00:0.00
+
+== 3. the basin of the logistic stock of coupled.py 3: the largest start above N* that recovers, by bisection (T = 30, r_s = 1)
+   recovers up to a start of 1.170 N*, collapses from 1.170 N* (the draw at N* is 0.96 F_max, so F_max is reached at 1.042 N*)
+   with the welfare window T = 365 and a lag of 365 (a slower population):
+   recovers up to a start of 1.151 N*, collapses from 1.151 N*

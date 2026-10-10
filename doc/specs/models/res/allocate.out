@@ -1,0 +1,21 @@
+== 1000 agents of weight 1, one execution each wanted per tick, 365 ticks
+   f = granted share of the demand; columns: min and max share granted over a year to one agent; the longest
+   run of ticks in which some agent got nothing (max over agents) and the mean of agents' longest runs
+      f       rule     min     max  longest  mean longest
+    0.3        seq   0.000   0.822      365        254.44
+    0.3   prop_rot   0.000   0.822      365        254.44
+    0.3  prop_hash   0.236   0.384       40         14.34
+    0.5        seq   0.000   1.000      365        182.50
+    0.5   prop_rot   0.000   1.000      365        182.50
+    0.5  prop_hash   0.416   0.581       20          7.83
+    0.9        seq   0.726   1.000      100         36.50
+    0.9   prop_rot   0.726   1.000      100         36.50
+    0.9  prop_hash   0.841   0.945        5          2.28
+
+== weight invariance: 20 agents of weight 50 against 1000 agents of weight 1, the same demand, f = 0.5
+   cohorts  prop_hash: per-household share min 0.500 max 0.500
+   units    prop_hash: per-household share min 0.416 max 0.581
+   cohorts  seq: per-household share min 0.493 max 0.507  (the first cohorts in the order take everything)
+
+== mixed draws: 3 agents want 1 execution of draw 5, 4 want 1 of draw 2, 2 want 3 of draw 1; available 14
+   demand U = 29  grants: {0: 0, 1: 1, 2: 0, 3: 1, 4: 0, 5: 1, 6: 1, 7: 1, 8: 2}  units taken: 14
