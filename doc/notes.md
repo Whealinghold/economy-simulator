@@ -44,7 +44,7 @@ PR description.
 
 | Area | Open notes |
 |------|-----------|
-| ALL | N-016, N-017, N-027 |
+| ALL | N-016, N-017, N-027, N-103 |
 | AGT | N-043, N-067, N-081, N-087, N-101 |
 | BEL | N-042, N-043 |
 | CAL | N-030 |
@@ -54,29 +54,29 @@ PR description.
 | CLB | N-015 |
 | CLR | N-095 |
 | CODE | N-019, N-089 |
-| CRD | N-032, N-046 |
+| CRD | N-032, N-046, N-107 |
 | DEM | N-080, N-089 |
 | EMP | N-046 |
 | EST | N-082, N-096 |
 | EVD | N-018 |
 | EXP | N-015 |
-| EXT | N-021, N-046, N-084, N-095, N-096 |
-| FIS | N-021, N-046 |
+| EXT | N-021, N-046, N-084, N-095, N-096, N-104, N-107 |
+| FIS | N-021, N-046, N-107 |
 | GDS | N-031, N-039 |
 | IND | N-013 |
-| INF | N-046, N-084, N-100 |
+| INF | N-046, N-084, N-100, N-104, N-106 |
 | INT | N-022, N-031, N-036, N-051, N-079, N-090, N-091 |
-| LED | N-021 |
-| LND | N-046 |
-| MER | N-011, N-046, N-084, N-090, N-100 |
-| MIG | N-038, N-046, N-090, N-097 |
-| MON | N-095, N-096 |
+| LED | N-021, N-107 |
+| LND | N-046, N-104 |
+| MER | N-011, N-046, N-084, N-090, N-100, N-106 |
+| MIG | N-038, N-046, N-090, N-097, N-104, N-105 |
+| MON | N-095, N-096, N-107 |
 | OBS | N-012, N-031, N-035, N-040, N-045, N-065, N-067, N-072, N-081, N-087, N-088, N-094 |
 | PLC | N-025, N-046 |
 | POP | N-096, N-097, N-098 |
 | PRO | N-030, N-031, N-039, N-043, N-090 |
 | REF | N-027, N-030, N-089, N-092 |
-| RES | N-030, N-031, N-036, N-046, N-098 |
+| RES | N-030, N-031, N-036, N-046, N-098, N-104 |
 | RSK | N-046 |
 | SAV | N-046 |
 | SCL | N-030 |
@@ -85,7 +85,8 @@ PR description.
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099 |
 | STO | N-011, N-046 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092 |
-| SUB | N-046 |
+| SUB | N-046, N-104 |
+| TRN | N-105, N-106 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093 |
 | WEL | N-016, N-028, N-081, N-099 |
 | WLD | N-009, N-031, N-036, N-046, N-051, N-056, N-074, N-082 |
@@ -117,6 +118,7 @@ PR description.
 - **Update (2026-10-10, TRN):** transport assumes: arrivals in phase 1, first, after the moment and before relief and starting money, in shipment ID order; dispatch in phase 3 for each agent in ID order after `Trade` returns, in this order: discards, shipments, intents; an agent that is away is skipped in phases 2 and 3 (`spec-transport.md` 5.3, 5.5); `Inbound` is fixed at the start of phase 3.
 - **Update (2026-10-10, POP):** in phase 7 the POP deaths run before the entry budget is taken and births come last (`spec-population.md` 4.8).
 - **Update (2026-10-10, wave 2 integration):** the phase 1 order is now: the moment and the cost anchors; transport arrivals; relief and starting money; money flows; the directive. Phase 7: ladder reductions and removals, POP deaths, switches and applies, births last. WLD fixes both.
+- **Update (2026-10-10, wave 2 integration):** the order of account creation at construction is now fixed by the specs together and WLD adopts it: the built-in boundary accounts, then the boundary accounts of the declared money-flow reasons in flow-ID order (`spec-ledger.md` FR-LED-052), then each region's estate account in ascending `RegionID` (`spec-regions.md` 3.6.1, FR-REG-005), then the agents. The agent IDs of the estate pseudo-agents are `0..n-1`, so a pseudo-agent's ID equals its `RegionID`.
 ### N-011 Transport, storage and carriage
 
 - **Areas:** STO, CAR, MER
@@ -169,6 +171,7 @@ PR description.
   by commodity and could back a depreciation measure (`spec-ledger.md` 5.4.2, open
   question 7). Commodity classes are the grouping for price indices and value
   added (`spec-goods.md` 6.1).
+- **Update (2026-10-10, wave 2 integration):** a report by region does not balance from flows alone: a household that relocates takes its money and goods with it, and the ledger's relocation totals are the reconciling item (`spec-regions.md` 6.4). Rebuild the count of households by region from `AgentSpawned`, `AgentBankrupted`, `WeightChanged`, `RoleChanged` and `AgentRelocated`. The money supply by sector and the boundary balance per reason (one per money flow) come from the Snapshot fields of N-094. A price index of goods that travel should say whether it is the local price or the delivered price, which includes the freight (`spec-transport.md` 15, TRN-A4).
 
 ### N-015 Placeholders to calibrate once something has run
 
@@ -251,6 +254,7 @@ PR description.
     state, as ADR 0002 says, with a fresh read-receipt tag.
 - **Update (2026-10-10):** the log keys and events of the written specs are in `rules/observability-and-logging.md`. The rest of this note is unchanged: the architecture.md 4.3 and 7.7 amendment for the optional extension state (ADR 0002) waits for the first code.
 - **Update (2026-10-10, REG):** at the first code also add `internal/graph/` (the shortest-path algorithms over primitive slices) and `regions.go` to the layout of architecture.md 2.6 and `AGENTS.md`, and the REG terms to the glossary in `doc.go` (`Region` is used by every spec and is not in the vocabulary list of architecture.md 3.2).
+- **Update (2026-10-10, wave 2 integration):** the four new specs name these homes, to add to the layout of architecture.md 2.6 and `AGENTS.md` when each is first needed: `internal/graph` (REG, shortest paths over primitive slices), `internal/moneyflow` (MON), `internal/population` (POP) and `internal/transit` (TRN), each with the root file of its concept and, for TRN, the root types `Mode`, `Shipment` and `ShipmentRequest`. Each also needs its terms in the `doc.go` glossary and its sentinels mapped at the root (N-075). The Python models of the four specs are archived in `doc/specs/models/{reg,mon,pop,trn}/`.
 ### N-020 What each spec contributes to a checkpoint
 
 - **Areas:** CHK
@@ -491,6 +495,7 @@ PR description.
 - **Update (2026-10-10, POP):** the POP entries are in `spec-population.md` 14 (POP-A1 to A9, dampers POP-D1 to D7, scenarios POP-S1 to S4); in the register they are L75 to L83, D46 to D52 and S37 to S40. POP's row in 4.8 can be removed.
 - **Update (2026-10-10, TRN):** TRN's entries are TRN-A1 to TRN-A8 in `spec-transport.md` 15 (price-gap shipping with a transit delay, the invisible pipeline, the haul capacity cobweb, freight and the delivered price, perishables that cannot cross, a trip as a gap in income, vehicles as capital, diversion to the pool); in the register TRN-A1, A2 and A5 are L84 to L86, A3 merges into L21, A4 into L17, A6 into L19, A7 into L26 and A8 into L63; the dampers are D38 to D40 and the scenarios S30 to S32.
 - **Update (2026-10-10, wave 2 integration):** the entries of REG, MON, POP and TRN are merged into the register, so POP, MON and TRN leave the areas of this note. Still owed: MIG, INF, EMP, EXT, SAV, CRD, MER, STO, RSK, FIS, PLC, RES, LND, SUB, WLD.
+- **Update (2026-10-10, wave 2 integration):** the register now has 86 loops, 52 dampers and 39 scenarios (S01 to S40, S15 unused). The next free numbers are **L87, D53 and S41**. A writer uses provisional IDs (`<CODE>-A1`, `<CODE>-D1`, `<CODE>-S1`) in its spec, and the supervisor assigns the final numbers when the entries are merged (N-103); do not reuse a number a spec quotes provisionally.
 ### N-051 What the Strategy contract needs from other specs
 
 - **Areas:** INT, CHK, WLD
@@ -623,7 +628,7 @@ PR description.
 
 - **Areas:** INT
 - **Raised:** 2026-10-10, `spec-regions.md` 7, `spec-money-supply.md` 10.4, `spec-population.md` 3.6 and 6.6, `spec-transport.md` 9.1 and 10.3.
-- **Note:** Several mechanisms are world slots set between ticks, saved in a checkpoint, with a public face that belongs to INT (ruling R11): the yield shock (`spec-production.md` 6.8), the edge status, closed or slowed (`SetEdgeStatuses`, `spec-regions.md` 7), the transit factor (`spec-transport.md` 10.3), the flow scale (`SetFlowScale`, `spec-money-supply.md` 10.4) and the birth and death scales (`BirthScale`, `DeathScale`). INT also owns `relocate` for an external agent. For each, INT states the public name, its error values and its bound, between steps only. Each slot emits its own event and none is configuration.
+- **Note:** Several mechanisms are world slots set between ticks, saved in a checkpoint, with a public face that belongs to INT (decided at the wave 2 integration: the mechanism belongs to the spec that owns it, the public call to INT): the yield shock (`spec-production.md` 6.8), the edge status, closed or slowed (`SetEdgeStatuses`, `spec-regions.md` 7), the transit factor (`spec-transport.md` 10.3), the flow scale (`SetFlowScale`, `spec-money-supply.md` 10.4) and the birth and death scales (`BirthScale`, `DeathScale`). INT also owns `relocate` for an external agent. For each, INT states the public name, its error values and its bound, between steps only. Each slot emits its own event and none is configuration.
 
 ### N-092 Overlays and scenarios that the wave 2 specs hand to REF
 
@@ -653,7 +658,7 @@ PR description.
 
 - **Areas:** MON, POP, EST, EXT, SPN
 - **Raised:** 2026-10-10, `spec-money-supply.md` 8.6 and open question 4, `spec-population.md` 4.3, 4.8 and 5.5.
-- **Note:** Four things draw on or pay into a region's pool: relief (phase 1), money flows with the pool as a target (phase 1; the pool target needs the estates module, ruling R5), entry and births (phase 7, inside `EntryPoolShare`, deaths first). A per-household grant couples issuance to the household count (MON-A5): POP decides whether income from a grant raises births. In a closed region the population is bounded by M / stake; a faucet or an inflow with migrants lifts the bound. MON and EXT should say how money entering a region reaches its pool.
+- **Note:** Four things draw on or pay into a region's pool: relief (phase 1), money flows with the pool as a target (phase 1; a pool target needs the estates module, `spec-money-supply.md` 4.3.2; the estate account exists without it, the pool policy does not), entry and births (phase 7, inside `EntryPoolShare`, deaths first). A per-household grant couples issuance to the household count (MON-A5): POP decides whether income from a grant raises births. In a closed region the population is bounded by M / stake; a faucet or an inflow with migrants lifts the bound. MON and EXT should say how money entering a region reaches its pool.
 
 ### N-097 Migration and the population loop
 
@@ -671,13 +676,14 @@ PR description.
 
 - **Areas:** WEL, STB
 - **Raised:** 2026-10-10, `spec-transport.md` 15 (TRN-A6) and 20.9.
-- **Note:** The effective welfare window derives from recipes only (`spec-welfare-and-wages.md` 2.3.3), so a self-carried trip longer than the window looks like starving. The validation warning `trip_longer_than_window` is a stopgap; WEL decides whether the window counts the longest trip of a role (WEL open question 9, left open by ruling R6). The working ticks of a self-carried trip run from dispatch to the tick before arrival.
+- **Note:** The effective welfare window derives from recipes only (`spec-welfare-and-wages.md` 2.3.3), so a self-carried trip longer than the window looks like starving. The validation warning `trip_longer_than_window` is a stopgap; WEL decides whether the window counts the longest trip of a role (WEL open question 9, left open at the wave 2 integration). The working ticks of a self-carried trip run from dispatch to the tick before arrival.
 
 ### N-100 What transport leaves to MER and INF
 
 - **Areas:** MER, INF, CAR
 - **Raised:** 2026-10-10, `spec-transport.md` 8.4, 9.3, 20.2 and 20.5.
 - **Note:** A hired shipment needs a consignee in the destination region (otherwise `consignee_elsewhere`); a diverted cargo goes to the destination estate; a traveller keeps its beliefs and remembers nothing else; the backhaul double count of `spec-carriage.md` 5.1 stands; a bilateral contract with escrow is MER's and does not use the book. The shipper's decision is MER's and rumours are INF's.
+- **Update (2026-10-10, wave 2 integration):** a shipper that responds to a price gap with a transit delay of `k` ticks is stable in the linearised model only if its gain per tick is below `2 sin(pi / (2 (2k + 1)))` (1.0 at `k` = 1, 0.35 at `k` = 4), unless it counts `Inbound` or a cap bounds what it dispatches per tick, in which case the limit is about 2 whatever `k` is (`spec-transport.md` 15, 16; L84, L85). A model of a linear rule, not of the library: MER should count `Inbound` and test the margin with scenario S30.
 
 ### N-101 Does the default Target count Inbound?
 
@@ -688,8 +694,43 @@ PR description.
 ### N-102 Unify the module table names before the loader is written
 
 - **Areas:** CFG
-- **Raised:** 2026-10-10, ruling R14 of the wave 2 integration.
+- **Raised:** 2026-10-10, the wave 2 integration (the specs of that wave were not asked to share one spelling).
 - **Note:** The specs name the table of a module differently in the file: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]` and transport's own. `spec-config.md` records each as its spec says and leaves this as an open question. Unify before the loader is written.
+
+### N-103 Running several spec writers in parallel
+
+- **Areas:** ALL
+- **Raised:** 2026-10-10, the wave 2 run (REG, MON, POP and TRN written at once, then integrated).
+- **Note:** What worked, so the next run repeats it, and what bit.
+  - Each writer had its own worktree and branch and could create only its spec file and `doc/specs/models/<code>/`. It handed its edits to shared files over as a written handoff (notes, parameter rows, glossary, ledger reasons, config fields, register entries, events and keys, edits to other specs, checkpoint state, the `Testing` and `Observability` entries). The shared files collide when several writers edit them: `notes.md`, `specs/README.md`, `roadmap.md`, `documentation_index.md`, `spec-ledger.md`, `spec-config.md`, `spec-stability.md` and the rules. After the writers finished, one supervisor wrote the rulings and the final numbering, and integrators, one per disjoint set of files, applied the handoffs. The merges were conflict-free.
+  - Fix the interface between concurrent specs in the brief (who owns the region graph, the transit hook, the ledger reasons) and read the finished specs against each other. Two writers still disagreed with the specs around them: TRN had assumed an error that REG did not have, and POP showed that the spawner's signed hook could not work. The cheapest fix was a review message to the writer, with the owner of the interface winning. When one spec depends on another's interface, write the owner first if the schedule allows.
+  - Writers use provisional IDs for register entries, dampers and scenarios (`REG-A1`, `POP-D3`, `TRN-S2`) and their proposals clash. The supervisor assigns the final loop, damper and scenario numbers (see N-046) and the note IDs, and each register entry names the provisional ID in brackets so the mapping stays traceable.
+  - Checks to run mechanically after integration (the script lived in `/tmp` and is gone, so rebuild it with `perl` and `grep`, never the host Python): every `spec-x.md N.N` reference resolves (to a heading, a numbered paragraph or a table row); no requirement ID is defined twice; every file under `doc/` has a `documentation_index.md` row; the notes index equals the areas of the open notes; no `.pyc` is committed; the read-receipt tags changed only for the files that were edited. Run it on the base first: one reference was already broken (`spec-welfare-and-wages.md` to `spec-config.md` 13.5).
+  - Traps. Say in the brief that models run only in Docker (three of four writers ran the host `python3` for small things anyway). A model run in Docker leaves a root-owned `__pycache__` that makes removing a worktree fail and invites a committed `.pyc`: set `PYTHONDONTWRITEBYTECODE=1`, or clean up with a container. A new worktree makes Claude Code ask whether to trust the folder, which is the user's decision. In herdr a pane ID contains a colon and an agent name must match `[a-z][a-z0-9_-]*`. On this machine `grep` is `ugrep` and rejects some patterns. Notifications from a monitor of an earlier session arrive as if new: check what the supervisor started before acting on one.
+
+### N-104 Region-keyed tables use the one override mechanism
+
+- **Areas:** RES, SUB, MIG, INF, EXT, LND
+- **Raised:** 2026-10-10, `spec-regions.md` 5.1 and 5.3.
+- **Note:** A new table keyed by region (a yield, a price, a scale, a cap, a rate) uses the mechanism of `spec-regions.md` 5.1: one row per key in the owner's table, combined with the default by replace, add or scale, in canonical order by `RegionID`, with the errors of 5.3, and a row in the list of 5.1.3. `RegionPrices` and POP's `Regions[]` are the two examples. Do not invent a per-region field with its own rules. The same holds for SET, CAP and later specs.
+
+### N-105 Instant or timed migration
+
+- **Areas:** MIG, TRN
+- **Raised:** 2026-10-10, `spec-regions.md` 6.5.3, `spec-transport.md` 5.5.
+- **Note:** `relocate` is instantaneous (`spec-regions.md` 6). A migration that takes time has two ways. It can use TRN's traveller: the account stays in the origin region while away and changes region at arrival, and TRN's `open_shipment` refusal means MIG cannot relocate that agent meanwhile. Or it can use REG's reserved `NoRegion`, `depart` and `arrive`, which 6.5.3 binds to three rules: the departure region is recorded, a death leaves the money to the region departed from, and an account with no region is in no market. MIG picks one and states what a death, a ladder rung and the welfare window mean for a migrant on the road (the window problem of N-099 applies).
+
+### N-106 What a strategy may see of other regions
+
+- **Areas:** INF, MER, TRN
+- **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 15 (TRN-A1, L84).
+- **Note:** The agent view carries `Routes` (for each other region and mode: whether there is a route, the travel time, and for a hired mode the haul units per carrying unit) and `Inbound` (goods on the way to this agent). No view carries a remote price or a remote stock, and none should until INF defines rumours with a delay and an error: otherwise a shipper sees the gap it is meant to estimate, and the transit-delay loop is hidden. MER's shipper reads rumoured prices and `Routes` and counts `Inbound`.
+
+### N-107 New money faucets and sinks start from MON
+
+- **Areas:** EXT, FIS, CRD, MON, LED
+- **Raised:** 2026-10-10, `spec-money-supply.md` 4.5, 9.5 and 10.1.
+- **Note:** Start from MON's mechanism: a grant or a levy on a class, a declared reason equal to the flow ID, closed for a run, with its boundary account created at construction, reported in `BoundaryFlow` and checked by the audit. Add a built-in ledger reason only for a mechanism that is not a grant or a levy (an interest flow, a trade with an external counterparty). MON's positions bind the later specs: no faucet reads an aggregate or grows with a balance (only a sink may be proportional to a balance), and a counterparty whose balance is created or destroyed outside conservation is a Boundary account. Tax, credit and the external sector are the likely first uses. A policy that changes a rate over time is PLC's, through the flow-scale slot (N-091).
 
 ## Closed notes
 
@@ -1144,7 +1185,7 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Note:** `spec-clearing.md` admits asks only for stock and settles by moving goods; hired carriage moves none and uses escrow. The contract, transport and merchant specs must pick: the carriage unit as a produced good (a trip is a job), or a contract-aware admission and settlement that keeps the guarantees of `spec-clearing.md` 2.3. The carriage unit's price may fall below the resolution floor (an ask of 24 against a floor of 50), so choose a coarser unit.
 - **Update (2026-10-10, REG):** a route is an edge, keyed by `EdgeID`, in ascending (From, To) (`spec-regions.md` 4.7).
 - **Update (2026-10-10, TRN):** decided in `spec-transport.md` 8: option 1, the carriage unit is a produced good, the *haul unit* of a hired mode, made by an ordinary recipe of a carrier role, traded in the origin region's ordinary market and redeemed by the shipment at dispatch. `spec-clearing.md` needs no change and keeps the guarantees of 2.3. The unit price in the worked example is 1 195 against a floor of 50 (17.4), so the coarser unit is a data choice. Costs: capacity is produced ahead and unsold units spoil (a cobweb, TRN-A3); no escrow and no carrier custody for the market; a bilateral contract with escrow stays MER's.
-**Closed:** 2026-10-10. Decided by TRN in `spec-transport.md` 8 (option 1, the haul unit; the supervisor's ruling R13 accepts it). `spec-clearing.md` is unchanged. `spec-carriage.md` is edited to match: `FR-CAR-001` and `FR-CAR-002` move to the future contract spec keeping their IDs, `FR-CAR-005` to `FR-CAR-007` are superseded by `FR-TRN-009`, `FR-TRN-010` and `FR-TRN-012`, and the unnamed margin `m_bp` is deleted; `spec-ledger.md` and `spec-goods.md` are edited as `spec-transport.md` 8.5 lists. A bilateral contract with escrow and the backhaul double count stay MER's (N-100).
+**Closed:** 2026-10-10. Decided by TRN in `spec-transport.md` 8 (option 1, the haul unit; accepted at the wave 2 integration). `spec-clearing.md` is unchanged. `spec-carriage.md` is edited to match: `FR-CAR-001` and `FR-CAR-002` move to the future contract spec keeping their IDs, `FR-CAR-005` to `FR-CAR-007` are superseded by `FR-TRN-009`, `FR-TRN-010` and `FR-TRN-012`, and the unnamed margin `m_bp` is deleted; `spec-ledger.md` and `spec-goods.md` are edited as `spec-transport.md` 8.5 lists. A bilateral contract with escrow and the backhaul double count stay MER's (N-100).
 
 ### N-078 What the demand module needs from the money and income specs
 
@@ -1152,7 +1193,7 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Raised:** 2026-10-10, `spec-demand.md` 7.3.
 - **Note:** A non-producing class needs a recurring named transfer of money and a paired sink or return flow. In the model a stipend of 300 a tick to 50 households with no sink left household money at 47 700 against 2 700 at the start.
 - **Update (2026-10-10, MON):** applied in `spec-money-supply.md`: the recurring named transfer is a grant (4.2) to a role with an empty `Recipes` list (7.3), counted as income by default (7.2); the paired sink or return flow is a levy, with the validation check `pair_unbalanced` for fixed pairs (9.2, 12.2) and a derived bound for a rate levy (9.3, `m* = E + g/rho`). The model of DEM (a stipend of 300 to 50 households with no sink) is the unbalanced case (9.1). `spec-demand.md` 10.2 `class_without_income` gets its edit in the integration.
-**Closed:** 2026-10-10. Applied in `spec-money-supply.md` 4.2, 7.2, 7.3, 9.1 to 9.3 and 12.2: a grant and a levy as data, counted as income by default (the welfare edit of ruling R6), with a derived bound for the rate levy.
+**Closed:** 2026-10-10. Applied in `spec-money-supply.md` 4.2, 7.2, 7.3, 9.1 to 9.3 and 12.2: a grant and a levy as data, counted as income by default (the welfare edit of the wave 2 integration, `spec-welfare-and-wages.md` 2.1), with a derived bound for the rate levy.
 
 ### N-083 Population adds the `deaths` reason and decides renewal against births
 
@@ -1173,4 +1214,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 251f2abcc96f988d200d6a4f
+NOTES-TAG: 941689d21d654e99f25a487e
