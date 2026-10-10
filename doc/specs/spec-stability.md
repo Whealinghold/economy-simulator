@@ -335,17 +335,17 @@ margin share, which is a strong elasticity above the ceiling. *Test:* S04 with a
 carrier role. *Status:* hand.
 
 **STB-L17 Carriage cost and the basket.** *Kind:* loop. *Loop:* delivered food
-price (+) the carrier's upkeep `U` (+) its reservation fee (`fee_min = trip_ticks *
-U * (1 + m)`) (+) delivered food price. Polarity R across regions; the gain is the
-share of the delivered price that the carrier's food cost represents, which is
-below 1. *Delay:* a trip. *Owner:* CAR 2.2. *Damper:* none, but the gain is below
+price (+) the carrier's upkeep and feed cost (+) the cost of a haul unit (`UnitCost` of the
+haul recipe, `spec-transport.md` 8.3, which replaced the reservation fee `fee_min`) (+) the
+freight (+) delivered food price. Polarity R across regions; the gain is the share of the
+delivered price that the carrier's food cost represents, which is below 1. *Delay:* a trip.
+*Owner:* CAR 2.2; TRN 8.3 [TRN-A4]. *Damper:* none, but the gain is below
 one for any real fee share. *Undamped:* a long route with a high basket price.
-*Condition:* the carrier's upkeep is a small share of the delivered price. *Test:*
-S04 on a two-region chain (REF). *Status:* hand. `spec-carriage.md` 5.1 adds that
-the reservation fee charges the round trip on each leg's ask, which double counts when
-cargo is found for the return: the over-charge raises the cost of delivered food and
-so feeds this loop (it errs toward dearer carriage); the fix waits for the contract
-spec.
+*Condition:* the carrier's upkeep is a small share of the delivered price (in
+`spec-transport.md` 17.4: 6% for a full unit, 24% for a small cargo, placeholders). *Test:*
+S04 on a two-region chain (REF), X1. *Status:* hand. The double count of the round trip
+that `spec-carriage.md` 5.1 found concerned the `fee_min` form, which `spec-transport.md` 8
+replaces; it is restated as open in `spec-transport.md` 20.2.
 
 **STB-L18 In-kind valuation.** *Kind:* loop (weak). In-kind receipts count in
 income at the prices of the region (`spec-welfare-and-wages.md` 6.2); a price rise
@@ -357,7 +357,7 @@ raises the measured income, so the agent reaches its target sooner and works les
 the welfare window `T` shows costs and no income (+) the ratio reads below 1 (+)
 relief, migration and bankruptcy for a healthy producer (-) producers (-) supply.
 Polarity R through the failure ladder. *Delay:* the job duration. *Owner:* PRO 16,
-N-032. *Damper:* D29, the derived window (`spec-welfare-and-wages.md` 2.3.3):
+N-032; TRN 3.3.1 [TRN-A6] for a self-carried trip. *Damper:* D29, the derived window (`spec-welfare-and-wages.md` 2.3.3):
 `T = max(WelfareWindow, WindowCycles * longest Duration on the role's list)`, so the
 window always exceeds the longest job, and the PRO warning `job_longer_than_window`
 (FR-PRO-040) can no longer occur. *Undamped:* the response of a long-job role to
@@ -371,6 +371,9 @@ has no reserve; the household protects its food in stock, not its money) and VIA
 8.3.1 (starting money `U * (d_max + buffer)`, so a warm-started household can pay
 for the longest job). The starting money is a damper only for a household that starts
 at that level; a household that falls below it later is undamped, apart from D11.
+**A self-carried trip is also a gap in income** (TRN-A6): no income until the goods sell at the destination, so a trip longer than the effective window reads as starvation and can
+trigger relief or a role change (rungs 1 and 2). D29 does not cover it (the window derives from recipes only); the warning `trip_longer_than_window` is the only guard, and a traveller that leaves with enough money and provisions (`unprovisioned`, `spec-transport.md` 5.4) survives it.
+*Condition:* the longest trip of a travelling role is below its effective window. *Test:* S11's long-job pack with a travelling role. A trader's labour is also lost to production while it is away. `spec-welfare-and-wages.md` open question 9 (a window that counts trips) stays open.
 
 **STB-L20 An uninterruptible job overshoots the target.** *Kind:* amplifier. A
 started job cannot be interrupted (`spec-production.md` 5.2.2), so the target-income
@@ -386,7 +389,7 @@ with a delay, which is the cobweb. With naive expectations and `d` interleaved
 independent chains, it converges if supply is less elastic than demand at the
 equilibrium and diverges otherwise; the delay sets the period, not the threshold
 (section 6.3). *Delay:* the recipe `Duration`, travel, the traineeship.
-*Owner:* PRO 16, BEL 17. *Damper:* D02, D03 (beliefs are an averaging
+*Owner:* PRO 16, BEL 17; TRN 8.4 [TRN-A3] for the cobweb of the price of haul units (the delay is the haul recipe's `Duration`, the round trip; the short `ShelfLife` of the haul commodity ends banked capacity; a shipper's demand for haul units is derived and inelastic over the range where the price gap exceeds the freight, so the condition below is likelier to fail there, and the measured elasticity should be recorded; test S32). *Damper:* D02, D03 (beliefs are an averaging
 expectation), D07, D14 (entry limits: `EntryShare` of the spawner, SPN 6.3, specified).
 *Undamped:* with an unstable parameter set
 the price crosses its whole band (a range of 100 to 1 between the bounds of the
@@ -431,7 +434,9 @@ The ledger entry "hoarding by spoilage" is merged here.
 is capital: replacement demand is low and lumpy until the stock ages together, then
 spikes. *Delay:* the durability. *Owner:* GDS 10, SKL 2.6. *Damper:* D19 (different
 ages across holders, set by the starting inventories of the chain's data).
-*Condition:* ages are spread at the start. *Test:* S17. *Status:* untested.
+*Condition:* ages are spread at the start. *Test:* S17. *Status:* untested. Transport
+adds wear charged per tick of travel at dispatch (`spec-transport.md` 3.3.2), so a fleet
+bought together wears and is replaced together (TRN-A7, merged).
 
 **STB-L27 A single tool.** *Kind:* hazard. A recipe that requires a tool stops when
 it breaks; the toolmakers' capacity is the damper (`spec-skill-barriers.md` 2.6).
@@ -450,13 +455,18 @@ PRO 16. *Test:* in RES. *Status:* untested.
 
 **STB-L30 Money that cannot leave.** *Kind:* hazard. With no sink a faucet's
 cumulative total grows without bound; the boundary balances show it per reason
-(`spec-ledger.md` 3.4). *Owner:* LED 14. *Damper:* none in the core; a sink is
-`spec-money-supply.md`'s. *Condition:* a measure holds each faucet against a sink.
-*Test:* S13. *Status:* untested.
+(`spec-ledger.md` 3.4). *Owner:* LED 14; MON 9.1 [MON-A2]. *Damper:* D41 (a cumulative
+`Limit` ends the flow), D42 (a holding charge with a derived bound `m* = E + g/rho` on a
+hoarding class), and the warning `faucet_without_sink` (a grant and no levy at all;
+a grant with a `Limit` is exempt). *Undamped:* a pack that ignores the warning.
+*Condition:* every grant has a limit or a sink (a rate levy on a class that holds the
+money, or a matched fixed levy). *Test:* S13 (defined by `spec-money-supply.md` 17.6: the
+faucet alone, report-only on the price until STY sets a band), S33 (the sink and the
+bound). *Status:* hand for the hazard, model for the bound `m*` of a hoarder.
 
 **STB-L31 Wealth held out of circulation.** *Kind:* hazard. The estate pool and
 escrow hold money out of circulation. *Owner:* LED 14, EST 2.6. *Damper:* D12
-(`PoolRelease`). *Test:* S14. *Status:* untested.
+(`PoolRelease`); for a hoarding class also D41 and D42 (`spec-money-supply.md` 9.3). *Test:* S14, S33. *Status:* untested.
 
 **STB-L32 Non-negativity is a constraint, not a stabiliser.** *Kind:* constraint.
 The ledger enforces non-negative balances by refusing an operation, so a shortage
@@ -552,10 +562,14 @@ from at most `EntryPoolShare` of the pool per tick and keeps the rest for relief
 L63), immigrants carrying money, D15 (not written). *Undamped:* once the pool is empty
 and nothing arrives. *Condition:* a floor under market failure. *Test:* S14. *Status:*
 hand.
+With the population module (POP-A3, L77) the dead's holdings fill the pool, so the pool is
+fullest when the dead are most numerous and funds the births and the relief that follow
+(D47, D51); the loop still has no way back once a region is extinct.
 
 **STB-L40 Relief suppresses migration.** *Kind:* hazard. Relief raises the ratio
 that triggers migration (`specs/README.md` "Still open" 4). *Owner:* EST 2.6.
-*Test:* an experiment (STY). *Status:* untested.
+*Test:* an experiment (STY). *Status:* untested. With the population module relief also raises births and lowers deaths
+(`spec-population.md` open question 4, L75); the same experiment covers it.
 
 **STB-L41 The traineeship queue.** *Kind:* bias, **resolved in design**. The earlier
 application rule did not count the time in the queue and so overstated the appeal of
@@ -663,7 +677,10 @@ only and 1.53 with wants at the target 15 000. The default `TargetRatio` stays 1
 (decided, N-054; revisit when MON or EXT exist). *Condition:* a world where upkeep is
 the only demand either sets targets at 10 000 or accepts the halt as the only brake; a
 world with the demand module keeps the target within its ceiling. *Test:* S19 (no
-wants), S24 (with wants). *Status:* hand (an identity), model for the figure 1.53.
+wants), S24 (with wants). *Status:* hand (an identity), model for the figure 1.53. **For the population module** (`spec-population.md` 5.3, L81): with upkeep as the only demand a fed
+household reads a ratio near 1 and a surplus is a glut, not a higher ratio, so the replacement ratio of the
+schedules must lie below 10 000 (a fixed point at chronic hunger) or the population dies out;
+with wants it can lie between 10 000 and `1 + Wmax / U`.
 
 **STB-L47 Food first and the urgency bid.** *Kind:* amplifier (AGT-A6). *Loop:* hunger
 (+) a bid at the top of the belief range (+) staple price (+) cash spent on the
@@ -704,8 +721,11 @@ exit (rung 3, `AgentBankrupted` with a `Cause`) and the replacement (`Renewal`, 
 10 000, which restores households and reopens the loop); the demographic rates are POP's
 (the hook is `PopDelta`, SPN 8). *Damper:* D11, D35 (graded exit), D36 (an entrant
 enters only a viable role). *Undamped:* POP's rates and the interaction of `Renewal`
-with births (the warning `renewal_with_population`). *Condition and test:* in POP; the
-SPN half is S14. *Status:* hand-off.
+with births (the warning `renewal_with_population`). *Condition and test:* the POP half
+is L75 to L83 (`spec-population.md` 14: the rates are specified, `PopBirths` and `PopDeaths` replace the
+signed `PopDelta`, `Renewal` is ignored while the module is on, D47, D48), tests S37 to S40; the SPN half is S14.
+*Status:* model for the POP half (`spec-population.md` 13), which needs a fixed factor from RES
+(L80) for its feedback; hand for the SPN half.
 
 **STB-L51 A staple's demand is inelastic.** *Kind:* hazard (AGT-A1; N-043). *Loop:*
 price (+) spending on the staple at a fixed quantity and (-) cash left; when cash
@@ -834,14 +854,18 @@ pool (+) unfunded entrants (-) agents (-) households to relieve; and relief (-) 
 (-) entrants. *Owner:* SPN 7.3; EST 2.6. *Damper:* D37 (`EntryPoolShare`, default
 5 000, so at least half of the pool stays for relief), D11, D12, D35. *Undamped:* a pool
 that is empty when nothing arrives. *Condition:* money enters the region (immigrants,
-merchants). *Test:* S14. *Status:* hand.
+merchants). *Test:* S14. *Status:* hand. The population module's births draw the stake from the same pool (L76, D51), money flows to a
+pool come from `spec-money-supply.md` (L73), and cargo whose consignee is gone is diverted to the
+destination estate and so to the pool (TRN-A8, `spec-transport.md` 5.8; bounded by the shipments in flight at a
+removal; D37).
 
 **STB-L64 An extinct role is never re-seeded.** *Kind:* hazard (SPN-A8). A role with no
 agents has no wage and no signal, so no one enters it (SPN 6.5); a role that never had a
 group and is closed (the reference chain's `visitor`) is not extinct. *Owner:* SPN 6.5.
 *Damper:* none by design; a bounded `Warn` "role extinct" (`spec-spawner.md` 13.3).
 *Condition:* a pack whose roles can all die has no way back except an external agent or a
-consumer's action. *Test:* S27. *Status:* hand.
+consumer's action. *Test:* S27. *Status:* hand. The population module's floor `MinHouseholds` (D49) keeps the schedule from extinguishing a small group;
+the ladder alone can end a role, and an extinct region is absorbing (`spec-population.md` 6.4).
 
 **STB-L65 The cost of switching.** *Kind:* bias (SPN-A9). Goods outside the new role's
 tradable set go to the estate and the job is abandoned (`spec-spawner.md` 4.2), so a
@@ -854,20 +878,87 @@ switch costs the agent; the cost works as hysteresis in effect and shows in the 
 These entries do not exist yet. Each future spec adds its own by the checklist of
 section 9. The list says what each is expected to bring, from the notes and the
 roadmap, so that no loop is forgotten. The agents, viability, demand and spawner specs
-have been merged (4.7) and no longer have a row. The reference chain (REF) has no row:
+have been merged (4.7), and the region, money, population and transport specs (4.9), and no longer have a row. The reference chain (REF) has no row:
 it adds no rule and so no loop (`spec-reference-chain.md` 13, FR-STB-003); it builds the
 scenarios of section 8.
 
 | Spec | Expected entries | Where it is known from |
 |------|------------------|------------------------|
-| POP | the Malthusian fixed point: births and deaths depending on welfare (a balancing loop with a long delay, and a source of cycles); the hook is the signed `PopDelta` of the spawner (SPN 8), and POP decides `Renewal` against births (`renewal_with_population`) and adds the ledger reason `deaths` | roadmap POP row; SPN 8 |
-| MIG, INF | migration on rumoured ratios: a loop with the rumour delay; a flow toward a region lowers its ratio; whether a migrant keeps or reseeds its beliefs (SPN leaves it to MIG) | roadmap; SPN 7.4 |
+| MIG, INF | migration on rumoured ratios: a loop with the rumour delay (the distances of REG feed it); a flow toward a region lowers its ratio; relief and births raise it (L40, L75); whether a migrant keeps or reseeds its beliefs (SPN leaves it to MIG) | roadmap; SPN 7.4; REG 6 |
 | EMP | the employment and wage-setting side of the wage and demand loop (the demand side is L57); wages are demand, demand raises prices and wages; and DEM's need for a recurring named transfer to a non-producing class with a paired sink or return flow (`spec-demand.md` 7.3) | roadmap "Macro is measured"; DEM 7.3 |
-| MON, EXT, SAV, CRD | money creation and destruction, saving and investment, credit cycles and default | roadmap |
-| TRN, MER, STO, RSK | arbitrage with a delay (merchants chase a margin that has gone by arrival), storage and its cost, loss in transit | roadmap |
+| EXT, SAV, CRD | the outside world's flows (the primitives reserved by MON 10), saving and investment, credit cycles and default | roadmap; MON 10 |
+| MER, STO, RSK | the merchant's decision to ship (the loop of L84 is closed by its response), storage and its cost, loss in transit (the `loss` reason is RSK's) | roadmap; TRN 5, 10 |
 | FIS, PLC | policy rules that react to measures (a controller in the world, which `ADR 0001` allows only as a policy actor) | ADR 0001 |
 | RES, LND, SUB | depletion and regeneration, rent, subsistence output as the floor (D15) | roadmap |
 | WLD | the decision rates (D25) and the phase order the register assumes (`spec-agents.md` 4) | roadmap; N-009 |
+
+### 4.9 Regions (REG), money (MON), population (POP) and transport (TRN)
+
+These entries come from `spec-regions.md` 13 (three, `REG-A1` to `REG-A3`),
+`spec-money-supply.md` 16 (seven, `MON-A1` to `MON-A7`), `spec-population.md` 14 (nine,
+`POP-A1` to `POP-A9`) and `spec-transport.md` 15 (eight, `TRN-A1` to `TRN-A8`), merged by
+the checklist of section 9 (9.9). The new IDs are L66 to L86; the writers' provisional IDs
+stay in the Owner field in brackets. The dampers are D38 to D52 (section 5) and the
+scenarios S28 to S40 (section 8). A section number in an entry that names no spec is a
+section of the spec named in its Owner field. REG closes no loop of its own (checklist
+9.1): its distances are inputs to the delays of the loops of TRN, MER, MIG and INF, which
+enter them. Nothing here has been run except where a status says `model`. No default is
+claimed stable (N-027).
+
+| Source entry | Merged into | What was added there |
+|--------------|-------------|----------------------|
+| MON-A2 money that cannot leave | L30 | the limit, the holding charge and the warning `faucet_without_sink` (D41, D42); the faucet scenario S13 is now defined |
+| TRN-A3 the haul capacity cobweb | L21 | a case of the production-delay cobweb: the delay is the haul recipe's `Duration`; the shipper's demand for haul units is derived and inelastic over the range where the gap exceeds the freight; test S32 |
+| TRN-A4 freight and the delivered price | L17 | the `fee_min` form is replaced by the price of haul units (`spec-transport.md` 8.3) |
+| TRN-A6 a trip is a gap in income | L19 | a self-carried trip is not covered by D29; the warning `trip_longer_than_window` |
+| TRN-A7 vehicles are capital | L26 | wear charged per tick of travel at dispatch |
+| TRN-A8 diversion transfers wealth to the pool | L63 | cargo whose consignee is gone goes to the destination estate |
+| POP-A1 to A9 | L50, L46, L39, L40, L64 (edited) and L75 to L83 | see each entry |
+
+Cross-references between owners (R18): money flows and births draw on the same regional
+pool (L72, L73, L76, L77); a per-household grant couples MON and POP (L72).
+
+**STB-L66 A region that cannot be reached.** *Kind:* hazard. *Loop:* none. A region that imports an upkeep good (VIA `region_not_self_sufficient`) and has no path from a region that produces it is a closed economy that starves, and the cause is the graph, not the economy. A closure (7) can create the situation in a run. *Owner:* REG 4.5, 7 [REG-A1]. *Damper:* none by design; the warnings `region_isolated` and `graph_not_strongly_connected` (9.2), VIA's warning, and the event `EdgeStatusChanged` make it visible. *Undamped:* a closure that partitions the realm. *Condition:* every region that imports has a path from a region that supplies it, at construction; in a run the condition is the shock's. *Test:* S28. *Status:* hand.
+
+**STB-L67 A small market is a thin market.** *Kind:* hazard (the cost of N-026). *Loop:* none of its own. Splitting a town from its hamlets gives each hamlet a market with a few agents; a thin market's price is mostly its carried-forward price (`spec-clearing.md` 5.4), so the belief and price loops (L01 to L09) run on few orders, and each hamlet's pool and failure ladder are its own (L39, L63). Trade between them needs a carrier and a margin (TRN, MER), which do not exist yet. *Owner:* REG 3.4 [REG-A2]. *Damper:* none in this spec; the short edge makes the arbitrage cheap once TRN exists, and a setting that does not want the effect writes one region. *Condition:* a region holds enough agents to keep the group floor `MinAgents` (D10) or is accepted as thin. *Test:* S29. *Status:* hand.
+
+**STB-L68 A household takes its money with it.** *Kind:* bias. *Loop:* none of its own. A relocation moves money and goods between regions with no flow (6.3). The money of an arriving household enters the destination's demand and the sender's loses it; the loop that follows (migration raises demand and prices in the destination, which lowers the ratio that triggered it) is MIG's, and the hook is in the register (4.8, MIG row). The bias here is that a report of money by region changes with no flow, which the relocation totals (6.4) reconcile. *Owner:* REG 6 [REG-A3]. *Damper:* none needed. *Condition:* none. *Test:* S14 with a household that moves. *Status:* hand.
+
+**STB-L69 The fixed nominal faucet and the price level.** *Kind:* loop with drift. *Loop:* price level (-) real value of a fixed nominal grant (+) real demand of its recipients (+) price level. One `-` link, so balancing (B). The drift is not a loop: `M` rises by `g` a tick and, at constant real volume and turnover, the price level rises at `g / M(t)`, a rate that falls as `1/t` (9.1). *Delay:* the belief adjustment (`spec-beliefs.md` 5.2, a few ticks) and, for an income grant, the welfare window `T`. *Owner:* MON 9.1 [MON-A1]. *Damper:* D04 (the reference band bounds the price), D41, D42. *Undamped:* the nominal drift of an unbalanced faucet, by design, and measured. *Condition:* real volume and turnover change slowly against `M`. *Test:* S13, S33. *Status:* hand (a quantity-theory reading, untested in the library).
+
+**STB-L70 The holding charge.** *Kind:* loop. *Loop:* the class's money (+) the amount collected (+) money removed (-) the class's money. B. *Delay:* the time constant `1/rho` ticks (730 in the example of 9.3), against the welfare window `T` (30 to 120 ticks) and a year; a charge fast enough to be near `T` (`rho` above about 1/30) acts within a window and can take a household's savings for a long job (L19, L20), which the exemption is for. *Owner:* MON 6.3 [MON-A3]. *Damper:* itself; D43 protects the savings. *Undamped:* none known; a side effect is that holding money costs, so a household that saves for a tool pays for it. *Condition:* `Exempt` covers the reserve and the longest job's cash. *Test:* S33. *Status:* model for a hoarder (the strategy that spends is untested).
+
+**STB-L71 A levy that takes upkeep money.** *Kind:* hazard. *Loop:* levy (+) money held (-) upkeep bought (-) unfed households (+) privation (+) the ladder (role change, relief, exit; `spec-spawner.md` 5) (-) the levied base. B in the end, but through hunger. *Delay:* the privation count. *Owner:* MON 9.4 [MON-A4]. *Damper:* D43, D11 (relief refills the poor from the pool). *Undamped:* a fixed levy without an exemption on a class with no income above its upkeep. *Condition:* `Exempt` at least one tick's upkeep cost (the warning `levy_below_upkeep`). *Test:* S34. *Status:* hand.
+
+**STB-L72 A per-household grant and the population.** *Kind:* loop, owned jointly. *Loop:* grant (+) income and welfare ratio (+) births (POP) (+) households (+) the issue (the grant is per household). R, bounded by POP's carrying capacity and the food loop (L50). *Delay:* the welfare window and POP's. *Owner:* MON 4.3, 7.2; the rate is POP's [MON-A5]. *Damper:* `NotIncome`, D41, `Scale` (10.4), or a grant to the pool instead of to households, whose total does not depend on `H`. *Undamped:* POP's side. *Condition:* the decision of POP on whether income from a grant raises births. *Test:* in POP. *Status:* hand-off.
+
+**STB-L73 Growing households in a closed economy.** *Kind:* hazard (neighbours STB-L31, L45, regime F4). With `M` fixed and `H` rising, `M_h / H` crosses the spending threshold and then the liquidity floor (8.5, 8.6). *Delay:* the entry rate. *Owner:* MON 8 [MON-A6]. *Damper:* D11, D12 (the pool recycles what the dead leave), D31 (wants fall first, by design), and a pool grant sized to the expected entry (8.6). *Undamped:* a closed economy whose households grow past the thresholds. *Condition:* `M_h / H` at least the spending threshold; the measure is in the Snapshot (13.4). *Test:* S35. *Status:* hand.
+
+**STB-L74 A top-up peg.** *Kind:* amplifier (for EXT). A class topped up to `Level` has a budget fixed in money per tick, so its demand is unit-elastic in price (spending constant). A seller facing it has the neutral case `e = 1` of `spec-stability.md` 6.1. *Owner:* MON 10.2, EXT [MON-A7]. *Damper:* none in MON; the price bounds. *Condition:* the seller side is EXT's. *Test:* in EXT. *Status:* hand.
+
+**STB-L75 The Malthusian loop.** *Kind:* loop. *Loop:* households (+) crowding of the fixed factor (-) the ratio (+) net growth `birth - death` (+) households. Polarity B (an odd number of negative links), Malthusian by design, with a long delay. *Delay:* the welfare window `T` (mean `T / 2`), the economy's own lag `tau_e`, and nothing else (no generation lag, 3.3). *Owner:* POP 5; the third assumption is RES's; extends L50 and L46 [POP-A1]. *Damper:* D46, D47, D52, and the rate bounds (a rate is at most 10 000). *Undamped:* a long `tau_e`: the warning sees only the window. *Condition:* `k * tau` below about 1 (model: monotone to 0.7, overshoot from 0.9 to 1.4, a cycle from about 2); `k` from the schedules and `eta` of the pack. *Test:* S37. *Status:* model (13.1). *Needs a fixed factor (5.2); without one the loop has no feedback.*
+
+**STB-L76 The stake loop.** *Kind:* loop. *Loop:* households (+) money per household (-) funded births (+) households. Polarity B, a spurious Malthusian limit set by money. *Delay:* the pool's turnover (a death to a birth). *Owner:* POP 4.3, 5.5; touches EST 2.3 and SPN 7.3, extends L63 [POP-A2]. *Damper:* D51, D7; money from outside (MON, MIG). *Undamped:* a closed region cannot grow past `M / stake`. *Condition:* `M / stake` above the food-limited `N*`. *Test:* S39. *Status:* model (13.2).
+
+**STB-L77 Recovery needs the money of the dead.** *Kind:* loop (damper of L39). *Loop:* collapse (+) deaths (+) the pool's money (+) funded births and relief (-) the collapse. Polarity B, with the delay of the births. *Owner:* POP 6.2, 6.3; EST 2.1, 2.6 [POP-A3]. *Damper:* D47, D51; D11, D12, D37. *Undamped:* an extinct region (absorbing). *Condition:* households remain. *Test:* S14, S38. *Status:* hand.
+
+**STB-L78 Selection by role.** *Kind:* loop. *Loop:* a role's ratio (+) its births, net of deaths (+) its share of households (-) its ratio (a wage falls with supply). Polarity B, much slower than the spawner's role change (L36). Births enter the parents' role (3.2), so roles with a higher ratio grow faster and the spawner's damped switching acts on a population whose composition also drifts. *Owner:* POP 3.2; SPN 6 [POP-A4]. *Damper:* D14, D09 for the switching; rates bounded. *Condition:* the two rates of change are far apart (births 2.5% a year against switching per tick). *Test:* S06, S37. *Status:* hand.
+
+**STB-L79 Renewal refills the check.** *Kind:* hazard. *Loop:* ladder removals (-) households (+) renewal (+) households. Polarity R if enabled: a second positive loop on the same flow. *Owner:* POP 4.6; SPN 7.1 [POP-A5]. *Damper:* D48. *Undamped:* none while the module is on. *Test:* S40. *Status:* hand.
+
+**STB-L80 No fixed factor.** *Kind:* hazard. Without a fixed factor the ratio does not fall with households and the rate has the same sign for any `N` (5.2). *Owner:* POP 5.2; RES [POP-A6]. *Damper:* D50, D51 (the money). *Condition:* a fixed factor (RES). *Test:* S37 with a double. *Status:* hand.
+
+**STB-L81 The closed ceiling of the welfare ratio.** *Kind:* hazard (N-054; L46). In a closed economy with upkeep only the mean ratio is at most 1 (5.3): the schedule cannot separate abundance from sufficiency, so the fixed point is at chronic hunger (`r*` below 10 000) or the population dies out (`r*` above it). *Owner:* POP 5.3; DEM 7 [POP-A7]. *Damper:* wants (DEM) or a money source; the warning `replacement_above_closed_ceiling`. *Condition:* the pack's ceiling `1 + Wmax/U` above `r*`. *Test:* S40. *Status:* hand (a derivation from the cited identity).
+
+**STB-L82 A low-density trap.** *Kind:* hazard. At low density the ratio may fall with households (a chain without enough households to run), making a low fixed point stable and `N*` unstable above it (6.7). *Owner:* POP 6.7 [POP-A8]. *Damper:* D49 only. *Condition:* a pack whose chain survives at the smallest group. *Test:* S38. *Status:* hand.
+
+**STB-L83 The ladder's cap bounds the positive check.** *Kind:* constraint. A severe shortage is checked by the ladder, capped at `ExitShare` a tick and delayed by `RemovePrivation` (4.5.1); the schedule does not see unfed households. *Owner:* POP 4.5; SPN 5 [POP-A9]. *Damper:* D35. *Condition:* a pack wanting a faster check sets the ladder. *Test:* S14. *Status:* hand.
+
+**STB-L84 Price-gap shipping with a transit delay.** *Kind:* loop. *Loop:* the price gap between a dear and a cheap region (+) the quantity shipped (+) the price in the cheap region, at dispatch, where the shipper bought (-) the gap; and the gap (+) the quantity shipped (+, after `k` ticks) the arrivals in the dear region (-) the price there (+) the gap. Each path has one negative link, so each is balancing (B); the first is immediate and the second has the delay. *Delay:* the travel time `k` (section 4). *Owner:* TRN 5; the decision to ship is MER's [TRN-A1]. *Damper:* the freight is a floor on the gap that triggers a shipment, so the loop closes the gap to the freight cost and not to zero (L17); a shipper that counts `Inbound` (9.1) removes the delay from its signal; a limit on what can be shipped per tick (the capacity of one carrying unit, `MaxDispatchPerTick`) bounds the swing. *Undamped:* shippers that ignore their pipeline and respond strongly. *Condition:* in the linearised model of section 16, with `g` the fraction of the gap a shipper tries to close per tick and none of the effect at dispatch, the gap decays if `g < 2 sin(pi / (2 (2k + 1)))`, about `pi / (2k + 1)`: 1.0 at `k` = 1, 0.62 at 2, 0.35 at 4, 0.18 at 8; with at least half of the effect at dispatch (the purchase in the origin region moves its price at once) or with a shipper that counts `Inbound`, the limit is at least about 2 for any `k`. A cap on the shipment per tick bounds the swing of the gap to about `k` times the cap. *Test:* S30. *Status:* model (section 16). It does not show the library: it has no inventory, no belief and no market, and the shares of the effect at dispatch and at arrival are not derived for any pack.
+
+**STB-L85 The pipeline is invisible.** *Kind:* amplifier. *Loop:* a consignee's stock (excludes goods on the way) (-) its orders for the good (+) the goods on the way (+) its stock on arrival: a buyer that sees only its stock orders again while its goods are in transit, then holds twice what it wanted `k` ticks later and stops ordering, an oscillation of period about `2k` that grows with the delay. R in the stock signal, with the delay `k`. *Owner:* TRN 9.1 (the `Inbound` field); AGT's `Target` (`spec-agents.md` open question 20) [TRN-A2]. *Damper:* the buffer cap and the production halt (D24) bound the overhang once it exists; `Inbound` is the means to avoid it. *Undamped:* a strategy that does not count `Inbound`. *Condition:* the stock a strategy sizes against includes `Inbound`. *Test:* S30 with a consignee that buys and receives. *Status:* hand.
+
+**STB-L86 Perishables cannot cross.** *Kind:* hazard. A commodity with `ShelfLife` `S` cannot be delivered by a route of `k >= S` ticks (5.6.2), so a price gap in it never closes and its shipments, if a strategy makes them, spoil whole. Not an instability: a pinned gap, counted by `ShipmentArrived.Spoiled`. *Owner:* TRN 5.6 [TRN-A5]. *Damper:* the warning `route_too_slow_for_shelf_life` and the strategy's own use of `Routes`. *Condition:* a strategy ships a perishable only if `k <= S - 1 - age`. *Test:* a unit test of 5.6.2 and S07's perishable in a two-region pack. *Status:* hand.
 
 ## 5. The catalogue of dampers
 
@@ -916,6 +1007,21 @@ damper observable (FR-STB-013).
 | D35 | Graded exit | the privation count, the cohort step `DeathStep` and the regional `ExitShare` make a leaving of households gradual, so a role does not empty in one tick. Cost: long hunger before the rungs apply | SPN 5 (`ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`) | specified (counted by `EntryLimited.ExitCap`) |
 | D36 | Entry gate | a newcomer enters only a viable role (`EntryRatio`, default 8 000 basis points); a replacement goes to the leaver's role first | SPN 6.1, 7.2 (`EntryRatio`) | specified (counted by `EntryLimited.NoViableRole`) |
 | D37 | Funding limit | entrants are funded from at most `EntryPoolShare` of the pool per tick, in whole households, so relief keeps a share. Cost: some entrants are not created | SPN 7.3 (`EntryPoolShare`, default 5 000) | specified (counted by `EntryLimited.Unfunded`) |
+| D38 | The pipeline view | `Inbound` lets a consignee or shipper count goods on the way; its cost is the field in every view | TRN 9.1 | specified (the field); the use is AGT's (`spec-agents.md` open question 20) |
+| D39 | The dispatch cap | a plan carries at most `MaxDispatchPerTick` requests and a traveller makes one trip at a time; its cost is that a large shipment must be one request | TRN 5.4, 6.2 | specified (a bound) |
+| D40 | Freight as a floor on the gap | a good is shipped only if the gap exceeds the haul price, so shipping closes the gap to the freight and no further; its cost is a persistent gap | TRN 3.3.3, 8 | specified (emergent from the market price of haul units) |
+| D41 | Cumulative limit | `Limit` and the effective `MaxFlowTotal`: a flow that reaches it ends and says so | MON 4.4.2 [MON-D1] | specified (counted by `MoneyFlowEnded`, `MoneyFlowLimited`) |
+| D42 | Holding charge | a rate levy on the balance above an exemption, a balancing sink with a derived bound `m* = E + g/rho` | MON 6.3, 9.3 [MON-D2] | specified; the bound is `model` for hoarders |
+| D43 | Exemption on a levy | the levy never takes the balance below `w * Exempt`; warning `levy_below_upkeep` | MON 5.3, 9.4 [MON-D3] | specified |
+| D44 | A closed set of shapes | no faucet reads an aggregate or grows with a balance (a rule constant: the shape set) | MON 2, 9.5 [MON-D4] | specified |
+| D45 | Payment spread by a carry | the carry starts from the account ID: no lump, no pulse of every recipient at one tick, no draw | MON 6.1, 6.2 [MON-D5] | specified |
+| D46 | Bounded gain of the population loop | the slopes of the two schedules set the gain; the warning `population_gain` fires when the half-window alone makes gain times delay exceed 1/2 | POP 3.5, 5.4 [POP-D1] | specified (a warning; the economy's lag is not known to it) |
+| D47 | Disjoint rules, fed against unfed | the schedule acts only on fed households and the failure ladder only on unfed ones, so no household is counted twice and the positive check is graded | POP 3.7, 4.5 [POP-D2] | specified (a rule constant; counted by `Unfed` and `NoRatio` of `PopulationChanged`) |
+| D48 | No renewal | `Renewal` is 0 while the population module is on, so the ladder's removals are not refilled | POP 4.6 [POP-D3] | specified (a rule constant; a non-default value is warned) |
+| D49 | Floor of households | `MinHouseholds` against the schedule's deaths. Cost: a small group never dies out by the schedule | POP 4.4.1 [POP-D4] | specified (counted by `DeathsHeld`) |
+| D50 | Cap of households | `HouseholdCap`. Cost: births dropped at the cap | POP 4.4.2 [POP-D5] | specified (counted by `BirthsCapped`) |
+| D51 | Funding limit by the stake | births only as the pool pays, `BirthStake`. Cost: the money-limited population `M / stake` | POP 4.3, 5.5 [POP-D6] | specified (counted by `BirthsUnfunded`) |
+| D52 | Death in proportion | deaths fall on each agent in proportion to its own rate, by a per-agent carry with a spread start: neither synchronous nor concentrated on the poor | POP 3.8 [POP-D7] | specified (model 2 of `spec-population.md` 13.2) |
 
 ### 5.1 The rule for adding a damper
 
@@ -1439,12 +1545,12 @@ sets.
 
 | ID | Regime | Definition (placeholder thresholds) | Entries that can cause it |
 |----|--------|--------------------------------------|---------------------------|
-| STB-F1 | Runaway inflation | the price index of a commodity class rises by more than a stated share a window and keeps rising for more than a stated number of windows; money in the economy exceeds its start by a stated factor | L05, L10, L30, L14 (upper outcome) |
-| STB-F2 | Hoarding | money or goods held by a sector or by the pool rise above a stated share of the total for a stated time, and trade volume falls | L31, L11, L25, L45 |
-| STB-F3 | Collapse | households fall more than a stated share in a window, or a role with a positive start disappears, with no recovery within a stated horizon | L39, L35, L19, L11, L62, L63, L64 |
-| STB-F4 | Stagnation | trade volume stays below a stated share of its start for a stated time with no collapse: markets open, nothing happens | L03, L09, L11, L45, L46 |
-| STB-F5 | Pinned market (frozen at a bound) | more than a stated share of a market's outcomes end on a floor or ceiling for a stated number of ticks (the `Warn` of `spec-beliefs.md` 12.2); or no trade in a market that has unmatched orders on both sides | L05, L06, L09, L14 (a staple, or a luxury below the basin of 6.5), L51 |
-| STB-F6 | Cobweb blow-up | the price range (maximum over minimum) in a stated window exceeds a stated factor and does not shrink over successive windows; or a role's share swings by more than a stated fraction | L21, L36, L04, L58, L61 |
+| STB-F1 | Runaway inflation | the price index of a commodity class rises by more than a stated share a window and keeps rising for more than a stated number of windows; money in the economy exceeds its start by a stated factor | L05, L10, L30, L14 (upper outcome), L69 |
+| STB-F2 | Hoarding | money or goods held by a sector or by the pool rise above a stated share of the total for a stated time, and trade volume falls | L31, L11, L25, L45, L30, L73 |
+| STB-F3 | Collapse | households fall more than a stated share in a window, or a role with a positive start disappears, with no recovery within a stated horizon | L39, L35, L19, L11, L62, L63, L64, L66, L77, L82 |
+| STB-F4 | Stagnation | trade volume stays below a stated share of its start for a stated time with no collapse: markets open, nothing happens | L03, L09, L11, L45, L46, L73 |
+| STB-F5 | Pinned market (frozen at a bound) | more than a stated share of a market's outcomes end on a floor or ceiling for a stated number of ticks (the `Warn` of `spec-beliefs.md` 12.2); or no trade in a market that has unmatched orders on both sides | L05, L06, L09, L14 (a staple, or a luxury below the basin of 6.5), L51, L86 |
+| STB-F6 | Cobweb blow-up | the price range (maximum over minimum) in a stated window exceeds a stated factor and does not shrink over successive windows; or a role's share swings by more than a stated fraction | L21, L36, L04, L58, L61, L84, L85 |
 | STB-F7 | Synchronisation | the dispersion of belief centres or of targets falls below a stated minimum, or a role works and rests in lockstep | L13, L15, L22, L34, L35, L59 |
 | STB-F8 | Offset | a market's long-run price differs from its clearing price by more than a stated band, with unmet need | L02 |
 
@@ -1476,7 +1582,7 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S10 | A long run of the reference chain at scales 1, 4 and 10 | the dispersion of belief centres stays above a minimum; the scale-consistency tolerance of `spec-scale.md` 7.2 holds | L13, L33, L34, L59 |
 | S11 | A producer with a job longer than the welfare window | a healthy producer is not flagged as starving, and gets no relief or migration trigger by the job alone | L19, L20 |
 | S12 | A seasonal run with a delay near the season length, and a coarse tick | the prices stay within bands over several years | L23, L24, L28 |
-| S13 | A run with a faucet and no sink | the boundary balance of the faucet is reported and bounded by a stated rule | L30 |
+| S13 | A run with a faucet and no sink (defined by `spec-money-supply.md` 17.6) | the boundary balance of the flow's reason equals `-Total` exactly, `M` equals `M_init` plus it, and the audit holds; the price drift is report-only until STY sets a band | L30, L69 |
 | S14 | A region that loses its income, with the pool, relief and the failure ladder on | the region recovers from a stated depth of collapse, or collapses in a stated way and the immigrants restore it (F3) | L11, L31, L35, L38, L39, L50, L62, L63 |
 | S16 | Price-inelastic flows with an initial overhang | the price does not end pinned; or the run is reported as F5 and the pack is rejected | L06 |
 | S17 | A durable's replacement demand from a uniform starting age | the replacement orders are spread, not one spike | L26, L27 |
@@ -1490,8 +1596,23 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S25 | Total money at 0.5, 1 and 2 times the sum of the reserves, and a want of two alternatives with `Substitution` 4 and a price gap (`spec-demand.md` 13) | wants are not bought below the reserves; the shares of the two alternatives do not swing between the items without damping | L45, L58 |
 | S26 | A role-income shock with the spawner's caps on and off (`EntryShare` at its default and at 0, `ExitShare` at 0; `spec-spawner.md` 17) | the role's share stays within a stated band, the role changes per tick do not exceed `ceil(Households * EntryShare / 10 000)`, and with the caps off the share swings more, so the measure can see it (F6) | L35, L36, L54, L61 |
 | S27 | A region where no role is viable (`spec-spawner.md` 17) | no entrant is made; the `Warn` "role extinct" or the counter `NoViableRole` shows; households fall and the run is reported as F3 | L62, L64 |
+| S28 | A realm of three regions in a chain, with a closure of the middle link for a stated number of ticks and then a reopening, on a pack with trade on (`spec-regions.md` 13) | the cut region's households fall no faster than in the closed-region variant (F3) while cut; the price gap between the two ends rises while cut and returns inside a stated band after the reopening; the event `EdgeStatusChanged` is emitted at both changes. Waits for TRN, MER and INT | L66, L62 |
+| S29 | A town as one region, and the same town as a town and two hamlets joined by a short edge, with the same total households (`spec-regions.md` 13) | the thin hamlet markets are reported (price age, unmatched units); the dispersion of the three prices stays within a stated band once trade is on; the one-region run is the control. Waits for TRN and MER | L67 |
+| S30 | Two regions with a route and a merchant that ships on a price gap, with the shipper counting `Inbound` and not (`spec-transport.md` 15) | the gap closes to within the freight plus a band and does not oscillate with a growing amplitude for `k` in a stated range | L84, L85 |
+| S31 | A perishable with `ShelfLife` equal to the travel time and one less (`spec-transport.md` 15) | the first is never delivered, the second always | L86 |
+| S32 | A hired mode with a haul recipe whose `Duration` is the round trip, at three elasticities of the carriers' starts (`spec-transport.md` 15) | the price of haul units converges or is reported as F6 | L21 |
+| S33 | A rate levy bounds a hoarding class; a pair of a grant and a fixed levy drifts by its difference (`spec-money-supply.md` 16, MON-S1) | the class's money converges below `m*` and never above it; the net of the pair equals the difference of the fixed amounts times the ticks, exactly | L30, L70 |
+| S34 | A levy equal to a household's upkeep cost, without and with `Exempt` (`spec-money-supply.md` 16, MON-S2) | with the exemption no household goes unfed because of the levy; without it the warning fires and the unfed households are counted | L71 |
+| S35 | Growing households with and without a pool grant (`spec-money-supply.md` 16, MON-S3) | `M_h / H` crosses the thresholds `ReserveTicks * U_c` and `U_c` at the derived ticks without the grant and stays above the spending threshold with it | L73 |
+| S36 | The scale seam: `SetFlowScale` between steps (`spec-money-supply.md` 16, MON-S4) | only that flow's amounts change, from the next step; nothing changes without a call; the audit holds | L69 |
+| S37 | A region with a fixed factor (RES, or a test double that makes the ratio a function of households), the demand module on, started at 0.6 and at 1.6 times `N*` (`spec-population.md` 14.4, POP-S1) | the population approaches `N*` within a band and, for gain times delay below 0.5, without crossing it more than once; the mean ratio at the end is within a band of `r*` | L75, L78, L80 |
+| S38 | A productivity shock that cuts the region's income for a time, then restores it, with the pool, relief and the ladder on, and a chain whose role disappears (POP-S2) | households fall and regrow, the ratio rises while they are low, the extinct-region `Warn` does not fire; with the chain whose role disappears the run is reported as F3 and the trap is visible | L77, L82 |
+| S39 | A closed region with the pool empty, `BirthStake` 10 000, 5 000 and 0, and births above deaths (POP-S3) | the population stops at about `M / stake`; `BirthsUnfunded` is non-zero when it does | L76 |
+| S40 | The default schedules with the demand module off and `r*` above 10 000 and just below it, and a pack with `Renewal` set to a non-default value above 0 (POP-S4) | the first dies out or is flagged, the second sits at a bounded hunger that the ladder's counters show; `Renewal` is ignored, and warned only at the non-default value | L79, L81 |
 
-S15 is not used and the ID is not reissued. The scenarios S23 to S25 are DEM's and S26
+S15 is not used and the ID is not reissued. The scenarios S28 and S29 are REG's, S30 to S32
+TRN's (proposed as S28 to S30 there), S33 to S36 MON's (MON-S1 to MON-S4) and S37 to S40 POP's
+(POP-S1 to POP-S4); S13 existed and is now defined (MON). The scenarios S23 to S25 are DEM's and S26
 and S27 are SPN's; the specs proposed them as S23 to S25 and as S23 and S24, which
 collided, and the numbers above are final (the spawner's S23 and S24 became S26 and S27).
 
@@ -1521,7 +1642,7 @@ exact checks (REF 7.1.5, FR-REF-022, FR-REF-023).
 | S10 | `one` + `overlay/h200` at scales 1, 4 and 10 | 7.2 |
 | S11 | `one` + `overlay/estates` | 7.2 |
 | S12 | `one` + `overlay/long-grow`; the coarse-tick leg waits (REF 7.6) | 7.2, 7.6 |
-| S13 | not runnable: no faucet exists; waits for MON or EXT (`overlay/faucet.toml`) | 7.6 |
+| S13 | `one` + `overlay/faucet` (MON 17.6; REF to map) | to be assigned by REF |
 | S14 | `famine` | 7.2 |
 | S16 | `one` + `overlay/overhang` | 7.2 |
 | S17 | `one` warm, with `one` cold as the control | 7.2 |
@@ -1532,6 +1653,10 @@ exact checks (REF 7.1.5, FR-REF-022, FR-REF-023).
 | S23, S24, S25 | `one-demand` (and `one` for comparison in S24) | 7.7 |
 | S26 | `one`, with `entry_share` at its default and at 0 and `exit_share` at 0 | 7.7 |
 | S27 | `famine` with the yield of `grow_staple` and of the foresters and diggers at 0 | 7.7 |
+| S28, S29 | pack: to be assigned by REF (waits for TRN, MER, INT) | to be assigned by REF |
+| S30, S31, S32 | pack: to be assigned by REF | to be assigned by REF |
+| S33, S34, S35, S36 | pack: to be assigned by REF (`overlay/faucet`, `overlay/faucet-sunk` of MON 17.6 for S13 and S33) | to be assigned by REF |
+| S37, S38, S39, S40 | pack: to be assigned by REF (needs RES or a fixed-factor double, the demand overlay on, `Renewal` 0) | to be assigned by REF |
 
 FR-STB-005 can now be checked against this table and REF 7: REF's 7.2 has an entry for
 every scenario of this section except S15, or lists it in 7.6 with the spec it waits for
@@ -1601,9 +1726,9 @@ register's honest backlog.
 | L19 a job is a gap in income | only a warning, and starting money for the longest job in a warm start; the window or the income attribution is not fixed | WEL (N-032) |
 | L39 pool-dry collapse, L63 the pool serves two masters, L11 budget loop, L45 saving | relief is bounded by the pool and entrants share it (D37 keeps at least half for relief by default); an agent with no money, no goods and no relief is undamped; the floor under market failure (subsistence) is not written | SUB |
 | L09 hard cost floor | exit through the ladder (D35) is the only release and is slow by design | BEL (open question 1) |
-| L30 money without a sink | the sink and the measure are MON's | MON |
 | L22 lockstep of jobs | the stagger exists only when a warm start is configured | VIA (done), WLD for a cold start |
-| L35 synchronised failure, L50 hunger and removal | the failure ladder is specified (SPN 5, D35); it pays in long hunger (SPN 16.2), and the Malthusian loop (births, deaths, `Renewal` against births) is POP's and unwritten | POP |
+| L35 synchronised failure, L50 hunger and removal, L75 the Malthusian loop | the failure ladder is specified (SPN 5, D35); it pays in long hunger (SPN 16.2), and the Malthusian loop is now specified (POP, D46 to D52) but has no feedback until a fixed factor exists (L80): the endowment is RES's and RES is not written | RES, S37 |
+| L81 the closed ceiling, L82 a low-density trap, L66 an unreachable region | no mechanism beyond the warnings (`replacement_above_closed_ceiling`, `region_isolated`) and `MinHouseholds`; L66 and L82 are hazards by design | S40, S38, S28 |
 | L58 substitution flips, L59 periodic wants and cohort pulses, L62 the churn of a famine, L64 an extinct role | no mechanism beyond the exponent bound, the carry spread and the entry gate; L64 is undamped by design | S25, S10, S27 |
 | L13, L34 cohort lockstep | the floor `K` and the proportional share for the work decision; the belief gate has one draw per cohort; the first consumer needs no weight above 1 | SCL, N-030 |
 | L53 a warm start is not a stable start | no mechanism; the scenario S22 is the only check | STY, REF |
@@ -1640,6 +1765,11 @@ The parameters of the spawner's and the demand module's dampers, with `EntryShar
 | D30 | `Elasticity`, `Ceiling` (per want) | `spec-demand.md` 4.3, 9 | 15 000 and 15 000 basis points |
 | D31 | `Rank` (per want); the cap is AGT's `SpendMaxShare` | `spec-demand.md` 4.5, 9 | 0; see AGT |
 | D32 | none: a rule constant | `spec-demand.md` 4.7 | not applicable |
+| D38 to D40 | `MaxDispatchPerTick` (D39); the field `Inbound` (D38) | `spec-transport.md` 5.4, 9.1, 11 | see TRN |
+| D41, D42, D43, D45 | `Limit`, `MaxFlowTotal`; `RateBP`, `Exempt`; the carry | `spec-money-supply.md` 4.4, 6, 9, 11.1 | none by default (a flow has no default) |
+| D46 | the slopes of `BirthSchedule` and `DeathSchedule` | `spec-population.md` 3.5, 5.4, 8 | flat birth 250, death 450 to 50 basis points a year between ratios 8 000 and 16 000 (placeholders) |
+| D49, D50, D51 | `MinHouseholds`; `HouseholdCap`; `BirthStake` | `spec-population.md` 4.3, 4.4, 8 | 1; 0 (none); 10 000 basis points |
+| D47, D48, D52 | none: rule constants | `spec-population.md` 3.7, 4.6, 3.8 | not applicable |
 
 Each parameter has its row in the parameter-owner table of `README.md` once the owner
 specs' rows are added (the owners' handoffs list them). Nothing here is a default that
@@ -1683,7 +1813,13 @@ table of observability-and-logging.md 4.3: their owners list the rules change.
 Still not counted: the production halt (L44, N-067), whose owners add an aggregate in an
 event per region and role per tick in the style of `UpkeepShortfall` (note N-045).
 The regime measures of section 7 may also use `WeightChanged`, `RoleChanged` and
-`EntryLimited` for the occupation share and the changes per tick (S26).
+`EntryLimited` for the occupation share and the changes per tick (S26). Counted since
+round 6: the money flows' limits D41 (`MoneyFlowLimited`, `MoneyFlowEnded`,
+`MoneyFlowScaled`, `spec-money-supply.md` 13), the population module's floor, cap, funding
+limit and clamps D49, D50, D51 (`PopulationChanged`: `DeathsHeld`, `BirthsCapped`,
+`BirthsUnfunded`, `RateClamped`, `spec-population.md` 10.1), the dispatch cap D39
+(`ShipmentRejected`, reason `too_many_requests`, `spec-transport.md` 5.4) and an edge closure
+(`EdgeStatusChanged`, `spec-regions.md` 10).
 
 12.3. **Stability tests may add no event of their own.** A test that needs an
 internal number reads it from the snapshot or an event; it does not add a back door
@@ -1807,6 +1943,13 @@ Still open, with the next step:
 8. **Wants and the halt.** Whether the production halt (L44) cuts the supply of want goods
    in a downturn and deepens the loop of L57 is not analysed. *Next step:* S24 with the
    halt on and off.
+9. **The generation lag of the population loop (L75).** The model of `spec-population.md` 13.1 has
+   no generation lag; with one (a maturity pipeline for births, POP open question 1) the
+   approach to the replacement ratio becomes a cycle when gain times delay reaches about 1.
+   *Next step:* decide when a scenario needs a cycle (STY).
+10. **Shippers that count the pipeline (L84, L85).** The model of `spec-transport.md` 16 has no
+    inventory, belief or market; the shares of a shipper's effect at dispatch and at arrival are
+    not derived for any pack. *Next step:* S30 with the first merchant strategy (MER).
 
 ## 16. Sources
 
@@ -1832,6 +1975,6 @@ interpreter was used for the analyses.
 |---------|------|
 | The register, the catalogue, the checklist | this file |
 | The text checks of FR-STB-001 to 005 | a test in the root package's external test package that parses `doc/specs/` (like the parameter registry test, testing.md 6.7); written when `spec-config.md` fixes the registry test |
-| The scenarios S01 to S27 (S15 unused) | `spec-stylised-facts.md` (bands) and `spec-reference-chain.md` (configurations, section 7; the table after section 8 here), as integration and end-to-end tests |
+| The scenarios S01 to S40 (S15 unused) | `spec-stylised-facts.md` (bands) and `spec-reference-chain.md` (configurations, section 7; the table after section 8 here), as integration and end-to-end tests |
 | The regime measures | `spec-indicators.md`, computed from `spec-observability.md` events |
 | The damper counters | the events of the specs that own the dampers |
