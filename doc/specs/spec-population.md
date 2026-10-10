@@ -788,6 +788,18 @@ In a file the module is the table `[population]` with the two schedules as lists
 `{ ratio, rate }` and the regions as tables keyed by region ID, so layers merge by key
 (`spec-config.md` 6). A region not listed has the defaults.
 
+**Region-keyed table, in REG's sense.** `Modules.Population.Regions[]` is a region-keyed
+table of the mechanism of `spec-regions.md` 5.1, one row per region, owned by this spec
+for meaning, default and bound. `BirthScale` and `DeathScale` use the **scale** mode (the
+effective rate is the world's schedule times the factor over 10 000, with the truncation
+rule of 3.6); `HouseholdCap` uses **replace** (the row's value, else 0 = none). Absence is
+the default, with no warning; a row is resolved once into a dense array by `RegionID`; the
+canonical order is ascending `RegionID` (the region IDs bytewise, `spec-regions.md` 3.3.1
+and 5.3.4); the errors are those of `spec-regions.md` 5.3.1 and 5.3.2 (`ErrUnknownRegion`,
+`ErrDuplicateID`), not restated. The effective scales a shock sets are the separate
+slot of 6.6 and edit no row (`spec-regions.md` 5.3.6). The table needs a row in
+`spec-regions.md` 5.1.3.
+
 Why these defaults, and what they are not. They cross at 12 000, between a bare
 sufficiency (10 000) and the ceiling of the reference demand overlay (about 13 200,
 `spec-demand.md` 7.1), at 250 basis points a year (2.5%), which with the 365-tick year
@@ -806,7 +818,7 @@ Each rule has a sentinel and a failing-case test (testing.md 3.9); errors name t
 | Sentinel | Rejects |
 |----------|---------|
 | `ErrOutOfBounds` | a schedule with no knots or more than `MaxKnots`; knot ratios not strictly increasing, or outside their bound; a `Rate` outside 0 to 10 000; `MinHouseholds`, `BirthStake`, `BirthScale`, `DeathScale` or `HouseholdCap` outside its bound |
-| `ErrUnknownRegion` | a table of `Regions` naming no region; `ErrDuplicateID` for a region twice |
+| `ErrUnknownRegion`, `ErrDuplicateID` | the rows of `Regions` as `spec-regions.md` 5.3.1 and 5.3.2 say, cited and not restated |
 | (none) | No rule needs `ErrOverflow`: every product is bounded by the constants of `spec-config.md` 4.1 (3.8.5), and `Role.StartMoney` times the largest weight is already checked (`spec-config.md` 4.2). The arithmetic is checked all the same |
 
 ### 9.2 Warnings
@@ -898,7 +910,7 @@ measures; nothing reads them.
 All plain data in a fixed order, no maps (ADR 0002):
 
 - per agent, in ID order: the **death carry** `carry_a`, an `int64` in `[0, D)`;
-- per (region, role), in region then role order: the **birth carry** `carry_r`, in
+- per (region, role), in ascending `RegionID` then role order (`spec-regions.md` 3.3.2): the **birth carry** `carry_r`, in
   `[0, D)`;
 - per region: the effective `BirthScale` and `DeathScale` when a shock has set them
   (INT's slot, 6.6);
@@ -1180,7 +1192,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-POP-001 | The module MUST be on if and only if `Config.Modules.Population` is non-nil, and with it off no event, state or log of this spec MUST exist and `Renewal` MUST keep the meaning of `spec-spawner.md` 7.1 (3.1). |
-| FR-POP-002 | The world MUST compute the module's births and deaths once per region per tick in the entry-and-exit phase, after the update of `Privation` and before `Decide`, regions in region order, roles in role order, agents in ID order (4.1). |
+| FR-POP-002 | The world MUST compute the module's births and deaths once per region per tick in the entry-and-exit phase, after the update of `Privation` and before `Decide`, regions in ascending `RegionID` order (`spec-regions.md` 3.3.2), roles in role order, agents in ID order (4.1). |
 | FR-POP-003 | The signal of an agent MUST be its own welfare ratio (`spec-welfare-and-wages.md` 2.1, 2.2), and an agent whose ratio is absent MUST NOT be exposed, its households being counted as `NoRatio` (3.4). |
 | FR-POP-004 | A schedule MUST be evaluated by integer piecewise-linear interpolation, flat outside the first and last knots, with the increment truncated toward zero and the products checked (3.5.1). |
 | FR-POP-005 | The effective annual rate MUST be `min(10 000, trunc(schedule(ratio) * scale / 10 000))`, and a household whose rate is clamped MUST be counted as `RateClamped` (3.6). |
@@ -1205,7 +1217,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-024 | A change of weight or of role MUST leave an agent's death carry unchanged (7). |
 | FR-POP-025 | Every parameter of section 8 MUST be a field with the default and the bound stated, and a value outside its bound MUST be rejected with `ErrOutOfBounds` naming the path (8, 9.1). |
 | FR-POP-026 | A schedule with no knots or more than `MaxKnots`, or with knot ratios not strictly increasing, MUST be rejected with `ErrOutOfBounds` (9.1). |
-| FR-POP-027 | A region table naming an unknown region MUST be rejected with `ErrUnknownRegion` and a region twice with `ErrDuplicateID` (9.1). |
+| FR-POP-027 | The rows of `Regions` MUST obey `spec-regions.md` 5.3: an unknown region is `ErrUnknownRegion`, a second row for a region `ErrDuplicateID`, absence is the default without a warning, and rows are in ascending `RegionID` order in the hash and the checkpoint (8, 9.1). |
 | FR-POP-028 | The warnings `no_replacement_ratio`, `schedule_direction`, `replacement_above_closed_ceiling`, `population_gain`, `no_fixed_factor` and `population_without_upkeep` MUST be reported and MUST NOT fail validation (9.2). |
 | FR-POP-029 | The replacement ratio MUST be the ratio at which `birth - death` changes sign from negative to positive, found on the union of the knots in integer arithmetic, and MUST be reported once at validation and in the snapshot (5.7). |
 | FR-POP-030 | `population_gain` MUST be reported when `r* * dRate * T > 10 000 * dRatio * TicksPerYear` with `T` the longest effective window and `dRate / dRatio` the slope of `birth - death` at `r*` (5.4). |
