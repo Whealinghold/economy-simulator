@@ -637,7 +637,7 @@ it:
    `Recipes` list and no income runs down its money to the reserve and then to 0,
    and buys no want. The transfer is a ledger transfer from a boundary or another
    account, with a reason registered by the owning spec (`spec-ledger.md` 7.2):
-   EXT for income from the outside world, MON for a stipend (a grant to households of the role, counted as income by default, `spec-money-supply.md` 4.2, 7.3), FIS for pay or relief
+   EXT gives a non-producing class no income (`spec-external-sector.md` 12.3; an outside transfer is a MON grant), MON for a stipend (a grant to households of the role, counted as income by default, `spec-money-supply.md` 4.2, 7.3), FIS for pay or relief
    from a treasury, LND for rent, EMP for wages. DEM requires only that the transfer
    exists, is a named reason and arrives before the household's `Trade` of the next
    tick (`spec-clearing.md` 3.3.1).

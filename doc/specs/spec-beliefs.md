@@ -624,7 +624,7 @@ describes. How the strategy uses it is `spec-agents.md`'s.
 7.4. The window is pushed by the world once per market per tick, after the market
 clears and before the outcomes are processed, and only if units traded in the tick
 (the market price then has age 0), so every update of a tick sees the same window.
-It is state and goes in a checkpoint (section 13).
+It is state and goes in a checkpoint (section 13). The window mean after the push is also read by the price record of `spec-information.md` 4.3.
 
 ## 8. Seeding and the warm start
 
@@ -1116,7 +1116,7 @@ Still open:
    model before adding the signal.
 7. **A migrant's beliefs.** Reseeding on arrival is the default (8.3). Whether an agent
    that knows another region's prices should keep them for a while belongs to
-   `spec-migration.md` and `spec-information.md`. Next step: those specs.
+   `spec-migration.md` and `spec-information.md`. Next step: those specs. INF holds no per-agent state: a migrant's rumours are those of its new region from its next view (`spec-information.md` 7.3), so what remains is MIG's alone.
 9. **What the consumer can read.** Whether `Snapshot` reports each belief's centre
    and range or only per-market aggregates is `spec-observability.md`'s (N-040);
    vision.md goal 4 argues for at least the aggregates. Next step: that spec.

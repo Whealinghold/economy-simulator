@@ -468,7 +468,7 @@ Two further points hold either way:
 
 - **Migration does not depend on the target.** The trigger is the absolute
   ratio against subsistence and the rumoured conditions elsewhere (section 2.4),
-  so an ambitious agent below its aspiration does not migrate merely for that.
+  so an ambitious agent below its aspiration does not migrate merely for that. (Version 1 of `spec-information.md` rumours prices only; a rumoured ratio is open, `spec-information.md` 17 (item 4).)
 - **Chattering.** A rule "work below target, rest at or above" switches every
   time the ratio crosses the target. The band `RestBand` above the target avoids it
   (STB-L15, damper D09): the rule is now part of the definition above and is not left
