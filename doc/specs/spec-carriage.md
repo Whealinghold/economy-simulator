@@ -7,9 +7,9 @@ on any conflict). Its requirements carry IDs of the form `FR-CAR-NNN` and
 `NFR-CAR-NNN`, which tests cite (testing.md section 4). They are in section 6
 (FR-CAR-001 to 013, no NFR). Revised after `spec-transport.md` decided N-076
 (its section 8): hired carriage is the haul unit of a hired mode, a produced good
-traded in an ordinary market. Some requirements moved to the future contract spec
-or were superseded; their IDs are kept (section 6). The contract and merchant specs
-are not written.
+traded in an ordinary market. Some requirements moved to the contract and merchant
+spec (`spec-merchants.md`) or were superseded; their IDs are kept (section 6). The contract and merchant specs
+are `spec-merchants.md`.
 
 Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)).
 
@@ -21,13 +21,13 @@ glossary in `doc.go` before any code uses them (architecture.md 3.2).
 This spec covers how hired carriage is priced and paid: carriers are paid by
 merchants, and the fee is the market price of **haul units**, the commodity of a
 hired mode of `spec-transport.md`. It is the seed of the contract spec (a bilateral
-delivery with escrow, a deadline and failure), which is not yet written. Wages and
+delivery with escrow, a deadline and failure), which is `spec-merchants.md` 9. Wages and
 the target-income rule a carrier follows are in `spec-welfare-and-wages.md`.
 
 ## 2. Carriers are paid by merchants
 
 A carrier is a role whose income is the sale of haul units to shippers, typically
-merchants. The details of negotiated contracts belong to the contract feature spec.
+merchants. The details of negotiated contracts belong to `spec-merchants.md` 9.
 The currency consequences are:
 
 2.1. The fee is the price of haul units bought in an ordinary `trade` (reason
@@ -36,7 +36,7 @@ created or destroyed. There is no escrow and no carrier custody in the market: t
 goods travel alone (`spec-transport.md` 5.1) and the units are redeemed at dispatch
 (`spec-transport.md` 3.3.3), so no carrier can fail to deliver. Escrow
 (`escrow_in`, `escrow_out`, `escrow_refund`, `spec-ledger.md` 6.6) applies to a
-bilateral contract with a negotiated fee, which is the contract spec's and does not go
+bilateral contract with a negotiated fee, which is `spec-merchants.md` 9 (moved to 9.9) and does not go
 through the book. A loss of cargo in transit is RSK's (`spec-transport.md` 10.1).
 
 2.2. **Hired carriage is an ordinary commodity.** Decided by N-076
@@ -160,33 +160,31 @@ the whole round trip of the producing recipe, which double counts when cargo is 
 for the return: each direction's capacity is made by that region's carriers
 (`spec-transport.md` 8.4). A pack lever is to state the recipe's `Duration` and output
 for one direction only. Whether a return leg is priced once, and whether a bilateral
-contract prices it, is restated as open in `spec-transport.md` 20.2 and belongs to the
-contract spec and to MER. The effect today is over-charging, which errs towards dearer
-carriage, and the loop it feeds is STB-L17.
+contract prices it, is restated as open in `spec-transport.md` 20.2. Answered: `spec-merchants.md` 10 (not priced, the double count stands, measured). The effect today is over-charging, which errs towards dearer
+carriage, and the loop it feeds is STB-L17. Answered (wave 4): README "Still open" 5 is answered by `spec-merchants.md` 10.
 
 5.2. **How a merchant estimates `expected_margin_per_haul_unit`.** The ceiling
 `bid_max` of 2.2 uses the merchant's rumoured remote prices less its local cost. The
-rule belongs to `spec-merchants.md`, which needs `spec-information.md` for the
+rule is answered (README "Still open" 6) by `spec-merchants.md` 5.6, which needs `spec-information.md` for the
 rumours (delayed, approximate prices) (`Rumour.Price` and `Rumour.Mean`, `spec-information.md` 5.1), and to `spec-transport.md` for the cost of
-the trip (`Travel` and `Routes`, `spec-transport.md` 9). Until then the number has no
-source and the ceiling cannot be tested beyond its formula (FR-CAR-004).
+the trip (`Travel` and `Routes`, `spec-transport.md` 9). The ceiling is tested with FR-MER-016 (FR-CAR-004).
 
 ## 6. Requirements
 
 Each is a single testable statement (testing.md 4.1). Tests cite the IDs. The
 defaults and the bound are placeholders (N-015, N-027). A requirement whose test
 needs a spec that is not written says so. After N-076 (`spec-transport.md` 8), a
-requirement marked "moved" belongs to the future contract spec and keeps its ID, and
+requirement marked "moved" belongs to `spec-merchants.md` and keeps its ID, and
 one marked "superseded" is replaced by the requirement named; neither is tested here.
 
 ### Functional
 
 | ID | Requirement |
 |----|-------------|
-| FR-CAR-001 | **Moved to the contract spec** (a bilateral contract's fee). A contract fee MUST be a transfer of money from the merchant to the carrier, held in an escrow account from acceptance and released to the carrier on delivery; no contract MUST create or destroy money. For the market, the fee is the price of haul units in an ordinary `trade` (2.1). |
-| FR-CAR-002 | **Moved to the contract spec.** If the carrier dies in transit, the escrow MUST return to the merchant. (No escrow exists in the market, 2.1.) |
+| FR-CAR-001 | **Moved to `spec-merchants.md` 9.9**, restated there under this ID (tests cite it); not redefined here. For the market, the fee is the price of haul units in an ordinary `trade` (2.1). |
+| FR-CAR-002 | **Moved to `spec-merchants.md` 9.9**, restated there under this ID (tests cite it); not redefined here. (No escrow exists in the market, 2.1.) |
 | FR-CAR-003 | Hired carriage MUST be an ordinary commodity, the haul unit of a hired mode, traded in an ordinary market of the origin region and cleared by the same `Clearing` as any commodity market, and MUST NOT require a new extension interface or a change to `spec-clearing.md` (reworded; `spec-transport.md` FR-TRN-043). |
-| FR-CAR-004 | A merchant's bid ceiling per haul unit MUST be `expected_margin_per_haul_unit * MerchantFeeShare / 10 000`, truncated, and the merchant MUST NOT bid above it. |
+| FR-CAR-004 | A merchant's bid ceiling per haul unit MUST be `expected_margin_per_haul_unit * MerchantFeeShare / 10 000`, truncated, and the merchant MUST NOT bid above it. Tested with FR-MER-016; the merchant's share is `MerchantFeeShare` spread by agent ID (`spec-merchants.md` 5.7). |
 | FR-CAR-005 | **Superseded by FR-TRN-010 and FR-TRN-012.** A carrier's ask is anchored to its recipe's `UnitCost` by the cost band (`spec-beliefs.md` 3.2.2), not to a reservation fee over a chargeable capacity. |
 | FR-CAR-006 | **Superseded by the cost anchor** (`spec-production.md` 9, FR-PRO-035 to 037). `fee_min` and the margin `m_bp` are deleted. |
 | FR-CAR-007 | **Superseded by FR-TRN-010 and FR-TRN-012.** The traded unit is the haul unit, and a load buys carrying units by its binding fill. |

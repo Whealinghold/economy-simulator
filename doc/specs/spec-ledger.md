@@ -86,7 +86,7 @@ reservations. It has a kind, an owner reference and a region. Kinds:
 |------|-------|-----------|-----------------|
 | Agent | an agent's money and goods | the world, when an agent is created | no |
 | Estate | a region's estate: the money pool **and** the goods left behind, awaiting sale; the account of the region's estate pseudo-agent (`spec-estates.md` 2.7) | the world, one per region | no |
-| Escrow | money (or goods) held for a contract (`spec-carriage.md` 2.1) | the contract | no |
+| Escrow | money held for a delivery contract (`spec-merchants.md` 9.6): one open contract's money and nothing else; its region is the destination of the contract; reused by the next contract and never closed | the delivery contract (`spec-merchants.md` 9.6.2) | no |
 | Transit | goods being carried between regions (`spec-transport.md`) | the transport module, when no free Transit account of the origin region exists; reused, not closed after a shipment (`spec-transport.md` 7.1) | no |
 | Outside | the money and goods of a counterparty of the external sector (`spec-external-sector.md` 4.2): topped up from a boundary before admission and swept to zero after the markets clear; its region is the gate region; never closed, never relocated | the world, one per counterparty at construction, after the estate accounts and before any agent account | no |
 | Boundary | the net amount created or destroyed under one reason | the world, one per reason and kind of thing | **yes** |
@@ -317,7 +317,7 @@ point 4), saves none.
 6.6. **Escrow is not a reservation.** Money held for a contract must outlive a
 tick and be a claim of the contract, not an earmark of the payer. It is a transfer
 into an Escrow account, and a transfer out when the contract settles
-(`spec-carriage.md` 2.1).
+(`spec-merchants.md` 9.6; `spec-carriage.md` 2.1).
 
 6.7. **Named lots.** `ReserveGoods`, `ReleaseGoods` and `Move`, with or without
 from reserved, accept an optional lot key (commodity, born, durability). With a
@@ -364,7 +364,9 @@ parameter. The starting registry:
 | `outside_offer` | goods | faucet | boundary to an Outside account (a seller counterparty); born in the tick, at full durability | `spec-external-sector.md` 8.1 |
 | `outside_unsold` | goods | sink | Outside account (seller) to boundary | `spec-external-sector.md` 8.1 |
 | `outside_purchases` | goods | sink | Outside account (buyer) to boundary | `spec-external-sector.md` 8.1 |
-| `escrow_in`, `escrow_out`, `escrow_refund` | money | internal | agent to escrow, escrow to carrier, escrow to agent | `spec-carriage.md` |
+| `escrow_in` | money | internal | agent to escrow: the payer's `price * quantity` at the formation of a delivery contract | `spec-merchants.md` 9.6 |
+| `escrow_out` | money | internal | escrow to agent: the deliverer, for the units that reached the destination | `spec-merchants.md` 9.6 |
+| `escrow_refund` | money | internal | escrow to agent, or escrow to the estate of the destination region when the payer no longer exists | `spec-merchants.md` 9.6 |
 | `transit_out`, `transit_in` | goods | internal | agent to transit; transit to agent, or transit to estate (a diverted cargo) | `spec-transport.md` 7.2 |
 | `haul_use` | goods | sink | agent to boundary: the redemption of haul units at dispatch | `spec-transport.md` 7.2 |
 | `transit_use` | goods | sink | agent to boundary: the feed consumed by a trip | `spec-transport.md` 7.2 |
@@ -578,7 +580,7 @@ ways, both on the world:
   been constructed and not yet stepped, where it checks the construction bucket
   (9.1);
 - the option `WithAudit()` runs it at the end of every `Step`, after the tick's
-  events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1.
+  events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1; with the merchant module on it also checks that each open contract's Escrow account holds exactly `price * quantity`, that an unreferenced Escrow account is empty, that contract IDs are unique and that the shipment of each contract is in flight (`spec-merchants.md` 9.6, FR-MER-045).
 
 With the external module on the audit also checks that every counterparty account is empty, that each of the six `outside_*` boundary balances has the sign of its kind, and that for each commodity the boundary balance of `outside_purchases` equals the sum of the units traded on its buy sides and `outside_offer` less `outside_unsold` equals the sum of the units traded on its sell sides (`spec-external-sector.md` 8.5, FR-EXT-050). With the resources module on it SHOULD also check the endowment identity of `spec-resources.md` 6.4 (FR-RES-025); an endowment is in no account and the ledger is unchanged by it.
 
@@ -659,6 +661,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate and Outside accounts (`spec-external-sector.md` 8.1, FR-EXT-017). |
 | FR-LED-058 | An Outside account MUST be a non-boundary account of the gate region that may not go negative, MUST be created at construction after the estate accounts and before any agent account, MUST NOT be closed or relocated, and MUST hold no money and no goods at any tick boundary (`spec-external-sector.md` 4.2.3, FR-EXT-012). |
 | FR-LED-059 | With the external module on, the audit MUST also check the conditions of `spec-external-sector.md` 8.5 and report the node and commodity of the first that fails (FR-EXT-050). |
+| FR-LED-060 | The reasons `escrow_in`, `escrow_out` and `escrow_refund` MUST be internal transfers of money only: `escrow_in` from an Agent account to an Escrow account, `escrow_out` from an Escrow account to an Agent account, and `escrow_refund` from an Escrow account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch`, and a contract MUST add no faucet, no sink and no reason (`spec-merchants.md` 9.6.1). |
+| FR-LED-061 | With the merchant module on, the audit MUST also check the conditions of `spec-merchants.md` 9.6 (each open contract's Escrow account holds exactly `price * quantity`, an unreferenced Escrow account is empty, contract IDs are unique, and the shipment of each contract is in flight) and report the contract of the first that fails (FR-MER-045). |
 
 ### Non-functional
 
@@ -722,7 +726,7 @@ For `spec-stability.md`:
 7. **Goods valued as capital.** Durables are held as wear-able lots, but their wear
    is not a transfer (5.4.2). Whether depreciation should also appear as a named
    flow of value, for national-accounts style measures, is for `spec-indicators.md`.
-8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent's; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration remains `spec-migration.md`'s.
+8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent's; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration is `spec-migration.md`'s: a timed journey, and the region change at arrival is the ledger-level `Relocate` with the cause `migration` (`spec-migration.md` 8.4).
 9. **Reporting the construction bucket** (7.4.1). The bucket is readable, but whether
    the world emits it is for `spec-observability.md`. Recommend one `BoundaryFlow`
    set after `WorldCreated`, with `Tick` -1 (before tick 0), the only event with a

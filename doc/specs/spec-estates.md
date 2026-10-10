@@ -105,8 +105,11 @@ the result.
   from the observed wage (`spec-welfare-and-wages.md` section 4.3), because it is not earned by working.
 - Relief tops agents up to the relief line only, and the target-income rule
   (`spec-welfare-and-wages.md` section 5) still sees them below target, so they keep working.
-- Relief may delay the migration signal, since it raises the ratio. That is an
-  accepted effect.
+- Relief does not enter the migration trigger or the migrating household's wage
+  (`spec-migration.md` 5.4): the trigger reads the earned ratio, which leaves relief out. What
+  remains is the relief a poor arrival draws from the destination's pool.
+- Relief counts the receipts of an own-use job in the ratio (`spec-subsistence.md` 7), so a
+  household that feeds itself draws less.
 - A `ReliefPaid` event is emitted per region per tick when anything is paid
   (total paid, number of recipients). It carries no per-agent map.
 

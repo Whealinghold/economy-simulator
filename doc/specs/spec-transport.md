@@ -5,7 +5,7 @@ index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-TRN-NNN` and
 `NFR-TRN-NNN`, which tests cite (testing.md section 4). They are in section 19
-(FR-TRN-001 to 046, NFR-TRN-001 to 004).
+(FR-TRN-001 to 050, NFR-TRN-001 to 004).
 
 Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)),
 version 1 (`vision.md` section 4). Off unless configured: the zero configuration
@@ -386,7 +386,7 @@ therefore use the stock the strategy saw, and the orders that follow are admitte
 against what is left (`insufficient_stock` if the strategy double-counted).
 **Arrivals** are processed in phase 1 of the tick, first, after the moment is
 computed and before relief and starting money are paid (5.7). An agent that is away
-is not passed to `Work` or `Trade` (5.5).
+is not passed to `Work` or `Trade` (5.5). A request can also come from the **contract round** of `spec-merchants.md` 9.4, which runs after the last agent's plan: the offers and takes of a plan (`spec-merchants.md` 9.2) are collected here and matched there, and a matched offer is executed as the offerer's request, with every check and every effect of 5.4 and 5.5.1, **dispatched at once** in the round (the shipment is requested by the round and not by the plan; 5.4 refusals are the reason of a failed formation and emit `ShipmentRejected` as always).
 
 5.3.3. A request is processed against the state at that moment; there is no
 batching of requests across agents. Because each agent's goods are in its own
@@ -462,7 +462,7 @@ checked; a failure here is a programmer error and panics, architecture.md 8.1,
 - every tick from the dispatch tick to tick `Arrives - 1` is a working tick (3.3.1);
 - its account cannot be relocated by anyone else while it is away: see 5.5.3.
 
-5.5.3. **The refusal `open_shipment`.** When the module is on, transport registers the
+5.5.3. **The refusal `open_shipment`** (one of four `region_bound` refusals: `on_journey` is MIG's, `open_contract` MER's, `in_traineeship` SKL's; `spec-regions.md` 6.5.2). When the module is on, transport registers the
 `region_bound` refusal named `open_shipment` (`spec-regions.md` 6.5.2). It is open for an
 account whose agent is the traveller of an away trip, or the shipper or the consignee of
 a shipment in flight (an agent whose goods or whose delivery is tied to a region). The
@@ -500,7 +500,7 @@ In the first phase of tick `t`, after the moment is computed, the world processe
 shipments with `Arrives = t` in order of shipment ID:
 
 1. **A self-carried trip.** If the traveller still exists, its account's region
-   becomes `To` by the ledger-level `Relocate` with cause `transport` (1.2, 5.5.3) and it
+   becomes `To` by the ledger-level `Relocate` with cause `transport` (1.2, 5.5.3), its price beliefs are reseeded (5.7.1, no draw) and it
    is no longer away. If it
    was removed, nothing moves and the shipment record is dropped when the traveller is
    removed (5.9).
@@ -518,6 +518,8 @@ shipments with `Arrives = t` in order of shipment ID:
 The first phase comes before relief and starting money, so a consignee has its goods
 and a traveller its new region before anything else of the tick reads them, and
 before `Work` and `Trade`.
+
+5.7.1. **The arrival reseed.** A self-carried traveller that arrives has its price beliefs reseeded by the rule of `spec-beliefs.md` 8.3, right after the `Relocate` and with no draw (`spec-merchants.md` 12.2): for every commodity of its tradable set the centre is the clamp of the destination's window mean (the market price if the window is empty) and the width is `BeliefWidthInit`. The same rule, by one shared helper, reseeds a migrant at the arrival of a migration journey (`spec-migration.md` 8.4); it is a world operation and not a strategy's.
 
 ### 5.8 Cargo that cannot be delivered
 
@@ -726,8 +728,9 @@ dispatch (3.3.3). The reasons, in order of weight:
   and the goods travel alone, so no carrier can fail to deliver, and `FR-CAR-001` and
   `FR-CAR-002` do not apply to hired carriage (8.5). The risk of cargo not arriving is
   RSK's `loss`, borne by the consignee's side. A bilateral contract with a
-  negotiated fee, a deadline and an escrow remains possible and is MER's, built on the
-  shipment mechanism and `spec-ledger.md` 6.6; it does not go through the book.
+  negotiated fee, a deadline and an escrow is `spec-merchants.md` 9, built on the
+  shipment mechanism and `spec-ledger.md` 6.6; it does not go through the book (it is
+  matched by a first-fit round, ADR 0005).
 - **A hired shipment needs a consignee in the destination.** The shipper stays in its
   region, so the goods go to another agent there. A merchant that wants to sell in the
   destination itself travels (self-carried) or has a counterpart there. Which, and why,
@@ -749,7 +752,7 @@ shared files). For `spec-carriage.md`:
 
 - 2.1: a fee is the price of haul units bought in an ordinary trade (reason `trade`);
   escrow (`escrow_in`, `escrow_out`, `escrow_refund`) applies to a bilateral contract
-  of MER's, not to the market. FR-CAR-001 and FR-CAR-002 move to the contract spec.
+  of MER's (`spec-merchants.md` 9), not to the market. FR-CAR-001 and FR-CAR-002 moved to `spec-merchants.md` 9.9.
 - 2.2: the carriage market per directed route becomes the haul commodity of a hired
   mode traded in the origin region's market. The unit is the haul unit; its chargeable
   size is replaced by the load's binding fill (3.2.1). The ask is anchored to the
@@ -772,13 +775,14 @@ checks of 7.4.1. `spec-goods.md` 3.5 and its open question 1 are answered for tr
 
 ### 9.1 To a strategy
 
-`AgentView` (`spec-agents.md` 6.4.1) gains two groups, plain data, bounded by the
+`AgentView` (`spec-agents.md` 6.4.1) gains three groups, plain data, bounded by the
 configuration:
 
 | Group | Content |
 |-------|---------|
 | `Inbound` | per commodity with units on the way to this agent as consignee: the total quantity and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (so it does not depend on the order in which agents are called) |
 | `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3); an outside node is reported with no route (`outside_destination`, 5.4) |
+| `Outbound` | per destination region and commodity with units on the way, the total quantity of the shipments the agent is the **shipper** of and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (fixed at that moment, so that it does not depend on the order in which agents are called, as `Inbound` does not; `spec-merchants.md` 4.1) |
 
 `Inbound` exists so that a consignee does not buy again what is already on its way: a
 buyer that ignores its pipeline orders twice (TRN-A2). Whether the default strategy's
@@ -804,8 +808,8 @@ INF owns rumours and delay. Transport adds exactly this, and no more:
   traveller's remembered prices count as information, and how stale they are, is INF's
   and MER's;
 - an **arrival is an event** (`ShipmentArrived`); no price, no rumour and no belief
-  changes because of it. Beliefs of a traveller are kept across the move; whether a
-  traveller reseeds them is MER's, as MIG's for a migrant (N-038).
+  changes because of it. A traveller's beliefs are reseeded on arrival (5.7.1,
+  `spec-merchants.md` 12.2), as a migrant's are (N-038).
 - **INF defines rumours** (`spec-information.md` 5); a trip carries no news back (`spec-information.md` 7.5).
 
 ### 9.4 Lanes for the viability solver
@@ -857,8 +861,7 @@ adds then.
 
 10.5. **Migration (MIG).** A household's migration is not a shipment and is not a
 working trip (`spec-welfare-and-wages.md` 4.3). It may use `Travel` to know how long a
-journey takes. Its region change is the public relocation of `spec-regions.md` 6.1, refused
-with `ErrRegionBound` (`open_shipment`) while the agent is away or has a shipment in flight.
+journey takes: it does not. It has its own speed (`MoveSpeed`) and a journey that is not a shipment (`spec-migration.md` 6.4, 8). An agent on a migration journey is not `Away` in this spec's sense; it is refused for a shipment by the same skip of `spec-agents.md` 4 (it is passed to no `Trade`), and its account stays in the region of departure until arrival, as a traveller's does. MIG registers its own `region_bound` refusal `on_journey`, of the same kind as `open_shipment` (5.5.3, `spec-migration.md` 7.2.2), and changes the region at arrival by the ledger-level `Relocate` with the cause `migration`, after the arrivals of 5.7 (`spec-migration.md` 8.4). The public relocation of `spec-regions.md` 6.1 is refused with `ErrRegionBound` (`open_shipment`) while the agent is away or has a shipment in flight.
 
 ## 11. Parameters
 
@@ -927,7 +930,7 @@ Warnings never fail validation (`spec-config.md` 7.2).
 | `haul_never_spoils` | a `Haul` commodity with `ShelfLife` 0: capacity could be banked without cost |
 | `haul_durable` | a `Haul` commodity with `Durability` above 0 |
 | `vehicle_wears_in_one_trip` | `WearPerTick` times the longest travel time of the mode over the graph exceeds the vehicle's `Durability` |
-| `trip_longer_than_window` | the longest travel time of a self-carried mode over the graph exceeds the base `WelfareWindow` (`spec-welfare-and-wages.md` 2.3.1): a trip is a gap in income like a long job (STB-L19, TRN-A6) and the window is derived from recipes only |
+| `trip_longer_than_window` | the longest travel time of a self-carried mode over the graph exceeds the base `WelfareWindow` (`spec-welfare-and-wages.md` 2.3.1): a trip is a gap in income like a long job (STB-L19, TRN-A6) and the window is derived from recipes only. It stays for roles with no merchant block; for a merchant role the derived window counts the trip (`spec-merchants.md` 12.3, `spec-welfare-and-wages.md` 2.3.3) |
 | `route_too_slow_for_shelf_life` | for a commodity with a `ShelfLife` and a mode, every route of the graph takes `k` of `ShelfLife` or more: nothing perishable could ever be delivered by that mode (5.6.2). A report, bounded by commodities times modes |
 
 ## 13. Observability
@@ -1310,7 +1313,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-021 | A traveller MUST be away from its dispatch until the first phase of its arrival tick: not passed to `Work` or `Trade`, placing no order, with every tick from the dispatch tick to the tick before arrival a working tick, its account keeping its region and its upkeep consumed from its account. |
 | FR-TRN-022 | With the module on, transport MUST register the `region_bound` refusal `open_shipment`, open for an agent that is an away traveller or the shipper or consignee of a shipment in flight, so that the public relocation returns `ErrRegionBound` for it; at arrival transport MUST change the traveller's region by the ledger-level `Relocate` with cause `transport` and emit `AgentRelocated` once, and MUST NOT use `NoRegion`, `depart` or `arrive`. |
 | FR-TRN-023 | A Transit account MUST hold the cargo of at most one shipment in flight and nothing else, MUST NOT be closed, and MUST be empty when no shipment references it. |
-| FR-TRN-024 | In the first phase of a tick, after the moment and before relief, the world MUST process the shipments whose arrival is that tick in order of shipment ID: change a self-carried traveller's region to the destination, move the cargo to the consignee under `transit_in`, release the Transit account and emit `ShipmentArrived`. |
+| FR-TRN-024 | In the first phase of a tick, after the moment and before relief, the world MUST process the shipments whose arrival is that tick in order of shipment ID: change a self-carried traveller's region to the destination and reseed its price beliefs by the rule of `spec-beliefs.md` 8.3 with no draw (5.7.1), move the cargo to the consignee under `transit_in`, release the Transit account and emit `ShipmentArrived`. |
 | FR-TRN-025 | Goods in transit MUST age as in any account: a lot of a perishable commodity whose born tick plus shelf life minus 1 is at most the current tick MUST move whole to the `spoilage` boundary at the end of the tick from the Transit account, so that a lot is delivered if and only if the arrival tick is at most its born tick plus shelf life minus 1. |
 | FR-TRN-026 | A durable cargo MUST NOT lose durability in transit. |
 | FR-TRN-027 | A cargo whose consignee no longer exists, is not in the destination region, or could not hold the quantity MUST be moved to the destination region's estate account under `transit_in`, MUST be flagged `Diverted` in the event, and MUST NOT wait or be returned. |
@@ -1334,6 +1337,9 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-045 | A request MUST be refused `vehicle_in_cargo` if a line names the mode's `Vehicle` commodity, `duplicate_line`, `unknown_commodity` or `invalid_quantity` for a bad line, `empty_shipment` for a hired or consigned request with no line, and `too_many_lines` above `MaxShipmentLines`. |
 | FR-TRN-046 | A request MUST be refused `insufficient_stock` when for any commodity the sum of its line, its feed and its haul redemption exceeds the available (unreserved) stock. |
 | FR-TRN-047 | A request whose destination is an outside node of the external module MUST be refused with `outside_destination` after `unknown_region` and before `no_route`, changing no state, and `Routes` MUST report no route to such a node (`spec-external-sector.md` FR-EXT-034). |
+| FR-TRN-048 | A shipment MAY be requested by the contract round of `spec-merchants.md` 9.4 after the last agent's plan of phase 3; it MUST then be dispatched at once, with the checks and effects of 5.4 and 5.5.1 applied to the offerer, and a refusal MUST be the reason of the failed formation (5.3.2). |
+| FR-TRN-049 | The view of an agent MUST carry `Outbound`: per destination region and commodity with units on the way, the total quantity of the shipments the agent is the shipper of and the earliest arrival tick, from the shipments dispatched before the start of phase 3, whatever the order in which agents are called (9.1). |
+| FR-TRN-050 | The view of an agent on a migration journey MUST NOT be built and a shipment MUST NOT be requested for it (it is passed to no `Trade`); its relocation by the public path MUST be refused by MIG's `on_journey` (10.5). |
 
 ### Non-functional
 
@@ -1352,7 +1358,7 @@ bounds are placeholders (N-015, N-027).
 2. **Backhaul.** The round trip is in the cost of each direction's haul units (8.4). A
    joint product with a cost share, as `spec-production.md` 3.2 allows, cannot sell
    capacity in another region's market because accounts have one region. Whether a
-   carrier's round trip can be priced once is CAR's 5.1 and MER's.
+   carrier's round trip can be priced once is CAR's 5.1 and MER's. Answered in `spec-merchants.md` 10: not priced, the double count stands, measured.
 3. **Does the haul recipe agree with the mode?** Capacity-distance supplied should be
    about carrying units times speed times loaded time over span (17.4). Validation does
    not check it. A report that compares them, or a recipe template, could be added if
@@ -1363,7 +1369,7 @@ bounds are placeholders (N-015, N-027).
    included because it is noisy for coarse goods.
 5. **Return to sender.** A diverted cargo goes to the destination estate (5.8). A
    return to the shipper would need the shipper to be reachable and a second journey.
-   MER may want it for contracts.
+   MER does not return a cargo: a diverted cargo counts as reached (`spec-merchants.md` 9.7).
 6. **Attribution of internal flows.** `transit_out` and `transit_in` have two
    non-boundary sides; `spec-ledger.md` 7.4 attributes a flow to "the region of the
    non-boundary side". The ledger should state which side an internal flow is attributed
@@ -1379,7 +1385,7 @@ bounds are placeholders (N-015, N-027).
 9. **A window for travellers.** `spec-welfare-and-wages.md` 2.3.3 derives the window
    from recipes only. A traveller's trip is a gap in income (TRN-A6); either the window
    includes the longest self-carried trip of any role (it would lengthen every role's
-   window) or a role says whether it travels. The warning is a stopgap.
+   window) or a role says whether it travels. The warning is a stopgap. `spec-merchants.md` 12.3 proposes the answer for merchants (a role with a merchant block); WEL adopts it in 2.3.3.
 10. **Tolls and tariffs** at an edge (FIS) would be a money cost at dispatch, charged to
     the shipper; the place is step 3 of 5.5.1. Not specified.
 11. **Mid-journey events.** A closed road after dispatch does not affect a shipment in
