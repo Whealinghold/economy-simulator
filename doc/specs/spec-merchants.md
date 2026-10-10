@@ -93,7 +93,7 @@ Out of scope, with the owner:
 | # | Position | Section |
 |---|----------|---------|
 | 1 | Two parts, both off unless configured: the merchant strategy (chosen per role by name) and the delivery contract (`Modules.Merchants`). The contract does not require the merchant, and the merchant needs the contract only for a hired mode | 3.1, 9 |
-| 2 | The merchant is a second `Strategy` implementation, `strategy.Merchant`, written the way `spec-agents.md` 6.7 says: it holds a `DefaultStrategy` in a named field and delegates. `Work` is the default's (a role with no recipe requests no job), `Revise` is the default's, `Trade` is the default's with one change: the planned recipe is replaced by a **planned trip**, and the plan gains a shipment, an offer and takes | 3.3, 3.4 |
+| 2 | The merchant is a second `Strategy` implementation, `strategy.Merchant`, written the way `spec-agents.md` 6.7 says: it holds a `DefaultStrategy` in a named field and delegates. `Work` is the default's (a role with no recipe requests no job, unless its effective own-use list is non-empty: 6.4 and `spec-subsistence.md` 3.3.3), `Revise` is the default's, `Trade` is the default's with one change: the planned recipe is replaced by a **planned trip**, and the plan gains a shipment, an offer and takes | 3.3, 3.4 |
 | 3 | A planned trip is to the merchant what a planned recipe is to a producer: its inputs (the cargo, the haul units or the vehicle and feed, the provisions) are the job's inputs of `spec-agents.md` 7.3, bought by the same three-tier budget and the same limit-price draw. No second set of budget rules | 3.4 |
 | 4 | The merchant keeps no state. It values what it holds at what it would cost to replace (the local price), not at what it paid, so it needs no cost basis; the fixed spread of its thresholds is a function of its agent ID; it differences nothing across ticks because it remembers nothing | 3.5, 5.7 |
 | 5 | The expected revenue of a lane is the destination's rumour read cautiously: the lower of the rumoured price and the rumoured window mean, and none at all if the rumour's `SourceAge` is above a bound. The expected cost is the local price | 5.2 |
@@ -190,7 +190,7 @@ it eats is the main case, and 3.4 handles it with no special rule.
 
 | Method | The merchant's behaviour |
 |--------|--------------------------|
-| `Work` | the default's: a role with no recipe requests no job (`spec-agents.md` 7.1.1). Nothing is overridden |
+| `Work` | the default's: a role with no recipe requests no job (`spec-agents.md` 7.1.1), unless its effective own-use list is non-empty: then the default gives it an own-use job and its trips are refused while that job runs (6.4; `spec-subsistence.md` 3.3.3). A pure merchant role takes an empty row in the subsistence table. Nothing is overridden |
 | `Revise` | the default's: `DefaultStrategy.Revise`, one update per admitted order with the draw the world took (`spec-agents.md` 7.6). The merchant's beliefs about its own market are those of any agent |
 | `Trade` | the default's, with three changes: (1) the planned unit of work is a **planned trip** instead of a planned recipe (3.4); (2) the limit of a bid for the cargo and for haul units is lowered to a ceiling the trip can bear (5.6); (3) the plan gains at most one **shipment request** or one **delivery offer** when the trip is ready (6.3), and the **takes** of a consignee (8) |
 
