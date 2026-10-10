@@ -51,8 +51,7 @@ point). This spec covers:
 Out of scope: where a household goes when it leaves a region (`spec-migration.md`,
 MIG, later); the failure ladder, the entry rule and the occupation choice
 (`spec-spawner.md`); what makes the welfare ratio fall as households rise, which is a
-fixed factor of production such as an endowment (`spec-resources.md`, RES, not
-written; 5.2); shocks that change a death schedule (`spec-integration.md`, INT; 6.6);
+fixed factor of production such as an endowment (`spec-resources.md`, RES, written; 5.2, 8 there); shocks that change a death schedule (`spec-integration.md`, INT; 6.6);
 the tick phases (`spec-world.md`); the bands that say what a healthy population curve
 is (`spec-stylised-facts.md`).
 
@@ -497,21 +496,21 @@ decide is `N*`, the number of households at that ratio.
 | Assumption | Provided by | Status |
 |------------|-------------|--------|
 | 1 and 2: the rates | this spec | specified |
-| 3: the ratio falls with households | a **fixed factor**: an endowment that a recipe's executions draw from (`Draws`, `spec-production.md` 6.5), with a limited stock or flow. Owner RES | **RES is not written**. A recipe with `Draws` fails validation while RES is off (`ErrModuleDependency`, `spec-production.md` 10.2), so no pack can have a fixed factor today |
+| 3: the ratio falls with households | a **fixed factor**: an endowment that a recipe's executions draw from (`Draws`, `spec-production.md` 6.5), with a limited stock or flow. Owner RES | **provided by `spec-resources.md` 8** (N-098): an endowment that binds, with a stated mechanism, closed forms and a stability condition by shape. A recipe with `Draws` still fails validation while the resources module is off (`ErrModuleDependency`, `spec-production.md` 10.2); with it on the pack has a fixed factor. Nothing has been run against the library |
 | (a backstop) the money of the region | the stake loop of 5.5 | specified here; an accident of funding, not a Malthusian limit |
 | (a bound) a design cap | `HouseholdCap` (4.4.2) | specified here |
 
-Without a fixed factor every recipe has constant returns to labour (`spec-production.md`
+Without a fixed factor (a pack with no binding endowment) every recipe has constant returns to labour (`spec-production.md`
 3.1.2: a source with no endowment is limited by labour only), so the ratio does not
 fall as households rise, `g` keeps its sign at the ratio the economy settles at, and
 the population grows or shrinks without limit. That is a consequence of the library as
 specified, not a defect of this spec, and it has three consequences for the pack
-author:
+author, each now with a cure in `spec-resources.md`:
 
-- the module is **testable as a loop only with RES**, or with a test double that makes
-  the ratio a function of households (the models of section 13 do exactly this);
-- until RES, the only bounds are the money of the region (5.5) and `HouseholdCap`;
-- validation reports `no_fixed_factor` (9.2) so the author knows.
+- the module is testable as a loop with a RES endowment that binds (`spec-resources.md` 8, scenarios RES-S1), or with a test double that makes
+  the ratio a function of households (the models of section 13 do exactly this, and isolate the population rules from the resource's own timescale);
+- without a binding endowment the only bounds are the money of the region (5.5) and `HouseholdCap`;
+- validation reports `no_fixed_factor` (9.2) so the author knows; a pack cures it by a recipe with `Draws` on an endowment whose maximum flow can bind.
 
 ### 5.3 The ratio a closed economy can show
 
@@ -759,7 +758,7 @@ only mechanism that bears on it.
 | `spec-demand.md` | with wants the ratio ranges above 1 (5.3). Without them the fixed point is at hunger |
 | `spec-viability.md` | a warm start's census is not `N*`. A world that starts at its census and has a fixed factor drifts toward `N*` (open question 3) |
 | `spec-migration.md` (later) | the other way a household enters or leaves; it must share the replacement ratio as a signal and use the same stake rule for arrivals |
-| `spec-resources.md` (later) | provides the fixed factor (5.2) |
+| `spec-resources.md` | provides the fixed factor (5.2; `spec-resources.md` 8): an endowment that binds, regeneration shapes, the ration |
 | `spec-integration.md` | sets and clears the scales (6.6) |
 | `spec-calendar.md` | `TicksPerYear` converts annual rates exactly (3.8); no seasonality of births or deaths in version 1 |
 
@@ -832,7 +831,7 @@ Never fail validation (`spec-config.md` 7.2).
 | `schedule_direction` | a birth schedule falls, or a death schedule rises, anywhere (3.5.4) |
 | `replacement_above_closed_ceiling` | `r*` is above 10 000 and the demand module is off (5.3) |
 | `population_gain` | `r* * dRate * T > 10 000 * dRatio * TicksPerYear` with `T` the longest effective welfare window (5.4) |
-| `no_fixed_factor` | no recipe has `Draws` and no region has a `HouseholdCap` (5.2). Until RES exists this is true of every pack |
+| `no_fixed_factor` | no recipe draws on an endowment whose maximum flow can bind (the households at which the draw equals the sustainable draw, `spec-resources.md` 8.2, 11.3, below the census's households times a stated margin) and no region has a `HouseholdCap` (5.2). Before RES this was true of every pack; the margin is open (below) |
 | `population_without_upkeep` | no role has an upkeep (the `no_upkeep` case of `spec-agents.md` 13): the module is inert |
 
 The informational diagnostics `replacement_ratio` (5.7) and `renewal_ignored` (4.6.1) never fail validation. `replacement_ratio` names `r*` and the knot segment it
@@ -1143,8 +1142,8 @@ module is on. *Test:* POP-S4. *Status:* hand.
 
 **POP-A6. No fixed factor.** *Kind:* hazard. Without a fixed factor the ratio does not
 fall with households and the rate has the same sign for any `N` (5.2). *Owner:* POP 5.2;
-RES. *Damper:* POP-D5, POP-D6 (the money). *Condition:* a fixed factor (RES). *Test:*
-POP-S1 with a double. *Status:* hand.
+RES. *Damper:* POP-D5, POP-D6 (the money). *Condition:* a fixed factor (a RES endowment that binds). *Test:*
+POP-S1 with a RES endowment or a double. *Status:* hand.
 
 **POP-A7. The closed ceiling.** *Kind:* hazard (N-054; L46). In a closed economy with
 upkeep only the mean ratio is at most 1 (5.3): the schedule cannot separate abundance
@@ -1174,11 +1173,11 @@ generation lag, which would make POP-A1 oscillate, is not modelled (3.3).
 
 ### 14.4 Scenarios proposed
 
-Numbers are assigned by the register owner; `POP-Sn` stands for them.
+Numbers are assigned by the register owner; `POP-Sn` stands for them. Wave 3: POP-S1 to POP-S4 (S37 to S40 in the register) may now use RES for the fixed factor; none has been run, and the caveat of every number here stands.
 
 | ID | Scenario | Asserts | Entries |
 |----|----------|---------|---------|
-| POP-S1 | A region with a fixed factor (RES, or a test double that makes the ratio a function of households), the demand module on, started at 0.6 and at 1.6 times `N*` | the population approaches `N*` within a band and, for `k * tau` below 0.5, without crossing it more than once; the mean ratio at the end is within a band of `r*` | A1, A4, A6 |
+| POP-S1 | A region with a fixed factor (a RES `refill` endowment, scenario RES-S1 of `spec-resources.md` 19.4, or a test double that makes the ratio a function of households), the demand module on, started at 0.6 and at 1.6 times `N*` | the population approaches `N*` within a band and, for `k * tau` below 0.5, without crossing it more than once; the mean ratio at the end is within a band of `r*` | A1, A4, A6 |
 | POP-S2 | A yield shock that cuts the region's income for a time, then restores it, with the pool, relief and the ladder on | households fall and regrow; the ratio rises while they are low; the extinct-region `Warn` does not fire; and with a chain whose role disappears the run is reported as F3 and the trap is visible | A3, A8 |
 | POP-S3 | A closed region with the pool empty, `BirthStake` 10 000, 5 000 and 0, and births above deaths | the population stops at about `M / stake`; `BirthsUnfunded` is non-zero when it does | A2 |
 | POP-S4 | The default schedules with the demand module off and `r*` above 10 000, and with `r*` just below it; and a pack with `Renewal` set to a non-default value above 0 | the first dies out or is flagged; the second sits at a bounded hunger and the ladder's counters show it; `Renewal` is ignored, and warned only at the non-default value | A5, A7 |
@@ -1300,8 +1299,7 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
    and region scales. Next step: the first pack that needs it.
 3. **A warm start at `N*`.** A warm start's census (`spec-viability.md` 8) is not the
    Malthusian equilibrium; a world with a fixed factor drifts toward `N*`. The solver
-   could report `N*` for a given pair of schedules if it knew the fixed factor (RES).
-   Next step: VIA after RES.
+   could report `N*` for a given pair of schedules if it knew the fixed factor (RES, `spec-resources.md` 8.2) and the full-draw ratio `r_full`, which is no field (`spec-resources.md` 23 item 6; note N-110 proposed). RES is written; VIA still has to add it.
 4. **Fertility response to relief.** Relief raises the ratio (`spec-estates.md` 2.6) and
    so raises births and lowers deaths (STB-L40 touches the migration signal; this is the
    same effect for population). Next step: an experiment.
@@ -1319,7 +1317,9 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
 8. **The shock call.** The call that sets `DeathScale` and `BirthScale` is INT's;
    if INT prefers a different shape the fields stay and the call follows.
 
-9. **`Renewal` and its default.** Ignored while the module is on, informational at the
+9. **The margin of `no_fixed_factor`.** 5.2 and 9.2 say an endowment "can bind" when `N_bind` is below the census's households times a stated margin; the margin is not stated. Next step: POP with VIA, from `Headroom` (`spec-resources.md` 11.3).
+
+10. **`Renewal` and its default.** Ignored while the module is on, informational at the
    default and a warning only at a non-default value above 0 (4.6.1). Whether the
    spawner should drop `Renewal` as a field when the module is on is left to SPN.
 
