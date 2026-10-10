@@ -85,7 +85,7 @@ give the rule.
 | 7 | Can the outside be a pump? | No: on one line the ask is always above the bid by at least one basis point of the mid (validation `ErrCrossedQuotes`, 6.6), so no loop of buying and selling to the same outside earns money, and a counterparty buyer and seller cannot trade with each other | A money pump would be a faucet with no limit |
 | 8 | Which regions touch the outside? | The **gates**: regions with a direct edge to or from the node. An edge from the node to a region carries the node's goods in (the outside sells there); an edge from a region to the node carries the realm's goods out (the outside buys there). A closed edge (`spec-regions.md` 7) stops that flow | The graph already says where a place connects and in which direction, and `SetEdgeStatuses` is an embargo for free |
 | 9 | Do outside goods ride TRN? | No. They appear in the gate region's market as an ask and leave it as a bid. Moving them inward from the gate is the realm's, by TRN, as for any good. A shipment to an outside node is refused (4.4) | Keeps the outside out of TRN's accounts, consignees and travellers; the cost of crossing is in the quote |
-| 10 | How does an agent learn an outside price? | As ordinary orders in the gate market: the trades enter the price window, the unmatched quote is a best unmatched bid or ask in the market report (CLR 5.4, 5.5). No view field. Elsewhere not at all in version 1; INF may read the node's mid through one read function if the node declares `Informs` (9) | N-106: no view carries a remote price; the table of INF is not written by EXT |
+| 10 | How does an agent learn an outside price? | As ordinary orders in the gate market: the trades enter the price window, the unmatched quote is a best unmatched bid or ask in the market report (CLR 5.4, 5.5). No view field. Elsewhere not at all in version 1: an outside node is not a rumour source (9.2) | N-106: no view carries a remote price; EXT never touches INF (INF records only a market's published price, and a node has no market) |
 | 11 | What are the limits that stop a silent drain or flood? | Per tick: the line's capacity and its window. Over the run: a cap on units and on list value per side. Every cut is counted in an event. No rule reads the balance of trade (11) | "Macro is measured, never set"; MON-D1 is the model |
 | 12 | `Raw` goods | An import line with a sell side makes a commodity sourced for validation, beside a recipe with no inputs and a RES-limited sited recipe. The warning `raw_without_source` is satisfied by it; a commodity sourced only by an import draws `import_only_source` (10) | N-021 |
 | 13 | Closed to open | The steady state keeps the closed economy's identity with trade added as bounded columns and a value row of imports not above exports at the quotes; the demand ceiling of `spec-demand.md` 7 does not move; a persistent surplus raises the mean welfare ratio only while the money supply grows (12) | A balanced trade leaves the household identity unchanged |
@@ -135,8 +135,7 @@ edges at construction and never change; whether the edge is **open** is read eac
 from its status (7.5).
 
 3.2.2. **The distance of the edge is not a price.** The quote is a price at the gate,
-already delivered. The distance is used by INF if the node `Informs` (a delay, 9.2) and
-by the warnings of 14.2; this spec does not turn a distance into a cost, because the
+already delivered. The distance is used only by the warnings of 14.2; this spec does not turn a distance into a cost, because the
 cost of crossing is the setting's and a unit such as a league or a velocity change has no
 price in the core (`spec-regions.md` 4.1.2).
 
@@ -164,7 +163,6 @@ type External struct {
 // OutsideNode marks an existing region as the outside.
 type OutsideNode struct {
 	Region  string        // an existing region ID with no agents (3.1.2)
-	Informs bool          // INF may read the node's mid (9.2); default false
 	Lines   []OutsideLine // sorted by Commodity
 	Gates   []OutsideGate // sorted by Region; optional
 	Label   string        // presentation only
@@ -690,16 +688,13 @@ report (5.5) that the strategy's `Revise` and the beliefs see (`spec-beliefs.md`
 realm agent learns the outside price in the gate region by trading there, as it learns any
 price. No view field is added: the brief's alternative (a field EXT defines) is not needed.
 
-9.2. **Elsewhere, not at all in version 1, except through INF.** An agent outside a gate
-region is shown no outside price: no view carries a remote price, true or not (N-106). A node
-may declare `Informs` (default false). EXT then provides one read function,
-`World.OutsidePrice(node RegionID, c CommodityID) (mid int64, ok bool)`, the current mid of
-the line (6.1), false when the node does not `Inform` or has no such line. It is a **true
-price of a place**, as the market price of a region is, and INF decides whether, with what
-delay and with what error it enters a rumour: the delay would come from the REG distance
-between the node and the region and INF's information speed (`spec-regions.md` 4.3). EXT
-never writes INF's table, an `AgentView` or a strategy input (FR-EXT-033), and the function
-is not exposed to a strategy.
+9.2. **Elsewhere, not at all in version 1.** An agent outside a gate region is shown no outside
+price: no view carries a remote price, true or not (N-106). An outside node is **not a rumour
+source**: INF writes its rumour record only from a market's published price (`spec-information.md`
+4.5), and a node has no market (3.1.2), because its counterparties trade in the gate region's
+market. EXT adds no read function, no declaration and no field for INF and never writes INF's
+table, an `AgentView` or a strategy input (FR-EXT-033). The open question 10 records the shape a
+source would take.
 
 9.3. **Routes.** TRN's `Routes` view lists the regions other than the agent's. A node
 appears with no route, because a shipment to it is refused (`outside_destination`, 4.4). The
@@ -855,7 +850,6 @@ marked placeholder below is a placeholder.
 |-------|-------|---------|---------|-------|
 | Module | `Nodes` | the outside nodes, sorted by region (3.1) | none | at most `MaxOutsideNodes` |
 | Node | `Region` | the region marked as outside | none | an existing region, no agents |
-| Node | `Informs` | INF may read the node's mid (9.2) | false | boolean |
 | Node | `Lines` | the node's dealings, sorted by commodity | none | at most `MaxOutsideLines` |
 | Node | `Gates` | optional gate scales, sorted by region | none | gates of the node |
 | Node | `Label` (p) | display name | "" | presentation only, not hashed |
@@ -1308,7 +1302,7 @@ money to prices, or any behaviour of the library.
 | N-016 | **Applied.** Every field of 13.1 has a row proposed for the parameter-owner table (handoff, b); no parameter is unnamed |
 | N-017, N-027 | **Applied.** Names are neutral (outside, node, line, side, gate, counterparty, quote); no default macro constant is stated |
 | N-103 | **Applied.** The worktree, the scope fence, the handoff and the provisional IDs follow it |
-| N-106 | **Applied.** No view carries an outside price (9.1, 9.2); INF reads the node through one function if the node `Informs` |
+| N-106 | **Applied.** No view carries an outside price (9.1, 9.2); an outside node is not a rumour source in version 1 (9.2) |
 | N-009, N-012, N-020, N-075, N-091 | **Leave open for WLD, OBS, CHK, CFG, INT.** The three positions of 5, the events and metrics of 15, the state of 16, the sentinels of 14.1 and the shock slot of 6.5 |
 | N-018 | **Observed.** No default is set from an unread source |
 
@@ -1353,7 +1347,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-EXT-030 | The offered units MUST NOT exceed the remaining `TotalUnits` or `floor(remaining list value / limit)`; the units cut MUST be counted as `CutCap`; a side that reaches a cap MUST end for good, emit `OutsideEnded` once with the cause and place nothing afterwards. |
 | FR-EXT-031 | The list value of a tick's trades on a side MUST be the units traded times the limit price of the counterparty's order, and the effective list-value cap MUST be the smaller of `TotalValue` (when set) and `MaxLineTotal`. |
 | FR-EXT-032 | A side whose needed edge has the status closed MUST place no order and the wanted units MUST be counted as `CutClosed`; an edge's length factor MUST have no effect. |
-| FR-EXT-033 | No view, strategy input or INF table MUST carry or receive an outside price from this module; `World.OutsidePrice` MUST return the current mid only when the node declares `Informs`, and `ok` false otherwise. |
+| FR-EXT-033 | No view, strategy input or INF table MUST carry or receive an outside price from this module, and the module MUST declare no field and offer no function for INF. |
 | FR-EXT-034 | A shipment request whose destination is an outside node MUST be refused with `outside_destination`, and a relocation into one with `ErrOutsideNode`; neither MUST change any state. |
 | FR-EXT-035 | A commodity with a sell side that has a gate and a window not closed in every season MUST count as sourced for the structural check of `spec-config.md` 7.5, `raw_without_source` MUST NOT be raised for it, and a commodity sourced only so MUST draw `import_only_source`. |
 | FR-EXT-036 | `OutsideTraded` MUST be emitted once per (node, gate, commodity, side) per tick in which any unit was wanted or cut, after the sweep, in ascending (node, gate, commodity, buy before sell), with the fields of 15.1, no map and no pointer, and MUST NOT be emitted when nothing was wanted or cut. |
@@ -1410,7 +1404,13 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
    of 4.2.2. *Next step:* FIS.
 9. **Where the walk's draw sits.** Phase 1, after the money flows (5.1.1). WLD may prefer another
    place; the order inside the step is all this spec needs.
-10. **`Informs` per node or per line.** The granularity is a guess (9.2). *Next step:* INF.
+10. **An outside node as a remote information source.** Not provided in version 1: INF records a
+    rumour only from a market's published price, and an outside node has no market. The minimal shape
+    would be INF accepting a **quote function** as a second record source: a pure read of the
+    current mid of a line (6.1) keyed by (node, commodity), recorded like a published price, with the
+    delay from the REG distance between the node and the region. EXT would then add a declaration
+    on the node and the read function; the true price it returns is a true price of a place, as a
+    market price is. *Next step:* INF, if a setting needs distant regions to hear of outside prices.
 11. **Agent IDs shift.** Adding a node or a gate adds counterparties and shifts every household's
     agent ID, as adding a region shifts them by an estate (4.2.2). It changes tie-break keys and
     checkpoints between configurations. *Next step:* accepted; a pack that wants stable IDs adds
@@ -1427,7 +1427,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | The pure rules: the mid (6.1), the walk (6.4), the quotes (6.6), the wanted units with carry (7.1) and the cuts (7.3) | `internal/outside` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9) |
 | The counterparties, the tick steps (5) and the line state | root package, `external.go`, with the phase-1, phase-3 and phase-4 calls in `world.go` |
 | The account kind Outside and the six reasons | `internal/ledger` (a kind and registry rows, built at construction from the configuration) |
-| `SetOutsideShock`, `OutsidePrice`, `Lines` | root package; the public surface of the first is INT's |
+| `SetOutsideShock`, `Lines` | root package; the public surface of the first is INT's |
 | The events `OutsideTraded`, `OutsideEnded`, `OutsideShocked` | root package, `event.go` |
 | Log keys `node`, `value`, `nodes`, `counterparties`, `drift` | `internal/logkeys` |
 
