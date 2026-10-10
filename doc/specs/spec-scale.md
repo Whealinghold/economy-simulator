@@ -354,7 +354,7 @@ check, run over a range of `K`, is how `K` is chosen (5.2). The reference chain'
 
 - **Regions with no agents.** A distant region modelled only by supply and
   demand functions, with no agents at all, is the outside world, and belongs to
-  `spec-external-sector.md`. A region with agents, however few and heavy, is
+  `spec-external-sector.md` (3.1: it is a marked region of the graph). A region with agents, however few and heavy, is
   scaled, and belongs here. What such a region is, and what a region with no agent at all does, is
   `spec-regions.md` 3.5.
 - **Changing the scale in a running world.** Giving the agents near a player more

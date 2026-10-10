@@ -73,7 +73,7 @@ Out of scope: the **bands** (the numbers a measure must fall inside) are
 | 6 | Scale | Weight 1 everywhere (agents are households), except where a scenario sets a scale (S10) | `vision.md` 2 and N-030: the first consumer needs no weight above 1; it also avoids the cohort lockstep (N-014) in the standard fixture |
 | 7 | Bands | Not set here. Each scenario states its measure and the form of its pass, and names the band as a key of a bands document that STY fills. Until a key has a value the scenario reports the measure and asserts only what is exact | The task and `spec-skill-barriers.md` FR-SKL-025: bands live in the reference chain's data and are set by a run that a human reviews; inventing numbers would be a claim of validation |
 | 8 | What do SPN and DEM change? | Nothing in the base documents. The spawner is taken at its defaults. Demand is a **module** and the base has none (`spec-agents.md` 11.7: a world whose only demand is upkeep is needed by S19); the demand overlay of 4.4.6 adds it | Both specs are drafts written at the same time; the base must not depend on a decision they may change |
-| 9 | Trade between regions | The multi-region variants are valid and viable as sets of regions that do not trade, and their pooled behaviour is checked statically by the solver (A3, A5). The dynamic trade scenarios (X1, X2) wait for `spec-regions.md`, `spec-transport.md`, `spec-merchants.md` and `spec-information.md`, and are specified here only as far as they can be | None of those specs exists; inventing an edge table or a merchant here would be a decision for them |
+| 9 | Trade between regions | The multi-region variants are valid and viable as sets of regions that do not trade, and their pooled behaviour is checked statically by the solver (A3, A5). The dynamic trade scenarios (X1, X2) wait for `spec-merchants.md` (REG, TRN, INF and EXT are written), and are specified here only as far as they can be | `spec-regions.md`, `spec-transport.md`, `spec-information.md` and `spec-external-sector.md` now exist; the merchant and its shipper do not, and inventing one here would be a decision for MER |
 
 Assumptions about specs that are not final (so a change there names what to revisit):
 
@@ -817,7 +817,7 @@ regolith 66, wafer 2 163, solder 2 097, water 346, ice 112): the prototype of th
 reproduces that one. The tool sector is five households per role, the balanced census
 being a fraction of a household (0.16 fabbers), and a floor of five keeps each role
 alive. `cut_ice` omits the `Draws` of `spec-production.md` 12.2 because the resources
-module (RES) is not written; the deposit is then limited by labour only. The warm-start
+module (RES) did not exist when this fixture was built; the deposit is then limited by labour only. `spec-resources.md` now exists, and `overlay/resources.toml` (4.5) can give it the draws. The warm-start
 document `second/warm-second.toml` is the solver output in the layout of 4.4.1.
 
 ### 4.5 Overlays and defect packs
@@ -841,7 +841,11 @@ the variant's documents. The list, with its use:
 | `overlay/perturbed.toml` | `prepare` makes 6, not 8 (`lambda*` 2.298): the warm table is stale | S22 |
 | `overlay/faucet.toml` | `[module.money_supply]` with one grant flow `stipend` on the `grower` households of `north`: 20 a tick (2% of the basket), a placeholder; defined by `spec-money-supply.md` 17.6 | S13 |
 | `overlay/faucet-sunk.toml` | the same, plus a rate levy on the same role (`rate_bp` 3650 a year, `exempt` 3000); `spec-money-supply.md` 17.6 | S13, S33 |
-| `overlay/trade.toml` (edge part) | the directed edges of `spec-regions.md` 12.4 for `two`, `three` and `five` (`[region.<from>.edge.<to>]`, distances placeholders); the modes, carrier recipes and merchants are TRN, MER and INF's and are not yet written | X1, X2, S28, S29 |
+| `overlay/trade.toml` (edge part) | the directed edges of `spec-regions.md` 12.4 for `two`, `three` and `five` (`[region.<from>.edge.<to>]`, distances placeholders); the modes and carrier recipes are TRN's (`spec-transport.md` 3, 17.4); with them a `[modules.information]` table (`info_speed`, `rumour_error_bp`, `rumour_max_age`) and `informed = true` on the merchant role (`spec-information.md` 12.1 shows the keys); the merchant itself is MER's and is not yet written | X1, X2, S28, S29, S46, S47 |
+| `overlay/resources.toml` | the resources and endowments of `spec-resources.md` 18.1: `arable` (a `refill` stock for `grow_staple`), `deposit` (a finite stock for `dig_mineral`) and `stand` (a `logistic` stock with a refuge for `cut_fuel`), at the capacities of 18.2; a slack set and a binding set | S41 to S45 |
+| `overlay/external.toml` | the outside world: one agentless node on a gate region of `one` or `three` with a few lines (`spec-external-sector.md` 18.2 is a worked configuration, `[module.external.node.<id>]`); placeholders | S51 to S55 |
+
+**The five-region endowment sizing is hand-derived.** The capacities of `spec-resources.md` 18.2 (a slack set at 2.2 times and a binding set at 1.1 times the reference programme's draw) come from the census of `five`, the mean site factor of each region's `grow_staple` and an upkeep of 2.25 `staple` a household a tick; they are an order of magnitude and not a calibration. When `overlay/resources.toml` is built, REF replaces them with the capacities derived from the solver's exact flows of `five` (`Capacity = draw a year / (load * (RateBP / 10^4) * (1 - share))`), so that no autarky `lambda*` is lowered by a resource row in the slack set and the fixed factor acts in the binding set (RES 18.2; N-092). The sizes are placeholders until the solver has produced them.
 
 `overlay/skill.toml`, in full, because it sets the traineeship of the two skilled roles:
 
@@ -1348,8 +1352,8 @@ commodities, 45 recipes, 202 pivots in the prototype) finishes in under `a10.sec
 
 **X1. Two regions, arbitrage.** *Packs:* `two`. *Static part (runnable now):* in autarky
 the staple to fuel ratio differs by a factor of at least 2 between the regions (it is
-3.2); pooled it lies between them or is flagged. *Dynamic part (needs MER, INF; REG and TRN now exist):*
-with an edge, a carrier and a merchant role (an overlay `overlay/trade.toml`: its edge part is `spec-regions.md` 12.4, its modes, haul recipe and consignee follow `spec-transport.md` 3, 17.4, and the merchant and rumours are MER's and INF's), the fuel price in the two regions converges: after `x1.warmup` ticks the
+3.2); pooled it lies between them or is flagged. *Dynamic part (needs MER; REG, TRN and INF now exist):*
+with an edge, a carrier and a merchant role (an overlay `overlay/trade.toml`: its edge part is `spec-regions.md` 12.4, its modes, haul recipe and consignee follow `spec-transport.md` 3, 17.4, and the merchant is MER's and the rumours are INF's, `spec-information.md` 12.1 shows the keys), the fuel price in the two regions converges: after `x1.warmup` ticks the
 gap between the two is at most the transport cost of the edge plus `x1.margin_bp`, in the
 last year. Until then it is a skipped test with the issue ID of the missing specs
 (FR-REF-038). *Requirements:* FR-VIA-043 to FR-VIA-045, FR-CAR-003 (hired carriage is an ordinary market of the haul unit, `spec-transport.md` 8), FR-TRN-005 (travel time) and FR-REG-* for the edge.
@@ -1359,7 +1363,7 @@ last year. Until then it is a skipped test with the issue ID of the missing spec
 (needs trade and the spawner):* with trade on, the households of the region with the best
 yield move toward the activities the pooled solution assigns to it; each region's
 occupation shares move toward the pooled census within `x2.share_band_bp` over four
-years. Skipped until MER and INF exist (REG and TRN are written). *Level:* end-to-end.
+years. Skipped until MER exists (REG, TRN and INF are written). *Level:* end-to-end.
 
 **X3. The first consumer's world.** *Packs:* `five` (cold, and warm). *Setup:* 400 ticks,
 seeds 1 and 2; and `five` + `overlay/skill` for the second eligible recipe. *Pass:* the
@@ -1434,12 +1438,16 @@ events as well as the totals. A failure reports the seed.
 
 | Item | Waits for | Next step |
 |------|-----------|-----------|
-| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | MER, INF (and the contract spec); REG and TRN are written | the edge part of `overlay/trade.toml` is `spec-regions.md` 12.4 and the mode and haul recipe follow `spec-transport.md` 17.4; MER and INF add the merchant and the rumours; add the two tests |
+| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | MER (and the contract spec); REG, TRN and INF are written | the edge part of `overlay/trade.toml` is `spec-regions.md` 12.4 and the mode and haul recipe follow `spec-transport.md` 17.4; MER adds the merchant and INF's `[modules.information]` the rumours; add the two tests |
 | S28: a closure of the middle link and its reopening (REG-A1) | TRN, MER, INT (the public call that sets an edge status) | add with `overlay/trade.toml`; assert the cut region's households fall no faster than the closed-region variant and the price gap returns inside a band |
 | S29: a town as one region against a town and two hamlets (REG-A2) | TRN, MER | add with `overlay/trade.toml`; assert thin markets are reported |
 | S30, S31, S32: price-gap shipping with and without `Inbound`, a perishable at the travel time, a haul recipe at three elasticities (TRN-A1, A2, A5, A3) | MER (the shipper); the mechanism is `spec-transport.md` | need a merchant strategy and `overlay/trade.toml` |
 | S33 to S36: a rate levy on a hoarding class, a levy below the upkeep line, growing households with and without a pool grant, the scale seam (MON) | the packs exist (`overlay/faucet.toml`, `overlay/faucet-sunk.toml`, `one-demand`); the scale seam needs INT's public call | add the tests; S33 to S35 can run once the code exists |
-| S37 to S40: approach to the fixed point from both sides, a shock and recovery, a closed region with an empty pool, the closed ceiling (POP) | RES (the fixed factor of the Malthusian loop) or a test double, and `overlay/population` | the population overlay is a fixed-factor double or RES, wants on and `Renewal` 0 (`spec-population.md` 18.3) |
+| S37 to S40: approach to the fixed point from both sides, a shock and recovery, a closed region with an empty pool, the closed ceiling (POP) | RES (the fixed factor of the Malthusian loop; now written, but nothing has run) or a test double, and `overlay/population` | the population overlay uses `overlay/resources.toml` (the binding set) or a fixed-factor double, wants on and `Renewal` 0 (`spec-population.md` 18.3, `spec-resources.md` 18.3) |
+| S41 to S45: the resource-population loop, a logistic stock above and below the maximum draw, a finite deposit, the ration with cohorts, a blight and a drought (RES) | `overlay/resources.toml` (REF, with the solver's capacities); S41 needs the population overlay; S45 needs INT's shock slots | build the overlay; S42 to S44 can run once the code exists |
+| S46, S47: shippers reading rumours; a phantom gap from a stale source (INF) | MER (the shipper); the first assertion of S47 runs with a recording strategy | need a merchant strategy and `overlay/trade.toml` with `[modules.information]` |
+| S48, S49, S50: a closure and a reopening seen through the rumours, a checkpoint with the error on, a seasonal swing against a lag (INF) | `[modules.information]` and a recording strategy; S48 needs INT's edge-status call | add with `overlay/trade.toml`; S49 and S50 can run once the code exists |
+| S51 to S55: a corridor and a cobweb, an import-only good and a closed edge, a walk, a cap and a window, the invariant run (EXT) | `overlay/external.toml` (REF); S52 needs INT's edge-status call | build the overlay; S51, S53 to S55 can run once the code exists |
 | S12, the coarse-tick leg | CAL experience and STY | restate the pack at five days a tick and add the leg |
 | X5: checkpoint and resume | CHK | add when `spec-checkpoint.md` exists |
 | All bands | STY, then a run that a human reviews | CLB and EXP set the bands from runs of these packs |
@@ -1773,8 +1781,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 1. **Bands.** None is set. *Next step:* STY, after a first run of `one`, `three`, `five`
    and `famine` that a human reviews (FR-REF-024). Until then the band scenarios report.
 2. **Trade between regions.** `two`, `three` and `five` run as sets of regions that do
-   not trade. The edge table, the carrier, the merchant and the rumour model are REG,
-   MER and INF's (REG and TRN are written: `spec-regions.md` 12.4 gives the edges, `spec-transport.md` 3 and 17.4 the modes and a haul recipe). *Next step:* when MER and INF exist, add `overlay/trade.toml` and the
+   not trade. The edge table, the carrier and the rumour model are REG's, TRN's and INF's (written), and the merchant is MER's (REG, TRN and INF are written: `spec-regions.md` 12.4 gives the edges, `spec-transport.md` 3 and 17.4 the modes and a haul recipe). *Next step:* when MER exists, add `overlay/trade.toml` and the
    dynamic parts of X1 and X2; the packs are built so the regions are viable alone, so
    the overlay adds trade and removes nothing.
 3. **A faucet.** Resolved: `spec-money-supply.md` 17.6 defines the overlays and S13 is runnable (4.5, 7.2). EXT may add more flows.

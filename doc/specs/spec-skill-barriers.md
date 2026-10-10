@@ -120,7 +120,7 @@ changing.
 the role when the return on the tool beats the return required on capital. Let
 `p_d` be the role's expected net premium per working day
 (`W_skilled - W_unskilled`, from the observed values of `spec-welfare-and-wages.md` section 4.3, or the
-rumoured ones for a remote region), `D_work` its expected working days per
+rumoured ones for a remote region: not provided in version 1, since INF rumours prices only, `spec-information.md` 17 (item 4), so the entry rule uses the region's own observed values), `D_work` its expected working days per
 year (the role's `ExpectedWorkTicks`, `spec-welfare-and-wages.md` section 4.2), `P` the tool's ask in the region, and `CapitalReturn` the region's
 required annual return in basis points. The agent enters when:
 

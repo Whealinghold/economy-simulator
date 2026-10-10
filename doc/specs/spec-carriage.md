@@ -167,7 +167,7 @@ carriage, and the loop it feeds is STB-L17.
 5.2. **How a merchant estimates `expected_margin_per_haul_unit`.** The ceiling
 `bid_max` of 2.2 uses the merchant's rumoured remote prices less its local cost. The
 rule belongs to `spec-merchants.md`, which needs `spec-information.md` for the
-rumours (delayed, approximate prices), and to `spec-transport.md` for the cost of
+rumours (delayed, approximate prices) (`Rumour.Price` and `Rumour.Mean`, `spec-information.md` 5.1), and to `spec-transport.md` for the cost of
 the trip (`Travel` and `Routes`, `spec-transport.md` 9). Until then the number has no
 source and the ceiling cannot be tested beyond its formula (FR-CAR-004).
 

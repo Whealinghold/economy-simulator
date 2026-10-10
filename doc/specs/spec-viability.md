@@ -97,6 +97,7 @@ computes, with integer arithmetic (section 6):
 - the **mean factor** `E(r, rho)`: the mean of the effective factors
   (`spec-production.md` 6.3, with shock 10 000 and trainee 10 000) at those starts,
   in basis points. It is 0, and the activity does not exist, when `J = 0`;
+  For an activity with `Draws` (`spec-resources.md` 11.2) `E` is also multiplied by the abundance at the plan share of its resource, the least over its draws, a constant, so the programme stays linear;
 - the **net vector** `n(r, rho)`, per execution and per commodity `c`:
   `E * q_c / 10 000` for each non-discard output, minus the input quantity, minus
   `WearPerUse / Durability` for each required tool (a tool is a flow of wear, not a
@@ -123,6 +124,7 @@ subject to
   goods    for each commodity c:  sum over (r, rho) of x(r, rho) * n_c(r, rho)  >=  lambda * D(c, P)
   labour   for each region rho:   sum over r of d(r) * x(r, rho)               <=  phi * H(rho)
   capacity for each activity:     x(r, rho)  <=  H(rho) * J(r, rho) / TicksPerYear   (only if J * d < TicksPerYear)
+  resource for each endowment (res, rho):  sum of d(res, r) * x(r, rho)  <=  Phi(res, rho)    (only with the resources module on: `spec-resources.md` 11.1)
   x >= 0
 ```
 
@@ -131,6 +133,7 @@ groups). `phi` is the **available work share**: 1 (every tick) for the viability
 test, and the household-weighted mean of
 `ExpectedWorkTicks / TicksPerYear` for the **nominal** case (`spec-welfare-and-wages.md`
 4.2). Lanes (section 9) add columns; they change no row.
+The resource row is the sustainable draw of an endowment: its dual is `Rent`, the value of one more unit of draw a tick (`spec-resources.md` 11.1, 11.3). With the module off there is no row and nothing changes. With an outside (`spec-external-sector.md` 12.1) the programme gains import and export columns and one trade row (4.8); with neither the programme is the closed one above.
 
 **Wants as final demand (round 5; `spec-demand.md`).** When the demand module is on, the
 goods row gains a fixed term, `>= lambda * D(c, P) + W(c, P)`. `W(c, rho)` is the demand
@@ -203,7 +206,7 @@ An activity exists in region `rho` when `J(r, rho) > 0` (3.1). Commodity `c` is
 **producible in `rho`** if it is sourced there (an existing activity with no inputs
 outputs it, or it is marked `Raw`: 4.2.1) or
 some existing activity in `rho` outputs it with every input producible in `rho`
-(the fixpoint of `spec-config.md` 7.5, restricted to existing activities). It is
+(the fixpoint of `spec-config.md` 7.5, restricted to existing activities). For a recipe with `Draws`, "exists in `rho`" has the conjunct of `spec-resources.md` 9.2: for every draw the endowment of `rho` can supply at least one execution. It is
 **producible in the realm** if it is producible in some region (4.6 for trade).
 The tools a recipe requires are inputs to this fixpoint.
 
@@ -223,6 +226,8 @@ inputs outputs, and that no endowment, faucet or import supplies, has nothing re
 the marker. Marking a good `Raw` therefore does not close a cycle silently: the
 configuration loads, the warning names the good, and the cycle stands on the marker alone
 (`spec-reference-chain.md` 6.3). The fixture opens its cycles with real sources.
+
+The real sources, now written, are three (W1 of the wave 3 integration): a recipe with no inputs and no `Draws` (labour-limited), a recipe with `Draws` on an endowment that can start once (`spec-resources.md` 9.2), and an import line with a sell side (`spec-external-sector.md` 10.1). Either of the last two satisfies `raw_without_source`; the structural pass of `spec-config.md` 7.5 keeps counting the marker and a `Sited` source with `Draws` as sourced. An import line with a sell side is a real source: `raw_without_source` is not raised for a raw commodity it supplies, and for V1 it makes the commodity producible in the gate regions (`spec-external-sector.md` 10.1.2). A raw commodity whose only sources are finite endowments draws `raw_source_exhaustible` (`spec-resources.md` 9.3), and one sourced only by an import line draws `import_only_source` (`spec-external-sector.md` 10.1.2); both are warnings and neither changes V1.
 
 The difference from `ErrUnproducible` (`spec-config.md` 7.5) is that V1 looks at
 yield, season and region: a crop that grows nowhere is producible in the sense of
@@ -263,6 +268,8 @@ bounded (NFR-CFG-001).
 V3 is the reference programme with `phi = 1`. It fails when `lambda* < 1`: even with
 every household working every tick, with free trade among regions, the realm cannot
 make the upkeep. This is `labour_short`, an error.
+
+When the binding row of the programme at `lambda* < 1` is a resource row, the error is `resource_short` and not `labour_short` (`spec-resources.md` 11.3); the cause is reported.
 
 It fails per region, in autarky, with the warning `region_not_self_sufficient`. A
 region that is short in autarky is not a defective pack: a specialised world has
@@ -340,6 +347,15 @@ default `TargetRatio` stays 15 000 and is read as an aspiration that the whole
 population cannot meet until spending beyond upkeep or a money faucet exists, and
 whether the default should fall to 10 000 meanwhile is left open there. AGT accepts the
 glut and bounds it by the production halt (`spec-agents.md` 11.7). The money-supply module now exists (`spec-money-supply.md`): a balanced pair of grant and levy moves money between classes and leaves the mean ratio unchanged, and an unbalanced faucet raises it only while the money supply grows (`spec-money-supply.md` 8.2, 9.1); the finding is otherwise unchanged.
+
+### 4.8 The open layer (EXT) and the resource rows (RES)
+
+Two optional layers extend the programme and change no check above when their modules are off.
+
+- **Resources.** One row per endowment (3.2) with `Phi` computed in exact rational arithmetic from the shape, the plan stock and the season mean (`spec-resources.md` 11.1), and the abundance at the plan share in `E` (3.1). A pack whose census draws more than `Phi` fails `resource_short` (4.4). The solver reports `Headroom` and `Rent` and the informational `endowment_runway` (10.3); the warning `endowment_season_peak` compares the draws of a start window with the stock (10.2). `HorizonYears` is a field of the resources module and is read from the configuration; it is not a solve option (11).
+- **The open layer.** `spec-external-sector.md` 12.1 asks for import and export columns, one for each line side present, bounded above by the mean capacity per tick and priced at the quote at tick 0 with the gate's scale, and a **trade row**: imports times their quotes at most exports times their quotes, so the realm does not finance an unbounded deficit. The inputs come from a pure read function of the configuration, `Lines()`, in a deterministic order, which the solver may call without a world; the warm start applies nothing to counterparties. Writing the layer is this spec's work (a note proposed by EXT) and is not done here: until then the solver is closed and the corridor is not priced.
+
+The unmodelled part is the same for both: the realised price in a run is the midpoint of two limits, and the stock a run settles at is decided by the loop of `spec-resources.md` 8; the programme holds the plan stock and the quotes.
 
 ## 5. The steady state
 
@@ -718,6 +734,8 @@ runs are equal and the stream is untouched (FR-VIA-040):
 8.4.4. The stock is created by the ledger reason `initial`. Total goods at
 construction are the sum of these amounts and those of 8.5.
 
+8.4.5. **Endowments (optional).** With the resources module on, the stock of an endowment is not in this table. A warm-started pack sets `InitialBP` of the resource to its `PlanShareBP`, or a later version of the table adds one row per endowment (`spec-resources.md` 11.4, open question 3 there). A cold start from a full stock is legal.
+
 ### 8.5 Jobs: the answer to the production open question 2
 
 8.5.1. `JobSpec.InProgressBP` is the share of the group's agents that start with a
@@ -862,7 +880,7 @@ gets the warning `region_not_self_sufficient` with the list of commodities it
 imports (the first consumer's regions where a crop does not grow). Under autarky the
 region has `lambda* < 1`; under lanes it may not. The simulation moves goods
 between regions only when the transport module is on and an agent ships (`spec-transport.md`; the merchants are MER's), so such a region may starve in a run. The
-warning is the author's cue. With edges (`spec-regions.md` 4), free trade is meaningful only within a strongly connected component of the graph (`Graph.Components`, `spec-regions.md` 4.3.5, 4.5.3): a pair of regions in different components has no route, so no lane. Whether the check should use the components is VIA's decision (`spec-regions.md` open question 2).
+warning is the author's cue. With edges (`spec-regions.md` 4), free trade is meaningful only within a strongly connected component of the graph (`Graph.Components`, `spec-regions.md` 4.3.5, 4.5.3): a pair of regions in different components has no route, so no lane. Whether the check should use the components is VIA's decision (`spec-regions.md` open question 2). A region may also be short because of a resource: the warning carries a resource cause when the binding row of its autarky programme is an endowment (`spec-resources.md` 11.3). The outside (`spec-external-sector.md`) is not a lane: its imports are columns of the open layer (4.8).
 
 9.6. **Prices across regions.** With lanes, a seed price differs between regions by
 no more than the lane cost in value; without lanes there is no relation, and each
@@ -885,6 +903,7 @@ error rule.
 | `cycle_not_productive` | `ErrNotViable` | V2: a strongly connected component of the material graph with no surplus |
 | `labour_short` | `ErrNotViable` | V3: pooled `lambda* < 1` at full labour |
 | `storage_gap` | `ErrNotViable` | V4: an upkeep good out of production longer than its shelf life |
+| `resource_short` | `ErrNotViable` | V3: pooled `lambda* < 1` at full labour where a tight row is a resource row (`spec-resources.md` 11.3; with the resources module on) |
 | (existing) | `ErrWarmStartPrice`, `ErrWarmStartJob`, `ErrUnknown*`, `ErrOverflow`, `ErrDuplicateID` | the table of 8.7 |
 
 ### 10.2 Warnings (`spec-config.md` 7.2)
@@ -897,6 +916,9 @@ error rule.
 | `storage_gap_input` | V4 for an input of an activity that exists all year |
 | `viability_check_skipped` | the size gate (11) was exceeded; says which part was not run |
 | `raw_without_source` | a commodity marked `Raw` that no existing activity with no inputs outputs and that no endowment, faucet or import supplies (4.2.1) |
+| `endowment_season_peak` | the draws of a start window exceed what the stock holds at the opening of the window (`spec-resources.md` 11.3); an approximation, never an error |
+| `raw_source_exhaustible` | a raw commodity whose only sources are endowments of finite stocks (`spec-resources.md` 9.3); also counted by `raw_without_source`'s union of sources (4.2.1) |
+| `import_only_source` | a commodity sourced only by an import line (`spec-external-sector.md` 10.1.2) |
 | `wants_exceed_labour` | the demand module is on and the programme with the wants of 3.2 has `lambda* < 1` although the upkeep-only programme has `lambda* >= 1`: the wants are more than the labour can fund at full work. Size-gated like V3; never an error |
 | (not a warning) | `job_longer_than_window` of `spec-production.md` 10.4 no longer occurs: a role's welfare window is never shorter than twice its longest job (`spec-welfare-and-wages.md` 2.3.3), and the informational `window_extended` (WEL 2.3.5, 11.4) replaces it. The longest job against the window is not checked here |
 
@@ -907,7 +929,7 @@ error rule.
 `SeedBelowCostFloor`, `SeedAboveCostCeiling` (both against the full unit cost, 8.2.3),
 `UnpricedWages` (regions with no starting wage, 8.2.5), `Drift`, `ResidualBP` and the list over
 `ResidualWarnBP`, `Census` (needed against configured households per group),
-`CapacityTight` (the activities whose capacity row is tight), `Advantage` (9.2),
+`CapacityTight` (the activities whose capacity row is tight), `Headroom` and `Rent` (per endowment and region: the sustainable draw over the draw at the reference programme at `lambda` 1, and the dual of its row; `spec-resources.md` 11.3), `endowment_runway` (a finite stock's years at the optimum), `Advantage` (9.2),
 `CapShortened` (stock cover cut to shelf life, 8.4.2), `NominalSeed` (the regions whose
 table came from the nominal programme, 5.3.4), `SurplusWantsBP` (`lambda*` of the
 programme with the wants, absent when the module is off, 3.2), `WageBelowTarget` (the
@@ -934,6 +956,8 @@ They are rows in the parameter-owner table with the scope "Solve option (not a
 | Solve option | `ResidualWarnBP` | residual above which the report lists an activity (6.5) | 1 000 | 0 to 100 000 |
 | Solve option | `MaxPivots` | pivots allowed before `ErrSolveLimit` (5.4) | `MaxViabilityPivots` | 1 to `MaxViabilityPivots` |
 | Solve option | `Lanes` | routes between regions (9.4) | none | at most `MaxRegions * MaxRegions * MaxCommodities` |
+
+`HorizonYears` (years a finite stock must last) is not a solve option: it is a field of the resources module (`spec-resources.md` 12), read from the configuration, and has its row there. The inputs of the open layer (4.8) are the pure function `Lines()` of the external module and add no solve option.
 
 Bounds, provisional, in `bounds.go` (`spec-config.md` 4.1):
 
