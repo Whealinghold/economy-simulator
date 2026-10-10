@@ -1,0 +1,17 @@
+maximum gain g that decays, by delay d (ticks) and immediate share a
+d  a=0  (theory 2sin(pi/(2(2d+1))))   a=0.5   a=0.8   aware a=0
+0 1.998 2.0 1.998 1.998 1.998
+1 0.998 1.0 1.998 3.332 1.998
+2 0.618 0.618 1.998 1.998 1.998
+3 0.444 0.445 1.998 2.394 1.998
+4 0.346 0.347 1.998 1.998 1.998
+6 0.24 0.241 1.998 1.998 1.998
+8 0.184 0.185 1.998 1.998 1.998
+12 0.124 0.126 1.998 1.998 1.998
+20 0.076 0.077 1.998 1.998 1.998
+
+a=0, g above the limit, with a cap on the shipment per tick (amplitude of the gap):
+d=2 g=0.927 (1.5x limit): uncapped, cap 0.5, 0.2, 0.05 -> ['inf', 0.964, 0.393, 0.098]
+d=2 g=1.854 (3.0x limit): uncapped, cap 0.5, 0.2, 0.05 -> ['inf', 1.0, 0.4, 0.1]
+d=6 g=0.360 (1.5x limit): uncapped, cap 0.5, 0.2, 0.05 -> ['inf', 2.54, 1.016, 0.254]
+d=6 g=0.720 (3.0x limit): uncapped, cap 0.5, 0.2, 0.05 -> ['inf', 2.86, 1.144, 0.286]
