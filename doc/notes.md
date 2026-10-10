@@ -45,72 +45,53 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027 |
-| AGT | N-043, N-067, N-081, N-087 |
+| AGT | N-043, N-067, N-081, N-087, N-101 |
 | BEL | N-042, N-043 |
 | CAL | N-030 |
-| CAR | N-011, N-076 |
-| CFG | N-016, N-061, N-075 |
+| CAR | N-011, N-090, N-100 |
+| CFG | N-016, N-061, N-075, N-093, N-102 |
 | CHK | N-020, N-051 |
 | CLB | N-015 |
-| CLR | N-076 |
+| CLR | N-095 |
 | CODE | N-019, N-089 |
 | CRD | N-032, N-046 |
 | DEM | N-080, N-089 |
-| EMP | N-046, N-078 |
-| EST | N-082 |
-| EVD | N-018, N-029 |
+| EMP | N-046 |
+| EST | N-082, N-096 |
+| EVD | N-018 |
 | EXP | N-015 |
-| EXT | N-021, N-046, N-078, N-084 |
-| FIS | N-021, N-046, N-078 |
+| EXT | N-021, N-046, N-084, N-095, N-096 |
+| FIS | N-021, N-046 |
 | GDS | N-031, N-039 |
 | IND | N-013 |
-| INF | N-046, N-084 |
-| INT | N-022, N-031, N-036, N-051, N-079 |
-| LED | N-021, N-076, N-083 |
-| LND | N-046, N-078 |
-| MER | N-011, N-046, N-076, N-084 |
-| MIG | N-010, N-038, N-046 |
-| MON | N-021, N-046, N-078, N-084 |
-| OBS | N-012, N-031, N-035, N-040, N-045, N-065, N-067, N-072, N-081, N-087, N-088 |
+| INF | N-046, N-084, N-100 |
+| INT | N-022, N-031, N-036, N-051, N-079, N-090, N-091 |
+| LED | N-021 |
+| LND | N-046 |
+| MER | N-011, N-046, N-084, N-090, N-100 |
+| MIG | N-038, N-046, N-090, N-097 |
+| MON | N-095, N-096 |
+| OBS | N-012, N-031, N-035, N-040, N-045, N-065, N-067, N-072, N-081, N-087, N-088, N-094 |
 | PLC | N-025, N-046 |
-| POP | N-008, N-029, N-046, N-083 |
-| PRO | N-030, N-031, N-039, N-043 |
-| REF | N-027, N-030, N-089 |
-| REG | N-010, N-026, N-030, N-084 |
-| RES | N-030, N-031, N-036, N-046 |
+| POP | N-096, N-097, N-098 |
+| PRO | N-030, N-031, N-039, N-043, N-090 |
+| REF | N-027, N-030, N-089, N-092 |
+| RES | N-030, N-031, N-036, N-046, N-098 |
 | RSK | N-046 |
 | SAV | N-046 |
 | SCL | N-030 |
-| SET | N-026 |
-| SKL | N-039, N-071 |
-| SPN | N-043, N-089 |
-| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087 |
+| SKL | N-039, N-071, N-090 |
+| SPN | N-043, N-089, N-096 |
+| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099 |
 | STO | N-011, N-046 |
-| STY | N-015, N-027, N-030, N-084, N-085, N-086 |
+| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092 |
 | SUB | N-046 |
-| TRN | N-011, N-046, N-076, N-084 |
-| VIA | N-015, N-061, N-071, N-080, N-085 |
-| WEL | N-016, N-028, N-081 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093 |
+| WEL | N-016, N-028, N-081, N-099 |
 | WLD | N-009, N-031, N-036, N-046, N-051, N-056, N-074, N-082 |
 
 ## Open notes
 
-### N-008 Weight changes, cohort failure and the estate
-
-- **Areas:** POP
-- **Raised:** 2026-10-09, `spec-scale.md` 4.8 and open question 4, `spec-ledger.md`.
-- **Note:** A cohort whose money reaches 0 fails whole. Recommended: reduce its
-  weight by the share it cannot support before removing it (`spec-scale.md` 5.1),
-  inside a failure ladder (change role, relief, then death). A weight change is a
-  ledger operation with reason `split`, `merge`, `births` or `starvation`, scaling
-  holdings in proportion with the remainder going to the estate
-  (`spec-scale.md` 4.8; `spec-ledger.md` 7.2). Account IDs are never reused, so a
-  run with many deaths accumulates closed accounts (`spec-ledger.md` open
-  question 6; N-020). The estate pseudo-agent is not an agent: it has no weight and
-  is not counted in agents or households (`spec-estates.md` 2.7.4).
-- **Update (2026-10-10, AGT):** a cohort does not fail by itself; an agent with no money still exists and goes unfed (`spec-agents.md` 3.6.1). AGT supplies `Unfed` and `Hunger` (5.4, 5.5) and the effect of a weight change on agent state (3.7). The ladder and the partial weight reduction by the unfed share are SPN and POP's.
-- **Update (2026-10-10, EST):** weight changes pass money through the estate (`spec-estates.md` 2.8.1); a rise the pool cannot fund is open (N-073). The ladder is SPN and POP's.
-- **Update (2026-10-10, SPN and EST):** applied for SPN and EST in `spec-spawner.md` 5 (the ladder, reduction by the unfed share, the estate path) and `spec-estates.md` 2.8. POP owns the demographic rates (`PopDelta` hook, `spec-spawner.md` 8; the ledger reason `deaths`).
 ### N-009 Decisions the world and tick phases must make
 
 - **Areas:** WLD
@@ -131,20 +112,14 @@ PR description.
 - **Update (2026-10-10, AGT):** AGT assumes the phase order of `spec-agents.md` 4: start (moment, cost anchors, relief and starting money, directive), production (continue and complete, then `Work`, then starts), `Trade` and orders, clearing, outcomes and `Revise`, consumption, entry and exit, end (ageing). Creation draws in the order target ratio then residue (3.5.2). VIA: the warm start is applied before the agents' creation draws (`spec-viability.md` 8.6 item 5).
 - **Update (2026-10-10):** a construction phase precedes tick 0 and ends at the first `Step` (`spec-ledger.md` 5.2.4, N-074).
 - **Update (2026-10-10):** AGT phase 6 includes `Privation` and want consumption; phase 7 is detailed in `spec-spawner.md` 10.2 (relief in phase 1 from what the previous tick's entry step left, `spec-estates.md` 2.6; see N-082).
-### N-010 Regions
-
-- **Areas:** REG, MIG
-- **Raised:** 2026-10-09, from GDS, EST and LED.
-- **Note:** `spec-regions.md` owns the per-region override of a commodity's
-  reference price (`spec-goods.md` 6.3) and decides whether a region holds one
-  settlement or several (roadmap, Open 3). Each region creates its estate
-  pseudo-agent and account (`spec-estates.md` 2.7). Changing an account's region
-  is an explicit operation (`spec-ledger.md` 3.5) and its interaction with goods in
-  transit is open (`spec-ledger.md` open question 8; `spec-migration.md`).
-
+- **Update (2026-10-10, REG):** WLD takes from `spec-regions.md`: estate accounts and pseudo-agents are created with the regions, in ascending `RegionID`, before any household (3.6.1; the order against the ledger's boundary accounts is WLD's and the ledger's); every iteration over regions is ascending `RegionID` (3.3.2); a relocation needs no reservation open, so it runs after settlement and before the next admission, and the recommended phase is entry and exit (6.1.2); `SetEdgeStatuses` is a between-ticks call (7.3).
+- **Update (2026-10-10, MON):** the money flows run in phase 1 after relief and starting money and before production (`spec-money-supply.md` 5.1).
+- **Update (2026-10-10, TRN):** transport assumes: arrivals in phase 1, first, after the moment and before relief and starting money, in shipment ID order; dispatch in phase 3 for each agent in ID order after `Trade` returns, in this order: discards, shipments, intents; an agent that is away is skipped in phases 2 and 3 (`spec-transport.md` 5.3, 5.5); `Inbound` is fixed at the start of phase 3.
+- **Update (2026-10-10, POP):** in phase 7 the POP deaths run before the entry budget is taken and births come last (`spec-population.md` 4.8).
+- **Update (2026-10-10, wave 2 integration):** the phase 1 order is now: the moment and the cost anchors; transport arrivals; relief and starting money; money flows; the directive. Phase 7: ladder reductions and removals, POP deaths, switches and applies, births last. WLD fixes both.
 ### N-011 Transport, storage and carriage
 
-- **Areas:** TRN, STO, CAR, MER
+- **Areas:** STO, CAR, MER
 - **Raised:** 2026-10-09, `spec-goods.md` section 3.
 - **Note:** A vehicle's and a store's capacity is a pair, a mass capacity and a
   bulk capacity, and a load fits only if both are within it
@@ -157,6 +132,7 @@ PR description.
   section yet, and its open items (`specs/README.md`, "Still open" 5 and 6) belong
   to the contract and merchant specs.
 - **Update (2026-10-10, CAR):** `spec-carriage.md` now has Requirements (FR-CAR-001 to 013), restates its open items 5 and 6 with the reason they wait, and records a finding in 4.2 (see N-076).
+- **Update (2026-10-10, TRN):** applied for TRN in `spec-transport.md`. A mode's capacity is a pair per carrying unit and a load fits only if both sums are within it (3.2). Transport does not use `BulkFactor` or the chargeable size: a hired load buys `n = max(ceil(mass / UnitMass), ceil(bulk / UnitBulk))` carrying units by its binding fill, which removes the over-charge of `spec-goods.md` 3.5 for transport and is the per-mode factor the note asked for (3.2.1, 8.3). Goods keep ageing in Transit accounts and a lot spoils whole from them (5.6); cargo lost is the reason `loss`, reserved for RSK (10.1). Still open for STO (the chargeable size for storage), CAR and MER (a bilateral contract and its escrow, `spec-transport.md` 8.4).
 ### N-012 Events, metrics and log keys to define
 
 - **Areas:** OBS
@@ -176,6 +152,11 @@ PR description.
 - **Update (2026-10-10):** AGT adds `UpkeepShortfall` (one per region and role per tick, `spec-agents.md` 14.1); `AgentSpawned` gains `Role`, `StartMoney`, `External`; the removal event gains `Cause`; log keys `households` and `unfed` (14.4); a metric `economysim.household.unfed` is proposed (14.5). STB asks for counters on dampers that act silently (N-045).
 - **Update (2026-10-10):** OBS also decides the name of the Snapshot field for the households held to work by the floor, and whether the construction bucket is a `BoundaryFlow` with `Tick` -1 (N-072).
 - **Update (2026-10-10):** the events, keys and metrics of the written specs are now in the rules (`rules/observability-and-logging.md` 3.3.2, 4.3, 5.3). Still open for OBS: the Snapshot fields (N-065, N-081), `Tick` -1 for the construction bucket (N-072), the snapshot-fed gauges, and the remaining conflicts of the rules edit (N-088).
+- **Update (2026-10-10, REG):** REG adds the events `AgentRelocated` and `EdgeStatusChanged`, the log keys `edges`, `components`, `from_region`, `to_region`, `distance` and `closed`, the metric `economysim.household.relocations` (attributes `economysim.region.from` and `.to`), snapshot fields for the edges with a non-default status and the component count, and a question for OBS: events carry the `RegionID` or the string ID (`spec-regions.md` 10, open question 4).
+- **Update (2026-10-10, MON):** three events (`MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled`), three log keys (`flow`, `due`, `applied`) and two proposed metrics (`economysim.money.flow`, `economysim.money.flow.unapplied`) in `spec-money-supply.md` 13; Snapshot fields for the money supply by sector, the money boundary balance per reason and each flow's state in 13.4 (names are OBS's).
+- **Update (2026-10-10, POP):** POP adds the event `PopulationChanged` (one per region and role per tick, never when all counts are zero), the log keys `births` and `deaths`, and two proposed metrics (`economysim.household.births`, `economysim.household.deaths`) (`spec-population.md` 10).
+- **Update (2026-10-10, TRN):** transport adds the events `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected`, the log keys `shipment`, `mode`, `dest` and `modes`, and the metrics `economysim.transport.shipments`, `economysim.transport.in_transit` and `economysim.transport.cargo.spoiled` with a new metric attribute `economysim.mode` (`spec-transport.md` 13). Snapshot: the shipments in flight, the away agents and the non-default transit factors (13.5).
+- **Update (2026-10-10, wave 2 integration):** the events, log keys and metrics of REG, MON, POP and TRN are now in `rules/observability-and-logging.md` 3.3.2, 4.3 and 5.3. Still open for OBS: the Snapshot fields (N-094), whether events carry the `RegionID` or the string ID, and the conflicts of N-088.
 ### N-013 What indicators must not get wrong
 
 - **Areas:** IND
@@ -222,6 +203,10 @@ PR description.
 - **Update (2026-10-10):** AGT adds 17 rows and names `BasketTolerance`, closing one gap of the known list (the unnamed basket tolerance of `spec-currency.md` 5.3); VIA adds `WarmStart`. VIA's solve options (`StockCoverTicks`, `MoneyBufferTicks`, `ResidualWarnBP`, `MaxPivots`, `Lanes`) are not `Config` fields and are NOT in the parameter-owner table, because the registry test of testing.md 6.7 requires a field behind every row; they live in `spec-viability.md` 11. STB adds no field; its four proposals (`MinWorkTicks`, `ProdStopRatio`, `EntryShare`, `RoleHysteresis`) need rows if adopted.
 - **Update (2026-10-10, round 3):** `spec-config.md` 3.7 lists every field and 9.2 says a row is a `Config` field; the parameter-owner table now has a row for each (generated from 3.7, plus `WelfareWindow`, `WindowCycles`, `MinWorkShare`, `BeliefEvidenceShare`), and the solve options of `spec-viability.md` 11 are deliberately not rows. Closed: the `BasketTolerance` name, the `MaxPrice` and `MaxQuantity` wording (they are bounds), `ExpectedWorkTicks` against a derived `TicksPerYear` (an error, FR-CFG-048). Remaining: a carriage `m_bp` has no name; a test must verify the table against the code once it exists.
 - **Update (2026-10-10, round 4 and 5):** the parameter-owner table gained the demand and spawner fields (`World.Spawner`, `Role.Closed`) and a row for every field of `spec-config.md` 3.7, regenerated after the new modules. No unnamed parameter was found in AGT, WEL, DEM, SPN or REF. A test must still verify the table against the code once it exists.
+- **Update (2026-10-10, REG):** REG adds `Edge.From`, `.To`, `.Distance` and `RegionPrice.Region`, `.Commodity`, `.Price` to the parameter-owner table, and the presentation-only fields `Region.Label` and `World.DistanceLabel` to the allow-list of `spec-config.md` 8.3. No unnamed parameter was found. REG adds no tunable with a default (a distance and a price have none; the default of the sections is "no edges, no overrides"). The edge status of `spec-regions.md` 7 is world state, not a field, and has no row.
+- **Update (2026-10-10, MON):** the fields of `MoneyFlow` have rows in the parameter-owner table; no unnamed parameter; the runtime `Scale` is state and not a row.
+- **Update (2026-10-10, POP):** POP adds nine rows (`BirthStake` has an explicit name); no gap found. The registry test is still to be written.
+- **Update (2026-10-10, TRN):** TRN adds `Modes` and ten fields of a mode, each with a default or "required", a bound and an owner. No unnamed parameter; it removes the unnamed carriage margin `m_bp` of `spec-carriage.md` (the haul unit's price is anchored to the producing recipe's `UnitCost`, `spec-transport.md` 8.5).
 ### N-017 Words and names
 
 - **Areas:** ALL
@@ -234,6 +219,9 @@ PR description.
   (`spec-calendar.md` 2.5); "consumer" means the library consumer (N-001); a "pack"
   is configuration, a "module" is an optional mechanism. Add new terms to the glossary
   list in `specs/README.md`, and to `doc.go` before code uses them.
+- **Update (2026-10-10, REG):** terms fixed: region, edge, route (an edge), distance (a length, never a duration), component, edge status, relocation. "Settlement" names what a region is, not a type. Setting words appear only in the flagged examples of `spec-regions.md` 12.
+- **Update (2026-10-10, POP):** a birth and a death are the formation and dissolution of a household, not of a person; "stake" is the money a born household brings, not an investment; "year" is `TicksPerYear` ticks.
+- **Update (2026-10-10, TRN):** the agent that moves is the *traveller*; a *carrier* is the role of `spec-carriage.md` whose households make haul units. Example mode names (`foot`, `wagon`, `coach`, `crawler`, `lift`) are examples in two invented settings and are flagged so in the spec.
 
 ### N-018 Unverified evidence
 
@@ -262,6 +250,7 @@ PR description.
   - amend architecture.md 4.3 and 7.7 for the checkpoint and optional extension
     state, as ADR 0002 says, with a fresh read-receipt tag.
 - **Update (2026-10-10):** the log keys and events of the written specs are in `rules/observability-and-logging.md`. The rest of this note is unchanged: the architecture.md 4.3 and 7.7 amendment for the optional extension state (ADR 0002) waits for the first code.
+- **Update (2026-10-10, REG):** at the first code also add `internal/graph/` (the shortest-path algorithms over primitive slices) and `regions.go` to the layout of architecture.md 2.6 and `AGENTS.md`, and the REG terms to the glossary in `doc.go` (`Region` is used by every spec and is not in the vocabulary list of architecture.md 3.2).
 ### N-020 What each spec contributes to a checkpoint
 
 - **Areas:** CHK
@@ -274,9 +263,13 @@ PR description.
   compatibility policy after 1.0 (ADR 0002, open points).
 - **Update (2026-10-10, LED):** `Born` is signed in the saved state; the construction bucket and pending output are not in the ledger state (`spec-ledger.md` 11). The agent state AGT contributes is in `spec-agents.md` 20, the beliefs' in `spec-beliefs.md` 14.
 - **Update (2026-10-10):** the spawner's state (`Privation`, `RoleSince`, the renewal carry, two diagnostic runs) is in `spec-spawner.md` 14; the demand module's carries are in `spec-demand.md` 12.
+- **Update (2026-10-10, REG):** REG saves only the edges whose status is not the default (From, To, Closed, FactorBP), in `EdgeID` order (`spec-regions.md` 11). The graph tables, the resolved override arrays and the relocation totals are derived and not saved.
+- **Update (2026-10-10, MON):** state in `spec-money-supply.md` 14 (per flow `Total`, `Scale`, `Ended`; carries per open account; pool carries per region).
+- **Update (2026-10-10, POP):** POP contributes a death carry per agent, a birth carry per (region, role), the effective `BirthScale` and `DeathScale` per region when a shock set them, and two diagnostic runs (`spec-population.md` 11). Deaths close one account per removed agent and none for a partial reduction; with POP on the list of closed accounts grows by one slot per death in a weight-1 world (ledger open question 6).
+- **Update (2026-10-10, TRN):** the transport module's state is the next shipment ID, the shipments in flight and the non-default transit factors (`spec-transport.md` 14); away flags and the free lists of Transit accounts are derived.
 ### N-021 Anything that creates or destroys money or goods
 
-- **Areas:** MON, EXT, FIS, LED
+- **Areas:** EXT, FIS, LED
 - **Raised:** 2026-10-09.
 - **Note:** A new faucet or sink is a row in the ledger's reason registry, with its
   kind and owner (`spec-ledger.md` 7.2); there is no other way to change a total.
@@ -285,6 +278,9 @@ PR description.
   `Raw` needs a real source once resources, the external sector or faucets exist
   (`spec-goods.md` open question 5).
 - **Update (2026-10-10, LED):** the reason registry gained `disposal` and the goods form of `initial`; `initial` is not construction-only (an external agent mid-run, `spec-ledger.md` 7.2.1).
+- **Update (2026-10-10, REG):** REG adds no faucet, no sink and no ledger reason. A relocation moves nothing between accounts; the ledger keeps relocation totals as the reconciling item of a report by region (`spec-regions.md` 6.4).
+- **Update (2026-10-10, MON):** applied for money. The reason registry is the built-in rows plus one row per configured money flow (reason = flow ID), closed for a run, so a new money faucet or sink is a registry row (`spec-money-supply.md` 4.5, 10.3); any counterparty whose balance is created or destroyed outside conservation must be a Boundary account (10.1, FR-MON-043). Still open for EXT, FIS and RES: the goods side (a `Raw` commodity's real source, imports and exports, goods faucets).
+- **Update (2026-10-10, POP):** POP creates and destroys no money or goods; births and deaths are internal flows between the pool and agents.
 ### N-022 The player and other external agents
 
 - **Areas:** INT
@@ -312,23 +308,6 @@ PR description.
   for a granary) uses `Strategy` for its orders and the policy interface for its
   settings. Do not create the interface before PLC (architecture.md 4.2).
 - **Update (2026-10-10):** ADR 0003 decision 3 records the answer (its own interface, written with `spec-policy.md`). Close this note when PLC is written.
-### N-026 One settlement per region, or several?
-
-- **Areas:** REG, SET
-- **Raised:** 2026-10-10, `roadmap.md` Open 3. See also N-010.
-- **Note:** One settlement per region is simpler and makes `spec-settlements.md` a
-  thin layer; several lets a region have a large settlement and its smaller ones.
-  Decide when writing `spec-regions.md`, before `spec-settlements.md`, because it
-  fixes where market, estate and size class live.
-- **Answer (decided, 2026-10-10):** one settlement per region, and a region is one
-  market. A town and its hamlets are separate regions joined by short edges, which
-  costs little because clearing cost grows with regions and commodities, not
-  households (`spec-scale.md`). `spec-settlements.md` (later) then only gives a
-  region a size class from its households, which is the thin layer its roadmap row
-  describes. Victoria 3 treats the market as the unit and varies a state's access to
-  it instead of splitting prices inside a state (dev diary 9, snippet only). Apply
-  this in `spec-regions.md` and close the note there.
-- **Update (2026-10-10):** ADR 0003 decision 4 records the answer. Apply it in `spec-regions.md` and close this note there.
 ### N-027 No default macro constant is stable yet
 
 - **Areas:** ALL, REF, STY
@@ -368,31 +347,9 @@ PR description.
 - **Update (2026-10-10, STB):** run in `spec-stability.md` 6.1 (stylised model, integer rule). The slope of excess demand is `(1 - e) Q/p`, exact to four places; stable only if `e > 1`; `e = 1` (a fixed budget) is neutral. For `e = 0.5` every seed ends pinned: at the price ceiling after a rise, or at the price where all households work the full year after a fall. An inventory buffer and `TargetSpread` 3 000 do not remove it. A work floor (minimum working days, D13) replaces the ceiling by a price set by the floor. The survival-floor reading is unit-elastic too and is not a damper by itself. The model has no income feedback, so it does not show that a real pack is unstable. **AGT (2026-10-10):** a staple's demand elasticity is 0 to 1, never above 1 (`spec-agents.md` 11.6), so the stability condition `e > 1` fails; the default strategy applies the rule with a rest band and a proportional work share for a cohort (7.1.2, 9.3). Leave open until WEL decides D13 (`MinWorkTicks`).
 - **Update (2026-10-10, WEL and STB):** WEL adopted the floor as `MinWorkShare` (`spec-welfare-and-wages.md` 5.3, default 4 000 bp). `spec-stability.md` 6.1 gives the upper outcome as `P0 * (D0 / DMIN)^(1/e)`: about 1.06 times the reference for D0 = 150 days and the default floor, 2.9 for D0 = 250. The instability remains; scenario S04 records the outcome with the floor at its default and at 0. If a pinned market is still unacceptable, N-052 is the next lever. Leave open until S04 has run.
 - **Update (2026-10-10, STB):** DEM answers for a luxury: stable only with schedule elasticity above 10 000 and about 10% budget headroom (`spec-demand.md` 6.3; a model), scenario S23. A staple is unchanged. Open until S04 and S23 have run.
-### N-029 How deep a review of other economy libraries?
-
-- **Areas:** POP, EVD
-- **Raised:** 2026-10-10, `roadmap.md` Open 6. See also N-015, N-018.
-- **Note:** Open before `spec-agents.md` and `spec-population.md`. Only bazaarBot
-  has been read in full. abcEconomics, Prehistoric, the Space Project, ASSUME and
-  Crusoe are known from search snippets, and two documentation pages failed to
-  load. Record what is read in `specs/evidence.md`, and do not set a default from
-  an unread source.
-- **Answer (proposed, 2026-10-10):** a targeted review, not a survey. Opened today:
-  the abcEconomics index (Firm and Household archetypes; the platform moves goods,
-  as our ledger does; message passing) and ASSUME's custom-unit example (a unit plus
-  a bidding strategy with one `calculate_bids()` reused across actor types; dispatch
-  stays in the unit). Both support a single `Strategy` and physical handling outside
-  it. Still to read before AGT: the Doran and Parberry bazaarBot paper (N-015), the
-  abcEconomics Firm and Household pages, ASSUME's base strategy class, and the rest
-  of Lengnick (only pages 3 to 7 are read). Before POP: Clark's own Malthusian
-  source, not the VoxEU summary. Skip Prehistoric, the Space Project and Crusoe
-  unless a specific question needs them. The evidence rows are added to
-  `specs/evidence.md`.
-- **Update (2026-10-10):** the Doran and Parberry journal paper is read in full (text only). Lengnick's firm price rule, Table 1 and the price-flexibility experiment are read from extracted text with the Greek symbols lost. ASSUME's custom-unit example re-read; its bidding-agents page (404) and the ZIP paper (403) failed to load. Factorio, Victoria 3 and abcEconomics production pages were opened through a summarising fetch only. Still to read before AGT: the abcEconomics Firm and Household pages and ASSUME's base strategy class.
-- **Update (2026-10-10, AGT):** the targeted review for AGT is done. Read: Lengnick's household section (equations 1 to 4, 11, 12, Tables 1 and 2, the search part of 2.2; text extracted from the PDF, symbols partly lost); ASSUME's `base.py` (`BaseStrategy`, `BaseUnit`); abcEconomics `Household`, `Firm` and `Trade` pages through a summarising fetch. ASSUME's bidding-agents page still 404. Still to read before POP: Clark's own source.
 ### N-030 Five regions with different climates
 
-- **Areas:** RES, CAL, REG, PRO, SCL, STY, REF
+- **Areas:** RES, CAL, PRO, SCL, STY, REF
 - **Raised:** 2026-10-10, the first consumer's world size (`vision.md` section 2).
 - **Note:** The first consumer needs five regions of varying size and resource
   richness, with different climates, so a crop grows well in some and poorly or not
@@ -430,6 +387,8 @@ PR description.
 - **Update (2026-10-10, VIA):** `spec-viability.md` 9 and 13.2 (A3, A5): comparative advantage from yield differences, a three-region check (prototype: autarky surplus 2.980, 2.517 and 3.124; pooled 3.124), scenario A3 handed to REF. REF must choose yield ratios large enough to show specialisation.
 - **Update (2026-10-10, SCL):** with AGT, PRO and BEL describing the per-agent work, the cost model of `spec-scale.md` 6 is per tradable commodity (`c_0 + n_T * c_t`, placeholders 2 us, 1 us and a reference of 8 commodities): the first consumer's world of 5 000 agents is about 53 ms a tick (about 19 ticks a second), against the earlier 25 ms. Unmeasured; still missing: the recipe count and the tick rate.
 - **Update (2026-10-10, REF):** `five` in `spec-reference-chain.md` 4.4.4: five regions with yields by season and recipe, 5 000 households, 30 commodities, 45 recipes (the missing recipe count), 85 active markets (17 per region, not 150), a mean tradable set of 7.7. Each region is viable alone; pooled 2.039. Still missing: the consumer's tick rate. Trade between regions waits for REG, TRN, MER and INF.
+- **Update (2026-10-10, REG):** REG gives the region set and the graph. The five regions of `spec-reference-chain.md` 4.4.4 have no edges yet; `spec-regions.md` 12.4 proposes the edge part of `overlay/trade.toml` (a hub-and-pairs layout, 12 directed edges, distances placeholders until TRN fixes a unit's cost and speed). Yields by region keep the rules of `spec-regions.md` 5.3 (both keys exist, one row per key, canonical order). Remaining for RES, STY and REF as before.
+- **Update (2026-10-10, POP):** the per-agent death carry works at weight 1, the first consumer's case; no weight above 1 is needed.
 ### N-031 What the calendar hands to other specs
 
 - **Areas:** RES, PRO, WLD, OBS, INT, GDS
@@ -473,6 +432,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-production.md` 5.5, 6.5, 6.6.2, 6.8.
 - **Note:** WLD: production runs before orders; continuations and completions before starts; starts rotate by tick modulo the region's agent count (count taken at the start of the phase); at agent creation one draw in [0, 10 000) for production's residues, after the other creation draws in an order WLD fixes. INT: shocks are set and cleared between ticks through the yield-shock slot (a multiplier by region and recipe, default 10 000). RES: provide `Endowment(region, resource)` and `TakeEndowment(region, resource, n)`, own the resource definitions, depletion and regeneration, and make depletion visible by event since the ledger does not see it.
 - **Update (2026-10-10, VIA):** applied for VIA in `spec-viability.md` 8.5, which staggers initial jobs with a fixed rule and answers `spec-production.md` open question 2; WLD must apply the warm start before the agents' creation draws (8.6 item 5).
+- **Update (2026-10-10, REG):** the yield-shock slot and RES's `Endowment(region, resource)` key on `RegionID` (`spec-regions.md` 3.3). The edge status of `spec-regions.md` 7 is a second slot of the same shape (world state, set between ticks) for INT's closed-road shock; the other slots are listed in N-091.
 ### N-038 Seed prices, newcomers and migrants
 
 - **Areas:** MIG
@@ -481,6 +441,8 @@ PR description.
 - **Update (2026-10-10, VIA):** the seed table exists: `Config.WarmStart.Prices` with groups for money, stock and jobs (`spec-viability.md` 8.1, 8.2); newcomers use the window (8.8). It is a start, not a standing anchor.
 - **Update (2026-10-10):** the CLR part is applied (`spec-clearing.md` 5.4: the price before the first trade is the seed price). The BEL part is applied (`spec-beliefs.md` 8.1, 8.4).
 - **Update (2026-10-10, SPN):** newcomers use `spec-beliefs.md` 8.3, not the warm-start table; role changers keep common beliefs (`spec-spawner.md` 4.2, 7.4). MIG decides whether a migrant keeps or reseeds its beliefs (default reseed).
+- **Update (2026-10-10, REG):** `relocate` leaves a migrant's beliefs untouched (`spec-regions.md` 6.3), so MIG's default of reseeding on arrival is MIG's to execute. A warm-start seed replaces the seed price only; the reference band stays on the effective reference price (5.2.2).
+- **Update (2026-10-10, POP):** a born household takes the newcomer's beliefs of `spec-beliefs.md` 8.3 (`spec-spawner.md` 7.4); MIG still decides for a migrant. A traveller of the transport module keeps its beliefs across a trip (`spec-transport.md` 9.3).
 ### N-039 A hard cost floor
 
 - **Areas:** STB, GDS, PRO, SKL
@@ -516,12 +478,19 @@ PR description.
 - **Note:** FR-STB-013 requires every clamp, refusal, floor or limit to be counted in an event or a bounded `Warn`. Counters exist for belief clamps and order rejections (`BeliefsUpdated`, `OrderRejected`). Missing: the cap or floor on days worked, entry limits, the production stop. FR-STB-012: the regime measures must be computable from events and the snapshot alone: price, volume and unmatched per market, at-floor and at-ceiling per market, weights on spawn and bankruptcy, boundary flows, pool balance, pending output.
 - **Update (2026-10-10):** counters now exist for the work floor (Snapshot and bounded `Warn`, `spec-welfare-and-wages.md` 5.3, 11.3; `spec-agents.md` 7.1.3, FR-AGT-072) and for the traineeship queue and places (`spec-skill-barriers.md` 8.3). Still missing: the production halt (a per-agent `Debug` line only, N-067) and a spawner entry limit.
 - **Update (2026-10-10):** counters now exist for the demand schedule and ladder (`WantShortfall`) and for the spawner's limits (`EntryLimited`). Still missing: the production halt (N-067).
+- **Update (2026-10-10, MON):** `MoneyFlowLimited` is the counter for the silent clamps of MON (a levy found too little, a grant cut at `MaxMoney`, the limit).
+- **Update (2026-10-10, POP):** the silent clamps of POP are counted in the event `PopulationChanged`: `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsUnfunded`, `RateClamped` (`spec-population.md` 10.1).
 ### N-046 Register entries owed by unwritten specs
 
-- **Areas:** POP, MIG, INF, EMP, MON, EXT, SAV, CRD, TRN, MER, STO, RSK, FIS, PLC, RES, LND, SUB, WLD
+- **Areas:** MIG, INF, EMP, EXT, SAV, CRD, MER, STO, RSK, FIS, PLC, RES, LND, SUB, WLD
 - **Raised:** 2026-10-10, `spec-stability.md` 4.7 and 9.
 - **Note:** Each adds its entries by the checklist of `spec-stability.md` 9 and states its dampers by `STB-Dnn`. The expected entries are in section 4.7 (SPN: the failure ladder, entry limits, replacement by the most profitable role; POP: the Malthusian fixed point; and so on). A spec that adds a loop and no entry is not done (FR-STB-003). Undamped now: see `spec-stability.md` section 10.
 - **Update (2026-10-10):** the DEM and SPN entries are merged into the register (L35, L36, L45, L46, L47, L50, L54 and L57 to L65).
+- **Update (2026-10-10, REG):** REG has its entries (REG-A1 to A3, `spec-regions.md` 13), now L66 to L68; the TRN, MER, MIG and INF rows of `spec-stability.md` 4.8 depend on the distances of `spec-regions.md` 4.3.
+- **Update (2026-10-10, MON):** MON-A1 to MON-A7, dampers MON-D1 to MON-D5 and scenarios S13 (defined) and MON-S1 to MON-S4 are in `spec-money-supply.md` 16; in the register MON-A1 is L69, MON-A2 merges into L30, MON-A3 to A7 are L70 to L74, the dampers are D41 to D45 and the scenarios S33 to S36.
+- **Update (2026-10-10, POP):** the POP entries are in `spec-population.md` 14 (POP-A1 to A9, dampers POP-D1 to D7, scenarios POP-S1 to S4); in the register they are L75 to L83, D46 to D52 and S37 to S40. POP's row in 4.8 can be removed.
+- **Update (2026-10-10, TRN):** TRN's entries are TRN-A1 to TRN-A8 in `spec-transport.md` 15 (price-gap shipping with a transit delay, the invisible pipeline, the haul capacity cobweb, freight and the delivered price, perishables that cannot cross, a trip as a gap in income, vehicles as capital, diversion to the pool); in the register TRN-A1, A2 and A5 are L84 to L86, A3 merges into L21, A4 into L17, A6 into L19, A7 into L26 and A8 into L63; the dampers are D38 to D40 and the scenarios S30 to S32.
+- **Update (2026-10-10, wave 2 integration):** the entries of REG, MON, POP and TRN are merged into the register, so POP, MON and TRN leave the areas of this note. Still owed: MIG, INF, EMP, EXT, SAV, CRD, MER, STO, RSK, FIS, PLC, RES, LND, SUB, WLD.
 ### N-051 What the Strategy contract needs from other specs
 
 - **Areas:** INT, CHK, WLD
@@ -545,6 +514,7 @@ PR description.
 - **Areas:** OBS
 - **Raised:** 2026-10-10, `spec-agents.md` 7.1.3, `spec-welfare-and-wages.md` 5.3.
 - **Note:** The work floor is counted by the world (a pure function of the welfare record, so a consumer's strategy cannot hide it): a Snapshot field and a bounded `Warn` "work floor binding" (`spec-agents.md` FR-AGT-072). The traineeship queue has its own `Warn`. OBS names the Snapshot fields. The production halt and a spawner entry limit are still uncounted (N-067).
+- **Update (2026-10-10, POP):** the silent clamps of POP are counted in `PopulationChanged` (`spec-population.md` 10.1); the production halt is still uncounted (N-067).
 
 ### N-067 The production halt is not an anchor and has no counter
 
@@ -576,18 +546,8 @@ PR description.
 - **Raised:** 2026-10-10, `spec-ledger.md` 5.2.4 and 8.2.1.
 - **Note:** `ErrInvalidLot`, `ErrNotConstruction` and `ErrEmptyTransform` are ledger-internal; the root needs a mapping to public sentinels. Bounds for the estate fields are in `spec-estates.md` 3.
 - **Update (2026-10-10):** the sentinels `ErrUnknownSpawner`, `ErrUnknownWant`, `ErrWantItems` and `ErrWantDurable` also need a root mapping.
-### N-076 A carriage market is not a goods market
-
-- **Areas:** CAR, MER, TRN, CLR, LED
-- **Raised:** 2026-10-10, `spec-carriage.md` 4.2.
-- **Note:** `spec-clearing.md` admits asks only for stock and settles by moving goods; hired carriage moves none and uses escrow. The contract, transport and merchant specs must pick: the carriage unit as a produced good (a trip is a job), or a contract-aware admission and settlement that keeps the guarantees of `spec-clearing.md` 2.3. The carriage unit's price may fall below the resolution floor (an ask of 24 against a floor of 50), so choose a coarser unit.
-
-### N-078 What the demand module needs from the money and income specs
-
-- **Areas:** MON, EXT, EMP, LND, FIS
-- **Raised:** 2026-10-10, `spec-demand.md` 7.3.
-- **Note:** A non-producing class needs a recurring named transfer of money and a paired sink or return flow. In the model a stipend of 300 a tick to 50 households with no sink left household money at 47 700 against 2 700 at the start.
-
+- **Update (2026-10-10, MON):** MON adds the sentinels `ErrFlowShape` and `ErrReasonCollision`; the root needs a mapping.
+- **Update (2026-10-10, REG):** REG adds the root sentinels `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation` and `ErrRegionBound`; the last three of the relocation may be ledger-level if `Relocate` is in `internal/ledger`. `ErrUnknownAgent` may collide with INT's.
 ### N-079 External agents are mortal only when the consumer says so
 
 - **Areas:** INT
@@ -611,18 +571,17 @@ PR description.
 - **Areas:** WLD, EST
 - **Raised:** 2026-10-10, `spec-spawner.md` 7.3, `spec-estates.md` 2.6.
 - **Note:** Relief is paid in phase 1 from what the previous tick's phase-7 entry step left, so the pool is shared in time. WLD must keep the order: phase 1 relief, phase 7 entry.
-
-### N-083 Population adds the `deaths` reason and decides renewal against births
-
-- **Areas:** POP, LED
-- **Raised:** 2026-10-10, `spec-spawner.md` 4.1 and 8.2.
-- **Note:** POP adds the ledger reason `deaths` and decides `Renewal` against births (warning `renewal_with_population`).
+- **Update (2026-10-10, POP):** births draw from the pool in phase 7 inside `EntryPoolShare`; the POP deaths are executed before the budget is taken so the estates of the dead fund the same tick's births (`spec-population.md` 4.8). WLD must keep phase 1 relief, phase 7 entry. The pool is shared more widely now: see N-096.
 
 ### N-084 Scenarios that wait for trade, money and the coarse tick
 
-- **Areas:** MON, EXT, REG, TRN, MER, INF, STY
+- **Areas:** EXT, MER, INF, STY
 - **Raised:** 2026-10-10, `spec-reference-chain.md` 7.6.
 - **Note:** S13 (the faucet overlay), the dynamic parts of X1 and X2 (the trade overlay) and the coarse-tick leg of S12 wait for these specs.
+- **Update (2026-10-10, REG):** REG supplies the edge format and a proposal for the edge part of `overlay/trade.toml` (`spec-regions.md` 12.4), and two scenarios, S28 and S29 (in the register S28 and S29). X1 and X2 (dynamic) still wait for MER and INF.
+- **Update (2026-10-10, MON):** S13 is defined: `overlay/faucet.toml` (and `overlay/faucet-sunk.toml`) are in `spec-money-supply.md` 17.6, and the pass is exact for the accounting (boundary balance = `-Total`, `M = M_init + issued`) and report-only for the price drift until STY sets a band. Still open: the dynamic parts of X1 and X2, the coarse-tick leg of S12.
+- **Update (2026-10-10, TRN):** the transport mechanism for the dynamic parts of X1 and X2 exists (modes, the shipment, `Inbound` and `Routes`: `spec-transport.md` 3 to 9). An `overlay/trade.toml` needs a `modules.transport.modes` table, a hired mode's haul commodity and a carrier recipe (17.4 is a model), a consignee in the destination, MER's shipper and INF's rumours. The static check can use `transport.Lanes` (9.4). Scenarios S30 to S32 are proposed in the register (TRN 15 called them S28 to S30).
+- **Update (2026-10-10, wave 2 integration):** REG, MON and TRN now exist, so only EXT, MER, INF and STY are left in the areas. The overlays are N-092.
 
 ### N-085 Nominal table against the full-labour table
 
@@ -653,6 +612,84 @@ PR description.
 - **Areas:** DEM, SPN, REF, CODE
 - **Raised:** 2026-10-10, `spec-demand.md` 14, `spec-spawner.md` 16, `spec-reference-chain.md` 14.
 - **Note:** The scripts behind these specs are still in `/tmp/economy-boss/` (`dem/`, `spn/`, `ref/`). Archive them under `doc/specs/models/` like the others, and update the specs' paths.
+
+### N-090 What MIG and the specs that tie obligations to a region must do with a relocation
+
+- **Areas:** MIG, PRO, SKL, CAR, MER, INT
+- **Raised:** 2026-10-10, `spec-regions.md` 6.
+- **Note:** `relocate` moves only the account's region (`spec-regions.md` 6.2). MIG decides the job (abandon it first; the abandon reason `region_changed` is proposed for `spec-production.md` 5.4, REG open question 3), the beliefs (reseed on arrival, N-038), `Privation` and the traineeship. SKL registers an `in_traineeship` refusal and CAR or MER an `open_contract` refusal (`region_bound`, 6.5.2). INT owns the public face of `relocate` for an external agent (6.6). The part for TRN is done: it registers `open_shipment` and calls `Relocate` with cause `transport` at an arrival.
+
+### N-091 The world slots INT must expose
+
+- **Areas:** INT
+- **Raised:** 2026-10-10, `spec-regions.md` 7, `spec-money-supply.md` 10.4, `spec-population.md` 3.6 and 6.6, `spec-transport.md` 9.1 and 10.3.
+- **Note:** Several mechanisms are world slots set between ticks, saved in a checkpoint, with a public face that belongs to INT (ruling R11): the yield shock (`spec-production.md` 6.8), the edge status, closed or slowed (`SetEdgeStatuses`, `spec-regions.md` 7), the transit factor (`spec-transport.md` 10.3), the flow scale (`SetFlowScale`, `spec-money-supply.md` 10.4) and the birth and death scales (`BirthScale`, `DeathScale`). INT also owns `relocate` for an external agent. For each, INT states the public name, its error values and its bound, between steps only. Each slot emits its own event and none is configuration.
+
+### N-092 Overlays and scenarios that the wave 2 specs hand to REF
+
+- **Areas:** REF, STB, STY
+- **Raised:** 2026-10-10, `spec-regions.md` 12.4, `spec-money-supply.md` 17.6, `spec-population.md` 14.4 and 18, `spec-transport.md` 15 and 17.
+- **Note:** REF builds: the edge part of `overlay/trade.toml` (REG 12.4, with a `modules.transport.modes` table, a hired mode's haul commodity and a carrier recipe, TRN 17.4); `overlay/faucet.toml` and `overlay/faucet-sunk.toml` (MON 17.6); a population overlay (a fixed-factor test double or RES, the demand overlay on, `Renewal` 0; a warm start's census is not the Malthusian `N*`, POP 18). The new scenarios are S28 and S29 (REG), S30 to S32 (TRN), S33 to S36 (MON) and S37 to S40 (POP); S13 is defined. STY sets the bands for natural increase, recovery time and the money-limited population.
+
+### N-093 Inputs that the wave 2 specs offer the viability check
+
+- **Areas:** VIA, CFG
+- **Raised:** 2026-10-10, `spec-regions.md` 4.5.3, `spec-transport.md` 9.4, `spec-money-supply.md` 15.4.
+- **Note:** (1) `WithFreeTrade` links every pair of regions; with edges only regions in one strongly connected component can trade (`Graph.Components`), so the pooled check may use it (REG open question 2). (2) `transport.Lanes` derives lanes from hired modes with labour only; the carriers' feed and vehicle wear are not in the programme (TRN 9.4, 20.8), and VIA may want a lane with inputs. (3) With a rate levy a class's holdings are bounded by `m* = E + g/rho` (MON 9.3); VIA may seed a hoarder class at `min(Money, m*)` (MON 15.4), optional.
+
+### N-094 Snapshot fields of the wave 2 modules
+
+- **Areas:** OBS
+- **Raised:** 2026-10-10, `spec-regions.md` 10.5, `spec-money-supply.md` 13.4, `spec-population.md` 10.4, `spec-transport.md` 13.5.
+- **Note:** OBS names the fields. REG: the edges with a non-default status and the component count. MON: the money supply by sector, the money boundary balance per reason and each flow's state. POP: per region and role the mean birth and death rates, the natural increase, the birth carry and the unfed households of the last tick; per module `r*` and the gain. TRN: the shipments in flight, the away agents and the non-default transit factors.
+
+### N-095 The external sector's hooks in money and clearing
+
+- **Areas:** EXT, MON, CLR
+- **Raised:** 2026-10-10, `spec-money-supply.md` 10.1 and 10.2.
+- **Note:** MON reserves the target kind `external`, the top-up plus sweep as the pass-through counterparty, and the rule that a counterparty whose balance is not conserved is a Boundary account. EXT decides between a boundary-backed admission in CLR and the pass-through account (MON open question 1).
+
+### N-096 The regional pool serves births, entry, relief and money flows
+
+- **Areas:** MON, POP, EST, EXT, SPN
+- **Raised:** 2026-10-10, `spec-money-supply.md` 8.6 and open question 4, `spec-population.md` 4.3, 4.8 and 5.5.
+- **Note:** Four things draw on or pay into a region's pool: relief (phase 1), money flows with the pool as a target (phase 1; the pool target needs the estates module, ruling R5), entry and births (phase 7, inside `EntryPoolShare`, deaths first). A per-household grant couples issuance to the household count (MON-A5): POP decides whether income from a grant raises births. In a closed region the population is bounded by M / stake; a faucet or an inflow with migrants lifts the bound. MON and EXT should say how money entering a region reaches its pool.
+
+### N-097 Migration and the population loop
+
+- **Areas:** MIG, POP
+- **Raised:** 2026-10-10, `spec-population.md` 6.5.
+- **Note:** MIG is the other way households enter and leave. It must use the same stake rule for arrivals and not create money, say whether the replacement ratio is part of its signal, and share the pool budget `EntryPoolShare` with births. A closed region (no immigrant) is the behaviour tested before MIG. Relief raises the ratio and so births and lowers deaths (POP open question 4): the same effect as L40.
+
+### N-098 The Malthusian feedback needs a fixed factor from RES
+
+- **Areas:** RES, POP
+- **Raised:** 2026-10-10, `spec-population.md` 5.2.
+- **Note:** The third Malthusian assumption (the ratio falls as households rise) can be provided only by an endowment that recipes draw from (`Draws`, `spec-production.md` 6.5), which fails validation while RES is off. Until RES exists POP's loop has no feedback; the only bounds are the pool's money (M / stake) and `HouseholdCap`. RES must provide a limited, regenerating endowment and say how it makes the ratio fall with households, so RES is written before the POP scenarios can run (recorded in the roadmap). A test double (a ratio function of households) is used until then.
+
+### N-099 A trip is a gap in income
+
+- **Areas:** WEL, STB
+- **Raised:** 2026-10-10, `spec-transport.md` 15 (TRN-A6) and 20.9.
+- **Note:** The effective welfare window derives from recipes only (`spec-welfare-and-wages.md` 2.3.3), so a self-carried trip longer than the window looks like starving. The validation warning `trip_longer_than_window` is a stopgap; WEL decides whether the window counts the longest trip of a role (WEL open question 9, left open by ruling R6). The working ticks of a self-carried trip run from dispatch to the tick before arrival.
+
+### N-100 What transport leaves to MER and INF
+
+- **Areas:** MER, INF, CAR
+- **Raised:** 2026-10-10, `spec-transport.md` 8.4, 9.3, 20.2 and 20.5.
+- **Note:** A hired shipment needs a consignee in the destination region (otherwise `consignee_elsewhere`); a diverted cargo goes to the destination estate; a traveller keeps its beliefs and remembers nothing else; the backhaul double count of `spec-carriage.md` 5.1 stands; a bilateral contract with escrow is MER's and does not use the book. The shipper's decision is MER's and rumours are INF's.
+
+### N-101 Does the default Target count Inbound?
+
+- **Areas:** AGT
+- **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 20.7.
+- **Note:** The field `Inbound` exists in the agent view. The default strategy never ships, but a consignee can be sent goods (TRN-A2): decide whether the default `Target` counts what is in flight to the agent.
+
+### N-102 Unify the module table names before the loader is written
+
+- **Areas:** CFG
+- **Raised:** 2026-10-10, ruling R14 of the wave 2 integration.
+- **Note:** The specs name the table of a module differently in the file: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]` and transport's own. `spec-config.md` records each as its spec says and leaves this as an open question. Unify before the loader is written.
 
 ## Closed notes
 
@@ -945,6 +982,8 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Answer (2026-10-10, AGT):** version 1 has no spending beyond upkeep; the glut is accepted and bounded by the production halt (`spec-agents.md` 11.7, FR-AGT-070). Open for WEL: whether the default `TargetRatio` stays 15 000 in a world without DEM, MON or EXT.
 - **Update (2026-10-10):** WEL made the role-economics check a report, never an error (`spec-welfare-and-wages.md` 7.1). Decided by the coordinating agent: the default `TargetRatio` stays 15 000. In a world whose only demand is upkeep the mean ratio is 1, agents work at the floor-bounded maximum and the glut is bounded by the production halt; lowering the default would hide the missing demand, money-supply and external-sector specs. Revisit when DEM, MON or EXT exist. STB records it as STB-L46 with scenario S19.
 - **Closed:** 2026-10-10. Answered by `spec-demand.md` 7: with wants the closed economy's mean welfare ratio is `1 + W/U` (model: 1.53 at target 15 000, against exactly 1.000 with upkeep only), up to `1 + Wmax/U`; no money faucet is needed; the money needed is the reserve plus about `e*` per household. The default `TargetRatio` stays 15 000 with the module on or off (`spec-welfare-and-wages.md` 7.2); the warning `target_above_demand` compares a pack's target with its own ceiling. STB-L46 stays for a pack without the demand module.
+- **Update (2026-10-10, MON):** with MON the answer stands: a balanced pair leaves the mean ratio unchanged, an unbalanced faucet raises it only while the supply grows (`spec-money-supply.md` 8.2, 9.1); the default `TargetRatio` stays 15 000, so "revisit when DEM, MON or EXT exist" is answered for MON.
+- **Update (2026-10-10, POP):** the closed ceiling matters for the population: with upkeep as the only demand a fed household reads a mean ratio near 10 000, so the Malthusian fixed point is at chronic hunger or the population dies out (`spec-population.md` 5.3, POP-A7).
 
 ### N-047 What the reference chain must contain
 
@@ -982,6 +1021,7 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Raised:** 2026-10-10, `spec-estates.md` 2.8.1 and open question 2.
 - **Note:** A weight rise draws money from the estate pool; refuse it or apply it partially when the pool is short. Goods drawn for a rise are unspecified.
 - **Closed:** 2026-10-10. Applied for entry in `spec-spawner.md` 4.3 and 7.3 and `spec-estates.md` 2.8.1: partial, in whole households, money only, within the whole-pool budget `EntryPoolShare`; entrants get no goods. POP confirms for births.
+- **Update (2026-10-10, POP):** confirmed for births with one change: each born household brings `Role.StartMoney * BirthStake / 10 000` (`spec-population.md` 4.3), with the ledger reason `births` for a new agent as well as for households added to an existing one. In a closed region the stake caps the population at M / stake (`spec-population.md` 5.5, model 2).
 
 ### N-058 Exact big integers in the solver
 
@@ -1021,6 +1061,106 @@ resolution (applied or rejected, and why) and where it was settled.
   recorded in an ADR; close this note then.
 - **Closed:** 2026-10-10. Decided by the human (ADR 0003): FIS and PLC are later; INT is in version 1 only as shocks and a player agent.
 
+### N-008 Weight changes, cohort failure and the estate
+
+- **Areas:** POP
+- **Raised:** 2026-10-09, `spec-scale.md` 4.8 and open question 4, `spec-ledger.md`.
+- **Note:** A cohort whose money reaches 0 fails whole. Recommended: reduce its
+  weight by the share it cannot support before removing it (`spec-scale.md` 5.1),
+  inside a failure ladder (change role, relief, then death). A weight change is a
+  ledger operation with reason `split`, `merge`, `births` or `starvation`, scaling
+  holdings in proportion with the remainder going to the estate
+  (`spec-scale.md` 4.8; `spec-ledger.md` 7.2). Account IDs are never reused, so a
+  run with many deaths accumulates closed accounts (`spec-ledger.md` open
+  question 6; N-020). The estate pseudo-agent is not an agent: it has no weight and
+  is not counted in agents or households (`spec-estates.md` 2.7.4).
+- **Update (2026-10-10, AGT):** a cohort does not fail by itself; an agent with no money still exists and goes unfed (`spec-agents.md` 3.6.1). AGT supplies `Unfed` and `Hunger` (5.4, 5.5) and the effect of a weight change on agent state (3.7). The ladder and the partial weight reduction by the unfed share are SPN and POP's.
+- **Update (2026-10-10, EST):** weight changes pass money through the estate (`spec-estates.md` 2.8.1); a rise the pool cannot fund is open (N-073). The ladder is SPN and POP's.
+- **Update (2026-10-10, SPN and EST):** applied for SPN and EST in `spec-spawner.md` 5 (the ladder, reduction by the unfed share, the estate path) and `spec-estates.md` 2.8. POP owns the demographic rates (`PopDelta` hook, `spec-spawner.md` 8; the ledger reason `deaths`).
+- **Update (2026-10-10, POP):** applied for POP in `spec-population.md` 4.7: the ledger reasons are `births` (extended to every household born through the module) and `deaths` (new, a partial reduction; a death that empties an agent is a removal with `estate_money` and `estate_goods` and cause `population`). The ladder's `starvation` reduction stays SPN's.
+**Closed:** 2026-10-10. Applied in `spec-population.md` 4.7 (reasons) and 4.5 (no household counted by two rules).
+
+### N-010 Regions
+
+- **Areas:** REG, MIG
+- **Raised:** 2026-10-09, from GDS, EST and LED.
+- **Note:** `spec-regions.md` owns the per-region override of a commodity's
+  reference price (`spec-goods.md` 6.3) and decides whether a region holds one
+  settlement or several (roadmap, Open 3). Each region creates its estate
+  pseudo-agent and account (`spec-estates.md` 2.7). Changing an account's region
+  is an explicit operation (`spec-ledger.md` 3.5) and its interaction with goods in
+  transit is open (`spec-ledger.md` open question 8; `spec-migration.md`).
+- **Update (2026-10-10, TRN):** goods in transit are in Transit ledger accounts, so relocating an agent moves no cargo (`spec-transport.md` 7; `spec-regions.md` 6.5.1). TRN registers the `region_bound` refusal `open_shipment` (`spec-regions.md` 6.5.2) when the module is on: an away traveller, or the shipper or consignee of a shipment in flight, is refused by the public relocation with `ErrRegionBound`. At arrival TRN changes the traveller account's region by the ledger-level `Relocate` with cause `transport` and emits REG's `AgentRelocated`; it does not use `NoRegion`, `depart` or `arrive` in version 1 (the traveller stays in the origin region while away). It uses REG's `Distance(from, to)` (`(int64, bool)`, 4.3). Answers `spec-ledger.md` open question 8 for transport (`spec-transport.md` 1.2, 5.5.3).
+**Closed:** 2026-10-10. Applied in `spec-regions.md` (REG): the reference-price override is `RegionPrices` (5.2), one case of a single override mechanism (5.1); one settlement per region (3.1); each region's estate account and pseudo-agent are created in region order before any household, the pseudo-agent's agent ID equal to the `RegionID` (3.6); changing an account's region is `relocate` (6): ordered refusals, no transfer and no reason, relocation totals in the ledger, the event `AgentRelocated`. The hook for goods in transit is 6.5: cargo is never the agent's account, a spec that ties an obligation to a region registers a `region_bound` refusal (TRN registers `open_shipment`), and `NoRegion`, `depart` and `arrive` are reserved and unused in version 1. What MIG, PRO, SKL and CAR must do with a relocation is N-090.
+
+### N-026 One settlement per region, or several?
+
+- **Areas:** REG, SET
+- **Raised:** 2026-10-10, `roadmap.md` Open 3. See also N-010.
+- **Note:** One settlement per region is simpler and makes `spec-settlements.md` a
+  thin layer; several lets a region have a large settlement and its smaller ones.
+  Decide when writing `spec-regions.md`, before `spec-settlements.md`, because it
+  fixes where market, estate and size class live.
+- **Answer (decided, 2026-10-10):** one settlement per region, and a region is one
+  market. A town and its hamlets are separate regions joined by short edges, which
+  costs little because clearing cost grows with regions and commodities, not
+  households (`spec-scale.md`). `spec-settlements.md` (later) then only gives a
+  region a size class from its households, which is the thin layer its roadmap row
+  describes. Victoria 3 treats the market as the unit and varies a state's access to
+  it instead of splitting prices inside a state (dev diary 9, snippet only). Apply
+  this in `spec-regions.md` and close the note there.
+- **Update (2026-10-10):** ADR 0003 decision 4 records the answer. Apply it in `spec-regions.md` and close this note there.
+**Closed:** 2026-10-10. Applied in `spec-regions.md` 3.1.3 and 3.4: a region is one settlement and one market, and a town and its hamlets are separate regions joined by short edges (example C, 12.3). The cost is recorded as REG-A2 in the register (a small market is a thin market, and each hamlet has its own pool). `spec-settlements.md` (later) only adds a size class to a region.
+
+### N-029 How deep a review of other economy libraries?
+
+- **Areas:** POP, EVD
+- **Raised:** 2026-10-10, `roadmap.md` Open 6. See also N-015, N-018.
+- **Note:** Open before `spec-agents.md` and `spec-population.md`. Only bazaarBot
+  has been read in full. abcEconomics, Prehistoric, the Space Project, ASSUME and
+  Crusoe are known from search snippets, and two documentation pages failed to
+  load. Record what is read in `specs/evidence.md`, and do not set a default from
+  an unread source.
+- **Answer (proposed, 2026-10-10):** a targeted review, not a survey. Opened today:
+  the abcEconomics index (Firm and Household archetypes; the platform moves goods,
+  as our ledger does; message passing) and ASSUME's custom-unit example (a unit plus
+  a bidding strategy with one `calculate_bids()` reused across actor types; dispatch
+  stays in the unit). Both support a single `Strategy` and physical handling outside
+  it. Still to read before AGT: the Doran and Parberry bazaarBot paper (N-015), the
+  abcEconomics Firm and Household pages, ASSUME's base strategy class, and the rest
+  of Lengnick (only pages 3 to 7 are read). Before POP: Clark's own Malthusian
+  source, not the VoxEU summary. Skip Prehistoric, the Space Project and Crusoe
+  unless a specific question needs them. The evidence rows are added to
+  `specs/evidence.md`.
+- **Update (2026-10-10):** the Doran and Parberry journal paper is read in full (text only). Lengnick's firm price rule, Table 1 and the price-flexibility experiment are read from extracted text with the Greek symbols lost. ASSUME's custom-unit example re-read; its bidding-agents page (404) and the ZIP paper (403) failed to load. Factorio, Victoria 3 and abcEconomics production pages were opened through a summarising fetch only. Still to read before AGT: the abcEconomics Firm and Household pages and ASSUME's base strategy class.
+- **Update (2026-10-10, AGT):** the targeted review for AGT is done. Read: Lengnick's household section (equations 1 to 4, 11, 12, Tables 1 and 2, the search part of 2.2; text extracted from the PDF, symbols partly lost); ASSUME's `base.py` (`BaseStrategy`, `BaseUnit`); abcEconomics `Household`, `Firm` and `Trade` pages through a summarising fetch. ASSUME's bidding-agents page still 404. Still to read before POP: Clark's own source.
+- **Update (2026-10-10, POP):** Clark's own source read; see the closing line. Evidence rows added to `specs/evidence.md`; the VoxEU row is superseded for the structure of the model.
+**Closed:** 2026-10-10. Applied for POP in `spec-population.md` 16: Clark's own source read (chapter 2 of *A Farewell to Alms*, author's chapter PDF, text extracted, figures not seen; draft chapters 4 and 5 of the October 2006 draft of the whole book, draft pp. 90-93 and 100-103). Chapter 3 and the published edition not read. It gives shapes (birth rate flat or rising with income, death rate falling, living standards falling with population) and no usable rates; no default is set from it. The evidence rows are in `specs/evidence.md`.
+
+### N-076 A carriage market is not a goods market
+
+- **Areas:** CAR, MER, TRN, CLR, LED
+- **Raised:** 2026-10-10, `spec-carriage.md` 4.2.
+- **Note:** `spec-clearing.md` admits asks only for stock and settles by moving goods; hired carriage moves none and uses escrow. The contract, transport and merchant specs must pick: the carriage unit as a produced good (a trip is a job), or a contract-aware admission and settlement that keeps the guarantees of `spec-clearing.md` 2.3. The carriage unit's price may fall below the resolution floor (an ask of 24 against a floor of 50), so choose a coarser unit.
+- **Update (2026-10-10, REG):** a route is an edge, keyed by `EdgeID`, in ascending (From, To) (`spec-regions.md` 4.7).
+- **Update (2026-10-10, TRN):** decided in `spec-transport.md` 8: option 1, the carriage unit is a produced good, the *haul unit* of a hired mode, made by an ordinary recipe of a carrier role, traded in the origin region's ordinary market and redeemed by the shipment at dispatch. `spec-clearing.md` needs no change and keeps the guarantees of 2.3. The unit price in the worked example is 1 195 against a floor of 50 (17.4), so the coarser unit is a data choice. Costs: capacity is produced ahead and unsold units spoil (a cobweb, TRN-A3); no escrow and no carrier custody for the market; a bilateral contract with escrow stays MER's.
+**Closed:** 2026-10-10. Decided by TRN in `spec-transport.md` 8 (option 1, the haul unit; the supervisor's ruling R13 accepts it). `spec-clearing.md` is unchanged. `spec-carriage.md` is edited to match: `FR-CAR-001` and `FR-CAR-002` move to the future contract spec keeping their IDs, `FR-CAR-005` to `FR-CAR-007` are superseded by `FR-TRN-009`, `FR-TRN-010` and `FR-TRN-012`, and the unnamed margin `m_bp` is deleted; `spec-ledger.md` and `spec-goods.md` are edited as `spec-transport.md` 8.5 lists. A bilateral contract with escrow and the backhaul double count stay MER's (N-100).
+
+### N-078 What the demand module needs from the money and income specs
+
+- **Areas:** MON, EXT, EMP, LND, FIS
+- **Raised:** 2026-10-10, `spec-demand.md` 7.3.
+- **Note:** A non-producing class needs a recurring named transfer of money and a paired sink or return flow. In the model a stipend of 300 a tick to 50 households with no sink left household money at 47 700 against 2 700 at the start.
+- **Update (2026-10-10, MON):** applied in `spec-money-supply.md`: the recurring named transfer is a grant (4.2) to a role with an empty `Recipes` list (7.3), counted as income by default (7.2); the paired sink or return flow is a levy, with the validation check `pair_unbalanced` for fixed pairs (9.2, 12.2) and a derived bound for a rate levy (9.3, `m* = E + g/rho`). The model of DEM (a stipend of 300 to 50 households with no sink) is the unbalanced case (9.1). `spec-demand.md` 10.2 `class_without_income` gets its edit in the integration.
+**Closed:** 2026-10-10. Applied in `spec-money-supply.md` 4.2, 7.2, 7.3, 9.1 to 9.3 and 12.2: a grant and a levy as data, counted as income by default (the welfare edit of ruling R6), with a derived bound for the rate levy.
+
+### N-083 Population adds the `deaths` reason and decides renewal against births
+
+- **Areas:** POP, LED
+- **Raised:** 2026-10-10, `spec-spawner.md` 4.1 and 8.2.
+- **Note:** POP adds the ledger reason `deaths` and decides `Renewal` against births (warning `renewal_with_population`).
+**Closed:** 2026-10-10. Applied in `spec-population.md` 4.6 and 4.7: `deaths` is added to the ledger registry (money and goods, internal, agent to estate, a partial reduction) and `births` is extended to every household born through the module; `Renewal` is ignored (effective 0) while the population module is on, with the warning `renewal_with_population` only for a non-default positive `Renewal` and the informational `renewal_ignored` at the default (4.6.1); births are never netted.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -1033,4 +1173,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 99961e725dede5ae4e730591
+NOTES-TAG: 251f2abcc96f988d200d6a4f

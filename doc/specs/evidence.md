@@ -79,7 +79,12 @@ direction, not numeric defaults. None sets a default.
 | Production delays cause price oscillations whose damping depends on lag length and demand elasticity | cobweb-model literature, search summaries | **unverified** (summary only) |
 | Victoria 3 economic "death spirals" come from debt interest, falling tax efficiency and unprofitable production that stalls | one Steam forum thread | anecdote |
 | Dwarf Fortress disabled its economy because it made the game worse | Wikipedia | read via summary |
-| Pre-industrial economies tend to a Malthusian equilibrium when births rise and deaths fall with income | Clark, as summarised by VoxEU | **unverified** (summary only) |
+| Pre-industrial economies tend to a Malthusian equilibrium when births rise and deaths fall with income | Clark, as summarised by VoxEU | **unverified** (summary only); superseded for the structure of the model by the rows below that read Clark directly |
+| The Malthusian model rests on three assumptions: the birth rate is determined by custom and increases with living standards; the death rate declines as living standards rise; living standards decline as population increases (diminishing returns to a fixed land supply). In a stable population births equal deaths; the income at which they do (subsistence income) is fixed by the two schedules alone, independent of technology. A higher death schedule at a given income raises equilibrium income and lowers equilibrium population | Clark (2007), *A Farewell to Alms*, chapter 2, "The Logic of the Malthusian Economy" | read directly (text extracted with pdftotext; figures not seen). Supersedes the VoxEU summary row above |
+| Surviving children per woman 1.93 to 2.10 for six European populations, c. 1300 to c. 1800 (Table 2.1) | Clark (2007), chapter 2 | read directly; no default set |
+| "Gross fertility did not rise significantly with income": English testators c. 1620, richer ones (about ten times the assets) 12.7% against 7.8% never married, and gross fertility likely only 2% to 5% higher; "it does not do too much violence to reality to simply assume a given birth rate" | Clark (2006 draft of the book), chapter 4, draft pp. 90-93 | read directly (the October 2006 draft, not the published edition) |
+| Across households income was a strong predictor of mortality: household income explained 62% of the variation in infant mortality across eight London parishes, 1538-1653; for the poorest groups death rates exceeded birth rates. In England 1540-1800 no association between national mortality and national income appears, attributed to shifts of the death schedule over time | Clark (2006 draft of the book), chapter 5, draft pp. 100-103 | read directly (draft; figures not seen) |
+| Stylised-model results of POP: a Malthusian approach to the replacement ratio is monotone while the gain times the delay is below about 0.7 and cycles from about 1.5; a poorest-first allocation of deaths starves a pool-funded birth rule (86% fall in 80 years); a closed region's population is bounded by M / stake | `spec-population.md` 5.4, 5.5, 13, `models/pop/` | the worker's own Docker Python models; not validated against data; placeholders |
 | EVE Online money enters through NPC bounties, mission rewards, NPC buy orders and insurance, and leaves through NPC sales, taxes and fees; mining is classified as production, not a money faucet | Engadget (2010); CCP monthly economic reports (2025 and 2026), via summaries | **unverified** (summary only) |
 | CCP's 2010 quarterly economic newsletter | PDF is image-only; text could not be read | **missing** |
 | abcEconomics has Firm and Household archetype classes, goods handled by the platform (a transfer moves the good), and message passing between agents | abcEconomics documentation, index page | read directly (index only) |
@@ -150,6 +155,10 @@ Sources:
 - "Dwarf Fortress", Wikipedia. <https://en.wikipedia.org/wiki/Dwarf_Fortress>
 - "Taking Malthus seriously", VoxEU.
   <https://cepr.org/voxeu/columns/taking-malthus-seriously>
+- Clark, G. (2007), *A Farewell to Alms*, chapter 2, "The Logic of the Malthusian Economy".
+  <https://faculty.econ.ucdavis.edu/faculty/gclark/Farewell%20to%20Alms/FTA-chapter2.pdf>
+- Clark, G. (2006), draft of *A Farewell to Alms* (October 2006), chapters 4 and 5, draft pp. 90-93 and 100-103.
+  <https://faculty.econ.ucdavis.edu/faculty/gclark/papers/FTA2006-1.pdf>
 - "EVE Evolved: ISK sinks and faucets", Engadget (2010).
   <https://www.engadget.com/2010-10-24-eve-evolved-isk-sinks-and-faucets.html>
 - abcEconomics documentation. <https://abce.readthedocs.io/en/master/>
