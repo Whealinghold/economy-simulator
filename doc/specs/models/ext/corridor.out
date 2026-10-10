@@ -1,0 +1,43 @@
+realm-only equilibrium: Qd(P) = P - 19 at P = 60 (40 units)
+realm alone
+   price over ticks 100..399: min 20, max 120, mean 70.0
+   units made: min 1, max 100; made and unsold per tick: mean 19.5
+   imports per tick: mean 0.0; exports per tick: mean 0.0
+   cumulative money balance of trade: final 0, min 0, max 0
+   first 12 prices: [39, 101, 20, 120, 20, 120, 20, 120, 20, 120, 20, 120]
+outside: ask 75, bid 45, capacity 40
+   price over ticks 100..399: min 45, max 75, mean 60.0
+   units made: min 26, max 56; made and unsold per tick: mean 0.0
+   imports per tick: mean 3.5; exports per tick: mean 4.0
+   cumulative money balance of trade: final -33225, min -33225, max 135
+   first 12 prices: [45, 75, 45, 75, 45, 75, 45, 75, 45, 75, 45, 75]
+outside: ask 75, bid 45, capacity 10
+   price over ticks 100..399: min 45, max 75, mean 60.0
+   units made: min 26, max 56; made and unsold per tick: mean 0.0
+   imports per tick: mean 3.5; exports per tick: mean 4.0
+   cumulative money balance of trade: final -33225, min -33225, max 135
+   first 12 prices: [45, 75, 45, 75, 45, 75, 45, 75, 45, 75, 45, 75]
+outside: ask 75, bid 45, capacity 3
+   price over ticks 100..399: min 20, max 120, mean 70.0
+   units made: min 1, max 100; made and unsold per tick: mean 18.0
+   imports per tick: mean 1.5; exports per tick: mean 1.5
+   cumulative money balance of trade: final -59814, min -59814, max 135
+   first 12 prices: [45, 83, 20, 120, 20, 120, 20, 120, 20, 120, 20, 120]
+outside: ask 65, bid 55, capacity 40
+   price over ticks 100..399: min 55, max 65, mean 60.0
+   units made: min 36, max 46; made and unsold per tick: mean 0.0
+   imports per tick: mean 1.0; exports per tick: mean 1.5
+   cumulative money balance of trade: final 7275, min 310, max 7405
+   first 12 prices: [55, 65, 55, 65, 55, 65, 55, 65, 55, 65, 55, 65]
+outside: ask 75, bid 45, capacity 40, start at equilibrium
+   price over ticks 100..399: min 45, max 75, mean 60.0
+   units made: min 26, max 56; made and unsold per tick: mean 0.0
+   imports per tick: mean 3.5; exports per tick: mean 4.0
+   cumulative money balance of trade: final -32730, min -32730, max 135
+   first 12 prices: [59, 61, 57, 65, 49, 75, 45, 75, 45, 75, 45, 75]
+realm alone, start at equilibrium
+   price over ticks 100..399: min 20, max 120, mean 70.0
+   units made: min 1, max 100; made and unsold per tick: mean 19.5
+   imports per tick: mean 0.0; exports per tick: mean 0.0
+   cumulative money balance of trade: final 0, min 0, max 0
+   first 12 prices: [59, 61, 57, 65, 49, 81, 20, 120, 20, 120, 20, 120]

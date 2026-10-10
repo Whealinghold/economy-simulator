@@ -1,0 +1,31 @@
+a = 0, transit delay d = 2: the largest decaying gain by observation lag
+lag  n=lag+d  model   theory 2 sin(pi/(2(2n+1)))
+0 2 0.618 0.618
+1 3 0.444 0.445
+2 4 0.346 0.347
+3 5 0.284 0.285
+4 6 0.24 0.241
+6 8 0.184 0.185
+8 10 0.148 0.149
+
+a = 0.5 (half the effect at dispatch), d = 2, by observation lag
+0 1.998
+1 1.998
+2 1.998
+4 1.994
+8 1.976
+
+spread: the same minimum lag, vintages lag..lag+S, a = 0, d = 2
+lag  S  mean lag  largest decaying gain   point lag at the mean  point lag at the minimum
+1 0 1.0 0.444 0.444 0.444
+1 1 1.5 0.396 - 0.444
+1 2 2.0 0.36 0.346 0.444
+1 4 3.0 0.308 0.284 0.444
+2 0 2.0 0.346 0.346 0.346
+2 1 2.5 0.316 - 0.346
+2 2 3.0 0.292 0.284 0.346
+2 4 4.0 0.254 0.24 0.346
+4 0 4.0 0.24 0.24 0.24
+4 1 4.5 0.224 - 0.24
+4 2 5.0 0.212 0.208 0.24
+4 4 6.0 0.19 0.184 0.24
