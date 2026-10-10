@@ -14,8 +14,8 @@ What is fixed here is the framework: the shape of the configuration, where
 constants live, the file format, the validation machinery, the structural
 rules, the hash and the registry. The *catalogue* of fields and of per-field
 rules grows with each spec (section 9). It now includes the fields and rules of
-production, beliefs, agents and viability (sections 3.7, 4.1, 7.4); the specs
-still unwritten (regions, resources, spawner and the rest) add theirs when they
+production, beliefs, agents, viability, the spawner, demand, regions, money supply, population and transport (sections 3.7, 4.1, 7.4); the specs
+still unwritten (resources and the rest) add theirs when they
 are. Where a section depends on a spec that does not exist, it says so.
 
 Terms in **bold** on first use are new domain terms. They must be added to the
@@ -83,9 +83,11 @@ spec that owns them.
 | `Yields` | yield profiles, one per (region, recipe): a basis-point factor for all seasons or by season. A section of its own, keyed by two IDs, so that a recipe names no region and a region names no recipe (`spec-production.md` 6.1); the values move to `spec-resources.md` when it exists | `spec-production.md` |
 | `Roles` | role definitions and role parameters | `spec-agents.md`, `spec-welfare-and-wages.md`, `spec-skill-barriers.md` and others |
 | `Regions` | region definitions and region parameters, including reference prices, the reference basket and extra upkeep | `spec-regions.md`, `spec-currency.md`, `spec-agents.md`, `spec-estates.md` |
+| `Edges` | the directed routes between regions: `From`, `To`, `Distance` (an integer in the pack's distance unit); a section of its own, a list sorted by `(From, To)` | `spec-regions.md` 4.1 |
+| `RegionPrices` | reference-price overrides by region and commodity, one row per key | `spec-regions.md` 5.2 |
 | `Groups` | the population: households of a role in a region, with an optional scale | `spec-scale.md` |
 | `WarmStart` | the steady-state seed table: seed prices, starting money, stock and jobs per group, estate pools. A pointer: nil means no warm start. It is a section and not a module: it switches no mechanism on | `spec-viability.md` 8.1 |
-| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`) | each module's spec |
+| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`); `MoneySupply` (`Flows`), `Population` (schedules and `Regions`) and `Transport` (`Modes`) follow | each module's spec |
 
 The entity sections are slices of structs, each with an `ID` string. Package
 `config/` writes them from file tables (6.2).
@@ -117,7 +119,7 @@ Before a world is built or a hash is taken, every entity slice is sorted by ID
 (groups by region, then role). The order in which an author wrote entities has no
 effect. This follows architecture.md 7.5: nothing that influences results may
 depend on an arbitrary order. A recipe's inputs and outputs, being lists of
-(commodity, quantity), are sorted by commodity.
+(commodity, quantity), are sorted by commodity. Edges are sorted by `(From, To)` as region indices, region prices by region then commodity, money flows by ID, transport modes by ID, and the region-keyed tables of 5.1 of `spec-regions.md` by region.
 
 The one exception is the calendar's months and seasons. Their order is their
 meaning (the third month, the season after the last), so they are **ordered
@@ -166,13 +168,20 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `World` | `Spawner` (the registered name of the spawner, hashed; default `"default"`), `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare` | `spec-spawner.md` 3.1.3, 11 |
 | `Roles[]` | `Closed` (the default spawner places nobody in the role) | `spec-spawner.md` 6.2, 11 |
 | `Modules.Demand` | `Wants[]` (`ID`, `Items` each with `Commodity` and `Weight`, `Quantity`, `Period`, `Rank`, `Elasticity`, `Ceiling`, `Substitution`, `Label` (p)), `Tastes[]` (`Role`, `Want`, `Scale`), `RegionTastes[]` (`Region`, `Want`, `Scale`); present = the module is on | `spec-demand.md` 3.2, 9 |
+| `Regions[]` | `Label` (p) | `spec-regions.md` 3.2 |
+| `Edges[]` | `From`, `To`, `Distance` | `spec-regions.md` 4.1 |
+| `RegionPrices[]` | `Region`, `Commodity`, `Price` | `spec-regions.md` 5.2 |
+| `World` | `DistanceLabel` (p) | `spec-regions.md` 4.1.2 |
+| `Modules.MoneySupply` | `Flows[]` (`ID`, `Kind`, `Target` with `Kind`, `Region` and `Role`; `Amount`, `Level`, `RateBP`, `Exempt`, `Per`, `Start`, `Until`, `Limit`, `NotIncome`, `Label` (p)); present = the module is on | `spec-money-supply.md` 4.1, 11.1 |
+| `Modules.Population` | `BirthSchedule[]` and `DeathSchedule[]` (each knot `Ratio`, `Rate`), `MinHouseholds`, `BirthStake`, `Regions[]` (`Region`, `BirthScale`, `DeathScale`, `HouseholdCap`); present = the module is on | `spec-population.md` 3.5, 8 |
+| `Modules.Transport` | `Modes[]` (`ID`, `Speed`, `UnitMass`, `UnitBulk`, `Crew`, `Vehicle`, `WearPerTick`, `Feed[]` each with `Commodity` and `Quantity`, `Haul`, `HaulSpan`, `Label` (p)); present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
 
 Not fields: the seed, the logger, the observers, `WithAudit`, the strategy
 registrations (`WithStrategy`, whose *names* are hashed through `Role.Strategy` and
 whose code cannot be) and the solve options of `spec-viability.md` 11
 (`StockCoverTicks`, `MoneyBufferTicks`, `ResidualWarnBP`, `MaxPivots`, `Lanes`):
 they shape how a run or a table is produced and not what a world is. The yield
-shocks of `spec-production.md` 6.8 are world state, not configuration.
+shocks of `spec-production.md` 6.8 are world state, not configuration. So are the other slots set between ticks: the flow scale of `spec-money-supply.md` 4.4.3, the birth and death scales of `spec-population.md` 6.6, the edge statuses of `spec-regions.md` 7 and the transit factor of `spec-transport.md` 10.3; the public calls that set them are INT's.
 
 ## 4. Constants and bounds
 
@@ -226,6 +235,26 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxSubstitution` | 4 | the integer exponent of the substitution shares; the products go through the 128-bit helper |
 | `MaxTasteScale` | 100 000 | ten times (a role's or a region's multiplier) |
 | `MaxSeedPrices` | `MaxRegions * MaxCommodities` | one seed price per region and commodity; derived, so a warm-start table has a bounded size (`spec-viability.md` 8.1) |
+| `MaxDistance` | 10^9 | one edge of the region graph; a shortest path of at most `MaxRegions - 1` effective edges of at most `MaxDistance * MaxEdgeFactorBP / 10 000` stays below 10^13 (`spec-regions.md` 4.2) |
+| `MaxEdges` | `20 * MaxRegions` | bounds the graph construction work |
+| `MaxEdgeFactorBP` | 100 000 | the largest length factor of an edge status: ten times |
+| `MaxRegionPrices` | `MaxRegions * MaxCommodities` | one override per region and commodity; derived, as `MaxSeedPrices` is |
+| `MaxLabelBytes` | 256 | a label, for the presentation-only fields |
+| `MaxMoneyFlows` | 64 | flows of the money-supply module; the divisor of `MaxFlowTotal` (`spec-money-supply.md` 11.2) |
+| `MaxFlowAmount` | `MaxMoney / MaxWeight` = 10^12 | one household's due fits `MaxMoney` |
+| `MaxFlowRateBP` | 10 000 | at most the whole balance above the exemption per period |
+| `MaxFlowScale` | 100 000 | ten times the configured value; the numerator reaches 10^23, inside 128 bits |
+| `MaxFlowTotal` | `MaxMoney / MaxMoneyFlows` | all flows together create at most `MaxMoney` |
+| `MaxKnots` | 8 | knots in one schedule of the population module (`spec-population.md` 8); a knot ratio is 0 to `MaxBasisPoints` and a `Rate` 0 to 10 000, the largest probability per year, which is not a tunable |
+| `MaxModes` | 64 | the loop over modes per request and per view (`spec-transport.md` 11) |
+| `MaxSpeed` | 10^9 | with `MaxTransitFactorBP` the product `Speed * F` fits `int64` |
+| `MaxCapacity` | 10^12 | per carrying unit; times `MaxWeight` it is 10^18 |
+| `MaxFeed` | 4 | feed entries of a mode, as `MaxRequires` |
+| `MaxHaulSpan` | 10^12 | distance one haul unit carries one carrying unit |
+| `MaxShipmentLines` | 16 | lines of a request and the size of an event |
+| `MaxDispatchPerTick` | 8 | requests an agent's plan may carry |
+| `MaxTravelTicks` | `MaxTicksPerYear` | a journey of a year of ticks |
+| `MaxTransitFactorBP` | 100 000 | a road ten times faster |
 | `MaxDocumentBytes` | 16 MiB | a parser limit (6.5) |
 
 `MaxPrice` and `MaxQuantity` are bounds, not tunables. Specs that call them
@@ -283,6 +312,9 @@ the configuration with `ErrOverflow` if one fails:
 - for the spawner (`spec-spawner.md` 12): `Households * EntryShare` and
   `Households * ExitShare` at the largest weight, and `Wage * ExpectedWorkTicks`,
   within `MaxQuantity` and `MaxMoney`.
+- for the region graph (`spec-regions.md` 4.2): a path sum and an effective edge length (`Base * FactorBP / 10 000`) fit `int64`, and the checked helper is still used;
+- for transport (`spec-transport.md` 12.1): `MaxWeight * MaxCapacity` fits `int64` (true at the bounds); the products of a distance with a rate and a chargeable size, and of feed, wear and haul units, go through the 128-bit helper and are refused at dispatch as the matching insufficiency or `overflow`, so no further derived bound is needed;
+- for the money-supply and population modules: none beyond the bounds (`spec-money-supply.md` 12.1, `spec-population.md` 9.1).
 
 ## 5. Defaults
 
@@ -451,6 +483,7 @@ are region fields (`spec-estates.md` 3) and sit in the region table. The presenc
 of `[warm_start]` switches nothing on: it supplies a start (3.1). `commodity.*` is
 elided; see `spec-goods.md`. No setting vocabulary is in the engine (AGENTS.md).
 
+The other specs write their tables as follows, and this spec records each as its spec says. Edges and region prices are tables of the region, keyed by the other end or the commodity, with integer values (a float is `ErrNotInteger`): `[region.north.edge.south]` with `distance = 100`, and `[region.north.reference_price]` with `grain = 480` (`spec-regions.md` 4.1, 5.2). The money-supply module is `[module.money_supply]` with flows as tables `[module.money_supply.flow.<id>]` (`spec-money-supply.md` 17.6), like `[module.estates]`. The population module is the table `[population]`, schedules as lists of `{ ratio, rate }`, regions as tables keyed by region ID, like `[demand]` (`spec-population.md` 8). `spec-transport.md` states no file layout for its modes; a table of its own keyed by mode ID is assumed. The names differ (`[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`); they are not unified here (13.11).
 ### 6.3 What the loader rejects
 
 - an **unknown key**, at any depth (`ErrUnknownKey`, with its path);
@@ -558,6 +591,10 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrOverflow` | a derived product of 4.2 that does not fit | architecture.md 3.5 |
 | `ErrTooMany` | more entities of a kind than its bound | here |
 | `ErrModuleDependency` | a module on while a module it needs is off | here |
+| `ErrNoRegions` | a configuration with no region | `spec-regions.md` 9.1 |
+| `ErrSelfEdge` | an edge whose `From` equals its `To` | `spec-regions.md` 9.1 |
+
+The root maps the following sentinels of the new specs to public errors (N-075): `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` (REG; the last three are ledger-level if `relocate` lives in `internal/ledger`); `ErrFlowShape`, `ErrReasonCollision` (MON); `ErrVehicleNotDurable`, `ErrModeShape` (TRN). `ErrTravellerAway` does not exist: a refusal of a region-bound obligation is `ErrRegionBound` naming `open_shipment`.
 
 A role with no group in any region is not a fault and draws no warning: it is how a
 role for external agents is written (`visitor` in `spec-reference-chain.md` 4.2, with
@@ -574,7 +611,7 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 
 | Rule | Sentinel | Spec | Where |
 |------|----------|------|-------|
-| the cheapest tradable commodity's effective reference price in every region is at least the resolution floor `ceil(10 000 / BeliefStep)`; "tradable" is defined by `spec-agents.md` 3.4 (a commodity in the tradable set of at least one role) | `ErrOutOfBounds` | `spec-currency.md` 3.1, `spec-beliefs.md` FR-BEL-029 | `Validate` |
+| the cheapest tradable commodity's effective reference price in every region is at least the resolution floor `ceil(10 000 / BeliefStep)`; "tradable" is defined by `spec-agents.md` 3.4 (a commodity in the tradable set of at least one role); the effective reference price is the region's override or the commodity's (`spec-regions.md` 5.2) | `ErrOutOfBounds` | `spec-currency.md` 3.1, `spec-beliefs.md` FR-BEL-029 | `Validate` |
 | a region's `ReferenceBasket` differs from the cost of the baseline `World.Upkeep` plus the region's `ExtraUpkeep` at its effective reference prices by more than `BasketTolerance` basis points of `ReferenceBasket` | `ErrBasketMismatch` | `spec-currency.md` 5.3, `spec-agents.md` 5.6.1 | `Validate` |
 | the lowest possible per-agent target ratio is at least 10 000 | `ErrOutOfBounds` | `spec-welfare-and-wages.md` 5.1 | `Validate` |
 | the derived `TicksPerYear` is between 1 and `MaxTicksPerYear`, and each role's `ExpectedWorkTicks` is between 1 and `TicksPerYear`. A role left at the default 250 fails if the calendar gives fewer than 250 ticks a year; this is decided and deliberate (5.2, 13.5); the error carries `TicksPerYear` as the bound, so the author sees the number to stay under | `ErrOutOfBounds` | `spec-calendar.md` 3.2, `spec-welfare-and-wages.md` 4.2 | `Validate` |
@@ -611,6 +648,10 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | rule `role_cannot_work`: a role that lists recipes, with households in a region where none of its recipes has a positive yield | `ErrNotViable` | FR-VIA-005 | `Validate` |
 | rule `cycle_not_productive`: a strongly connected component of the material graph with no surplus (the Hawkins-Simon test, with the best yield across regions) | `ErrNotViable` | FR-VIA-006 | `Validate`, size-gated |
 | rule `labour_short`: the pooled free-trade programme has a surplus factor below 1 at full labour; rule `storage_gap`: an upkeep good with a shelf life below its longest supply gap | `ErrNotViable` | FR-VIA-007, FR-VIA-008 | `Validate`; `labour_short` size-gated |
+| the region graph: no region (`ErrNoRegions`), a self edge (`ErrSelfEdge`), an unknown region or commodity in an edge or a price override, a duplicate edge or override, a `Distance` outside `[1, MaxDistance]`, a price outside `[1, MaxPrice]`, more than `MaxEdges` edges | `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrDuplicateID`, `ErrOutOfBounds`, `ErrTooMany` | `spec-regions.md` 9.1, FR-REG-001 to 013, 033 | `Validate` |
+| a money flow: a field outside its bound or an unknown `Kind` or `Per`; a wrong field combination; a flow ID equal to a built-in reason or a duplicate; an unknown role or region; a pool target while the estates module is off | `ErrOutOfBounds`, `ErrFlowShape`, `ErrReasonCollision`, `ErrDuplicateID`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrModuleDependency` | `spec-money-supply.md` 12.1, FR-MON-034 to 038 | `Validate` |
+| a population schedule with no knot or more than `MaxKnots`, knot ratios not strictly increasing or out of bound, a `Rate` outside 0 to 10 000, `MinHouseholds`, `BirthStake`, `BirthScale`, `DeathScale` or `HouseholdCap` out of bound; an unknown or duplicate region row (the rules of `spec-regions.md` 5.3.1, 5.3.2, not restated) | `ErrOutOfBounds`, `ErrUnknownRegion`, `ErrDuplicateID` | `spec-population.md` 9.1, FR-POP-025 to 027 | `Validate` |
+| a transport mode: a field outside its bound, `UnitMass` and `UnitBulk` both 0, a duplicate mode or feed commodity, an unknown commodity, a `Vehicle` without `Durability`, a wrong field combination for a hired or a self-carried mode, the module on while the region graph is off, a product that overflows | `ErrOutOfBounds`, `ErrDuplicateID`, `ErrUnknownCommodity`, `ErrVehicleNotDurable`, `ErrModeShape`, `ErrModuleDependency`, `ErrOverflow` | `spec-transport.md` 12.1 | `Validate` |
 
 The structural rules of 7.3 and the producibility rule of 7.5 are errors. A rule
 that appears in a spec with no row here is not enforced until it has one (FR-CFG-028
@@ -643,6 +684,10 @@ and the registry test).
 | `want_unused`, `want_unsourced`, `want_inelastic`, `wants_exceed_spend_cap`, `target_above_demand`, `class_without_income`, `region_taste_without_taste` | the conditions of `spec-demand.md` 10.2 | `spec-demand.md` 10.2 |
 | `raw_without_source` | a commodity marked `Raw` that no existing activity with no inputs outputs and that no endowment, faucet or import supplies | `spec-viability.md` 4.2.1, 10.2 |
 | `wants_exceed_labour` | the demand module is on and the programme with the wants has `lambda* < 1` while the upkeep-only one has `lambda* >= 1` (size-gated) | `spec-viability.md` 3.2, 10.2 |
+| `region_isolated`, `graph_not_strongly_connected`, `edge_not_shortest`, `region_without_agents`, `override_equals_default` | the conditions of `spec-regions.md` 9.2 | `spec-regions.md` 9.2 |
+| `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty`, `grant_to_pool_no_outlet` | the conditions of `spec-money-supply.md` 12.2 | `spec-money-supply.md` 12.2 |
+| `no_replacement_ratio`, `schedule_direction`, `replacement_above_closed_ceiling`, `population_gain`, `no_fixed_factor`, `population_without_upkeep` | the conditions of `spec-population.md` 9.2; `renewal_with_population` (above) is raised only for a non-default `Renewal` above 0 with the module on. **Informational**, never failing: `replacement_ratio` and `renewal_ignored` (the module on and `Renewal` at its default) | `spec-population.md` 9.2, 4.6.1 |
+| `transport_without_routes`, `haul_unsourced`, `haul_never_spoils`, `haul_durable`, `vehicle_wears_in_one_trip`, `trip_longer_than_window`, `route_too_slow_for_shelf_life` | the conditions of `spec-transport.md` 12.2 | `spec-transport.md` 12.2 |
 
 ### 7.5 Producibility
 
@@ -757,6 +802,7 @@ instead. Three further cases are settled here:
   byte, its prices, wages, groups and pools are hashed (`spec-viability.md` 8.1). The solve
   options that produced it (`StockCoverTicks` and the rest, `spec-viability.md`
   11) are not fields and not hashed; only the table is.
+- **Regions, edges and the new modules.** `Edges` and `RegionPrices` are hashed in canonical order, every field; `Region.Label` and `World.DistanceLabel` are not (`spec-regions.md` 4.1.2). `Modules.MoneySupply` is hashed with a presence byte and, when present, its flows in ID order, every field but `Label`; the flow scale is state, not configuration. `Modules.Population` is hashed with a presence byte, its schedules in knot order and its region rows by region; the effective scales a shock sets are state. `Modules.Transport` is hashed with a presence byte and its modes in ID order, every field but `Label`; the transit factor is state.
 - **Yields.** `Yields` is hashed in canonical order (region, then recipe, and
   each profile's season entries sorted by season ID, as `spec-production.md` 6.1
   has it). The yield shocks of
@@ -777,7 +823,7 @@ ladder (`spec-currency.md` 2.2). They do not change any result, so they are not
 hashed. A field is presentation only if and only if its doc comment says so. A
 test changes every field of `Config` in turn and checks that the hash changes,
 except for the fields on a short allow-list of presentation-only fields. A new
-field that the encoder forgets therefore fails a test.
+field that the encoder forgets therefore fails a test. The allow-list is `Region.Label`, `World.DistanceLabel`, `Mode.Label`, `MoneyFlow.Label` and the labels of the earlier specs.
 
 8.4. The file's layout (comments, whitespace, key order, and the split into
 documents) does not affect the hash (2.5).
@@ -949,6 +995,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-064 | The eleven spawner parameters and `Role.Closed` MUST be configuration fields with the defaults and bounds of `spec-spawner.md` 11, each with a row in the parameter-owner table and a failing-case test, and `ChangePrivation` not below `RemovePrivation` MUST be rejected with `ErrOutOfBounds` (rule `ladder_order`). |
 | FR-CFG-065 | Validation MUST warn, and MUST NOT fail, with `entry_share_window`, `renewal_with_population`, `no_open_role`, the warnings of `spec-demand.md` 10.2 and `wants_exceed_labour`; `group_below_floor` MUST be a bounded run-time `Warn` and not a validation result. |
 | FR-CFG-066 | A role with no group in any region MUST be valid and MUST draw no warning. |
+| FR-CFG-067 | `Edges` and `RegionPrices` MUST be sorted (edges by `(From, To)` as region index, prices by region then commodity), MUST be hashed with every field, and the graph rules of `spec-regions.md` 9.1 MUST run in `Validate`; `ErrNoRegions` and `ErrSelfEdge` MUST be matched with `errors.Is`. |
+| FR-CFG-068 | `Config.Modules.MoneySupply` MUST be on if and only if non-nil, MUST be written as `[module.money_supply]`, MUST be part of the effective configuration and the hash with every field but `Label`, and its bounds MUST be constants of `bounds.go`. |
+| FR-CFG-069 | `Config.Modules.Population` MUST be on if and only if non-nil, MUST be written as the table `[population]`, MUST be part of the hash with its schedules in knot order and its region rows in region order, and a schedule outside the bound `MaxKnots` MUST be rejected with `ErrOutOfBounds`. |
+| FR-CFG-070 | `Config.Modules.Transport` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while the region graph is off, MUST be part of the hash with its modes in ID order and every field but `Label`, and its modes MUST be validated by the rules of `spec-transport.md` 12.1. |
+| FR-CFG-071 | `Region.Label`, `World.DistanceLabel`, `Mode.Label` and `MoneyFlow.Label` MUST be presentation only: changing them MUST NOT change the hash, and they MUST be on the allow-list of the hash test. |
+| FR-CFG-072 | Validation MUST warn, and MUST NOT fail, with the warnings of `spec-regions.md` 9.2, `spec-money-supply.md` 12.2, `spec-population.md` 9.2 and `spec-transport.md` 12.2; the informational diagnostics `replacement_ratio` and `renewal_ignored` MUST NOT fail validation. |
 
 ### Non-functional
 
@@ -1026,6 +1078,7 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
     `season_shorter_than_tick` and `tool_unaffordable` are named here (7.4.2) because
     the registry and the tests need a name. The calendar and skill-barriers specs
     should adopt them. Open until they do.
+11. **Unify the module table names before the loader is written.** The file layout of the modules differs from spec to spec: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, and a table of its own for transport (6.2). The framework records each as its spec says and does not unify them now. *Next step:* choose one rule (for example `[module.<name>]` for every module) in the slice, before `config/` is written, and amend the specs and the reference packs together.
 
 ## 14. Where this lives in the code
 

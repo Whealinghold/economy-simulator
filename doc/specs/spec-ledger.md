@@ -55,8 +55,7 @@ account may not. Because every transfer is double-entry, the total over *all*
 accounts, boundaries included, is always exactly zero. A faucet is a transfer
 *from* a boundary (which goes more negative), and a sink is a transfer *to* one.
 
-2.3. **Every flow has a name.** A transfer carries a reason from a closed
-registry (section 7). Each reason says whether it is internal, a faucet or a
+2.3. **Every flow has a name.** A transfer carries a reason from a registry (section 7) that is closed for a run: the built-in rows plus one row for each money flow the configuration declares (`spec-money-supply.md` 4.5, 7.2). Each reason says whether it is internal, a faucet or a
 sink, and the ledger refuses a transfer that does not fit. So a report of every
 source and drain of the economy is a sum over reasons.
 
@@ -88,7 +87,7 @@ reservations. It has a kind, an owner reference and a region. Kinds:
 | Agent | an agent's money and goods | the world, when an agent is created | no |
 | Estate | a region's estate: the money pool **and** the goods left behind, awaiting sale; the account of the region's estate pseudo-agent (`spec-estates.md` 2.7) | the world, one per region | no |
 | Escrow | money (or goods) held for a contract (`spec-carriage.md` 2.1) | the contract | no |
-| Transit | goods being carried between regions (`spec-transport.md`) | a shipment | no |
+| Transit | goods being carried between regions (`spec-transport.md`) | the transport module, when no free Transit account of the origin region exists; reused, not closed after a shipment (`spec-transport.md` 7.1) | no |
 | Boundary | the net amount created or destroyed under one reason | the world, one per reason and kind of thing | **yes** |
 
 A kind can be added by a later spec without changing the ledger's rules: it is
@@ -110,11 +109,11 @@ checkpoint is compacted (open question 6).
 or each commodity). The balance of a boundary account is therefore *the
 cumulative net amount of that reason that has entered or left the economy*: how
 much money a mint has created, how many units have spoiled. Reading the boundary
-balances is how a report finds every faucet and sink.
+balances is how a report finds every faucet and sink. The boundary accounts of the reasons that configured money flows declare are created at construction, in flow-ID order, after those of the built-in reasons and before any other account (`spec-money-supply.md` 4.5.1).
 
 3.5. An account has a **region**, except a boundary, which has none. Flows are
-attributed to the region of the non-boundary side. A region can change only by
-an explicit operation (`spec-migration.md`), never as a side effect.
+attributed to the region of the non-boundary side; an internal flow between two non-boundary accounts (`transit_out`, `transit_in`, `trade`, ...) is attributed to the region of the debited account (7.4). A region can change only by
+an explicit operation (`relocate`, `spec-regions.md` 6), never as a side effect. The estate account of each region is created by `spec-regions.md` 3.6, in region order, before any agent account.
 
 ## 4. Money
 
@@ -359,11 +358,15 @@ parameter. The starting registry:
 | `start_money` | money | internal | estate to agent | `spec-estates.md` |
 | `relief` | money | internal | estate to agent | `spec-estates.md` |
 | `escrow_in`, `escrow_out`, `escrow_refund` | money | internal | agent to escrow, escrow to carrier, escrow to agent | `spec-carriage.md` |
-| `transit_out`, `transit_in` | goods | internal | agent to transit, transit to agent | `spec-transport.md` |
-| `loss` | goods, money | sink | transit, agent or estate to boundary | `spec-transport.md`, `spec-estates.md` |
-| `split`, `merge`, `births`, `starvation` | money, goods | internal | agent to estate, or back | `spec-scale.md` 4.8, `spec-agents.md` 3.7, `spec-spawner.md` 4.1, 4.3 (`starvation`: a reduction by the failure ladder; `births`: households added to an existing agent, money from the pool and no goods), `spec-population.md` (which adds `deaths`) |
+| `transit_out`, `transit_in` | goods | internal | agent to transit; transit to agent, or transit to estate (a diverted cargo) | `spec-transport.md` 7.2 |
+| `haul_use` | goods | sink | agent to boundary: the redemption of haul units at dispatch | `spec-transport.md` 7.2 |
+| `transit_use` | goods | sink | agent to boundary: the feed consumed by a trip | `spec-transport.md` 7.2 |
+| `loss` | goods, money | sink | transit, agent or estate to boundary | RSK (`spec-risk.md`, later); no flow is posted under it in version 1 |
+| a flow ID | money | faucet (a grant) or sink (a levy) | boundary to agent or estate; agent or estate to boundary | `spec-money-supply.md` 4.5: one row per configured money flow, reason = flow ID, declared at construction |
+| `split`, `merge`, `births`, `starvation` | money, goods | internal | agent to estate, or back | `spec-scale.md` 4.8, `spec-agents.md` 3.7, `spec-spawner.md` 4.1, 4.3 (`starvation`: a reduction by the failure ladder; `births`: households added to an existing agent, money from the pool and no goods), `spec-population.md` 4.3 (every household born through the module, joining an existing agent or becoming a new one: money only, estate to agent) |
+| `deaths` | money, goods | internal | agent to estate | `spec-population.md` 4.7 (a partial reduction by the schedule; an emptied agent is a removal with `estate_money` and `estate_goods`) |
 
-Later specs add rows: money creation and destruction (`spec-money-supply.md`),
+Later specs add rows: money creation and destruction by configured flows (`spec-money-supply.md`: the rows are declared by the configuration, 4.5, 10.3),
 taxes (`spec-fiscal.md`), imports and exports (`spec-external-sector.md`), loans
 (`spec-credit.md`). The names are the strings used in events and logs, and are the
 values of the `reason` attribute (observability-and-logging.md 3.3.2).
@@ -390,7 +393,7 @@ or commodity) and the wear units per commodity. They are cleared at the start of
 each tick, kept as a slice in a fixed order, and read by the observability and
 indicator specs (`spec-observability.md`, `spec-indicators.md`). They are
 aggregates, so their size is bounded by regions, reasons and commodities, not by
-the number of agents.
+the number of agents. A flow between two non-boundary accounts is attributed to the region of the debited account. Beside them the ledger keeps the **relocation totals** (`spec-regions.md` 6.4): the money and the units moved with accounts that changed region, per ordered pair of regions, with the same lifetime and order; a relocation is not a transfer and is in no flow total.
 
 7.4.1. **The construction bucket.** What is moved during the construction phase
 (5.2.4) is totalled in a separate **construction bucket**, with the layout of the
@@ -568,7 +571,7 @@ ways, both on the world:
   been constructed and not yet stepped, where it checks the construction bucket
   (9.1);
 - the option `WithAudit()` runs it at the end of every `Step`, after the tick's
-  events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails.
+  events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1.
 
 Audit reads and never changes anything, so it affects no result, and the option is
 not part of the effective configuration or its hash (`spec-config.md` 8.1). It is
@@ -638,7 +641,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-048 | `Expiring(account, commodity, tick)` MUST return the number of non-earmarked units of the commodity in the account whose lot has `Born + ShelfLife - 1` at most `tick`, MUST return 0 for a commodity that does not spoil and for a tick before the current one, and MUST change nothing. |
 | FR-LED-049 | `Expiring` MUST return 0 without reading a lot when the account's earliest-expiry hint is after `tick`, MUST fail with `ErrUnknownAccount` or `ErrClosedAccount` for an unknown or closed account, and the sum of its results over the commodities for the current tick MUST equal what the ageing of the same tick moves to `spoilage` from that account, when nothing is earmarked. |
 | FR-LED-050 | The registry MUST contain the goods sink `want_consumption`, agent to boundary, owner `spec-demand.md`, and a ledger with the demand module off MUST show no flow under it (`spec-demand.md` FR-DEM-001, FR-DEM-039). |
-| FR-LED-051 | A weight reduction by the failure ladder MUST be applied with the reason `starvation`, and an entry of households into an existing agent with the reason `births`, each as transfers between the agent and the estate account that conserve money and goods exactly (`spec-spawner.md` 4.1, 4.3; FR-LED-027). |
+| FR-LED-051 | A weight reduction by the failure ladder MUST be applied with the reason `starvation`, a reduction by the population module with the reason `deaths`, and an entry of households into an existing agent with the reason `births`, each as transfers between the agent and the estate account that conserve money and goods exactly (`spec-spawner.md` 4.1, 4.3; FR-LED-027). |
+| FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows plus one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), and the boundary accounts of the declared reasons MUST be created at construction in flow-ID order after those of the built-in reasons and before any other account (`spec-money-supply.md` FR-MON-003). |
+| FR-LED-053 | A flow between two non-boundary accounts MUST be attributed in the flow totals to the region of the debited account, and a flow with a boundary to the region of the non-boundary side. |
+| FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared each tick, not saved; a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
+| FR-LED-055 | The registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary, `transit_in` MUST also be accepted from a Transit account to an Estate account, `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account, and `births` as an internal transfer of money from an estate to an agent account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
+| FR-LED-056 | With a money-supply module on, the audit MUST also check, for each flow, that its total equals the absolute boundary balance of its reason with the right sign (`spec-money-supply.md` FR-MON-026, FR-MON-027). |
 
 ### Non-functional
 
@@ -698,12 +706,11 @@ For `spec-stability.md`:
    that renumbers accounts would have to update every reference, and belongs to
    `spec-checkpoint.md`. Every removal of an agent closes its account
    (`spec-agents.md` 3.6), so the growth is one slot per removal; a weight change
-   (N-008) closes nothing. Still open (N-020).
+   (N-008) closes nothing. With the population module a death that empties an agent is a removal, so the growth also follows the death rate (`spec-population.md` 4.7). Still open (N-020).
 7. **Goods valued as capital.** Durables are held as wear-able lots, but their wear
    is not a transfer (5.4.2). Whether depreciation should also appear as a named
    flow of value, for national-accounts style measures, is for `spec-indicators.md`.
-8. **Region change of an account** (migration, 3.5): the interaction with goods in
-   transit is left to `spec-migration.md` and `spec-transport.md`.
+8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent'"'"'s; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration remains `spec-migration.md`'"'"'s.
 9. **Reporting the construction bucket** (7.4.1). The bucket is readable, but whether
    the world emits it is for `spec-observability.md`. Recommend one `BoundaryFlow`
    set after `WorldCreated`, with `Tick` -1 (before tick 0), the only event with a

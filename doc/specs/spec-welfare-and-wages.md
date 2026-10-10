@@ -52,17 +52,17 @@ whether tick `t` was a working tick (4.3):
   minor units:
 
   ```
-  income_t = R_t + K_t + F_t - S_t(Input) - W_t
+  income_t = R_t + K_t + F_t + G_t - S_t(Input) - W_t
   ```
 
   `R_t` is the money the agent received from trades in tick `t`; `K_t` the value of
   its in-kind receipts (section 6); `F_t` relief paid to it
-  (`spec-estates.md` 2.6); `S_t(Input)` the money it spent in tick `t` on bids whose
+  (`spec-estates.md` 2.6); `G_t` the money received under a grant to households that is not `NotIncome` (`spec-money-supply.md` 7.2), an unearned income like relief; `S_t(Input)` the money it spent in tick `t` on bids whose
   purpose is `Input` (`spec-agents.md` 6.3, 7.3.6); and `W_t` the **wear cost** of
   the tick, 2.1.4. Spending on upkeep (purpose `Upkeep`), on a tool (`Tool`) and on
   anything else (`Other`) is **not** netted: upkeep is the `cost_t` below, and a tool
   is capital, whose use is netted as wear. A starting-money grant (`start_money`,
-  `initial`) is not income. `income_t` may be negative (a tick of buying inputs and
+  `initial`) is not income, and neither is a grant with `NotIncome`. A levy of the money-supply module is not netted from `income_t` in version 1 (`spec-money-supply.md` 7.2, open question 5). `income_t` may be negative (a tick of buying inputs and
   selling nothing).
 - `cost_t` is the cost of one tick of the agent's **effective upkeep**
   (`spec-agents.md` 5.2: the role's list or the world's, plus the region's extra,
@@ -78,8 +78,8 @@ ratio_bp = (sum of income_t) * 10_000 / (sum of cost_t)
 The result is in basis points: 10 000 is a ratio of 1.0, 25 000 is 2.5. It is
 negative if the window's profit is negative.
 
-2.1.1. While an agent travels (it has no region), its upkeep is valued at the
-prices of the last region it was in, and its income for those ticks is zero
+2.1.1. While an agent is away on a trip (`spec-transport.md` 5.9: its account keeps its region, and `NoRegion` is reserved and unused in version 1, `spec-regions.md` 6.5.3), its upkeep is valued at the
+prices of the region of its account, and its income for those ticks is zero
 unless it receives some in kind. A carrier paid a fee on delivery has its
 income recorded in the tick the fee is released.
 
@@ -333,21 +333,19 @@ A tick is a **working tick** for an agent in these cases:
   in the tick (the `TradeExecuted` event), or it was in transit on a
   commercial trip.
 
-A **commercial trip** is travel carrying cargo under a delivery contract, or
-carrying the agent's own goods to sell. Migration travel, ticks spent resting
+A **commercial trip** is travel carrying the agent's own goods to sell (a self-carried shipment of `spec-transport.md`). Its working ticks are the ticks from the dispatch tick to the tick before arrival, read from the shipment record (`spec-transport.md` 5.9, FR-TRN-021). A carrier that moves other people's goods is a producer of haul units, whose job is an ordinary recipe (`spec-transport.md` 8). Migration travel, ticks spent resting
 under the target-income rule, and ticks with no activity are not working
 ticks. Whether a role "has recipes" is read from the configuration, so no code
 branches on a role identifier (`spec-currency.md` section 2.5).
 
-This definition agrees with `spec-carriage.md` section 2.3: every tick of a delivery trip is a
-working tick, so a carrier's observed wage over a trip is `fee / trip_ticks`.
+Every tick of a self-carried trip is a working tick, so the observed wage over a trip is the income of the trip over its ticks.
 Over the window `T`:
 
 ```
-observed_wage = (sum of (income_t - F_t)) / (number of working household-ticks)
+observed_wage = (sum of (income_t - F_t - G_t)) / (number of working household-ticks)
 ```
 
-Relief `F_t` is excluded: it is not earned by working (`spec-estates.md` 2.6). A
+Relief `F_t` and a grant `G_t` are excluded: they are not earned by working (`spec-estates.md` 2.6; `spec-money-supply.md` 7.2). A
 **working household-tick** is one household working for one tick: for an agent of
 weight `w` that has a job of `k` executions in progress it is `k` (the other
 `w - k` households rest, `spec-agents.md` 9.4), and for a role without recipes it is
@@ -607,7 +605,7 @@ that is bounded only by the production halt. Neither is an error of the pack.
 (4.2) is kept; this spec does not change it, and the decision is now taken (the open
 question 1 of section 15 is answered, 15.2): it stays 15 000 with the demand module on and off.
 Without spending beyond upkeep (the demand module off) and without money from a boundary
-(`spec-money-supply.md`, `spec-external-sector.md`), a `TargetRatio` above 10 000 is an **aspiration** that the
+(`spec-external-sector.md`) or from a configured grant that is not matched by a levy (`spec-money-supply.md` 9.1), a `TargetRatio` above 10 000 is an **aspiration** that the
 economy as a whole cannot meet: the households of a role work as the rule says and
 the ratio they reach is whatever the money in circulation allows. A pack that wants
 roles to rest in a closed upkeep-only world sets targets at 10 000, the only value
@@ -791,6 +789,7 @@ observed wage per working household (4.3).
    agent (it cannot: one job per agent, `spec-production.md` 5.1.2) this changes.
 5. **Hours.** A tick shorter than a day makes `ExpectedWorkTicks` a number of ticks and
    not days (`spec-calendar.md` 2.5); nothing here depends on hours.
+6. **A window that counts trips (open).** The effective window is derived from recipe durations only (2.3.3). A self-carried trip (4.3) is a gap in income like a long job (STB-L19, STB-L20 and `spec-stability.md` TRN-A6 merged into L19), and a trip longer than the base window can make a healthy trader look poor. Not decided here: until it is, `spec-transport.md` 12.2 warns with `trip_longer_than_window`. *Next step:* decide with the first traders (MER) whether the longest trip joins the derivation of 2.3.3.
 
 ## 16. Requirements
 
@@ -803,10 +802,10 @@ behaviour decided in the third round; the rest restate text that already existed
 | ID | Requirement |
 |----|-------------|
 | FR-WEL-001 | The welfare ratio of an agent MUST be the sum of `income_t` times 10 000 divided by the sum of `cost_t` over the agent's window, in basis points, truncated toward zero, computed with checked arithmetic. |
-| FR-WEL-002 | `income_t` MUST equal the trade receipts plus the in-kind receipts plus the relief of the tick, less the money spent on bids with the purpose `Input` and the wear cost of the tick, in signed minor units, and MUST NOT net spending with the purpose `Upkeep`, `Tool` or `Other` or a starting-money grant. (new) |
+| FR-WEL-002 | `income_t` MUST equal the trade receipts plus the in-kind receipts plus the relief of the tick, plus the grants of the money-supply module that are not `NotIncome`, less the money spent on bids with the purpose `Input` and the wear cost of the tick, in signed minor units, and MUST NOT net spending with the purpose `Upkeep`, `Tool` or `Other`, a levy, a starting-money grant or a grant with `NotIncome`. (new) |
 | FR-WEL-003 | The wear cost of a tick MUST be, for each execution started that wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (its effective reference price if it has never traded), times the executor's weight, and a tool purchase MUST NOT be netted. (new) |
 | FR-WEL-004 | `cost_t` MUST be the cost of the agent's effective upkeep (`spec-agents.md` 5.2) at the prices of the region the agent was in during tick `t`. (new) |
-| FR-WEL-005 | While an agent has no region, its upkeep MUST be valued at the prices of the last region it was in and its income MUST be zero unless it receives some in kind. |
+| FR-WEL-005 | While an agent has no region (reserved, unused in version 1) or is away on a trip, its upkeep MUST be valued at the prices of the last region it was in and its income MUST be zero unless it receives some in kind. |
 | FR-WEL-006 | An agent's records MUST stay with it when it changes region. |
 | FR-WEL-007 | An agent with fewer than `T` records MUST have the missing ticks padded with `pad_income = n * U * d_bp / 10 000` and `pad_cost = n * U`, with `d_bp` the role's `DefaultRatio`, default 10 000. |
 | FR-WEL-008 | The ratio MUST be reported as absent, and not as zero or infinity, when the agent has no upkeep. |
@@ -819,7 +818,7 @@ behaviour decided in the third round; the rest restate text that already existed
 | FR-WEL-015 | No configuration field MUST hold a wage or a wage multiplier, and a skill premium MUST be measured, never set. |
 | FR-WEL-016 | The role fields `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind` and `ExpectedWorkTicks` MUST have the defaults and bounds of section 12. |
 | FR-WEL-017 | For a role with recipes, a tick MUST be a working tick if the agent had a job in progress in it (started, continued or completed) or was in transit on a commercial trip, and for a role without recipes if it traded or was in transit on a commercial trip; migration travel, rest under the target-income rule and idle ticks MUST NOT be working ticks. (new for the job wording) |
-| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t` divided by the number of working household-ticks, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
+| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t` divided by the number of working household-ticks, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
 | FR-WEL-019 | The observed premium of a role in a region MUST be its observed wage times 10 000 divided by the mean observed wage of the region's agents of `Unskilled` roles weighted by households, and MUST be absent if the region has no such agents or the role has no working ticks. (new for the weighting) |
 | FR-WEL-020 | The `Snapshot` MUST report the observed wage and premium per role and region, the effective window per role, the households held to work by the floor, the household-weighted mean welfare ratio per role and region (absent when no agent has a ratio), each bounded by the configuration. |
 | FR-WEL-021 | The work share MUST be 10 000 if the ratio is below `T_lo`, 0 if it is at or above `T_hi = T_lo * (10 000 + RestBand) / 10 000`, and `(T_hi - ratio) * 10 000 / (T_hi - T_lo)` between, with `T_lo` the agent's own target, and the executions requested MUST be `ceil(weight * share / 10 000)`. (new for the band and the share) |

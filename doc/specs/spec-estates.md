@@ -37,9 +37,10 @@ removal, in order (the job abandoned, the trainee relationship ended, money and 
 moved, the account closed, one event), are `spec-agents.md` 3.6; this spec owns only
 what the estate then does with them.
 
+Goods also reach the estate by diversion: a cargo whose consignee is removed, outside the destination region or unable to hold it moves from its Transit account to the estate of the destination by `transit_in` (`spec-transport.md` 5.8), and the estate lists it like any other goods (2.7).
+
 2.2. **Which region.** The region the agent was in when it died. A traveller
-that dies in transit leaves its money to the pool of the region it departed
-from, and its cargo is lost (an explicit sink, with an event). Escrow for a
+that dies in transit leaves its money to the pool of the region of its account, the region it departed from (`spec-transport.md` 5.9.2). Its cargo is not in its account: it is in a Transit account and arrives at its consignee, or, if the consignee is gone, is diverted to the estate of the destination by the reason `transit_in` and listed like any estate goods (`spec-transport.md` 5.8, 5.9.3). The `loss` sink is RSK's (`spec-risk.md`, later) and nothing is posted under it by this spec. Escrow for a
 delivery contract is handled by `spec-carriage.md` section 2.1.
 
 2.3. **Use of the pool.** The pool funds the starting money of agents created
@@ -60,7 +61,7 @@ replacement in the first ticks may start with nothing). Money enters the world o
 by `initial` (at construction, a pool seed, and an external agent added during a run,
 `spec-agents.md` 3.5.4) and by the faucets of later specs, each a named flow of the
 ledger (`spec-ledger.md` 7.3). Otherwise the total, agents plus pools plus escrow, is
-constant.
+constant. A configured grant to the pool of a region is a named faucet too (`spec-money-supply.md` 4.3.2, 7.4); a pool target needs this module on (`ErrModuleDependency`), although the estate account exists whether or not it is (`spec-regions.md` 3.6.2): the pool policy of 2.6 is the module's. A levy on a pool collects after relief and starting money are paid in the same tick (`spec-money-supply.md` 7.5).
 
 2.4. **Consequences.** A prosperous region accumulates a pool and funds
 well-endowed newcomers. A collapsing region's pool runs dry, so new agents
@@ -117,7 +118,7 @@ that it acts as a **pseudo-agent**: something that places orders without being
 a household.
 
 2.7.1. Each region has exactly one estate pseudo-agent, created with the region,
-before any household. It has one ledger account of the kind Estate
+before any household. The world creates it, with its account, in region order at construction (`spec-regions.md` 3.6, whether or not this module is on). It has one ledger account of the kind Estate
 (`spec-ledger.md` 3.1) that holds **both** the pool's money and the unsold goods.
 So the proceeds of a sale, a `trade` transfer into that account, are the pool's
 money, with no separate path.
@@ -152,7 +153,7 @@ That price is state, so it is part of what this spec contributes to a checkpoint
 (ADR 0002): the list of (lot key, current price) per region, in canonical order.
 
 2.7.6. Pseudo-agent IDs are in the same ID space as agents, allocated first, one
-per region in region order, so every ordering that uses an agent ID
+per region in region order, as `spec-regions.md` 3.6.1 fixes (the pseudo-agent of the region with `RegionID` `r` has agent ID `r`), so every ordering that uses an agent ID
 (`spec-clearing.md` 4.1) is unaffected by the estate's presence beyond the extra
 orders it places.
 
@@ -163,7 +164,7 @@ to `w'`, the money difference passes through the estate account (`spec-scale.md`
 4.8; `spec-agents.md` 3.7): the surplus goes to the pool when the weight falls, and
 the shortfall is drawn from the pool when it rises, with the ledger reasons
 `split`, `merge`, `births`, `starvation` or `deaths` (`spec-ledger.md` 7.2). A draw never takes
-more than the pool holds. A rise that the pool cannot fund is applied partially, in whole households, from a budget of `EntryPoolShare` of the pool taken at the start of the entry step; the rest is not created and is counted (`spec-spawner.md` 4.3, 7.3, N-073). A rise by entry brings money and no goods.
+more than the pool holds. A rise that the pool cannot fund is applied partially, in whole households, from a budget of `EntryPoolShare` of the pool taken at the start of the entry step; the rest is not created and is counted (`spec-spawner.md` 4.3, 7.3, N-073). A rise by entry brings money and no goods. A household born through the population module brings a stake of `Role.StartMoney * BirthStake / 10 000` from the pool with the reason `births`, money only (`spec-population.md` 4.3); a death by a schedule passes the money of the households that die to the pool with the reason `deaths` (`spec-population.md` 4.7); both reasons are rows of `spec-ledger.md` 7.2.
 
 2.8.2. A cohort does not fail by itself (`spec-agents.md` 3.6.1): an agent with no
 money exists and goes unfed. The estate has no part in the decisions of the failure ladder (change
@@ -201,7 +202,7 @@ derived from the section named.
 |----|-------------|
 | FR-EST-001 | When an agent is removed, all its money MUST pass to its region's estate account with the reason `estate_money` and all its goods with `estate_goods`, conserving money and goods exactly (2.1; `spec-agents.md` 3.6). |
 | FR-EST-002 | The region of the estate that receives a removed agent's holdings MUST be the region of the agent's account when it is removed (2.2). |
-| FR-EST-003 | A traveller that dies in transit MUST leave its money to the pool of the region it departed from, and its cargo MUST be lost by the `loss` sink with an event (2.2). Testable once `spec-transport.md` exists. |
+| FR-EST-003 | A traveller that dies in transit MUST leave the money of its account to the pool of the region of that account, the region it departed from, and a cargo whose consignee is gone MUST reach the estate of the destination by `transit_in` and be listed like any estate goods (2.2; `spec-transport.md` 5.8, 5.9). |
 | FR-EST-004 | Each region MUST have exactly one estate pseudo-agent, with one ledger account of the kind Estate that holds both the pool's money and the unsold goods, created with the region and before any household (2.7.1). |
 | FR-EST-005 | Pseudo-agent IDs MUST be allocated first in the agent ID space, one per region in region order (2.7.6). |
 | FR-EST-006 | The estate MUST place asks only, and a bid from it MUST be rejected with `side_not_allowed`; each ask MUST be backed by a reservation of goods in the estate's account and need no cash (2.7.2). |

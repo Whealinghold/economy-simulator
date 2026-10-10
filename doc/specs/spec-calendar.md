@@ -201,8 +201,12 @@ that is not Earth replaces them.
 them. A pack for another planet states them in the ticks of its own calendar. The
 file format takes integers only (`spec-config.md` 2.6), so there is no "two weeks".
 
-6.2. Quantities stated per tick (a household's upkeep, the reference basket `B_r`)
-are data for the chosen tick length and are not rescaled (`spec-currency.md` 2.4).
+6.2. Quantities stated per tick (a household's upkeep, the reference basket `B_r`, the
+speed of a transport mode in distance units per tick, `spec-transport.md` 3.1, and a money flow stated
+`Per` tick, `spec-money-supply.md` 4.2)
+are data for the chosen tick length and are not rescaled (`spec-currency.md` 2.4). A quantity stated per
+year follows `TicksPerYear`: a money flow with `Per` `year` and the annual birth and death rates of
+`spec-population.md` 3.8 are converted exactly from it.
 This is the reason `TicksPerDay` and `DaysPerTick` change results and are hashed.
 
 6.3. `ExpectedWorkTicks` must be at most `TicksPerYear`
