@@ -28,17 +28,17 @@ gap, and the mean number of lots a tick.
 """
 import random
 
-G64 = 0x9E3779B97F4A7C15
-MASK = (1 << 64) - 1
+WEYL32 = 2654435769  # Knuth's multiplier, 2^32 / golden ratio: the one POP 3.8.3 uses for the start of a death carry
+MASK32 = (1 << 32) - 1
 
 
 def weyl_bp(agent_id):
-    """The fixed spread of the spec (5.4): u(a) in basis points, 0 to 9999.
+    """The fixed spread of the spec (5.7): u(a) in basis points, 0 to 9999.
 
-    (a + 1) * G64 mod 2^64, then floor(x * 10000 / 2^64): the one place in the module where
-    arithmetic is modular by design (a hash, not a quantity)."""
-    x = ((agent_id + 1) * G64) & MASK
-    return (x * 10000) >> 64
+    (a * 2 654 435 769) mod 2^32, then floor(x * 10000 / 2^32): the Weyl offset of spec-population.md 3.8.3,
+    the one place in the module where arithmetic is modular by design (a hash, not a quantity)."""
+    x = (agent_id * WEYL32) & MASK32
+    return (x * 10000) >> 32
 
 
 def bars(n, w, kind, first_id=1000):

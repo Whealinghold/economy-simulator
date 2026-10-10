@@ -93,7 +93,7 @@ def fresh():
 
 if __name__ == "__main__":
     print("the matching on one lane (destination lower, commodity fuel)")
-    offers = [(31, 244, 150), (32, 263, 150), (34, 250, 100)]
+    offers = [(32, 244, 150), (33, 263, 150), (35, 250, 100)]
     takes = [(61, 270, 200), (62, 255, 150), (63, 240, 150)]
     for o in offers:
         print(f"  offer agent {o[0]}: limit {o[1]}, {o[2]} units")
@@ -102,9 +102,9 @@ if __name__ == "__main__":
     pairs = match_lane(offers, takes)
     for p in pairs:
         print(f"  contract: deliverer {p[0]} payer {p[1]} {p[2]} units at {p[3]}")
-    print("  by limit the offers are 31, 34, 32: offer 31 takes 150 of take 61 (200 units) at the midpoint (244 + 270) / 2 = 257, leaving 50;")
-    print("  offer 34 (100 units, indivisible) does not fit the 50 left of take 61 and goes to take 62 at (250 + 255) / 2 = 252.5, half to even 252;")
-    print("  offer 32 (limit 263) finds no take: take 61 has 50 left and take 62 is below its limit")
+    print("  by limit the offers are 32, 35, 33: offer 32 takes 150 of take 61 (200 units) at the midpoint (244 + 270) / 2 = 257, leaving 50;")
+    print("  offer 35 (100 units, indivisible) does not fit the 50 left of take 61 and goes to take 62 at (250 + 255) / 2 = 252.5, half to even 252;")
+    print("  offer 33 (limit 263) finds no take: take 61 has 50 left and take 62 is below its limit")
     print()
 
     cases = {

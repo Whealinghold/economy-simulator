@@ -5,13 +5,17 @@ contract. Example B: a mining colony, a self-carried mode, a trader that buys at
 Integer arithmetic only; the rules are those of sections 5 and 6 of the spec.
 """
 
-G64 = 0x9E3779B97F4A7C15
-MASK = (1 << 64) - 1
+WEYL32 = 2654435769  # Knuth's multiplier, 2^32 / golden ratio: the one POP 3.8.3 uses for the start of a death carry
+MASK32 = (1 << 32) - 1
 
 
 def weyl_bp(agent_id):
-    x = ((agent_id + 1) * G64) & MASK
-    return (x * 10000) >> 64
+    """The fixed spread of the spec (5.7): u(a) in basis points, 0 to 9999.
+
+    (a * 2 654 435 769) mod 2^32, then floor(x * 10000 / 2^32): the Weyl offset of spec-population.md 3.8.3,
+    the one place in the module where arithmetic is modular by design (a hash, not a quantity)."""
+    x = (agent_id * WEYL32) & MASK32
+    return (x * 10000) >> 32
 
 
 def ceil_div(a, b):
@@ -93,7 +97,7 @@ line("freight Cm = n * s * 700", cm)
 g = q * (rnet - pacq)
 line("gross margin G = 150 * (289 - 200)", g)
 
-for agent in (31, 32, 33, 34):
+for agent in (32, 33, 34, 35):
     u, phi = fee_share(5000, 2500, agent)
     test = cm * 10000 <= phi * g
     per_haul = g // (n * s)
@@ -103,11 +107,11 @@ for agent in (31, 32, 33, 34):
     print(f"  agent {agent}: u = {u:5d} bp, share phi = {phi:5d} bp, test Cm*10000 <= phi*G: {test}, "
           f"per haul unit {per_haul}, haul bid ceiling {ceiling}, break-even buy {breakeven}, offer limit {asklimit}")
 
-u, phi = fee_share(5000, 2500, 31)
+u, phi = fee_share(5000, 2500, 32)
 asklimit = pacq + ceil_div(cm * 10000, phi * q)
 take_limit = 300 * (10000 - 1000) // 10000
 price = half_even_mid(asklimit, take_limit)
-line("agent 31: offer limit L", asklimit)
+line("agent 32: offer limit L", asklimit)
 line("consignee: take limit b = 300 * (10 000 - 1 000) / 10 000", take_limit)
 line("contract price = midpoint half to even of (L + b) / 2", price)
 escrow = price * q
@@ -123,7 +127,7 @@ shelf = 4
 line("with ShelfLife 4", f"{k} <= {shelf - 1 - 1}: {k <= shelf - 1 - 1}")
 
 print()
-print(f"Settlement of the contract of agent 31 (price {price} a unit, 150 units, escrow {escrow})")
+print(f"Settlement of the contract of agent 32 (price {price} a unit, 150 units, escrow {escrow})")
 for label, reached in (("all reached", 150), ("128 reached, 22 spoiled", 128), ("none reached", 0)):
     pay = price * reached
     refund = price * (q - reached)
@@ -139,7 +143,7 @@ g_p = q_p * (rhat - pacq)
 upkeep_cost = 1 * 200
 time_p = k_p * upkeep_cost * 10000 // 10000
 line("porter: lot, gross margin G = 6 * (305 - 200), time cost 3 * 200", f"{q_p}, {g_p}, {time_p}")
-u, phi = fee_share(5000, 2500, 31)
+u, phi = fee_share(5000, 2500, 32)
 line("porter: cost <= phi * G / 10 000 ?", f"{time_p} <= {phi * g_p // 10000}: {time_p * 10000 <= phi * g_p}")
 
 print()
@@ -172,8 +176,8 @@ line("time: 3 * (1 * 56) * 10 000 / 10 000", time_cost)
 line("trip cost Cs", cs)
 gb = qb * (rhat_b - pacq_b)
 line("gross margin G = 100 * (78 - 56)", gb)
-u, phi = fee_share(5000, 2500, 17)
-line("agent 17: u, phi", f"{u}, {phi}")
+u, phi = fee_share(5000, 2500, 18)
+line("agent 18: u, phi", f"{u}, {phi}")
 line("test Cs * 10 000 <= phi * G", f"{cs * 10000} <= {phi * gb}: {cs * 10000 <= phi * gb}")
 be = rhat_b - ceil_div(cs * 10000, phi * qb)
 line("break-even buy price", be)

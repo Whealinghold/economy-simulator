@@ -165,7 +165,7 @@ share (`spec-carriage.md` 3).
 |-------|---------|---------|-------|
 | `Modes` | the modes the merchant plans with, by ID | required, not empty | known modes, no duplicate, at most `MaxModes` |
 | `LotUnits` | the carrying units a dispatch may use at most: the lot cap (7.1) | 1 | 1 to `MaxLotUnits` |
-| `FeeShareSpreadBP` | the half-width of the fixed spread of the fee share by agent (5.7) | 2 500 | 0 to 5 000, and `MerchantFeeShare` less it at least 1 and plus it at most 10 000 |
+| `FeeShareSpreadBP` | the half-width of the fixed spread of the fee share by agent (5.7) | 2 500 | 0 to 5 000, at most `MerchantFeeShare`, and `MerchantFeeShare` plus it at most 10 000 |
 | `MaxSourceAge` | the oldest `SourceAge` of a rumour the merchant acts on (5.2) | 2 | 0 to `MaxRumourAge` |
 | `TimeCostBP` | the cost of one tick away, in basis points of the merchant's own upkeep cost for a tick (5.4) | 10 000 | 0 to 100 000 |
 | `ConsigneeCutBP` | the share of the destination price that the merchant expects to give up to a consignee when it sells under a contract (6.1) | 500 | 0 to 5 000 |
@@ -342,12 +342,12 @@ commodity, one destination and one mode (6.2).
 
 ### 5.2 Reading a rumour
 
-5.2.1. For the rumour `ρ` of (`r`, `c`) (`spec-information.md` 5.1) the **cautious
+5.2.1. For the rumour `rho` of (`r`, `c`) (`spec-information.md` 5.1) the **cautious
 revenue** per unit is
 
 ```
-Rhat = ρ.Price                        if ρ.Mean = 0
-Rhat = min(ρ.Price, ρ.Mean)           otherwise
+Rhat = rho.Price                        if rho.Mean = 0
+Rhat = min(rho.Price, rho.Mean)           otherwise
 ```
 
 and, for a hired mode, `Rnet = Rhat * (10 000 - ConsigneeCutBP) / 10 000` (truncated),
@@ -432,11 +432,11 @@ case: it anchors a price, not a decision to leave).
 G = q * (Rnet - P_acq)                    positive (case 5 of 5.1.2)
 ```
 
-and the agent's **fee share** `φ` is `MerchantFeeShare` with the agent's fixed spread
+and the agent's **fee share** `phi` is `MerchantFeeShare` with the agent's fixed spread
 (5.7), in basis points. The candidate passes if and only if
 
 ```
-C * 10 000 <= φ * G                        (128-bit intermediates, checked)
+C * 10 000 <= phi * G                        (128-bit intermediates, checked)
 ```
 
 that is, if the cost of carriage is at most the fee share of the expected gross margin. It
@@ -451,7 +451,7 @@ must promise twice its cost.
 rounded against the merchant:
 
 ```
-margin_needed = ceil(C * 10 000 / (φ * q))          per unit
+margin_needed = ceil(C * 10 000 / (phi * q))          per unit
 BreakEven     = Rnet - margin_needed                 the dearest price at which the lot still passes
 AskLimit      = P_acq + margin_needed                the cheapest delivered price at which it passes
 ```
@@ -466,14 +466,14 @@ This is the answer to the open item 6 of the README ("Still open") and to
 
 ```
 expected_margin_per_haul_unit = G / (n * s)                       truncated
-HaulCeiling                   = expected_margin_per_haul_unit * φ / 10 000   truncated
+HaulCeiling                   = expected_margin_per_haul_unit * phi / 10 000   truncated
 ```
 
 with `G` net of the consignee's cut (5.2.1). The merchant's bid for haul units has the limit
 `min(L, HaulCeiling)`, `L` the limit of the default's draw (`spec-agents.md` 7.5.3), and the
 bid for the cargo has the limit `min(L, BreakEven)`. The ceiling is **`FR-CAR-004`**: the
 merchant never bids for a haul unit more than the fee share of the margin it expects to earn
-from it, and with the spread of 5.7 `φ` is the agent's own share, equal to
+from it, and with the spread of 5.7 `phi` is the agent's own share, equal to
 `MerchantFeeShare` when `FeeShareSpreadBP` is 0. The ceiling makes the merchant's demand for
 haul units end at a price: above it, no merchant of the lane buys (MER-A4).
 
@@ -482,16 +482,18 @@ haul units end at a price: above it, no merchant of the lane buys (MER-A4).
 5.7.1. The fee share of agent `a` is
 
 ```
-u(a)  = floor( ((a + 1) * 0x9E3779B97F4A7C15 mod 2^64) * 10 000 / 2^64 )       in [0, 10 000)
-φ(a)  = clamp( MerchantFeeShare + FeeShareSpreadBP * (2 * u(a) - 10 000) / 10 000, 1, 10 000 )
+w(a)   = (a * 2 654 435 769) mod 2^32                      the Weyl offset of spec-population.md 3.8.3
+u(a)   = floor( w(a) * 10 000 / 2^32 )                       in [0, 10 000)
+phi(a) = clamp( MerchantFeeShare + FeeShareSpreadBP * (2 * u(a) - 10 000) / 10 000, 1, 10 000 )
 ```
 
-with the division truncated toward zero. `u` is a Weyl sequence of the golden ratio: agents with
-consecutive IDs get values spread evenly over the interval, and the product is computed with
-`math/bits.Mul64`, whose low word is the product modulo 2^64. **This is the one place in the
-module where arithmetic is modular by design**: `u` is a hash of an identifier, not a
-quantity, and nothing that affects money or goods wraps. The constant is a rule constant
-(architecture.md 9.6), not a parameter.
+with the division truncated toward zero. `w` is the Weyl offset that `spec-population.md` 3.8.3 uses for the start of
+a death carry (Knuth's multiplier, 2^32 over the golden ratio), and the spread of margins of MIG is the same function of the ID:
+there is one rule for a fixed per-agent spread in the library, and agents with consecutive IDs get values spread evenly over
+the interval. The product is the 32-bit product of an unsigned integer and the multiplier, which wraps modulo 2^32 by
+the definition of the type. **This is the one kind of place in the module where arithmetic is modular by design**: `w` is a
+hash of an identifier, not a quantity, and nothing that affects money or goods wraps. The multiplier is a rule constant
+(architecture.md 9.6), not a parameter; the helper belongs where the three users can share it (23).
 
 5.7.2. **Why it is a function of the ID and not a draw at creation.** `spec-information.md`
 11.2 and `spec-stability.md` L93 ask for "a fixed spread of the shippers' own thresholds,
@@ -507,7 +509,7 @@ shows and the `merchant_spread_narrow` warning does not see. A role that needs a
 raises `FeeShareSpreadBP`. A draw at creation is open question 3.
 
 5.7.3. The spread is **in the fee share, so in the bar**: a merchant with a lower share demands
-a larger margin over its cost before it ships, a bar of `10 000 / φ` times the cost. The
+a larger margin over its cost before it ships, a bar of `10 000 / phi` times the cost. The
 widest the bars can be is from `10 000 / (MerchantFeeShare + FeeShareSpreadBP)` to
 `10 000 / (MerchantFeeShare - FeeShareSpreadBP)`; with the defaults 1.33 to 4 times the cost,
 a width of 2.67. A bar is never below 1 times the cost, because a share is at most 10 000: a
@@ -528,9 +530,9 @@ merchant. The midpoint of a contract is half to even (9.4).
 6.1.1. The merchant compares modes by the **same rule on the same lane**: for a lane (`r`,
 `c`), each mode `m` of `Params.Modes` with a route gives its own lot (6.2), cost `C` (5.4) and
 revenue (5.2), and the passing candidate with the greatest `G - C` wins. A hired mode is
-valued with the consignee's cut, so a hired lane must beat a self-carried one by more than the
-cut, and a hired lane is chosen over a self-carried one when its freight, cut included, is less
-than the wear, the feed and the time of the trip. The comparison uses nothing the merchant
+valued with the consignee's cut, so its gross margin is lower than a self-carried lane's by the cut, and a
+hired lane is chosen over a self-carried one when its freight is less than the wear, the feed and the
+time of the trip by more than the cut costs. The comparison uses nothing the merchant
 cannot see: the market price of haul units and of the vehicle and the feed in its own market,
 its own cost of living, and the routes.
 
@@ -550,8 +552,9 @@ rule is a preference of the code; a pack that wants only one lists only that mod
    `min(floor(UnitMass / Mass), floor(UnitBulk / Bulk))` with a term whose capacity is 0 left out.
    For a self-carried mode the pooled capacity is also used by everything else the agent holds
    (`spec-transport.md` 3.2.2), so `q_cap` is the most units of `c` that fit after the other
-   holdings, by the same pair rule, and never more than the units the agent fields. This is the
-   cap of D39 applied to a merchant (7.1).
+   holdings, by the same pair rule, and never more than `LotUnits`. A self-carried mode in a merchant block has `Crew` 1, because the
+   merchant has weight 1 (3.6; 14.1), so the vehicles the lot needs are `n`, bought as an input (3.4.2). This is
+   the cap of D39 applied to a merchant (7.1).
 2. **What it can pay.** `q_aff = floor((Money - ReserveMoney - other) / LimitMax)`, with
    `ReserveMoney` the default's reserve (`spec-agents.md` 7.4.2), `other` the cost at their
    maximum limits of the trip's other inputs it does not yet hold, and `LimitMax` the
@@ -600,12 +603,20 @@ inputs it paid for: the cargo is sold by the default as surplus, the haul units 
 durable of the role's modes; the default offers a tool only to a role that makes it,
 `spec-agents.md` 7.3.5).
 
-### 6.4 A consignee waits for its goods
+### 6.4 When a merchant stays
 
-A merchant with `Inbound` goods (as a consignee, 8) plans no self-carried trip: it would leave
-its region with its account still there, arrive elsewhere before the cargo, and find the cargo
-diverted to the estate of the region it left (`spec-transport.md` 5.8). Case: `Waiting`. A
-hired trip needs nothing of the kind.
+A merchant plans no self-carried trip, and counts the case `Waiting`, when:
+
+- it has `Inbound` goods (as a consignee, 8): it would leave its region with its account still there, arrive
+  elsewhere before the cargo, and find the cargo diverted to the estate of the region it left
+  (`spec-transport.md` 5.8);
+- it has a job in progress: a merchant has no recipe of its own but the household floor of SUB (`spec-subsistence.md`)
+  may give a role with none an own-use list, and the default `Work` that a merchant inherits then starts an
+  own-use job, which the shipment mechanism refuses a trip for (`job_in_progress`, `spec-transport.md` 5.4).
+
+A merchant that is in the own-use mode of SUB (the flag the view carries beside `Hunger`) plans no trip at all and
+posts no take: it is short of food, and the household feeds itself before it trades. A hired trip needs nothing
+of the first two.
 
 ### 6.5 The work share
 
@@ -630,7 +641,7 @@ alike the merchants are.
 
 | # | Rule | What it damps | Cost | Counted by |
 |---|------|---------------|------|------------|
-| R1 | **Lane lock.** No new lot on a lane (`r`, `c`) while the merchant has units of `c` on the way to `r` (`Outbound`). A self-carried merchant is away and decides nothing, which is the same rule | the invisible pipeline of its own: it cannot re-send what has not yet arrived (L85, L84) | one lot per lane per `k` ticks | `Locked` |
+| R1 | **Lane lock.** No new lot on a lane (`r`, `c`) while the merchant has units of `c` on the way to `r` (`Outbound`). A self-carried merchant is away and decides nothing, which is the same rule | the invisible pipeline of its own: it cannot re-send what has not yet arrived (L85, L84) | one lot per lane per `k + 1` ticks | `Locked` |
 | R2 | **Cap.** At most one trip per plan (one commodity, one destination, one mode) and at most `LotUnits` carrying units; the plan carries one request or offer, far below `MaxDispatchPerTick` | the size of the swing: the gap moves by at most the cap times the merchants (D39) | a large shipment is several lots over several ticks | `LotCapped` |
 | R3 | **Fixed spread.** The fee share, and so the bar, differs by agent, fixed for the agent for ever (5.7) | herding of identical shippers on one reading (L93) | merchants with a high bar never ship the thin gaps | not silent: the bar is in every decision |
 | R4 | **Source age and a cautious reading.** A rumour with a `SourceAge` above `MaxSourceAge` is not acted on; the revenue is the lower of the price and the mean (5.2) | the phantom gap of a thin market (L94) | a thin source market is never served | `Stale` |
@@ -664,7 +675,7 @@ Q / W  <  2 sin( pi / (2 (2 n + 1)) )         n = Lag + k + 1      (no lock)
 one half or more, or with the pipeline counted, the limit is about 2 for any `n` (`spec-transport.md`
 15, TRN-A1; `models/trn/pipeline.out`).
 
-7.2.2. **What the lane lock does to the condition.** It limits each merchant to one lot per `k` ticks,
+7.2.2. **What the lane lock does to the condition.** It limits each merchant to one lot per `k + 1` ticks,
 which caps the response and breaks the lockstep of merchants that shipped together. The model finds the
 spread that settles the gap (a peak-to-peak size under a tenth of the freight) for `Q` = 0.5 f:
 
@@ -700,7 +711,7 @@ half of 6 000 ticks, in units of the freight; the mean gap is its mean:
 | spread `W` = 1 f, no lock | 0.59 f | 1.13 f |
 | spread `W` = 2 f, no lock | 0.04 f | 1.27 f |
 | spread `W` = 1 f and lock | 0.03 f | 1.28 f |
-| spread `W` = 1 f (Weyl of the agent ID) and lock | 0.05 f | 1.28 f |
+| spread `W` = 1 f (Weyl of the agent ID) and lock | 0.05 f | 1.27 f |
 | independent error 0.4 f, no lock (INF-D2 alone) | 1.32 f | 0.70 f |
 | independent error 0.4 f and lock | 0.58 f | 0.85 f |
 | identical, share at dispatch 0.5 | 1.20 f | 0.67 f |
@@ -733,7 +744,7 @@ other cases of 5.1.2 and 6 are counted beside them, so a lane that never trades 
 ### 8.1 Who receives a hired shipment
 
 8.1.1. A hired shipment needs a consignee in the destination (`spec-transport.md` 8.4, N-100). The
-decision of this spec, with the three options the brief names:
+decision of this spec, among three options:
 
 - **the merchant's own agent there:** rejected. Agents are independent accounts, a "house" of two accounts
   would be a relation the ledger does not know, and the goods would be given away between them;
@@ -918,8 +929,8 @@ and changes nothing.
    with every check and every effect of `spec-transport.md` 5.4 and 5.5.1, and the event
    `ShipmentDispatched` of that spec. A refusal of transport (`insufficient_haul`, `capacity_exceeded`,
    `traveller_away`, `unprovisioned`, ...) is the reason of the failure and emits `ShipmentRejected` as it
-   always does. A self-carried offer travels `D` with the lot consigned to `P`, and the rest of its holdings
-   with it.
+   always does. A self-carried offer sends `D` itself on the trip, with the lot consigned to `P` and the rest of its
+   holdings travelling with it.
 4. **Escrow.** The world takes the lowest-ID open Escrow account of region `r` that no open contract uses,
    or opens one (kind Escrow, region `r`), and transfers `p * q` from `P` to it under `escrow_in`. It cannot
    fail: `P`'s cash was checked in step 2 and nothing since has moved it.
@@ -1128,7 +1139,8 @@ does the warning is the only guard. The cost is the one WEL names for a long job
 12.4.1. **A merchant on a trip is away, and is not a migrant.** TRN keeps its account in the origin region while it is away
 (`spec-transport.md` 5.5.2), refuses a public relocation with `open_shipment` and `open_contract`, and changes its region at
 arrival with the cause `transport`. MIG must respect both refusals and must not read a trip as a move; a merchant that ends a
-trip in another region and stays there has relocated by trade, and the households-by-region count follows `AgentRelocated`.
+trip in another region and stays there has relocated by trade, and the households-by-region count follows `AgentRelocated`. MIG's own rule for a role with no recipe is MIG's: this spec asks only that a merchant not be moved
+for good while its trade is where it is, and the guard of the refusals is what makes that true while it is away.
 
 12.4.2. **A merchant has no home.** It lives where its account is. The ladder and relief see the origin region until arrival
 (`spec-transport.md` 5.9.4); a merchant that dies in transit leaves its money to the pool of the region it departed from
@@ -1139,8 +1151,8 @@ regions this allows.
 else the best viable role). A merchant has no recipes, so its observed wage is the income of its working ticks (`spec-welfare-and-wages.md`
 4.3), which is what the spawner's occupation signal reads. A role change or a removal ends nothing of a contract (9.8).
 
-12.4.4. **SUB.** None beyond the strategy registry: a merchant role has no recipe, and whether the household floor of SUB is open
-to a role with none is SUB's.
+12.4.4. **SUB.** The seam is 6.4. SUB lets a role with no recipe have an own-use list; the merchant's `Work` is the default's, so a merchant takes the mode as any household, and while it has an own-use job or is in the mode it
+stays (6.4). Otherwise the two specs share only the strategy registry.
 
 12.4.5. **EXT.** Section 11.
 
@@ -1166,7 +1178,7 @@ merchants priced, shared or insured a risk was read. The bounds are validation b
 | Role | `Merchant` | the merchant block: nil means the role is not a merchant (3.2) | nil | |
 | Merchant | `Modes` | the modes the merchant plans with | required | known modes, no duplicate, at most `MaxModes` |
 | Merchant | `LotUnits` | the lot cap in carrying units | 1 (placeholder) | 1 to `MaxLotUnits` |
-| Merchant | `FeeShareSpreadBP` | half-width of the spread of the fee share by agent | 2 500 (placeholder) | 0 to 5 000 and the share stays in 1 to 10 000 |
+| Merchant | `FeeShareSpreadBP` | half-width of the spread of the fee share by agent | 2 500 (placeholder) | 0 to 5 000, at most `MerchantFeeShare`, and the share plus it at most 10 000 |
 | Merchant | `MaxSourceAge` | the oldest `SourceAge` acted on | 2 (placeholder) | 0 to `MaxRumourAge` |
 | Merchant | `TimeCostBP` | cost of a tick away, in basis points of the agent's own upkeep cost | 10 000 (placeholder) | 0 to `MaxTimeCostBP` |
 | Merchant | `ConsigneeCutBP` | the share of the destination price expected to be given up under a contract | 500 (placeholder) | 0 to 5 000 |
@@ -1175,8 +1187,8 @@ merchants priced, shared or insured a risk was read. The bounds are validation b
 | Merchant | `TakeUnits` | the units of a cargo commodity a consignee wants to hold or have on the way | required with `Consigns` | 1 to `MaxQuantity` |
 
 `MerchantFeeShare` (Role, default 5 000, bound 0 to 10 000) is read here and owned by
-`spec-carriage.md` 3 (no new row). Both of its extremes are legal and a share of 0 makes the merchant
-never ship: a role that lists a mode and has a share of 0 draws a warning (14.2).
+`spec-carriage.md` 3 (no new row). Both of its extremes are legal: a share of 0 is clamped to 1 in 5.7.1 and
+makes the merchant never ship in practice (`spec-carriage.md` 3: "0 means the merchant never hires").
 
 `LotUnits` of 1 means one carrying unit a lot, so the lot is the load of one vehicle or of one carrying unit of a hired mode
 and the freight is the lumpiness of one unit (6.2.3). `FeeShareSpreadBP` of 2 500 on a share of 5 000
@@ -1193,7 +1205,7 @@ run: none of them is derived.
 | `MaxTimeCostBP` | 100 000 | ten times the upkeep for each tick away, far beyond any use |
 
 **Rule constants** (beside their code, not parameters, architecture.md 9.6): the multiplier of the spread
-(5.7.1), the cautious reading `min(Price, Mean)` (5.2), one trip and at most one request or offer per plan
+(5.7.1, shared with `spec-population.md` 3.8.3), the cautious reading `min(Price, Mean)` (5.2), one trip and at most one request or offer per plan
 (7.1), the lane lock (7.1), the matching order and the midpoint with half-to-even rounding (9.4), the key
 draw (9.4.2), the order of the checks of 9.3 and 9.5, the single line of a contract, the settlement table
 (9.7), the reseed on arrival (12.2), the reason constants of 9.3, 9.5 and the decisions of 5.1.2 in
@@ -1214,10 +1226,10 @@ for example `role.broker.merchant.modes`. The framework of `spec-config.md` 7 ru
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrOutOfBounds` | a field of 13 outside its bound; `FeeShareSpreadBP` with `MerchantFeeShare` less it below 1 or plus it above 10 000 |
+| `ErrOutOfBounds` | a field of 13 outside its bound; `FeeShareSpreadBP` above `MerchantFeeShare` or with `MerchantFeeShare` plus it above 10 000 |
 | `ErrUnknownMode` (new) | a mode ID in `Modes` that is not defined |
 | `ErrDuplicateID` | a mode twice in `Modes` |
-| `ErrMerchantShape` (new) | a merchant block on a role with a non-empty `Recipes`; `Strategy` `"merchant"` with no block; a block with `Informed` false; a trade input (3.2.2) that is not in `Trades`; an empty cargo set; `Consigns` with no `TakeUnits` |
+| `ErrMerchantShape` (new) | a merchant block on a role with a non-empty `Recipes`; `Strategy` `"merchant"` with no block; a block with `Informed` false; a trade input (3.2.2) that is not in `Trades`; an empty cargo set; a self-carried mode in `Modes` with a `Crew` above 1; `Consigns` with no `TakeUnits` |
 | `ErrMerchantWeight` (new) | a merchant role with a group of scale above 1, or whose households exceed one per agent (an agent of weight above 1) |
 | `ErrModuleDependency` | a merchant block while `Modules.Transport` or `Modules.Information` is absent; `Modules.Merchants` while `Modules.Transport` is absent; a hired mode in `Modes`, or `Consigns`, while `Modules.Merchants` is absent |
 | `ErrOverflow` | a derived check of `spec-config.md` 4.2: `MaxLotUnits` times the largest `Mass` or `Bulk` times `MaxQuantity` does not fit, or `MaxOpen` times `MaxMoney` does not fit |
@@ -1234,7 +1246,7 @@ with the attributes `rule` and `path`; the volume is bounded by the configuratio
 |---------|-----------|
 | `merchant_spread_narrow` | the width of the bars of a role, `10 000 * 10 000 / (MerchantFeeShare - FeeShareSpreadBP) - 10 000 * 10 000 / (MerchantFeeShare + FeeShareSpreadBP)`, in basis points of the cost, is below 10 000 (one cost): the merchants act together (L93). A placeholder threshold from the model of 7.3 |
 | `merchant_fee_share_high` | `MerchantFeeShare + FeeShareSpreadBP` above 9 000: the top merchants ship on a bare margin of cost |
-| `merchant_fee_share_zero` | `MerchantFeeShare - FeeShareSpreadBP` at most 0 (clamped to 1): some merchants never ship |
+| `merchant_fee_share_low` | `MerchantFeeShare - FeeShareSpreadBP` below 500: the lowest bar is above twenty times the cost, so some merchants hardly ever ship |
 | `merchant_no_consignee` | a merchant role lists a hired mode and no role has `Consigns` |
 | `lane_without_consignee` | carries `pairs`: the ordered pairs of regions with a route in a hired mode of a merchant role, where the destination has no group of a role that `Consigns` |
 | `cargo_never_delivered` | carries `pairs`: the (commodity, mode) pairs of a role with a cargo commodity of shelf life `S` above 0 for which every route has a travel time above `S - 2` (5.3.1): no lot can ever arrive fresh |
@@ -1271,7 +1283,7 @@ zero for the default, that the world sums per region into `MerchantsPlanned`:
 type PlanNotes struct {
 	Considered, NoRumour, Stale, Locked, Perishable, NoMargin, Unaffordable, BelowShare int64 // candidates, by result
 	Planned, Dispatched, Offered, Taken                                                  int64 // trips planned, requests, offers, takes
-	Rested, Waiting, LotCapped                                                           int64 // a rest, a wait for inbound goods, a lot cut by the cap
+	Rested, Waiting, LotCapped                                                           int64 // a rest, a stay (goods inbound, a job, the floor), a lot cut by the cap
 }
 ```
 
@@ -1463,7 +1475,7 @@ setting. The arithmetic is in `models/mer/worked.py` and `contract.py`; the outp
 
 Two regions, `upper` and `lower`, with the edges `upper` to `lower` of 60 and `lower` to `upper` of 70. One hired mode,
 `barge`: speed 30, a carrying unit of (1 200 mass, 900 bulk), haul commodity `haul`, span 10. `fuel` has mass 2 and bulk 6
-and never spoils. The information module has `info_speed` 40. The merchants are four `broker`s in `upper` (agents 31 to 34);
+and never spoils. The information module has `info_speed` 40. The merchants are four `broker`s in `upper` (agents 32 to 35);
 the consignees are the `broker`s in `lower` with `consigns`.
 
 ```toml
@@ -1511,47 +1523,47 @@ within the bound of 2. The cautious revenue is `min(310, 305)` = 305; a hired la
 
 **Four brokers, four fee shares.** The spread of 2 500 on a share of 5 000 gives:
 
-| Agent | `u` | `φ` | `φ * G / 10 000` against the freight 4 200 | Haul ceiling (`G / 6 = 2 225`) | Break-even buy | Offer limit |
+| Agent | `u` | `phi` | `phi * G / 10 000` against the freight 4 200 | Haul ceiling (`G / 6 = 2 225`) | Break-even buy | Offer limit |
 |------:|----:|----:|---------------------------------------------:|-------------------------------:|---------------:|------------:|
-| 31 | 7 770 | 6 385 | 8 524: passes | 1 420 | 245 | 244 |
-| 32 | 3 951 | 4 476 | 5 975: passes | 995 | 226 | 263 |
-| 33 | 131 | 2 566 | 3 425: **fails** | 570 | 179 | 310 |
-| 34 | 6 311 | 5 655 | 7 549: passes | 1 258 | 239 | 250 |
+| 32 | 7 770 | 6 385 | 8 524: passes | 1 420 | 245 | 244 |
+| 33 | 3 951 | 4 476 | 5 975: passes | 995 | 226 | 263 |
+| 34 | 131 | 2 566 | 3 425: **fails** | 570 | 179 | 310 |
+| 35 | 6 311 | 5 655 | 7 549: passes | 1 258 | 239 | 250 |
 
 The same lane, the same rumour, and one broker of four does not ship: the bars are 1.57, 2.23, 3.90 and 1.77 times the freight
-(`10 000 / φ`). The haul ceiling is `FR-CAR-004`: agent 31 bids at most 1 420 for a haul unit although the market asks 700. The
-break-even buy price 245 is the dearest price at which agent 31's lot still passes; its offer limit 244 is the least delivered
+(`10 000 / phi`). The haul ceiling is `FR-CAR-004`: agent 32 bids at most 1 420 for a haul unit although the market asks 700. The
+break-even buy price 245 is the dearest price at which agent 32's lot still passes; its offer limit 244 is the least delivered
 price at which it ships (`200 + ceil(4 200 * 10 000 / (6 385 * 150))` = 200 + 44).
 
-**The contract.** At tick 100 agent 31 prepares: it buys 150 fuel (its bid is the draw of its belief, lowered to 245 if above) and 6 haul units
+**The contract.** At tick 100 agent 32 prepares: it buys 150 fuel (its bid is the draw of its belief, lowered to 245 if above) and 6 haul units
 (lowered to 1 420), tier 2 of its budget, both arriving in phase 4. At tick 101 it is ready and offers 150 fuel to `lower` by `barge` at
 244. In `lower` the importers post takes with a limit of `300 * (10 000 - 1 000) / 10 000` = 270 (their local price is 300). The round of
 tick 101, on the lane (`lower`, fuel), with three offers and three takes (`contract.out`):
 
 | Offers | Limit | Units | | Takes | Limit | Up to |
 |-------:|------:|------:|-|------:|------:|------:|
-| agent 31 | 244 | 150 | | agent 61 | 270 | 200 |
-| agent 34 | 250 | 100 | | agent 62 | 255 | 150 |
-| agent 32 | 263 | 150 | | agent 63 | 240 | 150 |
+| agent 32 | 244 | 150 | | agent 61 | 270 | 200 |
+| agent 35 | 250 | 100 | | agent 62 | 255 | 150 |
+| agent 33 | 263 | 150 | | agent 63 | 240 | 150 |
 
-Offers in order of limit: 31, 34, 32. Offer 31 takes 150 of take 61 at `(244 + 270) / 2` = 257; take 61 has 50 left. Offer 34 (100 units,
-indivisible) does not fit the 50 left and goes to take 62 at `(250 + 255) / 2` = 252.5, half to even 252. Offer 32 (limit 263, 150 units)
-finds no take: 61 has 50 left and 62 is below its limit. Agent 33 made no offer. The two contracts are formed, each with a dispatch by the
-shipment mechanism and an escrow. For agent 31: 6 haul units go to the boundary under `haul_use` (region `upper`), the 150 fuel to a Transit
+Offers in order of limit: 32, 35, 33. Offer 32 takes 150 of take 61 at `(244 + 270) / 2` = 257; take 61 has 50 left. Offer 35 (100 units,
+indivisible) does not fit the 50 left and goes to take 62 at `(250 + 255) / 2` = 252.5, half to even 252. Offer 33 (limit 263, 150 units)
+finds no take: 61 has 50 left and 62 is below its limit. Agent 34 made no offer. The two contracts are formed, each with a dispatch by the
+shipment mechanism and an escrow. For agent 32: 6 haul units go to the boundary under `haul_use` (region `upper`), the 150 fuel to a Transit
 account of `upper` under `transit_out`, and `150 * 257` = 38 550 moves from agent 61 to an Escrow account of `lower` under `escrow_in`. The shipment
-arrives at `101 + 2` = 103, and the lane (`lower`, fuel) is locked for agent 31 in ticks 101 and 102 (`Outbound`).
+arrives at `101 + 2` = 103, and the lane (`lower`, fuel) is locked for agent 32 in ticks 101 and 102 (`Outbound`).
 
 **Settlement at tick 103**, phase 1, after the arrival of the shipment (`worked.out`, `contract.out`):
 
-| Case | `escrow_out` to agent 31 | `escrow_refund` |
+| Case | `escrow_out` to agent 32 | `escrow_refund` |
 |------|-------------------------:|----------------:|
 | all 150 reached | 38 550 | 0 |
 | 128 reached, 22 spoiled (a spoiling cargo) | `257 * 128` = 32 896 | `257 * 22` = 5 654 to agent 61 |
 | none reached | 0 | 38 550 to agent 61 |
-| agent 31 removed in transit | 0 | 38 550 to agent 61 at the removal |
+| agent 32 removed in transit | 0 | 38 550 to agent 61 at the removal |
 | agent 61 removed in transit (the cargo diverted to the estate) | 38 550 | 0 (the estate of `lower` stands in for 61) |
 
-In each case the sum of the two is 38 550 and the total money of all accounts is constant. For the case of full delivery, agent 31's account
+In each case the sum of the two is 38 550 and the total money of all accounts is constant. For the case of full delivery, agent 32's account
 shows `38 550 - 150 * 205 - 4 200` = 3 600, if it paid 205 on average for the fuel: less than the 13 350 expected margin, because the rumoured
 305 became a price of 257 (the consignee's discount of 10% from 300, then the midpoint) and the estimate allowed for a cut of 5%; the estimate
 is a reading and not a promise, and the share of 6 385 is the margin that keeps it from losing. Agent 61 sells the 150 fuel in `lower` at about 300 and earns
@@ -1561,7 +1573,7 @@ is a reading and not a promise, and the share of 6 385 is the margin that keeps 
 `3 - 1 - 1` = 1 tick; `k` = 2 is above it, so the lane is `Perishable` and set aside. With a shelf life of 4 the life left is 2 and the lane
 passes. **A self-carried mode on the same lane.** A `porter` (speed 20, a unit of (60, 40), crew 1) takes `ceil(60 / 20)` = 3 ticks and carries
 `min(60 / 2, 40 / 6)` = 6 units of fuel: a gross margin of `6 * (305 - 200)` = 630 against a time cost of `3 * 200 * 10 000 / 10 000` = 600
-(the agent's own upkeep cost is 200 a tick). Agent 31's `φ * G / 10 000` is 402: the porter fails and the barge, which passes, is the only mode
+(the agent's own upkeep cost is 200 a tick). Agent 32's `phi * G / 10 000` is 402: the porter fails and the barge, which passes, is the only mode
 (6.1).
 
 ### 19.2 Example B: a mining colony (a space setting; a self-carried mode and a gate)
@@ -1569,7 +1581,7 @@ passes. **A self-carried mode on the same lane.** A `porter` (speed 20, a unit o
 Three regions: `hub`, which is a gate of the outside node `far` (the outside sells `ration` into `hub`, ask 55); `pit`; and the node. `hub` to `pit`
 is 250 and `pit` to `hub` is 250. One self-carried mode, `skiff`: speed 100, a carrying unit of (2 000, 1 500), crew 1, a vehicle `skiff` of durability 400
 (price 4 000), wear 5 a tick, feed 1 `cell` a unit a tick. `ration` has mass 1 and bulk 1 and is also the upkeep (1 a tick). The information module has
-`info_speed` 100. The merchant is a `trader` of weight 1 in `hub`, agent 17: `u` = 1 246, so `φ` = `5 000 + 2 500 * (2 * 1 246 - 10 000) / 10 000` = 3 123.
+`info_speed` 100. The merchant is a `trader` of weight 1 in `hub`, agent 18: `u` = 1 246, so `phi` = `5 000 + 2 500 * (2 * 1 246 - 10 000) / 10 000` = 3 123.
 
 **The lane.** `k = ceil(250 / 100)` = 3; the news from `pit` has the lag `1 + ceil(250 / 100)` = 4. The rumour: price 80, mean 78, `SourceAge` 0:
 the cautious revenue is 78 and, being self-carried, there is no cut. The local price of `ration` at `hub` is 56 (the outside's unmatched ask of 55 is in
@@ -1589,7 +1601,7 @@ mean of `pit` (12.2), and the default's surplus rule sells the rations in `pit`'
 The gate shows in two places: the rations were bought at a price the outside set the lower limit of, and the rumour of `hub`'s price that a smelter-region merchant
 reads is `hub`'s published price, which includes the outside's trades, and is its way of learning of the import (11.3).
 
-**The Weyl spread** of the first twelve agent IDs from 1, in basis points: 2 360, 8 541, 4 721, 901, 7 082, 3 262, 9 442, 5 623, 1 803, 7 983, 4 164, 344.
+**The Weyl spread** of the first twelve agent IDs from 1, in basis points: 6 180, 2 360, 8 541, 4 721, 901, 7 082, 3 262, 9 442, 5 623, 1 803, 7 983, 4 164.
 Consecutive IDs are spread over the interval with the largest gap between neighbours of 1 459 for ten merchants (the ideal is 1 000); IDs seven apart are
 less even (2 836 for ten), `lane.out`.
 
@@ -1637,7 +1649,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 |----|-------------|
 | FR-MER-001 | The merchant strategy MUST be registered by the name `"merchant"` through `WithStrategy`, `strategy.Options()` MUST return the options that register the standard names, and a role naming an unregistered strategy MUST be rejected with `ErrUnknownStrategy` at `NewWorld` (3.1). |
 | FR-MER-002 | `strategy.Merchant` MUST hold a `DefaultStrategy` in a named field, its `Work` and `Revise` MUST be the default's, and its `Trade` MUST differ from the default's only as 3.3 says (3.3). |
-| FR-MER-003 | A role whose `Strategy` is `"merchant"` MUST have a merchant block, `Informed` true, `Recipes` empty and every group of scale 1, and a violation MUST be rejected with `ErrMerchantShape` or `ErrMerchantWeight` (3.2, 3.6, 14.1). |
+| FR-MER-003 | A role whose `Strategy` is `"merchant"` MUST have a merchant block, `Informed` true, `Recipes` empty, every group of scale 1 and no self-carried mode of `Crew` above 1 in its `Modes`, and a violation MUST be rejected with `ErrMerchantShape` or `ErrMerchantWeight` (3.2, 3.6, 14.1). |
 | FR-MER-004 | Each trade input of a merchant role (the `Haul` commodity of a hired mode, the `Vehicle` and the `Feed` commodities of a self-carried mode) MUST be in its `Trades`, and its cargo set MUST NOT be empty, or the configuration MUST be rejected with `ErrMerchantShape` (3.2.2). |
 | FR-MER-005 | The merchant strategy MUST keep no state, MUST take no random draw other than those the default strategy takes for the same intents, and MUST compute the fee share of an agent from its agent ID alone (3.1.3, 3.5). |
 | FR-MER-006 | The inputs of the planned trip MUST be the `Job_c` of 3.4.2, bought in tier 2 with the purpose `PurposeInput`, and with no trip planned `Job_c` MUST be 0 for every commodity so that the default's surplus rule sells what the merchant holds (3.4). |
@@ -1647,16 +1659,16 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-010 | A candidate for a commodity with a shelf life `S` above 0 MUST be set aside as `Perishable` if and only if the travel time `k` is above `S - 1 - max(1, OldestAge)` (5.3.1). |
 | FR-MER-011 | The cost of carriage of a hired candidate MUST be `n * s * P_haul`, with `n` the carrying units the lot needs, `s` the haul units per carrying unit and `P_haul` the local price of the haul commodity (5.4). |
 | FR-MER-012 | The cost of carriage of a self-carried candidate MUST be the wear, the feed and the time of 5.4, with the time at `k` times the agent's own upkeep cost times `TimeCostBP` over 10 000 and not at a regional wage or any aggregate (5.4). |
-| FR-MER-013 | A candidate MUST pass if and only if `C * 10 000 <= φ * G`, with `G = q * (Rnet - P_acq)` positive, evaluated with checked 128-bit arithmetic (5.5.1). |
+| FR-MER-013 | A candidate MUST pass if and only if `C * 10 000 <= phi * G`, with `G = q * (Rnet - P_acq)` positive, evaluated with checked 128-bit arithmetic (5.5.1). |
 | FR-MER-014 | Among the passing candidates the merchant MUST plan the one with the greatest `G - C`, ties to the lower region, then commodity, then mode, and with none it MUST plan no trip (5.1.2, 5.5.2). |
-| FR-MER-015 | `BreakEven` MUST be `Rnet - ceil(C * 10 000 / (φ * q))` and `AskLimit` MUST be `P_acq + ceil(C * 10 000 / (φ * q))`, both with the lot of the final pass (5.5.3, 6.2.2). |
-| FR-MER-016 | `expected_margin_per_haul_unit` MUST be `G / (n * s)` truncated, the limit of a merchant's bid for haul units MUST NOT exceed `expected_margin_per_haul_unit * φ / 10 000` truncated, and the limit of its bid for the cargo MUST NOT exceed `BreakEven` (5.6; this is `FR-CAR-004` with the agent's own fee share). |
+| FR-MER-015 | `BreakEven` MUST be `Rnet - ceil(C * 10 000 / (phi * q))` and `AskLimit` MUST be `P_acq + ceil(C * 10 000 / (phi * q))`, both with the lot of the final pass (5.5.3, 6.2.2). |
+| FR-MER-016 | `expected_margin_per_haul_unit` MUST be `G / (n * s)` truncated, the limit of a merchant's bid for haul units MUST NOT exceed `expected_margin_per_haul_unit * phi / 10 000` truncated, and the limit of its bid for the cargo MUST NOT exceed `BreakEven` (5.6; this is `FR-CAR-004` with the agent's own fee share). |
 | FR-MER-017 | The fee share of agent `a` MUST be `clamp(MerchantFeeShare + FeeShareSpreadBP * (2 * u(a) - 10 000) / 10 000, 1, 10 000)` with `u(a)` the Weyl value of 5.7.1 computed by `math/bits.Mul64`, and it MUST equal `MerchantFeeShare` when `FeeShareSpreadBP` is 0. |
 | FR-MER-018 | A product of the margin arithmetic that overflows MUST drop the candidate as `Unaffordable`, and every rounding MUST be against the merchant: costs up, revenues down (5.8). |
 | FR-MER-019 | Modes MUST be compared on the same lane by the same rule, each with its own lot, and the passing mode with the greatest `G - C` MUST be chosen, ties to the lower mode ID (6.1). |
 | FR-MER-020 | The lot MUST be the least of the lot cap, what the merchant can pay above its reserve and, when the trip is ready, what it holds, sized in the two passes of 6.2.2. |
 | FR-MER-021 | A trip MUST be ready only when the merchant holds all its inputs; a ready trip that passes the test MUST append the request `{ToSelf: true}` (self-carried) or one `DeliveryOffer` with limit `AskLimit` (hired), and a trip that is not ready MUST append neither (6.3). |
-| FR-MER-022 | A merchant with goods on the way to it (`Inbound`) MUST plan no self-carried trip (6.4). |
+| FR-MER-022 | A merchant with goods on the way to it (`Inbound`) or with a job in progress MUST plan no self-carried trip, and a merchant in the own-use mode MUST plan no trip and post no take; each MUST be counted as `Waiting` (6.4). |
 | FR-MER-023 | A merchant whose work share is 0 MUST plan no trip and post no take, and MUST still buy its upkeep and sell its surplus (6.5). |
 | FR-MER-024 | A candidate MUST be set aside as `Locked` while the merchant has units of the commodity on the way to the destination (`Outbound`) (7.1). |
 | FR-MER-025 | A merchant's plan MUST carry at most one shipment request or one delivery offer, of at most `LotUnits` carrying units (7.1). |
@@ -1757,6 +1769,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 |---------|------|
 | `Merchant` (the strategy type), `Options` | `strategy/merchant.go`, `strategy/options.go` (the package exists once a second strategy exists, architecture.md 2.6) |
 | The margin, the fee share and the Weyl spread, the cost of carriage, the sizing of a lot, the two-pass break-even, the matching and the midpoint, the settlement arithmetic | `internal/merchant` over primitives (architecture.md 2.9): `FeeShare(base, spread, id)`, `Margin(...)`, `Fit(...)`, `Match(offers, takes, keys)`, `Settle(price, quantity, reached)`; it imports `internal/household` for the shared tiers |
+| The Weyl offset `w(a)` of 5.7.1 | one helper, `Weyl32(id)`, in `internal/ordering` (deterministic helpers over primitives), shared with the death-carry offset of `spec-population.md` 3.8.3 and the spread of margins of MIG; `internal/merchant` imports it |
 | `DeliveryOffer`, `DeliveryTake`, `PlanNotes`, `Contract`, `ContractID`, the round, the formation, the settlement, the module's state and its steps in phases 1 and 3 | root package, `contract.go` |
 | The plan fields `Offers`, `Takes`, `Notes`; the view group `Merchant` and `Outbound` | root package, `strategy.go` (`spec-agents.md` 6.3, 6.4); `Outbound` beside `Inbound` in `transport.go` |
 | `Role.Merchant`, `Modules.Merchants` and their bounds | root package, `config.go` and `defaults.go`; `bounds.go` (`MaxLotUnits`, `MaxContracts`, `MaxTimeCostBP`) |
