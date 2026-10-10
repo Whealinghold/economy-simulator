@@ -410,6 +410,7 @@ by `Step`.
 | 4 | `job_in_progress` | self-carried and the agent has a job in progress, started this tick or earlier (`spec-production.md` 5.2) |
 | 5 | `same_region` | `To` is the shipper's own region |
 | 6 | `unknown_region` | `To` is not a region |
+| 6a | `outside_destination` | `To` is an outside node of the external module (`spec-external-sector.md` 3.1, 4.4); outside goods reach the realm through the gate region's market, not through a shipment |
 | 7 | `no_route` | REG has no path from the shipper's region to `To` |
 | 8 | `blocked` | the transit factor of (from, to, mode) is 0 |
 | 9 | `too_far` | `k` above `MaxTravelTicks` |
@@ -777,7 +778,7 @@ configuration:
 | Group | Content |
 |-------|---------|
 | `Inbound` | per commodity with units on the way to this agent as consignee: the total quantity and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (so it does not depend on the order in which agents are called) |
-| `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3) |
+| `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3); an outside node is reported with no route (`outside_destination`, 5.4) |
 
 `Inbound` exists so that a consignee does not buy again what is already on its way: a
 buyer that ignores its pipeline orders twice (TRN-A2). Whether the default strategy's
@@ -805,6 +806,7 @@ INF owns rumours and delay. Transport adds exactly this, and no more:
 - an **arrival is an event** (`ShipmentArrived`); no price, no rumour and no belief
   changes because of it. Beliefs of a traveller are kept across the move; whether a
   traveller reseeds them is MER's, as MIG's for a migrant (N-038).
+- **INF defines rumours** (`spec-information.md` 5); a trip carries no news back (`spec-information.md` 7.5).
 
 ### 9.4 Lanes for the viability solver
 
@@ -1035,6 +1037,7 @@ shipment per tick bounds the swing of the gap to about `k` times the cap. *Test:
 scenario (S28 proposed, below). *Status:* model (section 16). It does not show the
 library: it has no inventory, no belief and no market, and the shares of the effect at
 dispatch and at arrival are not derived for any pack.
+INF-A1 (`spec-information.md` 13) adds the rumour's lag `ell` to the delay of a shipper that reads a rumour: the gap decays if `g < 2 sin(pi / (2 (2 (ell + k) + 1)))` (`spec-information.md` 11.1).
 
 **TRN-A2. The pipeline is invisible.** *Kind:* amplifier. *Loop:* a consignee's stock
 (excludes goods on the way) (-) its orders for the good (+) the goods on the way (+) its
@@ -1330,6 +1333,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-044 | Two requests with the same arguments from the same state MUST give the same result, shipment ID, Transit account and events: no iteration order of a map MUST influence a result. |
 | FR-TRN-045 | A request MUST be refused `vehicle_in_cargo` if a line names the mode's `Vehicle` commodity, `duplicate_line`, `unknown_commodity` or `invalid_quantity` for a bad line, `empty_shipment` for a hired or consigned request with no line, and `too_many_lines` above `MaxShipmentLines`. |
 | FR-TRN-046 | A request MUST be refused `insufficient_stock` when for any commodity the sum of its line, its feed and its haul redemption exceeds the available (unreserved) stock. |
+| FR-TRN-047 | A request whose destination is an outside node of the external module MUST be refused with `outside_destination` after `unknown_region` and before `no_route`, changing no state, and `Routes` MUST report no route to such a node (`spec-external-sector.md` FR-EXT-034). |
 
 ### Non-functional
 

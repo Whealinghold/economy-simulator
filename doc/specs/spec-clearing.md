@@ -90,7 +90,7 @@ item is priced by its remaining durability (`spec-skill-barriers.md` 2.7). The
 rule of 3.1.1 therefore reads: at most one order per agent, commodity and named
 lot, where an ordinary agent names none. An order is identified by that triple,
 so a trade can say which ask it filled. Because the estate never bids, it cannot
-trade with itself.
+trade with itself. A **counterparty** of the external sector (`spec-external-sector.md` 4.2) is a second pseudo-agent of this kind: a buyer counterparty places only bids and a seller only asks, one order per commodity, so the rule above reads the same and an order of a counterparty is an ordinary order backed by a reservation in its own account (`spec-external-sector.md` 4.3).
 
 ### 3.2 Validation
 
@@ -100,7 +100,7 @@ Reasons are constants in `internal/logkeys`.
 | `reason` | Condition |
 |----------|-----------|
 | `unknown_agent` | the agent (or pseudo-agent) does not exist or is not in the market's region |
-| `side_not_allowed` | a pseudo-agent that may only sell places a bid (the estate, 3.1.2) |
+| `side_not_allowed` | a pseudo-agent that may place one side only places the other (the estate, 3.1.2; a counterparty, `spec-external-sector.md` 4.2) |
 | `unknown_commodity` | the commodity is not in the configuration |
 | `not_tradable` | the commodity is outside the tradable set of the agent's role (`spec-agents.md` 3.4). The world rejects such an intent while it builds the orders (`spec-agents.md` 6.5.2), so it never reaches matching. A pseudo-agent has no role and no tradable set, and this check does not apply to it |
 | `invalid_price` | the limit price is below 1 or above `MaxPrice`, a validation bound of `spec-config.md` 4.1 (in `bounds.go`, not a configured tunable) |

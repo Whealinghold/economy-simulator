@@ -155,7 +155,7 @@ That price is state, so it is part of what this spec contributes to a checkpoint
 2.7.6. Pseudo-agent IDs are in the same ID space as agents, allocated first, one
 per region in region order, as `spec-regions.md` 3.6.1 fixes (the pseudo-agent of the region with `RegionID` `r` has agent ID `r`), so every ordering that uses an agent ID
 (`spec-clearing.md` 4.1) is unaffected by the estate's presence beyond the extra
-orders it places.
+orders it places. With the external module on, the counterparties of its outside nodes take the agent IDs that follow the estates (`spec-external-sector.md` 4.2.2), and the households' IDs follow them; the estate IDs stay `0..n-1`.
 
 ### 2.8 Weight changes and a failing cohort
 
@@ -204,7 +204,7 @@ derived from the section named.
 | FR-EST-002 | The region of the estate that receives a removed agent's holdings MUST be the region of the agent's account when it is removed (2.2). |
 | FR-EST-003 | A traveller that dies in transit MUST leave the money of its account to the pool of the region of that account, the region it departed from, and a cargo whose consignee is gone MUST reach the estate of the destination by `transit_in` and be listed like any estate goods (2.2; `spec-transport.md` 5.8, 5.9). |
 | FR-EST-004 | Each region MUST have exactly one estate pseudo-agent, with one ledger account of the kind Estate that holds both the pool's money and the unsold goods, created with the region and before any household (2.7.1). |
-| FR-EST-005 | Pseudo-agent IDs MUST be allocated first in the agent ID space, one per region in region order (2.7.6). |
+| FR-EST-005 | Pseudo-agent IDs MUST be allocated first in the agent ID space, one per region in region order, the counterparties of the external module (when on) following them and the households after (2.7.6; `spec-external-sector.md` 4.2.2). |
 | FR-EST-006 | The estate MUST place asks only, and a bid from it MUST be rejected with `side_not_allowed`; each ask MUST be backed by a reservation of goods in the estate's account and need no cash (2.7.2). |
 | FR-EST-007 | The estate MUST place one ask for each lot it holds, naming the lot, and each lot's price MUST be kept as state (2.7.3, 2.7.5). |
 | FR-EST-008 | The first ask price of a durable lot MUST be the region's effective reference price times the lot's remaining durability over the full durability, and of any other lot the effective reference price, truncated and never below the resolution floor (2.7.3). |
