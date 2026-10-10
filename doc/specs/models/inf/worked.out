@@ -1,0 +1,66 @@
+Example A distances (from -> to):
+   lower [0, 55, 120]
+  middle [30, 0, 70]
+   upper [70, 40, 0]
+
+Example A lags, InfoSpeed 40 (rows: the source r, columns: the reader h)
+source \ reader:    lower    middle     upper
+           lower        -         3         4
+          middle        2         -         3
+           upper        3         2         -
+
+reader middle at tick 100 about staple at lower: Lag 3, vintage tick 97, record price 368, price age 0, window mean 366
+    e =  -500: price 350, mean 348
+    e =     0: price 368, mean 366
+    e =   500: price 386, mean 384
+reader upper at tick 100 about staple at lower: Lag 4, vintage tick 96, record price 370, price age 0, window mean 365
+    e =  -500: price 352, mean 347
+    e =     0: price 370, mean 365
+    e =   500: price 388, mean 383
+an illustrative draw e = -230 for reader upper: 361 357
+
+Example A with middle > lower closed: distances
+   lower [0, 55, 120]
+  middle [160, 0, 70]
+   upper [90, 40, 0]
+Example A lags after the closure
+source \ reader:    lower    middle     upper
+           lower        -         3         4
+          middle        5         -         3
+           upper        4         2         -
+
+reader lower, source upper: Lag 3 -> 4; at tick 100 the vintage moves from 97 to 96
+reader lower, source middle: Lag 2 -> 5; vintage 98 -> 95
+
+Example B distances (from -> to):
+    belt [0, 3000, 5000]
+ orbital [3000, 0, 2000]
+ surface [12400, 9400, 0]
+
+Example B lags, InfoSpeed 4000
+source \ reader:     belt   orbital   surface
+            belt        -         2         3
+         orbital        2         -         2
+         surface        5         4         -
+
+Example B lags, InfoSpeed 10^9 (a channel that is practically instant): the floor of 2
+source \ reader:     belt   orbital   surface
+            belt        -         2         2
+         orbital        2         -         2
+         surface        2         2         -
+
+Example B without the edge orbital > surface: news cannot reach `surface`
+source \ reader:     belt   orbital   surface
+            belt        -         2      none
+         orbital        2         -      none
+         surface        5         4         -
+
+first consumer: 85 source markets x depth 60 = 5100 entries, about 119 KiB
+40 informed agents x 8 tradable x 4 other regions = 1280 candidate rumours and as many draws a tick when the error is above 0
+
+bounds of the error: price, E, low, high
+370 500 352 388
+1 5000 1 2
+3 5000 2 4
+1000000000 5000 500000000 1000000000
+7 500 7 7
