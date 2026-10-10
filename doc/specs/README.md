@@ -392,7 +392,7 @@ trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, fauce
 | What damps occupation change? | The entry share (the damper that works in the model), with rotation of reviews, hysteresis and a cooldown | `spec-spawner.md` sections 6, 16.1 |
 | Which role replaces a leaver? | Like for like if viable, else the best viable role, else none; not the most profitable | `spec-spawner.md` section 7.2 |
 | Is `AgentBankrupted` the only removal event? | Yes, with `Cause` `insolvent`, `starved`, `consumer` or `population`; `WeightChanged` and `RoleChanged` are not removals | `spec-spawner.md` section 13.1.1 |
-| Who owns births and deaths? | POP; the spawner has a hook (`PopDelta`) and does not write the demographic rates | `spec-spawner.md` section 8 |
+| Who owns births and deaths? | POP; the spawner has a gross hook (`PopBirths` per role, `PopDeaths` per agent) and does not write the demographic rates | `spec-spawner.md` section 8, `spec-population.md` 4 |
 | How do `Hunger` and `Privation` relate? | Both computed by the world from `Unfed`; `Hunger` short for the strategy, `Privation` leaky for the ladder; `Hunger` never exceeds `Privation` | `spec-agents.md` section 5.4.1 |
 | What is a class in the demand module? | A role; its tastes are rows of `Tastes` | `spec-demand.md` section 3.3 |
 | How does demand grow with income and fall with price? | Through the concave spend cap and a ladder of wants, and a linear schedule of the price ratio with a choke price and a ceiling, all integer | `spec-demand.md` sections 4, 5 |

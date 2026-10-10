@@ -719,7 +719,7 @@ price (-) hunger. Polarity B, Malthusian by design, with a long delay and a sour
 cycles. SPN-A7 merged. *Owner:* AGT 5.5 supplies the signal; SPN 5 and 7 supply the
 exit (rung 3, `AgentBankrupted` with a `Cause`) and the replacement (`Renewal`, default
 10 000, which restores households and reopens the loop); the demographic rates are POP's
-(the hook is `PopDelta`, SPN 8). *Damper:* D11, D35 (graded exit), D36 (an entrant
+(the hook is `PopBirths` and `PopDeaths`, SPN 8). *Damper:* D11, D35 (graded exit), D36 (an entrant
 enters only a viable role). *Undamped:* POP's rates and the interaction of `Renewal`
 with births (the warning `renewal_with_population`). *Condition and test:* the POP half
 is L75 to L83 (`spec-population.md` 14: the rates are specified, `PopBirths` and `PopDeaths` replace the
