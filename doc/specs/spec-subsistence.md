@@ -16,7 +16,7 @@ tradable set; 5, upkeep and `Hunger`; 6.4, the view; 7.1, the default `Work`),
 rule), `spec-resources.md` (5, the seam and the ration; 10, open access),
 `spec-spawner.md` (5, the failure ladder), `spec-estates.md` (2.6, relief),
 `spec-ledger.md` (7 and 8, reasons and recipes), `spec-regions.md` (5 and 6, overrides and
-relocation), `spec-viability.md` (3 and 4, the steady state) and `spec-config.md` (3, 4, 7).
+relocation), `spec-viability.md` (3 to 5, the reference programme and the steady state) and `spec-config.md` (3, 4, 7).
 Land and rent (LND) are later; this spec leaves a hook (section 9.5).
 
 **Every number in this spec is a placeholder.** Nothing has been run in the library,
@@ -86,7 +86,7 @@ the rule.
 | 8 | How does it count in the welfare ratio and the observed wage? | The units created by an own-use job are an in-kind receipt in `income_t`, valued at creation at the prices used for `cost_t`; they and the job's ticks are **excluded** from the observed wage (7) | Without it a household that feeds itself reads a ratio of 0 and draws relief and a migration signal; with it counted in the wage, the occupation signal and the cost anchor would be polluted by labour that is not market labour |
 | 9 | How does it draw on an endowment? | Through `Draws` like any recipe: open access, the ration of `spec-resources.md` 5.3, no priority. LND's hooks apply to its requests as to any (9) | N-108; RES 10 |
 | 10 | What does it do to markets? | A household that cannot afford a staple feeds itself and its bids shrink with its stock, so the demand of the cash-bound falls faster than a fixed expenditure. In a stylised model it removes the shortage pin and 97% to 100% of the unfed household-ticks when it can feed a household; it does not anchor the interior and it can turn the pinned shortage into the pinned glut (11) | The first price-responsive flow for a staple that is not invented demand (N-043, N-052); the cost is stated |
-| 11 | Can it interrupt a job? | No. It is chosen at a free decision. A household in a long job cannot take it until the job ends (5.7) | `spec-production.md` 5.2.2: a job is not interruptible by choice. The lean season of a long-job role is open question 1 |
+| 11 | Can it interrupt a job? | No. It is chosen at a free decision. A household in a long job cannot take it until the job ends (5.7) | `spec-production.md` 5.2.2: a job is not interruptible by choice. The gap between yields of a long-job role is open question 1 |
 | 12 | What happens at a relocation? | The mode and its counter are dropped; the first evaluation is in the new region (5.8) | The own-use recipe, its yield and its endowment are the old region's |
 | 13 | Does it draw a random number? | No. Every rule is a function of the household's state with a total order | Determinism (architecture.md 7.3, 7.4) |
 | 14 | New region-keyed tables? | None. A region differs through the yield table and the endowment rows, which are already region-keyed (3.5) | N-104: do not invent a per-region field with its own rules |
@@ -155,14 +155,14 @@ that layers merge by key (`spec-config.md` 6.4).
 at most `MaxOwnUseRecipes` long. A recipe may be on the lists of many roles.
 
 3.3.2. The **covered set** `F` of a role is the set of its upkeep commodities
-(`spec-agents.md` 5.2, in any region) that are a non-discard output of at least one recipe
-on its effective own-use list. `F` is derived at construction, in canonical commodity order.
+(`spec-agents.md` 5.2) that are a non-discard output of at least one recipe
+on its effective own-use list. `F` is derived at construction, in canonical commodity order, from the role's own and the world's upkeep; for a particular agent the terms of 5.2 and 4.1 run over the commodities of `F` whose effective upkeep `u_c` there is above 0 (a commodity that is upkeep only through another region's `ExtraUpkeep` has `u_c` 0 here and is left out), and an agent with none is not evaluated (5.6).
 A role whose `F` is empty is never evaluated for the mode (5.6) and draws the warning
 `own_use_no_upkeep` (13.3): its own-use recipes cannot feed it.
 
 3.3.3. A role with an empty `Recipes` list (a trader, a carrier, a household on a grant,
 `spec-agents.md` 3.3.1) may have a non-empty own-use list and takes the mode like any
-other.
+other. A merchant role (`spec-merchants.md`) is such a role: with a non-empty own-use list it is given an own-use job in the mode, and while that job runs its self-carried trips are refused `job_in_progress` (`spec-transport.md` 5.4), so the household's survival comes before its trade; a pack that wants a pure merchant gives the role an empty row (3.2.1).
 
 ### 3.4 What an own-use recipe must be
 
@@ -195,20 +195,21 @@ The module has no region-keyed table and no per-region parameter. Whether a regi
 subsistence is whether its yield row for an own-use recipe is positive
 (`spec-resources.md` 7, `spec-production.md` 6.2) and, for a recipe with `Draws`, whether its
 endowment can supply an execution (`spec-resources.md` 9.2). How rich the subsistence is
-there is the yield factor and the endowment's capacity. A region with no floor (a walled
-town, a barren rock) has no row, or a row of 0. Nothing else is needed; adding a table would
+there is the yield factor and the endowment's capacity. A region with no floor (a closed
+town, a barren site) has no row, or a row of 0. Nothing else is needed; adding a table would
 say the same thing twice (the reason `spec-resources.md` 7.1.2 gives for refusing a climate
 entity). This applies note N-104 and the mechanism of `spec-regions.md` 5.1.
 
 ### 3.6 What the rest of the specs do with the list
 
-| Where | What changes | Edit (section 19, handoff h) |
+| Where | What changes | Edit owed (listed in the handoff) |
 |-------|--------------|-------------------------------|
 | `spec-production.md` 4.2, FR-PRO-008 | a request is on the role's list if it is on `Role.Recipes` or on the effective own-use list; the first refusal check is still `not_on_role` | yes |
 | `spec-production.md` 9.3 | an own-use recipe **never sets a cost anchor**: the anchor is the smallest `unit_cost` over recipes of `Role.Recipes`; the cost of a household's own labour is not what a seller's price is anchored to | yes |
 | `spec-production.md` 10.4 | `unused_recipe` counts an own-use list as a use | yes |
 | `spec-agents.md` 3.4 | the tradable set of a role includes the non-discard outputs of its own-use recipes (a household may hold and sell what it makes) | yes |
 | `spec-viability.md` 3.1, 4.2 | an own-use recipe that is on no role's `Recipes` is **not an activity** of the reference programme and does not make a commodity producible: the steady state assumes the markets work, and the floor is for when they do not | yes |
+| `spec-resources.md` 5.5.1, 10.1, 13.3 | the `Endowments` view group, open access and `endowment_unused` read the recipes of the role: they include the effective own-use list, so an endowment drawn only by own-use recipes is not `endowment_unused` | yes |
 | `spec-config.md` 7.5 | the structural producibility pass may keep counting it; V1 refines (an upkeep good made only by an own-use recipe is `unproducible_in_realm`) | optional |
 
 ## 4. Why the market stays preferred
@@ -243,7 +244,7 @@ runs. So
 FloorBP(r, region) = max over c in F of Cov(r, c)   <   SurplusBP of the region
 ```
 
-is the **bound**. It is checked at validation as the warning `own_use_beats_market` for every
+is the **bound**. It is per covered commodity: the recipes of a role that each cover one commodity are time-shared (an agent has one job, `spec-production.md` 5.1.2) and no figure combines them, so for a role whose covered set is smaller than its upkeep the bound is a statement about the covered goods only and the rest of the upkeep is still got from the market. It is checked at validation as the warning `own_use_beats_market` for every
 region where the recipe has a positive factor, against the surplus factor of the autarky
 programme of that region (`spec-viability.md` 4.4, 9.5) and, for a region that trades, the
 pooled one; the smaller is used. It is a warning and not an error because the check is
@@ -315,8 +316,8 @@ Secure  = min( Cover + Afford, MaxOwnUseTicks )                    ticks of upke
 
 `Stock_c` is the agent's whole balance (no reservation exists at that point,
 `spec-agents.md` 6.4.1), `Money` its available cash, `Price_c` the published price of `c` in
-its region (`spec-clearing.md` 5.4; the effective reference price if the market has never
-traded). The products and the sum are 128-bit checked; `Cost` is at least 1 because every
+its region (`spec-clearing.md` 5.4; the seed price, which is the effective reference price or a warm-start entry,
+if the market has never traded). The products and the sum are 128-bit checked; `Cost` is at least 1 because every
 upkeep quantity and every price is at least 1. Every term is a total for the agent, so a
 cohort of `w` identical households and `w` agents of weight 1 have the same `Cover`,
 `Afford` and `Secure` (FR-SUB-016, `spec-scale.md` 4.3).
@@ -361,9 +362,9 @@ it holds stock.
 own targets: after eating, the default strategy holds `CoverTicks` ticks of upkeep
 (`spec-agents.md` 7.3, `Keep` less `Reserve`). An `ExitTicks` above `CoverTicks` can be
 reached only by the floor's own surplus, so a household whose floor does not out-produce
-its eating can never leave by cover and leaves only by the retry. The warning
+its eating can never leave by cover: the flag stays set (the retry only alternates a role job with the own-use jobs, 5.5 item 5). The warning
 `own_use_exit_unreachable` fires for `ExitTicks > CoverTicks` (13.3); the model's last case of
-11.2 shows the hazard (1 069 households stuck on the floor, at a price of 100).
+11.2 shows the hazard as a flag that never clears (1 069 households stuck in the mode, at a price of 100).
 
 ### 5.4 When the flag is computed, and by whom
 
@@ -387,8 +388,8 @@ of 7.1.4 it applies this rule to an agent that is free.
 2. **In the mode:** the work share is 10 000 (survival comes before the target,
    `spec-agents.md` 7.1.3).
 3. **Which recipe.** Let `F_short` be the covered commodities whose cover is below
-   `ExitTicks`. Among the own-use recipes with `MaxExecutions >= 1` the agent requests the one
-   with the greatest `sum over c in F_short of Cov(r, c)` (4.1), compared as exact fractions,
+   `ExitTicks`. Among the own-use recipes with `MaxExecutions >= 1` and a positive
+   `sum over c in F_short of Cov(r, c)`, the agent requests the one with the greatest sum (4.1), compared as exact fractions,
    ties to the lower recipe ID. The value is a quantity of upkeep per labour tick and uses no
    price and no belief. A recipe with value 0 is not requested.
 4. **How many.** `k = min( w, MaxExecutions, max(1, ceil( w * (ExitTicks - Cover) / ExitTicks )) )`.
@@ -404,8 +405,9 @@ of 7.1.4 it applies this rule to an agent that is free.
    that role recipe instead of the own-use recipe. The role job is a test of the market: if
    the household earns, its `Afford` rises; if not, the mode continues. If no role recipe is
    eligible, the own-use job goes on.
-6. **Nothing runnable.** If no own-use recipe has `MaxExecutions >= 1` (a zero yield, no
-   site, no endowment, `spec-production.md` 4.2) the household is **blocked**: `Work` treats
+6. **Nothing runnable.** If no own-use recipe has `MaxExecutions >= 1` and a positive sum (a zero
+   yield, no site, no endowment, `spec-production.md` 4.2), or if every request it made was granted no execution by the
+   ration of `spec-resources.md` 5.3 at the start step (counted at the start, reason `no_endowment`) the household is **blocked**: `Work` treats
    the tick as if it were not in the mode, and the flag stays. The household is counted in
    `Blocked` (14.1).
 7. **The halt does not apply.** The production halt (`spec-agents.md` 7.1.5) does not apply
@@ -421,7 +423,7 @@ The flag is evaluated for an agent that: is not an estate or other pseudo-agent;
 trainee (its board comes from the trainer, `spec-skill-barriers.md` 4.2, as for the ladder,
 `spec-spawner.md` 5.2.3); is not away (on a transport trip, `spec-transport.md` 5.5.2, or on a migration journey,
 `spec-migration.md`): such an agent has no `Work` and no view; has an effective own-use list with a non-empty covered set; and has
-a positive effective upkeep. For any other agent `OwnUse` is false and its counter 0. An
+a positive effective upkeep. For an agent that is a pseudo-agent, a trainee, has an empty covered set or no upkeep, `OwnUse` is false and its counter 0; an agent that is away keeps its flag and counter frozen and is evaluated again on its return. An
 external agent is evaluated like any other (its fallback strategy is the default).
 
 ### 5.7 No interruption
@@ -429,7 +431,7 @@ external agent is evaluated like any other (its fallback strategy is the default
 A job runs to its end (`spec-production.md` 5.2.2). The mode is acted on at a free decision,
 so a household in the middle of a long role job cannot take the floor until the job
 completes, and a household in the middle of an own-use job cannot return to the market until
-it completes. The consequence for a role with long jobs, the *lean season*, is stated in
+it completes. The consequence for a role with long jobs, the *gap between yields*, is stated in
 10.3 and is open question 1. The cost of the alternative, an abandon with a reason, is that
 the inputs of the job are lost (`spec-production.md` 5.4.1).
 
@@ -554,6 +556,8 @@ productivity as a wage. An own-use tick **is** a working tick for the work floor
 target-income rule: the household worked (`spec-welfare-and-wages.md` 5.3 reads the same
 ring).
 
+The numerator keeps the cash `R_t` earned in an own-use tick (a sale of earlier stock), and the denominator drops the tick: a small upward bias, bounded by the sales of a household that is also on the floor; excluding the cash income of those ticks too would need a third integer per record and is open question 2.
+
 The record of a tick gains two integers, `K^own_t` and the own-use household-ticks, kept
 with running sums like the others (`spec-welfare-and-wages.md` 2.3.4). A tick of the window
 contributes to the wage only through the rest.
@@ -584,7 +588,7 @@ job (not enforceable on fungible stock). Open question 2.
 
 `spec-welfare-and-wages.md` 2.1 (the term `K^own_t` and 7.2 here), 2.3.3 (the longest
 `Duration` that sets the effective window includes the recipes on the role's own-use list, so
-the window holds the lump of an own-use job), 4.3 (the observed-wage formula of 7.3), 13 (two
+the window holds the lump of an own-use job), 4.3 (the observed-wage formula of 7.3, and the definition of a working tick: for every role, with or without recipes, a tick with an own-use job in progress is a working tick), 13 (two
 more integers per record) and 12 (nothing). The requirements of WEL for the income and the wage are edited in the same change.
 
 ## 8. The failure ladder
@@ -614,7 +618,7 @@ output is eaten that tick, `spec-production.md` 5.2). In the worst case, `c = 0`
 `d - 1` unfed ticks, and `Privation` reaches `d - 1`. If that reaches `ChangePrivation`, rung 1
 can change the household's role and abandon the job a tick before it completes; if it reaches
 `RemovePrivation`, rung 3 can reduce it. The warning `own_use_slower_than_ladder` fires for an
-own-use recipe with `Duration - 1 >= ChangePrivation` (13.3). The remedies are data: a shorter
+own-use recipe with `Duration - 1 >= ChangePrivation` (13.3). This is a lower bound that holds from a `Privation` of 0: a household that enters with the count already near `ChangePrivation` can be changed earlier, and rung 3 also waits for `tick - RoleSince >= RemovePrivation` (`spec-spawner.md` 5.2). The remedies are data: a shorter
 recipe, a larger `EnterTicks` so that the household enters with more cover left, or a larger
 `ChangePrivation`. This is the register entry SUB-A5.
 
@@ -656,8 +660,8 @@ jobs are in the ration with all others; **they have no priority and no quota**. 
 is short, a household in the mode is cut in proportion to what it asks, like any household that
 draws. This is the baseline against which tenure is measured, and it means that in a region
 whose commons is exhausted the floor is exhausted with it: the floor is a share of the
-commons, not a source beside it. A household that is cut to 0 has no runnable own-use recipe
-(`no_endowment`) and is counted as blocked (5.5 item 6, 14.1).
+commons, not a source beside it. A household that is cut to 0 by the ration requests, is granted no execution, starts nothing
+and is counted as blocked at the start step (`no_endowment`) (5.5 item 6, 14.1).
 
 ### 9.3 A thin commons lowers the floor's yield
 
@@ -680,29 +684,29 @@ population the region can feed: the same inequality as the Malthusian fixed poin
 
 ### 9.5 The hook for LND
 
-SUB asks nothing of RES. The hooks that LND will use (`spec-resources.md` 10.2) apply to a
+SUB asks of RES only the widening of 3.6. The hooks that LND will use (`spec-resources.md` 10.2) apply to a
 request of an own-use job as to any: a refusal after `no_endowment`, an entitlement applied to
 the request before the ration, a rent as a named money flow. Two things are stated here so
 that LND does not have to guess. (1) An own-use recipe is identified for a role by the pair of
-3.4.3; the request carries the recipe, so an entitlement may treat a request for an own-use
+3.4.3 (RES's own text reads the role's recipes, and the edit of 3.6 widens it); the request carries the recipe, so an entitlement may treat a request for an own-use
 recipe differently (a right of the landless to draw for their own use). (2) SUB itself charges nothing and
 reserves nothing: if LND closes the commons to a household, its own-use recipe is `no_endowment`
 and the household is blocked, and the warning `own_use_not_available` (13.3) is the static
 form of that.
 
-## 10. Seasons, shocks and the lean season
+## 10. Seasons, shocks and the gap between yields
 
 10.1. **Seasons.** The yield of an own-use recipe by season is its row in the yield table
 (`spec-production.md` 6.1, `spec-resources.md` 7.3): complete by season, an unlisted season is
-0. A recipe that yields only in autumn has `zero_yield` in winter and the household is blocked
-for the winter (5.5 item 6). Cover and the thresholds are in ticks and are not rescaled by the
+0. A recipe that yields only in one season has `zero_yield` in the others and the household is blocked
+for them (5.5 item 6). Cover and the thresholds are in ticks and are not rescaled by the
 calendar (`spec-calendar.md` 6.1).
 
-10.2. **Shocks.** A failed harvest is the yield shock of `spec-production.md` 6.8 on the
-own-use recipe, and it lowers `Cov` for the household at once; a blight of the commons is the
+10.2. **Shocks.** A failed yield is the yield shock of `spec-production.md` 6.8 on the
+own-use recipe, and it lowers `Cov` for the household at once; a sudden loss of the commons is the
 adjustment slots of `spec-resources.md` 6.3. SUB adds no slot.
 
-10.3. **The lean season.** A household that is in the middle of a long role job cannot take the
+10.3. **The gap between yields.** A household that is in the middle of a long role job cannot take the
 mode until the job ends (5.7). For a role whose recipes last a season, the time at which the
 household is most in need, the end of the stores before the next yield, is the time at which it is
 busy. The remedies are the starting stock and money that the warm start gives for the longest
@@ -735,8 +739,8 @@ self-employed producers under the target-income rule, supply unit-elastic in the
 1 370 consumer households of three units of upkeep a tick who earn a wage when not in the
 mode, buy with a hard budget and follow the rule of 5. It starts 10% above the reference price
 and runs 600 ticks; the table is the median seed of five. "Unfed" is household-ticks without
-the full upkeep; `f` is the floor's output a tick, `Cov = 3 333 f` basis points here (upkeep
-3).
+the full upkeep; `f` is the floor's output a tick, `Cov` is about 3 333 `f` basis points here (upkeep
+3; the truncated values of 4.1 are 6 666, 9 999 and 13 333).
 
 | Case | Final price | Unfed household-ticks | Mode changes |
 |------|-------------|-----------------------|--------------|
@@ -757,8 +761,8 @@ What the model shows. (1) When the floor can feed a household (`Cov` of 10 000 o
 removes 97% to 100% of the unfed household-ticks of the pinned shortage (796 402 to 9 603
 through 23 007; 82 665 to 0) and 91% to 92% of those of the outage (133 390 to 12 330 and
 10 960). (2) A floor below the
-upkeep (`f` = 2) helps only with the retry: without it the unfed household-ticks are 167 239
-against 82 665 with no floor at all, because households stay on a floor that cannot build
+upkeep (`f` = 2) helps little without the retry: with the work floor the unfed household-ticks are 167 239
+against 82 665 with no floor at all (503 926 against 796 402 without the work floor), because households stay on a floor that cannot build
 their cover and earn nothing (the trap, SUB-A6). With the retry 41 232. In an outage a floor
 below the upkeep does nothing (132 990 against 133 390). (3) The mode does not anchor the
 interior in general. With `f` of 3 or less the price falls through the repeller to the lower
@@ -771,7 +775,8 @@ unfed household-ticks at `f` = 3, because a household tests a dead market. (5) A
 the exit that also leaves when the last bid was filled and the money buys the exit cover
 (refused, 5.3.2) multiplies the unfed household-ticks by four and the mode changes by five.
 (6) An `ExitTicks` above what purchases can build (cover 4 against the stock a household
-holds) leaves households on the floor for good (1 069 stuck): 5.3.3.
+holds) leaves the flag set for good (1 069 households stuck in the mode, with few unfed
+household-ticks: a state hazard and not a hunger one): 5.3.3.
 
 What the model leaves out, so that none of the above is read as a prediction: it has no income
 feedback (a consumer's wage does not depend on the price), the producers are not consumers
@@ -833,7 +838,7 @@ default, a bound, an owner and a doc line, and a row in the parameter-owner tabl
 | Module | `Roles` | role rows that replace the default list (3.2.1) | none | one row per role, at most `MaxRoles`; each list at most `MaxOwnUseRecipes` (an empty list is legal) |
 | Role row | `Role`, `Recipes` | the key and the list of a row | required, none | an existing role; known recipes |
 | Module | `EnterTicks` | the mode starts when secure ticks fall below this (5.3) | 2 | 1 to `MaxOwnUseTicks` |
-| Module | `ExitTicks` | the mode ends when stock cover reaches this (5.3) | 3 | `EnterTicks + 1` to `MaxOwnUseTicks` |
+| Module | `ExitTicks` | the mode ends when stock cover reaches this (5.3) | 3 | 1 to `MaxOwnUseTicks`, and above `EnterTicks` (`ErrOwnUseBand`) |
 | Module | `RetryJobs` | consecutive own-use jobs before a role job is tried; 0 never (5.5) | 10 | 0 to `MaxRetryJobs` |
 
 Why these defaults, and what they are not. `EnterTicks` 2 and `ExitTicks` 3 are tied to the
@@ -852,7 +857,7 @@ has no default list: on with no recipe it does nothing (the warning `subsistence
 ## 13. Validation
 
 Each rule has a sentinel and a failing-case test (testing.md 3.9); errors name the path, for
-example `modules.subsistence.roles.cutter.recipes[0]`.
+example `modules.subsistence.role.<id>.recipes[0]`.
 
 ### 13.1 Bounds
 
@@ -1048,9 +1053,8 @@ good; fuel is not made by it and the cutter makes its own). `Cov(glean, grain) =
 (1 * 3) = 12 500` basis points: one tick of gleaning makes 1.25 ticks of grain. The market:
 `farm_grain` makes 8 grain, `cut_fuel` 3 fuel; the labour that makes the basket is `3/8 + 1/3 =
 17/24` of a tick per household-tick, so `lambda* = 24/17` and `SurplusBP = 14 117`. The bound
-holds, `12 500 < 14 117` (the floor covers 89% of what the market chain does), and the warning
-`own_use_beats_market` is silent. The labour share to subsist is `ceil(10^8 / 14 117) = 7 084` basis points in the market and `ceil(10^8 /
-12 500) = 8 000` on the floor.
+holds, `12 500 < 14 117` (the floor's coverage of grain is 89% of the market chain's surplus factor; fuel, which glean does not make, is held from the cutter's own cutting; the seven ticks on the floor stop that cutting, and the cutter lives on its fuel stock meanwhile, 5.5 item 4), and the warning
+`own_use_beats_market` is silent. The labour share to subsist is `ceil(10^8 / 14 117) = 7 084` basis points in the market chain; for grain alone the floor needs `ceil(10^8 / 12 500) = 8 000`.
 
 **A household in a failed fuel market (checked in `worked.out`).** A `cutter` household cannot
 sell fuel and earns nothing; it holds 7 grain and 150 money, the grain price is 100, so
@@ -1068,8 +1072,8 @@ sell fuel and earns nothing; it holds 7 grain and 150 money, the grain price is 
 `Made` is the yield with its carried remainder: `raw = 5 * 7 500 + residue` each tick (37 500
 plus 4 000 gives 4 and a residue of 1 500; then 39 000 gives 3 and 9 000; and so on), 3.75 a
 tick on average. `Afford` is 0 throughout: with 150 money the cutter buys 0 ticks of 300. It
-bids for nothing, because its reserve money is `3 * 400 = 1 200`, above its 150 (the saving
-rule, `spec-agents.md` 7.4.4). The cutter works the floor seven ticks, feeds itself at
+bids for nothing: its stock is at least one tick of upkeep when it trades (tier 1 is 0) and its spend cap is 0 because
+its 150 money is below the reserve money `3 * 400 = 1 200` (`spec-agents.md` 7.4.4). The cutter works the floor seven ticks, feeds itself at
 `Hunger` 0 throughout, and goes back to cutting; `OwnUseJobs` is 7, below `RetryJobs`. Its `K^own` is
 100 a unit made (400, 300 and 400 in ticks 2 to 4) against a cost of 400 a tick. A
 `farmer` household never takes the mode: its row is empty and its own output covers it.
@@ -1180,7 +1184,7 @@ of the covered good (+) households whose secure ticks fall below `EnterTicks` (+
 output and stock (-) their bids for the good (+) the price; one negative link, so B. The flag
 is the price-responsive flow that N-043 asked for; it is not a rationing of upkeep (11.1).
 *Delay:* the own-use job's duration, plus the time to build the exit cover; the neighbours are
-the welfare window `T` (30) and `ExitTicks` (3), 9.6 below. *Owner:* SUB 5, 11.1; touches L14,
+the welfare window `T` (30) and `ExitTicks` (3), the checklist item 9.6, in 18.2. *Owner:* SUB 5, 11.1; touches L14,
 L51 (it is the price-responsive flow that L51 lacks, for the households that cannot afford the
 staple), L48, L15 (chatter). *Damper:* SUB-D1 (the band), SUB-D3 (the retry), SUB-D5 (the
 ramp), D04 (the price bounds). *Undamped:* an overshoot: in the model the price falls through
@@ -1245,7 +1249,7 @@ of a surplus is counted twice (7.5). *Test:* SUB-S2.
 
 | ID | Damper | Mechanism | Home | Status |
 |----|--------|-----------|------|--------|
-| SUB-D1 | Hysteresis by stock | the mode ends only when the stock covers `ExitTicks`, above `EnterTicks`, never by money. Cost: a household may stay on the floor after the market has recovered, until it holds stock or the retry brings it back | SUB 5.3 | specified (counted by `OwnUseChanged.Left` and `Entered`) |
+| SUB-D1 | Hysteresis by stock | the mode ends only when the stock covers `ExitTicks`, above `EnterTicks`, never by money. Cost: a household may stay on the floor after the market has recovered, until it holds stock (the retry alternates a role job but does not clear the flag) | SUB 5.3 | specified (counted by `OwnUseChanged.Left` and `Entered`) |
 | SUB-D2 | Market first | the mode starts only when the household's own secure ticks are short; a household fed by the market never takes it. Cost: one unfed tick when the market is empty at a normal price | SUB 4.4, 5.2 | specified |
 | SUB-D3 | The market retry | after `RetryJobs` own-use jobs the next free decision is a role job, if one can run. Cost: a role job started into a failed market | SUB 5.5 item 5 | specified (counted by `OwnUseChanged.Retried`) |
 | SUB-D4 | The productivity bound and the source-only rule | `FloorBP < SurplusBP` (a warning) and no inputs or tools on an own-use recipe. Cost: a pack with a generous floor gets a warning, not an error | SUB 3.4.1, 4.2 | specified (a warning; the rule is an error) |
@@ -1274,7 +1278,7 @@ warning or a stated condition.
 | SUB-S1 | A staple role with a shortage injected (the pack of S04) and an outage of the staple market, with the module off and on, an own-use recipe of coverage 6 667, 10 000 and 13 333, the retry on and off, the work floor on and off (the model of 11.2 is the oracle of shape) | the unfed household-ticks fall when the floor covers the upkeep; the price is reported as the pinned shortage, the pinned glut or an interior band (F5, F6); a floor below the upkeep without the retry is no better than none | A1, A2, A3, A6, L14, L51 |
 | SUB-S2 | A region that loses its income (`famine` of S14, or S27's variant) with the pool, relief and the ladder on, and the module off and on | households unfed, removals and the pool's balance are lower with the mode; the ratio of a household on the floor is near what the floor covers and not 0; the mean ratio of the closed upkeep-only pack is 1 | A1, A7, L39, L46, L63 |
 | SUB-S3 | Own-use recipes of duration 1, 3 and 8 against `ChangePrivation` 3 | rung 1 abandons a running own-use job only when `Duration - 1` reaches `ChangePrivation`, and the warning fires for exactly those | A5 |
-| SUB-S4 | A scarce `refill` commons that own-use recipes draw on, a thousand agents of weight 1 and twenty cohorts of weight 50, the module off and on | the ration holds; `Blocked` is non-zero when the stock is cut; cohorts and units get the same mean; the commons recovers or does not as `spec-resources.md` 8 predicts; the `Warn`s are bounded | A4, L87, L90 |
+| SUB-S4 | A scarce `refill` commons that own-use recipes draw on, a thousand agents of weight 1 and twenty cohorts of weight 50, the module off and on | the ration holds; `Blocked` is non-zero at the start step when the stock is cut; cohorts and units get the same mean; the commons recovers or does not as `spec-resources.md` 8 predicts; the `Warn`s are bounded | A4, L87, L90 |
 | SUB-S5 | The invariant run: the reference chain with an own-use overlay over a range of seeds with `WithAudit`, a checkpoint at the middle of a mode, and a relocation of a household in the mode | the audit holds; the recorded events are the same as the state; the resumed run is bit-identical; the relocated household's flag is dropped; no ledger reason beyond the registry | determinism, A1 |
 
 ## 19. Notes settled
@@ -1284,7 +1288,7 @@ warning or a stated condition.
 | N-046 (register entries owed by SUB) | **applied** for SUB | section 18: SUB-A1 to SUB-A7, SUB-D1 to SUB-D5, SUB-S1 to SUB-S5 |
 | N-104 (region-keyed tables use the one mechanism) | **applied** for SUB: no region-keyed table or field; the role-keyed rows follow the replace mode and the one-row-per-key rules; regional differences are the yield table and the endowment rows | 3.2.1, 3.5 |
 | N-108 (what RES leaves to SUB) | **applied** for SUB: an own-use recipe draws through `Draws` like any recipe, open access, the ration, no priority, and the hooks for LND are stated | 9 |
-| N-016 (the parameter registry) | updated: five rows (the module, its default list, the role rows, three tunables), each with a default or "required", a bound and an owner | 12, handoff b |
+| N-016 (the parameter registry) | updated: seven rows (the module, its default list, the role rows, the key and list of a row, three tunables), each with a default or "required", a bound and an owner | 12, handoff b |
 | N-017 (words and names) | updated: terms fixed in the handoff c; setting words only in the flagged examples of 16 | 16 |
 | N-027 (no default macro constant is stable) | updated: every number is a placeholder; the model shows structure | 17 |
 | N-103 (running several writers) | updated in the handoff (process slips included) | handoff l |
@@ -1313,23 +1317,23 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-004 | Validation MUST reject, with `ErrOwnUseNotSource`, an own-use recipe that has `Inputs` or `Requires`. |
 | FR-SUB-005 | Validation MUST reject, with `ErrOwnUseNotSited`, an own-use recipe that is not `Sited`. |
 | FR-SUB-006 | Validation MUST reject, with `ErrOwnUseOverlap`, a recipe that is on both the effective own-use list and `Role.Recipes` of one role. |
-| FR-SUB-007 | Validation MUST reject, with `ErrOwnUseBand`, an `ExitTicks` not above `EnterTicks`, and with `ErrOutOfBounds` a tunable outside the bounds of 12 or a list longer than `MaxOwnUseRecipes`. |
+| FR-SUB-007 | Validation MUST reject, with `ErrOwnUseBand`, an `ExitTicks` not above `EnterTicks`, and with `ErrOutOfBounds` a tunable outside the numeric bounds of 12 or a list longer than `MaxOwnUseRecipes`. |
 | FR-SUB-008 | Validation MUST reject an unknown recipe in a list with `ErrUnknownRecipe` and an unknown role in a row with `ErrUnknownRole`. |
 | FR-SUB-009 | The module MUST have no region-keyed table and no per-region field; whether a region offers subsistence MUST be decided by the yield table and the endowment rows alone. |
-| FR-SUB-010 | The covered set of a role MUST be the upkeep commodities that are a non-discard output of an own-use recipe of the role, and an agent MUST be evaluated for the mode only if it is not a pseudo-agent, not a trainee, not away, has a non-empty covered set and a positive effective upkeep; any other agent MUST have `OwnUse` false and `OwnUseJobs` 0. |
+| FR-SUB-010 | The covered set of a role MUST be the upkeep commodities that are a non-discard output of an own-use recipe of the role, and an agent MUST be evaluated for the mode only if it is not a pseudo-agent, not a trainee, has a non-empty covered set and a positive effective upkeep; such an agent MUST NOT be evaluated while it is away (its flag and counter frozen), and any other agent MUST have `OwnUse` false and `OwnUseJobs` 0. |
 | FR-SUB-011 | `Cover`, `Cost`, `Afford` and `Secure` MUST be computed as in 5.2 with checked integer arithmetic, `Secure` saturating at `MaxOwnUseTicks`. |
 | FR-SUB-012 | `Afford` MUST be 0 for an agent with `Hunger` above 0. |
 | FR-SUB-013 | An agent not in the mode MUST enter it when its `Secure` is below `EnterTicks`, and `OwnUseJobs` MUST be 0 on entry. |
-| FR-SUB-014 | An agent in the mode MUST leave it when its `Cover` is at least `ExitTicks` and in no other case, whatever its money. |
+| FR-SUB-014 | An agent in the mode MUST leave it when its `Cover` is at least `ExitTicks` and in no other case of the flag step, whatever its money (the drops of FR-SUB-010, FR-SUB-031 and FR-SUB-032 are not flag steps). |
 | FR-SUB-015 | The flag MUST depend on nothing but the agent's own stock, money, `Hunger`, upkeep, counter and the prices of its own region; a test that changes every other agent, the regional wage and every other region MUST find it unchanged. |
 | FR-SUB-016 | A cohort of weight `w` and `w` agents of weight 1 in the same circumstances MUST have the same `Cover`, `Afford`, `Secure` and flag. |
 | FR-SUB-017 | The flag step MUST run in phase 2 after the continuations and completions and the snapshot of the endowments and before the first `Work`, in agent-ID order, and its result MUST NOT depend on the order of the agents. |
 | FR-SUB-018 | The view of an agent MUST carry `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`, and mark each own-use recipe in the per-recipe group. |
 | FR-SUB-019 | The default `Work` MUST use a work share of 10 000 for an agent in the mode. |
-| FR-SUB-020 | The default `Work` in the mode MUST request the own-use recipe with the greatest sum of `Cov` over the covered commodities whose cover is below `ExitTicks`, compared as exact fractions, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
+| FR-SUB-020 | The default `Work` in the mode MUST request, among the own-use recipes with `MaxExecutions` of 1 or more and a positive sum, the one with the greatest sum of `Cov` over the covered commodities whose cover is below `ExitTicks`, compared as exact fractions, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
 | FR-SUB-021 | The executions of the request of FR-SUB-020 MUST be `min(w, MaxExecutions, max(1, ceil(w * (ExitTicks - Cover) / ExitTicks)))`. |
 | FR-SUB-022 | `OwnUseJobs` MUST increase by 1 when an own-use job starts and MUST reset to 0 when a job of another recipe starts or the mode changes; when `RetryJobs` is above 0, `OwnUseJobs` has reached it and a role recipe is eligible, the default `Work` MUST request the role recipe. |
-| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked`. |
+| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, or the ration grants every own-use request of the agent 0 executions, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked`. |
 | FR-SUB-024 | The production halt of `spec-agents.md` 7.1.5 MUST NOT apply to an own-use recipe. |
 | FR-SUB-025 | A role with an empty `Recipes` list and a non-empty effective own-use list MUST request an own-use job in the mode. |
 | FR-SUB-026 | Production MUST accept a request for a recipe on the role's effective own-use list, and MUST still refuse any other recipe not on `Role.Recipes` with `not_on_role` before any other check. |
@@ -1341,7 +1345,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-032 | A role change MUST reset `OwnUseJobs`, keep `OwnUse` until the next evaluation and abandon an own-use job with `role_changed`; a weight change MUST leave both unchanged; a removal MUST drop both. |
 | FR-SUB-033 | The mode MUST NOT alter the computation of `Hunger` and `Privation` from `Unfed`. |
 | FR-SUB-034 | An external agent MUST be evaluated like any other, and the directive of the `Directed` strategy MUST override the default `Work`. |
-| FR-SUB-035 | The module MUST draw no number from the world's random source: the stream of a world is the same with the module on and off. |
+| FR-SUB-035 | The module MUST draw no number from the world's random source: the module's own steps (the flag step and the choice) draw nothing, and in a pack where no household ever enters the mode the stream of a world is the same with the module on and off. |
 | FR-SUB-036 | The request of an own-use job with `Draws` MUST enter the ration of `spec-resources.md` 5.3 as any other request, with no priority and no quota. |
 | FR-SUB-037 | A recipe that is on an own-use list and on no role's `Recipes` MUST NOT be an activity of the reference programme and MUST NOT make a commodity producible for V1. |
 | FR-SUB-038 | Validation MUST warn, and MUST NOT fail, with `subsistence_empty`, `own_use_no_upkeep`, `own_use_beats_market`, `own_use_partial`, `own_use_trap`, `own_use_exit_unreachable`, `own_use_slower_than_ladder` and `own_use_not_available` under the conditions of 13.3. |
@@ -1354,6 +1358,10 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-045 | A run with a logger and an observer attached MUST produce exactly the same results as one without. |
 | FR-SUB-046 | The snapshot MUST report per region and role the households in the mode and the households blocked in the last tick, and per agent `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`. |
 | FR-SUB-047 | A pack with the module, its recipes, its yield rows and its endowment rows MUST run from configuration alone, with no Go specific to it (architecture.md 9.4). |
+| FR-SUB-048 | An own-use recipe MUST NOT be requested by the default `Work` for an agent that is not in the mode. |
+| FR-SUB-049 | An agent with a job in progress MUST NOT be offered the mode's request until it is free (no interruption), and a started own-use job MUST run to its end. |
+| FR-SUB-050 | An own-use recipe with `Draws` while the resources module is off MUST be rejected with `ErrModuleDependency`. |
+| FR-SUB-051 | The units counted in `K^own_t` MUST be the units actually created at completion, after the carried remainder, and the per-agent view of the spawner MUST carry `OwnUse` read-only. |
 
 ### Non-functional
 
@@ -1365,8 +1373,8 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 
 ## 21. Open questions
 
-1. **The lean season.** A household in a long role job cannot take the mode (5.7), and the end
-   of the stores before a harvest is when it needs it. Either a second job slot for light
+1. **The gap between yields.** A household in a long role job cannot take the mode (5.7), and the end
+   of the stores before the next yield is when it needs it. Either a second job slot for light
    own-use work, which changes `spec-production.md` 5.1.2, or an interruption of a role job
    with an abandon reason that costs the inputs. Decide with PRO, with the first scenario that
    shows the case.
@@ -1379,7 +1387,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 4. **Rung 1 and a running own-use job.** The spawner's view gains `OwnUse`; the default
    spawner does not use it (8.3). Whether a household with a job that will cover its need should
    be skipped by rung 1, and the cost to the occupation signal.
-5. **A computed check of the lean season** in the style of V4: the longest gap in the year in
+5. **A computed check of the gap between yields** in the style of V4: the longest gap in the year in
    which none of a role's own-use recipes can run, against the cover that a household can hold
    (`CoverTicks`).
 6. **The retry.** In jobs, so that it is independent of durations. A retry in ticks or a retry
@@ -1392,7 +1400,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 9. **An own-use recipe that makes a want** (a non-upkeep good): out of scope; the covered set is
    upkeep only (3.3.2).
 10. **The priority on the commons.** Open access gives the floor no priority (9.2). A right to
-    glean is LND's entitlement; whether the default of LND is a priority for own-use requests.
+    draw for own use is LND's entitlement; whether the default of LND is a priority for own-use requests.
 11. **Measuring the duty cycle.** The share of a household's jobs that are own-use is a measure
     (IND), derivable from `OwnUseChanged.Started` and the recipe executions.
 12. **A mode that changes the target cover.** Raising the household's `Keep` while in the mode,
