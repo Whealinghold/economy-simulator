@@ -104,6 +104,10 @@ type Agent struct {
 	Privation int64        // the leaky count of unfed ticks that the failure ladder reads (5.4.1); computed by the world, defined by spec-spawner.md 5.1
 	DeathCarry int64       // the population module's carried remainder of deaths, in [0, 10 000 * TicksPerYear) (spec-population.md 3.8); unused when the module is off
 	Directive *Directive   // the mailbox of an external agent (10), usually nil
+
+	OwnUse     bool        // in the own-use mode (spec-subsistence.md 5.3); false when the module is off
+	OwnUseJobs int64       // own-use jobs started since the last job of another recipe (spec-subsistence.md 5.5 item 5)
+	Journey    *Journey    // a migration journey in progress: destination RegionID and arrival tick (spec-migration.md 8.2), usually nil
 }
 ```
 
@@ -120,6 +124,8 @@ type Agent struct {
 | Trainee status | the agent | `spec-skill-barriers.md` |
 | Hunger, last unfed count, `Privation`, `DeathCarry`, directive, `Mortal` | the agent | this spec, section 15 (`DeathCarry` is defined by `spec-population.md` 3.8) |
 | Trip state (away, shipment) | the transport module | `spec-transport.md` 14 |
+| Own-use mode and counter (`OwnUse`, `OwnUseJobs`) | the agent | `spec-subsistence.md` 15 |
+| Migration journey (`Journey`) | the agent | `spec-migration.md` 14 |
 | Upkeep, tradable set, targets, budgets, views, plans | derived or scratch, never state | not saved |
 | Price window, cost anchors | the market, or derived | `spec-beliefs.md` 13, `spec-production.md` 9.3 |
 
@@ -146,6 +152,11 @@ A **role** is a plain struct in the root package, an entry of `Config.Roles`
 | `StartStock` | list of (commodity, quantity) | goods per household an initial agent starts with | none |
 | `Strategy` | string | the registered strategy name (6.6) | `"default"` |
 | `Label` | string | presentation only | empty |
+| `Fixed` | bool | the agents of the role are never moved by the migration module (owner `spec-migration.md` 3.1, 11) | false |
+| `Merchant` | the merchant block | nil means the role is not a merchant role (owner `spec-merchants.md` 3.2, 13) | nil |
+
+The role's own-use recipes are not a field of the role: they are the rows of the subsistence module
+(`spec-subsistence.md` 3.2), and the **effective own-use list** of a role is derived (3.3.1 there).
 
 3.3.1. A role with an empty `Recipes` list is legal. Its households earn nothing
 from production: they are a trader, a carrier, a household that lives on relief or
@@ -166,6 +177,8 @@ for. It is derived from data, not configured one by one:
 tradable(role) = upkeep commodities (the effective list of 5.2, any region)
                + for each recipe on role.Recipes: its inputs, its required tools,
                  and its non-discard outputs
+               + the non-discard outputs of the recipes on the role's effective own-use list
+                 (`spec-subsistence.md` 3.6; a household may hold and sell what it makes)
                + role.Trades
                + when the demand module is on: the items of every want in the role's ladder
                  (`spec-demand.md` 3.2.3)
@@ -245,6 +258,10 @@ so that conservation is one rule:
 1. a job in progress is abandoned, creating nothing, with the reason `agent_removed`
    (`spec-production.md` 5.4);
 2. a trainee relationship ends (`spec-skill-barriers.md` 4.6);
+2a. a migration journey in progress is dropped (the households are counted in `Ended` of
+   `MigrationReviewed`, `spec-migration.md` 8.3); and for each open delivery contract of which the agent is
+   the deliverer, the escrow is returned in full to the payer (`escrow_refund`) and the contract ends
+   (`spec-merchants.md` 9.8.2). Step 2a is numbered so that the steps keep their numbers; it runs before the money moves;
 3. all money moves to the region's estate account with the reason `estate_money`;
 4. all goods move to the estate account with the reason `estate_goods`, and the
    estate lists them at the region's effective reference price, a used durable at that price times its remaining durability over its full durability (`spec-estates.md` 2.1, 2.7.3, FR-EST-008; decision of round 3: the anchor stays the effective reference price, `spec-skill-barriers.md` 2.7 follows it);
@@ -307,14 +324,23 @@ order below, and proposes it (N-009 collects what other specs assume).
 
 | # | Phase | What happens to an agent |
 |---|-------|--------------------------|
-| 1 | Start | In this order: the moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); transport arrivals, in shipment-ID order (`spec-transport.md` 5.7); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); money flows (`spec-money-supply.md` 5.1); the outside's walk, with the module on (`spec-external-sector.md` 5.1); an external agent's directive is read |
-| 2 | Production | Jobs continue and complete; with the resources module on, the stocks are snapshotted; `Work` is called for each agent that is free and did not continue or complete a job; the draws are rationed per endowment (`spec-resources.md` 5.2, 5.3); then the jobs start in the rotation order (`spec-production.md` 5.2, 5.5.1). An agent that is away is skipped (`spec-transport.md` 5.5.2) |
-| 3 | Trade decision | `Trade` is called for each agent in ID order (an agent that is away is skipped and gets no view); the world executes the plan: discards first, then shipments (`spec-transport.md` 5.3.2), then the orders built from the intents, in plan order; admission reserves cash and stock (`spec-clearing.md` 3). For an agent of an informed role the rumours of its view are built, with their error draws, immediately before its `Trade` (`spec-information.md` 5.5.2, 7.1). After the last agent and the estates' asks, the counterparties of the external module top up and place their orders (`spec-external-sector.md` 5.2) |
+| 1 | Start | In this order: the moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); transport arrivals, in shipment-ID order (`spec-transport.md` 5.7), with the reseed of an arriving traveller's beliefs (`spec-merchants.md` 12.2); the settlement of delivery contracts whose shipment arrived, in contract-ID order (`spec-merchants.md` 9.7); the arrivals of migration journeys, in ascending agent ID (`spec-migration.md` 8.4, 10.1); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); money flows (`spec-money-supply.md` 5.1); the outside's walk, with the module on (`spec-external-sector.md` 5.1); an external agent's directive is read |
+| 2 | Production | Jobs continue and complete; with the resources module on, the stocks are snapshotted; with the subsistence module on, the flag step (`OwnUse`) is computed for every eligible agent in agent-ID order (`spec-subsistence.md` 5.4); `Work` is called for each agent that is free and did not continue or complete a job; the draws are rationed per endowment (`spec-resources.md` 5.2, 5.3); then the jobs start in the rotation order (`spec-production.md` 5.2, 5.5.1); then `OwnUseChanged` (`spec-subsistence.md` 14.1). An agent that is away is skipped (`spec-transport.md` 5.5.2), and so is an agent on a migration journey (`spec-migration.md` 8.3) |
+| 3 | Trade decision | `Trade` is called for each agent in ID order (an agent that is away or on a migration journey is skipped and gets no view); the world executes the plan: discards first, then shipments (`spec-transport.md` 5.3.2), then the orders built from the intents, in plan order; admission reserves cash and stock (`spec-clearing.md` 3). For an agent of an informed role the rumours of its view are built, with their error draws, immediately before its `Trade` (`spec-information.md` 5.5.2, 7.1). After the last agent's plan and before the estates' asks, the contract round matches the delivery offers and takes of the plans (`spec-merchants.md` 9.4), then `ContractRound` and `MerchantsPlanned`. After the last agent and the estates' asks, the counterparties of the external module top up and place their orders (`spec-external-sector.md` 5.2) |
 | 4 | Clearing | Every market clears (`spec-clearing.md` 7.2); then the counterparty accounts are swept to zero (`spec-external-sector.md` 5.3) |
 | 5 | Outcomes | Price windows are updated; the price record of the information module is appended after the windows are pushed (`spec-information.md` 4.3); `Revise` is called for each outcome in order of region, commodity and admission (`spec-beliefs.md` 5.1) |
 | 6 | Consumption | Upkeep is consumed; `Unfed`, `Hunger` and `Privation` are set by the world; with the demand module on, the wants are then consumed (`spec-demand.md` 4.7, reason `want_consumption`); the welfare record of the tick is pushed |
-| 7 | Entry and exit | The spawner and population module act (`spec-spawner.md` 10.2: it reads `Privation` and the signals after phase 6); the population module's deaths come before the budget of the entry step is taken and its births last (`spec-population.md` 4.8); removed agents' holdings pass to the estates |
+| 7 | Entry and exit | The spawner and population module act (`spec-spawner.md` 10.2: it reads `Privation` and the signals after phase 6); the population module's deaths come before the budget of the entry step is taken and its births last (`spec-population.md` 4.8); removed agents' holdings pass to the estates; then, with the migration module on, the migration pass, once for the world, after the entry step of every region (`spec-migration.md` 10.2) |
 | 8 | End | Ageing and spoilage (`spec-ledger.md` 5.3), flow totals, regeneration of the endowments (`spec-resources.md` 4.1), optional audit |
+
+4.0. **Positions that more than one module claims (N-009).** Phase 1 holds, in this order, the
+arrivals of transport, the settlement of contracts (which follows the arrivals it depends on),
+and the arrivals of migration journeys, all before relief; each is a loop in its own ID order
+and the three touch different state (shipments, contracts, journeys). In phase 2 the flag step of
+the subsistence module comes after the snapshot of the endowments and before any `Work`. In
+phase 3 the contract round comes after the last agent's plan and before the estates' asks.
+In phase 7 the migration pass comes last, after the entry step of every region. `spec-world.md`
+fixes the final order; this is the order the specs assume.
 
 4.1. Upkeep bought in phase 3 arrives in phase 4 and can be eaten in phase 6 of the
 same tick. Money earned in phase 4 can be spent no earlier than phase 3 of the next
@@ -462,8 +488,11 @@ ratio, never by money (`spec-currency.md` 5.6).
 - **Agents in transit.** In version 1 a traveller stays in its origin region, away and in no
   market, until arrival (`spec-transport.md` 5.5.2); `NoRegion` and the `depart` and `arrive`
   hook are reserved and unused (`spec-regions.md` 6.5.3), and a shipment ties the account to its
-  region by the refusal `open_shipment` (`spec-regions.md` 6.5.2). A change of region by an
-  agent is `spec-migration.md`'s (open question 10).
+  region by the refusal `open_shipment` (`spec-regions.md` 6.5.2). A migration journey is the
+  same shape: the account stays in its region, the agent is passed to neither `Work` nor `Trade`,
+  and the refusal `on_journey` ties it (`spec-migration.md` 8; `Journey` of 3.1). The refusals
+  that bind an account to its region are `open_shipment` (TRN), `on_journey` (MIG), `open_contract`
+  (MER) and `in_traineeship` (SKL).
 
 ## 6. The Strategy extension point
 
@@ -587,6 +616,9 @@ type TradePlan struct {
 	Intents   []Intent
 	Discards  []Discard
 	Shipments []ShipmentRequest // spec-transport.md 5.3.1; the default strategy appends none
+	Offers    []DeliveryOffer   // spec-merchants.md 9.2; the default strategy appends none
+	Takes     []DeliveryTake    // spec-merchants.md 9.2; the default strategy appends none
+	Notes     PlanNotes         // spec-merchants.md 15.1.2: counters a strategy fills; zero for the default; influence nothing
 }
 
 // ShipmentRequest and Line are defined by spec-transport.md 5.3.1:
@@ -602,6 +634,12 @@ type TradePlan struct {
 //		Commodity CommodityID
 //		Quantity  Quantity
 //	}
+
+// DeliveryOffer, DeliveryTake and PlanNotes are defined by spec-merchants.md 9.2 and 15.1.2:
+// an offer is an indivisible quantity for delivery to another region at a least delivered
+// price, a take asks for goods to be delivered to the taker's region at a most price, and
+// the notes are fixed counters of the strategy's decisions. Offers and takes are matched
+// in the contract round after the last agent's plan, not by Clearing (phase 3, section 4).
 
 // JobRequest names the recipe to start. Executions is a maximum; 0 means the most
 // the agent can run. The zero value, with NoJob set, requests nothing.
@@ -628,14 +666,16 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 |-------|--------|
 | Identity | `Tick`, the `Moment` of `spec-calendar.md` 4, `Agent`, `Role`, `Region`, `Weight`, `External` |
 | Money | `Money`, the agent's available cash |
-| State | `Hunger`, `Unfed`, the welfare ratio and whether it exists, the agent's target ratio, the working ticks in its window and its **effective window** `T = max(WelfareWindow, WindowCycles * longest Duration)` (`spec-welfare-and-wages.md` 2.3.3; for the floor of 7.1.3), `StartsIn` (6.4.3) |
+| State | `Hunger`, `Unfed`, the welfare ratio and whether it exists, the agent's target ratio, the working ticks in its window and its **effective window** `T = max(WelfareWindow, WindowCycles * L)`, `L` the longest recipe, own-use recipe or merchant trip of its role (`spec-welfare-and-wages.md` 2.3.3; for the floor of 7.1.3), `StartsIn` (6.4.3) |
 | Upkeep | the effective upkeep (5.2) as per-household quantities |
 | Job | whether one is active, its recipe, `Remaining`, `Executions` |
 | Per commodity in the tradable set | `Stock` (the whole balance; no reservation exists yet), `Expiring` (units that spoil at the end of this tick), the belief and its bounds, the effective reference price, `UnitCost` (0 if the role cannot make it, or if the region has no observed wage yet; it counts labour, 7.3.6), and the market report: price, age, best unmatched bid and ask with flags, and the price window's mean, low, high and the position of the price in it (`spec-beliefs.md` 7) |
 | Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season (with the resources module on it includes the abundance of the tick's snapshot, `spec-resources.md` 4.7.3), `MaxExecutions` (`spec-production.md` 4.2; with the module on also bounded by `floor(stock / draw)` of the snapshot, reason `no_endowment`) and the reason if it is 0 |
+| Own-use (only with the subsistence module on) | `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` (`spec-subsistence.md` 5.2, 5.4), and a mark on each own-use recipe in the per-recipe group, so that a consumer's strategy does not recompute them. The own-use recipes of the role's effective own-use list appear in the per-recipe group beside the role's recipes |
+| Merchant (only in the view of an agent whose role has a merchant block) | `Params`, `Modes`, `Goods` (mass, bulk, shelf life, durability and the age of the oldest lot held) and `Outbound` (`spec-merchants.md` 4.1) |
 | Tunables | the values of section 12 |
 | Mailbox | the pending `Directive`, if any (section 10) |
-| Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1). An agent that is away is never passed a view |
+| Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1) and `Outbound` (the mirror of `Inbound`: per destination region and commodity with units on the way, the total quantity of the shipments the agent is the shipper of and the earliest arrival, fixed at the start of phase 3; `spec-merchants.md` 4.1). An agent that is away or on a migration journey is never passed a view |
 | Endowments (only with the resources module on) | for the agent's own region only: each endowment that its role's recipes draw on, sorted by resource: `Resource`, `Stock`, `Capacity`, `AbundanceBP` (`spec-resources.md` 5.5.1). No view carries another region's endowment |
 | Rumours (only with the information module on, and only in the view passed to `Trade` of an agent of a role with `Informed`) | `Rumours`: the rumours of `spec-information.md` 5, sorted by (`Region`, `Commodity`), a scratch slice valid for the call only. The `Work` view and the `OutcomeView` carry none |
 
@@ -687,6 +727,10 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
 - Shipments are then executed, in plan order, each refused whole with a `reason` if it fails
   a check (`spec-transport.md` 5.3.2, 5.4); the default strategy appends none, and with the
   transport module off every request is refused `unknown_mode`.
+- Delivery offers and takes (`Offers`, `Takes`) are collected, not executed here: they are
+  admitted and matched in the contract round after the last agent's plan (`spec-merchants.md`
+  9.3, 9.4); the default strategy appends none, and with `Modules.Merchants` absent each is
+  refused `contracts_off`. `Notes` is read by the world only to build `MerchantsPlanned`.
 - Intents are then turned into orders and submitted in plan order. An intent for a
   commodity outside the agent's tradable set is rejected with the reason
   `not_tradable`, an `OrderRejected` event, and never reaches clearing. In the order
@@ -727,6 +771,11 @@ a different set of names fails the hash check. The *code* behind a name cannot b
 hashed; a consumer who changes a strategy's behaviour under the same name gets a run
 that no longer matches its checkpoints, and this is the consumer's to manage
 (open question 4). An external agent names its strategy when it is added (section 10).
+The standard names beyond `"default"` live in the package `strategy/`, which exists once there is a
+second strategy (architecture.md 2.6): `strategy.Merchant`, registered as `"merchant"` by
+`strategy.Options()` (`spec-merchants.md` 3.1.2). The root package cannot import `strategy/`,
+so a configuration that names `"merchant"` needs the one Go line `economysim.NewWorld(cfg,
+strategy.Options()...)`. `strategy/` is created when the first code lands.
 
 ### 6.7 What a consumer's strategy may do
 
@@ -736,7 +785,8 @@ methods: `DefaultStrategy` is exported and stateless, and a consumer's type hold
 in a named field and delegates (architecture.md 4.7 forbids embedding in a public
 struct). That is the wrapper for the default belief rule that `spec-beliefs.md` 10.5
 asks this spec to decide: `DefaultStrategy.Revise`. The merchant strategy of
-`spec-merchants.md` is a second implementation, written the same way.
+`spec-merchants.md` is a second implementation (`strategy.Merchant`, `strategy/merchant.go`), written the same way. A
+merchant in the own-use mode plans no trip and posts no take (`spec-merchants.md` 6.4).
 
 ## 7. The default strategy
 
@@ -750,7 +800,11 @@ tunable of section 12 or derived from data.
 
 The default decides whether the agent works at all, and if so which recipe.
 
-7.1.1. **No recipes, no job.** A role with an empty `Recipes` list requests nothing.
+7.1.1. **No recipes, no job.** A role with an empty `Recipes` list and an empty effective own-use
+list requests nothing. A role with an empty `Recipes` list and a non-empty effective own-use list
+(`spec-subsistence.md` 3.3.3) requests nothing outside the own-use mode and an own-use job in it
+(7.1.9). A pure merchant role (no recipe) takes an empty row in the subsistence table
+(`spec-subsistence.md` 3.2.1) and so requests nothing.
 
 7.1.2. **Whether to work.** If the welfare module is off, the agent works whenever a
 recipe is worth starting (7.1.4). If it is on, the target-income rule of
@@ -767,8 +821,9 @@ otherwise:  T_lo = TargetRatio of the agent
             s = (T_hi - ratio) * 10 000 / (T_hi - T_lo)   between
 ```
 
-`T` is the agent's **effective window**, `max(WelfareWindow, WindowCycles * longest
-Duration on its role's list)` (`spec-welfare-and-wages.md` 2.3.3), and the working
+`T` is the agent's **effective window**, `max(WelfareWindow, WindowCycles * L)`, `L` the
+longest `Duration` on its role's list or its effective own-use list, or the longest trip of a
+merchant role (`spec-welfare-and-wages.md` 2.3.3), and the working
 ticks are those of its welfare record (the view carries both, 6.4.1).
 
 If `RestBand` is 0, `T_hi = T_lo` and `s` is 10 000 below the target and 0 at or
@@ -794,6 +849,9 @@ work share, and both set it to 10 000.
   its reasons are `spec-welfare-and-wages.md` 5.3 (default 4 000 basis points, a
   placeholder); this spec applies it. It does not remove the instability of L14: it sets
   where a pinned market stops.
+
+In the own-use mode (`spec-subsistence.md` 5.5) the work share is 10 000 and the request is
+the own-use recipe, with the retry (7.1.9).
 
 The floor acts silently, so by FR-STB-013 and N-065 it is **counted**. The world
 computes, for each agent that is free when `Work` would be called, whether the floor
@@ -832,7 +890,8 @@ OutputTarget_o(r) = ceil(w * q_o * E_r * OutputCoverTicks / (10 000 * Duration_r
 ```
 
 A byproduct (`CostShare` 0) never halts a recipe, or a pile of waste would stop the
-main product. This is the inventory-driven part of production (a firm with too much
+main product. The halt does not apply to an own-use recipe: its stop is the exit cover of
+the mode (7.1.9). This is the inventory-driven part of production (a firm with too much
 inventory hires fewer, in Lengnick's model): a negative feedback from stock to supply,
 with the delay of the recipe's duration. It is the **production stop** that the
 register proposed as STB-D24 and left without an owner (N-043); this spec adopts it,
@@ -860,6 +919,33 @@ to what it can, not refused.
 7.1.8. **A trainee** (`spec-skill-barriers.md` 4.1) is passed the trainer's
 trainee-eligible recipes and its yield `TraineeYield`, and chooses among them by the
 same rule, with the principal's stock for `MaxExecutions` (`spec-production.md` 8.1).
+
+7.1.9. **The own-use mode.** With the subsistence module on, before the recipe choice of 7.1.4 the
+default applies this rule to an agent that is free (the rule and its reasons are
+`spec-subsistence.md` 5.5; the flag is computed by the world in phase 2, before any `Work`,
+`spec-subsistence.md` 5.4):
+
+1. **Not in the mode** (`OwnUse` false): nothing changes. The work share is 7.1.2's and the
+   recipes are the role's. An own-use recipe is never chosen outside the mode.
+2. **In the mode:** the work share is 10 000 (survival comes before the target, 7.1.3).
+3. **Which recipe.** Among the own-use recipes with `MaxExecutions >= 1` and a positive sum of
+   coverage over the covered commodities whose cover is below the exit cover, the one with the
+   greatest sum, compared as exact fractions, ties to the lower recipe ID. The value uses no
+   price and no belief.
+4. **How many.** `k = min( w, MaxExecutions, max(1, ceil( w * (ExitTicks - Cover) / ExitTicks )) )`:
+   a weight-1 agent runs 1, a cohort puts in the share of its households short of cover. The other
+   households rest during the job (one job per agent, `spec-production.md` 5.1.2).
+5. **The retry.** Every started own-use job adds 1 to `OwnUseJobs`; a job of any other recipe
+   resets it to 0. If `RetryJobs > 0`, `OwnUseJobs >= RetryJobs` and a role recipe is eligible by
+   7.1.4, the request is that role recipe instead (a test of the market); otherwise the own-use
+   job goes on.
+6. **Nothing runnable.** If no own-use recipe qualifies, or the ration granted none of its
+   executions, the household is **blocked**: `Work` treats the tick as if it were not in the
+   mode, the flag stays, and the household is counted in `Blocked` (`OwnUseChanged`).
+7. **The halt does not apply** (7.1.5).
+
+A consumer's strategy sees the same flag in its view (6.4.1); the `Directed` directive overrides
+`Work` as for any recipe (10.4).
 
 ### 7.2 The planned recipe
 
@@ -952,7 +1038,9 @@ non-discard output of one of its recipes): a holder's tool is bound to it
 7.3.6. **`Purpose` and `UnitCost` of an intent.** Purpose is `PurposeInput` if
 `Job_c` is above 0 and `c` is an input of `r*`, `PurposeTool` if it is a tool of
 `r*`, `PurposeUpkeep` if `c` is an upkeep commodity, and `PurposeOther` otherwise. A
-commodity that is both an input and upkeep is classed as an input. `UnitCost` is the
+commodity that is both an input and upkeep is classed as an input. For a merchant, `r*` is its
+planned trip: the cargo, the haul units and the feed are inputs, a vehicle is a tool and the
+provisions are upkeep (`spec-merchants.md` 3.4.2). `UnitCost` is the
 cost anchor of the commodity in the agent's region (`spec-production.md` 9.3) if the
 role has a recipe that makes it, and 0 otherwise (`spec-beliefs.md` 3.2.4). **The
 anchor is the full cost, labour included**: inputs, the wear of tools and `Duration`
@@ -1484,7 +1572,10 @@ adapter treats a tick with no event for a region and role as zero unfed there
 14.6. **Snapshot.** Reports per region and role: households and agents, households
 fed and unfed, and the largest hunger; and **the households held to work by the floor**
 `MinWorkShare` in the last tick (7.1.3, N-065), which makes that silent damper
-observable (FR-STB-013); per agent in a query (INT): `Unfed`, `Hunger`, `Privation`. Bounded by the
+observable (FR-STB-013); with the subsistence module on, the households in the own-use mode and
+the households blocked in the last tick (`spec-subsistence.md` 14.4); per agent in a query (INT): `Unfed`, `Hunger`, `Privation`,
+and with the module on `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`; with the migration module on, the journey of an agent
+on one (`spec-migration.md` 13). Bounded by the
 configuration for the aggregates.
 
 14.7. **Cost with no observer.** The strategy calls, the plan and the view use
@@ -1499,7 +1590,7 @@ fixed order with no maps:
 
 - for each agent, in agent ID order: `ID`, the ledger account reference, `Role`,
   `Weight`, `External`, `Mortal`, the strategy reference (its registered name), `Unfed`,
-  `Hunger`, `Privation`, `DeathCarry` (hosted here, defined in `spec-population.md` 3.8), and the directive if any (its job request, intents, discards, holds and
+  `Hunger`, `Privation`, `DeathCarry` (hosted here, defined in `spec-population.md` 3.8), `OwnUse` and `OwnUseJobs` (hosted here, defined in `spec-subsistence.md` 5.3, 15), the `Journey` of an agent on a migration journey (destination and arrival tick, hosted here, defined in `spec-migration.md` 14), and the directive if any (its job request, intents, discards, holds and
   `Sticky`);
   (`RoleSince` is the spawner's and is listed in `spec-spawner.md` 14; the want carries of an
   agent are the demand module's and are listed in `spec-demand.md` 12);
@@ -1899,12 +1990,17 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-071 | The agent view MUST carry the working ticks in the agent's window and its effective window, and the default `Work` MUST read the floor from them and from no state of its own. (new) |
 | FR-AGT-072 | For each agent that is free when `Work` would be called, the world MUST determine by a pure function of its welfare record whether the floor `MinWorkShare` changed the share, whatever the strategy, MUST total the households of such agents per region and role, MUST report the total in the `Snapshot`, and MUST emit the `Warn` "work floor binding" of `spec-welfare-and-wages.md` 11.3 per region and role only, never per agent. (new, N-065) |
 | FR-AGT-073 | The cost anchor passed to the view and to the intents MUST be computed by the world once per tick before `Work` is called, and the default strategy MUST pass it through unchanged and MUST NOT compute a cost. (new) |
-| FR-AGT-074 | A job request for a recipe not on the role's list MUST be refused before any other check of production, and an intent for a commodity unknown to the configuration MUST be rejected as `unknown_commodity` and not as `not_tradable`. (new, FR-PRO-048, `spec-clearing.md` 3.2) |
+| FR-AGT-074 | A job request for a recipe not on the role's list or its effective own-use list MUST be refused before any other check of production, and an intent for a commodity unknown to the configuration MUST be rejected as `unknown_commodity` and not as `not_tradable`. (new, FR-PRO-048, `spec-clearing.md` 3.2) |
 | FR-AGT-075 | In each consumption phase the world MUST set `Privation` to `Privation + 1` if `Unfed` is above 0 and to `max(0, Privation - 1)` otherwise, after setting `Hunger`, MUST do so in the world and not in a strategy, MUST leave it unchanged by a weight change or a role change, and `Hunger` MUST NOT exceed `Privation`. (new, `spec-spawner.md` 5.1) |
 | FR-AGT-076 | With the demand module on, the want units funded by `spec-demand.md` 4.5 MUST join the agent's bid for the commodity as a fourth part `T4`, MUST add to `Keep` and `Target`, MUST be funded only from the cap that tier 3 leaves, and with the module off the bid MUST be exactly as without it. (new, `spec-demand.md` FR-DEM-001, 016, 019) |
 | FR-AGT-077 | `AgentBankrupted` MUST be the only event of a full removal, carrying `Weight` at removal, `Cause` (`insolvent`, `starved`, `consumer` or `population`), the money and the goods listed passed to the estate; a weight change that leaves households and a role change MUST NOT emit it. (new, `spec-spawner.md` 13.1.1) |
 | FR-AGT-078 | An agent MUST carry a `DeathCarry` in `[0, 10 000 * TicksPerYear)`, started at `offset(ID)` of `spec-population.md` 3.8.3 without a draw, unchanged by a weight or role change, saved in the checkpoint in agent ID order. (new, `spec-population.md` FR-POP-010, 024, 035) |
-| FR-AGT-079 | The world MUST execute a `TradePlan` in the order discards, shipments (in plan order), then intents, MUST NOT call `Work` or `Trade` for an agent that is away, and MUST pass no view to it; with the transport module off a shipment request MUST be refused `unknown_mode`. The default strategy MUST append no shipment. (new, `spec-transport.md` 5.3, 5.4) |
+| FR-AGT-079 | The world MUST execute a `TradePlan` in the order discards, shipments (in plan order), then intents, MUST NOT call `Work` or `Trade` for an agent that is away or on a migration journey, and MUST pass no view to it; with the transport module off a shipment request MUST be refused `unknown_mode`. The default strategy MUST append no shipment. (new, `spec-transport.md` 5.3, 5.4; `spec-migration.md` 8.3) |
+| FR-AGT-080 | With the subsistence module on, the default `Work` MUST, for an agent in the own-use mode, set the work share to 10 000 and request the own-use recipe by 7.1.9 (the greatest coverage of the short covered commodities, ties to the lower recipe ID; the retry of `RetryJobs`; blocked when nothing is runnable), MUST NOT apply the production halt to an own-use recipe, and MUST NOT choose an own-use recipe outside the mode; a role with an empty `Recipes` list and an empty effective own-use list MUST request nothing. (new, `spec-subsistence.md` FR-SUB-019 to 025) |
+| FR-AGT-081 | The view MUST carry `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` and a mark on each own-use recipe with the subsistence module on, and the group `Merchant` only for an agent whose role has a merchant block, and `Outbound` with the transport module on. (new, `spec-subsistence.md` FR-SUB-018, `spec-merchants.md` 4.1) |
+| FR-AGT-082 | `TradePlan` MUST carry `Offers`, `Takes` and `Notes` beside `Intents`, `Discards` and `Shipments`; the default strategy MUST append no offer and no take and leave `Notes` zero; offers and takes MUST be admitted and matched in the contract round after the last agent's plan and not by `Clearing`. (new, `spec-merchants.md` 9.2, 9.4) |
+| FR-AGT-083 | A strategy registered as `"merchant"` MUST be provided by `strategy.Merchant` in the package `strategy/`, registered by `strategy.Options()`; `NewWorld` MUST reject the name with `ErrUnknownStrategy` when it is not registered. (new, `spec-merchants.md` 3.1) |
+| FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |
 
 ### Non-functional
 
@@ -2008,6 +2104,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Reason constants (`not_tradable`, `not_on_role`, `over_budget`, `rest`, `halted`) and the log keys `households` and `unfed` | `internal/logkeys` |
 | The ledger reasons `consumption`, `disposal` and `initial` (money and goods), the query `Expiring` (5.3.3), and `WearItems` (5.4.3) | `internal/ledger` registry and operations (`spec-ledger.md` 7.2, 5.3.3, 5.4.3) |
 | The strategy table and registration | root package, `world.go` |
+| The merchant strategy and its registration `strategy.Options()` | `strategy/merchant.go`, `strategy/options.go` (the package is created when the first code lands; `spec-merchants.md` 3.1.2) |
+| The pure rules of the merchant (margin, fee share, lot, matching, settlement) | `internal/merchant` (stdlib only; `spec-merchants.md` 23) |
+| The own-use flag step, `Cov`, the ramp | `internal/ownuse` (stdlib only; `spec-subsistence.md` 22) |
+| The Weyl offset of the agent ID shared by POP, MIG and MER (`spec-population.md` 3.8.3) | `internal/ordering`, one helper (N-019) |
 
 ```go
 // internal/household: stdlib only, no root types. A sketch, not final.

@@ -145,8 +145,12 @@ output (`ErrRecipeNoOutput`, `spec-config.md` 7.3).
 A role lists the recipes its agents may start (`Role.Recipes`, a list of recipe IDs,
 sorted; the field is owned by `spec-agents.md` 3.3, which also says that an empty
 list is legal). A role with an empty list has no recipes (a trader, a carrier). An
-agent starts only a recipe on its role's list (FR-PRO-008); a request for any other
-is refused with `not_on_role` (4.2). A trainee also runs the trainee-eligible recipes of its trainer's
+agent starts only a recipe on its role's list or on the role's effective own-use list
+(`spec-subsistence.md` 3.3; FR-PRO-008); a request for any other
+is refused with `not_on_role` (4.2). An own-use recipe is an ordinary recipe named on that
+list (data, no flag on the recipe): it has no inputs and no `Requires`, and it is `Sited`
+(`spec-subsistence.md` 3.4; a sited recipe runs only where the yield table lists it, 6.2).
+It is not on `Role.Recipes`, and it sets no cost anchor (9.3). A trainee also runs the trainee-eligible recipes of its trainer's
 role, for its trainer (section 8). A tool-less variant and a tool variant of the
 same work are two recipes, and a role lists both; which to start is the strategy's
 choice (4.1). This is how bazaarBot's "with tools yields 4, without yields 2"
@@ -179,7 +183,7 @@ For an agent (the **executor**) of weight `w`, a recipe starts `k` executions, w
 - for each `Draws` entry, the executions granted by the ration of `spec-resources.md` 5.3 (6.5).
 
 Before any of this, the request is checked against the role: a recipe that is not on
-the agent's role list (or, for a trainee, on its trainer's) is refused with the
+the agent's role list or its effective own-use list (or, for a trainee, on its trainer's) is refused with the
 reason `not_on_role`, which is the world's check on a strategy
 (`spec-agents.md` 6.5.1) and starts nothing. If `k` is 0 nothing is consumed, and
 the reason is the first of `zero_yield` (the yield factor is 0, section 6),
@@ -320,7 +324,7 @@ Nothing in the job is a ledger holding, so ending a job early moves no goods.
 |-------|-------------------------|---------------------|
 | The executor goes bankrupt or dies | The job is **abandoned**: no output is created. The estate takes the agent's goods as usual (`spec-estates.md` 2.1). | `agent_removed` |
 | The executor changes role | Abandoned. Production offers no way to carry a job across roles | `role_changed` |
-| The executor's account changes region (`spec-regions.md` 6) | Proposed: abandoned, since the sited recipe and the yield of the new region differ. In version 1 an account changes region only at arrival of a self-carried trip, which cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise; MIG decides whether a migrant's job is abandoned and uses this reason | `region_changed` (proposed) |
+| The executor's account changes region (`spec-regions.md` 6) | Abandoned, since the sited recipe and the yield of the new region differ. A self-carried trip cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise for a traveller; it does for a migrant: the migration module abandons the job in progress at the departure of the journey, with this reason, before the account changes region at the arrival (`spec-migration.md` 8.2). An own-use job (`spec-subsistence.md` 5.8) is abandoned the same way | `region_changed` |
 | The principal of a trainee's job leaves (the trainer dies or the traineeship ends) | Abandoned | `principal_left` |
 | The executor's weight falls from `w` to `w'` | Not abandoned. `Executions` becomes `min(k, w')` and each pending quantity is multiplied by the new `Executions` over the old, rounded down; the loss is not a ledger flow because the goods were never created | none (a `RecipeExecuted` shows the smaller output) |
 | The executor's weight rises | The job is unchanged; new households did not start it | none |
@@ -697,11 +701,16 @@ first working tick is observed.
 
 The wage is the region's, not the role's: a skilled recipe is costed at the common
 wage, with the skill premium left to the tool wear and the market (open question 10).
+The own-use receipts and ticks of the subsistence module are left out of it
+(`spec-welfare-and-wages.md` 4.3, `spec-subsistence.md` 7.3): the wage is the return to market
+labour, so a region where households subsist does not pull the anchor toward 0.
 
 **The anchor.** The cost anchor of a commodity in a region is the smallest
 `unit_cost` over the recipes that make it and that can run in the region this tick
 (`E` above 0 and some agent of the region has the recipe on its role's list),
-ignoring those whose cost is 0. It is 0 if there is none. Ties are impossible (a
+ignoring those whose cost is 0. A recipe that is only on an own-use list never sets an
+anchor (`spec-subsistence.md` 3.6): the cost of a household's own labour is not what a
+seller's price is anchored to. It is 0 if there is none. Ties are impossible (a
 number). The root computes the anchor of every (region, commodity) **once per tick**,
 before orders, from the prices published by the previous clearing
 (`spec-clearing.md` 5.4) and the regional wage above, into scratch held by the
@@ -812,7 +821,7 @@ A warning never fails validation (`spec-config.md` 7.2). Each has a rule name an
 
 | Warning | Condition |
 |---------|-----------|
-| `unused_recipe` | no role lists the recipe and it is not trainee-eligible |
+| `unused_recipe` | no role lists the recipe, it is not trainee-eligible and it is on no role's effective own-use list (`spec-subsistence.md` 3.6) |
 | `unrunnable_recipe` | a `Sited` recipe with no profile that has a positive factor in any region, or a recipe whose every profile entry is 0, or a recipe whose every draw exceeds the effective capacity of its endowment in every region where its site factor is positive (`spec-resources.md` 13.3, `draw_impossible`) |
 | `durable_not_required` | a durable that no recipe requires (FR-GDS-023) |
 | `source_unbounded` | a source (no inputs) with no `Draws` and not `Sited`: limited by labour only (3.1.2); informational |
@@ -1144,7 +1153,7 @@ parentheses. This spec owns the full field lists and fixes them:
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
 | `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity), `EffectiveYield` in basis points |
-| `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`) |
+| `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
 They carry no map, no pointer, and only identifiers and fixed-point values, and
 they are emitted after the transition (observability-and-logging.md 4.1, 4.4). No
@@ -1256,7 +1265,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-005 | `Duration` MUST be an integer from 1 to `MaxRecipeTicks`, default 1, and changing the calendar MUST NOT rescale it. |
 | FR-PRO-006 | A `Requires` entry MUST name a commodity with `Durability` above 0 (`ErrToolNotDurable`) and a `WearPerUse` from 1 to its `Durability`, with at most `MaxRequires` entries and no commodity twice. |
 | FR-PRO-007 | A recipe with `Draws` MUST be rejected with `ErrModuleDependency` while the resources module is off, and each `Draws` entry MUST be at most `MaxDraws`. |
-| FR-PRO-008 | An agent MUST start only a recipe on its role's list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`. |
+| FR-PRO-008 | An agent MUST start only a recipe on its role's list or on the role's effective own-use list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`. |
 | FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`. |
 | FR-PRO-010 | The start of a job MUST be one all-or-nothing ledger `Transform` of `k` times each input to the `recipe_input` boundary, and a refused transform MUST leave the ledger unchanged and the job unstarted. |
 | FR-PRO-011 | At the start of a job each of the `k` executions MUST wear a distinct item of each required tool by `WearPerUse`, most worn first, destroying an item whose durability reaches 0 with the reason `wear`, and wear MUST NOT be applied again for the rest of the job. |
@@ -1295,8 +1304,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-044 | A recipe with a yield below 10 000 for a job MUST NOT create or destroy goods outside the `recipe_input`, `recipe_output`, `disposal` and `wear` flows. |
 | FR-PRO-045 | Goods MUST be conserved except by those flows after every tick of a run that contains multi-tick jobs and abandoned jobs, checked by audit. |
 | FR-PRO-046 | The two example packs of section 12, completed with the elided commodities and with their sources (`gather_seed`, `salvage`), MUST load, validate, pass the viability checks V1 to V4 of `spec-viability.md` (V1 included: a cycle with no source outside it is rejected, `unproducible_in_realm`; `lambda*` of at least 1 with every household working every tick) and run for a stated number of ticks with the invariants of testing.md 6.3 holding, with no Go code specific to either; that the run reaches a stable state is the claim of `spec-stylised-facts.md`, not of this requirement. |
-| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the sum over the region's agents of income minus relief over their windows, divided by the sum of their working household-ticks (`spec-welfare-and-wages.md` 4.3), as it stood at the end of the previous tick, and MUST be 0 when there is no working household-tick or the pooled figure is not positive. |
-| FR-PRO-048 | A request for a job MUST be checked against the role's recipe list before any other check, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
+| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the sum over the region's agents of income minus relief over their windows, divided by the sum of their working household-ticks (`spec-welfare-and-wages.md` 4.3; own-use receipts and ticks excluded), as it stood at the end of the previous tick, and MUST be 0 when there is no working household-tick or the pooled figure is not positive. |
+| FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
+| FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
+| FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
 | FR-PRO-049 | In a region whose wage is 0, the cost anchor of every commodity MUST be 0, so that only the reference band applies to beliefs there. |
 
 ### Non-functional
