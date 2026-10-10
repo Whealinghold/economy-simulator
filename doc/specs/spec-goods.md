@@ -259,9 +259,7 @@ other commodities. This is what `spec-config.md` 7.5 calls *sourced*. A raw
 commodity is gathered, harvested or imported: its source is a recipe with no
 inputs, a regional endowment (`spec-resources.md`), a faucet or an import
 (`spec-external-sector.md`). Marking a commodity raw is what lets a chain
-without a source for it validate; the specs that supply real sources add a check
-that a raw commodity has one (open question 5). Until then the marker stands
-alone. A commodity may be raw and also made by a recipe.
+without a source for it validate; the real sources now exist and the check is the warning `raw_without_source` of `spec-viability.md` 4.2.1: a raw commodity is really sourced by a recipe with no inputs, by a `Sited` recipe whose endowment can start at least once (`spec-resources.md` 9) or by an import line with a sell side (`spec-external-sector.md` 10.1); the warnings `raw_source_exhaustible` and `import_only_source` say when the only source is finite or foreign. A commodity may be raw and also made by a recipe. A commodity may be raw and also made by a recipe.
 
 ### 6.3 The reference price
 
@@ -444,7 +442,7 @@ Original entries:
    (`spec-skill-barriers.md` 2.7), not by an attribute here. If a case appears
    where a good must be forbidden from trade by rule, `spec-production.md` 7.4
    says to add `Tradable` here and a reject reason to `spec-clearing.md` 3.2.
-5. **A source for a raw good.** Check that a commodity marked `Raw` has a real
+5. **A source for a raw good.** (Answered for endowments and imports, 2026-10-10: `spec-resources.md` 9 and `spec-external-sector.md` 10.1; the check is `raw_without_source` of `spec-viability.md` 4.2.1, satisfied by either source; faucets of money are not goods.) Original text: Check that a commodity marked `Raw` has a real
    source once resources, the external sector or faucets exist, so the marker
    cannot hide a missing one (6.2).
 6. **A commodity that is both a tool and a consumable.** Allowed (5.5). The ledger

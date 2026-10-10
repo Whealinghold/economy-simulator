@@ -92,7 +92,8 @@ give the rule.
 3.1.1. The **money supply** `M` is the total of money over the non-boundary accounts:
 the households (Agent accounts), the public sector (Estate accounts, that is the pools)
 and the contract sector (Escrow, `spec-ledger.md` 9.3). Transit accounts hold goods only.
-Write `M_h`, `M_p` and `M_c` for the three. `M` is a measure: nothing in the engine reads
+Write `M_h`, `M_p` and `M_c` for the three. The Outside accounts of the external module are a fourth sector that is zero at every tick boundary and is not part of `M` (`spec-external-sector.md` 4.2.3).
+ `M` is a measure: nothing in the engine reads
 it (position 5).
 
 3.1.2. **The identity.** By the zero total of the ledger (`spec-ledger.md` 9.1 item 1),
@@ -128,7 +129,8 @@ The Snapshot carries them (13.4); the names are OBS's.
 | `initial` | faucet | `spec-agents.md` 3.5, `spec-viability.md` 8.3 | construction; an external agent added in a run |
 | one reason per grant | faucet | this spec | each tick the flow is active (5) |
 | one reason per levy | sink | this spec | each tick the flow is active (5) |
-| later specs | | EXT (imports and exports), FIS (taxes), CRD (loans and interest), RSK (`loss`) | not before they exist |
+| the external module | faucets and sinks | `spec-external-sector.md` 8.1: `outside_budget` (faucet), `outside_unspent`, `outside_receipts` (sinks) for money | each tick a counterparty trades |
+| later specs | | FIS (taxes), CRD (loans and interest), RSK (`loss`) | not before they exist |
 
 The internal money reasons (`trade`, `estate_money`, `start_money`, `relief`, `split`,
 `merge`, `births`, `starvation`, the escrow reasons) move money between non-boundary
@@ -429,7 +431,7 @@ due. The carry is the exact 128-bit remainder in every case.
 6.4.2. A flow's `Total` and the boundary balance of its reason cannot overflow:
 the effective limit is at most `MaxFlowTotal = MaxMoney / MaxMoneyFlows` (11.2), so all
 flows together create at most `MaxMoney`, and with `initial` (at most `MaxMoney` at
-construction, `spec-config.md` 4.2) the money supply stays below `2 * MaxMoney`,
+construction, `spec-config.md` 4.2) the money supply stays below `2 * MaxMoney`, and below `3 * MaxMoney` with the outside (the list value of the buy sides of the external module is at most `MaxMoney`, `spec-external-sector.md` 13.2),
 about `2 * 10^18`, inside `int64`.
 
 ### 6.5 Determinism
@@ -654,9 +656,8 @@ conservation (the outside world, an unseen source of money, a drain of money out
 be a Boundary account** in the ledger (`spec-ledger.md` 3.1), never an ordinary account
 that is topped up quietly. A Boundary account may go negative and has a region only
 through the flows attributed to it (`spec-ledger.md` 3.5). This keeps the identity of 3.1.2
-true and every faucet and sink a named reason. EXT's "external account" is therefore
-either a Boundary account that never reserves, or an ordinary pass-through account funded
-and swept by the flows of this spec (10.2). This is FR-MON-043; the audit checks the identity it protects (FR-MON-026).
+true and every faucet and sink a named reason. EXT's counterparty is therefore an ordinary pass-through account
+of its own kind, topped up from and swept to Boundary accounts under its own reasons (`spec-external-sector.md` 4.1, 8.1). This is FR-MON-043; the audit checks the identity it protects (FR-MON-026).
 
 ### 10.2 The top-up as the primitive for a pass-through counterparty
 
@@ -668,9 +669,7 @@ basis points per tick with `Exempt = Level`** that sweeps everything above `Leve
 next tick's start. The first is a named faucet and the second a named sink, so an outside
 buyer's purchases show as faucet money in `BoundaryFlow`, the proceeds of an outside seller
 as swept sink money, and their balance never exceeds `Level` between ticks. A level of `L`
-means the counterparty can spend at most `L` in a tick. The account class itself (a
-pseudo-agent per region, like the estate) and the target kind `"external"` are EXT's; this
-spec reserves the name and defines no behaviour (open question 1). Example: a counterparty
+means the counterparty can spend at most `L` in a tick. EXT chose its own account kind (Outside) and its own six reasons instead of these shapes (`spec-external-sector.md` 4.1); the shapes of this section remain available to a pack for a pass-through class of its own, and the target kind `"external"` is released and defines nothing (open question 1). Example: a counterparty
 at `Level` 5 000 whose balance is 3 800 after a tick is topped up by 1 200; at 6 300 the
 sweep collects 1 300. Both amounts are exact (the top-up has no carry; the sweep's due is
 `base * 10 000 / 10 000`).
@@ -1211,10 +1210,7 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 
 1. **Conversion of a commodity into money (3.4 B), and the external account.** A fixed-price
    buyer is EXT's. It needs a bid whose cash is a boundary, which `spec-clearing.md` 3
-   cannot admit (a boundary cannot reserve). *Next step:* EXT decides between a boundary-
-   backed admission in CLR and the pass-through account of 10.2; MON's top-up and sweep
-   are written to serve the second. The target kind `"external"` is reserved and defines
-   nothing.
+   cannot admit (a boundary cannot reserve). *Next step:* **Answered by `spec-external-sector.md` 4.1:** a pass-through account of the kind Outside with six built-in reasons, topped up before admission and swept to zero after the markets clear; `spec-clearing.md` changes by one wording only; a boundary-backed admission was rejected. MON's top-up and sweep shapes were not used as the mechanism (a flow tops up to a level in phase 1 and sweeps in the next phase 1). The target kind `"external"` is released and defines nothing.
 2. **A money-yielding recipe (3.4 A).** Rejected as a configured wage. *Next step:*
    reopen only if the fixed-price buyer of EXT proves unable to express money from extraction; then
    PRO and WEL would need an output of money and an income term.

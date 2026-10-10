@@ -88,6 +88,7 @@ reservations. It has a kind, an owner reference and a region. Kinds:
 | Estate | a region's estate: the money pool **and** the goods left behind, awaiting sale; the account of the region's estate pseudo-agent (`spec-estates.md` 2.7) | the world, one per region | no |
 | Escrow | money (or goods) held for a contract (`spec-carriage.md` 2.1) | the contract | no |
 | Transit | goods being carried between regions (`spec-transport.md`) | the transport module, when no free Transit account of the origin region exists; reused, not closed after a shipment (`spec-transport.md` 7.1) | no |
+| Outside | the money and goods of a counterparty of the external sector (`spec-external-sector.md` 4.2): topped up from a boundary before admission and swept to zero after the markets clear; its region is the gate region; never closed, never relocated | the world, one per counterparty at construction, after the estate accounts and before any agent account | no |
 | Boundary | the net amount created or destroyed under one reason | the world, one per reason and kind of thing | **yes** |
 
 A kind can be added by a later spec without changing the ledger's rules: it is
@@ -343,7 +344,7 @@ parameter. The starting registry:
 
 | Reason | Of | Kind | Between | Owner |
 |--------|----|------|---------|-------|
-| `trade` | money, goods | internal | agent to agent | `spec-clearing.md` |
+| `trade` | money, goods | internal | agent, estate or Outside account to agent, estate or Outside account | `spec-clearing.md` |
 | `initial` | money | faucet | boundary to agent or estate | `spec-config.md`, `spec-world.md`; `spec-agents.md` 3.5; `spec-viability.md` 8.3 |
 | `initial` | goods | faucet | boundary to agent or estate; a stated lot key only at construction (5.2.4) | `spec-agents.md` 3.5; `spec-viability.md` 8.4, 8.5.3, 8.6 |
 | `recipe_input` | goods | sink | agent to boundary | `spec-production.md` |
@@ -357,6 +358,12 @@ parameter. The starting registry:
 | `estate_goods` | goods | internal | agent to estate | `spec-estates.md` |
 | `start_money` | money | internal | estate to agent | `spec-estates.md` |
 | `relief` | money | internal | estate to agent | `spec-estates.md` |
+| `outside_budget` | money | faucet | boundary to an Outside account (a buyer counterparty) | `spec-external-sector.md` 8.1 |
+| `outside_unspent` | money | sink | Outside account (buyer) to boundary | `spec-external-sector.md` 8.1 |
+| `outside_receipts` | money | sink | Outside account (seller) to boundary | `spec-external-sector.md` 8.1 |
+| `outside_offer` | goods | faucet | boundary to an Outside account (a seller counterparty); born in the tick, at full durability | `spec-external-sector.md` 8.1 |
+| `outside_unsold` | goods | sink | Outside account (seller) to boundary | `spec-external-sector.md` 8.1 |
+| `outside_purchases` | goods | sink | Outside account (buyer) to boundary | `spec-external-sector.md` 8.1 |
 | `escrow_in`, `escrow_out`, `escrow_refund` | money | internal | agent to escrow, escrow to carrier, escrow to agent | `spec-carriage.md` |
 | `transit_out`, `transit_in` | goods | internal | agent to transit; transit to agent, or transit to estate (a diverted cargo) | `spec-transport.md` 7.2 |
 | `haul_use` | goods | sink | agent to boundary: the redemption of haul units at dispatch | `spec-transport.md` 7.2 |
@@ -367,7 +374,7 @@ parameter. The starting registry:
 | `deaths` | money, goods | internal | agent to estate | `spec-population.md` 4.7 (a partial reduction by the schedule; an emptied agent is a removal with `estate_money` and `estate_goods`) |
 
 Later specs add rows: money creation and destruction by configured flows (`spec-money-supply.md`: the rows are declared by the configuration, 4.5, 10.3),
-taxes (`spec-fiscal.md`), imports and exports (`spec-external-sector.md`), loans
+taxes (`spec-fiscal.md`), imports and exports (`spec-external-sector.md` 8.1: the six `outside_*` reasons, declared when the external module is on), loans
 (`spec-credit.md`). The names are the strings used in events and logs, and are the
 values of the `reason` attribute (observability-and-logging.md 3.3.2).
 
@@ -502,7 +509,7 @@ delta(households) + delta(public) + delta(contract) = faucets - sinks
 and the same for each commodity. This is the stock-flow consistency check: no
 sector's gain exists without another's loss or a named boundary flow. It is a
 test, run every tick over the reference chain, over a range of seeds
-(testing.md 6.2).
+(testing.md 6.2). With the external module on, the Outside accounts of its counterparties form a fourth non-boundary sector, the outside sector, whose money and goods are zero at every tick boundary (`spec-external-sector.md` 4.2.3, 8.4); the identity then holds with that sector at zero and the six `outside_*` reasons among the faucets and sinks.
 
 ## 10. Claims (room for credit)
 
@@ -572,6 +579,8 @@ ways, both on the world:
   (9.1);
 - the option `WithAudit()` runs it at the end of every `Step`, after the tick's
   events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1.
+
+With the external module on the audit also checks that every counterparty account is empty, that each of the six `outside_*` boundary balances has the sign of its kind, and that for each commodity the boundary balance of `outside_purchases` equals the sum of the units traded on its buy sides and `outside_offer` less `outside_unsold` equals the sum of the units traded on its sell sides (`spec-external-sector.md` 8.5, FR-EXT-050). With the resources module on it SHOULD also check the endowment identity of `spec-resources.md` 6.4 (FR-RES-025); an endowment is in no account and the ledger is unchanged by it.
 
 Audit reads and never changes anything, so it affects no result, and the option is
 not part of the effective configuration or its hash (`spec-config.md` 8.1). It is
@@ -647,6 +656,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared each tick, not saved; a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
 | FR-LED-055 | The registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary, `transit_in` MUST also be accepted from a Transit account to an Estate account, `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account, and `births` as an internal transfer of money from an estate to an agent account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
 | FR-LED-056 | With a money-supply module on, the audit MUST also check, for each flow, that its total equals the absolute boundary balance of its reason with the right sign (`spec-money-supply.md` FR-MON-026, FR-MON-027). |
+| FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate and Outside accounts (`spec-external-sector.md` 8.1, FR-EXT-017). |
+| FR-LED-058 | An Outside account MUST be a non-boundary account of the gate region that may not go negative, MUST be created at construction after the estate accounts and before any agent account, MUST NOT be closed or relocated, and MUST hold no money and no goods at any tick boundary (`spec-external-sector.md` 4.2.3, FR-EXT-012). |
+| FR-LED-059 | With the external module on, the audit MUST also check the conditions of `spec-external-sector.md` 8.5 and report the node and commodity of the first that fails (FR-EXT-050). |
 
 ### Non-functional
 

@@ -126,7 +126,7 @@ owned elsewhere is not restated: its meaning, default and bound are there.
 | `CapitalReturn` | the return a tool or training must beat to attract an entrant | `spec-skill-barriers.md` 2.5 |
 | `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | the estate's markdown, release rate and relief threshold | `spec-estates.md` 3 |
 | reference-price overrides | `RegionPrices` rows for the region (section 5) | REG (values); the commodity's default is `spec-goods.md` 6.3 |
-| yield profiles | `Yields` rows for the region | `spec-production.md` 6 (values move to `spec-resources.md`) |
+| yield profiles | `Yields` rows for the region | `spec-production.md` 6 (format); the values are `spec-resources.md` 7 |
 | taste multipliers | `Modules.Demand.RegionTastes` rows for the region | `spec-demand.md` 3.2 |
 | groups | `Groups` rows for the region: the households of each role | `spec-scale.md` 3 |
 | warm start | `WarmStart` rows for the region | `spec-viability.md` 8 |
@@ -194,9 +194,7 @@ reference price (`spec-clearing.md` 5.4) and its price age grows. Its estate exi
 
 3.5.2. `spec-scale.md` 8 calls a distant region modelled only by supply and demand
 functions, with no agents at all, the outside world, and gives it to
-`spec-external-sector.md`. This spec makes it a node and no more: how such a node is
-fed supply and demand, and whether the configuration marks it, are EXT's. Until EXT
-exists, a region with no group draws the warning `region_without_agents` (9.2),
+`spec-external-sector.md`. This spec makes it a node and no more: the external module marks such a node by a row of `Modules.External` and feeds it supply and demand through counterparties in the gate regions (`spec-external-sector.md` 3.1, 4); an outside node has no market, no group and no relocation into it (6.1.3). Any other region with no group draws the warning `region_without_agents` (9.2),
 which says that nothing will happen there. A region that loses its agents at run time
 draws no warning from this spec; the role-extinct and collapse warnings are SPN's and
 POP's.
@@ -499,13 +497,13 @@ list, and none may be called back into the world during a tick (architecture.md
 | Spec | Reads | Must not assume |
 |------|-------|-----------------|
 | MIG | `Out`, `Within`, `Distance` to weigh a destination; `Component` to skip unreachable ones | symmetric distances; that every region is reachable |
-| INF | `Distance`, `Within`; `Path` if a rumour passes region by region. The delay of a rumour is INF's function of the distance | that a distance is a number of ticks |
+| INF | `Distance(source, reader)` only, for the lag of a rumour (`spec-information.md` 5.2); not `Within` or `Path`: news does not relay | that a distance is a number of ticks |
 | TRN | `Edge`, `EdgeAt` for the direct route of a shipment (the effective length and `Closed`); `NextHop`, `Path` for a journey of several routes; `EdgeID` as a key. Travel time, cost and capacity are TRN's, derived from the effective length and a mode | that a shortest path is a direct edge; that a closed edge can be used |
 | CAR, MER | `Out` for the set of directed routes; `EdgeID` as the key of a route (4.7) | that a route has a reverse |
 | RES | `Len`, `Name`: the set of regions, so that an endowment is keyed by `RegionID` | any distance |
 | VIA | `Len`, `Name`; `Out` as the candidate lanes of the solver's hook (`spec-viability.md` 9.4); `Component` (4.5.3) | that all pairs are linked |
 | STY, IND | `Distance` for the price-convergence bands; region order for output | |
-| EXT | `Len`; which regions have no agents (3.5) | |
+| EXT | `Len`; `Edge` for the direct edges that make a region a gate of an outside node (`spec-external-sector.md` 3.2); the edge status of 7 as an embargo | that a gate has an edge in both directions |
 | INT | `SetEdgeStatuses` (7) for the closed-road shock | |
 | POL, SET (later) | `Len`, `RegionID`: a partition or a size class is a table keyed by region | that REG reads either |
 
@@ -550,6 +548,9 @@ table of the subject's owner, combined with the default in one of three ways:**
 | estate parameters | `Regions[]` | region | `spec-estates.md` 3 | replace |
 | yield | `Yields` | region, recipe | `spec-production.md` 6.1 | scale |
 | taste | `Modules.Demand.RegionTastes` | region, want | `spec-demand.md` 3.2 | scale |
+| endowments | `Modules.Resources.Endowments` | region, resource | `spec-resources.md` 3.3 | replace (`Capacity`, `Initial`), scale (`RegenScaleBP`) |
+| outside lines | `Modules.External.Nodes[].Lines` | node region, commodity | `spec-external-sector.md` 3.3 | replace |
+| outside gate scale | `Modules.External.Nodes[].Gates` | node region, gate region | `spec-external-sector.md` 3.2.4 | scale |
 
 `Groups` (`spec-scale.md` 3) and `WarmStart` (`spec-viability.md` 8) are also keyed by
 region but are populations and starting values, not overrides of a default.
@@ -677,6 +678,7 @@ relocation changes nothing (`spec-ledger.md` 2.6) and returns the error shown:
 | 3 | `closed_account` | the agent's account is closed | `ErrClosedAccount` (`spec-ledger.md` 4.2) |
 | 4 | `not_relocatable` | the account is not of kind Agent: an estate, an escrow, a transit or a boundary account | `ErrNotRelocatable` |
 | 5 | `same_region` | the account is already in `to` | `ErrSameRegion` |
+| 5a | `outside_node` | `to` is an outside node of the external module (`spec-external-sector.md` 3.1) | `ErrOutsideNode` |
 | 6 | `open_reservation` | the account has a reservation of money or goods | `ErrOpenReservation` |
 | 7 | `region_bound` | an obligation that a later spec registered is tied to the account's region (6.5) | `ErrRegionBound`, which names the obligation |
 
@@ -917,6 +919,7 @@ path, for example `edges[3].distance` or `region_prices[1].price`. The framework
 | `ErrUnknownCommodity` | an override naming an undefined commodity |
 | `ErrSelfEdge` (new) | an edge whose `From` equals its `To` |
 | `ErrDuplicateID` | two edges with the same `From` and `To`; two overrides for one region and commodity |
+| `ErrOutsideNode` (new, with the external module) | a relocation into an outside node (6.1.3) |
 | `ErrOutOfBounds` | a `Distance` below 1 or above `MaxDistance`; an override `Price` outside `[1, MaxPrice]`; a label above `MaxLabelBytes` |
 
 Rules of other specs that now read the effective reference price are unchanged in
@@ -942,7 +945,7 @@ by the configuration.
 | `region_isolated` | at least two regions, and a region with no edge in or out (4.5.2) |
 | `graph_not_strongly_connected` | at least two regions and more than one component; carries `components` |
 | `edge_not_shortest` | an edge longer than the shortest path between its ends through other edges (4.1.5); one warning per such edge |
-| `region_without_agents` | a region with no group (3.5.2) |
+| `region_without_agents` | a region with no group (3.5.2), except an outside node of the external module |
 | `override_equals_default` | a reference-price override equal to the commodity's price (5.2.4) |
 
 ## 10. Observability
@@ -1316,6 +1319,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-055 | The bounds `MaxDistance`, `MaxEdges`, `MaxEdgeFactorBP`, `MaxRegionPrices` and `MaxLabelBytes` MUST be constants in `bounds.go` with the values of 4.2 (4.2). |
 | FR-REG-056 | The "world created" line MUST carry `edges` and `components` beside `regions`, each warning of 9.2 MUST be logged once at `Warn` with `rule` and `path` at construction, a relocation MUST be logged at `Debug` only and guarded by `Enabled`, and no `Info` MUST be logged inside the tick (10.2). |
 | FR-REG-057 | The events `AgentRelocated` and `EdgeStatusChanged` MUST be constructed only when an observer was supplied, and a run with and without a logger and observer MUST give equal results (10.1, 10.6). |
+| FR-REG-058 | With the external module on, a relocation whose destination is an outside node MUST be refused with `ErrOutsideNode` after `same_region` and before `open_reservation`, changing nothing, and `region_without_agents` MUST NOT be raised for an outside node (`spec-external-sector.md` 3.1.2, FR-EXT-034, FR-EXT-004). |
 
 ### Non-functional
 
