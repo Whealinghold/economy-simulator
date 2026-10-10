@@ -49,7 +49,6 @@ PR description.
 | BEL | N-042, N-043 |
 | CAL | N-030 |
 | CAP | N-108 |
-| CAR | N-011, N-090, N-100 |
 | CFG | N-016, N-061, N-075, N-093, N-102 |
 | CHK | N-020, N-051 |
 | CLB | N-015 |
@@ -58,7 +57,7 @@ PR description.
 | CRD | N-032, N-046, N-107 |
 | DEM | N-080, N-089 |
 | EMP | N-046 |
-| EST | N-082, N-096, N-117 |
+| EST | N-082, N-096, N-117, N-119 |
 | EVD | N-018 |
 | EXP | N-015 |
 | EXT | N-108, N-112, N-113 |
@@ -69,26 +68,26 @@ PR description.
 | INT | N-022, N-031, N-036, N-051, N-079, N-090, N-091, N-116 |
 | LED | N-021, N-107, N-117 |
 | LND | N-046, N-104, N-108 |
-| MER | N-011, N-046, N-084, N-090, N-100, N-106 |
-| MIG | N-038, N-046, N-090, N-097, N-104, N-105, N-108, N-110 |
+| MER | N-120 |
+| MIG | N-121 |
 | MON | N-096, N-107 |
 | OBS | N-012, N-031, N-035, N-040, N-045, N-065, N-067, N-072, N-081, N-087, N-088, N-094, N-109, N-111, N-115 |
 | PLC | N-025, N-046 |
 | POP | N-096, N-097, N-109 |
-| PRO | N-030, N-031, N-039, N-043, N-090 |
+| PRO | N-030, N-031, N-039, N-043, N-090, N-118 |
 | REF | N-027, N-030, N-089, N-092, N-114 |
 | RSK | N-046 |
 | SAV | N-046 |
 | SCL | N-030 |
 | SKL | N-039, N-071, N-090, N-110 |
-| SPN | N-043, N-089, N-096 |
+| SPN | N-043, N-089, N-096, N-118 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113 |
-| STO | N-011, N-046 |
+| STO | N-011, N-046, N-120 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113 |
-| SUB | N-046, N-104, N-108 |
-| TRN | N-105 |
+| SUB | N-121 |
+| TRN | N-120 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114 |
-| WEL | N-016, N-028, N-081, N-099 |
+| WEL | N-016, N-028, N-081, N-099, N-118, N-119 |
 | WLD | N-009, N-031, N-036, N-046, N-051, N-056, N-074, N-082, N-111, N-117 |
 
 ## Open notes
@@ -123,10 +122,14 @@ PR description.
 - **Update (2026-10-10, INF):** WLD takes from INF: in phase 3 the view of an informed agent is built, with its error draws, immediately before its `Trade`, agents in ID order; `RumoursServed` is emitted after the last plan of phase 3, before phase 4; in phase 5 the price record is appended after the price windows are pushed and before the first `Revise` (`spec-information.md` 7.1).
 - **Update (2026-10-10, EXT):** EXT asks WLD for three positions (`spec-external-sector.md` 5): phase 1, after the money flows and before the directive, the walk draws (one per walking line, ascending node then commodity); phase 3, after the agents' plans and the estates' asks, the counterparties' top-ups and orders in ascending agent ID; phase 4, after every market has cleared and every reservation is settled or released and before outcomes, the sweep of every counterparty account. Agent IDs: the estates first, then the counterparties (ascending node, gate, buy before sell), then the households. Account creation: after the estate accounts, the Outside accounts in agent-ID order; the boundary accounts of the six reasons after those of the declared flows (money reasons first, then goods reasons by commodity).
 - **Update (2026-10-10, wave 3 integration):** the positions asked by RES, INF and EXT, in one list with the earlier ones (no two claim the same slot; where two act in one phase the order is the one listed). Phase 1: the moment and the cost anchors; transport arrivals; relief and starting money; money flows; the outside's walk (EXT); the directive. Phase 2: continuations and completions; the snapshot of every endowment's stock and abundance; `Work` for every free agent; the ration of each endowment that is drawn on; the starts in the rotation order (RES, W2: a two-pass start). Phase 3: for each agent in ID order, the rumours of an informed agent's view are built (INF, with the error draws) immediately before its `Trade`, then its plan is executed; the estates' asks; the counterparties' top-ups and orders in ascending agent ID (EXT); then `RumoursServed`, before phase 4. Phase 4: every market clears; then the sweep of every counterparty account (EXT). Phase 5: price windows are pushed, then the price record is appended (INF), then `Revise`. Phases 6 and 7 as before. Phase 8: ageing and spoilage, flow totals, regeneration of every endowment, the events `EndowmentChanged`, then the optional audit (RES). Construction order: the built-in boundary accounts, the boundary accounts of the declared money flows, those of EXT's six reasons, each region's estate account, the Outside accounts, then the agents. WLD fixes all of it.
+- **Update (2026-10-10, SUB):** SUB assumes in phase 2: continuations and completions, the snapshot of the endowments (RES), then the flag step of SUB for every eligible agent in agent-ID order, then `Work` for every free agent, the ration, the starts; the event `OwnUseChanged` follows the starts, in (RegionID, role) order (`spec-subsistence.md` 5.4, 14.1). SUB draws nothing.
+- **Update (2026-10-10, MIG):** MIG asks WLD for two positions (`spec-migration.md` 10.1): in phase 1, the arrivals of the migration journeys, in ascending agent ID, after the arrivals of the transport module and before relief and starting money; in phase 7, one migration pass for the whole world, after the entry step (the spawner and the population module) of EVERY region has run, with its error draws (6.2.1, 10.2.1). An agent on a journey is passed to neither `Work` nor `Trade` (as an away agent).
+- **Update (2026-10-10, MER):** MER asks: phase 1, after transport's arrivals and before relief and starting money, the settlement of contracts in contract ID order, and the reseed of an arriving traveller's beliefs; phase 3, after the last agent's plan, the contract round, then the events `ContractRound` and `MerchantsPlanned`, then the estates' asks and the counterparties' orders, then `RumoursServed` (`spec-merchants.md` 12.5).
+- **Update (2026-10-10, wave 4 integration, X12):** the positions asked by SUB, MIG and MER, in one list with the earlier ones. Where two specs act at the same point of a phase the order is the one listed; WLD fixes all of it. Phase 1: the moment and the cost anchors; transport arrivals (`ShipmentArrived`) and, at a traveller's arrival, the reseed of its beliefs (MER 12.2); the settlement of delivery contracts whose shipment arrived, in contract ID order, after the `ShipmentArrived` events (MER); the arrivals of migration journeys in ascending agent ID (MIG; MER's settlement and MIG's arrivals claim the same slot after transport's arrivals, and the order here is settlement first, since a party to an open contract cannot be on a journey, `spec-migration.md` 7.2); relief and starting money; money flows; the outside's walk (EXT); the directive. Phase 2: continuations and completions; the snapshot of every endowment's stock and abundance (RES); the flag step of the subsistence module for every eligible agent in agent-ID order (SUB, a pure function, no draw); `Work` for every free agent (an agent that is away or on a journey is skipped); the ration of each endowment that is drawn on; the starts in the rotation order (RES, a two-pass start); then the event `OwnUseChanged` in (RegionID, role) order. Phase 3: for each agent in ID order, the rumours of an informed agent's view are built (INF, with the error draws) immediately before its `Trade`, then its plan is executed; after the last agent's plan the contract round (MER: admission, first-fit matching, formation, with its draws), then `ContractRound` and `MerchantsPlanned` in ascending `RegionID`; the estates' asks; the counterparties' top-ups and orders in ascending agent ID (EXT); then `RumoursServed`, before phase 4. Phase 4: every market clears; then the sweep of every counterparty account (EXT). Phase 5: price windows are pushed, then the price record is appended (INF), then `Revise`. Phase 6 as before. Phase 7: ladder reductions and removals, POP deaths, switches and applies, births last (the entry step of every region), then ONE migration pass for the world with its error draws in ascending agent ID (MIG), taking its counts once at its start, then `MigrationStarted` and `MigrationReviewed`. Phase 8: ageing and spoilage, flow totals, regeneration of every endowment, the events `EndowmentChanged`, then the optional audit (RES). Construction order as in the wave 3 entry.
 
 ### N-011 Transport, storage and carriage
 
-- **Areas:** STO, CAR, MER
+- **Areas:** STO
 - **Raised:** 2026-10-09, `spec-goods.md` section 3.
 - **Note:** A vehicle's and a store's capacity is a pair, a mass capacity and a
   bulk capacity, and a load fits only if both are within it
@@ -140,6 +143,7 @@ PR description.
   to the contract and merchant specs.
 - **Update (2026-10-10, CAR):** `spec-carriage.md` now has Requirements (FR-CAR-001 to 013), restates its open items 5 and 6 with the reason they wait, and records a finding in 4.2 (see N-076).
 - **Update (2026-10-10, TRN):** applied for TRN in `spec-transport.md`. A mode's capacity is a pair per carrying unit and a load fits only if both sums are within it (3.2). Transport does not use `BulkFactor` or the chargeable size: a hired load buys `n = max(ceil(mass / UnitMass), ceil(bulk / UnitBulk))` carrying units by its binding fill, which removes the over-charge of `spec-goods.md` 3.5 for transport and is the per-mode factor the note asked for (3.2.1, 8.3). Goods keep ageing in Transit accounts and a lot spoils whole from them (5.6); cargo lost is the reason `loss`, reserved for RSK (10.1). Still open for STO (the chargeable size for storage), CAR and MER (a bilateral contract and its escrow, `spec-transport.md` 8.4).
+- **Update (2026-10-10, MER):** applied for MER in `spec-merchants.md` 9: contract money is held in an Escrow account by transfers, not in a reservation (9.6); the open items of CAR about the bilateral contract and the merchant's margin are settled there (9, 5.6, 10). Still open for STO (the chargeable size for storage).
 
 ### N-012 Events, metrics and log keys to define
 
@@ -168,6 +172,9 @@ PR description.
 - **Update (2026-10-10, RES):** RES adds the events `EndowmentChanged` and `EndowmentAdjusted`, the log keys `resource`, `stock` and `short`, four proposed metrics (`economysim.endowment.drawn`, `.regenerated`, `.short`, `.stock`) and two new metric attributes `economysim.resource` and `economysim.region` (`spec-resources.md` 14). Whether events carry the string ID or the integer index is OBS's (as for REG).
 - **Update (2026-10-10, INF):** INF adds the event `RumoursServed` (one per reader region per tick with an informed view), the log keys `rumours` and `lag`, and the metric `economysim.information.rumours` with a new attribute `economysim.outcome` (`offered`, `no_path`, `too_old`, `not_yet`) (`spec-information.md` 10).
 - **Update (2026-10-10, EXT):** EXT adds the events `OutsideTraded`, `OutsideEnded` and `OutsideShocked`, the log keys `node`, `value`, `nodes`, `counterparties` and `drift`, and three metrics `economysim.external.units`, `.value` and `.price` with the attribute `economysim.node` (`spec-external-sector.md` 15). Snapshot fields in 15.4 (names are OBS's).
+- **Update (2026-10-10, SUB):** SUB adds the event `OwnUseChanged` (one per region and role per tick, never when all counts are zero), the log key `own_use`, and two proposed metrics (`economysim.household.own_use`, a Gauge, and `economysim.own_use.units`, a Counter) with no new metric attribute (`spec-subsistence.md` 14).
+- **Update (2026-10-10, MIG):** MIG adds the events `MigrationStarted` (per departure) and `MigrationReviewed` (one per region per tick in which any household was pushed or held back, any arrival was held or any journey ended by a removal), three proposed metrics (`economysim.migration.started`, `.limited`, `.on_journey`) and a new metric attribute `economysim.limit` with twelve constants (`spec-migration.md` 13). No new log key. Arrivals are REG's `AgentRelocated` with the cause `migration`.
+- **Update (2026-10-10, MER):** MER adds the events `ContractFormed`, `ContractSettled`, `ContractRound` and `MerchantsPlanned`, the log keys `contract`, `offers`, `takes` and `merchants`, the metrics `economysim.contract.formed`, `.value`, `.escrow` and `economysim.merchant.decisions`, and a new metric attribute `economysim.decision` (`spec-merchants.md` 15). Snapshot: the contracts in flight and the money in escrow (15.4); names are OBS's.
 
 ### N-013 What indicators must not get wrong
 
@@ -200,6 +207,9 @@ PR description.
 - **Update (2026-10-10, round 4 and 5):** new placeholders: every default of `spec-demand.md` 9, `spec-spawner.md` 11 (`EntryShare` 50, `ExitShare` 100, `Renewal` 10 000, `EntryPoolShare`), `spec-reference-chain.md` (every pack quantity, the censuses, seeds and run lengths) and the thresholds of `spec-stability.md` 7 and 11.
 - **Update (2026-10-10, RES):** new placeholders: `HorizonYears` 50, `PlanShareBP` 6 000, `InitialBP` 10 000, the bounds `MaxResources` 256, `MaxEndowment` 10^15, `MaxRegenBP` 100 000, `MaxRegenScaleBP` and `MaxShockBP` 100 000, `MaxHorizonYears` 1 000, the warning thresholds 11 000 bp (`no_comparative_advantage`) and 2 000 bp a tick (`regen_per_tick_high`), every number of the worked examples (16), of the models (17) and of the five-region sizing (18).
 - **Update (2026-10-10, INF):** new placeholders: `RumourErrorBP` 500, `RumourMaxAge` 60, the bounds `MaxInfoSpeed`, `MaxRumourErrorBP`, `MaxRumourAge`, `MaxRumourCells`, `MaxRumoursPerView`, the cost counts of `spec-information.md` 7.8 and every number of its models and examples.
+- **Update (2026-10-10, SUB):** new placeholders: `EnterTicks` 2, `ExitTicks` 3, `RetryJobs` 10, the bounds `MaxOwnUseRecipes` 8, `MaxOwnUseTicks` 1 000 and `MaxRetryJobs` 1 000, every number of the worked examples (16) and of the model (11.2, 17).
+- **Update (2026-10-10, MIG):** new placeholders: the nine defaults of `spec-migration.md` 11, the factor 3 of the warning `migration_flow_window`, and every number of the worked examples (15) and of the models (16).
+- **Update (2026-10-10, MER):** new placeholders: `MaxOpen` 1 000, `LotUnits` 1, `FeeShareSpreadBP` 2 500, `MaxSourceAge` 2, `TimeCostBP` 10 000, `ConsigneeCutBP` 500, `TakeMarginBP` 1 000, the bounds `MaxLotUnits` 64, `MaxContracts` 1 000 000 and `MaxTimeCostBP` 100 000, the warning thresholds of 14.2 and every number of the models and examples.
 
 ### N-016 Keep the parameter registry true
 
@@ -226,6 +236,9 @@ PR description.
 - **Update (2026-10-10, RES):** RES adds the rows of the module, 11 fields of `Resource` and 5 of `Endowment` to the parameter-owner table and changes the owner of the yield rows and of `Draws`; no unnamed parameter was found. The registry test is still to be written.
 - **Update (2026-10-10, INF):** INF adds five rows (`Modules.Information`, `InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`, `Role.Informed`), each with a default or "required", a bound and an owner; no unnamed parameter.
 - **Update (2026-10-10, EXT):** EXT adds its rows to the parameter-owner table; no unnamed parameter. The shock, drift, carry and cumulative totals are runtime state and not rows.
+- **Update (2026-10-10, SUB):** SUB adds rows for the module, its default list, the role rows, the key and list of a row, and three tunables (`spec-subsistence.md` 12); no unnamed parameter was found. The registry test is still to be written.
+- **Update (2026-10-10, MIG):** MIG adds rows for the module, nine tunables, the region-keyed rows and `Role.Fixed` (`spec-migration.md` 11); no unnamed parameter was found. The registry test is still to be written.
+- **Update (2026-10-10, MER):** MER adds rows for `Modules.Merchants`, `MaxOpen` and the nine fields of the block `Role.Merchant` (`spec-merchants.md` 3.2, 13); `MerchantFeeShare` keeps its row. No unnamed parameter was found.
 
 ### N-017 Words and names
 
@@ -245,6 +258,9 @@ PR description.
 - **Update (2026-10-10, RES):** terms fixed: resource (not a commodity), endowment (a resource in a region), stock, capacity, regeneration, shape, refuge, abundance, plan share, ration, sustainable draw. Setting words (land, forest, ore, ice) appear only in the flagged examples of `spec-resources.md` 16 and 18. "Draw" now has a precise meaning.
 - **Update (2026-10-10, INF):** terms fixed: rumour, price record, observation, vintage, lag (of a rumour), information speed, horizon, informed (role), source.
 - **Update (2026-10-10, EXT):** terms fixed: outside, outside node, gate, line, side (of a line), mid, quote, margin, counterparty (buyer, seller), Outside (account kind), outside sector, import, export, balance of trade, list value, drift, shock, availability window, capacity, cap, sweep. Setting words appear only in the flagged examples of `spec-external-sector.md` 18.
+- **Update (2026-10-10, SUB):** terms fixed: subsistence floor (the whole mechanism), own-use recipe, own-use mode (the flag `OwnUse`), covered set, cover (stock in ticks of upkeep), afford, secure ticks, retry (the market test), coverage (`Cov`), `FloorBP`, blocked. The word floor has six uses in the specs (work floor, cost floor, resolution floor, `MinWorkShare`'s floor, the floor of agents, this one): SUB says "subsistence floor" for the mechanism and "own-use" for its parts. Setting words (glean, grain, common, tray) appear only in the flagged examples of `spec-subsistence.md` 16.
+- **Update (2026-10-10, MIG):** terms fixed: migration (this module's moves), migrant (an agent on a journey), journey, earned ratio (the welfare ratio without relief), settled, margin and width (of a move), horizon, estimate (of a destination), pushed (household), outflow cap, pipeline cap, provisioning. "Road" is not used (a journey). Setting words appear only in the flagged examples of `spec-migration.md` 15.
+- **Update (2026-10-10, MER):** terms fixed: merchant, planned trip, lane (of a merchant), candidate, lot, lot cap, cargo set, trade inputs, fee share, bar, cautious revenue, break-even, lane lock, delivery offer, delivery take, payer, deliverer, round (of contracts), delivery contract, settlement. Setting words appear only in the flagged examples of `spec-merchants.md` 19.
 
 ### N-018 Unverified evidence
 
@@ -276,6 +292,10 @@ PR description.
 - **Update (2026-10-10, REG):** at the first code also add `internal/graph/` (the shortest-path algorithms over primitive slices) and `regions.go` to the layout of architecture.md 2.6 and `AGENTS.md`, and the REG terms to the glossary in `doc.go` (`Region` is used by every spec and is not in the vocabulary list of architecture.md 3.2).
 - **Update (2026-10-10, wave 2 integration):** the four new specs name these homes, to add to the layout of architecture.md 2.6 and `AGENTS.md` when each is first needed: `internal/graph` (REG, shortest paths over primitive slices), `internal/moneyflow` (MON), `internal/population` (POP) and `internal/transit` (TRN), each with the root file of its concept and, for TRN, the root types `Mode`, `Shipment` and `ShipmentRequest`. Each also needs its terms in the `doc.go` glossary and its sentinels mapped at the root (N-075). The Python models of the four specs are archived in `doc/specs/models/{reg,mon,pop,trn}/`.
 - **Update (2026-10-10, wave 3 integration):** the three new specs name these homes, to add to the layout of architecture.md 2.6 and `AGENTS.md` when each is first needed: `internal/endowment` (RES: regeneration, abundance, the ration, the key; stdlib only), `internal/curve` (piecewise-linear evaluation, shared with the population schedules), `resources.go` (RES), `internal/rumour` and `information.go` (INF: the lag, the distortion, the ring, over primitive slices) `internal/outside` and `external.go` (EXT: the mid, the walk, the quotes and the caps, over primitive slices; the account kind Outside and the six reasons are rows of `internal/ledger`, `spec-external-sector.md` 23). Each also needs its terms in the `doc.go` glossary and its sentinels mapped at the root (N-075). The Python models of the three specs are archived in `doc/specs/models/{res,inf,ext}/`.
+- **Update (2026-10-10, SUB):** at the first code add `subsistence.go` and `internal/ownuse` (the flag step, `Cov`, the ramp, over primitive slices, standard library only) to the layout of architecture.md 2.6 and `AGENTS.md`, and the SUB terms to the `doc.go` glossary. The Python models are in `doc/specs/models/sub/`.
+- **Update (2026-10-10, MIG):** at the first code add `migration.go` and `internal/migration` (the estimate, the journey time, the margin and its offset, the ranking, the admission against the caps and the partition of outcomes, over primitive slices, standard library only) to the layout of architecture.md 2.6 and `AGENTS.md`, and the MIG terms to the `doc.go` glossary. The Python models are in `doc/specs/models/mig/`.
+- **Update (2026-10-10, MER):** MER names these homes, to add when each is first needed: `strategy/` (it now has a second member, so it is created with the first code: `merchant.go`, `options.go`), `internal/merchant` (the pure rules over primitive slices), `contract.go` (root). The Python models are in `doc/specs/models/mer/`.
+- **Update (2026-10-10, wave 4 integration, X1 and X13):** the homes of the three wave 4 specs in one list: `subsistence.go` and `internal/ownuse` (SUB), `migration.go` and `internal/migration` (MIG), `strategy/` with `Merchant` registered as "merchant", `internal/merchant` and `contract.go` (MER). One shared helper: the Weyl offset of the agent ID, `(id * 2 654 435 769) mod 2^32`, which `spec-population.md` 3.8.3 defines and MIG and MER reuse as a fixed per-agent spread with no creation draw, lives in `internal/ordering` (the package of deterministic ordering helpers) with one test of its evenness; a new per-agent spread reuses it and does not draw at creation. Each spec's terms go to the `doc.go` glossary and its sentinels are mapped at the root (N-075).
 
 ### N-020 What each spec contributes to a checkpoint
 
@@ -296,6 +316,9 @@ PR description.
 - **Update (2026-10-10, RES):** RES contributes per endowment `Stock`, the regeneration `Carry` and `ExhaustedRun`, and the non-default shock scales (`spec-resources.md` 15); effective values, the abundance snapshot, grants and keys are derived.
 - **Update (2026-10-10, INF):** INF saves the price record: per source in ascending order the observations held, oldest first (`spec-information.md` 14). The lag table, sources and rumours are derived; the error needs no state.
 - **Update (2026-10-10, EXT):** EXT saves per line the drift (with a walk) and the shock, per side the carry, the cumulative units and list value and the ended flag; the counterparty accounts are empty at a boundary and are not special state (`spec-external-sector.md` 16).
+- **Update (2026-10-10, SUB):** SUB contributes per agent `OwnUse` and `OwnUseJobs`, and per (region, role) two diagnostic runs for its `Warn`s (`spec-subsistence.md` 15). The welfare ring gains two integers per tick (WEL).
+- **Update (2026-10-10, MIG):** MIG contributes per agent on a journey its destination and arrival tick, and per region two diagnostic runs and a pending count of journeys ended by a removal (`spec-migration.md` 14). `RoleSince` is SPN's state. The welfare ring needs one more field per tick (relief).
+- **Update (2026-10-10, MER):** MER saves the next contract ID and the contracts in flight in ID order; the merchant strategy has no state; the Escrow accounts are the ledger's (`spec-merchants.md` 16).
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -314,6 +337,9 @@ PR description.
 - **Update (2026-10-10, RES):** RES applies its part in `spec-resources.md` 9: a raw commodity is endowment-sourced under a stated predicate (9.2: a source recipe with `Draws` on an endowment that can start at least once), validation takes the union with source recipes and EXT's imports, the warning `raw_source_exhaustible` flags a raw good whose only sources are finite stocks, and `endowment_runway` reports the run-down time. RES adds no faucet, no sink and no ledger reason (6.2.1).
 - **Update (2026-10-10, INF):** INF adds no faucet, no sink and no ledger reason.
 - **Update (2026-10-10, EXT):** applied for EXT in `spec-external-sector.md`. A trade with an external counterparty is the case for built-in reasons (8.1: `outside_budget`, `outside_unspent`, `outside_receipts`, `outside_offer`, `outside_unsold`, `outside_purchases`), and the counterparty's account is a pass-through account of the kind Outside swept to zero each tick (4). The goods side: a `Raw` commodity has three real sources, a recipe with no inputs, a RES-limited sited recipe and an import line; an import line with a sell side makes a commodity sourced for `spec-config.md` 7.5 and satisfies `raw_without_source`; a commodity sourced only so draws `import_only_source` (10.1). Still open for FIS (taxes) and LED (the ledger rows and kind).
+- **Update (2026-10-10, SUB):** SUB adds no faucet, no sink and no ledger reason: the output of an own-use job is created by `recipe_output` (`spec-subsistence.md` 6).
+- **Update (2026-10-10, MIG):** MIG adds no faucet, no sink and no ledger reason: a move is a relocation (no transfer), and the upkeep eaten on the journey is `consumption` (`spec-migration.md` 9.1).
+- **Update (2026-10-10, MER):** MER adds no faucet, no sink and no ledger reason (`spec-merchants.md` 9.6.1).
 
 ### N-022 The player and other external agents
 
@@ -324,6 +350,7 @@ PR description.
   admission and reservation rules as any agent (`spec-clearing.md` 3).
 - **Update (2026-10-10, AGT):** `spec-agents.md` 10. An external agent has weight 1, an `External` flag, and a strategy that is either a non-blocking consumer `Strategy` or the library's `Directed`, which reads a `Directive` left in the agent's mailbox between steps (applied to the next tick, discarded unless `Sticky`, saved in a checkpoint). No action happens inside a step; an "act now" operation is not provided, and INT may add one with its own rules. INT owns `AddAgent` and `Direct`. The spawner must not remove or replace an external agent unless the consumer asks.
 - **Update (2026-10-10, SPN):** an external agent is refused by the world for removal or replacement unless it is `Mortal` (`spec-spawner.md` 9, FR-SPN-010; `spec-agents.md` 10.6).
+- **Update (2026-10-10, MIG):** the default migration module never reviews, moves or draws for an external agent; INT moves one by the guarded `relocate` (`spec-migration.md` 3.3, 10.3).
 
 ### N-025 Do policy actors reuse `Strategy`?
 
@@ -354,6 +381,9 @@ PR description.
 - **Answer (2026-10-10):** this is a standing constraint, not a question. Keep the
   note open so every spec reads it; close it when REF and STY exist.
 - **Update (2026-10-10, RES):** every number of `spec-resources.md` is a placeholder or structural (a finite stock, a flat curve, a full start); the models show agreement with the linearisation, not stability of any default. INF and EXT set no default macro constant; the module has no default nodes.
+- **Update (2026-10-10, SUB):** every number of `spec-subsistence.md` is a placeholder (`EnterTicks` 2, `ExitTicks` 3, `RetryJobs` 10, the bounds 8 and 1 000, the example quantities); the staple model shows structure and sensitivity, not stability of any default.
+- **Update (2026-10-10, MIG):** every number of `spec-migration.md` is a placeholder (`MoveReviewTicks` 30, `MoveBelow` 10 000, `MoveGain` 1 000, `MoveWidth` 5 000, `MoveCooldown` 60, `MoveHorizon` 180, `MoveOutShare` 50, `MoveInShare` 100, the factor 3 of `migration_flow_window`, every number of the examples and of the models); the models show structure and which damper works alone, not the stability of any default.
+- **Update (2026-10-10, MER):** every default of `spec-merchants.md` is a labelled placeholder and the models of `doc/specs/models/mer/` show agreement with the linearised delay condition, not the stability of any default.
 
 ### N-028 Can the target-income rule make a shortage worse?
 
@@ -384,6 +414,7 @@ PR description.
 - **Update (2026-10-10, STB):** run in `spec-stability.md` 6.1 (stylised model, integer rule). The slope of excess demand is `(1 - e) Q/p`, exact to four places; stable only if `e > 1`; `e = 1` (a fixed budget) is neutral. For `e = 0.5` every seed ends pinned: at the price ceiling after a rise, or at the price where all households work the full year after a fall. An inventory buffer and `TargetSpread` 3 000 do not remove it. A work floor (minimum working days, D13) replaces the ceiling by a price set by the floor. The survival-floor reading is unit-elastic too and is not a damper by itself. The model has no income feedback, so it does not show that a real pack is unstable. **AGT (2026-10-10):** a staple's demand elasticity is 0 to 1, never above 1 (`spec-agents.md` 11.6), so the stability condition `e > 1` fails; the default strategy applies the rule with a rest band and a proportional work share for a cohort (7.1.2, 9.3). Leave open until WEL decides D13 (`MinWorkTicks`).
 - **Update (2026-10-10, WEL and STB):** WEL adopted the floor as `MinWorkShare` (`spec-welfare-and-wages.md` 5.3, default 4 000 bp). `spec-stability.md` 6.1 gives the upper outcome as `P0 * (D0 / DMIN)^(1/e)`: about 1.06 times the reference for D0 = 150 days and the default floor, 2.9 for D0 = 250. The instability remains; scenario S04 records the outcome with the floor at its default and at 0. If a pinned market is still unacceptable, N-052 is the next lever. Leave open until S04 has run.
 - **Update (2026-10-10, STB):** DEM answers for a luxury: stable only with schedule elasticity above 10 000 and about 10% budget headroom (`spec-demand.md` 6.3; a model), scenario S23. A staple is unchanged. Open until S04 and S23 have run.
+- **Update (2026-10-10, SUB):** SUB gives the households that cannot afford a staple an own-use recipe (`spec-subsistence.md` 11). In a stylised model (`models/sub/staple.py`) it removes the shortage pin and 97% to 100% of the unfed household-ticks when the floor covers the upkeep; it does not change the elasticity of the labour supply of the households that can afford the staple, and the price falls to the lower pin (the glut) when the floor covers up to the upkeep and stays in an interior band when it covers more. It is not a damper of L14. Leave open until S04 has run on the library, with the module on and off.
 
 ### N-030 Five regions with different climates
 
@@ -428,6 +459,7 @@ PR description.
 - **Update (2026-10-10, REG):** REG gives the region set and the graph. The five regions of `spec-reference-chain.md` 4.4.4 have no edges yet; `spec-regions.md` 12.4 proposes the edge part of `overlay/trade.toml` (a hub-and-pairs layout, 12 directed edges, distances placeholders until TRN fixes a unit's cost and speed). Yields by region keep the rules of `spec-regions.md` 5.3 (both keys exist, one row per key, canonical order). Remaining for RES, STY and REF as before.
 - **Update (2026-10-10, POP):** the per-agent death carry works at weight 1, the first consumer's case; no weight above 1 is needed.
 - **Update (2026-10-10, RES):** applied for RES in `spec-resources.md` 7: RES owns the VALUES of the yield table, PRO keeps the format, the lookup and the validation errors (`spec-production.md` 6); the table is core data and works with the resources module off. There is no climate entity and no function from richness to yield (rejected, 7.1.2): a climate is the rows of the table, richness is the capacity and the regeneration scale of an endowment (3.3). A new warning `no_comparative_advantage` checks the cross ratio of mean site factors (7.4). Endowments for the five-region pack are proposed in 18. Remaining: CAL, PRO, SCL, STY and REF as before.
+- **Update (2026-10-10, MIG):** weight 1 is the first consumer's case, so no cohort moves; a cohort would move whole and lockstep (`spec-migration.md` 3.2, warning `migration_cohort`).
 
 ### N-031 What the calendar hands to other specs
 
@@ -479,18 +511,6 @@ PR description.
 - **Update (2026-10-10, REG):** the yield-shock slot and RES's `Endowment(region, resource)` key on `RegionID` (`spec-regions.md` 3.3). The edge status of `spec-regions.md` 7 is a second slot of the same shape (world state, set between ticks) for INT's closed-road shock; the other slots are listed in N-091.
 - **Update (2026-10-10, RES):** applied for RES in `spec-resources.md` 5, 6 and 14: the seam is `Endowment` (public read) and an internal all-or-nothing take; RES owns the resource definitions, depletion and regeneration; depletion is visible by the events `EndowmentChanged` and `EndowmentAdjusted`, a bounded `Warn` and the counter `Short`. WLD: take a snapshot of every stock at the start of the production phase, after continuations and completions, ration the draws before the starts (5.2), and run regeneration as the last step of phase 8 before the optional audit (4.1). INT: two more slots for N-091, the scales and the adjustment (6.3). The ration replaces the rotation of `spec-production.md` 5.5.1 for contention on an endowment (decided at the wave 3 integration); the rotation still orders the starts.
 
-### N-038 Seed prices, newcomers and migrants
-
-- **Areas:** MIG
-- **Raised:** 2026-10-10, `spec-beliefs.md` 8.
-- **Note:** A single seed price per region and commodity starts both the beliefs and the market's initial price (`spec-beliefs.md` 8.1, 8.4); VIA may supply a table. CLR: the price before the first trade is that seed price (`spec-clearing.md` 5.4). SPN: replacements and newborns start from the window mean or the market price (8.3). MIG decides whether a migrant keeps or reseeds its beliefs (default reseed).
-- **Update (2026-10-10, VIA):** the seed table exists: `Config.WarmStart.Prices` with groups for money, stock and jobs (`spec-viability.md` 8.1, 8.2); newcomers use the window (8.8). It is a start, not a standing anchor.
-- **Update (2026-10-10):** the CLR part is applied (`spec-clearing.md` 5.4: the price before the first trade is the seed price). The BEL part is applied (`spec-beliefs.md` 8.1, 8.4).
-- **Update (2026-10-10, SPN):** newcomers use `spec-beliefs.md` 8.3, not the warm-start table; role changers keep common beliefs (`spec-spawner.md` 4.2, 7.4). MIG decides whether a migrant keeps or reseeds its beliefs (default reseed).
-- **Update (2026-10-10, REG):** `relocate` leaves a migrant's beliefs untouched (`spec-regions.md` 6.3), so MIG's default of reseeding on arrival is MIG's to execute. A warm-start seed replaces the seed price only; the reference band stays on the effective reference price (5.2.2).
-- **Update (2026-10-10, POP):** a born household takes the newcomer's beliefs of `spec-beliefs.md` 8.3 (`spec-spawner.md` 7.4); MIG still decides for a migrant. A traveller of the transport module keeps its beliefs across a trip (`spec-transport.md` 9.3).
-- **Update (2026-10-10, INF):** a migrant has no rumour state to keep or reseed: its rumours are those of its new region from its next view (`spec-information.md` 7.3).
-
 ### N-039 A hard cost floor
 
 - **Areas:** STB, GDS, PRO, SKL
@@ -523,6 +543,7 @@ PR description.
 - **Update (2026-10-10, STB):** `spec-stability.md` 6.2 run 1b: with AGT's target the default halt removes the floor pin and leaves a shortage cycle (price 1.5 to 3.1 times the reference, 12% of need unmet), so the halt bounds the glut but is not an anchor. Open for SPN (exit) and scenarios S04 and S16; see N-067.
 - **Update (2026-10-10, DEM and SPN):** DEM supplies a price-responsive flow for non-staples (D30). SPN's entry and exit are slow, capped flows (`EntryShare` 50 bp, `ExitShare` 100) and are not an anchor for a pinned staple (`spec-spawner.md` 16). A pure staple is unchanged: halt, buffer buying, recipe choice, work floor. Scenarios S04 and S16 decide whether this is enough.
 - **Update (2026-10-10, EXT):** an outside quote anchors the price of a traded good at the edges of its corridor, never in the interior, and weakly under the midpoint rule (`spec-external-sector.md` 6.7, EXT-A2, extended into L21). In the stylised model of 19.2 a corridor of 45 to 75 confines a cobweb that cycles between 20 and 120 alone, provided the capacity covers the swing. It is an anchor only for goods the outside deals in.
+- **Update (2026-10-10, SUB):** SUB is a price-responsive flow for a staple that is not an invented demand: a household whose secure ticks fall below `EnterTicks` feeds itself and its bids shrink with its stock (`spec-subsistence.md` 11.1; SUB-A2, L102). It anchors the shortage side for the households that can take the mode and not the interior of the price. A pure staple role with no own-use recipe is unchanged.
 
 ### N-045 Dampers that act silently
 
@@ -535,10 +556,13 @@ PR description.
 - **Update (2026-10-10, POP):** the silent clamps of POP are counted in the event `PopulationChanged`: `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsUnfunded`, `RateClamped` (`spec-population.md` 10.1).
 - **Update (2026-10-10, RES):** the cut demand on an endowment is counted: `EndowmentChanged` carries `Short`, `AgentsDenied` and `AgentsReduced` (aggregate per endowment per tick) and a bounded `Warn` "endowment exhausted" (`spec-resources.md` 6.2.2, 14). The production halt and the spawner entry limit are still as before.
 - **Update (2026-10-10, INF):** the closed road, the horizon and the young run are counted by `RumoursServed` (`NoPath`, `TooOld`, `NotYet`). EXT counts its silent cuts the same way: `CutCap`, `CutClosed` and `PriceClamped` in its events (`spec-external-sector.md` 15, EXT-D2, D4, D5).
+- **Update (2026-10-10, SUB):** the silent rules of SUB are counted in `OwnUseChanged` (`Entered`, `Left`, `Started`, `Blocked`, `Retried`, `Output`) and by two bounded `Warn`s (`spec-subsistence.md` 14.1, 14.2).
+- **Update (2026-10-10, MIG):** every silent limit of the migration module is counted in `MigrationReviewed`: the settling rule (`Unsettled`), the gates and the caps (`NoRumour`, `TooFar`, `NoViable`, `NoGain`, `OutCap`, `InCap`, `Unprovisioned`, `Bound`), held arrivals (`Held`) and journeys ended by a removal (`Ended`); every pushed household ends in exactly one outcome (`spec-migration.md` 7.6, 13.1), and two bounded `Warn`s say when a region is blocked or holds arrivals for ten ticks.
+- **Update (2026-10-10, MER):** the merchant's silent dampers (the lane lock, the lot cap, the source-age bound, the rest, the stay) are counted by `MerchantsPlanned` through the plan notes, and the contract round's limits by `ContractRound` (`spec-merchants.md` 15.1).
 
 ### N-046 Register entries owed by unwritten specs
 
-- **Areas:** MIG, EMP, SAV, CRD, MER, STO, RSK, FIS, PLC, LND, SUB, WLD
+- **Areas:** EMP, SAV, CRD, STO, RSK, FIS, PLC, LND, WLD
 - **Raised:** 2026-10-10, `spec-stability.md` 4.7 and 9.
 - **Note:** Each adds its entries by the checklist of `spec-stability.md` 9 and states its dampers by `STB-Dnn`. The expected entries are in section 4.7 (SPN: the failure ladder, entry limits, replacement by the most profitable role; POP: the Malthusian fixed point; and so on). A spec that adds a loop and no entry is not done (FR-STB-003). Undamped now: see `spec-stability.md` section 10.
 - **Update (2026-10-10):** the DEM and SPN entries are merged into the register (L35, L36, L45, L46, L47, L50, L54 and L57 to L65).
@@ -549,6 +573,10 @@ PR description.
 - **Update (2026-10-10, wave 2 integration):** the entries of REG, MON, POP and TRN are merged into the register, so POP, MON and TRN leave the areas of this note. Still owed: MIG, INF, EMP, EXT, SAV, CRD, MER, STO, RSK, FIS, PLC, RES, LND, SUB, WLD.
 - **Update (2026-10-10, wave 2 integration):** the register now has 86 loops, 52 dampers and 39 scenarios (S01 to S40, S15 unused). The next free numbers are **L87, D53 and S41**. A writer uses provisional IDs (`<CODE>-A1`, `<CODE>-D1`, `<CODE>-S1`) in its spec, and the supervisor assigns the final numbers when the entries are merged (N-103); do not reuse a number a spec quotes provisionally.
 - **Update (2026-10-10, wave 3 integration):** the entries of RES, INF and EXT (`spec-resources.md` 19, `spec-information.md` 13, `spec-external-sector.md` 17) are merged into the register, so RES, INF and EXT leave the areas of this note. New loops: RES-A1 to A3 are L87 to L89 and RES-A5 to A7 are L90 to L92 (RES-A4 merges into L29); INF-A2 to A4 are L93 to L95 (INF-A1 merges into L84 and L85 as a case, INF-A5 into L23); EXT-A1 is L96 and EXT-A3 to A7 are L97 to L101 (EXT-A2 extends L21, EXT-A8 merges into L84 as a case). Dampers: RES-D1 to D6 are D53 to D58, INF-D1 to D3 are D59 to D61, EXT-D1 to D5 are D62 to D66. Scenarios: RES-S1 to S5 are S41 to S45, INF-S1 to S5 are S46 to S50, EXT-S1 to S5 are S51 to S55. The register now has 101 loops, 66 dampers and 54 scenarios (S01 to S55, S15 unused). The next free numbers are **L102, D67 and S56**. Still owed: MIG, EMP, SAV, CRD, MER, STO, RSK, FIS, PLC, LND, SUB, WLD.
+- **Update (2026-10-10, SUB):** SUB-A1 to SUB-A7, dampers SUB-D1 to SUB-D5 and scenarios SUB-S1 to SUB-S5 are in `spec-subsistence.md` 18. SUB-A1 merges into L11 (and names L39 and L63 as beneficiaries), SUB-A7 into L18, L40 and L46; SUB-A2 to SUB-A6 are new loops and hazards (L102 to L106).
+- **Update (2026-10-10, MIG):** MIG-A1 to MIG-A9, dampers MIG-D1 to MIG-D7 and scenarios MIG-S1 to MIG-S6 are in `spec-migration.md` 17. MIG-A4 merges into L40 (relief and migration), MIG-A5 into L68 and L76, MIG-A6 into L19; MIG-A1, A2, A3, A7, A8 and A9 are new (L107 to L109, L110 to L112).
+- **Update (2026-10-10, MER):** MER's entries are MER-A1 to MER-A7 in `spec-merchants.md` 17 (the merchant's response to a price gap, the consignee's take loop, the merchant at its target income, derived demand for haul units with a choke price, the escrow, the drift of merchants between regions, a stranded preparation); MER-A1 merges into L84, L85 and L93, MER-A3 into L14 and L16, MER-A4 into L16 and L21, and MER-A2, A5, A6 and A7 are new (L113 to L116). Dampers MER-D1 to MER-D8, scenarios MER-S1 to MER-S6. The MER hook row of `spec-stability.md` 4.8 can be removed.
+- **Update (2026-10-10, wave 4 integration):** the entries of SUB, MIG and MER are merged into the register, so SUB, MIG and MER leave the areas of this note. Dampers: SUB-D1 to D5 are D67 to D71, MIG-D1 to D7 are D72 to D78, MER-D1 to D8 are D79 to D86. Scenarios: SUB-S1 to S5 are S56 to S60, MIG-S1 to S6 are S61 to S66, MER-S1 to S6 are S67 to S72. The register now has 116 loops, 86 dampers and 71 scenarios (S01 to S72, S15 unused). The next free numbers are **L117, D87 and S73**. Still owed: EMP, SAV, CRD, STO, RSK, FIS, PLC, LND, WLD.
 
 ### N-051 What the Strategy contract needs from other specs
 
@@ -578,6 +606,9 @@ PR description.
 - **Note:** The work floor is counted by the world (a pure function of the welfare record, so a consumer's strategy cannot hide it): a Snapshot field and a bounded `Warn` "work floor binding" (`spec-agents.md` FR-AGT-072). The traineeship queue has its own `Warn`. OBS names the Snapshot fields. The production halt and a spawner entry limit are still uncounted (N-067).
 - **Update (2026-10-10, POP):** the silent clamps of POP are counted in `PopulationChanged` (`spec-population.md` 10.1); the production halt is still uncounted (N-067).
 - **Update (2026-10-10, INF):** the closed road, the horizon and the young run are counted by `RumoursServed` (`spec-information.md` 10.1).
+- **Update (2026-10-10, SUB):** as N-045: the mode, the retry and the blocked households are counted by an aggregate event per region and role.
+- **Update (2026-10-10, MIG):** as N-045: every pushed household ends in one counted outcome of `MigrationReviewed`.
+- **Update (2026-10-10, MER):** as N-045: the merchant's dampers are counted by `MerchantsPlanned` and `ContractRound`.
 
 ### N-067 The production halt is not an anchor and has no counter
 
@@ -614,12 +645,15 @@ PR description.
 - **Update (2026-10-10, REG):** REG adds the root sentinels `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation` and `ErrRegionBound`; the last three of the relocation may be ledger-level if `Relocate` is in `internal/ledger`. `ErrUnknownAgent` may collide with INT's.
 - **Update (2026-10-10, RES):** RES adds the root sentinels `ErrUnknownResource`, `ErrResourceShape`, `ErrCurve` and `ErrInsufficientEndowment`; the last is mapped from `internal/endowment`.
 - **Update (2026-10-10, EXT):** EXT adds the sentinels `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate` and, with REG, `ErrOutsideNode`; the root needs a mapping.
+- **Update (2026-10-10, SUB):** SUB adds the sentinels `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited` and `ErrOwnUseOverlap`; the root needs a mapping.
+- **Update (2026-10-10, MER):** MER adds the root sentinels `ErrUnknownMode`, `ErrMerchantShape` and `ErrMerchantWeight`; the root needs a mapping.
 
 ### N-079 External agents are mortal only when the consumer says so
 
 - **Areas:** INT
 - **Raised:** 2026-10-10, `spec-agents.md` 10.6, `spec-spawner.md` 9.
 - **Note:** `AddAgent` carries a `Mortal` flag (default false); the world refuses decisions on an external agent unless it is mortal.
+- **Update (2026-10-10, MIG):** as N-022: a mortal external agent is not moved by the default module.
 
 ### N-080 Wants in the steady-state programme use equal-price shares
 
@@ -639,10 +673,12 @@ PR description.
 - **Raised:** 2026-10-10, `spec-spawner.md` 7.3, `spec-estates.md` 2.6.
 - **Note:** Relief is paid in phase 1 from what the previous tick's phase-7 entry step left, so the pool is shared in time. WLD must keep the order: phase 1 relief, phase 7 entry.
 - **Update (2026-10-10, POP):** births draw from the pool in phase 7 inside `EntryPoolShare`; the POP deaths are executed before the budget is taken so the estates of the dead fund the same tick's births (`spec-population.md` 4.8). WLD must keep phase 1 relief, phase 7 entry. The pool is shared more widely now: see N-096.
+- **Update (2026-10-10, SUB):** the subsistence floor draws nothing from the pool and lowers the draw on it (`spec-subsistence.md` 8.4); a floor-fed household still draws relief on a ratio that includes its receipts. Whether relief should pay a household that feeds itself is `spec-subsistence.md` open question 8 (N-119).
+- **Update (2026-10-10, MIG):** the migration module draws nothing from any pool; its indirect effects are the relief a poor arrival draws from the destination's pool (L63, MIG-A4) and the money a migrant leaves to the origin's pool if it dies on the journey (`spec-migration.md` 9.2).
 
 ### N-084 Scenarios that wait for trade, money and the coarse tick
 
-- **Areas:** MER, STY
+- **Areas:** STY
 - **Raised:** 2026-10-10, `spec-reference-chain.md` 7.6.
 - **Note:** S13 (the faucet overlay), the dynamic parts of X1 and X2 (the trade overlay) and the coarse-tick leg of S12 wait for these specs.
 - **Update (2026-10-10, REG):** REG supplies the edge format and a proposal for the edge part of `overlay/trade.toml` (`spec-regions.md` 12.4), and two scenarios, S28 and S29 (in the register S28 and S29). X1 and X2 (dynamic) still wait for MER and INF.
@@ -652,6 +688,7 @@ PR description.
 - **Update (2026-10-10, INF):** INF now supplies the rumours (`spec-information.md` 5). The overlay `overlay/trade.toml` needs a `[modules.information]` table (`info_speed`, `rumour_error_bp`, `rumour_max_age`) and an informed merchant role (`informed = true`); 12.1 there shows the keys.
 - **Update (2026-10-10, EXT):** EXT exists (`spec-external-sector.md`). Its invariant scenario EXT-S5 (S55) runs the reference chain with an external overlay (an outside node on a gate region, 18.2 is a model of the file layout) over a range of seeds with `WithAudit`; REF builds the pack. EXT gives the dynamic parts of X1 and X2 the gate as the place where imports appear and the counterparty's ask as the price a shipper reads there.
 - **Update (2026-10-10, wave 3 integration):** INF and EXT now exist, so only MER and STY are left in the areas. The dynamic parts of X1 and X2 wait for MER (the shipper); the overlays are N-092.
+- **Update (2026-10-10, MER):** MER exists. The dynamic parts of X1 and X2, S28 to S32, S46 and S47 can run with a merchant role: `overlay/trade.toml` needs `[modules.merchants]`, a role with `strategy = "merchant"`, `informed = true`, a `[role.<id>.merchant]` block and `consigns = true` for the consignee role (`spec-merchants.md` 19.1 shows the keys), plus the Go line `economysim.NewWorld(cfg, strategy.Options()...)`.
 
 ### N-085 Nominal table against the full-labour table
 
@@ -685,9 +722,13 @@ PR description.
 
 ### N-090 What MIG and the specs that tie obligations to a region must do with a relocation
 
-- **Areas:** MIG, PRO, SKL, CAR, MER, INT
+- **Areas:** PRO, SKL, INT
 - **Raised:** 2026-10-10, `spec-regions.md` 6.
 - **Note:** `relocate` moves only the account's region (`spec-regions.md` 6.2). MIG decides the job (abandon it first; the abandon reason `region_changed` is proposed for `spec-production.md` 5.4, REG open question 3), the beliefs (reseed on arrival, N-038), `Privation` and the traineeship. SKL registers an `in_traineeship` refusal and CAR or MER an `open_contract` refusal (`region_bound`, 6.5.2). INT owns the public face of `relocate` for an external agent (6.6). The part for TRN is done: it registers `open_shipment` and calls `Relocate` with cause `transport` at an arrival.
+- **Update (2026-10-10, SUB):** SUB's part: the mode and its counter are dropped at a relocation and at the departure of a timed move; SUB has no reason and no event for the drop; an own-use job is abandoned with `region_changed` as any job (`spec-subsistence.md` 5.8). A household on a journey or a trip is not evaluated.
+- **Update (2026-10-10, MIG):** MIG's part is applied in `spec-migration.md` 7.2 and 8.2 to 8.5: the job is abandoned at departure with `region_changed` (adopted in `spec-production.md` 5.4); the beliefs are reseeded at arrival; `Privation` and `Hunger` are kept and `RoleSince` is set at arrival, which gives the ladder's grace of `spec-spawner.md` 5.2; a trainer or a trainee, an away traveller and a party to an open contract are refused by the guard, the read-only query `World.RelocationRefusal(agent, to, skip...)` (`spec-migration.md` 7.2.1; REG 6.1), run again at arrival with `skip` = `on_journey`, where a refusal HOLDS the arrival; the region then changes by the ledger-level `Relocate`, cause `migration`. MIG registers the `region_bound` refusal `on_journey`. Still open: SKL (register `in_traineeship`), INT (the public face of `relocate` for an external agent, and the cancel of a journey before a forced move, `spec-migration.md` 8.4.1).
+- **Update (2026-10-10, MER):** MER registers the `region_bound` refusal `open_contract` (open for the payer and the deliverer of an open contract, `spec-merchants.md` 9.8.1). A merchant on a trip is away, is refused by `open_shipment` and `open_contract`, and is not a migrant (12.4.1). Removal of a party: 9.8.2.
+- **Update (2026-10-10, wave 4 integration, X2):** the full list of region-bound refusals is `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER) and `in_traineeship` (SKL). A timed move has the shape of TRN's traveller: the account stays in the origin while away and the region changes at arrival through the ledger-level `Relocate`; REG gains a read-only dry run of the relocate refusals with an optional `skip` of one named refusal.
 
 ### N-091 The world slots INT must expose
 
@@ -697,6 +738,8 @@ PR description.
 - **Update (2026-10-10, RES):** RES adds two slots for INT: per endowment a capacity scale and a regeneration scale (basis points, 0 to `MaxShockBP`, default 10 000), and a one-off signed adjustment of the stock (`spec-resources.md` 6.3). Both are set between ticks, saved in a checkpoint, emit `EndowmentAdjusted`. The failed harvest stays the yield shock.
 - **Update (2026-10-10, INF):** INF has no world slot. A blackout shock (slow or cut the news) would be one, set between ticks (`spec-information.md` 17 (open question 6)).
 - **Update (2026-10-10, EXT):** one more slot: the outside price shock per (node, commodity), a factor in basis points, set between steps by `SetOutsideShock` (name provisional), saved, not hashed, with the event `OutsideShocked` (`spec-external-sector.md` 6.5). An embargo is the edge status of `spec-regions.md` 7. A capacity slot is left open (EXT open question 6). See N-116.
+- **Update (2026-10-10, MIG):** MIG has no slot. A forced move (a flight, an expulsion) is INT's call of the guarded `relocate` with a cause of its own (`spec-regions.md` 6.6, `spec-migration.md` 10.3); for a household on a migration journey INT must cancel the journey first (MIG has an internal cancel, `spec-migration.md` 8.4.1; its public name is INT's), because MIG registers the refusal `on_journey`.
+- **Update (2026-10-10, MER):** MER has no world slot.
 
 ### N-092 Overlays and scenarios that the wave 2 specs hand to REF
 
@@ -705,6 +748,9 @@ PR description.
 - **Note:** REF builds: the edge part of `overlay/trade.toml` (REG 12.4, with a `modules.transport.modes` table, a hired mode's haul commodity and a carrier recipe, TRN 17.4); `overlay/faucet.toml` and `overlay/faucet-sunk.toml` (MON 17.6); a population overlay (a fixed-factor test double or RES, the demand overlay on, `Renewal` 0; a warm start's census is not the Malthusian `N*`, POP 18). The new scenarios are S28 and S29 (REG), S30 to S32 (TRN), S33 to S36 (MON) and S37 to S40 (POP); S13 is defined. STY sets the bands for natural increase, recovery time and the money-limited population.
 - **Update (2026-10-10, RES):** `spec-resources.md` 18 proposes `overlay/resources.toml` (an `arable` refill resource for `grow_staple`, a finite `deposit` for `dig_mineral`, a logistic `stand` for `cut_fuel`; the line gatherers stay unlimited), a slack and a binding data set sized from the solver's flows, and the scenarios RES-S1 to RES-S5 (S41 to S45, 19.4). Capacities in 18.2 are hand-derived; REF re-derives them from the solver.
 - **Update (2026-10-10, wave 3 integration):** EXT's scenarios EXT-S1 to S5 (S51 to S55) need an external overlay on a gate region of `one` or `three` (`spec-external-sector.md` 18.2); INF's S46 to S50 need `[modules.information]` and an informed merchant role; INF-S1 (S46) and the rest of INF-S2 (S47) wait for MER.
+- **Update (2026-10-10, SUB):** `spec-subsistence.md` 18.3 proposes the scenarios SUB-S1 to SUB-S5 (S56 to S60). REF builds an overlay `overlay/own-use.toml` (an own-use recipe on `one`, with a yield row and, for SUB-S4, a refill endowment) and uses `famine` for SUB-S2.
+- **Update (2026-10-10, MIG):** `spec-migration.md` 17.2 proposes MIG-S1 to MIG-S6 (S61 to S66) and 15.3 an overlay `overlay/migration.toml` (`[modules.information]`, `[modules.migration]`, `move_speed` chosen against the trade overlay's edge lengths so that the shortest journey is 1 or 2 ticks and the longest under `CoverTicks`). REF builds it.
+- **Update (2026-10-10, MER):** the trade overlay needs a merchant role, a consignee role and `[modules.merchants]` (`spec-merchants.md` 19.1); scenarios MER-S1 to MER-S6 (S67 to S72) are proposed in 17.
 
 ### N-093 Inputs that the wave 2 specs offer the viability check
 
@@ -718,6 +764,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-regions.md` 10.5, `spec-money-supply.md` 13.4, `spec-population.md` 10.4, `spec-transport.md` 13.5.
 - **Note:** OBS names the fields. REG: the edges with a non-default status and the component count. MON: the money supply by sector, the money boundary balance per reason and each flow's state. POP: per region and role the mean birth and death rates, the natural increase, the birth carry and the unfed households of the last tick; per module `r*` and the gain. TRN: the shipments in flight, the away agents and the non-default transit factors.
 - **Update (2026-10-10, RES):** snapshot fields per endowment: stock, effective capacity, abundance, `ExhaustedRun`, and the shock scales when non-default; with the population module on OBS may add `N_bind` where VIA has computed it (`spec-resources.md` 14.4). Names are OBS's. EXT's fields are in `spec-external-sector.md` 15.4 and INF has none beyond the event.
+- **Update (2026-10-10, SUB):** snapshot fields: per region and role the households in the mode and the households blocked in the last tick; per agent `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` (`spec-subsistence.md` 14.4). Names are OBS's.
 
 ### N-096 The regional pool serves births, entry, relief and money flows
 
@@ -725,32 +772,30 @@ PR description.
 - **Raised:** 2026-10-10, `spec-money-supply.md` 8.6 and open question 4, `spec-population.md` 4.3, 4.8 and 5.5.
 - **Note:** Four things draw on or pay into a region's pool: relief (phase 1), money flows with the pool as a target (phase 1; a pool target needs the estates module, `spec-money-supply.md` 4.3.2; the estate account exists without it, the pool policy does not), entry and births (phase 7, inside `EntryPoolShare`, deaths first). A per-household grant couples issuance to the household count (MON-A5): POP decides whether income from a grant raises births. In a closed region the population is bounded by M / stake; a faucet or an inflow with migrants lifts the bound. MON and EXT should say how money entering a region reaches its pool.
 - **Update (2026-10-10, EXT):** money that the outside pays reaches the households first (the sellers of the goods the outside buys) and the pool only through the estates (deaths, relief returns, sales by the estate); EXT adds no pool channel and no grant to a pool (`spec-external-sector.md` 11.5). A surplus therefore raises `M_h` before `M_p`, and a hoard of the outside's money is a hoard like any (STB-L31, L45; damper D42).
+- **Update (2026-10-10, MIG):** the migration module draws nothing from any pool (as N-082); a migrant takes no stake and neither region's pool is touched (`spec-migration.md` 9.2).
 
 ### N-097 Migration and the population loop
 
-- **Areas:** MIG, POP
+- **Areas:** POP
 - **Raised:** 2026-10-10, `spec-population.md` 6.5.
 - **Note:** MIG is the other way households enter and leave. It must use the same stake rule for arrivals and not create money, say whether the replacement ratio is part of its signal, and share the pool budget `EntryPoolShare` with births. A closed region (no immigrant) is the behaviour tested before MIG. Relief raises the ratio and so births and lowers deaths (POP open question 4): the same effect as L40.
+- **Update (2026-10-10, MIG):** applied for MIG in `spec-migration.md` 5.5 and 9: a migrant carries its account, so no household is created, no money is created and no stake is paid; neither region's pool is touched and `EntryPoolShare` is not shared (births and entry keep the whole budget); the replacement ratio is NOT part of the signal (the trigger is the household's own earned ratio against `MoveBelow`; a pack with both modules may set `MoveBelow` near `r*` by hand); the closed-region behaviour is unchanged. The money a migrant carries moves the money-limited bound `M / stake` of each region by what it carries (9.3, MIG-A5, L76). Still open for POP: its section 7 (the MIG row) and 6.5.
 
 ### N-099 A trip is a gap in income
 
 - **Areas:** WEL, STB
 - **Raised:** 2026-10-10, `spec-transport.md` 15 (TRN-A6) and 20.9.
 - **Note:** The effective welfare window derives from recipes only (`spec-welfare-and-wages.md` 2.3.3), so a self-carried trip longer than the window looks like starving. The validation warning `trip_longer_than_window` is a stopgap; WEL decides whether the window counts the longest trip of a role (WEL open question 9, left open at the wave 2 integration). The working ticks of a self-carried trip run from dispatch to the tick before arrival.
-
-### N-100 What transport leaves to MER and INF
-
-- **Areas:** MER, CAR
-- **Raised:** 2026-10-10, `spec-transport.md` 8.4, 9.3, 20.2 and 20.5.
-- **Note:** A hired shipment needs a consignee in the destination region (otherwise `consignee_elsewhere`); a diverted cargo goes to the destination estate; a traveller keeps its beliefs and remembers nothing else; the backhaul double count of `spec-carriage.md` 5.1 stands; a bilateral contract with escrow is MER's and does not use the book. The shipper's decision is MER's and rumours are INF's.
-- **Update (2026-10-10, wave 2 integration):** a shipper that responds to a price gap with a transit delay of `k` ticks is stable in the linearised model only if its gain per tick is below `2 sin(pi / (2 (2k + 1)))` (1.0 at `k` = 1, 0.35 at `k` = 4), unless it counts `Inbound` or a cap bounds what it dispatches per tick, in which case the limit is about 2 whatever `k` is (`spec-transport.md` 15, 16; L84, L85). A model of a linear rule, not of the library: MER should count `Inbound` and test the margin with scenario S30.
-- **Update (2026-10-10, INF):** rumours are defined (`spec-information.md` 5). A traveller keeps its beliefs and remembers nothing else; a trip carries no news back in version 1 and an arrival changes no record and no rumour (7.5, FR-INF-028); a per-traveller memory is MER's to ask for (`spec-information.md` 17, open question 1). A shipper's reading of a rumour and the condition on its gain are in INF-A1 and INF-A2 (13; L84, L85 and L93).
+- **Update (2026-10-10, MIG):** a migration journey is also a gap in income: `k` records of zero income and the origin's upkeep, not working ticks (`spec-welfare-and-wages.md` 4.3 already says so). The settling rule (`spec-migration.md` 5.2) waits a window before the record can trigger a move.
+- **Update (2026-10-10, MER):** MER proposes the answer (`spec-merchants.md` 12.3): the effective window of a role with a merchant block is `max(WelfareWindow, WindowCycles * max(longest Duration, Kmax))`, `Kmax` the longest travel time over the graph of the self-carried modes of its block. Until WEL closes its open question 9, `trip_longer_than_window` is the only guard.
+- **Update (2026-10-10, wave 4 integration, X4):** ruled in the one combined edit of `spec-welfare-and-wages.md`: the effective window (2.3.3) lists the recipes on the role's list, the effective own-use list and the longest trip of the role's modes; a recipe-less role with an own-use job, and a journey or a trip, are handled in 4.3; a migrant's journey is zero-income ticks in the window. The note stays open until WEL's open question 9 is closed.
 
 ### N-101 Does the default Target count Inbound?
 
 - **Areas:** AGT
 - **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 20.7.
 - **Note:** The field `Inbound` exists in the agent view. The default strategy never ships, but a consignee can be sent goods (TRN-A2): decide whether the default `Target` counts what is in flight to the agent.
+- **Update (2026-10-10, MER):** the merchant counts its `Inbound` as a consignee (`spec-merchants.md` 8.2) and its `Outbound` as a shipper (7.1). The default strategy is never a consignee unless a consumer's strategy sends it goods, so its `Target` is still AGT's.
 
 ### N-102 Unify the module table names before the loader is written
 
@@ -759,6 +804,8 @@ PR description.
 - **Note:** The specs name the table of a module differently in the file: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]` and transport's own. `spec-config.md` records each as its spec says and leaves this as an open question. Unify before the loader is written.
 - **Update (2026-10-10, RES):** RES writes its module tables as `[resources]`, `[resources.resource.<id>]` and `[resources.endowment.<region>.<resource>]`, the way `[demand.want.<id>]` is written (`spec-resources.md` 3.3.2).
 - **Update (2026-10-10, INF):** INF writes its table as `[modules.information]` (as transport's `modules.transport.modes`) and the role flag as `informed` in the role table.
+- **Update (2026-10-10, SUB):** SUB writes `[modules.subsistence]` and, for a role row, `[modules.subsistence.role.<id>]` (`spec-subsistence.md` 3.2).
+- **Update (2026-10-10, MER):** MER writes `[modules.merchants]` and the block `[role.<id>.merchant]` (`spec-merchants.md` 19.1), the form of `[modules.information]`.
 
 ### N-103 Running several spec writers in parallel
 
@@ -781,30 +828,19 @@ PR description.
   - Re-read what an integrator wrote in the rules and in any spec it edited. In wave 2 an integrator passed text through shell quoting and left the literal sequence `'"'"'` where an apostrophe belonged, in `rules/observability-and-logging.md` and `spec-ledger.md`; it was found only on the next re-read. Grep the whole of `doc/` for it after every integration (`grep -rF "'\"'\"'" doc`).
   - Merging without extra branches (a standing preference of the user: no branches beyond `main`): merge the integrators' branches in a detached worktree (`git worktree add --detach <path> main`), run the checks there, fast-forward `main` to the verified commit, then remove the worktrees and delete the merged branches. Before removing a worktree check for uncommitted changes and for root-owned files (a Docker `__pycache__`), or the removal fails halfway and leaves an empty workspace.
   - A launcher script that splits a pane ID such as `w4:p1` on the colon sends the brief to a target that does not exist (`agent target w4 not found`); the first launch of wave 2's integrators sent nothing. Read the result file of every prompt before waiting.
+- **Update (2026-10-10, wave 4 integration):** the seam check of the brief worked: the writers of SUB, MIG and MER read one another's drafts and fixed their mismatches while all three existed (MIG expected an "ending reason" of SUB that SUB does not have; MER adopted POP's Weyl offset instead of inventing a second spread). Slip: the host `python3` was called with no-op scripts; every model ran in Docker with `PYTHONDONTWRITEBYTECODE=1`.
 
 ### N-104 Region-keyed tables use the one override mechanism
 
-- **Areas:** SUB, MIG, LND
+- **Areas:** LND
 - **Raised:** 2026-10-10, `spec-regions.md` 5.1 and 5.3.
 - **Note:** A new table keyed by region (a yield, a price, a scale, a cap, a rate) uses the mechanism of `spec-regions.md` 5.1: one row per key in the owner's table, combined with the default by replace, add or scale, in canonical order by `RegionID`, with the errors of 5.3, and a row in the list of 5.1.3. `RegionPrices` and POP's `Regions[]` are the two examples. Do not invent a per-region field with its own rules. The same holds for SET, CAP and later specs.
 - **Update (2026-10-10, RES):** applied for RES in `spec-resources.md` 3.3.1: `Endowments` is a region-keyed table of the mechanism of `spec-regions.md` 5.1, one row per (region, resource), `Capacity` and `Initial` by replace, `RegenScaleBP` by scale, absence is the default (a resource's default capacity is 0). The row in the list of `spec-regions.md` 5.1.3 is added at the wave 3 integration. SUB, MIG and LND stay.
 - **Update (2026-10-10, INF):** INF adds no region-keyed table. The speed of news is one world value; a slower region is expressed by longer distances; a per-region speed would be a row of `spec-regions.md` 5.1.3 in scale mode keyed by the reader's region (`spec-information.md` 17 (open question 9)).
 - **Update (2026-10-10, EXT):** EXT's tables follow the one mechanism: the node rows are keyed by region, the line rows by (region, commodity), one row per key, in canonical order, with the errors of `spec-regions.md` 5.3; the gate scale (`OutsideGate.ScaleBP`) is a **scale** row (`spec-external-sector.md` 3.2.4). Rows are added to the list of `spec-regions.md` 5.1.3 at the wave 3 integration.
-
-### N-105 Instant or timed migration
-
-- **Areas:** MIG, TRN
-- **Raised:** 2026-10-10, `spec-regions.md` 6.5.3, `spec-transport.md` 5.5.
-- **Note:** `relocate` is instantaneous (`spec-regions.md` 6). A migration that takes time has two ways. It can use TRN's traveller: the account stays in the origin region while away and changes region at arrival, and TRN's `open_shipment` refusal means MIG cannot relocate that agent meanwhile. Or it can use REG's reserved `NoRegion`, `depart` and `arrive`, which 6.5.3 binds to three rules: the departure region is recorded, a death leaves the money to the region departed from, and an account with no region is in no market. MIG picks one and states what a death, a ladder rung and the welfare window mean for a migrant on the road (the window problem of N-099 applies).
-
-### N-106 What a strategy may see of other regions
-
-- **Areas:** MER
-- **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 15 (TRN-A1, L84).
-- **Note:** The agent view carries `Routes` (for each other region and mode: whether there is a route, the travel time, and for a hired mode the haul units per carrying unit) and `Inbound` (goods on the way to this agent). No view carries a remote price or a remote stock, and none should until INF defines rumours with a delay and an error: otherwise a shipper sees the gap it is meant to estimate, and the transit-delay loop is hidden. MER's shipper reads rumoured prices and `Routes` and counts `Inbound`.
-- **Update (2026-10-10, RES):** the agent view carries the endowments of its OWN region only (`spec-resources.md` 5.5.1); no view carries another region's stock.
-- **Update (2026-10-10, INF):** the view field is `Rumours` of the `Trade` view of a role with `Informed` (`spec-information.md` 6.2). No view carries a true remote price: a rumour is at least 2 ticks old (the local report is 1) and blurred by an independent error, whatever the speed (5.2.2, 5.5, FR-INF-018). What MER's shipper must do with it: read `Rumours` with `Routes`; count `Inbound` (L84) and cap what it dispatches per tick (D39); use `SourceAge`, since a rumour of a carried-forward price is not news (INF-A3, L94); not difference rumours of successive ticks, because a status change steps the vintage (INF-A4, L95); give shippers a fixed spread of their own thresholds, drawn at creation: in the model of `spec-information.md` 11.2 a spread of 0.8 times the freight settles the gap (0.04 f) where an independent information error of the same size leaves 0.6 f and identical shippers 1.8 f (a model of an invented rule, not of MER's). Condition on the gain: INF-A1 and INF-A2 (L84, L85, L93).
-- **Update (2026-10-10, EXT):** applied: no view carries an outside price (`spec-external-sector.md` 9.1, 9.2). In a gate region the price is learned from ordinary orders; elsewhere not at all in version 1; an outside node is not a rumour source (INF records only a market's published price). The shape of a source is EXT open question 10 (N-112).
+- **Update (2026-10-10, SUB):** applied for SUB in `spec-subsistence.md` 3.2.1 and 3.5: the module has no region-keyed table and no per-region field. Its role-keyed rows follow the replace mode (one row per role, absence is the default, an empty row means none); regional differences are rows of the yield table and the endowment rows, which already follow the mechanism.
+- **Update (2026-10-10, MIG):** applied for MIG in `spec-migration.md` 11.2: `Regions` rows with `OutShare` and `InShare`, one row per region, by replace, in region order, with the errors of `spec-regions.md` 5.3; a row is added to the list of `spec-regions.md` 5.1.3.
+- **Update (2026-10-10, MER):** MER adds no region-keyed table. A lane is not a row. LND stays.
 
 ### N-107 New money faucets and sinks start from MON
 
@@ -813,36 +849,45 @@ PR description.
 - **Note:** Start from MON's mechanism: a grant or a levy on a class, a declared reason equal to the flow ID, closed for a run, with its boundary account created at construction, reported in `BoundaryFlow` and checked by the audit. Add a built-in ledger reason only for a mechanism that is not a grant or a levy (an interest flow, a trade with an external counterparty). MON's positions bind the later specs: no faucet reads an aggregate or grows with a balance (only a sink may be proportional to a balance), and a counterparty whose balance is created or destroyed outside conservation is a Boundary account. Tax, credit and the external sector are the likely first uses. A policy that changes a rate over time is PLC's, through the flow-scale slot (N-091).
 - **Update (2026-10-10, RES):** RES adds no faucet, no sink and no ledger reason: a draw and a regeneration are not transfers and an endowment is in no account (`spec-resources.md` 6.2.1). Depletion is made visible by events and an exact per-endowment identity (6.4), which a test and the audit check.
 - **Update (2026-10-10, EXT):** applied for EXT: a trade with an external counterparty is the case the note names for built-in reasons (`spec-external-sector.md` 8.1); the counterparty's account is a Boundary account's partner and holds nothing across a tick (5.3); no rule reads an aggregate (11.3); a policy that changes trade acts through the shock slot (6.5), the edge status (`spec-regions.md` 7) or a flow scale.
+- **Update (2026-10-10, SUB):** applied for SUB: no faucet, no sink, no ledger reason; the form of the output is the ordinary recipe execution, and the in-kind channel was refused with reasons (`spec-subsistence.md` 6.2).
+- **Update (2026-10-10, MIG):** MIG adds no faucet or sink (`spec-migration.md` 9.1).
+- **Update (2026-10-10, MER):** the delivery contract moves money between non-boundary accounts and adds no faucet, no sink and no reason (`spec-merchants.md` 9.6.1); the three escrow reasons already in the registry change owner to MER.
 
 ### N-108 What the resources module leaves to land, subsistence, infrastructure, the outside and migration
 
-- **Areas:** LND, SUB, CAP, EXT, MIG
+- **Areas:** LND, CAP, EXT
 - **Raised:** 2026-10-10, `spec-resources.md` 10, 9.4 and 23.
 - **Note:** Endowments are open access: any recipe with `Draws` on an endowment of its region may take from it, and the ration shares a scarce stock (5.3). LND adds the tenure through three hooks: a refusal after `no_endowment`, a per-claimant entitlement applied to the request before the ration, and a rent as a named money flow valued at the dual of the resource row (`Rent`, `spec-resources.md` 11). SUB: household production may draw on an endowment through `Draws` like any recipe. CAP: a facility that raises capacity uses the capacity-scale slot (6.3). EXT: the import predicate is the second half of the sourcing of a raw good (9.4). MIG: nothing in RES moves households; the signal of a depleted region is the welfare ratio.
+- **Update (2026-10-10, SUB):** applied for SUB in `spec-subsistence.md` 9: an own-use recipe draws on an endowment through `Draws` like any recipe, open access, the ration of `spec-resources.md` 5.3, no priority and no quota; its requests carry the recipe, so LND's entitlement may treat them differently, and a closed commons makes the household `Blocked` and draws `own_use_not_available` (9.5). LND, CAP and EXT stay.
+- **Update (2026-10-10, MIG):** applied for MIG in `spec-migration.md` 4.4 and 6.3.3: nothing in RES moves households; the signal of a depleted region is the household's own earned ratio and measured wage; a destination's stock, endowment or abundance is state and is not read by an estimate (the estimate uses the table value of the yield). LND, CAP and EXT stay.
 
 ### N-109 The closed forms of the Malthusian loop need the welfare ratio at a full draw
 
 - **Areas:** POP, VIA, OBS
 - **Raised:** 2026-10-10, `spec-resources.md` 8.2, 8.5 and 23 (item 6).
 - **Note:** `N* = N_bind * r_full / r*` (flat curve) and the stock share `a(sigma*) = 10 000 r* / r_full` (curve) need the welfare ratio a household reads at its full draw and full abundance, `r_full`. It is a property of the pack's economy and not a field. Decide whether a run measures it (a snapshot figure), whether VIA computes it from the programme with wants, and whether a warning `population_cannot_grow` (`r_full <= r*`) belongs to POP or VIA.
+- **Update (2026-10-10, SUB):** with the module on the welfare ratio of a floor-fed household includes its receipts (`spec-subsistence.md` 7.4): `r_full` for such a household is the floor's ratio, below the replacement ratio of a market-fed one, so the schedules form fewer households and dissolve more among them.
 
 ### N-110 Version 1 rumours prices only
 
-- **Areas:** MIG, SKL, INF
+- **Areas:** SKL, INF
 - **Raised:** 2026-10-10, `spec-information.md` 17 (open question 4).
 - **Note:** MIG's rumoured welfare ratio (`spec-welfare-and-wages.md` 5.1) and SKL's rumoured premium (`spec-skill-barriers.md` 2.5) have no source: they are regional aggregates, so whether an agent may react to one is a question for "macro is measured, never set" (roadmap). Decide in `spec-migration.md`.
+- **Update (2026-10-10, MIG):** decided for MIG in `spec-migration.md` 4: a household does not react to a regional mean welfare ratio (an indicator, a controller input in disguise); it reads its own state, the structure of the world (graph, recipes, yield table, upkeep lists) and rumoured PRICES, from which it derives a destination's income (6.3). INF 17.4 is answered. The same decision applies to SKL's rumoured premium (`spec-skill-barriers.md` 2.5), which stays open for SKL.
 
 ### N-111 A view takes draws
 
 - **Areas:** WLD, AGT, OBS
 - **Raised:** 2026-10-10, `spec-information.md` 5.5.2.
 - **Note:** The view of an informed agent is built immediately before its `Trade` and, with `RumourErrorBP` above 0, takes draws from the world's source in a fixed order (one per candidate). AGT's view building and WLD's phase 3 must keep that order; the draw count is a function of the configuration and of the informed agents present. `spec-agents.md` 6.1.2 (the stream a strategy sees is a function of the world's state) still holds because the order is fixed. OBS: `RumoursServed` and its metric.
+- **Update (2026-10-10, MIG, X3):** a second reader. The migration pass of phase 7 reads rumours for the household under review through INF's read function, whatever the role's `Informed` flag says, and takes INF's error draws itself: among the reviewed households in ascending agent ID, one draw per source pair (candidate) whether or not a rumour is offered, none when `RumourErrorBP` is 0 or no agent is pushed (`spec-migration.md` 6.2.1, 10.2.1). They belong to the migration pass of phase 7 and never to a view of phase 3, so INF's stream (before each `Trade`) and MIG's (after the entry step) cannot interleave, and the draw count in a tick stays a function of the configuration and of which agents are pushed. `spec-information.md` (the reader, 5.5.2, 7, and the requirement that rumours reach only `Informed` views) carries the matching edit. AGT, WLD and OBS keep the fixed order of both; `RumoursServed` does not count MIG's calls.
 
 ### N-112 An outside node as a remote information source
 
 - **Areas:** EXT, INF
 - **Raised:** 2026-10-10, `spec-external-sector.md` 9.2 and open question 10, `spec-information.md` 4.5 and 17.
 - **Note:** In version 1 an outside node is not a rumour source: INF records only the published price of a market and a node has no market, and EXT has no `Informs` declaration and no outside-price field (FR-EXT-033). A merchant away from a gate therefore never hears of an outside price. The minimal shape, if a setting needs it, is a second record source in INF (a quote function that EXT supplies as a pure read) and an EXT declaration of the (region, commodity) pairs it serves. The INF hook `Informs` stays reserved and unused. `spec-information.md` 4.5, 4.5.2 and FR-INF-002 still describe a declaration by EXT and must be read as reserved until INF is revised.
+- **Update (2026-10-10, MER):** the market of a gate region is a rumour source like any market, so an interior merchant hears of the gate's published price (which includes the outside's trades) with the lag and the error of any rumour; only the node itself is not a source (`spec-merchants.md` 11.3).
 
 ### N-113 A quote is a limit, not a peg
 
@@ -873,6 +918,30 @@ PR description.
 - **Areas:** AGT, EST, WLD, LED
 - **Raised:** 2026-10-10, `spec-external-sector.md` 4.2.
 - **Note:** With the module on the estates take the lowest agent IDs (`0..n-1`, equal to the `RegionID`), then the counterparties (ascending node, gate, buy before sell), then the households, so adding a node or a gate shifts every household's ID, tie-break keys and checkpoints, as adding a region does. WLD fixes the construction order (the estate accounts, the Outside accounts, then the agents) and the positions of N-009; AGT and EST restate FR-AGT-001 and FR-EST-005.
+
+### N-118 One job per agent limits the subsistence floor
+
+- **Areas:** PRO, WEL, SPN
+- **Raised:** 2026-10-10, `spec-subsistence.md` 5.7, 10.3, 8.3 and 21 (items 1, 4, 7).
+- **Note:** A household in a long role job cannot take the own-use mode until the job ends, which is the lean season of a long-job role; a cohort cannot work an own-use recipe and a role recipe at once; the default spawner's rung 1 abandons a running own-use job. Decide, with the first scenario that shows the case, between a second light job slot, an interruption with an abandon reason, and a rule in the spawner that skips a household with a running own-use job.
+
+### N-119 The receipts of a household that feeds itself
+
+- **Areas:** WEL, EST
+- **Raised:** 2026-10-10, `spec-subsistence.md` 7.5, 8.4 and 21 (items 2, 8).
+- **Note:** The units of an own-use job are counted in the welfare ratio at creation, and a sale of the surplus is counted again as cash; relief may pay a household whose ratio is below the line only because its floor covers less than its upkeep. Decide a provenance, a consumption-side count, or accept the bound.
+
+### N-120 A migrant carries its whole account for free
+
+- **Areas:** TRN, MER, STO
+- **Raised:** 2026-10-10, `spec-migration.md` 9.4 (MIG-A9).
+- **Note:** TRN limits a traveller's load by a mode's capacity (`spec-transport.md` 3.2.2); a relocation has no capacity. The default strategy keeps holdings small, so the leak is small, but a consumer's strategy that stockpiles could ride a journey for free carriage. Close it with a carry limit (mass and bulk per household) if a case appears.
+
+### N-121 A role with no recipe: merchants, the floor and migration
+
+- **Areas:** MIG, SUB
+- **Raised:** 2026-10-10, `spec-merchants.md` 6.4 and 12.4.
+- **Note:** SUB lets a role with no recipe have an own-use list; the default `Work` a merchant inherits then starts an own-use job and the shipment mechanism refuses a trip (`job_in_progress`). MER keeps the merchant from planning a trip meanwhile and while it is in the own-use mode (the SUB qualifier on "a role with no recipe requests no job" is a supervisor erratum of `spec-merchants.md` 3.3). MIG ends the review of a no-recipe role in `no_estimate`, so no merchant is moved by MIG in version 1; if MIG gains an income estimate for such roles it must leave a merchant alone, since a merchant's place is where its trade is.
 
 ## Closed notes
 
@@ -1359,6 +1428,48 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Update (2026-10-10, RES):** applied in `spec-resources.md` 8: an endowment that binds is the fixed factor. With a flat abundance curve output per household is the endowment's maximum flow over the households above `N_bind` (an elasticity of -1, a kink); with a curve the stock and the population have closed forms; the stability condition is the characteristic equation `lambda^2 - F' lambda + Gamma = 0`, stable iff `F' < 0`, which gives: `constant` neutral, `refill` always stable and monotone above a rate (0.16 a year at the default population gain), `logistic` stable only above the maximum-yield point and in a narrow basin. Models in `doc/specs/models/res/` agree with the linearisation.
 - **Closed:** 2026-10-10. Applied in `spec-resources.md` 8 (the mechanism, the closed forms, the stability condition by shape, the validator's warnings `resource_overshoot` and `resource_unstable_plan`) and in `spec-population.md` 5.2 and 9.2 (the third assumption is provided by RES; `no_fixed_factor` reads RES). The POP scenarios S37 to S40 may now use RES; nothing has run. The closed forms need the welfare ratio at a full draw (N-109).
 
+### N-038 Seed prices, newcomers and migrants
+
+- **Areas:** MIG
+- **Raised:** 2026-10-10, `spec-beliefs.md` 8.
+- **Note:** A single seed price per region and commodity starts both the beliefs and the market's initial price (`spec-beliefs.md` 8.1, 8.4); VIA may supply a table. CLR: the price before the first trade is that seed price (`spec-clearing.md` 5.4). SPN: replacements and newborns start from the window mean or the market price (8.3). MIG decides whether a migrant keeps or reseeds its beliefs (default reseed).
+- **Update (2026-10-10, VIA):** the seed table exists: `Config.WarmStart.Prices` with groups for money, stock and jobs (`spec-viability.md` 8.1, 8.2); newcomers use the window (8.8). It is a start, not a standing anchor.
+- **Update (2026-10-10):** the CLR part is applied (`spec-clearing.md` 5.4: the price before the first trade is the seed price). The BEL part is applied (`spec-beliefs.md` 8.1, 8.4).
+- **Update (2026-10-10, SPN):** newcomers use `spec-beliefs.md` 8.3, not the warm-start table; role changers keep common beliefs (`spec-spawner.md` 4.2, 7.4). MIG decides whether a migrant keeps or reseeds its beliefs (default reseed).
+- **Update (2026-10-10, REG):** `relocate` leaves a migrant's beliefs untouched (`spec-regions.md` 6.3), so MIG's default of reseeding on arrival is MIG's to execute. A warm-start seed replaces the seed price only; the reference band stays on the effective reference price (5.2.2).
+- **Update (2026-10-10, POP):** a born household takes the newcomer's beliefs of `spec-beliefs.md` 8.3 (`spec-spawner.md` 7.4); MIG still decides for a migrant. A traveller of the transport module keeps its beliefs across a trip (`spec-transport.md` 9.3).
+- **Update (2026-10-10, INF):** a migrant has no rumour state to keep or reseed: its rumours are those of its new region from its next view (`spec-information.md` 7.3).
+- **Update (2026-10-10, MER):** a self-carried traveller reseeds its beliefs on arrival by the rule of `spec-beliefs.md` 8.3, taking no draw (`spec-merchants.md` 12.2), as MIG does for a migrant. One helper should serve both.
+- **Closed:** 2026-10-10. Applied in `spec-migration.md` 8.4 and 8.5: a migrant is reseeded at arrival as any newcomer (`spec-beliefs.md` 8.3): for every commodity of its tradable set the centre is the clamp of the window mean of the new market (the market price if the window is empty) and the width is `BeliefWidthInit`; it has no rumour state to keep or reseed. A traveller of the transport module is reseeded by the same rule (`spec-merchants.md` 12.2, MER).
+
+### N-100 What transport leaves to MER and INF
+
+- **Areas:** MER, CAR
+- **Raised:** 2026-10-10, `spec-transport.md` 8.4, 9.3, 20.2 and 20.5.
+- **Note:** A hired shipment needs a consignee in the destination region (otherwise `consignee_elsewhere`); a diverted cargo goes to the destination estate; a traveller keeps its beliefs and remembers nothing else; the backhaul double count of `spec-carriage.md` 5.1 stands; a bilateral contract with escrow is MER's and does not use the book. The shipper's decision is MER's and rumours are INF's.
+- **Update (2026-10-10, wave 2 integration):** a shipper that responds to a price gap with a transit delay of `k` ticks is stable in the linearised model only if its gain per tick is below `2 sin(pi / (2 (2k + 1)))` (1.0 at `k` = 1, 0.35 at `k` = 4), unless it counts `Inbound` or a cap bounds what it dispatches per tick, in which case the limit is about 2 whatever `k` is (`spec-transport.md` 15, 16; L84, L85). A model of a linear rule, not of the library: MER should count `Inbound` and test the margin with scenario S30.
+- **Update (2026-10-10, INF):** rumours are defined (`spec-information.md` 5). A traveller keeps its beliefs and remembers nothing else; a trip carries no news back in version 1 and an arrival changes no record and no rumour (7.5, FR-INF-028); a per-traveller memory is MER's to ask for (`spec-information.md` 17, open question 1). A shipper's reading of a rumour and the condition on its gain are in INF-A1 and INF-A2 (13; L84, L85 and L93).
+- **Update (2026-10-10, MIG):** a migrant is not a traveller and a traveller that is away is not a migrant; the migration guard respects `open_shipment` and `open_contract` (`spec-migration.md` 3.3.1, 7.2).
+- **Closed:** 2026-10-10. Applied in `spec-merchants.md`: the consignee of a hired shipment is the payer of a delivery contract (8, 9); a diverted cargo counts as reached and the estate of the destination stands in for a removed payer (9.7); a traveller reseeds its beliefs on arrival (12.2); the backhaul double count stands and is measured (10); the bilateral contract with escrow is built on the shipment and does not use the book (9.1); the shipper's stability rules are in 7 and the model in `doc/specs/models/mer/`. The matching of delivery offers and takes is a first-fit round after the last plan of phase 3, not `Clearing` ([ADR 0005](adr/0005-delivery-contracts-are-matched-by-a-first-fit-round.md)).
+
+### N-105 Instant or timed migration
+
+- **Areas:** MIG, TRN
+- **Raised:** 2026-10-10, `spec-regions.md` 6.5.3, `spec-transport.md` 5.5.
+- **Note:** `relocate` is instantaneous (`spec-regions.md` 6). A migration that takes time has two ways. It can use TRN's traveller: the account stays in the origin region while away and changes region at arrival, and TRN's `open_shipment` refusal means MIG cannot relocate that agent meanwhile. Or it can use REG's reserved `NoRegion`, `depart` and `arrive`, which 6.5.3 binds to three rules: the departure region is recorded, a death leaves the money to the region departed from, and an account with no region is in no market. MIG picks one and states what a death, a ladder rung and the welfare window mean for a migrant on the road (the window problem of N-099 applies).
+- **Closed:** 2026-10-10. Decided in `spec-migration.md` 8.1: a timed journey in the shape of TRN's traveller, the account staying in the region of departure until arrival and changing region at arrival through the ledger-level `Relocate` with the cause `migration`, after a dry run of every other refusal; MIG registers the `region_bound` refusal `on_journey`; REG's `NoRegion`, `depart` and `arrive` stay reserved and unused. A death on the journey leaves the money to the origin's pool, the ladder, relief and POP act as on any agent (8.3, 8.3.1); the window records `k` zero-income, non-working ticks (8.6) and the settling rule (5.2) keeps them from triggering a second move. TRN is unchanged except the wording of `spec-transport.md` 10.5.
+
+### N-106 What a strategy may see of other regions
+
+- **Areas:** MER
+- **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 15 (TRN-A1, L84).
+- **Note:** The agent view carries `Routes` (for each other region and mode: whether there is a route, the travel time, and for a hired mode the haul units per carrying unit) and `Inbound` (goods on the way to this agent). No view carries a remote price or a remote stock, and none should until INF defines rumours with a delay and an error: otherwise a shipper sees the gap it is meant to estimate, and the transit-delay loop is hidden. MER's shipper reads rumoured prices and `Routes` and counts `Inbound`.
+- **Update (2026-10-10, RES):** the agent view carries the endowments of its OWN region only (`spec-resources.md` 5.5.1); no view carries another region's stock.
+- **Update (2026-10-10, INF):** the view field is `Rumours` of the `Trade` view of a role with `Informed` (`spec-information.md` 6.2). No view carries a true remote price: a rumour is at least 2 ticks old (the local report is 1) and blurred by an independent error, whatever the speed (5.2.2, 5.5, FR-INF-018). What MER's shipper must do with it: read `Rumours` with `Routes`; count `Inbound` (L84) and cap what it dispatches per tick (D39); use `SourceAge`, since a rumour of a carried-forward price is not news (INF-A3, L94); not difference rumours of successive ticks, because a status change steps the vintage (INF-A4, L95); give shippers a fixed spread of their own thresholds, drawn at creation: in the model of `spec-information.md` 11.2 a spread of 0.8 times the freight settles the gap (0.04 f) where an independent information error of the same size leaves 0.6 f and identical shippers 1.8 f (a model of an invented rule, not of MER's). Condition on the gain: INF-A1 and INF-A2 (L84, L85, L93).
+- **Update (2026-10-10, EXT):** applied: no view carries an outside price (`spec-external-sector.md` 9.1, 9.2). In a gate region the price is learned from ordinary orders; elsewhere not at all in version 1; an outside node is not a rumour source (INF records only a market's published price). The shape of a source is EXT open question 10 (N-112).
+- **Update (2026-10-10, MIG):** the migration pass reads rumours through INF's function for the agent under review, not through a view, and shows a strategy nothing (`spec-migration.md` 4.3.1); MER's shipper is unchanged.
+- **Closed:** 2026-10-10. Applied in `spec-merchants.md` 4, 5, 7: the merchant reads `Rumours` with `Routes`, counts its `Inbound` as a consignee and its own `Outbound` as a shipper, caps the dispatch, spreads its thresholds by agent ID, acts only on a `SourceAge` within a bound and differences nothing. No view carries a remote price.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -1371,4 +1482,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 4adc4f71f1ce43217fcddd38
+NOTES-TAG: 1d6d3f4df410c8c96211b65e

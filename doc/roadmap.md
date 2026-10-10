@@ -46,15 +46,15 @@ configuration packs, not in a layer of the engine.
 | `specs/spec-production.md` | PRO | core | exists | Recipes as data (several inputs and outputs, cost shares, byproducts, discard), multi-tick jobs, required tools and wear, yield by region and season (the seam to RES), trainee-eligible recipes, the cost anchor for BEL. Has a Requirements section |
 | `specs/spec-beliefs.md` | BEL | core | exists | Price beliefs (centre and width, bounds, asynchronous bounded update, price window, seeding, warm-start hook). Has a Requirements section |
 | `specs/spec-agents.md` | AGT | core | exists | Households, upkeep, the Strategy extension (three methods), the default strategy with a budget stack and saving rule, no inventory capacity, cohorts, the directed external agent. Has a Requirements section |
-| `specs/spec-stability.md` | STB | core | exists | The feedback-loop register: entry format, 101 loops, the catalogue of 66 dampers, three numeric analyses, failure regimes, scenarios, the checklist for authors. Has a Requirements section; grows with every spec |
+| `specs/spec-stability.md` | STB | core | exists | The feedback-loop register: entry format, 116 loops, the catalogue of 86 dampers, three numeric analyses, failure regimes, scenarios, the checklist for authors. Has a Requirements section; grows with every spec |
 | `specs/spec-viability.md` | VIA | core | exists | Viability (sourced and runnable, productive cycles, labour sufficient, storable), the steady state by an exact linear programme and its dual, the warm-start table, regions and lanes. Has a Requirements section |
 | `specs/spec-spawner.md` | SPN | core | exists | The spawner extension, bankruptcy by privation, the failure ladder, replacement and the damped entry rule, pool-funded entrants, the hook for POP. Has a Requirements section |
 | `specs/spec-demand.md` | DEM | module | exists | Wants beyond upkeep as data, roles as classes, the price schedule, the ladder, the closed-economy ratio above 1. Has a Requirements section |
-| `specs/spec-reference-chain.md` | REF | fixture | exists | The standard fixture as TOML packs, the variants, the scenarios S01 to S55 and A1 to A10, the invariants, the golden rendering. Has a Requirements section |
+| `specs/spec-reference-chain.md` | REF | fixture | exists | The standard fixture as TOML packs, the variants, the scenarios S01 to S72 and A1 to A10, the invariants, the golden rendering. Has a Requirements section |
 | `specs/spec-welfare-and-wages.md` | WEL | module | exists | Welfare ratio, wages, target-income rule |
 | `specs/spec-skill-barriers.md` | SKL | module | exists | Tools and traineeship |
 | `specs/spec-estates.md` | EST | core, module | exists | Estates, regional pool, relief |
-| `specs/spec-carriage.md` | CAR | module | exists | Carrier pay: the fee is the market price of haul units (N-076, decided by `spec-transport.md`); its open questions move into `spec-merchants.md` and the contract spec |
+| `specs/spec-carriage.md` | CAR | module | exists | Carrier pay: the fee is the market price of haul units (N-076, decided by `spec-transport.md`); `FR-CAR-001` and `FR-CAR-002` moved to `spec-merchants.md` 9.9 and its open items 5 and 6 are answered there |
 | `specs/spec-regions.md` | REG | core | exists | The region as one settlement and market, the directed graph with integer distances and deterministic queries, one override mechanism, the relocation of an account and its hook for goods in transit, the edge status. Has a Requirements section |
 | `specs/spec-money-supply.md` | MON | core, module | exists | Money flows in data (grants and levies on a class or a pool), declared reasons, the money supply and its identities, the closed economy and its liquidity floor, the primitives and rules reserved for EXT (EXT took the pass-through counterparty). Has a Requirements section |
 | `specs/spec-population.md` | POP | module | exists | Births and deaths as household formation and dissolution driven by the welfare ratio, the hooks of the spawner, the stake, the Malthusian fixed point (the fixed factor comes from RES), collapse and recovery. Has a Requirements section |
@@ -62,10 +62,13 @@ configuration packs, not in a layer of the engine.
 | `specs/spec-resources.md` | RES | module | exists | Resources as data (not commodities), endowments per region with a stock, a capacity and three regeneration shapes, the abundance curve, the seam to production and the proportional ration of a scarce stock, depletion and recovery, the owner of the yield-table values (core data), the fixed factor of the population loop, the sourcing of raw goods, the sustainable draw for the solver. Has a Requirements section |
 | `specs/spec-information.md` | INF | module | exists | What an agent knows of other regions: its own market report for free and delayed, blurred rumours of remote prices for informed roles, from a price record per source market. Has a Requirements section |
 | `specs/spec-external-sector.md` | EXT | module | exists | The outside world as an agentless outside node, its lines (price path, capacity, windows, caps), trade through pass-through counterparties with an Outside account swept to zero each tick and six built-in ledger reasons, the balance of trade, the sourcing of raw goods by imports. Has a Requirements section |
+| `specs/spec-subsistence.md` | SUB | module | exists | Household production for own use as the floor under market failure: own-use recipes as ordinary source recipes named on a list, the bound that keeps the market preferred, the mode a household enters and leaves, the default `Work`, the receipts in the welfare ratio and out of the observed wage, the commons. Has a Requirements section |
+| `specs/spec-migration.md` | MIG | module | exists | Whether, when and where a household moves: a rule on the household's own earned ratio and measured wage and on rumoured prices only, a staggered review, an estimate of the income at each destination, a margin, a timed journey, caps on outflow and on the households on the way, no money or goods created. Has a Requirements section |
+| `specs/spec-merchants.md` | MER | module | exists | The merchant strategy (margin estimation from rumours, travel or hire, the lane lock and the lot cap), the consignee and the delivery contract (offers and takes matched in a first-fit round, escrow, settlement on arrival); restates `FR-CAR-001` and `FR-CAR-002`. Has a Requirements section |
 | `specs/evidence.md` | none | reference | exists | Sources behind the numbers |
 | `specs/bazaarbot-reference.md` | none | reference | exists | What bazaarBot does and where its defects are |
 
-Every existing spec now has a Requirements section (as of 2026-10-10). RES, INF and EXT were written on 2026-10-10 and, like every spec before them, are drafts: nothing in them has been run on the library. The edits that each new spec owes to the other existing specs are part of the work below and are tracked in [notes.md](notes.md).
+Every existing spec now has a Requirements section (as of 2026-10-10). RES, INF and EXT, and then SUB, MIG and MER, were written on 2026-10-10 and, like every spec before them, are drafts: nothing in them has been run on the library. The edits that each new spec owes to the other existing specs are part of the work below and are tracked in [notes.md](notes.md).
 
 ## Tier 1: the per-region core
 
@@ -151,11 +154,11 @@ What bazaarBot lacks.
 | `spec-regions.md` | REG | core | exists | The region graph, edge distance, per-region parameters | tier 1 |
 | `spec-settlements.md` | SET | module | planned | Settlement size: classes derived from the households in a settlement by configured thresholds (class names are configuration; hamlet, village, town and city are only examples), and what each size unlocks or limits: a market, warehouses, associations, buildings, defence, how many carriers and merchants it can support. Settings that need no sizes use a single class | REG, POP |
 | `spec-polity.md` | POL | module | planned | Who rules: realms, provinces and the polity as a whole as nested jurisdictions over regions, borders, which laws and levies apply where | REG |
-| `spec-subsistence.md` | SUB | module | planned | Household production outside the market (growing or making basics for oneself) as the floor under market failure, so a failed market does not mean starvation. Touches production, resources and land | PRO, RES, LND |
+| `spec-subsistence.md` | SUB | module | exists | Household production outside the market (growing or making basics for oneself) as the floor under market failure, so a failed market does not mean starvation. Own-use recipes are ordinary source recipes on a list; land and rent (LND) are later and the spec leaves a hook. Has a Requirements section | PRO, RES, AGT, WEL |
 | `spec-resources.md` | RES | module | exists | Regional endowments such as farmland and mines: yield, depletion, regeneration, the ration of a scarce stock, the owner of the yield-table values and the fixed factor of the population loop. Has a Requirements section | REG, PRO |
 | `spec-calendar.md` | CAL | core, module | exists | The structure of time, Earth by default (hours in a day, days in a week, months, ticks in a day or days in a tick), the derived `TicksPerYear`, and an optional cycle of seasons. Has a Requirements section | none |
 | `spec-population.md` | POP | module | exists | Births, deaths, starvation, regional collapse. Stability duties: birth and death rates that depend on welfare so a stable population exists (the Malthusian fixed point) | AGT, WEL, EST |
-| `spec-migration.md` | MIG | module | planned | Migration triggers on the welfare ratio, destination choice, interaction with relief | POP, REG, INF |
+| `spec-migration.md` | MIG | module | exists | Migration triggers on the household's own earned ratio, destination choice from rumoured prices, the timed journey, interaction with relief (relief does not enter the trigger). Has a Requirements section | REG, INF, WEL, AGT, SPN |
 | `spec-information.md` | INF | module | exists | Free local prices; delayed, approximate rumours of remote ones. Has a Requirements section | REG, BEL |
 | `spec-transport.md` | TRN | module | exists | Travel time, carrying capacity (backpack, horse, cart), goods in transit, spoilage in transit | REG, GDS, LED |
 | `spec-storage.md` | STO | module | planned | Warehousing, capacity limits, storage cost | LED, GDS |
@@ -164,7 +167,7 @@ What bazaarBot lacks.
 | `spec-institutions.md` | ORG | module | planned | Associations (a guild is one example), market charters, monopolies, price controls and usury laws; how associations gate the traineeship and tool barriers of `spec-skill-barriers.md` | POL, SKL, SET |
 | `spec-infrastructure.md` | CAP | module | planned | Fixed capital beyond personal tools: mills, smithies, ships, roads, bridges, granaries. Who builds them, who pays, depreciation and maintenance, and how a road changes an edge's travel time | REG, PRO, RES, SET |
 | `spec-employment.md` | EMP | module | planned | Hired labour: workshops, farm labour, wage contracts, and how they interact with the target-income rule | AGT, WEL |
-| `spec-merchants.md` | MER | module | planned | Margin estimation, the decision to travel or hire a carrier, delivery contracts | INF, TRN, CAR |
+| `spec-merchants.md` | MER | module | exists | Margin estimation, the decision to travel or hire a carrier, delivery contracts. Has a Requirements section | INF, TRN, CAR, AGT |
 | `spec-external-sector.md` | EXT | module | exists | The outside world: what lies beyond the realm, how it buys and sells (fixed or drifting prices, volumes), and how money and goods flow in and out. The valve that lets a setting import, export and gain or lose money. Has a Requirements section | REG, MON |
 | `spec-saving-and-investment.md` | SAV | module | planned | Why a household holds money back (hoarding, precaution), what turns savings into capital, and how an agent decides to build or expand | DEM, CAP, MON |
 | `spec-technology.md` | TEC | module | planned | What can raise productivity (learning by doing, discovery, diffusion) and what is exogenous; a setting without growth switches it off | PRO, CAP, SKL |
@@ -257,8 +260,9 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
 
 1. Done 2026-10-10: every existing spec has a Requirements section using its area code.
 2. Move the open questions that belong to planned specs (README "Still open",
-   items 1, 5 and 6) to the roadmap rows that own them: item 1 to PRO, items 5
-   and 6 to MER.
+   items 1, 5 and 6) to the roadmap rows that own them: item 1 to PRO. Done
+   2026-10-10: items 5 and 6 are answered by `spec-merchants.md`, and item 4 by
+   `spec-migration.md`.
 3. Add an unbiased rounding rule to `specs/spec-currency.md` section 2.3 (truncation
    toward zero biases prices over many operations), and record the stability
    duties above in the specs that own them when each is written.
@@ -290,13 +294,13 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
 2. (Answered 2026-10-10, ADR 0003.) A policy actor gets its own interface, written with `spec-policy.md`, because it returns settings and does not bid. Do not create it before PLC.
 3. (Answered 2026-10-10, ADR 0003, N-026.) One settlement per region; a region is one market. Applied in `spec-regions.md` 3.1 and 3.4.
 4. Stable defaults (ADR 0001, decision 5) cannot be claimed until `spec-reference-chain.md` and the acceptance bands in `spec-stylised-facts.md` exist. Until then no spec states a default macro constant as stable. This is a standing constraint, not a question (N-027).
-5. (Analysed 2026-10-10, N-028.) Labour supply under the target-income rule is unit-elastic, so a shortage corrects itself only if demand elasticity exceeds 1; a staple's is below 1 (`specs/spec-stability.md` 6.1, `specs/spec-agents.md` 11.6). The rule is kept; WEL adopted a floor on working ticks (`MinWorkShare`, `specs/spec-welfare-and-wages.md` 5.3), which sets the pinned price but does not remove the instability. Open until scenario S04 has run; DEM may supply elastic demand for non-staples.
+5. (Analysed 2026-10-10, N-028.) Labour supply under the target-income rule is unit-elastic, so a shortage corrects itself only if demand elasticity exceeds 1; a staple's is below 1 (`specs/spec-stability.md` 6.1, `specs/spec-agents.md` 11.6). The rule is kept; WEL adopted a floor on working ticks (`MinWorkShare`, `specs/spec-welfare-and-wages.md` 5.3), which sets the pinned price but does not remove the instability. Open until scenario S04 has run; DEM may supply elastic demand for non-staples, and SUB gives the households that cannot afford a staple an own-use recipe, which removes the shortage pin for them but is not a damper of the labour loop (`specs/spec-subsistence.md` 11).
 6. (Done for AGT, 2026-10-10, N-029.) The targeted review before `spec-agents.md` is complete (Lengnick's household section, ASSUME's base strategy class, abcEconomics Household, Firm and Trade pages; see `specs/evidence.md`). Clark's own Malthusian source is now read for `spec-population.md` (chapter 2 and draft chapters 4 and 5; `specs/evidence.md`).
 7. (Answered 2026-10-10, after RES was written.) The Malthusian loop of `spec-population.md` needs a fixed factor (land or another limit); `spec-resources.md` 8 provides it as an endowment that binds, and its stability depends on the shape of the endowment. The POP scenarios (S37 to S40) may now use RES instead of a test double. Caveat: nothing has run, so no scenario has shown the loop stable; the closed forms need the welfare ratio at a full draw, which is a property of a pack (N-109).
 
 ### Suggested next specs
 
-Version 1 specs still planned, in a suggested order: SUB (the floor under market failure), MIG, MER (which also settles the shipper, the consignee and the contract of `spec-carriage.md`; it reads the rumours of INF, the gate of EXT and the routes of TRN), then OBS and WLD, which collect the events, the snapshot and the phase order the written specs assume, then the rest of version 1 and the later stage of `vision.md` section 4. REG, MON, POP, TRN, RES, INF and EXT are written (2026-10-10).
+Version 1 specs still planned after wave 4, in a suggested order: WLD (the tick phases; it needs all of tiers 1 and 2, all of which now exist except the later-stage specs), then OBS and CHK, IND, a minimal INT (shocks and a player agent), STY and EXP, then CLB (the order of "Tier 3" above). The later-stage specs (STO, EMP, SET, LND, CAP, RSK, ORG, POL, FIS, PLC, SAV, TEC, CRD, INS) stay planned. REG, MON, POP, TRN, RES, INF, EXT, SUB, MIG and MER are written (2026-10-10).
 
 ## Updating this file
 
