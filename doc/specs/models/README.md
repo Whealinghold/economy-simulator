@@ -31,6 +31,9 @@ The scripts use only the Python standard library (the viability solver uses
 | `mon/` | `spec-money-supply.md` sections 9, 17 and 18 | The integer rules of the money flows: carry, rate levy, conservation, a balanced pair (`flows.py`, `flows.out`) |
 | `pop/` | `spec-population.md` sections 5, 13 | The Malthusian fixed point, the gain-times-delay sweep, the stake loop and the arithmetic of the worked examples (`fixed_point.py`, `sweep.py`, `stake.py`, `worked.py`) |
 | `trn/` | `spec-transport.md` sections 16 and 17 | The price-gap shipping delay model (`pipeline.py`, `pipeline.out`) and the arithmetic of the three-region example (`worked.py`, `worked.out`) |
+| `res/` | `spec-resources.md` sections 4, 5.3, 6.1, 8 and 16 to 18 | The integer regeneration rules and their carry (`regen.py`), the ration of a scarce endowment (`allocate.py`), the Malthusian loop closed by a refilling, a logistic and a constant-inflow stock (`coupled.py`), recovery after a blight and the basin of a logistic stock (`recovery.py`) and the arithmetic of the worked examples and the five-region sizing (`worked.py`), with outputs |
+| `inf/` | `spec-information.md` sections 11 and 12 | The largest gain at which price-gap shipping decays when the shipper reads a rumour of a given lag (`lag.py`), threshold shippers under identical, spread, independent-error and shared-error readings (`shippers.py`) and the arithmetic of the two worked examples (`worked.py`), with outputs |
+| `ext/` | `spec-external-sector.md` sections 6.4, 6.7, 7, 18 and 19 | The counterparty cycle (top-up, order, sweep) with its conservation checks, a walk, a window and caps (`cycle.py`), and a production cobweb with and without an outside (`corridor.py`), with outputs |
 
 ## Rules for this folder
 

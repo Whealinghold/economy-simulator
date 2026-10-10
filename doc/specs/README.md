@@ -21,9 +21,9 @@ wins and the spec is corrected.
 | [spec-spawner.md](spec-spawner.md) | (core) The spawner: the extension interface (`Decide`, a plan of remove, reduce, switch, apply and enter), bankruptcy by privation, the failure ladder (change role, relief, then reduction and removal), replacement and the entry rule with damped occupation change, pool funding of entrants, the hook for population, external agents, events and the `FR-SPN`/`NFR-SPN` requirements |
 | [spec-population.md](spec-population.md) | (module) Births and deaths as the formation and dissolution of households, driven by the household's own welfare ratio through two schedules, region scales, the hooks `PopBirths` and `PopDeaths` of the spawner, the stake that funds a birth, `Renewal` ignored while the module is on, the Malthusian fixed point and what it needs from RES, collapse and recovery, entries for the register and the `FR-POP`/`NFR-POP` requirements |
 | [spec-demand.md](spec-demand.md) | (module) Wants beyond upkeep as data (alternatives, quantity per period, rank, elasticity with a ceiling, integer substitution), roles as classes with taste rows, the price schedule with a choke price, whole units from a carried remainder, the ladder funded by the saving rule's cap, consumption of wants, the closed-economy ratio above 1, what the money specs must supply, entries for the register, and the `FR-DEM`/`NFR-DEM` requirements |
-| [spec-stability.md](spec-stability.md) | (core) The feedback-loop register: the entry format, 86 loops with sign, delay, damper, condition and test, the catalogue of 52 dampers and the rule for adding one, three numeric analyses (the target-income labour loop, the belief/price/inventory loop, the production and occupation cobwebs), the failure regimes, the scenarios the acceptance bands must cover, the checklist for spec authors, the loops no spec yet dampens, and the `FR-STB`/`NFR-STB` requirements |
+| [spec-stability.md](spec-stability.md) | (core) The feedback-loop register: the entry format, 101 loops with sign, delay, damper, condition and test, the catalogue of 66 dampers and the rule for adding one, three numeric analyses (the target-income labour loop, the belief/price/inventory loop, the production and occupation cobwebs), the failure regimes, the scenarios the acceptance bands must cover, the checklist for spec authors, the loops no spec yet dampens, and the `FR-STB`/`NFR-STB` requirements |
 | [spec-viability.md](spec-viability.md) | (core) Viability and the steady state: four layers of the check (sourced and runnable, productive cycles by the Hawkins-Simon condition, labour sufficient by an exact linear programme, storable), the programme and its dual as prices, wages and flows, exact integer arithmetic, why the solver is a pure core function and not part of NewWorld, the warm-start table (seed prices, money, stock, staggered jobs), regions and lanes, the rules added to config validation, what viability does not prove, and the FR-VIA/NFR-VIA requirements |
-| [spec-reference-chain.md](spec-reference-chain.md) | (fixture) The standard test fixture: a base chain as TOML, seven product lines to the first consumer's size, variants for one, two, three and five regions, a starvation variant, a demand overlay, a second setting and six defect packs, layered by key; solver-generated warm starts; the scenarios S01 to S27 and A1 to A10 assigned to packs with measures and the form of their pass; the invariants over seeds, the golden rendering, the configuration-only chain test; the `FR-REF` requirements |
+| [spec-reference-chain.md](spec-reference-chain.md) | (fixture) The standard test fixture: a base chain as TOML, seven product lines to the first consumer's size, variants for one, two, three and five regions, a starvation variant, a demand overlay, a second setting and six defect packs, layered by key; solver-generated warm starts; the scenarios S01 to S55 and A1 to A10 assigned to packs, or to the spec each waits for, with measures and the form of their pass; the invariants over seeds, the golden rendering, the configuration-only chain test; the `FR-REF` requirements |
 | [spec-scale.md](spec-scale.md) | (core) Population scale: an agent's weight (the households it stands for), deriving agents from a census at a chosen scale with a floor, what other specs must do with a weight, the cost model and a provisional budget |
 | [spec-config.md](spec-config.md) | (core) The configuration framework: its shape and how modules are switched on, bounds with their derivation, defaults defined once, the proposed TOML file format and pack layering, validation (framework, structural rules, rules from other specs), the configuration hash, and the parameter registry with the gaps found in it. Written ahead of the specs it depends on; its field catalogue grows |
 | [spec-welfare-and-wages.md](spec-welfare-and-wages.md) | (module) The welfare ratio, wage formulas, observed wages and premiums, the target-income rule, in-kind pay |
@@ -33,10 +33,13 @@ wins and the spec is corrected.
 | [spec-money-supply.md](spec-money-supply.md) | (core, module) Where money enters and leaves as named flows in data: grants and levies on a class of households or a pool, four non-reactive shapes, a window, a cumulative limit and a runtime scale seam; declared reasons; the money supply and its identities; the closed economy and its derived liquidity floor; the primitives reserved for the external sector; entries for the register; the `FR-MON`/`NFR-MON` requirements |
 | [spec-carriage.md](spec-carriage.md) | (module) Carrier pay by merchants: the fee is the market price of haul units, an ordinary commodity (the seed of the contract spec) |
 | [spec-transport.md](spec-transport.md) | (module) Transport modes as data (speed, a capacity pair per carrying unit, self-carried or hired), travel time from a REG distance, the shipment (request, 23 ordered refusal checks, dispatch, transit in a reused Transit account, arrival, diverted cargo), goods in transit in the ledger, audit and checkpoint, the decision on the carriage unit (N-076), what transport exposes to strategies and information, hooks for risk and infrastructure, entries for the register, a three-region worked example and the `FR-TRN`/`NFR-TRN` requirements |
+| [spec-resources.md](spec-resources.md) | (module; the yield-table values are core data) Resources as data, not commodities: endowments per region with a stock, a capacity and three regeneration shapes (constant, refill, logistic) with a carried remainder and an optional refuge, an abundance curve, the seam to production (`Endowment` read and an internal all-or-nothing take), the proportional ration of a scarce stock, permanent and recoverable depletion, shock slots, the owner of the yield-table values, the fixed factor of the population loop with its stability condition, the sourcing of raw goods, open access and the hook for tenure, the sustainable draw for the solver, entries for the register, the models run and the `FR-RES`/`NFR-RES` requirements |
+| [spec-information.md](spec-information.md) | (module) What an agent knows of other regions: only its own market report for free, and delayed, blurred rumours of remote prices for roles flagged `Informed`; the price record per source market (a ring of published prices), the rumour (region, commodity, price, mean, lag, source age), the lag from a REG distance and one speed with a floor of 2, an independent bounded error from the world's source, the cases with no rumour, the effect of a closed road, entries for the register, the models run and the `FR-INF`/`NFR-INF` requirements |
+| [spec-external-sector.md](spec-external-sector.md) | (module) The outside world: an outside node is an agentless region marked in the configuration, with lines (a price path, up to two sides, a capacity, windows and caps); it trades through pass-through counterparties, pseudo-agents with an Outside account topped up each tick and swept to zero, so clearing is unchanged; six built-in ledger reasons, the identities and the balance of trade, quotes that are limits and not pegs, what an agent sees of the outside, the sourcing of raw goods by imports, the open layer of the steady state, entries for the register, the models run and the `FR-EXT`/`NFR-EXT` requirements |
 | [evidence.md](evidence.md) | The sources behind the numbers, and which facts are unverified |
 | [bazaarbot-reference.md](bazaarbot-reference.md) | What the bazaarBot source does, its defects, and where each piece goes in the port (a reference, with no requirements and no area code) |
 
-Reading order: currency, goods, ledger, production, clearing, beliefs, agents, spawner, population, demand, scale, config, welfare and wages, skill barriers, estates, regions, money supply, carriage, transport, viability, stability, reference chain.
+Reading order: currency, goods, ledger, production, clearing, beliefs, agents, spawner, population, resources, demand, scale, config, welfare and wages, skill barriers, estates, regions, money supply, carriage, transport, information, external sector, viability, stability, reference chain.
 The layer in brackets (core, module, extension) is defined in [../roadmap.md](../roadmap.md) and
 [ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md). A spec says which of its
 parts are core and which are optional.
@@ -75,11 +78,11 @@ Rules for the IDs:
 | `OBS` | `spec-observability.md` | planned: events, snapshot, metrics |
 | `GDS` | `spec-goods.md` | exists; Requirements section written (FR-GDS-001 to 023, NFR-GDS-001) |
 | `REF` | `spec-reference-chain.md` | exists; Requirements section written (FR-REF-001 to 040, NFR-REF-001 to 002); fixture; bands unset, all numbers are placeholders |
-| `RES` | `spec-resources.md` | planned: regional endowments, depletion, regeneration |
+| `RES` | `spec-resources.md` | exists; Requirements section written (FR-RES-001 to 050, NFR-RES-001 to 004); module; the yield-table values are core data; all numbers are placeholders |
 | `CAL` | `spec-calendar.md` | exists; Requirements section written (FR-CAL-001 to 021, NFR-CAL-001 to 003); the structure of time, derived `TicksPerYear`, optional seasons |
 | `POP` | `spec-population.md` | exists; Requirements section written (FR-POP-001 to 040, NFR-POP-001 to 004); module; all numbers are placeholders |
 | `MIG` | `spec-migration.md` | planned: migration triggers and destinations |
-| `INF` | `spec-information.md` | planned: local prices and delayed rumours |
+| `INF` | `spec-information.md` | exists; Requirements section written (FR-INF-001 to 050, NFR-INF-001 to 004); module; all numbers are placeholders |
 | `TRN` | `spec-transport.md` | exists; Requirements section written (FR-TRN-001 to 046, NFR-TRN-001 to 004); module; all numbers are placeholders |
 | `STO` | `spec-storage.md` | planned: warehousing and storage cost |
 | `MER` | `spec-merchants.md` | planned: merchant decisions and delivery contracts |
@@ -99,14 +102,14 @@ Rules for the IDs:
 | `CAP` | `spec-infrastructure.md` | planned: mills, ships, roads, granaries |
 | `CRD` | `spec-credit.md` | planned extension: loans and interest |
 | `INS` | `spec-insurance.md` | planned extension: insurance |
-| `EXT` | `spec-external-sector.md` | planned: the outside world and money flows across the boundary |
+| `EXT` | `spec-external-sector.md` | exists; Requirements section written (FR-EXT-001 to 050, NFR-EXT-001 to 004); module; all numbers are placeholders |
 | `SAV` | `spec-saving-and-investment.md` | planned: saving, hoarding, investment decisions |
 | `TEC` | `spec-technology.md` | planned: productivity growth |
 | `PLC` | `spec-policy.md` | planned: policy actors and rules |
 | `STY` | `spec-stylised-facts.md` | planned: testable macro properties and failure regimes |
 | `CLB` | `spec-calibration.md` | planned: tuning knobs and calibration |
 | `EXP` | `spec-experiments.md` | planned: experiment harness (core) |
-| `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 86 loops, 52 dampers and 39 scenarios (S01 to S40, S15 unused); all numbers are placeholders |
+| `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 101 loops, 66 dampers and 54 scenarios (S01 to S55, S15 unused); all numbers are placeholders |
 | `VIA` | `spec-viability.md` | exists; Requirements section written (FR-VIA-001 to 059, NFR-VIA-001 to 004); all numbers are placeholders |
 | `SUB` | `spec-subsistence.md` | planned: household production as a floor |
 
@@ -176,8 +179,8 @@ the code stays reserved and unused.
 | `WearPerUse` | Recipe tool | `spec-production.md` section 4.4 |
 | `CostShare` | Recipe output | `spec-production.md` section 3.2 |
 | `Discard` | Recipe output | `spec-production.md` section 7.2 |
-| `Draws` | Recipe | `spec-production.md` section 6.5 (resource values owned by RES) |
-| `YieldProfile` | Region and recipe | `spec-production.md` section 6.1 (values move to `spec-resources.md` when it exists) |
+| `Draws` | Recipe | the field: `spec-production.md` section 3.1; the resources it names: `spec-resources.md` section 3 |
+| `YieldProfile` | Region and recipe | values and authoring: `spec-resources.md` section 7; format and lookup: `spec-production.md` section 6.1 |
 | `BeliefStep` | World | `spec-beliefs.md` section 11 |
 | `BeliefAdjustProb` | World | `spec-beliefs.md` section 11 |
 | `BeliefSignificance` | World | `spec-beliefs.md` section 11 |
@@ -220,9 +223,9 @@ the code stays reserved and unused.
 | `Inputs` | Recipe | `spec-production.md` section 3.1, 11 |
 | `Outputs` | Recipe | `spec-production.md` section 3.1, 11 |
 | `Requires` | Recipe | `spec-production.md` section 3.1, 11 |
-| `Region` | Yield | `spec-production.md` section 6.1 |
-| `Recipe` | Yield | `spec-production.md` section 6.1 |
-| `All` | Yield | `spec-production.md` section 6.1 |
+| `Region` | Yield | `spec-resources.md` section 7 (format: `spec-production.md` section 6.1) |
+| `Recipe` | Yield | `spec-resources.md` section 7 (format: `spec-production.md` section 6.1) |
+| `All` | Yield | `spec-resources.md` section 7 (format: `spec-production.md` section 6.1) |
 | `ID` | Role | `spec-agents.md` section 3.3 |
 | `ID` | Region | `spec-currency.md` section 5 |
 | `Role` | Group | `spec-scale.md` section 3.1 |
@@ -231,7 +234,7 @@ the code stays reserved and unused.
 | `Groups` | WarmStart | `spec-viability.md` section 8.1 |
 | `Pools` | WarmStart | `spec-viability.md` section 8.1 |
 | `Region` | Group | `spec-scale.md` section 3.1 |
-| `Seasons` | Yield | `spec-production.md` section 6.1 |
+| `Seasons` | Yield | `spec-resources.md` section 7 (format: `spec-production.md` section 6.1) |
 | `ReviewTicks` | World | `spec-spawner.md` section 11 |
 | `EntryShare` | World | `spec-spawner.md` section 11 |
 | `RoleHysteresis` | World | `spec-spawner.md` section 11 |
@@ -301,13 +304,66 @@ the code stays reserved and unused.
 | `Feed` | Mode | `spec-transport.md` section 3.1 |
 | `Haul` | Mode | `spec-transport.md` section 3.1 |
 | `HaulSpan` | Mode | `spec-transport.md` section 3.1 |
+| `Resources` | Modules (module; nil = off) | `spec-resources.md` section 3.3 |
+| `Resources` | Resources (the list of resource definitions) | `spec-resources.md` section 3.3 |
+| `Endowments` | Resources (the region-keyed table) | `spec-resources.md` section 3.3 |
+| `HorizonYears` | Resources | `spec-resources.md` section 12 |
+| `ID` | Resource | `spec-resources.md` section 12 |
+| `Shape` | Resource | `spec-resources.md` section 12 |
+| `RatePerYear` | Resource | `spec-resources.md` section 12 |
+| `RateBP` | Resource | `spec-resources.md` section 12 |
+| `Refuge` | Resource | `spec-resources.md` section 12 |
+| `Capacity` | Resource | `spec-resources.md` section 12 |
+| `InitialBP` | Resource | `spec-resources.md` section 12 |
+| `PlanShareBP` | Resource | `spec-resources.md` section 12 |
+| `Abundance` | Resource | `spec-resources.md` section 4.7, 12 |
+| `Share` | AbundanceKnot | `spec-resources.md` section 4.7, 12 |
+| `Factor` | AbundanceKnot | `spec-resources.md` section 4.7, 12 |
+| `Seasons` | Resource (regeneration by season) | `spec-resources.md` section 4.5, 12 |
+| `Season` | SeasonRegen | `spec-resources.md` section 4.5 |
+| `BP` | SeasonRegen | `spec-resources.md` section 4.5 |
+| `Region` | Endowment | `spec-resources.md` section 3.3 |
+| `Resource` | Endowment | `spec-resources.md` section 3.3 |
+| `Capacity` | Endowment (replace) | `spec-resources.md` section 3.3.1, 12 |
+| `Initial` | Endowment (replace) | `spec-resources.md` section 3.3.1, 12 |
+| `RegenScaleBP` | Endowment (scale) | `spec-resources.md` section 3.3.1, 12 |
+| `Information` | Modules (module; nil = off) | `spec-information.md` section 8 |
+| `InfoSpeed` | Information | `spec-information.md` section 8 |
+| `RumourErrorBP` | Information | `spec-information.md` section 8 |
+| `RumourMaxAge` | Information | `spec-information.md` section 8 |
+| `Informed` | Role | `spec-information.md` section 6.1 |
+| `External` | Modules (module; nil = off) | `spec-external-sector.md` section 3.1 |
+| `Nodes` | External | `spec-external-sector.md` section 3.1 |
+| `Region` | OutsideNode | `spec-external-sector.md` section 3.1 |
+| `Lines` | OutsideNode | `spec-external-sector.md` section 3.3 |
+| `Gates` | OutsideNode | `spec-external-sector.md` section 3.2.4 |
+| `Region` | OutsideGate | `spec-external-sector.md` section 3.2.4 |
+| `ScaleBP` | OutsideGate | `spec-external-sector.md` sections 3.2.4, 6.6 |
+| `Commodity` | OutsideLine | `spec-external-sector.md` section 3.3 |
+| `Base` | OutsideLine | `spec-external-sector.md` section 6.1 |
+| `PriceBySeason` | OutsideLine | `spec-external-sector.md` section 6.2 |
+| `TrendBP` | OutsideLine | `spec-external-sector.md` section 6.3 |
+| `FloorBP` | OutsideLine | `spec-external-sector.md` section 6.3 |
+| `CeilingBP` | OutsideLine | `spec-external-sector.md` section 6.3 |
+| `WalkStepBP` | OutsideLine | `spec-external-sector.md` section 6.4 |
+| `WalkRevertBP` | OutsideLine | `spec-external-sector.md` section 6.4 |
+| `WalkBoundBP` | OutsideLine | `spec-external-sector.md` section 6.4 |
+| `Sell` | OutsideLine | `spec-external-sector.md` section 3.3 |
+| `Buy` | OutsideLine | `spec-external-sector.md` section 3.3 |
+| `MarginBP` | OutsideSide | `spec-external-sector.md` section 6.6 |
+| `Capacity` | OutsideSide | `spec-external-sector.md` section 7.1 |
+| `Window` | OutsideSide | `spec-external-sector.md` section 7.2 |
+| `TotalUnits` | OutsideSide | `spec-external-sector.md` section 7.3 |
+| `TotalValue` | OutsideSide | `spec-external-sector.md` sections 7.3, 7.4 |
+| `Season` | SeasonFactor | `spec-external-sector.md` sections 6.2, 7.2 |
+| `BP` | SeasonFactor | `spec-external-sector.md` sections 6.2, 7.2 |
 
 ## New domain terms to add to the glossary
 
 Minor unit, denomination, ladder, formatter, precision, household, reference basket, welfare ratio, padded
 history, observed wage, observed premium, working tick, commercial trip,
 target-income rule, tool, durability, estate, pool, relief, carriage market,
-trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, faucet, sink, pack, layer, policy, feedback loop, damper, viability, steady state, subsistence floor, bid, ask, limit price, admission, reservation, crossing, tie-break key, market price, price age, reference price, weight, scale, group, effective configuration, configuration hash, pack, presentation-only field, warning, sourced, producible, year, commodity, unit, mass, bulk, load, container, capacity, binding dimension, chargeable size, lot, born tick, transfer, reason (of a transfer), claim, balance sheet, sector, flow total, pseudo-agent, earmark, named lot, audit, shelf life, age, spoil, durability (listed), durable, tool (listed), class, raw, calendar, calendar day, absolute day, moment, season, season cycle, ordered list, job, execution, executor, principal, duration, source (recipe with no inputs), co-product, byproduct, discard (output), disposal, yield factor, effective factor, site (sited recipe), yield profile, yield shock, residue, draw (endowment draw), pending output, work in progress, trainee yield, unit cost, cost anchor, cost share, price belief, centre (of a belief), width (of a belief), belief step, effective range, outcome (of an order), adjustment gate, stock ratio, target stock, seed price, price window, reference band, cost band, re-clamp, upkeep, effective upkeep, fed, unfed, hunger, tradable set, tradable (commodity), role, strategy, intent, trade plan, job request, purpose (of a bid), agent view, outcome view, work share, rest band, survival rule, planned recipe, reserve (units), keep, gap, surplus, target (stock), use target, output target, cover period, tier (of a bid), reserve money, spend cap, favourability, external agent, directive, directed strategy, mailbox, production stop, household labour, activity, start capacity, mean factor, net vector, reference programme, surplus factor, labour share to subsist, available work share, warm start, seed table, virtual start offset, stagger (rule), supply gap, lean reserve, balanced census, lane, residual, drift, register entry, failure regime, pinned market, stability scenario, evidence offset, effective window, working household-tick, wear cost, work floor, evidence share, full cost, regional wage, anchor (reference), starting wage, full unit cost, construction phase, construction bucket, periodic season, stated lot key, held to work (by the floor), spawner, privation, ladder (failure ladder), bankruptcy, entry share, entry limit, review (occupation review), cooldown, viability (of a role), expected ratio, renewal, entrant, mortal (external agent), role change, want, rank, taste, schedule, choke price, ceiling (of a schedule), substitution share, want carry, discretionary budget, nominal seed, final demand (wants), variant, overlay, product line, balanced census, stable-state predicate, bands document, shock script, cold variant, report-only (scenario), region, region graph, edge, route (an edge), distance, `RegionID`, `EdgeID`, `NoRegion`, hop, shortest path, next hop, component (strongly connected), island, edge status, effective length, factor (of an edge), relocation, relocation totals, region override, effective reference price, `Graph`, money supply, money flow, grant, levy, top-up, class (of accounts), flow carry, flow scale, declared reason, holding charge, liquidity floor, spending threshold, closed economy, balanced pair, birth (of a household), death (of a household), schedule (birth, death), knot, replacement ratio, exposed household, natural increase, birth stake, household cap, death carry, birth carry, fixed factor, gain (of the population loop), money-limited population, mode, self-carried mode, hired mode, carrying unit, crew (of a mode), haul unit, haul span, traveller, shipper, consignee, shipment, dispatch, arrival, transit account, transit factor, away (agent), inbound, diverted (cargo).
+trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, faucet, sink, pack, layer, policy, feedback loop, damper, viability, steady state, subsistence floor, bid, ask, limit price, admission, reservation, crossing, tie-break key, market price, price age, reference price, weight, scale, group, effective configuration, configuration hash, pack, presentation-only field, warning, sourced, producible, year, commodity, unit, mass, bulk, load, container, capacity, binding dimension, chargeable size, lot, born tick, transfer, reason (of a transfer), claim, balance sheet, sector, flow total, pseudo-agent, earmark, named lot, audit, shelf life, age, spoil, durability (listed), durable, tool (listed), class, raw, calendar, calendar day, absolute day, moment, season, season cycle, ordered list, job, execution, executor, principal, duration, source (recipe with no inputs), co-product, byproduct, discard (output), disposal, yield factor, effective factor, site (sited recipe), yield profile, yield shock, residue, draw (endowment draw), pending output, work in progress, trainee yield, unit cost, cost anchor, cost share, price belief, centre (of a belief), width (of a belief), belief step, effective range, outcome (of an order), adjustment gate, stock ratio, target stock, seed price, price window, reference band, cost band, re-clamp, upkeep, effective upkeep, fed, unfed, hunger, tradable set, tradable (commodity), role, strategy, intent, trade plan, job request, purpose (of a bid), agent view, outcome view, work share, rest band, survival rule, planned recipe, reserve (units), keep, gap, surplus, target (stock), use target, output target, cover period, tier (of a bid), reserve money, spend cap, favourability, external agent, directive, directed strategy, mailbox, production stop, household labour, activity, start capacity, mean factor, net vector, reference programme, surplus factor, labour share to subsist, available work share, warm start, seed table, virtual start offset, stagger (rule), supply gap, lean reserve, balanced census, lane, residual, drift, register entry, failure regime, pinned market, stability scenario, evidence offset, effective window, working household-tick, wear cost, work floor, evidence share, full cost, regional wage, anchor (reference), starting wage, full unit cost, construction phase, construction bucket, periodic season, stated lot key, held to work (by the floor), spawner, privation, ladder (failure ladder), bankruptcy, entry share, entry limit, review (occupation review), cooldown, viability (of a role), expected ratio, renewal, entrant, mortal (external agent), role change, want, rank, taste, schedule, choke price, ceiling (of a schedule), substitution share, want carry, discretionary budget, nominal seed, final demand (wants), variant, overlay, product line, balanced census, stable-state predicate, bands document, shock script, cold variant, report-only (scenario), region, region graph, edge, route (an edge), distance, `RegionID`, `EdgeID`, `NoRegion`, hop, shortest path, next hop, component (strongly connected), island, edge status, effective length, factor (of an edge), relocation, relocation totals, region override, effective reference price, `Graph`, money supply, money flow, grant, levy, top-up, class (of accounts), flow carry, flow scale, declared reason, holding charge, liquidity floor, spending threshold, closed economy, balanced pair, birth (of a household), death (of a household), schedule (birth, death), knot, replacement ratio, exposed household, natural increase, birth stake, household cap, death carry, birth carry, fixed factor, gain (of the population loop), money-limited population, mode, self-carried mode, hired mode, carrying unit, crew (of a mode), haul unit, haul span, traveller, shipper, consignee, shipment, dispatch, arrival, transit account, transit factor, away (agent), inbound, diverted (cargo), resource, endowment, stock (of an endowment), capacity (of an endowment), regeneration, shape (of a resource), carry (regeneration carry), refuge, extinct (stock), finite stock, abundance, abundance curve, plan share, plan stock, ration (of an endowment), grant (of a ration), request (of a draw), maximum flow, maximum sustainable draw, sustainable draw, runway, open access, binding (endowment), headroom, `ResourceID`, rumour, price record, observation (an entry of the price record), source (information source), vintage, lag (of a rumour), information speed, rumour error, horizon (of a rumour), informed (role), outside, outside node, gate, line (of an outside node), side (sell side, buy side), mid, quote, margin (of a side), counterparty, Outside (account kind), outside sector, import, export, balance of trade, list value, drift (of a walk), shock (of a line), availability window, capacity (of a side), cap (cumulative), sweep, top-up (of a counterparty).
 
 ## Decisions taken
 
@@ -419,6 +475,20 @@ trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, fauce
 | What is the carriage unit? | A produced good: the haul unit of a hired mode, made by a recipe and traded in an ordinary market; no change to clearing (N-076) | `spec-transport.md` section 8 |
 | Can goods move without a traveller? | Yes: a hired shipment redeems haul units and the goods travel alone; a self-carried traveller carries everything its account holds | `spec-transport.md` sections 3.2, 5.1 |
 | How long does a journey take? | `max(1, ceil(distance * 10 000 / (Speed * F)))` ticks, fixed at dispatch; there are no queues | `spec-transport.md` sections 4, 6 |
+| Is a resource a commodity? | No: it has no price, no ledger account and no mass; a draw consumes endowment and the recipe's output is the commodity | `spec-resources.md` section 3.1 |
+| Who owns the yield-table values? | RES; PRO keeps the format; there is no climate entity | `spec-resources.md` section 7 |
+| How is a scarce endowment shared? | A proportional ration, leftovers by largest remainder then a stateless hash key; not first come, and not the rotation of production. The start loop is two passes: `Work` for all agents, the ration, then the starts | `spec-resources.md` sections 5.2, 5.3 |
+| Is depletion permanent? | Data: a finite stock is, a refilling stock is not, a logistic stock is unless a refuge is set | `spec-resources.md` section 6.1 |
+| What does the ledger see of a draw? | Nothing: no new reason, and an exact identity per endowment instead | `spec-resources.md` sections 6.2, 6.4 |
+| What fixes the Malthusian loop? | An endowment that binds; whether the loop is stable depends on its shape | `spec-resources.md` section 8 |
+| What sources a `Raw` good? | A recipe with no inputs, a sited recipe with `Draws` on an endowment that can start at least once (RES), or an import line with a sell side (EXT); the marker `Raw` still counts as sourced in the viability check, and either source satisfies `raw_without_source` | `spec-resources.md` section 9, `spec-external-sector.md` section 10.1 |
+| What does an agent know about other regions? | Only its own region's market report for free; a remote price arrives as a rumour, at least 2 ticks old (the local report is 1) and blurred by an independent bounded error, only to roles flagged `Informed` | `spec-information.md` sections 3, 5, 6 |
+| Who holds rumours? | The world holds one price record per source market (a ring of published prices); a rumour is computed when an informed agent's view is built; there is no per-agent or per-pair table | `spec-information.md` sections 4, 5.2 |
+| Does news relay hop by hop, and does a trip carry news back? | No to both in version 1: the lag is `1 + ceil(shortest distance / InfoSpeed)` in one step, and a trip changes no record | `spec-information.md` sections 5.2, 7.5 |
+| How does the outside trade? | Through counterparties: pseudo-agents with a pass-through account of the kind Outside, topped up in phase 3 with exactly what their order reserves and swept to zero in phase 4; six built-in reasons; clearing is unchanged, and the quote is a limit and not a peg. A boundary-backed admission was rejected (ADR 0004) | `spec-external-sector.md` sections 4, 6.7 |
+| Where does the outside's money enter the pool? | It does not: it reaches the households first, and the pool only through the estates | `spec-external-sector.md` section 11.5 |
+| Do outside goods ride the transport module? | No: a shipment to an outside node is refused with `outside_destination` and a relocation into one with `ErrOutsideNode` | `spec-external-sector.md` section 4.4, `spec-transport.md` section 5.4 |
+| Is an outside node a source of rumours? | No in version 1: INF records only a market's published price and EXT has no declaration and no outside-price field for INF (N-112) | `spec-external-sector.md` section 9.2 |
 
 ## Still open
 
@@ -434,7 +504,8 @@ trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, fauce
    is found for the return (`spec-carriage.md` 5.1). Restated as open in
    `spec-transport.md` 20.2; it belongs to the contract spec and MER.
 6. How does a merchant estimate `expected_margin_per_haul_unit` for the
-   `MerchantFeeShare` ceiling? It uses its rumoured remote prices, but the
+   `MerchantFeeShare` ceiling? It uses its rumoured remote prices (defined by `spec-information.md` 5: a price, a mean,
+   a lag of at least 2 and a source age), but the
    exact rule belongs to the merchant strategy spec (MER; `spec-carriage.md` 5.2).
 7. (Answered 2026-10-10.) The tolerance rule is `max(25% of the excess, 200 bp)`, raised to twice the observed spread: `spec-skill-barriers.md` section 3.
 
