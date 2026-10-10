@@ -710,7 +710,7 @@ For `spec-stability.md`:
 7. **Goods valued as capital.** Durables are held as wear-able lots, but their wear
    is not a transfer (5.4.2). Whether depreciation should also appear as a named
    flow of value, for national-accounts style measures, is for `spec-indicators.md`.
-8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent'"'"'s; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration remains `spec-migration.md`'"'"'s.
+8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent's; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration remains `spec-migration.md`'s.
 9. **Reporting the construction bucket** (7.4.1). The bucket is readable, but whether
    the world emits it is for `spec-observability.md`. Recommend one `BoundaryFlow`
    set after `WorldCreated`, with `Tick` -1 (before tick 0), the only event with a

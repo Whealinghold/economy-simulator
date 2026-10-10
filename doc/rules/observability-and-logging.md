@@ -366,7 +366,7 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.household.births`        | `PopulationChanged` (`BirthsDone`, by role) |
 | `economysim.household.deaths`        | `PopulationChanged` (`DeathsDone`, by role) |
 | `economysim.transport.shipments`     | `ShipmentDispatched` |
-| `economysim.transport.in_transit`    | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line'"'"'s units shipped) |
+| `economysim.transport.in_transit`    | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line's units shipped) |
 | `economysim.transport.cargo.spoiled` | `ShipmentArrived` (units spoiled, by line) |
 
 `UpkeepShortfall` is not emitted for a region and role whose households are all
@@ -535,4 +535,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 39dcae114800d7b1165cd2bb
+RULE-TAG: e9a4f504832aa2549addb97a
