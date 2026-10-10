@@ -694,7 +694,7 @@ source**: INF writes its rumour record only from a market's published price (`sp
 4.5), and a node has no market (3.1.2), because its counterparties trade in the gate region's
 market. EXT adds no read function, no declaration and no field for INF and never writes INF's
 table, an `AgentView` or a strategy input (FR-EXT-033). The open question 10 records the shape a
-source would take.
+source would take. The market of a gate region is a rumour source like any market, so an interior merchant hears of the gate's published price, which includes the outside's trades, with the lag and the error of any rumour (`spec-merchants.md` 11.3); only the node itself is not a source.
 
 9.3. **Routes.** TRN's `Routes` view lists the regions other than the agent's. A node
 appears with no route, because a shipment to it is refused (`outside_destination`, 4.4). The

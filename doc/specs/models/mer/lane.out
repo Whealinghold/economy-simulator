@@ -1,0 +1,76 @@
+N = 50 merchants, Q = 0.5 f, rumour lag 2, transit 2, h = 0.1, Gstar = 2 f, share at dispatch a = 0
+(the steady flow that holds the gap at 1 f is 0.1 f a tick, 10 lots of 50; a bar is never below 1 f)
+identical bars (the herd of INF-A2)                  size  1.797 f   mean gap  0.612 f   lots a tick  13.88 of 50
+lot lock only                                        size  1.172 f   mean gap  0.823 f   lots a tick  11.75 of 50
+spread W = 0.25 (even), no lock                      size  1.804 f   mean gap  0.661 f   lots a tick  13.40 of 50
+spread W = 0.5 (even), no lock                       size  1.193 f   mean gap  0.887 f   lots a tick  11.14 of 50
+spread W = 1.0 (even), no lock                       size  0.589 f   mean gap  1.129 f   lots a tick   8.70 of 50
+spread W = 2.0 (even), no lock                       size  0.036 f   mean gap  1.272 f   lots a tick   7.28 of 50
+spread W = 0.25 (even) and lot lock                  size  0.899 f   mean gap  0.984 f   lots a tick  10.17 of 50
+spread W = 0.5 (even) and lot lock                   size  0.567 f   mean gap  1.123 f   lots a tick   8.77 of 50
+spread W = 1.0 (even) and lot lock                   size  0.033 f   mean gap  1.275 f   lots a tick   7.25 of 50
+spread W = 2.0 (even) and lot lock                   size  0.083 f   mean gap  1.414 f   lots a tick   5.86 of 50
+spread W = 0.25 (Weyl of the agent ID) and lock      size  0.897 f   mean gap  0.987 f   lots a tick  10.11 of 50
+spread W = 0.5 (Weyl of the agent ID) and lock       size  0.571 f   mean gap  1.124 f   lots a tick   8.76 of 50
+spread W = 1.0 (Weyl of the agent ID) and lock       size  0.046 f   mean gap  1.272 f   lots a tick   7.28 of 50
+spread W = 2.0 (Weyl of the agent ID) and lock       size  0.080 f   mean gap  1.425 f   lots a tick   5.75 of 50
+
+independent error E (uniform, +-E f), identical bars, with and without the lock
+error E = 0.1 f, no lock                             size  1.938 f   mean gap  0.545 f   lots a tick  14.53 of 50
+error E = 0.1 f, lock                                size  0.944 f   mean gap  0.902 f   lots a tick  11.01 of 50
+error E = 0.4 f, no lock                             size  1.321 f   mean gap  0.697 f   lots a tick  13.04 of 50
+error E = 0.4 f, lock                                size  0.582 f   mean gap  0.846 f   lots a tick  11.55 of 50
+error E = 0.8 f, no lock                             size  0.604 f   mean gap  0.637 f   lots a tick  13.63 of 50
+error E = 0.8 f, lock                                size  0.289 f   mean gap  0.740 f   lots a tick  12.60 of 50
+
+share of the effect at dispatch a = 0.5 (the purchase moves the origin price at once)
+identical bars, a = 0.5                              size  1.200 f   mean gap  0.667 f   lots a tick  13.33 of 50
+lock, a = 0.5                                        size  0.743 f   mean gap  0.846 f   lots a tick  11.52 of 50
+spread W = 1 and lock, a = 0.5                       size  0.059 f   mean gap  1.261 f   lots a tick   7.39 of 50
+
+longer total delay: rumour lag 6, transit 4
+identical bars                                       size  3.354 f   mean gap  0.289 f   lots a tick  17.20 of 50
+lock                                                 size  0.484 f   mean gap  0.929 f   lots a tick  10.72 of 50
+spread W = 1 (even), no lock                         size  1.817 f   mean gap  0.908 f   lots a tick  10.93 of 50
+spread W = 1 (even) and lock                         size  0.060 f   mean gap  1.428 f   lots a tick   5.72 of 50
+spread W = 2 (even) and lock                         size  0.109 f   mean gap  1.589 f   lots a tick   4.11 of 50
+
+a larger herd against the same steady flow: Q = 1.0 f (twice the lot size per merchant)
+identical bars                                       size  3.849 f   mean gap -0.083 f   lots a tick  10.42 of 50
+lock                                                 size  2.199 f   mean gap  0.421 f   lots a tick   7.90 of 50
+spread W = 1 (even), lock                            size  0.597 f   mean gap  1.115 f   lots a tick   4.42 of 50
+spread W = 2 (even), lock                            size  0.054 f   mean gap  1.267 f   lots a tick   3.67 of 50
+
+a cap on the lot (D39: LotUnits): Q = 0.25 f and 0.1 f
+identical bars, Q = 0.25 f                           size  0.981 f   mean gap  0.906 f   lots a tick  21.83 of 50
+spread W = 1 (even) and lock, Q = 0.25 f             size  0.061 f   mean gap  1.425 f   lots a tick  11.50 of 50
+identical bars, Q = 0.1 f                            size  0.410 f   mean gap  1.015 f   lots a tick  49.25 of 50
+spread W = 1 (even) and lock, Q = 0.1 f              size  0.036 f   mean gap  1.660 f   lots a tick  17.00 of 50
+
+number of merchants at a fixed Q (spread W = 1 even, lock, error 0.2 f)
+N = 5                                                size  0.607 f   mean gap  1.180 f   lots a tick   0.82 of 5
+N = 10                                               size  0.419 f   mean gap  1.214 f   lots a tick   1.57 of 10
+N = 20                                               size  0.303 f   mean gap  1.233 f   lots a tick   3.06 of 20
+N = 50                                               size  0.189 f   mean gap  1.244 f   lots a tick   7.55 of 50
+N = 200                                              size  0.104 f   mean gap  1.251 f   lots a tick  29.98 of 200
+
+eight seeds (1 to 8): lowest and highest size, spread W = 1 (even) and lock, error 0.2 f; identical with error 0.4 f
+spread + lock + error 0.2 f    0.18 f to  0.23 f
+identical, error 0.4 f         1.21 f to  1.32 f
+
+the smallest spread W (steps of 0.05 f, even bars) that settles the gap (size under 0.1 f), Q = 0.5 f, and the slope condition Q / W < 2 sin(pi / (2 (2 n + 1))), n = lag + transit
+lag 2, transit 2: limit on the slope 0.347, so W above  1.44 f; model: no lock 1.45, lock 0.8
+lag 4, transit 2: limit on the slope 0.241, so W above  2.07 f; model: no lock 1.85, lock 0.95
+lag 2, transit 4: limit on the slope 0.241, so W above  2.07 f; model: no lock 1.85, lock 0.55
+lag 6, transit 4: limit on the slope 0.149, so W above  3.35 f; model: no lock 2.55, lock 0.65
+lag 8, transit 8: limit on the slope 0.095, so W above  5.25 f; model: no lock None, lock None
+
+the Weyl spread of the agent ID: how even are N merchants with consecutive IDs, and with IDs of every 7th agent
+N = 5   IDs 1000+1j: largest gap  2361 bp, smallest   339 bp, ideal 2000 bp
+N = 5   IDs 1003+7j: largest gap  3263 bp, smallest   212 bp, ideal 2000 bp
+N = 10  IDs 1000+1j: largest gap  1459 bp, smallest   218 bp, ideal 1000 bp
+N = 10  IDs 1003+7j: largest gap  2837 bp, smallest   212 bp, ideal 1000 bp
+N = 20  IDs 1000+1j: largest gap   901 bp, smallest   218 bp, ideal 500 bp
+N = 20  IDs 1003+7j: largest gap  2198 bp, smallest   212 bp, ideal 500 bp
+N = 50  IDs 1000+1j: largest gap   345 bp, smallest    86 bp, ideal 200 bp
+N = 50  IDs 1003+7j: largest gap   213 bp, smallest    14 bp, ideal 200 bp

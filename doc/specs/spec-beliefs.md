@@ -647,8 +647,7 @@ here is 20% (section 14).
 `Centre = clamp(window mean, Floor, Ceiling)` if the window is not empty and
 the market price otherwise, with `BeliefWidthInit`. An agent that changes role (`spec-spawner.md` 4.2) keeps the belief of every commodity that is in the tradable sets of both roles, with its centre and width unchanged apart from the re-clamp of 3.3 to the bounds of the new role's unit cost; a commodity new to its set gets a belief by this paragraph's rule; a belief for a commodity that left the set is dropped. This is bazaarBot's rule of
 starting a new agent from the average price over its lookback (bazaarbot-reference.md section 8),
-with the window of section 7. Whether a migrant keeps its old beliefs or is
-reseeded in the new region is open (open question 7); the default is to reseed.
+with the window of section 7. A migrant (`spec-migration.md` 8.4) and a self-carried traveller on arrival (`spec-merchants.md` 12.2, `spec-transport.md` 5.7) are reseeded at arrival by this rule: for every commodity of the agent's tradable set the centre is the clamp of the window mean of the market it arrives in (the market price if the window is empty) and the width is `BeliefWidthInit`; no draw is taken, and one helper serves both arrivals.
 
 8.4. **The hook for a steady state.** `spec-viability.md` solves for the steady
 state of a chain and so gives a price for each commodity in each region. The seed
@@ -1114,9 +1113,7 @@ Still open:
    per side (`spec-clearing.md` 5.5). Next step: if the residual offset of 12 remains
    in a run with AGT's quantity rule, test the unmatched units as the evidence in the
    model before adding the signal.
-7. **A migrant's beliefs.** Reseeding on arrival is the default (8.3). Whether an agent
-   that knows another region's prices should keep them for a while belongs to
-   `spec-migration.md` and `spec-information.md`. Next step: those specs. INF holds no per-agent state: a migrant's rumours are those of its new region from its next view (`spec-information.md` 7.3), so what remains is MIG's alone.
+7. **A migrant's beliefs. Answered (2026-10-10).** A migrant and a self-carried traveller are reseeded on arrival by the rule of 8.3 (`spec-migration.md` 8.4, `spec-merchants.md` 12.2); neither keeps the beliefs of the region it left. INF holds no per-agent state: a migrant's rumours are those of its new region from its next view (`spec-information.md` 7.3). A migrant has no rumour state to keep (`spec-migration.md` 8.5).
 9. **What the consumer can read.** Whether `Snapshot` reports each belief's centre
    and range or only per-market aggregates is `spec-observability.md`'s (N-040);
    vision.md goal 4 argues for at least the aggregates. Next step: that spec.
