@@ -1002,7 +1002,7 @@ A seller facing it has the neutral case `e = 1` of `spec-stability.md` 6.1. *Own
 
 **New scenarios proposed (the register owner numbers them):**
 
-- **S13 (existing, now defined; 18.4 and 17.6).** A faucet and no sink on pack `one`:
+- **S13 (existing, now defined; 17.6).** A faucet and no sink on pack `one`:
   `overlay/faucet.toml`. *Measure:* the boundary balance of the flow's reason, `M`, and the
   index of the staple's price over four years. *Pass:* the boundary balance equals
   `-Total` exactly and equals `-Amount` times the household-ticks of the class, `M` equals
