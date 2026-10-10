@@ -1,0 +1,27 @@
+shortest distances
+  north [0, 40, 90]
+  mid [40, 0, 60]
+  south [100, 60, 0]
+travel ticks (foot speed 20, wagon and coach speed 30)
+  north->mid dist  40: foot 2, wagon 2
+  north->south dist  90: foot 5, wagon 3
+  mid->north dist  40: foot 2, wagon 2
+  mid->south dist  60: foot 3, wagon 2
+  south->north dist 100: foot 5, wagon 4
+  south->mid dist  60: foot 3, wagon 2
+example 1: a foot traveller, weight 1, unit (40, 30)
+  load (36, 30) fits (40, 30): True units 1
+  with fuel 3: (40, 42) fits: False
+  north->south ticks 5 dispatched tick 10, arrives tick 15
+  fresh born 10, shelf life 3 spoils at the end of tick 12 ; arrival 15 -> delivered: False
+  trip of 1 ticks from tick 10: arrival 11 delivered: True
+  trip of 2 ticks from tick 10: arrival 12 delivered: True
+  trip of 3 ticks from tick 10: arrival 13 delivered: False
+example 2: a wagon, weight 2, crew 2, one vehicle (cap 1200, 900), feed 3 fodder, wear 5 per tick
+  north->south ticks 3 feed 9 wear per vehicle 15 durability left 385
+example 3: hire by coach, unit (1200, 900), span 10
+  load (300, 200) units 1 haul units 6 ticks 2
+  recipe cost 480 300 4000 = 4780 unit cost 1195
+  freight at unit cost 7170 of cargo value 30000 = 2390 bp
+  a full unit: (1200, 800) units 1 freight share bp 597
+  haul units per execution: 1 unit * 40 distance / span 10 = 4 ; round trip ticks 4
