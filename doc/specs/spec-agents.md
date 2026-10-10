@@ -141,6 +141,7 @@ A **role** is a plain struct in the root package, an entry of `Config.Roles`
 | `Recipes` | list of recipe IDs | the recipes an agent of the role may start (`spec-production.md` 3.3); sorted; empty means the role has no recipes | none |
 | `Upkeep` | list of (commodity, quantity) | the upkeep of one household; a non-empty list replaces the world's upkeep (5.2) | none (the world's) |
 | `Trades` | list of commodity IDs | commodities the role trades beyond those its upkeep and recipes imply (3.4) | none |
+| `Informed` | bool | the agents of the role are shown rumours of other regions' prices in the view passed to `Trade` (owner `spec-information.md` 6.1; needs `Modules.Information`) | false |
 | `StartMoney` | money | money per household for an agent created at world construction, and the amount drawn from a pool for a later agent (`spec-estates.md` 2.3) | 10 000 (placeholder) |
 | `StartStock` | list of (commodity, quantity) | goods per household an initial agent starts with | none |
 | `Strategy` | string | the registered strategy name (6.6) | `"default"` |
@@ -306,14 +307,14 @@ order below, and proposes it (N-009 collects what other specs assume).
 
 | # | Phase | What happens to an agent |
 |---|-------|--------------------------|
-| 1 | Start | In this order: the moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); transport arrivals, in shipment-ID order (`spec-transport.md` 5.7); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); money flows (`spec-money-supply.md` 5.1); an external agent's directive is read |
-| 2 | Production | Jobs continue and complete; then `Work` is called for each agent that is free and did not continue or complete a job, and the jobs start (`spec-production.md` 5.2, 5.5). An agent that is away is skipped (`spec-transport.md` 5.5.2) |
-| 3 | Trade decision | `Trade` is called for each agent in ID order (an agent that is away is skipped and gets no view); the world executes the plan: discards first, then shipments (`spec-transport.md` 5.3.2), then the orders built from the intents, in plan order; admission reserves cash and stock (`spec-clearing.md` 3) |
-| 4 | Clearing | Every market clears (`spec-clearing.md` 7.2) |
-| 5 | Outcomes | Price windows are updated; `Revise` is called for each outcome in order of region, commodity and admission (`spec-beliefs.md` 5.1) |
+| 1 | Start | In this order: the moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); transport arrivals, in shipment-ID order (`spec-transport.md` 5.7); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); money flows (`spec-money-supply.md` 5.1); the outside's walk, with the module on (`spec-external-sector.md` 5.1); an external agent's directive is read |
+| 2 | Production | Jobs continue and complete; with the resources module on, the stocks are snapshotted; `Work` is called for each agent that is free and did not continue or complete a job; the draws are rationed per endowment (`spec-resources.md` 5.2, 5.3); then the jobs start in the rotation order (`spec-production.md` 5.2, 5.5.1). An agent that is away is skipped (`spec-transport.md` 5.5.2) |
+| 3 | Trade decision | `Trade` is called for each agent in ID order (an agent that is away is skipped and gets no view); the world executes the plan: discards first, then shipments (`spec-transport.md` 5.3.2), then the orders built from the intents, in plan order; admission reserves cash and stock (`spec-clearing.md` 3). For an agent of an informed role the rumours of its view are built, with their error draws, immediately before its `Trade` (`spec-information.md` 5.5.2, 7.1). After the last agent and the estates' asks, the counterparties of the external module top up and place their orders (`spec-external-sector.md` 5.2) |
+| 4 | Clearing | Every market clears (`spec-clearing.md` 7.2); then the counterparty accounts are swept to zero (`spec-external-sector.md` 5.3) |
+| 5 | Outcomes | Price windows are updated; the price record of the information module is appended after the windows are pushed (`spec-information.md` 4.3); `Revise` is called for each outcome in order of region, commodity and admission (`spec-beliefs.md` 5.1) |
 | 6 | Consumption | Upkeep is consumed; `Unfed`, `Hunger` and `Privation` are set by the world; with the demand module on, the wants are then consumed (`spec-demand.md` 4.7, reason `want_consumption`); the welfare record of the tick is pushed |
 | 7 | Entry and exit | The spawner and population module act (`spec-spawner.md` 10.2: it reads `Privation` and the signals after phase 6); the population module's deaths come before the budget of the entry step is taken and its births last (`spec-population.md` 4.8); removed agents' holdings pass to the estates |
-| 8 | End | Ageing and spoilage (`spec-ledger.md` 5.3), flow totals, optional audit |
+| 8 | End | Ageing and spoilage (`spec-ledger.md` 5.3), flow totals, regeneration of the endowments (`spec-resources.md` 4.1), optional audit |
 
 4.1. Upkeep bought in phase 3 arrives in phase 4 and can be eaten in phase 6 of the
 same tick. Money earned in phase 4 can be spent no earlier than phase 3 of the next
@@ -488,7 +489,7 @@ share live state with a strategy (6.4).
 or keep the one it was given after the call returns. The doc comment on `Strategy`
 states this, because a consumer's implementation that breaks it breaks
 reproducibility (architecture.md 7.4). The order of calls is fixed (section 4), so
-the stream a strategy sees is a function of the world's state.
+the stream a strategy sees is a function of the world's state. This holds with the information module: the error draws of a view are taken from the same source immediately before that agent's `Trade`, in a fixed order that is a function of the configuration and the state (`spec-information.md` 5.5.2), and the ration of `spec-resources.md` 5.3 and the walk of `spec-external-sector.md` 5.1 take theirs at fixed points of the tick.
 
 6.1.3. **Determinism of the strategy itself.** A strategy **MUST** be a function of
 its view and the random source. It must not read the clock, a global, a map's
@@ -631,10 +632,12 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Upkeep | the effective upkeep (5.2) as per-household quantities |
 | Job | whether one is active, its recipe, `Remaining`, `Executions` |
 | Per commodity in the tradable set | `Stock` (the whole balance; no reservation exists yet), `Expiring` (units that spoil at the end of this tick), the belief and its bounds, the effective reference price, `UnitCost` (0 if the role cannot make it, or if the region has no observed wage yet; it counts labour, 7.3.6), and the market report: price, age, best unmatched bid and ask with flags, and the price window's mean, low, high and the position of the price in it (`spec-beliefs.md` 7) |
-| Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season, `MaxExecutions` (`spec-production.md` 4.2) and the reason if it is 0 |
+| Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season (with the resources module on it includes the abundance of the tick's snapshot, `spec-resources.md` 4.7.3), `MaxExecutions` (`spec-production.md` 4.2; with the module on also bounded by `floor(stock / draw)` of the snapshot, reason `no_endowment`) and the reason if it is 0 |
 | Tunables | the values of section 12 |
 | Mailbox | the pending `Directive`, if any (section 10) |
 | Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1). An agent that is away is never passed a view |
+| Endowments (only with the resources module on) | for the agent's own region only: each endowment that its role's recipes draw on, sorted by resource: `Resource`, `Stock`, `Capacity`, `AbundanceBP` (`spec-resources.md` 5.5.1). No view carries another region's endowment |
+| Rumours (only with the information module on, and only in the view passed to `Trade` of an agent of a role with `Informed`) | `Rumours`: the rumours of `spec-information.md` 5, sorted by (`Region`, `Commodity`), a scratch slice valid for the call only. The `Work` view and the `OutcomeView` carry none |
 
 6.4.2. The view carries *configuration* (recipes, upkeep) by value as plain data.
 Nothing in it points into live state. The reading of architecture.md 12.4 ("every
@@ -1360,6 +1363,7 @@ carries the path, value and bound.
 | Role | `Recipes` | the role's recipes (3.3) | none | at most `MaxRecipes`, each a known recipe |
 | Role | `Upkeep` | the role's own upkeep, replacing the world's (5.2) | none | as `Upkeep` above |
 | Role | `Trades` | extra tradable commodities (3.4) | none | known commodities |
+| Role | `Informed` | shown rumours in the `Trade` view (owner `spec-information.md` 6.1) | false | a bool; needs the information module |
 | Role | `StartMoney` | money per household at creation, and from the pool for a later agent (3.5) | 10 000 | 0 to `MaxMoney / MaxWeight` |
 | Role | `StartStock` | goods per household for an initial agent (3.5) | none | each quantity 1 to `MaxQuantity / MaxWeight` |
 | Role | `Strategy` | the registered strategy name (6.6) | `"default"` | a registered name |
@@ -1822,7 +1826,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
-| FR-AGT-001 | Every agent MUST have a unique agent ID that is never reused in a run, an integer weight of at least 1, a role and a ledger account, and the pseudo-agents of the regions MUST have the lowest IDs. |
+| FR-AGT-001 | Every agent MUST have a unique agent ID that is never reused in a run, an integer weight of at least 1, a role and a ledger account, and the pseudo-agents of the regions MUST have the lowest IDs, followed by the counterparties of the external module (`spec-external-sector.md` 4.2.2). |
 | FR-AGT-002 | An agent MUST hold no money balance and no quantity of its own: its money, goods and tools MUST be in its ledger account, and its region MUST be that of the account. |
 | FR-AGT-003 | The tradable set of a role MUST be the effective upkeep commodities, the inputs, required tools and non-discard outputs of its recipes, its `Trades`, and with the demand module on the items of the wants in its ladder, in canonical order and without duplicates, and MUST NOT contain a discard output. (changed in round 5) |
 | FR-AGT-004 | An agent MUST hold one belief for every commodity in its tradable set from its creation, and MUST NOT trade a commodity outside the set. |

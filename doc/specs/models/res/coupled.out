@@ -1,0 +1,46 @@
+POP gain with eta = 1: kappa = r* g'(r*) / 10 000 = 0.060 per year; N* = 100,000; RMAX = 20000; r* = 12000; sigma* = r*/RMAX = 0.60
+
+== 1. refilling stock (shape refill), abundance proportional to the stock share, window T = 1 (no delay), start 1.6 N*
+   Linearisation: two eigenvalues of  l^2 + Rf l + Gamma = 0,  Gamma = kappa * F(S*)/S* = kappa * Rf * (1-sigma*)/sigma*.
+   Monotone iff Rf^2 >= 4 Gamma, i.e. Rf >= 4 kappa (1-sigma*)/sigma* = 0.160 a year; below it a damped oscillation
+    Rf/yr   predicted crossings  min N/N*  simulated
+     0.02  oscillates         5     0.844  damped oscillation (undershoot 15.6% of N*)
+     0.05  oscillates         3     0.930  damped oscillation (undershoot 7.0% of N*)
+     0.10  oscillates         1     0.986  damped oscillation (undershoot 1.4% of N*)
+     0.16    monotone         1     1.000  monotone
+     0.30    monotone         0     1.000  monotone
+     0.50    monotone         0     1.001  monotone
+     1.00    monotone         0     1.003  monotone
+     3.00    monotone         0     1.008  monotone
+
+== 2. the same with the welfare window T = 365 (a delay of about half a year, spec-population.md 5.4) and a lag of 365
+    Rf/yr crossings  min N/N*  simulated
+     0.16         1     0.954  damped oscillation (undershoot 4.6% of N*)
+     0.50         1     0.956  damped oscillation (undershoot 4.4% of N*)
+     1.00         1     0.957  damped oscillation (undershoot 4.3% of N*)
+     3.00         1     0.962  damped oscillation (undershoot 3.8% of N*)
+
+== 3. logistic stock, r_s = 1 a year, sigma* = 0.6 (above the maximum-yield point 0.5), T = 30, different starts above N*
+   The draw at N* is 96% of the maximum sustainable draw F_max = r_s C / 4; a start whose draw exceeds F_max cannot recover.
+   start/N* draw/F_max crossings  min N/N*  simulated
+       1.02      0.979         2     0.998  monotone
+       1.04      0.998         2     0.995  monotone
+       1.05      1.008         2     0.994  damped oscillation (undershoot 0.6% of N*)
+       1.10      1.056         2     0.975  damped oscillation (undershoot 2.5% of N*)
+       1.60      1.536         1     0.000  collapse
+   and a fixed point below the maximum-yield point (sigma* = 0.4, RMAX 30 000): unstable even for a small push
+   start 0.98 N*: crossings 2, min N/N* 0.000, max 1.080: collapse
+   start 1.02 N*: crossings 1, min N/N* 0.000, max 1.020: collapse
+
+== 4. constant inflow (F' = 0): neutral in the linearisation; starts 1.1 N* and 0.9 N* and 1.6 N*, T = 30
+   start 0.9 N*: crossings 12, tail amp 0.216, N/N* between 0.90 and 1.11: sustained cycle
+   start 1.1 N*: crossings 12, tail amp 0.202, N/N* between 0.90 and 1.10: sustained cycle
+   start 1.6 N*: crossings 9, tail amp 1.054, N/N* between 0.56 and 1.62: sustained cycle
+
+== 5. the flat curve (a pure quota, eta = 1 above the binding point), refill, T = 30
+   N_bind = Rf * C / (365 h): the households at which the draw equals the refill at an empty stock;
+   for N > N_bind the granted share is f = N_bind / N and r = RMAX * f, so N* = N_bind * RMAX / r*
+   Rf  0.3, start 1.6 N*(model): N_bind 60,000, predicted N* 100,000; final N 99,999 (1.000 of predicted); crossings 1; tail amp 0.0000
+   Rf  0.3, start 0.6 N*(model): N_bind 60,000, predicted N* 100,000; final N 99,833 (0.998 of predicted); crossings 0; tail amp 0.0000
+   Rf  3.0, start 1.6 N*(model): N_bind 60,000, predicted N* 100,000; final N 99,999 (1.000 of predicted); crossings 1; tail amp 0.0000
+   Rf  3.0, start 0.6 N*(model): N_bind 60,000, predicted N* 100,000; final N 99,833 (0.998 of predicted); crossings 0; tail amp 0.0000

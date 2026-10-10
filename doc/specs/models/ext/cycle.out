@@ -1,0 +1,48 @@
+== 18.1 worked tick (example A, one gate, tick 0) ==
+grain: mid 20, placed {'buy': (18, 50, 50, 0, 0)}
+   trade buyer OB seller g1 price 16 qty 20
+   trade buyer OB seller g2 price 18 qty 15
+   traded {'buy': 35, 'sell': 0} value {'buy': 590, 'sell': 0}
+salt: mid 40, placed {'sell': (42, 30, 30, 0, 0)}
+   trade buyer s1 seller OS price 46 qty 10
+   trade buyer s2 seller OS price 44 qty 10
+   traded {'buy': 0, 'sell': 20} value {'buy': 0, 'sell': 900}
+flows this tick (reason, thing): amount
+   outside_budget     money  900
+   outside_offer      salt   30
+   outside_purchases  grain  35
+   outside_receipts   money  900
+   outside_unsold     salt   10
+   outside_unspent    money  310
+   trade              grain  35
+   trade              money  1490
+   trade              salt   20
+boundary balances:
+   outside_budget     money  -900
+   outside_offer      salt   -30
+   outside_purchases  grain  35
+   outside_receipts   money  900
+   outside_unsold     salt   10
+   outside_unspent    money  310
+money in the realm 3000 -> 2690, change -310
+
+== 18.2 two years of example A with a walk on grain, 4 seasons of 90 ticks ==
+cumulative flows by reason and thing:
+   outside_budget     money  575610
+   outside_offer      salt   21600
+   outside_purchases  grain  24420
+   outside_receipts   money  951790
+   outside_unsold     salt   80
+   outside_unspent    money  166050
+exports (money in) 409560, imports (money out) 951790, balance -542230
+money in the realm 40000000 -> 39457770, change -542230
+drift of the grain walk: min -568, max 395 (bound 2000)
+lines ended: []
+
+== 18.3 a cumulative cap ends a line (example B) ==
+ended: [('ended', 'reagent', 'sell', 'value', 3), ('ended', 'ore', 'buy', 'units', 7)]
+first cut records (tick, commodity, side, (price, offered, wanted, cut_units, cut_value)): [(3, 'reagent', 'sell', (324, 7, 10, 0, 3)), (7, 'ore', 'buy', (96, 100, 200, 100, 0))]
+ore units sold 1500 of cap 1500; reagent list value 11988 of cap 12000 (realised money 13394)
+export value 139500, import value 13394, balance of trade 126106
+
+all identities held (zero total each thing, counterparties empty at every tick boundary)

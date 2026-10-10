@@ -1,0 +1,56 @@
+N = 50 shippers, Q = 0.5 f, lag 2, transit 2, h = 0.1, Gstar = 2 f
+(the steady flow that holds the gap at f is 0.1 f a tick, 10 lots of 50)
+identical shippers                           size of the gap  1.797 f   lots per tick  13.88 of 50
+spread S = 1                                 size of the gap  1.893 f   lots per tick  15.00 of 50
+spread S = 2                                 size of the gap  2.105 f   lots per tick  15.12 of 50
+spread S = 4                                 size of the gap  2.147 f   lots per tick  15.25 of 50
+spread S = 8                                 size of the gap  2.044 f   lots per tick  15.46 of 50
+independent error E = 0.05 f                 size of the gap  1.992 f   lots per tick  14.24 of 50
+independent error E = 0.1 f                  size of the gap  1.938 f   lots per tick  14.53 of 50
+independent error E = 0.2 f                  size of the gap  1.749 f   lots per tick  14.16 of 50
+independent error E = 0.4 f                  size of the gap  1.321 f   lots per tick  13.04 of 50
+independent error E = 0.8 f                  size of the gap  0.604 f   lots per tick  13.63 of 50
+shared error E = 0.2 f (one draw per tick)   size of the gap  2.220 f   lots per tick  14.18 of 50
+shared error E = 0.8 f (one draw per tick)   size of the gap  2.433 f   lots per tick  13.95 of 50
+spread S = 2 and error E = 0.2 f             size of the gap  1.915 f   lots per tick  14.72 of 50
+spread S = 4 and error E = 0.4 f             size of the gap  1.634 f   lots per tick  13.95 of 50
+
+a static spread of the shippers' own thresholds (no error, no spread of vintage): the bar of shipper j is
+ f * (1 - w + 2 w j / (N - 1)), fixed, no draw
+thresholds spread w = 0.1                    size of the gap  1.744 f   lots per tick  14.39 of 50
+thresholds spread w = 0.2                    size of the gap  1.594 f   lots per tick  14.06 of 50
+thresholds spread w = 0.4                    size of the gap  1.006 f   lots per tick  12.95 of 50
+thresholds spread w = 0.8                    size of the gap  0.040 f   lots per tick  13.67 of 50
+
+the same Q = 0.5 f shared among more shippers (error E = 0.2 f, spread 0)
+N = 5                                        size of the gap  1.994 f   lots per tick   1.41 of 5
+N = 20                                       size of the gap  1.801 f   lots per tick   5.66 of 20
+N = 50                                       size of the gap  1.749 f   lots per tick  14.16 of 50
+N = 200                                      size of the gap  1.682 f   lots per tick  56.61 of 200
+N = 1000                                     size of the gap  1.655 f   lots per tick 282.40 of 1000
+
+a smaller Q (the cap on what the shippers can ship, D39): identical shippers
+Q = 0.5 f                                    size of the gap  1.797 f   lots per tick  13.88 of 50
+Q = 0.25 f                                   size of the gap  0.981 f   lots per tick  21.83 of 50
+Q = 0.1 f                                    size of the gap  0.410 f   lots per tick  49.25 of 50
+Q = 0.05 f                                   size of the gap  0.000 f   lots per tick  50.00 of 50
+
+longer total delay (lag 6, transit 4), E = 0.4 f, spread 0 and 4
+lag 6, transit 4, E = 0.4 f                  size of the gap  3.036 f   lots per tick  16.56 of 50
+lag 6, transit 4, E = 0.4 f, S = 4           size of the gap  3.268 f   lots per tick  17.19 of 50
+
+the condition Q / (2 E) < 2 sin(pi / (2 (2 n + 1))), n = lag + transit = 4 (limit 0.346):
+size of the gap for the error E and the static spread w that give the same slope
+Q = 0.25 E or w = 0.2 slope 0.625 above the limit: error 0.863 f, thresholds 0.783 f
+Q = 0.25 E or w = 0.4 slope 0.312 below the limit: error 0.286 f, thresholds 0.019 f
+Q = 0.25 E or w = 0.8 slope 0.156 below the limit: error 0.251 f, thresholds 0.000 f
+Q = 0.5  E or w = 0.2 slope 1.250 above the limit: error 1.749 f, thresholds 1.594 f
+Q = 0.5  E or w = 0.4 slope 0.625 above the limit: error 1.321 f, thresholds 1.006 f
+Q = 0.5  E or w = 0.8 slope 0.312 below the limit: error 0.604 f, thresholds 0.040 f
+
+eight seeds (1 to 8) for the rows with an error: lowest and highest size of the gap
+E = 0.2 f             1.74 f to  1.81 f
+E = 0.4 f             1.21 f to  1.32 f
+E = 0.8 f             0.53 f to  0.68 f
+shared E = 0.2 f      2.21 f to  2.23 f
+shared E = 0.8 f      2.42 f to  2.73 f

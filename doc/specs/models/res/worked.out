@@ -1,0 +1,44 @@
+== A1. arable (refill 100% a year, regenerating only in autumn and winter at x2), capacity 2 000, 19 draws a tick for the first 20 ticks of spring
+   stock at: spring start | after the draws | end of spring | end of summer | end of autumn | end of winter
+   year 0:  1700 |  1320 |  1320 |  1320 |  1587 |  1748
+   year 1:  1748 |  1368 |  1368 |  1368 |  1617 |  1766
+   year 2:  1766 |  1386 |  1386 |  1386 |  1628 |  1773
+   year 3:  1773 |  1393 |  1393 |  1393 |  1632 |  1775
+
+== A2. woodland (logistic 30% a year, capacity 50 000, refuge 20), maximum sustainable draw F_max = 0.3 * 50 000 / 4 = 3 750 a year
+   steady 3 000 a year: year:stock:abundance 0:49992:9999  5:41609:9664  10:38666:9546  15:37390:9495  20:36788:9471  25:36491:9459  30:36343:9453  35:36268:9450
+   steady 3 600 a year (0.96 of F_max = 3 750): year:stock:abundance 0:49991:9999  5:39761:9590  10:35776:9431  15:33727:9349  20:32522:9300  25:31758:9270  30:31249:9249  35:30900:9236
+   steady 4 500 a year (above F_max): year:stock:abundance 0:49988:9999  5:36861:9474  10:30818:9232  15:26629:9065  20:22842:8568  25:18506:7701  30:11963:6392  35:0:0
+
+== B1. the ice field of the habitat (640 ticks a year)
+   ice needed 166.7 a tick; cut_ice executions 9.259 a tick at 18 ice each; draws 277.8 a tick = 177,778 a year; runway of 3 000 000 units at a flat yield: 16.9 years
+   with the abundance curve (0, 2 000) (2 000, 8 000) (10 000, 10 000): exhausted after 13.8 years; years to 80/50/20/5% left: 80%: 3.3, 50%: 7.9, 20%: 12.1, 5%: 13.6
+   the viability row (finite deposit: Initial / HorizonYears a year, per tick, against the 278 a tick the households need):
+      horizon 50 years:     60,000 a year =    93.8 a tick   -> short
+      horizon 15 years:    200,000 a year =   312.5 a tick   -> enough
+      horizon 10 years:    300,000 a year =   468.8 a tick   -> enough
+
+== C. the ration of spec-resources.md 5.3: 10 plots, requests A 4, B 3, C 3, D 2, E 1 (13 wanted)
+   U = 13; per agent: wanted, floor share, remainder numerator (of 13), granted
+    ('A', 4, 3, 1, 3)
+    ('B', 3, 2, 4, 2)
+    ('C', 3, 2, 4, 2)
+    ('D', 2, 1, 7, 2)
+    ('E', 1, 0, 10, 1)
+
+== D. the five-region proposal (spec-resources.md 18): arable draws a plot per grow_staple execution
+   region households mean-E(bp) executions/tick executions/year capacity(slack 2.2x) capacity(binding 1.1x)
+   north     1200    10000        1.534       559.9           2464              1232
+   east      1000     9500        1.346       491.2           2162              1081
+   south     1000    10000        1.278       466.6           2054              1027
+   west       800     7000        1.461       533.3           2347              1174
+   centre    1000     8000        1.598       583.3           2567              1284
+
+== A0. the first two autumn ticks of the arable stock, by the integer rule (stock, numerator, carry before, units added, carry after); D = 3.65e14
+    (1320, 1360000000000000, 0, 3, 265000000000000)
+    (1323, 1354000000000000, 265000000000000, 4, 159000000000000)
+
+== B2. the vats of the habitat (640 ticks a year)
+   mean site factor 5312.5 bp; biomass per execution 63.75; executions 31.37 a tick = 20,078 a year
+   capacity 30 000 vat-uses, refill 20 000 bp a year: maximum flow 60,000 a year; at the plan share 30,000 a year
+   households at which the draw equals them: N_bind 2,988 (empty stock) and 1,494 (plan share); headroom at 1 000 households 2.99 and 1.49

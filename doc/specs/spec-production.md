@@ -9,8 +9,9 @@ on any conflict). Its requirements carry IDs of the form `FR-PRO-NNN` and
 Layer: core ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)).
 Needs `spec-goods.md` (the fields of a commodity, `Durability`) and
 `spec-ledger.md` (`Transform`, `Wear`, the reason registry). Three parts are
-optional or belong to a later spec and are marked as such: the endowment limit
-(`spec-resources.md`), the yield table's values (`spec-resources.md`) and the
+optional or belong to another spec and are marked as such: the endowment limit
+(`spec-resources.md`, written: the seam of 6.5 is now completed there), the yield table's values
+(owned by `spec-resources.md` 7; the format, the lookup and the validation stay here) and the
 shock multiplier (`spec-integration.md`). The seams to them are defined here.
 
 **The numbers in this spec are placeholders.** Every bound, default and example
@@ -97,7 +98,7 @@ A `Recipe` is a plain struct in the root package, an entry of `Config.Recipes`
 | `Inputs` | list of (commodity, quantity) | consumed when a job starts, per execution |
 | `Outputs` | list of output items (3.2) | created when a job completes, per execution |
 | `Requires` | list of (commodity, `WearPerUse`) | tools: durables the executor must hold, each worn by use (section 4.4) |
-| `Draws` | list of (resource, quantity) | endowment the recipe takes from its region, per execution (section 6.5); module RES |
+| `Draws` | list of (resource, quantity) | endowment the recipe takes from its region, per execution (section 6.5); the resource is a `Resource` of `spec-resources.md` 3; module RES |
 | `Sited` | bool | the recipe runs only where the yield table gives it a positive factor (6.2) |
 | `TraineeEligible` | bool | a trainee may run it (section 8) |
 | `TraineeYield` | basis points | a trainee's output as a share of a full execution (8.2) |
@@ -175,8 +176,7 @@ For an agent (the **executor**) of weight `w`, a recipe starts `k` executions, w
 - `w` (`spec-scale.md` 4.2), or the strategy's maximum if lower;
 - for each input, the available stock divided by the input quantity, rounded down;
 - for each `Requires` entry, the number of unreserved tool items of that commodity;
-- for each `Draws` entry, the region's available endowment divided by the draw
-  quantity, rounded down (6.5).
+- for each `Draws` entry, the executions granted by the ration of `spec-resources.md` 5.3 (6.5).
 
 Before any of this, the request is checked against the role: a recipe that is not on
 the agent's role list (or, for a trainee, on its trainer's) is refused with the
@@ -263,7 +263,7 @@ In each tick the production phase runs for each agent, in the order of 5.5:
 1. If the agent has an active job, it **continues**: `Remaining` falls by 1. If it
    reaches 0 the job **completes** in this phase (5.3). The agent cannot start
    another job in the tick it continued.
-2. Otherwise, the agent may **start** a job (section 4). The job starts with
+2. Otherwise, the agent may **start** a job (section 4). With the resources module on, the starts of a tick are resolved in two passes, `Work` for every free agent and then the starts, with a ration of scarce endowments between them (5.5.1). The job starts with
    `Remaining` equal to its `Duration`, and then takes this tick's step of (1): so a
    job of duration 1 starts and completes in the same phase, and a job of duration
    `d` started in tick `s` completes in the production phase of tick `s + d - 1`.
@@ -342,6 +342,8 @@ the lowest IDs the whole endowment every tick, indefinitely. The rotation is
 deterministic and gives each agent the first turn equally often. It uses no random
 number.
 
+**Revised by `spec-resources.md` (wave 3).** The rotation orders the starts and no longer arbitrates a scarce endowment: it gave fairness only over a long run, and in a model a household of weight 1 was denied for a whole year at half supply (`spec-resources.md` 17.2). With the resources module on, the start phase is two-pass: (1) the stocks are snapshotted after the continuations and completions; (2) `Work` is called for every free agent and each request gets `k0`, the executions it could start ignoring draws; (3) for each endowment that some request draws on, in (`RegionID`, `ResourceID`) order, the requests are rationed in proportion to what they ask, leftovers by largest remainder then a stateless hash key of (tick, agent) (`spec-resources.md` 5.3); (4) the starts proceed in the rotation order, each with `k` the least of `k0` and the grants, taking its draws whole or not at all. With the module off, or for a recipe with no draw, nothing changes. The results of `Work` do not depend on the order of the calls (`spec-resources.md` FR-RES-015).
+
 5.5.2. Completion and continuation of jobs, for all agents, run before any
 starts, so a job that completes this tick cannot make an input available to a start
 in the same pass out of order. (An agent that completes cannot start in the same
@@ -355,9 +357,7 @@ is not yet sold, since trading is after production.)
 The **yield factor** of a job is a basis-point multiplier on every output of the
 recipe, read when the job starts. 10 000 is the recipe as written; 0 means the
 recipe cannot run; a larger value is a richer site. The factor comes from a table
-keyed by region, recipe and season. The table is data of the configuration, owned by
-`spec-resources.md` for its values (N-030); the type and how production consumes it
-are defined here so that RES can fill it in.
+keyed by region, recipe and season. The table is data of the configuration. **The values are owned by `spec-resources.md` 7** (N-030): what a value means, how a pack states a climate, and the checks that read the whole table. This spec keeps the type, the lookup (6.2), the effective factor (6.3) and the validation errors (10.2), and the table works with the resources module off.
 
 ```go
 // YieldProfile is a region's yield for one recipe. Plain data.
@@ -416,9 +416,11 @@ arithmetic and truncation toward zero, in this order:
 site  = table value (6.2)                           0 .. MaxYieldBP
 E     = site * shock / 10 000                       shock: 6.8, default 10 000
 E     = E * trainee / 10 000                        trainee: 10 000, or TraineeYield (8.2)
+E     = E * abundance / 10 000                      abundance: `spec-resources.md` 4.7 (the least over the recipe's draws;
+                                                    10 000 for a recipe with no draw or a flat curve)
 ```
 
-The two truncations lose less than 1 basis point in each step; they are a rule
+The three truncations lose less than 1 basis point in each step; they are a rule
 constant, not a tunable. `E = 0` means the job does not start (`zero_yield`,
 `no_site` when the cause is a `Sited` recipe with no profile).
 
@@ -443,20 +445,19 @@ completes whatever the season is at completion. This answers N-031 for productio
 A recipe with `Draws` takes a quantity of a regional resource per execution, such as
 a deposit's stock or a field's tilled area. The resource, its stock, its
 regeneration and its depletion are `spec-resources.md`'s. Production defines only
-the seam, two operations on a per-(region, resource) value that RES owns:
+the seam, two operations on a per-(region, resource) value that RES owns and defines in `spec-resources.md` 5.1 (typed IDs; `Endowment` is a public read, the take is internal to production and all-or-nothing):
 
 ```go
 // Defined by RES; production calls them. Both are plain data operations on world state.
-func (w *World) Endowment(region, resource int) int64                 // available units, 0 or more
-func (w *World) TakeEndowment(region, resource int, n int64) error    // n <= Endowment, else ErrInsufficientEndowment
+func (w *World) Endowment(region RegionID, resource ResourceID) int64        // available units, 0 or more
+func (w *World) takeEndowment(region RegionID, resource ResourceID, n int64) error  // n <= Endowment, else ErrInsufficientEndowment
 ```
 
-`k` is limited by the endowment divided by the draw quantity (4.2); the start step
-takes `k` times the draw quantity. A draw is not a ledger flow: the endowment is not
+`k` is limited by the executions the ration grants (`spec-resources.md` 5.3; 4.2, 5.5.1); the start step
+takes `k` times the draw quantity from the live stock, all draws or none. A draw is not a ledger flow: the endowment is not
 a good in an account. RES must make its own depletion visible (an event, and a
-regeneration flow), because the ledger will not see it. Until RES exists, a recipe
-with `Draws` fails validation with `ErrModuleDependency` (the resources module is
-off). The limit is therefore the only thing in a recipe that depends on another
+regeneration flow), because the ledger will not see it. RES now makes its depletion visible (`spec-resources.md` 6.2, 14). While the resources module is off, a recipe
+with `Draws` fails validation with `ErrModuleDependency`; with it on, an unknown resource is `ErrUnknownResource`. The limit is therefore the only thing in a recipe that depends on another
 module, and it does so through a list that is empty by default.
 
 ### 6.6 Fractional yield without chance (N-005)
@@ -533,7 +534,7 @@ The yield shock is one of several **world slots set between ticks**, each state 
 checkpoint and each given its public call by `spec-integration.md`: the edge status of
 `spec-regions.md` 7, the transit factor of `spec-transport.md` 10.3, the scale of a money flow
 (`spec-money-supply.md`) and the effective birth and death scales of a region
-(`spec-population.md` 6.6, 11). None edits a configured value.
+(`spec-population.md` 6.6, 11), and the capacity and regeneration scales and the one-off adjustment of an endowment (`spec-resources.md` 6.3). None edits a configured value.
 
 ## 7. Byproducts, waste and disposal (N-003)
 
@@ -638,7 +639,7 @@ input_cost  = sum over Inputs of  quantity * price                          (che
 wear_cost   = sum over Requires of  ceil(WearPerUse * price_of_tool / Durability)
 labour_cost = Duration * wage
 cost        = input_cost + wear_cost + labour_cost
-unit_cost   = ceil( cost * CostShare / (quantity * E) )                     (E from 6.3 for this region and season, trainee 10 000, shock included)
+unit_cost   = ceil( cost * CostShare / (quantity * E) )                     (E from 6.3 for this region and season, trainee 10 000, shock and abundance included: a thin stock makes a unit dearer, `spec-resources.md` 4.7.5)
 ```
 
 With `CostShare` in basis points and `E` in basis points the factors of 10 000
@@ -781,7 +782,7 @@ for example `recipes.mill_flour.outputs[1].cost_share`.
 | Sentinel | Rejects |
 |----------|---------|
 | `ErrOutOfBounds` | a `Duration` outside [1, `MaxRecipeTicks`]; a quantity outside [1, `MaxQuantity`]; a `WearPerUse` outside [1, `Durability`]; a yield outside [0, `MaxYieldBP`]; a `TraineeYield` outside [1, 10 000]; more than `MaxRequires`, `MaxDraws` or `MaxRecipeItems` entries |
-| `ErrDuplicateID` | a commodity twice in one list of a recipe; two yield profiles for one region and recipe |
+| `ErrDuplicateID` | a commodity twice in one list of a recipe; a resource twice in the `Draws` of a recipe; two yield profiles for one region and recipe |
 | `ErrRecipeNoOutput` | a recipe with no non-discard output |
 | `ErrCostShares` | non-discard `CostShare`s that do not add to 10 000, a discard output with a share above 0, or a missing share where there are several non-discard outputs |
 | `ErrToolNotDurable` | a `Requires` entry for a commodity with `Durability` 0 |
@@ -789,6 +790,7 @@ for example `recipes.mill_flour.outputs[1].cost_share`.
 | `ErrUnknownCommodity`, `ErrUnknownRecipe`, `ErrUnknownRegion` | the references in recipes, role lists and yield profiles |
 | `ErrUnknownSeason` | a yield entry for a season ID the calendar lacks, including any season entry when the calendar has no seasons |
 | `ErrModuleDependency` | `Draws` while the resources module is off |
+| `ErrUnknownResource` | a `Draws` entry that names a resource the resources module does not define (`spec-resources.md` 13.2) |
 | `ErrOverflow` | the derived products of 10.3 |
 
 ### 10.3 Derived checks (added to `spec-config.md` 4.2)
@@ -799,7 +801,7 @@ For every recipe, validation computes with checked arithmetic and rejects with
 - the largest weight a role's group can get (`spec-scale.md` 3.2) times each input
   quantity, and times each output quantity times the largest yield factor the
   configuration can give the recipe (the largest table entry, times the largest
-  shock bound, times the trainee factor) divided by 10 000, is at most `MaxQuantity`;
+  shock bound, times the trainee factor, times the largest abundance factor, `MaxYieldBP`, of `spec-resources.md` 4.7) divided by 10 000, is at most `MaxQuantity`;
 - the same weight times each draw quantity is at most `MaxQuantity`;
 - the sum over inputs of quantity times the largest reference price is at most
   `MaxMoney` (so `UnitCost` cannot overflow).
@@ -811,7 +813,7 @@ A warning never fails validation (`spec-config.md` 7.2). Each has a rule name an
 | Warning | Condition |
 |---------|-----------|
 | `unused_recipe` | no role lists the recipe and it is not trainee-eligible |
-| `unrunnable_recipe` | a `Sited` recipe with no profile that has a positive factor in any region, or a recipe whose every profile entry is 0 |
+| `unrunnable_recipe` | a `Sited` recipe with no profile that has a positive factor in any region, or a recipe whose every profile entry is 0, or a recipe whose every draw exceeds the effective capacity of its endowment in every region where its site factor is positive (`spec-resources.md` 13.3, `draw_impossible`) |
 | `durable_not_required` | a durable that no recipe requires (FR-GDS-023) |
 | `source_unbounded` | a source (no inputs) with no `Draws` and not `Sited`: limited by labour only (3.1.2); informational |
 
@@ -862,8 +864,8 @@ placeholder** (N-015, N-027).
 | Recipe tool | `WearPerUse` | wear units one execution puts on a tool (4.4) | 1 |
 | Recipe output | `CostShare` | share of the input cost allocated to the output, in basis points (3.2) | 10 000 if it is the only non-discard output, otherwise required |
 | Recipe output | `Discard` | created and disposed in one step (7.2) | false |
-| Recipe | `Draws` | endowment taken per execution, list of (resource, quantity) (6.5) | none |
-| Region and recipe | `YieldProfile` | basis-point factor by region, recipe and season (6.1); values owned by `spec-resources.md` once it exists | none (10 000, or 0 for a `Sited` recipe) |
+| Recipe | `Draws` | endowment taken per execution, list of (resource, quantity) (6.5); the resources are `spec-resources.md` 3 | none |
+| Region and recipe | `YieldProfile` | basis-point factor by region, recipe and season (6.1); values owned by `spec-resources.md` 7 (format and lookup: 6.1, 6.2) | none (10 000, or 0 for a `Sited` recipe) |
 
 `Inputs`, `Outputs` and `Requires` are lists with no default (`Outputs` is required,
 `ErrRecipeNoOutput`). `Label` is presentation only.
@@ -1013,6 +1015,8 @@ the recipe. The trainee kneads at half output with no oven; a skilled baker then
 (`spec-skill-barriers.md` 4.2).
 
 ### 12.2 Example B: a space colony (an electronics setting)
+
+The resources `ice_field` and `vat_volume` that its draws name are defined, with their endowments, in `spec-resources.md` 16.2.
 
 Calendar: a planet with two seasons `lit` and `dark` (`spec-calendar.md` 7.4 style).
 The viability prototype used the Earth year of 365 ticks with `lit` for spring and
@@ -1226,8 +1230,9 @@ Original entries (a sign, a delay, a damper and a test are given in the register
 - **A job cannot be interrupted** (5.2.2): the target-income rule overshoots its
   target by up to `Duration - 1` ticks and a cohort makes it `w` households at once.
 - **Contested endowments.** Several agents on one deposit: the rotation of 5.5.1
-  gives fairness over time, not within a tick. A deposit that runs out takes the
-  whole role with it. The depletion dynamics are RES's.
+  gave fairness over time, not within a tick. Replaced for draws by the ration of
+  `spec-resources.md` 5.3 (RES-A4, merged into STB-L29). A deposit that runs out takes the
+  whole role with it. The depletion dynamics are RES's (`spec-resources.md` 4, 6).
 - **A single tool.** A recipe that requires a tool stops when the tool breaks. The
   toolmakers' capacity is the damper (`spec-skill-barriers.md` 2.6).
 - **Self-feeding recipes.** Seed grain that makes grain is a positive loop that a
@@ -1252,7 +1257,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-006 | A `Requires` entry MUST name a commodity with `Durability` above 0 (`ErrToolNotDurable`) and a `WearPerUse` from 1 to its `Durability`, with at most `MaxRequires` entries and no commodity twice. |
 | FR-PRO-007 | A recipe with `Draws` MUST be rejected with `ErrModuleDependency` while the resources module is off, and each `Draws` entry MUST be at most `MaxDraws`. |
 | FR-PRO-008 | An agent MUST start only a recipe on its role's list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`. |
-| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and the available endowment over each draw quantity, each rounded down, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`. |
+| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`. |
 | FR-PRO-010 | The start of a job MUST be one all-or-nothing ledger `Transform` of `k` times each input to the `recipe_input` boundary, and a refused transform MUST leave the ledger unchanged and the job unstarted. |
 | FR-PRO-011 | At the start of a job each of the `k` executions MUST wear a distinct item of each required tool by `WearPerUse`, most worn first, destroying an item whose durability reaches 0 with the reason `wear`, and wear MUST NOT be applied again for the rest of the job. |
 | FR-PRO-012 | At completion the pending outputs MUST be created in one ledger `Transform` from the `recipe_output` boundary with `Born` equal to the completing tick for a commodity that spoils and full durability for a durable. |
@@ -1260,17 +1265,17 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-014 | An agent MUST have at most one active job, and MUST NOT start a job in a tick in which it continued or completed one. |
 | FR-PRO-015 | Every tick from a job's start tick to its completing tick inclusive MUST be a working tick of the executor, and a resting decision MUST NOT interrupt a started job. |
 | FR-PRO-016 | In each tick the production phase MUST run before orders are placed, and MUST process continuations and completions of all agents before starts. |
-| FR-PRO-017 | Agents in a region MUST be processed for starts in ID order beginning at the position equal to the tick modulo the count of agents in the region, with no random number. |
+| FR-PRO-017 | (Amended by `spec-resources.md` 5.2: the rotation no longer arbitrates a scarce endowment, the ration does.) Agents in a region MUST be processed for starts in ID order beginning at the position equal to the tick modulo the count of agents in the region, with no random number. |
 | FR-PRO-018 | A job MUST be abandoned, creating no output and moving no goods, when its executor is removed, changes role, or when the principal of a trainee's job leaves, and a `RecipeAbandoned` event MUST name the reason. |
 | FR-PRO-019 | When the executor's weight falls to `w'`, the job's `Executions` MUST become `min(k, w')` and each pending quantity MUST be multiplied by the new over the old `Executions` rounded down, and a rise in weight MUST NOT change the job. |
 | FR-PRO-020 | The site factor MUST be, for a region, recipe and the season of the start tick, the profile's season entry if present, else its `All`, else 0 if the profile has season entries, else 10 000 for a recipe that is not `Sited` and 0 for one that is. |
 | FR-PRO-021 | The season and the factor MUST be read when the job starts and the pending outputs fixed then, and a job started with a positive factor MUST complete whatever the season is at completion. |
-| FR-PRO-022 | The effective factor MUST be `site * shock / 10 000` then `* trainee / 10 000`, each truncated, and a job with an effective factor of 0 MUST NOT start. |
+| FR-PRO-022 | The effective factor MUST be `site * shock / 10 000` then `* trainee / 10 000` then `* abundance / 10 000` (`spec-resources.md` 4.7; 10 000 for a recipe with no draw), each truncated, and a job with an effective factor of 0 MUST NOT start. |
 | FR-PRO-023 | The yield shock of a region and recipe MUST default to 10 000, MUST multiply the site factor, MUST be from 0 to `MaxYieldBP`, and MUST be saved in the checkpoint. |
 | FR-PRO-024 | The quantity of an output created by a job of `k` executions MUST be `(k * q * E + residue) / 10 000` and the residue MUST become the remainder of that division, computed with checked 128-bit arithmetic. |
 | FR-PRO-025 | Over any number of jobs at a constant effective factor `E`, the total output MUST differ from `k * q * E / 10 000` per job by less than one unit, at every weight including 1. |
 | FR-PRO-026 | When an agent is created the world MUST draw exactly one integer in [0, 10 000) from its random source, whatever its recipes, and set every residue of the agent to it, and production MUST use no other random number. |
-| FR-PRO-027 | A job's start MUST take `k` times each draw quantity from the region's endowment through `TakeEndowment`, and production MUST NOT create or restore an endowment. |
+| FR-PRO-027 | A job's start MUST take `k` times each draw quantity from the region's endowment through the all-or-nothing take of `spec-resources.md` 5.1 (`TakeEndowment`, internal), and production MUST NOT create or restore an endowment. |
 | FR-PRO-028 | A recipe with a yield profile MUST need no second recipe for another region or season: a recipe MUST run in a new region, or stop running in one, by a change of the yield table alone. |
 | FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete. |
 | FR-PRO-030 | A discard output MUST be created and moved to the `disposal` boundary in the same step, MUST NOT appear in any account afterwards, and MUST appear in the flow totals under `recipe_output` and `disposal`. |
