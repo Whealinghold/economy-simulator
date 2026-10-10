@@ -723,7 +723,7 @@ all three.
 
 ### 6.6 Shocks
 
-A shock that changes the death rate (a disease, a famine of the setting's making that is
+A shock that changes the death rate (a disease, or any hazard that is
 not a lack of food) acts through the region's `DeathScale`; one that changes births
 through `BirthScale`. Each is a multiplier the consumer sets between ticks and clears, in
 the way the yield shock is (`spec-production.md` 6.8): the effective scale is world state
