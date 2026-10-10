@@ -1,0 +1,92 @@
+random check passed: 3000 graphs, 2750 tied pairs, 9531 unreachable pairs
+== A river valley == region order: ['lower', 'middle', 'upper']
+distance (row = from, column = to; - = unreachable)
+                      lower       middle        upper
+         lower            0           55          120
+        middle           30            0           70
+         upper           70           40            0
+  lower -> middle: lower > middle (55)
+  lower -> upper: lower > upper (120)
+  middle -> lower: middle > lower (30)
+  middle -> upper: middle > upper (70)
+  upper -> lower: upper > middle > lower (70)   [edge 90 longer than shortest 70]
+  upper -> middle: upper > middle (40)
+components: {'lower': 0, 'middle': 0, 'upper': 0}
+== B orbital colony == region order: ['belt', 'orbital', 'surface']
+distance (row = from, column = to; - = unreachable)
+                       belt      orbital      surface
+          belt            0         3000         5000
+       orbital         3000            0         2000
+       surface        12400         9400            0
+  belt -> orbital: belt > orbital (3000)
+  belt -> surface: belt > orbital > surface (5000)
+  orbital -> belt: orbital > belt (3000)
+  orbital -> surface: orbital > surface (2000)
+  surface -> belt: surface > orbital > belt (12400)
+  surface -> orbital: surface > orbital (9400)
+components: {'belt': 0, 'orbital': 0, 'surface': 0}
+== C town and hamlets == region order: ['hamlet_east', 'hamlet_west', 'town']
+distance (row = from, column = to; - = unreachable)
+                hamlet_east  hamlet_west         town
+   hamlet_east            0          160           80
+   hamlet_west          160            0           80
+          town           80           80            0
+  hamlet_east -> hamlet_west: hamlet_east > hamlet_west (160)
+  hamlet_east -> town: hamlet_east > town (80)
+  hamlet_west -> hamlet_east: hamlet_west > hamlet_east (160)
+  hamlet_west -> town: hamlet_west > town (80)
+  town -> hamlet_east: town > hamlet_east (80)
+  town -> hamlet_west: town > hamlet_west (80)
+components: {'hamlet_east': 0, 'hamlet_west': 0, 'town': 0}
+== C renamed: a_town == region order: ['a_town', 'hamlet_east', 'hamlet_west']
+distance (row = from, column = to; - = unreachable)
+                     a_town  hamlet_east  hamlet_west
+        a_town            0           80           80
+   hamlet_east           80            0          160
+   hamlet_west           80          160            0
+  a_town -> hamlet_east: a_town > hamlet_east (80)
+  a_town -> hamlet_west: a_town > hamlet_west (80)
+  hamlet_east -> a_town: hamlet_east > a_town (80)
+  hamlet_east -> hamlet_west: hamlet_east > a_town > hamlet_west (160)
+  hamlet_west -> a_town: hamlet_west > a_town (80)
+  hamlet_west -> hamlet_east: hamlet_west > a_town > hamlet_east (160)
+components: {'a_town': 0, 'hamlet_east': 0, 'hamlet_west': 0}
+== E five (proposal) == region order: ['centre', 'east', 'north', 'south', 'west']
+distance (row = from, column = to; - = unreachable)
+                     centre         east        north        south         west
+        centre            0          100          100          100          100
+          east          100            0          130          200          200
+         north          100          130            0          200          200
+         south          100          200          200            0          130
+          west          100          200          200          130            0
+  centre -> east: centre > east (100)
+  centre -> north: centre > north (100)
+  centre -> south: centre > south (100)
+  centre -> west: centre > west (100)
+  east -> centre: east > centre (100)
+  east -> north: east > north (130)
+  east -> south: east > centre > south (200)
+  east -> west: east > centre > west (200)
+  north -> centre: north > centre (100)
+  north -> east: north > east (130)
+  north -> south: north > centre > south (200)
+  north -> west: north > centre > west (200)
+  south -> centre: south > centre (100)
+  south -> east: south > centre > east (200)
+  south -> north: south > centre > north (200)
+  south -> west: south > west (130)
+  west -> centre: west > centre (100)
+  west -> east: west > centre > east (200)
+  west -> north: west > centre > north (200)
+  west -> south: west > south (130)
+components: {'centre': 0, 'east': 0, 'north': 0, 'south': 0, 'west': 0}
+== A with middle>lower closed ==
+  lower [0, 55, 120]
+  middle [160, 0, 70]
+  upper [90, 40, 0]
+effective(30, 15000 bp) = 45
+effective(30, 10000 bp) = 30
+effective(7, 10001 bp) = 8
+effective(1, 1 bp) = 1
+== B without orbital>surface == [[0, 3000, '-'], [3000, 0, '-'], [12400, 9400, 0]] components [0, 0, 1]
+longest shortest path <= 999000000000; int64 max 9223372036854775807
