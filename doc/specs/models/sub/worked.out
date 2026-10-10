@@ -1,0 +1,26 @@
+== Example A: an agrarian setting
+hand-solved surplus factor lambda* = 24/17 = 1.411764705882353  SurplusBP = 14117
+Cov(glean, grain) = 12500 bp   (the market bound needs it below SurplusBP 14117 )
+units per execution at E 7500: 15/4
+-- one cutter household (weight 1), grain price 100, upkeep grain 3, money 150, stock 7, residue start 4000
+t1: cover 2 afford 0 secure 2       mode=False made 0 K_own    0 stock after eating 4 hunger 0
+t2: cover 1 afford 0 secure 1 ENTER mode=True  made 4 K_own  400 stock after eating 5 hunger 0
+t3: cover 1 afford 0 secure 1       mode=True  made 3 K_own  300 stock after eating 5 hunger 0
+t4: cover 1 afford 0 secure 1       mode=True  made 4 K_own  400 stock after eating 6 hunger 0
+t5: cover 2 afford 0 secure 2       mode=True  made 4 K_own  400 stock after eating 7 hunger 0
+t6: cover 2 afford 0 secure 2       mode=True  made 4 K_own  400 stock after eating 8 hunger 0
+t7: cover 2 afford 0 secure 2       mode=True  made 3 K_own  300 stock after eating 8 hunger 0
+t8: cover 2 afford 0 secure 2       mode=True  made 4 K_own  400 stock after eating 9 hunger 0
+t9: cover 3 afford 0 secure 3 LEAVE mode=False made 0 K_own    0 stock after eating 6 hunger 0
+-- a cohort of 40 with cover 1, exit 3: ramp k = 27 ; with cover 0: 40 ; with cover 2: 14
+
+== Example B: an orbital habitat
+synthesise: 18 ration per 2 ticks, upkeep 4  => lambda* = 9/4  SurplusBP = 22500
+Cov(tend_tray, ration) = 10000 bp;  units per execution: 12
+cohort of 40: U = 160, stock 200 -> cover 1; cost per tick 1920, money 300 -> afford 0; secure 1
+enters the mode (secure < 2); ramp k = 27 ; draws of tray_volume (2 each) = 54
+   commodity stock of tray_volume 54: grant to the cohort alone = 27 executions
+   commodity stock of tray_volume 40: grant to the cohort alone = 20 executions
+   output at completion after 3 ticks:  324 ration (k * q * E / 10000 = 324 )
+   unfed ticks before the first output if cover were 1 : 1 ; worst case (cover 0): 2 ; Duration - 1 = 2 < ChangePrivation 3
+   K_own at the price of the completion tick (12): 3888

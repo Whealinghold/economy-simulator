@@ -1,0 +1,45 @@
+N_S=1000 A=10 K=1500000 P0=1000 N_C=1370 U=3 wages [3600,7200] supply at P0 4109, demand at P0 4110
+== DMIN 1 (no work floor)
+floor off (median of 5)                        p_end= 10000 tail min/max  10000/ 10000 peak p  10000 peak unfed  1370 unfed household-ticks   796402 peak on-own-use     0 mode changes      0
+     final prices over 5 seeds: [10000, 10000, 10000, 10000, 10000]
+own-use f=2, enter 2 exit 3, no retry (median of 5) p_end=   100 tail min/max    100/   100 peak p   2449 peak unfed   943 unfed household-ticks   503926 peak on-own-use  1069 mode changes   3049
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=2, enter 2 exit 3, retry 10 (median of 5) p_end=   100 tail min/max    100/   100 peak p   2134 peak unfed   891 unfed household-ticks   129394 peak on-own-use  1105 mode changes   3482
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=3, enter 2 exit 3, no retry (median of 5) p_end=   100 tail min/max    100/   188 peak p   3839 peak unfed  1209 unfed household-ticks     9603 peak on-own-use  1370 mode changes  20121
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=3, enter 2 exit 3, retry 10 (median of 5) p_end=   100 tail min/max    100/   201 peak p   4075 peak unfed  1209 unfed household-ticks    16299 peak on-own-use  1370 mode changes  21168
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=4, enter 2 exit 3, retry 10 (median of 5) p_end=  2650 tail min/max   2526/  2857 peak p  10000 peak unfed  1355 unfed household-ticks    23007 peak on-own-use  1370 mode changes 188706
+     final prices over 5 seeds: [2602, 2625, 2650, 2659, 2711]
+own-use f=3, enter 3 exit 4 (exit above cover), retry 10 (median of 5) p_end=   100 tail min/max    100/   100 peak p   1416 peak unfed   891 unfed household-ticks     1069 peak on-own-use  1069 mode changes   1069
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+== DMIN 146 (MinWorkShare 4000)
+floor off (median of 5)                        p_end=  1502 tail min/max   1481/  1572 peak p   2401 peak unfed   459 unfed household-ticks    82665 peak on-own-use     0 mode changes      0
+     final prices over 5 seeds: [1488, 1501, 1502, 1506, 1536]
+own-use f=2, enter 2 exit 3, no retry (median of 5) p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed   311 unfed household-ticks   167239 peak on-own-use   311 mode changes    311
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=2, enter 2 exit 3, retry 10 (median of 5) p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed   298 unfed household-ticks    41232 peak on-own-use   311 mode changes    622
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=3, enter 2 exit 3, no retry (median of 5) p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed     0 unfed household-ticks        0 peak on-own-use   311 mode changes    311
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=3, enter 2 exit 3, retry 10 (median of 5) p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed     0 unfed household-ticks        0 peak on-own-use   311 mode changes    622
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+own-use f=4, enter 2 exit 3, retry 10 (median of 5) p_end=  1386 tail min/max   1287/  1503 peak p   2012 peak unfed     0 unfed household-ticks        0 peak on-own-use   212 mode changes  12910
+     final prices over 5 seeds: [1338, 1365, 1386, 1394, 1421]
+own-use f=3, enter 3 exit 4 (exit above cover), retry 10 (median of 5) p_end=   100 tail min/max    100/   100 peak p   1825 peak unfed     0 unfed household-ticks        0 peak on-own-use   288 mode changes    288
+     final prices over 5 seeds: [100, 100, 100, 100, 100]
+== an outage: no seller at all for ticks 100 to 199, the price held at the reference (the money is good, the market is empty)
+floor off                                      p_end=  1000 tail min/max   1000/  1000 peak p   1000 peak unfed  1370 unfed household-ticks   133390 peak on-own-use     0 mode changes      0
+own-use f=3, enter 2 exit 3, retry 10          p_end=  1000 tail min/max   1000/  1000 peak p   1000 peak unfed  1270 unfed household-ticks    12330 peak on-own-use  1370 mode changes   2740
+own-use f=2, enter 2 exit 3, retry 10          p_end=  1000 tail min/max   1000/  1000 peak p   1000 peak unfed  1370 unfed household-ticks   132990 peak on-own-use  1370 mode changes   2740
+own-use f=4, enter 2 exit 3, retry 10          p_end=  1000 tail min/max   1000/  1000 peak p   1000 peak unfed  1270 unfed household-ticks    10960 peak on-own-use  1370 mode changes  21920
+== exit also by purchase: leave the mode when the last bid was filled and the money buys the exit cover
+DMIN 1 own-use f=3, exit by cover              p_end=   100 tail min/max    100/   201 peak p   4075 peak unfed  1209 unfed household-ticks    16299 peak on-own-use  1370 mode changes  21168
+DMIN 1 own-use f=3, exit by cover or purchase  p_end=   130 tail min/max    130/   411 peak p   5931 peak unfed  1044 unfed household-ticks    63650 peak on-own-use  1370 mode changes 107106
+DMIN 1 own-use f=2, exit by cover or purchase  p_end=   100 tail min/max    100/   182 peak p   3999 peak unfed  1370 unfed household-ticks   297429 peak on-own-use  1370 mode changes  86700
+DMIN 1 own-use f=4, exit by cover or purchase  p_end=  2718 tail min/max   2513/  3116 peak p  10000 peak unfed  1329 unfed household-ticks    78417 peak on-own-use  1349 mode changes 272362
+DMIN 146 own-use f=3, exit by cover            p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed     0 unfed household-ticks        0 peak on-own-use   311 mode changes    622
+DMIN 146 own-use f=3, exit by cover or purchase p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed     0 unfed household-ticks        0 peak on-own-use   311 mode changes    622
+DMIN 146 own-use f=2, exit by cover or purchase p_end=   100 tail min/max    100/   100 peak p   1898 peak unfed   298 unfed household-ticks    41232 peak on-own-use   311 mode changes    622
+DMIN 146 own-use f=4, exit by cover or purchase p_end=  1386 tail min/max   1287/  1503 peak p   2012 peak unfed     0 unfed household-ticks        0 peak on-own-use   212 mode changes  12910
