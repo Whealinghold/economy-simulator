@@ -102,7 +102,7 @@ quantities are plain integers.
 |-------|--------|
 | Region | `Tick`, `Region`, `TicksPerYear`, `PoolMoney` (the estate account's money), `Budget` (`PoolMoney * EntryPoolShare / 10 000`), the tunables of section 11 |
 | Per role (canonical order) | `Role`, `Closed`, `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopBirths` (section 8: households the population module asks to add; 0 when it is off) |
-| Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship`, `PopDeaths` (section 8: households the population module asks to remove from this agent, at most `Weight - Unfed`; 0 when it is off) |
+| Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship`, `PopDeaths` (section 8: households the population module asks to remove from this agent, at most `Weight - Unfed`; 0 when it is off), `OwnUse` (read-only: the agent is in the own-use mode of `spec-subsistence.md` 5.3; false when the module is off; the default spawner does not read it) |
 
 3.2.1. The view carries data, not a formula: **expected ratio** `E` and **viability** `V`
 of a role are computed from it (6.1) by a pure function in `internal/occupation`, so a
@@ -148,6 +148,7 @@ changes nothing, is counted in `EntryLimited` (13.1) and logged at `Debug` with 
 | `external_agent` | the agent is external and not mortal (9) |
 | `same_role` | a switch to the agent's own role |
 | `in_traineeship` | a switch or apply of a trainee, or a switch of a trainer with trainees. A removal is never refused for this: removing a trainee ends its traineeship (`spec-agents.md` 3.6 step 2) and removing a trainer returns its trainees to their own role (`spec-skill-barriers.md` 4.6) |
+| `on_journey` | a `Switch` or `Apply` of an agent on a migration journey (`spec-migration.md` 8.3). A removal or a reduction is never refused for this. The constant is also the name of the `region_bound` refusal that the migration module registers (`spec-migration.md` 7.2.2), which is a different table (`spec-regions.md` 6.5.2) |
 | `needs_weight_one` | an `Apply` for an agent of weight above 1 (N-064, `spec-skill-barriers.md` 4.1.1) |
 | `bad_households` | `Reduce` by 0 or by more than the weight; `Enter` of fewer than 1 household |
 | `unfunded` | an `Enter` or a weight rise whose money the pool cannot fund (see 4.3): the part that is funded proceeds |
@@ -179,6 +180,7 @@ ladder and the traineeship completion of `spec-skill-barriers.md` 4.1 (cause
 | Residues | set to 0 (a fraction of a unit is lost; `spec-production.md` 6.6.4) |
 | Want carries (`spec-demand.md` 4.4, when the demand module is on) | dropped with the old role's taste rows; the new role's carries start by the creation formula of `spec-demand.md` 4.4 (a function of the agent index, no draw) |
 | `Hunger`, `Unfed`, `Privation` | kept; the removal clock uses the time since `RoleSince` (5.3) |
+| `OwnUseJobs` (`spec-subsistence.md` 5.3) | reset to 0; `OwnUse` is kept and re-evaluated at the next phase 2 against the new role's list (`spec-subsistence.md` 5.8); an own-use job in progress is abandoned with `role_changed` like any job |
 | Strategy | the new role's registered strategy |
 | `RoleSince` | the current tick |
 
@@ -187,7 +189,7 @@ ladder and the traineeship completion of `spec-skill-barriers.md` 4.1 (cause
 `Enter(role, n)` adds `n` households. Placement is the world's rule: into the agent of
 the role in the region with the smallest weight (ties to the lower ID) while its weight
 is below the group's `Scale`; otherwise a new agent of weight 1 (so at scale 1 every
-entrant is a new agent, and at larger scales the agent count stays near `ceil(H / S)`).
+entrant is a new agent, and at larger scales the agent count stays near `ceil(H / S)`). An agent on a migration journey is never chosen (`spec-migration.md` 8.3): it is skipped as if it were not in the region.
 Each household brings `Role.StartMoney` from the pool (reason `start_money` for a new
 agent that is an entrant, `births` for households added to an existing agent), and **no
 goods** (`spec-agents.md` 3.5.3): the per-household goods of a cohort dilute. A household
@@ -228,7 +230,7 @@ state of the agent (section 14). It is not reset by a weight change or a role ch
 
 | Rung | Trigger | Action | Owner |
 |------|---------|--------|-------|
-| 0 | `Hunger > 0` or money below the reserve | work full time (the survival rule) | AGT 7.1.3 |
+| 0 | `Hunger > 0` or money below the reserve | work full time (the survival rule); with the subsistence module on, the own-use mode of `spec-subsistence.md` is the household's own response at this rung (rung 0, not a new rung) | AGT 7.1.3, SUB |
 | 1 | `Privation >= ChangePrivation` | change role (6.4) | here |
 | 2 | welfare ratio below `ReliefBelow` | relief from the pool, every tick, not conditional on anything here | EST 2.6 |
 | 3 | `Privation >= RemovePrivation` and `tick - RoleSince >= RemovePrivation` | reduce weight, then remove (5.3) | here |
@@ -241,6 +243,13 @@ whether the pool was empty; an empty pool is what `Cause` and `EntryLimited` sho
 first. The test `tick - RoleSince >= RemovePrivation` gives an agent that has just
 changed role as long to establish itself as the threshold itself, whatever its
 privation was.
+
+5.2.2a. **`RoleSince` is the tick the agent took up its present role or place.** It is set at
+creation, at a role change (4.2) and at the arrival of a migration journey
+(`spec-migration.md` 8.4), so the test `tick - RoleSince >= RemovePrivation` gives a migrant
+the grace it gives a role changer. The module that sets it for a move is MIG's; the ladder's
+rules are otherwise unchanged. The review clock `RoleCooldown` (6.2) reads it too, and the
+settling rule of `spec-migration.md` 5.2 reuses it.
 
 5.2.3. Trainees are exempt (their board comes from the trainer, `spec-skill-barriers.md`
 4.2) and so are external agents (9).
@@ -462,7 +471,7 @@ updates `Privation`; builds the view; calls `Decide`; executes the plan in plan 
 default's plan is: rung-3 reductions and removals; then rung-1 and review switches and
 applies; then renewal entries (none while the population module is on); then the births of `PopBirths`. The module's deaths (`PopDeaths`) follow the rung-3 reductions and removals and precede the switches, and the budget of 7.3 is taken after them. Creation draws
 (`spec-agents.md` 3.5.2) are taken as each new agent is created, in plan order. A
-consumer spawner's own draws all precede them, because `Decide` runs before execution.
+consumer spawner's own draws all precede them, because `Decide` runs before execution. The migration pass of `spec-migration.md` 10.2 (a module) follows the whole entry step of every region, so its draws and its departures come after the creation draws of every region.
 
 10.3. A spawner is called whether or not anything can happen, so a consumer's draws do not
 depend on the module state.
@@ -568,7 +577,7 @@ Per region: the pool balance (EST) and the funding budget.
 
 All plain data in a fixed order, no maps (ADR 0002):
 
-- per agent, in ID order: `Privation` and `RoleSince` (a signed tick);
+- per agent, in ID order: `Privation` and `RoleSince` (a signed tick; the tick the agent took up its role or place, 5.2.2a);
 - per (region, role), in region then role order: the renewal `carry`;
 - the population module's death carry per agent and birth carry per (region, role) are state of that module (`spec-population.md` 11), hosted in the agent for the first;
 - per region: the run of ticks with unfunded entrants and, per role, the run of empty
@@ -835,6 +844,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-050 | The default spawner MUST NOT remove, reduce or switch an agent in the tick it was created (7.4, 5.2). |
 | FR-SPN-051 | A reduction or removal MUST leave the fed households' share of the agent's money per household unchanged (4.1, 15.4). |
 | FR-SPN-052 | A world restored from a checkpoint taken between ticks MUST give the same `AgentSpawned`, `AgentBankrupted`, `WeightChanged` and `RoleChanged` events as an uninterrupted one (14). |
+| FR-SPN-053 | `RoleSince` MUST be the tick the agent took up its present role or place: set at creation, at a role change and at the arrival of a migration journey, so that rung 3 waits `RemovePrivation` ticks after an arrival as after a role change. (new, `spec-migration.md` 8.4) |
+| FR-SPN-054 | A `Switch` or `Apply` of an agent on a migration journey MUST be refused with `on_journey`, a removal or a reduction MUST NOT be, and the placement of an `Enter` MUST NOT choose such an agent. (new, `spec-migration.md` 8.3) |
+| FR-SPN-055 | A role change MUST reset `OwnUseJobs` to 0 and keep `OwnUse` for re-evaluation, and the per-agent view MUST carry `OwnUse` read-only. (new, `spec-subsistence.md` 5.8) |
 
 ### Non-functional
 
