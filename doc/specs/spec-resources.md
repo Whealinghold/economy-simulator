@@ -79,9 +79,9 @@ the bands that say what a healthy resource curve is (STY).
 | 2 | Is it a module? | Yes: `Modules.Resources`, present means on. The values of the yield table are owned here and stay core data that works with the module off | ADR 0001 decision 2; the zero configuration is the tested baseline. The yield table is needed by the first slice (one region, a seasonal crop) before any depletion exists (7) |
 | 3 | What is the state? | Per (region, resource): a **stock** of whole units between 0 and a **capacity**, a regeneration **carry**, and a count of consecutive ticks in which a request was cut. All `int64` | Integer fixed point (architecture.md 3.5); the carry is what lets a slow regeneration work at a tick that is short against it (4.3) |
 | 4 | How does a stock regenerate? | One of three **shapes**, a closed set: `constant` (a flow, zero for a finite stock), `refill` (the gap to capacity closes at a rate) and `logistic` (growth proportional to the stock and to the room left). Each has an annual rate in the unit of its shape, a region scale, and an optional factor by season | The three behave differently in the loop of section 8 (neutral, damped, tipping), so they are not three values of one formula. A formula chosen by the engine would be a setting's opinion; a shape is a rule |
-| 5 | Is depletion permanent? | It is **data**. A `constant` stock with rate 0 is finite and its depletion is permanent. A `refill` stock always regrows. A `logistic` stock regrows unless it reaches 0 with no **refuge**; with a refuge it recovers slowly. The consumer may restock by an adjustment (6) | The settings differ (a mine against a pasture), and the library should not choose. Two unrelated worked cases show both (16) |
+| 5 | Is depletion permanent? | It is **data**. A `constant` stock with rate 0 is finite and its depletion is permanent. A `refill` stock with a positive rate always regrows. A `logistic` stock regrows unless it reaches 0 with no **refuge**; with a refuge it recovers slowly. The consumer may restock by an adjustment (6) | The settings differ (a finite deposit against a recovering stock), and the library should not choose. Two unrelated worked cases show both (16) |
 | 6 | How does a draw reduce output besides running out? | Through the **abundance curve**: a list of knots from stock share to a yield factor, evaluated by integer interpolation, with a default of flat 10 000. The factor is the fourth factor of the effective yield of `spec-production.md` 6.3, read at job start from the stock as it stood when the production phase began | A hard quota is a cliff; a curve gives the soft landing that a real deposit or field has (a poorer grade, a thinner crop) and the smooth diminishing returns that the Malthusian loop needs (8). Flat by default keeps the quota alone |
-| 7 | Who gets a scarce stock? | The **ration** of 5.3: demands are summed per (region, resource); if the stock covers them all, all are granted; if not, each agent gets its proportional share of executions, and the leftover units go one execution at a time to the agents with the largest fractions, ties by a stateless hash key of (tick, agent). It replaces the rotation of `spec-production.md` 5.5.1 for draws only | The rotation is fair over a long run and not within a short one: in the model a household was denied for a whole year at half supply (17.2). A proportional share is weight-invariant (a cohort of 50 gets what 50 households would), takes no random draw and keeps no state |
+| 7 | Who gets a scarce stock? | The **ration** of 5.3: demands are summed per (region, resource); if the stock covers them all, all are granted; if not, each agent gets its proportional share of executions, and the leftover units go one execution at a time to the agents with the largest fractions, ties by a stateless hash key of (tick, agent). It is fair over runs for requests of equal size and proportional in every tick for any mix. It replaces the rotation of `spec-production.md` 5.5.1 for draws only | The rotation is fair over a long run and not within a short one: in the model a household was denied for a whole year at half supply (17.2). A proportional share is weight-invariant (a cohort of 50 gets what 50 households would), takes no random draw and keeps no state |
 | 8 | Which numbers does the seam expose? | `Endowment(region, resource)` returns the stock; `TakeEndowment(region, resource, n)` takes `n` units whole or fails with `ErrInsufficientEndowment`. The first is a public query, the second is internal to production. A consumer changes a stock only through the adjustment slot of 6.3 | The brief of PRO 6.5 fixes the two names. A public take would be a back door that moves a stock outside the tick (architecture.md 10.2) |
 | 9 | Does the ledger see it? | **No**, and it must not. A draw and a regeneration are not transfers; no reason is added to the registry. Depletion is visible by events, a counter of the cut demand and a `Warn`, and an exact identity per endowment per tick that a test and the audit check | Goods in accounts are conserved; a stock in the ground is not goods. A new faucet or sink in the ledger would misstate matter that never was in an account (N-107). The identity is the conservation law of this state |
 | 10 | Who owns the values of the yield table? | **This spec.** PRO keeps the format, the lookup and the validation errors. There is no climate entity and no function from richness to yield: a climate is the rows of the table, and richness is the capacity and the regeneration scale of an endowment | N-030: climate is data. A mapping would put a second table in front of the first and say the same thing |
@@ -89,7 +89,7 @@ the bands that say what a healthy resource curve is (STY).
 | 12 | How does a raw good get a source? | A source recipe with `Draws` on an endowment that can start at least once is sourced by this module; an import is sourced by EXT; a source recipe with no `Draws` is sourced by itself. The marker `Raw` alone stays a warning-bearing marker (9) | N-021. Validation sees the union and warns where a source can run out |
 | 13 | Open access or owned? | Open access in version 1: any agent of the region whose role lists a recipe that draws may draw, and the ration is the only arbiter. The hook for tenure is a refusal and a per-claimant entitlement that LND adds (10) | LND is later (`vision.md` 4). The open-access result is the baseline that tenure is measured against |
 | 14 | Is a draw returned when a job is abandoned? | No. The units were taken at the start, like the inputs, and an abandoned job is a loss of what it used (`spec-production.md` 5.4.1) | A refund would let an agent hold a stock for nothing and would need state |
-| 15 | Which shocks? | Two world slots set between ticks, saved in a checkpoint: a scale on the capacity and a scale on the regeneration of one endowment (a blight, a drought), and a one-off adjustment of the stock (a collapse, a discovery). INT names the calls | N-091, N-036. The failed harvest of `vision.md` 2 stays the yield shock of `spec-production.md` 6.8; these are the shocks of the ground |
+| 15 | Which shocks? | Two world slots set between ticks, saved in a checkpoint: a scale on the capacity and a scale on the regeneration of one endowment (a sudden loss of capacity, a slowed recovery), and a one-off adjustment of the stock (a collapse, a discovery). INT names the calls | N-091, N-036. The failed harvest of `vision.md` 2 stays the yield shock of `spec-production.md` 6.8; these are the shocks of the ground |
 | 16 | What does the solver use? | The **sustainable draw**: the regeneration at the **plan share** of the capacity for a renewing stock, and the starting stock over a stated horizon for a finite one. One linear row per (resource, region) and a constant abundance factor (11) | A steady state needs a flow; the stock level it holds is a choice the pack states |
 | 17 | Does this add feedback loops? | Yes: the resource-population loop, a tipping point below the maximum sustainable draw, open-access overuse through recipe choice and entry, the cliff of a finite stock, the opening of a season against the stock, and scarcity through the cost anchor (19) | `spec-stability.md` 9: a spec that adds a loop and no entry is not done |
 
@@ -99,7 +99,7 @@ the bands that say what a healthy resource curve is (STY).
 
 3.1.1. A **resource** is an entity of the configuration with an ID, a **shape** and
 the data of section 12. It stands for anything a recipe can run out of that is not
-a good in an account: ground, stands of plants, a body of water, a deposit, a
+a good in an account: anything that is a limited stock in the ground, in the water, in a
 volume of space. The core says nothing about which.
 
 3.1.2. **A resource is not a commodity.** It has no `Mass`, `Bulk` or reference price
@@ -212,7 +212,7 @@ type Endowment struct {
 spec for meaning, default and bound. `Capacity` and `Initial` use the **replace** mode
 (the row's value, else the resource's default capacity or its `InitialBP` share of
 the capacity); `RegenScaleBP` uses the **scale** mode (the resource's rate times the
-row's factor over 10 000, truncated, default 10 000). Absence is the default, with no
+row's factor over 10 000, default 10 000; only the effective scale m of 3.4 is truncated, the rate is not). Absence is the default, with no
 warning: a resource's default capacity is 0, so a region that has no row has none of
 the resource, which is the intended way to say that a region has no field or no
 deposit. A row is resolved once into the dense array of 3.2.2; the canonical order is
@@ -237,7 +237,7 @@ The shock slot (6.3) holds, per endowment, a capacity scale and a regeneration s
 in basis points, 10 000 each by default. The values the rules use are
 
 ```
-C   = trunc( capacity_row * capacity_scale / 10 000 )          effective capacity
+C   = min( MaxEndowment, trunc( capacity_row * capacity_scale / 10 000 ) )   effective capacity
 m   = trunc( RegenScaleBP * regen_scale / 10 000 )             effective regeneration scale
 ```
 
@@ -279,7 +279,7 @@ D = 10^12 * TPY                 (at most 10^17 for TPY at its bound, below int64
 | `refill` | the gap to capacity closes at a rate | `(RateBP / 10^4) * (C - S) * m * s / 10^8` units | `RateBP * (C - S) * m * s` (0 if `S >= C`) |
 | `logistic` | growth proportional to the stock and to the room left | `(RateBP / 10^4) * w * m * s / 10^8` units | `RateBP * w * m * s` |
 
-where, for `logistic`, with `S' = max(S, Refuge)`,
+where, for `logistic`, with `S' = max(S, min(Refuge, C - 1))` (a refuge is capped below the effective capacity, so a capacity shock cannot freeze regrowth),
 
 ```
 w = ceil( S' * (C - S') / C )        if 0 < S' < C
@@ -290,13 +290,12 @@ The formulas of the middle column are the meaning and are analysis, not rules; t
 integer rule is the last column and 4.3. The products can reach 10^31 (4.6) and use
 the checked 128-bit helper.
 
-4.2.1. **Why three.** `constant` is a mine or a well or a source of flow: its
+4.2.1. **Why three.** `constant` is a source of flow, or a finite deposit when its rate is 0: its
 regeneration does not respond to its stock, so with a population that responds to
 the stock the linearised loop is neutral (8.3) and the nonlinear loop cycles with an
-amplitude set by the start (17.3). `refill` is soil, pasture or an aquifer: the more
+amplitude set by the start (17.3). `refill` is a stock that recovers toward a capacity: the more
 is missing, the faster it comes back, so a displaced stock returns monotonically and
-the loop is damped. `logistic` is a stock that grows from itself, as a herd or a
-stand does: growth is largest at half the capacity, falls on both sides, is 0 at 0
+the loop is damped. `logistic` is a stock that grows from itself: growth is largest at half the capacity, falls on both sides, is 0 at 0
 (extinction is absorbing unless there is a refuge) and has a maximum, so a draw above
 the **maximum sustainable draw** `RateBP * C / (4 * 10^4)` a year (at `m = s = 10^4`)
 collapses the stock whatever else happens (8.3).
@@ -390,8 +389,7 @@ stored fits in `int64`:
 
 The largest numerator is `MaxRegenBP * MaxEndowment * (MaxRegenScaleBP * MaxShockBP / 10^4) * MaxSeasonRegenBP`,
 about 10^31 (below 2^127, about 1.7e38) and the largest `D` is 10^17 (below 2^63);
-model 1 checks both. No sum can exceed `int64` by these bounds, and none is ever wrapped
-(architecture.md 3.5). A per-tick growth fraction above 1 would overshoot
+model 1 checks the numerator for scales up to 10^5 (10^30) and the denominator; the bound above is the arithmetic of the product. The 128-bit intermediate cannot overflow, and `add` is clamped to `C - S` in 128 bits before it is narrowed to `int64` (it can exceed `int64` at `TPY` 1 otherwise); nothing is ever wrapped (architecture.md 3.5). A per-tick growth fraction above 1 would overshoot
 the capacity in one step: the clamp of 4.4 makes it harmless, and the warning
 `regen_per_tick_high` (13.3) flags an effective fraction above 2 000 basis points a
 tick as a rate that is stiff against the tick.
@@ -402,13 +400,13 @@ tick as a rate that is stiff against the tick.
 (`spec-production.md` 10.1), read from the stock share. The share is
 
 ```
-share = floor( Stock * 10 000 / C )          (0 if C = 0)
+share = floor( Stock * 10 000 / C )          (C > 0)
 ```
 
 and the factor is the curve evaluated at it. The curve is a list of 1 to `MaxKnots`
 knots (`spec-config.md` 4.1) of (`Share`, `Factor`), shares strictly increasing from
 0 to 10 000, factors from 0 to `MaxYieldBP`. **No knots means flat 10 000**, the
-default. Outside the first and last knots it is flat at their factors; between knots
+default, except that an endowment with C = 0 has abundance 0 whatever the curve (it can supply nothing). Outside the first and last knots it is flat at their factors; between knots
 `i` and `i+1`, with `dx = x_{i+1} - x_i`,
 
 ```
@@ -558,7 +556,7 @@ the same demand.
 - *The rule above*: for agents of weight 1 the leftovers go by the hash key, which is
   a different permutation each tick, so over a year each agent gets between 0.42 and
   0.58 of the demand at half supply, and the longest denial is 20 ticks. Cohorts get
-  exactly their proportional share. It is fair in expectation and in runs.
+  their proportional share (exactly when `w * A / U` is a whole number). It is fair in expectation and in runs for requests of equal size. **It is not fair in runs for a fixed mix of sizes**: the fractional order is the same every tick, so with 25 agents asking 2 and 50 asking 1 against a supply of 25 the larger requests take the leftovers every tick and the smaller get 0 for ever, below their proportional share of 0.25. The proportional part is exact in every tick; the leftover is the part that can be biased. The cost is bounded by the leftover (less than the number of agents), and a carried remainder per agent would remove it (open question 4). RES-S4 tests a mixed mix.
 
 5.3.5. **Weight invariance.** Twenty cohorts of weight 50 and a thousand agents of
 weight 1 with the same total demand get the same total, and a cohort's share per
@@ -569,8 +567,7 @@ this property.
 5.3.6. **What it costs.** The pass is `O(n log n)` in the requests on one endowment,
 and only when the stock is short: with `U <= A` it is one sum. The fractional order
 is by `phi_i`, so an agent that always asks for a small number of executions has a
-smaller chance at the leftovers than one that asks for many; the bias is at most one
-execution per agent per tick and is zero for equal requests. A carried remainder per
+smaller chance at the leftovers than one that asks for many; the bias is at most the leftover of the tick (fewer executions than agents) and is zero for equal requests, but it repeats every tick while the mix repeats (5.3.4). A carried remainder per
 agent would remove it at the price of state; it is not used (open question 4).
 
 5.3.7. **An example** (checked in `models/res/worked.py`, 17.5). Ten plots, five
@@ -602,7 +599,7 @@ whatever the weight.
 and its yield is scaled by `TraineeYield` as before (`spec-production.md` 8); its
 request is in the ration like any other.
 
-5.4.5. **An abandoned job** does not return its draw (position 14); the units are
+5.4.5. **An abandoned job, or a job whose executions fall because the executor's weight falls**, does not return its draw (position 14); the units are
 already counted as drawn in the tick of the start.
 
 5.4.6. **A region change** after the start changes nothing: the draw was taken from
@@ -627,7 +624,7 @@ a `Resource` of this spec); 4.2 and FR-PRO-009 (the draw term is the grant of 5.
 the live availability); 5.5.1 (the rotation orders starts and does not arbitrate a
 scarce stock); 6.3 (the effective factor gains `abundance`); 6.5 (the seam text points
 here); 10.2 (`ErrUnknownResource`); 10.4 (`unrunnable_recipe` also covers a recipe
-whose every draw exceeds the capacity where it has a positive yield); 16 and STB-L29.
+whose every draw exceeds the capacity where it has a positive yield); 10.3 (the output overflow check uses the largest yield factor times the largest abundance, up to `MaxYieldBP` over 10 000); 5.2 (continue or start per agent becomes continue and complete, `Work` for all, the ration, then the starts); 6.3 (the line `E = E * abundance / 10 000` after the trainee step, truncated like the others, so the order is site, shock, trainee, abundance); 16 and STB-L29.
 
 ## 6. Depletion, recovery and shocks
 
@@ -637,16 +634,15 @@ whose every draw exceeds the capacity where it has a positive yield); 16 and STB
 |----------------|-----------|-----|
 | `constant`, `RatePerYear` 0 | permanent | nothing adds to the stock; a **finite stock**. The default when a resource names no rate |
 | `constant`, `RatePerYear` above 0 | recoverable while the flow lasts | the flow adds regardless of the stock |
-| `refill` | recoverable | the gap is largest at 0, so regrowth is fastest there; it cannot be extinct |
+| `refill`, `RateBP` above 0 | recoverable | the gap is largest at 0, so regrowth is fastest there; it cannot be extinct |
 | `logistic`, `Refuge` 0 | recoverable above 0, **permanent at 0** | a stock of 0 has `w = 0`; extinction is absorbing |
 | `logistic`, `Refuge` above 0 | recoverable, slowly | at 0 the stock grows at the rate of a stock of `Refuge` |
 
 In every case the consumer may restock by the adjustment of 6.3. Model 4 (17.4)
-shows the four cases after a blight that sets the stock to 5% of the capacity: a
+shows the four cases after a shock that sets the stock to 5% of the capacity: a
 `refill` stock is back at 0.62 of the capacity after ten years, a `logistic` stock
 with no refuge is at 0 for ever and its households fall to the floor, the same stock
-with a refuge of 1% is back in about three centuries, and a `constant` flow recovers
-as its rate allows. The numbers are the model's. Two unrelated worked cases are in 16.
+with a refuge of 1% is back in about three centuries, and a `constant` flow does not settle: it cycles. The numbers are the model's. Two unrelated worked cases are in 16.
 
 ### 6.2 Visibility: the ledger does not see it
 
@@ -673,8 +669,7 @@ that is INT's (note N-091). Neither edits a configured row (`spec-regions.md` 5.
 
 6.3.1. **The scales.** Per endowment, a capacity scale and a regeneration scale in
 basis points, from 0 to `MaxShockBP`, default 10 000. A scale of 3 000 on the
-regeneration is a drought; a scale of 5 000 on the capacity is a blight, a cave-in
-or a lost field. A change recomputes the effective values of 3.4. If the stock then
+regeneration slows recovery; a scale of 5 000 on the capacity halves what the endowment can hold. A change recomputes the effective values of 3.4. If the stock then
 exceeds the capacity it is clamped to it and the excess is **lost**: it is reported in
 `EndowmentAdjusted` (kind `shock`, with the stock before and after) and counted as
 `Lost` in the identity of 6.4. A scale of 0 on the capacity empties the endowment and
@@ -699,9 +694,7 @@ For every endowment and every tick, in integers,
 Stock_end = Stock_start - Drawn + Regenerated - Lost + Adjusted
 ```
 
-where `Drawn` is the units taken by starts, `Regenerated` the units added by 4.3,
-`Lost` the units removed by a capacity clamp, and `Adjusted` the signed sum of the
-adjustments applied between the ticks. A test asserts it over the reference packs and
+where `Drawn` is the units taken by starts, `Regenerated` the units actually kept after the clamp of 4.4 (not the units computed), `Lost` the units removed by a capacity clamp, and `Adjusted` the signed sum of the effective (post-clamp) adjustments applied between the ticks; the `Lost` and `Adjusted` of a call between ticks belong to the tick that follows it. A test asserts it over the reference packs and
 a range of seeds, and `World.Audit` (`spec-ledger.md` 12.4) SHOULD check it, reporting
 the endowment, tick and the difference (FR-RES-025). It does not need the ledger and
 is the conservation law of the ground.
@@ -753,14 +746,14 @@ errors of `spec-production.md` 10.2:
    output is the best case and the numbers in a recipe stay readable. A pack that
    wants a richer land than the recipe says writes 15 000, as the invented iron seam
    of `spec-production.md` 12.1 does.
-2. **A crop that cannot grow somewhere has no profile or `all = 0`.** An omitted
+2. **A recipe that cannot run somewhere has no profile or `all = 0`.** An omitted
    profile on a `Sited` recipe is 0 as well; an omitted profile on a recipe that is not
-   `Sited` is 10 000, which is probably not what was meant for a crop. The warning
+   `Sited` is 10 000, which is probably not what was meant for a gathering recipe. The warning
    `unrunnable_recipe` (`spec-production.md` 10.4) catches a `Sited` recipe that runs
    nowhere.
 3. **A seasonal profile is complete.** A season it does not list is a season in which
-   the recipe cannot start (`spec-production.md` 6.2 rule 3). Reversed hemispheres,
-   two-season regions and the rest are the lists of N-030 and `spec-calendar.md` 5.3;
+   the recipe cannot start (`spec-production.md` 6.2 rule 3). Reversed season orders,
+   regions with fewer seasons and the rest are the lists of N-030 and `spec-calendar.md` 5.3;
    the world has one season cycle.
 4. **A factor is not a limit.** How much of the stock a recipe may take is the
    endowment's, and how much the stock has been depleted is the abundance's; the yield
@@ -796,9 +789,8 @@ and it differs from 1 exactly when the regions have a comparative advantage in t
 recipes. The warning **`no_comparative_advantage`** (13.3) fires when the realm has at
 least two such regions and two such recipes and no cross ratio, or its inverse, reaches
 11 000 basis points (a relative difference of 10%). The threshold is a placeholder and
-a rule constant, since a warning changes no result. The check is `O(R^2 K^2)` for `R`
-regions and `K` sited recipes and is bounded by the configuration; a pack above a
-stated size is checked on the regions of each component only. `spec-reference-chain.md`
+a rule constant, since a warning changes no result; so are the 2 000 bp of `regen_per_tick_high` and the cadence of the `Warn` (first and every tenth tick), which change no result. The check is `O(R^2 K^2)` for `R`
+regions and `K` sited recipes and is bounded by the configuration;. `spec-reference-chain.md`
 4.4.4 passes it by a wide margin (the cross ratio of `grow_staple` and `cut_fuel`
 between `north` and `centre` is 1.46).
 
@@ -906,11 +898,9 @@ Four things follow.
    a year makes the households overshoot `N*` and return in a damped oscillation, and
    the model agrees on both sides of the threshold (undershoot 15.6% of `N*` at 0.02,
    7.0% at 0.05, 1.4% at 0.10, none at 0.16 and above). With the welfare window and a
-   lag of a year the delay of `spec-population.md` 5.4 dominates and every `R` gives an
-   undershoot of about 4% (17.3): the delay is POP's condition, the refill rate is this
-   spec's, and both apply.
+   lag of a year, the four rates tried (0.16, 0.5, 1, 3) each undershoot by about 4% (17.3); POP's own estimate of the delay is small (5.4), so this is probably the nonlinearity of the 1.6 `N*` start and not a pure delay effect, and the model does not separate them. Both the delay of `spec-population.md` 5.4 and the refill rate apply.
 2. **A `logistic` stock is stable only above the maximum-yield point.** If the equilibrium
-   stock share `sigma*` is at or below 0.5 the fixed point is a saddle and the model collapses
+   stock share `sigma*` is at or below 0.5 the fixed point is unstable (a saddle or a repelling focus) and the model collapses
    from both sides of it (17.3). Above 0.5 it is stable, and its **basin is narrow**:
    the draw at `N*` is 0.96 of the maximum sustainable draw `F_max` for `sigma*` 0.6,
    and a start whose draw exceeds `F_max` for long enough empties the stock before the
@@ -931,9 +921,7 @@ Four things follow.
 5.7) when it is on; `sigma*` is not known, because it depends on `r_full`. The
 validator therefore evaluates the conditions at the **plan share** of the resource
 (`PlanShareBP`, the stock share the pack states as its operating point, 11.1), as
-integer inequalities with the checked 128-bit helper, with `eps` taken from the curve at
-the plan share (the slope of the segment that contains it over its factor, 0 for a flat
-curve). With `RateBP_eff = RateBP * m / 10^4` the annual rate in basis points, `dR` and
+integer inequalities with the checked 128-bit helper, with `eps` the elasticity of the curve at the plan share, `eps_bp = sig * slope / a(sig)` with the slope of the segment that contains `sig` (factor over share, rounded to the nearest basis point), 0 for a flat curve or when `a(sig)` is 0 (the condition is then not evaluated). With `RateBP_eff = RateBP * m / 10^4 * (mean season factor) / 10^4` the annual rate in basis points, `dR` and
 `dX` the slope of birth minus death (rate over ratio) at `r*`, `sig` the plan share and
 `eps_bp` the elasticity in basis points:
 
@@ -971,7 +959,7 @@ to the floor (17.4).
 2. The warning `no_fixed_factor` (`spec-population.md` 9.2) is POP's: it should now
    read "no recipe draws on an endowment whose maximum flow can bind (`N_bind` below
    the census's households times a stated margin) and no region has a `HouseholdCap`".
-   VIA can report it: `N_bind` is `Headroom` (11.3) times the census's households.
+   VIA can report the households at which the draw equals the sustainable draw at the plan stock, `N_plan` (the census's households times `Headroom`, 11.3); `N_bind` of 8.2 uses the maximum flow at an empty stock and is larger for `refill` by 1 over (1 minus the plan share).
 3. POP-S1 (`spec-population.md` 14.4; S37 in the register) can run on a `refill`
    resource instead of a test double. The double remains useful to isolate the
    population rules from the resource's own timescale.
@@ -1018,7 +1006,7 @@ both passes (`spec-viability.md` 4.2.1). The warning `raw_without_source`
 (`spec-viability.md` 10.2) becomes: a raw commodity that no recipe with no inputs
 outputs, that is not endowment-sourced and that no import or faucet supplies. This spec
 adds the warning **`raw_source_exhaustible`** (13.3): a raw commodity whose only sources
-are endowments of finite stocks (`constant` with rate 0). Such a chain stands until the
+are endowments of finite stocks (`constant` with rate 0, or a `refill` or `logistic` stock with `RateBP` 0). Such a chain stands until the
 stock is spent. The run-down time at the steady-state flow is the informational
 diagnostic `endowment_runway`, reported with the solver's diagnostics (`spec-viability.md` 10.3; 11.3 here).
 
@@ -1041,8 +1029,8 @@ stock is drawn down by the sum of choices that none of them internalises.
 10.2. **The hooks LND will use**, stated so that nothing in this spec has to change:
 
 - a **refusal**: a spec that ties access registers a reason in the ordered list of
-  production's refusals (`spec-production.md` 4.2), after `no_endowment`, in the way
-  transport registers `open_shipment` with the relocation (`spec-regions.md` 6.5.2);
+  production's refusals (`spec-production.md` 4.2), after `no_endowment`, by the same idea as the
+  refusals that other specs register with the relocation (`spec-regions.md` 6.5.2), but in the list of production;
 - an **entitlement**: a per-claimant cap on the executions of a request, applied to
   `w_i` before the ration, so that a holder's share is its own and the remainder is
   shared as today;
@@ -1081,7 +1069,7 @@ where `sbar` is the mean over the year's ticks of the season factor over 10 000
 starting stock. **A renewing stock is sustained by its flow; a finite stock is a
 reserve drawn down over `HorizonYears`** (module field, default 50, a placeholder): a
 pack that must be viable for fewer years than its deposits last is, and one that needs
-longer is not. A `constant` stock with a positive rate gets both terms.
+longer is not. A `constant` stock with a positive rate gets both terms. **The check is optimistic**: it holds the plan stock and so the plan abundance, while the run draws a deposit down. Example B passes at a horizon of 15 years by 1% (313 units a tick against 309 once the abundance at the plan share is counted) while the run of 16.2 exhausts the deposit in 13.8 years. A finite stock should be given a horizon with margin.
 
 11.2. **The abundance in the programme.** A recipe with draws has its mean factor `E`
 multiplied by the abundance at the plan share, `a_p = Eval(curve, PlanShareBP)`, the
@@ -1172,7 +1160,7 @@ The constants of 4.6, plus `MaxKnots` (8) and `MaxYieldBP` from `spec-config.md`
 | Sentinel | Rejects |
 |----------|---------|
 | `ErrOutOfBounds` | a field outside the bound of 12; more than `MaxResources` resources or `MaxEndowments` rows; a `Capacity`, `Initial` or `Refuge` above `MaxEndowment` |
-| `ErrDuplicateID` | two resources with one ID; two rows for one (region, resource); a season twice in a profile |
+| `ErrDuplicateID` | two resources with one ID; a resource twice in the `Draws` of one recipe; two rows for one (region, resource); a season twice in a profile |
 | `ErrUnknownResource` | a draw of a recipe (`spec-production.md` 3.1) or an endowment row that names a resource that is not defined; **new** |
 | `ErrUnknownRegion` | an endowment row that names an undefined region |
 | `ErrUnknownSeason` | a season in a regeneration profile that the calendar lacks, including any season entry when the calendar has no seasons |
@@ -1197,7 +1185,8 @@ reported through it.
 | `draw_impossible` | a recipe with a positive site factor in a region whose endowment of a drawn resource has an effective capacity below the draw (so it can never run there) |
 | `abundance_not_monotone` | an abundance curve whose factor falls as the share rises (4.7.2) |
 | `regen_per_tick_high` | a `refill` or `logistic` effective per-tick fraction, `RateBP * m / (10^4 * TPY)`, above 2 000 basis points |
-| `raw_source_exhaustible` | a raw commodity whose only sources are endowments of finite stocks (9.3) |
+| `raw_source_exhaustible` | a raw commodity whose only sources are endowments of finite stocks, that is `constant` with rate 0 or `refill` or `logistic` with `RateBP` 0 (9.3) |
+| `resource_inert` | a `refill` or `logistic` resource with `RateBP` 0: it never regenerates, so it is a finite stock of the wrong shape |
 | `resource_overshoot` | the inequalities of 8.3.1, with the population module on |
 | `resource_unstable_plan` | the conditions of 8.3.1, with the population module on |
 | `endowment_season_peak` | the condition of 11.3 |
@@ -1245,7 +1234,7 @@ configuration (5.4.1):
 | `economysim.endowment.drawn` | Counter | `{unit}` | `economysim.resource`, `economysim.region` | `EndowmentChanged.Drawn` |
 | `economysim.endowment.regenerated` | Counter | `{unit}` | same | `EndowmentChanged.Regenerated` |
 | `economysim.endowment.short` | Counter | `{unit}` | same | `EndowmentChanged.Short` |
-| `economysim.endowment.stock` | Gauge | `{unit}` | same | `EndowmentChanged.Stock`; the adapter keeps the last value for a tick with no event |
+| `economysim.endowment.stock` | Gauge | `{unit}` | same | `EndowmentChanged.Stock` and `EndowmentAdjusted.StockAfter`; the adapter keeps the last value otherwise |
 
 The series added for the five-region proposal of 18 are 5 regions times 3 resources,
 that is 15 per instrument and 60 in all.
@@ -1264,8 +1253,7 @@ held by the world (observability-and-logging.md 4.5, 8.2; NFR-RES-001).
 Every spec lists the state it contributes (ADR 0002). This module's, all plain data,
 sorted, no maps:
 
-- for each endowment with a non-zero value, in (`RegionID`, `ResourceID`) order: `Stock`,
-  `Carry`, `ExhaustedRun`; an endowment of capacity 0 has nothing to save;
+- for each endowment with a configured capacity above 0 (so a depleted stock is saved as 0 and not restored as the starting stock), in (`RegionID`, `ResourceID`) order: `Stock`, `Carry`, `ExhaustedRun`;
 - the shock scales that are not 10 000, as (region, resource, `CapacityBP`, `RegenBP`) in
   the same order.
 
@@ -1356,8 +1344,8 @@ half returns it (the table is `worked.out`, A1). The abundance of `woodland` at 
 
 **Three kinds of depletion** (A2 in `worked.out`). `woodland`'s maximum sustainable
 draw is `0.3 * 50 000 / 4 = 3 750` units a year. A steady draw of 3 000 holds the stock
-near 36 300 (share 0.73, abundance 9 450); of 3 600 (0.96 of the maximum) near 30 900
-(share 0.62); of 4 500, above it, the stock falls to 11 963 after thirty years and is 0
+toward 36 180 (share 0.72; the table of `worked.out` shows 36 268 at year 35); of 3 600 (0.96 of the maximum) toward 30 000
+(share 0.60; 30 900 at year 35); of 4 500, above it, the stock falls to 11 963 after thirty years and is 0
 at thirty-five, where it stays: with a refuge of 20 the regrowth at 0 is
 `0.3 * 20 = 6` units a year against a draw of 4 500. The iron seam never regrows: at
 18 units an execution its 400 000 units are 22 000 executions, and the poorer grade as it
@@ -1516,7 +1504,7 @@ mechanism for variants (`spec-reference-chain.md` 4.5). The proposal for a new o
 
 | Recipe | Draws | Resource and shape | Reason |
 |--------|-------|--------------------|--------|
-| `grow_staple` | 1 per execution | `arable`, `refill` 10 000 basis points a year | the land of a staple; the fixed factor of the population scenarios (S37) |
+| `grow_staple` | 1 per execution | `arable`, `refill` 10 000 basis points a year, `plan_share_bp` 5 000 (the sizing of 18.2 assumes it; the default is 6 000) | the land of a staple; the fixed factor of the population scenarios (S37) |
 | `dig_mineral` | 3 per execution | `deposit`, `constant` with rate 0 | a finite stock; the runway and the cliff (RES-S3) |
 | `cut_fuel` | 14 per execution | `stand`, `logistic` 3 000 basis points a year, refuge | the maximum sustainable draw and the tipping point (RES-S2) |
 | `gather_seed`, `gather_a` to `gather_g` | none | unlimited | not changed: wild gathering stays labour-limited |
@@ -1525,7 +1513,7 @@ The names are neutral and are REF's to choose.
 
 18.2. **Capacity from the solver, not by hand.** The capacity of an endowment follows
 from the draw of the reference programme (`spec-viability.md` 3.2) and a chosen
-**load**: `Capacity = draw a year / (load * (RateBP / 10^4) * (1 - share))` for a `refill` stock at the
+**load**: `Capacity = draw a year / (load * (RateBP / 10^4) * (1 - share))` (with `share` 0.5 and a rate of 1 below) for a `refill` stock at the
 plan share `share` (so that its sustainable draw is the draw divided by the load). The proposal uses
 two data sets: a **slack** one with a sustainable flow of 2.2 times the draw at
 `lambda = 1`, so that no autarky `lambda*` of `spec-reference-chain.md` 4.4.4 (1.64 to
@@ -1654,8 +1642,7 @@ draws. *Test:* RES-S4. *Status:* hand (the arithmetic of 16.1).
 
 The regeneration timescale of a refilling stock (a year at 10 000 basis points) is near the
 season cycle and the welfare window of POP (which sets the population's delay): the loop of
-RES-A1 has both. A `refill` of 16% a year has a time constant of six years against POP's
-33 (`spec-population.md` 5.4): the stock is faster than the population in the default
+RES-A1 has both. A `refill` of 16% a year has a time constant of six years against about 17 for the population (`spec-population.md` 5.4 gives 33 years at an elasticity of 0.5; it is half that at 1): the stock is faster than the population in the default
 placeholders, which is what makes the approach monotone. A shorter window makes the stock
 slower in comparison and an overshoot more likely.
 
@@ -1677,7 +1664,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
-| FR-RES-001 | The module MUST be on if and only if `Config.Modules.Resources` is non-nil; with it off no endowment, event, log, state or requirement of this spec MUST exist, a recipe with `Draws` MUST be rejected with `ErrModuleDependency`, and the yield table MUST work unchanged (2, 3.3). |
+| FR-RES-001 | The module MUST be on if and only if `Config.Modules.Resources` is non-nil; with it off no endowment, event, log or state of this spec MUST exist, a recipe with `Draws` MUST be rejected with `ErrModuleDependency`, and the yield table MUST work unchanged (2, 3.3). |
 | FR-RES-002 | A resource MUST be a plain struct with an ID and a shape from the closed set `constant`, `refill`, `logistic`; no code MUST branch on a resource ID; resource IDs and commodity IDs MUST be separate namespaces; and no resource MUST appear in an account, a lot, a price, a tradable set or any recipe list other than `Draws` (3.1). |
 | FR-RES-003 | Resources MUST be ordered by ID string bytewise to give `ResourceID`, and every iteration over endowments, in state, events, the snapshot and the checkpoint, MUST be in ascending `RegionID` then `ResourceID` (3.2.3). |
 | FR-RES-004 | `Endowments` MUST be a region-keyed table of the mechanism of `spec-regions.md` 5 with one row per (region, resource); `Capacity` and `Initial` MUST be replace and `RegenScaleBP` scale; absence MUST be the default without a warning; an unknown region or resource MUST be rejected with `ErrUnknownRegion` or `ErrUnknownResource` and a second row with `ErrDuplicateID` (3.3.1). |
@@ -1685,7 +1672,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-RES-006 | The starting stock MUST be the row's `Initial`, else `trunc(Capacity * InitialBP / 10 000)`, and MUST NOT exceed the capacity (3.3, 13.2). |
 | FR-RES-007 | Regeneration MUST run once per endowment per tick as the last step of phase 8 in ascending (`RegionID`, `ResourceID`) order, after the tick's draws, using the season of that tick (4.1). |
 | FR-RES-008 | The numerator of a `constant` stock MUST be `RatePerYear * m * s * 10^4`, of a `refill` stock `RateBP * (C - S) * m * s` (0 when `S >= C`), and of a `logistic` stock `RateBP * w * m * s`, over `D = 10^12 * TicksPerYear`, with `m` the effective scale and `s` the season factor, in checked 128-bit arithmetic (4.2). |
-| FR-RES-009 | For a `logistic` stock `w` MUST be `ceil(S' * (C - S') / C)` for `0 < S' < C` and 0 otherwise, with `S' = max(S, Refuge)`, so that a stock of at least one unit below the capacity regrows (4.3.3). |
+| FR-RES-009 | For a `logistic` stock `w` MUST be `ceil(S' * (C - S') / C)` for `0 < S' < C` and 0 otherwise, with `S' = max(S, min(Refuge, C - 1))`, so that a stock of at least one unit below the capacity regrows (4.3.3). |
 | FR-RES-010 | Regeneration MUST add `(Carry + n) / D` units and keep `(Carry + n) mod D` as the carry, and over any run in which the capacity is not reached the units added MUST equal `floor((Carry_start + sum of the numerators) / D)` whatever path the stock took (4.3.1). |
 | FR-RES-011 | When the stock would reach or exceed the effective capacity it MUST become the capacity and the carry MUST become 0, and a capacity of 0 MUST give a stock and a carry of 0 (4.4). |
 | FR-RES-012 | A regeneration profile MUST be complete: with a profile an unlisted season MUST have the factor 0, with none the factor MUST be 10 000 in every season, and a season entry when the calendar has no seasons MUST be rejected with `ErrUnknownSeason` (4.5.1). |
@@ -1697,7 +1684,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-RES-018 | The start of a job MUST take every draw or none, and a start that cannot MUST not begin and MUST be refused with `no_endowment` (5.4.1). |
 | FR-RES-019 | The key of the ration MUST be the SplitMix64 finaliser of `tick * 0x9E3779B97F4A7C15 + agent` as stated in 5.3.3, MUST keep no state and MUST NOT draw from the world's random source (5.3.3). |
 | FR-RES-020 | The grant MUST never exceed the request, the units granted MUST never exceed the stock, and the result MUST NOT depend on the order in which the requests were listed (5.3.2). |
-| FR-RES-021 | A cohort of weight `w` and `w` agents of weight 1 with the same total request MUST receive the same total grant to within one execution per agent, and the grant per household of a cohort MUST be its proportional share to within one execution (5.3.5). |
+| FR-RES-021 | A cohort of weight `w` and `w` agents of weight 1 with the same total request MUST receive total grants that differ by less than the number of agents, and each request MUST receive at least `floor(w * A / U)` executions (5.3.5). |
 | FR-RES-022 | The executions started MUST be the least of the executions the agent could start ignoring draws and the grant of each of its draws; when that is 0 for lack of a grant the refusal MUST be `no_endowment`, after `zero_yield`, `no_site`, `no_tool` and `no_input` (5.2). |
 | FR-RES-023 | A draw MUST NOT be returned when a job is abandoned, and a change of the executor's region after the start MUST NOT change the draw (5.4.5, 5.4.6). |
 | FR-RES-024 | A draw and a regeneration MUST post no ledger transfer, MUST create or destroy no money or goods, and MUST add no reason to the registry (6.2.1). |
