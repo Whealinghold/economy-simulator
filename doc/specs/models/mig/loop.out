@@ -1,0 +1,122 @@
+# 1. each damper alone against an undamped base (g 300, R 10, no width, no caps, no settling, no horizon), eta 1
+base: nothing                                t(500)     9  lowest   80  recrossings 239  moves/needed 639.54  end  601
+review period R 30                           t(500)    17  lowest  288  recrossings 112  moves/needed 154.13  end  372
+review period R 60                           t(500)    29  lowest  368  recrossings  63  moves/needed  53.65  end  628
+width 5000 added to the margin               t(500)     9  lowest  121  recrossings 239  moves/needed 587.80  end  663
+relative spread +-9000 of the margin         t(500)     9  lowest   76  recrossings 239  moves/needed 639.59  end  611
+margin 2000                                  t(500)     9  lowest  126  recrossings 239  moves/needed 626.58  end  610
+caps out 50 / on-road 100                    t(500)   255  lowest  489  recrossings   0  moves/needed  24.66  end  501
+settling (no re-move within T)               t(500)     9  lowest   80  recrossings  99  moves/needed 114.85  end  532
+horizon H 60 (a trip of 3 ticks loses 5%)    t(500)     9  lowest   80  recrossings 239  moves/needed 639.47  end  580
+the spec's defaults (R 30, g 1000, w 5000, caps) t(500)  None  lowest  514  recrossings   0  moves/needed   0.95  end  514
+
+# 1b. the same, with settling on (the rule of 5.2 is a rule, not a choice): each other damper alone
+settling only                                t(500)     9  lowest   80  recrossings  99  moves/needed 114.85  end  532
++ review period R 30                         t(500)    17  lowest  314  recrossings  98  moves/needed  67.45  end  403
++ review period R 60                         t(500)    29  lowest  368  recrossings  63  moves/needed  52.31  end  627
++ width 2000                                 t(500)     9  lowest  160  recrossings  10  moves/needed  16.63  end  499
++ width 5000                                 t(500)     9  lowest  175  recrossings   2  moves/needed   7.85  end  498
++ margin 1000                                t(500)     9  lowest  126  recrossings  99  moves/needed 114.26  end  621
++ margin 2000                                t(500)     9  lowest  160  recrossings   1  moves/needed   5.72  end  517
++ caps out 50 / on-road 100                  t(500)   241  lowest  483  recrossings   0  moves/needed  23.66  end  508
++ horizon H 60                               t(500)     9  lowest   97  recrossings  98  moves/needed 115.13  end  480
+
+# 2. the caps with width 0 (the width would hide them): outflow share per tick, share of the destination on the road
+out    10 in    50                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    10 in   100                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    10 in   300                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    10 in 10000                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    20 in    50                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    20 in   100                           t(500)  None  lowest  501  recrossings   0  moves/needed   1.00  end  501
+out    20 in   300                           t(500)   155  lowest  496  recrossings   0  moves/needed   1.01  end  496
+out    20 in 10000                           t(500)   155  lowest  496  recrossings   0  moves/needed   1.01  end  496
+out    50 in    50                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out    50 in   100                           t(500)   242  lowest  500  recrossings   0  moves/needed   1.00  end  500
+out    50 in   300                           t(500)   104  lowest  488  recrossings   0  moves/needed   1.04  end  488
+out    50 in 10000                           t(500)    88  lowest  487  recrossings   0  moves/needed   1.04  end  487
+out   100 in    50                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out   100 in   100                           t(500)   242  lowest  500  recrossings   0  moves/needed   1.00  end  500
+out   100 in   300                           t(500)    94  lowest  477  recrossings   0  moves/needed   1.15  end  499
+out   100 in 10000                           t(500)    48  lowest  462  recrossings   0  moves/needed   1.24  end  497
+out 10000 in    50                           t(500)  None  lowest  506  recrossings   0  moves/needed   0.98  end  506
+out 10000 in   100                           t(500)   242  lowest  500  recrossings   0  moves/needed   1.00  end  500
+out 10000 in   300                           t(500)    93  lowest  476  recrossings   0  moves/needed   1.16  end  500
+out 10000 in 10000                           t(500)    17  lowest  338  recrossings   4  moves/needed   3.00  end  489
+
+# 3. the invisible pipeline: the road time k, with width 0 and margin 1000 (so the dispersion cannot hide it)
+road  1 ticks, caps off (out 50 / on-road 100) t(500)    15  lowest  370  recrossings   2  moves/needed   2.48  end  504
+road  1 ticks, caps on  (out 50 / on-road 100) t(500)   161  lowest  492  recrossings   0  moves/needed   1.03  end  492
+road  3 ticks, caps off (out 50 / on-road 100) t(500)    17  lowest  339  recrossings   6  moves/needed   4.74  end  489
+road  3 ticks, caps on  (out 50 / on-road 100) t(500)   319  lowest  499  recrossings   0  moves/needed   1.00  end  499
+road  8 ticks, caps off (out 50 / on-road 100) t(500)    22  lowest  258  recrossings  78  moves/needed  86.65  end  288
+road  8 ticks, caps on  (out 50 / on-road 100) t(500)  None  lowest  505  recrossings   0  moves/needed   0.98  end  505
+road 20 ticks, caps off (out 50 / on-road 100) t(500)    34  lowest   91  recrossings   2  moves/needed   8.99  end  504
+road 20 ticks, caps on  (out 50 / on-road 100) t(500)  None  lowest  508  recrossings   0  moves/needed   0.97  end  508
+
+# 4. herding: region 0 is poor, 1 and 2 are equally good; every household of 0 sees the same ranking
+identical, exact news, no caps                 max on road to one   84  end  409/ 566/ 525  (n1-n2) p-p  674  started  4143
+rumour error 500 (independent), no caps        max on road to one   68  end  403/ 534/ 563  (n1-n2) p-p    0  started  1854
+rumour error 500 and width 5000, no caps       max on road to one   66  end  401/ 550/ 549  (n1-n2) p-p    0  started  1030
+caps out 50 / on-road 100, exact news          max on road to one    6  end  405/ 547/ 548  (n1-n2) p-p    9  started   595
+caps on-road 100 only (out uncapped), exact news max on road to one    6  end  392/ 555/ 553  (n1-n2) p-p    2  started   608
+caps, error 500 and width 5000 (the defaults)  max on road to one    5  end  418/ 542/ 540  (n1-n2) p-p    8  started   582
+
+# 5. the spec's default parameters (R 30, g 1000, width 5000, out 50, on-road 100, cooldown 60, H 180, error 500)
+# over seeds, elasticities and road times; two equal regions started 800/200, equilibrium 500
+eta 0.5 road  1: [   -, 537, 537, 263]  [   -, 533, 533, 267]  [   -, 537, 537, 263]  [   -, 536, 536, 264]  [   -, 535, 535, 265]
+eta 0.5 road  3: [   -, 544, 544, 256]  [   -, 539, 539, 261]  [   -, 544, 544, 256]  [   -, 545, 545, 255]  [   -, 544, 544, 256]
+eta 0.5 road  8: [   -, 556, 556, 244]  [   -, 557, 557, 243]  [   -, 557, 557, 243]  [   -, 559, 559, 241]  [   -, 559, 559, 241]
+eta 1.0 road  1: [   -, 509, 509, 291]  [   -, 509, 509, 291]  [   -, 505, 505, 295]  [   -, 510, 510, 290]  [   -, 507, 507, 293]
+eta 1.0 road  3: [   -, 516, 516, 284]  [   -, 515, 515, 285]  [   -, 516, 516, 284]  [   -, 515, 515, 285]  [   -, 516, 516, 284]
+eta 1.0 road  8: [   -, 523, 523, 277]  [   -, 524, 524, 276]  [   -, 523, 523, 277]  [   -, 524, 524, 276]  [   -, 524, 524, 276]
+# columns per seed: [tick of first reaching 500, lowest after, end, started]
+
+# an unequal pair: A = 10000 and 13000, eta 0.5, equilibrium split 0.59/0.41 of the households
+seed 1: nA at 0, 300, 600, 1200, 2400, 2999: 500, 411, 411, 411, 410, 410   started 90  eq 372
+seed 2: nA at 0, 300, 600, 1200, 2400, 2999: 500, 412, 411, 411, 411, 411   started 89  eq 372
+seed 3: nA at 0, 300, 600, 1200, 2400, 2999: 500, 414, 414, 414, 414, 414   started 86  eq 372
+
+# 6. when does the flow reverse? outflow share x window against the margin (width 0, no cap on the road, eta 1, R 30, T 30)
+# product = MoveOutShare * T (bp of the households per window); ratio = product / MoveGain
+   out   gain  product  ratio  lowest  recross
+    20    300      600    2.0     487        0
+    50    300     1500    5.0     471      119
+   100    300     3000   10.0     446      160
+   200    300     6000   20.0     405      142
+   300    300     9000   30.0     374      138
+ 10000    300   300000 1000.0     315       98
+    20   1000      600    0.6     496        0
+    50   1000     1500    1.5     487        0
+   100   1000     3000    3.0     462        0
+   200   1000     6000    6.0     416        2
+   300   1000     9000    9.0     390        1
+ 10000   1000   300000  300.0     338        4
+    20   2000      600    0.3     519        0
+    50   2000     1500    0.8     508        0
+   100   2000     3000    1.5     482        0
+   200   2000     6000    3.0     438        0
+   300   2000     9000    4.5     416        0
+ 10000   2000   300000  150.0     365        1
+    20   4000      600    0.1     557        0
+    50   4000     1500    0.4     549        0
+   100   4000     3000    0.8     520        0
+   200   4000     6000    1.5     478        0
+   300   4000     9000    2.2     457        0
+ 10000   4000   300000   75.0     416        0
+
+# 0. the linearised loop is a delayed integrator dz/dt = -kappa z(t - tau): stable iff kappa*tau < pi/2
+kappa*tau   lowest z/z0   amplitude, last quarter over the one before   reading
+    0.20     9.386e-91          2.888e-23   monotone
+    0.30    1.106e-170          2.741e-43   monotone
+    0.36    1.994e-280          7.885e-71   monotone
+    0.40    -0.0007071          1.583e-82   decays with overshoot
+    0.50      -0.04052          1.076e-69   decays with overshoot
+    1.00          -0.5           1.49e-28   decays with overshoot
+    1.40          -0.9          7.699e-08   decays with overshoot
+    1.50            -1           0.001482   decays with overshoot
+    1.56         -1.06              0.374   decays with overshoot
+    1.58        -29.48              2.293   grows
+    1.60    -3.756e+04              13.94   grows
+    2.00    -8.109e+59          1.186e+15   grows
+    3.00   -9.579e+161          3.727e+40   grows
+

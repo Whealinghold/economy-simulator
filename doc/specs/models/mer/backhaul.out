@@ -1,0 +1,10 @@
+round trip, one loaded leg                   cost of an execution  4780, unit cost  1195, freight of a shipment of 6 haul units   7170
+one way, the pack states one direction       cost of an execution  2390, unit cost   598, freight of a shipment of 6 haul units   3588
+
+Both legs loaded, round-trip recipe: the carrier's execution serves 8 haul units (4 each way)
+  unit cost 598, freight of a shipment of 6 haul units 3588
+
+The smallest gap a unit that a merchant ships on (fee share 5 000, a full carrying unit of 400 staple at a price of 300):
+  round trip, one loaded leg     freight  7170, smallest gap  36 a unit, 12.0 % of the price
+  round trip, both legs loaded   freight  3588, smallest gap  18 a unit, 6.0 % of the price
+  one way recipe                 freight  3588, smallest gap  18 a unit, 6.0 % of the price
