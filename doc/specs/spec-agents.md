@@ -72,7 +72,7 @@ sections give the rule.
 | 8 | Which events? | One aggregated event, `UpkeepShortfall`, per region and role per tick; new fields on `AgentSpawned`; no per-agent event | Observability rules 4.1 and 5.4.1 |
 | 9 | What does the agent contribute to a checkpoint? | Its identity, weight, role, strategy reference, hunger and mailbox; the default strategy keeps no state | ADR 0002 decision 7 |
 | 10 | What is price- or money-responsive, and what is a staple's demand elasticity? | Upkeep demand is **price-inelastic by construction**: elasticity 0 while cash suffices and -1 (a fixed expenditure) when cash binds, so never above 1. What does respond: buffer buying (price position and wealth, transient only), the choice among recipes by margin, a production halt on overstock (the damper D24, now specified), and exit through the spawner. The stability condition for the labour loop (demand elasticity above 1) is therefore **not met** by a staple in version 1, and this spec says so (11.6) | `spec-stability.md` 6.1 and 6.2 (STB-L14, L05, L06; N-043): with inelastic flows the belief rules have no interior attractor. Inventing an elastic subsistence demand would be a guess about households; the honest statement is that the anchor is bounds, the halt and exit. `spec-demand.md` adds an elastic demand for discretionary goods and leaves upkeep alone (11.6.1) |
-| 11 | What spending exists beyond upkeep? | With the demand module off, none: upkeep, the inputs of jobs (which net out of income) and buffers of the same goods. A closed economy then has a mean welfare ratio of 1 whatever the target (`spec-viability.md` 4.7, N-054), the target-income rule never rests, and the surplus is a glut, **bounded** by the production halt. With `spec-demand.md` on, **wants** are a fourth tier funded from what the saving rule leaves (7.4.3), and a closed economy can reach a ratio above 1 (`spec-demand.md` 7). Money creation for a non-producing class is `spec-money-supply.md` or `spec-external-sector.md` | An identity, not a defect of this spec (11.7) |
+| 11 | What spending exists beyond upkeep? | With the demand module off, none: upkeep, the inputs of jobs (which net out of income) and buffers of the same goods. A closed economy then has a mean welfare ratio of 1 whatever the target (`spec-viability.md` 4.7, N-054), the target-income rule never rests, and the surplus is a glut, **bounded** by the production halt. With `spec-demand.md` on, **wants** are a fourth tier funded from what the saving rule leaves (7.4.3), and a closed economy can reach a ratio above 1 (`spec-demand.md` 7). A non-producing class gets its money from a grant of `spec-money-supply.md` (4, 7.2), or from `spec-external-sector.md` | An identity, not a defect of this spec (11.7) |
 
 ## 3. The agent
 
@@ -102,6 +102,7 @@ type Agent struct {
 	Unfed     int64        // households not fully fed in the last consumption phase (5.4)
 	Hunger    int64        // consecutive ticks with Unfed above 0 (5.4)
 	Privation int64        // the leaky count of unfed ticks that the failure ladder reads (5.4.1); computed by the world, defined by spec-spawner.md 5.1
+	DeathCarry int64       // the population module's carried remainder of deaths, in [0, 10 000 * TicksPerYear) (spec-population.md 3.8); unused when the module is off
 	Directive *Directive   // the mailbox of an external agent (10), usually nil
 }
 ```
@@ -111,13 +112,14 @@ type Agent struct {
 | Piece | Home | Saved in a checkpoint by |
 |-------|------|--------------------------|
 | Money, goods, tools, lots, reservations | the ledger account of the agent | `spec-ledger.md` 11 |
-| Region | the account (`spec-ledger.md` 3.5); an agent has no region field of its own | `spec-ledger.md` |
+| Region | the account (`spec-ledger.md` 3.5); an agent has no region field of its own. It changes only by the operation of `spec-regions.md` 6 (relocation) | `spec-ledger.md` |
 | Role, weight, external flag, strategy reference | the agent | this spec, section 15 |
 | Price beliefs | the agent | `spec-beliefs.md` 13 |
 | Job, residues | the agent | `spec-production.md` 15 |
 | Welfare ring buffer, target ratio | the agent | `spec-welfare-and-wages.md` (state not yet listed there; section 21 question 9) |
 | Trainee status | the agent | `spec-skill-barriers.md` |
-| Hunger, last unfed count, `Privation`, directive, `Mortal` | the agent | this spec, section 15 |
+| Hunger, last unfed count, `Privation`, `DeathCarry`, directive, `Mortal` | the agent | this spec, section 15 (`DeathCarry` is defined by `spec-population.md` 3.8) |
+| Trip state (away, shipment) | the transport module | `spec-transport.md` 14 |
 | Upkeep, tradable set, targets, budgets, views, plans | derived or scratch, never state | not saved |
 | Price window, cost anchors | the market, or derived | `spec-beliefs.md` 13, `spec-production.md` 9.3 |
 
@@ -205,6 +207,7 @@ it and when is the spawner's (initial agents are derived from groups,
 | Welfare history | empty, padded by `DefaultRatio` (`spec-welfare-and-wages.md` 2.2) | none |
 | Residues | one draw in [0, 10 000) copied to every residue (`spec-production.md` 6.6.2) | none |
 | Hunger and unfed | 0 and 0 | none |
+| Death carry | `offset(ID)` of `spec-population.md` 3.8.3, a function of the ID (no draw) | none |
 | Strategy | the registered strategy of the role (6.6) | none |
 
 Initial money and goods are the only way either enters the economy at construction.
@@ -226,7 +229,7 @@ creates) receives `min(role.StartMoney * w, pool balance)` from its region's poo
 (`spec-estates.md` 2.3), reason `start_money`, and **no goods**, unless the spawner's
 entry rule grants some. A later agent therefore has to buy its tool and its inputs
 (`spec-skill-barriers.md` 2.3). Its beliefs start from the window mean or the market
-price (`spec-beliefs.md` 8.3). The two creation draws of 3.5.2 are made for it too.
+price (`spec-beliefs.md` 8.3). The two creation draws of 3.5.2 are made for it too; its death carry starts at `offset(ID)` of `spec-population.md` 3.8.3 and takes no draw.
 
 3.5.4. **An external agent** is born as an initial agent of weight 1, flagged
 `External`, with an amount of money its creator states and an `initial` faucet for
@@ -249,6 +252,10 @@ so that conservation is one rule:
    `Cause` (`insolvent`, `starved`, `consumer` or `population`; section 14.1). It is the only
    event of a full removal: bankruptcy, starvation and death are one event with a cause
    (`spec-spawner.md` 13.1.1).
+
+An agent that is away on a self-carried trip (`spec-transport.md` 5.9.2) is removed the same
+way: its account's holdings go to the estate of the account's region, the region it departed
+from, and its own shipment is dropped.
 
 Removal runs after clearing and consumption, when no reservation exists. It never
 creates or destroys money or goods. Beliefs, residues and the welfare history are
@@ -274,6 +281,7 @@ operation with a reason (`spec-scale.md` 4.8). For the agent, from `w` to `w'`:
 | Beliefs, residues, welfare history | unchanged: they are per household or per unit |
 | `Hunger` | unchanged |
 | `Privation` | unchanged (`spec-spawner.md` 5.1) |
+| `DeathCarry` | unchanged (`spec-population.md` 3.8) |
 | Want carries | unchanged: per household fractions (`spec-demand.md` 4.8) |
 | `Unfed` | recomputed at the next consumption phase |
 | Targets, upkeep, budgets | derived from the new weight at once |
@@ -285,7 +293,7 @@ have: the weight changes the scale of the amounts and nothing else.
 ### 3.8 What a role change does to an agent
 
 The mechanics are `spec-spawner.md` 4.2 and are the spawner's: the agent keeps its account,
-money, welfare history, `Hunger`, `Unfed` and `Privation`; goods outside the new role's tradable
+money, welfare history, `Hunger`, `Unfed`, `Privation` and `DeathCarry`; goods outside the new role's tradable
 set (3.4) pass to the estate; the job is abandoned with `role_changed`; beliefs are kept for
 commodities in both sets; residues reset; the strategy becomes the new role's registered one.
 The carries of the demand module follow `spec-demand.md` 4.9. Nothing in this spec changes: the
@@ -298,13 +306,13 @@ order below, and proposes it (N-009 collects what other specs assume).
 
 | # | Phase | What happens to an agent |
 |---|-------|--------------------------|
-| 1 | Start | The moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); an external agent's directive is read |
-| 2 | Production | Jobs continue and complete; then `Work` is called for each agent that is free and did not continue or complete a job, and the jobs start (`spec-production.md` 5.2, 5.5) |
-| 3 | Trade decision | `Trade` is called for each agent in ID order; the world builds the orders from the intents and submits them, discards first, in plan order; admission reserves cash and stock (`spec-clearing.md` 3) |
+| 1 | Start | In this order: the moment is computed (`spec-calendar.md` 6.5); cost anchors are computed from the previous tick's regional wage and prices (`spec-production.md` 9.3, FR-PRO-047, 048); transport arrivals, in shipment-ID order (`spec-transport.md` 5.7); relief and starting money are paid (`spec-estates.md` 2.3, 2.6); money flows (`spec-money-supply.md` 5.1); an external agent's directive is read |
+| 2 | Production | Jobs continue and complete; then `Work` is called for each agent that is free and did not continue or complete a job, and the jobs start (`spec-production.md` 5.2, 5.5). An agent that is away is skipped (`spec-transport.md` 5.5.2) |
+| 3 | Trade decision | `Trade` is called for each agent in ID order (an agent that is away is skipped and gets no view); the world executes the plan: discards first, then shipments (`spec-transport.md` 5.3.2), then the orders built from the intents, in plan order; admission reserves cash and stock (`spec-clearing.md` 3) |
 | 4 | Clearing | Every market clears (`spec-clearing.md` 7.2) |
 | 5 | Outcomes | Price windows are updated; `Revise` is called for each outcome in order of region, commodity and admission (`spec-beliefs.md` 5.1) |
 | 6 | Consumption | Upkeep is consumed; `Unfed`, `Hunger` and `Privation` are set by the world; with the demand module on, the wants are then consumed (`spec-demand.md` 4.7, reason `want_consumption`); the welfare record of the tick is pushed |
-| 7 | Entry and exit | The spawner and population module act (`spec-spawner.md` 10.2: it reads `Privation` and the signals after phase 6); removed agents' holdings pass to the estates |
+| 7 | Entry and exit | The spawner and population module act (`spec-spawner.md` 10.2: it reads `Privation` and the signals after phase 6); the population module's deaths come before the budget of the entry step is taken and its births last (`spec-population.md` 4.8); removed agents' holdings pass to the estates |
 | 8 | End | Ageing and spoilage (`spec-ledger.md` 5.3), flow totals, optional audit |
 
 4.1. Upkeep bought in phase 3 arrives in phase 4 and can be eaten in phase 6 of the
@@ -450,8 +458,11 @@ ratio, never by money (`spec-currency.md` 5.6).
   7.4 has a fourth tier for them (7.4.3), the want items join the tradable set (3.4), the want
   units join `Keep` and `Target` (7.3) and the bid quantity (7.5.4), and the wants are consumed
   after upkeep in phase 6 (4). The `Purpose` of such a bid is `Other` (7.3.6).
-- **Agents in transit** (no region) are `spec-transport.md`'s and
-  `spec-migration.md`'s (open question 10).
+- **Agents in transit.** In version 1 a traveller stays in its origin region, away and in no
+  market, until arrival (`spec-transport.md` 5.5.2); `NoRegion` and the `depart` and `arrive`
+  hook are reserved and unused (`spec-regions.md` 6.5.3), and a shipment ties the account to its
+  region by the refusal `open_shipment` (`spec-regions.md` 6.5.2). A change of region by an
+  agent is `spec-migration.md`'s (open question 10).
 
 ## 6. The Strategy extension point
 
@@ -572,9 +583,24 @@ type Discard struct {
 // TradePlan collects what Trade returns. The world gives the strategy a plan
 // that is empty and reused, so a strategy appends and allocates nothing.
 type TradePlan struct {
-	Intents  []Intent
-	Discards []Discard
+	Intents   []Intent
+	Discards  []Discard
+	Shipments []ShipmentRequest // spec-transport.md 5.3.1; the default strategy appends none
 }
+
+// ShipmentRequest and Line are defined by spec-transport.md 5.3.1:
+//
+//	type ShipmentRequest struct {
+//		Mode      ModeID
+//		To        RegionID
+//		Consignee AgentID // ignored when ToSelf is set
+//		ToSelf    bool    // self-carried only
+//		Lines     []Line  // empty when ToSelf
+//	}
+//	type Line struct {
+//		Commodity CommodityID
+//		Quantity  Quantity
+//	}
 
 // JobRequest names the recipe to start. Executions is a maximum; 0 means the most
 // the agent can run. The zero value, with NoJob set, requests nothing.
@@ -608,6 +634,7 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season, `MaxExecutions` (`spec-production.md` 4.2) and the reason if it is 0 |
 | Tunables | the values of section 12 |
 | Mailbox | the pending `Directive`, if any (section 10) |
+| Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1). An agent that is away is never passed a view |
 
 6.4.2. The view carries *configuration* (recipes, upkeep) by value as plain data.
 Nothing in it points into live state. The reading of architecture.md 12.4 ("every
@@ -654,6 +681,9 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
 - Discards are executed first, in plan order, as `Move`s to the `disposal` boundary
   (`spec-production.md` 7.3). A discard of more than the agent holds is refused whole
   and logged at `Debug`.
+- Shipments are then executed, in plan order, each refused whole with a `reason` if it fails
+  a check (`spec-transport.md` 5.3.2, 5.4); the default strategy appends none, and with the
+  transport module off every request is refused `unknown_mode`.
 - Intents are then turned into orders and submitted in plan order. An intent for a
   commodity outside the agent's tradable set is rejected with the reason
   `not_tradable`, an `OrderRejected` event, and never reaches clearing. In the order
@@ -1303,8 +1333,8 @@ income (a paradox of thrift, entry A4 of section 18). Spending beyond upkeep, wh
 lets a ratio above 1 exist, is now `spec-demand.md`'s: with that module on, the closed economy's
 mean ratio is `1 + W / U` and can reach the target up to the ceiling `1 + Wref / U` with no faucet
 (`spec-demand.md` 7; N-054 answered), and the warning `target_above_demand` says when a pack's
-target is above it. Only a non-producing class, and growth, need `spec-money-supply.md` or
-`spec-external-sector.md` (`spec-demand.md` 7.3). With the module off, a pack that sets a
+target is above it. Only a non-producing class, and growth, need a named flow of money: a grant
+or a levy of `spec-money-supply.md` (4, 9.2), or `spec-external-sector.md` (`spec-demand.md` 7.3). With the module off, a pack that sets a
 `TargetRatio` above 1 for every role should still expect the target-income rule never to rest.
 
 ## 12. Parameters
@@ -1465,7 +1495,7 @@ fixed order with no maps:
 
 - for each agent, in agent ID order: `ID`, the ledger account reference, `Role`,
   `Weight`, `External`, `Mortal`, the strategy reference (its registered name), `Unfed`,
-  `Hunger`, `Privation`, and the directive if any (its job request, intents, discards, holds and
+  `Hunger`, `Privation`, `DeathCarry` (hosted here, defined in `spec-population.md` 3.8), and the directive if any (its job request, intents, discards, holds and
   `Sticky`);
   (`RoleSince` is the spawner's and is listed in `spec-spawner.md` 14; the want carries of an
   agent are the demand module's and are listed in `spec-demand.md` 12);
@@ -1869,6 +1899,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-075 | In each consumption phase the world MUST set `Privation` to `Privation + 1` if `Unfed` is above 0 and to `max(0, Privation - 1)` otherwise, after setting `Hunger`, MUST do so in the world and not in a strategy, MUST leave it unchanged by a weight change or a role change, and `Hunger` MUST NOT exceed `Privation`. (new, `spec-spawner.md` 5.1) |
 | FR-AGT-076 | With the demand module on, the want units funded by `spec-demand.md` 4.5 MUST join the agent's bid for the commodity as a fourth part `T4`, MUST add to `Keep` and `Target`, MUST be funded only from the cap that tier 3 leaves, and with the module off the bid MUST be exactly as without it. (new, `spec-demand.md` FR-DEM-001, 016, 019) |
 | FR-AGT-077 | `AgentBankrupted` MUST be the only event of a full removal, carrying `Weight` at removal, `Cause` (`insolvent`, `starved`, `consumer` or `population`), the money and the goods listed passed to the estate; a weight change that leaves households and a role change MUST NOT emit it. (new, `spec-spawner.md` 13.1.1) |
+| FR-AGT-078 | An agent MUST carry a `DeathCarry` in `[0, 10 000 * TicksPerYear)`, started at `offset(ID)` of `spec-population.md` 3.8.3 without a draw, unchanged by a weight or role change, saved in the checkpoint in agent ID order. (new, `spec-population.md` FR-POP-010, 024, 035) |
+| FR-AGT-079 | The world MUST execute a `TradePlan` in the order discards, shipments (in plan order), then intents, MUST NOT call `Work` or `Trade` for an agent that is away, and MUST pass no view to it; with the transport module off a shipment request MUST be refused `unknown_mode`. The default strategy MUST append no shipment. (new, `spec-transport.md` 5.3, 5.4) |
 
 ### Non-functional
 
@@ -1915,8 +1947,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 9. **The welfare history is hosted here, not listed there.** `spec-welfare-and-wages.md`
    has no checkpoint section; the ring buffer and the target draw must be listed (CHK,
    N-020).
-10. **Agents in transit** have no region; their upkeep and orders are
-    `spec-transport.md`'s.
+10. **Agents in transit.** In version 1 a traveller keeps its origin region and is away, in no
+    market, until arrival (`spec-transport.md` 5.5.2, `spec-regions.md` 6.5.3); its upkeep is
+    consumed from its own stock (`unprovisioned` refuses a trip it cannot feed). Whether a
+    traveller should be fed by the market on the way is open.
 11. **Substitute needs. (Answered.)** Upkeep stays a fixed list: a household that can eat either of
     two staples is two roles or a list that includes both, in version 1. Substitution among
     alternatives exists in `spec-demand.md` 4.2, for wants only, where it cannot change `Fed`.
@@ -1951,6 +1985,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 19. **A switching margin for the recipe choice** (AGT-A7). A margin that keeps the
     previous recipe unless another beats it by a share needs the previous recipe as
     state and a tunable; not specified.
+20. **Does `Target` count `Inbound`?** With the transport module on the view carries `Inbound`
+    (6.4.1). Whether the default strategy's `Target` (7.3) should count the units arriving within
+    `StartsIn`, so that a consignee does not buy again what is on its way (`spec-stability.md`
+    L85), is open (`spec-transport.md` 20.7). The default strategy never ships and ignores
+    `Inbound` until this is decided.
 
 ## 22. Where this lives in the code
 

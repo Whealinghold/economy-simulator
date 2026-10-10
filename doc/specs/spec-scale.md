@@ -118,7 +118,7 @@ requirements.
 upkeep times `w` (`spec-agents.md` 5.2). A shortfall is a shortage of the agent's
 total, not an error: consumption takes what is held and `Fed`, `Unfed` and `Hunger`
 count the households that went without, exactly (`spec-agents.md` 5.3 to 5.5). How a
-partial shortfall reduces the weight is `spec-population.md`'s.
+partial shortfall reduces the weight is `spec-spawner.md` 5.3 (the ladder, by the unfed share); the births and deaths of the schedule fall on fed households only (`spec-population.md` 3.7, 4.5).
 
 4.2. **Production.** One recipe execution by an agent of weight `w` is `w`
 parallel household executions: it consumes `w` times the inputs and produces `w`
@@ -161,7 +161,11 @@ method. Production uses the carried remainder at every weight, 1 included, for t
 fraction of a yield (`spec-production.md` 6.6), and tool breakage is a durability
 counter (`spec-skill-barriers.md` 2.1), so neither draws a chance trial and neither
 needs the helper; the helper stays for a future event with a true per-household
-chance (open question 3, settled).
+chance (open question 3, settled). The population module uses it for births and deaths
+(`spec-population.md` 3.8): exactly, with the denominator `10 000 * TicksPerYear`, per agent for
+deaths and per (region, role) for births. The start of an agent's remainder is a fixed
+function of its ID (`spec-population.md` 3.8.3) and not a draw, which keeps the random stream
+independent of the module and still spreads the agents in time.
 
 4.7. **External agents.** A player agent, and any agent a consumer adds through
 the integration interface (`spec-integration.md`), has weight 1. A weight above
@@ -169,7 +173,7 @@ the integration interface (`spec-integration.md`), has weight 1. A weight above
 
 4.8. **Changing a weight.** A weight can change only through the spawner or the
 population module, never silently. A change is a ledger operation with a `reason`
-(`split`, `merge`, `births`, `starvation`, and `deaths` once the population module adds it), and for a reduction, a split or a merge the agent's holdings
+(`split`, `merge`, `births`, `starvation` and `deaths`; `births` and `deaths` are the population module's, `spec-population.md` 4.7), and for a reduction, a split or a merge the agent's holdings
 change in proportion, so each household keeps what it had: for money or stock
 `m`, a weight going from `w` to `w'` leaves the agent with
 `m' = floor(m * w' / w)`. The difference `m - m'` goes to the regional pool
@@ -177,7 +181,7 @@ change in proportion, so each household keeps what it had: for money or stock
 negative. No money or goods are created or lost except through that pool. The
 weights of a group still add up to its household count (FR-SCL-003), and a
 population module that changes the household count changes weights, not the
-number of agents, unless the group needs more agents to stay at the floor. A weight can also rise by entry (`spec-spawner.md` 4.3): the new households bring `Role.StartMoney` each from the pool and no goods, the agent's other holdings do not change, and the per-household goods of the cohort dilute; the group's household count then differs from its configured `Households`, which FR-SCL-003 states at construction only.
+number of agents, unless the group needs more agents to stay at the floor. A weight can also rise by entry (`spec-spawner.md` 4.3): the new households bring `Role.StartMoney` each from the pool and no goods, the agent's other holdings do not change, and the per-household goods of the cohort dilute; the group's household count then differs from its configured `Households`, which FR-SCL-003 states at construction only. A household born through the population module brings the stake `Role.StartMoney * BirthStake / 10 000` instead (`spec-population.md` 4.3), and a death by that module is a reduction with the reason `deaths` whose difference goes to the estate (`spec-population.md` 3.2).
 
 What the change does to the rest of the agent is `spec-agents.md` 3.7: beliefs,
 residues, welfare history and `Hunger` are per household and unchanged; the job keeps
@@ -351,7 +355,8 @@ check, run over a range of `K`, is how `K` is chosen (5.2). The reference chain'
 - **Regions with no agents.** A distant region modelled only by supply and
   demand functions, with no agents at all, is the outside world, and belongs to
   `spec-external-sector.md`. A region with agents, however few and heavy, is
-  scaled, and belongs here.
+  scaled, and belongs here. What such a region is, and what a region with no agent at all does, is
+  `spec-regions.md` 3.5.
 - **Changing the scale in a running world.** Giving the agents near a player more
   detail and the distant ones less (level of detail) needs split and merge
   operations on agents, with exact ledger operations (4.8) and a checkpoint that
@@ -365,7 +370,8 @@ check, run over a range of `K`, is how `K` is chosen (5.2). The reference chain'
 9.1. `AgentSpawned` and `AgentBankrupted` carry a `Weight` field
 (observability-and-logging.md 4.3), so a consumer can
 rebuild the household count by role from the events alone, as it can the agent
-count today. A later weight-changing event belongs to `spec-population.md`.
+count today. The weight-changing events are `WeightChanged` (`spec-spawner.md` 13.1) and, for the
+population module, the aggregate `PopulationChanged` (`spec-population.md` 10.1).
 
 9.2. The snapshot reports agents and households separately, per role and per
 region.

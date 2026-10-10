@@ -320,6 +320,7 @@ Nothing in the job is a ledger holding, so ending a job early moves no goods.
 |-------|-------------------------|---------------------|
 | The executor goes bankrupt or dies | The job is **abandoned**: no output is created. The estate takes the agent's goods as usual (`spec-estates.md` 2.1). | `agent_removed` |
 | The executor changes role | Abandoned. Production offers no way to carry a job across roles | `role_changed` |
+| The executor's account changes region (`spec-regions.md` 6) | Proposed: abandoned, since the sited recipe and the yield of the new region differ. In version 1 an account changes region only at arrival of a self-carried trip, which cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise; MIG decides whether a migrant's job is abandoned and uses this reason | `region_changed` (proposed) |
 | The principal of a trainee's job leaves (the trainer dies or the traineeship ends) | Abandoned | `principal_left` |
 | The executor's weight falls from `w` to `w'` | Not abandoned. `Executions` becomes `min(k, w')` and each pending quantity is multiplied by the new `Executions` over the old, rounded down; the loss is not a ledger flow because the goods were never created | none (a `RecipeExecuted` shows the smaller output) |
 | The executor's weight rises | The job is unchanged; new households did not start it | none |
@@ -527,6 +528,12 @@ the crops of a region; its expiry is the integration spec's, which sets and clea
 shocks between ticks. Production owns the slot and the arithmetic; it never creates a
 shock. The list is saved in the checkpoint (section 15), sorted by region and recipe.
 A shock multiplier is from 0 to `MaxYieldBP`.
+
+The yield shock is one of several **world slots set between ticks**, each state saved in the
+checkpoint and each given its public call by `spec-integration.md`: the edge status of
+`spec-regions.md` 7, the transit factor of `spec-transport.md` 10.3, the scale of a money flow
+(`spec-money-supply.md`) and the effective birth and death scales of a region
+(`spec-population.md` 6.6, 11). None edits a configured value.
 
 ## 7. Byproducts, waste and disposal (N-003)
 
@@ -1225,6 +1232,9 @@ Original entries (a sign, a delay, a damper and a test are given in the register
   toolmakers' capacity is the damper (`spec-skill-barriers.md` 2.6).
 - **Self-feeding recipes.** Seed grain that makes grain is a positive loop that a
   poor yield breaks (a famine of seed). The yield shock of 6.8 is how STY tests it.
+- **Haul recipes.** A hired mode's haul unit is made by an ordinary recipe whose `Duration`
+  is the round trip (`spec-transport.md` 8.3); its capacity cobweb is STB-L21 with the owner
+  `spec-transport.md` 8.4 (TRN-A3).
 
 ## 17. Requirements
 

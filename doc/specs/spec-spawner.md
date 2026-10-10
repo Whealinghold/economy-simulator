@@ -51,7 +51,7 @@ migrant goes (MIG); the traineeship queue, places and throttle (`spec-skill-barr
 | 4 | Which role does a newcomer take? | The role the leaver held, if it is viable; else the best viable open role by expected ratio; else none. Not "the most profitable role" | Everyone entering the best role at once is the occupation cobweb (model, 16.1: amplitude 1.0 with no limit). Like-for-like replacement leaves the occupation shares alone; the adjustment is done by the damped switching of 6 |
 | 5 | What damps occupation change? | A per-tick **entry share** (region and destination), reviews staggered by agent ID, a hysteresis band, and a cooldown | The model shows only the entry share removes the cobweb alone; the others are cheap and shrink it further. The condition is `EntryShare * window` small (16.1) |
 | 6 | Funding | Every entrant household is funded from the pool, at most `EntryPoolShare` of the pool per tick, as many as the budget buys; the rest are not created and are counted. Entrants get money and no goods | Closes N-073. Money is never created. Relief keeps at least the rest of the pool |
-| 7 | Births and population | SPN owns the operations and the funding; POP owns the number. The hook is a signed `PopDelta` per role in the view, executed by the same operations | One executor, two rule owners |
+| 7 | Births and population | SPN owns the operations and the funding; POP owns the number. The hook is gross: `PopBirths` per role and `PopDeaths` per agent in the view (both at least 0, `spec-population.md` 4.1), executed by the same operations | One executor, two rule owners |
 | 8 | External agents | Never in any decision of the default spawner. The world refuses a decision on an external agent unless it was added mortal | N-022, `spec-agents.md` 10.6 |
 | 9 | Randomness | The default spawner draws nothing. The `*rand.Rand` is passed for consumers' implementations | Every rule here has a deterministic, unique order, so no draw is needed and the stream does not depend on this module |
 
@@ -101,8 +101,8 @@ quantities are plain integers.
 | Group | Fields |
 |-------|--------|
 | Region | `Tick`, `Region`, `TicksPerYear`, `PoolMoney` (the estate account's money), `Budget` (`PoolMoney * EntryPoolShare / 10 000`), the tunables of section 11 |
-| Per role (canonical order) | `Role`, `Closed`, `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopDelta` (section 8) |
-| Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship` |
+| Per role (canonical order) | `Role`, `Closed`, `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopBirths` (section 8: households the population module asks to add; 0 when it is off) |
+| Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship`, `PopDeaths` (section 8: households the population module asks to remove from this agent, at most `Weight - Unfed`; 0 when it is off) |
 
 3.2.1. The view carries data, not a formula: **expected ratio** `E` and **viability** `V`
 of a role are computed from it (6.1) by a pure function in `internal/occupation`, so a
@@ -189,9 +189,13 @@ the role in the region with the smallest weight (ties to the lower ID) while its
 is below the group's `Scale`; otherwise a new agent of weight 1 (so at scale 1 every
 entrant is a new agent, and at larger scales the agent count stays near `ceil(H / S)`).
 Each household brings `Role.StartMoney` from the pool (reason `start_money` for a new
-agent, `births` for households added to an existing agent), and **no goods**
-(`spec-agents.md` 3.5.3): the per-household goods of a cohort dilute. The funded number
-is `min(n, floor(budget / StartMoney))`; a role with `StartMoney` 0 is not limited. The
+agent that is an entrant, `births` for households added to an existing agent), and **no
+goods** (`spec-agents.md` 3.5.3): the per-household goods of a cohort dilute. A household
+born through the population module (cause `births`) brings instead the stake
+`trunc(Role.StartMoney * BirthStake / 10 000)` (`spec-population.md` 4.3), with the reason
+`births` whether it joins an existing agent or becomes a new one. The funded number
+is `min(n, floor(budget / amount))`, `amount` being `Role.StartMoney` or the stake; an
+amount of 0 is not limited. The
 world also never draws more than the pool holds (FR-EST-022). The unfunded households
 are **not created**, not deferred, and are counted. This closes N-073 for entry, and a
 weight rise by POP uses the same rule. A new agent takes the two creation draws of
@@ -352,7 +356,9 @@ spawner.
 ### 7.1 Renewal
 
 The households that leave in a region by rung 3 in a tick are replaced at the rate
-`Renewal` (basis points; default 10 000, full replacement as bazaarBot did). Per role the
+`Renewal` (basis points; default 10 000, full replacement as bazaarBot did). While the
+population module is on the effective `Renewal` is 0 and no household is replaced here
+(`spec-population.md` 4.6, 8.3). Per role the
 number of replacements is
 
 ```
@@ -405,26 +411,30 @@ and the occupation choice. **What POP owns:** how many households are born or di
 causes other than the ladder, as a function of welfare, and the Malthusian fixed point
 (STB-L50). The ladder's deaths are SPN's; POP does not count them again.
 
-8.2. **The hook.** Each role in the view has `PopDelta`, a signed number of households that
-the population module, if it is on, asks to add (positive) or remove (negative) in this
-region and role this tick, computed before `Decide` from the state at the start of the
-phase; 0 when the module is off. The default spawner executes it:
+8.2. **The hook.** The population module, if it is on, computes before `Decide`, from the
+state at the start of the phase (`spec-population.md` 4.1), two non-negative numbers: per
+role in the view `PopBirths`, the households to add, and per agent in the view `PopDeaths`,
+the households to remove from it, at most `Weight - Unfed`; both are 0 when the module is
+off. They are gross: births and deaths are not netted, so the money of the dead reaches the
+pool and the stake of the newborn leaves it, at every scale. The default spawner executes
+them:
 
-- positive: `Enter(role, PopDelta)` with cause `births`, under the funding of 7.3 and
-  with the placement of 4.3, not capped by `EntryShare` and not gated by viability (POP
-  owns the rule);
-- negative: `Reduce` of the households of the role, taken from the agents in order of
-  `Privation` descending, then lowest `Money` per household, then ID, with cause
-  `population` and ledger reason `deaths` (a row POP adds to the registry).
+- deaths: for each agent with `PopDeaths` above 0, in agent ID order, a `Reduce` by
+  `PopDeaths` with cause `population` and ledger reason `deaths`; a reduction to 0 is a
+  removal (4.1). They come after the rung-3 reductions and removals and before the budget
+  of the entry step is taken (10.2), so the estates of the dead fund the same tick's births;
+- births: for each role with `PopBirths` above 0, `Enter(role, PopBirths)` with cause
+  `births`, last in the plan, under the funding of 7.3 with the placement of 4.3 and the
+  stake of 4.3, not capped by `EntryShare` and not gated by viability (POP owns the rule).
 
-POP may change the endowment of a newborn; until it does, a newborn household is an
-entrant (4.3).
+A newborn household is an entrant with the stake (4.3) until POP changes its endowment.
 
-8.3. **Renewal against births.** `Renewal` and `PopDelta` would both refill the region.
-POP decides: either it sets `Renewal` to 0 for the worlds that use it, or it computes its
-deltas net of renewal. Validation warns when both are on (`renewal_with_population`).
-This is for `spec-population.md`; until it exists `Renewal` 10 000 holds the household
-count steady, as in bazaarBot.
+8.3. **Renewal against births.** Decided (`spec-population.md` 4.6): while the population
+module is on the effective `Renewal` is 0, whatever is configured, so the households the
+ladder removes are not refilled and births are the only replacement. `renewal_with_population`
+is a warning only when `Renewal` is set to a non-default value above 0 with the module on;
+at the default it is the informational diagnostic `renewal_ignored` (`spec-population.md`
+4.6.1). With the module off `Renewal` keeps its meaning (7.1).
 
 ## 9. External agents
 
@@ -450,7 +460,7 @@ iterated (architecture.md 7.5) and every sort ends in a unique key (7.6).
 10.2. **Order of the entry-and-exit phase.** For each region in region order: the world
 updates `Privation`; builds the view; calls `Decide`; executes the plan in plan order. The
 default's plan is: rung-3 reductions and removals; then rung-1 and review switches and
-applies; then renewal entries; then `PopDelta` births and deaths. Creation draws
+applies; then renewal entries (none while the population module is on); then the births of `PopBirths`. The module's deaths (`PopDeaths`) follow the rung-3 reductions and removals and precede the switches, and the budget of 7.3 is taken after them. Creation draws
 (`spec-agents.md` 3.5.2) are taken as each new agent is created, in plan order. A
 consumer spawner's own draws all precede them, because `Decide` runs before execution.
 
@@ -500,7 +510,7 @@ Warnings (never fail validation):
 | Warning | Condition |
 |---------|-----------|
 | `entry_share_window` | `EntryShare` times the longest effective welfare window exceeds 2 500 (the model's condition, a placeholder): occupation changes may swing (SPN-A2) |
-| `renewal_with_population` | `Renewal` above 0 and the population module on (8.3) |
+| `renewal_with_population` | the population module on and `Renewal` set to a non-default value above 0 (8.3). At the default 10 000 only the informational diagnostic `renewal_ignored` is reported (`spec-population.md` 4.6.1) |
 | `no_open_role` | every role is `Closed`: no entrant can be placed |
 | `group_below_floor` | at run time, never at construction: a group with a weight above 1 whose agent count has fallen below `MinAgents` (13.3). A group that was below `MinAgents` from construction because it has fewer than `MinAgents` households (every household its own agent, `spec-scale.md` 5.2) is legal, silent here, and visible in the snapshot as agents and households per group |
 | `traineeship_cohort` | a role with `TrainingTicks` above 0 and a group with a scale above 1 (already `ErrOutOfBounds` in `spec-skill-barriers.md` 4.1.1; listed so the spawner's refusal is not a surprise) |
@@ -516,6 +526,8 @@ Warnings (never fail validation):
 | `WeightChanged` (new) | an agent's weight changes without removal: a rung-3 reduction, an entry into an existing agent, a POP birth or death | `Agent`, `Region`, `Role`, `From`, `To`, `Cause` |
 | `RoleChanged` (new) | an agent changes role | `Agent`, `Region`, `From`, `To`, `Weight`, `Cause`, `GoodsListed` |
 | `EntryLimited` (new) | once per region per tick in which any limit or refusal acted | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
+
+13.1.0. With the population module on, `PopulationChanged` (`spec-population.md` 10.1) follows `EntryLimited` in the order of the events of a region's entry step.
 
 13.1.1. **`AgentBankrupted` remains the only event of a full removal.** Its name is
 historical: `Cause` says why (`insolvent`, `starved`, `consumer`, `population`), so
@@ -558,6 +570,7 @@ All plain data in a fixed order, no maps (ADR 0002):
 
 - per agent, in ID order: `Privation` and `RoleSince` (a signed tick);
 - per (region, role), in region then role order: the renewal `carry`;
+- the population module's death carry per agent and birth carry per (region, role) are state of that module (`spec-population.md` 11), hosted in the agent for the first;
 - per region: the run of ticks with unfunded entrants and, per role, the run of empty
   ticks, for the two `Warn`s (diagnostic: they affect no result and are saved so a
   resumed run logs as the original did);
@@ -797,10 +810,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-025 | A replacement MUST go to the leaver's role if it is open and viable, else to the open viable role of highest `E` under the caps, else nowhere, counted as `NoViableRole` (7.2). |
 | FR-SPN-026 | The funding budget MUST be taken once per region per tick as `PoolMoney * EntryPoolShare / 10 000` before any entry (7.3). |
 | FR-SPN-027 | A newcomer MUST start with beliefs from the price window mean or the market price (not the warm-start table), `Hunger` and `Privation` 0 and `RoleSince` the current tick (7.4; `spec-beliefs.md` 8.3). |
-| FR-SPN-028 | A positive `PopDelta` MUST be executed as an `Enter` with cause `births` under the funding of 7.3 and without the cap or the gate, and a negative one as a `Reduce` with cause `population` on agents ordered by `Privation` descending, lowest money per household, then ID (8.2). |
+| FR-SPN-028 | A positive `PopBirths` of a role MUST be executed as an `Enter` with cause `births` under the funding of 7.3 with the stake of 4.3 and without the cap or the gate, and a positive `PopDeaths` of an agent as a `Reduce` of that agent with cause `population` and reason `deaths`, in agent ID order, at most `Weight - Unfed` (8.2). |
 | FR-SPN-029 | The default spawner MUST draw nothing from the random source (10.1). |
 | FR-SPN-030 | Every ordering of the default spawner MUST end in a unique key and MUST NOT depend on map iteration (10.1). |
-| FR-SPN-031 | The default's plan order MUST be: reductions and removals, then switches and applies, then renewal entries, then births and deaths of `PopDelta` (10.2). |
+| FR-SPN-031 | The default's plan order MUST be: reductions and removals, then the population module's deaths, then switches and applies, then renewal entries (none while the population module is on), then its births (10.2). |
 | FR-SPN-032 | `AgentBankrupted` MUST be the only event of a full removal, with `Agent`, `Region`, `Role`, `Weight`, `Cause`, `Money` and `GoodsListed`, and MUST NOT be emitted for a reduction that leaves households or for a role change (13.1.1). |
 | FR-SPN-033 | `WeightChanged` MUST be emitted for each weight change that is not a removal, with `From`, `To` and `Cause`, and `RoleChanged` for each role change, with `From`, `To`, `Weight`, `Cause` and `GoodsListed` (13.1). |
 | FR-SPN-034 | The agent count rebuilt from `AgentSpawned` (+1) and `AgentBankrupted` (-1) MUST equal the world's agent count at every tick, and the household count rebuilt from the `Weight` of those two events and `To - From` of `WeightChanged` MUST equal the sum of the weights (13.1.1, as the rules now state in 4.3 and 5.3.1). |
@@ -839,8 +852,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    weight above 1 (N-030). Next step: `spec-scale.md` open question 7.
 2. **Stranded goods.** They pass to the estate without payment (4.2). A sale at the agent's
    risk, or leaving them dormant, is the alternative. Next step: measure the loss in S06.
-3. **Renewal default.** 10 000 holds the census steady and matches bazaarBot. It is wrong for
-   a world where POP drives the count; 8.3 leaves it to POP.
+3. **Renewal default.** 10 000 holds the census steady and matches bazaarBot. Answered for
+   POP: while the population module is on `Renewal` is ignored (8.3). Whether the field should
+   disappear when the module is on is left open.
 4. **`Privation` is SPN's counter, not AGT's.** It could move to AGT beside `Hunger`; it is
    here because the ladder is the only reader.
 5. **The relief order.** 5.4's reading of `spec-estates.md` 2.6; WLD fixes the phase order.
