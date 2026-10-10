@@ -344,35 +344,37 @@ on the platform (architecture.md 7.5, 7.6). The model checks it against enumerat
 of all paths on 3 000 random directed graphs with ties and unreachable pairs
 (section 14).
 
-4.3.2. **The `Graph`.** The queries are methods of an immutable value, built from a
-configuration and held by the world:
+4.3.2. **The `Graph`.** The queries are methods of a value that holds plain data only (slices and integers:
+no pointer into the world, no function field), built from a configuration and the
+current edge statuses:
 
 ```go
-// Graph is the region graph. It is immutable: no method changes it, and a
-// change of edge status gives the world a new Graph (7). A Graph a caller holds
-// describes the world at the time it was taken and may be read from any goroutine.
-type Graph struct { /* unexported */ }
+// Graph is the region graph: plain data, independent of the world and of every
+// other Graph. No method changes it. It describes the world at the time it was
+// built and may be read from any goroutine. Keep it and reuse it: building one
+// costs a full construction (4.4.5).
+type Graph struct { /* unexported fields: slices and integers only */ }
 
-func NewGraph(cfg Config) (*Graph, error) // runs the graph rules of 9, then builds
-func (w *World) Graph() *Graph
+func NewGraph(cfg Config) (Graph, error) // runs the graph rules of 9, then builds
+func (w *World) Graph() Graph               // built fresh from the current edge statuses
 
-func (g *Graph) Len() int                               // regions
-func (g *Graph) Name(r RegionID) string                 // "" if r is not a region
-func (g *Graph) Lookup(id string) (RegionID, bool)
-func (g *Graph) Edges() int                             // configured edges, open or closed
+func (g Graph) Len() int                               // regions
+func (g Graph) Name(r RegionID) string                 // "" if r is not a region
+func (g Graph) Lookup(id string) (RegionID, bool)
+func (g Graph) Edges() int                             // configured edges, open or closed
 
-func (g *Graph) Edge(from, to RegionID) (EdgeView, bool) // the direct route, closed or not
-func (g *Graph) EdgeAt(e EdgeID) (EdgeView, bool)
-func (g *Graph) Out(from RegionID) []Hop                // open edges, ascending To
-func (g *Graph) In(to RegionID) []Hop                   // open edges, ascending From
+func (g Graph) Edge(from, to RegionID) (EdgeView, bool) // the direct route, closed or not
+func (g Graph) EdgeAt(e EdgeID) (EdgeView, bool)
+func (g Graph) Out(from RegionID) []Hop                // open edges, ascending To
+func (g Graph) In(to RegionID) []Hop                   // open edges, ascending From
 
-func (g *Graph) Distance(from, to RegionID) (int64, bool) // shortest; (0, true) for from == to
-func (g *Graph) NextHop(from, to RegionID) (RegionID, bool)
-func (g *Graph) Path(from, to RegionID) ([]RegionID, bool) // from ... to; [from] when equal
-func (g *Graph) Within(from RegionID, limit int64) []Hop   // others, ascending (Distance, Region)
+func (g Graph) Distance(from, to RegionID) (int64, bool) // shortest; (0, true) for from == to
+func (g Graph) NextHop(from, to RegionID) (RegionID, bool)
+func (g Graph) Path(from, to RegionID) ([]RegionID, bool) // from ... to; [from] when equal
+func (g Graph) Within(from RegionID, limit int64) []Hop   // others, ascending (Distance, Region)
 
-func (g *Graph) Components() int
-func (g *Graph) Component(r RegionID) (int, bool)
+func (g Graph) Components() int
+func (g Graph) Component(r RegionID) (int, bool)
 
 // Hop is a region and a length: the effective length of an edge in Out and In,
 // the shortest distance in Within.
@@ -402,12 +404,16 @@ change; the graph never hands out its own storage (architecture.md 12.4), so the
 queries that return a list allocate, and `Len`, `Name`, `Lookup`, `Edges`, `Edge`,
 `EdgeAt`, `Distance`, `NextHop`, `Component` and `Components` do not.
 
-4.3.4. **A `*Graph` crosses the API.** Architecture.md 12.4 asks that a value returned
-across the API boundary be a deep copy of plain data with no pointer into live state,
-so that a consumer can use it on another goroutine without a race. A `Graph` is
-neither plain data nor a copy, but it serves that purpose: it never changes after it
-is built, it holds no pointer into the world, and it has no mutating method. The
-reading is flagged for the rules owner (open question 3).
+4.3.4. **A `Graph` crosses the API as a deep copy (architecture.md 12.4).** `World.Graph()`
+builds a new `Graph` from the world's configuration and its current edge statuses on every
+call. The value shares no storage with the world or with any other call, holds no pointer
+into live state and no function field, and has no mutating method, so a consumer can marshal
+or read it on another goroutine without a race. An edge status change (7) therefore cannot
+change a `Graph` already returned: it describes the world as it was when it was built, by
+construction. The world answers its own queries from tables it keeps for itself (4.4.1);
+those are not the returned value. A caller that needs many answers keeps the value and
+reuses it instead of calling `World.Graph()` per query, because one call costs a full
+construction (4.4.5).
 
 4.3.5. **Components.** A **component** is a strongly connected component of the open
 graph: a set of regions each reachable from each other. They are numbered from 0 in
@@ -444,6 +450,13 @@ inside the tick loop. A query inside the loop is a table read (`O(1)`) or, for a
 a copy of at most `n` entries.
 
 4.4.4. A batch of edge statuses (7) rebuilds the tables once, not once per edge.
+
+4.4.5. **`World.Graph()`** builds the tables of 4.4.1 afresh, a full construction as in
+4.4.2 and 4.4.3 (about 3.5 * 10^5 steps and 120 KB for 100 regions and 400 edges), and
+copies nothing from the world's own tables. It is for a consumer, a tool or a spec that
+reads the graph many times: take it once and reuse it, and take another after a status
+change (the event `EdgeStatusChanged` says when). The engine's own reads (the world's
+specs inside a tick) use the world's internal tables and never call it.
 
 ### 4.5 Connectivity, islands and warnings
 
@@ -707,7 +720,7 @@ operation. Where the new region would make it stale, the caller decides:
 | State | What this operation does | Who decides, and the default that spec states or proposes |
 |-------|--------------------------|----------------------------------------------------------|
 | Role, weight, strategy | nothing | unchanged by the move |
-| Job in progress | nothing: its outputs were fixed at its start (`spec-production.md` 6.4, FR-PRO-021) and it completes where the agent then is | MIG. A `Sited` job would complete away from its site, so MIG should abandon the job first with a reason of `spec-production.md` 5.4; this spec proposes `region_changed` (open question 4) |
+| Job in progress | nothing: its outputs were fixed at its start (`spec-production.md` 6.4, FR-PRO-021) and it completes where the agent then is | MIG. A `Sited` job would complete away from its site, so MIG should abandon the job first with a reason of `spec-production.md` 5.4; this spec proposes `region_changed` (open question 3) |
 | Price beliefs | nothing | MIG; the default is to reseed on arrival (`spec-beliefs.md` 8.3, N-038) |
 | Welfare record | nothing: it travels with the agent (`spec-welfare-and-wages.md` 2.1.2) | WEL |
 | `Hunger`, `Privation` | nothing | SPN's leaky count is the agent's; MIG may reset it |
@@ -840,10 +853,10 @@ range (`ErrOutOfBounds`), and no edge appears twice in one call (`ErrDuplicateID
 any change fails, none is applied. A change equal to the edge's current status is
 accepted and is not an event.
 
-7.3.2. On success the world builds a new `Graph` once for the whole batch (4.4.4) and
-replaces the old one. A `Graph` that a caller holds keeps describing the world as it
-was (4.3.2). Then `EdgeStatusChanged` is emitted for each edge whose status changed,
-in ascending `EdgeID`, after the new graph is in place (10.1).
+7.3.2. On success the world rebuilds its own tables once for the whole batch (4.4.4). A `Graph`
+that a caller holds keeps describing the world as it was, because it shares nothing with
+the world (4.3.4); a later call of `World.Graph()` reflects the new statuses. Then `EdgeStatusChanged` is emitted for each edge whose status changed,
+in ascending `EdgeID`, after the new tables are in place (10.1).
 
 7.3.3. The public face is INT's (a closed-road shock), and CAP, RSK and POL may call it
 with their own `cause` later. The cause is a constant of `internal/logkeys`, carried
@@ -946,7 +959,7 @@ complete, and constructed only when an observer was supplied (4.5 there).
 `AgentRelocated` is per agent, like `AgentSpawned`: it is a transition of one agent.
 The fields that name a region carry the `RegionID`; whether events carry the region's
 string ID instead, as other events may, is for OBS to settle for all of them at once
-(open question 5). A consumer that tracks households by region needs `AgentRelocated`
+(open question 4). A consumer that tracks households by region needs `AgentRelocated`
 as well as `AgentSpawned`, `AgentBankrupted`, `WeightChanged` and `RoleChanged`
 (`rules/observability-and-logging.md` 4.3): a household leaves `From` and joins `To`.
 The estate pseudo-agents are not agents and cause no event (`spec-estates.md` 2.7.4).
@@ -1273,9 +1286,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-025 | A `RegionID` or `EdgeID` outside its range in any query MUST give the zero result and `false` and MUST NOT panic (4.3.3). |
 | FR-REG-026 | A list returned by a query MUST be a fresh slice: changing it MUST NOT change the graph or any later answer (4.3.3). |
 | FR-REG-027 | Components MUST be strongly connected components of the open graph, numbered from 0 in ascending order of the smallest `RegionID` in each; `Component(r)` MUST give the number of `r`'s component and `Components()` the count (4.3.5). |
-| FR-REG-028 | A `Graph` MUST NOT change after it is built: a `Graph` taken before `SetEdgeStatuses` MUST give the same answers after it, and `World.Graph()` MUST return the new one (4.3.2, 7.3.2). |
+| FR-REG-028 | `World.Graph()` MUST return a `Graph` built fresh from the current edge statuses that holds plain data only and shares no storage with the world or with any other call: a `Graph` taken before `SetEdgeStatuses` MUST give the same answers after it, changing a list it returned MUST NOT change it, and a `Graph` taken after MUST reflect the new statuses (4.3.2, 4.3.4, 7.3.2). |
 | FR-REG-029 | Path sums and effective lengths MUST use checked arithmetic and report overflow, and the largest case allowed by the bounds (999 edges of the largest effective length) MUST NOT overflow (4.2, 4.2.1). |
-| FR-REG-030 | `NewGraph(cfg)` MUST run the graph rules of section 9 and build the graph without a `World`, and the world MUST use the same function (4.3.2). |
+| FR-REG-030 | `NewGraph(cfg)` MUST run the graph rules of section 9 and build the graph without a `World`, and `World.Graph()` MUST give the same answers as `NewGraph` of the configuration with the same statuses applied (4.3.2). |
 | FR-REG-031 | The warnings `region_isolated`, `graph_not_strongly_connected` (carrying the count of components) and `edge_not_shortest` (for an edge strictly longer than the detour) MUST be raised as described, MUST NOT fail validation, and a world of one region and no edge MUST draw none of the first three (4.5.2, 9.2). |
 | FR-REG-032 | The effective reference price of a commodity in a region MUST be the `RegionPrices` row's price if there is one, else the commodity's `ReferencePrice`, and every use that `spec-goods.md` 6.3 lists MUST use the effective price (5.2.2). |
 | FR-REG-033 | A `RegionPrice` naming an undefined region or commodity, a second one for the same region and commodity, a price outside `[1, MaxPrice]`, or more than `MaxRegionPrices` of them MUST be rejected with `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrDuplicateID`, `ErrOutOfBounds` and `ErrTooMany` respectively (5.2, 9.1). |
@@ -1295,8 +1308,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-047 | When a registered region-bound obligation is open for an account, `relocate` MUST refuse with `ErrRegionBound` naming it, and with no obligation registered, as in version 1, it MUST never do so (6.5.2). |
 | FR-REG-048 | A relocation MUST leave the agent's role, weight, strategy, job, beliefs, welfare record, `Hunger`, `Privation`, trainee state and mailbox unchanged (6.3). |
 | FR-REG-049 | The effective length of an open edge MUST be `max(1, ceil(Base * FactorBP / 10 000))` computed with checked arithmetic, a closed edge MUST be absent from `Out`, `In`, `Distance`, `NextHop`, `Path`, `Within` and the components, and `Edge` MUST still return it with `Closed` set (7.2). |
-| FR-REG-050 | `SetEdgeStatuses` MUST be atomic: an edge that is not configured MUST be rejected with `ErrUnknownEdge`, a factor outside `[1, MaxEdgeFactorBP]` with `ErrOutOfBounds` and an edge twice with `ErrDuplicateID`, and when any change fails none MUST be applied (7.3.1). |
-| FR-REG-051 | A successful batch MUST rebuild the tables once, replace the world's graph, and emit `EdgeStatusChanged` once per edge whose status changed, in ascending `EdgeID`, after the new graph is in place, and none for a change equal to the current status (7.3.2, 4.4.4). |
+| FR-REG-050 | `SetEdgeStatuses` MUST be atomic: an edge that is not configured MUST be rejected with `ErrUnknownEdge`, a factor outside `[1, MaxEdgeFactorBP]` with `ErrOutOfBounds` and an edge twice with `ErrDuplicateID`, and when any change fails none MUST be applied and a `Graph` returned earlier or later MUST be unaffected by the failed call (7.3.1). |
+| FR-REG-051 | A successful batch MUST rebuild the tables once, rebuild the world's own tables, and emit `EdgeStatusChanged` once per edge whose status changed, in ascending `EdgeID`, after the new tables are in place, and none for a change equal to the current status (7.3.2, 4.4.4). |
 | FR-REG-052 | The checkpoint MUST contain the edges whose status is not the default, in ascending `EdgeID`, and nothing else of this spec; and a world restored between ticks MUST answer every query of 4.3.2 as an uninterrupted one does (11). |
 | FR-REG-053 | The configuration hash MUST cover `Regions`, `Edges` and `RegionPrices` in canonical order, every field except `Region.Label` and `World.DistanceLabel`, so that changing a distance or a price changes the hash and changing a label does not (11). |
 | FR-REG-054 | A configuration read from a file and the same configuration built in Go MUST have equal edges and overrides, equal hashes and equal runs, and the file MUST write an edge as `[region.<from>.edge.<to>]` with `distance` and the overrides as `[region.<id>.reference_price]` keyed by commodity; an unknown key MUST be rejected with `ErrUnknownKey` and a non-integer distance with `ErrNotInteger` (4.1.1, 5.2.1). |
@@ -1308,46 +1321,40 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
-| NFR-REG-001 | `Len`, `Name`, `Lookup`, `Edges`, `Edge`, `EdgeAt`, `Distance`, `NextHop`, `Component`, `Components` and `World.ReferencePrice` MUST NOT allocate (4.3.3, 5.2.4). |
+| NFR-REG-001 | The query methods `Len`, `Name`, `Lookup`, `Edges`, `Edge`, `EdgeAt`, `Distance`, `NextHop`, `Component` and `Components` of a `Graph`, and `World.ReferencePrice`, MUST NOT allocate. `World.Graph()` and `NewGraph` allocate (a full construction, 4.4.5). (4.3.3, 5.2.4) |
 | NFR-REG-002 | Building the graph of 100 regions and 400 edges SHOULD take under 10 ms and of the bounds (1 000 regions, 20 000 edges) under 5 s. Both figures are placeholders from the operation counts of 4.4.3 and are unmeasured (N-015). |
 | NFR-REG-003 | The graph validator and the queries MUST have fuzz tests (testing.md 7.4) asserting that they never panic for any edge list, region ID or limit, and that for every valid graph `Distance` obeys the triangle inequality, `Path` has the length `Distance` and each consecutive pair of `Path` is an open edge. |
 | NFR-REG-004 | The graph algorithms MUST live in `internal/graph` over primitive slices, import the standard library only, and know no region name, commodity or role (architecture.md 2.9, 9.1). |
 
 ## 17. Open questions
 
-1. **Is the edge status REG's or INT's?** The brief gives REG the graph and INT the
-   shocks. Section 7 puts the mechanism (the status, the rebuild, the event) here and
-   leaves the public call to INT, because a closed road is a change to the graph and the
-   tables are REG's. If the supervisor prefers INT to own it, section 7 moves with
-   `FR-REG-049` to `FR-REG-051`. Next step: the supervisor.
+1. **Edge status ownership.** Settled by the supervisor: the mechanism (status, rebuild,
+   event) stays in REG; the public call and the cause belong to INT. Kept here so the
+   numbering of the other questions is stable.
 2. **Free trade and components.** `spec-viability.md` 9.4 adds a lane between every pair
    of regions for the pooled check. With edges, a pooled solution across components that
    cannot reach each other is optimistic. Whether the check uses `Components` is VIA's.
    Next step: `spec-viability.md`.
-3. **A `*Graph` across the API.** 4.3.4 argues that an immutable `Graph` meets the aim of
-   architecture.md 12.4 although it is not plain data. If the rules owner disagrees, the
-   alternative is a plain-data copy of the tables (12 MB at the bound) or query methods
-   on `World` only. Next step: rules owner.
-4. **An abandon reason for a relocated job.** 6.3 proposes `region_changed` in
+3. **An abandon reason for a relocated job.** 6.3 proposes `region_changed` in
    `spec-production.md` 5.4 and leaves the decision to abandon to MIG. Next step: PRO
    and MIG.
-5. **Region in an event: ID or name.** 10.1 uses the `RegionID`; the `otelobserver`
+4. **Region in an event: ID or name.** 10.1 uses the `RegionID`; the `otelobserver`
    adapter and a consumer need the name for an attribute. Next step: OBS decides for every
    event at once.
-6. **Founding or merging regions in a run.** Out of scope for version 1 (2). A consumer
+5. **Founding or merging regions in a run.** Out of scope for version 1 (2). A consumer
    who needs a region that appears (a colony founded by the player) needs the tables to
    grow, the ledger to open an estate and a checkpoint to record it. Not designed.
-7. **A shorthand for a symmetric pair.** A file with many symmetric routes writes two
+6. **A shorthand for a symmetric pair.** A file with many symmetric routes writes two
    tables for each. A key such as `both = true` would halve the lines and is presentation
    in the loader, not a core feature. Next step: `spec-config.md` 6.
-8. **Append forms.** `AppendOut` and `AppendWithin` would let a per-tick caller avoid the
+7. **Append forms.** `AppendOut` and `AppendWithin` would let a per-tick caller avoid the
    allocation of 4.3.3. They can be added without a break (architecture.md 6.6); add them
    if MIG or INF shows the need.
-9. **Where in the tick a relocation happens, and in what order.** 6.1.2 recommends the
+8. **Where in the tick a relocation happens, and in what order.** 6.1.2 recommends the
    entry-and-exit phase. When several relocations in one tick compete for one thing (a
    pool, a place in a traineeship), their order is MIG's: this spec requires only the
    total order of agent ID if the caller has no better one.
-10. **Distances from coordinates.** A pack could give each region a position and derive
+9. **Distances from coordinates.** A pack could give each region a position and derive
     the distances. That belongs in pack tooling, not in the core (3.2).
 
 ## 18. Where this lives in the code
