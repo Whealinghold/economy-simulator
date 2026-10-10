@@ -130,7 +130,7 @@ p_d * D_work * 10_000 >= P * CapitalReturn
 
 Wear is already a recipe cost netted from the wage (section 2.6), so only the
 return on the capital tied up is tested here. `CapitalReturn` is a region
-parameter, default 1 000 (10% a year). Clark's evidence from land rents puts
+parameter (a region override of the one mechanism of `spec-regions.md` 5.1, replacing the world default, row "capital return" of its 5.1 table), default 1 000 (10% a year). Clark's evidence from land rents puts
 real returns at about 10% around 1300, falling to about 5% by 1400 and 4% to 5%
 before industrialisation (`evidence.md`). A chain modelled on the later period
 sets 500. A higher value makes entry harder and the premium larger. The rule
@@ -421,6 +421,8 @@ ticks served, then application tick. A trainee that dies goes to the estate
 (`spec-estates.md` section 2). The default spawner never removes a trainee by the failure ladder (its board comes from the trainer, `spec-spawner.md` 5.2.3), so a trainee leaves the world only through a consumer's removal, which ends the traineeship first (`spec-agents.md` 3.6). A trainer is subject to the ladder like any agent. Traineeships can also end early in this model only through
 the trainer's death: voluntary early termination, which was common in the
 historical record, is not modelled.
+
+4.6.1. **Region.** A trainer and its trainees are in one region, and a relocation of either would break the traineeship. A trainer with trainees, and a trainee, are to be registered as the `region_bound` refusal `in_traineeship` of the relocation of `spec-regions.md` 6.1.3 and 6.5.2, so that the account is refused with `ErrRegionBound` while the traineeship lasts. Not registered in version 1: the default migration does not exist yet and the world does not relocate agents of its own accord (`spec-regions.md` 6.5.2: the list is empty in version 1). Whoever adds migration registers it.
 
 4.7. **Events.** `TraineeshipStarted` (trainee, trainer, role),
 `TraineeshipCompleted` (agent, from role, to role) and `TraineeshipEnded`

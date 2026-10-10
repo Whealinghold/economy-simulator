@@ -839,6 +839,9 @@ the variant's documents. The list, with its use:
 | `overlay/overhang.toml` | growers start with 1 992 `staple` (three times) | S16 |
 | `overlay/poor.toml` | every group starts with 1 000 money | S20 |
 | `overlay/perturbed.toml` | `prepare` makes 6, not 8 (`lambda*` 2.298): the warm table is stale | S22 |
+| `overlay/faucet.toml` | `[module.money_supply]` with one grant flow `stipend` on the `grower` households of `north`: 20 a tick (2% of the basket), a placeholder; defined by `spec-money-supply.md` 17.6 | S13 |
+| `overlay/faucet-sunk.toml` | the same, plus a rate levy on the same role (`rate_bp` 3650 a year, `exempt` 3000); `spec-money-supply.md` 17.6 | S13, S33 |
+| `overlay/trade.toml` (edge part) | the directed edges of `spec-regions.md` 12.4 for `two`, `three` and `five` (`[region.<from>.edge.<to>]`, distances placeholders); the modes, carrier recipes and merchants are TRN, MER and INF's and are not yet written | X1, X2, S28, S29 |
 
 `overlay/skill.toml`, in full, because it sets the traineeship of the two skilled roles:
 
@@ -1201,12 +1204,7 @@ durations and per-tick quantities rescaled (`spec-calendar.md` 6.1, FR-CUR-004) 
 choice of `ExpectedWorkTicks`; it waits for CAL and STY (7.6). *Requirements:* FR-PRO-021,
 FR-CAL-009, FR-CAL-019, FR-CAL-020. *Loops:* STB-L23, L24, L28. *Level:* end-to-end.
 
-**S13. A faucet and no sink.** Not runnable: there is no faucet. The only creator of
-money after construction is an external agent added with `initial`, which is a single
-event, not a faucet. It needs `spec-money-supply.md` or `spec-external-sector.md`; the
-pack is `one` with an overlay `overlay/faucet.toml` that those specs define. The
-requirement it will serve is FR-EST-016 (money enters only by a named flow) and the
-`BoundaryFlow` of the faucet's reason. *Loop:* STB-L30. See 7.6.
+**S13. A faucet and no sink.** Defined by `spec-money-supply.md` (17.6, 16). *Packs:* `one` + `overlay/faucet.toml` (a grant flow with no sink), and `one` + `overlay/faucet-sunk.toml` (the same with a rate levy on the same role). *Pass:* the exact accounting holds (the boundary balance of the flow's declared reason equals the money granted, and the money supply moves by exactly that; FR-MON-043 and the identities of `spec-ledger.md` 9.1); the price drift is **reported** and has no band until STY exists. The requirements it serves are FR-EST-016 (money enters only by a named flow) and the `BoundaryFlow` of the flow's reason. *Loop:* STB-L30 (merged with L69).
 
 **S14. A region that loses its income.** *Packs:* `famine` (the estates module is in the
 pack). *Setup:* 1 800 ticks. The spring of the second year is hit by a harvest failure of
@@ -1350,19 +1348,18 @@ commodities, 45 recipes, 202 pivots in the prototype) finishes in under `a10.sec
 
 **X1. Two regions, arbitrage.** *Packs:* `two`. *Static part (runnable now):* in autarky
 the staple to fuel ratio differs by a factor of at least 2 between the regions (it is
-3.2); pooled it lies between them or is flagged. *Dynamic part (needs REG, TRN, MER, INF):*
-with an edge, a carrier and a merchant role (an overlay `overlay/trade.toml` that those
-specs define), the fuel price in the two regions converges: after `x1.warmup` ticks the
+3.2); pooled it lies between them or is flagged. *Dynamic part (needs MER, INF; REG and TRN now exist):*
+with an edge, a carrier and a merchant role (an overlay `overlay/trade.toml`: its edge part is `spec-regions.md` 12.4, its modes, haul recipe and consignee follow `spec-transport.md` 3, 17.4, and the merchant and rumours are MER's and INF's), the fuel price in the two regions converges: after `x1.warmup` ticks the
 gap between the two is at most the transport cost of the edge plus `x1.margin_bp`, in the
 last year. Until then it is a skipped test with the issue ID of the missing specs
-(FR-REF-038). *Requirements:* FR-VIA-043 to FR-VIA-045, FR-CAR-003 (the carriage market).
+(FR-REF-038). *Requirements:* FR-VIA-043 to FR-VIA-045, FR-CAR-003 (hired carriage is an ordinary market of the haul unit, `spec-transport.md` 8), FR-TRN-005 (travel time) and FR-REG-* for the edge.
 *Level:* integration (static), end-to-end (dynamic).
 
 **X2. Three regions, comparative advantage.** *Packs:* `three`. *Static:* A3. *Dynamic
 (needs trade and the spawner):* with trade on, the households of the region with the best
 yield move toward the activities the pooled solution assigns to it; each region's
 occupation shares move toward the pooled census within `x2.share_band_bp` over four
-years. Skipped until REG, TRN, MER and INF exist. *Level:* end-to-end.
+years. Skipped until MER and INF exist (REG and TRN are written). *Level:* end-to-end.
 
 **X3. The first consumer's world.** *Packs:* `five` (cold, and warm). *Setup:* 400 ticks,
 seeds 1 and 2; and `five` + `overlay/skill` for the second eligible recipe. *Pass:* the
@@ -1437,8 +1434,12 @@ events as well as the totals. A failure reports the seed.
 
 | Item | Waits for | Next step |
 |------|-----------|-----------|
-| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | REG, TRN, MER, INF (and CAR's open items) | those specs define `overlay/trade.toml`; add the two tests |
-| S13: a faucet and no sink | MON or EXT | their spec defines `overlay/faucet.toml`; add the test |
+| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | MER, INF (and the contract spec); REG and TRN are written | the edge part of `overlay/trade.toml` is `spec-regions.md` 12.4 and the mode and haul recipe follow `spec-transport.md` 17.4; MER and INF add the merchant and the rumours; add the two tests |
+| S28: a closure of the middle link and its reopening (REG-A1) | TRN, MER, INT (the public call that sets an edge status) | add with `overlay/trade.toml`; assert the cut region's households fall no faster than the closed-region variant and the price gap returns inside a band |
+| S29: a town as one region against a town and two hamlets (REG-A2) | TRN, MER | add with `overlay/trade.toml`; assert thin markets are reported |
+| S30, S31, S32: price-gap shipping with and without `Inbound`, a perishable at the travel time, a haul recipe at three elasticities (TRN-A1, A2, A5, A3) | MER (the shipper); the mechanism is `spec-transport.md` | need a merchant strategy and `overlay/trade.toml` |
+| S33 to S36: a rate levy on a hoarding class, a levy below the upkeep line, growing households with and without a pool grant, the scale seam (MON) | the packs exist (`overlay/faucet.toml`, `overlay/faucet-sunk.toml`, `one-demand`); the scale seam needs INT's public call | add the tests; S33 to S35 can run once the code exists |
+| S37 to S40: approach to the fixed point from both sides, a shock and recovery, a closed region with an empty pool, the closed ceiling (POP) | RES (the fixed factor of the Malthusian loop) or a test double, and `overlay/population` | the population overlay is a fixed-factor double or RES, wants on and `Renewal` 0 (`spec-population.md` 18.3) |
 | S12, the coarse-tick leg | CAL experience and STY | restate the pack at five days a tick and add the leg |
 | X5: checkpoint and resume | CHK | add when `spec-checkpoint.md` exists |
 | All bands | STY, then a run that a human reviews | CLB and EXP set the bands from runs of these packs |
@@ -1756,7 +1757,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-035 | Every scenario S01 to S22 of `spec-stability.md` 8 except S15 MUST be covered by a test, or listed in 7.6 with the spec it waits for, so that FR-STB-005 can be checked. |
 | FR-REF-036 | Every scenario A1 to A10 of `spec-viability.md` 13.2 MUST be covered by a test, or listed with the reason it needs no pack (A6). |
 | FR-REF-037 | A scenario that waits for an unwritten spec MUST be a test skipped with the reason and an issue ID (testing.md 5.7), and MUST NOT be left out. |
-| FR-REF-038 | The dynamic parts of X1 and X2 and the scenarios S13 and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
+| FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S32 and S37 to S40, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The documents of `testdata/chains/` MUST be the seed corpus of the loader fuzz test. |
 
@@ -1773,10 +1774,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    and `famine` that a human reviews (FR-REF-024). Until then the band scenarios report.
 2. **Trade between regions.** `two`, `three` and `five` run as sets of regions that do
    not trade. The edge table, the carrier, the merchant and the rumour model are REG,
-   TRN, MER and INF's. *Next step:* when they exist, add `overlay/trade.toml` and the
+   MER and INF's (REG and TRN are written: `spec-regions.md` 12.4 gives the edges, `spec-transport.md` 3 and 17.4 the modes and a haul recipe). *Next step:* when MER and INF exist, add `overlay/trade.toml` and the
    dynamic parts of X1 and X2; the packs are built so the regions are viable alone, so
    the overlay adds trade and removes nothing.
-3. **A faucet.** S13 needs MON or EXT. *Next step:* the overlay they define.
+3. **A faucet.** Resolved: `spec-money-supply.md` 17.6 defines the overlays and S13 is runnable (4.5, 7.2). EXT may add more flows.
 4. **The coarse-tick leg of S12.** Needs the pack restated at five days a tick (durations
    divided by five, per-tick quantities multiplied by five, `ExpectedWorkTicks` below 73).
    *Next step:* after CAL's experience; author `overlay/coarse5.toml`.

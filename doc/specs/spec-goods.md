@@ -100,16 +100,16 @@ means the commodity uses none of that dimension, so a good with no physical form
 stands for (`spec-scale.md` section 2).
 
 3.2. A **load** is a pair: the sum over the goods of quantity times mass, and the
-sum of quantity times bulk. A **container** is anything with a capacity: a
-carrier's vehicle (`spec-transport.md`), a store (`spec-storage.md`). Its
+sum of quantity times bulk. A **container** is anything with a capacity:
+a carrying unit of a mode (`spec-transport.md` 3.2), a store (`spec-storage.md`). Its
 capacity is also a pair, a **mass capacity** and a **bulk capacity**, owned by the
 spec of that container. A load **fits** a container if and only if both sums are
 within their capacity. Whichever is reached first is the **binding dimension**,
 and it differs by cargo. The sums are computed with checked arithmetic
 (architecture.md 3.5).
 
-3.3. **Chargeable size.** Transport and storage are priced as ordinary markets,
-by a price per unit (`spec-carriage.md` section 2.2), and that needs one number
+3.3. **Chargeable size.** Storage is priced as an ordinary market, by a price per
+unit (`spec-storage.md`; transport no longer uses it, `spec-transport.md` 8.3), and that needs one number
 per good. The **chargeable size** of one unit of a commodity is
 
 ```
@@ -126,8 +126,9 @@ is always decided by the pair of 3.2.
 3.4. **Chargeable capacity.** A container with a mass capacity `Cm` and a bulk
 capacity `Cb` carries at least `min(Cm, floor(Cb * BulkFactor / 10_000))`
 chargeable units of any single commodity: a load of one commodity within that
-number always fits. This is the capacity over which a carrier spreads its
-reservation fee (`spec-carriage.md` section 2.2) and a store its charge. The
+number always fits. This is the capacity over which a store spreads its charge
+(`spec-storage.md`; transport uses the pair per carrying unit instead,
+`spec-transport.md` 3.2). The
 bound is exact when `Cm` equals `Cb * BulkFactor / 10_000`, a vehicle that is
 balanced for the convention, and conservative otherwise.
 
@@ -135,8 +136,10 @@ balanced for the convention, and conservative otherwise.
 their chargeable sizes is above the chargeable capacity, because goods that are
 heavy and goods that are bulky use different limits. Pricing each good by its
 chargeable size and adding them therefore *over-charges* a well-mixed cargo. That
-is a stated simplification (open question 1): it keeps carriage and storage a
-per-unit market, and it errs towards dearer transport, not cheaper.
+is a stated simplification (open question 1) for storage: it keeps storage a
+per-unit market, and it errs towards dearer storage, not cheaper. Transport does
+not use the chargeable size: a hired load buys carrying units by its binding fill
+(`spec-transport.md` 3.2.1), which is exact.
 
 3.6. Mass and bulk are properties of a unit, so a cohort of agent weight `w`
 holds `w` times as much of each (`spec-scale.md` 4.2). Loads and capacities are
@@ -188,8 +191,8 @@ makes shelf life a pressure to sell: a seller holding fresh and old lots offers
 the old ones first.
 
 4.4. Age continues while goods are in transit or in an estate listing
-(`spec-estates.md` 2.1: perishable goods spoil as usual; `spec-transport.md`
-for goods on a route). Nothing pauses a clock.
+(`spec-estates.md` 2.1: perishable goods spoil as usual; goods in a Transit account
+age as in any account, `spec-transport.md` 5.6). Nothing pauses a clock.
 
 4.5. This is a cliff, not a decay: a lot is whole and then it is gone. A
 gradual decay (a share of the stock lost each tick) is smoother and needs no
@@ -279,7 +282,7 @@ default, `spec-config.md` 5.3), and it is a calibration anchor, not a live value
   fallback for a tool listing (`spec-skill-barriers.md` section 2.7).
 
 A region may override the price of a commodity for its own markets. The override
-field belongs to `spec-regions.md`. The **effective** reference price of a
+field is `RegionPrices` (`spec-regions.md` 5.2). The **effective** reference price of a
 commodity in a region is the region's override if it has one, else the
 commodity's `ReferencePrice`. This settles `spec-clearing.md` open question 6: the
 commodity owns the default, the region owns the override.
@@ -416,13 +419,13 @@ Original entries:
 ## 11. Open questions
 
 1. **Pricing a mixed load.** Section 3.5 over-charges well-mixed cargo because
-   each good is charged by its own chargeable size. A price based on the binding
-   fill of the combined load would be exact for one vehicle, but it is not a
-   per-unit price and so does not fit the carriage market. Revisit with
-   `spec-transport.md`, and measure how much over-charging the reference chain
-   actually has. A single world-level `BulkFactor` also means every vehicle type
-   is priced with one convention; a per-mode factor is the next step if one is
-   needed.
+   each good is charged by its own chargeable size. Answered for transport by
+   `spec-transport.md` 3.2.1 and 8.3: a hired load buys carrying units by the binding
+   fill of the combined load, `max(ceil(mass / UnitMass), ceil(bulk / UnitBulk))`,
+   which is exact for one vehicle of the mode and is still a per-unit price (the unit
+   is the haul unit), so `BulkFactor` is not used by transport and the per-mode unit
+   pair is the per-mode factor. Still open for storage (`spec-storage.md`), which may
+   keep the chargeable size and a single `BulkFactor`.
 2. **Cliff or decay for spoilage.** A lot spoils whole at a fixed age (4.5), and
    the ledger implements it with lots stored by born tick (`spec-ledger.md` 5.1
    and 5.3). The alternative is a share of the stock lost each tick; revisit only

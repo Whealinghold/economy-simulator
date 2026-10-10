@@ -46,15 +46,19 @@ configuration packs, not in a layer of the engine.
 | `specs/spec-production.md` | PRO | core | exists | Recipes as data (several inputs and outputs, cost shares, byproducts, discard), multi-tick jobs, required tools and wear, yield by region and season (the seam to RES), trainee-eligible recipes, the cost anchor for BEL. Has a Requirements section |
 | `specs/spec-beliefs.md` | BEL | core | exists | Price beliefs (centre and width, bounds, asynchronous bounded update, price window, seeding, warm-start hook). Has a Requirements section |
 | `specs/spec-agents.md` | AGT | core | exists | Households, upkeep, the Strategy extension (three methods), the default strategy with a budget stack and saving rule, no inventory capacity, cohorts, the directed external agent. Has a Requirements section |
-| `specs/spec-stability.md` | STB | core | exists | The feedback-loop register: entry format, 43 loops, the damper catalogue, three numeric analyses, failure regimes, scenarios, the checklist for authors. Has a Requirements section; grows with every spec |
+| `specs/spec-stability.md` | STB | core | exists | The feedback-loop register: entry format, 86 loops, the damper catalogue, three numeric analyses, failure regimes, scenarios, the checklist for authors. Has a Requirements section; grows with every spec |
 | `specs/spec-viability.md` | VIA | core | exists | Viability (sourced and runnable, productive cycles, labour sufficient, storable), the steady state by an exact linear programme and its dual, the warm-start table, regions and lanes. Has a Requirements section |
 | `specs/spec-spawner.md` | SPN | core | exists | The spawner extension, bankruptcy by privation, the failure ladder, replacement and the damped entry rule, pool-funded entrants, the hook for POP. Has a Requirements section |
 | `specs/spec-demand.md` | DEM | module | exists | Wants beyond upkeep as data, roles as classes, the price schedule, the ladder, the closed-economy ratio above 1. Has a Requirements section |
-| `specs/spec-reference-chain.md` | REF | fixture | exists | The standard fixture as TOML packs, the variants, the scenarios S01 to S27 and A1 to A10, the invariants, the golden rendering. Has a Requirements section |
+| `specs/spec-reference-chain.md` | REF | fixture | exists | The standard fixture as TOML packs, the variants, the scenarios S01 to S40 and A1 to A10, the invariants, the golden rendering. Has a Requirements section |
 | `specs/spec-welfare-and-wages.md` | WEL | module | exists | Welfare ratio, wages, target-income rule |
 | `specs/spec-skill-barriers.md` | SKL | module | exists | Tools and traineeship |
 | `specs/spec-estates.md` | EST | core, module | exists | Estates, regional pool, relief |
-| `specs/spec-carriage.md` | CAR | module | exists | Carriage market; its open questions move into `spec-merchants.md` |
+| `specs/spec-carriage.md` | CAR | module | exists | Carrier pay: the fee is the market price of haul units (N-076, decided by `spec-transport.md`); its open questions move into `spec-merchants.md` and the contract spec |
+| `specs/spec-regions.md` | REG | core | exists | The region as one settlement and market, the directed graph with integer distances and deterministic queries, one override mechanism, the relocation of an account and its hook for goods in transit, the edge status. Has a Requirements section |
+| `specs/spec-money-supply.md` | MON | core, module | exists | Money flows in data (grants and levies on a class or a pool), declared reasons, the money supply and its identities, the closed economy and its liquidity floor, primitives reserved for EXT. Has a Requirements section |
+| `specs/spec-population.md` | POP | module | exists | Births and deaths as household formation and dissolution driven by the welfare ratio, the hooks of the spawner, the stake, the Malthusian fixed point (needs a fixed factor from RES), collapse and recovery. Has a Requirements section |
+| `specs/spec-transport.md` | TRN | module | exists | Modes as data, travel time from a REG distance, the shipment and goods in transit, the carriage unit as a produced good (N-076), hooks for RSK and CAP. Has a Requirements section |
 | `specs/evidence.md` | none | reference | exists | Sources behind the numbers |
 | `specs/bazaarbot-reference.md` | none | reference | exists | What bazaarBot does and where its defects are |
 
@@ -142,16 +146,16 @@ What bazaarBot lacks.
 
 | Spec | Code | Layer | Status | Covers | Needs |
 |------|------|-------|--------|--------|-------|
-| `spec-regions.md` | REG | core | planned | The region graph, edge distance, per-region parameters | tier 1 |
+| `spec-regions.md` | REG | core | exists | The region graph, edge distance, per-region parameters | tier 1 |
 | `spec-settlements.md` | SET | module | planned | Settlement size: classes derived from the households in a settlement by configured thresholds (class names are configuration; hamlet, village, town and city are only examples), and what each size unlocks or limits: a market, warehouses, associations, buildings, defence, how many carriers and merchants it can support. Settings that need no sizes use a single class | REG, POP |
 | `spec-polity.md` | POL | module | planned | Who rules: realms, provinces and the polity as a whole as nested jurisdictions over regions, borders, which laws and levies apply where | REG |
 | `spec-subsistence.md` | SUB | module | planned | Household production outside the market (growing or making basics for oneself) as the floor under market failure, so a failed market does not mean starvation. Touches production, resources and land | PRO, RES, LND |
 | `spec-resources.md` | RES | module | planned | Regional endowments such as farmland and mines: yield, depletion, regeneration | REG, PRO |
 | `spec-calendar.md` | CAL | core, module | exists | The structure of time, Earth by default (hours in a day, days in a week, months, ticks in a day or days in a tick), the derived `TicksPerYear`, and an optional cycle of seasons. Has a Requirements section | none |
-| `spec-population.md` | POP | module | planned | Births, deaths, starvation, regional collapse. Stability duties: birth and death rates that depend on welfare so a stable population exists (the Malthusian fixed point) | AGT, WEL, EST |
+| `spec-population.md` | POP | module | exists | Births, deaths, starvation, regional collapse. Stability duties: birth and death rates that depend on welfare so a stable population exists (the Malthusian fixed point) | AGT, WEL, EST |
 | `spec-migration.md` | MIG | module | planned | Migration triggers on the welfare ratio, destination choice, interaction with relief | POP, REG, INF |
 | `spec-information.md` | INF | module | planned | Free local prices; delayed, approximate rumours of remote ones | REG, BEL |
-| `spec-transport.md` | TRN | module | planned | Travel time, carrying capacity (backpack, horse, cart), goods in transit, spoilage in transit | REG, GDS, LED |
+| `spec-transport.md` | TRN | module | exists | Travel time, carrying capacity (backpack, horse, cart), goods in transit, spoilage in transit | REG, GDS, LED |
 | `spec-storage.md` | STO | module | planned | Warehousing, capacity limits, storage cost | LED, GDS |
 | `spec-risk.md` | RSK | module | planned | Loss and conflict: banditry, raids, shipwreck, disasters, loss in transit and in storage, embargo | TRN, STO |
 | `spec-land.md` | LND | module | planned | Who owns the endowments of `spec-resources.md`: tenure, rent, tenancy, tenure obligations between landholder and tenant | RES |
@@ -175,7 +179,7 @@ Money supply, indicators, policy, stylised facts, calibration and experiments ar
 | `spec-checkpoint.md` | CHK | core | planned | The checkpoint: complete world state as plain data with a format version and a configuration hash; validated restore; one canonical binary encoding; explicit extension state; every other spec lists the state it contributes. A resumed run is bit-identical to an uninterrupted one (`adr/0002-persistence-by-checkpoint.md`) | WLD |
 | `spec-indicators.md` | IND | core | planned | Derived measures: GDP, price index, inequality, welfare distribution, used by the acceptance checks. Built on generic aggregators over commodity classes and account sets; the standard indicators are presets, and a consumer can define its own; national-accounts-style measures (value added, production and destruction value, price indices per commodity class, which needs the commodity class tag in `spec-goods.md`) | OBS |
 | `spec-integration.md` | INT | core | planned | What a game needs: queries, player agents, external shocks (a failed harvest, a closed road, a plague) | WLD |
-| `spec-money-supply.md` | MON | core | planned | Where money enters (mints, mines) and leaves; a closed economy deflates. Every creation or destruction of money has a named reason and an event. Core, because the macro layer depends on it | LED, CUR |
+| `spec-money-supply.md` | MON | core | exists | Where money enters (mints, mines) and leaves; a closed economy deflates. Every creation or destruction of money has a named reason and an event. Core, because the macro layer depends on it | LED, CUR |
 | `spec-fiscal.md` | FIS | module | planned | Taxes, tolls, tariffs, a ruler's treasury, granaries. An optional extension; the core does not depend on it | MON, REG, POL |
 | `spec-policy.md` | PLC | extension | planned | How a ruler or other policy actor chooses its settings over time (tax rates, minting, granary release, price controls): a fixed schedule, a rule that reacts to measures, or a player. Open: whether it reuses the `Strategy` extension point or needs its own (architecture.md 4.3) | POL, FIS, MON, IND |
 | `spec-stylised-facts.md` | STY | core | planned | The testable macro properties of a healthy run and their acceptance bands (for example the pre-industrial wage and population cycle, price convergence between connected regions within transport cost, response to a harvest shock, famine in a closed region), plus the failure regimes: runaway inflation, hoarding, collapse, stagnation. Includes the stability checks: bounded prices, no cobweb blow-up, and a warm start that stays near the steady state | IND |
@@ -282,10 +286,15 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
 
 1. (Answered 2026-10-10, ADR 0003.) FIS and PLC are later; INT is in version 1 only as shocks and a player agent. CHK is core (ADR 0002); SCL and DEM stay in the core.
 2. (Answered 2026-10-10, ADR 0003.) A policy actor gets its own interface, written with `spec-policy.md`, because it returns settings and does not bid. Do not create it before PLC.
-3. (Answered 2026-10-10, ADR 0003, N-026.) One settlement per region; a region is one market. Apply in `spec-regions.md`.
+3. (Answered 2026-10-10, ADR 0003, N-026.) One settlement per region; a region is one market. Applied in `spec-regions.md` 3.1 and 3.4.
 4. Stable defaults (ADR 0001, decision 5) cannot be claimed until `spec-reference-chain.md` and the acceptance bands in `spec-stylised-facts.md` exist. Until then no spec states a default macro constant as stable. This is a standing constraint, not a question (N-027).
 5. (Analysed 2026-10-10, N-028.) Labour supply under the target-income rule is unit-elastic, so a shortage corrects itself only if demand elasticity exceeds 1; a staple's is below 1 (`specs/spec-stability.md` 6.1, `specs/spec-agents.md` 11.6). The rule is kept; WEL adopted a floor on working ticks (`MinWorkShare`, `specs/spec-welfare-and-wages.md` 5.3), which sets the pinned price but does not remove the instability. Open until scenario S04 has run; DEM may supply elastic demand for non-staples.
-6. (Done for AGT, 2026-10-10, N-029.) The targeted review before `spec-agents.md` is complete (Lengnick's household section, ASSUME's base strategy class, abcEconomics Household, Firm and Trade pages; see `specs/evidence.md`). Still to read before `spec-population.md`: Clark's own Malthusian source, not the VoxEU summary.
+6. (Done for AGT, 2026-10-10, N-029.) The targeted review before `spec-agents.md` is complete (Lengnick's household section, ASSUME's base strategy class, abcEconomics Household, Firm and Trade pages; see `specs/evidence.md`). Clark's own Malthusian source is now read for `spec-population.md` (chapter 2 and draft chapters 4 and 5; `specs/evidence.md`).
+7. (2026-10-10, after REG, MON, POP and TRN.) The Malthusian loop of `spec-population.md` needs a fixed factor (land or another limit) that only `spec-resources.md` can provide. RES should be written before the POP scenarios (S37 to S40) can run on the library; until then they use a test double. This does not reorder tier 2: it is a dependency of those scenarios.
+
+### Suggested next specs
+
+Version 1 specs still planned, in a suggested order: RES (the fixed factor POP needs, endowments, regeneration), SUB (the floor under market failure), MIG, INF, MER (which also settles the shipper, the consignee and the contract of `spec-carriage.md`), EXT (the outside world; reuses the primitives of `spec-money-supply.md` 10), then OBS and WLD, which collect the events, the snapshot and the phase order the written specs assume. REG, MON, POP and TRN are written (2026-10-10).
 
 ## Updating this file
 
