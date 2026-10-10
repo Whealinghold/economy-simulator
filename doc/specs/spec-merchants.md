@@ -224,9 +224,11 @@ sum. With these as `Job_c`, and `StartsIn` 1 (a merchant has no job), the defaul
 computation gives `Keep`, `Target`, the gap and the three tiers: the cargo and the haul
 units are tier 2, the inputs of the trip, **not subject to the saving rule**, because a
 merchant that could not buy its stock would be a poverty trap like a producer that could
-not buy its inputs (`spec-agents.md` 7.4.3). Their purpose is `PurposeInput`
+not buy its inputs (`spec-agents.md` 7.4.3). The purpose of the cargo, the haul units and the feed is `PurposeInput`
 (`spec-agents.md` 7.3.6), so the money spent on them is netted from the merchant's income
-when it is spent, and the sale, when it comes, is income: `spec-welfare-and-wages.md` 2.1
+when it is spent, and the sale, when it comes, is income; the vehicle is `PurposeTool` (capital, not netted, and its wear
+is not netted either in version 1, because `spec-welfare-and-wages.md` 2.1.4 nets the wear of recipe tools only), and the
+provisions, which are upkeep goods, are `PurposeUpkeep`. So `spec-welfare-and-wages.md` 2.1
 reads the merchant's profit and not its turnover. That is the right reading of a
 merchant's cost of goods; the wording of `spec-agents.md` 7.3.6 ("the next job") needs the
 edit of 12.1.
@@ -552,7 +554,7 @@ rule is a preference of the code; a pack that wants only one lists only that mod
    `min(floor(UnitMass / Mass), floor(UnitBulk / Bulk))` with a term whose capacity is 0 left out.
    For a self-carried mode the pooled capacity is also used by everything else the agent holds
    (`spec-transport.md` 3.2.2), so `q_cap` is the most units of `c` that fit after the other
-   holdings, by the same pair rule, and never more than `LotUnits`. A self-carried mode in a merchant block has `Crew` 1, because the
+   holdings, by the same pair rule, and never more than `LotUnits` or `MaxQuantity`. A self-carried mode in a merchant block has `Crew` 1, because the
    merchant has weight 1 (3.6; 14.1), so the vehicles the lot needs are `n`, bought as an input (3.4.2). This is
    the cap of D39 applied to a merchant (7.1).
 2. **What it can pay.** `q_aff = floor((Money - ReserveMoney - other) / LimitMax)`, with
@@ -869,7 +871,7 @@ within an agent and admits each or refuses it whole with a `reason`, in this ord
 | both | 6 | `invalid_quantity`, `invalid_price` | a quantity below 1 or above `MaxQuantity`; a limit below 1 or above `MaxPrice` |
 | offer | 7 | `insufficient_stock` | the quantity exceeds the available (unreserved) units of the commodity |
 | take | 8 | `duplicate_take` | the agent already has an admitted take for the commodity this tick |
-| take | 9 | `overflow` | limit times quantity does not fit `int64` |
+| take | 9 | `overflow` | limit times quantity exceeds `MaxMoney` (the escrow could not hold it, `spec-ledger.md` 4.1) |
 | take | 10 | `insufficient_funds` | limit times quantity exceeds the agent's available cash |
 
 The payer's cash is its balance less what its orders of the tick reserved (`spec-clearing.md` 3.3), so
@@ -962,7 +964,7 @@ to the destination (`spec-ledger.md` 3.5).
 
 9.6.3. **Money in escrow is out of circulation** until the arrival: it is in the contract sector of
 `spec-ledger.md` 9.3, counted in the total of money and in the money supply by sector (`spec-money-supply.md`
-13.4), and in no agent's balance. The amount at any tick is at most `MaxOpen * MaxMoney`, and in practice the
+13.4), and in no agent's balance. The amount at any tick is at most the money in existence, and in practice the
 value of the goods in flight. It is a drain on the payers' liquidity of the same size, which the take sizing
 bounds (8.2) and MER-A5 records.
 
@@ -982,7 +984,11 @@ removed, diverted to the estate of the destination (`spec-transport.md` 5.8), an
 | the deliverer was removed before arrival | 0: the contract ended at the removal | `p * q` to the payer (9.8) |
 
 Then the Escrow account is empty and is released, and the event `ContractSettled` is emitted with the amounts
-and the cause. Three decisions in the table:
+and the cause. The bound `MaxMoney` on a balance applies as for a trade: a payment that would overflow the deliverer's balance is the same
+defect for a contract as for a trade (`spec-ledger.md` 4.2, `ErrBalanceOverflow`), the money supply is bounded at
+construction (`spec-config.md` 4.2), and this spec adds no rule.
+
+Three decisions in the table:
 
 - **The deliverer bears the spoilage.** It chose the lot and the lane, and the life-left rule of 5.3 exists to
   keep it from shipping what cannot arrive. The payer pays for what it receives.
@@ -1232,10 +1238,10 @@ for example `role.broker.merchant.modes`. The framework of `spec-config.md` 7 ru
 | `ErrMerchantShape` (new) | a merchant block on a role with a non-empty `Recipes`; `Strategy` `"merchant"` with no block; a block with `Informed` false; a trade input (3.2.2) that is not in `Trades`; an empty cargo set; a self-carried mode in `Modes` with a `Crew` above 1; `Consigns` with no `TakeUnits` |
 | `ErrMerchantWeight` (new) | a merchant role with a group of scale above 1, or whose households exceed one per agent (an agent of weight above 1) |
 | `ErrModuleDependency` | a merchant block while `Modules.Transport` or `Modules.Information` is absent; `Modules.Merchants` while `Modules.Transport` is absent; a hired mode in `Modes`, or `Consigns`, while `Modules.Merchants` is absent |
-| `ErrOverflow` | a derived check of `spec-config.md` 4.2: `MaxLotUnits` times the largest `Mass` or `Bulk` times `MaxQuantity` does not fit, or `MaxOpen` times `MaxMoney` does not fit |
 
-No new sentinel is needed for the contract round at run time: a refusal there is a counted reason, not an
-error (9.3).
+No overflow error is needed at validation: a product of the margin arithmetic that does not fit drops the candidate (5.8),
+the lot is at most `MaxQuantity`, and the escrow is at most the money in existence. No sentinel is needed for the contract round at run
+time: a refusal there is a counted reason, not an error (9.3).
 
 ### 14.2 Warnings
 
