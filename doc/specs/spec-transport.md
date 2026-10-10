@@ -9,9 +9,9 @@ on any conflict). Its requirements carry IDs of the form `FR-TRN-NNN` and
 
 Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)),
 version 1 (`vision.md` section 4). Off unless configured: the zero configuration
-has no transport mode and no goods ever travel. Needs `spec-regions.md` (REG,
-written in parallel: the directed region graph and its distances; this spec uses
-only the contract of section 1.2), `spec-goods.md` (mass, bulk, shelf life),
+has no transport mode and no goods ever travel. Needs `spec-regions.md` (REG:
+the directed region graph, its distances and the relocation of an account; this spec
+uses only what section 1.2 lists), `spec-goods.md` (mass, bulk, shelf life),
 `spec-ledger.md` (the Transit account kind, transfers, ageing, `WearItems`),
 `spec-production.md` (a haul unit is made by an ordinary recipe), `spec-agents.md`
 (the plan a strategy returns, the views, removal) and `spec-config.md` (the module
@@ -83,21 +83,31 @@ that moves with them is absent from its region's markets for `k` ticks.
 
 ### 1.2 What this spec assumes from REG
 
-`spec-regions.md` is being written in parallel. The contract fixed for this wave
-(unverified until REG is merged) is used and nothing else:
+Transport uses these parts of `spec-regions.md` and nothing else:
 
 - a region has an ID and the region graph has **directed** edges `From`, `To`,
-  `Distance`, with `Distance` an `int64` of at least 1 in a configured generic
-  distance unit; edges may be asymmetric; the unit has no travel-time meaning of
-  its own;
-- a deterministic query `Distance(from, to)` returns the length of the shortest
-  directed path and whether one exists, with a total-order tie-break between equal
-  paths. Transport uses the length only, never the path;
+  `Distance` (`spec-regions.md` 3.3, 4.1), with `Distance` an `int64` of at least 1
+  in a configured generic distance unit; edges may be asymmetric; the unit has no
+  travel-time meaning of its own;
+- the query `Distance(from, to)` returns `(int64, bool)`: the length of the shortest
+  directed path over open edges and whether one exists, with a total-order tie-break
+  between equal paths (`spec-regions.md` 4.3). Transport uses the length only, never
+  the path. A closed edge (`spec-regions.md` 7) is absent from the graph, so it lengthens
+  the distance or removes the route (`no_route`); an edge factor changes the distance;
 - one settlement per region and a region is one market (ADR 0003 decision 4); the
   region creates its estate pseudo-agent and account (`spec-estates.md` 2.7.1);
-- a region-change operation for an account, which transport calls at an arrival
-  (5.7) and which the world refuses for any other caller while the account's agent
-  is **away** (5.5).
+- the ledger-level `Relocate(account, region)` of `spec-regions.md` 6.1, which transport
+  calls itself at an arrival (5.7) and which carries `cause` `transport` (a constant of
+  `internal/logkeys`) and the event `AgentRelocated` (`spec-regions.md` 10.1);
+- the hook of `spec-regions.md` 6.5.2: a spec that ties an obligation to an account's
+  region registers a refusal `region_bound` with a name, and the public relocation
+  (`spec-regions.md` 6.1.3, check 7) refuses an account with an open obligation
+  (`ErrRegionBound`). `spec-regions.md` pre-names `open_shipment` for transport.
+  Transport registers it when the module is on (5.5.3).
+
+Transport does **not** use `NoRegion`, `depart` or `arrive` (`spec-regions.md` 6.5.3) in
+version 1: a traveller's account stays in the origin region while it is away and changes
+region at arrival. REG's reservation of those stays unused.
 
 ## 2. Positions taken
 
@@ -449,9 +459,20 @@ checked; a failure here is a programmer error and panics, architecture.md 8.1,
   as any lot does; its upkeep is consumed in phase 6 of each tick from them
   (`spec-agents.md` 5.3); the spawner acts on it as on any agent (5.9);
 - every tick from the dispatch tick to tick `Arrives - 1` is a working tick (3.3.1);
-- the world refuses any other operation that would change its account's region
-  (REG's operation, MIG's migration) while it is away, by returning the error
-  `ErrTravellerAway` to the caller.
+- its account cannot be relocated by anyone else while it is away: see 5.5.3.
+
+5.5.3. **The refusal `open_shipment`.** When the module is on, transport registers the
+`region_bound` refusal named `open_shipment` (`spec-regions.md` 6.5.2). It is open for an
+account whose agent is the traveller of an away trip, or the shipper or the consignee of
+a shipment in flight (an agent whose goods or whose delivery is tied to a region). The
+public relocation (MIG, INT) then returns `ErrRegionBound` naming `open_shipment`, and
+changes nothing. Transport itself changes a traveller's region at arrival by calling the
+ledger-level `Relocate(account, region)` directly, not the guarded public path, with the
+cause `transport`; it emits `AgentRelocated` of `spec-regions.md` 10.1 (`Agent`, `Role`,
+`From`, `To`, `Weight`, `Money`, `Units`, `Cause`) and no event of its own for the move.
+A traveller dying in transit leaves its money to the pool of the region it departed from
+(`spec-estates.md` 2.2) and, since its account is still in the origin region, that is the
+region of the account at removal (5.9.2).
 
 ### 5.6 In transit
 
@@ -478,7 +499,8 @@ In the first phase of tick `t`, after the moment is computed, the world processe
 shipments with `Arrives = t` in order of shipment ID:
 
 1. **A self-carried trip.** If the traveller still exists, its account's region
-   becomes `To` by REG's region-change operation (1.2) and it is no longer away. If it
+   becomes `To` by the ledger-level `Relocate` with cause `transport` (1.2, 5.5.3) and it
+   is no longer away. If it
    was removed, nothing moves and the shipment record is dropped when the traveller is
    removed (5.9).
 2. **Delivery.** If the shipment has a Transit account: for each commodity in the
@@ -549,7 +571,7 @@ a deterministic rule:
 
 6.3. **Blocked.** A pair blocked by the transit factor (4.2, 10.3) refuses new
 requests (`blocked`) and does not affect shipments in flight. A closed road is
-modelled as the REG graph losing an edge or the factor going to 0, set between ticks
+modelled as REG's edge status (closed, or a factor: `spec-regions.md` 7, which changes or removes the distance) or the transit factor going to 0, set between ticks
 by the integration spec (`vision.md` section 2), not by transport.
 
 6.4. **A refusal leaves no trace.** The only state a refusal could leave is the Transit
@@ -833,7 +855,8 @@ adds then.
 
 10.5. **Migration (MIG).** A household's migration is not a shipment and is not a
 working trip (`spec-welfare-and-wages.md` 4.3). It may use `Travel` to know how long a
-journey takes. Its region change is REG's operation, refused while the agent is away.
+journey takes. Its region change is the public relocation of `spec-regions.md` 6.1, refused
+with `ErrRegionBound` (`open_shipment`) while the agent is away or has a shipment in flight.
 
 ## 11. Parameters
 
@@ -1245,7 +1268,7 @@ conserved: shipped 100 = delivered 100 + diverted 0 + spoiled 0.
   default is claimed stable.
 - Read and not touched: **N-010** (regions) is REG's; this spec adds that goods in transit
   are in Transit accounts, so a region change of an agent's account moves no cargo, and
-  that an away traveller's account is not changed by anyone else (1.2).
+  that an away traveller or a party to a shipment in flight cannot be relocated by anyone else (`open_shipment`, 5.5.3).
 
 New terms for the glossary (README list and `doc.go`): mode, self-carried mode, hired
 mode, carrying unit, crew (of a mode), haul unit, haul span, traveller, shipper,
@@ -1282,7 +1305,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-019 | A self-carried request MUST be refused `traveller_away` if the agent is away and `job_in_progress` if it has a job in progress, and `unprovisioned` if after the dispatch's moves its stock of its upkeep goods is below its effective upkeep times its weight times the travel time. |
 | FR-TRN-020 | Dispatch MUST move each line from the shipper to a Transit account under `transit_out`, with the lots keeping their born tick and remaining durability, and MUST take the lowest-ID open Transit account of the shipper's region that no shipment in flight uses, or open one. |
 | FR-TRN-021 | A traveller MUST be away from its dispatch until the first phase of its arrival tick: not passed to `Work` or `Trade`, placing no order, with every tick from the dispatch tick to the tick before arrival a working tick, its account keeping its region and its upkeep consumed from its account. |
-| FR-TRN-022 | The world MUST refuse any change of an away agent's account region by a caller other than transport, returning the error `ErrTravellerAway`. |
+| FR-TRN-022 | With the module on, transport MUST register the `region_bound` refusal `open_shipment`, open for an agent that is an away traveller or the shipper or consignee of a shipment in flight, so that the public relocation returns `ErrRegionBound` for it; at arrival transport MUST change the traveller's region by the ledger-level `Relocate` with cause `transport` and emit `AgentRelocated` once, and MUST NOT use `NoRegion`, `depart` or `arrive`. |
 | FR-TRN-023 | A Transit account MUST hold the cargo of at most one shipment in flight and nothing else, MUST NOT be closed, and MUST be empty when no shipment references it. |
 | FR-TRN-024 | In the first phase of a tick, after the moment and before relief, the world MUST process the shipments whose arrival is that tick in order of shipment ID: change a self-carried traveller's region to the destination, move the cargo to the consignee under `transit_in`, release the Transit account and emit `ShipmentArrived`. |
 | FR-TRN-025 | Goods in transit MUST age as in any account: a lot of a perishable commodity whose born tick plus shelf life minus 1 is at most the current tick MUST move whole to the `spoilage` boundary at the end of the tick from the Transit account, so that a lot is delivered if and only if the arrival tick is at most its born tick plus shelf life minus 1. |
