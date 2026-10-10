@@ -49,7 +49,7 @@ point). This spec covers:
 - regional collapse, recovery, the floors and the closed region (6).
 
 Out of scope: where a household goes when it leaves a region (`spec-migration.md`,
-MIG, later); the failure ladder, the entry rule and the occupation choice
+MIG); the failure ladder, the entry rule and the occupation choice
 (`spec-spawner.md`); what makes the welfare ratio fall as households rise, which is a
 fixed factor of production such as an endowment (`spec-resources.md`, RES, written; 5.2, 8 there); shocks that change a death schedule (`spec-integration.md`, INT; 6.6);
 the tick phases (`spec-world.md`); the bands that say what a healthy population curve
@@ -71,7 +71,7 @@ is (`spec-stylised-facts.md`).
 | 10 | `Renewal` | Ignored while the module is on (effective 0). A configured non-default `Renewal` above 0 is warned (`renewal_with_population`); the default is only noted (4.6.1) | A refill of every ladder removal would cancel the positive check. Births are the only replacement (4.6) |
 | 11 | The fixed point | A replacement ratio `r*` where births equal deaths. It is stable if net growth rises with the ratio and the ratio falls with households. POP owns the first, RES the second. Without a fixed factor nothing bounds growth except the pool's money and `HouseholdCap` | Clark's three assumptions (16). The library has no fixed factor until RES exists (5.2) |
 | 12 | Collapse | No state, no regime flag. Collapse is a fall in households that the measures show; recovery is births funded by the pool the dead filled. Floors: `MinHouseholds` stops the schedule's deaths from emptying a role; the ladder alone can end a role | Macro is measured, never set. A smooth schedule must not extinguish a small group by arithmetic (6.4) |
-| 13 | Closed region | There is no immigrant. A region's households change by births, deaths and the ladder only, until MIG | Stated so the closed behaviour is testable (6.5) |
+| 13 | Closed region | There is no immigrant. A region's households change by births, deaths and the ladder only, until the migration module (`spec-migration.md`) is on | Stated so the closed behaviour is testable (6.5) |
 
 ## 3. The module and the rates
 
@@ -291,7 +291,7 @@ draws nothing, so the random stream does not depend on the module (3.1.1; unlike
 creation draw it adds none to the order of `spec-agents.md` 3.5.2). Without it every
 agent with the same ratio would reach its first death on the same tick (the lockstep of
 `spec-scale.md` 5.1). The offset is the helper's "random starting offset" of
-`spec-scale.md` 4.6 made deterministic. A newborn agent takes the offset of its own ID.
+`spec-scale.md` 4.6 made deterministic. A newborn agent takes the offset of its own ID. The same function of the ID is the fixed per-agent spread of the migration module (the share of `MoveWidth`, `spec-migration.md` 6.5) and of the merchant (the fee share, `spec-merchants.md` 5.7): one helper, whose home is `internal/ordering` (the package of deterministic ordering helpers), with one test of its evenness; a new per-agent spread reuses it and does not draw at creation.
 
 3.8.4. **Why exact.** Cumulatively, over any run of ticks the number of events is
 `floor((carry_start + sum of num) / D)` less the same at the start: within 1 of the
@@ -721,7 +721,7 @@ A region with no immigrant has only its own births, deaths and ladder. This is t
 behaviour tested before MIG exists. Its properties, from 5.5 and 6.3: the population is
 bounded by `M / stake`; recovery from a collapse needs the money the dead left; and a
 region whose households are all dead stays so. A migrant arriving with money (MIG) lifts
-all three.
+all three, by what it carries; a household pushed to move is poorer than a mean one and dilutes the money per household of the region it enters (`spec-migration.md` 9.3, STB-L76). No stake is paid for it and nothing is taken from either pool (7).
 
 ### 6.6 Shocks
 
@@ -757,7 +757,7 @@ only mechanism that bears on it.
 | `spec-scale.md` | the carried remainder (3.8, `spec-scale.md` 4.6); births into cohorts dilute their goods (4.3) |
 | `spec-demand.md` | with wants the ratio ranges above 1 (5.3). Without them the fixed point is at hunger |
 | `spec-viability.md` | a warm start's census is not `N*`. A world that starts at its census and has a fixed factor drifts toward `N*` (open question 3) |
-| `spec-migration.md` (later) | the other way a household enters or leaves; it must share the replacement ratio as a signal and use the same stake rule for arrivals |
+| `spec-migration.md` | the other way a household enters or leaves: the signal is not shared and no stake is paid; a migrant carries its account and draws nothing from the pool, so an arrival creates no household and no money (`spec-migration.md` 5.5, 9.2); the replacement ratio is not a migration signal (a pack with both modules may set `MoveBelow` near `r*` by hand); the money a migrant carries moves the bound `M / stake` (6.5) |
 | `spec-resources.md` | provides the fixed factor (5.2; `spec-resources.md` 8): an endowment that binds, regeneration shapes, the ration |
 | `spec-integration.md` | sets and clears the scales (6.6) |
 | `spec-calendar.md` | `TicksPerYear` converts annual rates exactly (3.8); no seasonality of births or deaths in version 1 |

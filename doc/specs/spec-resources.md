@@ -613,7 +613,7 @@ abundance (the snapshot of 4.7.3) and `MaxExecutions` is the least of the existi
 limits and, for each draw, `floor(A / d)` of the snapshot (a bound that ignores the
 competition of the ration), with `no_endowment` as the reason when that is 0. The
 view also gains a group `Endowments` (only with the module on), **for the agent's own
-region only**: the endowments that its role's recipes draw on, sorted by resource, each
+region only**: the endowments that its role's recipes draw on, including the recipes of its effective own-use list (`spec-subsistence.md` 3.6), sorted by resource, each
 with `Resource`, `Stock`, `Capacity` and `AbundanceBP`. It is local physical state, free like the local price, and it is not a
 macro measure that agents react to (roadmap, "Macro is measured, never set"). **No
 view carries the endowment of another region** (note N-106): a strategy that wants a
@@ -1019,12 +1019,14 @@ field.
 ## 10. Open access and tenure (the hook for LND)
 
 10.1. In version 1 every endowment is **open access**: any agent in the region whose
-role lists a recipe that draws on it may draw, subject only to the ration of 5.3. There
+role lists a recipe that draws on it, or has one on its effective own-use list (`spec-subsistence.md` 3.6), may draw, subject only to the ration of 5.3. There
 is no owner, no price for the use of the stock and no rent. This is the baseline that
 tenure is measured against. It has a known consequence, recorded as RES-A5 (19): when
 the abundance feeds the net value of a recipe (`spec-agents.md` 7.1.4 reads the
 effective yield), more households choose and enter the drawing role as it pays, and the
 stock is drawn down by the sum of choices that none of them internalises.
+
+The subsistence floor (`spec-subsistence.md` 9) is such a draw: an own-use recipe draws on an endowment through `Draws` like any recipe, with no priority and no quota over the market recipes, so its requests share the ration of 5.3 with theirs; it is a third path to the same draw-down, beside recipe choice and entry (RES-A5, `spec-stability.md` L90; the floor's own entry is L104). A closed commons makes a household in the own-use mode `Blocked` and counts `own_use_not_available`.
 
 10.2. **The hooks LND will use**, stated so that nothing in this spec has to change:
 
@@ -1033,7 +1035,7 @@ stock is drawn down by the sum of choices that none of them internalises.
   refusals that other specs register with the relocation (`spec-regions.md` 6.5.2), but in the list of production;
 - an **entitlement**: a per-claimant cap on the executions of a request, applied to
   `w_i` before the ration, so that a holder's share is its own and the remainder is
-  shared as today;
+  shared as today; a request carries its recipe, so an entitlement may treat an own-use request differently from a market one (`spec-subsistence.md` 9);
 - a **rent**: a recurring levy on the claimant by the money flows of
   `spec-money-supply.md` 4 (a named reason equal to the flow ID), valued at the dual
   of the resource row (11.3), which is the scarcity price of a unit of the stock.
@@ -1181,7 +1183,7 @@ reported through it.
 | Warning | Condition |
 |---------|-----------|
 | `resource_unused` | a resource that no recipe draws on |
-| `endowment_unused` | an endowment with a capacity in a region where no role with a group lists a recipe that draws on it |
+| `endowment_unused` | an endowment with a capacity in a region where no role with a group lists a recipe that draws on it, on its `Recipes` or on its effective own-use list (`spec-subsistence.md` 3.6) |
 | `draw_impossible` | a recipe with a positive site factor in a region whose endowment of a drawn resource has an effective capacity below the draw (so it can never run there) |
 | `abundance_not_monotone` | an abundance curve whose factor falls as the share rises (4.7.2) |
 | `regen_per_tick_high` | a `refill` or `logistic` effective per-tick fraction, `RateBP * m / (10^4 * TPY)`, above 2 000 basis points |
