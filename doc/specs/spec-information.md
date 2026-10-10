@@ -5,7 +5,7 @@ index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-INF-NNN` and
 `NFR-INF-NNN`, which tests cite (testing.md section 4). They are in section 16
-(FR-INF-001 to 050, NFR-INF-001 to 004).
+(FR-INF-001 to 052, NFR-INF-001 to 004).
 
 Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)),
 version 1 (`vision.md` section 4). Off unless configured: the zero configuration
@@ -71,7 +71,7 @@ what the markets published, late and blurred, to the agents that were told to li
 | 6 | How inexact? | A bounded error in basis points, one integer draw per reader, source and commodity from the world's source, uniform and mean zero; no draw when the bound is 0. The draw order is fixed (5.5) | Independent errors are the only kind the model shows to help; a shared one hurts (11.2). A quantised price is the same for every reader, so it would herd them (5.5.4) |
 | 7 | A staleness spread by agent (each agent reads a different vintage)? | Rejected | The model shows it lowers the stability limit of the shipping loop and does not reduce the swing of threshold shippers (11.1, 11.2). It would add an arbitrary rule on the agent ID for no gain |
 | 8 | What if there is no news? | No rumour, and the reason is counted: no path (REG has none, or every route is closed), too old (the lag exceeds `RumourMaxAge`), not yet (the run is younger than the lag) | A closed road silences a region; that is the correct behaviour and must be visible (FR-STB-013) |
-| 9 | Who is shown rumours? | A role flagged `Informed`. The default is off, and then the module costs nothing per agent. The `Trade` view carries them; `Work` and `Revise` do not | Almost every agent never ships; only a merchant needs them (6.1) |
+| 9 | Who is shown rumours? | A role flagged `Informed`, in the `Trade` view; the default is off, and then the module costs nothing per agent. `Work` and `Revise` do not carry them. One other reader: the migration pass asks for the rumours of the household under review whatever `Informed` says, through the same function and not through a view (6.1.3) | Almost every agent never ships; only a merchant needs them (6.1) |
 | 10 | Does a trip carry news back? | No in version 1 | It needs a per-agent memory of what was seen where, which is state that grows with agents, regions and commodities (7.5, 17.1) |
 | 11 | Is a cohort different? | No. A cohort is one agent: one view, one set of draws, prices per unit | `spec-scale.md` 4.4; the lockstep of a cohort is recorded (L13, L34) |
 | 12 | Can the outside world be a source? | Only if EXT declares the pair; the record is then written from that market's published price. EXT never writes the record | The contract with EXT (4.5): one generic key, one writer |
@@ -338,10 +338,11 @@ Mean   = clamp(halfEven(m * (10 000 + e) / 10 000), 1, MaxPrice)    if m > 0, el
 7.3, 7.7), one draw per candidate, **offered or not**, when `E` is above 0. The order is
 fixed: the world builds the view of an informed agent immediately before it calls that
 agent's `Trade`, and takes the draws at that moment in ascending `RegionID` of the
-source and, within a region, ascending `CommodityID`. Agents are visited in ID order
+source and, within a region, ascending `CommodityID`. The migration pass of phase 7 is a
+second reader and takes its own draws, in its own phase (6.1.3). Agents are visited in ID order
 (`spec-agents.md` 4), so the whole sequence is a function of the configuration, the
 world's state and the seed. The count of draws in a tick is the sum over the informed
-agents given a view of their candidates, and with `E` = 0 it is zero: a world with no
+agents given a view of their candidates (plus the migration pass's, 6.1.3), and with `E` = 0 it is zero: a world with no
 informed role, or with `E` = 0, takes no draw for this module and its random stream is
 the stream of a world without the module.
 
@@ -383,6 +384,8 @@ for them. Setting `Informed` while `Modules.Information` is nil is rejected
 household that makes and sells in its own market has no use for one; a merchant that
 may carry goods between regions does. The cost of the module is proportional to the
 number of informed agents and not to the population (7.8).
+
+6.1.3. **A second reader: the migration pass.** The migration module (`spec-migration.md` 4.3.1, 6.2) obtains rumours for the household it is reviewing, for the sources of the commodities its role needs, **whatever `Informed` says**. It calls the same rumour function a view uses (the same lag, vintage, error and `RumourMaxAge`, 5.2 to 5.5) and builds no view: a strategy is shown nothing, and the household's role does not become informed. Its error draws are taken in the migration pass of phase 7, after the entry step of every region, among the reviewed households in ascending agent ID, one per candidate (a source pair of a candidate region), in ascending source `RegionID` and then `CommodityID`, offered or not, and none when `E` is 0 or no household is reviewed (`spec-migration.md` 6.2.1, 10.2.1; N-111). They are never taken in phase 3, so the view draws and the migration draws cannot interleave. `RumoursServed` does not count these calls (10.1). The statement of 6.1.1 that the agents of any other role are not shown rumours is about views.
 
 ### 6.2 The view
 
@@ -450,15 +453,16 @@ interface (architecture.md 4.2).
 ### 7.1 Where it happens
 
 Tick phases are `spec-world.md`'s, which is not written (N-009); this spec depends on
-these two points of the order of `spec-agents.md` 4 and proposes them:
+these points of the order of `spec-agents.md` 4 and proposes them:
 
 | Phase | What this spec does |
 |-------|---------------------|
 | 3, trade decision | For each agent in ID order that is informed and not away: build the rumours of its view (5.3 to 5.5, with the draws), then call `Trade`. After the last agent's plan is executed and before phase 4, emit `RumoursServed` for each reader region in ascending `RegionID` (10.1) |
 | 5, outcomes | After the price windows are pushed and before the first `Revise`, append one entry to the record of every source (4.3) |
+| 7, entry and exit | The migration pass reads the rumours of the households it reviews (6.1.3), with its own draws, after the entry step of every region (`spec-migration.md` 10.2) |
 
-Nothing else in the tick touches this module. In particular no rumour is made in phase
-1, 2, 6, 7 or 8, and the record is not read in phase 5 or later of the tick it is
+Phase 7 has a second reader (6.1.3): the migration pass asks for the rumours of each reviewed household and takes their draws; it writes no entry. Nothing else in the tick touches this module. In particular no rumour is made in phase
+1, 2, 6 or 8, and in phase 7 only by the migration pass, and the record is not read in phase 5 or later of the tick it is
 written in: a rumour made in phase 3 of tick `t` reads entries of ticks `t - 2` and
 earlier.
 
@@ -630,7 +634,7 @@ there).
 |-------|---------|-------------------------|
 | `RumoursServed` (new) | once per reader region per tick in which the module is on and at least one informed agent was given a view in that region, in ascending `RegionID`, after the last plan of phase 3 is executed and before phase 4 | `Region` (the reader's), `Readers` (informed agents given a view), `Offered`, `NoPath`, `TooOld`, `NotYet` (counts of candidates by the result of 5.3.1, summed over the readers), `MaxLag` (the largest `Lag` among the offered, 0 if none) |
 
-It is bounded by the number of regions, so it is not per agent. It is the counter of
+It counts the readers of views only: the calls of the migration pass (6.1.3) are not in `Readers` or in the counts; the migration module counts its own outcomes (`spec-migration.md` 13.1). It is bounded by the number of regions, so it is not per agent. It is the counter of
 three silent limits: the closed road (`NoPath`), the horizon (`TooOld`) and the young
 run (`NotYet`), as FR-STB-013 asks of every limit. A tick with no informed view in a
 region emits nothing for it. The `Region` field carries the `RegionID`; whether events
@@ -900,7 +904,7 @@ response to the gap is a step of height `Q` (all shippers at once), which is a l
 cycle. *Owner:* INF 5.5; the thresholds are MER's. *Damper:* INF-D2 (an independent error,
 weak: it settles the cycle only when `Q / (2E)` is below the limit of INF-A1, so `E` must
 be a large part of the margin); D39 and the cap on the dispatch; a spread of the
-shippers' own thresholds (MER; far stronger in the model, 0.04 `f` against 1.8 `f` for
+shippers' own thresholds (MER, a function of the agent ID, `spec-merchants.md` 5.7.2; far stronger in the model, 0.04 `f` against 1.8 `f` for
 identical shippers at `w` = 0.8, 11.2); D38. *Undamped:* identical shippers with a large
 `Q` against the steady flow: a swing of almost twice the freight in the model (`Q` 0.5
 `f`, steady flow 0.1 `f`). *Condition:* `Q / (2E) < 2 sin(pi / (2 (2n + 1)))` with `n` the
@@ -1042,14 +1046,14 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-INF-011 | A candidate whose lag exceeds `RumourMaxAge` MUST get no rumour and be counted as `TooOld` (5.3.1). |
 | FR-INF-012 | A candidate whose lag exceeds the current tick MUST get no rumour and be counted as `NotYet` (5.3.1). |
 | FR-INF-013 | A candidate MUST be decided by the first of the cases of 5.3.1 that applies and counted exactly once; a candidate with no path and a lag above the horizon MUST be `NoPath` (5.3.1). |
-| FR-INF-014 | When `RumourErrorBP` is above 0, the world MUST take one draw `Int64N(2E + 1) - E` from its source for every candidate of an informed agent, offered or not, in ascending source `RegionID` and then `CommodityID`, immediately before that agent's `Trade`, with agents in ID order; and when it is 0 it MUST take none (5.5.2, 5.3.2). |
+| FR-INF-014 | When `RumourErrorBP` is above 0, the world MUST take one draw `Int64N(2E + 1) - E` from its source for every candidate of an informed agent, offered or not, in ascending source `RegionID` and then `CommodityID`, immediately before that agent's `Trade`, with agents in ID order; and when it is 0 it MUST take none (5.5.2, 5.3.2). The draws of the migration pass are separate (FR-INF-051). |
 | FR-INF-015 | A rumour's `Price` MUST be `halfEven(p * (10 000 + e) / 10 000)` clamped to `[1, MaxPrice]` and its `Mean` the same with the same `e` when the entry's mean is above 0 and 0 otherwise, so that `|Price - p|` is at most `ceil(p * E / 10 000)` (5.5.1). |
 | FR-INF-016 | `Lag` and `SourceAge` of a rumour MUST be the lag of 5.2 and the observation's age, unchanged by the error (5.1.2). |
 | FR-INF-017 | A rumour MUST be made from the observation of the vintage tick `t - Lag` of the source's record (5.4.1). |
 | FR-INF-018 | No rumour in any view MUST have a `Lag` below 2 or a vintage later than `t - 2`, whatever `InfoSpeed` (5.2.2, N-106). |
 | FR-INF-019 | The `Rumour` type MUST have exactly the fields `Region`, `Commodity`, `Price`, `Mean`, `Lag` and `SourceAge`, and no stock, volume, quote or hop count (5.1.1, position 13). |
 | FR-INF-020 | A view MUST carry at most one rumour per (region, commodity), sorted by ascending `Region` then `Commodity`, never about the agent's own region and only about commodities of its tradable set (5.3.1, 5.6). |
-| FR-INF-021 | Only the `Trade` view of an agent of an informed role MUST carry rumours; the `Work` view, the `OutcomeView` and the views of other agents MUST carry none and cause no draw (6.2.1). |
+| FR-INF-021 | Only the `Trade` view of an agent of an informed role MUST carry rumours; the `Work` view, the `OutcomeView` and the views of other agents MUST carry none and cause no draw (6.2.1). The migration pass obtains rumours by the function and not through a view (FR-INF-051). |
 | FR-INF-022 | An agent that is away and an estate pseudo-agent MUST be given no view, no rumour and no draw (6.3). |
 | FR-INF-023 | An agent of weight above 1 MUST get one view and one set of draws, and its rumoured prices MUST NOT be multiplied by its weight (6.4). |
 | FR-INF-024 | `AgentView.Rumour(region, commodity)` MUST return the view's rumour and `true`, or the zero value and `false` when there is none, and MUST NOT allocate (6.7). |
@@ -1084,6 +1088,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
+| FR-INF-051 | The migration pass MUST be able to obtain the rumours of the household under review through the rumour function whatever `Informed` says, with the same lag, vintage, error and `RumourMaxAge` as a view, MUST take its error draws only in phase 7, among the reviewed households in ascending agent ID and, for each, one per candidate in ascending source `RegionID` then `CommodityID`, offered or not, and none when `RumourErrorBP` is 0 or no household is reviewed; it MUST NOT build a view or make the role informed (6.1.3). |
+| FR-INF-052 | `RumoursServed` MUST NOT count the calls of the migration pass (6.1.3, 10.1). |
 | NFR-INF-001 | Appending the record, building the rumours of a view and `AgentView.Rumour` MUST NOT allocate in a tick with the default logger and observer (observability-and-logging.md 8.2). |
 | NFR-INF-002 | The per-tick cost SHOULD be `O(S)` for the append and `O(P)` for an informed agent's view (`P` its candidates, at most `MaxRumoursPerView`), and the draws and rumours of the 40 informed agents of the reference world (1 280 candidates) SHOULD take under 0.5 ms a tick. The figure is a placeholder and unmeasured (N-015). |
 | NFR-INF-003 | The lag, the distortion and the ring MUST live in `internal/rumour` over primitive slices, import the standard library only, and know no region, commodity or role (architecture.md 2.9, 9.1). |
@@ -1095,8 +1101,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    and returns has seen the true price, which a rumour does not give. A bounded form is
    possible: a record, per informed agent, of the last price seen in each region for its
    tradable set (at most `MaxRumoursPerView` entries, saved in a checkpoint) and its
-   tick. MER decides whether the shipper needs it; the cost is state per informed agent.
-   Next step: `spec-merchants.md`.
+   tick. Decided in `spec-merchants.md` 3.5: the merchant keeps no memory in version 1.
 2. **Relay through intermediate regions.** News goes from the source to the reader in
    one step (5.2.4). A relay would make a region on the way a source for its neighbours
    and let a hub learn earlier than a leaf; it needs a table per pair of regions and
@@ -1106,19 +1111,19 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    A pack whose roads are slow and whose couriers are not (or the reverse) has no field
    for it. A field `InfoLength` on an edge, or a second graph for news, would be REG's
    and INF's together. Next step: when a pack needs it.
-4. **Other signals.** Only prices are rumoured. MIG wants the welfare ratio elsewhere
-   (`spec-welfare-and-wages.md` 5.1, "rumoured conditions elsewhere") and SKL the
+4. **Other signals.** Only prices are rumoured. MIG wanted the welfare ratio elsewhere
+   (`spec-welfare-and-wages.md` 5.1, "rumoured conditions elsewhere") and SKL wants the
    remote premium (`spec-skill-barriers.md` 2.5). Both are aggregates measured in a region.
    A second record kind keyed by (region, signal) with the same lag and error would carry
    them; whether an agent may react to a regional aggregate is a question for the roadmap's
    "macro is measured, never set": a price is the market's own output, a mean ratio is an
-   indicator. Next step: `spec-migration.md`.
+   indicator. Answered for MIG (wave 4): a household does not use a regional mean ratio; it derives a destination's income from rumoured prices (`spec-migration.md` 4.4.1, 6.3); INF stays prices only. SKL's premium stays open.
 5. **What a stateless strategy can do with a noisy rumour.** A strategy keeps no state
    (`spec-agents.md` 6.1.4), so it cannot average several ticks of news; `Mean` helps
-   a little. MER may want a smoothed field (a mean of the last `n` observations of the
-   source before the vintage), which the record can give for free. Next step: MER.
+   a little. MER reads `min(Price, Mean)` only (`spec-merchants.md` 5.2). A smoothed field (a mean of the last `n` observations of the
+   source before the vintage), which the record can give for free, is not needed by MER or MIG in version 1.
    Linked: a fixed spread of the shipper's own thresholds is a stronger damper than any
-   error (11.2) and is MER's.
+   error (11.2) and is MER's: a function of the agent ID, not a draw at creation (`spec-merchants.md` 5.7.2).
 6. **A blackout shock.** A slot to slow or cut the news for a time (a war, a storm) would
    be a world slot like the edge status (`spec-regions.md` 7), set between ticks, with an
    event. Not in version 1; INT's, with N-091.

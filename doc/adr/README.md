@@ -44,6 +44,7 @@ shaped that way and is where a later reader looks when they want to reverse it.
 | [0002](0002-persistence-by-checkpoint.md) | State is persisted by the consumer, from a checkpoint the library produces | Proposed |
 | [0003](0003-version-1-scope.md) | Version 1 scope: the slice, version 1 and later | Accepted |
 | [0004](0004-outside-trades-through-pass-through-counterparties.md) | The outside trades through pass-through counterparties | Accepted (human review pending) |
+| [0005](0005-delivery-contracts-are-matched-by-a-first-fit-round.md) | Delivery contracts are matched by a first-fit round | Accepted (human review pending) |
 
 ## Updating this file
 
