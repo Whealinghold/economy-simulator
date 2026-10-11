@@ -97,7 +97,7 @@ means more severe. The meanings below are specific to this library.
 |---------|------------|--------|
 | `Error` | An internal inconsistency the library detected and repaired, where continuing is safe and the method has no error result. If continuing could corrupt state, panic instead (architecture.md 8.1). If you can return an error, return it instead. | Should never occur in normal operation. A single occurrence is a bug report. |
 | `Warn`  | The simulation is continuing but a market, a role or the configuration is degraded or surprising: a price clamped to a bound, a role with no agents left and no replacement, a configuration value that was defaulted. A problem with a single order, agent or trade is not a `Warn`: it is an event (such as `OrderRejected`) and, if useful, a `Debug` line. | Rare. At most one line per market or role per tick, so the volume is bounded by the configuration. |
-| `Info`  | Lifecycle that an operator wants in a normal run: world created (with a configuration summary and seed), run started (ticks requested), run ended (ticks completed, whether it was cancelled). The library never measures wall-clock duration (architecture.md 7.3); the caller or the `otelobserver` adapter does. | A handful per run. Never per tick, per agent or per trade. |
+| `Info`  | Lifecycle that an operator wants in a normal run: world created (with a configuration summary and seed), run started (ticks requested), run ended (ticks completed, whether it completed, was cancelled or failed), world restored (from a checkpoint), warm start applied. The library never measures wall-clock duration (architecture.md 7.3); the caller or the `otelobserver` adapter does. | A handful per run. Never per tick, per agent or per trade. |
 | `Debug` | Detail for diagnosing behaviour: per-tick summaries, per-market clearing results, rejected orders, strategy decisions, bankruptcy and spawn decisions. | Allowed to be high; **MUST** be guarded by `Enabled` in hot paths. |
 
 3.2.1. Choose the level by the audience and the action it implies, not by how
@@ -140,7 +140,7 @@ constants in an internal package and reused. The standard keys are:
 | `price`     | a price, in minor units              |
 | `quantity`  | a quantity, in whole units           |
 | `side`      | `bid` or `ask`                       |
-| `reason`    | machine-readable reason (see below)  |
+| `reason`    | machine-readable reason (see below); the values of the "run ended" line are `completed`, `cancelled` and `failed`, the closed set of that one line (log-only values, with no event field) |
 | `error`     | an error value (`slog.Any`)          |
 | `region`    | region ID                            |
 | `bound`     | which bound a price belief sits on: `floor` or `ceiling` |
@@ -151,7 +151,7 @@ constants in an internal package and reused. The standard keys are:
 | `rule`      | the name of a configuration validation rule |
 | `config_hash` | the first 8 bytes of the configuration hash |
 | `prices`, `wages`, `groups`, `jobs` | counts of rows of the warm-start table, in the construction summary |
-| `cause`      | machine-readable cause of a removal, a weight change or a role change (a constant, like `reason`) |
+| `cause`      | machine-readable cause of a removal, a weight change, a role change, a relocation, an edge status change, the end of a money flow or of an outside side, or a slot set by the consumer (a constant, like `reason`) |
 | `want`       | want ID |
 | `commodities`, `recipes`, `roles`, `regions` | counts of the entities of each kind, in the construction summary (`region`, an ID, is a different key) |
 | `modules`    | the names of the modules that are on, in the construction summary |
@@ -180,6 +180,10 @@ constants in an internal package and reused. The standard keys are:
 | `contract` | delivery contract ID |
 | `offers`, `takes` | counts of admitted delivery offers and delivery takes of a round |
 | `merchants` | a count of agents with a merchant block, in the construction summary (the module name `merchants` also joins the `modules` list) |
+| `format` | the checkpoint format version, logged as `slog.Int64(int64(f))` |
+| `bytes` | the size of an encoded checkpoint, in bytes (`int64`) |
+| `from`, `to` | a value before and after a change, in basis points (`int64`), as in a money flow scaled (`from_region` and `to_region` stay the keys of two regions) |
+| `account`, `amount` | a ledger account ID (`int64`) and a sum of money in minor units (`int64`), in the line of a refused transfer (`agent` is the key of an agent, which an estate, escrow or transit account is not) |
 
 Add a key to this table in the same PR that introduces it. Prices, money and
 quantities are logged as the integers they are (architecture.md 3.5), with
@@ -214,6 +218,17 @@ types are named in the past tense for what happened (`TradeExecuted`,
 `OrderRejected`), and do not embed other types (architecture.md 4.7).
 **[project]**
 
+A field that names a configured entity (a region, a commodity, a role, a
+recipe, a resource, a transport mode, a want) carries the typed integer ID of
+its kind, and an agent is named by its `AgentID`. A reason, a cause, a kind and
+a side are constants of a closed set, exported from the root package
+(`event.go`). The strings of the IDs are in the names table that `WorldCreated`,
+`WorldRestored` and the snapshot carry. A money flow is the exception: it has no
+typed ID and is named by its string ID, which is also its ledger reason. An
+event of a transition of one agent carries the agent's region at the time of the
+event, so that an observer that keeps no agent table can attribute it.
+**[project]**
+
 4.2. Adding fields to an event is allowed. Removing or renaming a field, or
 changing its meaning, is a breaking change (architecture.md 6.6). **[project]**
 
@@ -223,25 +238,27 @@ in the PR. **[project]**
 
 | Event type                | Emitted when                                         |
 |---------------------------|------------------------------------------------------|
-| `WorldCreated`            | the world is constructed and validated (seed, the whole configuration hash, whether a warm start was present) |
+| `WorldCreated`            | the world is constructed and validated (seed, the whole configuration hash, whether a warm start was present, the names table of the IDs) |
+| `WorldRestored`           | a checkpoint is restored and validated: the first event to the observers given to the restore, and none when the restore fails (the configuration hash, the format version, whether the run was reseeded and the salt, the names table, and the snapshot at the restored boundary) |
 | `RunStarted`              | `Run` begins (ticks requested)                       |
-| `RunEnded`                | `Run` returns, after its last completed tick (ticks completed, whether it was cancelled) |
-| `TickStarted`, `TickEnded`| each `Step` begins and ends                          |
+| `RunEnded`                | `Run` returns, after its last completed tick (ticks completed, whether it was cancelled, whether it failed) |
+| `TickStarted`, `TickEnded`| each `Step` begins; every step that began ends, a failed one with `Failed` true (a panic emits nothing) |
 | `OrderPlaced`             | an agent submits a bid or ask (region, commodity, agent, side, limit price, quantity) |
 | `OrderRejected`           | an order fails validation or cannot be accepted (region, commodity, agent, side, `reason`) |
 | `MarketCleared`           | a market finishes matching, once per market per tick, also when nothing traded (price, price age, volume, unmatched bid and ask units, best unmatched bid and ask) |
 | `TradeExecuted`           | a bid and an ask are matched                         |
-| `RecipeExecuted`          | a job completes, and a one-tick job completes in its start tick (agent, recipe, start tick, executions, outputs, disposed quantities, effective yield) |
-| `RecipeAbandoned`         | a job ends without output (agent, recipe, executions, `Reason`) |
+| `RecipeExecuted`          | a job completes, and a one-tick job completes in its start tick (agent, region, recipe, start tick, executions, outputs, disposed quantities, effective yield) |
+| `RecipeAbandoned`         | a job ends without output (agent, region, recipe, executions, `Reason`) |
+| `ProductionHalted`        | once per region and role per tick in which the production halt declined the job request of at least one free household, after `OwnUseChanged` in phase 2; never when none was (free households, halted households, and per recipe skipped the households for which it was) |
 | `AgentBankrupted`         | an agent is removed entirely; the only event of a full removal, whatever the cause (weight at removal, `Cause`: `insolvent`, `starved`, `consumer` or `population`; money and `GoodsListed`, the number of goods passed to the estate) |
 | `AgentSpawned`            | an agent enters the world, including each initial agent during construction, after `WorldCreated` (region, `Role`, `Weight`, `StartMoney` received, `External`) |
 | `UpkeepShortfall`         | once per region and role per tick in which at least one household went unfed, after the consumption phase; never when all are fed (households, unfed households, agents unfed, largest hunger) |
 | `BeliefsUpdated`          | once per market per tick that had at least one order outcome, after the outcomes are processed (counts of outcomes, adjustments, raises, lowerings, beliefs at floor and ceiling, conflicts and clamps; mean, low and high centre) |
-| `BoundaryFlow`            | once per tick for each (region, reason, money or commodity) with a non-zero total, after the tick's transitions (reason, faucet or sink, total quantity) |
+| `BoundaryFlow`            | once per tick for each (region, reason, money or commodity) with a non-zero total, for the reasons of kind faucet or sink only, after the tick's transitions (reason, faucet or sink, total quantity); the construction bucket of a world that has not yet stepped is emitted once, with `Tick` -1, at the entry of its first step, before `TickStarted` |
 | `EstateOpened`            | an agent is removed and its estate is opened, accompanying the removal event (agent, region, balance, number of goods listed) |
-| `ReliefPaid`              | once per region per tick in which any relief is paid (total paid, number of recipients) |
-| `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded` | a traineeship starts, completes, or ends without completing (identifiers only, and `reason` for the end) |
-| `WeightChanged`           | an agent's weight changes without removing it: a reduction by the failure ladder, households added to an existing agent, a birth or death of the population module (agent, region, role, `From`, `To`, `Cause`) |
+| `ReliefPaid`              | once per region per tick in which any relief is paid (total paid, number of recipients, households) |
+| `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded` | a traineeship starts, completes, or ends without completing (identifiers and region only, and `reason` for the end) |
+| `WeightChanged`           | an agent's weight changes without removing it: a reduction by the failure ladder, households added to an existing agent, a birth or death of the population module (agent, region, role, `From`, `To`, `Cause`, the money and the units of goods moved) |
 | `RoleChanged`             | an agent changes role (agent, region, `From`, `To`, weight, `Cause`, `GoodsListed`) |
 | `EntryLimited`            | once per region per tick in which a limit or refusal of the spawner acted; never when all counts are zero (counts of role changes, entrants, removals, unfunded households, households with no viable role, and each cap, cooldown, hysteresis, exit-cap and refusal that acted) |
 | `WantShortfall`           | once per region, role and want per tick in which a want was choked or unfunded for at least one household, after the trade phase (households, choked households, planned and funded units) |
@@ -255,18 +272,21 @@ in the PR. **[project]**
 | `ShipmentArrived`         | a shipment arrives, after its delivery (shipment, mode, origin, destination, receiver, whether diverted, and per line the units shipped, delivered, diverted and spoiled) |
 | `ShipmentRejected`        | a shipment request is refused (origin region, agent, mode, destination, `reason`) |
 | `EndowmentChanged`        | once per endowment (region, resource) per tick, after its regeneration at the end of phase 8, in (`RegionID`, resource) order, if any of the units drawn, regenerated, short or lost is non-zero; never otherwise (stock after the tick, effective capacity, abundance of the tick, units requested, granted, drawn and short, regenerated, lost, agents denied, agents reduced) |
-| `EndowmentAdjusted`       | a shock slot or an adjustment of an endowment is applied between ticks, once per call (kind `adjust` or `shock`, signed delta, the scales after, stock before and after, units lost) |
+| `EndowmentAdjusted`       | a shock slot or an adjustment of an endowment is applied between ticks, once per changed key of a call (kind `adjust` or `shock`, signed delta, the scales after, stock before and after, units lost) |
 | `RumoursServed`           | once per reader region per tick in which the information module is on and at least one informed agent was given a view there, in ascending `RegionID`, after the last plan of phase 3 and before phase 4 (region, readers, and counts of candidates offered, with no path, too old and not yet, and the largest lag offered) |
 | `OutsideTraded`           | once per (node, gate region, commodity, side) per tick in which the side wanted any unit or any unit was cut, after the sweep of phase 4; never when nothing was wanted or cut (node, gate region, commodity, side, mid, limit price, wanted, offered and traded units, money paid or received, list value, units cut by a closed edge, by a cap and by a price below 1, whether a price clamp acted) |
 | `OutsideEnded`            | a side of an outside node reaches its cumulative cap and ends, once (node, commodity, side, `Cause`: `units` or `value`, cumulative units and list value) |
-| `OutsideShocked`          | the price shock of an outside line is set between steps, once per call (node, commodity, from, to) |
+| `OutsideShocked`          | the price shock of an outside line is set between steps, once per changed key of a call (node, commodity, from, to) |
 | `OwnUseChanged`           | once per region and role per tick in phase 2, after the starts, in ascending `RegionID` then role order, if any of the households entered, left, started, blocked or retried, or the units output, is non-zero; never otherwise (households of the role, households in the own-use mode, entered, left, executions of own-use recipes started, blocked, retried, and the units created at the completion of own-use jobs, by commodity) |
 | `MigrationStarted`        | a migration journey begins, once per departure, in the order of admission, after the departure is complete (agent, role, `From`, `To`, weight, arrival tick, distance, journey time, earned ratio, home figure, estimate, whether a job was abandoned) |
 | `MigrationReviewed`       | once per region per tick in which the migration module is on and any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal, in ascending `RegionID` after the `MigrationStarted` events of the pass; never when all are zero (households unsettled, reviewed, pushed, and the eleven outcomes started, no estimate, no destination, no news, too far, not viable, no gain, bound, out cap, unprovisioned, in cap, and arrivals held and journeys ended) |
 | `ContractFormed`          | a delivery contract is formed, after its shipment's `ShipmentDispatched` (contract, payer, deliverer, origin region, destination, commodity, quantity, price, money escrowed, shipment, mode, arrival tick) |
-| `ContractSettled`         | a delivery contract ends: in phase 1 after the arrivals of transport, or at the removal of its deliverer (contract, payer, deliverer, destination, commodity, quantity, units reached and spoiled, money paid and refunded, `Cause`: `delivered`, `short`, `payer_removed` or `deliverer_removed`) |
+| `ContractSettled`         | a delivery contract ends: in phase 1 after the arrivals of transport, or at the removal of its deliverer (contract, payer, deliverer, the deliverer's region, destination, commodity, quantity, units reached and spoiled, money paid and refunded, `Cause`: `delivered`, `short`, `payer_removed` or `deliverer_removed`) |
 | `ContractRound`           | once per destination region per tick in which an offer or a take was submitted for it, in ascending `RegionID`, after the round (admitted and refused offers and takes, matches, contracts formed, failures by reason, units and value formed); never otherwise |
 | `MerchantsPlanned`        | once per region per tick in which an agent with a merchant block was given a view there, after `ContractRound` and before `RumoursServed` (merchants, counts of the lanes considered by result, trips planned, requests, offers and takes, rests, stays and lots cut by the cap) |
+| `YieldShocked`            | the yield shock of a (region, recipe) is set between ticks, once per changed key of a call (region, recipe, the factor before and after, in basis points) |
+| `TransitFactorChanged`    | the transit factor of an (origin, destination, mode) is set between ticks, once per changed key of a call (origin, destination, mode, the factor before and after, in basis points) |
+| `PopulationScaled`        | a birth or death scale of a region is set between ticks, once per changed key of a call (region, which scale, the value before and after, in basis points) |
 
 The parentheses name the main fields; the fields of each event, and the order
 in which the events of one step are emitted, are fixed by the spec that owns
@@ -274,35 +294,40 @@ the transition (`doc/specs/`: production for the recipe events, agents for
 `AgentSpawned`, the removal event and `UpkeepShortfall`, beliefs, clearing,
 ledger, estates, skill barriers and configuration for the rest). Every field
 obeys 4.1: no map, no pointer, fixed-point values. `BoundaryFlow`,
-`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited`, `WantShortfall`, `MoneyFlowLimited`, `PopulationChanged`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `OwnUseChanged`, `MigrationReviewed`, `ContractRound` and `MerchantsPlanned` are aggregates: each is bounded by
+`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited`, `WantShortfall`, `MoneyFlowLimited`, `PopulationChanged`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `OwnUseChanged`, `MigrationReviewed`, `ContractRound`, `MerchantsPlanned` and `ProductionHalted` are aggregates: each is bounded by
 regions, commodities, reasons, roles, wants, money flows, resources or outside nodes in the configuration, so none is per
-agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. `AgentRelocated` and `MigrationStarted` are per agent too, and `ContractFormed` and `ContractSettled` are per contract, like `ShipmentDispatched`. `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` are per shipment or request, like `OrderPlaced` and `OrderRejected`: their `Lines` are copies in commodity order, bounded by `MaxShipmentLines`. `EdgeStatusChanged`, `MoneyFlowEnded`, `MoneyFlowScaled`, `EndowmentAdjusted`, `OutsideEnded` and `OutsideShocked` are per edge, flow, call or side. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall`, `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled`, `PopulationChanged`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `EndowmentChanged`, `EndowmentAdjusted`, `RumoursServed`, `OutsideTraded`, `OutsideEnded`, `OutsideShocked`, `OwnUseChanged` (subsistence), `MigrationStarted` and `MigrationReviewed` (migration), `ContractFormed`, `ContractSettled` and `ContractRound` (merchants) and the events of any later module appear only when it is on, and `MerchantsPlanned` only when a role has the merchant block; `AgentRelocated` and `EdgeStatusChanged` depend on no module. The order of the events of a step follows the phases: arrivals of shipments in shipment order in phase 1, after them the `ContractSettled` events of the contracts whose shipment arrived in contract ID order and the migration arrivals (`AgentRelocated` with the cause `migration`) in ascending agent ID, in the order the tick positions of WLD fix (N-009); in phase 2 `OwnUseChanged` after the starts; in phase 3 each agent's shipment events in plan order before its `OrderPlaced` events, then, after the last plan, the `ShipmentDispatched` and `ContractFormed` events of each contract of the round in formation order, then `ContractRound` and `MerchantsPlanned`; in phase 7 `MigrationStarted` in the order of admission and then `MigrationReviewed`, after `EntryLimited` and `PopulationChanged` of the last region, and the `ContractSettled` of a deliverer's removal with the removal events. `RumoursServed` comes in phase 3 after the last plan, after `MerchantsPlanned` when the merchant module is on, and before phase 4, in ascending `RegionID`; the outside's events (`OutsideTraded`, `OutsideEnded`) come after the sweep at the end of phase 4; `EndowmentChanged` comes at the end of phase 8 in (`RegionID`, resource) order.
+agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. `AgentRelocated` and `MigrationStarted` are per agent too, and `ContractFormed` and `ContractSettled` are per contract, like `ShipmentDispatched`. `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` are per shipment or request, like `OrderPlaced` and `OrderRejected`: their `Lines` are copies in commodity order, bounded by `MaxShipmentLines`. `EdgeStatusChanged`, `MoneyFlowEnded`, `MoneyFlowScaled`, `EndowmentAdjusted`, `OutsideEnded`, `OutsideShocked`, `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` are per edge, flow, side or changed key of a call. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall`, `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled`, `PopulationChanged`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `EndowmentChanged`, `EndowmentAdjusted`, `RumoursServed`, `OutsideTraded`, `OutsideEnded`, `OutsideShocked`, `OwnUseChanged` (subsistence), `MigrationStarted` and `MigrationReviewed` (migration), `ContractFormed`, `ContractSettled` and `ContractRound` (merchants) and the events of any later module appear only when it is on, and `MerchantsPlanned` only when a role has the merchant block; `PopulationScaled` appears only with the population module and `TransitFactorChanged` only with the transport module; `AgentRelocated`, `EdgeStatusChanged`, `YieldShocked` (the yield shock is core data) and `ProductionHalted` depend on no module. The order of the events of a step follows the phases: arrivals of shipments in shipment order in phase 1, after them the `ContractSettled` events of the contracts whose shipment arrived in contract ID order and the migration arrivals (`AgentRelocated` with the cause `migration`) in ascending agent ID, in the order the tick positions of WLD fix (N-009); in phase 2 `OwnUseChanged` after the starts; in phase 3 each agent's shipment events in plan order before its `OrderPlaced` events, then, after the last plan, the `ShipmentDispatched` and `ContractFormed` events of each contract of the round in formation order, then `ContractRound` and `MerchantsPlanned`; in phase 7 `MigrationStarted` in the order of admission and then `MigrationReviewed`, after `EntryLimited` and `PopulationChanged` of the last region, and the `ContractSettled` of a deliverer's removal with the removal events. `RumoursServed` comes in phase 3 after the last plan, after `MerchantsPlanned` when the merchant module is on, and before phase 4, in ascending `RegionID`; the outside's events (`OutsideTraded`, `OutsideEnded`) come after the sweep at the end of phase 4; `EndowmentChanged` comes at the end of phase 8 in (`RegionID`, resource) order. The construction bucket's `BoundaryFlow` comes at the entry of the first step, before `TickStarted`; `ProductionHalted` comes after `OwnUseChanged` in phase 2; in a region's entry step the traineeship events come first (a completion emits the `RecipeAbandoned` of its job, if any, then `TraineeshipCompleted`, then the `RoleChanged` it causes, and each place filled `TraineeshipStarted`); the slot events (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and the others of a call) come at the call, after the whole call has been applied. A removal emits `RecipeAbandoned` for its job, `TraineeshipEnded` if it was in a traineeship, `ContractSettled` for each contract of which it was the deliverer, `AgentBankrupted` and `EstateOpened`, in that order (the removal of a trainer first ends its trainees' traineeships, in ascending agent ID); `AgentBankrupted` is the only event that removes the agent, and the others accompany it.
 
 Because observers are supplied as options to `NewWorld`, they receive
 `WorldCreated` and the initial `AgentSpawned` events. A consumer can rebuild
 the total live agent count from `AgentSpawned` and `AgentBankrupted` alone. The
 household count also needs `WeightChanged` (`To` less `From`) besides the `Weight` those two carry, and a count by role also needs `RoleChanged` (the agent and its weight leave `From` and join `To`). A count of households by region also needs `AgentRelocated` (the weight leaves `From` and joins `To`). Estate pseudo-agents are not
-agents and are not counted in any of them.
+agents and are not counted in any of them. An observer given to a restore receives no `AgentSpawned` for the restored agents: it starts from `WorldRestored`, whose snapshot holds the agents and the households by role and region at the restored boundary, and adds the events after it. The money of the household sector and of the pool is rebuilt from the same snapshot, its pending totals (`Pending`) and, for a world that has not stepped, the construction bucket (`Construction`).
 
 4.4. Observers are called synchronously on the stepping goroutine and **MUST
 NOT** call back into the `World` (architecture.md 12.5). The library **MUST
 NOT** hold internal locks or leave state half-updated while calling an observer:
-emit an event only after the transition it describes is complete. Observers
+emit an event only after the transition it describes is complete. A failed step
+is the one exception: the world is marked failed before `TickEnded` is emitted,
+and the event describes the end of the step (`spec-world.md` 3.5.6). Observers
 **MUST** ignore event types they do not recognise.
 
 4.5. When the observer is the no-op default, constructing events in hot paths
 **MUST NOT** allocate. Passing an event struct as an `Event` boxes it, so the
 world records once, at construction, whether any observer was supplied, and
-constructs and emits events only when it was. Prove this with an allocation
-test (8.2). **[project]**
+constructs and emits events only when it was. A counter that exists only to
+build an event is built only under the same flag, and a restore records the flag
+once and builds the `WorldRestored` snapshot only when an observer was supplied.
+Prove this with an allocation test (8.2). **[project]**
 
 ## 5. Metrics
 
-Metrics are produced from events by the separate `otelobserver` module. The
-core module defines events; it does not define or record metrics, and it does
-not import OpenTelemetry (architecture.md 11.4). The rules in this section
-apply to `otelobserver` and to anyone adding events that metrics will be built
-from.
+Metrics are produced from events, and for some instruments from a snapshot that
+the consumer passes to the adapter (`RecordSnapshot`), by the separate
+`otelobserver` module. The core module defines events and the snapshot; it does
+not define or record metrics, and it does not import OpenTelemetry
+(architecture.md 11.4). The rules in this section apply to `otelobserver` and to
+anyone adding events or snapshot fields that metrics will be built from.
 
 ### 5.1 Naming
 
@@ -337,12 +362,14 @@ Pick the instrument by the nature of the value, following the
 | only ever increases (trades, bankruptcies) | Counter                      |
 | goes up and down (live agent count)     | UpDownCounter                   |
 | a distribution (step duration, trade price spread) | Histogram            |
-| a point-in-time value that is not additive (last clearing price) | Gauge  |
+| a point-in-time value that is not additive, or a level set from a snapshot (last clearing price) | Gauge  |
 
 ### 5.3 Initial catalogue
 
 These are the initial instruments. Changing a name, unit or attribute set
-breaks users' dashboards and alerts and is a breaking change. Every instrument
+breaks users' dashboards and alerts and is a breaking change, once there is a
+release: until the first release the catalogue may change freely, because no
+code exists and no dashboard depends on it. Every instrument
 except the duration histogram records integers, so use the `Int64` variants;
 prices are recorded in minor units, unconverted (architecture.md 3.5).
 **[project]**
@@ -352,17 +379,23 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.world.step.duration`    | Histogram       | `s`             | none              |
 | `economysim.market.trades`          | Counter         | `{trade}`       | `economysim.commodity` |
 | `economysim.market.volume`          | Counter         | `{unit}`        | `economysim.commodity` |
-| `economysim.market.clearing_price`  | Gauge           | `{minor_unit}`  | `economysim.commodity` |
-| `economysim.market.orders.unmatched`| Counter         | `{order}`       | `economysim.commodity`, `economysim.side` |
+| `economysim.market.clearing_price`  | Gauge           | `{minor_unit}`  | `economysim.commodity`, `economysim.region` |
+| `economysim.market.unmatched`       | Counter         | `{unit}`        | `economysim.commodity`, `economysim.side` |
+| `economysim.market.orders`          | Counter         | `{order}`       | `economysim.commodity`, `economysim.side` |
+| `economysim.market.orders.rejected` | Counter         | `{order}`       | `economysim.commodity`, `economysim.reason` |
+| `economysim.belief.centre`          | Gauge           | `{minor_unit}`  | `economysim.commodity`, `economysim.region` |
 | `economysim.recipe.executions`      | Counter         | `{execution}`   | `economysim.recipe` |
+| `economysim.production.halted`      | Counter         | `{household}`   | `economysim.role`, `economysim.recipe` |
 | `economysim.agent.count`            | UpDownCounter   | `{agent}`       | `economysim.role` |
-| `economysim.agent.bankruptcies`     | Counter         | `{agent}`       | `economysim.role` |
+| `economysim.agent.removals`         | Counter         | `{agent}`       | `economysim.role`, `economysim.cause` |
 | `economysim.household.count`        | UpDownCounter   | `{household}`   | `economysim.role` |
 | `economysim.household.unfed`        | UpDownCounter   | `{household}`   | `economysim.role` |
 | `economysim.role.changes`           | Counter         | `{change}`      | `economysim.role` (the destination role) |
+| `economysim.entry.limited`          | Counter         | `{case}`        | `economysim.entry_limit` |
 | `economysim.want.unfunded`          | Counter         | `{unit}`        | `economysim.want`, `economysim.role` |
-| `economysim.household.relocations`  | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to` |
+| `economysim.household.relocations`  | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to`, `economysim.cause` |
 | `economysim.money.flow`             | Counter         | `{minor_unit}`  | `economysim.reason`, `economysim.kind` (`faucet` or `sink`) |
+| `economysim.commodity.flow`         | Counter         | `{unit}`        | `economysim.reason`, `economysim.kind`, `economysim.commodity` |
 | `economysim.money.flow.unapplied`   | Counter         | `{minor_unit}`  | `economysim.reason` |
 | `economysim.household.births`       | Counter         | `{household}`   | `economysim.role` |
 | `economysim.household.deaths`       | Counter         | `{household}`   | `economysim.role` |
@@ -376,7 +409,7 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.information.rumours`    | Counter         | `{rumour}`      | `economysim.outcome` |
 | `economysim.external.units`         | Counter         | `{unit}`        | `economysim.node`, `economysim.commodity`, `economysim.side` |
 | `economysim.external.value`         | Counter         | `{minor_unit}`  | `economysim.node`, `economysim.commodity`, `economysim.side` |
-| `economysim.external.price`         | Gauge           | `{minor_unit}`  | `economysim.node`, `economysim.commodity`, `economysim.side` |
+| `economysim.external.price`         | Gauge           | `{minor_unit}`  | `economysim.node`, `economysim.region`, `economysim.commodity`, `economysim.side` |
 | `economysim.household.own_use`      | Gauge           | `{household}`   | `economysim.role`, `economysim.region` |
 | `economysim.own_use.units`          | Counter         | `{unit}`        | `economysim.commodity` |
 | `economysim.migration.started`      | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to` |
@@ -386,25 +419,37 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.contract.value`         | Counter         | `{minor_unit}`  | `economysim.commodity` |
 | `economysim.contract.escrow`        | UpDownCounter   | `{minor_unit}`  | none |
 | `economysim.merchant.decisions`     | Counter         | `{lane}`        | `economysim.decision` |
+| `economysim.production.pending`     | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region` |
+| `economysim.market.stock`           | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents` or `estate`) |
+| `economysim.money.supply`           | Gauge           | `{minor_unit}`  | `economysim.region`, `economysim.sector` (`households`, `pool` or `contract`) |
+| `economysim.welfare.ratio`          | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
+
+The last four are fed by a snapshot, not by events (5.3.1).
 
 ### 5.3.1 Which event feeds which metric
 
 | Metric                               | Fed by                                  |
 |--------------------------------------|-----------------------------------------|
-| `economysim.world.step.duration`     | `TickStarted` to `TickEnded`, measured by the adapter |
+| `economysim.world.step.duration`     | `TickStarted` to `TickEnded`, measured by the adapter; not recorded when `TickEnded` has `Failed` true |
 | `economysim.market.trades`           | `TradeExecuted`                         |
 | `economysim.market.volume`           | `TradeExecuted` (quantity)              |
 | `economysim.market.clearing_price`   | `MarketCleared`                         |
-| `economysim.market.orders.unmatched` | `MarketCleared`                         |
+| `economysim.market.unmatched`        | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`, units) |
+| `economysim.market.orders`           | `OrderPlaced`                           |
+| `economysim.market.orders.rejected`  | `OrderRejected`                         |
+| `economysim.belief.centre`           | `BeliefsUpdated` (the mean centre)      |
 | `economysim.recipe.executions`       | `RecipeExecuted` (its `Executions` field, not one per event) |
+| `economysim.production.halted`       | `ProductionHalted` (the households of each recipe skipped; a household counts once for each recipe skipped) |
 | `economysim.agent.count`             | `AgentSpawned` (+1, including initial agents), `AgentBankrupted` (-1); by role also `RoleChanged` (-1 for `From`, +1 for `To`) |
-| `economysim.agent.bankruptcies`      | `AgentBankrupted` (every `Cause`)       |
+| `economysim.agent.removals`          | `AgentBankrupted` (every `Cause`)       |
 | `economysim.household.count`         | `AgentSpawned` (+`Weight`, including initial agents), `AgentBankrupted` (-`Weight`), `WeightChanged` (`To` less `From`); by role also `RoleChanged` (-`Weight` for `From`, +`Weight` for `To`) |
 | `economysim.household.unfed`         | `UpkeepShortfall` (`Unfed`, by role; see below) |
 | `economysim.role.changes`            | `RoleChanged` (by `To`)                 |
+| `economysim.entry.limited`           | `EntryLimited` (the counts of the limits and refusals that acted, by limit) |
 | `economysim.want.unfunded`           | `WantShortfall` (`Planned` less `Funded`, by want and role) |
-| `economysim.household.relocations`   | `AgentRelocated` (`Weight`, by `From` and `To`) |
-| `economysim.money.flow`              | `BoundaryFlow` (money, by the reason and whether it is a faucet or a sink) |
+| `economysim.household.relocations`   | `AgentRelocated` (`Weight`, by `From`, `To` and `Cause`) |
+| `economysim.money.flow`              | `BoundaryFlow` (money, by the reason and whether it is a faucet or a sink; includes the construction bucket at `Tick` -1) |
+| `economysim.commodity.flow`          | `BoundaryFlow` (goods, by the reason, the kind and the commodity) |
 | `economysim.money.flow.unapplied`    | `MoneyFlowLimited` (`Due` less `Applied`, by flow) |
 | `economysim.household.births`        | `PopulationChanged` (`BirthsDone`, by role) |
 | `economysim.household.deaths`        | `PopulationChanged` (`DeathsDone`, by role) |
@@ -418,7 +463,7 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.information.rumours` | `RumoursServed` (`Offered`, `NoPath`, `TooOld`, `NotYet`, by outcome) |
 | `economysim.external.units` | `OutsideTraded` (units traded) |
 | `economysim.external.value` | `OutsideTraded` (money paid or received) |
-| `economysim.external.price` | `OutsideTraded` (the limit price) |
+| `economysim.external.price` | `OutsideTraded` (the limit price, by node, gate region, commodity and side) |
 | `economysim.household.own_use` | `OwnUseChanged` (households in the mode, by role and region); the adapter keeps the last value for a tick with no event |
 | `economysim.own_use.units` | `OwnUseChanged` (units output, per line) |
 | `economysim.migration.started` | `MigrationStarted` (`Weight`, by `From` and `To`) |
@@ -429,13 +474,29 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.contract.escrow` | `ContractFormed` (+ money escrowed), `ContractSettled` (- money paid and refunded) |
 | `economysim.merchant.decisions` | `MerchantsPlanned` (the case counts, by decision) |
 
+The four instruments fed by a snapshot are recorded by the adapter once per
+snapshot the consumer passes to it, between two steps, from these fields:
+
+| Metric                               | Fed by                                  |
+|--------------------------------------|-----------------------------------------|
+| `economysim.production.pending`      | `Markets[].Pending`: the output of jobs in progress, which no account holds |
+| `economysim.market.stock`            | `Markets[].HeldByAgents` and `HeldByEstate`, by holder |
+| `economysim.money.supply`            | `Regions[].MoneyHouseholds`, `MoneyPool` and `MoneyContract`, by sector |
+| `economysim.welfare.ratio`           | `Roles[].MeanRatioBP`, where the role has a mean ratio |
+
+An instrument fed by a snapshot is absent, not zero, until a snapshot is passed,
+and holds its last value between two snapshots.
+
 `UpkeepShortfall` is not emitted for a region and role whose households are all
-fed, so the adapter treats a tick with no such event for a region and role as
-zero unfed there. `economysim.household.count` and `economysim.household.unfed`
+fed, so the adapter keeps the last unfed count of each region and role, adds the
+change to `economysim.household.unfed` when the event comes, and at `TickEnded`
+sets to zero every cell that had no event in the step. At a `TickEnded` with
+`Failed` true it makes no correction. `economysim.household.count` and `economysim.household.unfed`
 count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.relocations`, `economysim.household.births`, `economysim.household.deaths`, `economysim.household.own_use` and the migration instruments count households (the sum of weights), never agents.
 
-A new metric **MUST** be derivable from the existing events or come with the
-event it needs. Do not add event fields only to avoid a lookup in the adapter.
+A new metric **MUST** be derivable from the existing events or from a field of
+the snapshot, and the tables above say which, or come with the event or field it
+needs. Do not add event fields only to avoid a lookup in the adapter.
 The adapter measures durations with its own clock; events carry no wall-clock
 time (4.1). Because observers run synchronously (4.4), a step duration includes
 the time spent in every observer during the step.
@@ -444,7 +505,7 @@ the time spent in every observer during the step.
 
 5.4.1. Metric attributes **MUST** have a number of values bounded by the
 configuration: `economysim.commodity`, `economysim.role`, `economysim.recipe`,
-`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the built-in reasons, and faucet or sink), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). Metric attributes **MUST NOT** include agent IDs, order IDs,
+`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, and of the relocation causes `transport`, `migration` and `consumer`), `economysim.entry_limit` (the eight constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `cooldown`, `hysteresis`, `exit_cap`, `refused`), `economysim.holder` (`agents`, `estate`), `economysim.sector` (`households`, `pool`, `contract`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). Metric attributes **MUST NOT** include agent IDs, order IDs,
 ticks, prices, quantities or any other unbounded or per-entity value. Put those
 in logs, traces or events.
 
@@ -456,11 +517,16 @@ how many series it adds for the reference chain in the PR.
 6.1. Traces are coarse. Create a span for each `Run`, from `RunStarted` to
 `RunEnded`, and for each `Step`, from `TickStarted` to `TickEnded`, with
 `economysim.tick` as a span attribute. A step inside a run is a child of the
-run's span; a `Step` called directly is a root span. **MUST NOT** create a span
-per order, trade or agent. **[project]**
+run's span; a `Step` called directly is a root span. A span closes at its
+`TickEnded` or `RunEnded`, and takes an error status when that event has
+`Failed` true. **MUST NOT** create a span per order, trade or agent.
+**[project]**
 
-6.2. Notable occurrences within a step (a bankruptcy, a rejected order) are
-span events or attributes on the step span, not child spans.
+6.2. Rare notable occurrences within a step (a bankruptcy) are span events or
+attributes on the step span, not child spans. An event that is per order or per
+trade (a rejected order, a trade) is not a span event: the step span carries the
+counts of orders placed, orders rejected and trades, and the traded volume, as
+attributes.
 
 6.3. The `otelobserver` module uses the `TracerProvider` and `MeterProvider`
 given by the client, and **MUST NOT** call the global providers. Its
@@ -494,12 +560,25 @@ return quickly and hand work to their own goroutines if needed.
   results with and without a logger and observer attached.
 - **Cardinality**: in the core module, a test over the reference chain asserts
   that every event field that becomes a metric attribute (commodity, role,
-  recipe, side) takes only values present in the configuration. In
+  recipe, side, region, cause, reason) takes only values present in the
+  configuration or in its closed set of constants. In
   `otelobserver`, a test asserts the attribute sets recorded on each
   instrument, using a configuration built in Go inside its own tests, because
   it cannot read the core module's `testdata/` (testing.md 10.2).
 - **Run lifecycle**: `Run` emits `RunStarted` and `RunEnded`, including when it
-  is cancelled, and `RunEnded` reports the ticks actually completed.
+  is cancelled or a step failed, and `RunEnded` reports the ticks actually
+  completed.
+- **Restore**: the snapshot of a restored world equals the snapshot of the
+  original at the same boundary; an observer given to a restore receives
+  `WorldRestored` first and nothing when the restore fails; the counts of agents
+  and households and the money of the household sector and of the pool, rebuilt
+  from `WorldRestored` and the events after it, equal the snapshot.
+- **Counterpart**: every `Warn` has an event or a snapshot field that tells the
+  same fact, and a test checks it.
+- **Golden rendering**: the events of a scripted run, rendered in a fixed text
+  form, equal a file in `testdata/golden/` (testing.md 7.1, 7.2).
+- **Adapter calls**: in `otelobserver`, each series is recorded once per tick,
+  however many orders and trades the tick had.
 - **Composition**: with several `WithObserver` options, every event reaches
   each observer in the order given. An observer that ignores unknown event
   types keeps working when a new event type is added.
@@ -536,7 +615,8 @@ answer; an empty or missing section is not. **[project]**
    with `Enabled`? Is any `Warn` in it bounded per market or role (3.2.2)?
    Does event construction allocate when the observer is the no-op (8.2)?
 5. **Changed event, metric name, unit or attribute?** This is a breaking change
-   for users' dashboards. Is it versioned and called out in the changelog?
+   for users' dashboards once there is a release (5.3). Is it versioned and
+   called out in the changelog?
 6. **New metric attribute?** Is it bounded by configuration (5.4)?
 7. **Used `Error` or `Info`?** Re-read the table in 3.2 and confirm the level.
 8. **Logging an error you also return?** Remove the log.
@@ -595,4 +675,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 8522b7405b6c4b7edf3d2ce0
+RULE-TAG: 426f329e791963bcc44687e4

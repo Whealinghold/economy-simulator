@@ -84,29 +84,46 @@ economy-sim/
   doc.go                 package economysim: overview and the glossary (3.2)
   *.go                   public API, one file per concept: world.go, market.go,
                          agent.go, order.go, value.go, snapshot.go, strategy.go,
-                         clearing.go, spawner.go, observer.go, event.go, errors.go
+                         clearing.go, spawner.go, observer.go, event.go, errors.go,
+                         checkpoint.go, option.go, random.go, tick.go,
+                         integration.go
   config/                file format -> root Config structs; the only package
                          that may import a third-party parser
   strategy/              additional strategies (the default implementation of
                          each extension interface lives in the root, see 4.5)
+  indicator/             derived measures over a snapshot and events; imports
+                         the root, and nothing in the module imports it
+  experiment/            sweeps, replicas and reductions of runs; imports the
+                         root and config/, and nothing in the module imports it
   internal/              everything not meant to be public
     clearing/            order-matching algorithm over primitive structs
     ledger/              goods and money accounting
     beliefs/             price-belief updates
     production/          recipe execution
-    ordering/            deterministic sorted iteration helpers
-    logkeys/             slog attribute keys and reason constants
+    ordering/            deterministic sorted iteration helpers, the SplitMix64
+                         finaliser, and the Weyl, bucket and key helpers
+    codec/               canonical encoding primitives of a checkpoint
+    measure/             checked arithmetic of indicator/ over primitive types
+    verdict/             detectors, seed rules and the band-setting rule of the
+                         stylised facts
+    design/              experiment design: grids, permutations, seeds, overlay
+                         text
+    reduce/              checked reductions of experiment/ over primitive types
+    logkeys/             slog attribute key strings; it imports nothing and
+                         holds no type of the root
   otelobserver/          separate module (own go.mod): Observer backed by OpenTelemetry
   examples/<name>/       each example is its own module with its own go.mod
   testdata/              fixtures shared across packages: chains/ (config
-                         fixtures, including the reference chain), golden/
+                         fixtures, including the reference chain), golden/,
+                         checkpoints/ (one fixture per checkpoint format version)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
   doc/rules/             this directory
 ```
 
-The `internal/` packages and `strategy/` are created when first needed, not up
-front (2.1). The names above are the intended homes, not a checklist.
+The `internal/` packages, `strategy/`, `indicator/` and `experiment/` are
+created when first needed, not up front (2.1). The names above are the intended
+homes, not a checklist.
 `strategy/` exists once there is a second strategy; the default stays in the
 root package, which cannot import `strategy/` (2.7).
 
@@ -119,25 +136,32 @@ depends on the OpenTelemetry API packages and on the root module, never the
 reverse. Use a `go.work` file for local development, and tag its releases with
 the sub-module prefix (`otelobserver/v0.1.0`).
 
-2.7. Import cycles are forbidden. `config` and `strategy` MAY import the root
-package; the root package **MUST NOT** import `config` or `strategy`.
+2.7. Import cycles are forbidden. `config`, `strategy`, `indicator` and
+`experiment` MAY import the root package, and `experiment` MAY also import
+`config` (to load a configuration); the root package **MUST NOT** import any of
+them. Nothing in the module imports `indicator` or `experiment` (its own tests,
+`otelobserver` and `examples/` aside), and `experiment` imports neither
+`indicator` nor `internal/measure`.
 
 2.8. Code that is not part of the intended API **MUST** live under `internal/`.
 Keep as much as possible there: it lets the module refactor freely without
 breaking consumers. Every exported identifier outside `internal/` is a
 compatibility promise, so export as little as possible.
 
-2.9. Packages under `internal/` **MUST NOT** import the root package, `config/`
-or `strategy/`. Domain types (`Commodity`, `Recipe`, `Role`, `Order`, `Price`
-and so on) are owned by the root package. An `internal/` package defines the
-small structs it needs (for example `clearing.Offer`) using primitive fields,
-and the root converts to and from them. This keeps the dependency direction
-`config` and `strategy` → root → `internal`, avoids import cycles (2.7), and
-makes each internal package testable on its own. **[project]**
+2.9. Packages under `internal/` **MUST NOT** import the root package, `config/`,
+`strategy/`, `indicator/` or `experiment/`. Domain types (`Commodity`, `Recipe`,
+`Role`, `Order`, `Price` and so on) are owned by the root package. An `internal/`
+package defines the small structs it needs (for example `clearing.Offer`) using
+primitive fields, and the root converts to and from them. This keeps the
+dependency direction `config`, `strategy`, `indicator` and `experiment` → root →
+`internal`, avoids import cycles (2.7), and makes each internal package testable
+on its own. **[project]**
 
 - Convert only at the call from the root into `internal/`, inline in the calling
-  code. Do not create a package, file or type whose job is converting. This is
-  not the mapper layer forbidden by 3.1.
+  code. `indicator` converts at its own call into `internal/measure`, and
+  `experiment` into `internal/design` and `internal/reduce`, in the same way.
+  Do not create a package, file or type whose job is converting. This is not the
+  mapper layer forbidden by 3.1.
 - An `internal/` package does not know what a commodity, role or agent is. It
   receives opaque numbers and references, consistent with 9.1.
 - When the root needs the original object back, the internal struct carries a
@@ -209,6 +233,9 @@ A new domain term **MUST** be added to the glossary in `doc.go` before use.
 
 3.3. Domain quantities **MUST** use small named value types (`Money`, `Price`,
 `Quantity`, `CommodityID`, `RoleID`) so that mixing units is a compile error.
+Every other configured entity has a typed ID of its own kind in the same way
+(`RegionID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`); a money flow, which
+has no typed ID, is named by its string ID (also its ledger reason).
 These types **MUST** be immutable and **MUST NOT** carry behaviour beyond
 arithmetic, comparison and formatting. **[project]**
 
@@ -283,6 +310,23 @@ Adding a new extension interface requires an update to this table.
 defines, not an extension point: consumers cannot implement it, and it is not
 subject to 4.5.
 
+**Extension state.** An implementation of `Strategy`, `Clearing` or `Spawner`
+that keeps state between calls **MUST** also implement the optional interface
+`Stateful`, so that a checkpoint can save it and a restore can load it (ADR
+0002, decision 7): **[project]**
+
+```go
+type Stateful interface {
+	SaveState() (version uint32, state []byte, err error)
+	LoadState(version uint32, state []byte) error
+}
+```
+
+`Stateful` is not an extension point and is not subject to 4.5: no code requires
+it, an implementation that keeps no state does not implement it, and it has no
+default. `Observer` is never saved: an observer must not influence results
+(observability-and-logging.md 1.4), so it has no simulation state.
+
 4.4. Functions **MUST** accept interfaces and return concrete types. A function
 **MUST NOT** return an interface unless hiding unexported state across a
 package boundary requires it, and the reason **MUST** be commented.
@@ -333,13 +377,14 @@ implementer. Events are passed by value. The detailed event rules are in
 
 ## 5. Dependencies
 
-5.1. The root package and `internal/` **MUST** depend on the standard library
-only. **[project]**
+5.1. The root package, `indicator/`, `experiment/` and `internal/` **MUST**
+depend on the standard library only (and, within the module, on the packages 2.7
+allows). **[project]**
 
 5.2. Only `config/` MAY import a third-party package, and only for file-format
 parsing. Everything it produces **MUST** be plain structs defined in the root
 package, so that callers can build a configuration in Go without any file
-format. **[project]**
+format. `experiment/` reaches a parser only through `config/`. **[project]**
 
 5.3. A new third-party dependency **MUST** be justified in the PR description
 (what it provides, why the standard library is insufficient, its maintenance
@@ -368,13 +413,20 @@ func WithSeed(seed uint64) Option {
 func NewWorld(cfg Config, opts ...Option) (*World, error) { /* ... */ }
 ```
 
-The core options include `WithSeed`, `WithLogger(*slog.Logger)` and
-`WithObserver(Observer)`. Without `WithSeed` the seed is 0, so a world built
-with no options is still reproducible (7.4). The logger and observer are
-optional and default to no-ops (see 11.2). Passing a nil logger or observer **MUST** be treated as "use the
-no-op default", not as an error. `WithObserver` is additive: it MAY be passed
-more than once, and every event is delivered to each observer in the order the
-options were given.
+The core options include `WithSeed`, `WithLogger(*slog.Logger)`,
+`WithObserver(Observer)`, `WithAudit()`, `WithTargetSpread(bp)` and the
+registration options `WithStrategy(name, s)`, `WithSpawner(name, s)` and
+`WithClearing(name, c)` (`spec-world.md` 4.1), and, for a restore only,
+`WithReseed(salt)` (`spec-checkpoint.md` 6.8). Without `WithSeed` the seed is 0,
+so a world built with no options is still reproducible (7.4); the last
+`WithSeed` given wins. `WithSeed` on a restore and `WithReseed` on `NewWorld`
+are `ErrOptionContext`, and `RestoreWorld` takes the same `Option` type. The
+logger and observer are optional and default to no-ops (see 11.2). Passing a nil
+logger or observer **MUST** be treated as "use the no-op default", not as an
+error. `WithObserver` is additive: it MAY be passed more than once, and every
+event is delivered to each observer in the order the options were given. The
+registration options are additive too: a name given twice, or a nil extension,
+is an error.
 
 Options **MUST** validate their input and return an error rather than panic.
 The `options` struct **MUST** be unexported.
@@ -409,12 +461,23 @@ tables that are never mutated). Inject dependencies instead.
 
 7.2. `init()` functions **MUST NOT** be used.
 
-7.3. Code in the root package and `internal/` **MUST NOT** call `time.Now`,
-`time.Since`, the global `math/rand` or `math/rand/v2` functions, or
-`crypto/rand`. Time is simulated ticks. Randomness comes from one `*rand.Rand`
-(`math/rand/v2`) per world, built on a `rand.PCG` source seeded from
-`WithSeed`. The choice of source and the way the seed maps onto it are part of
-the golden output; changing either is a behaviour change (6.6).
+7.3. Code in the root package, `indicator/`, `experiment/` and `internal/`
+**MUST NOT** call `time.Now`, `time.Since`, the global `math/rand` or
+`math/rand/v2` functions, or `crypto/rand`. Time is simulated ticks. Randomness
+comes from one `*rand.Rand` (`math/rand/v2`) per world, built on a `rand.PCG`
+source seeded from `WithSeed`. The choice of source and the way the seed maps
+onto it are part of the golden output; changing either is a behaviour change
+(6.6).
+
+- The seeding rule: the state of the `rand.PCG` is the first two outputs of the
+  SplitMix64 generator started from the seed (`spec-world.md` 7.1.2).
+- The world's draw for a bound `n` of at least 1 is the high word of
+  `Uint64() * n` (`math/bits.Mul64`): one source word per draw, no loop and no
+  rejection (`spec-world.md` 7.2.1). The methods of `rand.Rand` that an extension
+  may call can take more than one word per call (`spec-world.md` 7.2.2).
+- On a restore the source is installed from the saved 20-byte state of the
+  `rand.PCG` and not seeded; the one option that changes it is `WithReseed`,
+  whose rule is part of the golden output as the seeding rule is.
 
 7.4. For a given seed, configuration and sequence of calls, the output
 **MUST** be bit-identical across runs and platforms. This is enforced by a
@@ -440,6 +503,18 @@ world's `*rand.Rand` as a parameter. Implementations **MUST NOT** create their
 own source, use a global one, or keep the one they were given after the call
 returns. The interfaces' doc comments **MUST** state this contract, because a
 consumer's implementation that breaks it breaks 7.4. **[project]**
+
+An implementation that is `Stateful` (4.3) **MUST** keep in what `SaveState`
+writes every piece of state that can influence a result (no state in closures,
+package variables or goroutines, 7.1 and 12.2). `SaveState` **MUST NOT** change
+the extension and **MUST** give equal bytes for equal states. `LoadState`
+**MUST** replace the whole state, **MUST** validate its input and return an error
+for a version or bytes it cannot read, and **MUST NOT** keep the slice it is
+given. Neither method receives or may create a random source. An instance that
+holds state **MUST NOT** be shared between worlds. The doc comments of
+`Strategy`, `Spawner`, `Clearing` and `Stateful` **MUST** state this contract,
+because an implementation that breaks it breaks 7.4 after a restore and the
+library cannot detect it. **[project]**
 
 ## 8. Errors
 
@@ -613,11 +688,15 @@ requirement is from Code Review Comments and the Uber guide.
 `context.Context` as its first parameter and honour cancellation. A
 `context.Context` **MUST NOT** be stored in a struct field. `Step()` and other
 short, CPU-bound calls do not need one. A multi-tick convenience such as
-`Run(ctx, ticks)` **MUST** check `ctx` between ticks, return the wrapped
-`ctx.Err()` on cancellation, and leave the world at a tick boundary, never
-half-way through a step. `Run` emits `RunStarted` before its first tick and
-`RunEnded` after its last completed tick, including when it is cancelled
-(observability-and-logging.md 4.3).
+`Run(ctx, ticks)` returns `(completed int64, err error)`, **MUST** check `ctx`
+before every tick, including the first, and never inside a tick. On cancellation
+it returns the wrapped `ctx.Err()` and leaves the world at a tick boundary,
+never half-way through a step. A failed step is not a cancellation: `Run`
+returns the step's error with the ticks completed, and the world is then failed:
+every later call that has an error result returns `ErrWorldFailed`
+(`spec-world.md` 3.5). `Run` emits `RunStarted` before its first tick and
+`RunEnded` after its last completed tick, including when it is cancelled or a
+step failed (observability-and-logging.md 4.3).
 
 12.4. `Snapshot` and every value returned across the API boundary **MUST** be a
 deep copy containing plain data (no pointers into live state, no function
@@ -628,7 +707,9 @@ fields), so a consumer can marshal it on another goroutine without races.
 order they were registered, **MUST NOT** call back into the `World`, and
 **SHOULD** return quickly. The library does not recover a panicking observer:
 the panic propagates to the caller of `Step`. Events are emitted after the state
-change they describe is complete, in a deterministic order. **[project]**
+change they describe is complete, in a deterministic order. A failed step is the
+one exception: the world is marked failed before `TickEnded` is emitted, and the
+event describes the end of the step (`spec-world.md` 3.5.6). **[project]**
 
 12.6. Transports (gRPC, HTTP, CLI) are separate modules that import this one.
 They own serialisation, authentication, concurrency control and lifecycle.
@@ -699,8 +780,10 @@ directly against the primary pages:
 | 12.2 (lifecycle), 12.3         | Code Review Comments (goroutine lifetimes, contexts); Google decisions; Uber guide |
 | 11.1, 11.2                     | `log/slog` package documentation (`DiscardHandler`, `Enabled`); OpenTelemetry library guidelines (libraries use the API only; no-op without an SDK) |
 
-Rules 4.8, 11.3–11.5 and 12.5 are project decisions: the sources do not
-prescribe an observer shape, a sealed event set, or delivery ordering. The
+Rules 4.8, 11.3–11.5 and 12.5, the extension-state paragraph of 4.3 and the
+last paragraph of 7.7 are project decisions: the sources do not prescribe an
+observer shape, a sealed event set, delivery ordering, or how an extension saves
+its state. The
 fixed-point representation in 3.5 and the tie-break rule in 7.6 are project
 decisions built on the language and library facts cited above.
 
@@ -717,4 +800,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: b3e3ba11f37d7a51799aedf9
+RULE-TAG: 42eeab37487ade5f18253f16
