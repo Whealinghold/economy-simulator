@@ -1,0 +1,54 @@
+
+A. first consumer, default window: 5000 agents, |T_a| 7.7, window 30, modules none, closed accounts 0
+  section            ints     varint B      fixed B
+  agents            75000        79909       600000
+  beliefs           80000       158923       640000
+  estates             405          504         3240
+  ledger           270500       303183      2164000
+  markets            1955         3444        15640
+  production        56406        88988       451248
+  welfare         1210000      1475051      9680000
+  world                 3           25           44
+  total           1694269      2110117     13554262   (fixed/varint = 6.4)
+
+B. first consumer, long-job window: 5000 agents, |T_a| 7.7, window 120, modules ['demand', 'information', 'population'], closed accounts 0
+  section            ints     varint B      fixed B
+  agents            75000        92050       600000
+  beliefs           80000       158899       640000
+  demand            15000        29807       120000
+  estates             405          505         3240
+  information       15385        25292       123080
+  ledger           270500       302971      2164000
+  markets            1955         3439        15640
+  production        55790        88296       446320
+  welfare         4810000      5849814     38480000
+  world                 3           25           44
+  total           5324038      6551188     42592414   (fixed/varint = 6.5)
+
+C. first consumer, modules, 10 000 deaths: 5000 agents, |T_a| 7.7, window 30, modules ['demand', 'information', 'population'], closed accounts 10000
+  section            ints     varint B      fixed B
+  agents            75000        95985       600000
+  beliefs           80000       159019       640000
+  demand            15000        29817       120000
+  estates             405          502         3240
+  information       15385        25300       123080
+  ledger           290500       341029      2324000
+  markets            1955         3442        15640
+  production        55839        88349       446712
+  welfare         1210000      1475229      9680000
+  world                 3           25           44
+  total           1744087      2218787     13952806   (fixed/varint = 6.3)
+
+D. full-detail realm: 200000 agents, |T_a| 8.0, window 30, modules ['demand', 'information', 'population'], closed accounts 0
+  section            ints     varint B      fixed B
+  agents          3000000      3680654     24000000
+  beliefs         3200000      6357666     25600000
+  demand           600000      1192220      4800000
+  estates             405          504         3240
+  information       15385        25313       123080
+  ledger         10800500     12278429     86404000
+  markets            1955         3438        15640
+  production      2239237      3653807     17913896
+  welfare        48400000     59009294    387200000
+  world                 3           25           44
+  total          68257485     86201440    546059990   (fixed/varint = 6.3)

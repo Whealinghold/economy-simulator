@@ -1,0 +1,61 @@
+1. discrimination: verdict per series
+   healthy seasonal                           R1       none      
+   healthy seasonal                           R6 year  none      
+   healthy seasonal                           R9       none      
+   inflation +40% a year                      R1       detected  onset window 2
+   deflation -40% a year, volume falling      R9       detected  onset window 2
+   deflation -40% a year, volume flat         R9       none      
+   cobweb, range doubling                     R6 year  detected  onset window 3
+   healthy, two years only                    R1       unknown   windows
+   healthy, stale prices                      R1       unknown   stale
+   households 600 -> 200, no recovery, 3 years R3       unknown   needs a longer run (horizon 915, available 729)
+   households 600 -> 200, no recovery, 6 years R3       detected  onset tick 365
+   households 600 -> 200 -> 600               R3       none      
+   pinned 80 ticks                            R5a      detected  run 80
+   pinned 40 ticks                            R5a      none      
+   frozen 70 ticks                            R5b      detected  run 70
+   lockstep dispersion 10 bp                  R7       detected  low 10
+   offset 4 000, unmet 4 000                  R8       detected  offset 4000
+   offset 4 000, no reference                 R8       unknown   no steady-state price
+   volume to 36% a year, households fine      R4       detected  onset window 3
+   volume to 36% a year, households 70%       R4       none      collapse is R3
+   pool share 60% twice, volume falling       R2       detected  pool share
+   pool share 60% twice, volume flat          R2       none      
+
+2. a series shorter than the rule needs is unknown, not none:
+   R1 on 2 years: ('unknown', 'windows')
+   R6 on 2 years: ('unknown', 'windows')
+
+   r5.pinned_ticks 60 is 1643 bp of a year, at least s16.pinned_share_bp 1000
+3. ordering rule of 6.5.2 on the priors
+   s16.pinned_share_bp        1000  <=     r5.pinned_bp           5000  ok
+   x4.pinned_share_bp         1000  <=     r5.pinned_bp           5000  ok
+   s07.freeze_ticks             30  <=     r5.freeze_ticks          60  ok
+   s03.pinned_ticks             30  <=     r5.pinned_ticks          60  ok
+   s04.pinned_ticks             30  <=     r5.pinned_ticks          60  ok
+   s05.range_factor          20000  <=     r6.factor             30000  ok
+   x4.range_factor           20000  <=     r6.factor             30000  ok
+   s05.range_growth_bp        1000  <=     r6.growth_bp           2500  ok
+   s12.range_factor          20000  <=     r6.factor             30000  ok
+   s01.unmet_bp               1500  <=     r8.unmet_bp            3000  ok
+   p07.drift_bp                500  <=     r1.rise_bp             3000  ok
+   p07.drift_bp                500  <=     r9.fall_bp             3000  ok
+   s14.recover_ticks (4 x t_min)  40000  <=     r3.horizon_factor x t_min  50000  ok
+   s06.swing_bp                300  <=     r6.swing_bp            1000  ok
+   s01.offset_bp              1500  <=     r8.offset_bp           3000  ok
+   h02.offset_bp              2000  <=     r8.offset_bp           3000  ok
+   s10.dispersion_min_bp       100  >=     r7.disp_bp               50  ok
+   m05.pool_share_bp          3000  <=     r2.share_bp            5000  ok
+   x4.households_bp           9000  >=     10000 - r3.fall_bp     8000  ok
+
+4. a stationary seasonal series read by year windows and by 120-tick windows
+   amp = seasonal swing +-amp bp; pairs = successive windows; 'grow' = range above the previous by more than
+   s05.range_growth_bp (1 000); 'fact' = grows and range above 20 000 (fails STY-P03's two conjuncts);
+   'regime' = R6's rule alone (range above 30 000 and growth above 2 500), two in a row
+   amp    year windows           120-tick windows
+         range  grow fact  R6    pairs grow fact  regime-run
+   2500  17153    0    0  none        23    3    0  none
+   4000  23979    0    0  none        23    6    0  none
+   5000  30802    0    0  none        23    4    0  none
+   6000  41015    0    0  none        23    5    5  none
+

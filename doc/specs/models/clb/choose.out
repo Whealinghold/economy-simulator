@@ -1,0 +1,6 @@
+feasible points: [1, 5, 6] distances: [1, 2, 2]
+chosen: 1 {'cost_floor': -1, 'evidence_share': 0}
+no feasible point; the Pareto set: [0, 1]
+alias A,B: True 10000   A,C: False 495
+one measure: [120] and [-35] collinear: True 10000
+bounds: |e| <= 2^26, m <= 16 fit 128 bits; one above is an overflow error

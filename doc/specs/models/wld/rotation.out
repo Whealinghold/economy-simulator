@@ -1,0 +1,6 @@
+100 tied candidates, cap 5 a tick, 1000 ticks: expected 50 admissions each
+id        min    0 max 1000  by decile of ID: [5000, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+key       min   36 max   73  by decile of ID: [533, 485, 514, 474, 512, 499, 494, 491, 490, 508]
+rotation  min   50 max   50  by decile of ID: [500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
+first agent in the rotation of a region of 4, ticks 0..7: [0, 1, 2, 3, 0, 1, 2, 3]
+changing candidate set, keyed ties: min 138 max 168 (mean 150.0)

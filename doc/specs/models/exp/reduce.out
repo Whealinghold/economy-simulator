@@ -1,0 +1,32 @@
+all checks passed
+
+== replicas of one point: ten readings of a price range, in basis points of the base
+  readings sorted : [10100, 10200, 10300, 10400, 10500, 10600, 10700, 10900, 11800, 12100]
+  n=10  min=10100  max=12100  mean=10760  std=674
+  Q( 1000 bp) = 10100   (rank k = 1)
+  Q( 2500 bp) = 10300   (rank k = 3)
+  Q( 5000 bp) = 10500   (rank k = 5)
+  Q( 7500 bp) = 10900   (rank k = 8)
+  Q( 9000 bp) = 11800   (rank k = 9)
+  pass share of 'price range at most 11 000 bp': 8 of 10 -> 8000 bp
+
+== a failed run in the same point: n planned 10, one failed, nine used
+  the run that read 10 600 failed: used 9, failed 1
+  mean of nine=10778   pass share against planned 10: 7000 bp (the failed run does not pass)
+  had the run that read 12 100 failed instead: pass share 8000 bp, mean of nine 10611
+
+== the comparison of two points, eight paired replicas
+  differences     : [3, 5, -1, 8, 6, 0, 6, 1]
+  mean difference : 4   median : 3
+  wins 6  losses 1  ties 1  two-sided sign tail 125000 ppm
+  relative, from the exact sums of the same pairs: rdiv(10 000 * 28, 822) = 341 bp
+  (from the rounded means it would be rdiv(10 000 * 4, 103) = 388 bp: a second rounding, not used)
+  DiffOfMeans from exact sums: rdiv(850 * 8 - 822 * 8, 8 * 8) = 4
+
+== sensitivity on a 3 x 3 grid: bin means of two factors
+  factor A bin means [104, 114, 144]  range 40
+  factor B bin means [117, 121, 125]  range 8
+  shares of the total range: A 8333 bp, B 1667 bp
+
+== one-at-a-time elasticity: a knob from 7 000 to 8 000 moves the mean of a measure from 12 000 to 11 100
+  elasticity -5250 bp: a 1 percent rise of the knob moves the measure by -0.525 percent

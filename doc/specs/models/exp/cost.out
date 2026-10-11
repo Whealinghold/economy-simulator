@@ -1,0 +1,28 @@
+== one run, no observer, no samples (the bare cost of the ticks)
+  one    400 ticks  2 s   (2231.9 runs an hour)
+  one   1095 ticks  4 s   (819.5 runs an hour)
+  one   3650 ticks  15 s   (246.4 runs an hour)
+  five   400 ticks  21 s   (169.7 runs an hour)
+  five  1095 ticks  58 s   (62.0 runs an hour)
+  five  3650 ticks  3 min   (18.6 runs an hour)
+
+== a sweep: points x replicas runs of T ticks, one core, observer on, a sample every 30 ticks
+   pack  points  replicas  ticks   runs   total (one core)
+   one       3       10    400     30   52 s              
+   one      24       10   1095    240   19 min            
+   one     100       10   1095   1000   78 min            
+   five     12       10   1095    120   2.1 h             
+   five    100       10   1095   1000   17.1 h            
+
+== the saving of a branch: a burn-in of B ticks run once, then K branches of T - B ticks each
+   pack  T     B    K   without branching   with branching   saved
+   one   1095  365  10   44 s              31 s            29%
+   five  1095  365  10   10 min            7 min           30%
+   five  1095  730  20   19 min            7 min           63%
+
+== the size of a Result: runs x measures x (1 + windows) readings; 9 bytes packed (an int64 and a flag), 16 as a Go struct
+   points  replicas  measures  samples  final only (16 B)  with the series (16 B)  with the series (9 B)
+       24       10        20       36  76 KB              2.8 MB                  1.6 MB
+      100       10        20       36  320 KB             11.8 MB                 6.7 MB
+     1000       10        20       36  3.2 MB             118.4 MB                66.6 MB
+     1000       50        40      120  32.0 MB            3872.0 MB               2178.0 MB

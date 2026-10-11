@@ -1,0 +1,47 @@
+== multipliers alpha_j = floor(2^64 * frac(phi_d^-(j+1)))
+d= 1
+   j= 0  0x9e3779b97f4a7c15
+d= 2
+   j= 0  0xc13fa9a902a6328f
+   j= 1  0x91e10da5c79e7b1c
+d= 4
+   j= 0  0xdb4f0b9175ae2165
+   j= 1  0xbbe0563303a4615f
+   j= 2  0xa0f2ec75a1fe1575
+   j= 3  0x89e182857d9ed688
+d= 8
+   j= 0  0xebedeed9d803c815
+   j= 1  0xd96eb1a810caaf5e
+   j= 2  0xc862b36daf790dd5
+   j= 3  0xb8acd90c142fe10b
+   j= 4  0xaa324f90ded86b69
+   j= 5  0x9cda5e693fea10ae
+   j= 6  0x908e3d2c82567a73
+   j= 7  0x8538ecb5bd456ea2
+check: d=1, j=0 equals the SplitMix64 gamma 0x9E3779B97F4A7C15
+
+== one-dimensional equidistribution: counts per bin for the first N points (d = 4, axis j)
+   N    bins  axis  min  max  (a uniform grid would give N/bins)
+    16    16  all     0    3   (N/bins = 1.00)
+    50    10  all     0    8   (N/bins = 5.00)
+   100    10  all     1   15   (N/bins = 10.00)
+   256    16  all    11   20   (N/bins = 16.00)
+  1000    20  all    45   58   (N/bins = 50.00)
+
+== a square of 8 x 8 cells, N = 64 points: empty cells and the smallest distance
+  Kronecker d=2   empty cells  9   min distance^2 113958852334968244
+  hash draw  d=2  empty cells 25   min distance^2 2235907636051885
+  hash draw salt 1 empty cells 20   min distance^2 3462413293135400
+  hash draw salt 2 empty cells 23   min distance^2 5247793369197989
+  hash draw salt 3 empty cells 23   min distance^2 871308425206141
+  hash draw salt 4 empty cells 21   min distance^2 689033423561045
+  hash draw salt 5 empty cells 26   min distance^2 1639571183937952
+
+== stability under growth: the first 8 points of d = 2 do not change when N grows
+  equal: point i depends on i and d only (stateless)
+
+== the first four points of d = 2, as a share of the unit square in basis points
+  i=0  ( 2548,   698) bp
+  i=1  (   97,  6396) bp
+  i=2  ( 7646,  2095) bp
+  i=3  ( 5195,  7793) bp

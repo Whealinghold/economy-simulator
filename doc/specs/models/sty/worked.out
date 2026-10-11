@@ -1,0 +1,34 @@
+17.1 setting a band: 50 setting seeds (1 to 50, REF's nightly range) of s01.recover_ticks; the gate seeds 1 to 10 are the first ten
+  setting values: min 70, median 116, max 161 (range 91)
+  headroom 2 500 bp of the range: upper bound 184
+  rounded outward to two significant digits: 190 ticks
+  gate seeds inside: 10 of 10; SR1 pass; SR2 pass
+
+17.2 the rules on one gate run: values 41, 55, 58, 60, 62, 64, 66, 70, 74, 103 against an upper bound of 90
+  inside 9 of 10; SR1 (all) fail; SR2 (at least 9) pass; median 63 is inside
+  the outside seed (103) is listed in the verdict record: it is not discarded
+
+17.3 classifying a series: the whole-economy index of an inflating run, year windows
+  yearly mean prices: [9994, 13993, 19589, 27417]
+  links in bp: [14001, 13999, 13996]
+  R1 verdict: ('detected', 'onset window 2')
+  the same without the drift: R1 none  R6 (year) none
+
+17.4 the speed limit of a recovery, by integer iteration per tick with a carried remainder
+  fall of 18% (1000 to 820), g_max 200 bp a year, back to 900 (the lower edge of s14.recover_band_bp): 1700 ticks (4 years and 240 ticks)
+  yearly compounding in exact fractions: 5 years
+
+17.5 the historical premium: Clark (2005) table A2, craftsman over labourer, England, 12 points
+  min 14100, median 15150, max 19300 (bp)
+
+17.6 the gap after freight (STY-P06), three directed lanes, delivered price = origin price + freight
+  a->b: delivered 112, destination 118, gap 6, 536 bp of the delivered price
+  b->c: delivered 99, destination 104, gap 5, 505 bp of the delivered price
+  a->c: delivered 120, destination 141, gap 21, 1750 bp of the delivered price
+  median over lanes: 536 bp; against a margin of 1 000: pass
+  worst lane: 1750 bp; against x1.worst_bp of 3 000: pass (a median alone would not show it)
+
+17.7 STY-S04: the earliest unfed tick of a household after a cut
+  holds 14 units, needs 2 a tick, cut at 400: not unfed before tick 407
+
+all asserted figures hold

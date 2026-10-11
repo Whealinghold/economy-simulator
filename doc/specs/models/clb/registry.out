@@ -1,0 +1,109 @@
+ok   knob rows have 12 cells
+ok   group rows have 7 cells
+ok   ids are unique
+     113 knob rows (K 30, D 75, S 6, P 2), 64 groups
+     K and D rows 105: search kinds {'U': 96, 'I': 7, 'E': 2}
+     IND presets 21, facts 38, scenarios 53, loops 116, dampers 86, I 23, A 15, E 5
+ok   knob rows use the closed sets and known references
+ok   structure groups use the closed sets
+ok   owner sections resolve in the owner spec
+ok   owner cell matches the README owner section
+ok   flag z only on defaults of 0; geo only on defaults of 1 or more (owner table)
+ok   a geo row has an owner default of at least 1, or the flag z
+ok   the flag z only where the owner default is 0 or none
+ok   every owner row is a knob row or in a group
+ok   registry-only pairs are the expected scopes
+     255 owner pairs, 9 registry-only
+ok   no Default or Bound column
+ok   group owner cells match the README owner sections
+     back links missing (informational): 6
+        ('K-MON03', 'I12')
+        ('K-INF03', 'I14')
+        ('K-MER04', 'I14')
+        ('K-MON03', 'A16')
+        ('K-RES01', 'A16')
+        ('K-RES03', 'A16')
+
+notes (informational, to be read): 145
+    ('K-SCL01', 'L13 entry does not name Scale')
+    ('K-SCL01', 'L33 entry does not name Scale')
+    ('K-SCL01', 'L34 entry does not name Scale')
+    ('K-SCL02', 'L33 entry does not name MinAgents')
+    ('K-SCL02', 'L34 entry does not name MinAgents')
+    ('K-WEL01', 'L14 entry does not name WelfareWindow')
+    ('K-WEL01', 'L36 entry does not name WelfareWindow')
+    ('K-WEL02', 'L36 entry does not name WindowCycles')
+    ('K-WEL03', 'L14 entry does not name TargetSpread')
+    ('K-WEL04', 'L14 entry does not name TargetRatio')
+    ('K-WEL05', 'L53 entry does not name DefaultRatio')
+    ('K-WEL06', 'L14 entry does not name ExpectedWorkTicks')
+    ('K-WEL07', 'L15 entry does not name MinWorkShare')
+    ('K-WEL07', 'L51 entry does not name MinWorkShare')
+    ('K-WEL08', 'L14 entry does not name WithTargetSpread')
+    ('K-WEL08', 'L15 entry does not name WithTargetSpread')
+    ('K-WEL08', 'D08 row/table does not name WithTargetSpread')
+    ('K-AGT01', 'L04 entry does not name CoverTicks')
+    ('K-AGT02', 'L49 entry does not name InputJobs')
+    ('K-AGT03', 'L04 entry does not name OutputCoverTicks')
+    ('K-AGT04', 'L49 entry does not name FavourFloor')
+    ('K-AGT05', 'L11 entry does not name ReserveTicks')
+    ('K-AGT05', 'L45 entry does not name ReserveTicks')
+    ('K-AGT06', 'L45 entry does not name SpendMaxShare')
+    ('K-AGT06', 'D27 row/table does not name SpendMaxShare')
+    ('K-AGT07', 'L45 entry does not name SpendHalfTicks')
+    ('K-AGT07', 'L57 entry does not name SpendHalfTicks')
+    ('K-AGT07', 'D27 row/table does not name SpendHalfTicks')
+    ('K-AGT08', 'L14 entry does not name RestBand')
+    ('K-AGT09', 'L05 entry does not name ProduceHaltRatio')
+    ('K-AGT09', 'L06 entry does not name ProduceHaltRatio')
+    ('K-AGT10', 'L11 entry does not name StartMoney')
+    ('K-BEL01', 'L01 entry does not name BeliefStep')
+    ('K-BEL02', 'L13 entry does not name BeliefAdjustProb')
+    ('K-BEL03', 'L02 entry does not name BeliefSignificance')
+    ('K-BEL04', 'L05 entry does not name BeliefStockLow')
+    ('K-BEL04', 'D07 row/table does not name BeliefStockLow')
+    ('K-BEL05', 'L06 entry does not name BeliefStockHigh')
+    ('K-BEL05', 'D07 row/table does not name BeliefStockHigh')
+    ('K-BEL06', 'D05 row/table does not name BeliefMaxAge')
+    ('K-BEL07', 'D05 row/table does not name BeliefEvidenceShare')
+    ('K-BEL08', 'L07 entry does not name BeliefWidthInit')
+    ('K-BEL11', 'L07 entry does not name BeliefWidthStep')
+    ('K-BEL12', 'D04 row/table does not name CostFloor')
+    ('K-BEL13', 'D04 row/table does not name CostCeiling')
+    ('K-BEL14', 'L05 entry does not name RefBandLow')
+    ('K-BEL14', 'D04 row/table does not name RefBandLow')
+    ('K-BEL15', 'L05 entry does not name RefBandHigh')
+    ('K-BEL15', 'D04 row/table does not name RefBandHigh')
+    ('K-SPN01', 'L61 entry does not name ReviewTicks')
+    ('K-SPN03', 'L61 entry does not name RoleHysteresis')
+    ('K-SPN05', 'L61 entry does not name EntryRatio')
+    ('K-SPN05', 'L64 entry does not name EntryRatio')
+    ('K-SPN06', 'L50 entry does not name ChangePrivation')
+    ('K-SPN06', 'L62 entry does not name ChangePrivation')
+    ('K-SPN07', 'L50 entry does not name RemovePrivation')
+    ('K-SPN07', 'L62 entry does not name RemovePrivation')
+    ('K-SPN10', 'L61 entry does not name Renewal')
+    ('K-EST02', 'L39 entry does not name PoolRelease')
+    ('K-EST02', 'L63 entry does not name PoolRelease')
+    ('K-EST02', 'D11 row/table does not name PoolRelease')
+    ('K-EST03', 'L39 entry does not name ReliefBelow')
+    ('K-EST03', 'L40 entry does not name ReliefBelow')
+    ('K-EST03', 'D11 row/table does not name ReliefBelow')
+    ('K-SKL01', 'L37 entry does not name TrainingTicks')
+    ('K-SKL01', 'L41 entry does not name TrainingTicks')
+    ('K-SKL02', 'L37 entry does not name MaxTrainees')
+    ('K-SKL02', 'L41 entry does not name MaxTrainees')
+    ('K-SKL03', 'L37 entry does not name TeachingLoad')
+    ('K-SKL04', 'L36 entry does not name CapitalReturn')
+    ('K-SKL04', 'L37 entry does not name CapitalReturn')
+    ('K-PRO01', 'L37 entry does not name TraineeYield')
+    ('K-PRO01', 'L41 entry does not name TraineeYield')
+    ('K-DEM01', 'L57 entry does not name Elasticity')
+    ('K-DEM02', 'L14 entry does not name Ceiling')
+    ('K-DEM02', 'L57 entry does not name Ceiling')
+    ('K-MON01', 'L69 entry does not name Limit')
+    ('K-MON01', 'L72 entry does not name Limit')
+    ('K-MON03', 'L70 entry does not name RateBP')
+    ('K-POP01', 'L75 entry does not name BirthSchedule')
+
+all checks passed

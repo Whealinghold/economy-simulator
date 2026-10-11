@@ -1,0 +1,35 @@
+A. one conjunct: chance a point whose per-seed 'inside' probability is p passes SR2
+   p      n=10 (need 9)   n=50 (need 45)   n=10 SR1 (all)   n=50 SR1 (all)
+   4/5          3758             480             1074               0
+   17/20        5443            2194             1969               3
+   9/10         7361            6161             3487              52
+   19/20        9139            9622             5987             769
+   97/100       9655            9963             7374            2181
+   99/100       9957           10000             9044            6050
+   199/200       9989           10000             9511            7783
+
+B. many conjuncts: the stability record of one default needs 3 checks x P packs x 3 points
+   (default and both neighbours) at the gate (n=10, SR2); independent, an upper bound on joint pass
+   p      one conjunct   9 conj (1 pack)   27 conj (3 packs)   45 conj (5 packs)   63 conj (7 packs)
+   19/20        9139           4446              879              174               34
+   97/100       9655           7290             3875             2059             1094
+   49/50        9838           8635             6438             4800             3579
+   99/100       9957           9623             8910             8250             7639
+   199/200       9989           9902             9708             9519             9333
+
+C. the winner's curse: N points of equal true p, chosen on a search block of R=10, confirmed on 50
+   p      N    best passes search (SR2, n=10)   chosen passes confirm (SR2, n=50)   confirm if search had been reused
+   4/5     16             9995                              480                          9995
+   4/5     64            10000                              480                         10000
+   17/20   16            10000                             2194                         10000
+   17/20   64            10000                             2194                         10000
+   9/10    16            10000                             6161                         10000
+   9/10    64            10000                             6161                         10000
+
+D. attempts: a point of true p confirmed on a fresh block each attempt (n=50, SR2); chance it passes
+   at least once in k attempts (the reason attempts are counted and the gate is a final, separate check)
+   p      1 attempt   2 attempts   3 attempts   gate (n=10, SR2) once
+   17/20      2194        3906        5243         5443
+   9/10       6161        8526        9434         7361
+   93/100     8650        9818        9975         8483
+   19/20      9622        9986        9999         9139

@@ -1,0 +1,61 @@
+A. pass rules: probability that a build passes, in basis points
+   q = chance one seed is outside the band; rule SR1 all, SR2 at least ceil(9n/10) inside
+   n   q      SR1(all)  SR2(9 in 10)
+   10    1%     9044     9957
+   10    2%     8171     9838
+   10    5%     5987     9139
+   10   20%     1074     3758
+   10   30%      282     1493
+   10   50%       10      107
+   50    1%     6050    10000
+   50    2%     3642     9995
+   50    5%      769     9622
+   50   20%        0      480
+   50   30%        0        7
+   50   50%        0        0
+   false fail = 10000 - pass at the small q; power = 10000 - pass at the large q
+
+B. a new seed outside the envelope of m exchangeable seeds: 2/(m+1)
+  m=3 exact: 12/24 = 5000 bp (2/(m+1) = 5000 bp)
+  m=5 exact: 240/720 = 3333 bp (2/(m+1) = 3333 bp)
+  m=7 exact: 10080/40320 = 2500 bp (2/(m+1) = 2500 bp)
+  m=10 formula: 1818 bp
+  m=40 formula: 488 bp
+  m=50 formula: 392 bp
+
+C. headroom and rounding of the band-setting rule on 10 NEW seeds, i.e. what a hold-out gives (trials of 2000)
+   band = [min - h*range, max + h*range] of m setting seeds, rounded outward to two significant digits
+   (against REF's seeds the gate seeds are among the setting seeds, so the gate shows a change of the code)
+   rows: P(all 10 gate seeds inside), P(at least 9 of 10 inside), in basis points
+  shape bell, m=10 setting seeds
+    h=    0 bp   all= 2655   nine= 5475
+    h= 1000 bp   all= 4385   nine= 7265
+    h= 2500 bp   all= 6940   nine= 8875
+    h= 5000 bp   all= 8990   nine= 9795
+  shape bell, m=40 setting seeds
+    h=    0 bp   all= 6955   nine= 9305
+    h= 1000 bp   all= 8575   nine= 9780
+    h= 2500 bp   all= 9770   nine= 9990
+    h= 5000 bp   all=10000   nine=10000
+  shape bell, m=50 setting seeds
+    h=    0 bp   all= 7170   nine= 9465
+    h= 1000 bp   all= 9010   nine= 9855
+    h= 2500 bp   all= 9845   nine=10000
+    h= 5000 bp   all=10000   nine=10000
+  shape skew, m=10 setting seeds
+    h=    0 bp   all= 2480   nine= 5350
+    h= 1000 bp   all= 6835   nine= 8290
+    h= 2500 bp   all= 8350   nine= 9185
+    h= 5000 bp   all= 9325   nine= 9700
+  shape skew, m=40 setting seeds
+    h=    0 bp   all= 7155   nine= 9245
+    h= 1000 bp   all= 9765   nine= 9960
+    h= 2500 bp   all= 9990   nine= 9995
+    h= 5000 bp   all=10000   nine=10000
+  shape skew, m=50 setting seeds
+    h=    0 bp   all= 7620   nine= 9420
+    h= 1000 bp   all= 9905   nine= 9990
+    h= 2500 bp   all= 9995   nine=10000
+    h= 5000 bp   all=10000   nine=10000
+
+rounding asserted: 201 -> 210, 184 -> 190, -201 -> -210 (lower) and -200 (upper), 2001 -> 2100

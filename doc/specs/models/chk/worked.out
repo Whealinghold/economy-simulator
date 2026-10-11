@@ -1,0 +1,35 @@
+unsigned:
+  U(0) = 00
+  U(1) = 01
+  U(127) = 7f
+  U(128) = 80 01
+  U(300) = ac 02
+  U(16383) = ff 7f
+  U(16384) = 80 80 01
+  U(9223372036854775808) = 80 80 80 80 80 80 80 80 80 01
+  U(18446744073709551615) = ff ff ff ff ff ff ff ff ff 01
+signed (zigzag):
+  I(0) = 00
+  I(-1) = 01
+  I(1) = 02
+  I(-64) = 7f
+  I(64) = 80 01
+  I(10000) = a0 9c 01
+  I(-9223372036854775808) = ff ff ff ff ff ff ff ff ff 01
+  I(9223372036854775807) = fe ff ff ff ff ff ff ff ff 01
+rejected inputs:
+  80 00 (0 in two bytes)         -> non-minimal varint
+  81 80 00 (1 in three bytes)    -> non-minimal varint
+  ff*9 02 (2^64 + ...)           -> varint overflows 64 bits
+  80 (truncated)                 -> truncated varint
+world section (tag 1): 01 16 70 63 67 3a 8e 3e 6b 7e ff 8d b5 6c b5 8e 6a 2f 88 e0 bb fa 0b 01
+toy frame length 96, digest 727327a924d46a2dea28ae4cf4f36bec1e12ac1234e6f5405a7fe50609387d73
+header: 45 53 43 4b 01 01 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 00 00
+agent account: 00 00 01 04 a0 9c 01 01 03 05 00 00
+closed account: 00 01
+state words hi=8e3e6b7eff8db56c lo=b58e6a2f88e0bbfa
+  salt 0: hi=0eec475500551da4 lo=64b50bad715e9bc6 first word=51798660ccefa5fa
+  salt 1: hi=8d300de17fda20a5 lo=52b5dbda40cf330c first word=081f02238dd84e8c
+  salt 2: hi=c44be769bde5c5d0 lo=7603e7237b5b0efa first word=e7b2f5564db971e6
+  salt 42: hi=26e84dab9a52f23d lo=ca6855e42adbe836 first word=80c06a62e31cb550
+reseed matches Go 1.25 for salts [0, 1, 2, 42]

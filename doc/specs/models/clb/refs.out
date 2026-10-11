@@ -1,0 +1,10 @@
+ok   requirement IDs are unique
+ok   every FR-CLB reference is defined
+     68 requirements defined; not cited outside section 21: ['FR-CLB-054', 'FR-CLB-072', 'FR-CLB-073', 'FR-CLB-074', 'FR-CLB-080', 'FR-CLB-081']
+ok   bare section references resolve in this spec
+ok   every spec file named exists
+ok   no shell-quoting residue
+ok   no tab characters
+ok   no setting words (a short list)
+
+all checks passed

@@ -1,0 +1,55 @@
+== A. a grid: cost_floor in {7 000, 8 000, 9 000, 10 000} x belief_step in {100, 200, 400}
+  12 points
+   point  0  cost_floor= 7000  belief_step=100
+   point  1  cost_floor= 7000  belief_step=200
+   point  2  cost_floor= 7000  belief_step=400
+   point  3  cost_floor= 8000  belief_step=100
+   point  4  cost_floor= 8000  belief_step=200
+   point  5  cost_floor= 8000  belief_step=400
+   point  6  cost_floor= 9000  belief_step=100
+   point  7  cost_floor= 9000  belief_step=200
+   point  8  cost_floor= 9000  belief_step=400
+   point  9  cost_floor=10000  belief_step=100
+   point 10  cost_floor=10000  belief_step=200
+   point 11  cost_floor=10000  belief_step=400
+
+== B. one at a time: the same factors, level 0 the baseline
+  6 points (1 + 3 + 2)
+   point 0  cost_floor= 7000  belief_step=100
+   point 1  cost_floor= 8000  belief_step=100
+   point 2  cost_floor= 9000  belief_step=100
+   point 3  cost_floor=10000  belief_step=100
+   point 4  cost_floor= 7000  belief_step=200
+   point 5  cost_floor= 7000  belief_step=400
+
+== C. a Latin hypercube, N = 8, two ranged factors: cost_floor in [6 000, 10 000], belief_step in [100, 400]
+   point 0  cells (4, 1)  cost_floor= 8250  belief_step=156
+   point 1  cells (7, 2)  cost_floor= 9750  belief_step=194
+   point 2  cells (0, 5)  cost_floor= 6250  belief_step=306
+   point 3  cells (2, 3)  cost_floor= 7250  belief_step=231
+   point 4  cells (1, 0)  cost_floor= 6750  belief_step=118
+   point 5  cells (5, 4)  cost_floor= 8750  belief_step=269
+   point 6  cells (3, 6)  cost_floor= 7750  belief_step=344
+   point 7  cells (6, 7)  cost_floor= 9250  belief_step=382
+  each axis uses every cell once
+
+== D. the overlay documents of point 5 of example A (cost_floor=8 000, belief_step=200 is point 4; point 5 is 8 000 and 400)
+   [world]
+   cost_floor = 8000
+   [world]
+   belief_step = 400
+
+== E. seeds: Seed0 = 1, 4 replicas, 3 points
+   Same     : [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
+   PerPoint : [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+
+== F. a branch plan: one burn-in of 365 ticks, then three branches of 60 ticks, seed 1
+   burn-in  ticks 0..364, seed 1, checkpoint c at tick 365
+   branch 0  restore c, WithReseed(salt 7), no call
+   branch 1  restore c, WithReseed(salt 7), SetYieldShocks north/grow_staple 5000
+   branch 2  restore c, WithReseed(salt 7), SetYieldShocks 5000, cleared at tick 425
+   a paired branch keeps the same salt in every branch; a Monte Carlo of branches gives each its own
+
+== G. the size of a design
+   grid 4 x 3 x 2 x 5 levels = 120 points; with 10 replicas 1200 runs
+   one at a time over those four factors = 11 points
