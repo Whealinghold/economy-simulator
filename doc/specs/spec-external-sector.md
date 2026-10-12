@@ -77,7 +77,7 @@ give the rule.
 | # | Question | Position | Why |
 |---|----------|----------|-----|
 | 1 | What is the outside? | A region of the graph with no agents, **marked** by a row of this module (an **outside node**). It has no market, no households and no policy. It is data: lines of price paths and sides of quantities | `spec-scale.md` 8 and `spec-regions.md` 3.5.2 already call a region with supply and demand functions and no agents the outside world, a node; this spec marks it and gives it the functions. One mechanism for places (the graph) |
-| 2 | How does it trade? | Through **counterparties**: pseudo-agents, one per (node, gate region, side), that place ordinary orders in the gate region's market. Each order is backed by an account of a new kind, **Outside**, that is topped up with exactly the reservation from a Boundary account just before admission and swept to zero after every market has cleared (4) | Compared with a boundary-backed admission and a standing outside account in 4.1: this one keeps `spec-clearing.md` 2.3 and 3 true with no change of rule, every unit and minor unit moves by a named reason, and nothing is held across a tick |
+| 2 | How does it trade? | Through **counterparties**: pseudo-agents, one per (node, gate region, side), that place ordinary orders in the gate region's market. Each order is backed by an account of a new kind, **Outside**, that is topped up with a budget that covers the reservation from a Boundary account just before admission and swept to zero after every market has cleared (4) | Compared with a boundary-backed admission and a standing outside account in 4.1: this one keeps `spec-clearing.md` 2.3 and 3 true with no change of rule, every unit and minor unit moves by a named reason, and nothing is held across a tick |
 | 3 | What changes in `spec-clearing.md`? | One wording: the row `side_not_allowed` and 3.1.2 name the counterparty beside the estate as a pseudo-agent that places one side only. No rule changes | The counterparty is an agent from the market's point of view (4.3) |
 | 4 | How does money cross the boundary? | By six built-in reasons (8.1): the budget of a buying counterparty, its unspent part, the receipts of a selling counterparty, and the goods forms: offer, unsold, purchases. Money enters the realm only when the outside buys, and leaves only when the outside sells; the net is the **balance of trade** (8.3) | N-107: a trade with an external counterparty is the case for a built-in reason, not a grant or a levy |
 | 5 | Fixed prices or drifting prices? | A line has a mid price path: a base, a table by season, a linear trend with a clamp, a bounded mean-reverting walk drawn from the world's source (draw order stated, 6.4), and a shock slot set between ticks (6.5). All integer. A pack with none of the last three has a fixed price | "Fixed or drifting by a deterministic rule from data" (brief); the walk is the only random element and has a stated, fixed draw count |
@@ -238,7 +238,7 @@ compared.
 | Option | What it is | Verdict and reason |
 |--------|-----------|--------------------|
 | **(a) Boundary-backed admission** | the counterparty is a Boundary account; CLR admits its order against a cap, and settlement moves goods or money to or from the boundary under a reason | **Rejected.** The ledger refuses a boundary reservation (`spec-ledger.md` 6.1, `ErrBoundaryReserve`). It would need (i) a new kind of reservation backed by a cap and not by a balance, (ii) a settlement that moves money from a boundary to a non-boundary account as part of a `trade`, which is neither internal nor a faucet in the registry, (iii) a change of `spec-clearing.md` 3.3, of the guarantee in 2.3 ("every order is backed" becomes "backed by a balance or a cap") and of 6, and of the ledger's 6 and 7. Two specs and their requirements change, for a mechanism whose only gain is the absence of a gross top-up |
-| **(b) A pass-through account** | the counterparty has an ordinary account of a new kind; just before admission it is topped up from a boundary with exactly what the order reserves; after every market has cleared it is swept to zero | **Chosen.** The order is an ordinary order backed by a real reservation; settlement is an ordinary `trade` transfer; the top-up and the sweep are transfers with named reasons (8.1). `spec-clearing.md` 2.3 and 3 hold with no change of rule (4.3). The cost: the boundary flows are gross (the budget offered, the part returned), so the net is a derived measure (8.3) |
+| **(b) A pass-through account** | the counterparty has an ordinary account of a new kind; just before admission it is topped up from a boundary with a budget that covers what the order reserves (`limit * quantity`; a legal price can only lower the reservation, `spec-institutions.md` 6.3.3); after every market has cleared it is swept to zero | **Chosen.** The order is an ordinary order backed by a real reservation; settlement is an ordinary `trade` transfer; the top-up and the sweep are transfers with named reasons (8.1). `spec-clearing.md` 2.3 and 3 hold with no change of rule (4.3). The cost: the boundary flows are gross (the budget offered, the part returned), so the net is a derived measure (8.3) |
 | **(c) MON's top-up and sweep as flows** | the counterparty is a class of accounts topped up to a level by a top-up grant in phase 1 and swept by a rate levy of 10 000 basis points (`spec-money-supply.md` 10.2) | **Rejected as the mechanism, kept as the model.** A flow tops up to a fixed level per tick in phase 1, and the sweep runs in the next tick's phase 1: the account would hold money through the whole tick between, and the level cannot follow the order, which depends on the price, the window and the caps of each line. It cannot carry goods. (b) uses the same two rules, a Boundary account for what is not conserved (`spec-money-supply.md` 10.1, FR-MON-043) and a closed registry of declared reasons, in a form made for an order |
 
 The answer to MON's open question 1 is therefore (b): a pass-through account owned by this
@@ -288,15 +288,16 @@ For one order of a counterparty, `spec-clearing.md` 3.2 checks, in order:
 | `side_not_allowed` | a buyer places only bids and a seller only asks (a wording addition, 4.4) |
 | `unknown_commodity` | the line's commodity is validated |
 | `not_tradable` | does not apply: a pseudo-agent has no role (`spec-clearing.md` 3.2) |
+| `not_permitted` | does not apply: a pseudo-agent holds no membership of a body, and the check lets it pass (`spec-clearing.md` 3.2, `spec-institutions.md` 5.6.2) |
 | `invalid_price` | the quote is clamped to `[1, MaxPrice]` (6.6) |
 | `invalid_quantity` | the quantity offered is at least 1 (a side that offers nothing places no order) and at most `Capacity`, which is at most `MaxQuantity` (13.1) |
 | `duplicate_order` | one order per commodity per counterparty |
 | `overflow` | price times quantity is at most `MaxPrice * MaxQuantity` = 10^18, which fits (`spec-config.md` 4.1) |
-| `insufficient_funds` | a buyer is topped up with exactly `limit * quantity` before admission (5.2) |
+| `insufficient_funds` | a buyer is topped up with a budget of `limit * quantity` before admission (5.2), which is at least what the order reserves (a legal price can lower the reservation, never raise it) |
 | `insufficient_stock` | a seller is topped up with exactly `quantity` units before admission |
 
 So every order is admitted, and every admitted order is backed by a reservation in a real
-account (`spec-clearing.md` 3.3). The reservation of a bid is `limit * quantity`, and a trade
+account (`spec-clearing.md` 3.3). The reservation of a bid is at most `limit * quantity` (a legal price may lower it), and a trade
 price never exceeds the limit, so settlement cannot fail (2.3). The part of the budget
 that the price improvement leaves goes back to the buyer's available cash at settlement
 (`spec-clearing.md` 6) and is swept at the end of phase 4. When the markets have finished,
@@ -370,7 +371,7 @@ take their share of the clearing's draws.
 
 5.2.3. **Why a top-up each tick.** An unfilled part of a bid or an ask is released when its
 market finishes and is swept at once (5.3); nothing the outside brought stays in the
-realm's ledger overnight. This is what makes the boundary flows gross (8.1).
+realm's ledger overnight. This is what makes the boundary flows gross (8.1). The top-up of a buyer is a **budget** computed from the quote; a legal price (`spec-institutions.md` 6.3.3) may lower the limit the order reserves, and what it does not reserve is swept back unspent at P4.2 under `outside_unspent`.
 
 ### 5.3 Phase 4: the sweep
 
@@ -1334,7 +1335,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-EXT-011 | The counterparties MUST take the agent IDs after the estate pseudo-agents in ascending (node, gate, buy before sell), MUST NOT be counted as agents or households, and MUST NOT cause `AgentSpawned`. |
 | FR-EXT-012 | A counterparty MUST have exactly one account of the kind Outside in the gate region, opened at construction after the estate accounts and before any agent account, never closed and never relocated, and MUST hold no money and no goods at any tick boundary. |
 | FR-EXT-013 | A counterparty's order MUST be placed by the ordinary admission after the estates' orders, in ascending agent ID, MUST be admitted for every configured case, MUST take a tie-break key like any order, and a buyer MUST place only bids and a seller only asks. |
-| FR-EXT-014 | Before admission a buyer's account MUST receive exactly `limit * offered` under `outside_budget` and a seller's exactly `offered` units, born in that tick and at full durability, under `outside_offer`. |
+| FR-EXT-014 | Before admission a buyer's account MUST receive exactly `limit * offered` under `outside_budget` (the order may reserve less under a legal price, 5.2.3) and a seller's exactly `offered` units, born in that tick and at full durability, under `outside_offer`. |
 | FR-EXT-015 | After every market has cleared and every reservation has been settled or released, and before outcomes are processed, each counterparty account MUST be emptied to the boundary under `outside_unspent`, `outside_purchases`, `outside_unsold` or `outside_receipts` according to 5.3.1. |
 | FR-EXT-016 | A checkpoint taken between ticks MUST find every counterparty account empty, and a restored world MUST place the same orders and apply the same sweeps as an uninterrupted one. |
 | FR-EXT-017 | With the module on, the registry MUST hold the six reasons with the kinds of 8.1, closed for the run, and a money flow ID equal to one of them MUST be rejected with `ErrReasonCollision`. |
@@ -1408,7 +1409,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
    remittance.
 8. **Tariffs and tolls.** A levy on the trades with a counterparty belongs to FIS. The
    counterparty's trades are ordinary `trade` transfers, so FIS can attach to the agent ID range
-   of 4.2.2. *Next step:* FIS.
+   of 4.2.2. *Answered by FIS (`spec-fiscal.md` 6):* a tariff is a duty with `Scope` `import` or `export` on the trades of a gate region, charged to the realm's party, since a counterparty never pays (6.4 there); the sweep of 5.3 and the sectoral identity of 8.4 are unchanged, because the duty is applied at P4.1a, after the trade and before the sweep, and moves money from a household or pool account to a treasury, never from a counterparty account. This spec is unchanged.
 9. **Where the walk's draw sits.** Phase 1, after the money flows (5.1.1). WLD may prefer another
    place; the order inside the step is all this spec needs.
 10. **An outside node as a remote information source.** Not provided in version 1: INF records a

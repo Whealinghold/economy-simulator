@@ -263,7 +263,7 @@ checks in 11.1.
 | **Unit** | `bp`, `ticks`, `units`, `minor`, `count`, `years`, `share`, `name`, `flag` or `list` |
 | **Search** | the kind of the search range (5.1): `U`, `E<n>` (an anchor of 6.1), `I<nn>` (a derived condition of 6.4), or `-` for S and P rows (an S field may carry an `E<n>` anchor) |
 | **Grid** | the rule of 5.2: `geo`, `lin<step>`, `set:<a/b/c>` or `-` |
-| **Stage** | the stage that first searches it (7.3): `C1` to `C9`, or `-` |
+| **Stage** | the stage that first searches it (7.3): `C1` to `C9`, or `-` for a row that no stage searches (a P row, a `v1x` row, and the K and D rows of the fourteen later modules, 7.3.12) |
 | **Flags** | a space-separated subset of `in`, `chk`, `out`, `tbl`, `d`, `z`, `v1x`, `off=<v>` (4.2.1) |
 | **Moves** | the expected effects: `<fact>/<Measure>:<sign><src>` tokens, separated by `;` (4.4) |
 | **Loops** | the register entries it sits in: `L<nn>` and `D<nn>`, with `D<nn>=<Counter>` where the damper has a counter |
@@ -422,9 +422,10 @@ accepts both spellings.
 The rows are checked **in both directions** against the parameter-owner table
 (4.8, 11.1): every owner row has a registry row or a group that lists it, and every
 registry row names an owner row, except the fields the owner table does not hold: the
-solve options of VIA 11, the presentation-only fields and the fields that only the catalogue of `spec-config.md` 3.7 lists. The registry is
+solve options of VIA 11 and the presentation-only fields. The registry is
 also read **against the catalogue of `spec-config.md` 3.7**, field by field (11.1), so that a field the
-README table collapses (`RegionTaste.Scale`, `Taste.Role`) is not missed. The class of a row
+README table collapses is not missed (the rows `Taste.Role` and `RegionTaste.*` that this check found
+missing are in the README now). The class of a row
 is not derivable by a test, and a human decides it by the order of 4.3; what the test
 checks is that the decision was made.
 
@@ -467,8 +468,8 @@ words of this spec are fixed:
 | **U** | unknown | nothing supports a range. The search starts at the default and its neighbours and widens by the rule of 5.3 | the row's Search cell | By the widening rule only |
 
 Nearly every knob is **U**. That is a result of reading the specs, not a gap to be
-filled by invention: of the 105 K and D rows (76 D, 29 K) of section 6, **96 are U**, 7
-have a derived condition (I07, I11, I12, I18) and 2 have an evidence anchor (E5, 6.1; E1
+filled by invention: of the 165 K and D rows (108 D, 57 K) of section 6, **155 are U**, 8
+have a derived condition (I07, I11, I12, I18, I27) and 2 have an evidence anchor (E5, 6.1; E1
 sits on an S row, and E2 to E4 are leads, not anchors).
 A **placeholder** default (N-015) is a starting point and not a range; "calibrated
 once something has run" means a record (section 8) names a value and the runs it
@@ -660,7 +661,7 @@ admit"; 4.2.1). **K-AGT07**: the cap is `SpendMaxShare * (e * H / (e + H)) / 10 
 
 | ID | Key | Class | Owner | Unit | Search | Grid | Stage | Flags | Moves | Loops | Links |
 |----|-----|-------|-------|------|--------|------|-------|-------|-------|-------|-------|
-| K-BEL01 | World.BeliefStep | D | BEL 11 | bp | U | geo | C4 | chk off=- | P03/PriceRange:+S; P04/Offset.abs:? | L01 L04 D02 D21 | I01 A08 |
+| K-BEL01 | World.BeliefStep | D | BEL 11 | bp | U | geo | C4 | in off=- | P03/PriceRange:+S; P04/Offset.abs:? | L01 L04 D02 D21 | I01 A08 |
 | K-BEL02 | World.BeliefAdjustProb | D | BEL 11 | bp | U | lin1000 | C4 | off=max | P09/Dispersion:-H | L01 L13 D03 | I03 |
 | K-BEL03 | World.BeliefSignificance | K | BEL 11 | bp | U | lin250 | C4 | - | P04/Offset.abs:? | L02 | - |
 | K-BEL04 | World.BeliefStockLow | D | BEL 11 | bp | U | lin1000 | C4 | off=- | M05/StockCover:? | L04 L05 D07 | I03 A06 |
@@ -868,6 +869,108 @@ table and the table is data that is hashed (`spec-viability.md` 7.4). They carry
 flag `tbl` (4.2.1): they are inputs of the solver, so not `out`, and the effect is on the table, not on a rule. **K-VIA03** changes only what
 the report lists (`chk`: no table and no rule moves, only the lines of the report), and **K-VIA04** is a work cap that changes no result (class P by rule (1) of 4.3). **K-VIA05** (`Lanes`) is read by the programme (VIA 9.4) and is structure.
 
+#### 6.2.9 Storage, employment, settlements and tenure (STO, EMP, SET, LND)
+
+The knob rows of the fourteen modules of wave 5 (`spec-config.md` 3.1), in the order of the `Modules` row, and their structure groups in 6.3. A K or D row of these modules has the Stage `-`: no stage of 7.3 searches it (7.3.12). The class of a row is the order of 4.3, applied to the owner's own classification where that gives one; where it does not, the Notes say so.
+
+| ID | Key | Class | Owner | Unit | Search | Grid | Stage | Flags | Moves | Loops | Links |
+|----|-----|-------|-------|------|--------|------|-------|-------|-------|-------|-------|
+| K-EMP01 | Employer.MaxHires | D | EMP 13 | count | U | geo | - | off=max | - | L21 L22 D105=Unfilled | - |
+| K-EMP02 | Employer.WorkerShareBP | K | EMP 13 | bp | U | lin1000 | - | - | - | L148 D104 D108 | - |
+| K-EMP03 | Employer.HireYieldBP | K | EMP 13 | bp | U | lin1000 | - | - | - | - | - |
+| K-EMP04 | Employment.MaxOpen | D | EMP 13 | count | U | geo | - | off=max | - | L149 D110=TooMany | - |
+| K-SET01 | Settlements.BandBP | D | SET 3.4.2 | bp | U | lin500 | - | off=0 | - | L151 L152 D111 | - |
+| K-SET02 | Settlements.Dwell | D | SET 3.4.3 | ticks | U | geo | - | off=0 | - | L151 L152 D112=SettlementHeld | - |
+| K-LND01 | Tenure.RentStepBP | D | LND 5.5 | bp | U | geo | - | z off=0 | - | L155 D116 | - |
+| K-LND02 | Tenure.RentFloorBP | D | LND 5.5 | bp | U | geo | - | z off=0 | - | L155 D116 | - |
+| K-LND03 | Tenure.RentCeilingBP | D | LND 5.5 | bp | U | geo | - | off=max | - | L155 D116 | - |
+| K-LND04 | Tenure.MaxHolderShareBP | D | LND 6.1.2 | bp | U | geo | - | off=max | - | L158 D115 | - |
+| K-LND05 | Tenure.OwnUseExempt | S | LND 5.3.4 | flag | - | - | C1 | - | - | D120 | - |
+| K-LND06 | TenureTerm.Rent | S | LND 5.2 | minor | - | - | C2 | chk | - | L155 L156 | - |
+| K-LND07 | TenureTerm.Closed | S | LND 4.3 | flag | - | - | C1 | chk | - | L159 | - |
+| K-LND08 | Holding.ShareBP | S | LND 10 | bp | - | - | C2 | - | - | L157 L158 L160 | - |
+
+Notes. **Storage** has no knob row: `Base`, a class's `Mass` and `Bulk`, the lists and the class's `Needs` are structural choices of the pack (STO 12.4), grouped in 6.3 (S-STO01 to S-STO07). They carry `chk` (VIA 11 lists `modules.storage.*` as `no (a check)`: the rule `room_below_warm_job`, and the room is not in the programme) and `d`: a room that cuts a bid changes the count of admitted orders, which WLD 7.4.3 says of the storage module (D5 to D8). **K-EMP01 and K-EMP04** are D by rule (3) of 4.3: `MaxHires` is the Home of D105 (EMP-D2) and `MaxOpen` of D110 (EMP-D7), as `Merchants.MaxOpen` (K-MER01) is of D84; EMP's handoff calls `MaxOpen` a structural limit and the ordered test of 4.3 decides. Neither carries `d`: the labour round takes no word of the stream and a parameter that changes the positions posted moves no later word (EMP N-124), and `MaxOpen` fails a formation after the draws of its term, as K-MER01 does (4.2.1). **K-EMP02** is a knob although D104 and D108 name `WorkerShareBP`: they are a rule constant (no bidding up) and a visible lever (the share the circuit needs, EMP 11.3.2), and neither counts it. **K-SET01 and K-SET02** are the damper strengths of D111 and D112 with the off value 0 (no band, no dwell), and the default `Dwell` equals the welfare window by design (SET 3.4.3). SET-D3, the class floor (`RegionSettlement.Floor`, S-SET04), is a bound with no D number (STB 2.3) and a structural choice. No SET field carries `d`: the module takes no draw (a gated role changes the entrants through the role's own knobs, SET 6.4). **K-LND01 to K-LND04** are the damper strengths of D116 (the rent band and the bounded step, on L155) and D115 (the share cap, on L158); `RentStepBP` 0, `RentFloorBP` 0 and `MaxHolderShareBP` 10 000 are their off values and the default state (4.3.1: a calibration moves them away from off and never back), and `RentCeilingBP` is off at its highest legal value. **K-LND05** is the switch of D120 and so S by rule (2). **K-LND06 and K-LND08** are quantities of the setting that no damper counts (a rent per unit, a holder's share) and so S by rule (4), where LND's handoff calls them knobs; the dual `Rent` of the solver's row (VIA 10.2, LND 5.6) is the guide of a pack's rent and not a search range. **K-LND06 and K-LND07** carry `chk`: VIA 11 lists `modules.tenure.terms.*` as `no (a report)` (the warning `rent_off_dual`); the holdings are not read.
+
+#### 6.2.10 Polity, credit, infrastructure, risk and fiscal (POL, CRD, CAP, RSK, FIS)
+
+| ID | Key | Class | Owner | Unit | Search | Grid | Stage | Flags | Moves | Loops | Links |
+|----|-----|-------|-------|------|--------|------|-------|-------|-------|-------|-------|
+| K-CRD01 | Credit.ShieldTicks | D | CRD 8.2 | ticks | U | geo | - | z off=0 | - | L11 L45 L39 L63 D121 | - |
+| K-CRD02 | Credit.WriteOffTicks | D | CRD 8.5 | ticks | U | geo | - | z off=0 | - | L166 D125 | - |
+| K-CRD03 | Credit.MinPrincipal | K | CRD 14 | minor | U | geo | - | - | - | - | - |
+| K-CRD04 | Credit.MaxClaims | D | CRD 6.4 | count | U | geo | - | off=max | - | D128 | - |
+| K-CRD05 | Lend.RateBP | K | CRD 7.1 | bp | U | lin100 | - | - | - | L167 | - |
+| K-CRD06 | Lend.MaxTermTicks | S | CRD 10.3 | ticks | - | - | C2 | - | - | - | I24 I25 |
+| K-CRD07 | Lend.KeepTicks | D | CRD 10.3 | ticks | U | geo | - | z off=0 | - | L163 D124 | I24 |
+| K-CRD08 | Lend.ShareBP | D | CRD 10.3 | bp | U | geo | - | off=max | - | L163 L22 L31 L45 D124 | - |
+| K-CRD09 | Borrow.MaxRateBP | K | CRD 10.2 | bp | U | lin100 | - | - | - | L167 | - |
+| K-CRD10 | Borrow.MaxDebtTicks | D | CRD 5.3.3 | ticks | U | geo | - | off=max | - | L11 L45 L163 D123 | I25 |
+| K-CRD11 | Borrow.SlackTicks | K | CRD 10.2 | ticks | U | lin1 | - | - | - | - | I25 I26 |
+| K-CAP01 | FacilityClass.Decay | D | CAP 12.2 | units | U | geo | - | in z off=0 | - | L36 L21 L170 D130 | - |
+| K-CAP02 | FacilityClass.WearPerUse | D | CAP 12.2 | units | U | geo | - | in z off=0 | - | L36 L21 L170 D130 | - |
+| K-CAP03 | FacilityClass.BoostBP | S | CAP 12.2 | bp | - | - | C2 | in | - | L168 | - |
+| K-CAP04 | FacilityClass.Capacity | S | CAP 12.2 | units | - | - | C2 | in | - | - | - |
+| K-CAP05 | FacilityClass.Durability | S | CAP 12.2 | units | - | - | C2 | in | - | L170 | - |
+| K-FIS01 | Tax.Amount | K | FIS 5.1 | minor | U | geo | - | z | - | L174 L180 | - |
+| K-FIS02 | Tax.RateBP | K | FIS 5.1 | bp | U | geo | - | z | - | L174 L14 | - |
+| K-FIS03 | Tax.Exempt | D | FIS 5.1 | minor | U | geo | - | z off=0 | - | L174 L180 D137 | - |
+| K-FIS04 | Duty.RateBP | K | FIS 6.1 | bp | U | geo | - | - | - | L175 L178 | - |
+| K-FIS05 | Toll.Amount | K | FIS 7.1 | minor | U | geo | - | - | - | L179 | - |
+| K-FIS06 | Payout.Amount | K | FIS 8.1 | minor | U | geo | - | z | - | L175 | - |
+| K-FIS07 | Payout.Level | K | FIS 8.1 | minor | U | geo | - | z | - | L175 | - |
+| K-FIS08 | Purchase.Quantity | K | FIS 9.1 | units | U | geo | - | - | - | L176 L177 | - |
+| K-FIS09 | Purchase.LimitBP | K | FIS 9.1 | bp | U | geo | - | - | - | L177 | - |
+| K-FIS10 | Purchase.Hold | D | FIS 9.1 | units | U | geo | - | d z off=0 | - | L176 L177 D140=TreasuryOrdered | - |
+| K-FIS11 | Release.Quantity | K | FIS 9.1 | units | U | geo | - | - | - | L176 | - |
+| K-FIS12 | Release.LimitBP | K | FIS 9.1 | bp | U | geo | - | - | - | L176 | - |
+| K-FIS13 | Release.Reserve | D | FIS 9.1 | units | U | geo | - | d z off=0 | - | L176 D140=TreasuryOrdered | - |
+
+Notes. **POL** has no knob row: a tree and a membership are structure, and `StartMoney` has no effect until a reader (FIS) exists, so it is S at C2 with no range (6.3). **RSK** has none: a danger is a fact of a setting, and `StrikeBP`, `SeverityBP`, `Common` and the existence of a row are structural choices with no search range (RSK 12.5.1); the two scale slots are state and not rows (3.5 item 1). `Common` and the lists of rows carry `d` (S-RSK01 to S-RSK03): a common row draws every tick by configuration (D13, D15) and a plain row only when a shipment crosses it or a store is held (D14), so the count moves with them; `StrikeBP` and `SeverityBP` do not carry it, since a row's loss probability is at least 1 and the count does not depend on its value (RSK 11.4.1). **K-CRD01 to K-CRD11**: none carries `d` (CRD 12.2, N-124: the module takes no word of the stream). `ShieldTicks` (D121) has an interior optimum (CRD 8.2.2) and its default 0 is its off value; `WriteOffTicks` 0 is "never" (D125). `MaxClaims` is D by rule (3) as the Home of D128, a state bound and not a stabiliser of a loop (CRD's handoff calls it structural); `MaxTermTicks` is S by rule (4), a duration, and pairs with `KeepTicks` (I24); `SlackTicks` is read against the recipes' `Duration` (I25) and SAV's `SafetyTicks` may not fall below it (I26). `RateBP` and `MaxRateBP` have no default (0 is written, never defaulted), so their grid is `lin` and not `geo` (5.2). **K-CAP01 and K-CAP02** are the damper strengths of D130 on L36 and L21 (decay brings the accumulation down) and the **driver**, not a damper, of L170 (the same two fields, CAP-A5; off value 0, which is also the default); they carry `in` because VIA 11 lists `modules.infrastructure.*` as moving the table (the facility row and the gains at full condition; `Decay` and the repair are not read by the programme, and the flag follows the path, not the reading). `BoostBP`, `Capacity` and `Durability` are structural with an unknown range (CAP 12.2). No CAP field carries `d` (the module takes no draw). **FIS**: `Tax.Exempt` (D137), `Purchase.Hold` and `Release.Reserve` (D140) are damper strengths whose default 0 is the off value. `Purchase.Hold` and `Release.Reserve` carry `d`: they are the caps that decide whether a treasury's standing order exists at the tick, and a treasury's order is an item of D7 (WLD 7.3.1); FIS's handoff sets no `d` and calls a comparison "not paired" (N-124), which is the same fact stated without the flag. A quantity, a limit and an amount set a size or a price and are not `d` (4.2.1). The windows, targets, payers and scopes of the six kinds are structural (6.3). `Tax.Amount`, `Tax.RateBP`, `Payout.Amount` and `Payout.Level` have a default of 0 and take `z`.
+
+#### 6.2.11 Institutions, saving, technology, policy and insurance (ORG, SAV, TEC, PLC, INS)
+
+| ID | Key | Class | Owner | Unit | Search | Grid | Stage | Flags | Moves | Loops | Links |
+|----|-----|-------|-------|------|--------|------|-------|-------|-------|-------|-------|
+| K-ORG01 | Body.Places | D | ORG 9 | count | U | geo | - | d z off=0 | - | L183 L184 D144 | - |
+| K-ORG02 | Body.MaxTrainees | D | ORG 9 | count | U | geo | - | z off=max | - | L41 D20 | I23 |
+| K-ORG03 | Institutions.OwnUseBound | S | ORG 5.5.2 | flag | - | - | C1 | - | - | D146 | - |
+| K-ORG04 | Control.CapBP | S | ORG 6.1 | bp | - | - | C2 | chk | - | L181 | - |
+| K-ORG05 | Control.FloorBP | S | ORG 6.1 | bp | - | - | C2 | chk | - | L182 | - |
+| K-ORG06 | RateLimit.CapBP | S | ORG 6.1 | bp | - | - | C2 | - | - | - | - |
+| K-SAV01 | Saving.SafetyTicks | S | SAV 5.6.1 | ticks | - | - | C2 | d | - | - | I26 |
+| K-SAV02 | Saving.HurdleSpreadBP | D | SAV 5.5.2 | bp | U | geo | - | d off=0 | - | L36 L21 D149 | - |
+| K-SAV03 | Saving.CommitBandBP | D | SAV 5.5.3 | bp | U | geo | - | d off=0 | - | L188 D148 | - |
+| K-SAV04 | Saver.PrecautionShareBP | K | SAV 4.2 | bp | U | geo | - | d z | - | L45 D150 D151 | - |
+| K-SAV05 | Saver.PrecautionCapTicks | D | SAV 4.2 | ticks | U | geo | - | d off=max | - | L45 D150 | - |
+| K-SAV06 | Saver.HurdleBP | K | SAV 5.5.1 | bp | U | lin1000 | - | d | - | L36 L21 | - |
+| K-SAV07 | Saver.PaybackTicks | K | SAV 5.3 | ticks | U | geo | - | d | - | D153 | - |
+| K-SAV08 | Saver.RepairBelowBP | K | SAV 5.8 | bp | U | lin1000 | - | d | - | L189 | - |
+| K-TEC01 | TechField.CapBP | D | TEC 9.2 | bp | U | geo | - | off=- | - | L191 L88 D155=ClampedBP | - |
+| K-TEC02 | TechField.DoublingBP | K | TEC 9.2 | bp | U | geo | - | z | - | L191 | - |
+| K-TEC03 | TechField.TrendBP | K | TEC 9.2 | bp | U | geo | - | z | - | L192 | - |
+| K-TEC04 | TechField.DiscoveryBP | K | TEC 9.2 | bp | U | geo | - | z | - | L21 L22 | - |
+| K-TEC05 | TechField.StepBP | K | TEC 9.2 | bp | U | geo | - | - | - | L21 L22 | - |
+| K-TEC06 | TechField.CatchUpBP | K | TEC 9.2 | bp | U | geo | - | z | - | L194 | I27 |
+| K-TEC07 | TechField.Reach | K | TEC 9.2 | units | I27 | geo | - | - | - | L194 | I27 |
+| K-TEC08 | TechField.Base | S | TEC 9.2 | units | - | - | C2 | - | - | L191 | - |
+| K-PLC01 | PolicyActor.Every | D | PLC 7.2 | ticks | U | geo | - | off=1 | - | L195 L196 D161 | - |
+| K-PLC02 | Lever.MaxStep | D | PLC 6.2.2 | units | U | geo | - | z off=0 | - | L196 L198 D159=Stepped | - |
+| K-PLC03 | Reaction.Deadband | D | PLC 8.3.1 | units | U | geo | - | z off=0 | - | L195 D160=InBand | - |
+| K-PLC04 | Reaction.MaxAge | D | PLC 8.3.2 | ticks | U | lin1 | - | off=max | - | L196 D162=NoReading | - |
+| K-PLC05 | Reaction.Span | K | PLC 8.3.1 | units | U | geo | - | - | - | L195 | A17 |
+| K-PLC06 | Reaction.Move | K | PLC 8.3.1 | bp | U | lin100 | - | - | - | L195 | A17 |
+| K-PLC07 | Lever.Min | S | PLC 3.4.1 | units | - | - | C2 | - | - | D158=Clamped | - |
+| K-PLC08 | Lever.Max | S | PLC 3.4.1 | units | - | - | C2 | - | - | D158=Clamped | - |
+| K-PLC09 | Reaction.Target | S | PLC 8.3.1 | units | - | - | C2 | - | - | L195 | - |
+| K-INS01 | Insurance.ValueCapBP | D | INS 6.2 | bp | U | geo | - | off=max | - | L200 D166 | - |
+| K-INS02 | Underwrite.CoverBP | D | INS 13 | bp | U | geo | - | off=max | - | L84 L85 L93 L19 D164 | - |
+| K-INS03 | Underwrite.CapBP | D | INS 13 | bp | U | geo | - | off=max | - | L201 D165 | - |
+| K-INS04 | Underwrite.LoadingBP | S | INS 6.4 | bp | - | - | C2 | - | - | - | - |
+| K-INS05 | Underwrite.StoreRateBP | S | INS 6.4 | bp | - | - | C2 | - | - | - | - |
+
+Notes. **K-ORG01 and K-ORG02** are D by rule (3) as the Homes of D144 and D20; ORG's handoff calls them knobs (and `MaxTrainees` "a damper strength of D20"). `Places` carries `d`: a refusal moves D6 to D8 (ORG-N5; 7.2.3), and `MaxTrainees` does not, a training place being no order. The fields of a `Right` carry `d` as well (S-ORG03): a right is a refusal by design. `OwnUseBound` is the switch of D146 (S by rule (2)). `CapBP` and `FloorBP` of a control and a rate limit are **policy values**, a pack's data that a calibration reports and never searches; a clamp changes no count (EXP 7.2.3). **K-SAV01 to K-SAV08 and every SAV group** carry `d` (SAV 9.2, N-124): a target `S*` above the reserve lowers the budgets that admit an order (D7, D8) and a planned project changes the intents considered (D5), as soon as some household of a role with a block has `S*` above its reserve. `PrecautionShareBP` is the strength of the amplifier of L45 (SAV-A1) with the off value 0 and is a knob, since an `off=` is for class D only (4.2.1); `SafetyTicks` is S with a derived condition (I26), so its Search is `-` and the condition is in Links. **TEC**: the five rates are K, and `DoublingBP`, `TrendBP`, `DiscoveryBP` and `CatchUpBP` take `z` (the owner's default 0 is "off", and a `geo` grid is built on the pack's non-zero value, 5.2); `StepBP` and `Reach` are `required` with their rate above 0 and take no `z`; `CapBP` is D with `off=-` (it is `required`, so no value disables it and it can only be weakened); `Reach` has a derived condition (I27) and is its own Search; `Base` and `Recipes` are structural. No TEC field carries `d`: the module's one word is a construction word (draw D16, WLD 7.4.2) taken only when a field has `DiscoveryBP` above 0, and 0 is never a grid level (4.2.1, K-INF02). No TEC field carries `in` or `chk`: VIA 11 lists `modules.technology.*` under "Not read" (a gain is 0 at tick 0). **PLC**: `Every`, `MaxStep`, `Deadband` and `MaxAge` are the damper strengths of D161, D159, D160 and D162; `Span` and `Move` enter a run only as the gain `Move / Span`, up to the truncation (A17); `Min` and `Max` are the mandate, a policy shape and so S by rule (2) though D158 counts them, and `Target` is the setting's goal. No PLC field carries `d`: the built-in policies take no word, and a consumer's `Policy` that draws is outside the table (PLC 7.3.1, L120). `MaxAge` is `lin1` because its owner default is `required` with a lowest legal value of 0 (5.2). **INS**: `ValueCapBP`, `CoverBP` and `CapBP` are the damper strengths of D166, D164 and D165 (INS 20.3); the posted prices and every quantity are structural. No INS field carries `d` (the module takes no word, INS 12.2).
+
 ### 6.3 Structure groups
 
 The S and P fields of a scope that need no row of their own. A group row names the
@@ -933,7 +1036,7 @@ schedule, the knots of an abundance curve). The groups are the registry's answer
 | S-RES04 | AbundanceKnot | Share, Factor | D | RES 4.7 | C9 | in |
 | S-RES05 | Endowment | Region, Resource, Capacity, Initial, RegenScaleBP | S | RES 3.3.1 | C2 | in |
 | S-RES06 | SeasonRegen | Season, BP | S | RES 4.5 | C2 | in |
-| S-CFG01 | Modules | Information, Resources, Transport, External, Merchants, Migration, Population, Subsistence | S | INF 8; RES 3.3; TRN 3.1; EXT 3.1; MER 13; MIG 11; POP 8; SUB 3.2 | C1 | - |
+| S-CFG01 | Modules | Information, Resources, Transport, External, Merchants, Migration, Population, Subsistence, Settlements, Storage, Employment, Tenure, Credit, Risk, Infrastructure, Insurance, Polity, Fiscal, Institutions, Policy, Saving, Technology | S | INF 8; RES 3.3; TRN 3.1; EXT 3.1; MER 13; MIG 11; POP 8; SUB 3.2; SET 8; STO 12.1; EMP 13; LND 10; CRD 14; RSK 12.1; CAP 12.1; INS 13; POL 8; FIS 14; ORG 9; SAV 10; TEC 9.1; PLC 10 | C1 | - |
 | S-INF01 | Role | Informed | S | INF 6.1 | C1 | d |
 | S-EXT01 | External | Nodes | S | EXT 3.1 | C1 | - |
 | S-EXT02 | OutsideNode | Region, Lines, Gates | S | EXT 3.1 3.3 3.2.4 | C1 | - |
@@ -950,6 +1053,74 @@ schedule, the knots of an abundance curve). The groups are the registry's answer
 | S-MIG03 | Role | Fixed | S | MIG 3.1 | C1 | d |
 | S-MER01 | Merchant | Modes, Consigns | S | MER 3.2 | C1 | d |
 | S-MER02 | Role | Merchant | S | MER 3.2 | C1 | - |
+| S-MON03 | FlowTarget | Kind, Region, Role | S | MON 4.1 | C8 | - |
+| S-STO01 | Storage | Roles, Classes | S | STO 12.1 | C1 | chk d |
+| S-STO02 | Storage | Base | S | STO 12.1 | C2 | chk d |
+| S-STO03 | RoleRoom | Role, Stores | S | STO 12.1 | C1 | chk d |
+| S-STO04 | RoleRoom | Base | S | STO 12.1 | C2 | chk d |
+| S-STO05 | StoreClass | ID, Needs | S | STO 3.2 12.1 | C1 | chk d |
+| S-STO06 | StoreClass | Mass, Bulk | S | STO 3.2 12.1 | C2 | chk d |
+| S-STO07 | Capacity | Mass, Bulk | S | STO 12.1 | C2 | chk d |
+| S-STO08 | FlowTarget | Store | S | STO 7.1.2 12.3 | C1 | - |
+| S-EMP01 | Role | Hireable, Employer | S | EMP 13 | C1 | - |
+| S-EMP02 | Employer | Recipes | S | EMP 13 | C1 | - |
+| S-SET01 | Settlements | Classes, Regions | S | SET 8 | C1 | - |
+| S-SET02 | SettlementClass | ID, Enter, Flags, Limits | S | SET 8 | C1 | - |
+| S-SET03 | ClassLimit | Name, Value | S | SET 8 | C1 | - |
+| S-SET04 | RegionSettlement | Region, ThresholdBP, Floor | S | SET 8 | C1 | - |
+| S-SET05 | Role | Needs, Ceiling | S | SET 8 | C1 | - |
+| S-LND01 | Tenure | Terms, Holdings | S | LND 10 | C1 | - |
+| S-LND02 | TenureTerm | Region, Resource | S | LND 10 | C1 | chk |
+| S-LND03 | Holding | Region, Resource, Holder | S | LND 10 | C1 | - |
+| S-POL01 | Polity | Jurisdictions, Members | S | POL 8 | C1 | - |
+| S-POL02 | Jurisdiction | ID, Parent, Seat | S | POL 8 | C1 | - |
+| S-POL03 | Jurisdiction | StartMoney | S | POL 8 | C2 | - |
+| S-POL04 | Member | Region, Jurisdiction | S | POL 8 | C1 | - |
+| S-CRD01 | Role | Credit | S | CRD 14 | C1 | - |
+| S-CRD02 | CreditTerms | Lend, Borrow | S | CRD 4.2 | C1 | - |
+| S-CAP01 | Infrastructure | Classes, Initial | S | CAP 12.1 | C1 | in |
+| S-CAP02 | FacilityClass | ID, Kind, Modes, Resource, Store, Needs | S | CAP 12.2 3.1 | C1 | in |
+| S-CAP03 | InitialFacility | Region, Class, Toward, Role | S | CAP 3.4.2 | C1 | in |
+| S-CAP04 | InitialFacility | Count | S | CAP 3.4.2 | C2 | in |
+| S-CAP05 | Recipe | Needs, Builds, Repairs | S | CAP 4.1.1 | C1 | - |
+| S-CAP06 | FacilityBuild | Class, Toward | S | CAP 4.1.1 | C1 | - |
+| S-CAP07 | FacilityRepair | Class | S | CAP 4.1.1 | C1 | - |
+| S-CAP08 | FacilityRepair | Units | S | CAP 4.1.1 | C2 | - |
+| S-RSK01 | Risk | Routes, Stores | S | RSK 12.1 | C1 | d |
+| S-RSK02 | RouteRisk | From, To, Mode, Common | S | RSK 3.2.1 3.2 | C1 | d |
+| S-RSK03 | StoreRisk | Region, Class, Common | S | RSK 3.2.2 3.2 | C1 | d |
+| S-RSK04 | RouteRisk | StrikeBP, SeverityBP | S | RSK 3.2 | C2 | - |
+| S-RSK05 | StoreRisk | StrikeBP, SeverityBP | S | RSK 3.2 | C2 | - |
+| S-FIS01 | Fiscal | Taxes, Duties, Tolls, Payouts, Purchases, Releases | S | FIS 14 | C1 | - |
+| S-FIS02 | Tax | ID, Authority, Window, Target, Per | S | FIS 14 3.1 | C1 | - |
+| S-FIS03 | Duty | ID, Authority, Window, Region, Commodity, Payer, Scope | S | FIS 14 3.1 | C1 | - |
+| S-FIS04 | Toll | ID, Authority, Window, On, Mode | S | FIS 14 3.1 | C1 | - |
+| S-FIS05 | Payout | ID, Authority, Window, Target, Commodity, NotIncome, Per | S | FIS 14 3.1 | C1 | - |
+| S-FIS06 | Purchase | ID, Authority, Window, Commodity | S | FIS 14 3.1 | C1 | - |
+| S-FIS07 | Release | ID, Authority, Window, Commodity | S | FIS 14 3.1 | C1 | - |
+| S-FIS08 | Window | Start, Until, Seasons | S | FIS 14 | C2 | - |
+| S-FIS09 | FlowTarget | Jurisdiction | S | FIS 14 | C1 | - |
+| S-ORG01 | Institutions | Bodies, Controls, RateLimits | S | ORG 9 | C1 | - |
+| S-ORG02 | Body | ID, Roles, Regions, Jurisdictions, Needs | S | ORG 9 | C1 | - |
+| S-ORG03 | Right | ID, Body, Activity, Subject, Region, Jurisdiction, Who | S | ORG 9 | C1 | d |
+| S-ORG04 | Control | ID, Commodity, Region, Jurisdiction | S | ORG 9 | C1 | chk |
+| S-ORG05 | RateLimit | ID, Region, Jurisdiction | S | ORG 9 | C1 | - |
+| S-ORG06 | Institutions | Rights | S | ORG 9 | C1 | d |
+| S-SAV01 | Role | Saver | S | SAV 10 | C1 | d |
+| S-SAV02 | Saver | Worth | S | SAV 10.2 | C1 | d |
+| S-SAV03 | ProjectWorth | Class, PerTick, Count | S | SAV 10.2 | C2 | d |
+| S-TEC01 | Technology | Fields | S | TEC 9.1 | C1 | - |
+| S-TEC02 | TechField | ID, Recipes | S | TEC 3.1 | C1 | - |
+| S-PLC01 | Policy | Actors | S | PLC 10 | C1 | - |
+| S-PLC02 | PolicyActor | ID, Jurisdiction, Policy, ReadsRegions, Levers, Schedule, Cycle, Rules | S | PLC 10 | C1 | - |
+| S-PLC03 | Lever | ID, Kind, Flow, From, To, Mode, Against, MayClose | S | PLC 3.4 3.5 | C1 | - |
+| S-PLC04 | ScheduleStep | Lever, At, BP, Closed | S | PLC 8.2 | C1 | - |
+| S-PLC05 | Reaction | Lever, Gauge, Commodity, Raise | S | PLC 8.3 | C1 | - |
+| S-INS01 | Insurance | PayoutTicks, MinSum, MaxPolicies, MaxCoverRequests | S | INS 13 | C2 | - |
+| S-INS02 | Role | Cover | S | INS 13 | C1 | - |
+| S-INS03 | CoverTerms | Underwrite, Insure | S | INS 4.2 | C1 | - |
+| S-INS04 | Underwrite | ShareBP | S | INS 13 | C2 | - |
+| S-INS05 | Insure | MinLossBP, RuinShareBP, MaxLoadingBP, MinCoverBP, StoreShareBP, MaxStoreRateBP | S | INS 13 | C2 | - |
 | S-PRS01 | Presentation | Label, UnitLabel, DistanceLabel | P | CFG 8.3 | - | - |
 
 Notes. **S-GDS03, S-REG05, S-VIA01, S-VIA02** are `out`: the table of a
@@ -958,7 +1129,9 @@ FR-REF-007). **S-PRS01** is the class P group: the presentation-only fields
 (`spec-config.md` 8.3), which are not rows of the owner table and are not checked
 against it (the coverage check is one-directional for them). **S-SCL02** carries `d`
 because the households of a group fix the number of agents and so the number of
-creation draws (WLD 7.3, D1 and D10). **S-MIG01**: `MoveSpeed` is a *gauge* (A07). **Fields that a damper entry also names** and that define an identity, an order or a memory are S by rule (2) of 4.3, which is applied before rule (3): `Role.Closed` (D36), a want's `Rank` (D31) and `OutsideSide.Window` (D65) define identity, order and the memory of a line, and a calibration does not move them (C1 or C2). **S-AGT03** (`BasketTolerance`) only decides whether a configuration is accepted (`ErrBasketMismatch`) and changes no result; it is kept S at C1 with the reference basket, not P, because it is in the hash. **S-TRN04** is a quantity staged at C2 with the other quantities of the mode. **S-CUR02** (`ReferenceBasket`) is a calibration anchor and not a live value (CUR 5.4): it is not solver output (it has no `out`), the solver reads the upkeep and the reference prices (S-AGT01, S-GDS03) and not the field, and I22 checks the field against them. **S-AGT05** (`StartStock`) has no `in`: the warm start overrides a role's defaults for money and inventory (VIA 3.3 item 3). **S-AGT06** is `Role.Upkeep`, the owner row `Upkeep` with the README remark "also Role, replacing the world's" (a pair of its own, 4.7), and VIA 11 lists `role.<id>.upkeep`. **S-GDS04, S-GDS05, S-AGT07, S-PRO06 and S-VIA03** are what is left of rows split to follow the published list of VIA 11 (4.2.1): `Raw` is read and `Mass` and `Bulk` are not, `Recipes` is read and `Trades` and `Strategy` are not, `TraineeEligible` is not read, and `Pools` is seeded and not written. **S-DEM05** and **S-DEM06** are the `Tastes[]` and `RegionTastes[]` of `spec-config.md` 3.7; the README owner table has no row for `Taste.Role` or for the `RegionTaste` fields (owed, 23, X7), so the registry follows CFG 3.7 here.
+creation draws (WLD 7.3, D1 and D10). **S-MIG01**: `MoveSpeed` is a *gauge* (A07). **Fields that a damper entry also names** and that define an identity, an order or a memory are S by rule (2) of 4.3, which is applied before rule (3): `Role.Closed` (D36), a want's `Rank` (D31) and `OutsideSide.Window` (D65) define identity, order and the memory of a line, and a calibration does not move them (C1 or C2). **S-AGT03** (`BasketTolerance`) only decides whether a configuration is accepted (`ErrBasketMismatch`) and changes no result; it is kept S at C1 with the reference basket, not P, because it is in the hash. **S-TRN04** is a quantity staged at C2 with the other quantities of the mode. **S-CUR02** (`ReferenceBasket`) is a calibration anchor and not a live value (CUR 5.4): it is not solver output (it has no `out`), the solver reads the upkeep and the reference prices (S-AGT01, S-GDS03) and not the field, and I22 checks the field against them. **S-AGT05** (`StartStock`) has no `in`: the warm start overrides a role's defaults for money and inventory (VIA 3.3 item 3). **S-AGT06** is `Role.Upkeep`, the owner row `Upkeep` with the README remark "also Role, replacing the world's" (a pair of its own, 4.7), and VIA 11 lists `role.<id>.upkeep`. **S-GDS04, S-GDS05, S-AGT07, S-PRO06 and S-VIA03** are what is left of rows split to follow the published list of VIA 11 (4.2.1): `Raw` is read and `Mass` and `Bulk` are not, `Recipes` is read and `Trades` and `Strategy` are not, `TraineeEligible` is not read, and `Pools` is seeded and not written. **S-DEM05** and **S-DEM06** are the `Tastes[]` and `RegionTastes[]` of `spec-config.md` 3.7; the README owner table has their rows since the integration of the fourteen later modules (they were owed, 23, X7), so these two groups are owner pairs like the others.
+
+**The groups of the fourteen later modules** (S-MON03 to S-INS05) follow the order of the `Modules` row. **S-CFG01** lists the fourteen names beside the eight earlier ones, so every `Modules` field of the owner table is a group field; the order of the names is the order of the hash (`spec-config.md` 3.1, 8.2). **S-MON03** is the three old fields of `FlowTarget` (MON owns the type; STO owns `Store`, S-STO08, and FIS owns `Jurisdiction`, S-FIS09, F10); the new kinds `stores` and `treasury` are values of `Kind`, not fields. **The flags follow VIA 11 and WLD 7.3.1.** `chk`: `modules.storage.*` (S-STO01 to S-STO07), `modules.institutions.control.<id>.*` (S-ORG04 and K-ORG04, K-ORG05) and `modules.tenure.terms.*` (S-LND02, K-LND06, K-LND07), each `no (a check)` or `no (a report)`; `in`: `modules.infrastructure.*` (S-CAP01 to S-CAP04 and K-CAP01 to K-CAP05). The other ten modules are under "Not read" and carry neither (the technology gain is 0 at tick 0). The `Recipe.Needs`, `Builds`, `Repairs` of S-CAP05 and the build and repair clauses (S-CAP06 to S-CAP08) carry no flag: no path of the first table of VIA 11 names a recipe's `needs`, `builds` or `repairs`, and the table says that a field no row names is not read. `d`: the room (S-STO01 to S-STO07, WLD 7.4.3), the rows and the `Common` of the risk module (S-RSK01 to S-RSK03), the fields of a right (S-ORG03, S-ORG06) and every saving field (S-SAV01 to S-SAV03, N-124); nothing else. **Stage:** C1 identity, topology and lists, C2 quantities of the setting (a room, a rent, a rate of danger, a limit, a window of ticks), as for the earlier groups (7.3.12). **S-FIS02 to S-FIS07** repeat the fields that the six kinds share (`ID`, `Authority`, `Window`) one group per kind, since a group has one scope token (4.8); the `Window` struct is S-FIS08. **S-POL03** (`StartMoney`) is S at C2 with no range until a reader exists.
 
 ### 6.4 Interactions: the pairs that must move together
 
@@ -994,6 +1167,10 @@ together).
 | I21 | Relief and entry draw on one pool in time: entrants take at most `EntryPoolShare` of it, relief is `PoolRelease` of it, and the default keeps at least half for relief | cond | `spec-spawner.md` 7.3; `spec-estates.md` 2.6; N-082 | EntryPoolShare, PoolRelease |
 | I22 | A region's `ReferenceBasket` equals the cost of the baseline `Upkeep` plus its `ExtraUpkeep` at its effective reference prices within `BasketTolerance` (`ErrBasketMismatch`) | rule | `spec-config.md` 7.4.1; `spec-currency.md` 5.3 | Upkeep, ExtraUpkeep, ReferencePrice, ReferenceBasket |
 | I23 | The traineeship throttle is `trainers * MaxTrainees / TrainingTicks`; a trainer's gain per trainee-tick depends on `TraineeYield`, `TeachingLoad` and the wage; training pays only above a break-even `TraineeYield` | cond | `spec-skill-barriers.md` 4.3, 4.4, 4.9; `spec-production.md` 8.3 | TrainingTicks, MaxTrainees, TeachingLoad, TraineeYield |
+| I24 | A lender with no recipe and no money flow that targets it needs `KeepTicks` at least its `MaxTermTicks`: below it the lender lends money it must eat before the money returns (`lender_keep_below_term`) | warn, cond | `spec-credit.md` 10.3, 15.2 | KeepTicks, MaxTermTicks |
+| I25 | A borrower's request has the horizon `Duration` plus 1 plus `SlackTicks` (plus 1 more where the inputs cannot be bought at once, `Late`): some lender's `MaxTermTicks` must reach it (`term_exceeds_lenders`) and so must `MaxDebtTicks` of the borrower role (`cap_below_horizon`) | warn, cond | `spec-credit.md` 10.2, 15.2 | SlackTicks, Duration, MaxTermTicks, MaxDebtTicks |
+| I26 | A role with a `Saver` block and a `Borrow` block has `SafetyTicks` at least its `SlackTicks` (`safety_below_slack`), so that the default borrower finds no gap for a funded project (FR-SAV-023); a role with a `Saver` block alone is not constrained | warn, cond | `spec-saving-and-investment.md` 6.1.1, 11.2; `spec-credit.md` 10.2 | SafetyTicks, SlackTicks |
+| I27 | A field with `CatchUpBP` above 0 has contact only between ordinary regions at a finite distance below `Reach`, with the weight `(Reach - d) * 10 000 / Reach` and 0 at `Reach`; `Reach` is read in the pack's distance unit (A07), and the warning `diffusion_no_contact` says that no pair is within it | warn, cond | `spec-technology.md` 4.5.1, 10.2 | Reach, CatchUpBP, Distance |
 
 ### 6.5 Aliases and gauges: what the facts cannot tell apart
 
@@ -1022,6 +1199,7 @@ gives the integer test that confirms or refutes an alias on a screen.
 | A14 | alias | `PoolRelease` and `ReliefBelow` | relief paid on the gap of each household (`spec-estates.md` 2.6, `need_i`), while the pool lasts | searches `PoolRelease` first (it bounds the drain), then `ReliefBelow` |
 | A15 | alias | the knots of a schedule and its region multiplier | a schedule's level; its slopes set the gain (D46) | searches the multiplier (a scalar) and leaves the knots to the pack's demography |
 | A16 | alias | the knots of `Resource.Abundance` and the curve they draw | one yield curve per resource; a flat curve is the default (4.3.1) | searches no knot: the curve is the pack's, and a calibration moves the yield only through `RateBP` and `PlanShareBP` (I12) |
+| A17 | alias | `Reaction.Span` and `Reaction.Move` | one gain `Move / Span` per decision (the step is `trunc(e * Move / Span)`, PLC 8.3.1): the facts see the quotient and, through the truncation, the pair only at the margin | searches the gain as a composite factor and fixes `Span` by structure (the gauge's own unit); `Move` then carries the gain (the bound of the loop is on the gain, PLC-A1) |
 
 ### 6.6 Retired rows
 
@@ -1150,7 +1328,7 @@ and `PerPointSeeds`), because a change that moves a draw count leaves the runs
 unpaired (WLD 7.6.1); the feasible set is the same set operation on those
 distributions' pass counts. A paired comparison is used only for a knob that moves
 no count, and, when CHK offers the read of the stream (EXP 7.3.2, without which
-`Pair` is refused), the alignment horizon is recorded (EXP 7.3).
+`Pair` is refused), the alignment horizon is recorded (EXP 7.3). A binding right of the institutions module is unaligned from its first refusal (a refusal moves D6 to D8, a clamp changes no count, ORG-N5; EXP 7.2.3): the fields of a `Right` carry `d` (S-ORG03), as does `Places` (K-ORG01), so the knobs of that module are compared as distributions too.
 
 7.2.4. **Confirm.** One experiment: the chosen configuration (the base with the
 overlay of the choice) and, as a **control**, the base, each over the confirm seeds
@@ -1328,6 +1506,19 @@ the new value on a fresh block and then every stage between them, recorded as
 H facts, because the warm table is stale (I19). A change to **any** document of the pack
 (an S row at C1 or C2, a unit, or a K or D value the pack itself sets) changes the lineage
 (9.2) and **every stage starts again from C1** (C1 is `Check` and runs no tick).
+
+7.3.12. **The fourteen later modules.** The K and D rows of the modules of wave 5 (6.2.9 to
+6.2.11: 28 K and 32 D rows) carry the Stage `-`: no stage of this table searches them. A
+stage is the one whose facts need a knob, and none of the facts of STY has a band that
+these knobs move: the scenarios of the modules are harness tests or reports (STY 5.11, S91 to
+S165) and STY-W07 is a report fact. A pack that wants one of them searched adds a stage after
+C9 in the same change that extends the closed Stage set of 4.2 and the check of 11.1, which
+no row does today. The counts of the table above (the 16 BEL rows of C4a and the others) are
+unchanged, and a K or D row at Stage `-` is no factor of a screen until it has a stage. The
+S rows of the modules are staged as the others: C1 for identity, topology and lists, C2 for
+the quantities of the setting (a room, a rent, a rate of danger, a share, a limit, a mandate)
+and the policy values of a control, which are a pack's data.
+
 
 ### 7.4 The stop rules
 
@@ -1703,7 +1894,7 @@ collinear columns (or one of them must be dormant), and if they do not, the grou
 is wrong and is **corrected as a finding**. A gauge (A07 to A09) is not tested by the
 alias test; it is tested by a **scaling check** at C1 (every member scaled together
 leaves the run unchanged up to the rounding the row names), a hand test the author
-makes once.
+makes once. The alias of a later module is tested as the earlier ones are: A17 (`Span` and `Move` of PLC) says that the facts see only the gain `Move / Span` up to the truncation, so the two columns of a screen must be collinear (or one dormant), and a calibration searches the gain as a composite factor.
 
 ### 10.4 Dormant knobs
 
@@ -1766,7 +1957,7 @@ list, because IND has none):
 | rows | a knob row has not 12 cells or a group row not 7 | FR-CLB-001 |
 | unique IDs | an ID repeats | FR-CLB-101 |
 | coverage, owner to registry | a pair (scope token, parameter) of the owner table, or of its `(also <Scope>` remark (`Role.Upkeep`), is neither a knob row's key nor a field of a group of that scope (4.7, 4.8) | FR-CLB-002 |
-| coverage, registry to owner | a key or a group field names no owner row, outside the scopes `Solve option` and `Presentation` and the fields that only CFG 3.7 lists (`RegionTaste.*`, `Taste.Role`: owed, 23) | FR-CLB-002 |
+| coverage, registry to owner | a key or a group field names no owner row, outside the scopes `Solve option` and `Presentation` (the catalogue-only fields `Taste.Role` and `RegionTaste.*` are owner rows now) | FR-CLB-002 |
 | coverage, CFG 3.7 | a field name of the catalogue of `spec-config.md` 3.7 (a field not marked (p)) is neither a registry key nor a group field, or a field listed inside a nested table of the catalogue is under no scope of that table's name | FR-CLB-002 |
 | class | a class is not K, D, S or P | FR-CLB-003 |
 | `off=` | a D row has no `off=`, or a non-D row has one | FR-CLB-103 |
@@ -1977,7 +2168,7 @@ A summary, by file; the exact change of each row is in section 23.
 |----|------|-----|
 | `specs/README.md` | a sentence under "Parameter owners" that the **class, the kind of range, the expected effects and the interactions** of each row are in `spec-calibration.md` section 6, found by (scope token, parameter); the rows `Taste.Role` and `RegionTaste` (`Region`, `Want`, `Scale`) that `spec-config.md` 3.7 lists and the table lacks | the "ranges" of the roadmap row; a column would restate the owners' bounds and drift (section 4.5); the registry test reads CFG 3.7 too |
 | `spec-config.md` | 9.2: the parameter registry has a second reader, the registry test of CLB 11.1; 9.3 gap list: "the solve options are rows of CLB's registry"; 6.2: the experiment path of a key is the snake-case file spelling of `<Scope>.<Field>` | FR-CFG-047; N-102 |
-| `spec-viability.md` | 11: the sentence "rows in the parameter-owner table" becomes "rows of the registry of `spec-calibration.md`" (6.2.8); and two clarifications of **the list of the configuration paths the programme reads**, which VIA 11 now publishes and the registry follows (4.2.1): whether `world.belief_step` moves the table (6.4 raises a seed price to the floor, the list says `no (a check)`) and whether a `.*` row names every field of its table | EXP open question 7 is answered by the list; `stale_warm_start` is EXP's to specify (EXP 14.4) |
+| `spec-viability.md` | 11: the sentence "rows in the parameter-owner table" becomes "rows of the registry of `spec-calibration.md`" (6.2.8); and two clarifications of **the list of the configuration paths the programme reads**, which VIA 11 now publishes and the registry follows (4.2.1): whether `world.belief_step` moves the table (met: 6.4 raises a seed price to the floor, and the list says `yes (a price at the floor only)`, so K-BEL01 is `in`) and whether a `.*` row names every field of its table | EXP open question 7 is answered by the list; `stale_warm_start` is EXP's to specify (EXP 14.4) |
 | `spec-stylised-facts.md` | 7.3.1: an edge clause; 7.3.3: the file name of the stability record; 10.3: where M06, P08, S06, G01 and W05 are set (8.2, 10.2 and the working thresholds are met) | the edge default has one neighbour; one stability record and one home |
 | `spec-stability.md` | 9 (the checklist): a step after 9.9 "**classify each new tunable and add its registry row** (`spec-calibration.md` 4.3)"; L142 and D97, whose wording ("the held-out check") the gate of STY 8.2 contradicts; the entries of 17 are merged (L139 to L142, D93, D95 to D98, S88 to S90) | FR-CLB-004 |
 | `spec-indicators.md` | 9.1: a **field column**, a closed list of the result fields of each preset (without `UpkeepShortfall`, which is an OBS event) | the registry test of 11.1 |
@@ -2134,7 +2325,7 @@ library, a default or a band (N-027).
 
 | Script | Output | What it does |
 |--------|--------|--------------|
-| `registry.py` | `registry.out` | parses the registry of section 6 as plain text and runs the checks of 11.1 against the owner table of `specs/README.md`, the catalogue of `spec-config.md` 3.7, the facts of STY, the register of STB, the presets of IND and the event table of the rules: cells, closed sets, references, owners, `z` and `geo` against the owner's default and bound, the off number and the cut, `out`, the `in` and `chk` flags against the first table of VIA 11, and **coverage of all 257 owner pairs (the 256 rows of the table and the `(also Role` remark of `Upkeep`) both ways and of the fields of the catalogue** |
+| `registry.py` | `registry.out` | parses the registry of section 6 as plain text and runs the checks of 11.1 against the owner table of `specs/README.md`, the catalogue of `spec-config.md` 3.7, the facts of STY, the register of STB, the presets of IND and the event table of the rules: cells, closed sets, references, owners, `z` and `geo` against the owner's default and bound, the off number and the cut, `out`, the `in` and `chk` flags against the first table of VIA 11, and **coverage of all 549 owner pairs (the 548 rows of the table and the `(also Role` remark of `Upkeep`) both ways and of the fields of the catalogue** |
 | `refs.py` | `refs.out` | the spec's own mechanical checks: requirement IDs defined and referenced, section references, files named, no shell-quoting residue, no setting words |
 | `grid.py` | `grid.out` | the grid rule of 5.2 in integers: half to even, `geo`, `lin`, the cut, the skip of an invalid level, the edge record, a `z` row at 0 and the overflow error; 20 000 random (base, bound) cases check the levels are ascending, unique, in bounds and contain the base; the table of 19.1 |
 | `stop.py` | `stop.out` | the exact binomial arithmetic of the stop rules: SR2 at 10 and 50 seeds, the joint pass of 9, 27, 45 and 63 conjuncts, the winner's curse of a search among 16 and 64 points, attempts |
@@ -2534,7 +2725,7 @@ search blocks, 7.3.1 `in sample`, 10.2 working thresholds; REF 4.1 `calibrated/`
 |------|---------|--------|
 | `doc/specs/README.md` | Index and reading order | add `spec-calibration.md` (core): "The registry of tuning knobs: one row for each tunable and solve option, classified as a knob, a damper strength, a structural choice or presentation, with its owner, its kind of range (a validation bound is never a search range; nearly every search range is unknown), its grid and neighbours, its expected effects with sign and source, its loops and the pairs that must move together; the procedure that calibrates a setting against the stylised facts (search blocks, screen, explore, choose, confirm; stages C0 to C9; stop rules), the record, the packs, sensitivity and identifiability, `FR-CLB`/`NFR-CLB`"; reading order after `spec-experiments.md` |
 | | Requirement IDs table | the `CLB` row: "exists; Requirements section written (FR-CLB-001 to 091 and 100 to 109, NFR-CLB-001 to 005); core; no `Config` field; all procedure constants are placeholders" |
-| | Parameter owners | one sentence under the header: "The class, the kind of range, the expected effects and the interactions of each row are in `spec-calibration.md` section 6, found by (scope token, parameter)."; and the rows `Role` (scope `Taste`) and `Region`, `Want`, `Scale` (scope `RegionTaste`), owner `spec-demand.md` section 9, which `spec-config.md` 3.7 lists and the table lacks |
+| | Parameter owners | one sentence under the header: "The class, the kind of range, the expected effects and the interactions of each row are in `spec-calibration.md` section 6, found by (scope token, parameter)."; and the rows `Role` (scope `Taste`) and `Region`, `Want`, `Scale` (scope `RegionTaste`), owner `spec-demand.md` section 9, which `spec-config.md` 3.7 lists (met: the table has them) |
 | | Decisions taken | rows: *Where is the registry of knobs?* In `spec-calibration.md` 6; the owner table is not given a column (4.1). *What is a calibration for?* Feasibility and minimal change, never an optimum (3.4). *Which seeds may a calibration choose on?* Search blocks of 100 from 101, one choice each; the confirm on STY's setting seeds 1 to 50 (REF 8.2); never the gate (7.1); a hold-out 51 to 60 is a SHOULD of REF 8.2 and no band is set from it. *What transfers between settings?* The procedure, the conditions and the regime thresholds; defaults and priors as starting points; no band, record or table (9.3) |
 | | Glossary | knob, damper strength, structural choice, registry (of knobs), search range, evidence anchor, derived condition, base value, grid (of a knob), neighbour, edge (of a grid), screen, screened in, dormant, invisible, alias group, gauge, composite (knob), search block, confirm seeds, feasible region, minimal change, grid distance, Pareto set, known miss, working target, working threshold, calibration overlay, calibration record, lineage, re-entry, stage (of a calibration), attempt, off value, structure group, scope token, overlay document, claim set, sensitivity matrix, scaling check, stage stop, program stop; the terms **gate**, **hold-out**, **finding**, **stability record**, **elasticity** and **effect range** are used as STY, EXP and IND define them and are not redefined |
 | `doc/documentation_index.md` | rows | `specs/spec-calibration.md` and `specs/models/clb/` |
@@ -2545,7 +2736,7 @@ search blocks, 7.3.1 `in sample`, 10.2 working thresholds; REF 4.1 `calibrated/`
 | `doc.go` (glossary) | | the terms above |
 | `doc/specs/spec-config.md` | 9.2, 9.3 | 9.2: the registry has a second reader (CLB 11.1); the solve options are rows of CLB's registry (FR-CFG-047 stays); 9.3: a line "the solve options are CLB registry rows" |
 | | 6.2 | the experiment path of a key is the snake-case file spelling of `<Scope>.<Field>` (CLB 4.2; N-102) |
-| `doc/specs/spec-viability.md` (A) | 11 (the sentence before the bounds) | "They are rows in the parameter-owner table with the scope 'Solve option'" becomes "rows of the registry of `spec-calibration.md` 6.2.8"; and, in the list of the configuration paths the programme reads (met, and followed by the `in` and `chk` flags, CLB 4.2.1): (a) whether `world.belief_step` moves the table, since 6.4 raises a seed price to the resolution floor and the list says `no (a check)` (CLB follows the list, K-BEL01); (b) say that a `.*` names every field of its table (CLB reads it so) |
+| `doc/specs/spec-viability.md` (A) | 11 (the sentence before the bounds) | "They are rows in the parameter-owner table with the scope 'Solve option'" becomes "rows of the registry of `spec-calibration.md` 6.2.8"; and, in the list of the configuration paths the programme reads (met, and followed by the `in` and `chk` flags, CLB 4.2.1): (a) whether `world.belief_step` moves the table, since 6.4 raises a seed price to the resolution floor (met: the list says `yes (a price at the floor only)` and CLB follows it, K-BEL01 is `in`); (b) say that a `.*` names every field of its table (CLB reads it so) |
 | `doc/specs/spec-stylised-facts.md` (A) | 7.3.1 | an **edge clause**: whether a default at the edge of a grid may be called stable on one neighbour with the beyond not examined; CLB 7.4.3 says it may not and records `one_neighbour` |
 | | 7.3.3 | the file name of the stability record: `testdata/golden/stylised/<pack>.stability.txt`, in the grammar of CLB 8.2 (the `stability` and `claim` lines), one record and one home (CLB 8.4) |
 | | 10.3 | where M06, P08, S06, G01 and W05 are set in the order (they are in no step); CLB 7.3 searches them at C4b (X and O parts, the B part waiting for a pack), C4a, C5, C2 and C7b, and W05 at C5 |

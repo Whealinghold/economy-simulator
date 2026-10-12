@@ -78,10 +78,10 @@ Out of scope, with the owner:
 | What a snapshot or an event contains, and when it is emitted | `spec-observability.md` (OBS); this spec reads it |
 | The acceptance bands, the stylised facts, the thresholds of a failure regime | `spec-stylised-facts.md` (STY); IND supplies the measure a band is stated in |
 | A sweep, a calibration run, a series store | `spec-experiments.md` (EXP), `spec-calibration.md` (CLB) |
-| A rule that reads a measure and changes a setting | `spec-policy.md` (PLC, later); no rule of the library does (3.1) |
+| A rule that reads a measure and changes a setting | `spec-policy.md` (PLC); no rule of the library calls `indicator` (3.1), and the built-in `rule` of PLC reads four gauges that are field reads with the definition of the matching preset (`spec-policy.md` 8.3.2) |
 | The money supply as a mechanism (flows, the liquidity floor) | `spec-money-supply.md` (MON); IND measures it |
 | The steady-state price a measure may be compared with | `spec-viability.md` (VIA); IND takes it as an input (9, `Offset`) |
-| Taxes, tariffs, credit, a net international position | later specs (FIS, CRD); the accounts have a hook, not a field (7.8.2) |
+| Taxes, tariffs, rent, interest, premiums, a net international position | FIS, LND, CRD, INS; their flows are ledger reasons and events that the tally and the sector table read (7.8.2); a net international position has no row in version 1 |
 
 ## 2. Positions taken
 
@@ -97,7 +97,7 @@ Out of scope, with the owner:
 | 8 | GDP is stated **three ways that are one fact seen from three sources**: production (events: recipe output less recipe input, with work in progress), expenditure (events and two snapshots: consumption, change in stocks, losses, carriage, trade) and income (the households' own booked income). Production equals expenditure **exactly**, at the realm for any one price table and by region with named interregional terms; income is a diagnostic with named reconciling items and is never claimed to equal either | 7 |
 | 9 | A **price for valuing** is always an argument. Three constructors: the window unit value of the published price, the effective reference price, and a delivered price (origin price plus freight). A base-window table gives constant prices | 4.3, 8.4 |
 | 10 | By region: a flow belongs to the region of the account debited or credited by the ledger (LED 3.5, 7.4); the **reconciling items** of a region are the relocation (money exactly, goods by total units) and interregional trade (shipments and contract payments); the realm's identity has none | 8 |
-| 11 | Twenty-one presets, listed once in 9, each with a first test that is a hand computation of the worked example of 18 | 9, 18 |
+| 11 | Twenty-five presets, listed once in 9, each with a first test that is a hand computation of the worked example of 18 | 9, 18 |
 | 12 | A **window** is half-open ticks `[From, To)` bounded by two snapshots; a series is stored by the consumer as `[]Point`; the library keeps no history; a recorder keeps running sums, not ticks | 10 |
 | 13 | A restore does not break a window: a **tally** is the consumer's plain value, events are not repeated across a restore, and a tally started at `WorldRestored` opens with that event's snapshot | 10.5 |
 
@@ -129,8 +129,8 @@ the same checkpoint digest, event stream and snapshots).
 indicator and set a slot (INT 3.5, OBS-A1). That is a loop that exists in the
 consumer, with a delay of one tick by construction, and it is registered as a
 hazard (16, IND-A1), not as a mechanism of the library. A controller that is
-part of a *setting's* rules is a policy actor (PLC, later), with its own
-interface and its own register entries (N-025).
+part of a *setting's* rules is a policy actor (`spec-policy.md`, PLC), with its own
+interface (`Policy`, architecture.md 4.3) and its own register entries.
 
 3.1.4. **No draw, no time, no state.** An indicator takes no random number
 (WLD 7.5), reads no clock (architecture.md 7.3), keeps no package-level state
@@ -214,8 +214,8 @@ wall-clock time, architecture.md 7.3; N-015).
 
 | Class | Cost | Which presets |
 |-------|------|---------------|
-| 1 | `O(rows of one snapshot)`: a copy or a fold of the aggregate rows (regions, roles, markets), independent of the number of agents (OBS 5.6) | `Sectors` (balances; its closing identity needs a tally and is class 2), `Households` and `Unfed` at a boundary, `BasketLevel`, `StockCover` at a boundary (over a window it is class 2), `RoleShares`, `RealWage`, `HouseholdIncome` (per snapshot) |
-| 2 | `O(rows of a tally)`: one pass over the window's running sums, bounded by regions, reasons, commodities, lanes (never by ticks, orders or agents) | `GDP`, `ValueAdded`, `PriceIndex`, `DeliveredPrice`, `PriceGap`, `TradeBalance`, `Turnover`, `PriceRange`, `Pinned`, `Dispersion`, `Offset`, and `Households` and `Unfed` over a window |
+| 1 | `O(rows of one snapshot)`: a copy or a fold of the aggregate rows (regions, roles, markets), independent of the number of agents (OBS 5.6) | `Sectors` (balances; its closing identity needs a tally and is class 2), `Households` and `Unfed` at a boundary, `BasketLevel`, `StockCover` at a boundary (over a window it is class 2), `RoleShares`, `RealWage`, `HouseholdIncome` (per snapshot), `Employment` at a boundary |
+| 2 | `O(rows of a tally)`: one pass over the window's running sums, bounded by regions, reasons, commodities, lanes (never by ticks, orders or agents) | `GDP`, `ValueAdded`, `PriceIndex`, `DeliveredPrice`, `PriceGap`, `TradeBalance`, `Turnover`, `PriceRange`, `Pinned`, `Dispersion`, `Offset`, `Unemployment`, `WageBill`, `Losses`, and `Households`, `Unfed` and `Employment` over a window |
 | 3 | `O(A log A)` for `A` household rows: a sort and a pass; the rows themselves cost the caller `O(A)` queries (4.5) | `WelfareDistribution`, `Inequality` |
 | W | `O(points)` over a consumer's series | `Stats`, `Growth`, `Change`, `PriceRange` and `RoleShares` over a series |
 
@@ -325,8 +325,11 @@ or ticks (FR-IND-004).
 | `BoundaryFlow` | (region, reason, commodity or money) | the sum of `Total` over the window; the `Kind`; the rows of `Tick` -1 apart; and `Open.Pending`, copied from the opening snapshot (7.1.5) |
 | `MarketCleared` | (region, commodity) | `SumPV` (128-bit sum of `Price * Volume`), `SumV`, the last `Price`, the lowest and highest `Price`, the ticks with volume, the last `PriceAge`, and the ticks in which units were left unmatched on **both** sides with no volume (`StuckTicks`, for `Pinned`) |
 | `BeliefsUpdated` | (region, commodity) | `Outcomes`, `AtFloor`, `AtCeiling` summed; the last `LowCentre`, `HighCentre`, `MeanCentre`, and the lowest value over the window of `rdiv(10 000 * (HighCentre - LowCentre), MeanCentre)` (for `Dispersion`) |
-| `ShipmentDispatched` | (origin, destination, mode) | shipments, `HaulUnits`, carrying `Units`, and the units of the lines by commodity |
-| `ShipmentArrived` | (origin, destination, mode, commodity) | `Shipped`, `Delivered`, `Diverted`, `Spoiled` summed |
+| `ShipmentDispatched` | (origin, destination, mode) | shipments, `HaulUnits`, carrying `Units`, the units of the lines by commodity, and the shipments with `LossBP` above 0 (`Struck`, for `Losses`) |
+| `ShipmentArrived` | (origin, destination, mode, commodity) | `Shipped`, `Delivered`, `Diverted`, `Spoiled`, `Lost` summed, and by commodity the `AccountLost` of a self-carried trip |
+| `StoreLoss` | (region, store class, commodity) | `Stores` struck and the units `Lost` summed |
+| `LabourRound` | region (and worker role) | `Offered`, `Hired`, `NoVacancy`, `NotStarted`, `HouseholdTicks`, `Paid` and `Refunded` summed, and the counts of formation refusals by reason (for `Unemployment`, `WageBill`, `Employment`) |
+| `FiscalFlowApplied` | (flow, authority, region) | the `Applied` and the `Due` summed, with the `Kind` and the `Class` (for the regional terms of 8.2) |
 | `ContractSettled` | (deliverer's `Region`, `To`) | `Paid`, `Refunded` summed (the event carries the deliverer's region, OBS 4.1.6, so no contract is remembered) |
 | `ContractFormed` | (`Region`, `To`) | `Escrowed` summed |
 | `ReliefPaid` | region | `Paid` and `Recipients` summed |
@@ -871,11 +874,12 @@ ask. IND's own rounding is authoritative for IND measures (5.5.1).
 ## 7. The accounts
 
 National-accounts-style measures over a window: what was produced, what it was
-used for, and who held the change. The economy of this library has no firms, no
-wages as a flow and no taxes in version 1 (households are self-employed;
-ADR 0001), so the accounts are built from what the ledger records: goods made
-and used by recipes, consumption, spoilage, trade with the outside, and the
-stocks. The identities that follow are consequences of the ledger's
+used for, and who held the change. The library has no firms: with the employment module off households are
+self-employed (ADR 0001) and there is no wage flow, and with the fiscal, land,
+credit and insurance modules off there is no tax, rent, interest or premium
+either. The accounts are built from what the ledger records: goods made
+and used by recipes, consumption, spoilage, losses, trade with the outside, and
+the stocks; a module that is on adds flows of money between sectors (7.5.3, 7.8.2). The identities that follow are consequences of the ledger's
 conservation (LED 9.1) and are asserted with exact equality, never a tolerance
 (testing.md 6.3).
 
@@ -897,11 +901,11 @@ snapshots (7.1.5)**, or a **stock** from a snapshot. `r` is a region and
 | `Wear` | items retired because their durability ran out | `wear` |
 | `Haul` | haul units redeemed at dispatch | `haul_use` |
 | `Feed` | feed consumed by a trip | `transit_use` |
-| `Loss` | units lost (reserved for the risk spec, 0 in version 1) | `loss` |
+| `Loss` | units lost to a strike of the risk module (RSK): a route strike at the arrival of a shipment and a store strike at P8.1a; 0 with the module off | `loss` |
 | `Offer`, `Unsold` | units the outside brought to sell and the part not bought | `outside_offer`, `outside_unsold` |
 | `Purch` | units the outside bought | `outside_purchases` |
 | `Init` | units created by `initial` in the window (an external agent added in the run) | `initial` at `Tick` 0 or later |
-| `Held` | units held by agents plus units held by the estate | `MarketRow.HeldByAgents + HeldByEstate` |
+| `Held` | units held by agents, by the estate and by treasuries | `MarketRow.HeldByAgents + HeldByEstate + HeldByTreasury` (the last is 0 with no governed jurisdiction) |
 | `Pend` | units of pending output of jobs in progress | `MarketRow.Pending` |
 | `Transit` | units in Transit accounts attributed to the origin region | the lines of `Shipments` whose `Region` is `r` |
 
@@ -980,9 +984,13 @@ start's staggered jobs (VIA 8.5) are the case where the accrual matters.
 
 7.2.2. **What labour is.** Labour is not a commodity (GDS 7.3) and a recipe's
 labour is the household's time, not an input: `ValueAdded` therefore contains
-labour and profit together, and the library has no wage bill to separate them
-(7.5, 7.8). A consumer who needs the labour share has the observed wage
-(`RealWage`, 9) and the households' working ticks and forms it itself.
+labour and profit together. With the employment module off the library has no
+wage bill to separate them: a consumer who needs the labour share has the
+observed wage (`RealWage`, 9) and the households' working ticks and forms it
+itself. With the module on, what a hired household is paid is a flow of money
+(`wage_pay`, EMP 7) that is not an input of the job and is not netted from
+`ValueAdded`, and `WageBill` (9, row 23) reports it beside the value added
+(7.5.1).
 
 7.2.3. **By class.** `Output` and `Intermediate` are returned by commodity
 class (4.4): a class's output is the value of the units of its commodities made,
@@ -1128,14 +1136,22 @@ off the books, and it holds in the audit's own terms (`World.Audit`, LED 12.4).
 
 ### 7.5 The income view
 
-7.5.1. **What the library has.** There is no wage flow (7.2.2). What exists is
-the **household's own booked income** `income_t` of WEL 2.1:
+7.5.1. **What the library has.** With the employment module on, a hired
+household's wage is a flow of money: the internal reason `wage_pay`, from the
+Escrow account of the hire to the worker (EMP 7), totalled in a tick as
+`LabourRound.Paid`. It is no boundary row and is in no term of 7.1 to 7.4, since
+it moves money between sectors and makes no goods; `WageBill` (9, row 23) reports
+it, and the labour share is the wage bill over the value added of 7.2.1. What
+the library has of the income view proper is the **household's own booked
+income** `income_t` of WEL 2.1:
 
 ```
 income_t = R_t + K_t + K^own_t + F_t + G_t - S_t(Input) - W_t
 ```
 
-per agent per tick, in the welfare ring (saved state). Summed over the live
+per agent per tick, in the welfare ring (saved state). The terms are WEL 2.1's:
+a module that adds a term of income (wages, interest, rent, a payout) changes
+WEL's formula and not this view, which reads their sum. Summed over the live
 agents, weighted by their households, it is the **household income** of a region
 and role for a tick, and the sum over the ticks of a window is the window's.
 OBS's `RoleRow` does not carry it (it carries a mean ratio). **The fields
@@ -1175,32 +1191,40 @@ fields exist (until then the first test is that the preset returns `OK` false).
 money, by sector, over a window and for the realm (LED 9.3):
 
 ```
-dM_h + dM_p + dM_c  =  sum of money faucets - sum of money sinks
+dM_h + dM_p + dM_c + dM_t  =  sum of money faucets - sum of money sinks
 ```
 
 with `M_h`, `M_p`, `M_c` the money of households, of the estate pools and of
-Escrow accounts (OBS 5.3.2; the outside holds nothing at a boundary), and the
+Escrow accounts (contracts and hires), and `M_t` the money of the treasuries of
+governed jurisdictions (POL 10.5; 0 with none) (OBS 5.3.2; the outside holds
+nothing at a boundary), and the
 faucets and sinks the `BoundaryFlow` rows of kind faucet or sink with
 `Commodity` `NoCommodity`. The relation to **goods** is the balance sheet of
-LED 9.2: valued at one table `p`, the net worth of the three sectors
+LED 9.2: valued at one table `p`, the net worth of the sectors (the three of
+LED 9.2 and the treasuries)
 
 ```
 NW_h = M_h + sum p * HeldByAgents + sum p * Pend           (households, with work in progress)
 NW_p = M_p + sum p * HeldByEstate                          (public: the pools and the estates' goods)
 NW_c = M_c + sum p * Transit                               (contract: escrow and cargo)
+NW_t = M_t + sum p * HeldByTreasury                        (treasuries: money and goods bought or held)
 ```
 
 changes, in total, by exactly the **value of the boundary flows and of the
 change of work in progress**:
-`dNW_h + dNW_p + dNW_c = (money faucets - sinks) + sum p * (goods faucets -
+`dNW_h + dNW_p + dNW_c + dNW_t = (money faucets - sinks) + sum p * (goods faucets -
 sinks) + sum p * dPend`, the last term because work in progress is in `NW_h`
 and in no flow, which is `(money faucets - sinks) + GDP^P - C - Written -
 Carriage - Exp + Imp + Endow` with `GDP^P` in its accrual form (FR-IND-018). The
 flows are corrected by 7.1.5. That is the stock-flow consistency of LED 9.3
 in value, and it **is** the saving-and-investment identity: gross saving of the
-realm is `GDP - C`, and it is held as the change of the three sectors' net
-worth plus what leaves as `Written`, `Carriage` and trade. The preset `Sectors`
-(9) returns `NW` and `dNW` per sector and the closing of this equation.
+realm is `GDP - C`, and it is held as the change of the sectors' net
+worth plus what leaves as `Written`, `Carriage` and trade. A wage, a tax, a rent, an
+interest payment or a premium moves money from one of these sectors to another
+and makes no term of the equation: each is an internal reason of its module
+(`spec-employment.md`, `spec-fiscal.md`, `spec-land.md`, `spec-credit.md`,
+`spec-insurance.md`). The preset `Sectors` (9) returns `NW` and `dNW` per sector
+and the closing of this equation, and the money moved by each such reason (7.8.2).
 
 ### 7.6 Depreciation, and net product
 
@@ -1235,7 +1259,7 @@ one call with the base `Prices`.
 
 7.7.2. **A closed economy.** With no outside module and no money faucet or
 sink, `NX = 0`, `Endow = 0` unless an external agent was added, and the money
-identity of 7.5.3 reads `dM_h + dM_p + dM_c = 0` (MON 8.2). The mean welfare
+identity of 7.5.3 reads `dM_h + dM_p + dM_c + dM_t = 0` (MON 8.2). The mean welfare
 ratio is then **exactly 1 only if households buy only upkeep and every
 household's income equals its upkeep cost**; the exact statement the library
 makes is the household-weighted mean of the ratio over agents (WEL 2.1), which
@@ -1258,10 +1282,19 @@ destination's price on arrival by the table, which is the `TradeValuation` of
 7.4.2. A consumer who wants distribution as a sector computes `TradeValuation +
 freight` itself.
 
-7.8.2. **Taxes, subsidies, rent and interest.** None exists in version 1; the
-accounts have no row for them, and a later spec (FIS, LND, CRD) adds its flows
-as ledger reasons that appear in `BoundaryFlow` or in the sector table, and
-the identities of 7.4 and 7.5.3 stay as they are.
+7.8.2. **Taxes, subsidies, rent, interest and premiums.** With the fiscal, land,
+credit and insurance modules on each exists, as an internal transfer of money
+between two accounts under its own reason (a levy or a payout between a
+household or a pool and a treasury, a rent, an interest payment, a premium or a
+payout). None is a boundary row and none is output, so the accounts have no row
+for them and the identities of 7.4 and 7.5.3 stay as they are. They are read in
+two places: the aggregate events of the modules, which the tally keeps where a
+preset needs them (4.2.2), and the money of each sector in `Sectors` (9, row 7),
+with the regional terms of 8.2 for the fiscal flows. A tax is not value added and
+no preset adds one to `GDP`; a consumer that wants a figure at market prices
+forms it from those rows and says so. The net worths of 7.5.3 hold money and
+goods only: a claim is a row of the snapshot (`Claims`) and a consumer values it
+itself.
 
 7.8.3. **Household production for own use** is production: an own-use recipe's
 output is `recipe_output` and is in `Out`, valued at the table price of the
@@ -1292,13 +1325,25 @@ d(Held + Transit)_rc = Out - In - Cons - WCons - Spoil - Disp - Wear - Haul - Fe
                        + RelocIn_rc - RelocOut_rc        relocation (this section)
 ```
 
-**Money**, by region: `d(M_h + M_p + M_c)_r = faucets_r - sinks_r +
-RelocMoneyIn_r - RelocMoneyOut_r + SettledIn_r - SettledOut_r`, where the
-relocation terms are the `Money` of `AgentRelocated` by `From` and `To`
-(a household that relocates takes its money with it), and the contract terms are
-the `Paid` of `ContractSettled` (money leaves the Escrow account of the
-**destination** region and reaches the deliverer, in the origin region, which is
-the event's own `Region`). The flows are corrected by 7.1.5. **Every term is observable**, so the
+**Money**, by region: `d(M_h + M_p + M_c + M_t)_r = faucets_r - sinks_r +
+RelocMoneyIn_r - RelocMoneyOut_r + SettledIn_r - SettledOut_r + FiscalIn_r -
+FiscalOut_r`, where the relocation terms are the `Money` of `AgentRelocated` by
+`From` and `To` (a household that relocates takes its money with it), and the
+contract terms are the `Paid` of `ContractSettled` (money leaves the Escrow
+account of the **destination** region and reaches the deliverer, in the origin
+region, which is the event's own `Region`). `M_t` is the money of the treasuries
+seated in `r` (`RegionRow.MoneyTreasury`, POL 10.5), a treasury's account being
+in the region of its seat (POL 5.3.4). A tax paid by the households of one
+region into a treasury seated in another, and a payout from a treasury to the
+households of another, is a transfer between regions that none of the other
+terms names: `FiscalOut_r` is the money (the `Applied` of the money rows of
+`FiscalFlowApplied`) that leaves `r` for the seat of an authority outside it, a
+payout counting as `FiscalOut` of the seat and `FiscalIn` of the recipient's
+region, and `FiscalIn_r` is the money that comes in, the seat of each authority
+read from the `Jurisdictions` rows of the snapshot (FIS 4.3.2, 16.1.3). Where no
+authority is seated away from its payers and recipients both terms are 0, and a
+world with no fiscal module has none. The flows are corrected by 7.1.5. **Every
+term is observable**, so the
 regional money identity is **exact** (FR-IND-019). In **goods**,
 `AgentRelocated` carries only the **total units** moved (`Units`), not units by
 commodity: the per-commodity relocation terms are the **reconciling item** of
@@ -1410,45 +1455,55 @@ says "check before reading"; it does not withhold the measure.
 ## 9. The standard presets
 
 A **preset** is a named, fixed call of the aggregators (3.6) with a stated
-definition, input and unit. The list is closed for version 1 and each row is a
-requirement on the preset (FR-IND-030 to FR-IND-050). A consumer adds its own
-the same way (3.6); a preset is never *the* measure, only the one every
-consumer, scenario and band means by its name.
+definition, input and unit. The list is closed for version 1: a later module's
+request for a preset is an ask of the module's spec (22), not a row, and the
+four rows 22 to 25 are the presets of the employment and risk modules that this
+spec accepted. Each row is a requirement on the preset (FR-IND-030 to FR-IND-050,
+and FR-IND-056 to FR-IND-059 for rows 22 to 25). A consumer adds its own the same
+way (3.6); a preset is never *the* measure, only the one every consumer,
+scenario and band means by its name.
 
 ### 9.1 The list
 
-Columns: **Definition**, **Inputs** (3.3), **Unit**, **Cost** (3.4), **Must not
+Columns: **Definition**, **Result fields** (the exported fields of the result,
+in the spelling that STY, CLB and STB use for a measure, `Pinned.Share`,
+`Turnover.Volume`; a field a band or a knob row names is in this column, and the
+names are provisional until the code, 3.6), **Inputs** (3.3), **Unit**, **Cost** (3.4), **Must not
 hide** (the failure a naive version of the measure would conceal, which the
 result carries as a field), **First test** (a hand computation of 18).
 
-| # | Preset | Definition | Inputs | Unit | Cost | Must not hide | First test |
-|---|--------|------------|--------|------|------|---------------|------------|
-| 1 | `GDP` | the three views and the identity of 7: production (`ValueAdded`, accrual, with cash beside it), expenditure by component, the residual of the identity (which is zero) and, by region, `Inter`, `Reloc`, `Endow`; realm and regions | `Open`, `Close`, tally, `Prices` | minor units | 2 | work in progress (`Pending`) shown apart from cash; discards in `Written`, not in `C`; `Basis` of depreciation; the construction bucket as a memo line | 18.2 |
-| 2 | `ValueAdded` | output and intermediate use by commodity class, and value added by recipe on the completion basis with grouping by cost share and the `WIP` reconciling row | tally (`RecipeExecuted`, `BoundaryFlow`), `Config`, `Prices`, `Classes` | minor units | 2 | that a class has no value added of its own (7.2.3); the `WIP` row; disposed output counted in gross output | 18.3 |
-| 3 | `PriceIndex` | `Laspeyres`, `Paasche`, `Fisher` of a set (a class, a region, a pair, all) against a base window, with the weights named, and the chain (5.3) | a `Base` (prices and quantities of the base window, 3.3), the current `Prices` and quantities (tally), `Classes` | bp of the base | 2 | `Stale` share of the set (prices carried forward); `Clamped`; which weights; that a class index and the all-goods index are not sums of each other | 18.4 |
-| 4 | `BasketLevel` | the cost of the baseline basket of a region at its published prices over its **computed** cost at its reference prices, `rdiv(10 000 * sum p * q, Bcost_r)` (8.4: not the configured `B_r`); and the level of one region against another from exact sums | `Snapshot` (or window `Prices`), `Config` (upkeep, `ExtraUpkeep`, reference prices) | bp (10 000 is the calibration) | 1 | the basket is **fixed**: it does not follow what households actually buy; a good with no trade is priced stale (`Stale`) | 18.5 |
-| 5 | `DeliveredPrice` | per lane (origin, destination, commodity): the origin's window price plus the freight per unit of cargo of the lane's hired mode (8.4), with `Hired` and `Freight` | tally (`ShipmentDispatched`, `ShipmentArrived`), `Config` (modes), `Prices` | minor units per unit | 2 | a self-carried lane has no priced freight (`Hired` false, `Freight` 0): the lane's cost is not in the price | 18.5 |
-| 6 | `PriceGap` | per connected pair and commodity: the absolute difference of the two prices as a share of the pair's mean, `Spread`; and the gap after freight `p_d - Delivered`, signed, as a share of the delivered price; and whether the pair is in one component | `Prices`, `DeliveredPrice`, `Graph` components | bp | 2 | a gap in a pair with no route (a closed road) is not a failure of arbitrage; `Connected` is a field, and an unconnected pair is excluded from any average | 18.5 |
-| 7 | `Sectors` | money by sector and per household (`M_h`, `M_p`, `M_c`, `M`, `M_h / H`), by region and in total; net worth by sector and its change at a price table; the closing of the identity of 7.5.3 | `Close` (and `Open`, and the tally for the closing), `Prices` | minor units; minor units per household (by region and total; **by role** only through household rows of `Money`) | 1 | money held out of circulation (pool, escrow) is its own row, not "the economy"; the boundary balance of each reason (how much entered and left); the net worth of the estate is public | 18.6 |
-| 8 | `Turnover` | the value of trade `sum(Price * Volume)` and the volume by market, region and class; the **velocity** `V = turnover / M` of the window, and annualised from the exact sums, `rdiv(10 000 * turnover * TicksPerYear, M * n)` | tally (`MarketCleared`), `Close.Money` | minor units; units; bp (and per year) | 2 | a thin market (few ticks with volume) is flagged (`Active` ticks); a velocity with a falling `M_h` and a rising pool is a different story than a falling turnover | 18.6 |
-| 9 | `Households` | households and agents by region and role, their shares, and the **account of change**: spawned, bankrupted, weight changes, role changes, relocations, births and deaths done, over the window; the natural increase and its annual rate | `Open`, `Close`, tally | households; bp | 1 or 2 | agents are not households; a migrant on a journey is in its origin; the account closes exactly (`Residual` 0); an estate is in neither | 18.7 |
-| 10 | `WelfareDistribution` | the distribution of the welfare ratio over households: `Mean`, `P10`, `P25`, `P50`, `P75`, `P90`, the share below 10 000 (a ratio under 1), the share below the role's target, and the same for the earned ratio | household rows of `WelfareRatio` and `EarnedRatio` | bp | 3 | negative ratios exist (no Gini); `Absent` households (no upkeep); `Cohort` coverage; a mean of ratios is not the aggregate ratio (7.7.2) | 18.8 |
-| 11 | `Inequality` | the Gini of money (and of wealth with a table), `Top(1 000)`, `Bottom(4 000)`, `P90 / P10`, `CohortShare` | household rows of `Money` (or `Wealth`), `Prices` | bp | 3 | a cohort is identical by construction (`CohortShare`); money is not wealth; the estate and pool are outside the households | 18.8 |
-| 12 | `Unfed` | the share of households unfed in the last consumption (at a boundary) and the share of **household-ticks** unfed over a window, by region and role, and the largest `MaxHunger` | `Close.Roles[].Unfed`, `Households`; or tally (`UpkeepShortfall` and the running households at each `TickStarted`, 6.3) | bp | 1 or 2 | households, not agents (an agent of weight 6 unfed is 6); `UpkeepShortfall` is not emitted when all are fed, so the denominator is the running count at the tick's start, not the events | 18.7 |
-| 13 | `TradeBalance` | by node, gate and commodity: units imported and exported (`Imp`, `Exp`), the money value of each (`import_value`, `export_value`), the net, and the volume at a table; and the openness `(X + M) / GDP` | tally (`OutsideTraded`, `BoundaryFlow` of the six reasons), `Prices`, `GDP` | units; minor units; bp | 2 | the outside's boundary flows are **gross** (budget, unspent), the net is derived (EXT 8.2, N-115); price improvement is a transfer, not output | 18.8 |
-| 14 | `RealWage` | per (region, role): the observed wage per working household-tick over the cost of the role's upkeep at the region's price table, `rdiv(10 000 * wage, upkeep cost)`: how many ticks of upkeep a working tick buys | `Close.Roles[]` (`WageObserved`, `HasWage`), `Config` (effective upkeep), `Prices` | bp (10 000 is one tick of upkeep) | 1 | a role with no observed wage (`HasWage` false) is absent, not zero; wage is per working tick, and a role works less than every tick (it is not an income) | 18.8 |
-| 15 | `StockCover` | units held (agents and estate) over the units consumed per tick, per (region, commodity) or class: ticks of cover; and the unsold share `HeldByEstate / Held` | `Close.Markets[]`, tally (`Cons`, `WCons`) | bp of one tick (10 000 is one tick of cover) | 1 or 2 | a glut (cover rising without bound, F2, F4) and an empty pantry (cover 0) are different failures; a commodity with no consumption has cover undefined (`OK` false), not infinite | 18.6 |
-| 16 | `RoleShares` | households by role as a share of the region's (and the realm's), per window start and end, and the swing: `max - min` of the share over a series | `Close.Roles[]` or the tally's running counts; a series | bp | 1; W | the swing of a role's share is the cobweb (F6, L36); a role that disappears has share 0 and must be reported, not dropped | 18.7 |
-| 17 | `PriceRange` | per market and class: the lowest and the highest published price in the window, `High * 10 000 / Low`, and over a series of windows whether the range shrinks | tally (`MarketCleared`), a series | bp (10 000: no variation) | 2; W | a market with no trade in the window has range 10 000 only because its price is carried (`Active` 0); the `Low` is a published price, not a limit | 18.5 |
-| 18 | `Pinned` | the share of belief outcomes that ended on the floor or the ceiling of the reference band: `(AtFloor + AtCeiling) / Outcomes` per market, and the markets with unmatched units on both sides and no volume | tally (`BeliefsUpdated`, `MarketCleared`) | bp | 2 | a pinned price is not a stable price (F5); `Outcomes` 0 means undefined, not zero | 18.5 |
-| 19 | `Dispersion` | the spread of belief centres: `(HighCentre - LowCentre) / MeanCentre` per market, in the last tick of the window and the window's lowest | tally (`BeliefsUpdated`) | bp | 2 | synchronisation (F7) shows as a spread that falls below a floor; `MeanCentre` 0 is undefined | 18.5 |
-| 20 | `Offset` | the difference between a market's window price and a reference price supplied by the caller (the steady-state price of VIA, a base table), `rdiv(10 000 * (p - ref), ref)`, signed, with `Unmet` need: the share of the household-ticks of the window that were unfed (the `Unfed` share of row 12, from `UpkeepShortfall`), in basis points | `Prices`, a `Prices` of the reference, tally | bp, signed | 2 | the offset (F8) is meaningful only against a reference computed for the same pack; `Unmet` is reported beside it | 18.5 |
-| 21 | `HouseholdIncome` | the booked income of households (income, relief, cost), the aggregate ratio `sum income / sum cost`, and the `Gap` of 7.5.2; **`OK` false in version 1**: the fields are a future ask (7.5.1, 22) | per-tick snapshots after each step (`RoleRow.IncomeLast`, ... once they exist) | minor units; bp | 1 per tick | that it is cash at traded prices with inputs netted at purchase (7.5.2); that it is not GDP; the aggregate ratio is the quantity N-054 is about | 18.9 (that it returns `OK` false in version 1; the stationary world once the fields exist) |
+| # | Preset | Definition | Result fields | Inputs | Unit | Cost | Must not hide | First test |
+|---|--------|------------|---------------|--------|------|------|---------------|------------|
+| 1 | `GDP` | the three views and the identity of 7: production (`ValueAdded`, accrual, with cash beside it), expenditure by component, the residual of the identity (which is zero) and, by region, `Inter`, `Reloc`, `Endow`; realm and regions | `ValueAdded`, `Cash`, `C`, `StockChange`, `Written`, `Carriage`, `NX`, `Inter`, `Reloc`, `Endow`, `TradeValuation`, `NetProduct`, `Basis`, `Residual`, `Construction` | `Open`, `Close`, tally, `Prices` | minor units | 2 | work in progress (`Pending`) shown apart from cash; discards in `Written`, not in `C`; `Basis` of depreciation; the construction bucket as a memo line | 18.2 |
+| 2 | `ValueAdded` | output and intermediate use by commodity class, and value added by recipe on the completion basis with grouping by cost share and the `WIP` reconciling row | `Output`, `Intermediate`, `ByRecipe`, `ByClass`, `WIP` | tally (`RecipeExecuted`, `BoundaryFlow`), `Config`, `Prices`, `Classes` | minor units | 2 | that a class has no value added of its own (7.2.3); the `WIP` row; disposed output counted in gross output | 18.3 |
+| 3 | `PriceIndex` | `Laspeyres`, `Paasche`, `Fisher` of a set (a class, a region, a pair, all) against a base window, with the weights named, and the chain (5.3) | `Laspeyres`, `Paasche`, `Fisher`, `Chain`, `Weights`, `Stale`, `Clamped` | a `Base` (prices and quantities of the base window, 3.3), the current `Prices` and quantities (tally), `Classes` | bp of the base | 2 | `Stale` share of the set (prices carried forward); `Clamped`; which weights; that a class index and the all-goods index are not sums of each other | 18.4 |
+| 4 | `BasketLevel` | the cost of the baseline basket of a region at its published prices over its **computed** cost at its reference prices, `rdiv(10 000 * sum p * q, Bcost_r)` (8.4: not the configured `B_r`); and the level of one region against another from exact sums | `Level`, `Ratio`, `Stale` | `Snapshot` (or window `Prices`), `Config` (upkeep, `ExtraUpkeep`, reference prices) | bp (10 000 is the calibration) | 1 | the basket is **fixed**: it does not follow what households actually buy; a good with no trade is priced stale (`Stale`) | 18.5 |
+| 5 | `DeliveredPrice` | per lane (origin, destination, commodity): the origin's window price plus the freight per unit of cargo of the lane's hired mode (8.4), with `Hired` and `Freight` | `Delivered`, `Freight`, `Hired`, `HaulValue`, `Units` | tally (`ShipmentDispatched`, `ShipmentArrived`), `Config` (modes), `Prices` | minor units per unit | 2 | a self-carried lane has no priced freight (`Hired` false, `Freight` 0): the lane's cost is not in the price | 18.5 |
+| 6 | `PriceGap` | per connected pair and commodity: the absolute difference of the two prices as a share of the pair's mean, `Spread`; and the gap after freight `p_d - Delivered`, signed, as a share of the delivered price; and whether the pair is in one component | `Spread`, `GapLocal`, `GapAfterFreight`, `Connected` | `Prices`, `DeliveredPrice`, `Graph` components | bp | 2 | a gap in a pair with no route (a closed road) is not a failure of arbitrage; `Connected` is a field, and an unconnected pair is excluded from any average | 18.5 |
+| 7 | `Sectors` | money by sector and per household (`M_h`, `M_p`, `M_c`, `M_t`, `M`, `M_h / H`), by region and in total, `M_t` being the money of the treasuries of governed jurisdictions (POL 10.5) with the fiscal flows reported beside it (`FiscalIn`, `FiscalOut` of 8.2 and the `Applied` of each fiscal flow by kind); net worth by sector (a treasury's with the goods it holds) and its change at a price table; the closing of the identity of 7.5.3 | `M_h`, `M_p`, `M_c`, `M_t`, `M`, `PerHousehold`, `NW`, `dNW`, `Closing`, `Boundary`, `FiscalIn`, `FiscalOut` | `Close` (and `Open`, and the tally for the closing and for `FiscalFlowApplied`), `Prices` | minor units; minor units per household (by region and total; **by role** only through household rows of `Money`) | 1 | money held out of circulation (pool, escrow, treasury) is its own row, not "the economy"; a tax moves money from households to a treasury and is no loss of money; the boundary balance of each reason (how much entered and left); the net worth of the estate is public | 18.6 |
+| 8 | `Turnover` | the value of trade `sum(Price * Volume)` and the volume by market, region and class; the **velocity** `V = turnover / M` of the window, and annualised from the exact sums, `rdiv(10 000 * turnover * TicksPerYear, M * n)` | `Value`, `Volume`, `Velocity`, `Annualised`, `Active` | tally (`MarketCleared`), `Close.Money` | minor units; units; bp (and per year) | 2 | a thin market (few ticks with volume) is flagged (`Active` ticks); a velocity with a falling `M_h` and a rising pool is a different story than a falling turnover | 18.6 |
+| 9 | `Households` | households and agents by region and role, their shares, and the **account of change**: spawned, bankrupted, weight changes, role changes, relocations, births and deaths done, over the window; the natural increase and its annual rate | `Households`, `Agents`, `Spawned`, `Bankrupted`, `WeightChanges`, `RoleChanges`, `Relocated`, `Births`, `Deaths`, `Rate`, `Residual` | `Open`, `Close`, tally | households; bp | 1 or 2 | agents are not households; a migrant on a journey is in its origin; the account closes exactly (`Residual` 0); an estate is in neither | 18.7 |
+| 10 | `WelfareDistribution` | the distribution of the welfare ratio over households: `Mean`, `P10`, `P25`, `P50`, `P75`, `P90`, the share below 10 000 (a ratio under 1), the share below the role's target, and the same for the earned ratio | `Mean`, `P10`, `P25`, `P50`, `P75`, `P90`, `Below`, `BelowTarget`, `Earned`, `Absent`, `Cohort` | household rows of `WelfareRatio` and `EarnedRatio` | bp | 3 | negative ratios exist (no Gini); `Absent` households (no upkeep); `Cohort` coverage; a mean of ratios is not the aggregate ratio (7.7.2) | 18.8 |
+| 11 | `Inequality` | the Gini of money (and of wealth with a table), `Top(1 000)`, `Bottom(4 000)`, `P90 / P10`, `CohortShare` | `Gini`, `Top`, `Bottom`, `P90P10`, `CohortShare` | household rows of `Money` (or `Wealth`), `Prices` | bp | 3 | a cohort is identical by construction (`CohortShare`); money is not wealth; the estate and pool are outside the households | 18.8 |
+| 12 | `Unfed` | the share of households unfed in the last consumption (at a boundary) and the share of **household-ticks** unfed over a window, by region and role, and the largest `MaxHunger` | `Share`, `HouseholdTicks`, `MaxHunger` | `Close.Roles[].Unfed`, `Households`; or tally (`UpkeepShortfall` and the running households at each `TickStarted`, 6.3) | bp | 1 or 2 | households, not agents (an agent of weight 6 unfed is 6); `UpkeepShortfall` is not emitted when all are fed, so the denominator is the running count at the tick's start, not the events | 18.7 |
+| 13 | `TradeBalance` | by node, gate and commodity: units imported and exported (`Imp`, `Exp`), the money value of each (`import_value`, `export_value`), the net, and the volume at a table; and the openness `(X + M) / GDP` | `Imp`, `Exp`, `ImportValue`, `ExportValue`, `Net`, `Volume`, `Openness` | tally (`OutsideTraded`, `BoundaryFlow` of the six reasons), `Prices`, `GDP` | units; minor units; bp | 2 | the outside's boundary flows are **gross** (budget, unspent), the net is derived (EXT 8.2, N-115); price improvement is a transfer, not output | 18.8 |
+| 14 | `RealWage` | per (region, role): the observed wage per working household-tick over the cost of the role's upkeep at the region's price table, `rdiv(10 000 * wage, upkeep cost)`: how many ticks of upkeep a working tick buys | `Ratio`, `HasWage` | `Close.Roles[]` (`WageObserved`, `HasWage`), `Config` (effective upkeep), `Prices` | bp (10 000 is one tick of upkeep) | 1 | a role with no observed wage (`HasWage` false) is absent, not zero; wage is per working tick, and a role works less than every tick (it is not an income) | 18.8 |
+| 15 | `StockCover` | units held (agents, estate and treasuries) over the units consumed per tick, per (region, commodity) or class: ticks of cover; and the unsold share `HeldByEstate / Held` | `Cover`, `Unsold` | `Close.Markets[]`, tally (`Cons`, `WCons`) | bp of one tick (10 000 is one tick of cover) | 1 or 2 | a glut (cover rising without bound, F2, F4) and an empty pantry (cover 0) are different failures; a commodity with no consumption has cover undefined (`OK` false), not infinite | 18.6 |
+| 16 | `RoleShares` | households by role as a share of the region's (and the realm's), per window start and end, and the swing: `max - min` of the share over a series | `Share`, `Swing` | `Close.Roles[]` or the tally's running counts; a series | bp | 1; W | the swing of a role's share is the cobweb (F6, L36); a role that disappears has share 0 and must be reported, not dropped | 18.7 |
+| 17 | `PriceRange` | per market and class: the lowest and the highest published price in the window, `High * 10 000 / Low`, and over a series of windows whether the range shrinks | `Low`, `High`, `Range`, `Active` | tally (`MarketCleared`), a series | bp (10 000: no variation) | 2; W | a market with no trade in the window has range 10 000 only because its price is carried (`Active` 0); the `Low` is a published price, not a limit | 18.5 |
+| 18 | `Pinned` | the share of belief outcomes that ended on the floor or the ceiling of the reference band: `(AtFloor + AtCeiling) / Outcomes` per market, and the markets with unmatched units on both sides and no volume | `Share`, `Outcomes`, `AtFloor`, `AtCeiling`, `Stuck` | tally (`BeliefsUpdated`, `MarketCleared`) | bp | 2 | a pinned price is not a stable price (F5); `Outcomes` 0 means undefined, not zero | 18.5 |
+| 19 | `Dispersion` | the spread of belief centres: `(HighCentre - LowCentre) / MeanCentre` per market, in the last tick of the window and the window's lowest | `Spread`, `LowCentre`, `HighCentre`, `MeanCentre`, `Lowest` | tally (`BeliefsUpdated`) | bp | 2 | synchronisation (F7) shows as a spread that falls below a floor; `MeanCentre` 0 is undefined | 18.5 |
+| 20 | `Offset` | the difference between a market's window price and a reference price supplied by the caller (the steady-state price of VIA, a base table), `rdiv(10 000 * (p - ref), ref)`, signed, with `Unmet` need: the share of the household-ticks of the window that were unfed (the `Unfed` share of row 12, from `UpkeepShortfall`), in basis points | `Diff` (signed; the `Offset.abs` of CLB is its absolute value), `Unmet` | `Prices`, a `Prices` of the reference, tally | bp, signed | 2 | the offset (F8) is meaningful only against a reference computed for the same pack; `Unmet` is reported beside it | 18.5 |
+| 21 | `HouseholdIncome` | the booked income of households (income, relief, cost), the aggregate ratio `sum income / sum cost`, and the `Gap` of 7.5.2; **`OK` false in version 1**: the fields are a future ask (7.5.1, 22) | `Income`, `Relief`, `Cost`, `Ratio`, `Gap` | per-tick snapshots after each step (`RoleRow.IncomeLast`, ... once they exist) | minor units; bp | 1 per tick | that it is cash at traded prices with inputs netted at purchase (7.5.2); that it is not GDP; the aggregate ratio is the quantity N-054 is about | 18.9 (that it returns `OK` false in version 1; the stationary world once the fields exist) |
+| 22 | `Unemployment` | the share of the households that offered their labour for hire in a window and were not matched: `rdiv(10 000 * NoVacancy, Offered)` of the summed household-ticks (EMP 10.1.1), by region and worker role, with `Offered` and `Hired` beside it and the refusals of formation by reason (EMP 10.1.3) | `Rate`, `Offered`, `Hired`, `NoVacancy`, `ByReason` | tally (`LabourRound`), `Config` (`Role.Hireable`) | bp; households | 2 | households, not agents; a household that rested, was in the own-use mode, was a trainee, away or on a journey offered nothing and is not counted; a role with no offered household-tick has the rate undefined (`OK` false), not 0; the rate does not say whether the unemployment is structural or frictional, and the reasons are returned beside it | 18.11 |
+| 23 | `WageBill` | the money paid to hired households in a window, the sum of `LabourRound.Paid` by region of the hire, with the `Refunded` of cut starts beside it, and the labour share `rdiv(10 000 * Paid, ValueAdded)` against the accrual form of 7.2.1 and against the cash form | `Paid`, `Refunded`, `Share`, `ShareCash` | tally (`LabourRound`), `GDP` (`ValueAdded`, `Cash`) | minor units; bp | 2 | that `ValueAdded` holds the wage and the employer's profit together (7.2.2), so the share is the wage bill over it and not a share of income; that a hire is paid by the tick and its value is booked at the job start, so a window that cuts a hire shows the two on different edges; the share is `OK` false for a value added at or below 0, and above 10 000 it is a result and not an error | 18.11 |
+| 24 | `Employment` | the households of the hireable roles that were on a hired job: at a boundary `rdiv(10 000 * Employed, Households)` of the role from `RoleRow.Employed`, and over a window the `HouseholdTicks` paid over the running households at the start of each tick (6.3), by region and role; and `Employing`, the hired households working for agents of an employer role | `Rate`, `Employed`, `Employing`, `HouseholdTicks` | `Close.Roles[]` (`Employed`, `Employing`, `Households`), tally (`LabourRound`, the running households), `Config` (`Role.Hireable`) | bp; households | 1 or 2 | households, not agents; a household that works its own recipe is not employed in this sense, and employment is not "has income"; a role that is not hireable is absent, not 0; the denominator is the running count, as for `Unfed` | 18.11 |
+| 25 | `Losses` | the units lost to strikes and their value at a table, by commodity, region and source: `route` (the `Lost` of each `ShipmentArrived` line and the `AccountLost` of a self-carried trip) and `store` (the `Lost` of `StoreLoss`), the strikes counted apart (`Struck`: the shipments with a `LossBP` above 0 and the stores struck), and the total against the boundary flow `loss` | `Units`, `Value`, `Struck`, `Source` | tally (`ShipmentArrived`, `ShipmentDispatched`, `StoreLoss`, `BoundaryFlow` of `loss`), `Prices` | units; minor units | 2 | a strike that took no unit (a line rounded down) is in `Struck` and not in `Units`; a loss is valued at the price of the region of the account that held it (an origin, for a cargo in transit, 8.1); the `Lost` of `ContractSettled` is the same units as a `ShipmentArrived` line and is not added again; the total equals the `loss` of the window, which is the check | 18.11 |
 
 9.1.1. **Names.** The row's preset name is the exported function; the fields of
 its result are the nouns of the row. The set of names and the closed sets they
 use are rule constants of the package and a change of a name is a breaking change
-(architecture.md 6.6). Two of the twenty-one (`WelfareDistribution`, `Inequality`) need household rows
+(architecture.md 6.6). Two of the twenty-five (`WelfareDistribution`, `Inequality`) need household rows
 and are class 3; the rest need only a snapshot or a tally.
 
 9.1.2. **What a preset returns.** Every preset returns a result struct with plain
@@ -1607,7 +1662,7 @@ this table gives the measure):
 | price convergence between connected regions within transport cost | `PriceGap.GapAfterFreight` per connected pair | a window per season or year |
 | recovery after a harvest shock | `GDP` real, `PriceIndex` of the shocked class, `Unfed` | a series from the shock |
 | famine in a closed region | `Unfed` (household-ticks), `Households` change, `StockCover` | a series |
-| the wage and demand loop | `RealWage`, `WelfareDistribution.Mean`, `HouseholdIncome` | a series |
+| the wage and demand loop | `RealWage`, `WelfareDistribution.Mean`, `HouseholdIncome`, and with the employment module on `Unemployment.Rate` and `WageBill.Share` | a series |
 | R9 deflation with distress (proposed F9, `spec-stylised-facts.md` 6.2; the thresholds are there) | `PriceIndex.Fisher` chain and `Turnover.Volume` | a series |
 
 11.1.1. **Requirements on STY's use.** A band is stated with the **scale**
@@ -1724,7 +1779,7 @@ by hand.
   call, and a window as long as the loop's natural period turns a damped
   controller into an oscillator. *Owner:* INT 3.5; the consumer. *Damper:* none
   in the library, by design (ADR 0001 decision 7); a policy actor
-  (`spec-policy.md`, later) is where a rule that reads measures is specified,
+  (`spec-policy.md`) is where a rule that reads measures is specified,
   with its own entries. *Undamped:* all of it. *Condition:* a controller whose
   gain times its total delay (`n/2 + 1` ticks) is small against 1, as for any
   loop with a delay (`spec-stability.md` 6.3). *Test:* none in the library; the
@@ -1900,7 +1955,7 @@ Alpha grain over the two ticks: `Pinned = rdiv(10 000 * (6 + 1), 50) = 1 400`
 
 ### 18.6 Money, velocity and cover
 
-Region alpha at the close: `M_h = 5 000`, `M_p = 800`, `M_c = 200`, `M = 6 000`,
+Region alpha at the close: `M_h = 5 000`, `M_p = 800`, `M_c = 200`, `M_t = 0` (no governed jurisdiction), `M = 6 000`,
 100 households, so `M_h / H = 50`. Turnover of the window `sum(Price * Volume) =
 3 000`, `V = rdiv(10 000 * 3 000, 6 000) = 5 000` per window, annualised from the
 exact sums `rdiv(10 000 * 3 000 * 365, 6 000 * 2) = 912 500` (91.25 turnovers a
@@ -1984,6 +2039,28 @@ boundary at 265** (106 ticks of year 0, 59 of year 1), and `[524, 630)` (clipped
 at the end of year 1; `Clipped` true). *First test of
 `YearWindow` and `SeasonWindows`:* these boundaries from `Calendar.At`.
 
+### 18.11 Hired labour, and a lost cargo
+
+A second window of the world of 18.1, with the employment and risk modules on
+(it leaves 18.2 as it is). At alpha the `grower` role is hireable. In tick 10
+`LabourRound` has `Offered` 12, `Hired` 9, `NoVacancy` 3, `HouseholdTicks` 9 and
+`Paid` 270 (a wage of 30); in tick 11 `Offered` 10, `Hired` 8, `NoVacancy` 2,
+`HouseholdTicks` 8 and `Paid` 240 (no start was cut, so nothing is refunded). `Unemployment = rdiv(10 000 * (3 + 2), 12 + 10) = rdiv(50 000, 22) =
+2 273` (2 272.7). `WageBill`: `Paid = 270 + 240 = 510` against `ValueAdded` 1 200
+of 18.2, `Share = rdiv(10 000 * 510, 1 200) = 4 250` exactly, and against the
+cash form 1 300, `ShareCash = rdiv(5 100 000, 1 300) = 3 923` (3 923.08).
+`Employment` over the window: the paid household-ticks 9 + 8 = 17 over the running
+`grower` households at the start of the two ticks, 40 and 42 (18.7), `rdiv(170 000,
+82) = 2 073` (2 073.2); at the close, if 8 of the 39 `grower` households at alpha
+are on a hired job of more than one tick, `rdiv(80 000, 39) = 2 051` (2 051.3).
+
+A shipment of 10 units of grain leaves alpha with `LossBP` 2 500 and arrives:
+`Lost = rhe(10 * 2 500, 10 000) = rhe(2.5) = 2` (half to even), `Delivered` 8; and
+a store strike takes 3 loaves at alpha. `Units = 2 + 3 = 5`, `Value = 2 * 10 + 3 *
+25 = 95` at alpha's table (grain 10, loaf 25), `Struck = 1` shipment `+ 1` store,
+and the boundary flow `loss` of the window is 5 units, the check. *First tests of
+`Unemployment`, `WageBill`, `Employment` and `Losses`:* these numbers.
+
 ## 19. Notes settled
 
 Per `AGENTS.md`: every open note tagged `IND` and every `ALL` note, and the
@@ -2025,7 +2102,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 ### Functional
 
-FR-IND-030 to FR-IND-050 are one requirement per preset whose clauses (the
+FR-IND-030 to FR-IND-050 and FR-IND-056 to FR-IND-059 are one requirement per preset whose clauses (the
 fields and the "must not hide" field of its row in 9) are asserted as separate
 checks of that preset's worked-example test.
 
@@ -2048,8 +2125,8 @@ checks of that preset's worked-example test.
 | FR-IND-015 | The Gini coefficient MUST be 0 for equal values and `(W - 1) / W` for one holder, MUST return `ErrNegativeValue` for a negative value and `OK` false for `W = 0` or `S = 0` (5.4.3). |
 | FR-IND-016 | For each commodity of the realm, over each window, `dHeld + dTransit` MUST equal the units made less the units used and lost plus the units that the outside brought and `initial` created, exactly, with the flows corrected by `Close.Pending` less `Open.Pending`, for a window with a call between ticks before `Open` and one after `Close` as for one with none (7.1.3, 7.1.5). |
 | FR-IND-017 | At one price table for every region, `GDP^P` of the realm MUST equal `C + StockChange + Written + Carriage + NX - Endow` exactly, for every window, seed and pack (7.4.1 a). |
-| FR-IND-018 | Over a window the sum of the changes of the net worth of the three sectors at one price table MUST equal the value of the money and goods boundary flows of the window plus `p * dPend`, exactly (7.5.3). |
-| FR-IND-019 | For each region the change of its money MUST equal its money faucets less sinks plus the money relocated in and out and the contract payments settled in and out, exactly, and the units of the relocation item summed over commodities MUST equal the units of `AgentRelocated` in total (8.2). |
+| FR-IND-018 | Over a window the sum of the changes of the net worth of the sectors (households, pools, contracts and hires, treasuries) at one price table MUST equal the value of the money and goods boundary flows of the window plus `p * dPend`, exactly (7.5.3). |
+| FR-IND-019 | For each region the change of its money MUST equal its money faucets less sinks plus the money relocated in and out, the contract payments settled in and out and the money that crosses a region boundary under a fiscal flow (`FiscalIn`, `FiscalOut`), exactly, the money of a region including its treasuries, and the units of the relocation item summed over commodities MUST equal the units of `AgentRelocated` in total (8.2). |
 | FR-IND-020 | An index MUST be 10 000 against its own base, MUST be computed from the exact sums by the formulas of 5.3.3 with the weights it names, and MUST return `OK` false for a zero denominator. |
 | FR-IND-021 | The Fisher index MUST be the integer nearest to the square root of the product of the rounded Laspeyres and Paasche indices (5.3.4). |
 | FR-IND-022 | A chain index MUST follow `C_k = rdiv(C_{k-1} * I_k, 10 000)` from `C_0 = 10 000`, and a clamped link MUST make every later point `Clamped` (5.3.5). |
@@ -2066,7 +2143,7 @@ checks of that preset's worked-example test.
 | FR-IND-033 | `BasketLevel` MUST be `rdiv(10 000 * the basket at the published prices, Bcost_r)`, `Bcost_r` the computed cost of the region's baseline upkeep at its effective reference prices, so that it is exactly 10 000 at reference prices (8.4, 9 row 4). |
 | FR-IND-034 | `DeliveredPrice` MUST be the origin's price plus `rdiv(HaulValue, Units)` of the dispatches of the lane's hired mode, with `Hired` false and `Freight` 0 for a self-carried lane (8.4, 9 row 5). |
 | FR-IND-035 | `PriceGap` MUST return the spread and the gap after freight with `Connected`, and MUST exclude an unconnected pair from any average (9, row 6). |
-| FR-IND-036 | `Sectors` MUST return money by sector and per household, the boundary balance by reason and the change of net worth by sector with the closing of the identity of 7.5.3 (9, row 7). |
+| FR-IND-036 | `Sectors` MUST return money by sector (households, pools, contracts and hires, treasuries) and per household, the boundary balance by reason and the change of net worth by sector with the closing of the identity of 7.5.3 (9, row 7). |
 | FR-IND-037 | `Turnover` MUST return value and volume by market, region and class and the velocity of the window and per year, with `Active` ticks (9, row 8). |
 | FR-IND-038 | `Households` MUST count households and agents separately and return the account of change of a window with a zero residual (9, row 9). |
 | FR-IND-039 | `WelfareDistribution` MUST return the mean, the quantiles, the shares below the thresholds and the earned ratio, MUST NOT return a Gini and MUST report `Absent` and `Cohort` (9, row 10). |
@@ -2086,6 +2163,10 @@ checks of that preset's worked-example test.
 | FR-IND-053 | An annualised total MUST be `rdiv(x * TicksPerYear, n)` for a window of `n` ticks (5.7.2). |
 | FR-IND-054 | `indicator` MUST keep no package-level mutable state, MUST start no goroutine, MUST draw no random number and MUST keep no history (3.1.4, 10.3). |
 | FR-IND-055 | A tally started at `WorldRestored` MUST open at that event's snapshot, and a window that straddles a restore with the same tally MUST give the result of the uninterrupted run (10.5). |
+| FR-IND-056 | `Unemployment` MUST be `rdiv(10 000 * NoVacancy, Offered)` of the household-ticks summed over the window by region and worker role, MUST return `Offered`, `Hired` and the refusals by reason beside it, and MUST be `OK` false where nothing was offered (9, row 22). |
+| FR-IND-057 | `WageBill` MUST return the `Paid` and the `Refunded` of `LabourRound` summed over the window by region, and the shares of the value added in its accrual and cash forms, `OK` false for a value added at or below 0 (9, row 23). |
+| FR-IND-058 | `Employment` MUST count households and not agents, MUST be `rdiv(10 000 * Employed, Households)` at a boundary and the paid household-ticks over the running households of the window otherwise, and MUST omit a role that is not hireable (9, row 24). |
+| FR-IND-059 | `Losses` MUST return the units lost and their value by commodity, region and source, MUST count a strike apart from the units it took, MUST NOT add the `Lost` of `ContractSettled` to that of `ShipmentArrived`, and its total MUST equal the boundary flow `loss` of the window (9, row 25). |
 
 ### Non-functional
 
@@ -2122,9 +2203,11 @@ checks of that preset's worked-example test.
    retired at its end, `Written`). Next step: PRO's `RecipeExecuted` carries the
    wear units, or the table is net of a per-execution wear value from the
    recipe and the table price.
-5. **Labour share and the wage bill.** With no hired labour (EMP, later) there
-   is no wage bill; the labour share of value added is not defined. When EMP
-   exists the income view gains a compensation row. Next step: EMP.
+5. **Labour share and the wage bill.** Answered by EMP (`spec-employment.md`
+   10.2.1): with the employment module on, the wage is a flow (`wage_pay`) and
+   `WageBill` (9, row 23) reports it with the labour share of the value added;
+   with it off there is no wage bill and the labour share is not defined. The
+   compensation row of the income view waits for the income fields of 7.5.1.
 6. **A metric from a preset.** Which presets, if any, an adapter should expose
    (14.2). Next step: the first dashboard (OBS 18 question 8).
 7. **A default for `Weights`.** `Consumed` for a consumer price index, `Traded`

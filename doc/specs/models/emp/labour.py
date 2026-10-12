@@ -83,7 +83,8 @@ def summary(out):
     ps = [x[0] for x in tail]
     emp = sum(x[1] for x in tail) / len(tail)
     off = sum(x[2] for x in tail) / len(tail)
-    return min(ps), max(ps), emp, off, tail[-1][4]
+    hs = [x[1] for x in tail]
+    return min(ps), max(ps), emp, off, tail[-1][4], min(hs), max(hs)
 
 if __name__ == "__main__":
     P0 = 1000
@@ -109,4 +110,6 @@ if __name__ == "__main__":
         lo = min(r[0] for r in res); hi = max(r[1] for r in res)
         emp = sum(r[2] for r in res) / len(res)
         off = sum(r[3] for r in res) / len(res)
-        print(cs, "->", "price", lo, hi, "hired %.1f offering %.1f" % (emp, off))
+        hmin = min(r[5] for r in res); hmax = max(r[6] for r in res)
+        print(cs, "->", "price", lo, hi, "hired %.1f offering %.1f" % (emp, off),
+              "| hired per tick over the last 100: min", hmin, "max", hmax)

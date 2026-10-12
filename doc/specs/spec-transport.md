@@ -54,7 +54,7 @@ It covers:
 - goods in transit in the ledger, the audit and the balance sheets (section 7);
 - the decision on N-076, the carriage unit (section 8);
 - what transport exposes to strategies and to information (section 9);
-- the hooks reserved for risk and infrastructure (section 10);
+- the hooks of risk, infrastructure, storage and fiscal (section 10);
 - parameters, validation, observability, checkpoint state, register entries, what
   was run, a worked example of three regions, the notes settled, the requirements
   and the open questions (sections 11 to 20).
@@ -66,8 +66,8 @@ Out of scope, with the owner:
 | The region graph, its edges and distances, the region entity, the region-change operation of an account | `spec-regions.md` (REG) |
 | Who ships, what and why; the decision to travel or to hire | `spec-merchants.md` (MER), the agent's `Strategy` |
 | Rumours and delayed prices | `spec-information.md` (INF) |
-| Loss in transit: theft, wreck, disaster | `spec-risk.md` (RSK); this spec reserves the hook (10.1) |
-| Roads, bridges, ships as fixed capital and how they change a travel time | `spec-infrastructure.md` (CAP); this spec reserves the hook (10.2) |
+| Loss in transit: theft, wreck, disaster | `spec-risk.md` (RSK); this spec gives it the record field, the step at arrival and the hook (5.7, 10.1) |
+| Roads, bridges, ships as fixed capital and how they change a travel time | `spec-infrastructure.md` (CAP); this spec gives it the transit factor slot and the effective factor (4.1, 10.2) |
 | Warehouses and storage cost | `spec-storage.md` (STO) |
 | Migration of households | `spec-migration.md` (MIG) |
 | Tolls and tariffs | `spec-fiscal.md` (FIS) |
@@ -117,14 +117,14 @@ region at arrival. REG's reservation of those stays unused.
 |---|----------|---------|
 | 1 | Transport is a module, off unless configured. A world with modes and strategies that never ask for a shipment behaves as a world without transport | 3.1, 5.3 |
 | 2 | A mode is data: a speed, a capacity pair per carrying unit, and either the crew and goods a traveller needs (**self-carried**) or a commodity of **haul units** that a shipper buys and redeems (**hired**). No code branches on a mode | 3.1 |
-| 3 | Transport charges goods and time and never money. A trip costs the traveller's time, wear of a durable vehicle and a list of consumed goods; hired capacity costs what its producers' recipe costs, through the ordinary market | 3.3 |
+| 3 | Transport charges goods and time and moves no money of its own, with one exception: a toll of `spec-fiscal.md` 7 at dispatch, only when the fiscal module is on. A trip costs the traveller's time, wear of a durable vehicle and a list of consumed goods; hired capacity costs what its producers' recipe costs, through the ordinary market | 3.3 |
 | 4 | Capacity is a pair, mass and bulk, per carrying unit, and a load fits if and only if both sums are within it (`spec-goods.md` 3.2). `BulkFactor` is not used for transport: a hired load is priced by its binding fill, which removes the over-charge of `spec-goods.md` 3.5 for transport | 3.2, 8.4 |
 | 5 | Travel time is `ceil(distance / speed)` with a minimum of 1 tick, from the shortest distance of REG, and is fixed at dispatch | 4 |
 | 6 | The traveller of a self-carried trip carries everything its account holds, counted against its capacity: no capacity can be bypassed by moving an account | 3.2, 5.5 |
 | 7 | Goods in transit are in a Transit ledger account, one shipment per account, and age as in any account. Transit accounts are reused, never closed | 5.6, 7.1 |
 | 8 | There are no queues. A request that cannot be met is refused whole with a reason and leaves no state | 6 |
 | 9 | The carriage unit is a produced good (N-076, option 1): the haul unit is an ordinary commodity made by an ordinary recipe, traded in an ordinary market and redeemed at dispatch. No change to clearing, and every guarantee of `spec-clearing.md` 2.3 stands | 8 |
-| 10 | Loss in transit is RSK's. The reason `loss` stays unused and reserved | 10.1 |
+| 10 | Loss in transit is RSK's (`spec-risk.md`): `LossBP` in the record, the loss at arrival. The reason `loss` is used with the risk module on and unused with it off | 5.7, 10.1 |
 
 ## 3. Modes
 
@@ -202,7 +202,7 @@ accepted although no packing exists (open question 4).
 3.2.2. **The load of a self-carried trip is everything the traveller's account
 holds.** The load is the pair of sums over every good in the traveller's account at
 dispatch (the lines it consigns to another agent, if any, are part of them), except
-units of the mode's `Vehicle` commodity (a vehicle is not cargo) and the feed that
+units of the mode's `Vehicle` commodity (a vehicle is not cargo; the same units are not exposed to a strike of the risk module either, `spec-risk.md` 5.4.1) and the feed that
 the trip consumes (3.3.2). Money has no mass and no bulk. The reason is closure: the
 traveller's account changes region at arrival (5.7), and a rule that checked only a
 declared cargo would let an agent move any quantity of goods by declaring none. The
@@ -223,9 +223,11 @@ simplification and not a design target; a player and any named merchant are weig
 
 ### 3.3 The cost of a trip
 
-Transport charges goods and time; it never moves money (position 3). Money costs
-arise elsewhere: the price of hired capacity is the market's, a toll would be
-FIS's, a loss would be RSK's.
+Transport charges goods and time; it moves no money of its own (position 3). The one
+exception is a toll of `spec-fiscal.md` 7, charged to the shipper at dispatch (5.5.1,
+step 3a) only when the fiscal module is on; with it off the position holds as written.
+Other money costs arise elsewhere: the price of hired capacity is the market's, and a
+loss is RSK's and is a loss of goods (`spec-risk.md` 5).
 
 3.3.1. **Time.** The traveller of a self-carried trip is away for `k` ticks
 (section 4) and every one of them is a working tick for the welfare ratio: the
@@ -282,7 +284,10 @@ k = max(1, ceil(D * 10_000 / (v * F)))
 ```
 
 where `F` is the **transit factor** of (`from`, `to`, mode) in basis points, 10 000
-by default. With the default factor this is `ceil(D / v)`. The product `D * 10_000`
+by default: the **effective** factor of 10.3, `F_slot` with the facility layer of
+`spec-infrastructure.md` 5.2.2 multiplied in, for a pair whose own direct edge is its
+shortest path (`spec-infrastructure.md` 5.2.5); the layer of any other pair is 0, so
+`F` is `F_slot` there, and the product is capped at `MaxTransitFactorBP`. With the default factor this is `ceil(D / v)`. The product `D * 10_000`
 and the division use the checked multiply-divide helper with a 128-bit intermediate
 (`spec-currency.md` 7; architecture.md 3.5); `v * F` is at most
 `MaxSpeed * MaxTransitFactorBP` and fits. The rounding is **up**: a journey never
@@ -345,9 +350,13 @@ type Shipment struct {
 	Account    int        // the Transit ledger account; -1 for a trip to oneself
 	Units      int64      // carrying units used (n)
 	HaulUnits  int64      // haul units redeemed (n * s); 0 for a self-carried trip
+	LossBP     int64      // the share of the cargo the risk module fixed at dispatch; 0 with the module off or no strike (spec-risk.md 4)
 	Lines      []Line     // commodity and quantity shipped, in commodity order
 }
 ```
+
+`LossBP` is not shown to any view (`spec-risk.md` 8.1: a view sees the expected loss
+of a route in `Routes`, never the outcome of a strike).
 
 The quantity delivered is not stored: at arrival the shipment's Transit account holds
 exactly what was not spoiled on the way (5.6), and the difference from `Lines` is the
@@ -410,6 +419,7 @@ by `Step`.
 | 1 | `too_many_requests` | this is request number `MaxDispatchPerTick + 1` or later of the agent's plan |
 | 2 | `unknown_mode` | the mode is not in the configuration (also every request when the module is off) |
 | 3 | `traveller_away` | self-carried and the agent is already away (including by an earlier request of this plan) |
+| 3a | `has_store` | self-carried and the agent owns a store (`spec-storage.md` 9.3): a trip ends in a region change that the `region_bound` refusal `has_store` of `spec-regions.md` 6.5.2 would hold for ever (the refusal reason and the registered refusal are one meaning in two registries) |
 | 4 | `job_in_progress` | self-carried and the agent has a job in progress, started this tick or earlier (`spec-production.md` 5.2) |
 | 5 | `same_region` | `To` is the shipper's own region |
 | 6 | `unknown_region` | `To` is not a region |
@@ -419,6 +429,7 @@ by `Step`.
 | 9 | `too_far` | `k` above `MaxTravelTicks` |
 | 10 | `unknown_consignee` | the consignee is not an existing agent (a pseudo-agent is not one) |
 | 11 | `consignee_elsewhere` | the consignee is not in region `To`, except `ToSelf` of a self-carried request; a hired request with `ToSelf` is this reason |
+| 11a | `consignee_full` | a consignee other than the shipper whose account is limited and whose free room less its upkeep room (`spec-storage.md` 3.4.5, 5.4.1; after the pledges of earlier requests of the tick) is below the load of the lines in either dimension |
 | 12 | `lines_with_self` | `ToSelf` with a non-empty `Lines` |
 | 13 | `empty_shipment` | a hired request, or a self-carried one to another agent, with no line |
 | 14 | `too_many_lines` | more than `MaxShipmentLines` lines |
@@ -430,7 +441,8 @@ by `Step`.
 | 20 | `insufficient_haul` | hired and it holds fewer than `n * s` haul units (counting a line of the haul commodity) |
 | 21 | `insufficient_feed` | self-carried and it lacks a feed quantity |
 | 22 | `unprovisioned` | self-carried and, after the moves of dispatch, the traveller's stock of its upkeep goods is below its effective upkeep times `w` times `k` (`spec-agents.md` 5.2): it would be unfed on the way, and it cannot buy while away |
-| 23 | `overflow` | a product of 3.2 or 3.3 does not fit `int64` |
+| 22a | `toll_unaffordable` | the fiscal module is on and the shipper's available money (its balance less what is reserved) is below the total toll of the path (`spec-fiscal.md` 7.4) |
+| 23 | `overflow` | a product of 3.2 or 3.3, or the total toll (`spec-fiscal.md` 7.3), does not fit `int64` |
 
 A quantity beyond `MaxQuantity` in a feed or haul product (3.3) is reported as the
 corresponding insufficiency, since no account can hold more.
@@ -450,7 +462,16 @@ checked; a failure here is a programmer error and panics, architecture.md 8.1,
    durability (`spec-ledger.md` 5.2.1): age and wear travel with the goods.
 3. **Cost.** Self-carried: the feed and the wear of 3.3.2. Hired: the `n * s` haul
    units of 3.3.3 to the boundary under `haul_use`.
-4. **The record.** The shipment is stored with the next ID. `Arrives` is `t + k`.
+3a. **Toll.** With the fiscal module on: for each crossing of the path in path order and
+   each toll in ascending ID with a due above 0, `Transfer(shipper, treasury, due)` under
+   the toll's ID (`spec-fiscal.md` 7.4); the refusal 22a checked the total, so the step
+   cannot fail. The total is the field `Toll` of the event.
+4. **The record.** The shipment is stored with the next ID. `Arrives` is `t + k`. For a
+   consignee other than the shipper with a limited account, the consignee's pledge is set
+   up by the load of the lines (`spec-storage.md` 5.4.1).
+4a. **The risk.** With `Modules.Risk` present, `LossBP` is computed and written into the
+   record of step 4 (`spec-risk.md` 4.1.1); a request that was refused never reaches it
+   and takes no draw.
 5. **Away.** For a self-carried trip the traveller is marked away until arrival.
 6. **The event** `ShipmentDispatched` (section 13).
 
@@ -467,7 +488,7 @@ checked; a failure here is a programmer error and panics, architecture.md 8.1,
 - every tick from the dispatch tick to tick `Arrives - 1` is a working tick (3.3.1);
 - its account cannot be relocated by anyone else while it is away: see 5.5.3.
 
-5.5.3. **The refusal `open_shipment`** (one of four `region_bound` refusals: `on_journey` is MIG's, `open_contract` MER's, `in_traineeship` SKL's; `spec-regions.md` 6.5.2). When the module is on, transport registers the
+5.5.3. **The refusal `open_shipment`** (a `region_bound` refusal; the others are `on_journey` of MIG, `open_contract` of MER, `in_traineeship` of SKL, `open_hire` of EMP and `has_store` of STO, and `spec-regions.md` 6.5.2 holds the list). When the module is on, transport registers the
 `region_bound` refusal named `open_shipment` (`spec-regions.md` 6.5.2). It is open for an
 account whose agent is the traveller of an away trip, or the shipper or the consignee of
 a shipment in flight (an agent whose goods or whose delivery is tied to a region). The
@@ -501,14 +522,20 @@ in tick `t` over `k` ticks is delivered if and only if `t + k <= b + S - 1`, tha
 `k <= S - 1 - (t - b)`. A fresh lot (`b = t`) therefore travels at most `S - 1` ticks
 and arrives with at least one tick of use left (17.2).
 
-5.6.3. Nothing else happens to the cargo in version 1. Reserved for risk: a transfer
-from the Transit account to the boundary under `loss` (10.1).
+5.6.3. Nothing else happens to the cargo in transit. The loss of the risk module is a
+transfer from the Transit account to the boundary under `loss`, made at arrival (step 0
+of 5.7; `spec-risk.md` 5).
 
 ### 5.7 Arrival
 
 In the first phase of tick `t`, after the moment is computed, the world processes the
 shipments with `Arrives = t` in order of shipment ID:
 
+0. **The loss.** If `LossBP` is above 0, each commodity of the shipment's Transit account
+   loses `rhe(held * LossBP, 10 000)` units to the boundary under `loss`; for a
+   self-carried shipment whose traveller still exists, the same is then done over every
+   commodity of the traveller's own account except the mode's `Vehicle`
+   (`spec-risk.md` 5.1, 5.4). The arrival goes on with what is left.
 1. **A self-carried trip.** If the traveller still exists, its account's region
    becomes `To` by the ledger-level `Relocate` with cause `transport` (1.2, 5.5.3), its price beliefs are reseeded (5.7.1, no draw) and it
    is no longer away. If it
@@ -518,12 +545,15 @@ shipments with `Arrives = t` in order of shipment ID:
    account in commodity order, the whole quantity left moves to the consignee under
    `transit_in`, taking lots oldest first and keeping their born tick and durability.
    The consignee is the agent named in the shipment, if it still exists, is in region
-   `To`, and the move would not exceed `MaxQuantity`; otherwise the quantity is
-   **diverted** (5.8).
+   `To`, and the move would not exceed `MaxQuantity` or the consignee's room (the credit
+   is bounded by `RoomLeft`, whole units, in line order; `spec-storage.md` 5.4.4: a
+   backstop, because the pledge of step 4 of 5.5.1 makes it unreachable unless the room
+   was cut while the cargo travelled); otherwise the quantity is **diverted** (5.8).
 3. **Release.** The Transit account is empty. It stays open and joins the free list
    of its region (7.1).
-4. **The event** `ShipmentArrived`, with for each line the shipped, delivered and
-   spoiled quantity and whether any was diverted (section 13).
+4. **The event** `ShipmentArrived`, with for each line the shipped, delivered, diverted,
+   spoiled and lost quantity, and the amounts lost from the traveller's own account
+   (section 13).
 
 The first phase comes before relief, so a consignee has its goods
 and a traveller its new region before anything else of the tick reads them, and
@@ -533,7 +563,8 @@ before `Work` and `Trade`.
 
 ### 5.8 Cargo that cannot be delivered
 
-If the consignee has been removed, is not in `To`, or cannot hold the quantity, the
+If the consignee has been removed, is not in `To`, or cannot hold the quantity (its
+`MaxQuantity` or its room, 5.7 item 2), the
 goods are **diverted**: they move to the estate account of region `To` under
 `transit_in` (a transit-to-estate move; 7.2). The estate lists them for sale like any
 estate goods (`spec-estates.md` 2.7), so their value goes to the regional pool. No
@@ -551,11 +582,14 @@ Transit account and belong to the consignee on arrival.
 5.9.2. **The traveller is removed** (it starves, or the consumer removes an external
 agent with `RemoveAgent`, mortal or not, `spec-integration.md` 4.4.1): its holdings in its own account go to the
 estate of the account's region, `From`, as for any removal (`spec-agents.md` 3.6). A
-shipment to itself is dropped. A shipment with lines continues without a traveller:
-its cargo is in the Transit account and arrives at `Arrives`, delivered to the
-consignee; only the traveller's region change is skipped.
+shipment to itself is dropped, with no loss. A shipment with lines continues without a
+traveller: its cargo is in the Transit account, is struck there as any shipment is (5.7
+step 0; the traveller's own account is in the estate and is not) and arrives at
+`Arrives`, delivered to the consignee; only the traveller's region change is skipped.
 
-5.9.3. **The consignee is removed** before arrival: the cargo is diverted (5.8).
+5.9.3. **The consignee is removed** before arrival: the cargo is diverted (5.8). A
+weight reduction of the consignee does not change the cargo: the room it needs may have
+gone, and the arrival diverts the part that does not fit (`spec-storage.md` 5.4.4).
 
 5.9.4. **Weight and role.** A weight change of an away traveller does not change the
 trip: the capacity was fixed at dispatch. A role change by the spawner does not end
@@ -624,13 +658,13 @@ The reasons below join the registry of `spec-ledger.md` 7.2. `transit_out` and
 | `transit_in` | goods | internal | transit to agent, or transit to estate (a diverted cargo) | this spec |
 | `haul_use` | goods | sink | agent to boundary: the redemption of haul units | this spec |
 | `transit_use` | goods | sink | agent to boundary: the feed of a trip | this spec |
-| `loss` | goods | sink | transit to boundary | **RSK**; reserved, no flow under it in this spec |
+| `loss` | goods | sink | transit to boundary; with the risk module on also agent to boundary (the traveller's own account, step 0 of 5.7) | **RSK**; used with `Modules.Risk`, goods only; no flow under it in this spec's own rules |
 | `spoilage`, `wear` | goods | sink | existing; a Transit account and a worn vehicle appear as holders | `spec-goods.md`, `spec-ledger.md` |
 
 `haul_use` and `transit_use` are separate from `consumption` so that they are told
 apart in `BoundaryFlow`, as `want_consumption` is (`spec-ledger.md` 7.2). `loss` is
-listed in the registry with owners `spec-transport.md` and `spec-estates.md`; the
-handoff proposes changing its owner to RSK.
+used with the risk module on and its owner is RSK (`spec-ledger.md` 7.2); this spec
+only gives it a place, the loss of step 0 of 5.7.
 
 ### 7.3 Conservation and attribution
 
@@ -639,8 +673,8 @@ non-boundary accounts, never negative. They are in the contract sector of 9.3 th
 
 7.3.2. **Per shipment.** For each line, the quantity shipped equals the quantity
 delivered to the consignee plus the quantity diverted to the estate plus the quantity
-that spoiled in transit (plus the quantity lost, which is 0 until RSK), exactly
-(FR-TRN-028). The spoiled quantity is measured, not assumed: it is the line's shipped
+that spoiled in transit plus the quantity lost (`spec-risk.md` 5.2.2; 0 with the risk
+module off), exactly (FR-TRN-028). The spoiled quantity is measured, not assumed: it is the line's shipped
 quantity less what the Transit account held at arrival.
 
 7.3.3. **Attribution.** The ledger attributes a flow to the region of the account on the
@@ -791,7 +825,7 @@ configuration:
 | Group | Content |
 |-------|---------|
 | `Inbound` | per commodity with units on the way to this agent as consignee: the total quantity and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (so it does not depend on the order in which agents are called) |
-| `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3); an outside node is reported with no route (`outside_destination`, 5.4) |
+| `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3); an outside node is reported with no route (`outside_destination`, 5.4). With the risk module it gains `LossBP`, the expected loss of the route (`spec-risk.md` 8.1: 0 with the module off), and with the fiscal module `Toll`, the money one carrying unit pays in tolls on the path (`spec-fiscal.md` 7.5) |
 | `Outbound` | per destination region and commodity with units on the way, the total quantity of the shipments the agent is the **shipper** of and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (fixed at that moment, so that it does not depend on the order in which agents are called, as `Inbound` does not; `spec-merchants.md` 4.1) |
 
 `Inbound` exists so that a consignee does not buy again what is already on its way: a
@@ -802,8 +836,11 @@ An agent that is away is never passed a view.
 ### 9.2 Queries
 
 Read-only functions of the world, available to a consumer and to later specs:
-`Travel(from, to, mode)` returns the travel time and the haul units per carrying unit
-or that there is no route; `InTransit(agent)` (7.4.2); `Away(agent)`. None changes
+`Travel(from, to, mode)` returns the travel time, at the effective transit factor (4.1),
+and the haul units per carrying unit, or that there is no route;
+`RouteLoss(from, to, mode)` the expected loss in basis points of the route, or that
+there is none (the formula is `spec-risk.md` 8.1.1, a cached lookup, class 1; this spec
+owns the read and INT lists it); `InTransit(agent)` (7.4.2); `Away(agent)`. None changes
 state or draws a random number.
 
 ### 9.3 The information consequence
@@ -826,7 +863,8 @@ INF owns rumours and delay. Transport adds exactly this, and no more:
 
 `spec-viability.md` 9.4 takes a list of lanes as data and says transport decides who
 supplies them. For each hired mode, ordered pair of regions with a route, and
-commodity `c`, transport can derive one lane with no loss (RSK adds loss) and a labour
+commodity `c`, transport can derive one lane with the loss of `spec-risk.md` 8.3 (the expected loss of
+the path at the configured scales; 0 with the risk module off) and a labour
 charge in household-ticks per 10 000 units of `c`:
 
 ```
@@ -845,35 +883,41 @@ version 1.
 
 ## 10. Hooks reserved
 
-10.1. **Risk (RSK).** Reserved, not specified. The place is between dispatch and
-arrival: a transfer from the Transit account to the boundary under `loss` before the
-delivery of 5.7, which the arrival event would report as `Lost` (a field that is 0
-until RSK adds the mechanism; adding a field is allowed, observability-and-logging.md
-4.2). A loss that falls on a traveller's own holdings is RSK's to define. RSK decides
-whether a risk is per edge, per mode or per shipment, and what it draws.
+10.1. **Risk (RSK).** Specified by `spec-risk.md`: `LossBP` in the record (5.2), the
+risk of step 4a of 5.5.1, the loss of step 0 of 5.7, the expected loss in `Routes` (9.1)
+and in `RouteLoss` (9.2).
 
-10.2. **Infrastructure (CAP).** Reserved: how a road, a bridge or a ship changes a
-travel time. The place is the transit factor `F` of 4.1, per (from, to, mode), 10 000
-by default and up to `MaxTransitFactorBP`; a faster road raises it. The same slot
-could carry an edge limit (`edge_full`, 6.2). Nothing in this spec reads a road.
+10.2. **Infrastructure (CAP).** The transit factor `F` of 4.1 is per (from, to, mode),
+10 000 by default and up to `MaxTransitFactorBP`. A route facility
+(`spec-infrastructure.md` 5.2) multiplies a gain `(10 000 + B) / 10 000` into `F`;
+nothing in this spec reads a road. The same slot could carry an edge limit
+(`edge_full`, 6.2).
 
 10.3. **The transit factor slot.** `F` is world state, not configuration: a table of
-the factors that differ from 10 000, keyed by (from, to, mode), set between ticks by
-the integration spec for a shock (a closed road is 0) or by CAP, and saved in a
-checkpoint (14). It acts on new dispatches only; shipments in flight keep the arrival
+the factors that differ from 10 000, keyed by (from, to, mode), set by
+the consumer between ticks for a shock (a closed road is 0), or by a policy actor at
+P0.3a (`spec-policy.md`, cause `policy`), and saved in a checkpoint (14). The slot is
+never written by the facility layer of CAP, which is a second factor multiplied into
+`F` (4.1, 10.2). It acts on new dispatches only; shipments in flight keep the arrival
 tick they were given (4.3). The public call is `SetTransitFactors([]TransitFactor{From,
 To, Mode; BP})` of the integration spec (`spec-integration.md` 5.1): `From` must differ
-from `To` (`ErrSameRegion`), and a changed key emits `TransitFactorChanged` (13.1). This
+from `To` (`ErrSameRegion`), and a changed key emits `TransitFactorChanged` (13.1) with `Cause` `consumer` or
+`policy`. This
 spec owns the slot and its effect (as production owns the yield-shock slot,
 `spec-production.md` 6.8).
 
-10.4. **Storage (STO).** None: the destination is an account, not a warehouse. A cargo
-that arrives is in the consignee's account and subject to whatever capacity rule STO
-adds then.
+10.4. **Storage (STO).** The consignee's room is pledged at dispatch (step 4 of 5.5.1;
+`spec-storage.md` 5.4): a shipment that would not fit is refused `consignee_full` (5.4),
+and the arrival credits the cargo from the pledge (5.7 item 2).
 
 10.5. **Migration (MIG).** A household's migration is not a shipment and is not a
 working trip (`spec-welfare-and-wages.md` 4.3). It may use `Travel` to know how long a
 journey takes: it does not. It has its own speed (`MoveSpeed`) and a journey that is not a shipment (`spec-migration.md` 6.4, 8). An agent on a migration journey is not `Away` in this spec's sense; it is refused for a shipment by the same skip of `spec-agents.md` 4 (it is passed to no `Trade`), and its account stays in the region of departure until arrival, as a traveller's does. MIG registers its own `region_bound` refusal `on_journey`, of the same kind as `open_shipment` (5.5.3, `spec-migration.md` 7.2.2), and changes the region at arrival by the ledger-level `Relocate` with the cause `migration`, after the arrivals of 5.7 (`spec-migration.md` 8.4). The public relocation of `spec-regions.md` 6.1 is refused with `ErrRegionBound` (`open_shipment`) while the agent is away or has a shipment in flight.
+
+10.6. **Fiscal (FIS).** A toll on the crossing of a border is charged at dispatch, in
+step 3a of 5.5.1, with the refusal `toll_unaffordable` (5.4); specified by
+`spec-fiscal.md` 7. Tariffs on goods that cross the border of the realm are FIS duties
+and not shipments (`spec-fiscal.md` 6).
 
 ## 11. Parameters
 
@@ -904,7 +948,7 @@ it is 10^18, which fits `int64`); `MaxFeed` 4 (as `MaxRequires`);
 `MaxHaulSpan` 10^12; `MaxShipmentLines` 16 (the loop and the size of an event);
 `MaxDispatchPerTick` 8 (requests an agent's plan may carry); `MaxTravelTicks` equal to
 `MaxTicksPerYear` (100 000: a journey of a year of ticks, and a duration times a count
-does not overflow); `MaxTransitFactorBP` 100 000 (a road ten times faster).
+does not overflow); `MaxTransitFactorBP` 100 000 (a road ten times faster; it caps the effective factor of 4.1, the slot times the facility layer).
 
 Read here and owned elsewhere (no row): `Mass`, `Bulk`, `ShelfLife`, `Durability`
 (`spec-goods.md` 8); `Distance` (REG); `MaxWeight`, `MaxQuantity`, `MaxTicksPerYear`
@@ -953,13 +997,14 @@ state transition of one shipment or one request (observability-and-logging.md 4.
 
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
-| `ShipmentDispatched` (new) | when a shipment is dispatched | `Shipment`, `Mode`, `Region` (origin), `To`, `Shipper`, `Traveller` and `Hired`, `Consignee`, `Arrives`, `Units`, `HaulUnits`, `Lines` (commodity and quantity, a copy in commodity order) |
-| `ShipmentArrived` (new) | when a shipment arrives, after its delivery | `Shipment`, `Mode`, `Region` (origin), `To`, `Receiver` (the consignee, or the destination estate pseudo-agent if diverted), `Diverted`, `Lines` (commodity, `Shipped`, `Delivered` to the consignee, `Diverted` to the estate, `Spoiled`) |
-| `ShipmentRejected` (new) | when a request is refused | `Region`, `Agent`, `Mode`, `To`, `Reason` |
+| `ShipmentDispatched` (new) | when a shipment is dispatched | `Shipment`, `Mode`, `Region` (origin), `To`, `Shipper`, `Traveller` and `Hired`, `Consignee`, `Arrives`, `Units`, `HaulUnits`, `LossBP` (the share fixed by the risk module, 0 with it off), `Toll` (the total toll paid, minor units, 0 with the fiscal module off), `Lines` (commodity and quantity, a copy in commodity order) |
+| `ShipmentArrived` (new) | when a shipment arrives, after its delivery | `Shipment`, `Mode`, `Region` (origin), `To`, `Receiver` (the consignee, or the destination estate pseudo-agent if diverted), `Diverted`, `Lines` (commodity, `Shipped`, `Delivered` to the consignee, `Diverted` to the estate, `Spoiled`, `Lost`), `AccountLost` (the amounts lost from the traveller's own account, by commodity in commodity order; empty for a hired shipment, `spec-risk.md` 5.4) |
+| `ShipmentRejected` (new) | when a request is refused | `Region`, `Agent`, `Mode`, `To`, `Reason` (the constants of 5.4) |
 
 A fourth event, `TransitFactorChanged`, is a slot event and not a shipment event: once per
-changed key of a call of `SetTransitFactors` (10.3), at the call, with `From`, `To`,
-`Mode` and the factor before and after in basis points (`spec-observability.md` 4.4.4);
+changed key of a call of `SetTransitFactors` (10.3), at the call, or at P0.3a for a policy
+actor's write, with `From`, `To`, `Mode`, the factor before and after in basis points
+and `Cause` (`consumer` or `policy`) (`spec-observability.md` 4.4.4);
 it is emitted only with the module on.
 
 None has a map, a pointer or a wall-clock time (observability-and-logging.md 4.1).
@@ -996,10 +1041,11 @@ events:
 | `economysim.transport.shipments` | Counter | `{shipment}` | `economysim.mode` | `ShipmentDispatched` |
 | `economysim.transport.in_transit` | UpDownCounter | `{unit}` | `economysim.commodity` | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line's `Shipped`) |
 | `economysim.transport.cargo.spoiled` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (`Spoiled`) |
+| `economysim.transport.cargo.lost` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (each line's `Lost` and each `AccountLost` amount; `spec-risk.md` 14.4) |
 
 `economysim.mode` is bounded by the configuration (5.4.1 there; at most `MaxModes`);
 `economysim.commodity` already is. The series added for the reference chain: one per
-mode and, for the two commodity metrics, one per commodity that is ever shipped
+mode and, for the three commodity metrics, one per commodity that is ever shipped
 (5.4.2 there), at most 30.
 
 13.5. **Snapshot.** The list of shipments in flight (the record of 5.2 with the lines
@@ -1009,7 +1055,10 @@ and the time left), the set of away agents, and the transit factors that differ 
 
 13.6. **Cost with no observer.** Travel time, the fit test and the load sum use scratch
 held by the world and allocate nothing (NFR-TRN-001); events are not built
-(NFR-TRN-004). Observation never changes results.
+(NFR-TRN-004). The arrival keeps the units lost, by commodity, for the lines and for the
+traveller's account, in the same scratch whether or not an observer was supplied, because
+the settlement of route covers reads them (`spec-insurance.md` 8); no step of dispatch is
+added for it. Observation never changes results.
 
 ## 14. State contributed to a checkpoint
 
@@ -1018,8 +1067,8 @@ data in a fixed order with no maps:
 
 - the next shipment ID;
 - the shipments in flight, in ID order: every field of 5.2 (the mode and regions by
-  their position in the canonical order of the configuration, the lines in commodity
-  order);
+  their position in the canonical order of the configuration, `LossBP`, present with the
+  risk module on, the lines in commodity order);
 - the transit factors that differ from 10 000, in the order of (from, to, mode).
 
 **Not saved:** the away flags (derived: a traveller is away if it is the traveller of
@@ -1277,7 +1326,7 @@ conserved: shipped 100 = delivered 100 + diverted 0 + spoiled 0.
   chargeable size and `BulkFactor` are not used by transport because a hired load buys
   `n` units by its binding fill (3.2.1, 8.3), which also answers "add a per-mode factor
   if the error matters": the unit pair is the per-mode factor; goods keep ageing in
-  transit (5.6); cargo lost is `loss`, reserved for RSK (10.1); contract money is held
+  transit (5.6); cargo lost is `loss`, RSK's (5.7 step 0, 10.1); contract money is held
   in an Escrow account, not a reservation, and that is MER's for a bilateral contract
   (8.4). Left open for STO, CAR and MER.
 - **N-046** (register entries owed). Left open for the other specs. TRN's entries are
@@ -1314,7 +1363,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-002 | A mode with `Haul` set MUST have a `HaulSpan` from 1 to `MaxHaulSpan` and no `Crew`, `Vehicle`, `WearPerTick` or `Feed`; a mode without `Haul` MUST have no `HaulSpan`; a violation MUST be rejected with `ErrModeShape`. |
 | FR-TRN-003 | A `Vehicle` MUST be a known commodity with `Durability` above 0 (`ErrVehicleNotDurable`), with a `WearPerTick` from 1 to its `Durability`, and a `Vehicle`, `Feed` or `Haul` that is not a defined commodity MUST be rejected with `ErrUnknownCommodity`. |
 | FR-TRN-004 | With the module absent from the configuration, every shipment request MUST be refused with `unknown_mode`, no shipment, Transit account or transport event MUST exist, and a configuration with modes and strategies that request no shipment MUST give results identical to one without the module. |
-| FR-TRN-005 | The travel time MUST be `max(1, ceil(D * 10 000 / (Speed * F)))` with `D` the shortest distance of the region graph and `F` the transit factor in basis points (default 10 000), computed with a 128-bit intermediate and checked arithmetic. |
+| FR-TRN-005 | The travel time MUST be `max(1, ceil(D * 10 000 / (Speed * F)))` with `D` the shortest distance of the region graph and `F` the effective transit factor in basis points (the slot, default 10 000, with the facility layer of 4.1 when the infrastructure module is on, capped at `MaxTransitFactorBP`), computed with a 128-bit intermediate and checked arithmetic. |
 | FR-TRN-006 | A request between regions with no path MUST be refused `no_route`, one with a transit factor of 0 `blocked`, and one whose travel time exceeds `MaxTravelTicks` `too_far`. |
 | FR-TRN-007 | A shipment's arrival tick MUST be its dispatch tick plus its travel time at dispatch, and a later change of the transit factor or of the graph MUST NOT change the arrival tick of a shipment in flight. |
 | FR-TRN-008 | The carrying units a self-carried traveller of weight `w` fields MUST be `floor(w / Crew)`, limited by the available vehicle items when the mode has a `Vehicle`; with none the request MUST be refused `crew_short` or `no_vehicle`. |
@@ -1324,11 +1373,11 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-012 | A hired shipment MUST redeem `n * s` haul units from the shipper's account to the boundary under `haul_use`, with `s = ceil(distance / HaulSpan)`, and MUST be refused `insufficient_haul` if the shipper holds fewer. |
 | FR-TRN-013 | At dispatch a self-carried trip with a `Vehicle` MUST apply `WearItems` to the `n` vehicles used for `WearPerTick` times the travel time, a vehicle that reaches 0 MUST be destroyed to the `wear` boundary, and the trip MUST NOT be interrupted by it. |
 | FR-TRN-014 | At dispatch each `Feed` entry MUST move `quantity * n * k` units from the traveller to the boundary under `transit_use`, and a traveller holding less MUST be refused `insufficient_feed`. |
-| FR-TRN-015 | Transport MUST NOT move money: no transfer of money MUST be made by dispatch, transit or arrival. |
+| FR-TRN-015 | Transport MUST NOT move money of its own: no transfer of money MUST be made by dispatch, transit or arrival, except the toll of step 3a of 5.5.1 with the fiscal module on (`spec-fiscal.md` 7). |
 | FR-TRN-016 | In phase 3 the world MUST execute, for each agent in ID order, the plan's discards, then its shipment requests in plan order, then turn its intents into orders; an agent MUST NOT make more than `MaxDispatchPerTick` requests in a plan, the rest being refused `too_many_requests`. |
 | FR-TRN-017 | A request MUST be refused whole, with a reason of 5.4 chosen by the order of its checks, changing no state and opening no account, and MUST emit `ShipmentRejected`. |
 | FR-TRN-018 | A request with a consignee MUST be refused `unknown_consignee` if the consignee is not an existing agent and `consignee_elsewhere` if it is not in the destination region, except a self-carried request to oneself; a request to oneself MUST have no lines (`lines_with_self`). |
-| FR-TRN-019 | A self-carried request MUST be refused `traveller_away` if the agent is away and `job_in_progress` if it has a job in progress, and `unprovisioned` if after the dispatch's moves its stock of its upkeep goods is below its effective upkeep times its weight times the travel time. |
+| FR-TRN-019 | A self-carried request MUST be refused `traveller_away` if the agent is away, `has_store` if it owns a store (FR-STO-031) and `job_in_progress` if it has a job in progress, and `unprovisioned` if after the dispatch's moves its stock of its upkeep goods is below its effective upkeep times its weight times the travel time. |
 | FR-TRN-020 | Dispatch MUST move each line from the shipper to a Transit account under `transit_out`, with the lots keeping their born tick and remaining durability, and MUST take the lowest-ID open Transit account of the shipper's region that no shipment in flight uses, or open one. |
 | FR-TRN-021 | A traveller MUST be away from its dispatch until the first phase of its arrival tick: not passed to `Work` or `Trade`, placing no order, with every tick from the dispatch tick to the tick before arrival a working tick, its account keeping its region and its upkeep consumed from its account. |
 | FR-TRN-022 | With the module on, transport MUST register the `region_bound` refusal `open_shipment`, open for an agent that is an away traveller or the shipper or consignee of a shipment in flight, so that the public relocation returns `ErrRegionBound` for it; the refusal MUST report the IDs of the shipments of which the agent is shipper or consignee, and for an away traveller its own trip, as its instance keys; at arrival transport MUST first run the guard query ignoring only the shipment that arrives and the contract formed on it, MUST NOT move the account when another refusal holds, and MUST then change the traveller's region by the ledger-level `Relocate` with cause `transport` and emit `AgentRelocated` once, and MUST NOT use `NoRegion`, `depart` or `arrive`. |
@@ -1337,24 +1386,24 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-025 | Goods in transit MUST age as in any account: a lot of a perishable commodity whose born tick plus shelf life minus 1 is at most the current tick MUST move whole to the `spoilage` boundary at the end of the tick from the Transit account, so that a lot is delivered if and only if the arrival tick is at most its born tick plus shelf life minus 1. |
 | FR-TRN-026 | A durable cargo MUST NOT lose durability in transit. |
 | FR-TRN-027 | A cargo whose consignee no longer exists, is not in the destination region, or could not hold the quantity MUST be moved to the destination region's estate account under `transit_in`, MUST be flagged `Diverted` in the event, and MUST NOT wait or be returned. |
-| FR-TRN-028 | For each line of a shipment, the quantity shipped MUST equal the quantity delivered to the consignee plus the quantity diverted to the estate plus the quantity that spoiled in transit, exactly. |
+| FR-TRN-028 | For each line of a shipment, the quantity shipped MUST equal the quantity delivered to the consignee plus the quantity diverted to the estate plus the quantity that spoiled in transit plus the quantity lost (0 with the risk module off), exactly. |
 | FR-TRN-029 | Removing a shipper MUST NOT change a shipment; removing a traveller MUST send its own holdings to the estate of its account's region, drop a shipment to itself, and leave a shipment with lines to arrive without the region change; removing a consignee MUST divert the cargo. |
 | FR-TRN-030 | The ledger registry MUST contain `transit_out` (agent to transit), `transit_in` (transit to agent or estate), `haul_use` and `transit_use` (goods sinks, agent to boundary), and a transfer under one of them between accounts of the wrong kind MUST be refused with `ErrReasonMismatch`. |
-| FR-TRN-031 | The reason `loss` MUST be unused by this module: no flow under it MUST exist with the module on. |
+| FR-TRN-031 | The reason `loss` MUST be unused by this module with the risk module off: no flow under it MUST exist then; with it on the flows are the risk module's (`spec-risk.md` 5, 7). |
 | FR-TRN-032 | `World.Audit` MUST also check, with the module on, that every Transit account holds only the commodities and at most the quantities of the one shipment that references it, that an unreferenced Transit account is empty, that shipment IDs are unique with arrival ticks not before the current tick, and that the away travellers and the live self-carried shipments correspond. |
 | FR-TRN-033 | `AgentView` MUST carry `Inbound` (per commodity the total quantity on the way to the agent and the earliest arrival, from the shipments dispatched before phase 3 began) and `Routes` (per other region and mode the existence of a route, the travel time and for a hired mode the haul units per carrying unit), and an agent that is away MUST NOT be passed a view. |
-| FR-TRN-034 | `InTransit(agent)` MUST return the lines of the shipments of which the agent is shipper or consignee, `Travel(from, to, mode)` the travel time and haul units per unit or the absence of a route, and neither MUST change state or draw a random number. |
-| FR-TRN-035 | `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` MUST be emitted with the fields of 13.1, with no map, pointer or wall-clock time, in the order of 13.1, and MUST NOT be emitted when the module is off; `TransitFactorChanged` MUST be emitted once per changed key of a call of `SetTransitFactors`, at the call, and only with the module on. |
+| FR-TRN-034 | `InTransit(agent)` MUST return the lines of the shipments of which the agent is shipper or consignee, `Travel(from, to, mode)` the travel time and haul units per unit or the absence of a route, `RouteLoss(from, to, mode)` the expected loss of the route or its absence, and none MUST change state or draw a random number. |
+| FR-TRN-035 | `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` MUST be emitted with the fields of 13.1, with no map, pointer or wall-clock time, in the order of 13.1, and MUST NOT be emitted when the module is off; `TransitFactorChanged` MUST be emitted once per changed key of a call of `SetTransitFactors`, at the call or at P0.3a for a policy actor, with `Cause`, and only with the module on. |
 | FR-TRN-036 | The shipments in flight, the next shipment ID and the transit factors that differ from 10 000 MUST be saved in a checkpoint in the order of section 14, the away flags and the free lists MUST be recomputed on restore, and the restored run MUST continue exactly as an uninterrupted one. |
 | FR-TRN-037 | The modes MUST be part of the effective configuration and its hash, except `Label`. |
 | FR-TRN-038 | Validation MUST emit the warnings of 12.2 without failing the configuration, and MUST reject the errors of 12.1 each with its sentinel. |
 | FR-TRN-039 | The transit factor slot MUST default to 10 000 for every (from, to, mode), MUST affect new dispatches only, a value above `MaxTransitFactorBP` MUST be refused, a key whose `from` equals `to` MUST be refused with `ErrSameRegion`, and a changed key MUST emit `TransitFactorChanged` (10.3). |
 | FR-TRN-040 | A shipment's Transit account and its cargo MUST be attributed, for spoilage, to the origin region. |
-| FR-TRN-041 | `transport.Lanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with loss 0 and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
+| FR-TRN-041 | `transport.Lanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with the loss of `spec-risk.md` 8.3 (0 with the risk module off) and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
 | FR-TRN-042 | The module MUST log nothing above `Debug` per shipment, MUST have no `Info` line in the tick, and the keys `shipment`, `mode`, `dest` and `modes` MUST be used as in 13.3. |
 | FR-TRN-043 | Hired capacity MUST be an ordinary commodity made by ordinary recipes and traded by ordinary orders: no market, admission or settlement rule of `spec-clearing.md` MUST depend on a mode, and a world with the module on MUST pass the clearing invariants unchanged. |
 | FR-TRN-044 | Two requests with the same arguments from the same state MUST give the same result, shipment ID, Transit account and events: no iteration order of a map MUST influence a result. |
-| FR-TRN-045 | A request MUST be refused `vehicle_in_cargo` if a line names the mode's `Vehicle` commodity, `duplicate_line`, `unknown_commodity` or `invalid_quantity` for a bad line, `empty_shipment` for a hired or consigned request with no line, and `too_many_lines` above `MaxShipmentLines`. |
+| FR-TRN-045 | A request MUST be refused `vehicle_in_cargo` if a line names the mode's `Vehicle` commodity, `duplicate_line`, `unknown_commodity` or `invalid_quantity` for a bad line, `empty_shipment` for a hired or consigned request with no line, and `too_many_lines` above `MaxShipmentLines`; `consignee_full` is FR-STO-014's and `has_store` FR-STO-031's. |
 | FR-TRN-046 | A request MUST be refused `insufficient_stock` when for any commodity the sum of its line, its feed and its haul redemption exceeds the available (unreserved) stock. |
 | FR-TRN-047 | A request whose destination is an outside node of the external module MUST be refused with `outside_destination` after `unknown_region` and before `no_route`, changing no state, and `Routes` MUST report no route to such a node (`spec-external-sector.md` FR-EXT-034). |
 | FR-TRN-048 | A shipment MAY be requested by the contract round of `spec-merchants.md` 9.4 after the last agent's plan of phase 3; it MUST then be dispatched at once, with the checks and effects of 5.4 and 5.5.1 applied to the offerer, and a refusal MUST be the reason of the failed formation (5.3.2). |
@@ -1406,11 +1455,12 @@ bounds are placeholders (N-015, N-027).
    from recipes only. A traveller's trip is a gap in income (TRN-A6); either the window
    includes the longest self-carried trip of any role (it would lengthen every role's
    window) or a role says whether it travels. The warning is a stopgap. `spec-merchants.md` 12.3 proposes the answer for merchants (a role with a merchant block); WEL adopts it in 2.3.3.
-10. **Tolls and tariffs** at an edge (FIS) would be a money cost at dispatch, charged to
-    the shipper; the place is step 3 of 5.5.1. Not specified.
+10. **Tolls and tariffs** at an edge. Answered: a toll is charged to the shipper at
+    dispatch, in step 3a of 5.5.1, by `spec-fiscal.md` 7; a tariff is a FIS duty, not a
+    shipment's (`spec-fiscal.md` 6).
 11. **Mid-journey events.** A closed road after dispatch does not affect a shipment in
     flight (4.3, 6.3). Whether a shock should delay or divert cargo in flight is
-    INT's and RSK's.
+    INT's; RSK answers that a strike delays and diverts nothing (`spec-risk.md` 4.1.4).
 12. **Several vehicles of unequal wear in one trip.** `WearItems` wears the `n` most worn
     distinct vehicles (`spec-ledger.md` 5.4.3), so the worst vehicle is used first and may
     break at dispatch while a new one is spared. Whether the least worn should travel is

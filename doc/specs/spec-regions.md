@@ -107,7 +107,7 @@ table that names regions, never a field that regions read (5.4).
 3.1.3. **One settlement per region (N-026, ADR 0003 decision 4).** There is no
 second level inside a region: no ward, no hamlet that shares its market. A setting
 that has a town with outlying hamlets writes the town and each hamlet as regions
-joined by short edges (3.4). `spec-settlements.md` (later) only gives a region a size
+joined by short edges (3.4). `spec-settlements.md` only gives a region a size
 class derived from its households; it neither splits nor merges markets.
 
 ### 3.2 Fields and who owns them
@@ -505,7 +505,8 @@ list, and none may be called back into the world during a tick (architecture.md
 | STY, IND | `Distance` for the price-convergence bands; region order for output | |
 | EXT | `Len`; `Edge` for the direct edges that make a region a gate of an outside node (`spec-external-sector.md` 3.2); the edge status of 7 as an embargo | that a gate has an edge in both directions |
 | INT | `SetEdgeStatuses` (7) for the closed-road shock | |
-| POL, SET (later) | `Len`, `RegionID`: a partition or a size class is a table keyed by region | that REG reads either |
+| SET | `Len`, `RegionID`: a size class is derived per region, from the households of each | that REG reads it |
+| POL | `Len`, `RegionID`: a membership is a table keyed by region; for `Between`, `EdgeAt` and `Edge`, the crossing of an edge's two ends | that REG reads a membership; that a closed edge is not a border |
 
 ### 4.7 Routes as keys: the hook for the carriage market
 
@@ -552,6 +553,16 @@ table of the subject's owner, combined with the default in one of three ways:**
 | endowments | `Modules.Resources.Endowments` | region, resource | `spec-resources.md` 3.3 | replace (`Capacity`, `Initial`), scale (`RegenScaleBP`) |
 | outside lines | `Modules.External.Nodes[].Lines` | node region, commodity | `spec-external-sector.md` 3.3 | replace |
 | outside gate scale | `Modules.External.Nodes[].Gates` | node region, gate region | `spec-external-sector.md` 3.2.4 | scale |
+| initial facilities | `Modules.Infrastructure.Initial` | region, class, toward, role | `spec-infrastructure.md` 3.4.2 | replace |
+| tenure terms | `Modules.Tenure.Terms` | region, resource | `spec-land.md` 3.3.1 | replace |
+| tenure holdings | `Modules.Tenure.Holdings` | region, resource, holder | `spec-land.md` 3.3.1 | replace |
+| rights | `Modules.Institutions.Rights` | activity, subject, region | `spec-institutions.md` 5.1 | replace |
+| price controls | `Modules.Institutions.Controls` | commodity, region | `spec-institutions.md` 6.1 | replace |
+| membership of a jurisdiction | `Modules.Polity.Members` | region | `spec-polity.md` 3.4 | replace |
+| route risk | `Modules.Risk.Routes` | region `From`, edge `To`, mode | `spec-risk.md` 3.2.1 | replace |
+| store risk | `Modules.Risk.Stores` | region, store class | `spec-risk.md` 3.2.2 | replace |
+| thresholds of the settlement classes | `Modules.Settlements.Regions` | region | `spec-settlements.md` 3.5 | scale (`ThresholdBP`) |
+| the lowest settlement class | `Modules.Settlements.Regions` | region | `spec-settlements.md` 3.5 | replace (`Floor`) |
 
 `Groups` (`spec-scale.md` 3) and `WarmStart` (`spec-viability.md` 8) are also keyed by
 region but are populations and starting values, not overrides of a default.
@@ -625,7 +636,9 @@ value in a run are separate slots with their own state: the yield shocks of
 5.4.1. There is no hierarchy: a region's value is compared with the world's or the
 commodity's, never with a province's or another region's. POL may group regions; it
 does so with a table of its own that names regions, and no value is inherited through
-it.
+it. Rows that a later spec keys by jurisdiction combine along a chain of jurisdictions by
+the three modes of `spec-polity.md` 6.1.2 (innermost, added, scaled: its "replace" is the
+innermost row, not the row-else-default of 5.1.2); no region field above is read from one.
 
 5.4.2. A World tunable (a belief step, a cover period) is world-wide. A setting that
 needs it by region makes it a region field in its owner's spec, with the rules above.
@@ -802,8 +815,7 @@ from the destination, goods would appear in another region without having travel
 there. This spec forbids that by a hook, not by a rule of its own: a spec that creates
 an obligation tied to the region of an account **registers a refusal** of reason
 `region_bound` with a name, and the relocation of 6.1.3 refuses an account for which
-any registered obligation is open. The refusals foreseen, none of them in version 1,
-and the owner of each:
+any registered obligation is open. The refusals that the modules register, and the owner of each (this spec registers none):
 
 | Name | Obligation | Instance keys the agent holds | Owner |
 |------|------------|-------------------------------|-------|
@@ -811,8 +823,13 @@ and the owner of each:
 | `on_journey` | the agent is on a migration journey (`spec-migration.md` 7.2.2) | its one journey | MIG |
 | `open_contract` | the agent is the payer or the deliverer of an open delivery contract (`spec-merchants.md` 9.8.1) | the IDs of its open contracts | MER |
 | `in_traineeship` | the agent is a trainer with trainees, or a trainee | none (one obligation) | SKL |
+| `open_hire` | the agent is the principal of an open hire (`spec-employment.md` 6.5.1) | the IDs of its open hires | EMP |
+| `has_store` | the agent owns at least one store (`spec-storage.md` 9.2) | none (one obligation) | STO |
 
-This is the full list of the region-bound refusals. The list is closed at construction by
+This is the full list of the region-bound refusals; no count is stated, because a module that
+keeps an account away or committed adds a row (N-090). CRD (`spec-credit.md` 9.4.2), LND
+(`spec-land.md` 2, position 12), ORG (`spec-institutions.md` 3.6), RSK (`spec-risk.md` 3.5) and CAP
+(`spec-infrastructure.md` 7.5) register none, with their reasons. The list is closed at construction by
 the modules that are on (a module that is off registers nothing), so it is part of the
 world's behaviour and not a callback into consumer code. With none of those modules on
 it is empty. Each registered obligation also reports the **instance keys** it holds
@@ -842,7 +859,7 @@ a migrant stays in the region of departure until arrival, so `NoRegion`, `depart
 `arrive` stay reserved and unused.
 
 6.5.4. **What is lost in transit** (cargo or a traveller) is a `loss` sink and is RSK's
-(`spec-ledger.md` 7.2). This spec reserves the place and specifies nothing.
+(`spec-ledger.md` 7.2) and is specified by `spec-risk.md`; this spec adds nothing.
 
 ### 6.6 Who calls it
 
@@ -912,8 +929,9 @@ func (w *World) SetEdgeStatuses(changes []EdgeStatus) error
 ```
 
 The exported form takes no cause: INT's call (`spec-integration.md` 5.1) is the only
-public one. The world keeps an internal form with a `cause` for the modules that may
-set a status later (7.3.3).
+public one. The world keeps an internal form with a `cause`, which a policy actor calls
+at P0.3a with the cause `policy` (`spec-policy.md` 6.4); the graph is rebuilt once for the
+whole application (7.3.3).
 
 7.3.1. Every change names a configured edge (`ErrUnknownEdge`), has a factor in
 range (`ErrOutOfBounds`), and no edge appears twice in one call (`ErrDuplicateID`). If
@@ -925,10 +943,15 @@ that a caller holds keeps describing the world as it was, because it shares noth
 the world (4.3.4); a later call of `World.Graph()` reflects the new statuses. Then `EdgeStatusChanged` is emitted for each edge whose status changed,
 in ascending `EdgeID`, after the new tables are in place (10.1).
 
-7.3.3. The public face is INT's (a closed-road shock, `spec-integration.md` 5.1), and CAP,
-RSK and POL may call the internal form with their own `cause` later. The cause is an
-exported constant of the root package (`event.go`; `internal/logkeys` holds the key
-strings only), carried to the event and the log.
+7.3.3. The public face is INT's (a closed-road shock, `spec-integration.md` 5.1). The one other
+caller of the internal form is a policy actor (`spec-policy.md`), at P0.3a, with the cause
+`policy`; it applies all the entries of one actor in one call, so the tables are rebuilt
+once (7.3.2). CAP sets no edge status (a facility is a layer of the transit factor, not a
+status: `spec-infrastructure.md` 5.2.2) and RSK has none (`spec-risk.md` 10.1.1); POL's
+`Between` (`spec-polity.md`) only lists the edges that a consumer or a policy actor may
+close for an embargo of a border and calls nothing. The cause is an exported constant of
+the root package (`event.go`; `internal/logkeys` holds the key strings only), carried to
+the event and the log.
 
 ### 7.4 What a status does not do
 
@@ -1392,7 +1415,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-057 | The events `AgentRelocated` and `EdgeStatusChanged` MUST be constructed only when an observer was supplied, and a run with and without a logger and observer MUST give equal results (10.1, 10.6). |
 | FR-REG-058 | With the external module on, a relocation whose destination is an outside node MUST be refused with `ErrOutsideNode` after `same_region` and before `open_reservation`, changing nothing, and `region_without_agents` MUST NOT be raised for an outside node (`spec-external-sector.md` 3.1.2, FR-EXT-034, FR-EXT-004). |
 | FR-REG-059 | `World.RelocationRefusal(a, to, skip...)` MUST return the reason and the error of the first refusal of 6.1.3 that `relocate(a, to, ...)` would return, in the order of that table, or `("", nil)`, MUST NOT test a registered obligation named in `skip`, by name or by instance key, and no other refusal, MUST change nothing, draw nothing and allocate nothing, and for every input `relocate` MUST return exactly the error the query returns (6.1.1, 6.1.6). |
-| FR-REG-060 | The registered `region_bound` refusals MUST be exactly those of the modules that are on, named `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER) and `in_traineeship` (SKL); a module that moves an account itself by the ledger-level `Relocate` MUST first ask the query with its own refusal in `skip`, naming by instance key only the instance that the move completes where the agent can hold several, and MUST NOT move the account when it names another refusal or another instance (6.5.2, 6.6). |
+| FR-REG-060 | The registered `region_bound` refusals MUST be exactly those of the modules that are on, named `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER), `in_traineeship` (SKL), `open_hire` (EMP) and `has_store` (STO); a module that moves an account itself by the ledger-level `Relocate` MUST first ask the query with its own refusal in `skip`, naming by instance key only the instance that the move completes where the agent can hold several, and MUST NOT move the account when it names another refusal or another instance (6.5.2, 6.6). |
 
 ### Non-functional
 

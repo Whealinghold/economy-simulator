@@ -62,7 +62,7 @@ Goals:
    endowment puts on gathering. Whether it also needs conditions (a season, a
    building), variable yield, quality grades or recipes that change over time
    is open, and is decided when PRO and GDS are written. A production hook
-   (a fifth extension point) is not planned; add one only if a real case shows
+   (a further extension point beyond those of `rules/architecture.md` 4.3) is not planned; add one only if a real case shows
    that data cannot express a rule, because client code inside production
    makes determinism and conservation harder to guarantee.
 
@@ -73,7 +73,7 @@ core.
 
 ## 4. Proposed scope
 
-Each planned spec gets one of three stages.
+Each spec of the roadmap, written or planned, gets one of three stages.
 
 - **Slice**: the vertical slice of the overview, section 8: one region, a short
   chain, clearing, beliefs and stability checks. Its job is to show which of the

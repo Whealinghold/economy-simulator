@@ -72,7 +72,7 @@ Out of scope, with the owner:
 | # | Position | Section |
 |---|----------|---------|
 | 1 | One authoritative tick of eight phases. Every position in it has a stable ID (`P3.2`, the second position of phase 3, is stable; new positions take a letter suffix) and one owner. A module that is off skips its positions and changes none of the others | 6 |
-| 2 | The order of a phase is the order of its table. Where two specs claimed one slot, the ruling of 6.12 says which wins; the wordings and positions in the written specs that disagree are ruled one by one (fourteen entries) and the edit each needs is listed in 22 | 6.11 |
+| 2 | The order of a phase is the order of its table. Where two specs claimed one slot, the ruling of 6.12 says which wins; the wordings and positions in the written specs that disagree are ruled one by one (twenty-eight entries) and the edit each needs is listed in 22 | 6.11 |
 | 3 | A `Step` that returns an error leaves the world **failed**: every later call that would change or read live state returns `ErrWorldFailed`, and the consumer restores the checkpoint it took at an earlier boundary. No half-finished tick is ever observable, saved or resumed | 3.5 |
 | 4 | A call made from inside a step (an observer, a strategy, a spawner, a clearing) returns `ErrInStep` and changes nothing | 3.6 |
 | 5 | One `*rand.Rand` on one `rand.PCG` per world. The seed becomes the 128-bit state by two outputs of SplitMix64. Every bounded draw the world takes is one `Uint64` and the high word of its product with the bound: one source word, no rejection | 7.1, 7.2 |
@@ -116,11 +116,13 @@ no global to dirty).
 
 3.2.2. The errors are the validation errors of `spec-config.md` 7.1 (joined, each
 with a path and a rule), the errors of an option (4.3), `ErrAuditFailed` (5.1
-step 9, with `WithAudit`), and the three name checks that need the options and so
+step 9, with `WithAudit`), and the four name checks that need the options and so
 live in `NewWorld`: a `Role.Strategy` name that is neither `default`, `directed` nor
 registered (`ErrUnknownStrategy`, `spec-config.md` 7.1.4), a `World.Spawner` name that is not
-registered (`ErrUnknownSpawner`, `spec-spawner.md` 3.1.3) and a `World.Clearing`
-name that is not registered or is empty (`ErrUnknownClearing`, 4.2). The name
+registered (`ErrUnknownSpawner`, `spec-spawner.md` 3.1.3), a `World.Clearing`
+name that is not registered or is empty (`ErrUnknownClearing`, 4.2) and, with the policy module
+on, a `Policy` name of an actor that is neither built in nor registered
+(`ErrUnknownPolicy`, `spec-policy.md` 4.5.1). The name
 checks run **after `Validate` succeeds**, and each returns a `ValidationError` with
 the path of the field and the rule, like any validation error (`spec-config.md`
 7.1.1). Nothing else in a running simulation fails because of the configuration
@@ -203,7 +205,7 @@ groups (`spec-integration.md` 6.1.2):
   nil on a healthy world), `Tick() int64` (the tick the failed step was running),
   the accessors of the immutable configuration (`ConfigHash`, `Config`) and the
   tables derived from the configuration and the edge statuses, which a step does
-  not change (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`).
+  not change (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `Polity`, `TreasuryAgent`).
 - **Readers of live state.** `Endowment`, `InTransit` and `Away` return the state
   that the failed step left. It is **not** a boundary state and has no guarantee of
   consistency: a consumer reads `Err()` first. The rationale of the first group
@@ -234,7 +236,7 @@ reservations and a half-settled market, and a consumer that saved it (CHK refuse
 8.4) or analysed it would be reading a state no run produces.
 
 3.5.4. **A panic.** The library does not recover a panicking observer, strategy,
-spawner or clearing (architecture.md 12.5): the panic propagates to the caller of
+spawner, clearing or policy (architecture.md 12.5): the panic propagates to the caller of
 `Step`. The world marks itself failed with a deferred function that does not call
 `recover`, so if the consumer recovers the panic and calls the world again it gets
 `ErrWorldFailed`, not a world in an unknown state. The world is unusable until
@@ -269,7 +271,7 @@ method of `World` that has an error result returns `ErrInStep` and changes nothi
 reads included, except `RelocationRefusal`, whose `error` is the refusal it
 reports (3.5.1). The readers that have no error result return their value, in the
 two groups of 3.5.1. `Err`, `Tick`, `Config`, `ConfigHash` and the derived tables
-(`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`) return a value that a
+(`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `Polity`, `TreasuryAgent`) return a value that a
 step does not change mid-call (`Tick` advances at P8.6, after the last event). The
 readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal`
 return the state as the running step has left it, which is not a boundary value and
@@ -282,6 +284,11 @@ for the snapshot after `Step` returns.
 3.6.2. The flag is set at the entry of `Step` and cleared at its exit by a deferred
 function. It is not state and is not saved.
 
+3.6.3. **A policy actor is not a call from inside a step.** A policy actor's decision at
+P0.3a (`spec-policy.md` 7.1) writes the slots of kinds `flow`, `edge` and `transit` through the
+owners' internal setters, with the cause `policy`; the public setters keep returning
+`ErrInStep` (8.2.2). The actor's `Decide` receives a plain view and never a `*World`, as a
+`Strategy` does (3.6.1).
 ### 3.7 Reads and the other calls
 
 3.7.1. Between steps, on a healthy world, a consumer may call any read: `Tick`,
@@ -289,8 +296,9 @@ function. It is not state and is not saved.
 (`spec-regions.md` 4.3), `Calendar`, `ReferencePrice` and `Warnings`, the transport
 reads `InTransit`, `Travel` and `Away` (`spec-transport.md` 9.2), `Endowment`
 (`spec-resources.md` 5.1), the queries `Agent`, `Agents`, `Market`, `Region` and
-`Slots` (`spec-integration.md` 6.2) and the guard query `RelocationRefusal`
-(`spec-regions.md` 6.1.6). Each returns a deep copy of plain data (architecture.md
+`Slots` (`spec-integration.md` 6.2) the guard query `RelocationRefusal`
+(`spec-regions.md` 6.1.6) and, with the polity module on, `Polity` and `TreasuryAgent`
+(`spec-polity.md` 4.2, 5.5.1). Each returns a deep copy of plain data (architecture.md
 12.4), changes no state and draws no random number.
 
 3.7.2. `Tick() int64` is the number of steps completed since tick 0: the tick the
@@ -315,6 +323,7 @@ validates its argument and returns an error rather than panic.
 | `WithStrategy(name string, s Strategy)` | yes (what a role that names it does) | the **name** only, through `Role.Strategy`; the code behind a name is not hashed (`spec-agents.md` 6.6) | additive; the names `default` and `directed` (the library's own, `spec-agents.md` 6.6) and a name given twice are `ErrDuplicateID`; a nil `Strategy` is `ErrNilExtension` |
 | `WithSpawner(name string, s Spawner)` | yes | the name only, through `World.Spawner` (`spec-spawner.md` 3.1.3) | registers under a name; `World.Spawner` selects it; same duplicate and nil rules |
 | `WithClearing(name string, c Clearing)` | yes | the name only, through `World.Clearing` (4.2) | same shape; the name `average` is `AverageClearing` and is built in; an empty name is `ErrUnknownClearing` |
+| `WithPolicy(name string, p Policy)` | yes (what an actor that names it decides) | the name only, through `Actor.Policy` (`spec-policy.md` 4.5): the code behind a name is not hashed | additive; the names `hold`, `schedule`, `rule` and `directed` (the library's own) and a name given twice are `ErrDuplicateID`; a nil `Policy` is `ErrNilExtension`; an actor's name that is neither built in nor registered is `ErrUnknownPolicy` in `NewWorld` (3.2.2) |
 | `WithReseed(salt uint64)` | yes: it sets the PCG state at a restore by the rule of `spec-checkpoint.md` 6.8.2 | **no**: it is not configuration and not a registered name; it is a call of the **sequence of calls** (8.1.1), reported in `WorldRestored` | **restore only**: on `NewWorld` it is `ErrOptionContext`; a salt of 0 is a reseed like any other (`spec-checkpoint.md` 6.8) |
 
 4.2. **A gap this spec fills.** `Clearing` is one of the four extension points
@@ -330,8 +339,7 @@ world's `Rand` as it likes (7.2.2); D7 is the default's count. Without the name 
 with the default and a checkpoint would restore into the wrong rule silently. The
 edits are listed in 22.
 
-4.3. **Errors of options.** `ErrDuplicateID` (a name registered twice, `default`
-or `directed`), `ErrNilExtension` (a nil `Strategy`, `Spawner` or `Clearing`),
+4.3. **Errors of options.** `ErrDuplicateID` (a name registered twice, or one of the library's own: `default` or `directed` of a strategy, `hold`, `schedule`, `rule` or `directed` of a policy), `ErrNilExtension` (a nil `Strategy`, `Spawner`, `Clearing` or `Policy`),
 `ErrOutOfBounds` (an argument outside its bound), `ErrOptionContext` (`WithSeed`
 on a restore, `WithReseed` on `NewWorld`; `spec-checkpoint.md` 6.4). An option that
 fails fails `NewWorld` (or the restore) with its error before any world state is
@@ -363,12 +371,12 @@ steps before them.
 |---|------|-------|
 | 1 | Apply the options in the order given; each validates its argument (4) | this spec |
 | 2 | Deep-copy the `Config`, apply `WithTargetSpread`, sort every slice into canonical order (groups by region then role) | `spec-config.md` 3.4, 3.5 |
-| 3 | `Validate`: every rule, every error, sorted; if it succeeds, the three name checks of 3.2.2. Collect the warnings | `spec-config.md` 7 |
+| 3 | `Validate`: every rule, every error, sorted; if it succeeds, the four name checks of 3.2.2. Collect the warnings | `spec-config.md` 7 |
 | 4 | Compute the configuration hash (SHA-256 of the canonical encoding of the effective configuration) | `spec-config.md` 8.2 |
-| 5 | Derive what is not state: the calendar and `TicksPerYear`, the region graph tables and the lag table, the module tables, the weights of each group | CAL, REG, INF, SCL |
+| 5 | Derive what is not state: the calendar and `TicksPerYear`, the region graph tables and the lag table, the module tables, the polity tables (the jurisdictions, the governed set and the treasury of each), the weights of each group | CAL, REG, INF, SCL, POL |
 | 6 | Seed the random source (7.1) | this spec |
-| 7 | Open the ledger in its construction phase (5.5) and create the accounts in the order of 5.2 | LED |
-| 8 | Create the agents, then apply the warm start (5.6), then take the creation draws (5.7) | AGT, VIA, WEL, PRO |
+| 7 | Open the ledger in its construction phase (5.5) and create the accounts in the order of 5.2, the Treasury accounts of the governed jurisdictions among them | LED, POL |
+| 8 | Create the treasury pseudo-agents with their `StartMoney` and then the household agents, then the sub-steps 8a to 8c of 5.1.2: the titles (8a), the warm start (5.6), the creation draws (5.7), the initial facilities (8b), the settlement class of each region, the technology key (8c) | POL, AGT, LND, VIA, WEL, PRO, CAP, SET, TEC |
 | 9 | With `WithAudit`: run the audit once, and fail with `ErrAuditFailed` if it fails (a warm start that breaks conservation is found here, not at tick 0) | LED 12.4 |
 | 10 | Log the warnings and the `Info` line, then emit `WorldCreated` and the `AgentSpawned` events (5.8) | OBS |
 
@@ -376,6 +384,31 @@ steps before them.
 steps 5 to 8: the validator is the only place a mistake is found (architecture.md
 8.5). A failure there is a programmer error and panics with a message that says
 so (architecture.md 8.1).
+
+5.1.2. **Step 8, in order (ruling C26 of 6.12).** Step 8 is one step with sub-steps, and the
+letters name a sub-step the way a letter names a position (6.1.1); nothing takes a random
+number before the creation draws of item 4, and the draws of items 1 to 4 are the same
+whatever the modules that are on (5.7.2):
+
+1. the treasury pseudo-agents, one per governed jurisdiction in ascending `JurisdictionID`,
+   each with the `StartMoney` of its jurisdiction by `initial` (`spec-polity.md` 5.4.1), then the
+   household agents of the groups (5.3, 5.4); no draw;
+2. **8a**, with `Modules.Tenure`: the titles of the configuration (`spec-land.md` 6.1), after
+   the agents exist and before the warm start; no draw;
+3. the warm start (5.6); no draw;
+4. the creation draws (5.7): draw D1, two for each household agent;
+5. **8b**, with `Modules.Infrastructure`: the initial facilities (`spec-infrastructure.md`
+   3.4.2), after the warm start and the creation draws, so that a facility's endowment and store
+   see the stocks the warm start made; no draw;
+6. with `Modules.Settlements`: the settlement class of each region from the household count
+   (`spec-settlements.md` 4.5), no draw;
+7. **8c**, with `Modules.Technology` and some field with `DiscoveryBP` above 0: the technology
+   key, one word, after the creation draws (draw D16, 7.3; `spec-technology.md` 4.4.1); the one
+   draw of construction that is not an agent's, and it comes after all of them, so that the
+   creation draws are the same with the module on or off.
+
+The audit of step 9 follows, and the events of step 10 come in the order of the sub-steps
+(5.8.2).
 
 ### 5.2 The ledger's accounts
 
@@ -390,13 +423,14 @@ the hash of a checkpoint. At construction the accounts are created in this order
 | 3 | The Boundary accounts of the six `outside_*` reasons, with the module on: the money reasons first, then the goods reasons for each commodity that has a line side, in commodity order | | EXT 4.2.4 |
 | 4 | The estate account of each region | ascending `RegionID` | REG 3.6.1 |
 | 5 | The Outside account of each counterparty | ascending agent ID of the counterparty (5.3) | EXT 4.2.3 |
+| 5a | The Treasury account of each governed jurisdiction, with the polity module on | ascending `JurisdictionID` | POL 5.2.1 |
 | 6 | The Agent account of each household agent | ascending agent ID | AGT 3.5.1 |
 
 After construction the ledger opens accounts as the run needs them: a Transit
 account for a shipment (the open one with the lowest ID that no shipment in flight
 uses, or a new one), an Escrow account for a contract (the same rule), an Agent
 account for each agent created later. Each is the next account ID. The accounts of
-orders 1 to 5 are never closed or relocated.
+orders 1 to 5a are never closed or relocated.
 
 ### 5.3 The agent ID space
 
@@ -404,14 +438,15 @@ orders 1 to 5 are never closed or relocated.
 |-----|------|-------|--------|
 | `0 .. n-1` | the estate pseudo-agents, one per region **including** an outside node: the ID equals the `RegionID` | ascending `RegionID` | REG 3.6.1; EST 2.7.6 |
 | `n .. n+m-1` | the counterparties of the outside, with the external module on | ascending (node `RegionID`, gate `RegionID`, side with buy before sell) | EXT 4.2.2 |
-| `n+m ..` | the household agents of the groups | the groups in canonical order (region, then role), within a group ascending index; the first `H mod a` agents of a group take the extra household | SCL 3.2; CFG 3.4 |
+| `n+m .. n+m+g-1` | the treasury pseudo-agents, one per governed jurisdiction, with the polity module on | ascending `JurisdictionID` | POL 5.2.2 |
+| `n+m+g ..` | the household agents of the groups | the groups in canonical order (region, then role), within a group ascending index; the first `H mod a` agents of a group take the extra household | SCL 3.2; CFG 3.4 |
 | after construction | every later agent: spawner entrants and replacements, births, external agents | the next ID at creation, in creation order | AGT 3.5.3 |
 
 5.3.1. An ID is never reused, so a removed agent's ID stays unused for the run. The
 pseudo-agents are not agents or households (`spec-estates.md` 2.7.4) and are never
 passed to a strategy.
 
-5.3.2. **Consequence (N-117).** Adding a region, an outside node or a gate shifts
+5.3.2. **Consequence (N-117).** Adding a region, an outside node, a gate or a governed jurisdiction shifts
 every household's ID, so every tie-break that reads an ID, every rotation phase and
 every cadence offset (9) changes with it, as it does in any change of the
 configuration. That is not a defect: the hash differs, so no checkpoint of the one
@@ -490,7 +525,10 @@ original, and the bucket's `BoundaryFlow` is emitted at that first step (P0.2a).
    `WearItems`, no endowment is drawn at construction (the virtual start precedes
    the run: a recommendation to VIA, 22), and the pending output is fixed from the virtual start with the
    effective factor of the season of that tick (shock at its default) and a
-   starting residue of 0;
+   starting residue of 0, and, with the storage module on, **pledged**: the load of the
+   pending output is counted in the agent's load from the first tick, as it is for a job
+   started by `Work` (`spec-storage.md` 4.3; the check `room_below_warm_job` is made here,
+   13.1 there);
 5. `WarmStart.Pools` create each region's pool by `initial` into its estate account
    (`spec-viability.md` 8.3.3).
 
@@ -521,12 +559,15 @@ adopted it here without change). **A spec that adds a creation draw appends it t
 the table with a new row and says what the draw is for; it never makes the draw
 conditional on a module or an option**, because a stream that depends on which
 modules are on cannot be compared between runs (WEL 5.1, NFR-POP-004,
-FR-INF-047). The pseudo-agents take none. A later agent (a replacement, a birth, an
+FR-INF-047). The one word that is not an agent's creation draw is a **module-level word**, taken once at construction, after all the creation draws, by a module that is on and has work to do (7.4.2): the technology key (8c, draw D16 of 7.3), which a creation draw of an agent never is. The pseudo-agents take none. A later agent (a replacement, a birth, an
 external agent) takes the same two, in this order, at its creation
 (`spec-agents.md` 3.5.3).
 
-5.7.3. The construction therefore takes `2 * H_agents` draws and nothing else, and
-the first draw of the first tick is the `2 * H_agents + 1`th of the stream.
+5.7.3. The construction therefore takes `2 * H_agents` draws, and one more when the technology
+module has a field with `DiscoveryBP` above 0 (draw D16, 8c), and nothing else. The first draw
+of the first tick is the `2 * H_agents + 1`th of the stream, or the `2 * H_agents + 2`th with
+the technology key. A pair of runs that differs in whether a discovery field exists is not
+aligned from the first tick (`spec-technology.md` 6.3.2).
 
 ### 5.8 Events and logs at construction
 
@@ -536,13 +577,23 @@ with `rule` and `path`, then one `Info` line "world created" with `seed`,
 `config_hash`, `commodities`, `recipes`, `roles`, `regions`, `agents`,
 `households`, `modules`, `warm_start` and, for the modules that are on, their counts
 (`prices`, `wages`, `groups`, `jobs`, `edges`, `components`, `nodes`,
-`counterparties`, `modes`, `merchants`), all keys of the rules' table 3.3.2.
+`counterparties`, `modes`, `merchants`, and, of the later modules, `store_classes`,
+`settlement_classes`, `facility_classes`, `facilities`, `jurisdictions`, `governed`,
+`fiscal_flows`, `bodies`, `rights`, `controls`, `rows`, `fields`, `actors`, `levers` and
+`underwriters`), all keys of the rules' table 3.3.2; `modules` lists the lower-case name of
+each module that is on, `polity` and `policy` among them.
 
 5.8.2. Events, with `Tick` 0, only when an observer was supplied
 (observability-and-logging.md 4.5): `WorldCreated` (the seed, the whole hash,
 whether a warm start was present, the names table of the IDs,
 `spec-observability.md` 3.2.4), then one `AgentSpawned` for each household
-agent in ascending agent ID. The estates and the counterparties emit none. The
+agent in ascending agent ID, then, with the infrastructure module on, one `FacilityChanged`
+(`Kind` `added`, `Cause` `initial`) for each initial facility in ascending facility ID
+(8b), then, with the settlements module on, one `SettlementClassChanged` (`Cause`
+`founded`) for each region in ascending `RegionID` (ruling C26 of 6.12). The estates, the
+counterparties and the treasury pseudo-agents emit none; a treasury's money is the
+`StartMoney` of its jurisdiction in the `Jurisdictions` rows of `WorldCreated`
+(`spec-observability.md` 3.2.4). The
 construction bucket is emitted as a `BoundaryFlow` with `Tick` -1, not here but at
 the entry of the first step (P0.2a, `spec-observability.md` 4.4.2; N-072 answered).
 
@@ -591,12 +642,12 @@ requirement of each module spec). A module that is on and has nothing to do (no
 informed role, no walking line, no admitted offer) takes no draw either
 (FR-INF-047, FR-EXT-021, FR-MER-033).
 
-6.1.6. **Reservations.** Reservations open only at positions P3.2, P3.4 and P3.5 (an
-order is admitted and its cash or stock earmarked) and are all settled or released
+6.1.6. **Reservations.** Reservations open only at positions P3.2, P3.4, P3.4a and P3.5 (an
+order is admitted and its cash or stock earmarked; P3.4a is the treasuries' standing orders) and are all settled or released
 by the end of P4.1; none is open from P4.2 to the next tick's P3.2
 (`spec-ledger.md` 6.5 states the boundary; the window is this spec's). Every position that needs none open (a relocation, a
 removal, a weight change, relief, a money flow) is therefore before P3.2 or after
-P4.1. A contract's money is escrow, not a reservation (`spec-ledger.md` 6.6).
+P4.1. A contract's money is escrow, not a reservation (`spec-ledger.md` 6.6), and so is a hire's wage (`spec-employment.md` 5.5). P3.3b opens no reservation and moves only money that is not reserved at that point (P3.3's escrow is not a reservation); P1.7a, P1.7b, P3.3c and P4.1a open none.
 
 6.1.7. **Events** are emitted after the transition they describe is complete
 (architecture.md 12.5, observability-and-logging.md 4.4), and only when an observer
@@ -622,7 +673,7 @@ reads, writes and draws. The change enters this table in the same change as the
 spec that asks for it. If two specs ask for one slot, this section rules and the
 loser's text is edited (6.12).
 
-6.1.11. **Outside nodes.** "For each region" in P1.6, P3.4, P7.1 and the rest means
+6.1.11. **Outside nodes.** "For each region" in P1.6, P3.3b, P3.4, P7.1, P7.2a and the rest means
 every region that is not an outside node, except where a row says estates: an
 outside node has an estate that holds nothing (`spec-external-sector.md` 3.1.1), no
 agents, no pool and no market. P7.1 is not run for it and no spawner is called for
@@ -636,6 +687,7 @@ it (FR-SPN-002 is edited), so D9 takes no word for it.
 | P0.2 | Nothing is cleared at entry. The flow totals and the per-tick counters of every module are cleared at P8.6, so that a move made by a call between ticks is totalled in the tick the next step runs (8.1.3) | LED 7.4; each module | derived, not saved |
 | P0.2a | At the entry of the **first** step of a world that is in its construction phase and holds a bucket (built by `NewWorld`, or restored from a checkpoint taken before its first step, 5.5.3), before `TickStarted`: the construction bucket as `BoundaryFlow` events with `Tick` -1, once, in the order of `spec-observability.md` 4.4.1.2 over the bucket's rows. A world that never steps emits none, and a world restored after its first step has no bucket | OBS 4.4.2; LED 7.4.1 | no draw; the bucket is read, not cleared; the events of calls between ticks were emitted at their calls and come before it (6.11) |
 | P0.3 | `TickStarted` | OBS | the first event of the step, after the bucket's `BoundaryFlow` events (P0.2a) in the first step of a world in construction |
+| P0.3a | The policy actors, with the policy module on and an actor due (`spec-policy.md` 7.2), in ascending `ActorID`: the view, `Decide`, the checks, and the application through the owners' internal setters of the slots of kinds `flow`, `edge` and `transit`, cause `policy` (8.2.2) | PLC 7.1 | reads the boundary state and the slots; writes the slot keys of the actor's levers; draws: a consumer's `Policy` takes its own words in call order (D17, 7.3), the built-ins take none; events: after `TickStarted`, per due actor, the owners' slot events (cause `policy`) and then `PolicyDecided`, before the first event of phase 1 (6.11 item 1) |
 
 ### 6.3 Phase 1: start
 
@@ -646,13 +698,17 @@ the consequence of what the previous tick left or of what a slot set between tic
 |----|--------------------------|-------|----------------|-------|--------|
 | P1.1 | The moment: `Calendar.At(t)`, once. It is derived and adds nothing to a checkpoint | CAL 6.5; N-031 | reads `t`; scratch | none | none |
 | P1.2 | The cost anchors: per (region, commodity) the unit cost of what a role there can make, from the previous tick's observed wage per region and the published price left by P4.1 of the previous tick (the seed price at tick 0, not the price window) | PRO 9.3, FR-PRO-037, FR-PRO-047, 048 | reads wage record, published prices, yields (shock, abundance); writes the anchor table, which is derived | none | none |
-| P1.3 | The arrivals of transport, in ascending shipment ID: a traveller's account changes region by `Relocate` (cause `transport`), after the guard query run **ignoring only the shipment that arrives and the contract formed on it** (by instance, ruling C16; every other shipment, contract or obligation of the agent still refuses), and its beliefs are reseeded (no draw); a hired cargo is delivered to its consignee or diverted to the estate of the destination; the Transit account joins the free list | TRN 5.7, 5.8; MER 12.2 | reads shipments with `Arrives = t`; writes lots, the account's region, beliefs, the away flag | none | per shipment: `AgentRelocated` (a traveller), then `ShipmentArrived` |
+| P1.3 | The arrivals of transport, in ascending shipment ID: a shipment whose loss share (`LossBP`, recorded at its dispatch by draw D14) is above 0 first loses that share (step 0 of `spec-risk.md` 5.1, before the traveller's region change and the delivery); then a traveller's account changes region by `Relocate` (cause `transport`), after the guard query run **ignoring only the shipment that arrives and the contract formed on it** (by instance, ruling C16; every other shipment, contract or obligation of the agent still refuses), and its beliefs are reseeded (no draw); a hired cargo is delivered to its consignee, bounded by the room left of a limited account, the part that does not fit diverted to the estate of the destination or disposed (STO 5.3.4); the Transit account joins the free list | TRN 5.7, 5.8; MER 12.2 | reads shipments with `Arrives = t`; writes lots, the account's region, beliefs, the away flag | none | per shipment: `AgentRelocated` (a traveller), then `ShipmentArrived` (with the loss, `Lost` and `AccountLost`) |
+| P1.3a | The settlement of the route covers of the shipments that arrived in P1.3, ascending cover ID, one pass per underwriter: the loss value, the due, the shield and the allocation; what the underwriter cannot pay becomes a payout claim | INS 8 | reads the lost units of the arrival (scratch of P1.3), covers, balances, the published prices; writes balances, covers, claims | none | per cover `CoverEnded` in ascending cover ID, then `CoverSettled` per region |
 | P1.4 | The settlement of delivery contracts whose shipment arrived in P1.3, ascending contract ID: `escrow_out` for the units that reached, `escrow_refund` for the rest | MER 9.7 | contracts, Escrow accounts; writes balances; the contract ends | none | `ContractSettled` |
 | P1.5 | The arrivals of migration journeys, ascending agent ID: the guard is run again with `skip = on_journey`, the account changes region by `Relocate` (cause `migration`), beliefs are reseeded (no draw), `RoleSince` is set; a refusal holds the arrival | MIG 8.4 | journeys; writes region, beliefs, `RoleSince` | none | `AgentRelocated` (cause `migration`) |
 | P1.6 | Relief, per region ascending: the release is `pool * PoolRelease / 10 000`, shared by need to the agents whose ratio is below `ReliefBelow` | EST 2.6 | pool, welfare records up to the previous tick, effective upkeep; writes balances (`relief`) | none | `ReliefPaid` per region that paid |
 | P1.7 | The money flows: grants in ascending flow ID, then levies in ascending flow ID; each over regions ascending, then accounts ascending | MON 5.1, 5.2 | flow state, balances, weights; writes balances, carries, totals, `Ended` | none | after the step, per flow in ascending flow ID: `MoneyFlowLimited`, then `MoneyFlowEnded` of the same flow |
+| P1.7a | The settlement of the claims, in ascending claim ID: interest and principal due, the pot and its pro rata share, payments, arrears, ends, defaults and write-offs; the payout claims of the covers are settled in the same pass | CRD 8 | reads claims, balances (after the tick's money flows), the shield; writes balances, claims, the totals of the module | none (ties by the stateless key, remainders carried) | `LoanEnded` per ended claim in ascending claim ID, then `CreditSettled` per region |
+| P1.7b | The fiscal flows: the taxes on households and pools by flow ID, the remittances by flow ID, then the payouts per authority; a tax a payer cannot meet is forgiven for the shortfall (FIS 5.3) | FIS 5.3, 8.4 | reads the fiscal flows, balances after P1.7a, the treasuries' accounts; writes balances, carries, totals | none (a cut is pro rata by the keyed tie of 10.1.1) | `FiscalFlowApplied` per flow and region |
 | P1.8 | The outside's walk: for each line with `WalkStepBP` above 0, ascending (node `RegionID`, `CommodityID`), the drift moves | EXT 5.1, 6.4 | line state; writes the drift | one per walking line, in that order | none |
 | P1.9 | The directives: the mailbox of each `Directed` external agent is read, and a non-`Sticky` directive is taken out of it into the tick's scratch (INT 4.2.3) | AGT 10; INT 4.2.3 | mailbox; writes the directive of the tick | none | none |
+| P1.9a | The membership round, with the institutions module on: for each body in ascending `BodyID`, the lapse pass over every household of the body and then the admission per region | ORG 4 | reads households, the bodies' tables, the places; writes membership, the waiting counts | none | none (counted at P7.2b) |
 
 Starting money is not paid in phase 1: it moves at the creation of an agent
 (phase 7, or an external agent's call between ticks). Ruling C1 of 6.12.
@@ -661,15 +717,17 @@ Starting money is not paid in phase 1: it moves at the creation of an agent
 
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
-| P2.1 | Continuations and completions, in the rotation order (6.1.4): `Remaining` falls by 1; at 0 the job completes: one `Transform` creates the pending outputs from `recipe_output`, the part above `MaxQuantity` disposed | PRO 5.2, 5.3 | jobs; writes lots, clears the job | none | `RecipeExecuted` |
+| P2.1 | Continuations and completions, in the rotation order (6.1.4): `Remaining` falls by 1; at 0 the job completes: one `Transform` creates the pending outputs from `recipe_output`, the part above `MaxQuantity` disposed, the credit bounded by the room left (STO 5.3.4); a hired job's wage released to the worker (EMP 6.2); a build or repair completes (CAP 4.3); the executions of a job of a technology field are added to the counter of its cell (scratch, TEC 3.4) | PRO 5.2, 5.3 | jobs; writes lots, clears the job | none | `RecipeExecuted` |
 | P2.2 | Teaching: each trainer's accumulator advances by the sum of its trainees' loads, trainers in ascending ID; a trainer whose accumulator reaches 10 000 subtracts it and is teaching this tick | SKL 4.2 (position: C5) | trainees' `TeachingLoad`; writes the accumulator, the flag | none | none |
 | P2.3 | The snapshot of every endowment's stock and abundance, ascending (`RegionID`, `ResourceID`), fixed for the tick | RES 5.2 | stocks; scratch | none | none |
 | P2.4 | The own-use flag step for every eligible agent, ascending agent ID: a pure function of the household's own stock, money, `Hunger` and own-market price | SUB 5.4 | agent state, the snapshot; writes `OwnUse` and its runs | none | none (counted in 2.8) |
-| P2.5 | `Work` for every free agent (no job in progress, and none continued or completed in P2.1; not away, not on a journey, not teaching), in the rotation order: the strategy returns a `JobRequest`; the world derives `k0`, the executions it could start ignoring draws, and refuses what it must | AGT 6.2, 7.1; PRO 4.2; RES 5.2 | the view built from the state after 2.1 and the snapshot; writes the requests (scratch) | the default takes none; a consumer's own are counted in call order | none (a refusal is a `Debug` line) |
-| P2.6 | The ration, for each endowment some request draws on, ascending (`RegionID`, `ResourceID`): requests collected in agent ID order, shared proportionally, the leftovers by largest fractional part, then the stateless hash key of (tick, agent), then agent ID | RES 5.3 | requests, snapshot; writes the grants (scratch) | none | none |
-| P2.7 | The starts, in the rotation order: `k = min(k0, grants, live inputs)`; one `Transform` (`recipe_input`), tools worn, endowment draws taken whole or not at all, the job created with its pending output (yield read now); a job of duration 1 then completes as in 2.1 | PRO 5.2, 5.3, 6.4; RES 5.4 | requests, grants, ledger; writes jobs, lots, endowment stock | none | `RecipeExecuted` for a one-tick job, in its start tick |
+| P2.5 | `Work` for every free agent (no job in progress, and none continued or completed in P2.1; not away, not on a journey, not teaching), in the rotation order: the strategy returns a `JobRequest`; the world derives `k0`, the executions it could start ignoring draws, and refuses what it must: `k0` includes the facility limits (CAP 4.2.2) and the room bound `k_room` (STO 5.3.1), so that P2.6 shares a request the room can hold | AGT 6.2, 7.1; PRO 4.2; RES 5.2 | the view built from the state after 2.1 and the snapshot; writes the requests (scratch) | the default takes none; a consumer's own are counted in call order | none (a refusal is a `Debug` line) |
+| P2.5a | The labour round, with the employment module on: the admission of the offers and vacancies posted at P2.5, their order, the matching and the formation of the hires; a hired household's job starts at P2.7 of the tick | EMP 5.1.1 | reads the `Offer` and `Hire` requests of P2.5, stock, tools, cash, the P2.3 snapshot; writes hires, Escrow balances, the hired requests, the withdrawn own requests | none (ties by the keyed `K(t, id)`, 10.1.1) | `HireFormed` in formation order |
+| P2.6 | The ration, for each endowment some request draws on, ascending (`RegionID`, `ResourceID`): requests collected in agent ID order, shared proportionally, the leftovers by largest fractional part, then the stateless hash key of (tick, agent), then agent ID | RES 5.3 | requests, snapshot and, for the tiers of tenure (own, commons, let: LND 4.3, each by RES 5.3.2), the principals' balances for the clip of the rent (no reservation is open in phase 2, 6.1.6); writes the grants (scratch) | none | none |
+| P2.7 | The starts, in the rotation order: `k = min(k0, grants, live inputs, bounded again by the facility limits 1 and 3 against the running count of the tick (CAP 4.2.2), by the room at that moment (STO 5.3.2) and by the largest `k` whose rent the principal can pay (LND 5.3, 5.4)`; one `Transform` (`recipe_input`), tools worn, endowment draws taken whole or not at all, the job created with its pending output (yield read now); a job of duration 1 then completes as in 2.1; the use wear of a facility a recipe `Needs` is applied once `k` is final (CAP 5.1.3) | PRO 5.2, 5.3, 6.4; RES 5.4 | requests, grants, ledger; writes jobs, lots, endowment stock | none | `RecipeExecuted` for a one-tick job, in its start tick |
 | P2.8 | The own-use counts, ascending `RegionID`, then role | SUB 14.1 | the counts of P2.1 (units output), P2.4 (entered, left), P2.5 (blocked, retried) and P2.7 (started, and blocked: a household in the mode whose own-use requests the ration cut entirely and which started nothing, SUB 5.5 item 6) | none | `OwnUseChanged` |
 | P2.8a | The production halt's count, ascending `RegionID`, then role: per (region, role) the free households passed to `Work` at P2.5, those declined for the halt, and per recipe the households for which it was skipped; only where some household was declined | OBS 4.4.6; AGT 7.1.5, 14.3 | the halt report that `Work` returned at P2.5 (scratch) | none | `ProductionHalted`, after `OwnUseChanged` |
+| P2.8b | The labour-round aggregate, with the employment module on, ascending `RegionID`, where any offer, vacancy or hire was counted | EMP 6.3.3 | the counters of P2.5a and of the wage releases of P2.1 and P2.7 (scratch) | none | `LabourRound` per region, after `ProductionHalted` |
 
 6.4.1. **`Work` is always two-pass (ruling C9).** All the calls of `Work` of P2.5
 come before any start of P2.7, with the module of resources on or off. Interleaving
@@ -683,16 +741,23 @@ strategy sees depend on a module switch.
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
 | P3.1 | `Inbound` and `Outbound` are fixed for every agent: derived from the shipments and contracts, so that they do not depend on the order of agents | TRN 5.3.3, 9.1; MER 4.1 | shipments, contracts; scratch | none | none |
-| P3.2 | For each agent in ascending ID (6.1.3): (a) if its role is `Informed` and the information module is on, build the rumours of its view; (b) `Trade` appends to the plan; (c) execute the plan: discards, then shipments in plan order, then orders in plan order, each admitted with its reservation or rejected | AGT 4, 6.5; INF 5.5.2, 7.1; TRN 5.3.2; CLR 3 | agent state, market reports, rumours, `Inbound`; writes the ledger (discards, Transit), reservations, the order list of each market, shipments | (a) one per candidate, offered or not, in ascending source `RegionID`, then `CommodityID`, when `RumourErrorBP` is above 0; (b) the default takes one per intent it considers, in canonical commodity order; a consumer's own in call order | per agent: `ShipmentDispatched` or `ShipmentRejected` in plan order, then `OrderPlaced` or `OrderRejected` in plan order |
-| P3.3 | The contract round, with `Modules.Merchants` present: admission of every offer and take of the plans in one pass in agent ID and plan order; then the keys; then the lanes in ascending (destination `RegionID`, `CommodityID`): matching, formation (checks, dispatch, escrow) | MER 9.3 to 9.5 | the offers and takes, stock, cash; writes shipments, Escrow, contracts | one per admitted offer in admission order, then one per admitted take in admission order, all before the first lane | per formed contract in formation order: `ShipmentDispatched`, then `ContractFormed`; the `ShipmentRejected` of a formation that fails at dispatch; then `ContractRound` per destination region ascending |
+| P3.1a | The common strikes of the routes, with `Modules.Risk`: for each route row with `Common` and a probability above 0, ascending (`From`, `To`, `Mode`), one word; the outcome is kept for the tick | RSK 4.2 | the route rows and their risk scales; writes the strike outcome (scratch) | D13: one per such row in that order | none (a risk scale is set at a call: `RouteRiskScaled`) |
+| P3.2 | For each agent in ascending ID (6.1.3): (a) if its role is `Informed` and the information module is on, build the rumours of its view; (b) `Trade` appends to the plan; (c) execute the plan: discards, then shipments in plan order, then orders in plan order, each admitted with its reservation or rejected; the toll of a shipment is charged at its dispatch (step 3a of `spec-transport.md` 5.5.1, FIS 10) | AGT 4, 6.5; INF 5.5.2, 7.1; TRN 5.3.2; CLR 3 | agent state, market reports, rumours, `Inbound`; writes the ledger (discards, Transit), reservations, the order list of each market, shipments | (a) one per candidate, offered or not, in ascending source `RegionID`, then `CommodityID`, when `RumourErrorBP` is above 0; (b) the default takes one per intent it considers, in canonical commodity order; a consumer's own in call order; (c) with `Modules.Risk`, D14 at the record of each dispatched shipment, one per unit row on its path with a loss probability above 0, inside the agent's turn after its own words (RSK 4.1) | per agent: `ShipmentDispatched` or `ShipmentRejected` in plan order, then `OrderPlaced` or `OrderRejected` in plan order |
+| P3.3 | The contract round, with `Modules.Merchants` present: admission of every offer and take of the plans in one pass in agent ID and plan order; then the keys; then the lanes in ascending (destination `RegionID`, `CommodityID`): matching, formation (checks, dispatch, escrow) | MER 9.3 to 9.5 | the offers and takes, stock, cash; writes shipments, Escrow, contracts | one per admitted offer in admission order, then one per admitted take in admission order, all before the first lane; then, with `Modules.Risk`, D14 at the record of each shipment a formation dispatched (RSK 4.1) | per formed contract in formation order: `ShipmentDispatched`, then `ContractFormed`; the `ShipmentRejected` of a formation that fails at dispatch; then `ContractRound` per destination region ascending |
 | P3.3a | `MerchantsPlanned` per region ascending, whenever an agent with a merchant block was given a view there, **also with the module absent** | MER 15.1.1 | the plan notes of P3.2 | none | `MerchantsPlanned` |
+| P3.3b | The credit round, with the credit module on: the admission of the requests and offers of the plans in one pass, the order, the matching and the formation of the claims; it uses only money that is available (not reserved) after P3.2 | CRD 5, 6 | the `Borrow` and `Lend` requests of P3.2, balances; writes balances, claims | none | `LoanFormed` in formation order, then `CreditRound` per region |
+| P3.3c | The cover round, with the insurance module on: the admission, the order, the matching and the formation of the store and voyage covers | INS 5, 7 | the requests and offers of the plans, balances less reservations, the lost-unit estimates, the shipments of the tick, the published prices; writes balances, covers | none | `CoverFormed` in formation order, then `CoverRound` per region, after `CreditRound` |
 | P3.4 | The estates' asks, per region ascending: one ask for each lot held, named, at the lot's current price | EST 2.7 | estate lots and prices; writes reservations, order lists | none | `OrderPlaced`, and `OrderRejected` for an ask the clearing refuses |
+| P3.4a | The treasuries' standing orders, with the fiscal module on, for each authority in ascending jurisdiction order: the purchases and the releases of its goods, each order admitted with its reservation or rejected | FIS 9 | the treasuries' balances and stocks, the published prices; writes reservations, order lists | none (a treasury's order has no outcome and takes no word, ruling C21) | `OrderPlaced` or `OrderRejected`, then `TreasuryOrdered` per authority |
 | P3.5 | The counterparties of the outside, ascending agent ID: for each line of its node in commodity order whose side is present: the wanted units, whether the edge is open, the quote, the offered units, the top-up from the boundary, the order | EXT 5.2 | line state, moment, edge status; writes the Outside account, the order lists, carries | none | `OrderPlaced`, `OrderRejected` |
 | P3.6 | The aggregate events of the phase: `RumoursServed` per reader region ascending, then `WantShortfall` per (region, role, want) ascending | INF 10.1; DEM 11 | the counts of P3.2 | none | those events |
+| P3.6a | The room aggregate, with the storage module on, per region ascending then role, where any count is above zero | STO 14.1 | the counts of P1.3, P2.1, P2.5, P2.7, P3.2 and P7.1 (scratch) | none | `RoomLimited` |
+| P3.6b | The saving aggregate, with a role that has the saving block: per region ascending then role, where a triggering count is above zero | SAV 9, 14 | the counts of the saving steps inside P2.5, P3.2(b) and P8.6 (scratch) | none | `SavingPlanned` |
+| P3.6c | The toll aggregate, with the fiscal module on: the tolls charged at dispatch in P3.2(c) and P3.3, per flow and region, in the order of the flows | FIS 10.1 | the toll counts of the tick (scratch) | none | `FiscalFlowApplied` (kind `toll`) |
 
 6.5.1. In a market's input order the orders come in this sequence: the agents'
-orders in ascending agent ID and plan order, the estates' asks, the counterparties'
-orders. The tie-break keys of P4.1 are drawn in that order, so the order itself
+orders in ascending agent ID and plan order, the estates' asks, the treasuries'
+orders, the counterparties' orders. The tie-break keys of P4.1 are drawn in that order, so the order itself
 gives no agent a claim (10).
 
 ### 6.6 Phase 4: clearing
@@ -700,6 +765,7 @@ gives no agent a claim (10).
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
 | P4.1 | For each market in ascending `RegionID`, then `CommodityID` (there is a market for every region that is not an outside node and every commodity): `Clear(bids, asks, rng)`; validate the whole list; settle the trades in order; release the unmatched reservations; publish the price and its age | CLR 4 to 8, 5.4 | the admitted orders of the market in input order; writes balances, lots, the published price and age | one per order, bids first then asks, each in input order, before sorting | `TradeExecuted` in trade order, then `MarketCleared`, also with no trade |
+| P4.1a | The duties on the trades of each market just cleared, with the fiscal module on, in the order of the flows, after the clearing of all markets and before the sweep | FIS 6 | the trades of P4.1, the fiscal flows; writes balances, carries, totals; no reservation is open | none | `FiscalFlowApplied` (kind `duty`) per flow and region, after the `MarketCleared` events |
 | P4.2 | The sweep, for each counterparty in ascending agent ID: its account is emptied to the boundary, money then goods in commodity order; the cumulative units and list value and the ended flags are updated | EXT 5.3 | the Outside accounts; writes boundary balances, side state | none | `OutsideTraded` per (node, gate, commodity, side) with any unit wanted or cut, then `OutsideEnded` |
 
 6.6.1. An invalid list at P4.1 settles none of that market's trades, releases its
@@ -714,7 +780,7 @@ returns the error; the world is failed (3.5).
 | P5.1 | The price window of every market **in which units traded this tick** is pushed with the market's published price, ascending (`RegionID`, `CommodityID`); a market that did not trade is not pushed | CLR FR-CLR-032; BEL 7.4 | published price; writes the window | none | none |
 | P5.2 | The information record: one entry for every source (region, commodity) with a market, ascending, after the windows | INF 4.3, 7.1 | published price and age; writes the ring | none | none |
 | P5.3 | The estate listing step: each estate lot that had an ask this tick and was not wholly sold has its price reduced by `EstateMarkdown`, truncated, never below the resolution floor | EST 2.7.3 (position: C6) | estate lots; writes prices | none | none |
-| P5.4 | The outcomes, for each admitted order **of a household agent** in ascending `RegionID`, `CommodityID` and admission order: the world takes one `uint64`, builds the outcome with the market report, calls `Revise`, and applies the returned belief inside its bounds | CLR 7.3; BEL 5.1; AGT 6.2 | the outcome, the report, the stock after the trades less this tick's upkeep reserve, `Target`, `UnitCost`; writes the belief | one per admitted order (the world's `Draw`), then a consumer's own in call order; **an estate's ask and a counterparty's order has no outcome and takes no word** (ruling C21) | `BeliefsUpdated` after the last outcome of each market that had one |
+| P5.4 | The outcomes, for each admitted order **of a household agent** in ascending `RegionID`, `CommodityID` and admission order: the world takes one `uint64`, builds the outcome with the market report, calls `Revise`, and applies the returned belief inside its bounds | CLR 7.3; BEL 5.1; AGT 6.2 | the outcome, the report, the stock after the trades less this tick's upkeep reserve, `Target`, `UnitCost`; writes the belief | one per admitted order (the world's `Draw`), then a consumer's own in call order; **an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word** (ruling C21) | `BeliefsUpdated` after the last outcome of each market that had one |
 
 ### 6.8 Phase 6: consumption
 
@@ -725,6 +791,12 @@ returns the error; the world is failed (3.5).
 | P6.3 | The welfare record of the tick is pushed for each agent ascending: income (spending on `Input` and tool wear netted), the effective upkeep as cost, the working household-ticks, the own-use ticks and units, the in-kind receipts | WEL 2, 4.3; SUB 7 | the tick's flows and a per-agent scratch of the tick (working ticks: set at P2.1 for a job continued or completed and at P2.7 for a start, because the job is cleared at completion and a one-tick job is never seen at P6.3; own-use ticks at P2.7); writes the ring | none | none |
 | P6.4 | The shortfall, ascending (region, role), only where a household went unfed | AGT 14.1 | counts of P6.1 | none | `UpkeepShortfall` |
 
+6.8.1. **A flow after P6.3 amends the record of its tick.** A flow of the insurance result `N_t`
+that moves after P6.3 (at P7.1, the principal that a removal's waterfall pays; at P8.1b, a store
+payout) is added to the record of its tick by amending the last record, which adds no state; an
+agent with no record of tick `t` (one created at P7.1) is not amended (`spec-insurance.md` 11.1.3,
+`spec-welfare-and-wages.md` 2.1).
+
 ### 6.9 Phase 7: entry and exit
 
 No reservation is open (6.1.6). Removal, weight change and role change
@@ -734,8 +806,10 @@ of phase 1 (P1.3, P1.5), which are guarded, and between ticks; `spec-regions.md`
 
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
-| P7.1 | For each region in ascending `RegionID`, the entry step, in this order: (a) traineeships: completions (a role change, cause `traineeship`), then places filled from the queue in queue order, then the ticks served advance (position: C5); (b) the population module computes `PopDeaths` per agent in ID order and `PopBirths` per role in role order, the carries advancing; (c) the view is built (its `Budget` is advisory, a ceiling at view time) and `Decide` is called; (d) the plan is executed in plan order: rung-3 reductions and removals; the module's deaths in agent ID order; **then the pool budget `PoolMoney * EntryPoolShare / 10 000` is taken once**, so that the estates of the dead fund the same tick's births (ruling C15); rung-1 and review switches and applies; renewal entries (none while the population module is on); the module's births | SPN 10.2, 7.3; POP 4.1, 4.8; SKL; AGT 3.6, 3.7, 3.8 | agents, pool, `Privation`, welfare records; writes weights, roles, accounts, jobs, estates, pool, queues, carries | (c) a consumer spawner's own; (d) two creation draws (5.7) as each new agent is created, in plan order | in step (a), in queue order, each completion's `RecipeAbandoned` (if the trainee had a job, reason `role_changed`), then `TraineeshipCompleted`, then the `RoleChanged` it causes, and then `TraineeshipStarted` for each place filled, before the events of steps (b) to (d); then each executed operation's own events, in plan order; a removal's, in the order of 6.11 item 8; then `EntryLimited`; then `PopulationChanged` per role ascending |
+| P7.1 | For each region in ascending `RegionID`, the entry step, in this order: (a) traineeships: completions (a role change, cause `traineeship`), then places filled from the queue in queue order, then the ticks served advance (position: C5); (b) the population module computes `PopDeaths` per agent in ID order and `PopBirths` per role in role order, the carries advancing; (c) the view is built (its `Budget` is advisory, a ceiling at view time) and `Decide` is called; (d) the plan is executed in plan order: rung-3 reductions and removals; the module's deaths in agent ID order; **then the pool budget `PoolMoney * EntryPoolShare / 10 000` is taken once**, so that the estates of the dead fund the same tick's births (ruling C15); rung-1 and review switches and applies; renewal entries (none while the population module is on); a removal and a role change also end what the agent holds, in the removal steps of `spec-agents.md` 3.6 (2b titles, 2c hires, 2d and 2e claims, 2f covers, 2g facilities), and a role change into a role with no base room ends its stores (STO 3.6.1a); the module's births | SPN 10.2, 7.3; POP 4.1, 4.8; SKL; AGT 3.6, 3.7, 3.8 | agents, pool, `Privation`, welfare records; writes weights, roles, accounts, jobs, estates, pool, queues, carries | (c) a consumer spawner's own; (d) two creation draws (5.7) as each new agent is created, in plan order | in step (a), in queue order, each completion's `RecipeAbandoned` (if the trainee had a job, reason `role_changed`), then `TraineeshipCompleted`, then the `RoleChanged` it causes, and then `TraineeshipStarted` for each place filled, before the events of steps (b) to (d); then each executed operation's own events, in plan order; a removal's, in the order of 6.11 item 8; then `EntryLimited`; then `PopulationChanged` per role ascending |
 | P7.2 | After the entry step of **every** region: one migration pass for the world: the counts are taken once; each agent that is eligible, settled and pushed is evaluated in ascending agent ID with its rumours, **as of tick `t + 1`** (ruling C17); admission in order of earned ratio then agent ID against the guard, the caps and the provisioning; the departures in admission order | MIG 10.2 | counts, journeys, rumours; writes journeys, job abandons, the refusal `on_journey` | one per source pair for each pushed household that is evaluated (a pushed household whose role has no recipe ends in `no_estimate` before its candidates are formed, MIG 6.3.4, and takes none), in ascending agent ID, then (destination, commodity), when `RumourErrorBP` is above 0 | per departure in admission order the `RecipeAbandoned` of its job (if any) and then, after the last departure, `MigrationStarted` in admission order; then `MigrationReviewed` per region ascending |
+| P7.2a | The settlement review, with the settlements module on, per region ascending, an outside node skipped: the class by its thresholds, with the dwell | SET 4, 5.1 | the weights of the region's agents, the saved class and `Since`, the floor, the effective thresholds; writes class and `Since` | none | `SettlementClassChanged` or `SettlementHeld` per region |
+| P7.2b | The aggregates of the institutions module, per region ascending, then body, right or control | ORG 7.3.1 | the counts of P1.9a, P2.5, P3.2 and P7.1 (scratch) | none | `MembershipChanged`, `RightRefused`, `PriceControlled` |
 
 6.9.1. **Per region, interleaved (ruling C3).** Region `r + 1`'s computation,
 view and `Decide` come after region `r`'s execution and its creation draws. A
@@ -748,11 +822,21 @@ changes no result of the default.
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
 | P8.1 | Ageing and spoilage: every account in ascending ID, every lot whose `Born + ShelfLife - 1 <= t` moves whole to `spoilage`; the earliest-expiry hint makes the cost proportional to what expires | LED 5.3 | lots; writes lots, boundary balances | none | none |
+| P8.1a | The strikes on stores, with `Modules.Risk`: the common store rows, then the stores of each limited agent with a stored load above 0; all are decided, then applied; the goods lost go to `loss` | RSK 6.2 | store rows, lots; writes lots, boundary balances | D15: one per common store row, then one per limited agent's store row, in that order | `StoreLoss` per (agent, store class), ascending agent ID then class |
+| P8.1b | The settlement of the store covers of the tick, ascending cover ID | INS 8 | the amounts of `StoreLoss` (scratch), covers, balances; writes balances, covers, claims | none | `CoverEnded`, then `CoverSettled` per region |
 | P8.2 | The flow totals of the tick are final | LED 7.4, 12.1 | totals | none | `BoundaryFlow` for each non-zero (region, reason, money or commodity) of the reasons of kind faucet or sink only (the internal reasons are told by their own events), in the order of `spec-observability.md` 4.4.1.2 |
 | P8.3 | Regeneration of every endowment, ascending (`RegionID`, `ResourceID`), with the season of the tick; the carry advances | RES 4.1 | the stock the draws left; writes stock, carry, run | none | `EndowmentChanged` in that order |
+| P8.3a | The rent step of every endowment with a title, in (`RegionID`, `ResourceID`) order, then the title step: the posted rent moves by a bounded step on the counters of the tick; the internal reasons `rent` and `title_sale` | LND 5.5 | the counters of the tick, titles, balances; writes balances, titles, the posted rent | none | `RentPaid` per endowment, after `EndowmentChanged` |
+| P8.3b | The facility step: decay, ruin (a forced `removeStore`), the install of store facilities, the rebuild of the effect tables with the ground clamp, `FacilityLimited` | CAP 6.3 | the facility list and the stocks; writes conditions, the list, `Installed`, the tables, stores, endowment stocks; creates no goods (FR-CAP-042) | none | `StoreChanged` (cause `facility`), `FacilityChanged`, `EndowmentAdjusted` (kind `facility`), then `FacilityLimited` |
+| P8.3c | The technology step, with the module on: the fold of the execution counters, the trend, the discovery, the snapshot of the gains, the diffusion and the clamp | TEC 4.6 | the counters, the saved cells, the graph tables, the key; writes the cells and the derived gains | none (the keyed hash of D16 takes no word) | `TechnologyAdvanced` per cell in ascending (`RegionID`, field), after the events of P8.3b |
 | P8.4 | With `WithAudit`: the ledger's audit and the checks of the modules that are on | LED 12.4 | everything; writes nothing | none | none (the error `ErrAuditFailed`; it sets `Failed` of P8.5) |
 | P8.5 | `TickEnded`, with `Failed` true if the audit failed (and at P4.1 on that failure, 3.5.6) | OBS | | none | `TickEnded` |
 | P8.6 | The tick counter advances: `Tick()` is `t + 1`; then the flow totals and the per-tick counters of the modules are cleared (so a move made by a call between ticks is totalled in the next tick, 8.1.3) | this spec | | none | none |
+
+6.10.1. **P8.1a to P8.3c and the totals of P8.2.** P8.1b and P8.3a move money between accounts under
+internal reasons (a payout, `rent`, `title_sale`) and P8.3b and P8.3c create no goods and no
+money across a boundary reason (FR-CAP-042), so the flow totals that P8.2 declares final stay
+final; the only boundary reason that moves before P8.2 is P8.1a's `loss`.
 
 ### 6.11 The order of the events of a step
 
@@ -762,24 +846,36 @@ row.
 
 1. In the first step of a world in its construction phase that holds a bucket
    (5.5.3): the construction bucket's `BoundaryFlow` events with `Tick` -1 (P0.2a),
-   then `TickStarted`. In every other step `TickStarted` is first.
+   then `TickStarted`. In every other step `TickStarted` is first. Then, with the policy
+   module on, for each due actor in ascending `ActorID` (P0.3a): the slot events of the
+   application of its entries (cause `policy`: `MoneyFlowScaled`, `EdgeStatusChanged`,
+   `TransitFactorChanged`), then its `PolicyDecided`, before the first event of phase 1.
 2. Phase 1: per shipment `AgentRelocated` (a traveller) then `ShipmentArrived`; the
-   `ContractSettled` events in contract ID order; the migration arrivals
-   (`AgentRelocated`, cause `migration`) in agent ID order; `ReliefPaid` per region;
-   per money flow in flow ID order `MoneyFlowLimited`, then `MoneyFlowEnded` of the
-   same flow.
-3. Phase 2: `RecipeExecuted` for the completions of P2.1 in rotation order, then for
-   the one-tick jobs of P2.7 in start order; `OwnUseChanged`; then
-   `ProductionHalted` (P2.8a).
+   `CoverEnded` events of the route covers of those shipments in cover ID order, then
+   `CoverSettled` per region (P1.3a); the `ContractSettled` events in contract ID order;
+   the migration arrivals (`AgentRelocated`, cause `migration`) in agent ID order;
+   `ReliefPaid` per region; per money flow in flow ID order `MoneyFlowLimited`, then
+   `MoneyFlowEnded` of the same flow; the `LoanEnded` events in claim ID order, then
+   `CreditSettled` per region (P1.7a); `FiscalFlowApplied` per flow and region (P1.7b).
+3. Phase 2: for each completion of P2.1 in rotation order `RecipeExecuted`, then the
+   `HireEnded` (`completed`) of its hire, then the `FacilityChanged` (`built`,
+   `repaired`) of a build or repair it completes; then the `HireFormed` events of the
+   labour round in formation order (P2.5a); then the one-tick jobs of P2.7 in start
+   order, each in the same way; `OwnUseChanged`; then `ProductionHalted` (P2.8a); then
+   `LabourRound` per region (P2.8b).
 4. Phase 3: per agent in ID order its `ShipmentDispatched` or `ShipmentRejected`,
    then its `OrderPlaced` or `OrderRejected`; then per contract in formation order
    `ShipmentDispatched` and `ContractFormed` (a formation that fails at dispatch
    gives its `ShipmentRejected`); `ContractRound` per region; `MerchantsPlanned` per
-   region (P3.3a); the estates' `OrderPlaced` (and `OrderRejected` for an ask the
-   clearing refuses); the counterparties' `OrderPlaced` and `OrderRejected`;
-   `RumoursServed`; `WantShortfall`.
-5. Phase 4: per market `TradeExecuted` then `MarketCleared`; `OutsideTraded`,
-   `OutsideEnded`.
+   region (P3.3a); the `LoanFormed` events in formation order and `CreditRound` per
+   region (P3.3b); the `CoverFormed` events in formation order and `CoverRound` per
+   region (P3.3c); the estates' `OrderPlaced` (and `OrderRejected` for an ask the
+   clearing refuses); the treasuries' `OrderPlaced` and `OrderRejected` and then
+   `TreasuryOrdered` per authority (P3.4a); the counterparties' `OrderPlaced` and
+   `OrderRejected`; `RumoursServed`; `WantShortfall`; `RoomLimited` (P3.6a);
+   `SavingPlanned` (P3.6b); the toll `FiscalFlowApplied` events (P3.6c).
+5. Phase 4: per market `TradeExecuted` then `MarketCleared`; the duty
+   `FiscalFlowApplied` events (P4.1a); `OutsideTraded`, `OutsideEnded`.
 6. Phase 5: `BeliefsUpdated` per market.
 7. Phase 6: `UpkeepShortfall`.
 8. Phase 7: per region, **first** the traineeship events of the entry step's
@@ -789,12 +885,25 @@ row.
    filled; then the executed operations' events of parts (b) to (d), then
    `EntryLimited`, then `PopulationChanged`; after the last region, per departure in
    admission order the `RecipeAbandoned` of its job, then `MigrationStarted` in
-   admission order, then `MigrationReviewed`.
+   admission order, then `MigrationReviewed`; then, per region in ascending `RegionID`,
+   `SettlementClassChanged` or `SettlementHeld` (P7.2a); then `MembershipChanged`,
+   `RightRefused` and `PriceControlled` in (`RegionID`, body, right or control) order
+   (P7.2b).
 
    **One removal**, from P7.1(d) or a call between ticks, emits in this order:
    `RecipeAbandoned` for its job (reason `agent_removed`), `TraineeshipEnded` if it
    was in a traineeship, the `ContractSettled` of each contract of which it was the
-   deliverer (`deliverer_removed`), then `AgentBankrupted`, then `EstateOpened`.
+   deliverer (`deliverer_removed`), then the events of the removal steps of
+   `spec-agents.md` 3.6, in step order and all before `AgentBankrupted` (ruling C28): the
+   `TitleTransferred` of each title moved, in ascending (region, resource) order (2b);
+   the `HireEnded` of each hire, the worker's side first and then, in ascending hire ID,
+   the employer's, each with the `RecipeAbandoned` of the worker's job it ends (2c);
+   the `LoanEnded` of each claim ended by the waterfall, in ascending claim ID (2d), and the
+   `LoanPassed` of each claim passed to the estate (2e); the `CoverEnded` of each cover
+   ended, in ascending cover ID (2f); and the `FacilityChanged` of each facility of the agent, in ascending facility ID
+   (2g): `transferred` (cause `owner_removed`) for a site, route or ground facility,
+   which passes to the estate of its region, and `ruined` (cause `owner_removed`) for a
+   store facility, its `StoreChanged` first (`spec-infrastructure.md` 7.1.1, AGT 3.6 step 2g); and last `AgentBankrupted`, then `EstateOpened`.
    The removal of a **trainer** first ends its trainees' traineeships, and those
    events come first: trainee by trainee in ascending agent ID, each trainee's
    `RecipeAbandoned` (reason `principal_left`) and then its `TraineeshipEnded`
@@ -802,18 +911,34 @@ row.
    `AgentBankrupted` is **the only event that removes the agent**; the others
    accompany it (ruling C11). A role change emits `RecipeAbandoned` (`role_changed`)
    and then `RoleChanged`, and a role change that completes a traineeship emits
-   `RecipeAbandoned`, `TraineeshipCompleted` and then `RoleChanged`; a weight reduction emits `WeightChanged` and no abandon
+   `RecipeAbandoned`, `TraineeshipCompleted` and then `RoleChanged`; a role change ends the
+   agent's hires first (for an employer, each hire in ascending hire ID with the
+   `RecipeAbandoned` of the worker's job and the `HireEnded` of cause `employer_role`; for
+   a worker its `HireEnded` of cause `worker_role`), before its `RoleChanged`
+   (`spec-employment.md` 6.5.2), and after the `RoleChanged` the `StoreChanged`
+   (`removed`, cause `role_changed`) and the `FacilityChanged` (`ruined`, cause
+   `role_changed`) in ascending facility ID; a weight reduction emits `WeightChanged` and no abandon
    (the job's `Executions` is scaled, `spec-production.md` 5.4). A journey dropped by
    a removal has no event of its own: it is counted in `MigrationReviewed`.
-9. Phase 8: `BoundaryFlow`, `EndowmentChanged`, `TickEnded` (with `Failed` true if
-   the audit failed). A step that fails at P4.1 ends with its `TickEnded` of `Failed`
+9. Phase 8: `StoreLoss` per (agent, store class) in ascending agent ID then class order
+   (P8.1a); the `CoverEnded` events of the store covers settled in P8.1b in ascending
+   cover ID, then `CoverSettled` per region; `BoundaryFlow`; `EndowmentChanged`;
+   `RentPaid` per endowment (P8.3a); the `StoreChanged`, `FacilityChanged` and
+   `EndowmentAdjusted` (kind `facility`) events of the facility step and then
+   `FacilityLimited` per region and class (P8.3b); `TechnologyAdvanced` per (`RegionID`,
+   field) (P8.3c); `TickEnded` (with `Failed` true if the audit failed). A step that fails at P4.1 ends with its `TickEnded` of `Failed`
    true after the events before the failure (3.5.6).
 
 Events of a call between ticks (`EdgeStatusChanged`, `MoneyFlowScaled`,
-`EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `TransitFactorChanged`,
-`PopulationScaled`, and the `AgentSpawned`, `AgentRelocated` or the events of a
-removal (item 8) for an external agent) are emitted at the call, carry the `Tick`
-the next step will run, and come before that step's `TickStarted`. The construction
+`EndowmentAdjusted` (also kind `facility`), `OutsideShocked`, `YieldShocked`,
+`TransitFactorChanged`, `PopulationScaled`, `RentScaled`, `CreditRateScaled`,
+`RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`, `RightSuspensionSet`,
+`TechnologyAdjusted`, `StoreChanged`, `FacilityChanged`, `TitleTransferred`, the
+`LoanEnded` of a forgiven claim, and the `AgentSpawned`, `AgentRelocated` or the events
+of a removal (item 8) for an external agent) are emitted at the call, carry the `Tick`
+the next step will run, and come before that step's `TickStarted`. The one exception is
+the write of a policy actor (8.2.2): its slot events come at P0.3a, after `TickStarted`
+(item 1). The construction
 bucket's `BoundaryFlow` events (item 1) are emitted at the entry of the first step,
 so they come after the events of every call made between `NewWorld` (or a restore
 into the phase) and that step, and before its `TickStarted`.
@@ -850,6 +975,11 @@ written specs would have implemented differently.
 | C21 | Outcomes of pseudo-agents' orders | CLR 7.3, FR-CLR-025, FR-AGT-023, FR-BEL-008: the outcome goes to the agent's `Revise`; an estate and a counterparty have no strategy or belief | A pseudo-agent's order has no outcome and takes no D8 word | this spec | CLR 7.3, FR-CLR-025; FR-AGT-023; FR-BEL-008 repeat it |
 | C22 | Markets in any order | CLR 3.3.1, 7.2, FR-CLR-023, SCL 6.6: clearing in any order gives the same trades | Independent **given the keys**; the keys come from one stream in market order, so the fixed order is part of the draw sequence (D7) | this spec | CLR 3.3.1, 7.2, FR-CLR-023; SCL 6.6 |
 | C23 | Warm money and stock | AGT 19, EST 2.3, FR-VIA-032: the group's entry replaces the defaults; the first draft created both | A group with a warm entry is created with its entry in place of the defaults, one `initial` (5.4.2, 5.6.1 item 3) | AGT 19, VIA | none |
+| C24 | Two specs claimed P1.7a | CRD 8.1.1 (the settlement of the claims, "the new position P1.7a") and FIS 5.3, 6, 8.4, 10.1, 12 (taxes, remittances and payouts, "P1.7a (new)"); INS, SAV, RSK, CAP and PLC cite CRD's name | By 6.1.1 the letter goes with the order, not the author: the position that runs first after P1.7 is **P1.7a CRD**, the second **P1.7b FIS**. Debt service therefore runs before taxes, and a debtor short of cash pays its claim and the tax is forgiven for the shortfall (FIS 5.3) | this spec | FIS: P1.7a becomes P1.7b everywhere (about twenty mentions); CRD, INS, SAV, RSK, CAP and PLC keep P1.7a |
+| C25 | Draw IDs of the later modules | RSK 11.2 takes D13, D14 and D15; PLC 7.1.1 takes "D13"; TEC 6.3.1 takes "D16", which is also the label of the register's damper D16 (`spec-stability.md` 5: another namespace); EMP's first "D13" is withdrawn | **D13, D14, D15 RSK; D16 TEC; D17 PLC**, in the order of a run in 7.3; PLC's built-ins take none and D17 is a consumer's own words. Prose that could mean the register's damper says "draw D16" | this spec | PLC: "D13" becomes "D17"; TEC and RSK keep theirs; any text that writes D13 to D17 for a draw says "draw" |
+| C26 | Step 8 of construction | LND 6.1.1: "step 8a", titles before the warm start; TEC 6.3.1: "step 8a", the key after the creation draws; CAP 3.4.3: the initial facilities after the warm start; SET 4.5: the classes after the agents; POL 5.4.1: the treasury pseudo-agents with their money before the households | Step 8 is one step with an ordered list of sub-steps (5.1.2): the pseudo-agents and then the agents, **8a LND** the titles, the warm start, the creation draws, **8b CAP** the initial facilities, the settlement classes (no letter), **8c TEC** the key; the events of step 10 follow the same order (5.8.2) | this spec | TEC: "8a" becomes "8c" (6.3.1 table, FR-TEC-011, 6.3.4, 17.2); CAP 3.4.3 names 8b; LND keeps 8a |
+| C27 | The tail of P3.6 | STO 14.1 takes P3.6a and says both "new" and "no new position"; SAV 9, 14 and FIS 10.1 ask for "P3.6, after `WantShortfall`", and SAV wants `RoomLimited` before `SavingPlanned` | **P3.6a STO** (`RoomLimited`), **P3.6b SAV** (`SavingPlanned`), **P3.6c FIS** (the toll `FiscalFlowApplied`), after `WantShortfall`: stable names rather than an ordered list inside P3.6 | this spec | SAV 9, 14 and FR-SAV-027 ("no new position"): P3.6b; FIS 10.1: P3.6c; STO 11.1 drops "no new position" |
+| C28 | The removal steps of `spec-agents.md` 3.6 | EMP 6.5.2 and LND 6.4.1 both ask "2b"; CRD 9 takes 2d and 2e; INS 8.6 takes 2f; CAP 6.3 and 14.1 place `FacilityChanged` after `EstateOpened` | **2b LND** (titles to the pool), **2c EMP** (the hires end, the worker's side first, the remainder of the escrow returned to the employer's account before the waterfall), **2d and 2e CRD**, **2f INS**, **2g CAP**; every event of a removal precedes `AgentBankrupted` and `EstateOpened` (6.11 item 8) | this spec; `spec-agents.md` 3.6 carries the steps | AGT 3.6 (the steps); EMP 6.5.2 and EMP-22; CAP 6.3, 14.1 (before `EstateOpened`); INS 8.6.3 (2f ends a store cover of the tick unpaid, the premium kept) |
 
 The rulings of the wave 3 and 4 integrations stand and are the order of the tables
 above: settlement of contracts before the arrivals of migration journeys, because a
@@ -946,36 +1076,51 @@ adds a draw appends a row with a new ID and states its count.
 | ID | When and where | Taken by | How many | In what order | Owner |
 |----|----------------|----------|----------|---------------|-------|
 | D1 | construction, after the warm start (5.7) | the world, per household agent | 2: the target ratio, then the residue | ascending agent ID | WEL 5.1; PRO 6.6.2 |
+| D16 | construction, step 8c (5.1.2), after the creation draws and before the audit of step 9, only when the technology module has a field with `DiscoveryBP` above 0 | the world: the technology key | 1 | once | TEC 4.4.1 |
+| D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | PLC 7.1.1 |
 | D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | EXT 5.1, 6.4 |
 | D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | AGT 7.1 |
+| D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | RSK 4.2 |
 | D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | INF 5.5.2 |
 | D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | AGT 7.5.3 |
+| D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | RSK 4.1 |
 | D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | MER 9.4.2 |
-| D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask and a counterparty's order included; a consumer's `Clearing` draws as it likes from the world's `Rand` (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | CLR 4.2 |
-| D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own; an estate's ask and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | BEL 4.5, 5.1.1 |
+| D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the world's `Rand` (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | CLR 4.2 |
+| D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | BEL 4.5, 5.1.1 |
 | D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | SPN 3.1.2, 10.2 |
 | D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | AGT 3.5.3 |
 | D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | MIG 6.2.1, 10.2.1; INF 6.1.3 |
+| D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | RSK 6.2 |
 | D12 | between ticks, at the call | the world, per agent that INT adds: D10's two | 2 | in the order of the calls | AGT 10 |
+
+The rows are in the order of a run, not of the ID. The IDs D13 to D17 are the draw IDs of ruling C25 (6.12). D16 is not the damper D16 of the
+register (`spec-stability.md` 5): wherever the two could be meant a text says "draw D16".
+The draw D17 and D3, D5 and D9 of a consumer's extension are in call order and are not
+terms of 7.3.1.
 
 7.3.1. **The words of one tick**, for a world with no consumer extension, is
 
 ```
 walk lines                                        D2
++ common route rows with P > 0 (Risk)          D13
 + candidates of the informed views (E > 0)        D4
 + intents the default considers                   D5
++ unit rows on the paths of the shipments dispatched (Risk)   D14
 + admitted offers + admitted takes                D6
 + admitted orders (default clearing)               D7
 + admitted orders of household agents              D8
 + 2 * agents created in phase 7                   D10
 + source pairs of the evaluated pushed households (E > 0)   D11
++ common store rows with P > 0 + stores drawn (Risk)  D15
 ```
 
 with `E` the information error. Each term is a function of the configuration and
 of the state at the start of the tick (7.4): the number of walking lines, of
 informed agents and the tradable pairs they can see, of intents the strategy
 considers, of orders the agents' budgets admit, of agents the ladder and the
-module of population create, of households that the migration rule pushes.
+module of population create, of households that the migration rule pushes. The risk
+module's three terms are present only with `Modules.Risk`, and D16 (a construction word)
+and D17 (a consumer's own) are no term of a tick.
 
 ### 7.4 The count is a function of configuration and state
 
@@ -988,15 +1133,22 @@ whether the world was checkpointed and restored in between.
 
 7.4.2. **Modules.** A module that is on and does nothing takes no word and leaves
 the stream as it would be with the module off (FR-INF-047, FR-RES-045,
-FR-POP-036, FR-MON-041, FR-SUB-035, FR-EXT-021). A module that adds a **creation**
-draw adds it to D1's table for every agent whatever its switches (5.7.2).
+FR-POP-036, FR-MON-041, FR-SUB-035, FR-EXT-021, FR-EMP-061, FR-ORG-017, FR-POL-020, FR-CAP-002, FR-STO-037). A
+module that adds a **creation** draw adds it to D1's table for every agent whatever its
+switches (5.7.2). The one word of a module that is not an agent's creation draw is taken at
+construction, once, by a module that is on **and has work to do** (the technology key,
+D16, 8c): a module that is on and has no field with a discovery rate takes none, and the
+creation draws are the same with it on or off.
 
 7.4.3. **A draw that might be skipped is taken anyway** when skipping would make
 the count depend on an outcome: the default strategy draws for every intent it
 considers even when affordability then removes the order (`spec-agents.md` 7.5.3),
 a pushed household draws for every candidate whether or not a rumour is offered, a
 belief draws for every outcome whether or not the gate opens. The draw is paid for
-the paired comparison it keeps exact (WEL 5.1; 7.6.1).
+the paired comparison it keeps exact (WEL 5.1; 7.6.1). The storage, saving and
+institutions modules change the **count** of D5 to D8 by what they refuse, cut or bar
+(a bid cut by the room, a project that changes a budget, a place a household is refused),
+because those counts are functions of state (7.4.1); none of them adds a word.
 
 7.4.4. **How it is tested.** A run with a recording observer and a capturing
 logger and a run with neither produce the same bytes of `Snapshot` at every tick and
@@ -1012,7 +1164,13 @@ flows, regeneration and the outside's capacity, the per-agent spreads of the
 migration margin, the merchant's fee share and the death carry (the Weyl offset of
 the agent ID, POP 3.8.3), the stagger of a warm start (VIA 8.4.3), the rotation of
 starts, the review rotation, the subsistence flag, the settlement of contracts,
-the sweep, regeneration, the cost anchors and the welfare record.
+the sweep, regeneration, the cost anchors and the welfare record, and, of the later modules,
+the credit round's and the cover round's order (the stateless key) and the settlement's
+remainders (CRD 6, 8; INS 7.3, 8), the tiers of tenure, the apportionment and the rent step
+(LND 8.2), the labour round (ties by the keyed `K(t, id)`, 10.1.1; EMP 5.3), the membership
+round (ORG 4), the fiscal flows' pro rata cut (a keyed tie, FIS 10.2.5), the technology
+step's keyed discovery hit (TEC 4.6.4), the settlement review, the facility step, the polity
+and the built-in policies.
 
 ### 7.6 Hazard: a stream is positional
 
@@ -1041,6 +1199,8 @@ simpler for it. It is open question 4 (22).
 8.1.1. Every change to the world that does not come from a step acts **between
 ticks**: a shock, a slot, an adjustment, an external agent, a relocation, a
 directive, a checkpoint. It never acts inside `Step`; the guard of 3.6 refuses it.
+The one other writer of a slot is a policy actor at P0.3a (8.2.2), which uses the owners'
+internal setters, so that the public call stays a call between ticks only.
 Consequences, which hold for every call of 8.2 and 8.3:
 
 1. it takes effect at the first position of the next step that reads it
@@ -1048,7 +1208,8 @@ Consequences, which hold for every call of 8.2 and 8.3:
 2. it is atomic: it validates in full and then applies, or returns an error and
    changes nothing (`spec-regions.md` 7.3.1, `spec-ledger.md` 2.6);
 3. it emits its own event at the call, carrying the tick the next step will run,
-   before that step's `TickStarted` (6.11);
+   before that step's `TickStarted` (6.11); a policy actor's write at P0.3a (8.2.2)
+   emits its events after `TickStarted`;
 4. its state is saved in a checkpoint by the spec that owns it (12);
 5. it is not configuration and is not hashed: a run with shocks and the same
    configuration has the same hash, and the shocks belong to the **sequence of
@@ -1088,28 +1249,55 @@ its bounds are INT's (N-091). This table does not name the calls.
 | Yield shock: a multiplier by (region, recipe), 0 to `MaxYieldBP`, default 10 000 | PRO 6.8 | P1.2 (the cost anchor), P2.5 (`k0`), P2.7 (the yield read at the start of a job; a running job keeps its pending output) | `YieldShocked`, one per changed key (`spec-observability.md` 4.4.4) | PRO 15: sorted by region, recipe |
 | Edge status: closed, or a length factor, by edge | REG 7 | the graph tables and the lag table are rebuilt **at the call** (REG 4.4.4, INF 7.2); read at P3.2 and P3.3 (route, travel time), P3.5 (a closed edge cuts the outside) and P7.2 (a journey's distance); shipments in flight keep their arrival tick | `EdgeStatusChanged`, in `EdgeID` order, after the tables are in place | REG 11: the non-default edges |
 | Transit factor: by (from, to, mode), 0 to `MaxTransitFactorBP`, default 10 000 | TRN 10.3 | P3.2 and P3.3, at dispatch; new dispatches only | `TransitFactorChanged`, one per changed key | TRN 14: the non-default factors |
-| Flow scale: by money flow, 0 to `MaxFlowScale`, default 10 000 | MON 10.4 | P1.7 | `MoneyFlowScaled` | MON 14 |
+| Flow scale: by money flow or fiscal flow, 0 to `MaxFlowScale`, default 10 000 | MON 10.4; FIS 13.1 | P1.7 (money flows), P1.7b (taxes, remittances, payouts), P3.2(c) and P3.3 (tolls), P3.4a (the treasuries' orders), P4.1a (duties) | `MoneyFlowScaled` (cause `consumer`, or `policy` at P0.3a) | MON 14; FIS 14 |
+| Rate scale: by region, 0 to `MaxShockBP`, default 10 000 | CRD 13.1 | P3.3b (the effective rate of a new loan) | `CreditRateScaled`, one per changed key | CRD 17 |
+| Rent scale: by (region, resource), 0 to `MaxShockBP`, default 10 000 | LND 5.2 | P1.2, P2.3, P2.6, P2.7 | `RentScaled`, one per changed key | LND 14 |
+| Route risk scale: by (`From`, `To`, `Mode`), 0 to `MaxShockBP`, default 10 000 | RSK 9 | P3.1a and the record of a dispatch (P3.2(c), P3.3) | `RouteRiskScaled`, one per changed key | RSK 15 |
+| Store risk scale: by (region, store class), 0 to `MaxShockBP`, default 10 000 | RSK 9 | P8.1a | `StoreRiskScaled`, one per changed key | RSK 15 |
+| Legal level: by control, a cap and a floor, 0 to `MaxBasisPoints` (a rate limit: 0 to `MaxCreditRateBP`) | ORG 6, 7.2 | the admission of P3.2, P3.3, P3.3b, P3.4 and P3.5; **the resolved ranges are rebuilt at the call** | `LegalLevelSet`, one per changed key in ascending `ControlID` | ORG 12 (not hashed) |
+| Right suspension: by right, a bool, default false | ORG 5.4.3, 7.2 | P2.5 (and the formation of a hire), P3.2(c), P7.1(a); **the resolved rights are rebuilt at the call** | `RightSuspensionSet`, one per changed key in ascending `RightID` | ORG 12 (not hashed) |
 | Birth scale and death scale: by region, default the region's configured value (10 000 with no row) | POP 3.6, 6.6 | P7.1(b) | `PopulationScaled`, one per changed key, naming which scale | POP 11 |
 | Endowment capacity scale and regeneration scale: by (region, resource), 0 to `MaxShockBP` | RES 6.3.1 | the capacity scale **at the call** (the effective capacity is recomputed and a stock above it is clamped, the excess lost); the regeneration scale at P8.3 | `EndowmentAdjusted` (kind `shock`) | RES 15 |
 | Endowment adjustment: a signed one-off delta to a stock | RES 6.3.2 | at the call (the stock changes now) | `EndowmentAdjusted` (kind `adjust`) | RES 15: the stock |
 | Outside price shock: a factor by (node, commodity), 1 to `MaxShockBP`, default 10 000 | EXT 6.5 | P1.8 and the quotes of P3.5 | `OutsideShocked` | EXT 16 (not hashed) |
 | Directive: the mailbox of an external agent, applied to the next tick, discarded unless `Sticky` | AGT 10 | P1.9 | none | AGT 15: the directive is state |
+| Policy directive: the mailbox of a `directed` policy actor, a list of lever settings written by `DirectPolicy`, read at the actor's decision and cleared after it (the Directive row is its model) | PLC 8.4 | P0.3a, when the actor is due | none at the call; the slot events of its application at P0.3a (cause `policy`) | PLC 13: the mailbox is state |
+| Technology advance: a signed delta of the advance of a (region, field) cell, clamped to `[0, CapBP]` | TEC 7.1 | at the call (the gain is re-derived now; modelled on Endowment adjustment) | `TechnologyAdjusted`, one per changed key | TEC 12 (not hashed, not listed by `Slots()`) |
 
 8.2.1. **A new slot** gets a row here in the change that introduces it, with its
 read position, and says whether it acts at the call or at a position. No slot
 edits a configured value (`spec-regions.md` 5.3.6, `spec-resources.md` 6.3). The
-two cases of "acts at the call" (the graph tables, the endowment's capacity) exist
-because a derived table must be consistent before the next step, and the call is
+cases of "acts at the call" (the graph tables, the endowment's capacity, the effect tables
+of the facilities, CAP 11, and the legal and right tables of the institutions module, ORG 7.2)
+exist because a derived table must be consistent before the next step, and the call is
 the only place that can rebuild it without an observer seeing a half-built world.
+
+8.2.2. **A policy actor is the second writer of three kinds of slot (ruling of F8; PLC 7.1.3).**
+At P0.3a a due policy actor writes the slots of kinds `flow`, `edge` and `transit` (the flow
+scale, the edge status and the transit factor) through the owners' internal setters, with
+the cause `policy` on their events; no other slot has a second writer. The write is
+indistinguishable in effect from a call made between the previous `Step` and this one: P0.3a
+is the entry of the step, before any position that reads a slot, and no reservation is open
+(6.1.6). The last write wins, a consumer's call before the step and an actor's at P0.3a
+in that order. The public setters keep returning `ErrInStep` (3.6.3), and a call between
+ticks never takes effect through an actor. An actor writes no `SetRightSuspensions`,
+`AdjustTechnology`, `AdjustFacilities` or `TransferTitles` (`spec-policy.md` 6.3.3).
 
 ### 8.3 Calls that act on agents
 
 | Call (public name: INT) | What it does | Mechanism | Events |
 |-------------------------|--------------|-----------|--------|
 | Add an external agent | creates an agent of weight 1 with the next ID: an account, its money and goods by `initial`, beliefs, and D12's two creation draws | AGT 3.5.4, 10 | `AgentSpawned` |
-| Remove an agent (an external agent, mortal or not) | the removal mechanics of `spec-agents.md` 3.6: job abandoned, trainee relationship ended, journey dropped, contracts of a deliverer settled, money and goods to the estate | AGT 3.6; SPN 9 | in the order of 6.11 item 8: `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `AgentBankrupted`, `EstateOpened` |
+| Remove an agent (an external agent, mortal or not) | the removal mechanics of `spec-agents.md` 3.6: job abandoned, trainee relationship ended, journey dropped, contracts of a deliverer settled, money and goods to the estate | AGT 3.6; SPN 9 | in the order of 6.11 item 8 |
 | Relocate an agent (the guarded path; any agent that is not a pseudo-agent, `spec-integration.md` 4.5.1) | the account's region changes if no reservation is open and no `region_bound` refusal applies; a journey the agent is on is cancelled inside the call, with the move | REG 6; MIG 8.4.1 | `AgentRelocated` |
 | Direct an agent | writes the mailbox | AGT 10 | none |
+| Add a store to an agent | gives the agent one more store of a class; refused for a class the region's settlement class lacks (`ErrStoreLocked`), an agent with no base room (`ErrNotLimited`) and an agent away or on a journey (`ErrAgentAway`) | STO 3.6.2 | `StoreChanged` (`added`, cause `consumer`) |
+| Remove a store from an agent | takes one store of a class; refused when the load plus the pledge would no longer fit (`ErrNoRoom`) or a store facility is installed in it (`ErrStoreInUse`) | STO 3.6.2 | `StoreChanged` (`removed`, cause `consumer`) |
+| Add facilities | creates facilities of a class in a region, for an owner that is a household agent, an external agent or the estate of the region, at a given or the full condition | CAP 11.1 | `FacilityChanged` (`added`), `EndowmentAdjusted` (kind `facility`) |
+| Adjust facilities | changes the condition of one facility by a signed delta, clamped to `[0, Durability]`; a facility taken to 0 is ruined, and a store facility takes its store with it | CAP 11.2 | `FacilityChanged`, `EndowmentAdjusted` (kind `facility`), `StoreChanged` (cause `facility`) |
+| Transfer facilities | gives a facility to another owner (a live household or external agent, or the estate of its region); moves no money | CAP 11.3 | `FacilityChanged` (`transferred`) |
+| Transfer titles | moves a share of an endowment's title between holders, or between the commons and a holder, at an optional price (the internal reason `title_sale`) | LND 6.3 | `TitleTransferred` (cause `consumer`) |
+| Forgive claims | ends every open claim whose debtor's region and role match a filter, and moves no money | CRD 13.2 | `LoanEnded` (cause `forgiven`) |
 
 8.3.1. A call that creates or removes an agent between ticks changes the agent ID
 space (5.3): the next ID, the rotation lists and the review rotations of every
@@ -1153,12 +1341,12 @@ and says which; it does not invent a fifth without a row here.
 
 | Device | What it is | Draw? | Where it appears |
 |--------|-----------|-------|------------------|
-| **Rotation** | An agent acts on the ticks where `(tick + bucket(id, P)) mod P = 0`, with `P` a period in ticks and `bucket(id, P) = (Weyl2(id) * P) >> 32` (9.1.1). The load is `agents / P` a tick, spread to within a few agents whatever the layout of the IDs for a group of about a thousand agents or more; a small group is looser (9.1.1) | no | SPN 6.2, MIG 5.1 |
+| **Rotation** | An agent acts on the ticks where `(tick + bucket(id, P)) mod P = 0`, with `P` a period in ticks and `bucket(id, P) = (Weyl2(id) * P) >> 32` (9.1.1). The load is `agents / P` a tick, spread to within a few agents whatever the layout of the IDs for a group of about a thousand agents or more; a small group is looser (9.1.1) | no | SPN 6.2, MIG 5.1, PLC 7.2 |
 | **Carried remainder** | A quantity stated per period or per year is applied each tick as `floor((carry + amount) / D)` with the remainder kept, `D` containing the period or `TicksPerYear`. Exact over any run, no lump, any divisor | no | MON 6.1, POP 3.8, DEM 4.4, RES 4.3, EXT 7.1 |
 | **Window** | A memory of the last `N` ticks (a ring) that a decision reads. It is not a cadence: the decision that reads it still runs when it is asked | no | BEL 7, WEL 2.3, INF 4.3 |
 | **Gate** | A probability per outcome: the decision runs for the outcome with probability `p`. Asynchronous adjustment at a random rate | one word per outcome | BEL 5.2 |
 
-9.1.1. **The Weyl value and the bucket (ruling C14).** `Weyl32(id) = (id * 2 654 435 769) mod 2^32` (POP 3.8.3) is the fixed per-agent spread of the library for **carries and margins**: the death carry, the migration margin and the merchant's fee share use it, and one helper in `internal/ordering` (N-019, wave 4) carries one test of its evenness. It draws nothing and adds no creation draw. A rotation does **not** use it. A rotation uses `bucket(id, P) = (Weyl2(id) * P) >> 32`, a value in `[0, P)`, where `Weyl2(id) = (id * 0x6A09E667) mod 2^32` is a **second Kronecker sequence** with its own multiplier (the fractional part of the square root of 2, the first constant of SHA-256). The rule behind it: **two spreads that act on one decision must not share a value.** MIG's margin `MoveGain + Weyl32(id) * MoveWidth / 2^32` and a rotation bucket taken from the same `Weyl32` are monotone in one number, so the households that meet the margin review on the same few ticks of the period: in the model of 18 (`cadence.py`; 1 000 consecutive IDs, a period of 30, the 400 households that meet a margin of 3 000) the Weyl32 bucket puts them on 12 ticks of 30, with 18 empty and up to 34 on one, against 11 to 15 on every tick with the rule bucket and 12 to 15 with raw IDs. The model also shows why the raw ID is not used: with 1 000 agents and a period of 30, raw IDs spaced by 10 (a role created in a regular interleave with two others) put 333, 333 and 334 reviews on three ticks of 30 and none on the other 27. The rule bucket stays at 30 to 37 on a tick against a mean of 33.3 (98 to 103 against 100 at a period of 10) for every stride of 1 to 31 with IDs from 100; over the starting IDs 0, 100 and 12345 it is 24 to 39 at a period of 30 and 94 to 113 at 10 for 1 000 agents (bounds 40 and 120), and 152 to 182 and 485 to 511 for 5 000. That is a property of a large group: with 200 agents and a period of 30 it reaches 0 to 16 against a mean of 6.7 and a bound of 8 at stride 13 (the Weyl32 bucket is as bad at stride 29), so **no bound is claimed below about a thousand agents**. `Weyl2` is `Weyl32 * c mod 2^32` with `c` fixed, so it is a function of `Weyl32`: the rule "must not share a value" is met **operationally**, not by independence (Spearman rank correlation 0.008 over 1 000 consecutive IDs, and the margin households fall on every tick), and the model is the check. An independent hash of the ID was considered and not adopted: it is binomial, 17 to 55 a tick at the same size (`cadence.out`). The written specs say `(tick + AgentID) mod P`; the edit is one expression (22).
+9.1.1. **The Weyl value and the bucket (ruling C14).** `Weyl32(id) = (id * 2 654 435 769) mod 2^32` (POP 3.8.3) is the fixed per-agent spread of the library for **carries and margins**: the death carry, the migration margin, the merchant's fee share and the saver's hurdle spread use it, and one helper in `internal/ordering` (N-019, wave 4) carries one test of its evenness. It draws nothing and adds no creation draw. A rotation does **not** use it. A rotation uses `bucket(id, P) = (Weyl2(id) * P) >> 32`, a value in `[0, P)`, where `Weyl2(id) = (id * 0x6A09E667) mod 2^32` is a **second Kronecker sequence** with its own multiplier (the fractional part of the square root of 2, the first constant of SHA-256). The rule behind it: **two spreads that act on one decision must not share a value.** MIG's margin `MoveGain + Weyl32(id) * MoveWidth / 2^32` and a rotation bucket taken from the same `Weyl32` are monotone in one number, so the households that meet the margin review on the same few ticks of the period: in the model of 18 (`cadence.py`; 1 000 consecutive IDs, a period of 30, the 400 households that meet a margin of 3 000) the Weyl32 bucket puts them on 12 ticks of 30, with 18 empty and up to 34 on one, against 11 to 15 on every tick with the rule bucket and 12 to 15 with raw IDs. The model also shows why the raw ID is not used: with 1 000 agents and a period of 30, raw IDs spaced by 10 (a role created in a regular interleave with two others) put 333, 333 and 334 reviews on three ticks of 30 and none on the other 27. The rule bucket stays at 30 to 37 on a tick against a mean of 33.3 (98 to 103 against 100 at a period of 10) for every stride of 1 to 31 with IDs from 100; over the starting IDs 0, 100 and 12345 it is 24 to 39 at a period of 30 and 94 to 113 at 10 for 1 000 agents (bounds 40 and 120), and 152 to 182 and 485 to 511 for 5 000. That is a property of a large group: with 200 agents and a period of 30 it reaches 0 to 16 against a mean of 6.7 and a bound of 8 at stride 13 (the Weyl32 bucket is as bad at stride 29), so **no bound is claimed below about a thousand agents**. `Weyl2` is `Weyl32 * c mod 2^32` with `c` fixed, so it is a function of `Weyl32`: the rule "must not share a value" is met **operationally**, not by independence (Spearman rank correlation 0.008 over 1 000 consecutive IDs, and the margin households fall on every tick), and the model is the check. An independent hash of the ID was considered and not adopted: it is binomial, 17 to 55 a tick at the same size (`cadence.out`). The written specs say `(tick + AgentID) mod P`; the edit is one expression (22).
 
 ### 9.2 The table
 
@@ -1192,6 +1380,12 @@ are the owners' placeholders (N-015, N-027); none is repeated as a claim here.
 | Ageing | `ShelfLife`, `Durability` | GDS 4, LED 5.3 | per commodity | P8.1 | `Born + ShelfLife - 1 <= t` |
 | Seasons and the year | the calendar | CAL | Earth | P1.1 | `Calendar.At(t)`, derived |
 | The contract round | every tick; `MaxSourceAge` | MER 9.4, 5.2 | 2 | P3.3 | every tick; the bound compares with `SourceAge` |
+| The labour round | none: every tick | EMP 5.1 | | P2.5a | every tick, no cadence |
+| The credit round and the settlement of claims | none: every tick | CRD 12.3 | | P3.3b, P1.7a | every tick, no rate, no gate |
+| The membership round | none: every tick | ORG 4 | | P1.9a | every tick, no cadence |
+| The posted rent | `RentStepBP`, `RentFloorBP`, `RentCeilingBP` | LND 5.5 | 0; 0; 20 000 | P8.3a | every tick; a bounded step on the counters of that tick |
+| A settlement class | `Dwell`, `BandBP` | SET 3.4 | 30; 1 000 | P7.2a | a change applies when `t - Since >= Dwell` |
+| A policy actor's decision | `Every`, ticks | PLC 7.2 | required | P0.3a | rotation: `(t + bucket(a, Every)) mod Every = 0`, `a` the `ActorID` |
 
 ### 9.3 A cadence that does not divide `TicksPerYear`
 
@@ -1237,13 +1431,25 @@ such as the effective welfare window `max(WelfareWindow, WindowCycles * longest
 Duration)` or the lag of a rumour from the distance table. "Macro is measured,
 never set" (roadmap; ADR 0001 decision 7; `spec-stability.md` 5.1.3).
 
+   **Three exceptions, each owned (ADR 0006, which narrows ADR 0001 decision 7).** A derived
+   structural rank, a step function of the household count of one region with a band and a
+   dwell (the settlement class of `spec-settlements.md`), may gate an entry, a right or a
+   number of places; the household count of one region may gate a permission, a place or a
+   structure and is read against a body's `Places` by the institutions module
+   (`spec-institutions.md` 3.4.1); and a quantity local to the entity a price or rent
+   belongs to (the units unserved or idle at one endowment, a title's share: `spec-land.md`)
+   is not an aggregate. None of them reads an aggregate into a rate, price, wage, share,
+   probability, period or window, none is read by an agent's view, and a new reader is a new
+   ADR.
+
 9.4.2. **What is allowed.** A decision reads what a household can know: its own
 state, what its market publishes (a price, the price window, the observed wage of
 its region and role), the structure of the world and rumoured prices. Reading a
 published price to decide is a decision; changing **how often** anyone decides
 because of an aggregate is not. A controller that wants a rate to follow a measure
 is a policy actor and plugs in through a slot (ADR 0001 decision 4, MON 10.4); the
-world contains none.
+library contains one only as the policy actors of `spec-policy.md`, which set a slot at P0.3a
+(8.2.2) and never a cadence.
 
 9.4.3. **A cadence is configuration.** It is in the hash and constant for a run.
 No slot of 8.2 changes a cadence. A blackout that slows the news would be a slot
@@ -1284,9 +1490,11 @@ remedy named, and an edit is **proposed**, not owed):
 | O5 | The contract round's lanes, MER 9.4, and `MaxOpen` | ascending (destination, commodity) | a payer's funds go to the earlier lanes (`payer_funds`), and contracts formed up to `MaxOpen` go to the earlier lanes | rotate the starting lane by `t mod lanes` |
 | O6 | A trainee's upkeep out of a trainer's account (P6.1) | at the trainee's ID position | a trainee whose ID comes first eats before the trainer's own use if the stock is short | rare (the trainer's targets include its trainees' upkeep, `spec-agents.md` 5.7); accept and count |
 | O7 | The ration's leftovers, RES 5.3.4 | the fractional part, the same order every tick for a fixed mix of request sizes | agents asking for many executions | a carried remainder per agent (RES open question 4) |
-| O8 | The input order of a market | agents by ID, estates, counterparties | none: the keys of P4.1 make it irrelevant | none |
+| O8 | The input order of a market | agents by ID, estates, treasuries, counterparties | none: the keys of P4.1 make it irrelevant | none |
+| O9 | A role ceiling that binds, SET 6.4.5 | the entrants in the order of the spawner's plan: need, then agent ID | the lower ID among equal need | break the tie by `K(t, id)` (10.1.1), the remedy of O2 and O3; the counter is `RoleCeiling` |
+| O10 | The places of a body, ORG 4.3 and 4.5 | by seniority, then the stateless key of (tick, agent), then agent ID; the headroom is shared with the class limit and the entry budget among the first-come places above | the household whose role has been held longest, when the places bind | none beyond the keyed tie ORG already takes (10.1.1); the seniority order is the rule, and a household that waits is counted in `MembershipChanged` |
 
-10.2.1. The first five are registered as one hazard, WLD-A2 (17). They are
+10.2.1. O1 to O5, O9 and O10 are registered as one hazard, WLD-A2 (17). They are
 **biases, not loops**: they pick who is served when a cap binds, and they do not
 feed back, unless an agent's chance to be served changes its later welfare, in
 which case the lower ID or the earlier region is selected for survival, and a
@@ -1310,37 +1518,54 @@ candidates of a view (at most `MaxRumoursPerView`). Costs are counts, not timing
 | Position | Cost shape | Dominant term of |
 |----------|-----------|------------------|
 | P0.2a | `O(rows of the bucket)`, once in a run, at most `R * reasons * C` | regions, reasons, commodities |
+| P0.3a | `O(due actors * (levers + readings))`, plus a consumer's own `Decide` | policy actors |
+| P1.3a, P8.1b | `O(arrived shipments with a cover + underwriters paid)`; `O(store owners struck + underwriters paid)` | the arrivals and the strikes, not the owners |
 | P1.2 | `O(R * recipes)` | regions and recipes |
 | P1.3, P1.4, P1.5 | proportional to the arrivals, settlements and journeys of the tick | the pipeline |
 | P1.6 | `O(A)` for the agents of regions whose pool is positive | agents |
 | P1.7 | `O(recipients of each flow)`, at most `A * flows` | flows |
+| P1.7a | `O(debtors visited + their claims)`: the visited are those with a claim due or overdue this tick | claims falling due and overdue, not open claims |
+| P1.7b | `O(payers and recipients of each fiscal flow)`, at most `A * fiscal flows` | fiscal flows |
 | P1.8, P1.9 | `O(lines)`, `O(external agents)` | the outside |
+| P1.9a | `O(households of the roles of the bodies)` for the lapse pass, `O(R * bodies)` for the admission | households of a body's roles |
 | P2.1, P2.4, P2.5, P2.7 | `O(A)`; `Work` is `O(recipes of the role)` per agent | agents |
 | P2.3, P2.6 | `O(E)`; `O(requests log requests)` only for an endowment that is short | endowments |
+| P2.5a | `O(offers + vacancies)` per region and role pair for the sort and the matching, `O(hires formed)` | agents with an `Offer` or a `Hire` |
 | P2.8, P2.8a | `O(regions * roles)`, from counts the earlier positions kept | regions and roles |
+| P2.8b | `O(regions * roles)`, from the counts of the labour round | regions and roles |
+| P3.1a | `O(common route rows with P > 0)` | route rows |
 | P3.2 | `O(A * (c_0 + T_a * c_t))`, plus `O(I * V)` for the rumours | the cost model of `spec-scale.md` 6.1 |
 | P3.3 | `O(offers log offers + takes)` | contracts |
+| P3.3b, P3.3c | `O(Q + F)` per lane for the sort of requests and offers by rate and key, `O(fills)` for the matching; `O(R + O)` per lane and `O(candidates * scanned offers)` for the covers | agents with a credit or a cover block |
 | P3.4, P3.5 | `O(estate lots)`, `O(X * lines)` | the estates, the outside |
+| P3.4a | `O(standing orders of each authority)`, one order per lot and side | treasuries |
+| P3.6a, P3.6b, P3.6c | `O(regions * roles)` from counts the earlier positions kept; `O(fiscal flows * regions)` | regions and roles |
 | P4.1 | `O(sum over markets of n_m log n_m)` | orders |
+| P4.1a | `O(trades of the tick * duties)` | trades |
 | P4.2 | `O(X * lines)` | the outside |
 | P5.1, P5.2 | `O(M)` | markets |
 | P5.4 | `O(O)` | orders |
 | P6.1, P6.2, P6.3 | `O(A * items)` | agents |
 | P7.1 | `O(agents of the region)` for the view; the plan is `O(changes)` | agents |
 | P7.2 | `O(A / MoveReviewTicks * V)` a tick, amortised | agents, candidates |
+| P7.2a, P7.2b | `O(R)` with a counter per region and `O(A)` once with a scan; `O(R * (bodies + rights + controls))` | regions, bodies |
 | P8.1 | `O(accounts with a lot due + lots due)`, by the earliest-expiry hint | what expires |
+| P8.1a | `O(common store rows + stores of the limited owners)` | store rows |
 | P8.2, P8.3 | `O(R * reasons * C)`, `O(E)` | regions, resources |
+| P8.3a, P8.3b, P8.3c | `O(E)` and its tenants; `O(facilities)`; `O(regions * fields)` | endowments, facilities, fields |
 
 11.2. **Against the budget of `spec-scale.md` 6.** The terms that grow with the
 number of agents are P2 (`O(A)`), P3.2 (`O(A * (c_0 + T_a * c_t))`), P6 and P7.1;
 the term that is `n log n` is P4.1; every other position is bounded by regions,
 commodities, endowments, nodes or the pipeline. **Nothing in a tick is quadratic
-in the number of agents**, and nothing in it depends on the number of households.
+in the number of agents**, and nothing in it depends on the number of households beyond the
+weights that a tax, a lapse pass or a count of a class reads.
 The model of `spec-scale.md` 6.1 (`c_0 + |T_a| c_t` per agent, and the clearing)
 therefore stands as the per-tick budget: this spec adds no term to it that is
-proportional to agents beyond those of the cost model (P1.6, P1.7 and P7.2 are
+proportional to agents beyond those of the cost model (P1.6, P1.7, P1.7b, P1.9a and P7.2 are
 `O(A)` shapes of their own: relief reads every agent of a region with a pool, a
-flow every recipient, the migration pass the agents on their review tick), and the
+flow and a tax every recipient or payer, the membership lapse pass every household of a body's
+roles, the migration pass the agents on their review tick), and the
 only added work is `O(R * recipes)` (the cost anchors), `O(lines)` and the position
 scratch.
 
@@ -1368,12 +1593,15 @@ contributions are those of the specs that own them (section 8.2 lists the slots)
 12.1. **Derived on restore, never saved:** the moment (`Calendar.At`) and
 `TicksPerYear`, the rotation positions and counts, the graph and lag tables, the
 cost anchors, the module scratch of 0.2, the flow totals, the earliest-expiry hints
-and the free lists of Transit and Escrow accounts (their owners'). Not saved
+and the free lists of Transit and Escrow accounts (their owners'), and the room, load and
+pledge of a limited account (STO 4: derived from the stores, the lots and the jobs, with no new
+saved world state), the effect tables of the facilities and the resolved legal and right
+tables, which the call that changed them rebuilt (8.2.1). Not saved
 either: the failed flag (a failed world is not checkpointed), the in-step guard,
 the observers, the logger and the registrations of extensions. The registrations
-are checked by **name** against the hash; the **state of an extension** that
-implements the optional save and load pair is saved by CHK as ADR 0002 decision 7
-says. The flow totals are derived (cleared at P8.6) with one exception: the totals
+are checked by **name** against the hash (a strategy, a spawner, a clearing and a policy); the
+**state of an extension** that implements the optional save and load pair is saved by CHK as
+ADR 0002 decision 7 says. The flow totals are derived (cleared at P8.6) with one exception: the totals
 that calls between ticks added since the last P8.6 (the **pending totals**) are
 state at a boundary and are saved (8.1.3, open question 16: answered, CHK 4.4). The
 construction bucket is saved only while the world is in its construction phase
@@ -1404,10 +1632,10 @@ Stated as requirements on the world, not as their content.
 
 | To | The world guarantees |
 |----|----------------------|
-| **OBS** | every event carries `Tick`; the events of a step come in the order of 6.11 and **every** step that emitted `TickStarted` is closed by `TickEnded`, a failed one with `Failed` true, which describes the end of the step and not a completed tick (3.5.6); events are constructed only when an observer was supplied; a snapshot is available only at a boundary on a healthy world (3.7, 8.4); construction events carry `Tick` 0 and come in the order of 5.8; a between-ticks call emits its event at the call with the tick of the next step. OBS **adds** what this spec asked for: a `Failed` field on `TickEnded` (3.5.6) and on `RunEnded` (3.4.2), the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots that had none (8.2), the names table on `WorldCreated` (5.8.2), and the construction bucket as a `BoundaryFlow` with `Tick` -1 at the entry of the first step (P0.2a, N-072) |
+| **OBS** | every event carries `Tick`; the events of a step come in the order of 6.11 and **every** step that emitted `TickStarted` is closed by `TickEnded`, a failed one with `Failed` true, which describes the end of the step and not a completed tick (3.5.6); events are constructed only when an observer was supplied; a snapshot is available only at a boundary on a healthy world (3.7, 8.4); construction events carry `Tick` 0 and come in the order of 5.8 (`AgentSpawned`, then the initial `FacilityChanged`, then the founding `SettlementClassChanged`); a between-ticks call emits its event at the call with the tick of the next step, and a policy actor's write emits its slot events at P0.3a after `TickStarted`, then `PolicyDecided` (6.11 item 1). OBS **adds** what this spec asked for: a `Failed` field on `TickEnded` (3.5.6) and on `RunEnded` (3.4.2), the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots that had none (8.2), the names table on `WorldCreated` (5.8.2), and the construction bucket as a `BoundaryFlow` with `Tick` -1 at the entry of the first step (P0.2a, N-072) |
 | **CHK** | the contribution of 12 (the PCG state, the next agent ID and the construction flag with the bucket while in construction; the tick in the header); the boundary of 8.4; a failed world is refused; the register of extension names is in the hash; `WithSeed` is refused by a restore and `WithReseed` is the restore-only option (4.1, 12.3); `Tick()`, `ConfigHash` and `Config` are readable |
-| **INT** | every call acts between ticks (8.1), is atomic, emits its event at the call, takes its draws at the call, and is refused with `ErrInStep` or `ErrWorldFailed`; the slots of 8.2 and the calls of 8.3 (add, remove, relocate, direct; the cancel of a journey is inside `Relocate`) are the whole list of mechanisms; INT names them and fixes their bounds and errors; a slot never edits a configured value; no "act now" exists inside a step |
-| **IND** | indicators are a function of the events and the snapshot at a boundary; the flow totals of a finished tick reach IND through `BoundaryFlow` only; the snapshot holds the pending totals of 8.1.3 and no more; counts of agents and households are separate (the weights); a tick is the finest resolution: no value exists between `TickStarted` and `TickEnded`; the counters that reveal a binding cap (O1 to O5) are events |
+| **INT** | every call acts between ticks (8.1), is atomic, emits its event at the call, takes its draws at the call, and is refused with `ErrInStep` or `ErrWorldFailed`; the slots of 8.2 and the calls of 8.3 (add, remove, relocate, direct; add and remove a store; add, adjust and transfer facilities; transfer titles; forgive claims; the cancel of a journey is inside `Relocate`) are the whole list of mechanisms; INT names them and fixes their bounds and errors; a slot never edits a configured value; no "act now" exists inside a step, and the one writer inside a step is a policy actor at P0.3a through the owners' internal setters (8.2.2), which no public call reaches |
+| **IND** | indicators are a function of the events and the snapshot at a boundary; the flow totals of a finished tick reach IND through `BoundaryFlow` only; the snapshot holds the pending totals of 8.1.3 and no more; counts of agents and households are separate (the weights); a tick is the finest resolution: no value exists between `TickStarted` and `TickEnded`; the counters that reveal a binding cap (O1 to O5, O9 and O10) are events |
 | **STY** | a run is a function of (configuration, seed, sequence of calls); `Run(ctx, n)` runs `n` ticks and leaves a snapshot-able world; two runs with the same inputs are bit-identical across platforms (architecture.md 7.4); a golden test is enforced; a run with an observer equals one without |
 | **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison is exact, and a measured variance reduction, only while the draw counts are equal (7.6.1); the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
 
@@ -1427,7 +1655,7 @@ constants of the SplitMix64 finaliser (7.1.2); the world's draw (7.2.1) and the 
 of draws (7.3); the rotation of starts (6.1.4); the Weyl multiplier
 `2 654 435 769` and the bucket (9.1.1); the keyed tie-break (10.1.1); the failed
 state (3.5) and the guard (3.6); the order of accounts (5.2) and of agent IDs
-(5.3); the order of events (6.11).
+(5.3); the sub-steps 8a to 8c of construction (5.1.2); the order of events (6.11).
 
 **Not parameters:** the tick counter, the moment, `TicksPerYear` (derived), the
 rotation positions, the failed flag, the effective configuration.
@@ -1440,7 +1668,8 @@ has a failing-case test, testing.md 3.9):
 | Sentinel | When | Where |
 |----------|------|-------|
 | `ErrUnknownClearing` | `World.Clearing` names a clearing that was not registered | `NewWorld` (3.2.2) |
-| `ErrNilExtension` | `WithStrategy`, `WithSpawner` or `WithClearing` was given a nil implementation | the option (4.3) |
+| `ErrUnknownPolicy` | an actor's `Policy` names a policy that is neither built in nor registered (`spec-policy.md` 4.5.1) | `NewWorld` (3.2.2) |
+| `ErrNilExtension` | `WithStrategy`, `WithSpawner`, `WithClearing` or `WithPolicy` was given a nil implementation | the option (4.3) |
 | `ErrWorldFailed` | any call that has an error result on a failed world, other than `RelocationRefusal` (the readers with no error result work, 3.5.1) | 3.5 |
 | `ErrInStep` | any call on a world whose step is running | 3.6 |
 | `ErrOptionContext` | `WithSeed` given to a restore, or `WithReseed` given to `NewWorld` (a sentinel of CHK, used by the options of 4.1) | the option (4.3) |
@@ -1484,11 +1713,15 @@ summary, and a count that an observer wants is derived from the events of the st
 and death scales have an event each, `YieldShocked`, `TransitFactorChanged` and
 `PopulationScaled`, one per changed key of a call (`spec-observability.md` 4.4.4);
 the other slots have one (`EdgeStatusChanged`, `MoneyFlowScaled`,
-`EndowmentAdjusted`, `OutsideShocked`); N-091 says each slot emits its own event
-and none is configuration.
+`EndowmentAdjusted`, `OutsideShocked`, and, of the later modules, `RentScaled`,
+`CreditRateScaled`, `RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`,
+`RightSuspensionSet` and `TechnologyAdjusted`); N-091 says each slot emits its own event
+and none is configuration. The events of a policy actor's write are the owners' slot events
+with the cause `policy`, at P0.3a (8.2.2).
 
 16.3. **Logs**, through the injected logger, constant lowercase messages, the keys
-of the rules' table 3.3.2 (no new key):
+of the rules' table 3.3.2 (this spec adds none; the keys that the later modules added to
+the "world created" line are in 5.8.1):
 
 | Level | Message | Attributes | When |
 |-------|---------|------------|------|
@@ -1520,7 +1753,9 @@ event beyond those already listed, and three slots gained one (`YieldShocked`,
 `TransitFactorChanged`, `PopulationScaled`; the birth and the death scale share
 one); the
 `Run` loop has `Info` lines only; nothing in a tick is logged above `Debug`;
-no new metric attribute.
+no new metric attribute. The events of the later modules' positions (6.3 to 6.10) are owned
+by their specs and listed in the rules' table 4.3; this spec fixes only where each comes in
+the order of a step (6.11).
 
 ## 17. Entries for the stability register
 
@@ -1544,12 +1779,12 @@ L93) are written for a delay of at least one tick and must not assume zero.
 *Test:* none of its own; every price-loop scenario runs on it. *Status:* hand.
 
 **WLD-A2 A cap is first-come.** *Kind:* bias. *Loop:* none: it chooses who is
-served when a cap or a budget binds (the places O1 to O5 of 10.2), and does not
+served when a cap or a budget binds (the places O1 to O5, O9 and O10 of 10.2), and does not
 feed back unless being served changes an agent's later welfare, in which case it
 selects for survival by ID, role or region. *Owner:* WLD 10.2 with SPN 6.3, 7.3,
-MIG 7.1, MON 5.4, MER 9.4. *Damper:* the keyed tie of 10.1.1 and a rotation of the
+MIG 7.1, MON 5.4, MER 9.4, SET 6.4.5, ORG 4.3. *Damper:* the keyed tie of 10.1.1 and a rotation of the
 starting role, region or lane (WLD-D1), **proposed, not adopted**. *Undamped:* the
-five places as written. *Condition:* a cap that binds a fraction of the ticks and
+seven places as written. *Condition:* a cap that binds a fraction of the ticks and
 a difference between roles or regions that is not read as real before its counter
 (`EntryLimited`, `MoneyFlowLimited`, `ContractRound`) is checked. *Test:* WLD-S1
 (the unit model `rotation.py`). *Status:* model of the ordering alone.
@@ -1592,14 +1827,14 @@ and the harness measures the gain (`spec-experiments.md` 7). *Test:* WLD-S4
 per tick). *Status:* model.
 
 **Dampers.** WLD-D1 *Ties and caps by key or rotation* (10.1.1): stated as the
-rule for new specs and proposed for O1 to O5. D25 *Decision rates*, which the
+rule for new specs and proposed for O1 to O5, O9 and O10. D25 *Decision rates*, which the
 register lists as proposed with WLD as owner, is **specified** here (section 9);
 status moves from proposed to specified. WLD-D2 *Draw anyway* (5.7.2, 7.4.3), an
 existing practice (WEL 5.1, AGT 7.5.3, MIG 6.2.1) made a rule.
 
 **Scenarios.** WLD-S1 *Fairness of a binding cap*: 100 tied candidates, a cap of 5,
 1 000 ticks; pass when no candidate is admitted fewer than half or more than twice
-its expected share. WLD-S2 *Load of a cadence*: 1 000 agents at periods 10 and 30
+its expected share, at each of the seven first-come places O1 to O5, O9 and O10 of 10.2 in turn (the cap standing for that place's budget, limit or places). WLD-S2 *Load of a cadence*: 1 000 agents at periods 10 and 30
 with IDs spaced by every stride of 1 to 31; pass when no tick has more than
 `ceil(1.2 * n / P)` reviews, for `n` of 1 000 and 5 000 (the rule bucket reaches 39
 against a bound of 40 for `n` 1 000 and `P` 30 over three starting IDs, 113 against 120
@@ -1661,7 +1896,9 @@ Outside account of counterparty 3 (`B+10`); the agent accounts of agents 4 to 10
 
 The creation draws are taken after the warm start, in ID order: agent 4 words 0
 (target) and 1 (residue), agent 5 words 2 and 3, and so on to agent 10 words 12 and
-13. Fourteen words are the whole construction; the first word of tick 0 is word 14
+13. Fourteen words are the whole construction **with the technology key off** (no field has a
+discovery rate); with it on the key is word 14, taken after the last creation draw (8c, D16), and
+the first word of tick 0 is word 15. Without it the first word of tick 0 is word 14
 (5.7.3). The events: `WorldCreated`, then `AgentSpawned` for agents 4 to 10, each
 with `Tick` 0.
 
@@ -1741,7 +1978,7 @@ has no default or bound of its own.
 | ID | Requirement |
 |----|-------------|
 | FR-WLD-001 | `NewWorld` MUST apply its options in the order given, MUST return `(nil, err)` and no world when an option or the validation fails, and MUST NOT return a partly built world (3.2.1). |
-| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner` or `World.Clearing` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner` or `ErrUnknownClearing`, a name registered twice or the name `default` or `directed` with `ErrDuplicateID`, and a nil `Strategy`, `Spawner` or `Clearing` with `ErrNilExtension` (3.2.2, 4.1, 4.3). |
+| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner`, `World.Clearing` or `Actor.Policy` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` or `ErrUnknownPolicy`, a name registered twice or a built-in name (`default` and `directed` of a strategy; `hold`, `schedule`, `rule` and `directed` of a policy) with `ErrDuplicateID`, and a nil `Strategy`, `Spawner`, `Clearing` or `Policy` with `ErrNilExtension` (3.2.2, 4.1, 4.3). |
 | FR-WLD-003 | A nil logger or observer MUST mean the discard default and not an error; `WithObserver` MUST be additive and deliver each event to every observer in the order the options were given (4.1). |
 | FR-WLD-004 | `Step` MUST run the positions of section 6 in the order of their tables and MUST advance `Tick()` by one if and only if every position ran and the audit, when on, passed (3.3.1, 6, P8.6). |
 | FR-WLD-005 | `Step` MUST return an error wrapping `ErrInvalidTrade` when a clearing returns an invalid list and `ErrAuditFailed` when the audit fails, MUST name the tick, and MUST NOT return an error for any other condition of a running simulation (3.3.3). |
@@ -1753,26 +1990,26 @@ has no default or bound of its own.
 | FR-WLD-011 | Two worlds MUST share no state, so that stepping them on two goroutines is free of races (3.1.1). |
 | FR-WLD-012 | Every step that emitted `TickStarted` MUST emit `TickEnded`, a failed one included, with `Failed` true when the step returned an error, set at the point of failure and after the world is marked failed; a guard that fails at P0.1 MUST emit nothing; a step that ends in a panic MUST emit nothing; `Tick()` MUST be unchanged by a failed step (3.5.6). |
 | FR-WLD-020 | `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit` and `WithReseed` MUST NOT change the configuration hash, and `WithTargetSpread` MUST change it (4.1). |
-| FR-WLD-021 | Every option that can change a result MUST be a datum in the effective configuration or a registered name that a role, the spawner or the clearing selects, or, for `WithReseed`, a call of the sequence of calls (4.4, 8.1.1). |
-| FR-WLD-030 | At construction the ledger's accounts MUST be created in the order of 5.2 and an account ID MUST never be reused. |
-| FR-WLD-031 | The agent IDs MUST be allocated as 5.3 says: the estates `0 .. n-1` with the ID equal to the `RegionID`, then the counterparties, then the households in (region, role, index) order, and a later agent the next ID. |
+| FR-WLD-021 | Every option that can change a result MUST be a datum in the effective configuration or a registered name that a role, the spawner, the clearing or a policy actor selects, or, for `WithReseed`, a call of the sequence of calls (4.4, 8.1.1). |
+| FR-WLD-030 | At construction the ledger's accounts MUST be created in the order of 5.2 (the Treasury accounts at 5a, after the Outside accounts and before the agent accounts) and an account ID MUST never be reused. |
+| FR-WLD-031 | The agent IDs MUST be allocated as 5.3 says: the estates `0 .. n-1` with the ID equal to the `RegionID`, then the counterparties, then the treasury pseudo-agents in ascending `JurisdictionID`, then the households in (region, role, index) order, and a later agent the next ID. |
 | FR-WLD-032 | The agents and weights of a group MUST be derived without a draw, and the pseudo-agents MUST NOT be passed to a strategy or counted as agents or households (5.4.1, 5.3.1). |
 | FR-WLD-033 | The warm start MUST be applied before the creation draws, MUST take no draw, and a job created at construction MUST have its pending output fixed with a residue of 0 (5.6). |
 | FR-WLD-034 | For every household agent, in ascending ID, the world MUST take two draws at its creation, the target ratio and then the residue, whatever the configuration, and a later agent MUST take the same two at its creation (5.7). |
 | FR-WLD-035 | The construction phase MUST end when the first `Step` begins, the consumer's calls before it MUST be inside it, and only the warm start MUST be able to state a lot key (5.5). |
 | FR-WLD-036 | With `WithAudit` `NewWorld` MUST run the audit once after construction and fail with `ErrAuditFailed` if it fails (5.1). |
-| FR-WLD-037 | Construction MUST emit `WorldCreated` (with the names table of the IDs) and then one `AgentSpawned` for each household agent in ascending ID, with `Tick` 0, only when an observer was supplied, and the logs of 5.8.1 (5.8); the construction bucket MUST NOT be emitted at construction but at the entry of the first step (P0.2a). |
+| FR-WLD-037 | Construction MUST emit `WorldCreated` (with the names table of the IDs) and then one `AgentSpawned` for each household agent in ascending ID, then each initial `FacilityChanged` and then each founding `SettlementClassChanged`, with `Tick` 0, only when an observer was supplied, and the logs of 5.8.1 (5.8); the construction bucket MUST NOT be emitted at construction but at the entry of the first step (P0.2a). |
 | FR-WLD-038 | A group with a warm-start entry MUST be created with the entry's money and stock in place of `StartMoney` and `StartStock`, in one `initial` creation (5.4.2). |
 | FR-WLD-040 | The positions of a tick MUST be the positions of section 6 with the IDs given there, a new position MUST take a letter after the position it follows, and no position MUST be renumbered (6.1.1). |
 | FR-WLD-041 | Every loop of a position MUST visit its items in the total order that the row states and MUST NOT iterate a map (6.1.2, architecture.md 7.5, 7.6). |
 | FR-WLD-042 | An away agent and an agent on a journey MUST be passed to neither `Work` nor `Trade`, a teaching trainer MUST NOT be passed to `Work`, and a pseudo-agent MUST NOT be passed to a strategy (6.1.3). |
 | FR-WLD-043 | The starts and the calls of `Work` MUST run region by region and, within a region, in ascending ID from the position `t mod n_r` of the agents whose account is there, with `n_r` taken once at the start of phase 2 (6.1.4). |
 | FR-WLD-044 | A module that is off, or on with nothing to do, MUST have no position that takes a draw or emits an event, and MUST leave every result as a world without it (6.1.5). |
-| FR-WLD-045 | A reservation MUST be opened only at P3.2, P3.4 and P3.5 and every reservation MUST be settled or released by the end of P4.1 (6.1.6). |
+| FR-WLD-045 | A reservation MUST be opened only at P3.2, P3.4, P3.4a and P3.5 and every reservation MUST be settled or released by the end of P4.1 (6.1.6). |
 | FR-WLD-046 | All calls of `Work` of P2.5 MUST precede every start of P2.7, whatever modules are on (6.4.1). |
-| FR-WLD-047 | In phase 3 the agents' plans MUST be executed in ascending agent ID, then the contract round, then the estates' asks, then the counterparties' orders, then the aggregate events, and a market's input order MUST be that sequence (6.5). |
+| FR-WLD-047 | In phase 3 the agents' plans MUST be executed in ascending agent ID, then the contract round, the credit round and the cover round, then the estates' asks, then the treasuries' orders, then the counterparties' orders, then the aggregate events, and a market's input order MUST be the agents' orders, the estates', the treasuries' and the counterparties' (6.5, 6.5.1). |
 | FR-WLD-048 | At P4.1 the markets MUST clear in ascending (`RegionID`, `CommodityID`); an invalid list MUST settle nothing of its market, release its reservations and fail the step before any later market clears (6.6.1). |
-| FR-WLD-049 | At P5.4 the world MUST take one `uint64` for each admitted order of a household agent, in ascending (`RegionID`, `CommodityID`) and admission order, and pass it as the outcome's `Draw`; an estate's ask and a counterparty's order MUST have no outcome and take no word (6.7). |
+| FR-WLD-049 | At P5.4 the world MUST take one `uint64` for each admitted order of a household agent, in ascending (`RegionID`, `CommodityID`) and admission order, and pass it as the outcome's `Draw`; an estate's ask, a treasury's order and a counterparty's order MUST have no outcome and take no word (6.7). |
 | FR-WLD-050 | `Privation` MUST be set once per tick, at P6.1 with `Hunger`, and the spawner and the population module MUST read it (6.8, ruling C2). |
 | FR-WLD-051 | In phase 7 each region's computation, view, `Decide` and execution MUST run in ascending `RegionID` with the creation draws of that region before the next region's `Decide`, and the migration pass MUST run once after every region (6.9). |
 | FR-WLD-052 | The tick counter MUST advance after `TickEnded`; the audit MUST precede `TickEnded` and MUST NOT change any state (6.10). |
@@ -1795,6 +2032,9 @@ has no default or bound of its own.
 | FR-WLD-072 | Each slot of 8.2 MUST act at the position or at the call that 8.2 gives, and a slot MUST NOT edit a configured value (8.2.1). |
 | FR-WLD-073 | A checkpoint MUST be refused on a failed world and inside a step, and MUST be possible on a healthy world between ticks, including before the first step (8.4). |
 | FR-WLD-074 | The flow totals MUST be cleared at P8.6 and not at the entry of a step, so that a move made by a call between ticks is totalled in the tick the next step runs (8.1.3, ruling C18). |
+| FR-WLD-075 | A policy actor MUST write only the slots of kinds `flow`, `edge` and `transit`, at P0.3a, through the owners' internal setters and with the cause `policy`; the public setters MUST still return `ErrInStep` inside a step; and the slot events of the write MUST come after `TickStarted`, then `PolicyDecided` (8.2.2, 6.11 item 1). |
+| FR-WLD-076 | Step 8 of construction MUST run its sub-steps in the order of 5.1.2: the treasury pseudo-agents, the household agents, 8a the titles, the warm start, the creation draws, 8b the initial facilities, the settlement classes, 8c the technology key; the only construction draw that is not an agent's MUST be taken after all the creation draws (5.7.2, 5.7.3). |
+| FR-WLD-077 | The positions of the later modules MUST be those of 6.2 to 6.10 (P0.3a, P1.3a, P1.7a, P1.7b, P1.9a, P2.5a, P2.8b, P3.1a, P3.3b, P3.3c, P3.4a, P3.6a, P3.6b, P3.6c, P4.1a, P7.2a, P7.2b, P8.1a, P8.1b, P8.3a, P8.3b, P8.3c), the draws those of 7.3 (D13 to D17), and the removal steps those of `spec-agents.md` 3.6 (2b to 2g), with every event of a removal before `AgentBankrupted` (6.11 item 8, rulings C24 to C28). |
 | FR-WLD-080 | A rotation cadence MUST select an agent on the ticks where `(t + bucket(id, P)) mod P = 0`, with `bucket(id, P) = (Weyl2(id) * P) >> 32` and `Weyl2(id) = (id * 0x6A09E667) mod 2^32`, in `[0, P)` for every ID and every `P` from 1 to 1 000, and the bucket MUST NOT use `Weyl32` (9.1.1). |
 | FR-WLD-081 | A quantity stated per year MUST be applied by a carried remainder whose denominator contains `TicksPerYear`, and MUST NOT be converted to an integer number of ticks (9.3.2). |
 | FR-WLD-082 | A cadence that does not divide `TicksPerYear` MUST be accepted and applied unchanged (9.3.1). |
@@ -1803,7 +2043,7 @@ has no default or bound of its own.
 | FR-WLD-091 | `K(t, id)` MUST be the SplitMix64 finaliser of `t * 0x9E3779B97F4A7C15 + id` and MUST take no draw and keep no state (10.1.1). |
 | FR-WLD-100 | The world's contribution to a checkpoint MUST be the 20 bytes of the PCG state, the next agent ID and the construction flag, in a fixed order (the tick counter is written in the checkpoint's header), plus the flow totals that calls between ticks added since the last P8.6 when there are any, and nothing derived MUST be saved (12). |
 | FR-WLD-101 | A restore from those and the other specs' state MUST continue exactly as an uninterrupted run; a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be, with its bucket (12.2, 5.5.3). |
-| FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, the derived tables (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`) MUST return their value, and the readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal` MUST return the state the failed step left, with no guarantee of consistency; `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
+| FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, the derived tables (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `Polity`, `TreasuryAgent`) MUST return their value, and the readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal` MUST return the state the failed step left, with no guarantee of consistency; `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
 
 ### Non-functional
 
@@ -1968,6 +2208,20 @@ table. A letter in brackets is the ruling of 6.12.
 | `spec-welfare-and-wages.md` | 5.1 | "one draw" is the world's draw (C8) |
 | `spec-welfare-and-wages.md` | 6.1 | `Role.InKind` has no mover and no position: routed (open question 14) |
 | `spec-reference-chain.md` | 2 item 5, S18, X8(b)(d), FR-REF-005 | a cold pack expects the warning `cold_start_lockstep`; S18 gains the cold leg (WLD-S3) |
+| `spec-fiscal.md` | 5.3, 6, 8.4, 10.1, 12 and its handoff | P1.7a becomes **P1.7b** (C24, about twenty mentions); the toll aggregate is **P3.6c** (C27); the toll step is step 3a of `spec-transport.md` 5.5.1 |
+| `spec-credit.md`, `spec-insurance.md`, `spec-saving-and-investment.md`, `spec-risk.md`, `spec-infrastructure.md`, `spec-policy.md` | where each cites P1.7a | they cite CRD's P1.7a and keep it (C24); INS "P1.7a of `t + PayoutTicks`" is CRD's |
+| `spec-technology.md` | 6.3.1 (table), 6.3.3, 6.3.4, FR-TEC-011, 17.2 | step **8c** and not 8a (C26); the draw is D16 and is written "draw D16" where the register's damper D16 could be meant (C25) |
+| `spec-policy.md` | 7.1.1, FR-PLC (every mention of "D13") | the consumer's own words are **D17** (C25); the built-ins take none |
+| `spec-risk.md` | 4.2, 6.2, 11.2, 16 (every "CAP's P8.3a") | the facility step is **P8.3b**; the rent step is P8.3a (LND keeps it) |
+| `spec-infrastructure.md` | 3.4.3, 6.3, 14.1, FR-CAP | the initial facilities are step **8b** of construction (C26); `FacilityChanged` of a removed owner's facilities is removal step **2g** and comes **before** `AgentBankrupted` and `EstateOpened` (C28) |
+| `spec-employment.md` | 6.5.2, FR-EMP-038, the removal rows | the hires end at removal step **2c**, after LND's 2b; the remainder of the escrow returns to the employer's account before CRD's waterfall (C28) |
+| `spec-land.md` | 6.4.1, 18.2 | the titles go to the pool at removal step **2b**; the construction step 8a is kept (C26, C28) |
+| `spec-credit.md` | 9 | the waterfall and the passing of claims are removal steps **2d** and **2e** (C28) |
+| `spec-insurance.md` | 8.6, 8.6.3, 12.1.1 and every `PolicyFormed`, `PolicyEnded` | removal step **2f**; a store cover of the tick ends unpaid at 2f with the premium kept; the events are `CoverFormed` and `CoverEnded` (the name `Policy` is the policy actor's, architecture.md 4.3) |
+| `spec-saving-and-investment.md` | 9, 14, FR-SAV-027 | the aggregate is **P3.6b**, after `RoomLimited` (C27) |
+| `spec-storage.md` | 11.1, 14.1 | `RoomLimited` is **P3.6a**; drop "no new position" (C27) |
+| `spec-agents.md` | 3.6 | the removal steps 2b LND, 2c EMP, 2d and 2e CRD, 2f INS, 2g CAP, all before `AgentBankrupted` (C28); 7.1.10 to 7.8 are the later modules' default rules |
+| `spec-money-supply.md` | 4.4.3, 10.4, FR-MON-023 | "the only writer of `Scale` is a call from outside" gains: "or a policy actor at P0.3a, through the internal setter (`spec-world.md` 8.2.2)" |
 | `specs/README.md` | index, reading order, area row 78 (WLD), parameter owners (a row for `World.Clearing`; line 147 `WithTargetSpread` "hashed"), decisions (row 480 and the decisions of 3.5, 7.1, 7.2), glossary | WLD exists; the 20 terms of N-017; the rows |
 | `doc/specs/models/README.md` | contents | a row for `wld/` |
 | `doc/rules/architecture.md` | 3.2, 6.2, 7.3, 12.3 | the glossary terms; the option list (4.1); the seeding rule and the world's draw (7.1, 7.2); `Run` returns two values and the state of a world after an error (3.4, 3.5); a fresh read-receipt tag |
@@ -1985,9 +2239,9 @@ table. A letter in brackets is the ruling of 6.12.
 |---------|------|
 | `World`, `NewWorld`, `Step`, `Run`, `Err`, `Tick`, the failed state and the in-step guard | root package, `world.go` |
 | The eight phases and their positions, each a method that calls into the module files | root package, `tick.go` |
-| `Option`, `options`, `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread`, `WithStrategy`, `WithSpawner`, `WithClearing` | root package, `option.go` |
+| `Option`, `options`, `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread`, `WithStrategy`, `WithSpawner`, `WithClearing`, `WithPolicy` | root package, `option.go` |
 | The source, the seeding rule and the world's draw | root package, `random.go` (a small struct holding the PCG and the Rand; internal packages receive plain `uint64`, architecture.md 2.9) |
-| The sentinels `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` | root package, `errors.go` |
+| The sentinels `ErrUnknownClearing`, `ErrUnknownPolicy`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` | root package, `errors.go` |
 | `WorldCreated`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` | root package, `event.go` |
 | `Weyl32`, `Weyl2`, `Bucket(id, P)`, the finaliser and `Key(t, id)` (shared with the ration of RES) | `internal/ordering` |
 | The construction order, the warm start application, the creation draws | root package, `world.go` calling `internal/ledger` and the modules |

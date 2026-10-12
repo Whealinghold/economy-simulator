@@ -5,7 +5,7 @@ index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-CLR-NNN` and
 `NFR-CLR-NNN`, which tests cite (testing.md section 4). They are in section 12
-(FR-CLR-001 to 034, NFR-CLR-001 to 003).
+(FR-CLR-001 to 035, NFR-CLR-001 to 003).
 
 Layer: core ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)).
 Needs `spec-ledger.md` for reservations and transfers (section 3.3 and ledger
@@ -77,20 +77,27 @@ of whole units. An ask may also name a **lot** (commodity, born tick and
 remaining durability, `spec-ledger.md` 6.7), in which case its goods are exactly
 that lot. Only the estate pseudo-agent names a lot (3.1.2).
 
-3.1.1. An agent has at most one order per commodity per tick, and an order that
-names no lot is identified by its agent and commodity. This keeps the book simple
-and means an agent can never trade with itself: a bid and an ask from one agent
-in one market are not both admitted. The original has the same property
+3.1.1. An agent has at most one order per commodity, lot and side per tick, and an
+order that names no lot is identified by its agent, commodity and side. This keeps
+the book simple and keeps the property that an agent never trades with itself, by
+the integer order of its own limits and not by refusing the second side: an
+ordinary agent places one order per commodity (the world rejects a second intent
+for a commodity while it builds the orders, `spec-agents.md` 6.5.2), so it places
+one side, and a treasury (3.1.2) may place a bid and an ask of one commodity because the two
+limits are strictly ordered, bid below ask, on the integers (`spec-fiscal.md`
+9.4.1, FR-FIS-053), so the pair never crosses (4.3 requires the bid's limit not
+below the ask's). The original has one order per agent per commodity
 (bazaarbot-reference.md section 5).
 
 3.1.2. **The estate exception.** A region's estate is a pseudo-agent
 (`spec-estates.md` 2.7). It places only asks, never bids, and may place several
 asks for one commodity in a tick, each naming a different lot, because an estate
 item is priced by its remaining durability (`spec-skill-barriers.md` 2.7). The
-rule of 3.1.1 therefore reads: at most one order per agent, commodity and named
-lot, where an ordinary agent names none. An order is identified by that triple,
-so a trade can say which ask it filled. Because the estate never bids, it cannot
+rule of 3.1.1 therefore reads: at most one order per agent, commodity, named
+lot and side, where an ordinary agent names none. An order is identified by that
+quadruple, so a trade can say which ask it filled. Because the estate never bids, it cannot
 trade with itself. A **counterparty** of the external sector (`spec-external-sector.md` 4.2) is a second pseudo-agent of this kind: a buyer counterparty places only bids and a seller only asks, one order per commodity, so the rule above reads the same and an order of a counterparty is an ordinary order backed by a reservation in its own account (`spec-external-sector.md` 4.3).
+A **treasury** of a governed jurisdiction (`spec-polity.md` 5, `spec-fiscal.md` 9) is a third pseudo-agent of this kind. It places its standing orders at P3.4a (`spec-fiscal.md` 9.4.2) and may place a bid and an ask of one commodity in a tick, one of each side, with strictly ordered integer limits, validated at construction (`ErrFiscalShape`); two bids, or two asks, of one commodity of one treasury are never admitted from the configuration, and a second order of one side is `duplicate_order` all the same. A treasury never matches itself because the bid's limit is below the ask's, and the clearing may assume it (FR-FIS-053); the identity check of 8.2 stays as a guard. A treasury has no strategy and no belief, so its orders have no outcome (7.3).
 
 ### 3.2 Validation
 
@@ -104,19 +111,36 @@ the key strings only.
 | `side_not_allowed` | a pseudo-agent that may place one side only places the other (the estate, 3.1.2; a counterparty, `spec-external-sector.md` 4.2) |
 | `unknown_commodity` | the commodity is not in the configuration |
 | `not_tradable` | the commodity is outside the tradable set of the agent's role (`spec-agents.md` 3.4). The world rejects such an intent while it builds the orders (`spec-agents.md` 6.5.2), so it never reaches matching. A pseudo-agent has no role and no tradable set, and this check does not apply to it |
+| `not_permitted` | the agent is not a member of the body that holds the `sell` right (for an ask) or the `buy` right (for a bid) in force on the commodity in its region (`spec-institutions.md` 5.6.2, FR-ORG-024). The world rejects such an intent while it builds the orders, beside `not_tradable` and after it, so it never reaches matching. A pseudo-agent holds no membership and this check does not apply to it |
 | `invalid_price` | the limit price is below 1 or above `MaxPrice`, a validation bound of `spec-config.md` 4.1 (in `bounds.go`, not a configured tunable) |
 | `invalid_quantity` | the quantity is below 1 or above `MaxQuantity`, a validation bound of `spec-config.md` 4.1 |
-| `duplicate_order` | the agent already has an admitted order for this commodity (and named lot, if any) this tick |
+| `duplicate_order` | the agent already has an admitted order of this side for this commodity (and named lot, if any) this tick |
 | `overflow` | limit price times quantity does not fit in `int64` |
 | `insufficient_funds` | a bid whose limit price times quantity exceeds the agent's available cash |
 | `insufficient_stock` | an ask whose quantity exceeds the agent's available stock |
+| `no_room` | with the storage module on, a bid of an agent whose account is limited, whose quantity times each size exceeds the free room of the account in either dimension (`spec-storage.md` 5.2.1, FR-STO-008). Not applied to an ask or to a pseudo-agent |
 
 Checks run in the order of the table; the first that fails gives the reason.
 The `reason` of a second intent for one commodity (`duplicate_order`) and of one
 outside the tradable set (`not_tradable`) is therefore decided by this order too.
 An order is rejected whole. The market never reduces a quantity to fit a budget:
-sizing an order is the strategy's job (`spec-agents.md`), and a silent clamp
-would hide a strategy defect.
+sizing an order is the strategy's job (`spec-agents.md`), and a silent clamp of a
+quantity would hide a strategy defect. The one clamp the market makes is of a
+price, to a legal cap or floor (3.2.1), and it is counted, never silent.
+
+3.2.1. **The legal clamp.** With the institutions module on and a price control in
+force for (region, commodity) (`spec-institutions.md` 6.3), an order that has passed
+the checks of `invalid_price`, `invalid_quantity`, `duplicate_order` and `overflow`
+is clamped before the checks of funds, stock and room: a bid whose limit price is
+above the cap has its limit replaced by the cap, and an ask whose limit price is
+below the floor has its limit raised to the floor. The admitted order carries the
+replaced limit: its reservation is `limit * quantity` at it, `OrderPlaced` shows it,
+`Clearing` receives it and the world's check of 8.2 compares with it. The clamp adds
+no `reason`, reduces no quantity and changes no tie-break key (4.2). The overflow
+test of 3.2 sees the limit before the clamp, which is harmless: a floor raise can
+lift an ask above the product tested, but an ask reserves no money, and a cap only
+lowers a bid. Every replaced limit is counted in `PriceControlled`
+(`spec-institutions.md` 11.1).
 
 ### 3.3 Reservation
 
@@ -127,7 +151,11 @@ agent is its balance minus what is reserved. A reservation is released when the
 order expires or is filled (section 6).
 
 A bid reserves at its limit price, the worst case: a trade price never exceeds
-the bid's limit (section 5.1), so the buyer is never short at settlement.
+the bid's limit (section 5.1), so the buyer is never short at settlement. The limit
+is the admitted limit, after the legal clamp (3.2.1). With the storage module on, a
+bid of a limited account also reserves its room, `quantity` times each size
+(`ReserveRoom`, `spec-storage.md` 4.1, 5.2.1), in the same step as its cash, and the
+room is released as the cash is.
 
 Reservation is a ledger operation (`spec-ledger.md` section 6): reserve,
 release, and a transfer marked from reserved that carries a `reason` (`trade`).
@@ -271,6 +299,9 @@ For each trade of `q` units at price `p` between buyer `B` and seller `S`:
 3. `B`'s reservation for the bid is reduced by `bid limit * q`, and the
    difference between that and `p * q` goes back to `B`'s available cash.
 4. `S`'s reservation for the ask is reduced by `q`.
+5. With the storage module on and a limited buyer, the `q` units are credited from
+   the room the bid reserved (the credit marked from reserved, `spec-ledger.md`
+   6.8), which cannot fail for room (`spec-storage.md` 5.2.2, FR-STO-009).
 
 All four happen or none does. They are ledger transfers with the `reason`
 `trade` (`spec-ledger.md`), so the faucets-and-sinks accounts show no creation or
@@ -278,7 +309,8 @@ destruction. `p * q` was checked for overflow at admission, because `p` is at
 most the bid limit.
 
 When a market has finished, the remaining reservation of every unmatched or
-partly filled order is released.
+partly filled order is released, and with the storage module on so is the reserved
+room of the part of a bid that did not trade (`ReleaseRoom`), at the end of P4.1.
 
 6.1. Within a market, goods and money are conserved exactly: the units sold
 equal the units bought, and the money paid equals the money received. Across the
@@ -314,9 +346,9 @@ with their flags: 5.4, 5.5). Outcomes are delivered after every market of the ti
 has cleared and the price windows are updated, in order of region, then commodity,
 then the order in which the orders were admitted (`spec-beliefs.md` 5.1.1,
 FR-BEL-007, FR-BEL-008). A rejected order has no outcome: it never reached the
-market. Nor has an order of a pseudo-agent: an estate's ask and a counterparty's
-order have no strategy or belief, so they receive no outcome and take no outcome
-draw (`spec-world.md` D8, ruling C21). What `Revise` does with the outcome is `spec-beliefs.md` and
+market. Nor has an order of a pseudo-agent: an estate's ask, a counterparty's
+order and a treasury's order have no strategy or belief, so they receive no outcome
+and take no outcome draw (`spec-world.md` D8, ruling C21; `spec-fiscal.md` 9.5). What `Revise` does with the outcome is `spec-beliefs.md` and
 `spec-agents.md`; the market only supplies it.
 
 ## 8. The `Clearing` extension point
@@ -360,7 +392,7 @@ before it settles any. A list is valid if, for every trade:
 - the quantity is at least 1 and, summed per order, no more than the order's
   quantity;
 - the price is at least the ask's limit price and at most the bid's limit
-  price;
+  price, both as admitted (after the legal clamp of 3.2.1);
 - the buyer and the seller are different agents.
 
 If the list is invalid, the world settles none of the trades of that market,
@@ -412,7 +444,7 @@ and order for this spec:
 
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
-| `OrderPlaced` | when an order is admitted | region, commodity, agent, side, limit price, quantity |
+| `OrderPlaced` | when an order is admitted | region, commodity, agent, side, limit price (the admitted limit, after the legal clamp of 3.2.1), quantity |
 | `OrderRejected` | when an order is not admitted | region, commodity, agent, side, `Reason` |
 | `TradeExecuted` | after a trade is settled | region, commodity, buyer, seller, price, quantity |
 | `MarketCleared` | once per market per tick, after its trades | region, commodity, market price, price age, volume, unmatched bid units, unmatched ask units, best unmatched bid and ask (with a flag for "none") |
@@ -515,7 +547,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-001 | Orders MUST be matched only against orders of the same region and commodity. |
 | FR-CLR-002 | An order whose limit price is below 1 or above `MaxPrice` MUST be rejected with `reason` `invalid_price`; one whose quantity is below 1 or above `MaxQuantity` (both bounded by `spec-config.md` 4.1) MUST be rejected with `invalid_quantity`. |
 | FR-CLR-003 | An order for an unknown agent, an agent outside the market's region, or an unknown commodity MUST be rejected with `unknown_agent` or `unknown_commodity`. |
-| FR-CLR-004 | A second order from the same agent for the same commodity and the same named lot (none, for an ordinary agent) in the same tick MUST be rejected with `duplicate_order`. |
+| FR-CLR-004 | A second order from the same agent for the same commodity, the same named lot (none, for an ordinary agent) and the same side in the same tick MUST be rejected with `duplicate_order`; a bid and an ask of one commodity from one agent are not by that fact a duplicate (3.1.1). |
 | FR-CLR-005 | A bid MUST be admitted only if its limit price times its quantity does not exceed the agent's available cash, and on admission that amount MUST be reserved; otherwise it MUST be rejected with `insufficient_funds`. |
 | FR-CLR-006 | An ask MUST be admitted only if its quantity does not exceed the agent's available stock of the commodity, and on admission that quantity MUST be reserved; otherwise it MUST be rejected with `insufficient_stock`. |
 | FR-CLR-007 | If limit price times quantity overflows `int64`, the order MUST be rejected with `overflow`; no value MUST wrap and nothing MUST panic. |
@@ -536,8 +568,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-022 | The same seed, configuration and sequence of orders MUST give identical trades in an identical order, and `AverageClearing` MUST draw exactly one `uint64` per order, bids first, in input order. |
 | FR-CLR-023 | Given the tie-break keys, the trades, prices and balances of a tick MUST NOT depend on the order in which its markets are cleared; the fixed order of the markets is part of the draw sequence of the keys (3.3.1, 7.2). |
 | FR-CLR-024 | The world MUST validate the whole list of trades from a `Clearing` before settling any; if any trade breaks the rules of section 8.2 it MUST settle none of that market's trades, release its reservations and return an error wrapping `ErrInvalidTrade`. |
-| FR-CLR-025 | The total outcome (filled units, unfilled units) of each admitted order of a household agent, with the market report of its market (market price, price age, best unmatched bid and ask with flags), MUST be delivered once to the agent's `Revise` after all markets of the tick have cleared, however many trades filled the order, in order of region, commodity and admission; a rejected order, and an order of a pseudo-agent (an estate or a counterparty), MUST have no outcome and MUST take no outcome draw (7.3). |
-| FR-CLR-026 | `OrderPlaced` MUST be emitted for each admitted order and `OrderRejected` with a `reason` from the table in section 3.2 for each rejected order, in the order submitted. |
+| FR-CLR-025 | The total outcome (filled units, unfilled units) of each admitted order of a household agent, with the market report of its market (market price, price age, best unmatched bid and ask with flags), MUST be delivered once to the agent's `Revise` after all markets of the tick have cleared, however many trades filled the order, in order of region, commodity and admission; a rejected order, and an order of a pseudo-agent (an estate, a counterparty or a treasury), MUST have no outcome and MUST take no outcome draw (7.3). |
+| FR-CLR-026 | `OrderPlaced` MUST be emitted for each admitted order and `OrderRejected` with a `reason` from the table in section 3.2 for each rejected order, in the order submitted. The reason `no_room` is FR-STO-008 and the room of a settlement is FR-STO-009; the reason `not_permitted` is FR-ORG-024. |
 | FR-CLR-027 | `TradeExecuted` MUST be emitted for each settled trade, in matching order and after settlement, and `MarketCleared` once per market per tick after that market's trades, even if nothing traded; markets MUST be ordered by region and then commodity. |
 | FR-CLR-028 | A bid from a pseudo-agent that may only sell, such as an estate, MUST be rejected with `side_not_allowed`. |
 | FR-CLR-029 | An ask that names a lot MUST reserve exactly the units of that lot, and settling a trade against it MUST move units of that lot and no other. |
@@ -546,6 +578,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-032 | A market MUST push its market price into its price window once per tick, after it has cleared and before the outcomes are processed, if and only if units traded, and the `Clearing` MUST NOT read or write the window. |
 | FR-CLR-033 | The clearing path MUST emit no `Info`, `Warn` or `Error` log line, and each `Debug` line MUST be guarded by `Enabled`. |
 | FR-CLR-034 | The market report of the last clearing of each market (the published price, the price age, the volume, the unmatched units of each side and the best unmatched bid and ask with their flags) MUST be saved in a checkpoint, and a restored world MUST answer the same report as the original at the same boundary (7.1, 16). |
+| FR-CLR-035 | A price control in force for (region, commodity) MUST replace, in admission and after the checks of price, quantity, duplicate and overflow and before those of funds, stock and room, the limit of a bid above its cap by the cap and the limit of an ask below its floor by the floor; the admitted order MUST carry the replaced limit in its reservation, in `OrderPlaced`, in the orders given to `Clearing` and in the check of 8.2, and the clamp MUST add no `reason`, change no quantity and draw nothing (3.2.1). |
 
 ### Non-functional
 
@@ -592,7 +625,8 @@ Original entries (each to be given its sign, delay, damper and test):
    authors meant a crossing check without writing it is not known.
 2. **One order per agent per commodity per tick.** This is simple and matches
    the original, but a strategy cannot post a ladder of prices. The estate is
-   the one exception (3.1.2), identified by its named lot. Relaxing the rule for
+   an exception (3.1.2), identified by its named lot, and a treasury may place
+   one bid and one ask of one commodity, identified by their side (3.1.1). Relaxing the rule for
    ordinary agents needs a general order identifier in `Trade` and a rule for
    self-trades. Recommend keeping the restriction for version 1.
 3. **Pairwise midpoint or one price.** A single clearing price for the whole

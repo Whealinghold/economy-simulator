@@ -27,6 +27,8 @@ print("value per execution", value, "input cost", cost, "net", net, "bid per tic
 w_hand = wage(0, bid, 5000)
 print("hand (no recipe, reservation 0): wage", w_hand, "employer's margin per execution", bid - w_hand)
 # the miller: money 6 000, grain 12, own execution 1 (3 grain), MaxHires 4, upkeep cost 300 at its beliefs
+# (its upkeep is 2 `bread` a tick at 150, a good that is not an input of the recipe, so the
+# keep-the-food rule of AGT 7.1.6 does not hold back any grain)
 money, grain, own_k, maxhires = 6000, 12, 1, 4
 upkeep_cost = 300
 by_stock = grain // 3 - own_k
@@ -43,9 +45,8 @@ print("output created for the miller at P2.7 (d = 1):", hired * 2, "flour; grain
 # the hand's welfare: upkeep 2 grain at 150 = 300 a tick
 print("a hired hand's ratio on a working tick:", w_hand * 10000 // 300, "bp; days to reach a target of 15 000 in a 365-tick year:",
       ceil_div(15000 * 300 * 365, 10000 * w_hand))
-# the employer-side identity (section 11.2): hired settles at E*u_e/((1-phi)*a) with employers who eat upkeep only
-phi = 5000
-print("h* with E=1 miller, upkeep 2 units, a=2 flour: ", 1 * 2 / ((1 - phi / 10000) * 2), "hired households; places 4")
+# the closed form of 11.2 is for one good that the employers also eat; here the hands eat grain
+# and the mill makes flour, so it is not applied to this example (see the last block below).
 
 print()
 print("== Example B: a mining colony, a rig operator that hires crew (placeholders) ==")
@@ -57,16 +58,24 @@ wear = ceil_div(1 * rig_price, 500)
 net = value - (charge + wear)
 bid = net // 3
 print("value per execution", value, "charge", charge, "wear", wear, "net", net, "bid per tick", bid)
-# the crew household has its own recipe gather_scrap: net 60 per tick of its own labour (reservation)
-reserve = 60
+# the crew household has its own recipe gather_scrap: net 180 per execution of 3 ticks = 60 a tick (reservation)
+reserve = 180 // 3
 w_crew = wage(reserve, bid, 5000)
 print("crew with own alternative", reserve, "-> wage per household-tick", w_crew,
       "; an unskilled hand with reservation 0 -> wage", wage(0, bid, 5000))
 d = 3
 print("escrow of one crew household for the job:", w_crew * d, "; employer margin per execution:", (bid - w_crew) * d)
-# the rig operator's cash: 1 500; two rigs held, own execution 1 -> one place left
-money = 1500
-print("employer funds for one hire:", money >= w_crew * d, "(", money, "against", w_crew * d, ")")
+# the operator: MaxHires 3, money 5 000, upkeep cost 300, three rigs and three charges held, no own execution
+money, upkeep_cost, maxhires, rigs, charges = 5000, 300, 3, 3, 3
+cohort = 3                                       # one offer of a cohort of 3 households
+bill = w_crew * d * cohort
+by_cash = (money - upkeep_cost) // (bid * d)       # 4.3.3: the bid is per tick, the job lasts d ticks
+positions = min(maxhires, rigs, charges, by_cash)
+print("positions: MaxHires", maxhires, "by stock", charges, "by tools", rigs, "by cash", by_cash, "->", positions,
+      "; fit for a cohort of 3:", positions >= cohort)
+print("with money 3 000, by cash would be", (3000 - upkeep_cost) // (bid * d), "-> the cohort is never matched")
+print("employer funds for the cohort:", money >= bill, "(", money, "against", bill, ")")
+assert money >= bill and positions >= cohort and (3000 - upkeep_cost) // (bid * d) < cohort
 # a pay schedule of the job: start tick s at P2.7, then P2.1 on s+1 and s+2
 print("wage released at s, s+1, s+2: ", [w_crew] * 3, "; completion at s+2 refunds", w_crew * d - 3 * w_crew)
 # a fall of the worker's weight 3 -> 2 after the second tick: executions scale, escrow remainder refunded at the end

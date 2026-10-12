@@ -71,7 +71,7 @@ give the rule.
 | # | Question | Position | Why |
 |---|----------|----------|-----|
 | 1 | What creates or destroys money? | Only a transfer with a reason of the ledger registry. In version 1 that is `initial` (construction and external agents) and the **money flows** this spec adds. A world with no `Modules.MoneySupply` has no other faucet or sink: it is the closed economy | `spec-ledger.md` 2.1, 7.3; ADR 0001 decisions 1 and 2 |
-| 2 | How does money enter, concretely? | A **grant**: a recurring transfer from a boundary to a **class**, the households of a role (in one region or all) or a region's pool. One mechanism covers a stipend (N-078), an issuance into a treasury-like pool, a bounty and a one-off endowment at a stated tick | One primitive, data-driven, with no code that names a role or a commodity (architecture.md 9.1) |
+| 2 | How does money enter, concretely? | A **grant**: a recurring transfer from a boundary to a **class**, the households of a role (in one region or all) or a region's pool. One mechanism covers a stipend (N-078), an issuance into a region's pool, a bounty and a one-off endowment at a stated tick | One primitive, data-driven, with no code that names a role or a commodity (architecture.md 9.1) |
 | 3 | Extraction and issuance (the roadmap's "mints, mines")? | Not as a recipe output and not as a conversion of a commodity to money. An extracted commodity is an ordinary commodity at an ordinary price; money from it is a grant, or, when EXT exists, a fixed-price buyer in the outside world. Compared in 3.4 | A money-yielding recipe would be a configured wage for the extracting role (`spec-currency.md` 2.6) and would change PRO's output type and WEL's income; a conversion at a fixed rate is a standing bid from a boundary, which the market cannot admit (a boundary cannot reserve, `spec-ledger.md` 6.1) and which is EXT's |
 | 4 | How does money leave? | A **levy**: a recurring transfer from a class to a boundary, either a fixed amount per household or a rate on the balance above an exemption (a holding charge). Both are capped by what the recipient holds | The rate form gives a bound that can be derived (9.3); the fixed form is the paired sink DEM asked for (N-078) |
 | 5 | Does any rule read an aggregate? | No. A flow reads the tick, its own schedule, its own totals, the **weight** of the recipient and, for a rate levy and a top-up, the recipient's own balance. It never reads the money supply, a price, an index or a count of agents of a class. A policy that wants to react to measures plugs in through the **flow scale** slot (10.4), as the yield-shock slot does for production | "Macro is measured, never set" (roadmap; ADR 0001 decision 7; `spec-stability.md` 5.1.3) |
@@ -79,7 +79,7 @@ give the rule.
 | 7 | Rate units | Integers: minor units per household (or per pool) per **tick** or per **year**, and basis points per tick or per year. A year is `TicksPerYear`, derived from the calendar. Amounts are spread over the ticks with a carried remainder, so the long-run total is exact and nothing is paid in lumps | Calendar-aware by data (`spec-calendar.md` 3.2); lumps would synchronise every recipient (STB-L22), and a consumer who wants a pulse has the shock slot |
 | 8 | What names a flow in reports? | Each flow declares one ledger **reason**, equal to its ID, with the kind faucet or sink. The registry is closed at construction: the built-in rows plus one row per flow. `BoundaryFlow` and the boundary balance then total each flow by itself | `spec-ledger.md` 7.2 ("a reason is declared once, with its kind"); a pack should not have to edit the library to name a faucet |
 | 9 | How are a faucet and its sink paired? | Not automatically. A pack declares both; validation compares the nominal yearly totals of the fixed flows over the census and warns when they differ (`pair_unbalanced`); a rate levy gives a bound whatever the balance of the pair (9.3); the **boundary balance per reason** is the measure. Money that is created is visible, not hidden | A mirror rule (a levy that retires what a grant issued) was considered and rejected: it adds a coupling and an allocation rule, and it hides the drift that the measure should show (open question 6) |
-| 10 | Is a grant income? | By default yes: an unearned income of the recipient, like relief (WEL 2.1), excluded from the observed wage. A grant with `NotIncome` is not. A levy is not netted from income in version 1 | The target-income rule should not tell a household that lives on a stipend to work (and a household that is taxed is not richer for it); WEL decides netting for FIS (open question 5) |
+| 10 | Is a grant income? | By default yes: an unearned income of the recipient, like relief (WEL 2.1), excluded from the observed wage. A grant with `NotIncome` is not. A levy is not netted from income in version 1 | The target-income rule should not tell a household that lives on a stipend to work (and a household that is taxed is not richer for it); WEL 2.1 states the one rule per flow (7.2, open question 5) |
 | 11 | The closed economy "deflates" | Stated exactly in 8: the supply is constant, money per household moves only with the households and the sectors, and a falling price level follows only if real volume per unit of money grows. The library asserts the identities and measures; it makes no claim that prices fall. A liquidity floor is derived (8.5) | A claim about prices would be a result, and no result exists (N-027) |
 | 12 | Hoarding | Measured (sector shares of money, 3.1) and damped by the pool's release (D12), by the holding charge and by a cumulative **limit** on a grant. No rule reads the measure | `spec-stability.md` F2, L31, L45 |
 | 13 | Randomness | None. Remainders come from a carry started from the account ID. The creation-draw list of `spec-agents.md` 3.5.2 does not grow | Determinism (architecture.md 7.3) |
@@ -90,9 +90,10 @@ give the rule.
 ### 3.1 The money supply and its identity
 
 3.1.1. The **money supply** `M` is the total of money over the non-boundary accounts:
-the households (Agent accounts), the public sector (Estate accounts, that is the pools)
-and the contract sector (Escrow, `spec-ledger.md` 9.3). Transit accounts hold goods only.
-Write `M_h`, `M_p` and `M_c` for the three. The Outside accounts of the external module are a fourth sector that is zero at every tick boundary and is not part of `M` (`spec-external-sector.md` 4.2.3).
+the households (Agent accounts), the public sector (Estate accounts, that is the pools),
+the contract sector (Escrow, `spec-ledger.md` 9.3) and the treasuries of the governed
+jurisdictions (Treasury accounts, `spec-polity.md` 5; none with no governed jurisdiction).
+Transit accounts hold goods only. Write `M_h`, `M_p`, `M_c` and `M_t` for the four. The Outside accounts of the external module are a further sector that is zero at every tick boundary and is not part of `M` (`spec-external-sector.md` 4.2.3).
  `M` is a measure: nothing in the engine reads
 it (position 5).
 
@@ -114,7 +115,7 @@ per household by role) are `spec-indicators.md`'s and are computed from them:
 
 | Measure | Definition |
 |---------|------------|
-| `M`, `M_h`, `M_p`, `M_c` | as 3.1.1, world and per region |
+| `M`, `M_h`, `M_p`, `M_c`, `M_t` | as 3.1.1, world and per region (`M_t` of a region is the treasuries seated in it, `spec-polity.md` 5.1.1) |
 | `H` | the households: the sum of agent weights, pseudo-agents excluded (`spec-scale.md` FR-SCL-015) |
 | `M_h / H` | money per household, world and per region (`Sectors` of `spec-indicators.md` 9 row 7, with the velocity `V` as `Turnover`, row 8); per role it is reachable only through the household rows of `Money` (`spec-indicators.md` 9 row 7), not through `Sectors` |
 | Boundary balance per reason | the cumulative net created (negative) or destroyed (positive) under each money reason, `initial` included |
@@ -130,7 +131,7 @@ The Snapshot carries them (13.4); the names are `spec-observability.md` 5.3.2 an
 | one reason per grant | faucet | this spec | each tick the flow is active (5) |
 | one reason per levy | sink | this spec | each tick the flow is active (5) |
 | the external module | faucets and sinks | `spec-external-sector.md` 8.1: `outside_budget` (faucet), `outside_unspent`, `outside_receipts` (sinks) for money | each tick a counterparty trades |
-| later specs | | FIS (taxes), CRD (loans and interest), RSK (`loss`) | not before they exist |
+| later specs | internal | FIS (taxes, duties, tolls and payouts), CRD (claims and interest), RSK (`loss`, goods only), LND (rent) | a fiscal, credit or rent reason moves money between non-boundary accounts and is neither a faucet nor a sink; a mint or a tribute is a flow of this module with the target kind `treasury` (4.3.5) |
 
 The internal money reasons (`trade`, `estate_money`, `start_money`, `relief`, `split`,
 `merge`, `births`, `starvation`, the escrow reasons) move money between non-boundary
@@ -141,7 +142,8 @@ accounts and change the sectors, not `M`.
 The faucets and sinks of other specs are theirs; this spec owns the statement that all of
 them are registry rows and the measures above. It does not own: the pool's rules
 (`spec-estates.md`), the amount a newcomer is given (`Role.StartMoney`, the spawner), the
-outside world (EXT), or any rule that adjusts a flow in response to a measure (PLC).
+outside world (EXT), saving and investment decisions (`spec-saving-and-investment.md`), or any
+rule that adjusts a flow in response to a measure (PLC).
 
 ### 3.4 Mechanisms considered for extraction and issuance
 
@@ -167,9 +169,11 @@ most what is held, 5.4), conservation by reason and exact equality.
 
 3.5.2. **The sectoral identity** (`spec-ledger.md` 9.3) takes its terms from the flows. A
 grant to a household class raises the households sector by its applied amount; a grant to
-a pool raises the public sector; a levy lowers the sector it is drawn from; and in each
-tick `delta(households) + delta(public) + delta(contract) = faucets - sinks`, where the
-faucets and sinks now include the flows' reasons. Money moved between sectors by relief,
+a pool raises the public sector; a grant to a treasury raises the treasury sector; a levy
+lowers the sector it is drawn from; and in each tick
+`delta(households) + delta(public) + delta(contract) + delta(treasury) = faucets - sinks`,
+where the faucets and sinks now include the flows' reasons (the treasury term is 0 with no
+governed jurisdiction, `spec-ledger.md` 9.3). Money moved between sectors by relief,
 starting money and escrow changes the split and not the sum.
 
 3.5.3. **What the audit adds.** `World.Audit` and `WithAudit` (`spec-ledger.md` 12.4) also
@@ -209,18 +213,22 @@ type MoneyFlow struct {
 	Label     string     // presentation only
 }
 
-// FlowTarget names a class of accounts.
+// FlowTarget names a class of accounts. This spec owns the type and these three fields;
+// the later kinds add their own (4.3.4, 4.3.5).
 type FlowTarget struct {
-	Kind   string // "households" or "pool"
-	Region string // "" means every region
-	Role   string // households only
+	Kind         string // "households", "pool", "stores" (STO) or "treasury" (FIS)
+	Region       string // "" means every region
+	Role         string // households only
+	Store        string // stores only: a store class; "" means every class (`spec-storage.md` 7.1.2)
+	Jurisdiction string // treasury only: a governed jurisdiction (`spec-fiscal.md` 3.2)
 }
 ```
 
 4.1.1. **Exactly one shape.** A grant has either `Amount` (a rate) or `Level` (a top-up).
 A levy has either `Amount` (fixed) or `RateBP` (a rate on the balance). `Exempt` belongs
 to a levy only, `Level` and `NotIncome` to a grant only, and `NotIncome` to a grant to
-households only. Any other combination is `ErrFlowShape` (12.1).
+households only. Any other combination is `ErrFlowShape` (12.1). For a target of kind `stores`, `Level` and
+`RateBP` are `ErrFlowShape` too: only the fixed levy and the rate grant are defined (4.3.4).
 
 4.1.2. **Defaults.** The zero values are the defaults: `Per` is `tick`, `Start` is 0,
 `Until` is 0 (open ended), `Limit` is 0 (none), `Exempt` is 0 and `NotIncome` is false (a
@@ -239,7 +247,9 @@ states them. There is therefore no default macro constant in this spec (N-027).
 `w` is the recipient's weight (1 for a pool), `S` the flow's scale in basis points (4.4,
 default 10 000), `P` the number of ticks in the period: 1 for `tick`, `TicksPerYear` for
 `year`. A top-up has no period. All division truncates toward zero on non-negative values
-(architecture.md 3.5), and the remainder is carried, not lost (6.1).
+(architecture.md 3.5), and the remainder is carried, not lost (6.1). For a target of kind
+`stores` only the rate grant and the fixed levy are defined, with `w` replaced by the number
+of stores (4.3.4); `Level` and `RateBP` are `ErrFlowShape`.
 
 ### 4.3 Targets (classes)
 
@@ -254,12 +264,37 @@ region, so an agent that changes role or region moves between classes with its c
 4.3.2. **A pool.** The Estate account of `Target.Region`, or of every region when it is
 empty. The amount is per pool, weight 1. A pool target needs the estates module
 (`ErrModuleDependency`, 12.1): the pool is the module's (`spec-estates.md` layer note).
-The pool is where a grant to "the treasury" goes; what the pool does with money is the
-estate's (relief, starting money, `spec-estates.md` 2.3, 2.6).
+The pool is where a grant to the region's pool goes; a grant to a jurisdiction's treasury is a
+target of kind `treasury` (4.3.5). What the pool does with money is the estate's (relief,
+starting money, `spec-estates.md` 2.3, 2.6).
 
 4.3.3. **Regions** are visited in region order (ID order, `spec-config.md` 3.4) and the
 accounts of a class in ascending account ID, so every total and every limit is applied
 in one order that no map influences (architecture.md 7.5).
+
+4.3.4. **Stores** (target kind `stores`; the type's field `Store`, `spec-storage.md` 7.1.2).
+Every open Agent account whose agent owns at least one store of class `Target.Store` (every
+class if empty) in `Target.Region` (every region if empty). **An amount is per store, not per
+household**: the account of an owner of `n` matching stores is due `n` times the amount, where
+4.3.1 multiplies by the weight `w`, because a store is not a household's quantity. `Exempt` is
+an amount per account. Membership is read at the position of the flow (P1.7), so a store added
+or removed between ticks counts from the next P1.7. Only the rate grant and the fixed levy are
+defined (4.2); the kind needs the storage module (`ErrModuleDependency`) and a class that
+exists (`ErrUnknownStoreClass`, 12.1). The carry is kept per account, as for households (14).
+The flow is STO's first use of 10.3 (`spec-storage.md` 7).
+
+4.3.5. **A treasury** (target kind `treasury`; the type's field `Jurisdiction`,
+`spec-fiscal.md` 3.2.3, 4.2). The Treasury account of `Target.Jurisdiction`, a governed
+jurisdiction (`spec-polity.md` 5): `ErrUnknownJurisdiction` if it is not defined and
+`ErrNotGoverned` if it has no seat; with `Jurisdiction` empty, the treasuries of every governed
+jurisdiction in ascending `JurisdictionID`. `Region` and `Role` are not read for it and must be
+empty (`ErrFlowShape`): a treasury is in the region of its seat. The amount is per treasury,
+weight 1, with the four shapes of 4.2 as for a pool. A grant to it is a faucet into the
+treasury sector `M_t` and a levy on it a sink from it, both at P1.7, before the fiscal flows
+of `spec-fiscal.md` at P1.7b, so a mint is spendable by a payout of the same tick. The treasury
+is not the pool (4.3.2): a treasury is a jurisdiction's account, the pool a region's.
+A tax, a duty, a toll and a payout between a treasury and the economy are not flows of this
+module; they are `spec-fiscal.md`'s, and their IDs share this module's namespace (4.5.2).
 
 ### 4.4 Schedule, limit and scale
 
@@ -280,9 +315,9 @@ limit in region order. The limit is the damper of a finite endowment (MON-D1).
 4.4.3. **Scale.** Each flow has a runtime **flow scale** `Scale`, in basis points, default
 10 000, bound 0 to `MaxFlowScale`. The effective `Amount`, `Level` and `RateBP` are the
 configured values times `Scale / 10 000`. It is world state, not configuration: it is
-changed only between steps through the world's operation (10.4), it is saved in a
-checkpoint and it is not part of the configuration hash. The engine never changes it.
-`Scale` 0 pauses the flow.
+changed only through the world's operation (10.4), between steps by a consumer or at
+P0.3a by a policy actor (`spec-policy.md`); it is saved in a checkpoint and it is not part of
+the configuration hash. No rule of this module changes it. `Scale` 0 pauses the flow.
 
 4.4.4. **Total.** Each flow keeps its cumulative `Total` applied (grants issued, levies
 collected), a non-negative `int64`. It is state, and the ledger's boundary balance of the
@@ -299,7 +334,8 @@ run (ledger 2.3). The boundary accounts of the declared reasons are created at
 construction in flow-ID order, after the built-in ones and before any other account.
 
 4.5.2. An ID that equals a built-in reason, or a reason declared by another flow or by a
-later spec's registration, is `ErrReasonCollision`. IDs follow `spec-config.md` 3.3, so a
+later spec's registration (the fiscal flows of `spec-fiscal.md` 3.4 share this namespace), is
+`ErrReasonCollision`. IDs follow `spec-config.md` 3.3, so a
 reason is usable as a log value and a metric attribute without escaping. The set of
 reasons is bounded by the configuration (`MaxMoneyFlows`), so the `reason` attribute and
 the aggregated `BoundaryFlow` keep a bounded cardinality (observability-and-logging.md
@@ -454,12 +490,14 @@ it adds the same to the ratio of a cohort and of a single household.
 the recipient for the tick it is paid: it is added to `income_t` of
 `spec-welfare-and-wages.md` 2.1 next to relief `F_t`, and it is excluded from the observed
 wage of 4.3 there, because it is not earned by working. A grant with `NotIncome`, like a
-starting-money grant (`initial`, `start_money`), is not income. A levy is not netted from
-`income_t` in version 1: it is not an input cost and not wear, and upkeep is not netted
-either. The reason for the default is the household of a non-producing class: with its
+starting-money grant (`initial`, `start_money`), is not income. A levy of this module is not
+netted from `income_t` in version 1: it is not an input cost and not wear, and upkeep is not
+netted either. The reason for the default is the household of a non-producing class: with its
 stipend counted, its ratio is above the target, and the target-income rule (which has no
-job to do for it) is not tripped. The reason for not netting a levy is that a levy is the
-fiscal specs' case (open question 5). This needs an edit to WEL (handoff, section h).
+job to do for it) is not tripped. The reason for not netting a levy is that a levy is a
+holding charge or a sink and not a public receipt: a tax, a duty and a toll of
+`spec-fiscal.md` are netted, and `spec-welfare-and-wages.md` 2.1 states the one rule per flow
+(open question 5).
 
 7.3. **A non-producing class.** A role with an empty `Recipes` list and a grant to it
 (N-078) has income, buys its upkeep and, with the demand module, its wants
@@ -473,7 +511,9 @@ starting money of entrants, bounded by `EntryPoolShare` (`spec-estates.md` 2.3, 
 `spec-spawner.md` 7.3). A pool grant is therefore the way to fund a growing population
 (8.6) and a famine region's relief without touching households directly. A pool with
 `PoolRelease` 0 and no entrants holds the money out of circulation (hoarding by the pool,
-STB-L31): the grant does not reach anyone.
+STB-L31): the grant does not reach anyone. Rent, interest and the claim payments that the
+estate receives (`spec-land.md`, `spec-credit.md`) enter the same pool and reach households by
+the same two uses.
 
 7.5. **Relief and a levy on the pool.** A levy on a pool collects from the estate account
 after relief has been paid in the same tick (5.1), and before that tick's entry, so it
@@ -520,7 +560,7 @@ With `M` fixed, nominal trade value can rise only if `V` rises. So the mean pric
 exactly when the real volume of trade (the quantities traded at constant relative prices)
 grows by more than `V` does. In this library real volume grows when households are added
 (entry or births funded from the pool, which keep `M` unchanged), when a shock is
-recovered from, or, later, with technology; it falls with hoarding, which lowers `V`. A
+recovered from, or, later, with technology; it falls with hoarding, which lowers `V` (the measure of what is hoarded is `IdleMoney`, `spec-saving-and-investment.md` 8.4). A
 stationary closed economy (constant households, constant output, constant behaviour) has a
 constant mean price. The pressure is therefore a statement about `M / (real volume)`, and
 the measure is `M_h / H` together with `V`. In this design the effect is not a flow from
@@ -643,14 +683,15 @@ the target-income rule does not see it.
 ### 9.5 Why a faucet is never proportional to a balance
 
 A faucet of `r` basis points per tick of the recipient's own balance gives
-`m(t+1) = m(t) * (1 + r/10^4)`: exponential growth with no bound, the compound interest of
-CRD and the savings returns of SAV. It is a reinforcing loop with gain above 1 on every
+`m(t+1) = m(t) * (1 + r/10^4)`: exponential growth with no bound, the compound interest that CRD does not pay (interest in
+`spec-credit.md` is a transfer between accounts, not a faucet) and a return on savings that SAV
+does not pay (`spec-saving-and-investment.md` 2, 8.2). It is a reinforcing loop with gain above 1 on every
 balance, and the hoarding that it rewards cannot be damped by anything local. This spec
 therefore allows only fixed or levelled faucets, whose total over `n` ticks is linear in
 `n` (a top-up is capped by the level). A consumer who wants interest has the credit and
 saving specs, which will carry their own entries.
 
-## 10. Reserved for EXT, FIS and PLC
+## 10. How EXT, FIS, STO and PLC plug in
 
 ### 10.1 A counterparty whose balance is not conserved is a boundary
 
@@ -679,11 +720,15 @@ sweep collects 1 300. Both amounts are exact (the top-up has no carry; the sweep
 
 ### 10.3 Later specs add reasons through the same path
 
-FIS (taxes, tolls), EXT (imports and exports), CRD (loans) and RSK (loss) add rows to the
-ledger registry as `spec-ledger.md` 7.2 says. They are not flows of this module unless
-they choose to be; a spec that wants a configured, scheduled faucet or sink may reuse
-`MoneyFlow` and its step (4, 5) and add a target kind. A reason a later spec adds MUST NOT
-collide with a flow ID (`ErrReasonCollision`, FR-MON-036).
+FIS (taxes, duties, tolls and payouts), EXT (imports and exports), CRD (claims and interest),
+LND (rent) and RSK (loss, goods only) add rows to the ledger registry as `spec-ledger.md` 7.2
+says; of these only EXT adds faucets and sinks of money (8.1 there), and the others are
+internal reasons that move money between non-boundary accounts. They are not flows of this
+module unless they choose to be: a spec that wants a configured, scheduled faucet or sink may
+reuse `MoneyFlow` and its step (4, 5) and add a target kind. Two have: STO's `stores` (4.3.4,
+the first use) and FIS's `treasury` (4.3.5). A reason a later spec adds MUST NOT collide with a
+flow ID (`ErrReasonCollision`, FR-MON-036). The type `FlowTarget` and its three old fields
+are this spec's; each new kind adds its field and is owned by the spec that adds it.
 
 ### 10.4 How a policy plugs in without this spec containing one
 
@@ -692,21 +737,25 @@ ADR 0001 decision 4 lists the actions it may take: a transfer between accounts (
 by the ledger like any transfer, so it cannot create money without a declared faucet), a
 change of a rate, and stock added to a boundary. MON supplies the seam for the second: the
 **flow scale** (4.4.3). The public call is `SetFlowScales([]FlowScale{Flow; BP})`
-(`spec-integration.md` 5.1; PLC may call it too): it sets `Scale` for a flow between
-steps; it validates the module (`ErrModuleOff`), the flow ID (`ErrUnknownFlow`, new) and
-the bound (`ErrOutOfBounds`), and the new value applies from the next P1.7. The scale is
-state (14), the operation emits `MoneyFlowScaled` per changed flow, and a consumer's own rule, a human at a
-console, a scripted schedule or a future PLC can call it. Two consequences. First, the
-engine contains no rule that changes a flow in response to a measure: the only writer of
-`Scale` is a call from outside. Second, a PLC that doubles a stipend or pauses a faucet
-does so within the bounds of the configured flow and the ledger's checks; it cannot create
-money by any path that is not a declared flow, and the audit still holds.
+(`spec-integration.md` 5.1): it sets `Scale` for a flow between steps; it validates the module
+(`ErrModuleOff`), the flow ID (`ErrUnknownFlow`, new) and the bound (`ErrOutOfBounds`), and the
+new value applies from the next P1.7. A fiscal flow's ID is accepted too (`spec-fiscal.md`
+13.1). The scale is state (14), the operation emits `MoneyFlowScaled` per changed flow (with
+the `Cause` `consumer` or `policy`), and a consumer's own rule, a human at a console, a
+scripted schedule or a policy actor can set it. A policy actor of `spec-policy.md` writes it at
+P0.3a through the internal form, with the cause `policy`; the public call stays between ticks.
+Two consequences. First, no rule of this module changes a flow in response to a measure: the
+writers of `Scale` are a call from outside and a policy actor, whose rule is the consumer's
+or PLC's (`spec-policy.md` 3.5.1 gives the reach of a lever). Second, a policy actor that
+doubles a stipend or pauses a faucet does so within the bounds of the configured flow and the
+ledger's checks; it cannot create money by any path that is not a declared flow, and the audit
+still holds.
 
 ### 10.5 What this spec will not do
 
 It will not create a flow in response to a measure, add a faucet proportional to a balance
-or the supply (9.5), convert a commodity into money (3.4), tax a trade (FIS), model the
-outside world (EXT), or lend (CRD). A grant to an agent class by an event (for example a
+or the supply (9.5), convert a commodity into money (3.4), tax a trade (`spec-fiscal.md`), model the
+outside world (EXT), or lend (`spec-credit.md`). A grant to an agent class by an event (for example a
 newcomer's endowment beyond the pool's) is not provided: it would be a rule reacting to
 entry, which is POP's and SPN's to decide (open question 4).
 
@@ -726,8 +775,10 @@ mean "absent".
 | Module | `Flows` | the flows, sorted by ID (4.1) | none | at most `MaxMoneyFlows` |
 | Flow | `ID` | the flow's name and its ledger reason (4.5) | none | an ID of `spec-config.md` 3.3, unique, not a built-in reason |
 | Flow | `Kind` | `grant` (faucet) or `levy` (sink) | none | one of the two |
-| Flow | `Target` | the class: kind `households` or `pool`, an optional region, a role for households (4.3) | none | known region and role |
-| Flow | `Amount` | minor units per household (or per pool) per `Per`: a grant's rate or a fixed levy | 0 | 0 to `MaxFlowAmount` |
+| Flow | `Target` | the class: kind `households`, `pool`, `stores` or `treasury`, an optional region, a role for households, a store class for stores, a jurisdiction for a treasury (4.3) | none | known region, role, store class and jurisdiction |
+| Flow | `Target.Store` | stores only: a store class; "" means every class (4.3.4) | "" | a configured store class |
+| Flow | `Target.Jurisdiction` | treasury only: a governed jurisdiction; "" means every governed one (4.3.5) | "" | a defined, governed jurisdiction |
+| Flow | `Amount` | minor units per household (or per pool, per store, per treasury) per `Per`: a grant's rate or a fixed levy | 0 | 0 to `MaxFlowAmount` |
 | Flow | `Level` | a top-up grant: the balance it raises to, per household or per pool | 0 | 0 to `MaxFlowAmount` |
 | Flow | `RateBP` | a rate levy: basis points per `Per` of the balance above `Exempt` | 0 | 0 to `MaxFlowRateBP` |
 | Flow | `Exempt` | a levy: minor units per household (or per pool) never collected | 0 | 0 to `MaxFlowAmount` |
@@ -761,12 +812,15 @@ Each rule has a sentinel and a failing-case test (testing.md 3.9); an error name
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per` or `Kind` that is not one of its values; `Until` not above `Start` when set; more than `MaxMoneyFlows` flows |
-| `ErrFlowShape` (new) | a grant with `RateBP` or `Exempt`, or with both `Amount` and `Level` or neither; a levy with `Level`, or with both `Amount` and `RateBP` or neither; a household target with no role; a pool target with a role; `NotIncome` on a levy or a pool target; `Level` with `Per` `year` |
+| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per`, a `Kind` or a target `Kind` that is not one of its values; `Until` not above `Start` when set; more than `MaxMoneyFlows` flows |
+| `ErrFlowShape` (new) | a grant with `RateBP` or `Exempt`, or with both `Amount` and `Level` or neither; a levy with `Level`, or with both `Amount` and `RateBP` or neither; a household target with no role; a pool target with a role; `NotIncome` on a levy or on a target that is not households; `Level` with `Per` `year`; a stores target with `Level` or `RateBP`, a role, or a jurisdiction; a treasury target with a region, a role or a store class |
 | `ErrDuplicateID` | two flows with one ID |
 | `ErrReasonCollision` (new) | a flow ID that equals a built-in reason of the registry or a reason a later spec declares |
 | `ErrUnknownRole`, `ErrUnknownRegion` | a target naming an undefined role or region |
-| `ErrModuleDependency` | a pool target while the estates module is off |
+| `ErrModuleDependency` | a pool target while the estates module is off; a stores target while the storage module is off |
+| `ErrUnknownStoreClass` (STO) | a stores target naming a store class that is not configured |
+| `ErrUnknownJurisdiction` (POL) | a treasury target naming a jurisdiction that is not defined |
+| `ErrNotGoverned` (FIS) | a treasury target naming a jurisdiction that has no seat |
 
 There is no derived overflow check of `spec-config.md` 4.2 for this module: `MaxFlowAmount`
 is itself `MaxMoney / MaxWeight`, so `w * Amount`, `w * Level` and `w * Exempt` fit
@@ -789,6 +843,7 @@ Never fail validation; each is logged once at construction through the injected 
 | `levy_below_upkeep` | a levy on households whose `Exempt` is below one tick's upkeep cost of the targeted role at the reference prices of its regions (9.4) |
 | `class_empty` | a household target whose class has no households in any targeted region at construction (it may fill later) |
 | `grant_to_pool_no_outlet` | a grant to a pool in a region where `PoolRelease` is 0, so the money reaches nobody except entrants (7.4) |
+| `store_levy_below_upkeep` (STO) | a levy that targets stores has an `Exempt` below one tick's upkeep cost, at the reference prices, of a limited role (9.4; `spec-storage.md` 7.2) |
 
 ## 13. Observability
 
@@ -804,7 +859,7 @@ events carry what `BoundaryFlow` cannot.
 | `BoundaryFlow` (existing) | once per tick per (region, reason, money) with a non-zero total | `Region`, `Reason` (the flow ID), faucet or sink, total |
 | `MoneyFlowLimited` (new) | once per flow and region in a tick in which any due was not applied; never when all was applied | `Flow`, `Region`, `Due`, `Applied`, `Short` (households whose levy found too little), `Headroom` (households whose credit was cut at `MaxMoney`), `Limit` (households cut by the limit) |
 | `MoneyFlowEnded` (new) | once, in the tick a flow reaches its effective limit and ends | `Flow`, `Cause` (`limit` or `cap`), `Total` |
-| `MoneyFlowScaled` (new) | once per changed flow of a call of `SetFlowScales` | `Flow`, `From`, `To` (basis points) |
+| `MoneyFlowScaled` (new) | once per changed flow of a call of `SetFlowScales`, or of a policy actor's write at P0.3a; also for a fiscal flow | `Flow`, `From`, `To` (basis points), `Cause` (`consumer` or `policy`) |
 
 13.1.1. **`MoneyFlowLimited` is the counter of the silent clamps of this spec** (the
 shortfall of a levy, the headroom of a grant, the limit), as `EntryLimited` is the
@@ -840,7 +895,7 @@ slots, and no log argument is built unguarded.
 ### 13.4 Snapshot
 
 The Snapshot carries, as plain data in a fixed order (field names are OBS's): per region,
-`M_h`, `M_p`, `M_c`; the world's `M` and `H`; the money boundary balance per reason, in the
+`M_h`, `M_p`, `M_c`, `M_t`; the world's `M` and `H`; the money boundary balance per reason, in the
 order of `spec-observability.md` 4.4.1.2; and per flow, its `Total`, `Scale` and whether it
 has ended. `M_h / H` and velocity are computed by the consumer or by IND from these
 (`Sectors` and `Turnover`, `spec-indicators.md` 9 rows 7 and 8). Nothing in the engine reads
@@ -876,7 +931,11 @@ All plain data in a fixed order, no maps (ADR 0002):
 - per flow with a household target and a carry shape (a rate grant, a fixed levy or a rate
   levy), in ID order: the carries, as (account ID, carry) pairs in ascending account ID, only
   for open accounts;
-- per flow with a pool target and a carry shape: one carry per region, in region order.
+- per flow with a pool target and a carry shape: one carry per region, in region order;
+- per flow with a stores target and a carry shape: the carries as (account ID, carry) pairs in
+  ascending account ID, only for open accounts, one per account and not per store;
+- per flow with a treasury target and a carry shape: one carry per treasury, in ascending
+  `JurisdictionID`.
 
 A top-up has no carry. The boundary balances of the declared reasons are in the ledger's
 saved state (`spec-ledger.md` 11), not here. Not saved: the due, the per-tick aggregates and
@@ -1167,12 +1226,12 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-005 | A flow MUST have exactly one shape: a grant `Amount` or `Level`, a levy `Amount` or `RateBP`; any other combination of the fields of 4.1.1 MUST be rejected with `ErrFlowShape`. |
 | FR-MON-006 | The due of a recipient MUST depend only on its weight, its balance (rate levy, top-up), its carry, the flow's fields, the flow's scale and the tick, and MUST NOT depend on any other account, price, total or count. |
 | FR-MON-007 | A household class MUST be every open Agent account whose agent has the target role and, if a region is stated, that region, external agents included and estate pseudo-agents excluded, and an amount MUST be multiplied by the agent's weight. |
-| FR-MON-008 | A pool class MUST be the Estate account of the stated region, or of every region when none is stated, with weight 1. |
+| FR-MON-008 | A pool class MUST be the Estate account of the stated region, or of every region when none is stated, with weight 1; a stores class MUST be every open Agent account whose agent owns a store of the stated class in the stated region, with an amount multiplied by the number of its matching stores and not by its weight; a treasury class MUST be the Treasury account of the stated governed jurisdiction, or of every governed jurisdiction in ascending ID when none is stated, with weight 1 (4.3.4, 4.3.5). |
 | FR-MON-009 | Class membership MUST be evaluated each tick from the agent's current role and region. |
 | FR-MON-010 | A flow MUST be active in tick `t` exactly when `t >= Start`, `Until` is 0 or `t < Until`, and it has not ended, and an inactive flow MUST change no state. |
 | FR-MON-011 | The cumulative amount a flow applies MUST NOT exceed `Limit` when `Limit` is above 0, nor `MaxFlowTotal`; a flow that reaches its effective limit MUST end, and `MoneyFlowEnded` MUST be emitted once with the cause. |
 | FR-MON-012 | A rate grant and a fixed levy MUST pay `floor((w*Amount*S + carry) / (P*10^4))` and keep the remainder as the carry, so the total over any run of ticks with unchanged `w` and `S` equals `floor((n*w*Amount*S + c0) / (P*10^4))`. |
-| FR-MON-013 | A recipient's initial carry MUST be `(ID mod P) * 10^4` for a rate grant or a fixed levy, with `ID` the account ID (the region index for a pool), and 0 for a rate levy. |
+| FR-MON-013 | A recipient's initial carry MUST be `(ID mod P) * 10^4` for a rate grant or a fixed levy, with `ID` the account ID (the region index for a pool, the jurisdiction's index in ascending `JurisdictionID` for a treasury; a stores class is by account ID as households are), and 0 for a rate levy. |
 | FR-MON-014 | `Per` `year` MUST use the `TicksPerYear` derived from the calendar, so a change of calendar changes the per-tick amount, and `Per` `tick` MUST NOT be rescaled by a change of calendar. |
 | FR-MON-015 | A rate levy MUST take `floor((base*RateBP*S + carry) / (P*10^8))` with `base = max(0, balance - w*Exempt)`, at most `base`, keeping the remainder as the carry. |
 | FR-MON-016 | A top-up MUST pay `max(0, w*Level*S/10^4 - balance)`, truncated, and keep no carry. |
@@ -1182,7 +1241,7 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-020 | A levy MUST collect at most the balance above `w*Exempt` and MUST NOT take a balance below it; the uncollected part MUST be forgiven, not carried, and counted as `Short`. |
 | FR-MON-021 | A grant MUST NOT take a balance above `MaxMoney`; the part not issued MUST be counted as `Headroom`. |
 | FR-MON-022 | An amount cut by the limit MUST be counted as `Limit`, and the carry MUST advance by the due and not by what was applied. |
-| FR-MON-023 | A flow's scale MUST default to 10 000, MUST be changed only by `SetFlowScales` between steps within 0 to `MaxFlowScale`, MUST apply from the next P1.7, MUST be refused with `ErrModuleOff` (module off), `ErrUnknownFlow` (a flow that is not declared) or `ErrOutOfBounds`, and `MoneyFlowScaled` MUST be emitted for each changed flow. |
+| FR-MON-023 | A flow's scale MUST default to 10 000, MUST be changed only by `SetFlowScales` between steps or by a policy actor at P0.3a within 0 to `MaxFlowScale`, MUST apply from the next P1.7, MUST be refused with `ErrModuleOff` (module off), `ErrUnknownFlow` (a flow that is not declared) or `ErrOutOfBounds`, and `MoneyFlowScaled` MUST be emitted for each changed flow with its `Cause`. |
 | FR-MON-024 | The engine MUST NOT change a flow's scale or any other field of a flow by itself; no rule of this module MUST read the money supply, a price, an index or a count of accounts of a class. |
 | FR-MON-025 | A grant to households that is not `NotIncome` MUST be added to the recipient's `income_t` for the tick and excluded from the observed wage, a grant with `NotIncome` MUST NOT, and a levy MUST NOT be netted from income. |
 | FR-MON-026 | After every operation, `M` MUST equal `M_init` plus the grants applied minus the levies applied (plus the other faucets and sinks), and for each flow the boundary balance of its reason MUST equal `-Total` for a grant and `+Total` for a levy, with exact equality. |
@@ -1197,15 +1256,15 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-035 | Two flows with one ID MUST be rejected with `ErrDuplicateID`. |
 | FR-MON-036 | A flow ID equal to a built-in reason, or to a reason a later spec declares, MUST be rejected with `ErrReasonCollision`. |
 | FR-MON-037 | A target naming an undefined role or region MUST be rejected with `ErrUnknownRole` or `ErrUnknownRegion`. |
-| FR-MON-038 | A pool target while the estates module is off MUST be rejected with `ErrModuleDependency`. |
-| FR-MON-039 | The warnings `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty` and `grant_to_pool_no_outlet` MUST NOT fail validation, and each MUST name its path. |
+| FR-MON-038 | A pool target while the estates module is off, and a stores target while the storage module is off, MUST be rejected with `ErrModuleDependency`; a stores target naming an unconfigured class MUST be `ErrUnknownStoreClass`, a treasury target naming an undefined jurisdiction `ErrUnknownJurisdiction` and one with no seat `ErrNotGoverned`. |
+| FR-MON-039 | The warnings `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty`, `grant_to_pool_no_outlet` and `store_levy_below_upkeep` MUST NOT fail validation, and each MUST name its path. |
 | FR-MON-040 | The state of 14 MUST be saved in the order given, a restored world MUST apply the same payments as an uninterrupted one, and a carry of a closed account MUST NOT be saved. |
 | FR-MON-041 | The module MUST draw no random number, and the draws made at agent creation (`spec-agents.md` 3.5.2) MUST NOT depend on whether it is on. |
-| FR-MON-042 | The Snapshot MUST carry `M_h`, `M_p`, `M_c` per region, `M` and `H`, the money boundary balance per reason sorted by reason, and each flow's `Total`, `Scale` and whether it ended, as plain data; the boundary balances MUST be in the order of `spec-observability.md` 4.4.1.2. |
+| FR-MON-042 | The Snapshot MUST carry `M_h`, `M_p`, `M_c`, `M_t` per region, `M` and `H`, the money boundary balance per reason sorted by reason, and each flow's `Total`, `Scale` and whether it ended, as plain data; the boundary balances MUST be in the order of `spec-observability.md` 4.4.1.2. |
 | FR-MON-043 | A faucet or sink reason MUST have a Boundary account on its boundary side, so a counterparty whose balance is created or destroyed outside conservation is a Boundary account; a transfer under such a reason between two non-boundary accounts MUST be refused with `ErrReasonMismatch` (`spec-ledger.md` FR-LED-004). |
 | FR-MON-044 | A flow MUST NOT apply anything during the construction phase, and the construction bucket MUST contain only `initial` money. |
 | FR-MON-045 | A flow whose scale is 0, or that has ended, MUST apply nothing and emit no `BoundaryFlow` entry. |
-| FR-MON-046 | In every tick, the change of money held by the households, public and contract sectors MUST equal the grants applied minus the levies applied plus the other faucets minus the other sinks, a grant to a household class MUST change only the households sector and a grant to a pool only the public sector (`spec-ledger.md` FR-LED-025). |
+| FR-MON-046 | In every tick, the change of money held by the households, public, contract and treasury sectors MUST equal the grants applied minus the levies applied plus the other faucets minus the other sinks, a grant to a household class MUST change only the households sector, a grant to a pool only the public sector and a grant to a treasury only the treasury sector (`spec-ledger.md` FR-LED-025). |
 
 ### Non-functional
 
@@ -1233,8 +1292,9 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
    grant (8.6). *Next step:* POP decides whether it needs a per-entry faucet and, if so,
    whether it is a flow with a trigger or its own reason.
 5. **Should a levy net out of income?** A household levied 20% looks as rich to the
-   target-income rule as before (7.2). It matters when FIS adds taxes. *Next step:* WEL
-   decides netting with FIS; until then it is a documented limitation.
+   target-income rule as before (7.2). **Answered in part:** `spec-fiscal.md` 12 nets a tax,
+   a duty and a toll; a levy of this module stays un-netted, and `spec-welfare-and-wages.md`
+   2.1 states the rule per flow. *Next step:* reopen only if a pack needs a levy netted.
 6. **A mirror levy.** A levy that retires exactly what a named grant issued would make a
    pair exactly neutral. Rejected for now (2, position 9). *Next step:* revisit if MON-S1
    shows packs routinely drifting by a nominal mismatch.

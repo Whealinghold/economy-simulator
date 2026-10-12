@@ -222,7 +222,8 @@ For an agent `a` of weight `w` and `Unfed` households (`spec-agents.md` 5.4), th
 
 ```
 H_a = w - Unfed          when the agent is not external, its ratio exists,
-                         and (for births) its role is not Closed
+                         and (for births) its role is not closed
+                         in the region (`Closed`, or a `Needs` its class lacks)
 H_a = 0                  otherwise
 ```
 
@@ -238,10 +239,12 @@ shows how many households the schedule did not see.
 A consumer who wants a mortal player or a player who has children writes its own
 spawner.
 
-3.7.3. **Births and a `Closed` role.** A role marked `Closed` receives no entrant from
-the default spawner (`spec-spawner.md` 6.2, FR-SPN-041). Its households are not exposed
-for births, so the birth carry of the role does not advance. Its households are exposed
-for deaths.
+3.7.3. **Births and a closed role.** A role marked `Closed`, or whose `Needs` flag the
+region's class lacks (`spec-settlements.md` 6.4.1), receives no entrant from the default
+spawner (`spec-spawner.md` 6.2, FR-SPN-041, FR-SPN-057). Its households are not exposed for
+births, so the birth carry of the role does not advance. Its households are exposed for
+deaths. A role that is open but has a ceiling (`spec-settlements.md` 6.4.2) or a body's places
+(`spec-institutions.md` 3.4.3) is exposed, and its births are capped at its headroom (4.4.4).
 
 ### 3.8 From a rate to whole households: the carried remainder
 
@@ -394,6 +397,16 @@ households, `Weight - Unfed`. A cut is counted (`DeathsCut`). After the ladder's
 reductions of the same tick, which take only unfed households (`spec-spawner.md` 5.3),
 the fed households of the agent are untouched, so the cap holds in the plan order of
 4.8.
+
+4.4.4. **The role ceiling.** The births of a role in a region are capped at its headroom: the
+least of the headroom of its class limit (`Role.Ceiling`, `spec-settlements.md` 6.4.2) and of its
+body's (`spec-institutions.md` 3.4.3), counted at the start of the region's entry step
+(`spec-spawner.md` 6.3.1). The births that would exceed it are dropped and counted
+(`BirthsCeiling`, a field of `PopulationChanged`; `BirthsCapped` stays the count of
+`HouseholdCap`). SET owns the rule and the name; a body's places are a second source of the same
+cap and add no field. The order of the cuts on the births of a tick is: `HouseholdCap` for the
+region (4.4.2), then the role ceiling, then the pool's funding (4.3, `BirthsUnfunded`). It is a
+bound, like 4.4.2, and removes no household when a limit falls.
 
 ### 4.5 The ladder and the schedule: no household is counted twice
 
@@ -756,6 +769,8 @@ only mechanism that bears on it.
 | `spec-welfare-and-wages.md` | the signal (3.4); the effective window is part of the delay (5.4). A longer window slows the response and lowers the gain tolerance |
 | `spec-agents.md` | `Unfed` defines the exposed households (3.7); the agent gains the field `DeathCarry` (11); the weight change leaves it unchanged (`spec-agents.md` 3.7); creation sets it (3.8.3) |
 | `spec-spawner.md` | the view, the plan order, the funding, `Renewal` (4) |
+| `spec-settlements.md` | a role's `Needs` closes it for births in a class that lacks the flag (3.7.3) and its `Ceiling` caps its births at the headroom, counted in `BirthsCeiling` (4.4.4); SET owns the rule |
+| `spec-institutions.md` | a body's places make a second source of the same headroom (3.4.3 there); no field is added |
 | `spec-estates.md` | the dead's holdings fill the pool; births draw from it; relief shares it (4.7, 5.5.2). N-082: the order phase 1 relief, phase 7 entry holds |
 | `spec-scale.md` | the carried remainder (3.8, `spec-scale.md` 4.6); births into cohorts dilute their goods (4.3) |
 | `spec-demand.md` | with wants the ratio ranges above 1 (5.3). Without them the fixed point is at hunger |
@@ -860,6 +875,7 @@ map, no pointer, no wall-clock time.
 | `DeathsCut` | deaths cut to the fed households of an agent (4.4.3) |
 | `DeathsHeld` | deaths dropped by `MinHouseholds` (4.4.1) |
 | `BirthsCapped` | births dropped by `HouseholdCap` (4.4.2) |
+| `BirthsCeiling` | births dropped by a role ceiling, a class limit or a body's places (4.4.4) |
 | `BirthsUnfunded` | births the pool could not fund (4.3) |
 | `RateClamped` | exposed households whose effective rate was clamped at 10 000 (3.6) |
 | `BirthsDone`, `DeathsDone` | households actually added and removed by the module in the tick |
@@ -1211,7 +1227,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-004 | A schedule MUST be evaluated by integer piecewise-linear interpolation, flat outside the first and last knots, with the increment truncated toward zero and the products checked (3.5.1). |
 | FR-POP-005 | The effective annual rate MUST be `min(10 000, trunc(schedule(ratio) * scale / 10 000))`, and a household whose rate is clamped MUST be counted as `RateClamped` (3.6). |
 | FR-POP-006 | The exposed households of an agent MUST be `Weight - Unfed` for an agent that is not external and whose ratio exists, and 0 otherwise; an unfed household MUST NOT be subject to the schedule (3.7). |
-| FR-POP-007 | The exposed households for births MUST exclude those of a `Closed` role, and the birth carry of such a role MUST NOT advance (3.7.3). |
+| FR-POP-007 | The exposed households for births MUST exclude those of a `Closed` role and of a role whose `Needs` flag the region's class lacks, and the birth carry of such a role MUST NOT advance (3.7.3). |
 | FR-POP-008 | For each agent with exposed households the module MUST add `H_a * d_a` to the agent's death carry, take `carry / D` whole households, keep `carry mod D`, and cut the households to `H_a`, counting a cut as `DeathsCut`, with `D = 10 000 * TicksPerYear` (3.8.1). |
 | FR-POP-009 | An agent with no exposed households MUST keep its death carry unchanged (3.8.1). |
 | FR-POP-010 | The initial death carry of every agent, an initial agent or a later one, MUST be `((id * 2 654 435 769) mod 2^32) * D / 2^32`, computed with the checked 128-bit helper, and MUST NOT use the random source (3.8.3). |
@@ -1235,7 +1251,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-028 | The warnings `no_replacement_ratio`, `schedule_direction`, `replacement_above_closed_ceiling`, `population_gain`, `no_fixed_factor` and `population_without_upkeep` MUST be reported and MUST NOT fail validation (9.2). |
 | FR-POP-029 | The replacement ratio MUST be the ratio at which `birth - death` changes sign from negative to positive, found on the union of the knots in integer arithmetic, and MUST be reported once at validation and in the snapshot (5.7). |
 | FR-POP-030 | `population_gain` MUST be reported when `r* * dRate * T > 10 000 * dRatio * TicksPerYear` with `T` the longest effective window and `dRate / dRatio` the slope of `birth - death` at `r*` (5.4). |
-| FR-POP-031 | `PopulationChanged` MUST be emitted once per region and role per tick after the region's plan, when any of `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsUnfunded`, `RateClamped`, `BirthsDone` or `DeathsDone` is non-zero, and MUST NOT otherwise, with the fields of 10.1 and no map (10.1). |
+| FR-POP-031 | `PopulationChanged` MUST be emitted once per region and role per tick after the region's plan, when any of `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsCeiling`, `BirthsUnfunded`, `RateClamped`, `BirthsDone` or `DeathsDone` is non-zero, and MUST NOT otherwise, with the fields of 10.1 and no map (10.1). |
 | FR-POP-032 | `DeathsDone` MUST equal the households removed with cause `population` and `BirthsDone` the households added with cause `births`, in the same tick (10.1). |
 | FR-POP-033 | The `Warn`s "region extinct", "births unfunded" and "deaths held" MUST be bounded per region or role, emitted at the first tick and each tenth after, and carry the attributes of 10.3. |
 | FR-POP-034 | The snapshot MUST report per region and role the mean birth and death rates and the natural increase, and the module's `r*` and gain (10.4). |
@@ -1245,6 +1261,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-038 | A region with no households MUST get no birth from the module and MUST emit the `Warn` "region extinct" (6.4). |
 | FR-POP-039 | The effective `BirthScale` and `DeathScale` of a region MUST be the configured values unless a shock has set them, and MUST be read each tick (6.6). |
 | FR-POP-040 | The household-weighted mean ratio in the snapshot MUST NOT be read by any rule of this module (3.4.3). |
+| FR-POP-041 | The births of a role in a region MUST be capped at its headroom (the least of its class limit and its body's, less its households, counted at the start of the entry step), the births dropped MUST be counted in `BirthsCeiling` and not in `BirthsCapped`, and the cuts MUST apply in the order `HouseholdCap`, role ceiling, funding (4.4.4; `spec-settlements.md` FR-SET-023). (new) |
 
 ### Non-functional
 

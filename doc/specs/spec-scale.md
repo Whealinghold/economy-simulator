@@ -178,7 +178,7 @@ change in proportion, so each household keeps what it had: for money or stock
 `m`, a weight going from `w` to `w'` leaves the agent with
 `m' = floor(m * w' / w)`. The difference `m - m'` goes to the regional pool
 (`spec-estates.md`) when it is positive, and is drawn from the pool when it is
-negative. No money or goods are created or lost except through that pool. The
+negative. No money or goods are created or lost except through that pool. The room of a limited role scales with the weight, and the load with the holdings; what a pledge can no longer fit is disposed or diverted (`spec-storage.md` 5.5.3). The
 weights of a group still add up to its household count (FR-SCL-003), and a
 population module that changes the household count changes weights, not the
 number of agents, unless the group needs more agents to stay at the floor. A weight can also rise by entry (`spec-spawner.md` 4.3): the new households bring `Role.StartMoney` each from the pool and no goods, the agent's other holdings do not change, and the per-household goods of the cohort dilute; the group's household count then differs from its configured `Households`, which FR-SCL-003 states at construction only. A household born through the population module brings the stake `Role.StartMoney * BirthStake / 10 000` instead (`spec-population.md` 4.3), and a death by that module is a reduction with the reason `deaths` whose difference goes to the estate (`spec-population.md` 3.2).

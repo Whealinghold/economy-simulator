@@ -972,6 +972,11 @@ state that feeds a count first differs; nothing promises that is more than a few
 ticks, and the model of 18 shows a parameter that is aligned for the first
 sample only. That is a property of the world and not a defect of the harness.
 
+Known to break alignment (one list; each is a property of its module, not a defect of the harness):
+
+- **A binding right** (`spec-institutions.md` 7.3.4, ORG-N5): a run in which a right refuses an order is unaligned from the first refusal, because the refusal moves D6 to D8 and removes an order; a clamp by a legal price changes no count and keeps the pair aligned, and a declaration with nothing in force (the inert overlay, FR-ORG-017) is aligned from construction.
+- **A pair that turns discovery on or off** (`spec-technology.md` 6.3.2, TEC D16): a field with `DiscoveryBP` above 0 takes one word at construction, so the two worlds differ by one word at construction and are unaligned from the start; a pair that differs only in a rate of the module with `DiscoveryBP` unchanged takes no word in a tick and is aligned from construction.
+
 ### 7.3 How the harness checks it
 
 7.3.1. **The fingerprint.** With `Pair`, the harness records at each window

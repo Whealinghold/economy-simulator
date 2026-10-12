@@ -40,6 +40,14 @@ changes what the remaining specs must supply.
    bid, so the `Strategy` signature does not fit. A ruler that also trades uses
    `Strategy` for its orders and the policy interface for its settings. The
    interface is not created before PLC (architecture.md 4.2).
+
+   *Note, 2026-10-13 (text above kept).* `spec-policy.md` 4.7 creates the
+   interface, `Policy`, as the fifth row of the table of `architecture.md` 4.3.
+   The second sentence narrows to two objects: the treasury trades through the
+   standing orders of `spec-fiscal.md`, and a person who trades is an external
+   agent with `Directed` (`spec-policy.md` 9.2), so a policy actor is never an
+   agent that bids. The way back to one object is `spec-policy.md` open
+   question 5.
 4. **One settlement per region; a region is one market.** A town and its hamlets
    are separate regions joined by short edges. `spec-settlements.md` (later) only
    gives a region a size class from its households. Apply in `spec-regions.md`.

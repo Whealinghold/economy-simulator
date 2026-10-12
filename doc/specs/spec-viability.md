@@ -125,6 +125,7 @@ subject to
   labour   for each region rho:   sum over r of d(r) * x(r, rho)               <=  phi * H(rho)
   capacity for each activity:     x(r, rho)  <=  H(rho) * J(r, rho) / TicksPerYear   (only if J * d < TicksPerYear)
   resource for each endowment (res, rho):  sum of d(res, r) * x(r, rho)  <=  Phi(res, rho)    (only with the resources module on: `spec-resources.md` 11.1)
+  facility for each (role group g, facility class f) with `Needs`:  executions of the recipes that need f by g  <=  cap(g, f)   (only with the infrastructure module on: 4.2.2)
   x >= 0
 ```
 
@@ -133,6 +134,7 @@ groups). `phi` is the **available work share**: 1 (every tick) for the viability
 test, and the household-weighted mean of
 `ExpectedWorkTicks / TicksPerYear` for the **nominal** case (`spec-welfare-and-wages.md`
 4.2). Lanes (section 9) add columns; they change no row.
+With the infrastructure module on, a route or ground facility at full condition enters as the gain of its `BoostBP` on the transit factor of the lanes (9.4) and on the sustainable draw of the endowment (`spec-resources.md` 11), and the facility row above is the sum of the `cap` of the facilities a group holds (`spec-infrastructure.md` 13.4); `Decay` and repair are not in the programme (4.2.2).
 The resource row is the sustainable draw of an endowment: its dual is `Rent`, the value of one more unit of draw a tick (`spec-resources.md` 11.1, 11.3). With the module off there is no row and nothing changes. With an outside (`spec-external-sector.md` 12.1) the programme gains import and export columns and one trade row (4.8); with neither the programme is the closed one above.
 
 **Wants as final demand (round 5; `spec-demand.md`).** When the demand module is on, the
@@ -236,6 +238,8 @@ The real sources, now written, are three (W1 of the wave 3 integration): a recip
 The difference from `ErrUnproducible` (`spec-config.md` 7.5) is that V1 looks at
 yield, season and region: a crop that grows nowhere is producible in the sense of
 7.5 and not in the sense of V1.
+
+4.2.2. **A recipe that needs a facility** (`spec-infrastructure.md` 13.4). With the infrastructure module on, a recipe with `Needs` is **runnable in a region** only where the pack has an initial facility of the class held by that role's agents (`spec-infrastructure.md` 3.4.2); with none, the activity does not exist in that region for V1, and the warm start creates no job that needs a facility that does not exist (`ErrNotViable`, as for a missing tool). Its activity is bounded by the sum of the `cap` of those facilities per execution of a start: one row for each (role group, facility class) in 3.2. With the module off nothing changes.
 
 ### 4.3 V2: productive cycles
 
@@ -351,6 +355,8 @@ default `TargetRatio` stays 15 000 and is read as an aspiration that the whole
 population cannot meet until spending beyond upkeep or a money faucet exists, and
 whether the default should fall to 10 000 meanwhile is left open there. AGT accepts the
 glut and bounds it by the production halt (`spec-agents.md` 11.7). The money-supply module now exists (`spec-money-supply.md`): a balanced pair of grant and levy moves money between classes and leaves the mean ratio unchanged, and an unbalanced faucet raises it only while the money supply grows (`spec-money-supply.md` 8.2, 9.1); the finding is otherwise unchanged.
+
+**A steady state with employers is not a zero-profit state** (`spec-employment.md` 22 item 7). The programme prices every activity at cost with labour at the wage dual, as if every household worked for itself. With the employment module on, a hired household's output is shared by the worker share `phi` and the employer keeps `1 - phi` of the margin, so the prices of a pack with employers sit above the solver's by that margin. The programme is not changed for it, and the warm start has no hire in flight (8.1).
 
 ### 4.8 The open layer (EXT) and the resource rows (RES)
 
@@ -518,6 +524,8 @@ raised to the floor, a price of 0, and a price outside the reference band
 (`spec-beliefs.md` 3.2.1) are recorded in the report. A quantity or money amount that
 does not fit `int64` or its bound is `ErrOverflow`.
 
+`world.belief_step` moves the table only for a price that the floor binds, which is the one case in which it is not a check (11).
+
 6.5. **Residual.** After rounding, the solver recomputes the value added of each
 active activity at the integer prices and compares it with the wage times the
 duration. The largest deviation in basis points is `Report.ResidualBP`; those above
@@ -616,6 +624,8 @@ In a file: `[warm_start.region.<id>.price]` with one key per commodity,
 `wage` and `pool` under the region (`spec-config.md` 6.2). A price missing for a
 commodity falls back to the reference price; a group missing keeps the role's
 defaults; a region with no wage has an unknown wage whenever the pooled figure is unknown (8.2.5), and nothing is latched.
+
+**What the table does not carry.** The table has no claim (`spec-credit.md` 11.4), no hire in flight (`spec-employment.md` 22 item 7, 4.7), no rent column (`spec-land.md` 12.3: the money seeds are not computed from a rent circuit) and no policy state: a world made from it starts with none of them, and a pack that wants an initial claim or a hire states it itself. The modules that read nothing of the table are listed in 11 ("Not read").
 
 **Order of application.** The table states no order of its sections; the world applies them in the order of `spec-world.md` 5.6.1: the prices, the wages, then the groups (money and stock), then the jobs (after the stock, because the oldest-first moves of the job's construction step would otherwise draw on the staggered lots), then the pools. The warm start takes no random number (FR-VIA-040).
 
@@ -833,6 +843,8 @@ of virtual start offsets (`ErrWarmStartJob`); two entries for one key
 (`ErrDuplicateID`). A warm start does not need the whole table: absent entries take
 the baseline.
 
+With the storage module on, a group with a job in progress is also tested against the room at construction: its stock load plus the load of the job's pending output must fit the base room plus the given stores (`ErrRoomShape`, rule `room_below_warm_job`, `spec-storage.md` 13.1). It is a check: the room does not enter the programme and the table is not changed by it (11).
+
 ### 8.8 Beliefs
 
 BEL 8.2 starts every initial agent of a group at the same centre, so the warm start
@@ -882,10 +894,12 @@ type Lane struct {
 
 Each lane becomes an activity with net vector (`-1` at `From`, `+ (10 000 - LossBP) / 10 000`
 at `To`) and labour `Labour / 10 000` in `From`. Nothing else in the programme
-changes. Lanes are supplied by `transport.Lanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with loss 0 until RSK exists and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
+changes. Lanes are supplied by `transport.Lanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with the expected loss of `spec-risk.md` 8.3 as `LossBP` (0 with the risk module off) and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
 lanes: autarky. The option `WithFreeTrade()` adds a lane of labour 0 and loss 0
 between every pair of regions for every commodity. It is a bound for comparison and
 the case `Validate` checks (4.6); it is not a model of any world.
+
+With the infrastructure module on, a route facility at full condition raises the transit factor of the lanes of its edge by its `BoostBP` and a ground facility raises the capacity of its endowment (`spec-infrastructure.md` 13.4; `spec-resources.md` 11): a gain at full condition, a constant, so the programme stays linear. A facility with `Decay` above 0 and no repair has no steady state with it (4.2.2).
 
 9.5. **Import-dependent regions.** A region producible in the realm and not alone
 gets the warning `region_not_self_sufficient` with the list of commodities it
@@ -929,6 +943,7 @@ error rule.
 | `viability_check_skipped` | the size gate (11) was exceeded; says which part was not run |
 | `raw_without_source` | a commodity marked `Raw` that no existing activity with no inputs outputs and that no endowment, faucet or import supplies (4.2.1) |
 | `endowment_season_peak` | the draws of a start window exceed what the stock holds at the opening of the window (`spec-resources.md` 11.3); an approximation, never an error |
+| `rent_off_dual` | with the tenure module on, a configured rent of an endowment whose row binds (`Rent` above 0) more than `RentDualTolBP` from that dual, or above 0 where the row is slack (`spec-land.md` 5.6.2); LND owns the rule and the name, the solver supplies the dual; never an error |
 | `raw_source_exhaustible` | a raw commodity whose only sources are endowments of finite stocks (`spec-resources.md` 9.3); also counted by `raw_without_source`'s union of sources (4.2.1) |
 | `import_only_source` | a commodity sourced only by an import line (`spec-external-sector.md` 10.1.2) |
 | `wants_exceed_labour` | the demand module is on and the programme with the wants of 3.2 has `lambda* < 1` although the upkeep-only programme has `lambda* >= 1`: the wants are more than the labour can fund at full work. Size-gated like V3; never an error |
@@ -942,7 +957,7 @@ error rule.
 `SeedBelowCostFloor`, `SeedAboveCostCeiling` (both against the full unit cost, 8.2.3),
 `UnpricedWages` (regions with no starting wage, 8.2.5), `Drift`, `ResidualBP` and the list over
 `ResidualWarnBP`, `Census` (needed against configured households per group),
-`CapacityTight` (the activities whose capacity row is tight), `Headroom` and `Rent` (per endowment and region: the sustainable draw over the draw at the reference programme at `lambda` 1, and the dual of its row; `spec-resources.md` 11.3), `endowment_runway` (a finite stock's years at the optimum), `Advantage` (9.2),
+`CapacityTight` (the activities whose capacity row is tight), `FacilityDecay` (each facility class with `Decay` or `WearPerUse` above 0, informational: it is not in the programme, 4.2.2), `Headroom` and `Rent` (per endowment and region: the sustainable draw over the draw at the reference programme at `lambda` 1, and the dual of its row; `spec-resources.md` 11.3), `endowment_runway` (a finite stock's years at the optimum), `Advantage` (9.2),
 `CapShortened` (stock cover cut to shelf life, 8.4.2), `NominalSeed` (the regions whose
 table came from the nominal programme, 5.3.4), `SurplusWantsBP` (`lambda*` of the
 programme with the wants, absent when the module is off, 3.2), `RegionSurplusBP` (per region, the autarky `SurplusBP`, and the pooled one for a region that trades: the figures that `spec-subsistence.md` 4.2 compares with `FloorBP`; absent when a part was not run), `WageBelowTarget` (the
@@ -952,6 +967,8 @@ never an error** (WEL 7.1, N-054): with the identity of 4.7 it fails for every r
 closed economy with upkeep only, and the default `TargetRatio` of 15 000 stays
 (WEL 7.2); the report is a calibration number, and `target_above_surplus` is the only
 related warning.
+
+`Headroom` and `Rent` are the guide of `spec-land.md` 5.6: with the stock slack (`Headroom` above 1) the commons serves everyone and a rent is never charged; the warning `rent_off_dual` (10.2) compares a configured rent with the dual. The programme is not edited for tenure (`spec-land.md` 12.1).
 
 ## 11. Parameters
 
@@ -1009,13 +1026,18 @@ it (`spec-calibration.md` 4.2.1 reads it so).
 | `resources.resource.<id>.*`, `resources.endowment.<region>.<resource>.*`, `resources.horizon_years` | the resource row `Phi` and the abundance factor of `E` (3.1, 3.2, 4.8) | yes (module on) |
 | `demand.want.<id>.*`, `demand.taste.<role>.<want>.*`, `demand.region_taste.<region>.<want>.*` | the fixed term `W(c, P)` of the goods row (3.2) | yes (module on) |
 | `modules.transport.modes.*`, `region.<id>.edge.<id>.distance` | the lanes a consumer passes (9.4); the pooled programme reads the region graph only through them | yes (when lanes are used) |
+| `modules.infrastructure.*` | the facility row of each (role group, facility class) with `Needs`, the runnable test of V1 where an initial facility is held, and the gains of a route or ground facility at full condition (3.2, 4.2.2, 9.4); `Decay` and repair are not read | yes (module on) |
 | `module.external.node.*` | the import and export columns and the trade row of the open layer (4.8) | yes (module on) |
-| `commodity.<id>.reference_price`, `region.<id>.reference_price.<commodity>`, `world.belief_step`, `world.cost_floor`, `world.cost_ceiling`, `world.ref_band_low`, `world.ref_band_high` | the fallback and the checks of a seed price (8.2.2 to 8.2.4); the prices are an output of the programme, not an input | no (a check) |
+| `world.belief_step` | the resolution floor `ceil(10 000 / BeliefStep)` of a seed price (6.4); read by the programme only for a price at the floor, and by the checks of 8.2.2 to 8.2.4 | yes (a price at the floor only) |
+| `commodity.<id>.reference_price`, `region.<id>.reference_price.<commodity>`, `world.cost_floor`, `world.cost_ceiling`, `world.ref_band_low`, `world.ref_band_high` | the fallback and the checks of a seed price (8.2.2 to 8.2.4); the prices are an output of the programme, not an input | no (a check) |
+| `modules.storage.*` | the rule `room_below_warm_job`: a job of the table tested against the room at construction (8.7); the room is not in the programme | no (a check) |
+| `modules.institutions.control.<id>.*` | the warning `cap_below_seed_cost`: a control's cap against the full unit cost at the table's prices (`spec-institutions.md` 10.2, 8.2.3); a price is an output of the programme, so no table moves | no (a check) |
+| `modules.tenure.terms.*` | the warning `rent_off_dual`: a configured rent against the dual `Rent` of its row (10.2, 10.3); titles and holdings are not read | no (a report) |
 | `role.<id>.target_ratio`, `role.<id>.target_spread`, `world.welfare_window`, `world.window_cycles` | the reports `target_above_surplus` and `subsistence_exceeds_expected_work` (4.4, 10.2) and the longest job of the money rule (8.3.1) | no (a report) |
 
 Not read: the spawner, the migration, information, merchant and subsistence modules,
 the money flows (a balanced pair adds no real demand or supply, 8.3.1), the population
-module, the seed, the options and every presentation-only field. The consumer
+module, the settlements module (the table does not read a class, `spec-settlements.md` 6.4.4), the employment module (no hire in flight, 8.1), the credit module (no claim, 8.1), the risk module (a lane's loss reaches the programme through `Lanes`, 9.4, a derived input and not a path of the table), the insurance module, the polity module, the fiscal module (the programme counts none of its flows: `spec-fiscal.md` 21.2), the policy and saving modules, the technology module (a gain is 0 at tick 0, so no parameter of `modules.technology.*` moves the table or needs a regenerated one: `spec-technology.md` 3.3.2), the seed, the options and every presentation-only field. The consumer
 (`spec-calibration.md` 4.2.1 flags a knob that moves the table with its own mark) adds
 its flags to this list; none is decided here.
 
@@ -1328,7 +1350,7 @@ spec is written):
 4. **More than one recipe per role.** The solver lets households pick any recipe of
    the region; AGT's rule picks by expected net value. If the two disagree the warm
    start's jobs are not what the strategy would start. Check once AGT exists.
-5. **Lanes.** Answered for transport: `transport.Lanes` supplies them (`spec-transport.md` 9.4; labour only, loss 0 until RSK). Who uses them for a merchant's decision belongs to MER.
+5. **Lanes.** Answered for transport: `transport.Lanes` supplies them (`spec-transport.md` 9.4; labour only, with the expected loss of `spec-risk.md` 8.3: 0 with the risk module off). Who uses them for a merchant's decision belongs to MER.
 6. **A default pool.** Whether the warm start seeds the estate pool by default
    (8.3.3) so the first replacements have money.
 7. **Exact arithmetic in Go.** `math/big` is standard library and exact; whether its

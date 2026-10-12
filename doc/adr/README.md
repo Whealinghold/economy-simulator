@@ -13,6 +13,10 @@ shaped that way and is where a later reader looks when they want to reverse it.
 - One decision per ADR. A decision that changes an earlier one is a new ADR that
   says `Supersedes: NNNN`; the old ADR keeps its text and gets the status
   `Superseded by NNNN`.
+- A decision that changes only one clause of an earlier one, and leaves the rest
+  standing, is a new ADR with `Supersedes: none` and `Narrows: NNNN decision N`.
+  The old ADR keeps its text and its status; a dated note under the decision
+  points to the new one, and the new ADR is listed in the index.
 - Status is one of: `Proposed`, `Accepted`, `Rejected`, `Deprecated`,
   `Superseded by NNNN`.
 - A decision that conflicts with a rule in `doc/rules/` is not valid until the
@@ -27,6 +31,7 @@ shaped that way and is where a later reader looks when they want to reverse it.
 - Status: Proposed | Accepted | ...
 - Date: YYYY-MM-DD
 - Supersedes: none (or NNNN)
+- Narrows: (optional) NNNN decision N
 
 ## Context
 ## Decision
@@ -45,6 +50,7 @@ shaped that way and is where a later reader looks when they want to reverse it.
 | [0003](0003-version-1-scope.md) | Version 1 scope: the slice, version 1 and later | Accepted |
 | [0004](0004-outside-trades-through-pass-through-counterparties.md) | The outside trades through pass-through counterparties | Accepted (human review pending) |
 | [0005](0005-delivery-contracts-are-matched-by-a-first-fit-round.md) | Delivery contracts are matched by a first-fit round | Accepted (human review pending) |
+| [0006](0006-structural-rank-may-gate-entry-rights-and-places.md) | A derived structural rank may gate an entry, a right or a place; no agent reacts to an aggregate | Accepted (human review pending) |
 
 ## Updating this file
 

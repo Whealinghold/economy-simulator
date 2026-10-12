@@ -52,3 +52,14 @@ if __name__ == '__main__':
         print('step %5d  ' % step, '  '.join(row))
     print('with the band narrowed to 8000..12000 bp of base 40, step 1000, delay 3:', run(1000, 3, floor_bp=8000, ceil_bp=12000))
     print('with the supply above the demand at the floor (60 units): the rent falls to the floor', run(500, 1, supply=60))
+    print()
+    print('half-span about the clearing rent 70 against 3 * step * (delay + 1) / 4 (step in money: 40 * bp / 10000);')
+    print('a cycle is bounded inside the band [20, 80] when the half-span is below 10 (80 - 70), the nearer bound')
+    print('step_bp step delay observed(min,max) half-span-below half-span-above estimate bounded-by-estimate hits-bound')
+    for bp in (100, 250, 500, 1000, 2500):
+        st = max(1, 40 * bp // 10000)
+        for delay in (0, 1, 3, 8):
+            lo, hi = run(bp, delay)
+            est = 3 * st * (delay + 1) // 4
+            print('%6d %4d %5d (%d,%d) %d %d %d %s %s' % (bp, st, delay, lo, hi, 70 - lo, hi - 70, est,
+                  est < 10, hi == 80 or lo == 20))

@@ -1,2 +1,2 @@
-500 scenarios: hires formed 1045 | unmatched households / positions closed by reason: {'no_vacancy': 3888, 'employer_funds': 492, 'no_input': 731, 'too_many': 164, 'below_unit': 2}
+500 scenarios: hires formed 1048 | unmatched households / positions closed by reason: {'no_vacancy': 3885, 'employer_funds': 484, 'no_input': 726, 'too_many': 169, 'below_unit': 2}
 every step: total money constant, balances non-negative, escrow >= wage * k * ticks left, wage within [reserve, bid], escrows empty at the end

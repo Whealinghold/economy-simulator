@@ -76,11 +76,11 @@ Out of scope, with the owner:
 |----------|-------|
 | The stock, its regeneration, the snapshot and the ration among requests without tenure | `spec-resources.md` (RES) |
 | A purchase decision (an agent that buys a title because the rent is worth more than the price), credit to buy one, a market for titles | `spec-saving-and-investment.md` (SAV), `spec-credit.md` (CRD); this spec gives the transfer they will call (6.3) |
-| Taxes on rent, a land tax, a tenure levy of a ruler | `spec-fiscal.md` (FIS); a money flow of `spec-money-supply.md` on a holder role is available now |
+| Taxes on rent, a land tax, a tenure levy of a ruler | `spec-fiscal.md` (FIS): a tax on rent is not offered; a tax on the holder role is `spec-fiscal.md` 5; a money flow of `spec-money-supply.md` on a holder role is available now |
 | A charter, an exclusive right, a rent control as law, a guild's claim | `spec-institutions.md` (ORG); the slot of 9.1 is the mechanism they will set |
-| Fixed capital that raises an endowment's capacity (irrigation, drainage) and who owns it | `spec-infrastructure.md` (CAP), which uses the capacity slot of RES 6.3 |
-| Loss of a title by conflict, a seizure, a siege | `spec-risk.md` (RSK), through the call of 6.3 |
-| A jurisdiction in which a holding is legal | `spec-polity.md` (POL) |
+| Fixed capital that raises an endowment's capacity (irrigation, drainage) and who owns it | `spec-infrastructure.md` (CAP), which adds a layer multiplied into the effective capacity (its 5.3), not a write to the capacity slot of RES 6.3 |
+| Loss of a title by conflict, a seizure, a siege | not RSK's in version 1: RSK names no cause and has no actor that moves a title; a title is not goods; the consumer's call of 6.3 |
+| A jurisdiction in which a holding is legal | `spec-polity.md` (POL) supplies the key (a jurisdiction); a table keyed by jurisdiction, with the combining modes of `spec-polity.md` 6.1.2, is this spec's or ORG's |
 | Renting room to another agent, a keeper's business | `spec-storage.md` open question 2; a contract, not tenure of a stock |
 | Holding a unit of the stock for the length of a job (a concurrency limit, not a flow) | open question 1 of RES; not modelled here either (20.1) |
 | The public calls and queries as such | `spec-integration.md` (INT, section 9) |
@@ -90,19 +90,19 @@ Out of scope, with the owner:
 | # | Question | Position | Why |
 |---|----------|----------|-----|
 | 1 | What is tenure? | A **title** is a share, in basis points, of the snapshot stock of one endowment, held by one **holder**. The shares of an endowment never sum above 10 000; the untitled remainder is the **commons share**. A title changes who may draw and who is paid when another draws. It does not split the stock | RES keeps one stock per (region, resource) and the ration reads it once per tick (RES 5.2). A share of that scalar is the minimum that gives the three hooks a subject. A sub-stock per title would reimplement regeneration per title (section 20, question 2) |
-| 2 | Is it a module? | Yes: `Modules.Tenure`, present means on, needs `Modules.Resources` (`ErrModuleDependency`). With it off, or with no row for an endowment, the ration is RES 5.3 and every result is bit-identical to a world without this spec | ADR 0001 decision 2: the zero configuration is the tested baseline; the open-access result is the baseline tenure is measured against (RES 10.1) |
+| 2 | Is it a module? | Yes: `Modules.Tenure`, present means on, needs `Modules.Resources` (`ErrModuleDependency`). With it off, or with no row for an endowment, the ration is RES 5.3 and every result, event (but `WorldCreated`) and draw is that of a world without this spec (FR-LND-006) | ADR 0001 decision 2: the zero configuration is the tested baseline; the open-access result is the baseline tenure is measured against (RES 10.1) |
 | 3 | Who may hold a title? | An agent (a household, a cohort or an external agent, as one holder whatever its weight) or **the pool**, the estate pseudo-agent of the endowment's region. Nothing else: no company, no association, no jurisdiction (6.3, 7.7) | The estate is the one holder the world already has that is not a household (`spec-estates.md` 2); a group holder is ORG's and POL's |
 | 4 | What does a title give? | The **entitlement**: before the ration, a share of the tick's snapshot stock that only its principal may draw on first, by an exact apportionment (4.2). What the holder does not use is **let** to the requests the commons did not serve, at the posted rent, unless the endowment is `Closed` | RES 10.2 hook 2 ("a holder's share is its own and the remainder is shared as today"). Letting what is idle is what makes tenancy exist without a contract; closing it is the data switch for an exclusive right |
 | 5 | In what order is a request served? | Own entitlement, then the commons (free), then the let units (paid). A request that is served in a tier pays only for what it draws in the third | A free unit is taken before a paid one, so rent arises only at the margin where the free stock is spent: the Ricardian reading of rent, and a damper on the price of access |
 | 6 | What is rent? | A **transfer** of money, per unit drawn from let units, from the principal that runs the job to the lessors, with one new internal ledger reason `rent`. It is not a money flow of MON: a flow is a boundary flow on a class of households with no counterparty, and rent has a payer, a payee and a base that is a draw. It creates and destroys nothing | N-107 says to add a built-in reason "only for a mechanism that is not a grant or a levy"; this is that case. N-108 and RES 10.2 name the form "a named money flow"; 5.1.2 gives the reason it is not (MON 4.3, 10.3) |
 | 7 | How is the rate chosen? | **Data**: a rate per unit drawn per (region, resource), with the solver's dual `Rent` (RES 11.3) as the guide and the warning `rent_off_dual`. An optional bounded **step** moves the posted rent with the units unserved, inside a band that is a fraction of the configured rate. Default: the rate does not move | "Valued at the dual of the resource row" (RES 10.2). A rate that follows a measured aggregate is refused by WLD 9.4.1; the units unserved at one endowment are that endowment's own market, like BEL's unmatched units |
-| 8 | Does rent enter prices? | Yes, by the cost anchor: the rent of a drawn unit at the posted rate is an input cost of the recipe, for a holder's own units too (an owner could let them) | Without it rent changes who is paid and nothing else, and RES-A5 has no damper. PRO 9.1 said "endowment draws are not priced"; the edit owed there is one line (section 18) |
+| 8 | Does rent enter prices and choices? | Yes, in two places: the cost anchor of PRO 9.1 (the belief update) and the default strategy's `cost_r` (AGT 7.1.4, the recipe choice, through `Posted` of the view): the rent in force of a drawn unit is a cost of the recipe, for a holder's own units too (an owner could let them) | Without it rent changes who is paid and nothing else, and RES-A5 has no damper. PRO 9.1 said "endowment draws are not priced" and AGT 7.1.4 reads no draw; the edits owed there are one line each (section 18) |
 | 9 | Who pays when a job is hired or a trainee works? | The **principal**: the account whose inputs the job uses. Holder status is the principal's, so a worker on the employer's draw is on the employer's title | EMP 6 and SKL 4: a hired or trained job runs on the principal's account (PRO 4.3) |
-| 10 | What if the principal cannot pay? | The executions it can pay for start, and the others do not; with none the refusal is `rent_funds`. The rent is never a debt | There is no credit in version 1 (`spec-ledger.md` 10); a start that cannot be paid is refused, as a bid is (`insufficient_funds`) |
-| 11 | How is a title acquired, moved and lost? | At construction by configuration (a share per household of a role, or the pool); by the public call `TransferTitles` between ticks (a consumer, later SAV, CRD, RSK, ORG); on the removal of a holder it passes to the pool of the endowment's region, and nothing hands it back in a run. There is **no in-run purchase decision** in version 1 | EST 2: "no heirs, no wills". A decision to buy is an investment decision (SAV) and needs a plan field of `Strategy`, which this spec does not add |
+| 10 | What if the principal cannot pay? | The executions it can pay for start, and the others do not; with none the refusal is `rent_funds`. The rent is never a debt | Credit is an optional module (`spec-credit.md`) and a rent is never a debt; a start that cannot be paid is refused, as a bid is (`insufficient_funds`) |
+| 11 | How is a title acquired, moved and lost? | At construction by configuration (a share per household of a role, or the pool); by the public call `TransferTitles` between ticks (a consumer, SAV, CRD, ORG); on the removal of a holder it passes to the pool of the endowment's region, and nothing hands it back in a run. There is **no in-run purchase decision** in version 1 | EST 2: "no heirs, no wills". A decision to buy is an investment decision (SAV) and needs a plan field of `Strategy`, which this spec does not add |
 | 12 | Does a title bind its holder to the region? | **No `region_bound` refusal.** Nothing about a title needs the holder's account in the region: rent is a transfer between accounts, and the entitlement is read from the executor's own region where the job runs | N-090: the rule is for an obligation that needs the account in the region. A tenant has no commitment: it draws day by day (7.2) |
 | 13 | How does a SUB household fare? | An own-use request is a request. It pays rent like any other unless the module field `OwnUseExempt` is set; where the endowment is closed to it, the household is `Blocked` with the reason `no_title` or `rent_funds` | SUB 9.5 states the hook; the exempt switch is the "right of the landless to draw for their own use" it names. Default: the rule applies to all alike |
-| 14 | A new refusal reason? | `no_title` and `rent_funds`, after `no_endowment` and before STO's `no_room` in the order of PRO 4.2 | RES 10.2 hook 1; the order keeps `no_room` last (STO 5.3) |
+| 14 | A new refusal reason? | `no_title` and `rent_funds`, after `no_endowment` and before CAP's build reasons and STO's `no_room` in the master order of PRO 4.2 | RES 10.2 hook 1; the order keeps `no_room` last (STO 5.3) |
 | 15 | Does it draw from the random source? | **No.** The leftovers of an apportionment go by the stateless key of RES 5.3.3 and the ID. The stream of a world does not depend on whether the module is on | WLD 7.4.2; the rule for a new tie is WLD 10.1.1 |
 | 16 | What is saved? | Per titled endowment: the holders with their shares, the posted rent when it can move, two diagnostic runs; the non-default rent scales. All plain data, sorted, no maps | ADR 0002; N-128: a title is saved once, here, and not in the agent record (6.5) |
 | 17 | Does it add feedback loops? | Yes: the rent step against a delayed response, the priced-out tenant, rent and the target-income rule, erosion of private titles into the pool, concentration through transfers, enclosure and flight, rent drained into a pool (section 16) | `spec-stability.md` 9: a spec that adds a loop and no entry is not done |
@@ -244,7 +244,8 @@ has a title, in (`RegionID`, `ResourceID`) order:
    its results do not depend on tenure.
 3. **The ration** (P2.6): the tiers of 4.3, in order, with the apportioned units of step 1.
 4. **The start** (P2.7): `k` is the least of `k0`, the grants and the live inputs, as in RES
-   5.4, and then the largest number of executions whose rent the principal can pay (5.4).
+   5.4, and then the largest number of executions whose rent the principal can pay (5.4); the
+   lessor supplies and the transfers follow on the units taken (5.3.1).
 
 ### 4.2 The entitlement
 
@@ -298,14 +299,18 @@ or the trainer (position 9).
 2. **Commons.** The residual demands `w_i - o_i`, over all requests, are rationed against
    the commons entitlement `E_0` by the rule of RES 5.3.2. The grants are `c_i`. The
    commons is **free**: no rent is charged for a unit of this tier.
-3. **Let.** Unless the endowment is `Closed`, the supply is `L = sum of U'_h` over all
-   holders, with `U'_h = U_h` clipped to the units that the holder's balance can receive at
-   the rent in force, `floor((MaxMoney - balance) / r)` when `r` is positive (it never binds
-   within the bounds of `spec-money-supply.md` 6.4.2 and is stated so that no transfer of
-   5.3 can fail). The demands that remain, `w_i - o_i - c_i`, are rationed against `L` by
-   the same rule. The grants are `t_i`. Their units are **let units**, for which rent is
-   charged (5.3). With `Closed` the supply is 0 and `t_i = 0`: the unused entitlement stays
-   in the stock. In what follows `U_h` is the clipped value where it enters the supply.
+3. **Let.** Unless the endowment is `Closed`, the supply is `L = sum of U_h` over all
+   holders. The demand of a request for this tier is what remains, `w_i - o_i - c_i`, **clipped
+   to the executions its principal can pay at the rent in force**,
+   `ŵ_i = min(w_i - o_i - c_i, floor(balance / (r * d_i)))` when `r` is positive and the
+   request is not exempt (5.3.4), the balance being the principal's at P2.6 (no reservation
+   is open in P2, `spec-world.md` 6.1.6). The clip is per request: a principal with several
+   requests, or draws on several endowments, can still be cut at the start (5.4). The units a
+   request is clipped by are **priced out**: `(w_i - o_i - c_i - ŵ_i) d_i` (counted in
+   `RentPaid.PricedOut`, and in no step of the posted rent, 5.5.1). The clipped demands are
+   rationed against `L` by the same rule. The grants are `t_i`. Their units are **let units**,
+   for which rent is charged (5.3). With `Closed` the supply is 0 and `t_i = 0`: the unused
+   entitlement stays in the stock, and is counted in `RentPaid.Held` (13.1).
 4. **The grant** of a request is `g_i = o_i + c_i + t_i` executions, at most `w_i`, and the
    units it draws are `g_i d_i`. The units taken in all tiers sum to at most `A`
    (FR-LND-011). Units of any tier that the starts do not take (for the reasons of RES
@@ -332,35 +337,45 @@ sets of tiers; its grants are independent and `k` is the least of them, exactly 
 
 ### 4.4 Who is on which unit: lessors, tenants and the attribution
 
-4.4.1. The units let in tier 3 are drawn from the unused entitlements. Let `G3` be the
-units the let grants take, `sum of t_i d_i`. The **supply** of each **lessor** `h` (a holder
-with `U_h > 0`) is the apportionment of `G3` by the weights `U_h`, by the largest
-remainder with the same key and ID ties as 4.2.1: `S_h <= U_h`. This is exact: a holder
-whose unused entitlement is half of the let supply supplies half of what was drawn, so
-rent is shared in proportion to what each held idle and never in the order of the IDs (a
-lower ID is not first, WLD 10.1.1).
+4.4.1. The units let in tier 3 are drawn from the unused entitlements. Let `V` be the let
+units the starts **took** (P2.7, after the cut of 5.4: `V <= sum of t_i d_i <= L`). The
+**supply** of each **lessor** `h` (a holder with `U_h > 0`) is the apportionment of `V` by
+the weights `U_h`, by the largest remainder with the same key and ID ties as 4.2.1:
+`S_h <= U_h` (for `V <= L = sum of U_h`, `ceil(V U_h / L) <= U_h`). This is exact and is
+computed on what was drawn, not on what was granted: a holder whose unused entitlement is
+half of the let supply supplies half of what was drawn, whatever tenant was cut, so rent is
+shared in proportion to what each held idle and never in the order of the IDs (a lower ID
+is not first, WLD 10.1.1).
 
-4.4.2. **Attribution.** The tenants are the requests with `t_i > 0`, in ascending agent
+4.4.2. **Attribution.** The tenants are the requests that took let units, in ascending agent
 ID; the lessors in ascending agent ID (the pool first, its ID being a `RegionID`). Walk
-both lists with two pointers, assigning each tenant's `t_i d_i` units to the lessors'
-remaining `S_h` in order. The result is a list of triples (tenant, lessor, units). It is a
-function of the grants and the supplies, so it needs no state and no draw. A tenant that is
-its own lessor (a holder whose request exceeds its entitlement by less than an execution
-and which is assigned units of its own `U_h`) is assigned them like any other and the
-transfer to itself is skipped (5.3.3); the units still count as let.
+both lists with two pointers, assigning the units each tenant took (the `k` of its start,
+after the own and commons executions, 5.3.2, times `d_i`) to the lessors' remaining `S_h`
+in order. The result is a list of triples (tenant, lessor, units). It is a
+function of the units taken and the supplies, so it needs no state and no draw. A tenant
+that is its own lessor (a holder whose request exceeds its entitlement by less than an
+execution and which is assigned units of its own `U_h`) is assigned them like any other and
+the transfer to itself is skipped (5.3.3); the units still count as let.
 
 4.4.3. **What the attribution decides.** It fixes who pays whom and nothing about who
 draws: all units are of one stock and one quality, the tenants were chosen by the ration
-and the lessors' supplies by the apportionment of 4.4.1. The walk in ascending IDs gives no
-lower ID a larger share of rent or of units.
+and the lessors' supplies by the apportionment of 4.4.1. Each lessor is paid for exactly
+`S_h` units whichever tenant was cut, so the walk in ascending IDs gives no lower ID a
+larger total of rent or of units; it only decides which pairs the ledger entries record.
+Every tenant pays `r` times the units it took and every lessor receives `r * S_h`
+whatever the pairing, so no balance and no sector total depends on it.
 
 ### 4.5 What the grants cost: the reasons
 
 4.5.1. The grant `g_i` limits the start as RES 5.4 says. A request whose `k0` was positive
-and whose start is 0 is refused with the first of the reasons of `spec-production.md` 4.2:
-`zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`, **`no_title`**,
-**`rent_funds`**, then `no_room` (with the storage module on). `no_endowment` and
-`no_title` are told apart by rule, not by competition:
+and whose start is 0 is refused with the first of the reasons of the master order of
+`spec-production.md` 4.2 (which owns it): `zero_yield`, `no_site`, `no_tool`,
+`no_facility`, `no_input`, `no_endowment`, **`no_title`**, **`rent_funds`**, then CAP's
+`not_unlocked`, `facility_cap`, `no_target`, `store_refused` and `nothing_to_repair`
+(`spec-infrastructure.md` 4.2.2), then `no_room` (with the storage module on); a request off
+the role's list is `not_on_role` and one off a right's `produce` is `not_permitted`, both
+before `k0` is computed. `no_endowment` and `no_title` are told apart by rule, not by
+competition:
 
 - `no_title`: the request's draw is refused because **by rule no unit of the stock is open
   to its principal**. With `A_i = E_p + E_0 + (Closed ? 0 : sum of E_h for h not p)` the
@@ -370,8 +385,9 @@ and whose start is 0 is refused with the first of the reasons of `spec-productio
   transfer or by opening the endowment.
 - `no_endowment` is every other case of a zero grant: the stock is too thin (`A < d`) or
   the competition took what was open to it. This is RES's reason and is unchanged.
-- `rent_funds`: the grants allowed at least one execution and the principal cannot pay the
-  rent of any of them (5.4).
+- `rent_funds`: the start is 0 and the principal's balance is what made it 0: the request
+  was priced out of the let tier (`ŵ_i` below its residual demand, 4.3 step 3) or its let
+  executions were cut for rent at the start (5.4), and nothing was taken in the other tiers.
 
 4.5.2. The view (RES 5.5.1) gains the `Endowments` fields of 4.6 so a strategy can avoid
 a request that the world would refuse. `MaxExecutions` is bounded by `floor(A_i / d)` and
@@ -389,9 +405,16 @@ strategy that wants it asks nothing of the library (INT's query `Holders` is for
 consumer, 9.3). This is the endowment rule of RES 5.5.1 (N-106) applied to a second kind of
 local state.
 
-4.6.2. The default strategy reads none of the new fields. It reads the effective yield and
-the unit cost (AGT 7.1.4), which carry the rent through the cost anchor (5.7), and it asks
-for the executions its inputs and the view allow; a start the world cuts for rent is
+4.6.2. The default strategy reads one of the new fields, `Posted`, and no other. AGT 7.1.4
+chooses a recipe by `net_r = value_r - cost_r` with `cost_r` the inputs and the tool wear
+at the agent's own beliefs, and does not read the cost anchor (`UnitCost` is the anchor of
+the belief update, AGT 6.4). With this module on, `cost_r` gains `rent_cost_r = sum over
+Draws of d * Posted` (the rent in force of the view, which is what a unit of the draw
+would cost at the margin, for a holder's own unit too: 5.7.2); an edit to AGT 7.1.4 is owed
+(18.2) and the choice is tested (FR-LND-020). A **source** recipe stays eligible at
+`net_r <= 0` (AGT 7.1.4): rent does not stop a household that must work to eat; it moves
+the choice among recipes and the eligibility of the recipes that have inputs. The strategy
+asks for the executions its inputs and the view allow; a start the world cuts for rent is
 counted and not hidden (13.1).
 
 ### 4.7 Cohorts, principals and hires
@@ -403,10 +426,24 @@ entitlement is a share of the stock for the agent, not per household.
 
 4.7.2. **A hired job** (EMP) runs on the employer's account: its request's principal is
 the employer, the employer's title is the entitlement of the job, and the employer pays any
-rent. **A traineeship** (SKL 4) is the same with the trainer. EMP's formation check order
-(FR-EMP-023) gains `no_title` and `rent_funds` after `no_endowment` and before `no_room`
-(section 18); a vacancy that is refused for tenure counts in `LabourRound` under the
-fields EMP names (`NoEndowment` and its two new neighbours, owed there).
+rent. **A traineeship** (SKL 4) is the same with the trainer. EMP forms a hire at P2.5a,
+before the ration of P2.6, so at formation the units let and the rent are not known; the
+checks of FR-EMP-023 gain tenure as **bounds**, not as the outcome:
+
+- `no_title` after `no_endowment` and before CAP's build reasons and `no_room` (the master order of `spec-production.md` 4.2), by the rule of 4.5.1 (it needs only
+  the stock and the holdings, which are fixed for the tick);
+- `rent_funds` only when the principal cannot pay even the **least** rent the job could
+  owe: the rent of the let units that remain after its own entitlement and the whole
+  commons entitlement (`max(0, m * d - E_p - E_0)` units, at the rent in force), which is 0
+  when its own entitlement covers the draw. A principal that can pay that bound forms the
+  hire; whether it can pay the rent the ration really leaves is decided at P2.7 (5.4).
+
+What can still cut a hire after formation is, as for the ration and the room, a cut at the
+start: EMP 5.5.1 and 6.1.3 gain "a rent cut" beside "a ration or room cut" (section 18);
+the wages of the unstarted executions are refunded under `wage_refund`, and with `k` = 0 the
+hire ends `not_started` with the escrow refunded. A vacancy refused at formation for tenure
+counts in `LabourRound` under the fields EMP names (`NoEndowment` and its two new
+neighbours, owed there).
 
 4.7.3. **A holder who is also an executor and a principal** of several requests is
 handled by 4.3 step 1: its entitlement is rationed among them like any supply.
@@ -449,8 +486,9 @@ cannot be matched per draw. N-107 allows exactly this case ("a built-in ledger r
 for a mechanism that is not a grant or a levy") and MON's positions are kept: **no faucet
 reads an aggregate** (rent reads the units drawn this tick, a flow of one endowment, not a
 balance or a total), and **a counterparty is never a boundary** (the lessors are agents or
-the estate). A tax on a holder or on rent is a MON levy on the holder role, or FIS's, and is
-a sink; this spec adds none.
+the estate). A tax on a holder is a MON levy on the holder role or FIS's tax on it
+(`spec-fiscal.md` 5), and is a sink; a tax on rent itself is not offered (`spec-fiscal.md` 24 question 3);
+this spec adds none.
 
 5.1.3. **What rent is not.** Not a price in the market: no order, no clearing, no belief.
 Not a debt: it is paid at the start of a job or the job does not start (5.4). Not a
@@ -482,28 +520,44 @@ the units let is computed in 128 bits and an overflow is treated as unaffordable
 
 ### 5.3 The charge and the payee
 
-5.3.1. **When.** At the start of the job, in P2.7, inside the same atomic step that takes
-the inputs and the draws (PRO 4.3, RES 5.4.1): the principal pays `r` for each unit it
-draws from a let unit, and the lessors are paid. The rent of a multi-tick job is charged
-once, at its start, for the units it drew, as the inputs are. An abandoned job returns no
-rent (RES position 14: the draw is not returned).
+5.3.1. **When.** At the start of the job, in P2.7: the principal pays `r` for each unit it
+draws from a let unit, and the lessors are paid. P2.7 has two passes over the tick's starts,
+which are one atomic step in effect (no other position runs between them, and a start of
+pass 1 has reserved its rent in the principal's scratch balance, 5.4.1, so pass 2 cannot
+fail for lack of funds):
+
+1. **The starts** take the inputs and the draws, in the order of RES 5.4, each with the
+   `k` of 5.4 (the least of the grants, the live inputs, the room and the rent its
+   principal can still pay). The let units the starts took in all are `V` (4.4.1).
+2. **The charge**: the supplies of the lessors are the apportionment of `V` (4.4.1), the
+   attribution of 4.4.2 pairs tenants and lessors, and the transfers of 5.3.3 are made, in
+   (`RegionID`, `ResourceID`) order, then by tenant and lessor ID.
+
+The rent of a multi-tick job is charged once, at its start, for the units it drew, as the
+inputs are. An abandoned job returns no rent (RES position 14: the draw is not returned).
 
 5.3.2. **How much.** The executions of the job are served in the order own, commons, let
 (a job of `k` executions uses `min(k, o_i)` own, then up to `c_i` from the commons, then
 the rest from let units). The let units it takes are `max(0, k - o_i - c_i) * d_i`, and its
 rent is `r` times that. The units are attributed to lessors in the order of the triples of
-4.4.2 for this tenant, taking from the first triple; a tenant that took fewer units than it
-was granted (because `k` was cut) is charged for the first of its units and the rest are
-not taken. The rent paid to each lessor is `r` times the units attributed to it.
+4.4.2 for this tenant, taking from the first triple; the supplies are those of the units
+actually taken, so a tenant that took fewer units than it was granted (because `k` was cut)
+leaves no lessor's supply above what was drawn (4.4.1). The rent paid to each lessor is
+`r` times the units attributed to it.
 
 5.3.3. **Transfers.** One transfer per (tenant, lessor) triple used, reason `rent`, from the
 principal's account to the lessor's (the agent's account, or the estate account of the
 endowment's region for the pool). A transfer whose payer and payee are the same account is
-skipped, with the units still counted as let. The transfers of a start are made after the
-inputs and the draws are taken and before the job is created; they cannot fail (5.4 makes
-the money available) and one that is refused for any other reason is a programmer error that
-panics with a message that says so (architecture.md 8.1, `spec-ledger.md` 12.2). The
-number of transfers a tick is bounded by tenants plus lessors per endowment.
+skipped, with the units still counted as let. The payer's side cannot fail (5.4.1 reserved
+the money). The **payee's side** is bounded as MON bounds a credit
+(`spec-money-supply.md` 6.4.1): a payee whose balance would pass `MaxMoney` receives only
+`MaxMoney - balance`; the part that it cannot receive is **not charged** to the payer and is
+counted in `RentPaid.Forfeited` (money). The units are still drawn and counted as let. This
+makes the transfer total: no transfer of 5.3 can be refused by the ledger
+(`ErrBalanceOverflow`, FR-LED-006), and nothing in this step panics. It is a bound that
+`spec-money-supply.md` 6.4.2 does not rule out (the supply is bounded, one balance is not),
+reached only by an account near `MaxMoney`. The number of transfers a tick is bounded by
+tenants plus lessors per endowment.
 
 5.3.4. **An exempt request.** With `OwnUseExempt` set, a request for a recipe of the
 principal's effective own-use list (`spec-subsistence.md` 3.6) is charged **no** rent: its
@@ -514,18 +568,28 @@ switch of this spec that takes from a holder, and it is data, default off (posit
 ### 5.4 What a principal that cannot pay gets
 
 5.4.1. At the start the principal's balance is what it can spend: no reservation is open in
-P2 (`spec-world.md` 6.1.6). Rent is the only claim on it in this step. Let `k_other` be the
-executions the start would take by RES 5.4 and `R(k)` the total rent of `k` executions over
-all its draws, `sum over its draws of r * d * max(0, k - o - c)`. `R` is non-decreasing in
-`k`. The start uses the **largest `k <= k_other` with `R(k) <= balance`**, found by
-bisection over `k` (the cost is `O(log w)` per start; `w` is at most `MaxWeight`). The
-executions between that `k` and `k_other` are not started and their units stay in the
-stock.
+P2 (`spec-world.md` 6.1.6). Rent is the only claim on it in this step, and a principal may
+have several starts in the tick (several requests, several draws), so the starts of pass 1
+(5.3.1) run in the order of RES 5.4 and each **reserves its rent in a scratch balance of the
+principal**: the money available to a start is the balance less the rent that the earlier
+starts of the same principal reserved. Let `k_other` be the executions the start would take
+by RES 5.4 and `R(k)` the total rent of `k` executions over all its draws, `sum over its
+draws of r * d * max(0, k - o - c)`. `R` is non-decreasing in `k`. The start uses the
+**largest `k <= k_other` with `R(k) <= available`**, found by bisection over `k` (the cost is
+`O(log w)` per start; `w` is at most `MaxWeight`). The executions between that `k` and
+`k_other` are not started and their units stay in the stock (they are `CutUnits`, and they
+are idle let units in the sense of 5.5.1). The clip of 4.3 step 3 makes the cut rare:
+it acts before the ration so that a principal with no cash does not take let units from a
+principal who can pay (the escrow of wages, P2.5a, is already out of the balance it reads);
+the cut here is what the clip could not see: the sum over several requests, or several draws
+on several endowments, of one principal.
 
 5.4.2. If that `k` is 0 and `k_other` was positive the request is refused with `rent_funds`
 and nothing is taken. No debt, no carried amount, no partial charge: a start that cannot be
 paid in full does not begin. A household whose job is refused for rent is a household
-that does not earn this tick, and the loop of section 16 (LND-A2) is the cost.
+that does not earn this tick, and the loop of section 16 (LND-A2) is the cost. A request
+whose let demand was clipped to 0 at 4.3 step 3 and that took nothing in the other tiers is
+refused with the same reason (4.5.1).
 
 5.4.3. A principal that is a pseudo-agent is never a request's principal. A removed
 holder's receipts are paid at the moment of the charge, so there is nothing pending at
@@ -536,20 +600,31 @@ removal (6.4).
 5.5.1. **Rule.** With `RentStepBP` above 0, at P8.3a of every tick, for each endowment that
 has a title and is not `Closed`, and after the tick's starts, let
 
-- `X`: the units that were wanted and not served in any tier, `sum over requests of
-  (w_i - o_i - c_i - t_i) * d_i`, over requests that were granted some executions or
-  refused for competition (not those refused `no_title` or `rent_funds`, which no price
-  clears);
-- `Y`: the let supply that was not drawn, `L - G3`.
+- `X`: the units that were wanted **at the rent in force** and not served in the let tier,
+  `sum over requests of (ŵ_i - t_i) * d_i`, with `ŵ_i` the clipped demand of 4.3 step 3. It
+  leaves out the units refused `no_title`, which no price clears (they are not asked of the
+  let tier), and the units priced out by the clip (`PricedOut`): a tenant that has no cash at
+  this rent is not demand that a higher rent serves, and it does not move the rent;
+- `V`: the let units the starts took (4.4.1), and `Y = L - V`: the let supply that was not
+  drawn, **whatever the reason**: units no request asked, a fragment smaller than one
+  execution, and units granted and cut for rent at the start (5.4.1). Units cut for rent are
+  idle units, which a lower rent would have cleared;
+- `C`: the let units granted and cut for rent at the start, `CutUnits` of the event, a part
+  of `Y`.
 
 Let `B` be the configured rent (the row's `Rent`), `step = max(1, B * RentStepBP /
 10 000)`, `floor = B * RentFloorBP / 10 000` and `ceil = B * RentCeilingBP / 10 000`. Then
 
 ```
-if X > 0:  P' = min(ceil, P + step)
-elif Y > 0: P' = max(floor, P - step)
-else:       P' = P
+if X > 0 and C = 0:  P' = min(ceil, P + step)
+elif Y > 0:          P' = max(floor, P - step)
+else:                P' = P
 ```
+
+The test of `X` comes first only when no unit was cut for rent: a fragment of the supply
+smaller than one execution (a draw of `d` units cannot take `d - 1` left) lies idle beside
+unserved demand, and does not lower the rent; a unit cut for rent is the case that a lower
+rent clears, and does.
 
 The new `P` applies from the next tick (P1.2 of the next tick reads it; P8.3a is after the
 last read of the tick). A `Closed` endowment's posted rent never moves. A configured `B` of
@@ -557,18 +632,24 @@ last read of the tick). A `Closed` endowment's posted rent never moves. A config
 
 5.5.2. **What it is.** A bounded, one-number tatonnement for the price of access to one
 endowment: it rises while demand for the let units is unmet and falls while let units lie
-idle. The units it reads are those of the endowment itself in this tick, a local market
+idle (including those cut for rent). A tenant priced out by the clip moves it neither way:
+a pack that wants poverty to lower the rent has `PricedOut` in the event and a scenario
+(LND-S3), not a rule. The units it reads are those of the endowment itself in this tick, a local market
 quantity of the same kind as the unmatched units that move a belief
 (`spec-beliefs.md` 5.4), and not an aggregate of the world (WLD 9.4.1). It is **default
 off** (`RentStepBP` 0): the rate of a pack that does not set it is the configured one.
 
 5.5.3. **Why a band, and why it is a damper.** The band `[floor, ceil]` is a fraction of
 the configured rate, which is the guide of 5.6. The step is bounded, so the rent moves by
-at most `step` a tick; the response of demand to it passes through the cost anchor and the
-decisions of the agents, with the delays of `spec-stability.md` 4, so the loop is a
-balancing loop with a delay and a limit cycle whose amplitude is a few steps
-(`rent.out`: a step of 250 basis points of a rate of 40 with a response delayed 8 ticks
-cycles in 63 to 78 about a clearing rent of 70; a step of 1 000 with a delay of 3 reaches the ceiling). A band that
+at most `step` a tick; the response of demand to it passes through the cost of the recipe
+choice (4.6.2, 5.7.1) and the decisions of the agents, with the delays of `spec-stability.md` 4, so the loop is a
+balancing loop with a delay and a limit cycle. In the model the half-span of the cycle
+about the clearing rent is about `3 * step * (delay + 1) / 4` (`rent.out`, the last table:
+a step of 250 basis points of a rate of 40, that is 1, with a response delayed 8 ticks
+cycles in 63 to 78 about a clearing rent of 70; a step of 1 000, that is 4, with a delay of
+3 reaches the ceiling of 80, 10 above the clearing rent, for an estimate of 12). The cycle
+stays inside the band when that half-span is below the distance from the clearing rent to
+the nearer of the floor and the ceiling, not below the width of the band. A band that
 sits below the market-clearing rent pins the rent at its ceiling and leaves demand unserved:
 the band is the damper and also a cap on what the posted rent can discover
 (`rent.out`, last lines). It is registered as LND-A1 and LND-D2.
@@ -582,8 +663,9 @@ The rent a pack sets for an endowment is meant to be that number: the scarcity p
 the stock at the plan share, so that the cost anchor carries the same signal into the choice
 of a recipe that the shadow price would.
 
-5.6.2. The validator does not read the solver. `rent_off_dual` is one of the warnings the
-solver reports through VIA (RES 11.3): it fires when the configured rent differs from the
+5.6.2. The validator does not read the solver. `rent_off_dual` is **this spec's** warning,
+reported by the solver through VIA's list of warnings (`spec-viability.md` 10.2, which lists it
+there; the figure it compares with is `Rent` of RES 11.3 in the report of VIA 10.3): it fires when the configured rent differs from the
 dual by more than `RentDualTolBP` (a rule constant, placeholder 5 000: 50%) for an
 endowment whose row binds (`Rent` above 0), or when the configured rent is above 0 and the
 row is slack. It never fails validation. An endowment whose row is slack has a dual of 0
@@ -613,6 +695,14 @@ because the endowment is not bought; a scarce deposit shows as a rent in the mar
 not in the cost", is amended: with this module on a draw is priced at the posted rent, and
 without it, or with a rent of 0, it is not. `unit_cost` is 0 (unknown) under the same
 conditions as before; a rent of 0 leaves the cost as it was (FR-LND-020).
+
+The rent has **two readers**, and they are different edits. The cost anchor of PRO 9.1 is
+read by the belief update (a cost floor and ceiling on the output's price, `UnitCost`, AGT
+6.4), and carries the rent into the price of the output. The default strategy's choice of
+a recipe (AGT 7.1.4) does not read the anchor; it reads `Posted` of the view (4.6.2) and
+subtracts `sum over Draws of d * Posted` in `cost_r`. Both are owed (18.2). The first raises
+the price floor of the output, which if anything raises `value_r`; the second is what makes
+rent lower the net value of the drawing recipe and so damp the draw-down (LND-D5, LND-A1).
 
 5.7.2. **Own use is priced at the same rent.** A holder's own entitlement is free in money
 and costly in opportunity. The cost anchor is per (region, commodity) and not per agent
@@ -697,7 +787,8 @@ about it: that is an investment decision, SAV's, and it needs a field of the pla
 `Strategy` returns (`spec-agents.md` 6) that this spec does not add (position 11). A
 consumer that models a lessor or a player buying a share makes the call itself, between
 ticks, with a price taken from the player's account. A later spec that adds a decision
-calls the same transfer (6.3) and does not change this spec.
+calls the same transfer (6.3) and does not change this spec. `spec-saving-and-investment.md` 6.3
+leaves the decision open and says what it would need (an observable return, a seller).
 
 6.2.2. **Why leave the decision out.** A purchase is a choice with a price, a budget and an
 expectation, and a household that buys a title forgoes consumption now for a stream of rent:
@@ -716,7 +807,7 @@ The public call is INT's to name and bound (9.2). The mechanism:
 type TitleTransfer struct {
 	Region   RegionID
 	Resource ResourceID
-	From, To AgentID // NoAgent names the commons
+	From, To AgentID // NoAgent (the constant -1, below every agent ID and every RegionID) names the commons
 	ShareBP  int64   // 1 to 10 000
 	Price    Money   // paid by To to From with the reason title_sale; 0 is a gift
 }
@@ -741,7 +832,7 @@ applies none if any fails; a key is (region, resource, `From`, `To`) and may app
 (`ErrDuplicateID`); the entries are applied in canonical order (ascending region, resource,
 `From`, `To`), so that two entries on one endowment give the same result whatever the
 order of the slice. The events are `TitleTransferred`, one per entry, at the call, with
-`Cause` `call`.
+`Cause` `consumer` (INT 3.3.3: the cause of every event of a call between ticks).
 
 6.3.4. **Checks**, in the order of `spec-integration.md` 3.2: the module is on; each entry's
 region, resource and agents are known and live (`ErrUnknownRegion`, `ErrUnknownResource`,
@@ -764,8 +855,7 @@ rent paid.
 ### 6.4 How a title is lost: removal
 
 6.4.1. At a removal (`spec-agents.md` 3.6), after the contracts of step 2a are settled and
-before the money moves (a step 2b, numbered so that the steps of AGT 3.6 keep their
-numbers), each title of the removed agent moves to the pool of the title's
+before the money moves (step 2b of AGT 3.6, before EMP's 2c and CRD's 2d and 2e), each title of the removed agent moves to the pool of the title's
 **endowment region** (not the region the agent was in): the pool's share becomes the sum
 of its share and the removed one's, and the commons share is unchanged. One event
 `TitleTransferred` per title with `Cause` `removal`, in ascending (`RegionID`,
@@ -868,18 +958,21 @@ follow residence makes the call.
 
 The principal of a request is the principal of its job (4.7.2), so tenure applies to a
 hired or trained job by the employer's or trainer's titles, and rent is paid from the
-principal's account. EMP's `bid` is a net value per tick, which carries the rent through
-`UnitCost` (5.7); a vacancy whose recipe the principal cannot pay for is refused at its
-formation with `rent_funds`, the check of FR-EMP-023 gains the two reasons (section 18).
-The wage and the rent are two payments from one account at two positions
-(`spec-employment.md`: the wage is escrowed at P2.5a, rent is paid at P2.7); a principal
-that spent its balance on wages has none left for rent, and the job is not started, which
-is the poverty trap of LND-A2 seen from the employer.
+principal's account. EMP's `Bid` is `floor(net_r / Duration_r)` with `net_r` of AGT 7.1.4
+(EMP 4.3.3), so with the edit of 4.6.2 it carries the rent in force; a vacancy that the
+principal cannot pay for even at the least rent (4.7.2) is refused at its formation with
+`rent_funds`, and the check of FR-EMP-023 gains the two reasons (section 18). The wage and
+the rent are two payments
+from one account at two positions (`spec-employment.md`: the wage is escrowed at P2.5a,
+rent is paid at P2.7); a principal that spent its balance on wages has none left for rent,
+and the job is cut at the start (`not_started` when nothing starts, the escrow refunded,
+EMP 6.1.3), which is the poverty trap of LND-A2 seen from the employer.
 
 ### 7.4 Storage (STO)
 
-The order of the refusals is `no_endowment`, `no_title`, `rent_funds`, `no_room`
-(position 14). The start takes the least of the executions that inputs, grants, rent and
+The order of the refusals is `no_endowment`, `no_title`, `rent_funds`, then CAP's build
+reasons if the infrastructure module is on, then `no_room` (position 14; the master order of
+`spec-production.md` 4.2). The start takes the least of the executions that inputs, grants, rent and
 room allow; each limit depends only on `k`, so they are independent and the order only
 names the reason (FR-STO-011 gains the two reasons ahead of `no_room`).
 
@@ -909,21 +1002,21 @@ accumulates until a consumer's call or a flow moves it (the warning `rent_hoarde
 
 | Spec | What it takes from this one | Where |
 |------|-----------------------------|-------|
-| CAP (`spec-infrastructure.md`) | A facility that raises capacity uses the capacity slot of RES 6.3; the stock rises and every title's entitlement with it, so the gain of an improvement accrues to holders in proportion to their shares. Who may build on whose title is CAP's | 3.1.3 |
-| FIS (`spec-fiscal.md`) | A tax on rent or on titles is a MON levy on the holder role (a sink), or FIS's own reason; rent itself is a transfer | 5.1.2 |
+| CAP (`spec-infrastructure.md`) | A facility that raises capacity is a layer multiplied into the effective capacity (`spec-infrastructure.md` 5.3), not a write to the capacity slot of RES 6.3; the stock rises and every title's entitlement with it, so the gain of an improvement accrues to holders in proportion to their shares. Who may build on whose title is CAP's | 3.1.3 |
+| FIS (`spec-fiscal.md`) | A tax on rent is not offered; a tax on the holder role is `spec-fiscal.md` 5 (a sink); rent itself is a transfer | 5.1.2 |
 | ORG (`spec-institutions.md`) | A rent control is the slot of 9.1 or a price control in the sense ORG settles; a charter or monopoly is a `Closed` row with a title to the chartered agent, set by the call; a refusal reason that ORG adds follows `rent_funds` | 9.1, 4.5 |
-| RSK (`spec-risk.md`) | Loss of a title by conflict is the call of 6.3 with a cause RSK names; a cargo or a stock lost is RSK's `loss`, not tenure | 6.3 |
+| RSK (`spec-risk.md`) | Loss of a title by conflict is not RSK's in version 1 (RSK names no cause and has no actor); it is the consumer's call of 6.3; a cargo or a stock lost is RSK's `loss`, not tenure | 6.3 |
 | SAV (`spec-saving-and-investment.md`) and CRD (`spec-credit.md`) | The decision to buy a title and the credit to do so call `TransferTitles`; the price is `title_sale`; the cap is the damper of LND-D1 | 6.2 |
 | STO (`spec-storage.md`) | A lease of room, a keeper, is a contract over room; if it reuses the reason `rent` that is the owner's call and the reason is reserved (5.8) | 5.8 |
 | SET (`spec-settlements.md`) | No hook: the class of a region gates no title. A pack that ties tenure to size does so by configuring titles per region | none |
-| POL (`spec-polity.md`) | Jurisdiction-level law over titles is POL's and FIS's; a holding is by (region, resource), and a region is in one jurisdiction | none |
+| POL (`spec-polity.md`) | A jurisdiction is the key (POL 5, 6.1.2); a table keyed by jurisdiction over titles is this spec's or ORG's, with the combining modes of `spec-polity.md` 6.1.2; a holding is by (region, resource), and a region is in one jurisdiction | none |
 | TEC (`spec-technology.md`) | A yield factor raises the output per drawn unit and so the rent a unit can bear; it changes no rule here | none |
 
 ### 7.8 Markets, beliefs, the clearing
 
 None. Tenure does not touch an order, a belief or a clearing: the price of a drawn
 commodity moves only through the cost anchor (5.7) and, for a staple, through the
-supply the tiers allow.
+supply the tiers allow; the choice of a recipe moves through `cost_r` (4.6.2).
 
 ## 8. Position in the tick and draws
 
@@ -937,8 +1030,8 @@ module does there, in addition to what its owner does.
 | P1.2 | the cost anchor adds the rent of the draws (5.7) | reads `r` | none | none |
 | P2.3 | with the snapshot of every endowment, the entitlements of the holders and the commons (4.2), for each endowment with a title | reads the stock and the holdings; scratch | none | none |
 | P2.5 | the view carries `Posted`, `ShareBP`, `Entitled`, `Closed` and the new reason of `MaxExecutions` (4.6) | scratch | none | none (a refusal is a `Debug` line) |
-| P2.6 | the ration is the four tiers (4.3); the lessor supply and the attribution (4.4) | requests, entitlements; scratch | none | none |
-| P2.7 | the largest `k` whose rent the principal can pay (5.4); the transfers of rent (5.3) | balances; writes balances, stock | none | none |
+| P2.6 | the ration is the four tiers (4.3), the let demand clipped to what each principal can pay (4.3 step 3) | requests, entitlements, balances; scratch | none | none |
+| P2.7 | pass 1: the largest `k` whose rent the principal can pay, reserved against its other starts (5.4); pass 2: the lessor supply and the attribution (4.4) on the units taken and the transfers of rent (5.3) | balances; writes balances, stock | none | none |
 | P7.1 | at a removal, the titles of the agent move to the pools (6.4) | holdings | none | `TitleTransferred` before `AgentBankrupted` |
 | **P8.3a** (new) | after regeneration and `EndowmentChanged`: the rent step of every endowment that has one (5.5), then the event `RentPaid` | the tick's counters; writes the posted rent | none | `RentPaid` per endowment, in (`RegionID`, `ResourceID`) order |
 | construction, step 8a (new) | the titles of the configuration (6.1) | writes the holdings | none | none |
@@ -950,7 +1043,8 @@ the next tick reads at P1.2 must be fixed by the end of this one. P8.3 is the re
 in an event order a recording observer sees (`RentPaid` carries the refusal counts the
 other event does not). The new position takes a letter after the one it follows
 (`spec-world.md` 6.1.1) and the events order of 6.11 item 9 becomes `BoundaryFlow`,
-`EndowmentChanged`, `RentPaid`, `TickEnded`.
+`EndowmentChanged`, `RentPaid`, then the events of CAP's P8.3b (`spec-infrastructure.md` 6.3,
+which follows this step and keeps this one's name), `TickEnded`.
 
 ### 8.2 Draws
 
@@ -980,7 +1074,12 @@ The mechanism is this spec's; the public name, error values and bounds are INT's
 
 | Call | Entry (key; value) | Value bound; default | Needs | Owner | Read by the tick at | Event (at the call) | Saved by |
 |------|--------------------|----------------------|-------|-------|---------------------|---------------------|----------|
-| `SetRentScales` | `RentScale{Region, Resource; BP}` | 0 to `MaxShockBP`; 10 000 (0 makes rent free) | tenure | LND 5.2 | P1.2, P2.3 (the view), P2.6, P2.7 | `RentScaled` (new) | LND 14, by (region, resource) |
+| `SetRentScales` | `EndowmentScale{Region, Resource; BP}` | 0 to `MaxShockBP`; 10 000 (0 makes rent free) | tenure | LND 5.2 | P1.2, P2.3 (the view), P2.6, P2.7 | `RentScaled` (new) | LND 14, by (region, resource) |
+
+The entry type is `EndowmentScale`, the one of the capacity and regeneration scales of RES 6.3.1
+(`spec-integration.md` 5.1): the slot is told apart by its name and its own saved table, and
+there is no type of its own. The slot is a lever kind of the policy module (`rent`,
+`spec-policy.md` 6.3.2): reserved in version 1, offered when that module's slot row says so.
 
 An entry equal to 10 000 clears the key (`spec-integration.md` 5.2.1). The slot never
 edits a configured rent (5.2.2); the effective rate is the posted rent times the scale. A
@@ -994,7 +1093,7 @@ sets `RentStepBP` to 0 or accepts the drift.
 
 | Call | Entry | Bound | Needs | Owner | Acts | Event | Saved by |
 |------|-------|-------|-------|-------|------|-------|----------|
-| `TransferTitles` | `TitleTransfer{Region, Resource, From, To; ShareBP, Price}` | `ShareBP` 1 to 10 000; `Price` 0 to `MaxMoney`; at most `MaxTitleTransfers` entries | tenure | LND 6.3 | **at the call**: the share moves now; the first step reads it at P2.3 | `TitleTransferred` (`Cause` `call`) | LND 14 (the holdings) |
+| `TransferTitles` | `TitleTransfer{Region, Resource, From, To; ShareBP, Price}` | `ShareBP` 1 to 10 000; `Price` 0 to `MaxMoney`; at most `MaxTitleTransfers` entries | tenure | LND 6.3 | **at the call**: the share moves now; the first step reads it at P2.3 | `TitleTransferred` (`Cause` `consumer`) | LND 14 (the holdings) |
 
 It is an adjustment in the sense of `spec-world.md` 8.2 (as `AdjustEndowments` is), not a
 slot: it has no default to clear and `Slots()` does not list it.
@@ -1170,16 +1269,33 @@ describe (`observability-and-logging.md` 4.1, 4.4). The typed IDs are `RegionID`
 
 | Event | Owner | Position | Class | Gate | Fields (besides `Tick`) |
 |-------|-------|----------|-------|------|-------------------------|
-| `RentPaid` | LND 13.1 | P8.3a, (`RegionID`, `ResourceID`) order, after `EndowmentChanged` | A (aggregate) | tenure | `Region`, `Resource`, `Rent` (the rent in force, per unit), `Entitled` (units of entitlement of holders, `A - E_0`), `OwnUnits`, `CommonsUnits`, `LetUnits` (units drawn in each tier), `Offered` (let supply `L`), `Idle` (`L - G3`), `Unserved` (`X`, 5.5.1), `Tenants` (requests with let units started), `Lessors` (holders paid), `Paid` (money), `NoTitle`, `RentFunds` (requests refused for each reason), `CutUnits` (units granted and not taken for rent), `Exempt` (let units drawn rent-free), `RentAfter` (the posted rent after the step, before the scale) |
-| `TitleTransferred` | LND 6.3, 6.4 | a removal (before `AgentBankrupted`), or a call | E (per title moved) | tenure | `Region`, `Resource`, `From`, `To` (`NoAgent` for the commons), `ShareBP`, `Price Money`, `Cause` (`removal`, `call`), `FromAfter`, `ToAfter` (the shares after, basis points) |
+| `RentPaid` | LND 13.1 | P8.3a, (`RegionID`, `ResourceID`) order, after `EndowmentChanged` | A (aggregate) | tenure | `Region`, `Resource`, `Rent` (the rent in force that tick, per unit), `Entitled` (units of entitlement of holders, `A - E_0`), `OwnUnits`, `CommonsUnits`, `LetUnits` (units drawn in each tier; `LetUnits` is `V` of 4.4.1), `Offered` (let supply `L`), `Idle` (`L - V`), `Held` (unused entitlement not let because the endowment is `Closed`), `Unserved` (`X`, 5.5.1), `PricedOut` (units clipped for cash, 4.3 step 3), `Tenants` (requests that took let units), `Lessors` (holders paid), `Paid` (money moved), `Forfeited` (money not charged because a payee could not receive it, 5.3.3), `NoTitle`, `RentFunds` (requests refused for each reason), `CutUnits` (let units granted and not taken for rent, `C`), `Exempt` (let units drawn rent-free), `RentAfter` (the posted rent after the step, before the scale), `ToPool` (money received by the pool of `Region`), `From` (list of `RegionMoney`: the money paid, by the region of the payer's account, ascending `RegionID`), `To` (the same, the money received by lessor households, by the region of the payee's account); `RegionMoney` is `{Region, Money}`, plain data, one entry per region with a non-zero amount |
+| `TitleTransferred` | LND 6.3, 6.4 | a removal (before `AgentBankrupted`), or a call | E (per title moved) | tenure | `Region`, `Resource`, `From`, `To` (`NoAgent` for the commons), `ShareBP`, `Price Money`, `Cause` (`removal`, `consumer`), `FromAfter`, `ToAfter` (the shares after, basis points), `FromRegion`, `ToRegion` (the region of the account that pays or is paid the price: of the agent's account, or `Region` for the pool and for `NoAgent`), `FromPool`, `ToPool` (the account is the pool of that region: the pool itself, or `NoAgent`, whose price the pool pays or receives, 6.3.2) |
 | `RentScaled` | LND 9.1 | call | C | tenure | `Region`, `Resource`, `From`, `To` (the scale before and after, basis points) |
 
-13.1.1. `RentPaid` is emitted for an endowment in a tick in which any of `Paid`, `NoTitle`,
-`RentFunds`, `CutUnits` or a change of the posted rent is non-zero, and never otherwise. It
-is the counter that a silent damper needs (N-045): the cut for rent, the closure and the
-band are all counted here, by region and resource, with no per-agent event. Its count a
-tick is bounded by regions times resources. `OwnUnits`, `CommonsUnits` and `LetUnits` sum
-with the units the starts took, which `EndowmentChanged.Drawn` reports.
+13.1.1. `RentPaid` is emitted for an endowment that has a title in a tick in
+which any of `OwnUnits`, `CommonsUnits`, `LetUnits`, `Idle`, `Held`, `Unserved`, `PricedOut`,
+`NoTitle`, `RentFunds`, `CutUnits`, `Paid` or `Forfeited` is non-zero, or the posted rent
+changed (`RentAfter` is not the posted rent at the start of the tick), and never otherwise.
+In a tick in which any unit was drawn from a tier the event is therefore emitted, so the
+identity `OwnUnits + CommonsUnits + LetUnits = EndowmentChanged.Drawn` of the same endowment
+and tick always holds where `EndowmentChanged` is emitted with a positive `Drawn`, and the
+counter `economysim.rent.units` (13.3) is complete. It is the counter that a silent damper
+needs (N-045): the cut for rent, the clip, the closure and the band are all counted here, by
+region and resource, with no per-agent event. Its count a tick is bounded by regions times
+resources.
+
+13.1.1a. **Money, for the rebuild of OBS 4.3.3.** A rent moves money between household
+sectors of regions and to the pool of `Region`, and a title sale moves it between sectors of
+two regions or a sector and a pool. The sums are in the event, by region, so that an observer
+with no agent table (OBS 3.3.7) rebuilds `MoneyHouseholds` and `MoneyPool` of every region
+(FR-OBS-041): for a `RentPaid`, the households of region `g` lose `From[g]` and gain `To[g]`,
+and the pool of `Region` gains `ToPool`; `Paid = sum of From = sum of To + ToPool`, a pool
+is never a payer (5.4.3). For a `TitleTransferred` with `Price` above 0, the payer's side
+(`To` agent, or the pool when `ToPool`) of region `ToRegion` loses `Price` and the payee's
+side (`From`, or the pool when `FromPool`) of region `FromRegion` gains it; the pool's side is
+the pool sector and the household's side the household sector. A removal moves no money
+(6.4.1) and its `Price` is 0. The edit to OBS 4.3.3 (a new item 8) is in 18.2.
 
 13.1.2. `TitleTransferred` is per title moved: bounded by the titles a removed agent holds
 (at most the endowments of the configuration) and by the entries of a call. An observer
@@ -1188,8 +1304,21 @@ events after it (6.1.3).
 
 13.1.3. The reasons and causes are constants of a closed set exported from the root package:
 the refusal reasons `no_title` and `rent_funds` (joining `no_endowment` in production's
-list), and the causes `removal` and `call` of `TitleTransferred`. They are constants of
+list), and the cause `removal` of `TitleTransferred` (the other, `consumer`, exists, INT 3.3.3). They are constants of
 `event.go`, as every reason is (`observability-and-logging.md` 4.1).
+
+13.1.4. **`Short` and "endowment exhausted" under tenure** (RES 14.1, 14.2). The fields of
+`EndowmentChanged` keep their RES meaning with the tiers: `Requested` the units asked,
+`Granted` the units the four tiers granted (the sum of `o_i + c_i + t_i`, times `d_i`),
+`Short = Requested - Granted`, and `AgentsDenied` the requests granted 0, a request refused
+`no_title` or priced out among them. Under a closed or titled endowment a request can be
+short while the stock is idle (example B: 400 units short of the commons and 300 units of
+closed entitlement idle), and RES's `Warn` "endowment exhausted" on `Short` above 0 would
+say exhaustion of a stock that is not exhausted. The fact is carried by `RentPaid.Held` and
+`Idle`, units of unused entitlement that were not drawn, so the owed rows (18.2) give the
+`Warn` of RES 14.2 and OBS 7.3 row 12 the condition `Short - min(Short, Held + Idle) > 0`
+for an endowment with tenure data (the same as RES's with the module off, where both are 0),
+and leave the counter `economysim.endowment.short` as RES defines it.
 
 ### 13.2 Logs
 
@@ -1209,7 +1338,7 @@ state is repaired. A validation warning is returned (`spec-config.md` 7.2), not 
 
 New metric attribute `economysim.tier` (three constants: `own`, `commons`, `let`).
 `economysim.reason` gains `no_title` and `rent_funds`, and `economysim.cause` gains
-`removal` and `call` (the closed sets of `observability-and-logging.md` 5.4.1).
+`removal` (the closed sets of `observability-and-logging.md` 5.4.1).
 
 | Name | Instrument | Unit | Attributes | Fed by |
 |------|------------|------|------------|--------|
@@ -1222,7 +1351,7 @@ New metric attribute `economysim.tier` (three constants: `own`, `commons`, `let`
 The series for the five-region proposal of RES 18 with titles on two of its resources are 10
 for each instrument with no extra attribute (`rent.paid`, `rent.rate`), 30 for `rent.units`
 (three tiers), 20 for `rent.refusals` (two reasons) and 20 for `title.transfers` (two causes):
-80 in all. A count of holders is a snapshot field (13.4) and not an event metric.
+90 in all (10 + 10 + 30 + 20 + 20). A count of holders is a snapshot field (13.4) and not an event metric.
 
 ### 13.4 Snapshot
 
@@ -1311,7 +1440,7 @@ One region, `vale`, with a resource `plots` that refills (RES 16.1), a recipe `g
 draws 1 unit of `plots` per execution and yields 10 units of `grain` at an abundance of 10 000,
 a role `freeholder` of 10 households and a role `landless` of 40. Ten households hold 5% of
 the stock each; the rest of the stock is the commons; rent is 40 per let unit and does not
-move.
+move; every household holds at least 40 in money, so the clip of 4.3 step 3 does not bind.
 
 ```toml
 # Example: the tenure part of a pack. The resource, the roles and the recipe are the pack's.
@@ -1379,10 +1508,17 @@ request is open to `A_i = 0 + 0 + 0` and is refused with `no_title` although the
 
 The consumer then calls `TransferTitles{From: s1, To: NoAgent, ShareBP: 2 500, Price: 0}`, a
 release of one household's share to the commons. The commons share is 2 500: the entitlement
-of the commons is 150, of each of the three holders left 150. Twenty diggers want 5
-executions of 5 units each, 500 units against 150: the proportional part is 1 execution each
-(100 units) and the 50 left over go to ten diggers by the key, so ten get 2 executions and
-ten get 1. `Unserved` is 350 units. A second call sells a digger a title of 1 000 basis
+of the commons is 150, of each of the three holders left 150. Household `s1` now holds
+nothing and still works: it asks for 10 executions of 5 units (50 units) of the commons like
+the twenty diggers, who want 5 executions of 5 units each, 25 units each and 500 in
+all: 550 units against 150. The proportional part is 1 execution for each digger (5 units)
+and 2 for `s1` (10 units), 110 units; the 40 units left over are 8 executions, which go by
+the largest fraction (`s1` first, its fraction is the largest) then the key: `s1` gets 3,
+seven diggers get 2 and thirteen get 1, 30 executions and 150 units in all. `Unserved` is
+400 units, and the three holders' unused 100 units each (300 in all) lie idle: the
+endowment is closed (`tiers.out`, `worked_b`). The `Warn` "endowment exhausted" of RES
+sees 100 units of shortage (400 short less the 300 held), which is the demand of 700 units
+against a stock of 600, and not 400 (13.1.4). A second call sells a digger a title of 1 000 basis
 points for 300 (`Price`), and the digger pays 300 to the seller by `title_sale`: its
 entitlement is 60 units, enough for the 5 executions it wants, and its unused 35 units are
 not let.
@@ -1403,24 +1539,27 @@ is `model` where section 17 supports it and `hand` otherwise; nothing here claim
 | LND-D2 | Rent band and bounded step: the posted rent moves by at most `step` a tick inside `[floor, ceil]` of the configured rate. Cost: the band can sit below the clearing rent and leave demand unserved | LND 5.5 | specified (data; default off, `RentStepBP` 0) |
 | LND-D3 | The commons before the let: a free unit is taken before a paid one, so rent is charged only at the margin where the free stock is spent. A rule constant | LND 4.3.1 | specified |
 | LND-D4 | No debt: a start that cannot be paid in full does not begin, and a rent is never carried. A rule constant | LND 5.4 | specified |
-| LND-D5 | Rent in the cost anchor: the scarcity price of a drawn unit enters the choice of a recipe, which damps open-access draw-down (RES-A5, STB-L90) where tenure has a positive rent. Cost: a recipe that draws looks dearer to holders who pay nothing | LND 5.7 | specified (a rule when the module is on) |
+| LND-D5 | Rent in the choice of a recipe and in the cost anchor: the rent in force of a drawn unit is subtracted in the default strategy's `cost_r` (AGT 7.1.4, an edit owed) and added to the anchor of PRO 9.1, which damps open-access draw-down (RES-A5, STB-L90) where tenure has a positive rent. Cost: a recipe that draws looks dearer to holders who pay nothing; a source recipe is still eligible, so the damper does not stop a household that must work to eat (a role whose only drawing recipe is a source has no alternative to move to) | LND 4.6.2, 5.7 | specified (a rule when the module is on, with the owed AGT edit) |
 | LND-D6 | `OwnUseExempt`: the subsistence floor survives a closed tenure. Cost: lessors are not paid for those units | LND 5.3.4, 7.1 | specified (data; default off) |
 
 ### 16.2 Loops, hazards and amplifiers
 
 **LND-A1. The rent step against a delayed response.** *Kind:* loop. *Loop:* units unserved
-(+) the posted rent (+) the rent in the cost anchor and so the net value of the drawing
-recipe (-) the units asked of the let tier (+) units unserved. One negative link, so
+(+) the posted rent (+) the rent in `cost_r` of the choice of a recipe (AGT 7.1.4, owed) and so
+the net value of the drawing recipe (-) the units asked of the let tier (+) units unserved. One negative link, so
 balancing (B) with a delay. *Delay:* one tick (P1.2 reads the rent set at P8.3a), the job
 `Duration` of the recipe, the belief step of the output's price and the review of the
-occupation (`spec-spawner.md` 6). *Owner:* LND 5.5; AGT 7.1.4; PRO 9.1. *Damper:* LND-D2 (a
-bounded step inside a band), D5 (the signal itself). *Undamped:* a band below the
+occupation (`spec-spawner.md` 6). *Owner:* LND 5.5; AGT 7.1.4 (the edit owed in 18.2: without it the choice is rent-blind
+and the link marked (-) does not exist); PRO 9.1. *Damper:* LND-D2 (a bounded step inside a
+band), D5 (the signal itself). *Undamped:* a band below the
 market-clearing rent pins the rent at its ceiling and leaves demand unserved, which is a
-cap on discovery and not a cycle; a positive rent with a slack commons overstates the cost
-anchor (5.7.4). *Condition:* in the model the limit cycle has amplitude
-about `step * (delay + 1)`, and a step of 1 000 basis points (4 on a rate of 40) with a delay of 3
-reaches the ceiling of 80; stable in the sense of a bounded cycle when `step * (delay + 1)` is below the
-width of the band. *Test:* LND-S2. *Status:* model (`rent.out`): demand is a step function
+cap on discovery and not a cycle; a role whose only drawing recipe is a source (the usual
+form of a gathering role), for which the link marked (-) does not act; a positive rent with a slack commons overstates the cost
+anchor (5.7.4). *Condition:* in the model the half-span of the limit cycle about the clearing rent is about
+`3 * step * (delay + 1) / 4` (a rule of thumb within a factor of 1.5, overstating a cycle that lands on the clearing rent in one step: `rent.out`, last table), and a
+step of 1 000 basis points (4 on a rate of 40) with a delay of 3 reaches the ceiling of 80; the
+cycle is bounded inside the band when that half-span is below the distance from the clearing
+rent to the nearer of floor and ceiling (10 in the model), not below the width of the band. *Test:* LND-S2. *Status:* model (`rent.out`): demand is a step function
 of the rent seen `delay` ticks ago, no recipe choice, no price; it does not show the
 library.
 
@@ -1428,13 +1567,14 @@ library.
 whose rent it can pay (+) the jobs started and so its income (+) its cash; with a refusal
 for `rent_funds` the income falls, the cash falls and the next refusal follows: two
 negative links in the chain refusal to income to cash, so reinforcing (R). *Delay:* the job
-`Duration` and the welfare window `T` (`spec-welfare-and-wages.md` 2.3). *Owner:* LND 5.4;
+`Duration` and the welfare window `T` (`spec-welfare-and-wages.md` 2.3). *Owner:* LND 4.3 step 3, 5.4;
 EST 2.6; SPN 5. *Damper:* LND-D3 (the commons first: a household served by the free tier
 pays nothing), D4 (no debt: the loss is bounded to one start), D6, relief of the pool
 (`PoolRelease`), the failure ladder. *Undamped:* a household that holds nothing, draws only
 let units and has no relief. *Condition:* the commons or relief covers the cash a start
-needs; the warning `role_locked_out` and the counter `RentFunds` are its static and
-dynamic forms. *Test:* LND-S3. *Status:* hand.
+needs; the warning `role_locked_out` and the counters `RentFunds` and `PricedOut` are its
+static and dynamic forms (a tenant with no cash is clipped out of the let ration before it, so
+it takes no unit from a tenant that can pay, and it does not lower the rent, 5.5.1). *Test:* LND-S3. *Status:* hand.
 
 **LND-A3. Rent and the target-income rule.** *Kind:* case of L14. A tenant's income is net
 of rent (5.7.3), so the target-income rule of `spec-welfare-and-wages.md` 5 works against a
@@ -1457,7 +1597,7 @@ landless, not a population).
 **LND-A5. Concentration through transfers.** *Kind:* hazard of the seam. *Loop:* a holder's
 rent income (+) its purchasing power for titles (+) its share (+) its rent income. No buyer
 exists in version 1, so the loop is closed only by a consumer's calls or by SAV's decision
-and CRD's credit; it is stated here because the module offers the transfer that closes it.
+and CRD's credit (a loan funds the money of the call; no title is pledged in version 1, `spec-credit.md` 3.5); it is stated here because the module offers the transfer that closes it.
 *Owner:* LND 6.2, 6.3. *Damper:* LND-D1. *Undamped:* a consumer that sells every title to one
 agent with the cap off. *Condition:* the cap is below the share at which one holder can
 set the let supply (above half of the stock). *Test:* LND-S5. *Status:* hand.
@@ -1520,15 +1660,21 @@ default to be stable (N-015, N-027).
 ### 17.1 The tiers (`tiers.py`, `tiers.out`)
 
 The entitlement by the largest remainder, the four tiers with the ration of RES 5.3.2, the
-lessor supply and the attribution of 4.4, over 20 000 random scenarios (0 to 6 holders with
-shares summing below 10 000, 0 to 12 requests of weight 1 to 5 and draw 1 to 3, a stock of 0
-to 300, closed and open, a rent of 0 to 50). In every scenario: the units drawn do not exceed
-the stock; every grant is between 0 and the request; the entitlements sum to the stock; no
-unused entitlement is negative; the rent paid equals the rent times the let units; a closed
-endowment lets none; and the result does not depend on how the requests are listed. The
-worked example of 15.1 and the second case of 4.2.2 are in the same output. *What it does
-not show:* the tiers with more than one draw per recipe (the grants are independent, 4.3.3),
-the start's cut for rent, a cohort that changes weight, and any economy.
+lessor supply and the attribution of 4.4 on the units taken, over 20 000 random scenarios (0
+to 6 holders with shares summing below 10 000, 0 to 12 requests of weight 1 to 5 and draw 1
+to 3, a stock of 0 to 300, closed and open, a rent of 0 to 50), each run twice: with every
+principal able to pay, and with a balance of 0 to 60 each (the let demand clipped, the starts
+cut by the money left). In every scenario: the units drawn do not exceed the stock; every
+grant is between 0 and the request; the entitlements sum to the stock; no unused entitlement
+is negative; the rent paid equals the rent times the let units taken; no principal pays more
+than its balance; each lessor's supply is at most its unused entitlement and the supplies sum
+to the units taken; when units are unserved, an idle let unit is a cut unit or a fragment smaller than one execution;
+a closed endowment lets none; and the result does not depend on how the requests are listed.
+The worked example of 15.1, the second case of 4.2.2, example B before and after the release
+(15.2, `worked_b`) and a case of ten tenants with no cash against ten let units (priced out,
+not unserved) are in the same output. *What it does not show:* the tiers with more than one
+draw per recipe (the grants are independent, 4.3.3), a principal with several draws, a cohort
+that changes weight, and any economy.
 
 ### 17.2 The rent step (`rent.py`, `rent.out`)
 
@@ -1538,7 +1684,10 @@ band of 5 000 to 20 000 basis points. The market-clearing rent is 70. With no st
 stays at 40 and 20 units of demand are unserved; with a step it converges to 70 with a delay of 0 and
 cycles with amplitude growing with the step and the delay (a step of 250 and a delay of 8
 cycles in 63 to 78; a step of 1 000 with a delay of 3 hits the ceiling of 80); a band of 8 000
-to 12 000 pins the rent at 48, below the clearing rent, with demand unserved. *What it does
+to 12 000 pins the rent at 48, below the clearing rent, with demand unserved. The last table
+of `rent.out` sets the observed half-span of the cycle about 70 against
+`3 * step * (delay + 1) / 4`: the cycle reaches the nearer bound (80) in exactly the rows where
+the estimate is 12 or more, and in none where it is 7 or less. *What it does
 not show:* any response of a recipe choice, a price or an entry; the demand is a function of
 the rent seen with a delay.
 
@@ -1555,7 +1704,10 @@ the estate's use of the titles.
 The library has no code; nothing here is a run of it. The cost anchor with rent, the choice
 of a recipe by net value under rent, the interaction with the ladder and with migration, and
 the circulation of the rent through the pool are the scenarios of 16.4, which wait for a
-first slice.
+first slice. The rise-and-fall rule of 5.5.1 on the tier output (the units unserved, idle and cut
+together) was not run either: `tiers.py` returns the counters and `rent.py` has no cut;
+whether the rule can flip-flop when one unit cut for rent lowers the rent and un-cuts it
+is derived by hand only and is a case for LND-S2.
 
 ## 18. Notes settled, and the edits this spec owes
 
@@ -1581,7 +1733,7 @@ first slice.
 | N-054 | Rent moves money between households and the pool and creates none, so the mean welfare ratio of a closed economy is unchanged by it; the ratio of a holder and of a tenant differ (7.5) |
 
 New notes to add (the supervisor numbers them): (a) **a decision to acquire a title is
-SAV's, with CRD's credit, and calls `TransferTitles`; it needs a field in the plan of a
+SAV's, with CRD's credit (a loan funds the money of the call; no title is pledged in version 1, `spec-credit.md` 3.5), and calls `TransferTitles`; it needs a field in the plan of a
 `Strategy`** (areas SAV, CRD, AGT); (b) **MIG's estimate of a destination's income does not
 read rent or title; a rumoured rent would be a second kind of rumour** (areas MIG, INF); (c)
 **the steady-state programme has one row per endowment; the split of that row among roles and
@@ -1595,31 +1747,32 @@ edits none (the process of N-103).
 | File | Section | Exact change |
 |------|---------|--------------|
 | `spec-world.md` | 5.1 table, step 8 | add a step 8a after the agents are created and before the warm start: "the titles of `Modules.Tenure`, `spec-land.md` 6.1; no draw" |
-| `spec-world.md` | 6.4 rows P2.3, P2.6, P2.7 | P2.3: "and, for an endowment with a title, the entitlements (LND 4.2)"; P2.6: "the four tiers: own, commons, let (LND 4.3), each by RES 5.3.2"; P2.7: "the largest `k` whose rent the principal can pay and the transfers of rent (LND 5.3, 5.4)" |
+| `spec-world.md` | 6.4 rows P2.3, P2.6, P2.7 | P2.3: "and, for an endowment with a title, the entitlements (LND 4.2)"; P2.6: "the four tiers: own, commons, let (LND 4.3), each by RES 5.3.2; reads the principals' balances (the clip of LND 4.3 step 3; no reservation is open in P2, WLD 6.1.6)"; P2.7: "the largest `k` whose rent the principal can pay and the transfers of rent (LND 5.3, 5.4)" |
 | `spec-world.md` | 6.10 | a row **P8.3a**: "the rent step of every endowment with a step, then `RentPaid` per endowment in (`RegionID`, `ResourceID`) order; owner LND 5.5; reads the counters of the tick; draws none" |
-| `spec-world.md` | 6.11 items 8, 9 | item 8 (one removal): `TitleTransferred` per title, ascending (region, resource), after `ContractSettled` and before `AgentBankrupted`; item 9: `BoundaryFlow`, `EndowmentChanged`, `RentPaid`, `TickEnded` |
+| `spec-world.md` | 6.11 items 8, 9 | item 8 (one removal): `TitleTransferred` per title, ascending (region, resource), after `ContractSettled` and before `AgentBankrupted`; item 9: `BoundaryFlow`, `EndowmentChanged`, `RentPaid`, then CAP's P8.3b events, `TickEnded` |
+| `spec-world.md` | 9.4.1 | a carve-out sentence: a quantity local to the entity a price belongs to (the units unserved or idle at one endowment, as BEL's unmatched units at one market) is not an aggregate in the sense of this rule; the step of LND 5.5 reads only that and is off by default (see also SET's ask) |
 | `spec-world.md` | 7.5 | add "the tiers of tenure, the apportionment and the rent step (LND 8.2)" to what does not draw |
 | `spec-world.md` | 8.2 table | a row "Rent scale: by (region, resource), 0 to `MaxShockBP`, default 10 000; mechanism LND 5.2; read at P1.2, P2.3, P2.6, P2.7; `RentScaled`; saved by LND 14", and the adjustment `TransferTitles` beside `AdjustEndowments` (at the call; `TitleTransferred`) |
 | `spec-world.md` | 9.2 table | the row of 8.3 above |
-| `spec-resources.md` | 5.2 step 3, 5.3, 5.5.1, 10.2, 14.1, 23 (1) | 5.2 step 3 and 5.3: "with the module of tenure on the ration is the four tiers of `spec-land.md` 4.3, each by this rule"; 5.5.1: the view fields of LND 4.6 and the reason `no_title` of `MaxExecutions`; 10.2: "the three hooks are used by `spec-land.md` 4.5, 4.2 and 5"; 14.1: `Granted` is the sum of the tiers; 23 (1): a pointer to LND 20 (1) |
-| `spec-production.md` | 4.2 | the reasons in order: `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`, `no_title`, `rent_funds` |
+| `spec-resources.md` | 5.2 step 3, 5.3, 5.5.1, 10.2, 14.1, 14.2, 23 (1) | 14.2 and FR-RES-028: for an endowment with tenure data the `Warn` "endowment exhausted" fires on `Short - min(Short, Held + Idle) > 0` (LND 13.1.4; unchanged with the module off); 5.2 step 3 and 5.3: "with the module of tenure on the ration is the four tiers of `spec-land.md` 4.3, each by this rule"; 5.5.1: the view fields of LND 4.6 and the reason `no_title` of `MaxExecutions`; 10.2: "the three hooks are used by `spec-land.md` 4.5, 4.2 and 5"; 14.1: `Granted` is the sum of the tiers; 23 (1): a pointer to LND 20 (1) |
+| `spec-production.md` | 4.2 | the reasons: `no_title` and `rent_funds` after `no_endowment` and before CAP's build reasons and `no_room`, in the master order of 4.2 (PRO owns it) |
 | `spec-production.md` | 9.1 | add `rent_cost = sum over Draws of d * r` (LND 5.7.1) to `cost`; replace "Endowment draws are not priced, ..." by "A draw is priced at the posted rent of `spec-land.md` 5.2.2 when the tenure module is on, and is not priced otherwise" |
 | `spec-production.md` | 14.2 | the two reasons join the refusal table |
-| `spec-agents.md` | 3.6, 6.4, 6.5.1 | 3.6: a step 2b "each title of the agent moves to the pool of the title's region, `spec-land.md` 6.4"; 6.4: the fields of LND 4.6; 6.5.1: the two reasons |
+| `spec-agents.md` | 3.6, 6.4, 6.5.1, 7.1.4 | 3.6: a step 2b "each title of the agent moves to the pool of the title's region, `spec-land.md` 6.4"; 6.4: the fields of LND 4.6; 6.5.1: the two reasons; **7.1.4: `cost_r` gains `sum over the recipe's Draws of d * Posted` (the rent in force of the view, LND 4.6.2), 0 when the module is off or the rent is 0; a source recipe stays eligible at `net_r <= 0`; FR-AGT-048 and the `UnitCost` text are unchanged (the anchor is the belief update's)** |
 | `spec-ledger.md` | 7.2 | the two rows of LND 5.8.1 |
 | `spec-welfare-and-wages.md` | 2.1, 4.3 | 2.1: `income_t` gains the rent received as an unearned receipt (as `G_t`) and nets the rent paid as `S_t(Input)`; 4.3: the observed wage excludes rent received |
 | `spec-demand.md` | 10.2 | `class_without_income` is not raised for a role that holds a title (a holding row names it) |
 | `spec-subsistence.md` | 5.5 item 6, 9.5, 14.1 | 5.5 and 14.1: `no_title` and `rent_funds` join `no_endowment` as reasons for `Blocked`; 9.5: "applied by `spec-land.md` 7.1, with `OwnUseExempt`" |
 | `spec-migration.md` | 6.3 (a sentence) | the estimate reads no rent and no title (`spec-land.md` 7.2.2) |
-| `spec-employment.md` | FR-EMP-023, `LabourRound` fields | the order `no_endowment`, `no_title`, `rent_funds`, `no_room`; `LabourRound` gains `NoTitle` and `RentFunds` |
+| `spec-employment.md` | FR-EMP-023, 5.5.1, 6.1.3, `LabourRound` fields | FR-EMP-023: the order `no_endowment`, `no_title`, `rent_funds`, `no_room`, with `rent_funds` at formation a **bound** (the principal cannot pay even the least rent, LND 4.7.2), 0 when its own entitlement covers the draw; 5.5.1: the cuts after formation are the ration, the room and **the rent** at the start; 6.1.3: "A ration, room or rent cut": `k = min(m, grant, live inputs, k_room, k_rent)`, the refund and `not_started` follow; `LabourRound` gains `NoTitle` and `RentFunds` |
 | `spec-storage.md` | 4.2 reasons list, FR-STO-011 | `no_room` comes after `no_title` and `rent_funds` |
 | `spec-regions.md` | 5.1.3, 6.5.2 | 5.1.3: two rows (tenure terms, tenure holdings; both replace); 6.5.2: the list of refusals records that LND registers none |
-| `spec-integration.md` | 5.1, 5.1.3, 5.3, 6.2, 7.1, 3.4.3 | a row `SetRentScales`; its check row (`ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID`); `SlotState.RentScales`; the queries `Titles`, `Holders`, `Rent`; the sentinels of 9.4; the adjustment `TransferTitles` in a new 5.4 with its checks of 6.3.4; 3.4.3: `Titles` accepts the estate pseudo-agent of a region |
-| `spec-checkpoint.md` | 4.2, 4.2.3, 4.2.5, 6.2 | a section row for Tenure in the module order after Resources (the tag is the supervisor's); 4.2.3: a title's holder is a live agent or the endowment region's estate; 4.2.5: the sparse parts of 14.1; 6.2: the checks of 14.2 |
-| `spec-observability.md` | 3.3.9, 4.1, 5.3, 6, 7.3 | the three events with their class, position and gate; the snapshot fields of 13.4; the metrics and attribute values of 13.3; the `Warn` row "tenure refusal" with its counterpart |
-| `rules/observability-and-logging.md` | 3.3.2, 4.3, 5.3, 5.3.1, 5.4.1 | keys `rent`, `share`; the three events; the five instruments and their feeders; the attribute `economysim.tier`, and the constants `no_title`, `rent_funds`, `removal`, `call`; a fresh read-receipt tag |
+| `spec-integration.md` | 3.6 first row, 5.1, 5.1.3, 5.3, 6.2, 7.1, 3.4.3 | 3.6: one sentence on the row "An act-now operation": `TransferTitles` with a `Price` moves money between two agents at the call and is not an act-now trade of the book (it takes no order, clears nothing and cannot change the order of a clearing; a title sale is outside the book, and the reasons of 3.6 do not apply); and a row `SetRentScales` (the type `EndowmentScale`, reused); its check row (`ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID`); `SlotState.RentScales`; the queries `Titles`, `Holders`, `Rent`; the sentinels of 9.4; the adjustment `TransferTitles` in a new 5.4 with its checks of 6.3.4; 3.4.3: `Titles` accepts the estate pseudo-agent of a region |
+| `spec-checkpoint.md` | 4.2, 4.2.3, 4.2.5, 4.3, 6.2 | 4.3: a row LND: the entitlements, the tiers, the supplies and attribution, the rent in force and the key, the commons share (10 000 less the titles), the scratch of the reservation (FR-CHK-045); a section row for Tenure in the module order after Resources (the tag is the supervisor's); 4.2.3: a title's holder is a live agent or the endowment region's estate; 4.2.5: the sparse parts of 14.1; 6.2: the checks of 14.2 |
+| `spec-observability.md` | 3.3.9, 4.1, 4.3.3, 4.4.8, 4.5, 5.3, 6, 7.3, 7.6 | the three events with their class, position and gate; **4.3.3: an item 8 for rent and for the price of a title (LND 13.1.1a): at a `RentPaid`, households of region `g` lose `From[g]` and gain `To[g]` and the pool of `Region` gains `ToPool`; at a `TitleTransferred` with `Price` above 0 the payer's side of `ToRegion` loses it and the payee's side of `FromRegion` gains it, the pool's side when `ToPool` or `FromPool`; FR-OBS-041 unchanged**; 4.4.8: the removal order, `TitleTransferred` per title before `AgentBankrupted`, after `ContractSettled`; 4.5: the order of `RentPaid` after `EndowmentChanged`; the snapshot fields of 13.4; the metrics and attribute values of 13.3; the `Warn` row "tenure refusal" with its counterpart; **7.3 row 12: "endowment exhausted" with tenure data is `Short - min(Short, Held + Idle) > 0` (LND 13.1.4)**; 7.6: the keys `rent`, `share` and the values `removal` (`economysim.cause`), `no_title`, `rent_funds` (`economysim.reason`) |
+| `rules/observability-and-logging.md` | 3.3.2, 4.3 (the catalogue and the money-rebuild paragraph: the fields of LND 13.1.1a), 5.3, 5.3.1, 5.4.1 | keys `rent`, `share`; the three events; the five instruments and their feeders; the attribute `economysim.tier`, and the constants `no_title`, `rent_funds` (reasons) and `removal` (a cause; `consumer` exists); a fresh read-receipt tag |
 | `spec-config.md` | 3.2, 3.7, 4.1, 6.2, 7.3, 7.4, 8.1 | the module in 3.2 and the fields in 3.7; bounds `MaxRentStepBP`, `MaxRentCeilingBP`, `MaxHoldings`, `MaxTitleTransfers`; the keys of 3.3.2 here; the sentinels `ErrTitleShares`, `ErrTitleCap`, `ErrNoTitle`, `ErrNotAHolder`; the rules and warnings of 11; the terms and holdings in the hash (`Label`-like fields none) |
-| `spec-viability.md` | 11.3 | `Rent` is the guide of LND 5.6 and `rent_off_dual` is reported there; the programme is not edited for tenure |
+| `spec-viability.md` | 10.2, 10.3 | 10.2: a row for the warning `rent_off_dual` (LND 5.6.2: a configured rent of an endowment that is more than `RentDualTolBP` from the dual `Rent` of its row, or above 0 where the row is slack; never an error); 10.3: `Headroom` and `Rent` are the guide of LND 5.6; the programme is not edited for tenure |
 | `spec-stability.md` | 4, 5, 8; 4.8 | the entries, dampers and scenarios of 16 with their final numbers; remove the hook row LND (4.8, line "LND: rent") |
 | `spec-calibration.md` | 6 | registry rows: `RentStepBP`, `RentFloorBP`, `RentCeilingBP` (damper strengths of LND-D2 on LND-A1), `MaxHolderShareBP` (damper strength of LND-D1 on LND-A5), `OwnUseExempt` (structural choice), `Terms.Rent` (knob; the dual is its guide), `Terms.Closed` (structural), `Holdings.ShareBP` (knob) |
 | `spec-indicators.md` | presets | asks: `RentShare` (rent paid over value added of the drawing recipes), `LandlessShare` (households with no title in a region that draws), `TitleConcentration` (the share of the largest holder and a Gini of shares, from the snapshot rows and `TitleTransferred`) |
@@ -1643,29 +1796,29 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LND-003 | A holder MUST be an agent that is not a pseudo-agent, or the estate pseudo-agent of the endowment's region; any other agent MUST be refused with `ErrNotAHolder`, and a row naming an outside node's region with `ErrOutsideNode` (3.2, 11.1). |
 | FR-LND-004 | `Terms` and `Holdings` MUST be region-keyed tables of the mechanism of `spec-regions.md` 5, with one row per key; `Rent` and `Closed` MUST be replace; absence MUST be open access without a warning; an unknown region, resource or role MUST be rejected with `ErrUnknownRegion`, `ErrUnknownResource` or `ErrUnknownRole` and a second row for one key with `ErrDuplicateID` (3.3.1). |
 | FR-LND-005 | The titles of the configuration MUST be created after the agents exist and before the warm start, in the order of the holdings, with a role holder giving each household agent of the role in the region a share of `w * ShareBP`, and construction MUST emit no event, take no draw and charge no rent (6.1). |
-| FR-LND-006 | An endowment with no title MUST be rationed by the rule of RES 5.3 exactly, and a world with the module on and no title MUST be bit-identical in its snapshots, events and stream to the same world with the module off (4.1). |
+| FR-LND-006 | An endowment with no title MUST be rationed by the rule of RES 5.3 exactly, and a world with the module on and no title MUST give the same results, the same events other than `WorldCreated` (whose `ConfigHash` differs), and the same random stream as the same world with the module off, its snapshot differing only by the tenure rows of 13.4 (4.1). |
 | FR-LND-007 | The entitlements MUST be the apportionment of the snapshot stock by the shares of the holders and the commons share by the largest remainder, ties by the key of RES 5.3.3 then by agent ID with the commons last, and MUST sum to the stock exactly (4.2.1). |
 | FR-LND-008 | A holder's entitlement MUST first serve the requests whose principal is that holder, by the ration of RES 5.3.2, and what it leaves MUST be its unused entitlement (4.3 step 1). |
 | FR-LND-009 | The commons entitlement MUST serve the residual demands before the let tier, and a unit of the commons MUST be free (4.3 steps 2, 4.3.1). |
-| FR-LND-010 | The let supply MUST be the sum of the unused entitlements, each clipped to what the holder's balance can receive at the rent in force, and MUST be 0 for a `Closed` endowment; a unit of the let tier MUST be the only unit for which rent is charged (4.3 step 3, 5.3). |
+| FR-LND-010 | The let supply MUST be the sum of the unused entitlements and MUST be 0 for a `Closed` endowment; the demand of a request for the let tier MUST be clipped to the executions its principal can pay at the rent in force, the units clipped being counted as `PricedOut`; a unit of the let tier MUST be the only unit for which rent is charged (4.3 step 3, 5.3). |
 | FR-LND-011 | The grant of a request MUST NOT exceed the request, the units taken in all tiers MUST NOT exceed the snapshot stock, and the grants MUST NOT depend on the order in which the requests were listed (4.3, 4.3.2). |
 | FR-LND-012 | The principal of a request MUST be the account whose inputs the job uses, and the holder status, the entitlement and the rent of a hired or trained job MUST be the principal's (4.7.2, position 9). |
-| FR-LND-013 | The supply of each lessor MUST be the apportionment of the units let by the weights of the unused entitlements by the largest remainder, MUST NOT exceed the lessor's unused entitlement, and the units MUST be attributed to tenants in ascending agent ID against lessors in ascending agent ID (4.4). |
-| FR-LND-014 | A request whose start is 0 MUST be refused with the first of `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`, `no_title`, `rent_funds`, with `no_title` only when the stock could serve an execution and no unit is open to the principal by rule (4.5.1). |
+| FR-LND-013 | The supply of each lessor MUST be the apportionment of the let units the starts took by the weights of the unused entitlements by the largest remainder, MUST NOT exceed the lessor's unused entitlement, and the units MUST be attributed to tenants in ascending agent ID against lessors in ascending agent ID (4.4). |
+| FR-LND-014 | A request whose start is 0 MUST be refused with the first of the master order of `spec-production.md` 4.2 (its slice here: `no_endowment`, `no_title`, `rent_funds`, after `no_input` and before `no_room`, with CAP's build reasons between), with `no_title` only when the stock could serve an execution and no unit is open to the principal by rule (4.5.1); at the formation of a hire `rent_funds` MUST be refused only when the principal cannot pay the least rent the job could owe, 0 when its own entitlement covers the draw (4.7.2). |
 | FR-LND-015 | The rent in force MUST be the posted rent times the scale over 10 000, truncated toward zero and at least 1 when both are positive, and a scale of 0 MUST make it 0 (5.2.2). |
-| FR-LND-016 | The rent of a job MUST be paid at its start, inside the atomic step, for the let units it draws; the start MUST use the largest number of executions whose total rent the principal's balance covers; and when that is 0 the request MUST be refused with `rent_funds`, with nothing taken and nothing carried (5.3, 5.4). |
+| FR-LND-016 | The rent of a job MUST be paid at its start, inside the atomic step, for the let units it draws; the start MUST use the largest number of executions whose total rent the principal's balance covers; and when that is 0 the request MUST be refused with `rent_funds`, with nothing taken and nothing carried; the rent MUST be reserved against the principal's other starts of the tick, and a payee that cannot receive the whole rent MUST receive what it can, the rest being forfeited and counted, so that no transfer of rent is refused by the ledger (5.3, 5.4). |
 | FR-LND-017 | Rent MUST be a ledger transfer of the reason `rent` between non-boundary accounts, MUST create and destroy no money, MUST be in no `BoundaryFlow`, and a transfer whose payer and payee are one account MUST be skipped with the units still counted as let (5.1, 5.3.3). |
 | FR-LND-018 | With `OwnUseExempt` set, a request for a recipe of the principal's effective own-use list MUST be charged no rent and its lessors MUST be paid nothing for those units (5.3.4). |
-| FR-LND-019 | With `RentStepBP` above 0 the posted rent of an endowment that is not closed MUST rise by `step` bounded by the ceiling when units were unserved and fall by `step` bounded by the floor when let units were idle and none unserved, at P8.3a, and MUST NOT move otherwise or with `RentStepBP` 0 (5.5.1). |
-| FR-LND-020 | The cost anchor MUST add `sum of d * r` over the draws of a recipe to its cost when the module is on, for a holder's units too, and a rent of 0 MUST leave the cost as it was (5.7.1). |
+| FR-LND-019 | With `RentStepBP` above 0 the posted rent of an endowment that is not closed MUST, at P8.3a, rise by `step` bounded by the ceiling when units were unserved at the rent in force and no let unit was cut for rent, fall by `step` bounded by the floor when otherwise let units were not drawn (units cut for rent included), and MUST NOT move otherwise or with `RentStepBP` 0; units priced out MUST move it neither way (5.5.1). |
+| FR-LND-020 | The cost anchor MUST add `sum of d * r` over the draws of a recipe to its cost when the module is on, for a holder's units too, and the default strategy's `cost_r` MUST add `sum of d * Posted`, with a source recipe still eligible; a rent of 0 MUST leave both as they were (5.7.1, 4.6.2). |
 | FR-LND-021 | The rent a principal paid MUST be netted in `income_t` like an input, the rent a holder received MUST be an unearned receipt that is excluded from the observed wage, and a holder role MUST NOT draw `class_without_income` (5.7.3). |
 | FR-LND-022 | The view MUST carry, for the agent's own region only, `Posted`, `ShareBP`, `Entitled` and `Closed` of each endowment its role draws on, and no view MUST carry another holder's share or the holdings of an endowment (4.6.1). |
 | FR-LND-023 | At a removal each title of the agent MUST move to the pool of the title's region, before `AgentBankrupted`, one `TitleTransferred` with the cause `removal` each in ascending (region, resource), and no money MUST move (6.4.1). |
 | FR-LND-024 | A weight change, a role change and a relocation MUST leave an agent's titles unchanged, and the module MUST register no `region_bound` refusal (6.5, 6.6). |
-| FR-LND-025 | `TransferTitles` MUST validate every entry in canonical key order on a working copy and apply none if any fails, MUST move a share between two holders or between the commons and a holder, MUST move the price from `To` to `From` by the reason `title_sale` and create no money, and MUST emit one `TitleTransferred` with the cause `call` per entry (6.3). |
+| FR-LND-025 | `TransferTitles` MUST validate every entry in canonical key order on a working copy and apply none if any fails, MUST move a share between two holders or between the commons and a holder, MUST move the price from `To` to `From` by the reason `title_sale` and create no money, and MUST emit one `TitleTransferred` with the cause `consumer` per entry, carrying the regions and pools of its price (6.3, 13.1.1a). |
 | FR-LND-026 | `SetRentScales` MUST set a scale of 0 to `MaxShockBP` per endowment, default 10 000, atomically, one entry per key, with an event per changed key, read from the first step after the call, and MUST NOT edit a configured rent (9.1). |
 | FR-LND-027 | The queries `Titles`, `Holders` and `Rent` MUST draw nothing, emit nothing, change nothing and return a deep copy of plain data in ascending order (9.3). |
-| FR-LND-028 | `RentPaid` MUST be emitted once per endowment per tick, after `EndowmentChanged`, in (`RegionID`, `ResourceID`) order, if and only if `Paid`, `NoTitle`, `RentFunds`, `CutUnits` or the posted rent changed is non-zero, with the fields of 13.1 and no map (13.1). |
+| FR-LND-028 | `RentPaid` MUST be emitted once per endowment with a title per tick, after `EndowmentChanged`, in (`RegionID`, `ResourceID`) order, if and only if a tier count, `Idle`, `Held`, `Unserved`, `PricedOut`, a refusal count, `CutUnits`, `Paid` or `Forfeited` is non-zero or the posted rent changed, with the fields of 13.1 and no map, and its `From`, `To` and `ToPool` MUST rebuild the money of the household sectors and the pools by region (13.1, 13.1.1a). |
 | FR-LND-029 | `TitleTransferred` and `RentScaled` MUST carry the fields of 13.1, contain no map and no pointer, and be emitted at the transition or call after it is complete (13.1). |
 | FR-LND-030 | The `Warn` "tenure refusal" MUST be emitted for an endowment and a reason in a tick with a positive count and a run of 1 or a multiple of 10, at most once per endowment and reason per tick, and the run MUST be saved (13.2, 14.1). |
 | FR-LND-031 | Each metric attribute of 13.3 MUST take only values present in the configuration or in its closed set, and no metric MUST carry an agent ID, a price or a tick (13.3). |
@@ -1674,7 +1827,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LND-034 | A world restored between ticks MUST apportion, ration, charge and step exactly as an uninterrupted one (14.3). |
 | FR-LND-035 | A restore MUST reject, with `ErrCheckpointCorrupt`, a holder that is not a live agent or the endowment region's estate, a share outside 1 to 10 000, a repeated holder, shares summing above 10 000, a holder above the cap, a posted rent outside its band or a title of an outside node (14.2). |
 | FR-LND-036 | The module MUST draw nothing from the random source, and the random stream of a world MUST NOT depend on whether the module is on (8.2). |
-| FR-LND-037 | With `WithAudit`, the audit MUST check that the shares of every endowment sum to at most 10 000, that every holder is live, and that the money moved by rent in a tick equals the rent in force times the units charged (5.8, 14.2). |
+| FR-LND-037 | With `WithAudit`, the audit MUST check that the shares of every endowment sum to at most 10 000, that every holder is live, and that the money moved by rent in a tick equals the `Rent` of the tick's `RentPaid` (the rent in force at P2.7, not the posted rent after the step of P8.3a) times the units charged, less the exempt units and the forfeited money (5.8, 14.2). |
 | FR-LND-038 | The errors of 11.1 MUST be reported with the sentinel and the path of the field, and `ErrTitleShares`, `ErrTitleCap`, `ErrNoTitle` and `ErrNotAHolder` MUST be defined as root sentinels (11.1, 9.4). |
 | FR-LND-039 | The warnings of 11.2 MUST be reported and MUST NOT fail validation (11.2). |
 | FR-LND-040 | `rent_off_dual` MUST be reported through the solver, which MUST report `Rent` per (resource, region); the programme MUST NOT be changed by a title or a rent (5.6.2, 12). |
@@ -1753,13 +1906,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `TenureConfig`, `TenureTerm`, `Holding`, `HolderRef`, `TitleTransfer`, `TitleState`, `HoldingsState`, `RentScale`, `NoAgent` | root package, `tenure.go`; defaults in `defaults.go`; bounds in `bounds.go` |
+| `TenureConfig`, `TenureTerm`, `Holding`, `HolderRef`, `TitleTransfer`, `TitleState`, `HoldingsState`, `RegionMoney`, the constant `NoAgent AgentID = -1` (as `NoRegion RegionID = -1`) | root package, `tenure.go`; defaults in `defaults.go`; bounds in `bounds.go` |
 | Validation, the sentinels `ErrTitleShares`, `ErrTitleCap`, `ErrNoTitle`, `ErrNotAHolder`, and the warnings | root package, `validate.go`, `errors.go` |
 | The apportionment, the tiers, the lessor supply and the attribution, the step and the rent charge | `internal/tenure`: pure functions over primitive slices and indexes (architecture.md 2.9); the standard library, `internal/ordering` for the key and `internal/endowment` for the ration |
 | The holdings, the posted rent, the scales, the diagnostic runs and the removal step | root package, `world.go` and `tenure.go` |
 | The events `RentPaid`, `TitleTransferred`, `RentScaled` | root package, `event.go` |
 | The log keys `rent`, `share` | `internal/logkeys` (key strings only) |
-| The reasons `no_title`, `rent_funds`, `removal`, `call` | root package, `event.go` (exported constants) |
+| The reasons `no_title`, `rent_funds`, `removal` | root package, `event.go` (exported constants) |
 | The ledger reasons `rent`, `title_sale` | `internal/ledger` registry, declared with the module |
 
 ```go
@@ -1783,24 +1936,27 @@ type Request struct {
 	Executions int64
 	Draw       int64
 	Exempt     bool  // an own-use request when the module is exempt
+	Cash       int64 // the principal's balance at P2.6 (the starts reserve against it, 5.4.1)
 }
 
 // Result holds, per request, the executions of each tier and, per lessor, the units
 // supplied; and the counters of the tick.
 type Result struct { /* own, commons, let by request; pays (tenant, lessor, units); counters */ }
 
-// Tiers runs the four tiers of 4.3 and the attribution of 4.4. A pure function of its
-// arguments: no state, no draw.
-func Tiers(stock int64, parts []Part, reqs []Request, closed bool, tick int64, res *Result)
+// Tiers runs the four tiers of 4.3 (the let demand clipped by Request.Cash), the starts of
+// 5.4 (rent reserved per principal) and the attribution of 4.4 on the units taken. A pure
+// function of its arguments: no state, no draw.
+func Tiers(stock int64, parts []Part, reqs []Request, closed bool, rent, tick int64, res *Result)
 
-// Step returns the posted rent after one tick (5.5.1).
-func Step(posted, base, stepBP, floorBP, ceilBP, unserved, idle int64) int64
+// Step returns the posted rent after one tick (5.5.1): unserved is X, idle is Y = L - V and
+// cut is C.
+func Step(posted, base, stepBP, floorBP, ceilBP, unserved, idle, cut int64) int64
 ```
 
 ### 21.2 Terms (N-017)
 
 To add to the glossary in `specs/README.md` and `doc.go` before code uses them:
-**tenure** (this module), **title**, **holder**, **commons share**, **entitlement**
+**tenure** (this module), **title** (a claim of ownership of a share of an endowment, never a rank or an honorific), **holder**, **commons share**, **entitlement**
 (units of a title at a snapshot; not the entitlement of other specs), **unused entitlement**,
 **let** (a unit of an unused entitlement offered to others; the verb is not "lease"),
 **lessor**, **tenant** (a request served from let units), **tier** (of the ration: own,
@@ -1808,4 +1964,5 @@ commons, let; a different word from STY's tier of tests), **posted rent**, **ren
 **rent scale**, **closed** (an endowment that lets nothing), **enclosure** and **release**
 (the two directions of a transfer to and from the commons), **principal** (PRO's, used
 here for the holder status of a job), **apportionment** (by the largest remainder).
+**no agent** (`NoAgent`, the constant -1 of `AgentID`: the commons, as a party of `TransferTitles`; `NoRegion` of REG is the model), **priced out** (units of a request clipped by what its principal can pay at the rent in force, 4.3 step 3), **forfeited** (rent that a payee at `MaxMoney` could not receive and was not charged, 5.3.3), **held** (unused entitlement of a closed endowment).
 "Land" is not a term: it appears only in the name of the file and in the examples.

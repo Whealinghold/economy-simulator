@@ -102,12 +102,14 @@ quantities are plain integers.
 | Group | Fields |
 |-------|--------|
 | Region | `Tick`, `Region`, `TicksPerYear`, `PoolMoney` (the estate account's money), `Budget` (`PoolMoney * EntryPoolShare / 10 000` at view time; advisory, a ceiling that a consumer spawner may use to size its plan: the world takes the budget itself after the module's deaths, 7.3), the tunables of section 11 |
-| Per role (canonical order) | `Role`, `Closed`, `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopBirths` (section 8: households the population module asks to add; 0 when it is off) |
+| Per role (canonical order) | `Role`, `Closed` (true when `Role.Closed` is set or when `Role.Needs` names a flag the region's class lacks, `spec-settlements.md` 6.4.1), `Headroom` and `NoLimit` (the least of the class limit and the body's, less the households of the role, 6.3.1), `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopBirths` (section 8: households the population module asks to add; 0 when it is off) |
 | Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship`, `PopDeaths` (section 8: households the population module asks to remove from this agent, at most `Weight - Unfed`; 0 when it is off), `OwnUse` (read-only: the agent is in the own-use mode of `spec-subsistence.md` 5.3; false when the module is off; the default spawner does not read it) |
 
 3.2.1. The view carries data, not a formula: **expected ratio** `E` and **viability** `V`
 of a role are computed from it (6.1) by a pure function in `internal/occupation`, so a
 consumer spawner may reuse or ignore them.
+
+3.2.2. `QueueAhead`, `Trainers` and `MaxTrainees` are the **effective** figures of `spec-skill-barriers.md` 4.5 and 4.9 as the institutions module amends them (`spec-institutions.md` 5.7.2, 5.7.3): `Trainers` counts the households that can take a trainee (members, where a `train` right is in force), and `MaxTrainees` is the least of the role's and the trainer's body's. SKL owns the figures; the view only carries them.
 
 ### 3.3 Decisions
 
@@ -173,8 +175,10 @@ ladder and the traineeship completion of `spec-skill-barriers.md` 4.1 (cause
 | State | Effect |
 |-------|--------|
 | Money | kept |
-| Goods | those in the new role's tradable set (`spec-agents.md` 3.4) are kept; the others pass to the estate with `estate_goods` and are listed (a switching cost, counted: `GoodsListed`) |
+| Goods | those in the new role's tradable set (`spec-agents.md` 3.4) are kept; the others pass to the estate with `estate_goods` and are listed (a switching cost, counted: `GoodsListed`); the load above the new role's room (`spec-storage.md` 5.5.2, by the rule of 5.5.2.1) goes too, under `estate_goods`, and counts in `GoodsListed` |
 | Job | abandoned, reason `role_changed` (`spec-production.md` 5.4); N-034 |
+| Hires | as a worker, its hire ends and its job is abandoned (`role_changed`); as an employer, its hires end and each worker's job is abandoned (`principal_left`), the escrow returning to the employer (`spec-employment.md` 6.4) |
+| Stores (`spec-storage.md` 3.6.1a) | a change to a role with a base room keeps them; a change to a role with no base room ends them, each with a `StoreChanged` (cause `role_changed`) after the `RoleChanged` |
 | Beliefs | kept for commodities in both sets; new ones start per `spec-beliefs.md` 8.3; the rest are dropped |
 | Welfare history | kept (records stay with the agent, `spec-welfare-and-wages.md` 2.1.2) |
 | Target ratio | `clamp(new_target + (old_target - old_role_target), new_target - spread, new_target + spread)`: its offset carries over, no draw |
@@ -193,7 +197,7 @@ is below the group's `Scale`; otherwise a new agent of weight 1 (so at scale 1 e
 entrant is a new agent, and at larger scales the agent count stays near `ceil(H / S)`). An agent on a migration journey is never chosen (`spec-migration.md` 8.3): it is skipped as if it were not in the region.
 Each household brings `Role.StartMoney` from the pool (reason `start_money` for a new
 agent that is an entrant, `births` for households added to an existing agent), and **no
-goods** (`spec-agents.md` 3.5.3): the per-household goods of a cohort dilute. A household
+goods** (`spec-agents.md` 3.5.3): the per-household goods of a cohort dilute. A new agent of a role with a store row is given its stores, except those the region's class lacks the `Needs` flag for, which are not given and are counted in `AgentSpawned.StoresLocked` (`spec-storage.md` 3.2.3, 14.1). A household
 born through the population module (cause `births`) brings instead the stake
 `trunc(Role.StartMoney * BirthStake / 10 000)` (`spec-population.md` 4.3), with the reason
 `births` whether it joins an existing agent or becomes a new one. The funded number
@@ -208,7 +212,7 @@ weight rise by POP uses the same rule. A new agent takes the two creation draws 
 
 `Apply(agent, role)` enters the agent in the traineeship queue of `spec-skill-barriers.md`
 4.4. The queue, places and completion are SKL's; the completion calls the role change
-of 4.2.
+of 4.2. A completion is **held**, not refused, while the target role has no headroom for the trainee's weight (6.3.1; `spec-institutions.md` 4.5.2): it stays a trainee and takes its place when the headroom reaches 1.
 
 ## 5. Bankruptcy and the failure ladder
 
@@ -352,6 +356,20 @@ destination role counts only switchers and cross-role entrants: like-for-like
 replacement (7.2) does not change a share and is not capped. This is the **entry limit**
 (D14).
 
+### 6.3.1 The role ceiling
+
+A role's **headroom** in the region is the least of the headroom of its class limit
+(`Role.Ceiling`, `spec-settlements.md` 6.4.2) and of its body's (`spec-institutions.md`
+3.4.3), less the households of the role, counted at the start of the region's entry step;
+the view says `NoLimit` when neither applies. The default spawner admits an entrant or a
+switcher (an `Enter`, including a replacement of 7.2, a `Switch` and an `Apply` taking a
+place) only while the weight of the agent fits the headroom, each admission reduces it, and
+each refusal is counted in `EntryLimited.RoleCeiling`. SET owns the names and the rule
+(`spec-settlements.md` 6.4.2); a body's places add a second source to the same count and no
+field. A ceiling is not enforced on what is there: no household is removed for it, and a
+ceiling that binds serves the entrants in the order of the plan (6.3, N-122), first come.
+A trainee's completion shares the headroom: it is held, not refused (4.4).
+
 ### 6.4 Rung 1
 
 An agent with `Privation >= ChangePrivation` (not external, not a trainee, past its
@@ -388,7 +406,7 @@ fractions (section 14). With `Renewal` 5 000 and one removal per tick the entrie
 
 For each role in role order, its `n_r` replacements go, in this order, to:
 
-1. the same role, if it is open and viable (like for like; not capped, 6.3);
+1. the same role, if it is open (not `Closed`, its `Needs` carried) and viable and its headroom fits (like for like; not capped by `EntryShare`, 6.3; under the ceiling, 6.3.1);
 2. otherwise the open viable role with the highest `E` (ties to the lower role ID), under
    the caps of 6.3;
 3. otherwise nowhere: the replacement is dropped and counted (`NoViableRole`).
@@ -417,7 +435,7 @@ Money from the pool, no goods, an empty welfare record padded by the role's
 the market price, not from the warm-start table (`spec-beliefs.md` 8.3,
 `spec-viability.md` 8.8; closes the SPN part of N-038), `Hunger` and `Privation` 0, the
 two creation draws of `spec-agents.md` 3.5.2, and `RoleSince` the current tick, so a
-newcomer is not reviewed for `RoleCooldown` ticks.
+newcomer is not reviewed for `RoleCooldown` ticks. A new agent has the stores of its role row that the region's class permits (`spec-storage.md` 3.2.3); the rest are counted in `StoresLocked`.
 
 ## 8. Births and population: the boundary with POP
 
@@ -441,7 +459,7 @@ them:
   of the entry step is taken (10.2), so the estates of the dead fund the same tick's births;
 - births: for each role with `PopBirths` above 0, `Enter(role, PopBirths)` with cause
   `births`, last in the plan, under the funding of 7.3 with the placement of 4.3 and the
-  stake of 4.3, not capped by `EntryShare` and not gated by viability (POP owns the rule).
+  stake of 4.3, not capped by `EntryShare` and not gated by viability, but capped by a role ceiling (6.3.1), whose rule POP owns (`spec-population.md` 3.7.3, 4.4).
 
 A newborn household is an entrant with the stake (4.3) until POP changes its endowment.
 
@@ -510,6 +528,8 @@ not from any source.
 | World | `Renewal` | share of the households lost by rung 3 that are replaced, in basis points (7.1) | 10 000 | 0 to 10 000 |
 | World | `EntryPoolShare` | share of the pool that may fund entrants in one tick, in basis points (7.3) | 5 000 | 0 to 10 000 |
 | Role | `Closed` | the default spawner places no entrant or switcher in this role (6.2) | false | boolean |
+| Role | `Needs` | a settlement flag the region's class must carry for the role to be open (6.2; SET owns it, `spec-settlements.md` 6.4.1) | empty | a flag ID |
+| Role | `Ceiling` | a settlement limit on the households of the role in a region (6.3.1; SET owns it, `spec-settlements.md` 6.4.2) | empty | a limit ID |
 
 The placeholders and why: `EntryShare` 50 because in the model (16.1) shares of 200 and
 above left the role swinging by 30 to 100% at a window of 30 and 120, and 50 held it at 0
@@ -526,6 +546,7 @@ Each rule has a sentinel and a failing-case test (testing.md 3.9); errors name t
 | `ErrOutOfBounds` | a parameter of section 11 outside its bound; `ChangePrivation` not below `RemovePrivation` (rule `ladder_order`); an `EntryShare` of 0 with a `ChangePrivation` the pack relies on is not an error |
 | `ErrUnknownStrategy`-style `ErrUnknownSpawner` | `WithSpawner` naming nothing registered (checked by `NewWorld`) |
 | `ErrOverflow` | `Households * EntryShare`, `Households * ExitShare` or `Wage * ExpectedWorkTicks` products beyond `MaxQuantity` or `MaxMoney` at the largest weight |
+| `ErrUnknownSettlementFlag`, `ErrUnknownLimit`, `ErrModuleDependency` | a `Role.Needs` or `Role.Ceiling` naming a flag or limit no class carries, or either with the settlement module off (owned by SET, `spec-settlements.md` 9.1; listed so the spawner's gate is not a surprise) |
 
 Warnings (never fail validation):
 
@@ -543,11 +564,11 @@ Warnings (never fail validation):
 
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
-| `AgentSpawned` (existing) | an agent is created, including entrants | `Agent`, `Region`, `Role`, `Weight`, `StartMoney`, `External` |
+| `AgentSpawned` (existing) | an agent is created, including entrants | `Agent`, `Region`, `Role`, `Weight`, `StartMoney`, `External`, `StoresLocked` (the stores of the role row not given because the region's class lacks the flag; 0 with no gate, `spec-storage.md` 14.1) |
 | `AgentBankrupted` (existing) | an agent is removed entirely, by rung 3 or at the consumer's request | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause`, `Money`, `GoodsListed` |
 | `WeightChanged` (new) | an agent's weight changes without removal: a rung-3 reduction, an entry into an existing agent, a POP birth or death | `Agent`, `Region`, `Role`, `From`, `To`, `Cause`, `Money` (signed, positive to the agent) and `Units` (goods moved to the estate) |
 | `RoleChanged` (new) | an agent changes role | `Agent`, `Region`, `From`, `To`, `Weight`, `Cause`, `GoodsListed` |
-| `EntryLimited` (new) | once per region per tick in which any limit or refusal acted | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
+| `EntryLimited` (new) | once per region per tick in which any limit or refusal acted | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
 
 13.1.0. With the population module on, `PopulationChanged` (`spec-population.md` 10.1) follows `EntryLimited` in the order of the events of a region's entry step.
 
@@ -563,7 +584,7 @@ events, and `RoleChanged` for the count by role. `economysim.agent.bankruptcies`
 `AgentBankrupted`, all causes. `WeightChanged`, `RoleChanged` and `EntryLimited` are in the event table of observability-and-logging.md 4.3, and the feeds of `agent.count`, `household.count` and `role.changes` are in 5.3.1.
 
 13.1.2. `EntryLimited` is the counter of the silent dampers (N-045, N-065, N-067: the
-entry limit, the cooldown, the hysteresis band, the exit cap, the viability gate and the
+entry limit, the role ceiling, the cooldown, the hysteresis band, the exit cap, the viability gate and the
 funding limit). Each field is a count of households or decisions in the tick; it is not
 emitted when everything is zero, so a healthy world costs nothing. Bounded by the number
 of regions. `Refused` totals the world's refusals of section 4; their reasons are `Debug`.
@@ -819,8 +840,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-003 | A spawner MUST NOT create its own random source, use a global one, or keep the `*rand.Rand` after `Decide` returns, and the doc comment of `Spawner` MUST say so (3.1.2). |
 | FR-SPN-004 | The world MUST execute the decisions of a region in plan order and MUST refuse, change nothing for and count each decision that fails a check of section 4, with its `reason`. |
 | FR-SPN-005 | A removal MUST follow `spec-agents.md` 3.6 and a reduction MUST scale money and each good to `floor(x * w' / w)` with the difference to the estate, with the ledger reason `starvation`, `deaths` or `births`, conserving money and goods exactly (4.1). |
-| FR-SPN-006 | A role change MUST keep the agent's account and money, keep goods in the new role's tradable set and pass the others to the estate with `estate_goods`, abandon the job with `role_changed`, keep beliefs for common commodities, keep the welfare history, carry the target-ratio offset without a draw, set `RoleSince` to the current tick and open or close no account (4.2). |
-| FR-SPN-007 | `Enter` MUST place households in the role's agent of smallest weight below the group's `Scale`, else in a new agent of weight 1, and each household MUST bring `Role.StartMoney` from the pool and no goods (4.3). |
+| FR-SPN-006 | A role change MUST keep the agent's account and money, keep goods in the new role's tradable set and pass the others, and the load above the new role's room (`spec-storage.md` 5.5.2.1), to the estate with `estate_goods`, abandon the job with `role_changed`, end its hires (4.2), keep or end its stores by the new role's base room, keep beliefs for common commodities, keep the welfare history, carry the target-ratio offset without a draw, set `RoleSince` to the current tick and open or close no account (4.2). |
+| FR-SPN-007 | `Enter` MUST place households in the role's agent of smallest weight below the group's `Scale`, else in a new agent of weight 1, and each household MUST bring `Role.StartMoney` from the pool and no goods, and a new agent MUST be given the stores of its role row that the region's class permits, the others counted in `AgentSpawned.StoresLocked` (4.3). |
 | FR-SPN-008 | The funded number of an `Enter` MUST be `min(n, floor(budget / StartMoney))`, the unfunded households MUST NOT be created or deferred, and the pool MUST never be overdrawn (4.3, 7.3; FR-EST-022). |
 | FR-SPN-009 | A decision to `Apply` for an agent of weight above 1 MUST be refused with `needs_weight_one` (4.4; N-064). |
 | FR-SPN-010 | The world MUST refuse a decision on an external agent with `external_agent` unless the agent is mortal, and the default spawner MUST NOT produce one (9). |
@@ -841,7 +862,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-025 | A replacement MUST go to the leaver's role if it is open and viable, else to the open viable role of highest `E` under the caps, else nowhere, counted as `NoViableRole` (7.2). |
 | FR-SPN-026 | The funding budget MUST be taken once per region per tick as `PoolMoney * EntryPoolShare / 10 000`, after the population module's deaths and before the switches and any entry (7.3; `spec-world.md` ruling C15). |
 | FR-SPN-027 | A newcomer MUST start with beliefs from the price window mean or the market price (not the warm-start table), `Hunger` and `Privation` 0 and `RoleSince` the current tick (7.4; `spec-beliefs.md` 8.3). |
-| FR-SPN-028 | A positive `PopBirths` of a role MUST be executed as an `Enter` with cause `births` under the funding of 7.3 with the stake of 4.3 and without the cap or the gate, and a positive `PopDeaths` of an agent as a `Reduce` of that agent with cause `population` and reason `deaths`, in agent ID order, at most `Weight - Unfed` (8.2). |
+| FR-SPN-028 | A positive `PopBirths` of a role MUST be executed as an `Enter` with cause `births` under the funding of 7.3 with the stake of 4.3 and without the cap or the gate, except the role ceiling of 6.3.1, and a positive `PopDeaths` of an agent as a `Reduce` of that agent with cause `population` and reason `deaths`, in agent ID order, at most `Weight - Unfed` (8.2). |
 | FR-SPN-029 | The default spawner MUST draw nothing from the random source (10.1). |
 | FR-SPN-030 | Every ordering of the default spawner MUST end in a unique key and MUST NOT depend on map iteration (10.1). |
 | FR-SPN-031 | The default's plan order MUST be: reductions and removals, then the population module's deaths, then switches and applies, then renewal entries (none while the population module is on), then its births (10.2). |
@@ -862,13 +883,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-046 | The expected ratio, the viability and the privation maximum per role and region MUST be in the snapshot; the counts of `EntryLimited` are the event (13.4). |
 | FR-SPN-047 | A group of weight above 1 whose agent count falls below `MinAgents` MUST be reported by a bounded `Warn` and MUST NOT be rebuilt silently (13.3). |
 | FR-SPN-048 | A role change of an agent whose role has a required tool held MUST pass that tool to the estate if it is not in the new role's tradable set (4.2). |
-| FR-SPN-049 | A trainee's completion MUST use the role change of 4.2 with the cause `traineeship` (4.2, 4.4). |
+| FR-SPN-049 | A trainee's completion MUST use the role change of 4.2 with the cause `traineeship`, and MUST be held, not refused, while the headroom of the target role (6.3.1: the least of the class limit and the body's) is below the trainee's weight, so a completion shares the headroom with the entrants and the switchers (4.2, 4.4; `spec-institutions.md` 4.5.2). |
 | FR-SPN-050 | The default spawner MUST NOT remove, reduce or switch an agent in the tick it was created (7.4, 5.2). |
 | FR-SPN-051 | A reduction or removal MUST leave the fed households' share of the agent's money per household unchanged (4.1, 15.4). |
 | FR-SPN-052 | A world restored from a checkpoint taken between ticks MUST give the same `AgentSpawned`, `AgentBankrupted`, `WeightChanged` and `RoleChanged` events as an uninterrupted one (14). |
 | FR-SPN-053 | `RoleSince` MUST be the tick the agent took up its present role or place: set at creation, at a role change, at the arrival of a migration journey and at a forced `Relocate` (`spec-integration.md` 4.5.2), so that rung 3 waits `RemovePrivation` ticks after an arrival as after a role change. (new, `spec-migration.md` 8.4) |
 | FR-SPN-054 | A `Switch` or `Apply` of an agent on a migration journey MUST be refused with `on_journey`, a removal or a reduction MUST NOT be, and the placement of an `Enter` MUST NOT choose such an agent. (new, `spec-migration.md` 8.3) |
 | FR-SPN-055 | A role change MUST reset `OwnUseJobs` to 0 and keep `OwnUse` for re-evaluation, and the per-agent view MUST carry `OwnUse` read-only. (new, `spec-subsistence.md` 5.8) |
+| FR-SPN-056 | The default spawner MUST admit an entrant or a switcher into a role only while its weight fits the role's headroom (the least of its class limit and its body's, 6.3.1), MUST count each refusal in `EntryLimited.RoleCeiling`, and MUST NOT remove a household because a ceiling is exceeded (`spec-settlements.md` 6.4.2, FR-SET-023; `spec-institutions.md` 3.4.3). (new) |
+| FR-SPN-057 | A role whose `Needs` flag the region's class lacks MUST be `Closed` in the view for that region and MUST receive no entrant, no switcher and no like-for-like replacement from the default spawner (6.2, 7.2; `spec-settlements.md` 6.4.1, FR-SET-022). (new) |
 
 ### Non-functional
 

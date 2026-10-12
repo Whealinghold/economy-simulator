@@ -1,13 +1,21 @@
-1. start size: 20000 cases, closed form equals the exact largest k in 18964, below it in 1036 (largest gap 11 executions); it never started more than fits
+1. start size (one dimension): 20000 cases, closed form equals the exact largest k in 18964, below it in 1036 (largest gap 11 executions); it never started more than fits
+   cases with a gap of 3 or more: 6; (gap, c, free): [(11, 0, 1), (8, 0, 2), (5, 2000, 1), (3, 15000, 5), (3, 8000, 2), (3, 7500, 4)]
 2. targets {0: 40, 1: 30} scaled by 6461 bp to {0: 25, 1: 19} in room (100, 100) with pledge (10, 10) and reserve {0: 6}
-3. 4000 ticks: 3830 bids admitted, 3830 settled whole, 3379 bids and 78 starts refused for room, the highest committed load 60 of room 60
-A ('A', 0, (400, 200), [1, 1], 1)
-A ('A', 100, (200, 100), [0, 0], 0)
-A ('A', 160, (80, 40), [0, 0], 0)
-A ('A', 190, (20, 10), [0, 0], 0)
+   with pledge (95, 10) the available mass room is negative: clamped, f = 0, targets {0: 0, 1: 0}
+3. 4000 ticks, upkeep 2 units a tick: 2997 bids admitted, 2997 settled whole, 7826 bids, 258 starts and 407 dispatches refused for room; 245 tier 1 bids needed, all fitted after 0 units discarded; never unfed for room; highest committed load 58 of room 60
+4. weight 10 -> 5, 20 000 random reductions: the scaled load always fits the new room
+   before: room (1200, 1200), load (200, 100), pledge (940, 940)
+   after: room (700, 700), load (100, 50), pledge (940, 940)
+   at P1.3 the cargo credits 40 of 40 (diverts 0); at P2.1 the output credits 280 of 450 and disposes 170
+5. 5000 random role changes: the excess always ends within the room; worked case of 18.3, units moved to the estate: {'B': 20, 'A': 10}
+6. 582 random discards: the tier 1 units always fit after the discard (433 units discarded in all); the case of 6.3.2, room (60, 60) full of surplus: discarded {1: 1}
+A ('A', 0, 'free', (400, 200), 'free less U', (394, 197), 'R', (3940000, 1970000), 'k', [1, 1], 1)
+A ('A', 100, 'free', (200, 100), 'free less U', (194, 97), 'R', (1940000, 970000), 'k', [0, 0], 0)
+A ('A', 160, 'free', (80, 40), 'free less U', (74, 37), 'R', (740000, 370000), 'k', [0, 0], 0)
+A ('A', 190, 'free', (20, 10), 'free less U', (14, 7), 'R', (140000, 70000), 'k', [0, 0], 0)
 A ('B', 'units that fit', 4530, 'room', (6040, 9060))
 A ('B', 'bid', 4500, 'admitted', 'free before', (6040, 9060), 'free after', (1540, 60))
 A ('B', 'bid', 40, 'rejected no_room', 'free before', (1540, 60), 'free after', (1540, 60))
-A ('B', 'cargo of 20 pledged', 'free', (1520, 20))
+A ('B', 'cargo of 20 pledged', 'free less U before', (1538, 56), 'free after', (1520, 20))
 A ('B', 'bid', 11, 'rejected no_room', 'free before', (1520, 20), 'free after', (1520, 20))
 A ('B', 'bid', 10, 'admitted', 'free before', (1520, 20), 'free after', (1510, 0))

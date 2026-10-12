@@ -1,11 +1,12 @@
 """The labour round of spec-employment.md sections 5 and 6, with the ledger checks.
 
 A prototype of the spec's rules, not of the library. Standard library only. Integer
-arithmetic throughout; the keys of the round come from a seeded random.Random (the
-library draws them from the world's source, one word per admitted offer and then one
-per admitted vacancy, in admission order).
+arithmetic throughout; the ties of the round are broken by the stateless key K(t, id)
+of spec-world.md 10.1.1 (SplitMix64 finaliser of t * 0x9E3779B97F4A7C15 + id, smaller
+first, then the ID): no word of the world's source is taken (spec-employment.md 5.3.1).
+A random.Random is used only to build the scenarios and to choose interruptions.
 
-It implements: the keys and the order (5.3), first-fit matching with the wage
+It implements: the order by value then K(t, id) (5.3), first-fit matching with the wage
 `R + phi * (Bid - R)` half to even (5.4), formation with its refusals, the closing of a
 lane or a vacancy and the **fit** of a vacancy (5.5), the escrow, the release of one
 tick's wage at P2.1 or P2.7 and the completion with the refund (6.2, 6.3), and three
@@ -22,8 +23,26 @@ def half_even_div(n, d):
         q += 1
     return q
 
+M64 = (1 << 64) - 1
+
+def finalise(x):
+    """The SplitMix64 finaliser (modular uint64 arithmetic: the wrap is the hash)."""
+    x &= M64
+    x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & M64
+    x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & M64
+    return x ^ (x >> 31)
+
+def K(t, agent_id):
+    """The stateless tie key of spec-world.md 10.1.1; takes no draw and keeps no state."""
+    return finalise(t * 0x9E3779B97F4A7C15 + agent_id)
+
+def agent_id(name):
+    """Employers E<i> have ID i, workers W<i> have ID 1000 + i."""
+    return int(name[1:]) + (1000 if name[0] == "W" else 0)
+
 class World:
     def __init__(self, seed):
+        self.tick = seed                 # the tick of the scenario: any value, K depends on it
         self.rng = random.Random(seed)
         self.money = {}          # account -> balance (agents, "estate", escrows)
         self.hires = {}          # id -> dict
@@ -53,10 +72,10 @@ def round_(w, offers, vacancies, stock_capacity, max_open):
     employer's stock and tools allow beyond its own request. One region (one lane).
     Returns the hires formed and the counts (households unmatched; positions unfilled by
     the reason that closed the vacancy)."""
-    for o in offers:                                   # 5.3.1: keys, offers then vacancies
-        o["key"] = w.rng.getrandbits(64)
+    for o in offers:                                   # 5.3.1: the stateless key, no draw
+        o["key"] = (K(w.tick, agent_id(o["agent"])), agent_id(o["agent"]))
     for v in vacancies:
-        v["key"] = w.rng.getrandbits(64)
+        v["key"] = (K(w.tick, agent_id(v["agent"])), agent_id(v["agent"]))
         v["left"] = v["positions"]
         v["fit"] = v["positions"]                      # the largest block it can still take
         v["closed"] = None

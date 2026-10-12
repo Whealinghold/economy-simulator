@@ -69,7 +69,7 @@ Out of scope, with the owner:
 | # | Position | Section |
 |---|----------|---------|
 | 1 | There are three outputs and each fact goes to one: a **fact that happened** is an event, a **state at a boundary** is a snapshot field, a **thing for a human** is a log line. A metric is derived, never a fourth source of truth | 3.1 |
-| 2 | One catalogue of 52 events: the 47 of the rules, `WorldRestored`, `ProductionHalted`, `YieldShocked`, `TransitFactorChanged` and `PopulationScaled`. Every event has one owner, one position, one volume class and one module gate | 4 |
+| 2 | One catalogue of 88 events: the 47 of the first rules, `WorldRestored`, `ProductionHalted`, `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` (52), and the 36 of the fourteen later-stage modules (4.1.9 to 4.1.12 and the groups they name). Every event has one owner, one position, one volume class and one module gate | 4 |
 | 3 | An event carries the **typed integer ID** of every configured entity (`RegionID`, `CommodityID`, `RoleID`, ...) and the agent ID; a reason, a cause and a side are constants of a closed set. The strings come from one **names table**, carried by `WorldCreated`, `WorldRestored` and the snapshot, and by `World.Config()`. This answers REG open question 4, RES 14.1 and N-012 | 3.2 |
 | 4 | An event of a transition of one agent carries the agent's region (and role where the metric needs it) so that a consumer with no agent table can attribute it | 3.3 |
 | 5 | `BoundaryFlow` is only for the reasons whose kind is faucet or sink. The internal reasons (`trade`, `relief`, `start_money`, `estate_*`, `escrow_*`, `transit_*`, the weight reasons) have their own events or are in the snapshot | 4.4.1 |
@@ -81,7 +81,7 @@ Out of scope, with the owner:
 | 11 | Agents and households are reported separately everywhere, pseudo-agents are never in either, and a count of households is the sum of weights | 5.1 |
 | 12 | A metric is fed by an event or by a snapshot that the consumer passes to the adapter between steps. The metrics that are fed by a snapshot are named as such, and the rule that every metric is derivable from events is restated to say so | 6.2, 6.3 |
 | 13 | `economysim.agent.bankruptcies` is renamed `economysim.agent.removals` and gains the attribute `economysim.cause` (answers N-088 4) | 6.3 |
-| 14 | Every `Warn` is bounded by a market, a role, a region, an endowment, a side or (row 19, with no run) a recipe of the configuration, and repeats on every tenth consecutive tick of its condition, and pattern A also on the first; the `10` is one rule constant. There is no `Error` path in the library | 7 |
+| 14 | Every `Warn` is bounded by an entity of the configuration (a market, a role, a region, an endowment, a body, a side or, row 19, with no run, a recipe), and repeats on every tenth consecutive tick of its condition, and pattern A also on the first; the `10` is one rule constant. There is no `Error` path in the library | 7 |
 | 15 | With no observer the world constructs no event; the cost with an observer is counted per event class, and the per-order and per-trade classes are 92% to 99% of the events | 8 |
 | 16 | The golden rendering of events is defined here, in text, field by field in declaration order; the renderer is test code | 9.5 |
 
@@ -131,9 +131,17 @@ canonical region order, `spec-regions.md` 3.3), `CommodityID`, `RoleID`,
 `RecipeID`, `ResourceID`, `ModeID` and `WantID`, each an index in the
 canonical order of its kind (`spec-config.md` 3.4, 3.5; `WantID` is a type this
 spec asks `spec-demand.md` to name, section 19), a season index (`Moment.Season`,
--1 for none), and `AgentID` (an `int64`, never reused). A **money flow** is the
-exception, as in `spec-integration.md` 3.4.1: it is named by its string ID, which
-is also its ledger reason (`spec-money-supply.md` 4.5), and has no typed ID. A **reason**, a **cause**, a **kind**
+-1 for none), and `AgentID` (an `int64`, never reused). The later-stage modules add
+the typed IDs `StoreClassID` (STO), `SettlementClassID` (SET), `FacilityClassID`
+(CAP), `TechFieldID` (TEC), `JurisdictionID` (POL), `BodyID`, `RightID` and
+`ControlID` (ORG) and `ActorID` (PLC), each an index in the canonical order of its
+kind, and a claim, a hire, a cover policy and a facility are named by the ID that
+its owner defines (`HireID`, `FacilityID`; a claim and a cover policy are `int64`
+counters of the world, as a shipment is, 3.2.5). A **money
+flow** and a **fiscal flow** are the exception, as in `spec-integration.md` 3.4.1:
+each is named by its string ID, which is also its ledger reason
+(`spec-money-supply.md` 4.5; the two kinds share one ID namespace), and has no typed
+ID. A **reason**, a **cause**, a **kind**
 (faucet or sink) and every other member of a closed set of constants is a named
 string type (`Reason`, `Cause`, `Kind`, `ScaleKind`) **exported from the root
 package** (`event.go`) with its constants, so that a consumer and the separate
@@ -166,9 +174,17 @@ appears:
 // The slice of a kind is indexed by that kind's ID type. Plain data: a deep copy.
 type Names struct {
 	Regions, Commodities, Roles, Recipes, Resources, Modes, Wants, Seasons []string
+	// Kinds of the later-stage modules; each is empty with its module off.
+	StoreClasses, SettlementClasses, FacilityClasses, TechFields []string
+	Jurisdictions, Actors, Bodies, Rights, Controls              []string
 }
 ```
 
+The slice of a later module's kind is named by the plural of the ID type, one field
+for each kind (the settlement classes are not the commodity classes of IND, so the
+field says `SettlementClasses`), and it holds the string of every typed ID of the
+module in the canonical order of the module's own data (STO, SET, CAP, TEC, POL,
+PLC, ORG). A fiscal flow and a money flow have no slice: each is its own string.
 It is carried by `WorldCreated`, by `WorldRestored` and by the `Snapshot`, and is
 what `Config()` would give by walking its canonical order. It is built once at
 construction (it is derived from the configuration, 8.1) and copied into each
@@ -177,8 +193,9 @@ An adapter that sees `WorldCreated` or `WorldRestored` holds the table and never
 needs the configuration (6.6.1).
 
 3.2.5. **What is not an index.** The shipment ID and the contract ID are `int64`
-counters of the world. The ledger's `Reason` is the string of its registry, and
-for a money flow it equals the flow's string ID (`spec-money-supply.md` 4.5), so
+counters of the world, as are the claim ID, the hire ID, the cover policy ID and the
+facility ID of the later modules. The ledger's `Reason` is the string of its registry, and
+for a money flow, and for a fiscal flow, it equals the flow's string ID (`spec-money-supply.md` 4.5), so
 `BoundaryFlow.Reason` joins to the `Flow` field of `MoneyFlowLimited`, `MoneyFlowEnded`
 and `MoneyFlowScaled` by equality, with no table. An outside node has a `RegionID` like any region (`spec-regions.md` 3.3):
 `OutsideTraded` carries it in `Node` and the gate in `Region`, and the `Region`
@@ -246,11 +263,11 @@ They are the only guide a consumer has to the cost of an observer (8):
 | Class | Code | Bounded by | Examples |
 |-------|------|------------|----------|
 | world or run | W | once per world, run or step | `WorldCreated`, `RunStarted`, `TickStarted` |
-| aggregate | A | the configuration: regions, markets, roles, wants, flows, resources, nodes, reasons, never agents, orders or trades | `MarketCleared`, `UpkeepShortfall`, `BoundaryFlow`, `EndowmentChanged` |
-| entity | E | one transition of one agent, shipment, contract, journey, edge or flow, however many there are | `AgentSpawned`, `AgentBankrupted`, `ShipmentDispatched`, `ContractFormed` |
+| aggregate | A | the configuration: regions, markets, roles, wants, flows, resources, nodes, reasons, facility classes, bodies, rights, controls, technology fields, authorities, policy actors, never agents, orders or trades | `MarketCleared`, `UpkeepShortfall`, `BoundaryFlow`, `EndowmentChanged` |
+| entity | E | one transition of one agent, shipment, contract, journey, edge, flow, claim, hire, title, facility, store, cover policy or region (a settlement class), however many there are | `AgentSpawned`, `AgentBankrupted`, `ShipmentDispatched`, `ContractFormed` |
 | order | O | one per order | `OrderPlaced`, `OrderRejected` |
 | trade | R | one per trade | `TradeExecuted` |
-| call | C | one per changed cell of a call between ticks | `YieldShocked`, `EdgeStatusChanged`, `OutsideShocked` |
+| call | C | one per changed slot cell, at a call between ticks, at P0.3a when a policy actor writes it (cause `policy`), or at P8.3b for a facility's change of an endowment (at most one per endowment, bounded by regions times resources) | `YieldShocked`, `EdgeStatusChanged`, `OutsideShocked` |
 
 The classes O and R are the volume of the library (8.3): they grow with the
 number of agents and the number of tradable commodities, and every other class is
@@ -274,7 +291,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 
 | Event | Owner | Position | Class | Gate | Fields (besides `Tick`) |
 |-------|-------|----------|-------|------|-------------------------|
-| `WorldCreated` | WLD 16.1, CFG 10.3 | construction, first (WLD 5.8.2) | W | core | `Seed uint64`, `ConfigHash [32]byte`, `WarmStart bool`, `Names Names`+ |
+| `WorldCreated` | WLD 16.1, CFG 10.3 | construction, first (WLD 5.8.2) | W | core | `Seed uint64`, `ConfigHash [32]byte`, `WarmStart bool`, `Names Names`+, `Jurisdictions []JurisdictionRow`+ (one `JurisdictionRow{Jurisdiction; Seat; Agent; Money}` for each governed jurisdiction, `Money` its `StartMoney`; empty with none, POL 10.7) |
 | `WorldRestored` + | OBS 4.4.5; CHK 6.7.3, 14.1 | the restore, first | W | core | `ConfigHash [32]byte`, `Format uint32` (the checkpoint's, as `CheckpointInfo.Format`; the log key is `slog.Int64(int64(f))`), `Reseeded bool`, `Salt uint64` (meaningful when `Reseeded`), `Names Names`, `Snapshot Snapshot` (the state at the restored boundary; its header holds the original seed, the agents and the households) |
 | `RunStarted` | WLD 3.4, 16.1 | `Run`, before its first tick | W | core | `Ticks int64` (requested) |
 | `RunEnded` | WLD 3.4.2, 16.1 | `Run`, before it returns | W | core | `Completed int64`, `Cancelled bool`, `Failed bool`+ |
@@ -301,21 +318,23 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `OwnUseChanged` | SUB 14.1 | P2.8 | A | subsistence | `Region`, `Role`, `Households`, `OnOwnUse`, `Entered`, `Left`, `Started`, `Blocked`, `Retried`, `Output []Amount` |
 | `UpkeepShortfall` | AGT 14.1 | P6.4 | A | core | `Region`, `Role`, `Households`, `Unfed`, `Agents`, `MaxHunger` |
 | `WantShortfall` | DEM 11.1 | P3.6 | A | demand | `Region`, `Role`, `Want`, `Households`, `Choked`, `Planned`, `Funded` |
+| `RoomLimited` | STO 14.1 | P3.6a, after `WantShortfall`, region then role ascending; never when `StartsCut`, `StartsRefused`, `BidsCut`, `BidsRejected`, `ShipmentsRefused` and `Discarded` are all 0 | A | storage | `Region`, `Role`, `LimitedHouseholds`, `FullHouseholds` (both ride along and do not trigger it), `StartsCut`, `StartsRefused`, `BidsCut`, `BidsRejected`, `ShipmentsRefused`, `Discarded` |
 
 #### 4.1.4 Agents, weight, roles, entry and exit
 
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
-| `AgentSpawned` | AGT 14.1, SPN 13.1 | construction after `WorldCreated`; P7.1(d); call | E | core | `Agent`, `Region`, `Role`, `Weight`, `StartMoney Money`, `External bool` |
+| `AgentSpawned` | AGT 14.1, SPN 13.1 | construction after `WorldCreated`; P7.1(d); call | E | core | `Agent`, `Region`, `Role`, `Weight`, `StartMoney Money`, `External bool`, `StoresLocked` (the stores of the role row not given because the region's class lacks the flag, STO 14.1; 0 with the module off) |
 | `AgentBankrupted` | AGT 14.1, SPN 13.1 | P7.1(d); call; the one event that removes the agent (4.4.8) | E | core | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause`, `Money Money`, `GoodsListed int64` |
 | `EstateOpened` | EST 2.5 | with the removal, after `AgentBankrupted` (4.4.8) | E | core | `Agent`, `Region`, `Balance Money`, `GoodsListed int64` |
 | `WeightChanged` | SPN 13.1 | P7.1(d) (no consumer call changes a weight, WLD 8.3) | E | core | `Agent`, `Region`, `Role`, `From`, `To` (weights), `Cause`, `Money Money`+ (signed: positive to the agent), `Units int64`+ (goods moved to the estate) |
 | `RoleChanged` | SPN 13.1 | P7.1(a), (d) | E | core | `Agent`, `Region`, `From`, `To` (roles), `Weight`, `Cause`, `GoodsListed int64` |
-| `EntryLimited` | SPN 13.1 | P7.1, end of the region's step | A | core | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
-| `PopulationChanged` | POP 10.1 | P7.1, after `EntryLimited`, roles ascending | A | population | `Region`, `Role`, `Exposed`, `Unfed`, `NoRatio`, `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsUnfunded`, `RateClamped`, `BirthsDone`, `DeathsDone` |
+| `EntryLimited` | SPN 13.1 | P7.1, end of the region's step | A | core | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`+ (a refusal by the class ceiling of a role, SET 6.4), `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
+| `PopulationChanged` | POP 10.1 | P7.1, after `EntryLimited`, roles ascending | A | population | `Region`, `Role`, `Exposed`, `Unfed`, `NoRatio`, `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsCeiling`+ (births cut by a role ceiling), `BirthsUnfunded`, `RateClamped`, `BirthsDone`, `DeathsDone` |
 | `TraineeshipStarted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Trainee`, `Trainer`, `Role`, `Region`+ |
 | `TraineeshipCompleted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Agent`, `Region`+, `From`, `To` (roles) |
 | `TraineeshipEnded` | SKL 4.7, 8.1 | with a removal (4.4.8) | E | skill barriers | `Agent`, `Region`+, `Reason` |
+| `StoreChanged` | STO 14.1 | a call (`AddStore`, `RemoveStore`); P7.1 after the `RoleChanged` that ended the store; P8.3b for a store facility | E | storage | `Agent`, `Region`, `Role`, `Class StoreClassID`, `Kind` (`added`, `removed`), `Cause` (`consumer`, `role_changed`, `facility`), `Stores` (the agent's stores of the class after), `Room`, `Load` (the account's, as pairs, after) |
 
 #### 4.1.5 Money, estates, boundary
 
@@ -325,20 +344,21 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `ReliefPaid` | EST 2.6, FR-EST-020 | P1.6 | A | estates (pool policy) | `Region`, `Paid Money`, `Recipients int64` (agents), `Households int64`+ |
 | `MoneyFlowLimited` | MON 13.1 | P1.7, after the step, flow order | A | money supply | `Flow string`, `Region`, `Due Money`, `Applied Money`, `Short`, `Headroom`, `Limit` (households) |
 | `MoneyFlowEnded` | MON 13.1 | P1.7, after `MoneyFlowLimited` of the same flow | E | money supply | `Flow string`, `Cause`, `Total Money` |
-| `MoneyFlowScaled` | MON 13.1 | call | C | money supply | `Flow string`, `From`, `To` (bp) |
+| `MoneyFlowScaled` | MON 13.1; PLC 12.1.2 | call; P0.3a when a policy actor writes it | C | money supply (or fiscal, for a fiscal flow) | `Flow string`, `From`, `To` (bp), `Cause`+ (`consumer`, `policy`) |
+| `StoreLoss` | RSK 14.1 | P8.1a, ascending agent ID then class, after the whole position is applied | E | risk | `Agent`, `Region`, `Class StoreClassID`, `Stores` (stores of the class struck, at least 1), `Common bool` (the row's flag), `ShareBP` (after the cap), `Lost []Amount` (a copy, in commodity order; empty when every product rounded to 0) |
 
 #### 4.1.6 Regions, transport, contracts, migration
 
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
 | `AgentRelocated` | REG 10.1 | P1.3, P1.5, call | E | core | `Agent`, `Role`, `From`, `To` (regions), `Weight`, `Money Money`, `Units int64`, `Cause` |
-| `EdgeStatusChanged` | REG 10.1 | call, edge order, after the graph is in place | C | core | `From`, `To` (regions), `Closed bool`, `FactorBP`, `Cause` |
-| `ShipmentDispatched` | TRN 13.1 | P3.2(c), P3.3 | E | transport | `Shipment`, `Mode`, `Region` (origin), `To`, `Shipper`, `Traveller`, `Hired bool`, `Consignee`, `Arrives int64`, `Units`, `HaulUnits`, `Lines []Amount` |
-| `ShipmentArrived` | TRN 13.1 | P1.3 | E | transport | `Shipment`, `Mode`, `Region`, `To`, `Receiver`, `Diverted bool`, `Lines []ArrivedLine` with `ArrivedLine{Commodity; Shipped, Delivered, Diverted, Spoiled Quantity}` |
+| `EdgeStatusChanged` | REG 10.1 | call, edge order, after the graph is in place; P0.3a for a policy actor's write (cause `policy`) | C | core | `From`, `To` (regions), `Closed bool`, `FactorBP`, `Cause` (gains `policy`) |
+| `ShipmentDispatched` | TRN 13.1 | P3.2(c), P3.3 | E | transport | `Shipment`, `Mode`, `Region` (origin), `To`, `Shipper`, `Traveller`, `Hired bool`, `Consignee`, `Arrives int64`, `Units`, `HaulUnits`, `Lines []Amount`, `Toll Money`+ (the total toll of the shipment, 0 when none, FIS 16.1), `LossBP`+ (the loss share fixed at dispatch, 0 for no strike or the module off, RSK 14.1) |
+| `ShipmentArrived` | TRN 13.1 | P1.3 | E | transport | `Shipment`, `Mode`, `Region`, `To`, `Receiver`, `Diverted bool`, `Lines []ArrivedLine` with `ArrivedLine{Commodity; Shipped, Delivered, Diverted, Spoiled, Lost Quantity}` (`Lost`+: RSK 14.1), `AccountLost []Amount`+ (the loss of the traveller's own account, in commodity order; empty for a hired shipment) |
 | `ShipmentRejected` | TRN 13.1 | P3.2(c), P3.3 | E | transport | `Region`, `Agent`, `Mode`, `To`, `Reason` |
-| `TransitFactorChanged` + | OBS 4.4.4; TRN 10.3 | call, (`From`, `To`, `Mode`) order | C | transport | `From`, `To` (regions), `Mode`, `BeforeBP`, `AfterBP` |
+| `TransitFactorChanged` + | OBS 4.4.4; TRN 10.3 | call, (`From`, `To`, `Mode`) order; P0.3a for a policy actor's write | C | transport | `From`, `To` (regions), `Mode`, `BeforeBP`, `AfterBP`, `Cause`+ (`consumer`, `policy`; PLC 12.1.2) |
 | `ContractFormed` | MER 15.1.1 | P3.3, formation order, after the contract's `ShipmentDispatched` | E | merchants | `Contract`, `Payer`, `Deliverer`, `Region`, `To`, `Commodity`, `Quantity`, `Price`, `Escrowed Money`, `Shipment`, `Mode`, `Arrives` |
-| `ContractSettled` | MER 15.1.1 | P1.4; with a removal of the deliverer (4.4.8) | E | merchants | `Contract`, `Payer`, `Deliverer`, `Region`+ (the deliverer's account at the event), `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Paid Money`, `Refunded Money`, `Cause` |
+| `ContractSettled` | MER 15.1.1 | P1.4; with a removal of the deliverer (4.4.8) | E | merchants | `Contract`, `Payer`, `Deliverer`, `Region`+ (the deliverer's account at the event), `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Lost`+ (units lost in transit, RSK 14.1; `Reached = Quantity - Spoiled - Lost`), `Paid Money`, `Refunded Money`, `Cause` |
 | `ContractRound` | MER 15.1.1 | P3.3, destination region ascending | A | merchants | `Region`, `Offers`, `Takes`, `OffersRefused`, `TakesRefused`, `Matched`, `Formed`, `NoTaker`, `PayerFunds`, `TooMany`, `DispatchRefused`, `Units`, `Value Money` |
 | `MerchantsPlanned` | MER 15.1.1, WLD P3.3a | P3.3a, region ascending | A | merchant block | `Region`, `Merchants`, `Considered`, `NoRumour`, `Stale`, `Locked`, `Perishable`, `NoMargin`, `Unaffordable`, `BelowShare`, `Planned`, `Dispatched`, `Offered`, `Taken`, `Rested`, `Waiting`, `LotCapped` |
 | `MigrationStarted` | MIG 13.1 | P7.2, admission order | E | migration | `Agent`, `Role`, `From`, `To`, `Weight`, `Arrives int64`, `Distance int64`, `Journey int64`, `EarnedRatio` (bp, signed), `Home`, `Estimate` (bp), `JobAbandoned bool` |
@@ -349,7 +369,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
 | `EndowmentChanged` | RES 14.1 | P8.3, (`Region`, `Resource`) order | A | resources | `Region`, `Resource`, `Stock`, `Capacity`, `AbundanceBP`, `Requested`, `Granted`, `Drawn`, `Short`, `Regenerated`, `Lost`, `AgentsDenied`, `AgentsReduced` |
-| `EndowmentAdjusted` | RES 14.1 | call | C | resources | `Region`, `Resource`, `Kind`, `Delta` (signed), `CapacityBP`, `RegenBP`, `StockBefore`, `StockAfter`, `Lost` |
+| `EndowmentAdjusted` | RES 14.1; CAP 14.1 | call; P8.3b for a facility's change (`Kind` `facility`) | C | resources | `Region`, `Resource`, `Kind` (`adjust`, `shock`, `facility`), `Delta` (signed), `CapacityBP`, `RegenBP`, `StockBefore`, `StockAfter`, `Lost` |
 | `RumoursServed` | INF 10.1 | P3.6, region ascending | A | information | `Region`, `Readers`, `Offered`, `NoPath`, `TooOld`, `NotYet`, `MaxLag` |
 | `OutsideTraded` | EXT 15.1 | P4.2, (`Node`, gate, `Commodity`, buy before sell) | A | external | `Node`, `Region` (the gate), `Commodity`, `Side`, `Mid Price`, `Price` (the limit), `Wanted`, `Offered`, `Traded`, `Value Money`, `ListValue Money`, `CutClosed`, `CutCap`, `CutPrice`, `PriceClamped bool` |
 | `OutsideEnded` | EXT 15.1 | P4.2, after `OutsideTraded` | E | external | `Node`, `Commodity`, `Side`, `Cause`, `Units`, `ListValue Money` |
@@ -362,19 +382,103 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `YieldShocked` + | OBS 4.4.4; PRO 6.8 | call, (`Region`, `Recipe`) order | C | core (the slot is core data) | `Region`, `Recipe`, `BeforeBP`, `AfterBP` |
 | `PopulationScaled` + | OBS 4.4.4; POP 3.6, 6.6 | call, region order; one event per changed key, so the call of births and the call of deaths each emit theirs | C | population | `Region`, `Which ScaleKind` (`birth` or `death`), `BeforeBP`, `AfterBP` |
 
-The count is 52: the 47 of `rules/observability-and-logging.md` 4.3 and the five
-marked `+` as new events. Volume class by event, for the cost model of section 8:
+| `RouteRiskScaled` | RSK 14.1 | call, ascending (`From`, `To`, `Mode`) | C | risk | `From`, `To` (regions), `Mode`, `BeforeBP`, `AfterBP` |
+| `StoreRiskScaled` | RSK 14.1 | call, ascending (`Region`, `Class`) | C | risk | `Region`, `Class StoreClassID`, `BeforeBP`, `AfterBP` |
+
+The two risk scales are the slot events of their module and sit here because RSK
+asks for this group (the other slot events of the later modules are in 4.1.9 to
+4.1.12, beside the module that owns the slot).
+
+#### 4.1.9 Employment
+
+Gate: `Modules.Employment` (a role with the block). The fields are EMP 15.1's.
+
+| Event | Owner | Position | Class | Gate | Fields |
+|-------|-------|----------|-------|------|--------|
+| `HireFormed` | EMP 15.1 | P2.5a, formation order | E | employment | `Hire`, `Region`, `Employer`, `Worker`, `EmployerRole`, `WorkerRole`, `Recipe`, `Households` (the executions), `Wage Money` (per household-tick), `Ticks int64` (the job's duration), `Escrowed Money`, `Reserve Price`, `Bid Price` |
+| `HireEnded` | EMP 15.1, 6.5.2 | P2.1, P2.7; P7.1, P7.2 or a call, in the order of 4.4.8 (a removal: 2c, the worker's side and then the employer's) | E | employment | `Hire`, `Region` (the employer's at the event), `Employer`, `Worker`, `Recipe`, `Households`, `Worked int64` (the working ticks paid), `Paid Money`, `Refunded Money` (the remainder of the escrow at the end; the refunds of a cut start are in `LabourRound`), `Cause` (`completed`, `worker_left`, `worker_role`, `worker_moved`, `employer_left`, `employer_role`, `not_started`) |
+| `LabourRound` | EMP 15.1 | P2.8b, region ascending, after `ProductionHalted`; once per region per tick in which any offer, vacancy or hire in progress was counted, never otherwise | A | employment | `Region`, `Offered`, `Hired`, `NoVacancy`, `NotStarted` (households), `Posted`, `Filled`, `Unfilled` (positions), `OffersRefused`, `VacanciesRefused`, `Matched`, `TooMany`, `NoSite`, `ZeroYield`, `NoInput`, `NoTool`, `NoEndowment`, `NoRoom`, `EmployerFunds` (positions closed by each), `WageBelowUnit`, `HouseholdTicks`, `Paid Money`, `Refunded Money`, `Workers []LabourRow` with `LabourRow{Role; Offered, Hired, NoVacancy}`, `Employers []VacancyRow` with `VacancyRow{Role; Posted, Filled, Unfilled}` |
+
+#### 4.1.10 Credit
+
+Gate: `Modules.Credit`. The fields are CRD 16.1's. A claim has an `Origin`, `loan` or
+`payout` (an insurance payout that the underwriter could not pay in full,
+`spec-insurance.md` 8.3). The credit module forms only claims of origin `loan`; a
+claim of origin `payout` is formed by INS (told by `CoverEnded.Short` and its
+`Claim`) and ends through `LoanEnded` with `Origin` `payout`, so a reader separates
+the two by that field. The credit instruments and the credit `Warn` rows count the
+claims of origin `loan` only (6.2.1; `rules/observability-and-logging.md` 5.3.1): a payout claim
+is counted by the insurance instruments. Whether the sums of `CreditSettled` hold
+the payments of a payout claim, which the rebuild of 4.3.3 needs, or only those of
+a loan, is CRD's to say, and the edit is owed (19).
+
+| Event | Owner | Position | Class | Gate | Fields |
+|-------|-------|----------|-------|------|--------|
+| `LoanFormed` | CRD 16.1 | P3.3b, formation order | E | credit | `Claim`, `Creditor`, `Debtor`, `Region` (the debtor's), `Principal`, `Interest`, `RateBP`, `Term`, `Due` |
+| `LoanEnded` | CRD 16.1; INS 15.4 | P1.7a, ascending claim ID; with a removal (2d); at the call of `ForgiveClaims` | E | credit | `Claim`, `Origin`+ (`loan`, `payout`), `Creditor`, `Debtor`, `Region` (the debtor's at the event), `CreditorRegion`, `ToEstate bool`, `Principal`, `PaidPrincipal`, `PaidInterest` (the waterfall's payment at a removal, 0 for other causes), `LostPrincipal`, `LostInterest`, `Cause` (`repaid`, `written_off`, `debtor_removed`, `forgiven`) |
+| `LoanPassed` | CRD 16.1 | with a removal (2e), ascending claim ID | E | credit | `Claim`, `Creditor` (the removed agent), `Debtor`, `Region` (the estate's), `Owed` |
+| `CreditRound` | CRD 16.1 | P3.3b, region ascending, after the last `LoanFormed`; never when all counts are 0 | A | credit | `Region`, `Requests`, `Offers`, `RequestsRefused`, `OffersRefused`, `InArrears`, `Exposure` (subsets of the refusals), `Formed`, `Principal`, `Interest`, `Unfilled`, `TooMany`, `Overflow` |
+| `CreditSettled` | CRD 16.1 | P1.7a, region ascending, after the `LoanEnded` events of the tick; never when all counts and sums are 0 | A | credit | `Region`, then for its debtors `Due`, `Repaid`, `Defaulted`, `WrittenOff`, `PrincipalPaid`, `InterestPaid`, `Lost`, `Shielded`, `Headroom`, `Arrears`; and for its creditors `Received`, `ReceivedByEstate` |
+| `CreditRateScaled` | CRD 16.1 | call, ascending `RegionID` | C | credit | `Region`, `BeforeBP`, `AfterBP` |
+
+#### 4.1.11 Technology
+
+| Event | Owner | Position | Class | Gate | Fields |
+|-------|-------|----------|-------|------|--------|
+| `TechnologyAdvanced` | TEC 11.1 | P8.3c, (`Region`, `Field`) order; for a cell in which anything accrued | A | technology | `Region`, `Field TechFieldID`, `Executions`, `Experience`, `Discoveries`, `BeforeBP`, `AfterBP`, `DoingAddedBP`, `TrendAddedBP`, `DiscoveryAddedBP`, `CatchUpAddedBP`, `ClampedBP` (the cut of the cap), `AtCap bool` |
+| `TechnologyAdjusted` | TEC 7.1 | call, (`Region`, `Field`) order | C | technology | `Region`, `Field`, `DeltaBP` (signed, asked), `BeforeBP`, `AfterBP`, `LostBP` (the part the bounds cut) |
+
+#### 4.1.12 The other later-stage modules
+
+Each row is the owner's, with the names the rulings of the integration fixed (a
+settlement class is a `SettlementClassID`, a cover policy is INS's, the key of a
+store class is `store_class`).
+
+| Event | Owner | Position | Class | Gate | Fields |
+|-------|-------|----------|-------|------|--------|
+| `SettlementClassChanged` | SET 10.1 | construction after the initial `AgentSpawned` events (`founded`); P7.2a | E | settlements | `Region`, `From`, `To` (`SettlementClassID`; `From` is `NoSettlementClass` at the founding), `Households`, `Cause` (`founded`, `grew`, `shrank`) |
+| `SettlementHeld` | SET 10.1 | P7.2a, region ascending, instead of `SettlementClassChanged` | A | settlements | `Region`, `Class`, `Target`, `Households`, `TicksLeft` |
+| `RentPaid` | LND 13.1 | P8.3a, (`Region`, `Resource`) order, after `EndowmentChanged`; for an endowment with a title, when any tier count, idle, held or unserved unit, refusal, cut, payment or forfeit is non-zero or the posted rent changed | A | tenure | `Region`, `Resource`, `Rent`, `Entitled`, `OwnUnits`, `CommonsUnits`, `LetUnits`, `Offered`, `Idle`, `Held`, `Unserved`, `PricedOut`, `Tenants`, `Lessors`, `Paid Money`, `Forfeited Money`, `NoTitle`, `RentFunds`, `CutUnits`, `Exempt`, `RentAfter`, `ToPool Money`, `From []RegionMoney`, `To []RegionMoney` with `RegionMoney{Region; Money}` |
+| `TitleTransferred` | LND 13.1 | a removal, before `AgentBankrupted` (2b); or a call | E | tenure | `Region`, `Resource`, `From`, `To` (agents; `NoAgent` for the commons), `ShareBP`, `Price Money`, `Cause` (`removal`, `consumer`), `FromAfter`, `ToAfter`, `FromRegion`, `ToRegion`, `FromPool`, `ToPool` |
+| `RentScaled` | LND 13.1 | call, (`Region`, `Resource`) order | C | tenure | `Region`, `Resource`, `From`, `To` (bp) |
+| `FacilityChanged` | CAP 14.1 | construction after the last `AgentSpawned`; P2.1, P2.7; P7.1 (a removal, 2g; a role change); P8.3b; a call | E | infrastructure | `Facility`, `Class FacilityClassID`, `Region`, `To` (`NoRegion` unless a route with a target), `Owner`, `Kind` (`added`, `built`, `repaired`, `installed`, `transferred`, `ruined`), `Cause` (`recipe`, `initial`, `consumer`, `decay`, `use`, `role_changed`, `owner_removed`), `Before`, `After` (the condition), `Effect`, `GoodsListed` |
+| `FacilityLimited` | CAP 14.1 | P8.3b, region ascending then class; never when `Cut`, `Refused`, `Voided` and `Pending` are all 0 | A | infrastructure | `Region`, `Class`, `Served`, `Cut`, `Refused`, `Voided`, `Pending` |
+| `FiscalFlowApplied` | FIS 16.1 | P1.7b (taxes, remittances, payouts), P3.6c (tolls), P4.1a (duties); in the order of the flows, per flow and region ascending; for a due or an exempt trade | A | fiscal | `Flow string`, `Kind` (`tax`, `duty`, `toll`, `payout`), `Authority JurisdictionID`, `Region`, `Class` (`households`, `pool`, `treasury`), `Commodity`, `Due`, `Applied`, `Parties`, `Short`, `Cut`, `Headroom`, `Exempt` |
+| `TreasuryOrdered` | FIS 16.1 | P3.4a, once per authority after its orders; when a standing order was active with a wish of at least 1 | A | fiscal | `Authority`, `Region` (the seat), `Bids`, `Asks`, `WantedBuy`, `PlacedBuy`, `WantedSell`, `PlacedSell`, `CutCash`, `CutHold`, `CutStock` |
+| `MembershipChanged` | ORG 11.1 | P7.2b, (`RegionID`, `BodyID`) order; never when all counts are zero | A | institutions | `Region`, `Body`, `Members`, `Places`, `Eligible`, `Admitted`, `LapsedRole`, `LapsedRegion`, `Skipped`, `Barred`, `Waiting`, `Held` |
+| `RightRefused` | ORG 11.1 | P7.2b, (`RegionID`, `RightID`) order | A | institutions | `Region`, `Right`, `Produce`, `Sell`, `Buy`, `Train` |
+| `PriceControlled` | ORG 11.1 | P7.2b, (`RegionID`, `ControlID`) order | A | institutions | `Region`, `Control`, `Commodity` (`NoCommodity` for a rate limit), `Bids`, `Asks`, `Units` |
+| `LegalLevelSet` | ORG 11.1 | call, `ControlID` order | C | institutions | `Control`, `CapBefore`, `CapAfter`, `FloorBefore`, `FloorAfter` (bp) |
+| `RightSuspensionSet` | ORG 11.1 | call, `RightID` order | C | institutions | `Right`, `Suspended` (after) |
+| `SavingPlanned` | SAV 12.1 | P3.6b, (`RegionID`, `RoleID`) order, after `RoomLimited`; when a triggering count is above 0 | A | saving | `Region`, `Role`; riding: `Households`, `Goal`, `Buffer`, `Funded`, `Committed`; triggering: `Saving`, `Buffered`, `Passed`, `Building`, `NoReturn`, `Standing`, `Unreachable`, `Survival`, `Builds`, `Repairs` |
+| `PolicyDecided` | PLC 12.1 | P0.3a, per due actor in ascending `ActorID`, after the slot events of its application; if any count is non-zero | A | policy | `Actor`, `Jurisdiction`, `Entries`, `Applied`, `Unchanged`, `NotHeld`, `Duplicate`, `NoClose`, `Clamped`, `Stepped`, `InBand`, `NoReading` |
+| `CoverFormed` | INS 15.1 | P3.3c, formation order | E | insurance | `Policy`, `Kind` (`route`, `store`), `Insured`, `Underwriter`, `Region`, `UnderwriterRegion`, `Shipment` (`NoShipment` for a store), `Mode`, `To`, `Sum`, `MaxPayout`, `Premium`, `RateBP`, `CoverBP` |
+| `CoverEnded` | INS 15.1 | P1.3a; P8.1b; with a removal (2f); a `no_loss` store cover is not an event | E | insurance | `Policy`, `Kind`, `Insured`, `Underwriter`, `Region`, `UnderwriterRegion`, `Cause` (`no_loss`, `claimed`, `insured_removed`, `underwriter_removed`), `LossValue`, `Due`, `Paid`, `Short`, `Claim` (the payout claim, -1 when none), `Dropped`, `Cut`, `Capped bool` |
+| `CoverRound` | INS 15.1 | P3.3c, region ascending, after `CreditRound`; never when all counts are 0 | A | insurance | `Region`, `Requests`, `Offers`, `RequestsRefused`, `OffersRefused`, `InArrears`, `Exposure`, `Candidates`, `Formed`, `Sum`, `Premium`, `Unfilled`, `NoShipment`, `NoRisk`, `NoOffer`, `BelowMinimum`, `Funds`, `TooMany`, `Overflow`, `ValueCapped` |
+| `CoverSettled` | INS 15.1 | P1.3a and P8.1b, region ascending, after the `CoverEnded` events of the position; stage `claim`: P1.7a, region ascending, after CRD's `CreditSettled`; never when all counts are 0 | A | insurance | `Region`, `Stage` (`arrival`, `store`, `claim`), `Ended`, `Claimed`, `LossValue`, `Due`, `Paid`, `Short`, `Dropped`, `Cut`, `Capped`, `ValueCapped`, `Shielded`; at stage `claim` only `ClaimEnded` (payout claims ended repaid), `ClaimPaid` (principal paid by the debtors of the region) and `ClaimReceived` (principal received by the insureds of the region), the other fields being 0 |
+
+Three further changes of events that the table of 4.1.6 and 4.1.8 already shows are
+the later modules': the `Cause` of `MoneyFlowScaled`, `TransitFactorChanged` and
+`EdgeStatusChanged` gains the constant `policy` (PLC), and the fields `Toll`,
+`LossBP`, `Lost` and `AccountLost` are the fiscal and risk modules' (FIS, RSK).
+
+The count is 88: the 47 of the first table of `rules/observability-and-logging.md`
+4.3, the five marked `+` as new events (52), and the 36 of the later modules
+(`StoreChanged` and `RoomLimited` in 4.1.3 and 4.1.4, `StoreLoss` in 4.1.5, the two
+risk scales in 4.1.8, three in 4.1.9, six in 4.1.10, two in 4.1.11 and twenty in
+4.1.12: 2 + 1 + 2 + 3 + 6 + 2 + 20 = 36). Volume class by event, for the cost model of
+section 8:
 
 | Class | Events |
 |-------|--------|
 | W (6) | `WorldCreated`, `WorldRestored`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` |
-| A (17) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded` |
-| E (19) | `RecipeExecuted`, `RecipeAbandoned`, `AgentSpawned`, `AgentBankrupted`, `EstateOpened`, `WeightChanged`, `RoleChanged`, `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded`, `MoneyFlowEnded`, `AgentRelocated`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `ContractFormed`, `ContractSettled`, `MigrationStarted`, `OutsideEnded` |
+| A (34) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound`, `CoverSettled` |
+| E (31) | `RecipeExecuted`, `RecipeAbandoned`, `AgentSpawned`, `AgentBankrupted`, `EstateOpened`, `WeightChanged`, `RoleChanged`, `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded`, `MoneyFlowEnded`, `AgentRelocated`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `ContractFormed`, `ContractSettled`, `MigrationStarted`, `OutsideEnded`, `StoreChanged`, `StoreLoss`, `HireFormed`, `HireEnded`, `LoanFormed`, `LoanEnded`, `LoanPassed`, `SettlementClassChanged`, `TitleTransferred`, `FacilityChanged`, `CoverFormed`, `CoverEnded` |
 | O (2) | `OrderPlaced`, `OrderRejected` |
 | R (1) | `TradeExecuted` |
-| C (7) | `MoneyFlowScaled`, `EdgeStatusChanged`, `TransitFactorChanged`, `EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `PopulationScaled` |
+| C (14) | `MoneyFlowScaled`, `EdgeStatusChanged`, `TransitFactorChanged`, `EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `PopulationScaled`, `RentScaled`, `CreditRateScaled`, `RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`, `RightSuspensionSet`, `TechnologyAdjusted` |
 
-The six classes add to 52 (6 + 17 + 19 + 2 + 1 + 7). The first tables are the
+The six classes add to 88 (6 + 34 + 31 + 2 + 1 + 14). The first tables are the
 authority and this one is for reading: a test (FR-OBS-003) derives the class of
 each event from the tables of 4.1 and checks that every event type of the
 catalogue appears once.
@@ -397,9 +501,17 @@ comment, as the owners wrote it.
 4.2.3. **A `Reason`, a `Cause`, a `Kind` and a `ScaleKind`** are named string types
 exported from the root with their constants (`event.go`); `internal/logkeys` holds
 key strings only and does not alias them (architecture.md 2.9). Their constants are **the values of the
-`reason` and `cause` log keys** (rules 3.3.2). `Kind` has two sets, by event:
-`faucet` and `sink` in `BoundaryFlow`, `adjust` and `shock` in
-`EndowmentAdjusted` (its owner's name); `ScaleKind` is `birth` and `death`. The constants of each event's field are listed
+`reason` and `cause` log keys** (rules 3.3.2). `Kind` is a closed set **for each
+event**: `faucet` and `sink` in `BoundaryFlow`; `adjust`, `shock` and `facility` in
+`EndowmentAdjusted` (its owner's names); `added`, `built`, `repaired`, `installed`,
+`transferred` and `ruined` in `FacilityChanged`; `added` and `removed` in
+`StoreChanged` (`added` is shared with `FacilityChanged`, a different set of a
+different field); `tax`, `duty`, `toll` and `payout` in `FiscalFlowApplied`
+(whose `Class` is a set too: `households`, `pool`, `treasury`); `route` and `store`
+in `CoverFormed` and `CoverEnded`; `ScaleKind` is `birth` and `death`. A `Cause` that
+a policy actor sets is the constant `policy` (beside `consumer`) on
+`MoneyFlowScaled` and `TransitFactorChanged`, and a member of the set of
+`EdgeStatusChanged`. The constants of each event's field are listed
 by the owning spec (the rejection reasons of `OrderRejected` in
 `spec-clearing.md` 3.2; the causes of a removal in `spec-spawner.md` 13.1.1; the
 abandon reasons in `spec-production.md` 14.1). A **consumer-supplied** free text
@@ -425,9 +537,11 @@ paragraph). This spec adds what the new fields make possible, and requires it
 journey is in its origin region until `AgentRelocated` with the cause `migration`
 (`spec-migration.md` 13.1.1).
 
-4.3.3. **Money of the household sector and of the pool, by region.** Start from the
-first snapshot (or from nothing at construction) and add, tick by tick, in this
-order of reading:
+4.3.3. **Money of the household sector, of the pool and of the treasury sector, by
+region.** Start from the first snapshot (or from nothing at construction) and add,
+tick by tick, in this order of reading (the treasury sector is the money of the
+treasuries seated in the region, `RegionRow.MoneyTreasury`, zero with no governed
+jurisdiction):
 
 1. the **money reasons that move the household or the pool sector across the
    boundary**: `initial` and the money-flow IDs, from `BoundaryFlow` (a flow's
@@ -439,7 +553,13 @@ order of reading:
 2. the money of `TradeExecuted` (an estate pseudo-agent has an `AgentID` below the
    number of regions, equal to its `RegionID`, `spec-world.md` 5.3; a counterparty
    has one from the number of regions to the end of the counterparties,
-   `spec-world.md` 5.3);
+   `spec-world.md` 5.3; **a treasury** has one after the end of the counterparties'
+   range, `spec-polity.md` 5.2.2, whose seat region is that of its row in
+   `WorldCreated.Jurisdictions` and whose money is the **treasury sector** of the
+   seat's region: the money of a `TradeExecuted` with a treasury as buyer or seller
+   moves between the household sector of the trade's region and that sector, and a
+   trade between a treasury and a counterparty or an estate moves between that sector
+   and the other's, never into a household sector, and needs no `FiscalFlowApplied`);
 3. `ReliefPaid.Paid`, pool to households;
 4. `AgentSpawned.StartMoney` of an entrant that the pool funded (a spawner entrant
    or a household born into a new agent). An agent created by `initial` (every
@@ -447,8 +567,11 @@ order of reading:
    true) is in the `initial` row of 1, not here. **The pool's own seed** (a warm
    start's `WarmStart.Pools`, `spec-estates.md` 2.3) is part of the region's
    `initial` money row too: the pool's seed is that row less the `StartMoney` of
-   the `AgentSpawned` of the same region that `initial` funded, because
-   `BoundaryFlow` has no holder;
+   the `AgentSpawned` of the same region that `initial` funded and less the
+   `Money` of each row of `WorldCreated.Jurisdictions` whose seat is the region (the
+   `StartMoney` of a treasury, which the same row funded and which is in the
+   treasury sector, not the household or pool sector), because `BoundaryFlow` has
+   no holder;
 5. `AgentBankrupted.Money` (household to pool) and `WeightChanged.Money` (signed,
    to or from the pool);
 6. `AgentRelocated.Money` (between regions);
@@ -456,7 +579,42 @@ order of reading:
    (to the deliverer, in the region `Region` of its account at the event) and
    `.Refunded` (to the payer, whose region is `To`, or, with `Cause`
    `payer_removed`, to the pool of `To`). `ContractSettled` carries `Region` for
-   this (a field added here; the edit is MER's, section 19).
+   this (a field added here; the edit is MER's, section 19). The sector holds the
+   escrow of the hires too (`MoneyContract` includes it, 5.3.2), by four readings of
+   EMP 15.1.1: `HireFormed.Escrowed` (household to contract sector), `LabourRound.Paid`
+   (contract sector to the workers' households, within the region of the round),
+   `LabourRound.Refunded` (contract sector to the employers of the region: the refund
+   of a start cut by the ration or the room) and `HireEnded.Refunded` (the remainder
+   at the end, to the employer, a removed employer's own account first: EMP 6.4.1), each
+   refund in exactly one of the last two;
+8. **rent and the price of a title** (LND 13.1.1a): at a `RentPaid` the households of
+   region `g` lose `From[g]` and gain `To[g]` and the pool of `Region` gains
+   `ToPool` (`Paid` is the sum of `From`, a pool is never a payer); at a
+   `TitleTransferred` with `Price` above 0 the payer's side of `ToRegion` (the
+   household sector, or the pool when `ToPool`) loses it and the payee's side of
+   `FromRegion` (the household sector, or the pool when `FromPool`) gains it; a
+   removal moves no money and its `Price` is 0;
+9. **a loan** at P3.3b (`LoanFormed`): `Principal` moves between two households of
+   `Region` (a lane is a region) and changes the money of no region;
+10. **a payment** at P1.7a (`CreditSettled`): the households of `Region` lose
+   `PrincipalPaid + InterestPaid`, and the households of the region gain `Received` and
+   its pool `ReceivedByEstate`;
+11. **a waterfall payment** (`LoanEnded` with `Cause` `debtor_removed`):
+   `PaidPrincipal + PaidInterest` from the households of its `Region` to those of its
+   `CreditorRegion`, or to that region's pool when `ToEstate`;
+12. **a fiscal flow** (`FiscalFlowApplied` of money): `Applied` from the household
+   sector or the pool of `Region` (by `Class`) to the treasury sector of the seat of
+   `Authority`, for the kinds `tax`, `duty` and `toll`; the reverse for a `payout`
+   (from the treasury sector of the seat to the sector of `Class` in `Region`); the
+   units of an in-kind payout move between the treasury's holdings and the households
+   of the seat region;
+13. **a cover payout** (`CoverEnded.Paid`): from the households of
+   `UnderwriterRegion` to those of `Region`; a premium (`CoverFormed.Premium`) moves
+   between two households of one region (a lane is a region, INS 7.2.1) and changes no
+   regional total; the payout claim of `Short` is a claim of origin `payout`; its later payments
+   at P1.7a (`CoverSettled` of stage `claim`) move `ClaimPaid` from the households of
+   the debtors' `Region` and `ClaimReceived` to those of the insureds' `Region`
+   (the credit instruments do not count them), and at a removal they are item 11.
 
 A call between ticks has moved money that no event has reported yet: it is in
 `Snapshot.Pending` until the tick that reports it, and the rebuild at such a
@@ -492,6 +650,11 @@ with the reason"), and an internal flow is already told by a more specific event
 | `escrow_in`, `escrow_out`, `escrow_refund` | internal | no | `ContractFormed`, `ContractSettled` |
 | `transit_out`, `transit_in` | internal | no | `ShipmentDispatched`, `ShipmentArrived` (a diverted cargo: `Lines[].Diverted`) |
 | `split`, `merge`, `births`, `starvation`, `deaths` | internal | no | `WeightChanged` (`Money`, `Units`), `AgentBankrupted`; the stake of a household born into a new agent is `AgentSpawned.StartMoney` |
+| `rent`, `title_sale` (LND) | internal | no | `RentPaid`, `TitleTransferred` |
+| `wage_escrow`, `wage_pay`, `wage_refund` (EMP) | internal | no | `HireFormed`, `LabourRound`, `HireEnded` |
+| `loan_out`, `loan_repay`, `loan_interest` (CRD) | internal | no | `LoanFormed`, `CreditSettled`, `LoanEnded` |
+| `premium`, `payout` (INS) | internal | no | `CoverFormed`, `CoverEnded` |
+| every fiscal flow ID (FIS; it shares the namespace of the money flow IDs) | internal | no | `FiscalFlowApplied` |
 
 This answers `spec-reference-chain.md` 9, which lists `start_money` and `relief`
 among the reasons of `BoundaryFlow` for S14: they are told by `AgentSpawned` and
@@ -622,7 +785,10 @@ cannot hide the halt or report a different count, so every strategy, the library
 and a consumer's, is counted alike. A `rest` is **not** counted here: it is the target-income rule working as designed,
 not a clamp, and the households held to work by the floor are in the snapshot
 (5.3.4). The position is P2.8a, after `OwnUseChanged`, in ascending (`RegionID`,
-`RoleID`).
+`RoleID`). `ProductionHalted` is the counter of the damper D24 (the production halt,
+`ProduceHaltRatio`; `spec-stability.md` register, K-AGT09 of
+`spec-calibration.md`): a halt that acts is visible here and nowhere else
+(FR-STB-013).
 
 #### 4.4.7 Events that are not added, with the reason
 
@@ -641,7 +807,16 @@ not a clamp, and the households held to work by the floor are in the snapshot
 requirement (FR-OBS-020): a removal emits, in this order, `RecipeAbandoned`
 (reason `agent_removed`) for its job, `TraineeshipEnded` if it was in a
 traineeship, `ContractSettled` for each contract of which it was the deliverer
-(`deliverer_removed`), `AgentBankrupted`, `EstateOpened`. `AgentBankrupted` is the
+(`deliverer_removed`), then the events of the removal steps of `spec-agents.md` 3.6
+in step order, each only with its module on: `TitleTransferred` for each title moved
+(2b, LND), `HireEnded` for each hire (2c, EMP: the worker's side and then the
+employer's; the remainder of the escrow has returned to the employer's account
+before the waterfall), `LoanEnded` for each claim ended (2d, CRD, in ascending claim
+ID) and `LoanPassed` for each claim passed to the estate (2e, CRD, in ascending claim
+ID), `CoverEnded` for each cover ended (2f, INS, unpaid, with the premium kept) and
+`FacilityChanged` (`ruined`, cause `owner_removed`) for each facility (2g, CAP); and
+last `AgentBankrupted`, `EstateOpened`. Every event of a removal precedes
+`AgentBankrupted`. `AgentBankrupted` is the
 only event that removes the agent: an observer decrements its agent count on
 `AgentBankrupted` and only on it; the others accompany the removal and are not a
 second removal.
@@ -662,6 +837,30 @@ come **first**, trainee by trainee in ascending agent ID, each trainee's
 `RecipeAbandoned` then its `TraineeshipEnded`, and then the trainer's own list
 above; the owners (PRO 5.4, SKL 4.2) state it (section 19).
 
+#### 4.4.9 The order of the events of the later modules' positions
+
+`spec-world.md` 6.11 gives the merged order and the owners' specs the events of their
+positions; this paragraph lists the three places where the order of events is not
+that of the position's number alone.
+
+(1) **P0.3a, the policy step.** After `TickStarted` and before the first event of
+phase 1, for each due policy actor in ascending `ActorID`: the slot events of its
+application in the order of its levers (`MoneyFlowScaled`, `TransitFactorChanged`,
+`EdgeStatusChanged`, each with the cause `policy`), then its `PolicyDecided`. An
+observer that wants to know which actor caused a slot event reads the next
+`PolicyDecided`; one that wants only whether it was a policy reads the cause.
+(2) **P7.1, a store ended by a role change.** `StoreChanged` (`removed`, cause
+`role_changed`) comes after the `RoleChanged` that ended it; a store given by the role row at creation has no
+event (`AgentSpawned.StoresLocked` reports the ones not given).
+(3) **P8.3b, the facility step.** After `BoundaryFlow`, `EndowmentChanged` and
+`RentPaid` (P8.3a): per ruined facility in ascending ID, `StoreChanged` (`removed`,
+cause `facility`) for a store and then `FacilityChanged` (`ruined`); then per
+installed store facility in ascending ID, `StoreChanged` (`added`, cause
+`facility`) and then `FacilityChanged` (`installed`); then `EndowmentAdjusted`
+(kind `facility`) in ascending (`RegionID`, `ResourceID`); then `FacilityLimited`;
+then `TickEnded`. The state results of P8.3a and P8.3b are independent, so a golden
+stream differs only by this order, which is written once here and in CAP 14.1.
+
 ### 4.5 Checks against the order of the tick
 
 `spec-world.md` 6.11 gives the merged order; this spec checked each event of 4.1
@@ -679,6 +878,7 @@ against it and against the rules' paragraph on order (4.3 there). Findings:
 | K8 | The rules' paragraph names `MerchantsPlanned` "only when a role has the merchant block" and WLD P3.3a says "also with the module absent" | consistent: the gate is the block, not the module; a role with the block and no module is a validation question (`spec-merchants.md`), not this spec's | none |
 | K9 | `RecipeAbandoned` can be emitted at P7.2 (a departure) and between ticks (a removal); 6.11 item 8 lists both | none | |
 | K10 | `OrderRejected` can come from P3.4 (an estate's ask rejected) and P3.5 | listed in 4.1.2 | none |
+| K11 | The events of the later modules have positions that `spec-world.md` 6 names: P0.3a (`PolicyDecided` and the policy-caused slot events, after `TickStarted`), P1.3a (`CoverEnded`, `CoverSettled`), P1.7a (`LoanEnded`, `CreditSettled`, then `CoverSettled` of stage `claim`), P1.7b (`FiscalFlowApplied` of taxes and payouts), P2.5a (`HireFormed`), P2.8b (`LabourRound`), P3.3b (`LoanFormed`, `CreditRound`), P3.3c (`CoverFormed`, `CoverRound`), P3.4a (`TreasuryOrdered`), P3.6a (`RoomLimited`), P3.6b (`SavingPlanned`), P3.6c (the toll `FiscalFlowApplied`), P4.1a (the duty `FiscalFlowApplied`), P7.2a (`SettlementClassChanged`, `SettlementHeld`), P7.2b (`MembershipChanged`, `RightRefused`, `PriceControlled`), P8.1a (`StoreLoss`), P8.1b (`CoverEnded`, `CoverSettled`), P8.3a (`RentPaid`, after `EndowmentChanged`), P8.3b (`FacilityChanged`, `StoreChanged` and `EndowmentAdjusted` of kind `facility`, then `FacilityLimited`) and P8.3c (`TechnologyAdvanced`); the removal steps are 2b to 2g (4.4.8) | the order is WLD 6.11, as amended by the owners' rows; this table only lists it | WLD 6, 6.11 |
 
 
 ## 5. The snapshot
@@ -755,8 +955,9 @@ for the whole run" in the snapshot (the ledger itself keeps it for its audit,
 
 Each row type below lists its fields. **Cost** is the class of 5.5: **K** a figure
 the owner already keeps, **D** derived from the configuration, **S** a scan over
-agents, **L** a scan over lots, **B** a scan over beliefs, **F** a copy of an
-in-flight set. **Src** is the spec that owns the meaning.
+agents, **L** a scan over lots, **B** a scan over beliefs, **Q** a scan over
+the agents of the roles with a block that does more than a constant number of reads
+per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the meaning.
 
 #### 5.3.1 The header
 
@@ -770,7 +971,7 @@ in-flight set. **Src** is the spec that owns the meaning.
 | `Modules` | `[]string` | the modules that are on, in the order of `spec-config.md` 3.2 | CFG | D |
 | `Agents` | `int64` | live agents; pseudo-agents excluded | SCL 9 | K |
 | `Households` | `int64` | the sum of the weights of the live agents | SCL 9 | K |
-| `Money` | `Money` | money in non-boundary accounts, estates and escrow included, counterparties excluded (they hold nothing at a boundary) | LED 9 | K |
+| `Money` | `Money` | money in non-boundary accounts, estates, escrow and treasuries included (the treasuries in `MoneyTreasury`, 5.3.2), counterparties excluded (they hold nothing at a boundary) | LED 9, POL 10.5 | K |
 
 #### 5.3.2 Regions: `Regions []RegionRow`, one per region by `RegionID`
 
@@ -784,7 +985,9 @@ An outside node has a row with `Outside` true and every other field zero
 | `Agents`, `Households` | `int64` | agents of the region and their weights; a migrant on a journey is in its origin | SCL, MIG 13.1.1 | S |
 | `MoneyHouseholds` | `Money` | `M_h`: the money of the agents of the region | MON 13.4 | S |
 | `MoneyPool` | `Money` | `M_p`: the money of the region's estate account, which is the pool | EST 2.4 | K |
-| `MoneyContract` | `Money` | `M_c`: the money in Escrow accounts attributed to the region by the ledger | MON 13.4, LED 9.3 | F |
+| `MoneyContract` | `Money` | `M_c`: the money in Escrow accounts attributed to the region by the ledger, the escrow of the hires (`Hires[].Held`) included | MON 13.4, LED 9.3, EMP 15.4 | F |
+| `MoneyTreasury` | `Money` | `M_t`: the money of the treasuries seated in the region (0 with none) | POL 10.5 | K |
+| `Class`, `ClassSince`, `ClassTarget`, `ClassAtFloor` | `SettlementClassID`, `int64`, `SettlementClassID`, `bool` | the settlement class of the region as of the last review, the tick of its last change (0 at construction), the class a review at the current `Households` would give ignoring the dwell, and whether the class is the region's floor and the count alone would give a lower one (settlements on; `Class` and `ClassSince` are saved, the other two are derived) | SET 10.5 | K, D |
 | `EntryBudget` | `Money` | the budget that the next entry step's view would carry from the current pool, `MoneyPool * EntryPoolShare / 10 000`; **advisory**: the pool budget is taken in P7.1(d) after the deaths (WLD C15) and is not a ceiling on any draw | SPN 13.4, WLD C15 | K |
 | `HouseholdCap` | `int64` | the region's `HouseholdCap` of the population module, 0 for none | POP 10.4 | D |
 | `OnJourneyFrom`, `OnJourneyTo` | `int64` | households on a migration journey that leave this region and that head for it | MIG 13.4 | F |
@@ -821,6 +1024,9 @@ role row says so.
 | `Places`, `PlacesTaken`, `Queue`, `Trainers` | `int64` | the traineeship throttle: places, taken, applicants waiting, trainers (skill barriers on) | SKL 8.2 | S |
 | `BirthRateBP`, `DeathRateBP`, `NaturalIncreaseBP` | `int64` | household-weighted mean annual rates at the agents' current ratios, and their difference (signed) (population on) | POP 10.4 | S |
 | `BirthCarry` | `int64` | the (region, role) birth carry, below its denominator | POP 11 | K |
+| `Employed`, `Employing` | `int64` | households of the role on a hired job at the boundary; hired households working for agents of the role (employment on) | EMP 15.4 | S |
+| `LimitedHouseholds`, `RoomMass`, `RoomBulk`, `LoadMass`, `LoadBulk` | `int64` | the households of the limited agents of the role in the region, and the sums over them of the room and the load in each dimension, the weight folded into the room (storage on); `economysim.room.fill` is `Load * 10 000 / Room` of a dimension | STO 14.5 | S |
+| `SavingHouseholds`, `GoalMoney`, `BufferMoney`, `IdleMoney` | `int64`, `Money` | the households of agents with a goal above 0, and the sums over agents of `Goal`, of `max(0, Precaution - ReserveMoney)` and of `Idle` (saving on, a role with the block; a drawdown and a project test per agent, not a constant number of reads) | SAV 8.4.2 | Q |
 
 The `MeanRatio` per region over all roles is not a field: it is the household-
 weighted mean of the role rows, and a consumer computes it as the sum of `MeanRatioBP` times `RatioHouseholds` over
@@ -835,7 +1041,7 @@ outside node, in that order:
 | Field | Type | Meaning | Src | Cost |
 |-------|------|---------|-----|------|
 | `State` | `MarketState` | the market report that INT's query `Market(region, commodity)` returns (`spec-integration.md` 6.3): `Region`, `Commodity`, the published `Price`, its `Age`, the `Volume` and the `UnmatchedBid` and `UnmatchedAsk` units of the last clearing, `BestBid`, `BestAsk` with `HasBid` and `HasAsk`, and the price window's `WindowLen`, `WindowMean`, `WindowLow` and `WindowHigh`, under INT's names. One type, so the snapshot and the query cannot disagree; the event `MarketCleared` carries the same values under its owner's names (`PriceAge`, `HasBestBid`, `HasBestAsk`). It is saved state: CLR 5.4 and 5.5 and BEL 7 (the last report is a request to CHK, section 19) | CLR 5.4, 5.5; INT 6.3 | K |
-| `HeldByAgents`, `HeldByEstate` | `Quantity` | the stock at the boundary in the households' accounts and in the estate's: what no order of the tick sold (N-081 item 2). Goods in Transit accounts are in `Shipments` | OBS | L |
+| `HeldByAgents`, `HeldByEstate`, `HeldByTreasury` | `Quantity` | the stock at the boundary in the households' accounts, in the estate's and in the treasuries seated in the region: what no order of the tick sold (N-081 item 2). Goods in Transit accounts are in `Shipments` | OBS, FIS 16.3 | L |
 | `Pending` | `Quantity` | the pending output of the jobs in progress in the region: in no account, so this is the only place it is measured | PRO 14.3 | S |
 | `Beliefs`, `MeanCentre`, `LowCentre`, `HighCentre`, `AtFloor`, `AtCeiling` | `int64`, `Price`, `Price`, `Price`, `int64`, `int64` | the beliefs of the region's agents for the commodity: how many, the mean (half to even), the lowest and the highest centre, and how many sit at the lower or upper bound of their effective range (the reference band or the cost band, BEL 12.1) (N-040) | BEL 12.1 | B |
 
@@ -858,6 +1064,10 @@ type RegionState struct {
 	Endowments []EndowmentRow // by ResourceID
 	Shipments  []ShipmentRow  // those that leave or reach the region, by ID
 	Journeys   []JourneyRow   // those that leave or reach it, by agent ID
+	Facilities []FacilityRow  // by FacilityClassID (CAP on)
+	Stores     []StoreRow     // by StoreClassID (STO on)
+	Bodies     []BodyRow      // by BodyID (ORG on)
+	Tech       []TechRow      // by TechFieldID (TEC on)
 }
 ```
 
@@ -865,20 +1075,27 @@ Its cost is the region's share of the scans of 5.5 (`O(agents of the region)` fo
 S rows, the region's lots for L and its beliefs for B), the second class of
 `spec-integration.md` 6.1.3, and it equals the filter of a full snapshot by region
 (FR-OBS-044). The world-level fields (`Boundary`, `Flows`, `Pending`, `Outside`)
-are not in it.
+are not in it, nor are the in-flight sets that have two regions (`Contracts`, `Hires`,
+`Claims`, `Policies`, `Away`) or one value for the world (`Credit`, `Insurance`,
+`Jurisdictions`, `Actors`, `LegalLevels`, `Suspended`).
 
 #### 5.3.6 Resources
 
 `Endowments []EndowmentRow`, one per (region, resource) in that order:
 `Region`, `Resource`, `Stock`, `Capacity` (effective), `AbundanceBP`,
-`ExhaustedRun`, `CapacityScaleBP`, `RegenScaleBP` (both 10 000 when not shocked).
-Source RES 14.4. Cost K (the abundance is a function of stock and capacity). The
+`ExhaustedRun`, `CapacityScaleBP`, `RegenScaleBP` (both 10 000 when not shocked); with the
+tenure module on and tenure data for the endowment also `Holders` (the number of
+titles), `PoolBP` (the pool's share), `CommonsBP`, `TopBP` (the largest share of an
+agent), `Posted` (the posted rent), `ScaleBP` (the rent scale), `Closed`, and the two
+diagnostic runs `NoTitleRun` and `RentFundsRun` (LND 13.4; the per-holder list is the
+query `Holders`, not a snapshot field). Source RES 14.4. Cost K (the abundance is a
+function of stock and capacity). The
 measures of 8 there that need the full-draw ratio (`N_bind`, N-109) are **not**
 fields: see 5.8.
 
 #### 5.3.7 The graph
 
-The other slots (yield shocks, birth and death scales, flow scales, endowment scales, outside shocks) are **not** snapshot fields: the non-default ones are
+The other slots (yield shocks, birth and death scales, flow scales, endowment scales, outside shocks, rent scales, credit rate scales, route and store risk scales) are **not** snapshot fields: the non-default ones are
 INT's `Slots()` (`spec-integration.md` 5.3). The edges and the transit factors are
 in the snapshot because REG and TRN asked, and they are the same rows as in
 `Slots()`.
@@ -897,10 +1114,16 @@ in the snapshot because REG and TRN asked, and they are the same rows as in
 | `Away` | by agent ID | `[]AgentID`: the agents away on a trip | TRN 13.5 | F |
 | `Journeys` | by agent ID | `Agent`, `Role`, `From`, `To`, `Arrives`, `Weight` | MIG 13.4 | F |
 | `Contracts` | by contract ID | `Contract`, `Payer`, `Deliverer`, `Region`, `To`, `Commodity`, `Quantity`, `Price`, `Escrowed`, `Shipment`, `Formed` (the tick, MER 16), `Arrives`, `TicksLeft` | MER 15.4 | F |
-| `Escrow` | one `Money` | the money held for contracts in total (the sum of `MoneyContract`) | MER 15.4 | F |
+| `Escrow` | one `Money` | the money held for contracts in total (the contracts' part of `MoneyContract`; the hires' part is the sum of `Hires[].Held`) | MER 15.4 | F |
+| `Hires` | by hire ID | `Hire`, `Region`, `Employer`, `Worker`, `Recipe`, `Households`, `Wage`, `Formed`, `Ends` (the completion tick), `TicksLeft`, `Account` (the Escrow account), `Held` (its balance) | EMP 15.4 | F |
+| `Claims` | by claim ID | `Claim`, `Origin`+ (`loan`, `payout`), `Creditor` (an `AgentID`, or the estate's agent ID, which is its `RegionID`), `Debtor`, `Region` (the debtor's), `Principal`, `Interest`, `PrincipalOwed`, `InterestOwed`, `RateBP`, `Formed`, `Due`, `Overdue` | CRD 16.4, INS 15.4 | F |
+| `Credit` | one value | `Lent`, `Repaid`, `InterestPaid`, `InterestFixed`, `LostPrincipal`, `LostInterest`, `Awarded`+ (the payout claims awarded by INS, whose `Short` is read from it) | CRD 16.4, INS 15.4 | F |
+| `Policies` | by cover policy ID | `Policy`, `Insured`, `Underwriter`, `Region`, `Shipment`, `Sum`, `MaxPayout`, `CoverBP`, `Premium`, `Formed` (route covers only; a store cover opens and ends inside one tick) | INS 15.4 | F |
+| `Insurance` | one value | `Formed`, `Premiums`, `Due`, `Paid`, `Dropped`, `Cut` (`Short` is `Credit.Awarded`, read, not saved twice) | INS 15.4 | F |
 
-Each is bounded by what is in flight, and so by `MaxOpen`, the shipments in
-flight and the agents (5.6).
+Each is bounded by what is in flight, and so by `MaxOpen`, `MaxClaims`, `MaxPolicies`,
+the shipments in flight, the hires and the agents (5.6). `Claims` of origin `payout`
+are the insurance claims; the credit instruments count `loan` only (6.2.1).
 
 #### 5.3.9 The outside
 
@@ -931,6 +1154,29 @@ equal deaths) and `GainBP` (the module's gain, in the unit of `spec-population.m
 carry the rest (`BirthRateBP`, `DeathRateBP`, `NaturalIncreaseBP`, `BirthCarry`,
 `HouseholdCap`). Source POP 10.4.
 
+#### 5.3.11 The rows of the other later-stage modules
+
+Each is a slice, empty with its module off, in the canonical order of its key, and a
+function of saved state (5.2.1). The rows that the earlier groups gain (`MoneyTreasury`,
+the settlement class fields, `Employed`, the room, load and saving fields,
+`HeldByTreasury`, the tenure fields of an endowment) are in 5.3.2 to 5.3.6.
+
+| Slice | Row | Fields | Src | Cost |
+|-------|-----|--------|-----|------|
+| `Jurisdictions` | one per **governed** jurisdiction, ascending `JurisdictionID` | `Jurisdiction`, `Seat`, `Agent` (the treasury pseudo-agent), `Money` | POL 10.5 | K |
+| `Actors` | one per policy actor, ascending `ActorID` | `Actor`, `Jurisdiction`, `Pending` (the settings in the mailbox of a `directed` actor, 0 for another policy) | PLC 12.3 | K |
+| `Bodies` | (`Region`, `Body`) of the scope, ascending | `Region`, `Body`, `Members`, `Eligible`, `Places` (households; `Waiting` is `Eligible - Members`, derived by the reader) | ORG 11.5.1 | S |
+| `LegalLevels` | one per control or rate limit whose level differs from the configured one, ascending `ControlID` | `Control`, `CapBP`, `FloorBP` | ORG 11.5.2 | K |
+| `Suspended` | the suspended rights, ascending | `[]RightID` | ORG 11.5.2 | K |
+| `Facilities` | (`Region`, class) with a non-zero count | `Region`, `Class`, `Facilities` (a count), `ConditionBP` (the sum of `Condition * 10 000 / Durability`), `Effect`, `Pending` (store facilities not installed) | CAP 14.5 | S |
+| `Stores` | (`Region`, class) with a non-zero count | `Region`, `Class`, `Stores` (a count of stores, not of agents or households) | STO 14.5 | S |
+| `Tech` | (`Region`, field) with `Experience` or `AdvanceBP` above 0 | `Region`, `Field`, `Experience`, `AdvanceBP`, `GainBP` | TEC 11.4 | K |
+
+The snapshot's header `Modules` lists the module names that are on, so a consumer
+tells an empty slice from a module that is off (5.1.3). The scale lists of the credit, rent and risk
+modules are INT's `Slots()` and are not snapshot rows (5.3.7), and an adjustment of a
+technology gain is not a slot (INT 5.1).
+
 ### 5.4 The per-agent record
 
 Per-agent data is **not** in the snapshot (5.6). The record of one agent is
@@ -948,6 +1194,10 @@ them (INT 4.7.2):
 | BEL | the centre, the width and the bounds per commodity of the tradable set (N-040) | yes |
 | MIG 13.4 | the agent's journey (destination, arrival tick) | yes |
 | TRN 13.5 | whether the agent is away | yes |
+| STO 14.5 | the group Room: `Room`, `Load`, `Pledge`, `Free`, `Stores` | yes (INT 4.7.2, Room) |
+| EMP 15.4 | `Employer`, `HasEmployer`, `Hired` (the households on a hired job) | yes (INT 4.7.2) |
+| CRD 16.4 | the claims of the agent, as creditor and as debtor | yes (INT 4.7.2, Credit) |
+| INS 15.4 | the cover policies of the agent and its liability as underwriter | yes (INT 4.7.2, Policies and Liability) |
 
 A query is not a snapshot: it is a read of one agent or one market, it may
 allocate, and it costs the second class of `spec-integration.md` 6.1. The rows of
@@ -960,7 +1210,10 @@ consumer's tool and an adapter read the same field names (INT 6.3 and 6.5 adopte
 compute from tables: `O(rows)`. `S` is one pass over the live agents, each
 touched once, with a constant number of reads per agent: `O(A)`. `L` is one
 pass over the lots of the accounts of households and estates: `O(accounts +
-lots)`. `B` is one pass over the beliefs: `O(sum over agents of |T_a|)`. `F` is
+lots)`. `B` is one pass over the beliefs: `O(sum over agents of |T_a|)`. `Q` is
+one pass over the agents of the roles that have a block (saving), each with a
+drawdown over a window and a project test: `O(sum over those agents of (T + recipes
+* inputs + facilities))`, paid only by a world with such a role. `F` is
 a copy of what is in flight. The snapshot is the sum, plus the allocation of the
 deep copy.
 
@@ -973,12 +1226,13 @@ commodities, 5 regions, 20 roles) and a placeholder 10 nanoseconds a read:
 | S | 5 000 agents, a placeholder 6 reads each: 30 000 | 0.3 ms |
 | L | 5 000 accounts, 8 lots each: 40 000 | 0.4 ms |
 | B | 5 000 times 8: 40 000 | 0.4 ms |
+| Q | 1 000 agents with a block, a placeholder 40 reads each: 40 000 (SAV 12.5) | 0.4 ms |
 | K, D, F | under 1 000 rows | under 0.01 ms |
 | allocation | rows of 5.3 times about 200 bytes (rows of 14 to 25 fields): 150 market rows, 100 role rows, 5 region rows and the in-flight sets, about 300 rows, about 60 KB | not counted |
-| **Total** | | **about 1.1 ms** |
+| **Total** | | **about 1.1 ms** without class Q, **about 1.5 ms** with it |
 
 Against the tick of about 53 ms of the same budget that is about 2% for one
-snapshot, so a consumer may take one every tick; a consumer that only needs the
+snapshot (about 3% with class Q), so a consumer may take one every tick; a consumer that only needs the
 cheap rows pays for the scans anyway, and a call with groups to skip is the
 addition this spec leaves open (section 18, question 3). These numbers are
 counted, not measured; the library measures no wall-clock time
@@ -987,11 +1241,13 @@ counted, not measured; the library measures no wall-clock time
 ### 5.6 What bounds its size
 
 5.6.1. The size of a snapshot is `O(R * (roles + commodities) + resources *
-regions + modes * regions^2 + edges)` for the configuration, plus the in-flight
-sets (`Shipments`, `Away`, `Journeys`, `Contracts`). It is **never proportional
-to the number of agents**, except through those four sets, each of which is a
-set of agents that are doing something rare (a trip, a journey) or a configured
-cap (`MaxOpen`). For the first consumer's world it is of the order of 300 rows
+regions + modes * regions^2 + edges)` for the configuration (and the rows of the
+later modules of 5.3.11, bounded by regions times classes, fields and bodies), plus
+the in-flight sets of 5.3.8 (`Shipments`, `Away`, `Journeys`, `Contracts`, `Hires`,
+`Claims`, `Policies`). It is **never proportional to the number of agents**, except
+through those sets, each of which is a set of agents that are doing something rare
+(a trip, a journey, a hire, a claim, a cover) or a configured cap (`MaxOpen`,
+`MaxClaims`, `MaxPolicies`). For the first consumer's world it is of the order of 300 rows
 (5.5.2).
 
 5.6.2. A world of 200 000 agents (`spec-scale.md` 6.3's third row) has the same
@@ -1040,11 +1296,12 @@ input because nothing reads one back.
 | N-040 | whether beliefs are in the snapshot | aggregates per market in 5.3.5; per agent in the query |
 | N-109 | whether a run measures the welfare ratio at a full draw | **No.** `r_full` is a counterfactual (what a household would earn at a full draw and a full stock), not a state, so it is not a snapshot field; it is a property of the pack's economy, and the steady-state solver of `spec-viability.md` is the place to compute it (a recommendation to POP and VIA, who own the decision whether a warning `population_cannot_grow` exists and whether the closed forms of `spec-resources.md` 8 read it from the solver). The note stays open for them |
 | IND 7.5.1, 7.7, 7.6.2 | per role the last tick's income, relief and cost (`IncomeLast`, `ReliefLast`, `CostLast`); the wear units removed, by commodity; the lines (commodity and units) of `AgentRelocated` | **Not adopted in version 1.** The income fields would be three `Money` fields of `RoleRow` (a function of the welfare ring, so of saved state, FR-OBS-043) and are a future ask; until then IND's `HouseholdIncome` is `OK` false. The wear units are a different quantity from the items retired that `wear` of `BoundaryFlow` counts (4.4.1). `Lines` of `AgentRelocated` would be new and is not needed |
+| EMP 15.4, STO 14.5, SET 10.5, LND 13.4, CRD 16.4, CAP 14.5, ORG 11.5, SAV 8.4.2 and 12.5, TEC 11.4, POL 10.5, PLC 12.3, INS 15.4, FIS 16.3 | the rows and fields of the later-stage modules: role, region, market and endowment fields, the in-flight sets `Hires`, `Claims` and `Policies`, and the new slices | **Adopted** as asked, in 5.3.2 to 5.3.6, 5.3.8 and 5.3.11; a count of the last tick of any of them is the module's event (5.2.2); the cost of the saving fields is the new class `Q` (5.5.1, SAV 12.5) |
 
 ## 6. Metrics
 
 Metrics are produced by the separate module `otelobserver` from the events of
-section 4 and, for four instruments, from a snapshot that the consumer passes to
+section 4 and, for fourteen instruments, from a snapshot that the consumer passes to
 it (6.2.2). The core defines none and does not import OpenTelemetry
 (architecture.md 11.4). This section reconciles the catalogue of rules 5.3 with
 the events, resolves the five conflicts of N-088, and says what the adapter keeps.
@@ -1103,7 +1360,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.household.count` | UpDownCounter | `{household}` | `economysim.role` | `AgentSpawned` (+`Weight`), `AgentBankrupted` (-`Weight`), `WeightChanged` (`To` less `From`), `RoleChanged` (-`Weight` `From`, +`Weight` `To`) | kept |
 | `economysim.household.unfed` | UpDownCounter | `{household}` | `economysim.role` | `UpkeepShortfall` (`Unfed`), with the adapter's per-(region, role) last value (6.3.1) | kept, rule made exact |
 | `economysim.role.changes` | Counter | `{change}` | `economysim.role` (the destination) | `RoleChanged` (by `To`) | kept |
-| `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`) | **new** |
+| `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`) | **new** |
 | `economysim.want.unfunded` | Counter | `{unit}` | `economysim.want`, `economysim.role` | `WantShortfall` (`Planned` less `Funded`) | kept |
 | `economysim.household.relocations` | Counter | `{household}` | `economysim.region.from`, `economysim.region.to`, `economysim.cause` | `AgentRelocated` (`Weight`) | **changed**: gains `economysim.cause`, because a merchant's trips and a migrant's move are not one thing |
 | `economysim.money.flow` | Counter | `{minor_unit}` | `economysim.reason`, `economysim.kind` | `BoundaryFlow` (money); includes the bucket at `Tick` -1 (6.3.2) | kept |
@@ -1129,6 +1386,59 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.contract.value` | Counter | `{minor_unit}` | `economysim.commodity` | `ContractFormed` (`Escrowed`) | kept |
 | `economysim.contract.escrow` | UpDownCounter | `{minor_unit}` | none | `ContractFormed` (+`Escrowed`), `ContractSettled` (-`Paid`, -`Refunded`) | kept |
 | `economysim.merchant.decisions` | Counter | `{lane}` | `economysim.decision` | `MerchantsPlanned` (the case counts) | kept |
+| `economysim.storage.limited` | Counter | `{case}` | `economysim.region`, `economysim.role`, `economysim.room_limit` | `RoomLimited` (`StartsCut` as `start_cut`, `StartsRefused` as `start_refused`, `BidsCut` as `bid_cut`, `BidsRejected` as `bid_rejected`, `ShipmentsRefused` as `shipment_refused`) | **new** (STO) |
+| `economysim.hire.formed` | Counter | `{hire}` | `economysim.role` (the employer's) | `HireFormed` | **new** (EMP) |
+| `economysim.hire.wage` | Counter | `{minor_unit}` | `economysim.region` | `LabourRound` (`Paid`) | **new** |
+| `economysim.labour.unmatched` | Counter | `{household}` | `economysim.role` (the worker's) | `LabourRound` (`Workers[].NoVacancy`) | **new** |
+| `economysim.vacancy.unfilled` | Counter | `{position}` | `economysim.role` (the employer's), `economysim.reason` | `LabourRound` (`Employers[].Unfilled`, and the refusal fields by reason) | **new** |
+| `economysim.hire.escrow` | UpDownCounter | `{minor_unit}` | none | `HireFormed` (+`Escrowed`), `LabourRound` (-`Paid`, -`Refunded`), `HireEnded` (-`Refunded`); the sector `contract` of `economysim.money.supply` includes it | **new** |
+| `economysim.settlement.class` | Gauge | `{class}` | `economysim.region` | `SettlementClassChanged` (`To`); the adapter keeps the last value, which the events of construction set | **new** (SET) |
+| `economysim.settlement.changes` | Counter | `{change}` | `economysim.region` | `SettlementClassChanged`, except the cause `founded` | **new** |
+| `economysim.rent.paid` | Counter | `{minor_unit}` | `economysim.resource`, `economysim.region` | `RentPaid` (`Paid`) | **new** (LND) |
+| `economysim.rent.units` | Counter | `{unit}` | `economysim.resource`, `economysim.region`, `economysim.tier` | `RentPaid` (`OwnUnits`, `CommonsUnits`, `LetUnits` as `own`, `commons`, `let`) | **new** |
+| `economysim.rent.rate` | Gauge | `{minor_unit}` | `economysim.resource`, `economysim.region` | `RentPaid` (`RentAfter`) and `RentScaled` (`To`); the adapter holds the last values (6.3.6) | **new** |
+| `economysim.rent.refusals` | Counter | `{request}` | `economysim.resource`, `economysim.region`, `economysim.reason` | `RentPaid` (`NoTitle`, `RentFunds` as `no_title`, `rent_funds`) | **new** |
+| `economysim.title.transfers` | Counter | `{transfer}` | `economysim.resource`, `economysim.region`, `economysim.cause` | `TitleTransferred` (by `Cause`: `removal`, `consumer`) | **new** |
+| `economysim.credit.formed` | Counter | `{claim}` | none | `LoanFormed` | **new** (CRD; origin `loan` only) |
+| `economysim.credit.principal` | Counter | `{minor_unit}` | none | `LoanFormed` (`Principal`) | **new** |
+| `economysim.credit.interest` | Counter | `{minor_unit}` | none | `CreditSettled` (`InterestPaid`) and `LoanEnded` (`PaidInterest`), of origin `loan` | **new** |
+| `economysim.credit.outstanding` | UpDownCounter | `{minor_unit}` | none | `LoanFormed` (+`Principal`), `CreditSettled` (-`PrincipalPaid`), `LoanEnded` (-`PaidPrincipal` and `LostPrincipal`), of origin `loan`; seeded at a restore (6.4.2) | **new** |
+| `economysim.credit.defaults` | Counter | `{claim}` | none | `CreditSettled` (`Defaulted`) | **new** |
+| `economysim.credit.lost` | Counter | `{minor_unit}` | `economysim.cause` | `LoanEnded` (`LostPrincipal` plus `LostInterest`, by `Cause`), of origin `loan` | **new** |
+| `economysim.credit.refused` | Counter | `{request}` | none | `CreditRound` (`RequestsRefused` plus `OffersRefused`) | **new** |
+| `economysim.credit.limited` | Counter | `{case}` | `economysim.credit_limit` | `CreditRound` (`InArrears`, `Exposure`, `TooMany`, `Overflow` as `in_arrears`, `exposure`, `too_many_claims`, `overflow`; the first two are also in `refused`, so the two instruments are not added) | **new** |
+| `economysim.facility.count` | UpDownCounter | `{facility}` | `economysim.facility_class`, `economysim.region` | `FacilityChanged` (+1 for `added` and `built`, -1 for `ruined`; the other kinds change no count) | **new** (CAP) |
+| `economysim.facility.limited` | Counter | `{execution}` | `economysim.facility_class`, `economysim.region`, `economysim.facility_limit` | `FacilityLimited` (`Cut` as `cut`, `Voided` as `voided`) | **new** |
+| `economysim.facility.refused` | Counter | `{start}` | `economysim.facility_class`, `economysim.region` | `FacilityLimited` (`Refused`) | **new** |
+| `economysim.risk.strikes` | Counter | `{strike}` | `economysim.risk_kind` | `ShipmentDispatched` (1 for each with `LossBP` above 0, as `route`), `StoreLoss` (`Stores`, as `store`) | **new** (RSK) |
+| `economysim.transport.cargo.lost` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (each line's `Lost` and each `AccountLost` amount) | **new** |
+| `economysim.store.lost` | Counter | `{unit}` | `economysim.commodity`, `economysim.store_class` | `StoreLoss` (`Lost`) | **new** |
+| `economysim.fiscal.collected` | Counter | `{minor_unit}` | `economysim.reason` (the fiscal flow ID) | `FiscalFlowApplied` (`Applied` of the kinds `tax`, `duty`, `toll`) | **new** (FIS) |
+| `economysim.fiscal.paid` | Counter | `{minor_unit}` | `economysim.reason` | `FiscalFlowApplied` (`Applied` of the kind `payout`, money) | **new** |
+| `economysim.fiscal.in_kind` | Counter | `{unit}` | `economysim.reason`, `economysim.commodity` | `FiscalFlowApplied` (`Applied` of an in-kind `payout`) | **new** |
+| `economysim.fiscal.unapplied` | Counter | `{minor_unit}` | `economysim.reason` | `FiscalFlowApplied` (`Due` less `Applied` of the fiscal flows that move money) | **new** |
+| `economysim.fiscal.order.cut` | Counter | `{unit}` | `economysim.clamp` | `TreasuryOrdered` (`CutCash`, `CutHold`, `CutStock` as `cash`, `hold`, `stock`) | **new** |
+| `economysim.right.refusals` | Counter | `{refusal}` | `economysim.right`, `economysim.activity` | `RightRefused` (`Produce`, `Sell`, `Buy`, `Train` as `produce`, `sell`, `buy`, `train`) | **new** (ORG) |
+| `economysim.control.clamped` | Counter | `{clamp}` | `economysim.control`, `economysim.side` | `PriceControlled` (`Bids` as `bid`, `Asks` as `ask`) | **new** |
+| `economysim.saving.requests` | Counter | `{request}` | `economysim.role`, `economysim.project` | `SavingPlanned` (`Builds` as `build`, `Repairs` as `repair`) | **new** (SAV) |
+| `economysim.saving.barred` | Counter | `{household}` | `economysim.role`, `economysim.bar` | `SavingPlanned` (`NoReturn`, `Standing`, `Unreachable`, `Survival` as `no_return`, `standing`, `unreachable`, `survival`) | **new** |
+| `economysim.technology.gain` | Gauge | `{basis_point}` | `economysim.field`, `economysim.region` | `TechnologyAdvanced` and `TechnologyAdjusted` (`AfterBP`); the adapter holds the last value for a tick with no event (6.3.6) and seeds the level from the technology rows of `WorldRestored`'s snapshot (6.4.2) | **new** (TEC) |
+| `economysim.technology.experience` | Counter | `{execution}` | `economysim.field`, `economysim.region` | `TechnologyAdvanced` (`Executions`) | **new** |
+| `economysim.technology.discoveries` | Counter | `{discovery}` | `economysim.field` | `TechnologyAdvanced` (`Discoveries`) | **new** |
+| `economysim.technology.clamped` | Counter | `{basis_point}` | `economysim.field` | `TechnologyAdvanced` (`ClampedBP`, the part cut by the cap) | **new** |
+| `economysim.policy.decisions` | Counter | `{decision}` | `economysim.actor` | `PolicyDecided` (one per event) | **new** (PLC) |
+| `economysim.policy.entries` | Counter | `{entry}` | `economysim.actor`, `economysim.entry_outcome` | `PolicyDecided` (`Applied`, `Unchanged`, `NotHeld`, `Duplicate`, `NoClose` as `applied`, `unchanged`, `not_held`, `duplicate`, `no_close`) | **new** |
+| `economysim.policy.cut` | Counter | `{entry}` | `economysim.actor`, `economysim.policy_cut` | `PolicyDecided` (`Clamped`, `Stepped` as `clamped`, `stepped`) | **new** |
+| `economysim.policy.held` | Counter | `{reaction}` | `economysim.actor`, `economysim.policy_hold` | `PolicyDecided` (`InBand`, `NoReading` as `in_band`, `no_reading`) | **new** |
+| `economysim.insurance.policies` | Counter | `{policy}` | `economysim.cover_kind` | `CoverFormed` (by `Kind`) | **new** (INS) |
+| `economysim.insurance.premium` | Counter | `{minor_unit}` | none | `CoverFormed` (`Premium`) | **new** |
+| `economysim.insurance.payout` | Counter | `{minor_unit}` | none | `CoverSettled` (`Paid`) | **new** |
+| `economysim.insurance.shortfall` | Counter | `{minor_unit}` | none | `CoverSettled` (`Short`) | **new** |
+| `economysim.insurance.unpaid` | Counter | `{minor_unit}` | `economysim.cover_loss` | `CoverSettled` (`Dropped`, `Cut` as `dropped`, `cut`) | **new** |
+| `economysim.insurance.liability` | UpDownCounter | `{minor_unit}` | none | `CoverFormed` (+`MaxPayout`, route covers only), `CoverEnded` (-`MaxPayout` of a route cover); seeded at a restore (6.4.2) | **new** |
+| `economysim.insurance.claims` | UpDownCounter | `{minor_unit}` | none | `CoverEnded` (+`Short`), `LoanEnded` of origin `payout` (-`Principal`, the claim at face; the part paid is `CoverSettled.ClaimPaid`); seeded at a restore (6.4.2) | **new** |
+| `economysim.insurance.refused` | Counter | `{request}` | none | `CoverRound` (`RequestsRefused` plus `OffersRefused`) | **new** |
+| `economysim.insurance.limited` | Counter | `{case}` | `economysim.cover_limit` | `CoverRound` (`InArrears`, `Exposure`, `NoRisk`, `NoOffer`, `BelowMinimum`, `Funds`, `TooMany`, `Overflow` as `in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`) | **new** |
 
 #### 6.2.2 Fed by a snapshot
 
@@ -1140,9 +1450,19 @@ adapter records each instrument below once per call, from the rows named.
 | Name | Instrument | Unit | Attributes | Fed by |
 |------|-----------|------|------------|--------|
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
-| `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`) | `Markets[].HeldByAgents`, `HeldByEstate` (N-081 2) |
-| `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` |
+| `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
+| `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
 | `economysim.welfare.ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].MeanRatioBP` where `HasMeanRatio` (N-081 1) |
+| `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
+| `economysim.room.fill` | Gauge | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` | `Roles[]` room and load, `Load * 10 000 / Room` of a dimension (`mass`, `bulk`), absent where the room is 0 |
+| `economysim.credit.arrears` | Gauge | `{minor_unit}` | `economysim.region` | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region (a level that changes with no `CreditSettled`: a debtor removed in phase 7, `ForgiveClaims`, a relocation) |
+| `economysim.facility.pending` | Gauge | `{facility}` | `economysim.facility_class`, `economysim.region` | `Facilities[]` rows, `Pending` (store facilities not installed) |
+| `economysim.facility.condition` | Gauge | `{basis_point}` | `economysim.facility_class`, `economysim.region` | `Facilities[]` rows, `ConditionBP` summed over the row |
+| `economysim.body.members` | Gauge | `{household}` | `economysim.body`, `economysim.region` | `Bodies[].Members`, by body and region |
+| `economysim.body.waiting` | Gauge | `{household}` | `economysim.body`, `economysim.region` | `Bodies[]` (`Eligible - Members`), by body and region |
+| `economysim.saving.goal` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].GoalMoney` |
+| `economysim.saving.buffer` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].BufferMoney` |
+| `economysim.saving.idle` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].IdleMoney` |
 
 An instrument of this table with no snapshot passed is absent, not zero.
 
@@ -1194,7 +1514,8 @@ dashboard of relief is `ReliefPaid.Paid` summed.
 
 6.3.6. **The gauges that hold a last value** (`economysim.endowment.stock`,
 `economysim.household.own_use`, `economysim.external.price`,
-`economysim.market.clearing_price`, `economysim.belief.centre`): the adapter keeps
+`economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.rent.rate`,
+`economysim.settlement.class`, `economysim.technology.gain`): the adapter keeps
 the last recorded value per series and re-records every held series at
 `TickEnded`, so that a series whose event was silent in a tick is not stale at
 collection. The cost is bounded by the number of series of the gauge, never by
@@ -1224,10 +1545,18 @@ boundary (4.4.5). The adapter seeds its levels from it, once:
 | `economysim.household.own_use` | `Roles[].OnOwnUse` |
 | `economysim.external.price` | `Outside.Sides[].Quote` |
 | `economysim.market.clearing_price` | `Markets[].State.Price` |
+| `economysim.hire.escrow` | the sum of `Hires[].Held` |
+| `economysim.facility.count` | the sum of `Facilities[].Facilities` by (class, region) |
+| `economysim.settlement.class` | `Regions[].Class` |
+| `economysim.rent.rate` | `Endowments[].Posted` and `ScaleBP` (the rent in force) |
+| `economysim.credit.outstanding` | the sum of `PrincipalOwed` over the `Claims[]` rows of origin `loan`, equal to `Credit.Lent - Credit.Repaid - Credit.LostPrincipal` |
+| `economysim.technology.gain` | `Tech[].GainBP`, a cell with no row being 0 |
+| `economysim.insurance.liability` | the sum of `Policies[].MaxPayout` |
+| `economysim.insurance.claims` | the sum of `PrincipalOwed` over the `Claims[]` rows of origin `payout` |
 
 `economysim.belief.centre` is **not** seeded: `Markets[].MeanCentre` is over all
 beliefs and `BeliefsUpdated.MeanCentre` over those processed in the tick (BEL 12.1),
-so the series starts at the first event after the restore. The sparse held gauges (`endowment.stock`, `household.own_use`, `external.price`) are seeded for every key, whereas the original adapter has a series only for the keys that emitted, and `external.price` is seeded from the current quote where the original holds the last traded limit: they agree from the first event of each series, not before. A Counter is **not** seeded: it counts what this adapter saw, and a restore
+so the series starts at the first event after the restore. The sparse held gauges (`endowment.stock`, `household.own_use`, `external.price`, `rent.rate`, `settlement.class`, `technology.gain`) are seeded for every key, whereas the original adapter has a series only for the keys that emitted, and `external.price` is seeded from the current quote where the original holds the last traded limit: they agree from the first event of each series, not before. A Counter is **not** seeded: it counts what this adapter saw, and a restore
 starts it at 0, as a counter does when a process restarts.
 
 6.4.3. **Why a snapshot and not a list of levels.** A separate "levels" value
@@ -1238,20 +1567,41 @@ is once per restore.
 ### 6.5 Attributes and cardinality
 
 6.5.1. **The attributes** of rules 5.4.1 stand. This section adds four and
-extends the use of a fifth. Each is bounded by the configuration or by a constant set:
+extends the use of a fifth, and lists the attributes of the later modules (the rules
+name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 
 | Attribute | Values | Added for |
 |-----------|--------|-----------|
 | `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); a closed set of constants (4.2.3) | removals, relocations |
-| `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `cooldown`, `hysteresis`, `exit_cap`, `refused` | `economysim.entry.limited` |
-| `economysim.holder` | `agents`, `estate` | `economysim.market.stock` |
-| `economysim.sector` | `households`, `pool`, `contract` | `economysim.money.supply` |
+| `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused` (nine) | `economysim.entry.limited` |
+| `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
+| `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
 | `economysim.region` | the regions of the configuration (an existing attribute of RES) | `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price`, the snapshot gauges |
+| `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field`, `economysim.actor` | the entities of the configuration of the module (store classes, facility classes, bodies, rights, controls, technology fields, policy actors) | STO, CAP, ORG, TEC, PLC |
+| `economysim.dimension` | `mass`, `bulk` | `economysim.room.fill` |
+| `economysim.room_limit` | `start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused` | `economysim.storage.limited` |
+| `economysim.tier` | `own`, `commons`, `let` | `economysim.rent.units` |
+| `economysim.credit_limit` | `in_arrears`, `exposure`, `too_many_claims`, `overflow` | `economysim.credit.limited` |
+| `economysim.facility_limit` | `cut`, `voided` | `economysim.facility.limited` |
+| `economysim.risk_kind` | `route`, `store` | `economysim.risk.strikes` |
+| `economysim.clamp` | `cash`, `hold`, `stock` | `economysim.fiscal.order.cut` |
+| `economysim.activity` | `produce`, `sell`, `buy`, `train` | `economysim.right.refusals` |
+| `economysim.project`, `economysim.bar` | `build`, `repair`; `no_return`, `standing`, `unreachable`, `survival` | `economysim.saving.requests`, `economysim.saving.barred` |
+| `economysim.entry_outcome`, `economysim.policy_cut`, `economysim.policy_hold` | `applied`, `unchanged`, `not_held`, `duplicate`, `no_close`; `clamped`, `stepped`; `in_band`, `no_reading` | `economysim.policy.entries`, `.cut`, `.held` |
+| `economysim.cover_kind`, `economysim.cover_loss`, `economysim.cover_limit` | `route`, `store`; `dropped`, `cut`; `in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow` | `economysim.insurance.*` |
 
 `economysim.reason` takes, besides the money flow IDs and the built-in boundary
 reasons of rules 5.4.1, the **rejection reasons** of `OrderRejected` (ten
-constants, `spec-agents.md` 14.2) for `economysim.market.orders.rejected`, and the
-goods boundary reasons of 4.4.1 for `economysim.commodity.flow`. No attribute is an
+constants, `spec-agents.md` 14.2, and `not_permitted` and `no_room` of the later
+modules) for `economysim.market.orders.rejected`, the goods boundary reasons of 4.4.1
+for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namespace
+of the money flow IDs) for `economysim.fiscal.*`, the refusal reasons of a vacancy
+(`employer_funds`, `no_input`, `no_tool`, `no_endowment`, `no_room`, `zero_yield`,
+`no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled` and of a
+rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
+also takes, per instrument, the closed set of the event that feeds it (`removal` and
+`consumer` for `economysim.title.transfers`; `repaid`, `written_off`,
+`debtor_removed` and `forgiven` for `economysim.credit.lost`). No attribute is an
 agent ID, an order ID, a tick, a price, a quantity, a contract or a shipment ID
 (rules 5.4.1).
 
@@ -1267,13 +1617,14 @@ the attribute sets, every cell that could occur:
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
 | production (executions 45, halted 20 roles x 45 recipes) | 945 |
 | agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20) | 200 |
-| wants (6 x 20) and entry (8) | 128 |
-| money (flow 9 reasons, `loss` included, x 2 kinds, unapplied 4) and relocations (20 ordered pairs x 3 causes) | 82 |
+| wants (6 x 20) and entry (9) | 129 |
+| money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
 | snapshot-fed (pending 150, stock 300, money supply 15, welfare ratio 100) | 565 |
 | duration | 1 |
-| **Total** | **about 4 100** (4 143) |
+| the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
+| **Total** | **about 4 100** (4 142), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1347,7 +1698,7 @@ has an event or a snapshot counterpart (7.4), and the test of 9.2 checks it.
 | Level | Paths | Where |
 |-------|-------|-------|
 | `Error` | **none**. No written spec has an inconsistency that the library repairs and survives; a violated internal invariant panics with a message that says so (architecture.md 8.1) or, with `WithAudit`, returns `ErrAuditFailed` | |
-| `Warn` | 19 messages, 7.3 | construction (configuration warnings) and the tick (bounded by market, role, region, endowment, side or, row 19, recipe) |
+| `Warn` | 25 messages, 7.3 | construction (configuration warnings) and the tick (bounded by an entity of the configuration: a market, role, region, endowment, body, side or, row 19, recipe) |
 | `Info` | 5 messages, 7.2 | construction, `Run`, a restore; **none inside a step** |
 | `Debug` | per entity, guarded by `Enabled`, 7.5 | the tick |
 
@@ -1360,7 +1711,7 @@ says so in its Observability entry.
 
 | Message | Keys | When | Owner |
 |---------|------|------|-------|
-| "world created" | `seed`, `config_hash`, `commodities`, `recipes`, `roles`, `regions`, `agents`, `households`, `modules`, `warm_start`, and for the modules that are on `prices`, `wages`, `groups`, `jobs`, `edges`, `components`, `nodes`, `counterparties`, `modes`, `merchants` | once, at the end of construction | WLD 5.8.1, CFG 10.1 |
+| "world created" | `seed`, `config_hash`, `commodities`, `recipes`, `roles`, `regions`, `agents`, `households`, `modules`, `warm_start`, and for the modules that are on `prices`, `wages`, `groups`, `jobs`, `edges`, `components`, `nodes`, `counterparties`, `modes`, `merchants`, `store_classes`, `settlement_classes`, `facility_classes`, `facilities`, `fields`, `jurisdictions`, `governed`, `fiscal_flows`, `bodies`, `rights`, `controls`, `actors`, `levers`, `lenders`, `borrowers`, `underwriters`, `insured`, `rows` | once, at the end of construction | WLD 5.8.1, CFG 10.1 |
 | "warm start applied" | `regions`, `prices`, `wages`, `groups`, `jobs` | once, at construction, with a warm start | VIA 17.2 |
 | "run started" | `ticks` | `Run`, once | WLD 16.3 |
 | "run ended" | `ticks` (completed), `reason` (`completed`, `cancelled`, `failed`) | `Run`, once; the error is returned, not logged | WLD 16.3 |
@@ -1404,7 +1755,7 @@ which each uses.
 | 9 | "region extinct" | A: a region with no households | `region` | regions | `RegionRow.Households` | POP 10.3 |
 | 10 | "births unfunded" | A (POP 10.3: "first tick of the condition and every tenth after"): births due and the pool funded none | `region`, `births` | regions | `PopulationChanged.BirthsUnfunded` | POP 10.3 |
 | 11 | "deaths held" | A (POP 10.3): `MinHouseholds` held deaths in a group | `region`, `role`, `deaths` | regions x roles | `PopulationChanged.DeathsHeld` | POP 10.3 |
-| 12 | "endowment exhausted" | A: `Short` above 0 | `tick`, `region`, `resource`, `stock`, `short` | endowments | `EndowmentChanged.Short`; `EndowmentRow` | RES 14.2 |
+| 12 | "endowment exhausted" | A: `Short` above 0; for an endowment with tenure data `Short - min(Short, Held + Idle)` above 0 (LND 13.1.4) | `tick`, `region`, `resource`, `stock`, `short` | endowments | `EndowmentChanged.Short`; `RentPaid.Held`, `Idle`; `EndowmentRow` | RES 14.2, LND 13.1.4 |
 | 13 | "outside side ended" | once per side, when it ends | `node`, `commodity`, `side`, `cause` | sides | `OutsideEnded` | EXT 15.2 |
 | 14 | "role on own use" | B: more than half of a role's households in the mode | `region`, `role`, `households`, `own_use` | regions x roles | `OwnUseChanged.OnOwnUse`; `RoleRow.OnOwnUse` | SUB 14.2 |
 | 15 | "own use blocked" | B: at least one household in the mode blocked | `region`, `role`, `households`, `reason` | regions x roles | `OwnUseChanged.Blocked` | SUB 14.2 |
@@ -1412,8 +1763,14 @@ which each uses.
 | 17 | "arrivals held" | B: a held arrival in each tick | `region`, `households` | regions | `MigrationReviewed.Held` | MIG 13.2 |
 | 18 | "wants choked" | B: all of a role's households choked for the want | `region`, `role`, `want`, `households` | regions x roles x wants | `WantShortfall.Choked` | DEM 11.2 |
 | 19 | "recipe output disposed" | **no run**: the overflow rule of PRO 5.3.2, at most one per recipe per tick (PRO 14.2), exempt from FR-OBS-071 and FR-OBS-072 and bounded by the recipes of the configuration | `recipe`, `commodity`, `quantity` | recipes | `RecipeExecuted.Disposed` | PRO 14.2 |
+| 20 | "labour unmatched" | B: more than half of a worker role's offered households in a region were unmatched in each tick of the run | `region`, `role`, `households` | regions x roles | `LabourRound.Workers[].NoVacancy`; `RoleRow.Employed` | EMP 15.2 |
+| 21 | "vacancies unfilled" | B: positions of an employer role in a region were unfilled in each tick of the run | `region`, `role`, `vacancies`, `reason` | regions x roles | `LabourRound.Employers[].Unfilled` and the refusal fields | EMP 15.2 |
+| 22 | "tenure refusal" | A: requests of an endowment were refused for a reason (`no_title` or `rent_funds`) in the tick, the run of such ticks (saved by LND) being 1 or a multiple of 10 | `tick`, `region`, `resource`, `rent`, `agents`, `reason` | endowments x 2 reasons | `RentPaid.NoTitle`, `RentFunds` | LND 13.2 |
+| 23 | "claims overdue" | B: the debtors of a region owe overdue claims of origin `loan` at the end of P1.7a | `region`, `claims`, `arrears` | regions | `CreditSettled.Arrears`; the `Claims` rows (`Overdue` at or above 0) | CRD 16.2 |
+| 24 | "claim cap reached" | A: a request was cut because `MaxClaims` open claims exist | `claims` | the world | `CreditRound.TooMany`; the length of `Claims` | CRD 16.2 |
+| 25 | "body has waiting households" | B: the households waiting for a place of a body in a region were above 0 in each tick of the run | `region`, `body`, `waiting`, `places` | regions x bodies | `MembershipChanged.Waiting`; `BodyRow` (`Eligible - Members`) | ORG 11.2 |
 
-7.3.1. **The bound.** Lines 2 to 18 each have a cell per entity of the
+7.3.1. **The bound.** Lines 2 to 18 and 20 to 25 each have a cell per entity of the
 configuration and emit at most once per `WarnRun` ticks per cell **within an uninterrupted run**
 (pattern A adds the first tick of a run), so on average a tick emits the number of
 cells over `WarnRun`, and at most the number of cells in the worst tick. Line 19 is bounded per tick by
@@ -1421,9 +1778,12 @@ the number of recipes, and line 13 by the number of sides over the whole run. Fo
 the reference world (placeholder sizes of 6.5.2: 5 regions, 20 roles, 150 markets,
 15 endowments, 6 wants) the cells of lines 2 to 18 are about 1 700 (eight kinds
 over 100 (region, role) cells, 600 of line 18, 150 markets, 25 regions, 15
-endowments, 120 sides of 1 node, 2 gates, 30 commodities and 2 sides). **The per-tick bound is the number of cells**: every run
+endowments, 120 sides of 1 node, 2 gates, 30 commodities and 2 sides), and those of
+lines 20 to 25 about 250 more (200 of lines 20 and 21 over the 100 (region, role)
+cells, 30 of line 22, 5 of line 23, 1 of line 24 and, for a placeholder of two
+bodies, 10 of line 25), so about 1 950. **The per-tick bound is the number of cells**: every run
 can start in the same tick (a famine, a shock, all groups at construction) and
-pattern A fires on the first tick, so one tick may emit about 1 700 lines, plus
+pattern A fires on the first tick, so one tick may emit about 1 950 lines, plus
 the 45 of line 19. **Over a window of `w` ticks** the bound is the cells times `ceil(w / 2)` for pattern A
 (a condition true on alternate ticks starts a new run every other tick) and
 `ceil(w / WarnRun)` for pattern B, which is unbroken-run bound only; about 170 a
@@ -1467,7 +1827,7 @@ SUB ("own use entered", "own use left", "own use retry", "own use blocked"), MIG
 ("migration started", "migration declined", "arrival held"), MER ("contract
 formed", "contract settled", "offer refused", "take refused", "trip planned"),
 DEM ("want skipped", "want consumed"), SKL ("traineeship refused"), LED (a
-refused transfer), CHK ("checkpoint taken": `tick`, `bytes`), INT ("agent added", "directive set", "agent removed", and one constant message per setter: "yield shocks set", "edge statuses set", "transit factors set", "flow scales set", "birth scales set", "death scales set", "capacity scales set", "regen scales set", "endowments adjusted", "outside shocks set", with `tick` and `cause`: `spec-integration.md` 12.2).
+refused transfer), CHK ("checkpoint taken": `tick`, `bytes`), INT ("agent added", "directive set", "agent removed", and one constant message per setter: "yield shocks set", "edge statuses set", "transit factors set", "flow scales set", "birth scales set", "death scales set", "capacity scales set", "regen scales set", "endowments adjusted", "outside shocks set", with `tick` and `cause`: `spec-integration.md` 12.2), and, for the later modules, EMP ("offer refused", "vacancy refused", "hire refused"), STO ("bid cut for room", "job refused for room", "store added", "store removed"), SET ("settlement class changed", "settlement class held"), LND ("rent charged"), CRD ("loan formed", "loan ended", "claim passed", "claim overdue", "request refused", "offer refused"), CAP ("facility built", "facility repaired", "facility ruined", "facility installed", "facility start refused"), RSK ("route struck", "store struck"), FIS ("fiscal flow applied", "treasury ordered"), ORG ("start refused" and "order rejected" with the reason `not_permitted`, "place not open"), SAV ("project chosen", "project declined"), TEC ("technology advanced", "technology adjusted"), PLC ("policy decided", "policy entry refused", "rule moved lever") and INS ("cover formed", "cover ended", "cover refused"); POL has none.
 
 7.5.3. A `Debug` line that records a *fact* is also an event or a snapshot field
 (a rejected order, a relocation, a contract): the line is the human's view of it.
@@ -1490,6 +1850,10 @@ rules' `from_region` and `to_region`):
 | `format` | `int64` | the checkpoint format version | **no: add** | "world restored" (CHK) |
 | `bytes` | `int64` | the size of an encoded checkpoint | **no: add** | "world restored", "checkpoint taken" (CHK) |
 | `from`, `to` | `int64` | a value before and after, in basis points (a flow scale) | **no: add**, or MON renames them (routed, section 19) | "money flow scaled" (MON 13.2) |
+
+The rules' table has since gained these four, `account` and `amount` (the line of a
+refused transfer, LED 12.2), and the keys of the later modules, which the table
+below lists with the lines that use them.
 
 The keys in the rules' table and where each is used (the counts are of
 messages in 7.2, 7.3 and 7.5, for the reader who wants to know whether a key is
@@ -1518,6 +1882,20 @@ dead):
 | `node`, `value`, `nodes`, `counterparties`, `drift` | EXT's lines and summary |
 | `own_use` | SUB's Warn |
 | `contract`, `offers`, `takes`, `merchants` | MER's lines and summary |
+| `store_class`, `store_classes` | STO's lines and the summary (the key `class` of the first draft is `store_class`, so as not to collide with a commodity class or a settlement class) |
+| `settlement_class`, `from_settlement_class`, `to_settlement_class`, `target_settlement_class`, `settlement_classes` | SET's lines and the summary |
+| `vacancies` | the "vacancies unfilled" Warn (row 21) |
+| `rent`, `share` | LND's "tenure refusal" and "rent charged"; RSK's "route struck" and "store struck" |
+| `claim`, `claims`, `lenders`, `borrowers`, `rate`, `term`, `principal`, `owed`, `arrears`, `lost` | CRD's lines and summary, and rows 23 and 24 |
+| `facility`, `facility_class`, `facilities`, `facility_classes`, `condition` | CAP's lines and summary |
+| `rows` | RSK's summary |
+| `authority`, `fiscal_flows` | FIS's lines and summary |
+| `body`, `right`, `control`, `activity`, `places`, `waiting`, `bodies`, `rights`, `controls` | ORG's lines, summary and row 25 |
+| `goal`, `buffer` | SAV's "project chosen" |
+| `field`, `fields`, `gain` | TEC's lines and summary |
+| `actor`, `lever`, `reading`, `entries`, `changed`, `actors`, `levers` | PLC's lines and summary |
+| `cover_policy`, `sum`, `premium`, `payout`, `underwriters`, `insured` | INS's lines and summary (the key `policy` of the first draft is `cover_policy`, so as not to collide with PLC's module, cause and `Policy`) |
+| `jurisdictions`, `governed` | POL's summary |
 
 7.6.1. **Rules about keys** that this spec restates for the owners: a key is
 lower-case `snake_case`, defined once as a constant in `internal/logkeys` and
@@ -1591,8 +1969,8 @@ measured (N-015).
 |-------|-----------------|-----|
 | O | up to 40 000 | agents times tradable set: `5 000 * 8` placed or rejected orders (`spec-scale.md` 6.3) |
 | R | up to about 40 000; a placeholder typical 20 000 | a pair trades `min` of the two remainders (`spec-clearing.md` 4.4), so a trade exhausts at least one order and trades per market can reach its orders less one |
-| A | ceiling about 3 600 (the terms below sum to 3 585); a typical tick a few hundred | markets 150 (`MarketCleared`) and 150 (`BeliefsUpdated`); `BoundaryFlow` up to 5 x 14 x 30 = 2 100 rows, a few hundred that occur; `UpkeepShortfall`, `OwnUseChanged`, `PopulationChanged` up to 100 each; `WantShortfall` up to 5 x 20 x 6 = 600; `ProductionHalted` up to 100; `OutsideTraded` up to 2 gates x 30 x 2 = 120; the rest under 50 |
-| E | tens to a few hundred | entries, exits, role changes, recipe completions (up to one per agent per tick for a one-tick recipe: up to 5 000), shipments, contracts |
+| A | ceiling about 3 600 (the terms below sum to 3 585); a typical tick a few hundred | markets 150 (`MarketCleared`) and 150 (`BeliefsUpdated`); `BoundaryFlow` up to 5 x 14 x 30 = 2 100 rows, a few hundred that occur; `UpkeepShortfall`, `OwnUseChanged`, `PopulationChanged` up to 100 each; `WantShortfall` up to 5 x 20 x 6 = 600; `ProductionHalted` up to 100; `OutsideTraded` up to 2 gates x 30 x 2 = 120; the rest under 50 ; the later modules add aggregates bounded by their own counts of the configuration (`RoomLimited` and `SavingPlanned` by regions times roles, up to 100 each at these sizes; `TechnologyAdvanced` by regions times fields; the rest by regions times a small count of classes, bodies, flows or actors), a few hundred more at most, so the ceiling rises by that and stays far below O and R |
+| E | tens to a few hundred | entries, exits, role changes, recipe completions (up to one per agent per tick for a one-tick recipe: up to 5 000), shipments, contracts, hires, claims, covers, titles and facilities |
 | W | 2 | `TickStarted`, `TickEnded` |
 | C | 0 | between ticks |
 
@@ -1615,10 +1993,10 @@ carries.
 ### 8.4 The cost of the snapshot and of `WorldRestored`
 
 The snapshot is on request and costs what 5.5 says: about 1.1 ms of counted work
-for the first consumer's world, 2% of a tick, and `O(configuration + in-flight)`
-in size (5.6). `WorldRestored` builds one, once, and only when an observer was
+for the first consumer's world (about 1.5 ms with the saving fields of class Q, 5.5),
+2% to 3% of a tick, and `O(configuration + in-flight)` in size (5.6). `WorldRestored` builds one, once, and only when an observer was
 supplied. A world that is never snapshotted pays nothing for the snapshot: the snapshot
-keeps no counter of its own (5.2), and the S, L and B classes are scans at the call.
+keeps no counter of its own (5.2), and the S, L, B and Q classes are scans at the call.
 
 ## 9. How observability is tested
 
@@ -1696,8 +2074,12 @@ field, the value is a constant of its closed set. The list of such fields is the
 attribute column of 6.2.1: commodity, role, recipe, side, want, region, node,
 mode, resource, reason, cause, kind, outcome (the counts of `RumoursServed`),
 limit and decision (the counts of `MigrationReviewed` and `MerchantsPlanned`),
-entry limit (the counts of `EntryLimited`). Requirement FR-OBS-005 and
-FR-OBS-006.
+entry limit (the counts of `EntryLimited`), and the attributes of the later modules
+of 6.5.1: store class, facility class, body, right, control, field and actor
+(a typed ID in the range of its names slice), and the closed sets of the room limit,
+the tier, the credit and cover limits, the risk kind, the clamp, the activity, the
+project, the bar, the entry outcome, the policy cut and hold, the cover kind and the
+cover loss. Requirement FR-OBS-005 and FR-OBS-006.
 
 9.4.2. **In `otelobserver`**, a test asserts the attribute sets recorded on each
 instrument, using a configuration built in Go inside its own tests (it cannot read
@@ -1807,7 +2189,7 @@ overlays, `spec-reference-chain.md` 4):
 | agents and households | `Agents` and `Households` are different; pseudo-agents are in neither; a cohort of weight 40 counts 1 and 40; the sum over `Roles` equals the header | FR-OBS-032 |
 | bounded | the number of rows of a snapshot of one configuration is equal at scale 1 and at scale 40, with the in-flight sets empty | FR-OBS-033 |
 | rebuild | the agents and households by role and region rebuilt from the events equal the snapshot at every boundary of the all-modules run, over a range of seeds | FR-OBS-040 |
-| money | the money of the households and of the pool of each region rebuilt from the events (4.3.3), plus `Construction` before the first step and `Pending`, equals `MoneyHouseholds` and `MoneyPool` at every boundary, also after the scenario's calls between steps | FR-OBS-041 |
+| money | the money of the households, of the pool and of the treasury sector of each region rebuilt from the events (4.3.3) and `WorldCreated.Jurisdictions`, plus `Construction` before the first step and `Pending`, equals `MoneyHouseholds`, `MoneyPool` and `MoneyTreasury` at every boundary, also after the scenario's calls between steps, with a governed jurisdiction whose `StartMoney` is above 0 and a standing order and a tax in different regions | FR-OBS-041 |
 | identity | the boundary balance of each reason equals `Construction` plus the sum of `BoundaryFlow` of every tick plus `Pending`, as a signed total, at every boundary, also after the scenario's calls between steps | FR-OBS-042 |
 | restore equality | the snapshot after a restore at tick `n` equals the snapshot of the uninterrupted world at `n`, field for field, for a range of seeds and each module on | FR-OBS-043 |
 | region state | `Region(r)`'s `RegionState` equals the rows of the full snapshot whose key has `r` | FR-OBS-044 |
@@ -1939,7 +2321,7 @@ reads an event or a snapshot).
   construction (the events of a step reach the consumer after the step; its call
   acts at the next step, `spec-world.md` 8.1). *Owner:* INT 3.5; the consumer.
   *Damper:* none in the library, by design ("macro is measured, never set",
-  ADR 0001 decision 7); `spec-policy.md` (PLC, later) is where a rule that reads
+  ADR 0001 decision 7); `spec-policy.md` (PLC) is where a rule that reads
   measures and sets a slot is specified, with its own entries. *Undamped:* all of
   it. *Condition:* a consumer's controller with a gain that is small against the
   delay, as for any loop with a delay (`spec-stability.md` 6.3). *Test:* none in
@@ -1962,7 +2344,7 @@ configuration (3.2.4), the flag of 8.1.1 is rebuilt from the options of the
 restore, and the observers, the logger and the adapter's state are not world
 state (`spec-world.md` 12.1). The runs that the `Warn`s of 7.3 use are the owners'
 diagnostic state and are listed in their checkpoint sections (AGT 15, BEL 13, WEL
-13, SKL 9, SPN 14, POP 11, RES 15, SUB 15, MIG 14, DEM 12); they are saved so that
+13, SKL 9, SPN 14, POP 11, RES 15, SUB 15, MIG 14, DEM 12, EMP 16, LND 14, CRD 17, ORG 12); they are saved so that
 a resumed run logs as the original did, and nothing here adds to them.
 
 What a restore needs from this spec is two things: the names table to put in
@@ -2110,7 +2492,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-007 | A pseudo-agent MUST NOT be counted in any `Agents` or `Households` field and MUST NOT be the subject of `AgentSpawned`, `AgentBankrupted`, `WeightChanged` or `RoleChanged` (3.3.6, 5.1.2). |
 | FR-OBS-008 | A module that is off MUST emit none of its events, and the events of the other modules MUST equal those of a world in which it was never configured (3.3.3). |
 | FR-OBS-009 | An aggregate event that the table marks "never when all are zero" MUST NOT be emitted in a tick in which all its counts are zero. |
-| FR-OBS-010 | `WorldCreated` MUST be the first event of a constructed world, with `Tick` 0, the seed, the whole configuration hash, whether a warm start was present and the names table, and MUST precede the `AgentSpawned` of each initial agent. |
+| FR-OBS-010 | `WorldCreated` MUST be the first event of a constructed world, with `Tick` 0, the seed, the whole configuration hash, whether a warm start was present, the names table and the `Jurisdictions` rows, and MUST precede the `AgentSpawned` of each initial agent. |
 | FR-OBS-011 | A restore MUST emit `WorldRestored` as its first event to the observers given to it, with the restored tick, the hash, the format, the reseed flag and salt, the names table and the snapshot at the restored boundary, and MUST emit no `AgentSpawned`, `AgentBankrupted` or `BoundaryFlow` for events that happened before the restore (the bucket of a world restored in construction is emitted at its first step, FR-OBS-015) (4.4.5). |
 | FR-OBS-012 | `Run` MUST emit `RunStarted` and, whenever it did, `RunEnded` with the steps completed and the flags `Cancelled` and `Failed`, never both true; a call refused before its first step MUST emit neither. |
 | FR-OBS-013 | Every step that emitted `TickStarted` MUST emit `TickEnded`, with `Failed` true when it returned an error, and a guard that refuses a step before `TickStarted`, and a step that ends in a panic (`spec-world.md` 3.5.4), MUST emit no `TickEnded`; a `Run` that ends in a panic emits no `RunEnded` and the run span stays open until the world is restored. |
@@ -2120,7 +2502,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-017 | A call that sets a slot MUST emit one event per cell whose value changed, in the order of the key, after the whole call is applied, with the `Tick` of the next step and before its `TickStarted`, and MUST emit none for a cell set to the value it holds (4.4.4). |
 | FR-OBS-018 | `RecipeExecuted`, `RecipeAbandoned` and the three `Traineeship*` events MUST carry the region of the agent at the time of the event (3.3.7). |
 | FR-OBS-019 | `WeightChanged` MUST carry the money (signed, positive to the agent) and the units of goods that the change moved between the agent and the estate. |
-| FR-OBS-020 | One removal MUST emit, in this order, `RecipeAbandoned` for its job, `TraineeshipEnded` if it was in a traineeship, `ContractSettled` for each contract it delivered, `AgentBankrupted`, `EstateOpened` (and, for a trainer, its trainees' `RecipeAbandoned` and `TraineeshipEnded` first, 4.4.8), and `AgentBankrupted` MUST be the only event that removes the agent (4.4.8). |
+| FR-OBS-020 | One removal MUST emit, in this order, `RecipeAbandoned` for its job, `TraineeshipEnded` if it was in a traineeship, `ContractSettled` for each contract it delivered, then the events of the removal steps of `spec-agents.md` 3.6 in step order (`TitleTransferred` 2b, `HireEnded` 2c, `LoanEnded` 2d, `LoanPassed` 2e, `CoverEnded` 2f, `FacilityChanged` 2g, each with its module on), `AgentBankrupted`, `EstateOpened` (and, for a trainer, its trainees' `RecipeAbandoned` and `TraineeshipEnded` first, 4.4.8), and `AgentBankrupted` MUST be the only event that removes the agent (4.4.8). |
 | FR-OBS-021 | Within a region's entry step the completions of traineeships MUST be emitted as `TraineeshipCompleted` then the `RoleChanged` it causes, then each place filled as `TraineeshipStarted`, before the events of the population module and the spawner's plan (4.4.8). |
 | FR-OBS-022 | The events of a step MUST be emitted in the order of `spec-world.md` 6.11 as amended by 4.4 and 4.5, each after the state change it describes. |
 | FR-OBS-023 | A run MUST give identical snapshots, configuration hash, random state, draw count and event stream whether or not a logger, an observer or `WithAudit` is attached, and whatever the observer's speed. |
@@ -2130,7 +2512,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-032 | A snapshot MUST report agents and households as separate fields, with pseudo-agents in neither and a count of households the sum of weights. |
 | FR-OBS-033 | The number of rows of a snapshot MUST depend on the configuration and on the sets in flight (shipments, away agents, journeys, contracts) and MUST NOT depend on the number of agents or households. |
 | FR-OBS-040 | The agents and households by role and by region rebuilt from `AgentSpawned`, `AgentBankrupted`, `WeightChanged`, `RoleChanged` and `AgentRelocated` MUST equal the snapshot at every tick boundary. |
-| FR-OBS-041 | The money of the households and of the pool of each region rebuilt from the events of 4.3.3, plus `Snapshot.Construction` (before the first step) and `Snapshot.Pending`, MUST equal `MoneyHouseholds` and `MoneyPool` at every tick boundary, a boundary after a call between ticks included. |
+| FR-OBS-041 | The money of the households, of the pool and of the treasury sector of each region rebuilt from the events of 4.3.3 (with `WorldCreated.Jurisdictions`), plus `Snapshot.Construction` (before the first step) and `Snapshot.Pending`, MUST equal `MoneyHouseholds`, `MoneyPool` and `MoneyTreasury` at every tick boundary, a boundary after a call between ticks included. |
 | FR-OBS-042 | The boundary balance of each reason MUST equal the construction bucket plus the sum of the `BoundaryFlow` events of every tick since, with exact equality, plus `Snapshot.Pending`, at every tick boundary of a run from construction, a boundary after a call between ticks included. |
 | FR-OBS-043 | The snapshot of a world restored at tick `n` MUST equal, field for field, the snapshot of the uninterrupted world at tick `n`, and no field of a snapshot MUST be a function of anything that a checkpoint does not save (5.2.1). |
 | FR-OBS-044 | `RegionState` of a region MUST equal the rows of the full snapshot whose key has that region (5.3.5a). |
@@ -2139,7 +2521,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-051 | Every `Warn` of 7.3 MUST have a counterpart event or snapshot field that exists in sections 4 and 5. |
 | FR-OBS-052 | The attribute sets recorded on each instrument MUST be within the bounds of 6.5 for the configuration, and MUST contain no agent ID, order ID, tick, price, quantity, contract or shipment ID. |
 | FR-OBS-053 | `economysim.household.unfed` MUST equal, at every tick, the sum over regions of the households unfed in the last complete step, by the rule of 6.3.1, including the tick in which no event is emitted. |
-| FR-OBS-054 | An adapter attached at a restore MUST seed its level instruments from `WorldRestored` and MUST then agree with an adapter attached at construction, from the end of the first complete step after the restore, on every UpDownCounter and on every gauge that is fed every tick (`economysim.market.clearing_price`); a sparse held gauge (`economysim.endowment.stock`, `economysim.household.own_use`, `economysim.external.price`, `economysim.belief.centre`) agrees from the first event of its series (6.4.2). |
+| FR-OBS-054 | An adapter attached at a restore MUST seed its level instruments from `WorldRestored` and MUST then agree with an adapter attached at construction, from the end of the first complete step after the restore, on every UpDownCounter and on every gauge that is fed every tick (`economysim.market.clearing_price`); a sparse held gauge (`economysim.endowment.stock`, `economysim.household.own_use`, `economysim.external.price`, `economysim.belief.centre`, `economysim.rent.rate`, `economysim.settlement.class`, `economysim.technology.gain`) agrees from the first event of its series (6.4.2). |
 | FR-OBS-055 | A failed step MUST record no duration, MUST end its span with an error status and MUST run no reset: the level instruments are those after the events the adapter saw (6.3.1). |
 | FR-OBS-056 | The adapter MUST NOT call the `World` and MUST NOT keep a value keyed by an agent ID, an order, a trade, a shipment or a contract. |
 | FR-OBS-057 | `economysim.agent.removals` by `economysim.cause` MUST sum to the number of `AgentBankrupted` events. |
@@ -2291,6 +2673,8 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `spec-population.md` (also) | 11; 10.3 | save the run of ticks of "region extinct" per region (R7); 10.3 conditions say "for ten consecutive ticks" while the header says pattern A: drop the clause from the conditions of "births unfunded" and "deaths held", or say pattern B in the header (R11); OBS follows what POP says |
 | `spec-integration.md` (also) | 12.2 "slot set"; 6.3, 6.5 | the Debug line uses keys the rules' table lacks (`rule` naming a call, a count of keys): restrict to the table's keys or add them with the code; `MarketState.WindowLen` is an `int64` (every count is); `Region(r)` returns `RegionState` (5.3.5a) and for an outside node `ErrOutsideNode` |
 | `spec-ledger.md` (also) | 12.2 | the Debug line of a refused transfer uses account IDs and amounts: keys `account` and `amount` are not in the rules' table, use `agent`/`quantity`/`value` or add them |
+| `spec-credit.md` | 16.1, 16.3 | say whether `CreditSettled` counts the payments of a claim of origin `payout` (the rebuild of `spec-observability.md` 4.3.3 item 10 needs them) or only those of a loan, and give a field for the other if the instruments `economysim.credit.*` are to count origin `loan` only (the rules 5.3.1); `Origin` on `LoanEnded` and on the `Claims` row (4.1.10, 5.3.8) |
+| `spec-insurance.md` | 15 | the events are `CoverFormed` and `CoverEnded`, the key `cover_policy`, the Debug lines "cover formed" and "cover ended"; INS counts its own outstanding payout claims in an instrument of its own (not in the catalogue of 6.2.1 yet) and feeds `economysim.credit.outstanding` by nothing |
 | `doc/notes.md` | the open notes of this spec | in the handoff |
 | `doc/specs/README.md`, `doc/roadmap.md`, `doc/documentation_index.md` | the OBS row, the existing-specs table, the parameter owners (none) | OBS exists |
 

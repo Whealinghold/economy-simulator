@@ -24,11 +24,11 @@ defines:
   with a **reason** (section 2);
 - accounts and **boundary** accounts (section 3);
 - money (section 4) and goods held as **lots** (section 5);
-- reservations that back orders (section 6);
+- reservations that back orders, and the room of a limited account (section 6);
 - the registry of reasons and the flows built on it (section 7);
 - how production, consumption, spoilage and wear are expressed (section 8);
 - conservation, balance sheets and the sectoral identities (section 9);
-- claims, left room for credit (section 10);
+- claims, and the credit and insurance that use them (section 10);
 - the state it contributes to a checkpoint (section 11).
 
 Out of scope: what a recipe is (`spec-production.md`), what an order is
@@ -55,7 +55,7 @@ account may not. Because every transfer is double-entry, the total over *all*
 accounts, boundaries included, is always exactly zero. A faucet is a transfer
 *from* a boundary (which goes more negative), and a sink is a transfer *to* one.
 
-2.3. **Every flow has a name.** A transfer carries a reason from a registry (section 7) that is closed for a run: the built-in rows plus one row for each money flow the configuration declares (`spec-money-supply.md` 4.5, 7.2). Each reason says whether it is internal, a faucet or a
+2.3. **Every flow has a name.** A transfer carries a reason from a registry (section 7) that is closed for a run: the built-in rows, one row for each money flow and each fiscal flow the configuration declares (`spec-money-supply.md` 4.5, 7.2; `spec-fiscal.md` 3.4), and the internal reasons that a module declares when it is on (`spec-employment.md` 7.1, `spec-credit.md` 3.3, `spec-land.md` 5.8, `spec-insurance.md` 9.1). Each reason says whether it is internal, a faucet or a
 sink, and the ledger refuses a transfer that does not fit. So a report of every
 source and drain of the economy is a sum over reasons.
 
@@ -84,25 +84,28 @@ reservations. It has a kind, an owner reference and a region. Kinds:
 
 | Kind | Holds | Opened by | May be negative |
 |------|-------|-----------|-----------------|
-| Agent | an agent's money and goods | the world, when an agent is created | no |
+| Agent | an agent's money and goods and, with the storage module on, optionally a room, a pair (mass, bulk) with its load, pledge and reserved room (6.8, `spec-storage.md` 4) | the world, when an agent is created | no |
 | Estate | a region's estate: the money pool **and** the goods left behind, awaiting sale; the account of the region's estate pseudo-agent (`spec-estates.md` 2.7) | the world, one per region | no |
-| Escrow | money held for a delivery contract (`spec-merchants.md` 9.6): one open contract's money and nothing else; its region is the destination of the contract; reused by the next contract and never closed | the delivery contract (`spec-merchants.md` 9.6.2) | no |
+| Escrow | money held for a delivery contract (`spec-merchants.md` 9.6) or for a hire (`spec-employment.md` 7.2): one open contract's or hire's money and nothing else; its region is the destination of the contract, or the employer's region for a hire; reused by the next contract or hire and never closed | the delivery contract (`spec-merchants.md` 9.6.2) or the hire (`spec-employment.md` 7.2) | no |
 | Transit | goods being carried between regions (`spec-transport.md`) | the transport module, when no free Transit account of the origin region exists; reused, not closed after a shipment (`spec-transport.md` 7.1) | no |
 | Outside | the money and goods of a counterparty of the external sector (`spec-external-sector.md` 4.2): topped up from a boundary before admission and swept to zero after the markets clear; its region is the gate region; never closed, never relocated | the world, one per counterparty at construction, after the estate accounts and before any agent account | no |
+| Treasury | the money and goods of a governed jurisdiction (`spec-polity.md` 5): the account of its treasury pseudo-agent; its region is the seat's; never closed, never relocated | the world, one per governed jurisdiction at construction, after the Outside accounts and before any agent account | no |
 | Boundary | the net amount created or destroyed under one reason | the world, one per reason and kind of thing | **yes** |
 
 A kind can be added by a later spec without changing the ledger's rules: it is
 one more entry in the table above, internal (not a boundary) unless it is a
-boundary.
+boundary. The kinds are numbered in the order of the table (`spec-checkpoint.md`
+4.2 tag 2), so the Treasury is kind 5 and a later kind follows it.
 
 3.2. An account has an **ID**. IDs are assigned in order of creation, starting at
 0, and are never reused in a run (architecture.md 7.5: iteration and tie-breaks
 use the ID). The ledger iterates over accounts in ID order, never over a map.
 
 3.3. An account is **closed** when its owner ceases to exist. A closed account
-must have no money, no goods and no reservations: the owner's holdings are moved
-out by transfers first (an agent's go to the estate, in the order of
-`spec-agents.md` 3.6). A closed
+must have no money, no goods, no reservations and no open claim as creditor or
+debtor (`ErrOpenClaim`, `spec-credit.md` 3.2.1): the owner's holdings are moved out by
+transfers first and its claims ended or passed (an agent's go to the estate, in the
+order of `spec-agents.md` 3.6). A closed
 account's slot stays so that IDs stay stable; it is saved as a kind and a closed
 flag and is never compacted in version 1 (`spec-checkpoint.md` 9.4).
 
@@ -192,8 +195,9 @@ goods, in a market, in transit and in an estate (`spec-goods.md` 4.4).
 
 5.2.2. A move is refused with `ErrInsufficientStock` (not enough available),
 `ErrBalanceOverflow` (the quantity in `to` would exceed `MaxQuantity`),
-`ErrReasonMismatch`, `ErrUnknownAccount`, `ErrClosedAccount` or `ErrInvalidAmount`.
-It may be marked from reserved (6.3).
+`ErrReasonMismatch`, `ErrUnknownAccount`, `ErrClosedAccount`, `ErrInvalidAmount` or,
+for an unmarked credit that does not fit the free room of a limited account, `ErrNoRoom`
+(6.8). It may be marked from reserved (6.3).
 
 5.2.3. **Creation.** Goods that enter the economy are a move *from* a boundary
 account. The new lot's `Born` is the current tick if the commodity spoils, and its
@@ -315,10 +319,10 @@ reservation has been settled or released. **At a tick boundary the ledger holds 
 reservation**, and so a checkpoint, which is taken between ticks (ADR 0002, open
 point 4), saves none.
 
-6.6. **Escrow is not a reservation.** Money held for a contract must outlive a
-tick and be a claim of the contract, not an earmark of the payer. It is a transfer
-into an Escrow account, and a transfer out when the contract settles
-(`spec-merchants.md` 9.6; `spec-carriage.md` 2.1).
+6.6. **Escrow is not a reservation.** Money held for a contract or a hire must outlive a
+tick and be a claim of the contract or the hire, not an earmark of the payer. It is a
+transfer into an Escrow account, and a transfer out when the contract settles or the hire
+ends (`spec-merchants.md` 9.6; `spec-carriage.md` 2.1; `spec-employment.md` 7.2).
 
 6.7. **Named lots.** `ReserveGoods`, `ReleaseGoods` and `Move`, with or without
 from reserved, accept an optional lot key (commodity, born, durability). With a
@@ -327,6 +331,41 @@ too few available units or `ErrUnknownLot` if there is no such lot. Without one
 they act in canonical order. Named operations exist for the estate, which prices
 each lot separately (`spec-estates.md` 2.7.3); an ordinary agent never needs
 them.
+
+6.8. **Room.** With the storage module on, an Agent account may be **limited**: it has a
+room, a pair (mass, bulk), and the ledger keeps its load, its pledge and its reserved room
+(`spec-storage.md` 4). The ledger knows no role, store or class: it sees the room and a
+table of per-commodity sizes (`Mass`, `Bulk`) given at construction, as it sees shelf life
+(2.7). An account that is not limited costs every operation what it did (`spec-storage.md`
+4.5).
+
+6.8.1. **Operations.** `SetRoom(account, limited, mass, bulk)` sets the room and is refused
+with `ErrNoRoom` if the load plus the reserved room exceeds it (the pledge is not tested).
+`SetPledge(account, mass, bulk)` sets the pledge, absolute, and tests nothing: the callers
+test before a commitment (`spec-storage.md` 4.1.2). `ReserveRoom` is refused with
+`ErrNoRoom` if it exceeds the free room, and `ReleaseRoom` of more than is reserved with
+`ErrReservationExceeds` (6.2). `FreeRoom` and `RoomLeft` (`Room - Load - Reserved`, 0 where
+negative) are read-only and allocate nothing.
+
+6.8.2. **Three forms of a credit of goods.** A credit (`Move` into the account, `Transform`
+outputs, a creation) is **unmarked** (it must fit the free room, else `ErrNoRoom`),
+**from reserved** (the settlement of a bid: the reserved room falls by what the load rises
+by) or **from pledge** (the completion of a job, the arrival of a cargo: bounded by the
+pledge and by `RoomLeft`). A credit marked from reserved or from pledge that exceeds what it
+draws on is `ErrReservationExceeds`, as a money transfer from reserved is (6.3). A debit
+lowers the load and raises the free room with no condition. Every operation keeps 2.6.
+
+6.8.3. **Who tests first.** An input-derived path reads the free room before it acts and
+turns a shortfall into its own refusal (`spec-storage.md` 4.2.2). A settlement from
+reserved room that still meets `ErrNoRoom` has found a defect in the library: it is a
+programmer error, and it panics with a message that says so or, with `WithAudit`, fails
+the step with `ErrAuditFailed` (12.2).
+
+6.8.4. **What room is not.** It is not a transfer and adds no account kind, reason, flow
+total, claim or boundary: 2.1 still holds for every balance and every quantity. The
+reserved room is 0 at every tick boundary, as a reservation is (6.5), and the load and the
+pledge are derived and not saved (11). The ledger's part of the requirements is
+FR-STO-005, 006, 007, 009, 010 and 040 (`spec-storage.md` 13).
 
 ## 7. Reasons and flows
 
@@ -345,8 +384,8 @@ parameter. The starting registry:
 
 | Reason | Of | Kind | Between | Owner |
 |--------|----|------|---------|-------|
-| `trade` | money, goods | internal | agent, estate or Outside account to agent, estate or Outside account | `spec-clearing.md` |
-| `initial` | money | faucet | boundary to agent or estate | `spec-config.md`, `spec-world.md`; `spec-agents.md` 3.5; `spec-viability.md` 8.3 |
+| `trade` | money, goods | internal | agent, estate, Outside or Treasury account to agent, estate, Outside or Treasury account | `spec-clearing.md`; a treasury trades through its standing orders, `spec-fiscal.md` 3.4.2 |
+| `initial` | money | faucet | boundary to agent, estate or treasury | `spec-config.md`, `spec-world.md`; `spec-agents.md` 3.5; `spec-viability.md` 8.3; `spec-polity.md` 5.4.1 (a treasury's `StartMoney`) |
 | `initial` | goods | faucet | boundary to agent or estate; a stated lot key only at construction (5.2.4) | `spec-agents.md` 3.5; `spec-viability.md` 8.4, 8.5.3, 8.6 |
 | `recipe_input` | goods | sink | agent to boundary | `spec-production.md` |
 | `recipe_output` | goods | faucet | boundary to agent | `spec-production.md` |
@@ -368,17 +407,33 @@ parameter. The starting registry:
 | `escrow_in` | money | internal | agent to escrow: the payer's `price * quantity` at the formation of a delivery contract | `spec-merchants.md` 9.6 |
 | `escrow_out` | money | internal | escrow to agent: the deliverer, for the units that reached the destination | `spec-merchants.md` 9.6 |
 | `escrow_refund` | money | internal | escrow to agent, or escrow to the estate of the destination region when the payer no longer exists | `spec-merchants.md` 9.6 |
+| `wage_escrow` | money | internal | agent (the employer) to escrow: the bill of a hire at its formation | `spec-employment.md` 7.1 |
+| `wage_pay` | money | internal | escrow to agent: the worker, one tick's wage | `spec-employment.md` 7.1 |
+| `wage_refund` | money | internal | escrow to agent (the employer; a removed employer is paid to its own account first, `spec-employment.md` 6.4.1) | `spec-employment.md` 7.1 |
+| `loan_out` | money | internal | agent (the lender) to agent (the borrower) | `spec-credit.md` 3.3 |
+| `loan_repay`, `loan_interest` | money | internal | agent to agent, or agent to estate: the principal and the interest paid | `spec-credit.md` 3.3 |
+| `rent` | money | internal | agent to agent or estate: the rent of a drawn unit | `spec-land.md` 5.8 |
+| `title_sale` | money | internal | agent to agent or estate: the price of a title in a `TransferTitles` call | `spec-land.md` 5.8, 6.3 |
+| `premium`, `payout` | money | internal | agent (the insured) to agent (the underwriter); agent (the underwriter) to agent (the insured) | `spec-insurance.md` 9.1 |
 | `transit_out`, `transit_in` | goods | internal | agent to transit; transit to agent, or transit to estate (a diverted cargo) | `spec-transport.md` 7.2 |
 | `haul_use` | goods | sink | agent to boundary: the redemption of haul units at dispatch | `spec-transport.md` 7.2 |
 | `transit_use` | goods | sink | agent to boundary: the feed consumed by a trip | `spec-transport.md` 7.2 |
-| `loss` | goods, money | sink | transit, agent or estate to boundary | RSK (`spec-risk.md`, later); no flow is posted under it in version 1 |
+| `loss` | goods | sink | Transit account or agent account to boundary; the money form is not used in version 1 and there is no estate form | `spec-risk.md` 7.1 (posted by the risk module with it on) |
 | a flow ID | money | faucet (a grant) or sink (a levy) | boundary to agent or estate; agent or estate to boundary | `spec-money-supply.md` 4.5: one row per configured money flow, reason = flow ID, declared at construction |
+| a fiscal flow ID (tax, duty, toll, payout) | money, goods (an in-kind payout) | internal | agent, estate or treasury to treasury; treasury to agent, estate or treasury | `spec-fiscal.md` 3.4: one row per configured fiscal flow, declared at construction, no boundary account |
 | `split`, `merge`, `births`, `starvation` | money, goods | internal | agent to estate, or back | `spec-scale.md` 4.8, `spec-agents.md` 3.7, `spec-spawner.md` 4.1, 4.3 (`starvation`: a reduction by the failure ladder; `births`: households added to an existing agent, money from the pool and no goods), `spec-population.md` 4.3 (every household born through the module, joining an existing agent or becoming a new one: money only, estate to agent) |
 | `deaths` | money, goods | internal | agent to estate | `spec-population.md` 4.7 (a partial reduction by the schedule; an emptied agent is a removal with `estate_money` and `estate_goods`) |
 
-Later specs add rows: money creation and destruction by configured flows (`spec-money-supply.md`: the rows are declared by the configuration, 4.5, 10.3),
-taxes (`spec-fiscal.md`), imports and exports (`spec-external-sector.md` 8.1: the six `outside_*` reasons, declared when the external module is on), loans
-(`spec-credit.md`). The names are the strings used in events and logs, and are the
+A spec that needs a new flow adds a row. The rows after the built-in ones are those that
+configuration or a module declares: money creation and destruction by configured flows
+(`spec-money-supply.md`: the rows are declared by the configuration, 4.5, 10.3), taxes,
+duties, tolls and payouts (`spec-fiscal.md` 3.4), imports and exports
+(`spec-external-sector.md` 8.1: the six `outside_*` reasons, declared when the external
+module is on), the wage reasons of the employment module, the loan reasons of the credit
+module, `rent` and `title_sale` of the tenure module and `premium` and `payout` of the
+insurance module. A reason that a module declares is declared when the module is on and
+closed for the run, and collides with no flow ID (`ErrReasonCollision`,
+`spec-money-supply.md` 4.5.2). The names are the strings used in events and logs, and are the
 values of the `reason` attribute (observability-and-logging.md 3.3.2).
 
 7.2.1. `initial` has no limit in time: it creates the endowment at construction and
@@ -513,30 +568,45 @@ agent" of the roadmap.
 ### 9.3 Sectors and the sectoral identity
 
 Each account kind belongs to a **sector**: households (agent accounts), public
-(estates), contract (escrow and transit), and boundary. In every tick, the
-change in money held by the three non-boundary sectors adds up to the money
+(estates), contract (escrow, whether of a delivery contract or of a hire, and transit),
+treasury (treasury accounts), and boundary. In every tick, the
+change in money held by the four non-boundary sectors adds up to the money
 created minus the money destroyed by the boundary in that tick:
 
 ```
-delta(households) + delta(public) + delta(contract) = faucets - sinks
+delta(households) + delta(public) + delta(contract) + delta(treasury) = faucets - sinks
 ```
+
+The treasury term is zero in a world with no governed jurisdiction (`spec-polity.md` 5.3.1),
+and every fiscal reason nets to zero in the identity (`spec-fiscal.md` 4.1.1): a tax
+moves money from the households or the public sector to the treasury sector, a payout the
+other way. Unlike the outside sector below, the treasury term is not zero at a boundary: a
+treasury holds money between ticks.
 
 and the same for each commodity. This is the stock-flow consistency check: no
 sector's gain exists without another's loss or a named boundary flow. It is a
 test, run every tick over the reference chain, over a range of seeds
 (testing.md 6.2). With the external module on, the Outside accounts of its counterparties form a fourth non-boundary sector, the outside sector, whose money and goods are zero at every tick boundary (`spec-external-sector.md` 4.2.3, 8.4); the identity then holds with that sector at zero and the six `outside_*` reasons among the faucets and sinks.
 
-## 10. Claims (room for credit)
+## 10. Claims
 
 A **claim** is a record of an amount that one account owes another: a creditor, a
 debtor, a principal and terms. It is an asset of the creditor and a liability of
 the debtor on their balance sheets, and the pair always balances (a loan is a
-transfer of money from creditor to debtor *and* a claim). In version 1 nothing
-creates a claim: the ledger has the list, empty, and the balance sheet reads it.
-`spec-credit.md` defines the terms, interest and default. Keeping the list in the
-ledger from the start means the checkpoint and the balance sheets do not change
-shape when credit arrives (ADR 0002, "the ledger (accounts, balance sheets,
-obligations)").
+transfer of money from creditor to debtor *and* a claim). A claim is the record of
+`spec-credit.md` 3.1: the ledger keeps the list, the five operations of
+`spec-credit.md` 3.2 (`Lend`, `Settle`, `WriteOff`, `Reassign` and `Obligate`) and the cumulative totals of
+`spec-credit.md` 3.3.2, and the balance sheet reads the list at the amount owed. The list
+is empty unless a module that creates a claim is on. A claim has an **origin**, `loan` or
+`payout`, fixed at formation: a loan is formed by `Lend`, a payout claim by the operation
+`Obligate(creditor, debtor, amount, due)` of `spec-insurance.md` 9.2, which appends a
+claim with no transfer, and every other operation works on a claim of either origin. The
+totals are the six of the credit spec and `Awarded` (the sum of `Principal` of every
+payout claim formed), so the principal still owed over the open claims is `Lent + Awarded -
+Repaid - LostPrincipal`, exactly. `spec-credit.md` defines the terms, interest and
+default; `spec-insurance.md` the payout claim. Keeping the list in the ledger from the
+start means the checkpoint and the balance sheets did not change shape when credit
+arrived (ADR 0002, "the ledger (accounts, balance sheets, obligations)").
 
 ## 11. State contributed to a checkpoint
 
@@ -548,14 +618,18 @@ Every spec lists the state it contributes (ADR 0002, consequences). The ledger's
   before tick 0 by a warm start keeps its negative value); a closed account is its
   kind and a closed flag only (`spec-checkpoint.md` 4.2 tag 2);
 - the boundary balances: the cumulative net per reason and thing;
-- the claims, in a fixed order (empty in version 1);
+- the next claim ID, the open claims in ascending ID with the fields of `spec-credit.md`
+  3.1 and their `Origin`, and the seven cumulative totals of 10 (the list empty and the
+  totals zero unless a module that creates a claim is on);
 - the pending totals (7.4): the flow totals, the wear units and the relocation
   totals that calls between ticks added since the last tick's end, and, while the
   world is in its construction phase, the construction bucket (7.4.1), in the
   layout of the flow totals.
 
 It does **not** contain: reservations or earmarks (6.5: none exist between ticks,
-so `Reserved` is 0 in every saved lot), the flow totals of finished ticks
+so `Reserved` is 0 in every saved lot), the room of an account, its load, its pledge and
+its reserved room (derived from the role, the weight, the stores, the lots, the jobs and
+the shipments in flight, `spec-storage.md` 15.2), the flow totals of finished ticks
 (cleared at the end of each tick), the construction bucket once the world has
 stepped (7.4.1), the derived expiry hints
 (recomputed on restore), pending output (it is in no account; `spec-production.md`
@@ -606,9 +680,11 @@ ways, both on the world:
 - the option `WithAudit()` runs it at the end of every `Step`, after the tick's
   state changes and before `TickEnded` (`spec-world.md` 3.5.6, 6.10), and also once
   at the end of `NewWorld` (`spec-world.md` 5.1 step 9), and makes `Step` return an
-  error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1; with the merchant module on it also checks that each open contract's Escrow account holds exactly `price * quantity`, that an unreferenced Escrow account is empty, that contract IDs are unique and that the shipment of each contract is in flight (`spec-merchants.md` 9.6, FR-MER-045).
+  error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1; with the merchant module on it also checks that each open contract's Escrow account holds exactly `price * quantity`, that an Escrow account that no open contract or hire references is empty, that contract IDs are unique and that the shipment of each contract is in flight (`spec-merchants.md` 9.6, FR-MER-045); with the employment module on it checks each open hire's Escrow account as `spec-employment.md` 7.4.2 says.
 
 With the external module on the audit also checks that every counterparty account is empty, that each of the six `outside_*` boundary balances has the sign of its kind, and that for each commodity the boundary balance of `outside_purchases` equals the sum of the units traded on its buy sides and `outside_offer` less `outside_unsold` equals the sum of the units traded on its sell sides (`spec-external-sector.md` 8.5, FR-EXT-050). With the resources module on it SHOULD also check the endowment identity of `spec-resources.md` 6.4 (FR-RES-025); an endowment is in no account and the ledger is unchanged by it.
+
+With the storage module on the audit also checks, for every limited account, the four identities of `spec-storage.md` 4.4: the load equals the sum over the lots of quantity times size; the load plus the reserved room is within the room at every position, and the load plus the pledge plus the reserved room for an account that committed; the reserved room is 0 at a tick boundary; the pledge equals what the job and the shipments in flight imply (FR-STO-040). With the credit module on it checks the identities of `spec-credit.md` 3.6: the principal owed over the open claims equals `Lent + Awarded - Repaid - LostPrincipal` and the interest owed plus `InterestPaid` plus `LostInterest` equals `InterestFixed`, each owed part is in range and the two are not both 0, and the creditor and the debtor of every open claim are open accounts of the right kind and differ; it reports the claim ID of the first that fails (FR-CRD-082). With the insurance module on it checks the identities of `spec-insurance.md` 9.4 (FR-INS-081). With the risk module on it also checks that the loss share of every shipment in flight is within 0 to 10 000 (`spec-risk.md` 7.5.1). With a governed jurisdiction the treasury accounts are checked as any non-boundary account is, and the treasury term of 9.3 is part of the sectoral identity.
 
 Audit reads and never changes anything, so it affects no result, and the option is
 not part of the effective configuration or its hash (`spec-config.md` 8.1). It is
@@ -636,7 +712,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-006 | A transfer that would overflow `int64`, or take a non-boundary money balance above `MaxMoney` or a quantity above `MaxQuantity`, MUST be refused with `ErrBalanceOverflow`, and MUST NOT wrap. |
 | FR-LED-007 | A refused or failed operation MUST leave the ledger unchanged. |
 | FR-LED-008 | Account IDs MUST be assigned in order of creation and MUST NOT be reused in a run, and the ledger MUST iterate accounts in ID order. |
-| FR-LED-009 | An account MUST NOT be closed while it holds money, goods or reservations, and an operation naming a closed account MUST be refused with `ErrClosedAccount`. |
+| FR-LED-009 | An account MUST NOT be closed while it holds money, goods, reservations or an open claim as creditor or debtor (`ErrOpenClaim`), and an operation naming a closed account MUST be refused with `ErrClosedAccount`. |
 | FR-LED-010 | Goods in an account MUST be held as lots of a commodity, a quantity of at least 1, a born tick and a remaining durability, with equal lots merged and ordered by commodity, born and durability. |
 | FR-LED-011 | Equal holdings MUST have an identical representation whatever sequence of operations produced them. |
 | FR-LED-012 | A move MUST take lots oldest first and then lowest remaining durability, and the moved lots MUST keep their born tick and remaining durability. |
@@ -649,13 +725,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-019 | A transfer marked from reserved MUST draw on the reservation and fail if it is too small, and an unmarked transfer MUST NOT spend reserved money or goods. |
 | FR-LED-020 | At every tick boundary the ledger MUST hold no market reservation. |
 | FR-LED-021 | `Transform` MUST consume its inputs to the `recipe_input` boundary and produce its outputs from the `recipe_output` boundary all or nothing. |
-| FR-LED-022 | Money held for a contract MUST be held in an Escrow account by transfers, and MUST NOT be a reservation. |
+| FR-LED-022 | Money held for a contract or a hire MUST be held in an Escrow account by transfers, and MUST NOT be a reservation. |
 | FR-LED-023 | The ledger MUST keep, for the current tick, the total moved per region, reason and money or commodity, in a deterministic order. |
 | FR-LED-024 | For money and for each commodity, the change of the total over non-boundary accounts in a tick MUST equal the faucets minus the sinks of that tick, reason by reason. |
-| FR-LED-025 | In every tick, the change of the money held by the households, public and contract sectors MUST sum to the faucets minus the sinks of the boundary, and likewise for each commodity. |
+| FR-LED-025 | In every tick, the change of the money held by the households, public, contract and treasury sectors MUST sum to the faucets minus the sinks of the boundary, and likewise for each commodity; the treasury term MUST be zero in a world with no governed jurisdiction. |
 | FR-LED-026 | A balance sheet MUST give a non-boundary account's money, goods valued at supplied prices, claims held and owed and net worth, using checked arithmetic, and the engine MUST NOT read it to make a decision. |
 | FR-LED-027 | A change of an agent's weight MUST be applied by transfers whose reasons are `split`, `merge`, `births` or `starvation`, scaling every holding in proportion with the remainder going to the counterparty account, and conserving money and goods exactly (`FR-SCL-014`). |
-| FR-LED-028 | The ledger MUST hold a list of claims, empty in version 1, and a balance sheet MUST include it. |
+| FR-LED-028 | The ledger MUST hold a list of claims, empty unless a module that creates a claim is on, and a balance sheet MUST include it. |
 | FR-LED-029 | The ledger's saved state MUST be plain data in the order of section 11, with no maps, and MUST NOT contain reservations, the flow totals of finished ticks, the construction bucket once the world has stepped or expiry hints, and MUST contain the pending totals and, while the world is in its construction phase, the construction bucket. |
 | FR-LED-030 | After a restore, the derived expiry hints MUST be recomputed, and the run MUST continue exactly as an uninterrupted one. |
 | FR-LED-031 | `BoundaryFlow` MUST be emitted once per tick for each region, reason of kind faucet or sink, and money or commodity with a non-zero total, in the order of `spec-observability.md` 4.4.1.2, and MUST contain no map. |
@@ -679,16 +755,22 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-049 | `Expiring` MUST return 0 without reading a lot when the account's earliest-expiry hint is after `tick`, MUST fail with `ErrUnknownAccount` or `ErrClosedAccount` for an unknown or closed account, and the sum of its results over the commodities for the current tick MUST equal what the ageing of the same tick moves to `spoilage` from that account, when nothing is earmarked. |
 | FR-LED-050 | The registry MUST contain the goods sink `want_consumption`, agent to boundary, owner `spec-demand.md`, and a ledger with the demand module off MUST show no flow under it (`spec-demand.md` FR-DEM-001, FR-DEM-039). |
 | FR-LED-051 | A weight reduction by the failure ladder MUST be applied with the reason `starvation`, a reduction by the population module with the reason `deaths`, and an entry of households into an existing agent with the reason `births`, each as transfers between the agent and the estate account that conserve money and goods exactly (`spec-spawner.md` 4.1, 4.3; FR-LED-027). |
-| FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows plus one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), and the boundary accounts of the declared reasons MUST be created at construction in flow-ID order after those of the built-in reasons and before any other account (`spec-money-supply.md` FR-MON-003). |
+| FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows, one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), one internal row for each configured fiscal flow, and the internal reasons of the modules that are on, and the boundary accounts of the declared money-flow reasons MUST be created at construction in flow-ID order after those of the built-in reasons and before any other account (`spec-money-supply.md` FR-MON-003); an internal reason has no boundary account. |
 | FR-LED-053 | A flow between two non-boundary accounts MUST be attributed in the flow totals to the region of the debited account, and a flow with a boundary to the region of the non-boundary side. |
 | FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared at the end of each tick with them, the totals that calls between ticks added since the last tick's end being pending totals that are saved (7.4, 11); a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
 | FR-LED-055 | The registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary, `transit_in` MUST also be accepted from a Transit account to an Estate account, `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account, and `births` as an internal transfer of money from an estate to an agent account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
 | FR-LED-056 | With a money-supply module on, the audit MUST also check, for each flow, that its total equals the absolute boundary balance of its reason with the right sign (`spec-money-supply.md` FR-MON-026, FR-MON-027). |
-| FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate and Outside accounts (`spec-external-sector.md` 8.1, FR-EXT-017). |
+| FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate, Outside and Treasury accounts (`spec-external-sector.md` 8.1, FR-EXT-017; `spec-fiscal.md` FR-FIS-052). |
 | FR-LED-058 | An Outside account MUST be a non-boundary account of the gate region that may not go negative, MUST be created at construction after the estate accounts and before any agent account, MUST NOT be closed or relocated, and MUST hold no money and no goods at any tick boundary (`spec-external-sector.md` 4.2.3, FR-EXT-012). |
 | FR-LED-059 | With the external module on, the audit MUST also check the conditions of `spec-external-sector.md` 8.5 and report the node and commodity of the first that fails (FR-EXT-050). |
-| FR-LED-060 | The reasons `escrow_in`, `escrow_out` and `escrow_refund` MUST be internal transfers of money only: `escrow_in` from an Agent account to an Escrow account, `escrow_out` from an Escrow account to an Agent account, and `escrow_refund` from an Escrow account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch`, and a contract MUST add no faucet, no sink and no reason (`spec-merchants.md` 9.6.1). |
-| FR-LED-061 | With the merchant module on, the audit MUST also check the conditions of `spec-merchants.md` 9.6 (each open contract's Escrow account holds exactly `price * quantity`, an unreferenced Escrow account is empty, contract IDs are unique, and the shipment of each contract is in flight) and report the contract of the first that fails (FR-MER-045). |
+| FR-LED-060 | The reasons `escrow_in`, `escrow_out` and `escrow_refund` MUST be internal transfers of money only: `escrow_in` from an Agent account to an Escrow account, `escrow_out` from an Escrow account to an Agent account, and `escrow_refund` from an Escrow account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch`, and a contract MUST add no faucet, no sink and no reason (`spec-merchants.md` 9.6.1). The reasons `wage_escrow`, `wage_pay` and `wage_refund` MUST be internal transfers of money only: `wage_escrow` from an Agent account to an Escrow account, `wage_pay` from an Escrow account to an Agent account, and `wage_refund` from an Escrow account to an Agent account; each other pairing MUST be refused with `ErrReasonMismatch`, and a hire MUST add no faucet, no sink and no `BoundaryFlow` row (`spec-employment.md` 7.1). |
+| FR-LED-061 | With the merchant module on, the audit MUST also check the conditions of `spec-merchants.md` 9.6 (each open contract's Escrow account holds exactly `price * quantity`, an Escrow account that no open contract or hire references is empty, contract IDs are unique, and the shipment of each contract is in flight) and report the contract of the first that fails (FR-MER-045). |
+| FR-LED-062 | With the credit module on, the registry MUST contain the reasons `loan_out`, `loan_repay` and `loan_interest` as internal transfers of money only, `loan_out` from an Agent account to an Agent account, and `loan_repay` and `loan_interest` from an Agent account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-credit.md` 3.3). |
+| FR-LED-063 | `Lend`, `Settle`, `WriteOff`, `Reassign` and `Obligate` MUST each apply completely or change nothing, MUST create or destroy no money (the total of money over non-boundary accounts is unchanged by them), and `Obligate`, `WriteOff` and `Reassign` MUST move no money (`spec-credit.md` 3.2, `spec-insurance.md` 9.2). |
+| FR-LED-064 | With the credit module on, the audit MUST check the identities of `spec-credit.md` 3.6 and the identity of the principal owed with `Awarded` (10), and MUST report the ID of the first claim that fails (FR-CRD-082). |
+| FR-LED-065 | A Treasury account MUST be a non-boundary account that may not go negative, MUST be created at construction after the Outside accounts and before any agent account, and MUST NOT be closed or relocated (`spec-polity.md` 5.3). |
+
+The ledger's part of the room of a limited account is FR-STO-005, FR-STO-006, FR-STO-007, FR-STO-009, FR-STO-010 and FR-STO-040 (`spec-storage.md` 13; 6.8). The ledger's part of a payout claim is FR-INS-002 to FR-INS-004 (`spec-insurance.md` 13). Their IDs are kept where they are defined and no FR-LED is added for them.
 
 ### Non-functional
 
@@ -770,7 +852,7 @@ expiring lots (N-053, 5.3.3).
 
 | Concern | Home |
 |---------|------|
-| Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
+| Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, the room operations of 6.8, claims and their five operations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
 | The registry of reasons and their kinds | `internal/ledger` (a fixed table); the reason names are exported constants of the root package (`event.go`), and `internal/logkeys` holds the key strings only |
 | Checked add and multiply | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 | Balance sheet valuation | `internal/ledger`, with the price table supplied by the root |

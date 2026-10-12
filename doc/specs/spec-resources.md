@@ -67,7 +67,7 @@ resource does not have (MER, INF); the outside world as a source of goods (EXT,
 section 9 says how the two meet); who owns an endowment, rent and tenure (LND,
 section 10 leaves the hook); household production as a floor under market failure
 (SUB, which may draw on an endowment); fixed capital that raises capacity, such as
-irrigation (CAP, which would use the capacity slot of 6.3); the public calls that
+irrigation (CAP, which adds a layer to the effective capacity of 3.4 and writes no slot); the public calls that
 set a shock (INT); the tick phases (WLD, section 5.2 states what this spec needs);
 the bands that say what a healthy resource curve is (STY).
 
@@ -133,11 +133,12 @@ differs by shape, a closed enumerated set like the flow shapes of
 |-------|---------|-------|
 | `Stock` | units available now | 0 to the effective capacity |
 | `Carry` | the fraction of a unit regenerated and not yet added, in units of `1/D` (4.3) | 0 to `D - 1` |
-| `ExhaustedRun` | consecutive ticks in which a request on this endowment was cut | 0 or more |
+| `ExhaustedRun` | consecutive ticks in which a request on this endowment was cut (with tenure data, the condition of 14.2) | 0 or more |
 
 The **capacity** is the most the stock can hold. The effective capacity is the
-configured capacity times the capacity scale of the shock slot over 10 000,
-truncated (3.4).
+configured capacity times the capacity scale of the shock slot over 10 000 and times
+the capacity layer of the ground facilities (`spec-infrastructure.md` 5.3), truncated
+(3.4).
 
 3.2.2. The endowments are a dense array indexed by (`RegionID`, `ResourceID`), built
 at construction from the configuration (3.3), so a lookup in the tick loop is a read
@@ -237,12 +238,12 @@ The shock slot (6.3) holds, per endowment, a capacity scale and a regeneration s
 in basis points, 10 000 each by default. The values the rules use are
 
 ```
-C   = min( MaxEndowment, trunc( capacity_row * capacity_scale / 10 000 ) )   effective capacity
+C   = min( MaxEndowment, trunc( capacity_row * capacity_scale * (10 000 + B) / 10^8 ) )   effective capacity
 m   = trunc( RegenScaleBP * regen_scale / 10 000 )             effective regeneration scale
 ```
 
 with `capacity_row` the row's capacity or the resource's, and `RegenScaleBP` the row's
-or 10 000. Both are computed with the checked 128-bit helper (`spec-currency.md` 7)
+or 10 000. `B` is the capped sum of the gains of the ground facilities of the endowment, in basis points (`spec-infrastructure.md` 5.3.2); it is 0 with the module off or no facility. Both are computed with the checked 128-bit helper (`spec-currency.md` 7)
 and are at most `MaxEndowment` and `MaxRegenScaleBP * MaxShockBP / 10 000`
 respectively (4.6).
 
@@ -489,7 +490,7 @@ other step of production.
    the calls, because the only shared state they read, the endowment, is the
    snapshot (FR-RES-015).
 3. **Ration.** For each endowment that some request draws on, in order, the requests
-   are collected in agent-ID order and rationed (5.3). Each request gets, per draw, a
+   are collected in agent-ID order and rationed (5.3). With the tenure module on, the ration is the four tiers of `spec-land.md` 4.3, each by the rule of 5.3.2. Each request gets, per draw, a
    number of executions it may start.
 4. **Start.** The starts proceed in the rotation order of `spec-production.md` 5.5.1.
    The executions started are `k = min(k0, the grant of each draw)`, then limited by
@@ -611,7 +612,7 @@ the region the executor was in at the start.
 yield `E` and `MaxExecutions` with its reason. With this module `E` includes the
 abundance (the snapshot of 4.7.3) and `MaxExecutions` is the least of the existing
 limits and, for each draw, `floor(A / d)` of the snapshot (a bound that ignores the
-competition of the ration), with `no_endowment` as the reason when that is 0. The
+competition of the ration), with `no_endowment` as the reason when that is 0. With the tenure module on, each endowment that has tenure data also carries the fields of `spec-land.md` 4.6, and `MaxExecutions` takes the reason `no_title` or `rent_funds` after `no_endowment` (`spec-land.md` 4.5). The
 view also gains a group `Endowments` (only with the module on), **for the agent's own
 region only**: the endowments that its role's recipes draw on, including the recipes of its effective own-use list (`spec-subsistence.md` 3.6), sorted by resource, each
 with `Resource`, `Stock`, `Capacity` and `AbundanceBP`. It is local physical state, free like the local price, and it is not a
@@ -677,7 +678,7 @@ regeneration slows recovery; a scale of 5 000 on the capacity halves what the en
 exceeds the capacity it is clamped to it and the excess is **lost**: it is reported in
 `EndowmentAdjusted` (kind `shock`, with the stock before and after) and counted as
 `Lost` in the identity of 6.4. A scale of 0 on the capacity empties the endowment and
-makes every draw impossible.
+makes every draw impossible. The stock is clamped in the same way when a facility lowers the effective capacity: at P8.3b (`spec-infrastructure.md` 6.3) and at the calls of CAP, where the units lost are reported by `EndowmentAdjusted` (kind `facility`) and counted in `Lost`. The loss of a P8.3b clamp is reported by `EndowmentAdjusted` only: `EndowmentChanged.Stock` and `.Capacity` are those of the end of P8.3, and a reader takes the later of the two.
 
 6.3.2. **The adjustment.** A signed delta to the stock, clamped to [0, capacity]: a
 negative delta is a collapse, a positive one a discovery or a restocking. The event is
@@ -698,7 +699,7 @@ For every endowment and every tick, in integers,
 Stock_end = Stock_start - Drawn + Regenerated - Lost + Adjusted
 ```
 
-where `Drawn` is the units taken by starts, `Regenerated` the units actually kept after the clamp of 4.4 (not the units computed), `Lost` the units removed by a capacity clamp, and `Adjusted` the signed sum of the effective (post-clamp) adjustments applied between the ticks; the `Lost` and `Adjusted` of a call between ticks belong to the tick that follows it. A test asserts it over the reference packs and
+where `Drawn` is the units taken by starts, `Regenerated` the units actually kept after the clamp of 4.4 (not the units computed), `Lost` the units removed by a capacity clamp (a shock, or a facility at P8.3b or at a call of CAP), and `Adjusted` the signed sum of the effective (post-clamp) adjustments applied between the ticks; the `Lost` and `Adjusted` of a call between ticks belong to the tick that follows it. A test asserts it over the reference packs and
 a range of seeds, and `World.Audit` (`spec-ledger.md` 12.4) SHOULD check it, reporting
 the endowment, tick and the difference (FR-RES-025). It does not need the ledger and
 is the conservation law of the ground.
@@ -940,7 +941,7 @@ Check, for the defaults (`r*` 12 000, `dR` 400, `dX` 8 000) with a refill of 5 0
 basis points a year, `sig` 6 000 and a curve through the origin (`eps_bp` 10 000): the
 left side is `5 000 * 10^4 * 8 000 * 6 000 = 2.4e15` and the right `4 * 12 000 * 400 *
 10 000 * 4 000 = 7.68e14`, so no warning (0.5 a year is above the threshold 0.16). At
-1 600 basis points the two sides are equal. The warnings fire only with the population
+1 600 basis points the two sides are equal. A technology gain moves `sigma*`: `spec-technology.md` 10.3 is the same inequality with the cap of the gain. The warnings fire only with the population
 module on; without it there is no loop to oscillate.
 
 ### 8.4 What the models show
@@ -1024,7 +1025,7 @@ field.
 
 10.1. In version 1 every endowment is **open access**: any agent in the region whose
 role lists a recipe that draws on it, or has one on its effective own-use list (`spec-subsistence.md` 3.6), may draw, subject only to the ration of 5.3. There
-is no owner, no price for the use of the stock and no rent. This is the baseline that
+is no owner, no price for the use of the stock and no rent, unless `Modules.Tenure` is on (`spec-land.md`), which adds titles, an entitlement and a rent to the same ration. This is the baseline that
 tenure is measured against. It has a known consequence, recorded as RES-A5 (19): when
 the abundance feeds the net value of a recipe (`spec-agents.md` 7.1.4 reads the
 effective yield), more households choose and enter the drawing role as it pays, and the
@@ -1032,7 +1033,7 @@ stock is drawn down by the sum of choices that none of them internalises.
 
 The subsistence floor (`spec-subsistence.md` 9) is such a draw: an own-use recipe draws on an endowment through `Draws` like any recipe, with no priority and no quota over the market recipes, so its requests share the ration of 5.3 with theirs; it is a third path to the same draw-down, beside recipe choice and entry (RES-A5, `spec-stability.md` L90; the floor's own entry is L104). A closed commons makes a household in the own-use mode `Blocked` and counts `own_use_not_available`.
 
-10.2. **The hooks LND will use**, stated so that nothing in this spec has to change:
+10.2. **The hooks LND uses**, stated so that nothing in this spec has to change (`spec-land.md` 4.5, 4.2 and 5 use the three):
 
 - a **refusal**: a spec that ties access registers a reason in the ordered list of
   production's refusals (`spec-production.md` 4.2), after `no_endowment`, by the same idea as the
@@ -1040,11 +1041,14 @@ The subsistence floor (`spec-subsistence.md` 9) is such a draw: an own-use recip
 - an **entitlement**: a per-claimant cap on the executions of a request, applied to
   `w_i` before the ration, so that a holder's share is its own and the remainder is
   shared as today; a request carries its recipe, so an entitlement may treat an own-use request differently from a market one (`spec-subsistence.md` 9);
-- a **rent**: a recurring levy on the claimant by the money flows of
-  `spec-money-supply.md` 4 (a named reason equal to the flow ID), valued at the dual
-  of the resource row (11.3), which is the scarcity price of a unit of the stock.
+- a **rent**: a transfer from the claimant to the holder of the title (or to the pool
+  of the region), whose base is a draw and whose reasons are `rent` and `title_sale`
+  (`spec-land.md` 5), valued by default at the dual of the resource row (11.3), which
+  is the scarcity price of a unit of the stock. It is not a money flow of
+  `spec-money-supply.md` 4, which has no counterparty and no per-draw base; a tax on
+  the rent stays a levy of MON on the holder role.
 
-10.3. Until LND exists, nothing in the core reads who has drawn. The ration is a
+10.3. Outside the tenure module (`spec-land.md`), nothing in the core reads who has drawn. The ration is a
 function of the requests of the tick and keeps no memory of past draws, so a tenure
 rule that wants a history keeps its own.
 
@@ -1077,6 +1081,8 @@ reserve drawn down over `HorizonYears`** (module field, default 50, a placeholde
 pack that must be viable for fewer years than its deposits last is, and one that needs
 longer is not. A `constant` stock with a positive rate gets both terms. **The check is optimistic**: it holds the plan stock and so the plan abundance, while the run draws a deposit down. Example B passes at a horizon of 15 years by 1% (313 units a tick against 309 once the abundance at the plan share is counted) while the run of 16.2 exhausts the deposit in 13.8 years. A finite stock should be given a horizon with margin.
 
+`C` is the effective capacity of 3.4 at tick 0: the configured capacity times the capacity scale of 10 000 and the layer of the ground facilities that are in the initial configuration (`spec-infrastructure.md` 5.3), taken at full condition. A facility built later raises the capacity of the run and not the check; the shock slot is not read.
+
 11.2. **The abundance in the programme.** A recipe with draws has its mean factor `E`
 multiplied by the abundance at the plan share, `a_p = Eval(curve, PlanShareBP)`, the
 minimum over its draws (4.7.4), a constant. The programme stays linear. This is the
@@ -1090,7 +1096,7 @@ decided by the loop of 8 and may differ.
   warm start's census is above `N_bind`;
 - `Rent[res][region]`, the dual of the row, the value of one more unit of draw per
   tick, 0 when the row is slack. It is a report, the scarcity price that LND's rent
-  would charge (10.2);
+  charges by default (`spec-land.md` 5.6, 10.2);
 - the error **`resource_short`**: `lambda* < 1` with a tight resource row, which takes
   the place of `labour_short` when the binding row is a resource (V3), and the
   per-region warning `region_not_self_sufficient` when the cause is a resource;
@@ -1209,8 +1215,8 @@ emitted after the transition they describe (observability-and-logging.md 4.1, 4.
 
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
-| `EndowmentChanged` | once per endowment per tick, after its regeneration at the end of phase 8, in (`RegionID`, `ResourceID`) order, **if any of `Drawn`, `Regenerated`, `Short` or `Lost` is non-zero**; never otherwise | `Tick`, `Region`, `Resource`, `Stock` (after the tick), `Capacity` (effective), `AbundanceBP` (the snapshot of the tick), `Requested` (units asked, the sum of `w * d`), `Granted` (units the ration granted), `Drawn` (units the starts took, at most `Granted`), `Short` (`Requested - Granted`), `Regenerated`, `Lost` (units removed by a capacity clamp this tick), `AgentsDenied` (requests granted 0), `AgentsReduced` (requests granted less than asked but more than 0) |
-| `EndowmentAdjusted` | a shock slot or an adjustment is applied between ticks (6.3), once per changed endowment of a call | `Tick`, `Region`, `Resource`, `Kind` (`adjust` or `shock`), `Delta` (signed, for `adjust`), `CapacityBP` and `RegenBP` (the scales after, for `shock`), `StockBefore`, `StockAfter`, `Lost` |
+| `EndowmentChanged` | once per endowment per tick, after its regeneration at the end of phase 8, in (`RegionID`, `ResourceID`) order, **if any of `Drawn`, `Regenerated`, `Short` or `Lost` is non-zero**; never otherwise | `Tick`, `Region`, `Resource`, `Stock` (after the tick), `Capacity` (effective), `AbundanceBP` (the snapshot of the tick), `Requested` (units asked, the sum of `w * d`), `Granted` (units the ration granted; with the tenure module on, the sum of its tiers), `Drawn` (units the starts took, at most `Granted`), `Short` (`Requested - Granted`), `Regenerated`, `Lost` (units removed by a capacity clamp this tick: a shock, or a facility at P8.3b or at a call of CAP), `AgentsDenied` (requests granted 0), `AgentsReduced` (requests granted less than asked but more than 0) |
+| `EndowmentAdjusted` | a shock slot or an adjustment is applied between ticks (6.3), once per changed endowment of a call, or a facility lowers the effective capacity at P8.3b or at a call of CAP and units were lost (only then) | `Tick`, `Region`, `Resource`, `Kind` (`adjust`, `shock` or `facility`), `Delta` (signed, for `adjust`), `CapacityBP` and `RegenBP` (the scales after, for `shock`), `StockBefore`, `StockAfter`, `Lost` |
 
 `Region` and `Resource` are the typed IDs `RegionID` and `ResourceID`; the strings are
 in the names table of `spec-observability.md` 3.2. Both events are aggregates bounded
@@ -1226,7 +1232,7 @@ resource ID), `stock` (units in an endowment) and `short` (units asked and not g
 `tick`, `region`, `resource`, `stock` and `short`, emitted for an endowment in a tick in
 which `Short` is above 0 and its `ExhaustedRun` is 1 or a multiple of 10, so the first
 cut and then every tenth consecutive tick (bounded by regions times resources, as
-observability-and-logging.md 3.2.2 requires). At `Debug`, guarded by `Enabled`, per
+observability-and-logging.md 3.2.2 requires). For an endowment with tenure data (`spec-land.md` 13.1.4) the condition is `Short - min(Short, Held + Idle) > 0`, `Held` and `Idle` being the unused units of the entitlement the tenure module counted in `RentPaid`; with the module off it is `Short > 0`. At `Debug`, guarded by `Enabled`, per
 endowment per tick in which the ration had to cut: `draw rationed` with `tick`,
 `region`, `resource`, `quantity` (requested), `short`. No `Info`, no `Error`. A
 validation warning is not a log: it is returned (`spec-config.md` 7.2).
@@ -1701,7 +1707,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-RES-025 | For every endowment and tick, `Stock_end` MUST equal `Stock_start - Drawn + Regenerated - Lost + Adjusted`, a test MUST assert it over the reference packs and a range of seeds, and `World.Audit` SHOULD report a difference (6.4). |
 | FR-RES-026 | `EndowmentChanged` MUST be emitted once per endowment per tick, after its regeneration, in (`RegionID`, `ResourceID`) order, if and only if `Drawn`, `Regenerated`, `Short` or `Lost` is non-zero, with the fields of 14.1 and no map (14.1). |
 | FR-RES-027 | `Requested - Granted` MUST equal `Short`, `Drawn` MUST not exceed `Granted`, and `AgentsDenied` and `AgentsReduced` MUST count the requests granted 0 and the requests granted less than asked but more than 0 (14.1). |
-| FR-RES-028 | The `Warn` "endowment exhausted" MUST be emitted for an endowment in a tick with `Short` above 0 and `ExhaustedRun` equal to 1 or a multiple of 10, at most once per endowment per tick, and `ExhaustedRun` MUST count consecutive ticks with `Short` above 0 and be saved (14.2, 15). |
+| FR-RES-028 | The `Warn` "endowment exhausted" MUST be emitted for an endowment in a tick with `Short` above 0 (with tenure data, `Short - min(Short, Held + Idle)` above 0, `spec-land.md` 13.1.4) and `ExhaustedRun` equal to 1 or a multiple of 10, at most once per endowment per tick, and `ExhaustedRun` MUST count consecutive ticks with `Short` above 0 and be saved (14.2, 15). |
 | FR-RES-029 | The shock slot MUST hold per endowment a capacity scale and a regeneration scale from 0 to `MaxShockBP`, default 10 000, set only between ticks by `SetCapacityScales` and `SetRegenScales`, MUST recompute the effective values, and when the stock then exceeds the capacity MUST clamp it and count the excess as lost (6.3.1). |
 | FR-RES-030 | The adjustment, `AdjustEndowments`, MUST change the stock by a signed delta clamped to [0, capacity], MUST emit `EndowmentAdjusted`, and MUST be counted in the identity of FR-RES-025 (6.3.2). |
 | FR-RES-031 | A `constant` stock with `RatePerYear` 0 MUST never gain stock except by an adjustment, a `logistic` stock at 0 with `Refuge` 0 MUST stay at 0, one with `Refuge` above 0 MUST regrow from 0, and a `refill` stock with a positive rate MUST regrow from 0 (6.1). |
@@ -1766,6 +1772,7 @@ by labour only (`spec-production.md` 3.1.2). No default of this spec is set from
 | N-045 | Applied for RES: the cut demand is counted by `Short`, `AgentsDenied` and `AgentsReduced` of `EndowmentChanged` and a bounded `Warn` (6.2.2, 14) |
 | N-106 | Applied: the agent view carries the endowments of its own region only (5.5.1) |
 | N-107 | Applied: this spec adds no faucet, no sink and no ledger reason (6.2.1) |
+| N-108 | Applied for RES: a facility that raises capacity is a layer of the effective capacity (3.4), not a write to the shock slot; the three hooks of tenure are used by `spec-land.md` (10.2); the draw of the subsistence floor is open access (10.1); the import predicate is 9.4; nothing here moves households (MIG reads no stock). LND is answered, SUB and MIG are answered; CAP and EXT stay with their specs |
 | N-091 | Two slots added for INT: the scales and the adjustment (6.3) |
 | N-092 | The overlay for the resource scenarios is proposed (18) |
 | N-016, N-017, N-027, N-103 | N-016: the rows of 12 are owed to the parameter-owner table and none is unnamed; N-017: new terms in the handoff; N-027: every number here is a placeholder; N-103: this spec was written by the process of that note |
@@ -1774,7 +1781,7 @@ by labour only (`spec-production.md` 3.1.2). No default of this spec is set from
 
 1. **Occupying draws (a lease).** A draw consumes. Land held for the duration of a job and
    then released is a concurrency limit, not a flow; a refill with a fallow approximates it.
-   Next step: LND or CAP, when a pack needs a stock held.
+   Tenure does not change it (`spec-land.md` 20 (1)). Next step: CAP, when a pack needs a stock held.
 2. **Removal that follows the yield (catch per effort).** The draw is fixed per execution (a
    grade story). A stock whose removal is proportional to its abundance has a self-damping
    term and, derived by hand, is stable for any effort below the growth rate, with

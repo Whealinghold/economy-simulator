@@ -338,7 +338,7 @@ B = max(0, cap - spent_tier3)        and never more than the money left after ti
 ```
 
 where `cap = SpendMaxShare * (e * H / (e + H)) / 10 000` is the cap of `spec-agents.md`
-7.4.4 (`e` the money left after tiers 1 and 2, less `ReserveMoney`). The same cap
+7.4.4 (`e` the money left after tiers 1 and 2, less `ReserveMoney`, which for a role with a `Saver` block is the savings target of `spec-saving-and-investment.md` 3.2; the cap itself is `spec-agents.md` 7.4.4's). The same cap
 funds buffers first and wants second, so the saving rule is one rule: below the
 reserve nothing is spent on either, and the sum of tiers 3 and 4 never exceeds the
 excess (FR-DEM-020). Buffers go first because they belong to survival and jobs
@@ -765,7 +765,7 @@ Warnings never fail validation (`spec-config.md` 7.2).
 | `want_inelastic` | a want with `Elasticity` of 10 000 or less whose item is made by a role under the target-income rule (the stability condition of 6.3 fails) |
 | `wants_exceed_spend_cap` | a role's `Wmax` per tick (7.1) is at least `SpendMaxShare * SpendHalfTicks * UpkeepCost / 10 000`: the wants can never be fully funded (5.1) |
 | `target_above_demand` | the mean `TargetRatio` of a role is above `10 000 + 10 000 * Wref / UpkeepCost`: the target is not reachable at reference prices and the target-income rule is expected not to rest (7.2, the 20 000 row); it can still be reached if prices fall, up to the hard bound `Wmax` |
-| `class_without_income` | a role with a ladder, an empty `Recipes` list, no `Trades` and a `StartMoney` below `ReserveTicks` times its upkeep cost plus a year of its wants: it can fund no want unless another module pays it (7.3). Not raised for a role that a grant to households with `NotIncome` false targets (`spec-money-supply.md` 4.3, 7.3) |
+| `class_without_income` | a role with a ladder, an empty `Recipes` list, no `Trades` and a `StartMoney` below `ReserveTicks` times its upkeep cost plus a year of its wants: it can fund no want unless another module pays it (7.3). Not raised for a role that a grant to households with `NotIncome` false targets (`spec-money-supply.md` 4.3, 7.3), that a payout of `spec-fiscal.md` with `NotIncome` false targets (a stipend to a role, `spec-fiscal.md` 8.1), that holds a title (`spec-land.md` 5.7.3), or that is `Hireable` in a world that has an employer role (`spec-employment.md` 3.1) |
 | `region_taste_without_taste` | a region taste for a want that no role has a taste for |
 
 The checks that a chain can supply the wants' goods are `spec-viability.md`'s (open

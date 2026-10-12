@@ -226,7 +226,7 @@ structure, so a destination whose land is exhausted, or crowded, shows nothing o
 it until the arrivals show it in prices, late (MIG-A3). The caps of 7 use
 the counts of households of the two regions: they are limits the world applies to
 the flow, as `EntryShare` and `ExitShare` are, and no estimate, gate or ranking
-reads a count.
+reads a count. Nor does it read the settlement class of a region: a class is the module's own measure of a place and is shown to no agent (`spec-settlements.md` 6.7).
 
 4.4.1. **Why a price and not a ratio.** The roadmap and INF 17.4 asked whether a
 household may react to a regional mean welfare ratio. It may not: a mean ratio is
@@ -469,7 +469,7 @@ is that wage at the destination's prices, which is what a household that knew
 only prices could compute. It does not include labour in the cost (the household's
 own labour is what is earning), it does not include the cost of a tool it would
 have to buy there beyond the wear (the household carries its tools), and it does
-not include a fixed factor's limit (4.4).
+not include a fixed factor's limit (4.4). It reads no rent and no title either: the posted rent of an endowment and who holds it are state, and a rumour carries prices only (`spec-land.md` 7.2.2).
 
 6.3.2. **The home side is measured, not estimated.** The household's own income per
 working tick is its observed wage over its window, without relief and grants
@@ -590,7 +590,7 @@ The household is first tested against the refusals of `spec-regions.md` 6.1.3 by
 read-only query `World.RelocationRefusal` (7.2.1), in that order, with the destination at
 the head of its ranking: a `region_bound` refusal that a later spec registered
 (`open_shipment` for an agent that is the shipper or the consignee of a shipment in
-flight or is away, `in_traineeship`, `open_contract`) ends the consideration with the
+flight or is away, `in_traineeship`, `open_contract`, `open_hire` for a party to an open hire of `spec-employment.md`, `has_store` for an agent that holds a store of `spec-storage.md`) ends the consideration with the
 outcome `bound`. An agent already on a journey is not in the pass.
 The other refusals cannot occur for a live, open agent account in a region, with
 no reservation in phase 7 and a destination that is a region other than its own
@@ -848,6 +848,7 @@ facts of REG, repeated so that a reader of this spec finds the whole.
 | `Hunger`, `Privation` | unchanged. The grace that SPN gives a role changer applies: `RoleSince` is the arrival tick, so rung 3 waits `RemovePrivation` ticks (`spec-spawner.md` 5.2) | |
 | `RoleSince` | the arrival tick; also the tick of a forced move by INT's `Relocate` (`spec-integration.md` 4.5.2 step 5) | at arrival, or at the forced move |
 | Traineeship | a trainer with trainees, and a trainee, are refused by the guard (`in_traineeship`, SKL) | at admission |
+| Hire, store | a party to an open hire (`open_hire`, EMP) and an agent that holds a store (`has_store`, STO) are refused by the guard, with the outcome `bound` | at admission |
 | Rumours | none are kept; the agent's rumours are those of its new region from its next view (`spec-information.md` 7.3) | |
 | Cost anchors, effective upkeep, effective reference price | derived from the region each tick and change at the next computation (`spec-regions.md` 6.3) | |
 
@@ -1722,7 +1723,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-MIG-017 | A candidate MUST be tested at stages 1 to 4 in that order (every price present; `k < H`; `Vhat >= EntryRatio`; `V_eff * 10 000 >= V_a * (10 000 + g_a)` by cross-multiplication), with the margin `g_a = MoveGain + floor(Offset(AgentID) * MoveWidth / 2^32)` and `Offset(id) = (id * 2 654 435 769) mod 2^32`, and the surviving candidates MUST be ranked by discounted estimate descending and, for equal values, by `RegionID` ascending (6.5). |
 | FR-MIG-018 | A pushed agent whose role has no recipes MUST end in `no_estimate`; one with no candidate region in `no_destination`; and one whose candidates all fail the gates in the outcome of the latest stage any reached (3.3.2, 6.3.4, 7.6). |
 | FR-MIG-019 | The agents with a ranking MUST be admitted in order of earned ratio ascending and, for equal ratios, agent ID ascending (7.1). |
-| FR-MIG-020 | The guard MUST test the refusals of `spec-regions.md` 6.1.3 by the read-only query `RelocationRefusal` and a `region_bound` refusal MUST end the consideration with `bound`; the query MUST change nothing, draw nothing and allocate nothing, and `skip` MUST leave the named obligations untested (7.2, 7.2.1). |
+| FR-MIG-020 | The guard MUST test the refusals of `spec-regions.md` 6.1.3 by the read-only query `RelocationRefusal` and a `region_bound` refusal (`open_shipment`, `on_journey`, `open_contract`, `in_traineeship`, `open_hire`, `has_store`) MUST end the consideration with `bound`; the query MUST change nothing, draw nothing and allocate nothing, and `skip` MUST leave the named obligations untested (7.2, 7.2.1). |
 | FR-MIG-021 | At most `ceil(Households_h * OutShare_h / 10 000)` households MUST start a journey from region `h` in a tick, with the households counted at the start of the pass including those on a journey; an agent that makes the count reach the cap MUST be admitted, a later one refused with `out_cap`; and `OutShare` 0 MUST mean none (7.3). |
 | FR-MIG-022 | A candidate MUST be skipped as `unprovisioned` unless the agent holds, at the end of phase 6, `w * u_c * k` of each commodity `c` of its effective upkeep in its present region (7.4). |
 | FR-MIG-023 | The households on a journey to `d`, those admitted earlier in the pass included, MUST NOT exceed `ceil(Households_d * InShare_d / 10 000)` when a household is admitted to it; the household that makes the count reach the cap MUST be admitted; a candidate over the cap MUST be skipped as `in_cap`; and `InShare` 0 MUST mean none (7.5). |

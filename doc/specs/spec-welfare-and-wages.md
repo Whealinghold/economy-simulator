@@ -46,16 +46,16 @@ the baseline basket, and higher values leave more discretionary income.
 
 Each agent keeps a ring buffer of per-tick records for the last `T` ticks (the
 window of 2.3, which is derived per role). Record `t` holds `income_t`, `cost_t`, the
-relief `F_t` and the grant `G_t` that are inside `income_t` (so that the earned ratio of
-2.1.7 and the observed wage of 4.3 exist), the own-use receipt `K^own_t`, and
+relief `F_t` and the signed unearned sum `G_t` that are inside `income_t` (so that the earned ratio of
+2.1.7 and the observed wage of 4.3 exist; `G_t` is defined in 2.1.9), the own-use receipt `K^own_t`, and
 whether tick `t` was a working tick (4.3) with its working household-ticks and its
-own-use household-ticks (section 13):
+own-use household-ticks (section 13). The ring is also read by the saving module, whose drawdown is a pure function of it (`spec-saving-and-investment.md` 4.1):
 
 - `income_t` is the **profit** of the tick (as in bazaarBot's `profit`), in signed
   minor units:
 
   ```
-  income_t = R_t + K_t + K^own_t + F_t + G_t - S_t(Input) - W_t
+  income_t = R_t + Y_t + K_t + K^own_t + F_t + G_t - S_t(Input) - W_t - V_t - Z_t - I^out_t
   ```
 
   `R_t` is the money the agent received from trades in tick `t`; `K_t` the value of
@@ -63,12 +63,12 @@ own-use household-ticks (section 13):
   of the subsistence module created at its completion in tick `t`, at the prices of
   `cost_t` (`spec-subsistence.md` 7.1, 7.2; a household that makes exactly its upkeep reads
   10 000 at any price); `F_t` relief paid to it
-  (`spec-estates.md` 2.6); `G_t` the money received under a grant to households that is not `NotIncome` (`spec-money-supply.md` 7.2), an unearned income like relief; `S_t(Input)` the money it spent in tick `t` on bids whose
-  purpose is `Input` (`spec-agents.md` 6.3, 7.3.6); and `W_t` the **wear cost** of
-  the tick, 2.1.4. Spending on upkeep (purpose `Upkeep`), on a tool (`Tool`) and on
+  (`spec-estates.md` 2.6); `Y_t` the wages it received (`wage_pay` into its account at P2.1 and P2.7, `spec-employment.md` 8.1; earned income) and `V_t` the wages it paid, released from the escrows of the hires of which it is the principal in the tick the working tick is taken (the escrow is not netted when it is made); `G_t` the **unearned sum**, signed, of the flows that are not a return to working (the grants, payouts, interest received, insurance result and rent received, less the taxes, duties and tolls paid, 2.1.9), stored as one field of the record; `S_t(Input)` the money it spent in tick `t` on bids whose
+  purpose is `Input` (`spec-agents.md` 6.3, 7.3.6); `W_t` the **wear cost** of
+  the tick, 2.1.4; `Z_t` the rent it paid in the tick for the use of an endowment (`spec-land.md` 5.7.3), a cost of production netted as an input is, in cash when paid (it is not a bid and has no purpose); and `I^out_t` the interest it paid (`spec-credit.md` 11.1). A term of a module that is off is 0. Spending on upkeep (purpose `Upkeep`), on a tool (`Tool`) and on
   anything else (`Other`) is **not** netted: upkeep is the `cost_t` below, and a tool
   is capital, whose use is netted as wear. A starting-money grant (`start_money`,
-  `initial`) is not income, and neither is a grant with `NotIncome`. A levy of the money-supply module is not netted from `income_t` in version 1 (`spec-money-supply.md` 7.2, open question 5). `income_t` may be negative (a tick of buying inputs and
+  `initial`) is not income, and neither is a grant with `NotIncome`. Which flow is netted, which is kept out of the observed wage and which is neither is one rule per flow, in 2.1.9. `income_t` may be negative (a tick of buying inputs and
   selling nothing).
 - `cost_t` is the cost of one tick of the agent's **effective upkeep**
   (`spec-agents.md` 5.2: the role's list or the world's, plus the region's extra,
@@ -108,8 +108,8 @@ twice. This answers N-050.
 2.1.4. **The wear cost** of tick `t` is, for each execution started in the tick that
 wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of
 the tool in that tick (the price of `spec-clearing.md` 5.4; the effective reference
-price if it has never traded), summed over executions, with the executor's weight
-applied as for any amount. It is the `wear_cost` of `spec-production.md` 9.1 evaluated
+price if it has never traded), summed over executions, with the weight of the executor, or of the principal for a hired execution (the tool is its
+capital, `spec-employment.md` 8.1), applied as for any amount. It is the `wear_cost` of `spec-production.md` 9.1 evaluated
 at the market price, and it uses no belief.
 
 2.1.5. **A commodity that is both an input and upkeep** (the seed that is also eaten)
@@ -129,7 +129,7 @@ an in-kind receipt (6.2), so its ratio stays at 1.0 while it is boarded.
 
 2.1.7. **The earned ratio.** `earned_bp = sum(income_t - F_t) * 10 000 / sum(cost_t)` over the
 same effective window with the same padding and truncation as the ratio of 2.1: the ratio with
-the relief taken out of the income. A grant `G_t` stays in. It is a derived read from the
+the relief taken out of the income. The unearned sum `G_t` (2.1.9) stays in. It is a derived read from the
 records and not a second record, absent when the ratio is absent (2.2.3), and is the figure
 the migration module reads as its trigger (`spec-migration.md` 5.3), so that relief does not
 suppress migration (`spec-migration.md` 5.4).
@@ -140,6 +140,46 @@ counted when they are eaten, whose cost is in `cost_t` as for bought goods
 covers, and relief and the schedules of `spec-population.md` see it (`spec-subsistence.md`
 7.4). A sale of the surplus counts again as cash (`spec-subsistence.md` 7.5, open question 2
 there).
+
+2.1.9. **One rule per flow.** Every flow that reaches the record is one of three things, and the
+table gives each flow once, with the module that owns the flow. **Production** (in `income_t` and
+in the observed wage of 4.3, which is the profit of a working tick: its receipts, and the costs of
+making them, including the wages, the rent and the interest paid on the finance of it); **unearned**
+(in `income_t` and in the signed `G_t`, so out of the observed wage and in the earned ratio of
+2.1.7); or **not income** (in neither). The reason is one: the observed wage is the return to market
+labour and the cost anchor reads it (`spec-production.md` 9.3), so a receipt or a charge that is not
+part of the production of the tick stays out of it, while the target-income rule and relief read
+what a household has left to live on, so a charge it must pay is netted.
+
+| Flow | Term | Effect on `income_t` | Where | Owner |
+|------|------|----------------------|-------|-------|
+| Receipts of trades; in-kind receipts | `R_t`; `K_t` | + | production | 2.1, 6 |
+| Wages received; wages paid (released from the escrow) | `Y_t`; `V_t` | +; - | production | `spec-employment.md` 8.1 |
+| Spending on inputs; wear of a tool | `S_t(Input)`; `W_t` | -; - | production | 2.1.3, 2.1.4 |
+| Rent paid for the use of an endowment | `Z_t` | - | production | `spec-land.md` 5.7.3 |
+| Interest paid | `I^out_t` | - | production | `spec-credit.md` 11.1 |
+| Own-use receipts | `K^own_t` | + | its own field (4.3) | `spec-subsistence.md` 7.1 |
+| Relief | `F_t` | + | its own field | `spec-estates.md` 2.6 |
+| A grant that is not `NotIncome` | in `G_t` | + | unearned | `spec-money-supply.md` 7.2 |
+| A payout of a treasury that is not `NotIncome` (money, or in kind at the value of 6.2; it is not `K_t`) | `P_t`, in `G_t` | + | unearned | `spec-fiscal.md` 12.1 |
+| Interest received | `I^in_t`, in `G_t` | + | unearned | `spec-credit.md` 11.1.1 |
+| Insurance result: payouts, premiums and the principal of payout claims received less those paid | `N_t`, in `G_t` | + or - | unearned | `spec-insurance.md` 11.1 |
+| Rent received by a holder | `Q_t`, in `G_t` | + | unearned | `spec-land.md` 5.7.3 |
+| A tax, a duty or a toll paid to a treasury | `X_t`, in `G_t` | - | unearned | `spec-fiscal.md` 12 |
+| A levy of the money-supply module | none | not netted | none | `spec-money-supply.md` 7.2 |
+| The principal of a loan; a starting-money grant; a grant with `NotIncome` | none | none | none | `spec-credit.md` 11.1; 2.1 |
+
+So `G_t = (grants) + P_t + I^in_t + N_t + Q_t - X_t`, which the record stores as one signed
+integer (13): it is the field that already holds the grant, and no field is added. A tax is netted
+because a household taxed a fifth that looked as rich as before would neither work more nor be
+relieved (`spec-fiscal.md` 12.2); it is out of the wage because the statutory charge is not a cost
+of the firm that hires, and a lower wage would lower the cost anchor by an incidence the engine
+does not model. A levy is not netted in version 1: it moves money between sectors at a scale the
+consumer or a policy actor sets and is not a charge for anything, and netting it is open question 7
+of 15.2. A flow of `G_t` that moves after the record of its tick was pushed (P6.3 of
+`spec-world.md` 6.8: the payout of a store cover at P8.1b, the principal a removal's waterfall pays
+at P7.1) is added to that record by amending its last record (`spec-insurance.md` 11.1.3); an agent
+with no record of the tick is not amended.
 
 ### 2.2 Agents without a full history
 
@@ -213,8 +253,7 @@ whatever the phase of the job within it, which removes the saw-tooth that a wind
 about one and a half cycles would give. The cost is slower response: the ratio of a
 long-job role reacts over `T` ticks to the migration trigger, to relief and to the
 target-income rule, which only decides when the agent is free. That slowness is real
-(a farm cannot answer a bad price faster than a crop) and is accepted. **Credit is the
-real remedy for a long job** (`spec-credit.md`); version 1 has none. The record is
+(a farm cannot answer a bad price faster than a crop) and is accepted. Credit (`spec-credit.md`, an optional module) funds the cash gap of a long job; it does not change how the ratio reads it. The record is
 STB-L19 and STB-L20, scenario S11.
 
 2.3.4. The effective window is at most `MaxWelfareWindow` (3 650 ticks, a provisional
@@ -368,6 +407,8 @@ A tick is a **working tick** for an agent in these cases:
   in the tick (the `TradeExecuted` event), or it was in transit on a
   commercial trip, or it had an own-use job in progress (`spec-subsistence.md` 7.6; a
   role with no recipes may have an own-use list, 3.3.3 there).
+- for a `Hireable` role (`spec-employment.md` 8.3.1) the "bought or sold" clause above does not apply: its working ticks are the ticks with a job in progress, its own or a hired one, and its working household-ticks are the `k` of that job (otherwise every tick of a worker, which buys its upkeep each tick, would be a working tick of its full weight and the floor of 5.3 would never bind);
+- a tick in which the agent is the principal of a hired job in progress is a working tick for the floor of 5.3 and adds nothing to its working household-ticks (`spec-employment.md` 8.2.4); and the pooled regional wage below is taken over the agents of roles that have no employer block (`spec-employment.md` 8.4).
 
 A **commercial trip** is travel carrying the agent's own goods to sell (a self-carried shipment of `spec-transport.md`). Its working ticks are the ticks from the dispatch tick to the tick before arrival, read from the shipment record (`spec-transport.md` 5.9, FR-TRN-021). A carrier that moves other people's goods is a producer of haul units, whose job is an ordinary recipe (`spec-transport.md` 8). Migration travel, ticks spent resting
 under the target-income rule, and ticks with no activity are not working
@@ -381,7 +422,7 @@ Over the window `T`:
 observed_wage = (sum of (income_t - F_t - G_t - K^own_t)) / (number of working household-ticks - number of own-use household-ticks)
 ```
 
-Relief `F_t` and a grant `G_t` are excluded: they are not earned by working (`spec-estates.md` 2.6; `spec-money-supply.md` 7.2). The
+Relief `F_t` and the unearned sum `G_t` (2.1.9: a grant, a payout, interest received, the insurance result and rent received, less a tax, duty or toll paid) are excluded: they are not earned by working (`spec-estates.md` 2.6; `spec-money-supply.md` 7.2). Wages received `Y_t` and paid `V_t`, rent paid `Z_t` and interest paid `I^out_t` stay in, as inputs and wear do (`spec-employment.md` 8.3). The
 own-use receipt `K^own_t` and the own-use household-ticks are excluded too: the wage is the return
 to market labour, and an own-use job is not market labour (`spec-subsistence.md` 7.3, which
 gives the reason and the bias left, its open question 2). An own-use tick **is** a working tick for the
@@ -745,8 +786,8 @@ in 1700s England, and up to about 4 for the best-off households.
 
 - Military roles and their pay. The 1344 pay scale in `evidence.md` is kept as a
   note for a later feature.
-- Employers other than merchants hiring carriers, treasuries and taxation.
-- Wages for employees working in someone else's recipe (general wage labour).
+- Employers other than merchants hiring carriers: now `spec-employment.md` (an employer role with a hire list). Treasuries and taxation: now `spec-fiscal.md`.
+- Wages for employees working in someone else's recipe (general wage labour): now `spec-employment.md`.
 
 ## 11. Observability
 
@@ -819,7 +860,7 @@ Every spec lists the state it contributes (ADR 0002). This spec's, hosted in the
 
 - for each agent, in agent ID order: the ring buffer of its window, oldest first, with
   for each record `income_t` (signed `int64`), `cost_t` (`int64`), the relief `F_t` and the
-  grant `G_t` that are inside `income_t` (signed `int64`, for the earned ratio of 2.1.7 and the observed wage of 4.3),
+  unearned sum `G_t` of 2.1.9 that is inside `income_t` (signed `int64`, for the earned ratio of 2.1.7 and the observed wage of 4.3; one field, whose meaning widens with the modules that are on and whose shape is unchanged),
   the own-use receipt `K^own_t` (`int64`) and the own-use household-ticks, and the working flag
   and the working household-ticks; the number of records held (fewer than `T` for a
   new agent); and the target ratio drawn at creation (5.1);
@@ -879,6 +920,8 @@ longest trip of a merchant role (2.3.3).
    not days (`spec-calendar.md` 2.5); nothing here depends on hours.
 6. **A window that counts trips. (Answered for a merchant role.)** A self-carried trip (4.3) is a gap in income like a long job (STB-L19, STB-L20 and `spec-stability.md` TRN-A6 merged into L19), and a trip longer than the base window can make a healthy trader look poor. `spec-merchants.md` 12.3 proposed and 2.3.3 adopts that the longest trip of a role with a merchant block joins the derivation (`Kmax`); `spec-transport.md` 12.2 still warns with `trip_longer_than_window` for a role with no block. N-099 stays open: a migration journey is recorded as zero-income, non-working ticks and is not excluded from the window (2.1.1, `spec-migration.md` 8.6, its open question 8).
 
+7. **Netting a levy (2.1.9).** A tax paid to a treasury is netted and a levy of the money-supply module is not (`spec-money-supply.md` 7.2, open question 5; `spec-fiscal.md` 12.2): the two differ in kind, and a pack that wants a levy netted too asks for the one rule. Next step: the first scenario in which a levy and a tax are both on and the target-income rule is read (STB-L14); the change is one term (`X_t`-like) in `G_t` and a format-neutral edit.
+
 ## 16. Requirements
 
 Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Every
@@ -890,8 +933,8 @@ behaviour decided in the third round; the rest restate text that already existed
 | ID | Requirement |
 |----|-------------|
 | FR-WEL-001 | The welfare ratio of an agent MUST be the sum of `income_t` times 10 000 divided by the sum of `cost_t` over the agent's window, in basis points, truncated toward zero, computed with checked arithmetic. |
-| FR-WEL-002 | `income_t` MUST equal the trade receipts plus the in-kind receipts plus the own-use receipts `K^own_t` (`spec-subsistence.md` 7.1) plus the relief of the tick, plus the grants of the money-supply module that are not `NotIncome`, less the money spent on bids with the purpose `Input` and the wear cost of the tick, in signed minor units, and MUST NOT net spending with the purpose `Upkeep`, `Tool` or `Other`, a levy, a starting-money grant or a grant with `NotIncome`. (new) |
-| FR-WEL-003 | The wear cost of a tick MUST be, for each execution started that wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (its effective reference price if it has never traded), times the executor's weight, and a tool purchase MUST NOT be netted. (new) |
+| FR-WEL-002 | `income_t` MUST equal the trade receipts plus the in-kind receipts plus the own-use receipts `K^own_t` (`spec-subsistence.md` 7.1) plus the wages received `Y_t`, plus the relief of the tick, plus the unearned sum `G_t` (the grants of the money-supply module that are not `NotIncome`, the payouts of a treasury that are not `NotIncome`, interest received, the insurance result and rent received, less the taxes, duties and tolls paid, 2.1.9), less the money spent on bids with the purpose `Input`, the wear cost of the tick, the wages paid `V_t`, the rent paid `Z_t` and the interest paid `I^out_t`, in signed minor units, and MUST NOT net spending with the purpose `Upkeep`, `Tool` or `Other`, a levy, the principal of a loan, a starting-money grant or a grant with `NotIncome`. (new) |
+| FR-WEL-003 | The wear cost of a tick MUST be, for each execution started that wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (its effective reference price if it has never traded), times the weight of the executor (of the principal for a hired execution), and a tool purchase MUST NOT be netted. (new) |
 | FR-WEL-004 | `cost_t` MUST be the cost of the agent's effective upkeep (`spec-agents.md` 5.2) at the prices of the region the agent was in during tick `t`. (new) |
 | FR-WEL-005 | While an agent has no region (reserved, unused in version 1) or is away on a trip, its upkeep MUST be valued at the prices of the last region it was in and its income MUST be zero unless it receives some in kind. |
 | FR-WEL-006 | An agent's records MUST stay with it when it changes region. |
@@ -905,8 +948,8 @@ behaviour decided in the third round; the rest restate text that already existed
 | FR-WEL-014 | `ExpectedWorkTicks` MUST be an integer from 1 to the derived `TicksPerYear`, default 250, and a larger value MUST be rejected with `ErrOutOfBounds` carrying `TicksPerYear`, never scaled silently. (new, with FR-CFG-048) |
 | FR-WEL-015 | No configuration field MUST hold a wage or a wage multiplier, and a skill premium MUST be measured, never set. |
 | FR-WEL-016 | The role fields `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind` and `ExpectedWorkTicks` MUST have the defaults and bounds of section 12. |
-| FR-WEL-017 | For a role with recipes, a tick MUST be a working tick if the agent had a job in progress in it (started, continued or completed) or was in transit on a commercial trip, and for a role without recipes if it traded or was in transit on a commercial trip, and a tick with an own-use job in progress MUST be a working tick for a role with or without recipes; migration travel, rest under the target-income rule and idle ticks MUST NOT be working ticks. (new for the job wording) |
-| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t - K^own_t` divided by the number of working household-ticks less the number of own-use household-ticks, and the same figure MUST be available for one agent over its own effective window, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
+| FR-WEL-017 | For a role with recipes, a tick MUST be a working tick if the agent had a job in progress in it (started, continued or completed) or was in transit on a commercial trip, and for a role without recipes if it traded or was in transit on a commercial trip, and a tick with an own-use job in progress MUST be a working tick for a role with or without recipes; for a `Hireable` role a tick MUST be a working tick if a job, its own or a hired one, was in progress (its working household-ticks are the `k` of that job), and a tick in which the agent is the principal of a hired job in progress MUST be a working tick for the floor of 5.3 and add no working household-tick; migration travel, rest under the target-income rule and idle ticks MUST NOT be working ticks. (new for the job wording) |
+| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t - K^own_t` (`G_t` the unearned sum of 2.1.9) divided by the number of working household-ticks less the number of own-use household-ticks, and the same figure MUST be available for one agent over its own effective window, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
 | FR-WEL-019 | The observed premium of a role in a region MUST be its observed wage times 10 000 divided by the mean observed wage of the region's agents of `Unskilled` roles weighted by households, and MUST be absent if the region has no such agents or the role has no working ticks. (new for the weighting) |
 | FR-WEL-020 | The `Snapshot` MUST report the observed wage and premium per role and region, the effective window per role, the households held to work by the floor (`HeldByFloor`, evaluated at the boundary over the agents with no job in progress after P6.3, so it may differ from the count the `Warn` of FR-WEL-033 used), the household-weighted mean welfare ratio per role and region with the households whose ratio exists (`MeanRatioBP` and `RatioHouseholds`; absent when no agent has a ratio), each bounded by the configuration. |
 | FR-WEL-021 | The work share MUST be 10 000 if the ratio is below `T_lo`, 0 if it is at or above `T_hi = T_lo * (10 000 + RestBand) / 10 000`, and `(T_hi - ratio) * 10 000 / (T_hi - T_lo)` between, with `T_lo` the agent's own target, and the executions requested MUST be `ceil(weight * share / 10 000)`. (new for the band and the share) |
@@ -928,7 +971,8 @@ behaviour decided in the third round; the rest restate text that already existed
 | FR-WEL-037 | The observed wage of 4.3 MUST be available per role and region as a value per working household-tick with a flag saying whether anyone worked in the window, for the spawner's occupation signal, and MUST exclude relief. (new, `spec-spawner.md` 6.1) |
 | FR-WEL-038 | With the demand module on, the role economics check of 7.3 MUST remain a report that never fails validation or construction, and the warning `target_above_demand` MUST be the demand module's. (new) |
 | FR-WEL-039 | The earned ratio of an agent MUST be `sum(income_t - F_t) * 10 000 / sum(cost_t)` over the same effective window, with the same padding and truncation as the ratio, MUST be absent when the ratio is absent, and MUST be available per agent in a query. (new, `spec-migration.md` 5.3) |
-| FR-WEL-040 | Each record MUST hold the relief `F_t` and the grant `G_t` inside `income_t`, the own-use receipt `K^own_t` and the own-use household-ticks, so that the earned ratio and the observed wage per agent are derived from the records alone. (new, `spec-migration.md` 5.4.3, `spec-subsistence.md` 7.3) |
+| FR-WEL-040 | Each record MUST hold the relief `F_t` and the signed unearned sum `G_t` of 2.1.9 (one field, with no field added for interest, insurance, rent or a fiscal flow) inside `income_t`, the own-use receipt `K^own_t` and the own-use household-ticks, so that the earned ratio and the observed wage per agent are derived from the records alone. (new, `spec-migration.md` 5.4.3, `spec-subsistence.md` 7.3) |
+| FR-WEL-041 | Each flow of 2.1.9 MUST enter the record by its one rule: wages received and paid, rent paid and interest paid in `income_t` and in the observed wage; a payout, interest received, the insurance result and rent received in `income_t` and in `G_t`; a tax, a duty or a toll paid netted in `G_t`; a levy of the money-supply module and the principal of a loan in neither; and a flow that moves after the record of its tick was pushed MUST be added to that record. (new, 2.1.9) |
 
 ### Non-functional
 

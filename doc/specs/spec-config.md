@@ -14,9 +14,7 @@ What is fixed here is the framework: the shape of the configuration, where
 constants live, the file format, the validation machinery, the structural
 rules, the hash and the registry. The *catalogue* of fields and of per-field
 rules grows with each spec (section 9). It now includes the fields and rules of
-production, beliefs, agents, viability, the spawner, demand, regions, money supply, population, transport, resources, information and the external sector (sections 3.7, 4.1, 7.4); the specs
-still unwritten (migration, merchants and the rest) add theirs when they
-are. Where a section depends on a spec that does not exist, it says so.
+production, beliefs, agents, viability, the spawner, demand, regions, money supply, population, transport, resources, information, the external sector, subsistence, migration and merchants, and of the fourteen later-stage modules (settlements, storage, employment, tenure, credit, risk, infrastructure, insurance, polity, fiscal, institutions, policy, saving and technology; sections 3.7.1, 4.1, 7.3, 7.4). A spec that is added later adds its rows in the same change as its own (9.2). Where a section depends on a spec that does not exist, it says so.
 
 Terms in **bold** on first use are new domain terms. They must be added to the
 glossary in `doc.go` before any code uses them (architecture.md 3.2).
@@ -87,7 +85,7 @@ spec that owns them.
 | `RegionPrices` | reference-price overrides by region and commodity, one row per key | `spec-regions.md` 5.2 |
 | `Groups` | the population: households of a role in a region, with an optional scale | `spec-scale.md` |
 | `WarmStart` | the steady-state seed table: seed prices, starting money, stock and jobs per group, estate pools. A pointer: nil means no warm start. It is a section and not a module: it switches no mechanism on | `spec-viability.md` 8.1 |
-| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`); `MoneySupply` (`Flows`), `Population` (schedules and `Regions`) and `Transport` (`Modes`) follow; `Resources` (`Resources`, `Endowments`, `HorizonYears`), `Information` (`InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`) and `External` (`Nodes`) come with the specs of wave 3; `Subsistence` (`Recipes`, `Roles`, `EnterTicks`, `ExitTicks`, `RetryJobs`), `Migration` (nine tunables and `Regions`) and `Merchants` (`MaxOpen`) come with the specs of wave 4 | each module's spec |
+| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`); `MoneySupply` (`Flows`), `Population` (schedules and `Regions`) and `Transport` (`Modes`) follow; `Resources` (`Resources`, `Endowments`, `HorizonYears`), `Information` (`InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`) and `External` (`Nodes`) come with the specs of wave 3; `Subsistence` (`Recipes`, `Roles`, `EnterTicks`, `ExitTicks`, `RetryJobs`), `Migration` (nine tunables and `Regions`) and `Merchants` (`MaxOpen`) come with the specs of wave 4; and the fourteen modules of wave 5 follow, in this order and no other: `Settlements`, `Storage`, `Employment`, `Tenure`, `Credit`, `Risk`, `Infrastructure`, `Insurance`, `Polity`, `Fiscal`, `Institutions`, `Policy`, `Saving` and `Technology` (their fields are in 3.7.1). The order of the pointer fields of `Modules` is a hash input (8.2): a module that is added later is appended, never inserted | each module's spec |
 
 The entity sections are slices of structs, each with an `ID` string. Package
 `config/` writes them from file tables (6.2).
@@ -111,7 +109,11 @@ kind (commodity, recipe, role, region). The restriction keeps IDs usable as file
 keys, log values and metric attributes without escaping. The internal typed IDs
 (`CommodityID`, `RoleID`, architecture.md 3.3) are assigned in the order of the
 IDs sorted as strings, after canonicalisation (3.4), so they do not depend on how
-a file or a slice was ordered.
+a file or a slice was ordered. The one exception is the settlement class, whose
+`SettlementClassID` is its rank by `Enter` and not the rank of its ID string (3.4,
+`spec-settlements.md` 3.2). The word `pool` is **reserved** as a role ID: it names the
+holder that is the pool of a region in a holding of the tenure module, so a role with
+that ID is `ErrDuplicateID` (`spec-land.md` 3.3.2, 11.1).
 
 ### 3.4 Canonical order
 
@@ -119,12 +121,13 @@ Before a world is built or a hash is taken, every entity slice is sorted by ID
 (groups by region, then role). The order in which an author wrote entities has no
 effect. This follows architecture.md 7.5: nothing that influences results may
 depend on an arbitrary order. A recipe's inputs and outputs, being lists of
-(commodity, quantity), are sorted by commodity. Edges are sorted by `(From, To)` as region indices, region prices by region then commodity, money flows by ID, transport modes by ID, and the region-keyed tables of 5.1 of `spec-regions.md` by region.
+(commodity, quantity), are sorted by commodity. Edges are sorted by `(From, To)` as region indices, region prices by region then commodity, money flows by ID, transport modes by ID, and the region-keyed tables of 5.1 of `spec-regions.md` by region. The lists and rows of the modules of wave 5 follow the same rule and are sorted as their specs say: by ID (the classes of storage, infrastructure and technology; the bodies, rights and controls; the jurisdictions; the six lists of fiscal flows; the policy actors and their levers), by the key of the row (a role, a region, a `(Region, Resource)` term, a `(Region, Resource, Holder)` holding with the pool before the roles, a `(From, To, Mode)` route row, a `(Region, Class)` store row, a `(Lever, At)` schedule step, which orders the steps of a policy actor by tick, a `Reaction` by `Lever`), and the recipes of an employer or a technology field by recipe ID.
 
-The one exception is the calendar's months and seasons. Their order is their
+There are two exceptions. The first is the calendar's months and seasons. Their order is their
 meaning (the third month, the season after the last), so they are **ordered
 lists**: they are kept as written, are written in a file as arrays and not as
 tables keyed by ID, and an overriding document replaces a list as a whole (6.4).
+The second is the settlement classes of `Modules.Settlements`: they are sorted by `Enter`, the households at which a class is reached, and not by ID, because the rank is the meaning (`spec-settlements.md` 3.2). A class's `Flags` are sorted by name, its `Limits` by `Name` and the region rows by region; the written order of classes has no effect, as for any entity.
 
 ### 3.5 Copy on construction
 
@@ -173,7 +176,7 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Edges[]` | `From`, `To`, `Distance` | `spec-regions.md` 4.1 |
 | `RegionPrices[]` | `Region`, `Commodity`, `Price` | `spec-regions.md` 5.2 |
 | `World` | `DistanceLabel` (p) | `spec-regions.md` 4.1.2 |
-| `Modules.MoneySupply` | `Flows[]` (`ID`, `Kind`, `Target` with `Kind`, `Region` and `Role`; `Amount`, `Level`, `RateBP`, `Exempt`, `Per`, `Start`, `Until`, `Limit`, `NotIncome`, `Label` (p)); present = the module is on | `spec-money-supply.md` 4.1, 11.1 |
+| `Modules.MoneySupply` | `Flows[]` (`ID`, `Kind`, `Target` with `Kind`, `Region` and `Role`, and `Store` and `Jurisdiction` (owned by `spec-storage.md` and `spec-fiscal.md`, 3.7.1); `Amount`, `Level`, `RateBP`, `Exempt`, `Per`, `Start`, `Until`, `Limit`, `NotIncome`, `Label` (p)); present = the module is on | `spec-money-supply.md` 4.1, 11.1 |
 | `Modules.Population` | `BirthSchedule[]` and `DeathSchedule[]` (each knot `Ratio`, `Rate`), `MinHouseholds`, `BirthStake`, `Regions[]` (`Region`, `BirthScale`, `DeathScale`, `HouseholdCap`); present = the module is on | `spec-population.md` 3.5, 8 |
 | `Modules.Transport` | `Modes[]` (`ID`, `Speed`, `UnitMass`, `UnitBulk`, `Crew`, `Vehicle`, `WearPerTick`, `Feed[]` each with `Commodity` and `Quantity`, `Haul`, `HaulSpan`, `Label` (p)); present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
 | `Modules.Resources` | `Resources[]` (`ID`, `Shape`, `RatePerYear`, `RateBP`, `Refuge`, `Capacity`, `InitialBP`, `PlanShareBP`, `Abundance[]` each with `Share` and `Factor`, `Seasons[]` each with `Season` and `BP`, `Label` (p)), `Endowments[]` (`Region`, `Resource`, `Capacity`, `Initial`, `RegenScaleBP`), `HorizonYears`; present = the module is on; it needs production | `spec-resources.md` 3.3, 12 |
@@ -186,14 +189,289 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Roles[]` | `Merchant` (the block: `Modes`, `LotUnits`, `FeeShareSpreadBP`, `MaxSourceAge`, `TimeCostBP`, `ConsigneeCutBP`, `Consigns`, `TakeMarginBP`, `TakeUnits`; nil = not a merchant role; needs `Modules.Transport` and `Modules.Information`). `MerchantFeeShare` keeps its row above | `spec-merchants.md` 3.2, 13 |
 | `Modules.External` | `Nodes[]` (`Region`, `Lines[]` each with `Commodity`, `Base`, `PriceBySeason[]` (`Season`, `BP`), `TrendBP`, `FloorBP`, `CeilingBP`, `WalkStepBP`, `WalkRevertBP`, `WalkBoundBP`, `Sell` and `Buy` each with `MarginBP`, `Capacity`, `Window[]` (`Season`, `BP`), `TotalUnits`, `TotalValue`; `Gates[]` (`Region`, `ScaleBP`); `Label` (p)); present = the module is on; it needs the region graph | `spec-external-sector.md` 3.3, 13.1 |
 
+The fields of the fourteen modules of wave 5, and the fields they add to `Role`, `Recipe` and `FlowTarget`, are in 3.7.1 (one row per field, with its scope, default, bound and owner section).
+
 Not fields: the seed, the logger, the observers, `WithAudit`, `WithReseed` (a
 restore-only option that gives a different continuation, `spec-checkpoint.md` 6.8, and
-never a field), the extension registrations (`WithStrategy`, `WithSpawner` and
-`WithClearing`, whose *names* are hashed through `Role.Strategy`, `World.Spawner` and
-`World.Clearing` and whose code cannot be) and the solve options of `spec-viability.md` 11
+never a field), the extension registrations (`WithStrategy`, `WithSpawner`, `WithClearing` and `WithPolicy`, whose *names* are hashed through `Role.Strategy`, `World.Spawner`, `World.Clearing` and `PolicyActor.Policy` and whose code cannot be) and the solve options of `spec-viability.md` 11
 (`StockCoverTicks`, `MoneyBufferTicks`, `ResidualWarnBP`, `MaxPivots`, `Lanes`):
 they shape how a run or a table is produced and not what a world is. The yield
-shocks of `spec-production.md` 6.8 are world state, not configuration. So are the other slots set between ticks: the flow scale of `spec-money-supply.md` 4.4.3, the birth and death scales of `spec-population.md` 6.6, the edge statuses of `spec-regions.md` 7 and the transit factor of `spec-transport.md` 10.3, the endowment shock scales of `spec-resources.md` 6.3 and the outside price shock of `spec-external-sector.md` 6.5; the public calls that set them are INT's. State, not fields, are also the own-use mode `OwnUse` and the counter `OwnUseJobs` of an agent (`spec-subsistence.md` 5.3), the journey of a migrating agent (`spec-migration.md` 14) and the contracts in flight (`spec-merchants.md` 16).
+shocks of `spec-production.md` 6.8 are world state, not configuration. So are the other slots set between ticks: the flow scale of `spec-money-supply.md` 4.4.3, the birth and death scales of `spec-population.md` 6.6, the edge statuses of `spec-regions.md` 7 and the transit factor of `spec-transport.md` 10.3, the endowment shock scales of `spec-resources.md` 6.3, the outside price shock of `spec-external-sector.md` 6.5, the rent scales of the tenure module (`EndowmentScale{Region, Resource; BP}`, `spec-land.md` 9.1), the rate scales of the credit module (`RegionScale{Region; BP}`, `spec-credit.md` 13.1), the legal levels and the right suspensions of the institutions module (`spec-institutions.md` 7.1), the flow scale of a fiscal flow (`spec-fiscal.md` 13.1, the slot of `spec-money-supply.md` 4.4.3) and the route and store risk scales of the risk module (`spec-risk.md` 9); the public calls that set them are INT's. State, not fields, are also the own-use mode `OwnUse` and the counter `OwnUseJobs` of an agent (`spec-subsistence.md` 5.3), the journey of a migrating agent (`spec-migration.md` 14) and the contracts in flight (`spec-merchants.md` 16).
+
+### 3.7.1 The fields of the fourteen later modules
+
+This is the catalogue of the fourteen modules of wave 5 (3.1), in the order of the `Modules` row, and of the fields they add to the types of the earlier specs (`Role`, `Recipe`, `FlowTarget`). It has one row per field that is not presentation-only: the presentation-only `Label` of a store class, a settlement class, a jurisdiction, a facility class, a technology field, a policy actor, a body, a right, a control, a rate limit and each of the six fiscal kinds is on the allow-list of 8.3 and has no row (9.2). The **Scope** is the Go type that holds the field, as the owner spec names it; the module's own row has the scope `Modules`. `Default` and `Bound` are the owner's, and "required" means that the field has no default. Bounds in capitals are constants of 4.1. The **Owner** is the spec and the section that says what the field means; the owner table of `specs/README.md` and the registry of `spec-calibration.md` are written from this table (9.2).
+
+| Scope | Field | Default | Bound | Owner |
+|-------|-------|---------|-------|-------|
+| `Modules` | `Settlements` | nil (off); needs no other module | | `spec-settlements.md` 3.1, 8 |
+| `Settlements` | `Classes` | required, at least one | 1 to `MaxSettlementClasses` | `spec-settlements.md` 3.1, 8 |
+| `Settlements` | `BandBP` | 1 000 | 0 to `MaxBandBP` | `spec-settlements.md` 3.4.2, 8 |
+| `Settlements` | `Dwell` | 30 | 0 to `MaxWelfareWindow` | `spec-settlements.md` 3.4.3, 8 |
+| `Settlements` | `Regions` | none | at most `MaxRegions` | `spec-settlements.md` 3.5, 8 |
+| `SettlementClass` | `ID` | required | the ID pattern of 3.3, at most `MaxIDLength` bytes, unique | `spec-settlements.md` 3.1, 8 |
+| `SettlementClass` | `Enter` | required; 0 for the first | 0 to `MaxHouseholds`, strictly increasing | `spec-settlements.md` 3.4.1, 8 |
+| `SettlementClass` | `Flags` | none | each at most once; at most `MaxClassFlags` distinct in the module | `spec-settlements.md` 3.3.1, 8 |
+| `SettlementClass` | `Limits` | none | each name at most once; at most `MaxClassLimits` distinct in the module | `spec-settlements.md` 3.3.2, 8 |
+| `ClassLimit` | `Name` | required | the ID pattern of 3.3 | `spec-settlements.md` 3.3.2, 8 |
+| `ClassLimit` | `Value` | required | 0 to `MaxQuantity` | `spec-settlements.md` 3.3.2, 8 |
+| `RegionSettlement` | `Region` | required | a defined region that is not an outside node | `spec-settlements.md` 3.5, 8 |
+| `RegionSettlement` | `ThresholdBP` | 10 000 | 1 to `MaxThresholdBP` | `spec-settlements.md` 3.5.2, 8 |
+| `RegionSettlement` | `Floor` | none | a defined class ID | `spec-settlements.md` 3.5.3, 8 |
+| `Role` | `Needs` | none | a flag some class carries; the module on | `spec-settlements.md` 6.4.1, 8 |
+| `Role` | `Ceiling` | none | a limit some class carries; the module on | `spec-settlements.md` 6.4.2, 8 |
+| `Modules` | `Storage` | nil (off) | | `spec-storage.md` 12.1 |
+| `Storage` | `Base` | `nil`: unlimited | `Mass` and `Bulk` each 0 to `MaxRoom` | `spec-storage.md` 12.1 |
+| `Storage` | `Roles` | none | at most one row per role | `spec-storage.md` 12.1 |
+| `Storage` | `Classes` | none | at most `MaxStoreClasses` | `spec-storage.md` 12.1 |
+| `Capacity` | `Mass` | required | 0 to `MaxRoom` | `spec-storage.md` 12.1 (the type is `spec-goods.md` 3.2) |
+| `Capacity` | `Bulk` | required | 0 to `MaxRoom` | `spec-storage.md` 12.1 (the type is `spec-goods.md` 3.2) |
+| `RoleRoom` | `Role` | required | an existing role | `spec-storage.md` 12.1 |
+| `RoleRoom` | `Base` | `nil`: unlimited | as `Storage.Base` | `spec-storage.md` 12.1 |
+| `RoleRoom` | `Stores` | none | at most `MaxStoresPerAgent`, existing classes; not on an unlimited role | `spec-storage.md` 12.1 |
+| `StoreClass` | `ID` | required | the ID pattern of 3.3 | `spec-storage.md` 3.2, 12.1 |
+| `StoreClass` | `Mass` | required | 0 to `MaxRoom`; not both 0 | `spec-storage.md` 3.2, 12.1 |
+| `StoreClass` | `Bulk` | required | 0 to `MaxRoom`; not both 0 | `spec-storage.md` 3.2, 12.1 |
+| `StoreClass` | `Needs` | empty: none | an existing settlement flag; empty unless `Modules.Settlements` is present | `spec-storage.md` 3.2.3, 12.1 (the flag is `spec-settlements.md`'s) |
+| `FlowTarget` | `Store` | empty (every class) | a configured store class; meaning only for the kind `stores` | `spec-storage.md` 7.1.2, 12.3 (the type is `spec-money-supply.md` 4.1) |
+| `Modules` | `Employment` | nil (off) | | `spec-employment.md` 3.1, 13 |
+| `Employment` | `MaxOpen` | 1 000 | 1 to `MaxHireRecords` (the most hires open at once in a region) | `spec-employment.md` 13 |
+| `Role` | `Hireable` | false | a bool; needs the module | `spec-employment.md` 3.1, 13 |
+| `Role` | `Employer` | nil: the role does not hire | needs the module | `spec-employment.md` 3.2, 13 |
+| `Employer` | `Recipes` | required | at least 1, known, no duplicate, on the role's `Recipes` | `spec-employment.md` 3.2, 13 |
+| `Employer` | `MaxHires` | 4 | 1 to `MaxEstablishment` | `spec-employment.md` 3.2, 13 |
+| `Employer` | `WorkerShareBP` | 5 000 | 1 to 10 000 | `spec-employment.md` 3.2, 5.4, 13 |
+| `Employer` | `HireYieldBP` | 10 000 | 1 to `MaxYieldBP` | `spec-employment.md` 3.2, 6.1, 13 |
+| `Modules` | `Tenure` | nil (off); needs `Modules.Resources` | | `spec-land.md` 3.3, 10 |
+| `Tenure` | `Terms` | none (open access) | one row per (region, resource) | `spec-land.md` 3.3, 10 |
+| `Tenure` | `Holdings` | none | at most `MaxHoldings`; one row per (region, resource, holder) | `spec-land.md` 3.3, 10 |
+| `Tenure` | `RentStepBP` | 0 (the rent does not move) | 0 to `MaxRentStepBP` | `spec-land.md` 5.5, 10 |
+| `Tenure` | `RentFloorBP` | 0 | 0 to 10 000 | `spec-land.md` 5.5, 10 |
+| `Tenure` | `RentCeilingBP` | 20 000 | 10 000 to `MaxRentCeilingBP` | `spec-land.md` 5.5, 10 |
+| `Tenure` | `OwnUseExempt` | false | a bool | `spec-land.md` 5.3.4, 10 |
+| `Tenure` | `MaxHolderShareBP` | 10 000 (off) | 1 to 10 000 | `spec-land.md` 6.1.2, 10 |
+| `TenureTerm` | `Region` | required | an existing region; not an outside node | `spec-land.md` 10 |
+| `TenureTerm` | `Resource` | required | an existing resource | `spec-land.md` 10 |
+| `TenureTerm` | `Rent` | 0 | 0 to `MaxPrice` | `spec-land.md` 5.2, 10 |
+| `TenureTerm` | `Closed` | false | a bool | `spec-land.md` 4.3, 10 |
+| `Holding` | `Region` | required | an existing region; not an outside node | `spec-land.md` 10 |
+| `Holding` | `Resource` | required | an existing resource | `spec-land.md` 10 |
+| `Holding` | `Holder` | required | an existing role, or `pool` | `spec-land.md` 10 |
+| `Holding` | `ShareBP` | required | 1 to 10 000; the sum over an endowment at most 10 000 | `spec-land.md` 10 |
+| `Modules` | `Credit` | nil (off); needs no other module | | `spec-credit.md` 4.1, 14 |
+| `Credit` | `MinPrincipal` | required | 1 to `MaxMoney` | `spec-credit.md` 14 |
+| `Credit` | `ShieldTicks` | 0 (no shield) | 0 to `MaxCreditTerm` | `spec-credit.md` 8.2, 14 |
+| `Credit` | `WriteOffTicks` | 0 (never) | 0 to `MaxCreditTerm` | `spec-credit.md` 8.5, 14 |
+| `Credit` | `MaxClaims` | required | 1 to `MaxOpenClaims` | `spec-credit.md` 6.4, 14 |
+| `Role` | `Credit` | nil: the role does not deal in credit | exactly one of `Lend` and `Borrow` | `spec-credit.md` 4.2, 14 |
+| `CreditTerms` | `Lend` | nil | one of the two blocks, not both | `spec-credit.md` 4.2 |
+| `CreditTerms` | `Borrow` | nil | one of the two blocks, not both | `spec-credit.md` 4.2 |
+| `Lend` | `RateBP` | required (0 is interest-free and is written, never defaulted) | 0 to `MaxCreditRateBP` | `spec-credit.md` 7.1, 14 |
+| `Lend` | `MaxTermTicks` | required | 1 to `MaxCreditTerm` | `spec-credit.md` 10.3, 14 |
+| `Lend` | `KeepTicks` | 0 | 0 to `MaxCreditTerm` | `spec-credit.md` 10.3, 14 |
+| `Lend` | `ShareBP` | required | 1 to 10 000 | `spec-credit.md` 10.3, 14 |
+| `Borrow` | `MaxRateBP` | required (0 accepts only interest-free credit) | 0 to `MaxCreditRateBP` | `spec-credit.md` 10.2, 14 |
+| `Borrow` | `MaxDebtTicks` | required | 1 to `MaxCreditTerm` | `spec-credit.md` 5.3.3, 14 |
+| `Borrow` | `SlackTicks` | 0 | 0 to `MaxCreditTerm` | `spec-credit.md` 10.2, 14 |
+| `Modules` | `Risk` | nil (off) | | `spec-risk.md` 12.1 |
+| `Risk` | `Routes` | none | at most `MaxRiskRows`, one per key | `spec-risk.md` 3.2.1, 12.1 |
+| `Risk` | `Stores` | none | at most `MaxRiskRows`, one per key | `spec-risk.md` 3.2.2, 12.1 |
+| `RouteRisk` | `From` | required | a configured edge; neither end an outside node | `spec-risk.md` 3.2.1 |
+| `RouteRisk` | `To` | required | a configured edge; neither end an outside node | `spec-risk.md` 3.2.1 |
+| `RouteRisk` | `Mode` | required | an existing mode | `spec-risk.md` 3.2.1 |
+| `RouteRisk` | `StrikeBP` | required | 1 to 10 000 | `spec-risk.md` 3.2, 3.4 |
+| `RouteRisk` | `SeverityBP` | required | 1 to 10 000 | `spec-risk.md` 3.2, 3.4 |
+| `RouteRisk` | `Common` | false | a bool | `spec-risk.md` 3.2, 3.3 |
+| `StoreRisk` | `Region` | required | a region that is not an outside node | `spec-risk.md` 3.2.2 |
+| `StoreRisk` | `Class` | required | an existing store class | `spec-risk.md` 3.2.2 |
+| `StoreRisk` | `StrikeBP` | required | 1 to 10 000 | `spec-risk.md` 3.2, 3.4 |
+| `StoreRisk` | `SeverityBP` | required | 1 to 10 000 | `spec-risk.md` 3.2, 3.4 |
+| `StoreRisk` | `Common` | false | a bool | `spec-risk.md` 3.2, 3.3 |
+| `Modules` | `Infrastructure` | nil (off) | | `spec-infrastructure.md` 12.1 |
+| `Infrastructure` | `Classes` | empty (the module is then inert) | at most `MaxFacilityClasses` | `spec-infrastructure.md` 12.1 |
+| `Infrastructure` | `Initial` | empty | at most `MaxInitialRows`, one row per key | `spec-infrastructure.md` 12.1, 3.4.2 |
+| `FacilityClass` | `ID` | required | the ID pattern of 3.3 | `spec-infrastructure.md` 3.1 |
+| `FacilityClass` | `Kind` | required | `site`, `route`, `ground` or `store` | `spec-infrastructure.md` 3.1, 12.2 |
+| `FacilityClass` | `Durability` | required | 2 to `MaxDurability` | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Decay` | 0 | 0 to `Durability - 1` | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `WearPerUse` | 0 (site) | 0 to `Durability` | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Capacity` | required for a site | 1 to `MaxFacilityCapacity` | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `BoostBP` | required (route, ground) | 1 to `MaxBoostBP` | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Modes` | required (route) | 1 to `MaxRouteModes`, each a mode of the transport module | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Resource` | required (ground) | a resource of the resources module | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Store` | required (store) | a store class of the storage module | `spec-infrastructure.md` 12.2 |
+| `FacilityClass` | `Needs` | empty: none | a settlement flag of the settlements module | `spec-infrastructure.md` 8, 12.2 |
+| `InitialFacility` | `Region` | required | a region; not an outside node | `spec-infrastructure.md` 3.4.2 |
+| `InitialFacility` | `Class` | required | a facility class | `spec-infrastructure.md` 3.4.2 |
+| `InitialFacility` | `Toward` | empty: every edge leaving `Region` (route only) | a region; not an outside node | `spec-infrastructure.md` 3.4.2 |
+| `InitialFacility` | `Role` | empty: the region's estate | a role with a group in the region | `spec-infrastructure.md` 3.4.2 |
+| `InitialFacility` | `Count` | required | 1 to `MaxInitialCount` | `spec-infrastructure.md` 3.4.2 |
+| `Recipe` | `Needs` | none | site classes, each at most once, at most `MaxRecipeNeeds` | `spec-infrastructure.md` 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `Recipe` | `Builds` | nil | at most one of `Builds` and `Repairs` | `spec-infrastructure.md` 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `Recipe` | `Repairs` | nil | at most one of `Builds` and `Repairs` | `spec-infrastructure.md` 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `FacilityBuild` | `Class` | required | a facility class | `spec-infrastructure.md` 4.1.1 |
+| `FacilityBuild` | `Toward` | empty: every edge leaving the region (route only) | a region of the configuration; not an outside node | `spec-infrastructure.md` 4.1.1 |
+| `FacilityRepair` | `Class` | required | a facility class | `spec-infrastructure.md` 4.1.1 |
+| `FacilityRepair` | `Units` | required | 1 to the class's `Durability` | `spec-infrastructure.md` 4.1.1 |
+| `Modules` | `Insurance` | nil (off); needs `Modules.Risk` and `Modules.Credit` | | `spec-insurance.md` 4.1, 13 |
+| `Insurance` | `ValueCapBP` | required | 1 to `MaxValueCapBP` | `spec-insurance.md` 6.2, 13 |
+| `Insurance` | `PayoutTicks` | 1 | 1 to `MaxCreditTerm` | `spec-insurance.md` 8.4, 13 |
+| `Insurance` | `MinSum` | required | 1 to `MaxMoney` | `spec-insurance.md` 7.4, 13 |
+| `Insurance` | `MaxPolicies` | required | 1 to `MaxOpenPolicies` | `spec-insurance.md` 7.4, 13 |
+| `Insurance` | `MaxCoverRequests` | 4 | 1 to `MaxCoverRequestsBound` | `spec-insurance.md` 5.2, 13 |
+| `Role` | `Cover` | nil: the role does not deal in cover | exactly one of `Underwrite` and `Insure` | `spec-insurance.md` 4.2, 13 |
+| `CoverTerms` | `Underwrite` | nil | one of the two blocks, not both | `spec-insurance.md` 4.2 |
+| `CoverTerms` | `Insure` | nil | one of the two blocks, not both | `spec-insurance.md` 4.2 |
+| `Underwrite` | `LoadingBP` | required | 0 to `MaxLoadingBound` | `spec-insurance.md` 6.4, 13 |
+| `Underwrite` | `StoreRateBP` | required | 0 to `MaxStoreRateBound` | `spec-insurance.md` 6.4, 13 |
+| `Underwrite` | `CoverBP` | required | 1 to 10 000 | `spec-insurance.md` 4.2, 13 |
+| `Underwrite` | `CapBP` | required | 1 to `MaxCapBound` | `spec-insurance.md` 4.2, 13 |
+| `Underwrite` | `ShareBP` | required | 1 to 10 000 | `spec-insurance.md` 10.3, 13 |
+| `Insure` | `MinLossBP` | required (0 means no route cover) | 0 to 10 000 | `spec-insurance.md` 4.2, 10.2, 13 |
+| `Insure` | `RuinShareBP` | required | 0 to `MaxRuinBound` | `spec-insurance.md` 10.2, 13 |
+| `Insure` | `MaxLoadingBP` | required | 0 to `MaxLoadingBound` | `spec-insurance.md` 10.2, 13 |
+| `Insure` | `MinCoverBP` | required | 1 to 10 000 | `spec-insurance.md` 10.2, 13 |
+| `Insure` | `StoreShareBP` | 0 (buys none) | 0 to 10 000 | `spec-insurance.md` 10.2, 13 |
+| `Insure` | `MaxStoreRateBP` | required | 0 to `MaxStoreRateBound` | `spec-insurance.md` 10.2, 13 |
+| `Modules` | `Polity` | nil (off); needs no other module | | `spec-polity.md` 8 |
+| `Polity` | `Jurisdictions` | none | at most `MaxJurisdictions` | `spec-polity.md` 3, 8 |
+| `Polity` | `Members` | none | one row per region, at most `MaxRegions` | `spec-polity.md` 3.4, 8 |
+| `Jurisdiction` | `ID` | required | the ID pattern of 3.3, unique | `spec-polity.md` 3.2, 8 |
+| `Jurisdiction` | `Parent` | empty: a root | a defined jurisdiction other than itself, no cycle, fewer than `MaxPolityDepth` ancestors | `spec-polity.md` 3.3, 8 |
+| `Jurisdiction` | `Seat` | empty: a grouping | a region it covers that is not an outside node | `spec-polity.md` 3.5, 8 |
+| `Jurisdiction` | `StartMoney` | 0 | 0 to `MaxMoney`; only with a seat | `spec-polity.md` 3.5.4, 8 |
+| `Member` | `Region` | required | a defined region | `spec-polity.md` 3.4, 8 |
+| `Member` | `Jurisdiction` | required | a defined jurisdiction | `spec-polity.md` 3.4, 8 |
+| `Modules` | `Fiscal` | nil (off); needs `Modules.Polity` with a governed jurisdiction | | `spec-fiscal.md` 3.1, 14 |
+| `Fiscal` | `Taxes` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 5, 14 |
+| `Fiscal` | `Duties` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 6, 14 |
+| `Fiscal` | `Tolls` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 7, 14 |
+| `Fiscal` | `Payouts` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 8, 14 |
+| `Fiscal` | `Purchases` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 9, 14 |
+| `Fiscal` | `Releases` | none | all six lists together at most `MaxFiscalFlows` | `spec-fiscal.md` 3.1, 9, 14 |
+| `Tax`, `Duty`, `Toll`, `Payout`, `Purchase`, `Release` | `ID` | required | the ID pattern of 3.3, unique across the six kinds; not a built-in reason or a flow of the money-supply module | `spec-fiscal.md` 3.1.1, 3.4 |
+| `Tax`, `Duty`, `Toll`, `Payout`, `Purchase`, `Release` | `Authority` | required | a governed jurisdiction | `spec-fiscal.md` 3.1 |
+| `Window` | `Start` | 0 | `Until` 0 or above `Start` | `spec-fiscal.md` 3.1.2, 14 |
+| `Window` | `Until` | 0 (never ends) | 0 or above `Start` | `spec-fiscal.md` 3.1.2, 14 |
+| `Window` | `Seasons` | empty: every season | seasons of the calendar | `spec-fiscal.md` 3.1.2, 14 |
+| `FlowTarget` | `Jurisdiction` | empty | a governed jurisdiction below the authority; kind `treasury` only | `spec-fiscal.md` 3.2, 14 (the type is `spec-money-supply.md` 4.1) |
+| `FlowTarget` | `Kind` | as `spec-money-supply.md` 4.1 | the new values `stores` (the storage module) and `treasury` (the fiscal module) join the kinds of the money-supply module | `spec-money-supply.md` 4.1 (the field and the type); `spec-storage.md` 7.1.2, `spec-fiscal.md` 3.2 (the values) |
+| `Tax` | `Target` | required | a known region, role and jurisdiction; `Region` covered | `spec-fiscal.md` 3.2, 5.1.2, 14 |
+| `Tax` | `Amount` | 0 | 0 to `MaxFlowAmount` | `spec-fiscal.md` 5.1, 14 |
+| `Tax` | `RateBP` | 0 | 0 to `MaxFlowRateBP` | `spec-fiscal.md` 5.1, 14 |
+| `Tax` | `Exempt` | 0 | 0 to `MaxFlowAmount` | `spec-fiscal.md` 5.1, 14 |
+| `Tax`, `Payout` | `Per` | `tick` | `tick` or `year` | `spec-fiscal.md` 5.1, 8.1, 14 |
+| `Duty` | `Region` | empty: every region the authority covers | a covered region | `spec-fiscal.md` 6.1, 14 |
+| `Duty` | `Commodity` | empty: every commodity | a known commodity | `spec-fiscal.md` 6.1, 14 |
+| `Duty` | `Payer` | required | `seller` or `buyer` | `spec-fiscal.md` 6.1, 14 |
+| `Duty` | `Scope` | `any` | `domestic`, `import`, `export` or `any` | `spec-fiscal.md` 6.1.1, 14 |
+| `Duty` | `RateBP` | required | 1 to `MaxDutyBP` | `spec-fiscal.md` 6.1, 14 |
+| `Toll` | `On` | required | `exit` or `enter` | `spec-fiscal.md` 7.1, 14 |
+| `Toll` | `Mode` | empty: every mode | a configured mode | `spec-fiscal.md` 7.1, 14 |
+| `Toll` | `Amount` | required | 1 to `MaxFlowAmount` | `spec-fiscal.md` 7.1, 14 |
+| `Payout` | `Target` | required | as a tax's; `Role` and `Region` covered | `spec-fiscal.md` 3.2, 8.1, 14 |
+| `Payout` | `Commodity` | empty: money | a known commodity | `spec-fiscal.md` 8.1, 14 |
+| `Payout` | `Amount` | 0 | 0 to `MaxFlowAmount` | `spec-fiscal.md` 8.1, 14 |
+| `Payout` | `Level` | 0 | 0 to `MaxFlowAmount`; money only | `spec-fiscal.md` 8.1, 14 |
+| `Payout` | `NotIncome` | false | a bool; households only | `spec-fiscal.md` 8.1, 14 |
+| `Purchase`, `Release` | `Commodity` | required | a known commodity | `spec-fiscal.md` 9.1, 14 |
+| `Purchase`, `Release` | `Quantity` | required | 1 to `MaxQuantity` | `spec-fiscal.md` 9.1, 14 |
+| `Purchase`, `Release` | `LimitBP` | required | 1 to `MaxLimitBP` | `spec-fiscal.md` 9.1, 9.2, 14 |
+| `Purchase` | `Hold` | 0 (no cap) | 0 to `MaxQuantity` | `spec-fiscal.md` 9.1, 14 |
+| `Release` | `Reserve` | 0 | 0 to `MaxQuantity` | `spec-fiscal.md` 9.1, 14 |
+| `Modules` | `Institutions` | nil (off) | | `spec-institutions.md` 9 |
+| `Institutions` | `Bodies` | none | at most `MaxBodies` | `spec-institutions.md` 9 |
+| `Institutions` | `Rights` | none | at most `MaxRights` | `spec-institutions.md` 9 |
+| `Institutions` | `Controls` | none | at most `MaxControls`, shared with `RateLimits` | `spec-institutions.md` 9 |
+| `Institutions` | `RateLimits` | none | at most `MaxControls`, shared with `Controls` | `spec-institutions.md` 9 |
+| `Institutions` | `OwnUseBound` | false | a bool | `spec-institutions.md` 5.5.2, 9 |
+| `Body` | `ID` | required | the ID pattern of 3.3, unique | `spec-institutions.md` 3.2.2, 9 |
+| `Body` | `Roles` | required | at least one, defined, no (role, region) in two bodies | `spec-institutions.md` 3, 9 |
+| `Body` | `Regions` | empty | defined, not an outside node; with `Jurisdictions`, at least one region in all | `spec-institutions.md` 3, 9 |
+| `Body` | `Jurisdictions` | empty | defined; needs `Modules.Polity` | `spec-institutions.md` 3, 9 |
+| `Body` | `Places` | 0 (no limit) | 0 to `MaxHouseholds` | `spec-institutions.md` 3, 9 |
+| `Body` | `MaxTrainees` | 0 (the role's alone) | 0 to 100 | `spec-institutions.md` 3, 9 |
+| `Body` | `Needs` | empty | a defined settlement flag; needs `Modules.Settlements` | `spec-institutions.md` 3, 9 |
+| `Right` | `ID` | required | as a body | `spec-institutions.md` 5, 9 |
+| `Right` | `Body` | empty: a prohibition | a defined body | `spec-institutions.md` 5, 9 |
+| `Right` | `Activity` | required | `produce`, `sell`, `buy` or `train` | `spec-institutions.md` 5, 9 |
+| `Right` | `Subject` | required | defined, of the kind the activity names | `spec-institutions.md` 5, 9 |
+| `Right` | `Region` | required (exactly one of `Region` and `Jurisdiction`) | a region that is not an outside node | `spec-institutions.md` 5, 9 |
+| `Right` | `Jurisdiction` | required (exactly one of `Region` and `Jurisdiction`) | a defined jurisdiction; needs `Modules.Polity` | `spec-institutions.md` 5, 9 |
+| `Right` | `Who` | `principal` | `principal`, `executor` or `both`; `produce` only | `spec-institutions.md` 5.1.2, 9 |
+| `Control` | `ID` | required | as a body, one namespace with `RateLimit` | `spec-institutions.md` 6.1, 9 |
+| `Control` | `Commodity` | required | a defined commodity | `spec-institutions.md` 6.1, 9 |
+| `Control` | `Region` | required (exactly one of `Region` and `Jurisdiction`) | as a right | `spec-institutions.md` 6.1, 9 |
+| `Control` | `Jurisdiction` | required (exactly one of `Region` and `Jurisdiction`) | as a right | `spec-institutions.md` 6.1, 9 |
+| `Control` | `CapBP` | 0 (none) | 0 to `MaxBasisPoints` | `spec-institutions.md` 6.1, 9 |
+| `Control` | `FloorBP` | 0 (none) | 0 to `CapBP` when a cap is set | `spec-institutions.md` 6.1, 9 |
+| `RateLimit` | `ID` | required | as a control | `spec-institutions.md` 6.1, 9 |
+| `RateLimit` | `Region` | required (exactly one of `Region` and `Jurisdiction`) | as a right; needs `Modules.Credit` | `spec-institutions.md` 6.1, 9 |
+| `RateLimit` | `Jurisdiction` | required (exactly one of `Region` and `Jurisdiction`) | as a right; needs `Modules.Credit` | `spec-institutions.md` 6.1, 9 |
+| `RateLimit` | `CapBP` | required | 0 to `MaxCreditRateBP`; 0 is interest-free | `spec-institutions.md` 6.1, 9 |
+| `Modules` | `Policy` | nil (off); needs `Modules.Polity` with at least one jurisdiction | | `spec-policy.md` 3.1, 10 |
+| `Policy` | `Actors` | none | at most `MaxActors` | `spec-policy.md` 3.1, 10 |
+| `PolicyActor` | `ID` | required | the ID pattern of 3.3, unique | `spec-policy.md` 3.1, 10 |
+| `PolicyActor` | `Jurisdiction` | required | a defined jurisdiction, at most one actor each | `spec-policy.md` 3.2, 10 |
+| `PolicyActor` | `Policy` | required (a registered name) | a built-in or a name registered with `WithPolicy` | `spec-policy.md` 4.5, 10 |
+| `PolicyActor` | `Every` | required | 1 to `MaxPolicyEvery` | `spec-policy.md` 7.2, 10 |
+| `PolicyActor` | `ReadsRegions` | false | a bool | `spec-policy.md` 5.4, 10 |
+| `PolicyActor` | `Levers` | none | at most `MaxLevers` | `spec-policy.md` 3.4, 10 |
+| `PolicyActor` | `Schedule` | none | at most `MaxScheduleSteps`; only with `schedule` | `spec-policy.md` 8.2, 10 |
+| `PolicyActor` | `Cycle` | 0 (no cycle) | 0, or 1 to `MaxPolicyCycle`; only with `schedule` | `spec-policy.md` 8.2, 10 |
+| `PolicyActor` | `Rules` | none | one per lever; only with `rule` | `spec-policy.md` 8.3, 10 |
+| `Lever` | `ID` | required | the ID pattern of 3.3, unique within the actor | `spec-policy.md` 3.4 |
+| `Lever` | `Kind` | required | `flow`, `edge` or `transit` (a reserved kind is `ErrOutOfBounds`) | `spec-policy.md` 3.4, 6.3 |
+| `Lever` | `Flow` | by kind | a defined flow, in reach | `spec-policy.md` 3.5, 6.3 |
+| `Lever` | `From` | by kind | a defined region, in reach | `spec-policy.md` 3.5, 6.3 |
+| `Lever` | `To` | by kind | a defined region, in reach | `spec-policy.md` 3.5, 6.3 |
+| `Lever` | `Mode` | by kind | a defined mode | `spec-policy.md` 3.5, 6.3 |
+| `Lever` | `Against` | by kind | a defined jurisdiction | `spec-policy.md` 3.4.3 |
+| `Lever` | `Min` | required | inside the slot's bound; `Min <= Default <= Max` | `spec-policy.md` 3.4.1 |
+| `Lever` | `Max` | required | inside the slot's bound; `Min <= Default <= Max` | `spec-policy.md` 3.4.1 |
+| `Lever` | `MaxStep` | 0 (no limit) | 0, or 1 to the slot's bound | `spec-policy.md` 3.4.1, 6.2.2 |
+| `Lever` | `MayClose` | false | kind `edge` only | `spec-policy.md` 3.4.1, 6.2.1 |
+| `ScheduleStep` | `Lever` | required | a lever of the actor | `spec-policy.md` 8.2 |
+| `ScheduleStep` | `At` | required | 0 to `MaxScheduleTick`; below `Cycle` when there is one | `spec-policy.md` 8.2 |
+| `ScheduleStep` | `BP` | required | in `[Min, Max]` of the lever | `spec-policy.md` 8.2 |
+| `ScheduleStep` | `Closed` | false | `MayClose` only | `spec-policy.md` 8.2 |
+| `Reaction` | `Lever` | required | one per lever | `spec-policy.md` 8.3 |
+| `Reaction` | `Gauge` | required | `treasury`, `unfed_share`, `mean_ratio` or `price` | `spec-policy.md` 8.3.2 |
+| `Reaction` | `Commodity` | required for `price` | a defined commodity; empty otherwise | `spec-policy.md` 8.3.2 |
+| `Reaction` | `MaxAge` | required for `price` | 0 to `MaxPolicyEvery`; 0 otherwise | `spec-policy.md` 8.3.2 |
+| `Reaction` | `Target` | required | 0 to `MaxMoney` | `spec-policy.md` 8.3.1 |
+| `Reaction` | `Deadband` | 0 | 0 to `MaxMoney` | `spec-policy.md` 8.3.1, 8.3.6 |
+| `Reaction` | `Span` | required | 1 to `MaxMoney` | `spec-policy.md` 8.3.1 |
+| `Reaction` | `Move` | required | 0 to `MaxMoveBP` | `spec-policy.md` 8.3.1 |
+| `Reaction` | `Raise` | false | a bool | `spec-policy.md` 8.3.1 |
+| `Modules` | `Saving` | nil (off) | | `spec-saving-and-investment.md` 3.2, 10 |
+| `Saving` | `SafetyTicks` | 2 | 0 to `MaxSafetyTicks` | `spec-saving-and-investment.md` 5.6.1, 10.2 |
+| `Saving` | `HurdleSpreadBP` | 20 000 | 0 to `MaxHurdleSpreadBP` | `spec-saving-and-investment.md` 5.5.2, 10.2 |
+| `Saving` | `CommitBandBP` | 2 000 | 0 to `MaxCommitBandBP` | `spec-saving-and-investment.md` 5.5.3, 10.2 |
+| `Role` | `Saver` | nil: the role has no saving behaviour | present or nil | `spec-saving-and-investment.md` 3.2, 10 |
+| `Saver` | `PrecautionShareBP` | 0 (no buffer) | 0 to `MaxPrecautionShareBP` | `spec-saving-and-investment.md` 4.2, 10.2 |
+| `Saver` | `PrecautionCapTicks` | 30 | 0 to `MaxPrecautionCapTicks` | `spec-saving-and-investment.md` 4.2, 10.2 |
+| `Saver` | `HurdleBP` | 15 000 | 10 000 to `MaxHurdleBP` | `spec-saving-and-investment.md` 5.5.1, 10.2 |
+| `Saver` | `PaybackTicks` | 180 | 1 to `MaxPaybackTicks` | `spec-saving-and-investment.md` 5.3, 10.2 |
+| `Saver` | `RepairBelowBP` | 5 000 | 0 to 10 000; 0 never repairs | `spec-saving-and-investment.md` 5.8, 10.2 |
+| `Saver` | `Worth` | none | at most `MaxWorthRows`, each class once | `spec-saving-and-investment.md` 5.3.2, 10.2 |
+| `ProjectWorth` | `Class` | required | a facility class | `spec-saving-and-investment.md` 3.2, 10.2 |
+| `ProjectWorth` | `PerTick` | required | 1 to `MaxWorthPerTick` | `spec-saving-and-investment.md` 3.2, 10.2 |
+| `ProjectWorth` | `Count` | required | 1 to `MaxWorthCount` | `spec-saving-and-investment.md` 3.2, 10.2 |
+| `Modules` | `Technology` | nil (off) | | `spec-technology.md` 9.1 |
+| `Technology` | `Fields` | empty (the module is then inert) | at most `MaxTechFields` | `spec-technology.md` 9.1 |
+| `TechField` | `ID` | required | the ID pattern of 3.3 | `spec-technology.md` 3.1 |
+| `TechField` | `Recipes` | required | 1 to `MaxFieldRecipes`, each a recipe, none in another field | `spec-technology.md` 3.1, 9.2 |
+| `TechField` | `CapBP` | required | 1 to `MaxGainBP` | `spec-technology.md` 9.2 |
+| `TechField` | `Base` | required with `DoublingBP` above 0, else 0 | 1 to `MaxTechBase` | `spec-technology.md` 9.2 |
+| `TechField` | `DoublingBP` | 0 (off) | 0 to `MaxDoublingBP` | `spec-technology.md` 9.2 |
+| `TechField` | `TrendBP` | 0 (off) | 0 to `MaxTechTrendBP` | `spec-technology.md` 9.2 |
+| `TechField` | `DiscoveryBP` | 0 (off) | 0 to `MaxDiscoveryBP` | `spec-technology.md` 9.2 |
+| `TechField` | `StepBP` | required with `DiscoveryBP` above 0, else 0 | 1 to `MaxStepBP` | `spec-technology.md` 9.2 |
+| `TechField` | `CatchUpBP` | 0 (off) | 0 to `MaxCatchUpBP` | `spec-technology.md` 9.2 |
+| `TechField` | `Reach` | required with `CatchUpBP` above 0, else 0 | 1 to `MaxDistance` | `spec-technology.md` 9.2 |
+
+Where the owner spec names the Go type of a module differently from the scope of its row (`TenureConfig` in `spec-land.md` 3.3, `PolicyConfig` in `spec-policy.md` 3.1.2, which cannot be `Policy`: that name is the extension interface of architecture.md 4.3), the scope here is the module's field name in `Modules`, as the owner tables use it.
 
 ## 4. Constants and bounds
 
@@ -300,6 +578,78 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxLotUnits` | 64 | a merchant's lot cap in carrying units; with `MaxQuantity` and `MaxPrice` a lot's product fits `int64` through the 128-bit helper (`spec-merchants.md` 13) |
 | `MaxContracts` | 1 000 000 | delivery contracts in flight, so Escrow accounts (`spec-merchants.md` 13) |
 | `MaxTimeCostBP` | 100 000 | ten times the upkeep for each tick away (`spec-merchants.md` 13) |
+| `MaxRoom` | 10^12 per dimension | the mass room or the bulk room of a base room or of a store class; with `MaxWeight` it is 10^18, and the largest room of an account (a base room of a cohort and `MaxStoresPerAgent` stores) is below `int64` (`spec-storage.md` 12.2) |
+| `MaxStoresPerAgent` | 8 | stores one agent may own (`spec-storage.md` 12.2) |
+| `MaxStoreClasses` | 64 | store classes in a pack (`spec-storage.md` 12.2) |
+| `MaxEstablishment` | 1 000 | hired executions in progress at once of one employer; with `MaxQuantity` and `MaxPrice` the product of a bill fits `int64` through the 128-bit helper (`spec-employment.md` 13) |
+| `MaxHireRecords` | 1 000 000 | the hires open at once in a region; the Escrow accounts are at most this many (as `MaxContracts`) (`spec-employment.md` 13) |
+| `MaxSettlementClasses` | 16 | size classes of the settlements module; a ranking of settlements is short, and each region holds one threshold per class (`spec-settlements.md` 8.1) |
+| `MaxClassFlags` | 64 | distinct flags in the module, so that a class's flags fit one `uint64` (`spec-settlements.md` 8.1) |
+| `MaxClassLimits` | 64 | distinct limits in the module (`spec-settlements.md` 8.1) |
+| `MaxBandBP` | 5 000 | the band below an enter threshold: a leave threshold is at least half the enter threshold (`spec-settlements.md` 8.1) |
+| `MaxThresholdBP` | 100 000 | a region's scale of the enter thresholds: ten times, as `MaxYieldBP` (`spec-settlements.md` 8.1) |
+| `MaxRentStepBP` | 10 000 | the step of a posted rent each tick, basis points of the configured rate (`spec-land.md` 10) |
+| `MaxRentCeilingBP` | 100 000 | the highest posted rent, ten times the configured rate (`spec-land.md` 10) |
+| `MaxHoldings` | 4 096 | initial titles (rows) of the tenure module (`spec-land.md` 10) |
+| `MaxTitleTransfers` | 1 024 | entries of one `TransferTitles` call (`spec-land.md` 10) |
+| `MaxCreditRateBP` | 100 000 | ten times the principal a year: a rate above it is a typing error, and with `MaxCreditTerm` and `MaxMoney` the interest product fits 128 bits (`spec-credit.md` 14) |
+| `MaxCreditTerm` | 3 650 | ten Earth years of daily ticks, the order of `MaxWelfareWindow`; a term above it is a different instrument (`spec-credit.md` 14). `spec-insurance.md` reuses it for `PayoutTicks` |
+| `MaxOpenClaims` | 1 000 000 | the claims in the list at once; with `MaxMoney` the owed over all claims is at most the money in existence (`spec-credit.md` 14) |
+| `MaxRiskRows` | 4 096 | rows in each of the two tables of the risk module (`spec-risk.md` 12.2) |
+| `MaxFacilityClasses` | 64 | facility classes, authored by hand (`spec-infrastructure.md` 12.2) |
+| `MaxDurability` | 1 000 000 | condition units of a new facility, a unit being the author's; a product with a capacity or a boost fits (`spec-infrastructure.md` 12.2) |
+| `MaxFacilityCapacity` | 100 000 | executions a whole site facility serves in a start; at most the largest weight of a group is useful (`spec-infrastructure.md` 12.2) |
+| `MaxBoostBP` | 100 000 | the gain of a whole route or ground facility: at most elevenfold (`spec-infrastructure.md` 12.2) |
+| `MaxTotalBoostBP` | 200 000 | the cap of a sum of boosts (`spec-infrastructure.md` 12.2) |
+| `MaxRouteModes` | 8 | transport modes a route class speeds (`spec-infrastructure.md` 12.2) |
+| `MaxRecipeNeeds` | 2 | sites a recipe needs (`spec-infrastructure.md` 12.2) |
+| `MaxFacilities` | 100 000 | the world's list of facilities, a scan a tick (`spec-infrastructure.md` 12.2) |
+| `MaxFacilitiesPerAgent` | 64 | facilities one agent holds; the view carries them (`spec-infrastructure.md` 12.2) |
+| `MaxInitialCount`, `MaxInitialRows` | 1 000, 1 024 | the count of an initial row and the rows, so that construction is bounded (`spec-infrastructure.md` 12.2) |
+| `MaxValueCapBP` | 100 000 | ten times the reference price: a larger cap is a typing error, and the product with `MaxPrice` fits `int64` (`spec-insurance.md` 13) |
+| `MaxLoadingBound` | 100 000 | ten times the fair premium; with `MaxMoney`, 10 000 and 10 000 the premium product fits 128 bits (`spec-insurance.md` 13) |
+| `MaxStoreRateBound` | 10 000 | a premium of the whole sum insured for one tick (`spec-insurance.md` 13) |
+| `MaxCapBound` | 100 000 | ten times the underwriter's money (`spec-insurance.md` 13) |
+| `MaxRuinBound` | 100 000 | ten times the household's money (`spec-insurance.md` 13) |
+| `MaxOpenPolicies` | 1 000 000 | the policies in the list at once (`spec-insurance.md` 13) |
+| `MaxCoverRequestsBound` | 64 | the loop of a plan; with `MaxShipmentLines` the size of a round (`spec-insurance.md` 13) |
+| `MaxJurisdictions` | 1 000 | jurisdictions, the value of `MaxRegions`: a jurisdiction that covers no region draws a warning (`spec-polity.md` 8) |
+| `MaxPolityDepth` | 8 | levels of a chain of jurisdictions: a chain of at most 8 entries, a depth of at most 7 (`spec-polity.md` 8) |
+| `MaxFiscalFlows` | 64 | fiscal flows of all six kinds together, as `MaxMoneyFlows` (`spec-fiscal.md` 11.4) |
+| `MaxDutyBP` | 10 000 | the configured rate of a duty, the whole value of a trade at most at a scale of 10 000 (`spec-fiscal.md` 14) |
+| `MaxLimitBP` | 100 000 | the limit of a purchase or a release as a share of the reference price: ten times (`spec-fiscal.md` 14) |
+| `MaxBodies` | 256 | bodies of the institutions module (`spec-institutions.md` 9) |
+| `MaxRights` | 4 096 | rights (`spec-institutions.md` 9) |
+| `MaxControls` | 4 096 | price controls and rate limits together (`spec-institutions.md` 9) |
+| `MaxActors` | 64 | policy actors: at most one per jurisdiction (`spec-policy.md` 10) |
+| `MaxLevers` | 32 | levers of one actor (`spec-policy.md` 10) |
+| `MaxScheduleSteps` | 256 | steps of one actor's schedule (`spec-policy.md` 10) |
+| `MaxPolicyEvery` | 3 650 | ticks between two decisions: ten years of a 365-tick year (`spec-policy.md` 10) |
+| `MaxPolicyCycle` | 3 650 | the length of a repeating schedule (`spec-policy.md` 10) |
+| `MaxScheduleTick` | 1 000 000 000 | the largest `At` of a schedule step (`spec-policy.md` 10) |
+| `MaxLeverKeys` | 256 | the keys that one `Against` lever expands to (`spec-policy.md` 10) |
+| `MaxMoveBP` | 100 000 | the `Move` of a reaction, basis points of a lever value per `Span` (`spec-policy.md` 10) |
+| `MaxSafetyTicks` | 100 | a margin of ticks of upkeep, not a plan (`spec-saving-and-investment.md` 10.2) |
+| `MaxHurdleSpreadBP` | 100 000 | the spread of the hurdle by agent: the width of `MaxHurdleBP` (`spec-saving-and-investment.md` 10.2) |
+| `MaxCommitBandBP` | 5 000 | the fall of the hurdle for a household that holds half its inputs: at most half the hurdle (`spec-saving-and-investment.md` 10.2) |
+| `MaxPrecautionShareBP` | 20 000 | the share of the drawdown held as a buffer: up to twice the worst hole (`spec-saving-and-investment.md` 10.2) |
+| `MaxPrecautionCapTicks` | 1 000 | the buffer in ticks of upkeep cost, below the largest effective window (`spec-saving-and-investment.md` 10.2) |
+| `MaxHurdleBP` | 100 000 | a return of up to ten times the cost (`spec-saving-and-investment.md` 10.2) |
+| `MaxPaybackTicks` | 36 500 | a hundred years of a 365-tick year (`spec-saving-and-investment.md` 10.2) |
+| `MaxWorthRows` | 16 | `Worth` rows of one role (`spec-saving-and-investment.md` 10.2) |
+| `MaxWorthPerTick` | `MaxMoney / MaxPaybackTicks` | so that `PerTick * T_p` stays within `MaxMoney`; derived (`spec-saving-and-investment.md` 10.2) |
+| `MaxWorthCount` | 16 | facilities of a class per household up to which a `Worth` row counts (`spec-saving-and-investment.md` 10.2) |
+| `MaxTechFields` | 64 | technology fields, authored by hand (`spec-technology.md` 9.2) |
+| `MaxFieldRecipes` | 64 | recipes in one field (`spec-technology.md` 9.2) |
+| `MaxTechBase` | 10^12 | an author's count of executions behind a field; `X + Base` fits `int64` with `MaxExperience` (`spec-technology.md` 9.2) |
+| `MaxDoublingBP` | 10 000 | the gain per doubling of the cumulative work (`spec-technology.md` 9.2) |
+| `MaxTechTrendBP` | 10 000 | the gain a year adds at most: the table's yield again. Not `MaxTrendBP`, which is the trend of an outside line (above, 100 000) (`spec-technology.md` 9.2) |
+| `MaxDiscoveryBP` | 100 000 | ten discoveries a year (`spec-technology.md` 9.2) |
+| `MaxGainBP` | 100 000 | the largest gain of a cell: a yield at most elevenfold (`spec-technology.md` 9.2) |
+| `MaxStepBP` | `MaxGainBP` | the gain of one discovery is at most the cap (`spec-technology.md` 9.2) |
+| `MaxCatchUpBP` | 10 000 | the share of the gap to the frontier closed in a year: at most the whole gap (`spec-technology.md` 9.2) |
+| `MaxTechBP` | `10 000 + MaxGainBP` | the largest `tech` factor (`spec-technology.md` 9.2) |
+| `MaxExperience` | 2^50 | the cumulative executions of a cell, unreachable (`spec-technology.md` 9.2, 4.2.4) |
 | `MaxDocumentBytes` | 16 MiB | a parser limit (6.5) |
 
 `MaxPrice` and `MaxQuantity` are bounds, not tunables. Specs that call them
@@ -366,6 +716,7 @@ the configuration with `ErrOverflow` if one fails:
 - for the migration module (`spec-migration.md` 12.2): for each role that is not `Fixed` and has recipes, `|K(role)|` times the number of other regions is at most `MaxRumoursPerView` (`ErrTooMany`); `Households * MoveOutShare` and `Households * MoveInShare` at the largest group, and those of the rows, are at most `MaxQuantity` (`ErrOverflow`); the products of the estimate use the 128-bit helper and are covered by the unit-cost check of `spec-production.md` 10.3;
 - for the merchant module: none new (`spec-merchants.md` 14.1: a product of the margin arithmetic that does not fit drops a candidate at run time, a lot is at most `MaxQuantity`, and the escrow is at most the money in existence);
 - for the external module: none beyond the bounds (`spec-external-sector.md` 13.2); the products of a quote and a capacity are at most `MaxPrice * MaxQuantity` = 10^18.
+- for the modules of wave 5, as their specs state: tenure, a term's `Rent` times the largest draw of a recipe on its resource times the largest weight of a group in the region is at most `MaxMoney` (`spec-land.md` 11.1, `ErrOverflow`); employment, the largest yield factor of the check of `spec-production.md` 10.3 takes `HireYieldBP` into account (`spec-employment.md` 14.1, `ErrOverflow`), and a bill that does not fit fails the formation at run time and is not an error; storage, the room rules `room_below_upkeep`, `room_below_start_stock` and `room_below_warm_job` are shape errors (`ErrRoomShape`) and not overflow, and a load is computed through the 128-bit helper and refused where it would exceed the room (`spec-storage.md` 12.2, 13.1); settlements, credit, infrastructure, insurance, fiscal, saving and technology, none beyond the bounds (`spec-settlements.md` 9.1, `spec-credit.md` 15.1, `spec-infrastructure.md` 13.3, `spec-insurance.md` 14.1, `spec-fiscal.md` 11.4, `spec-saving-and-investment.md` 11.3, `spec-technology.md` 9.5: a premium, a payout or a loan that would pass `MaxMoney` is refused at formation and is a counted reason); the risk, polity, institutions and policy specs state none.
 
 ## 5. Defaults
 
@@ -542,7 +893,7 @@ are region fields (`spec-estates.md` 3) and sit in the region table. The presenc
 of `[warm_start]` switches nothing on: it supplies a start (3.1). `commodity.*` is
 elided; see `spec-goods.md`. No setting vocabulary is in the engine (AGENTS.md).
 
-The other specs write their tables as follows, and this spec records each as its spec says. Edges and region prices are tables of the region, keyed by the other end or the commodity, with integer values (a float is `ErrNotInteger`): `[region.north.edge.south]` with `distance = 100`, and `[region.north.reference_price]` with `grain = 480` (`spec-regions.md` 4.1, 5.2). The money-supply module is `[module.money_supply]` with flows as tables `[module.money_supply.flow.<id>]` (`spec-money-supply.md` 17.6), like `[module.estates]`. The population module is the table `[population]`, schedules as lists of `{ ratio, rate }`, regions as tables keyed by region ID, like `[demand]` (`spec-population.md` 8). `spec-transport.md` states no file layout for its modes; a table of its own keyed by mode ID is assumed. The resources module is the table `[resources]` with `[resources.resource.<id>]` (keys `shape`, `rate_per_year`, `rate_bp`, `refuge`, `capacity`, `initial_bp`, `plan_share_bp`, `abundance = [{ share, factor }]`, `seasons = [{ season, bp }]`) and `[resources.endowment.<region>.<resource>]` (keys `capacity`, `initial`, `regen_scale_bp`) (`spec-resources.md` 3.3.2, 16). The information module is `[modules.information]` with `info_speed`, `rumour_error_bp` and `rumour_max_age`, and `informed = true` in `[role.<id>]` (`spec-information.md` 12.1). The external module is `[module.external.node.<region>]` with `[module.external.node.<region>.line.<commodity>]` (keys `base`, `trend_bp`, `floor_bp`, `ceiling_bp`, `walk_step_bp`, `walk_revert_bp`, `walk_bound_bp`, `price_by_season = [{ season, bp }]`), its sides `...line.<commodity>.sell` and `...line.<commodity>.buy` (keys `margin_bp`, `capacity`, `window = [{ season, bp }]`, `total_units`, `total_value`) and gates `[module.external.node.<region>.gate.<region>]` (key `scale_bp`) (`spec-external-sector.md` 3.3.1, 18.2). The subsistence module is `[modules.subsistence]` with `recipes`, `enter_ticks`, `exit_ticks` and `retry_jobs`, and a role row as `[modules.subsistence.role.<id>]` with `recipes` (`spec-subsistence.md` 3.2.2, 16.1). The migration module is `[modules.migration]` with `move_speed`, `move_review_ticks`, `move_below`, `move_gain`, `move_width`, `move_cooldown`, `move_horizon`, `move_out_share` and `move_in_share`, a region row as `[modules.migration.region.<id>]` with `out_share` and `in_share`, and `fixed = true` in `[role.<id>]` (`spec-migration.md` 11, 15.3). The merchant module is `[modules.merchants]` with `max_open`, and the merchant block is `[role.<id>.merchant]` with `modes`, `lot_units`, `fee_share_spread_bp`, `max_source_age`, `time_cost_bp`, `consignee_cut_bp`, `consigns`, `take_margin_bp` and `take_units`, beside the role keys `merchant_fee_share`, `informed` and `strategy = "merchant"` (`spec-merchants.md` 19.1). The names differ (`[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, `[resources]`, `[modules.information]`, `[module.external]`); they are not unified here (13.11).
+The other specs write their tables as follows, and this spec records each as its spec says. Edges and region prices are tables of the region, keyed by the other end or the commodity, with integer values (a float is `ErrNotInteger`): `[region.north.edge.south]` with `distance = 100`, and `[region.north.reference_price]` with `grain = 480` (`spec-regions.md` 4.1, 5.2). The money-supply module is `[module.money_supply]` with flows as tables `[module.money_supply.flow.<id>]` (`spec-money-supply.md` 17.6), like `[module.estates]`. The population module is the table `[population]`, schedules as lists of `{ ratio, rate }`, regions as tables keyed by region ID, like `[demand]` (`spec-population.md` 8). `spec-transport.md` states no file layout for its modes; a table of its own keyed by mode ID is assumed. The resources module is the table `[resources]` with `[resources.resource.<id>]` (keys `shape`, `rate_per_year`, `rate_bp`, `refuge`, `capacity`, `initial_bp`, `plan_share_bp`, `abundance = [{ share, factor }]`, `seasons = [{ season, bp }]`) and `[resources.endowment.<region>.<resource>]` (keys `capacity`, `initial`, `regen_scale_bp`) (`spec-resources.md` 3.3.2, 16). The information module is `[modules.information]` with `info_speed`, `rumour_error_bp` and `rumour_max_age`, and `informed = true` in `[role.<id>]` (`spec-information.md` 12.1). The external module is `[module.external.node.<region>]` with `[module.external.node.<region>.line.<commodity>]` (keys `base`, `trend_bp`, `floor_bp`, `ceiling_bp`, `walk_step_bp`, `walk_revert_bp`, `walk_bound_bp`, `price_by_season = [{ season, bp }]`), its sides `...line.<commodity>.sell` and `...line.<commodity>.buy` (keys `margin_bp`, `capacity`, `window = [{ season, bp }]`, `total_units`, `total_value`) and gates `[module.external.node.<region>.gate.<region>]` (key `scale_bp`) (`spec-external-sector.md` 3.3.1, 18.2). The subsistence module is `[modules.subsistence]` with `recipes`, `enter_ticks`, `exit_ticks` and `retry_jobs`, and a role row as `[modules.subsistence.role.<id>]` with `recipes` (`spec-subsistence.md` 3.2.2, 16.1). The migration module is `[modules.migration]` with `move_speed`, `move_review_ticks`, `move_below`, `move_gain`, `move_width`, `move_cooldown`, `move_horizon`, `move_out_share` and `move_in_share`, a region row as `[modules.migration.region.<id>]` with `out_share` and `in_share`, and `fixed = true` in `[role.<id>]` (`spec-migration.md` 11, 15.3). The merchant module is `[modules.merchants]` with `max_open`, and the merchant block is `[role.<id>.merchant]` with `modes`, `lot_units`, `fee_share_spread_bp`, `max_source_age`, `time_cost_bp`, `consignee_cut_bp`, `consigns`, `take_margin_bp` and `take_units`, beside the role keys `merchant_fee_share`, `informed` and `strategy = "merchant"` (`spec-merchants.md` 19.1). The modules of wave 5 all use the form `[modules.<name>]` of `[modules.merchants]` (N-102), with sub-tables keyed by ID, and each spec says its keys. The settlements module is `[modules.settlements]` with `band_bp` and `dwell`, a class as `[modules.settlements.class.<id>]` with `enter` and `flags`, its limits as `[modules.settlements.class.<id>.limits]` (`<name> = <value>`), a region row as `[modules.settlements.region.<id>]` with `threshold_bp` and `floor`, and `needs` and `ceiling` in `[role.<id>]` (`spec-settlements.md` 3.1). The storage module is `[modules.storage]` with a class as `[modules.storage.class.<id>]` (keys `mass`, `bulk`, `needs`; `spec-storage.md` 7.3); that spec states no file layout for the base room and the role rows, and tables of their own keyed by role ID are assumed. The employment module is `[modules.employment]` with `max_open`, `hireable = true` in `[role.<id>]` and the block `[role.<id>.employer]` (`recipes`, `max_hires`, `worker_share_bp`, `hire_yield_bp`; `spec-employment.md` 13). The tenure module is `[modules.tenure]` with a term as `[modules.tenure.term.<region>.<resource>]` and a holding as `[modules.tenure.holding.<region>.<resource>.<holder>]`, `<holder>` being a role ID or the word `pool` (`spec-land.md` 3.3.2). The credit module is `[modules.credit]` with the role blocks `[role.<id>.credit.lend]` and `[role.<id>.credit.borrow]` (`spec-credit.md` 4.2). The risk module is `[modules.risk]` with `[modules.risk.route.<from>.<to>.<mode>]` and `[modules.risk.store.<region>.<class>]`, keys `strike_bp`, `severity_bp` and `common` (`spec-risk.md` FR-RSK-001; a path of seven segments, within `spec-experiments.md` 3.2.1). The infrastructure module is `[modules.infrastructure]` with `[modules.infrastructure.class.<id>]` and `[[modules.infrastructure.initial]]`, and a recipe carries `needs`, `[recipe.<id>.builds]` and `[recipe.<id>.repairs]` (`spec-infrastructure.md` 12.1, 4.1.1). The insurance module is `[modules.insurance]` with `[role.<id>.cover.underwrite]` and `[role.<id>.cover.insure]` (`spec-insurance.md` 4.2). The polity module is `[modules.polity]` with `[modules.polity.jurisdiction.<id>]` (`parent`, `seat`, `start_money`) and `[modules.polity.member]` with `<region> = "<jurisdiction>"` (`spec-polity.md` 3.4). The fiscal module is `[modules.fiscal]` with `[modules.fiscal.tax.<id>]`, `.duty.<id>`, `.toll.<id>`, `.payout.<id>`, `.purchase.<id>` and `.release.<id>` (`spec-fiscal.md` 3.1). The institutions module is `[modules.institutions]` with `[modules.institutions.body.<id>]`, `.right.<id>`, `.control.<id>` and `.rate_limit.<id>` (`spec-institutions.md` 9). The policy module is `[modules.policy]` with `[modules.policy.actor.<id>]`, `[modules.policy.actor.<id>.lever.<id>]`, `[modules.policy.actor.<id>.schedule.<lever>.<tick>]` and `[modules.policy.actor.<id>.rule.<lever>]` (`spec-policy.md` 3.1.2). The saving module is `[modules.saving]` with the role block `[role.<id>.saver]` and its rows `[[role.<id>.saver.worth]]` (`spec-saving-and-investment.md` 3.2). The technology module is `[modules.technology]` with `[modules.technology.field.<id>]`, whose `recipes` is a list (`spec-technology.md` 9.1). The names of the earlier modules differ (`[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, `[resources]`, `[modules.information]`, `[module.external]`) and those of wave 5 follow one form; they are not unified here (13.11).
 ### 6.3 What the loader rejects
 
 - an **unknown key**, at any depth (`ErrUnknownKey`, with its path);
@@ -613,7 +964,7 @@ on map order and a test can compare it (architecture.md 7.5).
 says how many were left out. A pathological file cannot flood a log.
 
 7.1.4. `NewWorld` calls `Validate` and returns its error. The only other checks it
-makes on configuration are the three that need the options (`spec-world.md` 3.2.2).
+makes on configuration are the four that need the options (`spec-world.md` 3.2.2).
 They run **after `Validate` succeeds**, and each returns a `*ValidationError` with
 the path of the field and the rule (7.1.1): every `Role.Strategy` name is
 `"default"`, `"directed"` (both built in, `spec-agents.md` 6.6, 10) or a name
@@ -621,10 +972,10 @@ registered with `WithStrategy`, else `ErrUnknownStrategy`; `World.Spawner` is th
 built-in `"default"` or a name registered with `WithSpawner`, else
 `ErrUnknownSpawner` (`spec-spawner.md` 3.1.3); `World.Clearing` is the built-in
 `"average"` or a name registered with `WithClearing`, else `ErrUnknownClearing`
-(`spec-clearing.md` 8). The name `"merchant"` is checked like any name, and
+(`spec-clearing.md` 8); and, with `Modules.Policy` present, every `PolicyActor.Policy` is `"hold"`, `"schedule"`, `"rule"` or `"directed"` (built in, `spec-policy.md` 4.4) or a name registered with `WithPolicy`, else `ErrUnknownPolicy` with the path `modules.policy.actors[i].policy` (`spec-policy.md` 4.5.1). The name `"merchant"` is checked like any name, and
 `strategy.Options()` registers it (`spec-merchants.md` 3.1). `Validate` takes no
 options, so it cannot know the registrations, and it does not see
-`WithTargetSpread` either (8.1); the three rules are therefore the config rules that
+`WithTargetSpread` either (8.1); the four rules are therefore the config rules that
 live in `NewWorld` and nowhere else, and a test builds a world with an unregistered
 name of each kind (FR-CFG-038). Nothing else in `NewWorld` fails on configuration
 (architecture.md 8.5).
@@ -674,7 +1025,7 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrNotAGate` | an outside gate row naming a region with no direct edge to or from the node | `spec-external-sector.md` 14.1 |
 | `ErrOutsideNode` | a relocation into an outside node (run time, not validation) | `spec-regions.md` 6.1.3 |
 
-The root maps the following sentinels of the new specs to public errors (N-075): `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` (REG; the last three are ledger-level if `relocate` lives in `internal/ledger`); `ErrFlowShape`, `ErrReasonCollision` (MON); `ErrResourceShape`, `ErrCurve`, `ErrUnknownResource` (RES); `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrOutsideNode` (EXT); INF adds none; `ErrVehicleNotDurable`, `ErrModeShape`, `ErrUnknownMode` (TRN: `ErrUnknownMode` is a root sentinel with the transport module alone, because `SetTransitFactors` returns it, `spec-integration.md` 5.1.3, and the merchant module reuses it); `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited`, `ErrOwnUseOverlap` (SUB); MIG adds none; `ErrMerchantShape`, `ErrMerchantWeight` (MER); `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` (WLD, `spec-world.md` 15.1); `ErrCheckpointVersion`, `ErrCheckpointCorrupt`, `ErrCheckpointConfig`, `ErrCheckpointExtension`, `ErrOptionContext` (CHK, `spec-checkpoint.md` 13.1); `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole`, `ErrNotTradable` (INT, `spec-integration.md` 11.2; `ErrUnknownAgent` is REG's, above). `ErrTravellerAway` does not exist: a refusal of a region-bound obligation is `ErrRegionBound` naming `open_shipment`.
+The root maps the following sentinels of the new specs to public errors (N-075): `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` (REG; the last three are ledger-level if `relocate` lives in `internal/ledger`); `ErrFlowShape`, `ErrReasonCollision` (MON); `ErrResourceShape`, `ErrCurve`, `ErrUnknownResource` (RES); `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrOutsideNode` (EXT); INF adds none; `ErrVehicleNotDurable`, `ErrModeShape`, `ErrUnknownMode` (TRN: `ErrUnknownMode` is a root sentinel with the transport module alone, because `SetTransitFactors` returns it, `spec-integration.md` 5.1.3, and the merchant module reuses it); `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited`, `ErrOwnUseOverlap` (SUB); MIG adds none; `ErrMerchantShape`, `ErrMerchantWeight` (MER); `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` (WLD, `spec-world.md` 15.1); `ErrCheckpointVersion`, `ErrCheckpointCorrupt`, `ErrCheckpointConfig`, `ErrCheckpointExtension`, `ErrOptionContext` (CHK, `spec-checkpoint.md` 13.1); `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole`, `ErrNotTradable` (INT, `spec-integration.md` 11.2; `ErrUnknownAgent` is REG's, above). The sentinels of the fourteen modules of wave 5 are mapped as well (N-075): `ErrUnknownSettlementClass`, `ErrUnknownSettlementFlag`, `ErrUnknownLimit` (SET; the flag name keeps it apart from the live `ErrUnknownFlow`); `ErrNoRoom` (the ledger's, mapped), `ErrUnknownStoreClass`, `ErrStoreShape`, `ErrRoomShape`, `ErrNotLimited`, `ErrAgentAway`, `ErrStoreLocked`, `ErrStoreInUse` (STO); `ErrEmploymentShape`, `ErrEmployerWeight` (EMP); `ErrTitleShares`, `ErrTitleCap`, `ErrNoTitle`, `ErrNotAHolder` (LND); `ErrCreditShape`, `ErrTooManyClaims` and the ledger's `ErrOpenClaim`, `ErrUnknownClaim`, `ErrClaimShape` (CRD); `ErrRiskShape`, `ErrUnknownRiskRow` (RSK); `ErrFacilityShape`, `ErrFacilityNoCost`, `ErrFacilityHolder`, `ErrFacilityCount`, `ErrUnknownFacilityClass`, `ErrFacilityOwner`, `ErrFacilityLocked`, `ErrFacilityTarget`, `ErrFacilityCap`, `ErrUnknownFacility`, `ErrFacilityNotTransferable`, `ErrFacilityRegion` (CAP); `ErrCoverShape` (INS); `ErrUnknownJurisdiction`, `ErrJurisdictionCycle`, `ErrSeatNotCovered`, `ErrSeatOutsideNode`, `ErrStartWithoutSeat` (POL); `ErrNotGoverned`, `ErrNotCovered`, `ErrFiscalShape` (FIS); `ErrUnknownBody`, `ErrBodyShape`, `ErrBodyOverlap`, `ErrRightShape`, `ErrControlShape`, `ErrUnknownControl`, `ErrUnknownRight` (ORG); `ErrPolicyShape`, `ErrLeverNotInReach`, `ErrLeverShared`, `ErrUnknownPolicy`, `ErrUnknownActor`, `ErrUnknownLever` (PLC); `ErrNotSaver` (SAV); `ErrTechShape`, `ErrTechRecipeOverlap`, `ErrUnknownTechField` (TEC). A sentinel that the owner spec reuses from another keeps its owner (7.4.1 names it). `ErrTravellerAway` does not exist: a refusal of a region-bound obligation is `ErrRegionBound` naming `open_shipment`.
 
 A role with no group in any region is not a fault and draws no warning: it is how a
 role for external agents is written (`visitor` in `spec-reference-chain.md` 4.2, with
@@ -740,6 +1091,20 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | the migration module: a field outside its bound (a missing `MoveSpeed` included), a row share above 10 000, `Modules.Migration` while `Modules.Information` is nil, a row for an unknown or twice-named region, more rows than `MaxRegions`, a mobile role with too many candidates, a product that overflows | `ErrOutOfBounds`, `ErrModuleDependency`, `ErrUnknownRegion`, `ErrDuplicateID`, `ErrTooMany`, `ErrOverflow` | `spec-migration.md` 12.1, 12.2 | `Validate` |
 | the merchant module: a field outside its bound, `FeeShareSpreadBP` above `MerchantFeeShare` or with their sum above 10 000, an unknown mode or a mode twice in `Modes`, a merchant block on a role with recipes, `Strategy` `"merchant"` with no block, a block with `Informed` false, a trade input not in `Trades`, an empty cargo set, a self-carried mode of `Crew` above 1, `Consigns` with no `TakeUnits`, a merchant role with a group of scale above 1, a block while transport or information is off, the module while transport is off, a hired mode or `Consigns` while `Modules.Merchants` is absent | `ErrOutOfBounds`, `ErrUnknownMode` (a root sentinel of the transport module, reused here), `ErrDuplicateID`, `ErrMerchantShape`, `ErrMerchantWeight`, `ErrModuleDependency` | `spec-merchants.md` 14.1 | `Validate` |
 | the external module: a field outside its bound, a side set on an absent side, an unknown region, commodity or season, a duplicate row, an outside node that has agents, crossed quotes, a gate that is not a gate, a flow ID equal to one of the six reasons, the module on while the region graph is off | `ErrOutOfBounds`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownSeason`, `ErrDuplicateID`, `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrReasonCollision`, `ErrModuleDependency` | `spec-external-sector.md` 14.1 | `Validate` |
+| the settlements module: an `Enter` outside `[0, MaxHouseholds]`; the first class with an `Enter` other than 0 (rule `first_class_open`); two classes with one `Enter` or `Enter` not strictly increasing in the sorted order (rule `enter_order`); `BandBP`, `Dwell` or `ThresholdBP` outside its bound; a limit `Value` outside `[0, MaxQuantity]`; a class ID, a flag or a limit name that is not an ID; a class, a flag or a limit twice, two rows for one region; more than `MaxSettlementClasses` classes, `MaxClassFlags` distinct flags, `MaxClassLimits` distinct limits or `MaxRegions` rows, or no class (rule `no_class`); a row for an undefined region or an outside node; a `Floor` that names no class; a `Role.Needs` that no class carries; a `Role.Ceiling` that no class carries; a `Needs` or `Ceiling` while the module is off | `ErrOutOfBounds`, `ErrInvalidID`, `ErrDuplicateID`, `ErrTooMany`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrUnknownSettlementClass`, `ErrUnknownSettlementFlag`, `ErrUnknownLimit`, `ErrModuleDependency` | `spec-settlements.md` 9.1 | `Validate`; the rules that read a role run with the roles |
+| the storage module: a class ID or a role row twice (rule `duplicate_id`); a row for an unknown role (`unknown_role`); a class with both capacities 0 or a capacity outside `0 .. MaxRoom` (`store_class_shape`); a `Base` outside `0 .. MaxRoom`, more than `MaxStoreClasses` classes or more than `MaxStoresPerAgent` stores in a row (`room_bound`); a row's `Stores`, or a stores target of a flow, that names a class not configured (`unknown_store_class`); a `Needs` that no settlement class carries (`needs_flag`) or a `Needs` while `Modules.Settlements` is absent (`needs_module_off`); stores listed for a role whose resolved base room is `nil` (`store_on_unlimited_role`); a limited role whose base room per household is below one tick of its upkeep (`room_below_upkeep`), whose `StartStock` or warm-start stock has a load above the room and the given stores (`room_below_start_stock`), or whose warm-start job does not fit (`room_below_warm_job`); a flow that targets stores while the module is off (`stores_target_off`) | `ErrDuplicateID`, `ErrUnknownRole`, `ErrStoreShape`, `ErrOutOfBounds`, `ErrUnknownStoreClass`, `ErrUnknownSettlementFlag`, `ErrModuleDependency`, `ErrNotLimited`, `ErrRoomShape` | `spec-storage.md` 13.1 | `Validate`; `room_below_warm_job` at construction, once the warm start is applied (`NewWorld` returns it) |
+| the employment module: a field outside its bound; a hire-list entry that is not a recipe; a recipe twice in a hire list; an employer block on a role with an empty `Recipes`, an empty hire list, a hire-list recipe not on `Role.Recipes`, a role both `Hireable` and an employer; an employer role with a group of scale above 1; `Hireable` or an employer block while the module is off | `ErrOutOfBounds`, `ErrUnknownRecipe`, `ErrDuplicateID`, `ErrEmploymentShape`, `ErrEmployerWeight`, `ErrModuleDependency` | `spec-employment.md` 14.1 | `Validate` |
+| the tenure module: the module while `Modules.Resources` is nil; a term or a holding naming an unknown region, resource or role, or an outside node; two terms for one (region, resource), two holdings for one (region, resource, holder), a role whose ID is the word `pool`; a field outside its bound, more than `MaxHoldings` holdings; a `ShareBP` outside 1 to 10 000, holdings whose total on one endowment exceeds 10 000; a holding whose largest agent would hold more than `MaxHolderShareBP`; a money flow whose ID is `rent` or `title_sale`; a term's rent product that overflows | `ErrModuleDependency`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrUnknownRole`, `ErrOutsideNode`, `ErrDuplicateID`, `ErrOutOfBounds`, `ErrTitleShares`, `ErrTitleCap`, `ErrReasonCollision`, `ErrOverflow` | `spec-land.md` 11.1 | `Validate` |
+| the credit module: a field outside its bound, `MinPrincipal` or `MaxClaims` below 1; a `CreditTerms` with both `Lend` and `Borrow` or with neither; a role with a credit block while the module is off; a money flow whose ID is `loan_out`, `loan_repay` or `loan_interest`; a `rate_bp` of a `Lend` block or a `max_rate_bp` of a `Borrow` block absent from a file (the generic rule of FR-CFG-008: a rate of 0 is legal and is written, so an omission is never a silent interest-free loan); an unknown role or a duplicate role row | `ErrOutOfBounds`, `ErrCreditShape`, `ErrModuleDependency`, `ErrReasonCollision`, `ErrMissingField`, `ErrUnknownRole`, `ErrDuplicateID` | `spec-credit.md` 15.1 | `Validate` |
+| the risk module: a route row with `Modules.Transport` absent or a store row with `Modules.Storage` absent (rule `risk_module_dependency`); a `From`, `To` or `Region` naming no region (`unknown_region`); a pair that is not a configured edge (`unknown_edge`); a `Mode` that is not configured (`unknown_mode`); a store `Class` that is not configured (`unknown_store_class`); a route row's edge with an outside node at an end, or a store row's region that is an outside node (`risk_outside_node`); a `StrikeBP` or `SeverityBP` outside `1 .. 10 000` (`risk_row_shape`); a key twice (`duplicate_id`); more than `MaxRiskRows` rows in a table (`risk_bound`) | `ErrModuleDependency`, `ErrUnknownRegion`, `ErrUnknownEdge`, `ErrUnknownMode`, `ErrUnknownStoreClass`, `ErrOutsideNode`, `ErrRiskShape`, `ErrDuplicateID`, `ErrOutOfBounds` | `spec-risk.md` 13.1 | `Validate` |
+| the infrastructure module: a class field set that its kind does not use or a required one missing, `Toward` on a clause of a class that is not `route`, both `Builds` and `Repairs` on a recipe, a class in `Needs` that is not a site or appears twice, an output of a build or repair recipe that is not `Discard`, a store row with no `Role`; a field outside its bound, more than `MaxRecipeNeeds` needs; a class twice, two initial rows with one key; a clause or an initial row naming an undefined class; a route, ground or store class naming an undefined mode, resource or store class; an initial row's `Region`, `Toward` or `Role` unknown; `Toward` equal to `Region`; an outside node in an initial row; a route row or clause with no edge; a recipe with `Builds` or `Repairs` and no input; an initial row whose role has no agent in the region, or a store row whose role has no base room; initial rows above `MaxFacilities` or an agent above `MaxFacilitiesPerAgent`; a route class with transport off, a ground class with resources off, a store class with storage off, a `Needs` flag with settlements off, a clause with the module off; a `TraineeEligible` recipe with a clause; a product that overflows | `ErrFacilityShape`, `ErrOutOfBounds`, `ErrDuplicateID`, `ErrUnknownFacilityClass`, `ErrUnknownMode`, `ErrUnknownResource`, `ErrUnknownStoreClass`, `ErrUnknownRegion`, `ErrUnknownRole`, `ErrSameRegion`, `ErrOutsideNode`, `ErrUnknownEdge`, `ErrFacilityNoCost`, `ErrFacilityHolder`, `ErrFacilityCount`, `ErrModuleDependency`, `ErrEligibleHasTool`, `ErrOverflow` | `spec-infrastructure.md` 13.1 | `Validate`; `ErrRecipeNoOutput` is waived for a recipe with `Builds` or `Repairs` |
+| the insurance module: a field outside its bound, `ValueCapBP`, `MinSum` or `MaxPolicies` below 1; a `CoverTerms` with both blocks or neither; the module while `Modules.Risk` or `Modules.Credit` is nil, a role with a cover block while the module is off, an `Insure` block with `MinLossBP` above 0 and no transport or with `StoreShareBP` above 0 and no storage; a money flow whose ID is `premium` or `payout`; a required field whose bound admits 0 (`loading_bp`, `store_rate_bp`, `min_loss_bp`, `ruin_share_bp`, `max_loading_bp`, `max_store_rate_bp`) absent from a file (the generic rule of FR-CFG-008); an unknown role or a duplicate role row | `ErrOutOfBounds`, `ErrCoverShape`, `ErrModuleDependency`, `ErrReasonCollision`, `ErrMissingField`, `ErrUnknownRole`, `ErrDuplicateID` | `spec-insurance.md` 14.1 | `Validate` |
+| the polity module: a jurisdiction ID that is not an ID or is twice, two membership rows for one region; more than `MaxJurisdictions`; a `Parent` or a member row naming an undefined jurisdiction; a member row or a `Seat` naming an undefined region; a parent chain that returns to the jurisdiction; `MaxPolityDepth` or more ancestors, a `StartMoney` outside `[0, MaxMoney]`; a `Seat` that is not a direct member of the jurisdiction or of one of its descendants; a `Seat` that is an outside node; a `StartMoney` above 0 with no seat | `ErrInvalidID`, `ErrDuplicateID`, `ErrTooMany`, `ErrUnknownJurisdiction`, `ErrUnknownRegion`, `ErrJurisdictionCycle`, `ErrOutOfBounds`, `ErrSeatNotCovered`, `ErrSeatOutsideNode`, `ErrStartWithoutSeat` | `spec-polity.md` 9.1 | `Validate`; the rules run in the order of 9.1 there |
+| the fiscal module: `Modules.Fiscal` while `Modules.Polity` is nil or has no governed jurisdiction, a pool target while the estates module is off, `import` or `export` scope while the external module is off, a toll while transport is off; more than `MaxFiscalFlows` flows; an ID that is not an ID or is repeated across the six kinds; an ID equal to a built-in reason, a flow of the money-supply module or a reason a later spec declares; an undefined `Authority` or target jurisdiction; an `Authority` or target treasury with no seat; a region the authority does not cover, a target treasury that is not a proper descendant; an undefined role, region, commodity, mode or season; a field outside its bound, a `Per`, `Payer`, `Scope`, `On` or target `Kind` that is not one of its values, `Until` not above `Start`; a wrong field combination of a tax, a payout, a duty, a purchase or a release | `ErrModuleDependency`, `ErrTooMany`, `ErrInvalidID`, `ErrDuplicateID`, `ErrReasonCollision`, `ErrUnknownJurisdiction`, `ErrNotGoverned`, `ErrNotCovered`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownMode`, `ErrUnknownSeason`, `ErrOutOfBounds`, `ErrFiscalShape` | `spec-fiscal.md` 15.1 | `Validate`, after the polity's rules |
+| the institutions module: an ID that is not an ID or is twice, two rights with one (activity, subject, scope key), two controls with one (commodity, scope key), two rate limits with one scope key; more than `MaxBodies`, `MaxRights` or `MaxControls`; a `Jurisdictions` entry or a right, control or rate limit keyed by a jurisdiction while `Modules.Polity` is absent, a `Needs` while `Modules.Settlements` is absent, a rate limit while `Modules.Credit` is absent; an undefined role, region, jurisdiction, recipe, commodity or flag; a right's `Body` that names no body; an outside node in a scope; a body with no role or no region, a (role, region) in the scope of two bodies; a right with an activity outside the four, a subject of the wrong kind, both or neither of `Region` and `Jurisdiction`, a `Who` other than `principal` on an activity other than `produce`; a control with both or neither of `Region` and `Jurisdiction`, a `FloorBP` above a `CapBP`, a `FloorBP` on a rate limit; a `Places`, `MaxTrainees` or level outside its bound | `ErrInvalidID`, `ErrDuplicateID`, `ErrTooMany`, `ErrModuleDependency`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownJurisdiction`, `ErrUnknownRecipe`, `ErrUnknownCommodity`, `ErrUnknownSettlementFlag`, `ErrUnknownBody`, `ErrOutsideNode`, `ErrBodyShape`, `ErrBodyOverlap`, `ErrRightShape`, `ErrControlShape`, `ErrOutOfBounds` | `spec-institutions.md` 10.1 | `Validate`; the rules run in the order of 10.1 there |
+| the policy module: `Modules.Policy` with `Modules.Polity` nil or with no jurisdiction, a `flow` lever with neither money supply nor fiscal on, a `transit` lever with transport off; more than `MaxActors`, `MaxLevers`, `MaxScheduleSteps` or `MaxLeverKeys`; an actor, lever, step or reaction repeated, two levers of one actor naming one key; an undefined `Jurisdiction` or `Against`; two actors on one jurisdiction (rule `one_actor_per_jurisdiction`); a `Kind` that is not offered, a field outside its bound, `Min > Max`, a default outside `[Min, Max]`; `Schedule`, `Cycle` or `Rules` with the wrong policy (`policy_data`); the key fields of a kind wrong (`lever_key`); an undefined flow, edge, region or mode; a `transit` lever with equal or outside-node ends (`transit_pair`); a key outside the reach of 3.5 there; an `Against` that names the actor's own jurisdiction, an ancestor or a descendant (`against_nested`); a schedule step or a reaction that is wrong (`schedule_lever`, `schedule_value`, `schedule_step`, `rule_lever`, `rule_gauge`, `rule_reads`); a `treasury` gauge on a jurisdiction with no seat; a key held by the levers of two actors; a `Policy` name that is neither built in nor registered (`NewWorld` only, 7.1.4) | `ErrModuleDependency`, `ErrTooMany`, `ErrDuplicateID`, `ErrUnknownJurisdiction`, `ErrPolicyShape`, `ErrOutOfBounds`, `ErrUnknownFlow`, `ErrUnknownEdge`, `ErrUnknownRegion`, `ErrUnknownMode`, `ErrLeverNotInReach`, `ErrNotGoverned`, `ErrLeverShared`, `ErrUnknownPolicy` | `spec-policy.md` 11.1 | `Validate`, in the order of the table there; `ErrUnknownPolicy` in `NewWorld` only |
+| the saving module: a field outside its bound (`Count` of a `Worth` row included), a `RepairBelowBP` above 10 000; a `Saver` block while `Modules.Saving` is absent, a `Worth` row while `Modules.Infrastructure` is absent; a `Worth` row that names an undefined class; a class twice in one role's `Worth`. The query `Saving(agent)` for an agent whose role has no block is `ErrNotSaver` at run time | `ErrOutOfBounds`, `ErrModuleDependency`, `ErrUnknownFacilityClass`, `ErrDuplicateID`, `ErrNotSaver` (a call) | `spec-saving-and-investment.md` 11.1 | `Validate` |
+| the technology module: a field of a mechanism that is off that is non-zero, a field that an on mechanism requires that is 0, or an empty `Recipes` (3.1.2 there); a recipe in two fields; a recipe of a field that is not configured; two fields with one ID; a field outside its bound (a `Label` above `MaxLabelBytes` included); more than `MaxTechFields` fields or `MaxFieldRecipes` recipes in one. A `TechFieldID` outside `[0, F)` in a call is `ErrUnknownTechField` | `ErrTechShape`, `ErrTechRecipeOverlap`, `ErrUnknownRecipe`, `ErrDuplicateID`, `ErrOutOfBounds`, `ErrTooMany`, `ErrUnknownTechField` (a call) | `spec-technology.md` 10.1 | `Validate` |
 
 The structural rules of 7.3 and the producibility rule of 7.5 are errors. A rule
 that appears in a spec with no row here is not enforced until it has one (FR-CFG-028
@@ -783,6 +1148,20 @@ and the registry test).
 | `merchant_spread_narrow`, `merchant_fee_share_high`, `merchant_fee_share_low`, `merchant_no_consignee`, `lane_without_consignee`, `cargo_never_delivered`, `consigns_without_cargo`, `merchants_one_agent` | the conditions of `spec-merchants.md` 14.2 | `spec-merchants.md` 14.2 |
 | `information_without_readers`, `information_without_routes`, `rumour_horizon_short`, `informed_without_sources` | the conditions of `spec-information.md` 9.3 | `spec-information.md` 9.3 |
 | `node_without_gate`, `gate_edge_wrong_direction`, `line_without_side`, `window_all_closed`, `quote_outside_reference_band`, `walk_faster_than_beliefs`, `outside_faucet_without_sink`, `outside_drain_without_source`, `outside_arbitrage`, `import_only_source`, `line_untraded` | the conditions of `spec-external-sector.md` 14.2 | `spec-external-sector.md` 14.2 |
+| `needs_unmet_at_start`, `ceiling_below_start`, `dwell_below_window`, `band_one_household`, `threshold_collapsed`, `class_unreachable`, `flag_unused`, `limit_unused` | the conditions of `spec-settlements.md` 9.2; `flag_unused` and `limit_unused` are informational | `spec-settlements.md` 9.2 |
+| `no_limited_role`, `room_below_cover`, `room_below_recipe`, `store_class_unused`, `store_locked_at_start`, `store_levy_below_upkeep` | the conditions of `spec-storage.md` 13.2 | `spec-storage.md` 13.2 |
+| `employment_no_employer`, `employment_no_worker`, `no_employer_in_region`, `employer_no_outlet`, `hire_never_profitable`, `wage_below_upkeep`, `payroll_exceeds_money`, `inkind_wage_ignored`, `worker_share_full` | the conditions of `spec-employment.md` 14.2; `wage_below_upkeep` is informational | `spec-employment.md` 14.2 |
+| `no_titles`, `rent_without_titles`, `titles_without_rent`, `holding_unused`, `role_locked_out`, `entitlement_below_unit`, `rent_above_output` (informational), `rent_hoarded`, `rent_step_inert`, `rent_off_dual` | the conditions of `spec-land.md` 11.2; `rent_off_dual` is reported by the solver (`spec-land.md` 5.6.2, 12) | `spec-land.md` 11.2 |
+| `no_credit_roles`, `credit_no_lender`, `credit_no_borrower`, `rate_above_limits`, `term_exceeds_lenders`, `cap_below_horizon`, `lender_without_cash`, `lender_without_income`, `lender_keep_below_term`, `no_shield`, `credit_no_upkeep`, `credit_free`, `interest_rounds_to_zero` | the conditions of `spec-credit.md` 15.2; informational, none fails validation | `spec-credit.md` 15.2 |
+| `no_risk_rows`, `risk_edge_off_path`, `risk_store_class_unowned`, `risk_certain` | the conditions of `spec-risk.md` 13.2 | `spec-risk.md` 13.2 |
+| `facility_unused`, `facility_unbuildable`, `decay_without_repair`, `capacity_never_binds`, `route_unused_mode`, `facility_gate_closed`, and `unrunnable_recipe` (above, extended) | the conditions of `spec-infrastructure.md` 13.2; `unrunnable_recipe` also fires for a recipe that `Needs` a class that is `facility_unbuildable` and has no initial facility in a region where the recipe is otherwise runnable | `spec-infrastructure.md` 13.2 |
+| `no_cover_roles`, `cover_no_underwriter`, `cover_no_insured`, `cover_without_risk`, `loading_above_limits`, `cover_below_minimum`, `underwriter_without_income`, `underwriter_cap_above_money`, `claims_below_policies`, `no_shield_underwriter`, `value_cap_unbound` | the conditions of `spec-insurance.md` 14.2 | `spec-insurance.md` 14.2 |
+| `jurisdiction_empty`, `region_unassigned` | the conditions of `spec-polity.md` 9.2 | `spec-polity.md` 9.2 |
+| `no_fiscal_flows`, `treasury_unfunded`, `treasury_idle`, `tax_below_upkeep`, `payout_pool_no_outlet`, `purchase_unbounded`, `release_unsourced`, `duty_stack_above_whole`, `toll_no_border`, `fiscal_class_empty` | the conditions of `spec-fiscal.md` 15.2. The names `no_fiscal_flows` and `fiscal_class_empty` are the module's own: `no_flows` and `class_empty` are the rows of `spec-money-supply.md` 12.2 above and keep their meaning | `spec-fiscal.md` 15.2 |
+| `body_empty`, `places_below_start`, `right_unreachable`, `right_over_upkeep`, `train_right_no_training`, `cap_below_band`, `floor_above_band`, `cap_below_seed_cost`, `rate_limit_below_floor`, `control_inert`, `body_needs_unmet_at_start` | the conditions of `spec-institutions.md` 10.2; `control_inert` and `body_needs_unmet_at_start` are informational | `spec-institutions.md` 10.2 |
+| `no_actors`, `actor_no_levers`, `lever_fixed`, `lever_no_keys`, `reads_unused`, `rule_undamped`, `rule_inert`, `cadence_long`, `schedule_dense` | the conditions of `spec-policy.md` 11.2 | `spec-policy.md` 11.2 |
+| `saver_no_project`, `worth_unused`, `worth_on_site`, `project_below_hurdle`, `safety_below_slack`, `saving_target_exceeds_money`, `repair_never`, `spread_below_margin` | the conditions of `spec-saving-and-investment.md` 11.2; informational, none fails validation | `spec-saving-and-investment.md` 11.2 |
+| `field_inert`, `field_unused`, `diffusion_no_contact`, `technology_past_maximum_yield`, `trend_outpaces_schedule`; the informational diagnostic `technology_stock_share` | the conditions of `spec-technology.md` 10.2, 10.3.4; `unrunnable_recipe` is unchanged | `spec-technology.md` 10.2 |
 
 ### 7.5 Producibility
 
@@ -902,6 +1281,8 @@ instead. `WithReseed` is excluded too: it is a restore-time option that changes 
 - **Regions, edges and the new modules.** `Edges` and `RegionPrices` are hashed in canonical order, every field; `Region.Label` and `World.DistanceLabel` are not (`spec-regions.md` 4.1.2). `Modules.MoneySupply` is hashed with a presence byte and, when present, its flows in ID order, every field but `Label`; the flow scale is state, not configuration. `Modules.Population` is hashed with a presence byte, its schedules in knot order and its region rows by region; the effective scales a shock sets are state. `Modules.Transport` is hashed with a presence byte and its modes in ID order, every field but `Label`; the transit factor is state.
 - **The resources, information and external modules.** Each is hashed with a presence byte and, when present, every field but `Label`: `Modules.Resources` with its resources by ID (knots by share, seasons in the calendar's order) and its endowment rows by region then resource, and `HorizonYears`; `Modules.Information` with its three fields, and `Role.Informed` as any role field; `Modules.External` with its nodes by region, lines by commodity, gates by region and season factors by season. The shock scales, drift, carries and cumulative totals are state and not hashed.
 - **The subsistence, migration and merchant modules.** Each is hashed with a presence byte and, when present, every field: `Modules.Subsistence` with its default list and its role rows by role (each list by recipe ID) and its three tunables; `Modules.Migration` with its nine fields and its `Regions` rows by region; `Modules.Merchants` with `MaxOpen`; `Role.Fixed` and the `Role.Merchant` block (modes by ID) as any role field. The per-agent state (`OwnUse`, `OwnUseJobs`, journeys) and the contracts are state and not hashed.
+- **The modules of wave 5.** Each is hashed with a presence byte and, when present, every field but the presentation-only ones (8.3), in canonical order (3.4): `Modules.Settlements` with its classes by `Enter` (each class's `Flags` by name and `Limits` by `Name`), `BandBP`, `Dwell` and its region rows by region, and `Role.Needs` and `Role.Ceiling` as any role field; `Modules.Storage` with `Base`, its role rows by role and its classes by ID, and `FlowTarget.Store` as any flow field; `Modules.Employment` with `MaxOpen`, and `Role.Hireable` and the `Role.Employer` block (the hire list by recipe ID) as any role field; `Modules.Tenure` with its terms by (region, resource), its holdings by (region, resource, holder), the pool before the roles, and its five tunables; `Modules.Credit` with its four tunables, and the `Role.Credit` block as any role field; `Modules.Risk` with its route rows by (`From`, `To`, `Mode`) and its store rows by (`Region`, `Class`); `Modules.Infrastructure` with its classes by ID and its initial rows by key, and the `Needs`, `Builds` and `Repairs` of a recipe as any recipe field; `Modules.Insurance` with its five tunables, and the `Role.Cover` block as any role field; `Modules.Polity` with its jurisdictions by ID and then its members by region; `Modules.Fiscal` with its six lists each by ID, every field but `Label`, and the seasons of a window in the calendar's order; `Modules.Institutions` with its bodies, rights, controls and rate limits by ID; `Modules.Policy` with every field of every actor by ID, the policy by **name** only (a registered implementation and the mailbox are not hashed); `Modules.Saving` with its three tunables, and the `Role.Saver` block as any role field; `Modules.Technology` with its fields by ID. The state of each module (the rent scales, the rate scales, the legal levels and right suspensions, the risk scales, the hire records, the claims, the titles, the facilities, the policies, the experience and the advance of a cell, a store of an agent) is state and is not hashed.
+
 - **Yields.** `Yields` is hashed in canonical order (region, then recipe, and
   each profile's season entries sorted by season ID, as `spec-production.md` 6.1
   has it). The yield shocks of
@@ -914,7 +1295,7 @@ different hash fails with `ErrCheckpointConfig` (ADR 0002, decision 4; `spec-che
 is written by hand in field order, with a version byte, integers as 8 bytes in
 big-endian order, strings and slices with a length prefix, entity slices in
 canonical order, the calendar's months and seasons in the order written, and a
-presence byte for each module and for `WarmStart`. It uses no reflection and
+presence byte for each module and for `WarmStart`. The presence bytes of the modules are written in the order of the `Modules` row of 3.1: the earlier modules, then the fourteen of wave 5 in the order that row gives, `Settlements` first and `Technology` last. That order is a hash input, and a module that is added later is appended and never inserted. It uses no reflection and
 no map, so equal configurations give equal bytes on every platform. The version of this encoding is written in the header of a checkpoint (`spec-checkpoint.md` 5.1), a restore hashes the effective configuration with that version, and from 1.0 an implementation keeps the encoder of every version it has written (`spec-checkpoint.md` 9.2.1 item 4, FR-CHK-063).
 
 8.3. Some fields are **presentation only**: a human-readable label, a display
@@ -922,7 +1303,7 @@ ladder (`spec-currency.md` 2.2). They do not change any result, so they are not
 hashed. A field is presentation only if and only if its doc comment says so. A
 test changes every field of `Config` in turn and checks that the hash changes,
 except for the fields on a short allow-list of presentation-only fields. A new
-field that the encoder forgets therefore fails a test. The allow-list is `Region.Label`, `World.DistanceLabel`, `Mode.Label`, `MoneyFlow.Label`, `Resource.Label`, `OutsideNode.Label` and the labels of the earlier specs.
+field that the encoder forgets therefore fails a test. The allow-list is `Region.Label`, `World.DistanceLabel`, `Mode.Label`, `MoneyFlow.Label`, `Resource.Label`, `OutsideNode.Label` and the labels of the earlier specs, and, for the modules of wave 5, `StoreClass.Label`, `SettlementClass.Label`, `Jurisdiction.Label`, `FacilityClass.Label`, `TechField.Label`, `PolicyActor.Label`, the `Label` of a body, of a right, of a control and of a rate limit, and the `Label` of each of the six kinds of fiscal flow.
 
 8.4. The file's layout (comments, whitespace, key order, and the split into
 documents) does not affect the hash (2.5).
@@ -965,7 +1346,7 @@ are MUST; check 3 is MUST; check 4 stays a SHOULD (FR-CFG-030) and check 5 is MU
 
 The owner table and the fields of 3.7 have a **second reader**: the registry test of
 `spec-calibration.md` 11.1 (FR-CLB-001 to 003), which checks that every row of the
-owner table and every field of 3.7 has a row in CLB's registry of knobs, and the
+owner table and every field of 3.7 and 3.7.1 has a row in CLB's registry of knobs, and the
 reverse, and reads the solve options (6.2.8) and the presentation-only fields (6.3) as rows of
 its own. It adds no requirement to this spec: the checks above are
 unchanged, and a new field needs its registry row in the same change as its row in
@@ -973,8 +1354,8 @@ the owner table.
 
 **What is a row.** A row is a field of `Config`: a World, Role, Region, Group,
 Commodity, Recipe, Yield or Calendar field, a field of a module's tables (scopes Demand,
-Want, Taste and RegionTaste for `Modules.Demand`, `spec-demand.md` 9), or a bound-checked
-section such as `WarmStart`. Two kinds of thing are NOT rows and the registry test MUST NOT look
+Want, Taste and RegionTaste for `Modules.Demand`, `spec-demand.md` 9; and the scopes of 3.7.1 for the fourteen modules of wave 5, written as Go type names: `Settlements`, `SettlementClass`, `ClassLimit`, `RegionSettlement`, `Storage`, `RoleRoom`, `StoreClass`, `Capacity`, `FlowTarget`, `Employment`, `Employer`, `Tenure`, `TenureTerm`, `Holding`, `Credit`, `CreditTerms`, `Lend`, `Borrow`, `Risk`, `RouteRisk`, `StoreRisk`, `Infrastructure`, `FacilityClass`, `InitialFacility`, `FacilityBuild`, `FacilityRepair`, `Insurance`, `CoverTerms`, `Underwrite`, `Insure`, `Polity`, `Jurisdiction`, `Member`, `Fiscal`, `Tax`, `Duty`, `Toll`, `Payout`, `Purchase`, `Release`, `Window`, `Institutions`, `Body`, `Right`, `Control`, `RateLimit`, `Policy`, `PolicyActor`, `Lever`, `ScheduleStep`, `Reaction`, `Saving`, `Saver`, `ProjectWorth`, `Technology` and `TechField`, and the fields they add to `Role` and `Recipe`), or a bound-checked
+section such as `WarmStart`. The `Label` of a store class, a settlement class, a jurisdiction, a facility class, a technology field, a policy actor, a body, a right, a control, a rate limit and a fiscal flow is presentation only and has no row (8.3). Two kinds of thing are NOT rows and the registry test MUST NOT look
 for a field behind them:
 
 - the **solve options** of `spec-viability.md` 11 (`StockCoverTicks`,
@@ -989,7 +1370,7 @@ for a field behind them:
 - the **bounds** of 4.1, which are constants in `bounds.go`, and the **options** of
   architecture.md 6.2 and `spec-world.md` 4.1 (`WithSeed`, `WithLogger`,
   `WithObserver`, `WithAudit`, `WithStrategy`, `WithSpawner`, `WithClearing`,
-  `WithReseed`). One option is the exception: `WithTargetSpread` changes results and
+  `WithPolicy`, `WithReseed`). `WithPolicy` registers the code behind a policy name; the name is hashed through the row `PolicyActor.Policy`. One option is the exception: `WithTargetSpread` changes results and
   is part of the effective configuration (8.1), so it **keeps its row** in the owner
   table, with a Scope cell that reads `World (option; hashed, spec-config.md 8.1)`.
   The registry test reads that cell and checks the row against the option, not
@@ -997,7 +1378,7 @@ for a field behind them:
   8.3 covers it through the effective configuration. An option that is a row is the
   only one that changes results; an option that changes none has no row.
 
-The registry must contain one row for each field of 3.7, including the sixteen belief
+The registry must contain one row for each field of 3.7 and 3.7.1, including the sixteen belief
 parameters, the eleven agent tunables, the recipe, yield and role fields, and
 `WarmStart`.
 
@@ -1090,7 +1471,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-035 | `Config` MUST have a `Yields` section of profiles keyed by region and recipe, sorted by region then recipe, and the production rules of `spec-production.md` 10.2 MUST be run on it and on the recipes with the sentinels `ErrCostShares`, `ErrToolNotDurable`, `ErrEligibleHasTool`, `ErrUnknownSeason`, `ErrModuleDependency`, `ErrDuplicateID` and `ErrOutOfBounds`. |
 | FR-CFG-036 | The derived checks of 4.2 for recipes, agents, the warm start and beliefs MUST be run, and a product that does not fit MUST be rejected with `ErrOverflow` carrying the path. |
 | FR-CFG-037 | `Config.WarmStart` MUST be nil by default, a non-nil value MUST NOT switch any mechanism on, and it MUST be validated with `ErrWarmStartPrice`, `ErrWarmStartJob` and the reference, duplicate and overflow sentinels of 7.4.1. |
-| FR-CFG-038 | A `Role.Strategy` name that is none of `"default"`, `"directed"` and a name registered with `WithStrategy`, a `World.Spawner` name that is not `"default"` or registered with `WithSpawner`, and a `World.Clearing` name that is not `"average"` or registered with `WithClearing` MUST each be rejected by `NewWorld`, after `Validate` has succeeded, with `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` as a `*ValidationError` with the path and the rule, `Validate` MUST NOT check them, and the three names MUST be in the effective configuration and the hash. |
+| FR-CFG-038 | A `Role.Strategy` name that is none of `"default"`, `"directed"` and a name registered with `WithStrategy`, a `World.Spawner` name that is not `"default"` or registered with `WithSpawner`, and a `World.Clearing` name that is not `"average"` or registered with `WithClearing`, and a `PolicyActor.Policy` name that is none of `"hold"`, `"schedule"`, `"rule"`, `"directed"` and a name registered with `WithPolicy` MUST each be rejected by `NewWorld`, after `Validate` has succeeded, with `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` and `ErrUnknownPolicy` as a `*ValidationError` with the path and the rule, `Validate` MUST NOT check them, and the four names MUST be in the effective configuration and the hash. |
 | FR-CFG-039 | The sixteen belief parameters (the fifteen of the first draft and `BeliefEvidenceShare`) MUST each have a default that passes validation and a bound, and the rules of FR-BEL-027, FR-BEL-028 and FR-BEL-037 MUST be run with `ErrOutOfBounds`. (changed: fifteen became sixteen) |
 | FR-CFG-040 | A region whose `ReferenceBasket` differs from the cost of the baseline upkeep plus its `ExtraUpkeep` at its effective reference prices by more than `BasketTolerance` basis points MUST be rejected with `ErrBasketMismatch`. |
 | FR-CFG-041 | Every viability error MUST be a `*ViabilityError` with a `Rule`, a `Path` and the offending value, matching `errors.Is(err, ErrNotViable)`, and the rules `unproducible_in_realm`, `role_cannot_work`, `cycle_not_productive`, `labour_short` and `storage_gap` MUST be errors. |
@@ -1136,6 +1517,20 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-081 | `World.Clearing` MUST be a configuration field holding a registered name, defaulting to `"average"`, with a row in the parameter-owner table (owner `spec-clearing.md` 8), MUST be hashed as a name, and an empty value MUST be rejected with `ErrUnknownClearing` by `NewWorld`. |
 | FR-CFG-082 | A configuration with a role of a recipe of `Duration` above 1, more than one agent in a group, and no warm start or a warm start with no job row for the role, MUST produce the informational diagnostic `cold_start_lockstep` once at construction, and it MUST NOT fail validation. |
 | FR-CFG-083 | `Validate` MUST NOT see `WithTargetSpread`, and the pure hash function of 8.5 MUST hash a `Config` as given, so that it differs from `World.ConfigHash` when that option was given. |
+| FR-CFG-084 | `Config.Modules.Settlements` MUST be on if and only if non-nil and MUST need no other module, MUST be written as `[modules.settlements]` with classes, limits and region rows as tables keyed by ID, MUST be part of the hash with its classes sorted by `Enter` and not by ID, a class's `Flags` by name and its `Limits` by `Name`, every field but `Label`, MUST have its bounds `MaxSettlementClasses`, `MaxClassFlags`, `MaxClassLimits`, `MaxBandBP` and `MaxThresholdBP` as constants of `bounds.go`, MUST reject a `Role.Needs` or `Role.Ceiling` with `ErrModuleDependency` while it is nil and with `ErrUnknownSettlementFlag` or `ErrUnknownLimit` when no class carries it, and its warnings (`spec-settlements.md` 9.2) MUST NOT fail validation. |
+| FR-CFG-085 | `Config.Modules.Storage` MUST be on if and only if non-nil, MUST be written as `[modules.storage]` with classes as `[modules.storage.class.<id>]`, MUST be part of the hash with its role rows by role and its classes by ID, every field but `StoreClass.Label`, MUST have its bounds `MaxRoom`, `MaxStoresPerAgent` and `MaxStoreClasses` as constants of `bounds.go`, MUST reject the shapes of `spec-storage.md` 13.1 with `ErrStoreShape`, `ErrRoomShape`, `ErrNotLimited`, `ErrUnknownStoreClass` and `ErrModuleDependency`, MUST check `room_below_warm_job` at construction and not in `Validate`, and its warnings (`spec-storage.md` 13.2) MUST NOT fail validation. |
+| FR-CFG-086 | `Config.Modules.Employment` MUST be on if and only if non-nil, MUST be written as `[modules.employment]` with `hireable = true` and the block `[role.<id>.employer]` on a role, MUST be part of the hash with a presence byte, `MaxOpen`, `Role.Hireable` and the `Role.Employer` block with its hire list by recipe ID, MUST NOT hash the hire records or the next hire ID, MUST have its bounds `MaxEstablishment` and `MaxHireRecords` as constants of `bounds.go`, MUST reject a `Hireable` role or an employer block while the module is off with `ErrModuleDependency`, a role that is both with `ErrEmploymentShape` and an employer group of scale above 1 with `ErrEmployerWeight`, and its warnings (`spec-employment.md` 14.2) MUST NOT fail validation. |
+| FR-CFG-087 | `Config.Modules.Tenure` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Resources` is nil, MUST be written as `[modules.tenure]` with `[modules.tenure.term.<region>.<resource>]` and `[modules.tenure.holding.<region>.<resource>.<holder>]`, MUST be part of the hash with its terms and holdings in canonical order, MUST reserve the word `pool` as a role ID (`ErrDuplicateID`), MUST have its bounds `MaxRentStepBP`, `MaxRentCeilingBP`, `MaxHoldings` and `MaxTitleTransfers` as constants of `bounds.go`, MUST reject a title total above 10 000 with `ErrTitleShares` and a holder above `MaxHolderShareBP` with `ErrTitleCap`, and its warnings (`spec-land.md` 11.2) MUST NOT fail validation. |
+| FR-CFG-088 | `Config.Modules.Credit` MUST be on if and only if non-nil and MUST need no other module, MUST be written as `[modules.credit]` with the role blocks `[role.<id>.credit.lend]` and `[role.<id>.credit.borrow]`, MUST be part of the hash with the module and every block and MUST NOT hash the rate scales, MUST have its bounds `MaxCreditRateBP`, `MaxCreditTerm` and `MaxOpenClaims` as constants of `bounds.go`, MUST reject a block with both or neither of `Lend` and `Borrow` with `ErrCreditShape`, a block while the module is off with `ErrModuleDependency` and an absent `rate_bp` or `max_rate_bp` with `ErrMissingField`, and its warnings (`spec-credit.md` 15.2) MUST NOT fail validation. |
+| FR-CFG-089 | `Config.Modules.Risk` MUST be on if and only if non-nil, MUST be written as `[modules.risk]` with `[modules.risk.route.<from>.<to>.<mode>]` and `[modules.risk.store.<region>.<class>]`, MUST be part of the hash with every field, its route rows by (`From`, `To`, `Mode`) and its store rows by (`Region`, `Class`), MUST have its bound `MaxRiskRows` as a constant of `bounds.go`, MUST reject a probability or a severity outside 1 to 10 000 with `ErrRiskShape`, a route row while transport is off or a store row while storage is off with `ErrModuleDependency`, and its warnings (`spec-risk.md` 13.2) MUST NOT fail validation. |
+| FR-CFG-090 | `Config.Modules.Infrastructure` MUST be on if and only if non-nil, MUST be written as `[modules.infrastructure]` with `[modules.infrastructure.class.<id>]` and `[[modules.infrastructure.initial]]`, MUST be part of the hash with its classes by ID and its initial rows by key, every field but `FacilityClass.Label`, MUST have its eleven bounds, `MaxFacilityClasses` to `MaxInitialRows`, as constants of `bounds.go`, MUST reject a recipe clause while the module is off with `ErrModuleDependency`, a class field set that its kind does not use with `ErrFacilityShape`, and the cases of `spec-infrastructure.md` 13.1 with `ErrFacilityNoCost`, `ErrFacilityHolder`, `ErrFacilityCount` and `ErrUnknownFacilityClass`, and its warnings (`spec-infrastructure.md` 13.2) MUST NOT fail validation. |
+| FR-CFG-091 | `Config.Modules.Insurance` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Risk` or `Modules.Credit` is nil, MUST be written as `[modules.insurance]` with the role blocks `[role.<id>.cover.underwrite]` and `[role.<id>.cover.insure]`, MUST be part of the hash with the module and every block, MUST have its seven bounds, `MaxValueCapBP` to `MaxCoverRequestsBound`, as constants of `bounds.go`, MUST reject a block with both or neither of `Underwrite` and `Insure` with `ErrCoverShape` and an absent required field whose bound admits 0 with `ErrMissingField`, and its warnings (`spec-insurance.md` 14.2) MUST NOT fail validation. |
+| FR-CFG-092 | `Config.Modules.Polity` MUST be on if and only if non-nil and MUST need no other module, MUST be written as `[modules.polity]` with `[modules.polity.jurisdiction.<id>]` and `[modules.polity.member]`, MUST be part of the hash with its jurisdictions by ID and its members by region, every field but `Jurisdiction.Label`, MUST have its bounds `MaxJurisdictions` and `MaxPolityDepth` as constants of `bounds.go`, MUST reject a cycle with `ErrJurisdictionCycle`, a seat the jurisdiction does not cover with `ErrSeatNotCovered`, an outside-node seat with `ErrSeatOutsideNode` and a `StartMoney` without a seat with `ErrStartWithoutSeat`, and its warnings (`spec-polity.md` 9.2) MUST NOT fail validation. |
+| FR-CFG-093 | `Config.Modules.Fiscal` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Polity` is nil or has no governed jurisdiction, MUST be written as `[modules.fiscal.tax.<id>]`, `.duty.<id>`, `.toll.<id>`, `.payout.<id>`, `.purchase.<id>` and `.release.<id>`, MUST be part of the hash with its six lists each by ID, every field but `Label`, the seasons in the calendar's order, and MUST NOT hash the flow scale, MUST have its bounds `MaxFiscalFlows`, `MaxDutyBP` and `MaxLimitBP` as constants of `bounds.go`, MUST reject an authority with no seat with `ErrNotGoverned`, a region or a target the authority does not cover with `ErrNotCovered` and a wrong field combination with `ErrFiscalShape`, and its warnings (`spec-fiscal.md` 15.2, `no_fiscal_flows` and `fiscal_class_empty` among them) MUST NOT fail validation. |
+| FR-CFG-094 | `Config.Modules.Institutions` MUST be on if and only if non-nil, MUST be written as `[modules.institutions]` with `[modules.institutions.body.<id>]`, `.right.<id>`, `.control.<id>` and `.rate_limit.<id>`, MUST be part of the hash in canonical order, every field but `Label`, and MUST NOT hash the legal levels or the right suspensions, MUST have its bounds `MaxBodies`, `MaxRights` and `MaxControls` as constants of `bounds.go`, MUST reject an unknown body with `ErrUnknownBody`, the shapes of `spec-institutions.md` 10.1 with `ErrBodyShape`, `ErrBodyOverlap`, `ErrRightShape` and `ErrControlShape` and a keyed jurisdiction, flag or rate limit while its module is off with `ErrModuleDependency`, and its warnings (`spec-institutions.md` 10.2) MUST NOT fail validation. |
+| FR-CFG-095 | `Config.Modules.Policy` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Polity` is nil or has no jurisdiction, MUST be written as `[modules.policy]` with `[modules.policy.actor.<id>]` and its lever, schedule and rule tables, MUST be part of the hash with the policy of an actor by name only and MUST NOT hash a registered implementation or the mailbox, MUST have its eight bounds, `MaxActors` to `MaxMoveBP`, as constants of `bounds.go`, MUST reject the shapes of `spec-policy.md` 11.1 with `ErrPolicyShape`, `ErrLeverNotInReach` and `ErrLeverShared`, and an unregistered name with `ErrUnknownPolicy` in `NewWorld` (7.1.4), and its warnings (`spec-policy.md` 11.2) MUST NOT fail validation. |
+| FR-CFG-096 | `Config.Modules.Saving` MUST be on if and only if non-nil, MUST be written as `[modules.saving]` with the role block `[role.<id>.saver]` and its rows `[[role.<id>.saver.worth]]`, MUST be part of the hash with the module and every block, MUST have its ten bounds, `MaxSafetyTicks` to `MaxWorthCount`, as constants of `bounds.go`, MUST reject a `Saver` block while the module is off and a `Worth` row while `Modules.Infrastructure` is nil with `ErrModuleDependency`, and its warnings (`spec-saving-and-investment.md` 11.2) MUST NOT fail validation. |
+| FR-CFG-097 | `Config.Modules.Technology` MUST be on if and only if non-nil, MUST be written as `[modules.technology]` with `[modules.technology.field.<id>]`, MUST be part of the hash with its fields by ID, every field but `Label`, and MUST NOT hash the experience or the advance of a cell, MUST have its bounds `MaxTechFields`, `MaxFieldRecipes`, `MaxTechBase`, `MaxDoublingBP`, `MaxTechTrendBP`, `MaxDiscoveryBP`, `MaxGainBP`, `MaxStepBP`, `MaxCatchUpBP`, `MaxTechBP` and `MaxExperience` as constants of `bounds.go`, MUST reject a field whose mechanism is off but set or on but unset with `ErrTechShape` and a recipe in two fields with `ErrTechRecipeOverlap`, and its warnings (`spec-technology.md` 10.2) MUST NOT fail validation. |
 
 ### Non-functional
 
@@ -1205,8 +1600,8 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
    a feature of the data-pack deliverable (roadmap, "Deliverables that are not
    specs"), not of the framework.
 8. **Where the name rules live. Decided: `NewWorld`.** `Validate` takes no
-   options and cannot see `WithStrategy`, `WithSpawner` or `WithClearing` (7.1.4);
-   there are three name checks, strategy, spawner and clearing, run after `Validate`
+   options and cannot see `WithStrategy`, `WithSpawner`, `WithClearing` or `WithPolicy` (7.1.4);
+   there are four name checks, strategy, spawner, clearing and policy, run after `Validate`
    succeeds. A `Validate` that took the registrations as an argument was rejected:
    it would put an option in a method that is meant to be pure data.
 9. **The size gate of the viability check.** `MaxViabilityCells` and
@@ -1217,7 +1612,7 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
     `season_shorter_than_tick` and `tool_unaffordable` are named here (7.4.2) because
     the registry and the tests need a name. The calendar and skill-barriers specs
     should adopt them. Open until they do.
-11. **Unify the module table names before the loader is written.** The file layout of the modules differs from spec to spec: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, and a table of its own for transport (6.2). The framework records each as its spec says and does not unify them now. *Next step:* choose one rule (for example `[module.<name>]` for every module) in the slice, before `config/` is written, and amend the specs and the reference packs together.
+11. **Unify the module table names before the loader is written.** The file layout of the modules differs from spec to spec: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, and a table of its own for transport (6.2). The fourteen modules of wave 5 all use `[modules.<name>]` (6.2), the form of `[modules.information]`, `[modules.subsistence]`, `[modules.migration]` and `[modules.merchants]`, so the table has two spellings, `[module.<name>]` and `[modules.<name>]`, and the unnamed `[demand]`, `[population]` and `[resources]`. The framework records each as its spec says and does not unify them now. *Next step:* choose one rule (for example `[modules.<name>]` for every module, the form that all the later modules use) in the slice, before `config/` is written, and amend the specs and the reference packs together.
 
 ## 14. Where this lives in the code
 
@@ -1229,7 +1624,7 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
 | `Validate`, `Warnings`, `ValidationError` and the sentinels | root package, `validate.go`, `errors.go` |
 | The producibility fixpoint (7.5) | root package, `validate.go`; a pure function over primitive slices that may live in `internal/` when it grows |
 | The viability rules of 7.6 and the sentinels `ErrNotViable`, `ErrWarmStartPrice`, `ErrWarmStartJob` and `ViabilityError` | root package, `validate.go`, `errors.go`; the programmes and checks in `internal/steady` (`spec-viability.md` 21) |
-| The three name checks (7.1.4: strategy, spawner, clearing) | root package, `world.go` (they need the options); `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` in `errors.go` |
+| The four name checks (7.1.4: strategy, spawner, clearing, policy) | root package, `world.go` (they need the options); `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` and `ErrUnknownPolicy` in `errors.go` |
 | `WarmStart` and its types | root package, `viability.go` (`spec-viability.md` 21), a field of `Config` in `config.go` |
 | Canonical order and the hash encoding | root package, `hash.go` |
 | `Parse`, `LoadFS`, the merge and the key mapping | package `config/` (the only package with a third-party import) |

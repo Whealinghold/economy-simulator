@@ -69,6 +69,11 @@ read as summaries; CCP's own 2010 newsletter PDF could not be read.
    default does nothing. Whether this is a new fifth extension point or reuses
    `Strategy` is open (see below).
 
+   *Note, 2026-10-13 (text above kept).* `spec-policy.md` 4.7 narrows the typed
+   actions to one: a policy sets a lever, a named, bounded, rate-limited
+   handle on a slot key. A transfer and stock added to a boundary are a
+   declared flow's scale, which a lever moves; the ledger never sees a policy.
+
 5. **Defaults are stable macro constants.** The library ships a named default
    for every macro parameter, held in one place per owner spec, chosen so that
    the reference chain stays inside the acceptance bands of
@@ -90,6 +95,11 @@ read as summaries; CCP's own 2010 newsletter PDF could not be read.
    aggregators over commodity classes and account sets, and the standard
    indicators (price index, value added, inequality) are presets built on them.
    A consumer may define its own.
+
+   *Note, 2026-10-13 (text above kept).* [ADR 0006](0006-structural-rank-may-gate-entry-rights-and-places.md)
+   narrows this decision: a derived structural rank, or a count of households of
+   one region, may gate an entry, a right or a place, and a quantity local to
+   one endowment is not an aggregate. Status stays Accepted.
 
 8. **Vocabulary stays neutral.** Mechanisms are expressed as upkeep unmet for a
    number of ticks (not "starvation"), a tick of configurable length with
@@ -132,7 +142,10 @@ read as summaries; CCP's own 2010 newsletter PDF could not be read.
 
 1. Does the `Policy` hook reuse the `Strategy` extension point or become a fifth
    extension point? A fifth means a change to the table in
-   `doc/rules/architecture.md` 4.3 in the same change.
+   `doc/rules/architecture.md` 4.3 in the same change. **Answered**
+   (2026-10-13): a fifth extension point, `Policy`, with one method, `Decide`,
+   that returns the settings of levers (`spec-policy.md` 4.7;
+   `doc/rules/architecture.md` 4.3).
 2. Which rule shapes ship for flows, and which parameters does each take?
 3. Which modules are in the first release (`doc/roadmap.md`, Open, item 1)?
 4. What numeric acceptance bands define "stable", and what are the default

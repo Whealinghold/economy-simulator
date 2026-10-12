@@ -22,7 +22,7 @@ it is, how big it is, whether it spoils, whether it wears out, how it is grouped
 for measurement, whether it is a raw good, and its reference price. It covers:
 
 - the unit and the choice of it (section 2);
-- mass, bulk and loads, and the chargeable size used to price transport and storage (section 3);
+- mass, bulk and loads, and the chargeable size, a per-unit size that no module of version 1 prices by (section 3);
 - spoilage by shelf life (section 4);
 - wear by durability (section 5);
 - classes, raw goods and the reference price (section 6);
@@ -108,9 +108,10 @@ within their capacity. Whichever is reached first is the **binding dimension**,
 and it differs by cargo. The sums are computed with checked arithmetic
 (architecture.md 3.5).
 
-3.3. **Chargeable size.** Storage is priced as an ordinary market, by a price per
-unit (`spec-storage.md`; transport no longer uses it, `spec-transport.md` 8.3), and that needs one number
-per good. The **chargeable size** of one unit of a commodity is
+3.3. **Chargeable size.** A price per unit of a place or a carrier needs one number per good.
+No module of version 1 uses it: transport buys carrying units by the pair (`spec-transport.md`
+8.3) and storage uses the pair and a per-store cost (`spec-storage.md` 8.4), so the size is
+kept for a later spec that prices by the unit. The **chargeable size** of one unit of a commodity is
 
 ```
 charge = max(mass, ceil(bulk * BulkFactor / 10_000))
@@ -120,15 +121,14 @@ charge = max(mass, ceil(bulk * BulkFactor / 10_000))
 one bulk unit is charged as one mass unit. A larger factor charges bulk more
 heavily, as freight does when it bills the greater of the actual weight and the
 space a parcel takes up. The chargeable size of a quantity is the quantity times
-`charge`, checked. It is used *only* for pricing. Whether a load fits a container
+`charge`, checked. It would be used *only* for pricing, by a spec that has a per-unit price. Whether a load fits a container
 is always decided by the pair of 3.2.
 
 3.4. **Chargeable capacity.** A container with a mass capacity `Cm` and a bulk
 capacity `Cb` carries at least `min(Cm, floor(Cb * BulkFactor / 10_000))`
 chargeable units of any single commodity: a load of one commodity within that
-number always fits. This is the capacity over which a store spreads its charge
-(`spec-storage.md`; transport uses the pair per carrying unit instead,
-`spec-transport.md` 3.2). The
+number always fits. This is the capacity over which a price per unit would be spread; transport and storage use the
+pair instead (`spec-transport.md` 3.2, `spec-storage.md` 8.4). The
 bound is exact when `Cm` equals `Cb * BulkFactor / 10_000`, a vehicle that is
 balanced for the convention, and conservative otherwise.
 
@@ -136,10 +136,10 @@ balanced for the convention, and conservative otherwise.
 their chargeable sizes is above the chargeable capacity, because goods that are
 heavy and goods that are bulky use different limits. Pricing each good by its
 chargeable size and adding them therefore *over-charges* a well-mixed cargo. That
-is a stated simplification (open question 1) for storage: it keeps storage a
-per-unit market, and it errs towards dearer storage, not cheaper. Transport does
-not use the chargeable size: a hired load buys carrying units by its binding fill
-(`spec-transport.md` 3.2.1), which is exact.
+is a stated simplification (open question 1) of a per-unit price: it errs towards a dearer
+price, not a cheaper one. Neither transport nor storage uses the chargeable size: a hired load buys carrying
+units by its binding fill (`spec-transport.md` 3.2.1), and a store has a capacity pair and a
+charge per store (`spec-storage.md` 8.4), both exact.
 
 3.6. Mass and bulk are properties of a unit, so a cohort of agent weight `w`
 holds `w` times as much of each (`spec-scale.md` 4.2). Loads and capacities are
@@ -336,7 +336,7 @@ All are fields of a commodity in the configuration, in the file as
 |-------|-------|---------|---------|
 | Commodity | `Mass` | load-bearing capacity one unit uses, in mass units (section 3); 0 uses none | 1 |
 | Commodity | `Bulk` | room one unit takes up, in bulk units (section 3); 0 takes none | 1 |
-| World | `BulkFactor` | how heavily bulk counts in a chargeable size, in basis points (section 3.3) | 10 000 |
+| World | `BulkFactor` | how heavily bulk counts in a chargeable size, in basis points (section 3.3); no module of version 1 reads it (`spec-storage.md` 8.4) | 10 000 |
 | Commodity | `ShelfLife` | ticks a lot lasts before it spoils; 0 never spoils (section 4) | 0 |
 | Commodity | `Durability` | wear units of a new unit; 0 does not wear (section 5) | 0 |
 | Commodity | `Classes` | set of class tags for measurement (section 6.1) | none |
@@ -369,7 +369,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-GDS-003 | The upkeep of a household for each commodity it needs MUST be at least 1 unit (the effective upkeep of `spec-agents.md` 5.1, 5.2, per household), or the configuration MUST be rejected. (Owned jointly with `spec-agents.md`.) |
 | FR-GDS-004 | `Mass` and `Bulk` MUST each be an integer from 0 to their bound, defaulting to 1. |
 | FR-GDS-005 | The load of a set of goods MUST be the pair of the sum of quantity times `Mass` and the sum of quantity times `Bulk`, computed with checked arithmetic, and a load MUST fit a container if and only if both sums are within the container's two capacities. |
-| FR-GDS-006 | The chargeable size of one unit of a commodity MUST be the greater of its `Mass` and `Bulk` times `BulkFactor` divided by 10 000 (rounded up), and `BulkFactor` MUST default to 10 000 and lie between 1 and `MaxBasisPoints`. |
+| FR-GDS-006 | The chargeable size of one unit of a commodity MUST be the greater of its `Mass` and `Bulk` times `BulkFactor` divided by 10 000 (rounded up), and `BulkFactor` MUST default to 10 000 and lie between 1 and `MaxBasisPoints` (no module of version 1 prices by the size). |
 | FR-GDS-007 | The chargeable capacity of a container MUST be the smaller of its mass capacity and its bulk capacity times `BulkFactor` divided by 10 000 rounded down, and any load of a single commodity whose chargeable size is within it MUST fit. |
 | FR-GDS-008 | `ShelfLife` MUST be an integer from 0 to its bound, where 0 means the commodity never spoils. |
 | FR-GDS-009 | The age of every lot of a perishable commodity MUST increase by 1 at the end of each tick, and a lot MUST spoil, whole, at the end of the tick in which its age reaches the shelf life. |
@@ -423,8 +423,9 @@ Original entries:
    fill of the combined load, `max(ceil(mass / UnitMass), ceil(bulk / UnitBulk))`,
    which is exact for one vehicle of the mode and is still a per-unit price (the unit
    is the haul unit), so `BulkFactor` is not used by transport and the per-mode unit
-   pair is the per-mode factor. Still open for storage (`spec-storage.md`), which may
-   keep the chargeable size and a single `BulkFactor`.
+   pair is the per-mode factor. Answered for storage by `spec-storage.md` 8.4: a store has the
+   pair as its capacity and a charge per store, so the over-charge does not arise there either;
+   the chargeable size and `BulkFactor` have no user in version 1.
 2. **Cliff or decay for spoilage.** A lot spoils whole at a fixed age (4.5), and
    the ledger implements it with lots stored by born tick (`spec-ledger.md` 5.1
    and 5.3). The alternative is a share of the stock lost each tick; revisit only
@@ -433,8 +434,7 @@ Original entries:
    inventory capacity in version 1. The original bounds an agent's whole
    inventory (`max_size`) and makes it discard goods when full; here a discard is
    a strategy decision executed as a move to the `disposal` boundary. `Mass` and
-   `Bulk` stay for transport and storage (`spec-storage.md` is "later" in the
-   vision).
+   `Bulk` stay for transport and storage (`spec-storage.md`, the pair of 3.2).
 4. **Goods that cannot or should not be traded.** Answered by
    `spec-production.md` 7.5 (N-003): there is no `Tradable` flag. A waste output
    is marked `Discard` (created and disposed of in one step, never held or

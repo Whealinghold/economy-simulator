@@ -78,7 +78,7 @@ Out of scope, with the owner:
 | 7 | The configuration is **not** in the checkpoint. The consumer passes it again and its hash must match; the registered extensions are checked by name | 6.2 |
 | 8 | A restored world is a **new world** that is bit-identical in its future to the one that was checkpointed, given the same calls. Two restores of one checkpoint continue identically | 8 |
 | 9 | `WithSeed` is refused on a restore. `WithReseed(salt)` is the restore-only option that gives a branch its own randomness, deterministically | 6.4, 6.8 |
-| 10 | Extension state is explicit: an optional two-method interface, `Stateful`, for `Strategy`, `Spawner` and `Clearing`, saved per registered name with a version. An `Observer` is never saved | 7 |
+| 10 | Extension state is explicit: an optional two-method interface, `Stateful`, for `Strategy`, `Spawner`, `Clearing` and `Policy`, saved per registered name with a version. An `Observer` is never saved | 7 |
 | 11 | Closed accounts are **never compacted** in version 1; a closed slot is saved as two small numbers | 9.4 |
 | 12 | Before 1.0 a checkpoint restores only into a library that writes its exact format version. From 1.0, a v1 library restores every v1 format and never a newer one | 9.1, 9.2 |
 | 13 | A checkpoint carries no events and no configuration. A consumer that needs history keeps its own | 3.5 |
@@ -243,8 +243,8 @@ default is **corrupt** (the one-spelling rule of 5.2, R10).
 | Tag | Section | Owner (and hosted fields) | State, in the order written | Present when |
 |-----|---------|---------------------------|-----------------------------|--------------|
 | 1 | World | WLD 12 | the state of the PCG (20 bytes, `MarshalBinary`), the next agent ID, whether the world is still in its construction phase. The tick, the seed and the hash are in the header (5.4) | always |
-| 2 | Ledger | LED 11, 7.4, 3 | every account that is not a boundary, in ID order: kind, closed flag and, if open, its region, owner reference, money, lots (commodity, quantity, `Born` signed, durability) in canonical order; the balance of each boundary account (a count the configuration implies); the claims (a count, 0 in format 1); the **pending totals** (the flow totals, the wear units and the relocation totals that calls between ticks added since the last P8.6, sparse); and, when the world is in construction, the **construction bucket** in the same layout | always |
-| 3 | Agents | AGT 15; hosts `RoleSince` (SPN 14), `DeathCarry` (POP 3.8), `OwnUse` and `OwnUseJobs` (SUB 5.3), `Journey` (MIG 8.2) | the table of strategy names used by agents (sorted); for each agent in ascending ID: ID, account, role, weight, `External` and `Mortal`, strategy name index, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey (destination, arrival tick) if any, the directive if any (whether it carries a job request, since `Directive.Job` is a pointer, then the job request if it does, the intents, discards, holds, `Sticky`); then the diagnostic run of consecutive unfed ticks per (region, role), sparse | always |
+| 2 | Ledger | LED 11, 7.4, 3; hosts the claims (CRD 17.1, INS 16.1) | every account that is not a boundary, in ID order: kind, closed flag and, if open, its region, owner reference, money, lots (commodity, quantity, `Born` signed, durability) in canonical order; the balance of each boundary account (a count the configuration implies); the **claims**: the next claim ID, then the open claims in ascending ID, each as the ledger numbers its accounts: ID, creditor and debtor (account IDs), `Principal`, `Interest`, `PrincipalOwed`, `InterestOwed`, `RateBP`, `Formed`, `Due`, `Overdue` (signed, -1 for none) and, with the insurance module on, `Origin` (`0` loan, `1` payout), then the six cumulative totals of `spec-credit.md` 3.3.2 and, with the insurance module on, `Awarded` (the count of claims is 0 and the totals are absent with neither module); the **pending totals** (the flow totals, the wear units and the relocation totals that calls between ticks added since the last P8.6, sparse); and, when the world is in construction, the **construction bucket** in the same layout | always |
+| 3 | Agents | AGT 15; hosts `RoleSince` (SPN 14), `DeathCarry` (POP 3.8), `OwnUse` and `OwnUseJobs` (SUB 5.3), `Journey` (MIG 8.2), the stores (STO 15.1) and the membership (ORG 12.1) | the table of strategy names used by agents (sorted); for each agent in ascending ID: ID, account, role, weight, `External` and `Mortal`, strategy name index, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey (destination, arrival tick) if any, the directive if any (whether it carries a job request, since `Directive.Job` is a pointer, then the job request if it does, the intents, discards, holds, `Sticky`); then, when `Modules.Storage` is on, the stores (a count, then (class index, count) pairs in ascending class index, a count of 0 being the common case); then, when `Modules.Institutions` is on, the membership as `BodyID + 1` and `RegionID + 1` (0 and 0 for none; one of the two zero is corrupt); then the diagnostic run of consecutive unfed ticks per (region, role), sparse | always |
 | 4 | Markets | CLR 5.4, 5.5; BEL 7, 13; the report of INT 6.3 | for each (region, commodity) of a region that is not an outside node, region then commodity: the **market report of the last clearing**: the published price, the price age, the volume, the unmatched bid units and ask units, the best unmatched bid (present flag, price), the best unmatched ask (present flag, price); the price window (count, then the prices **oldest first**); and the diagnostic run `BoundRun` | always |
 | 5 | Beliefs | BEL 13 | for each agent in ascending ID and each commodity of its role's tradable set in `CommodityID` order: `Centre`, `Width` | always |
 | 6 | Production | PRO 15 | for each agent in ascending ID: whether it has a job and, if so, `Recipe`, `Remaining`, `Executions`, `Principal` (agent ID) and the pending quantity of each output in output order; its residues, one per (recipe of its role or of its effective own-use list, output) in canonical order; then the yield shocks that are not 10 000 as (region, recipe, factor), sparse | always |
@@ -254,36 +254,55 @@ default is **corrupt** (the one-spelling rule of 5.2, R10).
 | 10 | Skills | SKL 9 | the trainees (agent, trainer, target role, ticks served, application tick) and the trainers (agent, teaching accumulator, trainees) in ascending agent ID; the queue of applicants for each (region, role) that has one, in queue order, each entry (agent, application tick, ticks served) (sparse: an empty queue is not written); the `Warn` run, sparse. Empty when no role has `TrainingTicks` above 0 | always |
 | 11 | Regions | REG 11 | the edges whose status is not the default, in ascending (`From`, `To`): `Closed`, `FactorBP` | always |
 | 12 | Demand | DEM 12 | for each agent whose role has a ladder, in ascending ID: the carry of each taste row in ladder order; the diagnostic run per (region, role, want), sparse | `Modules.Demand` |
-| 13 | MoneySupply | MON 14 | per flow in ID order: `Total`, `Scale`, `Ended`; for each flow with a household target and a carry shape, the (account, carry) pairs in ascending account ID, open accounts only; for each flow with a pool target and a carry shape, one carry per region | `Modules.MoneySupply` |
+| 13 | MoneySupply | MON 14 | per flow in ID order: `Total`, `Scale`, `Ended`; for each flow with a household target and a carry shape, the (account, carry) pairs in ascending account ID, open accounts only; for each flow with a stores target and a carry shape, the same pairs, open accounts only (a third case, `spec-storage.md` 15.1); for each flow with a pool target and a carry shape, one carry per region | `Modules.MoneySupply` |
 | 14 | Population | POP 11 | the birth carry per (region, role), sparse; the effective `BirthScale` and `DeathScale` per region when a shock set them, sparse; the three diagnostic runs (births unfunded, deaths held, and "region extinct" per region), sparse | `Modules.Population` |
 | 15 | Resources | RES 15 | for each endowment with a configured capacity above 0, in (`RegionID`, `ResourceID`) order: `Stock`, `Carry`, `ExhaustedRun`; the shock scales that are not 10 000 as (region, resource, capacity, regeneration), sparse | `Modules.Resources` |
 | 16 | Information | INF 14 | for each source (region, commodity) in ascending order: the entries held (a count), each oldest first as `Price`, `Mean`, `Age` | `Modules.Information` |
-| 17 | Transport | TRN 14 | the next shipment ID; the shipments in flight in ID order, every field of `spec-transport.md` 5.2 (modes and regions by index, lines in commodity order); the transit factors that are not 10 000 as (from, to, mode, factor), sparse | `Modules.Transport` |
+| 17 | Transport | TRN 14 | the next shipment ID; the shipments in flight in ID order, every field of `spec-transport.md` 5.2 (modes and regions by index, lines in commodity order; with `Modules.Risk`, `LossBP`, unsigned, 0 to 10 000, which the shipment record of TRN 5.2 carries); the transit factors that are not 10 000 as (from, to, mode, factor), sparse | `Modules.Transport` |
 | 18 | External | EXT 16 | for each line in (node, commodity) order: the drift when it walks, the shock; for each present side, **buy side then sell side** (a side is present when its `Capacity` is above 0, `spec-external-sector.md` 3.3): the capacity carry, the cumulative units, the cumulative list value, the ended flag | `Modules.External` |
 | 19 | Subsistence | SUB 15 | the two diagnostic runs per (region, role), sparse. The per-agent flag and counter are in section 3 | `Modules.Subsistence` |
 | 20 | Migration | MIG 14 | the two diagnostic runs per region and the count of journeys ended by a removal per region, sparse. The journeys are in section 3 | `Modules.Migration` |
 | 21 | Merchants | MER 16 | the next contract ID; the contracts in flight in ID order (ID, payer, deliverer, shipment, commodity, quantity, price, Escrow account, formation tick, destination region) | `Modules.Merchants` |
 | 22 | Integration | INT 13, 4.7.3 | for each external agent of an `Informed` role that has had a view, in ascending agent ID: the tick of its last view and the rumours given to it (region, commodity, price, mean, lag, source age), in the order of the view, sparse | `Modules.Information` |
-| 23 | Extensions | CHK 7 | for each registered `Stateful` extension in (kind, name) order: kind, name, version, state bytes | always (a count; `directed`, which `spec-integration.md` 4.2.2 builds in, has an entry in every world, empty unless its fallback is `Stateful`) |
+| 23 | Settlements | SET 11 | for each region that is not an outside node, in ascending `RegionID`: `Class` (an index into the sorted classes) and `Since` (the tick of the last change, 0 at construction). Dense; no diagnostic run, no hosted field | `Modules.Settlements` |
+| 24 | Employment | EMP 16 | the next hire ID; the hires in flight in ascending hire ID: ID, employer and worker (agent IDs), the wage per household-tick, the Escrow account, the formation tick, the region (by index); then the two diagnostic runs of the `Warn` lines of `spec-employment.md` 15.2.2 per (region, role), sparse. The recipe, executions and ticks left of a hire are the worker's job in section 6 | `Modules.Employment` |
+| 25 | Tenure | LND 14 | for each endowment with at least one title, in (`RegionID`, `ResourceID`) order: the number of titles and then each as (holder agent ID, `ShareBP`) in ascending holder ID; for each endowment with a posted rent: the posted rent; the rent scales that are not 10 000 as (region, resource, `BP`), sparse; the two diagnostic runs `NoTitleRun` and `RentFundsRun`, sparse | `Modules.Tenure` |
+| 26 | Credit | CRD 17.1 | the rate scales that are not 10 000 as (region, `BP`) in ascending region, sparse; the diagnostic run of the "claims overdue" `Warn` per region, sparse; the run of "claim cap reached", one value. The claims are in section 2 | `Modules.Credit` |
+| 27 | Facilities | CAP 15.1 | the next facility ID; the count; for each facility in ascending ID: `ID`, class index (the position in the configuration's sorted classes), `Region`, `To` (route classes only), `Owner` (an agent ID or the estate of `Region`), `Condition`, `Built`, `Installed` (a store class only) | `Modules.Infrastructure` |
+| 28 | Risk | RSK 15.1 | the route scales that are not 10 000 as (`From`, `To`, mode, `BP`) in ascending key, then the store scales that are not 10 000 as (region, class, `BP`) in ascending key; both sparse. `LossBP` of a shipment is in section 17 | `Modules.Risk` |
+| 29 | Insurance | INS 16.1 | the next policy ID; the open **route** policies in ascending ID: ID, insured and underwriter (agent IDs), shipment ID, `Sum`, `MaxPayout`, `CoverBP`, `Premium`, `Formed`; the six totals of `spec-insurance.md` 9.3. A store policy is never saved: it is formed at P3.3c and ended at P8.1b of one tick. The payout claims, `Origin` and `Awarded` are in section 2 | `Modules.Insurance` |
+| 30 | Fiscal | FIS 17 | for each flow in the order of the six lists (taxes, duties, tolls, payouts, purchases, releases, each by ID): for a tax, a duty or a payout with a rate shape the (account ID, carry) pairs in ascending account ID for every open account on which the flow has acted, zeros included; for a purchase or a release one carry, always written; then the scales that are not 10 000 as (flow position, scale), sparse. The treasury's money and goods are the ledger's | `Modules.Fiscal` |
+| 31 | Institutions | ORG 12.2 | the levels that differ from the configured ones as (`ControlID`, `CapBP`, `FloorBP`) in ascending `ControlID`; the suspended rights as `RightID` in ascending order; the run of consecutive ticks with waiting households per (region, body) that has one, sparse. Zero rows when nothing differs. The membership is in section 3 | `Modules.Institutions` |
+| 32 | Policy | PLC 13.1 | for each `directed` actor with a non-empty mailbox, in ascending `ActorID`: the actor, the count of settings, then each setting in ascending `LeverID` as the lever, the value and the closed flag. Sparse | `Modules.Policy` |
+| 33 | Technology | TEC 12.1 | for each (region, field) cell in ascending (`RegionID`, `TechFieldID`): `Experience`, `Advance`, `CatchUp` (the count is `R * F` from the configuration and is not written); for each field in ascending order: `TrendCarry`; then `Key` (unsigned, 64 bits), **present only when some field has `DiscoveryBP` above 0** | `Modules.Technology` |
+| 34 | Extensions | CHK 7 | for each registered `Stateful` extension in (kind, name) order: kind, name, version, state bytes | always (a count; `directed`, which `spec-integration.md` 4.2.2 builds in, has an entry in every world, empty unless its fallback is `Stateful`) |
 
 4.2.1. **Order.** The tag order is the write order and the restore order. Sections 12
-to 22 are in the order of the dependencies between modules (a shipment of 17 before the
-contracts of 21 that name it). A section of a module that is off is **absent**: it has
+to 33 are in the order of the dependencies between modules (a shipment of 17 before the
+contracts of 21 that name it, the claims of 2 and the Escrow accounts of 2 before the hires
+of 24, the endowments of 15 before the titles of 25, the stores of 3 and the shipments of 17
+before the facilities of 27 and the policies of 29). Tag 22 was assigned before the later-stage
+modules and a tag is never renumbered (5.3.3), so Integration stays 22, the sections 23 to 33
+follow it in dependency order, and Extensions, which loads after every other section
+(FR-CHK-029), is 34. A module with no section is listed in 4.2.6. A section of a module that is off is **absent**: it has
 no tag in the frame, the decoder derives the expected list of tags from the
 configuration, and an unexpected tag or a missing one is corrupt (5.3). The sections
-that depend on no module (1 to 11 and 23) are always present, with zero rows when there
+that depend on no module (1 to 11 and 34) are always present, with zero rows when there
 is nothing to save, so that the shape of a checkpoint does not depend on a run's
 history.
 
-4.2.2. **Pseudo-agents are not agents.** The estate pseudo-agents and the counterparties
-of the outside have no row in section 3. Their IDs and accounts are a function of the
+4.2.2. **Pseudo-agents are not agents.** The estate pseudo-agents, the counterparties
+of the outside and the treasury pseudo-agents of the governed jurisdictions have no row in
+section 3. Their IDs and accounts are a function of the
 configuration (`spec-world.md` 5.2, 5.3): the ledger saves their accounts like any
 other, and a restore rebuilds the pseudo-agent of region `r` and of each counterparty
 from the configuration and the account list. The **owner reference** of an account is the
 agent ID for an Agent account, the `RegionID` for an Estate account (equal to its
 pseudo-agent's ID), the index of the counterparty in the configuration's order (node,
-gate, buy before sell) for an Outside account, and absent for an Escrow or a Transit
-account, whose region is saved and whose user is named by the shipment or the contract
+gate, buy before sell) for an Outside account, the `JurisdictionID` for a Treasury account (a
+restore rebuilds the treasury pseudo-agent of each governed jurisdiction from the
+configuration and the account list, as it does an estate), and absent for an Escrow or a Transit
+account, whose region is saved and whose user is named by the shipment, the contract or the hire
 that holds it (an account that no record names is free, 4.3).
 
 4.2.3. **Agent references.** Every other section names an agent by its **ID**. The
@@ -291,14 +310,18 @@ decoder checks that the ID is that of a live agent of section 3, **except** for 
 references that name an agent that may since have been removed: a shipment's `Shipper`,
 `Traveller` and `Consignee` (a shipment outlives all three, `spec-transport.md` 5.9, 5.2),
 and a contract's payer (`spec-merchants.md` 9.7); for those the ID is only required to be
-less than the next agent ID (an ID is never reused). A reference to a region, a role, a recipe, a commodity, a
+less than the next agent ID (an ID is never reused). Two references may also name the **estate
+pseudo-agent** of a region, whose ID is the `RegionID` and which has no row in section 3: a
+facility's `Owner` (`spec-infrastructure.md` 15.3) and a title's holder
+(`spec-land.md` 14.2); each is checked against the region instead (the facility's region,
+the endowment's region). A reference to a region, a role, a recipe, a commodity, a
 mode or a resource is an index into the configuration's canonical order, checked
 against its count.
 
 4.2.4. **Enumerations of the format.** An account kind is `0` Agent, `1` Estate, `2`
-Escrow, `3` Transit, `4` Outside, in the order of `spec-ledger.md` 3.1 (a boundary has no
+Escrow, `3` Transit, `4` Outside, `5` Treasury, in the order of `spec-ledger.md` 3.1 (a boundary has no
 entry in the account list: its balance is written in the boundary list); an extension
-kind is `0` strategy, `1` spawner, `2` clearing; an agent flag word has bit `1` External
+kind is `0` strategy, `1` spawner, `2` clearing, `3` policy; the origin of a claim is `0` loan, `1` payout; an agent flag word has bit `1` External
 and bit `2` Mortal; the ended state of a money flow is `0` not ended, `1` limit, `2` cap
 (`spec-money-supply.md` 14). A value outside an enumeration is corrupt (R6).
 
@@ -307,17 +330,32 @@ owners say "per (region, role)" and not how many rows are written. **Dense** (ev
 element of the implied or stored count, no omission): the accounts, the lots, the agents,
 the beliefs, the markets (including `BoundRun` in each market row), the welfare records of
 an agent, the ring entries, the contracts, the shipments, the flow rows, the endowments and
-the lines. **Sparse** (only rows that differ from the default, ascending by key; a row at
-its default is corrupt, R10): every diagnostic run (tags 3, 7, 9, 10, 12, 14, 19, 20), the
+the lines, the hires, the claims, the facilities, the policies, the settlement rows (23) and
+the technology cells (33). The (account, carry) pairs of a fiscal flow (30) are dense over the
+accounts the flow has acted on, zeros included, which is not the sparse rule of "a row at its
+default is corrupt": an account with no pair has the flow's initial value and a pair at 0 is
+not that value (`spec-fiscal.md` 17). **Sparse** (only rows that differ from the default, ascending by key; a row at
+its default is corrupt, R10): every diagnostic run (tags 3, 7, 9, 10, 12, 14, 19, 20, 24, 25, 26, 31), the
 renewal carry and birth carry (default 0), the count of journeys ended by a removal
 (default 0), the yield shocks (default 10 000), the transit factors (default 10 000), the
-resource shock scales (default 10 000), the pending totals (default 0), the queues of tag
-10, the effective `BirthScale` and `DeathScale` (default: **the region's configured
+resource shock scales (default 10 000), the rent scales (25), the rate scales (26), the route
+and store risk scales (28), the scales of the fiscal flows (30), the mailboxes of tag 32, the
+pending totals (default 0), the queues of tag 10, the legal levels and suspended rights of tag
+31 (a level equal to the configured one is corrupt), the effective `BirthScale` and `DeathScale` (default: **the region's configured
 value**, which is 10 000 with no row, `spec-integration.md` 5.1) and the rumours of tag 22.
 **Signed (I):** `RoleSince`, `Born`, money and boundary balances, the welfare `income_t`,
-`cost_t`, relief, grant and own-use receipt, a trainee's application tick, the drift and
-the tick of a last view. Every other
+`cost_t`, relief, grant and own-use receipt, a trainee's application tick, the drift,
+the tick of a last view and a claim's `Overdue` (-1 for none). Every other
 integer is unsigned (U). A value of the wrong sign for its owner's range is corrupt (R13).
+
+4.2.6. **Modules with no section of their own.** POL adds none: its configuration is in the hash,
+its treasury is an account of section 2 (kind `5`) and a pseudo-agent rebuilt from the
+configuration and the account list (4.2.2), and nothing of it is state. STO has none: its stores
+are hosted in section 3 and its flows' carries are a third case of section 13 (N-128). SAV has
+none: the target, the goal, the test and the request are functions of the beliefs, the welfare
+ring, the facilities, the money, the configuration and the agent ID
+(`spec-saving-and-investment.md` 13). ORG hosts the membership in section 3 beside its own
+section 31. A field hosted in section 3 is present only with its module (4.2.1).
 
 ### 4.3 Derived and rebuilt on restore
 
@@ -346,6 +384,20 @@ parameter registry test does for configuration fields.
 | SUB | the effective own-use lists, the covered sets, `Cover`, `Cost`, `Afford`, `Secure`, the ramp |
 | MIG | the households by region, the households on a journey to a region, the caps of a tick, the candidates, the estimates and the rankings |
 | MER | the fee share and the spread (a function of the agent ID), the trip, the lot, the ceilings, the plan notes |
+| STO | the room of an account, its load, its pledge (from the jobs of section 6 and the shipments of section 17), the reserved room (0 at a boundary), the stored load, the table of sizes and the free room (`spec-storage.md` 15.2) |
+| EMP | the free list of Escrow accounts (an account no hire, shipment or contract names), the committed executions, the reservation and the bid, the positions, `Employed` and `Employing` (functions of the hires and the jobs) |
+| SET | the effective thresholds per region, the flag and limit tables, the household counter and the headroom (`spec-settlements.md` 11) |
+| LND | the entitlements, the tiers, the supply and the attribution of a tick, the rent in force and its key, the commons share (10 000 less the titles) and the scratch of the reservation (`spec-land.md` 14.1.1) |
+| POL | the `Polity` tables (parent, depth, chains, children, covered lists), the resolved arrays of readers, the treasury pseudo-agent IDs and their account index |
+| CRD | the due index, the overdue list, the by-account indexes, `Debt`, `Owed`, `Overdue`, `Lent`, `Receivable` and `CreditRoom` of an agent, the open count (`spec-credit.md` 17.3) |
+| CAP | the effect tables, `eff` and `cap`, the per-owner counts, the per-tick counters, `used(principal, class)` and `served(f)`, the order of use wear (`spec-infrastructure.md` 15.2) |
+| RSK | the common outcomes of P3.1a and P8.1a, the table of expected losses, the dense arrays of rows and the effective probabilities (`spec-risk.md` 15.2) |
+| INS | the by-shipment index, the by-agent indexes, `Open` and `Capacity` of an underwriter, the open count and the expected-loss table (`spec-insurance.md` 16.3) |
+| FIS | the dues, the lists of trades of the tick, the cached tolls, the per-agent tax and payout sums and the carry of a closed account (`spec-fiscal.md` 17) |
+| ORG | the resolved rights, the legal ranges in minor units, the scope regions of a body, the headroom and the scratch counts of the tick (`spec-institutions.md` 12.4) |
+| SAV | nothing: the target, the goal, the test and the request are functions of state that other sections hold (4.2.6) |
+| TEC | the gain of a cell, the contact weights and the per-tick counters (`spec-technology.md` 12.1) |
+| PLC | the due ticks and buckets, the expanded key lists, the views and the gauges (`spec-policy.md` 13.3) |
 | VIA | nothing: the warm start is configuration and its effect is ordinary state after tick 0 (`spec-viability.md` 18) |
 | WLD | the rotation positions and counts, the failed flag (a failed world is not checkpointed), the in-step guard, the module scratch cleared at P8.6 |
 | CFG | the effective configuration, rebuilt from the `Config` the consumer passes and checked by its hash |
@@ -444,7 +496,7 @@ one fuzz property.
 
 5.3.1. A section is `tag U`, `length U`, `body`. The **expected list of tags** is a
 function of the configuration: the tags of 4.2 in ascending order, those of the
-modules that are on, and always tags 1 to 11 and 23. The decoder reads the next tag
+modules that are on, and always tags 1 to 11 and 34. The decoder reads the next tag
 and requires it to be the next expected one; reads the length and requires it to be at
 most the bytes remaining; decodes the body from exactly those bytes and requires that
 every byte is consumed. A section that ends early or runs over is corrupt, and the
@@ -457,8 +509,9 @@ compatibility changes the format version (9.1). Section 22 is therefore mandator
 `Modules.Information` is on: it is saved so that `Agent` answers as the original did
 (FR-CHK-052), as INT 13.2 says.
 
-5.3.3. A tag is assigned once and never reused. A new section takes the next number and
-a new format version; a section that is dropped leaves its number unused.
+5.3.3. A tag is assigned once and never reused. A new section takes the next number and,
+once a format has been released, a new format version (9.3); a section that is dropped leaves
+its number unused.
 
 ### 5.4 The header and the trailer
 
@@ -555,10 +608,10 @@ trusted); `RestoreWorld` begins at step 2.
 | 1 | **Frame** (`UnmarshalBinary`): length at least the header and trailer; the magic; the **format** is one this library reads (`ErrCheckpointVersion` otherwise, checked before the digest so that a newer format is not reported as damage); the trailer equals the SHA-256 of the bytes before it; the header fields are in range | `ErrCheckpointVersion`, `ErrCheckpointCorrupt` |
 | 2 | **Options**: applied in the order given, each validated; `WithSeed` is `ErrOptionContext`; a nil extension is `ErrNilExtension`; a name registered twice is `ErrDuplicateID` | those |
 | 3 | **Configuration**: deep copy, `WithTargetSpread` applied, canonical order, `Validate` in full, the name checks of `spec-world.md` 3.2.2; warnings collected. Then the effective configuration is hashed **with the encoding version in the header** and compared with the header's hash | the validation errors; `ErrCheckpointConfig` |
-| 4 | **Extensions**: the set of registered extensions that implement `Stateful` equals the set of entries of section 23 by (kind, name); each strategy name in the table of section 3 is registered | `ErrCheckpointExtension` (joined with `ErrUnknownStrategy` for an unregistered strategy) |
+| 4 | **Extensions**: the set of registered extensions that implement `Stateful` equals the set of entries of section 34 by (kind, name); each strategy name in the table of section 3 is registered | `ErrCheckpointExtension` (joined with `ErrUnknownStrategy` for an unregistered strategy) |
 | 5 | **Derive** what is not state from the configuration: the calendar, the region graph tables, the lag table, the module tables, the weights of the groups (`spec-world.md` 5.1 step 5) | none: a validated configuration cannot fail here (programmer error, panics) |
 | 6 | **Sections**: in the order of the expected tag list, each decoded from exactly its bytes into new structures, with R1 to R13 checked as it is read and every reference to an earlier section checked | `ErrCheckpointCorrupt` naming the tag and the offset |
-| 7 | **Cross-checks** that need two sections: every open Agent account is the account of exactly one agent and of the agent that names it; every estate listing is a lot the estate holds; every Transit account of a shipment and Escrow account of a contract exists and holds what the record says; every trainee has its trainer and the converse; every money-flow carry is for an open account; every journey names a live agent and every other reference to an agent is live or one of the removable references of 4.2.3 (below the next agent ID) | `ErrCheckpointCorrupt` |
+| 7 | **Cross-checks** that need two sections: every open Agent account is the account of exactly one agent and of the agent that names it; every estate listing is a lot the estate holds; every Transit account of a shipment and Escrow account of a contract exists and holds what the record says; every trainee has its trainer and the converse; every money-flow carry is for an open account; every journey names a live agent and every other reference to an agent is live or one of the removable references of 4.2.3 (below the next agent ID); every Escrow account of a hire exists and holds what the record says; every claim's creditor and debtor are open accounts of the kinds of `spec-credit.md` 3.6; every open policy names a shipment in flight whose shipper is its insured; the account list holds exactly one Treasury account for each governed jurisdiction, in ascending `JurisdictionID` and in the seat's region (`spec-polity.md`, FR-POL-030), and a facility's owner is a live agent or the estate of its region | `ErrCheckpointCorrupt` |
 | 8 | **Install**: the PCG state is installed (`UnmarshalBinary` of the 20 bytes; its error is corrupt), the next agent ID, the tick; then the derived tables that need the state (the expiry hints, the tradable sets of the agents' roles, the Transit and Escrow free lists) | `ErrCheckpointCorrupt` |
 | 9 | **Reseed**, if `WithReseed` was given (6.8) | none |
 | 10 | **Audit**: the ledger's audit and every check of a module that is on, as `World.Audit` runs them, with the baseline of the boundary identity taken as the restored balance **less the pending totals** and, for a world restored in construction, with the saved bucket as the identity's construction term (`spec-ledger.md` 9.1). The audit runs whether or not `WithAudit` was given; `WithAudit` governs `NewWorld` and every `Step`, and this restore audit is a ruling of this spec that `spec-world.md` 3.3.3 and 12.2 are edited to state (20) | `ErrCheckpointCorrupt` wrapping `ErrAuditFailed` |
@@ -583,6 +636,12 @@ checks structure, bounds, references and conservation. A consumer that restores 
 it did not write has the trust problem of any save file; the library's guarantee is
 memory safety and the invariants of the ledger.
 
+6.2.4. **The checks of the later modules** are those their owners list, run in step 6 as the
+section is decoded and in step 7 where they need two sections, each a failure with
+`ErrCheckpointCorrupt` naming the tag and the entry: STO `spec-storage.md` 15.3 (the pledge is
+not tested), SET 11, EMP 16, LND 14.2, CRD 17.5, CAP 15.3, RSK 15.3, INS 16.5, FIS 17, ORG 12.3, PLC
+13.2 and TEC 12.2. A saved scale equal to its default, a pair or a row out of order and a count
+that the configuration does not imply are corrupt like any other (4.1.4, R10).
 ### 6.3 Errors
 
 Sentinels at the root (architecture.md 8.4), matched with `errors.Is`, each with a
@@ -692,7 +751,10 @@ lo' = finalise(lo xor finalise(x + 0x9E3779B97F4A7C15))
 ```
 
 with `finalise` the SplitMix64 finaliser of `spec-world.md` 7.1.2, and the PCG becomes
-`NewPCG(hi', lo')`. Both `hi'` and `lo'` are bijections of the salt, so distinct salts
+`NewPCG(hi', lo')`. **A module that keeps a key re-derives it by its own rule at the same restore**: the technology
+module's `Key' = finalise(Key xor finalise(salt))` (`spec-technology.md` 4.4.6), taken at the
+restore and saved with the branch, so that the branch discovers on other ticks. It is a rule
+constant and part of the golden output like the rule above. Both `hi'` and `lo'` are bijections of the salt, so distinct salts
 give distinct states, and a salt of 0 is a reseed like any other (the option's absence
 is "no reseed"). The constant is the first digits of pi, so that the mix shares no
 structure with the seeding rule: a formula that reused the seeding constant gave the
@@ -702,7 +764,7 @@ state `(0, 0)` for salt 0 on a world of seed 0, because `hi` was itself
 6.8.3. A reseed is part of **the sequence of calls** of architecture.md 7.4 (like an
 external agent's `AddAgent`), is not hashed, and is reported in `WorldRestored`
 (`Reseeded`, `Salt`). It is the **one option** that is both restore-only and a call in
-the sequence: it changes what the next checkpoint saves (the random state), which no other
+the sequence: it changes what the next checkpoint saves (the random state and the key of a module that keeps one), which no other
 option does (`spec-world.md` 4.4 and FR-WLD-020, FR-WLD-021 are edited to say so, 20). The seed in the header stays the original seed; a second
 checkpoint of the reseeded world carries the same informational seed and the reseeded
 random state.
@@ -716,7 +778,7 @@ extension's] state as opaque bytes" and leaves the exact interface open (open po
 It is:
 
 ```go
-// Stateful is implemented by a Strategy, Spawner or Clearing that keeps state between
+// Stateful is implemented by a Strategy, Spawner, Clearing or Policy that keeps state between
 // calls, so that a checkpoint can save it and a restore can load it. It is optional: an
 // implementation that keeps no state does not implement it.
 type Stateful interface {
@@ -728,16 +790,16 @@ type Stateful interface {
 }
 ```
 
-7.1.1. **It is not a fifth extension point.** The table of architecture.md 4.3 is
-unchanged: no code requires `Stateful`, and the world looks for it by a type assertion
+7.1.1. **It is not an extension point.** The table of architecture.md 4.3 (five rows with
+`Policy`) is unchanged by it: no code requires `Stateful`, and the world looks for it by a type assertion
 at construction and at `Checkpoint`. It is defined in the root package, where it is
 consumed (architecture.md 4.1), and has two methods (4.2). It has no default
 implementation and no compile-time assertion (4.5 is for extension interfaces).
 
 7.1.2. **Which kinds.** `Strategy` (registered by name, `spec-agents.md` 6.6), `Spawner`
-(`spec-spawner.md` 3.1.3) and `Clearing` (`spec-world.md` 4.2). The three registration
-tables are the three kinds of an entry; the kind is a value of the format
-(`0` strategy, `1` spawner, `2` clearing).
+(`spec-spawner.md` 3.1.3), `Clearing` (`spec-world.md` 4.2) and `Policy`
+(`spec-policy.md` 4.5). The four registration tables are the four kinds of an entry; the kind is a
+value of the format (`0` strategy, `1` spawner, `2` clearing, `3` policy).
 
 7.1.3. **Not `Observer`.** An observer must not influence a result
 (observability-and-logging.md 1.4, architecture.md 11.3), so it has no state that a
@@ -748,7 +810,7 @@ no-op by default.
 
 ### 7.2 The contract
 
-The doc comments of `Strategy`, `Spawner`, `Clearing` and `Stateful` state these, as
+The doc comments of `Strategy`, `Spawner`, `Clearing`, `Policy` and `Stateful` state these, as
 architecture.md 7.7 requires for the random source, because an implementation that
 breaks one of them breaks bit-identity after a restore (8) and the library cannot see it
 (7.3).
@@ -782,7 +844,7 @@ breaks one of them breaks bit-identity after a restore (8) and the library canno
 ### 7.3 What the world saves, and what it can and cannot detect
 
 7.3.1. **The entry.** For every registered extension that implements `Stateful`, used
-or not, section 23 holds one entry: kind, name, the version and the bytes `SaveState`
+or not, section 34 holds one entry: kind, name, the version and the bytes `SaveState`
 returned (possibly none). Entries are in kind order, names ascending as byte strings.
 An extension that does not implement `Stateful` has no entry.
 
@@ -834,7 +896,9 @@ running them.
 `DefaultStrategy`, `DefaultSpawner` and `AverageClearing` have **no state** (the
 default strategy and spawner say so in `spec-agents.md` 15 and `spec-spawner.md` 14;
 `spec-clearing.md` 7.1 for the clearing) and do not implement `Stateful`.
-`strategy.Merchant` has none (`spec-merchants.md` 3.5). `Directed`
+`strategy.Merchant` has none (`spec-merchants.md` 3.5). The built-in policies `hold`, `schedule` and
+`rule` keep no state (`spec-policy.md` 4); `directed` keeps its mailbox in the world, in section 32, and
+is not `Stateful`. `Directed`
 (`spec-agents.md` 10.3) has no state of its own (the mailbox is in the agent) and
 **delegates**: its `SaveState` returns the fallback's when the fallback implements
 `Stateful` and `(0, nil, nil)` otherwise, and its `LoadState` hands the bytes to the
@@ -849,7 +913,7 @@ tag when the first code lands (notes N-019):
 
 > **4.3**, after the paragraph that ends "is not subject to 4.5.":
 >
-> **Extension state.** An implementation of `Strategy`, `Clearing` or `Spawner` that
+> **Extension state.** An implementation of `Strategy`, `Clearing`, `Spawner` or `Policy` that
 > keeps state between calls MUST also implement the optional interface `Stateful`, so
 > that a checkpoint can save it and a restore can load it (ADR 0002, decision 7):
 >
@@ -874,7 +938,7 @@ tag when the first code lands (notes N-019):
 > its input and return an error for a version or bytes it cannot read, and MUST NOT keep
 > the slice it is given. Neither method receives or may create a random source. An
 > instance that holds state MUST NOT be shared between worlds. The doc comments of
-> `Strategy`, `Spawner`, `Clearing` and `Stateful` MUST state this contract, because an
+> `Strategy`, `Spawner`, `Clearing`, `Policy` and `Stateful` MUST state this contract, because an
 > implementation that breaks it breaks 7.4 after a restore and the library cannot detect
 > it.
 
@@ -930,7 +994,10 @@ restored again) is equal to the original.
 8.2.3. **The scenarios that wait for this spec**: X5 of `spec-reference-chain.md` 7.4
 (200 ticks, save, restore, 200 more against 400) on `one` and `five`, and the
 checkpoint legs of S60 (a household in the own-use mode) and S72 (merchants and
-consignees, a checkpoint at 80) of the register.
+consignees, a checkpoint at 80) of the register, and the checkpoint leg of SET-S5 of
+`spec-settlements.md` 14.2: a checkpoint taken during a held class change, restored and run
+on, with the class, `Since` and the tick at which the hold ends those of the uninterrupted
+world (the register number is assigned with the others, `spec-stability.md`).
 
 ### 8.3 What the golden rendering compares
 
@@ -1030,6 +1097,12 @@ library version. A consumer that needs the old behaviour pins the release.
 | an extension's own bytes | **no**: its own version (7.4) |
 | a rule of behaviour that leaves the shape of state alone | no (and a golden change, testing.md 7.2) |
 
+Nothing has been released, so by 9.1.1 the sections 23 to 33 and the fields they host (the
+stores, the membership, `LossBP`, the claims and their `Origin`, kind `5`, extension kind `3`) are
+written into **format 1**, and the format version is not bumped before the first release that
+has a later-stage module. The module specs that say "the format version changes with the first
+release that has the module" are met by this sentence and by the fixture of 9.2.1 item 3, which is
+one checkpoint of a world with every module on (`testdata/checkpoints/`).
 ### 9.4 Closed accounts: compaction at save, or never
 
 9.4.1. **Decision: never, in version 1.** Account IDs are never reused
@@ -1098,6 +1171,17 @@ eight integers a tick for `T` ticks for every agent: the size is `O(agents * T)`
 a function of weights or households (NFR-SCL-004), and `T` is the effective window
 (`spec-welfare-and-wages.md` 2.3.3, at least twice the longest job).
 
+10.2.1. **The later-stage sections** add little to case A, and none grows with the welfare window.
+The two fields hosted in section 3 are per agent: the stores (one byte, a count of 0, with
+`Modules.Storage`) and the membership (two bytes, 0 and 0, with `Modules.Institutions`), so
+`5 000 * (1 + 2)` is 15 KB, about 0.7% of the 2.1 MB; `LossBP` is up to two bytes a shipment in
+flight. The sections themselves are a count of rows of the world, not of its agents: the
+hires (about eight varints each), the claims (about twelve), the policies (about nine), the
+facilities (about eight), the titles (two per holder) and the diagnostic runs and scales,
+which are sparse; technology is `R * F` cells of three varints and the settlement section
+is two varints per region. At 100 rows of each kind the module sections together are
+under 10 KB. The figures are counts of the layout of 4.2, not a run of `size.py`, which
+was not extended for them (16).
 ### 10.3 Time
 
 Counted as integers written (about 1.7 million in case A, 68 million in case D) and
@@ -1439,8 +1523,8 @@ no default or bound of its own.
 | FR-CHK-027 | A successful restore MUST emit `WorldRestored` as its first event, and MUST emit no `AgentSpawned`, `AgentBankrupted` or `BoundaryFlow` for the past (6.7.3). |
 | FR-CHK-028 | A restore MUST log the configuration's warnings once each at `Warn` and one `Info` "world restored" with the keys of 14.2, and `Checkpoint` MUST log nothing at `Info` or above (6.7.4). |
 | FR-CHK-029 | `LoadState` of the extensions MUST be called only after every other step has succeeded, once per extension, in (kind, name) order (6.2.1). |
-| FR-CHK-030 | `Stateful` MUST be optional, MUST have the two methods of 7.1, and MUST apply to `Strategy`, `Spawner` and `Clearing` and never to `Observer` (7.1). |
-| FR-CHK-031 | Section 23 MUST hold, for every registered `Stateful` extension used or not, one entry (kind, name, version, bytes) in (kind, name) order, and none for one that is not `Stateful` (7.3.1). |
+| FR-CHK-030 | `Stateful` MUST be optional, MUST have the two methods of 7.1, and MUST apply to `Strategy`, `Spawner`, `Clearing` and `Policy` and never to `Observer` (7.1). |
+| FR-CHK-031 | Section 34 MUST hold, for every registered `Stateful` extension used or not, one entry (kind, name, version, bytes) in (kind, name) order, and none for one that is not `Stateful` (7.3.1). |
 | FR-CHK-032 | `SaveState` MUST be called once per extension per `Checkpoint` and `LoadState` once per restore, only between ticks, never inside a step (7.2 item 1); an error of `SaveState` fails the `Checkpoint` with `ErrCheckpointExtension` wrapping it (3.2.2). |
 | FR-CHK-033 | The world MUST copy the bytes `SaveState` returns before `Checkpoint` returns, and MUST pass `LoadState` a slice valid for the call only (7.2 items 2 and 3). |
 | FR-CHK-034 | The world MUST pass the version it read to `LoadState` and compare it with nothing itself (7.4.1). |
@@ -1449,14 +1533,14 @@ no default or bound of its own.
 | FR-CHK-037 | The library's own extensions (`DefaultStrategy`, `DefaultSpawner`, `AverageClearing`, `strategy.Merchant`) MUST keep no state and have no entry (7.5); `Directed` has an entry, possibly empty, wherever it is registered, and the built-in `directed` of INT is one. |
 | FR-CHK-038 | A `Checkpoint` of a world with a `Stateful` extension taken twice at one boundary MUST give equal bytes (ADR 0002 test (b), 8.2.1). |
 | FR-CHK-040 | Each section MUST contain exactly the state of 4.2 in the order given there, and no spec's saved state MUST be omitted or written twice (4.2, 4.5). |
-| FR-CHK-041 | A per-agent field hosted in the agent (`Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey, the directive) MUST be saved once, in section 3, and its module's section MUST list its own state only (4.5 F3). |
+| FR-CHK-041 | A per-agent field hosted in the agent (`Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey, the directive, the stores and the membership) MUST be saved once, in section 3, each only with its module, and its module's section MUST list its own state only (4.5 F3). |
 | FR-CHK-042 | Section 4 MUST hold, for every market, the whole report of the last clearing (price, age, volume, unmatched units, best unmatched bid and ask with their flags) and the window oldest first with no position (4.5 F1, F2). |
 | FR-CHK-043 | The diagnostic runs that decide when a `Warn` repeats MUST be saved, as sparse rows, so that a resumed run logs as the original did (4.1.2). |
 | FR-CHK-044 | The pending totals that calls between ticks added since the last P8.6, and the relocation totals, MUST be saved, and the construction bucket MUST be saved if and only if the world is in its construction phase (4.4). |
 | FR-CHK-045 | A test MUST list every field of the live state types that is neither saved nor named in 4.3 as derived or scratch, and MUST fail on one that is unnamed. |
 | FR-CHK-046 | A closed account MUST be saved as its kind and a closed flag, account IDs MUST be preserved, and no compaction MUST be done (9.4). |
 | FR-CHK-047 | No reservation or earmark MUST be in a checkpoint, and every saved lot MUST have `Reserved` 0 (4.4). |
-| FR-CHK-048 | The estate pseudo-agents and the counterparties MUST have no row in section 3 and MUST be rebuilt from the configuration and the account list (4.2.2). |
+| FR-CHK-048 | The estate pseudo-agents, the counterparties and the treasury pseudo-agents MUST have no row in section 3 and MUST be rebuilt from the configuration and the account list (4.2.2). |
 | FR-CHK-049 | The region of an open account, the owner reference of an account and the agent's reference to its account MUST agree, and the first accounts MUST be those of 5.2 of `spec-world.md` in the order given there. |
 | FR-CHK-050 | A restored world MUST continue exactly as the uninterrupted one: equal events, snapshots, queries, errors and byte-equal checkpoints at every later boundary, for a range of seeds and for the checkpoint ticks of 8.2.1 (8.1.1). |
 | FR-CHK-051 | A restore MUST take no random word: the next word of the restored world MUST be the next word of the original (8.4.2). |
@@ -1515,8 +1599,9 @@ no default or bound of its own.
    player's save file has the trust problem of any save file; whether the library
    should offer an optional keyed digest (an HMAC) was not decided and is not needed
    for a server's own checkpoints.
-8. **The claims list** is empty in format 1 (`spec-ledger.md` 10). Credit
-   (`spec-credit.md`) will add rows; that is a format version (9.3).
+8. **The claims list** was empty in the first draft of format 1 (`spec-ledger.md` 10). **Closed:**
+   Credit (`spec-credit.md`) fills it (4.2, tag 2), and with nothing released it is part of
+   format 1 (9.3), not a new version.
 9. **Closed slots** (9.4.4): the trigger is a quarter of the bytes; no consumer has
    shown one.
 10. **Streaming.** The digest covers the whole, so a restore needs all the bytes in
@@ -1571,6 +1656,7 @@ derived from this table.
 | `doc/specs/models/README.md` | contents | a row for `chk/` |
 | `doc/notes.md` | the open notes of 18 | close N-020; update N-051, N-019, N-075, N-016, N-017, N-027, N-103, N-012, N-072; add the new notes of the handoff; the index; a fresh tag |
 | `AGENTS.md` | layout | `checkpoint.go` and `internal/codec` when first needed (N-019) |
+| the module specs of the later stage | the sentence "its tag is the supervisor's" or "assigned at the integration" | the tags are 23 Settlements, 24 Employment, 25 Tenure, 26 Credit, 27 Facilities, 28 Risk, 29 Insurance, 30 Fiscal, 31 Institutions, 32 Policy, 33 Technology and 34 Extensions (4.2); Integration stays 22; and no format bump (9.3) |
 
 **Glossary terms** (to add to `doc.go` and the README list): checkpoint, restore,
 format version, section, frame, header, trailer, digest (of a checkpoint), canonical

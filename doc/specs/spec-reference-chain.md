@@ -143,8 +143,11 @@ testdata/chains/
   one-demand.toml  warm-one-demand.toml
   overlay/                  estates, skill, a5, nofloor, notool, imbalance-cook, glut-prepared,
                             h200, long-grow, overhang, poor, perturbed, faucet, faucet-sunk,
-                            sink, trade, resources, external, own-use, population, migration
-                            (4.5)
+                            sink, trade, resources, external, own-use, population, migration,
+                            settlements, storage, employment, tenure, credit, risk,
+                            infrastructure, cover, polity, polity-governed, fiscal,
+                            fiscal-governed, institutions, institutions-inert, policy,
+                            policy-directed, saving, technology (4.5)
   calibrated/<stage>-<n>.toml  overlays written by a calibration (`spec-calibration.md`),
                             layered after the pack they calibrate (4.5)
   defects/                  d1 to d6: one defect each
@@ -855,11 +858,31 @@ the variant's documents. The list, with its use:
 | `overlay/external.toml` | the outside world: one agentless node on a gate region of `one` or `three` with a few lines (`spec-external-sector.md` 18.2 is a worked configuration, `[module.external.node.<id>]`); placeholders | S51 to S55 |
 | `overlay/own-use.toml` | the subsistence floor: an own-use recipe on the staple role of `one` (a sited source with no inputs or tools, `spec-subsistence.md` 3.2, 16.1 is the shape) with a yield row in each region that is to offer it, and `[modules.subsistence]` at the placeholders of `spec-subsistence.md` 12 (`enter_ticks` 2, `exit_ticks` 3, `retry_jobs` 10); the coverage is set to 6 667, 10 000 and 13 333 basis points of the upkeep for S56; for S59 a `refill` endowment that the recipe draws on (`spec-resources.md` 18.1 is the shape); an empty row `[modules.subsistence.role.<id>]` for a role that is not to take the mode | S56 to S60 |
 | `overlay/migration.toml` | the migration module on the trade overlay: `[modules.information]` and `[modules.migration]` with `move_speed` chosen against the edge lengths of `overlay/trade.toml` so that the shortest journey is 1 or 2 ticks and the longest under `CoverTicks`, no role `Fixed` (and `fixed = true` on the chain's roles for the second leg of S65), on `five` with the trade overlay (S61 uses two of its regions and S62 three); `spec-migration.md` 15.3 | S61 to S66 |
+| `overlay/settlements.toml` | `[modules.settlements]` on `five`: the classes of `spec-settlements.md` 12.1 with a `merchant` role gated by the flag `fair` and a ceiling, and a role with a group in each region whose class carries or lacks the flag; the merchants module is on, so it is layered on `overlay/trade.toml`; `famine` is the base of S104; the base packs keep the module off | S102 to S104 (S105 and S106 are harness tests) |
+| `overlay/storage.toml` | `[modules.storage]`: a base room for the households and the producers and one store class (`spec-storage.md`); the base packs keep the module off | S91 to S96 |
+| `overlay/employment.toml` | `[modules.employment]` on `one`: an employer role with wants and a `Hireable` role with no recipe (`spec-employment.md` 22). The prices of a pack with employers sit above the solver's by the employers' margin and its warm start has no hire in flight (`spec-viability.md` 4.7, 8.1), so its bands are its own | S97 to S101 |
+| `overlay/tenure.toml` | `[modules.tenure]`: titles on the `refill` endowment of `overlay/resources.toml` for `one` and `five`, and the closed case of `spec-land.md` 15.2; layered after `overlay/resources.toml` | S107 to S111 |
+| `overlay/credit.toml` | `[modules.credit]` on `one`: a borrower role on the role with the 60-tick job (C04) and a lender role in one region, with its warm start (`spec-credit.md` 24) | S114 to S118 |
+| `overlay/risk.toml` | `[modules.risk]`: route rows on the edges of `overlay/trade.toml` and one store row (`spec-risk.md` 16); layered after `overlay/trade.toml` | S126 to S131 |
+| `overlay/infrastructure.toml` | `[modules.infrastructure]`: the facility classes of `spec-infrastructure.md` with initial rows held by a role, and a recipe with `Needs` (a site), a route class on an edge of `overlay/trade.toml` and a ground class on an endowment of `overlay/resources.toml` where a scenario uses them | S119 to S125 |
+| `overlay/cover.toml` | `[modules.insurance]`: an insured role and an underwriter on the trade overlay with `overlay/risk.toml` (`spec-insurance.md` 17); it needs credit (`overlay/credit.toml`) or a faucet (`overlay/faucet.toml`) for the loan that pays a premium | S160 to S165 |
+| `overlay/polity.toml` | `[modules.polity]` on `five`: a root jurisdiction over two child jurisdictions, one of three regions and one of two, ungoverned and with no money, so that every pack with it is exactly neutral (`spec-polity.md` 12.4.1) | S112 |
+| `overlay/polity-governed.toml` | the same with a seat and `start_money` on the root (`spec-polity.md` 12.4.1); layered after `overlay/polity.toml` | S113; the base of the fiscal and policy overlays |
+| `overlay/fiscal.toml` | `[modules.fiscal]` on `five`: a head tax, a duty and a payout, and on `three` a toll on a border with `overlay/trade.toml` (`spec-fiscal.md` 19); layered after `overlay/polity.toml` | S133 to S136 |
+| `overlay/fiscal-governed.toml` | the same flows with the treasuries of the governed jurisdictions; layered after `overlay/polity-governed.toml` | S132 (every flow at scale 0), S133 to S136 |
+| `overlay/institutions.toml` | `[modules.institutions]` on `five`: a body over the one skilled role of the hub region with places at 80% of its starting households, a `produce` right and a `train` right, and a control keyed by the jurisdiction of two child jurisdictions over one staple at levels given by S137's grid (`spec-institutions.md` 13.5); layered after `overlay/polity.toml` | S137 to S140 |
+| `overlay/institutions-inert.toml` | the same bodies, rights and controls with `Places` 0 and both levels 0, so that S141 asserts neutrality | S141 |
+| `overlay/policy.toml` | `[modules.policy]` on `five`: the actors and rules of `spec-policy.md` 14; layered after `overlay/polity-governed.toml` and `overlay/fiscal-governed.toml` | S155 to S157, S159 |
+| `overlay/policy-directed.toml` | the actor that a consumer directs with `DirectPolicy` (`spec-policy.md` 15); layered after `overlay/policy.toml` | S158 |
+| `overlay/saving.toml` | `[modules.saving]`: a `Saver` block on a producer role with a long job, on a role with a site recipe, a build recipe and a repair recipe, and on an employer role; S146 also layers `overlay/faucet.toml`; the build and repair legs need `overlay/infrastructure.toml` | S143 to S146 |
+| `overlay/technology.toml` | `[modules.technology]`: a field on the growers of `one` and `three`, learning only, then each mechanism in turn (`spec-technology.md` 14.4) | S148 to S154 |
+
+**Layering order of the later overlays.** The overlays above are layered after the variant, and among themselves in this order, so that each finds what it needs: `overlay/trade.toml`, `overlay/resources.toml`, `overlay/faucet.toml`, then `settlements`, `storage`, `employment`, `tenure`, `credit`, `risk`, `infrastructure`, `cover`, `polity`, `polity-governed`, `fiscal`, `fiscal-governed`, `institutions` (or `institutions-inert`), `policy`, `policy-directed`, `saving` and `technology`. It is the module order of `spec-config.md` 3.1, except that `overlay/polity-governed.toml` precedes `fiscal-governed` and `policy`, and `overlay/risk.toml` and `overlay/credit.toml` precede `cover`. A scenario layers only the overlays it names and those they need.
 
 **The all-modules pack** of `spec-observability.md` 9.7 (item 2: the reference chain with every
 module on, so that every event type occurs) is not a variant and is not a file: the
 test builds it in memory as `five` with the overlays of this table that switch a module
-on (estates, faucet, trade, resources, external, own-use, population, migration), and
+on (estates, faucet, trade, resources, external, own-use, population, migration, and the fourteen later overlays of this table in the layering order above, so that every module of the library is on), and
 the golden rendering of its events is `testdata/golden/events-all-modules.txt`. It names
 its modules, so FR-REF-018 is not broken: no variant of 4.1 contains one unnamed.
 
@@ -1697,6 +1720,42 @@ asserted, as in S18. S77, S78 and S81 to S83 have only exact checks, asserted fr
 can run (FR-REF-023); S82 also has an O check (the non-mortal player stays at hunger).
 
 
+### 7.12 Scenarios of the fourteen later modules (S91 to S165)
+
+The owner specs propose their scenarios under provisional names and the register numbers them
+(`spec-stability.md` 4.13 to 4.15, 8). Each runs with its module on over a range of seeds with
+`WithAudit`; the pack and overlays are assigned here, the overlays are in 4.5 and the code is the thing
+every one waits for (FR-REF-038). A scenario that is a **harness test** is of the class of S77 and S78: it
+asserts exact checks only, is outside the band rule of `spec-stylised-facts.md` 5.11 (FR-STY-098) and, when it
+needs no overlay, takes any pack as its fixture and is not built by REF.
+
+| Scenario | Pack and overlays | Class |
+|----------|-------------------|-------|
+| S91 to S96 (STO-S1 to STO-S6) | `one` + `overlay/storage.toml`; S94 (two shippers and one consignee) on `two` + `overlay/trade.toml` + `overlay/storage.toml` | the invariant of `spec-storage.md` 4.4 every tick; the rest reported |
+| S97 to S101 (EMP-S1 to EMP-S5) | `one` + `overlay/employment.toml`; S98 a labour-bound pack of it (more places than offers); S99 removes an employer and a worker in a job | S101 is a harness test: a module on takes no word, with or without offers |
+| S102 to S104 (SET-S1 to SET-S3) | `five` + `overlay/trade.toml` + `overlay/settlements.toml` with the population module and a refilling endowment (S102, S103); `famine` with the overlay (S104) | exact checks and the class sequence; bands are STY's |
+| S105, S106 (SET-S4, SET-S5) | none to assign: harness tests of `spec-settlements.md` 13 (inertness; a checkpoint during a held change) | not built by REF |
+| S107 to S111 (LND-S1 to LND-S5) | `one` or `five` + `overlay/resources.toml` + `overlay/tenure.toml`; S109 with `overlay/own-use.toml` and `overlay/migration.toml`; S110 with `overlay/population.toml` | the invariants asserted; the rest reported |
+| S112, S113 (POL-S1, POL-S2) | `five` + `overlay/polity.toml` against `five` (S112); `five` + `overlay/polity-governed.toml` against S112's run (S113), seeds 1 to 10, 200 ticks | harness tests: exact, outside the band rule |
+| S114 to S118 (CRD-S1 to CRD-S5) | `one` + `overlay/credit.toml`, cold and warm start (S114, S115); S116 invariants over seeds; S117 a cohort borrower; S118 calls and a checkpoint with open claims | exact checks asserted; the rest reported |
+| S119, S125 (CAP-S1, CAP-S7) | none to assign: harness tests of `spec-infrastructure.md` 16 (the module on with no class equals off; a checkpoint mid-build) | not built by REF |
+| S120 to S124 (CAP-S2 to CAP-S6) | `one` + `overlay/infrastructure.toml`; S121 on `three` + `overlay/trade.toml` (a road between two regions); S123 with `overlay/population.toml` and `overlay/resources.toml` | the invariants asserted; the rest reported |
+| S126 to S131 (RSK-S1 to RSK-S6) | `five` or `two` + `overlay/trade.toml` + `overlay/risk.toml`; S126 with every scale at 0 against the module off; S129 with `overlay/storage.toml` for the buffer store | exact identities every tick |
+| S132 to S136 (FIS-S1 to FIS-S5) | `five` + `overlay/polity-governed.toml` + `overlay/fiscal-governed.toml` (S132 with every flow at scale 0, against the world without the module); S135 on `one`; S136 on `three` + `overlay/trade.toml` | S132 is a harness test; the others have exact accounting checks and report the rest |
+| S137 to S141 (ORG-S1 to ORG-S5) | S137 `one` or `three` + `overlay/institutions.toml` (with the trade overlay for contracts); S138 `five` + `overlay/institutions.toml`; S139 the same with `overlay/migration.toml`; S140 `one` + `overlay/own-use.toml`; S141 `five` + `overlay/institutions-inert.toml` against `five` | S141 is a harness test; S137 reports its measures |
+| S142, S147 (SAV-S1, SAV-S6) | none to assign: harness tests of `spec-saving-and-investment.md` 14 (the module on with no block equals off; a checkpoint while saving and mid-build) | not built by REF |
+| S143 to S146 (SAV-S2 to SAV-S5) | `one` + `overlay/saving.toml` (the welfare module on); S144 and S145 with `overlay/infrastructure.toml`; S146 with `overlay/faucet.toml` | the identities asserted; the rest reported |
+| S148 to S154 (TEC-S1 to TEC-S7) | `one` + `overlay/technology.toml`; S149 with `overlay/population.toml` and `overlay/resources.toml`; S150 on `three` + `overlay/trade.toml`; S151 with `overlay/resources.toml` and `overlay/population.toml` | S148 and S153 are harness tests on `one` over a range of seeds; the rest report |
+| S155 to S159 (PLC-S1 to PLC-S5) | `five` + `overlay/polity-governed.toml` + `overlay/fiscal-governed.toml` + `overlay/policy.toml`; S158 with `overlay/policy-directed.toml`; S156 adds INT-S1's yield shock (S79) | S155, S158, S159 are harness tests; S156 passes on a band STY sets; S157 is a report |
+| S160 to S165 (INS-S1 to INS-S6) | `two` + `overlay/trade.toml` + `overlay/risk.toml` + `overlay/cover.toml` (+ `overlay/credit.toml` for S161); S162 over several underwriters | exact identities every tick; S163 and S164 report |
+
+The harness tests of these scenarios are S101, S105, S106, S112, S113, S119, S125, S132, S141, S142, S147, S148,
+S153, S155, S158 and S159; the list is what FR-STY-098 reads (a count is never written). A scenario here
+asserts its exact checks and its O checks whether or not a band exists (FR-REF-023); the others report until
+STY sets bands. The packs add no feature to the fixture's census (section 3): each module is a module and an
+overlay on the base chain.
+
+
 ## 8. How the tests use the fixture
 
 ### 8.1 Levels (testing.md 2)
@@ -1881,7 +1940,7 @@ the scenarios; the loops they exercise are named in 7. For the register owner:
 - the "REF" hook rows of `spec-stability.md` 4.8 and 10 point to section 7 here;
 - S22 is the check of STB-L53 (a warm start is not a stable start), S06 of the census
   imbalance of `spec-viability.md` 19, S19 of STB-L46;
-- the IDs are final: S23 to S25 are DEM's, S26 and S27 SPN's (7.7); S56 to S60 are SUB's, S61 to S66 MIG's and S67 to S72 MER's (7.9), S73 to S76 WLD's, S77 and S78 CHK's, S79 to S83 INT's (7.11) and S84 to S90 EXP's and CLB's, the nine harness tests of which (S77, S78, S84 to S90) REF does not build; the damper IDs are
+- the IDs are final: S23 to S25 are DEM's, S26 and S27 SPN's (7.7); S56 to S60 are SUB's, S61 to S66 MIG's and S67 to S72 MER's (7.9), S73 to S76 WLD's, S77 and S78 CHK's, S79 to S83 INT's (7.11) S84 to S90 EXP's and CLB's, and S91 to S165 those of the fourteen later modules (7.12); the harness tests among them (S77, S78, S84 to S90 and the list of 7.12) REF does not build as band scenarios; the damper IDs are
   `spec-stability.md`'s to assign.
 
 ## 14. Placeholders, the prototype and sources
@@ -1967,7 +2026,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-035 | Every scenario S01 to S22 of `spec-stability.md` 8 except S15 MUST be covered by a test, or listed in 7.6 with the spec it waits for, so that FR-STB-005 can be checked. |
 | FR-REF-036 | Every scenario A1 to A10 of `spec-viability.md` 13.2 MUST be covered by a test, or listed with the reason it needs no pack (A6). |
 | FR-REF-037 | A scenario that waits for an unwritten spec MUST be a test skipped with the reason and an issue ID (testing.md 5.7), and MUST NOT be left out. |
-| FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S83 of 7.6, 7.9 and 7.11, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
+| FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S83 of 7.6, 7.9 and 7.11, S91 to S165 of 7.12, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The configuration documents of `testdata/chains/` (not the files of `expected/`, `bands/` and `scripts/`) MUST be the seed corpus of the loader fuzz test. |
 
@@ -2022,7 +2081,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 |---------|------|
 | The documents of 4 | `testdata/chains/` (architecture.md 2.6) |
 | The expected results, bands and shock scripts | `testdata/chains/expected/`, `bands/`, `scripts/` |
-| The golden files | `testdata/golden/` (`one.txt` and `five.txt` of 8.5; `events-<pack>.txt`, `spec-observability.md` 9.5.3; `experiment-one.txt`, `spec-experiments.md`; `stylised/<pack>.txt`, `spec-stylised-facts.md` 8.5) |
+| The golden files | `testdata/golden/` (`one.txt` and `five.txt` of 8.5; `events-<pack>.txt`, `spec-observability.md` 9.5.3; `experiment-one.txt`, `spec-experiments.md`; `stylised/<pack>.txt` and `stylised/<pack>.stability.txt`, `spec-stylised-facts.md` 7.3.3 and 8.5) |
 | The records of a calibration | `testdata/calibration/<pack>/<stage>-<n>.txt` (`spec-calibration.md`), and its overlays in `testdata/chains/calibrated/` (4.1) |
 | The scenario tests, invariants, golden, determinism, X4, X5, X8 that need no `indicator` | the root package's external test package (`economysim_test`), in files named for the scenario group; skipped with `-short` |
 | The scenario tests that read an IND preset (REF) and the fact tests of STY | `indicator/scenario_*_test.go` and `indicator/stylised_*_test.go`, package `indicator_test`, sharing `stylised_helpers_test.go` (the recording observer, owned by STY); each re-runs its pack and seed and keeps its own small recorder, because FR-IND-001 lets no other package import `indicator` |

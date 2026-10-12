@@ -15,8 +15,8 @@ the region, `RegionID`, the one override mechanism of 5.1, N-104),
 `spec-world.md` (WLD: one new position in phase 7, 5.1), `spec-observability.md`
 (OBS), `spec-checkpoint.md` (CHK) and `spec-config.md` (CFG: the module switch and
 validation). It is read by `spec-spawner.md` (SPN) and `spec-population.md` (POP)
-through two gates (6.3) and by the specs that are not written yet (STO, ORG, RSK,
-CAP), which find their hooks reserved in 6.5. It reads `spec-agents.md` (AGT: the
+through two gates (6.3) and by the later modules (STO, ORG, RSK, CAP), which
+find their hooks in 6.3 and 6.5. It reads `spec-agents.md` (AGT: the
 agent, its weight and region) and `spec-migration.md` (MIG: a migrant is counted
 in its origin) and changes none of them. Every change it needs in another spec is
 listed in its handoff.
@@ -57,7 +57,7 @@ for what. It adds a layer and no behaviour of its own. It covers:
 - **where in the tick** the class is set, when it is read, and what a change
   emits (section 5);
 - **what a class unlocks or limits**: two forms, the table of hooks with the owner
-  spec of each, the rules for a reader, what is reserved for specs not written and
+  spec of each, the rules for a reader, what the later modules took or declined and
   what is refused (section 6);
 - **why a count of households may gate a structure** in a library whose rule is
   that macro is measured and never set, and the guards that make it so (section 7);
@@ -70,11 +70,11 @@ Out of scope, with the owner:
 |----------|-------|
 | The market of a region, the markets it holds, how a market clears | `spec-clearing.md` (CLR); REG |
 | What happens when a role is closed to entry, how many may enter, the ladder, births | `spec-spawner.md` (SPN), `spec-population.md` (POP) |
-| Stores, a store's capacity, its cost | `spec-storage.md` (STO, later) |
-| Associations, charters, price controls | `spec-institutions.md` (ORG, later) |
-| Defence, raids, loss | `spec-risk.md` (RSK, later) |
-| Facilities as capital (a processing site, a terminal); who builds them | `spec-infrastructure.md` (CAP, later) |
-| Realms, provinces and the jurisdiction of a region | `spec-polity.md` (POL, later) |
+| Stores, a store's capacity, its cost | `spec-storage.md` (STO) |
+| Associations, charters, price controls | `spec-institutions.md` (ORG) |
+| Defence, raids, loss | `spec-risk.md` (RSK) |
+| Facilities as capital (a processing site, a terminal); who builds them | `spec-infrastructure.md` (CAP) |
+| Realms, provinces and the jurisdiction of a region | `spec-polity.md` (POL) |
 | The number of merchants or carriers a settlement supports **as an economy**: that is what the merchants earn | `spec-merchants.md` (MER), `spec-transport.md` (TRN); SET gives only a ceiling (6.3, H3) |
 | The tick, the draws, the checkpoint format | WLD, CHK |
 
@@ -82,7 +82,7 @@ Out of scope, with the owner:
 
 | # | Question | Position | Why |
 |---|----------|----------|-----|
-| 1 | What is a class? | An entry of an ordered list, ordered by its `Enter` threshold (households), the first with `Enter` 0. The `ClassID` is the index. A setting with no sizes has one class | N-026 and ADR 0003: one settlement per region, so this is a thin layer. The names (hamlet, village, town, city) are data and only examples |
+| 1 | What is a class? | An entry of an ordered list, ordered by its `Enter` threshold (households), the first with `Enter` 0. The `SettlementClassID` is the index. A setting with no sizes has one class | N-026 and ADR 0003: one settlement per region, so this is a thin layer. The names (hamlet, village, town, city) are data and only examples |
 | 2 | What is it derived from? | The **household count** of the region: the sum of the weights of its agents (pseudo-agents excluded), the figure `RegionRow.Households` reports; a migrant on a journey is in its origin | One definition for the snapshot and the class, so a consumer can reproduce the class from what it can read (`spec-observability.md` 5.3.2) |
 | 3 | Where is it set? | One position, **P7.2a**, after the migration pass of every region. The class is constant from the entry of a tick to P7.2 and every reader sees the one value | A reader at P2.5 and a reader at P3.2 must not see two classes. Phase 7 is where households come and go (`spec-world.md` 6.9) |
 | 4 | What keeps it from flapping? | A **band** (a leave threshold below each enter threshold) and a **dwell** (a least number of ticks between two changes); a change that the dwell holds is counted | A count that crosses a threshold by one household must not open and close a gate every tick (model, 14.2) |
@@ -102,19 +102,19 @@ Out of scope, with the owner:
 ### 3.1 What a class is
 
 ```go
-// ClassID is the index of a settlement class in ascending order of Enter. It is
+// SettlementClassID is the index of a settlement class in ascending order of Enter. It is
 // not stable across configurations: adding a class renumbers the others. Use
 // the string ID to persist or exchange a class.
-type ClassID int
+type SettlementClassID int
 
-// NoClass means "no class": the From of the event of a founding. A snapshot's
+// NoSettlementClass means "no class": the From of the event of a founding. A snapshot's
 // Class is zero with the module off, and Modules says the module is off.
-const NoClass ClassID = -1
+const NoSettlementClass SettlementClassID = -1
 
 // Settlements is the module's configuration: Config.Modules.Settlements, nil
 // when the module is off.
 type Settlements struct {
-	Classes []SettlementClass // at least 1, at most MaxClasses
+	Classes []SettlementClass // at least 1, at most MaxSettlementClasses
 	BandBP  int64             // the band, in basis points of an enter threshold
 	Dwell   int64             // least ticks between two changes of a region's class
 	Regions []RegionSettlement
@@ -184,7 +184,7 @@ is taken. This is a **second exception** to the canonical order of `spec-config.
 3.4 (every entity slice by ID) and to the assignment of typed IDs by sorted ID string
 of 3.3 there; the edit to both is owed (handoff row 14). Two classes with one `Enter`
 are an error (`ErrOutOfBounds`, rule `enter_order`), so the order is total. The
-`ClassID` of a class is its index in that order, from 0: **the rank by `Enter`, not
+`SettlementClassID` of a class is its index in that order, from 0: **the rank by `Enter`, not
 the rank of the ID string** (in the example names of 12.1 `city` sorts before `hamlet` as a string and is the
 last class). The class of index 0 has `Enter` 0 (rule `first_class_open`,
 `ErrOutOfBounds`): every region has a class.
@@ -199,7 +199,7 @@ before the hash (`spec-config.md` 3.4 gains them, with the classes, in the same
 edit), so two configurations of equal content hash alike (`spec-config.md` 3.6).
 
 3.2.3. The IDs are what a file, a log line and a checkpoint of a pack use. The
-`ClassID` is what the engine's arrays use. The names table of `WorldCreated`,
+`SettlementClassID` is what the engine's arrays use. The names table of `WorldCreated`,
 `WorldRestored` and the snapshot gains the class IDs (handoff, `spec-observability.md`
 3.2.4).
 
@@ -219,7 +219,7 @@ is `0` to `MaxQuantity` and its unit is the reader's (6.2, rule R2).
 means or what `merchants` counts. The set of flags is the union of the flags the
 classes list, and the set of limits the union of the limit names; a reader names
 one in its own configuration (`Role.Needs`, `Role.Ceiling`, 6.3). A reader that names
-a flag no class carries is rejected (`ErrUnknownFlag`, 9.1), so a typo is an error
+a flag no class carries is rejected (`ErrUnknownSettlementFlag`, 9.1), so a typo is an error
 and not a gate that never opens.
 
 3.3.4. **A flag need not be monotone.** A flag carried by one class and not by the
@@ -310,7 +310,7 @@ needs no flag, needs no module.
 3.7.1. It is not a kind of market. A large and a small settlement clear by the same rules
 (`spec-clearing.md`); only what other specs make of the class differs.
 
-3.7.2. It is not a polity or a province (`spec-polity.md`, later) and it is not
+3.7.2. It is not a polity or a province (`spec-polity.md`) and it is not
 inherited from one (`spec-regions.md` 5.4.1).
 
 3.7.3. It is not a field of the region that other specs read as a number. There is
@@ -372,7 +372,7 @@ never held by a count, and the warning `threshold_collapsed` says so.
 
 ### 4.3 The review
 
-4.3.1. A region has a **class** `c` (a `ClassID`), its `Since` (the tick of its last
+4.3.1. A region has a **class** `c` (a `SettlementClassID`), its `Since` (the tick of its last
 change) and its class floor `f`. The **review** gives a target class `c'`:
 
 ```
@@ -427,7 +427,7 @@ SET-A1 and open question 4.
 before the first step, the class of each region, in ascending `RegionID`, is the
 highest `k` with `H >= E[k]`, and not below the floor: **no memory**, so the band
 plays no part. `Since` is 0. The event `SettlementClassChanged` with `From`
-`NoClass` and the cause `founded` is emitted for each region after the
+`NoSettlementClass` and the cause `founded` is emitted for each region after the
 `AgentSpawned` events (5.4).
 
 4.5.2. A restore installs the saved `c` and `Since` of each region and runs no
@@ -511,7 +511,7 @@ uninterrupted world would have run.
 
 5.4.1. **At construction**, after `WorldCreated` and the `AgentSpawned` events of the
 initial agents (`spec-world.md` 5.8): one `SettlementClassChanged` per region in
-ascending `RegionID`, `From` `NoClass`, cause `founded`, `Tick` 0. An observer then
+ascending `RegionID`, `From` `NoSettlementClass`, cause `founded`, `Tick` 0. An observer then
 has every class from events, as it has every agent.
 
 5.4.2. **In a step**, in phase 7 after `MigrationReviewed` of the last region
@@ -537,7 +537,7 @@ The events are bounded by regions. The gates are table reads (6.1).
 
 6.1.1. A reader names a **flag** or a **limit** in its own configuration (3.3.3).
 At construction the world resolves each name to an index, and the classes to a dense
-table: one word per class for the flags it carries (at most `MaxFlags` flags, so
+table: one word per class for the flags it carries (at most `MaxClassFlags` flags, so
 one `uint64`), one word for which limits it has, and the values. The reads are
 
 ```go
@@ -548,7 +548,7 @@ func (w *World) regionLimit(r RegionID, l limitIndex) (int64, bool) // false: no
 
 and read the class of the region as it stands (5.2). They are not exported: a
 consumer reads the class and the class table from the snapshot and `Config()` (10.5).
-This spec adds no public call beyond the type `ClassID` and the constant `NoClass`.
+This spec adds no public call beyond the type `SettlementClassID` and the constant `NoSettlementClass`.
 
 ### 6.2 Rules for a reader
 
@@ -566,22 +566,23 @@ Binding on every row of 6.3 and on every spec that adds one (position 6).
 
 ### 6.3 The table of hooks
 
-| # | Hook | Form | Reader's field (proposed) | Owner of the behaviour | Read at | Status |
+| # | Hook | Form | Reader's field | Owner of the behaviour | Read at | Status |
 |---|------|------|---------------------------|------------------------|---------|--------|
-| H1 | Entry to a role | flag | `Role.Needs` | SPN (the default spawner); POP (births) | P7.1(b) births; P7.1(c) the view and the plan | proposed, an edit owed (6.4.1) |
-| H2 | How many households a role may hold in a region | limit | `Role.Ceiling` | SPN; POP | P7.1(b), (c), (d) | proposed, an edit owed (6.4.2) |
+| H1 | Entry to a role | flag | `Role.Needs` | SPN (the default spawner); POP (births) | P7.1(b) births; P7.1(c) the view and the plan | adopted: the spawner view's `Closed` (`spec-spawner.md` 3) and `spec-population.md` 3.7.3 read it (6.4.1) |
+| H2 | How many households a role may hold in a region | limit | `Role.Ceiling` | SPN; POP | P7.1(b), (c), (d) | adopted: `spec-spawner.md` 6.3.1 and `spec-population.md` 4.4 read it (6.4.2) |
 | H3 | How many merchants or carriers a settlement supports | limit | `Role.Ceiling` on the merchant or carrier role; no field of MER or TRN | MER, TRN own the roles; SPN and POP the gate | as H2 | follows from H2 (6.4.3) |
-| H4 | A market charter | flag | by ORG | ORG; CLR for admission | later | reserved (6.5) |
-| H5 | Which store classes a region may have (a store is room for goods) | flag; a limit for how many stores of a class | `StoreClass.Needs` (proposed, STO 10.3 has the seam) | STO | `AddStore` and the construction of an agent with role stores, a call between ticks or a position before P7.2a | reserved; STO has the seam (`spec-storage.md` 10.3: a gate a later module registers, a predicate over (region, class)); its field `Needs`, the predicate `regionHas(region, class.Needs)` and the refusal `ErrStoreLocked` are owed by edit 31 of the handoff |
-| H6 | An association | flag | by ORG | ORG (and the barriers of SKL) | later | reserved |
-| H7 | Defence | limit | by RSK | RSK | later | reserved |
-| H8 | A facility: a processing site, a terminal (of a transport mode) | flag | by CAP; `Mode.Needs` in TRN | CAP; TRN | later | reserved |
+| H4 | A market charter | flag | `Body.Needs` (`spec-institutions.md` 3.5) | ORG; CLR for admission | the body's admission at P1.9a | taken by ORG: `Body.Needs`, `spec-institutions.md` 3.5 |
+| H5 | Which store classes a region may have (a store is room for goods) | flag only (STO declines a limit on how many stores of a class, `spec-storage.md` 10.3, question 13) | `StoreClass.Needs` | STO | `AddStore` and the construction of an agent with role stores, a call between ticks or a position before P7.2a; a store facility is read twice (H8 at the start of the build, H5 at the install: `spec-infrastructure.md` 5.4) | adopted by `spec-storage.md` 3.2.3: the field `Needs`, the predicate `regionHas(region, class.Needs)` and the refusal `ErrStoreLocked` |
+| H6 | An association | flag | `Body.Needs` (`spec-institutions.md` 3.5) | ORG (and the barriers of SKL) | the body's admission at P1.9a | taken by ORG: `Body.Needs`, `spec-institutions.md` 3.5 |
+| H7 | Defence | limit | none | RSK | | declined by RSK (`spec-risk.md` 10.3, question 5): reserved |
+| H8 | A facility: a processing site, a terminal (of a transport mode) | flag | `FacilityClass.Needs`; `Mode.Needs` in TRN stays reserved | CAP; TRN | the start of a build and `AddFacilities` (CAP) | applied (`spec-infrastructure.md` 8); a terminal of a transport mode (`Mode.Needs`) reserved |
 | H9 | A recipe condition | flag | by PRO | PRO | | **not offered** (6.6) |
 | H10 | A market for a commodity | flag | by CLR | CLR | | **not offered** (6.6) |
 
-The first three are the only readers of version 1 of this module: they use rules
-that exist (`Closed`, the entry caps, `PopBirths`) and need one field each. Without
-them the module has a class and nobody who reads it.
+H1 to H3 are the readers of the spawner and the population module and use rules
+that exist (`Closed`, the entry caps, `PopBirths`), with one field each. H4 to H6 and H8 are
+taken by ORG, STO and CAP (a reader adds its row here, R7); H7 is declined by RSK. Without
+readers the module has a class and nobody who reads it.
 
 ### 6.4 What H1 and H2 ask of their owners
 
@@ -601,7 +602,8 @@ is a rule of the default and not an invariant of the world.
 
 6.4.2. **H2, `Role.Ceiling`** (a limit ID, empty for none). In a region whose class
 has the limit, the role's **headroom** is `max(0, limit - households of the role in
-the region)`; with no limit there is none (the view says `NoLimit`). The default
+the region)`, and for a role that is in a body it is the least of this and the body's
+(`spec-institutions.md` 3.4.3); with no limit there is none (the view says `NoLimit`). The default
 spawner admits an entrant or a switcher into the role only while the weight of the
 agent fits the headroom, and counts a refusal (a new field `RoleCeiling` of
 `EntryLimited`); births of the role are capped at the headroom and counted (a new field
@@ -630,7 +632,7 @@ the spawner's plan: need, then agent ID (`spec-spawner.md` 6.3). That is one mor
 place of the kind `spec-world.md` 10.2 lists (O2, O3), and the remedy is the same
 (the keyed tie of 10.1.1, D87 there); it is SET-A5, and the counter is `RoleCeiling`.
 
-### 6.5 What is reserved for specs not written
+### 6.5 What the later specs took, and what is reserved
 
 The four later specs that the roadmap names each need a size. The promise of this
 spec to them is exactly this: the two reads of 6.1, at a position of their
@@ -641,10 +643,10 @@ holds, what a charter allows, what a defending force does or what a processing s
 
 | Spec | Likely use | The form |
 |------|-----------|----------|
-| STO (`spec-storage.md` 10.3) | which store classes a region may have: a flag named by a store class (`Needs`, owed to STO), tested at `AddStore` and at the construction of an agent with role stores, refusal `ErrStoreLocked` (to be defined by STO); a cap on the stores of a class in a region would be a limit | flag, limit |
-| ORG | which associations a region may have; whether it may hold a market charter | flag |
-| RSK | the strength of a defending force, fortification | limit, flag |
-| CAP | which facilities may be built; a mode's terminal | flag |
+| STO (`spec-storage.md` 3.2.3, 10.3) | which store classes a region may have: a flag named by a store class (`StoreClass.Needs`), tested at `AddStore` and at the construction of an agent with role stores, refusal `ErrStoreLocked` (STO's); a cap on the stores of a class is not offered | flag |
+| ORG (`spec-institutions.md` 3.5, 3.4.3) | which associations a region may have; whether it may hold a market charter: `Body.Needs`; a body's places are a second reader of a count (7.4) | flag |
+| RSK (`spec-risk.md` 10.3) | the strength of a defending force, fortification: declined (a probability is a rate, R2) | declined |
+| CAP (`spec-infrastructure.md` 8) | which facilities may be built: `FacilityClass.Needs`, read at the start of a build and at `AddFacilities`; a mode's terminal (`Mode.Needs`) stays reserved | flag |
 
 ### 6.6 What is not offered, and why
 
@@ -714,7 +716,7 @@ argue the letter. It asks each owner to name the one exception (7.4).
 | # | Guard | Where |
 |---|-------|-------|
 | G1 | **A step function.** `K - 1` steps, quantised, not a continuous response; a region can be moved up at most `K - 1` times without moving down | 3.1, 4.3 |
-| G2 | **It gates a permission or a count of places**, never a rate, price, wage, share, probability, period or window (R2). The things `spec-world.md` 9.4.1 keeps off an aggregate stay off it | 6.2, 6.6.3 |
+| G2 | **It gates a permission or a count of places**, never a rate, price, wage, share, probability, period or window (R2). The things `spec-world.md` 9.4.1 keeps off an aggregate stay off it. ORG is a second reader of a count (a body's `Places` against the households of its roles, `spec-institutions.md` 3.4.1), under the same exception (7.4) | 6.2, 6.6.3 |
 | G3 | **Damped.** A band, a dwell and a class floor; every held change is counted | 3.4, 4.4, 3.5.3 |
 | G4 | **One position, one value** in a tick; the class is state, saved and restored | 5.2, 11 |
 | G5 | **No agent reads it.** Views carry nothing; only the world's own positions read, and only through the table | 6.7, 6.3 |
@@ -730,26 +732,31 @@ it opens or closes) moves the count. That loop is registered: it can ratchet up 
 most `K - 1` classes (SET-A1), and it can fall to the bottom class and stay (SET-A2).
 Both are conditions on a pack, and the first is bounded by construction.
 
-### 7.4 The recommendation
+### 7.4 The decision
 
-Recorded as a conflict between specs in the handoff, with the owners deciding. The
-decision is **one decision with five edits**, not one sentence in WLD:
+Settled by [ADR 0006](../adr/0006-structural-rank-may-gate-entry-rights-and-places.md)
+(`Narrows: 0001 decision 7`): the rule keeps its letter and gains **three named exceptions**,
+written once: the settlement class of this spec (a derived structural rank that gates an entry,
+a right or a number of places); a count of the households of one region that gates a permission,
+a place or a structure, read against a body's `Places` by `spec-institutions.md` 3.4.1 (a second
+reader of a count); and a quantity local to the entity a price or rent belongs to (the units
+unserved or idle at one endowment, a title's share: `spec-land.md`), which is not an aggregate. The
+decision is **one decision with six texts**, not one sentence in WLD; each carries the one
+sentence that lists the three exceptions:
 
 | Owner | Edit |
 |-------|------|
-| `spec-world.md` 9.4.1 | one sentence added to the paragraph: "The one exception is the settlement class of `spec-settlements.md`, a step function of the household count of a region with a band and a dwell, which gates entry to a role and a count of places and nothing else." |
-| ADR 0001 decision 7 | an amendment, or a new ADR that supersedes the decision in this one respect: "the engine holds no aggregate state that agents react to" gains "; the settlement class is a derived structural rank, read by the world's own entry rules and by no agent" |
-| `spec-stability.md` 5.1.3 and FR-STB-020 | one clause each: "...except the settlement class of `spec-settlements.md` (SET-A4), which is a rank and not a damper" |
-| `roadmap.md` "Macro is measured, never set" | one sentence after the first paragraph naming the class as the single structural exception |
+| `spec-world.md` 9.4.1 | "Three exceptions, each owned (ADR 0006, which narrows ADR 0001 decision 7)": the settlement class of this spec, a step function of the household count of a region with a band and a dwell, which gates entry to a role, a right or a number of places and nothing else; the household count of one region against a body's `Places`; and a local quantity at one endowment |
+| ADR 0001 decision 7 | a dated pointer to ADR 0006 under the decision; its status stays Accepted |
+| ADR 0006 | the decision itself, with an owner for each exception (this spec's 7, `spec-institutions.md` 3.4.1, `spec-land.md`) |
+| `spec-stability.md` 5.1.3 and FR-STB-020 | one clause each: "...except the three exceptions of ADR 0006, which are ranks, counts against places and local quantities, and not dampers" |
+| `roadmap.md` "Macro is measured, never set" | one sentence after the first paragraph naming the three exceptions and ADR 0006 |
 
-The alternative, if the owners do not accept a count that bounds a number, is to offer
-**flags only**: a permission is a step function of a count with no number in it. The
-module then has no `Limits` (3.3.2), H2 and H3 are dropped, and "how many merchants"
-is a configured constant per role (open question 1). **The fallback needs the same
-decision.** A flag still reads a count of households and changes who may enter a
-role, so it is under the same four texts; it removes only the number that a count
-would bound, not the reading of the count. If no owner accepts the reading, the
-module has no class to give and the SET row of the roadmap is withdrawn.
+A reader that is added is a new reader of one of the exceptions and needs a new ADR (R7, G7).
+The alternative that was offered, **flags only** (a permission is a step function of a count
+with no number in it), would have needed the same decision, because a flag still reads a count
+of households; ADR 0006 accepts the reading, so the module keeps its `Limits` (3.3.2), H2 and
+H3 (open question 1 is answered).
 
 ## 8. Parameters
 
@@ -763,14 +770,14 @@ from any society.
 | Scope | Field | Meaning | Default | Bound |
 |-------|-------|---------|---------|-------|
 | Modules | `Settlements` | the module: present means on (`spec-config.md` 3.2); it needs no other module | nil (off) | |
-| Settlements | `Classes` | the size classes (3.1) | required, at least one | 1 to `MaxClasses` |
+| Settlements | `Classes` | the size classes (3.1) | required, at least one | 1 to `MaxSettlementClasses` |
 | Settlements | `BandBP` | the band: how far below an enter threshold the count may fall before a class is given up, in basis points of the enter threshold (3.4.2) | 1 000 | 0 to `MaxBandBP` |
 | Settlements | `Dwell` | least ticks between two changes of a region's class (3.4.3) | 30 | 0 to `MaxWelfareWindow` |
 | Settlements | `Regions[]` | rows of the region-keyed table (3.5) | none | at most `MaxRegions` |
 | SettlementClass | `ID` | the class's identity | required | `[a-z][a-z0-9_]*`, at most `MaxIDLength` bytes, unique |
 | SettlementClass | `Enter` | households at which the class is reached (3.4.1) | required; 0 for the first | 0 to `MaxHouseholds`, strictly increasing |
-| SettlementClass | `Flags` | the flags the class carries (3.3.1) | none | each at most once; at most `MaxFlags` distinct in the module |
-| SettlementClass | `Limits` | the limits the class carries (3.3.2) | none | each name at most once; at most `MaxLimits` distinct in the module; `Value` 0 to `MaxQuantity` |
+| SettlementClass | `Flags` | the flags the class carries (3.3.1) | none | each at most once; at most `MaxClassFlags` distinct in the module |
+| SettlementClass | `Limits` | the limits the class carries (3.3.2) | none | each name at most once; at most `MaxClassLimits` distinct in the module; `Value` 0 to `MaxQuantity` |
 | SettlementClass | `Label` (p) | display name; presentation only, not hashed | empty | at most `MaxLabelBytes` |
 | RegionSettlement | `Region` | the region the row is for | required | a defined region that is not an outside node |
 | RegionSettlement | `ThresholdBP` | scale of the enter thresholds, mode scale (3.5.2) | 10 000 | 1 to `MaxThresholdBP` |
@@ -778,9 +785,9 @@ from any society.
 | Role | `Needs` | H1: the flag the region's class must carry for the role to be open (6.4.1) | none | a flag some class carries; the module on |
 | Role | `Ceiling` | H2: the limit that bounds the households of the role in a region (6.4.2) | none | a limit some class carries; the module on |
 
-8.1. **The bounds** (`bounds.go`, provisional, architecture.md 9.6): `MaxClasses` 16
+8.1. **The bounds** (`bounds.go`, provisional, architecture.md 9.6): `MaxSettlementClasses` 16
 (a ranking of settlements is short, and each region holds `K` thresholds);
-`MaxFlags` 64 and `MaxLimits` 64 (so a class's flags fit one `uint64`, 6.1);
+`MaxClassFlags` 64 and `MaxClassLimits` 64 (so a class's flags fit one `uint64`, 6.1);
 `MaxBandBP` 5 000 (a leave threshold is at least `floor(E_k / 2)`, so a region that
 has just reached a class is not a few households from losing it);
 `MaxThresholdBP` 100 000 (ten times, as `MaxYieldBP`). `MaxHouseholds`,
@@ -804,7 +811,7 @@ the review and their order (4.3); the rounding, ceil for an effective enter
 threshold and floor for a leave threshold (4.2); the first dwell from tick 0 (4.4.3);
 the cause constants `founded`, `grew` and `shrank`; the position P7.2a.
 
-8.4. **Not parameters:** the `ClassID`, the effective thresholds (derived from
+8.4. **Not parameters:** the `SettlementClassID`, the effective thresholds (derived from
 the class, the band and the row), `Since` (state), the household count (derived), a
 role's headroom (derived), and the household floor of a class (it is `Enter`).
 
@@ -822,11 +829,11 @@ roles.
 | `ErrOutOfBounds` | an `Enter` outside `[0, MaxHouseholds]`; the first class with an `Enter` other than 0 (rule `first_class_open`); two classes with one `Enter`, or `Enter` not strictly increasing in the sorted order (rule `enter_order`); `BandBP`, `Dwell` or `ThresholdBP` outside its bound; a limit `Value` outside `[0, MaxQuantity]` |
 | `ErrInvalidID` | a class ID, a flag or a limit name that does not match `[a-z][a-z0-9_]*` or is longer than `MaxIDLength` |
 | `ErrDuplicateID` | a class ID twice; a flag twice in one class; a limit twice in one class; two rows for one region |
-| `ErrTooMany` | more than `MaxClasses` classes, `MaxFlags` distinct flags, `MaxLimits` distinct limits or `MaxRegions` rows; a module with no class (rule `no_class`) |
+| `ErrTooMany` | more than `MaxSettlementClasses` classes, `MaxClassFlags` distinct flags, `MaxClassLimits` distinct limits or `MaxRegions` rows; a module with no class (rule `no_class`) |
 | `ErrUnknownRegion` | a row naming an undefined region |
 | `ErrOutsideNode` | a row naming an outside node of the external module (it has no household and no class) |
 | `ErrUnknownSettlementClass` (new) | a `Floor` naming a class that is not defined |
-| `ErrUnknownFlag` (new) | a `Role.Needs` naming a flag that no class carries |
+| `ErrUnknownSettlementFlag` (new) | a `Role.Needs` naming a flag that no class carries |
 | `ErrUnknownLimit` (new) | a `Role.Ceiling` naming a limit that no class carries |
 | `ErrModuleDependency` | a `Role.Needs` or `Role.Ceiling` while `Modules.Settlements` is nil (R5) |
 
@@ -860,8 +867,8 @@ table (`spec-observability.md` 3.2).
 
 | Event | Owner | Position | Class | Gate | Fields (besides `Tick`) |
 |-------|-------|----------|-------|------|-------------------------|
-| `SettlementClassChanged` (new) | SET 4, 5.4 | construction, after the `AgentSpawned` events (`founded`); P7.2a | E | settlements | `Region`, `From`, `To` (`ClassID`; `From` is `NoClass` at the founding), `Households int64` (the count the review used), `Cause` (`founded`, `grew`, `shrank`) |
-| `SettlementHeld` (new) | SET 4.4 | P7.2a, region ascending, instead of the above | A | settlements | `Region`, `Class`, `Target` (`ClassID`), `Households int64`, `TicksLeft int64` (`Dwell - (t - Since)`, at least 1) |
+| `SettlementClassChanged` (new) | SET 4, 5.4 | construction, after the `AgentSpawned` events (`founded`); P7.2a | E | settlements | `Region`, `From`, `To` (`SettlementClassID`; `From` is `NoSettlementClass` at the founding), `Households int64` (the count the review used), `Cause` (`founded`, `grew`, `shrank`) |
+| `SettlementHeld` (new) | SET 4.4 | P7.2a, region ascending, instead of the above | A | settlements | `Region`, `Class`, `Target` (`SettlementClassID`), `Households int64`, `TicksLeft int64` (`Dwell - (t - Since)`, at least 1) |
 
 `SettlementClassChanged` is per region, like `AgentRelocated` is per agent: it is a
 transition of one region, at most once per region per `Dwell` ticks (once per tick
@@ -910,9 +917,9 @@ none of them state of its own beyond what 11 saves:
 
 | Field | Type | Meaning | Cost |
 |-------|------|---------|------|
-| `Class` | `ClassID` | the class of the region as of the last review (5.2) | K |
+| `Class` | `SettlementClassID` | the class of the region as of the last review (5.2) | K |
 | `ClassSince` | `int64` | the tick of its last change; 0 at construction | K |
-| `ClassTarget` | `ClassID` | the class a review at the current `Households` would give, ignoring the dwell (4.3): a pure function of the count, the class and the configuration | D |
+| `ClassTarget` | `SettlementClassID` | the class a review at the current `Households` would give, ignoring the dwell (4.3): a pure function of the count, the class and the configuration | D |
 | `ClassAtFloor` | `bool` | the class is the region's `Floor` and the count alone would give a lower one (4.3.3) | D |
 
 A field absent for want of the module is zero and `Modules` says which are on
@@ -1068,8 +1075,9 @@ open to entry or its ceiling rises (+) households of that role and what they mak
 earn (+) welfare ratio of the region (+) births, entries and arrivals (+) households.
 All links are +, so **R**, reinforcing, and **saturating**: there are `K - 1` steps.
 *Delay:* one tick (P7.2a to the next P1) plus the dwell plus the delays of what follows (the
-welfare window `T`, a job's duration, a journey). *Owner:* SET 4, 6. *Damper:* SET-D1,
-SET-D2, the finite number of classes, SPN's entry share (D14) and POP's carried births.
+welfare window `T`, a job's duration, a journey). *Owner:* SET 4, 6. *Damper:* the finite
+number of classes, SPN's entry share (D14) and POP's carried births (SET-D1 and SET-D2, the band
+and the dwell, damp the flapping that precedes a step, not the staircase).
 *Undamped:* the step itself: a region at a threshold gains a role in one tick; and
 regions founded together are held together and released together at tick `Dwell`
 (4.4.3), which can open many gates in one tick (open question 4). *Condition:* the
@@ -1110,7 +1118,7 @@ author wants the run-down. *Test:* SET-S3 (the base). *Status:* hand.
 **SET-A4. A count that gates is not a controller.** *Kind:* constraint. *Loop:* none
 of its own; it is the exception of section 7. *Owner:* SET 7. *Damper:* the guards
 G1 to G7. *Undamped:* a consumer's own controller that reads the snapshot's class
-and sets slots (L121, `spec-policy.md` later). *Condition:* the readers are the rows
+and sets slots (L121, `spec-policy.md`). *Condition:* the readers are the rows
 of 6.3 and nothing else; no view carries a class; a limit is a count (R2). *Test:*
 FR-SET-018 and FR-SET-019 (a static check over the readers), and review for R2.
 *Status:* hand.
@@ -1231,7 +1239,7 @@ No open note carries the code `SET` (the index of `notes.md` has no such row).
 | N-026 One settlement per region | **Already closed** (2026-10-10, REG). Confirmed: this spec is the thin layer the note describes: a class per region from its households, no second level, no split of the market, no field a region reads | 1, 2 (position 1), 3.7 |
 | N-104 Region-keyed tables use the one override mechanism | **Applied; the SET part is done; LND stays.** `Modules.Settlements.Regions` is one row per region, `ThresholdBP` by scale and `Floor` by replace, with the errors of `spec-regions.md` 5.3; two rows join the list of 5.1.3 (handoff) | 3.5, 8 |
 | N-016 Keep the parameter registry true | **Applied** for this spec: every field has a row (8) and a default or "required", a bound and an owner; no unnamed parameter was found | 8 |
-| N-017 Words and names | **Applied**: the terms are settlement class, enter threshold, leave threshold, band, dwell, settlement review, household count (of a region), flag, limit, gate, class floor (qualified, "floor" has six uses already), held change, headroom, ceiling, `ClassID`, `NoClass`. The setting words (`hamlet`, `village`, `town`, `city`, `outpost`, `station`, `hub`, `fair`, `hall`, `merchants`, `dock`, `berths`, `yard`) appear only in the flagged examples of 3.1, 12 and the file listings | 3, 12 |
+| N-017 Words and names | **Applied**: the terms are settlement class, enter threshold, leave threshold, band, dwell, settlement review, household count (of a region), flag, limit, gate, class floor (qualified, "floor" has six uses already), held change, headroom, ceiling, `SettlementClassID`, `NoSettlementClass`. The setting words (`hamlet`, `village`, `town`, `city`, `outpost`, `station`, `hub`, `fair`, `hall`, `merchants`, `dock`, `berths`, `yard`) appear only in the flagged examples of 3.1, 12 and the file listings | 3, 12 |
 | N-027 No default macro constant is stable | **Applied**: `BandBP` 1 000 and `Dwell` 30 and every number of the examples and models are placeholders; the models are of the rules on an assumed count; the spec sets no price, wage, rate or share | preamble, 8.2, 14 |
 | N-045 Dampers that act silently | **Applied**: the band and the class floor act without an event of their own (a held class is the class; the floor is the field `ClassAtFloor`); the dwell is counted by `SettlementHeld`; the refusals of a gate are counted by the reader (R4, `RoleCeiling`, `BirthsCeiling`, `NoViableRole`) | 6.2, 10 |
 | N-046 Register entries owed by unwritten specs | **Applied for SET**: SET-A1 to A5, SET-D1 to D4, SET-S1 to S5 (13); SET is not in the areas of the note, so nothing is removed from it | 13 |
@@ -1254,9 +1262,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-SET-001 | With `Modules.Settlements` nil no region MUST have a class, no review, event or checkpoint section MUST exist, the snapshot fields of 10.5 MUST be zero, and a `Role.Needs` or `Role.Ceiling` MUST be rejected with `ErrModuleDependency` (2, 9.1). |
-| FR-SET-002 | The module MUST have at least one class and at most `MaxClasses`; the classes MUST be sorted by `Enter` ascending before a world is built or a hash taken (not by ID: an exception to `spec-config.md` 3.4); the `ClassID` of a class MUST be its index; the first class MUST have `Enter` 0 (rule `first_class_open`) and the `Enter` values MUST be strictly increasing (rule `enter_order`), each violation `ErrOutOfBounds`, and no class `ErrTooMany` (3.2, 9.1). |
+| FR-SET-002 | The module MUST have at least one class and at most `MaxSettlementClasses`; the classes MUST be sorted by `Enter` ascending before a world is built or a hash taken (not by ID: an exception to `spec-config.md` 3.4); the `SettlementClassID` of a class MUST be its index; the first class MUST have `Enter` 0 (rule `first_class_open`) and the `Enter` values MUST be strictly increasing (rule `enter_order`), each violation `ErrOutOfBounds`, and no class `ErrTooMany` (3.2, 9.1). |
 | FR-SET-003 | An `Enter` outside `[0, MaxHouseholds]`, a `BandBP` outside `[0, MaxBandBP]`, a `Dwell` outside `[0, MaxWelfareWindow]`, a `ThresholdBP` outside `[1, MaxThresholdBP]` and a limit value outside `[0, MaxQuantity]` MUST be rejected with `ErrOutOfBounds` naming the path (8, 9.1). |
-| FR-SET-004 | A class, flag or limit ID that does not match `[a-z][a-z0-9_]*` or exceeds `MaxIDLength` MUST be rejected with `ErrInvalidID`; a class ID, a flag or a limit twice in one class MUST be rejected with `ErrDuplicateID`; more than `MaxFlags` distinct flags or `MaxLimits` distinct limits MUST be rejected with `ErrTooMany` (3.3, 9.1). |
+| FR-SET-004 | A class, flag or limit ID that does not match `[a-z][a-z0-9_]*` or exceeds `MaxIDLength` MUST be rejected with `ErrInvalidID`; a class ID, a flag or a limit twice in one class MUST be rejected with `ErrDuplicateID`; more than `MaxClassFlags` distinct flags or `MaxClassLimits` distinct limits MUST be rejected with `ErrTooMany` (3.3, 9.1). |
 | FR-SET-005 | The flags of the module MUST be the union of the flags the classes list, and the limits the union of their names; a limit a class does not list MUST read as no limit, and a listed value of 0 MUST read as a limit of 0 (3.3.3, 3.3.5). |
 | FR-SET-006 | A region row MUST follow `spec-regions.md` 5.3: a row naming an undefined region MUST be rejected with `ErrUnknownRegion`, one naming an outside node with `ErrOutsideNode`, a second row for one region with `ErrDuplicateID`; rows MUST be sorted by region; an absent row MUST give the defaults with no warning (3.5). |
 | FR-SET-007 | A `Floor` naming an undefined class MUST be rejected with `ErrUnknownSettlementClass`, and the class of a region MUST never be below its floor, at construction or at any review (3.5.3, 4.3). |
@@ -1265,7 +1273,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SET-010 | A review MUST give the highest class `c'` reached upward from `c` with `H >= E[c' + 1]` at each step, and, only if none was, the class reached downward with `H < L[c']` at each step, not below the floor; both directions MUST NOT hold at once; and after a review that is not held the class MUST satisfy `H < E[c' + 1]` (if `c' + 1 < K`) and `L[c'] <= H` unless `c'` is the region's floor (4.3.2). |
 | FR-SET-011 | A review that finds a change due with `t - Since < Dwell` MUST leave the class and `Since` unchanged and emit `SettlementHeld`; a held change MUST NOT be remembered, and the next review MUST recompute the target from the count it then has (4.4.1). |
 | FR-SET-012 | `Since` MUST be the tick of the last change, the dwell MUST run from it and not from the last review, and in a new world `Since` MUST be 0 (4.4.2, 4.4.3, 4.5.1). |
-| FR-SET-013 | At construction the class of each region MUST be the highest `k` with `H >= E[k]`, not below the floor, with no band, and one `SettlementClassChanged` with `From` `NoClass` and the cause `founded` MUST be emitted per region in ascending `RegionID` after the `AgentSpawned` events (4.5.1, 5.4.1). |
+| FR-SET-013 | At construction the class of each region MUST be the highest `k` with `H >= E[k]`, not below the floor, with no band, and one `SettlementClassChanged` with `From` `NoSettlementClass` and the cause `founded` MUST be emitted per region in ascending `RegionID` after the `AgentSpawned` events (4.5.1, 5.4.1). |
 | FR-SET-014 | The review MUST run once per tick at P7.2a after P7.2, for each region that is not an outside node in ascending `RegionID`, and the class of every region MUST be the same value at every position from P0.1 to P7.2 of a tick (5.1, 5.2.1). |
 | FR-SET-015 | A world with `Modules.Settlements` of one class with no flag and no limit, and no `Role.Needs` or `Role.Ceiling`, MUST give every result of the world without the module: every field of the snapshot other than the module's own fields, the configuration hash, `Modules` and the class IDs of the names table, every event other than the module's own and the hash, names table and `settlement_classes` count that `WorldCreated`, `WorldRestored` and the construction line carry, and the final state of the random source, at every tick (3.6.1). |
 | FR-SET-016 | The review and every read MUST take no random word and MUST NOT transfer money or goods, add a ledger reason or change any agent (4.7, 2). |
@@ -1273,7 +1281,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SET-018 | No view of `Work`, `Trade` or `Revise`, and no outcome, MUST carry a class, a flag or a limit; the spawner's view MUST carry a role's openness and headroom in the region and no class (6.7). |
 | FR-SET-019 | The readers of the class MUST be exactly the positions of the rows of 6.3 that are adopted, checked by a static test over the packages that use the module's reads (6.2 R1, R7). |
 | FR-SET-020 | Flags and limits MUST be resolved at construction to dense tables indexed by class, and a read MUST NOT allocate (6.1.1). |
-| FR-SET-021 | A `Role.Needs` naming a flag no class carries MUST be rejected with `ErrUnknownFlag`, a `Role.Ceiling` naming a limit no class carries with `ErrUnknownLimit`, and either while the module is off with `ErrModuleDependency` (6.2 R5, 9.1). |
+| FR-SET-021 | A `Role.Needs` naming a flag no class carries MUST be rejected with `ErrUnknownSettlementFlag`, a `Role.Ceiling` naming a limit no class carries with `ErrUnknownLimit`, and either while the module is off with `ErrModuleDependency` (6.2 R5, 9.1). |
 | FR-SET-022 | A role with a `Needs` the region's class does not carry MUST be closed in that region as `Role.Closed` is: no entrant, no switcher, no like-for-like replacement, no birth and no advance of its birth carry; its households MUST stay and MUST NOT be removed because of the gate (6.4.1). |
 | FR-SET-023 | A role with a `Ceiling` MUST have, in a region whose class has the limit, the headroom `max(0, limit - households)`; the default spawner MUST NOT admit an entrant or a switcher beyond it and MUST count the refusal; births MUST be capped at it and counted; no household MUST be removed for a ceiling (6.4.2). |
 | FR-SET-024 | `SettlementClassChanged` MUST be emitted once per region per change after the change is complete, with `Region`, `From`, `To`, `Households` and `Cause` (`grew` when `To` is above `From`, `shrank` when below, `founded` at construction), MUST contain no map, and MUST NOT be emitted with the module off (10.1). |
@@ -1298,13 +1306,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 ## 17. Open questions
 
-1. **A count that bounds a number.** Section 7 asks WLD, ADR 0001, STB and the
-   roadmap to carve the class out of the rule (7.4). If they refuse a count that
-   bounds a number, the module keeps flags and drops limits (`ClassLimit`, H2 and
-   H3), and "how many merchants" becomes a constant of the role; the flags-only
-   fallback still needs the carve-out, since a flag reads the same count. The
-   recommendation is the carve-out: a count of places is the thing a settlement's rank
-   gives. Next step: the owners, with the supervisor.
+1. **A count that bounds a number.** Answered by ADR 0006 (7.4): the class is one of
+   its three named exceptions, so the module keeps its limits (`ClassLimit`, H2 and
+   H3). Had the owners refused a count that bounds a number, the module would have kept
+   flags and dropped limits, and "how many merchants" would be a constant of the role.
 2. **A gate the world enforces.** `Needs` and `Ceiling` bind the default spawner and
    births only, as `Closed` does (6.4.1); an external agent or a consumer's spawner
    may ignore them. A world-enforced gate would add a refusal reason to `Enter` and
@@ -1342,12 +1347,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `ClassID`, `NoClass`, `Settlements`, `SettlementClass`, `ClassLimit`, `RegionSettlement`, the construction of the dense tables, the review's call at P7.2a, `regionHas` and `regionLimit` | root package, `settlements.go` |
+| `SettlementClassID`, `NoSettlementClass`, `Settlements`, `SettlementClass`, `ClassLimit`, `RegionSettlement`, the construction of the dense tables, the review's call at P7.2a, `regionHas` and `regionLimit` | root package, `settlements.go` |
 | The effective thresholds and the review over primitive slices | `internal/settlement` (standard library only, converted inline at the call, architecture.md 2.9) |
 | `Role.Needs` and `Role.Ceiling` | root package, with the role (`spec-agents.md` 3.3); read by `spec-spawner.md` and `spec-population.md` code |
 | Events `SettlementClassChanged`, `SettlementHeld`; the cause constants `founded`, `grew`, `shrank` | root package, `event.go`; `internal/logkeys` holds the key strings only |
 | The snapshot fields | root package, `snapshot.go` |
-| The bounds `MaxClasses`, `MaxFlags`, `MaxLimits`, `MaxBandBP`, `MaxThresholdBP` | root package, `bounds.go` |
+| The bounds `MaxSettlementClasses`, `MaxClassFlags`, `MaxClassLimits`, `MaxBandBP`, `MaxThresholdBP` | root package, `bounds.go` |
 | The defaults `BandBP` 1 000 and `Dwell` 30 | root package, `defaults.go` |
-| Validation, the sentinels `ErrUnknownSettlementClass`, `ErrUnknownFlag`, `ErrUnknownLimit` | root package, `validate.go`, `errors.go` |
+| Validation, the sentinels `ErrUnknownSettlementClass`, `ErrUnknownSettlementFlag`, `ErrUnknownLimit` | root package, `validate.go`, `errors.go` |
 | The checkpoint section | `checkpoint.go` with the other module sections |

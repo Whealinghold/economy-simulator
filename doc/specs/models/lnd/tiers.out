@@ -1,4 +1,4 @@
-rule: 20000 scenarios, conservation, bounds and rent identity hold
+rule: 20000 scenarios, with and without cash: conservation, bounds, rent identity, supplies, listing order hold
 A=100, ten holders of 500 bp, commons 5 000 bp, rent 40 per unit, tick 5
 entitlements (holders, commons): [5, 5, 5, 5, 5, 5, 5, 5, 5, 5] 50
 own executions of the holders: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3] unused [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
@@ -7,3 +7,7 @@ let units 20 unserved units 10 idle let units 0
 rent received by lessor: [80, 80, 80, 80, 80, 80, 80, 80, 80, 80] total 800
 units drawn: 100
 A=80, fifty holders of 100 bp: entitlements of 1 unit for 40 of 50 holders; commons 40 ; units drawn 80 ; let units 0
+B before: A=600, four holders of 2 500 bp, closed. entitlements [150, 150, 150, 150] commons 0 ; diggers drawn 0 ; unused [100, 100, 100, 100]
+B after the release: entitlements [150, 150, 150] commons 150
+  commons grants: s1 3 ; diggers with 2: 7 with 1: 13 ; units from the commons 150 ; unserved units 400 ; unused of holders (not let, closed) [100, 100, 100]
+cash case: 10 let units at rent 40, 20 requests, ten with no cash: drawn 10 unserved 0 priced out 10 idle 0 cut 0

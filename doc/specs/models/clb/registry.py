@@ -88,7 +88,7 @@ fact_ids = set(re.findall(r"\*\*STY-([A-Z]\d\d)\b", STY))
 scen_ids = set(re.findall(r"^\| (S\d\d) \|", STY, re.M))
 scen_text = {m.group(1): m.group(2) for m in re.finditer(r"^\| (S\d\d) \|(.*)$", STY, re.M)}
 loops = set(re.findall(r"\*\*STB-(L\d+)\b", STB))
-dampers = set(re.findall(r"^\| (D\d\d) \|", STB, re.M))
+dampers = set(re.findall(r"^\| (D\d{2,3}) \|", STB, re.M))
 interactions = set(re.findall(r"^\| (I\d\d) \|", CLB, re.M))
 aliases = set(re.findall(r"^\| (A\d\d) \|", CLB, re.M))
 anchors = set(re.findall(r"^\| (E\d) \| anchor \|", CLB, re.M))
@@ -101,13 +101,13 @@ loop_text = {}
 for m in re.finditer(r"\*\*STB-(L\d+)\b(.*?)(?=\n\*\*STB-L\d+|\n## |\n### )", STB, re.S):
     loop_text[m.group(1)] = m.group(2)
 damper_text = {}
-for m in re.finditer(r"^\| (D\d\d) \|(.*)$", STB, re.M):
+for m in re.finditer(r"^\| (D\d{2,3}) \|(.*)$", STB, re.M):
     damper_text[m.group(1)] = m.group(2)
 # the parameter table of section 11 of STB names parameters per damper too
-for m in re.finditer(r"^\| (D\d\d)(?:[, ]+D\d\d)* [^|]*\|([^|]*)\|", STB, re.M):
+for m in re.finditer(r"^\| (D\d{2,3})(?:[, ]+D\d{2,3})* [^|]*\|([^|]*)\|", STB, re.M):
     damper_text[m.group(1)] = damper_text.get(m.group(1), "") + m.group(2)
-for m in re.finditer(r"^\| ((?:D\d\d(?:, )?)+(?: to D\d\d)?) \|([^|]*)\|", STB, re.M):
-    for d in re.findall(r"D\d\d", m.group(1)):
+for m in re.finditer(r"^\| ((?:D\d{2,3}(?:, )?)+(?: to D\d{2,3})?) \|([^|]*)\|", STB, re.M):
+    for d in re.findall(r"D\d{2,3}", m.group(1)):
         damper_text[d] = damper_text.get(d, "") + m.group(2)
 
 bad = []
@@ -155,7 +155,7 @@ for r in knob_rows:
         if re.fullmatch(r"L\d+", b):
             if b not in loops: bad.append((i, "unknown loop", b))
             elif field not in loop_text.get(b, ""): notes.append((i, f"{b} entry does not name {field}"))
-        elif re.fullmatch(r"D\d\d", b):
+        elif re.fullmatch(r"D\d{2,3}", b):
             if b not in dampers: bad.append((i, "unknown damper", b))
             elif field not in damper_text.get(b, "") and field not in loop_text.get("", ""):
                 notes.append((i, f"{b} row/table does not name {field}"))
@@ -235,11 +235,13 @@ check("owner cell matches a README owner section", not mism, str(mism[:20]))
 
 
 # default and bound from the owner's parameter table
-def owner_row(code, field):
+def owner_row(code, field, scope=None):
     f = code_to_file.get(code)
     if not f: return None
     lines = read(f).splitlines()
     for n, ln in enumerate(lines):
+        if scope and len(cells(ln)) > 1 and cells(ln)[0] != scope and any(cells(l2)[0] == scope for l2 in lines if l2.startswith("|") and len(cells(l2)) > 1 and cells(l2)[1] == field):
+            continue
         if re.match(rf"^\|[^|]*\|?\s*`{re.escape(field)}`\s*\|", ln) or re.match(rf"^\|\s*`{re.escape(field)}`\s*\|", ln):
             for k in range(n, max(0, n - 40), -1):
                 if lines[k].startswith("|") and "Default" in lines[k]:
@@ -268,7 +270,7 @@ for r in knob_rows:
     cls, kind, flags = r[2], r[6], r[8].split() if r[8] != "-" else []
     code = r[3].split()[0]
     scope, _, field = r[1].rpartition(".")
-    got = owner_row(code, field)
+    got = owner_row(code, field, scope.split(".")[-1])
     if got is None:
         if kind == "geo" or "z" in flags:
             notes.append((r[0], "default not found in the owner's table (check by hand)"))
@@ -373,7 +375,7 @@ PATHMAP = {   # the table-prefix rule of EXP 11.3.1 and the snake form, written 
     "world.cost_ceiling": [("World", "CostCeiling")], "world.ref_band_low": [("World", "RefBandLow")],
     "world.ref_band_high": [("World", "RefBandHigh")],
     "role.<id>.target_ratio": [("Role", "TargetRatio")], "role.<id>.target_spread": [("Role", "TargetSpread")],
-    "world.welfare_window": [("World", "WelfareWindow")], "world.window_cycles": [("World", "WindowCycles")],
+    "world.welfare_window": [("World", "WelfareWindow")], "modules.infrastructure.*": [("Infrastructure", STAR), ("FacilityClass", STAR), ("InitialFacility", STAR)], "modules.storage.*": [("Storage", STAR), ("RoleRoom", STAR), ("StoreClass", STAR), ("Capacity", STAR)], "modules.institutions.control.<id>.*": [("Control", STAR)], "modules.tenure.terms.*": [("TenureTerm", STAR)], "world.window_cycles": [("World", "WindowCycles")],
 }
 via_paths, via_unmapped = [], []
 for cell, moves in via_rows:
@@ -435,7 +437,7 @@ check("registry-only pairs are the expected scopes", not unexpected, str(unexpec
 print(f"     {len(owner_pairs)} owner pairs ({sum(1 for v in owner_pairs.values() if len(v[1]) > 1)} with several owner sections), {len(extra)} registry-only")
 
 # ---- coverage against the catalogue of spec-config.md 3.7 (11.1 "coverage, CFG 3.7") ----------
-cat37 = CFG.split("### 3.7 The catalogue of fields", 1)[1].split("Not fields:", 1)[0]
+cat37 = CFG.split("### 3.7 The catalogue of fields", 1)[1].split("## 4. Constants and bounds", 1)[0]
 cfg_names, cfg_nested = set(), []   # field names; (nested table name, field name)
 for line in cat37.splitlines():
     if not line.startswith("| `"): continue
@@ -467,7 +469,7 @@ def singular(n):
 
 
 # a table of the catalogue whose registry scopes are not named for it (the catalogue flattens deeper tables)
-ALIAS = {"DeathSchedule": ["knot"], "BirthSchedule": ["knot"], "Flows": ["moneyflow"], "Nodes": ["outside", "seasonfactor"],
+ALIAS = {"DeathSchedule": ["knot"], "BirthSchedule": ["knot"], "Flows": ["moneyflow", "flowtarget"], "Nodes": ["outside", "seasonfactor"],
          "Modes": ["mode"], "Resources": ["resource", "abundance", "seasonregen"], "Requires": ["recipe tool"],
          "Wants": ["want"], "Clearing": ["world"]}
 # tokens of a sub-structure that the catalogue flattens into its parent's parentheses: checked by name only

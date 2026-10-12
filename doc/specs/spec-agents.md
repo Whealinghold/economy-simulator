@@ -65,8 +65,8 @@ sections give the rule.
 | 1 | What is an agent, and what lives where? | A household or cohort: a role, a region, a weight, and a ledger account that holds its money and every good (tools too). Beliefs, job, residues, welfare history, trainee state, hunger and a strategy reference live in the agent. Upkeep, targets and the tradable set are derived, never saved | One owner per fact. The ledger already conserves what the agent holds (`spec-ledger.md` 2.1), so the agent holds no balance of its own |
 | 2 | What is upkeep, and what is starvation? | A per-household list of (commodity, quantity) per tick, consumed in the consumption phase as a boundary flow (`consumption`). Each commodity is eaten independently, up to what is held. **Fed** households are the least over the list of consumed over per-household need, and **unfed** are the rest. Starvation is only a signal here (`Unfed`, `Hunger`); the consequences are `spec-spawner.md` and `spec-population.md` | A shortage must be a number the population specs can act on. Independent consumption wastes nothing: a household with the staple but no fuel still eats |
 | 3 | What is the `Strategy`? | Three methods, the most the extension rules allow: `Work` (which recipe to start, before production), `Trade` (orders and discards, after production) and `Revise` (the new belief for one order outcome). Each gets a plain-data view and the world's random source, and returns plain data. The strategy never mutates the world | Architecture.md 4.2 limits an interface to three methods. Production runs before orders (`spec-production.md` 5.2), so the decision to work and the decision to trade are taken at different times; the outcome of a market arrives after clearing, so belief revision is a third call |
-| 4 | Inventory target and capacity? | A **target** is the stock an agent wants to hold at the start of the next tick: a number of ticks of use (`CoverTicks`), plus the inputs of its next job. For a commodity it only makes, the target is a number of ticks of its output (`OutputCoverTicks`). **No inventory capacity in version 1** | Capacity needs a rule for what to discard and a storage cost, which are `spec-storage.md`. Production never refuses output (`spec-production.md` 5.3.2). Overstock is limited by spoilage, by the cash-limited buffer rule, and by a production halt when output piles up (7.1) |
-| 5 | Liquidity and saving? | A hard constraint: no order beyond available cash, no borrowing, no negative balance. A **budget stack** of three tiers: upkeep first, job inputs second, buffers third. Only the third tier is subject to the saving rule: below a reserve of `ReserveTicks` of upkeep cost nothing is spent on buffers, and above it spending is a concave, bounded function of the excess | A household must be able to eat before it does anything else, and a producer must be able to buy inputs, or the model would starve productive households. A buffer is the only spending that can safely be cut when wealth is low |
+| 4 | Inventory target and capacity? | A **target** is the stock an agent wants to hold at the start of the next tick: a number of ticks of use (`CoverTicks`), plus the inputs of its next job. For a commodity it only makes, the target is a number of ticks of its output (`OutputCoverTicks`). **No inventory capacity unless the storage module is on** (section 8) | Capacity needs a rule for what to discard and a storage cost, which are `spec-storage.md`. Production never refuses output (`spec-production.md` 5.3.2). Overstock is limited by spoilage, by the cash-limited buffer rule, and by a production halt when output piles up (7.1) |
+| 5 | Liquidity and saving? | A hard constraint: no order beyond available cash, no borrowing (with the credit module off; a loan of the module raises the balance before it is spent, 7.4.1), no negative balance. A **budget stack** of three tiers: upkeep first, job inputs second, buffers third. Only the third tier is subject to the saving rule: below a reserve of `ReserveTicks` of upkeep cost nothing is spent on buffers, and above it spending is a concave, bounded function of the excess | A household must be able to eat before it does anything else, and a producer must be able to buy inputs, or the model would starve productive households. A buffer is the only spending that can safely be cut when wealth is low |
 | 6 | Cohorts? | Quantities are `w` times the household amounts; a limit price is never scaled; one belief and one draw per order; the work decision is proportional (`ceil(w * share)`), not all or nothing | `spec-scale.md` 4.4; the proportional response removes the all-at-once lockstep of the target-income rule for a cohort (N-014) |
 | 7 | The player? | An ordinary agent of weight 1, flagged **external**. Its strategy is either a consumer-written `Strategy`, called synchronously and not allowed to block, or the library's **directed** strategy, which reads a **directive** the consumer left in a mailbox between steps. Nothing happens in the middle of a `Step` | `Step` is a synchronous batch (overview 4) and all orders of a tick are placed before any market clears (`spec-clearing.md` 7.2); a callback that waits for a human would stall the game loop. The mailbox is plain state, so a checkpoint saves it |
 | 8 | Which events? | One aggregated event, `UpkeepShortfall`, per region and role per tick; new fields on `AgentSpawned`; no per-agent event | Observability rules 4.1 and 5.4.1 |
@@ -85,7 +85,7 @@ agent is a matter for `spec-integration.md` and `Snapshot`.
 ```go
 // Agent is one household or a cohort of identical households. Plain data.
 type Agent struct {
-	ID        AgentID  // never reused; pseudo-agents (estates) come first (spec-estates.md 2.7.6)
+	ID        AgentID  // never reused; the pseudo-agents come first: the estates (spec-estates.md 2.7.6), then the counterparties of the external module, then the treasuries of governed jurisdictions (spec-polity.md 5.2.2); the households follow
 	Account   int      // the ledger account of kind Agent; the region lives on the account
 	Role      RoleID
 	Weight    int64    // households this agent stands for, at least 1 (spec-scale.md 2)
@@ -109,6 +109,9 @@ type Agent struct {
 	OwnUse     bool        // in the own-use mode (spec-subsistence.md 5.3); false when the module is off
 	OwnUseJobs int64       // own-use jobs started since the last job of another recipe (spec-subsistence.md 5.5 item 5)
 	Journey    *Journey    // a migration journey in progress: destination RegionID and arrival tick (spec-migration.md 8.2), usually nil
+
+	Member     Membership  // the (BodyID, RegionID) of the body the household was admitted to, or none (spec-institutions.md 3.6, 4.2.1, 12.1); none when the module is off
+	Stores     []StoreCount // the stores the agent hosts: (class, count) ascending by class (spec-storage.md 15.1); empty when the module is off
 }
 ```
 
@@ -127,6 +130,7 @@ type Agent struct {
 | Trip state (away, shipment) | the transport module | `spec-transport.md` 14 |
 | Own-use mode and counter (`OwnUse`, `OwnUseJobs`) | the agent | `spec-subsistence.md` 15 |
 | Migration journey (`Journey`) | the agent | `spec-migration.md` 14 |
+| Membership of a body (`Member`) and the stores of the agent (`Stores`) | the agent | `spec-institutions.md` 12.1 and `spec-storage.md` 15.1, in the agent record of `spec-checkpoint.md` 4.2 tag 3 |
 | Upkeep, tradable set, targets, budgets, views, plans | derived or scratch, never state | not saved |
 | Price window, cost anchors | the market, or derived | `spec-beliefs.md` 13, `spec-production.md` 9.3 |
 
@@ -155,6 +159,13 @@ A **role** is a plain struct in the root package, an entry of `Config.Roles`
 | `Label` | string | presentation only | empty |
 | `Fixed` | bool | the agents of the role are never moved by the migration module (owner `spec-migration.md` 3.1, 11) | false |
 | `Merchant` | the merchant block | nil means the role is not a merchant role (owner `spec-merchants.md` 3.2, 13) | nil |
+| `Hireable` | bool | the households of the role may offer themselves for hire (owner `spec-employment.md` 3.1; needs `Modules.Employment`) | false |
+| `Employer` | the employer block | nil means the role does not hire (owner `spec-employment.md` 3.2) | nil |
+| `Credit` | the credit block | nil means the role does not deal in credit (owner `spec-credit.md` 4.2, 14) | nil |
+| `Cover` | the insurance block | nil means the role does not deal in cover (owner `spec-insurance.md` 4.2) | nil |
+| `Saver` | the saver block | nil means the role has no savings or investment rule (owner `spec-saving-and-investment.md` 3.2, 10.4) | nil |
+| `Needs` | flag ID | the settlement-class flag a region must carry for the role to be entered (owner `spec-settlements.md` 6.4.1) | empty |
+| `Ceiling` | limit ID | the settlement-class limit on the households of the role in a region (owner `spec-settlements.md` 6.4.2) | empty |
 
 The role's own-use recipes are not a field of the role: they are the rows of the subsistence module
 (`spec-subsistence.md` 3.2), and the **effective own-use list** of a role is derived (3.3.1 there).
@@ -269,7 +280,13 @@ so that conservation is one rule:
    `MigrationReviewed`, `spec-migration.md` 8.3); and for each open delivery contract of which the agent is
    the deliverer, the escrow is returned in full to the payer (`escrow_refund`) and the contract ends
    (`spec-merchants.md` 9.8.2). Step 2a is numbered so that the steps keep their numbers; it runs before the money moves;
-3. all money moves to the region's estate account with the reason `estate_money`;
+2b. each title of the agent moves to the pool of the title's region (`spec-land.md` 6.4); no money moves;
+2c. each open hire of the agent ends (`spec-employment.md` 6.5.2): as a worker, its job is abandoned (`agent_removed`, step 1) and the remainder of the escrow returns to the employer; as an employer, for each hire in ascending hire ID, the worker's job is abandoned (`principal_left`), the remainder of the escrow returns to **the agent's own account**, so that the waterfall of 2d sees it, and the hire ends;
+2d. for each open claim of the agent as debtor, the waterfall of `spec-credit.md` 9.1: its money pays them, pro rata, before the rest moves to the estate, and what is still owed is written off;
+2e. each open claim of the agent as creditor passes to the estate of its region (`spec-credit.md` 9.2);
+2f. each open cover of the agent, as insured or as underwriter, ends with no transfer (`spec-insurance.md` 8.6);
+2g. each facility of the agent is handled as `spec-infrastructure.md` 7.1 says: a site, route or ground facility passes to the estate of its region and a store facility is ruined; no money moves;
+3. all money that remains moves to the region's estate account with the reason `estate_money`;
 4. all goods move to the estate account with the reason `estate_goods`, and the
    estate lists them at the region's effective reference price, a used durable at that price times its remaining durability over its full durability (`spec-estates.md` 2.1, 2.7.3, FR-EST-008; decision of round 3: the anchor stays the effective reference price, `spec-skill-barriers.md` 2.7 follows it);
 5. the account is closed (`spec-ledger.md` 3.3); the agent's ID is never reused;
@@ -277,8 +294,10 @@ so that conservation is one rule:
    `Cause` (`insolvent`, `starved`, `consumer` or `population`; section 14.1). It is the only
    event that removes the agent: bankruptcy, starvation and death are one event with a cause
    (`spec-spawner.md` 13.1.1). The events of the steps above accompany it (`RecipeAbandoned`,
-   `TraineeshipEnded`, `ContractSettled`, `EstateOpened`), in the order of `spec-world.md` 6.11
-   item 8.
+   `TraineeshipEnded`, `ContractSettled`, and those of steps 2b to 2g: `TitleTransferred`,
+   `HireEnded`, `LoanEnded`, `LoanPassed`, `CoverEnded` and `FacilityChanged`), in the order of
+   `spec-world.md` 6.11 item 8: every event of a removal precedes `AgentBankrupted`, and
+   `EstateOpened` follows it.
 
 An agent that is away on a self-carried trip (`spec-transport.md` 5.9.2) is removed the same
 way: its account's holdings go to the estate of the account's region, the region it departed
@@ -543,8 +562,9 @@ be stateless or implement the optional save and load pair of ADR 0002 decision 7
 6.1.5. **Panics** in a strategy are not recovered; they propagate to the caller of
 `Step`, as an observer's do (architecture.md 12.5).
 
-6.1.6. **Pseudo-agents.** The estate has no strategy and is never passed to one
-(`spec-estates.md` 2.7.4).
+6.1.6. **Pseudo-agents.** An estate, a counterparty of the external module and a treasury
+have no strategy and are never passed to one (`spec-estates.md` 2.7.4,
+`spec-external-sector.md` 4.2, `spec-polity.md` 5.3.3).
 
 ### 6.2 The methods
 
@@ -634,6 +654,11 @@ type TradePlan struct {
 	Offers    []DeliveryOffer   // spec-merchants.md 9.2; the default strategy appends none
 	Takes     []DeliveryTake    // spec-merchants.md 9.2; the default strategy appends none
 	Notes     PlanNotes         // spec-merchants.md 15.1.2: counters a strategy fills; zero for the default; influence nothing
+	Borrow    []CreditRequest   // spec-credit.md 5.1; the default appends one only for a role with a Borrow block
+	Lend      []CreditOffer     // spec-credit.md 5.1; the default appends one only for a role with a Lend block
+	Cover     []LaneCover       // spec-insurance.md 5.1; the default appends them only for a role with an Insure block
+	Store     []StoreCover      // spec-insurance.md 5.1; at most one
+	Offer     []CoverOffer      // spec-insurance.md 5.1; at most one, for a role with an Underwrite block (beside the merchants' Offers: another type)
 }
 
 // ShipmentRequest and Line are defined by spec-transport.md 5.3.1:
@@ -656,12 +681,20 @@ type TradePlan struct {
 // the notes are fixed counters of the strategy's decisions. Offers and takes are matched
 // in the contract round after the last agent's plan, not by Clearing (phase 3, section 4).
 
+// CreditRequest and CreditOffer are defined by spec-credit.md 5.1, LaneCover, StoreCover and
+// CoverOffer by spec-insurance.md 5.1, and LabourOffer and HireRequest by spec-employment.md 4.1:
+// they are collected in the plan or the request and admitted and matched in the rounds of those
+// modules (6.5), not by Clearing.
+
 // JobRequest names the recipe to start. Executions is a maximum; 0 means the most
 // the agent can run. The zero value, with NoJob set, requests nothing.
 type JobRequest struct {
 	NoJob      bool
 	Recipe     RecipeID
 	Executions int64
+
+	Offer LabourOffer // a worker's offer of its households for hire (spec-employment.md 4.1); Households 0 means none
+	Hire  HireRequest // an employer's vacancies (spec-employment.md 4.1); Positions 0 means none
 }
 ```
 
@@ -685,14 +718,24 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Upkeep | the effective upkeep (5.2) as per-household quantities |
 | Job | whether one is active, its recipe, `Remaining`, `Executions` |
 | Per commodity in the tradable set | `Stock` (the whole balance; no reservation exists yet), `Expiring` (units that spoil at the end of this tick), the belief and its bounds, the effective reference price, `UnitCost` (0 if the role cannot make it, or if the region has no observed wage yet; it counts labour, 7.3.6), and the market report: price, age, best unmatched bid and ask with flags, and the price window's mean, low, high and the position of the price in it (`spec-beliefs.md` 7) |
-| Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season (with the resources module on it includes the abundance of the tick's snapshot, `spec-resources.md` 4.7.3), `MaxExecutions` (`spec-production.md` 4.2; with the module on also bounded by `floor(stock / draw)` of the snapshot, reason `no_endowment`) and the reason if it is 0 |
+| Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season (with the resources module on it includes the abundance of the tick's snapshot, `spec-resources.md` 4.7.3; the factors are site, shock, technology, the trainee or hired factor and abundance, `spec-production.md` 6.3), `MaxExecutions` (`spec-production.md` 4.2: `k0` of the world, the executions the inputs, the tools, the ration, the capacity and the limits of the facility classes the recipe needs, builds or repairs, and with the storage module on the free room allow; with the resources module on also bounded by `floor(stock / draw)` of the snapshot, reason `no_endowment`) and the reason if it is 0 (the master order of `spec-production.md` 4.2); with the modules on, also `Needs`, `Builds` and `Repairs` (`spec-infrastructure.md` 4.1.1), for a `Builds` or `Repairs` recipe `Standing` (the first refusal other than `no_input` and `no_tool` that would apply were the inputs and tools held), and for a recipe on an employer's hire list the hired yield (`spec-employment.md` 9.1) |
 | Own-use (only with the subsistence module on) | `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` (`spec-subsistence.md` 5.2, 5.4), and a mark on each own-use recipe in the per-recipe group, so that a consumer's strategy does not recompute them. The own-use recipes of the role's effective own-use list appear in the per-recipe group beside the role's recipes |
 | Merchant (only in the view of an agent whose role has a merchant block) | `Params`, `Modes`, `Goods` (mass, bulk, shelf life, durability and the age of the oldest lot held) and `Outbound` (`spec-merchants.md` 4.1) |
+| Employment (only with the module on, and only for a role that is `Hireable` or has an employer block) | `Hireable`; for an employer the hire list, `MaxHires`, `WorkerShareBP`, `HireYieldBP`, the executions and number of hires it has open (`Hired`) and the hires open in its region (`Open`) (`spec-employment.md` 9.1) |
+| Credit (only in the view of an agent whose role has a credit block) | `Lend`, `Borrow`, `MinPrincipal`, `UpkeepCost`, `Debt`, `Owed`, `Overdue`, `NextDue`, `Room`, `Lent`, `Receivable`, `ScaleBP` (`spec-credit.md` 10.1) |
+| Cover (only in the view of an agent whose role has a cover block) | `Underwrite`, `Insure`, `MinSum`, `MaxCoverRequests`, `Open`, `Capacity`, `Money`, `Owed`, `Policies`, `LaneLoss`, `ValueCapBP`, `UnitValue` (`spec-insurance.md` 10.1) |
+| Room (only with the storage module on, and only for a limited agent) | `Limited`, `Room`, `Load`, `Pledge`, `Free` (pairs of mass and bulk), the agent's `Stores`, and `Mass` and `Bulk` per commodity of the tradable set (`spec-storage.md` 6.1.1). No other agent's room is visible |
+| Saving (only for an agent whose role has a saver block, in the `Work` and the `Trade` view) | `Block`, `SafetyTicks`, `HurdleSpreadBP`, `CommitBandBP`, `Drawdown`, `Facilities`, `Classes` (`spec-saving-and-investment.md` 5.2); the per-recipe group carries `Needs`, `Builds`, `Repairs` and `Standing` |
+| Facilities (only with the infrastructure module on) | in the `Work` view, the agent's own facilities in its region, ascending ID, at most `MaxFacilitiesPerAgent` (`FacilityView`, `spec-infrastructure.md` 9.1); the `Trade` view carries them only through the saving group above |
 | Tunables | the values of section 12 |
 | Mailbox | the pending `Directive`, if any (section 10) |
 | Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1) and `Outbound` (the mirror of `Inbound`: per destination region and commodity with units on the way, the total quantity of the shipments the agent is the shipper of and the earliest arrival, fixed at the start of phase 3; `spec-merchants.md` 4.1). An agent that is away or on a migration journey is never passed a view |
-| Endowments (only with the resources module on) | for the agent's own region only: each endowment that its role's recipes draw on, sorted by resource: `Resource`, `Stock`, `Capacity`, `AbundanceBP` (`spec-resources.md` 5.5.1). No view carries another region's endowment |
+| Endowments (only with the resources module on) | for the agent's own region only: each endowment that its role's recipes draw on, sorted by resource: `Resource`, `Stock`, `Capacity`, `AbundanceBP` (`spec-resources.md` 5.5.1) and, with the tenure module on, `Posted` (the rent in force per unit), `ShareBP`, `Entitled` and `Closed` (`spec-land.md` 4.6.1). No view carries another region's endowment or another holder's share |
 | Rumours (only with the information module on, and only in the view passed to `Trade` of an agent of a role with `Informed`) | `Rumours`: the rumours of `spec-information.md` 5, sorted by (`Region`, `Commodity`), a scratch slice valid for the call only. The `Work` view and the `OutcomeView` carry none |
+
+No view carries a settlement class, a flag or a limit: a household reads its own state, and the
+effect of a class on a role is the spawner's and the population module's, not a strategy's
+(`spec-settlements.md` 2, FR-SET-018).
 
 6.4.2. The view carries *configuration* (recipes, upkeep) by value as plain data.
 Nothing in it points into live state. The reading of architecture.md 12.4 ("every
@@ -732,7 +775,10 @@ way it checks a `Clearing`'s trades (`spec-clearing.md` 8.2).
 reason `not_on_role` (a refusal reason of `spec-production.md` 4.2, section 22); the
 agent starts nothing, and the world logs it at `Debug`. Production checks the role's
 list **before any other check** (FR-PRO-048), so a request off the list never reaches
-the input, tool or yield checks. Any other refusal is production's, with its reasons.
+the input, tool or yield checks. Any other refusal is production's, with its reasons: the whole order of the reasons is
+`spec-production.md` 4.2's, and `not_permitted`, `no_facility`, `no_title`, `rent_funds` and
+`no_room` are among them. An `Offer` or a `Hire` of the request is checked by the labour round
+(`spec-employment.md` 5.2) and a refusal leaves the rest of the request alone.
 
 6.5.2. **`Trade`.**
 
@@ -746,20 +792,34 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
   admitted and matched in the contract round after the last agent's plan (`spec-merchants.md`
   9.3, 9.4); the default strategy appends none, and with `Modules.Merchants` absent each is
   refused `contracts_off`. `Notes` is read by the world only to build `MerchantsPlanned`.
+- Credit requests and offers (`Borrow`, `Lend`) are collected, not executed here: they are
+  admitted and matched in the credit round at P3.3b after the last agent's plan
+  (`spec-credit.md` 5.2, 6.1); the default appends one only for a role with a `Borrow` or a
+  `Lend` block, and with `Modules.Credit` absent each is refused `credit_off`, a `Debug` line.
+- Cover requests and offers (`Cover`, `Store`, `Offer`) are collected in the same way and
+  admitted and matched in the cover round at P3.3c (`spec-insurance.md` 5.2, 7.1); with
+  `Modules.Insurance` absent each is refused `insurance_off`, a `Debug` line.
 - Intents are then turned into orders and submitted in plan order. An intent for a
   commodity outside the agent's tradable set is rejected with the reason
   `not_tradable`, an `OrderRejected` event, and never reaches clearing. In the order
   of checks of `spec-clearing.md` 3.2 the check comes **after** `unknown_commodity`
   (a commodity the configuration does not know is that reason, not this one), and it
   does not apply to a pseudo-agent, which has no role and no tradable set. A second
-  intent for a commodity is rejected as `duplicate_order`. Every other rejection is
-  the market's (`spec-clearing.md` 3.2): `invalid_price`, `invalid_quantity`,
-  `insufficient_funds`, `insufficient_stock`, `overflow`.
+  intent for a commodity is rejected as `duplicate_order`. An intent to sell or buy a
+  commodity under a `sell` or `buy` right of a body that the agent is not a member of is
+  rejected with `not_permitted` (`spec-institutions.md` 5.6.2, FR-ORG-024); the world checks it
+  while it builds the orders, **after** `not_tradable` and before the market's checks, and it
+  does not apply to a pseudo-agent, which holds no membership (FR-AGT-085). Every other
+  rejection is the market's (`spec-clearing.md` 3.2): `invalid_price`, `invalid_quantity`,
+  `insufficient_funds`, `insufficient_stock`, `no_room` (with the storage module on),
+  `overflow`.
 - An intent's `Target` and `Reserve` above `MaxQuantity`, and a `Purpose` outside the
   enumeration, are treated as 0 and `PurposeOther`, with a `Debug` log. They are
   inputs to a belief rule, not orders, so they do not reject the order.
-- The world clamps nothing: a strategy that sizes an order beyond its budget gets it
-  rejected whole (`spec-clearing.md` 3.2), not reduced.
+- The world clamps no quantity to a budget: a strategy that sizes an order beyond its budget
+  gets it rejected whole (`spec-clearing.md` 3.2), not reduced. A legal price is the one thing
+  admission may replace: a limit above a cap or below a floor in force is replaced by it
+  (`spec-clearing.md` 3.2.1), and that is counted in `PriceControlled`, never silent.
 
 6.5.3. **`Revise`.** The returned belief is clamped to the invariant and the bounds
 before it is stored, and the clamps are counted in `BeliefsUpdated`
@@ -781,7 +841,9 @@ func WithStrategy(name string, s Strategy) Option
 `WithStrategy` is additive. The name `"default"` is built in and is the library's
 `DefaultStrategy`; the name `"directed"` is built in beside it and is
 `Directed{Fallback: DefaultStrategy{}}` (10.3), the strategy that an empty strategy name
-of `AddAgent` means (`spec-integration.md` 4.2.2). The world holds a strategy **directed**
+of `AddAgent` means (`spec-integration.md` 4.2.2). The `directed` policy of a policy actor
+(`spec-policy.md` 8.4) is not this strategy: it is the mailbox of an actor's lever settings,
+and has no `Sticky`. The world holds a strategy **directed**
 when the registered value's dynamic type is `Directed`; a consumer wrapper that holds one
 in a field is not, and `Direct` returns `ErrNotDirected` for it. `Role.Strategy` (3.3) is a name; an unknown name is rejected at
 construction with `ErrUnknownStrategy`. The *names* are data: they are in the
@@ -802,7 +864,9 @@ A strategy may ignore beliefs, the tradable set's targets and the default rules,
 price and size however it likes, within 6.5. It may call the default strategy's
 methods: `DefaultStrategy` is exported and stateless, and a consumer's type holds one
 in a named field and delegates (architecture.md 4.7 forbids embedding in a public
-struct). That is the wrapper for the default belief rule that `spec-beliefs.md` 10.5
+struct). The pure rules of the saving module are exported beside it, `SavingTarget(v *AgentView)`
+and `ChooseProject(v *AgentView)` (`spec-saving-and-investment.md` 4.3.3, FR-SAV-042), as are
+`DefaultCover` and `DefaultOffer` of the insurance module (`spec-insurance.md` 10.4). That is the wrapper for the default belief rule that `spec-beliefs.md` 10.5
 asks this spec to decide: `DefaultStrategy.Revise`. The merchant strategy of
 `spec-merchants.md` is a second implementation (`strategy.Merchant`, `strategy/merchant.go`), written the same way. A
 merchant in the own-use mode plans no trip and posts no take (`spec-merchants.md` 6.4).
@@ -891,6 +955,8 @@ which is evaluated when `Work` is called (`spec-observability.md` 5.3.4, `HeldBy
 value_r = sum over non-discard outputs o:  floor(q_o * E_r * Centre_o / 10 000)
 cost_r  = sum over inputs i:   q_i * Centre_i
         + sum over tools t:    ceil(WearPerUse_t * Centre_t / Durability_t)
+        + sum over the recipe's Draws (res, d):  d * Posted_res   (the rent in force of the view, `spec-land.md` 4.6.2;
+                                                  0 with the tenure module off or a rent of 0)
 net_r   = value_r - cost_r                       (per execution, in minor units)
 ```
 
@@ -901,7 +967,12 @@ labour) is chosen; two recipes are compared by cross-multiplication in 128 bits,
 a tie goes to the lower recipe ID. A recipe is eligible only if `net_r > 0` or it is a
 source (no inputs): a source costs nothing but labour, and a household that must work
 to eat will cut or gather even when its belief of the price is low. This answers N-034's
-question of the default choice rule.
+question of the default choice rule. A source stays eligible at `net_r <= 0` with the rent in
+`cost_r`: a rent moves the choice among recipes and the eligibility of those with inputs, and
+does not stop a household that must work to eat (`spec-land.md` 4.6.2). A recipe with `Builds`
+or `Repairs` has at least one input and only discard outputs (`spec-infrastructure.md` 4.1.2
+B2, B3), so its `value_r` is 0, it is not a source and its `net_r` is `-cost_r`: it is never
+eligible here, and only the project request of 7.1.11 asks for one.
 
 7.1.5. **The production halt.** A recipe is skipped if any of its outputs with a
 positive `CostShare` is overstocked:
@@ -983,6 +1054,36 @@ default applies this rule to an agent that is free (the rule and its reasons are
 A consumer's strategy sees the same flag in its view (6.4.1); the `Directed` directive overrides
 `Work` as for any recipe (10.4).
 
+7.1.10. **Labour offers and vacancies** (employment module on, `spec-employment.md` 4.3). After
+the choice of 7.1.2 to 7.1.7 and using its results, the default fills the two fields that
+`JobRequest` gained (6.3) and changes nothing else. **A worker's offer:** for a role that is
+`Hireable`, an agent that is not in the own-use mode and not a trainee, and whose work share
+`s` (with the survival rule and the floor of 7.1.3 already applied) is above 0, `Offer` is
+`Households = ceil(w * s / 10 000)` with `Reserve` the value per tick of its own best
+executable recipe by 7.1.4 and 7.1.5, `max(0, floor(net_r / Duration_r))`, or 0 if it has none;
+a household that the target-income rule says should rest offers nothing. **An employer's
+vacancies:** for a role with an employer block, an agent that is free, and a recipe of its hire
+list that is eligible by 7.1.4 and not halted by 7.1.5, `Hire` is for the best such recipe by
+`net_r / Duration_r` at the hired yield, with `Bid = floor(net_r / Duration_r)` and
+`Positions` the least of the establishment left, the stock, the tools and the cash after the
+upkeep of the tick (`spec-employment.md` 4.3.3). The own request is the fallback of an offer
+(`spec-employment.md` 4.1.1). The default keeps no state and draws no word for an offer or a
+vacancy: the round breaks its ties by a keyed hash (`spec-employment.md` 5.3). The planned
+recipe of 7.2 keeps `k* = w`, and the hires add `H*` to the planned executions of an employer
+(`spec-employment.md` 9.2). An employer that is busy with its own job posts no vacancy: `Work`
+is not called for it (`spec-employment.md` 4.1.3).
+
+7.1.11. **The project request** (saving module on, `spec-saving-and-investment.md` 5.7). For a
+free agent of a role with a `Saver` block, the default requests, before the choice of 7.1.4 and
+independent of the work share, the project recipe that passes the test of
+`spec-saving-and-investment.md` 5.5: `{Recipe: p, Executions: 1}` for a build and
+`{Recipe: p, Executions: MaxExecutions}` for a repair, if its `MaxExecutions` is at least 1;
+otherwise the request is that of 7.1.2 to 7.1.7. There is none while `Hunger` is above 0,
+while `Money` is below `ReserveMoney` (7.4.2), in the own-use mode, or while the active job is
+a project recipe (`spec-saving-and-investment.md` 5.5.5, 5.5.6), and a project whose per-recipe
+`Standing` is not empty is not weighed (`spec-saving-and-investment.md` 5.5.1). The numbers
+7.1.10 and 7.1.11 do not fix an order of evaluation.
+
 ### 7.2 The planned recipe
 
 `Trade` needs to know what the agent expects to do next, so that it can buy the
@@ -992,7 +1093,10 @@ source, not halted, the one with the greatest `net_r / Duration_r`. It may be no
 planned executions are `k* = w`. A recipe whose input the agent lacks is still planned:
 it is what the agent will try to buy for. `Work` then picks the best *executable*
 recipe, which may differ (the tool-less variant of `spec-production.md` 3.3 when the
-tool is missing).
+tool is missing). With the saving module on and a project funded
+(`spec-saving-and-investment.md` 5.6.4), the planned recipe is the project recipe and `k*` its
+executions; for an employer the hires add the planned job `r_h` and its `H*`
+(`spec-employment.md` 9.2.1).
 
 ### 7.3 Needs and targets
 
@@ -1016,7 +1120,10 @@ Keep_c   = Reserve + UseTgt_c + Want_c   units the agent wants to hold now
 `Want_c` is known only after tiers 1 to 3 are allocated, because the wants are paid from what
 the cap leaves (7.4.3); the tiers 1 to 3 do not depend on it, so the order is: 7.3 without
 `Want_c`, the tiers, the demand module's allocation, then `Keep_c`, `Target_c` and the gap are
-raised by `Want_c` for the bid. An agent without the module has `Want_c` = 0 throughout.
+raised by `Want_c` for the bid. An agent without the module has `Want_c` = 0 throughout. For an employer
+(`spec-employment.md` 9.2.1) `Job_c` also counts the inputs and tools of its planned hires:
+`Job_c = InputJobs * (k* * q_c(r*) + H* * q_c(r_h))` for an input of either recipe and
+`k* + H*` for a tool, `StartsIn` being 1; the rest of 7.3 to 7.5 is unchanged.
 
 7.3.1. **The target.** `Target_c` is the number the belief rule receives
 (`spec-beliefs.md` 4.4), the units the agent wants to hold *after* this tick's
@@ -1069,7 +1176,11 @@ no earmark exists, so they are all of them); those not needed for this tick's up
 are offered even when there is no surplus above `Keep`, if no bid is
 placed for the commodity. A **tool** is offered only by a role that makes it (a
 non-discard output of one of its recipes): a holder's tool is bound to it
-(`spec-skill-barriers.md` 2.7), and the estate is the only seller of a used one.
+(`spec-skill-barriers.md` 2.7), and the estate is the only seller of a used one. With the
+storage module on, a limited agent first discards, before it forms the asks, the surplus units
+that its tier 1 bids need room for, the minimum that lets them fit (`spec-storage.md` 6.3.2,
+5.5.2.1); the discard is a `Discard` of the plan (6.5.2), counted under `disposal` (8.2), and
+nothing is discarded for tier 2 or beyond.
 
 7.3.6. **`Purpose` and `UnitCost` of an intent.** Purpose is `PurposeInput` if
 `Job_c` is above 0 and `c` is an input of `r*`, `PurposeTool` if it is a tool of
@@ -1080,23 +1191,35 @@ provisions are upkeep (`spec-merchants.md` 3.4.2). `UnitCost` is the
 cost anchor of the commodity in the agent's region (`spec-production.md` 9.3) if the
 role has a recipe that makes it, and 0 otherwise (`spec-beliefs.md` 3.2.4). **The
 anchor is the full cost, labour included**: inputs, the wear of tools and `Duration`
-working ticks valued at the region's pooled observed wage of the previous tick
-(`spec-production.md` 9.1, 9.3, FR-PRO-047, N-055). It is **0 while the region has no
+working ticks valued at the region's pooled observed wage of the previous tick and, with the
+tenure module on, the rent of its draws at the posted rent (`spec-production.md` 9.1, 9.3,
+FR-PRO-047, N-055; `spec-land.md` 5.7.1). It is **0 while the region has no
 observed wage** (`spec-production.md` 9.1.1, FR-PRO-049), so in the first ticks of a
 run with no starting wage only the reference band applies to beliefs
 (`spec-beliefs.md` 3.2.2). The strategy does not compute the anchor: the world computes
 it once per tick before `Work` is called (FR-PRO-048) and hands it to the view and to
 the intent; the default `Trade` passes it through unchanged. A bid whose commodity is a want item and nothing else has `PurposeOther`: it is not netted from income (`spec-welfare-and-wages.md` 2.1).
 
+7.3.7. **Room.** With the storage module on and the agent limited, after `UseTgt_c` and
+`OutTgt_c` are computed and before the tiers, the targets are scaled to the room
+(`spec-storage.md` 6.2.2): `Avail_d = max(0, Room_d - Pledge_d - ResLoad_d)` per dimension, `f`
+the least `floor(Avail_d * 10 000 / TL_d)` over the dimensions where the load of the targets
+`TL_d` exceeds it (10 000 if none binds), and `Target'_c = floor(Target_c * f / 10 000)`,
+`UseTgt'_c = floor(UseTgt_c * f / 10 000)` and `Keep'_c = Reserve_c + UseTgt'_c + Want_c`
+replace `Target_c`, `UseTgt_c` and `Keep_c` of 7.3 in the gap, the tiers and the intent. The
+scaling is pro rata over every commodity of the target; it is not a ceiling on stock
+(`spec-storage.md` 6.2.4). An agent that is not limited, or with the module off, is unchanged.
+
 ### 7.4 The budget stack and the saving rule
 
 7.4.1. **The hard constraint.** The sum over the agent's bids of limit times quantity
 is at most its available money. The default strategy builds its orders so that none
 is rejected for funds (FR-AGT-044); the market's rejection (`insufficient_funds`) is
-the backstop for any other strategy (`spec-clearing.md` 3.3). There is no borrowing
-and no negative balance (`spec-ledger.md` 4.1). The money in a bid is reserved at its
-limit, the worst case, so the budget is computed at the limit price, not at the
-expected price.
+the backstop for any other strategy (`spec-clearing.md` 3.3). There is no negative
+balance (`spec-ledger.md` 4.1); a loan of the credit module raises the balance before it is
+spent, and the money in a bid is still reserved from the balance. The money in a bid is
+reserved at its limit, the worst case, so the budget is computed at the limit price, not at
+the expected price.
 
 7.4.2. **The reserve.** The agent's upkeep cost for one tick, at its own beliefs, is
 `UpkeepCost = sum over upkeep c of U_c * Centre_c` (checked). The **reserve money** is
@@ -1104,6 +1227,12 @@ expected price.
 ```
 ReserveMoney = ReserveTicks * UpkeepCost
 ```
+
+`ReserveMoney` is the flat reserve: 7.1.2, 7.1.3 and the warning `reserve_exceeds_money` read
+it. The excess of 7.4.4 is taken over `SavingTarget`, which is `ReserveMoney` unless
+`Modules.Saving` is present and the role has a `Saver` block; then it is `max(ReserveMoney,
+Precaution) + Goal` (`spec-saving-and-investment.md` 3.2). It replaces the flat reserve in
+`e` only.
 
 7.4.3. **The stack.** Money is allocated to tiers in order. Within a tier, commodities
 are taken in canonical order, each at its drawn limit `L_c` (7.5):
@@ -1125,7 +1254,7 @@ is the interaction of N-032 and open question 6.
 7.4.4. **The spend cap.** After tiers 1 and 2, with `avail` the money left:
 
 ```
-e   = max(0, avail - ReserveMoney)                    excess over the reserve
+e   = max(0, avail - SavingTarget)                    excess over the savings target (`ReserveMoney`, 7.4.2)
 H   = SpendHalfTicks * UpkeepCost                     the excess at which the share is half
 cap = SpendMaxShare * ( e * H / (e + H) ) / 10 000    integer, checked, 128-bit intermediates
 ```
@@ -1195,7 +1324,8 @@ for a cohort of any weight (`spec-scale.md` 4.4). Two rules:
 
 7.5.4. **The quantity.** `qty_c = q1 + q2 + q3 + q4`, each tier's quantity bounded by its
 want, by what the money at the limit allows in that tier, and (for tiers 3 and 4) by the
-cap; `q4` is the units of `Want_c` funded by `spec-demand.md` 4.5 (0 with the module off), at the
+cap, and, with the storage module on, by the free room, allocated in the order of the money
+stack (`spec-storage.md` 6.3.1); `q4` is the units of `Want_c` funded by `spec-demand.md` 4.5 (0 with the module off), at the
 same limit as the rest of the bid. A commodity whose quantity is 0 gets no order. The intent carries `Target`,
 `Reserve`, `UnitCost` and `Purpose` (7.3.6).
 
@@ -1210,19 +1340,36 @@ belief, the bounds, the outcome, the market report, `o.Stock`, `o.Target`,
 `o.UnitCost` and `o.Draw`, and returns the new belief. Nothing else: one update per
 admitted order, with the gate draw the world took (`spec-beliefs.md` 5.1.2).
 
+### 7.7 Credit
+
+The default borrower and lender are the rules of `spec-credit.md` 10.2 and 10.3, evaluated in
+`Trade` after the tiers of 7.4.3 are built. They append at most one request (`Borrow`) and one
+offer (`Lend`) to the plan and take no draw. `Tier2` and `Late` of the borrower's rule are that
+spec's (10.2, 10.2.1.2): `Tier2` is the cost of the inputs and tools of the next job at the
+limits of the plan, whatever money allows. A role with no `Borrow` or `Lend` block gets neither,
+and with the module absent none is possible (`credit_off`).
+
+### 7.8 Cover
+
+The default insured and the default underwriter are the rules of `spec-insurance.md` 10.2 and
+10.3 (exported as `DefaultCover` and `DefaultOffer`, 10.4 there), evaluated in `Trade` after the
+credit rule of 7.7 and filling the plan fields `Cover`, `Store` and `Offer` of 6.3. They take no
+draw and keep no state.
+
 ## 8. Inventory capacity and discards
 
 This answers N-002.
 
-8.1. **Decision: no inventory capacity in version 1.** An agent can hold any quantity
-up to `MaxQuantity` of a commodity. Reasons:
+8.1. **Decision: no inventory capacity unless the storage module is on.** With it off an
+agent can hold any quantity up to `MaxQuantity` of a commodity; with it on a limited agent has a
+room (`spec-storage.md` 3, 4) and 8.3 says what changes. Reasons for the default:
 
 1. bazaarBot's bound (`max_size`) is the source of two of its defects (the limit
    formula of defect 8 and the discarding of `makeRoomFor`, `bazaarbot-reference.md`
    section 10); a capacity makes a rule for what to discard, and that is a strategy
    decision, not a mechanism (N-002);
 2. `spec-goods.md` provides `Mass` and `Bulk`, but the container with a capacity is
-   `spec-storage.md`, which is later (`vision.md` 4). A capacity before storage exists
+   `spec-storage.md`, an optional module (`vision.md` 4). A capacity outside it
    would be a second, ad hoc store;
 3. production never refuses output for lack of room (`spec-production.md` 5.3.2), so
    a capacity would put a rule of loss in a place nothing else needs one;
@@ -1233,12 +1380,16 @@ up to `MaxQuantity` of a commodity. Reasons:
 8.2. **Discards.** A strategy may discard (6.3). The world executes it as a `Move` to
 the `disposal` boundary (`spec-production.md` 7.3). The `disposal` reason is a goods
 sink in the registry, so a discard is counted in `BoundaryFlow` by region and
-commodity, which is the event N-002 asked for. The default strategy never discards: a
-good it cannot sell falls in price and spoils or waits.
+commodity, which is the event N-002 asked for. The default strategy never discards, except, with the storage module on, for upkeep: a limited
+household discards the surplus that its tier 1 bids need room for (7.3.5,
+`spec-storage.md` 6.3.2). A good it cannot sell falls in price and spoils or waits.
 
-8.3. **If a capacity arrives** (`spec-storage.md`), a full store is a strategy problem
-on the next tick (`spec-production.md` 5.3.2, N-002 update), the view gains the free
-room, and discarding stays a strategy decision. Nothing in this spec would change.
+8.3. **With the storage module on** (`spec-storage.md`), room is decided at the decision and
+not found out on the next tick: the view carries the agent's free room (6.4.1), its targets are
+scaled to the room (7.3.7), a bid is sized to the free room (7.5.4), a job request beyond the
+room is refused `no_room` (`spec-production.md` 4.2) and a bid beyond it is rejected `no_room`
+(`spec-clearing.md` 3.2). Discarding stays a strategy decision, apart from the default's discard
+for upkeep (8.2).
 
 ## 9. Cohorts
 
@@ -1317,6 +1468,8 @@ type Directive struct {
 	Intents  []Intent     // used by Trade
 	Discards []Discard    // used by Trade
 	Hold     []CommodityID // commodities the fallback must not trade
+	Borrow   *CreditRequest // replaces the fallback's credit request (spec-credit.md 10.5); nil means the fallback's
+	Lend     *CreditOffer   // replaces the fallback's credit offer (spec-credit.md 10.5); nil means the fallback's
 	Sticky   bool         // keep the directive after the tick it applies to
 }
 
@@ -1331,7 +1484,8 @@ type Directed struct {
 fallback's when the fallback is `Stateful` and `(0, nil, nil)` otherwise, and its `LoadState`
 loads the fallback's (`spec-checkpoint.md` 7.5). The directive is not that state: it is saved
 in the agent record (15). The library registers `Directed{Fallback: DefaultStrategy{}}`
-under the built-in name `directed`, beside `default` (6.6).
+under the built-in name `directed`, beside `default` (6.6). It is not the `directed` policy of a
+policy actor (`spec-policy.md` 8.4).
 
 10.4. **The rules of `Directed`.**
 
@@ -1340,7 +1494,9 @@ under the built-in name `directed`, beside `default` (6.6).
 2. `Work` returns the directive's `Job` if it has one (`Job` is non-nil), else the fallback's.
 3. `Trade` returns the fallback's plan with two changes: an intent in the directive
    *replaces* the fallback's intent for the same commodity, and a commodity in `Hold`
-   is removed from the fallback's plan. The directive's discards are added.
+   is removed from the fallback's plan. The directive's discards are added. A `Borrow` or a `Lend`
+   replaces the fallback's credit request or offer (`spec-credit.md` 10.5); a directive carries no
+   cover field in version 1 (`spec-insurance.md` 10.5).
 4. `Revise` is the fallback's (a player's price beliefs adjust by the default rule so
    its automatic orders remain sensible). With a nil `Fallback`, `Revise` returns the
    belief unchanged.
@@ -1418,9 +1574,10 @@ proposes (a floor on working ticks, STB-D13) is **adopted** by `spec-welfare-and
 does not change the elasticity. Nothing in this spec claims the loop is stable; scenario
 S04 records the measured elasticity, with the floor on and off.
 
-11.5. **Credit.** A household has no way to borrow (the claims list is empty in
-version 1, `spec-ledger.md` 10). A long job cannot be funded by credit, which is
-N-032's real remedy and `spec-credit.md`'s.
+11.5. **Credit.** A household borrows only with the credit module on and a `Borrow` block on its
+role (`spec-credit.md` 10.2); with the module off the claims list is empty
+(`spec-ledger.md` 10) and a long job cannot be funded by credit, which is N-032's real remedy
+and `spec-credit.md`'s.
 
 11.6. **What responds to price or money, and a staple's elasticity.** This answers
 the request of N-043 (`spec-stability.md` 6.2: with price-inelastic flows the belief
@@ -1506,6 +1663,9 @@ carries the path, value and bound.
 
 Read here and owned elsewhere (so no row in this table): `MinWorkShare`, `WelfareWindow`
 and `WindowCycles` (`spec-welfare-and-wages.md` 12.1, used by 7.1.2 and 7.1.3),
+the role fields `Hireable`, `Employer`, `Credit`, `Cover`, `Saver`, `Needs` and `Ceiling` of
+3.3 with their blocks (`spec-employment.md` 13, `spec-credit.md` 14, `spec-insurance.md` 13,
+`spec-saving-and-investment.md` 10.4, `spec-settlements.md` 6.4),
 `PriceWindow` and the belief parameters (`spec-beliefs.md` 11: 16 of them, with `CostFloor`
 7 000 and `BeliefEvidenceShare` 5 000 as placeholders). `RestBand` and `ProduceHaltRatio`
 are owned here (the rows above).
@@ -1538,6 +1698,8 @@ path, for example `roles.worker.upkeep[1].quantity`.
 | `ErrUnknownStrategy` | a role naming a strategy that is not registered |
 | `ErrBasketMismatch` | a region whose `ReferenceBasket` differs from the cost of the baseline upkeep plus its extra upkeep by more than `BasketTolerance` |
 | `ErrOverflow` | the largest weight times an upkeep quantity, a start quantity or a job input, summed with the targets of 7.3, above `MaxQuantity`; the start money times the largest weight above `MaxMoney`; the cost of the upkeep at the largest reference price above `MaxMoney` |
+| `ErrModuleDependency` | a role with a `Hireable` or `Employer` field, a `Credit`, `Cover` or `Saver` block, or a `Needs` or `Ceiling`, while the module that owns it is off (the owner's rule: `spec-employment.md` 14.1, `spec-credit.md` 14, `spec-insurance.md` 13, `spec-saving-and-investment.md` 11.1, `spec-settlements.md` 9.1) |
+| `ErrRoomShape`, `ErrStoreShape`, `ErrNotLimited` | a limited role whose base room per household cannot hold one tick of its upkeep or its start stock, and the other room rules of `spec-storage.md` 13.1 |
 
 Warnings never fail validation (`spec-config.md` 7.2):
 
@@ -1561,7 +1723,7 @@ spec owns the full field lists, as that document says, and they are below.
 
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
-| `AgentSpawned` | an agent enters, including each initial agent after `WorldCreated` | `Agent`, `Region`, `Role`, `Weight`, `StartMoney` (what it received), `External` |
+| `AgentSpawned` | an agent enters, including each initial agent after `WorldCreated` | `Agent`, `Region`, `Role`, `Weight`, `StartMoney` (what it received), `External`, `StoresLocked` (the stores of the role's row not given because the region's class lacks the flag, 0 with no gate; `spec-storage.md` 3.2.3) |
 | `AgentBankrupted` | an agent is removed entirely (3.6): the only event that removes the agent, whatever the cause; the others of the removal accompany it, in the order of `spec-world.md` 6.11 item 8 | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause` (`insolvent`, `starved`, `consumer`, `population`; `spec-spawner.md` 13.1.1), `Money` and `GoodsListed` (the goods passed to the estate) |
 | `WeightChanged`, `RoleChanged`, `EntryLimited` | a weight change without removal, a role change, and the aggregate of the spawner's silent limits | defined and owned by `spec-spawner.md` 13.1; listed here only because they act on the agent state of 3.7 and 3.8 |
 | `UpkeepShortfall` | once per region and role per tick in which at least one household was unfed, after the consumption phase, in order of region and role | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `Unfed` (households), `Agents` (agents with `Unfed` above 0), `MaxHunger` (the largest `Hunger`) |
@@ -1584,20 +1746,28 @@ revision: the orders have `OrderPlaced` and `OrderRejected`, the beliefs have
 The rejection reasons an `OrderRejected` of an agent's intent can carry, in the order
 of `spec-clearing.md` 3.2, are: `unknown_agent`, `side_not_allowed` (not for a
 household), `unknown_commodity`, `not_tradable` (after `unknown_commodity`, and
-never for a pseudo-agent), `invalid_price`, `invalid_quantity`, `duplicate_order`,
-`overflow`, `insufficient_funds` and `insufficient_stock`. A consumer's strategy can
-cause any of them; the default strategy causes none of `not_tradable`,
-`duplicate_order`, `insufficient_funds`, `insufficient_stock` and `overflow` (FR-AGT-044).
+never for a pseudo-agent), `not_permitted` (after `not_tradable`, and never for a
+pseudo-agent), `invalid_price`, `invalid_quantity`, `duplicate_order`, `overflow`,
+`insufficient_funds`, `insufficient_stock` and `no_room`. A consumer's strategy can cause any of
+them; the default strategy causes none of `not_tradable`, `duplicate_order`,
+`insufficient_funds`, `insufficient_stock`, `no_room` and `overflow` (FR-AGT-044), and a right in
+force can still refuse an order of the default as `not_permitted`, because no rule of the default
+reads a right (`spec-institutions.md` 6.4). The refusals of the credit and cover fields of a plan
+(`credit_off`, `insurance_off` and the reasons of `spec-credit.md` 5.2 and
+`spec-insurance.md` 5.2) are `Debug` lines (14.3), not rejections of an order.
 
 14.3. **Logs.** Everything per agent is `Debug`, guarded by `Enabled`, with a constant
 message:
 
-- "work declined", with `agent`, `recipe` and `reason` (`rest`, `halted`, `no_recipe`,
-  `not_on_role`);
+- "work declined", with `agent`, `recipe` and `reason` (`rest`, `halted`, `no_recipe` and the
+  refusal reasons of `spec-production.md` 4.2, `not_on_role` and `not_permitted` among them);
 - "intent dropped", with `agent`, `commodity`, `side` and `reason` (`not_tradable`,
   `over_budget`);
 - "upkeep unmet", with `agent`, `commodity` and `quantity` (the shortfall);
-- "discard refused", with `agent`, `commodity` and `quantity`.
+- "discard refused", with `agent`, `commodity` and `quantity`;
+- "request refused" and "offer refused" of the credit fields (`agent`, `reason`,
+  `spec-credit.md` 16.1.1) and "cover refused" of the cover fields (`agent`, `reason`,
+  `spec-insurance.md` 15).
 
 One `Warn`, bounded by the configuration (observability-and-logging.md 3.2.2): "households unfed",
 **per region and role**, never per agent, emitted when the role has had a nonzero
@@ -1641,8 +1811,9 @@ fixed order with no maps:
 
 - for each agent, in agent ID order: `ID`, the ledger account reference, `Role`,
   `Weight`, `External`, `Mortal`, the strategy reference (its registered name), `Unfed`,
-  `Hunger`, `Privation` (hosted here, defined in `spec-spawner.md` 5.1), `RoleSince` (hosted here, defined in `spec-spawner.md` 5.2.2a), `DeathCarry` (hosted here, defined in `spec-population.md` 3.8), `OwnUse` and `OwnUseJobs` (hosted here, defined in `spec-subsistence.md` 5.3, 15), the `Journey` of an agent on a migration journey (destination and arrival tick, hosted here, defined in `spec-migration.md` 14), and the directive if any (its job request if it has one, intents, discards, holds and
-  `Sticky`); each is saved once, in the agent record of section 3 of `spec-checkpoint.md`
+  `Hunger`, `Privation` (hosted here, defined in `spec-spawner.md` 5.1), `RoleSince` (hosted here, defined in `spec-spawner.md` 5.2.2a), `DeathCarry` (hosted here, defined in `spec-population.md` 3.8), `OwnUse` and `OwnUseJobs` (hosted here, defined in `spec-subsistence.md` 5.3, 15), the `Journey` of an agent on a migration journey (destination and arrival tick, hosted here, defined in `spec-migration.md` 14), the membership pair of a body (hosted here, defined in `spec-institutions.md` 12.1), the stores
+  the agent hosts (hosted here, defined in `spec-storage.md` 15.1), and the directive if any (its
+  job request if it has one, intents, discards, holds, credit request and offer, and `Sticky`); each is saved once, in the agent record of section 3 of `spec-checkpoint.md`
   (4.2 tag 3), and the module's own section lists only the state it keeps beside it. The
   want carries of an agent are the demand module's and are listed in `spec-demand.md` 12,
   and the rumours of the last view of an external informed agent are saved by the
@@ -1839,7 +2010,9 @@ its reserve spends), D11, D12. *Undamped:* if the sum of the households' reserve
 exceeds the money in the world, no household reaches its reserve, buffers are never
 bought and the work rule runs at full. *Condition:* total household money at least the
 sum of the reserve money; the warning `reserve_exceeds_money` of section 13 checks it
-at the reference prices for the starting money. *Test:* S19 (new, below). *Status:* hand.
+at the reference prices for the starting money. *Case:* SAV-A1 of
+`spec-saving-and-investment.md` 14, where a target above the reserve changes the excess of 7.4.4.
+*Test:* S19 (new, below). *Status:* hand.
 
 **AGT-A5. The closed economy fixes the mean welfare ratio at 1 (N-054).** *Kind:*
 hazard. *Loop:* none; an identity (11.7): income equals upkeep spending, so the target
@@ -1910,7 +2083,8 @@ inputs paid at its start (-) money for upkeep until it completes. Tier 2 has no
 reserve (7.4.3, open question 15). The household protects its food in stock (7.1.6),
 not its money. *Delay:* the duration. *Owner:* AGT 7.4; merges with STB-L19 and L20
 (N-032). *Damper:* `spec-viability.md` 8.3.1 starts money at `U * (d_max + buffer)`;
-D11. *Undamped:* any household that starts or ends below it. *Test:* S11. *Status:* hand.
+D11. *Undamped:* any household that starts or ends below it. *Remedy:* a household with a `Saver` block holds
+its own buffer (`spec-saving-and-investment.md` 4.3.3). *Test:* S11. *Status:* hand.
 
 **AGT-A13. Cohort work share.** *Kind:* amplifier made smaller. *Loop:* ratio crosses
 the band (+) the cohort's households work or rest together. With the proportional share
@@ -1973,14 +2147,14 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
-| FR-AGT-001 | Every agent MUST have a unique agent ID that is never reused in a run, an integer weight of at least 1, a role and a ledger account, and the pseudo-agents of the regions MUST have the lowest IDs, followed by the counterparties of the external module (`spec-external-sector.md` 4.2.2). |
+| FR-AGT-001 | Every agent MUST have a unique agent ID that is never reused in a run, an integer weight of at least 1, a role and a ledger account, and the pseudo-agents of the regions MUST have the lowest IDs, followed by the counterparties of the external module (`spec-external-sector.md` 4.2.2) and then the treasuries of the governed jurisdictions (`spec-polity.md` 5.2.2). |
 | FR-AGT-002 | An agent MUST hold no money balance and no quantity of its own: its money, goods and tools MUST be in its ledger account, and its region MUST be that of the account. |
 | FR-AGT-003 | The tradable set of a role MUST be the effective upkeep commodities, the inputs, required tools and non-discard outputs of its recipes, its `Trades`, and with the demand module on the items of the wants in its ladder, in canonical order and without duplicates, and MUST NOT contain a discard output. (changed in round 5) |
 | FR-AGT-004 | An agent MUST hold one belief for every commodity in its tradable set from its creation, and MUST NOT trade a commodity outside the set. |
 | FR-AGT-005 | An initial agent of weight `w` MUST receive `w` times `StartMoney` of money and `w` times each `StartStock` quantity of goods, both by the `initial` reason, a belief for each commodity in its tradable set from the seed price with width `BeliefWidthInit`, no job unless a warm start gives one, an empty welfare history, and zero hunger. |
 | FR-AGT-006 | At creation the world MUST draw, per agent and in agent-ID order, first the target-ratio value and then the residue value, whatever the configuration, and MUST draw nothing else for the agent. |
 | FR-AGT-007 | A later agent MUST receive the lesser of `w` times `StartMoney` and the pool balance from its region's pool by the reason `start_money`, and no goods unless the spawner's rule grants some. |
-| FR-AGT-008 | Removing an agent MUST abandon its job, move all its money to the region's estate with the reason `estate_money` and all its goods with `estate_goods`, close its account and emit `AgentBankrupted`, the only event that removes the agent, with the events of its job, traineeship and contracts and `EstateOpened` accompanying it in the order of `spec-world.md` 6.11 item 8, and MUST conserve money and goods exactly. |
+| FR-AGT-008 | Removing an agent MUST abandon its job, end its titles, hires, claims, covers and facilities in the steps 2b to 2g of 3.6, move all its money, less what its creditors take in the waterfall of `spec-credit.md` 9.1, to the region's estate with the reason `estate_money` and all its goods with `estate_goods`, close its account and emit `AgentBankrupted`, the only event that removes the agent, with the events of its job, traineeship, contracts and steps 2b to 2g preceding it and `EstateOpened` after it, in the order of `spec-world.md` 6.11 item 8, and MUST conserve money and goods exactly. |
 | FR-AGT-009 | A change of weight from `w` to `w'` MUST leave each money and goods holding at `floor(h * w' / w)`, the difference passing to or from the estate, MUST leave the beliefs, residues, welfare history and hunger unchanged, and MUST apply the job rule of `spec-production.md` 5.4. |
 | FR-AGT-010 | A role with an empty `Recipes` list MUST be valid, and an agent of it MUST request no job. |
 | FR-AGT-011 | The effective upkeep of an agent MUST be the role's list, or the world's if the role has none, merged with the region's extra upkeep by adding quantities of one commodity, in canonical order, each quantity multiplied by the weight, with checked arithmetic. |
@@ -2004,7 +2178,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-029 | A belief returned by `Revise` MUST be clamped to the invariant and bounds before storage, and a return of the current belief MUST leave it unchanged apart from the re-clamp. |
 | FR-AGT-030 | A role's `Strategy` MUST be a registered name (the built-in `default` and `directed` are registered beside those of `WithStrategy`), an unknown name MUST be rejected with `ErrUnknownStrategy`, and the names MUST be part of the effective configuration and its hash. |
 | FR-AGT-031 | The default strategy MUST keep no state, and the same view and the same random source MUST give the same return. |
-| FR-AGT-032 | A pseudo-agent MUST NOT be passed to a strategy. |
+| FR-AGT-032 | A pseudo-agent (an estate, a counterparty or a treasury) MUST NOT be passed to a strategy. |
 | FR-AGT-033 | With the welfare module off, the default `Work` MUST request a job whenever a recipe is eligible. |
 | FR-AGT-034 | With the welfare module on, the work share MUST be 10 000 when the agent's `Hunger` is above 0, or its money is below the reserve, or the working ticks in its effective window are fewer than `MinWorkShare * T / 10 000`; otherwise 10 000 below the target, 0 at or above the target raised by `RestBand`, and linear between; and the executions requested MUST be `ceil(w * s / 10 000)`, at least 1 when `s` is above 0. The effective window `T` MUST be `max(WelfareWindow, WindowCycles * longest Duration on the role's list)`. (changed in the sweep: the floor and the window) |
 | FR-AGT-035 | The default recipe MUST be the eligible recipe with the greatest net value per tick, where the net value is the non-discard outputs at the effective yield and the agent's belief centres less the inputs and the wear of the tools, compared by cross-multiplication with ties to the lower recipe ID, and a recipe MUST be eligible only if its net value is positive or it has no inputs. |
@@ -2014,26 +2188,26 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-039 | For each commodity the default `Trade` MUST place at most one order: a bid for the gap if it is positive, otherwise an ask for the surplus if it is positive, and none otherwise. |
 | FR-AGT-040 | The three tiers of a bid MUST add to its gap, with tier 1 the upkeep short for this tick, tier 2 the inputs and tools of the next job short, and tier 3 the rest. |
 | FR-AGT-041 | The sum over an agent's bids of limit price times quantity MUST NOT exceed its available money, and tiers 1 and 2 MUST be allocated before tier 3, in canonical commodity order within a tier. |
-| FR-AGT-042 | Tier 3 MUST be limited to the spend cap `SpendMaxShare * (e * H / (e + H)) / 10 000`, with `e` the money left after tiers 1 and 2 less the reserve money, floored at 0, and the cap MUST be 0 when `e` is 0, MUST NOT decrease as `e` rises and MUST NOT exceed `e`. |
+| FR-AGT-042 | Tier 3 MUST be limited to the spend cap `SpendMaxShare * (e * H / (e + H)) / 10 000`, with `e` the money left after tiers 1 and 2 less the savings target (the reserve money, unless the saving module is on and the role has a `Saver` block, 7.4.2), floored at 0, and the cap MUST be 0 when `e` is 0, MUST NOT decrease as `e` rises and MUST NOT exceed `e`. |
 | FR-AGT-043 | The share of a tier-3 want bought MUST be `FavourFloor + (10 000 - FavourFloor) * (10 000 - pos) / 10 000`, with `pos` the position of the market price in the price window or 5 000 when the window is empty, and MUST NOT be applied to tiers 1 and 2 or to asks. |
-| FR-AGT-044 | With an accurate view the default strategy MUST NOT produce an order that the market rejects for `insufficient_funds`, `insufficient_stock`, `duplicate_order`, `not_tradable` or `overflow`, over a range of seeds. |
+| FR-AGT-044 | With an accurate view the default strategy MUST NOT produce an order that the market rejects for `insufficient_funds`, `insufficient_stock`, `duplicate_order`, `not_tradable`, `no_room` (with the storage module on) or `overflow`, over a range of seeds. |
 | FR-AGT-045 | One `uint64` MUST be taken from the world's source for each intent the default strategy considers, the limit MUST be drawn from the effective range of the belief with `beliefs.Draw`, and an agent with `Hunger` above 0 MUST bid the top of the range for tier 1. |
 | FR-AGT-046 | The quantities of an agent's orders, targets and reserves MUST be the weight times the per-household amounts, and the limit price MUST be the same whatever the weight. |
 | FR-AGT-047 | An ask MUST be for the whole surplus, units that expire at the end of the tick MUST be offered if no bid is placed, and an ask for a tool MUST be placed only by a role that makes it. |
-| FR-AGT-048 | Every intent MUST carry the target of 7.3, the units reserved for this tick's upkeep, a unit cost that is the cost anchor of `spec-production.md` 9.3 (which counts labour at the pooled observed wage of the previous tick) only if the role can make the commodity and is 0 otherwise and whenever the region has no observed wage, and a purpose by the rule of 7.3.6. (changed in the sweep) |
+| FR-AGT-048 | Every intent MUST carry the target of 7.3, the units reserved for this tick's upkeep, a unit cost that is the cost anchor of `spec-production.md` 9.3 (which counts labour at the pooled observed wage of the previous tick and, with the tenure module on, the rent of the draws) only if the role can make the commodity and is 0 otherwise and whenever the region has no observed wage, and a purpose by the rule of 7.3.6. (changed in the sweep) |
 | FR-AGT-049 | The stock passed to `Revise` MUST be the units held after the trades less the units reserved for this tick's upkeep, not below 0. |
 | FR-AGT-050 | `DefaultStrategy.Revise` MUST return the result of `beliefs.Update` with the draw the world took. |
-| FR-AGT-051 | An agent MUST have no inventory capacity other than `MaxQuantity`, and the default strategy MUST NOT discard. |
+| FR-AGT-051 | With the storage module off an agent MUST have no inventory capacity other than `MaxQuantity` and the default strategy MUST NOT discard; with it on the capacity MUST be the room of `spec-storage.md`, and the default strategy MUST discard only the surplus that its tier 1 bids need room for (`spec-storage.md` 6.3.2). |
 | FR-AGT-052 | An agent of weight `w` in the same per-household state as an agent of weight 1, with the same random draws, MUST produce orders whose limit prices are equal and whose quantities are `w` times as large, and the same `Fed` fraction. |
 | FR-AGT-053 | An external agent MUST have weight 1 and the `External` flag, MUST be bound by the same admission and conservation rules as any agent, and MUST NOT be removed, reduced, replaced or moved to another role by any spawner, the world refusing the decision with the reason `external_agent`, unless the agent is mortal, a flag the consumer sets when it adds the agent (default false). (changed in round 5: `Mortal`, `spec-spawner.md` 9.2) |
-| FR-AGT-054 | `Directed` MUST return the directive's job request if it has one (`Job` non-nil), otherwise the fallback's; MUST replace the fallback's intent for a commodity by the directive's intent for it; MUST remove from the fallback's plan the commodities in `Hold`; and MUST add the directive's discards. |
+| FR-AGT-054 | `Directed` MUST return the directive's job request if it has one (`Job` non-nil), otherwise the fallback's; MUST replace the fallback's intent for a commodity by the directive's intent for it; MUST remove from the fallback's plan the commodities in `Hold`; and MUST add the directive's discards; a `Borrow` or a `Lend` of the directive MUST replace the fallback's credit request or offer. |
 | FR-AGT-055 | A directive MUST apply to the tick after it was set, MUST be discarded after that tick unless `Sticky`, and MUST be part of the checkpoint. |
 | FR-AGT-056 | No strategy call MUST wait for the consumer: `Step` MUST NOT block on input from the consumer, and an external agent MUST act only through its directive or a non-blocking strategy. |
 | FR-AGT-057 | Per tick, the world MUST total for each agent the money it received from trades, the relief it was paid, the value of its in-kind receipts (including the board a trainee takes from its trainer's account) and the money it spent on trades by purpose, and the wear cost of the tools its executions wore (`spec-welfare-and-wages.md` 2.1, 2.1.4), MUST clear the totals at the start of the tick, and the trade totals MUST equal the agent's money flows by the reason `trade` and the relief total those by the reason `relief` in the ledger. (changed in the sweep: relief, in-kind and wear added) |
 | FR-AGT-058 | Each parameter of section 12 MUST have a default that passes validation, and a value outside its bound MUST be rejected with `ErrOutOfBounds` carrying its path, value and bound. |
 | FR-AGT-059 | Validation MUST reject an unknown commodity or recipe in an upkeep, start stock, `Trades` or `Recipes` list, a duplicate commodity in one list, and a configuration in which the largest weight times an upkeep, start or job quantity, with the targets, exceeds `MaxQuantity`, or the start money times the largest weight exceeds `MaxMoney`. |
 | FR-AGT-060 | Validation MUST warn, and MUST NOT fail, for `no_upkeep`, `commodity_untraded`, `upkeep_unsourced`, `start_stock_below_target` and `reserve_exceeds_money`. |
-| FR-AGT-061 | `AgentSpawned` MUST carry the agent, region, role, weight, the starting money received and the external flag, and MUST be emitted for each initial agent after `WorldCreated`. |
+| FR-AGT-061 | `AgentSpawned` MUST carry the agent, region, role, weight, the starting money received, the external flag and `StoresLocked`, and MUST be emitted for each initial agent after `WorldCreated`. |
 | FR-AGT-062 | Every per-agent log line of this spec MUST be at `Debug` and guarded by `Enabled`, and no `Info` MUST be emitted in the per-tick, per-agent or per-order loops. |
 | FR-AGT-063 | A run with a logger and an observer attached MUST give results identical to a run without them, and the draws of section 7 MUST be taken in both. |
 | FR-AGT-064 | The state of section 15 MUST be saved as plain data in a fixed order with no maps, and a world restored between ticks MUST give the same orders, jobs and consumption as an uninterrupted run. |
@@ -2057,6 +2231,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-082 | `TradePlan` MUST carry `Offers`, `Takes` and `Notes` beside `Intents`, `Discards` and `Shipments`; the default strategy MUST append no offer and no take and leave `Notes` zero; offers and takes MUST be admitted and matched in the contract round after the last agent's plan and not by `Clearing`. (new, `spec-merchants.md` 9.2, 9.4) |
 | FR-AGT-083 | A strategy registered as `"merchant"` MUST be provided by `strategy.Merchant` in the package `strategy/`, registered by `strategy.Options()`; `NewWorld` MUST reject the name with `ErrUnknownStrategy` when it is not registered. (new, `spec-merchants.md` 3.1) |
 | FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |
+| FR-AGT-085 | An order for a commodity under a `sell` or a `buy` right in force of a body that the agent is not a member of MUST be rejected by the world while it builds the orders, with the reason `not_permitted`, after `not_tradable` and before the market's checks, MUST NOT reach clearing and MUST have no outcome; the check MUST NOT apply to a pseudo-agent. (new, `spec-institutions.md` 5.6.2, FR-ORG-024) |
 
 ### Non-functional
 
@@ -2121,7 +2296,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 14. **Draw order at creation (3.5.2). (Answered.)** `spec-world.md` 5.7.1 adopts it.
 15. **The reserve for a long job.** Tier 2 has no reserve (7.4.3). Whether a job longer
     than a number of ticks should keep `min(Duration, ReserveTicks)` ticks of upkeep
-    cost is the interaction of N-032 with the saving rule, and wants a run.
+    cost is the interaction of N-032 with the saving rule, and wants a run. With the saving module
+    on and a `Saver` block, the household's own remedy is `spec-saving-and-investment.md` 4.3.3.
 16. **An elastic subsistence demand. (Answered, N-052 closed.)** A staple's demand is inelastic by
     construction (11.6) and stays so. Rationing of tier 1 is rejected (`spec-demand.md` 17), and
     `spec-demand.md` supplies an elastic demand for discretionary goods instead. The only lever
@@ -2155,7 +2331,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the work share (7.1.2), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1), the tradable set (3.4); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |
 | The consumption phase, the creation and removal of agents, the mailbox | root package, `world.go` and `agent.go`, calling `internal/ledger` and `internal/household` inline |
 | The events `AgentSpawned` (extended) and `UpkeepShortfall` | root package, `event.go` |
-| Reason constants (`not_tradable`, `not_on_role`, `over_budget`, `rest`, `halted`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
+| Reason constants (`not_tradable`, `not_permitted`, `not_on_role`, `no_room`, `over_budget`, `rest`, `halted`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
 | The log keys `households` and `unfed` (key strings only) | `internal/logkeys` |
 | The ledger reasons `consumption`, `disposal` and `initial` (money and goods), the query `Expiring` (5.3.3), and `WearItems` (5.4.3) | `internal/ledger` registry and operations (`spec-ledger.md` 7.2, 5.3.3, 5.4.3) |
 | The strategy table and registration | root package, `world.go` |

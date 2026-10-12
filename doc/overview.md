@@ -32,7 +32,7 @@ The realm: regions joined by trade and movement.
                  +--------^--------------------+---------------+
                           | in (faucets)       | out (sinks)
 +-------------------------+--------------------v--------------------------------+
-| REALM  (polity: borders, laws, taxes, tolls, treasury)                        |
+| REALM  (polity: jurisdictions, borders, taxes, tolls, treasuries)             |
 |                                                                               |
 |  +--------------+     routes: distance, travel time, risk     +-------------+ |
 |  |  REGION A    |<========= merchants and carriers ==========>|  REGION B   | |
@@ -181,7 +181,7 @@ snap, err := w.Snapshot()            // a deep copy of plain data
   metrics, tracing or a UI feed. Logs go to the injected `*slog.Logger`. Both
   default to doing nothing.
 - **Influence is through extension points and shocks.** The consumer can
-  replace `Strategy`, `Clearing`, `Spawner` or `Observer`, and, through
+  replace `Strategy`, `Clearing`, `Spawner`, `Policy` or `Observer`, and, through
   the calls of `specs/spec-integration.md`, inject shocks such as a failed
   harvest or a closed road, or act as a player.
 - **Persistence belongs to the consumer.** The library produces a checkpoint
@@ -205,13 +205,13 @@ player is an ordinary external agent whose strategy is the library's `Directed`
 
 - **Status:** design only. There is no code. The documents are drafts, and none
   of the behaviour has been run or validated.
-- **Written:** the rules (`rules/`), thirty-seven economy specs (currency, goods,
-  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport, resources, information, external sector, subsistence, migration, merchants, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration), the evidence file, the
+- **Written:** the rules (`rules/`), fifty-one economy specs (currency, goods,
+  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport, resources, information, external sector, subsistence, migration, merchants, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration, and the fourteen later-stage modules: settlements, storage, employment, land, polity, credit, risk, infrastructure, insurance, fiscal, institutions, policy, saving and investment, technology), the evidence file, the
   bazaarBot reference, the roadmap, a vision and version-1 scope
-  ([vision.md](vision.md), accepted by ADR 0003), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties) and ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round). Every economy spec has a Requirements section.
-- **Planned:** 14 more specs (the ones of the roadmap that have no file), listed in the roadmap with layers and
-  dependencies, and a dependency picture of the first tier.
-- **Known gaps:** services, land and labour as goods; authoring tools; no
+  ([vision.md](vision.md), accepted by ADR 0003), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties), ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round) and ADR 0006 (accepted, human review pending; a derived structural rank may gate an entry, a right or a place). Every economy spec has a Requirements section.
+- **Planned:** no spec: every spec of the roadmap has a file (the fourteen later-stage modules are drafts, written on
+  2026-10-12). The roadmap lists them with layers and dependencies, and a dependency picture of the first tier.
+- **Known gaps:** services as goods (land and hired labour are modules, not goods); authoring tools; no
   default has run, so none is called stable.
   Several sources behind the numbers are unverified summaries
   (`specs/evidence.md`).

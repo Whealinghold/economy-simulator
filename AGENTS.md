@@ -126,6 +126,8 @@ economy-sim/
 │   ├── production/         # recipe execution
 │   ├── ordering/           # deterministic sorted iteration helpers, the
 │   │                       #   finaliser, and the Weyl, bucket and key helpers
+│   ├── checked/            # the checked 128-bit helper shared by the packages
+│   │                       #   that need one; imports nothing
 │   ├── codec/              # canonical encoding primitives of a checkpoint
 │   ├── measure/            # checked arithmetic of indicator/
 │   ├── verdict/            # detectors, seed rules and the band-setting rule
@@ -137,7 +139,8 @@ economy-sim/
 ├── otelobserver/           # separate module: Observer backed by OpenTelemetry
 ├── examples/<name>/        # each example is its own module
 ├── testdata/               # shared fixtures: chains/ (config), golden/,
-│                           #   checkpoints/, calibration/ (records per pack); fuzz
+│                           #   checkpoints/ (one all-modules-on fixture per
+│                           #   format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
 ├── doc/specs/              # design specs, one area per file (README.md indexes
 │                           #   them and assigns area codes; evidence.md holds

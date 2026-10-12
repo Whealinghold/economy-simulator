@@ -21,7 +21,7 @@ wins and the spec is corrected.
 | [spec-spawner.md](spec-spawner.md) | (core) The spawner: the extension interface (`Decide`, a plan of remove, reduce, switch, apply and enter), bankruptcy by privation, the failure ladder (change role, relief, then reduction and removal), replacement and the entry rule with damped occupation change, pool funding of entrants, the hook for population, external agents, events and the `FR-SPN`/`NFR-SPN` requirements |
 | [spec-population.md](spec-population.md) | (module) Births and deaths as the formation and dissolution of households, driven by the household's own welfare ratio through two schedules, region scales, the hooks `PopBirths` and `PopDeaths` of the spawner, the stake that funds a birth, `Renewal` ignored while the module is on, the Malthusian fixed point and what it needs from RES, collapse and recovery, entries for the register and the `FR-POP`/`NFR-POP` requirements |
 | [spec-demand.md](spec-demand.md) | (module) Wants beyond upkeep as data (alternatives, quantity per period, rank, elasticity with a ceiling, integer substitution), roles as classes with taste rows, the price schedule with a choke price, whole units from a carried remainder, the ladder funded by the saving rule's cap, consumption of wants, the closed-economy ratio above 1, what the money specs must supply, entries for the register, and the `FR-DEM`/`NFR-DEM` requirements |
-| [spec-stability.md](spec-stability.md) | (core) The feedback-loop register: the entry format, 142 loops with sign, delay, damper, condition and test, the catalogue of 98 dampers and the rule for adding one, three numeric analyses (the target-income labour loop, the belief/price/inventory loop, the production and occupation cobwebs), the failure regimes, the scenarios the acceptance bands must cover, the checklist for spec authors, the loops no spec yet dampens, and the `FR-STB`/`NFR-STB` requirements |
+| [spec-stability.md](spec-stability.md) | (core) The feedback-loop register: the entry format, 202 loops with sign, delay, damper, condition and test, the catalogue of 169 dampers and the rule for adding one, three numeric analyses (the target-income labour loop, the belief/price/inventory loop, the production and occupation cobwebs), the failure regimes, the scenarios the acceptance bands must cover, the checklist for spec authors, the loops no spec yet dampens, and the `FR-STB`/`NFR-STB` requirements |
 | [spec-viability.md](spec-viability.md) | (core) Viability and the steady state: four layers of the check (sourced and runnable, productive cycles by the Hawkins-Simon condition, labour sufficient by an exact linear programme, storable), the programme and its dual as prices, wages and flows, exact integer arithmetic, why the solver is a pure core function and not part of NewWorld, the warm-start table (seed prices, money, stock, staggered jobs), regions and lanes, the rules added to config validation, what viability does not prove, and the FR-VIA/NFR-VIA requirements |
 | [spec-reference-chain.md](spec-reference-chain.md) | (fixture) The standard test fixture: a base chain as TOML, seven product lines to the first consumer's size, variants for one, two, three and five regions, a starvation variant, a demand overlay, a second setting and six defect packs, layered by key; solver-generated warm starts; the scenarios S01 to S83 (the harness tests S77 and S78 are not built by REF) and A1 to A10 assigned to packs, or to the spec each waits for, with measures and the form of their pass; the invariants over seeds, the golden rendering, the configuration-only chain test; the `FR-REF` requirements |
 | [spec-scale.md](spec-scale.md) | (core) Population scale: an agent's weight (the households it stands for), deriving agents from a census at a chosen scale with a floor, what other specs must do with a weight, the cost model and a provisional budget |
@@ -50,15 +50,25 @@ wins and the spec is corrected.
 | [spec-storage.md](spec-storage.md) | (module, later stage; draft) Warehousing: what a store is, its capacity pair, storage cost as a named money flow, spoilage and wear in storage, hooks for risk and settlements |
 | [spec-employment.md](spec-employment.md) | (module, later stage; draft) Hired labour: the hire as a contract matched in a round, wages, the target-income rule for earners and employers, unemployment as a measure |
 | [spec-settlements.md](spec-settlements.md) | (module, later stage) Settlement size classes derived from households with a hysteresis band, and the flags each class sets for other modules |
-| [spec-land.md](spec-land.md) | (module, later stage; draft) Tenure, rent and tenancy over the endowments of resources: the three hooks, claims, rent as named money flows |
+| [spec-land.md](spec-land.md) | (module, later stage; draft) Tenure over the endowments of resources: titles as shares of an endowment's stock, the entitlement before the ration, rent as a transfer valued at the dual and tenancy by let units, with the open access of RES as the default |
+| [spec-polity.md](spec-polity.md) | (module, later stage; draft) Jurisdictions over regions as one tree with membership, the chain, covers, crossing and between as deterministic queries, the treasury account and pseudo-agent of a governed jurisdiction, and one combining rule for the rows later specs key by jurisdiction; no law and no inheritance of a region field |
+| [spec-credit.md](spec-credit.md) | (module, later stage; draft) Credit: a claim formed by a loan at a posted rate matched in a first-fit round, interest as a transfer and never a faucet, settlement at the due tick with a shield, arrears and the waterfall at a removal, the default borrower and lender, and no collateral in version 1 |
+| [spec-infrastructure.md](spec-infrastructure.md) | (module, later stage; draft) Facilities as fixed capital with a condition, built and repaired by ordinary recipes, and four effects: a site that a recipe needs, a route that speeds an edge, a ground improvement that raises an endowment's capacity, and a store |
+| [spec-risk.md](spec-risk.md) | (module, later stage; draft) Loss of cargo in transit and of stored goods as rows of data, strikes drawn from the world's source, the `loss` sink, the embargo as an edge status, and the seams for insurance |
+| [spec-fiscal.md](spec-fiscal.md) | (module, later stage; draft) Taxes, duties, tolls, the treasury's payouts and its standing orders: six typed lists over a governed jurisdiction's treasury, internal reasons only, a pro rata cut, a flow scale as the one lever |
+| [spec-institutions.md](spec-institutions.md) | (module, later stage; draft) Bodies that select households with places, exclusive rights over an activity in a scope, and legal prices as a clamp in admission; no law table, no account and no enforcement agent |
+| [spec-saving-and-investment.md](spec-saving-and-investment.md) | (module, later stage; draft) A savings target above the reserve, a precaution buffer taken from the household's own cash cycle, a project test for a build or a repair, and the hoard as a measure |
+| [spec-technology.md](spec-technology.md) | (module, later stage; draft) A gain in yield held per region and field, raised by doing, by a trend, by discovery and by contact, and a bound on what it can do to the population loop |
+| [spec-policy.md](spec-policy.md) | (module, later stage; draft) Policy actors: an interface of one method (`Decide`) and not `Strategy`; a policy actor is a row of configuration attached to a jurisdiction with a cadence and a list of levers (a named, bounded, rate-limited handle on a flow scale, an edge status or a transit factor) that is both its mandate and the only thing it can move; what it reads (the boundary state of the regions it covers and its treasury), when it acts (a position at the entry of the tick, a rotation), four built-ins (hold, a fixed schedule, a reactive rule on four gauges, a player's mailbox), the call a player uses, the loops and the models run |
+| [spec-insurance.md](spec-insurance.md) | (module, later stage; draft) Single-event cover of a cargo and of stored goods against the losses of the risk module, priced from the expected loss, paid from an underwriter's money with the unpaid part a credit claim |
 | [evidence.md](evidence.md) | The sources behind the numbers, and which facts are unverified |
 | [bazaarbot-reference.md](bazaarbot-reference.md) | What the bazaarBot source does, its defects, and where each piece goes in the port (a reference, with no requirements and no area code) |
 
-Reading order: currency, goods, ledger, production, clearing, beliefs, agents, spawner, population, resources, subsistence, demand, scale, config, welfare and wages, skill barriers, estates, regions, money supply, carriage, transport, information, migration, external sector, merchants, viability, stability, reference chain, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration, then the later-stage modules (settlements, storage, employment, land).
+Reading order: currency, goods, ledger, production, clearing, beliefs, agents, spawner, population, resources, subsistence, demand, scale, config, welfare and wages, skill barriers, estates, regions, money supply, carriage, transport, information, migration, external sector, merchants, viability, stability, reference chain, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration, then the later-stage modules (settlements, storage, employment, land, credit, risk, infrastructure, insurance, polity, fiscal, institutions, policy, saving and investment, technology). The later-stage order is the order in which each module needs only the ones before it, and it is the order of the modules appended to `Modules` (`spec-config.md` 3.1).
 The layer in brackets (core, module, extension) is defined in [../roadmap.md](../roadmap.md) and
 [ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md). A spec says which of its
 parts are core and which are optional.
-The plan for the specs not yet written is in [../roadmap.md](../roadmap.md).
+All the specs of the roadmap are written; the fourteen later-stage specs are drafts. The tier tables of [../roadmap.md](../roadmap.md) stay the home of the order of work, the area codes and what each spec needs.
 
 ## Requirement IDs and area codes
 
@@ -77,54 +87,54 @@ Rules for the IDs:
 | Code | Spec | Status |
 |------|------|--------|
 | `CUR` | `spec-currency.md` | exists; Requirements section written (FR-CUR-001 to 023, NFR-CUR-001); all numbers are placeholders |
-| `WEL` | `spec-welfare-and-wages.md` | exists; Requirements section written (FR-WEL-001 to 040, NFR-WEL-001 to 003); all numbers are placeholders |
+| `WEL` | `spec-welfare-and-wages.md` | exists; Requirements section written (FR-WEL-001 to 041, NFR-WEL-001 to 003); all numbers are placeholders |
 | `SKL` | `spec-skill-barriers.md` | exists; Requirements section written (FR-SKL-001 to 028, NFR-SKL-001 to 002); all numbers are placeholders |
 | `EST` | `spec-estates.md` | exists; Requirements section written (FR-EST-001 to 024, NFR-EST-001); bounds and defaults are placeholders |
 | `CAR` | `spec-carriage.md` | exists; Requirements section written (FR-CAR-001 to 013; 001 and 002 moved to `spec-merchants.md` 9.9, 005 to 007 superseded by `spec-transport.md`); the contract and the merchant are in `spec-merchants.md` |
-| `CLR` | `spec-clearing.md` | exists; Requirements section written (FR-CLR-001 to 034, NFR-CLR-001 to 003) |
+| `CLR` | `spec-clearing.md` | exists; Requirements section written (FR-CLR-001 to 035, NFR-CLR-001 to 003) |
 | `BEL` | `spec-beliefs.md` | exists; Requirements section written (FR-BEL-001 to 039, NFR-BEL-001 to 003); all defaults are placeholders |
-| `AGT` | `spec-agents.md` | exists; Requirements section written (FR-AGT-001 to 084, NFR-AGT-001 to 004); all defaults are placeholders |
-| `LED` | `spec-ledger.md` | exists; Requirements section written (FR-LED-001 to 061, NFR-LED-001 to 004) |
+| `AGT` | `spec-agents.md` | exists; Requirements section written (FR-AGT-001 to 085, NFR-AGT-001 to 004); all defaults are placeholders |
+| `LED` | `spec-ledger.md` | exists; Requirements section written (FR-LED-001 to 065, NFR-LED-001 to 004) |
 | `PRO` | `spec-production.md` | exists; Requirements section written (FR-PRO-001 to 051, NFR-PRO-001 to 004); all numbers are placeholders |
-| `SPN` | `spec-spawner.md` | exists; Requirements section written (FR-SPN-001 to 055, NFR-SPN-001 to 003); all numbers are placeholders |
+| `SPN` | `spec-spawner.md` | exists; Requirements section written (FR-SPN-001 to 057, NFR-SPN-001 to 003); all numbers are placeholders |
 | `WLD` | `spec-world.md` | exists; Requirements section written (FR-WLD-001 to 110, NFR-WLD-001 to 005); core; adds only the field `World.Clearing` (owned by `spec-clearing.md` 8); all numbers are placeholders |
 | `REG` | `spec-regions.md` | exists; Requirements section written (FR-REG-001 to 060, NFR-REG-001 to 004); core; the region, the directed graph, overrides, relocation; bounds are placeholders |
-| `CFG` | `spec-config.md` | exists; Requirements section written (FR-CFG-001 to 083, NFR-CFG-001 to 003); the field catalogue is section 3.7 |
+| `CFG` | `spec-config.md` | exists; Requirements section written (FR-CFG-001 to 097, NFR-CFG-001 to 003); the field catalogue is section 3.7 (3.7.1 for the fourteen later-stage modules) |
 | `OBS` | `spec-observability.md` | exists; Requirements section written (FR-OBS-001 to 090, NFR-OBS-001 to 005); core; no `Config` field (`WarnRun` is a rule constant); all numbers are placeholders |
 | `GDS` | `spec-goods.md` | exists; Requirements section written (FR-GDS-001 to 023, NFR-GDS-001) |
 | `REF` | `spec-reference-chain.md` | exists; Requirements section written (FR-REF-001 to 040, NFR-REF-001 to 002); fixture; bands unset, all numbers are placeholders |
 | `RES` | `spec-resources.md` | exists; Requirements section written (FR-RES-001 to 050, NFR-RES-001 to 004); module; the yield-table values are core data; all numbers are placeholders |
 | `CAL` | `spec-calendar.md` | exists; Requirements section written (FR-CAL-001 to 021, NFR-CAL-001 to 003); the structure of time, derived `TicksPerYear`, optional seasons |
-| `POP` | `spec-population.md` | exists; Requirements section written (FR-POP-001 to 040, NFR-POP-001 to 004); module; all numbers are placeholders |
+| `POP` | `spec-population.md` | exists; Requirements section written (FR-POP-001 to 041, NFR-POP-001 to 004); module; all numbers are placeholders |
 | `MIG` | `spec-migration.md` | exists; Requirements section written (FR-MIG-001 to 048, NFR-MIG-001 to 004); module; all numbers are placeholders |
 | `INF` | `spec-information.md` | exists; Requirements section written (FR-INF-001 to 052, NFR-INF-001 to 004); module; all numbers are placeholders |
 | `TRN` | `spec-transport.md` | exists; Requirements section written (FR-TRN-001 to 050, NFR-TRN-001 to 004); module; all numbers are placeholders |
-| `STO` | `spec-storage.md` | exists (draft); Requirements section written (FR-STO-001 to 044, NFR-STO-001 to 004); module; reviewed once, revisions pending; all numbers are placeholders |
-| `MER` | `spec-merchants.md` | exists; Requirements section written (FR-MER-001 to 063, NFR-MER-001 to 005; FR-CAR-001 and 002 restated); module; all numbers are placeholders |
+| `STO` | `spec-storage.md` | exists (draft); Requirements section written (FR-STO-001 to 046, NFR-STO-001 to 004); module; reviewed (FAIL on R1 and R2, fixed by a second revision, not re-verified); all numbers are placeholders |
+| `MER` | `spec-merchants.md` | exists; Requirements section written (FR-MER-001 to 064, NFR-MER-001 to 005; FR-CAR-001 and 002 restated); module; all numbers are placeholders |
 | `INT` | `spec-integration.md` | exists; Requirements section written (FR-INT-001 to 070, NFR-INT-001 to 005); core, and minimal: the player and other external agents, the world slots and the queries; no `Config` field |
 | `MON` | `spec-money-supply.md` | exists; Requirements section written (FR-MON-001 to 046, NFR-MON-001 to 003); core for the identities, module for the flows; all numbers are placeholders |
-| `FIS` | `spec-fiscal.md` | planned: taxes, tolls, treasury, granaries |
+| `FIS` | `spec-fiscal.md` | exists (draft); Requirements section written (FR-FIS-001 to 013, 020 to 026, 030 to 056 and 060 to 063, in groups; NFR-FIS-001 to 005); module; reviewed and re-verified (PASS, minors R1, R2); all numbers are placeholders |
 | `SCL` | `spec-scale.md` | exists; Requirements section written (FR-SCL-001 to 020, NFR-SCL-001 to 004); cost figures provisional |
 | `DEM` | `spec-demand.md` | exists; Requirements section written (FR-DEM-001 to 043, NFR-DEM-001 to 004); module; all numbers are placeholders |
-| `RSK` | `spec-risk.md` | planned: loss, conflict, banditry, disasters |
-| `LND` | `spec-land.md` | exists (draft); Requirements section written (FR-LND-001 to 046, NFR-LND-001 to 004); module; not yet reviewed; all numbers are placeholders |
+| `RSK` | `spec-risk.md` | exists (draft); Requirements section written (FR-RSK-001 to 040, NFR-RSK-001 to 004); module; reviewed and re-verified (PASS, minors R1, R2); all numbers are placeholders |
+| `LND` | `spec-land.md` | exists (draft); Requirements section written (FR-LND-001 to 046, NFR-LND-001 to 004); module; reviewed and re-verified (PASS, minors R1 to R6); all numbers are placeholders |
 | `EMP` | `spec-employment.md` | exists (draft); Requirements section written (FR-EMP-001 to 063, NFR-EMP-001 to 005); module; reviewed once, revisions pending; all numbers are placeholders |
 | `CHK` | `spec-checkpoint.md` | exists; Requirements section written (FR-CHK-001 to 082, NFR-CHK-001 to 005); core; no `Config` field; sizes and costs are counts of placeholders |
-| `IND` | `spec-indicators.md` | exists; Requirements section written (FR-IND-001 to 055, NFR-IND-001 to 004); core; the `indicator/` package; no `Config` field; all numbers are placeholders |
+| `IND` | `spec-indicators.md` | exists; Requirements section written (FR-IND-001 to 059, NFR-IND-001 to 004); core; the `indicator/` package; no `Config` field; all numbers are placeholders |
 | `SET` | `spec-settlements.md` | exists; Requirements section written (FR-SET-001 to 033, NFR-SET-001 to 004); module; reviewed and re-verified (three minors left in the review file); all numbers are placeholders |
-| `POL` | `spec-polity.md` | planned: realms, provinces, jurisdictions |
-| `ORG` | `spec-institutions.md` | planned: associations, charters, price controls |
-| `CAP` | `spec-infrastructure.md` | planned: mills, ships, roads, granaries |
-| `CRD` | `spec-credit.md` | planned extension: loans and interest |
-| `INS` | `spec-insurance.md` | planned extension: insurance |
+| `POL` | `spec-polity.md` | exists (draft); Requirements section written (FR-POL-001 to 035, NFR-POL-001 to 004); module; reviewed and re-verified (PASS, minors R1, R2); the tree and the membership are configuration; all numbers are placeholders |
+| `ORG` | `spec-institutions.md` | exists (draft); Requirements section written (FR-ORG-001 to 055, NFR-ORG-001 to 004); module; reviewed and re-verified (PASS, minors R1 to R5); all numbers are placeholders |
+| `CAP` | `spec-infrastructure.md` | exists (draft); Requirements section written (FR-CAP-001 to 048, NFR-CAP-001 to 005); module; reviewed (FAIL on R1 major, not re-verified); all numbers are placeholders |
+| `CRD` | `spec-credit.md` | exists (draft); Requirements section written (FR-CRD-001 to 018, 020 to 027, 030 to 037, 040 to 045, 050 to 055, 060 to 062, 070 to 079 and 082 to 088, in groups; NFR-CRD-001 to 005); module; reviewed (FAIL on N1, fix owed, not re-verified); all numbers are placeholders |
+| `INS` | `spec-insurance.md` | exists (draft); Requirements section written (FR-INS-001 to 008, 010 to 016, 020 to 025, 030 to 036, 040 to 046, 050 to 053, 060 to 064, 070 to 082 and 087, in groups; NFR-INS-001 to 005); module; reviewed (FAIL on R1, fixed by a third pass and accepted by grep, not re-verified by a reviewer); all numbers are placeholders |
 | `EXT` | `spec-external-sector.md` | exists; Requirements section written (FR-EXT-001 to 050, NFR-EXT-001 to 004); module; all numbers are placeholders |
-| `SAV` | `spec-saving-and-investment.md` | planned: saving, hoarding, investment decisions |
-| `TEC` | `spec-technology.md` | planned: productivity growth |
-| `PLC` | `spec-policy.md` | planned: policy actors and rules |
+| `SAV` | `spec-saving-and-investment.md` | exists (draft); Requirements section written (FR-SAV-001 to 047, NFR-SAV-001 to 005); module; reviewed (FAIL on R1 major, not re-verified); all numbers are placeholders |
+| `TEC` | `spec-technology.md` | exists (draft); Requirements section written (FR-TEC-001 to 037, NFR-TEC-001 to 005); module; reviewed and re-verified (PASS, minors N1 to N4); all numbers are placeholders |
+| `PLC` | `spec-policy.md` | exists (draft); Requirements section written (FR-PLC-001 to 013, 020 to 025, 030 to 035, 040 to 047, 050 to 055, 060 to 064, 070 to 074, 080 to 086 and 090 to 092, in groups; NFR-PLC-001 to 005); module, later stage; the fifth extension interface `Policy`; adds the position P0.3a and the call `DirectPolicy`; reviewed and re-verified (PASS, minor R1); all numbers are placeholders |
 | `STY` | `spec-stylised-facts.md` | exists; Requirements section written (FR-STY-001 to 098, NFR-STY-001 to 004); core; every band is a prior and no default is called stable |
 | `CLB` | `spec-calibration.md` | exists; Requirements section written (FR-CLB-001 to 091 and 100 to 109, NFR-CLB-001 to 005); core; no `Config` field; all procedure constants are placeholders |
 | `EXP` | `spec-experiments.md` | exists; Requirements section written (FR-EXP-001 to 072, NFR-EXP-001 to 006); core; no `Config` field; all bounds are placeholders |
-| `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 142 loops, 98 dampers and 90 scenarios (S01 to S90, S15 unused); all numbers are placeholders |
+| `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 202 loops, 169 dampers and 165 scenarios (S01 to S165, S15 unused); all numbers are placeholders |
 | `VIA` | `spec-viability.md` | exists; Requirements section written (FR-VIA-001 to 059, NFR-VIA-001 to 004); all numbers are placeholders |
 | `SUB` | `spec-subsistence.md` | exists; Requirements section written (FR-SUB-001 to 051, NFR-SUB-001 to 003); module; all numbers are placeholders |
 
@@ -151,6 +161,8 @@ the code stays reserved and unused.
 ## Parameter owners
 
 The class, the kind of range, the expected effects and the interactions of each row are in `spec-calibration.md` section 6, found by (scope token, parameter).
+
+A Go field that only spells in Go what the file says by a key or by absence has no row (`spec-config.md` 9.2): the `Has` flag of a row (`TenureTerm.HasRent` and `HasClosed`, as `HasCapacity` of an endowment row) says that the row's value applies, which the file says by writing the key, and `HolderRef.Kind` and `Role` are the Go form of the `<holder>` key of a holding (a role ID or the word `pool`, `spec-land.md` 3.3.2), which is the row `Holder`.
 
 | Parameter | Scope | Owner |
 |-----------|-------|-------|
@@ -303,6 +315,9 @@ The class, the kind of range, the expected effects and the interactions of each 
 | `Until` | MoneyFlow | `spec-money-supply.md` section 4.4.1 |
 | `Limit` | MoneyFlow | `spec-money-supply.md` section 4.4.2 |
 | `NotIncome` | MoneyFlow | `spec-money-supply.md` section 7.2 |
+| `Kind` | FlowTarget | `spec-money-supply.md` section 4.1 (kinds `stores` and `treasury`: sections 4.3.4 and 4.3.5) |
+| `Region` | FlowTarget | `spec-money-supply.md` section 4.1 |
+| `Role` | FlowTarget | `spec-money-supply.md` section 4.1 (`spec-fiscal.md` section 3.2 reads an empty `Role` of a tax or a payout as every role) |
 | `Population` | Modules (module; nil = off) | `spec-population.md` section 8 |
 | `BirthSchedule` | Population | `spec-population.md` section 8 |
 | `DeathSchedule` | Population | `spec-population.md` section 8 |
@@ -414,13 +429,302 @@ The class, the kind of range, the expected effects and the interactions of each 
 | `Consigns` | Merchant | `spec-merchants.md` section 3.2 |
 | `TakeMarginBP` | Merchant | `spec-merchants.md` section 3.2 |
 | `TakeUnits` | Merchant | `spec-merchants.md` section 3.2 |
+| `Storage` | Modules (module; nil = off) | `spec-storage.md` section 12.1 |
+| `Base` | Storage | `spec-storage.md` section 12.1 |
+| `Roles` | Storage | `spec-storage.md` section 12.1 |
+| `Classes` | Storage | `spec-storage.md` section 12.1 |
+| `Role` | RoleRoom | `spec-storage.md` section 12.1 |
+| `Base` | RoleRoom | `spec-storage.md` section 12.1 |
+| `Stores` | RoleRoom | `spec-storage.md` section 12.1 |
+| `ID` | StoreClass | `spec-storage.md` sections 3.2, 12.1 |
+| `Mass` | StoreClass | `spec-storage.md` sections 3.2, 12.1 |
+| `Bulk` | StoreClass | `spec-storage.md` sections 3.2, 12.1 |
+| `Needs` | StoreClass | `spec-storage.md` sections 3.2.3, 12.1 (the flag is `spec-settlements.md`'s) |
+| `Mass` | Capacity | `spec-storage.md` section 12.1 (the type is `spec-goods.md` 3.2) |
+| `Bulk` | Capacity | `spec-storage.md` section 12.1 (the type is `spec-goods.md` 3.2) |
+| `Store` | FlowTarget | `spec-storage.md` sections 7.1.2, 12.3 (the type is `spec-money-supply.md` 4.1) |
+| `Employment` | Modules (module; nil = off) | `spec-employment.md` sections 3.1, 13 |
+| `MaxOpen` | Employment (per region) | `spec-employment.md` section 13 |
+| `Hireable` | Role | `spec-employment.md` sections 3.1, 13 |
+| `Employer` | Role (the employer block; nil = not an employer) | `spec-employment.md` sections 3.2, 13 |
+| `Recipes` | Employer (the hire list) | `spec-employment.md` sections 3.2, 13 |
+| `MaxHires` | Employer | `spec-employment.md` sections 3.2, 13 |
+| `WorkerShareBP` | Employer | `spec-employment.md` sections 3.2, 5.4, 13 |
+| `HireYieldBP` | Employer | `spec-employment.md` sections 3.2, 6.1, 13 |
+| `Settlements` | Modules (module; nil = off) | `spec-settlements.md` sections 3.1, 8 |
+| `Classes` | Settlements (the size classes, sorted by `Enter`) | `spec-settlements.md` sections 3.1, 8 |
+| `BandBP` | Settlements | `spec-settlements.md` sections 3.4.2, 8 |
+| `Dwell` | Settlements | `spec-settlements.md` sections 3.4.3, 8 |
+| `Regions` | Settlements (the region-keyed rows) | `spec-settlements.md` sections 3.5, 8 |
+| `ID` | SettlementClass | `spec-settlements.md` sections 3.1, 8 |
+| `Enter` | SettlementClass | `spec-settlements.md` sections 3.4.1, 8 |
+| `Flags` | SettlementClass | `spec-settlements.md` sections 3.3.1, 8 |
+| `Limits` | SettlementClass | `spec-settlements.md` sections 3.3.2, 8 |
+| `Name` | ClassLimit | `spec-settlements.md` sections 3.3.2, 8 |
+| `Value` | ClassLimit | `spec-settlements.md` sections 3.3.2, 8 |
+| `Region` | RegionSettlement | `spec-settlements.md` sections 3.5, 8 |
+| `ThresholdBP` | RegionSettlement (scale) | `spec-settlements.md` sections 3.5.2, 8 |
+| `Floor` | RegionSettlement (replace) | `spec-settlements.md` sections 3.5.3, 8 |
+| `Needs` | Role (a settlement flag) | `spec-settlements.md` sections 6.4.1, 8 |
+| `Ceiling` | Role | `spec-settlements.md` sections 6.4.2, 8 |
+| `Tenure` | Modules (module; nil = off) | `spec-land.md` sections 3.3, 10 |
+| `RentStepBP` | Tenure | `spec-land.md` sections 5.5, 10 |
+| `RentFloorBP` | Tenure | `spec-land.md` sections 5.5, 10 |
+| `RentCeilingBP` | Tenure | `spec-land.md` sections 5.5, 10 |
+| `OwnUseExempt` | Tenure | `spec-land.md` sections 5.3.4, 10 |
+| `MaxHolderShareBP` | Tenure | `spec-land.md` sections 6.1.2, 10 |
+| `Terms` | Tenure (the region-keyed table) | `spec-land.md` sections 3.3, 10 |
+| `Holdings` | Tenure | `spec-land.md` sections 3.3, 10 |
+| `Region` | TenureTerm | `spec-land.md` section 10 |
+| `Resource` | TenureTerm | `spec-land.md` section 10 |
+| `Rent` | TenureTerm | `spec-land.md` sections 5.2, 10 |
+| `Closed` | TenureTerm | `spec-land.md` sections 4.3, 10 |
+| `Region` | Holding | `spec-land.md` section 10 |
+| `Resource` | Holding | `spec-land.md` section 10 |
+| `Holder` | Holding | `spec-land.md` section 10 |
+| `ShareBP` | Holding | `spec-land.md` section 10 |
+| `Polity` | Modules (module; nil = off) | `spec-polity.md` section 8 |
+| `Jurisdictions` | Polity | `spec-polity.md` sections 3, 8 |
+| `Members` | Polity (the region-keyed rows, replace) | `spec-polity.md` sections 3.4, 8 |
+| `ID` | Jurisdiction | `spec-polity.md` sections 3.2, 8 |
+| `Parent` | Jurisdiction | `spec-polity.md` sections 3.3, 8 |
+| `Seat` | Jurisdiction | `spec-polity.md` sections 3.5, 8 |
+| `StartMoney` | Jurisdiction | `spec-polity.md` sections 3.5.4, 8 |
+| `Region` | Member | `spec-polity.md` sections 3.4, 8 |
+| `Jurisdiction` | Member | `spec-polity.md` sections 3.4, 8 |
+| `Credit` | Modules (module; nil = off) | `spec-credit.md` sections 4.1, 14 |
+| `MinPrincipal` | Credit | `spec-credit.md` section 14 |
+| `ShieldTicks` | Credit | `spec-credit.md` sections 8.2, 14 |
+| `WriteOffTicks` | Credit | `spec-credit.md` sections 8.5, 14 |
+| `MaxClaims` | Credit | `spec-credit.md` sections 6.4, 14 |
+| `Credit` | Role (the credit block; nil = not a credit role) | `spec-credit.md` sections 4.2, 14 |
+| `Lend` | CreditTerms | `spec-credit.md` section 4.2 |
+| `Borrow` | CreditTerms | `spec-credit.md` section 4.2 |
+| `RateBP` | Lend | `spec-credit.md` sections 7.1, 14 |
+| `MaxTermTicks` | Lend | `spec-credit.md` sections 10.3, 14 |
+| `KeepTicks` | Lend | `spec-credit.md` sections 10.3, 14 |
+| `ShareBP` | Lend | `spec-credit.md` sections 10.3, 14 |
+| `MaxRateBP` | Borrow | `spec-credit.md` sections 10.2, 14 |
+| `MaxDebtTicks` | Borrow | `spec-credit.md` sections 5.3.3, 14 |
+| `SlackTicks` | Borrow | `spec-credit.md` sections 10.2, 14 |
+| `Infrastructure` | Modules (module; nil = off) | `spec-infrastructure.md` section 12.1 |
+| `Classes` | Infrastructure | `spec-infrastructure.md` section 12.1 |
+| `Initial` | Infrastructure | `spec-infrastructure.md` sections 12.1, 3.4.2 |
+| `ID` | FacilityClass | `spec-infrastructure.md` section 3.1 |
+| `Kind` | FacilityClass | `spec-infrastructure.md` sections 3.1, 12.2 |
+| `Durability` | FacilityClass (of the class) | `spec-infrastructure.md` section 12.2 |
+| `Decay` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `WearPerUse` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `Capacity` | FacilityClass (of the class) | `spec-infrastructure.md` section 12.2 |
+| `BoostBP` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `Modes` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `Resource` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `Store` | FacilityClass | `spec-infrastructure.md` section 12.2 |
+| `Needs` | FacilityClass (a settlement flag) | `spec-infrastructure.md` sections 8, 12.2 |
+| `Region` | InitialFacility | `spec-infrastructure.md` section 3.4.2 |
+| `Class` | InitialFacility | `spec-infrastructure.md` section 3.4.2 |
+| `Toward` | InitialFacility | `spec-infrastructure.md` section 3.4.2 |
+| `Role` | InitialFacility | `spec-infrastructure.md` section 3.4.2 |
+| `Count` | InitialFacility | `spec-infrastructure.md` section 3.4.2 |
+| `Needs` | Recipe (a list of facility classes) | `spec-infrastructure.md` sections 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `Builds` | Recipe | `spec-infrastructure.md` sections 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `Repairs` | Recipe | `spec-infrastructure.md` sections 4.1.1, 4.1.2 (the format is `spec-production.md` 3.1) |
+| `Class` | FacilityBuild | `spec-infrastructure.md` section 4.1.1 |
+| `Toward` | FacilityBuild | `spec-infrastructure.md` section 4.1.1 |
+| `Class` | FacilityRepair | `spec-infrastructure.md` section 4.1.1 |
+| `Units` | FacilityRepair | `spec-infrastructure.md` section 4.1.1 |
+| `Risk` | Modules (module; nil = off) | `spec-risk.md` section 12.1 |
+| `Routes` | Risk | `spec-risk.md` sections 3.2.1, 12.1 |
+| `Stores` | Risk | `spec-risk.md` sections 3.2.2, 12.1 |
+| `From` | RouteRisk | `spec-risk.md` section 3.2.1 |
+| `To` | RouteRisk | `spec-risk.md` section 3.2.1 |
+| `Mode` | RouteRisk | `spec-risk.md` section 3.2.1 |
+| `Region` | StoreRisk | `spec-risk.md` section 3.2.2 |
+| `Class` | StoreRisk | `spec-risk.md` section 3.2.2 |
+| `StrikeBP` | RouteRisk | `spec-risk.md` sections 3.2, 3.4 |
+| `StrikeBP` | StoreRisk | `spec-risk.md` sections 3.2, 3.4 |
+| `SeverityBP` | RouteRisk | `spec-risk.md` sections 3.2, 3.4 |
+| `SeverityBP` | StoreRisk | `spec-risk.md` sections 3.2, 3.4 |
+| `Common` | RouteRisk | `spec-risk.md` sections 3.2, 3.3 |
+| `Common` | StoreRisk | `spec-risk.md` sections 3.2, 3.3 |
+| `Fiscal` | Modules (module; nil = off) | `spec-fiscal.md` sections 3.1, 14 |
+| `Taxes` | Fiscal | `spec-fiscal.md` sections 3.1, 5, 14 |
+| `Duties` | Fiscal | `spec-fiscal.md` sections 3.1, 6, 14 |
+| `Tolls` | Fiscal | `spec-fiscal.md` sections 3.1, 7, 14 |
+| `Payouts` | Fiscal | `spec-fiscal.md` sections 3.1, 8, 14 |
+| `Purchases` | Fiscal | `spec-fiscal.md` sections 3.1, 9, 14 |
+| `Releases` | Fiscal | `spec-fiscal.md` sections 3.1, 9, 14 |
+| `ID` | Tax (also the ledger reason) | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `ID` | Duty (also the ledger reason) | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `ID` | Toll (also the ledger reason) | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `ID` | Payout (also the ledger reason) | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `ID` | Purchase | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `ID` | Release | `spec-fiscal.md` sections 3.1.1, 3.4 |
+| `Authority` | Tax | `spec-fiscal.md` section 3.1 |
+| `Authority` | Duty | `spec-fiscal.md` section 3.1 |
+| `Authority` | Toll | `spec-fiscal.md` section 3.1 |
+| `Authority` | Payout | `spec-fiscal.md` section 3.1 |
+| `Authority` | Purchase | `spec-fiscal.md` section 3.1 |
+| `Authority` | Release | `spec-fiscal.md` section 3.1 |
+| `Window` | Tax | `spec-fiscal.md` sections 3.1.2, 5.1 |
+| `Window` | Duty | `spec-fiscal.md` sections 3.1.2, 6.1 |
+| `Window` | Toll | `spec-fiscal.md` sections 3.1.2, 7.1 |
+| `Window` | Payout | `spec-fiscal.md` sections 3.1.2, 8.1 |
+| `Window` | Purchase | `spec-fiscal.md` sections 3.1.2, 9.1 |
+| `Window` | Release | `spec-fiscal.md` sections 3.1.2, 9.1 |
+| `Start` | Window (every kind) | `spec-fiscal.md` sections 3.1.2, 14 |
+| `Until` | Window | `spec-fiscal.md` sections 3.1.2, 14 |
+| `Seasons` | Window | `spec-fiscal.md` sections 3.1.2, 14 |
+| `Target` | Tax (a `FlowTarget`) | `spec-fiscal.md` sections 3.2, 5.1.2, 14 |
+| `Amount` | Tax | `spec-fiscal.md` sections 5.1, 14 |
+| `RateBP` | Tax | `spec-fiscal.md` sections 5.1, 14 |
+| `Exempt` | Tax | `spec-fiscal.md` sections 5.1, 14 |
+| `Per` | Tax | `spec-fiscal.md` sections 5.1, 8.1, 14 |
+| `Region` | Duty | `spec-fiscal.md` sections 6.1, 14 |
+| `Commodity` | Duty | `spec-fiscal.md` sections 6.1, 14 |
+| `Payer` | Duty | `spec-fiscal.md` sections 6.1, 14 |
+| `Scope` | Duty | `spec-fiscal.md` sections 6.1.1, 14 |
+| `RateBP` | Duty | `spec-fiscal.md` sections 6.1, 14 |
+| `On` | Toll | `spec-fiscal.md` sections 7.1, 14 |
+| `Mode` | Toll | `spec-fiscal.md` sections 7.1, 14 |
+| `Amount` | Toll | `spec-fiscal.md` sections 7.1, 14 |
+| `Target` | Payout (a `FlowTarget`) | `spec-fiscal.md` sections 3.2, 8.1, 14 |
+| `Commodity` | Payout | `spec-fiscal.md` sections 8.1, 14 |
+| `Amount` | Payout | `spec-fiscal.md` sections 8.1, 14 |
+| `Level` | Payout | `spec-fiscal.md` sections 8.1, 14 |
+| `Per` | Payout | `spec-fiscal.md` sections 5.1, 8.1, 14 |
+| `NotIncome` | Payout | `spec-fiscal.md` sections 8.1, 14 |
+| `Commodity` | Purchase | `spec-fiscal.md` sections 9.1, 14 |
+| `Quantity` | Purchase | `spec-fiscal.md` sections 9.1, 14 |
+| `LimitBP` | Purchase | `spec-fiscal.md` sections 9.1, 9.2, 14 |
+| `Hold` | Purchase | `spec-fiscal.md` sections 9.1, 14 |
+| `Commodity` | Release | `spec-fiscal.md` sections 9.1, 14 |
+| `Quantity` | Release | `spec-fiscal.md` sections 9.1, 14 |
+| `LimitBP` | Release | `spec-fiscal.md` sections 9.1, 9.2, 14 |
+| `Reserve` | Release | `spec-fiscal.md` sections 9.1, 14 |
+| `Jurisdiction` | FlowTarget (treasury only) | `spec-fiscal.md` sections 3.2, 14 (the type is `spec-money-supply.md` 4.1) |
+| `Institutions` | Modules (module; nil = off) | `spec-institutions.md` section 9 |
+| `Bodies` | Institutions | `spec-institutions.md` section 9 |
+| `Rights` | Institutions | `spec-institutions.md` section 9 |
+| `Controls` | Institutions | `spec-institutions.md` section 9 |
+| `RateLimits` | Institutions | `spec-institutions.md` section 9 |
+| `OwnUseBound` | Institutions | `spec-institutions.md` sections 5.5.2, 9 |
+| `ID` | Body | `spec-institutions.md` sections 3.2.2, 9 |
+| `Roles` | Body | `spec-institutions.md` sections 3, 9 |
+| `Regions` | Body | `spec-institutions.md` sections 3, 9 |
+| `Jurisdictions` | Body | `spec-institutions.md` sections 3, 9 |
+| `Places` | Body | `spec-institutions.md` sections 3, 9 |
+| `MaxTrainees` | Body | `spec-institutions.md` sections 3, 9 |
+| `Needs` | Body (a settlement flag) | `spec-institutions.md` sections 3, 9 |
+| `ID` | Right | `spec-institutions.md` sections 5, 9 |
+| `Body` | Right | `spec-institutions.md` sections 5, 9 |
+| `Activity` | Right | `spec-institutions.md` sections 5, 9 |
+| `Subject` | Right | `spec-institutions.md` sections 5, 9 |
+| `Region` | Right | `spec-institutions.md` sections 5, 9 |
+| `Jurisdiction` | Right | `spec-institutions.md` sections 5, 9 |
+| `Who` | Right | `spec-institutions.md` sections 5.1.2, 9 |
+| `ID` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `Commodity` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `Region` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `Jurisdiction` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `CapBP` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `FloorBP` | Control | `spec-institutions.md` sections 6.1, 9 |
+| `ID` | RateLimit | `spec-institutions.md` sections 6.1, 9 |
+| `Region` | RateLimit | `spec-institutions.md` sections 6.1, 9 |
+| `Jurisdiction` | RateLimit | `spec-institutions.md` sections 6.1, 9 |
+| `CapBP` | RateLimit | `spec-institutions.md` sections 6.1, 9 |
+| `Saving` | Modules (module; nil = off) | `spec-saving-and-investment.md` sections 3.2, 10 |
+| `SafetyTicks` | Saving | `spec-saving-and-investment.md` sections 5.6.1, 10.2 |
+| `HurdleSpreadBP` | Saving | `spec-saving-and-investment.md` sections 5.5.2, 10.2 |
+| `CommitBandBP` | Saving | `spec-saving-and-investment.md` sections 5.5.3, 10.2 |
+| `Saver` | Role (the saver block; nil = no saving behaviour) | `spec-saving-and-investment.md` sections 3.2, 10 |
+| `PrecautionShareBP` | Saver | `spec-saving-and-investment.md` sections 4.2, 10.2 |
+| `PrecautionCapTicks` | Saver | `spec-saving-and-investment.md` sections 4.2, 10.2 |
+| `HurdleBP` | Saver | `spec-saving-and-investment.md` sections 5.5.1, 10.2 |
+| `PaybackTicks` | Saver | `spec-saving-and-investment.md` sections 5.3, 10.2 |
+| `RepairBelowBP` | Saver | `spec-saving-and-investment.md` sections 5.8, 10.2 |
+| `Worth` | Saver (the rows) | `spec-saving-and-investment.md` sections 5.3.2, 10.2 |
+| `Class` | ProjectWorth | `spec-saving-and-investment.md` sections 3.2, 10.2 |
+| `PerTick` | ProjectWorth | `spec-saving-and-investment.md` sections 3.2, 10.2 |
+| `Count` | ProjectWorth | `spec-saving-and-investment.md` sections 3.2, 10.2 |
+| `Technology` | Modules (module; nil = off) | `spec-technology.md` section 9.1 |
+| `Fields` | Technology | `spec-technology.md` section 9.1 |
+| `ID` | TechField | `spec-technology.md` section 3.1 |
+| `Recipes` | TechField | `spec-technology.md` sections 3.1, 9.2 |
+| `CapBP` | TechField | `spec-technology.md` section 9.2 |
+| `Base` | TechField (learning) | `spec-technology.md` section 9.2 |
+| `DoublingBP` | TechField | `spec-technology.md` section 9.2 |
+| `TrendBP` | TechField | `spec-technology.md` section 9.2 |
+| `DiscoveryBP` | TechField | `spec-technology.md` section 9.2 |
+| `StepBP` | TechField (discovery) | `spec-technology.md` section 9.2 |
+| `CatchUpBP` | TechField | `spec-technology.md` section 9.2 |
+| `Reach` | TechField (diffusion) | `spec-technology.md` section 9.2 |
+| `Policy` | Modules (module; nil = off) | `spec-policy.md` sections 3.1, 10 |
+| `Actors` | Policy | `spec-policy.md` sections 3.1, 10 |
+| `ID` | PolicyActor | `spec-policy.md` sections 3.1, 10 |
+| `Jurisdiction` | PolicyActor | `spec-policy.md` sections 3.2, 10 |
+| `Policy` | PolicyActor (a registered name) | `spec-policy.md` sections 4.5, 10 |
+| `Every` | PolicyActor | `spec-policy.md` sections 7.2, 10 |
+| `ReadsRegions` | PolicyActor | `spec-policy.md` sections 5.4, 10 |
+| `Levers` | PolicyActor | `spec-policy.md` sections 3.4, 10 |
+| `Schedule` | PolicyActor | `spec-policy.md` sections 8.2, 10 |
+| `Cycle` | PolicyActor | `spec-policy.md` sections 8.2, 10 |
+| `Rules` | PolicyActor | `spec-policy.md` sections 8.3, 10 |
+| `ID` | Lever | `spec-policy.md` section 3.4 |
+| `Kind` | Lever | `spec-policy.md` sections 3.4, 6.3 |
+| `Flow` | Lever | `spec-policy.md` sections 3.5, 6.3 |
+| `From` | Lever | `spec-policy.md` sections 3.5, 6.3 |
+| `To` | Lever | `spec-policy.md` sections 3.5, 6.3 |
+| `Mode` | Lever | `spec-policy.md` sections 3.5, 6.3 |
+| `Against` | Lever | `spec-policy.md` section 3.4.3 |
+| `Min` | Lever | `spec-policy.md` section 3.4.1 |
+| `Max` | Lever | `spec-policy.md` section 3.4.1 |
+| `MaxStep` | Lever | `spec-policy.md` sections 3.4.1, 6.2.2 |
+| `MayClose` | Lever | `spec-policy.md` sections 3.4.1, 6.2.1 |
+| `Lever` | ScheduleStep | `spec-policy.md` section 8.2 |
+| `At` | ScheduleStep | `spec-policy.md` section 8.2 |
+| `BP` | ScheduleStep | `spec-policy.md` section 8.2 |
+| `Closed` | ScheduleStep | `spec-policy.md` section 8.2 |
+| `Lever` | Reaction | `spec-policy.md` section 8.3 |
+| `Gauge` | Reaction | `spec-policy.md` section 8.3.2 |
+| `Commodity` | Reaction | `spec-policy.md` section 8.3.2 |
+| `MaxAge` | Reaction | `spec-policy.md` section 8.3.2 |
+| `Target` | Reaction | `spec-policy.md` section 8.3.1 |
+| `Deadband` | Reaction | `spec-policy.md` sections 8.3.1, 8.3.6 |
+| `Span` | Reaction | `spec-policy.md` section 8.3.1 |
+| `Move` | Reaction | `spec-policy.md` section 8.3.1 |
+| `Raise` | Reaction | `spec-policy.md` section 8.3.1 |
+| `Insurance` | Modules (module; nil = off) | `spec-insurance.md` sections 4.1, 13 |
+| `ValueCapBP` | Insurance | `spec-insurance.md` sections 6.2, 13 |
+| `PayoutTicks` | Insurance | `spec-insurance.md` sections 8.4, 13 |
+| `MinSum` | Insurance | `spec-insurance.md` sections 7.4, 13 |
+| `MaxPolicies` | Insurance | `spec-insurance.md` sections 7.4, 13 |
+| `MaxCoverRequests` | Insurance | `spec-insurance.md` sections 5.2, 13 |
+| `Cover` | Role (the cover block; nil = not a cover role) | `spec-insurance.md` sections 4.2, 13 |
+| `Underwrite` | CoverTerms | `spec-insurance.md` section 4.2 |
+| `Insure` | CoverTerms | `spec-insurance.md` section 4.2 |
+| `LoadingBP` | Underwrite | `spec-insurance.md` sections 6.4, 13 |
+| `StoreRateBP` | Underwrite | `spec-insurance.md` sections 6.4, 13 |
+| `CoverBP` | Underwrite | `spec-insurance.md` sections 4.2, 13 |
+| `CapBP` | Underwrite | `spec-insurance.md` sections 4.2, 13 |
+| `ShareBP` | Underwrite | `spec-insurance.md` sections 10.3, 13 |
+| `MinLossBP` | Insure | `spec-insurance.md` sections 4.2, 10.2, 13 |
+| `RuinShareBP` | Insure | `spec-insurance.md` sections 10.2, 13 |
+| `MaxLoadingBP` | Insure | `spec-insurance.md` sections 10.2, 13 |
+| `MinCoverBP` | Insure | `spec-insurance.md` sections 10.2, 13 |
+| `StoreShareBP` | Insure | `spec-insurance.md` sections 10.2, 13 |
+| `MaxStoreRateBP` | Insure | `spec-insurance.md` sections 10.2, 13 |
 
 ## New domain terms to add to the glossary
 
 Minor unit, denomination, ladder, formatter, precision, household, reference basket, welfare ratio, padded
 history, observed wage, observed premium, working tick, commercial trip,
 target-income rule, tool, durability, estate, pool, relief, carriage market,
-trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, faucet, sink, pack, layer, policy, feedback loop, damper, viability, steady state, subsistence floor, bid, ask, limit price, admission, reservation, crossing, tie-break key, market price, price age, reference price, weight, scale, group, effective configuration, configuration hash, pack, presentation-only field, warning, sourced, producible, year, commodity, unit, mass, bulk, load, container, capacity, binding dimension, chargeable size, lot, born tick, transfer, reason (of a transfer), claim, balance sheet, sector, flow total, pseudo-agent, earmark, named lot, audit, shelf life, age, spoil, durability (listed), durable, tool (listed), class, raw, calendar, calendar day, absolute day, moment, season, season cycle, ordered list, job, execution, executor, principal, duration, source (recipe with no inputs), co-product, byproduct, discard (output), disposal, yield factor, effective factor, site (sited recipe), yield profile, yield shock, residue, draw (endowment draw), pending output, work in progress, trainee yield, unit cost, cost anchor, cost share, price belief, centre (of a belief), width (of a belief), belief step, effective range, outcome (of an order), adjustment gate, stock ratio, target stock, seed price, price window, reference band, cost band, re-clamp, upkeep, effective upkeep, fed, unfed, hunger, tradable set, tradable (commodity), role, strategy, intent, trade plan, job request, purpose (of a bid), agent view, outcome view, work share, rest band, survival rule, planned recipe, reserve (units), keep, gap, surplus, target (stock), use target, output target, cover period, tier (of a bid), reserve money, spend cap, favourability, external agent, directive, directed strategy, mailbox, production stop, household labour, activity, start capacity, mean factor, net vector, reference programme, surplus factor, labour share to subsist, available work share, warm start, seed table, virtual start offset, stagger (rule), supply gap, lean reserve, balanced census, lane, residual, drift, register entry, failure regime, pinned market, stability scenario, evidence offset, effective window, working household-tick, wear cost, work floor, evidence share, full cost, regional wage, anchor (reference), starting wage, full unit cost, construction phase, construction bucket, periodic season, stated lot key, held to work (by the floor), spawner, privation, ladder (failure ladder), bankruptcy, entry share, entry limit, review (occupation review), cooldown, viability (of a role), expected ratio, renewal, entrant, mortal (external agent), role change, want, rank, taste, schedule, choke price, ceiling (of a schedule), substitution share, want carry, discretionary budget, nominal seed, final demand (wants), variant, overlay, product line, balanced census, stable-state predicate, bands document, shock script, cold variant, report-only (scenario), region, region graph, edge, route (an edge), distance, `RegionID`, `EdgeID`, `NoRegion`, hop, shortest path, next hop, component (strongly connected), island, edge status, effective length, factor (of an edge), relocation, relocation totals, region override, effective reference price, `Graph`, money supply, money flow, grant, levy, top-up, class (of accounts), flow carry, flow scale, declared reason, holding charge, liquidity floor, spending threshold, closed economy, balanced pair, birth (of a household), death (of a household), schedule (birth, death), knot, replacement ratio, exposed household, natural increase, birth stake, household cap, death carry, birth carry, fixed factor, gain (of the population loop), money-limited population, mode, self-carried mode, hired mode, carrying unit, crew (of a mode), haul unit, haul span, traveller, shipper, consignee, shipment, dispatch, arrival, transit account, transit factor, away (agent), inbound, diverted (cargo), resource, endowment, stock (of an endowment), capacity (of an endowment), regeneration, shape (of a resource), carry (regeneration carry), refuge, extinct (stock), finite stock, abundance, abundance curve, plan share, plan stock, ration (of an endowment), grant (of a ration), request (of a draw), maximum flow, maximum sustainable draw, sustainable draw, runway, open access, binding (endowment), headroom, `ResourceID`, rumour, price record, observation (an entry of the price record), source (information source), vintage, lag (of a rumour), information speed, rumour error, horizon (of a rumour), informed (role), outside, outside node, gate, line (of an outside node), side (sell side, buy side), mid, quote, margin (of a side), counterparty, Outside (account kind), outside sector, import, export, balance of trade, list value, drift (of a walk), shock (of a line), availability window, capacity (of a side), cap (cumulative), sweep, top-up (of a counterparty), own-use recipe, own-use mode, covered set, cover (of upkeep), afford (ticks), secure ticks, coverage (of an own-use recipe), retry (the market retry), blocked (household), ramp (of an own-use job), migration, migrant, journey (of a migrant), earned ratio, settled (agent), pushed (household), estimate (of a destination), margin (of a move), width (of the margin), horizon (of a move), outflow cap, pipeline cap, provisioning (of a journey), `Fixed` (role flag), merchant, planned trip, lane (of a merchant), candidate (lane and mode), lot (of a merchant), lot cap, cargo set, trade inputs, fee share, bar, cautious revenue, break-even price, ask limit, lane lock, delivery offer, delivery take, payer, deliverer, round (of contracts), delivery contract, escrow (of a contract), settlement (of a contract), plan notes, outbound, tick boundary, phase, position (of a tick), entry (of a tick), slot, between ticks, cadence, rotation, bucket (review bucket), Weyl value, keyed tie, failed world, word (of the stream), the world's draw, creation draw, carried remainder, window (memory), pending totals, names table, volume class, recorder, level (of an instrument), delta instrument, region state, snapshot row, construction flow, run (of a bounded `Warn`), pattern A, pattern B, `WarnRun`, `NoCommodity`, `WantID`, checkpoint, restore, format version, section (of a checkpoint), frame, header (of a checkpoint), trailer, digest (of a checkpoint), canonical encoding, one spelling, sparse row, construction flag, extension state, `Stateful`, entry (of an extension), reseed (of a stream), salt, branch, fixture (of a format), agent state, forced move, market state, slot state, query class, entry (of a setter), key (of a slot), indicator, preset, aggregator, tally, window (of ticks; the same term as EXP's window (sample)), household row, price table, base window, index (basis points of a base), Laspeyres, Paasche, Fisher, chain index, clamp (of an index), stale share, cohort share, value added (of a region), production approach, expenditure approach, income view, gross accumulation, written (goods), carriage (use of goods in moving goods), delivered price, freight, trade valuation, retirement basis, binding counters, reconciling item, stylised fact, fact (STY), band, prior, setting seeds, hold-out set, headroom (of a band), acceptance class, exact fact, ordinal fact, banded fact, report fact, pack-asserted fact, confidence (of a band), blind-spot field, detector, verdict, unknown (verdict), onset, healthy start, provoked run, separation protocol, stability check, stability record, verdict record, tier (of a test), experiment, factor, level, change, design (grid, one at a time, spread), point, replica, run key, unit (of work), plan, record (of a run), result, transient, final reading, series, measure, criterion, pass share, reduction, variant (of calls), continuation, aligned (prefix, horizon), stream fingerprint, pairing gain, effect range, elasticity, knob, damper strength, structural choice, registry (of knobs; the parameter-owner table is a different thing), search range, evidence anchor, derived condition, base value, grid (of a knob), neighbour (of a grid point), edge (of a grid; the edge of the region graph is REG's), screen, screened in, dormant, invisible, alias group, gauge (of a calibration; OBS's gauge is an instrument), composite (knob), search block, confirm seeds, feasible region, minimal change, grid distance, Pareto set, known miss, working target, working threshold, calibration overlay, calibration record, lineage, re-entry, stage (of a calibration), attempt, off value, structure group, scope token, overlay document, claim set, sensitivity matrix, scaling check, stage stop, program stop. Gate, hold-out, finding, stability record, elasticity and effect range are used as STY, EXP and IND define them and are not redefined by CLB.
+trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, faucet, sink, pack, layer, pool policy, feedback loop, damper, viability, steady state, subsistence floor, bid, ask, limit price, admission, reservation, crossing, tie-break key, market price, price age, reference price, weight, scale, group, effective configuration, configuration hash, pack, presentation-only field, warning, sourced, producible, year, commodity, unit, mass, bulk, load, container, capacity, binding dimension, chargeable size, lot, born tick, transfer, reason (of a transfer), claim, balance sheet, sector, flow total, pseudo-agent, earmark, named lot, audit, shelf life, age, spoil, durability (listed), durable, tool (listed), commodity class, raw, calendar, calendar day, absolute day, moment, season, season cycle, ordered list, job, execution, executor, principal, duration, source (recipe with no inputs), co-product, byproduct, discard (output), disposal, yield factor, effective factor, site (sited recipe), yield profile, yield shock, residue, draw (endowment draw), pending output, work in progress, trainee yield, unit cost, cost anchor, cost share, price belief, centre (of a belief), width (of a belief), belief step, effective range, outcome (of an order), adjustment gate, stock ratio, target stock, seed price, price window, reference band, cost band, re-clamp, upkeep, effective upkeep, fed, unfed, hunger, tradable set, tradable (commodity), role, strategy, intent, trade plan, job request, purpose (of a bid), agent view, outcome view, work share, rest band, survival rule, planned recipe, reserve (units), keep, gap, surplus, target (stock), use target, output target, cover period, tier (of a bid), reserve money, spend cap, favourability, external agent, directive, directed strategy, mailbox, production stop, household labour, activity, start capacity, mean factor, net vector, reference programme, surplus factor, labour share to subsist, available work share, warm start, seed table, virtual start offset, stagger (rule), supply gap, lean reserve, balanced census, lane, residual, drift, register entry, failure regime, pinned market, stability scenario, evidence offset, effective window, working household-tick, wear cost, work floor, evidence share, full cost, regional wage, anchor (reference), starting wage, full unit cost, construction phase, construction bucket, periodic season, stated lot key, held to work (by the floor), spawner, privation, ladder (failure ladder), bankruptcy, entry share, entry limit, review (occupation review), cooldown, viability (of a role), expected ratio, renewal, entrant, mortal (external agent), role change, want, rank, taste, schedule, choke price, ceiling (of a schedule), substitution share, want carry, discretionary budget, nominal seed, final demand (wants), variant, overlay, product line, balanced census, stable-state predicate, bands document, shock script, cold variant, report-only (scenario), region, region graph, edge, route (an edge), distance, `RegionID`, `EdgeID`, `NoRegion`, hop, shortest path, next hop, component (strongly connected), island, edge status, effective length, factor (of an edge), relocation, relocation totals, region override, effective reference price, `Graph`, money supply, money flow, grant, levy, top-up, account class, flow carry, flow scale, declared reason, holding charge, liquidity floor, spending threshold, closed economy, balanced pair, birth (of a household), death (of a household), schedule (birth, death), knot, replacement ratio, exposed household, natural increase, birth stake, household cap, death carry, birth carry, fixed factor, gain (of the population loop), money-limited population, mode, self-carried mode, hired mode, carrying unit, crew (of a mode), haul unit, haul span, traveller, shipper, consignee, shipment, dispatch, arrival, transit account, transit factor, away (agent), inbound, diverted (cargo), resource, endowment, stock (of an endowment), capacity (of an endowment), regeneration, shape (of a resource), carry (regeneration carry), refuge, extinct (stock), finite stock, abundance, abundance curve, plan share, plan stock, ration (of an endowment), grant (of a ration), request (of a draw), maximum flow, maximum sustainable draw, sustainable draw, runway, open access, binding (endowment), headroom, `ResourceID`, rumour, price record, observation (an entry of the price record), source (information source), vintage, lag (of a rumour), information speed, rumour error, horizon (of a rumour), informed (role), outside, outside node, gate, line (of an outside node), side (sell side, buy side), mid, quote, margin (of a side), counterparty, Outside (account kind), outside sector, import, export, balance of trade, list value, drift (of a walk), shock (of a line), availability window, capacity (of a side), cap (cumulative), sweep, top-up (of a counterparty), own-use recipe, own-use mode, covered set, cover (of upkeep), afford (ticks), secure ticks, coverage (of an own-use recipe), retry (the market retry), blocked (household), ramp (of an own-use job), migration, migrant, journey (of a migrant), earned ratio, settled (agent), pushed (household), estimate (of a destination), margin (of a move), width (of the margin), horizon (of a move), outflow cap, pipeline cap, provisioning (of a journey), `Fixed` (role flag), merchant, planned trip, lane (of a merchant), candidate (lane and mode), lot (of a merchant), lot cap, cargo set, trade inputs, fee share, bar, cautious revenue, break-even price, ask limit, lane lock, delivery offer, delivery take, payer, deliverer, contract round, delivery contract, escrow (of a contract), settlement (of a contract), plan notes, outbound, tick boundary, phase, position (of a tick), entry (of a tick), slot, between ticks, cadence, rotation, bucket (review bucket), Weyl value, keyed tie, failed world, word (of the stream), the world's draw, creation draw, carried remainder, window (memory), pending totals, names table, volume class, recorder, level (of an instrument), delta instrument, region state, snapshot row, construction flow, run (of a bounded `Warn`), pattern A, pattern B, `WarnRun`, `NoCommodity`, `WantID`, checkpoint, restore, format version, section (of a checkpoint), frame, header (of a checkpoint), trailer, digest (of a checkpoint), canonical encoding, one spelling, sparse row, construction flag, extension state, `Stateful`, entry (of an extension), reseed (of a stream), salt, branch, fixture (of a format), agent state, forced move, market state, slot state, query class, entry (of a setter), key (of a slot), indicator, preset, aggregator, tally, window (of ticks; the same term as EXP's window (sample)), household row, price table, base window, index (basis points of a base), Laspeyres, Paasche, Fisher, chain index, clamp (of an index), stale share, cohort share, value added (of a region), production approach, expenditure approach, income view, gross accumulation, written (goods), carriage (use of goods in moving goods), delivered price, freight, trade valuation, retirement basis, binding counters, reconciling item, stylised fact, fact (STY), band, prior, setting seeds, hold-out set, headroom (of a band), acceptance class, exact fact, ordinal fact, banded fact, report fact, pack-asserted fact, confidence (of a band), blind-spot field, detector, verdict, unknown (verdict), onset, healthy start, provoked run, separation protocol, stability check, stability record, verdict record, tier (of a test), experiment, factor, level, change, design (grid, one at a time, spread), point, replica, run key, unit (of work), plan, record (of a run), result, transient, final reading, series, measure, criterion, pass share, reduction, variant (of calls), continuation, aligned (prefix, horizon), stream fingerprint, pairing gain, effect range, elasticity, knob, damper strength, structural choice, registry (of knobs; the parameter-owner table is a different thing), search range, evidence anchor, derived condition, base value, grid (of a knob), neighbour (of a grid point), edge (of a grid; the edge of the region graph is REG's), screen, screened in, dormant, invisible, alias group, gauge (of a calibration; OBS's gauge is an instrument), composite (knob), search block, confirm seeds, feasible region, minimal change, grid distance, Pareto set, known miss, working target, working threshold, calibration overlay, calibration record, lineage, re-entry, stage (of a calibration), attempt, off value, structure group, scope token, overlay document, claim set, sensitivity matrix, scaling check, stage stop, program stop. Gate, hold-out, finding, stability record, elasticity and effect range are used as STY, EXP and IND define them and are not redefined by CLB.
+
+Terms of the fourteen later-stage modules, each once, as each spec's N-017 list gives them. A word that an earlier spec or another module also uses is written in its qualified spelling. **Qualified spellings:** commodity class (a class of goods, `spec-goods.md`), account class (a class of accounts, a `FlowTarget` of MON and of FIS), store class (STO), settlement class (SET, always so written), facility class (CAP); claim is the ledger's (INS's is a payout claim); contract is MER's delivery contract (EMP's is a hire; a hire is not a contract of MER); facility is CAP's (EMP says the employer's tool); treasury is POL's account and pseudo-agent of a governed jurisdiction, never the region's pool; rent is LND's (ORG says premium, STO does not use it); levy is MON's (a transfer to a treasury is a tax); round is always "<module> round" (contract round, labour round, credit round, cover round, membership round) and a lane of such a round is a region ("lane of the credit round"), while "lane" alone stays MER's pair of a destination and a commodity; policy is PLC's interface `Policy` (an actor's policy is a name), an insurance policy is INS's, and a pool policy is the estates'; member is a direct member of a jurisdiction (POL) or a body member (ORG); ceiling is a role ceiling (SET), and the ceiling of a schedule is DEM's; reach is a jurisdiction's reach for a lever (PLC), a field's reach (TEC) and reachable (SAV); place is a body place (ORG), a trainee place (SKL) or an order place (WLD); need is a class need (a flag), a facility need (a recipe's list of facility classes) or a body need; cap and floor are a legal cap and a legal floor (ORG), a class floor (SET), a field cap (TEC) or a capacity cap (INS); headroom is qualified each time ("headroom of a role's ceiling", of a body, of a debtor); gate is a class gate (SET); limit is a class limit (SET, a count); hold and held are a key holder (PLC), a title holder (LND), a held change (SET) and a held completion (ORG); release is a standing order (FIS), a title release (LND) or the pool's `PoolRelease`; gain is a technology gain (TEC) or a layer gain (CAP); keep is a keep of a job (SAV) or a lender's keep (CRD); payout is a fiscal payout (FIS) or an insurance payout (INS); premium is an insurance premium (INS), a technology premium (TEC) or WEL's observed premium; window is a fiscal window (FIS); base is a base of a duty (FIS) or a base of a field (TEC); scale is always "<noun> scale" (risk scale, rent scale, rate scale, flow scale); schedule, directive, mailbox and gauge of an actor are PLC's ("gauge of a rule").
+
+**STO:** store, room, mass room, bulk room, base room, limited (account), load, pledge, reserved room, free room, stored load, owns a store, fits (a load fits a room), commit (room is committed at the decision), upkeep room, cut of the room, buffer store, `StoreClassID`. **EMP:** employment, employer, worker (wage earner), hire (the one-job contract and its record), `HireID`, hire list, establishment, vacancy, positions, labour offer, reservation wage (not the ledger's reservation counter), employer's bid (not an order side), wage (money per household-tick; never a field), worker share, escrow (of a hire), payroll, unmatched (household), unemployment (a measure), hired yield, `open_hire`. **SET:** `SettlementClassID`, `NoSettlementClass`, enter threshold, leave threshold, band (of a class; the band of a stylised fact is STY's), dwell, settlement review (P7.2a), household count (of a region), flag (of a class), limit (of a class), gate (a reader's use of a flag or a limit), class floor, held change, headroom (of a role's ceiling), ceiling (of a role). **LND:** tenure, title (a claim of ownership of a share of an endowment, never a rank or an honorific), holder, commons share, entitlement, unused entitlement, let (verb), lessor, tenant, tier (of the ration), posted rent, rent in force, rent scale, closed (an endowment), enclosure, apportionment, `NoAgent`, priced out, forfeited. **POL:** jurisdiction, polity, root (of the tree), chain (of a region), covers, common jurisdiction, crossing (of a border; not the clearing crossing), exit, enter, border, border depth, seat, governed (jurisdiction), grouping, treasury sector, combining mode (innermost, added, scaled), `JurisdictionID`, `NoJurisdiction`. **CRD:** credit (the module; nothing else is called credit), loan, creditor, debtor, lender, borrower, request (for credit), offer (of credit; a delivery offer is MER's), posted rate, effective rate, rate scale, term, principal (of a loan; the principal of a job is PRO's), interest, owed, due tick, overdue, arrears, shield, settlement of claims (the pass of P1.7a; not EXT's sweep, not a settlement of a contract), waterfall, passed (claim), written off, forgiven, exposure cap, credit room (`CreditRoom`; not STO's room), cash gap, horizon (of a gap; not MIG's, RES's or INF's). **CAP:** facility, kind (of a facility class: site, route, ground, store), site, route (a facility's; an edge is REG's), ground improvement, store facility, condition, decay, use wear, effect fraction, ruin, repair, build (a job whose completion creates facilities), builder, repairer, commissioning, effect table, install (of a store facility), pending (a store facility not installed), durability and capacity (of the class). **RSK:** risk row, route row, store row, exposure (of goods; not POP's exposed household), strike, severity, common row, unit row, effective probability, loss share, kept share, stored fraction, expected loss (of a route), total loss, trip account. **FIS:** fiscal flow, authority, tax (head tax, holding tax, remittance), duty (sales tax, purchase tax, tariff), toll, in kind, standing order (purchase, release), pro rata cut, counterparty (of a trade; EXT's), payer (of a tax or a duty; MER's payer of a delivery contract is another), payee. **ORG:** body, outsider, eligible (household), places (of a body), seniority, held completion, right (not LND's title), activity (`produce`, `sell`, `buy`, `train`; not VIA's), subject (of a right), scope key, prohibition, in force (a right, a range), suspended (right), `Who` (principal, executor, both), legal price, control (a price control; not the controller of a loop), rate limit, legal range, clamp, `BodyID`, `ControlID`, `RightID`. **SAV:** saving (the module; money held back), saver (a role with the block), savings target, floor (of the target), precaution buffer, drawdown, goal, project, margin test, benefit, cost (of a project), job value, hurdle, hurdle spread, payback horizon, commit band, outlay, funded (a household for a project), worth (a pack's value of a whole facility), idle money, standing refusal, bar (the four reasons a project is not taken; MER's bar is another). **TEC:** technology (the module; not VIA's technology matrix), technology field, cell (of a field in a region), experience, learned gain, advance, technology factor, doubling (of the cumulative work), trend, discovery, key (of the module), contact, contact weight, frontier, gap, catch-up, practises (a cell). **PLC:** policy (the interface), policy actor, lever, mandate, decision (of an actor), due (actor), cadence (of an actor), reading, target (of a rule), deadband, span, move, step limit, rest (of a rule), reaction, step and cycle (of a schedule), `ActorID`, `LeverID`, `LeverKind`, `PolicyView`, `Settings`, `HoldPolicy`, `Against` (a lever's group). **INS:** cover (insurance; not the cover of upkeep), underwriter, insured, sum insured, maximum payout, cover share (`CoverBP`), loading, store rate, capacity (of an underwriter), open liability, unit value, value cap, loss value, due (of a policy), payout claim, shortfall, lane request (a mode and a destination; the lane of the cover round is a region).
 
 ## Decisions taken
 
@@ -599,6 +903,59 @@ trainee, trainer, traineeship, trainee-eligible recipe, account, boundary, fauce
 | What is a calibration for? | Feasibility and minimal change, never an optimum | `spec-calibration.md` section 3.4 |
 | Which seeds may a calibration choose on? | Search blocks of 100 from 101, one choice each; the confirm on STY's setting seeds 1 to 50 (REF 8.2); never the gate; a hold-out 51 to 60 is a SHOULD of REF 8.2 and no band is set from it | `spec-calibration.md` section 7.1 |
 | What transfers between settings? | The procedure, the conditions and the regime thresholds; defaults and priors as starting points; no band, record or table | `spec-calibration.md` section 9.3 |
+| What is a store? | Room on the owner's account (a pair of mass and bulk added to its base room) | `spec-storage.md` section 3 |
+| When is room tested? | At the decision | `spec-storage.md` section 5.1 |
+| What does a store cost? | A fixed levy per store, a MON flow | `spec-storage.md` section 7 |
+| Does a store slow ageing? | No | `spec-storage.md` section 8.1 |
+| What does an owner of a store lose? | The freedom to move | `spec-storage.md` section 9 |
+| Is labour a commodity? | No: a wage is money between accounts under a ledger reason | `spec-employment.md` section 3.5 |
+| Who matches workers and employers? | A first-fit round at P2.5a | `spec-employment.md` section 5 |
+| What sets a wage? | The midpoint of the two sides' own values, with a worker share | `spec-employment.md` sections 5.4, 4.3 |
+| What limits hired employment in a closed economy? | The employers' spending | `spec-employment.md` section 11 |
+| What is a settlement class? | An entry of an ordered list, ordered by its `Enter` threshold in households; the `SettlementClassID` is the index, and a setting with no sizes has one class | `spec-settlements.md` section 3.1 |
+| What is a settlement class derived from? | The household count of the region, at one position (P7.2a), with a band and a dwell against flapping | `spec-settlements.md` sections 3.4, 4 |
+| What may read a settlement class? | Only the rows of the table of hooks, each by its owner spec at a stated position; no view of a strategy carries a class | `spec-settlements.md` sections 6.2, 6.3 |
+| What may a settlement class not do? | Change a price, a wage, a rate, a share, a probability, a period or a window; a gate bars entry and removes no household | `spec-settlements.md` sections 6.2, 7 |
+| Is rent a debt, and who is paid? | No: a transfer of money per unit drawn from a let unit, from the principal that runs the job to the lessors, under the internal reason `rent`; not a MON flow, never a debt (a start that cannot pay is refused `rent_funds`) | `spec-land.md` sections 2 (positions 6, 10), 5 |
+| Is the polity a tree or a graph? | A tree, not a DAG: a region's chain is one path to the root | `spec-polity.md` sections 2, 3.3 |
+| What is the actor of a polity? | A treasury account and pseudo-agent of a governed jurisdiction only | `spec-polity.md` section 5 |
+| Does a polity change a result by being on? | No, while no jurisdiction is governed: it is neutral | `spec-polity.md` FR-POL-019 |
+| Does a region inherit a value through a jurisdiction? | No: readers use the three combining modes | `spec-polity.md` section 6.1 |
+| Can membership change in a run? | No: it is static in version 1 | `spec-polity.md` section 7.4 |
+| Does a loan create money? | No: the principal moves from the lender's account to the borrower's and a claim is formed; a setting that wants money created declares a MON grant | `spec-credit.md` sections 2, 3.4 |
+| Is a loan renewed? | Never: the due claim is settled at P1.7a before any request of the tick is admitted at P3.3b, and a debtor with an overdue claim is refused | `spec-credit.md` sections 2, 6.1.3 |
+| What does a removal do to claims? | A debtor's money pays its claims pro rata before the rest goes to the estate (the waterfall); the claims of a removed creditor pass to the estate | `spec-credit.md` sections 2, 9 |
+| Is a facility a good? | No: module state | `spec-infrastructure.md` section 3.2.2 |
+| How does a road speed an edge? | A layer multiplied into the transit factor | `spec-infrastructure.md` section 5.2.2 |
+| Who builds? | A recipe with `Builds`, decided by a strategy or SAV | `spec-infrastructure.md` section 4.5 |
+| Does a facility register a region-bound refusal? | No, except a store's | `spec-infrastructure.md` section 7.5 |
+| What is a risk? | A row of data: a strike probability, a severity share and a `Common` flag, per directed edge and mode or per store class in a region; no actor, no macro state | `spec-risk.md` section 3 |
+| When is a cargo's fate decided, and when is it told? | At dispatch (one word per unit row of the path; common rows once a tick at P3.1a), kept in the shipment as `LossBP`; applied at arrival, before the delivery | `spec-risk.md` sections 4, 5 |
+| What does a strike take? | A share of every commodity, rounded half to even, from a Transit account and the traveller's own account, or the struck store's share of the account; never money, never a chosen set of goods | `spec-risk.md` sections 5.3, 6.3, 7.4 |
+| What does a shipper see? | The expected loss of a route, in `Routes`; never an outcome, a draw or a scale as such | `spec-risk.md` section 8 |
+| Is the merchant's margin net of the loss? | Yes, the cautious revenue is net of `LossBP` | `spec-risk.md` section 8.4 |
+| How is the embargo modelled? | As REG's edge status, set by a consumer or a border; RSK adds no mechanism and no autonomous closure | `spec-risk.md` section 10.1 |
+| Is a probability scaled by a slot? | Yes, the strike probability only; two slots; no timer | `spec-risk.md` section 9 |
+| Does a row with probability 0 draw? | No: so the module on with every scale 0 equals the module off | `spec-risk.md` sections 3.4.3, 11.3 |
+| Does an insurance policy create money, and what if the underwriter cannot pay? | No: a premium and a payout are transfers; the part an underwriter cannot pay is a payout claim that CRD holds, settles and passes to the estate | `spec-insurance.md` section 2 (positions 6, 7) |
+| Does a fiscal flow create money? | No: every fiscal reason is internal between non-boundary accounts; a mint or a tribute is a MON grant or levy with the target kind `treasury`; six typed lists; a treasury that holds less than is due cuts its payouts pro rata | `spec-fiscal.md` section 2 (positions 2, 3, 9) |
+| Is a price control a clamp, a rejection or a strategy rule? | A clamp in the admission of the market: a bid's limit is lowered to a cap, an ask's raised to a floor; no new rejection reason | `spec-institutions.md` sections 6.3, 6.4 |
+| When is a right read? | At the start of the activity (a production start, the building of an order): one refusal reason, `not_permitted` | `spec-institutions.md` sections 5.2, 5.6 |
+| How are the members of a body chosen? | By seniority: the longest in its role, then a stateless key, then the agent ID; a household whole or not at all; no draw | `spec-institutions.md` section 4.3 |
+| What do a body's places limit? | A count of the households of its roles in each region, as one more limit on the headroom (a ceiling); it is not enforced on those already there | `spec-institutions.md` section 3.4 |
+| Why does a household hold money back? | The reserve, a buffer from its own drawdown, a goal for a project | `spec-saving-and-investment.md` sections 2, 3, 4 |
+| How does an agent decide to build or repair? | A project test with a hurdle spread by agent, in the default strategy for a role with a `Saver` block | `spec-saving-and-investment.md` section 5 |
+| How is a project funded? | From the household's own money; the default asks for no loan | `spec-saving-and-investment.md` section 6 |
+| Where is knowledge held? | In a cell, a region and a field, not an agent | `spec-technology.md` section 3.5 |
+| How does a gain enter production? | As a term `tech` of the effective factor | `spec-technology.md` section 5.1 |
+| Does a gain change the warm start? | No, it is 0 at tick 0 | `spec-technology.md` section 3.3.2 |
+| How is discovery random? | A keyed hash of one construction word, no word in a tick | `spec-technology.md` section 4.4 |
+| What does a gain do to the Malthusian fixed point? | Moves it; a logistic stock can be pushed past its maximum-yield point | `spec-technology.md` sections 13, 10.3 |
+| Does a policy actor reuse `Strategy`? | No: its own interface `Policy` with one method, `Decide`; a fifth row of architecture.md 4.3 | `spec-policy.md` section 4, [ADR 0003](../adr/0003-version-1-scope.md) decision 3 |
+| What can a policy actor change? | Only levers: a named, bounded, rate-limited handle on a flow scale, an edge status or a transit factor; the lever list is its mandate; one holder per key | `spec-policy.md` sections 3.4, 3.5, 6 |
+| When does a policy actor act? | At P0.3a, the entry of the step, on a cadence by rotation of its index; its settings act as a consumer's call between the two steps would | `spec-policy.md` section 7 |
+| What does a policy actor read? | The boundary state of the regions its jurisdiction covers, its treasury and its levers; no event, no indicator, no live state | `spec-policy.md` section 5 |
+| Who is a player ruler? | A `directed` policy and `DirectPolicy`, with a mandate and a cadence; or INT's setters with neither | `spec-policy.md` sections 8.4, 9 |
 
 ## Still open
 

@@ -99,6 +99,9 @@ A `Recipe` is a plain struct in the root package, an entry of `Config.Recipes`
 | `Outputs` | list of output items (3.2) | created when a job completes, per execution |
 | `Requires` | list of (commodity, `WearPerUse`) | tools: durables the executor must hold, each worn by use (section 4.4) |
 | `Draws` | list of (resource, quantity) | endowment the recipe takes from its region, per execution (section 6.5); the resource is a `Resource` of `spec-resources.md` 3; module RES |
+| `Needs` | list of site class IDs | facility classes of kind `site` the principal must hold a usable facility of in its region; at most `MaxRecipeNeeds` (module CAP, `spec-infrastructure.md` 4.1) |
+| `Builds` | clause (`Class`, `Toward`) | the completion creates facilities of the class (module CAP, `spec-infrastructure.md` 4.1) |
+| `Repairs` | clause (`Class`, `Units`) | the completion restores condition to facilities the principal owns (module CAP, `spec-infrastructure.md` 4.1) |
 | `Sited` | bool | the recipe runs only where the yield table gives it a positive factor (6.2) |
 | `TraineeEligible` | bool | a trainee may run it (section 8) |
 | `TraineeYield` | basis points | a trainee's output as a share of a full execution (8.2) |
@@ -121,6 +124,12 @@ unlimited faucet of labour output. That is legal and is the author's choice.
 it is data on the role (3.3). Nothing in production branches on a recipe,
 commodity or role identifier (architecture.md 9.1).
 
+3.1.4. The three clauses `Needs`, `Builds` and `Repairs` are data like every other
+field. Their values and their rules are `spec-infrastructure.md` 4.1 (a recipe has at
+most one of `Builds` and `Repairs`, and a recipe with either has at least one input);
+this spec keeps the format and the sentinels (10.2). With the infrastructure module off a
+recipe with any of them is `ErrModuleDependency`.
+
 ### 3.2 Output items
 
 An output item is a commodity, a quantity and two more fields:
@@ -131,14 +140,18 @@ An output item is a commodity, a quantity and two more fields:
 | `Discard` | the output is created and disposed in the same step (section 7.2) | false |
 
 3.2.1. The `CostShare` of the non-discard outputs adds up to exactly 10 000. The
-`CostShare` of a discard output is 0.
+`CostShare` of a discard output is 0. A recipe with `Builds` or `Repairs` has no
+non-discard output (3.2.2), so there is nothing to add up: its `CostShare`s are all 0 and
+`ErrCostShares` is not raised for it.
 
 3.2.2. A **byproduct** is not a separate kind of item. It is an output with a
 `CostShare` of 0 that is not discarded: it is made by the same execution and is
 sold if it can be, and no cost is allocated to it. An output with a positive
 `CostShare` is a **co-product**. The engine has no code path that tells them apart
 except the cost allocation of section 9. A recipe needs at least one non-discard
-output (`ErrRecipeNoOutput`, `spec-config.md` 7.3).
+output (`ErrRecipeNoOutput`, `spec-config.md` 7.3), unless it has `Builds` or `Repairs`
+(`spec-infrastructure.md` 4.1.2 B3): such a recipe creates facilities or restores
+condition instead, and an output it has is a discard output.
 
 ### 3.3 Which agents can run a recipe
 
@@ -151,7 +164,9 @@ is refused with `not_on_role` (4.2). An own-use recipe is an ordinary recipe nam
 list (data, no flag on the recipe): it has no inputs and no `Requires`, and it is `Sited`
 (`spec-subsistence.md` 3.4; a sited recipe runs only where the yield table lists it, 6.2).
 It is not on `Role.Recipes`, and it sets no cost anchor (9.3). A trainee also runs the trainee-eligible recipes of its trainer's
-role, for its trainer (section 8). A tool-less variant and a tool variant of the
+role, for its trainer (section 8). A worker of the employment module also runs, for its
+employer, a recipe on the hire list of the employer's role (`Role.Employer.Recipes`,
+`spec-employment.md` 3.2); the request is made by the labour round, not by `Work`. A tool-less variant and a tool variant of the
 same work are two recipes, and a role lists both; which to start is the strategy's
 choice (4.1). This is how bazaarBot's "with tools yields 4, without yields 2"
 (`bazaarbot-reference.md` 10) is written: two recipes, not a conditional.
@@ -181,17 +196,34 @@ For an agent (the **executor**) of weight `w`, a recipe starts `k` executions, w
 - `w` (`spec-scale.md` 4.2), or the strategy's maximum if lower;
 - for each input, the available stock divided by the input quantity, rounded down;
 - for each `Requires` entry, the number of unreserved tool items of that commodity;
-- for each `Draws` entry, the executions granted by the ration of `spec-resources.md` 5.3 (6.5).
+- for each `Draws` entry, the executions granted by the ration of `spec-resources.md` 5.3 (6.5);
+- for each `Needs` class, the capacity of the principal's facilities of the class in its region, less the executions the same principal has already started or committed to the class in the tick (`spec-infrastructure.md` 4.2.2), evaluated again at P2.7;
+- for a `Builds` or `Repairs` recipe, the gate, the room for facilities, the target, the store and what there is to repair (`spec-infrastructure.md` 4.2.2, limits 2 to 6);
+- with the tenure module on, the executions the principal can pay the rent for (`spec-land.md` 4.5, 5.4);
+- with the storage module on, `k_room`, the executions whose output fits the principal's free room (`spec-storage.md` 5.3.1, 5.3.2), evaluated at P2.5 as part of `k0` and again at P2.7, so the first start of a tick leaves the room the later ones see.
 
 Before any of this, the request is checked against the role: a recipe that is not on
-the agent's role list or its effective own-use list (or, for a trainee, on its trainer's) is refused with the
-reason `not_on_role`, which is the world's check on a strategy
-(`spec-agents.md` 6.5.1) and starts nothing. If `k` is 0 nothing is consumed, and
-the reason is the first of `zero_yield` (the yield factor is 0, section 6),
-`no_site` (a `Sited` recipe with no positive factor), `no_tool`, `no_input`,
-`no_endowment`, in that order. This is the partial result of `spec-scale.md` 4.2: `k`
-households work and the rest could not. A partial `k` is not an error and not a
-warning (FR-PRO-009).
+the agent's role list or its effective own-use list (or, for a trainee, on its trainer's, or,
+for a hired household, on its employer's hire list, checked at admission,
+`spec-employment.md` 5.2) is refused with the reason `not_on_role`, which is the world's
+check on a strategy (`spec-agents.md` 6.5.1) and starts nothing. A recipe that a right in
+force bars is then refused with `not_permitted` (`spec-institutions.md` 5.2, 5.3), for the
+executor, the principal or both as the right says (the principal of a trainee's or a hire's
+job is tested as the executor is). Both checks come before `k` is derived.
+
+If `k` is 0 nothing is consumed, and the reason is the first of `zero_yield` (the yield
+factor is 0, section 6), `no_site` (a `Sited` recipe with no positive factor), `no_tool`,
+`no_facility` (`spec-infrastructure.md` 4.2.2), `no_input`, `no_endowment`, `no_title` and
+`rent_funds` (`spec-land.md` 4.5.1), `not_unlocked`, `facility_cap`, `no_target`,
+`store_refused` and `nothing_to_repair` (`spec-infrastructure.md` 4.2.2), and `no_room`
+(`spec-storage.md` 5.3.1), in that order, `no_room` last. With the two checks of the
+paragraph above in front, the whole **master order** of the reasons of a refused start is:
+`not_on_role`, `not_permitted`, `zero_yield`, `no_site`, `no_tool`, `no_facility`,
+`no_input`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`, `facility_cap`,
+`no_target`, `store_refused`, `nothing_to_repair`, `no_room`. This spec owns it and every
+other file quotes its own slice and cites this one; a reason of a module that is off
+cannot occur. This is the partial result of `spec-scale.md` 4.2: `k` households work and
+the rest could not. A partial `k` is not an error and not a warning (FR-PRO-009).
 
 ### 4.3 The start step
 
@@ -205,16 +237,24 @@ balance. If the world ever places orders first, available excludes reserved
 (`spec-ledger.md` 6.3).
 
 4.3.2. An input of a trainee's execution is taken from its **principal** (8.1), the
-trainer.
+trainer, or, for a hired execution, the employer (`spec-employment.md` 6.1).
 
 4.3.3. Money is not spent by production. Wages, fees and the price of inputs are
-trades (`spec-clearing.md`); a recipe has no cash cost.
+trades (`spec-clearing.md`); a recipe has no cash cost. (A hire's wage is paid by the
+labour round from its escrow, `spec-employment.md` 7, not by production, and a rent is a
+transfer of the start, `spec-land.md` 5.3.)
+
+4.3.4. **The pledge.** With the storage module on, after the start's `Transform` the world
+sets the principal's pledge to the exact load of the job's pending output plus the inbound
+cargo (`spec-storage.md` 4.3, 5.3.3). A discard output, and the part of an output that
+`MaxQuantity` disposes, take none, because they are never held (7.2, 5.3.2).
 
 ### 4.4 Tools and wear
 
 4.4.1. A `Requires` entry is a commodity with `Durability` above 0 and a
 `WearPerUse` from 1 to its `Durability`. The executor must hold `k` unreserved items
-of it: each household of the cohort has its own tool (`spec-scale.md` 4.2,
+of it (for a hired execution the principal holds them and they wear:
+`spec-employment.md` 6.1.2): each household of the cohort has its own tool (`spec-scale.md` 4.2,
 FR-SCL-007).
 
 4.4.2. At the start, each of the `k` executions wears a **distinct** item of each
@@ -232,6 +272,14 @@ FR-PRO-040).
 4.4.4. A tool's price is whatever the market sets (`spec-skill-barriers.md` 2.4).
 Production fixes only the wear per use, which with `Durability` fixes the wear cost
 used in section 9.
+
+4.4.5. **A facility a recipe `Needs` is worn at the position of a tool**, at the start,
+after `k` is final and before the inputs are taken (`spec-infrastructure.md` 5.1.3): the
+`k` executions are assigned to the principal's facilities of the class in its region,
+most worn first by the condition of the effect table, each taking at most its `cap(f)`
+less the executions already assigned to it in the tick, and each facility loses its
+executions times the class's `WearPerUse`. A facility is not an item of an account and is
+not in `Requires`; the two clauses are separate (`spec-infrastructure.md` 4.1).
 
 ## 5. Duration and jobs
 
@@ -306,17 +354,33 @@ principal's account from the `recipe_output` boundary and takes no inputs
 (`spec-ledger.md` 8.2). Each output lot has `Born` equal to the completing tick if
 the commodity spoils, and a durable has full durability (`spec-ledger.md` 5.2.3). A
 discard output is created and moved to the `disposal` boundary in the same step
-(7.2).
+(7.2). A recipe with no output at all (a `Builds` or `Repairs` recipe may have none,
+3.2.2) makes no `Transform` at the completion: there is nothing to create, and a
+`Transform` with both sides empty is refused (`spec-ledger.md` 8.2.1). With the storage
+module on the outputs are credited from the pledge up to `RoomLeft`
+(`spec-storage.md` 5.3.4): the room for them was decided at the start, so the credit
+cannot fail for room.
 
 5.3.2. If creating an output would push the principal's quantity of that commodity
 above `MaxQuantity`, the part that fits is created and the rest is created and
 disposed in the same step (reason `disposal`), and the event reports the amount
 (FR-PRO-029). Production never fails and never holds a job open for lack of room.
-Whether agents have an inventory capacity at all is N-002's; if it exists, a full
-inventory is the strategy's problem on the next tick, not a reason to lose output
-here.
+With the storage module on, room is decided at the start (4.2, `k_room`), so a full
+inventory is a refused start (`no_room`), not a lost output. The one exception is a cut
+of the room while the job runs (`spec-storage.md` 5.5.3): the outputs are then credited in
+commodity order, each up to `RoomLeft`, whole units, and the rest is created and disposed
+in the same step under `disposal` and reported in `RecipeExecuted` as the `MaxQuantity`
+overflow is (FR-PRO-029). N-002's update stands with that one exception.
 
 5.3.3. `RecipeExecuted` is emitted at completion (section 14).
+
+5.3.4. **A recipe with `Builds` or `Repairs`.** At the completion the world creates `k`
+facilities (a `Builds`) or restores `k * Units` of condition (a `Repairs`), as
+`spec-infrastructure.md` 4.3 says, besides the ordinary completion of the recipe's
+outputs, which are all discard. `RecipeExecuted` is emitted as for any job with no
+output row for the clause, and then the `FacilityChanged` events of
+`spec-infrastructure.md` 14.1. The effects begin at the next P8.3b
+(`spec-infrastructure.md` 4.3.3).
 
 ### 5.4 Interruption, bankruptcy and death
 
@@ -327,9 +391,9 @@ Nothing in the job is a ledger holding, so ending a job early moves no goods.
 |-------|-------------------------|---------------------|
 | The executor goes bankrupt or dies | The job is **abandoned**: no output is created. The estate takes the agent's goods as usual (`spec-estates.md` 2.1). | `agent_removed` |
 | The executor changes role, including a trainee at the completion of its traineeship | Abandoned. Production offers no way to carry a job across roles. At a completion the traineeship also ends, and this row, not the row of `principal_left`, applies: the order is `RecipeAbandoned` (`role_changed`), `TraineeshipCompleted`, then the `RoleChanged` it causes (`spec-world.md` 6.11) | `role_changed` |
-| The executor's account changes region (`spec-regions.md` 6) | Abandoned, since the sited recipe and the yield of the new region differ. A self-carried trip cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise for a traveller; it does for a migrant: the migration module abandons the job in progress at the departure of the journey, with this reason, before the account changes region at the arrival (`spec-migration.md` 8.2). An own-use job (`spec-subsistence.md` 5.8) is abandoned the same way | `region_changed` |
-| The principal of a trainee's job leaves (the trainer is removed, or the traineeship ends without completing) | Abandoned. A trainer's removal abandons its trainees' jobs first, in ascending agent ID, before the trainer's own events (`spec-world.md` 6.11 item 8; `spec-observability.md` 4.4.8). A completion is not this row (see the row above) | `principal_left` |
-| The executor's weight falls from `w` to `w'` | Not abandoned. `Executions` becomes `min(k, w')` and each pending quantity is multiplied by the new `Executions` over the old, rounded down; the loss is not a ledger flow because the goods were never created | none (a `RecipeExecuted` shows the smaller output) |
+| The executor's account changes region (`spec-regions.md` 6) | Abandoned, since the sited recipe and the yield of the new region differ. A self-carried trip cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise for a traveller; it does for a migrant: the migration module abandons the job in progress at the departure of the journey, with this reason, before the account changes region at the arrival (`spec-migration.md` 8.2). An own-use job (`spec-subsistence.md` 5.8) is abandoned the same way, and so is a hired job when its worker moves (the hire ends with the cause `worker_moved`, `spec-employment.md` 6.4) | `region_changed` |
+| The principal of a trainee's or a hired job leaves (the trainer is removed, or the traineeship ends without completing; the employer is removed or changes role, `spec-employment.md` 6.4) | Abandoned. A trainer's removal abandons its trainees' jobs first, in ascending agent ID, before the trainer's own events (`spec-world.md` 6.11 item 8; `spec-observability.md` 4.4.8). A completion is not this row (see the row above) | `principal_left` |
+| The executor's weight falls from `w` to `w'` | Not abandoned. `Executions` becomes `min(k, w')` and each pending quantity is multiplied by the new `Executions` over the old, rounded down; the loss is not a ledger flow because the goods were never created. With the storage module on the world recomputes the pledge from the scaled pending output; the pledge is not scaled with the room and may exceed it, which 5.3.2 resolves at the completion (`spec-storage.md` 5.5.3) | none (a `RecipeExecuted` shows the smaller output) |
 | The executor's weight rises | The job is unchanged; new households did not start it | none |
 | A checkpoint is taken | Nothing; the job is saved (section 15) | none |
 
@@ -422,12 +486,15 @@ arithmetic and truncation toward zero, in this order:
 ```
 site  = table value (6.2)                           0 .. MaxYieldBP
 E     = site * shock / 10 000                       shock: 6.8, default 10 000
-E     = E * trainee / 10 000                        trainee: 10 000, or TraineeYield (8.2)
+E     = E * tech / 10 000                           tech: 10 000 plus the gain of the recipe's field in the executor's
+                                                    region (`spec-technology.md` 5.1.1); 10 000 for a recipe in no field
+E     = E * trainee / 10 000                        trainee: 10 000, or TraineeYield (8.2), or, for a hired job,
+                                                    `Employer.HireYieldBP` (`spec-employment.md` 6.1), which replaces it
 E     = E * abundance / 10 000                      abundance: `spec-resources.md` 4.7 (the least over the recipe's draws;
                                                     10 000 for a recipe with no draw or a flat curve)
 ```
 
-The three truncations lose less than 1 basis point in each step; they are a rule
+The four truncations lose less than 1 basis point in each step; they are a rule
 constant, not a tunable. `E = 0` means the job does not start (`zero_yield`,
 `no_site` when the cause is a `Sited` recipe with no profile).
 
@@ -523,7 +590,7 @@ dies, its residue is dropped; the fraction of a unit it represents was never cre
 | Deferred | What a pack does instead | Cost of the deferral |
 |----------|--------------------------|----------------------|
 | **Random yield** (Factorio's `probability`, `amount_min` and `amount_max`) | A mean yield through the factor and the residue (6.6) | No variance in a harvest from one agent to the next. A failed harvest is a shock (6.8), which is correlated and so more realistic for a region. A game that wants luck per agent adds it as a shock per agent through INT |
-| **A condition on a building or other fixed capital** | A tool that stands for the building, held by the executor (4.4) | A mill held by one miller cannot be shared, has no capacity and no location. `spec-infrastructure.md` adds a facility requirement |
+| **A condition on a building or other fixed capital** | Answered by `spec-infrastructure.md`: a facility class the recipe `Needs` (3.1), held by the principal in its region, with a capacity and wear by use and by time (4.4.5). A tool that stands for the building stays legal | A tool held by one miller cannot be shared, has no capacity and no location, which is why a facility is a separate clause and not an item |
 | **A season condition at completion** | A perishable intermediate (6.4) | A harvest window needs two recipes and a perishable commodity instead of one condition |
 | **A per-output factor** | One factor for every output; a recipe whose outputs vary differently is two recipes | A harvest where grain and straw vary independently cannot be one recipe. They normally move together |
 | **A recipe that changes over time** (technology) | A pack replaces a recipe at construction | Productivity growth is `spec-technology.md`; recipes are fixed for a run |
@@ -589,7 +656,11 @@ working ticks, its weight bound `k`. The trainer is the **principal**: the input
 taken from the trainer's account and the output goes to it (4.3.2, 5.3.1,
 `spec-skill-barriers.md` 4.2). The recipe must be on the trainer's role list (3.3). A
 trainee-eligible recipe MUST NOT have `Requires`: a trainee needs "neither the tool
-nor the skill", so a recipe that needs a tool is not eligible. An author who wants an
+nor the skill", so a recipe that needs a tool is not eligible. It has none of `Needs`, `Builds` or
+`Repairs` either (`spec-infrastructure.md` 4.1.2 B7): a facility is not divisible and a
+trainee's job draws on its trainer's account, not on the trainer's site. A recipe on an
+employer's hire list may require a tool: the principal holds it
+(`spec-employment.md` 6.1.2); the rule above is about the trainee's own tool. An author who wants an
 eligible variant of a tool recipe writes a second recipe without the tool and with a
 smaller output (the `knead_dough` and `bake_loaf` of section 12.1 show the split).
 
@@ -652,16 +723,19 @@ season:
 input_cost  = sum over Inputs of  quantity * price                          (checked)
 wear_cost   = sum over Requires of  ceil(WearPerUse * price_of_tool / Durability)
 labour_cost = Duration * wage
-cost        = input_cost + wear_cost + labour_cost
-unit_cost   = ceil( cost * CostShare / (quantity * E) )                     (E from 6.3 for this region and season, trainee 10 000, shock and abundance included: a thin stock makes a unit dearer, `spec-resources.md` 4.7.5)
+rent_cost   = sum over Draws of  d * r(region, res)                         (`spec-land.md` 5.7.1; 0 with the tenure module off or a rent of 0)
+cost        = input_cost + wear_cost + labour_cost + rent_cost
+unit_cost   = ceil( cost * CostShare / (quantity * E) )                     (E from 6.3 for this region and season, trainee 10 000, shock, technology and abundance included: a thin stock makes a unit dearer, `spec-resources.md` 4.7.5)
 ```
 
 With `CostShare` in basis points and `E` in basis points the factors of 10 000
 cancel, as in the example below. The result is rounded **up**, so the anchor never
 understates cost. The labour of an execution is `Duration` household-ticks whatever
 the weight of the executor (`spec-viability.md` 3.1), so `wage` is per household.
-Endowment draws are not priced, because the endowment is not bought; a scarce deposit
-shows as a rent in the market price, not in the cost.
+A draw is priced at the posted rent of `spec-land.md` 5.2.2 when the tenure module is on
+(`rent_cost`, `spec-land.md` 5.7.1: for every unit, a holder's own included, the rent being
+the opportunity cost), and is not priced otherwise: the endowment is not bought, and a
+scarce deposit then shows as a rent in the market price, not in the cost.
 
 9.1.1. `unit_cost` is 0 (unknown) when: any input or tool price is 0; the wage is 0
 or less; `E` is 0; `CostShare` is 0 (a byproduct or a discard output: no cost is
@@ -748,8 +822,10 @@ type Wear struct {
 // up, or 0 if unknown (section 9.1.1). prices is indexed by commodity index; 0
 // means unknown. share and yieldBP are basis points; outQty is the output's
 // quantity per execution; duration is the recipe's ticks and wage the money per
-// working tick of one household. It has no side effects and allocates nothing.
-func UnitCost(inputs []Term, tools []Wear, prices []int64, share, outQty, yieldBP, duration, wage int64) int64
+// working tick of one household; rent is the rent of the draws of one execution
+// (`sum over Draws of d * r`, 0 with the tenure module off). It has no side effects and
+// allocates nothing.
+func UnitCost(inputs []Term, tools []Wear, prices []int64, share, outQty, yieldBP, duration, wage, rent int64) int64
 ```
 
 The root's `UnitCost(region, commodity)` over a whole configuration, and
@@ -789,6 +865,7 @@ Provisional, in `bounds.go` (`spec-config.md` 4.1), placeholders until the slice
 | `MaxYieldBP` | 100 000 | a yield factor of 10 times; with `MaxWeight` (10^6) and a quantity it must still fit (10.3) |
 | `MaxRequires` | 4 | tools of one recipe |
 | `MaxDraws` | 4 | endowments of one recipe |
+| `MaxRecipeNeeds` | 2 | site classes a recipe needs (`spec-infrastructure.md` 12.2) |
 
 `MaxRecipeItems` (16 per side) and `MaxRecipes` are in `spec-config.md` 4.1.
 
@@ -801,10 +878,11 @@ for example `recipes.mill_flour.outputs[1].cost_share`.
 |----------|---------|
 | `ErrOutOfBounds` | a `Duration` outside [1, `MaxRecipeTicks`]; a quantity outside [1, `MaxQuantity`]; a `WearPerUse` outside [1, `Durability`]; a yield outside [0, `MaxYieldBP`]; a `TraineeYield` outside [1, 10 000]; more than `MaxRequires`, `MaxDraws` or `MaxRecipeItems` entries |
 | `ErrDuplicateID` | a commodity twice in one list of a recipe; a resource twice in the `Draws` of a recipe; two yield profiles for one region and recipe |
-| `ErrRecipeNoOutput` | a recipe with no non-discard output |
-| `ErrCostShares` | non-discard `CostShare`s that do not add to 10 000, a discard output with a share above 0, or a missing share where there are several non-discard outputs |
+| `ErrRecipeNoOutput` | a recipe with no non-discard output, unless it has `Builds` or `Repairs` (waived, `spec-infrastructure.md` 4.1.2 B3) |
+| `ErrCostShares` | non-discard `CostShare`s that do not add to 10 000, a discard output with a share above 0, or a missing share where there are several non-discard outputs; not raised for a recipe with `Builds` or `Repairs` and no non-discard output (the sum is 0, 3.2.1) |
 | `ErrToolNotDurable` | a `Requires` entry for a commodity with `Durability` 0 |
-| `ErrEligibleHasTool` | a `TraineeEligible` recipe with `Requires` |
+| `ErrEligibleHasTool` | a `TraineeEligible` recipe with `Requires`, `Needs`, `Builds` or `Repairs` |
+| `ErrFacilityShape`, `ErrFacilityNoCost`, `ErrUnknownFacilityClass`, `ErrModuleDependency` | the clauses `Needs`, `Builds` and `Repairs` (`spec-infrastructure.md` 13.1) |
 | `ErrUnknownCommodity`, `ErrUnknownRecipe`, `ErrUnknownRegion` | the references in recipes, role lists and yield profiles |
 | `ErrUnknownSeason` | a yield entry for a season ID the calendar lacks, including any season entry when the calendar has no seasons |
 | `ErrModuleDependency` | `Draws` while the resources module is off |
@@ -819,7 +897,10 @@ For every recipe, validation computes with checked arithmetic and rejects with
 - the largest weight a role's group can get (`spec-scale.md` 3.2) times each input
   quantity, and times each output quantity times the largest yield factor the
   configuration can give the recipe (the largest table entry, times the largest
-  shock bound, times the trainee factor, times the largest abundance factor, `MaxYieldBP`, of `spec-resources.md` 4.7) divided by 10 000, is at most `MaxQuantity`;
+  shock bound, times the largest technology factor `MaxTechBP` (`spec-technology.md` 5.1.4;
+  10 000 for a recipe in no field), times the larger of the trainee factor and, for a
+  recipe on an employer's hire list, `Employer.HireYieldBP` (up to `MaxYieldBP`), times
+  the largest abundance factor, `MaxYieldBP`, of `spec-resources.md` 4.7) divided by 10 000, is at most `MaxQuantity`;
 - the same weight times each draw quantity is at most `MaxQuantity`;
 - the sum over inputs of quantity times the largest reference price is at most
   `MaxMoney` (so `UnitCost` cannot overflow).
@@ -831,7 +912,7 @@ A warning never fails validation (`spec-config.md` 7.2). Each has a rule name an
 | Warning | Condition |
 |---------|-----------|
 | `unused_recipe` | no role lists the recipe, it is not trainee-eligible and it is on no role's effective own-use list (`spec-subsistence.md` 3.6) |
-| `unrunnable_recipe` | a `Sited` recipe with no profile that has a positive factor in any region, or a recipe whose every profile entry is 0, or a recipe whose every draw exceeds the effective capacity of its endowment in every region where its site factor is positive (`spec-resources.md` 13.3, `draw_impossible`) |
+| `unrunnable_recipe` | a `Sited` recipe with no profile that has a positive factor in any region, or a recipe whose every profile entry is 0, or a recipe whose every draw exceeds the effective capacity of its endowment in every region where its site factor is positive (`spec-resources.md` 13.3, `draw_impossible`), or a recipe whose `Needs` class has no initial facility in a region where it is otherwise runnable and no recipe builds it (`spec-infrastructure.md` 13.2, `facility_unbuildable`) |
 | `durable_not_required` | a durable that no recipe requires (FR-GDS-023) |
 | `source_unbounded` | a source (no inputs) with no `Draws` and not `Sited`: limited by labour only (3.1.2); informational |
 
@@ -883,10 +964,13 @@ placeholder** (N-015, N-027).
 | Recipe output | `CostShare` | share of the input cost allocated to the output, in basis points (3.2) | 10 000 if it is the only non-discard output, otherwise required |
 | Recipe output | `Discard` | created and disposed in one step (7.2) | false |
 | Recipe | `Draws` | endowment taken per execution, list of (resource, quantity) (6.5); the resources are `spec-resources.md` 3 | none |
+| Recipe | `Needs` | site classes the principal must hold a facility of (3.1); values and rules `spec-infrastructure.md` 4.1 | none |
+| Recipe | `Builds` | the facility class (and region of a route) the completion creates (3.1) | none |
+| Recipe | `Repairs` | the facility class and the units of condition the completion restores (3.1) | none |
 | Region and recipe | `YieldProfile` | basis-point factor by region, recipe and season (6.1); values owned by `spec-resources.md` 7 (format and lookup: 6.1, 6.2) | none (10 000, or 0 for a `Sited` recipe) |
 
 `Inputs`, `Outputs` and `Requires` are lists with no default (`Outputs` is required,
-`ErrRecipeNoOutput`). `Label` is presentation only.
+`ErrRecipeNoOutput`, except for a recipe with `Builds` or `Repairs`). `Label` is presentation only.
 
 The placeholders, listed so that none is mistaken for a result: `Duration` 1 (a
 structural default, instant production); `TraineeYield` 5 000; the bounds
@@ -1161,7 +1245,7 @@ parentheses. This spec owns the full field lists and fixes them:
 
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
-| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity), `EffectiveYield` in basis points |
+| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity) (the part above `MaxQuantity` and, with the storage module on, the part that a cut of the room left no room for, 5.3.2), `EffectiveYield` in basis points |
 | `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Region`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
 They carry no map, no pointer, and only identifiers and fixed-point values, and
@@ -1173,10 +1257,11 @@ pending quantity by commodity, fed by the snapshot, not by an event.
 
 14.2. **Logs.** At `Debug`, guarded by `Enabled` in the per-agent loop: `recipe not
 started` with `agent`, `recipe` and `reason` from the set of 4.2, which includes
-`not_on_role` (a request off the role's list, `spec-agents.md` 6.5.1; N-049). No
-`Info`. A `Warn`
+`not_on_role` (a request off the role's list, `spec-agents.md` 6.5.1; N-049), `not_permitted`,
+`no_facility`, `no_title`, `rent_funds` and `no_room` and the other reasons of the master
+order of 4.2. No `Info`. A `Warn`
 for the overflow rule of 5.3.2 (`recipe output disposed`, with `recipe`,
-`commodity`, `quantity`), at most one per recipe per tick, a bound that comes from
+`commodity`, `quantity`; also for the part that a cut of the room left no room for, 5.3.2), at most one per recipe per tick, a bound that comes from
 the configuration (observability-and-logging.md 3.2.2). The reason constants are exported
 constants of the root package (`event.go`); `internal/logkeys` holds the key strings only.
 The keys are existing ones (`recipe`, `agent`, `commodity`,
@@ -1249,7 +1334,7 @@ Original entries (a sign, a delay, a damper and a test are given in the register
   it is working. The ratio would trigger migration, relief and bankruptcy for a
   healthy farm. This was N-032; it is settled by `spec-welfare-and-wages.md` 2.3.3,
   which derives the window to exceed the longest job (the warning is removed).
-  Credit (`spec-credit.md`) is the real answer for a long job; version 1 has none.
+  Credit (`spec-credit.md`, an optional module) is the real answer for a long job; it is in force only where a pack turns it on.
 - **A job cannot be interrupted** (5.2.2): the target-income rule overshoots its
   target by up to `Duration - 1` ticks and a cohort makes it `w` households at once.
 - **Contested endowments.** Several agents on one deposit: the rotation of 5.5.1
@@ -1274,13 +1359,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 |----|-------------|
 | FR-PRO-001 | A `Recipe` MUST be a plain struct in the root package, with no function field and no embedded type, and no code in production MUST branch on a recipe, commodity, role or class identifier. |
 | FR-PRO-002 | The `Inputs` and `Outputs` of a recipe MUST each be a list of at most `MaxRecipeItems` items, each quantity from 1 to `MaxQuantity`, with no commodity twice in one list, in canonical commodity order. |
-| FR-PRO-003 | A recipe with no inputs MUST be valid and MUST act as a source, and a recipe with no non-discard output MUST be rejected with `ErrRecipeNoOutput`. |
-| FR-PRO-004 | The `CostShare`s of a recipe's non-discard outputs MUST add to exactly 10 000, a sole non-discard output MUST default to 10 000, and a discard output's share MUST be 0, or the configuration MUST be rejected with `ErrCostShares`. |
+| FR-PRO-003 | A recipe with no inputs MUST be valid and MUST act as a source, and a recipe with no non-discard output MUST be rejected with `ErrRecipeNoOutput`, unless it has `Builds` or `Repairs` (`spec-infrastructure.md` 4.1.2 B3). |
+| FR-PRO-004 | The `CostShare`s of a recipe's non-discard outputs MUST add to exactly 10 000, a sole non-discard output MUST default to 10 000, and a discard output's share MUST be 0, or the configuration MUST be rejected with `ErrCostShares`; a recipe with `Builds` or `Repairs` and no non-discard output has no share to add up and MUST NOT be rejected for it. |
 | FR-PRO-005 | `Duration` MUST be an integer from 1 to `MaxRecipeTicks`, default 1, and changing the calendar MUST NOT rescale it. |
 | FR-PRO-006 | A `Requires` entry MUST name a commodity with `Durability` above 0 (`ErrToolNotDurable`) and a `WearPerUse` from 1 to its `Durability`, with at most `MaxRequires` entries and no commodity twice. |
 | FR-PRO-007 | A recipe with `Draws` MUST be rejected with `ErrModuleDependency` while the resources module is off, and each `Draws` entry MUST be at most `MaxDraws`. |
-| FR-PRO-008 | An agent MUST start only a recipe on its role's list or on the role's effective own-use list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`. |
-| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_input`, `no_endowment`. |
+| FR-PRO-008 | An agent MUST start only a recipe on its role's list or on the role's effective own-use list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, or, as a hired household, a recipe on its employer's hire list (checked at admission, `spec-employment.md` 5.2), and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`; a request that a right in force bars MUST start nothing and be refused with `not_permitted` immediately after (`spec-institutions.md` FR-ORG-020). |
+| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and, for a recipe that needs a facility, builds or repairs, with the capacity and the limits of `spec-infrastructure.md` 4.2.2, and (with the storage module on) `k_room`, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_facility`, `no_input`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`, `facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`, `no_room` (the order of 4.2). |
 | FR-PRO-010 | The start of a job MUST be one all-or-nothing ledger `Transform` of `k` times each input to the `recipe_input` boundary, and a refused transform MUST leave the ledger unchanged and the job unstarted. |
 | FR-PRO-011 | At the start of a job each of the `k` executions MUST wear a distinct item of each required tool by `WearPerUse`, most worn first, destroying an item whose durability reaches 0 with the reason `wear`, and wear MUST NOT be applied again for the rest of the job. |
 | FR-PRO-012 | At completion the pending outputs MUST be created in one ledger `Transform` from the `recipe_output` boundary with `Born` equal to the completing tick for a commodity that spoils and full durability for a durable. |
@@ -1293,24 +1378,24 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-019 | When the executor's weight falls to `w'`, the job's `Executions` MUST become `min(k, w')` and each pending quantity MUST be multiplied by the new over the old `Executions` rounded down, and a rise in weight MUST NOT change the job. |
 | FR-PRO-020 | The site factor MUST be, for a region, recipe and the season of the start tick, the profile's season entry if present, else its `All`, else 0 if the profile has season entries, else 10 000 for a recipe that is not `Sited` and 0 for one that is. |
 | FR-PRO-021 | The season and the factor MUST be read when the job starts and the pending outputs fixed then, and a job started with a positive factor MUST complete whatever the season is at completion. |
-| FR-PRO-022 | The effective factor MUST be `site * shock / 10 000` then `* trainee / 10 000` then `* abundance / 10 000` (`spec-resources.md` 4.7; 10 000 for a recipe with no draw), each truncated, and a job with an effective factor of 0 MUST NOT start. |
+| FR-PRO-022 | The effective factor MUST be `site * shock / 10 000` then `* tech / 10 000` (`spec-technology.md` 5.1.1; 10 000 for a recipe in no field) then `* trainee / 10 000` (for a hired job `HireYieldBP` replaces it, `spec-employment.md` 6.1) then `* abundance / 10 000` (`spec-resources.md` 4.7; 10 000 for a recipe with no draw), each truncated, and a job with an effective factor of 0 MUST NOT start. |
 | FR-PRO-023 | The yield shock of a region and recipe MUST default to 10 000, MUST multiply the site factor, MUST be from 0 to `MaxYieldBP`, and MUST be saved in the checkpoint. |
 | FR-PRO-024 | The quantity of an output created by a job of `k` executions MUST be `(k * q * E + residue) / 10 000` and the residue MUST become the remainder of that division, computed with checked 128-bit arithmetic. |
 | FR-PRO-025 | Over any number of jobs at a constant effective factor `E`, the total output MUST differ from `k * q * E / 10 000` per job by less than one unit, at every weight including 1. |
 | FR-PRO-026 | When an agent is created the world MUST draw exactly one integer in [0, 10 000) from its random source (one source word, `spec-world.md` ruling C8), after the warm start and after the agent's target-ratio draw, whatever its recipes, and set every residue of the agent to it, and production MUST use no other random number; the pending output of a job created at construction from a warm start MUST use residue 0 (ruling C4). |
 | FR-PRO-027 | A job's start MUST take `k` times each draw quantity from the region's endowment through the all-or-nothing take of `spec-resources.md` 5.1 (`TakeEndowment`, internal), and production MUST NOT create or restore an endowment. |
 | FR-PRO-028 | A recipe with a yield profile MUST need no second recipe for another region or season: a recipe MUST run in a new region, or stop running in one, by a change of the yield table alone. |
-| FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete. |
+| FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete; with the storage module on the same MUST hold for the part of an output that a cut of the room left no room for (5.3.2). |
 | FR-PRO-030 | A discard output MUST be created and moved to the `disposal` boundary in the same step, MUST NOT appear in any account afterwards, and MUST appear in the flow totals under `recipe_output` and `disposal`. |
 | FR-PRO-031 | The ledger reason registry MUST contain `disposal` as a goods sink from an agent to a boundary, owned by production. |
 | FR-PRO-032 | Production MUST NOT consult any `Tradable` attribute, and a byproduct (an output with a `CostShare` of 0 that is not discarded) MUST be handled by the same code as any other output. |
-| FR-PRO-033 | A trainee-eligible recipe MUST have no `Requires` (`ErrEligibleHasTool`), and a trainee's job MUST take its inputs from, and create its outputs in, the principal's account. |
-| FR-PRO-034 | `TraineeYield` MUST be an integer from 1 to 10 000, default 5 000, applied as the trainee factor of the effective factor, and a trainee's inputs MUST NOT be reduced. |
-| FR-PRO-035 | `UnitCost` MUST equal the sum of quantity times price over the inputs, plus the sum of `ceil(WearPerUse * tool price / Durability)` over the tools, plus `Duration` times the wage, times `CostShare`, divided by the output quantity times the effective factor, rounded up, in checked integer arithmetic. |
+| FR-PRO-033 | A trainee-eligible recipe MUST have no `Requires`, `Needs`, `Builds` or `Repairs` (`ErrEligibleHasTool`), and a trainee's job MUST take its inputs from, and create its outputs in, the principal's account. |
+| FR-PRO-034 | `TraineeYield` MUST be an integer from 1 to 10 000, default 5 000, applied as the trainee factor of the effective factor, and a trainee's inputs MUST NOT be reduced; for a hired job the factor MUST be the employer's `HireYieldBP` in its place (`spec-employment.md` 6.1). |
+| FR-PRO-035 | `UnitCost` MUST equal the sum of quantity times price over the inputs, plus the sum of `ceil(WearPerUse * tool price / Durability)` over the tools, plus `Duration` times the wage, plus (with the tenure module on) the sum over the draws of quantity times the posted rent (`spec-land.md` 5.7.1), times `CostShare`, divided by the output quantity times the effective factor, rounded up, in checked integer arithmetic. |
 | FR-PRO-036 | `UnitCost` MUST be 0 when any input or tool price is 0, the wage is 0 or less, the effective factor is 0, the cost share is 0, or the arithmetic would overflow, and MUST have no side effect and allocate nothing. |
 | FR-PRO-037 | The cost anchor of a commodity in a region MUST be the smallest non-zero `UnitCost` over the recipes that make it and can run there this tick, or 0 if none, computed once per tick before orders from the previous clearing's published prices and the regional wage of FR-PRO-047. |
 | FR-PRO-038 | A yield profile that names an unknown region, recipe or season MUST be rejected with the sentinel for that kind or `ErrUnknownSeason`, and a duplicate profile with `ErrDuplicateID`, and a value outside [0, `MaxYieldBP`] with `ErrOutOfBounds`. |
-| FR-PRO-039 | A configuration in which the largest weight times an input, a draw, or an output times the largest possible effective factor exceeds `MaxQuantity`, or in which the cost of the inputs can exceed `MaxMoney`, MUST be rejected with `ErrOverflow`. |
+| FR-PRO-039 | A configuration in which the largest weight times an input, a draw, or an output times the largest possible effective factor exceeds `MaxQuantity`, or in which the cost of the inputs can exceed `MaxMoney`, MUST be rejected with `ErrOverflow`; the largest possible effective factor includes `MaxTechBP` for a recipe in a technology field and the larger of the trainee factor and `HireYieldBP` for a recipe on a hire list (10.3). |
 | FR-PRO-040 | Validation MUST warn, and MUST NOT fail, for an unused recipe, an unrunnable recipe and a durable no recipe requires. |
 | FR-PRO-041 | `RecipeExecuted` MUST be emitted at completion with the fields of section 14.1, and `RecipeAbandoned` when a job is abandoned, each after the state change and with no map. |
 | FR-PRO-042 | The snapshot MUST report the pending output by region and commodity and the number of agents with a job by recipe. |
@@ -1319,7 +1404,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-045 | Goods MUST be conserved except by those flows after every tick of a run that contains multi-tick jobs and abandoned jobs, checked by audit. |
 | FR-PRO-046 | The two example packs of section 12, completed with the elided commodities and with their sources (`gather_seed`, `salvage`), MUST load, validate, pass the viability checks V1 to V4 of `spec-viability.md` (V1 included: a cycle with no source outside it is rejected, `unproducible_in_realm`; `lambda*` of at least 1 with every household working every tick) and run for a stated number of ticks with the invariants of testing.md 6.3 holding, with no Go code specific to either; that the run reaches a stable state is the claim of `spec-stylised-facts.md`, not of this requirement. |
 | FR-PRO-047 | The regional wage used for `UnitCost` MUST be the pooled observed wage as `spec-welfare-and-wages.md` 4.3 defines it (the definition and the cases in which it is unknown are that spec's: FR-WEL-018, FR-WEL-020), as it stood at the end of the previous tick, and MUST be 0 when that wage is unknown. |
-| FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
+| FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check (`not_on_role`), then against the rights in force (`not_permitted`) and before `k0` is derived, for the principal of a trainee's or a hire's job as for the executor as the right says, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
 | FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
 | FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
 | FR-PRO-049 | In a region whose wage is 0, the cost anchor of every commodity MUST be 0, so that only the reference band applies to beliefs there. |
@@ -1365,7 +1450,10 @@ Still open:
 
 7. **A tool shared by several households.** A cohort of weight `w` needs `w` tool
    items. Whether a pack wants a "workshop" tool used by many is
-   `spec-infrastructure.md`'s. Next step: that spec.
+   `spec-infrastructure.md`'s. **Answered (2026-10-12):** a workshop is a facility class
+   that a recipe `Needs` (3.1); its capacity bounds the executions of the principal's starts
+   in a tick, and a facility is the owner's alone, with no sharing and no queue
+   (`spec-infrastructure.md` 5.1.2, 5.1.5). A tool that stands for a workshop stays legal.
 10. **A wage per role for the cost anchor.** 9.3 costs every recipe at the region's
     common wage. A skilled role earns more, so its recipes are under-costed. Next step:
     run the reference chain (`spec-reference-chain.md`) with the pooled wage and compare

@@ -96,7 +96,7 @@ means more severe. The meanings below are specific to this library.
 | Level   | Use it for | Volume |
 |---------|------------|--------|
 | `Error` | An internal inconsistency the library detected and repaired, where continuing is safe and the method has no error result. If continuing could corrupt state, panic instead (architecture.md 8.1). If you can return an error, return it instead. | Should never occur in normal operation. A single occurrence is a bug report. |
-| `Warn`  | The simulation is continuing but a market, a role or the configuration is degraded or surprising: a price clamped to a bound, a role with no agents left and no replacement, a configuration value that was defaulted. A problem with a single order, agent or trade is not a `Warn`: it is an event (such as `OrderRejected`) and, if useful, a `Debug` line. | Rare. At most one line per market or role per tick, so the volume is bounded by the configuration. |
+| `Warn`  | The simulation is continuing but an entity of the configuration (a market, a role, a region, an endowment, a body) or the configuration itself is degraded or surprising: a price clamped to a bound, a role with no agents left and no replacement, a configuration value that was defaulted. A problem with a single order, agent or trade is not a `Warn`: it is an event (such as `OrderRejected`) and, if useful, a `Debug` line. | Rare. At most one line per entity of the configuration per tick, so the volume is bounded by the configuration. |
 | `Info`  | Lifecycle that an operator wants in a normal run: world created (with a configuration summary and seed), run started (ticks requested), run ended (ticks completed, whether it completed, was cancelled or failed), world restored (from a checkpoint), warm start applied. The library never measures wall-clock duration (architecture.md 7.3); the caller or the `otelobserver` adapter does. | A handful per run. Never per tick, per agent or per trade. |
 | `Debug` | Detail for diagnosing behaviour: per-tick summaries, per-market clearing results, rejected orders, strategy decisions, bankruptcy and spawn decisions. | Allowed to be high; **MUST** be guarded by `Enabled` in hot paths. |
 
@@ -106,8 +106,9 @@ shown this on request?"
 
 3.2.2. `Info` **MUST NOT** be emitted inside the per-tick, per-agent or
 per-order loops. `Warn` **MAY** be emitted inside the per-tick loop only for a
-condition about a market, a role or the configuration, so that its volume per
-tick is bounded by the configuration; it **MUST NOT** be emitted per agent, per
+condition about any entity of the configuration (a market, a role, a region, an
+endowment, a body) or the configuration itself, so that its volume per tick is
+bounded by the configuration; it **MUST NOT** be emitted per agent, per
 order or per trade. `Error` has no volume rule because it should never fire.
 Put per-entity detail at `Debug` and, when it is a fact, in an event.
 
@@ -140,7 +141,7 @@ constants in an internal package and reused. The standard keys are:
 | `price`     | a price, in minor units              |
 | `quantity`  | a quantity, in whole units           |
 | `side`      | `bid` or `ask`                       |
-| `reason`    | machine-readable reason (see below); the values of the "run ended" line are `completed`, `cancelled` and `failed`, the closed set of that one line (log-only values, with no event field) |
+| `reason`    | machine-readable reason (see below); the values of the "run ended" line are `completed`, `cancelled` and `failed`, the closed set of that one line (log-only values, with no event field); `not_member` is a log-only reason of the institutions module |
 | `error`     | an error value (`slog.Any`)          |
 | `region`    | region ID                            |
 | `bound`     | which bound a price belief sits on: `floor` or `ceiling` |
@@ -151,10 +152,10 @@ constants in an internal package and reused. The standard keys are:
 | `rule`      | the name of a configuration validation rule |
 | `config_hash` | the first 8 bytes of the configuration hash |
 | `prices`, `wages`, `groups`, `jobs` | counts of rows of the warm-start table, in the construction summary |
-| `cause`      | machine-readable cause of a removal, a weight change, a role change, a relocation, an edge status change, the end of a money flow or of an outside side, or a slot set by the consumer (a constant, like `reason`) |
+| `cause`      | machine-readable cause of a removal, a weight change, a role change, a relocation, an edge status change, the end of a money flow or of an outside side, or a slot set by the consumer or by a policy actor (a constant, like `reason`; each event has its own closed set, listed by the spec that owns the event) |
 | `want`       | want ID |
 | `commodities`, `recipes`, `roles`, `regions` | counts of the entities of each kind, in the construction summary (`region`, an ID, is a different key) |
-| `modules`    | the names of the modules that are on, in the construction summary |
+| `modules`    | the names of the modules that are on, in the construction summary (the lower-case name of each `Modules` key, such as `storage` or `insurance`) |
 | `warm_start` | whether a warm start was present, in the construction summary (a bool) |
 | `edges`, `components` | counts of the directed edges and of the strongly connected components of the region graph, in the construction summary |
 | `from_region`, `to_region` | region IDs of the two ends of a relocation or an edge (`region` stays the key for a single region) |
@@ -184,6 +185,26 @@ constants in an internal package and reused. The standard keys are:
 | `bytes` | the size of an encoded checkpoint, in bytes (`int64`) |
 | `from`, `to` | a value before and after a change, in basis points (`int64`), as in a money flow scaled (`from_region` and `to_region` stay the keys of two regions) |
 | `account`, `amount` | a ledger account ID (`int64`) and a sum of money in minor units (`int64`), in the line of a refused transfer (`agent` is the key of an agent, which an estate, escrow or transit account is not) |
+| `store_class`, `store_classes` | a store class ID (string), and a count of store classes in the construction summary |
+| `settlement_class`, `from_settlement_class`, `to_settlement_class`, `target_settlement_class`, `settlement_classes` | settlement class IDs (`int64`: the class, and the two ends and the target of a change), and a count in the construction summary |
+| `vacancies` | a count of positions posted by employers |
+| `rent`, `share` | `rent`: money per unit of an endowment, in minor units (`int64`); `share`: a share in basis points (`int64`), as the share of a title or of a strike |
+| `jurisdictions`, `governed` | counts of jurisdictions and of governed jurisdictions, in the construction summary |
+| `claim`, `claims`, `lenders`, `borrowers` | a claim ID, and counts of claims, lenders and borrowers |
+| `rate`, `term` | a rate in basis points (`int64`) and a term in ticks (`int64`) |
+| `principal`, `owed`, `arrears`, `lost` | money in minor units (`int64`): the principal of a claim (not the agent of a production job), the amount owed, the owed on overdue claims, and the amount lost |
+| `facility`, `facility_class`, `facilities`, `facility_classes` | a facility ID, a facility class ID (string), and counts of facilities and of facility classes in the construction summary |
+| `condition` | the wear of a facility, in units of its durability (`int64`) |
+| `rows` | a count of risk rows, in the construction summary |
+| `authority`, `fiscal_flows` | a jurisdiction ID (string) and a count of fiscal flows in the construction summary |
+| `body`, `right`, `control`, `activity` | IDs of a body, a right and a control, and the activity a right gates |
+| `places`, `waiting`, `bodies`, `rights`, `controls` | counts: places of a body, households waiting for one, and bodies, rights and controls in the construction summary |
+| `goal`, `buffer` | money in minor units (`int64`), in the two `Debug` lines of the saving module |
+| `field`, `fields`, `gain` | a technology field ID, a count of fields in the construction summary, and a gain in basis points (`int64`) |
+| `actor`, `lever`, `reading` | IDs of a policy actor, of one of its levers and of the reading a rule used |
+| `entries`, `changed`, `actors`, `levers` | counts: entries a policy actor returned, settings changed, and actors and levers in the construction summary |
+| `cover_policy`, `sum`, `premium`, `payout` | an insurance cover's policy ID, and its sum, premium and payout in minor units (`int64`) |
+| `underwriters`, `insured` | counts of underwriters and of insured agents, in the construction summary |
 
 Add a key to this table in the same PR that introduces it. Prices, money and
 quantities are logged as the integers they are (architecture.md 3.5), with
@@ -223,8 +244,9 @@ recipe, a resource, a transport mode, a want) carries the typed integer ID of
 its kind, and an agent is named by its `AgentID`. A reason, a cause, a kind and
 a side are constants of a closed set, exported from the root package
 (`event.go`). The strings of the IDs are in the names table that `WorldCreated`,
-`WorldRestored` and the snapshot carry. A money flow is the exception: it has no
-typed ID and is named by its string ID, which is also its ledger reason. An
+`WorldRestored` and the snapshot carry. A money flow and a fiscal flow are the
+exception: neither has a typed ID, and each is named by its string ID, which is
+also its ledger reason (the two kinds share one ID namespace). An
 event of a transition of one agent carries the agent's region at the time of the
 event, so that an observer that keeps no agent table can attribute it.
 **[project]**
@@ -238,7 +260,7 @@ in the PR. **[project]**
 
 | Event type                | Emitted when                                         |
 |---------------------------|------------------------------------------------------|
-| `WorldCreated`            | the world is constructed and validated (seed, the whole configuration hash, whether a warm start was present, the names table of the IDs) |
+| `WorldCreated`            | the world is constructed and validated (seed, the whole configuration hash, whether a warm start was present, the names table of the IDs, which also holds the store classes, settlement classes, facility classes, technology fields, jurisdictions, policy actors, bodies, rights and controls of the modules that are on) |
 | `WorldRestored`           | a checkpoint is restored and validated: the first event to the observers given to the restore, and none when the restore fails (the configuration hash, the format version, whether the run was reseeded and the salt, the names table, and the snapshot at the restored boundary) |
 | `RunStarted`              | `Run` begins (ticks requested)                       |
 | `RunEnded`                | `Run` returns, after its last completed tick (ticks completed, whether it was cancelled, whether it failed) |
@@ -251,7 +273,7 @@ in the PR. **[project]**
 | `RecipeAbandoned`         | a job ends without output (agent, region, recipe, executions, `Reason`) |
 | `ProductionHalted`        | once per region and role per tick in which the production halt declined the job request of at least one free household, after `OwnUseChanged` in phase 2; never when none was (free households, halted households, and per recipe skipped the households for which it was) |
 | `AgentBankrupted`         | an agent is removed entirely; the only event of a full removal, whatever the cause (weight at removal, `Cause`: `insolvent`, `starved`, `consumer` or `population`; money and `GoodsListed`, the number of goods passed to the estate) |
-| `AgentSpawned`            | an agent enters the world, including each initial agent during construction, after `WorldCreated` (region, `Role`, `Weight`, `StartMoney` received, `External`) |
+| `AgentSpawned`            | an agent enters the world, including each initial agent during construction, after `WorldCreated` (region, `Role`, `Weight`, `StartMoney` received, `External`, and `StoresLocked`, the stores of the role row not given because the region's class lacks the flag) |
 | `UpkeepShortfall`         | once per region and role per tick in which at least one household went unfed, after the consumption phase; never when all are fed (households, unfed households, agents unfed, largest hunger) |
 | `BeliefsUpdated`          | once per market per tick that had at least one order outcome, after the outcomes are processed (counts of outcomes, adjustments, raises, lowerings, beliefs at floor and ceiling, conflicts and clamps; mean, low and high centre) |
 | `BoundaryFlow`            | once per tick for each (region, reason, money or commodity) with a non-zero total, for the reasons of kind faucet or sink only, after the tick's transitions (reason, faucet or sink, total quantity); the construction bucket of a world that has not yet stepped is emitted once, with `Tick` -1, at the entry of its first step, before `TickStarted` |
@@ -260,19 +282,19 @@ in the PR. **[project]**
 | `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded` | a traineeship starts, completes, or ends without completing (identifiers and region only, and `reason` for the end) |
 | `WeightChanged`           | an agent's weight changes without removing it: a reduction by the failure ladder, households added to an existing agent, a birth or death of the population module (agent, region, role, `From`, `To`, `Cause`, the money and the units of goods moved) |
 | `RoleChanged`             | an agent changes role (agent, region, `From`, `To`, weight, `Cause`, `GoodsListed`) |
-| `EntryLimited`            | once per region per tick in which a limit or refusal of the spawner acted; never when all counts are zero (counts of role changes, entrants, removals, unfunded households, households with no viable role, and each cap, cooldown, hysteresis, exit-cap and refusal that acted) |
+| `EntryLimited`            | once per region per tick in which a limit or refusal of the spawner acted; never when all counts are zero (counts of role changes, entrants, removals, unfunded households, households with no viable role, and each cap, cooldown, hysteresis, exit-cap, role ceiling and refusal that acted) |
 | `WantShortfall`           | once per region, role and want per tick in which a want was choked or unfunded for at least one household, after the trade phase (households, choked households, planned and funded units) |
 | `AgentRelocated`          | an agent's account changes region, once per relocation, after it is complete (agent, role, `From`, `To`, weight, money, units of goods, `Cause`) |
-| `EdgeStatusChanged`       | an edge's status changed, once per changed edge in edge order after the new graph is in place (`From`, `To`, `Closed`, `FactorBP`, `Cause`); only when something sets a status |
+| `EdgeStatusChanged`       | an edge's status changed, once per changed edge in edge order after the new graph is in place (`From`, `To`, `Closed`, `FactorBP`, `Cause`, which includes `policy` for a policy actor's write at P0.3a); only when something sets a status |
 | `MoneyFlowLimited`        | once per money flow and region per tick in which any amount due was not applied; never when all was applied (flow, region, due, applied, and the households short, cut at the balance bound and cut by the limit) |
 | `MoneyFlowEnded`          | a money flow reaches its effective limit and ends, once (flow, `Cause`: `limit` or `cap`, total) |
-| `MoneyFlowScaled`         | a money flow's scale is changed between steps, once per change (flow, from, to) |
-| `PopulationChanged`       | once per region and role per tick in which the population module is on and any count other than the exposed, unfed and no-ratio households is non-zero, after the region's plan and after `EntryLimited`; never when all are zero (region, role, exposed, unfed and no-ratio households, births and deaths due, deaths cut, deaths held, births capped, births unfunded, rates clamped, births and deaths done) |
-| `ShipmentDispatched`      | a shipment is dispatched (shipment, mode, origin region, destination, shipper, traveller and whether hired, consignee, arrival tick, carrying units, haul units redeemed, lines) |
-| `ShipmentArrived`         | a shipment arrives, after its delivery (shipment, mode, origin, destination, receiver, whether diverted, and per line the units shipped, delivered, diverted and spoiled) |
+| `MoneyFlowScaled`         | a money flow's scale is changed between steps, or by a policy actor at P0.3a, once per change (flow, from, to, `Cause`: `consumer` or `policy`) |
+| `PopulationChanged`       | once per region and role per tick in which the population module is on and any count other than the exposed, unfed and no-ratio households is non-zero, after the region's plan and after `EntryLimited`; never when all are zero (region, role, exposed, unfed and no-ratio households, births and deaths due, deaths cut, deaths held, births capped, births cut by a role ceiling, births unfunded, rates clamped, births and deaths done) |
+| `ShipmentDispatched`      | a shipment is dispatched (shipment, mode, origin region, destination, shipper, traveller and whether hired, consignee, arrival tick, carrying units, haul units redeemed, the toll paid, the loss in basis points, lines) |
+| `ShipmentArrived`         | a shipment arrives, after its delivery (shipment, mode, origin, destination, receiver, whether diverted, and per line the units shipped, delivered, diverted, spoiled and lost, and the amounts lost to an account) |
 | `ShipmentRejected`        | a shipment request is refused (origin region, agent, mode, destination, `reason`) |
 | `EndowmentChanged`        | once per endowment (region, resource) per tick, after its regeneration at the end of phase 8, in (`RegionID`, resource) order, if any of the units drawn, regenerated, short or lost is non-zero; never otherwise (stock after the tick, effective capacity, abundance of the tick, units requested, granted, drawn and short, regenerated, lost, agents denied, agents reduced) |
-| `EndowmentAdjusted`       | a shock slot or an adjustment of an endowment is applied between ticks, once per changed key of a call (kind `adjust` or `shock`, signed delta, the scales after, stock before and after, units lost) |
+| `EndowmentAdjusted`       | a shock slot or an adjustment of an endowment is applied between ticks, once per changed key of a call, or a facility changes its endowment at P8.3b (kind `adjust`, `shock` or `facility`, signed delta, the scales after, stock before and after, units lost) |
 | `RumoursServed`           | once per reader region per tick in which the information module is on and at least one informed agent was given a view there, in ascending `RegionID`, after the last plan of phase 3 and before phase 4 (region, readers, and counts of candidates offered, with no path, too old and not yet, and the largest lag offered) |
 | `OutsideTraded`           | once per (node, gate region, commodity, side) per tick in which the side wanted any unit or any unit was cut, after the sweep of phase 4; never when nothing was wanted or cut (node, gate region, commodity, side, mid, limit price, wanted, offered and traded units, money paid or received, list value, units cut by a closed edge, by a cap and by a price below 1, whether a price clamp acted) |
 | `OutsideEnded`            | a side of an outside node reaches its cumulative cap and ends, once (node, commodity, side, `Cause`: `units` or `value`, cumulative units and list value) |
@@ -281,12 +303,46 @@ in the PR. **[project]**
 | `MigrationStarted`        | a migration journey begins, once per departure, in the order of admission, after the departure is complete (agent, role, `From`, `To`, weight, arrival tick, distance, journey time, earned ratio, home figure, estimate, whether a job was abandoned) |
 | `MigrationReviewed`       | once per region per tick in which the migration module is on and any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal, in ascending `RegionID` after the `MigrationStarted` events of the pass; never when all are zero (households unsettled, reviewed, pushed, and the eleven outcomes started, no estimate, no destination, no news, too far, not viable, no gain, bound, out cap, unprovisioned, in cap, and arrivals held and journeys ended) |
 | `ContractFormed`          | a delivery contract is formed, after its shipment's `ShipmentDispatched` (contract, payer, deliverer, origin region, destination, commodity, quantity, price, money escrowed, shipment, mode, arrival tick) |
-| `ContractSettled`         | a delivery contract ends: in phase 1 after the arrivals of transport, or at the removal of its deliverer (contract, payer, deliverer, the deliverer's region, destination, commodity, quantity, units reached and spoiled, money paid and refunded, `Cause`: `delivered`, `short`, `payer_removed` or `deliverer_removed`) |
+| `ContractSettled`         | a delivery contract ends: in phase 1 after the arrivals of transport, or at the removal of its deliverer (contract, payer, deliverer, the deliverer's region, destination, commodity, quantity, units reached and spoiled, money paid and refunded, units lost, `Cause`: `delivered`, `short`, `payer_removed` or `deliverer_removed`) |
 | `ContractRound`           | once per destination region per tick in which an offer or a take was submitted for it, in ascending `RegionID`, after the round (admitted and refused offers and takes, matches, contracts formed, failures by reason, units and value formed); never otherwise |
 | `MerchantsPlanned`        | once per region per tick in which an agent with a merchant block was given a view there, after `ContractRound` and before `RumoursServed` (merchants, counts of the lanes considered by result, trips planned, requests, offers and takes, rests, stays and lots cut by the cap) |
 | `YieldShocked`            | the yield shock of a (region, recipe) is set between ticks, once per changed key of a call (region, recipe, the factor before and after, in basis points) |
-| `TransitFactorChanged`    | the transit factor of an (origin, destination, mode) is set between ticks, once per changed key of a call (origin, destination, mode, the factor before and after, in basis points) |
+| `TransitFactorChanged`    | the transit factor of an (origin, destination, mode) is set between ticks, or by a policy actor at P0.3a, once per changed key of a call (origin, destination, mode, the factor before and after, in basis points, `Cause`: `consumer` or `policy`) |
 | `PopulationScaled`        | a birth or death scale of a region is set between ticks, once per changed key of a call (region, which scale, the value before and after, in basis points) |
+| `RoomLimited`             | once per region and role per tick at P3.6a, in ascending `RegionID` then role order, when the storage module is on and a room cut or refused a start, a bid or a shipment; never when the six counts are zero (limited and full households, starts cut and refused, bids cut and rejected, shipments refused, units discarded) |
+| `StoreChanged`            | a store is added to an agent or removed from it, once per store: at a call, in phase 7 after the `RoleChanged` that ended it, or at the facility step of phase 8 for a store facility (agent, region, role, store class, `Kind`: `added` or `removed`, `Cause`: `consumer`, `role_changed` or `facility`, stores, room, load) |
+| `HireFormed`              | a hire is formed, in formation order, at P2.5a (hire, region, employer, worker, their roles, recipe, households, wage, ticks, money escrowed, reserve and bid price) |
+| `HireEnded`               | a hire ends, once: at P2.1 or P2.7, in phase 7 with a removal, a role change or a move, or at a call (hire, region, employer, worker, recipe, households, working ticks paid, money paid, remainder of the escrow refunded and whether it went to the estate, `Cause`: `completed`, `worker_left`, `worker_role`, `worker_moved`, `employer_left`, `employer_role` or `not_started`) |
+| `LabourRound`             | once per region per tick at P2.8b, in ascending `RegionID` after `ProductionHalted`, in which the employment module is on and any offer, vacancy or hire was counted (households offered, hired and unmatched; positions posted, filled and unfilled; offers and vacancies refused; formations refused by reason; wages paid and money refunded; rows by worker role and by employer role) |
+| `SettlementClassChanged`  | a region's settlement class changes: at construction after the initial `AgentSpawned` events (the founding) and at P7.2a (region, `From`, `To`, households, `Cause`: `founded`, `grew` or `shrank`) |
+| `SettlementHeld`          | once per region at P7.2a in which the dwell rule holds a class change, instead of `SettlementClassChanged` (region, class, target, households, ticks left) |
+| `RentPaid`                | once per endowment (region, resource) that has a title per tick at P8.3a, after `EndowmentChanged`, in (`RegionID`, resource) order, if any tier count, idle, held or unserved unit, refusal, cut, payment or forfeit is non-zero or the posted rent changed (rent in force, units by tier, let supply offered and idle, unserved and priced out, tenants and lessors, money paid and forfeited, requests refused for no title and for rent funds, the posted rent after the step) |
+| `TitleTransferred`        | a title (a share of an endowment) moves: with a removal, or at a call, once per title moved (region, resource, `From`, `To`, share, price, `Cause`: `removal` or `consumer`, the shares after, and the regions and pools that pay and are paid) |
+| `RentScaled`              | the rent scale of an endowment is set between ticks, once per changed key of a call (region, resource, the scale before and after, in basis points) |
+| `LoanFormed`              | a claim is formed, in formation order, at P3.3b (claim, creditor, debtor, debtor's region, principal, interest, rate, term, due tick) |
+| `LoanEnded`               | a claim ends, once: at P1.7a in ascending claim ID, with a removal, or at a call (claim, creditor, debtor, the regions of the two accounts, whether the creditor is an estate, principal, principal and interest paid, principal and interest lost, `Origin`: `loan` or `payout`, `Cause`: `repaid`, `written_off`, `debtor_removed` or `forgiven`) |
+| `LoanPassed`              | a removed creditor's claim passes to its estate, once per claim in ascending claim ID, with the removal (claim, creditor, debtor, the estate's region, amount owed) |
+| `CreditRound`             | once per region per tick at P3.3b, in ascending `RegionID` after the last `LoanFormed`, in which a request or an offer was submitted; never when all counts are zero (requests and offers admitted and refused, with the arrears and exposure refusals as subsets, claims formed, principal and interest formed, principal unfilled, fills dropped for too many claims and for overflow) |
+| `CreditSettled`           | once per region per tick at P1.7a, in ascending `RegionID` after the `LoanEnded` events of the tick, if a count or a sum is non-zero (for its debtors: claims due, repaid, newly overdue and written off, principal and interest paid, amounts lost, kept out by the shield and cut at a creditor, arrears; for its creditors: money received by agents and by the estate) |
+| `CreditRateScaled`        | the rate scale of a region is set between ticks, once per changed key of a call (region, the scale before and after, in basis points) |
+| `FacilityChanged`         | a facility is added, built, repaired, installed, transferred or ruined, once per transition: at construction after the initial `AgentSpawned` events, at P2.1 or P2.7, at P7.1 with a removal or a role change, at P8.3b, or at a call (facility, class, region, `To`, owner, `Kind`, `Cause`, condition before and after, effect, units listed to the estate by a forced removal of a store) |
+| `FacilityLimited`         | once per region and facility class per tick at P8.3b, in ascending `RegionID` then class order; never when executions cut, starts refused, executions voided and store facilities pending are all zero (executions served, cut for capacity, refused whole and voided, and facilities pending) |
+| `StoreLoss`               | once per agent and store class struck at P8.1a, in ascending agent ID then class order, after the whole position is applied (agent, region, store class, stores struck, whether the row's share is common, share in basis points, and the units lost, in commodity order) |
+| `RouteRiskScaled`, `StoreRiskScaled` | a route or store risk scale is set between ticks, once per changed key of a call (the route or the region and class, the scale before and after, in basis points) |
+| `FiscalFlowApplied`       | once per fiscal flow and region per tick in which a due or an exempt trade occurred, in the order of the flows, at P1.7b (taxes and payouts), P3.6c (tolls) or P4.1a (duties) (flow, `Kind`: `tax`, `duty`, `toll` or `payout`, authority, region, class of the payer or recipient, commodity, due and applied, parties, and the amounts short, cut and exempt) |
+| `TreasuryOrdered`         | once per authority per tick at P3.4a in which a standing order was active with a wish of at least 1 (authority, seat region, orders placed, units wanted and placed on each side, units cut for cash, for the hold and for stock) |
+| `MembershipChanged`       | once per region and body per tick at P7.2b, in (`RegionID`, body) order, if any household was admitted, lapsed, skipped, barred, left waiting or held; never otherwise (members, places, eligible households, and the counts of each outcome) |
+| `RightRefused`            | once per region and right per tick at P7.2b, in (`RegionID`, right) order, if any count is non-zero (starts, sell and buy orders and training places refused to a non-member) |
+| `PriceControlled`         | once per region and control per tick at P7.2b, in (`RegionID`, control) order, if any order was lowered to a cap or raised to a floor (commodity, orders lowered and raised, units) |
+| `LegalLevelSet`, `RightSuspensionSet` | the cap and floor of a control, or the suspension of a right, is set between ticks, once per changed key of a call (the control with its cap and floor before and after, or the right and whether it is suspended) |
+| `SavingPlanned`           | once per region and role per tick at P3.6b, in ascending `RegionID` then role order, after `RoomLimited`, if any triggering count is above zero (households saving, buffered, with a project chosen, building, or barred, by bar; goal and buffer money; requests funded and committed) |
+| `TechnologyAdvanced`      | once per region and field per tick at P8.3c, in (`RegionID`, field) order, for each cell in which a counter, a trend, a discovery, a catch-up or a cut occurred; never when the module is off (executions, experience, discoveries, the gain before and after, what each mechanism added, the part cut by the cap, whether at the cap) |
+| `TechnologyAdjusted`      | the gain of a (region, field) cell is adjusted between ticks, once per changed key of a call (region, field, the delta asked, the gain before and after, the part the bounds cut) |
+| `PolicyDecided`           | once per due policy actor per tick at P0.3a, after `TickStarted` and after the slot events of its application, if any count is non-zero; never when the actor returned nothing and held nothing for a reason (actor, jurisdiction, entries returned, and the counts applied, unchanged, not held, duplicate, with no close, clamped, stepped, held in band and held for no reading) |
+| `CoverFormed`             | an insurance cover is formed, in formation order, at P3.3c (cover policy, `Kind`: `route` or `store`, insured, underwriter, their regions, shipment, mode, destination, sum, maximum payout, premium, rate, cover in basis points) |
+| `CoverEnded`              | a cover ends, once: at P1.3a, at P8.1b, or with a removal (2f) (cover policy, `Kind`, insured, underwriter, their regions, `Cause`: `no_loss`, `claimed`, `insured_removed` or `underwriter_removed`, loss value, due, paid, short, the payout claim, dropped, cut, whether capped) |
+| `CoverRound`              | once per region per tick at P3.3c, in ascending `RegionID` after `CreditRound`, in which a request or an offer was submitted; never when all counts are zero (requests and offers admitted and refused, candidates, covers formed, sum and premium, sum unfilled, and the failures by reason) |
+| `CoverSettled`            | once per region and position (P1.3a or P8.1b) in which a cover was settled, in ascending `RegionID` after the `CoverEnded` events of the position; never when all counts are zero (covers ended and claimed, loss value, due, paid, short, dropped, cut, capped and kept out by the shield) |
 
 The parentheses name the main fields; the fields of each event, and the order
 in which the events of one step are emitted, are fixed by the spec that owns
@@ -294,15 +350,15 @@ the transition (`doc/specs/`: production for the recipe events, agents for
 `AgentSpawned`, the removal event and `UpkeepShortfall`, beliefs, clearing,
 ledger, estates, skill barriers and configuration for the rest). Every field
 obeys 4.1: no map, no pointer, fixed-point values. `BoundaryFlow`,
-`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited`, `WantShortfall`, `MoneyFlowLimited`, `PopulationChanged`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `OwnUseChanged`, `MigrationReviewed`, `ContractRound`, `MerchantsPlanned` and `ProductionHalted` are aggregates: each is bounded by
-regions, commodities, reasons, roles, wants, money flows, resources or outside nodes in the configuration, so none is per
-agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. `AgentRelocated` and `MigrationStarted` are per agent too, and `ContractFormed` and `ContractSettled` are per contract, like `ShipmentDispatched`. `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` are per shipment or request, like `OrderPlaced` and `OrderRejected`: their `Lines` are copies in commodity order, bounded by `MaxShipmentLines`. `EdgeStatusChanged`, `MoneyFlowEnded`, `MoneyFlowScaled`, `EndowmentAdjusted`, `OutsideEnded`, `OutsideShocked`, `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` are per edge, flow, side or changed key of a call. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall`, `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled`, `PopulationChanged`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `EndowmentChanged`, `EndowmentAdjusted`, `RumoursServed`, `OutsideTraded`, `OutsideEnded`, `OutsideShocked`, `OwnUseChanged` (subsistence), `MigrationStarted` and `MigrationReviewed` (migration), `ContractFormed`, `ContractSettled` and `ContractRound` (merchants) and the events of any later module appear only when it is on, and `MerchantsPlanned` only when a role has the merchant block; `PopulationScaled` appears only with the population module and `TransitFactorChanged` only with the transport module; `AgentRelocated`, `EdgeStatusChanged`, `YieldShocked` (the yield shock is core data) and `ProductionHalted` depend on no module. The order of the events of a step follows the phases: arrivals of shipments in shipment order in phase 1, after them the `ContractSettled` events of the contracts whose shipment arrived in contract ID order and the migration arrivals (`AgentRelocated` with the cause `migration`) in ascending agent ID, in the order the tick positions of WLD fix (N-009); in phase 2 `OwnUseChanged` after the starts; in phase 3 each agent's shipment events in plan order before its `OrderPlaced` events, then, after the last plan, the `ShipmentDispatched` and `ContractFormed` events of each contract of the round in formation order, then `ContractRound` and `MerchantsPlanned`; in phase 7 `MigrationStarted` in the order of admission and then `MigrationReviewed`, after `EntryLimited` and `PopulationChanged` of the last region, and the `ContractSettled` of a deliverer's removal with the removal events. `RumoursServed` comes in phase 3 after the last plan, after `MerchantsPlanned` when the merchant module is on, and before phase 4, in ascending `RegionID`; the outside's events (`OutsideTraded`, `OutsideEnded`) come after the sweep at the end of phase 4; `EndowmentChanged` comes at the end of phase 8 in (`RegionID`, resource) order. The construction bucket's `BoundaryFlow` comes at the entry of the first step, before `TickStarted`; `ProductionHalted` comes after `OwnUseChanged` in phase 2; in a region's entry step the traineeship events come first (a completion emits the `RecipeAbandoned` of its job, if any, then `TraineeshipCompleted`, then the `RoleChanged` it causes, and each place filled `TraineeshipStarted`); the slot events (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and the others of a call) come at the call, after the whole call has been applied. A removal emits `RecipeAbandoned` for its job, `TraineeshipEnded` if it was in a traineeship, `ContractSettled` for each contract of which it was the deliverer, `AgentBankrupted` and `EstateOpened`, in that order (the removal of a trainer first ends its trainees' traineeships, in ascending agent ID); `AgentBankrupted` is the only event that removes the agent, and the others accompany it.
+`BeliefsUpdated`, `UpkeepShortfall`, `EntryLimited`, `WantShortfall`, `MoneyFlowLimited`, `PopulationChanged`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `OwnUseChanged`, `MigrationReviewed`, `ContractRound`, `MerchantsPlanned`, `ProductionHalted`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound` and `CoverSettled` are aggregates: each is bounded by
+regions, commodities, reasons, roles, wants, money flows, resources, outside nodes, facility classes, fiscal flows, bodies, rights, controls, technology fields or policy actors in the configuration, so none is per
+agent, order or trade. `WeightChanged` and `RoleChanged` are per agent, like `AgentSpawned` and `AgentBankrupted`: each is a state transition of one agent. `AgentRelocated` and `MigrationStarted` are per agent too, `ContractFormed` and `ContractSettled` are per contract, like `ShipmentDispatched`, and `HireFormed` and `HireEnded` are per hire, `LoanFormed`, `LoanEnded` and `LoanPassed` per claim, `CoverFormed` and `CoverEnded` per cover, `TitleTransferred` per title, `StoreChanged` per store, `FacilityChanged` per facility transition, `StoreLoss` per agent and store class struck and `SettlementClassChanged` per region: each is a state transition of one entity. `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` are per shipment or request, like `OrderPlaced` and `OrderRejected`: their `Lines` are copies in commodity order, bounded by `MaxShipmentLines`. `EdgeStatusChanged`, `MoneyFlowEnded`, `MoneyFlowScaled`, `EndowmentAdjusted`, `OutsideEnded`, `OutsideShocked`, `YieldShocked`, `TransitFactorChanged`, `PopulationScaled`, `RentScaled`, `CreditRateScaled`, `RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`, `RightSuspensionSet` and `TechnologyAdjusted` are per edge, flow, side or changed key of a call. An event of a module that is switched off is not emitted: modules are off unless configured (ADR 0001), so `ReliefPaid`, `Traineeship*`, `WantShortfall`, `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled` (the money supply module or the fiscal module), `PopulationChanged`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `EndowmentChanged`, `EndowmentAdjusted`, `RumoursServed`, `OutsideTraded`, `OutsideEnded`, `OutsideShocked`, `OwnUseChanged` (subsistence), `MigrationStarted` and `MigrationReviewed` (migration), `ContractFormed`, `ContractSettled` and `ContractRound` (merchants) and the events of any later module appear only when it is on, `MerchantsPlanned` only when a role has the merchant block, and likewise `HireFormed`, `HireEnded`, `LabourRound`, `LoanFormed`, `CreditRound`, `SavingPlanned`, `CoverFormed` and `CoverRound` only when a role has the block of their module; `PopulationScaled` appears only with the population module and `TransitFactorChanged` only with the transport module; `AgentRelocated`, `EdgeStatusChanged`, `YieldShocked` (the yield shock is core data) and `ProductionHalted` depend on no module. The order of the events of a step follows the phases: after `TickStarted`, at P0.3a, the slot events of each due policy actor's write (cause `policy`) and then its `PolicyDecided`, in ascending actor order; arrivals of shipments in shipment order in phase 1, after them the `ContractSettled` events of the contracts whose shipment arrived in contract ID order and the migration arrivals (`AgentRelocated` with the cause `migration`) in ascending agent ID, in the order the tick positions of WLD fix (N-009), then the positions of the later modules: P1.3a the `CoverEnded` events of the route covers of the shipments that arrived in ascending cover ID and then `CoverSettled` per region, P1.7a `LoanEnded` in ascending claim ID and then `CreditSettled` per region, and P1.7b `FiscalFlowApplied` for taxes and payouts; in phase 2 `HireEnded` at P2.1 and P2.7, `HireFormed` at P2.5a, `OwnUseChanged` after the starts, and `LabourRound` at P2.8b after `ProductionHalted`; in phase 3 each agent's shipment events in plan order before its `OrderPlaced` events, then, after the last plan, the `ShipmentDispatched` and `ContractFormed` events of each contract of the round in formation order, then `ContractRound` and `MerchantsPlanned`, and at P3.3b `LoanFormed` in formation order then `CreditRound`, at P3.3c `CoverFormed` in formation order then `CoverRound` after `CreditRound`, at P3.4a `TreasuryOrdered`, and in the tail P3.6a `RoomLimited`, P3.6b `SavingPlanned` and P3.6c the toll `FiscalFlowApplied` events, after `WantShortfall`; in phase 7 `SettlementClassChanged` or `SettlementHeld` at P7.2a and `MembershipChanged`, `RightRefused` and `PriceControlled` at P7.2b, and `MigrationStarted` in the order of admission and then `MigrationReviewed`, after `EntryLimited` and `PopulationChanged` of the last region, and the `ContractSettled` of a deliverer's removal with the removal events; the duties `FiscalFlowApplied` come at P4.1a, `StoreLoss` at P8.1a, `CoverEnded` of the paid store covers then `CoverSettled` at P8.1b, and in phase 8 `RentPaid` at P8.3a after `EndowmentChanged`, the `FacilityChanged`, store `StoreChanged` and `EndowmentAdjusted` (kind `facility`) events then `FacilityLimited` at P8.3b, and `TechnologyAdvanced` at P8.3c. `RumoursServed` comes in phase 3 after the last plan, after `MerchantsPlanned` when the merchant module is on, and before phase 4, in ascending `RegionID`; the outside's events (`OutsideTraded`, `OutsideEnded`) come after the sweep at the end of phase 4; `EndowmentChanged` comes at the end of phase 8 in (`RegionID`, resource) order. The construction bucket's `BoundaryFlow` comes at the entry of the first step, before `TickStarted`; at construction `SettlementClassChanged` (the founding) and `FacilityChanged` (the initial facilities) come after the initial `AgentSpawned` events; `ProductionHalted` comes after `OwnUseChanged` in phase 2; in a region's entry step the traineeship events come first (a completion emits the `RecipeAbandoned` of its job, if any, then `TraineeshipCompleted`, then the `RoleChanged` it causes, and each place filled `TraineeshipStarted`); the slot events (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and the others of a call) come at the call, after the whole call has been applied, except a policy actor's write, which comes at P0.3a after `TickStarted`. A removal emits `RecipeAbandoned` for its job, `TraineeshipEnded` if it was in a traineeship, `ContractSettled` for each contract of which it was the deliverer, then the events of the removal steps of `spec-agents.md` 3.6 in step order: `TitleTransferred` for each title moved (2b), `HireEnded` for each hire (2c, the worker's side and then the employer's), `LoanEnded` for each claim ended (2d) and `LoanPassed` for each claim passed to the estate (2e), `CoverEnded` for each cover ended (2f) and `FacilityChanged` for each facility ruined (2g), and last `AgentBankrupted` and `EstateOpened`, in that order (the removal of a trainer first ends its trainees' traineeships, in ascending agent ID): every event of a removal precedes `AgentBankrupted`; `AgentBankrupted` is the only event that removes the agent, and the others accompany it.
 
 Because observers are supplied as options to `NewWorld`, they receive
 `WorldCreated` and the initial `AgentSpawned` events. A consumer can rebuild
 the total live agent count from `AgentSpawned` and `AgentBankrupted` alone. The
-household count also needs `WeightChanged` (`To` less `From`) besides the `Weight` those two carry, and a count by role also needs `RoleChanged` (the agent and its weight leave `From` and join `To`). A count of households by region also needs `AgentRelocated` (the weight leaves `From` and joins `To`). Estate pseudo-agents are not
-agents and are not counted in any of them. An observer given to a restore receives no `AgentSpawned` for the restored agents: it starts from `WorldRestored`, whose snapshot holds the agents and the households by role and region at the restored boundary, and adds the events after it. The money of the household sector and of the pool is rebuilt from the same snapshot, its pending totals (`Pending`) and, for a world that has not stepped, the construction bucket (`Construction`).
+household count also needs `WeightChanged` (`To` less `From`) besides the `Weight` those two carry, and a count by role also needs `RoleChanged` (the agent and its weight leave `From` and join `To`). A count of households by region also needs `AgentRelocated` (the weight leaves `From` and joins `To`). Estate pseudo-agents and the treasuries of governed jurisdictions are not
+agents and are not counted in any of them. An observer given to a restore receives no `AgentSpawned` for the restored agents: it starts from `WorldRestored`, whose snapshot holds the agents and the households by role and region at the restored boundary, and adds the events after it. The money of the household sector and of the pool is rebuilt from the same snapshot, its pending totals (`Pending`) and, for a world that has not stepped, the construction bucket (`Construction`). The money of a treasury is in the `Jurisdictions` rows and `MoneyTreasury` of the snapshot, and the treasury's agent ID is classed by the `Jurisdictions` rows of `WorldCreated`; the escrow of the hires is in the contract sector; the sets in flight at a restore (open hires, claims and covers, with the contracts and shipments) are rows of the same snapshot.
 
 4.4. Observers are called synchronously on the stepping goroutine and **MUST
 NOT** call back into the `World` (architecture.md 12.5). The library **MUST
@@ -420,11 +476,74 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.contract.escrow`        | UpDownCounter   | `{minor_unit}`  | none |
 | `economysim.merchant.decisions`     | Counter         | `{lane}`        | `economysim.decision` |
 | `economysim.production.pending`     | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region` |
-| `economysim.market.stock`           | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents` or `estate`) |
-| `economysim.money.supply`           | Gauge           | `{minor_unit}`  | `economysim.region`, `economysim.sector` (`households`, `pool` or `contract`) |
+| `economysim.market.stock`           | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate` or `treasury`) |
+| `economysim.money.supply`           | Gauge           | `{minor_unit}`  | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract` or `treasury`) |
 | `economysim.welfare.ratio`          | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
+| `economysim.storage.limited`        | Counter         | `{case}`        | `economysim.region`, `economysim.role`, `economysim.room_limit` |
+| `economysim.store.count`            | Gauge           | `{store}`       | `economysim.region`, `economysim.store_class` |
+| `economysim.room.fill`              | Gauge           | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` |
+| `economysim.hire.formed`            | Counter         | `{hire}`        | `economysim.role` (the employer's) |
+| `economysim.hire.wage`              | Counter         | `{minor_unit}`  | `economysim.region` |
+| `economysim.labour.unmatched`       | Counter         | `{household}`   | `economysim.role` (the worker's) |
+| `economysim.vacancy.unfilled`       | Counter         | `{position}`    | `economysim.role` (the employer's), `economysim.reason` |
+| `economysim.hire.escrow`            | UpDownCounter   | `{minor_unit}`  | none |
+| `economysim.settlement.class`       | Gauge           | `{class}`       | `economysim.region` |
+| `economysim.settlement.changes`     | Counter         | `{change}`      | `economysim.region` |
+| `economysim.rent.paid`              | Counter         | `{minor_unit}`  | `economysim.resource`, `economysim.region` |
+| `economysim.rent.units`             | Counter         | `{unit}`        | `economysim.resource`, `economysim.region`, `economysim.tier` |
+| `economysim.rent.rate`              | Gauge           | `{minor_unit}`  | `economysim.resource`, `economysim.region` |
+| `economysim.rent.refusals`          | Counter         | `{request}`     | `economysim.resource`, `economysim.region`, `economysim.reason` |
+| `economysim.title.transfers`        | Counter         | `{transfer}`    | `economysim.resource`, `economysim.region`, `economysim.cause` |
+| `economysim.credit.formed`          | Counter         | `{claim}`       | none |
+| `economysim.credit.principal`       | Counter         | `{minor_unit}`  | none |
+| `economysim.credit.interest`        | Counter         | `{minor_unit}`  | none |
+| `economysim.credit.outstanding`     | UpDownCounter   | `{minor_unit}`  | none |
+| `economysim.credit.arrears`         | Gauge           | `{minor_unit}`  | `economysim.region` |
+| `economysim.credit.defaults`        | Counter         | `{claim}`       | none |
+| `economysim.credit.lost`            | Counter         | `{minor_unit}`  | `economysim.cause` |
+| `economysim.credit.refused`         | Counter         | `{request}`     | none |
+| `economysim.credit.limited`         | Counter         | `{case}`        | `economysim.credit_limit` |
+| `economysim.facility.count`         | UpDownCounter   | `{facility}`    | `economysim.facility_class`, `economysim.region` |
+| `economysim.facility.limited`       | Counter         | `{execution}`   | `economysim.facility_class`, `economysim.region`, `economysim.facility_limit` |
+| `economysim.facility.refused`       | Counter         | `{start}`       | `economysim.facility_class`, `economysim.region` |
+| `economysim.facility.pending`       | Gauge           | `{facility}`    | `economysim.facility_class`, `economysim.region` |
+| `economysim.facility.condition`     | Gauge           | `{basis_point}` | `economysim.facility_class`, `economysim.region` |
+| `economysim.risk.strikes`           | Counter         | `{strike}`      | `economysim.risk_kind` |
+| `economysim.transport.cargo.lost`   | Counter         | `{unit}`        | `economysim.commodity` |
+| `economysim.store.lost`             | Counter         | `{unit}`        | `economysim.commodity`, `economysim.store_class` |
+| `economysim.fiscal.collected`       | Counter         | `{minor_unit}`  | `economysim.reason` (the fiscal flow ID) |
+| `economysim.fiscal.paid`            | Counter         | `{minor_unit}`  | `economysim.reason` |
+| `economysim.fiscal.in_kind`         | Counter         | `{unit}`        | `economysim.reason`, `economysim.commodity` |
+| `economysim.fiscal.unapplied`       | Counter         | `{minor_unit}`  | `economysim.reason` |
+| `economysim.fiscal.order.cut`       | Counter         | `{unit}`        | `economysim.clamp` |
+| `economysim.body.members`           | Gauge           | `{household}`   | `economysim.body`, `economysim.region` |
+| `economysim.body.waiting`           | Gauge           | `{household}`   | `economysim.body`, `economysim.region` |
+| `economysim.right.refusals`         | Counter         | `{refusal}`     | `economysim.right`, `economysim.activity` |
+| `economysim.control.clamped`        | Counter         | `{clamp}`       | `economysim.control`, `economysim.side` |
+| `economysim.saving.goal`            | Gauge           | `{minor_unit}`  | `economysim.role`, `economysim.region` |
+| `economysim.saving.buffer`          | Gauge           | `{minor_unit}`  | `economysim.role`, `economysim.region` |
+| `economysim.saving.idle`            | Gauge           | `{minor_unit}`  | `economysim.role`, `economysim.region` |
+| `economysim.saving.requests`        | Counter         | `{request}`     | `economysim.role`, `economysim.project` |
+| `economysim.saving.barred`          | Counter         | `{household}`   | `economysim.role`, `economysim.bar` |
+| `economysim.technology.gain`        | Gauge           | `{basis_point}` | `economysim.field`, `economysim.region` |
+| `economysim.technology.experience`  | Counter         | `{execution}`   | `economysim.field`, `economysim.region` |
+| `economysim.technology.discoveries` | Counter         | `{discovery}`   | `economysim.field` |
+| `economysim.technology.clamped`     | Counter         | `{basis_point}` | `economysim.field` |
+| `economysim.policy.decisions`       | Counter         | `{decision}`    | `economysim.actor` |
+| `economysim.policy.entries`         | Counter         | `{entry}`       | `economysim.actor`, `economysim.entry_outcome` |
+| `economysim.policy.cut`             | Counter         | `{entry}`       | `economysim.actor`, `economysim.policy_cut` |
+| `economysim.policy.held`            | Counter         | `{reaction}`    | `economysim.actor`, `economysim.policy_hold` |
+| `economysim.insurance.policies`     | Counter         | `{policy}`      | `economysim.cover_kind` |
+| `economysim.insurance.premium`      | Counter         | `{minor_unit}`  | none |
+| `economysim.insurance.payout`       | Counter         | `{minor_unit}`  | none |
+| `economysim.insurance.shortfall`    | Counter         | `{minor_unit}`  | none |
+| `economysim.insurance.unpaid`       | Counter         | `{minor_unit}`  | `economysim.cover_loss` |
+| `economysim.insurance.liability`    | UpDownCounter   | `{minor_unit}`  | none |
+| `economysim.insurance.claims`       | UpDownCounter   | `{minor_unit}`  | none |
+| `economysim.insurance.refused`      | Counter         | `{request}`     | none |
+| `economysim.insurance.limited`      | Counter         | `{case}`        | `economysim.cover_limit` |
 
-The last four are fed by a snapshot, not by events (5.3.1).
+The instruments fed by a snapshot, not by events, are the rows of the second table of 5.3.1; the sector `contract` of `economysim.money.supply` also holds the escrow of the hires.
 
 ### 5.3.1 Which event feeds which metric
 
@@ -473,16 +592,79 @@ The last four are fed by a snapshot, not by events (5.3.1).
 | `economysim.contract.value` | `ContractFormed` (money escrowed) |
 | `economysim.contract.escrow` | `ContractFormed` (+ money escrowed), `ContractSettled` (- money paid and refunded) |
 | `economysim.merchant.decisions` | `MerchantsPlanned` (the case counts, by decision) |
+| `economysim.storage.limited` | `RoomLimited` (each of the five counts, by `room_limit`: `start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`) |
+| `economysim.hire.formed` | `HireFormed` (by the employer's role) |
+| `economysim.hire.wage` | `LabourRound` (money paid) |
+| `economysim.labour.unmatched` | `LabourRound` (households offered and not hired, by the worker's role) |
+| `economysim.vacancy.unfilled` | `LabourRound` (positions unfilled and the formation refusals, by the employer's role and the reason) |
+| `economysim.hire.escrow` | `HireFormed` (+ money escrowed), `LabourRound` (- money paid, - money refunded), `HireEnded` (- remainder refunded); the sector `contract` of `economysim.money.supply` includes it |
+| `economysim.settlement.class` | `SettlementClassChanged` (`To`); the adapter keeps the last value, which the events of construction set |
+| `economysim.settlement.changes` | `SettlementClassChanged`, except the cause `founded` |
+| `economysim.rent.paid` | `RentPaid` (money paid) |
+| `economysim.rent.units` | `RentPaid` (units by tier: `own`, `commons`, `let`) |
+| `economysim.rent.rate` | `RentPaid` (the posted rent after the step) and `RentScaled` (the scale after); the adapter holds the last values |
+| `economysim.rent.refusals` | `RentPaid` (requests refused, by reason `no_title` and `rent_funds`) |
+| `economysim.title.transfers` | `TitleTransferred` (by `Cause`: `removal`, `consumer`) |
+| `economysim.credit.formed` | `LoanFormed` |
+| `economysim.credit.principal` | `LoanFormed` (principal) |
+| `economysim.credit.interest` | `CreditSettled` (interest paid) and `LoanEnded` (interest paid) |
+| `economysim.credit.outstanding` | `LoanFormed` (+ principal), `CreditSettled` (- principal paid), `LoanEnded` (- principal paid and lost); seeded at a restore from the claims of the snapshot |
+| `economysim.credit.defaults` | `CreditSettled` (claims newly overdue) |
+| `economysim.credit.lost` | `LoanEnded` (principal and interest lost, by `Cause`) |
+| `economysim.credit.refused` | `CreditRound` (requests and offers refused) |
+| `economysim.credit.limited` | `CreditRound` (arrears, exposure, too many claims, overflow, by `credit_limit`; the first two are also in `refused`, so the two instruments are not added) |
+| `economysim.facility.count` | `FacilityChanged` (+1 for `added` and `built`, -1 for `ruined`) |
+| `economysim.facility.limited` | `FacilityLimited` (executions cut and voided, by `facility_limit`: `cut`, `voided`) |
+| `economysim.facility.refused` | `FacilityLimited` (starts refused) |
+| `economysim.risk.strikes` | `ShipmentDispatched` (1 for each with a loss above 0, by `route`), `StoreLoss` (stores struck, by `store`) |
+| `economysim.transport.cargo.lost` | `ShipmentArrived` (each line's units lost and each amount lost to an account) |
+| `economysim.store.lost` | `StoreLoss` (units lost) |
+| `economysim.fiscal.collected` | `FiscalFlowApplied` (applied money of the kinds `tax`, `duty` and `toll`, by flow) |
+| `economysim.fiscal.paid` | `FiscalFlowApplied` (applied money of the kind `payout`) |
+| `economysim.fiscal.in_kind` | `FiscalFlowApplied` (applied units of an in-kind `payout`, by flow and commodity) |
+| `economysim.fiscal.unapplied` | `FiscalFlowApplied` (due less applied of the flows that move money) |
+| `economysim.fiscal.order.cut` | `TreasuryOrdered` (units cut for cash, for the hold and for stock, by `clamp`) |
+| `economysim.right.refusals` | `RightRefused` (starts, sell and buy orders and training places, by activity) |
+| `economysim.control.clamped` | `PriceControlled` (orders lowered as `bid`, raised as `ask`) |
+| `economysim.saving.requests` | `SavingPlanned` (builds as `build`, repairs as `repair`) |
+| `economysim.saving.barred` | `SavingPlanned` (households barred, by `bar`: `no_return`, `standing`, `unreachable`, `survival`) |
+| `economysim.technology.gain` | `TechnologyAdvanced` and `TechnologyAdjusted` (the gain after); the adapter holds the last value and takes the level from the technology rows of `WorldRestored`'s snapshot |
+| `economysim.technology.experience` | `TechnologyAdvanced` (executions) |
+| `economysim.technology.discoveries` | `TechnologyAdvanced` (discoveries) |
+| `economysim.technology.clamped` | `TechnologyAdvanced` (the part cut by the cap) |
+| `economysim.policy.decisions` | `PolicyDecided` (one per event) |
+| `economysim.policy.entries` | `PolicyDecided` (applied, unchanged, not held, duplicate, with no close, by `entry_outcome`) |
+| `economysim.policy.cut` | `PolicyDecided` (clamped, stepped, by `policy_cut`) |
+| `economysim.policy.held` | `PolicyDecided` (held in band, held for no reading, by `policy_hold`) |
+| `economysim.insurance.policies` | `CoverFormed` (by kind) |
+| `economysim.insurance.premium` | `CoverFormed` (premium) |
+| `economysim.insurance.payout` | `CoverSettled` (paid) |
+| `economysim.insurance.shortfall` | `CoverSettled` (short) |
+| `economysim.insurance.unpaid` | `CoverSettled` (dropped and cut, by `cover_loss`) |
+| `economysim.insurance.liability` | `CoverFormed` (+ maximum payout, route covers only), `CoverEnded` (- maximum payout of a route cover); seeded at a restore from the covers of the snapshot |
+| `economysim.insurance.claims` | `CoverEnded` (+ `Short`, the payout claim the underwriter owes), `LoanEnded` of origin `payout` (- the claim ended, paid or written off); seeded at a restore from the claims of origin `payout` in the snapshot |
+| `economysim.insurance.refused` | `CoverRound` (requests and offers refused) |
+| `economysim.insurance.limited` | `CoverRound` (arrears, exposure, no risk, no offer, below minimum, funds, too many, overflow, by `cover_limit`) |
 
-The four instruments fed by a snapshot are recorded by the adapter once per
+The instruments fed by a snapshot are recorded by the adapter once per
 snapshot the consumer passes to it, between two steps, from these fields:
 
 | Metric                               | Fed by                                  |
 |--------------------------------------|-----------------------------------------|
 | `economysim.production.pending`      | `Markets[].Pending`: the output of jobs in progress, which no account holds |
-| `economysim.market.stock`            | `Markets[].HeldByAgents` and `HeldByEstate`, by holder |
-| `economysim.money.supply`            | `Regions[].MoneyHouseholds`, `MoneyPool` and `MoneyContract`, by sector |
+| `economysim.market.stock`            | `Markets[].HeldByAgents`, `HeldByEstate` and `HeldByTreasury`, by holder |
+| `economysim.money.supply`            | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` and `MoneyTreasury`, by sector |
 | `economysim.welfare.ratio`           | `Roles[].MeanRatioBP`, where the role has a mean ratio |
+| `economysim.store.count`             | `Stores[]` rows of the snapshot, by region and store class |
+| `economysim.room.fill`               | `Roles[]` room and load, `load * 10 000 / room`, absent where the room is 0 |
+| `economysim.credit.arrears`          | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region |
+| `economysim.facility.pending`        | the facility rows, `Pending` (store facilities not installed) |
+| `economysim.facility.condition`      | the facility rows, `Condition * 10 000 / Durability` summed over the row |
+| `economysim.body.members`            | `Bodies[].Members`, by body and region |
+| `economysim.body.waiting`            | `Bodies[]` (`Eligible - Members`), by body and region |
+| `economysim.saving.goal`             | `Roles[].GoalMoney` |
+| `economysim.saving.buffer`           | `Roles[].BufferMoney` |
+| `economysim.saving.idle`             | `Roles[].IdleMoney` |
 
 An instrument fed by a snapshot is absent, not zero, until a snapshot is passed,
 and holds its last value between two snapshots.
@@ -492,7 +674,7 @@ fed, so the adapter keeps the last unfed count of each region and role, adds the
 change to `economysim.household.unfed` when the event comes, and at `TickEnded`
 sets to zero every cell that had no event in the step. At a `TickEnded` with
 `Failed` true it makes no correction. `economysim.household.count` and `economysim.household.unfed`
-count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.relocations`, `economysim.household.births`, `economysim.household.deaths`, `economysim.household.own_use` and the migration instruments count households (the sum of weights), never agents.
+count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.relocations`, `economysim.household.births`, `economysim.household.deaths`, `economysim.household.own_use` and the migration instruments count households (the sum of weights), never agents. `economysim.hire.escrow` and the other money instruments count minor units. The credit instruments (`economysim.credit.*`) and the `Warn` lines of the credit module count only the claims whose `Origin` is `loan`: a claim of origin `payout` is an insurance claim, counted by the insurance instruments.
 
 A new metric **MUST** be derivable from the existing events or from a field of
 the snapshot, and the tables above say which, or come with the event or field it
@@ -505,7 +687,7 @@ the time spent in every observer during the step.
 
 5.4.1. Metric attributes **MUST** have a number of values bounded by the
 configuration: `economysim.commodity`, `economysim.role`, `economysim.recipe`,
-`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, and of the relocation causes `transport`, `migration` and `consumer`), `economysim.entry_limit` (the eight constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `cooldown`, `hysteresis`, `exit_cap`, `refused`), `economysim.holder` (`agents`, `estate`), `economysim.sector` (`households`, `pool`, `contract`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). Metric attributes **MUST NOT** include agent IDs, order IDs,
+`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the fiscal flow IDs, which share one namespace, and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, the refusal reasons of a vacancy and of a rent request, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, of the relocation causes `transport`, `migration` and `consumer`, and, per instrument, the closed set of the event that feeds it: `removal` and `consumer` for `economysim.title.transfers`, `repaid`, `written_off`, `debtor_removed` and `forgiven` for `economysim.credit.lost`), `economysim.entry_limit` (the nine constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`), `economysim.holder` (`agents`, `estate`, `treasury`), `economysim.sector` (`households`, `pool`, `contract`, `treasury`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). The attributes of the later modules are bounded in the same way: `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field` and `economysim.actor` by the entities of the configuration, and `economysim.dimension` (`mass`, `bulk`), `economysim.room_limit` (`start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`), `economysim.tier` (`own`, `commons`, `let`), `economysim.credit_limit` (`in_arrears`, `exposure`, `too_many_claims`, `overflow`), `economysim.facility_limit` (`cut`, `voided`), `economysim.risk_kind` (`route`, `store`), `economysim.clamp` (`cash`, `hold`, `stock`), `economysim.activity` (`produce`, `sell`, `buy`, `train`), `economysim.project` (`build`, `repair`), `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`, `duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`), `economysim.policy_hold` (`in_band`, `no_reading`), `economysim.cover_kind` (`route`, `store`), `economysim.cover_loss` (`dropped`, `cut`) and `economysim.cover_limit` (`in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`) by their closed sets. Metric attributes **MUST NOT** include agent IDs, order IDs,
 ticks, prices, quantities or any other unbounded or per-entity value. Put those
 in logs, traces or events.
 
@@ -675,4 +857,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 426f329e791963bcc44687e4
+RULE-TAG: 04876a7b0d8e097b549a7b06

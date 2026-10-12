@@ -39,7 +39,7 @@ which the tick reads it and how it is cleared. It covers:
 - **external agents**: adding one, directing it, removing it, moving it, what it
   is told, and what the library does and never does with it (section 4);
 - **the slots**: one table of every world slot a consumer may set, with the rules
-  they share (section 5);
+  they share, and the calls that are not slots (section 5, 5.4);
 - **queries**: what a consumer may read without a snapshot, its cost class and
   that none of it draws or changes state (section 6);
 - **errors and guards**: the sentinels, the order of checks, a failed world
@@ -56,7 +56,7 @@ Out of scope, with the owner:
 | The event each call emits, its fields and its order | `spec-observability.md` (OBS) and the rules' table 4.3; this spec names what it needs (section 12) |
 | The checkpoint, its encoding, restore and its errors | `spec-checkpoint.md` (CHK); this spec lists what it contributes (section 13) |
 | Measures over many agents, indices, inequality | `spec-indicators.md` (IND) |
-| A policy actor, taxes, tolls, a ruler's treasury | PLC, FIS: later (ADR 0003 decision 2) |
+| A policy actor, taxes, tolls, a ruler's treasury | `spec-policy.md` (PLC), `spec-fiscal.md` (FIS), `spec-polity.md` (POL); INT lists the one call of PLC, `DirectPolicy` (5.4), and no slot of its own for any of them |
 | Scripting, a rule language, a timer for a shock | not provided (ADR 0001 alternatives; 3.6) |
 | Storage and transport of a consumer's own data (a save file, a socket) | the consumer; the library never persists (ADR 0002) |
 
@@ -74,7 +74,7 @@ Out of scope, with the owner:
 | 8 | The library never removes, reduces, replaces, switches or moves an external agent unless it is mortal, and the default modules never move one. Only the consumer removes one, by `RemoveAgent` | 4.4, 4.6 |
 | 9 | A forced move is `Relocate`: the guarded relocation of `spec-regions.md` 6, which first cancels a migration journey **atomically** with the move. There is no separate public cancel | 4.5 |
 | 10 | What a player is told is `AgentState`: its state at the tick boundary, the market reports of its region and the rumours of its last view. It is not the `AgentView` of a strategy, which is built inside a step | 4.7 |
-| 11 | The slots are nine setters and one adjustment, listed in one table with the position at which the tick reads each. A shock has no timer: the consumer sets it and clears it | 5, 3.6 |
+| 11 | The slots are fifteen setters and two adjustments, listed in one table with the position at which the tick reads each. A shock has no timer: the consumer sets it and clears it. The calls that hold no value over a default are not slots and are listed apart (5.4, 4.9, 4.10) | 5, 3.6 |
 | 12 | A query takes no draw, changes no state, emits no event and returns a deep copy of plain data. Its cost is stated by class | 6 |
 
 ## 3. The rules common to every call
@@ -109,7 +109,7 @@ the call's name and, for a slice, the index of the entry:
 |---|-------|-------|
 | 1 | a step is running | `ErrInStep` |
 | 2 | the world is failed | `ErrWorldFailed` |
-| 3 | the module the call needs is off (section 5 says which calls need which) | `ErrModuleOff` |
+| 3 | the module the call needs is off (sections 4, 5 say which calls need which; for `Direct` the module of each optional field the directive sets, 4.3.2 row 1) | `ErrModuleOff` |
 | 4 | each argument, in the order given: an ID is known, an enumeration is valid, a number is within its bound, a key is not repeated | the sentinel of the row of the owner (sections 4, 5) |
 | 5 | the agent, where the call names one: it exists, it is live, and it is of the kind the call needs (**for `Direct` only, this check comes before check 4**: the agent is found before its directive is read; `Relocate` keeps the order of `spec-regions.md` 6.1.3: region, then agent, then the account's kind) | `ErrUnknownAgent`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected` |
 | 6 | what the owner of the mechanism refuses (the refusals of a relocation, `ErrRegionBound`) | the owner's sentinel |
@@ -150,6 +150,10 @@ before that step's `TickStarted` (`spec-world.md` 6.11). Within a call the event
 are in the canonical order of the key (ascending, as each owner states), not in
 the order of the slice, so that the order of a consumer's slice cannot change an
 observer's record. The cause of an event that carries one is `consumer`.
+Both sentences are true of a **consumer's call**. A policy actor's write to a slot
+(`spec-policy.md` 7.1.1) is not a call: it is made inside the step, at P0.3a, after
+`TickStarted`, with the cause `policy`, and its slot events and `PolicyDecided`
+come there (`spec-world.md` 6.11); the public calls stay between ticks only.
 
 3.3.4. **A call is not a transaction across calls.** Two calls are two
 independent atomic changes. A consumer that needs a disaster that sets a yield
@@ -161,10 +165,15 @@ applies several slots atomically was considered and is not provided in version 1
 ### 3.4 Identifiers
 
 3.4.1. A call takes the typed IDs the library already exports (`RegionID`,
-`CommodityID`, `RoleID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`;
+`CommodityID`, `RoleID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`, and for
+the later modules `StoreClassID`, `FacilityClassID`, `FacilityID`, `BodyID`,
+`RightID`, `ControlID`, `TechFieldID`, `JurisdictionID`, `ActorID`, `LeverID`;
 architecture.md 3.3). A **flow** is the exception: it is named by its string ID,
 which is also its ledger reason (`spec-money-supply.md` 4.5), because it has no
-typed ID.
+typed ID; a fiscal flow is named the same way, the two kinds sharing one ID
+namespace (observability-and-logging.md 4.1). A typed ID has a constant of -1 that names nothing
+(`NoRegion`, `NoAgent`, `NoBody` and the like): it is outside `[0, n)` and no call
+accepts it.
 
 3.4.2. **A typed ID is not stable across configurations** (`spec-regions.md` 3.3.1;
 `spec-world.md` 5.3.2). It is the position of the entity in the corresponding slice
@@ -176,11 +185,16 @@ once after `NewWorld` from `Config()` (and a region by `Graph.Lookup`,
 second surface over data the consumer already holds (open question 1). An
 `AgentID` has no string form; it is never reused and it is returned by `AddAgent`.
 
-3.4.3. A pseudo-agent (an estate, a counterparty of the outside) has an `AgentID`
-and is **not an agent**: `Agent`, `Direct` and `RemoveAgent` return `ErrUnknownAgent`
-for it (`spec-world.md` 5.3.1). `Relocate` and the query `RelocationRefusal` are REG's and
-agree for every input (FR-REG-059): they return `ErrNotRelocatable` for an estate's ID
-(`spec-regions.md` 6.1.3 row 4, after the region and agent checks).
+3.4.3. A pseudo-agent (an estate, a counterparty of the outside, the treasury of a
+governed jurisdiction) has an `AgentID` and is **not an agent**: `Agent`, `Direct` and
+`RemoveAgent` return `ErrUnknownAgent` for it (`spec-world.md` 5.3.1;
+`spec-polity.md` 5.3.3). `Relocate` and the query `RelocationRefusal` are REG's and
+agree for every input (FR-REG-059): they return `ErrNotRelocatable` for an estate's or
+a treasury's ID (`spec-regions.md` 6.1.3 row 4, after the region and agent checks).
+One exception is the query `Titles` and the call `TransferTitles` (5.4), which accept
+the estate pseudo-agent of the endowment's region as a holder of a title
+(`spec-land.md` 9.2, 9.3); every other pseudo-agent, and the estate of another
+region, is `ErrNotAHolder` there.
 
 ### 3.5 What a call does to the run
 
@@ -207,7 +221,7 @@ Each is a decision, with the reason, so that a consumer does not look for it.
 
 | Not provided | Why | Instead |
 |--------------|-----|---------|
-| An **act-now** operation (buy now, settle now) | it breaks the rule that the order of clearing cannot change a result (FR-CLR-023), would execute a trade between steps and would make a checkpoint depend on when the consumer called (`spec-agents.md` 10.5) | a directive: the order is placed in the next step and filled in its clearing |
+| An **act-now** operation (buy now, settle now) | it breaks the rule that the order of clearing cannot change a result (FR-CLR-023), would execute a trade between steps and would make a checkpoint depend on when the consumer called (`spec-agents.md` 10.5) | a directive: the order is placed in the next step and filled in its clearing. `TransferTitles` (5.4) with a `Price` moves money between two agents at the call, and it is not an act-now trade of the book: it takes no order, clears nothing and cannot change the order of a clearing, so the reasons of this row do not apply to it (`spec-land.md` 6.3) |
 | A **timer** on a shock (a duration, an expiry) | a timer is state, saved and read by a position, and a rule in the tick; the roadmap holds the engine to measuring and not setting (ADR 0001 decision 7) | the consumer sets the slot and clears it at the tick it chooses; `Calendar().At(t)` gives the season to time it by (N-031) |
 | A **bundle** of slots applied as one | a second surface, and a first consumer has not asked (3.3.4) | two calls |
 | **Goods injected** into a region or an estate | a goods faucet needs a ledger reason and a named flow (N-021, N-107); the money flows are the supported faucets | an external agent added with `Stock`, which is a named, counted `initial` |
@@ -257,7 +271,9 @@ and is not an outside node (`ErrOutsideNode`: it has no market and no agents,
 `[0, MaxMoney]` and each `Quantity` in `[1, MaxQuantity]` (`ErrOutOfBounds`); a
 commodity is known (`ErrUnknownCommodity`) and appears once (`ErrDuplicateID`); and
 the creation does not take a balance or a total above its bound (`ErrOverflow` of `spec-agents.md` 13, to which the call maps the ledger's
-`ErrBalanceOverflow` of `spec-ledger.md` 4.2; the mapping joins N-075). The amount of `Money` is **stated** by the
+`ErrBalanceOverflow` of `spec-ledger.md` 4.2; the mapping joins N-075); and, with
+the storage module on, the goods it would create fit the agent's room (`ErrNoRoom`
+of `spec-storage.md` 3.6.2, FR-STO-019: nothing is created). The amount of `Money` is **stated** by the
 consumer: `Role.StartMoney` is the default of an agent the configuration or the
 spawner creates and is not applied here (`spec-agents.md` 3.5.4), so a player may
 start with nothing. A consumer that wants the role's figure reads it from
@@ -352,13 +368,15 @@ at P3.2 of the same tick. A directive given before that step is read at its P1.9
 func (w *World) Direct(a AgentID, d Directive) error
 ```
 
-`Directive` is the type of `spec-agents.md` 10.3: a job request, intents,
-discards, a hold list and `Sticky`. This spec adds validation and nothing to the
-type.
+`Directive` is the type of `spec-agents.md` 10.3: a job request (which may carry the
+`Offer` and `Hire` of the employment module), intents, discards, a hold list, the
+optional `Borrow` and `Lend` of the credit module (`spec-credit.md` 10.5) and
+`Sticky`. This spec adds validation and nothing to the type.
 
 4.3.1. **Semantics.** The mailbox holds one directive. A second call before the
 step **replaces** the first: it does not merge. A directive with nothing in it
-(no job request, no intents, no discards, no hold) empties the mailbox. The
+(no job request, no intents, no discards, no hold, no `Borrow` and no `Lend`)
+empties the mailbox. The
 directive is read at P1.9 of the next step and applies to that step
 (`spec-agents.md` 10.4 rule 1, FR-AGT-055); the world drops it afterwards unless
 `Sticky`, in which case it stays until another call replaces or empties it. A
@@ -374,13 +392,15 @@ external (`ErrNotExternal`) and found directed (`ErrNotDirected`):
 
 | # | Check | Error |
 |---|-------|-------|
-| 1 | a job request names a known recipe (unless it asks for no job) and `Executions` is 0 or at most the agent's weight | `ErrUnknownRecipe`, `ErrOutOfBounds` |
-| 2 | the recipe is on the role's list or its effective own-use list | `ErrNotOnRole` |
-| 3 | each intent names a known commodity, has a valid `Side` and `Purpose`, `Quantity` in `[1, MaxQuantity]`, `Limit` in `[1, MaxPrice]`, and `Target`, `Reserve` and `UnitCost` in their bounds; a commodity appears in at most one intent | `ErrUnknownCommodity`, `ErrOutOfBounds`, `ErrDuplicateID` |
-| 4 | each intent's commodity is in the role's tradable set (`spec-agents.md` 3.4) | `ErrNotTradable` |
-| 5 | each discard names a known commodity, once, with `Quantity` in `[1, MaxQuantity]`; each hold names a known commodity, once | as 3 |
+| 1 | the module of each optional field the directive sets is on: `Offer` or `Hire` of the job request (employment), `Borrow` or `Lend` (credit); this is check 3 of 3.2, made for the fields that are set | `ErrModuleOff` |
+| 2 | a job request names a known recipe (unless it asks for no job) and `Executions` is 0 or at most the agent's weight; its `Offer` and `Hire` are **not** checked here: the labour round admits them (`spec-employment.md` 5.2) and refuses them as an event | `ErrUnknownRecipe`, `ErrOutOfBounds` |
+| 3 | the recipe is on the role's list or its effective own-use list | `ErrNotOnRole` |
+| 4 | each intent names a known commodity, has a valid `Side` and `Purpose`, `Quantity` in `[1, MaxQuantity]`, `Limit` in `[1, MaxPrice]`, and `Target`, `Reserve` and `UnitCost` in their bounds; a commodity appears in at most one intent | `ErrUnknownCommodity`, `ErrOutOfBounds`, `ErrDuplicateID` |
+| 5 | each intent's commodity is in the role's tradable set (`spec-agents.md` 3.4) | `ErrNotTradable` |
+| 6 | each discard names a known commodity, once, with `Quantity` in `[1, MaxQuantity]`; each hold names a known commodity, once | as 4 |
+| 7 | a `Borrow` or `Lend` is within its bounds (`spec-credit.md` 10.5) and the role has a credit block of the kind it asks (a role with none has nothing to ask a credit of) | `ErrOutOfBounds`, `ErrNotOnRole` |
 
-The two checks that read the role (2 and 4) are the only state-like ones, and they
+The three checks that read the role (3, 5 and 7) are the only state-like ones, and they
 are made here because a player's only feedback on a request that can never be
 honoured is the error of the call; the world checks the same at admission as it
 does for every strategy (`spec-agents.md` 6.5), so a change of role after the call
@@ -417,7 +437,14 @@ order: its job is abandoned (`agent_removed`); a traineeship ends if it was in o
 a contract of which it is the deliverer returns to the payer and the contract
 ends (`spec-merchants.md` 9.8.2); a contract of which it is the payer is settled
 by the estate standing in for it (`spec-merchants.md` 9.7); a shipment it owns or
-receives is diverted or dropped as `spec-transport.md` 5.8 and 5.9 say; its money
+receives is diverted or dropped as `spec-transport.md` 5.8 and 5.9 say; with the later
+modules on, in the step order of `spec-agents.md` 3.6: its titles go to the pool of
+each endowment's region (2b, `spec-land.md` 6.4), its hires end (2c: the worker's
+side and then the employer's, the remainder of the escrow returning to the
+employer's account first, `spec-employment.md` 6.5.2), its claims are paid by the
+waterfall and the rest passes to the estate (2d and 2e, `spec-credit.md` 9), its
+open covers end (2f, `spec-insurance.md` 8.6) and its facilities are passed to the
+estate or ruined (2g, `spec-infrastructure.md` 7.1); its money
 and goods go to the estate of its region (`estate_money`, `estate_goods`) and the
 estate lists the goods; its account is closed; its ID is never reused. The call
 never refuses for an obligation, because every obligation has a defined end on
@@ -425,9 +452,13 @@ removal. It draws nothing.
 
 4.4.3. **Events**, at the call, with the `Tick` the next step will run, in the
 order of `spec-world.md` 6.11 item 8: `RecipeAbandoned` if it had a job,
-`TraineeshipEnded` if it was in a traineeship, the `ContractSettled` of each contract it was the deliverer of, `AgentBankrupted` with
-`Cause` `consumer`, then `EstateOpened`. `AgentBankrupted` is the event that
-removes the agent. A pending directive and the rumours kept for it (4.7.3) go with
+`TraineeshipEnded` if it was in a traineeship, the `ContractSettled` of each contract it was the deliverer of, then the events of the
+steps of `spec-agents.md` 3.6 in step order (`TitleTransferred` for each title moved,
+`HireEnded` for each hire, `LoanEnded` for each claim ended and `LoanPassed` for each
+claim passed to the estate, `CoverEnded` for each cover ended, `FacilityChanged` for
+each facility passed or ruined), then `AgentBankrupted` with `Cause` `consumer` and
+`EstateOpened`: every event of a removal precedes `AgentBankrupted`, which is the
+event that removes the agent. A pending directive and the rumours kept for it (4.7.3) go with
 the agent.
 
 4.4.4. **After it.** The ID names a removed agent: `Agent`, `Direct`,
@@ -459,8 +490,11 @@ whole and lockstep (`spec-regions.md` 6.1.4).
    `spec-regions.md` 6.1.6, in REG's order of 6.1.3: the first refusal other than
    `on_journey` is returned (`ErrUnknownRegion`, `ErrUnknownAgent` (`ErrAgentRemoved` for a
    removed ID), `ErrNotRelocatable` for an estate's ID, `ErrSameRegion`, `ErrOutsideNode`, `ErrOpenReservation`, or `ErrRegionBound`, which names the obligation:
-   `open_shipment`, `open_contract`, `in_traineeship`). If one is returned nothing
-   has changed. From here on the call cannot fail;
+   `open_shipment`, `open_contract`, `in_traineeship`, `open_hire` (the agent is the
+   principal of an open hire, `spec-employment.md` 6.5.1) or `has_store` (it owns a
+   store, `spec-storage.md` 9: the consumer calls `RemoveStore` for each, then
+   `Relocate`). The list is that of the modules that are on, as REG keeps it
+   (FR-REG-060). If one is returned nothing has changed. From here on the call cannot fail;
 2. if the agent is on a migration journey the journey is dropped by the module's
    own cancel (`spec-migration.md` 8.4.1): the record goes, the ledger is not
    touched (the account never left the origin), and the households are counted in
@@ -509,6 +543,9 @@ removes from play itself, or a shipment of a self-carried mode that
 | The failure ladder | its signals are visible; rung 1 and rung 3 do not act unless mortal | SPN 5, 9.2 |
 | Traineeships | a mortal external agent may be a trainee through a consumer's spawner's `Apply`; any other `Apply` is refused like any decision on it | SKL 4.1.1, SPN 9.2 |
 | Delivery contracts, shipments, journeys of the consumer's own | it may be a payer, a deliverer, a shipper or a consignee through its strategy; the refusals of a relocation apply | TRN, MER |
+| Employment, credit | a role with the block hires, is hired, lends or borrows like any agent, by the default rules or by the `Offer`, `Hire`, `Borrow` and `Lend` of its directive; its hires and claims end at its removal (2c to 2e) | EMP 5.2, 6.5; CRD 4.4.2, 10.5 |
+| Tenure, storage, facilities | it may hold a title as one holder whatever its weight, own stores and facilities; a relocation is refused while it has an open hire or a store (4.5.2); its titles go to the pool at its removal (2b) | LND 6.3, 6.4; STO 3.6.2, 9; CAP 7.1 |
+| Institutions, settlements, saving, insurance | it is counted in its region's households and is eligible for a body and for a place like any household (no call admits or expels a member); a role with a saving or cover block follows the fallback's rules, and `Saving(a)` reports them | ORG 7.4.2; SET 4.1.1; SAV 7.1, 7.3; INS 10.5 |
 
 4.6.1. **A mortal external agent** is one the consumer lets the library's rules
 act on. It is not a promise that the default spawner will: the default spawner
@@ -549,11 +586,18 @@ deep-copied plain value, no pointer, no function, no map.
 | Away, journey | whether it is away on a trip (its shipment), and its journey (destination, arrival tick) | TRN 5.5, MIG 14 |
 | Own use | with the subsistence module on: `OwnUse`, `OwnUseJobs`, `Cover`, `Secure` | SUB 14.4 |
 | Wants | with the demand module on: the carry of each want of the agent's ladder (`spec-demand.md` 4.4, 12) | DEM 4.4, 12 |
+| Employment | with the employment module on: `Employer` and `HasEmployer` (the hire of the agent as a worker), `Hired` (the hired executions open, as an employer) | EMP 6 |
+| Credit | with the credit module on and a role with a block: `Debt`, `Owed`, `Overdue`, `NextDue`, `CreditRoom` (the exposure room of CRD 5.3.3, named so that it is not `Room`), `Lent`, `Receivable` | CRD 10.1 |
+| Cover | with the insurance module on: `Policies` (the number of the agent's open covers, as insured or as underwriter) and `Open` (for an underwriter, its open liability; 0 for an insured) | INS 16.3.1 |
+| Room | with the storage module on and a limited role: `Room`, `Load`, `Pledge`, `Free` (0 per dimension where negative after a cut) and `Stores` | STO 14.5 |
+| Facilities | with the infrastructure module on: the agent's facilities in all regions, in ascending ID, at most `MaxFacilitiesPerAgent` | CAP 11.4 |
+| Membership | with the institutions module on: the `BodyID` of the body the agent is a member of, or `NoBody`, true only for a member at the boundary | ORG 4.4.1 |
 | Mailbox | the directive pending, if any | AGT 10 |
 | Rumours | the rumours of the last view built for it, and the tick of that view (4.7.3) | INF 5, 6 |
 
-The cost of building it is `O(|tradable set| + |recipes| + |lots|)`, an
-allocation; it is a query of the second class (6.1). It reports the agent as of
+The cost of building it is `O(|tradable set| + |recipes| + |lots|)` plus the agent's
+open claims, hires, covers and facilities (each bounded by its module's cap, from the
+by-agent indexes), an allocation; it is a query of the second class (6.1). It reports the agent as of
 the end of the last step and says nothing of what its production of the next step
 will do: `MaxExecutions`, the refusal reason of a recipe and the stock after the
 next completions are not in it, because they are not a function of the boundary
@@ -582,35 +626,122 @@ are the agent's state and are saved by `spec-agents.md` 15. The one thing this
 spec adds is the rumours of 4.7.3. A restored world answers `Direct` and `Agent`
 as the original did (FR-AGT-064).
 
+### 4.9 Stores: AddStore and RemoveStore
+
+```go
+// AddStore gives the agent one more store of the class.
+func (w *World) AddStore(a AgentID, class StoreClassID) error
+// RemoveStore takes one store of the class from the agent.
+func (w *World) RemoveStore(a AgentID, class StoreClassID) error
+```
+
+Two calls on one agent of a limited role (`spec-storage.md` 3.6.2): any agent that
+may own a store, a household or an external one, not only an external agent. The
+mechanism, the effect on room and the refusals are STO's; the conventions of 3 hold:
+the order of checks of 3.2, atomic, no draw, and one event per call, `StoreChanged`
+(`Kind` `added` or `removed`, `Cause` `consumer`, 3.3.3), at the call with the `Tick` the
+next step will run. The class is a `StoreClassID`, the position of the class in
+`Config().Storage.Classes` (3.4.2). The state is saved by STO (13.1).
+
+4.9.1. **Checks**, in the order of 3.2: the module is on (`ErrModuleOff`); the class
+is known (`ErrUnknownStoreClass`); the agent is a live agent (`ErrUnknownAgent`, with
+`ErrAgentRemoved` for a removed ID; a pseudo-agent is `ErrUnknownAgent`, 3.4.3); then
+what STO refuses: for `AddStore`, a class whose `Needs` flag the agent's region lacks
+(`ErrStoreLocked`), a role with no base room (`ErrNotLimited`: a store on an unlimited
+account adds nothing, and an input accepted and ignored is a trap), an agent away on a
+self-carried trip or on a migration journey (`ErrAgentAway`: at its arrival `has_store`
+would hold the relocation for ever) and more than `MaxStoresPerAgent`
+(`ErrOutOfBounds`); for `RemoveStore`, an agent that owns none of the class
+(`ErrOutOfBounds`), a removal after which its load plus pledge would exceed the room
+(`ErrNoRoom`) and a store that is the installed store of a facility
+(`ErrStoreInUse`, `spec-infrastructure.md` 5.4.3: the consumer ends such a store with
+`AdjustFacilities`, 5.4). `RemoveStore` is not refused for an agent that is away: it can
+only free the arrival.
+
+4.9.2. **Why they are not slots.** A store is added to an agent's account, as an
+agent is added; no value is held over a configured default and `Slots()` does not list
+it. A consumer that adds an agent with a store row in its role gets the store from the
+role (`spec-storage.md` 3.2.3), and `AddAgent` returns `ErrNoRoom` if the goods it
+creates do not fit (4.1.1).
+
+### 4.10 Claims: ForgiveClaims
+
+```go
+// ClaimFilter names the claims to forgive by the debtor's region and role at the call.
+type ClaimFilter struct {
+	Region     RegionID
+	Role       RoleID
+	AllRegions bool
+	AllRoles   bool
+}
+
+// ForgiveClaims ends every open claim that matches any filter, with no transfer,
+// and returns how many it ended. The creditors lose what was owed.
+func (w *World) ForgiveClaims(filters []ClaimFilter) (ended int64, err error)
+```
+
+The one thing a game does to debt that no rule does (`spec-credit.md` 13.2). It is an
+act at the call and not a slot: it holds no value, and `Slots()` does not list it.
+
+4.10.1. **Checks**, in the order of 3.2: the module is on (`ErrModuleOff`, naming
+`credit`); then for each filter in the order given, a region that is a known region
+(`ErrUnknownRegion`) and not an outside node (`ErrOutsideNode`) unless `AllRegions`, a
+role that is known (`ErrUnknownRole`) unless `AllRoles`, and a filter that repeats
+another (`ErrDuplicateID`). A filter that matches nothing is legal and returns 0. On
+an error it returns 0 and nothing has changed.
+
+4.10.2. **What it does.** Each matching claim is written off at the call, in ascending
+claim ID, with the cause `forgiven`: no money moves, and the loss is the creditors'
+(the lost totals of the ledger rise by what was owed, so the identities of
+`spec-ledger.md` 9 hold). It emits one `LoanEnded` per claim (`Cause` `forgiven`), at
+the call, in ascending claim ID, with the `Tick` the next step will run. It draws
+nothing, and the claims it removed are not in the saved list.
+
 ## 5. The slots
 
 A **slot** is a piece of world state that a consumer sets from outside, between
 ticks, over a configured value, and that a position of the tick reads
-(`spec-world.md` 8.2). The mechanism, the arithmetic and the saved state of each
-belong to the spec that owns it; this section gives the public call. It answers
-N-091 and N-116 and settles the naming that the owners left provisional. The
-table is the whole list: a spec that adds a slot adds a row here and one to
-`spec-world.md` 8.2 in the same change (`spec-world.md` 8.2.1).
+(`spec-world.md` 8.2). A slot is set by a consumer between ticks, or by a policy
+actor at P0.3a (`spec-policy.md`): the owner's internal setter is the one the public
+call uses after its checks, and an actor's write is made inside the step with the
+cause `policy` (3.3.3, 5.2.5); the public calls stay between ticks. The mechanism,
+the arithmetic and the saved state of each belong to the spec that owns it; this
+section gives the public call. It answers N-091 and N-116 and settles the naming
+that the owners left provisional. The table is the whole list: a spec that adds a
+slot adds a row here and one to `spec-world.md` 8.2 in the same change
+(`spec-world.md` 8.2.1). A call that holds no value over a default is not a slot
+and is listed in 5.4 (and 4.9, 4.10 for an agent's stores and claims).
 
 ### 5.1 The table
 
 Every setter has the shape of 3.3: a slice of entries, one per key, atomic, an
 event per changed key in the canonical key order. The value column is the whole
 value an entry gives its key. The default is what an unset key holds and what an
-entry equal to it restores.
+entry equal to it restores. The two **adjustments**, `AdjustEndowments` and
+`AdjustTechnology`, are one-off changes of a stock and of an advance: they hold no
+value, have no default to clear and are not listed by `Slots()` (5.3.1); they have
+the shape of 3.3 and the rows of this table for the reading position, the event and
+the saved state, as the one table keeps the surface in one place.
 
 | Call | Entry (key; value) | Value bound; default | Needs | Owner | Read by the tick at | Event (at the call) | Saved by |
 |------|--------------------|----------------------|-------|-------|---------------------|---------------------|----------|
 | `SetYieldShocks` | `YieldShock{Region, Recipe; BP}` | 0 to `MaxYieldBP`; 10 000 | | PRO 6.8 | P1.2 (cost anchor), P2.5 (`k0`), P2.7 (the yield read at a job's start; a running job keeps its pending output) | `YieldShocked` (new) | PRO 15, by (region, recipe) |
 | `SetEdgeStatuses` | `EdgeStatus{From, To; Closed, FactorBP}` | `FactorBP` 1 to `MaxEdgeFactorBP`; open at 10 000 | | REG 7 | **at the call**: the graph and lag tables are rebuilt; then P3.2 and P3.3 (route, travel time), P3.5 (a closed gate edge cuts the outside), P7.2 (a journey's distance); a shipment in flight keeps its arrival tick | `EdgeStatusChanged` | REG 11, by `EdgeID` |
 | `SetTransitFactors` | `TransitFactor{From, To, Mode; BP}` | 0 to `MaxTransitFactorBP`; 10 000 (0 blocks new dispatches) | transport | TRN 10.3 | P3.2 and P3.3, at dispatch; new dispatches only | `TransitFactorChanged` (new) | TRN 14, by (from, to, mode) |
-| `SetFlowScales` | `FlowScale{Flow; BP}` | 0 to `MaxFlowScale`; 10 000 (0 pauses the flow) | money supply | MON 4.4.3, 10.4 | P1.7 | `MoneyFlowScaled` | MON 14, by flow ID |
+| `SetFlowScales` | `FlowScale{Flow; BP}` | 0 to `MaxFlowScale`; 10 000 (0 pauses the flow: skipped whole) | money supply or fiscal | MON 4.4.3, 10.4; FIS 3.1.3, 13.1 | P1.7 (a money flow); P1.7b, P3.2(c), P3.3, P3.4a, P4.1a (a fiscal flow, by its kind) | `MoneyFlowScaled` (the name stays for a fiscal flow) | MON 14 (its flows), FIS 17 (the sparse scale list of the `fiscal` section) |
 | `SetBirthScales` | `RegionScale{Region; BP}` | 0 to `MaxBasisPoints`; the region's configured `BirthScale`, 10 000 with no row | population | POP 3.6, 6.6 | P7.1(b) | `PopulationScaled` (new) | POP 11, by region |
 | `SetDeathScales` | `RegionScale{Region; BP}` | as above, with `DeathScale` | population | POP 3.6, 6.6 | P7.1(b) | `PopulationScaled` (new) | POP 11, by region |
 | `SetCapacityScales` | `EndowmentScale{Region, Resource; BP}` | 0 to `MaxShockBP`; 10 000 | resources | RES 6.3.1 | **at the call**: the effective capacity is recomputed and a stock above it is clamped, the excess lost | `EndowmentAdjusted` (kind `shock`) | RES 15, by (region, resource) |
 | `SetRegenScales` | `EndowmentScale{Region, Resource; BP}` | 0 to `MaxShockBP`; 10 000 | resources | RES 6.3.1 | P8.3 | `EndowmentAdjusted` (kind `shock`) | RES 15, by (region, resource) |
 | `AdjustEndowments` | `EndowmentAdjustment{Region, Resource; Delta}` | `Delta` signed, at most `MaxEndowment` in magnitude; the stock is clamped to [0, capacity] | resources | RES 6.3.2 | **at the call**: the stock changes now | `EndowmentAdjusted` (kind `adjust`) | RES 15 (the stock) |
 | `SetOutsideShocks` | `OutsideShock{Node, Commodity; BP}` | 1 to `MaxShockBP`; 10 000 | external | EXT 6.5 | P1.8 (the walk) and the quotes of P3.5 | `OutsideShocked` | EXT 16, by (node, commodity); not hashed |
+| `SetRentScales` | `EndowmentScale{Region, Resource; BP}` | 0 to `MaxShockBP`; 10 000 (0 makes rent free) | tenure | LND 5.2, 9.1 | P1.2, P2.3 (the view), P2.6, P2.7 | `RentScaled` (new) | LND 14, by (region, resource); not hashed |
+| `SetRateScales` | `RegionScale{Region; BP}` | 0 to `MaxShockBP`; 10 000 (0 is interest-free, not a pause) | credit | CRD 6.3.1, 13.1 | P3.3b (new loans only: a claim's rate is fixed at formation) | `CreditRateScaled` (new) | CRD 17, by region; not hashed |
+| `SetRouteRiskScales` | `RouteRiskScale{From, To, Mode; BP}` | 0 to `MaxShockBP`; 10 000 | risk | RSK 9.1 | P3.1a, the dispatch record (a shipment in flight keeps its `LossBP`); **at the call**: the expected-loss table is rebuilt | `RouteRiskScaled` (new) | RSK 15, by (from, to, mode); not hashed |
+| `SetStoreRiskScales` | `StoreRiskScale{Region, Class; BP}` | 0 to `MaxShockBP`; 10 000 | risk | RSK 9.1 | P8.1a | `StoreRiskScaled` (new) | RSK 15, by (region, store class); not hashed |
+| `SetLegalLevels` | `LegalLevel{Control; CapBP, FloorBP}` | goods: 0 to `MaxBasisPoints` for each, 0 none, `FloorBP` at most `CapBP` when both set; a rate limit: `CapBP` 0 to `MaxCreditRateBP`, `FloorBP` 0; the configured levels | institutions | ORG 6, 7.1 | the admission of the market (P3.2, P3.4, P3.5), of the contract round (P3.3) and of the credit round (P3.3b); **at the call**: the resolved ranges are rebuilt | `LegalLevelSet` (new) | ORG 12, by `ControlID`; not hashed |
+| `SetRightSuspensions` | `RightSuspension{Right; Suspended}` | a bool; false | institutions | ORG 5.4.3, 7.1 | P2.5 (and the labour round's formation), P3.2(c), P7.1(a); **at the call**: the resolved rights are rebuilt | `RightSuspensionSet` (new) | ORG 12, by `RightID`; not hashed |
+| `AdjustTechnology` | `TechnologyAdjustment{Region, Field; DeltaBP}` | `DeltaBP` signed, at most `MaxGainBP` in magnitude; the advance is clamped to [0, the field's cap], the part cut is lost and reported | technology | TEC 7.1 | **at the call**: the cell's advance changes now | `TechnologyAdjusted` | TEC 12 (the advance); not listed by `Slots()` |
 
 5.1.1. **The directive is the one slot of an agent**, set by `Direct` (4.3): read at
 P1.9, saved by AGT 15, no event. It is in this list of slots by
@@ -622,11 +753,14 @@ changes)` (REG 7.3) and said each name was provisional. The public names are the
 plural slice forms above, which is the shape REG gave its call; the singular form
 is an entry of one. The edits are in section 19. The slices' entry types
 (`YieldShock`, `TransitFactor`, `FlowScale`, `RegionScale`, `EndowmentScale`,
-`EndowmentAdjustment`, `OutsideShock`) are plain structs of the root package with
-exported fields and no embedded type (architecture.md 4.7). `EdgeStatus` is REG's
+`EndowmentAdjustment`, `OutsideShock`, and for the later modules
+`RouteRiskScale`, `StoreRiskScale`, `LegalLevel`, `RightSuspension` and
+`TechnologyAdjustment`) are plain structs of the root package with exported fields
+and no embedded type (architecture.md 4.7). The rate scale of a region reuses
+`RegionScale` (the same shape as a birth or a death scale, with its own bound), and the rent scale of a (region, resource) reuses `EndowmentScale` (the same shape as a capacity or a regeneration scale, with its own bound). `EdgeStatus` is REG's
 type (`spec-regions.md` 7.3) and its fields are as there: the zero `EdgeStatus`
 has a `FactorBP` of 0, which is out of bound, so an entry that opens an edge says
-`Closed: false, FactorBP: 10000`.
+`Closed: false, FactorBP: 10000`. No slot sets a membership of a jurisdiction: an embargo of a border is `SetEdgeStatuses` over the edges that `Polity.Between` gives (`spec-polity.md` 4.2.3).
 
 5.1.3. **What the key checks are**, applied in the order of 3.2 (module, then each
 entry in the order given):
@@ -636,10 +770,17 @@ entry in the order given):
 | yield shock | `ErrUnknownRegion` (a `RegionID` outside `[0, n)`, `NoRegion` included), `ErrUnknownRecipe`, `ErrOutOfBounds`, `ErrDuplicateID` |
 | edge status | `ErrUnknownEdge` (a pair that is not a configured edge), `ErrOutOfBounds`, `ErrDuplicateID` (REG FR-REG-050) |
 | transit factor | `ErrModuleOff`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrSameRegion` (from equals to), `ErrUnknownMode`, `ErrOutOfBounds`, `ErrDuplicateID` |
-| flow scale | `ErrModuleOff`, `ErrUnknownFlow` (new), `ErrOutOfBounds`, `ErrDuplicateID` |
+| flow scale | `ErrModuleOff` (neither the money supply nor the fiscal module is on), `ErrUnknownFlow` (new: an ID that is neither a money flow nor a fiscal flow), `ErrOutOfBounds`, `ErrDuplicateID` |
 | birth and death scale | `ErrModuleOff`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID` |
 | capacity and regeneration scale, adjustment | `ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrOutOfBounds`, `ErrDuplicateID` |
 | outside shock | `ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownLine` (new: the node has no line for the commodity; an ordinary region has no lines, so it returns this too), `ErrOutOfBounds`, `ErrDuplicateID` |
+| rent scale | `ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID` |
+| rate scale | `ErrModuleOff`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID` |
+| route risk scale | `ErrModuleOff`, `ErrUnknownRegion` (`From` or `To`), `ErrUnknownMode`, `ErrUnknownRiskRow` (new: the key is not a configured route row), `ErrOutOfBounds`, `ErrDuplicateID` |
+| store risk scale | `ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownStoreClass`, `ErrUnknownRiskRow` (a key with no store row), `ErrOutOfBounds`, `ErrDuplicateID` |
+| legal level | `ErrModuleOff`, `ErrUnknownControl` (new), `ErrOutOfBounds` (a level outside its bound, a floor above a cap, a `FloorBP` on a rate limit), `ErrDuplicateID` |
+| right suspension | `ErrModuleOff`, `ErrUnknownRight` (new), `ErrDuplicateID` |
+| technology adjustment | `ErrModuleOff`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrUnknownTechField` (new), `ErrOutOfBounds`, `ErrDuplicateID` |
 
 A call that cannot have an effect is refused rather than accepted and ignored:
 with the module off the call returns `ErrModuleOff` naming the module; for a key
@@ -678,10 +819,16 @@ the difference over it, and the hash names the configuration, not the difference
 steps is read by the first step after it; a call made after a step is read by the
 next. Two calls to one slot between two steps: the later one wins, with an event
 for each change it made (the first call's event is emitted too: it was a change).
+A **policy actor** that holds a key writes it at P0.3a of the step, after every call
+of the consumer between the steps, and only when its decision returns an entry for
+the key: its value then replaces the consumer's, with the event of the cause
+`policy`; an actor that returns no entry for the key never overwrites the
+consumer's value (`spec-policy.md` 6.4.3).
 
 5.2.6. **The bounds are the owners'.** `MaxYieldBP`, `MaxEdgeFactorBP`,
-`MaxTransitFactorBP`, `MaxFlowScale`, `MaxBasisPoints`, `MaxShockBP` and
-`MaxEndowment` are constants of `bounds.go` (`spec-config.md` 4.1). This spec adds
+`MaxTransitFactorBP`, `MaxFlowScale`, `MaxBasisPoints`, `MaxShockBP`,
+`MaxEndowment`, `MaxCreditRateBP` (the cap of a rate limit, 5.1) and `MaxGainBP`
+(`AdjustTechnology`) are constants of `bounds.go` (`spec-config.md` 4.1). This spec adds
 none, and no slot has a number of keys of its own to bound: a key names an entity
 of the configuration and appears once in a call, so the size of a slot and of a
 call is bounded by the configuration.
@@ -692,15 +839,21 @@ call is bounded by the configuration.
 // SlotState lists every slot value that differs from its default, in the
 // canonical order of its owner (the order a checkpoint saves it in).
 type SlotState struct {
-	YieldShocks    []YieldShock
-	EdgeStatuses   []EdgeStatus
-	TransitFactors []TransitFactor
-	FlowScales     []FlowScale
-	BirthScales    []RegionScale
-	DeathScales    []RegionScale
-	CapacityScales []EndowmentScale
-	RegenScales    []EndowmentScale
-	OutsideShocks  []OutsideShock
+	YieldShocks      []YieldShock
+	EdgeStatuses     []EdgeStatus
+	TransitFactors   []TransitFactor
+	FlowScales       []FlowScale
+	BirthScales      []RegionScale
+	DeathScales      []RegionScale
+	CapacityScales   []EndowmentScale
+	RegenScales      []EndowmentScale
+	OutsideShocks    []OutsideShock
+	RentScales       []EndowmentScale
+	RateScales       []RegionScale
+	RouteRiskScales  []RouteRiskScale
+	StoreRiskScales  []StoreRiskScale
+	LegalLevels      []LegalLevel
+	RightSuspensions []RightSuspension
 }
 
 // Slots returns a deep copy of the world's slots. It changes nothing.
@@ -711,11 +864,63 @@ func (w *World) Slots() (SlotState, error)
 restores a world to a state (STY, EXP) can read what is set, without a snapshot,
 and an empty `SlotState` says that the world holds no shock. It lists the same
 keys the owners save, so a restored world reports the list the original did
-(FR-INT-032). The one-off adjustments of an endowment are not listed: they are
-not a held value, and their effect is the stock (RES 6.4).
+(FR-INT-032). The order of the fields is the order in which the owners' sections
+come in a checkpoint (`spec-checkpoint.md` 4.2). `FlowScales` is read from both
+owners, MON's flows and FIS's fiscal flows, and presented in one flow-ID order. The
+one-off adjustments of an endowment and of a technology field are not listed: they
+are not a held value, and their effect is the stock (RES 6.4) and the advance (TEC
+7.1). What a policy actor set is in the lists as any slot value is, with the key at
+the value the actor chose (`spec-policy.md` 12.3).
 
 5.3.2. **Cost.** `O(non-default keys)`, an allocation. It is a query of the second
 class (6.1).
+
+### 5.4 Calls that are not slots
+
+Five calls change the world between ticks and hold no value over a configured
+default, so they are not rows of 5.1, have no default to clear and are not listed by
+`Slots()`. The conventions of 3 hold for each: the order of checks of 3.2 (a step
+running, a failed world, the module, then each entry in the order given), atomic, a key
+once per call (`ErrDuplicateID`), an event per change in the canonical order of the
+owner at the call with the `Tick` the next step will run and the cause `consumer`, and
+no draw. The mechanism, the bounds and the saved state are the owner's; this table is
+the public call (as 5.1 is for a slot). The two adjustments `AdjustEndowments` and
+`AdjustTechnology` stay in the table of 5.1, one choice for both.
+
+| Call | Entry | Needs | Owner | Acts | Event (at the call) | Saved by |
+|------|-------|-------|-------|------|---------------------|----------|
+| `AddFacilities(adds []NewFacility) ([]FacilityID, error)` | `NewFacility{Class, Region, Toward, Owner, Condition}`: the facilities take the next IDs in slice order | infrastructure | CAP 11.1 | **at the call**: created and, for a store class, installed in the call | `FacilityChanged` (kind `added`, cause `consumer`), and for a store class `StoreChanged` (`added`, cause `facility`) before it | CAP 15 (the facilities) |
+| `AdjustFacilities(changes []FacilityAdjustment) error` | `FacilityAdjustment{ID, Delta}`: signed, the result clamped to [0, `Durability`]; 0 ruins the facility | infrastructure | CAP 11.2 | **at the call**: the condition changes now; a ruin rebuilds the tables, clamps a ground facility's endowment and forces `removeStore` for a store | `FacilityChanged`, and for a store `StoreChanged` (`removed`, cause `facility`) before it | CAP 15 |
+| `TransferFacilities(moves []FacilityTransfer) error` | `FacilityTransfer{ID, To}`: a live agent or the estate of the facility's region | infrastructure | CAP 11.3 | **at the call**: the owner changes; no money moves | `FacilityChanged` (kind `transferred`, cause `consumer`) | CAP 15 |
+| `TransferTitles(transfers []TitleTransfer) error` | `TitleTransfer{Region, Resource, From, To; ShareBP, Price}`: `ShareBP` 1 to 10 000, `Price` 0 to `MaxMoney`, at most `MaxTitleTransfers` entries; `NoAgent` as the commons | tenure | LND 6.3, 9.2 | **at the call**: the share moves now (and the price, if any, from `To` to `From`); the first step reads it at P2.3 | `TitleTransferred` (`Cause` `consumer`) | LND 14 (the holdings) |
+| `DirectPolicy(d []PolicyDirective) error` | `PolicyDirective{Actor ActorID; Levers []LeverSetting}`: the whole content of one actor's mailbox; an empty `Levers` clears it | policy | PLC 9.1 | applied at the actor's next decision tick (P0.3a), through the checks of PLC 6.2; the step limit is not a check of the call | none (the actor's own events at P0.3a) | PLC 13 (the mailbox of a `directed` actor) |
+
+5.4.1. **Why these are calls.** A facility or a title is an entity with an identity, not
+a value held for a key; a transfer moves an owner or a share once. `DirectPolicy` leaves a directive
+for an actor, as `Direct` does for an agent: it replaces the actor's mailbox, and the
+policy of the actor decides what it does at its next decision (`spec-policy.md` 9.1.4).
+A call to a slot of 5.1 that an actor holds is legal and stands until the actor next
+returns an entry for the key (5.2.5).
+
+5.4.2. **Errors**, in the order of 3.2 and then the owner's, and the sentinels are
+listed in 7.1 with their owner: `AddFacilities` returns `ErrModuleOff`,
+`ErrUnknownFacilityClass`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrSameRegion`,
+`ErrUnknownEdge`, `ErrFacilityShape`, `ErrOutOfBounds`, `ErrUnknownAgent`,
+`ErrAgentRemoved`, `ErrFacilityOwner`, `ErrFacilityRegion`, `ErrFacilityLocked`,
+`ErrFacilityTarget`, `ErrFacilityCap` and, for a store class, `ErrNotLimited`,
+`ErrAgentAway`, `ErrStoreLocked` (STO's, from `addStore`); `AdjustFacilities`:
+`ErrModuleOff`, `ErrUnknownFacility`, `ErrOutOfBounds`, `ErrDuplicateID`;
+`TransferFacilities`: `ErrModuleOff`, `ErrUnknownFacility`, `ErrUnknownAgent`,
+`ErrAgentRemoved`, `ErrFacilityOwner`, `ErrFacilityNotTransferable`,
+`ErrFacilityCap`, `ErrDuplicateID`; `TransferTitles`: `ErrModuleOff`,
+`ErrUnknownRegion`, `ErrUnknownResource`, `ErrUnknownAgent`, `ErrAgentRemoved`,
+`ErrNotAHolder`, `ErrOutsideNode`, `ErrOutOfBounds`, `ErrDuplicateID`, `ErrNoTitle`,
+`ErrTitleCap`, `ErrOverflow` (the payee's balance would pass its bound, mapped) and the
+ledger's `ErrInsufficientFunds` for a price the payer cannot pay; `DirectPolicy`: `ErrModuleOff` (naming `policy`), `ErrUnknownActor`,
+`ErrDuplicateID`, `ErrNotDirected` (the actor's policy is not `directed`),
+`ErrUnknownLever`, `ErrOutOfBounds` (a value outside `[Min, Max]`, or `Closed` without
+`MayClose`). `ErrNotDirected` names the target that takes no directive: an agent for `Direct`,
+an actor for `DirectPolicy`.
 
 ## 6. Queries
 
@@ -742,7 +947,7 @@ world. A reader with no error result returns its value in both cases
 | Readers | Read | In a step | On a failed world |
 |---------|------|-----------|-------------------|
 | `Tick`, `Err`, `ConfigHash`, `Config` | the clock, the failure, the configuration and its hash | the value (`Tick` advances at P8.6, after the last event) | the value: the tick of the failed step, the failure |
-| `Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel` | tables derived from the configuration and the edge statuses, which a step does not change | the value as of the last boundary | the same |
+| `Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `RouteLoss`, `Polity`, `TreasuryAgent` | tables derived from the configuration, the edge statuses and the risk scales, which no step changes but a policy actor's write at P0.3a, rebuilt there | the value as of the last boundary | the same |
 | `Endowment`, `InTransit`, `Away`, `RelocationRefusal` | live state | the value of the state as the running step has left it, which an observer sees complete up to the event it was given (events follow the transition they describe); the value is not a boundary value | the state the failed step left, which is **not** a boundary state: a consumer reads `Err()` first |
 
 Nothing that follows architecture.md 12.5 (an observer, a strategy, a spawner or a
@@ -783,8 +988,12 @@ to call per frame, and is stated per query. Counts, not timings (N-015).
 | `Agents(r) ([]AgentID, error)` | the live agents whose account is in region `r`, ascending, no pseudo-agent | REG 3.1.1 | 2 |
 | `Agent(a) (AgentState, error)` | the state of one agent at the boundary (4.7.2) | AGT 14.6 | 2 |
 | `Endowment(r, res) int64` | the units of an endowment available | RES 5.1 | 1 |
-| `InTransit(a)`, `Travel(from, to, mode)`, `Away(a)` | the lines of the shipments of an agent; the travel time and haul units of a route; whether an agent is away | TRN 9.2 | 2, 1, 1 |
+| `InTransit(a)`, `Travel(from, to, mode)`, `Away(a)`, `RouteLoss(from, to, mode)` | the lines of the shipments of an agent; the travel time and haul units of a route; whether an agent is away; the loss share of a route in basis points and whether there is a path (`ok` false for no path, an unknown key or the module off; a lookup in the cached table, not a walk of the path) | TRN 9.2 | 2, 1, 1, 1 |
 | `RelocationRefusal(a, to, skip...)` | the reason and error that a relocation would meet, `("", nil)` if none | REG 6.1.6 | 1 |
+| `Facility(id) (FacilityState, error)`, `Facilities(r) ([]FacilityState, error)` | one facility, with its class, region, target, owner, condition and effect; the facilities that stand in a region, ascending ID | CAP 11.4 | 2 |
+| `Titles(a) ([]TitleState, error)`, `Holders(r, res) (HoldingsState, error)`, `Rent(r, res) (int64, error)` | the titles of an agent (or of a region's estate), the tenure of one endowment, the rent in force | LND 9.3 | 2, 2, 1 |
+| `Polity() Polity`, `TreasuryAgent(j) (AgentID, bool)` | the jurisdictions and their structure, a deep copy built on each call as `Graph()` is; the pseudo-agent of a governed jurisdiction's treasury (`false` for a grouping or an unknown `j`) | POL 4.2.4, 5.5 | 3, 1 |
+| `Saving(a) (SavingState, error)` | the saving state of an agent whose role has a saving block (6.7) | SAV 7.3 | 2 |
 | `Slots() (SlotState, error)` | the non-default slots (5.3) | this spec | 2 |
 | `Audit() error` | nil if every identity of the ledger and the modules holds | LED 12.4 | 3 |
 | `Snapshot() (Snapshot, error)` | the aggregates and the sets in flight | OBS | 3 |
@@ -851,7 +1060,7 @@ tables again from the configuration and holds the same list. The validation
 
 ### 6.5 Region
 
-`Region(r)` returns the **region state of the snapshot** (`RegionState`, `spec-observability.md` 5.3.5a): the region's row, its role rows, markets, jobs, endowments and the shipments and journeys that touch it; the households unfed and the largest hunger are fields of its role rows. On an outside node it returns the node's row (OBS 5.3.2) and `Agents` an empty list. This spec adds no field: a region summary that the snapshot and this query computed twice would be two truths. The query exists so that a frame that needs one region does not build the whole snapshot. Its cost is the region's share of the scans of the snapshot (`spec-observability.md` 5.5: the agents of the region, its lots and its beliefs), the second class of 6.1.3, and the result equals the filter of a full snapshot by region (`spec-observability.md` 5.3.5a).
+`Region(r)` returns the **region state of the snapshot** (`RegionState`, `spec-observability.md` 5.3.5a): the region's row, its role rows, markets, jobs, endowments and the shipments and journeys that touch it; the households unfed and the largest hunger are fields of its role rows. On an outside node it returns the node's row (OBS 5.3.2) and `Agents` an empty list. This spec adds no field: a region summary that the snapshot and this query computed twice would be two truths. The query exists so that a frame that needs one region does not build the whole snapshot. Its cost is the region's share of the scans of the snapshot (`spec-observability.md` 5.5: the agents of the region, its lots and its beliefs), the second class of 6.1.3, and the result equals the filter of a full snapshot by region (`spec-observability.md` 5.3.5a). With the settlements module on the row carries the class fields of the snapshot's `RegionRow` (`Class`, `ClassSince`, `ClassTarget`, `ClassAtFloor`, `spec-settlements.md` 10.5), and with a governed jurisdiction its treasury's money: no new call and no slot is needed for either.
 
 ### 6.6 What a consumer reads, by need
 
@@ -865,8 +1074,35 @@ tables again from the configuration and holds the same list. The validation
 | What is shocked | `Slots()` |
 | Whether the configuration is sound | `Config.Validate()`, `Warnings()` |
 | Where a road leads, how far | `Graph()`, `Travel` |
+| A facility, who owns what and in what condition | `Facility`, `Facilities`, and the `Facilities` of `Agent(a)` |
+| Who holds an endowment, the rent in force | `Titles`, `Holders`, `Rent` |
+| A jurisdiction, its treasury | `Polity()`, `TreasuryAgent` and the `Jurisdictions` rows of the snapshot |
+| What a household is saving for | `Saving(a)` (6.7) |
+| How risky a route is | `RouteLoss` |
 | Everything, for a dashboard | `Snapshot()` |
 | Everything, to resume | `Checkpoint()` |
+
+### 6.7 Saving
+
+`Saving(a)` is SAV's query (`spec-saving-and-investment.md` 7.3), listed in 6.2 and
+given its place here because it is the one reader of 6.2 that takes a role's block:
+
+```go
+// Saving returns the saving state of an agent whose role has a saving block.
+func (w *World) Saving(a AgentID) (SavingState, error)
+```
+
+For an agent whose role has a block it returns the floor, the precaution, the drawdown,
+the goal and the idle money, and the chosen project with its benefit, cost, outlay and
+whether it is funded, or the keep of a job in progress (`Building`). It is a pure
+function of saved state: it draws nothing, changes nothing and answers a restored world
+as the original did (FR-SAV-040). It is a query of the second class (6.1.3).
+
+6.7.1. **Errors**, in the order of 3.2: `ErrInStep`, `ErrWorldFailed`, `ErrModuleOff`
+(the saving module is off), `ErrUnknownAgent` (and `ErrAgentRemoved`; a pseudo-agent is
+`ErrUnknownAgent`, 3.4.3), then `ErrNotSaver` (new: the agent's role has no block; the
+result is the zero value). The saving rule of an external agent is the fallback's: a
+player that is given a role with no block is not a saver and is free of the rule.
 
 ## 7. Errors and guards
 
@@ -891,11 +1127,19 @@ return, and who defines each:
 | `ErrUnknownAgent` | the ID names no agent: never issued, or a pseudo-agent (but `Relocate` returns `ErrNotRelocatable` for a pseudo-agent, 7.1.1) | REG 6.1.3 (one sentinel, the same meaning, N-075) |
 | `ErrAgentRemoved` | the ID was an agent and has been removed; wraps `ErrUnknownAgent` | this spec (new) |
 | `ErrNotExternal` | the call needs an external agent and the agent is not | this spec (new) |
-| `ErrNotDirected` | the agent's strategy is not the library's `Directed` | this spec (new) |
-| `ErrNotOnRole` | a directive's recipe is not on the role's list | this spec (new; the reason `not_on_role` of PRO 4.2 as an error) |
+| `ErrNotDirected` | the agent's strategy is not the library's `Directed` (`Direct`), or the policy of the actor is not `directed` (`DirectPolicy`): the target takes no directive | this spec (new); PLC 9.1.2 for the actor |
+| `ErrNotOnRole` | a directive's recipe is not on the role's list, or its `Borrow` or `Lend` asks of a credit block the role has not (the meaning widens to a block the role has not) | this spec (new; the reason `not_on_role` of PRO 4.2 as an error); CRD 10.5 |
 | `ErrNotTradable` | a directive's commodity is not in the role's tradable set | this spec (new; the reason `not_tradable` of CLR 3.2 as an error) |
 | `ErrOverflow` | creating the agent's money or goods would take a balance or a total above its bound (the ledger's `ErrBalanceOverflow`, mapped) | AGT 13; the ledger's is LED 4.2 |
-| `ErrSameRegion`, `ErrOutsideNode`, `ErrOpenReservation`, `ErrRegionBound` (`ErrClosedAccount` cannot occur for a live agent; `ErrNotRelocatable` for an estate's ID) | the other refusals of a relocation (`spec-regions.md` 6.1.3); `ErrRegionBound` names the obligation | REG |
+| `ErrSameRegion`, `ErrOutsideNode`, `ErrOpenReservation`, `ErrRegionBound` (`ErrClosedAccount` cannot occur for a live agent; `ErrNotRelocatable` for an estate's or a treasury's ID) | the other refusals of a relocation (`spec-regions.md` 6.1.3); `ErrRegionBound` names the obligation (`open_shipment`, `on_journey`, `open_contract`, `in_traineeship`, `open_hire`, `has_store`) | REG |
+| `ErrUnknownStoreClass`, `ErrStoreLocked`, `ErrNotLimited`, `ErrAgentAway`, `ErrNoRoom`, `ErrStoreInUse` | a store class names nothing; the class's `Needs` flag is not carried by the region; the role has no base room; the agent is away on a trip or a journey; a removal would leave the load above the room (and `AddAgent`'s goods do not fit); the store is the installed store of a facility | STO 3.6.2 (`ErrStoreInUse`: STO's, asked by CAP 5.4.3) |
+| `ErrUnknownFacilityClass`, `ErrUnknownFacility`, `ErrFacilityShape`, `ErrFacilityOwner`, `ErrFacilityRegion`, `ErrFacilityLocked`, `ErrFacilityTarget`, `ErrFacilityCap`, `ErrFacilityNotTransferable` | the facility calls of 5.4 (each as `spec-infrastructure.md` 11, 13.1 says) | CAP 11, 13.1 |
+| `ErrUnknownRiskRow` | a route or store risk key is not a configured row | RSK 9.2 |
+| `ErrUnknownControl`, `ErrUnknownRight` | an ID names no control or right | ORG 7.1.1 |
+| `ErrUnknownTechField` | a `TechFieldID` outside `[0, F)` | TEC 7.1.3 |
+| `ErrUnknownActor`, `ErrUnknownLever` | an ID names no actor, or no lever of the actor | PLC 9.1.2 |
+| `ErrNoTitle`, `ErrTitleCap`, `ErrNotAHolder` | a `From` that does not hold the share; a holder above `MaxHolderShareBP`; an agent that cannot hold a title | LND 9.4 |
+| `ErrNotSaver` | `Saving` for an agent whose role has no block | SAV 7.3 |
 
 7.1.1. **One sentinel for an unknown agent (N-075).** REG's `relocate` and this
 spec's calls both say "the ID names no agent". It is one root sentinel,
@@ -980,7 +1224,7 @@ player was shown, its quest log) is its own and is not in the checkpoint.
 
 A scenario of STY and a run of EXP drive a world through exactly this surface and
 no other: `NewWorld`, `AddAgent`, `Direct`, the slot setters, `Relocate`,
-`RemoveAgent`, `Step` and `Run`, and the queries of section 6. A scenario script
+`RemoveAgent`, the calls of 4.9, 4.10 and 5.4, `Step` and `Run`, and the queries of section 6. A scenario script
 is a list of (tick, call); the harness applies each call at the boundary before
 the tick it names, with its own tick counter. Run with the same seed and the same
 list it gives the same result on every platform (3.5.1). Two calls that touch
@@ -1007,7 +1251,18 @@ calls of `AddAgent`, which take their draws in call order (D12).
 | an embargo | `SetEdgeStatuses` on the gate edge | a node's line is cut by a closed edge |
 | a refugee household, an expulsion | `Relocate` | a forced move |
 | a player trades, a merchant is added | `AddAgent`, `Direct` | |
-| a tax | a levy flow in the configuration, scaled by `SetFlowScales` | FIS is later |
+| a tax, a duty, a toll, a payout raised, paused or cut | a fiscal flow in the configuration (`spec-fiscal.md`), scaled by `SetFlowScales` | the flow's scale is the lever; 0 pauses it whole |
+| a tax rule that follows a reading | a `rule` policy (`spec-policy.md` 8.3), or a consumer's `Policy` registered with `WithPolicy` | a registered loop bounded by the levers' limits; a consumer's own rule is INT-A1 |
+| a rent rise, a free rent | `SetRentScales` | a rent in force, not the configured one; 0 makes rent free |
+| a credit squeeze, a cheap-money decree | `SetRateScales` | new loans only; a claim's rate is fixed at formation |
+| a cancellation of debts, a jubilee | `ForgiveClaims` | a call at once; the creditors lose what was owed |
+| banditry on a road, a storm season, a flood at a depot | `SetRouteRiskScales`, `SetStoreRiskScales` | a shipment in flight keeps its loss share |
+| a price cap or floor decreed, a right suspended | `SetLegalLevels`, `SetRightSuspensions` | read from the next step's admission |
+| a technique learned or lost | `AdjustTechnology` | a one-off; the advance is clamped to the cap |
+| a mill built by decree, a bridge wrecked, a mill given away | `AddFacilities`, `AdjustFacilities`, `TransferFacilities` | at the call; a ruin forces `removeStore` for a store |
+| an enclosure of a common, a land sale | `TransferTitles` | at the call; a price moves money between the two agents |
+| a store built for a player | `AddStore` | refused for an agent away or in a role with no room |
+| a ruler's rates in a game with a governing player | `DirectPolicy` | applied at the actor's next decision, through its mandate |
 
 What is not expressible, from 3.6: an act-now trade, goods dropped on a market, a
 partial embargo, a shock that ends by itself, a shock on a cohort of households
@@ -1073,16 +1328,16 @@ has a failing-case test, testing.md 3.9):
 
 | Sentinel | When | Where |
 |----------|------|-------|
-| `ErrModuleOff` | a call that needs a module that is off (5.1.3) | the setters of 5.1 |
+| `ErrModuleOff` | a call that needs a module that is off (5.1.3), naming the module | the setters and the adjustments of 5.1; the calls of 4.9, 4.10 and 5.4; `Saving` (6.7); `Direct` for an optional field of a module that is off (4.3.2 row 1) |
 | `ErrUnknownFlow` | `SetFlowScales` names a flow the configuration does not have | `SetFlowScales` |
 | `ErrUnknownLine` | `SetOutsideShocks` names a (node, commodity) with no line | `SetOutsideShocks` |
 | `ErrAgentRemoved` | an agent call names the ID of a removed agent; wraps `ErrUnknownAgent` | the agent calls and `Agent` |
 | `ErrNotExternal` | `Direct` or `RemoveAgent` on an agent that is not external | those |
-| `ErrNotDirected` | `Direct` on an external agent whose strategy is not `Directed` | `Direct` |
-| `ErrNotOnRole` | a directive's recipe is not on the role's list (nor its effective own-use list) | `Direct` |
+| `ErrNotDirected` | `Direct` on an external agent whose strategy is not `Directed`; `DirectPolicy` on an actor whose policy is not `directed` | `Direct`, `DirectPolicy` |
+| `ErrNotOnRole` | a directive's recipe is not on the role's list (nor its effective own-use list), or its `Borrow` or `Lend` asks of a credit block the role has not | `Direct` |
 | `ErrNotTradable` | a directive's commodity is not in the role's tradable set | `Direct` |
 
-The other errors the calls return are existing sentinels (7.1).
+The other errors the calls return are existing sentinels (7.1); those that the later modules define (the store, facility, risk, institution, technology, policy, tenure and saving sentinels of 7.1) are their owners', mapped at the root by them as N-075 asks, and this spec lists them so that the surface is in one place.
 
 11.3. **What is not validated here:** that a shock is sensible (a yield of 100 000
 for every recipe is legal), that a slot's value is a change a story needs, and
@@ -1100,27 +1355,40 @@ table says what each call needs and where an event is **new** and so asked of OB
 |------|----------|------|-----------------------|
 | `AddAgent` | `AgentSpawned` | no | agent, region, role, weight 1, `StartMoney`, `External` true |
 | `Direct` | none | | (`spec-world.md` 8.3) |
-| `RemoveAgent` | `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `AgentBankrupted` (`Cause` `consumer`), `EstateOpened` | no | as the removal of AGT 3.6 |
+| `RemoveAgent` | `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, then of the later modules `TitleTransferred`, `HireEnded`, `LoanEnded`, `LoanPassed`, `CoverEnded`, `FacilityChanged` (in the step order of AGT 3.6), `AgentBankrupted` (`Cause` `consumer`), `EstateOpened` | no | as the removal of AGT 3.6 |
 | `Relocate` | `RecipeAbandoned` (`region_changed`), `AgentRelocated` (`Cause` `consumer`) | no | as REG 10.1 |
 | `SetYieldShocks` | `YieldShocked` | **yes** | region, recipe, before and after (basis points) |
-| `SetEdgeStatuses` | `EdgeStatusChanged` | no | from, to, closed, factor, cause `consumer` |
+| `SetEdgeStatuses` | `EdgeStatusChanged` | no | from, to, closed, factor, cause `consumer` (`policy` for an actor's write at P0.3a, which is not a call) |
 | `SetTransitFactors` | `TransitFactorChanged` | **yes** | from, to, mode, before and after (basis points) |
-| `SetFlowScales` | `MoneyFlowScaled` | no | flow, from, to |
+| `SetFlowScales` | `MoneyFlowScaled` | no | flow (a money flow or a fiscal flow), from, to, cause `consumer` (`policy` at P0.3a) |
 | `SetBirthScales`, `SetDeathScales` | `PopulationScaled` | **yes** | region, which (`birth` or `death`), before and after (basis points) |
 | `SetCapacityScales`, `SetRegenScales`, `AdjustEndowments` | `EndowmentAdjusted` | no | kind (`shock` or `adjust`), the scales after, stock before and after, units lost (RES 14) |
 | `SetOutsideShocks` | `OutsideShocked` | no | node, commodity, from, to |
+| `SetRentScales` | `RentScaled` | no | region, resource, the scale before and after (basis points) |
+| `SetRateScales` | `CreditRateScaled` | no | region, the scale before and after (basis points) |
+| `SetRouteRiskScales`, `SetStoreRiskScales` | `RouteRiskScaled`, `StoreRiskScaled` | no | the route or the region and class, the scale before and after (basis points) |
+| `SetLegalLevels`, `SetRightSuspensions` | `LegalLevelSet`, `RightSuspensionSet` | no | the control with its cap and floor before and after, or the right and whether it is suspended |
+| `AdjustTechnology` | `TechnologyAdjusted` | no | region, field, the delta asked, the gain before and after, the part the bounds cut |
+| `AddStore`, `RemoveStore` | `StoreChanged` | no | agent, region, role, store class, `Kind` `added` or `removed`, `Cause` `consumer`, stores, room, load |
+| `ForgiveClaims` | `LoanEnded` (cause `forgiven`), one per claim | no | claim, creditor, debtor, principal and interest lost |
+| `AddFacilities`, `AdjustFacilities`, `TransferFacilities` | `FacilityChanged` (kind `added`, `ruined` or `transferred`, cause `consumer`); `StoreChanged` (cause `facility`) first for a store facility; `EndowmentAdjusted` (kind `facility`) for a ground facility whose clamp cuts a stock | no | facility, class, region, owner, kind, condition before and after |
+| `TransferTitles` | `TitleTransferred` (`Cause` `consumer`) | no | region, resource, `From`, `To`, share, price, the shares after |
+| `DirectPolicy` | none | | (the actor's `PolicyDecided` and slot events come at P0.3a of the step) |
 
 The three new names follow the proposals of OBS's decisions so far
 (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled`); the final names and
 fields are OBS's, which has adopted them (`spec-observability.md` 4.1.8). Every event is plain data with no map, a past-tense name and
 fixed-point values (observability-and-logging.md 4.1). A call that changes `n` keys
 emits `n` events, bounded by the configuration (3.3.2); none is per agent except
-those of an agent call.
+those of an agent call (and a store, a facility, a title or a claim is one entity: one
+event per entity changed, bounded by the call's slice or by the claims that match).
+The events of the later modules' calls are in the rules' table 4.3 and need nothing new
+of OBS.
 
 12.2. **Logs.** Constant lowercase messages, the keys of the rules' table 3.3.2 (no
 new key), all at `Debug` and guarded by `Enabled`: "agent added" (`agent`,
 `region`, `role`), "directive set" (`agent`), "agent removed" (`agent`, `cause`),
-one constant message per setter, "yield shocks set", "edge statuses set" and so on (`tick`, `cause` with the value `consumer`; the number of keys changed is the number of events, so no key is added). No `Info`: a
+one constant message per setter, "yield shocks set", "edge statuses set" and so on, and likewise for each call of 4.9, 4.10 and 5.4 ("store added", "claims forgiven", "facilities added", "titles transferred", "policy directed") (`tick`, `cause` with the value `consumer`; the number of keys changed is the number of events, so no key is added). No `Info`: a
 consumer's calls are not a lifecycle of the library, and a server may make many. No
 `Warn` or `Error`: a refused call is a returned error, handled once by the caller
 (architecture.md 8.3, observability-and-logging.md 2.2). The value `consumer` joins
@@ -1151,7 +1419,7 @@ agent holds the baseline constant plus nothing per call (NFR-INT-002).
 failure paths are returned (the sentinels of 11.2) and not logged; three state
 transitions had no event and OBS has adopted them (`YieldShocked`,
 `TransitFactorChanged`, `PopulationScaled`), the others reuse an event of the
-rules; no new decision point of a strategy; no new loop; nothing is logged above
+rules, the calls of the later modules among them (12.1); no new decision point of a strategy; no new loop; nothing is logged above
 `Debug`; no new metric and no new metric attribute; tests of
 observability-and-logging.md 8.1 are FR-INT-050 to 054.
 
@@ -1164,8 +1432,10 @@ Every spec lists the state it contributes (ADR 0002). This spec's:
 | For each external agent whose role is `Informed`, with the information module on: the **tick of its last view** and the **rumours of that view** as they were given to it (region, commodity, price, mean, lag, source age), at most `MaxRumoursPerView`, in the order the view had (ascending region, then commodity) | they were built with error draws from the stream and cannot be rebuilt without draws (4.7.3) | section 22 of the checkpoint (`spec-checkpoint.md` 4.2, tag 22), in ascending agent ID, rows only for an external agent that has had a view |
 
 13.1. **What is not saved by this spec.** The mailbox, the flags and the strategy
-name are AGT's (15). The slots are the owners' (5.1, "Saved by"). The sequence of
-calls is not state (9.2). No call is pending: a call is applied when it is made.
+name are AGT's (15). The slots are the owners' (5.1, "Saved by"), and so are the state of the calls of
+4.9, 4.10 and 5.4: the stores (STO), the claims a forgiveness removed (CRD: nothing of
+its own), the facilities (CAP 15), the titles (LND 14) and the mailbox of a `directed`
+actor (PLC 13). The sequence of calls is not state (9.2). No call is pending: a call is applied when it is made.
 
 13.2. **Effect on results.** None: the strategy that was given these rumours has
 used them, and no position reads them again. They are mandatory in a
@@ -1286,16 +1556,17 @@ Provisional IDs (N-103); the supervisor assigns the final numbers. The checklist
 of `spec-stability.md` 9 was followed: 9.1 each call was read for the chain it
 creates. **This spec adds no feedback loop of its own**: every call is a step
 input from outside, and nothing in the library reads a measure and changes a rate
-through it (the slots are written only by the consumer, `spec-money-supply.md`
-10.4). It adds two hazards and one bias, and one damper, because the surface is
+through it (the slots are written by the consumer, `spec-money-supply.md` 10.4, or by
+a policy actor, whose loops are PLC's entries and not this spec's). It adds two hazards and one bias, and one damper, because the surface is
 where a consumer can build a loop the engine does not contain.
 
 **INT-A1 The consumer closes a loop through the surface.** *Kind:* hazard.
 *Loop:* a rule of the consumer reads `Market`, `Region`, `Agent` or an indicator
 and sets a slot or a directive each tick or every few: price level to `FlowScale`
 (a mint), unemployment to a yield shock (a story), a price to a player's order.
-That is a policy actor, built outside the engine, and ADR 0001 decision 4 accepts
-it. *Delay:* at least one tick: it reads at the boundary and the tick reads the
+That is a policy actor, built outside the engine or registered with `WithPolicy`
+(`spec-policy.md`; the registered one is PLC's loop and has its own entries), and ADR
+0001 decision 4 accepts it. *Delay:* at least one tick: it reads at the boundary and the tick reads the
 slot at its position (5.1); a slot read at P8.3 or at job start adds that
 position's own delay. *Owner:* INT 5, ADR 0001, `spec-world.md` 9.4.
 *Damper:* the bound of each slot (INT-D1) and the one-tick delay; the engine adds
@@ -1366,10 +1637,10 @@ applied, rejected or left open here, with the text to append in the handoff.
 | N-031 What the calendar hands to other specs | **Applied for INT:** a consumer converts ticks to dates with `Calendar().At`; a shock by season is set before and cleared after the window (there is no season key, because the yield is read at job start, 3.6). **Leave open** for OBS and GDS as before | 6.2, 3.6 |
 | N-036 Production's draws, phases and shocks in the world | **Applied for INT; close its INT part:** the yield-shock slot's public call is `SetYieldShocks`, read at P1.2, P2.5 and P2.7, cleared by setting 10 000; it has no timer | 5.1, 5.2.2 |
 | N-051 What the Strategy contract needs from other specs | **Applied for INT:** `AddAgent`, `Direct` and the mailbox. **Leave open** for CHK (the strategy names, the directive as state) | 4 |
-| N-075 Mapping the ledger's sentinels | **Leave open**, with this added: INT adds `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole` and `ErrNotTradable`; `ErrUnknownAgent` is one sentinel of one meaning for REG and INT (7.1.1) | 7.1, 11.2 |
+| N-075 Mapping the ledger's sentinels | **Leave open**, with this added: INT adds `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole` and `ErrNotTradable`; `ErrUnknownAgent` is one sentinel of one meaning for REG and INT (7.1.1); the sentinels of the later modules' calls are listed in 7.1 with their owner | 7.1, 11.2 |
 | N-079 External agents are mortal only when the consumer says so | **Applied; close.** `NewAgent.Mortal`, default false; the library acts on a mortal external agent only through a consumer's spawner or call; the consumer's `RemoveAgent` ignores the flag | 4.1, 4.4, 4.6 |
-| N-090 What MIG and the specs that tie obligations to a region must do with a relocation | **Applied for INT:** the public face of `relocate` is `Relocate`, for any agent, with the journey's cancel inside it (4.5). **Leave open** for SKL (to register `in_traineeship`) and for the later modules that keep an account in a region (the rule of 2026-10-10) | 4.5 |
-| N-091 The world slots INT must expose | **Applied; close.** The table of 5.1: nine setters and one adjustment, with public name, arguments, errors, bound, event, position and saved state; a later spec that adds a slot adds a row (5.1) | 5 |
+| N-090 What MIG and the specs that tie obligations to a region must do with a relocation | **Applied for INT:** the public face of `relocate` is `Relocate`, for any agent, with the journey's cancel inside it (4.5). **Leave open** for SKL (to register `in_traineeship`) and for the later modules that keep an account in a region (the rule of 2026-10-10); EMP (`open_hire`) and STO (`has_store`) have registered theirs (4.5.2) | 4.5 |
+| N-091 The world slots INT must expose | **Applied; close.** The table of 5.1: fifteen setters and two adjustments (nine and one when written, the rows of the later modules added since), with public name, arguments, errors, bound, event, position and saved state, and 5.4, 4.9 and 4.10 for the calls that are not slots; a later spec that adds a slot adds a row (5.1) | 5 |
 | N-116 The outside's slots | **Applied; close.** `SetOutsideShocks`; `SetEdgeStatuses` for an embargo; a capacity multiplier is not provided (3.6) | 5.1, 3.6 |
 | N-016 Keep the parameter registry true | **Applied:** this spec adds no field and no row (10) | 10 |
 | N-017 Words and names | **Applied:** the terms of the handoff go to the glossary (agent state, forced move, market state, slot state, query class, entry, key); the examples are flagged setting words | 14 |
@@ -1393,7 +1664,7 @@ spec has no default or bound of its own.
 | FR-INT-001 | A call that changes the world MUST return `ErrInStep` when made from inside a step and `ErrWorldFailed` (wrapping the cause) on a failed world, before it reads its arguments, and MUST change nothing (3.1.2, 3.2, 7.3). |
 | FR-INT-002 | A call MUST validate every entry before it applies any; on any error no state MUST change, no event MUST be emitted and no random number MUST be drawn (3.3.1). |
 | FR-INT-003 | A slot setter MUST reject a key that appears twice with `ErrDuplicateID`, MUST accept an empty or nil slice as a no-op with no event, and MUST treat an entry equal to the key's current value as no change and no event (3.3.2). |
-| FR-INT-004 | A call MUST emit one event per key that changed, at the call, carrying the `Tick` the next step will run, before that step's `TickStarted`, in the canonical order of the key and not the order of the slice, and the cause of an event that carries one MUST be `consumer` (3.3.3). |
+| FR-INT-004 | A call MUST emit one event per key that changed, at the call, carrying the `Tick` the next step will run, before that step's `TickStarted`, in the canonical order of the key and not the order of the slice, and the cause of an event that carries one MUST be `consumer` (3.3.3); a policy actor's write is not a call and its events come at P0.3a with the cause `policy` (3.3.3). |
 | FR-INT-005 | An argument error MUST be a `*ValidationError` whose `Path` names the argument, matched by `errors.Is` with its sentinel; the checks of a call MUST run in the order of 3.2, the agent before the directive for `Direct`, and in the order of `spec-regions.md` 6.1.3 for `Relocate` (3.2, 3.2.2, 4.3.2). |
 | FR-INT-006 | A call that needs a module that is off MUST return `ErrModuleOff` before it reads an entry, and a call that cannot have an effect for its key MUST return the sentinel of 5.1.3 and not be accepted and ignored (5.1.3). |
 | FR-INT-007 | No call other than `AddAgent` MUST draw a random number, `AddAgent` MUST take the two creation draws at the call after its checks, in call order, and a refused call MUST draw none (3.5.2). |
@@ -1401,24 +1672,24 @@ spec has no default or bound of its own.
 | FR-INT-009 | No call other than `AddAgent` MUST create or destroy money or goods, and the identities of `spec-ledger.md` 9 MUST hold after every call (3.5.3). |
 | FR-INT-010 | A call MUST accept a directive whose orders the agent cannot afford or whose discards it cannot cover, and the step MUST refuse them with the reason of the position, as it refuses any order (3.2.1). |
 | FR-INT-011 | A call MUST be legal in the construction phase and its moves MUST go to the construction bucket there, and MUST be totalled in the tick the next step runs after it (3.1.1). |
-| FR-INT-020 | `AddAgent` MUST return `ErrUnknownRegion`, `ErrOutsideNode`, `ErrUnknownRole`, `ErrUnknownStrategy`, `ErrOutOfBounds`, `ErrUnknownCommodity`, `ErrDuplicateID` or `ErrOverflow` for the cases of 4.1.1 and MUST create nothing when it returns one. |
+| FR-INT-020 | `AddAgent` MUST return `ErrUnknownRegion`, `ErrOutsideNode`, `ErrUnknownRole`, `ErrUnknownStrategy`, `ErrOutOfBounds`, `ErrUnknownCommodity`, `ErrDuplicateID`, `ErrOverflow` or, with the storage module on, `ErrNoRoom` for the cases of 4.1.1 and MUST create nothing when it returns one. |
 | FR-INT-021 | `AddAgent` MUST create an agent of weight 1 with `External` true and the `Mortal` flag as asked, an account in the region, the stated money and goods by `initial` with the default lot key, beliefs by `spec-beliefs.md` 8.3, no job, an empty welfare record, `Hunger`, `Unfed` and `Privation` 0, `RoleSince` the current tick and the two creation draws, and MUST emit `AgentSpawned` with `External` true (4.1.2). |
 | FR-INT-022 | An added agent MUST take the next agent ID and no other agent's ID, review bucket or key MUST change (4.1.3). |
 | FR-INT-023 | An empty `Strategy` MUST mean `directed`; `default`, `directed` and every registered name MUST be accepted and any other name MUST be `ErrUnknownStrategy`; the world MUST hold a strategy directed if and only if the registered value's dynamic type is `Directed` (4.2.2). |
 | FR-INT-024 | An external agent MUST be passed `Work` at P2.5 when free and `Trade` at P3.2 from the next step, MUST be refused every decision of the spawner unless mortal, and MUST NOT be reviewed or moved by the migration module (4.2.3, 4.6). |
-| FR-INT-025 | `Direct` MUST return `ErrUnknownAgent`, `ErrAgentRemoved`, `ErrNotExternal` or `ErrNotDirected` for the agent, and for the directive `ErrUnknownRecipe`, `ErrNotOnRole`, `ErrUnknownCommodity`, `ErrNotTradable`, `ErrOutOfBounds` or `ErrDuplicateID` by the checks of 4.3.2, and MUST leave the mailbox as it was when it returns one. |
+| FR-INT-025 | `Direct` MUST return `ErrUnknownAgent`, `ErrAgentRemoved`, `ErrNotExternal` or `ErrNotDirected` for the agent, and for the directive `ErrModuleOff` for an optional field of a module that is off, `ErrUnknownRecipe`, `ErrNotOnRole` (also for a `Borrow` or `Lend` of a role with no credit block), `ErrUnknownCommodity`, `ErrNotTradable`, `ErrOutOfBounds` or `ErrDuplicateID` by the checks of 4.3.2, and MUST NOT refuse the `Offer` and `Hire` of a job request for their content, which the labour round admits, and MUST leave the mailbox as it was when it returns one. |
 | FR-INT-026 | The mailbox MUST hold one directive: a second `Direct` before the step MUST replace the first, and a directive with nothing in it MUST empty the mailbox (4.3.1). |
 | FR-INT-027 | A directive MUST apply to the next step only and MUST be dropped after it unless `Sticky`, and `Direct` MUST emit no event (4.3.1, 4.3.4). |
 | FR-INT-028 | A directive MUST carry a job request only when the consumer sets one, so that a directive with intents and no job leaves `Work` to the fallback (4.3.3). |
 | FR-INT-029 | `RemoveAgent` MUST return `ErrNotExternal` for a household of the configuration or the spawner, MUST apply the removal mechanics of `spec-agents.md` 3.6 with the cause `consumer` whether or not the agent is mortal, MUST NOT refuse for an obligation, MUST emit the events in the order of `spec-world.md` 6.11 item 8 and MUST NOT reuse the ID (4.4). |
-| FR-INT-030 | A call that names the ID of a removed agent MUST return `ErrAgentRemoved`, which MUST match `ErrUnknownAgent`; the ID of one never issued MUST return `ErrUnknownAgent` and not `ErrAgentRemoved`, and the ID of a pseudo-agent MUST return `ErrUnknownAgent` from `Agent`, `Direct` and `RemoveAgent` and `ErrNotRelocatable` from `Relocate` and `RelocationRefusal` (7.1.1). |
+| FR-INT-030 | A call that names the ID of a removed agent MUST return `ErrAgentRemoved`, which MUST match `ErrUnknownAgent`; the ID of one never issued MUST return `ErrUnknownAgent` and not `ErrAgentRemoved`, and the ID of a pseudo-agent (an estate, a counterparty or a treasury) MUST return `ErrUnknownAgent` from `Agent`, `Direct` and `RemoveAgent` and `ErrNotRelocatable` from `Relocate` and `RelocationRefusal` (7.1.1). |
 | FR-INT-031 | `Relocate` MUST run the dry run with `skip` `on_journey`, return its first refusal and change nothing if there is one, and otherwise, atomically, drop the agent's journey, abandon its job with `region_changed`, drop its own-use flag, change its region by the guarded relocation with the cause `consumer`, reseed its beliefs with no draw and set `RoleSince` to the current tick (4.5.2). |
-| FR-INT-032 | `Slots` MUST list exactly the slot values that differ from their defaults, in the canonical order of their owners, and a restored world MUST report the list the original did (5.3). |
+| FR-INT-032 | `Slots` MUST list exactly the slot values that differ from their defaults, in the canonical order of their owners (the order of the sections of a checkpoint), with the flow scales of both the money and the fiscal flows in one flow-ID order, MUST NOT list an adjustment, and a restored world MUST report the list the original did (5.3). |
 | FR-INT-033 | `AgentState` MUST be a deep copy of plain data holding the groups of 4.7.2, MUST be a function of the state of the world alone and MUST NOT include `MaxExecutions`, a refusal reason or a stock after the next completions (4.7.2). |
 | FR-INT-040 | `SetYieldShocks` MUST accept a multiplier in `[0, MaxYieldBP]` for a (region, recipe) of an ordinary region, MUST make the yield of a job started afterwards read it at P2.7 and MUST leave a job in progress its pending output, and MUST emit `YieldShocked` (5.1). |
 | FR-INT-041 | `SetEdgeStatuses` MUST accept only configured edges and a factor in `[1, MaxEdgeFactorBP]`, MUST rebuild the graph and lag tables at the call, MUST NOT change the arrival tick of a shipment in flight and MUST emit `EdgeStatusChanged` in ascending `EdgeID` with the cause `consumer` (5.1; FR-REG-050). |
 | FR-INT-042 | `SetTransitFactors` MUST accept a factor in `[0, MaxTransitFactorBP]` for a (from, to, mode) with from different from to, MUST affect new dispatches only and MUST emit `TransitFactorChanged` (5.1; FR-TRN-039). |
-| FR-INT-043 | `SetFlowScales` MUST accept a scale in `[0, MaxFlowScale]` for a configured flow, MUST apply it from the next P1.7 and MUST emit `MoneyFlowScaled` (5.1; FR-MON-023). |
+| FR-INT-043 | `SetFlowScales` MUST accept a scale in `[0, MaxFlowScale]` for a configured flow (a money flow or a fiscal flow), MUST apply it from the next P1.7 and MUST emit `MoneyFlowScaled` (5.1; FR-MON-023). |
 | FR-INT-044 | `SetBirthScales` and `SetDeathScales` MUST accept a scale in `[0, MaxBasisPoints]` for a region, MUST treat the region's configured value as the default and MUST emit `PopulationScaled` with which scale changed (5.1, 5.2.1; FR-POP-039). |
 | FR-INT-045 | `SetCapacityScales` and `SetRegenScales` MUST accept a scale in `[0, MaxShockBP]` for a (region, resource); a capacity scale MUST recompute the effective capacity at the call and clamp a stock above it, counting the excess as lost; and each MUST emit `EndowmentAdjusted` with kind `shock` (5.1; FR-RES-029). |
 | FR-INT-046 | `AdjustEndowments` MUST accept a signed delta of at most `MaxEndowment` in magnitude, MUST clamp the stock to `[0, capacity]`, MUST create no goods and MUST emit `EndowmentAdjusted` with kind `adjust` carrying the effective delta (5.1; FR-RES-030). |

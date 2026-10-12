@@ -280,7 +280,7 @@ goods (`spec-regions.md` 4.1.2). Where the unit is a real length, news at a stat
 speed is a fair reading. Where it is an effort (the velocity change of the orbital
 example of `spec-regions.md` 12.2), `InfoSpeed` is simply the pack's choice of how many
 units of effort one tick of news covers; it has no other meaning. A pack whose news does
-not follow its roads has no field for that in version 1 (17.3).
+not follow its roads has no field for that in version 1 (17.3). A route facility (`spec-infrastructure.md` 5.2) changes the transit factor of a mode and not a `Distance`, so it does not change the lag of a rumour (`spec-infrastructure.md` 5.2.3).
 
 ### 5.3 When there is no rumour
 

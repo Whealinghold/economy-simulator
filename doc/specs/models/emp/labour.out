@@ -1,8 +1,8 @@
 N E H a c u | halt floor | seeds ending (min,max price of last 100 ticks; mean hired; mean offering; last stock)
-{'N': 200, 'E': 20, 'H': 6, 'a': 6, 'c': 1200, 'u': 3} -> price 200 205 hired 59.3 offering 200.0
-{'N': 200, 'E': 20, 'H': 6, 'a': 6, 'c': 1200, 'u': 3, 'halt_bp': 30000} -> price 200 205 hired 60.2 offering 200.0
-{'N': 200, 'E': 20, 'H': 4, 'a': 6, 'c': 1200, 'u': 3} -> price 10000 10000 hired 80.0 offering 200.0
-{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 1200, 'u': 3} -> price 200 205 hired 50.0 offering 100.0
-{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 1200, 'u': 3, 'floor_bp': 0} -> price 200 205 hired 50.0 offering 100.0
-{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 100, 'u': 3} -> price 100 100 hired 100.0 offering 100.0
-{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 100, 'u': 3, 'floor_bp': 0} -> price 100 100 hired 100.0 offering 100.0
+{'N': 200, 'E': 20, 'H': 6, 'a': 6, 'c': 1200, 'u': 3} -> price 200 205 hired 59.3 offering 200.0 | hired per tick over the last 100: min 0 max 120
+{'N': 200, 'E': 20, 'H': 6, 'a': 6, 'c': 1200, 'u': 3, 'halt_bp': 30000} -> price 200 205 hired 60.2 offering 200.0 | hired per tick over the last 100: min 0 max 120
+{'N': 200, 'E': 20, 'H': 4, 'a': 6, 'c': 1200, 'u': 3} -> price 10000 10000 hired 80.0 offering 200.0 | hired per tick over the last 100: min 80 max 80
+{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 1200, 'u': 3} -> price 200 205 hired 50.0 offering 100.0 | hired per tick over the last 100: min 0 max 100
+{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 1200, 'u': 3, 'floor_bp': 0} -> price 200 205 hired 50.0 offering 100.0 | hired per tick over the last 100: min 0 max 100
+{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 100, 'u': 3} -> price 100 100 hired 100.0 offering 100.0 | hired per tick over the last 100: min 100 max 100
+{'N': 100, 'E': 40, 'H': 6, 'a': 6, 'c': 100, 'u': 3, 'floor_bp': 0} -> price 100 100 hired 100.0 offering 100.0 | hired per tick over the last 100: min 100 max 100

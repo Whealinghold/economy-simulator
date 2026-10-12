@@ -413,17 +413,26 @@ of 7.1.4 it applies this rule to an agent that is free.
    household were not in the mode and requests as 7.1 says (a role recipe, if one is
    eligible), and the household is counted in `Blocked` at P2.5; (b) every request it made
    was granted no execution by the ration of `spec-resources.md` 5.3 at P2.6 (reason
-   `no_endowment`): the household starts nothing at P2.7, is flagged blocked and counted in
+   `no_endowment`), or was refused at P2.7 by the check of the start for one of the reasons
+   listed below: the household starts nothing at P2.7, is flagged blocked and counted in
    `Blocked` there, and its next `Work` is the next tick's. It is **not** asked again in the
    same tick and does not fall back to a role recipe in it: the lost tick is the cost of a
    request that could not be known to fail (`spec-world.md` 22 question 12, ruling F7 of the
    integration).
+   The reasons of a blocked own-use start are one list, in the master order of
+   `spec-production.md` 4.2: `not_permitted` (only when `OwnUseBound` is set, `spec-institutions.md`
+   5.5.2; otherwise an own-use job is exempt from a `produce` right), `no_endowment`, `no_title`
+   and `rent_funds` (`spec-land.md` 4.5.1; an own-use request pays rent like any other unless
+   `OwnUseExempt` is set), and `no_room` (`spec-storage.md` 5.3.1: tested at P2.5 as the bound
+   `k_room` and again at P2.7, so a refusal at P2.7 belongs to case (b)). `zero_yield` and
+   `no_site` are case (a).
 7. **The halt does not apply.** The production halt (`spec-agents.md` 7.1.5) does not apply
    to an own-use recipe: its stop is the exit cover. The executions of 4 are bounded by the
    shortfall, so a job overshoots by at most one execution's output per household.
 
 5.5.1. A consumer's strategy sees the same flag. The `Directed` strategy's directive
 overrides `Work` as for any recipe (`spec-agents.md` 10.4); the fallback is the default.
+The own-use mode bars a project of the saving module (`spec-saving-and-investment.md` 5.5.5).
 
 ### 5.6 Who is evaluated
 
@@ -701,9 +710,10 @@ the request before the ration, a rent as a named money flow. Two things are stat
 that LND does not have to guess. (1) An own-use recipe is identified for a role by the pair of
 3.4.3 (RES's own text reads the role's recipes, and the edit of 3.6 widens it); the request carries the recipe, so an entitlement may treat a request for an own-use
 recipe differently (a right of the landless to draw for their own use). (2) SUB itself charges nothing and
-reserves nothing: if LND closes the commons to a household, its own-use recipe is `no_endowment`
-and the household is blocked, and the warning `own_use_not_available` (13.3) is the static
-form of that.
+reserves nothing: the rent and the entitlement are applied by `spec-land.md` 7.1, and an own-use
+request pays rent unless `OwnUseExempt` is set; where LND closes an endowment to a household its
+own-use recipe is blocked (`no_endowment` or `no_title`, `rent_funds` when it cannot pay, 5.5
+item 6), and the warning `own_use_not_available` (13.3) is the static form of that.
 
 ## 10. Seasons, shocks and the gap between yields
 
@@ -928,7 +938,7 @@ describes (observability-and-logging.md 4.1, 4.4):
 
 | Event | Emitted when | Fields (besides `Tick`) |
 |-------|--------------|-------------------------|
-| `OwnUseChanged` | once per region and role per tick in phase 2, after the starts, in ascending `RegionID` then role order, **if any of `Entered`, `Left`, `Started`, `Blocked`, `Retried` or `Output` is non-zero**; never otherwise | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `OnOwnUse` (households with the flag at the end of the flag step), `Entered` and `Left` (households whose flag changed in the tick), `Started` (executions of own-use recipes started), `Blocked` (households in the mode that were free and had no own-use recipe they could run at P2.5, or whose own-use requests the ration cut entirely at P2.6 and which started nothing at P2.7; a household counts once), `Retried` (households for which the retry chose a role recipe over a runnable own-use recipe), `Output` (a slice of (`Commodity`, `Units`) in commodity order: the units created at the completion of own-use jobs in the tick) |
+| `OwnUseChanged` | once per region and role per tick in phase 2, after the starts, in ascending `RegionID` then role order, **if any of `Entered`, `Left`, `Started`, `Blocked`, `Retried` or `Output` is non-zero**; never otherwise | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `OnOwnUse` (households with the flag at the end of the flag step), `Entered` and `Left` (households whose flag changed in the tick), `Started` (executions of own-use recipes started), `Blocked` (households in the mode that were free and had no own-use recipe they could run at P2.5, or whose own-use requests the ration cut entirely at P2.6 or the check of the start refused at P2.7, and which started nothing; a household counts once; the reasons are the list of 5.5 item 6, which is `Debug` only and not a field), `Retried` (households for which the retry chose a role recipe over a runnable own-use recipe), `Output` (a slice of (`Commodity`, `Units`) in commodity order: the units created at the completion of own-use jobs in the tick) |
 
 `OwnUseChanged` is an aggregate bounded by regions times roles
 (observability-and-logging.md 4.3, the paragraph of aggregates). It is off when the module is
@@ -945,7 +955,7 @@ All via the injected logger, constant messages, attributes in `snake_case`.
 `Debug` (guarded by `Enabled`, per agent): "own use entered" (`agent`, `role`, `reason`:
 `unfed` when `Hunger` decided it, `short_cover` otherwise), "own use left" (`agent`, `role`,
 `reason`: `cover`), "own use retry" (`agent`, `role`), "own use blocked" (`agent`, `role`,
-`reason`: the production reason, `no_site`, `zero_yield` or `no_endowment`). `Warn`, bounded
+`reason`: the production reason of the list of 5.5 item 6, or `no_site` or `zero_yield`). `Warn`, bounded
 per region and role (observability-and-logging.md 3.2.2):
 
 - "role on own use": more than half of a role's households have been in the mode for ten
@@ -1347,7 +1357,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-020 | The default `Work` in the mode MUST request, among the own-use recipes with `MaxExecutions` of 1 or more and a positive sum, the one with the greatest sum of `Cov` over the covered commodities whose cover is below `ExitTicks`, compared as exact fractions, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
 | FR-SUB-021 | The executions of the request of FR-SUB-020 MUST be `min(w, MaxExecutions, max(1, ceil(w * (ExitTicks - Cover) / ExitTicks)))`. |
 | FR-SUB-022 | `OwnUseJobs` MUST increase by 1 when an own-use job starts and MUST reset to 0 when a job of another recipe starts or the mode changes; when `RetryJobs` is above 0, `OwnUseJobs` has reached it and a role recipe is eligible, the default `Work` MUST request the role recipe. |
-| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked` at P2.5; when the ration grants every own-use request of the agent 0 executions, the agent MUST start nothing at P2.7, the flag MUST stay, the agent MUST be counted in `Blocked` at P2.7, and its next `Work` MUST be the next tick's. |
+| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked` at P2.5; when the ration grants every own-use request of the agent 0 executions or the check of the start refuses it for a reason of the list of 5.5 item 6 (`not_permitted` only with `OwnUseBound`, `no_endowment`, `no_title`, `rent_funds`, `no_room`), the agent MUST start nothing at P2.7, the flag MUST stay, the agent MUST be counted in `Blocked` at P2.7, and its next `Work` MUST be the next tick's. |
 | FR-SUB-024 | The production halt of `spec-agents.md` 7.1.5 MUST NOT apply to an own-use recipe. |
 | FR-SUB-025 | A role with an empty `Recipes` list and a non-empty effective own-use list MUST request an own-use job in the mode. |
 | FR-SUB-026 | Production MUST accept a request for a recipe on the role's effective own-use list, and MUST still refuse any other recipe not on `Role.Recipes` with `not_on_role` before any other check. |

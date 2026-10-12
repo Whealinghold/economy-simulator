@@ -5,7 +5,7 @@ index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-MER-NNN` and
 `NFR-MER-NNN`, which tests cite (testing.md section 4). They are in section 21
-(FR-MER-001 to 063, NFR-MER-001 to 005). It also restates `FR-CAR-001` and
+(FR-MER-001 to 064, NFR-MER-001 to 005). It also restates `FR-CAR-001` and
 `FR-CAR-002`, which `spec-carriage.md` moved here, under their old IDs (9.9).
 
 Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)),
@@ -77,16 +77,16 @@ Out of scope, with the owner:
 | Not here | Owner |
 |----------|-------|
 | Rumours, their lag, error and `SourceAge` | `spec-information.md` (INF) |
-| The shipment mechanism, the 23 refusals, haul units as a market good, the Transit account | `spec-transport.md` (TRN) |
+| The shipment mechanism, its refusals (`spec-transport.md` 5.4), haul units as a market good, the Transit account | `spec-transport.md` (TRN) |
 | The price of a haul unit | the market: carriers' recipes and the ordinary book (`spec-transport.md` 8) |
 | Whether, when and where a household moves for good | `spec-migration.md` (MIG); a merchant on a trip is away and is not a migrant (12.4) |
 | The welfare ratio and the window | `spec-welfare-and-wages.md` (WEL); this spec asks it for one edit (12.3) |
 | Household production as a floor | `spec-subsistence.md` (SUB); no seam beyond the strategy registry |
 | Loss in transit, theft | `spec-risk.md` (RSK) |
-| Credit: an advance against a cargo, a bill, a merchant's loan | `spec-credit.md` (CRD); not in version 1 (9.10) |
+| Credit: an advance against a cargo, a bill, a merchant's loan | `spec-credit.md` (CRD), an optional module with no advance against a cargo or a bill in version 1 (9.10) |
 | Warehouses and a cost of storing | `spec-storage.md` (STO) |
 | Tolls and tariffs | `spec-fiscal.md` (FIS) |
-| Associations of merchants, charters | `spec-institutions.md` (ORG) |
+| Associations of merchants, charters | `spec-institutions.md` (ORG); a charter over carriage is reserved there (`spec-institutions.md` 5.8) |
 
 ## 2. Positions taken
 
@@ -105,7 +105,7 @@ Out of scope, with the owner:
 | 11 | The consignee of a hired shipment is the **payer** of a delivery contract: it buys the goods before they move. A merchant role with `Consigns` posts takes, sized against its stock and its `Inbound` | 8, 9 |
 | 12 | A delivery contract is a spot-forward sale: offers and takes are matched in one **round** after the last plan of phase 3, the price is the midpoint, the goods are dispatched at once by the shipment mechanism, the payer's money is in escrow from formation, and the contract is settled on arrival. There is no forward term, no standing order and no credit in version 1 | 9 |
 | 13 | The contract has two parties, a payer and a deliverer. The carrier of `spec-carriage.md` is the deliverer when it travels, and the market for haul units when it does not (N-076). `FR-CAR-001` and `FR-CAR-002` keep their IDs and are restated for this shape | 9.9 |
-| 14 | Settlement pays the deliverer for the units that reached the destination, delivered or diverted, and refunds the payer for the units that spoiled. The removal of the deliverer refunds the payer in full; the removal of the payer leaves the contract standing with the estate of its region in its place | 9.7 |
+| 14 | Settlement pays the deliverer for the units that reached the destination, delivered or diverted, and refunds the payer for the units that spoiled or were lost. The removal of the deliverer refunds the payer in full; the removal of the payer leaves the contract standing with the estate of its region in its place | 9.7 |
 | 15 | The contract adds no faucet, no sink and no ledger reason: it uses the three escrow reasons already in the registry, whose owner it takes over. It registers the `region_bound` refusal `open_contract` that `spec-regions.md` 6.5.2 foresaw | 9.6, 9.8 |
 | 16 | Backhaul is not priced by this spec. The double count of the round trip stands, it errs towards dearer carriage, a pack states its recipe for one direction to remove it, and the model puts a number on it (a doubled smallest gap) | 10 |
 | 17 | The gate of the outside is not a special case. A gate region is an ordinary region with an ordinary market that is a rumour source; an outside node is never a destination; a merchant buys imports in the book and ships them inland like any good | 11 |
@@ -192,7 +192,7 @@ it eats is the main case, and 3.4 handles it with no special rule.
 |--------|--------------------------|
 | `Work` | the default's: a role with no recipe requests no job (`spec-agents.md` 7.1.1), unless its effective own-use list is non-empty: then the default gives it an own-use job and its trips are refused while that job runs (6.4; `spec-subsistence.md` 3.3.3). A pure merchant role takes an empty row in the subsistence table. Nothing is overridden |
 | `Revise` | the default's: `DefaultStrategy.Revise`, one update per admitted order with the draw the world took (`spec-agents.md` 7.6). The merchant's beliefs about its own market are those of any agent |
-| `Trade` | the default's, with three changes: (1) the planned unit of work is a **planned trip** instead of a planned recipe (3.4); (2) the limit of a bid for the cargo and for haul units is lowered to a ceiling the trip can bear (5.6); (3) the plan gains at most one **shipment request** or one **delivery offer** when the trip is ready (6.3), and the **takes** of a consignee (8) |
+| `Trade` | the default's, with four changes: (1) the planned unit of work is a **planned trip** instead of a planned recipe (3.4); (2) the limit of a bid for the cargo and for haul units is lowered to a ceiling the trip can bear (5.6); (3) the plan gains at most one **shipment request** or one **delivery offer** when the trip is ready (6.3), and the **takes** of a consignee (8); (4) with the insurance module, it calls the exported `DefaultCover` (`spec-insurance.md` 10.4) for the lanes of its trips, which appends cover requests to the plan. The rules of 5 to 9 are unchanged: the margin of 5.2 stays net of the expected loss and does not include cover, and 9.7's table is unchanged (the payout is the shipper's, `spec-insurance.md`) |
 
 The tradable set, the targets, the three tiers, the saving rule, the favourability, the
 urgency of a hungry household, the limit-price draw and the affordability rule of
@@ -285,7 +285,7 @@ is removed with its goods to the estate (`spec-agents.md` 3.6), with the contrac
 The `AgentView` of the trade phase (`spec-agents.md` 6.4.1) already carries what a
 merchant mostly needs: the local market report of every commodity of its tradable set (the
 price, its age, the best unmatched quotes, the window), the agent's money, upkeep and
-beliefs, `Inbound` and `Routes` with the transport module on (`spec-transport.md` 9.1) and
+beliefs, `Inbound` and `Routes` with the transport module on (`spec-transport.md` 9.1, with `LossBP` and `Toll` when the risk and fiscal modules are on), `Stores` with the storage module (`spec-storage.md` 6.1) and
 `Rumours` for an informed role (`spec-information.md` 6.2). This spec adds one group, plain
 data, a scratch copy valid for the call only like the others, present only in the view of
 an agent whose role has a merchant block:
@@ -354,7 +354,9 @@ Rhat = min(rho.Price, rho.Mean)           otherwise
 
 and, for a hired mode, `Rnet = Rhat * (10 000 - ConsigneeCutBP) / 10 000` (truncated),
 which is the revenue after the share a consignee keeps (6.1); for a self-carried mode
-`Rnet = Rhat`. The window mean is the smoother of the two readings and the published price
+`Rnet = Rhat`. With the risk module on, `Rnet` is then net of the expected loss of the route:
+`Rnet = Rnet * (10 000 - LossBP) / 10 000` truncated, `LossBP` of `Routes[to][mode]`
+(`spec-risk.md` 8.4; 0 with the module off). The window mean is the smoother of the two readings and the published price
 the latest; the lower of them does not extrapolate a spike. The rumour is an old reading
 blurred by an error (`spec-information.md` 5.4, 5.5): the merchant uses `Price` and `Mean`
 as they are and does not undo the error, which has mean zero.
@@ -415,6 +417,11 @@ costs to buy now. The **cost of carriage** `C` is:
     one tick of the agent's effective upkeep at its own belief centres
     (`spec-agents.md` 7.4.2).
 
+With the fiscal module on, every mode adds the toll of the path: `C = C + n * Toll`, `Toll` the
+money one carrying unit pays on the path, read from `Routes[to][mode]` (`spec-fiscal.md` 7.5), so
+the test of 5.5.1 and `BreakEven` see it and a trip the shipper could not afford is not planned
+(the refusal `toll_unaffordable`, `spec-transport.md` 5.4, is the backstop).
+
 All sums are checked. **The time of a trip is paid at the merchant's own cost of living,
 not at a wage.** A merchant that goes away for `k` ticks gives up `k` ticks in which it
 could eat from what it earns here; `TimeCostBP` of 10 000 (the default) asks the trip to
@@ -459,7 +466,9 @@ AskLimit      = P_acq + margin_needed                the cheapest delivered pric
 ```
 
 `BreakEven` is the ceiling of the merchant's bid for the cargo (5.6); `AskLimit` is the
-limit of its offer in a contract (9.2). A `BreakEven` below 1 means no bid.
+limit of its offer in a contract (9.2). A `BreakEven` below 1 means no bid. `G`, `BreakEven`
+and `HaulCeiling` read `Rnet` and so are net of the expected loss (5.2.1); `AskLimit` holds no
+`Rnet` and is unchanged.
 
 ### 5.6 `expected_margin_per_haul_unit`
 
@@ -471,7 +480,8 @@ expected_margin_per_haul_unit = G / (n * s)                       truncated
 HaulCeiling                   = expected_margin_per_haul_unit * phi / 10 000   truncated
 ```
 
-with `G` net of the consignee's cut (5.2.1). The merchant's bid for haul units has the limit
+with `G` net of the consignee's cut and of the expected loss (5.2.1); with the fiscal module on
+the margin per haul unit subtracts the toll of the lot, `(G - n * Toll) / (n * s)` (5.4). The merchant's bid for haul units has the limit
 `min(L, HaulCeiling)`, `L` the limit of the default's draw (`spec-agents.md` 7.5.3), and the
 bid for the cargo has the limit `min(L, BreakEven)`. The ceiling is **`FR-CAR-004`**: the
 merchant never bids for a haul unit more than the fee share of the margin it expects to earn
@@ -534,7 +544,8 @@ merchant. The midpoint of a contract is half to even (9.4).
 revenue (5.2), and the passing candidate with the greatest `G - C` wins. A hired mode is
 valued with the consignee's cut, so its gross margin is lower than a self-carried lane's by the cut, and a
 hired lane is chosen over a self-carried one when its freight is less than the wear, the feed and the
-time of the trip by more than the cut costs. The comparison uses nothing the merchant
+time of the trip by more than the cut costs. A merchant whose view's `Stores` is non-empty drops the self-carried modes from the comparison
+(6.4; `spec-storage.md` 9.3). The comparison uses nothing the merchant
 cannot see: the market price of haul units and of the vehicle and the feed in its own market,
 its own cost of living, and the routes.
 
@@ -559,7 +570,7 @@ rule is a preference of the code; a pack that wants only one lists only that mod
    the cap of D39 applied to a merchant (7.1).
 2. **What it can pay.** `q_aff = floor((Money - ReserveMoney - other) / LimitMax)`, with
    `ReserveMoney` the default's reserve (`spec-agents.md` 7.4.2), `other` the cost at their
-   maximum limits of the trip's other inputs it does not yet hold, and `LimitMax` the
+   maximum limits of the trip's other inputs it does not yet hold plus the toll `n * Toll` of the trip with the fiscal module on (5.4), and `LimitMax` the
    dearest price at which it would bid for `c`, `min(High, BreakEven)`. A merchant never plans a
    lot that would leave it below its reserve.
 3. **What it holds,** when it is ready to dispatch (6.3): the free units of `c`, the units above
@@ -612,13 +623,17 @@ A merchant plans no self-carried trip, and counts the case `Waiting`, when:
 - it has `Inbound` goods (as a consignee, 8): it would leave its region with its account still there, arrive
   elsewhere before the cargo, and find the cargo diverted to the estate of the region it left
   (`spec-transport.md` 5.8);
+- it owns a store (the view's `Stores` is non-empty): a trip ends in a region change that the
+  `region_bound` refusal `has_store` would hold for ever, and transport refuses the dispatch
+  with the reason `has_store` (`spec-transport.md` 5.4; `spec-storage.md` 9.3). The planner drops the
+  self-carried option and a hired mode is unaffected;
 - it has a job in progress: a merchant has no recipe of its own but the household floor of SUB (`spec-subsistence.md`)
   may give a role with none an own-use list, and the default `Work` that a merchant inherits then starts an
   own-use job, which the shipment mechanism refuses a trip for (`job_in_progress`, `spec-transport.md` 5.4).
 
 A merchant that is in the own-use mode of SUB (the flag the view carries beside `Hunger`) plans no trip at all and
 posts no take: it is short of food, and the household feeds itself before it trades. A hired trip needs nothing
-of the first two.
+of the first three.
 
 ### 6.5 The work share
 
@@ -868,11 +883,19 @@ the root package, `event.go`; `internal/logkeys` holds the key strings only; a r
 | offer | 3 | `unknown_mode` | the mode is not configured |
 | offer | 4 | `unknown_region`, `same_region`, `outside_destination` | as the same reasons of `spec-transport.md` 5.4 |
 | both | 5 | `unknown_commodity`, `not_tradable` | as `spec-clearing.md` 3.2 |
+| offer, take | 5a | `not_permitted` | with the institutions module: the deliverer's `sell` right (an offer) or the payer's `buy` right (a take) on the commodity is not held, tested for the **destination** region (`spec-institutions.md` 5.2.1, 6.7.1) |
 | both | 6 | `invalid_quantity`, `invalid_price` | a quantity below 1 or above `MaxQuantity`; a limit below 1 or above `MaxPrice` |
 | offer | 7 | `insufficient_stock` | the quantity exceeds the available (unreserved) units of the commodity |
 | take | 8 | `duplicate_take` | the agent already has an admitted take for the commodity this tick |
 | take | 9 | `overflow` | limit times quantity exceeds `MaxMoney` (the escrow could not hold it, `spec-ledger.md` 4.1) |
 | take | 10 | `insufficient_funds` | limit times quantity exceeds the agent's available cash |
+
+9.3.1. **The legal range.** With the institutions module, a take's bid limit above the cap in force for the
+commodity in the destination region is replaced by it after check 9 (`overflow`), and an offer's ask limit
+below the floor in force is raised to it after check 6 (`invalid_price`): the same place as in the book, so a
+contract does not evade a legal price (`spec-institutions.md` 6.7.1). The admitted limits are the clamped
+ones, and the ordering of 9.4.2 and the midpoint of 9.4.3 use them. The row 5a is counted in `ContractRound`'s
+refusals (15.1.1).
 
 The payer's cash is its balance less what its orders of the tick reserved (`spec-clearing.md` 3.3), so
 a take can never spend money an order has earmarked, and the stock of an offer is the stock unreserved by
@@ -930,10 +953,11 @@ and changes nothing.
 3. **Dispatch.** The world executes, as `D`, the shipment request `{Mode, To: r, Consignee: P, Lines: [(c, q)]}`
    with every check and every effect of `spec-transport.md` 5.4 and 5.5.1, and the event
    `ShipmentDispatched` of that spec. A refusal of transport (`insufficient_haul`, `capacity_exceeded`,
-   `traveller_away`, `unprovisioned`, ...) is the reason of the failure and emits `ShipmentRejected` as it
-   always does. A self-carried offer sends `D` itself on the trip, with the lot consigned to `P` and the rest of its
+   `traveller_away`, `unprovisioned`, `consignee_full`, `has_store`, `toll_unaffordable`, ...) is the reason of the
+   failure and emits `ShipmentRejected` as it always does, and the round counts it in the column
+   `ContractRound.DispatchRefused` (15.1.1; no new column). A self-carried offer sends `D` itself on the trip, with the lot consigned to `P` and the rest of its
    holdings travelling with it.
-4. **Escrow.** The world takes the lowest-ID open Escrow account of region `r` that no open contract uses,
+4. **Escrow.** The world takes the lowest-ID open Escrow account of region `r` that no open contract or hire uses,
    or opens one (kind Escrow, region `r`), and transfers `p * q` from `P` to it under `escrow_in`. It cannot
    fail: `P`'s cash was checked in step 2 and nothing since has moved it.
 5. **The record** of 16, with the next contract ID, and the event `ContractFormed` (15.1).
@@ -954,9 +978,9 @@ longer exists, to the Estate account of the payer's region. **The contract adds 
 reason:** it moves money between non-boundary accounts only, so every identity of `spec-ledger.md` 9.1 holds
 and `BoundaryFlow` shows nothing of it (N-107: applied, not applicable).
 
-9.6.2. **Accounts.** An Escrow account holds one open contract's money and nothing else. As Transit accounts are
+9.6.2. **Accounts.** An Escrow account holds one open contract's or one open hire's money (`spec-employment.md`) and nothing else. As Transit accounts are
 (`spec-transport.md` 7.1) they are reused and never closed: a contract takes the lowest-ID open Escrow account of
-the payer's region that no open contract references, or opens one, and releases it when it ends; the free list is
+the payer's region that no open contract or hire references, or opens one, and releases it when it ends; the free list is
 derived from the ledger and the contract list and is not saved. The reason is the same: IDs are never reused and
 a closed account's slot stays, so closing one account per contract would add a slot per contract. The region of
 an Escrow account is the region it was opened in, the destination `r`, so a contract's flows are attributed
@@ -973,14 +997,15 @@ bounds (8.2) and MER-A5 records.
 In phase 1, after all arrivals of the tick have been processed by transport (`spec-transport.md` 5.7), the world
 settles the contracts whose shipment arrived, in contract ID order. For a contract with price `p` and quantity
 `q`, with `reached` the units of the line that arrived and were delivered to the payer or, if the payer had been
-removed, diverted to the estate of the destination (`spec-transport.md` 5.8), and `spoiled = q - reached`
+removed, diverted to the estate of the destination (`spec-transport.md` 5.8), `spoiled` the units spoiled in transit,
+`lost` the units lost in transit (`spec-risk.md` 5, 0 with the risk module off) and `reached = q - spoiled - lost`
 (`ShipmentArrived`):
 
 | Case | To the deliverer (`escrow_out`) | Back (`escrow_refund`) |
 |------|--------------------------------|------------------------|
 | everything arrived | `p * q` | 0 |
-| `spoiled` units spoiled in transit | `p * reached` | `p * spoiled` to the payer |
-| the payer was removed before arrival (the cargo was diverted) | `p * reached` | `p * spoiled` to the estate of region `r` |
+| `spoiled` units spoiled and `lost` units lost in transit | `p * reached` | `p * (spoiled + lost)` to the payer |
+| the payer was removed before arrival (the cargo was diverted) | `p * reached` | `p * (spoiled + lost)` to the estate of region `r` |
 | the deliverer was removed before arrival | 0: the contract ended at the removal | `p * q` to the payer (9.8) |
 
 Then the Escrow account is empty and is released, and the event `ContractSettled` is emitted with the amounts
@@ -990,7 +1015,7 @@ construction (`spec-config.md` 4.2), and this spec adds no rule.
 
 Three decisions in the table:
 
-- **The deliverer bears the spoilage.** It chose the lot and the lane, and the life-left rule of 5.3 exists to
+- **The deliverer bears the spoilage and the loss.** It chose the lot and the lane, and the life-left rule of 5.3 exists to
   keep it from shipping what cannot arrive. The payer pays for what it receives.
 - **A diverted cargo counts as reached.** It reached the destination; the deliverer did what it promised. A
   payer that was removed in transit is paid for out of its escrow, which would otherwise have gone to the estate
@@ -1047,8 +1072,8 @@ Tests cite the old IDs. They are also in section 21, with the requirements of th
 A forward term (a delivery at a tick in the future), a standing or repeating contract, a third-party carrier and a custody
 transfer of goods into escrow, a bond or a penalty, a renegotiation or a partial acceptance of an offer, a contract with
 several lines, a price indexed to a market price, a take for goods from a named region, and every form of credit: an advance
-against a cargo, a bill, a loan to a merchant. Credit is `spec-credit.md` (CRD), a planned extension; the ledger has a claims
-list for it (`spec-ledger.md` 10) and nothing here depends on it. A merchant that cannot afford its lot is limited to a smaller
+against a cargo, a bill, a loan to a merchant. Credit is an optional module (`spec-credit.md`, CRD) with no advance against a cargo and no bill in version 1;
+nothing here depends on it. A merchant that cannot afford its lot is limited to a smaller
 lot (6.2.1): that is the cost of the absence, and `Unaffordable` counts it.
 
 ## 10. Backhaul
@@ -1273,7 +1298,7 @@ and `OrderPlaced`; two are aggregates, bounded by the regions, like `UpkeepShort
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
 | `ContractFormed` (new) | when a contract is formed, after its shipment's `ShipmentDispatched` | `Contract`, `Payer`, `Deliverer`, `Region` (the deliverer's, the origin), `To`, `Commodity`, `Quantity`, `Price`, `Escrowed`, `Shipment`, `Mode`, `Arrives` |
-| `ContractSettled` (new) | when a contract ends, at its arrival or at the removal of its deliverer | `Contract`, `Payer`, `Deliverer`, `Region` (the deliverer's account at the event, as `ContractFormed.Region`), `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Paid`, `Refunded`, `Cause` (`delivered`, `short`, `payer_removed`, `deliverer_removed`) |
+| `ContractSettled` (new) | when a contract ends, at its arrival or at the removal of its deliverer | `Contract`, `Payer`, `Deliverer`, `Region` (the deliverer's account at the event, as `ContractFormed.Region`), `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Lost` (the units lost in transit, `spec-risk.md` 5; `Spoiled` counts the units spoiled only), `Paid`, `Refunded`, `Cause` (`delivered`, `short`, `payer_removed`, `deliverer_removed`) |
 | `ContractRound` (new) | once per destination region and tick in which an offer or a take was submitted for it, in ascending `RegionID`, after the last contract of the round | `Region` (the destination), `Offers` and `Takes` (admitted), `OffersRefused`, `TakesRefused`, `Matched`, `Formed`, `NoTaker`, `PayerFunds`, `TooMany`, `DispatchRefused`, `Units`, `Value` (of the contracts formed) |
 | `MerchantsPlanned` (new) | once per region and tick in which at least one agent with a merchant block was given a view there, in ascending `RegionID`, after `ContractRound` and before `RumoursServed` | `Region`, `Merchants`, and the sums of the plan notes of 15.1.2 |
 
@@ -1664,11 +1689,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-005 | The merchant strategy MUST keep no state, MUST take no random draw other than those the default strategy takes for the same intents, and MUST compute the fee share of an agent from its agent ID alone (3.1.3, 3.5). |
 | FR-MER-006 | The inputs of the planned trip MUST be the `Job_c` of 3.4.2, bought in tier 2 with the purpose `PurposeInput`, and with no trip planned `Job_c` MUST be 0 for every commodity so that the default's surplus rule sells what the merchant holds (3.4). |
 | FR-MER-007 | Each candidate (lane and mode) MUST be decided by the first applicable case of 5.1.2 and counted exactly once. |
-| FR-MER-008 | The cautious revenue MUST be the rumoured `Price` when the rumoured `Mean` is 0 and `min(Price, Mean)` otherwise, and `Rnet` MUST be `Rhat * (10 000 - ConsigneeCutBP) / 10 000` truncated for a hired mode and `Rhat` for a self-carried mode (5.2.1). |
+| FR-MER-008 | The cautious revenue MUST be the rumoured `Price` when the rumoured `Mean` is 0 and `min(Price, Mean)` otherwise, and `Rnet` MUST be `Rhat * (10 000 - ConsigneeCutBP) / 10 000` truncated for a hired mode and `Rhat` for a self-carried mode, then, with the risk module on, `Rnet * (10 000 - LossBP) / 10 000` truncated (5.2.1). |
 | FR-MER-009 | A rumour whose `SourceAge` is above `MaxSourceAge` MUST NOT be acted on: the candidate MUST be set aside as `Stale` (5.2.2). |
 | FR-MER-010 | A candidate for a commodity with a shelf life `S` above 0 MUST be set aside as `Perishable` if and only if the travel time `k` is above `S - 1 - max(1, OldestAge)` (5.3.1). |
-| FR-MER-011 | The cost of carriage of a hired candidate MUST be `n * s * P_haul`, with `n` the carrying units the lot needs, `s` the haul units per carrying unit and `P_haul` the local price of the haul commodity (5.4). |
-| FR-MER-012 | The cost of carriage of a self-carried candidate MUST be the wear, the feed and the time of 5.4, with the time at `k` times the agent's own upkeep cost times `TimeCostBP` over 10 000 and not at a regional wage or any aggregate (5.4). |
+| FR-MER-011 | The cost of carriage of a hired candidate MUST be `n * s * P_haul`, with `n` the carrying units the lot needs, `s` the haul units per carrying unit and `P_haul` the local price of the haul commodity, plus `n * Toll` with the fiscal module on (5.4). |
+| FR-MER-012 | The cost of carriage of a self-carried candidate MUST be the wear, the feed and the time of 5.4, with the time at `k` times the agent's own upkeep cost times `TimeCostBP` over 10 000 and not at a regional wage or any aggregate, plus `n * Toll` with the fiscal module on (5.4). |
 | FR-MER-013 | A candidate MUST pass if and only if `C * 10 000 <= phi * G`, with `G = q * (Rnet - P_acq)` positive, evaluated with checked 128-bit arithmetic (5.5.1). |
 | FR-MER-014 | Among the passing candidates the merchant MUST plan the one with the greatest `G - C`, ties to the lower region, then commodity, then mode, and with none it MUST plan no trip (5.1.2, 5.5.2). |
 | FR-MER-015 | `BreakEven` MUST be `Rnet - ceil(C * 10 000 / (phi * q))` and `AskLimit` MUST be `P_acq + ceil(C * 10 000 / (phi * q))`, both with the lot of the final pass (5.5.3, 6.2.2). |
@@ -1678,7 +1703,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-019 | Modes MUST be compared on the same lane by the same rule, each with its own lot, and the passing mode with the greatest `G - C` MUST be chosen, ties to the lower mode ID (6.1). |
 | FR-MER-020 | The lot MUST be the least of the lot cap, what the merchant can pay above its reserve and, when the trip is ready, what it holds, sized in the two passes of 6.2.2. |
 | FR-MER-021 | A trip MUST be ready only when the merchant holds all its inputs; a ready trip that passes the test MUST append the request `{ToSelf: true}` (self-carried) or one `DeliveryOffer` with limit `AskLimit` (hired), and a trip that is not ready MUST append neither (6.3). |
-| FR-MER-022 | A merchant with goods on the way to it (`Inbound`) or with a job in progress MUST plan no self-carried trip, and a merchant in the own-use mode MUST plan no trip and post no take; each MUST be counted as `Waiting` (6.4). |
+| FR-MER-022 | A merchant with goods on the way to it (`Inbound`), with a job in progress or with a store MUST plan no self-carried trip, and a merchant in the own-use mode MUST plan no trip and post no take; each MUST be counted as `Waiting` (6.4). |
 | FR-MER-023 | A merchant whose work share is 0 MUST plan no trip and post no take, and MUST still buy its upkeep and sell its surplus (6.5). |
 | FR-MER-024 | A candidate MUST be set aside as `Locked` while the merchant has units of the commodity on the way to the destination (`Outbound`) (7.1). |
 | FR-MER-025 | A merchant's plan MUST carry at most one shipment request or one delivery offer, of at most `LotUnits` carrying units (7.1). |
@@ -1695,13 +1720,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-036 | Formation MUST apply the checks of 9.5 in order, `too_many_contracts` then `payer_funds` then the dispatch, a failure ending the attempt with its reason, dropping the offer, leaving the take unchanged and changing nothing else. |
 | FR-MER-037 | Formation MUST dispatch the shipment as the deliverer by the shipment mechanism with all its checks and effects and the payer as consignee, and only then MUST it transfer `price * quantity` from the payer to an Escrow account under `escrow_in`. |
 | FR-MER-038 | A contract MUST exist only if its dispatch and its escrow both took place; its deadline MUST be the arrival tick of its shipment, and a later change of the transit factor or of the graph MUST NOT move it (9.5). |
-| FR-MER-039 | An Escrow account MUST hold the money of at most one open contract and nothing else, MUST be the lowest-ID open Escrow account of the destination region that no open contract references or a new one, MUST NOT be closed, and MUST be empty when no contract references it (9.6.2). |
-| FR-MER-040 | In phase 1, after the arrivals of transport, the contracts whose shipment arrived MUST be settled in contract ID order by the table of 9.7: `escrow_out` of `price * reached` to the deliverer, `escrow_refund` of `price * spoiled` to the payer or, if it no longer exists, to the estate of the destination region. |
+| FR-MER-039 | An Escrow account MUST hold the money of at most one open contract and nothing else, MUST be the lowest-ID open Escrow account of the destination region that no open contract or hire references or a new one, MUST NOT be closed, and MUST be empty when no contract references it (9.6.2). |
+| FR-MER-040 | In phase 1, after the arrivals of transport, the contracts whose shipment arrived MUST be settled in contract ID order by the table of 9.7: `escrow_out` of `price * reached` to the deliverer, `escrow_refund` of `price * (spoiled + lost)` to the payer or, if it no longer exists, to the estate of the destination region. |
 | FR-MER-041 | If the deliverer of an open contract is removed, the contract MUST end at the removal with the whole escrow returned to the payer, or to the estate of its region if the payer no longer exists, and the shipment MUST NOT be touched (9.8.2). |
 | FR-MER-042 | If the payer of an open contract is removed, the contract MUST stand and be settled at the arrival with the estate of the destination region standing in for the payer, and the deliverer MUST be paid for the units diverted as for the units delivered (9.7, 9.8.2). |
 | FR-MER-043 | With the module on, `open_contract` MUST be registered as a `region_bound` refusal, open for the payer and the deliverer of an open contract, so that the public relocation returns `ErrRegionBound` for them (9.8.1). |
 | FR-MER-044 | A contract MUST create or destroy no money or goods and add no ledger reason, and every identity of `spec-ledger.md` 9.1 MUST hold with money in escrow (9.6.1). |
-| FR-MER-045 | `World.Audit` MUST also check, with the module on, that each open contract's Escrow account holds exactly `price * quantity`, that an unreferenced Escrow account is empty, that contract IDs are unique, and that the shipment of each contract is in flight (9.6). |
+| FR-MER-045 | `World.Audit` MUST also check, with the module on, that each open contract's Escrow account holds exactly `price * quantity`, that an Escrow account that no open contract and no open hire references is empty (an account of a hire is not audited here as a contract's), that contract IDs are unique, and that the shipment of each contract is in flight (9.6). |
 | FR-MER-046 | No more than `MaxOpen` contracts MUST be open at once: a formation that would exceed it MUST fail with `too_many_contracts` (9.5, 13). |
 | FR-MER-047 | At the arrival of a self-carried traveller its beliefs MUST be reseeded by the rule of `spec-beliefs.md` 8.3 for every commodity of its tradable set, taking no random draw (12.2). |
 | FR-MER-048 | The haul units redeemed by a hired shipment MUST be attributed in the flow totals to the origin region (`spec-transport.md` 7.3.3), so that the haul units of the two directions of a pair are readable separately (10.4). |
@@ -1720,6 +1745,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-061 | A world restored between ticks MUST settle the same contracts at the same ticks, take the same key draws and give the same events as an uninterrupted one. |
 | FR-MER-062 | For a given seed, configuration and sequence of calls, the offers, matches, contracts, settlements and events MUST be identical across runs and platforms (architecture.md 7.4), checked by a golden test on a world with merchants and consignees. |
 | FR-MER-063 | With `Modules.Merchants` absent and no role with a merchant block, results MUST equal those of a world without this spec, and with the module on and every strategy the default, results MUST equal those of a world with it off apart from the hash. |
+| FR-MER-064 | With the institutions module, a take's bid limit above the cap in force for its commodity in the destination region MUST be replaced by the cap after the check `overflow`, an offer's ask limit below the floor MUST be raised to it after the check `invalid_price`, and an offer without the `sell` right or a take without the `buy` right in the destination region MUST be refused `not_permitted` (9.3). |
 
 **Restated from `spec-carriage.md` (9.9), under their old IDs:**
 

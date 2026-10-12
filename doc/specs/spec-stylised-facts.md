@@ -14,8 +14,8 @@ nature**: it defines what the library is tested against, and adds no API, no
 properties (STY), adjust a knob (CLB), run again (EXP). It needs
 `spec-indicators.md` (IND: every measure a fact is stated in, by preset name and
 field), `spec-stability.md` (STB: the register, the failure regimes F1 to F8 and
-the scenarios S01 to S90, of which this spec takes the bands of the economic ones and
-not of the nine of the class "harness test"),
+the scenarios S01 to S165, of which this spec takes the bands of the economic ones and
+not of those of the class "harness test" (the list is in 5.11)),
 `spec-reference-chain.md` (REF: the packs and the form of a band file),
 `spec-viability.md` (VIA: the steady-state prices a fact is compared with),
 `spec-world.md` (WLD: the run is a function of configuration, seed and calls) and
@@ -236,7 +236,7 @@ Two keys are STY's own and name unmet need, which no REF entry carries: `s01.unm
 band keys of the bands files like the rest (registry rule of 9.1) and are not
 used by STY-P06, whose worst-lane band is `x1.worst_bp` alone.
 
-The scenarios that STB added after REF's 7.2 (S23 to S90, the harness tests aside) have no key yet; each
+The scenarios that STB added after REF's 7.2 (S23 to S165, the harness tests aside) have no key yet; each
 fact that backs one defines its keys in 5 (`s28.reopen_ticks` and so on) and REF
 adds them to its band files when it builds the pack (section 21).
 
@@ -386,6 +386,22 @@ is off has none of its positions and leaves every result as it would be without
 it (WLD 6.1.5). 5.10 is the matrix. A fact whose modules are absent is not
 failed: it is **not applicable**, and the verdict record says so (8.5).
 
+**One rule for the later modules.** A fact holds on a pack with the fourteen modules
+of the later stage (settlements, storage, employment, tenure, credit, risk,
+infrastructure, insurance, polity, fiscal, institutions, policy, saving and
+technology) **off**, unless the *On* column of its row in 5.10 names the module; the
+*Off* column says what else must be absent. A pack that turns one on is its own pack
+and needs its own record (7.4). Two cases are named because a fact would otherwise be
+read where it cannot hold:
+
+- **Technology.** A claim of stability is made with `Modules.Technology` off: a gain
+  makes the steady state drift by design (`spec-technology.md` 8.7). A run with growth
+  is held to TEC-S2 to S5 (S149 to S152), not to the facts of this section.
+- **A binding control or right.** A pack with a price control in force (a cap or a
+  floor) or a right that refuses an activity is **report-only** (class R) for the facts
+  that assume free markets: P02, P04, P05, P06, S01 and S03. The exact facts (M01,
+  M02) stay asserted. A control that binds nothing (the inert overlay) is not binding.
+
 ## 5. The facts
 
 Each fact is in the form of 3.1 and in the order the roadmap row asks for:
@@ -512,13 +528,18 @@ G. *Loops:* STB-L10, L28.
 
 **STY-P06 Connected regions' prices converge within the cost of carriage.**
 *Property:* with trade on, no connected lane leaves a profit larger than a margin
-after freight, and the relative prices of two trading regions lie within the
+after freight (in a pack with route rows, `spec-risk.md`, the cost of carriage is
+freight and the expected loss of the route, `Routes.LossBP`, `spec-risk.md` 8.3: a
+lane's gap is read net of both), and the relative prices of two trading regions lie within the
 range of their autarky ratios. *Measure:* `PriceGap` (IND 9 row 6) per directed
 connected lane and traded commodity, `GapAfterFreight` as a share of the
 delivered price (`DeliveredPrice`, IND 8.4), the **median over the lanes that dispatched** of the positive part
 `max(gap, 0)` over the **year** window (a lane with no dispatch has no
 `Delivered`; a negative gap is a lane on which carriage does not pay); `Spread` against the same run without the trade overlay as a
-control; `Connected` true; the conjunct `Binding` of 4.3. *Pack:* `two` and
+control; `Connected` true; the conjunct `Binding` of 4.3; in a pack with route rows the expected loss of the route, which IND's
+`DeliveredPrice` and `PriceGap` (IND 9 rows 5 and 6) carry once IND adds it (until then the
+measure reads freight only, and the loss is a part of the gap that `x1.margin_bp` is read
+with). *Pack:* `two` and
 `three` with `overlay/trade.toml` (X1, X2 dynamic; S30, S46, S67), the control
 the same pack without it. *Seeds:* SR2, tier N (the dynamic part waits for
 MER and the code, REF 7.6). *Band:* `x1.margin_bp` prior 1 000 (10% of the
@@ -727,6 +748,22 @@ population above `M / stake` is a defect of the stake rule. *Source:* hand
 (POP 5.5) and model. *Confidence:* I for the bound, M for the bands. *Class:* X
 and B, tier L. *Loops:* STB-L75, L76, L79.
 
+**STY-W07 Unemployment and the employers' margin are reported.** *Property:* with
+the employment module on, the share of the households that offered work and were
+not hired and the margin that employers keep on the hired output are recorded; no
+value is a defect and no band exists. A steady state with employers is not a
+zero-profit state (`spec-viability.md` 4.7), so the margin is expected above 0.
+*Measure:* `Unemployment` (IND 9 row 22: the unmatched household-ticks over the
+offered household-ticks by region and role, with `Offered` beside it; EMP 10.1.1)
+over the **year** window, and the employers' margin as 10 000 less the labour share
+of `WageBill` (IND 9 row 23, EMP 10.2.1), by region. *Pack:* `one` +
+`overlay/employment.toml` (REF 4.5; S97 to S100); the module on, 5.10. *Seeds:* every
+seed the pack runs, recorded and not asserted, tier G. *Band:* none. *Pass and fail:*
+nothing; the values go to the verdict record and to the `t.Logf` line, and a region
+with no household that offered has no value, not 0. *Source:* internal requirement
+(EMP 10, the finding of VIA 4.7). *Confidence:* P (no value is claimed). *Class:* R,
+tier G. *Loops:* STB-L14, L150 (EMP-A5).
+
 ### 5.3 Shocks
 
 Every shock is injected through INT's calls, at a boundary between steps
@@ -913,7 +950,7 @@ size P. *Class:* B, tier G. *Loops:* STB-L36, L37, L54, L61.
 **STY-M01 A closed economy's money is constant.** *Property:* with no faucet or
 sink after construction, the money of the economy equals its start at every
 tick, and the sectors add up to it. *Measure:* `Sectors.M` against `M_init`;
-`M_h + M_p + M_c = M` (IND 9 row 7); window: tick. *Pack:* every pack with no
+`M_h + M_p + M_c + M_t = M` (IND 9 row 7); window: tick. *Pack:* every pack with no
 money flow and no outside. *Seeds:* all, tier G (REF 7.5's range). *Band:* none.
 *Source:* internal (`spec-money-supply.md` 8.2 items 1 and 2). *Confidence:* I.
 *Class:* X, tier G. *Loops:* STB-L30.
@@ -961,7 +998,7 @@ derivation and model. *Confidence:* H. *Class:* **R** until the aggregate exists
 no-shock run the share of money held out of circulation stays below a band, and
 with the production halt on the unsold stock of each produced good stays near the
 halt's threshold, while with it off the stock grows past it. *Measure:*
-`Sectors` share `(M_p + M_c) / M`; `StockCover` and the unsold share
+`Sectors` share `(M_p + M_c + M_t) / M`; `StockCover` and the unsold share
 `HeldByEstate / Held` (IND 9 rows 7 and 15); S19's stock as a share of the halt
 threshold. *Pack:* `one` with the halt on and off (S19), the glut pack of S07.
 *Seeds:* SR2, tier G. *Band:* `m05.pool_share_bp` prior 3 000 (P);
@@ -1131,20 +1168,27 @@ present) is not listed unless the fact names it. *Trade set* is the region
 graph's edges with transport, information and the merchant strategy
 (`overlay/trade.toml`).
 
+The fourteen modules of the later stage are off for every row unless its *On* column
+names them, and a binding control or right is absent where the *Off* column says so
+(4.6).
+
 | Fact | On | Off | Pack |
 |------|----|-----|------|
-| P01, P02, P03, P05, P08, P09 | none | none | any |
-| P04 | none | external, money flows | any viable |
-| P06 | trade set | none | `two`, `three`, `five` |
+| P01, P03, P08, P09 | none | none | any |
+| P02, P05 | none | a binding control or right (4.6) | any |
+| P04 | none | external, money flows, a binding control or right (4.6) | any viable |
+| P06 | trade set | a binding control or right (4.6) | `two`, `three`, `five` |
 | P07 | none | population, money flows, external | `one`, `second` |
 | W01 | demand | none | `one-demand`, `five` + demand |
 | W02, W03 | population, resources (binding), demand | `Renewal` 0 | `one-demand` + `overlay/resources.toml` + population overlay |
 | W04 | skill barriers | none | `one` + `overlay/skill` |
 | W05 | none | none | `one` |
 | W06 | population (resources for the fixed point) | migration, money flows (for the money cap) | the population overlay |
-| S01, S05 (accounts) | none; money flows for S05 | none | `one`, `one` + `overlay/faucet` |
+| W07 | employment | none | `one` + `overlay/employment.toml` |
+| S01 | none | a binding control or right (4.6) | `one` |
+| S05 (accounts) | money flows | none | `one` + `overlay/faucet` |
 | S02, S06 | estates (pool, relief, ladder) | none; population for the tier L leg | `famine` + `overlay/estates` |
-| S03 | trade set | none | a three-region chain + trade overlay |
+| S03 | trade set | a binding control or right (4.6) | a three-region chain + trade overlay |
 | S04, T01, T03 | external | none | `overlay/external.toml` |
 | D01, D02, D03 | none | none | any viable (not `famine` for D01) |
 | M01, M03 | none | money flows, external, demand (M03) | `one` |
@@ -1160,8 +1204,8 @@ graph's edges with transport, information and the merchant strategy
 
 FR-STB-005 asks that every scenario of `spec-stability.md` 8 be covered, and the
 brief asks that a scenario's bands have one home. The table gives, for every
-scenario S01 to S90 (S15 is unused) except the nine of the class "harness test"
-(S77, S78 and S84 to S90, below the table), the **fact** that holds its band, or the
+scenario S01 to S165 (S15 is unused) except those of the class "harness test"
+(S77, S78, S84 to S90 and the list below the table), the **fact** that holds its band, or the
 class of what it asserts when no band is involved. A scenario with an assertion of
 its own owner (an exact check, or a formula the owner derives) keeps it; STY adds
 only the key and the prior where the scenario named "a stated band" and no fact
@@ -1240,19 +1284,21 @@ a placeholder (P) unless a basis is given.
 | S81 | tier G, exact: the same seed, configuration and calls give the same state at every tick and the same events (the golden rendering of REF 8.5); two orders of calls on different keys give the same state; a run with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit (STY-M02) | X | none: an exact check, asserted whether or not a band exists (FR-REF-023) |
 | S82 | tier G, exact: the mailbox, the slots and `Agent` of the restored world equal the original's and the result equals an uninterrupted run (9.5, FR-STY-088); O: a non-mortal player at hunger stays and a mortal one is removed by a consumer's spawner | X, O | none: exact and ordinal checks, asserted whether or not a band exists |
 | S83 | tier G, exact: a `Relocate` of a household on a journey moves it and ends its journey (`Ended` counts it); one with an open contract is refused with `ErrRegionBound`; goods and money are conserved (STY-M02) | X | none: exact checks, asserted whether or not a band exists |
+| S91 to S165 (the fourteen later modules, REF 7.12) | the owner's own assertion in the scenario table of its spec (exact accounting, an invariant or a derived bound), asserted whether or not a band exists (FR-REF-023); the measures that spec reports stay reported until a reviewed run sets a key (8.4); the pass of PLC-S2 (S156) is a band for STY to set: the unfed share returns inside the band | X, O, R | none yet |
 
 A scenario that is **exact** is asserted whether or not any band exists
 (FR-REF-023), so STY has nothing to set for it. The scenarios that **expect a
 regime** (S14's deep depth, S27, S38, S40, S43) name it in their band table
 (6.4).
 
-**Scenarios of the class "harness test"** (S77, S78 and S84 to S90 of
-`spec-stability.md` 8; FR-STB-005) are outside this table and outside the coverage
+**Scenarios of the class "harness test"** (S77, S78 and S84 to S90, and S101, S105,
+S106, S112, S113, S119, S125, S132, S141, S142, S147, S148, S153, S155, S158 and S159 of
+`spec-reference-chain.md` 7.12, of `spec-stability.md` 8; FR-STB-005) are outside this table and outside the coverage
 rule of FR-STY-098. Each is a test of a harness or of a procedure against a model of
 its own rules and asserts nothing about prices, households or money, so no fact of
 this spec holds it and no band exists for it; it is covered by a test in the spec that
 owns the harness (`spec-checkpoint.md` 15, `spec-experiments.md` 17,
-`spec-calibration.md` 11).
+`spec-calibration.md` 11 and the specs of the later modules named in REF 7.12).
 
 ## 6. The failure regimes
 
@@ -1307,7 +1353,7 @@ basis points, a count in ticks or windows. `k` indexes the **year** windows coun
 | ID | Regime (STB) | Rule | Keys (prior) | Loops it exposes |
 |----|--------------|------|--------------|------------------|
 | **R1** | runaway inflation (F1) | `g_k = link_k - 10 000` of the `PriceIndex.Fisher` chain with `Consumed` weights, of the whole economy and of each class of `Classes` (any one detected is detected), is at least `rise_bp` in each of `windows` consecutive windows; **or** `Sectors.M` is at least `m_factor_bp / 10 000` times `M_init` at two successive closes; **or** any link is `Clamped` | `r1.rise_bp` 3 000, `r1.windows` 2, `r1.m_factor_bp` 30 000 (P) | L05, L10, L14 (upper outcome), L30 (a faucet with no sink), L69, L98 |
-| **R2** | hoarding (F2) | trade volume falls (`Turnover.Volume` of the last window is below `vol_bp` of the first) **and** one of: `(M_p + M_c) / M` is at least `share_bp` at `windows` consecutive closes; the unsold share `HeldByEstate / Held` of a commodity with consumption is at least `unsold_bp` and rising over `windows`; `Inequality.Top(1 000)` of household money is at least `top_bp` | `r2.vol_bp` 8 000, `r2.share_bp` 5 000, `r2.unsold_bp` 5 000, `r2.top_bp` 7 000, `r2.windows` 2 (P) | L31, L11, L25, L45, L30, L73 |
+| **R2** | hoarding (F2) | trade volume falls (`Turnover.Volume` of the last window is below `vol_bp` of the first) **and** one of: `(M_p + M_c + M_t) / M` is at least `share_bp` at `windows` consecutive closes; the unsold share `HeldByEstate / Held` of a commodity with consumption is at least `unsold_bp` and rising over `windows`; `Inequality.Top(1 000)` of household money is at least `top_bp` | `r2.vol_bp` 8 000, `r2.share_bp` 5 000, `r2.unsold_bp` 5 000, `r2.top_bp` 7 000, `r2.windows` 2 (P) | L31, L11, L25, L45, L30, L73 |
 | **R3** | collapse (F3) | the households of the realm, or of a region with a positive start, fall to at most `10 000 - fall_bp` of their start **and** are not back at `10 000 - recover_bp` within `horizon_factor / 10 000` times `t_min` ticks of the minimum (`t_min`: the speed limit of STY-S02, from the trough to `10 000 - s14.recover_band_bp` of the earlier level, the same figure and the same level as R3's `recover_bp`; the two priors are 1 000 and a registry check keeps them equal; at least `horizon` ticks); **or** a role with positive start households has none for `role_ticks` consecutive ticks; a run too short for the horizon is `unknown` (**needs a longer run**) | `r3.fall_bp` 2 000, `r3.recover_bp` 1 000, `r3.horizon_factor` 50 000 (5 times: above S02's band of 4), `r3.horizon` 730, `r3.role_ticks` 365 (P) | L39, L35, L19, L11, L62, L63, L64, L66, L77, L82, L88 to L90, L101, L104, L105, L111 |
 | **R4** | stagnation (F4) | `Turnover.Volume` is below `vol_bp` of the first window in each of `windows` consecutive windows **while** households are above `10 000 - fall_bp` of their start (no collapse) | `r4.vol_bp` 5 000, `r4.windows` 2 (P) | L03, L09, L11, L45, L46, L73 |
 | **R5a** | pinned market (F5) | in one-tick windows, `Pinned.Share` of a market is at or above `pinned_bp` for at least `pinned_ticks` consecutive ticks | `r5.pinned_bp` 5 000, `r5.pinned_ticks` 60 (P) | L05, L06, L09, L14, L51, L86, L91, L21, L102, L106 |
@@ -1334,7 +1380,7 @@ price) is the lowest the price can reach, and a market at it is also R5a.
 6.3.2. **R2's first conjunct.** The share of money outside the households is a
 regime only with trade falling; a pool that fills in a collapse is working as
 designed (`spec-population.md` 6.2: it is fullest when need is greatest), and that
-run is R3, not R2.
+run is R3, not R2. The share is `(M_p + M_c + M_t) / M`, every sector but the households, with `M = M_h + M_p + M_c + M_t` (IND 9 row 7, which lists pool, escrow and treasury as money held out of circulation, and STB F2, "held by a sector or by the pool"): a treasury that keeps what it collects is a hoard like a pool that is not released, and with no governed jurisdiction `M_t` is 0 and the form is the pool and escrow share alone. A pack whose treasuries are meant to hold a buffer sets `r2.share_bp` above it (a key of `regimes.toml`, 6.2).
 
 6.3.3. **R5 has two parts** because STB's F5 has two readings: the beliefs of a
 market sit at a bound (the `Warn` "price beliefs at bound", FR-BEL-031, emitted at
@@ -1445,7 +1491,7 @@ whose bad side is low the statistic is negated, below):
 | Detector | Separated key | Statistic | Held keys |
 |----------|---------------|-----------|-----------|
 | R1 | `rise_bp` | the largest rise held for `windows` links | `windows`, `m_factor_bp` |
-| R2 | `share_bp` | the largest pool and escrow share held for `windows` closes | `vol_bp`, `unsold_bp`, `top_bp`, `windows` |
+| R2 | `share_bp` | the largest pool, escrow and treasury share held for `windows` closes | `vol_bp`, `unsold_bp`, `top_bp`, `windows` |
 | R3 | `fall_bp` | the deepest fall | `recover_bp`, `horizon_factor`, `horizon`, `role_ticks` |
 | R4 | `vol_bp` (low is bad) | the lowest volume share held for `windows` windows | `windows` |
 | R5a | `pinned_ticks` | the longest pinned run | `pinned_bp` |
@@ -1553,6 +1599,9 @@ property of the default, and the neighbour rule is how it is seen
 (`spec-calibration.md` owns the grid; section 10). A claim of stability says
 `in sample` unless REF provides a hold-out and the claim was checked on it
 (`spec-calibration.md` 7.4.2).
+A default at an **edge** of its grid has one neighbour: it is **not called stable**, and
+the record's `claim` line says `one_neighbour` (`spec-calibration.md` 7.4.3, FR-CLB-039). A
+claim of stability is made with `Modules.Technology` off (4.6).
 
 7.3.2. The word **stable** is not used of a configuration in a spec, a doc
 comment, a log line or a release note outside this procedure; "no regime was
@@ -1563,7 +1612,8 @@ of their own over a window and claim nothing about a default.
 7.3.3. A default has a **stability record**: the verdict of the three checks at
 the default and at its two neighbours, the commit and configuration hash they
 were set from, and the seeds. It is a text file beside the golden file
-(`testdata/golden/stylised/`, 8.5).
+(`testdata/golden/stylised/<pack>.stability.txt`, beside the verdict record
+`<pack>.txt`, 8.5).
 
 ### 7.4 What the checks do not claim
 
@@ -1901,7 +1951,7 @@ dampers (the owner is in the parameter-owner table of README):
 | STY hands | Content |
 |-----------|---------|
 | **targets** | the bands whose keys are set (the version 1 criteria first, 8.1.1) and, for the rest, the observed values of the verdict record beside the prior |
-| **expected signs** | the register's expected effect of a knob on a fact, as the sign of the change of one preset field (IND 11.3): `CostFloor` up raises `Pinned.Share` and lowers `Turnover.Volume` (STB-L09; the cost-floor curve of `spec-stability.md` 6.2 run 5); `BeliefStep` up raises the oscillation of a price (STB-L04); `EntryShare` up raises the role-share swing (SPN 16.1); `RumourErrorBP` up widens the converged gap of P06 (INF 11.2); `BirthStake` down raises the money-limited bound `M / stake` (POP 5.5); `ProduceHaltRatio` down lowers the unsold stock (STB-L44). A measured sign against the expected one is a finding |
+| **expected signs** | the register's expected effect of a knob on a fact, as the sign of the change of one preset field (IND 11.3): `CostFloor` up raises `Pinned.Share` and lowers `Turnover.Volume` (STB-L09; the cost-floor curve of `spec-stability.md` 6.2 run 5); `BeliefStep` up raises the oscillation of a price (STB-L04); `EntryShare` up raises the role-share swing (SPN 16.1); `RumourErrorBP`: sign `?` for the converged gap of P06 (INF 11.2: an independent error narrows it from 1.80 to 0.60 of the freight, and only a shared error widens it); `BirthStake` down raises the money-limited bound `M / stake` (POP 5.5); `ProduceHaltRatio` down lowers the unsold stock (STB-L44). A measured sign against the expected one is a finding |
 | **the stop rule** | the procedure stops when the three checks of 7.1 are STABLE at the defaults and both neighbours for the shipped packs (7.3.1), not when one band is met, and the chosen point is **confirmed on seeds it was not chosen on** (EXP 4.6.4 and 12.4.2: another `Seed0`, which is the calibration's own separation of search and confirm; it is not the bands' hold-out, which REF's seed sets provide only as the recommendation of 8.2, so a claim says `in sample` unless REF has one, `spec-calibration.md` 7.4.2) |
 | **the blind spots** | a calibration targets a band **and** its blind-spot fields (4.3, IND-A2): a knob is not turned until a price index looks flat when `Stale` has risen |
 
@@ -1922,6 +1972,12 @@ the next:
 | 7 | trade: P06, S03, T02 | `two`, `three` + `overlay/trade.toml` | the trade overlay, MER, the code |
 | 8 | the open layer: S04, S05, T01, T03 | `overlay/external.toml`, `overlay/faucet.toml` | the overlays |
 | 9 | the long facts: W02, W03, W06, the L tier of S02 | the population and resources overlays | step 6, tier L |
+
+**Five facts that are in no step above** are searched at the stages of
+`spec-calibration.md` 7.3 and have their bands set with the group of their fact:
+M06 is searched at C4b (its X and O parts; its B part is tier N) and set with step 3, P08
+at C4a and set with step 3, S06 at C5 and set with step 4, G01 at C2 and again at C7b and
+set once after step 6, and W05 at C5 and set with step 4.
 
 ### 10.4 What STY owes the next specs
 
@@ -1970,7 +2026,7 @@ No rule is added to `spec-config.md`. The checks of this spec are checks of its
 | shape | a key with a `value` has an empty `set_by`, or a `set_by` that does not name a commit, a configuration hash and a seed set |
 | seeds | a `set_by` seed set is not REF's setting range (1 to 50, or 1 to 10 for tier L) or has fewer than 10 seeds |
 | ordering | a fact band is looser than the regime threshold it backs (6.5.2), or a regime threshold is set while its detector is recorded as not separating |
-| coverage | a scenario S01 to S90 (S15 and the nine of the class "harness test" excepted) has no row in 5.11 (FR-STB-005, both directions) |
+| coverage | a scenario S01 to S165 (S15 and those of the class "harness test" of 5.11 excepted) has no row in 5.11 (FR-STB-005, both directions) |
 | closed sets | a class, a confidence or a verdict class outside its set |
 
 `set_by` has the form `commit=<id>;config=<hash>;seeds=<a>-<b>`; no wall-clock
@@ -2259,7 +2315,7 @@ test asserts separately under the one ID.
 | FR-STY-045 | STY-M02: the ledger's identities of IND 7 and 8 MUST hold exactly for every tick and seed of REF 7.5. |
 | FR-STY-046 | STY-M03: the aggregate ratio (`HouseholdIncome`) of a closed upkeep-only pack, when it is `OK`, MUST be within `s19.ratio_band_bp` of 10 000; until then the mean of ratios MUST be reported beside it and not asserted. |
 | FR-STY-047 | STY-M04: with wants the aggregate ratio, when `OK`, MUST be above 10 000 and at most `10 000 * (1 + Wmax / U)`; until then it MUST be reported. |
-| FR-STY-048 | STY-M05: the share of money in the pool and escrow MUST be within `m05.pool_share_bp`, and with the halt on the unsold stock within `s19.stock_bound_bp`, and with it off the stock of at least one good MUST pass it. |
+| FR-STY-048 | STY-M05: the share of money in the pool, the escrow and the treasuries MUST be within `m05.pool_share_bp`, and with the halt on the unsold stock within `s19.stock_bound_bp`, and with it off the stock of at least one good MUST pass it. |
 | FR-STY-049 | STY-M06: the mean money per household of a closed region MUST NOT exceed its start, and validation MUST raise `reserve_exceeds_money` for a start below the reserve, and a group that is a net earner MUST reach the reserve within `s20.ticks` (tier N, when REF has the pack of section 21). |
 | FR-STY-050 | STY-T01: the identities of EXT 8.2 MUST hold and the counterparties MUST be empty at every boundary. |
 | FR-STY-051 | STY-T02: with trade the distance of a region's role shares to the pooled census MUST fall over four years (REF X2) and end within `x2.share_band_bp`. |
@@ -2269,9 +2325,10 @@ test asserts separately under the one ID.
 | FR-STY-055 | STY-H03: a warm and a cold start of a perturbed chain MUST end in the same regime. |
 | FR-STY-056 | STY-H04: the replacement bids of a durable MUST be within `s17.spike_factor` of their mean in a warm start and the cold control MUST show a larger ratio by `s17.control_gap_bp`; the completions of a long job MUST be staggered. |
 | FR-STY-057 | STY-G01: every detector MUST return `none` for a viable pack run from its warm start with no shock, for every seed, and households MUST stay above `x4.households_bp` of their start. |
+| FR-STY-058 | STY-W07: with the employment module on, the unemployment share and the employers' margin MUST be recorded in the verdict record and MUST NOT be asserted. |
 | FR-STY-060 | A detector MUST return one of `none`, `detected` or `unknown`; it MUST return `unknown`, never `none`, for too few windows, stale prices (R1, R9), low activity (R6, R8), an unset key or a missing reference, and the volume detectors R2, R4, R5b and R9 MUST NOT be made `unknown` by low activity. |
 | FR-STY-061 | R1 MUST detect a rise of at least `r1.rise_bp` in each of `r1.windows` consecutive windows, or money at `r1.m_factor_bp` of its start, or a clamped link. |
-| FR-STY-062 | R2 MUST detect falling volume with a pool and escrow share, an unsold share or a top-decile share at or above its threshold for `r2.windows` windows. |
+| FR-STY-062 | R2 MUST detect falling volume with a pool, escrow and treasury share, an unsold share or a top-decile share at or above its threshold for `r2.windows` windows. |
 | FR-STY-063 | R3 MUST detect households at or below `10 000 - r3.fall_bp` of their start not recovered to `10 000 - r3.recover_bp` within `r3.horizon_factor` times the speed limit `t_min` of STY-S02 (at least `r3.horizon` ticks), or a role at 0 for `r3.role_ticks`. |
 | FR-STY-064 | R4 MUST detect volume below `r4.vol_bp` of the first window in `r4.windows` windows with no collapse. |
 | FR-STY-065 | R5a MUST detect a pinned share at or above `r5.pinned_bp` for `r5.pinned_ticks` ticks and R5b a run of `r5.freeze_ticks` ticks with unmatched units on both sides and no volume. |
@@ -2305,7 +2362,7 @@ test asserts separately under the one ID.
 | FR-STY-095 | A stability check MUST be a conjunction as 7.1 states and MUST return STABLE, NOT STABLE or UNDETERMINED. |
 | FR-STY-096 | The word stable MUST be used of a default only under 7.3.1. |
 | FR-STY-097 | A default MUST have a stability record (7.3.3) before it is called stable. |
-| FR-STY-098 | Every scenario S01 to S90 except S15 and the nine of the class "harness test" (S77, S78, S84 to S90) MUST have a row in 5.11 holding its band or naming what it asserts. |
+| FR-STY-098 | Every scenario S01 to S165 except S15 and those of the class "harness test" (the list of 5.11) MUST have a row in 5.11 holding its band or naming what it asserts. |
 
 ### Non-functional
 
@@ -2378,9 +2435,9 @@ recommendation.
 | File | Section | Change |
 |------|---------|--------|
 | `spec-stability.md` | 7 | add the row **STB-F9 deflation with distress** (measure: `PriceIndex.Fisher` link and `Turnover.Volume`; causes L70, L71, L98); replace "Thresholds are placeholders that STY sets." with a pointer to STY 6.2 and `bands/regimes.toml`; keep the meaning of F1 to F8 |
-| | 8 | in the scenario table, the "Asserts" bands of the scenarios of 5.11 (S01 to S90 but S15 and the harness tests) point to STY 5.11 as their home; the rows keep their setup; open question 3 ("the thresholds of the regimes") is **closed** by STY 6 |
+| | 8 | in the scenario table, the "Asserts" bands of the scenarios of 5.11 (S01 to S165 but S15 and the harness tests) point to STY 5.11 as their home; the rows keep their setup; open question 3 ("the thresholds of the regimes") is **closed** by STY 6 |
 | | 11 | no parameter changes; the thresholds are test data |
-| `spec-reference-chain.md` | 4.1 | add to the layout `bands/regimes.toml` and `testdata/golden/stylised/<pack>.txt` |
+| `spec-reference-chain.md` | 4.1 | add to the layout `bands/regimes.toml` and `testdata/golden/stylised/<pack>.txt` and `<pack>.stability.txt` |
 | | 7.1.5 | the band file shape gains `expects = [...]` per scenario table and the form `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"`; FR-REF-024 keeps "at least the seeds of 8.2"; STY adds nothing to it and relies on no change |
 | | 7.2 S05 | the four successive windows of 120 ticks become **season** windows of successive years (STY 4.1.3), with the run lengthened to four seasonal years (tier L) |
 | | 7.2, 7.4, 7.7, 7.9 | add the band keys of STY 5.11 that REF's entries lack (`s23.band_bp`, `s25.swing_bp`, `s26.share_band_bp`, `s28.band_bp`, `s28.reopen_ticks`, `s29.disp_bp`, `s40.hunger_bp`, `s43.runway_bp`, `s44.grant_band_bp`, `s44.denied_ticks`, `s56.unfed_drop_bp`, `s61.journeys_factor`, `s62.split_band_bp`, `s63.journeys_band_bp`, `s65.role_share_bp`) and the keys STY adds to its own facts (`s01.unmet_bp`, `r8.unmet_bp`, `x1.worst_bp`, `p07.drift_bp`, `w01.mean_low_bp`, `w01.mean_high_bp`, `w02.n_band_bp`, `w02.ratio_band_bp`, `w06.fixed_point_bp`, `w06.money_cap_bp`, `d01.unfed_bp`, `m05.pool_share_bp`, `h02.offset_bp`, `h02.money_bp`, `t03.quote_band_bp`, `t03.pull_bp`) |
@@ -2396,7 +2453,7 @@ recommendation.
 | | 7.2 S22, X4, 7.5 | the detectors need three year windows from tick 0: REF's 1 095 ticks give exactly three; `five` at 400 ticks gives one, so STY-G01 on `five` **needs a longer run**: 1 095 ticks on seeds 1 and 2 (about 58 s a seed at REF's 53 ms) |
 | | 7.2 S05, S12 | S05's growth key is STY-P03's `s05.range_growth_bp` for S12 too (no key of its own) |
 | `spec-reference-chain.md` | 7.2 S20, X rows | the net-earner B part of STY-M06 needs a pack in which a group starts below the reserve and earns (a closed economy cannot raise the mean): until REF has one the B part is tier N and waits |
-| `spec-observability.md` (A) | 5.3.5, FR-STB-012 list | the fields R2 reads from the snapshot: `MoneyPool`, `MoneyContract` by region, `HeldByEstate` and `HeldByAgents` by market, and the household money rows for `Inequality.Top`; add them to the FR-STB-012 list |
+| `spec-observability.md` (A) | 5.3.5, FR-STB-012 list | the fields R2 reads from the snapshot: `MoneyPool`, `MoneyContract`, `MoneyTreasury` by region, `HeldByEstate` and `HeldByAgents` by market, and the household money rows for `Inequality.Top`; add them to the FR-STB-012 list |
 | `spec-calibration.md` (A) | 7.3.5, X4 | detectors read whole years from tick 0 and do not exclude a first-year transient (STY 4.1.2); STY agrees to CLB's "working threshold" X4 only as the priors of 6.2 until a setting run sets them |
 | `spec-reference-chain.md` | 17 | the file and package for tests that need `indicator`: `indicator/stylised_*_test.go` (STY) and `indicator/scenario_*_test.go` (REF), package `indicator_test`, sharing `stylised_helpers_test.go` (the recording observer), which STY owns |
 | `spec-experiments.md` (A) | 12.2.3 | "the gate 1 to 10, the setting 11 to 50, the nightly 1 to 50 (STY 8.2)" becomes "the gate 1 to 10, the setting and nightly 1 to 50, tier L 1 to 10 (STY 8.2)"; STY does not rely on the edit |

@@ -27,7 +27,11 @@ money and goods stay conserved. Each region has an **estate**, which holds a
 heirs, no wills.
 
 2.1. **What passes to the estate.** The agent's money balance (never
-negative, since there is no credit); its tools, listed under `spec-skill-barriers.md` section 2.7; and
+negative), less what its creditors take in the waterfall of `spec-credit.md` 9.1 (the claims
+of the removed agent as debtor are paid from its balance first, pro rata, and the estate
+receives what is left; the remainder of the escrow of a hire of a removed employer returns to
+the agent's own account before the waterfall, `spec-agents.md` 3.6 step 2c, so that it is in
+that balance and has no reason of its own); its tools, listed under `spec-skill-barriers.md` section 2.7; and
 its other goods, listed as asks by the estate pseudo-agent (section 2.7) at the
 region's effective reference price (`spec-goods.md` 6.3) with the same markdown.
 Perishable goods spoil as usual. Sale proceeds go to the pool. These are ledger
@@ -38,10 +42,17 @@ moved, the account closed, `AgentBankrupted`, the only event that removes the ag
 the events that accompany it in the order of `spec-world.md` 6.11 item 8), are
 `spec-agents.md` 3.6; this spec owns only what the estate then does with them.
 
+The steps of `spec-agents.md` 3.6 also pass to the estate what is not money or goods: the
+titles of the agent (`spec-land.md` 6.4: they move to the pool of the title's region and no
+money moves), the claims of which it is the creditor (`spec-credit.md` 9.2) and its site,
+route or ground facilities (`spec-infrastructure.md` 7.1). Its open hires, covers and
+delivery contracts end with no transfer of their own. `EstateOpened` counts the goods listed
+and nothing else.
+
 Goods also reach the estate by diversion: a cargo whose consignee is removed, outside the destination region or unable to hold it moves from its Transit account to the estate of the destination by `transit_in` (`spec-transport.md` 5.8), and the estate lists it like any other goods (2.7).
 
 2.2. **Which region.** The region the agent was in when it died. A traveller
-that dies in transit leaves its money to the pool of the region of its account, the region it departed from (`spec-transport.md` 5.9.2). Its cargo is not in its account: it is in a Transit account and arrives at its consignee, or, if the consignee is gone, is diverted to the estate of the destination by the reason `transit_in` and listed like any estate goods (`spec-transport.md` 5.8, 5.9.3). The `loss` sink is RSK's (`spec-risk.md`, later) and nothing is posted under it by this spec. Escrow for a
+that dies in transit leaves its money to the pool of the region of its account, the region it departed from (`spec-transport.md` 5.9.2). Its cargo is not in its account: it is in a Transit account and arrives at its consignee, or, if the consignee is gone, is diverted to the estate of the destination by the reason `transit_in` and listed like any estate goods (`spec-transport.md` 5.8, 5.9.3). The `loss` sink is RSK's (`spec-risk.md`, with `Modules.Risk`; `spec-ledger.md` 7.2) and nothing is posted under it by this spec. Escrow for a
 delivery contract is handled by `spec-carriage.md` section 2.1.
 
 2.3. **Use of the pool.** The pool funds the starting money of agents created
@@ -62,7 +73,7 @@ replacement in the first ticks may start with nothing). Money enters the world o
 by `initial` (at construction, a pool seed, and an external agent added during a run,
 `spec-agents.md` 3.5.4) and by the faucets of later specs, each a named flow of the
 ledger (`spec-ledger.md` 7.3). Otherwise the total, agents plus pools plus escrow, is
-constant. A configured grant to the pool of a region is a named faucet too (`spec-money-supply.md` 4.3.2, 7.4); a pool target needs this module on (`ErrModuleDependency`), although the estate account exists whether or not it is (`spec-regions.md` 3.6.2): the pool policy of 2.6 is the module's. A levy on a pool collects after relief in the same tick (P1.7 after P1.6) and before that tick's entry step, where the starting money of an entrant is funded at its creation, in phase 7 (`spec-money-supply.md` 7.5; `spec-world.md` ruling C1).
+constant. A configured grant to the pool of a region is a named faucet too (`spec-money-supply.md` 4.3.2, 7.4); a pool target needs this module on (`ErrModuleDependency`), although the estate account exists whether or not it is (`spec-regions.md` 3.6.2): the pool policy of 2.6 is the module's. A levy on a pool collects after relief in the same tick (P1.7 after P1.6) and before that tick's entry step, where the starting money of an entrant is funded at its creation, in phase 7 (`spec-money-supply.md` 7.5; `spec-world.md` ruling C1). A tax on a pool collects at P1.7b, after relief and after the settlement of claims at P1.7a (`spec-fiscal.md` 5.6); the treasury it is paid to is not the pool. The interest, the principal and the rent that the estate receives as a creditor or a holder of titles enter its account and so the pool (`spec-credit.md` 9.2.2; `spec-land.md` 5.3).
 
 2.4. **Consequences.** A prosperous region accumulates a pool and funds
 well-endowed newcomers. A collapsing region's pool runs dry, so new agents
@@ -112,6 +123,8 @@ the result.
   remains is the relief a poor arrival draws from the destination's pool.
 - Relief counts the receipts of an own-use job in the ratio (`spec-subsistence.md` 7), so a
   household that feeds itself draws less.
+- Relief is in the balance that a debtor's settlement of claims reads at P1.7a, up to the shield
+  (`spec-credit.md` 8.8): money the pool pays a poor household can be paid on to a creditor.
 - A `ReliefPaid` event is emitted per region per tick when anything is paid
   (total paid, number of recipients, and `Households`, the sum of the recipients'
   weights). It carries no per-agent map. It is the pool policy's event: it is not
@@ -148,9 +161,14 @@ different asks. The price of an ask is
   last price for each tick in which the lot had an ask and was not wholly sold,
   truncated, never below the resolution floor.
 
+The estate is exempt from a right (`spec-institutions.md` 5.5.2), and its asks are bound by a
+legal price (6.3.3 there): a legal floor raises the limit of the admitted order and leaves the
+listed price of the lot, which is state (2.7.5), unchanged. The "last price" of the markdown
+above is that listed price.
+
 2.7.4. It has no strategy, no price beliefs, no household, no weight, no upkeep
 and no welfare ratio. It cannot die or go bankrupt, it draws no relief and is not
-counted in the number of agents or households (`spec-scale.md` 3.2, FR-SCL-015).
+counted in the number of agents or households (`spec-scale.md` 3.2, FR-SCL-015). A treasury pseudo-agent (`spec-polity.md` 5.2) is likewise in no count. The estate may be the creditor of a claim by inheritance (`spec-credit.md` 9.2); it never lends, demands repayment or forgives.
 No `AgentSpawned` event is emitted for it, and the snapshot marks it as a pseudo-
 agent. Its orders are otherwise ordinary: they are placed with the others before
 any market clears, take a tie-break key like any order (`spec-clearing.md` 4.2),
@@ -163,7 +181,7 @@ That price is state, so it is part of what this spec contributes to a checkpoint
 2.7.6. Pseudo-agent IDs are in the same ID space as agents, allocated first, one
 per region in region order, as `spec-regions.md` 3.6.1 fixes (the pseudo-agent of the region with `RegionID` `r` has agent ID `r`), so every ordering that uses an agent ID
 (`spec-clearing.md` 4.1) is unaffected by the estate's presence beyond the extra
-orders it places. With the external module on, the counterparties of its outside nodes take the agent IDs that follow the estates (`spec-external-sector.md` 4.2.2), and the households' IDs follow them; the estate IDs stay `0..n-1`.
+orders it places. With the external module on, the counterparties of its outside nodes take the agent IDs that follow the estates (`spec-external-sector.md` 4.2.2), the treasuries of governed jurisdictions follow the counterparties (`spec-polity.md` 5.2.2), and the households' IDs follow them; the estate IDs stay `0..n-1`. The order is estates, counterparties, treasuries, households.
 
 ### 2.8 Weight changes and a failing cohort
 
@@ -208,16 +226,16 @@ derived from the section named.
 
 | ID | Requirement |
 |----|-------------|
-| FR-EST-001 | When an agent is removed, all its money MUST pass to its region's estate account with the reason `estate_money` and all its goods with `estate_goods`, conserving money and goods exactly (2.1; `spec-agents.md` 3.6). |
+| FR-EST-001 | When an agent is removed, all its money, less what its creditors take in the waterfall of `spec-credit.md` 9.1, MUST pass to its region's estate account with the reason `estate_money` and all its goods with `estate_goods`, conserving money and goods exactly (2.1; `spec-agents.md` 3.6). |
 | FR-EST-002 | The region of the estate that receives a removed agent's holdings MUST be the region of the agent's account when it is removed (2.2). |
 | FR-EST-003 | A traveller that dies in transit MUST leave the money of its account to the pool of the region of that account, the region it departed from, and a cargo whose consignee is gone MUST reach the estate of the destination by `transit_in` and be listed like any estate goods (2.2; `spec-transport.md` 5.8, 5.9). |
 | FR-EST-004 | Each region MUST have exactly one estate pseudo-agent, with one ledger account of the kind Estate that holds both the pool's money and the unsold goods, created with the region and before any household (2.7.1). |
-| FR-EST-005 | Pseudo-agent IDs MUST be allocated first in the agent ID space, one per region in region order, the counterparties of the external module (when on) following them and the households after (2.7.6; `spec-external-sector.md` 4.2.2). |
+| FR-EST-005 | Pseudo-agent IDs MUST be allocated first in the agent ID space, one per region in region order, the counterparties of the external module (when on) following them, then the treasuries of governed jurisdictions, and the households after (2.7.6; `spec-external-sector.md` 4.2.2; `spec-polity.md` 5.2.2). |
 | FR-EST-006 | The estate MUST place asks only, and a bid from it MUST be rejected with `side_not_allowed`; each ask MUST be backed by a reservation of goods in the estate's account and need no cash (2.7.2). |
 | FR-EST-007 | The estate MUST place one ask for each lot it holds, naming the lot, and each lot's price MUST be kept as state (2.7.3, 2.7.5). |
 | FR-EST-008 | The first ask price of a durable lot MUST be the region's effective reference price times the lot's remaining durability over the full durability, and of any other lot the effective reference price, truncated and never below the resolution floor (2.7.3). |
 | FR-EST-009 | At P5.3, for each lot that had an ask in the tick and was not wholly sold, its ask price MUST fall by `EstateMarkdown` basis points of the last price, truncated and never below the resolution floor (2.7.3). |
-| FR-EST-010 | The estate pseudo-agent MUST NOT be counted in the number of agents or households, MUST NOT cause an `AgentSpawned` event, and the snapshot MUST mark it as a pseudo-agent (2.7.4). |
+| FR-EST-010 | The estate pseudo-agent MUST NOT be counted in the number of agents or households, MUST NOT cause an `AgentSpawned` event, and the snapshot MUST mark it as a pseudo-agent; a treasury, like an estate, has no per-agent row and is in no count (its identity is `JurisdictionRow.Agent`) (2.7.4). |
 | FR-EST-011 | The estate MUST NOT die, go bankrupt, receive relief or be passed to a strategy (2.7.4). |
 | FR-EST-012 | The estate's orders MUST be placed with the others before any market clears, MUST take a tie-break key like any order, and the events they produce MUST carry the estate's agent ID (2.7.4). |
 | FR-EST-013 | The proceeds of a sale by the estate MUST be a `trade` transfer into the estate account, and the pool balance reported per region in the snapshot MUST equal that account's money balance (2.4, 2.7.1). |

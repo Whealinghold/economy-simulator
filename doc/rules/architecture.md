@@ -102,6 +102,9 @@ economy-sim/
     production/          recipe execution
     ordering/            deterministic sorted iteration helpers, the SplitMix64
                          finaliser, and the Weyl, bucket and key helpers
+    checked/             the checked 128-bit helper (a product or ratio that
+                         can exceed int64), shared by every package that needs
+                         one; it imports nothing and holds no type of the root
     codec/               canonical encoding primitives of a checkpoint
     measure/             checked arithmetic of indicator/ over primitive types
     verdict/             detectors, seed rules and the band-setting rule of the
@@ -119,7 +122,9 @@ economy-sim/
   examples/<name>/       each example is its own module with its own go.mod
   testdata/              fixtures shared across packages: chains/ (config
                          fixtures, including the reference chain), golden/,
-                         checkpoints/ (one fixture per checkpoint format version),
+                         checkpoints/ (one fixture per checkpoint format version,
+                         with every module on; a module's restore test builds
+                         its world from its overlay in the test),
                          calibration/ (the records of a calibration, per pack)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
@@ -232,14 +237,14 @@ conversion at the `internal/` boundary described in 2.9 is not a mapper layer.
 3.2. Use a single ubiquitous vocabulary in code, config and docs:
 `Commodity`, `Recipe`, `Role`, `Agent`, `Market`, `Order`, `Trade`, `World`,
 `Tick`, `Run`, `Money`, `Price`, `Quantity`, `Strategy`, `Clearing`, `Spawner`,
-`Snapshot`, `Event`, `Observer`.
+`Snapshot`, `Event`, `Observer`, `Policy`.
 A new domain term **MUST** be added to the glossary in `doc.go` before use.
 **[project]**
 
 3.3. Domain quantities **MUST** use small named value types (`Money`, `Price`,
 `Quantity`, `CommodityID`, `RoleID`) so that mixing units is a compile error.
 Every other configured entity has a typed ID of its own kind in the same way
-(`RegionID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`); a money flow, which
+(`RegionID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`); a money flow or a fiscal flow, which
 has no typed ID, is named by its string ID (also its ledger reason).
 These types **MUST** be immutable and **MUST NOT** carry behaviour beyond
 arithmetic, comparison and formatting. **[project]**
@@ -273,7 +278,8 @@ not through an event bus, channels or global registries. **[project]**
   products the simulation computes fit in `int64`. Arithmetic that can still
   overflow (price × quantity, accumulated balances, value × basis points)
   goes through checked helpers in `internal/` (using `math/bits` or an
-  explicit range check) that report overflow to the caller. The caller
+  explicit range check; the 128-bit product or ratio is the one shared
+  `internal/checked`, 2.6) that report overflow to the caller. The caller
   handles it as an operation that cannot be applied, for example an order
   rejected with a `reason`. Silent wrap-around is a defect.
 - One exception, for the exact solver in `internal/steady`
@@ -308,14 +314,18 @@ created until a real need exists: a second implementation or a test seam.
 | `Clearing` | the rule by which a market matches orders and sets price |
 | `Spawner`  | decides replacement and entry of agents                  |
 | `Observer` | receives events (trade, bankruptcy, tick) for metrics and tracing; the default discards events |
+| `Policy`   | decides the settings of a policy actor's levers on its cadence; it returns settings and never bids; the default holds every lever |
 
-Adding a new extension interface requires an update to this table.
+Adding a new extension interface requires an update to this table. `Policy`
+is the fifth row because a policy actor does not bid, so the `Strategy`
+signature does not fit (ADR 0003, decision 3; ADR 0001, open point 1,
+answered in `spec-policy.md` 4.7).
 
 `Event` (4.8) is also an interface, but it is a sealed set of types the library
 defines, not an extension point: consumers cannot implement it, and it is not
 subject to 4.5.
 
-**Extension state.** An implementation of `Strategy`, `Clearing` or `Spawner`
+**Extension state.** An implementation of `Strategy`, `Clearing`, `Spawner` or `Policy`
 that keeps state between calls **MUST** also implement the optional interface
 `Stateful`, so that a checkpoint can save it and a restore can load it (ADR
 0002, decision 7): **[project]**
@@ -420,8 +430,8 @@ func NewWorld(cfg Config, opts ...Option) (*World, error) { /* ... */ }
 
 The core options include `WithSeed`, `WithLogger(*slog.Logger)`,
 `WithObserver(Observer)`, `WithAudit()`, `WithTargetSpread(bp)` and the
-registration options `WithStrategy(name, s)`, `WithSpawner(name, s)` and
-`WithClearing(name, c)` (`spec-world.md` 4.1), and, for a restore only,
+registration options `WithStrategy(name, s)`, `WithSpawner(name, s)`,
+`WithClearing(name, c)` and `WithPolicy(name, p)` (`spec-world.md` 4.1), and, for a restore only,
 `WithReseed(salt)` (`spec-checkpoint.md` 6.8). Without `WithSeed` the seed is 0,
 so a world built with no options is still reproducible (7.4); the last
 `WithSeed` given wins. `WithSeed` on a restore and `WithReseed` on `NewWorld`
@@ -503,7 +513,7 @@ or use `slices.SortStableFunc` on input whose order is itself deterministic.
 This matters most for clearing, where equal prices are common. **[project]**
 
 7.7. Extension implementations (4.3) get their randomness from the world.
-Methods on `Strategy`, `Clearing` and `Spawner` that need it receive the
+Methods on `Strategy`, `Clearing`, `Spawner` and `Policy` that need it receive the
 world's `*rand.Rand` as a parameter. Implementations **MUST NOT** create their
 own source, use a global one, or keep the one they were given after the call
 returns. The interfaces' doc comments **MUST** state this contract, because a
@@ -517,7 +527,7 @@ the extension and **MUST** give equal bytes for equal states. `LoadState`
 for a version or bytes it cannot read, and **MUST NOT** keep the slice it is
 given. Neither method receives or may create a random source. An instance that
 holds state **MUST NOT** be shared between worlds. The doc comments of
-`Strategy`, `Spawner`, `Clearing` and `Stateful` **MUST** state this contract,
+`Strategy`, `Spawner`, `Clearing`, `Policy` and `Stateful` **MUST** state this contract,
 because an implementation that breaks it breaks 7.4 after a restore and the
 library cannot detect it. **[project]**
 
@@ -805,4 +815,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 3dcbb5404c096c27477c4e73
+RULE-TAG: 72d15bb407b707a32eeb5c2b

@@ -276,6 +276,10 @@ premium_bp = 10_000 + (tool_price + C_train) * CapitalReturn / (D_work * W_unski
   `C_train` is the training cost of section 4.5, and is 0 for a role with no
   training.
 
+  For a role whose households are limited by the places of a body, D is **reported and not
+  asserted**: the throttle there is the body's, not the trainers' (`spec-institutions.md`
+  5.7.5); C still holds.
+
   The tolerance is `max(25% of the predicted excess over 10 000, 200 basis points)`,
   and it is raised to twice the coefficient of variation of the observed premium across
   seeds, as measured on the reference chain, if that is larger. Both numbers are
@@ -307,7 +311,7 @@ and it is what gives the model a premium of historical size (section 4.8).
 through a traineeship. An agent in any other role may apply. If it is
 accepted it becomes a **trainee** of a **trainer**, a living agent holding
 the target role, for `TrainingTicks` ticks. At completion it changes to the
-target role by the role change of `spec-spawner.md` 4.2 (cause `traineeship`): it keeps its account and money and the goods its new role can trade, and goods outside the new role's tradable set pass to the estate. The application is made by the default spawner (`spec-spawner.md` 4.4, 6.2) and only for an agent of weight 1. It still needs the tool (section 2)
+target role by the role change of `spec-spawner.md` 4.2 (cause `traineeship`): it keeps its account and money and the goods its new role can trade, and goods outside the new role's tradable set pass to the estate, and so does the load above the new role's room (`spec-storage.md` 5.5.2). The application is made by the default spawner (`spec-spawner.md` 4.4, 6.2) and only for an agent of weight 1. It still needs the tool (section 2)
 before it can run the role's skilled recipes. A role with `TrainingTicks` of 0
 has no training barrier, only the tool.
 
@@ -359,12 +363,19 @@ the limit is an open question (section 11).
 4.2.1. **Ticks served.** The completion, the filling of places from the queue and the
 advance of ticks served are at P7.1(a) of each region's entry step (`spec-world.md`
 ruling C5), in this order: (1) every trainee whose ticks served has reached
-`TrainingTicks` completes; (2) places are filled from the queue in queue order; (3) the
-ticks served of every trainee, including one placed in step (2), rise by 1. A place
+`TrainingTicks` completes, if the target role has headroom of at least the trainee's weight in
+the region (`spec-institutions.md` 4.5.2); one that has not is **held**; (2) places are filled
+from the queue in queue order; (3) the ticks served of every trainee, including one placed in
+step (2), rise by 1, and those of a held trainee stay at `TrainingTicks`. A place
 filled in the entry step of tick `s` therefore makes the agent a trainee for the
 production phases of ticks `s + 1` to `s + TrainingTicks`, and it completes in the entry
 step of tick `s + TrainingTicks`. A trainee returned to the queue by 4.6 keeps the ticks
-it has served.
+it has served. A held trainee stays a trainee: it keeps running the trainer's eligible recipes at
+`TraineeYield`, its board comes from the trainer, it still counts in the `TeachingLoad` the
+trainer's teaching accumulator sums, it holds one of its trainer's places (so a place it holds
+is not open to the queue), and it is counted `Held`. It completes at the first entry step in
+which the headroom is at least its weight, in the order of application tick and then agent ID
+(`spec-institutions.md` 4.5.2).
 
 4.3. **Trainer's incentive.** A trainer takes a trainee only if the
 expected net gain per trainee-tick is not negative:
@@ -390,7 +401,7 @@ which softens the incentive cliff (STB-L37). Whether `output_a` for the test use
 function `TrainingPays` of `spec-production.md` 8.3 over supplied prices is the
 implementation's choice; the inequality is the same.
 
-4.4. **Places and queue.** A trainer holds at most `MaxTrainees` at once.
+4.4. **Places and queue.** A trainer holds at most `MaxTrainees` at once. With a `train` right in force for the role in the region, a household that is not a member of the holder body has no place, and a member holds at most `min(MaxTrainees of the role, MaxTrainees of its body)`; a traineeship in progress is not ended (`spec-institutions.md` 5.7.1, 5.7.3).
 The default is 3, the limit set by the English Statute of Artificers of 1563
 (`evidence.md`, a search snippet and unverified; the default is a placeholder). Applicants queue per role per region, ordered by the tick they
 applied and then by agent identifier. A place opens when a trainer has fewer than
@@ -422,7 +433,8 @@ the agent its surplus, since it goes on working in its own role, but it **delays
 premium. The premium stream starts `q_w` ticks later, where `q_w` is the expected wait:
 the applicants queued ahead of the agent for the role in its region times
 `TrainingTicks`, divided by `n_max` (4.9) and rounded up, or no application if there are
-no trainers. With a linear discount at `CapitalReturn` per year (a placeholder
+no trainers. Trainers are the households of the target role in the region that can take a
+trainee: members where a `train` right is in force, all holders otherwise (`spec-institutions.md` 5.7.2). With a linear discount at `CapitalReturn` per year (a placeholder
 simplification; exact for small delays) the rule becomes
 
 ```
@@ -479,7 +491,7 @@ cost and the throughput, and is recorded as a deviation in the fixture.
 4.9. **The shortest traineeship that shows the throttle** (README "Still open" 3). The
 throttle of 4.4 is visible only when it binds, that is when applicants would arrive
 faster than places turn over. Let `n_max = trainers * MaxTrainees` be the places in a
-region and `a` the flow of applicants per tick that the application rule (4.5) would
+region (each trainer counting `min(MaxTrainees of the role, MaxTrainees of its body)`, `spec-institutions.md` 5.7.3) and `a` the flow of applicants per tick that the application rule (4.5) would
 produce if there were no limit. The throttle binds if and only if
 
 ```
@@ -539,7 +551,8 @@ The wider calibration steps are in `spec-welfare-and-wages.md` section 8 and
 ## 7. Non-goals and future work
 
 - Cash premiums paid by a trainee's family, association rules beyond the
-  trainee limit, intermediate-stage years (journeyman years in a medieval
+  trainee limit (those are `spec-institutions.md` 5.7: a body's `MaxTrainees`, a `train`
+  right and the held completion), intermediate-stage years (journeyman years in a medieval
   setting), and voluntary early termination.
   Section 4 models a single traineeship pathway funded by the trainer and
   repaid in the trainee's work.
@@ -557,13 +570,13 @@ constructed only when an observer was supplied (4.5 there). The reasons of
 `EstateOpened`.
 
 8.2. **Snapshot.** Per region and role: the places, the places taken, the queue length,
-the trainers, and the observed premium (`spec-welfare-and-wages.md` 4.3). The
+the trainers, the trainees held for want of headroom (`Held`, 4.2.1), and the observed premium (`spec-welfare-and-wages.md` 4.3). The
 throttle and the queue are therefore observable (FR-STB-013). All are bounded by the
 configuration.
 
 8.3. **Logs.** Nothing above `Debug`. At `Debug`, guarded by `Enabled`: "traineeship
 refused" with `agent`, `role` and `reason` (`weight`, `no_trainer`, `gain_negative`,
-`queue_too_long`). One `Warn`, bounded by the configuration: "no places open", per
+`queue_too_long`), and "place not open" with `agent`, `role`, `region` and the reason `not_member` (a place a non-member trainer does not have, `spec-institutions.md` 11.2; the line "traineeship refused" is an applicant's and is unchanged). One `Warn`, bounded by the configuration: "no places open", per
 region and role, emitted when a role with applicants has had no place open for 10
 consecutive ticks because `gain` is negative (STB-L37), at the tenth tick and every
 tenth after, with `region`, `role` and `reason`. It is the counter of the incentive
@@ -655,7 +668,7 @@ and 0.23 to 0.25".
 2. **Voluntary early termination** (4.6, section 7), common in the record
    (`evidence.md`): not modelled; the Justman and Beek account says the premium guards
    against it. Next step, a later module with cash premiums.
-3. **A cash premium and credit** (section 7): `spec-credit.md`.
+3. **A cash premium and credit** (section 7): `spec-credit.md` (no cash premium exists in version 1, so no premium loan: `spec-credit.md` 11.4).
 4. **The anchor of an estate's ask** (2.7): the effective reference price today; the
    price window mean is better. Next step, the estate spec's owner.
 5. **Tool durability and prices** (2.9) remain assumptions; the evidence rows are
@@ -686,16 +699,16 @@ the third round.
 | FR-SKL-012 | Only an agent of weight 1 MUST be a trainer or a trainee, and a configuration with a role of `TrainingTicks` above 0 that has a group of scale above 1 MUST be rejected with `ErrOutOfBounds`. (new) |
 | FR-SKL-013 | While boarded, a trainee's upkeep MUST be consumed from the trainer's account with the reason `consumption`, and the trainer's use MUST include it. (new) |
 | FR-SKL-014 | A trainee MUST run only trainee-eligible recipes of the trainer's role, as executor with the trainer as principal, taking inputs from and creating outputs in the trainer's account, and its output MUST be `TraineeYield` of a full execution. (new for the references) |
-| FR-SKL-015 | Each tick, at P2.2, a trainer's teaching accumulator MUST increase by the sum of its trainees' `TeachingLoad`, and when it reaches 10 000 it MUST subtract 10 000 and that tick MUST be a teaching tick in which the trainer does not start its skilled recipe (a job in progress continues); the completion, the filling of places and the advance of ticks served MUST be at P7.1(a), in that order (4.2, 4.2.1). |
+| FR-SKL-015 | Each tick, at P2.2, a trainer's teaching accumulator MUST increase by the sum of its trainees' `TeachingLoad`, and when it reaches 10 000 it MUST subtract 10 000 and that tick MUST be a teaching tick in which the trainer does not start its skilled recipe (a job in progress continues); the completion, the filling of places and the advance of ticks served MUST be at P7.1(a), in that order, and a trainee whose ticks served have reached `TrainingTicks` MUST complete only if the target role's headroom in the region is at least its weight, otherwise it MUST stay a trainee, hold its trainer's place and be counted `Held` (4.2, 4.2.1; `spec-institutions.md` 4.5.2). |
 | FR-SKL-016 | A trainer MUST take a trainee into a free place only if `output_a - U_a - TeachingLoad * W_trainer / 10 000 >= 0`, and a negative gain MUST NOT end a traineeship in progress. (new for the second clause) |
-| FR-SKL-017 | A trainer MUST hold at most `MaxTrainees` trainees, default 3, and applicants MUST queue per role and region ordered by application tick and then agent ID. |
+| FR-SKL-017 | A trainer MUST hold at most `MaxTrainees` trainees, default 3 (with a `train` right in force, at most the lesser of that and its body's `MaxTrainees`, and a non-member MUST have no place: `spec-institutions.md` 5.7.1, 5.7.3), and applicants MUST queue per role and region ordered by application tick and then agent ID. |
 | FR-SKL-018 | `C_train` MUST equal `TrainingTicks` times the agent's observed income per tick above its upkeep, floored at 0. |
-| FR-SKL-019 | The expected wait `q_w` MUST be the applicants queued ahead times `TrainingTicks` divided by `trainers * MaxTrainees`, rounded up, and an agent MUST NOT apply where there is no trainer. (new) |
+| FR-SKL-019 | The expected wait `q_w` MUST be the applicants queued ahead times `TrainingTicks` divided by `trainers * MaxTrainees` (each trainer counting the lesser of its role's and its body's `MaxTrainees`, `spec-institutions.md` 5.7.3), rounded up, and an agent MUST NOT apply where there is no trainer. (new) |
 | FR-SKL-020 | When a trainer dies its trainees MUST keep the ticks served, return to their own role and rejoin the queue ordered by ticks served and then application tick. |
 | FR-SKL-021 | `TraineeshipStarted`, `TraineeshipCompleted` and `TraineeshipEnded` MUST carry only identifiers and the reason and no map, and MUST be emitted after the transition. |
 | FR-SKL-022 | The `Warn` "no places open" MUST be emitted per region and role, never per agent, only after 10 consecutive ticks with applicants and no place because the gain is negative, at the tenth tick and every tenth after. (new) |
 | FR-SKL-023 | The premium check C MUST always run: with a tool requirement the observed premium MUST be above 10 000 and rise with the tool's price, and with free tools it MUST be within the tolerance of 10 000. |
-| FR-SKL-024 | The whole-series band of check A MUST be reported and MUST NOT fail a test, and the derived check D, once the entry rule exists, MUST accept a premium within `max(25% of the predicted excess over 10 000, 200 basis points)` of `10 000 + (tool_price + C_train) * CapitalReturn / (D_work * W_unskilled)`, raised to twice the observed coefficient of variation if larger. (new for the floor) |
+| FR-SKL-024 | The whole-series band of check A MUST be reported and MUST NOT fail a test, and the derived check D, once the entry rule exists, MUST accept a premium within `max(25% of the predicted excess over 10 000, 200 basis points)` of `10 000 + (tool_price + C_train) * CapitalReturn / (D_work * W_unskilled)`, raised to twice the observed coefficient of variation if larger; for a role limited by the places of a body it MUST be reported and not asserted (`spec-institutions.md` 5.7.5). (new for the floor) |
 | FR-SKL-025 | Bands and tolerances MUST live in the reference chain's data under `testdata/` and MUST NOT be part of the library's API. |
 | FR-SKL-026 | `TrainingTicks`, `MaxTrainees`, `TeachingLoad` and `CapitalReturn` MUST have the defaults and bounds of section 5, and a value outside its bound MUST be rejected with `ErrOutOfBounds`. |
 | FR-SKL-027 | The state of section 9 MUST be saved as plain data in a fixed order with no maps, and a world restored between ticks MUST give the same traineeships, queues and teaching ticks as an uninterrupted run. |
