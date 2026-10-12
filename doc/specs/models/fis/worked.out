@@ -1,0 +1,30 @@
+== A. tick 0 of a small fiscal pack on the kingdom
+agent IDs: {'capital': (7, 10), 'farm': (11, 20), 'harbour': (21, 26), 'hills': (27, 31), 'mill': (32, 36)}
+poll applied by region: {'capital': 240, 'farm': 600, 'harbour': 305, 'hills': 300, 'mill': 300} short: {21: 20, 22: 35} crown treasury: 51745
+tithe by region: {'farm': 90, 'hills': 45, 'mill': 45} inland treasury: 5180 carry of one payer: {40000000}
+remit due: 1045 inland treasury: 4135 crown: 52790
+payout due 10000 available 4135 floor 206 leftover 15
+applied: [206, 207] recipients with the extra unit: 15 of 20 the five without it: [13, 19, 31, 32, 36]
+keys of those five: {13: 14180207640020093695, 19: 13564971763896621636, 31: 15517599431202433770, 32: 16927763432924390401, 36: 16839827797137734171}
+inland treasury after the payout: 0
+
+== B. a toll: crossings of the shipments of the examples
+hills > harbour: exit ['uplands', 'inland'] enter ['coast']
+harbour > mill: exit ['coast'] enter ['inland']
+farm > mill: exit [] enter []
+capital > mill: exit [] enter ['inland']
+edge hills > mill: toll 0
+edge mill > harbour: toll 12
+hills > harbour, n = 3 carrying units: total toll 12 paid by the shipper to the treasury of inland (region mill)
+harbour > mill, toll `gate_in` (inland, on enter, 2 a unit), n = 3: 6
+a scale of 5000 and 3 units of toll 3: 4 (the product first, one truncation)
+
+== C. a duty with a carry: 3 % of the value of a seller's sales (300 bp)
+tick 0, seller A: base 1350, due 40, carry 50000000
+tick 0, seller B: base 208, due 6, carry 24000000
+tick 1, seller A: base 100, due 3, carry 50000000 (exactly 3 + 0.5 = 3.5 units owed over the two ticks: 43 paid of 40.5 + 3 = 43.5)
+
+== D. a tariff and an export duty at a gate (the league of spec-polity.md 12.2)
+import: counterparty sells 5 cloth at 200 = 1000 ; duty 1500 bp from the domestic buyer: 150
+export: domestic seller sells 20 grain at 55 = 1100 ; duty 1000 bp from the seller: 110
+the two payers are in `delta`, the treasury of `west` is in `brook`: a transfer of 260 from region delta to region brook

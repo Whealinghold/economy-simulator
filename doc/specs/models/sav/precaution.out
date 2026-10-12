@@ -1,0 +1,25 @@
+Part A: one household, income 160 (good) or 30 (bad), upkeep 100, 20 000 ticks, window 30
+share_bp cap_ticks | unfed ticks | mean money | mean discretionary
+       0        30 |        2410 |        410 |         36
+    5000        30 |        2333 |        429 |         35
+   10000        30 |        2141 |        482 |         35
+   20000        30 |        1862 |        576 |         34
+   10000         5 |        2218 |        455 |         35
+
+Part B: representative household, circular flow, leakage 2 000 bp, autonomous income 40 cut by 10 000 bp for 30 ticks at tick 200
+share_bp cap_ticks | discretionary before | lowest | ticks to 90% after the cut ends | peak buffer | lowest money
+       0        30 |                  100 |      0 | 60                              |           0 |           64
+    5000        30 |                  100 |      0 | 60                              |         220 |           64
+   10000        30 |                  100 |      0 | 60                              |         440 |           64
+   20000        30 |                  100 |      0 | 58                              |         880 |           64
+   10000         3 |                  100 |      0 | 60                              |         300 |           64
+
+Part C: producer with a 20-tick job, window of 40 records: drawdown = 2200 (inputs 300, upkeep 100, sales 2 500)
+
+Part B2: as B with leakage 3 000 bp and a cut of 60 ticks (a deep and long one: the hole in the cash flow is 30 a tick)
+share_bp cap_ticks | discretionary before | lowest | ticks to 90% after the cut ends | peak buffer | lowest money
+       0        30 |                   33 |      0 | 62                              |           0 |            0
+    5000        30 |                   33 |      0 | 62                              |        1498 |            0
+   10000        30 |                   33 |      0 | 62                              |        2996 |            0
+   20000        30 |                   33 |      0 | 62                              |        3000 |            0
+   10000        10 |                   33 |      0 | 62                              |        1000 |            0

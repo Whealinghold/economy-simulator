@@ -1,0 +1,4 @@
+cut: 20000 instances, 19841 short; all identities held; largest leftover 94
+extra units over 1000 ticks, 10 equal recipients, 5 extra a tick: [512, 519, 475, 485, 494, 494, 493, 525, 497, 506] sum 5000
+by the key; by lower ID first would be [1000]*5 + [0]*5
+duty carry: 2000 runs, the total paid equals floor((sum + c0) / 10^8) exactly

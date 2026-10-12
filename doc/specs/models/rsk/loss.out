@@ -1,0 +1,68 @@
+== 1. The world's words and the strike test (spec-risk.md 3.4.2) ==
+seed  0: words b18c97843f57bb91 d7046f21f79eba31 -> draw(10000) = 6935, 8399
+seed  1: words af9d32bf75779748 b7672df032bf0473 -> draw(10000) = 6859, 7164
+seed 42: words 61c88529c9612c1b 2608d8a3075aa168 -> draw(10000) = 3819, 1485
+
+== 2. Worked example A: a hired shipment over two rows (spec-risk.md 18.1) ==
+D13 (common row, P=1000): draw 3819 -> spared
+D14 (unit row,   P=3000): draw 1485 -> struck
+LossBP = 2500 (kept 7500)
+expected loss of the route (8.1.1) = 1305
+line a: shipped 40 spoiled 3 held 37 lost rhe(37*2500,10000)=9 delivered 28
+line b: shipped 5 spoiled 0 held 5 lost rhe(5*2500,10000)=1 delivered 4
+line c: shipped 2 spoiled 0 held 2 lost rhe(2*2500,10000)=0 delivered 2
+line d: shipped 6 spoiled 0 held 6 lost rhe(6*2500,10000)=2 delivered 4
+contract: q=30 price=20 reached=22 paid=440 refund=160
+
+== 3. Worked example B: a limited owner with two classes (spec-risk.md 18.2) ==
+load (mass, bulk) = [550, 400], SumCap = [500, 400], Stored = [450, 320]
+class bin: phi_mass 3272 phi_bulk 2000 phi 3272
+class pit: phi_mass 1636 phi_bulk 4000 phi 4000
+share (bp): {'bin': 1309, 'pit': 4000}
+grain: q0 250 lost bin 33, pit 100 total 133 left 117
+cloth: q0 50 lost bin 7, pit 20 total 27 left 23
+
+== 4. Worked example C: a trip to oneself (spec-risk.md 18.3) ==
+grain: held 12 lost rhe(12*2500,10000) = 3
+cloth: held 3 lost rhe(3*2500,10000) = 1
+cart: held 2, the mode's Vehicle: not exposed (5.4.1); a rule over every commodity would take 0
+
+== 5. The rounding bias of a line (spec-risk.md 5.3.2): lost units against q*share ==
+q       500   1500   2500   5000   7500   (lost / ideal q*s/10000)
+1        0/0.05     0/0.15     0/0.25     0/0.50     1/0.75
+2        0/0.10     0/0.30     0/0.50     1/1.00     2/1.50
+3        0/0.15     0/0.45     1/0.75     2/1.50     2/2.25
+5        0/0.25     1/0.75     1/1.25     2/2.50     4/3.75
+10       0/0.50     2/1.50     2/2.50     5/5.00     8/7.50
+40       2/2.00     6/6.00   10/10.00   20/20.00   30/30.00
+100      5/5.00   15/15.00   25/25.00   50/50.00   75/75.00
+mean error over q = 1..20 (lost - ideal), by share:
+  share   500: -0.025 units a line
+  share  1000: -0.000 units a line
+  share  2500: -0.025 units a line
+  share  4000: -0.000 units a line
+  share  5000: +0.000 units a line
+  share  6000: -0.000 units a line
+  share  7500: +0.025 units a line
+  share  9500: +0.025 units a line
+
+== 6. The expected loss of a route against 500 000 simulated dispatches (8.1.1) ==
+formula 1305 bp; mean simulated LossBP 1306.1 bp, standard error 2.8 (n=500000)
+frequency of a strike at P=3000: 0.3003 (want 0.3000)
+
+== 7. The price-gap shipper with a loss (spec-risk.md 16, RSK-A1) ==
+pd0 180, po0 100, freight 20, gain 0.05, delay 3: shipped, arrived, wasted, final destination and origin price, real margin per unit
+  loss    0 known   shipped  60.00 arrived  60.00 wasted  0.00  Pd 150.00 Po 130.00  margin  +0.00
+  loss    0 unknown shipped  60.00 arrived  60.00 wasted  0.00  Pd 150.00 Po 130.00  margin  +0.00
+  loss 2500 known   shipped  19.20 arrived  14.40 wasted  4.80  Pd 172.80 Po 109.60  margin  +0.00
+  loss 2500 unknown shipped  68.57 arrived  51.43 wasted 17.14  Pd 154.29 Po 134.29  margin -38.57
+  loss 5000 known   shipped   0.00 arrived   0.00 wasted  0.00  Pd 180.00 Po 100.00  margin -30.00
+  loss 5000 unknown shipped  80.00 arrived  40.00 wasted 40.00  Pd 160.00 Po 140.00  margin -80.00
+largest gain that decays, delay 3, immediate share a = 0 (theory g0/(1-lam) unknown, g0/(1-lam)^2 known):
+  loss    0: unknown 0.444 (theory 0.445); known 0.444 (theory 0.445)
+  loss 2500: unknown 0.592 (theory 0.593); known 0.790 (theory 0.791)
+  loss 5000: unknown 0.890 (theory 0.890); known 1.780 (theory 1.780)
+largest gain that decays, delay 3, immediate share a = 0.5 (search stops at 4.0):
+  loss    0: unknown 1.998; known 1.998
+  loss 2500: unknown 2.348; known 2.716
+  loss 5000: unknown 2.872; known 3.830

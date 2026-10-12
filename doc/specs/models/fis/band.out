@@ -1,0 +1,12 @@
+iid shocks of -2000 to +2000 units (price -20 to +20), 400 ticks, band 40 to 60, Q 500, hold 6000
+no treasury   : price 30 to 69, mean |p - 50| 9.7, ticks outside 40..60: 178 of 400
+with treasury : price 35 to 69, mean |p - 50| 8.0, ticks outside 40..60: 83 of 400
+stock between 0 and 2553; cash at the end 1017103; cash short from tick None; stock zero from tick 55
+shortage, no treasury  : price 65 to 65, mean |p - 50| 15.0, ticks outside 40..60: 120 of 120
+shortage, with treasury: price 60 to 65, mean |p - 50| 14.8, ticks outside 40..60: 114 of 120
+stock at ticks 40, 42, 44, 46, 48, 52: [2500, 1500, 500, 0, 0, 0]; stock zero from tick 45; prices at 41, 44, 47, 52, 100: [60, 60, 65, 65, 65]
+ticks of defence = stock / (units released a tick) = 6
+glut, no treasury  : price 35 to 35, mean |p - 50| 15.0, ticks outside 40..60: 120 of 120
+glut, with treasury: price 35 to 40, mean |p - 50| 14.8, ticks outside 40..60: 114 of 120
+stock at ticks 40, 42, 44, 46, 52, 100: [3500, 4500, 5500, 6000, 6000, 6000]; cash at the end 30000; prices at 41, 44, 47, 100: [40, 40, 35, 35]
+the hold cap (6000) ends the purchases at tick 46

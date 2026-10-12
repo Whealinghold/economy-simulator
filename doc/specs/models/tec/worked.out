@@ -1,0 +1,19 @@
+== Example A: three regions, one field `tillage` (an example), Base 100 000, DoublingBP 200, CapBP 3 000, CatchUpBP 2 000, Reach 100
+   executions a tick: [900, 400, 150]; distances plain-hills 20, plain-coast 60, hills-coast 50; w(20) 8 000, w(50) 5 000, w(60) 4 000
+   after tick     1: X [900, 400, 150], doing g [2, 1, 0], A [0, 0, 0], gain G [2, 1, 0]
+   after tick   365: X [328500, 146000, 54750], doing g [421, 270, 130], A [0, 10, 5], gain G [421, 280, 135]
+   after tick   730: X [657000, 292000, 109500], doing g [583, 393, 214], A [0, 22, 10], gain G [583, 415, 224]
+   after tick  1825: X [1642500, 730000, 273750], doing g [827, 611, 379], A [0, 38, 10], gain G [827, 649, 389]
+   (cell `hills` practises 400 a tick and `coast` 150: their own doing is lower; the catch-up from `plain` adds to A)
+
+== One tick of P8.3c on the same cells at tick 364 (the end of year 1), by hand
+   X before the step [327600, 145600, 54600]; executions this tick [900, 400, 150]
+   lg12: [76327, 73223, 70371], Base lg12 67690; doing g before [421, 269, 130], after [421, 270, 130]; per cell Doing [0, 1, 0]
+
+== Bounds (9.5): every product of the module fits, with the placeholders
+   lg12 difference at most 62 * 4096 = 253952; times MaxDoublingBP 10000: 2539520000 < 2^63
+   catch-up numerator: gap 100000 * CatchUpBP 10000 + carry < 10 000 * 100000: 2000000000 < 2^63
+   discovery: K (2^64) * (10 000 * 100000) is a 128-bit product whose high word is < 1000000000
+   the yield chain of PRO 6.3 with tech: 100000 (site) * 100000 (shock) * 110000 (tech) * 100000 (trainee or hired: MaxYieldBP) * abundance 100 000 = 1.100e+25: the validator's check of PRO 10.3 uses the checked 128-bit helper
+   one execution's output at the bounds: 1000000 * 1000000000 * 110000 / 10 000 would be 1.100e+16: rejected by PRO 10.3 (the quantity bound), which is the point of the check
+   a contact weight is computed where it is used: (Reach - d) * 10 000 with Reach at most MaxDistance 10^9: 1.000e+13 < 2^63 (no table)

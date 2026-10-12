@@ -1,0 +1,32 @@
+A: RegionIDs {'capital': 0, 'farm': 1, 'harbour': 2, 'hills': 3, 'mill': 4}
+A: JurisdictionIDs {'coast': 0, 'crown': 1, 'inland': 2, 'uplands': 3}
+A: chain(capital) = ['crown']
+A: chain(farm) = ['inland', 'crown']
+A: chain(harbour) = ['coast', 'crown']
+A: chain(hills) = ['uplands', 'inland', 'crown']
+A: chain(mill) = ['inland', 'crown']
+A: crossing(hills, harbour): exit=['uplands', 'inland'] enter=['coast'] common=crown border depth=0
+A: crossing(harbour, hills): exit=['coast'] enter=['inland', 'uplands'] common=crown border depth=0
+A: crossing(farm, mill): exit=[] enter=[] common=inland border depth=1
+A: crossing(farm, capital): exit=['inland'] enter=[] common=crown border depth=0
+A: crossing(hills, farm): exit=['uplands'] enter=[] common=inland border depth=1
+A: crossing(capital, mill): exit=[] enter=['inland'] common=crown border depth=0
+A: edges by EdgeID {0: ('capital', 'harbour'), 1: ('capital', 'mill'), 2: ('farm', 'mill'), 3: ('harbour', 'capital'), 4: ('harbour', 'mill'), 5: ('hills', 'mill'), 6: ('mill', 'capital'), 7: ('mill', 'farm'), 8: ('mill', 'harbour'), 9: ('mill', 'hills')}
+A: between(coast, inland) = [4]
+A: between(inland, coast) = [8]
+A: between(coast, crown) = []
+A: between(uplands, coast) = []
+A: estate agents 0..4, counterparties 0, treasuries {'crown': 5, 'inland': 6}, households from 7
+A: capital  add= 200 bp  innermost cap=90  scaled(1000)=900
+A: farm     add= 300 bp  innermost cap=80  scaled(1000)=720
+A: harbour  add= 200 bp  innermost cap=90  scaled(1000)=900
+A: hills    add= 350 bp  innermost cap=80  scaled(1000)=720
+A: mill     add= 300 bp  innermost cap=80  scaled(1000)=720
+B: RegionIDs {'ashford': 0, 'brook': 1, 'city': 2, 'delta': 3, 'far': 4}
+B: crossing(delta, far): exit=['west'] enter=[]
+B: crossing(far, delta): exit=[] enter=['west']
+B: crossing(city, ashford): exit=[] enter=['east']
+B: crossing(ashford, brook): exit=['east'] enter=['west']
+B: crossing(brook, delta): exit=[] enter=[]
+B: crossing(city, far): exit=[] enter=[]
+B: estates 0..4, counterparties 5..6, treasuries east=7 west=8, households from 9

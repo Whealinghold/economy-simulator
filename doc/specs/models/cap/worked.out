@@ -1,0 +1,46 @@
+== 1. route: the travel time of a 60-unit edge at speed 20, Durability 2000, BoostBP 6000 (18.2)
+   F_slot  state                                          B      F_eff   k
+    10000  no road                                           0   10000   3
+    10000  one road at 2000 (AddFacilities)               6000   16000   2
+    10000  one road built (1999 in the table)             5997   15997   2
+    10000  one road at half (1000)                        3000   13000   3
+    10000  two roads at 2000                             12000   22000   2
+     5000  one road at 2000, F_slot 5000 (damaged)        6000    8000   4
+        0  one road at 2000, F_slot 0 (closed)            6000       0   blocked
+   k is 2 down to condition 1667 and 3 at 1666: 332 ticks of decay after the first table
+== 1b. which pair a layer applies to (5.2.5): road of 2000 on each direct edge, speed 20
+   pair                      edge   shortest  layer  B      k
+   a to b (direct, shortest)        60        60  True   6000  2
+   a to c (no direct edge)           -       120  False     0  6
+   a to d (direct 110, path 100)   110       100  False     0  5
+== 2. ground: capacity 1200, scale 10000, BoostBP 3000, Durability 500, Decay 1 (18.3)
+   tick  condition  B     effective capacity  stock lost so far (stock kept at capacity)
+      0        500   3000               1560  0
+    100        400   2400               1488  72
+    200        300   1800               1416  144
+    300        200   1200               1344  216
+    400        100    600               1272  288
+    499          1      6               1200  360
+    500          0      0               1200  360
+== 3. most worn first, two starts of one principal in a tick: 5000 random cases (invariants)
+   passed; largest list 6 facilities
+== 3c. two mills of cap(f) 3 (cap_c 6): an own start of 3 and a hire of 3 (5.1.3)
+   own 3 then hire 3 -> served {1: 3, 2: 3}, conditions {1: 894, 2: 944}
+== 3b. capacity per principal and tick (5.1.2): own start and two hires against cap_c = 6
+   requests 4, 5, 3 -> executions [4, 2, 0], total 6
+== 4. a mill: weight 10, Capacity 6, WearPerUse 2, Decay 1, Durability 1000 (18.1)
+   policy                       executions   grind ticks  repair ticks  ruined at   condition at end (1 000 ticks)
+   never repaired                      421           158             0        158   0
+   repair below 100                   3070           979            21       None   193
+   repair below 300                   3946           964            36       None   557
+   repair below 600                   4763           925            75       None   698
+   repair below 900                   4368           728           272       None   893
+== 5. CAP-A1, a model of an INVENTED rule (a builder that builds on the price gap):
+   price p = 1000 + 25 * (Q - K) with Q = 100, builders add g/1000 * (p - 1000) / 100 facilities, arriving after
+   L ticks, each facility loses 1% a tick. Amplitude of K over ticks 300 to 600:
+   g (per mille)   L=2    L=5    L=10
+             100      0.0     0.0     0.0
+             250      0.0     0.0     0.0
+             500      0.0     0.0     0.2
+            1000      0.0     0.1    21.6
+            2000      0.0    12.8    41.4

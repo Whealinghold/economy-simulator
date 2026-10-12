@@ -1,0 +1,21 @@
+Plant slope -4000 (reading falls 4000 per 10000 of lever), Target 1000, a +600 shock at tick 20: the equilibrium lever is 11500.
+Raising the lever lowers the reading, so the rule raises the lever when the reading is above
+target (sign +1, the balancing direction).  K = Move/Span * 0.4 is the loop gain per decision.
+case                                         changes pinned tail min tail max
+d=0 K=0.4 no dampers                              14      0    11498    11498
+d=0 K=1.9 (below 2)                              580      0    11489    11508
+d=0 K=2.4 (above 2)                              580    287        0    27600
+d=2 K=0.4 (bound 0.618)                           54      0    11498    11498
+d=2 K=0.8 (above 0.618), no dampers              511    132        0    29440
+d=2 K=0.8 MaxStep 200                            580      0    11120    11880
+d=2 K=0.8 MaxStep 50                             470      0    11410    11590
+d=2 K=0.8 MaxStep 50 Deadband 40                  30      0    11500    11500
+d=2 K=0.8 bounds 8000..12000                     508    137    10720    12000
+d=2 K=0.4 Deadband 40 noise 30                    22      0    11501    11501
+d=2 K=0.4 Deadband 0  noise 30                   587      0    11391    11597
+
+PLC-A2, a stale reading: the reading never changes (a price carried forward at 1500,
+target 1000), the rule keeps stepping: windup to the bound, with and without MaxAge.
+no guard, bounds 0..40000                      final lever  20000  changes 100
+no guard, bounds 8000..12000                   final lever  12000  changes 20
+MaxAge 3 (reading undefined after 3 ticks)     final lever  10300  changes 3

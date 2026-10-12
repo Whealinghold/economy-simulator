@@ -1,0 +1,32 @@
+== actors, ascending ID: coast_council 0, crown_council 1, inland_council 2
+actor 0 Every 10: Weyl2 0 bucket 0; decision ticks 0..129: [0, 10, 20, 30, 40, 50] ... [110, 120]
+actor 1 Every 10: Weyl2 1779033703 bucket 4; decision ticks 0..129: [6, 16, 26, 36, 46, 56] ... [116, 126]
+actor 2 Every 30: Weyl2 3558067406 bucket 24; decision ticks 0..129: [6, 36, 66, 96, 126] ... [96, 126]
+
+== A: schedule of crown_council (steps at 0, 120, 240; Every 10, bucket 4)
+tick 126: schedule value 15000 (current 10000) -> applied
+tick 246: schedule value 10000 (current 15000) -> applied
+first decision at or after 120: 126
+
+== B: rule of inland_council (Every 30, bucket 24) on unfed_share, lever stipend
+decision ticks: [6, 36, 66, 96, 126]
+unfed  90 of 1000: reading   900 bp, error  +400, delta  +800, applied  10000 -> 10800
+unfed  70 of 1000: reading   700 bp, error  +200, delta  +400, applied  10800 -> 11200
+unfed  52 of 1000: reading   520 bp, error   +20, delta    +0, in_band  11200 -> 11200
+unfed 160 of 1000: reading  1600 bp, error +1100, delta +1000, stepped  11200 -> 12200
+unfed  30 of 1000: reading   300 bp, error  -200, delta  -400, applied  12200 -> 11800
+
+== gauges
+mean_ratio: 7400000 / 600 = 12333.333333333334 -> half even 12333
+price with MaxAge 3: 18600 / 850 = 21.88235294117647 -> half even 22
+unfed_share 900 bp check: 900
+
+== C: a border lever of coast_council (Against inland) in the kingdom of spec-polity.md 12.1
+Between(coast, inland): [4]  Between(inland, coast): [8]
+lever keys of Against inland held by coast: [4, 8]
+Between(coast, crown): [] (nested: none)
+
+== E: the checks of a returned list (current stipend 11000, Min 0, Max 20000, MaxStep 1000)
+entry 1: clamp to Max -> 20000; step limit -> 12000 (applied, clamped, stepped)
+entry 2: duplicate (the lever already had an entry in this list)
+entry 3: not_held (no lever 7)

@@ -1,0 +1,57 @@
+== 1. The premium of a route cover (spec-insurance.md 5.2, example A of 17.1) ==
+  grain shipped 40 published  12 reference  10 unit value  12 line  480
+  cloth shipped  5 published  90 reference  80 unit value  90 line  450
+  rope  shipped  2 published  30 reference  30 unit value  30 line   60
+  tar   shipped  6 published  25 reference  20 unit value  24 line  144
+  expected loss L = 1305 bp; sum insured 1134; rate 1357 bp; premium 154; max payout 907
+  fair premium (loading 10 000) = 118; premium / fair = 1.305
+
+== 2. The claim at the arrival (7.1, 7.2): lost units 9, 1, 0, 2 of spec-risk.md 18.1 ==
+  grain lost 9 at published  14: unit value  12
+  cloth lost 1 at published  90: unit value  90
+  rope  lost 0 at published  30: unit value  30
+  tar   lost 2 at published  25: unit value  24
+  loss value 246; cover_bp * loss value = 197; due = min(max payout 907, that) = 197
+
+== 3. One underwriter, three policies due at one position (7.3, 7.4) ==
+  balance 1000 shield 100 pot  900 owed [197, 150, 90] pay  437 shares [197, 150, 90] shortfall (claims) [0, 0, 0]
+  balance  400 shield 100 pot  300 owed [197, 150, 90] pay  300 shares [135, 103, 62] shortfall (claims) [62, 47, 28]
+  balance  150 shield 100 pot   50 owed [197, 150, 90] pay   50 shares [23, 17, 10] shortfall (claims) [174, 133, 80]
+  balance   80 shield 100 pot    0 owed [197, 150, 90] pay    0 shares [0, 0, 0] shortfall (claims) [197, 150, 90]
+  removal (no shield): balance 150, claims [40, 60, 200] -> shares [20, 30, 100]
+
+== 4. A store cover with the lost units of spec-risk.md 18.2 (5.3, 7.5) ==
+  held value 6250; sum insured 3125 (share 5000); premium 47; max payout 2500
+  loss value (133 grain, 27 cloth) 3353; cover_bp * loss = 2682; due = 2500 (the cap binds)
+
+== 5. The value cap against a rising published price (6.1): 10 units lost, reference 10, cap 12 000 bp ==
+  published  10 unit value  10 loss value  100 payout at cover 8 000:   80
+  published  12 unit value  12 loss value  120 payout at cover 8 000:   96
+  published  15 unit value  12 loss value  120 payout at cover 8 000:   96
+  published  25 unit value  12 loss value  120 payout at cover 8 000:   96
+  published  40 unit value  12 loss value  120 payout at cover 8 000:   96
+
+== 6. The underwriter's capital under unit rows and under a common row (INS-A2, INS-A4) ==
+  one underwriter, money 1 000, upkeep 5 a tick, policies of max payout 100 each, strike probability 0.05,
+  loading 13 000 on the expected payout; capacity = cap_bp * available money / 10 000 less open liability;
+  pays above a shield of 3 ticks of upkeep; the shortfall is a claim paid first from later income, and an
+  underwriter in arrears writes nothing; removed when its money is below one tick of upkeep. 300 seeds, 300 ticks; demand for cover is at most 20 policies a tick.
+  cap_bp  rows    removed by 300   mean tick removed   mean shortfall per run
+    5000  unit       91 / 300               185.9          0.0
+    5000  common    210 / 300               143.7          0.0
+   10000  unit       25 / 300               115.9          0.0
+   10000  common    235 / 300                56.4          0.1
+   20000  unit        8 / 300                71.9          0.9
+   20000  common    202 / 300                34.0        566.5
+   40000  unit        6 / 300                40.8          1.3
+   40000  common    200 / 300                35.2        704.2
+
+== 7. The shipper that nets the recovery of a cover (INS-A1): the loop of models/rsk/loss.py part 7 ==
+  delay 3, gain 0.05, loss 2 500 bp, cover 8 000 bp, loading 13 000 on the expected payout
+  lossless read (loss ignored)   shipped  68.57 arrived  51.43  Pd 154.29 Po 134.29  margin of goods  -38.57  margin with cover and premium  -46.63
+  reads the loss, no cover       shipped  19.20 arrived  14.40  Pd 172.80 Po 109.60  margin of goods   +0.00  margin with cover and premium   -6.58
+  nets the recovery              shipped  59.56 arrived  44.67  Pd 157.66 Po 129.78  margin of goods  -31.53  margin with cover and premium  -39.32
+  largest gain that decays, delay 3, immediate share a = 0 (theory g0 / scale):
+    lossless read      scale 0.7500: 0.592 (theory 0.593)
+    reads the loss     scale 0.5625: 0.790 (theory 0.791)
+    nets the recovery  scale 0.7125: 0.624 (theory 0.625)

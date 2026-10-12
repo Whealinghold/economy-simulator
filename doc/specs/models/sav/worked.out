@@ -1,0 +1,48 @@
+Example A: a mill (a pre-industrial example; unit: one grind)
+  pv grind 200000 pv carry 80000 inputs 360
+   rate 2
+   life 300
+   t_p 180
+   dj 120000
+   benefit 2160
+   opp 40
+   cost 400
+   passes True
+   ratio_bp 54000
+  outlay 600 reserve 90 funds needed 690
+  hurdles with a spread of 2 000 for ids 3, 7, 11: [(3, 16708), (7, 15652), (11, 16596)]
+  money 100 and a surplus of 14 a tick reaches 702 at tick 43
+  a commit band of 2 000: hurdle 12000
+
+Example B: the buffer of a producer with a 20-tick job
+  drawdown over the last 40 records 2200
+  share 10000 cap ticks 30 -> precaution 2200 (flat reserve 300)
+  share 5000 cap ticks 30 -> precaution 1100 (flat reserve 300)
+  share 10000 cap ticks 10 -> precaution 1000 (flat reserve 300)
+
+Example C: a cold cell (a space-colony example; unit: one cell), a store class with a Worth row
+  worth 15 benefit 1500 cost 220 ratio bp 68181 passes at 15 000: True
+  worth 3 benefit 300 cost 220 ratio bp 13636 passes at 15 000: False
+
+Example A2: the repair of the mill at condition 120 of 600
+   cap(f) 2 missing 480 m 5 restored 480 rate 2 t_p 180
+   delta J per facility 120000 benefit 2160 inputs 160 opportunity 20 cost 180 ratio bp 120000 passes at 15 000: True
+   a build at cap_now 2 : dJ 0 benefit 0 passes: False
+
+Example A3: reach, the goal in progress and the funding tick (5.5.6, 5.6.3, 5.6.5), example A's numbers
+   money 100 ring n 30 C_n 420 need 590 reachable: True
+   money 100 ring n 30 C_n 60 need 590 reachable: False
+   money 400 ring n 30 C_n 0 need 290 reachable: False
+   money 690 ring n 0 C_n 0 need 0 reachable: True
+   build in progress, remaining 4 -> goal 210
+   build in progress, remaining 3 -> goal 180
+   build in progress, remaining 1 -> goal 120
+   funding tick: money 700 tier 2 on the inputs 360 avail 340 e with the full goal 0 e with the goal net of tier 2 10
+
+Example C2: the Worth row saturates at Count (5.3.2), a store class, Count 2
+   facilities held 0 benefit 1500 passes at 15 000: True
+   facilities held 1 benefit 1500 passes at 15 000: True
+   facilities held 2 benefit 0 passes at 15 000: False
+
+Example D: the tool of a build recipe that the household does not hold (5.4, 5.6.1)
+   inputs 360 tool to buy 50 outlay 650

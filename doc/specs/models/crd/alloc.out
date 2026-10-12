@@ -1,0 +1,37 @@
+== interest (7.1, example A of spec section 20) ==
+  5 700 at 600 bp for 65 ticks of 365: 61 (exact 60.904)
+  small: 3650 at 100 bp for 1 tick: 0 (exact 0.1 -> 0)
+  half: 1825 at 100 bp, 1 tick: 0 (exact 0.05 -> 0)
+  half: 18250 * 100 * 1 / 3650000 = 0 (exact 0.5 -> 0, the even)
+  half: 54750 * 100 / 3650000 = 2 (exact 1.5 -> 2, the even)
+
+== pro rata with the largest remainder (8.3, example B) ==
+  pay 1000 over owed [600, 900]: [400, 600] sum 1000
+  pay 1001 over owed [600, 900]: [400, 601] sum 1001
+  three equal claims of 100, pay 100, ties by K(t, id):
+    t=1: [33, 33, 34]
+    t=2: [33, 34, 33]
+    t=3: [34, 33, 33]
+
+== interest first inside a claim (8.3) ==
+  share 70 of a claim owing interest 61 and principal 5 700 -> (61, 9)
+
+== example A of spec section 20.1: the loan, the pot at P1.7a (8.2), the allocation ==
+  request: need = 100 * 65 + 200 - 1000 = 5700 ; interest on 5700 = 61 ; owed 5761
+  money 7500: pot 7400, pay 5761 (interest 61, principal 5700), owed left 0
+  money 3000: pot 2900, pay 2900 (interest 61, principal 2839), owed left 2861
+  money 80: pot 0, pay 0 (interest 0, principal 0), owed left 5761
+
+== example C of spec section 20.3 (the second setting): need and interest ==
+  need = 50 * 33 + 120 - 300 = 1470 ; interest 11 (exact 10.915)
+  money 80: Late = 1 , H = 34 , need in full = 1740 ; sized by what tier 2 affords = 1650
+
+== the waterfall of a removal (9.1, example B second half of 20.2) ==
+  claim 21: paid interest 50, principal 283; lost interest 0, principal 167
+  claim 22: paid interest 50, principal 417; lost interest 0, principal 233
+  left for the estate: 0
+  with a balance of 1 500: [(21, 50, 450, 0, 0), (22, 50, 650, 0, 0)] estate 300
+
+allocation properties over random cases: 20000 cases, all hold
+mini ledger, random operations: {'lend': 1215, 'settle': 1428, 'write_off': 586, 'reassign': 899}
+money conserved and the pair identity held after every operation

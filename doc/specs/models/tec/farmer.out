@@ -1,0 +1,29 @@
+models/tec/farmer.py: n = 1 000 producers, K = 15 000 a year, D0 = 150 days at T = 1, floor DMIN = 100 days, p0 = 100
+The interior equilibrium of the rule is stable only for e > 1 (spec-stability.md 6.1); for e < 1 the market is pinned and the
+floor sets the outcome (spec-stability.md 6.1: the upper pin is at the price where all households work the floor). Both shown.
+
+   e     T      case   days    price    output income / K
+ 0.5  1.00  interior  150.0   100.00    150000      1.000
+ 0.5  1.10  interior  136.4   100.00    150000      1.000
+ 0.5  1.25  interior  120.0   100.00    150000      1.000
+ 0.5  1.50  interior  100.0   100.00    150000      1.000
+ 0.5  2.00     floor  100.0    56.25    200000      0.750
+
+ 1.0  1.00  interior  150.0   100.00    150000      1.000
+ 1.0  1.10  interior  136.4   100.00    150000      1.000
+ 1.0  1.25  interior  120.0   100.00    150000      1.000
+ 1.0  1.50  interior  100.0   100.00    150000      1.000
+ 1.0  2.00     floor  100.0    75.00    200000      1.000
+
+ 1.5  1.00  interior  150.0   100.00    150000      1.000
+ 1.5  1.10  interior  136.4   100.00    150000      1.000
+ 1.5  1.25  interior  120.0   100.00    150000      1.000
+ 1.5  1.50  interior  100.0   100.00    150000      1.000
+ 1.5  2.00     floor  100.0    82.55    200000      1.101
+
+Forced to the floor for e = 0.5 (the pinned market): income / K = (T * DMIN / D0)^(1 - 1 / e) * (DMIN / D0)... evaluated:
+  T 1.00: floor-pinned price  225.00, income / K  1.500, ratio to T = 1:  1.000 = T^(1 - 1/e) =  1.000
+  T 1.10: floor-pinned price  185.95, income / K  1.364, ratio to T = 1:  0.909 = T^(1 - 1/e) =  0.909
+  T 1.25: floor-pinned price  144.00, income / K  1.200, ratio to T = 1:  0.800 = T^(1 - 1/e) =  0.800
+  T 1.50: floor-pinned price  100.00, income / K  1.000, ratio to T = 1:  0.667 = T^(1 - 1/e) =  0.667
+  T 2.00: floor-pinned price   56.25, income / K  0.750, ratio to T = 1:  0.500 = T^(1 - 1/e) =  0.500

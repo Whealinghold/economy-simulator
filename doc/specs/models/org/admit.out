@@ -1,0 +1,10 @@
+3000 random populations over three regions, 15108 moves of a member inside the scope: A1 to A3 held
+3000 random runs of the held completion, 44654 completions, 110708 ticks with a held trainee: A5 held
+A4 held (the key is the SplitMix64 finaliser)
+example A, tick 0: lapsed 0 admitted 12 skipped 2 waiting 2
+  members: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]
+  waiting: [112, 113]
+tick 4, one member removed: lapsed 0 admitted 1 skipped 1 waiting 1
+  admitted is the senior waiting household; still waiting: [113]
+  households of the role 13, places 12, headroom 0
+move inside the scope: lapsed region 1, admitted 0, skipped 1; member of region 1: [2]

@@ -1,0 +1,27 @@
+16 borrowers (job 60 ticks, upkeep 100, inputs 200, start money 1500, lump 7000), 4 lenders (cash 50000, rate 600 bp, keep 3, share 5000 bp), 480 ticks
+case                                                  unfed_b       jobs     formed       lent   int_paid   defaults       lost    refused   unfilled       open    arrearslender_cash    unfed_l
+A no credit                                               321        128          0          0          0          0          0          0          0          0          0      46400          0
+B credit, shield 1                                          0        128         49      85845        781          0          0          0          0          0          0      47181          0
+B0 as B, horizon without the +1                            47        128         40      73473        652         40          0          0          0          0          0      47052          0
+C one bad cycle, shield 1                                 723        116         97     223971       2023          3          0        724          0         10       2078      33676          0
+D one bad cycle, shield 0                                 727        116         96     223851       2021          3          0        724         29         10       1778      34005          0
+D2 one bad cycle, shield 3                                238        128         92     200914       1826          4          0        240          0          6          0      38754          0
+E bad from tick 180 on, no write-off                     3403         78         55     132832       1249         16          0       3419          0         16      36349      14110         36
+F bad from tick 180 on, write-off 120                    2962         86         94     179045       1669         39      36349       2282    3819073         36      32040        144        316
+G0 money 150 (below the inputs), no credit               7664          0          0          0          0          0          0          0          0          0          0      46400          0
+G1 money 150, tier 2 as affordable                          0        112        164     449381       4305          0          0          0          0         17          0      37600          0
+G2 money 150, tier 2 in full                                0        112        148     449486       4321          0          0          0          0         17          0      37600          0
+G3 money 150, MinPrincipal 200, tier 2 as affordable         35        112        144     428906       4153          0          0          0        168         16          0      40168          0
+G4 money 150, MinPrincipal 200, tier 2 in full              6        112        143     447855       4312          0          0          0        548         16          0      38148          0
+H0 money 150, library delay, horizon J + 1                  0        112        165     508685       4832         19          0          0          0         19          0      24800          0
+H1 the same, +1 when the inputs are not affordable (10.2)          0        112        148     508786       4846          0          0          0        480         17          0      24800          0
+
+one bad cycle (income 1500 from tick 180 to 240): the shield, at SlackTicks 0 and 5
+shield     unfed_b   refused  defaults   unfed_l   |   same at SlackTicks 5
+0              727       724         3         0   |          165       165         8         1
+1              723       724         3         0   |          162       165         8         1
+2              242       240         4         0   |          212       220        10         1
+3              238       240         4         0   |          208       220        10         1
+5              231       240         4         0   |          200       220        10         1
+8              272       300         5         0   |          235       275        13         1
+money conserved at every tick of every case (asserted)
