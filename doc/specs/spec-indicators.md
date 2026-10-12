@@ -337,7 +337,7 @@ or ticks (FR-IND-004).
 | `OutsideTraded` | (node, gate, commodity, side) | `Traded`, `Value`, `ListValue` summed; the side is the counterparty's: a **bid** is the outside buying (an export of the realm), an **ask** the outside selling (an import) |
 | `EntryLimited`, `PopulationChanged`, `MoneyFlowLimited`, `ContractRound`, `MigrationReviewed` | region (and role) | the counts of each cap, limit or refusal that acted: `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Unfunded`, `Refused`; `BirthsCapped`, `BirthsUnfunded`, `DeathsCut`, `DeathsHeld`; `Short`, `Limit`; `TooMany`, `PayerFunds`; `OutCap`, `InCap`, `Unprovisioned`, `Bound`, `Held`; summed: the **binding counters** of 8.7 |
 | `RecipeExecuted` | (region, recipe) | `Executions` and `Outputs`, `Disposed` by commodity, summed (7.2.4) |
-| `TickEnded`, `WorldCreated`, `WorldRestored`, `RunEnded` | the window | the step count, the failure flag, the opening snapshot of a restore |
+| `TickEnded`, `WorldCreated`, `WorldRestored`, `RunEnded` | the window | the step count, the failure flag, the opening snapshot of a restore (used only when no window is open, 4.2.5) |
 
 4.2.3. **What it ignores, on purpose.** The per-order and per-trade classes
 (`OrderPlaced`, `OrderRejected`, `TradeExecuted`; OBS volume classes O and R,
@@ -360,8 +360,18 @@ row, so nothing of an earlier window survives (4.1.4). `Close(s Snapshot) (Windo
 returns it, so that a result computed from it is a function of the frozen
 value. `Open` may be called again on the same value to start the next window
 (the usual loop: `Close` then `Open` with the same snapshot). A tally that is
-fed `WorldRestored` while open starts a new window at that event's snapshot
-(10.5).
+fed `WorldRestored` while a window is open ignores it for that window: a restore
+changes nothing in a window that straddles it (10.5.1, FR-IND-055). One with no
+window open `Open`s a window at that event's snapshot (10.5.2).
+
+4.2.6. **The fields of `Window`.** A `Window` is plain data with exported fields and
+no tags (it is the consumer's value, 10.5.1): `From` and `To` (`int64`, the
+ticks of 4.1.1, `To - From` steps), `ConfigHash` (the hash of the configuration of
+the world the events came from, from `WorldCreated` or `WorldRestored`; two windows
+of different hashes are not combined, 3.3.2), the number of steps, the two
+snapshots' household counts by (region, role), `Open.Pending` and `Close.Pending`
+(7.1.5), and the rows of 4.2.2 in canonical order. A measure takes a `Window`
+and nothing else of the tally.
 
 ### 4.3 What a price is for valuing
 
@@ -1432,7 +1442,7 @@ result carries as a field), **First test** (a hand computation of 18).
 | 17 | `PriceRange` | per market and class: the lowest and the highest published price in the window, `High * 10 000 / Low`, and over a series of windows whether the range shrinks | tally (`MarketCleared`), a series | bp (10 000: no variation) | 2; W | a market with no trade in the window has range 10 000 only because its price is carried (`Active` 0); the `Low` is a published price, not a limit | 18.5 |
 | 18 | `Pinned` | the share of belief outcomes that ended on the floor or the ceiling of the reference band: `(AtFloor + AtCeiling) / Outcomes` per market, and the markets with unmatched units on both sides and no volume | tally (`BeliefsUpdated`, `MarketCleared`) | bp | 2 | a pinned price is not a stable price (F5); `Outcomes` 0 means undefined, not zero | 18.5 |
 | 19 | `Dispersion` | the spread of belief centres: `(HighCentre - LowCentre) / MeanCentre` per market, in the last tick of the window and the window's lowest | tally (`BeliefsUpdated`) | bp | 2 | synchronisation (F7) shows as a spread that falls below a floor; `MeanCentre` 0 is undefined | 18.5 |
-| 20 | `Offset` | the difference between a market's window price and a reference price supplied by the caller (the steady-state price of VIA, a base table), `rdiv(10 000 * (p - ref), ref)`, signed, with `Unmet` need from `UpkeepShortfall` | `Prices`, a `Prices` of the reference, tally | bp, signed | 2 | the offset (F8) is meaningful only against a reference computed for the same pack; `Unmet` is reported beside it | 18.5 |
+| 20 | `Offset` | the difference between a market's window price and a reference price supplied by the caller (the steady-state price of VIA, a base table), `rdiv(10 000 * (p - ref), ref)`, signed, with `Unmet` need: the share of the household-ticks of the window that were unfed (the `Unfed` share of row 12, from `UpkeepShortfall`), in basis points | `Prices`, a `Prices` of the reference, tally | bp, signed | 2 | the offset (F8) is meaningful only against a reference computed for the same pack; `Unmet` is reported beside it | 18.5 |
 | 21 | `HouseholdIncome` | the booked income of households (income, relief, cost), the aggregate ratio `sum income / sum cost`, and the `Gap` of 7.5.2; **`OK` false in version 1**: the fields are a future ask (7.5.1, 22) | per-tick snapshots after each step (`RoleRow.IncomeLast`, ... once they exist) | minor units; bp | 1 per tick | that it is cash at traded prices with inputs netted at purchase (7.5.2); that it is not GDP; the aggregate ratio is the quantity N-054 is about | 18.9 (that it returns `OK` false in version 1; the stationary world once the fields exist) |
 
 9.1.1. **Names.** The row's preset name is the exported function; the fields of
@@ -1598,6 +1608,7 @@ this table gives the measure):
 | recovery after a harvest shock | `GDP` real, `PriceIndex` of the shocked class, `Unfed` | a series from the shock |
 | famine in a closed region | `Unfed` (household-ticks), `Households` change, `StockCover` | a series |
 | the wage and demand loop | `RealWage`, `WelfareDistribution.Mean`, `HouseholdIncome` | a series |
+| R9 deflation with distress (proposed F9, `spec-stylised-facts.md` 6.2; the thresholds are there) | `PriceIndex.Fisher` chain and `Turnover.Volume` | a series |
 
 11.1.1. **Requirements on STY's use.** A band is stated with the **scale**
 (`CohortShare` is reported with every inequality figure, 6.2), the **window**
@@ -1612,7 +1623,7 @@ check the band was read the way it was written.
 |-----------------|-------|
 | every preset is a pure function of plain data that a harness already holds (a snapshot, a tally) and **takes no world**, so a sweep computes them on separate goroutines with no coordination (worlds share nothing, WLD 3.1.1) | 3.1, 3.3 |
 | a result is keyed by the `ConfigHash` it carries, and by names, not indices, across configurations | 3.3.2 |
-| two runs of one seed give equal results bit for bit, so a **paired comparison** of a measure is valid when the difference moves no draw count (WLD-A5) | 3.1.4 |
+| two runs of one seed give equal results bit for bit, so a **paired comparison** of a measure is exact when the difference moves no draw count (WLD-A5), and the estimate of a difference of means is valid whether the runs are aligned or not (`spec-experiments.md` 7.4.1) | 3.1.4 |
 | the series are the harness's: the library keeps none, and `Stats`, `Growth` and `Change` cover what a sweep summarises | 10.3 |
 | a window is cheap: a tally is `O(rows)`, and a sweep of `K` runs of `T` ticks keeps `K` tallies, not `K * T` points | 4.2.4, 10.4 |
 
@@ -2068,7 +2079,7 @@ checks of that preset's worked-example test.
 | FR-IND-046 | `PriceRange` MUST return the lowest and highest published price of the window and the ratio, with `Active` (9, row 17). |
 | FR-IND-047 | `Pinned` MUST return `(AtFloor + AtCeiling) / Outcomes` and the markets with unmatched units on both sides and no volume (9, row 18). |
 | FR-IND-048 | `Dispersion` MUST return `(HighCentre - LowCentre) / MeanCentre` of the last tick and the window's lowest (9, row 19). |
-| FR-IND-049 | `Offset` MUST return the signed difference of the window price from the caller's reference price with `Unmet` need (9, row 20). |
+| FR-IND-049 | `Offset` MUST return the signed difference of the window price from the caller's reference price with `Unmet` need (9, row 20: the share of household-ticks of the window that were unfed, in basis points). |
 | FR-IND-050 | `HouseholdIncome` MUST return `OK` false until the snapshot carries the income fields and, when it does, the booked income, relief, cost, the aggregate ratio and the `Gap` (9, row 21). |
 | FR-IND-051 | A regional comparison MUST carry the warning `Binding` with the counters when a cap or a limit of a compared region acted in the window (8.7). |
 | FR-IND-052 | `YearWindow` MUST return the ticks whose `Moment.Year` is `y` with `Partial` set where fewer than `TicksPerYear`, and `SeasonWindows` each maximal run of consecutive ticks of the season, across a year boundary where the season wraps, clipped to the range with `Clipped` set, in order (10.2). |
@@ -2118,8 +2129,8 @@ checks of that preset's worked-example test.
    (14.2). Next step: the first dashboard (OBS 18 question 8).
 7. **A default for `Weights`.** `Consumed` for a consumer price index, `Traded`
    for a market index; the spec offers both and names neither as "the" index
-   (a default would be a claim, N-027). Next step: STY, with the band that needs
-   one.
+   (a default would be a claim, N-027). Answered by STY 4.2.2: there is no default
+   weight set, and each fact names its own.
 8. **A per-line freight.** `ShipmentDispatched` gives the haul units of the
    whole shipment, and the freight of a line is apportioned by chargeable size
    (8.4). Exact for a one-line shipment, a convention otherwise. Next step: TRN

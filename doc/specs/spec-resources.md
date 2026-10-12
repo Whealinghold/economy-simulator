@@ -664,8 +664,12 @@ resources.
 
 ### 6.3 The shock slots
 
-Two world slots, set between ticks, saved in a checkpoint, each with a public call
-that is INT's (note N-091). Neither edits a configured row (`spec-regions.md` 5.3.6).
+Two world slots (a capacity scale and a regeneration scale) and one adjustment of the
+stock, set between ticks and saved in a checkpoint, with the public calls of
+`spec-integration.md` 5.1 (note N-091): `SetCapacityScales` and `SetRegenScales`, whose
+entries are `EndowmentScale{Region, Resource; BP}` (0 to `MaxShockBP`, default 10 000),
+and `AdjustEndowments`, whose entries are `EndowmentAdjustment{Region, Resource; Delta}`.
+None edits a configured row (`spec-regions.md` 5.3.6).
 
 6.3.1. **The scales.** Per endowment, a capacity scale and a regeneration scale in
 basis points, from 0 to `MaxShockBP`, default 10 000. A scale of 3 000 on the
@@ -1206,12 +1210,12 @@ emitted after the transition they describe (observability-and-logging.md 4.1, 4.
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
 | `EndowmentChanged` | once per endowment per tick, after its regeneration at the end of phase 8, in (`RegionID`, `ResourceID`) order, **if any of `Drawn`, `Regenerated`, `Short` or `Lost` is non-zero**; never otherwise | `Tick`, `Region`, `Resource`, `Stock` (after the tick), `Capacity` (effective), `AbundanceBP` (the snapshot of the tick), `Requested` (units asked, the sum of `w * d`), `Granted` (units the ration granted), `Drawn` (units the starts took, at most `Granted`), `Short` (`Requested - Granted`), `Regenerated`, `Lost` (units removed by a capacity clamp this tick), `AgentsDenied` (requests granted 0), `AgentsReduced` (requests granted less than asked but more than 0) |
-| `EndowmentAdjusted` | a shock slot or an adjustment is applied between ticks (6.3), once per call | `Tick`, `Region`, `Resource`, `Kind` (`adjust` or `shock`), `Delta` (signed, for `adjust`), `CapacityBP` and `RegenBP` (the scales after, for `shock`), `StockBefore`, `StockAfter`, `Lost` |
+| `EndowmentAdjusted` | a shock slot or an adjustment is applied between ticks (6.3), once per changed endowment of a call | `Tick`, `Region`, `Resource`, `Kind` (`adjust` or `shock`), `Delta` (signed, for `adjust`), `CapacityBP` and `RegenBP` (the scales after, for `shock`), `StockBefore`, `StockAfter`, `Lost` |
 
-`Region` and `Resource` are the identifiers; whether an event carries the integer index
-or the string ID is OBS's decision for every event with a region (note N-012,
-`spec-regions.md` open question 4). Both events are aggregates bounded by regions times
-resources (observability-and-logging.md 4.3), or per call. `EndowmentChanged` is the
+`Region` and `Resource` are the typed IDs `RegionID` and `ResourceID`; the strings are
+in the names table of `spec-observability.md` 3.2. Both events are aggregates bounded
+by regions times resources (observability-and-logging.md 4.3), or per changed endowment
+of a call. `EndowmentChanged` is the
 counter that a halted recipe needs (note N-045): `Short`, `AgentsDenied` and
 `AgentsReduced` say that production did not start for want of the stock, by region and
 resource, with no per-agent event. An event of a module that is off is not emitted.
@@ -1650,6 +1654,10 @@ slower in comparison and an overshoot more likely.
 
 ### 19.4 Scenarios proposed
 
+RES-S1 to RES-S5 are `spec-reference-chain.md`'s S41 to S45, in the same order; their
+bands are in `spec-stylised-facts.md` 5.11 (S43 within `s43.runway_bp`, 10%; S44 within
+`s44.grant_band_bp` and `s44.denied_ticks`).
+
 | ID | Scenario | Asserts | Entries |
 |----|----------|---------|---------|
 | RES-S1 | A region with a `refill` resource and the population module on, started at 0.6 and 1.6 times the households at which the stock binds, over rates above and below the threshold of 8.3 | the population approaches `N*` within a band; for a rate above the threshold without crossing it more than once, below it with a damped oscillation of the size the table predicts; `EndowmentChanged.Short` is non-zero while it binds | A1 |
@@ -1694,8 +1702,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-RES-026 | `EndowmentChanged` MUST be emitted once per endowment per tick, after its regeneration, in (`RegionID`, `ResourceID`) order, if and only if `Drawn`, `Regenerated`, `Short` or `Lost` is non-zero, with the fields of 14.1 and no map (14.1). |
 | FR-RES-027 | `Requested - Granted` MUST equal `Short`, `Drawn` MUST not exceed `Granted`, and `AgentsDenied` and `AgentsReduced` MUST count the requests granted 0 and the requests granted less than asked but more than 0 (14.1). |
 | FR-RES-028 | The `Warn` "endowment exhausted" MUST be emitted for an endowment in a tick with `Short` above 0 and `ExhaustedRun` equal to 1 or a multiple of 10, at most once per endowment per tick, and `ExhaustedRun` MUST count consecutive ticks with `Short` above 0 and be saved (14.2, 15). |
-| FR-RES-029 | The shock slot MUST hold per endowment a capacity scale and a regeneration scale from 0 to `MaxShockBP`, default 10 000, set only between ticks, MUST recompute the effective values, and when the stock then exceeds the capacity MUST clamp it and count the excess as lost (6.3.1). |
-| FR-RES-030 | The adjustment MUST change the stock by a signed delta clamped to [0, capacity], MUST emit `EndowmentAdjusted`, and MUST be counted in the identity of FR-RES-025 (6.3.2). |
+| FR-RES-029 | The shock slot MUST hold per endowment a capacity scale and a regeneration scale from 0 to `MaxShockBP`, default 10 000, set only between ticks by `SetCapacityScales` and `SetRegenScales`, MUST recompute the effective values, and when the stock then exceeds the capacity MUST clamp it and count the excess as lost (6.3.1). |
+| FR-RES-030 | The adjustment, `AdjustEndowments`, MUST change the stock by a signed delta clamped to [0, capacity], MUST emit `EndowmentAdjusted`, and MUST be counted in the identity of FR-RES-025 (6.3.2). |
 | FR-RES-031 | A `constant` stock with `RatePerYear` 0 MUST never gain stock except by an adjustment, a `logistic` stock at 0 with `Refuge` 0 MUST stay at 0, one with `Refuge` above 0 MUST regrow from 0, and a `refill` stock with a positive rate MUST regrow from 0 (6.1). |
 | FR-RES-032 | The errors of 13.2 MUST be reported with the sentinel and the path of the field, and `ErrUnknownResource`, `ErrResourceShape` and `ErrCurve` MUST be defined as root sentinels (13.2). |
 | FR-RES-033 | The warnings of 13.3 MUST be reported and MUST NOT fail validation, `draw_impossible` for a positive-yield region whose capacity is below the draw, and the conditions that need the solver MUST be reported through it (13.3). |
@@ -1800,7 +1808,8 @@ by labour only (`spec-production.md` 3.1.2). No default of this spec is set from
 | Piecewise-linear evaluation of a knot list, shared with the population schedules | `internal/curve` (a new package with one purpose; `spec-population.md` 19 may use it) |
 | The endowments array, the snapshot, the take, the shock slots and the identity | root package, `world.go` and `resources.go` |
 | The events `EndowmentChanged` and `EndowmentAdjusted` | root package, `event.go` |
-| The log keys `resource`, `stock`, `short` and the reason constants | `internal/logkeys` |
+| The log keys `resource`, `stock`, `short` | `internal/logkeys` (key strings only) |
+| The reason constants | root package, `event.go` (exported constants) |
 | The sustainable-draw rows, `Headroom`, `Rent`, `resource_short`, `endowment_runway` | `internal/steady`, called through `SolveSteadyState` (`spec-viability.md` 6) |
 
 ```go

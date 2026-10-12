@@ -116,11 +116,11 @@ per household by role) are `spec-indicators.md`'s and are computed from them:
 |---------|------------|
 | `M`, `M_h`, `M_p`, `M_c` | as 3.1.1, world and per region |
 | `H` | the households: the sum of agent weights, pseudo-agents excluded (`spec-scale.md` FR-SCL-015) |
-| `M_h / H` | money per household, world, per region and per role |
+| `M_h / H` | money per household, world and per region (`Sectors` of `spec-indicators.md` 9 row 7, with the velocity `V` as `Turnover`, row 8); per role it is reachable only through the household rows of `Money` (`spec-indicators.md` 9 row 7), not through `Sectors` |
 | Boundary balance per reason | the cumulative net created (negative) or destroyed (positive) under each money reason, `initial` included |
 | Issued and collected per flow | the cumulative `Total` of each flow (4.4) and the per-tick amounts in `BoundaryFlow` |
 
-The Snapshot carries them (13.4); the names are OBS's.
+The Snapshot carries them (13.4); the names are `spec-observability.md` 5.3.2 and 5.3.3.
 
 ### 3.2 The sources and drains of money in version 1
 
@@ -310,16 +310,18 @@ the aggregated `BoundaryFlow` keep a bounded cardinality (observability-and-logg
 ### 5.1 Where it runs
 
 5.1.1. The flows run in phase 1 (Start) of the tick (`spec-agents.md` 4), after the relief
-and starting-money payments (`spec-estates.md` 2.3, 2.6) and before production begins. So
+payment (`spec-estates.md` 2.6; starting money moves at an entrant's creation in phase 7,
+`spec-world.md` 6.12, C1) and before production begins. So
 a grant arrives before the recipient's `Trade` of the same tick (`spec-clearing.md`
 3.3.1, `spec-demand.md` 7.3 item 2), and a levy sees the balance the household starts the
 tick with, after its grants and any relief. No reservation exists in phase 1
 (`spec-ledger.md` 6.5), so a balance is the amount available.
 
-5.1.2. This is a proposal to `spec-world.md` (N-009): one position in phase 1, between
-relief and the directive. Relief is paid first because it draws on the pool of the previous
-tick's entry step (`spec-estates.md` 2.6, N-082); a grant to a pool therefore feeds the
-next tick's relief and entry, not this one's.
+5.1.2. `spec-world.md` fixes the position: P1.7, after P1.6 (relief) and before P1.8 (the
+outside's walk) and P1.9 (the directives). Relief is paid first because it draws on the
+pool of the previous tick's entry step (`spec-estates.md` 2.6, N-082); a grant to a pool
+therefore feeds the same tick's entry (P7.1 takes the pool budget after the deaths,
+`spec-world.md` 6.12, C15) and the next tick's relief.
 
 ### 5.2 The order
 
@@ -474,8 +476,8 @@ starting money of entrants, bounded by `EntryPoolShare` (`spec-estates.md` 2.3, 
 STB-L31): the grant does not reach anyone.
 
 7.5. **Relief and a levy on the pool.** A levy on a pool collects from the estate account
-after relief and starting money have been paid in the same tick (5.1), so it never takes
-money relief has already committed.
+after relief has been paid in the same tick (5.1), and before that tick's entry, so it
+never takes money relief has already committed.
 
 ## 8. The closed economy and what "deflation" means
 
@@ -512,7 +514,8 @@ roadmap's phrase "a closed economy deflates" is a conditional, and 8.4 states it
 ### 8.4 How deflation pressure arises
 
 Define the turnover `V` of a window as the money value of the trades in it divided by `M`
-(an indicator, IND's; the identity `sum(p*q) = M*V` is its definition and asserts nothing).
+(an indicator, IND's: `Turnover`, `spec-indicators.md` 9 row 8; the identity `sum(p*q) = M*V`
+is its definition and asserts nothing).
 With `M` fixed, nominal trade value can rise only if `V` rises. So the mean price falls
 exactly when the real volume of trade (the quantities traded at constant relative prices)
 grows by more than `V` does. In this library real volume grows when households are added
@@ -688,10 +691,11 @@ A policy actor (PLC) reads read-only measures and returns settings (ADR 0003 dec
 ADR 0001 decision 4 lists the actions it may take: a transfer between accounts (validated
 by the ledger like any transfer, so it cannot create money without a declared faucet), a
 change of a rate, and stock added to a boundary. MON supplies the seam for the second: the
-**flow scale** (4.4.3). The world's operation `SetFlowScale(flow, bp)` (name provisional,
-the public surface is INT's and PLC's) sets `Scale` for a flow between steps; it validates
-the flow ID and the bound, and the new value applies from the next step. The scale is state
-(14), the operation emits `MoneyFlowScaled`, and a consumer's own rule, a human at a
+**flow scale** (4.4.3). The public call is `SetFlowScales([]FlowScale{Flow; BP})`
+(`spec-integration.md` 5.1; PLC may call it too): it sets `Scale` for a flow between
+steps; it validates the module (`ErrModuleOff`), the flow ID (`ErrUnknownFlow`, new) and
+the bound (`ErrOutOfBounds`), and the new value applies from the next P1.7. The scale is
+state (14), the operation emits `MoneyFlowScaled` per changed flow, and a consumer's own rule, a human at a
 console, a scripted schedule or a future PLC can call it. Two consequences. First, the
 engine contains no rule that changes a flow in response to a measure: the only writer of
 `Scale` is a call from outside. Second, a PLC that doubles a stipend or pauses a faucet
@@ -800,7 +804,7 @@ events carry what `BoundaryFlow` cannot.
 | `BoundaryFlow` (existing) | once per tick per (region, reason, money) with a non-zero total | `Region`, `Reason` (the flow ID), faucet or sink, total |
 | `MoneyFlowLimited` (new) | once per flow and region in a tick in which any due was not applied; never when all was applied | `Flow`, `Region`, `Due`, `Applied`, `Short` (households whose levy found too little), `Headroom` (households whose credit was cut at `MaxMoney`), `Limit` (households cut by the limit) |
 | `MoneyFlowEnded` (new) | once, in the tick a flow reaches its effective limit and ends | `Flow`, `Cause` (`limit` or `cap`), `Total` |
-| `MoneyFlowScaled` (new) | each time `SetFlowScale` changes a scale | `Flow`, `From`, `To` (basis points) |
+| `MoneyFlowScaled` (new) | once per changed flow of a call of `SetFlowScales` | `Flow`, `From`, `To` (basis points) |
 
 13.1.1. **`MoneyFlowLimited` is the counter of the silent clamps of this spec** (the
 shortfall of a levy, the headroom of a grant, the limit), as `EntryLimited` is the
@@ -822,7 +826,8 @@ flow limited" (`flow`, `region`, `due`, `applied`), "money flow ended" (`flow`, 
 "money flow scaled" (`flow`, `from`, `to`). The constant messages are lowercase phrases and
 the values are attributes (observability-and-logging.md 3.3.1). New log keys, to add to
 3.3.2 with the code: `flow` (the flow ID), `due` and `applied` (money, minor units, logged
-with `slog.Int64`). `reason` and `region` exist. The warnings of 12.2 are `Warn` at
+with `slog.Int64`); `from` and `to` (a value before and after, in basis points) are added
+by `spec-observability.md` and the rules (3.3.2). `reason` and `region` exist. The warnings of 12.2 are `Warn` at
 construction with `rule` and `path`.
 
 ### 13.3 Cost with no observer
@@ -835,10 +840,12 @@ slots, and no log argument is built unguarded.
 ### 13.4 Snapshot
 
 The Snapshot carries, as plain data in a fixed order (field names are OBS's): per region,
-`M_h`, `M_p`, `M_c`; the world's `M` and `H`; the money boundary balance per reason, sorted
-by reason; and per flow, its `Total`, `Scale` and whether it has ended. `M_h / H` and
-velocity are computed by the consumer or by IND from these. Nothing in the engine reads
-the Snapshot (architecture.md 12.4; position 5).
+`M_h`, `M_p`, `M_c`; the world's `M` and `H`; the money boundary balance per reason, in the
+order of `spec-observability.md` 4.4.1.2; and per flow, its `Total`, `Scale` and whether it
+has ended. `M_h / H` and velocity are computed by the consumer or by IND from these
+(`Sectors` and `Turnover`, `spec-indicators.md` 9 rows 7 and 8). Nothing in the engine reads
+the Snapshot (architecture.md 12.4; position 5). The field names are those of
+`spec-observability.md` 5.3.2 (the regions) and 5.3.3 (the boundary and the flows).
 
 ### 13.5 The Observability entry (observability-and-logging.md 9)
 
@@ -954,7 +961,8 @@ sink or a limit makes `M` unbounded; the boundary balance per reason shows it (3
 *Owner:* LED 14, now MON 9.1. *Damper:* MON-D1, MON-D2, and the warning
 `faucet_without_sink`. *Undamped:* a pack that ignores the warning. *Condition:* every grant
 has a limit or a sink (a rate levy on a class that holds the money, or a matched fixed
-levy). *Test:* S13 (the faucet alone, report-only until STY sets a band), MON-S1 (the sink
+levy). *Test:* S13 (the faucet alone, report-only: `spec-stylised-facts.md` STY-S05 gives
+no band, and says why: neither a source nor a model fixes the direction), MON-S1 (the sink
 and the bound). *Status:* hand for the hazard, model for the bound `m*` of a hoarder.
 
 **MON-A3. The holding charge (a balancing sink).** *Kind:* loop. *Loop:* the class's
@@ -1005,8 +1013,9 @@ A seller facing it has the neutral case `e = 1` of `spec-stability.md` 6.1. *Own
   `overlay/faucet.toml`. *Measure:* the boundary balance of the flow's reason, `M`, and the
   index of the staple's price over four years. *Pass:* the boundary balance equals
   `-Total` exactly and equals `-Amount` times the household-ticks of the class, `M` equals
-  `M_init` plus it, and the audit holds (FR-MON-026); the price drift is **report-only**
-  until STY sets a band (MON-A1).
+  `M_init` plus it, and the audit holds (FR-MON-026); the price drift is **report-only**:
+  STY-S05 sets no band, because neither a source nor a model fixes the direction
+  (`spec-stylised-facts.md`; MON-A1).
 - **MON-S1. A rate levy bounds a hoarding class; a pair drifts by its difference.** *Setup:*
   a grant and a rate levy on one class and a grant and a fixed levy pair, as 9.2 and 9.3.
   *Measure:* the class's money against `m*`, the net boundary balance of the pair.
@@ -1021,7 +1030,7 @@ A seller facing it has the neutral case `e = 1` of `spec-stability.md` 6.1. *Own
   `M_h / H` against `ReserveTicks * U_c` and `U_c`, the unfed households and the pool.
   *Pass:* without the grant `M_h / H` crosses the thresholds at the derived ticks (500 and
   3 500 for the example), with it stays above the spending threshold. *Loop:* MON-A6.
-- **MON-S4. The scale seam.** *Setup:* `SetFlowScale` between steps. *Pass:* only that
+- **MON-S4. The scale seam.** *Setup:* `SetFlowScales` between steps. *Pass:* only that
   flow's amounts change, from the next step; nothing changes without a call; the audit
   holds. *Loop:* MON-A1 (the PLC seam).
 
@@ -1140,7 +1149,7 @@ the model is a check of arithmetic and conservation, not a result.
 | N-017, N-027 | **Applied.** Names are neutral (grant, levy, flow, pool, household); no default macro constant is stated (11.1) |
 | N-020 | **Applied.** The state MON adds to a checkpoint is in 14 |
 | N-075 | **Leave open for CFG.** `ErrFlowShape` and `ErrReasonCollision` need a root mapping |
-| N-009 | **Leave open for WLD.** MON asks for one position in phase 1, after relief and before production (5.1) |
+| N-009 | **Applied.** `spec-world.md` fixes the position: P1.7, after relief (P1.6) and before production (5.1) |
 
 ## 20. Requirements
 
@@ -1169,11 +1178,11 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-016 | A top-up MUST pay `max(0, w*Level*S/10^4 - balance)`, truncated, and keep no carry. |
 | FR-MON-017 | Every product of the step MUST use checked arithmetic with a 128-bit intermediate, MUST NOT wrap, and a quotient above `MaxMoney` MUST be treated as `MaxMoney` in the limits of FR-MON-020 to FR-MON-022. |
 | FR-MON-018 | In each tick the grants MUST be applied before the levies, each in ascending flow ID, within a flow regions in region order and accounts in ascending account ID. |
-| FR-MON-019 | The flows MUST run in phase 1 after relief and starting money are paid and before production begins, so a grant is available to the same tick's `Trade`. |
+| FR-MON-019 | The flows MUST run in phase 1 after relief is paid and before production begins, so a grant is available to the same tick's `Trade`. |
 | FR-MON-020 | A levy MUST collect at most the balance above `w*Exempt` and MUST NOT take a balance below it; the uncollected part MUST be forgiven, not carried, and counted as `Short`. |
 | FR-MON-021 | A grant MUST NOT take a balance above `MaxMoney`; the part not issued MUST be counted as `Headroom`. |
 | FR-MON-022 | An amount cut by the limit MUST be counted as `Limit`, and the carry MUST advance by the due and not by what was applied. |
-| FR-MON-023 | A flow's scale MUST default to 10 000, MUST be changed only by `SetFlowScale` between steps within 0 to `MaxFlowScale`, MUST apply from the next step, and `MoneyFlowScaled` MUST be emitted for each change. |
+| FR-MON-023 | A flow's scale MUST default to 10 000, MUST be changed only by `SetFlowScales` between steps within 0 to `MaxFlowScale`, MUST apply from the next P1.7, MUST be refused with `ErrModuleOff` (module off), `ErrUnknownFlow` (a flow that is not declared) or `ErrOutOfBounds`, and `MoneyFlowScaled` MUST be emitted for each changed flow. |
 | FR-MON-024 | The engine MUST NOT change a flow's scale or any other field of a flow by itself; no rule of this module MUST read the money supply, a price, an index or a count of accounts of a class. |
 | FR-MON-025 | A grant to households that is not `NotIncome` MUST be added to the recipient's `income_t` for the tick and excluded from the observed wage, a grant with `NotIncome` MUST NOT, and a levy MUST NOT be netted from income. |
 | FR-MON-026 | After every operation, `M` MUST equal `M_init` plus the grants applied minus the levies applied (plus the other faucets and sinks), and for each flow the boundary balance of its reason MUST equal `-Total` for a grant and `+Total` for a levy, with exact equality. |
@@ -1192,7 +1201,7 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-039 | The warnings `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty` and `grant_to_pool_no_outlet` MUST NOT fail validation, and each MUST name its path. |
 | FR-MON-040 | The state of 14 MUST be saved in the order given, a restored world MUST apply the same payments as an uninterrupted one, and a carry of a closed account MUST NOT be saved. |
 | FR-MON-041 | The module MUST draw no random number, and the draws made at agent creation (`spec-agents.md` 3.5.2) MUST NOT depend on whether it is on. |
-| FR-MON-042 | The Snapshot MUST carry `M_h`, `M_p`, `M_c` per region, `M` and `H`, the money boundary balance per reason sorted by reason, and each flow's `Total`, `Scale` and whether it ended, as plain data. |
+| FR-MON-042 | The Snapshot MUST carry `M_h`, `M_p`, `M_c` per region, `M` and `H`, the money boundary balance per reason sorted by reason, and each flow's `Total`, `Scale` and whether it ended, as plain data; the boundary balances MUST be in the order of `spec-observability.md` 4.4.1.2. |
 | FR-MON-043 | A faucet or sink reason MUST have a Boundary account on its boundary side, so a counterparty whose balance is created or destroyed outside conservation is a Boundary account; a transfer under such a reason between two non-boundary accounts MUST be refused with `ErrReasonMismatch` (`spec-ledger.md` FR-LED-004). |
 | FR-MON-044 | A flow MUST NOT apply anything during the construction phase, and the construction bucket MUST contain only `initial` money. |
 | FR-MON-045 | A flow whose scale is 0, or that has ended, MUST apply nothing and emit no `BoundaryFlow` entry. |
@@ -1242,8 +1251,9 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
     asks for construction (4.5.1). *Next step:* LED confirms (account IDs of regions and
     agents shift by the number of declared reasons).
 11. **Interest, saving and credit** are excluded (9.5); they carry their own entries.
-12. **Velocity and a price index** are IND's. The measures of 3.1.3 are the inputs. *Next
-    step:* IND defines them.
+12. **Velocity and a price index** are IND's. The measures of 3.1.3 are the inputs.
+    **Answered:** velocity is `Turnover` and money per household is `Sectors`
+    (`spec-indicators.md` 9 rows 8 and 7); a price index is `PriceIndex`.
 
 ## 22. Where this lives in the code
 
@@ -1253,10 +1263,10 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | Validation, the sentinels `ErrFlowShape`, `ErrReasonCollision` and the warnings | root package, `validate.go`, `errors.go` |
 | The pure rules: the carry (6.1), the rate levy (6.3), the top-up, the limits (5.4) | `internal/moneyflow` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9); name provisional, and it MAY live in `internal/ledger` helpers if small |
 | The step (5) and the flow state | root package, `world.go` (phase 1) and `moneysupply.go` |
-| `SetFlowScale` | root package, `world.go`; the public surface is INT's |
+| `SetFlowScales` | root package, `integration.go` (`spec-integration.md` 5.1); the flow state is in `moneysupply.go` |
 | The events `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled` | root package, `event.go` |
 | The declared reasons | `internal/ledger` registry, built at construction from the flow list |
-| Log keys `flow`, `due`, `applied` | `internal/logkeys` |
+| Log keys `flow`, `due`, `applied` | `internal/logkeys` (key strings only) |
 
 ```go
 // internal/moneyflow: stdlib only, no root types. A sketch, not final.

@@ -61,10 +61,10 @@ STAGES = [
     dict(name="C3 scale", pack="one", k=2, d=0, screen=0, explore=0, R=0, search_runs=30, confirm_runs=0,
          ms=30 * run_ms("one", TICKS4Y)),     # 3 scales x 10 seeds, no search (7.3.4)
     stage("C4a beliefs", "one", 16, 6, TICKS4Y, confirm_packs=("one", "second")),
-    stage("C4b agents and welfare", "one", 13, 5, TICKS4Y, confirm_packs=("one", "second")),
+    stage("C4b agents and welfare", "one", 13, 5, TICKS4Y, confirm_packs=("one", "second", "one", "one")),   # M06 and H03 legs: variants of one
     stage("C4c occupation", "one", 5, 3, TICKS4Y, confirm_packs=("one",)),
-    stage("C5 shocks and ladder", "famine", 12, 4, 1800, branch=(400, 2), confirm_packs=("famine", "one")),
-    stage("C6 demand and barriers", "one-demand", 10, 4, TICKS4Y, confirm_packs=("one-demand", "three", "five"), conf_seeds={"three": 4, "five": 2}),
+    stage("C5 shocks and ladder", "famine", 12, 4, 1800, branch=(400, 2), confirm_packs=("famine", "one", "one")),   # W05 on one and on one + nofloor
+    stage("C6 demand and barriers", "one-demand", 9, 4, TICKS4Y, confirm_packs=("one-demand", "three", "five"), conf_seeds={"three": 4, "five": 2}),
     stage("C7a trade", "three", 12, 4, TICKS4Y, confirm_packs=("two", "three")),
     stage("C7b movement", "three", 10, 4, TICKS4Y, confirm_packs=("three",)),
     stage("C8 open layer", "one", 12, 3, TICKS4Y, confirm_packs=("one",)),

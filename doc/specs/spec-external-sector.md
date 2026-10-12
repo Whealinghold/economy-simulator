@@ -445,13 +445,14 @@ clamp is the damper EXT-D5 (17).
 of each tick it moves:
 
 ```
-d  = Uint64N(2 * WalkStepBP + 1) - WalkStepBP           (one draw, in [-step, step])
+d  = -WalkStepBP + draw(2 * WalkStepBP + 1)             (one draw, in [-step, step])
 D' = clamp(D - trunc(D * WalkRevertBP / 10 000) + d, -WalkBoundBP, WalkBoundBP)
 ```
 
-The draw is `rand.Uint64N` of `math/rand/v2` on the world's source (architecture.md
-7.3), taken in the order of 5.1.1; the extension contract of architecture.md 7.7 does not
-apply because the world itself draws. `WalkBoundBP` must be at least `WalkStepBP` and at most 9 999, so
+The draw is the world's draw of `spec-world.md` 7.2.1 (the high word of one source
+word times the bound: one word, no loop, no rejection; architecture.md 7.3), taken in
+the order of 5.1.1; the extension contract of architecture.md 7.7 does not apply because
+the world itself draws. `WalkBoundBP` must be at least `WalkStepBP` and at most 9 999, so
 `F_walk` stays positive.
 
 6.4.2. **What it does.** The drift is a bounded, mean-reverting random walk (an
@@ -477,10 +478,13 @@ beliefs to keep up is not derived (EXT-A6).
 The **shock** of a line is a factor in basis points, default 10 000, bound 1 to
 `MaxShockBP` (100 000), that multiplies the mid (6.1). It is world state, not
 configuration: it is changed only between steps by the world's operation
-`SetOutsideShock(node, commodity, bp)` (name provisional; the public surface is INT's,
+`SetOutsideShocks([]OutsideShock{Node, Commodity; BP})` (`spec-integration.md` 5.1;
 N-091), applies from the next step, is saved in a checkpoint and is not part of the
-configuration hash. The operation validates the node, the commodity and the bound
-(`ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrOutOfBounds`) and emits `OutsideShocked`.
+configuration hash. The operation validates, in this order (`spec-integration.md`
+5.1.3), the module (`ErrModuleOff`), the node (`ErrUnknownRegion`), the commodity
+(`ErrUnknownCommodity`), the line (`ErrUnknownLine`, new: the node has no line for the
+commodity), the bound (`ErrOutOfBounds`) and that no key repeats (`ErrDuplicateID`), and
+emits `OutsideShocked` for each changed (node, commodity).
 The engine never changes it. It is the means by which a consumer, a script or a future
 policy actor moves an outside price (a supplier abroad fails, a rival market opens) without
 a rule of the core reading anything. A closed edge (7.5) is the means to cut a flow.
@@ -649,9 +653,12 @@ For every tick, exactly (FR-EXT-019, FR-EXT-020):
 
 The **balance of trade** of a node over a period is `export_value - import_value`: the money
 the outside added to the realm (positive) or took from it (negative). It is a **measure**: it
-is computed from the boundary balances and read from the Snapshot (15.4), and nothing in the
-engine reads it (11.3). Because the boundary accounts are per reason and region, it is
-available per gate; per node it is the sum over the node's gates, and per commodity for goods.
+is measured by `TradeBalance` of `spec-indicators.md` 9 row 13 (gross and net, units and
+money, by node, gate and commodity, from `OutsideTraded` and `BoundaryFlow`), and not by a
+Snapshot field; nothing in the engine reads it (11.3). The boundary accounts are per reason
+and kind of thing (`spec-ledger.md` 3.4) and the money of a reason is attributed to the
+gate region, so the per-gate figure comes from `BoundaryFlow` and `OutsideTraded`; per node
+it is the sum over the node's gates, and per commodity for goods.
 The cumulative balance over the run equals `M_t - M_init` less the contributions of the
 other faucets and sinks (8.2, item 4).
 
@@ -949,7 +956,7 @@ plain struct with a `Tick`, no map, no pointer, fixed-point values (4.1 there).
 |-------|--------------|--------|
 | `OutsideTraded` | once per (node, gate, commodity, side) per tick in which the side wanted any unit or any unit was cut, after the sweep, in ascending (node, gate, commodity, buy before sell); never when nothing was wanted or cut | `Node`, `Region` (the gate), `Commodity`, `Side` (`bid` for a buy side, `ask` for a sell side), `Mid`, `Price` (the limit), `Wanted`, `Offered`, `Traded`, `Value` (money paid or received in the trades), `ListValue`, `CutClosed`, `CutCap`, `CutPrice`, `PriceClamped` |
 | `OutsideEnded` | a side reaches its cap and ends, once | `Node`, `Commodity`, `Side`, `Cause` (`units` or `value`), `Units`, `ListValue` (cumulative) |
-| `OutsideShocked` | the shock slot is set between steps, once per call | `Node`, `Commodity`, `From`, `To` |
+| `OutsideShocked` | the shock slot is set between steps, once per changed (node, commodity) of a call | `Node`, `Commodity`, `From`, `To` |
 
 `OutsideTraded` is an aggregate: it is bounded by nodes, gates and lines in the configuration
 and is not per agent, order or trade. The events of a module that is off are not emitted. The
@@ -985,18 +992,17 @@ construction (observability-and-logging.md 4.5, 8.2; NFR-EXT-001).
 
 ### 15.4 Snapshot
 
-The Snapshot carries, as plain data (names are OBS's, N-094): for each node, line and gate the
+The Snapshot carries, as plain data (names are `spec-observability.md` 5.3, N-094; the balance of trade is not a field, 8.3): for each node, line and gate the
 mid, the quote of each side, the drift, the shock and the carry; for each side the cumulative
 units, the list value and whether it ended; per commodity the cumulative `import_c` and
-`export_c` of 8.2 and per node the cumulative `export_value` and `import_value` and their
-difference, the balance of trade; the six boundary balances per reason (money, and goods per
-commodity); and the counterparties as pseudo-agents with their account IDs and gate regions
+`export_c` of 8.2 (the sums of the sides' `Units` per commodity); the six boundary balances
+per reason (money, and goods per commodity); and the counterparties as pseudo-agents with their account IDs and gate regions
 (FR-EXT-046).
 
 ### 15.5 The Observability entry (observability-and-logging.md 9)
 
 1. *New failure path or rejected input?* The configuration errors of 14.1 are returned at
-   construction; the shock operation returns its errors; a cut of an order is survived and
+   construction; `SetOutsideShocks` returns its errors; a cut of an order is survived and
    counted in `OutsideTraded`, with the cause as a field and no `Warn` per tick.
 2. *New state transition?* A top-up, a sweep, a drift, a shock and an end: the first two are
    ledger transfers reported in `BoundaryFlow` and `OutsideTraded`; the others have events.
@@ -1341,7 +1347,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-EXT-024 | The mid MUST be `clamp(round_half_even(Base * S * F * Shock / 10^12), 1, MaxPrice)` with `F` as in 6.1, MUST equal `Base` for a line with no season table, no trend, no walk and the default shock, and MUST be computed from the tick, the drift and the shock without being stored. |
 | FR-EXT-025 | A season table naming an unknown season, or any season when the calendar has none, MUST be rejected with `ErrUnknownSeason`, and a tick with no season MUST use the factor 10 000. |
 | FR-EXT-026 | The trend factor MUST be linear and truncated toward zero, `F` MUST be held between `FloorBP` and `CeilingBP`, and a tick in which a clamp changes `F` or the mid MUST set `PriceClamped`. |
-| FR-EXT-027 | The shock MUST default to 10 000, MUST be changed only between steps by `SetOutsideShock` within 1 to `MaxShockBP`, MUST apply from the next step, MUST be saved and not hashed, and MUST emit `OutsideShocked`; the engine MUST NOT change it. |
+| FR-EXT-027 | The shock MUST default to 10 000, MUST be changed only between steps by `SetOutsideShocks` within 1 to `MaxShockBP`, MUST apply from the next step, MUST be saved and not hashed, and MUST emit `OutsideShocked`; the engine MUST NOT change it. |
 | FR-EXT-028 | The wanted units MUST be `floor((Capacity * Avail + carry) / 10 000)` with the carry set to the remainder, advancing by the wanted units whether or not they are offered. |
 | FR-EXT-029 | A season with availability 0 MUST place no order and MUST NOT be counted as a cut; a window that is 0 in every season MUST draw `window_all_closed`. |
 | FR-EXT-030 | The offered units MUST NOT exceed the remaining `TotalUnits` or `floor(remaining list value / limit)`; the units cut MUST be counted as `CutCap`; a side that reaches a cap MUST end for good, emit `OutsideEnded` once with the cause and place nothing afterwards. |
@@ -1351,7 +1357,7 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-EXT-034 | A shipment request whose destination is an outside node MUST be refused with `outside_destination`, and a relocation into one with `ErrOutsideNode`; neither MUST change any state. |
 | FR-EXT-035 | A commodity with a sell side that has a gate and a window not closed in every season MUST count as sourced for the structural check of `spec-config.md` 7.5, `raw_without_source` MUST NOT be raised for it, and a commodity sourced only so MUST draw `import_only_source`. |
 | FR-EXT-036 | `OutsideTraded` MUST be emitted once per (node, gate, commodity, side) per tick in which any unit was wanted or cut, after the sweep, in ascending (node, gate, commodity, buy before sell), with the fields of 15.1, no map and no pointer, and MUST NOT be emitted when nothing was wanted or cut. |
-| FR-EXT-037 | `OutsideEnded` MUST be emitted once per side that ends and `OutsideShocked` once per call of `SetOutsideShock`; neither MUST be emitted with the module off. |
+| FR-EXT-037 | `OutsideEnded` MUST be emitted once per side that ends and `OutsideShocked` once per changed (node, commodity) of a call of `SetOutsideShocks`; neither MUST be emitted with the module off. |
 | FR-EXT-038 | The tick MUST NOT log at `Info` or `Error`, MUST log `Warn` only for an ended side and the warnings of construction, and its `Debug` lines MUST be guarded by `Enabled`, have constant messages and use the keys of 15.2. |
 | FR-EXT-039 | The reasons of 8.1 MUST appear in `BoundaryFlow` under their names for the gate region with the kind faucet or sink. |
 | FR-EXT-040 | A field outside its bound, a side set on an absent side, a `WalkBoundBP` below the step, or more than `MaxOutsideNodes` nodes, `MaxOutsideLines` lines or `MaxCounterparties` counterparties MUST be rejected with `ErrOutOfBounds` naming the path. |
@@ -1383,8 +1389,9 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
    in `spec-clearing.md` 5.1 and 8. *Next step:* run EXT-S1; if the pull of beliefs toward the
    quote is too weak for a setting that wants a fixed price, CLR adds the flag and the rule.
 2. **Gross flows.** The boundary flows are gross (5.2.3, 8.1). A reader of `BoundaryFlow` sees a
-   large budget and a large return. *Next step:* OBS decides whether to add a net event or metric
-   of the balance of trade; the derivation is in 8.2 and 15.5.
+   large budget and a large return. **Answered:** OBS adds no net event or metric
+   (`spec-observability.md` 4.4.7), and the net is `TradeBalance` of `spec-indicators.md` 9
+   row 13; the derivation is in 8.2 and 15.5.
 3. **A price by distance.** The quote is delivered at the gate (3.2.2). An edge's length or its
    status factor could change the price. *Next step:* TRN or INF, once a cost per distance unit
    exists.
@@ -1427,9 +1434,9 @@ or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | The pure rules: the mid (6.1), the walk (6.4), the quotes (6.6), the wanted units with carry (7.1) and the cuts (7.3) | `internal/outside` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9) |
 | The counterparties, the tick steps (5) and the line state | root package, `external.go`, with the phase-1, phase-3 and phase-4 calls in `world.go` |
 | The account kind Outside and the six reasons | `internal/ledger` (a kind and registry rows, built at construction from the configuration) |
-| `SetOutsideShock`, `Lines` | root package; the public surface of the first is INT's |
+| `SetOutsideShocks`, `Lines` | root package, `integration.go` for the first (`spec-integration.md` 5.1) |
 | The events `OutsideTraded`, `OutsideEnded`, `OutsideShocked` | root package, `event.go` |
-| Log keys `node`, `value`, `nodes`, `counterparties`, `drift` | `internal/logkeys` |
+| Log keys `node`, `value`, `nodes`, `counterparties`, `drift` | `internal/logkeys` (key strings only) |
 
 ```go
 // internal/outside: stdlib only, no root types. A sketch, not final.

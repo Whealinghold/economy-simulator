@@ -338,8 +338,11 @@ which the orders were admitted. This order is deterministic and is the order in
 which the one draw per outcome is taken, so the random stream does not depend on
 anything but the number and order of admitted orders.
 
-5.1.2. Each admitted order gives exactly one update, however many trades filled
-it. An agent with no order in a market gets no update there. This replaces the
+5.1.2. Each admitted order of a household agent gives exactly one update, however many
+trades filled it. An agent with no order in a market gets no update there. An estate's
+ask and a counterparty's order (`spec-estates.md`, `spec-external-sector.md` 5.2) have no
+outcome and no draw: no belief exists to update, and the world takes the one `uint64` of
+5.1.1 only for an order of a household agent (`spec-world.md` 6.7, ruling C21). This replaces the
 original's update per matched trade plus one per unmatched order (defect 11).
 
 5.1.3. The world applies the update when processing the outcome, before the next
@@ -643,11 +646,11 @@ belief, and differ after their first draws and updates. bazaarBot starts a belie
 at half to one and a half times the price (a width of 50%); the default width
 here is 20% (section 14).
 
-8.3. **Agents that enter later** (a replacement, a newborn, a migrant) start at
+8.3. **Agents that enter later** (a replacement, a newborn, an immigrant, a migrant, a traveller, a forced mover, an external agent added by `AddAgent`) start at
 `Centre = clamp(window mean, Floor, Ceiling)` if the window is not empty and
 the market price otherwise, with `BeliefWidthInit`. An agent that changes role (`spec-spawner.md` 4.2) keeps the belief of every commodity that is in the tradable sets of both roles, with its centre and width unchanged apart from the re-clamp of 3.3 to the bounds of the new role's unit cost; a commodity new to its set gets a belief by this paragraph's rule; a belief for a commodity that left the set is dropped. This is bazaarBot's rule of
 starting a new agent from the average price over its lookback (bazaarbot-reference.md section 8),
-with the window of section 7. A migrant (`spec-migration.md` 8.4) and a self-carried traveller on arrival (`spec-merchants.md` 12.2, `spec-transport.md` 5.7) are reseeded at arrival by this rule: for every commodity of the agent's tradable set the centre is the clamp of the window mean of the market it arrives in (the market price if the window is empty) and the width is `BeliefWidthInit`; no draw is taken, and one helper serves both arrivals.
+with the window of section 7. A migrant (`spec-migration.md` 8.4) and a self-carried traveller on arrival (`spec-merchants.md` 12.2, `spec-transport.md` 5.7) are reseeded at arrival by this rule: for every commodity of the agent's tradable set the centre is the clamp of the window mean of the market it arrives in (the market price if the window is empty) and the width is `BeliefWidthInit`; no draw is taken. **One helper serves every case**, `beliefs.Reseed` of `internal/beliefs` (primitive slices in and out, 2.9 of architecture.md): the arrival of a migrant, the arrival of a self-carried traveller, a forced `Relocate` (`spec-integration.md` 4.5.2, `spec-regions.md` 6.3), the creation of a later agent and an external agent added during a run (`spec-integration.md` 4.1.2, which before the first step reads the seed price of 8.2, as `spec-agents.md` 3.5.4 says). A new caller of the rule calls the helper and does not restate it.
 
 8.4. **The hook for a steady state.** `spec-viability.md` solves for the steady
 state of a chain and so gives a price for each commodity in each region. The seed
@@ -827,11 +830,12 @@ slice; all fields are integers. It lets a designer see why a price moved
   configuration error caught at validation.
 
 12.3. **Log keys.** `region`, `bound` (`floor` or `ceiling`) and `agents` are in the
-table of observability-and-logging.md 3.3.2. The `reason` values above are constants
-in `internal/logkeys`.
+table of observability-and-logging.md 3.3.2. The `reason` values above are exported constants of the root package
+(`event.go`; `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only.
 
-12.4. **No new metric** is defined here. The metrics adapter can build a gauge of
-the mean centre per commodity from `BeliefsUpdated`; its name belongs to
+12.4. **No new metric** is defined here. The metric is `economysim.belief.centre`, a Gauge by
+`economysim.commodity` and `economysim.region` (`spec-observability.md` 6.2.1), fed by the mean
+centre of `BeliefsUpdated` (`MeanCentre`) of a market; its name and attributes belong to
 `spec-observability.md`.
 
 12.5. With the default no-op logger and observer, the update path allocates
@@ -848,12 +852,13 @@ Every spec lists the state it contributes (ADR 0002, consequences). This spec's:
 
 - for each agent, in agent ID order, and for each commodity in its tradable set,
   in commodity ID order: the `Centre` and the `Width` (two `int64`);
-- for each market, in region then commodity order: the price window (the count,
-  the position of the next write, and the prices in ring order, up to
-  `PriceWindow`) and `BoundRun`, the count of consecutive ticks used by the
-  `Warn` of 12.2. The window lives in the market's record beside the published
-  price and its age (`spec-clearing.md` 5.4), which are `spec-clearing.md`'s state;
-  the window and `BoundRun` are this spec's.
+- for each market, in region then commodity order: the price window (the count
+  and the prices oldest first, up to `PriceWindow`; the position of the next write is
+  derived from the count and is not saved) and `BoundRun`, the count of consecutive
+  ticks used by the `Warn` of 12.2. The window lives in the market's record beside the
+  published price and its age (`spec-clearing.md` 5.4), which are `spec-clearing.md`'s
+  state; the market record is shared with `spec-clearing.md` 5.4 and is written once, in
+  section 4 of `spec-checkpoint.md`; the window and `BoundRun` are this spec's.
 
 It does **not** contain: the bounds `Floor` and `Ceiling` and the effective
 range (all are computed from configuration and the caller's unit cost); the
@@ -993,8 +998,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-BEL-004 | The floor MUST be the larger of the reference-band floor and the cost floor, capped at `MaxPrice`; the ceiling MUST be the smaller of the reference-band ceiling and the cost ceiling, raised to the floor if below it; so `Floor <= Ceiling` always. |
 | FR-BEL-005 | A unit cost of 0 MUST apply no cost floor or cost ceiling. |
 | FR-BEL-006 | Every product in the rule MUST use checked arithmetic, and no input within the configuration bounds MUST cause a wrap or a panic. |
-| FR-BEL-007 | Each admitted order MUST give exactly one belief update after its market has cleared, however many trades filled it; a rejected order, and an agent with no order in a market, MUST give none. |
-| FR-BEL-008 | The world MUST draw exactly one `uint64` for each outcome, in order of region, commodity and admission, whether or not the update uses it. |
+| FR-BEL-007 | Each admitted order of a household agent MUST give exactly one belief update after its market has cleared, however many trades filled it; a rejected order, and an agent with no order in a market, MUST give none. |
+| FR-BEL-008 | The world MUST draw exactly one `uint64` for each outcome of an order of a household agent, in order of region, commodity and admission, whether or not the update uses it; an estate's ask and a counterparty's order have no outcome and no draw. |
 | FR-BEL-009 | The adjustment gate MUST be open if and only if the high word of the product of the draw and 10 000 is below `BeliefAdjustProb`; when closed, the centre and the width MUST be unchanged, apart from re-clamping to the bounds. |
 | FR-BEL-010 | One unit of adjustment `Δ` MUST be `max(1, Centre * BeliefStep / 10 000)`, truncated. |
 | FR-BEL-011 | For a bid that was not fully filled, the target price MUST be the smaller of the best unmatched ask and the market price when fresh and above the limit; for an ask that was not fully filled, the larger of the best unmatched bid and the market price when fresh and below the limit; and there MUST be no target if neither candidate exists. |
@@ -1168,11 +1173,12 @@ that 0.19% of 1.5 billion random rule sets passed them.
 | Concern | Home |
 |---------|------|
 | The belief per agent and commodity, the seed table (`Config.WarmStart.Prices`), the price window per market (beside the published price and age, outside `Clearing`), `BoundRun` | root package, `agent.go` and `market.go` |
-| `Bounds`, `Update`, `Draw`, the window push and the position helper | `internal/beliefs` (stdlib only), over primitive structs: `Belief`, `Params`, `Bounds`, `Outcome`, `Quote`, `Inputs`, `Result`. The caller passes the one `uint64`; the package imports no random source |
+| `Bounds`, `Update`, `Draw`, `Reseed` (8.3), the window push and the position helper | `internal/beliefs` (stdlib only), over primitive structs: `Belief`, `Params`, `Bounds`, `Outcome`, `Quote`, `Inputs`, `Result`. The caller passes the one `uint64`; the package imports no random source |
 | The parameters of section 11 | root package, `config.go` and `defaults.go`; bounds in `bounds.go` |
 | Processing outcomes in order, the draw per outcome, the clamp of a strategy's belief | root package, the step logic of `spec-world.md`; `strategy.go` for the default strategy's use of the draw |
 | The event `BeliefsUpdated` | root package, `event.go` |
-| `reason` constants and the new log keys | `internal/logkeys` |
+| `reason` constants (exported, `spec-observability.md` 4.2.3) | root package, `event.go` |
+| The new log keys (key strings only) | `internal/logkeys` |
 | Checked multiply and divide, half-to-even mean | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 
 ```go

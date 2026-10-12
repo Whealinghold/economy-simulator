@@ -405,11 +405,19 @@ of 7.1.4 it applies this rule to an agent that is free.
    that role recipe instead of the own-use recipe. The role job is a test of the market: if
    the household earns, its `Afford` rises; if not, the mode continues. If no role recipe is
    eligible, the own-use job goes on.
-6. **Nothing runnable.** If no own-use recipe has `MaxExecutions >= 1` and a positive sum (a zero
-   yield, no site, no endowment, `spec-production.md` 4.2), or if every request it made was granted no execution by the
-   ration of `spec-resources.md` 5.3 at the start step (counted at the start, reason `no_endowment`) the household is **blocked**: `Work` treats
-   the tick as if it were not in the mode, and the flag stays. The household is counted in
-   `Blocked` (14.1).
+6. **Nothing runnable.** `Work` is called at P2.5, before the ration (P2.6) and the starts
+   (P2.7), in every pass (`spec-world.md` 6.4.1, ruling C9), so it can know only what its view
+   and the snapshot of the endowments tell it. Two cases, both **blocked**, and the flag stays:
+   (a) no own-use recipe has `MaxExecutions >= 1` and a positive sum (a zero yield, no site,
+   no endowment in the snapshot, `spec-production.md` 4.2): `Work` treats the tick as if the
+   household were not in the mode and requests as 7.1 says (a role recipe, if one is
+   eligible), and the household is counted in `Blocked` at P2.5; (b) every request it made
+   was granted no execution by the ration of `spec-resources.md` 5.3 at P2.6 (reason
+   `no_endowment`): the household starts nothing at P2.7, is flagged blocked and counted in
+   `Blocked` there, and its next `Work` is the next tick's. It is **not** asked again in the
+   same tick and does not fall back to a role recipe in it: the lost tick is the cost of a
+   request that could not be known to fail (`spec-world.md` 22 question 12, ruling F7 of the
+   integration).
 7. **The halt does not apply.** The production halt (`spec-agents.md` 7.1.5) does not apply
    to an own-use recipe: its stop is the exit cover. The executions of 4 are bounded by the
    shortfall, so a job overshoots by at most one execution's output per household.
@@ -548,7 +556,10 @@ observed_wage = sum( income_t - F_t - G_t - K^own_t ) / sum( working household-t
 
 where the own-use household-ticks of a tick are `k` for an own-use job of `k` executions in
 progress (started, continued or completed), the same count `spec-welfare-and-wages.md` 4.3
-uses for any job. Without the exclusion a household that spends a window on the floor would
+uses for any job. Both quantities enter the welfare record at P6.3 from the per-agent scratch
+that the own-use job sets at P2.1 (a completion, which clears the job) and at P2.7 (a start),
+because the job itself is gone at completion by the time P6.3 reads it (`spec-world.md` 6.8;
+`spec-production.md` 5.2.1). Without the exclusion a household that spends a window on the floor would
 show a large number of working ticks and little cash income, and pull the regional wage, and
 with it every cost anchor, toward 0 in exactly the region where the floor is in use; with the
 receipt in the numerator and the ticks in the denominator it would show the floor's
@@ -917,7 +928,7 @@ describes (observability-and-logging.md 4.1, 4.4):
 
 | Event | Emitted when | Fields (besides `Tick`) |
 |-------|--------------|-------------------------|
-| `OwnUseChanged` | once per region and role per tick in phase 2, after the starts, in ascending `RegionID` then role order, **if any of `Entered`, `Left`, `Started`, `Blocked`, `Retried` or `Output` is non-zero**; never otherwise | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `OnOwnUse` (households with the flag at the end of the flag step), `Entered` and `Left` (households whose flag changed in the tick), `Started` (executions of own-use recipes started), `Blocked` (households in the mode that were free and had no own-use recipe they could run), `Retried` (households for which the retry chose a role recipe over a runnable own-use recipe), `Output` (a slice of (`Commodity`, `Units`) in commodity order: the units created at the completion of own-use jobs in the tick) |
+| `OwnUseChanged` | once per region and role per tick in phase 2, after the starts, in ascending `RegionID` then role order, **if any of `Entered`, `Left`, `Started`, `Blocked`, `Retried` or `Output` is non-zero**; never otherwise | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `OnOwnUse` (households with the flag at the end of the flag step), `Entered` and `Left` (households whose flag changed in the tick), `Started` (executions of own-use recipes started), `Blocked` (households in the mode that were free and had no own-use recipe they could run at P2.5, or whose own-use requests the ration cut entirely at P2.6 and which started nothing at P2.7; a household counts once), `Retried` (households for which the retry chose a role recipe over a runnable own-use recipe), `Output` (a slice of (`Commodity`, `Units`) in commodity order: the units created at the completion of own-use jobs in the tick) |
 
 `OwnUseChanged` is an aggregate bounded by regions times roles
 (observability-and-logging.md 4.3, the paragraph of aggregates). It is off when the module is
@@ -963,8 +974,10 @@ metric is derivable from the event, as 5.3.1 requires.
 
 ### 14.4 Snapshot
 
-Per region and role: the households in the mode and the households blocked in the last tick;
-per agent, in a query (INT): `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`. The names are OBS's.
+Per region and role: the households in the mode (`RoleRow.OnOwnUse`,
+`spec-observability.md` 5.3.4); the households blocked are the event `OwnUseChanged.Blocked`
+(14.1), not a snapshot field. Per agent, in a query (`spec-integration.md` 4.7.2): `OwnUse`,
+`OwnUseJobs`, `Cover` and `Secure`. The names are OBS's.
 Bounded by the configuration for the aggregates.
 
 ### 14.5 Cost with no observer
@@ -995,7 +1008,8 @@ draw (FR-SUB-035).
 Every spec lists the state it contributes (ADR 0002). All plain data in a fixed order, no maps:
 
 - for each agent, in agent-ID order: `OwnUse` (a bool) and `OwnUseJobs` (an `int64`). Hosted in
-  the agent (`spec-agents.md` 3.1, 15), defined here;
+  the agent record and saved there, once (`spec-agents.md` 3.1, 15; `spec-checkpoint.md` 4.2
+  tag 3), defined here; this section names them for their meaning and writes nothing of them;
 - for each (region, role), in region then role order: the two runs of consecutive ticks of the
   two `Warn`s of 14.2 (diagnostic: they affect no result and are saved so that a resumed run
   logs as the original did);
@@ -1333,7 +1347,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-020 | The default `Work` in the mode MUST request, among the own-use recipes with `MaxExecutions` of 1 or more and a positive sum, the one with the greatest sum of `Cov` over the covered commodities whose cover is below `ExitTicks`, compared as exact fractions, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
 | FR-SUB-021 | The executions of the request of FR-SUB-020 MUST be `min(w, MaxExecutions, max(1, ceil(w * (ExitTicks - Cover) / ExitTicks)))`. |
 | FR-SUB-022 | `OwnUseJobs` MUST increase by 1 when an own-use job starts and MUST reset to 0 when a job of another recipe starts or the mode changes; when `RetryJobs` is above 0, `OwnUseJobs` has reached it and a role recipe is eligible, the default `Work` MUST request the role recipe. |
-| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, or the ration grants every own-use request of the agent 0 executions, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked`. |
+| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked` at P2.5; when the ration grants every own-use request of the agent 0 executions, the agent MUST start nothing at P2.7, the flag MUST stay, the agent MUST be counted in `Blocked` at P2.7, and its next `Work` MUST be the next tick's. |
 | FR-SUB-024 | The production halt of `spec-agents.md` 7.1.5 MUST NOT apply to an own-use recipe. |
 | FR-SUB-025 | A role with an empty `Recipes` list and a non-empty effective own-use list MUST request an own-use job in the mode. |
 | FR-SUB-026 | Production MUST accept a request for a recipe on the role's effective own-use list, and MUST still refuse any other recipe not on `Role.Recipes` with `not_on_role` before any other check. |
@@ -1354,9 +1368,9 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-041 | The events of a tick MUST be in ascending `RegionID` then role order, after the starts of phase 2, with no map and no pointer in any field and `Output` in commodity order. |
 | FR-SUB-042 | The `Warn` "role on own use" MUST be emitted at the tenth consecutive tick on which more than half of a role's households in a region are in the mode and every tenth after, and the `Warn` "own use blocked" at the tenth consecutive tick on which a household in the mode is blocked and every tenth after, each at most once per region and role per tick. |
 | FR-SUB-043 | The log key `own_use` and the metrics `economysim.household.own_use` and `economysim.own_use.units` MUST be defined as in 14.2 and 14.3, with attributes bounded by the configuration. |
-| FR-SUB-044 | A checkpoint MUST save `OwnUse` and `OwnUseJobs` of every agent and the two diagnostic runs, and a world restored between ticks MUST evaluate, choose and report as an uninterrupted one. |
+| FR-SUB-044 | A checkpoint MUST save `OwnUse` and `OwnUseJobs` of every agent in the agent record (`spec-checkpoint.md` 4.2 tag 3), and the two diagnostic runs, and a world restored between ticks MUST evaluate, choose and report as an uninterrupted one. |
 | FR-SUB-045 | A run with a logger and an observer attached MUST produce exactly the same results as one without. |
-| FR-SUB-046 | The snapshot MUST report per region and role the households in the mode and the households blocked in the last tick, and per agent `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`. |
+| FR-SUB-046 | The snapshot MUST report per region and role the households in the mode (the households blocked are the event `OwnUseChanged.Blocked`, not a snapshot field), and per agent `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`. |
 | FR-SUB-047 | A pack with the module, its recipes, its yield rows and its endowment rows MUST run from configuration alone, with no Go specific to it (architecture.md 9.4). |
 | FR-SUB-048 | An own-use recipe MUST NOT be requested by the default `Work` for an agent that is not in the mode. |
 | FR-SUB-049 | An agent with a job in progress MUST NOT be offered the mode's request until it is free (no interruption), and a started own-use job MUST run to its end. |
@@ -1401,8 +1415,11 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
    upkeep only (3.3.2).
 10. **The priority on the commons.** Open access gives the floor no priority (9.2). A right to
     draw for own use is LND's entitlement; whether the default of LND is a priority for own-use requests.
-11. **Measuring the duty cycle.** The share of a household's jobs that are own-use is a measure
-    (IND), derivable from `OwnUseChanged.Started` and the recipe executions.
+11. **Measuring the duty cycle. (Answered, with a caveat.)** `spec-indicators.md` defines no
+    duty-cycle measure: 7.8.3 has a consumer list the own-use recipes and read their
+    `RecipeExecuted` rows of the tally. The duty cycle is `OwnUseChanged.Started` (executions
+    started) over those rows. `Started` counts starts and `RecipeExecuted` is emitted at
+    completion, so the ratio is exact only over a window long enough to hold whole jobs.
 12. **A mode that changes the target cover.** Raising the household's `Keep` while in the mode,
     so that purchases can build the exit cover, would remove the unreachable exit of 5.3.3 and
     couple the module to `Trade`.

@@ -82,7 +82,7 @@ Out of scope, with the owner:
 | 9 | Ties go to a random key or a rotation, never to the lower ID, in new specs; the places in the written specs that still favour a low ID or an early role are registered as hazards with a named remedy | 10 |
 | 10 | `Work` is always called for every free agent before any job starts (two passes), whatever modules are on | 6.4.1 |
 | 11 | The privation count is set once, in phase 6, with the hunger count | 6.8, 6.12 |
-| 12 | The world contributes to a checkpoint the tick counter, the state of the PCG source and the next agent ID; everything else of the world is derived | 12 |
+| 12 | The world contributes to a checkpoint the state of the PCG source, the next agent ID and whether it is still in its construction phase (the tick counter is written in the checkpoint's header, `spec-checkpoint.md` 5.4.3); everything else of the world is derived | 12 |
 
 ## 3. The world's calls
 
@@ -117,8 +117,8 @@ no global to dirty).
 3.2.2. The errors are the validation errors of `spec-config.md` 7.1 (joined, each
 with a path and a rule), the errors of an option (4.3), `ErrAuditFailed` (5.1
 step 9, with `WithAudit`), and the three name checks that need the options and so
-live in `NewWorld`: a `Role.Strategy` name that is neither `default` nor registered
-(`ErrUnknownStrategy`, `spec-config.md` 7.1.4), a `World.Spawner` name that is not
+live in `NewWorld`: a `Role.Strategy` name that is neither `default`, `directed` nor
+registered (`ErrUnknownStrategy`, `spec-config.md` 7.1.4), a `World.Spawner` name that is not
 registered (`ErrUnknownSpawner`, `spec-spawner.md` 3.1.3) and a `World.Clearing`
 name that is not registered or is empty (`ErrUnknownClearing`, 4.2). The name
 checks run **after `Validate` succeeds**, and each returns a `ValidationError` with
@@ -146,7 +146,7 @@ started, no shipment half dispatched.
 | Error | When | Position | Source |
 |-------|------|----------|--------|
 | `ErrInvalidTrade` | a `Clearing` returned a list of trades that breaks the checks of `spec-clearing.md` 8.2: a buyer or seller with no order in the market, a quantity of 0 or above the order's, a price outside the two limits, the same agent on both sides | P4.1 | `spec-clearing.md` 8.2, open question 5 |
-| `ErrAuditFailed` | `WithAudit` is on and an identity of `spec-ledger.md` 9.1 or a module's check (12.4 there) failed | P8.4 | `spec-ledger.md` 12.4 |
+| `ErrAuditFailed` | `WithAudit` is on and an identity of `spec-ledger.md` 9.1 or a module's check (12.4 there) failed. (A restore always audits once; its failure is `ErrCheckpointCorrupt` wrapping `ErrAuditFailed`, `spec-checkpoint.md` 6.2.2, and is not an error of `Step`) | P8.4 | `spec-ledger.md` 12.4 |
 | `ErrWorldFailed` | an earlier step failed (3.5) | entry | this spec |
 | `ErrInStep` | `Step` was called from inside a step (3.6) | entry | this spec |
 
@@ -170,17 +170,18 @@ func (w *World) Run(ctx context.Context, ticks int64) (completed int64, err erro
 `RunStarted` (with `ticks`), then repeats: check `ctx.Err()`, then `Step`. It
 checks the context **before every tick, including the first**, and never inside a
 tick, so cancellation leaves the world at a tick boundary and usable. It emits
-`RunEnded` before returning, with the ticks completed and whether it was
-cancelled.
+`RunEnded` before returning, with the ticks completed, whether it was cancelled and
+whether a step failed (`Failed`; the two flags are never both true,
+`spec-observability.md` 4.4.3.2).
 
 3.4.2. Returns:
 
 | Outcome | `completed` | `err` | `RunEnded` | World after |
 |---------|-------------|-------|------------|-------------|
-| All `ticks` steps ran | `ticks` | nil | completed `ticks`, not cancelled | usable, at tick `t0 + ticks` |
-| The context was done before tick `k` | `k` | `ctx.Err()` wrapped with `%w` and the number completed | completed `k`, cancelled | usable, at tick `t0 + k` |
-| Step `k + 1` failed | `k` | the step's error, wrapped | completed `k`, not cancelled (see 16.1: OBS may add a flag) | failed (3.5) |
-| `ticks` is 0 | 0 | nil | completed 0 | unchanged |
+| All `ticks` steps ran | `ticks` | nil | completed `ticks`, not cancelled, `Failed` false | usable, at tick `t0 + ticks` |
+| The context was done before tick `k` | `k` | `ctx.Err()` wrapped with `%w` and the number completed | completed `k`, cancelled, `Failed` false | usable, at tick `t0 + k` |
+| Step `k + 1` failed | `k` | the step's error, wrapped | completed `k`, not cancelled, `Failed` true | failed (3.5) |
+| `ticks` is 0 | 0 | nil | completed 0, not cancelled, `Failed` false | unchanged |
 | `ticks` is negative | 0 | `ErrOutOfBounds` naming `ticks`, and **no** `RunStarted` | none | unchanged |
 | The world is failed or in a step | 0 | `ErrWorldFailed` or `ErrInStep`, and no `RunStarted` | none | unchanged |
 
@@ -193,12 +194,24 @@ cancelled.
 3.5.1. **Decision.** A `Step` that returns an error leaves the world **failed**.
 Every later call that would change live state or read it and that has an error
 result (`Step`, `Run`, every slot and external call of section 8, `Snapshot`,
-`Audit`, `Checkpoint`) returns `ErrWorldFailed` wrapping the error that failed the
-world. Four calls still work on a failed world, because they read nothing that the
-failure could have made inconsistent: `Err() error` (the failure, nil on a healthy
-world), `Tick() int64` (the tick the failed step was running) and the accessors of
-the immutable configuration (`ConfigHash`, `Config`), which have no error result
-and return their value.
+`Audit`, `Checkpoint`, and the queries `Market`, `Region`, `Agents`, `Agent` and
+`Slots` of `spec-integration.md` 6.2) returns `ErrWorldFailed` wrapping the error
+that failed the world. The readers that have **no error result** still work, in two
+groups (`spec-integration.md` 6.1.2):
+
+- **Values the failure cannot have made inconsistent.** `Err() error` (the failure,
+  nil on a healthy world), `Tick() int64` (the tick the failed step was running),
+  the accessors of the immutable configuration (`ConfigHash`, `Config`) and the
+  tables derived from the configuration and the edge statuses, which a step does
+  not change (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`).
+- **Readers of live state.** `Endowment`, `InTransit` and `Away` return the state
+  that the failed step left. It is **not** a boundary state and has no guarantee of
+  consistency: a consumer reads `Err()` first. The rationale of the first group
+  does not cover them.
+
+`RelocationRefusal` is listed apart: its `error` result is the refusal it reports
+and not an error of the call, so it is not refused with `ErrWorldFailed`; on a
+failed world it reads live state like the second group.
 
 3.5.2. **Why.** A step that fails has already changed state in earlier positions:
 jobs started, orders admitted with reservations open, shipments dispatched,
@@ -253,9 +266,17 @@ world (architecture.md 12.5); the same holds for `Strategy`, `Spawner` and
 `Clearing`, which receive plain views and never a `*World` (`spec-agents.md`
 6.1.1). The rule is enforced, because it is one flag: while a step runs, every
 method of `World` that has an error result returns `ErrInStep` and changes nothing,
-reads included. The readers that have no error result (`Tick`, `Config`,
-`ConfigHash`) return their value, which a step does not change mid-call (`Tick`
-advances at P8.6, after the last event). An observer that wants a snapshot keeps the events it was given, or the consumer asks
+reads included, except `RelocationRefusal`, whose `error` is the refusal it
+reports (3.5.1). The readers that have no error result return their value, in the
+two groups of 3.5.1. `Err`, `Tick`, `Config`, `ConfigHash` and the derived tables
+(`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`) return a value that a
+step does not change mid-call (`Tick` advances at P8.6, after the last event). The
+readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal`
+return the state as the running step has left it, which is not a boundary value and
+which an observer sees complete up to the event it was given (events follow the
+transition they describe). No conforming code calls them from inside a step
+(architecture.md 12.5): the clause says what the value would be. An observer that
+wants a snapshot keeps the events it was given, or the consumer asks
 for the snapshot after `Step` returns.
 
 3.6.2. The flag is set at the entry of `Step` and cleared at its exit by a deferred
@@ -264,11 +285,13 @@ function. It is not state and is not saved.
 ### 3.7 Reads and the other calls
 
 3.7.1. Between steps, on a healthy world, a consumer may call any read: `Tick`,
-`Snapshot` (OBS), `Audit` (`spec-ledger.md` 12.4), `Checkpoint` (CHK), `Graph`
-(`spec-regions.md` 4.3), `Calendar`, the transport reads `InTransit` and `Travel`
-(`spec-transport.md` 9.2), `Endowment` (`spec-resources.md` 5.1) and the guard
-query `RelocationRefusal` (`spec-regions.md` 6.1.6). Each returns a deep copy of
-plain data (architecture.md 12.4), changes no state and draws no random number.
+`Err`, `Snapshot` (OBS), `Audit` (`spec-ledger.md` 12.4), `Checkpoint` (CHK), `Graph`
+(`spec-regions.md` 4.3), `Calendar`, `ReferencePrice` and `Warnings`, the transport
+reads `InTransit`, `Travel` and `Away` (`spec-transport.md` 9.2), `Endowment`
+(`spec-resources.md` 5.1), the queries `Agent`, `Agents`, `Market`, `Region` and
+`Slots` (`spec-integration.md` 6.2) and the guard query `RelocationRefusal`
+(`spec-regions.md` 6.1.6). Each returns a deep copy of plain data (architecture.md
+12.4), changes no state and draws no random number.
 
 3.7.2. `Tick() int64` is the number of steps completed since tick 0: the tick the
 next `Step` will run. It is the clock of the whole library (architecture.md 7.3). The names `Err`, `Tick`, `ConfigHash` and `Config` are provisional until the code; `NewWorld`, `Step` and `Run` are fixed by the rules.
@@ -284,14 +307,15 @@ validates its argument and returns an error rather than panic.
 
 | Option | Changes results? | In the effective configuration and the hash? | Rules |
 |--------|------------------|-----------------------------------------------|-------|
-| `WithSeed(seed uint64)` | yes: it fixes the whole stream (7.1) | **no**: the random state travels in the checkpoint instead (`spec-config.md` 8.1). It is in `WorldCreated` and in the `Info` line of construction | default 0; the last one given wins |
+| `WithSeed(seed uint64)` | yes: it fixes the whole stream (7.1) | **no**: the random state travels in the checkpoint instead (`spec-config.md` 8.1). It is in `WorldCreated` and in the `Info` line of construction | default 0; the last one given wins; refused on a restore (`ErrOptionContext`, 12.3) |
 | `WithLogger(*slog.Logger)` | no | no | nil means the discard logger (architecture.md 6.2) |
 | `WithObserver(Observer)` | no | no | additive: each is called for every event in the order the options were given; nil is ignored |
 | `WithAudit()` | no, on a world that holds its invariants: it changes only what happens when one fails (an error where there would be a panic) | no (`spec-ledger.md` 12.4) | |
 | `WithTargetSpread(bp int64)` | **yes**: it overrides the `TargetSpread` of every role (`spec-welfare-and-wages.md` 5.2) | **yes**: it is part of the effective configuration, so it is applied before the hash is taken and before validation (`spec-config.md` 8.1 lists it among the options that change results) | bound as the field's; the last one given wins; the creation draw is taken whatever the value (5.7) |
-| `WithStrategy(name string, s Strategy)` | yes (what a role that names it does) | the **name** only, through `Role.Strategy`; the code behind a name is not hashed (`spec-agents.md` 6.6) | additive; the name `default` and a name given twice are `ErrDuplicateID`; a nil `Strategy` is `ErrNilExtension` |
+| `WithStrategy(name string, s Strategy)` | yes (what a role that names it does) | the **name** only, through `Role.Strategy`; the code behind a name is not hashed (`spec-agents.md` 6.6) | additive; the names `default` and `directed` (the library's own, `spec-agents.md` 6.6) and a name given twice are `ErrDuplicateID`; a nil `Strategy` is `ErrNilExtension` |
 | `WithSpawner(name string, s Spawner)` | yes | the name only, through `World.Spawner` (`spec-spawner.md` 3.1.3) | registers under a name; `World.Spawner` selects it; same duplicate and nil rules |
 | `WithClearing(name string, c Clearing)` | yes | the name only, through `World.Clearing` (4.2) | same shape; the name `average` is `AverageClearing` and is built in; an empty name is `ErrUnknownClearing` |
+| `WithReseed(salt uint64)` | yes: it sets the PCG state at a restore by the rule of `spec-checkpoint.md` 6.8.2 | **no**: it is not configuration and not a registered name; it is a call of the **sequence of calls** (8.1.1), reported in `WorldRestored` | **restore only**: on `NewWorld` it is `ErrOptionContext`; a salt of 0 is a reseed like any other (`spec-checkpoint.md` 6.8) |
 
 4.2. **A gap this spec fills.** `Clearing` is one of the four extension points
 (architecture.md 4.3), `spec-clearing.md` 8 defines its shape, and no written spec
@@ -306,16 +330,21 @@ world's `Rand` as it likes (7.2.2); D7 is the default's count. Without the name 
 with the default and a checkpoint would restore into the wrong rule silently. The
 edits are listed in 22.
 
-4.3. **Errors of options.** `ErrDuplicateID` (a name registered twice or
-`default`), `ErrNilExtension` (a nil `Strategy`, `Spawner` or `Clearing`),
-`ErrOutOfBounds` (an argument outside its bound). An option that fails fails
-`NewWorld` with its error before any world state is built.
+4.3. **Errors of options.** `ErrDuplicateID` (a name registered twice, `default`
+or `directed`), `ErrNilExtension` (a nil `Strategy`, `Spawner` or `Clearing`),
+`ErrOutOfBounds` (an argument outside its bound), `ErrOptionContext` (`WithSeed`
+on a restore, `WithReseed` on `NewWorld`; `spec-checkpoint.md` 6.4). An option that
+fails fails `NewWorld` (or the restore) with its error before any world state is
+built.
 
 4.4. **The rule for a new option.** A new option is added to this table in the
 same change. If it can change a result it is in the effective configuration (a
-datum) or is a registered name (code); if it cannot, the spec says so and a
+datum), is a registered name (code) or, for `WithReseed` alone, is a call of the
+sequence of calls (8.1.1); if it cannot change a result, the spec says so and a
 non-interference test proves it (observability-and-logging.md 8.1). An option
-never changes what is saved in a checkpoint.
+never changes what is saved in a checkpoint, except `WithReseed`, the one
+restore-only option, which is a call in the sequence of calls like `AddAgent` and
+sets the random state by the rule of `spec-checkpoint.md` 6.8.2.
 
 4.5. **What is not a world option.** `WithFreeTrade` is an option of `Validate`
 and of the steady-state solver (`spec-viability.md` 9), not of `NewWorld`.
@@ -413,20 +442,28 @@ draws at the call.
 ### 5.5 The construction phase
 
 5.5.1. The ledger's **construction phase** (`spec-ledger.md` 5.2.4) begins at the
-first line of `NewWorld` and ends when the first `Step` begins (N-074). In it the
+first line of `NewWorld`, or at the restore of a checkpoint taken before the first
+`Step` (5.5.3), and ends when the first `Step` begins (N-074). In it the
 current tick is 0, every move is totalled in the construction bucket and not in
 the flow totals of tick 0 (`spec-ledger.md` 7.4.1), and the world may state a lot
 key (a negative `Born`, a worn durable) for the warm start. The public API offers no
 way to state a key, so only the world's own warm start uses the privilege.
 
-5.5.2. The consumer's calls between `NewWorld` and the first `Step` (INT's
-`AddAgent` and the slots of section 8) are inside the phase: their moves go to the
-bucket and take the ordinary defaults of `spec-ledger.md` 5.2.3. `Audit()` works
-inside it and checks the bucket (`spec-ledger.md` 12.4).
+5.5.2. The consumer's calls between `NewWorld` (or a restore into the phase, 5.5.3)
+and the first `Step` (INT's `AddAgent` and the slots of section 8) are inside the
+phase: their moves go to the bucket and take the ordinary defaults of
+`spec-ledger.md` 5.2.3. `Audit()` works inside it and checks the bucket
+(`spec-ledger.md` 12.4). The bucket's `BoundaryFlow` is emitted at the entry of the
+first step, a world whose first step this is and which holds a bucket (P0.2a), so
+that those calls are in it.
 
-5.5.3. A world restored from a checkpoint is never in construction: its boundary
-balances already hold the total and the bucket is not saved (`spec-ledger.md`
-7.4.1, 11).
+5.5.3. A world restored from a checkpoint taken **after** its first `Step` is not in
+construction: its boundary balances already hold the total and the bucket is not
+saved. One taken **before** its first `Step` keeps its construction phase and its
+bucket: the flag and the bucket are saved while the world is in construction
+(`spec-checkpoint.md` 4.4, 6.7.2; `spec-ledger.md` 7.4.1, 11), a call between the
+restore and the first `Step` is totalled in the bucket as it would have been on the
+original, and the bucket's `BoundaryFlow` is emitted at that first step (P0.2a).
 
 ### 5.6 The warm start and the jobs created at construction (N-056 items 4 and 5)
 
@@ -503,9 +540,11 @@ with `rule` and `path`, then one `Info` line "world created" with `seed`,
 
 5.8.2. Events, with `Tick` 0, only when an observer was supplied
 (observability-and-logging.md 4.5): `WorldCreated` (the seed, the whole hash,
-whether a warm start was present), then one `AgentSpawned` for each household
-agent in ascending agent ID. The estates and the counterparties emit none. Whether
-the construction bucket is also a `BoundaryFlow` is OBS's (N-072).
+whether a warm start was present, the names table of the IDs,
+`spec-observability.md` 3.2.4), then one `AgentSpawned` for each household
+agent in ascending agent ID. The estates and the counterparties emit none. The
+construction bucket is emitted as a `BoundaryFlow` with `Tick` -1, not here but at
+the entry of the first step (P0.2a, `spec-observability.md` 4.4.2; N-072 answered).
 
 ## 6. The tick
 
@@ -595,7 +634,8 @@ it (FR-SPN-002 is edited), so D9 takes no word for it.
 |----|-----------|-------|-------|
 | P0.1 | Guards: `ErrInStep` if a step is running, `ErrWorldFailed` if the world failed | this spec | 3.5, 3.6 |
 | P0.2 | Nothing is cleared at entry. The flow totals and the per-tick counters of every module are cleared at P8.6, so that a move made by a call between ticks is totalled in the tick the next step runs (8.1.3) | LED 7.4; each module | derived, not saved |
-| P0.3 | `TickStarted` | OBS | the first event of the step |
+| P0.2a | At the entry of the **first** step of a world that is in its construction phase and holds a bucket (built by `NewWorld`, or restored from a checkpoint taken before its first step, 5.5.3), before `TickStarted`: the construction bucket as `BoundaryFlow` events with `Tick` -1, once, in the order of `spec-observability.md` 4.4.1.2 over the bucket's rows. A world that never steps emits none, and a world restored after its first step has no bucket | OBS 4.4.2; LED 7.4.1 | no draw; the bucket is read, not cleared; the events of calls between ticks were emitted at their calls and come before it (6.11) |
+| P0.3 | `TickStarted` | OBS | the first event of the step, after the bucket's `BoundaryFlow` events (P0.2a) in the first step of a world in construction |
 
 ### 6.3 Phase 1: start
 
@@ -610,9 +650,9 @@ the consequence of what the previous tick left or of what a slot set between tic
 | P1.4 | The settlement of delivery contracts whose shipment arrived in P1.3, ascending contract ID: `escrow_out` for the units that reached, `escrow_refund` for the rest | MER 9.7 | contracts, Escrow accounts; writes balances; the contract ends | none | `ContractSettled` |
 | P1.5 | The arrivals of migration journeys, ascending agent ID: the guard is run again with `skip = on_journey`, the account changes region by `Relocate` (cause `migration`), beliefs are reseeded (no draw), `RoleSince` is set; a refusal holds the arrival | MIG 8.4 | journeys; writes region, beliefs, `RoleSince` | none | `AgentRelocated` (cause `migration`) |
 | P1.6 | Relief, per region ascending: the release is `pool * PoolRelease / 10 000`, shared by need to the agents whose ratio is below `ReliefBelow` | EST 2.6 | pool, welfare records up to the previous tick, effective upkeep; writes balances (`relief`) | none | `ReliefPaid` per region that paid |
-| P1.7 | The money flows: grants in ascending flow ID, then levies in ascending flow ID; each over regions ascending, then accounts ascending | MON 5.1, 5.2 | flow state, balances, weights; writes balances, carries, totals, `Ended` | none | after the step: `MoneyFlowLimited` and `MoneyFlowEnded`, in flow ID order |
+| P1.7 | The money flows: grants in ascending flow ID, then levies in ascending flow ID; each over regions ascending, then accounts ascending | MON 5.1, 5.2 | flow state, balances, weights; writes balances, carries, totals, `Ended` | none | after the step, per flow in ascending flow ID: `MoneyFlowLimited`, then `MoneyFlowEnded` of the same flow |
 | P1.8 | The outside's walk: for each line with `WalkStepBP` above 0, ascending (node `RegionID`, `CommodityID`), the drift moves | EXT 5.1, 6.4 | line state; writes the drift | one per walking line, in that order | none |
-| P1.9 | The directives: the mailbox of each `Directed` external agent is read for the tick | AGT 10 | mailbox; writes the directive of the tick | none | none |
+| P1.9 | The directives: the mailbox of each `Directed` external agent is read, and a non-`Sticky` directive is taken out of it into the tick's scratch (INT 4.2.3) | AGT 10; INT 4.2.3 | mailbox; writes the directive of the tick | none | none |
 
 Starting money is not paid in phase 1: it moves at the creation of an agent
 (phase 7, or an external agent's call between ticks). Ruling C1 of 6.12.
@@ -628,7 +668,8 @@ Starting money is not paid in phase 1: it moves at the creation of an agent
 | P2.5 | `Work` for every free agent (no job in progress, and none continued or completed in P2.1; not away, not on a journey, not teaching), in the rotation order: the strategy returns a `JobRequest`; the world derives `k0`, the executions it could start ignoring draws, and refuses what it must | AGT 6.2, 7.1; PRO 4.2; RES 5.2 | the view built from the state after 2.1 and the snapshot; writes the requests (scratch) | the default takes none; a consumer's own are counted in call order | none (a refusal is a `Debug` line) |
 | P2.6 | The ration, for each endowment some request draws on, ascending (`RegionID`, `ResourceID`): requests collected in agent ID order, shared proportionally, the leftovers by largest fractional part, then the stateless hash key of (tick, agent), then agent ID | RES 5.3 | requests, snapshot; writes the grants (scratch) | none | none |
 | P2.7 | The starts, in the rotation order: `k = min(k0, grants, live inputs)`; one `Transform` (`recipe_input`), tools worn, endowment draws taken whole or not at all, the job created with its pending output (yield read now); a job of duration 1 then completes as in 2.1 | PRO 5.2, 5.3, 6.4; RES 5.4 | requests, grants, ledger; writes jobs, lots, endowment stock | none | `RecipeExecuted` for a one-tick job, in its start tick |
-| P2.8 | The own-use counts, ascending `RegionID`, then role | SUB 14.1 | the counts of P2.1 (units output), P2.4 (entered, left), P2.5 (blocked, retried) and P2.7 (started) | none | `OwnUseChanged` |
+| P2.8 | The own-use counts, ascending `RegionID`, then role | SUB 14.1 | the counts of P2.1 (units output), P2.4 (entered, left), P2.5 (blocked, retried) and P2.7 (started, and blocked: a household in the mode whose own-use requests the ration cut entirely and which started nothing, SUB 5.5 item 6) | none | `OwnUseChanged` |
+| P2.8a | The production halt's count, ascending `RegionID`, then role: per (region, role) the free households passed to `Work` at P2.5, those declined for the halt, and per recipe the households for which it was skipped; only where some household was declined | OBS 4.4.6; AGT 7.1.5, 14.3 | the halt report that `Work` returned at P2.5 (scratch) | none | `ProductionHalted`, after `OwnUseChanged` |
 
 6.4.1. **`Work` is always two-pass (ruling C9).** All the calls of `Work` of P2.5
 come before any start of P2.7, with the module of resources on or off. Interleaving
@@ -645,7 +686,7 @@ strategy sees depend on a module switch.
 | P3.2 | For each agent in ascending ID (6.1.3): (a) if its role is `Informed` and the information module is on, build the rumours of its view; (b) `Trade` appends to the plan; (c) execute the plan: discards, then shipments in plan order, then orders in plan order, each admitted with its reservation or rejected | AGT 4, 6.5; INF 5.5.2, 7.1; TRN 5.3.2; CLR 3 | agent state, market reports, rumours, `Inbound`; writes the ledger (discards, Transit), reservations, the order list of each market, shipments | (a) one per candidate, offered or not, in ascending source `RegionID`, then `CommodityID`, when `RumourErrorBP` is above 0; (b) the default takes one per intent it considers, in canonical commodity order; a consumer's own in call order | per agent: `ShipmentDispatched` or `ShipmentRejected` in plan order, then `OrderPlaced` or `OrderRejected` in plan order |
 | P3.3 | The contract round, with `Modules.Merchants` present: admission of every offer and take of the plans in one pass in agent ID and plan order; then the keys; then the lanes in ascending (destination `RegionID`, `CommodityID`): matching, formation (checks, dispatch, escrow) | MER 9.3 to 9.5 | the offers and takes, stock, cash; writes shipments, Escrow, contracts | one per admitted offer in admission order, then one per admitted take in admission order, all before the first lane | per formed contract in formation order: `ShipmentDispatched`, then `ContractFormed`; the `ShipmentRejected` of a formation that fails at dispatch; then `ContractRound` per destination region ascending |
 | P3.3a | `MerchantsPlanned` per region ascending, whenever an agent with a merchant block was given a view there, **also with the module absent** | MER 15.1.1 | the plan notes of P3.2 | none | `MerchantsPlanned` |
-| P3.4 | The estates' asks, per region ascending: one ask for each lot held, named, at the lot's current price | EST 2.7 | estate lots and prices; writes reservations, order lists | none | `OrderPlaced` |
+| P3.4 | The estates' asks, per region ascending: one ask for each lot held, named, at the lot's current price | EST 2.7 | estate lots and prices; writes reservations, order lists | none | `OrderPlaced`, and `OrderRejected` for an ask the clearing refuses |
 | P3.5 | The counterparties of the outside, ascending agent ID: for each line of its node in commodity order whose side is present: the wanted units, whether the edge is open, the quote, the offered units, the top-up from the boundary, the order | EXT 5.2 | line state, moment, edge status; writes the Outside account, the order lists, carries | none | `OrderPlaced`, `OrderRejected` |
 | P3.6 | The aggregate events of the phase: `RumoursServed` per reader region ascending, then `WantShortfall` per (region, role, want) ascending | INF 10.1; DEM 11 | the counts of P3.2 | none | those events |
 
@@ -693,7 +734,7 @@ of phase 1 (P1.3, P1.5), which are guarded, and between ticks; `spec-regions.md`
 
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
-| P7.1 | For each region in ascending `RegionID`, the entry step, in this order: (a) traineeships: completions (a role change, cause `traineeship`), then places filled from the queue in queue order, then the ticks served advance (position: C5); (b) the population module computes `PopDeaths` per agent in ID order and `PopBirths` per role in role order, the carries advancing; (c) the view is built (its `Budget` is advisory, a ceiling at view time) and `Decide` is called; (d) the plan is executed in plan order: rung-3 reductions and removals; the module's deaths in agent ID order; **then the pool budget `PoolMoney * EntryPoolShare / 10 000` is taken once**, so that the estates of the dead fund the same tick's births (ruling C15); rung-1 and review switches and applies; renewal entries (none while the population module is on); the module's births | SPN 10.2, 7.3; POP 4.1, 4.8; SKL; AGT 3.6, 3.7, 3.8 | agents, pool, `Privation`, welfare records; writes weights, roles, accounts, jobs, estates, pool, queues, carries | (c) a consumer spawner's own; (d) two creation draws (5.7) as each new agent is created, in plan order | each executed operation's own events, in plan order; a removal's, in the order of 6.11 item 8; then `EntryLimited`; then `PopulationChanged` per role ascending |
+| P7.1 | For each region in ascending `RegionID`, the entry step, in this order: (a) traineeships: completions (a role change, cause `traineeship`), then places filled from the queue in queue order, then the ticks served advance (position: C5); (b) the population module computes `PopDeaths` per agent in ID order and `PopBirths` per role in role order, the carries advancing; (c) the view is built (its `Budget` is advisory, a ceiling at view time) and `Decide` is called; (d) the plan is executed in plan order: rung-3 reductions and removals; the module's deaths in agent ID order; **then the pool budget `PoolMoney * EntryPoolShare / 10 000` is taken once**, so that the estates of the dead fund the same tick's births (ruling C15); rung-1 and review switches and applies; renewal entries (none while the population module is on); the module's births | SPN 10.2, 7.3; POP 4.1, 4.8; SKL; AGT 3.6, 3.7, 3.8 | agents, pool, `Privation`, welfare records; writes weights, roles, accounts, jobs, estates, pool, queues, carries | (c) a consumer spawner's own; (d) two creation draws (5.7) as each new agent is created, in plan order | in step (a), in queue order, each completion's `RecipeAbandoned` (if the trainee had a job, reason `role_changed`), then `TraineeshipCompleted`, then the `RoleChanged` it causes, and then `TraineeshipStarted` for each place filled, before the events of steps (b) to (d); then each executed operation's own events, in plan order; a removal's, in the order of 6.11 item 8; then `EntryLimited`; then `PopulationChanged` per role ascending |
 | P7.2 | After the entry step of **every** region: one migration pass for the world: the counts are taken once; each agent that is eligible, settled and pushed is evaluated in ascending agent ID with its rumours, **as of tick `t + 1`** (ruling C17); admission in order of earned ratio then agent ID against the guard, the caps and the provisioning; the departures in admission order | MIG 10.2 | counts, journeys, rumours; writes journeys, job abandons, the refusal `on_journey` | one per source pair for each pushed household that is evaluated (a pushed household whose role has no recipe ends in `no_estimate` before its candidates are formed, MIG 6.3.4, and takes none), in ascending agent ID, then (destination, commodity), when `RumourErrorBP` is above 0 | per departure in admission order the `RecipeAbandoned` of its job (if any) and then, after the last departure, `MigrationStarted` in admission order; then `MigrationReviewed` per region ascending |
 
 6.9.1. **Per region, interleaved (ruling C3).** Region `r + 1`'s computation,
@@ -707,7 +748,7 @@ changes no result of the default.
 | ID | What runs, in this order | Owner | Reads / writes | Draws | Events |
 |----|--------------------------|-------|----------------|-------|--------|
 | P8.1 | Ageing and spoilage: every account in ascending ID, every lot whose `Born + ShelfLife - 1 <= t` moves whole to `spoilage`; the earliest-expiry hint makes the cost proportional to what expires | LED 5.3 | lots; writes lots, boundary balances | none | none |
-| P8.2 | The flow totals of the tick are final | LED 7.4, 12.1 | totals | none | `BoundaryFlow` for each non-zero (region, reason, commodity), in that order |
+| P8.2 | The flow totals of the tick are final | LED 7.4, 12.1 | totals | none | `BoundaryFlow` for each non-zero (region, reason, money or commodity) of the reasons of kind faucet or sink only (the internal reasons are told by their own events), in the order of `spec-observability.md` 4.4.1.2 |
 | P8.3 | Regeneration of every endowment, ascending (`RegionID`, `ResourceID`), with the season of the tick; the carry advances | RES 4.1 | the stock the draws left; writes stock, carry, run | none | `EndowmentChanged` in that order |
 | P8.4 | With `WithAudit`: the ledger's audit and the checks of the modules that are on | LED 12.4 | everything; writes nothing | none | none (the error `ErrAuditFailed`; it sets `Failed` of P8.5) |
 | P8.5 | `TickEnded`, with `Failed` true if the audit failed (and at P4.1 on that failure, 3.5.6) | OBS | | none | `TickEnded` |
@@ -719,35 +760,49 @@ The events of one `Step`, in the order a recording observer sees them. An event
 type appears where its position is; within a position the order is the one in the
 row.
 
-1. `TickStarted`.
+1. In the first step of a world in its construction phase that holds a bucket
+   (5.5.3): the construction bucket's `BoundaryFlow` events with `Tick` -1 (P0.2a),
+   then `TickStarted`. In every other step `TickStarted` is first.
 2. Phase 1: per shipment `AgentRelocated` (a traveller) then `ShipmentArrived`; the
    `ContractSettled` events in contract ID order; the migration arrivals
    (`AgentRelocated`, cause `migration`) in agent ID order; `ReliefPaid` per region;
-   `MoneyFlowLimited` and `MoneyFlowEnded` in flow ID order.
+   per money flow in flow ID order `MoneyFlowLimited`, then `MoneyFlowEnded` of the
+   same flow.
 3. Phase 2: `RecipeExecuted` for the completions of P2.1 in rotation order, then for
-   the one-tick jobs of P2.7 in start order; `OwnUseChanged`.
+   the one-tick jobs of P2.7 in start order; `OwnUseChanged`; then
+   `ProductionHalted` (P2.8a).
 4. Phase 3: per agent in ID order its `ShipmentDispatched` or `ShipmentRejected`,
    then its `OrderPlaced` or `OrderRejected`; then per contract in formation order
    `ShipmentDispatched` and `ContractFormed` (a formation that fails at dispatch
    gives its `ShipmentRejected`); `ContractRound` per region; `MerchantsPlanned` per
-   region (P3.3a); the estates' `OrderPlaced`; the counterparties'
-   `OrderPlaced` and `OrderRejected`; `RumoursServed`; `WantShortfall`.
+   region (P3.3a); the estates' `OrderPlaced` (and `OrderRejected` for an ask the
+   clearing refuses); the counterparties' `OrderPlaced` and `OrderRejected`;
+   `RumoursServed`; `WantShortfall`.
 5. Phase 4: per market `TradeExecuted` then `MarketCleared`; `OutsideTraded`,
    `OutsideEnded`.
 6. Phase 5: `BeliefsUpdated` per market.
 7. Phase 6: `UpkeepShortfall`.
-8. Phase 7: per region the executed operations' events, then `EntryLimited`, then
-   `PopulationChanged`; after the last region, per departure in admission order the
-   `RecipeAbandoned` of its job, then `MigrationStarted` in admission order, then
-   `MigrationReviewed`.
+8. Phase 7: per region, **first** the traineeship events of the entry step's
+   part (a), in queue order: each completion as the `RecipeAbandoned` of its job (if
+   any, reason `role_changed`), then `TraineeshipCompleted`, then the `RoleChanged`
+   (cause `traineeship`) it causes, and then `TraineeshipStarted` for each place
+   filled; then the executed operations' events of parts (b) to (d), then
+   `EntryLimited`, then `PopulationChanged`; after the last region, per departure in
+   admission order the `RecipeAbandoned` of its job, then `MigrationStarted` in
+   admission order, then `MigrationReviewed`.
 
    **One removal**, from P7.1(d) or a call between ticks, emits in this order:
    `RecipeAbandoned` for its job (reason `agent_removed`), `TraineeshipEnded` if it
    was in a traineeship, the `ContractSettled` of each contract of which it was the
    deliverer (`deliverer_removed`), then `AgentBankrupted`, then `EstateOpened`.
+   The removal of a **trainer** first ends its trainees' traineeships, and those
+   events come first: trainee by trainee in ascending agent ID, each trainee's
+   `RecipeAbandoned` (reason `principal_left`) and then its `TraineeshipEnded`
+   (`trainer_left`), and then the trainer's own list above.
    `AgentBankrupted` is **the only event that removes the agent**; the others
    accompany it (ruling C11). A role change emits `RecipeAbandoned` (`role_changed`)
-   and then `RoleChanged`; a weight reduction emits `WeightChanged` and no abandon
+   and then `RoleChanged`, and a role change that completes a traineeship emits
+   `RecipeAbandoned`, `TraineeshipCompleted` and then `RoleChanged`; a weight reduction emits `WeightChanged` and no abandon
    (the job's `Executions` is scaled, `spec-production.md` 5.4). A journey dropped by
    a removal has no event of its own: it is counted in `MigrationReviewed`.
 9. Phase 8: `BoundaryFlow`, `EndowmentChanged`, `TickEnded` (with `Failed` true if
@@ -755,9 +810,13 @@ row.
    true after the events before the failure (3.5.6).
 
 Events of a call between ticks (`EdgeStatusChanged`, `MoneyFlowScaled`,
-`EndowmentAdjusted`, `OutsideShocked`, and the `AgentSpawned`, `AgentRelocated` or
-the events of a removal (item 8) for an external agent) are emitted at the call, carry the `Tick`
-the next step will run, and come before that step's `TickStarted`.
+`EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `TransitFactorChanged`,
+`PopulationScaled`, and the `AgentSpawned`, `AgentRelocated` or the events of a
+removal (item 8) for an external agent) are emitted at the call, carry the `Tick`
+the next step will run, and come before that step's `TickStarted`. The construction
+bucket's `BoundaryFlow` events (item 1) are emitted at the entry of the first step,
+so they come after the events of every call made between `NewWorld` (or a restore
+into the phase) and that step, and before its `TickStarted`.
 
 ### 6.12 Positions that two specs claimed, and wordings that disagree (the rulings)
 
@@ -937,7 +996,7 @@ the count depend on an outcome: the default strategy draws for every intent it
 considers even when affordability then removes the order (`spec-agents.md` 7.5.3),
 a pushed household draws for every candidate whether or not a rumour is offered, a
 belief draws for every outcome whether or not the gate opens. The draw is paid for
-the paired comparison it buys (WEL 5.1).
+the paired comparison it keeps exact (WEL 5.1; 7.6.1).
 
 7.4.4. **How it is tested.** A run with a recording observer and a capturing
 logger and a run with neither produce the same bytes of `Snapshot` at every tick and
@@ -961,10 +1020,14 @@ the sweep, regeneration, the cost anchors and the welfare record.
 consequence is that **every draw's value depends on how many were taken before
 it**: one extra draw early in a run changes every later draw of the run. Two runs
 that differ in one datum that changes the draw count are statistically alike and
-not paired. This is registered as WLD-A5 (17). The mitigations are the rules of
-7.4.3 (draw anyway) and 5.7.2 (a creation draw is unconditional), and a note for
-EXP: a paired comparison is valid only between runs that differ in a parameter
-that changes no draw count, such as the spread of the target (WEL 5.1).
+no longer draw for draw. This is registered as WLD-A5 (17). The mitigations are the
+rules of 7.4.3 (draw anyway) and 5.7.2 (a creation draw is unconditional), and a
+note for EXP: a paired comparison is **exact**, draw for draw, and a variance
+reduction that the harness measures, only while the two runs are aligned (equal
+words drawn at every boundary, `spec-experiments.md` 7.3), as they are for a
+parameter that changes no draw count, such as the spread of the target (WEL 5.1).
+The estimate of a difference of means from seed-matched runs is unbiased, aligned
+or not (`spec-experiments.md` 7).
 
 7.6.2. A derived sub-stream per purpose (seed mixed with the tick and the purpose)
 would remove the propagation, and was not adopted: the rule of architecture.md 7.3
@@ -989,7 +1052,9 @@ Consequences, which hold for every call of 8.2 and 8.3:
 4. its state is saved in a checkpoint by the spec that owns it (12);
 5. it is not configuration and is not hashed: a run with shocks and the same
    configuration has the same hash, and the shocks belong to the **sequence of
-   calls** that architecture.md 7.4 names beside the seed and the configuration;
+   calls** that architecture.md 7.4 names beside the seed and the configuration.
+   `WithReseed` of a restore (4.1) is also a call of that sequence, and acts at the
+   restore and not between ticks;
 6. a call that draws takes its draws at the call, in call order (D12).
 
 8.1.2. A call on a failed world returns `ErrWorldFailed` (3.5); during a step,
@@ -1002,7 +1067,14 @@ moves between ticks (an external agent's `initial`, a relocation's totals) fall 
 the totals of the tick the next step runs, are reported by that tick's
 `BoundaryFlow`, and keep `spec-ledger.md` 9.1 (boundary balance = construction
 bucket + the totals of every tick since) true when `WithAudit` runs. Before the
-first step the same moves go to the construction bucket (5.5.2).
+first step the same moves go to the construction bucket (5.5.2). A **window of
+flows** that a consumer or an indicator reads between two snapshots therefore
+begins after the calls it includes: a window opened after such a call holds the
+move in its opening snapshot and would count it again in the first tick's flow,
+and a call made after the last step is in no flow of the window. The snapshot's
+`Pending` (what the next tick's `BoundaryFlow` will include besides its own) is
+the correction, subtracted at the opening and added at the closing
+(`spec-indicators.md` 7.1.5; `spec-observability.md` 5.3.3).
 
 ### 8.2 The slots
 
@@ -1013,11 +1085,11 @@ its bounds are INT's (N-091). This table does not name the calls.
 
 | Slot | Mechanism owner | Read in the tick | Event at the call | Saved by |
 |------|-----------------|------------------|-------------------|----------|
-| Yield shock: a multiplier by (region, recipe), 0 to `MaxYieldBP`, default 10 000 | PRO 6.8 | P1.2 (the cost anchor), P2.5 (`k0`), P2.7 (the yield read at the start of a job; a running job keeps its pending output) | none in the rules (OBS, 16.2) | PRO 15: sorted by region, recipe |
+| Yield shock: a multiplier by (region, recipe), 0 to `MaxYieldBP`, default 10 000 | PRO 6.8 | P1.2 (the cost anchor), P2.5 (`k0`), P2.7 (the yield read at the start of a job; a running job keeps its pending output) | `YieldShocked`, one per changed key (`spec-observability.md` 4.4.4) | PRO 15: sorted by region, recipe |
 | Edge status: closed, or a length factor, by edge | REG 7 | the graph tables and the lag table are rebuilt **at the call** (REG 4.4.4, INF 7.2); read at P3.2 and P3.3 (route, travel time), P3.5 (a closed edge cuts the outside) and P7.2 (a journey's distance); shipments in flight keep their arrival tick | `EdgeStatusChanged`, in `EdgeID` order, after the tables are in place | REG 11: the non-default edges |
-| Transit factor: by (from, to, mode), 0 to `MaxTransitFactorBP`, default 10 000 | TRN 10.3 | P3.2 and P3.3, at dispatch; new dispatches only | none in the rules (OBS, 16.2) | TRN 14: the non-default factors |
+| Transit factor: by (from, to, mode), 0 to `MaxTransitFactorBP`, default 10 000 | TRN 10.3 | P3.2 and P3.3, at dispatch; new dispatches only | `TransitFactorChanged`, one per changed key | TRN 14: the non-default factors |
 | Flow scale: by money flow, 0 to `MaxFlowScale`, default 10 000 | MON 10.4 | P1.7 | `MoneyFlowScaled` | MON 14 |
-| Birth scale and death scale: by region, default 10 000 | POP 3.6, 6.6 | P7.1(b) | none in the rules (OBS, 16.2) | POP 11 |
+| Birth scale and death scale: by region, default the region's configured value (10 000 with no row) | POP 3.6, 6.6 | P7.1(b) | `PopulationScaled`, one per changed key, naming which scale | POP 11 |
 | Endowment capacity scale and regeneration scale: by (region, resource), 0 to `MaxShockBP` | RES 6.3.1 | the capacity scale **at the call** (the effective capacity is recomputed and a stock above it is clamped, the excess lost); the regeneration scale at P8.3 | `EndowmentAdjusted` (kind `shock`) | RES 15 |
 | Endowment adjustment: a signed one-off delta to a stock | RES 6.3.2 | at the call (the stock changes now) | `EndowmentAdjusted` (kind `adjust`) | RES 15: the stock |
 | Outside price shock: a factor by (node, commodity), 1 to `MaxShockBP`, default 10 000 | EXT 6.5 | P1.8 and the quotes of P3.5 | `OutsideShocked` | EXT 16 (not hashed) |
@@ -1035,9 +1107,8 @@ the only place that can rebuild it without an observer seeing a half-built world
 | Call (public name: INT) | What it does | Mechanism | Events |
 |-------------------------|--------------|-----------|--------|
 | Add an external agent | creates an agent of weight 1 with the next ID: an account, its money and goods by `initial`, beliefs, and D12's two creation draws | AGT 3.5.4, 10 | `AgentSpawned` |
-| Remove an agent (an external one the consumer asks for, or a mortal one) | the removal mechanics of `spec-agents.md` 3.6: job abandoned, trainee relationship ended, journey dropped, contracts of a deliverer settled, money and goods to the estate | AGT 3.6; SPN 9 | `AgentBankrupted`, `EstateOpened`, `ContractSettled` |
-| Relocate an agent (the guarded path) | the account's region changes if no reservation is open and no `region_bound` refusal applies | REG 6; MIG 8.4.1 | `AgentRelocated` |
-| Cancel a migration journey | the internal cancel of `spec-migration.md` 8.4.1, before a forced move | MIG 8.4.1 | none of its own |
+| Remove an agent (an external agent, mortal or not) | the removal mechanics of `spec-agents.md` 3.6: job abandoned, trainee relationship ended, journey dropped, contracts of a deliverer settled, money and goods to the estate | AGT 3.6; SPN 9 | in the order of 6.11 item 8: `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `AgentBankrupted`, `EstateOpened` |
+| Relocate an agent (the guarded path; any agent that is not a pseudo-agent, `spec-integration.md` 4.5.1) | the account's region changes if no reservation is open and no `region_bound` refusal applies; a journey the agent is on is cancelled inside the call, with the move | REG 6; MIG 8.4.1 | `AgentRelocated` |
 | Direct an agent | writes the mailbox | AGT 10 | none |
 
 8.3.1. A call that creates or removes an agent between ticks changes the agent ID
@@ -1048,18 +1119,22 @@ that fixes a run.
 ### 8.4 Where the checkpoint is taken
 
 8.4.1. **Between ticks, on a healthy world, and nowhere else** (ADR 0002 open
-point 4; `spec-ledger.md` 6.5). At that boundary: no reservation is open, every
+point 4, answered here and in `spec-checkpoint.md` 3.2; `spec-ledger.md` 6.5). At that boundary: no reservation is open, every
 counterparty account is empty (EXT 5.3.3), no shipment is half dispatched and no
 job is half started, the flow totals and every per-tick scratch of 0.2 are not
-state, `Tick()` is the tick the next step runs. The construction bucket is not
-saved: a world that was never restored keeps it for the run, a restored world has
-none (5.5.3). The one exception to "the flow totals are not state" is the totals
-that calls between ticks added since the last P8.6 (8.1.3): they belong to the next
-tick, so a checkpoint taken after such a call must save them (12).
+state, `Tick()` is the tick the next step runs. The construction bucket is saved
+**only while the world is in its construction phase** (5.5.3; `spec-checkpoint.md`
+4.4): a world that was never restored keeps it, readable, for the run; a world
+restored from a checkpoint taken after its first step has none, and one taken
+before it has the saved bucket. The one exception to "the flow totals are not
+state" is the totals that calls between ticks added since the last P8.6 (8.1.3):
+they belong to the next tick, so a checkpoint taken after such a call must save
+them (12).
 
 8.4.2. A checkpoint of a failed world, or of a call made from inside a step, is
 refused (3.5, 3.6). A world that has been constructed and not stepped may be
-checkpointed: it is at the tick 0 boundary.
+checkpointed: it is at the tick 0 boundary, still in its construction phase, and
+the checkpoint keeps the flag and the bucket (5.5.3).
 
 8.4.3. A restored world continues as an uninterrupted one: the same draws, events
 and results (FR-WLD-063). What the restore needs from the world is 12.
@@ -1218,7 +1293,10 @@ which case the lower ID or the earlier region is selected for survival, and a
 statistic that groups by region or role would show it as a difference between
 regions that the data did not put there. IND and STY must not read a regional
 difference as real before checking whether a cap or a limit was binding there
-(the counters exist: `EntryLimited`, `MoneyFlowLimited`, `ContractRound`).
+(the counters exist: `EntryLimited`, `MoneyFlowLimited`, `ContractRound`). IND
+honours this with the warning `Binding` on every measure that compares regions or
+roles (`spec-indicators.md` 8.7), and its binding counters also count the caps of
+`PopulationChanged` and `MigrationReviewed`.
 
 ## 11. Cost
 
@@ -1231,6 +1309,7 @@ candidates of a view (at most `MaxRumoursPerView`). Costs are counts, not timing
 
 | Position | Cost shape | Dominant term of |
 |----------|-----------|------------------|
+| P0.2a | `O(rows of the bucket)`, once in a run, at most `R * reasons * C` | regions, reasons, commodities |
 | P1.2 | `O(R * recipes)` | regions and recipes |
 | P1.3, P1.4, P1.5 | proportional to the arrivals, settlements and journeys of the tick | the pipeline |
 | P1.6 | `O(A)` for the agents of regions whose pool is positive | agents |
@@ -1238,6 +1317,7 @@ candidates of a view (at most `MaxRumoursPerView`). Costs are counts, not timing
 | P1.8, P1.9 | `O(lines)`, `O(external agents)` | the outside |
 | P2.1, P2.4, P2.5, P2.7 | `O(A)`; `Work` is `O(recipes of the role)` per agent | agents |
 | P2.3, P2.6 | `O(E)`; `O(requests log requests)` only for an endowment that is short | endowments |
+| P2.8, P2.8a | `O(regions * roles)`, from counts the earlier positions kept | regions and roles |
 | P3.2 | `O(A * (c_0 + T_a * c_t))`, plus `O(I * V)` for the rumours | the cost model of `spec-scale.md` 6.1 |
 | P3.3 | `O(offers log offers + takes)` | contracts |
 | P3.4, P3.5 | `O(estate lots)`, `O(X * lines)` | the estates, the outside |
@@ -1277,9 +1357,10 @@ world adds, as plain data in a fixed order (ADR 0002 decisions 3 and 5):
 
 | State | Why it cannot be derived |
 |-------|--------------------------|
-| The tick counter, `int64` | it is the clock |
+| The tick counter, `int64` | it is the clock; it is written in the checkpoint's header, so that `Info` needs no section (`spec-checkpoint.md` 5.4.3) |
 | The state of the PCG: `MarshalBinary`, 20 bytes | the stream resumes exactly (7.1) |
 | The next agent ID, `int64` | an agent's ID is never reused; the highest ID of the live agents is not enough if the highest was removed, and the closed accounts that would imply it may one day be compacted (`spec-ledger.md` open question 6) |
+| Whether the world is still in its construction phase (a flag) | a world checkpointed before its first `Step` is restored in construction, with its bucket, and a later call is totalled in it as on the original (5.5.3; `spec-checkpoint.md` 4.4, 6.7.2) |
 
 The configuration hash is stored by CHK and is not world state. The world's other
 contributions are those of the specs that own them (section 8.2 lists the slots).
@@ -1293,20 +1374,29 @@ the observers, the logger and the registrations of extensions. The registrations
 are checked by **name** against the hash; the **state of an extension** that
 implements the optional save and load pair is saved by CHK as ADR 0002 decision 7
 says. The flow totals are derived (cleared at P8.6) with one exception: the totals
-that calls between ticks added since the last P8.6 are state at a boundary and must
-be saved (8.1.3, open question 16).
+that calls between ticks added since the last P8.6 (the **pending totals**) are
+state at a boundary and are saved (8.1.3, open question 16: answered, CHK 4.4). The
+construction bucket is saved only while the world is in its construction phase
+(5.5.3, 8.4.1).
 
 12.2. **What a restore needs from the world** is a way to build the derived tables
-and install the saved state without running positions 5.1 steps 7 to 10: the
+and install the saved state without running steps 7 and 8 of 5.1 (the audit of
+step 9 and the events of step 10 are replaced by the restore's own, below): the
 validated configuration and options (steps 1 to 6 of 5.1), then the ledger, the
 agents and every module's state from the checkpoint, then the tick counter, the
-PCG state and the next agent ID. A restored world is not in construction (5.5.3)
-and emits no `WorldCreated`; the event for a restore is CHK's and OBS's.
+PCG state, the next agent ID and the construction flag. A world restored from a
+checkpoint taken after its first `Step` is not in construction; one taken before it
+is, and keeps its bucket (5.5.3). It emits no `WorldCreated`; its event is
+`WorldRestored`, the first event to the observers given to the restore
+(`spec-checkpoint.md` 6.7.3, `spec-observability.md` 4.4.5). The restore runs the
+audit whether or not `WithAudit` was given (`spec-checkpoint.md` 6.2.2).
 
 12.3. **The seed.** `WithSeed` is not hashed and the random state is in the
-checkpoint, so a seed given to a restore has no use. This spec recommends to CHK
-that a restore **reject** `WithSeed` (an option that is accepted and ignored is a
-trap), and that the saved state carry the original seed for information only.
+checkpoint, so a seed given to a restore has no use. CHK adopts the recommendation
+of this spec (`spec-checkpoint.md` 6.4): `WithSeed` is **refused** on a restore
+(`ErrOptionContext`; an option that is accepted and ignored is a trap), and the
+original seed in the header is informational only. `WithReseed(salt)` is the one
+way to give a restored world its own stream (`spec-checkpoint.md` 6.8; 4.1).
 
 ## 13. What the world hands to the specs that come after it
 
@@ -1314,12 +1404,12 @@ Stated as requirements on the world, not as their content.
 
 | To | The world guarantees |
 |----|----------------------|
-| **OBS** | every event carries `Tick`; the events of a step come in the order of 6.11 and **every** step that emitted `TickStarted` is closed by `TickEnded`, a failed one with `Failed` true, which describes the end of the step and not a completed tick (3.5.6); events are constructed only when an observer was supplied; a snapshot is available only at a boundary on a healthy world (3.7, 8.4); construction events carry `Tick` 0 and come in the order of 5.8; a between-ticks call emits its event at the call with the tick of the next step. The world **asks** OBS for: a `Failed` field on `TickEnded` (3.5.6) and one on `RunEnded` (3.4.2), an event for the slots that have none (yield shock, transit factor, birth and death scales: 8.2), and a decision on the construction bucket as `BoundaryFlow` (N-072) |
-| **CHK** | the contribution of 12; the boundary of 8.4; a failed world is refused; the register of extension names is in the hash; `WithSeed` is rejected by a restore (12.3); `Tick()`, `ConfigHash` and `Config` are readable |
-| **INT** | every call acts between ticks (8.1), is atomic, emits its event at the call, takes its draws at the call, and is refused with `ErrInStep` or `ErrWorldFailed`; the slots of 8.2 and the calls of 8.3 are the whole list of mechanisms; INT names them and fixes their bounds and errors; a slot never edits a configured value; no "act now" exists inside a step |
+| **OBS** | every event carries `Tick`; the events of a step come in the order of 6.11 and **every** step that emitted `TickStarted` is closed by `TickEnded`, a failed one with `Failed` true, which describes the end of the step and not a completed tick (3.5.6); events are constructed only when an observer was supplied; a snapshot is available only at a boundary on a healthy world (3.7, 8.4); construction events carry `Tick` 0 and come in the order of 5.8; a between-ticks call emits its event at the call with the tick of the next step. OBS **adds** what this spec asked for: a `Failed` field on `TickEnded` (3.5.6) and on `RunEnded` (3.4.2), the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots that had none (8.2), the names table on `WorldCreated` (5.8.2), and the construction bucket as a `BoundaryFlow` with `Tick` -1 at the entry of the first step (P0.2a, N-072) |
+| **CHK** | the contribution of 12 (the PCG state, the next agent ID and the construction flag with the bucket while in construction; the tick in the header); the boundary of 8.4; a failed world is refused; the register of extension names is in the hash; `WithSeed` is refused by a restore and `WithReseed` is the restore-only option (4.1, 12.3); `Tick()`, `ConfigHash` and `Config` are readable |
+| **INT** | every call acts between ticks (8.1), is atomic, emits its event at the call, takes its draws at the call, and is refused with `ErrInStep` or `ErrWorldFailed`; the slots of 8.2 and the calls of 8.3 (add, remove, relocate, direct; the cancel of a journey is inside `Relocate`) are the whole list of mechanisms; INT names them and fixes their bounds and errors; a slot never edits a configured value; no "act now" exists inside a step |
 | **IND** | indicators are a function of the events and the snapshot at a boundary; the flow totals of a finished tick reach IND through `BoundaryFlow` only; the snapshot holds the pending totals of 8.1.3 and no more; counts of agents and households are separate (the weights); a tick is the finest resolution: no value exists between `TickStarted` and `TickEnded`; the counters that reveal a binding cap (O1 to O5) are events |
 | **STY** | a run is a function of (configuration, seed, sequence of calls); `Run(ctx, n)` runs `n` ticks and leaves a snapshot-able world; two runs with the same inputs are bit-identical across platforms (architecture.md 7.4); a golden test is enforced; a run with an observer equals one without |
-| **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison needs equal draw counts (7.6.1); the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
+| **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison is exact, and a measured variance reduction, only while the draw counts are equal (7.6.1); the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
 
 ## 14. Parameters
 
@@ -1351,8 +1441,9 @@ has a failing-case test, testing.md 3.9):
 |----------|------|-------|
 | `ErrUnknownClearing` | `World.Clearing` names a clearing that was not registered | `NewWorld` (3.2.2) |
 | `ErrNilExtension` | `WithStrategy`, `WithSpawner` or `WithClearing` was given a nil implementation | the option (4.3) |
-| `ErrWorldFailed` | any call on a failed world other than the readers of 3.5.1 | 3.5 |
+| `ErrWorldFailed` | any call that has an error result on a failed world, other than `RelocationRefusal` (the readers with no error result work, 3.5.1) | 3.5 |
 | `ErrInStep` | any call on a world whose step is running | 3.6 |
+| `ErrOptionContext` | `WithSeed` given to a restore, or `WithReseed` given to `NewWorld` (a sentinel of CHK, used by the options of 4.1) | the option (4.3) |
 
 `ErrInvalidTrade` and `ErrAuditFailed` are the sentinels of `spec-clearing.md` 8.2
 and `spec-ledger.md` 12.4; this spec fixes where `Step` returns them (3.3.3).
@@ -1378,22 +1469,23 @@ value is legal.
 
 | Event | Emitted | Fields |
 |-------|---------|--------|
-| `WorldCreated` | at the end of construction, before the initial `AgentSpawned` events (5.8) | `Tick` 0, `Seed`, the whole configuration hash, whether a warm start was present |
+| `WorldCreated` | at the end of construction, before the initial `AgentSpawned` events (5.8) | `Tick` 0, `Seed`, the whole configuration hash, whether a warm start was present, the names table of the IDs (`spec-observability.md` 3.2.4) |
 | `RunStarted` | by `Run` before its first tick (3.4) | `Tick`, `Ticks` requested |
-| `RunEnded` | by `Run` before it returns, whenever `RunStarted` was emitted | `Tick`, ticks completed, whether it was cancelled |
+| `RunEnded` | by `Run` before it returns, whenever `RunStarted` was emitted | `Tick`, ticks completed, whether it was cancelled, `Failed` (true when the run ended on a failed step) |
 | `TickStarted`, `TickEnded` | at P0.3 and P8.5 (and at the failure of P4.1) | `Tick`; `TickEnded` also `Failed` |
 
-`RunEnded` does not say that the run ended because a step failed: the error that
-`Run` returns says so. This spec asks OBS for one field on each of two events: `Failed` on `RunEnded`,
-true when the run ended on a failed step, and `Failed` on `TickEnded`, true when the
-step returned an error; they are added fields, which the rules allow
-(observability-and-logging.md 4.2). `TickEnded` carries `Tick` and `Failed` (R2, 3.5.6) and nothing else: a
-count that an observer wants is derived from the events of the step.
+`Failed` on `RunEnded` and on `TickEnded` are fields that OBS added at this
+spec's request (`spec-observability.md` 4.4.3; observability-and-logging.md 4.2).
+`TickEnded` carries `Tick` and `Failed` (R2, 3.5.6) and nothing else: it is not a
+summary, and a count that an observer wants is derived from the events of the step
+(`spec-observability.md` 4.4.3.1).
 
-16.2. **Events requested of OBS** for the slots that have none: the yield shock,
-the transit factor, the birth and death scales (8.2). The other slots have one
-(`EdgeStatusChanged`, `MoneyFlowScaled`, `EndowmentAdjusted`, `OutsideShocked`);
-N-091 says each slot emits its own event and none is configuration.
+16.2. **Events of the slots.** The yield shock, the transit factor and the birth
+and death scales have an event each, `YieldShocked`, `TransitFactorChanged` and
+`PopulationScaled`, one per changed key of a call (`spec-observability.md` 4.4.4);
+the other slots have one (`EdgeStatusChanged`, `MoneyFlowScaled`,
+`EndowmentAdjusted`, `OutsideShocked`); N-091 says each slot emits its own event
+and none is configuration.
 
 16.3. **Logs**, through the injected logger, constant lowercase messages, the keys
 of the rules' table 3.3.2 (no new key):
@@ -1424,7 +1516,9 @@ is one boolean test.
 16.7. **The Observability entry** (observability-and-logging.md 9): see the
 handoff. In short: new failure paths are returned (`ErrInvalidTrade`,
 `ErrAuditFailed`, `ErrWorldFailed`, `ErrInStep`); no new state transition needs an
-event beyond those already listed, and four slots are asked to gain one; the
+event beyond those already listed, and three slots gained one (`YieldShocked`,
+`TransitFactorChanged`, `PopulationScaled`; the birth and the death scale share
+one); the
 `Run` loop has `Info` lines only; nothing in a tick is logged above `Debug`;
 no new metric attribute.
 
@@ -1486,12 +1580,14 @@ agents than its review period is read as bursty. *Test:* WLD-S2 (`cadence.py`).
 
 **WLD-A5 The stream is positional.** *Kind:* hazard. *Loop:* none: one
 extra draw early in a run changes every later draw of the run (7.6). Two runs that
-differ in a datum that changes a draw count are alike in distribution and are not
-paired. *Owner:* WLD 7.6, architecture.md 7.3. *Damper:* WLD-D2: draw anyway
+differ in a datum that changes a draw count are alike in distribution and are no
+longer draw for draw. *Owner:* WLD 7.6, architecture.md 7.3. *Damper:* WLD-D2: draw anyway
 (5.7.2, 7.4.3). *Undamped:* any change in the number of intents considered, orders
 admitted or agents created, which is what a different parameter does. *Condition:*
-a paired comparison between two runs is valid only for a change that moves no
-draw count; otherwise compare distributions over seeds. *Test:* WLD-S4
+a paired comparison between two runs is exact, and a measured variance
+reduction, only for a change that moves no draw count (while aligned); the
+estimate of a difference of means from seed-matched runs is unbiased either way,
+and the harness measures the gain (`spec-experiments.md` 7). *Test:* WLD-S4
 (`stream.py`: 98.0% of the later draws differ with one stream, 2.0% with a stream
 per tick). *Status:* model.
 
@@ -1624,10 +1720,10 @@ handoff.
 | N-017 Words and names | **Applied:** twenty terms are defined here and go to the glossary (the list is in the handoff): tick boundary, phase, position, entry, slot, between ticks, cadence, rotation, bucket, Weyl value, keyed tie, failed world, word, the world's draw, creation draw, construction phase, gate, carried remainder, window, outside node as a region of a loop; the examples are flagged setting words | 19 |
 | N-027 No default macro constant is stable | **Applied:** this spec sets no default; the numbers of the examples are placeholders; the models show no default stable | preamble, 14, 18 |
 | N-103 Running several spec writers in parallel | **Applied:** no shared file was edited; the proposals are in the handoff with provisional IDs (`WLD-A1` to `A5`, `WLD-D1`, `D2`, `WLD-S1` to `S4`); the models ran in Docker with no bytecode. **One slip:** the host `python3` was called once with `--version` early on; nothing else ran on the host | 17, 18 |
-| N-012 Events, metrics and log keys to define | **Leave open**, with this added: a `Failed` field on `RunEnded`, events for the four slots without one (16) | 16 |
-| N-020 What each spec contributes to a checkpoint | **Leave open**, with this added: the tick, the PCG state and the next agent ID (12) | 12 |
+| N-012 Events, metrics and log keys to define | **Leave open**, with this added: OBS accepted `Failed` on `RunEnded` and `TickEnded` and the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots without one (16) | 16 |
+| N-020 What each spec contributes to a checkpoint | **Leave open**, with this added: the PCG state, the next agent ID and the construction flag; the tick is written in the header (12) | 12 |
 | N-045 Dampers that act silently | **Leave open**, with this added: the binding caps are counted by their modules' events and WLD-A2 asks the readers to check them (10.2.1) | 10.2 |
-| N-075 Mapping the ledger's sentinels | **Leave open**, with this added: `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` need a root mapping (15.1) | 15 |
+| N-075 Mapping the ledger's sentinels | **Leave open**, with this added: `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` and `ErrOptionContext` need a root mapping (15.1) | 15 |
 | N-091 The world slots INT must expose | **Leave open for INT**, with this added: the slots as one table with the position each is read at (8.2) and the calls that act on agents (8.3) | 8 |
 | N-019 Housekeeping for the first code change | **Leave open**, with this added: `random.go`, `tick.go` and `option.go` and the `internal/ordering` helpers (23); the options and terms for the glossary | 23 |
 | N-022 The player and other external agents | **Leave open**, with this added: an external agent is created at the call with the next ID and the two creation draws (8.3, D12) | 8.3 |
@@ -1645,19 +1741,19 @@ has no default or bound of its own.
 | ID | Requirement |
 |----|-------------|
 | FR-WLD-001 | `NewWorld` MUST apply its options in the order given, MUST return `(nil, err)` and no world when an option or the validation fails, and MUST NOT return a partly built world (3.2.1). |
-| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner` or `World.Clearing` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner` or `ErrUnknownClearing`, a name registered twice or the name `default` with `ErrDuplicateID`, and a nil `Strategy`, `Spawner` or `Clearing` with `ErrNilExtension` (3.2.2, 4.1, 4.3). |
+| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner` or `World.Clearing` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner` or `ErrUnknownClearing`, a name registered twice or the name `default` or `directed` with `ErrDuplicateID`, and a nil `Strategy`, `Spawner` or `Clearing` with `ErrNilExtension` (3.2.2, 4.1, 4.3). |
 | FR-WLD-003 | A nil logger or observer MUST mean the discard default and not an error; `WithObserver` MUST be additive and deliver each event to every observer in the order the options were given (4.1). |
 | FR-WLD-004 | `Step` MUST run the positions of section 6 in the order of their tables and MUST advance `Tick()` by one if and only if every position ran and the audit, when on, passed (3.3.1, 6, P8.6). |
 | FR-WLD-005 | `Step` MUST return an error wrapping `ErrInvalidTrade` when a clearing returns an invalid list and `ErrAuditFailed` when the audit fails, MUST name the tick, and MUST NOT return an error for any other condition of a running simulation (3.3.3). |
-| FR-WLD-006 | After `Step` returns an error the world MUST be failed: every later call other than `Err`, `Tick`, `ConfigHash` and `Config` MUST return `ErrWorldFailed` wrapping the cause and change nothing, and a panic that leaves a step MUST mark the world failed without the library calling `recover` (3.5). |
-| FR-WLD-007 | A call of any method of `World` that has an error result, made while a step is running, MUST return `ErrInStep` and change nothing; a reader with no error result (`Tick`, `Config`, `ConfigHash`) MUST return its value, and `Err` MUST return the failure (nil on a healthy world) (3.6). |
-| FR-WLD-008 | `Run` MUST emit `RunStarted` before its first tick, check `ctx.Err()` before every tick including the first and never inside one, and emit `RunEnded` with the ticks completed and whether it was cancelled before it returns whenever it emitted `RunStarted` (3.4.1). |
+| FR-WLD-006 | After `Step` returns an error the world MUST be failed: every later call that has an error result, other than `RelocationRefusal` (whose error is the refusal it reports), MUST return `ErrWorldFailed` wrapping the cause and change nothing; a reader with no error result MUST return its value (3.5.1); and a panic that leaves a step MUST mark the world failed without the library calling `recover` (3.5). |
+| FR-WLD-007 | A call of any method of `World` that has an error result, made while a step is running, MUST return `ErrInStep` and change nothing, except `RelocationRefusal`, whose error is the refusal it reports; a reader with no error result MUST return its value (the immutable group of 3.5.1: `Tick`, `Config`, `ConfigHash` and the derived tables; the readers of live state return the state the step has left), and `Err` MUST return the failure (nil on a healthy world) (3.6). |
+| FR-WLD-008 | `Run` MUST emit `RunStarted` before its first tick, check `ctx.Err()` before every tick including the first and never inside one, and emit `RunEnded` with the ticks completed, whether it was cancelled and whether a step failed (`Failed`) before it returns whenever it emitted `RunStarted` (3.4.1). |
 | FR-WLD-009 | `Run` MUST return the ticks completed and, on cancellation, an error that wraps `ctx.Err()`; a negative `ticks` MUST return `ErrOutOfBounds` with no event; a cancelled run MUST leave the world at a tick boundary and usable (3.4.2, 3.5.5). |
 | FR-WLD-010 | Every read of a healthy world between ticks MUST return a deep copy of plain data and MUST change no state and draw no random number (3.7.1). |
 | FR-WLD-011 | Two worlds MUST share no state, so that stepping them on two goroutines is free of races (3.1.1). |
 | FR-WLD-012 | Every step that emitted `TickStarted` MUST emit `TickEnded`, a failed one included, with `Failed` true when the step returned an error, set at the point of failure and after the world is marked failed; a guard that fails at P0.1 MUST emit nothing; a step that ends in a panic MUST emit nothing; `Tick()` MUST be unchanged by a failed step (3.5.6). |
-| FR-WLD-020 | `WithSeed`, `WithLogger`, `WithObserver` and `WithAudit` MUST NOT change the configuration hash, and `WithTargetSpread` MUST change it (4.1). |
-| FR-WLD-021 | Every option that can change a result MUST be a datum in the effective configuration or a registered name that a role, the spawner or the clearing selects (4.4). |
+| FR-WLD-020 | `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit` and `WithReseed` MUST NOT change the configuration hash, and `WithTargetSpread` MUST change it (4.1). |
+| FR-WLD-021 | Every option that can change a result MUST be a datum in the effective configuration or a registered name that a role, the spawner or the clearing selects, or, for `WithReseed`, a call of the sequence of calls (4.4, 8.1.1). |
 | FR-WLD-030 | At construction the ledger's accounts MUST be created in the order of 5.2 and an account ID MUST never be reused. |
 | FR-WLD-031 | The agent IDs MUST be allocated as 5.3 says: the estates `0 .. n-1` with the ID equal to the `RegionID`, then the counterparties, then the households in (region, role, index) order, and a later agent the next ID. |
 | FR-WLD-032 | The agents and weights of a group MUST be derived without a draw, and the pseudo-agents MUST NOT be passed to a strategy or counted as agents or households (5.4.1, 5.3.1). |
@@ -1665,7 +1761,7 @@ has no default or bound of its own.
 | FR-WLD-034 | For every household agent, in ascending ID, the world MUST take two draws at its creation, the target ratio and then the residue, whatever the configuration, and a later agent MUST take the same two at its creation (5.7). |
 | FR-WLD-035 | The construction phase MUST end when the first `Step` begins, the consumer's calls before it MUST be inside it, and only the warm start MUST be able to state a lot key (5.5). |
 | FR-WLD-036 | With `WithAudit` `NewWorld` MUST run the audit once after construction and fail with `ErrAuditFailed` if it fails (5.1). |
-| FR-WLD-037 | Construction MUST emit `WorldCreated` and then one `AgentSpawned` for each household agent in ascending ID, with `Tick` 0, only when an observer was supplied, and the logs of 5.8.1 (5.8). |
+| FR-WLD-037 | Construction MUST emit `WorldCreated` (with the names table of the IDs) and then one `AgentSpawned` for each household agent in ascending ID, with `Tick` 0, only when an observer was supplied, and the logs of 5.8.1 (5.8); the construction bucket MUST NOT be emitted at construction but at the entry of the first step (P0.2a). |
 | FR-WLD-038 | A group with a warm-start entry MUST be created with the entry's money and stock in place of `StartMoney` and `StartStock`, in one `initial` creation (5.4.2). |
 | FR-WLD-040 | The positions of a tick MUST be the positions of section 6 with the IDs given there, a new position MUST take a letter after the position it follows, and no position MUST be renumbered (6.1.1). |
 | FR-WLD-041 | Every loop of a position MUST visit its items in the total order that the row states and MUST NOT iterate a map (6.1.2, architecture.md 7.5, 7.6). |
@@ -1705,9 +1801,9 @@ has no default or bound of its own.
 | FR-WLD-083 | No cadence, window, gate probability or share MUST be a function of a measured aggregate of the world, and a cadence MUST be a datum of the configuration, in the hash and constant for a run (9.4). |
 | FR-WLD-090 | A tie between candidates of equal merit in a rule that a spec adds MUST be broken by `K(t, id)` and then the ID, unless the spec states a reason (10.1.1). |
 | FR-WLD-091 | `K(t, id)` MUST be the SplitMix64 finaliser of `t * 0x9E3779B97F4A7C15 + id` and MUST take no draw and keep no state (10.1.1). |
-| FR-WLD-100 | The world's contribution to a checkpoint MUST be the tick counter, the 20 bytes of the PCG state and the next agent ID, in a fixed order, plus the flow totals that calls between ticks added since the last P8.6 when there are any, and nothing derived MUST be saved (12). |
-| FR-WLD-101 | A restore from those and the other specs' state MUST continue exactly as an uninterrupted run, and a restored world MUST NOT be in construction (12.2, 5.5.3). |
-| FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, and `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
+| FR-WLD-100 | The world's contribution to a checkpoint MUST be the 20 bytes of the PCG state, the next agent ID and the construction flag, in a fixed order (the tick counter is written in the checkpoint's header), plus the flow totals that calls between ticks added since the last P8.6 when there are any, and nothing derived MUST be saved (12). |
+| FR-WLD-101 | A restore from those and the other specs' state MUST continue exactly as an uninterrupted run; a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be, with its bucket (12.2, 5.5.3). |
+| FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, the derived tables (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`) MUST return their value, and the readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal` MUST return the state the failed step left, with no guarantee of consistency; `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
 
 ### Non-functional
 
@@ -1741,10 +1837,13 @@ has no default or bound of its own.
 4. **Per-purpose streams.** A derived stream per (tick, purpose) would remove the
    positional hazard (WLD-A5, 98% against 2% in the model) and make a parallel step
    by region possible. It conflicts with architecture.md 7.3 (one source per world)
-   and changes the checkpoint to a tick and a seed. Next step: EXP's first paired
-   experiment, and a rule change if pairing matters.
-5. **`RunEnded` and a failed step.** `RunEnded` has no flag for a failed step (16.1).
-   Next step: OBS.
+   and changes the checkpoint to a tick and a seed. **Answered in part:** the harness
+   measures the pairing gain (`spec-experiments.md` 7), so the cost of the positional
+   stream is a number and not a guess; per-purpose streams stay open. Next step:
+   EXP's first paired experiment, and a rule change if the measured gain matters.
+5. **`RunEnded` and a failed step.** **Closed (OBS):** `RunEnded.Failed` is
+   accepted as an added field, true only for a failed step and never together with
+   `Cancelled` (`spec-observability.md` 4.4.3, 16.1 here).
 6. **A sub-tick or a per-region tick rate.** Every position is per tick for the
    whole world; a region that ticks more often than another is not provided, and a
    tick that is several days is a calendar choice (`spec-calendar.md` 4). Next step:
@@ -1758,8 +1857,10 @@ has no default or bound of its own.
    does (testing.md 6.7) and compare them with the code's list. Next step: with the
    first code.
 9. **`TickEnded` as a summary.** An indicator may want the counts of a tick
-   (orders, trades, agents) on the closing event. They are derived from the events
-   today; OBS decides (13).
+   (orders, trades, agents) on the closing event. **Closed (OBS, IND):**
+   `TickEnded` is not a summary (`spec-observability.md` 4.4.3.1); the counts of a
+   tick are derived from the events of the step, which every observer receives, and
+   the standing counts are in the snapshot.
 10. **The first position of the first step.** At tick 0 the first step reads a
     record that is empty (INF 7.6), a welfare record padded by `DefaultRatio`, and a
     cost anchor of 0 when there is no wage. Whether the run should begin with a
@@ -1777,7 +1878,9 @@ has no default or bound of its own.
     (C9) `Work` runs at P2.5 before the ration of P2.6, so it cannot know that the
     ration cut every request. Recommendation: the household that the ration cut
     entirely is flagged `Blocked` at P2.7 and its next `Work` is the next tick's.
-    Owner: SUB, routed.
+    **Answered (SUB 5.5 item 6, FR-SUB-023):** a household whose own-use requests the
+    ration cut entirely and which started nothing is counted in `Blocked` at P2.7, the
+    flag stays, and its next `Work` is the next tick's; P2.8 reports the count.
 13. **The carrier of planned want units.** The demand module plans want units at P3.2
     and consumes them at P6.2, and `Intent` and `TradePlan` have no field for them
     (DEM 4.7, AGT 6). Recommendation: `Intent.WantUnits`, saved nowhere (scratch of
@@ -1790,8 +1893,10 @@ has no default or bound of its own.
     tick 0 is the stock after it. Owner: VIA, routed.
 16. **The totals of a call between ticks at a checkpoint.** A move that a call made
     since the last P8.6 has a total that belongs to the next tick (8.1.3); a
-    checkpoint taken then must save it or the restored audit fails (12). Owner: LED
-    and CHK, routed.
+    checkpoint taken then must save it or the restored audit fails (12). **Closed
+    (CHK, LED):** the pending totals are saved (`spec-checkpoint.md` 4.4;
+    `spec-ledger.md` 7.4, 11); the restore's baseline is the restored balance less
+    them (`spec-checkpoint.md` 6.2 step 10).
 
 ### Edits owed to other specs
 
@@ -1854,8 +1959,8 @@ table. A letter in brackets is the ruling of 6.12.
 | `spec-spawner.md` | 5.3.1, 13.1.1, FR-SPN-032 | "the only event that removes the agent" (C11) |
 | `spec-spawner.md` | 6.3, 7.3 | proposed, not owed: ties by `K(t, id)`; the roles served from a rotating start or by share (O1, O3) |
 | `spec-stability.md` | 4.8, D25, D33, D72, 10 (L22 row) | merge WLD-A1 to A5 (kinds: amplifier, bias, hazard); D25 specified; D33 and D72 cite the bucket; the WLD hook row goes; L22 cites WLD-A3 and S18's cold leg (WLD-S3) |
-| `spec-stability.md` | S63, MIG-S3 | "the same seeds" is a paired design that WLD-A5 excludes where a draw count moves; compare distributions |
-| `spec-subsistence.md` | 5.5 item 6, FR-SUB-023 | "`Work` acts as if not in the mode when the ration cut every request" cannot hold under two passes (`Work` is P2.5, the ration P2.6): routed (open question 12) |
+| `spec-stability.md` | S63, MIG-S3 | "the same seeds" is a paired design that is exact only while the draw counts are equal (WLD-A5, 7.6.1); where a draw count moves the estimate of a difference of means is still unbiased and the harness measures the gain (`spec-experiments.md` 7) |
+| `spec-subsistence.md` | 5.5 item 6, FR-SUB-023 | "`Work` acts as if not in the mode when the ration cut every request" cannot hold under two passes (`Work` is P2.5, the ration P2.6): applied, the household the ration cut entirely is `Blocked` at P2.7 and its next `Work` is the next tick's (open question 12) |
 | `spec-subsistence.md` | 7 | own-use ticks and units enter the welfare record from the per-agent scratch (P6.3) |
 | `spec-transport.md` | 5.3.2, 5.5.3, 5.7, FR-TRN-022, FR-TRN-024 | relief only in phase 1 (C1); `open_shipment` exposes the **shipment IDs** the agent is shipper or consignee of and, for an away traveller, its own trip; the arrival runs the guard ignoring its own shipment and the contract formed on it (C16) |
 | `spec-transport.md` | 5.5.2 | "places no order" while away begins after the dispatch, which is in P3.2(c) |
@@ -1866,7 +1971,7 @@ table. A letter in brackets is the ruling of 6.12.
 | `specs/README.md` | index, reading order, area row 78 (WLD), parameter owners (a row for `World.Clearing`; line 147 `WithTargetSpread` "hashed"), decisions (row 480 and the decisions of 3.5, 7.1, 7.2), glossary | WLD exists; the 20 terms of N-017; the rows |
 | `doc/specs/models/README.md` | contents | a row for `wld/` |
 | `doc/rules/architecture.md` | 3.2, 6.2, 7.3, 12.3 | the glossary terms; the option list (4.1); the seeding rule and the world's draw (7.1, 7.2); `Run` returns two values and the state of a world after an error (3.4, 3.5); a fresh read-receipt tag |
-| `doc/rules/observability-and-logging.md` | 3.3.2, 4.3, 5.3.1, 6.1 | the value `reason` of the run-ended line; `RunEnded.Failed`; events for the four slots; `TickEnded.Failed`: every started step is closed (a panic emits nothing), a failed one with `Failed` true, and 6.1 closes the span at `TickEnded`; 4.4 and architecture.md 12.5 "after the transition it describes" read "the end of the step" for a failed step, the world being failed before the event (3.5.6); a fresh tag |
+| `doc/rules/observability-and-logging.md` | 3.3.2, 4.3, 5.3.1, 6.1 | the value `reason` of the run-ended line; `RunEnded.Failed`; the three events for the slots (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled`); `TickEnded.Failed`: every started step is closed (a panic emits nothing), a failed one with `Failed` true, and 6.1 closes the span at `TickEnded`; 4.4 and architecture.md 12.5 "after the transition it describes" read "the end of the step" for a failed step, the world being failed before the event (3.5.6); a fresh tag |
 | `doc/notes.md` | the open notes of 20 | close N-009, N-056, N-074, N-117; update N-031, N-036, N-046, N-051, N-082, N-111, N-016, N-017, N-027, N-103, N-012, N-020, N-045, N-075, N-091, N-019, N-022, N-079, N-084, N-092; add the new notes of the handoff; the index; a fresh tag |
 | `doc/overview.md` | 143 and its `Run` sample | `Run(ctx, ticks)` returns two values (3.4) |
 | `doc/adr/0002-persistence-by-checkpoint.md` | open point 4, decision 7 | open point 4 answered: between ticks only (8.4); an extension's own state is saved as decision 7 says, and its registration is not (12.1) |

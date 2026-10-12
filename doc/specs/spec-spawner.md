@@ -49,7 +49,7 @@ migrant goes (MIG); the traineeship queue, places and throttle (`spec-skill-barr
 | 2 | What is bankruptcy? | Not "money is 0" (bazaarBot). A household is bankrupt when its **privation** (a leaky count of unfed ticks) has reached `RemovePrivation`. The cause is recorded: `insolvent` if it could not have paid a tick of upkeep, `starved` if it had the money but no food could be bought | Money 0 with food in the larder is not failure, and one meal in seven is not fed. A leaky count catches both (model, 16.2) |
 | 3 | The ladder | Rung 0 is AGT's survival rule (work full time). Rung 1 (privation `ChangePrivation`): change to a better viable role. Rung 2: relief, which the estate pays every tick to every agent below `ReliefBelow`, not conditionally. Rung 3 (privation `RemovePrivation`): weight reduced by up to `DeathStep` of the cohort per tick, removal when it reaches 0, and at most `ExitShare` of the region's households leave per tick | The roadmap order, made of measurable thresholds. Without the cap a role of identical weight-1 agents dies in one tick (model: 130 to 150 in one tick, against 2 to 6 with the cap) |
 | 4 | Which role does a newcomer take? | The role the leaver held, if it is viable; else the best viable open role by expected ratio; else none. Not "the most profitable role" | Everyone entering the best role at once is the occupation cobweb (model, 16.1: amplitude 1.0 with no limit). Like-for-like replacement leaves the occupation shares alone; the adjustment is done by the damped switching of 6 |
-| 5 | What damps occupation change? | A per-tick **entry share** (region and destination), reviews staggered by agent ID, a hysteresis band, and a cooldown | The model shows only the entry share removes the cobweb alone; the others are cheap and shrink it further. The condition is `EntryShare * window` small (16.1) |
+| 5 | What damps occupation change? | A per-tick **entry share** (region and destination), reviews staggered by the bucket of the agent ID (6.2), a hysteresis band, and a cooldown | The model shows only the entry share removes the cobweb alone; the others are cheap and shrink it further. The condition is `EntryShare * window` small (16.1) |
 | 6 | Funding | Every entrant household is funded from the pool, at most `EntryPoolShare` of the pool per tick, as many as the budget buys; the rest are not created and are counted. Entrants get money and no goods | Closes N-073. Money is never created. Relief keeps at least the rest of the pool |
 | 7 | Births and population | SPN owns the operations and the funding; POP owns the number. The hook is gross: `PopBirths` per role and `PopDeaths` per agent in the view (both at least 0, `spec-population.md` 4.1), executed by the same operations | One executor, two rule owners |
 | 8 | External agents | Never in any decision of the default spawner. The world refuses a decision on an external agent unless it was added mortal | N-022, `spec-agents.md` 10.6 |
@@ -70,9 +70,9 @@ var _ Spawner = DefaultSpawner{}
 // Spawner decides who leaves, who enters and who changes role.
 // rng is the world's random source; an implementation must not keep it.
 type Spawner interface {
-	// Decide is called once per tick for each region in region order, in the entry-and-exit
-	// phase, after consumption, when no reservation exists. It appends decisions to d in the
-	// order they are to be executed.
+	// Decide is called once per tick for each region in region order (not for an outside node,
+	// `spec-world.md` 6.1.11), in the entry-and-exit phase, after consumption, when no
+	// reservation exists. It appends decisions to d in the order they are to be executed.
 	Decide(v *RegionView, rng *rand.Rand, d *Decisions)
 }
 ```
@@ -84,7 +84,8 @@ not call back into the world, keep a pointer into the view, or write to it.
 An implementation **MUST NOT** create its own source, use a global one, or keep the one
 it was given after the call returns. The doc comment on `Spawner` states this. The call
 order is fixed (regions in order), so the stream a spawner sees is a function of the
-world's state. The world's own creation draws follow all calls of the phase (section 10).
+world's state. The world's own creation draws of a region follow that region's `Decide` and
+precede the `Decide` of the next region (section 10, `spec-world.md` 6.9.1).
 
 3.1.3. **Registration.** `WithSpawner(name string, s Spawner)` replaces the default.
 The *name* is in the effective configuration and its hash; the code is not
@@ -100,7 +101,7 @@ quantities are plain integers.
 
 | Group | Fields |
 |-------|--------|
-| Region | `Tick`, `Region`, `TicksPerYear`, `PoolMoney` (the estate account's money), `Budget` (`PoolMoney * EntryPoolShare / 10 000`), the tunables of section 11 |
+| Region | `Tick`, `Region`, `TicksPerYear`, `PoolMoney` (the estate account's money), `Budget` (`PoolMoney * EntryPoolShare / 10 000` at view time; advisory, a ceiling that a consumer spawner may use to size its plan: the world takes the budget itself after the module's deaths, 7.3), the tunables of section 11 |
 | Per role (canonical order) | `Role`, `Closed`, `Households` (sum of weights), `Agents`, `Wage` (the observed wage per working household-tick, `spec-welfare-and-wages.md` 4.3) and `HasWage`, `Upkeep` (cost of one household's effective upkeep per tick at the region's prices), `ExpectedWorkTicks`, `StartMoney`, `ToolPrice` (the market price of the tools its recipes require, 0 if none), `TrainingTicks`, `QueueAhead`, `Trainers`, `MaxTrainees`, `CapitalReturn`, `PopBirths` (section 8: households the population module asks to add; 0 when it is off) |
 | Per agent (ID order, no pseudo-agents) | `Agent`, `Role`, `Weight`, `External`, `Mortal`, `Money`, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `Surplus` (`S_u` of `spec-skill-barriers.md` 4.5), `Upkeep` (per household), `InTraineeship`, `PopDeaths` (section 8: households the population module asks to remove from this agent, at most `Weight - Unfed`; 0 when it is off), `OwnUse` (read-only: the agent is in the own-use mode of `spec-subsistence.md` 5.3; false when the module is off; the default spawner does not read it) |
 
@@ -131,8 +132,8 @@ type Decision struct {
 type Decisions struct{ List []Decision }
 ```
 
-`Cause` is a named string type; its values are rule constants in `internal/logkeys`:
-`insolvent`, `starved`, `consumer`, `population` (removal and reduction), `distress`,
+`Cause` is a named string type; its values are exported constants of the root package
+(`event.go`; `internal/logkeys` holds the key strings only): `insolvent`, `starved`, `consumer`, `population` (removal and reduction), `distress`,
 `review`, `traineeship` (role change), `renewal`, `births` (entry).
 
 ## 4. Operations and what the world checks
@@ -216,7 +217,9 @@ of 4.2.
 AGT gives `Unfed` and `Hunger` (consecutive ticks with `Unfed` above 0). A household
 that eats one tick in seven resets `Hunger` each time and never reaches any threshold
 (model, 16.2: 36 000 unfed household-ticks and no rung reached). So the ladder uses its
-own count, the **privation** of an agent, updated by the world before `Decide`:
+own count, the **privation** of an agent, set by the world at P6.1 with `Hunger` (ruling
+C2 of `spec-world.md` 6.12; the formula is AGT's, `spec-agents.md` 5.4.1, and is restated
+here) and only read by the spawner:
 
 ```
 Privation = Privation + 1   if Unfed > 0
@@ -245,8 +248,9 @@ changed role as long to establish itself as the threshold itself, whatever its
 privation was.
 
 5.2.2a. **`RoleSince` is the tick the agent took up its present role or place.** It is set at
-creation, at a role change (4.2) and at the arrival of a migration journey
-(`spec-migration.md` 8.4), so the test `tick - RoleSince >= RemovePrivation` gives a migrant
+creation, at a role change (4.2), at the arrival of a migration journey
+(`spec-migration.md` 8.4) and at a forced `Relocate` of the integration interface
+(`spec-integration.md` 4.5.2 step 5), so the test `tick - RoleSince >= RemovePrivation` gives a migrant
 the grace it gives a role changer. The module that sets it for a move is MIG's; the ladder's
 rules are otherwise unchanged. The review clock `RoleCooldown` (6.2) reads it too, and the
 settling rule of `spec-migration.md` 5.2 reuses it.
@@ -274,16 +278,17 @@ remainder is 0 it waits for the next tick. `ExitShare` 0 turns the rung off (no 
 leaves by the ladder); a consumer who wants that sets it.
 
 5.3.1. **Bankruptcy** is the rung-3 removal of an agent: the event `AgentBankrupted`
-with the cause. It is the only event of a full removal (13.1).
+with the cause. It is the only event that removes the agent (13.1); the events that
+accompany a removal are listed in `spec-world.md` 6.11 item 8.
 
 ### 5.4 Interaction with the estate and relief
 
 The leaver's money and goods pass to the estate (AGT 3.6; the reduction of 4.1) and
 become pool and listings; the pool then funds relief and entrants. The same pool funds
 both, so entry is limited to `EntryPoolShare` of it per tick and relief keeps the rest
-(STB-L39). `spec-estates.md` 2.6 says relief is paid "after the tick's starting-money
-grants"; this spec reads that as: after the entry step of the previous tick's phase 7
-(the grants happen at creation). WLD fixes the order.
+(STB-L39). Relief is paid in phase 1 and only relief is paid there; starting money moves at
+creation, in phase 7 (`spec-world.md` ruling C1). So relief reads what the previous tick's
+entry step left in the pool (`spec-estates.md` 2.6).
 
 ## 6. The entry rule and the occupation choice
 
@@ -307,9 +312,10 @@ make a role look better.
 
 ### 6.2 Voluntary review
 
-Each agent **reviews** its role on the ticks where `(tick + AgentID) mod ReviewTicks = 0`:
-a fixed rotation with no random draw, so reviews are spread over the period (the decision
-rate of D25, specified here for occupations). An agent reviews only if it is not
+Each agent **reviews** its role on the ticks where `(tick + bucket(AgentID, ReviewTicks))
+mod ReviewTicks = 0`, with `bucket(id, P) = (Weyl2(id) * P) >> 32` of `spec-world.md` 9.1.1
+(ruling C14): a fixed rotation with no random draw, so reviews are spread over the period
+(the decision rate of D25, specified here for occupations). An agent reviews only if it is not
 external, not a trainee, not already handled by rung 1, and `tick - RoleSince >=
 RoleCooldown`. It looks at the open roles (`Closed` false) other than its own, in role
 order, with a signal, and takes the one with the highest `E` (ties to the lower role
@@ -397,9 +403,10 @@ listings.
 
 ### 7.3 Funding
 
-The budget is `PoolMoney * EntryPoolShare / 10 000` taken once at the start of the entry
-step, so the order of roles does not change what any role gets, but earlier roles in
-role order draw on it first. Each entrant household costs `Role.StartMoney`; the world
+The budget is `PoolMoney * EntryPoolShare / 10 000` taken once, after the population
+module's deaths and before the switches (`spec-world.md` P7.1(d), ruling C15; the view's
+`Budget` is advisory), so the order of roles does not change what any role gets, but
+earlier roles in role order draw on it first. Each entrant household costs `Role.StartMoney`; the world
 admits as many as the budget buys (4.3). The unfunded count of the tick is reported
 (`Unfunded` in `EntryLimited`).
 
@@ -452,10 +459,13 @@ removes, switches, applies or replaces one (N-022, `spec-agents.md` 10.6, FR-AGT
 External agents appear in the view (`External` true) so a consumer spawner can see them.
 
 9.2. The world refuses any decision on an external agent with `external_agent`, from any
-spawner, unless the agent is **mortal**, a flag of the integration interface's
-`AddAgent`, default false (`spec-integration.md` owns the field). A mortal external agent
-is subject to the ladder only through a consumer's spawner or the consumer's own removal
-call; whether a player can starve is the consumer's choice (`spec-agents.md` 10.6).
+spawner, unless the agent is **mortal**, the flag `Mortal` of `NewAgent` in the integration
+interface's `AddAgent`, default false (`spec-integration.md` 4.1 owns the field). A mortal
+external agent is subject to the ladder only through a consumer's spawner. The consumer's
+own `RemoveAgent` (`spec-integration.md` 4.4) removes any external agent, mortal or not:
+`Mortal` limits what the library decides, not what the consumer asks. Whether a player can
+starve is the consumer's choice (`spec-agents.md` 10.6). A mortal external agent may be a
+trainee through a consumer spawner's `Apply`; a non-mortal one never (`spec-integration.md` 4.6).
 
 9.3. External agents count in `Households` and in the role's wage like any agent.
 
@@ -467,11 +477,14 @@ ordered by `Privation`, gap and then ID, destinations by `E` and then role ID. N
 iterated (architecture.md 7.5) and every sort ends in a unique key (7.6).
 
 10.2. **Order of the entry-and-exit phase.** For each region in region order: the world
-updates `Privation`; builds the view; calls `Decide`; executes the plan in plan order. The
+builds the view (`Privation` was set at P6.1, 5.1); calls `Decide`; executes the plan in
+plan order. The
 default's plan is: rung-3 reductions and removals; then rung-1 and review switches and
 applies; then renewal entries (none while the population module is on); then the births of `PopBirths`. The module's deaths (`PopDeaths`) follow the rung-3 reductions and removals and precede the switches, and the budget of 7.3 is taken after them. Creation draws
 (`spec-agents.md` 3.5.2) are taken as each new agent is created, in plan order. A
-consumer spawner's own draws all precede them, because `Decide` runs before execution. The migration pass of `spec-migration.md` 10.2 (a module) follows the whole entry step of every region, so its draws and its departures come after the creation draws of every region.
+consumer spawner's own draws of a region precede the creation draws of that region, because
+`Decide` runs before execution, and follow those of the previous region (ruling C3,
+`spec-world.md` 6.9.1). The migration pass of `spec-migration.md` 10.2 (a module) follows the whole entry step of every region, so its draws and its departures come after the creation draws of every region.
 
 10.3. A spawner is called whether or not anything can happen, so a consumer's draws do not
 depend on the module state.
@@ -532,13 +545,13 @@ Warnings (never fail validation):
 |-------|---------|-------------------------|
 | `AgentSpawned` (existing) | an agent is created, including entrants | `Agent`, `Region`, `Role`, `Weight`, `StartMoney`, `External` |
 | `AgentBankrupted` (existing) | an agent is removed entirely, by rung 3 or at the consumer's request | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause`, `Money`, `GoodsListed` |
-| `WeightChanged` (new) | an agent's weight changes without removal: a rung-3 reduction, an entry into an existing agent, a POP birth or death | `Agent`, `Region`, `Role`, `From`, `To`, `Cause` |
+| `WeightChanged` (new) | an agent's weight changes without removal: a rung-3 reduction, an entry into an existing agent, a POP birth or death | `Agent`, `Region`, `Role`, `From`, `To`, `Cause`, `Money` (signed, positive to the agent) and `Units` (goods moved to the estate) |
 | `RoleChanged` (new) | an agent changes role | `Agent`, `Region`, `From`, `To`, `Weight`, `Cause`, `GoodsListed` |
 | `EntryLimited` (new) | once per region per tick in which any limit or refusal acted | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
 
 13.1.0. With the population module on, `PopulationChanged` (`spec-population.md` 10.1) follows `EntryLimited` in the order of the events of a region's entry step.
 
-13.1.1. **`AgentBankrupted` remains the only event of a full removal.** Its name is
+13.1.1. **`AgentBankrupted` is the only event that removes the agent.** Its name is
 historical: `Cause` says why (`insolvent`, `starved`, `consumer`, `population`), so
 bankruptcy, starvation and death are one event with a cause, not three. A reduction that
 leaves households is not a removal of an agent and has its own event, `WeightChanged`; a
@@ -563,26 +576,31 @@ by `economysim.role` (the destination) fed by `RoleChanged`; `household.count` a
 "agent bankrupt" (`agent`, `role`, `reason`), "role changed" (`agent`, `role`, `reason`),
 "decision refused" (`agent`, `reason`), "entry dropped" (`role`, `reason`: `no_viable_role`,
 `unfunded`). `Warn`, bounded per region or role (observability-and-logging.md 3.2.2):
-"role extinct" (a role in a region with no agents, at the first tick and each tenth after;
-`region`, `role`); "entry unfunded" (a region whose pool funded no entrant for ten
-consecutive ticks while entrants were due, each tenth after; `region`, `households`);
-"group below floor" (`region`, `role`, `agents`). No `Info`, no `Error`. New log keys,
+"role extinct" (a role that had at least one agent, or has a configured group, and has none in
+the region, FR-SPN-042; at the first tick and each tenth after; `region`, `role`); "entry
+unfunded" (a region whose pool funded no entrant for ten consecutive ticks while entrants were
+due, each tenth after; `region`, `households`); "group below floor" (a group of weight above 1
+whose agent count is below `MinAgents`, at run time, FR-SPN-047; at the first tick and each
+tenth after; `region`, `role`, `agents`). No `Info`, no `Error`. New log keys,
 added with the code: `households` (exists in AGT), `cause`.
 
 13.4. **Snapshot.** Per region and role: households, agents, the expected ratio and
-viability when defined, the privation maximum, and the last tick's `EntryLimited` counts.
-Per region: the pool balance (EST) and the funding budget.
+viability when defined, and the privation maximum. The counts of `EntryLimited` are the event,
+not a snapshot field. Per region: the pool balance (EST) and the funding budget.
 
 ## 14. State contributed to a checkpoint
 
 All plain data in a fixed order, no maps (ADR 0002):
 
-- per agent, in ID order: `Privation` and `RoleSince` (a signed tick; the tick the agent took up its role or place, 5.2.2a);
+- per agent: `Privation` and `RoleSince` (a signed tick; the tick the agent took up its role or
+  place, 5.2.2a), together, hosted in the agent record and saved there in ID order
+  (`spec-checkpoint.md` 4.2 tag 3); this spec lists no other per-agent state;
 - per (region, role), in region then role order: the renewal `carry`;
 - the population module's death carry per agent and birth carry per (region, role) are state of that module (`spec-population.md` 11), hosted in the agent for the first;
-- per region: the run of ticks with unfunded entrants and, per role, the run of empty
-  ticks, for the two `Warn`s (diagnostic: they affect no result and are saved so a
-  resumed run logs as the original did);
+- the diagnostic runs for the three `Warn`s: per region the run of ticks with unfunded
+  entrants; per (region, role) the run of empty ticks of a role and the run of ticks a group is
+  below `MinAgents` (they affect no result and are saved so a resumed run logs as the original
+  did);
 - a consumer spawner's state, through the optional pair.
 
 The default spawner has no other state. Not saved: the view, the plan, the signals `E` and
@@ -603,9 +621,11 @@ tick, `ExpectedWorkTicks` 250 and `TicksPerYear` 365: `E = 1 200 * 250 * 10 000 
 whose own role has `E_o = 8 219` and `RoleHysteresis` 1 000 needs `E_d >= ceil(8 219 * 11 000
 / 10 000) = 9 041` to change.
 
-15.2. **Review rotation.** `ReviewTicks` 10, agent ID 17: it reviews where `(t + 17) mod
-10 = 0`, that is ticks 3, 13, 23, 33. Agents with consecutive IDs review on consecutive
-ticks, one tenth of a role each tick.
+15.2. **Review rotation.** `ReviewTicks` 10, agent ID 17: `Weyl2(17) = 17 * 0x6A09E667 mod
+2^32 = 178 801 879` and `bucket(17, 10) = (178 801 879 * 10) >> 32 = 0`, so it reviews where
+`(t + 0) mod 10 = 0`, that is ticks 0, 10, 20, 30. Consecutive IDs do not review on consecutive
+ticks: the bucket spreads a role over the period, about one tenth of a large group each
+tick (`spec-world.md` 9.1.1).
 
 15.3. **The caps.** A region of 1 000 households, `EntryShare` 50: the region allows
 `ceil(1 000 * 50 / 10 000) = 5` role changes per tick. A destination role with 50
@@ -643,7 +663,9 @@ show how the dampers behave, and no default is shown to be stable (N-027).
 1 000 weight-1 agents in 3 roles, each paying `a_r * (x_r / x0_r)^(-1/e)` per head; the signal
 is the mean of that income over the last `T` ticks (the welfare window); reviews rotate by
 agent ID; the switch rules are those of 6.2 and 6.3; start at shares 0.4, 0.3, 0.3; a 30%
-income shock to role 0 at tick 1 500. "Amplitude" is the largest minus the smallest share of
+income shock to role 0 at tick 1 500. (The model rotates reviews by raw agent ID; the rule
+of 6.2 uses the bucket of `spec-world.md` 9.1.1, which spreads the same load. The rows below are
+of the model, not re-run.) "Amplitude" is the largest minus the smallest share of
 role 0 over the last 500 of 3 000 ticks (1.0 means it runs between empty and full).
 
 | Variant (`e` 0.5, `T` 30) | Amplitude | Mean changes per tick |
@@ -722,7 +744,7 @@ register owner merges them into `spec-stability.md` section 5). **Status is
 |----|--------|------|--------|
 | D09 | Hysteresis for a change of role: `RoleHysteresis` | SPN 6.2 | specified (it is not enough alone, 16.1) |
 | D14 | Entry limit: `EntryShare` per region and per destination | SPN 6.3 | specified; the effective occupation damper in the model |
-| D33 | Staggered occupation review: `ReviewTicks`, by agent ID, no draw (a form of D25) | SPN 6.2 | specified |
+| D33 | Staggered occupation review: `ReviewTicks`, by the bucket of the agent ID (`spec-world.md` 9.1.1), no draw (a form of D25) | SPN 6.2 | specified |
 | D34 | Cooldown after a role change: `RoleCooldown` | SPN 6.2 | specified |
 | D35 | Graded exit: the privation count, the cohort `DeathStep` and the regional `ExitShare` | SPN 5 | specified; counted by `EntryLimited` |
 | D36 | Entry gate: a newcomer enters only a viable role, `EntryRatio`; like for like first | SPN 6.1, 7.2 | specified |
@@ -793,7 +815,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-SPN-001 | The root package MUST define `Spawner` with one method `Decide(v *RegionView, rng *rand.Rand, d *Decisions)`, a default `DefaultSpawner`, and the assertion `var _ Spawner = DefaultSpawner{}` (3.1; architecture.md 4.5). |
-| FR-SPN-002 | The world MUST call `Decide` once per region per tick, in region order, in the entry-and-exit phase after consumption, with no reservation open (3.1, 10.2). |
+| FR-SPN-002 | The world MUST call `Decide` once per region per tick, in region order, in the entry-and-exit phase after consumption, with no reservation open, and MUST NOT call it for an outside node (`spec-world.md` 6.1.11) (3.1, 10.2). |
 | FR-SPN-003 | A spawner MUST NOT create its own random source, use a global one, or keep the `*rand.Rand` after `Decide` returns, and the doc comment of `Spawner` MUST say so (3.1.2). |
 | FR-SPN-004 | The world MUST execute the decisions of a region in plan order and MUST refuse, change nothing for and count each decision that fails a check of section 4, with its `reason`. |
 | FR-SPN-005 | A removal MUST follow `spec-agents.md` 3.6 and a reduction MUST scale money and each good to `floor(x * w' / w)` with the difference to the estate, with the ledger reason `starvation`, `deaths` or `births`, conserving money and goods exactly (4.1). |
@@ -803,13 +825,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-009 | A decision to `Apply` for an agent of weight above 1 MUST be refused with `needs_weight_one` (4.4; N-064). |
 | FR-SPN-010 | The world MUST refuse a decision on an external agent with `external_agent` unless the agent is mortal, and the default spawner MUST NOT produce one (9). |
 | FR-SPN-011 | The world MUST refuse a switch or apply of a trainee, and a switch of a trainer with trainees, with `in_traineeship`, and MUST NOT refuse a removal or reduction for that reason (4). |
-| FR-SPN-012 | The world MUST update `Privation` before each `Decide` as `Privation + 1` if `Unfed > 0` and `max(0, Privation - 1)` otherwise (5.1). |
+| FR-SPN-012 | The spawner MUST read `Privation` as set by the world at P6.1: `Privation + 1` if `Unfed > 0` and `max(0, Privation - 1)` otherwise (5.1; `spec-agents.md` 5.4.1). |
 | FR-SPN-013 | The default spawner MUST apply rung 3 to an agent with `Privation >= RemovePrivation` and `tick - RoleSince >= RemovePrivation` and to no other, and never to an external agent, a trainee or a pseudo-agent (5.2, 5.3). |
 | FR-SPN-014 | A rung-3 reduction MUST be `min(Unfed, max(1, ceil(w * DeathStep / 10 000)))` households, cut to the region's remaining allowance `ceil(Households * ExitShare / 10 000)`, in order of `Privation` descending then ID ascending (5.3). |
 | FR-SPN-015 | A reduction to weight 0 MUST be a removal with the event `AgentBankrupted`, with `Cause` `insolvent` if `Money < Upkeep * w` and `starved` otherwise (5.3). |
 | FR-SPN-016 | `ExitShare` 0 MUST turn rung 3 off and `EntryShare` 0 MUST turn off all role changes, including rung 1 (5.3, 6.3). |
 | FR-SPN-017 | `E` and `V` of a role MUST be `Wage * ExpectedWorkTicks * 10 000 / (Upkeep * TicksPerYear)` and `Wage * 10 000 / Upkeep` with checked arithmetic, and a role with no observed wage MUST have no signal and MUST NOT be entered by the default spawner (6.1, 6.5). |
-| FR-SPN-018 | An agent MUST be reviewed by the default spawner only on ticks where `(tick + AgentID) mod ReviewTicks = 0`, and only if it is not external, not a trainee and `tick - RoleSince >= RoleCooldown` (6.2). |
+| FR-SPN-018 | An agent MUST be reviewed by the default spawner only on ticks where `(tick + bucket(AgentID, ReviewTicks)) mod ReviewTicks = 0` (`bucket` of `spec-world.md` 9.1.1), and only if it is not external, not a trainee and `tick - RoleSince >= RoleCooldown` (6.2). |
 | FR-SPN-019 | A review MUST choose the open role with the highest `E` (ties to the lower role ID) that satisfies `E_d * 10 000 >= E_o * (10 000 + RoleHysteresis)` and, for a role with a tool or training, the capital test of `spec-skill-barriers.md` 2.5 and 4.5 (6.2). |
 | FR-SPN-020 | A role needing a tool MUST be entered by `Switch` only if the agent's money covers `ToolPrice`, and a role with `TrainingTicks` above 0 MUST be entered only by `Apply` (6.2). |
 | FR-SPN-021 | The default spawner MUST admit role changes in order of need (rung 1 by privation, then gap, then ID) while fewer than `ceil(Households * EntryShare / 10 000)` have changed in the region and fewer than the same share of the destination have entered it, the agent that reaches a cap being admitted (6.3). |
@@ -817,14 +839,14 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-023 | A rung-1 candidate (`Privation >= ChangePrivation`) MUST be considered every tick, and its destination MUST be an open viable role with `E_d > E_o` that passes the capital test (6.4). |
 | FR-SPN-024 | `Renewal` MUST replace the households lost by rung 3 with a carry per (region, role), so a rate below 10 000 loses no fraction (7.1). |
 | FR-SPN-025 | A replacement MUST go to the leaver's role if it is open and viable, else to the open viable role of highest `E` under the caps, else nowhere, counted as `NoViableRole` (7.2). |
-| FR-SPN-026 | The funding budget MUST be taken once per region per tick as `PoolMoney * EntryPoolShare / 10 000` before any entry (7.3). |
+| FR-SPN-026 | The funding budget MUST be taken once per region per tick as `PoolMoney * EntryPoolShare / 10 000`, after the population module's deaths and before the switches and any entry (7.3; `spec-world.md` ruling C15). |
 | FR-SPN-027 | A newcomer MUST start with beliefs from the price window mean or the market price (not the warm-start table), `Hunger` and `Privation` 0 and `RoleSince` the current tick (7.4; `spec-beliefs.md` 8.3). |
 | FR-SPN-028 | A positive `PopBirths` of a role MUST be executed as an `Enter` with cause `births` under the funding of 7.3 with the stake of 4.3 and without the cap or the gate, and a positive `PopDeaths` of an agent as a `Reduce` of that agent with cause `population` and reason `deaths`, in agent ID order, at most `Weight - Unfed` (8.2). |
 | FR-SPN-029 | The default spawner MUST draw nothing from the random source (10.1). |
 | FR-SPN-030 | Every ordering of the default spawner MUST end in a unique key and MUST NOT depend on map iteration (10.1). |
 | FR-SPN-031 | The default's plan order MUST be: reductions and removals, then the population module's deaths, then switches and applies, then renewal entries (none while the population module is on), then its births (10.2). |
-| FR-SPN-032 | `AgentBankrupted` MUST be the only event of a full removal, with `Agent`, `Region`, `Role`, `Weight`, `Cause`, `Money` and `GoodsListed`, and MUST NOT be emitted for a reduction that leaves households or for a role change (13.1.1). |
-| FR-SPN-033 | `WeightChanged` MUST be emitted for each weight change that is not a removal, with `From`, `To` and `Cause`, and `RoleChanged` for each role change, with `From`, `To`, `Weight`, `Cause` and `GoodsListed` (13.1). |
+| FR-SPN-032 | `AgentBankrupted` MUST be the only event that removes the agent (the events that accompany a removal are those of `spec-world.md` 6.11 item 8), with `Agent`, `Region`, `Role`, `Weight`, `Cause`, `Money` and `GoodsListed`, and MUST NOT be emitted for a reduction that leaves households or for a role change (13.1.1). |
+| FR-SPN-033 | `WeightChanged` MUST be emitted for each weight change that is not a removal, with `From`, `To`, `Cause`, `Money` (signed, positive to the agent) and `Units` (goods moved to the estate; FR-OBS-019), and `RoleChanged` for each role change, with `From`, `To`, `Weight`, `Cause` and `GoodsListed` (13.1). |
 | FR-SPN-034 | The agent count rebuilt from `AgentSpawned` (+1) and `AgentBankrupted` (-1) MUST equal the world's agent count at every tick, and the household count rebuilt from the `Weight` of those two events and `To - From` of `WeightChanged` MUST equal the sum of the weights (13.1.1, as the rules now state in 4.3 and 5.3.1). |
 | FR-SPN-035 | `EntryLimited` MUST be emitted once per region per tick in which any limit or refusal acted, with the counts of 13.1, and MUST NOT be emitted when all are zero (13.1.2). |
 | FR-SPN-036 | The `Warn`s "role extinct", "entry unfunded" and "group below floor" MUST be bounded per region or role and carry the attributes of 13.3 (13.3). |
@@ -834,17 +856,17 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-040 | An unknown spawner name MUST be rejected by `NewWorld` with `ErrUnknownSpawner` (3.1.3). |
 | FR-SPN-041 | A role marked `Closed` MUST receive no entrant and no switcher from the default spawner (6.2, 7.2). |
 | FR-SPN-042 | The default spawner MUST NOT re-seed a role with no agents, and the world MUST emit the `Warn` "role extinct" for a role that had an agent or has a configured group and has none; a role that never had a group and has no agent (such as a closed role filled only by external agents) MUST NOT cause it (6.5). |
-| FR-SPN-043 | The fields `Privation`, `RoleSince`, the renewal carry and the two diagnostic runs MUST be in the checkpoint in a fixed order, and a restored world MUST make the same decisions as an uninterrupted one (14; FR-SPN-052). |
+| FR-SPN-043 | The fields `Privation` and `RoleSince` (hosted in the agent record), the renewal carry and the three diagnostic runs MUST be in the checkpoint in a fixed order, and a restored world MUST make the same decisions as an uninterrupted one (14; FR-SPN-052; `spec-checkpoint.md` 4.2 tags 3 and 9). |
 | FR-SPN-044 | Role changes, reductions and entries into an existing agent MUST open and close no account (14). |
 | FR-SPN-045 | Money and goods MUST be conserved exactly by every decision (removal, reduction, role change, entry), and no money may enter except by `start_money` and `births` from the pool (4). |
-| FR-SPN-046 | The expected ratio, the viability and the privation maximum per role and region MUST be in the snapshot, with the last tick's `EntryLimited` counts (13.4). |
+| FR-SPN-046 | The expected ratio, the viability and the privation maximum per role and region MUST be in the snapshot; the counts of `EntryLimited` are the event (13.4). |
 | FR-SPN-047 | A group of weight above 1 whose agent count falls below `MinAgents` MUST be reported by a bounded `Warn` and MUST NOT be rebuilt silently (13.3). |
 | FR-SPN-048 | A role change of an agent whose role has a required tool held MUST pass that tool to the estate if it is not in the new role's tradable set (4.2). |
 | FR-SPN-049 | A trainee's completion MUST use the role change of 4.2 with the cause `traineeship` (4.2, 4.4). |
 | FR-SPN-050 | The default spawner MUST NOT remove, reduce or switch an agent in the tick it was created (7.4, 5.2). |
 | FR-SPN-051 | A reduction or removal MUST leave the fed households' share of the agent's money per household unchanged (4.1, 15.4). |
 | FR-SPN-052 | A world restored from a checkpoint taken between ticks MUST give the same `AgentSpawned`, `AgentBankrupted`, `WeightChanged` and `RoleChanged` events as an uninterrupted one (14). |
-| FR-SPN-053 | `RoleSince` MUST be the tick the agent took up its present role or place: set at creation, at a role change and at the arrival of a migration journey, so that rung 3 waits `RemovePrivation` ticks after an arrival as after a role change. (new, `spec-migration.md` 8.4) |
+| FR-SPN-053 | `RoleSince` MUST be the tick the agent took up its present role or place: set at creation, at a role change, at the arrival of a migration journey and at a forced `Relocate` (`spec-integration.md` 4.5.2), so that rung 3 waits `RemovePrivation` ticks after an arrival as after a role change. (new, `spec-migration.md` 8.4) |
 | FR-SPN-054 | A `Switch` or `Apply` of an agent on a migration journey MUST be refused with `on_journey`, a removal or a reduction MUST NOT be, and the placement of an `Enter` MUST NOT choose such an agent. (new, `spec-migration.md` 8.3) |
 | FR-SPN-055 | A role change MUST reset `OwnUseJobs` to 0 and keep `OwnUse` for re-evaluation, and the per-agent view MUST carry `OwnUse` read-only. (new, `spec-subsistence.md` 5.8) |
 
@@ -869,13 +891,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    disappear when the module is on is left open.
 4. **`Privation` is SPN's counter, not AGT's.** It could move to AGT beside `Hunger`; it is
    here because the ladder is the only reader.
-5. **The relief order.** 5.4's reading of `spec-estates.md` 2.6; WLD fixes the phase order.
+5. **The relief order.** Answered by `spec-world.md` ruling C1: phase 1 pays relief only and
+   starting money moves at creation in phase 7, so relief reads what the previous tick's
+   entry step left (5.4).
 6. **Entry gate on a stale wage.** `V` is a window mean, so a collapsing role looks viable for
    about half a window (SPN-A4). A shorter window for the gate would need a second window.
 7. **`EntryShare` against the window.** The condition is a model's (16.1); the warning's 2 500 is
    a placeholder. Next step: S06 and S26 on the reference chain.
-8. **A mortal external agent.** The `Mortal` field belongs to INT; if INT prefers another name,
-   the check of section 4 follows.
+8. **A mortal external agent.** Answered: the field is `NewAgent.Mortal` of `AddAgent`
+   (`spec-integration.md` 4.1) and the check of section 4 reads it.
 
 ## 20. Where this lives in the code
 
@@ -886,4 +910,4 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Pure rules: `E`, `V`, the caps, the apportionment of allowances, the carry, the privation update | `internal/occupation` (stdlib only, over primitive slices and indexes, converted inline at the call, architecture.md 2.9) |
 | Execution of decisions (removal, reduction, role change, entry, funding) | root package, `world.go`, calling `internal/ledger` inline |
 | Events `WeightChanged`, `RoleChanged`, `EntryLimited` (and the extended `AgentBankrupted`) | root package, `event.go` |
-| Reason and cause constants | `internal/logkeys` |
+| Reason and cause constants (the `reason` values of section 4 and the `Cause` values of 3.3) | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |

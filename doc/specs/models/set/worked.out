@@ -1,0 +1,22 @@
+== Example A: a realm of five regions (an early-modern-like example setting)
+classes {'hamlet': 0, 'village': 300, 'town': 800, 'city': 2000} band 1000 bp, dwell 30
+centre  ThresholdBP 10000 floor hamlet  E=[300, 800, 2000] L=[270, 720, 1800] households  1400 -> class town (computed town)
+east    ThresholdBP 10000 floor hamlet  E=[300, 800, 2000] L=[270, 720, 1800] households   900 -> class town (computed town)
+north   ThresholdBP 10000 floor village E=[300, 800, 2000] L=[270, 720, 1800] households   150 -> class village (computed hamlet)
+south   ThresholdBP 10000 floor hamlet  E=[300, 800, 2000] L=[270, 720, 1800] households  1100 -> class town (computed town)
+west    ThresholdBP  6000 floor hamlet  E=[180, 480, 1200] L=[162, 432, 1080] households   240 -> class village (computed village)
+-- the trace of centre: +3 households a tick from 1400, a plague at tick 205
+  recovers to 1810 by tick 230: t=200 H=2000 town->city since=200; t=205 H=1790 held (target town, ticks left 25); t=229 H=1790 held (target town, ticks left 1); held ticks 25
+  stays at 1790 at tick 230: t=200 H=2000 town->city since=200; t=205 H=1790 held (target town, ticks left 25); t=229 H=1790 held (target town, ticks left 1); t=230 H=1790 city->town since=230; held ticks 25
+== Example B: an orbital colony (unit: a household is a crew of the colony)
+classes {'outpost': 0, 'station': 20, 'hub': 150} E [20, 150] L [18, 135] (band 1000 bp)
+  households 5: founded class outpost
+  households 19: founded class outpost
+  households 20: founded class station
+  households 149: founded class station
+  households 150: founded class hub
+  households 136: founded class station
+  households 135: founded class station
+  a review at class hub: 134 -> station ; 135 -> hub (L = 135)
+== Example C: one class (a setting with no sizes)
+E [0] L [0] class for 0, 1, 10^9 households: [0, 0, 0] ; a review never changes it: 0 0

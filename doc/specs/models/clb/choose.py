@@ -89,6 +89,24 @@ def collinear(a, b, tol_bp):
     return lhs >= rhs
 
 
+def aliased(a, b, tol_bp):
+    """The procedure's test (10.2): a reading that is None (OK false), above 2^26 in absolute
+    value or Clamped (EXP clamps at 2^31 - 1) is EXCLUDED, never wrapped and never an error;
+    the test runs over the measures where both are defined. More than 16 measures are tested
+    by fact group by the caller."""
+    pairs = [(x, y) for x, y in zip(a, b)
+             if x is not None and y is not None and abs(x) <= E_MAX and abs(y) <= E_MAX]
+    if not pairs:
+        return False
+    return collinear([x for x, _ in pairs], [y for _, y in pairs], tol_bp)
+
+
+def to_level(levels, v):
+    """A Spread value maps to the nearest grid level; a tie goes to the LOWER level (7.2.3: a rule
+    of its own, not a division)."""
+    return min(levels, key=lambda l: (abs(l - v), l))
+
+
 def cos2_bp(a, b):
     dot = sum(x * y for x, y in zip(a, b))
     na = sum(x * x for x in a)
@@ -146,10 +164,11 @@ if __name__ == "__main__":
         except OverflowError:
             pass
     print("bounds: |e| <= 2^26, m <= 16 fit 128 bits; one above is an overflow error")
+    # a reading above 2^26, a clamped one (2^31 - 1) or an undefined one is excluded, not an error
+    assert aliased([2**31 - 1, 5, None], [999, 10, 7], 500)          # only the second measure is read
+    assert not aliased([2**31 - 1], [4], 500) and not aliased([None], [None], 500)
     # half to even in the rounded cos^2 and the exact seed threshold
     assert rdiv(5, 2) == 2 and rdiv(7, 2) == 4 and rdiv(-5, 2) == -2
     assert need("B", 25) == 23 and need("B", 10) == 9 and need("B", 50) == 45
     # a Spread value maps to the nearest level; a tie goes to the lower level (a rule of its own)
-    def to_level(levels, v):
-        return min(levels, key=lambda l: (abs(l - v), l))
     assert to_level([100, 200, 400], 300) == 200 and to_level([100, 200, 400], 290) == 200

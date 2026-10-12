@@ -14,7 +14,8 @@ nature**: it defines what the library is tested against, and adds no API, no
 properties (STY), adjust a knob (CLB), run again (EXP). It needs
 `spec-indicators.md` (IND: every measure a fact is stated in, by preset name and
 field), `spec-stability.md` (STB: the register, the failure regimes F1 to F8 and
-the scenarios S01 to S72, which this spec takes the bands of),
+the scenarios S01 to S90, of which this spec takes the bands of the economic ones and
+not of the nine of the class "harness test"),
 `spec-reference-chain.md` (REF: the packs and the form of a band file),
 `spec-viability.md` (VIA: the steady-state prices a fact is compared with),
 `spec-world.md` (WLD: the run is a function of configuration, seed and calls) and
@@ -95,7 +96,7 @@ Out of scope, with the owner:
 | 3 | **One home** for a band: STY defines the fact and its prior in this spec; the **value** a test asserts lives in `testdata/chains/bands/<pack>.toml` (REF 4.1, 7.1.5) and is set only by the protocol of 8.4. The regime thresholds are global, in `bands/regimes.toml`, because a regime must mean the same thing in every pack | 3.5, 6.5 |
 | 4 | **Bands use REF's seed sets** (FR-REF-024, FR-REF-025): a band is set from a reviewed run over the nightly range 1 to 50 of REF 8.2, never from one seed and never from the code under test without review. The gate seeds 1 to 10 are inside that range, so the gate is a **regression** test, not an out-of-sample one; a hold-out set (51 to 60) is an owed REF row with a recommendation, and nothing here relies on it | 8.2, 8.4 |
 | 5 | A **regime** is a property of a run that a detector classifies (none, detected or unknown); a **failed test** is an assertion on a fact that does not hold. A run may be in a regime and pass (a shock scenario that expects it), and may fail a fact with no regime. A regime threshold is looser than the band of every fact it backs | 6.4 |
-| 6 | **Deflation with distress** is a new regime, proposed to STB as F9 (STY-R9); the other eight are STB's F1 to F8 with thresholds | 6.3 |
+| 6 | **Deflation with distress** is a new regime, added to STB as F9 (STY-R9); the other eight are STB's F1 to F8 with thresholds | 6.3 |
 | 7 | The pass statistic over seeds is one of three, by the fact's kind: all seeds (X, O and the regimes of STY-G01), at least nine in ten (every B fact), or the median (report). Each is justified by exact binomial arithmetic in 8.3 | 8.3 |
 | 8 | Four tiers of test: **S** short (unit; runs under `-short`), **G** gate (integration and end to end, seeds 1 to 10, the lengths of REF 7.2 and 8.2: at most 1 800 ticks), **N** nightly (seeds 1 to 50), **L** long (longer than 1 800 ticks, a build tag, never in the merge gate) | 4.5, 9 |
 | 9 | A detector and a seed rule are **pure functions of plain series** and take no world, so they are unit-tested under `-short` against synthetic series (S tier), and the same code classifies a real run | 6.1, 9.1 |
@@ -235,7 +236,7 @@ Two keys are STY's own and name unmet need, which no REF entry carries: `s01.unm
 band keys of the bands files like the rest (registry rule of 9.1) and are not
 used by STY-P06, whose worst-lane band is `x1.worst_bp` alone.
 
-The scenarios that STB added after REF's 7.2 (S23 to S72) have no key yet; each
+The scenarios that STB added after REF's 7.2 (S23 to S90, the harness tests aside) have no key yet; each
 fact that backs one defines its keys in 5 (`s28.reopen_ticks` and so on) and REF
 adds them to its band files when it builds the pack (section 21).
 
@@ -720,7 +721,7 @@ births done in a year at most `max(birth schedule)` in basis points of the
 households plus the rounding of the carry (derived, `spec-population.md` 6.3
 `g_max`). **B**: `w06.fixed_point_bp` prior 100 bp a year (the realised net rate of the account of change, `Households` IND 9 row 9,
 not the schedule's `NaturalIncreaseBP`, within the band near the end level, P); `w06.money_cap_bp` prior 1 000 below `M / stake`
-(the model of POP 13.2: 1 160 of 1 200, 2 350 of 2 400, 4 800 of 4 800). *Pass
+(the model of POP 13.2: about 1 160 of 1 200, 2 350 of 2 400 and about 4 750 of 4 800). *Pass
 and fail:* `BirthsUnfunded` non-zero at the stop is the signature (S39); a
 population above `M / stake` is a defect of the stake rule. *Source:* hand
 (POP 5.5) and model. *Confidence:* I for the bound, M for the bands. *Class:* X
@@ -765,9 +766,12 @@ the recovery band**, `10 000 - s14.recover_band_bp` of the earlier level (the
 level the observed time is measured to), at the fastest rate the modules in force allow, by integer iteration **per tick with a carried remainder** over
 `10 000 * TicksPerYear` (the rule of `spec-population.md` 3.8; whole-year
 compounding is a coarser reading and is not used) with `g_max = max(birth) - min(death)` for
-the population module (`spec-population.md` 6.3), and the spawner's per-tick
-cap `ceil(Households * EntryShare / 10 000)` for entry without it (STB
-FR-STB-029; the owner confirms, open question 2). *Pack:* `famine` with the
+the population module (`spec-population.md` 6.3), and, without it, by replacement alone: at most
+`Renewal` times the leavers of the tick (`spec-spawner.md` 7.1), which the caps of
+`spec-spawner.md` 6.3 do not limit (FR-SPN-022), and as many as the pool funds,
+`EntryPoolShare` of it per tick (`spec-spawner.md` 8.2); the per-tick cap
+`ceil(Households * EntryShare / 10 000)` is not the limit of regrowth (open question 2,
+answered). *Pack:* `famine` with the
 estates overlay, depth `m` in `{7 000, 5 000, 2 500, 0}` bp from tick 424 to 515
 (S14), 1 800 ticks; the longer horizon of a population-module recovery is tier L.
 *Seeds:* all for O and X, SR2 for B, tier G (L for POP on). *Band:*
@@ -1156,7 +1160,8 @@ graph's edges with transport, information and the merchant strategy
 
 FR-STB-005 asks that every scenario of `spec-stability.md` 8 be covered, and the
 brief asks that a scenario's bands have one home. The table gives, for every
-scenario S01 to S72 (S15 is unused), the **fact** that holds its band, or the
+scenario S01 to S90 (S15 is unused) except the nine of the class "harness test"
+(S77, S78 and S84 to S90, below the table), the **fact** that holds its band, or the
 class of what it asserts when no band is involved. A scenario with an assertion of
 its own owner (an exact check, or a formula the owner derives) keeps it; STY adds
 only the key and the prior where the scenario named "a stated band" and no fact
@@ -1226,11 +1231,28 @@ a placeholder (P) unless a basis is given.
 | S68, S71 | exact (the contract table, conservation with escrow, the audit; the node is named by no shipment) | X | |
 | S69 | a merchant with `MaxSourceAge` 2 ships nothing on a stale rumour; one with the bound at its maximum ships and arrives without moving the price | O | |
 | S70 | the mode switches at the haul price the rule of `spec-merchants.md` 6.1 gives | O | |
+| S73 | tier S, no seeds, a world built in Go (WLD-S1): the admissions of each of 100 tied candidates under a cap of 5 over 1 000 ticks, as a share of its expected share; none below half or above twice it, a bound the keyed tie of `spec-world.md` 10.1.1 derives (O); with the lower ID first the first five take all admissions, the control (X); the nightly flag of STY-A4 reads L133 | O, X | none, **reported, no band**: the half and the twice are WLD's derived bound and not a measured band, so no run sets them |
+| S74 | tier S, no seeds (WLD-S2): the reviews per tick of 1 000 and of 5 000 agents at periods 10 and 30 over every stride of 1 to 31 and three starting IDs; no tick above `ceil(1.2 * n / P)` (O, `spec-world.md` 9.1.1); below about a thousand agents the load is **reported** and no bound is claimed | O, R | none, **reported, no band**: the 1.2 is the rule's own bound with its derivation in `spec-world.md` 9.1.1, and the small-group burst is a property of the period (L119) |
+| S75 | the warm leg is STY-H04 (`s17.spike_factor`, `s17.control_gap_bp`) as for S18; the cold leg, tier G, is **R**: the completions per tick of the first 40 ticks of a chain with a `Duration` 10 recipe without the warm start, a pulse that is measured and recorded; the warning `cold_start_lockstep` is raised for the cold run (exact); R7 reads the same series and is not asserted here | X, R | none, **reported, no band** for the cold leg: the pulse is the design of a cold start (L22) and a band on it would assert a property that the library has by construction; the warm leg's keys are STY-H04's |
+| S76 | tier S for the unit model and tier G for the two runs of `one` that differ by one draw in the first tick (WLD-S4): the share of later draws that differ is **reported** (the model gives 98.0% for one stream and 2.0% for a stream per tick); a paired comparison is claimed only for a change that moves no draw count (L120, L124) | R | none, **reported, no band**: the share is a property of one positional stream (`spec-world.md` 7.6) and is read by EXP's paired designs (`spec-experiments.md` 7) |
+| S79 | STY-P01 (every published price inside the belief bounds, each tick) and STY-M02 (goods and money conserved each tick), both tier G and exact; the recovery of the shocked region's staple price is STY-S01's measure (the ten-tick mean back within `s01.band_bp` of `P0`, 5.3) after `SetYieldShocks` of 3 000 on the staple recipe of one region of `three` or `five` for `k` ticks, then cleared | X, B | `s79.recover_ticks` 365 (P): ticks after the shock clears; the staple job starts only in spring (REF 4.2), so a shock that clears after a spring shows in the harvest of the next one; no other basis |
+| S80 | STY-S03 (the gap opens while the edge is closed and closes after the reopening), tier N, with S28's two keys and no new one: the same fact on a pack of three or more regions; a consumer's rule that scales a flow from a published price shows in `MoneyFlowScaled` and in the flow's next tick (exact; it is not a claim that the rule is stable, L121) | O, X, B | `s28.band_bp`, `s28.reopen_ticks` (STY-S03's, 5.3) |
+| S81 | tier G, exact: the same seed, configuration and calls give the same state at every tick and the same events (the golden rendering of REF 8.5); two orders of calls on different keys give the same state; a run with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit (STY-M02) | X | none: an exact check, asserted whether or not a band exists (FR-REF-023) |
+| S82 | tier G, exact: the mailbox, the slots and `Agent` of the restored world equal the original's and the result equals an uninterrupted run (9.5, FR-STY-088); O: a non-mortal player at hunger stays and a mortal one is removed by a consumer's spawner | X, O | none: exact and ordinal checks, asserted whether or not a band exists |
+| S83 | tier G, exact: a `Relocate` of a household on a journey moves it and ends its journey (`Ended` counts it); one with an open contract is refused with `ErrRegionBound`; goods and money are conserved (STY-M02) | X | none: exact checks, asserted whether or not a band exists |
 
 A scenario that is **exact** is asserted whether or not any band exists
 (FR-REF-023), so STY has nothing to set for it. The scenarios that **expect a
 regime** (S14's deep depth, S27, S38, S40, S43) name it in their band table
 (6.4).
+
+**Scenarios of the class "harness test"** (S77, S78 and S84 to S90 of
+`spec-stability.md` 8; FR-STB-005) are outside this table and outside the coverage
+rule of FR-STY-098. Each is a test of a harness or of a procedure against a model of
+its own rules and asserts nothing about prices, households or money, so no fact of
+this spec holds it and no band exists for it; it is covered by a test in the spec that
+owns the harness (`spec-checkpoint.md` 15, `spec-experiments.md` 17,
+`spec-calibration.md` 11).
 
 ## 6. The failure regimes
 
@@ -1293,7 +1315,7 @@ basis points, a count in ticks or windows. `k` indexes the **year** windows coun
 | **R6** | cobweb blow-up (F6) | the `PriceRange` ratio of the **season** or **year** window exceeds `factor` and is above the previous window's by more than `growth_bp` in `windows` successive windows; **or** a role's `RoleShares` swing is at least `swing_bp` in two windows | `r6.factor` 30 000, `r6.growth_bp` 2 500, `r6.windows` 2, `r6.swing_bp` 1 000 (P) | L21, L36, L04, L58, L61, L84, L85, L93, L97, L100, L107 to L109 |
 | **R7** | synchronisation, lockstep (F7) | the window's lowest `Dispersion` of a market is below `disp_bp`; **or** in one-tick windows of the first `first_ticks` ticks the completions of a recipe on one tick exceed `spike_factor / 10 000` times their mean | `r7.disp_bp` 50, `r7.spike_factor` 20 000, `r7.first_ticks` 60 (P) | L13, L15, L22, L34, L35, L59, L92, L93 |
 | **R8** | offset (F8) | the absolute value of `Offset` of a market is at least `offset_bp` **and** the `Unfed` share of household-ticks of the window is at least `unmet_bp` | `r8.offset_bp` 3 000, `r8.unmet_bp` 3 000 (bp of household-ticks unfed, as `s01.unmet_bp`; P) | L02 |
-| **R9** | deflation with distress (**new**, proposed as F9) | `link_k` is at most `10 000 - fall_bp` in each of `windows` consecutive windows **and** the later window's `Turnover.Volume` is below the earlier's | `r9.fall_bp` 3 000, `r9.windows` 2 (P) | L70, L71 (a sink or a levy with no paired grant), L98; the floor of the reference band |
+| **R9** | deflation with distress (**new**, STB-F9) | `link_k` is at most `10 000 - fall_bp` in each of `windows` consecutive windows **and** the later window's `Turnover.Volume` is below the earlier's | `r9.fall_bp` 3 000, `r9.windows` 2 (P) | L70, L71 (a sink or a levy with no paired grant), L98; the floor of the reference band |
 
 Shared keys: `stale_max_bp` prior 1 000 and `active_min_bp` prior 5 000 (4.3),
 `min_windows` prior 3 (P).
@@ -1380,6 +1402,9 @@ unit   = "bp"
 A detector with an unset key returns `unknown` with the reason "threshold unset",
 and G01 reports it (so the suite runs before STY has data, as REF 7.1.5 intends).
 
+A calibration may use the priors of 6.2 as **labelled working thresholds**
+(`spec-calibration.md` 3.3 item 2): they are outside acceptance, a verdict that
+rests on one says so, and `unknown` for an unset key is unchanged.
 6.5.2. **The ordering rule.** A regime threshold is **looser** than the band of
 every fact it backs: for an upper bound the band is at most the threshold, for a
 lower bound at least. The pairs are `s07.freeze_ticks` against `r5.freeze_ticks`, `s03.pinned_ticks`
@@ -1525,7 +1550,9 @@ review (8.4), **and** that is also STABLE at the two neighbouring points of the
 default's knob on the grid CLB gives it. A default at the edge of the stable
 region is not stable: a one-step change of a knob that flips the verdict is a
 property of the default, and the neighbour rule is how it is seen
-(`spec-calibration.md` owns the grid; section 10).
+(`spec-calibration.md` owns the grid; section 10). A claim of stability says
+`in sample` unless REF provides a hold-out and the claim was checked on it
+(`spec-calibration.md` 7.4.2).
 
 7.3.2. The word **stable** is not used of a configuration in a spec, a doc
 comment, a log line or a release note outside this procedure; "no regime was
@@ -1581,8 +1608,9 @@ incomplete; each says so by staying unset.
 | **nightly** | 1 to 50 | the scheduled repeat (REF 8.2): the whole range |
 | **invariant** | the ranges of REF 7.5 (1 to 16 for `one`, 1 to 4 for `three`, `famine`, `second`, `one-demand`, 1 and 2 for `five`) | the X facts |
 | **configuration-only** | 1 to 4 on `second` | X4 (STY-P08) |
+| **search block** | 101 and up, 100 seeds each (CLB 7.1; outside every set of REF) | one choice of a calibration; never a band, never a gate assertion |
 
-REF fixes these sets (FR-REF-024, FR-REF-025) and this spec does not change them.
+REF fixes the sets above (FR-REF-024, FR-REF-025) and this spec does not change them; the search blocks are a calibration's own and lie outside every REF set, and the gate is never an input to a calibration's choice.
 The gate seeds lie inside the setting range, so a band set from 1 to 50 is not
 asserted out of sample by the gate: the gate catches a **change** of the code,
 not a band that does not generalise. What stands in for the hold-out in the meantime: (1) a calibration's own
@@ -1591,9 +1619,9 @@ up, confirm on 1 to 50; this protects a chosen point, not a band); (2) the verdi
 record's list of seeds outside a band and its recurrence flag across nightlies
 (8.3.2); (3) a later change of the code is what the gate sees. None of the three
 is out-of-sample evidence for a band. The honest cure is a hold-out set. The
-recommendation (an owed REF row, section 21, **not relied on**): REF 8.2 adds the
-seeds 51 to 60 as a hold-out that no band is set from, and FR-REF-024 says
-"set from 1 to 50, checked on 51 to 60". Until it exists the model's figure for a
+recommendation (REF 8.2, a SHOULD, **not relied on**): REF 8.2 adds the seeds 51 to 60
+as a hold-out that no band and no calibration choice is set from, and FR-REF-024
+stands as written. Until it is run the model's figure for a
 hold-out (16, `seeds.py` part C) is what a hold-out *would* give, not what the
 gate gives.
 
@@ -1874,7 +1902,7 @@ dampers (the owner is in the parameter-owner table of README):
 |-----------|---------|
 | **targets** | the bands whose keys are set (the version 1 criteria first, 8.1.1) and, for the rest, the observed values of the verdict record beside the prior |
 | **expected signs** | the register's expected effect of a knob on a fact, as the sign of the change of one preset field (IND 11.3): `CostFloor` up raises `Pinned.Share` and lowers `Turnover.Volume` (STB-L09; the cost-floor curve of `spec-stability.md` 6.2 run 5); `BeliefStep` up raises the oscillation of a price (STB-L04); `EntryShare` up raises the role-share swing (SPN 16.1); `RumourErrorBP` up widens the converged gap of P06 (INF 11.2); `BirthStake` down raises the money-limited bound `M / stake` (POP 5.5); `ProduceHaltRatio` down lowers the unsold stock (STB-L44). A measured sign against the expected one is a finding |
-| **the stop rule** | the procedure stops when the three checks of 7.1 are STABLE at the defaults and both neighbours for the shipped packs (7.3.1), not when one band is met, and the chosen point is **confirmed on seeds it was not chosen on** (EXP 4.6.4 and 12.4.2: another `Seed0`, which is the calibration's own hold-out; it is not the bands' hold-out, which REF's seed sets do not provide, 8.2) |
+| **the stop rule** | the procedure stops when the three checks of 7.1 are STABLE at the defaults and both neighbours for the shipped packs (7.3.1), not when one band is met, and the chosen point is **confirmed on seeds it was not chosen on** (EXP 4.6.4 and 12.4.2: another `Seed0`, which is the calibration's own separation of search and confirm; it is not the bands' hold-out, which REF's seed sets provide only as the recommendation of 8.2, so a claim says `in sample` unless REF has one, `spec-calibration.md` 7.4.2) |
 | **the blind spots** | a calibration targets a band **and** its blind-spot fields (4.3, IND-A2): a knob is not turned until a price index looks flat when `Stale` has risen |
 
 ### 10.3 The order in which bands are set
@@ -1942,7 +1970,7 @@ No rule is added to `spec-config.md`. The checks of this spec are checks of its
 | shape | a key with a `value` has an empty `set_by`, or a `set_by` that does not name a commit, a configuration hash and a seed set |
 | seeds | a `set_by` seed set is not REF's setting range (1 to 50, or 1 to 10 for tier L) or has fewer than 10 seeds |
 | ordering | a fact band is looser than the regime threshold it backs (6.5.2), or a regime threshold is set while its detector is recorded as not separating |
-| coverage | a scenario S01 to S72 (S15 excepted) has no row in 5.11 (FR-STB-005, both directions) |
+| coverage | a scenario S01 to S90 (S15 and the nine of the class "harness test" excepted) has no row in 5.11 (FR-STB-005, both directions) |
 | closed sets | a class, a confidence or a verdict class outside its set |
 
 `set_by` has the form `commit=<id>;config=<hash>;seeds=<a>-<b>`; no wall-clock
@@ -2017,8 +2045,8 @@ a test (6.5.3); the new entries are hazards of **method**, the way IND-A2 is.
   in more than a stated share of nightlies. *Test:* WLD-S1 and the nightly record.
   *Status:* hand.
 
-**New regime.** STY proposes **STB-F9, deflation with distress** (STY-R9, 6.3.1),
-with its threshold, its measure and its loops (L70, L71, L98), to be merged into
+**New regime.** STY added **STB-F9, deflation with distress** (STY-R9, 6.3.1),
+with its threshold, its measure and its loops (L70, L71, L98), and it is now in
 `spec-stability.md` 7. It adds no loop: it names a state of loops that exist.
 
 ## 16. What was run
@@ -2164,7 +2192,7 @@ N-043, N-054, the loops that decide what a band can claim.
 **New notes to add** (IDs are the supervisor's):
 
 1. *STB, REF, IND, OBS*: the failure regimes now have thresholds (`regimes.toml`);
-   a ninth regime, deflation with distress (F9), is proposed; the scenario bands
+   a ninth regime, deflation with distress (F9), is added to the register; the scenario bands
    have one home (STY 3.5, 5.11). Section 21 lists the edits.
 2. *CFG, POP, STY*: a pack with the population module on, no demand module and no
    faucet has no healthy start at the default schedules (C1); the warning
@@ -2277,7 +2305,7 @@ test asserts separately under the one ID.
 | FR-STY-095 | A stability check MUST be a conjunction as 7.1 states and MUST return STABLE, NOT STABLE or UNDETERMINED. |
 | FR-STY-096 | The word stable MUST be used of a default only under 7.3.1. |
 | FR-STY-097 | A default MUST have a stability record (7.3.3) before it is called stable. |
-| FR-STY-098 | Every scenario S01 to S72 except S15 MUST have a row in 5.11 holding its band or naming what it asserts. |
+| FR-STY-098 | Every scenario S01 to S90 except S15 and the nine of the class "harness test" (S77, S78, S84 to S90) MUST have a row in 5.11 holding its band or naming what it asserts. |
 
 ### Non-functional
 
@@ -2295,16 +2323,19 @@ test asserts separately under the one ID.
    if the quote does (`spec-external-sector.md` 6.7). Does EXT bound the quote to
    the band (D66's `FloorBP`, `CeilingBP`), or is the interval of STY-P01 widened
    for a pack with an outside? *Next step:* EXT.
-2. **The speed limit without the population module.** STY-S02 uses the
-   spawner's per-tick cap `ceil(Households * EntryShare / 10 000)` (FR-STB-029) as
-   the limit of regrowth by entry. Whether entry that replaces a leaver is under
-   that cap or has its own (`Renewal`, `EntryPoolShare`) is SPN's. *Next step:*
-   SPN confirms or gives the cap.
+2. **The speed limit without the population module.** Answered by SPN: like-for-like
+   replacement is not under the caps of SPN 6.3 (FR-SPN-022, 7.2), so the
+   per-tick cap `ceil(Households * EntryShare / 10 000)` is not the limit of regrowth.
+   STY-S02 uses `Renewal` times the leavers of the tick (SPN 7.1) and the funding
+   (`EntryPoolShare` of the pool per tick, SPN 8.2). No SPN edit.
+   *Next step:* none.
 3. **Where the detectors live for a consumer.** They are in `internal/verdict`
    here, so a consumer cannot call them; CLB's procedure is a consumer's loop
    (IND 11.3). *Next step:* CLB decides whether they join `indicator` (IND would
    gain a closed set of verdicts) or a public package; STY needs only that the
-   code is one.
+   code is one. Answered in part: CLB's open question 1 recommends a public
+   `verdict` package when the first consumer runs its own calibration; the
+   supervisor decides.
 4. **A healthy pack with a warning it expects.** `one-demand` expects
    `target_above_demand` (its ceiling is 1.32, below the target 1.5, REF 4.4.6).
    Is a pack that carries a warning by design "healthy" for G01? *Next step:*
@@ -2347,7 +2378,7 @@ recommendation.
 | File | Section | Change |
 |------|---------|--------|
 | `spec-stability.md` | 7 | add the row **STB-F9 deflation with distress** (measure: `PriceIndex.Fisher` link and `Turnover.Volume`; causes L70, L71, L98); replace "Thresholds are placeholders that STY sets." with a pointer to STY 6.2 and `bands/regimes.toml`; keep the meaning of F1 to F8 |
-| | 8 | in the scenario table, the "Asserts" bands of S01 to S72 point to STY 5.11 as their home; the rows keep their setup; open question 3 ("the thresholds of the regimes") is **closed** by STY 6 |
+| | 8 | in the scenario table, the "Asserts" bands of the scenarios of 5.11 (S01 to S90 but S15 and the harness tests) point to STY 5.11 as their home; the rows keep their setup; open question 3 ("the thresholds of the regimes") is **closed** by STY 6 |
 | | 11 | no parameter changes; the thresholds are test data |
 | `spec-reference-chain.md` | 4.1 | add to the layout `bands/regimes.toml` and `testdata/golden/stylised/<pack>.txt` |
 | | 7.1.5 | the band file shape gains `expects = [...]` per scenario table and the form `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"`; FR-REF-024 keeps "at least the seeds of 8.2"; STY adds nothing to it and relies on no change |
@@ -2384,7 +2415,7 @@ recommendation.
 | `spec-resources.md` | 19.4 | the bands of S41 to S45 are in STY 5.11 (S43's `s43.runway_bp`, S44's `s44.grant_band_bp`) |
 | `spec-skill-barriers.md` | FR-SKL-024, FR-SKL-025 | the historical premium range and the bands of S06 are STY-W04 and STY-D03 |
 | `spec-viability.md` (A) | 13.2 A1 | "within the STY band" is `a1.price_band_bp` of STY-H01 |
-| `spec-spawner.md` (A) | FR-SPN-021, 022 | confirm the per-tick cap that STY-S02 uses as the speed limit without the population module |
+| `spec-spawner.md` (A) | FR-SPN-021, 022 | **met, no SPN edit**: like-for-like replacement is not capped (FR-SPN-022), so STY-S02 uses `Renewal` times the leavers and the funding as the speed limit without the population module |
 | `spec-external-sector.md` (A) | 6.7, 13 | say whether a quote is bounded to the realm's reference band (open question 1) |
 | `spec-world.md` | 13 (STY row) | no change; STY relies on it as it stands |
 | `spec-checkpoint.md` | 11 (STY) | no change; STY-H uses FR-CHK-050 |

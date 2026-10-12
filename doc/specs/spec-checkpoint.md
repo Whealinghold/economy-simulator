@@ -94,7 +94,9 @@ Out of scope, with the owner:
 type Checkpoint struct{ /* unexported: the encoded bytes */ }
 
 // Checkpoint returns the checkpoint of the world. It changes no state and draws no
-// random number. It returns ErrWorldFailed on a failed world and ErrInStep inside a step.
+// random number. It returns ErrWorldFailed on a failed world, ErrInStep inside a step
+// and, on a healthy world, ErrCheckpointExtension wrapping the error of an extension
+// whose SaveState failed.
 func (w *World) Checkpoint() (Checkpoint, error)
 
 // RestoreWorld builds a new world from the configuration and a checkpoint taken from a
@@ -110,6 +112,13 @@ func (c *Checkpoint) UnmarshalBinary(data []byte) error
 
 // Info reports what the frame says, before any configuration is chosen.
 func (c Checkpoint) Info() CheckpointInfo
+
+// Stream returns the state of the world's random source at the boundary: the 16 bytes
+// that follow the "pcg:" prefix of the 20 bytes of section 1. It decodes that one
+// section and returns ErrCheckpointCorrupt for a checkpoint whose section 1 is not
+// readable. Two worlds of one seed and one reseed have equal streams if and only
+// if they have drawn the same number of words (spec-experiments.md 7.3).
+func (c Checkpoint) Stream() ([16]byte, error)
 
 type CheckpointInfo struct {
 	Format     uint32   // the format version of the bytes
@@ -139,7 +148,11 @@ them whole; there are no struct tags in the core.
 3.1.2. **Why `Info`.** A consumer holding several packs chooses the configuration to
 restore with by the hash, and wants the tick and the format before it builds a world.
 `Info` reads only the frame, so it is available after `UnmarshalBinary`, which has
-verified the digest.
+verified the digest. It has no error result and no section is decoded for it. The
+stream state of the random source, which `spec-experiments.md` 7.3.2 needs to pair
+two runs, is in section 1 and not in the frame, so it has its own accessor,
+`Stream`, which decodes that one section and has an error result (`Info`
+is unchanged).
 
 ### 3.2 When
 
@@ -231,18 +244,18 @@ default is **corrupt** (the one-spelling rule of 5.2, R10).
 |-----|---------|---------------------------|-----------------------------|--------------|
 | 1 | World | WLD 12 | the state of the PCG (20 bytes, `MarshalBinary`), the next agent ID, whether the world is still in its construction phase. The tick, the seed and the hash are in the header (5.4) | always |
 | 2 | Ledger | LED 11, 7.4, 3 | every account that is not a boundary, in ID order: kind, closed flag and, if open, its region, owner reference, money, lots (commodity, quantity, `Born` signed, durability) in canonical order; the balance of each boundary account (a count the configuration implies); the claims (a count, 0 in format 1); the **pending totals** (the flow totals, the wear units and the relocation totals that calls between ticks added since the last P8.6, sparse); and, when the world is in construction, the **construction bucket** in the same layout | always |
-| 3 | Agents | AGT 15; hosts `RoleSince` (SPN 14), `DeathCarry` (POP 3.8), `OwnUse` and `OwnUseJobs` (SUB 5.3), `Journey` (MIG 8.2) | the table of strategy names used by agents (sorted); for each agent in ascending ID: ID, account, role, weight, `External` and `Mortal`, strategy name index, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey (destination, arrival tick) if any, the directive (job request, intents, discards, holds, `Sticky`) if any; then the diagnostic run of consecutive unfed ticks per (region, role), sparse | always |
+| 3 | Agents | AGT 15; hosts `RoleSince` (SPN 14), `DeathCarry` (POP 3.8), `OwnUse` and `OwnUseJobs` (SUB 5.3), `Journey` (MIG 8.2) | the table of strategy names used by agents (sorted); for each agent in ascending ID: ID, account, role, weight, `External` and `Mortal`, strategy name index, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey (destination, arrival tick) if any, the directive if any (whether it carries a job request, since `Directive.Job` is a pointer, then the job request if it does, the intents, discards, holds, `Sticky`); then the diagnostic run of consecutive unfed ticks per (region, role), sparse | always |
 | 4 | Markets | CLR 5.4, 5.5; BEL 7, 13; the report of INT 6.3 | for each (region, commodity) of a region that is not an outside node, region then commodity: the **market report of the last clearing**: the published price, the price age, the volume, the unmatched bid units and ask units, the best unmatched bid (present flag, price), the best unmatched ask (present flag, price); the price window (count, then the prices **oldest first**); and the diagnostic run `BoundRun` | always |
 | 5 | Beliefs | BEL 13 | for each agent in ascending ID and each commodity of its role's tradable set in `CommodityID` order: `Centre`, `Width` | always |
-| 6 | Production | PRO 15 | for each agent in ascending ID: whether it has a job and, if so, `Recipe`, `Remaining`, `Executions`, `Principal` (agent ID) and the pending quantity of each output in output order; its residues, one per (recipe of its role, output) in canonical order; then the yield shocks that are not 10 000 as (region, recipe, factor), sparse | always |
+| 6 | Production | PRO 15 | for each agent in ascending ID: whether it has a job and, if so, `Recipe`, `Remaining`, `Executions`, `Principal` (agent ID) and the pending quantity of each output in output order; its residues, one per (recipe of its role or of its effective own-use list, output) in canonical order; then the yield shocks that are not 10 000 as (region, recipe, factor), sparse | always |
 | 7 | Welfare | WEL 13 | for each agent in ascending ID: the records held, then each record **oldest first** (`income_t`, `cost_t`, relief, grant, own-use receipt, own-use household-ticks, working flag, working household-ticks), then the target ratio drawn at creation; then the diagnostic run per (region, role) of the `Warn` of WEL 11.3, sparse | always |
 | 8 | Estates | EST 2.7.5 | for each region in ascending `RegionID`: the current ask price of each lot the estate lists, by lot key (commodity, born, durability) in canonical order | always |
-| 9 | Spawner | SPN 14 | the renewal carry per (region, role), sparse; the run of ticks with unfunded entrants per region and the run of empty ticks per (region, role), sparse | always |
+| 9 | Spawner | SPN 14 | the renewal carry per (region, role), sparse; the run of ticks with unfunded entrants per region, the run of empty ticks per (region, role) and the run of ticks of "group below floor" per (region, role), sparse | always |
 | 10 | Skills | SKL 9 | the trainees (agent, trainer, target role, ticks served, application tick) and the trainers (agent, teaching accumulator, trainees) in ascending agent ID; the queue of applicants for each (region, role) that has one, in queue order, each entry (agent, application tick, ticks served) (sparse: an empty queue is not written); the `Warn` run, sparse. Empty when no role has `TrainingTicks` above 0 | always |
 | 11 | Regions | REG 11 | the edges whose status is not the default, in ascending (`From`, `To`): `Closed`, `FactorBP` | always |
 | 12 | Demand | DEM 12 | for each agent whose role has a ladder, in ascending ID: the carry of each taste row in ladder order; the diagnostic run per (region, role, want), sparse | `Modules.Demand` |
 | 13 | MoneySupply | MON 14 | per flow in ID order: `Total`, `Scale`, `Ended`; for each flow with a household target and a carry shape, the (account, carry) pairs in ascending account ID, open accounts only; for each flow with a pool target and a carry shape, one carry per region | `Modules.MoneySupply` |
-| 14 | Population | POP 11 | the birth carry per (region, role), sparse; the effective `BirthScale` and `DeathScale` per region when a shock set them, sparse; the two diagnostic runs, sparse | `Modules.Population` |
+| 14 | Population | POP 11 | the birth carry per (region, role), sparse; the effective `BirthScale` and `DeathScale` per region when a shock set them, sparse; the three diagnostic runs (births unfunded, deaths held, and "region extinct" per region), sparse | `Modules.Population` |
 | 15 | Resources | RES 15 | for each endowment with a configured capacity above 0, in (`RegionID`, `ResourceID`) order: `Stock`, `Carry`, `ExhaustedRun`; the shock scales that are not 10 000 as (region, resource, capacity, regeneration), sparse | `Modules.Resources` |
 | 16 | Information | INF 14 | for each source (region, commodity) in ascending order: the entries held (a count), each oldest first as `Price`, `Mean`, `Age` | `Modules.Information` |
 | 17 | Transport | TRN 14 | the next shipment ID; the shipments in flight in ID order, every field of `spec-transport.md` 5.2 (modes and regions by index, lines in commodity order); the transit factors that are not 10 000 as (from, to, mode, factor), sparse | `Modules.Transport` |
@@ -315,7 +328,7 @@ parameter registry test does for configuration fields.
 
 | Spec | Derived (rebuilt at restore, or recomputed each tick) |
 |------|--------------------------------------------------------|
-| CAL | the moment of a tick, `TicksPerYear`, the day-of-year table (`spec-calendar.md` 6.5) |
+| CAL | the moment of a tick, `TicksPerYear`, the day-of-year table (`spec-calendar.md` 4 and 12) |
 | REG | `RegionID` and `EdgeID`, the distance, next-hop and component tables, the adjacency lists, the resolved override arrays, the lists of the agents of a region |
 | LED | the earliest-expiry hint of each account (recomputed from the lots), the free lists of the Transit and Escrow accounts (an account no shipment or contract names), the derived account index of each pseudo-agent |
 | AGT | the effective upkeep, the tradable sets, targets, budgets, views, plans, the planned recipe and the work share |
@@ -409,7 +422,7 @@ because the decoder, the fuzz test and the golden digest all depend on them.
 | R9 | **Order**: each sequence has the order 4.2 states. A sequence keyed by an ID is **strictly ascending**: a duplicate or a descent is corrupt. A positional sequence (the beliefs of an agent in `CommodityID` order) has the length the configuration implies |
 | R10 | **One spelling**: a sparse row (4.1.4) equal to its default is corrupt; a count that 4.1.3 implies is never written; a field of a module that is off is not written (the module's section is absent), **except** the fields hosted in the agent record and in a welfare record, which are written always. Of these, `OwnUse`, `OwnUseJobs` and the welfare own-use receipt and own-use household-tick fields must be 0 when `Modules.Subsistence` is off, and the journey must be absent when `Modules.Migration` is off (a non-zero value then is corrupt); `DeathCarry` (`offset(ID)` at creation, `spec-population.md` FR-POP-010) and `RoleSince` (the creation tick, `spec-spawner.md` 7.4) are **always** written with their owners' values whatever modules are on, and `Privation`, `Unfed` and `Hunger` are core fields with no module condition |
 | R11 | **No other bytes**: no padding, no alignment, no reserved field, no trailing byte inside a section or after the trailer |
-| R12 | **No maps, floats, pointers, functions, timestamps, host or build identity** (architecture.md 3.5, 4.1, 12.4) |
+| R12 | **No maps, floats, pointers, functions, timestamps, host or build identity** (architecture.md 3.5, 12.4; observability-and-logging.md 4.1) |
 | R13 | **Value bounds**: every value is within the range its owning spec gives (a non-boundary balance in `[0, MaxMoney]`, a quantity in `[1, MaxQuantity]`, a basis-point factor within its bound, a tick that is at least 0 where the spec says so). A value outside is corrupt |
 
 5.2.1. **Why the minimal-form rule is stated.** `binary.Uvarint` of the standard
@@ -441,9 +454,8 @@ error names the tag (6.3).
 has no optional section and no unknown tag. The length lets a decoder fail at the
 section that is wrong and lets a human find it. A future format that wants forward
 compatibility changes the format version (9.1). Section 22 is therefore mandatory when
-`Modules.Information` is on, whatever INT 13.2 says of a restore "without" the rumours:
-it is saved so that `Agent` answers as the original did (FR-CHK-052), and INT 13.2 is
-edited to say so (20).
+`Modules.Information` is on: it is saved so that `Agent` answers as the original did
+(FR-CHK-052), as INT 13.2 says.
 
 5.3.3. A tag is assigned once and never reused. A new section takes the next number and
 a new format version; a section that is dropped leaves its number unused.
@@ -583,7 +595,7 @@ or hashes) and is built with `%w`.
 | `ErrCheckpointVersion` | the format version is not one this library reads. It carries the version read and the supported range | 1 |
 | `ErrCheckpointCorrupt` | the bytes are not a checkpoint: too short, wrong magic, wrong digest, a non-minimal or overflowing varint, a count or length larger than the input, a bad boolean or enum, an unsorted or duplicated key, a value outside its bound, a section that ends early or runs over, an unexpected tag, a dangling reference, a failed cross-check, a failed audit | 1, 6, 7, 8, 10 |
 | `ErrCheckpointConfig` | the configuration's hash is not the checkpoint's. It carries both hashes and the encoding version | 3 |
-| `ErrCheckpointExtension` | an extension does not match: a saved name that is not registered or not `Stateful`, a registered `Stateful` extension with no saved entry, a kind that differs, a version the extension refuses, a `LoadState` error | 4, 11 |
+| `ErrCheckpointExtension` | an extension does not match: a saved name that is not registered or not `Stateful`, a registered `Stateful` extension with no saved entry, a kind that differs, a version the extension refuses, a `LoadState` error | 4, 11; and `Checkpoint` on a healthy world when a `SaveState` returned an error, which it wraps (3.2.2) |
 | `ErrOptionContext` | an option that is not valid in this call: `WithSeed` on a restore, `WithReseed` on `NewWorld` | 2 |
 | `ErrWorldFailed`, `ErrInStep` | `Checkpoint` on a failed world or inside a step (`spec-world.md` 15.1) | |
 
@@ -1120,10 +1132,10 @@ Stated as guarantees and asks on the surface of this spec.
 
 | To | Guarantee or request |
 |----|----------------------|
-| **EXP** | (1) `RestoreWorld` builds a **new** world that shares nothing with the checkpoint's source, so a harness may restore many worlds from one `Checkpoint` and step them on separate goroutines (`spec-world.md` 3.1.1). (2) **Branching** is checkpoint once, restore many: the cost of a branch is a restore (10.3), cheaper than a construction with a warm-start solve (`spec-viability.md`). (3) Two restores of one checkpoint continue **identically** given the same calls, so a paired comparison (same randomness, one parameter or shock differing) is valid when the difference moves no draw count (WLD-A5, `spec-world.md` 7.6). (4) For **independent** continuations from one state the harness passes `WithReseed(salt)` with a different salt per branch: deterministic, so a run is reproducible from (checkpoint, salt, calls). (5) A **cloned** world is `RestoreWorld(cfg, w.Checkpoint())`; there is no in-memory clone (open question 2 of 20). (6) A stateful extension is **one instance per world** (7.2 item 6): the harness registers a new instance for each branch; a shared one corrupts the others. (7) The key of a result is (`Info().ConfigHash`, the digest of the trailer, the salt) |
+| **EXP** | (1) `RestoreWorld` builds a **new** world that shares nothing with the checkpoint's source, so a harness may restore many worlds from one `Checkpoint` and step them on separate goroutines (`spec-world.md` 3.1.1). (2) **Branching** is checkpoint once, restore many: the cost of a branch is a restore (10.3), cheaper than a construction with a warm-start solve (`spec-viability.md`). (3) Two restores of one checkpoint continue **identically** given the same calls, so a paired comparison (same randomness, one parameter or shock differing; two restores of one checkpoint share the configuration, so a differing parameter is not a case between two restores: it would be `ErrCheckpointConfig`, 6.2.1, and the difference is a shock or a call) is exact when the difference moves no draw count (WLD-A5, `spec-world.md` 7.6). (4) For **independent** continuations from one state the harness passes `WithReseed(salt)` with a different salt per branch: deterministic, so a run is reproducible from (checkpoint, salt, calls). (5) A **cloned** world is `RestoreWorld(cfg, w.Checkpoint())`; there is no in-memory clone (open question 2 of 20). (6) A stateful extension is **one instance per world** (7.2 item 6): the harness registers a new instance for each branch; a shared one corrupts the others. (7) The key of a result is (`Info().ConfigHash`, the digest of the trailer, the salt) |
 | **INT** | (1) The names are `World.Checkpoint`, `Checkpoint` (with `MarshalBinary`, `AppendBinary`, `UnmarshalBinary`, `Info`) and `RestoreWorld`; INT lists them in its surface and adds no second path. (2) `Checkpoint` is a **read** (WLD 3.7.1): it changes nothing, draws nothing and is refused with `ErrInStep` inside a step. (3) The **sequence of calls** is not saved (INT 9.2): a restored world has no history of calls, and a consumer that wants a replay log keeps one. (4) What a restored world answers (`Slots`, `Agent`, `Direct`, `Market`, `Region`) equals the original's at the same boundary (FR-CHK-052); INT's one piece of state, the rumours of the last view of an external agent, is section 22. (5) A restore **before the first step** keeps the construction phase (6.7.2), so INT 3.1.1 holds for a restored world. (6) An external agent's strategy name is checked at restore (6.2 step 4) |
 | **OBS** | (1) A restore emits `WorldRestored` as its first event with the snapshot at the restored boundary (OBS 4.4.5), and **no** `AgentSpawned`, `AgentBankrupted` or `BoundaryFlow` for the past. (2) A snapshot is a function of the checkpoint and the configuration (OBS 5.2.1), which this inventory makes testable: every field of a snapshot is derivable from the sections of 4.2 (FR-CHK-053). (3) `Checkpoint` emits no event (OBS 4.4.7: a read emits nothing), so reading cannot change the stream; a `Debug` line "checkpoint taken" with `tick` and `bytes` is the only trace. (4) Two log keys are new: `format` and `bytes` (14). (5) The adapter's instruments fed by deltas start from the levels of the event, not from zero (OBS 6.4) |
-| **STY, IND** | (1) A run split by a restore is **the same run**: the indicators and the stylised-fact tests may take a checkpoint anywhere without changing a measure (FR-CHK-050). (2) Events are not repeated across a restore, so an indicator that accumulates must carry its own state through the boundary or rebuild it from the snapshot. (3) The digest of the trailer is the golden check of a state (8.3) |
+| **STY, IND** | (1) A run split by a restore is **the same run**: the indicators and the stylised-fact tests may take a checkpoint anywhere without changing a measure (FR-CHK-050). (2) Events are not repeated across a restore, so an indicator that accumulates keeps its tally as the consumer's plain value (`spec-indicators.md` 10.5): it survives a restore as it is, and a consumer that lost it opens a new one at `WorldRestored` (IND 10.5.2). (3) The digest of the trailer is the golden check of a state (8.3) |
 | **WLD, CFG, LED** | the edits of section 20, in particular: the construction flag and bucket, the audit baseline, the hash version in the header, `ErrOptionContext` and `WithReseed` in the options table |
 
 ## 12. Parameters
@@ -1181,7 +1193,7 @@ observability-and-logging.md 3.3.2:
 | `Debug` | "checkpoint taken" | `tick`, `bytes` | once per `Checkpoint`, guarded by `Enabled` |
 
 Two **new keys** (to add to table 3.3.2 in the change that introduces them, as the rule
-says): `format` (the format version, `int64`) and `bytes` (a count of bytes, `int64`).
+says): `format` (the format version, logged as `slog.Int64(int64(f))`) and `bytes` (a count of bytes, `int64`).
 The errors of a restore are returned and not logged (architecture.md 8.3), and nothing
 at `Info` or above is emitted inside a step. A checkpoint of a failed world is an error
 return and no line.
@@ -1290,7 +1302,7 @@ Rejected as corrupt (R1): `80 00` (zero in two bytes), `81 80 00` (one in three)
 
 ### 17.2 The world section of an example construction
 
-`spec-world.md` 19.1: seed 0, three regions and seven household agents (IDs 4 to 10),
+`spec-world.md` 19.1 (which states no seed; this example takes seed 0): three regions and seven household agents (IDs 4 to 10),
 14 words taken at construction, so the PCG has taken 14 words and the next agent ID is 11.
 The world has not stepped, so the construction flag is set. The state of the PCG after
 14 words of seed 0 is `70 63 67 3a 8e3e6b7eff8db56c b58e6a2f88e0bbfa` (the next word is
@@ -1398,11 +1410,11 @@ no default or bound of its own.
 | ID | Requirement |
 |----|-------------|
 | FR-CHK-001 | `World.Checkpoint` MUST return a `Checkpoint` holding the canonical encoding of the complete state of the world at the boundary, and MUST change no state, draw no random number and emit no event (3.1, 3.2). |
-| FR-CHK-002 | `Checkpoint` MUST return `ErrWorldFailed` on a failed world and `ErrInStep` inside a step, and MUST succeed on a healthy world between ticks, including before the first `Step` (3.2). |
+| FR-CHK-002 | `Checkpoint` MUST return `ErrWorldFailed` on a failed world and `ErrInStep` inside a step, MUST return `ErrCheckpointExtension` wrapping the error of an extension whose `SaveState` failed, and MUST succeed otherwise on a healthy world between ticks, including before the first `Step` (3.2). |
 | FR-CHK-003 | `MarshalBinary` and `AppendBinary` MUST return a copy, `UnmarshalBinary` MUST copy its argument, and a `Checkpoint` MUST be immutable, readable from other goroutines and usable for any number of restores (3.3). |
 | FR-CHK-004 | Equal states MUST give equal bytes: two checkpoints of one world at one boundary, and checkpoints of two worlds built from the same configuration, seed and sequence of calls, MUST be byte-equal. |
 | FR-CHK-005 | If `RestoreWorld` without `WithReseed` accepts a `Checkpoint`, a `Checkpoint()` of the world it returns, taken at once, MUST be byte-equal to it (6.6.3). |
-| FR-CHK-006 | `UnmarshalBinary` MUST check the magic, then the format (`ErrCheckpointVersion` before the digest is looked at), then the digest and the header ranges (`ErrCheckpointCorrupt`), and `Info` MUST report the format, the configuration hash, the tick, the seed and the length (5.1, 6.2 step 1). |
+| FR-CHK-006 | `UnmarshalBinary` MUST check the magic, then the format (`ErrCheckpointVersion` before the digest is looked at), then the digest and the header ranges (`ErrCheckpointCorrupt`), and `Info` MUST report the format, the configuration hash, the tick, the seed and the length (5.1, 6.2 step 1), with no error result, and `Stream` MUST return the 16 bytes after the `"pcg:"` prefix of section 1 (3.1.2). |
 | FR-CHK-007 | A checkpoint MUST NOT contain the configuration, the options, an observer, the logger, the code of an extension, or an event (3.5). |
 | FR-CHK-008 | The sections MUST be written in the tag order of 4.2, the set present MUST be a function of the configuration, an unexpected or missing tag MUST be corrupt, and every section MUST be consumed exactly (4.2.1, 5.3). |
 | FR-CHK-009 | The frame MUST be the magic, the format, the hash version, the configuration hash, the tick, the seed, the sections and a trailer of the SHA-256 of every byte before it, and nothing else (5.1, 5.4). |
@@ -1429,7 +1441,7 @@ no default or bound of its own.
 | FR-CHK-029 | `LoadState` of the extensions MUST be called only after every other step has succeeded, once per extension, in (kind, name) order (6.2.1). |
 | FR-CHK-030 | `Stateful` MUST be optional, MUST have the two methods of 7.1, and MUST apply to `Strategy`, `Spawner` and `Clearing` and never to `Observer` (7.1). |
 | FR-CHK-031 | Section 23 MUST hold, for every registered `Stateful` extension used or not, one entry (kind, name, version, bytes) in (kind, name) order, and none for one that is not `Stateful` (7.3.1). |
-| FR-CHK-032 | `SaveState` MUST be called once per extension per `Checkpoint` and `LoadState` once per restore, only between ticks, never inside a step (7.2 item 1). |
+| FR-CHK-032 | `SaveState` MUST be called once per extension per `Checkpoint` and `LoadState` once per restore, only between ticks, never inside a step (7.2 item 1); an error of `SaveState` fails the `Checkpoint` with `ErrCheckpointExtension` wrapping it (3.2.2). |
 | FR-CHK-033 | The world MUST copy the bytes `SaveState` returns before `Checkpoint` returns, and MUST pass `LoadState` a slice valid for the call only (7.2 items 2 and 3). |
 | FR-CHK-034 | The world MUST pass the version it read to `LoadState` and compare it with nothing itself (7.4.1). |
 | FR-CHK-035 | `Directed` MUST implement `Stateful` by delegating to its fallback when that is `Stateful` and by saving nothing otherwise (7.5). |

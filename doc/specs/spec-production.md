@@ -170,7 +170,8 @@ tick of labour, at the agent's belief centres) is `spec-agents.md` 7.1.4, not th
 spec's. Whether a resting agent (the target-income rule,
 `spec-welfare-and-wages.md` section 5) starts is the same decision, taken only when
 the agent has no active job (5.2): `Work` is not called for an agent that continued
-or completed a job in the tick.
+or completed a job in the tick, nor for one that is away, on a migration journey or
+teaching (`spec-world.md` P2.5).
 
 ### 4.2 How many executions
 
@@ -267,7 +268,7 @@ In each tick the production phase runs for each agent, in the order of 5.5:
 1. If the agent has an active job, it **continues**: `Remaining` falls by 1. If it
    reaches 0 the job **completes** in this phase (5.3). The agent cannot start
    another job in the tick it continued.
-2. Otherwise, the agent may **start** a job (section 4). With the resources module on, the starts of a tick are resolved in two passes, `Work` for every free agent and then the starts, with a ration of scarce endowments between them (5.5.1). The job starts with
+2. Otherwise, the agent may **start** a job (section 4). The starts of a tick are resolved in two passes whatever modules are on (`spec-world.md` P2.5 to P2.7, ruling C9): `Work` for every free agent and then the starts, with a ration of scarce endowments between them (5.5.1). The job starts with
    `Remaining` equal to its `Duration`, and then takes this tick's step of (1): so a
    job of duration 1 starts and completes in the same phase, and a job of duration
    `d` started in tick `s` completes in the production phase of tick `s + d - 1`.
@@ -280,8 +281,10 @@ completion is available to the orders placed after the production phase.
 5.2.1. **Every tick of a job is a working tick.** The start tick, each tick in
 between and the completing tick count. `spec-welfare-and-wages.md` 4.3 now says so
 ("had a job in progress in the tick (started, continued or completed)"): the event
-comes once at the end of the job, so the root reads working ticks from the agent's
-job, not from the event (N-035). For a job of `k` executions the working
+comes once at the end of the job, so the root reads working ticks from a per-agent
+scratch set at P2.1 (continued or completed) and at P2.7 (started), not from the event
+and not from the job, which is cleared at completion before the record is pushed at P6.3
+(N-035; `spec-world.md` P6.3). For a job of `k` executions the working
 household-ticks of each tick are `k`.
 
 5.2.2. **A job is not interruptible by choice.** The target-income rule decides to
@@ -323,9 +326,9 @@ Nothing in the job is a ledger holding, so ending a job early moves no goods.
 | Event | What happens to the job | Reason in the event |
 |-------|-------------------------|---------------------|
 | The executor goes bankrupt or dies | The job is **abandoned**: no output is created. The estate takes the agent's goods as usual (`spec-estates.md` 2.1). | `agent_removed` |
-| The executor changes role | Abandoned. Production offers no way to carry a job across roles | `role_changed` |
+| The executor changes role, including a trainee at the completion of its traineeship | Abandoned. Production offers no way to carry a job across roles. At a completion the traineeship also ends, and this row, not the row of `principal_left`, applies: the order is `RecipeAbandoned` (`role_changed`), `TraineeshipCompleted`, then the `RoleChanged` it causes (`spec-world.md` 6.11) | `role_changed` |
 | The executor's account changes region (`spec-regions.md` 6) | Abandoned, since the sited recipe and the yield of the new region differ. A self-carried trip cannot start while a job is in progress (`spec-transport.md` 5.4, `job_in_progress`), so the case does not arise for a traveller; it does for a migrant: the migration module abandons the job in progress at the departure of the journey, with this reason, before the account changes region at the arrival (`spec-migration.md` 8.2). An own-use job (`spec-subsistence.md` 5.8) is abandoned the same way | `region_changed` |
-| The principal of a trainee's job leaves (the trainer dies or the traineeship ends) | Abandoned | `principal_left` |
+| The principal of a trainee's job leaves (the trainer is removed, or the traineeship ends without completing) | Abandoned. A trainer's removal abandons its trainees' jobs first, in ascending agent ID, before the trainer's own events (`spec-world.md` 6.11 item 8; `spec-observability.md` 4.4.8). A completion is not this row (see the row above) | `principal_left` |
 | The executor's weight falls from `w` to `w'` | Not abandoned. `Executions` becomes `min(k, w')` and each pending quantity is multiplied by the new `Executions` over the old, rounded down; the loss is not a ledger flow because the goods were never created | none (a `RecipeExecuted` shows the smaller output) |
 | The executor's weight rises | The job is unchanged; new households did not start it | none |
 | A checkpoint is taken | Nothing; the job is saved (section 15) | none |
@@ -346,7 +349,7 @@ the lowest IDs the whole endowment every tick, indefinitely. The rotation is
 deterministic and gives each agent the first turn equally often. It uses no random
 number.
 
-**Revised by `spec-resources.md` (wave 3).** The rotation orders the starts and no longer arbitrates a scarce endowment: it gave fairness only over a long run, and in a model a household of weight 1 was denied for a whole year at half supply (`spec-resources.md` 17.2). With the resources module on, the start phase is two-pass: (1) the stocks are snapshotted after the continuations and completions; (2) `Work` is called for every free agent and each request gets `k0`, the executions it could start ignoring draws; (3) for each endowment that some request draws on, in (`RegionID`, `ResourceID`) order, the requests are rationed in proportion to what they ask, leftovers by largest remainder then a stateless hash key of (tick, agent) (`spec-resources.md` 5.3); (4) the starts proceed in the rotation order, each with `k` the least of `k0` and the grants, taking its draws whole or not at all. With the module off, or for a recipe with no draw, nothing changes. The results of `Work` do not depend on the order of the calls (`spec-resources.md` FR-RES-015).
+**Revised by `spec-resources.md` (wave 3).** The rotation orders the starts and no longer arbitrates a scarce endowment: it gave fairness only over a long run, and in a model a household of weight 1 was denied for a whole year at half supply (`spec-resources.md` 17.2). The start phase is two-pass whatever modules are on (`spec-world.md` ruling C9): (1) the stocks are snapshotted after the continuations and completions; (2) `Work` is called for every free agent and each request gets `k0`, the executions it could start ignoring draws; (3) for each endowment that some request draws on, in (`RegionID`, `ResourceID`) order, the requests are rationed in proportion to what they ask, leftovers by largest remainder then a stateless hash key of (tick, agent) (`spec-resources.md` 5.3); (4) the starts proceed in the rotation order, each with `k` the least of `k0` and the grants, taking its draws whole or not at all. With the resources module off, or for a recipe with no draw, step (3) changes nothing and each request keeps its `k0`. The results of `Work` do not depend on the order of the calls (`spec-resources.md` FR-RES-015).
 
 5.5.2. Completion and continuation of jobs, for all agents, run before any
 starts, so a job that completes this tick cannot make an input available to a start
@@ -497,7 +500,11 @@ configuration of recipes, as in `spec-welfare-and-wages.md` 5.1), and sets every
 residue of the agent to it. Without the draw, every agent would start at residue 0
 and all would produce the same short and long years together, which would be a
 lockstep that the market has to absorb (N-014). The draw is made in agent-creation
-order, after the draws of other specs, in the order `spec-world.md` fixes.
+order, after the warm start is applied and after the agent's other creation draw (the
+target ratio, `spec-agents.md` 3.5.2), in the order `spec-world.md` fixes (D10); it is one
+source word of the world's draw (`spec-world.md` 7.2, ruling C8). A job created at
+construction from a warm start has its pending output computed with residue 0, and the
+agent's residues take the drawn value afterwards (ruling C4).
 
 6.6.3. The method is the same at every weight, 1 included. A cohort of weight `w`
 runs `k` up to `w` executions in one multiplication, so its cost is that of an agent
@@ -529,9 +536,9 @@ dies, its residue is dropped; the fraction of a unit it represents was never cre
 The world holds a list of **yield shocks**, each a region, a recipe and a
 basis-point multiplier (default 10 000, meaning none). A shock multiplies the site
 factor in 6.3. The failed harvest of the vision (section 2) is a shock of 3 000 on
-the crops of a region; its expiry is the integration spec's, which sets and clears
-shocks between ticks. Production owns the slot and the arithmetic; it never creates a
-shock. The list is saved in the checkpoint (section 15), sorted by region and recipe.
+the crops of a region; it has no expiry or timer: the public call is `SetYieldShocks`
+(`spec-integration.md` 5.2.2), the consumer sets and clears shocks between ticks. Production
+owns the slot and the arithmetic; it never creates a shock. The list is saved in the checkpoint (section 15), sorted by region and recipe.
 A shock multiplier is from 0 to `MaxYieldBP`.
 
 The yield shock is one of several **world slots set between ticks**, each state saved in the
@@ -553,7 +560,9 @@ exhaust. At completion it is created from the `recipe_output` boundary in the
 executor's account and at once moved to the `disposal` boundary, in one
 transform step. It never sits in inventory and never reaches a market. It is
 measured in the flow totals (`recipe_output` and `disposal`, by commodity), so an
-indicator can report waste produced, which is how a pollution measure would be built.
+indicator can report waste produced (`Disp` in `Written` and in the `Disposed` of the
+recipe table, `spec-indicators.md` 7.2.1), which is how a pollution measure would be built.
+Work in progress is `Pending` there.
 Its commodity needs a reference price like any commodity (`spec-goods.md` 6.3) but
 the price is never used.
 
@@ -615,7 +624,8 @@ whose yield is below it, so that both outcomes are tested.
 
 8.5. A trainee's job follows the same timing, weight and abandonment rules as any
 job (section 5). If the traineeship ends while a job is running, the job is abandoned
-(`principal_left`).
+(`principal_left`); at the completion of the traineeship it is abandoned with
+`role_changed`, the trainee changing role (5.4).
 
 ## 9. The production cost exposed to price beliefs
 
@@ -684,20 +694,19 @@ unknown wage (0) the flour's `unit_cost` is 0 as well.
 ### 9.3 The wage, and the cost anchor of a commodity in a region
 
 **The regional wage.** The wage per working tick of a region is the pooled observed
-wage of `spec-welfare-and-wages.md` 4.3: the sum, over the region's agents, of income
-minus relief over their windows, divided by the sum of their working household-ticks,
-as it stood at the end of the previous tick. It is the working-household-tick-weighted
-mean of the role wages, and per household whatever the weights. Income there already
+wage, which `spec-welfare-and-wages.md` 4.3 defines and owns: this spec has no formula
+of its own for it (the figure of 4.3 excludes relief, grants and own-use receipts and
+ticks), and it is read as it stood at the end of the previous tick. Income there already
 nets the money spent on inputs (cash) and the wear of tools (accrual)
 (`spec-welfare-and-wages.md` 2.1, 2.1.3, 2.1.4), so the observed wage is the return to
 labour and the cost of 9.1 counts inputs and wear once. The window is each agent's
 effective window, which is at least its longest job (2.3.3). The wage is 0 (unknown)
-while no agent of the region has a working household-tick in its window or when the
-pooled figure is not positive. Pooling over the region keeps one noisy agent from
-moving the anchor, and using the previous tick's value means that this tick's cost
-does not depend on this tick's prices, so there is no circle. A warm start may supply
-the starting wage (`spec-viability.md` 8; the handoff asks for it), used until the
-first working tick is observed.
+where `spec-welfare-and-wages.md` 4.3 says the pooled figure is unknown. Pooling over
+the region keeps one noisy agent from moving the anchor, and using the previous tick's
+value means that this tick's cost does not depend on this tick's prices, so there is no
+circle. A warm start may supply the starting wage (`spec-viability.md` 8), used whenever
+the pooled figure is unknown (a function of the welfare rings, not a latch;
+`spec-checkpoint.md` F5).
 
 The wage is the region's, not the role's: a skilled recipe is costed at the common
 wage, with the skill premium left to the tool wear and the market (open question 10).
@@ -1152,8 +1161,8 @@ parentheses. This spec owns the full field lists and fixes them:
 
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
-| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity), `EffectiveYield` in basis points |
-| `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
+| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity), `EffectiveYield` in basis points |
+| `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Region`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
 They carry no map, no pointer, and only identifiers and fixed-point values, and
 they are emitted after the transition (observability-and-logging.md 4.1, 4.4). No
@@ -1168,8 +1177,9 @@ started` with `agent`, `recipe` and `reason` from the set of 4.2, which includes
 `Info`. A `Warn`
 for the overflow rule of 5.3.2 (`recipe output disposed`, with `recipe`,
 `commodity`, `quantity`), at most one per recipe per tick, a bound that comes from
-the configuration (observability-and-logging.md 3.2.2). The reason constants are in
-`internal/logkeys`. The keys are existing ones (`recipe`, `agent`, `commodity`,
+the configuration (observability-and-logging.md 3.2.2). The reason constants are exported
+constants of the root package (`event.go`); `internal/logkeys` holds the key strings only.
+The keys are existing ones (`recipe`, `agent`, `commodity`,
 `quantity`, `reason`).
 
 14.3. **Snapshot.** Reports, per region and commodity, the quantity of **pending
@@ -1189,12 +1199,16 @@ sorted, with no maps:
 
 - for each agent, in agent ID order: its active job, if any (`Recipe`, `Remaining`,
   `Executions`, `Principal`, `Pending` quantities in output order), and its residues,
-  one per (recipe on its role's list, output item) in canonical order;
+  one per (recipe on its role's list or its effective own-use list, output item) in
+  canonical order (an own-use recipe is not on `Role.Recipes`, 3.3, and produces through the
+  same factor and residue);
 - the yield shocks, sorted by region and recipe.
 
 **Not saved**, because derived: the yield table (configuration), the cost anchors of
-9.3 (recomputed each tick), the season (a function of the tick), and the rotation
-offset of 5.5.1 (a function of the tick). The recipe list and its canonical order
+9.3 (recomputed each tick), the season (a function of the tick), the rotation
+offset of 5.5.1 (a function of the tick), and the count of pending quantities of a job,
+which is the number of its recipe's outputs. The layout and order are those of
+`spec-checkpoint.md` 4.2 tag 6. The recipe list and its canonical order
 come from the configuration, whose hash a restore checks. A restored world completes
 its jobs on the same ticks and produces the same quantities as an uninterrupted
 one (FR-PRO-043).
@@ -1283,7 +1297,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-023 | The yield shock of a region and recipe MUST default to 10 000, MUST multiply the site factor, MUST be from 0 to `MaxYieldBP`, and MUST be saved in the checkpoint. |
 | FR-PRO-024 | The quantity of an output created by a job of `k` executions MUST be `(k * q * E + residue) / 10 000` and the residue MUST become the remainder of that division, computed with checked 128-bit arithmetic. |
 | FR-PRO-025 | Over any number of jobs at a constant effective factor `E`, the total output MUST differ from `k * q * E / 10 000` per job by less than one unit, at every weight including 1. |
-| FR-PRO-026 | When an agent is created the world MUST draw exactly one integer in [0, 10 000) from its random source, whatever its recipes, and set every residue of the agent to it, and production MUST use no other random number. |
+| FR-PRO-026 | When an agent is created the world MUST draw exactly one integer in [0, 10 000) from its random source (one source word, `spec-world.md` ruling C8), after the warm start and after the agent's target-ratio draw, whatever its recipes, and set every residue of the agent to it, and production MUST use no other random number; the pending output of a job created at construction from a warm start MUST use residue 0 (ruling C4). |
 | FR-PRO-027 | A job's start MUST take `k` times each draw quantity from the region's endowment through the all-or-nothing take of `spec-resources.md` 5.1 (`TakeEndowment`, internal), and production MUST NOT create or restore an endowment. |
 | FR-PRO-028 | A recipe with a yield profile MUST need no second recipe for another region or season: a recipe MUST run in a new region, or stop running in one, by a change of the yield table alone. |
 | FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete. |
@@ -1304,7 +1318,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-044 | A recipe with a yield below 10 000 for a job MUST NOT create or destroy goods outside the `recipe_input`, `recipe_output`, `disposal` and `wear` flows. |
 | FR-PRO-045 | Goods MUST be conserved except by those flows after every tick of a run that contains multi-tick jobs and abandoned jobs, checked by audit. |
 | FR-PRO-046 | The two example packs of section 12, completed with the elided commodities and with their sources (`gather_seed`, `salvage`), MUST load, validate, pass the viability checks V1 to V4 of `spec-viability.md` (V1 included: a cycle with no source outside it is rejected, `unproducible_in_realm`; `lambda*` of at least 1 with every household working every tick) and run for a stated number of ticks with the invariants of testing.md 6.3 holding, with no Go code specific to either; that the run reaches a stable state is the claim of `spec-stylised-facts.md`, not of this requirement. |
-| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the sum over the region's agents of income minus relief over their windows, divided by the sum of their working household-ticks (`spec-welfare-and-wages.md` 4.3; own-use receipts and ticks excluded), as it stood at the end of the previous tick, and MUST be 0 when there is no working household-tick or the pooled figure is not positive. |
+| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the pooled observed wage as `spec-welfare-and-wages.md` 4.3 defines it (the definition and the cases in which it is unknown are that spec's: FR-WEL-018, FR-WEL-020), as it stood at the end of the previous tick, and MUST be 0 when that wage is unknown. |
 | FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
 | FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
 | FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
@@ -1372,4 +1386,4 @@ Still open:
 | The job, the residues and the production phase | root package, `agent.go` and `world.go`, calling `internal/production` and `internal/ledger` inline |
 | The reason `disposal` | `internal/ledger` registry (`spec-ledger.md` 7.2) |
 | The events `RecipeExecuted` (extended) and `RecipeAbandoned` | root package, `event.go` |
-| Reason constants for refused starts | `internal/logkeys` |
+| Reason constants for refused starts | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |

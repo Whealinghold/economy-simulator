@@ -308,15 +308,16 @@ MaxTicksPerYear` (`spec-config.md` 4.1). Every sum is checked.
 ### 4.1 When it runs and what it hands over
 
 In the entry-and-exit phase (`spec-agents.md` 4, phase 7), for each region in region
-order, after the world has updated `Privation` and before `Decide` (`spec-spawner.md`
-10.2): the module computes, from the state at the start of the phase,
+order, after the `Privation` that P6.1 set and before `Decide` (`spec-spawner.md` 10.2):
+the module computes, from the state at P7.1(b) of the region (`spec-world.md` 6.9: after
+the completions of traineeships of step (a), whose role changes it therefore sees, and
+before any removal, switch or entry of the step),
 
 - per agent, `PopDeaths`: the households to remove, `n_a` of 3.8.1 after the floor of
   4.4;
 - per role, `PopBirths`: the households to add, `births_r` of 3.8.2 after the cap of 4.4.
 
-and puts them in the spawner's view (`spec-spawner.md` 3.2, as changed by C1 in the
-handoff). The default spawner executes them (4.8). A consumer's spawner may ignore them;
+and puts them in the spawner's view (`spec-spawner.md` 3.2). The default spawner executes them (4.8). A consumer's spawner may ignore them;
 the carries have already advanced, so a number it ignores is not carried over. The
 computation draws nothing, and its cost is proportional to the agents of the region
 (NFR-POP-002).
@@ -729,8 +730,10 @@ A shock that changes the death rate (a disease, or any hazard that is
 not a lack of food) acts through the region's `DeathScale`; one that changes births
 through `BirthScale`. Each is a multiplier the consumer sets between ticks and clears, in
 the way the yield shock is (`spec-production.md` 6.8): the effective scale is world state
-(saved, 11), and the configured value is its default. INT owns the call that sets it
-(`spec-integration.md`); this spec owns the fields and their effect. A shock that removes
+(saved, 11), and the configured value is its default (an unset scale is the configured
+value, not 10 000: FR-POP-039). INT owns the calls that set them, `SetBirthScales` and
+`SetDeathScales`, each over a list of `RegionScale{Region; BP}` (`spec-integration.md` 5.1);
+this spec owns the fields and their effect, and each change is the event `PopulationScaled`. A shock that removes
 households at once (a battle, a flood) is a consumer call of the spawner's kind, with
 cause `consumer` (`spec-spawner.md` 3.3), and is not a schedule.
 
@@ -834,7 +837,7 @@ Never fail validation (`spec-config.md` 7.2).
 | `no_fixed_factor` | no recipe draws on an endowment whose maximum flow can bind (the households at which the draw equals the sustainable draw, `spec-resources.md` 8.2, 11.3, below the census's households times a stated margin) and no region has a `HouseholdCap` (5.2). Before RES this was true of every pack; the margin is open (below) |
 | `population_without_upkeep` | no role has an upkeep (the `no_upkeep` case of `spec-agents.md` 13): the module is inert |
 
-The informational diagnostics `replacement_ratio` (5.7) and `renewal_ignored` (4.6.1) never fail validation. `replacement_ratio` names `r*` and the knot segment it
+The informational diagnostics `replacement_ratio` (5.7) and `renewal_ignored` (4.6.1) never fail validation. A warning never fails validation, but the **acceptance** of a pack by `spec-stylised-facts.md` reads `replacement_above_closed_ceiling` as a rejection of the pack for a scenario that expects a healthy start (STY C1: with the population module on, no demand module and no faucet, the default schedules have no healthy start). `replacement_ratio` names `r*` and the knot segment it
 lies on, once at validation, and never fails.
 
 ## 10. Observability
@@ -869,7 +872,10 @@ reductions. The household count is still rebuilt from `AgentSpawned`, `WeightCha
 is a `WeightChanged` with `Cause` `population`, a birth into an existing agent a
 `WeightChanged` with `Cause` `births`, a birth that makes a new agent an `AgentSpawned`,
 and a death that empties an agent an `AgentBankrupted` with `Cause` `population`
-(`spec-spawner.md` 13.1). `PopulationChanged` adds the aggregate and the counters of the
+(`spec-spawner.md` 13.1). A `WeightChanged` carries the money and the units of goods that
+the change moved, `Money` and `Units` (`spec-observability.md` 4.1.4), so the money that a
+birth takes from the pool as a stake and the money that a death returns to the estate are in
+the event of the operation as well as in `BoundaryFlow`. `PopulationChanged` adds the aggregate and the counters of the
 clamps, which no per-agent event can carry.
 
 ### 10.2 Metrics
@@ -889,8 +895,12 @@ tenth after:
 | Message | Condition | Attributes |
 |---------|-----------|------------|
 | "region extinct" | a region has no households | `region` |
-| "births unfunded" | births were due and the pool funded none for ten consecutive ticks | `region`, `births` (the due count of the last tick) |
-| "deaths held" | `MinHouseholds` held deaths for ten consecutive ticks in a group | `region`, `role`, `deaths` |
+| "births unfunded" | births were due and the pool funded none | `region`, `births` (the due count of the last tick) |
+| "deaths held" | `MinHouseholds` held deaths in a group | `region`, `role`, `deaths` |
+
+The three conditions are of pattern A (`spec-observability.md` 7.3): the line is emitted at
+the first tick of the condition and every tenth tick after it, as the header says, so the
+run of consecutive ticks of each condition is state (11).
 
 `Debug`, per region per tick, guarded by `Enabled`: "population step" with `region`,
 `births`, `deaths`. No `Info`, no `Error`. New log keys, added with the code
@@ -900,22 +910,27 @@ tenth after:
 
 Per region and role: the household-weighted mean annual birth rate and death rate at the
 agents' current ratios (basis points a year), their difference (the **natural
-increase** rate), the birth carry and the unfed households of the last tick. Per region:
-the pool balance (EST) and, if set, the cap. Per module: `r*` and the gain. These are
-measures; nothing reads them.
+increase** rate), the birth carry and the unfed households. The fields are
+`spec-observability.md`'s (5.3.4 and 5.3.10): the unfed households are `RoleRow.Unfed`, a
+state at the boundary, not a count of the last tick (the last tick's are in
+`PopulationChanged.Unfed`). Per region: the pool balance (EST) and, if set, the cap. Per
+module: `r*` and the gain. These are measures; nothing reads them.
 
 ## 11. State contributed to a checkpoint
 
 All plain data in a fixed order, no maps (ADR 0002):
 
-- per agent, in ID order: the **death carry** `carry_a`, an `int64` in `[0, D)`;
+- the **death carry** `carry_a` of each agent, an `int64` in `[0, D)`, is hosted in the agent
+  record and saved there, once (`spec-agents.md` 3.1, 15; `spec-checkpoint.md` 4.2 tag 3,
+  FR-CHK-041); this section does not list it again;
 - per (region, role), in ascending `RegionID` then role order (`spec-regions.md` 3.3.2): the **birth carry** `carry_r`, in
   `[0, D)`;
 - per region: the effective `BirthScale` and `DeathScale` when a shock has set them
   (INT's slot, 6.6);
-- per region: the run of consecutive ticks of unfunded births, and per (region, role) the
-  run of ticks of held deaths, for the two `Warn`s (diagnostic: they affect no result and
-  are saved so a resumed run logs as the original did).
+- per region: the run of consecutive ticks of a region with no households ("region
+  extinct") and the run of ticks of unfunded births, and per (region, role) the run of ticks
+  of held deaths: the three runs of the three `Warn`s of 10.3 (diagnostic: they affect no
+  result and are saved so a resumed run logs as the original did).
 
 Not saved: the exposed households, `PopBirths` and `PopDeaths` (recomputed each tick),
 `r*` and the gain (derived from the configuration). A world restored between ticks makes
@@ -1173,7 +1188,7 @@ generation lag, which would make POP-A1 oscillate, is not modelled (3.3).
 
 ### 14.4 Scenarios proposed
 
-Numbers are assigned by the register owner; `POP-Sn` stands for them. Wave 3: POP-S1 to POP-S4 (S37 to S40 in the register) may now use RES for the fixed factor; none has been run, and the caveat of every number here stands.
+Numbers are assigned by the register owner; `POP-Sn` stands for them. Wave 3: POP-S1 to POP-S4 (S37 to S40 in the register) may now use RES for the fixed factor; none has been run, and the caveat of every number here stands. The bands of S37 to S40 are those of `spec-stylised-facts.md`: STY-W02 (S37), STY-W03 (S38), STY-W06 (S39), and the keys of its 5.11 (`w06.money_cap_bp`, `s40.hunger_bp`); this spec states what each scenario asserts and STY sets the numbers.
 
 | ID | Scenario | Asserts | Entries |
 |----|----------|---------|---------|
@@ -1191,7 +1206,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-POP-001 | The module MUST be on if and only if `Config.Modules.Population` is non-nil, and with it off no event, state or log of this spec MUST exist and `Renewal` MUST keep the meaning of `spec-spawner.md` 7.1 (3.1). |
-| FR-POP-002 | The world MUST compute the module's births and deaths once per region per tick in the entry-and-exit phase, after the update of `Privation` and before `Decide`, regions in ascending `RegionID` order (`spec-regions.md` 3.3.2), roles in role order, agents in ID order (4.1). |
+| FR-POP-002 | The world MUST compute the module's births and deaths once per region per tick in the entry-and-exit phase, after the `Privation` that P6.1 set and before `Decide`, regions in ascending `RegionID` order (`spec-regions.md` 3.3.2), roles in role order, agents in ID order (4.1). |
 | FR-POP-003 | The signal of an agent MUST be its own welfare ratio (`spec-welfare-and-wages.md` 2.1, 2.2), and an agent whose ratio is absent MUST NOT be exposed, its households being counted as `NoRatio` (3.4). |
 | FR-POP-004 | A schedule MUST be evaluated by integer piecewise-linear interpolation, flat outside the first and last knots, with the increment truncated toward zero and the products checked (3.5.1). |
 | FR-POP-005 | The effective annual rate MUST be `min(10 000, trunc(schedule(ratio) * scale / 10 000))`, and a household whose rate is clamped MUST be counted as `RateClamped` (3.6). |
@@ -1224,7 +1239,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-POP-032 | `DeathsDone` MUST equal the households removed with cause `population` and `BirthsDone` the households added with cause `births`, in the same tick (10.1). |
 | FR-POP-033 | The `Warn`s "region extinct", "births unfunded" and "deaths held" MUST be bounded per region or role, emitted at the first tick and each tenth after, and carry the attributes of 10.3. |
 | FR-POP-034 | The snapshot MUST report per region and role the mean birth and death rates and the natural increase, and the module's `r*` and gain (10.4). |
-| FR-POP-035 | The death carries, the birth carries, the effective scales and the two diagnostic runs MUST be in the checkpoint in a fixed order, and a world restored between ticks MUST make the same births and deaths as an uninterrupted one (11). |
+| FR-POP-035 | The death carries (in the agent record, `spec-checkpoint.md` 4.2 tag 3), the birth carries, the effective scales and the three diagnostic runs MUST be in the checkpoint in a fixed order, and a world restored between ticks MUST make the same births and deaths as an uninterrupted one (11). |
 | FR-POP-036 | The module MUST draw nothing from the random source, and every ordering MUST end in a unique key and MUST NOT depend on map iteration (3.8.3, architecture.md 7.5, 7.6). |
 | FR-POP-037 | The household count rebuilt from `AgentSpawned`, `WeightChanged` and `AgentBankrupted` MUST equal the sum of the weights in every tick with the module on (4.7). |
 | FR-POP-038 | A region with no households MUST get no birth from the module and MUST emit the `Warn` "region extinct" (6.4). |
@@ -1314,8 +1329,9 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
    time from the same agent; a second agent of the same role and ratio has a different
    carry start (3.8.3). Whether the Weyl start spreads well for very large numbers of
    agents is untested. Next step: a test with 10^5 agents.
-8. **The shock call.** The call that sets `DeathScale` and `BirthScale` is INT's;
-   if INT prefers a different shape the fields stay and the call follows.
+8. **The shock call. (Answered.)** The calls are `SetBirthScales` and `SetDeathScales` of
+   `spec-integration.md` 5.1, each over `RegionScale{Region; BP}`; the fields stay and each
+   change is the event `PopulationScaled`.
 
 9. **The margin of `no_fixed_factor`.** 5.2 and 9.2 say an endowment "can bind" when `N_bind` is below the census's households times a stated margin; the margin is not stated. Next step: POP with VIA, from `Headroom` (`spec-resources.md` 11.3).
 
@@ -1332,7 +1348,8 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
 | Pure rules: the schedule interpolation, the effective rate, the carry, the offset, the replacement ratio and the gain test | `internal/population` (stdlib only, over primitive slices and indexes, converted inline at the call, architecture.md 2.9) |
 | The computation each tick, the views, the cap and the floor | root package, `world.go` and `spawner.go` (the view fields) |
 | The event `PopulationChanged` | root package, `event.go` |
-| Reason and cause constants (`births`, `deaths`, `population`) and the log keys `births`, `deaths` | `internal/logkeys` |
+| Reason and cause constants (`births`, `deaths`, `population`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
+| The log keys `births`, `deaths` (key strings only) | `internal/logkeys` |
 | The ledger reasons | `internal/ledger` registry (`spec-ledger.md` 7.2) |
 
 ```go

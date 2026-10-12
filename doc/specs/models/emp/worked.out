@@ -1,0 +1,29 @@
+== Example A: a river valley, a mill that hires hands (placeholders) ==
+value per execution 1400 input cost 450 net 950 bid per tick 950
+hand (no recipe, reservation 0): wage 475 employer's margin per execution 475
+positions: by stock 3 by cash 6 MaxHires 4 -> 3
+hands offering 5 hired 3 unmatched households 2 escrow 1425 miller's cash after formation 4575
+output created for the miller at P2.7 (d = 1): 6 flour; grain taken 9 ; wage paid 1425 ; refund 0
+a hired hand's ratio on a working tick: 15833 bp; days to reach a target of 15 000 in a 365-tick year: 346
+h* with E=1 miller, upkeep 2 units, a=2 flour:  2.0 hired households; places 4
+
+== Example B: a mining colony, a rig operator that hires crew (placeholders) ==
+value per execution 1600 charge 120 wear 40 net 1440 bid per tick 480
+crew with own alternative 60 -> wage per household-tick 270 ; an unskilled hand with reservation 0 -> wage 240
+escrow of one crew household for the job: 810 ; employer margin per execution: 630
+employer funds for one hire: True ( 1500 against 810 )
+wage released at s, s+1, s+2:  [270, 270, 270] ; completion at s+2 refunds 0
+weight 3 -> 2 after two ticks: paid 2160 of an escrow of 2430 refund 270
+
+== The reservation of a household with an own recipe (4.3.2) ==
+own recipe net 180 per 3 ticks -> reservation per tick 60
+
+== The closed form of section 11.2: hired households settle at h* (see circuit.py) ==
+phi  3000 SpendMaxShare     0  h* = 7.1 of 100 places
+phi  3000 SpendMaxShare  5000  h* = 42.9 of 100 places
+phi  5000 SpendMaxShare     0  h* = 10.0 of 100 places
+phi  5000 SpendMaxShare  5000  h* = 60.0 of 100 places
+phi  7500 SpendMaxShare     0  h* = 20.0 of 100 places
+phi  7500 SpendMaxShare  5000  h* = 100.0 of 100 places
+phi  9000 SpendMaxShare     0  h* = 50.0 of 100 places
+phi  9000 SpendMaxShare  5000  h* = 100.0 of 100 places

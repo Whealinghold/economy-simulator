@@ -1,4 +1,4 @@
-"""Every number of the worked examples of spec-calibration.md 19, asserted.
+"""The computed numbers of the worked examples of spec-calibration.md 19 (19.5 is a format example), asserted.
 
 Imports the other models of this folder. Invented settings, placeholder numbers
 (N-027). Run in Docker only (see grid.py).
@@ -20,7 +20,7 @@ assert grid.neighbours(lv, 7000)[:2] == (3500, 14000)
 lv = grid.geo_levels(200, 1, 2500)
 floor_ok = lambda v: -(-10000 // v) <= 96            # I01 at a cheapest price of 96
 assert [(v, -(-10000 // v)) for v in (50, 100, 200, 400)] == [(50, 200), (100, 100), (200, 50), (400, 25)]
-low, up, edges = grid.neighbours(lv, 200, floor_ok)
+low, up, edges, _ = grid.neighbours(lv, 200, floor_ok)
 assert (low, up, edges) == (None, 400, [("below", "rule")])
 
 lv = grid.geo_levels(50, 0, 10000)
@@ -30,7 +30,18 @@ lv = grid.lin_levels(4000, 1000, 0, 250 * 10000 // 365)                  # I05: 
 assert 250 * 10000 // 365 == 6849 and grid.neighbours(lv, 4000)[:2] == (3000, 5000)
 
 lv = grid.lin_levels(3, 1, 1, 1000)
-assert grid.neighbours(lv, 3, lambda v: v > 2) == (None, 4, [("below", "rule")])   # I07, EnterTicks 2
+assert grid.neighbours(lv, 3, lambda v: v > 2)[:3] == (None, 4, [("below", "rule")])   # I07, EnterTicks 2
+
+# 19.1 the cut and the z case (5.2): RestBand loses 0, TargetSpread keeps its base, a z row at 0 has no grid
+low, up, edges, kept = grid.build("lin250", 500, 0, 10000, off=0)
+assert (low, up) == (250, 750) and kept[:4] == [250, 500, 750, 1000]
+low, up, edges, kept = grid.build("lin250", 250, 0, 10000, off=0)
+assert (low, up, edges) == (None, 500, [("below", "off")])
+low, up, edges, kept = grid.build("lin500", 0, 0, 9999, off=0)
+assert (low, up, edges) == (None, 500, [("below", "bound")]) and kept[:3] == [0, 500, 1000]
+assert grid.build("geo", 0, 0, 10**15, z=True) is None
+low, up, edges, kept = grid.build("geo", 8000, 1, 10**15, z=True)
+assert kept[kept.index(8000) - 2: kept.index(8000) + 3] == [2000, 4000, 8000, 16000, 32000]
 
 # 19.2 a screen -------------------------------------------------------------------
 def elasticity(x0, xl, y0, yl):
@@ -90,7 +101,7 @@ s = {x["name"]: x for x in cost.STAGES}["C4a beliefs"]
 assert (s["screen"], s["explore"], s["search_runs"], s["confirm_runs"]) == (33, 60, 930, 200)
 assert cost.run_ms("one", 1095) // 1000 == 4 and round(cost.hours(s["ms"]), 1) == 1.5
 tot_runs = sum(x["search_runs"] + x["confirm_runs"] for x in cost.STAGES)
-assert tot_runs == 7012 and round(cost.hours(sum(x["ms"] for x in cost.STAGES))) == 39
+assert tot_runs == 7292 and round(cost.hours(sum(x["ms"] for x in cost.STAGES)), 1) == 39.5
 packs7 = ("one", "second", "two", "three", "five", "famine", "one-demand")
 assert (1 + 2 * 49) * len(packs7) * 20 == 13860
 assert round(cost.hours((1 + 2 * 49) * 20 * sum(cost.run_ms(p, 1095) for p in packs7)), 0) == 57

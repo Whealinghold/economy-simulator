@@ -96,8 +96,8 @@ is section 23). Names are provisional until the code, as in `spec-world.md`
 3.7.2; the shape and the rules are not.
 
 ```go
-// Experiment describes a set of runs. The zero value is not valid.
-type Experiment struct {
+// Spec describes a set of runs (an experiment). The zero value is not valid.
+type Spec struct {
 	Name       string   // a label for the consumer; not part of any key
 	Base       [][]byte // the documents of the pack, in layering order (config 6.4)
 	Factors    []Factor // none: one point, the base
@@ -388,7 +388,7 @@ are INT's: `SetYieldShocks`, `SetEdgeStatuses`, `SetFlowScales`, `AddAgent`,
 calls is an input of the run (INT 3.5.1), so the script is part of what a result
 is a function of.
 
-3.5.2. **Sources of steps.** `Experiment.Script` (every run), `Level.Steps` (the
+3.5.2. **Sources of steps.** `Spec.Script` (every run), `Level.Steps` (the
 runs of a point at that level: a shock whose size is a factor), and a
 `Variant`'s steps (6). The steps of one run are merged by tick; equal ticks keep
 the order script, then levels in factor order, then the variant's.
@@ -434,7 +434,7 @@ resolve; that is a recorded point failure and not a precondition (9).
 - **Not a script language.** There is no loop, condition, expression or variable
   in an experiment, and no call that reads a result and changes the next run. A
   consumer that wants "bisect to the parameter at which the loop goes unstable" writes
-  a loop that builds an `Experiment` per round: the loop is the consumer's, as the
+  a loop that builds a `Spec` per round: the loop is the consumer's, as the
   roadmap says of the calibration loop, and an adaptive design in the library
   would be an optimiser (open question 3).
 - **Not file input or output.** The harness reads no file and writes none, takes
@@ -651,11 +651,11 @@ type Unit struct {
 	Keys           []Key
 }
 
-func Plan(e Experiment) ([]Unit, error)                                          // pure
-func RunUnit(ctx context.Context, e Experiment, u Unit) ([]Record, error)        // one unit
-func ExecuteUnit(ctx context.Context, cfg economysim.Config, e Experiment, u Unit) ([]Record, error)
-func Assemble(e Experiment, recs []Record) (Result, error)                       // pure
-func Run(ctx context.Context, e Experiment, opts ...RunOption) (Result, error)   // sequential
+func Plan(e Spec) ([]Unit, error)                                          // pure
+func RunUnit(ctx context.Context, e Spec, u Unit) ([]Record, error)        // one unit
+func ExecuteUnit(ctx context.Context, cfg economysim.Config, e Spec, u Unit) ([]Record, error)
+func Assemble(e Spec, recs []Record) (Result, error)                       // pure
+func Run(ctx context.Context, e Spec, opts ...RunOption) (Result, error)   // sequential
 ```
 
 5.1.1. **Plan** lists the units in **plan order**: point ascending, then replica
@@ -733,7 +733,7 @@ The library does not parallelise (architecture.md 12.2): worlds share nothing
 goroutines, or its own machines, and calls `RunUnit` on each unit of `Plan`.
 This is what it may rely on, and what it must do.
 
-5.3.1. **Shared and read-only:** the `Experiment` value, including the bytes of
+5.3.1. **Shared and read-only:** the `Spec` value, including the bytes of
 `Base` and of every `Docs`, and the `Plan`. No function of the library writes
 to them; the consumer must not, while a run is in flight (FR-EXP-021).
 
@@ -865,7 +865,7 @@ window) and IND 10.5.1, FR-IND-055 (a restore changes nothing in a straddling
 window) say different things: the contradiction is routed (22), and a measure that
 needs the straddling window to continue ignores `WorldRestored` in its observer.
 
-6.1.2. **Steps.** `Experiment.Script` and the levels' steps with a tick below
+6.1.2. **Steps.** `Spec.Script` and the levels' steps with a tick below
 `At` are applied in the burn-in; those at or above `At` and the variant's are
 applied in the branch (a step at `At` right after the restore, in the order of
 3.5.2). A variant step with a tick below `At` is `ErrBadBranch`.
@@ -985,15 +985,14 @@ never a measure's input.
 7.3.2. **Where it comes from, and what is asked.** The public surface has no read
 of the state of the source at a boundary: `CheckpointInfo` has five fields and
 `Info` "reads only the frame" (CHK 3.1.2, 5.4.3, FR-CHK-006), and the state is in
-section 1 of the body. This spec **does not rely** on a read that does not exist.
-It asks CHK for one of two forms, and the harness uses whichever CHK adopts:
-(a) `Info` decodes the first 20 bytes of section 1 and gives `Stream [16]byte`,
-the 16 bytes that follow the `"pcg:"` prefix of the `MarshalBinary` of the source
-(an `Info` that decodes a section needs an error result, which it does not have
-today); (b) a second read of CHK's naming that returns the same 16 bytes. A copy
+section 1 of the body. CHK adds a separate accessor,
+`Checkpoint.Stream() ([16]byte, error)`, which decodes the first 20 bytes of
+section 1 and returns the 16 bytes that follow the `"pcg:"` prefix of the
+`MarshalBinary` of the source; `Info` stays frame-only, with five fields and no
+error result (CHK 3.1.2). The harness reads the stream state with it. A copy
 of the state in the header was considered and costs a format change and a
 validation. Parsing format 1 in the harness was rejected: it would tie the harness
-to a byte layout that CHK 9.1 allows to change before 1.0. **Without either,
+to a byte layout that CHK 9.1 allows to change before 1.0. **Without the accessor,
 `Pair` is refused at `Validate` with `ErrBadSchedule`**, the alignment is unknown,
 and the pairing gain of 7.4 is the whole measure (open question 4). The digest
 needs no field: it is the last 32 bytes of the `MarshalBinary` of the checkpoint
@@ -1340,7 +1339,7 @@ leave a half-record that looks complete.
 | any error out of a `Step.Do`, whatever its type (even `ErrAuditFailed` from a `w.Audit()` the step called on a healthy world) | `script` | healthy; the calls the step made before the error stay applied (3.5.3) |
 | a tick (`w.Run`) returned `ErrInvalidTrade` | `invalid_trade` | failed (`spec-world.md` 3.5) |
 | a tick returned `ErrAuditFailed` | `audit` | failed |
-| `Checkpoint` returned an error on a healthy world (an extension's `SaveState`, FR-CHK-032; CHK names no sentinel) | `checkpoint` | healthy, dropped |
+| `Checkpoint` returned an error on a healthy world (an extension's `SaveState`: `ErrCheckpointExtension`, which wraps the extension's error, FR-CHK-032) | `checkpoint` | healthy, dropped |
 | a tick returned any other error or `ErrWorldFailed` (WLD 3.3.3 says no other condition is an error of `Step`: this row is defensive, so that a later error is classified and not lost) | `step` | failed |
 | the burn-in of a unit failed: its branches inherit the burn-in's status and tick | as the burn-in | |
 | the context ended | not recorded (5.4) | healthy, dropped |
@@ -1602,7 +1601,7 @@ reports the reductions and asserts nothing.
 
 | STY needs (10.1) | Kept in |
 |------------------|---------|
-| a run of a pack and overlays over a seed set, the gate 1 to 10, the setting 11 to 50, the nightly 1 to 50 (STY 8.2), shocks as INT calls at ticks, the series and the events a verdict reads as plain data | a seed set is a `Seed0` and a `Replicas`: (1, 10), (11, 40), (1, 50); shocks are steps (3.5); the series is `Keep.Series` and an event-level measure reads events through its own `Observer` and `Sample.Key` (3.4) |
+| a run of a pack and overlays over a seed set, the gate 1 to 10, the setting and the nightly 1 to 50, tier L 1 to 10 (STY 8.2), shocks as INT calls at ticks, the series and the events a verdict reads as plain data | a seed set is a `Seed0` and a `Replicas`: (1, 10), (1, 50), tier L (1, 10); shocks are steps (3.5); the series is `Keep.Series` and an event-level measure reads events through its own `Observer` and `Sample.Key` (3.4) |
 | a one-at-a-time sweep of a knob at the default and its two neighbours, with the verdict of each fact and detector as the response | `OneAtATime` with three levels (level 0 the default); a fact or a detector is a `Measure` whose value is its verdict code, and a band is a `Criterion` |
 | a comparison of two points as distributions over seeds, not as a pair, for a knob that moves a count | `PerPointSeeds` or `SameSeeds` with the `Dist` field of `Compare` (8.4.2), and the reductions of each group (8.3); a pair is used only for a knob that moves no count, and `AlignedPairs` and the gain say which (7) |
 | the verdict record keyed by the `ConfigHash` | `Record.Hash`, `Record.Pass` and `Result`; STY's text record (STY 8.5) is a rendering of them that STY writes: the class and the band are its own, the values per seed and the seeds outside are `Final` and `Pass` |
@@ -1638,6 +1637,8 @@ have several changes. CLB's registry may keep the paths as data.
 | Explore | `Spread` of `N` points over the knobs that matter, `SameSeeds` | the main effects (8.5) and the pass share of each point against STY's criteria (8.3) |
 | Choose | a consumer's loop over the result | one point, or a region |
 | Confirm | `Grid` or one point with a **different `Seed0`** (4.6.4) and more replicas | the pass share of the chosen point on seeds it was not chosen on |
+
+The steps carry the rules of `spec-calibration.md` 7.2 and the blocks of seeds of 7.1: a choice is made on the blocks 101 and up, and the confirm is on STY's setting seeds, 1 to 50 (tier L: 1 to 10), which is the different `Seed0` of the last row.
 
 12.4.3. **The expected effect of a knob** is the sign of the elasticity or of the
 mean difference of two points on a measure (8.4, 8.5), which is a number with a
@@ -2120,13 +2121,14 @@ has no default of its own and one set of package bounds (13.2).
    bisection, which is a consumer's loop of experiments. *Next step:* CLB's first
    procedure that needs it.
 4. **A read of the stream state (7.3.2).** `Pair` needs one 16-byte read of the
-   source's state at a boundary from CHK: `Info` decoding the first 20 bytes of
-   section 1 (with an error result), or another accessor. The alternative is a
+   source's state at a boundary from CHK: the accessor `Checkpoint.Stream`
+   decoding the first 20 bytes of section 1. The alternative was a
    `Draws` field on `TickEnded` (words drawn in the step): OBS refused counts that
    an observer can derive from events (4.4.3.1), and a draw count is **not**
    derivable, so the refusal does not carry over; it would give the count exactly
-   at every tick. *Next step:* the supervisor's decision; without either `Pair` is
-   refused at `Validate` and the gain stays.
+   at every tick. *Answered:* `Checkpoint.Stream() ([16]byte, error)`, an accessor of
+   CHK, with `Info` unchanged; a `Draws` field on `TickEnded` is not adopted.
+   Until CHK has it `Pair` is refused at `Validate` and the gain stays.
 5. **Equal `(Hash, Seed)` could be run once (8.1.3).** A spread over a narrow
    integer range repeats configurations. *Next step:* the first sweep where it
    shows (a memo keyed by hash and seed inside `Run` cannot change a result).
@@ -2137,7 +2139,8 @@ has no default of its own and one set of package bounds (13.2).
 7. **The `stale_warm_start` warning (3.3.3, 14.4)** needs the list of paths the
    viability solver reads, which VIA does not publish. *Next step:* VIA lists them
    (the tunables of its programme: upkeep, recipes, yields), and the warning is on
-   by default.
+   by default. The `in` and `chk` flags of the registry rows of `spec-calibration.md`
+   4.2.1 are a candidate list for VIA to confirm.
 8. **A failure threshold (9.5).** Whether a sweep should stop when a share of its
    runs failed is a policy; the callback gives it. *Next step:* the first long
    calibration that wastes a night on a bad pack.
@@ -2200,7 +2203,7 @@ is derived from this table.
 
 | Concern | Home |
 |---------|------|
-| `Experiment`, `Factor`, `Level`, `Change`, `Step`, `Measure`, `Criterion`, `Branch`, `Variant`, `Validate`, the closed sets, the sentinels and the bounds | `experiment/experiment.go` |
+| `Spec`, `Factor`, `Level`, `Change`, `Step`, `Measure`, `Criterion`, `Branch`, `Variant`, `Validate`, the closed sets, the sentinels and the bounds | `experiment/experiment.go` |
 | `Plan`, `RunUnit`, `ExecuteUnit`, `Run`, `Check`, `RunOption` | `experiment/run.go` |
 | the branch procedure | `experiment/branch.go` |
 | `Record`, `Result`, `Assemble`, the reductions, `Compare`, the sensitivity | `experiment/result.go`, `experiment/reduce.go` |
@@ -2210,8 +2213,10 @@ is derived from this table.
 | the SplitMix64 finaliser | `internal/ordering` (WLD 7.1.2, N-019) |
 | the models | `doc/specs/models/exp/` |
 
-The primary type is `experiment.Experiment`, as `list.List`; no other exported name
-begins with `Experiment` (architecture.md 2.5). `Step` and `Run` are this package's
+The primary type is `experiment.Spec`: architecture.md 2.5 forbids an exported name
+that repeats the package name (`experiment.Experiment` would stutter), so the type
+is named for what it is, a specification of a set of runs, and no exported name
+begins with `Experiment`. `Step` and `Run` are this package's
 names for a script call and a sweep, and are not WLD's `Step` and `Run`: they are
 in another package and take other arguments (architecture.md 3.2 asks the glossary
 to say so).

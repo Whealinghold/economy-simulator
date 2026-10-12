@@ -131,12 +131,14 @@ economy-sim/
 │   ├── verdict/            # detectors, seed rules and the band-setting rule
 │   ├── design/             # experiment design: grids, permutations, seeds
 │   ├── reduce/             # checked reductions of experiment/
+│   ├── calibration/        # grid, choice, alias test, record and overlay of a
+│   │                       #   calibration; stdlib and internal/design only
 │   └── logkeys/            # slog attribute key strings; imports nothing
 ├── otelobserver/           # separate module: Observer backed by OpenTelemetry
 ├── examples/<name>/        # each example is its own module
 ├── testdata/               # shared fixtures: chains/ (config), golden/,
-│                           #   checkpoints/; fuzz corpora live in each
-│                           #   package's testdata/fuzz/
+│                           #   checkpoints/, calibration/ (records per pack); fuzz
+│                           #   corpora live in each package's testdata/fuzz/
 ├── doc/specs/              # design specs, one area per file (README.md indexes
 │                           #   them and assigns area codes; evidence.md holds
 │                           #   the sources); each spec's Requirements section

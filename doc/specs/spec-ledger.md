@@ -103,8 +103,8 @@ use the ID). The ledger iterates over accounts in ID order, never over a map.
 must have no money, no goods and no reservations: the owner's holdings are moved
 out by transfers first (an agent's go to the estate, in the order of
 `spec-agents.md` 3.6). A closed
-account's slot stays so that IDs stay stable; its storage is reclaimed when a
-checkpoint is compacted (open question 6).
+account's slot stays so that IDs stay stable; it is saved as a kind and a closed
+flag and is never compacted in version 1 (`spec-checkpoint.md` 9.4).
 
 3.4. Boundary accounts are one per **reason** and one per kind of thing (money,
 or each commodity). The balance of a boundary account is therefore *the
@@ -201,7 +201,8 @@ account. The new lot's `Born` is the current tick if the commodity spoils, and i
 goes more negative by the quantity.
 
 5.2.4. **Construction.** The world builds the ledger in a **construction phase**
-that ends when the first `Step` begins; in it the current tick is 0. Only in this
+that begins at the first line of `NewWorld` (`spec-world.md` 5.5.1) and ends when
+the first `Step` begins; in it the current tick is 0. Only in this
 phase may a creation (a move from a boundary under `initial`) state the lot key
 instead of taking 5.2.3's defaults, so that a warm start (`spec-viability.md` 8.4.3,
 8.6) can create:
@@ -262,7 +263,7 @@ beyond the destruction of one item are not carried to the next. This matches
 5.4.2. Wear changes no quantity until an item is destroyed, so it is not a
 transfer. It is a change of the state of an item and is counted in the flow totals
 as **wear units** by commodity (7.4), so a depreciation measure is possible
-(`spec-indicators.md`). The units counted are the durability actually removed, so an
+(`spec-indicators.md`); they are not reported by an event (`spec-indicators.md` 7.6.1). The units counted are the durability actually removed, so an
 item destroyed with less durability left than the wear asked for counts what it had.
 
 5.4.3. **`WearItems(account, commodity, n, units)`** wears `n` items at once, for a
@@ -398,21 +399,31 @@ and spoilage.
 ### 7.4 Flow totals
 
 The ledger keeps, for the current tick, the total moved per (region, reason, money
-or commodity) and the wear units per commodity. They are cleared at the start of
-each tick, kept as a slice in a fixed order, and read by the observability and
-indicator specs (`spec-observability.md`, `spec-indicators.md`). They are
+or commodity) and the wear units per commodity. They are cleared at the end of the
+tick (P8.6, `spec-world.md` 6.10), after the tick's events and the audit, and not
+at its start, so a move that a call between ticks makes (an external agent's
+`initial`, a relocation) is totalled in the tick the next step runs
+(`spec-world.md` 8.1.3). They are kept as a slice in a fixed order. The transfer
+totals reach the observability and indicator specs through `BoundaryFlow` (12.1),
+which reports the faucet and sink reasons only; the wear units and the relocation
+totals are not reported by an event (5.4.2, `spec-indicators.md` 7.6.1). They are
 aggregates, so their size is bounded by regions, reasons and commodities, not by
-the number of agents. A flow between two non-boundary accounts is attributed to the region of the debited account. Beside them the ledger keeps the **relocation totals** (`spec-regions.md` 6.4): the money and the units moved with accounts that changed region, per ordered pair of regions, with the same lifetime and order; a relocation is not a transfer and is in no flow total.
+the number of agents. A flow between two non-boundary accounts is attributed to the region of the debited account. Beside them the ledger keeps the **relocation totals** (`spec-regions.md` 6.4): the money and the units moved with accounts that changed region, per ordered pair of regions, with the same lifetime and order; a relocation is not a transfer and is in no flow total. The flow totals, the wear units and the relocation totals that calls between ticks have added since the last tick's end are the **pending totals**: they belong to the next tick and are saved in a checkpoint (11).
 
 7.4.1. **The construction bucket.** What is moved during the construction phase
 (5.2.4) is totalled in a separate **construction bucket**, with the layout of the
 flow totals, and not in the totals of tick 0. So the endowment and the work in
 progress of a warm start (`spec-viability.md` 8.6 item 3) do not look like a flow of
 the first tick, and a report of tick 0 shows only what tick 0 did. The bucket is
-cleared by nothing, is read-only, and is available for the whole run; it is not saved
-in a checkpoint (11), because a restored world is not in construction and its boundary
-balances already hold the total. The audit includes it (12.4). Whether the world
-emits it as a `BoundaryFlow` is for `spec-observability.md` (open question 9).
+cleared by nothing, is read-only, and stays readable for the run. It is saved in a
+checkpoint only while the world is in its construction phase (11): a world
+checkpointed before its first `Step` is restored still in construction, with its
+bucket, and a world restored after its first step is not in construction, because
+its boundary balances already hold the total. The audit includes it (12.4). The
+world emits it as `BoundaryFlow` events with `Tick` -1, once, at the entry of the
+first step, before `TickStarted` (`spec-observability.md` 4.4.2; open question 9).
+A move that a call makes after the first step is not in the bucket: it is in the
+pending totals (7.4).
 
 ## 8. Production, consumption, spoilage and wear
 
@@ -480,7 +491,9 @@ non-boundary accounts equals the faucets minus the sinks of the construction buc
 total. From the first tick on, the identity of item 3 is checked over each tick as
 before, and the boundary balance of each reason equals the construction bucket plus
 the totals of every tick since (in a run that began from construction; after a
-restore the baseline is the restored balances).
+restore the baseline is the restored balances less the pending totals saved with
+them, and a world restored in construction keeps its bucket as the construction
+term).
 
 ### 9.2 Balance sheets
 
@@ -530,15 +543,21 @@ obligations)").
 Every spec lists the state it contributes (ADR 0002, consequences). The ledger's:
 
 - the tick counter the lots' ages are measured against;
-- the accounts, in ID order: kind, owner reference, region, whether closed,
-  money balance, and lots in canonical order (`Born` is signed: a lot made before
-  tick 0 by a warm start keeps its negative value);
+- the accounts, in ID order: kind, whether closed and, if open, owner reference,
+  region, money balance, and lots in canonical order (`Born` is signed: a lot made
+  before tick 0 by a warm start keeps its negative value); a closed account is its
+  kind and a closed flag only (`spec-checkpoint.md` 4.2 tag 2);
 - the boundary balances: the cumulative net per reason and thing;
-- the claims, in a fixed order (empty in version 1).
+- the claims, in a fixed order (empty in version 1);
+- the pending totals (7.4): the flow totals, the wear units and the relocation
+  totals that calls between ticks added since the last tick's end, and, while the
+  world is in its construction phase, the construction bucket (7.4.1), in the
+  layout of the flow totals.
 
 It does **not** contain: reservations or earmarks (6.5: none exist between ticks,
-so `Reserved` is 0 in every saved lot), flow totals
-(cleared each tick), the construction bucket (7.4.1), the derived expiry hints
+so `Reserved` is 0 in every saved lot), the flow totals of finished ticks
+(cleared at the end of each tick), the construction bucket once the world has
+stepped (7.4.1), the derived expiry hints
 (recomputed on restore), pending output (it is in no account; `spec-production.md`
 15 saves it with the job) or the table
 of commodity attributes (configuration). All is plain data with no maps, sorted,
@@ -550,17 +569,22 @@ so equal states give equal bytes.
 be far too many. The ledger instead feeds one aggregated event per tick, which is in
 the table of observability-and-logging.md 4.3: `BoundaryFlow`, once per tick for
 each (region, reason, money or commodity) with a non-zero total, after the tick's
-transitions. This spec owns its fields: `Tick`, `Region`, `Reason` (the string name),
-the commodity (or none for money), whether it is a faucet or a sink, and the total
-quantity. It is emitted in the order of region, reason and commodity, with no map in
-it. This is the "faucet-and-sink
-event with the reason" of ADR 0001.
+transitions, for the reasons of kind faucet or sink only: an internal reason is not
+in it (`spec-observability.md` 4.4.1). This spec owns its fields: `Tick`, `Region`,
+`Reason` (the string name), the commodity (`NoCommodity` for money), whether it is a
+faucet or a sink, and the total, a magnitude (the kind gives the direction). It is
+emitted in the order of `spec-observability.md` 4.4.1.2 (ascending region, then
+reason, money before goods, then commodity), with no map in it. This is the
+"faucet-and-sink event with the reason" of ADR 0001. The construction bucket is
+emitted in the same form with `Tick` -1 (7.4.1).
 
 12.2. **Logs.** Nothing at `Info`, `Warn` or `Error`. Operation errors are returned
 (architecture.md 8.3) and the root turns them into order rejections
 (`spec-clearing.md` 3.2) or into a failure of the caller. At `Debug`, guarded by
-`Enabled` in hot paths, the ledger may log a refused transfer with `reason`,
-account IDs and amounts. A violated internal invariant found outside an enabled
+`Enabled` in hot paths, the ledger may log a refused transfer with the keys `reason`,
+`account` (the account ID, `int64`) and `amount` (money, `int64`), as in
+observability-and-logging.md 3.3.2; `agent` is not used, because an estate, escrow
+or transit account is not an agent. A violated internal invariant found outside an enabled
 audit (12.4) is a programmer error, so it panics with a message that says so
 (architecture.md 8.1).
 
@@ -580,7 +604,9 @@ ways, both on the world:
   been constructed and not yet stepped, where it checks the construction bucket
   (9.1);
 - the option `WithAudit()` runs it at the end of every `Step`, after the tick's
-  events, and makes `Step` return an error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1; with the merchant module on it also checks that each open contract's Escrow account holds exactly `price * quantity`, that an unreferenced Escrow account is empty, that contract IDs are unique and that the shipment of each contract is in flight (`spec-merchants.md` 9.6, FR-MER-045).
+  state changes and before `TickEnded` (`spec-world.md` 3.5.6, 6.10), and also once
+  at the end of `NewWorld` (`spec-world.md` 5.1 step 9), and makes `Step` return an
+  error wrapping `ErrAuditFailed` if it fails. With the money-supply module on it also checks, for each flow, that its `Total` equals the absolute boundary balance of its reason and has the right sign (`spec-money-supply.md` 3.5.3); with the transport module on it runs the checks of `spec-transport.md` 7.4.1; with the merchant module on it also checks that each open contract's Escrow account holds exactly `price * quantity`, that an unreferenced Escrow account is empty, that contract IDs are unique and that the shipment of each contract is in flight (`spec-merchants.md` 9.6, FR-MER-045).
 
 With the external module on the audit also checks that every counterparty account is empty, that each of the six `outside_*` boundary balances has the sign of its kind, and that for each commodity the boundary balance of `outside_purchases` equals the sum of the units traded on its buy sides and `outside_offer` less `outside_unsold` equals the sum of the units traded on its sell sides (`spec-external-sector.md` 8.5, FR-EXT-050). With the resources module on it SHOULD also check the endowment identity of `spec-resources.md` 6.4 (FR-RES-025); an endowment is in no account and the ledger is unchanged by it.
 
@@ -630,9 +656,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-026 | A balance sheet MUST give a non-boundary account's money, goods valued at supplied prices, claims held and owed and net worth, using checked arithmetic, and the engine MUST NOT read it to make a decision. |
 | FR-LED-027 | A change of an agent's weight MUST be applied by transfers whose reasons are `split`, `merge`, `births` or `starvation`, scaling every holding in proportion with the remainder going to the counterparty account, and conserving money and goods exactly (`FR-SCL-014`). |
 | FR-LED-028 | The ledger MUST hold a list of claims, empty in version 1, and a balance sheet MUST include it. |
-| FR-LED-029 | The ledger's saved state MUST be plain data in the order of section 11, with no maps, and MUST NOT contain reservations, flow totals, the construction bucket or expiry hints. |
+| FR-LED-029 | The ledger's saved state MUST be plain data in the order of section 11, with no maps, and MUST NOT contain reservations, the flow totals of finished ticks, the construction bucket once the world has stepped or expiry hints, and MUST contain the pending totals and, while the world is in its construction phase, the construction bucket. |
 | FR-LED-030 | After a restore, the derived expiry hints MUST be recomputed, and the run MUST continue exactly as an uninterrupted one. |
-| FR-LED-031 | `BoundaryFlow` MUST be emitted once per tick for each region, reason and money or commodity with a non-zero total, in the order of region, reason and commodity, and MUST contain no map. |
+| FR-LED-031 | `BoundaryFlow` MUST be emitted once per tick for each region, reason of kind faucet or sink, and money or commodity with a non-zero total, in the order of `spec-observability.md` 4.4.1.2, and MUST contain no map. |
 | FR-LED-032 | The ledger MUST NOT log above `Debug`, and a violated internal invariant found when audit is not enabled MUST panic with a message that says it is a programmer error. |
 | FR-LED-033 | Reserving, releasing and moving goods MUST accept an optional lot key and, with one, MUST act on exactly that lot, failing with `ErrInsufficientStock` or `ErrUnknownLot`. |
 | FR-LED-034 | A goods reservation MUST earmark units in canonical order (or in the named lot), an unmarked move MUST take only unearmarked units, and a move from reserved MUST consume earmarked units. |
@@ -646,7 +672,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-042 | `Wear(account, commodity, units)` MUST give the same result as `WearItems(account, commodity, 1, units)`, and both MUST count in the flow totals the durability actually removed, by commodity. |
 | FR-LED-043 | During construction only, a creation under `initial` MAY state its lot key: a `Born` from `-(ShelfLife - 1)` to 0 for a spoiling commodity and a remaining durability from 1 to the full durability for a durable; a key outside these ranges MUST be refused with `ErrInvalidLot` and a stated key outside construction with `ErrNotConstruction`. |
 | FR-LED-044 | A lot with a negative `Born` MUST follow the rules of ageing, age, canonical order, the expiry hint and the checkpoint exactly as any other lot, and MUST spoil at the end of the tick `Born + ShelfLife - 1`. |
-| FR-LED-045 | What is moved during construction MUST be totalled in a separate construction bucket and not in the flow totals of tick 0, and the bucket MUST stay readable for the run. |
+| FR-LED-045 | What is moved during construction MUST be totalled in a separate construction bucket and not in the flow totals of tick 0, and the bucket MUST stay readable for the run and MUST be saved in a checkpoint if and only if the world is in its construction phase. |
 | FR-LED-046 | The audit MUST include the construction bucket: after construction and before the first `Step`, the total of each thing over the non-boundary accounts MUST equal the faucets minus the sinks of the bucket, reason by reason, with exact equality. |
 | FR-LED-047 | The output of a job in progress MUST be in no account, and every identity of section 9.1 MUST hold with jobs in progress, including at tick 0 of a world with a warm start. |
 | FR-LED-048 | `Expiring(account, commodity, tick)` MUST return the number of non-earmarked units of the commodity in the account whose lot has `Born + ShelfLife - 1` at most `tick`, MUST return 0 for a commodity that does not spoil and for a tick before the current one, and MUST change nothing. |
@@ -655,7 +681,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-051 | A weight reduction by the failure ladder MUST be applied with the reason `starvation`, a reduction by the population module with the reason `deaths`, and an entry of households into an existing agent with the reason `births`, each as transfers between the agent and the estate account that conserve money and goods exactly (`spec-spawner.md` 4.1, 4.3; FR-LED-027). |
 | FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows plus one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), and the boundary accounts of the declared reasons MUST be created at construction in flow-ID order after those of the built-in reasons and before any other account (`spec-money-supply.md` FR-MON-003). |
 | FR-LED-053 | A flow between two non-boundary accounts MUST be attributed in the flow totals to the region of the debited account, and a flow with a boundary to the region of the non-boundary side. |
-| FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared each tick, not saved; a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
+| FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared at the end of each tick with them, the totals that calls between ticks added since the last tick's end being pending totals that are saved (7.4, 11); a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
 | FR-LED-055 | The registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary, `transit_in` MUST also be accepted from a Transit account to an Estate account, `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account, and `births` as an internal transfer of money from an estate to an agent account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
 | FR-LED-056 | With a money-supply module on, the audit MUST also check, for each flow, that its total equals the absolute boundary balance of its reason with the right sign (`spec-money-supply.md` FR-MON-026, FR-MON-027). |
 | FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate and Outside accounts (`spec-external-sector.md` 8.1, FR-EXT-017). |
@@ -713,7 +739,9 @@ For `spec-stability.md`:
    the checks, to cost less on a very large world.
 4. **Valuation of goods on a balance sheet.** The market price is used here. A
    cost basis (what the holder paid) needs per-lot cost, which this design does
-   not keep. Do not add it unless an indicator needs it.
+   not keep. Do not add it unless an indicator needs it. **Answered:** the
+   valuation is the caller's price table (`spec-indicators.md` 4.3); the ledger
+   keeps no cost basis.
 5. **Event volume.** One aggregated event per (region, reason, commodity) per tick
    is bounded by the configuration. A per-agent flow event is not provided; the
    Debug log and the balance sheets give agent-level detail.
@@ -722,19 +750,16 @@ For `spec-stability.md`:
    that renumbers accounts would have to update every reference, and belongs to
    `spec-checkpoint.md`. Every removal of an agent closes its account
    (`spec-agents.md` 3.6), so the growth is one slot per removal; a weight change
-   (N-008) closes nothing. With the population module a death that empties an agent is a removal, so the growth also follows the death rate (`spec-population.md` 4.7). Still open (N-020).
+   (N-008) closes nothing. With the population module a death that empties an agent is a removal, so the growth also follows the death rate (`spec-population.md` 4.7). Answered: never compacted in version 1; a closed slot is saved as a kind and a closed flag, two bytes; revisit when closed slots exceed a quarter of the checkpoint bytes (`spec-checkpoint.md` 9.4).
 7. **Goods valued as capital.** Durables are held as wear-able lots, but their wear
    is not a transfer (5.4.2). Whether depreciation should also appear as a named
-   flow of value, for national-accounts style measures, is for `spec-indicators.md`.
+   flow of value, for national-accounts style measures, is for `spec-indicators.md`. **Answered:** the version-1 depreciation is a retirement basis (the retired items valued at the table price, `spec-indicators.md` 7.6); the wear units are not in an event, and FR-LED-016 stays.
 8. **Region change of an account** (3.5). Answered: `spec-regions.md` 6.5 (cargo is in Transit accounts, not in the agent's; obligations tied to a region are `region_bound` refusals, `open_shipment` for transport, `spec-transport.md` 5.5; `NoRegion` is reserved and unused in version 1); migration is `spec-migration.md`'s: a timed journey, and the region change at arrival is the ledger-level `Relocate` with the cause `migration` (`spec-migration.md` 8.4).
-9. **Reporting the construction bucket** (7.4.1). The bucket is readable, but whether
-   the world emits it is for `spec-observability.md`. Recommend one `BoundaryFlow`
-   set after `WorldCreated`, with `Tick` -1 (before tick 0), the only event with a
-   negative tick; the alternative is a query and the snapshot only.
+9. **Reporting the construction bucket** (7.4.1). **Answered** by `spec-observability.md` 4.4.2: the bucket is emitted as `BoundaryFlow` events with `Tick` -1 (before tick 0, the only event with a negative tick), once, at the entry of the first step, before `TickStarted`, and not after `WorldCreated`, because the consumer's calls between `NewWorld` and the first `Step` add to it; a world restored in construction emits it at its first step like the original.
 10. **Work in progress on a balance sheet** (9.2). Pending output is in no account
     (8.2.2), so a balance sheet cannot value it. The snapshot reports it by commodity
     (`spec-production.md` 14.3); valuing it, at cost or at a price, is for
-    `spec-indicators.md`.
+    `spec-indicators.md`. **Answered:** pending output is in the households' net worth at the table price (`spec-indicators.md` 7.5.3).
 
 Settled by the new specs: the goods form of `initial`, the `disposal` reason, the empty
 side of a `Transform`, `WearItems` (all N-033, applied in 5.4.3, 7.2 and 8.2.1), the
@@ -746,7 +771,7 @@ expiring lots (N-053, 5.3.3).
 | Concern | Home |
 |---------|------|
 | Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
-| The registry of reasons and their kinds | `internal/ledger` (a fixed table), with the string names used by `internal/logkeys` |
+| The registry of reasons and their kinds | `internal/ledger` (a fixed table); the reason names are exported constants of the root package (`event.go`), and `internal/logkeys` holds the key strings only |
 | Checked add and multiply | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 | Balance sheet valuation | `internal/ledger`, with the price table supplied by the root |
 | The event `BoundaryFlow` | root package, `event.go` (`spec-observability.md`) |

@@ -173,8 +173,10 @@ Stated exactly, because `spec-agents.md` is written at the same time.
    household of the region (free occupational choice); the role lists matter only
    for the checks that name a role and for assigning jobs in the warm start. An own-use list (`spec-subsistence.md` 3.2) is not read as a role list: a recipe only on it is no activity (3.1), and the floor is left out of the programme, which describes the market chain.
 3. **Starting state.** An agent is born with money, an inventory, an optional job,
-   belief centres at the seed price, a weight and its random draws
-   (`spec-production.md` 6.6.2, `spec-welfare-and-wages.md` 5.1). The role carries
+   belief centres at the seed price and a weight; its two creation draws (the target
+   ratio and the residue) come **after** the warm start is applied, and the pending
+   output of a warm job is fixed with a residue of 0 before them
+   (`spec-world.md` 5.6, 5.7; `spec-production.md` 6.6.2, `spec-welfare-and-wages.md` 5.1). The role carries
    defaults for money and inventory (AGT's `StartMoney`, `StartStock`); the warm
    start of section 8 overrides them for a group when it names the group.
 4. **Weight.** The warm start gives amounts *per household*; the world multiplies by
@@ -579,7 +581,7 @@ type WarmStart struct {
 }
 
 // SeedWage is the starting wage of a region: money per working household-tick,
-// used as the observed wage until the first working tick is observed (8.2.5).
+// used as the pooled observed wage whenever that figure is unknown (8.2.5).
 type SeedWage struct {
 	Region string
 	Wage   int64 // minor units per working household-tick
@@ -613,7 +615,9 @@ In a file: `[warm_start.region.<id>.price]` with one key per commodity,
 `[warm_start.region.<id>.group.<role>]` with `money`, `stock` and `jobs`, and
 `wage` and `pool` under the region (`spec-config.md` 6.2). A price missing for a
 commodity falls back to the reference price; a group missing keeps the role's
-defaults; a region with no wage has an unknown wage until one is observed (8.2.5).
+defaults; a region with no wage has an unknown wage whenever the pooled figure is unknown (8.2.5), and nothing is latched.
+
+**Order of application.** The table states no order of its sections; the world applies them in the order of `spec-world.md` 5.6.1: the prices, the wages, then the groups (money and stock), then the jobs (after the stock, because the oldest-first moves of the job's construction step would otherwise draw on the staggered lots), then the pools. The warm start takes no random number (FR-VIA-040).
 
 ### 8.2 Prices
 
@@ -660,16 +664,19 @@ whose only activity is inactive, or a rounding effect at the resolution floor.
 the table and is listed in `Report.UnpricedCommodities`, not guessed.
 
 8.2.5. **The starting wage.** `SeedWage` gives, per region, the money per working
-household-tick that the cost anchor uses until the first working tick has been
-observed (`spec-production.md` 9.3, which asks for it; N-060). Without it the wage is
+household-tick that the cost anchor uses whenever the pooled observed wage of the
+region is unknown (`spec-production.md` 9.3, which asks for it; N-060). Without it the wage is
 unknown in the first ticks and no commodity has a cost band (`spec-production.md`
 9.1.1). The solver sets it to the wage of the dual (the shadow price of the labour
 row), scaled by the same scale as the prices (6.3) and rounded half to even; where the
 labour row is slack the wage is 0, and no entry is written for the region (the wage
 stays unknown and the region is listed in `Report.UnpricedWages`). The world uses it
-as the pooled observed wage of `spec-welfare-and-wages.md` 4.3 only while no agent of
-the region has a working household-tick in its window; the first observation replaces
-it. Validation checks it against `[1, MaxMoney]` (a wage is a per-tick amount, and no
+as the pooled observed wage of `spec-welfare-and-wages.md` 4.3 whenever that figure is
+unknown: no agent of the region has a working household-tick in its window, or the
+pooled figure is not positive. That is a pure function of the welfare rings and the
+configuration, and **nothing is latched** (`spec-checkpoint.md` 4.5 F5): an
+observation replaces it while it lasts, and it is the figure again if the rings
+empty. Validation checks it against `[1, MaxMoney]` (a wage is a per-tick amount, and no
 bound tighter than a balance is meaningful) and that the product of the wage and the
 longest `Duration` of a recipe is at most `MaxMoney` (`ErrWarmStartPrice`; the product
 is the labour cost of `spec-production.md` 9.1). It is a level, not a rule: it changes
@@ -759,7 +766,10 @@ takes the offset `V[floor(j * |V| / busy)]`, sorted ascending. Then:
 
 - the job started `o` ticks before tick 0: `Remaining = d - o`;
 - the effective factor, and so the pending outputs, are those of the season of the
-  virtual start (`spec-production.md` 6.3), with the shock at its default;
+  virtual start (`spec-production.md` 6.3), with the shock at its default and a
+  starting residue of 0 (the creation draw of `spec-world.md` 5.7 comes after the warm
+  start and sets every residue of the agent, C4; the output of the job in progress was
+  fixed before it and is not recomputed);
 - `Executions` equals the agent's weight, and `Principal` is the agent itself.
 
 If `V` is empty the table is rejected (`ErrWarmStartJob`, FR-VIA-033). A recipe
@@ -806,9 +816,9 @@ Items 1 to 3 were requested of the ledger (N-056) and are **applied in
 4. A job can be created at construction with `Remaining` below its `Duration` and
    pending output fixed from the virtual start (8.5.2). The ledger side is the
    construction phase of 5.2.4; the job itself is the world's and production's.
-5. The agent's creation draws (the residue of production, the target spread) are
-   unchanged and come after the warm start is applied (`spec-world.md` fixes the
-   order, N-009).
+5. The agent's creation draws (the target ratio, then the residue of production) are
+   unchanged and come after the warm start is applied (`spec-world.md` 5.6 and 5.7 fix
+   the order, N-009).
 
 ### 8.7 Validation of the table
 
@@ -948,8 +958,9 @@ related warning.
 The configuration adds one section and no tunable. The solver has options; they
 shape the table that is then data, so they are not hashed and are not `Config`
 fields, but each has a default, a bound, an owner and a doc line as if they were.
-They are rows in the parameter-owner table with the scope "Solve option (not a
-`Config` field)"; the registry test of testing.md 6.7 must exempt that scope (handoff).
+They are rows of the registry of knobs of `spec-calibration.md` (6.2.8), with the scope
+"Solve option", and not rows of the parameter-owner table, because the registry test of
+testing.md 6.7 requires a field behind every row (`spec-config.md` 9.2, FR-CFG-047).
 
 | Scope | Field | Meaning | Default | Bound |
 |-------|-------|---------|---------|-------|
@@ -974,6 +985,39 @@ The placeholders, listed so that none is mistaken for a result: `StockCoverTicks
 `MoneyBufferTicks` 10, `ResidualWarnBP` 1 000, `MaxViabilityPivots` 100 000,
 `MaxViabilityCells` 4 000 000; and every price, quantity, duration and yield in
 section 15, which are the prototype's inventions.
+
+**The configuration paths the programme reads.** A table is stale when a path in
+the first group of rows changes and the table is not regenerated (`spec-experiments.md`
+3.3.3, EXP-A5; STB-L53). A path is written as the loader spells it
+(`spec-config.md` 6.2): the table prefix of its scope and the snake case of the field.
+`<id>` is an ID of the kind named. The list is of what 3 to 9 read; a field that no
+row names is not read by the programme.
+
+A `.*` at the end of a path names every field of that table, and of the tables nested in
+it (`spec-calibration.md` 4.2.1 reads it so).
+
+| Path | What the programme or a check does with it | Moves the table |
+|------|--------------------------------------------|-----------------|
+| `world.upkeep`, `role.<id>.upkeep`, `region.<id>.extra_upkeep` | the upkeep basket `u(g, c)` of each group (3.3 item 1) | yes |
+| `region.<id>.group.<role>.households` | `H(rho)` and the demand `D(c, rho)` (3.1); `scale` is not read, since the weights do not change the households | yes |
+| `recipe.<id>.duration`, `.inputs`, `.outputs` (with `cost_share` and `discard`), `.requires` (with `wear_per_use`), `.draws`, `.sited` | the net vector `n`, the labour `d` and the start capacity `J` (3.1) | yes |
+| `commodity.<id>.durability`, `.shelf_life`, `.raw` | the tool wear flow (3.1), V4 and the lean reserve (4.5, 8.4), the sourcing of V1 (4.2) | yes |
+| `region.<id>.yield.<recipe>` (`all`, `seasons`) | the mean factor `E` and `J` (3.1) | yes |
+| `calendar.*` (`hours_per_day`, `days_per_week`, `months`, `ticks_per_day`, `days_per_tick`, `start_day`, `seasons`, `season_start`) | `TicksPerYear`, `SeasonAt` and the virtual starts of the jobs (3.1, 8.5.2) | yes |
+| `role.<id>.expected_work_ticks` | the available work share `phi` of the nominal case (3.2) | yes (the nominal case only) |
+| `role.<id>.recipes` | the checks that name a role and the assignment of jobs (3.3 item 2, 8.5); not the programme, which is free occupational choice | the jobs of the table |
+| `resources.resource.<id>.*`, `resources.endowment.<region>.<resource>.*`, `resources.horizon_years` | the resource row `Phi` and the abundance factor of `E` (3.1, 3.2, 4.8) | yes (module on) |
+| `demand.want.<id>.*`, `demand.taste.<role>.<want>.*`, `demand.region_taste.<region>.<want>.*` | the fixed term `W(c, P)` of the goods row (3.2) | yes (module on) |
+| `modules.transport.modes.*`, `region.<id>.edge.<id>.distance` | the lanes a consumer passes (9.4); the pooled programme reads the region graph only through them | yes (when lanes are used) |
+| `module.external.node.*` | the import and export columns and the trade row of the open layer (4.8) | yes (module on) |
+| `commodity.<id>.reference_price`, `region.<id>.reference_price.<commodity>`, `world.belief_step`, `world.cost_floor`, `world.cost_ceiling`, `world.ref_band_low`, `world.ref_band_high` | the fallback and the checks of a seed price (8.2.2 to 8.2.4); the prices are an output of the programme, not an input | no (a check) |
+| `role.<id>.target_ratio`, `role.<id>.target_spread`, `world.welfare_window`, `world.window_cycles` | the reports `target_above_surplus` and `subsistence_exceeds_expected_work` (4.4, 10.2) and the longest job of the money rule (8.3.1) | no (a report) |
+
+Not read: the spawner, the migration, information, merchant and subsistence modules,
+the money flows (a balanced pair adds no real demand or supply, 8.3.1), the population
+module, the seed, the options and every presentation-only field. The consumer
+(`spec-calibration.md` 4.2.1 flags a knob that moves the table with its own mark) adds
+its flags to this list; none is decided here.
 
 ## 12. Placeholders and sources of the numbers
 
@@ -1010,7 +1054,7 @@ A8 is S18, A9 every pack, A10 `five`.
 
 | ID | Scenario | Asserts |
 |----|----------|---------|
-| A1 | One region, the reference chain | `lambda* >= 1`; every active activity at the wage within `ResidualWarnBP`; the table loads; a warm run keeps each price within the STY band of its seed for the first `T` ticks and a cold run does not do better |
+| A1 | One region, the reference chain | `lambda* >= 1`; every active activity at the wage within `ResidualWarnBP`; the table loads; a warm run keeps each price within `a1.price_band_bp` (STY-H01, prior 1 500 basis points, a placeholder) of its seed for the first 30 ticks (`T` is the welfare window, STY-H01; `spec-stylised-facts.md` 5, FR-STY-053) and a cold run does not do better |
 | A2 | A set of non-viable variants of A1, one defect each | each is rejected by its own rule: a seed cycle with a yield below the seed in; an upkeep good no region makes; a role with no runnable recipe; a job so long that `lambda* < 1` (the as-written example A of PRO 12.1); a staple whose shelf life is below its supply gap |
 | A3 | Three regions with different yields for at least three recipes | each region's autarky `lambda*` differs; the pooled solution has an activity active in a strict subset of regions; pooled relative prices lie in the autarky range or are reported |
 | A4 | The space colony (a second setting) | the same checks pass with no Go specific to it (architecture.md 9.4). Run by REF as the configuration-only chain test X4 on the pack `second` (`spec-reference-chain.md` 7.3, 7.4) |
@@ -1190,7 +1234,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-049 | `WarmStart.Wages` MUST be a list of at most one `SeedWage` per region, sorted by region, each a wage in minor units per working household-tick, part of the effective configuration and the hash. |
 | FR-VIA-050 | The solver MUST set the `SeedWage` of a region to the shadow price of its labour row scaled by the price scale of 6.3 and rounded half to even, MUST write no entry where that wage is 0, and MUST list such regions in `Report.UnpricedWages`. |
 | FR-VIA-051 | A `SeedWage` MUST be rejected with `ErrWarmStartPrice` outside `[1, MaxMoney]` or when its product with the longest recipe `Duration` exceeds `MaxMoney`, and two wages for one region with `ErrDuplicateID`. |
-| FR-VIA-052 | The world MUST use a region's `SeedWage` as the pooled observed wage of the cost anchor only while no agent of the region has a working household-tick in its window, and MUST replace it by the observed wage from the first such tick; a region with no `SeedWage` MUST have an unknown wage until then. |
+| FR-VIA-052 | The world MUST use a region's `SeedWage` as the pooled observed wage of the cost anchor whenever the pooled figure is unknown (no agent of the region has a working household-tick in its window, or the figure is not positive) and MUST NOT latch the choice, so the figure is a function of the welfare rings and the configuration alone; a region with no `SeedWage` MUST have an unknown wage while the pooled figure is unknown. |
 | FR-VIA-053 | The season of a virtual start tick `-o` MUST be `Calendar.SeasonAt(-o)`, and the solver and the world MUST NOT compute it by any other rule. |
 | FR-VIA-054 | The seed-band check of FR-VIA-027 MUST use the solver's own wage, so that the check and the starting wage agree, and for the rescaled example chains the seed over the full unit cost MUST be within 1% of 1 at the integer prices (the prototype gives 0.991 to 1.000). |
 | FR-VIA-055 | With the demand module off the goods rows of the reference programme MUST be unchanged, and with it on they MUST carry the fixed term `W(c, P)` of 3.2, not multiplied by `lambda`, computed as an exact fraction from the groups' households, tastes, region tastes, quantities, periods and item weights. |
@@ -1309,6 +1353,13 @@ spec is written):
     one wage per region (`spec-production.md` 9.3, open question 10 there). A skilled
     recipe is costed at the common wage; whether the solver should report a wage per
     recipe class is for SKL.
+13. **A warm job draws no endowment.** `spec-world.md` 5.6.1 item 4 says that no
+    endowment is drawn for a job created at construction (the virtual start precedes
+    the run) and asks VIA to confirm, because 8.5.3 grants the job's inputs and says
+    nothing of the resources a recipe with `Draws` takes. *Recommendation:* accept. The
+    stock of an endowment at tick 0 is its `InitialBP` (8.4.5), which already states
+    what is left, so a draw made for the warm job would count the same units twice.
+    *Next step:* VIA confirms, and 8.5.3 gets one sentence.
 
 ## 21. Where this lives in the code
 
@@ -1322,4 +1373,4 @@ spec is written):
 | Sentinels (`ErrNotViable`, `ErrNoUpkeep`, `ErrSolveLimit`, `ErrSolveInconsistent`, `ErrWarmStartPrice`, `ErrWarmStartJob`) and `ViabilityError` | root package, `errors.go` |
 | The rules of section 10 | root package, `validate.go` |
 | The file mapping of the section | `config/` |
-| Reason constants | `internal/logkeys` |
+| The reason constants (exported from the root package, `event.go`) and their key strings | the root package for the constants; `internal/logkeys` holds the key strings only |

@@ -1,0 +1,59 @@
+== the rule: invariants over every household count 0..3000, classes 0, 500, 2500
+band     0 bp  E=[0, 500, 2500] L=[0, 500, 2500]  states outside the band after a review: 0
+band     0 bp  floors 0, 1, 2 from every class >= floor (18006 reviews): states outside the band, the floor excepted: 0
+band     0 bp  floor 1: counts at the floor below its leave threshold: 500
+band  1000 bp  E=[0, 500, 2500] L=[0, 450, 2250]  states outside the band after a review: 0
+band  1000 bp  floors 0, 1, 2 from every class >= floor (18006 reviews): states outside the band, the floor excepted: 0
+band  1000 bp  floor 1: counts at the floor below its leave threshold: 450
+a region at class 1 (E=500, L=450): households 449 -> class 0 ; 450 -> 1 ; 2500 -> 2 ; class 2 at 2249 -> 1 ; at 2250 -> 2
+a jump over a class: class 0 at 3000 -> 2 ; class 2 at 0 with floor 1 -> 1
+Enter 500 at ThresholdBP 5000: E=250 L=225 (band 25 households)
+Enter 5 at ThresholdBP 5000: E=3 L=2 (band 1 households)
+Enter 1 at ThresholdBP 10000: E=1 L=0 (band 1 households)
+Enter 6 at ThresholdBP 5000: E=3 L=2 (band 1 households)
+Enter 3 at BandBP 5000: E=3 L=1 (band 2 households; E*BandBP <= 10000: False; floor(E/2) = 1)
+Enter 5 at BandBP 1000: E=5 L=4 (band 1 households; E*BandBP <= 10000: True; floor(E/2) = 2)
+Enter 10 at BandBP 1000: E=10 L=9 (band 1 households; E*BandBP <= 10000: True; floor(E/2) = 5)
+Enter 11 at BandBP 1000: E=11 L=9 (band 2 households; E*BandBP <= 10000: False; floor(E/2) = 5)
+Enter 7 at BandBP 5000: E=7 L=3 (band 4 households; E*BandBP <= 10000: False; floor(E/2) = 3)
+== class changes in 3650 ticks, mean (max) over 40 seeds; households an integer
+   mean-reverting walk, reversion 1/20 a tick, base ON the threshold E=500
+   step s: uniform in [-s, s]; the walk's standard deviation is printed
+-- s=2, sd of households about 4.5 (0.9% of 500)
+   band bp \ dwell:      0            30
+       0           1330.4 (1411)       114.8 (116)
+     500              0.0 (  0)         0.0 (  0)
+    1000              0.0 (  0)         0.0 (  0)
+    2000              0.0 (  0)         0.0 (  0)
+-- s=5, sd of households about 10.1 (2.0% of 500)
+   band bp \ dwell:      0            30
+       0            817.2 (912)       107.6 (111)
+     500              1.2 (  4)         1.1 (  4)
+    1000              0.0 (  0)         0.0 (  0)
+    2000              0.0 (  0)         0.0 (  0)
+-- s=10, sd of households about 19.4 (3.9% of 500)
+   band bp \ dwell:      0            30
+       0            556.8 (666)        99.7 (108)
+     500             56.5 ( 70)        44.5 ( 56)
+    1000              2.9 (  8)         2.9 (  8)
+    2000              0.0 (  0)         0.0 (  0)
+-- s=20, sd of households about 37.9 (7.6% of 500)
+   band bp \ dwell:      0            30
+       0            476.6 (531)        97.4 (104)
+     500            150.5 (181)        78.2 ( 91)
+    1000             59.5 ( 78)        46.9 ( 59)
+    2000              3.9 ( 10)         3.8 ( 10)
+== staircase and absorbing class: an assumed net growth rate per class, basis points a tick
+   classes: 0 (E 0), 1 (E 100), 2 (E 400), 3 (E 1600); rates by class (-4, +12, +20, +4) bp a tick
+growth only, band 1000 dwell 30        : final class 3, households 3495, changes 2, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (1699, 2, 3, 1602)]
+growth only, band 0 dwell 0            : final class 3, households 3495, changes 2, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (1699, 2, 3, 1602)]
+shock to 60 at t=1500, band 1000 dwell 30: final class 0, households 25, changes 2, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (1500, 2, 0, 60)]
+shock to 60 at t=1500, floor class 1     : final class 2, households 1242, changes 3, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (1500, 2, 1, 60), (3083, 1, 2, 400)]
+shock to 380 at t=1500, band 1000 dwell 30: final class 3, households 2837, changes 2, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (2220, 2, 3, 1601)]
+shock to 380 at t=1500, band 0 dwell 0    : final class 3, households 2816, changes 4, held ticks 0
+     changes (tick, from, to, households): [(1005, 1, 2, 400), (1500, 2, 1, 380), (1543, 1, 2, 400), (2237, 2, 3, 1600)]

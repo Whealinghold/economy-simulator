@@ -202,7 +202,11 @@ upkeep, and the upkeep itself (the list of goods a household must consume each
 tick to stay alive, a "day" being a tick) is defined by `spec-agents.md` 5.1 and
 5.2, which owns the **effective upkeep** an agent actually consumes. A role with
 an upkeep list of its own pays its own cost; `B_r` stays the cost of the baseline
-(`spec-agents.md` 5.6.1).
+(`spec-agents.md` 5.6.1). The reference basket is also the **fixed basket** of the
+indicator `BasketLevel` (`spec-indicators.md` 8.4): that measure divides the cost of the
+baseline basket at the published prices by its **computed** cost at the reference prices,
+not by the configured `B_r`, which validation only checks against the computed cost
+within `BasketTolerance` (5.3). No simulation decision reads `B_r` (FR-CUR-023).
 
 5.2. The default is `B_r = 1 000` minor units for every region that does not
 set its own. The number is chosen so that a basket spread over several goods
@@ -253,7 +257,9 @@ at most twenty distinct goods can clear it.
 - Physical coins: coins as commodities with a face value, money supply from
   mining and minting, carrying and theft.
 - Exchange rates between metals or regions, and debasement.
-- An inflation index, or a price level that varies over time by design.
+- A price level that varies over time by design (a drifting basket or a scheduled inflation). An
+  inflation index as a **measure** is not a non-goal: it is the fixed-basket `BasketLevel` of
+  `spec-indicators.md` 8.4, a function of the published prices, and it changes no behaviour.
 - Parsing formatted text (such as `1 sp 4 cp` in the RPG preset) back into `Money`. The formatter writes only.
 
 The design keeps these open: `Money` stays an `int64` count of the minor unit.

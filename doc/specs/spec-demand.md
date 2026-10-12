@@ -179,6 +179,12 @@ region tastes by region then want. The **ladder** of a role is its wants sorted 
 `Rank`, then by ID (a total order, architecture.md 7.6). A role with no `Tastes`
 row has an empty ladder and no wants.
 
+3.2.2a. **`WantID`** is the typed ID of a want: the 0-based index of the want in the
+canonical order of wants by ID (3.2.2), as `CommodityID` is of commodities
+(architecture.md 3.3). Events and snapshot rows that name a want carry it, and the strings
+of the IDs are in the names table (`spec-observability.md` 3.2.1). `Want.ID` stays the
+string of the configuration.
+
 3.2.3. The items of the wants in a role's ladder join the role's tradable set
 (`spec-agents.md` 3.4; a change AGT owns, section 17). A belief exists for each from
 creation (FR-AGT-004). A want item that is in no role's set cannot exist, because
@@ -318,7 +324,7 @@ a new agent starts at
 C_k(0) = ( AgentIndex * 7 919 + k's position in the ladder * 2 777 ) mod 10 000
 ```
 
-a deterministic spread (no draw: `spec-agents.md` 3.5.2 is unchanged) so that the
+a deterministic spread (no draw: `spec-agents.md` 3.5.2 is unchanged), where `AgentIndex` is the 0-based position of the agent in the region's agent list, away agents included (`spec-world.md` 6.1.4); it is read at the creation of the agent, or at the change of role of 4.9 so that the
 agents of a role do not all place a unit in the same tick (DEM-A5). Units the
 household cannot fund are lost; the carry keeps only the fraction, so a rich tick
 does not repay a poor one (no pent-up demand).
@@ -396,7 +402,7 @@ consumed: a want that is not met in a tick is simply not satisfied. There is no
 penalty and no hunger for a want. `want_consumption` is a goods sink owned by this
 spec; it is a new row in the ledger registry (`spec-ledger.md` 7.2, section 17) and is
 reported in `BoundaryFlow` by region and commodity, which separates discretionary
-from subsistence consumption for the indicators.
+from subsistence consumption for the indicators. In the indicators `want_consumption` is final consumption `C` together with `consumption` (`spec-indicators.md` 7.1, 7.3: `Cons` and `WCons`), and the split between discretionary and subsistence is the reason's.
 
 ### 4.8 Cohorts
 
@@ -416,7 +422,7 @@ and want, so:
 - **A role change** gives the agent the ladder of the new role. A carry is kept for
   each want that is in both ladders (by want ID, so a reordered rank does not matter),
   a want only in the new ladder starts at the formula of 4.4 with its position in the
-  new ladder, and a carry of a want only in the old ladder is dropped. Nothing is drawn.
+  new ladder (and the agent's `AgentIndex` at the change), and a carry of a want only in the old ladder is dropped. Nothing is drawn.
   `spec-spawner.md` 4.2 gets a row for it (handoff). The goods a household bought for
   a want of the old role and still holds are treated by the spawner's rule for goods
   outside the new tradable set (kept if they are in it, else listed by the estate).
@@ -791,16 +797,17 @@ want in 10 consecutive ticks, at the tenth and every tenth after, with `region`,
 choke price everywhere. No `Info` and no `Error`.
 
 11.3. **New log key** for observability-and-logging.md 3.3.2: `want`. The `reason`
-values are constants in `internal/logkeys`.
+values are exported constants of the root package (`event.go`, `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only.
 
 11.4. **Metric.** `economysim.want.unfunded`, a counter of `{unit}` with attributes
 `economysim.want`, `economysim.role`, fed by `WantShortfall` (`Planned` less
 `Funded`), now in the metric catalogue (`rules/observability-and-logging.md` 5.3, 5.3.1). Both
 attributes are bounded by the configuration (5.4.1 there).
 
-11.5. **Snapshot.** Per region, role and want: households, planned, funded and
-choked in the last tick; per agent in a query: the carries. Bounded by the
-configuration.
+11.5. **Snapshot.** The per-want counts (households, planned, funded and choked in the last
+tick, per region, role and want) are the event `WantShortfall` (11.1), not snapshot fields
+(`spec-observability.md` 4.4); the carries of an agent are in the `AgentState` of a query
+(`spec-integration.md` 4.7.2). Bounded by the configuration.
 
 11.6. **Cost with no observer.** The want computation uses scratch held by the world
 and allocates nothing (NFR-DEM-001). Observation never changes results.
@@ -1078,7 +1085,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-DEM-010 | The schedule MUST be `clamp(10 000 + trunc(Elasticity * (10 000 - r) / 10 000), 0, Ceiling)`, MUST equal 10 000 at the reference price, MUST NOT increase as the price ratio rises, and MUST be 0 at and above the choke price. |
 | FR-DEM-011 | An agent whose want price ratio gives a schedule of 0 MUST skip the want for the tick, MUST be counted as choked, and MUST place no bid for it. |
 | FR-DEM-012 | The desired rate of a want MUST be `Quantity * weight * taste scale * region scale * schedule / (Period * 10^8)` ten-thousandths of a unit, computed with a checked 128-bit product, and the agent MUST want `floor((carry + rate) / 10 000)` units, keeping the remainder as its carry. |
-| FR-DEM-013 | The carry of a new agent MUST be `(AgentIndex * 7 919 + position * 2 777) mod 10 000` and MUST NOT use the random source. |
+| FR-DEM-013 | The carry of a new agent MUST be `(AgentIndex * 7 919 + position * 2 777) mod 10 000`, with `AgentIndex` the 0-based position of the agent in its region's agent list, away agents included (`spec-world.md` 6.1.4), and MUST NOT use the random source. |
 | FR-DEM-014 | Over a long run the units wanted of a want MUST equal the rate times the number of ticks to within one unit per household, whatever the weight and whatever the changes of price. |
 | FR-DEM-015 | Units that an agent does not fund in a tick MUST be lost and the carry MUST keep only the fraction. |
 | FR-DEM-016 | The want budget MUST be the cap of `spec-agents.md` 7.4.4 less the tier 3 spending, floored at 0, and never more than the money left after tiers 1 to 3. |
@@ -1165,7 +1172,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Pure rules: the ratio (4.2), the shares (4.2), the schedule (4.3), the carry and units (4.4), the ladder allocation (4.5), the want consumption amount (4.7) | `internal/household` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9); the same package as AGT's pure rules, because they share the budget |
 | The merge into the bid and the consumption phase | root package, `strategy.go` (`DefaultStrategy.Trade`) and `world.go` |
 | The event `WantShortfall` | root package, `event.go` |
-| Reason constants (`choked`, `over_budget`, `no_budget`, `no_stock`) and the log key `want` | `internal/logkeys` |
+| Reason constants (`choked`, `over_budget`, `no_budget`, `no_stock`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
+| The log key `want` (key string only) | `internal/logkeys` |
 | The ledger reason `want_consumption` | `internal/ledger` registry (`spec-ledger.md` 7.2) |
 
 ```go

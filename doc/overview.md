@@ -140,8 +140,9 @@ How the pieces are layered:
 The consumer builds one `World`, keeps it for the life of the simulation and
 drives it forward. The library is a stateful object that is stepped, not a
 function called per request. The sketch is illustrative: the names in it come
-from the rules (`rules/architecture.md` 6.1, 6.2, 12.3), but the tick and
-query specs (WLD, INT) are not written.
+from the rules (`rules/architecture.md` 6.1, 6.2, 12.3); the tick is
+fixed in `specs/spec-world.md` 3 and 6 and the calls and queries in
+`specs/spec-integration.md`.
 
 ```go
 cfg := economysim.Config{ /* commodities, recipes, roles, regions */ }
@@ -152,11 +153,13 @@ w, err := economysim.NewWorld(cfg,
 )
 
 for gameIsRunning {
-	w.Step()                         // advance one tick
+	if err := w.Step(); err != nil { // advance one tick; after an error the world is failed
+		break                        // restore a checkpoint to go on
+	}
 }
-err = w.Run(ctx, 365)                // or many ticks; checks ctx between ticks
+completed, err := w.Run(ctx, 365)    // or many ticks; checks ctx before every tick
 
-snap := w.Snapshot()                 // a deep copy of plain data
+snap, err := w.Snapshot()            // a deep copy of plain data
 ```
 
 - **The world owns the state.** Agents, inventories, the ledger, price beliefs,
@@ -171,24 +174,26 @@ snap := w.Snapshot()                 // a deep copy of plain data
 - **One caller at a time.** A `World` is not safe for concurrent use. A game
   loop serialises access naturally; a server puts a lock or an owning
   goroutine around it.
-- **Reads are pull or push.** `Snapshot` (and the planned queries) return
-  deep copies that can cross goroutines. An `Observer` receives events
-  (`TradeExecuted`, `MarketCleared`, `AgentBankrupted`, ...) synchronously
-  during `Step`, for metrics, tracing or a UI feed. Logs go to the injected
-  `*slog.Logger`. Both default to doing nothing.
+- **Reads are pull or push.** `Snapshot` and the queries (`Agent`, `Market`,
+  `Region`, `Slots`, ... of `specs/spec-integration.md` 6) return deep copies
+  that can cross goroutines. An `Observer` receives events (`TradeExecuted`,
+  `MarketCleared`, `AgentBankrupted`, ...) synchronously during `Step`, for
+  metrics, tracing or a UI feed. Logs go to the injected `*slog.Logger`. Both
+  default to doing nothing.
 - **Influence is through extension points and shocks.** The consumer can
-  replace `Strategy`, `Clearing`, `Spawner` or `Observer`, and (planned,
-  INT) inject shocks such as a failed harvest or a closed road, or act as a
-  player.
+  replace `Strategy`, `Clearing`, `Spawner` or `Observer`, and, through
+  the calls of `specs/spec-integration.md`, inject shocks such as a failed
+  harvest or a closed road, or act as a player.
 - **Persistence belongs to the consumer.** The library produces a checkpoint
-  of the complete state as plain data with one canonical encoding. The consumer
-  stores it and restores a world from it, and a resumed run is bit-identical to
-  an uninterrupted one (`adr/0002-persistence-by-checkpoint.md`, proposed).
+  of the complete state (`Checkpoint()`, restored by `RestoreWorld`) as plain data
+  with one canonical encoding. The consumer stores it and restores a world from
+  it, and a resumed run is bit-identical to an uninterrupted one
+  (`specs/spec-checkpoint.md`, `adr/0002-persistence-by-checkpoint.md`, proposed).
 
-Two points are open and affect this shape: whether the consumer reads the
-world only through `Snapshot` or also through targeted queries, and whether a
-player is an ordinary agent or sits outside the agent model and calls in. Both
-are decided in INT and bear on AGT and LED, so settle them before AGT.
+The two points that were open are settled: the consumer reads the world through
+`Snapshot` and through targeted queries (`specs/spec-integration.md` 6), and a
+player is an ordinary external agent whose strategy is the library's `Directed`
+(`specs/spec-agents.md` 10, `adr/0003-version-1-scope.md` decision 2).
 
 ## 5. What we can and cannot model
 
@@ -200,15 +205,14 @@ are decided in INT and bear on AGT and LED, so settle them before AGT.
 
 - **Status:** design only. There is no code. The documents are drafts, and none
   of the behaviour has been run or validated.
-- **Written:** the rules (`rules/`), twenty-nine economy specs (currency, goods,
-  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport, resources, information, external sector, subsistence, migration, merchants), the evidence file, the
-  bazaarBot reference, the roadmap, a draft vision and scope
-  ([vision.md](vision.md)), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties) and ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round). Every economy spec has a Requirements section.
-- **Planned:** 22 more specs, listed in the roadmap with layers and
+- **Written:** the rules (`rules/`), thirty-seven economy specs (currency, goods,
+  ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport, resources, information, external sector, subsistence, migration, merchants, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration), the evidence file, the
+  bazaarBot reference, the roadmap, a vision and version-1 scope
+  ([vision.md](vision.md), accepted by ADR 0003), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties) and ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round). Every economy spec has a Requirements section.
+- **Planned:** 14 more specs (the ones of the roadmap that have no file), listed in the roadmap with layers and
   dependencies, and a dependency picture of the first tier.
-- **Known gaps:** an accepted vision and version-1 scope (a draft proposal
-  exists); demand beyond subsistence; services, land and labour as goods; the player's place in the
-  economy; explainability for designers; a cost budget; authoring tools.
+- **Known gaps:** services, land and labour as goods; authoring tools; no
+  default has run, so none is called stable.
   Several sources behind the numbers are unverified summaries
   (`specs/evidence.md`).
 - **Not yet done:** running bazaarBot to see what stable behaviour looks like. The Doran and Parberry paper was read on 2026-10-10 (`specs/evidence.md`).

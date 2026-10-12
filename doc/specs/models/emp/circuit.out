@@ -1,0 +1,17 @@
+phi_bp smax_bp | last 3000 ticks: mean hired, predicted h*, mean sold per tick, units per worker-tick | money in workers, in employers
+ 3000     0 | hired    7.1  h*    7.1  sold   42.8  per worker 0.06 | Mw 80000 Me 6820000
+ 3000  2500 | hired   23.8  h*   25.0  sold  142.9  per worker 0.56 | Mw 84000 Me 6226000
+ 3000  5000 | hired   40.5  h*   42.9  sold  243.0  per worker 1.06 | Mw 80000 Me 5524000
+ 3000  9000 | hired   66.7  h*   71.4  sold  400.0  per worker 1.85 | Mw 87000 Me 4068000
+ 5000     0 | hired   10.0  h*   10.0  sold   60.0  per worker 0.15 | Mw 0 Me 6900000
+ 5000  2500 | hired   33.3  h*   35.0  sold  200.0  per worker 0.85 | Mw 0 Me 6250000
+ 5000  5000 | hired   56.7  h*   60.0  sold  340.0  per worker 1.55 | Mw 0 Me 4740000
+ 5000  9000 | hired   86.7  h*  100.0  sold  520.0  per worker 2.45 | Mw 0 Me 2510000
+ 7500     0 | hired   19.8  h*   20.0  sold  119.3  per worker 0.45 | Mw 47000 Me 6823000
+ 7500  2500 | hired   66.7  h*   70.0  sold  400.0  per worker 1.85 | Mw 50000 Me 5050000
+ 7500  5000 | hired  100.0  h*  100.0  sold  600.0  per worker 2.85 | Mw 1642000 Me 1802000
+ 7500  9000 | hired  100.0  h*  100.0  sold  600.0  per worker 2.85 | Mw 1642000 Me 832000
+ 9000     0 | hired   50.0  h*   50.0  sold  300.0  per worker 1.35 | Mw 324000 Me 6280000
+ 9000  2500 | hired  100.0  h*  100.0  sold  600.0  per worker 2.85 | Mw 3154000 Me 974000
+ 9000  5000 | hired   99.3  h*  100.0  sold  596.0  per worker 2.83 | Mw 3167000 Me 721000
+ 9000  9000 | hired   94.9  h*  100.0  sold  569.6  per worker 2.70 | Mw 2437000 Me 1002000

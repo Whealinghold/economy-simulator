@@ -198,7 +198,9 @@ A weight of `w` loses three things:
 
 1. **Heterogeneity.** The `w` households are identical in belief, stock, money
    and fortune. Inequality inside a cohort is zero, so an inequality indicator
-   (`spec-indicators.md`) can see only the differences between agents.
+   (`spec-indicators.md`) can see only the differences between agents; the indicator
+   reports `CohortShare`, the share of the households that sit in cohorts of weight above 1
+   (`spec-indicators.md` 6.2), so a reader knows how much of the world the zero covers.
 2. **Noise averaging.** With fewer agents, one agent's belief update moves a
    larger share of the market, and prices are noisier. The relative noise of a
    market average falls roughly as the square root of the number of traders, so
@@ -224,6 +226,12 @@ scaled. So a thin market caused by a small real population is allowed to be
 thin, and a thin market caused only by scaling is not.
 
 A group that has fewer than `K` households from the start (the smallest groups of the five-region reference census have 4 to 9, `spec-reference-chain.md` 6.5) is legal and silent: every household is its own agent, the snapshot reports agents and households per group, and no warning is raised. The warning `group_below_floor` (`spec-spawner.md` 12, 13.3) is only for a group with a weight above 1 whose agent count has fallen below `K` at run time, after exits; it names the region, role and agent count and is bounded per group.
+
+`K` is an integer from 1 to `MaxHouseholds` (`spec-config.md` 4.1); `Validate`
+rejects a value outside that range with `ErrOutOfBounds` (FR-SCL-020). A `K` above
+the households of a group is legal and silent, as above, so the upper bound only
+keeps the value, and the grid of a calibration over it (`spec-calibration.md`
+K-SCL02), finite.
 
 `K` is a world-level parameter. Its default is a placeholder of 10: the
 bazaarBot example uses 10 agents per role (bazaarbot-reference.md section 10),
@@ -312,15 +320,18 @@ commodity of its tradable set (`spec-beliefs.md` 13), a ring buffer of welfare
 records (`spec-welfare-and-wages.md` 2.3.1, default window 30), residues and a job
 (`spec-agents.md` 15), so the state per agent is a few hundred bytes plus its lots; for
 5 000 agents that is of the order of megabytes. This is an estimate and not a
-measurement.
+measurement. A checkpoint of the first consumer's world (5 000 agents, 30 commodities) is
+about 2 MB, and the welfare ring is 70% of it (`spec-checkpoint.md` 10.2, a model with
+invented value magnitudes).
 
 6.5. **Near-linear.** Doubling the agents, with the same commodities, should
 slightly more than double the tick at most (NFR-SCL-001 allows a factor of 2.2,
 for the clearing term). A worse-than-linear term would put the budget out of
 reach as the world grows.
 
-6.6. **Not concurrent.** Markets are independent within a tick
-(`spec-clearing.md` section 7), so a future parallel step can shard by region.
+6.6. **Not concurrent.** Markets are independent within a tick given the keys
+(`spec-clearing.md` section 7; the fixed order of the markets is part of the draw
+sequence, `spec-world.md` 6.7, ruling C22), so a future parallel step can shard by region.
 That is not planned and would need architecture.md 12.2 changed first.
 
 ## 7. Consistency across scales
@@ -370,19 +381,23 @@ check, run over a range of `K`, is how `K` is chosen (5.2). The reference chain'
 9.1. `AgentSpawned` and `AgentBankrupted` carry a `Weight` field
 (observability-and-logging.md 4.3), so a consumer can
 rebuild the household count by role from the events alone, as it can the agent
-count today. The weight-changing events are `WeightChanged` (`spec-spawner.md` 13.1) and, for the
-population module, the aggregate `PopulationChanged` (`spec-population.md` 10.1).
+count today, with `WeightChanged` (`To` less `From`) and `RoleChanged` (the agent and its
+weight leave `From` and join `To`). The weight-changing events are `WeightChanged`
+(`spec-spawner.md` 13.1) and, for the population module, the aggregate `PopulationChanged`
+(`spec-population.md` 10.1); a count by region also needs `AgentRelocated`.
 
 9.2. The snapshot reports agents and households separately, per role and per
-region.
+region (`spec-observability.md` 5.3.2 and 5.3.4; the fields are that spec's).
 
 9.3. No new log line. `World created` at `Info` gains the totals as attributes
 (`agents`, `households`) so an operator can see the scale of a run. They are
 summary counts, not per-entity values (observability-and-logging.md 3.3.5).
 
 9.4. The metric `economysim.agent.count` counts agents. The household count is
-`economysim.household.count`, an up-down counter by role, fed by the `Weight` of the
-same two events; both are in the catalogue of observability-and-logging.md 5.3 and
+`economysim.household.count`, an up-down counter by role, fed by the `Weight` of
+`AgentSpawned` and `AgentBankrupted`, by `WeightChanged` (`To` less `From`) and, by role,
+by `RoleChanged` (`spec-observability.md` 6.2.1; `agent.count` is also fed by
+`RoleChanged` by role); both are in the catalogue of observability-and-logging.md 5.3 and
 5.3.1, and neither counts estate pseudo-agents.
 
 ## 10. Stability register entries
@@ -432,6 +447,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SCL-017 | For the reference chain with 200 households per role (`spec-reference-chain.md` overlay `h200`, `one` pack) at scales 1, 4 and 10, with `MinAgents` 10, the time-averaged price of each commodity at scales 4 and 10 SHOULD be within the tolerance of section 7.2 of its value at scale 1. |
 | FR-SCL-018 | `AgentSpawned` and `AgentBankrupted` MUST carry the agent's weight, and the snapshot MUST report agents and households separately. |
 | FR-SCL-019 | At the end of construction, with or without a warm start, the weights of each group MUST add up to its `Households`, and the total money and the total quantity of each good MUST equal the households times the per-household amounts, exactly, at every scale (7.1). |
+| FR-SCL-020 | A configuration with a `MinAgents` below 1 or above `MaxHouseholds` MUST be rejected with `ErrOutOfBounds`; a `MinAgents` above the households of a group MUST NOT be an error or a warning (5.2). |
 
 ### Non-functional
 

@@ -1,0 +1,10 @@
+market-clearing rent for 20 units and 60 tenants valued 10..100: 70
+step (bp of base 40), delay (ticks) -> (min, max) of the posted rent over the last half of 400 ticks
+step     0   0:(40,40)  1:(40,40)  3:(40,40)  8:(40,40)
+step   100   0:(70,70)  1:(71,71)  3:(68,73)  8:(63,78)
+step   250   0:(70,70)  1:(71,71)  3:(68,73)  8:(63,78)
+step   500   0:(70,70)  1:(68,72)  3:(64,76)  8:(54,80)
+step  1000   0:(68,72)  1:(64,76)  3:(56,80)  8:(36,80)
+step  2500   0:(70,70)  1:(60,80)  3:(40,80)  8:(20,80)
+with the band narrowed to 8000..12000 bp of base 40, step 1000, delay 3: (48, 48)
+with the supply above the demand at the floor (60 units): the rent falls to the floor (20, 20)

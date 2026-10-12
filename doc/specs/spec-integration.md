@@ -753,7 +753,7 @@ state the step has left, not a boundary value, because version 1 keeps no copy. 
 reader with no error result is listed beside `Tick`, `Config` and `ConfigHash`; this
 is not a change of the guard of `spec-world.md` 3.6.1 for methods with an error result.
 The `error` of `RelocationRefusal` is the refusal it reports and not an error of the
-call. WLD 3.5.1 and 3.6.1 name only three readers; the edit that lists the others
+call. WLD 3.5.1 and 3.6.1 name only four readers (`Err`, `Tick`, `ConfigHash`, `Config`); the edit that lists the others
 is in section 19.
 A query is legal in the construction phase.
 
@@ -810,7 +810,7 @@ type MarketState struct {
 	UnmatchedAsk     Quantity
 	BestBid, BestAsk Price    // highest unmatched bid, lowest unmatched ask
 	HasBid, HasAsk   bool     // whether each side had an unmatched order
-	WindowLen        int      // ticks of trading held in the price window
+	WindowLen        int64    // ticks of trading held in the price window
 	WindowMean       Price    // the window's statistics (spec-beliefs.md 7.2)
 	WindowLow        Price
 	WindowHigh       Price
@@ -887,8 +887,8 @@ return, and who defines each:
 | `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownRole`, `ErrUnknownRecipe`, `ErrUnknownMode` (defined with the merchant block, MER; `SetTransitFactors` needs it with only transport on, so it is a root sentinel: edit row), `ErrUnknownResource`, `ErrUnknownEdge`, `ErrUnknownStrategy` | an ID names nothing | the specs that own the entity |
 | `ErrUnknownFlow` | a flow ID names no flow of the configuration | this spec (new) |
 | `ErrUnknownLine` | no outside node has a line for the (node, commodity) | this spec (new) |
-| `ErrOutsideNode` | the region is an outside node: it has no agents and no market | REG 6.1.3, EXT |
-| `ErrUnknownAgent` | the ID names no agent: never issued, or a pseudo-agent | REG 6.1.3 (one sentinel, the same meaning, N-075) |
+| `ErrOutsideNode` | the region is an outside node: it has no agents and no market (`Region` is not refused: it returns the node's row, 6.5) | REG 6.1.3, EXT |
+| `ErrUnknownAgent` | the ID names no agent: never issued, or a pseudo-agent (but `Relocate` returns `ErrNotRelocatable` for a pseudo-agent, 7.1.1) | REG 6.1.3 (one sentinel, the same meaning, N-075) |
 | `ErrAgentRemoved` | the ID was an agent and has been removed; wraps `ErrUnknownAgent` | this spec (new) |
 | `ErrNotExternal` | the call needs an external agent and the agent is not | this spec (new) |
 | `ErrNotDirected` | the agent's strategy is not the library's `Directed` | this spec (new) |
@@ -903,7 +903,11 @@ spec's calls both say "the ID names no agent". It is one root sentinel,
 removed agent's ID is the more specific `ErrAgentRemoved`, which the world can
 tell because an ID is issued once: an ID below the next ID that is not live and
 is not a pseudo-agent was an agent that has been removed. It needs no table of
-dead IDs.
+dead IDs. The ID of a pseudo-agent (an estate, a counterparty of the outside) is not
+an unknown agent to `Relocate`: REG owns the refusals of a relocation, and
+`Relocate` and `RelocationRefusal` return `ErrNotRelocatable` for it (3.4.3,
+`spec-regions.md` 6.1.3), while `Agent`, `Direct` and `RemoveAgent` return
+`ErrUnknownAgent`.
 
 ### 7.2 The guards, in order
 
@@ -1033,7 +1037,9 @@ The events each call needs, with the owner and the fields the call knows
 A measure may exclude external agents by the `External` flag that every agent and
 `AgentSpawned` carries: a player is a household in the counts (4.1.5), and a
 measure that does not want the player in a regional average filters it. IND
-decides. Whether a regional difference is real before a cap or a shock is checked
+decides: the household rows of a measure are built from `Agents(r)` and `Agent(a)`
+(`spec-indicators.md` 4.5.2), `RowOpt.ExcludeExternal` is the filter, and a bulk
+read of one column is IND's open question 21 (1) and is not offered. Whether a regional difference is real before a cap or a shock is checked
 is WLD-A2's warning, and a shock the consumer set is visible in `Slots()` and in
 the events of the call.
 
@@ -1106,7 +1112,7 @@ table says what each call needs and where an event is **new** and so asked of OB
 
 The three new names follow the proposals of OBS's decisions so far
 (`YieldShocked`, `TransitFactorChanged`, `PopulationScaled`); the final names and
-fields are OBS's. Every event is plain data with no map, a past-tense name and
+fields are OBS's, which has adopted them (`spec-observability.md` 4.1.8). Every event is plain data with no map, a past-tense name and
 fixed-point values (observability-and-logging.md 4.1). A call that changes `n` keys
 emits `n` events, bounded by the configuration (3.3.2); none is per agent except
 those of an agent call.
@@ -1118,7 +1124,8 @@ one constant message per setter, "yield shocks set", "edge statuses set" and so 
 consumer's calls are not a lifecycle of the library, and a server may make many. No
 `Warn` or `Error`: a refused call is a returned error, handled once by the caller
 (architecture.md 8.3, observability-and-logging.md 2.2). The value `consumer` joins
-the constants of the key `cause` (`internal/logkeys`).
+the constants of the key `cause`: it is an exported constant of the root package
+(`event.go`), and `internal/logkeys` holds the key strings only.
 
 12.3. **Metrics.** None are new. `economysim.agent.count` and
 `economysim.household.count` count an external agent (it is an `AgentSpawned`
@@ -1404,7 +1411,7 @@ spec has no default or bound of its own.
 | FR-INT-027 | A directive MUST apply to the next step only and MUST be dropped after it unless `Sticky`, and `Direct` MUST emit no event (4.3.1, 4.3.4). |
 | FR-INT-028 | A directive MUST carry a job request only when the consumer sets one, so that a directive with intents and no job leaves `Work` to the fallback (4.3.3). |
 | FR-INT-029 | `RemoveAgent` MUST return `ErrNotExternal` for a household of the configuration or the spawner, MUST apply the removal mechanics of `spec-agents.md` 3.6 with the cause `consumer` whether or not the agent is mortal, MUST NOT refuse for an obligation, MUST emit the events in the order of `spec-world.md` 6.11 item 8 and MUST NOT reuse the ID (4.4). |
-| FR-INT-030 | A call that names the ID of a removed agent MUST return `ErrAgentRemoved`, which MUST match `ErrUnknownAgent`; the ID of a pseudo-agent or of one never issued MUST return `ErrUnknownAgent` and not `ErrAgentRemoved` (7.1.1). |
+| FR-INT-030 | A call that names the ID of a removed agent MUST return `ErrAgentRemoved`, which MUST match `ErrUnknownAgent`; the ID of one never issued MUST return `ErrUnknownAgent` and not `ErrAgentRemoved`, and the ID of a pseudo-agent MUST return `ErrUnknownAgent` from `Agent`, `Direct` and `RemoveAgent` and `ErrNotRelocatable` from `Relocate` and `RelocationRefusal` (7.1.1). |
 | FR-INT-031 | `Relocate` MUST run the dry run with `skip` `on_journey`, return its first refusal and change nothing if there is one, and otherwise, atomically, drop the agent's journey, abandon its job with `region_changed`, drop its own-use flag, change its region by the guarded relocation with the cause `consumer`, reseed its beliefs with no draw and set `RoleSince` to the current tick (4.5.2). |
 | FR-INT-032 | `Slots` MUST list exactly the slot values that differ from their defaults, in the canonical order of their owners, and a restored world MUST report the list the original did (5.3). |
 | FR-INT-033 | `AgentState` MUST be a deep copy of plain data holding the groups of 4.7.2, MUST be a function of the state of the world alone and MUST NOT include `MaxExecutions`, a refusal reason or a stock after the next completions (4.7.2). |
@@ -1543,8 +1550,8 @@ could depend on (nothing has run).
 | The slot setters and their entry types (`YieldShock`, `TransitFactor`, `FlowScale`, `RegionScale`, `EndowmentScale`, `EndowmentAdjustment`, `OutsideShock`), `SlotState`, `Slots` | root package, `integration.go`; each setter calls its owner's mechanism (`production.go`, `regions.go`, `transport.go`, `moneysupply.go`, `population.go`, `resources.go`, `external.go`) |
 | `AgentState`, `Agent`, `Agents` | root package, `agent.go` |
 | `MarketState`, `Market` | root package, `market.go` |
-| `Region` and its row | root package, `snapshot.go` (OBS's row) |
+| `Region` and its row (an outside node returns its row, 6.5) | root package, `snapshot.go` (OBS's row) |
 | `Warnings` | root package, `world.go` |
 | The sentinels of 11.2 | root package, `errors.go` |
-| The reason constants `consumer`, `not_on_role`, `not_tradable` | `internal/logkeys` |
+| The cause constant `consumer` (this spec's); `not_on_role` and `not_tradable` are PRO's and CLR's reasons, in the root package's `event.go` by their owners' rows | root package, `event.go`; `internal/logkeys` holds the key strings only |
 | No new `internal/` package | the checks are root code over the owners' primitives (architecture.md 2.9) |

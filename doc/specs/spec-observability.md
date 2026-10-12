@@ -588,7 +588,7 @@ observers given to the restore, with `Tick` the restored tick, the whole
 configuration hash, the checkpoint's format version, whether the run was reseeded
 and with what salt (CHK 6.8), the names table and the **snapshot at the restored
 boundary**, whose header carries the original seed and the totals of agents and
-households (CHK 14.1 asked for them beside it; they are in the snapshot once). It is not a replay: no `AgentSpawned` is emitted for the restored
+households (they are in the snapshot once). It is not a replay: no `AgentSpawned` is emitted for the restored
 agents, so an adapter that was never given the history has no levels. The
 snapshot is the levels (6.4.2): every instrument that is fed by deltas starts
 from it. CHK says when the restore calls the observers and what a restore does
@@ -614,13 +614,12 @@ fed by the rows counts a household once per recipe skipped, 6.2.1). The rows are
 has at most as many as its list. It is never emitted when `Halted` is zero.
 
 It answers N-087's question by commodity: the recipe row names the output that
-was overstocked. The mechanism is AGT's and is **owed, not ruled here**: `JobRequest` is
-`{NoJob, Recipe, Executions}` (`spec-agents.md` 6.3), one request per agent, which
-cannot carry per-recipe rows. AGT adds to what `Work` returns a report of the
-recipes it skipped for the halt (a slice beside `NoJob`), and the world sums it
-per (region, role), as `TradePlan.Notes` is summed for `MerchantsPlanned`
-(`spec-merchants.md` 15.1.2). A strategy that reports none counts none, and a
-`rest` is **not** counted here: it is the target-income rule working as designed,
+was overstocked. The mechanism is AGT's and is settled (`spec-agents.md` 7.1.5): the
+**world** computes the count, as a pure function of the view, for each free
+household and each recipe of its role, from the agent's own stock and `OutputTarget`,
+and sums it per (region, role). `JobRequest` and `Work` are unchanged: a strategy
+cannot hide the halt or report a different count, so every strategy, the library's
+and a consumer's, is counted alike. A `rest` is **not** counted here: it is the target-income rule working as designed,
 not a clamp, and the households held to work by the floor are in the snapshot
 (5.3.4). The position is P2.8a, after `OwnUseChanged`, in ascending (`RegionID`,
 `RoleID`).
@@ -1040,6 +1039,7 @@ input because nothing reads one back.
 | N-031 | the moment of the calendar | `Moment` in 5.3.1 |
 | N-040 | whether beliefs are in the snapshot | aggregates per market in 5.3.5; per agent in the query |
 | N-109 | whether a run measures the welfare ratio at a full draw | **No.** `r_full` is a counterfactual (what a household would earn at a full draw and a full stock), not a state, so it is not a snapshot field; it is a property of the pack's economy, and the steady-state solver of `spec-viability.md` is the place to compute it (a recommendation to POP and VIA, who own the decision whether a warning `population_cannot_grow` exists and whether the closed forms of `spec-resources.md` 8 read it from the solver). The note stays open for them |
+| IND 7.5.1, 7.7, 7.6.2 | per role the last tick's income, relief and cost (`IncomeLast`, `ReliefLast`, `CostLast`); the wear units removed, by commodity; the lines (commodity and units) of `AgentRelocated` | **Not adopted in version 1.** The income fields would be three `Money` fields of `RoleRow` (a function of the welfare ring, so of saved state, FR-OBS-043) and are a future ask; until then IND's `HouseholdIncome` is `OK` false. The wear units are a different quantity from the items retired that `wear` of `BoundaryFlow` counts (4.4.1). `Lines` of `AgentRelocated` would be new and is not needed |
 
 ## 6. Metrics
 
@@ -1445,7 +1445,7 @@ and at every multiple of `WarnRun` ticks it stays below; it is pattern A.
 The column "Counterpart" of 7.3 is a table a test can read (FR-OBS-051): for each
 message, the named event or snapshot field exists in sections 4 and 5. A spec
 that adds a `Warn` adds a row, with its counterpart or the reason there is none
-(rules 9.1).
+(observability-and-logging.md 9, item 1).
 
 ### 7.5 `Debug`
 
@@ -1467,7 +1467,7 @@ SUB ("own use entered", "own use left", "own use retry", "own use blocked"), MIG
 ("migration started", "migration declined", "arrival held"), MER ("contract
 formed", "contract settled", "offer refused", "take refused", "trip planned"),
 DEM ("want skipped", "want consumed"), SKL ("traineeship refused"), LED (a
-refused transfer), CHK ("checkpoint taken": `tick`, `bytes`), INT ("agent added", "directive set", "agent removed", "slot set").
+refused transfer), CHK ("checkpoint taken": `tick`, `bytes`), INT ("agent added", "directive set", "agent removed", and one constant message per setter: "yield shocks set", "edge statuses set", "transit factors set", "flow scales set", "birth scales set", "death scales set", "capacity scales set", "regen scales set", "endowments adjusted", "outside shocks set", with `tick` and `cause`: `spec-integration.md` 12.2).
 
 7.5.3. A `Debug` line that records a *fact* is also an event or a snapshot field
 (a rejected order, a relocation, a contract): the line is the human's view of it.
@@ -1843,6 +1843,7 @@ Stated as requirements on this spec's output, not as their content.
 | a measure is a function of the events of the steps it covers and of a snapshot at a boundary; no value exists between `TickStarted` and `TickEnded` | 3.1, 5.1 |
 | agents and households are separate; population indicators count households, never agents; pseudo-agents are in neither | 3.3.6, 5.1.2 |
 | the money of the households, the pool and contracts by region, and the boundary balance by reason, are in every snapshot; the flows of a tick reach IND through `BoundaryFlow` only, and the bucket at `Tick` -1 | 5.3.3, 4.4.1, 4.4.2 |
+| IND's reads of the snapshot and the events are `spec-indicators.md` 3.3 and 9; the household rows of a measure are INT's `Agents` and `Agent` (5.6) | 5.6, 10.5 |
 | a price index of a commodity class needs the commodity class tag (`spec-goods.md` 6.1) from the configuration and the prices of `MarketCleared` or `MarketRow.State.Price`; whether the index is the local price or the delivered price (TRN-A4) is the consumer's choice, since the freight is in the shipment events | 4.1.2, 5.3.5 |
 | value added and production and destruction value need `BoundaryFlow` under `recipe_output`, `recipe_input`, `consumption` and `spoilage` by commodity, and a price the consumer supplies (`spec-ledger.md` 9.2: a balance sheet is measurement only) | 4.4.1 |
 | the typed IDs are positions in the configuration; a measure that must survive a change of configuration keys by the string ID from the names table | 3.2 |
@@ -1855,13 +1856,14 @@ the snapshot alone (FR-STB-012), and this is the map STY and IND use:
 | Regime | Computed from |
 |--------|---------------|
 | F1 runaway inflation | the price per commodity (`MarketCleared.Price`, `MarketRow.State.Price`) by class; the money supply (`Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract`) and `BoundaryFlow` money |
-| F2 hoarding | the shares of money by sector and region; `HeldByAgents` and `HeldByEstate`; `MarketCleared.Volume` falling |
+| F2 hoarding | the shares of money by sector and region (`MoneyPool` and `MoneyContract` by region, against `M`); `HeldByAgents` and `HeldByEstate` by market; for `Inequality.Top`, the household money rows of INT's `Agents` and `Agent` (not a snapshot field, 5.6); `MarketCleared.Volume` falling |
 | F3 collapse | `Households` by region and role (the events of 4.3.2, or the snapshot); a role with `Agents` 0 (`RoleRow`) |
 | F4 stagnation | `MarketCleared.Volume` and the count of `TradeExecuted` against their start |
 | F5 pinned market | `BeliefsUpdated.AtFloor`, `AtCeiling`, `Outcomes`; `MarketCleared` with unmatched units on both sides and no volume; the `Warn` "price beliefs at bound" |
 | F6 cobweb blow-up | the range of `MarketCleared.Price` over a window; role shares from `RoleRow.Households` |
 | F7 synchronisation | `BeliefsUpdated.LowCentre`, `HighCentre`, `MeanCentre`; the distribution of `RecipeExecuted.StartTick` |
 | F8 offset | `MarketCleared.Price` against the solver's price (`spec-viability.md`), a consumer's computation |
+| R9 deflation with distress (STY 6.2, proposed there as F9 of the regimes of STB 7) | the `PriceIndex` chain over `MarketCleared.Price` by class (IND `Fisher`) and the volume of `MarketCleared`; no new event and no new field |
 
 A scenario's `Run(ctx, n)` leaves a world that can be snapshotted (`spec-world.md`
 13); the golden rendering of 9.5 is the regression record of a run.
@@ -1871,7 +1873,8 @@ A scenario's `Run(ctx, n)` leaves a world that can be snapshotted (`spec-world.m
 | EXP may rely on | Where |
 |-----------------|-------|
 | worlds share nothing, so a sweep builds many and snapshots each between ticks; the snapshot's size and cost do not depend on the number of agents | 5.5, 5.6 |
-| the recorder of 9.1 is the pattern for a harness's collector; the rendering of 9.5.2 is the format of a diff between two runs of a sweep | 9.1, 9.5 |
+| the recorder of 9.1 is the pattern for a harness's collector; the format of a diff between two runs of a sweep is `spec-experiments.md` 8.2.2 (`Render`), not 9.5.2 | 9.1, 9.5 |
+| a sweep with no measure that has an `Observer` registers none (`spec-experiments.md` 3.4.4); the world then builds no event (observability-and-logging.md 4.5) | 4.5 |
 | `ConfigHash` and the names table key a result; an index is not stable across configurations | 3.2 |
 | a failed world is detected by `TickEnded.Failed` and `RunEnded.Failed`, and by `Err()` | 4.4.3 |
 | the cost of observing is counted per class (8.3); a sweep that wants no per-order events passes an observer that ignores them, or waits for the open option (18, question 1) | 8 |
@@ -2113,7 +2116,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-013 | Every step that emitted `TickStarted` MUST emit `TickEnded`, with `Failed` true when it returned an error, and a guard that refuses a step before `TickStarted`, and a step that ends in a panic (`spec-world.md` 3.5.4), MUST emit no `TickEnded`; a `Run` that ends in a panic emits no `RunEnded` and the run span stays open until the world is restored. |
 | FR-OBS-014 | `BoundaryFlow` MUST be emitted only for a (region, reason, money or commodity) whose reason has the kind faucet or sink and whose total is non-zero, in the order of region, registry order of the reason, money before goods, then commodity, with `Commodity` `NoCommodity` for money (4.4.1). |
 | FR-OBS-015 | The construction bucket MUST be emitted once as `BoundaryFlow` with `Tick` -1, at the entry of the first step of a world that is still in its construction phase and before its `TickStarted`, and MUST NOT be emitted by a world restored after its first step (4.4.2). |
-| FR-OBS-016 | `ProductionHalted` MUST be emitted once per region and role per tick in which at least one household's job request was declined by the production halt, with one `Skipped` row for each recipe the halt skipped, and MUST NOT be emitted when `Halted` is 0 (4.4.6). |
+| FR-OBS-016 | `ProductionHalted` MUST be emitted once per region and role per tick in which at least one household's job request was declined by the production halt, with one `Skipped` row for each recipe the halt skipped, MUST be counted by the world from the view and not reported by a strategy (`JobRequest` and `Work` are unchanged, `spec-agents.md` 7.1.5), and MUST NOT be emitted when `Halted` is 0 (4.4.6). |
 | FR-OBS-017 | A call that sets a slot MUST emit one event per cell whose value changed, in the order of the key, after the whole call is applied, with the `Tick` of the next step and before its `TickStarted`, and MUST emit none for a cell set to the value it holds (4.4.4). |
 | FR-OBS-018 | `RecipeExecuted`, `RecipeAbandoned` and the three `Traineeship*` events MUST carry the region of the agent at the time of the event (3.3.7). |
 | FR-OBS-019 | `WeightChanged` MUST carry the money (signed, positive to the agent) and the units of goods that the change moved between the agent and the estate. |
@@ -2204,8 +2207,8 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
    no instrument (`EstateOpened`, `ReliefPaid`, `WeightChanged` beyond the counts,
    `ShipmentRejected`, `RecipeAbandoned`, `EndowmentAdjusted`). They are for a
    recorder, a trace or a log. If one is missed on a dashboard it is a new row of
-   6.2, derivable from the event already there (3.1.4). Next step: IND's first
-   indicators.
+   6.2, derivable from the event already there (3.1.4). Answered: IND adds no event and no
+   metric (`spec-indicators.md` 14).
 
 ## 19. Edits owed to other files
 
@@ -2260,7 +2263,7 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `spec-money-supply.md` | 13.4 | the snapshot list reads 5.3.2 and 5.3.3 here |
 | `spec-regions.md` | 10.1, open question 4 | answered: events carry the `RegionID`; the strings are the names table; the relocation causes are `transport`, `migration`, `consumer` |
 | `spec-resources.md`, `spec-information.md`, `spec-migration.md` | 14.1; 10.1; 13.1 | the question of the index or the string ID is answered (3.2) |
-| `spec-reference-chain.md` | 9 | the rows marked "not stated" and "missing" are answered (5.3.4, 5.3.5, `ProductionHalted`, 4.4.2); `start_money` and `relief` are told by `AgentSpawned` and `ReliefPaid`, not `BoundaryFlow` (4.4.1) |
+| `spec-reference-chain.md` | 9 | the rows marked "not stated" and "missing" are answered (5.3.4, 5.3.5, `ProductionHalted`, 4.4.6); `start_money` and `relief` are told by `AgentSpawned` and `ReliefPaid`, not `BoundaryFlow` (4.4.1) |
 | `spec-stability.md` | 12.1, 12.2, FR-STB-012 | the production halt is counted by `ProductionHalted`; the map of regimes to measures is 10.2 here |
 | `spec-beliefs.md` | 12.4 | the metric is `economysim.belief.centre` (6.2.1) |
 | `spec-calendar.md` | 8.2, open question 4 | answered: no season event (4.4.7) |
@@ -2273,7 +2276,7 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `spec-ledger.md` (also) | 11 | the bucket is saved while the world is in its construction phase (CHK 4.4) |
 | `spec-checkpoint.md` (also) | 14.1 | `WorldRestored.Format` is the `uint32` of `CheckpointInfo.Format` (R12; settled here, no CHK change); the "log key `format`" is `slog.Int64(int64(f))` |
 | `spec-checkpoint.md` (also) | 4.2 tags 9 and 14, FR-CHK-043 | with SPN 14 and POP 11 below, the runs of "group below floor" and "region extinct" are saved |
-| `spec-agents.md` (also) | 7.1.5, 6.3, 14.3 | **one** request: the halt count for `ProductionHalted` is reported as the **recipe IDs** the halt skipped, per household that `Work` was called for (a slice beside `NoJob`, or computed by the world from stock and `OutputTarget` as it computes the floor in 7.1.3, AGT decides); "declined for the halt" is AGT 14.3's reason `halted`; an agent with no work share (`rest`) is `rest`, not `halted`; households are the agent's weight, not its `Executions` |
+| `spec-agents.md` (also) | 7.1.5, 6.3, 14.3 | **one** request: the halt count for `ProductionHalted` is the **recipe IDs** the halt skipped, per household that `Work` was called for ((computed by the world as a pure function of the view, from stock and `OutputTarget`, as it computes the floor in 7.1.3; `JobRequest` and `Work` are unchanged, AGT 7.1.5)); "declined for the halt" is AGT 14.3's reason `halted`; an agent with no work share (`rest`) is `rest`, not `halted`; households are the agent's weight, not its `Executions` |
 | `spec-agents.md`, `spec-welfare-and-wages.md` (also) | 7.1.3, 14.6, FR-AGT-072; 5.3, 11.2 | say that the count of the households held by the work floor at the boundary (`RoleRow.HeldByFloor`) is evaluated over the agents with no job in progress on the record after P6.3 and may differ from the count in the "work floor binding" `Warn` (F16) |
 | `spec-external-sector.md` (also) | 8.3, 15.4 | 8.3 "the boundary accounts are per reason and region" reads "one per reason" (`spec-ledger.md` 3.4); 15.4's cumulative balance of trade per node is dropped from the snapshot and `import_c`, `export_c` are the sums of the sides' `Units` per commodity (F2) |
 | `spec-merchants.md` (also) | 15.1.1 | `ContractSettled` gains `Region` (the deliverer's); "An event of a module that is off is not emitted" says that `MerchantsPlanned` is gated by the merchant block (F4, K8) |

@@ -239,8 +239,9 @@ breaking, and with no randomness.
 
 A commodity has a set of **classes**: short tags such as `food` or `fuel` or
 `tool`, chosen by the author. They exist for measurement: the generic
-aggregators of `spec-indicators.md` group by class (a price index per class, a
-value added per class), and a consumer-defined measure can too. Rules:
+aggregators of `spec-indicators.md` group by class (a price index per class, an
+output and an intermediate use per class, and a value added by recipe grouped by cost share,
+7.2.3), and a consumer-defined measure can too. Rules:
 
 - A class is a string matching the ID pattern of `spec-config.md` 3.3, and a
   commodity has at most 8, with no duplicates.

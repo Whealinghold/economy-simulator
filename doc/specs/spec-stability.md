@@ -17,7 +17,9 @@ section 6 are runs of small stylised models of the rules of other specs, with
 placeholder parameters (notes N-015, N-027). They show how a loop can behave and
 which parameters it is sensitive to; they do not validate a default, and they are
 not runs of the library, which does not exist. Every threshold in sections 7 and 8
-is a placeholder for `spec-stylised-facts.md` to replace.
+is a placeholder; `spec-stylised-facts.md` sets the thresholds of the regimes (its 6.2, in
+`testdata/chains/bands/regimes.toml`) and the bands of the scenarios (its 5.11), each with
+its protocol and none yet with a value.
 
 Terms in **bold** on first use are new domain terms. They must be added to the
 glossary in `doc.go` before any code uses them (architecture.md 3.2). Two of them
@@ -426,8 +428,13 @@ initial jobs, tool ages and lots at fixed phases, `spec-viability.md` 8.4.3 and
 8.5, which answers `spec-production.md` open question 2). *Undamped:* a world not
 started from the warm start. Merged: AGT-A8, the synchronised purchase: jobs complete
 in one tick, the agents are free in one tick and buy their inputs in that tick, a
-pulse of demand and then of price (`spec-agents.md` 7.3.2); and VIA's "lockstep of
-jobs". *Condition:* completions are spread. *Test:* S18 (VIA A8). *Status:* hand.
+pulse of demand and then of price (`spec-agents.md` 7.3.2); VIA's "lockstep of
+jobs"; and WLD-A3, the case of a world with no warm start (`spec-world.md` 5.6.3, 17): the
+stagger is D22 and exists only with a warm start, so a cold pack's first jobs complete
+together every `Duration` ticks, undamped by design and reported by the informational
+warning `cold_start_lockstep`. *Condition:* completions are spread, which for a recipe
+of `Duration` above 1 needs a warm start. *Test:* S18 (VIA A8), and S75 for the cold leg
+(WLD-S3). *Status:* hand.
 
 **STB-L23 Seasons are a periodic forcing.** *Kind:* amplifier. Seasonal yields make
 supply swing with a fixed period, exciting any loop with a delay close to it
@@ -917,7 +924,7 @@ switch costs the agent; the cost works as hysteresis in effect and shows in the 
 These entries do not exist yet. Each future spec adds its own by the checklist of
 section 9. The list says what each is expected to bring, from the notes and the
 roadmap, so that no loop is forgotten. The agents, viability, demand and spawner specs
-have been merged (4.7), and the region, money, population and transport specs (4.9), and the resource, information and external-sector specs (4.10), and the subsistence, migration and merchant specs (4.11), and no longer have a row. The reference chain (REF) has no row:
+have been merged (4.7), and the region, money, population and transport specs (4.9), and the resource, information and external-sector specs (4.10), and the subsistence, migration and merchant specs (4.11), and the world, observability, checkpoint, integration, indicator, stylised-facts, experiment and calibration specs (4.12), and no longer have a row. The reference chain (REF) has no row:
 it adds no rule and so no loop (`spec-reference-chain.md` 13, FR-STB-003); it builds the
 scenarios of section 8.
 
@@ -928,7 +935,6 @@ scenarios of section 8.
 | STO, RSK | storage and its cost, loss in transit (the `loss` reason is RSK's); the merchant's decision to ship is written (4.11, L84 and L113) | roadmap; TRN 5, 10 |
 | FIS, PLC | policy rules that react to measures (a controller in the world, which `ADR 0001` allows only as a policy actor) | ADR 0001 |
 | LND | rent; the subsistence floor (D15) is written (4.11); depletion and regeneration are written (4.10) | roadmap |
-| WLD | the decision rates (D25) and the phase order the register assumes (`spec-agents.md` 4) | roadmap; N-009 |
 
 ### 4.9 Regions (REG), money (MON), population (POP) and transport (TRN)
 
@@ -1114,6 +1120,97 @@ Nothing here has been run except where a status says `model`. No default is clai
 Cross-references between owners: the floor (L102, L103, L106) is the answer to the "no money, no goods" end of L11 and to L39 and L63; SUB's receipts enter the ratio that MIG's earned ratio reads (L18, L40); a merchant role with no recipe takes SUB's mode only if its effective own-use list is non-empty (`spec-subsistence.md` 3.3.3, `spec-merchants.md` 6.4), and then plans no trip; a migrant and a traveller are reseeded at arrival by one rule (D85, `spec-beliefs.md` 8.3); a journey and a trip are both gaps in income (L19, L107).
 
 
+### 4.12 World (WLD), observability (OBS), checkpoint (CHK), integration (INT), indicators (IND), stylised facts (STY), experiments (EXP) and calibration (CLB)
+
+These entries come from `spec-world.md` 17 (five, `WLD-A1` to `WLD-A5`),
+`spec-observability.md` 13 (two, `OBS-A1` and `OBS-A2`), `spec-checkpoint.md` 15 (three,
+`CHK-A1` to `CHK-A3`), `spec-indicators.md` 16 (three, `IND-A1` to `IND-A3`),
+`spec-integration.md` 16 (three, `INT-A1` to `INT-A3`), `spec-stylised-facts.md` 15
+(four, `STY-A1` to `STY-A4`), `spec-experiments.md` 17 (five, `EXP-A1` to `EXP-A5`) and
+`spec-calibration.md` 17 (six, `CLB-A1` to `CLB-A6`), merged by the checklist of
+section 9 (9.9). The new IDs are L117 to L142 (WLD L117 to L120, OBS L121 and L122, CHK
+L123 to L125, IND L126 and L127, INT L128 and L129, STY L130 to L133, EXP L134 to L138,
+CLB L139 to L142); the writers' provisional IDs stay in the Owner field in brackets. The
+dampers are D87 to D98 (section 5) and the scenarios S73 to S90 (section 8). A section
+number in an entry that names no spec is a section of the spec named in its Owner field.
+None of these specs adds a feedback loop of the library: nothing in a run reads a measure
+and changes a rate through an event, a snapshot or an indicator (FR-STB-003, IND 3.1,
+observability-and-logging.md 1.4). Their entries are amplifiers, biases and **hazards**: a trap of a consumer's
+loop, of a method (a calibration, a band, a harness) or of the reading of a measure. The
+kind of each is written `hazard`, as section 3 has it, and the qualifier ("of method", "of
+reading", "of cost") is in its text. Nothing here has been run except where a status says
+`model`. No default is claimed stable (N-027).
+
+| Source entry | Merged into | What was added there |
+|--------------|-------------|----------------------|
+| WLD-A3 a cold start is a lockstep | L22 | the case of a world with no warm start (the pulse of every `Duration` ticks); D22 exists only with a warm start; the informational warning `cold_start_lockstep` is raised for it; test S75, which is also the cold leg of S18 |
+| IND-A1 a consumer closes a loop through an indicator | L121 | the window adds `n/2` ticks of delay beyond the one tick of the call |
+| INT-A1 the consumer closes a loop through the surface | L121 | a rule of the consumer on `Market`, `Region` or `Agent` that sets a slot or a directive; bounded by INT-D1 (D91); test S80 |
+| CLB-A2 the winner's curse for the procedure | L135 | the confirm on other seeds, with a control (D93); test S88 |
+| CLB-A4 a stale warm start across a calibration | L138 | the flag `in`, the re-entry rule and the table generated last; test S88 (the dry run's check of the table's hash) |
+
+Cross-references between owners (R18 continued): L121 is the one loop a consumer builds
+through the library's reads (an event, a window of an indicator, a slot call); L118 and
+L133 are one trap, a first-come order read as a real difference between agents; L126, L130
+and L139 are three forms of one trap, a band or a measure tuned to the code that sets it;
+L127 and L132 are one trap, silence read as health (L03, STB-F5); L135 is the winner's curse
+as EXP names it and CLB restates it; L136 and L138 are the approach and the stale start
+that a window can include; L120 is why a paired comparison (L134) holds only for a change
+that moves no draw count.
+
+**STB-L117 The phase order is a one-tick delay in every loop.** *Kind:* amplifier. *Loop:* none of its own. *Delay:* one tick: a price formed at P4.1 reaches a decision at P3.2 of the next tick; money earned at P4.1 is spendable at P3.2 of the next tick; a belief revised at P5.4 is used at P3.2 of the next tick; an outcome is seen at P5.4 and not before. *Owner:* WLD 6.1.8 (CLR 3.3.1, AGT 4.1) [WLD-A1]. *Damper:* none by design: the delay cannot be shorter without letting an order spend what it has not yet earned. *Undamped:* by design. *Condition:* the gain bounds of the loops through prices, income and beliefs (L01 to L21, L84, L85, L93) are written for a delay of at least one tick and must not assume zero. *Test:* none of its own; every price-loop scenario runs on it (S01, S30). *Status:* hand.
+
+**STB-L118 A cap is first-come.** *Kind:* bias. *Loop:* none: it chooses who is served when a cap or a budget binds (the places O1 to O5 of `spec-world.md` 10.2), and does not feed back unless being served changes an agent's later welfare, in which case it selects for survival by ID, role or region. *Owner:* WLD 10.2 with SPN 6.3, 7.3, MIG 7.1, MON 5.4, MER 9.4 [WLD-A2]; neighbour of L133. *Damper:* the keyed tie of WLD 10.1.1 and a rotation of the starting role, region or lane (D87), **proposed, not adopted**; so the loop is undamped (FR-STB-006). *Undamped:* the five places as written. *Condition:* a cap that binds a fraction of the ticks and a difference between roles or regions that is not read as real before its counter (`EntryLimited`, `MoneyFlowLimited`, `ContractRound`) is checked. *Test:* S73 (the unit model `rotation.py`). *Status:* model of the ordering alone.
+
+**STB-L119 Cadences that coincide, and a group smaller than its period.** *Kind:* hazard. *Loop:* none. Two rotations whose periods have a common factor (30 and 10) put an agent's occupation review and migration review on the same tick for 13.3% of agents with the rule bucket (4 in 30; always with raw IDs), and a group of `n` agents with a period `P > n` acts on at most `n` of the `P` ticks. The first is harmless because the settling rule (`spec-migration.md` 5.2) holds an agent that changed role this tick; the second means a small group acts in bursts. *Owner:* WLD 9.3.4 with SPN 6.2, MIG 5.1 [WLD-A4]. *Damper:* the bucket of WLD 9.1.1, which spreads the load whatever the layout of the IDs for a group of about a thousand agents or more (D25). *Undamped:* the burst of a small group, which is a property of the period. *Condition:* a role of fewer agents than its review period is read as bursty. *Test:* S74 (`cadence.py`). *Status:* model of the load alone.
+
+**STB-L120 The stream is positional.** *Kind:* hazard. *Loop:* none: one extra draw early in a run changes every later draw of the run (`spec-world.md` 7.6). Two runs that differ in a datum that changes a draw count are alike in distribution and are not paired. *Owner:* WLD 7.6, architecture.md 7.3 [WLD-A5]. *Damper:* D88 (draw anyway, WLD 5.7.2, 7.4.3). *Undamped:* any change in the number of intents considered, orders admitted or agents created, which is what a different parameter does. *Condition:* a paired comparison between two runs is valid only for a change that moves no draw count; otherwise compare distributions over seeds. *Test:* S76 (`stream.py`: 98.0% of the later draws differ with one stream, 2.0% with a stream per tick). *Status:* model.
+
+**STB-L121 A consumer closes a loop through the library's reads.** *Kind:* hazard. *Loop:* the events of step `t`, a window of an indicator over steps `t-n+1 .. t` (`PriceIndex`, `Inequality`, `Unfed`), or a read of `Market`, `Region` or `Agent` (+) a consumer's rule (a game's reaction to a price or to inflation, a script that sets a shock, a flow scale or a directive) (+) a slot call (+) the state at `t + 1`. The loop exists in the consumer, not in the library: a policy actor built outside the engine, which ADR 0001 decision 4 accepts. *Delay:* at least one tick by construction (the events of a step reach the consumer after the step; its call acts at the next step, `spec-world.md` 8.1); a measure over a window of `n` ticks is a moving average and adds `n/2` ticks, so a window as long as the loop's natural period turns a damped controller into an oscillator; a slot read at P8.3 or at job start adds that position's own delay. *Owner:* INT 3.5, 5; the consumer [OBS-A1, with IND-A1 and INT-A1 as cases]. *Damper:* none in the library, by design ("macro is measured, never set", ADR 0001 decision 7) beyond the bound of each slot and the atomic call (D91); `spec-policy.md` (PLC, later) is where a rule that reads measures and sets a slot is specified, with its own entries. *Undamped:* the consumer's own gain. *Condition:* the gain of such a rule times its total delay (`n/2 + 1` ticks for a windowed measure) must obey the bounds of the loops it feeds (section 6.3; L84 and L85 give the form of a delayed gain): a rule that sets a flow scale at a gain above the condition of the loop it acts on cycles, and conservation and determinism still hold. *Test:* S80 (the surface works as a controller input, which is not a claim that any controller is stable); the non-interference test (FR-IND-003) shows only that the library does not close it. *Status:* hand.
+
+**STB-L122 A slow observer stretches the step and changes no result.** *Kind:* hazard of cost, not of dynamics. A slow observer lengthens the wall time of a step (observability-and-logging.md 4.4) and nothing else: the world is single-threaded and has no timeouts, no deadline and no clock, so a slow observer cannot make a result differ. *Owner:* WLD 3.1.3 [OBS-A2]. *Damper:* none needed. *Condition:* none. *Test:* FR-OBS-023 (an integration test of the owner: the stream and the state are the same with a slow and a fast observer; no scenario). *Status:* hand.
+
+**STB-L123 A hidden-state extension survives no restore.** *Kind:* hazard. *Loop:* none: an extension (`Strategy`, `Spawner`, `Clearing`) that keeps state outside what it saves (a field not in `SaveState`, a closure, a package variable) makes a resumed run diverge from the original with no error, because the library cannot see it. *Owner:* CHK 7, 7.3.3 [CHK-A1]. *Damper:* D89: the `Stateful` pair with a version, the entry per registered name, the detection of a missing or surplus entry, and the consumer's round-trip test of CHK 8.2 with the library's own example. *Undamped:* an extension with hidden state, by construction. *Condition:* the consumer runs the round-trip test on any extension that keeps state. *Test:* S77 with a deliberately hidden extension. *Status:* hand.
+
+**STB-L124 Branches that share their randomness are not independent.** *Kind:* hazard (and a feature for a paired comparison). *Loop:* none: two worlds restored from one checkpoint and given the same calls give **identical** runs; a statistic over such branches has one sample, not many. *Owner:* CHK 6.8, 11 (EXP) [CHK-A2]; its pair is L120. *Damper:* D90: `WithReseed(salt)`, one salt per branch, deterministic. *Undamped:* a harness that forgets it. *Condition:* a Monte Carlo over branches gives each its own salt; a paired comparison keeps the same one and changes only a parameter that moves no draw count (L120). *Test:* S78. *Status:* model (a bijection of the salt: the 10^6 first words of the Go check are distinct).
+
+**STB-L125 Closed accounts accumulate.** *Kind:* hazard. *Loop:* none: every removal leaves a two-byte slot that is saved for the rest of the run (CHK 9.4); a long run with the population module in a closed region grows the checkpoint by the number of its deaths. *Owner:* CHK 9.4 with LED 3.3 [CHK-A3]. *Damper:* none by design: compaction was rejected as a design change. *Undamped:* by design; the growth is about 1% of a first-consumer checkpoint per ten thousand deaths. *Condition:* revisit when closed slots exceed a quarter of the checkpoint bytes (CHK 9.4.4). *Test:* NFR-CHK-004 reports the share (a measurement; no scenario). *Status:* hand.
+
+**STB-L126 A calibration targets a measure that has a blind spot.** *Kind:* hazard of method. *Loop:* knob (+) preset value (-) distance to a band (+) knob, run by the measure-compare-adjust-run loop of the roadmap (CLB, EXP). The loop can converge on a value of the measure by a route that the measure cannot see: an inequality band met by raising the weight of cohorts (within a cohort inequality is zero, IND 6.2); a price-index band met by letting markets carry stale prices (IND 5.3.8); a GDP band met by output that is discarded (IND 7.3.2). *Owner:* CLB, STY [IND-A2]; neighbour of L130 and L139. *Damper:* the **field** that names each blind spot is part of the result (`CohortShare`, `Stale`, `Written`, `Absent`, `Binding`), and a band is stated with the scale, the weights, the window and the price table (IND 11.1.1); the check at scale is SCL 7.2's. *Undamped:* a band that omits those fields. *Condition:* a band is a conjunction of a measure and its blind-spot field. *Test:* S10 (scales 1, 4, 10) reads `Inequality` with `CohortShare`. *Status:* hand.
+
+**STB-L127 A measure that is smooth for the wrong reason.** *Kind:* hazard of reading, a neighbour of L03 (the stale price loop) and STB-F5. *Loop:* none: a price index over markets that did not trade is the carried-forward price, which does not move, so the index looks stable exactly when the markets are pinned or frozen (F4, F5). *Owner:* IND 5.3.8 [IND-A3]; neighbour of L132. *Damper:* `Stale` on every index, and `Pinned` and `Turnover` beside it in the same scenario (F5 is `Pinned`, F4 is `Turnover.Volume`). *Undamped:* a claim that cites no `Stale`. *Condition:* a stable-price claim cites `Stale` below a stated share. *Test:* S03 and S09 read `PriceIndex.Stale` and `Pinned` together. *Status:* hand.
+
+**STB-L128 A call is a faucet by another name.** *Kind:* bias. *Loop:* none: `AddAgent` creates money and goods by `initial` outside any declared flow, so a consumer that adds agents with money raises the money supply by the calls. It is visible: `BoundaryFlow` reports it under `initial` in the tick it falls in, and the identities hold. *Owner:* INT 4.1.4, `spec-money-supply.md` 9 [INT-A2]. *Damper:* none; the stated, counted amount (`MaxMoney`, the overflow check). *Undamped:* by design. *Condition:* a measure of price drift in a run with `AddAgent` calls reads the `initial` flow before it reads an inflation (`spec-money-supply.md` 8.2, 9.1; L30, L69). *Test:* S81. *Status:* hand.
+
+**STB-L129 An agent the library will not remove.** *Kind:* bias (a neighbour of L40). *Loop:* none: a non-mortal external agent is outside the failure ladder, so it can stay unfed for as long as it holds out, draw relief on a ratio that stays low, and keep goods and money out of circulation. It counts in the households of its group and in the role's wage and welfare (`spec-spawner.md` 9.3). *Owner:* INT 4.6, SPN 9 [INT-A3]. *Damper:* the `Mortal` flag; the counters of `UpkeepShortfall` and `ReliefPaid` include it. *Undamped:* by design. *Condition:* a regional mean that includes a player that cannot die is read with the `External` flag in view (INT 9.4); a consumer that wants a player that can fail sets `Mortal` and provides the spawner or the call. *Test:* S82. *Status:* hand.
+
+**STB-L130 A band is tuned to the code.** *Kind:* hazard of method. *Loop:* a calibration of a knob (+) a measure (-) the distance to a band (+) the knob, as L126, with a second path: the band itself is moved by a reviewer until the test passes (+) the band (-) the failures, which closes without the library moving. *Delay:* a review cycle. *Owner:* STY 8.4, CLB [STY-A1]; neighbour of L126 and L139. *Damper:* REF's seed sets and a hold-out set once REF adds it (STY 8.2), headroom (STY 8.4.3), outward rounding, the ordering against the regime threshold (STY 6.5.2), a review that must say which of three it was (STY 8.4.5), and the record of every set value with its run. *Undamped:* the reviewer's judgement. *Condition:* every band's `set_by` names a setting run on REF's seeds. *Test:* the registry check of STY 12 (no scenario). *Status:* hand.
+
+**STB-L131 A threshold at the edge of healthy.** *Kind:* hazard of method. *Loop:* none: a regime threshold that the healthy runs approach flags a healthy pack, or one that a bad run approaches passes a bad pack. *Owner:* STY 6.5 [STY-A2]. *Damper:* the separation protocol (STY 6.5.3) sets a threshold only where healthy and provoked runs are separated, and records a detector that does not as unusable (its key unset, the verdict `unknown`). *Undamped:* a regime with no provoked run (R9 until `overlay/sink.toml` exists). *Condition:* `t_hi < t_lo` for every threshold set. *Test:* S16, S07 at a 10 000 floor and the other provoked runs of STY 6.5.3. *Status:* hand.
+
+**STB-L132 Silence is read as health.** *Kind:* hazard of reading (a neighbour of L127). *Loop:* none: a detector over a series that is too short, whose prices are stale or whose key is unset returns "no regime", and a verdict of `none` is then read as `stable`. *Owner:* STY 6.1.2 [STY-A3]. *Damper:* the third verdict class, `unknown`, which a check treats as UNDETERMINED and not as STABLE (STY 7.2). *Undamped:* a consumer that reads only `detected`. *Condition:* a check cites its `unknown`s. *Test:* the unit tests of STY 9.1 (FR-STY-060; no scenario). *Status:* hand.
+
+**STB-L133 A listed seed that recurs.** *Kind:* bias (a neighbour of L118). *Loop:* none: SR2 lets one seed in ten sit outside a band, and if the same seed or agent position is the one that sits outside on every nightly, the cause is an ID, a region order or a cap that favours it (`spec-world.md` 10.2: "IND and STY must not read a regional difference as real before checking whether a cap or a limit was binding"). *Owner:* STY 8.3.2, WLD 10.2 [STY-A4]. *Damper:* the record lists the seeds and the nightly flags a recurring one; the `Binding` field of IND 8.7 is read with it. *Undamped:* a cap whose bias is small. *Condition:* no seed is outside in more than a stated share of nightlies. *Test:* S73 and the nightly record. *Status:* hand.
+
+**STB-L134 Too few replicas.** *Kind:* hazard. *Loop:* none: a mean and a standard deviation of three seeds are one draw from the distribution of those statistics. *Owner:* EXP 8.3 [EXP-A1]. *Damper:* D92: the reductions report `Used` beside every statistic and the standard deviation, so a consumer sees the sample; the bands' seeds are `spec-reference-chain.md` 8.2 (10, nightly 50). *Undamped:* an experiment with `Replicas` 2 reports a number. *Condition:* a band is never set from fewer than the seeds of REF 8.2 (FR-REF-024). *Test:* S84. *Status:* hand.
+
+**STB-L135 The best of many points is fitted to its seeds.** *Kind:* hazard (the winner's curse). *Loop:* none: choosing the maximum of `N` noisy pass shares selects the points whose noise was favourable, so the chosen point's pass share on those seeds overstates it. *Owner:* EXP 4.6.4, 12.4.2 [EXP-A2]; CLB 7.1.2 restates it for the procedure [CLB-A2]. *Damper:* D93: the confirm step on another `Seed0` (a second experiment, independent of the first), with a control, and D95 (a search block serves one choice). *Undamped:* a calibration that stops at the choice, and a confirm so small it has the same noise. *Condition:* the confirm share, not the chosen or the search share, is what a calibration claims. *Test:* S85; the arithmetic is CLB's `stop.py` (an 85% point passes a 10-seed search among 16 points with certainty and a 50-seed confirm 22% of the time). *Status:* hand.
+
+**STB-L136 A transient read as an equilibrium.** *Kind:* hazard. *Loop:* none: a window opened before the run has settled measures the approach, not the state. *Owner:* EXP 3.4.2; STY (the length of a transient) [EXP-A3]. *Damper:* `Transient` (a burn-in no window covers) and the series: a drift across successive windows is visible (IND `Stats`, `Change`). *Undamped:* `Transient` 0. *Condition:* a band is stated with its window (IND 11.1.1). *Test:* S86. *Status:* hand.
+
+**STB-L137 Survivors.** *Kind:* hazard. *Loop:* none: dropping failed runs from a mean makes a sweep that fails often look better than one that does not. *Owner:* EXP 8.3.1, 9.3 [EXP-A4]. *Damper:* D94: `Planned = Used + Failed + Undefined + Missing`, a pass share over `Planned`, and the counts always beside the mean. *Undamped:* a consumer that reads `Mean` and ignores `Failed`. *Condition:* a failure of the world is a result (EXP 9). *Test:* S87. *Status:* hand.
+
+**STB-L138 A stale warm start across a sweep or a calibration.** *Kind:* hazard. *Loop:* none: a parameter that moves the steady state is swept over a base whose `WarmStart` was solved for the base's value, so every other point starts away from its own equilibrium and the measure includes the approach (L53's perturbation, the warm start that hides an instability). *Owner:* EXP 3.3.3; VIA 8 [EXP-A5]; CLB 4.2.1, 7.3.11, 9.1 restates it for a calibration [CLB-A4]. *Damper:* `Prepare` regenerates the table per point; `stale_warm_start` (opt-in); for a calibration the flag `in`, the re-entry rule and the warm start generated last. *Undamped:* a sweep with no `Prepare`. *Condition:* the experiment says whether it means a perturbation or a comparison of steady states. *Test:* S22's cold leg (section 8); S88 for the calibration. *Status:* hand.
+
+**STB-L139 A knob fitted to a band the same code set.** *Kind:* hazard of method (a neighbour of L130). *Loop:* a knob (+) a measure (-) the distance to a band (+) the knob, with the band itself set from the code under test, so the loop closes without the library moving. *Owner:* CLB 3.3, 7.1 [CLB-A1]. *Damper:* D95 and D93: the targets are the acceptance set and the priors of size H, M or E; a prior of size P is never a target; bands are set **after** a calibration from seeds it did not choose on. *Undamped:* a reviewer's judgement of a prior's size. *Condition:* no band is set from the seeds a calibration chose on. *Test:* S88. *Status:* hand.
+
+**STB-L140 A damper disabled to pass a fact.** *Kind:* hazard of method. *Loop:* a failing fact (+) a damper moved to off (-) the failing fact, which hides the loop and leaves it undamped. *Owner:* CLB 4.3.1, 7.4.1 [CLB-A3]. *Damper:* D96 (the off value is never a calibration move) and the dormant rule (a damper that never acted is not moved). *Undamped:* a pack that chooses the off value as structure and says so. *Condition:* a calibration never moves a knob of class D to its off value. *Test:* the check "no off value" of CLB 14 (no scenario). *Status:* hand.
+
+**STB-L141 An alias read as two knobs.** *Kind:* hazard. *Loop:* none: two knobs that the facts see only through a product are both "calibrated", and the values found are one equation in two unknowns. *Owner:* CLB 6.5, 10 [CLB-A5]. *Damper:* the alias groups, the alias test, the composite factor. *Undamped:* an alias no spec has named, found only by the test. *Condition:* the alias test has run on the registry. *Test:* S90. *Status:* hand.
+
+**STB-L142 The gate as a training set.** *Kind:* hazard of method. *Loop:* a gate verdict (+) a knob moved because of it (+) the next gate verdict, which makes the gate a fitted check, because the gate is inside the setting range and is never out of sample (`spec-stylised-facts.md` 8.2). *Owner:* CLB 7.1, 7.4.4 [CLB-A6]. *Damper:* D97 (a gate failure is a finding that returns the stage to a new block) and D98 (attempts counted, review after three). *Undamped:* a reviewer who moves a knob on the verdict and re-runs the same gate. *Condition:* the gate is never an input to a choice. *Test:* the check "blocks" of CLB 14 (no scenario). *Status:* hand.
+
+
 ## 5. The catalogue of dampers
 
 A **damper** is a rule or parameter whose job is to limit a feedback loop. This
@@ -1148,7 +1245,7 @@ damper observable (FR-STB-013).
 | D22 | Staggered warm start | initial jobs, tool ages and perishable lots placed at fixed phases (agent `i` of `n` at `floor(i * P / n)`, no random number) so they do not complete together | VIA 8.4.3, 8.5; FR-VIA-037, 038 | specified (only when a warm start is configured) |
 | D23 | Viability check | reject a chain with an unproductive cycle, `labour_short`, `storage_gap` or an unsourced good (V1 to V4); `cycle_not_productive` is the cycle gain `g < 1` of L10 at `CostFloor` 10 000, and the warning `cycle_cost_gain` flags `g = CostFloor / 10 000 * s >= 1` at the configured `CostFloor` (`s` the full-cost share of the cycle's own inputs); the warning `cost_floor_at_full_cost` flags the wage loop at `CostFloor` 10 000 or more | VIA 4; CFG 7.6 item 3; FR-VIA-004 to 008; FR-CFG-044, 056 | specified (error for the material cycle, warnings for the cost gain and the wage loop) |
 | D24 | Production stop | a recipe is not started when the stock of an output with a positive cost share is at or above `ProduceHaltRatio` of its target, so an overhang cannot grow without bound; no inventory capacity is added (N-002) | AGT 7.1.5; FR-AGT-036, 070 | specified |
-| D25 | Decision rates | trade each tick, price and hiring and migration decisions at slower stated rates, as data | WLD (not written); specified for places by MIG 5.1 (D72) | proposed |
+| D25 | Decision rates | trade each tick, and every other decision at a stated cadence that is a configuration field of its owner, selected by a rotation `(t + bucket(id, P)) mod P = 0` that takes no draw; no cadence is read from an aggregate. Cost: a slower response | WLD 9 (9.1.1 the bucket, 9.2 the table of cadences, 9.4 no rate from an aggregate); MIG 5.1 (D72) | specified |
 | D26 | Survival rule | work while unfed or below the reserve money | AGT 7.1.3 | specified, but unit-elastic (6.1), so it is a household rule and **not a damper of L14** |
 | D27 | Budget stack and saving rule | upkeep first, job inputs second, buffers only above a reserve and under a concave cap | AGT 7.4 | specified |
 | D28 | Proportional work share | a cohort of `w` households works `k = ceil(w * s / 10 000)` households, so it moves in steps of `1 / w` as the ratio crosses the band, not all at once | AGT 7.1.2, 9.3 | specified (a form of D09 and D08) |
@@ -1156,7 +1253,7 @@ damper observable (FR-STB-013).
 | D30 | Demand schedule | a want falls with the price of its items to a choke price (the schedule reaches 0) and rises with a fall to a ceiling; the response is through the belief centre, so it is local and lagged. Cost: a want vanishes at a dear price | DEM 4.3 (`Elasticity`, `Ceiling`) | specified (counted by `WantShortfall.Choked`) |
 | D31 | Ladder and shared cap | a want is funded only from the part of the saving rule's cap that buffers leave, in rank order, so wants never touch the reserve, upkeep or job inputs. Cost: in a poor household higher wants are never bought | DEM 4.5 (`Rank`; the cap is AGT's) | specified (counted by `WantShortfall`: `Planned` less `Funded`) |
 | D32 | Consumption guard | a want never eats into the next tick's upkeep of the same commodity | DEM 4.7 | specified (a rule constant) |
-| D33 | Staggered occupation review | an agent reviews its role only every `ReviewTicks` ticks, by agent ID, with no draw (a form of D25); alone it does not remove the cobweb | SPN 6.2 (`ReviewTicks`, default 10) | specified |
+| D33 | Staggered occupation review | an agent reviews its role only every `ReviewTicks` ticks, on the rotation bucket `(t + bucket(id, ReviewTicks)) mod ReviewTicks = 0` of WLD 9.1.1 (a second Kronecker value of the ID, not the raw ID), with no draw (a form of D25); alone it does not remove the cobweb | SPN 6.2 (`ReviewTicks`, default 10) | specified |
 | D34 | Cooldown after a role change | `RoleCooldown` ticks (default 30) after entering a role or being created before an agent may change role | SPN 6.2 (`RoleCooldown`) | specified (counted by `EntryLimited.Cooldown`) |
 | D35 | Graded exit | the privation count, the cohort step `DeathStep` and the regional `ExitShare` make a leaving of households gradual, so a role does not empty in one tick. Cost: long hunger before the rungs apply | SPN 5 (`ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`) | specified (counted by `EntryLimited.ExitCap`) |
 | D36 | Entry gate | a newcomer enters only a viable role (`EntryRatio`, default 8 000 basis points); a replacement goes to the leaver's role first | SPN 6.1, 7.2 (`EntryRatio`) | specified (counted by `EntryLimited.NoViableRole`) |
@@ -1195,7 +1292,7 @@ damper observable (FR-STB-013).
 | D69 | The market retry | after `RetryJobs` own-use jobs the next free decision is a role job, if one can run; cost: a role job started into a failed market | SUB 5.5 item 5 [SUB-D3] | specified (counted by `OwnUseChanged.Retried`) |
 | D70 | The productivity bound and the source-only rule | `FloorBP < SurplusBP` (a warning) and no inputs or tools on an own-use recipe; cost: a pack with a generous floor gets a warning, not an error | SUB 3.4.1, 4.2 [SUB-D4] | specified (a warning; the rule is an error) |
 | D71 | Proportional ramp for cohorts | a cohort puts on the floor the share of its households that is short of cover, so labour moves in steps of `1/w` (a form of D28); cost: the rest of the cohort rests during the job | SUB 5.5 item 4 [SUB-D5] | specified |
-| D72 | Staggered migration review | a household decides only on its turn, `(tick + AgentID) mod MoveReviewTicks`, no draw (a form of D25 and D33); alone it does not stop the cycle; cost: slow response | MIG 5.1 (`MoveReviewTicks`) [MIG-D1] | specified |
+| D72 | Staggered migration review | a household decides only on its turn, `(t + bucket(id, MoveReviewTicks)) mod MoveReviewTicks = 0` (the rotation bucket of WLD 9.1.1, not the Weyl value of its margin), no draw (a form of D25 and D33); alone it does not stop the cycle; cost: slow response | MIG 5.1 (`MoveReviewTicks`) [MIG-D1] | specified |
 | D73 | Settling | a household is not reviewed until the longer of `MoveCooldown` and its own effective window have passed since it took up its place (a form of D34 and D29); cost: a mistaken move stays for a window | MIG 5.2 (`MoveCooldown`) [MIG-D2] | specified (counted by `Unsettled`) |
 | D74 | Margin with a width | a household moves only for a gain beyond its own margin, `MoveGain` plus a share of `MoveWidth` by agent ID, so the thresholds are spread (a form of D09 and D08); cost: a persistent income gap of the order of the margin | MIG 6.5 (`MoveGain`, `MoveWidth`) [MIG-D3] | specified (counted by `NoGain`) |
 | D75 | Outflow cap | at most `MoveOutShare` of a region's households start a journey in a tick (the opposite of D14); cost: a region empties slowly | MIG 7.3 (`MoveOutShare`) [MIG-D4] | specified (counted by `OutCap`) |
@@ -1210,6 +1307,18 @@ damper observable (FR-STB-013).
 | D84 | Cash only and a cap | a take is sized on the money above the reserve, the payer's cash is checked again at formation, and at most `MaxOpen` contracts are open; cost: some takes are not filled | MER 8.2, 9.5 (`MaxOpen`) [MER-D6] | specified (counted by `PayerFunds` and `TooMany` of `ContractRound`) |
 | D85 | The reseed on arrival | a traveller's (and a migrant's) beliefs are reseeded from the destination's market, so it does not offer its cargo at the origin's price; cost: what the belief had learned is lost | MER 12.2; MIG 8.4; `spec-beliefs.md` 8.3 [MER-D7] | specified (a rule constant) |
 | D86 | The fee share as a margin of safety | carriage is paid for only if it costs at most a share of the expected gross margin (extends D40); cost: a persistent gap of the freight over the share | MER 5.5 (`MerchantFeeShare`) [MER-D8] | specified (counted by `BelowShare`) |
+| D87 | Ties and caps by key or rotation | a tie between candidates of equal merit is broken by the stateless key `K(t, id)` (SplitMix64 of `t * 0x9E3779B97F4A7C15 + id`, smaller first, then by ID), which takes no draw, needs no state and changes every tick, so a lower ID is never systematically first; a cap that binds can also rotate its starting index. Cost: a tie case differs from tick to tick | WLD 10.1.1 [WLD-D1]; the key is RES 5.3.3 | **proposed** for the five places O1 to O5 of `spec-world.md` 10.2 (L118 is undamped); stated as the rule for a new tie |
+| D88 | Draw anyway | a draw that a rule may or may not need is taken every time, so the stream does not depend on a parameter or on which modules are on and two runs are comparable. Cost: a draw that nothing uses | WLD 5.7.2, 7.4.3 [WLD-D2]; the practice of WEL 5.1, AGT 7.5.3, MIG 6.2.1 | specified (an existing practice made a rule; a rule constant) |
+| D89 | The `Stateful` pair and its detection | an extension that keeps state saves it through `SaveState` and `LoadState`, with a version and an entry per registered name; a missing or surplus entry is `ErrCheckpointExtension`. Cost: an extension with a closure or a package variable is not detectable, and the consumer's round-trip test is the check | CHK 7 [CHK-D1] | specified (the interface of architecture.md 4.3) |
+| D90 | Reseed by salt | `WithReseed(salt)` gives a restored branch its own deterministic continuation, so branches of one checkpoint are independent samples. Cost: a reseeded branch is no longer a paired comparison with its parent | CHK 6.8 [CHK-D2] | specified (a rule constant, the reseed rule of `spec-checkpoint.md` 6.8.2) |
+| D91 | A call is validated, bounded and atomic | every value of a slot call is checked against the owner's bound before any is applied, a key appears once, and a failed call changes nothing: no overflowing shock, no half-applied disaster, no draw from a rejected call. Cost: a call with one bad key applies none | INT 3.3, 5.2.6 [INT-D1] | specified (adds no parameter: the bounds are the owners') |
+| D92 | Counts beside statistics | every reduction reports `Used` beside the statistic and its standard deviation, so a consumer sees the sample. Cost: a longer result | EXP 8.3 [EXP-D1] | specified |
+| D93 | A confirm run on other seeds | a chosen point is confirmed on seeds the search did not use, against a control on the same seeds, and the confirm share is what is claimed (CLB restates it, CLB-D2). Cost: a second experiment | EXP 12.4.2 [EXP-D2, CLB-D2] | specified (method) |
+| D94 | Failures counted, never dropped | `Planned = Used + Failed + Undefined + Missing`, a pass share over `Planned`, and the counts beside the mean. Cost: a mean over a smaller `Used` is reported with it | EXP 8.3.1 [EXP-D3] | specified |
+| D95 | A search block serves one choice | the seeds of a block that chose a point are not reused to choose another, so the winner's curse is not compounded. Cost: more seeds | CLB 7.1 [CLB-D1] | specified (method) |
+| D96 | A D knob is never moved to its off value | a damper's off value is not a calibration move; a damper that never acted (the dormant rule) is left where it is. Cost: a failing fact that a damper causes is a finding, not a tuning | CLB 4.3.1, 7.4.1 [CLB-D3] | specified (method) |
+| D97 | The gate is never an input to a choice | a gate failure is a finding that returns the stage to a new block; the gate is not trained on. Cost: a stage restarts | CLB 7.4.4 [CLB-D4] | specified (method) |
+| D98 | Attempts are counted | attempts per stage are counted and a fourth needs a review. Cost: a stuck calibration stops | CLB 7.1 [CLB-D5] | specified (method) |
 
 ### 5.1 The rule for adding a damper
 
@@ -1728,19 +1837,23 @@ supports a claim of stability (N-027).
 A **failure regime** is a way a run goes wrong that a stability test must be able to
 recognise. Each is defined by a measure that can be computed from events and the
 snapshot alone (FR-STB-012), so that `spec-indicators.md` and
-`spec-stylised-facts.md` can implement it. Thresholds are placeholders that STY
-sets.
+`spec-stylised-facts.md` can implement it. The thresholds are `spec-stylised-facts.md`'s: its 6.2 gives the detector of each regime (R1 to R9) and its 6.5 the file
+`testdata/chains/bands/regimes.toml` (`spec-reference-chain.md` 7.1.5), whose keys have no
+value until a reviewed run sets one; the words "a stated share" below are those keys. The
+meaning of F1 to F8 is this table's, and a detector that departs from its wording is for
+this spec to rule (STY 6.3.6).
 
 | ID | Regime | Definition (placeholder thresholds) | Entries that can cause it |
 |----|--------|--------------------------------------|---------------------------|
-| STB-F1 | Runaway inflation | the price index of a commodity class rises by more than a stated share a window and keeps rising for more than a stated number of windows; money in the economy exceeds its start by a stated factor | L05, L10, L30, L14 (upper outcome), L69, L98 |
-| STB-F2 | Hoarding | money or goods held by a sector or by the pool rise above a stated share of the total for a stated time, and trade volume falls | L31, L11, L25, L45, L30, L73 |
+| STB-F1 | Runaway inflation | the price index of the whole economy or of a commodity class rises by more than a stated share a window and keeps rising for more than a stated number of windows; money in the economy exceeds its start by a stated factor | L05, L10, L30, L14 (upper outcome), L69, L98 |
+| STB-F2 | Hoarding | money or goods held by a sector or by the pool rise above a stated share of the total for a stated time, and trade volume falls; or the top decile of household money holds more than a stated share (STY 6.3.6, flagged: this spec may reject it) | L31, L11, L25, L45, L30, L73 |
 | STB-F3 | Collapse | households fall more than a stated share in a window, or a role with a positive start disappears, with no recovery within a stated horizon | L39, L35, L19, L11, L62, L63, L64, L66, L77, L82, L88, L89, L90, L101, L104, L105, L111 |
 | STB-F4 | Stagnation | trade volume stays below a stated share of its start for a stated time with no collapse: markets open, nothing happens | L03, L09, L11, L45, L46, L73 |
 | STB-F5 | Pinned market (frozen at a bound) | more than a stated share of a market's outcomes end on a floor or ceiling for a stated number of ticks (the `Warn` of `spec-beliefs.md` 12.2); or no trade in a market that has unmatched orders on both sides | L05, L06, L09, L14 (a staple, or a luxury below the basin of 6.5), L51, L86, L91, L21 (at an outside quote), L102, L106 |
-| STB-F6 | Cobweb blow-up | the price range (maximum over minimum) in a stated window exceeds a stated factor and does not shrink over successive windows; or a role's share swings by more than a stated fraction | L21, L36, L04, L58, L61, L84, L85, L93, L97, L100, L107, L108, L109 |
+| STB-F6 | Cobweb blow-up | the price range (maximum over minimum) in a stated window exceeds a stated factor and grows over successive windows (a steady oscillation that never grows is not a blow-up, STY 6.3.4); or a role's share swings by more than a stated fraction | L21, L36, L04, L58, L61, L84, L85, L93, L97, L100, L107, L108, L109 |
 | STB-F7 | Synchronisation | the dispersion of belief centres or of targets falls below a stated minimum, or a role works and rests in lockstep | L13, L15, L22, L34, L35, L59, L92, L93 |
 | STB-F8 | Offset | a market's long-run price differs from its clearing price by more than a stated band, with unmet need | L02 |
+| STB-F9 | Deflation with distress | the price index (`PriceIndex.Fisher` link) falls by more than a stated share in each of a stated number of successive windows **and** trade volume (`Turnover.Volume`) falls: a price that falls because nobody buys, not a fall with a growing volume (`spec-money-supply.md` 8.4) | L70, L71, L98 |
 
 The paper's stability criteria (`spec-beliefs.md` 19: every commodity produced and
 consumed, none untraded for more than 20% of rounds, mean volume above one unit,
@@ -1754,7 +1867,10 @@ A **scenario** is a configuration and a script of injected shocks that a stabili
 test runs and asserts on. This list is what `spec-stylised-facts.md` and
 `spec-reference-chain.md` must cover. A scenario is written by those specs, with
 bands; here it is named, tied to the entries it shows, and described just enough to
-be built. All use fixed seeds and report the failing seed (testing.md 6.2).
+be built. The "Asserts" column states the property; the band that quantifies it, and the
+class of the assertion, is the row of `spec-stylised-facts.md` 5.11, and the setups of the
+rows below stay as they are. A scenario of the class "harness test" (S77, S78, S84 to
+S90) is the exception: its assertion is the table's and it has no band. All use fixed seeds and report the failing seed (testing.md 6.2).
 
 | ID | Scenario | Asserts | Entries |
 |----|----------|---------|---------|
@@ -1776,7 +1892,7 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S17 | A durable's replacement demand from a uniform starting age | the replacement orders are spread, not one spike | L26, L27 |
 | S18 | The warm start of a long-job chain (VIA A8) | the output does not complete in a single tick; completions per tick over the first `d` ticks are within a stated spread of their mean | L22 |
 | S19 | The default `TargetRatio` in a closed economy with upkeep as the only demand, run with the halt on and off (`spec-agents.md` 18) | the mean welfare ratio is near 1; the unsold stock is bounded and the halt stops output; with the halt off the glut grows (F2, F4) | L46, L44 |
-| S20 | Starting money below `ReserveTicks` times the upkeep cost for every household (`spec-agents.md` 18) | households work and reach the reserve, or the world reports the unreachable reserve | L45, L11 |
+| S20 | Starting money below `ReserveTicks` times the upkeep cost for every household (`spec-agents.md` 18) | households work and reach the reserve, or the world reports the unreachable reserve: the validation warning `reserve_exceeds_money` (FR-AGT-060, `spec-config.md` 7.4.2), raised at construction; in a closed economy the mean money per household cannot rise (`spec-money-supply.md` 8.2 item 3) | L45, L11 |
 | S21 | Seed prices of the reference chain against the cost band | every seed lies inside `[UnitCost * CostFloor, UnitCost * CostCeiling]` at the seed prices, or the solver reports it (FR-VIA-027) | L52, L09 |
 | S22 | A perturbed chain started from the warm start and from a cold start | the warm start does not hide an instability: both end in the same regime (VIA A1) | L53, L14, L21 |
 | S23 | A self-employed luxury role under the target-income rule with a want of `Elasticity` 5 000, 10 000, 15 000 and 30 000 and budget headroom of 100%, 110% and 160%, perturbed 10% up and 10% down (`spec-demand.md` 13) | the price converges only when both conditions of `spec-demand.md` 6.3 hold (schedule elasticity above 10 000 and headroom of about 10%); the lower edge of the basin is reported; otherwise the run is reported as F5 | L14, L57 |
@@ -1792,7 +1908,7 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S33 | A rate levy bounds a hoarding class; a pair of a grant and a fixed levy drifts by its difference (`spec-money-supply.md` 16, MON-S1) | the class's money converges below `m*` and never above it; the net of the pair equals the difference of the fixed amounts times the ticks, exactly | L30, L70 |
 | S34 | A levy equal to a household's upkeep cost, without and with `Exempt` (`spec-money-supply.md` 16, MON-S2) | with the exemption no household goes unfed because of the levy; without it the warning fires and the unfed households are counted | L71 |
 | S35 | Growing households with and without a pool grant (`spec-money-supply.md` 16, MON-S3) | `M_h / H` crosses the thresholds `ReserveTicks * U_c` and `U_c` at the derived ticks without the grant and stays above the spending threshold with it | L73 |
-| S36 | The scale seam: `SetFlowScale` between steps (`spec-money-supply.md` 16, MON-S4) | only that flow's amounts change, from the next step; nothing changes without a call; the audit holds | L69 |
+| S36 | The scale seam: `SetFlowScales` between steps (`spec-integration.md` 5.1) (`spec-money-supply.md` 16, MON-S4) | only that flow's amounts change, from the next step; nothing changes without a call; the audit holds | L69 |
 | S37 | A region with a fixed factor (RES, or a test double that makes the ratio a function of households), the demand module on, started at 0.6 and at 1.6 times `N*` (`spec-population.md` 14.4, POP-S1) | the population approaches `N*` within a band and, for gain times delay below 0.5, without crossing it more than once; the mean ratio at the end is within a band of `r*` | L75, L78, L80 |
 | S38 | A productivity shock that cuts the region's income for a time, then restores it, with the pool, relief and the ladder on, and a chain whose role disappears (POP-S2) | households fall and regrow, the ratio rises while they are low, the extinct-region `Warn` does not fire; with the chain whose role disappears the run is reported as F3 and the trap is visible | L77, L82 |
 | S39 | A closed region with the pool empty, `BirthStake` 10 000, 5 000 and 0, and births above deaths (POP-S3) | the population stops at about `M / stake`; `BirthsUnfunded` is non-zero when it does | L76 |
@@ -1819,7 +1935,7 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S60 | The invariant run: the reference chain with an own-use overlay over a range of seeds with `WithAudit`, a checkpoint at the middle of a mode, and a relocation of a household in the mode (SUB-S5) | the audit holds; the recorded events are the same as the state; the resumed run is bit-identical; the relocated household's flag is dropped; no ledger reason beyond the registry | determinism, L11 |
 | S61 | Two regions with the same structure, a yield shock on one set between ticks and cleared, the migration module on with the defaults (MIG-S1) | the households of the shocked region settle with no cycle: the range of each successive window of its household count shrinks or stays inside the margin (F6 not met); the households on the way to a region never exceed its pipeline cap; the number of journeys is within a stated factor of the minimum | L107, L109 |
 | S62 | Three regions: a poor one and two equal ones (MIG-S2) | the arrivals divide between the equal ones within a stated band, and the difference of their household counts does not alternate in sign (F6) | L108 |
-| S63 | S61 with relief on and off, same seeds (MIG-S3) | the households that start a journey differ by less than a stated band; the destination's pool is reported | L40 |
+| S63 | S61 with relief on and off, over the same set of seeds (MIG-S3): a comparison of the distributions over seeds and not a paired design, which L120 excludes where relief moves a draw count | the households that start a journey differ by less than a stated band; the destination's pool is reported | L40, L120 |
 | S64 | A realm with an edge whose journey exceeds `CoverTicks`, a region that loses its income (MIG-S4) | the pushed households of that region are counted `unprovisioned`, the `Warn` "migration blocked" is emitted at the tenth tick, and relief and the ladder act on them | L110 |
 | S65 | A region with a chain of three roles and a better neighbour (MIG-S5) | no role of the chain falls below a stated share of its households in a window (F3), or the run is reported with the counts; with `Fixed` on the chain's roles nothing leaves | L111 |
 | S66 | The invariants over a range of seeds with `WithAudit`, journeys and a closure during a journey (MIG-S6) | money and each commodity are conserved exactly across departures, journeys and arrivals; the relocation totals reconcile a report by region; the household count by region rebuilt from the events equals the snapshot at every tick; a household is in one region at all times; the outcomes of every pass add to `Pushed` | L68, L112, all |
@@ -1829,12 +1945,32 @@ be built. All use fixed seeds and report the failing seed (testing.md 6.2).
 | S70 | Three regions in a chain, a hired mode and a self-carried one, the price of haul units raised stepwise (MER-S4) | the mode chosen switches at the haul price the rule of `spec-merchants.md` 6.1 gives; merchants relocate along the lanes and `AgentRelocated` with the cause `transport` counts them | L115, L16, L21 |
 | S71 | A gate region with an outside node (S52 and S55 with the merchant) (MER-S5) | merchants buy imports at the gate and sell inland; no shipment or offer names the node; the outside's capacity is shared | L84 |
 | S72 | The reference world with merchants and consignees, 200 ticks, a checkpoint at 80 and a resume (MER-S6) | the resumed run is bit-identical, the key draws equal the admitted offers and takes, and the contracts in flight at the checkpoint settle at the same ticks | determinism, FR-MER-061, FR-MER-062 |
+| S73 | A cap that binds on 100 tied candidates: a cap of 5 admissions a tick over 1 000 ticks, with the places O1 to O5 in turn (`spec-world.md` 10.2; WLD-S1) | no candidate is admitted fewer than half or more than twice its expected share; with the lower ID first, the first five IDs take all admissions (the unit model `rotation.py`) | L118, L133 |
+| S74 | The load of a cadence: 1 000 agents and then 5 000, at periods 10 and 30, with IDs spaced by every stride of 1 to 31 and three starting IDs (`spec-world.md` 9.1.1; WLD-S2) | no tick has more than `ceil(1.2 * n / P)` reviews; no bound is claimed below about a thousand agents (`cadence.py`) | L119 |
+| S75 | Cold and warm start: a chain with a recipe of `Duration` 10 run with and without a warm start (`spec-world.md` 5.6; WLD-S3; also the cold leg of S18) | the completions per tick in the first 40 ticks are spread with the warm start and a pulse without it; the warning `cold_start_lockstep` is raised for the cold run | L22 |
+| S76 | The stream after a change: two runs that differ by one extra draw in the first tick (`spec-world.md` 7.6; WLD-S4) | the share of later draws that differ is reported (`stream.py`: 98.0% with one stream, 2.0% with a stream per tick); a paired comparison is claimed only for a change that moves no draw count | L120, L124 |
+| S77 | **Harness test.** Round trip over seeds and modules: the reference chain, `one` and `five`, each module in turn on, a range of seeds, a restore at several ticks including 0; and a deliberately hidden-state extension (`spec-checkpoint.md` 15; CHK-S1) | byte-equal checkpoints and equal events for 100 ticks; the hidden-state extension fails the same test, and the pass is the detection of the failure | L123, D89 |
+| S78 | **Harness test.** Branching: from one checkpoint, 100 restores with 100 salts and 100 restores with one salt (`spec-checkpoint.md` 15; CHK-S2) | 100 distinct runs of the same length with 100 salts, one run with one salt; the pass is the count of distinct final digests | L124, D90 |
+| S79 | A failed harvest and recovery: `SetYieldShocks` of 3 000 on the staple recipe of one region of `three` or `five` for `k` ticks, then cleared (`spec-integration.md` 16; INT-S1) | conservation holds each tick, prices stay inside the belief bounds, and the region recovers within a time that STY sets | L121, D91 |
+| S80 | A closed road and its reopening: `SetEdgeStatuses` closed on a trade edge, then open; and a consumer rule that scales a flow from a published price (`spec-integration.md` 16; INT-S2) | the price gap of the two regions opens and then closes to the freight (STY's band); the surface works as a controller input, which is not a claim that any controller is stable | L121, L66, L84 |
+| S81 | The sequence of calls is the input: two runs with the same seed, configuration and calls; two orders of calls on different keys; a run with `AddAgent` (`spec-integration.md` 16; INT-S3) | the same state at every tick and the same events (golden); the same state for the two orders; `initial` shows in `BoundaryFlow` and the audit passes | L128, D91 |
+| S82 | A player, a checkpoint and a restore: add a player, a directive and a shock, checkpoint, restore, run (`spec-integration.md` 16; INT-S4) | the mailbox, the slots and `Agent` equal the original's and the result equals an uninterrupted run; a non-mortal player at hunger stays, a mortal one is removed by a consumer's spawner | L129 |
+| S83 | A forced move: `Relocate` of a household on a journey and of one with an open contract (`spec-integration.md` 16; INT-S5) | the household on a journey is moved and its journey ends (`Ended` counts it); the one with an open contract is refused with `ErrRegionBound`; conservation holds | L68, L112, D91 |
+| S84 | **Harness test.** The spread of a statistic: the standard deviation of a mean over `R` seeds of a known toy process (`spec-experiments.md` 17; EXP-S1) | it falls as `1 / sqrt(R)` within the placeholders of `models/exp/pairing.py` | L134, D92 |
+| S85 | **Harness test.** The winner's curse: 100 points with one true pass share (`spec-experiments.md` 17; EXP-S2) | the chosen point's share on the choosing seeds exceeds its share on others | L135, D93 |
+| S86 | **Harness test.** The transient: a toy process with a known approach, windows opened at 0 and at the settling tick (`spec-experiments.md` 17; EXP-S3) | the two windows differ by the stated amount | L136 |
+| S87 | **Harness test.** The survivor: a sweep whose points fail at known rates (`spec-experiments.md` 17; EXP-S4) | the `Failed` and `Planned` counts equal the rates and the mean over used runs differs from the mean of all by the stated bias | L137, D94 |
+| S88 | **Harness test.** The dry run: the calibration procedure run end to end on a tiny experiment of `one` (`spec-calibration.md` 11.4; CLB-S1) | the plan, the reproducible choice, the empty overlay when every point meets its criteria, `chosen none` when none does, the seeds of each step and equal record bytes; no economy number is asserted | L139, L135, L138, D93, D95, D98 |
+| S89 | **Harness test.** Coverage of the registry against the owner table (`spec-calibration.md` 11.1; CLB-S2) | every owner-table pair has a registry row and every row a pair, both ways | none: a check of CLB's registry |
+| S90 | **Harness test.** The alias test: a synthetic sensitivity matrix with a known proportional column and a known independent one (`spec-calibration.md` 10, 11.3; CLB-S3) | the integer alias test finds the proportional pair and only it | L141 |
 
 S15 is not used and the ID is not reissued. The scenarios S28 and S29 are REG's, S30 to S32
 TRN's (proposed as S28 to S30 there), S33 to S36 MON's (MON-S1 to MON-S4) and S37 to S40 POP's
 (POP-S1 to POP-S4); S13 existed and is now defined (MON). The scenarios S23 to S25 are DEM's and S26
 and S27 are SPN's; the specs proposed them as S23 to S25 and as S23 and S24, which
-collided, and the numbers above are final (the spawner's S23 and S24 became S26 and S27). S41 to S45 are RES's (RES-S1 to RES-S5), S46 to S50 INF's (INF-S1 to INF-S5) and S51 to S55 EXT's (EXT-S1 to EXT-S5); each spec keeps its provisional ID in the row. S56 to S60 are SUB's (SUB-S1 to SUB-S5), S61 to S66 MIG's (MIG-S1 to MIG-S6) and S67 to S72 MER's (MER-S1 to MER-S6), in that order of integration, each with its provisional ID in the row. The register has 116 loops (L01 to L116), 86 dampers (D01 to D86) and 71 scenarios (S01 to S72, S15 unused).
+collided, and the numbers above are final (the spawner's S23 and S24 became S26 and S27). S41 to S45 are RES's (RES-S1 to RES-S5), S46 to S50 INF's (INF-S1 to INF-S5) and S51 to S55 EXT's (EXT-S1 to EXT-S5); each spec keeps its provisional ID in the row. S56 to S60 are SUB's (SUB-S1 to SUB-S5), S61 to S66 MIG's (MIG-S1 to MIG-S6) and S67 to S72 MER's (MER-S1 to MER-S6), in that order of integration, each with its provisional ID in the row. S73 to S76 are WLD's (WLD-S1 to WLD-S4), S77 and S78 CHK's (CHK-S1, CHK-S2), S79 to S83 INT's (INT-S1 to INT-S5), S84 to S87 EXP's (EXP-S1 to EXP-S4) and S88 to S90 CLB's (CLB-S1 to CLB-S3), in the order WLD, OBS, CHK, IND, INT, STY, EXP, CLB (OBS, IND and STY add none); WLD-S3 is a leg of S18 as well as S75. The register has 142 loops (L01 to L142), 98 dampers (D01 to D98) and 90 scenarios (S01 to S90, S15 unused).
+
+**Class "harness test".** Nine of the scenarios (S77, S78 and S84 to S90) are tests of a harness or of a procedure against a model of its own rules, not runs of an economy: they assert nothing about prices, households or money, and each is a unit or integration test in the spec that owns the harness (`spec-checkpoint.md` 15, `spec-experiments.md` 17, `spec-calibration.md` 11). They are numbered here so that no ID is reused and each entry has a test to name, they are marked in the table, and they are **excluded** from the rule that STY holds a band for every scenario (FR-STY-098) and from the packs REF assigns (FR-STB-005): S77 uses the packs `one` and `five` and S88 the pack `one`, as a fixture and not as a scenario of the economy.
 
 The reference chain must contain at least one staple role with a demand elasticity
 below 1 (S04), one perishable (S07), one chain with a cycle (S08), a long recipe
@@ -1848,9 +1984,9 @@ demand overlay `one-demand` of its 4.4.6; N-047 closed by REF).
 
 **Where REF builds each scenario** (`spec-reference-chain.md` 7; the scenarios of that
 spec named X1 to X8 and the viability scenarios A1 to A10 are REF's and VIA's, not part
-of this register, and exercise it as noted). Bands are STY's: until `spec-stylised-facts.md`
-exists a band key with no value makes a scenario report its measure and assert only its
-exact checks (REF 7.1.5, FR-REF-022, FR-REF-023).
+of this register, and exercise it as noted). Bands are STY's (`spec-stylised-facts.md`
+3.6 and 5.11, set only by its 8.4): a band key with no value makes a scenario report its
+measure and assert only its exact checks (REF 7.1.5, FR-REF-022, FR-REF-023).
 
 | Scenario | REF pack | REF section |
 |----------|----------|-------------|
@@ -1883,10 +2019,15 @@ exact checks (REF 7.1.5, FR-REF-022, FR-REF-023).
 | S56, S57, S58, S59, S60 | pack: to be assigned by REF (`one` + a new `overlay/own-use.toml` for S56, S58, S59, S60 (S59 also needs a refill endowment), `famine` + the overlay for S57; `spec-subsistence.md` 16.1 is the shape) | to be assigned by REF |
 | S61, S62, S63, S64, S65, S66 | pack: to be assigned by REF (a migration overlay `overlay/migration.toml` with `[modules.information]` and `[modules.migration]` on two regions, three for S62, `move_speed` chosen against the trade overlay's edge lengths; `spec-migration.md` 15.3) | to be assigned by REF |
 | S67, S68, S69, S70, S71, S72 | pack: to be assigned by REF (a merchant role, a consignee role and `[modules.merchants]` in `overlay/trade.toml`; `spec-merchants.md` 19.1) | to be assigned by REF |
+| S73, S74, S76 | none: a unit model of the ordering device and of the stream, on a world built in Go in the test (as S02); S76 may run `one` for two runs that differ by one draw | `spec-reference-chain.md` 7.11 |
+| S75 | `one` with `warm-one` and without, as S18 (the cold leg of S18) | 7.2 (S18) |
+| S77, S78 | none to assign: harness tests of `spec-checkpoint.md` 15; S77 takes `one` and `five` as its fixture | not built by REF |
+| S79, S80, S81, S82, S83 | pack: assigned in REF 7.11 (`three` or `five` for S79 and S80, with `overlay/trade.toml` for the trade edge of S80; S81 to S83 `one` with an external agent) | `spec-reference-chain.md` 7.11 |
+| S84, S85, S86, S87, S88, S89, S90 | none to assign: harness tests of `spec-experiments.md` 17 and `spec-calibration.md` 11; S88 takes `one` as its fixture | not built by REF |
 
 FR-STB-005 can now be checked against this table and REF 7: REF's 7.2 has an entry for
-every scenario of this section except S15, or lists it in 7.6 with the spec it waits for
-(FR-REF-035, FR-REF-037). REF 7.7 still names the scenarios of DEM and SPN by owner
+every scenario of this section except S15 and the nine of the class "harness test", or
+lists it in 7.6 with the spec it waits for (FR-REF-035, FR-REF-037). REF 7.7 still names the scenarios of DEM and SPN by owner
 (`S23-SPN`, `S23-DEM` and so on); REF is updating that text to the final numbers.
 
 The exact checks of S02, S03, S09, S11, S17, S18 and S21 are asserted whether or not a
@@ -1931,6 +2072,12 @@ owner merges them here. A spec may not be called done if it adds a loop and no e
 9.9. **Merge duplicates.** If two specs describe one loop in different words, the
 register keeps one entry and names both owners (as L03 and L25 do).
 
+9.10. **Classify each new tunable.** Each tunable that 9.7 lists gets its class (a knob,
+a damper strength, a structural choice or presentation) and its row in the registry of knobs
+of `spec-calibration.md` (4.3, 6), in the same change; a damper strength names the
+damper and the loop it acts on. 9.7 is the owner table; this is the registry, which
+holds no default or bound (`spec-calibration.md` 4.5).
+
 ## 10. Cross-check: loops no spec dampens
 
 This is the result of reading the written specs against the register (section 4).
@@ -1952,7 +2099,7 @@ register's honest backlog.
 | L19 a job is a gap in income | only a warning, and starting money for the longest job in a warm start; the window or the income attribution is not fixed | WEL (N-032) |
 | L39 pool-dry collapse, L63 the pool serves two masters, L11 budget loop, L45 saving | relief is bounded by the pool and entrants share it (D37 keeps at least half for relief by default); an agent with no money, no goods and no relief is undamped; the floor under market failure is now specified (SUB, D15, D67 to D71; L102 to L106), and a household with nothing it can run (`Blocked`) is still undamped | S14, S56, S57 |
 | L09 hard cost floor | exit through the ladder (D35) is the only release and is slow by design | BEL (open question 1) |
-| L22 lockstep of jobs | the stagger exists only when a warm start is configured | VIA (done), WLD for a cold start |
+| L22 lockstep of jobs | the stagger exists only when a warm start is configured; a cold start is a lockstep by design, registered as the case of WLD-A3 and reported by the informational warning `cold_start_lockstep` (`spec-config.md` 7.4.2) | VIA (done); the cold leg is S75 (the cold leg of S18) |
 | L35 synchronised failure, L50 hunger and removal, L75 the Malthusian loop | the failure ladder is specified (SPN 5, D35); it pays in long hunger (SPN 16.2), and the Malthusian loop is now specified (POP, D46 to D52) and its feedback is provided by an endowment that binds (RES, L87, D54, D58); a pack without one still has none (L80), and the stability of L87 depends on the shape of the endowment (a `constant` flow is neutral, a logistic stock tips, L88) | S41, S37 |
 | L81 the closed ceiling, L82 a low-density trap, L66 an unreachable region | no mechanism beyond the warnings (`replacement_above_closed_ceiling`, `region_isolated`) and `MinHouseholds`; L66 and L82 are hazards by design | S40, S38, S28 |
 | L58 substitution flips, L59 periodic wants and cohort pulses, L62 the churn of a famine, L64 an extinct role | no mechanism beyond the exponent bound, the carry spread and the entry gate; L64 is undamped by design | S25, S10, S27 |
@@ -1962,6 +2109,8 @@ register's honest backlog.
 | L40 relief and migration | decided by construction (MIG 5.4: relief is not in the trigger or the pull); S63 checks it, and an experiment (STY) is the check for births and deaths (L75) | S63, STY |
 | L90 open-access draw-down, L89 a finite stock, L91 scarcity through the cost anchor, L92 the opening of a season | the ration (D53), the plan row and warnings (D58) and the entry limits (D14, D34) soften them; the incentive of open access is damped only by tenure (LND, not written), a finite stock has no fixed point by design, and L91 can freeze a market through a cost floor (L09) | S42, S43, S44, LND |
 | L93 herding of threshold shippers, L94 a phantom gap, L95 the vintage step | INF supplies the lag, the blur and `SourceAge`; the independent error is a weak damper (D60); what damps them is the shipper's own spread of thresholds, a dispatch cap (D39), `Inbound` (D38) and the use of `SourceAge`, now MER's (D79 to D82, D86; the merchant strategy; model only, `models/mer/lane.py`) | S46, S47, S48, S67, S69 |
+| L117 the phase order is a one-tick delay, L118 a cap is first-come, L121 a consumer closes a loop through the library's reads, L125 closed accounts accumulate, L128 a call is a faucet by another name, L129 an agent the library will not remove | undamped by design, and each says so: the delay cannot be shorter without an order spending what it has not earned (L117); the five places O1 to O5 keep the order of their IDs, since D87 is only proposed (L118); "macro is measured, never set" leaves a controller to the consumer (L121, `spec-policy.md` later); compaction of closed accounts was rejected (L125); `AddAgent` money is counted under `initial` (L128); a non-mortal external agent is outside the ladder (L129) | WLD, CHK, INT, PLC; S73, S80, S81, S82 |
+| L119 cadences that coincide, L120 the stream is positional, L124 branches that share their randomness | the bucket (D25) spreads the load of a group of about a thousand agents or more and not a small one; D88 and D90 are the dampers, and a consumer must still say which comparison it means (paired or over seeds) | WLD, CHK, EXP; S74, S76, S78 |
 | L96 the price-specie flow, L98 the drift of the balance of trade, L99 the spread, L100 a drifting outside price, L101 a single source | by design: caps and windows (D63, D65) end a flow and say so, the spread and the drift are measured, and the realm's response is through demand and beliefs (D02, D03); a single source is a warning (`import_only_source`) and acceptance | S51, S52, S53, S54 |
 
 ## 11. Parameters
@@ -2021,6 +2170,14 @@ The parameters of the spawner's and the demand module's dampers, with `EntryShar
 | D84 | `MaxOpen` | `spec-merchants.md` 9.5, 13 | 1 000 (a placeholder) |
 | D85 | none: a rule constant (the reseed) | `spec-merchants.md` 12.2; `spec-migration.md` 8.4 | not applicable |
 | D86 | `MerchantFeeShare` | `spec-carriage.md` 2.2; `spec-merchants.md` 5.5 | see CAR |
+| D25 | each cadence is a field of its owner (`ReviewTicks`, `MoveReviewTicks`, `Duration`, `BeliefAdjustProb`, `WelfareWindow` and the rest of the table of `spec-world.md` 9.2); none is new here | `spec-world.md` 9.2 | see the owners |
+| D87 | none: proposed, not adopted (a rule for a new tie, `spec-world.md` 10.1.1) | `spec-world.md` 10.1.1 | not applicable |
+| D88 | none: a rule constant (draw anyway) | `spec-world.md` 5.7.2, 7.4.3 | not applicable |
+| D89 | none: the `Stateful` interface is a rule of the extension contract, with no field | `spec-checkpoint.md` 7; architecture.md 4.3 | not applicable |
+| D90 | none: a rule constant (the reseed, `x = finalise(salt xor 0x243F6A8885A308D3)`); the salt is an argument of `WithReseed`, not a field | `spec-checkpoint.md` 6.8.2 | not applicable |
+| D91 | none: the bounds are the owners' (`MaxYieldBP`, `MaxShockBP` and the rest of `spec-config.md` 4.1) | `spec-integration.md` 3.3, 5.2.6 | not applicable |
+| D92, D93, D94 | none: rules of the harness (`Used` beside a statistic; the confirm on another `Seed0`; `Planned = Used + Failed + Undefined + Missing`); `Replicas`, `Seed0` and `Transient` are the experiment's arguments and not fields | `spec-experiments.md` 8.3, 8.3.1, 12.4.2 | not applicable |
+| D95, D96, D97, D98 | none: rules of the procedure (a block serves one choice; no off value; the gate is no input; attempts are counted); the numbers (the review after three) are `spec-calibration.md`'s own constants, not `Config` fields | `spec-calibration.md` 4.3.1, 7.1, 7.4 | not applicable |
 
 Each parameter has its row in the parameter-owner table of `README.md` once the owner
 specs' rows are added (the owners' handoffs list them). Nothing here is a default that
@@ -2038,7 +2195,13 @@ events of other specs:
 12.1. **Regimes are computed from events and the snapshot.** The measures of section
 7 use `MarketCleared` (price, volume, unmatched), `BeliefsUpdated` (`AtFloor`,
 `AtCeiling`, `Clamped`, `MeanCentre`, `LowCentre`, `HighCentre`), `AgentSpawned` and
-`AgentBankrupted` with weights, `BoundaryFlow` and the snapshot. A regime that
+`AgentBankrupted` with weights, `BoundaryFlow`, `ProductionHalted` (the production halt of L44, once per region and
+role per tick, `spec-observability.md` 4.4.6) and the snapshot. For the regimes of
+`spec-stylised-facts.md` 6.2 the snapshot fields that R2 reads are `MoneyPool` and
+`MoneyContract` by region and `HeldByEstate` and `HeldByAgents` by market
+(`spec-observability.md` 10.2); the household money rows that `Inequality.Top` reads
+are not snapshot fields but the `Agents` and `Agent` queries of `spec-integration.md`
+(`spec-observability.md` 5.6). A regime that
 needs a number no event carries is a request to OBS (FR-STB-012, note N-012).
 
 12.2. **A damper that acts must be seen to act** (FR-STB-013). A clamp, a refusal,
@@ -2046,9 +2209,7 @@ a floor or a limit has a counter in an event or a bounded `Warn`. Today:
 `BeliefsUpdated` counts the clamps of beliefs; the rejection reasons of
 `OrderRejected` count the refusals of the hard budget; the `Warn` "price beliefs at
 bound" reports a pinned market; `UpkeepShortfall` and the `Warn` "households unfed"
-(`spec-agents.md` 14) report hunger. Not yet counted: the production halt (L44) has
-only a per-agent `Debug` line ("work declined", reason `halted`), no aggregated
-counter and no bounded `Warn`. Counted since round 3 (N-065): the work floor D13
+(`spec-agents.md` 14) report hunger. The production halt (L44) had only a per-agent `Debug` line ("work declined", reason `halted`) and is counted now by `ProductionHalted` (below). Counted since round 3 (N-065): the work floor D13
 (`spec-welfare-and-wages.md` 5.3: the `Snapshot` reports, per region and role, the
 households held to work by `MinWorkShare` in the last tick, and the `Warn` "work floor
 binding" is emitted once per region and role after ten ticks with more than half held),
@@ -2059,10 +2220,13 @@ and the `Warn` "wants choked", `spec-demand.md` 11), and the spawner's limits D1
 D35, D36, D37 (`EntryLimited`: `RegionCap`, `RoleCap`, `Cooldown`, `Hysteresis`,
 `ExitCap`, `NoViableRole`, `Unfunded`, `Refused`, and the `Warn`s "role extinct", "entry
 unfunded" and "group below floor", `spec-spawner.md` 13). These events
-(`WantShortfall`, `EntryLimited`, `WeightChanged`, `RoleChanged`) are not yet in the
-table of observability-and-logging.md 4.3: their owners list the rules change.
-Still not counted: the production halt (L44, N-067), whose owners add an aggregate in an
-event per region and role per tick in the style of `UpkeepShortfall` (note N-045).
+(`WantShortfall`, `EntryLimited`, `WeightChanged`, `RoleChanged`) are in the
+table of observability-and-logging.md 4.3.
+Counted since the tier 3 specs: the production halt D24 (L44, N-067) by `ProductionHalted`, once
+per region and role per tick in phase 2 after `OwnUseChanged` and only where some free
+household was declined (the households passed to `Work`, those declined for the halt
+and, per recipe, those for which it was skipped; `spec-observability.md` 4.4.6,
+`spec-world.md` P2.8a; note N-045).
 The regime measures of section 7 may also use `WeightChanged`, `RoleChanged` and
 `EntryLimited` for the occupation share and the changes per tick (S26). Counted since
 round 6: the money flows' limits D41 (`MoneyFlowLimited`, `MoneyFlowEnded`,
@@ -2096,16 +2260,16 @@ on the library, checked by scenarios.
 |----|-------------|
 | FR-STB-001 | Every register entry MUST have an ID of the form `STB-Lnn`, a kind from the list of section 3, a polarity or "none", an owner, a damper or the word "Undamped", a condition, a test and a status of `hand`, `model` or `untested`, and an ID MUST NOT be reused. |
 | FR-STB-002 | Every spec that has a section "Entries for the stability register" MUST have each of its entries present in this register, by name or by a merge noted in the entry. |
-| FR-STB-003 | Every spec with a Requirements section that adds a rule reading a price, a stock, an income, a count or a share and changing one MUST have a register entry for the loop or state in its own register section why there is none. |
+| FR-STB-003 | Every spec with a Requirements section that adds a rule reading a price, a stock, an income, a count or a share and changing one MUST have a register entry for the loop or state in its own register section why there is none. A spec whose only loop is a consumer's (a procedure that reads a measure, and a person who moves a knob) says so, with the reason, as `spec-calibration.md` 17 does (3.1, 3.5). |
 | FR-STB-004 | Every damper named in a register entry MUST appear in the catalogue of section 5 with a home and a status, and a damper with the status *specified* MUST name a parameter in the parameter-owner table of `README.md` or a rule constant at the section it names. |
-| FR-STB-005 | Every register entry with a status of `untested` or `hand` MUST name a scenario of section 8, and every scenario MUST be covered by a test in `spec-stylised-facts.md` or `spec-reference-chain.md` when those specs exist. |
+| FR-STB-005 | Every register entry with a status of `untested` or `hand` MUST name a scenario of section 8 (or the requirement of its owner that tests it, where it is a hazard of cost or of method that has no scenario), and every scenario, except those of the class "harness test" (S77, S78, S84 to S90), MUST be covered by a test in `spec-stylised-facts.md` or `spec-reference-chain.md` when those specs exist; a scenario of that class MUST be covered by a test in the spec that owns the harness. |
 | FR-STB-006 | A damper that is *proposed* MUST NOT be counted as a damper in an entry's Damper field: the entry MUST list the loop as undamped until a spec adopts it. |
 | FR-STB-007 | A scenario MUST use fixed seeds, MUST report the failing seed, and MUST be an integration or end-to-end test skipped with `-short` (testing.md 10.5). |
 | FR-STB-008 | In every stability scenario no tradable commodity's published price MUST leave the interval allowed by its reference band and cost band, and no balance or inventory MUST be negative (the invariants of testing.md 6.3 hold at every tick). |
 | FR-STB-009 | Scenario S04 MUST inject a shortage into a self-employed staple role and MUST assert that the price stays within its bounds and that the role is not pinned at a bound for longer than a stated number of ticks. |
 | FR-STB-010 | Scenario S05 MUST run a staple with a delayed supply response and MUST assert that the range of the price over successive windows does not grow without bound, or report the pack as F6. |
 | FR-STB-011 | Scenario S07 MUST run a perishable glut with the default `CostFloor` and MUST assert that the market does not stay with no trade while both sides have unmatched orders for longer than a stated number of ticks. |
-| FR-STB-012 | The measures of the failure regimes of section 7 MUST be computable from the events and the snapshot alone, without access to unexported state. |
+| FR-STB-012 | The measures of the failure regimes of section 7 MUST be computable from the events and the snapshot alone, without access to unexported state; the map of the regimes to their events and fields is `spec-observability.md` 10.2 and the preset and field of each regime are `spec-indicators.md` 11.1 (both give F1 to F8; the row of F9 is owed to both by `spec-stylised-facts.md` 6.2). |
 | FR-STB-013 | Every damper that clamps, refuses, floors or limits MUST have a counter in an event or a `Warn` whose volume is bounded by the configuration, and a test that the counter is emitted. |
 | FR-STB-014 | The shocks of a scenario MUST be injected only through the integration interface or the configuration (INT, `spec-production.md` 6.8) and MUST NOT be applied by editing state. |
 | FR-STB-015 | Each pack that ships MUST be run through the scenarios of section 8 that its content allows, and the result MUST be recorded with the pack. |
@@ -2115,7 +2279,7 @@ on the library, checked by scenarios.
 | FR-STB-019 | A change that adds, removes or weakens a damper MUST update the catalogue and the affected entries in the same change (section 5.1.1, 5.1.8). |
 | FR-STB-020 | The library MUST NOT read a macro aggregate and feed it back into an agent's decision or a market's price; a stability mechanism MUST use local information only (section 5.1.3). |
 | FR-STB-021 | Scenario S19 MUST run the default `TargetRatio` in a closed economy whose only demand is upkeep, with the production halt on, and MUST assert that the unsold stock of each produced good stays below a stated bound and that the mean welfare ratio is near 1; with the halt off the same run MUST show the stock growing beyond that bound. |
-| FR-STB-022 | Scenario S20 MUST start every household below `ReserveTicks` times its upkeep cost and MUST assert that households reach the reserve within a stated number of ticks, or that the world reports the unreachable reserve. |
+| FR-STB-022 | Scenario S20 MUST start every household below `ReserveTicks` times its upkeep cost and MUST assert that households reach the reserve within a stated number of ticks, or that the world reports the unreachable reserve, which is the validation warning `reserve_exceeds_money` raised at construction (FR-AGT-060). |
 | FR-STB-023 | For the reference chain, every seed price MUST lie inside the cost band at the seed prices, or the report MUST list it (FR-VIA-027), and scenario S21 MUST fail the pack when a good sold at its seed price is capped below the price at which its seller earns the wage. |
 | FR-STB-024 | Scenario S22 MUST run a perturbed chain from the warm start and from a cold start and MUST assert that the warm start does not hide an instability: both runs end in the same regime of section 7. |
 | FR-STB-025 | Every entry merged from another spec's register section MUST name its source entry (for example `AGT-A8`, `VIA 19`) in the merged text, so that FR-STB-002 can be checked in both directions. |
@@ -2123,7 +2287,7 @@ on the library, checked by scenarios.
 | FR-STB-026 | Scenario S23 MUST run a self-employed luxury role under the target-income rule with a want of schedule elasticity at, below and above 10 000 and with budget headroom at 100% and above 110%, perturbed up and down, and MUST assert that the price converges to the reference only when the elasticity is above 10 000 and the headroom is at least about 10%, and MUST report the lower edge of the basin; any other outcome MUST be reported as F5. |
 | FR-STB-027 | Scenario S24 MUST run a closed economy with a ladder with the wants on and off and a `TargetRatio` above the ceiling, and MUST assert that the mean welfare ratio is near 1 with the wants off, above 1 with them on and at most `1 + Wmax / U`, and that the unsold stock stays below a stated bound when the target is above the ceiling. |
 | FR-STB-028 | Scenario S25 MUST run a want with total money at 0.5, 1 and 2 times the sum of the reserves and a want of two alternatives with `Substitution` 4 and a price gap, and MUST assert that no want is bought by a household below its reserve and that the shares of the alternatives do not swing between the items undamped. |
-| FR-STB-029 | Scenario S26 MUST apply a role-income shock with the spawner's caps on and off and MUST assert that the role changes per tick do not exceed `ceil(Households * EntryShare / 10 000)` per region with the caps on, that the role's share stays within a stated band, and that with the caps off the share swings by more than with them on. |
+| FR-STB-029 | Scenario S26 MUST apply a role-income shock with the spawner's caps on and off and MUST assert that the role changes per tick do not exceed `ceil(Households * EntryShare / 10 000)` per region with the caps on (role changes only: like-for-like replacement is not under that cap, `spec-spawner.md` FR-SPN-022; it is bounded by `Renewal` times the leavers of the tick and by `EntryPoolShare`, and `Renewal` is ignored while the population module is on), that the role's share stays within a stated band, and that with the caps off the share swings by more than with them on. |
 | FR-STB-030 | Scenario S27 MUST run a region where no role is viable and MUST assert that no entrant is created, that the count `NoViableRole` or the `Warn` "role extinct" shows, and that the households fall. |
 | FR-STB-031 | The ID of a loop, damper or scenario that two specs proposed under one number MUST be assigned once by this register: loops from L57, dampers D30 to D37 and scenarios S23 to S27, with the owner's local entry ids (`DEM-A1` and so on) kept in the merged text (FR-STB-025). |
 
@@ -2170,8 +2334,11 @@ Still open, with the next step:
    step:* BEL's question 12 (a variant of the model with another quantity rule); FR-STB-018
    becomes a hard requirement with a band set by STY, because the offset is reduced, not
    removed.
-3. **The thresholds of the regimes.** Section 7 has none. *Next step:* STY sets them
-   from the first run of the reference chain.
+3. **The thresholds of the regimes. Closed (STY 6).** The detector of each regime and
+   the keys of its thresholds are `spec-stylised-facts.md` 6.2 and 6.5; a key has no
+   value until a reviewed run sets it by the protocol of STY 8.4, and a detector with an
+   unset key returns `unknown`. *Next step:* the first run of the reference chain sets
+   them (STY 8.4).
 4. **The coupling of loops.** The register treats loops one by one. The interactions
    (a cobweb on top of a backward-bending labour supply, a freeze feeding a collapse,
    the halt of L44 against the cobweb of L21) are not analysed. *Next step:* S22 and
@@ -2187,7 +2354,9 @@ Still open, with the next step:
    (the luxury basin, the closed-economy ratio 1.53, the entry-share condition) come from
    their models. *Next step:* re-run the occupation model of 6.3 with SPN's discrete rules
    and the luxury model of 6.1 with DEM's schedule when STY or EXP exist, and set the
-   threshold of `entry_share_window` from the run, not from the guess.
+   threshold of `entry_share_window` from the run, not from the guess. `spec-experiments.md`
+   12.3 states what the run is (the experiments of S23 and S26 with their factors); the
+   run itself is STY's and CLB's and has not been made.
 7. **A cobweb on top of the ladder.** The interaction of the ladder's long hunger
    (L35), the entry share (L36) and relief (L63) is analysed only in SPN's model, which has
    no goods and no market. *Next step:* S14 and S26 together on `famine`, then S22.
@@ -2226,6 +2395,6 @@ interpreter was used for the analyses.
 |---------|------|
 | The register, the catalogue, the checklist | this file |
 | The text checks of FR-STB-001 to 005 | a test in the root package's external test package that parses `doc/specs/` (like the parameter registry test, testing.md 6.7); written when `spec-config.md` fixes the registry test |
-| The scenarios S01 to S72 (S15 unused) | `spec-stylised-facts.md` (bands) and `spec-reference-chain.md` (configurations, section 7; the table after section 8 here), as integration and end-to-end tests |
-| The regime measures | `spec-indicators.md`, computed from `spec-observability.md` events |
+| The scenarios S01 to S90 (S15 unused) | `spec-stylised-facts.md` (bands) and `spec-reference-chain.md` (configurations, section 7; the table after section 8 here), as integration and end-to-end tests; the nine of the class "harness test" (S77, S78, S84 to S90) in the specs that own the harness |
+| The regime measures | `spec-indicators.md` (the preset and field of each regime, its 11.1), computed from `spec-observability.md` events and snapshot (its 10.2); the detectors and thresholds are `spec-stylised-facts.md` 6 |
 | The damper counters | the events of the specs that own the dampers |

@@ -1,30 +1,42 @@
 ok   knob rows have 12 cells
 ok   group rows have 7 cells
 ok   ids are unique
-     113 knob rows (K 30, D 75, S 6, P 2), 64 groups
+     113 knob rows (K 29, D 76, S 6, P 2), 72 groups
      K and D rows 105: search kinds {'U': 96, 'I': 7, 'E': 2}
-     IND presets 21, facts 38, scenarios 53, loops 116, dampers 86, I 23, A 15, E 5
+     IND presets 21, facts 38, scenarios 62, loops 142, dampers 98, I 23, A 15, E 2
 ok   knob rows use the closed sets and known references
 ok   structure groups use the closed sets
+ok   every README owner row parses an owner file and a section
 ok   owner sections resolve in the owner spec
-ok   owner cell matches the README owner section
-ok   flag z only on defaults of 0; geo only on defaults of 1 or more (owner table)
+ok   owner cell matches a README owner section
 ok   a geo row has an owner default of at least 1, or the flag z
-ok   the flag z only where the owner default is 0 or none
+ok   a required default of a geo row has a lowest legal value of at least 1
+ok   the flag z only where the owner default is 0, none or the world's
+ok   an off number is not the owner's bound (min/max), and no off level survives the cut
+     the cut removed a level on 9 rows of the owners' defaults: [('K-AGT05', 3, 0), ('K-AGT08', 500, 0), ('K-BEL02', 5000, 10000), ('K-BEL14', 1000, 1), ('K-SPN01', 10, 1), ('K-SPN11', 5000, 10000), ('K-POP04', 10000, 0), ('K-MER03', 2500, 0), ('K-MIG01', 30, 1)]
+ok   `out` only on a field the solver writes (WarmStart Prices, Wages, Groups; ReferencePrice; RegionPrice.Price)
+ok   VIA 11 has a table of paths
+ok   every path of VIA 11's table is mapped to a registry (scope, field)
+ok   `in` and `chk` are on exactly the data fields VIA 11 lists (a key and a container are not checked)
+     VIA 11: 37 paths, 98 fields moving the table, 11 fields read by a check or a report
 ok   every owner row is a knob row or in a group
 ok   registry-only pairs are the expected scopes
-     255 owner pairs, 9 registry-only
+     257 owner pairs (44 with several owner sections), 12 registry-only
+ok   every field name of CFG 3.7 is a registry key or a group field
+     nested fields checked by name only (the catalogue flattens them): 5
+ok   every nested field of CFG 3.7 is under a scope named for its table
 ok   no Default or Bound column
 ok   group owner cells match the README owner sections
-     back links missing (informational): 6
+     back links missing (informational): 7
         ('K-MON03', 'I12')
         ('K-INF03', 'I14')
         ('K-MER04', 'I14')
+        ('K-DEM02', 'I18')
         ('K-MON03', 'A16')
         ('K-RES01', 'A16')
         ('K-RES03', 'A16')
 
-notes (informational, to be read): 145
+notes (informational, to be read): 137
     ('K-SCL01', 'L13 entry does not name Scale')
     ('K-SCL01', 'L33 entry does not name Scale')
     ('K-SCL01', 'L34 entry does not name Scale')
@@ -33,21 +45,17 @@ notes (informational, to be read): 145
     ('K-WEL01', 'L14 entry does not name WelfareWindow')
     ('K-WEL01', 'L36 entry does not name WelfareWindow')
     ('K-WEL02', 'L36 entry does not name WindowCycles')
-    ('K-WEL03', 'L14 entry does not name TargetSpread')
+    ('K-WEL03', 'L34 entry does not name TargetSpread')
     ('K-WEL04', 'L14 entry does not name TargetRatio')
-    ('K-WEL05', 'L53 entry does not name DefaultRatio')
-    ('K-WEL06', 'L14 entry does not name ExpectedWorkTicks')
-    ('K-WEL07', 'L15 entry does not name MinWorkShare')
-    ('K-WEL07', 'L51 entry does not name MinWorkShare')
-    ('K-WEL08', 'L14 entry does not name WithTargetSpread')
     ('K-WEL08', 'L15 entry does not name WithTargetSpread')
+    ('K-WEL08', 'L34 entry does not name WithTargetSpread')
     ('K-WEL08', 'D08 row/table does not name WithTargetSpread')
-    ('K-AGT01', 'L04 entry does not name CoverTicks')
     ('K-AGT02', 'L49 entry does not name InputJobs')
     ('K-AGT03', 'L04 entry does not name OutputCoverTicks')
     ('K-AGT04', 'L49 entry does not name FavourFloor')
     ('K-AGT05', 'L11 entry does not name ReserveTicks')
     ('K-AGT05', 'L45 entry does not name ReserveTicks')
+    ('K-AGT05', 'D27 row/table does not name ReserveTicks')
     ('K-AGT06', 'L45 entry does not name SpendMaxShare')
     ('K-AGT06', 'D27 row/table does not name SpendMaxShare')
     ('K-AGT07', 'L45 entry does not name SpendHalfTicks')
@@ -69,15 +77,13 @@ notes (informational, to be read): 145
     ('K-BEL08', 'L07 entry does not name BeliefWidthInit')
     ('K-BEL11', 'L07 entry does not name BeliefWidthStep')
     ('K-BEL12', 'D04 row/table does not name CostFloor')
+    ('K-BEL13', 'L10 entry does not name CostCeiling')
     ('K-BEL13', 'D04 row/table does not name CostCeiling')
-    ('K-BEL14', 'L05 entry does not name RefBandLow')
+    ('K-BEL14', 'L06 entry does not name RefBandLow')
     ('K-BEL14', 'D04 row/table does not name RefBandLow')
     ('K-BEL15', 'L05 entry does not name RefBandHigh')
     ('K-BEL15', 'D04 row/table does not name RefBandHigh')
-    ('K-SPN01', 'L61 entry does not name ReviewTicks')
-    ('K-SPN03', 'L61 entry does not name RoleHysteresis')
     ('K-SPN05', 'L61 entry does not name EntryRatio')
-    ('K-SPN05', 'L64 entry does not name EntryRatio')
     ('K-SPN06', 'L50 entry does not name ChangePrivation')
     ('K-SPN06', 'L62 entry does not name ChangePrivation')
     ('K-SPN07', 'L50 entry does not name RemovePrivation')
@@ -89,21 +95,27 @@ notes (informational, to be read): 145
     ('K-EST03', 'L39 entry does not name ReliefBelow')
     ('K-EST03', 'L40 entry does not name ReliefBelow')
     ('K-EST03', 'D11 row/table does not name ReliefBelow')
-    ('K-SKL01', 'L37 entry does not name TrainingTicks')
     ('K-SKL01', 'L41 entry does not name TrainingTicks')
-    ('K-SKL02', 'L37 entry does not name MaxTrainees')
     ('K-SKL02', 'L41 entry does not name MaxTrainees')
     ('K-SKL03', 'L37 entry does not name TeachingLoad')
     ('K-SKL04', 'L36 entry does not name CapitalReturn')
-    ('K-SKL04', 'L37 entry does not name CapitalReturn')
     ('K-PRO01', 'L37 entry does not name TraineeYield')
-    ('K-PRO01', 'L41 entry does not name TraineeYield')
-    ('K-DEM01', 'L57 entry does not name Elasticity')
     ('K-DEM02', 'L14 entry does not name Ceiling')
-    ('K-DEM02', 'L57 entry does not name Ceiling')
     ('K-MON01', 'L69 entry does not name Limit')
     ('K-MON01', 'L72 entry does not name Limit')
     ('K-MON03', 'L70 entry does not name RateBP')
     ('K-POP01', 'L75 entry does not name BirthSchedule')
+    ('K-POP02', 'L75 entry does not name DeathSchedule')
+    ('K-POP02', 'L77 entry does not name DeathSchedule')
+    ('K-POP03', 'L82 entry does not name MinHouseholds')
+    ('K-POP04', 'L76 entry does not name BirthStake')
+    ('K-POP04', 'L77 entry does not name BirthStake')
+    ('K-POP05', 'L75 entry does not name BirthScale')
+    ('K-POP06', 'L75 entry does not name DeathScale')
+    ('K-POP06', 'L77 entry does not name DeathScale')
+    ('K-RES01', 'L87 entry does not name RateBP')
+    ('K-RES01', 'L88 entry does not name RateBP')
+    ('K-RES02', 'L88 entry does not name Refuge')
+    ('K-RES03', 'L87 entry does not name PlanShareBP')
 
 all checks passed

@@ -1,0 +1,9 @@
+rule: 20000 scenarios, conservation, bounds and rent identity hold
+A=100, ten holders of 500 bp, commons 5 000 bp, rent 40 per unit, tick 5
+entitlements (holders, commons): [5, 5, 5, 5, 5, 5, 5, 5, 5, 5] 50
+own executions of the holders: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3] unused [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+commons grants: 2 executions for 10 landless, 1 for 30
+let units 20 unserved units 10 idle let units 0
+rent received by lessor: [80, 80, 80, 80, 80, 80, 80, 80, 80, 80] total 800
+units drawn: 100
+A=80, fifty holders of 100 bp: entitlements of 1 unit for 40 of 50 holders; commons 40 ; units drawn 80 ; let units 0

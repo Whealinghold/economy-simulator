@@ -120,8 +120,9 @@ no state of section 14 exists, no agent has a journey, and the phases of
 
 3.1.2. With the module on, an agent changes region by this module (the journey of
 section 8), by the arrival of a transport trip (`spec-transport.md` 5.7), and by
-the consumer's own call for an external agent (`spec-regions.md` 6.6). Nothing
-else changes a region.
+the consumer's own call of `Relocate` (`spec-integration.md` 4.5.1, `spec-regions.md`
+6.6), which moves any agent that is not a pseudo-agent, a household as well as an
+external agent. Nothing else changes a region.
 
 ### 3.2 The unit: a whole agent
 
@@ -150,7 +151,7 @@ An agent is **eligible for review** in the migration pass of a tick when all hol
 2. its role is not `Fixed`;
 3. it is not on a journey (8.3);
 4. it is not away on a trip of the transport module (`spec-transport.md` 5.5.2);
-5. its turn has come: `(tick + AgentID) mod MoveReviewTicks = 0` (5.1);
+5. its turn has come: `(tick + bucket(AgentID, MoveReviewTicks)) mod MoveReviewTicks = 0` (5.1);
 6. it is settled (5.2).
 
 An eligible agent is **pushed** when its earned ratio exists and is below
@@ -242,15 +243,16 @@ the caps and the settling rule are for.
 An agent reviews its place on the ticks where
 
 ```
-(tick + AgentID) mod MoveReviewTicks = 0
+(tick + bucket(AgentID, MoveReviewTicks)) mod MoveReviewTicks = 0
 ```
 
-a fixed rotation with no random draw, so reviews are spread over the period and a
-group of agents with consecutive IDs reviews on consecutive ticks. It is the
+with `bucket(id, P) = (Weyl2(id) * P) >> 32` of `spec-world.md` 9.1.1 (ruling C14), a
+fixed rotation with no random draw, so reviews are spread over the period. It is the
 decision rate of D25 (migration and hiring decisions at slower stated rates) applied
 to places, and the same device as the occupation review of `spec-spawner.md` 6.2.
 The review runs in the migration pass of phase 7 (10), after consumption, so it sees
-the tick just ended.
+the tick just ended; its rumours are read as of tick `t + 1` (ruling C17,
+`spec-world.md` P7.2).
 
 5.1.1. **What the rotation does and does not do.** In the model (16.2) a period
 alone does not stop the cycle: with a period of 30 or 60 ticks the whole region is
@@ -269,7 +271,8 @@ t - RoleSince >= max( MoveCooldown, T_a )
 with `T_a` the effective welfare window of its role (`spec-welfare-and-wages.md`
 2.3.3, derived and never shorter than the longest job). `RoleSince` is the tick the
 agent took up its present role or place: SPN sets it at creation and at a change of
-role (`spec-spawner.md` 4.2, 7.4) and this module sets it at **arrival**. An agent
+role (`spec-spawner.md` 4.2, 7.4), this module sets it at **arrival**, and a forced
+`Relocate` of INT sets it at the move (`spec-integration.md` 4.5.2 step 5). An agent
 created in a run, a role changer and a migrant are therefore all left alone for at
 least a window.
 
@@ -398,7 +401,7 @@ in ascending order such that `(d, c)` is a **source** of INF (`spec-information.
 |---|------|--------|
 | 1 | no walk from `d` to `h` over open edges | none (`NoPath`) |
 | 2 | `Lag(d, h)` is above `RumourMaxAge` | none (`TooOld`) |
-| 3 | `Lag(d, h)` is above the current tick | none (`NotYet`) |
+| 3 | `Lag(d, h)` is above `t + 1`, the tick the pass reads as of (ruling C17, `spec-world.md` P7.2) | none (`NotYet`) |
 | 4 | otherwise | a rumour |
 
 and a **price** `p_c(d)` is taken from the rumour: its `Mean` if it is above 0, else
@@ -477,8 +480,9 @@ V_a = observed wage * 10 000 / U_h
 ```
 
 with `U_h` the cost of its effective upkeep in its own region at the local market
-prices of the previous tick (the price window mean if the window is not empty,
-else the market price; `spec-clearing.md` 5.4), per household. If the agent had no
+prices of tick `t`, the tick just ended (the window already holds the tick's push; the
+price window mean if the window is not empty, else the market price;
+`spec-clearing.md` 5.4), per household. If the agent had no
 working household-tick in its window, `V_a` is 0. The local prices are free and
 exact (`spec-information.md` 3.1), the rumoured ones are late and blurred, and the
 comparison is between a measurement and an estimate: that is a feature (a household
@@ -597,22 +601,25 @@ arrival (8.4), because an obligation can open on the journey.
 7.2.1. **The query.** The refusals of REG 6.1.3 are asked, with no change of state, by
 
 ```go
-// RelocationRefusal returns the reason (a constant of internal/logkeys) and the error of
+// RelocationRefusal returns the reason (an exported constant of the root package) and the error of
 // the first refusal of spec-regions.md 6.1.3 that would stop relocate(a, to, ...), or
-// ("", nil) if none would. Registered region_bound obligations named in skip are not
-// tested. It changes nothing, draws nothing and allocates nothing.
+// ("", nil) if none would. Registered region_bound obligations named in skip, by name or
+// by instance key, are not tested. It changes nothing, draws nothing and allocates nothing.
 func (w *World) RelocationRefusal(a AgentID, to RegionID, skip ...string) (string, error)
 ```
 
-The guard calls it with no `skip`. The arrival of 8.4 calls it with `skip` = `on_journey`.
+The guard calls it with no `skip`. The arrival of 8.4 calls it with `skip` = `on_journey`,
+by name: an agent has at most one journey, so the name is enough (`spec-regions.md` 6.1.6).
 
 7.2.2. **The refusal `on_journey`.** With the module on, this module registers the
 `region_bound` refusal `on_journey` (`spec-regions.md` 6.5.2), open for an agent that has a
-journey, as TRN registers `open_shipment` (`spec-transport.md` 5.5.3). The public
-relocation (INT, a later module) returns `ErrRegionBound` naming `on_journey` and changes
-nothing, so the account stays in the region of departure for the whole journey. This module
-itself changes the region only at arrival, through the ledger-level `Relocate` (8.4), as TRN
-does at the arrival of a trip.
+journey, as TRN registers `open_shipment` (`spec-transport.md` 5.5.3). One caller skips
+it on purpose: the public `Relocate` of INT (`spec-integration.md` 4.5.2) runs the dry run
+with `skip` = `on_journey`, cancels the journey (8.4.1) and moves the agent, in one atomic
+call. Any other path of the guarded relocation returns `ErrRegionBound` naming `on_journey`
+and changes nothing, so the account stays in the region of departure for the whole journey.
+This module itself changes the region only at arrival, through the ledger-level `Relocate`
+(8.4), as TRN does at the arrival of a trip.
 ### 7.3 The outflow cap
 
 In a region `h`, at most
@@ -750,7 +757,9 @@ panics, architecture.md 8.1):
    departure, and the agent is in the destination from the first phase of tick
    `tick + 1 + k`. The arrival tick is fixed now and does not move if the graph
    changes later (as TRN 4.3).
-4. **The event** `MigrationStarted` (13.1).
+4. **The event** `MigrationStarted` (13.1) is emitted at step 5 of the pass (10.2), after
+   the last departure, in the order of admission. The `RecipeAbandoned` of step 1 is
+   emitted per departure, in admission order, before it (`spec-world.md` P7.2).
 
 A departure at the end of tick `t` therefore costs `k` ticks in which the household
 makes nothing and trades nothing, and at least one (`k >= 1`).
@@ -765,10 +774,10 @@ journey**: its account keeps the region of departure, and
 | `Work`, `Trade`, `Revise`, orders | none: it is passed to none of them and places no order, as an agent that is away (`spec-transport.md` 5.5.2). It is in no market |
 | Upkeep | consumed in phase 6 as in any tick, from its own account, with the effective upkeep of the origin region (`spec-agents.md` 5.2, 5.3); the provisioning of 7.4 made sure it can |
 | Welfare record | pushed each tick as usual: no income from trade or work (relief apart: the earned ratio leaves it out), cost the upkeep at the origin's prices (`spec-welfare-and-wages.md` 2.1.1). The ticks are not working ticks (`spec-welfare-and-wages.md` 4.3: "migration travel ... [is] not [a] working tick") |
-| Relief and starting money | the origin's pool pays relief to it if its ratio is below `ReliefBelow`, as to any agent of the region (its account is there, `spec-transport.md` 5.9.4) |
+| Relief | the origin's pool pays relief to it if its ratio is below `ReliefBelow`, as to any agent of the region (its account is there, `spec-transport.md` 5.9.4). Phase 1 pays relief only; starting money moves at creation (`spec-world.md` ruling C1) |
 | The ladder (SPN) | acts as on any agent: privation counts, and rung 3 may reduce or remove it. A role change or an application for a traineeship is **refused** while it is on a journey (`on_journey`, `spec-spawner.md` 4), and the placement of an entrant never chooses it (`spec-spawner.md` 4.3) |
 | POP's deaths | act on its fed households as on any agent's |
-| A removal | the holdings go to the origin's estate, the journey is dropped, and the removal event is the usual `AgentBankrupted` (`spec-agents.md` 3.6). The households are counted in `Ended` of the next `MigrationReviewed` (13.1) |
+| A removal | the holdings go to the origin's estate, the journey is dropped, and the removal event is the usual `AgentBankrupted` (`spec-agents.md` 3.6). The households are counted in `Ended` of the next `MigrationReviewed` (13.1). A cancel by INT's `Relocate` (8.4.1) is counted in `Ended` in the same way |
 | A weight reduction | the journey goes on with the smaller weight (as a trip, `spec-transport.md` 5.9.4) |
 | An edge that closes | the journey does not change: its arrival tick was fixed at departure (8.2). Rumours about the origin from the destination's side are INF's |
 | A consignee | it may be the consignee of a shipment that arrives in the origin while it is on the way, and the goods are delivered to its account |
@@ -785,8 +794,9 @@ journey from the window as it considers a long trip (open question 8).
 ### 8.4 Arrival
 
 In the first phase of each tick, after the arrivals of the transport module
-(`spec-transport.md` 5.7) and before relief and starting money, for each agent whose
-`Journey.Arrives` is the tick or earlier, in ascending agent ID:
+(`spec-transport.md` 5.7) and before relief (phase 1 pays relief only, `spec-world.md`
+ruling C1), for each agent whose `Journey.Arrives` is the tick or earlier, in ascending
+agent ID:
 
 1. **The dry run.** The world asks `RelocationRefusal(agent, To, "on_journey")` (7.2.1):
    every refusal of REG 6.1.3 except this module's own, including any obligation opened
@@ -816,9 +826,10 @@ The guard of 7.2 runs the same tests, so a refusal at arrival is rare.
 8.4.1. **Cancelling a journey.** The module has an internal operation `cancelJourney(agent)`: it
 drops the journey record, changes nothing in the ledger (the account never left the origin),
 counts the households in `Ended` of the next `MigrationReviewed`, and leaves the abandoned job
-abandoned. INT, to move a migrating household (a forced move, a player's call), must cancel
-the journey first and then call the public `relocate`. Whether INT exposes the cancel, and
-under what name, is INT's decision in a later spec (open question 16).
+abandoned. It has no public name. The cancel is a step inside INT's `Relocate`
+(`spec-integration.md` 4.5.2): the dry run with `skip` = `on_journey`, then the cancel, then
+the move, atomically, so a forced move of a migrating household is one call and a refusal by
+another obligation leaves the journey as it was (question 16 is answered).
 
 ### 8.5 What moves, and what does not
 
@@ -835,7 +846,7 @@ facts of REG, repeated so that a reader of this spec finds the whole.
 | Welfare record | kept (`spec-welfare-and-wages.md` 2.1.2), with the journey as zero-income ticks | |
 | Target ratio, residues, want carries, `DeathCarry` | unchanged: per household or per unit | |
 | `Hunger`, `Privation` | unchanged. The grace that SPN gives a role changer applies: `RoleSince` is the arrival tick, so rung 3 waits `RemovePrivation` ticks (`spec-spawner.md` 5.2) | |
-| `RoleSince` | the arrival tick | at arrival |
+| `RoleSince` | the arrival tick; also the tick of a forced move by INT's `Relocate` (`spec-integration.md` 4.5.2 step 5) | at arrival, or at the forced move |
 | Traineeship | a trainer with trainees, and a trainee, are refused by the guard (`in_traineeship`, SKL) | at admission |
 | Rumours | none are kept; the agent's rumours are those of its new region from its next view (`spec-information.md` 7.3) | |
 | Cost anchors, effective upkeep, effective reference price | derived from the region each tick and change at the next computation (`spec-regions.md` 6.3) | |
@@ -904,7 +915,7 @@ carriage. It is a stated bias (MIG-A9) and an open question (4).
 
 | Phase | What this module does |
 |-------|-----------------------|
-| 1, start | after the arrivals of the transport module and before relief and starting money: the arrivals of 8.4, in ascending agent ID |
+| 1, start | after the arrivals of the transport module and before relief (phase 1 pays relief only): the arrivals of 8.4, in ascending agent ID |
 | 2, 3 | none; an agent on a journey is passed to neither `Work` nor `Trade` (AGT 4, as an away agent) |
 | 6, consumption | none; the upkeep of a migrant is consumed from its account and its record is pushed as for any agent |
 | 7, entry and exit | after the entry step (the spawner and the population module) of **every** region has run: the migration pass of 10.2 |
@@ -947,10 +958,12 @@ module's.
 of 30 that is 167 reviews a tick, a few of them pushed, each a few dozen
 candidates. Counts, not timings (N-015).
 
-10.3. **A consumer's call.** The public face of `relocate` for an external agent is
-INT's (`spec-regions.md` 6.6): it calls the guarded path with its own cause, in
-the world's between-step slot; for a household on a journey it first cancels the journey (8.4.1). This module does not move an external agent and
-offers no way to have it do so: the default module is for households.
+10.3. **A consumer's call.** The public face of `relocate` is INT's `Relocate`
+(`spec-regions.md` 6.6, `spec-integration.md` 4.5): it calls the guarded path with its own
+cause, in the world's between-step slot, for any agent that is not a pseudo-agent; for a
+household on a journey the cancel of 8.4.1 is a step inside the call. This module does not
+move an external agent and offers no way to have it do so: the default module is for
+households.
 
 ## 11. Parameters
 
@@ -1004,8 +1017,9 @@ region that takes no immigrant, or lets nobody leave, is a row with a 0. A row i
 **replace** row. The row is added to the list of `spec-regions.md` 5.1.3 (handoff).
 
 11.3. **Rule constants** (beside their code, not parameters, architecture.md 9.6): the
-rotation `(tick + AgentID) mod MoveReviewTicks`; the Weyl multiplier 2 654 435 769 of
-`spec-population.md` 3.8.3; the use of the window mean and the exclusion of an empty
+rotation `(tick + bucket(AgentID, MoveReviewTicks)) mod MoveReviewTicks` with the bucket
+of `spec-world.md` 9.1.1 (`Weyl2`, multiplier `0x6A09E667`); the Weyl multiplier
+2 654 435 769 of `spec-population.md` 3.8.3 for the margin offset; the use of the window mean and the exclusion of an empty
 one (6.2); the form of the estimate (6.3); the discount `(H - k) / H` (6.4); the
 order of the stages and of the admission tests (6.5, 7.6); the ranking and its
 tie-break (6.5.1); the arrival tick `t + 1 + k` (8.2); the factor 3 of the warning
@@ -1089,15 +1103,15 @@ when an observer was supplied (4.5 there).
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
 | `MigrationStarted` (new) | a journey begins (8.2), once per departure, in the order of admission | `Agent`, `Role`, `From`, `To` (`RegionID`), `Weight`, `Arrives` (the arrival tick), `Distance` (REG's, `int64`), `Journey` (`k`), `EarnedRatio` (basis points, signed), `Home` (`V_a`), `Estimate` (`V_eff,d`, basis points), `JobAbandoned` (bool) |
-| `MigrationReviewed` (new) | once per region per tick in which the module is on and any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal; never when all are zero. Counts of **households**, attributed to the region of the agent's account | `Region`, `Unsettled` (households whose turn came, that the gate of 5.3 would have pushed and that were not settled, 5.2.3), `Reviewed` (households eligible and settled whose turn came), `Pushed`, then the outcomes of 7.6: `Started`, `NoEstimate`, `NoDestination`, `NoRumour`, `TooFar`, `NoViable`, `NoGain`, `Bound`, `OutCap`, `Unprovisioned`, `InCap`; and `Held` (arrivals held, 8.4), `Ended` (journeys ended by a removal since the last pass, 8.3) |
+| `MigrationReviewed` (new) | once per region per tick in which the module is on and any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal; never when all are zero. Counts of **households**, attributed to the region of the agent's account | `Region`, `Unsettled` (households whose turn came, that the gate of 5.3 would have pushed and that were not settled, 5.2.3), `Reviewed` (households eligible and settled whose turn came), `Pushed`, then the outcomes of 7.6: `Started`, `NoEstimate`, `NoDestination`, `NoRumour`, `TooFar`, `NoViable`, `NoGain`, `Bound`, `OutCap`, `Unprovisioned`, `InCap`; and `Held` (arrivals held, 8.4), `Ended` (journeys ended by a removal, or cancelled by `Relocate` of INT, since the last pass, 8.3, 8.4.1) |
 
 The arrival is the event `AgentRelocated` of REG, with the cause `migration`
 (`spec-regions.md` 10.1): this module adds none for it. Pushed equals the sum of the
 eleven outcomes (FR-MIG-025). `MigrationStarted` is per agent, like `AgentSpawned`
 and `AgentRelocated`; `MigrationReviewed` is an aggregate bounded by the number of
 regions, and is the counter of every silent limit of the module (N-045, N-065). The
-`Region` fields carry the `RegionID`; whether events carry the string ID is OBS's
-(`spec-regions.md` 17.4).
+`Region` fields carry the `RegionID`; the string is in the names table of `WorldCreated`
+(`spec-observability.md` 3.2; answers `spec-regions.md` 17.4).
 
 13.1.1. **Households on the way** can be rebuilt from events: `MigrationStarted`
 (+ `Weight`), `AgentRelocated` with the cause `migration` (- `Weight`) and `Ended`
@@ -1151,8 +1165,8 @@ series, 20 for the reference world, as `economysim.household.relocations` does.
 ### 13.4 Snapshot
 
 Per region: the households on a journey from it and to it; the agents with a journey
-(agent, destination, arrival tick), bounded by the agents and so by the scale; the
-last tick's counts of `MigrationReviewed`. The names are OBS's.
+(agent, destination, arrival tick), bounded by the agents and so by the scale. The
+counts of `MigrationReviewed` are the event, not a snapshot field. The names are OBS's.
 
 ### 13.5 No observer, no logger
 
@@ -1166,13 +1180,14 @@ observer is attached.
 Every spec lists the state it contributes (ADR 0002). This spec's, plain data in a
 fixed order with no maps:
 
-- per agent on a journey, in ascending agent ID: the destination `RegionID` and the
-  arrival tick;
+- per agent on a journey: the journey (the destination `RegionID` and the arrival tick),
+  hosted in the agent record and saved there in ascending agent ID
+  (`spec-checkpoint.md` 4.2 tag 3);
 - per region, in ascending `RegionID`: the run of consecutive ticks with pushed
   households and no start, and the run of consecutive ticks with an arrival held,
   for the two `Warn`s of 13.2 (diagnostic: they affect no result and are saved so
   that a resumed run logs as the original did);
-- the count of journeys ended by a removal since the last pass, per region
+- the count of journeys ended by a removal or cancelled by `Relocate` since the last pass, per region
   (reported once and then zero: it is saved so that a resumed run reports as the
   original did).
 
@@ -1612,7 +1627,7 @@ Open question 4.
 
 | ID | Damper | Mechanism | Home | Status |
 |----|--------|-----------|------|--------|
-| MIG-D1 | Staggered migration review | a household decides only on its turn, `(tick + AgentID) mod MoveReviewTicks`, no draw (a form of D25 and D33); alone it does not stop the cycle (16.2). Cost: slow response | 5.1 (`MoveReviewTicks`) | specified |
+| MIG-D1 | Staggered migration review | a household decides only on its turn, `(tick + bucket(AgentID, MoveReviewTicks)) mod MoveReviewTicks`, no draw (a form of D25 and D33); alone it does not stop the cycle (16.2). Cost: slow response | 5.1 (`MoveReviewTicks`) | specified |
 | MIG-D2 | Settling | a household is not reviewed until the longer of `MoveCooldown` and its own effective window have passed since it took up its place, so a record made partly of the place it left cannot trigger a second move (a form of D34 and D29). Cost: a mistaken move stays for a window | 5.2 (`MoveCooldown`) | specified (counted by `Unsettled`) |
 | MIG-D3 | Margin with a width | a household moves only for a gain beyond its own margin, `MoveGain` plus a share of `MoveWidth` by agent ID, so the thresholds are spread (a form of D09 and D08, and the "fixed spread" of INF 13). Cost: a persistent income gap of the order of the margin (16.5) | 6.5 (`MoveGain`, `MoveWidth`) | specified (counted by `NoGain`) |
 | MIG-D4 | Outflow cap | at most `MoveOutShare` of a region's households start a journey in a tick (the opposite of D14). Cost: a region empties slowly | 7.3 (`MoveOutShare`) | specified (counted by `OutCap`) |
@@ -1692,7 +1707,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-MIG-002 | `Modules.Migration` while `Modules.Information` is nil MUST be rejected with `ErrModuleDependency` (3.1, 12.1). |
 | FR-MIG-003 | A field of section 11 outside its bound, a missing `MoveSpeed` included, MUST be rejected with `ErrOutOfBounds` naming its path (11, 12.1). |
 | FR-MIG-004 | A `Regions` row naming an undefined region MUST be rejected with `ErrUnknownRegion`, two rows for one region with `ErrDuplicateID` and more than `MaxRegions` rows with `ErrTooMany`; an absent row MUST give the world's values with no warning; rows MUST be in region order (11.2). |
-| FR-MIG-005 | An agent of a role with `Fixed` set, an external agent, an agent on a journey and an agent that is away on a transport trip MUST NOT be reviewed, and a mobile agent MUST be reviewed only on the ticks where `(tick + AgentID) mod MoveReviewTicks` is 0 (3.3, 5.1). |
+| FR-MIG-005 | An agent of a role with `Fixed` set, an external agent, an agent on a journey and an agent that is away on a transport trip MUST NOT be reviewed, and a mobile agent MUST be reviewed only on the ticks where `(tick + bucket(AgentID, MoveReviewTicks)) mod MoveReviewTicks` is 0, with the bucket of `spec-world.md` 9.1.1 (3.3, 5.1). |
 | FR-MIG-006 | An agent MUST be settled at tick `t` if and only if `t - RoleSince >= max(MoveCooldown, T_a)` with `T_a` its effective welfare window; an arrival MUST set `RoleSince` to the arrival tick (5.2, 8.4). |
 | FR-MIG-007 | The households of an agent whose turn comes, that is eligible, not settled and whose earned ratio is below `MoveBelow` MUST be counted in `Unsettled` and nothing else MUST be computed for them (5.2.3). |
 | FR-MIG-008 | The earned ratio MUST be the welfare ratio of `spec-welfare-and-wages.md` 2.1 with the relief of the window taken out of the income, MUST be absent when the ratio is absent, and an agent MUST be pushed if and only if it is settled and eligible and the earned ratio exists and is below `MoveBelow` (5.3). |
@@ -1713,7 +1728,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-MIG-023 | The households on a journey to `d`, those admitted earlier in the pass included, MUST NOT exceed `ceil(Households_d * InShare_d / 10 000)` when a household is admitted to it; the household that makes the count reach the cap MUST be admitted; a candidate over the cap MUST be skipped as `in_cap`; and `InShare` 0 MUST mean none (7.5). |
 | FR-MIG-024 | The tests at admission MUST be, in order, the guard, the outflow cap, then for each candidate in its ranking provisioning and the pipeline cap, the first candidate that passes both being the destination; the outcome of an agent with none MUST be `unprovisioned` if all failed provisioning and `in_cap` otherwise (7.6). |
 | FR-MIG-025 | In every pass, for every region, `Pushed` MUST equal the sum of `Started`, `NoEstimate`, `NoDestination`, `NoRumour`, `TooFar`, `NoViable`, `NoGain`, `Bound`, `OutCap`, `Unprovisioned` and `InCap`, all counted in households (7.6, 13.1). |
-| FR-MIG-026 | Departure MUST, in this order, abandon a job in progress with the reason `region_changed`, end the subsistence activity of the agent, record `Journey = (To, tick + 1 + k)` and emit `MigrationStarted`; the arrival tick MUST NOT change if the graph changes later (8.2). |
+| FR-MIG-026 | Departure MUST, in this order, abandon a job in progress with the reason `region_changed`, end the subsistence activity of the agent, record `Journey = (To, tick + 1 + k)`, and the pass MUST then emit `MigrationStarted` for each departure in the order of admission, after the last departure and after the `RecipeAbandoned` events of the departures (8.2, 10.2); the arrival tick MUST NOT change if the graph changes later. |
 | FR-MIG-027 | An agent on a journey MUST NOT be passed to `Work`, `Trade` or `Revise` and MUST place no order; its upkeep MUST be consumed in phase 6 from its own account with the effective upkeep of the region of departure; and its welfare record MUST receive income 0 and the origin's upkeep as non-working ticks (8.3). |
 | FR-MIG-028 | An agent on a journey MUST remain in the region of departure for the relief, the ladder, the population module and every removal; a removal MUST send its holdings to that region's estate and drop its journey; a `Switch` or `Apply` of the spawner MUST be refused with `on_journey`; and no placement of an entrant MUST choose it (8.3). |
 | FR-MIG-029 | In the first phase of a tick, after the arrivals of the transport module and before relief, the module MUST process in ascending agent ID each agent whose `Arrives` is the tick or earlier, after `RelocationRefusal(agent, To, "on_journey")` finds no refusal, by the ledger-level `Relocate` with the cause `migration` (8.4). |
@@ -1722,20 +1737,20 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-MIG-032 | A move MUST leave the agent's role, weight, strategy, welfare record, target ratio, residues, want carries, `DeathCarry`, `Hunger` and `Privation` unchanged (8.5). |
 | FR-MIG-033 | The total of money and of each commodity over all accounts MUST be unchanged by a departure, a journey tick (apart from the upkeep consumed under the existing reason `consumption`) and an arrival; the module MUST add no ledger reason, boundary account or flow; and neither region's estate account MUST change because of a move (9.1, 9.2). |
 | FR-MIG-034 | The migration pass MUST run once per tick in phase 7 after the entry step of every region, and MUST consist of the counts, the evaluation in ascending agent ID, the admission, the departures and the events, in that order (10.1, 10.2). |
-| FR-MIG-035 | `MigrationStarted` MUST be emitted once per departure after it is complete, in the order of admission, with the fields of 13.1, and MUST contain no map. |
-| FR-MIG-036 | `MigrationReviewed` MUST be emitted once per region per tick, in ascending `RegionID`, after the `MigrationStarted` events, when any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal, and never otherwise; its counts MUST be households (13.1). |
+| FR-MIG-035 | `MigrationStarted` MUST be emitted once per departure, in the order of admission, after the last departure of the pass (10.2 step 5), with the fields of 13.1, and MUST contain no map. |
+| FR-MIG-036 | `MigrationReviewed` MUST be emitted once per region per tick, in ascending `RegionID`, after the `MigrationStarted` events, when any household was pushed or held back by the settling rule, any arrival was held or any journey ended by a removal or was cancelled by `Relocate`, and never otherwise; its counts MUST be households (13.1). |
 | FR-MIG-037 | The households on the way MUST be rebuildable from `MigrationStarted`, `AgentRelocated` with the cause `migration` and the `Ended` count of `MigrationReviewed` (13.1.1). |
 | FR-MIG-038 | Construction MUST log each warning of 12.3 once at `Warn` with `rule` and `path`; the pass MUST log at `Warn` only the bounded "migration blocked" and "arrivals held" lines, at `Debug` per agent guarded by `Enabled`, and at no `Info` inside the tick (13.2). |
 | FR-MIG-039 | The warnings `migration_without_routes`, `migration_no_mobile_role`, `migration_cohort`, `migration_provision`, `migration_far`, `migration_flow_window` and `migration_uncapped` MUST be raised as described, MUST NOT fail validation, and `migration_flow_window` MUST fire when `MoveOutShare` times the longest effective window of a mobile role exceeds 3 times `MoveGain` (12.3). |
 | FR-MIG-040 | A mobile role for which `|K(role)|` times the number of other regions exceeds `MaxRumoursPerView` MUST be rejected with `ErrTooMany`, and a `Households * MoveOutShare` or `Households * MoveInShare` beyond `MaxQuantity` with `ErrOverflow` (12.2). |
-| FR-MIG-041 | The checkpoint MUST contain the journeys in ascending agent ID with destination and arrival tick, the two diagnostic runs per region and the pending `Ended` count per region, and a world restored between ticks MUST make the same decisions and draws as an uninterrupted one (14). |
+| FR-MIG-041 | The checkpoint MUST contain the journeys, hosted in the agent record and saved there in ascending agent ID with destination and arrival tick (`spec-checkpoint.md` 4.2 tag 3), the two diagnostic runs per region and the pending `Ended` count per region, and a world restored between ticks MUST make the same decisions and draws as an uninterrupted one (14). |
 | FR-MIG-042 | For a given seed and configuration the movers, destinations and arrival ticks MUST be identical on every run and platform, and independent of the order in which regions, edges, roles and `Regions` rows were listed (6.5.1, 7.1, 10.2). |
 | FR-MIG-043 | A cohort MUST move whole; the caps MUST count households; and `migration_cohort` MUST be raised for a mobile role with a group scale above 1 (3.2). |
 | FR-MIG-044 | Every field of section 11 MUST have a row in the parameter-owner table, a default (or "required") that passes validation and a failing-case validation test (11; testing.md 6.7). |
-| FR-MIG-045 | The default module MUST NOT review, move or draw for an external agent, and an external agent's move MUST be the guarded `relocate` called by INT after it cancels any journey (3.3, 8.4.1, 10.3). |
+| FR-MIG-045 | The default module MUST NOT review, move or draw for an external agent, and a move that the consumer asks for MUST be INT's `Relocate`, which cancels any journey inside the call and moves any agent that is not a pseudo-agent (3.1.2, 3.3, 8.4.1, 10.3). |
 | FR-MIG-046 | A candidate region that is an outside node MUST NOT be a destination, and a destination with no rumour for the commodities of the estimate MUST be dropped at stage 1 (6.1, 6.2). |
-| FR-MIG-047 | With the module on, `on_journey` MUST be registered as a `region_bound` refusal open for an agent with a journey, so that the public relocation returns `ErrRegionBound` naming it and changes nothing; the account MUST stay in the region of departure until the module's own arrival (7.2.2). |
-| FR-MIG-048 | Cancelling a journey MUST drop the record, change no balance and no region, and count the households in `Ended`; a household moved by INT MUST have its journey cancelled first (8.4.1). |
+| FR-MIG-047 | With the module on, `on_journey` MUST be registered as a `region_bound` refusal open for an agent with a journey, so that a guarded relocation that does not skip it returns `ErrRegionBound` naming it and changes nothing, INT's `Relocate` being the one caller that skips it and cancels the journey; the account MUST stay in the region of departure until the module's own arrival or the cancel (7.2.2). |
+| FR-MIG-048 | Cancelling a journey MUST drop the record, change no balance and no region, and count the households in `Ended`; a household moved by INT MUST have its journey cancelled inside the same atomic `Relocate`, not by a separate public call (8.4.1). |
 
 ### Non-functional
 
@@ -1795,8 +1810,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 15. **Calibration.** Every default is a placeholder (N-015). The bands for the flow,
     the settling time and the imbalance that remains (16.5) are STY's; the defaults
     are CLB's.
-16. **Cancelling a journey.** 8.4.1 gives the module an internal cancel; its public face and
-    name are INT's. Next step: INT.
+16. **Cancelling a journey.** Answered: the cancel has no public name; it is a step inside
+    INT's `Relocate` (`spec-integration.md` 4.5.2, 4.5.3; 8.4.1).
 
 ## 21. Where this lives in the code
 
@@ -1807,5 +1822,5 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | The rumour for the agent under review | `internal/rumour` (INF), called from the pass |
 | The bounds of 11 (all existing) and the derived checks of 12.2 | root package, `bounds.go`, `validate.go` |
 | The warnings of 12.3 | root package, `validate.go` |
-| The reason and outcome constants (`migration`, `region_changed`, `on_journey`, `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) | `internal/logkeys` |
+| The reason and outcome constants (`migration`, `region_changed`, `on_journey`, `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |
 | The file shape (`[modules.migration]`, `[modules.migration.region.<id>]`) | `config/` (`spec-config.md` 6) |

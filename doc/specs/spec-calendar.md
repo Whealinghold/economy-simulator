@@ -316,8 +316,10 @@ day 0, tick of day 1, hour 10. Tick 640 is the first tick of year 1.
 tick (2.2), and every event already carries its `Tick`. A consumer converts with
 `Calendar.At`.
 
-8.2. Whether the world emits an event when a season begins is open (open question
-4). A game that wants "winter has come" can derive it from the tick today.
+8.2. The world emits no event when a season begins (answered in
+`spec-observability.md` 4.4.7: `Calendar.At(tick)` is a pure function, and the moment is in
+the snapshot). A game that wants "winter has come" finds the tick of a boundary by
+comparing `At(t)` with `At(t-1)`.
 
 ## 9. Stability register entries
 
@@ -394,9 +396,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    but start it at different dates (a hemisphere). The table of yields by season
    covers the cases known (5.3), and a shift makes the season a function of the
    region as well as the tick. Add it only if the first consumer's climates need it.
-4. **A season event.** Whether the world emits `SeasonStarted` when the season
-   changes (8.2). It is derivable, so it is a convenience for a game loop. Decide in
-   `spec-observability.md`.
+4. **A season event. (Answered.)** The world emits no `SeasonStarted` when the season
+   changes (8.2). It is derivable, so it would duplicate a function of `Tick`;
+   `spec-observability.md` 4.4.7 decides it.
 5. **Labels.** Names for months, weekdays and seasons are a consumer concern. If a
    formatter is wanted, it follows the denomination formatter of
    `spec-currency.md` section 4: optional, outside the core and not hashed.

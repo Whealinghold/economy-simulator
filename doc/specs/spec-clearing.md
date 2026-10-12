@@ -5,7 +5,7 @@ index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-CLR-NNN` and
 `NFR-CLR-NNN`, which tests cite (testing.md section 4). They are in section 12
-(FR-CLR-001 to 033, NFR-CLR-001 to 003).
+(FR-CLR-001 to 034, NFR-CLR-001 to 003).
 
 Layer: core ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)).
 Needs `spec-ledger.md` for reservations and transfers (section 3.3 and ledger
@@ -95,7 +95,8 @@ trade with itself. A **counterparty** of the external sector (`spec-external-sec
 ### 3.2 Validation
 
 An order is **rejected** (not admitted) with a `reason` if any of these holds.
-Reasons are constants in `internal/logkeys`.
+Reasons are exported constants of the root package (`event.go`); `internal/logkeys` holds
+the key strings only.
 
 | `reason` | Condition |
 |----------|-----------|
@@ -134,8 +135,10 @@ The ledger owns the representation. Reservations last one tick and none exists
 at a tick boundary (`FR-LED-020`).
 
 3.3.1. Money spent on a bid is not available to other orders in the same tick,
-and proceeds of a sale are not available until the next tick. So the order in
-which a tick's markets are cleared cannot change any result (section 7).
+and proceeds of a sale are not available until the next tick. So, given the
+tie-break keys (4.2), the order in which a tick's markets are cleared cannot change
+any result (section 7). The keys come from one stream in market order, so the fixed
+order of the markets is part of the draw sequence (`spec-world.md` D7, ruling C22).
 
 ## 4. Matching
 
@@ -153,7 +156,9 @@ is fair between agents (no agent is favoured by its position) and reproducible.
 Because the input position is unique, the comparison (limit price, key, input
 position) is a total order, as architecture.md 7.6 requires. The key is drawn
 for every order, whether or not there is a tie, so the number of draws depends
-only on the number of orders.
+only on the number of orders. In the root, `AverageClearing.Clear` takes the draws
+(one source word per order, `spec-world.md` 7.2, ruling C8) and hands the keys to
+`internal/clearing`, which takes no random source (8.3).
 
 The input order is supplied by the world and must itself be deterministic (the
 market lists orders in the order they were admitted, which follows the agents'
@@ -283,15 +288,19 @@ level of one round (bazaarbot-reference.md section 11, items 2 and 6).
 
 ## 7. Tick-level properties
 
-7.1. The market does not carry state between ticks other than the published
-price, the price age and the price window (section 5.4). Orders do not persist.
+7.1. The market does not carry state between ticks other than the market report of
+the last clearing (the published price, the price age, the volume, the unmatched units
+of each side and the best unmatched bid and ask with their flags: 5.4, 5.5) and the
+price window (5.4). Orders do not persist. The state is listed in section 16.
 
 7.2. All orders of a tick are placed (admitted or rejected) before any market
 clears. A market clears from its admitted orders only. Since each order is
 already backed by a reservation (3.3), clearing the markets in any order gives
-the same trades, prices and balances. The world clears them in a fixed order
-(by region, then commodity) so that events come out in a deterministic order
-(section 9).
+the same trades, prices and balances **given the tie-break keys** (4.2). The keys
+come from one stream in market order, so the fixed order of the markets is part
+of the draw sequence (`spec-world.md` D7, ruling C22). The world clears them in a
+fixed order (by region, then commodity), which is also the order in which events
+come out (section 9).
 
 7.3. Unmatched orders are not an error and are not retried. The agent learns the
 outcome of its order after the market clears (filled quantity and unfilled
@@ -299,13 +308,15 @@ quantity). The original updates beliefs once per matched trade and once
 per unmatched order, so one agent can see several updates for one good in one
 round (bazaarbot-reference.md section 11, item 11). Here the outcome goes to the
 agent's strategy method `Revise` (`spec-agents.md` 6.2, 6.4.4) **once per admitted
-order**, however many trades filled it, together with the market report of the
+order of a household agent**, however many trades filled it, together with the market report of the
 order's market (the market price, the price age and the best unmatched bid and ask
 with their flags: 5.4, 5.5). Outcomes are delivered after every market of the tick
 has cleared and the price windows are updated, in order of region, then commodity,
 then the order in which the orders were admitted (`spec-beliefs.md` 5.1.1,
 FR-BEL-007, FR-BEL-008). A rejected order has no outcome: it never reached the
-market. What `Revise` does with the outcome is `spec-beliefs.md` and
+market. Nor has an order of a pseudo-agent: an estate's ask and a counterparty's
+order have no strategy or belief, so they receive no outcome and take no outcome
+draw (`spec-world.md` D8, ruling C21). What `Revise` does with the outcome is `spec-beliefs.md` and
 `spec-agents.md`; the market only supplies it.
 
 ## 8. The `Clearing` extension point
@@ -314,6 +325,22 @@ market. What `Revise` does with the outcome is `spec-beliefs.md` and
 (architecture.md 4.3). It is defined in the root package where it is consumed
 (4.1) and ships with `AverageClearing` as its default, with a compile-time
 assertion (4.5). A proposed shape (final form is decided with the code):
+
+**The owner of `World.Clearing` (ruling C7, `spec-world.md` 4.2).** The field
+`Config.World.Clearing` is a string that names the clearing a world uses. This section
+owns it, as `spec-spawner.md` 3.1.3 owns `World.Spawner`: the default is `average`
+(from the defaults of `spec-config.md` 5, so an empty value is an error and not a
+default), `average` is `AverageClearing` and is built in, and a consumer's
+implementation is registered under another name by `WithClearing(name, c)`
+(`spec-world.md` 4.1). `NewWorld` rejects an empty name or one that is not registered
+with `ErrUnknownClearing`, a name registered twice (`average` is built in, so
+registering it is registering it twice) or the name `default` with `ErrDuplicateID`, as
+for the other extensions (`spec-world.md` FR-WLD-002), and a nil `Clearing` with
+`ErrNilExtension`.
+The **name** is in the effective configuration and its hash and the code behind it is
+not, so a world with a custom rule does not hash like one with the default
+(`spec-config.md` 8.1). An implementation that keeps state between calls implements
+`Stateful` (architecture.md 4.3, 7.7; ADR 0002 decision 7); `AverageClearing` keeps none.
 
 ```go
 // Clearing matches the admitted orders of one market and prices the trades.
@@ -337,8 +364,10 @@ before it settles any. A list is valid if, for every trade:
 - the buyer and the seller are different agents.
 
 If the list is invalid, the world settles none of the trades of that market,
-releases its reservations, and Step returns an error wrapping `ErrInvalidTrade`.
-The world does not also log it (architecture.md 8.3). A faulty extension
+releases its reservations, and `Step` returns an error wrapping `ErrInvalidTrade`
+at P4.1 (`spec-world.md` 3.5): the step fails and the world is failed, so every
+later call with an error result returns `ErrWorldFailed`. The world does not also
+log it (architecture.md 8.3). A faulty extension
 therefore cannot create money or goods or break a budget; it can only fail
 loudly. The default `AverageClearing` never produces an invalid list.
 
@@ -351,11 +380,12 @@ bound. That is deliberate (section 10).
 them inline (architecture.md 2.9):
 
 ```go
-// internal/clearing: stdlib only, no root types.
+// internal/clearing: stdlib only, no root types, no random source.
 type Offer struct {
-	Ref   int   // index into the caller's slice
+	Ref   int    // index into the caller's slice
 	Price int64
 	Qty   int64
+	Key   uint64 // the tie-break key of 4.2, drawn by the root
 }
 
 type Match struct {
@@ -363,10 +393,14 @@ type Match struct {
 	Price, Qty     int64
 }
 
-func Average(bids, asks []Offer, rng *rand.Rand) []Match
+func Average(bids, asks []Offer) []Match
 ```
 
-The internal package does not know about commodities, roles or agents. The
+`AverageClearing.Clear` in the root draws one source word per order, bids first and then
+asks, each in input order (4.2; `spec-world.md` 7.2, ruling C8), puts it in `Key`, and
+calls `Average`, which sorts by (limit price, `Key`, position in the input) and draws
+nothing. The key is a raw `uint64`, so it needs no reduction. The internal package does
+not know about commodities, roles or agents. The
 checked arithmetic it needs (the midpoint, the 128-bit volume-weighted mean) is
 in the `internal/` checked-arithmetic helpers that `spec-currency.md` section 7
 names.
@@ -500,9 +534,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-020 | When no unit traded, the market price MUST be the previous market price, and before the first trade ever it MUST be the seed price of the commodity in the region (the effective reference price, or the `WarmStart.Prices` entry when one is configured); the price age MUST be 0 after a tick in which units traded and otherwise one more than before. |
 | FR-CLR-021 | Each tick a market MUST report, per side, the unmatched units and the best unmatched limit price, or that there is none. |
 | FR-CLR-022 | The same seed, configuration and sequence of orders MUST give identical trades in an identical order, and `AverageClearing` MUST draw exactly one `uint64` per order, bids first, in input order. |
-| FR-CLR-023 | The trades, prices and balances of a tick MUST NOT depend on the order in which its markets are cleared. |
+| FR-CLR-023 | Given the tie-break keys, the trades, prices and balances of a tick MUST NOT depend on the order in which its markets are cleared; the fixed order of the markets is part of the draw sequence of the keys (3.3.1, 7.2). |
 | FR-CLR-024 | The world MUST validate the whole list of trades from a `Clearing` before settling any; if any trade breaks the rules of section 8.2 it MUST settle none of that market's trades, release its reservations and return an error wrapping `ErrInvalidTrade`. |
-| FR-CLR-025 | Each admitted order's total outcome (filled units, unfilled units), with the market report of its market (market price, price age, best unmatched bid and ask with flags), MUST be delivered once to the agent's `Revise` after all markets of the tick have cleared, however many trades filled the order, in order of region, commodity and admission; a rejected order MUST have no outcome. |
+| FR-CLR-025 | The total outcome (filled units, unfilled units) of each admitted order of a household agent, with the market report of its market (market price, price age, best unmatched bid and ask with flags), MUST be delivered once to the agent's `Revise` after all markets of the tick have cleared, however many trades filled the order, in order of region, commodity and admission; a rejected order, and an order of a pseudo-agent (an estate or a counterparty), MUST have no outcome and MUST take no outcome draw (7.3). |
 | FR-CLR-026 | `OrderPlaced` MUST be emitted for each admitted order and `OrderRejected` with a `reason` from the table in section 3.2 for each rejected order, in the order submitted. |
 | FR-CLR-027 | `TradeExecuted` MUST be emitted for each settled trade, in matching order and after settlement, and `MarketCleared` once per market per tick after that market's trades, even if nothing traded; markets MUST be ordered by region and then commodity. |
 | FR-CLR-028 | A bid from a pseudo-agent that may only sell, such as an estate, MUST be rejected with `side_not_allowed`. |
@@ -511,6 +545,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-031 | The checks of section 3.2 MUST run in the order of its table, so an order that fails two of them MUST be rejected with the first. |
 | FR-CLR-032 | A market MUST push its market price into its price window once per tick, after it has cleared and before the outcomes are processed, if and only if units traded, and the `Clearing` MUST NOT read or write the window. |
 | FR-CLR-033 | The clearing path MUST emit no `Info`, `Warn` or `Error` log line, and each `Debug` line MUST be guarded by `Enabled`. |
+| FR-CLR-034 | The market report of the last clearing of each market (the published price, the price age, the volume, the unmatched units of each side and the best unmatched bid and ask with their flags) MUST be saved in a checkpoint, and a restored world MUST answer the same report as the original at the same boundary (7.1, 16). |
 
 ### Non-functional
 
@@ -569,9 +604,9 @@ Original entries (each to be given its sign, delay, damper and test):
 4. **A "faithful" mode.** Not provided (section 10). If a comparison with the
    original is needed, run the original and compare the dynamics, not the
    trades.
-5. **How `Step` reports `ErrInvalidTrade`.** Whether it is a returned error or
-   a panic on a violated programmer invariant depends on the shape of `Step` in
-   `spec-world.md`. The rules favour a returned error (architecture.md 8.1).
+5. **How `Step` reports `ErrInvalidTrade`.** Answered (`spec-world.md` 3.5): `Step`
+   returns an error wrapping `ErrInvalidTrade` at P4.1 and the world is failed, as
+   architecture.md 8.1 favours (8.2).
 6. **The reference price's owner.** Settled in `spec-goods.md` 6.3: the
    commodity owns the default `ReferencePrice`, and a region may override it
    (the override field is `RegionPrices`, `spec-regions.md` 5.2). The price before the first trade
@@ -591,8 +626,31 @@ Original entries (each to be given its sign, delay, damper and test):
 |---------|------|
 | `Order`, `Trade`, `Clearing`, `AverageClearing`, `ErrInvalidTrade` | root package, `clearing.go`, `order.go`, `errors.go` |
 | Admission, reservation, the market price, the price age and the price window | root package, `market.go` |
-| The matching algorithm and the tie-break draw | `internal/clearing` (stdlib only; `Offer`, `Match`, `Average`) |
+| The tie-break draw (one source word per order) and the registration of `World.Clearing` by name | root package, `clearing.go` (`AverageClearing.Clear`), `option.go` (`WithClearing`) |
+| The matching algorithm over the keys it is given | `internal/clearing` (stdlib only, no random source; `Offer` with its `Key`, `Match`, `Average`) |
 | Midpoint, half-to-even division, 128-bit volume-weighted mean, checked multiply | the `internal/` checked-arithmetic helpers |
-| Rejection `reason` constants, including `not_tradable` | `internal/logkeys` |
+| Rejection `reason` constants, including `not_tradable` | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |
+| State contributed to a checkpoint (section 16) | root package, `market.go` |
 | Reserve, release, `trade` transfers | `internal/ledger` (`spec-ledger.md`) |
 | Events `OrderPlaced`, `OrderRejected`, `TradeExecuted`, `MarketCleared` | root package, `event.go` |
+
+## 16. State contributed to a checkpoint
+
+Every spec lists the state it contributes (ADR 0002). The market's, plain data in a
+fixed order with no maps, saved in the Markets section of the checkpoint
+(`spec-checkpoint.md` 4.2 tag 4), for each (region, commodity) of a region that is not an
+outside node, in region order and then commodity order:
+
+- the **market report of the last clearing**: the published price, the price age, the
+  volume, the unmatched bid units and the unmatched ask units, the best unmatched bid
+  (a present flag, then the price) and the best unmatched ask (a present flag, then the
+  price) (5.4, 5.5).
+
+The price window and its diagnostic run are the beliefs' state, saved beside the report
+(`spec-beliefs.md` 13). **Not saved:** the orders, the reservations (none exists at a
+boundary, 3.3), the tie-break keys and the list of trades of the last clearing (they are
+a function of the tick). The report is read at the next tick by `Trade` (`spec-agents.md`
+6.4.1), by the integration query `Market(r, c)` and by the snapshot, so a restored world
+must answer the same report as the original at the same boundary (FR-CLR-034). The
+implementation of an alternative `Clearing` that keeps state saves it through `Stateful`
+(8), under its registered name.

@@ -34,8 +34,9 @@ Perishable goods spoil as usual. Sale proceeds go to the pool. These are ledger
 transfers with the reasons `estate_money` and `estate_goods`
 (`spec-ledger.md` 7.2), into the region's one estate account. The mechanics of a
 removal, in order (the job abandoned, the trainee relationship ended, money and goods
-moved, the account closed, one event), are `spec-agents.md` 3.6; this spec owns only
-what the estate then does with them.
+moved, the account closed, `AgentBankrupted`, the only event that removes the agent, with
+the events that accompany it in the order of `spec-world.md` 6.11 item 8), are
+`spec-agents.md` 3.6; this spec owns only what the estate then does with them.
 
 Goods also reach the estate by diversion: a cargo whose consignee is removed, outside the destination region or unable to hold it moves from its Transit account to the estate of the destination by `transit_in` (`spec-transport.md` 5.8), and the estate lists it like any other goods (2.7).
 
@@ -61,7 +62,7 @@ replacement in the first ticks may start with nothing). Money enters the world o
 by `initial` (at construction, a pool seed, and an external agent added during a run,
 `spec-agents.md` 3.5.4) and by the faucets of later specs, each a named flow of the
 ledger (`spec-ledger.md` 7.3). Otherwise the total, agents plus pools plus escrow, is
-constant. A configured grant to the pool of a region is a named faucet too (`spec-money-supply.md` 4.3.2, 7.4); a pool target needs this module on (`ErrModuleDependency`), although the estate account exists whether or not it is (`spec-regions.md` 3.6.2): the pool policy of 2.6 is the module's. A levy on a pool collects after relief and starting money are paid in the same tick (`spec-money-supply.md` 7.5).
+constant. A configured grant to the pool of a region is a named faucet too (`spec-money-supply.md` 4.3.2, 7.4); a pool target needs this module on (`ErrModuleDependency`), although the estate account exists whether or not it is (`spec-regions.md` 3.6.2): the pool policy of 2.6 is the module's. A levy on a pool collects after relief in the same tick (P1.7 after P1.6) and before that tick's entry step, where the starting money of an entrant is funded at its creation, in phase 7 (`spec-money-supply.md` 7.5; `spec-world.md` ruling C1).
 
 2.4. **Consequences.** A prosperous region accumulates a pool and funds
 well-endowed newcomers. A collapsing region's pool runs dry, so new agents
@@ -72,8 +73,9 @@ starting money is released as relief (section 2.6), so it does not sit idle.
 The pool balance is exposed per region in `Snapshot` so it can be watched.
 
 2.5. **Events and state.** An `EstateOpened` event is emitted when an agent
-is removed (agent, region, balance, number of goods listed; it accompanies the removal
-event of `spec-agents.md` 14, which carries the cause). The agent-spawned event
+is removed, by every removal and whether or not the pool policy of 2.6 is on (agent,
+region, balance, number of goods listed; it accompanies `AgentBankrupted`, the event of
+`spec-agents.md` 14 that removes the agent and carries the cause). The agent-spawned event
 carries the starting money it received (`StartMoney`, `spec-agents.md` 14).
 
 2.6. **Relief.** Each tick, in the start phase (`spec-agents.md` 4, phase 1), the
@@ -111,7 +113,9 @@ the result.
 - Relief counts the receipts of an own-use job in the ratio (`spec-subsistence.md` 7), so a
   household that feeds itself draws less.
 - A `ReliefPaid` event is emitted per region per tick when anything is paid
-  (total paid, number of recipients). It carries no per-agent map.
+  (total paid, number of recipients, and `Households`, the sum of the recipients'
+  weights). It carries no per-agent map. It is the pool policy's event: it is not
+  emitted when the module is off, whereas `EstateOpened` (2.5) is core.
 
 ### 2.7 The estate as a pseudo-agent
 
@@ -140,8 +144,9 @@ different asks. The price of an ask is
   the lot's remaining durability over the commodity's full durability, and for
   other goods the effective reference price; this first price is truncated and
   never below the resolution floor (`spec-currency.md` 3.1);
-- reduced each tick the lot stays unsold by `EstateMarkdown` basis points of the
-  last price, truncated, never below the resolution floor.
+- reduced, at P5.3 (`spec-world.md` ruling C6), by `EstateMarkdown` basis points of the
+  last price for each tick in which the lot had an ask and was not wholly sold,
+  truncated, never below the resolution floor.
 
 2.7.4. It has no strategy, no price beliefs, no household, no weight, no upkeep
 and no welfare ratio. It cannot die or go bankrupt, it draws no relief and is not
@@ -167,7 +172,7 @@ to `w'`, the money difference passes through the estate account (`spec-scale.md`
 4.8; `spec-agents.md` 3.7): the surplus goes to the pool when the weight falls, and
 the shortfall is drawn from the pool when it rises, with the ledger reasons
 `split`, `merge`, `births`, `starvation` or `deaths` (`spec-ledger.md` 7.2). A draw never takes
-more than the pool holds. A rise that the pool cannot fund is applied partially, in whole households, from a budget of `EntryPoolShare` of the pool taken at the start of the entry step; the rest is not created and is counted (`spec-spawner.md` 4.3, 7.3, N-073). A rise by entry brings money and no goods. A household born through the population module brings a stake of `Role.StartMoney * BirthStake / 10 000` from the pool with the reason `births`, money only (`spec-population.md` 4.3); a death by a schedule passes the money of the households that die to the pool with the reason `deaths` (`spec-population.md` 4.7); both reasons are rows of `spec-ledger.md` 7.2.
+more than the pool holds. A rise that the pool cannot fund is applied partially, in whole households, from a budget of `EntryPoolShare` of the pool taken once, after the population module's deaths and before the switches (`spec-world.md` P7.1(d), ruling C15), so that the estates of the dead fund the same tick's births; the rest is not created and is counted (`spec-spawner.md` 4.3, 7.3, N-073). A rise by entry brings money and no goods. A household born through the population module brings a stake of `Role.StartMoney * BirthStake / 10 000` from the pool with the reason `births`, money only (`spec-population.md` 4.3); a death by a schedule passes the money of the households that die to the pool with the reason `deaths` (`spec-population.md` 4.7); both reasons are rows of `spec-ledger.md` 7.2.
 
 2.8.2. A cohort does not fail by itself (`spec-agents.md` 3.6.1): an agent with no
 money exists and goes unfed. The estate has no part in the decisions of the failure ladder (change
@@ -211,7 +216,7 @@ derived from the section named.
 | FR-EST-006 | The estate MUST place asks only, and a bid from it MUST be rejected with `side_not_allowed`; each ask MUST be backed by a reservation of goods in the estate's account and need no cash (2.7.2). |
 | FR-EST-007 | The estate MUST place one ask for each lot it holds, naming the lot, and each lot's price MUST be kept as state (2.7.3, 2.7.5). |
 | FR-EST-008 | The first ask price of a durable lot MUST be the region's effective reference price times the lot's remaining durability over the full durability, and of any other lot the effective reference price, truncated and never below the resolution floor (2.7.3). |
-| FR-EST-009 | Each tick a lot stays unsold, its ask price MUST fall by `EstateMarkdown` basis points of the last price, truncated and never below the resolution floor (2.7.3). |
+| FR-EST-009 | At P5.3, for each lot that had an ask in the tick and was not wholly sold, its ask price MUST fall by `EstateMarkdown` basis points of the last price, truncated and never below the resolution floor (2.7.3). |
 | FR-EST-010 | The estate pseudo-agent MUST NOT be counted in the number of agents or households, MUST NOT cause an `AgentSpawned` event, and the snapshot MUST mark it as a pseudo-agent (2.7.4). |
 | FR-EST-011 | The estate MUST NOT die, go bankrupt, receive relief or be passed to a strategy (2.7.4). |
 | FR-EST-012 | The estate's orders MUST be placed with the others before any market clears, MUST take a tie-break key like any order, and the events they produce MUST carry the estate's agent ID (2.7.4). |
@@ -222,8 +227,8 @@ derived from the section named.
 | FR-EST-017 | Each tick, in the start phase and after the starting-money draws of the previous tick's entry step, a region MUST release `pool * PoolRelease / 10 000` as relief, truncated, to the agents whose welfare ratio is below `ReliefBelow`, with the reason `relief` (2.6). |
 | FR-EST-018 | The relief of an agent MUST be `min(share_i, need_i)` with `need_i = U_i * (ReliefBelow - ratio_i) / 10 000` and `share_i = release * need_i / sum(need)`, with `U_i` the effective upkeep cost of the agent, using integer arithmetic checked for overflow, and what is not paid MUST stay in the pool (2.6). |
 | FR-EST-019 | An agent's relief MUST depend only on its own need and the totals, so that the order of agents does not change any payment (2.6). |
-| FR-EST-020 | `ReliefPaid` MUST be emitted once per region per tick when anything is paid, with the total paid and the number of recipients, and no map (2.6). |
-| FR-EST-021 | `EstateOpened` MUST be emitted when an agent is removed, with agent, region, balance and the number of goods listed, and the spawn event MUST carry the starting money received (2.5). |
+| FR-EST-020 | `ReliefPaid` MUST be emitted once per region per tick when anything is paid, with the total paid, the number of recipients and the households (the sum of their weights), and no map (2.6). |
+| FR-EST-021 | `EstateOpened` MUST be emitted for every removal of an agent, with the pool policy on or off, accompanying `AgentBankrupted`, with agent, region, balance and the number of goods listed, and the spawn event MUST carry the starting money received (2.5). |
 | FR-EST-022 | A draw from the pool for a weight change MUST NOT exceed the pool's balance (2.8.1). |
 | FR-EST-023 | `EstateMarkdown`, `PoolRelease` and `ReliefBelow` MUST be region fields with the defaults and bounds of section 3, and a value outside its bound MUST be rejected at construction with `ErrOutOfBounds` (3). |
 | FR-EST-024 | The state this spec contributes to a checkpoint MUST be the list of (lot key, current ask price) per region in canonical order, and a restored world MUST list and price the same lots as an uninterrupted one (2.7.5). |

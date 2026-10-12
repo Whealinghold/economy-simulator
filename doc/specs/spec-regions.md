@@ -656,8 +656,9 @@ func (w *World) relocate(a AgentID, to RegionID, cause Cause) error
 
 backed by `Relocate(account, region)` in `internal/ledger`, which takes the region as
 a plain index and does not know what a region is (architecture.md 2.9). The root
-checks that the index names a region. `cause` is a constant of `internal/logkeys`
-that the caller supplies (`migration` is MIG's; INT supplies its own); it is carried
+checks that the index names a region. `cause` is an exported constant of the root
+package (`event.go`; `internal/logkeys` holds the key strings only) that the caller
+supplies (`migration` is MIG's; INT supplies its own); it is carried
 to the event and the log and affects nothing else. `relocate` is defined as the
 read-only query of 6.1.6 followed by the change: it returns the error that the query
 names, or makes the change.
@@ -668,8 +669,11 @@ reservations exist only inside a tick, between admission and settlement
 consumer's call to the world may be made, and at the points of the tick that WLD fixes
 after settlement and before the next admission. It is never legal between the
 admission of an order and its settlement. Where in the tick MIG's relocations happen
-is WLD's and MIG's to fix; the recommendation is the entry-and-exit phase
-(`spec-agents.md` 4), so that an agent places its next orders in its new region.
+is fixed by `spec-world.md` (6.3, 6.9): a relocation happens at the arrivals of
+phase 1, which are guarded, at P1.3 (a traveller's arrival, cause `transport`) and
+P1.5 (a migration arrival, cause `migration`), and between ticks (INT's forced move,
+cause `consumer`); phase 7 has departures only. So an agent places its next orders in
+its new region.
 
 6.1.3. **Refusals.** The checks run in this order, before anything changes. A refused
 relocation changes nothing (`spec-ledger.md` 2.6) and returns the error shown:
@@ -685,8 +689,8 @@ relocation changes nothing (`spec-ledger.md` 2.6) and returns the error shown:
 | 6 | `open_reservation` | the account has a reservation of money or goods | `ErrOpenReservation` |
 | 7 | `region_bound` | an obligation that a later spec registered is tied to the account's region (6.5) | `ErrRegionBound`, which names the obligation |
 
-The reason is a constant of `internal/logkeys`, used in the log and in the count a
-caller keeps. The caller decides whether to log the error it gets (architecture.md
+The reason is an exported constant of the root package (`event.go`; `internal/logkeys`
+holds the key strings only), used in the log and in the count a caller keeps. The caller decides whether to log the error it gets (architecture.md
 8.3); the world does not log an error it returns.
 
 6.1.4. **The whole agent moves.** The account is the agent's, and an agent has a
@@ -695,27 +699,32 @@ stands for. Moving part of a cohort is a split first (the ledger reason `split`,
 `spec-scale.md` 4.8) and then a relocation of the new agent; version 1 does not split
 (`spec-scale.md` 8), and the first consumer has weight 1 throughout (N-030).
 
-6.1.5. **An external agent** may be relocated: the consumer asked for it (INT). The
-checks of 6.1.3 are the only ones. The default MIG does not relocate an external agent
-on its own (that is MIG's rule, N-022).
+6.1.5. **Any agent that is not a pseudo-agent** may be relocated, an external agent
+included: the consumer asked for it (INT 4.5). The checks of 6.1.3 are the only ones.
+The default MIG does not relocate an external agent on its own (that is MIG's rule,
+N-022).
 
 6.1.6. **The dry run.** The refusals of 6.1.3 can be asked without changing anything, by a
 read-only query of the world (the name and the signature are `spec-migration.md` 7.2.1's):
 
 ```go
-// RelocationRefusal returns the reason (a constant of internal/logkeys) and the error of
-// the first refusal of 6.1.3 that relocate(a, to, ...) would return, or ("", nil) if none
-// would. Registered region_bound obligations named in skip are not tested. It changes
-// nothing, draws nothing and allocates nothing.
+// RelocationRefusal returns the reason (an exported constant of the root package) and
+// the error of the first refusal of 6.1.3 that relocate(a, to, ...) would return, or
+// ("", nil) if none would. Registered region_bound obligations named in skip, by name
+// or by instance key, are not tested. It changes nothing, draws nothing and allocates
+// nothing.
 func (w *World) RelocationRefusal(a AgentID, to RegionID, skip ...string) (string, error)
 ```
 
 It runs the checks of 6.1.3 in the order of the table. `skip` names registered
-`region_bound` obligations (6.5.2) that are not tested; it can skip no other refusal. MIG
-uses it for its guard at admission, with no `skip`, and at the arrival of a journey with
-`skip` = `on_journey` (6.5.3, 6.6); an arrival that finds no other refusal changes the
-region through the ledger-level `Relocate`, as TRN does for a traveller. The query and
-`relocate` MUST agree for every input (FR-REG-059).
+`region_bound` obligations (6.5.2) that are not tested, by name or by instance key
+(6.5.2); it can skip no other refusal. A key has a fixed size, so the query still
+allocates nothing. MIG uses it for its guard at admission, with no `skip`, and at the
+arrival of a journey with `skip` = `on_journey`, by name, because an agent has at most
+one journey (6.5.3, 6.6); an arrival that finds no other refusal changes the region
+through the ledger-level `Relocate`, as TRN does for a traveller, which skips only the
+shipment that arrives and the contract formed on it (6.5.2). The query and `relocate`
+MUST agree for every input (FR-REG-059).
 
 ### 6.2 What the operation does
 
@@ -743,9 +752,10 @@ operation. Where the new region would make it stale, the caller decides:
 | State | What this operation does | Who decides, and the default that spec states or proposes |
 |-------|--------------------------|----------------------------------------------------------|
 | Role, weight, strategy | nothing | unchanged by the move |
-| Job in progress | nothing: its outputs were fixed at its start (`spec-production.md` 6.4, FR-PRO-021) and it completes where the agent then is | MIG. A `Sited` job would complete away from its site, so MIG abandons the job first, at departure, with the reason `region_changed` (adopted: `spec-production.md` 5.4, `spec-migration.md` 8.2; open question 3 is answered) |
-| Price beliefs | nothing | MIG; reseeded on arrival (`spec-beliefs.md` 8.3, `spec-migration.md` 8.4, N-038) |
-| Own-use mode and counter | nothing: the caller drops them | SUB (`spec-subsistence.md` 5.8): `OwnUse` false and `OwnUseJobs` 0 at a relocation and at the departure of a timed move |
+| Job in progress | nothing: its outputs were fixed at its start (`spec-production.md` 6.4, FR-PRO-021) and it completes where the agent then is | MIG. A `Sited` job would complete away from its site, so MIG abandons the job first, at departure, with the reason `region_changed` (adopted: `spec-production.md` 5.4, `spec-migration.md` 8.2; open question 3 is answered). INT's forced `Relocate` abandons it first in the same way (`spec-integration.md` 4.5.2 step 3) |
+| Price beliefs | nothing | MIG; reseeded on arrival (`spec-beliefs.md` 8.3, `spec-migration.md` 8.4, N-038). INT's forced `Relocate` reseeds by the same rule, with no draw (`spec-integration.md` 4.5.2 step 5) |
+| Own-use mode and counter | nothing: the caller drops them | SUB (`spec-subsistence.md` 5.8): `OwnUse` false and `OwnUseJobs` 0 at a relocation and at the departure of a timed move; INT's forced `Relocate` drops them (`spec-integration.md` 4.5.2 step 3) |
+| `RoleSince` | nothing | MIG sets it at arrival (`spec-migration.md` 8.5); INT's forced `Relocate` sets it to the current tick (`spec-integration.md` 4.5.2 step 5), which gives the grace of `spec-spawner.md` 5.2 |
 | Welfare record | nothing: it travels with the agent (`spec-welfare-and-wages.md` 2.1.2) | WEL |
 | `Hunger`, `Privation` | nothing | SPN's leaky count is the agent's; MIG may reset it |
 | Traineeship | nothing | SKL: a trainer with trainees or a trainee is registered as a `region_bound` refusal (6.5) |
@@ -757,16 +767,23 @@ operation. Where the new region would make it stale, the caller decides:
 6.4.1. The ledger keeps, for the current tick, the **relocation totals**: for each
 ordered pair of regions `(from, to)` with a relocation in the tick, the money moved
 with the accounts and, for each commodity, the units. They have the layout, the
-lifetime and the order of the flow totals (`spec-ledger.md` 7.4): cleared at the start
-of each tick, kept as a slice in a fixed order (ascending `from`, then `to`, then money
-before the commodities in commodity order), bounded by the regions and the commodities
-and never by the number of agents, and read-only. They are not saved in a checkpoint.
+lifetime and the order of the flow totals (`spec-ledger.md` 7.4): cleared at the end
+of each tick (P8.6, after the events and the audit, `spec-world.md` 8.1.3), so that a
+relocation made between ticks is totalled in the tick the next step runs, kept as a
+slice in a fixed order (ascending `from`, then `to`, then money before the commodities
+in commodity order), bounded by the regions and the commodities and never by the number
+of agents, and read-only. The totals of finished ticks are not saved in a checkpoint; the
+totals that a call between ticks added since the last tick's end are pending totals and
+are saved with the ledger's state (`spec-ledger.md` 7.4, 11; `spec-checkpoint.md` 4.2
+tag 2).
 
 6.4.2. They are the reconciling item of a regional stock report. The money held in
 a region changes by the flows attributed to it and by the relocations in and out, and
 the totals say how much came with accounts that moved. They are the only way a report
 by region can tell a household that arrived with money from a faucet. The global
-identities need no such item, since a relocation moves nothing between accounts.
+identities need no such item, since a relocation moves nothing between accounts. The
+report that uses them is `spec-indicators.md` 8.2 ("two reconciling items"; goods only
+in total).
 
 6.4.3. A relocation is not a boundary flow. It appears in no `BoundaryFlow` and no
 reason of the registry (`spec-ledger.md` 7.2) is added for it.
@@ -788,20 +805,26 @@ an obligation tied to the region of an account **registers a refusal** of reason
 any registered obligation is open. The refusals foreseen, none of them in version 1,
 and the owner of each:
 
-| Name | Obligation | Owner |
-|------|------------|-------|
-| `open_shipment` | the agent owns, or is the recipient of, a shipment in flight, or is an away traveller | TRN |
-| `on_journey` | the agent is on a migration journey (`spec-migration.md` 7.2.2) | MIG |
-| `open_contract` | the agent is the payer or the deliverer of an open delivery contract (`spec-merchants.md` 9.8.1) | MER |
-| `in_traineeship` | the agent is a trainer with trainees, or a trainee | SKL |
+| Name | Obligation | Instance keys the agent holds | Owner |
+|------|------------|-------------------------------|-------|
+| `open_shipment` | the agent owns, or is the recipient of, a shipment in flight, or is an away traveller | the IDs of the shipments of which it is shipper or consignee and, for an away traveller, its own trip | TRN |
+| `on_journey` | the agent is on a migration journey (`spec-migration.md` 7.2.2) | its one journey | MIG |
+| `open_contract` | the agent is the payer or the deliverer of an open delivery contract (`spec-merchants.md` 9.8.1) | the IDs of its open contracts | MER |
+| `in_traineeship` | the agent is a trainer with trainees, or a trainee | none (one obligation) | SKL |
 
 This is the full list of the region-bound refusals. The list is closed at construction by
 the modules that are on (a module that is off registers nothing), so it is part of the
 world's behaviour and not a callback into consumer code. With none of those modules on
-it is empty. A module that moves an account itself (TRN for a traveller, MIG for a
-migrant) does so by the ledger-level `Relocate` and not through the guarded `relocate`,
-because its own refusal would block it; before it does, it asks the query of 6.1.6 with
-its own refusal in `skip`, so that every other obligation still holds the move.
+it is empty. Each registered obligation also reports the **instance keys** it holds
+for an agent (the column above), each a fixed-size key (obligation, number). A module
+that moves an account itself (TRN for a traveller, MIG for a migrant) does so by the
+ledger-level `Relocate` and not through the guarded `relocate`, because its own refusal
+would block it; before it does, it asks the query of 6.1.6 with its own obligation
+in `skip` and, where an agent can hold several instances of it, only the instance
+that the move completes: TRN names the shipment that arrives, and the contract formed
+on it (MER), so that every other shipment, contract or obligation of the agent still
+holds the move (`spec-world.md` 6.12, C16). MIG names `on_journey` by name, because an
+agent has at most one journey.
 
 6.5.3. **An agent that is itself travelling.** The relocation of 6.1 is instantaneous:
 the agent is in the old region until the call and in the new one after it. A journey
@@ -826,10 +849,13 @@ a migrant stays in the region of departure until arrival, so `NoRegion`, `depart
 MIG moves a household by a timed journey (`spec-migration.md` 8): at the arrival it asks
 `RelocationRefusal(a, to, "on_journey")` (6.1.6) and, if nothing is found, changes the
 region through the ledger-level `Relocate` with the cause `migration`, as TRN does with the
-cause `transport` at the arrival of a traveller (a refusal that holds delays the arrival);
-it does not call the guarded `relocate`. INT calls the guarded `relocate` for an external
-agent the consumer moves (the player on a journey, in version 1 without a duration), and
-must cancel a migration journey before it moves that household (`on_journey`). The default spawner does not call it: an entry creates a
+cause `transport` at the arrival of a traveller, which runs the same query first,
+skipping only its own shipment and the contract formed on it (a refusal that holds
+delays the arrival); it does not call the guarded `relocate`. INT calls the guarded
+`relocate` for an agent the consumer moves (the player on a journey, in version 1
+without a duration); its `Relocate` cancels a migration journey atomically inside the
+call, so that the `on_journey` refusal does not stop it and no public cancel exists
+(`spec-integration.md` 4.5.2 step 2). The default spawner does not call it: an entry creates a
 household in a region, it does not move one (`spec-spawner.md` 4.3). The public
 face of the operation, its name and its phase in the tick belong to those specs.
 
@@ -880,9 +906,14 @@ type EdgeStatus struct {
 }
 
 // SetEdgeStatuses applies the changes to the world's graph, all or none. It is
-// called between ticks and never inside a Step.
-func (w *World) SetEdgeStatuses(cause Cause, changes []EdgeStatus) error
+// called between ticks and never inside a Step. The event cause is `consumer`
+// (`spec-integration.md` 3.3.3, 5.1).
+func (w *World) SetEdgeStatuses(changes []EdgeStatus) error
 ```
+
+The exported form takes no cause: INT's call (`spec-integration.md` 5.1) is the only
+public one. The world keeps an internal form with a `cause` for the modules that may
+set a status later (7.3.3).
 
 7.3.1. Every change names a configured edge (`ErrUnknownEdge`), has a factor in
 range (`ErrOutOfBounds`), and no edge appears twice in one call (`ErrDuplicateID`). If
@@ -894,9 +925,10 @@ that a caller holds keeps describing the world as it was, because it shares noth
 the world (4.3.4); a later call of `World.Graph()` reflects the new statuses. Then `EdgeStatusChanged` is emitted for each edge whose status changed,
 in ascending `EdgeID`, after the new tables are in place (10.1).
 
-7.3.3. The public face is INT's (a closed-road shock), and CAP, RSK and POL may call it
-with their own `cause` later. The cause is a constant of `internal/logkeys`, carried
-to the event and the log.
+7.3.3. The public face is INT's (a closed-road shock, `spec-integration.md` 5.1), and CAP,
+RSK and POL may call the internal form with their own `cause` later. The cause is an
+exported constant of the root package (`event.go`; `internal/logkeys` holds the key
+strings only), carried to the event and the log.
 
 ### 7.4 What a status does not do
 
@@ -994,9 +1026,11 @@ complete, and constructed only when an observer was supplied (4.5 there).
 | `EdgeStatusChanged` (new) | an edge's status changed (7.3.2), once per changed edge, in ascending `EdgeID`, after the new graph is in place | `From`, `To`, `Closed`, `FactorBP` (the new status), `Cause` |
 
 `AgentRelocated` is per agent, like `AgentSpawned`: it is a transition of one agent.
-The fields that name a region carry the `RegionID`; whether events carry the region's
-string ID instead, as other events may, is for OBS to settle for all of them at once
-(open question 4). A consumer that tracks households by region needs `AgentRelocated`
+The fields that name a region carry the `RegionID`; the strings come from the names
+table that `WorldCreated`, `WorldRestored` and the snapshot carry
+(`spec-observability.md` 3.2; open question 4 is answered). The relocation causes are
+`transport`, `migration` and `consumer` (`spec-world.md` P1.3, P1.5;
+`spec-integration.md` 3.3.3). A consumer that tracks households by region needs `AgentRelocated`
 as well as `AgentSpawned`, `AgentBankrupted`, `WeightChanged` and `RoleChanged`
 (`rules/observability-and-logging.md` 4.3): a household leaves `From` and joins `To`.
 The estate pseudo-agents are not agents and cause no event (`spec-estates.md` 2.7.4).
@@ -1017,7 +1051,8 @@ The estate pseudo-agents are not agents and cause no event (`spec-estates.md` 2.
 `components` (counts, in the construction summary), `from_region` and `to_region`
 (region IDs; `region` stays the key for a single region), `distance` (an `int64` in
 the pack's unit), `closed` (a bool), and `households`, `cause` and `reason`, which exist;
-their values are constants in `internal/logkeys`.
+the keys are strings in `internal/logkeys`, and their values (a reason, a cause) are
+exported constants of the root package (`event.go`).
 
 10.4. **Metric.** One instrument, fed by `AgentRelocated`, for the catalogue of
 `rules/observability-and-logging.md` 5.3:
@@ -1055,8 +1090,10 @@ Already saved by others: the region of every account is in the ledger state
 
 **Not saved** (derived): the `RegionID` and `EdgeID`, the distance, next-hop and
 component tables, the adjacency lists, the resolved override arrays (5.3.5), the
-relocation totals (6.4.1, like the flow totals) and the lists of the agents of a
-region. A restore builds the graph from the configuration and the saved statuses and
+relocation totals of finished ticks (6.4.1, like the flow totals; the relocation totals
+that a call between ticks added since the last tick's end are pending totals, saved
+with the ledger's state, `spec-checkpoint.md` 4.2 tag 2) and the lists of the agents
+of a region. A restore builds the graph from the configuration and the saved statuses and
 gets the same tables, because they are defined by their result (4.3.1); a world
 restored between ticks answers every query as an uninterrupted one does (FR-REG-052).
 The configuration hash covers `Regions`, `Edges` and `RegionPrices` in canonical
@@ -1337,7 +1374,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-039 | `relocate` MUST check, in this order, the region, the agent, the account being open, the kind, the region being different, the absence of a reservation and the registered obligations, MUST return the error of 6.1.3 for the first that fails, and a refused call MUST leave the ledger and the agent unchanged (6.1.3). |
 | FR-REG-040 | A successful relocation MUST set the account's region and change no balance, no lot and no reservation; the total over all accounts of money and of each commodity MUST be unchanged; and no transfer, reason, boundary account or flow total MUST be involved (6.2, 6.3). |
 | FR-REG-041 | Flows after a relocation MUST be attributed to the new region and flows before it MUST stay with the old one (6.2). |
-| FR-REG-042 | The ledger MUST keep, for the current tick, the money and the units of each commodity moved with relocated accounts for each ordered pair of regions, in ascending `from`, then `to`, then money before commodities in commodity order, cleared at the start of each tick and not saved in a checkpoint (6.4.1). |
+| FR-REG-042 | The ledger MUST keep, for the current tick, the money and the units of each commodity moved with relocated accounts for each ordered pair of regions, in ascending `from`, then `to`, then money before commodities in commodity order, cleared at the end of each tick (P8.6) and, for the totals of finished ticks, not saved in a checkpoint; the totals that a call between ticks added since the last tick's end are pending totals, saved with the ledger's state (6.4.1). |
 | FR-REG-043 | An estate, escrow, transit or boundary account MUST be refused with `ErrNotRelocatable`, and the estate pseudo-agent MUST never change region (3.6.3, 6.1.3). |
 | FR-REG-044 | In version 1 `relocate` MUST refuse `NoRegion` with `ErrUnknownRegion` and an agent MUST always be in a region (6.1.3, 6.5.3). |
 | FR-REG-045 | The derived list of the agents of a region MUST reflect a relocation at once, and each list MUST be in ascending agent ID (3.1.1, 6.2). |
@@ -1347,15 +1384,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-049 | The effective length of an open edge MUST be `max(1, ceil(Base * FactorBP / 10 000))` computed with checked arithmetic, a closed edge MUST be absent from `Out`, `In`, `Distance`, `NextHop`, `Path`, `Within` and the components, and `Edge` MUST still return it with `Closed` set (7.2). |
 | FR-REG-050 | `SetEdgeStatuses` MUST be atomic: an edge that is not configured MUST be rejected with `ErrUnknownEdge`, a factor outside `[1, MaxEdgeFactorBP]` with `ErrOutOfBounds` and an edge twice with `ErrDuplicateID`, and when any change fails none MUST be applied and a `Graph` returned earlier or later MUST be unaffected by the failed call (7.3.1). |
 | FR-REG-051 | A successful batch MUST rebuild the tables once, rebuild the world's own tables, and emit `EdgeStatusChanged` once per edge whose status changed, in ascending `EdgeID`, after the new tables are in place, and none for a change equal to the current status (7.3.2, 4.4.4). |
-| FR-REG-052 | The checkpoint MUST contain the edges whose status is not the default, in ascending `EdgeID`, and nothing else of this spec; and a world restored between ticks MUST answer every query of 4.3.2 as an uninterrupted one does (11). |
+| FR-REG-052 | The checkpoint MUST contain the edges whose status is not the default, in ascending `EdgeID`, and nothing else of this spec's own state (the pending relocation totals are the ledger's section); and a world restored between ticks MUST answer every query of 4.3.2 as an uninterrupted one does (11). |
 | FR-REG-053 | The configuration hash MUST cover `Regions`, `Edges` and `RegionPrices` in canonical order, every field except `Region.Label` and `World.DistanceLabel`, so that changing a distance or a price changes the hash and changing a label does not (11). |
 | FR-REG-054 | A configuration read from a file and the same configuration built in Go MUST have equal edges and overrides, equal hashes and equal runs, and the file MUST write an edge as `[region.<from>.edge.<to>]` with `distance` and the overrides as `[region.<id>.reference_price]` keyed by commodity; an unknown key MUST be rejected with `ErrUnknownKey` and a non-integer distance with `ErrNotInteger` (4.1.1, 5.2.1). |
 | FR-REG-055 | The bounds `MaxDistance`, `MaxEdges`, `MaxEdgeFactorBP`, `MaxRegionPrices` and `MaxLabelBytes` MUST be constants in `bounds.go` with the values of 4.2 (4.2). |
 | FR-REG-056 | The "world created" line MUST carry `edges` and `components` beside `regions`, each warning of 9.2 MUST be logged once at `Warn` with `rule` and `path` at construction, a relocation MUST be logged at `Debug` only and guarded by `Enabled`, and no `Info` MUST be logged inside the tick (10.2). |
 | FR-REG-057 | The events `AgentRelocated` and `EdgeStatusChanged` MUST be constructed only when an observer was supplied, and a run with and without a logger and observer MUST give equal results (10.1, 10.6). |
 | FR-REG-058 | With the external module on, a relocation whose destination is an outside node MUST be refused with `ErrOutsideNode` after `same_region` and before `open_reservation`, changing nothing, and `region_without_agents` MUST NOT be raised for an outside node (`spec-external-sector.md` 3.1.2, FR-EXT-034, FR-EXT-004). |
-| FR-REG-059 | `World.RelocationRefusal(a, to, skip...)` MUST return the reason and the error of the first refusal of 6.1.3 that `relocate(a, to, ...)` would return, in the order of that table, or `("", nil)`, MUST NOT test a registered obligation named in `skip` and no other refusal, MUST change nothing, draw nothing and allocate nothing, and for every input `relocate` MUST return exactly the error the query returns (6.1.1, 6.1.6). |
-| FR-REG-060 | The registered `region_bound` refusals MUST be exactly those of the modules that are on, named `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER) and `in_traineeship` (SKL); a module that moves an account itself by the ledger-level `Relocate` MUST first ask the query with its own refusal in `skip` and MUST NOT move the account when it names another refusal (6.5.2, 6.6). |
+| FR-REG-059 | `World.RelocationRefusal(a, to, skip...)` MUST return the reason and the error of the first refusal of 6.1.3 that `relocate(a, to, ...)` would return, in the order of that table, or `("", nil)`, MUST NOT test a registered obligation named in `skip`, by name or by instance key, and no other refusal, MUST change nothing, draw nothing and allocate nothing, and for every input `relocate` MUST return exactly the error the query returns (6.1.1, 6.1.6). |
+| FR-REG-060 | The registered `region_bound` refusals MUST be exactly those of the modules that are on, named `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER) and `in_traineeship` (SKL); a module that moves an account itself by the ledger-level `Relocate` MUST first ask the query with its own refusal in `skip`, naming by instance key only the instance that the move completes where the agent can hold several, and MUST NOT move the account when it names another refusal or another instance (6.5.2, 6.6). |
 
 ### Non-functional
 
@@ -1379,8 +1416,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    and MIG abandons the job at departure (`spec-migration.md` 8.2, 6.3). Next step: PRO adopts
    the reason in `spec-production.md` 5.4.
 4. **Region in an event: ID or name.** 10.1 uses the `RegionID`; the `otelobserver`
-   adapter and a consumer need the name for an attribute. Next step: OBS decides for every
-   event at once.
+   adapter and a consumer need the name for an attribute. **Answered** by
+   `spec-observability.md` 3.2: events carry the `RegionID` and the names table maps it.
 5. **Founding or merging regions in a run.** Out of scope for version 1 (2). A consumer
    who needs a region that appears (a colony founded by the player) needs the tables to
    grow, the ledger to open an estate and a checkpoint to record it. Not designed.
@@ -1390,8 +1427,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 7. **Append forms.** `AppendOut` and `AppendWithin` would let a per-tick caller avoid the
    allocation of 4.3.3. They can be added without a break (architecture.md 6.6); add them
    if MIG or INF shows the need.
-8. **Where in the tick a relocation happens, and in what order.** 6.1.2 recommends the
-   entry-and-exit phase. When several relocations in one tick compete for one thing (a
+8. **Where in the tick a relocation happens, and in what order.** 6.1.2 gives the
+   positions of `spec-world.md` (P1.3 and P1.5, and between ticks). When several relocations in one tick compete for one thing (a
    pool, a place in a traineeship), their order is MIG's: this spec requires only the
    total order of agent ID if the caller has no better one.
 9. **Distances from coordinates.** A pack could give each region a position and derive
@@ -1401,7 +1438,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `Region` (the entity, with the fields of other specs), `RegionID`, `NoRegion`, `Edge`, `EdgeID`, `RegionPrice`, `EdgeView`, `Hop`, `EdgeStatus`, `Graph`, `NewGraph`, `World.Graph`, `World.ReferencePrice`, `World.SetEdgeStatuses` | root package, `regions.go` |
+| `Region` (the entity, with the fields of other specs), `RegionID`, `NoRegion`, `Edge`, `EdgeID`, `RegionPrice`, `EdgeView`, `Hop`, `EdgeStatus`, `Graph`, `NewGraph`, `World.Graph`, `World.ReferencePrice` | root package, `regions.go` |
+| `World.SetEdgeStatuses(changes)`, the public face of the status slot (an internal form keeps the `cause`) | root package, `integration.go` (`spec-integration.md` 5.1) |
 | The estate creation at construction, `relocate`, `RelocationRefusal`, the lists of agents by region | root package, `world.go` |
 | The single-source searches, the next-hop table, the components, the lengths with a factor, over primitive slices | `internal/graph` (standard library only, converted inline at the call, architecture.md 2.9) |
 | `Relocate(account, region)` and the relocation totals | `internal/ledger` |
@@ -1409,5 +1447,5 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | The bounds of 4.2 | root package, `bounds.go` |
 | Validation, the sentinels `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` | root package, `validate.go`, `errors.go` |
 | Events `AgentRelocated`, `EdgeStatusChanged` | root package, `event.go` |
-| Reason and cause constants | `internal/logkeys` |
+| Reason and cause constants | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |
 | The file shape of an edge and an override | `config/` (`spec-config.md` 6) |

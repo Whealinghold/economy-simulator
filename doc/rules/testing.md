@@ -293,7 +293,11 @@ of the parameter-owner table in `doc/specs/README.md`, and every row has a
 field, a default that passes validation, and a failing-case validation test
 (3.9). The test reads the table with a plain text parse, so it needs no
 extra dependency. It is written when `spec-config.md` fixes the configuration
-shape; until then reviewers check the table by hand. **[project]**
+shape; until then reviewers check the table by hand. The registry of knobs of
+`doc/specs/spec-calibration.md` section 6 has a second test of the same kind
+(that spec's 11.1): it reads the same table and the classification of the
+registry by the same plain text parse, and needs no extra dependency.
+**[project]**
 
 ## 7. End-to-end, golden-file and fuzz tests
 
@@ -476,4 +480,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 899e165b8e2564628d200d1d
+RULE-TAG: 22da929a3c00a99f79eb878e

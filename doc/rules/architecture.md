@@ -109,13 +109,18 @@ economy-sim/
     design/              experiment design: grids, permutations, seeds, overlay
                          text
     reduce/              checked reductions of experiment/ over primitive types
+    calibration/         the grid and neighbours, the seed blocks, the choice,
+                         the alias test, and the record and overlay of a
+                         calibration, over primitive values; standard library
+                         and internal/design only
     logkeys/             slog attribute key strings; it imports nothing and
                          holds no type of the root
   otelobserver/          separate module (own go.mod): Observer backed by OpenTelemetry
   examples/<name>/       each example is its own module with its own go.mod
   testdata/              fixtures shared across packages: chains/ (config
                          fixtures, including the reference chain), golden/,
-                         checkpoints/ (one fixture per checkpoint format version)
+                         checkpoints/ (one fixture per checkpoint format version),
+                         calibration/ (the records of a calibration, per pack)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
   doc/rules/             this directory
@@ -800,4 +805,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 42eeab37487ade5f18253f16
+RULE-TAG: 3dcbb5404c096c27477c4e73

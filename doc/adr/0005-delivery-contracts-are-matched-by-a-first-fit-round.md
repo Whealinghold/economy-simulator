@@ -91,7 +91,9 @@ by `Clearing`.
   (`spec-merchants.md` 22, question 8).
 - Forward and standing contracts, a third-party carrier, a bond or a penalty, and credit
   (`spec-merchants.md` 9.10).
-- The position of the round in the tick is WLD's to fix (N-009).
+- The position of the round in the tick: **answered**, it is P3.3 of
+  [spec-world.md](../specs/spec-world.md) 6.5, after every agent's plan (P3.2) and
+  before the estates' asks (P3.4) (N-009).
 
 ## Related
 
@@ -100,5 +102,6 @@ by `Clearing`.
 [spec-carriage.md](../specs/spec-carriage.md) (2.1, 6),
 [spec-clearing.md](../specs/spec-clearing.md) (2.3, 3),
 [spec-ledger.md](../specs/spec-ledger.md) (3.1, 6.6, 7.2),
+[spec-world.md](../specs/spec-world.md) (6.4, 6.5),
 [ADR 0001](0001-macro-economy-as-replaceable-layers.md),
 [ADR 0004](0004-outside-trades-through-pass-through-counterparties.md).

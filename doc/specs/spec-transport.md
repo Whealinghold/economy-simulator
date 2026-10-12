@@ -97,8 +97,10 @@ Transport uses these parts of `spec-regions.md` and nothing else:
 - one settlement per region and a region is one market (ADR 0003 decision 4); the
   region creates its estate pseudo-agent and account (`spec-estates.md` 2.7.1);
 - the ledger-level `Relocate(account, region)` of `spec-regions.md` 6.1, which transport
-  calls itself at an arrival (5.7) and which carries `cause` `transport` (a constant of
-  `internal/logkeys`) and the event `AgentRelocated` (`spec-regions.md` 10.1);
+  calls itself at an arrival (5.7), after the guard query of `spec-regions.md` 6.1.6 run
+  ignoring only its own shipment and the contract formed on it (`spec-world.md` 6.12,
+  C16), and which carries `cause` `transport` (an exported constant of the root package)
+  and the event `AgentRelocated` (`spec-regions.md` 10.1);
 - the hook of `spec-regions.md` 6.5.2: a spec that ties an obligation to an account's
   region registers a refusal `region_bound` with a name, and the public relocation
   (`spec-regions.md` 6.1.3, check 7) refuses an account with an open obligation
@@ -385,7 +387,7 @@ then its intents become orders (`spec-agents.md` 6.5.2). An agent's shipment can
 therefore use the stock the strategy saw, and the orders that follow are admitted
 against what is left (`insufficient_stock` if the strategy double-counted).
 **Arrivals** are processed in phase 1 of the tick, first, after the moment is
-computed and before relief and starting money are paid (5.7). An agent that is away
+computed and before relief is paid (5.7). An agent that is away
 is not passed to `Work` or `Trade` (5.5). A request can also come from the **contract round** of `spec-merchants.md` 9.4, which runs after the last agent's plan: the offers and takes of a plan (`spec-merchants.md` 9.2) are collected here and matched there, and a matched offer is executed as the offerer's request, with every check and every effect of 5.4 and 5.5.1, **dispatched at once** in the round (the shipment is requested by the round and not by the plan; 5.4 refusals are the reason of a failed formation and emit `ShipmentRejected` as always).
 
 5.3.3. A request is processed against the state at that moment; there is no
@@ -398,7 +400,8 @@ order.
 ### 5.4 Refusal reasons
 
 A request is **refused** whole, with a `reason`, if the first of these holds. The
-checks run in this order; the reasons are constants in `internal/logkeys`. A refusal
+checks run in this order; the reasons are exported constants of the root package
+(`event.go`; `internal/logkeys` holds the key strings only). A refusal
 changes nothing, emits `ShipmentRejected` (section 13) and is not an error returned
 by `Step`.
 
@@ -454,8 +457,10 @@ checked; a failure here is a programmer error and panics, architecture.md 8.1,
 5.5.2. **The traveller while away.** From dispatch until the first phase of tick
 `Arrives`:
 
-- it is not passed to `Work` or `Trade` and places no order. It has no market to
-  trade in: it is in none;
+- from the next tick it is not passed to `Work` or `Trade` and places no order. It has
+  no market to trade in: it is in none. The orders of the plan that dispatched it are
+  admitted as usual in the same phase 3, after the shipments of that plan (5.3.2;
+  `spec-world.md` P3.2(c));
 - its account keeps its region (`From`) and its holdings stay in the account and age
   as any lot does; its upkeep is consumed in phase 6 of each tick from them
   (`spec-agents.md` 5.3); the spawner acts on it as on any agent (5.9);
@@ -468,8 +473,13 @@ account whose agent is the traveller of an away trip, or the shipper or the cons
 a shipment in flight (an agent whose goods or whose delivery is tied to a region). The
 public relocation (MIG, INT) then returns `ErrRegionBound` naming `open_shipment`, and
 changes nothing. Transport itself changes a traveller's region at arrival by calling the
-ledger-level `Relocate(account, region)` directly, not the guarded public path, with the
-cause `transport`; it emits `AgentRelocated` of `spec-regions.md` 10.1 (`Agent`, `Role`,
+ledger-level `Relocate(account, region)`, not the guarded public path, but only after the
+guard query of `spec-regions.md` 6.1.6 run ignoring its own obligation by **instance
+key**: `open_shipment` reports as its instance keys the IDs of the shipments of which the
+agent is shipper or consignee and, for an away traveller, its own trip, and the arrival
+ignores only the shipment that arrives and the contract formed on it (MER 9.8.1), so every
+other shipment, contract or obligation of the agent still refuses and holds the arrival
+(`spec-world.md` 6.12, C16). The cause is `transport`; it emits `AgentRelocated` of `spec-regions.md` 10.1 (`Agent`, `Role`,
 `From`, `To`, `Weight`, `Money`, `Units`, `Cause`) and no event of its own for the move.
 A traveller dying in transit leaves its money to the pool of the region it departed from
 (`spec-estates.md` 2.2) and, since its account is still in the origin region, that is the
@@ -515,7 +525,7 @@ shipments with `Arrives = t` in order of shipment ID:
 4. **The event** `ShipmentArrived`, with for each line the shipped, delivered and
    spoiled quantity and whether any was diverted (section 13).
 
-The first phase comes before relief and starting money, so a consignee has its goods
+The first phase comes before relief, so a consignee has its goods
 and a traveller its new region before anything else of the tick reads them, and
 before `Work` and `Trade`.
 
@@ -539,7 +549,7 @@ traveller is not the consignee): nothing happens to the shipment. The goods are 
 Transit account and belong to the consignee on arrival.
 
 5.9.2. **The traveller is removed** (it starves, or the consumer removes an external
-agent that is mortal, `spec-spawner.md` 9): its holdings in its own account go to the
+agent with `RemoveAgent`, mortal or not, `spec-integration.md` 4.4.1): its holdings in its own account go to the
 estate of the account's region, `From`, as for any removal (`spec-agents.md` 3.6). A
 shipment to itself is dropped. A shipment with lines continues without a traveller:
 its cargo is in the Transit account and arrives at `Arrives`, delivered to the
@@ -851,8 +861,10 @@ could carry an edge limit (`edge_full`, 6.2). Nothing in this spec reads a road.
 the factors that differ from 10 000, keyed by (from, to, mode), set between ticks by
 the integration spec for a shock (a closed road is 0) or by CAP, and saved in a
 checkpoint (14). It acts on new dispatches only; shipments in flight keep the arrival
-tick they were given (4.3). The setting function is the integration spec's; this spec
-owns the slot and its effect (as production owns the yield-shock slot,
+tick they were given (4.3). The public call is `SetTransitFactors([]TransitFactor{From,
+To, Mode; BP})` of the integration spec (`spec-integration.md` 5.1): `From` must differ
+from `To` (`ErrSameRegion`), and a changed key emits `TransitFactorChanged` (13.1). This
+spec owns the slot and its effect (as production owns the yield-shock slot,
 `spec-production.md` 6.8).
 
 10.4. **Storage (STO).** None: the destination is an account, not a warehouse. A cargo
@@ -917,6 +929,7 @@ for example `modules.transport.modes.wagon.vehicle`.
 | `ErrVehicleNotDurable` (new) | a `Vehicle` whose commodity has `Durability` 0 |
 | `ErrModeShape` (new) | a hired mode (`Haul` set) with `Crew`, `Vehicle`, `WearPerTick` or `Feed`, or without `HaulSpan`; a self-carried mode with `HaulSpan`; `WearPerTick` without `Vehicle` or `Vehicle` without `WearPerTick` |
 | `ErrModuleDependency` | the module on while the region graph (REG) is off |
+| `ErrUnknownMode` | a mode ID that is not defined (also returned by `SetTransitFactors`, `spec-integration.md` 5.1.3; a root sentinel with the transport module alone, which `spec-merchants.md` 14.1 also uses) |
 | `ErrOverflow` | `MaxWeight` times `MaxCapacity` above `int64` (a derived check of `spec-config.md` 4.2, true at the bounds above) |
 
 ### 12.2 Warnings
@@ -944,6 +957,11 @@ state transition of one shipment or one request (observability-and-logging.md 4.
 | `ShipmentArrived` (new) | when a shipment arrives, after its delivery | `Shipment`, `Mode`, `Region` (origin), `To`, `Receiver` (the consignee, or the destination estate pseudo-agent if diverted), `Diverted`, `Lines` (commodity, `Shipped`, `Delivered` to the consignee, `Diverted` to the estate, `Spoiled`) |
 | `ShipmentRejected` (new) | when a request is refused | `Region`, `Agent`, `Mode`, `To`, `Reason` |
 
+A fourth event, `TransitFactorChanged`, is a slot event and not a shipment event: once per
+changed key of a call of `SetTransitFactors` (10.3), at the call, with `From`, `To`,
+`Mode` and the factor before and after in basis points (`spec-observability.md` 4.4.4);
+it is emitted only with the module on.
+
 None has a map, a pointer or a wall-clock time (observability-and-logging.md 4.1).
 `Lines` are slices of copies in a deterministic order, bounded by `MaxShipmentLines`.
 The events are constructed only when an observer was supplied (4.5 there). An event of
@@ -968,7 +986,7 @@ logged per tick.
 13.3. **New log keys** for observability-and-logging.md 3.3.2: `shipment` (the shipment
 ID), `mode` (the mode ID), `dest` (the destination region ID; `region` is the origin),
 and `modes` (a count in the construction summary). The `reason` values of 5.4 are
-constants in `internal/logkeys`.
+exported constants of the root package (`event.go`).
 
 13.4. **Metrics** (observability-and-logging.md 5.3), all `Int64`, each derivable from the
 events:
@@ -1118,8 +1136,10 @@ removal. *Damper:* D37. *Status:* hand.
 **Scenarios proposed:** S28, *two regions with a route and a merchant that ships on a
 price gap, with the shipper counting `Inbound` and not*: the gap closes to within the
 freight plus a band and does not oscillate with a growing amplitude for `k` in a stated
-range (TRN-A1, A2); S29, *a perishable with `ShelfLife` equal to the travel time and one
-less*: the first is never delivered, the second always (TRN-A5); S30, *a hired mode with
+range (TRN-A1, A2); S29, *a perishable with `ShelfLife` equal to the travel time `k` and
+one tick inside it (`ShelfLife` = `k` + 1)*: the first is never delivered, the second
+always, since a fresh lot is delivered if and only if `k <= ShelfLife - 1` (5.6.2)
+(TRN-A5); S30, *a hired mode with
 a haul recipe whose `Duration` is the round trip, at three elasticities of the carriers'
 starts*: the price of haul units converges or is reported as F6 (TRN-A3).
 
@@ -1311,9 +1331,9 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-019 | A self-carried request MUST be refused `traveller_away` if the agent is away and `job_in_progress` if it has a job in progress, and `unprovisioned` if after the dispatch's moves its stock of its upkeep goods is below its effective upkeep times its weight times the travel time. |
 | FR-TRN-020 | Dispatch MUST move each line from the shipper to a Transit account under `transit_out`, with the lots keeping their born tick and remaining durability, and MUST take the lowest-ID open Transit account of the shipper's region that no shipment in flight uses, or open one. |
 | FR-TRN-021 | A traveller MUST be away from its dispatch until the first phase of its arrival tick: not passed to `Work` or `Trade`, placing no order, with every tick from the dispatch tick to the tick before arrival a working tick, its account keeping its region and its upkeep consumed from its account. |
-| FR-TRN-022 | With the module on, transport MUST register the `region_bound` refusal `open_shipment`, open for an agent that is an away traveller or the shipper or consignee of a shipment in flight, so that the public relocation returns `ErrRegionBound` for it; at arrival transport MUST change the traveller's region by the ledger-level `Relocate` with cause `transport` and emit `AgentRelocated` once, and MUST NOT use `NoRegion`, `depart` or `arrive`. |
+| FR-TRN-022 | With the module on, transport MUST register the `region_bound` refusal `open_shipment`, open for an agent that is an away traveller or the shipper or consignee of a shipment in flight, so that the public relocation returns `ErrRegionBound` for it; the refusal MUST report the IDs of the shipments of which the agent is shipper or consignee, and for an away traveller its own trip, as its instance keys; at arrival transport MUST first run the guard query ignoring only the shipment that arrives and the contract formed on it, MUST NOT move the account when another refusal holds, and MUST then change the traveller's region by the ledger-level `Relocate` with cause `transport` and emit `AgentRelocated` once, and MUST NOT use `NoRegion`, `depart` or `arrive`. |
 | FR-TRN-023 | A Transit account MUST hold the cargo of at most one shipment in flight and nothing else, MUST NOT be closed, and MUST be empty when no shipment references it. |
-| FR-TRN-024 | In the first phase of a tick, after the moment and before relief, the world MUST process the shipments whose arrival is that tick in order of shipment ID: change a self-carried traveller's region to the destination and reseed its price beliefs by the rule of `spec-beliefs.md` 8.3 with no draw (5.7.1), move the cargo to the consignee under `transit_in`, release the Transit account and emit `ShipmentArrived`. |
+| FR-TRN-024 | In the first phase of a tick, after the moment and before relief, the world MUST process the shipments whose arrival is that tick in order of shipment ID: change a self-carried traveller's region to the destination (after the guard of 5.5.3, run ignoring only the arriving shipment and the contract formed on it) and reseed its price beliefs by the rule of `spec-beliefs.md` 8.3 with no draw (5.7.1), move the cargo to the consignee under `transit_in`, release the Transit account and emit `ShipmentArrived`. |
 | FR-TRN-025 | Goods in transit MUST age as in any account: a lot of a perishable commodity whose born tick plus shelf life minus 1 is at most the current tick MUST move whole to the `spoilage` boundary at the end of the tick from the Transit account, so that a lot is delivered if and only if the arrival tick is at most its born tick plus shelf life minus 1. |
 | FR-TRN-026 | A durable cargo MUST NOT lose durability in transit. |
 | FR-TRN-027 | A cargo whose consignee no longer exists, is not in the destination region, or could not hold the quantity MUST be moved to the destination region's estate account under `transit_in`, MUST be flagged `Diverted` in the event, and MUST NOT wait or be returned. |
@@ -1324,11 +1344,11 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-032 | `World.Audit` MUST also check, with the module on, that every Transit account holds only the commodities and at most the quantities of the one shipment that references it, that an unreferenced Transit account is empty, that shipment IDs are unique with arrival ticks not before the current tick, and that the away travellers and the live self-carried shipments correspond. |
 | FR-TRN-033 | `AgentView` MUST carry `Inbound` (per commodity the total quantity on the way to the agent and the earliest arrival, from the shipments dispatched before phase 3 began) and `Routes` (per other region and mode the existence of a route, the travel time and for a hired mode the haul units per carrying unit), and an agent that is away MUST NOT be passed a view. |
 | FR-TRN-034 | `InTransit(agent)` MUST return the lines of the shipments of which the agent is shipper or consignee, `Travel(from, to, mode)` the travel time and haul units per unit or the absence of a route, and neither MUST change state or draw a random number. |
-| FR-TRN-035 | `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` MUST be emitted with the fields of 13.1, with no map, pointer or wall-clock time, in the order of 13.1, and MUST NOT be emitted when the module is off. |
+| FR-TRN-035 | `ShipmentDispatched`, `ShipmentArrived` and `ShipmentRejected` MUST be emitted with the fields of 13.1, with no map, pointer or wall-clock time, in the order of 13.1, and MUST NOT be emitted when the module is off; `TransitFactorChanged` MUST be emitted once per changed key of a call of `SetTransitFactors`, at the call, and only with the module on. |
 | FR-TRN-036 | The shipments in flight, the next shipment ID and the transit factors that differ from 10 000 MUST be saved in a checkpoint in the order of section 14, the away flags and the free lists MUST be recomputed on restore, and the restored run MUST continue exactly as an uninterrupted one. |
 | FR-TRN-037 | The modes MUST be part of the effective configuration and its hash, except `Label`. |
 | FR-TRN-038 | Validation MUST emit the warnings of 12.2 without failing the configuration, and MUST reject the errors of 12.1 each with its sentinel. |
-| FR-TRN-039 | The transit factor slot MUST default to 10 000 for every (from, to, mode), MUST affect new dispatches only, and a value above `MaxTransitFactorBP` MUST be refused. |
+| FR-TRN-039 | The transit factor slot MUST default to 10 000 for every (from, to, mode), MUST affect new dispatches only, a value above `MaxTransitFactorBP` MUST be refused, a key whose `from` equals `to` MUST be refused with `ErrSameRegion`, and a changed key MUST emit `TransitFactorChanged` (10.3). |
 | FR-TRN-040 | A shipment's Transit account and its cargo MUST be attributed, for spoilage, to the origin region. |
 | FR-TRN-041 | `transport.Lanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with loss 0 and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
 | FR-TRN-042 | The module MUST log nothing above `Debug` per shipment, MUST have no `Info` line in the tick, and the keys `shipment`, `mode`, `dest` and `modes` MUST be used as in 13.3. |
@@ -1408,4 +1428,5 @@ bounds are placeholders (N-015, N-027).
 | Validation and the warnings of section 12 | root package, `validate.go` |
 | `transport.Lanes` | root package, `transport.go` (a pure function; the solver of `spec-viability.md` takes its result as an option) |
 | The plan field `Shipments` and the view groups `Inbound`, `Routes` | root package, `strategy.go` (`spec-agents.md` 6.3, 6.4) |
-| Reason constants (`unknown_mode`, `capacity_exceeded` and the rest of 5.4) and log keys | `internal/logkeys` |
+| Reason constants (`unknown_mode`, `capacity_exceeded` and the rest of 5.4) | root package, `event.go` (exported constants) |
+| Log keys | `internal/logkeys` (key strings only) |

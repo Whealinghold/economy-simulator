@@ -251,9 +251,9 @@ observed premium has to say what it is checking. Four options were considered.
 
 | Option | Check | For | Against |
 |--------|-------|-----|---------|
-| A. One historical band | Observed premium within 14 000 to 20 100 basis points (Clark's English series, 1220 to 1900: low 1.40 in 1460, high 2.01 in 1290) | Simple and sourced | Too wide to catch a chain that lands at 1.9 when its tools imply 1.5. Ties the fixture to English building trades |
-| B. An era band | 1400 to 1900: 14 000 to 16 300. 1220 to 1350: 15 600 to 20 100 | Tighter | Claims the chain is medieval or early modern, which it is not |
-| C. Ordinal properties | With a tool requirement the premium is above 10 000. It rises with the tool's price, and with free tools it is within a small tolerance (initially 500) of 10 000 | Tests the mechanism, depends on no absolute number | Says nothing about the size |
+| A. One historical band | Observed premium within 14 100 to 19 300 basis points (the twelve points of Clark's table A2, `evidence.md`: minimum 14 100, maximum 19 300; the whole-series extremes of 1.40 in 1460 and 2.01 in 1290 are not in `evidence.md` and are unverified, N-018) | Simple and sourced | Too wide to catch a chain that lands at 1.9 when its tools imply 1.5. Ties the fixture to English building trades |
+| B. An era band | 1400 to 1900: 14 000 to 16 300. 1220 to 1350: 15 600 to 20 100 (era figures unverified, N-018) | Tighter | Claims the chain is medieval or early modern, which it is not |
+| C. Ordinal properties | With a tool requirement the premium is above 10 000. It rises with the tool's price, and with free tools it is within a small tolerance (initially 1 000, as the prior `s06.free_tool_tol_bp` of STY-W04) of 10 000 | Tests the mechanism, depends on no absolute number | Says nothing about the size |
 | D. Derived equilibrium | Premium within a tolerance of the value predicted by the chain's own tool price and the entry rule (below) | Self-consistent for any chain | Needs the entry rule (section 2.5), which is specified but not yet built |
 
 Decision:
@@ -261,7 +261,11 @@ Decision:
 - **C is required** and always runs. It is what the tool mechanism claims.
 - **A is reported, not asserted.** The calibration test logs the observed
   premium against the whole-series band. A value outside it is a prompt to
-  look at the recipe economics, not a test failure.
+  look at the recipe economics, not a test failure. The historical range is
+  reported by the stylised-facts spec as STY-W04, and the bands of scenario S06 are STY-W04
+  and STY-D03 (`spec-stylised-facts.md` 5; the bands live in `testdata/chains/bands/`, as
+  FR-SKL-025 says). `spec-stylised-facts.md` 17.5 reads the twelve points of the series
+  directly and gets the same 14 100 to 19 300 as option A above.
 - **D replaces A as the numeric check once the entry rule is built.** At
   break-even the premium follows from the tool's price (section 2.8):
 
@@ -339,13 +343,28 @@ the limit is an open question (section 11).
   trainer the **principal**: the inputs are taken from the trainer's account and the
   outputs go to it, and the output is `TraineeYield` of a full execution
   (`spec-production.md` 8.2, a placeholder of 5 000 basis points) while the inputs are
-  not reduced. A job in progress when the traineeship ends is abandoned
-  (`principal_left`, `spec-production.md` 5.4).
+  not reduced. A job in progress when the traineeship ends without completing is
+  abandoned (`principal_left`, `spec-production.md` 5.4); a job in progress at the
+  **completion** is abandoned with `role_changed`, because the trainee changes role
+  (4.1), and the order is `RecipeAbandoned`, `TraineeshipCompleted`, then the
+  `RoleChanged` it causes (`spec-observability.md` 4.4.8).
 - Each trainee takes `TeachingLoad` basis points of the trainer's working
   time. A per-trainer accumulator adds the sum of its trainees' loads every
-  tick. When it reaches 10 000, it subtracts 10 000 and that tick is a teaching
-  tick, in which the trainer does not run its skilled recipe. No randomness is
+  tick, stepped at P2.2 (`spec-world.md` ruling C5). When it reaches 10 000, it
+  subtracts 10 000 and that tick is a teaching tick, in which the trainer does not
+  run its skilled recipe. A teaching tick only bars a start: a job the trainer has in
+  progress continues, because the continuations of P2.1 come first. No randomness is
   used.
+
+4.2.1. **Ticks served.** The completion, the filling of places from the queue and the
+advance of ticks served are at P7.1(a) of each region's entry step (`spec-world.md`
+ruling C5), in this order: (1) every trainee whose ticks served has reached
+`TrainingTicks` completes; (2) places are filled from the queue in queue order; (3) the
+ticks served of every trainee, including one placed in step (2), rise by 1. A place
+filled in the entry step of tick `s` therefore makes the agent a trainee for the
+production phases of ticks `s + 1` to `s + TrainingTicks`, and it completes in the entry
+step of tick `s + TrainingTicks`. A trainee returned to the queue by 4.6 keeps the ticks
+it has served.
 
 4.3. **Trainer's incentive.** A trainer takes a trainee only if the
 expected net gain per trainee-tick is not negative:
@@ -417,16 +436,21 @@ earlier version of this rule lacked. It adds no parameter.
 
 4.6. **Interruptions.** If a trainer dies, its trainees keep the ticks
 they have served, return to their own role, and rejoin the queue in order of
-ticks served, then application tick. A trainee that dies goes to the estate
+ticks served, then application tick. The removal of a trainer emits, first, for each
+trainee in ascending agent ID, the `RecipeAbandoned` of its job (`principal_left`) and then
+its `TraineeshipEnded` (`trainer_left`), and then the trainer's own events
+(`spec-observability.md` 4.4.8; `spec-world.md` 6.11 item 8). A trainee that dies goes to the estate
 (`spec-estates.md` section 2). The default spawner never removes a trainee by the failure ladder (its board comes from the trainer, `spec-spawner.md` 5.2.3), so a trainee leaves the world only through a consumer's removal, which ends the traineeship first (`spec-agents.md` 3.6). A trainer is subject to the ladder like any agent. Traineeships can also end early in this model only through
 the trainer's death: voluntary early termination, which was common in the
 historical record, is not modelled.
 
 4.6.1. **Region.** A trainer and its trainees are in one region, and a relocation of either would break the traineeship. A trainer with trainees, and a trainee, are to be registered as the `region_bound` refusal `in_traineeship` of the relocation of `spec-regions.md` 6.1.3 and 6.5.2, so that the account is refused with `ErrRegionBound` while the traineeship lasts. `in_traineeship` is a registered `region_bound` name, one of the four foreseen in `spec-regions.md` 6.5.2 (`open_shipment` TRN, `on_journey` MIG, `open_contract` MER, `in_traineeship` SKL), and this module registers it when the skill module is on (a module that is off registers nothing). The migration module, which now exists, tests every registered refusal: a trainer with trainees, and a trainee, are never moved by it, because the guard refuses the departure at admission and holds the arrival if the obligation was opened on the way (`spec-migration.md` 7.2, 8.4); a forced move through the guarded `relocate` meets the same refusal (`spec-regions.md` 6.6).
 
-4.7. **Events.** `TraineeshipStarted` (trainee, trainer, role),
-`TraineeshipCompleted` (agent, from role, to role) and `TraineeshipEnded`
-(agent, reason). They carry identifiers only. Counts per role are bounded by
+4.7. **Events.** `TraineeshipStarted` (trainee, trainer, role, region),
+`TraineeshipCompleted` (agent, region, from role, to role) and `TraineeshipEnded`
+(agent, region, reason). They carry identifiers only, and `Region` is the agent's region at the
+event (`spec-observability.md` 4.1). Their order in a step is that of `spec-observability.md`
+4.4.8. Counts per role are bounded by
 the configuration, so they are safe as metric attributes.
 
 4.8. **Magnitude.** `B_r` = 1 000, an unskilled wage of 2 190 at a ratio of
@@ -443,7 +467,7 @@ the configuration, so they are safe as metric attributes.
   Training alone gives 12 333, and tool alone gives 10 400.
 
 So at a 10% required return, the cost of tool and training together explains a
-premium of about 1.27, against the historical 1.4 to 2.0. The rest is expected
+premium of about 1.27, against the historical 1.41 to 1.93 of the twelve points of Clark's table A2 (`evidence.md`). The rest is expected
 to come from the throttle of section 4.4 (a queue for places), and from
 trainers' teaching cost. At a 5% return the capital-cost part falls to about 1.14.
 These figures are placeholders to check by experiment, not tuned values.
@@ -522,8 +546,8 @@ The wider calibration steps are in `spec-welfare-and-wages.md` section 8 and
 
 ## 8. Observability
 
-8.1. **Events.** `TraineeshipStarted` (trainee, trainer, role), `TraineeshipCompleted`
-(agent, from role, to role) and `TraineeshipEnded` (agent, reason) of 4.7 are the only
+8.1. **Events.** `TraineeshipStarted` (trainee, trainer, role, region), `TraineeshipCompleted`
+(agent, region, from role, to role) and `TraineeshipEnded` (agent, region, reason) of 4.7 are the only
 events of this spec. They carry the `Tick`, identifiers and the reason, no map, and are
 emitted after the transition (observability-and-logging.md 4.1, 4.4); they are
 constructed only when an observer was supplied (4.5 there). The reasons of
@@ -662,7 +686,7 @@ the third round.
 | FR-SKL-012 | Only an agent of weight 1 MUST be a trainer or a trainee, and a configuration with a role of `TrainingTicks` above 0 that has a group of scale above 1 MUST be rejected with `ErrOutOfBounds`. (new) |
 | FR-SKL-013 | While boarded, a trainee's upkeep MUST be consumed from the trainer's account with the reason `consumption`, and the trainer's use MUST include it. (new) |
 | FR-SKL-014 | A trainee MUST run only trainee-eligible recipes of the trainer's role, as executor with the trainer as principal, taking inputs from and creating outputs in the trainer's account, and its output MUST be `TraineeYield` of a full execution. (new for the references) |
-| FR-SKL-015 | Each tick a trainer's teaching accumulator MUST increase by the sum of its trainees' `TeachingLoad`, and when it reaches 10 000 it MUST subtract 10 000 and that tick MUST be a teaching tick in which the trainer does not run its skilled recipe. |
+| FR-SKL-015 | Each tick, at P2.2, a trainer's teaching accumulator MUST increase by the sum of its trainees' `TeachingLoad`, and when it reaches 10 000 it MUST subtract 10 000 and that tick MUST be a teaching tick in which the trainer does not start its skilled recipe (a job in progress continues); the completion, the filling of places and the advance of ticks served MUST be at P7.1(a), in that order (4.2, 4.2.1). |
 | FR-SKL-016 | A trainer MUST take a trainee into a free place only if `output_a - U_a - TeachingLoad * W_trainer / 10 000 >= 0`, and a negative gain MUST NOT end a traineeship in progress. (new for the second clause) |
 | FR-SKL-017 | A trainer MUST hold at most `MaxTrainees` trainees, default 3, and applicants MUST queue per role and region ordered by application tick and then agent ID. |
 | FR-SKL-018 | `C_train` MUST equal `TrainingTicks` times the agent's observed income per tick above its upkeep, floored at 0. |

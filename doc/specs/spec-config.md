@@ -156,7 +156,7 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Commodities[]` | `ID`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes`, `Raw`, `ReferencePrice`, `Label` (p), `UnitLabel` (p) | `spec-goods.md` 8 |
 | `Recipes[]` | `ID`, `Duration`, `Inputs`, `Outputs` (each with `CostShare`, `Discard`), `Requires` (each with `WearPerUse`), `Draws`, `Sited`, `TraineeEligible`, `TraineeYield`, `Label` (p) | `spec-production.md` 3.1, 11 |
 | `Yields[]` | `Region`, `Recipe`, `All`, `Seasons` (a list of season and basis points) | `spec-production.md` 6.1 (the format), `spec-resources.md` 7 (the values) |
-| `Roles[]` | `ID`, `Recipes`, `Upkeep`, `Trades`, `StartMoney`, `StartStock`, `Strategy` (a name, hashed), `Label` (p) | `spec-agents.md` 3.3 |
+| `Roles[]` | `ID`, `Recipes`, `Upkeep`, `Trades`, `StartMoney`, `StartStock`, `Strategy` (a name, hashed: `default`, `directed`, both built in, or a registered name, 7.1.4), `Label` (p) | `spec-agents.md` 3.3 |
 | `Roles[]` | `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind`, `ExpectedWorkTicks`, `MinWorkShare` | `spec-welfare-and-wages.md` 4.2 |
 | `Roles[]` | `TrainingTicks`, `MaxTrainees`, `TeachingLoad` | `spec-skill-barriers.md` |
 | `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 |
@@ -166,6 +166,7 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Groups[]` | `Region`, `Role`, `Households`, `Scale` | `spec-scale.md` 3.1 |
 | `WarmStart` | `Prices`, `Wages` (the starting wage per region), `Groups`, `Pools` | `spec-viability.md` 8.1 |
 | `World` | `Spawner` (the registered name of the spawner, hashed; default `"default"`), `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare` | `spec-spawner.md` 3.1.3, 11 |
+| `World` | `Clearing` (the registered name of the clearing rule, hashed; default `"average"`, the built-in `AverageClearing`; an empty name is an error, 5.2) | `spec-clearing.md` 8 (decided in `spec-world.md` 4.2) |
 | `Roles[]` | `Closed` (the default spawner places nobody in the role) | `spec-spawner.md` 6.2, 11 |
 | `Modules.Demand` | `Wants[]` (`ID`, `Items` each with `Commodity` and `Weight`, `Quantity`, `Period`, `Rank`, `Elasticity`, `Ceiling`, `Substitution`, `Label` (p)), `Tastes[]` (`Role`, `Want`, `Scale`), `RegionTastes[]` (`Region`, `Want`, `Scale`); present = the module is on | `spec-demand.md` 3.2, 9 |
 | `Regions[]` | `Label` (p) | `spec-regions.md` 3.2 |
@@ -185,9 +186,11 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Roles[]` | `Merchant` (the block: `Modes`, `LotUnits`, `FeeShareSpreadBP`, `MaxSourceAge`, `TimeCostBP`, `ConsigneeCutBP`, `Consigns`, `TakeMarginBP`, `TakeUnits`; nil = not a merchant role; needs `Modules.Transport` and `Modules.Information`). `MerchantFeeShare` keeps its row above | `spec-merchants.md` 3.2, 13 |
 | `Modules.External` | `Nodes[]` (`Region`, `Lines[]` each with `Commodity`, `Base`, `PriceBySeason[]` (`Season`, `BP`), `TrendBP`, `FloorBP`, `CeilingBP`, `WalkStepBP`, `WalkRevertBP`, `WalkBoundBP`, `Sell` and `Buy` each with `MarginBP`, `Capacity`, `Window[]` (`Season`, `BP`), `TotalUnits`, `TotalValue`; `Gates[]` (`Region`, `ScaleBP`); `Label` (p)); present = the module is on; it needs the region graph | `spec-external-sector.md` 3.3, 13.1 |
 
-Not fields: the seed, the logger, the observers, `WithAudit`, the strategy
-registrations (`WithStrategy`, whose *names* are hashed through `Role.Strategy` and
-whose code cannot be) and the solve options of `spec-viability.md` 11
+Not fields: the seed, the logger, the observers, `WithAudit`, `WithReseed` (a
+restore-only option that gives a different continuation, `spec-checkpoint.md` 6.8, and
+never a field), the extension registrations (`WithStrategy`, `WithSpawner` and
+`WithClearing`, whose *names* are hashed through `Role.Strategy`, `World.Spawner` and
+`World.Clearing` and whose code cannot be) and the solve options of `spec-viability.md` 11
 (`StockCoverTicks`, `MoneyBufferTicks`, `ResidualWarnBP`, `MaxPivots`, `Lanes`):
 they shape how a run or a table is produced and not what a world is. The yield
 shocks of `spec-production.md` 6.8 are world state, not configuration. So are the other slots set between ticks: the flow scale of `spec-money-supply.md` 4.4.3, the birth and death scales of `spec-population.md` 6.6, the edge statuses of `spec-regions.md` 7 and the transit factor of `spec-transport.md` 10.3, the endowment shock scales of `spec-resources.md` 6.3 and the outside price shock of `spec-external-sector.md` 6.5; the public calls that set them are INT's. State, not fields, are also the own-use mode `OwnUse` and the counter `OwnUseJobs` of an agent (`spec-subsistence.md` 5.3), the journey of a migrating agent (`spec-migration.md` 14) and the contracts in flight (`spec-merchants.md` 16).
@@ -376,8 +379,10 @@ fully populated value. Defaults are the stable constants of ADR 0001 (decision
 `TargetRatio` 0, which validation rejects (it must be at least 10 000,
 `spec-welfare-and-wages.md` section 5.1). This is deliberate: a zero that
 silently meant "use the default" cannot be told apart from a deliberate 0, and
-some fields (such as `TargetSpread`) have a valid 0 and a non-zero default. The
-documentation of each config type says to start from its `Default` constructor.
+some fields (such as `TargetSpread`) have a valid 0 and a non-zero default. A name
+is the other case: `World.Clearing` empty fails (`ErrUnknownClearing`, 7.1.4), and
+the default `"average"` comes from `DefaultWorld()` and not from the zero value.
+The documentation of each config type says to start from its `Default` constructor.
 Architecture.md 6.3 requires this to be documented.
 
 5.3. A field with no sensible default is **required**: it has none, and the file
@@ -435,7 +440,13 @@ Entities are **tables keyed by ID**, not arrays, so they merge by key (6.4),
 cannot be duplicated within a document, and need no ordering. Lists of
 (commodity, quantity) are inline tables. Key names are the snake case of the Go
 field names (`TargetRatio` becomes `target_ratio`), by a fixed rule, so the
-mapping is predictable and testable.
+mapping is predictable and testable. The rule treats a run of capitals as one
+word: `RateBP` becomes `rate_bp`, `ID` becomes `id` and `TargetRatio` is two words,
+so an acronym is never split letter by letter. A path of a key in a document is the
+table prefix of its scope followed by the snake case of the field name
+(`spec-experiments.md` 3.2.1, 11.3.1). The registry of knobs of `spec-calibration.md`
+maps a path to its row by the same rule, with the prefix-to-scope map of
+`spec-experiments.md` 11.3.1, and never by the last segment alone (N-102).
 
 An illustration using fields specified in the specs listed in 3.7. Commodities
 are elided because `spec-goods.md` fixes their fields. Names such as `worker_a`,
@@ -491,7 +502,7 @@ households = 2000
 # A price missing here keeps the reference price; a group missing keeps the role's
 # defaults.
 [warm_start.region.north]
-wage = 2980          # starting wage per working household-tick, until one is observed
+wage = 2980          # starting wage per working household-tick, used whenever the pooled figure of the region is unknown
 
 [warm_start.region.north.price]
 grain = 480
@@ -540,7 +551,9 @@ The other specs write their tables as follows, and this spec records each as its
 - a missing required field (`ErrMissingField`);
 - a missing or unsupported `schema` (`ErrUnsupportedSchema`). The schema number
   versions the file format and is independent of the checkpoint format version
-  (ADR 0002, decision 8);
+  (ADR 0002, decision 8). It is checked on the **merged** tree (6.4): an overlay
+  document, one that only changes a few keys, has no `schema` line of its own, and
+  the first document of a pack has it;
 - a document longer than `MaxDocumentBytes` (`ErrTooLarge`), checked before
   decoding allocates in proportion to the input.
 
@@ -556,7 +569,9 @@ the order given, later over earlier:
 - a scalar or a list in a later document replaces the earlier one;
 - a key present as a table in one document and as a scalar in another is an error
   (`ErrMergeConflict`);
-- a document cannot delete an entity or a key in version 1 (open question 3).
+- a document cannot delete an entity or a key in version 1 (open question 3);
+- the `schema` key is merged like any scalar and checked once, on the merged tree
+  (6.3), so a document that overlays a pack may omit it.
 
 This is how the three levels of ADR 0001 decision 3 look in files: a base pack
 (the chain), a pack that tweaks parameters (overrides scalars), and a pack that
@@ -597,14 +612,22 @@ on map order and a test can compare it (architecture.md 7.5).
 7.1.3. At most 100 errors are returned, followed by one `ErrTooManyErrors` that
 says how many were left out. A pathological file cannot flood a log.
 
-7.1.4. `NewWorld` calls `Validate` and returns its error. The only other check it
-makes on configuration is the one that needs the options: every `Role.Strategy`
-name is `"default"` or a name registered with `WithStrategy`, else
-`ErrUnknownStrategy` (`spec-agents.md` 6.6); the name `"merchant"` is checked like any name, and `strategy.Options()` registers it (`spec-merchants.md` 3.1). `Validate` takes no options, so it
-cannot know the registrations; the rule is therefore the one config rule that lives
-in `NewWorld` and nowhere else, and a test builds a world with an unregistered name
-(FR-CFG-038). Nothing else in `NewWorld` fails on configuration (architecture.md
-8.5).
+7.1.4. `NewWorld` calls `Validate` and returns its error. The only other checks it
+makes on configuration are the three that need the options (`spec-world.md` 3.2.2).
+They run **after `Validate` succeeds**, and each returns a `*ValidationError` with
+the path of the field and the rule (7.1.1): every `Role.Strategy` name is
+`"default"`, `"directed"` (both built in, `spec-agents.md` 6.6, 10) or a name
+registered with `WithStrategy`, else `ErrUnknownStrategy`; `World.Spawner` is the
+built-in `"default"` or a name registered with `WithSpawner`, else
+`ErrUnknownSpawner` (`spec-spawner.md` 3.1.3); `World.Clearing` is the built-in
+`"average"` or a name registered with `WithClearing`, else `ErrUnknownClearing`
+(`spec-clearing.md` 8). The name `"merchant"` is checked like any name, and
+`strategy.Options()` registers it (`spec-merchants.md` 3.1). `Validate` takes no
+options, so it cannot know the registrations, and it does not see
+`WithTargetSpread` either (8.1); the three rules are therefore the config rules that
+live in `NewWorld` and nowhere else, and a test builds a world with an unregistered
+name of each kind (FR-CFG-038). Nothing else in `NewWorld` fails on configuration
+(architecture.md 8.5).
 
 7.1.5. `Validate` is pure and bounded. Its work is limited by the bounds of 4.1
 and, for the viability programmes, by `MaxViabilityPivots` and `MaxViabilityCells`
@@ -615,7 +638,9 @@ and, for the viability programmes, by `MaxViabilityPivots` and `MaxViabilityCell
 A **warning** is a configuration that is legal but probably a mistake, for
 example a role whose starting money cannot buy its required tool at the reference
 price (`spec-skill-barriers.md` 2.3). `Config.Warnings` returns them as values
-with a path and a rule; they never fail validation. `NewWorld` logs each once at
+with a path and a rule; they never fail validation. `Warnings()` is also a method of
+`World`, which returns what `Config.Warnings` returned at construction, so a consumer
+with no logger sees them (`spec-integration.md` 6.4). `NewWorld` logs each once at
 `Warn` through the injected logger, with the attributes `rule` and `path`. That
 is bounded by the size of the configuration and happens once at construction
 (observability-and-logging.md 3.2.2). The warnings that exist are listed with
@@ -649,7 +674,7 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrNotAGate` | an outside gate row naming a region with no direct edge to or from the node | `spec-external-sector.md` 14.1 |
 | `ErrOutsideNode` | a relocation into an outside node (run time, not validation) | `spec-regions.md` 6.1.3 |
 
-The root maps the following sentinels of the new specs to public errors (N-075): `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` (REG; the last three are ledger-level if `relocate` lives in `internal/ledger`); `ErrFlowShape`, `ErrReasonCollision` (MON); `ErrResourceShape`, `ErrCurve`, `ErrUnknownResource` (RES); `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrOutsideNode` (EXT); INF adds none; `ErrVehicleNotDurable`, `ErrModeShape` (TRN); `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited`, `ErrOwnUseOverlap` (SUB); MIG adds none; `ErrUnknownMode`, `ErrMerchantShape`, `ErrMerchantWeight` (MER). `ErrTravellerAway` does not exist: a refusal of a region-bound obligation is `ErrRegionBound` naming `open_shipment`.
+The root maps the following sentinels of the new specs to public errors (N-075): `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownEdge`, `ErrUnknownAgent`, `ErrNotRelocatable`, `ErrSameRegion`, `ErrOpenReservation`, `ErrRegionBound` (REG; the last three are ledger-level if `relocate` lives in `internal/ledger`); `ErrFlowShape`, `ErrReasonCollision` (MON); `ErrResourceShape`, `ErrCurve`, `ErrUnknownResource` (RES); `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrOutsideNode` (EXT); INF adds none; `ErrVehicleNotDurable`, `ErrModeShape`, `ErrUnknownMode` (TRN: `ErrUnknownMode` is a root sentinel with the transport module alone, because `SetTransitFactors` returns it, `spec-integration.md` 5.1.3, and the merchant module reuses it); `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited`, `ErrOwnUseOverlap` (SUB); MIG adds none; `ErrMerchantShape`, `ErrMerchantWeight` (MER); `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` (WLD, `spec-world.md` 15.1); `ErrCheckpointVersion`, `ErrCheckpointCorrupt`, `ErrCheckpointConfig`, `ErrCheckpointExtension`, `ErrOptionContext` (CHK, `spec-checkpoint.md` 13.1); `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved`, `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole`, `ErrNotTradable` (INT, `spec-integration.md` 11.2; `ErrUnknownAgent` is REG's, above). `ErrTravellerAway` does not exist: a refusal of a region-bound obligation is `ErrRegionBound` naming `open_shipment`.
 
 A role with no group in any region is not a fault and draws no warning: it is how a
 role for external agents is written (`visitor` in `spec-reference-chain.md` 4.2, with
@@ -673,6 +698,7 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | the calendar's bounds, tick shape and seasons | `ErrOutOfBounds`, `ErrCalendarTick`, `ErrCalendarSeasons` | `spec-calendar.md` 7 | `Validate` |
 | an effective welfare window above `MaxWelfareWindow`; a `WindowCycles` outside 1 to 100; a `MinWorkShare` outside 0 to 10 000 or above `ExpectedWorkTicks * 10 000 / TicksPerYear` | `ErrOutOfBounds` | `spec-welfare-and-wages.md` 2.3.4, 5.3, 12, FR-WEL-009, FR-WEL-028 | `Validate` |
 | rule `traineeship_needs_weight_one`: a role with `TrainingTicks` above 0 that has a group with a scale above 1 (an agent of weight above 1) | `ErrOutOfBounds` | `spec-skill-barriers.md` 4.1.1 | `Validate` |
+| `MinAgents` outside 1 to `MaxHouseholds` (a value above a group's households is legal: every household is its own agent) | `ErrOutOfBounds` | `spec-scale.md` 5.2, FR-SCL-020 | `Validate` |
 | a welfare window or income that would overflow (the effective window, 4.2); the largest weight times the largest quantity or amount above `MaxQuantity`; money products that overflow | `ErrOverflow` | `spec-welfare-and-wages.md` 2.3.2, `spec-scale.md` 4.5, FR-SCL-011 | `Validate`, by 4.2 |
 | a price or quantity of an order limit outside `[1, MaxPrice]` and `[1, MaxQuantity]` | `ErrOutOfBounds` | `spec-clearing.md` 3.2 | the bounds are 4.1 |
 | a `Duration`, quantity, `WearPerUse`, yield, `TraineeYield`, or count of items, tools or draws outside its bound | `ErrOutOfBounds` | `spec-production.md` 10.2 | `Validate` |
@@ -684,8 +710,9 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | a recipe with `Draws` while the resources module is off | `ErrModuleDependency` | `spec-production.md` 10.2, FR-PRO-007 | `Validate` |
 | a yield profile naming an unknown region or recipe; an upkeep, `StartStock`, `Trades`, `Recipes` or warm-start reference to an unknown commodity, recipe, role or region | `ErrUnknownRegion`, `ErrUnknownRecipe`, `ErrUnknownCommodity`, `ErrUnknownRole` | `spec-production.md` 10.2, `spec-agents.md` 13, `spec-viability.md` 8.7 | `Validate` |
 | an upkeep or start quantity below 1, more than `MaxUpkeepItems` upkeep items, or an agent tunable outside its bound | `ErrOutOfBounds` | `spec-agents.md` 12, 13, FR-GDS-003 | `Validate` |
-| a role naming a strategy that is not registered | `ErrUnknownStrategy` | `spec-agents.md` 6.6 | **`NewWorld` only** (7.1.4) |
+| a role naming a strategy that is neither `default`, `directed` nor registered | `ErrUnknownStrategy` | `spec-agents.md` 6.6 | **`NewWorld` only** (7.1.4) |
 | a spawner name that is not registered | `ErrUnknownSpawner` | `spec-spawner.md` 3.1.3, 12 | **`NewWorld` only**, as the strategy |
+| `World.Clearing` empty or naming no registered clearing (`average` is built in) | `ErrUnknownClearing` | `spec-clearing.md` 8, `spec-world.md` 3.2.2 | **`NewWorld` only**, as the strategy |
 | a spawner parameter outside its bound; `ChangePrivation` not below `RemovePrivation` (rule `ladder_order`) | `ErrOutOfBounds` | `spec-spawner.md` 11, 12, FR-SPN-037, FR-SPN-038 | `Validate` |
 | a want field outside its bound or a `Quantity` below 1, a `Ceiling` below 10 000, more than `MaxWantsPerRole` taste rows of a role | `ErrOutOfBounds` | `spec-demand.md` 9, 10.1 | `Validate` |
 | a want ID, a (role, want) pair or a (region, want) pair twice, or a commodity twice in one want | `ErrDuplicateID` | `spec-demand.md` 10.1 | `Validate` |
@@ -711,7 +738,7 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | the information module: `InfoSpeed`, `RumourErrorBP` or `RumourMaxAge` outside its bound; sources times `RumourMaxAge` above `MaxRumourCells`, or an informed role with too many candidates; `Role.Informed` while the module is off | `ErrOutOfBounds`, `ErrTooMany`, `ErrModuleDependency` | `spec-information.md` 9.1, 9.2 | `Validate` |
 | the subsistence module: `EnterTicks`, `ExitTicks` or `RetryJobs` outside its bound, a list longer than `MaxOwnUseRecipes`, `ExitTicks` not above `EnterTicks`, an own-use recipe that is unknown, twice in a list, with `Inputs` or `Requires`, not `Sited`, or also on the same role's `Recipes`, a row for an unknown or twice-named role, a recipe with `Draws` while the resources module is off | `ErrOutOfBounds`, `ErrOwnUseBand`, `ErrUnknownRecipe`, `ErrUnknownRole`, `ErrDuplicateID`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited`, `ErrOwnUseOverlap`, `ErrModuleDependency` | `spec-subsistence.md` 13.2 | `Validate` |
 | the migration module: a field outside its bound (a missing `MoveSpeed` included), a row share above 10 000, `Modules.Migration` while `Modules.Information` is nil, a row for an unknown or twice-named region, more rows than `MaxRegions`, a mobile role with too many candidates, a product that overflows | `ErrOutOfBounds`, `ErrModuleDependency`, `ErrUnknownRegion`, `ErrDuplicateID`, `ErrTooMany`, `ErrOverflow` | `spec-migration.md` 12.1, 12.2 | `Validate` |
-| the merchant module: a field outside its bound, `FeeShareSpreadBP` above `MerchantFeeShare` or with their sum above 10 000, an unknown mode or a mode twice in `Modes`, a merchant block on a role with recipes, `Strategy` `"merchant"` with no block, a block with `Informed` false, a trade input not in `Trades`, an empty cargo set, a self-carried mode of `Crew` above 1, `Consigns` with no `TakeUnits`, a merchant role with a group of scale above 1, a block while transport or information is off, the module while transport is off, a hired mode or `Consigns` while `Modules.Merchants` is absent | `ErrOutOfBounds`, `ErrUnknownMode`, `ErrDuplicateID`, `ErrMerchantShape`, `ErrMerchantWeight`, `ErrModuleDependency` | `spec-merchants.md` 14.1 | `Validate` |
+| the merchant module: a field outside its bound, `FeeShareSpreadBP` above `MerchantFeeShare` or with their sum above 10 000, an unknown mode or a mode twice in `Modes`, a merchant block on a role with recipes, `Strategy` `"merchant"` with no block, a block with `Informed` false, a trade input not in `Trades`, an empty cargo set, a self-carried mode of `Crew` above 1, `Consigns` with no `TakeUnits`, a merchant role with a group of scale above 1, a block while transport or information is off, the module while transport is off, a hired mode or `Consigns` while `Modules.Merchants` is absent | `ErrOutOfBounds`, `ErrUnknownMode` (a root sentinel of the transport module, reused here), `ErrDuplicateID`, `ErrMerchantShape`, `ErrMerchantWeight`, `ErrModuleDependency` | `spec-merchants.md` 14.1 | `Validate` |
 | the external module: a field outside its bound, a side set on an absent side, an unknown region, commodity or season, a duplicate row, an outside node that has agents, crossed quotes, a gate that is not a gate, a flow ID equal to one of the six reasons, the module on while the region graph is off | `ErrOutOfBounds`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownSeason`, `ErrDuplicateID`, `ErrOutsideNodeInhabited`, `ErrCrossedQuotes`, `ErrNotAGate`, `ErrReasonCollision`, `ErrModuleDependency` | `spec-external-sector.md` 14.1 | `Validate` |
 
 The structural rules of 7.3 and the producibility rule of 7.5 are errors. A rule
@@ -722,6 +749,7 @@ and the registry test).
 
 | Warning | Condition | Spec |
 |---------|-----------|------|
+| `cold_start_lockstep` | **informational**: a role with a recipe of `Duration` above 1 and more than one agent in a group, with no warm start or with a warm start that gives the role no job row, so the first jobs of the group start and complete together (STB-L22, WLD-A3). A count, not a number to calibrate; it never fails validation | `spec-world.md` 15.2 |
 | `no_upkeep` | no upkeep at the world, role or region level, so no household can starve | `spec-agents.md` 5.2, 13 |
 | `commodity_untraded` | a commodity in the tradable set of no role, that is not only a discard output | `spec-agents.md` 13 |
 | `upkeep_unsourced` | an upkeep commodity that is not raw, that no recipe makes and that no `StartStock` supplies | `spec-agents.md` 13 |
@@ -854,15 +882,15 @@ and 10); this section says how the framework runs it.
 canonicalisation (3.4), with every option that affects results applied. An option
 that affects results is part of the effective configuration, not outside it:
 `WithTargetSpread` (`spec-welfare-and-wages.md` 5.2) overrides the roles' spreads
-and so changes every run. The seed, the logger, the observers and `WithAudit`
+and so changes every run. A stand-alone `Config.Validate` and the pure hash function of 8.5 see a `Config` as given and not the options, so they do not see `WithTargetSpread`, and `World.ConfigHash` differs from the hash of the same `Config` whenever that option was given. The seed, the logger, the observers and `WithAudit`
 (`spec-ledger.md` 12.4) do not affect what the world *is* and are excluded; the random state travels in the checkpoint
-instead. Three further cases are settled here:
+instead. `WithReseed` is excluded too: it is a restore-time option that changes the continuation and not what the world is (`spec-checkpoint.md` 6.8). Three further cases are settled here:
 
-- **Strategy.** The *names* in `Role.Strategy` are hashed; the code behind a name
+- **Strategy.** The *names* in `Role.Strategy` (`default`, `directed` or a registered name) are hashed; the code behind a name
   is not and cannot be (`spec-agents.md` 6.6). The registrations made with
   `WithStrategy` are options and are not hashed beyond the names the roles use.
-- **The spawner and the demand module.** The *name* in `World.Spawner` is hashed, not the
-  code behind it (`spec-spawner.md` 3.1.3, as for strategies). `Modules.Demand` is
+- **The spawner, the clearing and the demand module.** The *name* in `World.Spawner` and the *name* in `World.Clearing` are hashed, not the
+  code behind them (`spec-spawner.md` 3.1.3, `spec-clearing.md` 8, as for strategies; a world with a custom rule does not hash like one with the default). `Modules.Demand` is
   hashed with a presence byte and, when present, its wants, tastes and region tastes in
   canonical order (wants by ID, items by commodity, tastes by role then want, region
   tastes by region then want), every field except `Label`; `Role.Closed` and the
@@ -882,12 +910,12 @@ instead. Three further cases are settled here:
 
 8.2. The **configuration hash** is the SHA-256 of a canonical binary encoding of
 the effective configuration. The checkpoint stores it and a restore with a
-different hash fails with a sentinel error (ADR 0002, decision 4). The encoding
+different hash fails with `ErrCheckpointConfig` (ADR 0002, decision 4; `spec-checkpoint.md` 13.1). The encoding
 is written by hand in field order, with a version byte, integers as 8 bytes in
 big-endian order, strings and slices with a length prefix, entity slices in
 canonical order, the calendar's months and seasons in the order written, and a
 presence byte for each module and for `WarmStart`. It uses no reflection and
-no map, so equal configurations give equal bytes on every platform.
+no map, so equal configurations give equal bytes on every platform. The version of this encoding is written in the header of a checkpoint (`spec-checkpoint.md` 5.1), a restore hashes the effective configuration with that version, and from 1.0 an implementation keeps the encoder of every version it has written (`spec-checkpoint.md` 9.2.1 item 4, FR-CHK-063).
 
 8.3. Some fields are **presentation only**: a human-readable label, a display
 ladder (`spec-currency.md` 2.2). They do not change any result, so they are not
@@ -898,6 +926,14 @@ field that the encoder forgets therefore fails a test. The allow-list is `Region
 
 8.4. The file's layout (comments, whitespace, key order, and the split into
 documents) does not affect the hash (2.5).
+
+8.5. **A pure hash function of a `Config`.** The root package exports one, taking a
+`Config` and returning the 32 bytes of 8.2 (the name is chosen with the code; this
+spec proposes `HashConfig`). It hashes the configuration **as given**: it applies no
+option, so it differs from `World.ConfigHash` when `WithTargetSpread` was given (8.1),
+and it validates nothing (an invalid `Config` has a hash, which `NewWorld` then
+refuses). It lets a harness tell two documents apart, or find a change that leaves
+the hash equal (`spec-experiments.md` 14.3, 14.4), without building a world.
 
 ## 9. The parameter registry
 
@@ -927,6 +963,14 @@ Checks 1 and 2 are the two directions the brief of architecture.md 9.7 asks for 
 are MUST; check 3 is MUST; check 4 stays a SHOULD (FR-CFG-030) and check 5 is MUST
 (FR-CFG-031). If check 4 proves brittle it is relaxed to a review item (13.4).
 
+The owner table and the fields of 3.7 have a **second reader**: the registry test of
+`spec-calibration.md` 11.1 (FR-CLB-001 to 003), which checks that every row of the
+owner table and every field of 3.7 has a row in CLB's registry of knobs, and the
+reverse, and reads the solve options (6.2.8) and the presentation-only fields (6.3) as rows of
+its own. It adds no requirement to this spec: the checks above are
+unchanged, and a new field needs its registry row in the same change as its row in
+the owner table.
+
 **What is a row.** A row is a field of `Config`: a World, Role, Region, Group,
 Commodity, Recipe, Yield or Calendar field, a field of a module's tables (scopes Demand,
 Want, Taste and RegionTaste for `Modules.Demand`, `spec-demand.md` 9), or a bound-checked
@@ -937,12 +981,21 @@ for a field behind them:
   `MoneyBufferTicks`, `ResidualWarnBP`, `MaxPivots`, `Lanes`). They shape how a
   table is produced and are not part of what a world is. They have defaults, bounds
   and an owner in their own spec and are not in the parameter-owner table, because
-  the test of testing.md 6.7 requires a field behind every row (FR-CFG-047);
+  the test of testing.md 6.7 requires a field behind every row (FR-CFG-047). They
+  are rows of **CLB's registry of knobs** (`spec-calibration.md` 6.2.8), which is a
+  different thing from the parameter-owner table: it classifies each row of that
+  table and the solve options, and holds no default or bound (`spec-calibration.md`
+  4.1, 4.5);
 - the **bounds** of 4.1, which are constants in `bounds.go`, and the **options** of
-  architecture.md 6.2 (`WithSeed`, `WithLogger`, `WithObserver`, `WithAudit`,
-  `WithStrategy`). An option that changes results (`WithTargetSpread`) is not a row
-  either; it is part of the effective configuration (8.1), and the owner table says
-  it is hashed.
+  architecture.md 6.2 and `spec-world.md` 4.1 (`WithSeed`, `WithLogger`,
+  `WithObserver`, `WithAudit`, `WithStrategy`, `WithSpawner`, `WithClearing`,
+  `WithReseed`). One option is the exception: `WithTargetSpread` changes results and
+  is part of the effective configuration (8.1), so it **keeps its row** in the owner
+  table, with a Scope cell that reads `World (option; hashed, spec-config.md 8.1)`.
+  The registry test reads that cell and checks the row against the option, not
+  against a `Config` field (checks 1 and 3 do not apply to it), and the hash test of
+  8.3 covers it through the effective configuration. An option that is a row is the
+  only one that changes results; an option that changes none has no row.
 
 The registry must contain one row for each field of 3.7, including the sixteen belief
 parameters, the eleven agent tunables, the recipe, yield and role fields, and
@@ -958,7 +1011,9 @@ decided.
 |-----|-------|-------|
 | The welfare window `T`, default 30 ticks, is a configuration value (`spec-welfare-and-wages.md` 2.3.1) but has no row in the owner table | WEL | **Resolved on the spec side.** WEL adopted `World.WelfareWindow`, default 30, bound 1 to 1 000 (2.3.1); the effective window of a role is `max(WelfareWindow, WindowCycles * longest Duration)`, at most `MaxWelfareWindow` (4.1, 4.2). The owner-table rows (`WelfareWindow`, `WindowCycles`, `MinWorkShare`) are still the README's to add |
 | The tolerance for `ReferenceBasket` against the sum of reference prices is "configured" (`spec-currency.md` 5.3) but unnamed and has no default | CUR | **Resolved.** It is `World.BasketTolerance`, default 1 000 basis points of `ReferenceBasket`, owner `spec-agents.md` 5.6.1 and 12; the rule is in 7.4.1 with `ErrBasketMismatch` |
-| `WithTargetSpread` changes results but is an option, so a restore with a different option would diverge silently | WEL | **Resolved.** It is in the effective configuration and the hash (8.1); the owner table should say it is hashed, which is the README's wording to add |
+| `WithTargetSpread` changes results but is an option, so a restore with a different option would diverge silently | WEL | **Resolved.** It is in the effective configuration and the hash (8.1), and the owner table keeps its row with the Scope cell `World (option; hashed, spec-config.md 8.1)` (9.2), which the README adds |
+| `World.Clearing`, the registered name of the clearing rule, is in no field catalogue: 3.7 listed the spawner's name only and `spec-clearing.md` 8 named no field | CLR, WLD | **Resolved.** `World.Clearing` (a registered name, default `"average"`, hashed) is the field for the name, as `World.Spawner` is for the spawner (3.7, 7.1.4, FR-CFG-081); the owner is `spec-clearing.md` 8, and the owner table gets its row (`World`, `Clearing`, `spec-clearing.md` section 8) in the same change, or FR-CFG-028 fails |
+| `spec-viability.md` 11 said the solve options "are rows in the parameter-owner table" while 9.2 and FR-CFG-047 say they are not, because the registry test requires a field behind every row | VIA, CLB | **Resolved, CFG wins** (`spec-calibration.md` X1). The solve options are rows of CLB's registry of knobs (`spec-calibration.md` 6.2.8), not of the parameter-owner table; `spec-viability.md` 11 says so |
 | ~~Formulas used 365 days a year and 250 working days as constants, while ADR 0001 point 8 says a tick has a configurable length and `spec-currency.md` 2.4 said a tick is a day~~ | CUR, WEL, SKL | **Resolved.** The year is derived from the `Calendar` (`TicksPerYear`, `spec-calendar.md` 3.2, 365 at the Earth default) and `ExpectedWorkTicks` (Role, default 250, `spec-welfare-and-wages.md` 4.2) is a parameter; the sibling specs refer to them |
 | ~~The reference price of a commodity in a region has no owner~~ | GDS, REG | **Resolved.** The commodity's `ReferencePrice` is required and owned by `spec-goods.md` 6.3; a region's override is `spec-regions.md`'s |
 | `MaxPrice` and `MaxQuantity` are referenced by the clearing spec as "configured" | CLR | **Resolved here, wording owed there.** They are bounds, not tunables, and 4.1 says so; `spec-clearing.md` 3.2 and its parameter lines should say "bounded by" and not "configured" |
@@ -973,18 +1028,16 @@ summary: the seed, the counts of commodities, recipes, roles, regions, agents an
 households, which modules are on, whether a warm start is present, and the first 8
 bytes of the hash as `config_hash` (observability-and-logging.md 3.2, 3.3.5). The
 attribute keys are `seed`, `commodities`, `recipes`, `roles`, `regions`, `agents`,
-`households`, `modules`, `warm_start` and `config_hash`. `seed`, `agents`,
-`households` and `config_hash` are in the table of observability-and-logging.md
-3.3.2; the others are the counts and flags named here. It does not log the
+`households`, `modules`, `warm_start` and `config_hash`, and, for the modules that are on, the per-module counts (`prices`, `wages`, `groups`, `jobs`, `edges`, `components`, `nodes`, `counterparties`, `modes`, `merchants`) that `spec-world.md` 5.8.1 fixes. All are keys of the table of observability-and-logging.md
+3.3.2. It does not log the
 configuration.
 
 10.2. Each warning (7.2) is a `Warn` line "configuration warning" with `rule` and
 `path`. There is no other log line in this spec. A validation error is returned,
 never logged (architecture.md 8.3).
 
-10.3. `WorldCreated` carries the whole hash (a fixed-size array, no map or
-slice) and a boolean `WarmStart` that says whether `Config.WarmStart` was present
-(`spec-viability.md` 17.1); observability-and-logging.md 4.3 lists both. The summary of 10.1 also says whether a warm
+10.3. `WorldCreated` carries the seed (`Seed`), the whole hash (`ConfigHash`, a fixed-size array), a boolean `WarmStart` that says whether `Config.WarmStart` was present
+(`spec-viability.md` 17.1) and the **names table** (`Names`, the strings of the typed IDs, `spec-observability.md` 3.2.4, 4.4); observability-and-logging.md 4.3 lists them. The event holds no map: each kind of the table is a slice of strings indexed by the ID type of its kind. The summary of 10.1 also says whether a warm
 start was applied; the warm start's own `Info` line is `spec-viability.md` 17.2's.
 
 10.4. The keys `path`, `rule` and `config_hash` are in the table of
@@ -1020,7 +1073,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-018 | A warning MUST NOT fail validation, MUST be returned by `Warnings` with a path and a rule, and MUST be logged once at `Warn` by `NewWorld`. |
 | FR-CFG-019 | The loader MUST reject an unknown key at any depth with `ErrUnknownKey` and its path. |
 | FR-CFG-020 | The loader MUST reject a non-integer number, or a string where a number is needed, with `ErrNotInteger` or a type error naming the path. |
-| FR-CFG-021 | The loader MUST reject a missing or unsupported `schema` with `ErrUnsupportedSchema`. |
+| FR-CFG-021 | The loader MUST reject a missing or unsupported `schema` in the merged tree with `ErrUnsupportedSchema`, and a document that overlays another MUST NOT need a `schema` line of its own. |
 | FR-CFG-022 | The loader MUST reject a document longer than `MaxDocumentBytes` with `ErrTooLarge` before allocating in proportion to its size. |
 | FR-CFG-023 | Documents MUST be merged in order, tables recursively by key and scalars and lists by replacement, and a table-versus-scalar conflict MUST be rejected with `ErrMergeConflict`. |
 | FR-CFG-024 | The loader MUST NOT panic on any input. |
@@ -1037,7 +1090,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-035 | `Config` MUST have a `Yields` section of profiles keyed by region and recipe, sorted by region then recipe, and the production rules of `spec-production.md` 10.2 MUST be run on it and on the recipes with the sentinels `ErrCostShares`, `ErrToolNotDurable`, `ErrEligibleHasTool`, `ErrUnknownSeason`, `ErrModuleDependency`, `ErrDuplicateID` and `ErrOutOfBounds`. |
 | FR-CFG-036 | The derived checks of 4.2 for recipes, agents, the warm start and beliefs MUST be run, and a product that does not fit MUST be rejected with `ErrOverflow` carrying the path. |
 | FR-CFG-037 | `Config.WarmStart` MUST be nil by default, a non-nil value MUST NOT switch any mechanism on, and it MUST be validated with `ErrWarmStartPrice`, `ErrWarmStartJob` and the reference, duplicate and overflow sentinels of 7.4.1. |
-| FR-CFG-038 | A `Role.Strategy` name that is neither `"default"` nor registered with `WithStrategy` MUST be rejected by `NewWorld` with `ErrUnknownStrategy`, `Validate` MUST NOT check it, and the strategy names MUST be in the effective configuration and the hash. |
+| FR-CFG-038 | A `Role.Strategy` name that is none of `"default"`, `"directed"` and a name registered with `WithStrategy`, a `World.Spawner` name that is not `"default"` or registered with `WithSpawner`, and a `World.Clearing` name that is not `"average"` or registered with `WithClearing` MUST each be rejected by `NewWorld`, after `Validate` has succeeded, with `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` as a `*ValidationError` with the path and the rule, `Validate` MUST NOT check them, and the three names MUST be in the effective configuration and the hash. |
 | FR-CFG-039 | The sixteen belief parameters (the fifteen of the first draft and `BeliefEvidenceShare`) MUST each have a default that passes validation and a bound, and the rules of FR-BEL-027, FR-BEL-028 and FR-BEL-037 MUST be run with `ErrOutOfBounds`. (changed: fifteen became sixteen) |
 | FR-CFG-040 | A region whose `ReferenceBasket` differs from the cost of the baseline upkeep plus its `ExtraUpkeep` at its effective reference prices by more than `BasketTolerance` basis points MUST be rejected with `ErrBasketMismatch`. |
 | FR-CFG-041 | Every viability error MUST be a `*ViabilityError` with a `Rule`, a `Path` and the offending value, matching `errors.Is(err, ErrNotViable)`, and the rules `unproducible_in_realm`, `role_cannot_work`, `cycle_not_productive`, `labour_short` and `storage_gap` MUST be errors. |
@@ -1078,8 +1131,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-076 | Validation MUST warn, and MUST NOT fail, with the warnings of `spec-resources.md` 13.3, `spec-information.md` 9.3 and `spec-external-sector.md` 14.2. |
 | FR-CFG-077 | `Config.Modules.Subsistence` MUST be on if and only if non-nil, MUST be written as the table `[modules.subsistence]` with role rows `[modules.subsistence.role.<id>]`, MUST be part of the hash with its lists and rows in canonical order and its three tunables, its bounds `MaxOwnUseRecipes`, `MaxOwnUseTicks` and `MaxRetryJobs` MUST be constants of `bounds.go`, and the rules of `spec-subsistence.md` 13.2 MUST be rejected with `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited` and `ErrOwnUseOverlap`. |
 | FR-CFG-078 | `Config.Modules.Migration` MUST be on if and only if non-nil, MUST be written as `[modules.migration]`, MUST be part of the hash with its `Regions` rows in region order, MUST be rejected with `ErrModuleDependency` while `Modules.Information` is nil, and `Role.Fixed` MUST default to false and be hashed as any role field (`spec-migration.md` 11, 12). |
-| FR-CFG-079 | `Config.Modules.Merchants` MUST be on if and only if non-nil, MUST be written as `[modules.merchants]` with the merchant block `[role.<id>.merchant]`, MUST be part of the hash with the block of each role, its bounds `MaxLotUnits`, `MaxContracts` and `MaxTimeCostBP` MUST be constants of `bounds.go`, and the rules of `spec-merchants.md` 14.1 MUST be rejected with `ErrUnknownMode`, `ErrMerchantShape`, `ErrMerchantWeight` and the sentinels named there. |
+| FR-CFG-079 | `Config.Modules.Merchants` MUST be on if and only if non-nil, MUST be written as `[modules.merchants]` with the merchant block `[role.<id>.merchant]`, MUST be part of the hash with the block of each role, its bounds `MaxLotUnits`, `MaxContracts` and `MaxTimeCostBP` MUST be constants of `bounds.go`, and the rules of `spec-merchants.md` 14.1 MUST be rejected with `ErrUnknownMode` (a root sentinel with the transport module alone, 7.3), `ErrMerchantShape`, `ErrMerchantWeight` and the sentinels named there. |
 | FR-CFG-080 | Validation MUST warn, and MUST NOT fail, with the warnings of `spec-subsistence.md` 13.3, `spec-migration.md` 12.3 and `spec-merchants.md` 14.2; `own_use_beats_market` is size-gated and `own_use_partial` informational. |
+| FR-CFG-081 | `World.Clearing` MUST be a configuration field holding a registered name, defaulting to `"average"`, with a row in the parameter-owner table (owner `spec-clearing.md` 8), MUST be hashed as a name, and an empty value MUST be rejected with `ErrUnknownClearing` by `NewWorld`. |
+| FR-CFG-082 | A configuration with a role of a recipe of `Duration` above 1, more than one agent in a group, and no warm start or a warm start with no job row for the role, MUST produce the informational diagnostic `cold_start_lockstep` once at construction, and it MUST NOT fail validation. |
+| FR-CFG-083 | `Validate` MUST NOT see `WithTargetSpread`, and the pure hash function of 8.5 MUST hash a `Config` as given, so that it differs from `World.ConfigHash` when that option was given. |
 
 ### Non-functional
 
@@ -1093,6 +1149,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 Merged into `spec-stability.md` section 4 (STB-L42, STB-L43), where they are
 indexed with their dampers and tests. The text below stays as the source:
+The cold-start warning `cold_start_lockstep` (7.4.2) is the registered remainder of
+STB-L22 (WLD-A3).
+
 
 For `spec-stability.md`:
 
@@ -1145,10 +1204,11 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
    differs from a checkpoint's. A pack that declares the engine version it needs is
    a feature of the data-pack deliverable (roadmap, "Deliverables that are not
    specs"), not of the framework.
-8. **Where the strategy-name rule lives. Decided: `NewWorld`.** `Validate` takes no
-   options and cannot see `WithStrategy` (7.1.4). A `Validate` that took the
-   registrations as an argument was rejected: it would put an option in a method
-   that is meant to be pure data.
+8. **Where the name rules live. Decided: `NewWorld`.** `Validate` takes no
+   options and cannot see `WithStrategy`, `WithSpawner` or `WithClearing` (7.1.4);
+   there are three name checks, strategy, spawner and clearing, run after `Validate`
+   succeeds. A `Validate` that took the registrations as an argument was rejected:
+   it would put an option in a method that is meant to be pure data.
 9. **The size gate of the viability check.** `MaxViabilityCells` and
    `MaxViabilityPivots` are guesses and the speed of exact arithmetic in Go is not
    measured (`spec-viability.md` open question 7). Measure in the slice and set
@@ -1169,7 +1229,7 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
 | `Validate`, `Warnings`, `ValidationError` and the sentinels | root package, `validate.go`, `errors.go` |
 | The producibility fixpoint (7.5) | root package, `validate.go`; a pure function over primitive slices that may live in `internal/` when it grows |
 | The viability rules of 7.6 and the sentinels `ErrNotViable`, `ErrWarmStartPrice`, `ErrWarmStartJob` and `ViabilityError` | root package, `validate.go`, `errors.go`; the programmes and checks in `internal/steady` (`spec-viability.md` 21) |
-| The strategy-name check (7.1.4) | root package, `world.go` (it needs the options); `ErrUnknownStrategy` in `errors.go` |
+| The three name checks (7.1.4: strategy, spawner, clearing) | root package, `world.go` (they need the options); `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` in `errors.go` |
 | `WarmStart` and its types | root package, `viability.go` (`spec-viability.md` 21), a field of `Config` in `config.go` |
 | Canonical order and the hash encoding | root package, `hash.go` |
 | `Parse`, `LoadFS`, the merge and the key mapping | package `config/` (the only package with a third-party import) |

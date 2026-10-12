@@ -360,7 +360,10 @@ A tick is a **working tick** for an agent in these cases:
   continued or completed, `spec-production.md` 5.2.1; an own-use job of the subsistence
   module is such a job), or it was in transit on a
   commercial trip. `RecipeExecuted` comes once, at the end of a job, so the root reads
-  working ticks from the agent's job state and not from that event (N-035);
+  working ticks from a per-agent scratch of the tick and not from that event (N-035): the
+  world sets it at P2.1 for a job continued or completed and at P2.7 for a start, because
+  the job is cleared at completion and a one-tick job is never seen at P6.3
+  (`spec-world.md` 6.4, 6.8, P6.3; `spec-production.md` 5.2.1);
 - the agent's role has no recipes (a trader or a carrier): it bought or sold
   in the tick (the `TradeExecuted` event), or it was in transit on a
   commercial trip, or it had an own-use job in progress (`spec-subsistence.md` 7.6; a
@@ -390,6 +393,19 @@ the weight when the agent traded or travelled. The **own-use household-ticks** o
 for an own-use job of `k` executions in progress, and are part of the working household-ticks.
 So the observed wage is per working household, and does not depend on the weight (FR-SCL-009). An agent that earns while
 resting under the target-income rule is not credited with working ticks.
+
+The **pooled regional wage** is the same formula with the sum taken over every agent of the
+region, whatever its role, each over its own effective window: the sum of
+`income_t - F_t - G_t - K^own_t` over their records, divided by the sum of their working
+household-ticks less their own-use household-ticks. It is the working-household-tick-weighted
+mean of the role wages and is per household whatever the weights. It is the figure that the
+cost anchor of `spec-production.md` 9.3 reads (as it stood at the end of the previous tick)
+and that `spec-viability.md` 8.2.5 means by "the pooled observed wage". It is **unknown**
+when no agent of the region has a working household-tick outside own-use in its window, or
+when the pooled figure is not positive. **The starting wage** of a warm start
+(`spec-viability.md` 8.2.5) is used whenever the pooled figure is unknown, and nothing is
+latched: both are functions of the rings and the configuration, so they add no state and
+a restore needs nothing for them (`spec-checkpoint.md` 4.5 F5).
 
 The same formula, read over one agent's own effective window, is the **observed wage of the
 agent**: the figure the migration module compares with an estimate of a destination
@@ -494,8 +510,9 @@ works more days at a given wage than one with a lower target.
 default 0) gives each agent its own target, drawn once when the agent is
 created, uniformly between `TargetRatio * (10_000 - spread) / 10_000` and
 `TargetRatio * (10_000 + spread) / 10_000`, from the world's random source.
-One draw is made for every agent at creation, whatever the spread, in
-agent-creation order. Drawing even when the spread is 0 keeps the random stream
+One word of the world's draw (`spec-world.md` 7.2.1) is taken for every agent at creation,
+whatever the spread, in agent-creation order: it is the first of the two creation
+draws of `spec-world.md` 5.7.1 (the target ratio, then the residue). Drawing even when the spread is 0 keeps the random stream
 identical across spread values, so an experiment can compare runs that differ
 only in the spread (a paired comparison). The drawn target is stored with the
 agent and appears in `Snapshot`. Validation requires the lowest possible target
@@ -508,7 +525,7 @@ The choice has these effects:
 | Aggregate labour supply | All agents of a role cross the threshold together. The role works and rests in lockstep, so supply moves in steps | The marginal worker changes continuously, so days worked respond smoothly to the wage |
 | Price stability | Lumpy supply swings prices, which swing wages, and can set up limit cycles (bazaarBot already oscillates) | Spread damps the swings |
 | Calibration and tests | The closed form in section 5 holds exactly for the whole role | The formula holds per agent. The role's total is a mean over draws, so a test uses a fixed seed and a tolerance, or spread 0 for exact checks |
-| Randomness | One draw per agent at creation, unused when the spread is 0 | The same draw, now used. The stream does not depend on the spread, but golden output changes when a spread is configured |
+| Randomness | One word of the world's draw per agent at creation, unused when the spread is 0 | The same word, now used. The stream does not depend on the spread, but golden output changes when a spread is configured |
 | Inequality inside a role | None from this source | Low-target agents rest more and earn and save less |
 | Survival | Targets are at least 1.0, so below subsistence every agent works every day | Same, given the validation above |
 
@@ -594,6 +611,13 @@ held to work by the floor in the last tick, and a `Warn` "work floor binding" is
 emitted once per region and role when more than half of the role's households have been
 held by it for 10 consecutive ticks, at the tenth tick and every tenth after (12).
 
+The snapshot field `RoleRow.HeldByFloor` is **evaluated at the boundary**, over the agents
+with no job in progress on the welfare record as it stands after P6.3
+(`spec-observability.md` 5.3.4): a function of saved state. It may differ from the count
+the `Warn` used at P2.5, which saw a shorter ring and another set of agents, so the two
+are the same quantity at two positions and not one number read twice. The `Warn` is
+the signal; the field is the measure.
+
 ### 5.4 Stability of the labour loop (STB-L14, L15, N-028)
 
 The rule makes labour supply unit-elastic in the wage (`D = K / W`, 5). A shortage of a
@@ -645,8 +669,10 @@ world construction. It is a calibration aid that produces a number per role
 (`WageBelowTarget` in the solver's report, `spec-viability.md` 10.3). The reason is an
 identity. In a closed economy (no money faucet or sink, `spec-ledger.md` 7.3) in which
 households buy nothing but their upkeep, household money is conserved, so total income
-equals total upkeep spending and the household-weighted mean welfare ratio is **1**
-whatever `TargetRatio` is (`spec-viability.md` 4.7). A target above 1 cannot then be met
+equals total upkeep spending and the **aggregate** welfare ratio (the sum of income over the sum of cost, over the same
+agents and window) is **1** whatever `TargetRatio` is (`spec-viability.md` 4.7). The mean of the
+per-agent ratios is not that figure: it differs from the aggregate by the covariance of the ratio
+with the cost (`spec-indicators.md` 7.7.2, N-054), and `MeanRatioBP` (11.2) is such a mean. A target above 1 cannot then be met
 by every role, the check fails for roles on average, and the target-income rule never
 rests (every household works every tick, `spec-agents.md` 11.7), producing a surplus
 that is bounded only by the production halt. Neither is an error of the pack.
@@ -660,7 +686,7 @@ economy as a whole cannot meet: the households of a role work as the rule says a
 the ratio they reach is whatever the money in circulation allows. A pack that wants
 roles to rest in a closed upkeep-only world sets targets at 10 000, the only value
 the whole population can meet on average (roles above 1 rest, roles below work, and
-the mean is 1); `target_above_surplus` (`spec-viability.md` 10.2) warns when the mean
+the aggregate ratio is 1); `target_above_surplus` (`spec-viability.md` 10.2) warns when the mean
 target is physically out of reach. The default does not fall to 10 000 when the
 module is off: lowering it would hide the missing demand and change every example, and a pack
 that wants roles to rest in an upkeep-only world sets its targets itself. With the module on, the
@@ -673,9 +699,9 @@ this is what it means. Two statements, one per role and one for the world:
   upkeep and the wants of the households (the sellers' income of `spec-demand.md` 7.1), reaches
   `W_target`. The wants make sales to other roles possible, so a luxury role's revenue is
   positive where, with upkeep alone, it had no buyers (the second row of `spec-demand.md` 7.2).
-- **For the world:** the household-weighted mean target cannot exceed the mean ratio that the
+- **For the world:** the household-weighted mean target cannot exceed the ratio that the
   wants allow, `1 + Wref / U` at the reference prices and at most `1 + Wmax / U`
-  (`spec-demand.md` 7.1). A mean target above the first is the validation warning
+  (`spec-demand.md` 7.1), stated on the aggregate ratio and not on the mean of the per-agent ratios, which differs from it by the covariance with the cost (`spec-indicators.md` 7.7.2). A mean target above the first is the validation warning
   `target_above_demand` (`spec-demand.md` 10.2), owned by the demand module: the roles do not
   all rest, as in 7.1, but now the bound is the pack's own wants and not 1. Roles above the mean rest, roles below
   work, and the mean is whatever the wants and the money in circulation allow.
@@ -730,9 +756,13 @@ premium are measures, read from the `Snapshot`, not events (observability-and-lo
 
 11.2. **Snapshot.** Reports, per region and role: the observed wage and the observed
 premium (4.3, absent as stated there), the role's effective window (2.3.3), the
-households held to work by the floor in the last tick (5.3), and the **household-weighted mean
-welfare ratio** of the role (the sum over its agents of weight times ratio over the sum of weights
-of the agents whose ratio exists; absent if none), and the same mean over all roles of the region.
+households held to work by the floor (`RoleRow.HeldByFloor`: evaluated at the boundary, over the agents with no
+job in progress on the record after P6.3, so it may differ from the count of the `Warn` in the tick, 5.3),
+and the **household-weighted mean
+welfare ratio** of the role (`MeanRatioBP`: the sum over its agents of weight times ratio over the sum of weights
+of the agents whose ratio exists, `RatioHouseholds`; absent if none), and the same mean over all roles of the region, which a consumer forms from the role rows weighted by `RatioHouseholds`.
+`MeanRatioBP` is rounded toward zero (FR-WEL-036); the mean of `spec-indicators.md` is rounded half to
+even and is authoritative for the indicators (5.5.1 there), so the two may differ by 1 basis point.
 The mean ratio is what the scenarios S19 and S24 of `spec-reference-chain.md` (section 9) and the
 closed-economy check of `spec-demand.md` 7 measure; it needs no event and is computed from the
 records of 2, so it adds no state. Per agent, in a query
@@ -746,7 +776,7 @@ than half of the role's households have been held to work by `MinWorkShare` for 
 consecutive ticks, at the tenth tick and every tenth after, with `region`, `role` and
 `households` (the number held). It is actionable: a role that works because of the
 floor and not its target is a pinned labour market (STB-L14). The count behind it
-makes the floor, a damper that acts silently, observable (FR-STB-013, N-045). The
+makes the floor, a damper that acts silently, observable (FR-STB-013, N-045); `RoleRow.HeldByFloor` is the same quantity evaluated at the boundary and may differ from it (5.3, 11.2). The
 run of consecutive ticks is diagnostic state (13). No `Info`, no `Error`, and nothing
 per agent above `Debug`.
 
@@ -797,8 +827,10 @@ Every spec lists the state it contributes (ADR 0002). This spec's, hosted in the
   by the `Warn` of 11.3 (diagnostic: it affects no result and is saved so that a resumed
   run logs as the original did).
 
-**Not saved:** the running sums (recomputed from the buffer on restore), the effective
-window (derived from the configuration), the work share and the ratio (derived).
+**Not saved (derived):** the running sums (recomputed from the buffer on restore), the effective
+window (derived from the configuration), the work share and the ratio (derived), the pooled
+regional wage and the choice of the starting wage in its place (4.3: a function of the rings
+and the configuration, with no latch, `spec-checkpoint.md` 4.5 F5).
 
 ## 14. Entries for the stability register
 
@@ -876,11 +908,11 @@ behaviour decided in the third round; the rest restate text that already existed
 | FR-WEL-017 | For a role with recipes, a tick MUST be a working tick if the agent had a job in progress in it (started, continued or completed) or was in transit on a commercial trip, and for a role without recipes if it traded or was in transit on a commercial trip, and a tick with an own-use job in progress MUST be a working tick for a role with or without recipes; migration travel, rest under the target-income rule and idle ticks MUST NOT be working ticks. (new for the job wording) |
 | FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t - K^own_t` divided by the number of working household-ticks less the number of own-use household-ticks, and the same figure MUST be available for one agent over its own effective window, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
 | FR-WEL-019 | The observed premium of a role in a region MUST be its observed wage times 10 000 divided by the mean observed wage of the region's agents of `Unskilled` roles weighted by households, and MUST be absent if the region has no such agents or the role has no working ticks. (new for the weighting) |
-| FR-WEL-020 | The `Snapshot` MUST report the observed wage and premium per role and region, the effective window per role, the households held to work by the floor, the household-weighted mean welfare ratio per role and region (absent when no agent has a ratio), each bounded by the configuration. |
+| FR-WEL-020 | The `Snapshot` MUST report the observed wage and premium per role and region, the effective window per role, the households held to work by the floor (`HeldByFloor`, evaluated at the boundary over the agents with no job in progress after P6.3, so it may differ from the count the `Warn` of FR-WEL-033 used), the household-weighted mean welfare ratio per role and region with the households whose ratio exists (`MeanRatioBP` and `RatioHouseholds`; absent when no agent has a ratio), each bounded by the configuration. |
 | FR-WEL-021 | The work share MUST be 10 000 if the ratio is below `T_lo`, 0 if it is at or above `T_hi = T_lo * (10 000 + RestBand) / 10 000`, and `(T_hi - ratio) * 10 000 / (T_hi - T_lo)` between, with `T_lo` the agent's own target, and the executions requested MUST be `ceil(weight * share / 10 000)`. (new for the band and the share) |
 | FR-WEL-022 | With `RestBand` 0 the days worked per year in steady state MUST be `min(D_year, ceil(r_bp * B_r * D_year / (10 000 * W)))`. |
 | FR-WEL-023 | An agent MUST be able to change its work or rest decision only when it has no job in progress. |
-| FR-WEL-024 | Each agent's target MUST be drawn once at creation uniformly between `TargetRatio * (10 000 - spread) / 10 000` and `TargetRatio * (10 000 + spread) / 10 000` from the world's random source, one draw for every agent whatever the spread, in the creation order of `spec-agents.md` 3.5.2, and MUST be stored with the agent. |
+| FR-WEL-024 | Each agent's target MUST be drawn once at creation uniformly between `TargetRatio * (10 000 - spread) / 10 000` and `TargetRatio * (10 000 + spread) / 10 000` from the world's random source, one word of the world's draw (`spec-world.md` 7.2.1) for every agent whatever the spread, the first of the two creation draws of `spec-world.md` 5.7.1, in the creation order of `spec-agents.md` 3.5.2, and MUST be stored with the agent. |
 | FR-WEL-025 | Validation MUST reject a role whose lowest possible target is below 10 000, or whose `TargetSpread` is 10 000 or more. |
 | FR-WEL-026 | `WithTargetSpread(bp)` MUST override every role's spread, MUST return an error and not panic on an invalid value, and MUST distinguish "not given" from "given as 0". |
 | FR-WEL-027 | If the working ticks in an agent's window are fewer than `MinWorkShare * T / 10 000`, its work share MUST be 10 000 whatever its ratio, and with `MinWorkShare` 0 the floor MUST be off. (new) |

@@ -1,15 +1,18 @@
-selftest ok: 20000 random (base, bound) cases, levels sorted, unique, in bounds, base present
+selftest ok: 20000 random (base, bound) cases, levels sorted, unique, in bounds, base present; the cut, the z case, the overflow error
 
-knob                           base  levels near the base, skipped ones included       neighbours / edges
+knob                           base  kept levels near the base (invalid ones not yet skipped)  neighbours / edges
 World.CostFloor                7000  [1750, 3500, 7000, 14000, 28000]             3500 / 14000 
 World.BeliefStep                200  [50, 100, 200, 400, 800]                     None / 400 [('below', 'rule')]   [I01 at a cheapest price of 96]
 World.EntryShare                 50  [12, 25, 50, 100, 200]                       25 / 100 
-World.RestBand                  500  [0, 250, 500, 750, 1000]                     250 / 750    [off=0 is cut: edge below is `off`]
-World.CoverTicks (base 1)         1  [1, 2, 4]                                    None / 2 [('below', 'rule')]   [geo floor of 1 above a bound of 0: a rule edge]
+World.RestBand                  500  [250, 500, 750, 1000]                        250 / 750    [off=0 is cut: the edge below 250 is `off`]
+Role.TargetSpread                 0  [0, 500, 1000]                               None / 500 [('below', 'bound')]   [base at its off value: kept; below is a bound]
+World.CoverTicks (base 1)         1  [1, 2, 4]                                    None / 2 [('below', 'bound')]   [geo floor of 1 above a bound of 0: a bound edge (FR-CLB-010: max(lo, 1))]
 World.CoverTicks                  3  [1, 2, 3, 6, 12]                             2 / 6 
-World.ReviewTicks                10  [2, 5, 10, 20, 40]                           5 / 20 
+World.ReviewTicks                10  [2, 5, 10, 20, 40]                           5 / 20    [off=1 is the lower bound: cut]
 World.ProduceHaltRatio        30000  [15000, 30000, 60000, 120000]                15000 / 60000 
 World.WelfareWindow              30  [8, 15, 30, 60, 120]                         15 / 60 
 Role.TargetRatio              15000  [13000, 14000, 15000, 16000, 17000]          14000 / 16000 
-Role.MinWorkShare              4000  [2000, 3000, 4000, 5000, 6000]               3000 / 5000    [I05 at ExpectedWorkTicks 250, TicksPerYear 365]
+Role.MinWorkShare              4000  [2000, 3000, 4000, 5000, 6000]               3000 / 5000    [I05 at ExpectedWorkTicks 250, TicksPerYear 365; off=0 cut]
 Subsistence.ExitTicks             3  [1, 2, 3, 4, 5]                              None / 4 [('below', 'rule')]   [I07 with EnterTicks 2]
+
+a z row (MoneyFlow.Limit, geo) with the pack's value 0: no grid, unsearched at_off -> None

@@ -857,8 +857,8 @@ take, and a world with the module off refuses them all (9.3).
 ### 9.3 Admission
 
 At the start of the round the world visits the offers and takes in agent-ID order and in plan order
-within an agent and admits each or refuses it whole with a `reason`, in this order (constants of
-`internal/logkeys`; a refusal changes nothing and is counted in `ContractRound`, 15.1, and logged at
+within an agent and admits each or refuses it whole with a `reason`, in this order (exported constants of
+the root package, `event.go`; `internal/logkeys` holds the key strings only; a refusal changes nothing and is counted in `ContractRound`, 15.1, and logged at
 `Debug`; it is not an error returned by `Step`):
 
 | Of | # | `reason` | Condition |
@@ -1008,7 +1008,10 @@ deliverer of an open contract. The public relocation (MIG, INT) returns `ErrRegi
 nothing. The payer (the consignee) and the deliverer (the shipper) are already refused by `open_shipment`
 (`spec-transport.md` 5.5.3), since both are parties to the shipment of the contract; the refusal is registered all the same, because the contract
 is the obligation and a later change of the transport rule must not free a party to it. This answers the CAR/MER part
-of N-090.
+of N-090. `open_contract` exposes the **contract IDs** of the agent's open contracts as its instance keys
+(`spec-regions.md` 6.5.2). The arrival guard of transport (`spec-world.md` 6.12, C16) ignores only the contract
+formed on the arriving shipment, by instance: a deliverer that arrives at P1.3 while its contract settles at P1.4 is
+not held by it, and every other contract of the agent still refuses.
 
 9.8.2. **Removal.** `spec-agents.md` 3.6 gains one step, before the money of the removed agent moves to the estate:
 for each open contract of the agent as **deliverer**, the escrow is returned in full to the payer (`escrow_refund`)
@@ -1166,8 +1169,8 @@ stays (6.4). Otherwise the two specs share only the strategy registry.
 
 | Phase | What this spec does |
 |-------|---------------------|
-| 1 | After transport's arrivals and before relief and starting money: the settlement of contracts whose shipment arrived, in contract ID order (9.7); at a traveller's arrival the reseed of its beliefs (12.2) |
-| 3 | For each agent in ID order, as before; a merchant's `Trade` follows the construction of its view (with the draws of `spec-information.md` 5.5.2); after the last agent's plan, the round: admission, matching, formation (9.3 to 9.5) with its draws, then `MerchantsPlanned`, then the estates' asks and the counterparties' orders, then `RumoursServed` |
+| 1 | After transport's arrivals and before relief (P1.4): the settlement of contracts whose shipment arrived, in contract ID order (9.7); at a traveller's arrival the reseed of its beliefs (12.2) |
+| 3 | For each agent in ID order, as before; a merchant's `Trade` follows the construction of its view (with the draws of `spec-information.md` 5.5.2); after the last agent's plan, the round: admission, matching, formation (9.3 to 9.5) with its draws, then `MerchantsPlanned` (P3.3a; it is also emitted with `Modules.Merchants` absent, since its gate is the merchant block), then the estates' asks and the counterparties' orders, then `RumoursServed` |
 | 7 | The removal of a party applies 9.8.2 |
 
 ## 13. Parameters
@@ -1214,8 +1217,8 @@ run: none of them is derived.
 (5.7.1, shared with `spec-population.md` 3.8.3), the cautious reading `min(Price, Mean)` (5.2), one trip and at most one request or offer per plan
 (7.1), the lane lock (7.1), the matching order and the midpoint with half-to-even rounding (9.4), the key
 draw (9.4.2), the order of the checks of 9.3 and 9.5, the single line of a contract, the settlement table
-(9.7), the reseed on arrival (12.2), the reason constants of 9.3, 9.5 and the decisions of 5.1.2 in
-`internal/logkeys`.
+(9.7), the reseed on arrival (12.2), the reason constants of 9.3, 9.5 and the decisions of 5.1.2, exported
+constants of the root package (`event.go`).
 
 **Not parameters:** the fee share of an agent (derived, 5.7), a lane's score, the trip, the lot, the ceilings
 (derived each tick), the free list of Escrow accounts (derived), the contracts (state, 16).
@@ -1233,7 +1236,7 @@ for example `role.broker.merchant.modes`. The framework of `spec-config.md` 7 ru
 | Sentinel | Rejects |
 |----------|---------|
 | `ErrOutOfBounds` | a field of 13 outside its bound; `FeeShareSpreadBP` above `MerchantFeeShare` or with `MerchantFeeShare` plus it above 10 000 |
-| `ErrUnknownMode` (new) | a mode ID in `Modes` that is not defined |
+| `ErrUnknownMode` (new, a root sentinel; also returned by `SetTransitFactors` with the transport module alone, `spec-transport.md` 12.1, `spec-integration.md` 5.1.3) | a mode ID in `Modes` that is not defined |
 | `ErrDuplicateID` | a mode twice in `Modes` |
 | `ErrMerchantShape` (new) | a merchant block on a role with a non-empty `Recipes`; `Strategy` `"merchant"` with no block; a block with `Informed` false; a trade input (3.2.2) that is not in `Trades`; an empty cargo set; a self-carried mode in `Modes` with a `Crew` above 1; `Consigns` with no `TakeUnits` |
 | `ErrMerchantWeight` (new) | a merchant role with a group of scale above 1, or whose households exceed one per agent (an agent of weight above 1) |
@@ -1270,13 +1273,14 @@ and `OrderPlaced`; two are aggregates, bounded by the regions, like `UpkeepShort
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
 | `ContractFormed` (new) | when a contract is formed, after its shipment's `ShipmentDispatched` | `Contract`, `Payer`, `Deliverer`, `Region` (the deliverer's, the origin), `To`, `Commodity`, `Quantity`, `Price`, `Escrowed`, `Shipment`, `Mode`, `Arrives` |
-| `ContractSettled` (new) | when a contract ends, at its arrival or at the removal of its deliverer | `Contract`, `Payer`, `Deliverer`, `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Paid`, `Refunded`, `Cause` (`delivered`, `short`, `payer_removed`, `deliverer_removed`) |
+| `ContractSettled` (new) | when a contract ends, at its arrival or at the removal of its deliverer | `Contract`, `Payer`, `Deliverer`, `Region` (the deliverer's account at the event, as `ContractFormed.Region`), `To`, `Commodity`, `Quantity`, `Reached`, `Spoiled`, `Paid`, `Refunded`, `Cause` (`delivered`, `short`, `payer_removed`, `deliverer_removed`) |
 | `ContractRound` (new) | once per destination region and tick in which an offer or a take was submitted for it, in ascending `RegionID`, after the last contract of the round | `Region` (the destination), `Offers` and `Takes` (admitted), `OffersRefused`, `TakesRefused`, `Matched`, `Formed`, `NoTaker`, `PayerFunds`, `TooMany`, `DispatchRefused`, `Units`, `Value` (of the contracts formed) |
 | `MerchantsPlanned` (new) | once per region and tick in which at least one agent with a merchant block was given a view there, in ascending `RegionID`, after `ContractRound` and before `RumoursServed` | `Region`, `Merchants`, and the sums of the plan notes of 15.1.2 |
 
 The order within a step: phase 1, after the `ShipmentArrived` events, the `ContractSettled` events in contract
 ID order; phase 3, during the round the `ShipmentDispatched` and `ContractFormed` events of each contract in
-formation order, then `ContractRound` and `MerchantsPlanned`. An event of a module that is off is not emitted.
+formation order, then `ContractRound` and `MerchantsPlanned`. The first three events are not emitted with the
+module off (`Modules.Merchants` absent); `MerchantsPlanned` is gated by the merchant block of a role and not by the module.
 `ContractSettled` for a deliverer's removal is emitted with the removal events of phase 7.
 
 15.1.2. **Plan notes.** A strategy cannot emit events, and the merchant's dampers act silently, so FR-STB-013
@@ -1784,6 +1788,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | Escrow accounts, `escrow_in`, `escrow_out`, `escrow_refund`, the audit checks | `internal/ledger` (`spec-ledger.md` 16); the root opens and reuses the accounts |
 | The `open_contract` refusal | root package, `contract.go`, registered at construction |
 | The reseed of a traveller at arrival | root package, `transport.go`, calling `internal/beliefs` |
-| The reason constants (9.3, 9.5), the decision constants (5.1.2) and the log keys | `internal/logkeys` |
+| The reason constants (9.3, 9.5) and the decision constants (5.1.2) | root package, `event.go` (exported constants) |
+| The log keys | `internal/logkeys` (key strings only) |
 | The file shape | `config/` (`spec-config.md` 6) |
 | The models | `doc/specs/models/mer/` |
