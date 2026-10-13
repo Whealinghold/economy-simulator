@@ -1,0 +1,166 @@
+// Package economysim simulates a market economy with configurable supply
+// chains, in the style of bazaarBot. It is a library: a consumer (a game loop,
+// a server, a command) builds a configuration, creates a world and steps it.
+//
+// The module path is github.com/Whealinghold/economy-sim, whose last element is
+// not a valid identifier, so the package name differs from it. Import it with
+// an explicit name:
+//
+//	import economysim "github.com/Whealinghold/economy-sim"
+//
+// # Principles
+//
+// Commodities, recipes and roles are data, never code. The library is
+// deterministic: a seed, a configuration and a sequence of calls give
+// bit-identical results. Money, prices and quantities are int64 fixed-point
+// values, and arithmetic that can overflow is checked, never wrapped. The
+// library has no goroutines, no global state and no output unless a logger or
+// an observer is injected.
+//
+// # Glossary
+//
+// A new domain term is added here before code uses it (architecture.md 3.2).
+// The terms below are the ones the code of the foundations uses; the fuller
+// list is in doc/specs/README.md.
+//
+//   - Agent: a participant of the market that holds an account, takes a role and
+//     trades. Identified by an AgentID.
+//   - Audit: an option (WithAudit) that makes a world check its invariants as it
+//     runs; it changes no result and is not part of the configuration hash.
+//   - Basis point: one ten-thousandth. Ratios, rates and factors are integers in
+//     basis points and are applied as v * bp / 10 000.
+//   - Boundary flow: money or goods that enter the economy (a faucet) or leave
+//     it (a sink) through a ledger reason; BoundaryFlow reports the total per
+//     tick, region and reason.
+//   - Bound: a constant of bounds.go that a configuration value is checked
+//     against, so that arithmetic cannot overflow and validation work is
+//     bounded. A bound is not a tunable.
+//   - Bucket: a value in [0, P) derived from an agent's ID by the second Weyl
+//     value, which places the agent on a tick of a rotation of period P.
+//   - Calendar: the structure of time in a configuration: hours, days, months,
+//     the length of a tick and the seasons. Earth by default.
+//   - Canonical order: the order of the entities of a configuration after
+//     sorting by ID, which fixes the typed IDs and the configuration hash
+//     whatever order the entities were written in.
+//   - Cause: a member of a closed set (Cause) that names why an agent was removed,
+//     reduced or changed role, such as insolvent or starved.
+//   - Commodity: a good that can be held and traded, identified by a CommodityID.
+//     NoCommodity stands for money where a commodity field is also used for it.
+//   - Configuration: the Config value that defines a world; plain data that a
+//     file loader or Go code builds.
+//   - Configuration hash: the SHA-256 of the canonical encoding of a Config,
+//     which a checkpoint stores and a restore compares.
+//   - Default constructor: DefaultWorld, DefaultRole and the like, the one
+//     place a default is defined. The zero value of an entity is not a default.
+//   - Draw site: a place in the code where the world takes a random word, named
+//     by a constant that never changes and keyed by (site, tick, id).
+//   - Effective seed: the seed a world draws from after any reseed; it is the one
+//     value of the random state that a checkpoint carries.
+//   - Configuration section: a struct of config.go that Config holds, one per
+//     part of the file: World, Calendar, Month, Season, Commodity, Item, Output,
+//     Tool, Recipe, YieldProfile, SeasonYield, Role, Region, Group, WarmStart,
+//     SeedPrice, SeedWage, WarmGroup, JobSpec and WarmPool.
+//   - Estate: the goods and money an agent leaves behind when it is removed; the
+//     money goes to the regional estate pool, the goods are listed for sale.
+//   - Estate pool: the money of a region's estates, which can fund the starting
+//     money of a new agent; WarmPool seeds it.
+//   - Event: a plain value that a world emits to its observers to report a
+//     transition; the closed set of event types is sealed to this package.
+//   - Event type: one of the sealed struct types of event.go that implement
+//     Event: WorldCreated, RunStarted, RunEnded, TickStarted, TickEnded,
+//     OrderPlaced, OrderRejected, TradeExecuted, MarketCleared, BeliefsUpdated,
+//     RecipeExecuted, RecipeAbandoned, ProductionHalted, UpkeepShortfall,
+//     AgentSpawned, AgentBankrupted, EstateOpened, WeightChanged, RoleChanged,
+//     EntryLimited and BoundaryFlow. The first field of each is Tick.
+//   - Faucet: a boundary flow that brings money or goods into the economy
+//     from outside; its Kind is KindFaucet.
+//   - Field id: the position of a field in its struct, counted from 1, under
+//     which the configuration hash writes it. An id is never reused or moved.
+//   - Finaliser: the SplitMix64 output function, a bijection of uint64 that mixes
+//     a word so that near inputs give unrelated outputs (ordering.Finalise).
+//   - Fixed point: money, prices and quantities are whole numbers of their
+//     smallest unit; no floating point affects a result.
+//   - Group: the households of one role in one region, with an optional scale.
+//   - Guard pass: the counting-only parse of a document in config/ that checks
+//     nesting depth and keys per table before any tree is built.
+//   - Household: the unit of population; an agent holds a weight of them.
+//   - Keyed stream: the random stream of one draw site, restarted from the
+//     seed and the key (site, tick, id) before each use, so that no draw depends
+//     on the order of others.
+//   - Kind: the kind of a boundary flow, a closed set with two members, faucet
+//     and sink.
+//   - Log key: the name of an attribute of a log line, defined once in
+//     internal/logkeys and listed in observability-and-logging.md 3.3.2.
+//   - Minor unit: the smallest unit of money. Money and Price are counts of
+//     minor units; the library has no currency, denomination or decimal place.
+//   - Module: an optional mechanism that is off unless its entry in
+//     Config.Modules is non-nil.
+//   - Money: an amount of money, an int64 count of minor units.
+//   - Names table: the Names value that maps each typed ID of a world to the
+//     string ID of its configuration, carried by events and snapshots.
+//   - Observer: the interface through which a consumer receives events; it is
+//     optional and discards by default. warnRun is the run length of a
+//     bounded warning.
+//   - Pack: a set of configuration documents, layered in order, that defines a
+//     supply chain; later documents add to or override earlier ones.
+//   - Presentation-only field: a field, such as a label, that changes no result
+//     and is not part of the configuration hash.
+//   - Price: money per unit of a commodity, an int64 count of minor units.
+//   - Producible: a commodity that is sourced, or that some recipe makes from
+//     inputs and tools that are all producible; validation rejects a
+//     commodity that something consumes and that is not producible.
+//   - Pool policy: what the estates module switches on: the release of the
+//     estate pool as relief and its use as a money-flow target.
+//   - Quantity: a count of whole units of a commodity.
+//   - Reason: a machine-readable member of a closed set (Reason) that names why
+//     an order was rejected, a job ended without output or a flow crossed the
+//     boundary.
+//   - Recipe: a rule that turns inputs into outputs over some ticks, identified
+//     by a RecipeID.
+//   - Region: a place with its own markets, identified by a RegionID. NoRegion
+//     stands for no region.
+//   - Reseed: the pure function that derives a new effective seed from a seed
+//     and a salt, as a restore does; it installs nothing.
+//   - Role: the occupation of an agent, which fixes the recipes it may run and
+//     what it needs, identified by a RoleID.
+//   - Rotation: a cadence that selects an agent on the ticks where
+//     (tick + bucket) mod P is 0, so a group of agents is spread over a period.
+//   - Schema version: the integer under the key schema in a configuration file
+//     that names the version of the file format; the loader accepts one.
+//   - Season: a named part of the year, in an ordered list of the calendar.
+//   - Row type: a small struct that an event carries in a slice or a field,
+//     such as Amount (a quantity of a commodity) and HaltRow (a recipe a
+//     production halt skipped and the households it was skipped for).
+//   - Seed: the value from which every random word of a world derives; with a
+//     configuration and a sequence of calls it fixes a run.
+//   - Site constant: the fixed value that names a draw site (siteWork and the
+//     like). It never changes and is spaced at least 2^32 from every other.
+//   - Side: the side of an order, bid (buys) or ask (sells).
+//   - Stream key: the (seed, site, tick, id[, sub]) that fixes the keyed stream
+//     of one draw; two equal keys give the same words.
+//   - Sink: a boundary flow that takes money or goods out of the economy; its
+//     Kind is KindSink.
+//   - Sourced: a commodity the producibility check takes as supplied from
+//     outside the recipe graph: one marked Raw. A recipe with no inputs is a
+//     source in the same sense.
+//   - Target spread: the spread, in basis points, of the target ratio of a role
+//     around its centre; WithTargetSpread overrides it for a whole world.
+//   - Tick: the unit of simulated time; there is no wall-clock time in the
+//     library.
+//   - Trainee: an agent that learns a role under a trainer for a number of
+//     ticks; a recipe may be trainee-eligible.
+//   - Upkeep: the goods one household must consume each tick to stay alive.
+//   - Warning: a configuration that is legal but probably a mistake; Warnings
+//     returns it as a value with a path and a rule and it never fails
+//     validation.
+//   - Warm start: an optional table that seeds prices, wages, money, stock and
+//     jobs so that a world begins near a steady state.
+//   - Weyl value: a fixed per-agent spread, the ID multiplied by an odd constant
+//     modulo 2^32. It draws no random number. Weyl32 is used for carries and
+//     margins and Weyl2, a second sequence, for the bucket of a rotation.
+//   - Word: one uint64 taken from a keyed stream; a draw of n values uses one word.
+//   - World: the simulation that a configuration defines and a consumer steps.
+//     In Config, World is the section of world-level parameters, such as the
+//     scale of a group and the bounds of its agents.
+//   - Yield profile: the factor, by season, of a recipe in a region.
+package economysim
