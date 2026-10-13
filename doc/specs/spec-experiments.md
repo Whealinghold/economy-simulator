@@ -527,7 +527,7 @@ Feistel network over `2w` bits maps `x = (l, r)` (each `w` bits) through
 network is a permutation of `[0, 2^(2w))` and, for `N >= 2`, `N <= 2^(2w) < 4 N`,
 the walk terminates in fewer than four applications on average and `P_k` is a permutation
 of `[0, N)` (FR-EXP-007; the model of 18 checks every `N` from 1 to 300 and
-larger ones).
+larger ones). The constant `0x243F6A8885A308D3` is the design's own rule constant and is not a reseed constant: the reseed of a restore (`spec-checkpoint.md` 6.8.2) is `seed' = finalise(seed xor finalise(salt))` and has no constant, and a spread is generated without a stream (4.5), so it reseeds nothing. It is kept because changing it moves every spread (FR-EXP-008) and the worked points of 19.
 
 4.4.3. **The value.** A factor with explicit levels uses level
 `floor((2 * cell + 1) * L / (2 * N))`; a range factor `[Min, Max]` uses
@@ -1535,8 +1535,9 @@ STY and CLB put in the repository), is the forward direction only: for each path
 test (`world` to World, `role.<id>` to Role, `region.<id>` to Region,
 `region.<id>.group.<id>` to Group, the module tables to their module scopes); (b)
 compare the **snake form** of the row's parameter name with the last segment of the
-path, by the loader's rule, which CFG is asked to state with its handling of
-acronyms (`RateBP`, `ID`; 22); (c) fail for a path with no row. A bare last-segment
+path, by the loader's rule, which CFG states with its handling of
+acronyms (`RateBP`, `ID`; `spec-config.md` 6.2) and its exceptions (6.2.2: `in_progress` is
+`InProgressBP`; a path is a file path, not the Go path of a validation error); (c) fail for a path with no row. A bare last-segment
 match is unsound (`Scale` and `Capacity` repeat across scopes), and testing.md 6.7
 defines no path-to-row parse, only the table's text and the two directions between
 fields and rows. It needs no dependency: the table is text (FR-EXP-072).
@@ -1677,8 +1678,8 @@ N-015; every product is computed with a checked multiplication and an overflow i
 | `MaxReading` | 2^40 | a reading's magnitude: keeps the sums below 2^126 for 10^6 used runs |
 | `MaxErrors` | 100 | of `Validate`, as `spec-config.md` 7.1.3 |
 
-13.3. **Rule constants** (beside their code, architecture.md 9.6): the salt
-`0x243F6A8885A308D3` and the gamma `0x9E3779B97F4A7C15` of 4.4.2; the SplitMix64
+13.3. **Rule constants** (beside their code, architecture.md 9.6): the design constant
+`0x243F6A8885A308D3` (not a reseed constant, 4.4.2) and the gamma `0x9E3779B97F4A7C15` of 4.4.2; the SplitMix64
 finaliser constants (`spec-world.md` 7.1.2); the four rounds of the Feistel
 network; the cell midpoint rule; the mixed-radix order; the OAT order; the seed
 rules of 4.6.1; the rounding rule (half to even, IND 5.2.2); the closed list of
@@ -2188,7 +2189,7 @@ is derived from this table.
 | `specs/README.md` | code table row `EXP` | "exists; Requirements section written (FR-EXP-001 to 072, NFR-EXP-001 to 006); core; no `Config` field; all bounds are placeholders" |
 | `specs/README.md` | decisions taken | rows: *Does the harness draw randomness?* No: counter-based and stateless (4.5). *How does a point differ from the base?* By overlay documents through the loader (3.3). *Can a branch change a parameter?* No: the hash (6.2). *When is a paired comparison valid?* Exact only while aligned; the estimate is unbiased always; the gain is measured (7). *How is a failed run counted?* Never dropped (8.3.1, 9) |
 | `specs/README.md` | glossary | experiment, factor, level, change, design (grid, one at a time, spread), point, replica, run key, unit (of work), plan, record, result, window (sample), transient, final reading, series, measure, criterion, pass share, reduction, branch, variant, continuation, aligned (prefix, horizon), stream fingerprint, pairing gain, effect range, elasticity, overlay |
-| `roadmap.md` | tier 3 table, existing specs table, "Suggested next specs" | EXP `planned` to `exists`; a row in the existing-specs table; remove EXP from the planned list |
+| `spec-roadmap.md` | tier 3 table, existing specs table, "Suggested next specs" | EXP `planned` to `exists`; a row in the existing-specs table; remove EXP from the planned list |
 | `documentation_index.md` | rows | `specs/spec-experiments.md` and `specs/models/exp/` |
 | `specs/models/README.md` | contents | a row for `exp/`: the counter-based Latin hypercube, the rejected Kronecker sequence, the integer reductions, the pairing toy and the cost arithmetic |
 | `rules/architecture.md` | 2.6 layout, 2.7, 3.2, 7.3 | the packages `experiment/` (public) and `internal/design`, `internal/reduce`; `experiment/` may import the root and `config/`, and none of them imports it; 7.3 extended to `experiment/`; the glossary terms; a fresh read-receipt tag (X4) |

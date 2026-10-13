@@ -170,6 +170,12 @@ A **role** is a plain struct in the root package, an entry of `Config.Roles`
 The role's own-use recipes are not a field of the role: they are the rows of the subsistence module
 (`spec-subsistence.md` 3.2), and the **effective own-use list** of a role is derived (3.3.1 there).
 
+**Core and module fields.** `ID`, `Recipes`, `Upkeep`, `Trades`, `StartMoney`, `StartStock`,
+`Strategy` and `Label` are the core's: they are in the first code (`spec-config.md` 3.7.2),
+with the welfare, skill-barrier and `Closed` fields of the other specs. `Informed`, `Fixed`,
+`Merchant`, `Hireable`, `Employer`, `Credit`, `Cover`, `Saver`, `Needs` and `Ceiling` are
+owned by the module their row names, are appended to `Role` with that module, and are
+written into the configuration hash only when that module is on (`spec-config.md` 8.2.1).
 3.3.1. A role with an empty `Recipes` list is legal. Its households earn nothing
 from production: they are a trader, a carrier, a household that lives on relief or
 on income another spec provides (`spec-estates.md`, `spec-employment.md`,
@@ -2325,7 +2331,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `Agent`, `Role`, `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Side`, `Purpose`, `Directive`, `AgentView`, `OutcomeView`, `RecipeID`, `Strategy`, `DefaultStrategy`, `Directed`, `WithStrategy` | root package: `agent.go`, `strategy.go`, `directive.go`, `option.go` |
+| `Agent`, `Role`, `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Purpose`, `Directive`, `AgentView`, `OutcomeView`, `Strategy`, `DefaultStrategy`, `Directed`, `WithStrategy` | root package: `agent.go`, `strategy.go`, `directive.go`, `option.go` |
+| `Side` (`Bid`, `Ask`, with a `String` method for the golden rendering of events) | root package, `event.go`: it is first used by the events (`spec-observability.md` 3.2.1), so it is declared with them and `Intent` and `Order` use it from there; `RecipeID` and the other typed IDs are in `value.go` |
 | The tunables of section 12 and the role and region fields of 3.3 | root package, `config.go` and `defaults.go`; bounds in `bounds.go` (`MaxUpkeepItems` joins `spec-config.md` 4.1) |
 | Validation, the sentinels and the warnings of section 13 | root package, `validate.go`, `errors.go` |
 | Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the work share (7.1.2), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1), the tradable set (3.4); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |

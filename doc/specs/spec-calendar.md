@@ -71,6 +71,40 @@ sorted (`spec-config.md` 3.4).
 | Calendar | `Seasons` | the seasons in order, each an `ID` and `Days`; may be empty; at most `MaxSeasons` | 4 seasons: `spring` 92, `summer` 92, `autumn` 91, `winter` 90 |
 | Calendar | `SeasonStart` | the zero-based day of the year on which the first season begins | 59 |
 
+In Go the section and the elements of its two ordered lists are (`spec-config.md` 3.7.2;
+fields in this order, which is the order of their ids in the hash):
+
+```go
+// Calendar is a section of Config. Its zero value is not a valid calendar (no month):
+// start from DefaultCalendar, which is Earth.
+type Calendar struct {
+	HoursPerDay int64
+	DaysPerWeek int64
+	Months      []Month // in order; the order is data
+	TicksPerDay int64
+	DaysPerTick int64
+	StartDay    int64
+	Seasons     []Season // in order; may be empty
+	SeasonStart int64
+}
+
+// Month and Season are the elements of the two ordered lists.
+type Month struct {
+	ID   string
+	Days int64
+}
+
+type Season struct {
+	ID   string
+	Days int64
+}
+```
+
+In a file the two lists are arrays of inline tables with the keys `id` and `days`
+(7.4); the table is `[calendar]`, with no ID, since there is one calendar. A key
+absent from `[calendar]` takes the Earth default of the table above, and a list that is
+written replaces the default list whole (`spec-config.md` 6.4).
+
 A tick is either a part of a day (`TicksPerDay` above 1) or a number of whole days
 (`DaysPerTick` above 1), never both: with both above 1, the day of a tick would
 depend on a fraction that has no meaning. The default is one tick a day.

@@ -301,7 +301,7 @@ This spec does not define the set; it only uses the word as AGT does (N-048).
 
 ### 6.5 Presentation
 
-`Label` (a display name) and `UnitLabel` (2.5) are free text of at most 64 bytes.
+`Label` (a display name) and `UnitLabel` (2.5) are free text of at most `MaxLabelBytes` bytes (256, `spec-config.md` 4.1: one bound for every label; an earlier draft said 64 here).
 They are presentation only: they change no result, are not part of the
 configuration hash (`spec-config.md` 8.3), and are not used by the core.
 
@@ -355,6 +355,7 @@ Bounds, which validation enforces with `ErrOutOfBounds`:
 - `Durability` from 0 to `MaxQuantity`.
 - `ReferencePrice` from 1 to `MaxPrice`.
 - at most 8 `Classes`, each matching the ID pattern.
+- `Label` and `UnitLabel` each at most `MaxLabelBytes` (256) bytes.
 
 ## 9. Requirements
 
@@ -384,7 +385,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-GDS-018 | A commodity marked `Raw` MUST count as sourced in the producibility check of `spec-config.md` 7.5. |
 | FR-GDS-019 | A commodity's reference price MUST be between 1 and `MaxPrice`, and a configuration that omits it MUST be rejected. |
 | FR-GDS-020 | The effective reference price of a commodity in a region MUST be the region's override if it has one, else the commodity's `ReferencePrice`. |
-| FR-GDS-021 | `Label` and `UnitLabel` MUST be at most 64 bytes, MUST NOT change any result, and MUST NOT be part of the configuration hash. |
+| FR-GDS-021 | `Label` and `UnitLabel` MUST be at most `MaxLabelBytes` bytes (256), a longer one MUST be rejected with `ErrOutOfBounds`, and neither MUST change any result or be part of the configuration hash. |
 | FR-GDS-022 | The attributes of a commodity MUST NOT change during a run. |
 | FR-GDS-023 | Validation MUST warn about a durable that no recipe requires, and MUST NOT fail the configuration for it. |
 

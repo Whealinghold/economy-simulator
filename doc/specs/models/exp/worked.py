@@ -5,6 +5,7 @@ used as data; every number is a placeholder (note N-027).
 """
 from lhs import axis_key, perm, value
 
+# 0x243F6A8885A308D3 is the DesignSalt of the Latin-hypercube design (spec-experiments.md 7), a design constant; it is not the reseed rule (spec-checkpoint.md 6.8.2).
 SALT = 0x243F6A8885A308D3
 
 

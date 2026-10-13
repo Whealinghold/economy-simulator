@@ -107,7 +107,7 @@ A `Recipe` is a plain struct in the root package, an entry of `Config.Recipes`
 | `TraineeYield` | basis points | a trainee's output as a share of a full execution (8.2) |
 | `Label` | string | presentation only; not hashed (`spec-goods.md` 6.5 applies) |
 
-3.1.1. `Inputs` and `Outputs` are lists of items. Within one list a commodity
+3.1.1. `Inputs` and `Outputs` are lists of items. In Go they are `[]Item` and `[]Output`, and `Requires` is `[]Tool` (`spec-config.md` 3.7.2; no struct embeds another, so `Output` repeats the two fields of `Item`). Within one list a commodity
 appears at most once. Each list is sorted by commodity in canonical order
 (`spec-config.md` 3.4) and has at most `MaxRecipeItems` items (16). A quantity is
 an integer from 1 to `MaxQuantity`. A commodity may appear in both lists: seed
@@ -447,7 +447,7 @@ type SeasonYield struct {
 ```
 
 A file writes it as `[region.<id>.yield.<recipe>]` with `all = N` and `seasons = {
-<season id> = N }` (section 12). `Config.Yields` is the list of profiles, sorted by
+<season id> = N }` (section 12). The key `all` is present exactly when `HasAll` is true (`spec-config.md` 6.2.2). `Config.Yields` is the list of profiles, sorted by
 region and recipe. One profile per (region, recipe) (`ErrDuplicateID`).
 
 ### 6.2 The lookup
@@ -960,14 +960,14 @@ placeholder** (N-015, N-027).
 | Recipe | `Sited` | runs only where the yield table gives a positive factor (6.2) | false |
 | Recipe | `TraineeEligible` | a trainee may run it (section 8) | false |
 | Recipe | `TraineeYield` | a trainee's share of a full execution's output, in basis points (8.2) | 5 000 |
-| Recipe tool | `WearPerUse` | wear units one execution puts on a tool (4.4) | 1 |
-| Recipe output | `CostShare` | share of the input cost allocated to the output, in basis points (3.2) | 10 000 if it is the only non-discard output, otherwise required |
-| Recipe output | `Discard` | created and disposed in one step (7.2) | false |
+| Tool | `WearPerUse` | wear units one execution puts on a tool (4.4) | 1 |
+| Output | `CostShare` | share of the input cost allocated to the output, in basis points (3.2) | 10 000 if it is the only non-discard output, otherwise required |
+| Output | `Discard` | created and disposed in one step (7.2) | false |
 | Recipe | `Draws` | endowment taken per execution, list of (resource, quantity) (6.5); the resources are `spec-resources.md` 3 | none |
 | Recipe | `Needs` | site classes the principal must hold a facility of (3.1); values and rules `spec-infrastructure.md` 4.1 | none |
 | Recipe | `Builds` | the facility class (and region of a route) the completion creates (3.1) | none |
 | Recipe | `Repairs` | the facility class and the units of condition the completion restores (3.1) | none |
-| Region and recipe | `YieldProfile` | basis-point factor by region, recipe and season (6.1); values owned by `spec-resources.md` 7 (format and lookup: 6.1, 6.2) | none (10 000, or 0 for a `Sited` recipe) |
+| Config | `Yields` | the profiles: a basis-point factor by region, recipe and season (6.1; the fields are the rows of the scope `YieldProfile`); values owned by `spec-resources.md` 7 (format and lookup: 6.1, 6.2) | none (10 000, or 0 for a `Sited` recipe) |
 
 `Inputs`, `Outputs` and `Requires` are lists with no default (`Outputs` is required,
 `ErrRecipeNoOutput`, except for a recipe with `Builds` or `Repairs`). `Label` is presentation only.

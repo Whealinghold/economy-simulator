@@ -205,9 +205,9 @@ type OutsideGate struct {
 }
 ```
 
-3.3.1. In a file a node is the table `[module.external.node.<region>]`, a line the table
-`[module.external.node.<region>.line.<commodity>]` with its sides as the sub-tables `sell`
-and `buy`, and a gate `[module.external.node.<region>.gate.<region>]`, so documents merge
+3.3.1. In a file a node is the table `[modules.external.node.<region>]`, a line the table
+`[modules.external.node.<region>.line.<commodity>]` with its sides as the sub-tables `sell`
+and `buy`, and a gate `[modules.external.node.<region>.gate.<region>]`, so documents merge
 by key (`spec-config.md` 6.4); the layout is proposed for 6.2 of that spec.
 
 3.3.2. **Canonical order.** Nodes are sorted by region (as `RegionID`), lines by commodity
@@ -1209,23 +1209,23 @@ accounts empty.
 ### 18.2 Example A, the configuration
 
 ```toml
-[module.external.node.coast]
+[modules.external.node.coast]
 
-[module.external.node.coast.line.salt]
+[modules.external.node.coast.line.salt]
 base = 40
 trend_bp = -300
 
-[module.external.node.coast.line.salt.sell]
+[modules.external.node.coast.line.salt.sell]
 margin_bp = 500
 capacity = 30
 
-[module.external.node.coast.line.grain]
+[modules.external.node.coast.line.grain]
 base = 20
 walk_step_bp = 100
 walk_revert_bp = 500
 walk_bound_bp = 2000
 
-[module.external.node.coast.line.grain.buy]
+[modules.external.node.coast.line.grain.buy]
 margin_bp = 1000
 capacity = 50
 window = [{ season = "winter", bp = 6000 }]

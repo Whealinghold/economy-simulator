@@ -11,29 +11,29 @@ seasons = [ { id = "lit", days = 184 }, { id = "dark", days = 181 } ]
 season_start = 59
 
 [commodity.ice]
-reference_price = 100
+reference_price = 112
 raw = true
 [commodity.water]
-reference_price = 100
+reference_price = 346
 [commodity.biomass]
-reference_price = 100
+reference_price = 327
 shelf_life = 60
 [commodity.regolith]
-reference_price = 100
+reference_price = 66
 raw = true
 [commodity.wafer]
-reference_price = 100
+reference_price = 2163
 [commodity.solder]
-reference_price = 100
+reference_price = 2097
 [commodity.board]
-reference_price = 100
+reference_price = 12364
 [commodity.slag]
 reference_price = 50
 [commodity.drill]
-reference_price = 100
+reference_price = 14330
 durability = 500
 [commodity.fabricator]
-reference_price = 100
+reference_price = 41155
 durability = 1000
 
 [recipe.cut_ice]

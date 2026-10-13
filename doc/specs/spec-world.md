@@ -1,4 +1,4 @@
-# Spec: World: the tick and its positions, the random stream, options, construction, the seam between ticks and decisions at different rates
+# Spec: World: the tick and its positions, the keyed random streams, options, construction, the seam between ticks and decisions at different rates
 
 Status: draft. Part of the economy specs: see [README.md](README.md) for the
 index, the shared conventions and who owns each parameter. This is a design
@@ -14,11 +14,11 @@ spec whose text wins, and section 22 lists what must still be edited elsewhere.
 
 This spec adds one `Config` field, the name `World.Clearing` (4.2; its owner is `spec-clearing.md` 8, as `World.Spawner` is the spawner's), and no other field or default. The only numbers in it are
 the constants of the SplitMix64 finaliser (published constants, rule constants,
-7.1) and the example numbers of section 19, which are labelled. Nothing has run in
+7.1.2), the site constants of the keyed streams (rule constants, 7.1.4) and the example numbers of section 19, which are labelled. Nothing has run in
 the library and no acceptance band exists (notes N-015, N-027); the scripts of
 section 18 are stylised Docker Python models of the rules in section 8 to 11, not
 claims about the library, and the one fact taken from the Go standard library
-(the PCG state and its seeding, 7.1) was checked by running Go 1.25 in Docker.
+(the PCG-DXSM, `PCG.Seed` and the vectors of 7.1.5) was checked by running Go 1.25 and Go 1.27 in Docker.
 The settings of the worked examples (19) are invented **examples**: the words
 in them (`grain`, `loaf`, `baker`, `grower`, `alpha`) are flagged as such and are
 data, never branched on (`AGENTS.md`, N-017).
@@ -45,9 +45,9 @@ between two ticks. It covers:
 - **the tick**: eight phases, each position in each phase with its owner, its
   reads, its writes, its draws and its events, and the order of the events of a
   step (section 6);
-- **the random stream**: the seeding rule, every draw of a run in one table, the
-  rule that the count of draws is a function of the configuration and of state
-  (section 7);
+- **the keyed random streams**: the key of a stream and the site constants, every
+  draw of a run in one table with its stream, the rule that the count of draws is a
+  function of the configuration and of state (section 7);
 - **between ticks**: the rule, the list of slots, the position of a checkpoint
   (section 8);
 - **decisions at different rates**: every cadence of the written specs in one
@@ -75,14 +75,14 @@ Out of scope, with the owner:
 | 2 | The order of a phase is the order of its table. Where two specs claimed one slot, the ruling of 6.12 says which wins; the wordings and positions in the written specs that disagree are ruled one by one (twenty-eight entries) and the edit each needs is listed in 22 | 6.11 |
 | 3 | A `Step` that returns an error leaves the world **failed**: every later call that would change or read live state returns `ErrWorldFailed`, and the consumer restores the checkpoint it took at an earlier boundary. No half-finished tick is ever observable, saved or resumed | 3.5 |
 | 4 | A call made from inside a step (an observer, a strategy, a spawner, a clearing) returns `ErrInStep` and changes nothing | 3.6 |
-| 5 | One `*rand.Rand` on one `rand.PCG` per world. The seed becomes the 128-bit state by two outputs of SplitMix64. Every bounded draw the world takes is one `Uint64` and the high word of its product with the bound: one source word, no rejection | 7.1, 7.2 |
-| 6 | The count of draws in a tick is a function of the configuration and of the state of the world, and never of an observer, a logger or a module that is on and inactive | 7.4 |
+| 5 | One seed, one `*rand.Rand` on one `rand.PCG` per world, and no stream position. At every draw site the PCG is reseeded from a key of (seed, site, tick, id) by SplitMix64 finalisations; no draw depends on how many another site took. Every bounded draw the world takes is one `Uint64` of its stream and the high word of its product with the bound: one source word, no rejection | 7.1, 7.2 |
+| 6 | The count of draws of each stream is a function of the configuration and of the state of the world, and never of an observer, a logger or a module that is on and inactive; a change in one stream moves no other | 7.4, 7.6 |
 | 7 | Every slot, shock and external call acts between ticks, and a between-ticks call that draws takes its draws at the call, in the order of the calls | 8 |
 | 8 | A rate is data and is applied by one of four devices: a rotation by the bucket of the agent ID, a carried remainder over `TicksPerYear`, a window or a gate. A cadence that does not divide `TicksPerYear` is legal and is never rounded. No rate is derived from an aggregate | 9 |
 | 9 | Ties go to a random key or a rotation, never to the lower ID, in new specs; the places in the written specs that still favour a low ID or an early role are registered as hazards with a named remedy | 10 |
 | 10 | `Work` is always called for every free agent before any job starts (two passes), whatever modules are on | 6.4.1 |
 | 11 | The privation count is set once, in phase 6, with the hunger count | 6.8, 6.12 |
-| 12 | The world contributes to a checkpoint the state of the PCG source, the next agent ID and whether it is still in its construction phase (the tick counter is written in the checkpoint's header, `spec-checkpoint.md` 5.4.3); everything else of the world is derived | 12 |
+| 12 | The world contributes to a checkpoint the next agent ID and whether it is still in its construction phase (the tick counter and the seed are written in the checkpoint's header, `spec-checkpoint.md` 5.4); no random state is saved; everything else of the world is derived | 12 |
 
 ## 3. The world's calls
 
@@ -315,7 +315,7 @@ validates its argument and returns an error rather than panic.
 
 | Option | Changes results? | In the effective configuration and the hash? | Rules |
 |--------|------------------|-----------------------------------------------|-------|
-| `WithSeed(seed uint64)` | yes: it fixes the whole stream (7.1) | **no**: the random state travels in the checkpoint instead (`spec-config.md` 8.1). It is in `WorldCreated` and in the `Info` line of construction | default 0; the last one given wins; refused on a restore (`ErrOptionContext`, 12.3) |
+| `WithSeed(seed uint64)` | yes: it fixes every stream (7.1) | **no**: the checkpoint carries the seed in its header instead (`spec-config.md` 8.1; `spec-checkpoint.md` 5.4). It is in `WorldCreated` and in the `Info` line of construction | default 0; the last one given wins; refused on a restore (`ErrOptionContext`, 12.3) |
 | `WithLogger(*slog.Logger)` | no | no | nil means the discard logger (architecture.md 6.2) |
 | `WithObserver(Observer)` | no | no | additive: each is called for every event in the order the options were given; nil is ignored |
 | `WithAudit()` | no, on a world that holds its invariants: it changes only what happens when one fails (an error where there would be a panic) | no (`spec-ledger.md` 12.4) | |
@@ -324,7 +324,7 @@ validates its argument and returns an error rather than panic.
 | `WithSpawner(name string, s Spawner)` | yes | the name only, through `World.Spawner` (`spec-spawner.md` 3.1.3) | registers under a name; `World.Spawner` selects it; same duplicate and nil rules |
 | `WithClearing(name string, c Clearing)` | yes | the name only, through `World.Clearing` (4.2) | same shape; the name `average` is `AverageClearing` and is built in; an empty name is `ErrUnknownClearing` |
 | `WithPolicy(name string, p Policy)` | yes (what an actor that names it decides) | the name only, through `Actor.Policy` (`spec-policy.md` 4.5): the code behind a name is not hashed | additive; the names `hold`, `schedule`, `rule` and `directed` (the library's own) and a name given twice are `ErrDuplicateID`; a nil `Policy` is `ErrNilExtension`; an actor's name that is neither built in nor registered is `ErrUnknownPolicy` in `NewWorld` (3.2.2) |
-| `WithReseed(salt uint64)` | yes: it sets the PCG state at a restore by the rule of `spec-checkpoint.md` 6.8.2 | **no**: it is not configuration and not a registered name; it is a call of the **sequence of calls** (8.1.1), reported in `WorldRestored` | **restore only**: on `NewWorld` it is `ErrOptionContext`; a salt of 0 is a reseed like any other (`spec-checkpoint.md` 6.8) |
+| `WithReseed(salt uint64)` | yes: it replaces the seed at a restore by the rule of `spec-checkpoint.md` 6.8.2 | **no**: it is not configuration and not a registered name; it is a call of the **sequence of calls** (8.1.1), reported in `WorldRestored` | **restore only**: on `NewWorld` it is `ErrOptionContext`; a salt of 0 is a reseed like any other (`spec-checkpoint.md` 6.8) |
 
 4.2. **A gap this spec fills.** `Clearing` is one of the four extension points
 (architecture.md 4.3), `spec-clearing.md` 8 defines its shape, and no written spec
@@ -352,7 +352,7 @@ sequence of calls (8.1.1); if it cannot change a result, the spec says so and a
 non-interference test proves it (observability-and-logging.md 8.1). An option
 never changes what is saved in a checkpoint, except `WithReseed`, the one
 restore-only option, which is a call in the sequence of calls like `AddAgent` and
-sets the random state by the rule of `spec-checkpoint.md` 6.8.2.
+replaces the seed by the rule of `spec-checkpoint.md` 6.8.2.
 
 4.5. **What is not a world option.** `WithFreeTrade` is an option of `Validate`
 and of the steady-state solver (`spec-viability.md` 9), not of `NewWorld`.
@@ -364,8 +364,9 @@ and of the steady-state solver (`spec-viability.md` 9), not of `NewWorld`.
 ### 5.1 What `NewWorld` does, in order
 
 The order is part of the golden output (architecture.md 7.4): nothing in it takes
-a random number until step 8, so the stream is fixed by the agents, not by the
-steps before them.
+a random number until step 8. The words of step 8 come from keyed streams (7.1.3):
+each agent's two creation words are a function of the seed and of its ID, so they do
+not depend on the order of the agents or of the steps before them.
 
 | # | Step | Owner |
 |---|------|-------|
@@ -374,7 +375,7 @@ steps before them.
 | 3 | `Validate`: every rule, every error, sorted; if it succeeds, the four name checks of 3.2.2. Collect the warnings | `spec-config.md` 7 |
 | 4 | Compute the configuration hash (SHA-256 of the canonical encoding of the effective configuration) | `spec-config.md` 8.2 |
 | 5 | Derive what is not state: the calendar and `TicksPerYear`, the region graph tables and the lag table, the module tables, the polity tables (the jurisdictions, the governed set and the treasury of each), the weights of each group | CAL, REG, INF, SCL, POL |
-| 6 | Seed the random source (7.1) | this spec |
+| 6 | Fix the seed, and build the one PCG and the one `Rand` (7.1.1); no word is taken | this spec |
 | 7 | Open the ledger in its construction phase (5.5) and create the accounts in the order of 5.2, the Treasury accounts of the governed jurisdictions among them | LED, POL |
 | 8 | Create the treasury pseudo-agents with their `StartMoney` and then the household agents, then the sub-steps 8a to 8c of 5.1.2: the titles (8a), the warm start (5.6), the creation draws (5.7), the initial facilities (8b), the settlement class of each region, the technology key (8c) | POL, AGT, LND, VIA, WEL, PRO, CAP, SET, TEC |
 | 9 | With `WithAudit`: run the audit once, and fail with `ErrAuditFailed` if it fails (a warm start that breaks conservation is found here, not at tick 0) | LED 12.4 |
@@ -403,9 +404,9 @@ whatever the modules that are on (5.7.2):
 6. with `Modules.Settlements`: the settlement class of each region from the household count
    (`spec-settlements.md` 4.5), no draw;
 7. **8c**, with `Modules.Technology` and some field with `DiscoveryBP` above 0: the technology
-   key, one word, after the creation draws (draw D16, 7.3; `spec-technology.md` 4.4.1); the one
-   draw of construction that is not an agent's, and it comes after all of them, so that the
-   creation draws are the same with the module on or off.
+   key, **derived from the effective seed and taking no word** (draw D16 is retired, 7.3;
+   `spec-technology.md` 4.4.1, owed under N-214); the step keeps its place after the creation
+   draws, so that the order of construction is unchanged.
 
 The audit of step 9 follows, and the events of step 10 come in the order of the sub-steps
 (5.8.2).
@@ -557,17 +558,20 @@ world takes **two** draws, in this order, whatever the configuration:
 5.7.2. The list belongs to this spec from here on (AGT 3.5.2 left it to WLD, and
 adopted it here without change). **A spec that adds a creation draw appends it to
 the table with a new row and says what the draw is for; it never makes the draw
-conditional on a module or an option**, because a stream that depends on which
-modules are on cannot be compared between runs (WEL 5.1, NFR-POP-004,
-FR-INF-047). The one word that is not an agent's creation draw is a **module-level word**, taken once at construction, after all the creation draws, by a module that is on and has work to do (7.4.2): the technology key (8c, draw D16 of 7.3), which a creation draw of an agent never is. The pseudo-agents take none. A later agent (a replacement, a birth, an
+conditional on a module or an option**, so that the words of an agent's creation
+stream do not depend on which modules are on (WEL 5.1, NFR-POP-004, FR-INF-047; under
+keyed streams a conditional word would move only the later words of that agent's own
+stream, and the rule keeps even that out). There is no module-level word: the technology
+key of 8c takes none (7.3). The pseudo-agents take none. A later agent (a replacement, a birth, an
 external agent) takes the same two, in this order, at its creation
 (`spec-agents.md` 3.5.3).
 
-5.7.3. The construction therefore takes `2 * H_agents` draws, and one more when the technology
-module has a field with `DiscoveryBP` above 0 (draw D16, 8c), and nothing else. The first draw
-of the first tick is the `2 * H_agents + 1`th of the stream, or the `2 * H_agents + 2`th with
-the technology key. A pair of runs that differs in whether a discovery field exists is not
-aligned from the first tick (`spec-technology.md` 6.3.2).
+5.7.3. The construction therefore takes `2 * H_agents` words and nothing else, each
+pair from the stream `(siteConstruction, 0, agent ID)` of its agent (7.1.4). No word has a
+position in a sequence, so the first draw of the first tick is not "the next word of the
+construction", and a pair of runs that differs in whether a discovery field exists is
+aligned from the first tick (the pair of `spec-technology.md` 6.3.2 is no longer
+misaligned: that text is stale under ADR 0008, see N-214).
 
 ### 5.8 Events and logs at construction
 
@@ -813,9 +817,10 @@ of phase 1 (P1.3, P1.5), which are guarded, and between ticks; `spec-regions.md`
 
 6.9.1. **Per region, interleaved (ruling C3).** Region `r + 1`'s computation,
 view and `Decide` come after region `r`'s execution and its creation draws. A
-consumer spawner's draws in `Decide` therefore sit between the creation draws of
-two regions, in a fixed order. The regions share no pool, so the interleaving
-changes no result of the default.
+consumer spawner's draws in `Decide` come from the stream `(siteSpawner, t, region)` and each
+new agent's creation words from its own `(siteCreation, t, agent)` (7.3), so the interleaving
+moves no word of any stream. The regions share no pool, so the interleaving changes no result
+of the default.
 
 ### 6.10 Phase 8: end
 
@@ -973,7 +978,7 @@ written specs would have implemented differently.
 | C19 | The price window | BEL 7.4, FR-CLR-032: pushed only when units traded; the first draft pushed every market | P5.1 pushes only a market that traded | BEL 7.4 | none |
 | C20 | What the cost anchor reads | PRO 9.3, FR-PRO-037, AGT 4: the prices published by the previous clearing; the first draft: the price windows | The published price left by P4.1 of the previous tick (the seed at tick 0) | PRO 9.3 | none |
 | C21 | Outcomes of pseudo-agents' orders | CLR 7.3, FR-CLR-025, FR-AGT-023, FR-BEL-008: the outcome goes to the agent's `Revise`; an estate and a counterparty have no strategy or belief | A pseudo-agent's order has no outcome and takes no D8 word | this spec | CLR 7.3, FR-CLR-025; FR-AGT-023; FR-BEL-008 repeat it |
-| C22 | Markets in any order | CLR 3.3.1, 7.2, FR-CLR-023, SCL 6.6: clearing in any order gives the same trades | Independent **given the keys**; the keys come from one stream in market order, so the fixed order is part of the draw sequence (D7) | this spec | CLR 3.3.1, 7.2, FR-CLR-023; SCL 6.6 |
+| C22 | Markets in any order | CLR 3.3.1, 7.2, FR-CLR-023, SCL 6.6: clearing in any order gives the same trades | Independent **given the keys**; each market's keys come from its own stream `(siteClearing, t, region, commodity)` (ADR 0008, 7.3), so the fixed order of the markets is no longer part of the draw sequence and a market's keys do not depend on the markets cleared before it | this spec | CLR 3.3.1, 7.2, FR-CLR-023; SCL 6.6 |
 | C23 | Warm money and stock | AGT 19, EST 2.3, FR-VIA-032: the group's entry replaces the defaults; the first draft created both | A group with a warm entry is created with its entry in place of the defaults, one `initial` (5.4.2, 5.6.1 item 3) | AGT 19, VIA | none |
 | C24 | Two specs claimed P1.7a | CRD 8.1.1 (the settlement of the claims, "the new position P1.7a") and FIS 5.3, 6, 8.4, 10.1, 12 (taxes, remittances and payouts, "P1.7a (new)"); INS, SAV, RSK, CAP and PLC cite CRD's name | By 6.1.1 the letter goes with the order, not the author: the position that runs first after P1.7 is **P1.7a CRD**, the second **P1.7b FIS**. Debt service therefore runs before taxes, and a debtor short of cash pays its claim and the tax is forgiven for the shortfall (FIS 5.3) | this spec | FIS: P1.7a becomes P1.7b everywhere (about twenty mentions); CRD, INS, SAV, RSK, CAP and PLC keep P1.7a |
 | C25 | Draw IDs of the later modules | RSK 11.2 takes D13, D14 and D15; PLC 7.1.1 takes "D13"; TEC 6.3.1 takes "D16", which is also the label of the register's damper D16 (`spec-stability.md` 5: another namespace); EMP's first "D13" is withdrawn | **D13, D14, D15 RSK; D16 TEC; D17 PLC**, in the order of a run in 7.3; PLC's built-ins take none and D17 is a consumer's own words. Prose that could mean the register's damper says "draw D16" | this spec | PLC: "D13" becomes "D17"; TEC and RSK keep theirs; any text that writes D13 to D17 for a draw says "draw" |
@@ -988,35 +993,120 @@ walk after the money flows and before the directive; the contract round after th
 last plan and before the estates' asks and the counterparties' orders; the
 migration pass after the entry step of every region.
 
-## 7. The random stream
+## 7. The keyed random streams
 
-### 7.1 One source, and how a seed becomes its state
+Randomness is a function of `(seed, site, tick, id)` and of nothing else
+([ADR 0008](../adr/0008-random-draws-are-keyed-streams.md), architecture.md 7.3, which
+states the rule and wins over any text of this spec that disagrees). A world holds one
+seed and no stream position. At the start of each **draw site** (a position, or a call
+into an extension, that takes words) it reseeds its one PCG from a key; the words that
+site takes are the words of that stream, in order. No draw depends on how many words
+another site, another entity or another tick took. Open points 1 and 2 of the ADR are
+answered here (7.1.3, 7.1.4, 7.3); point 3 (a site with no natural entity) stays open
+for the rows outside the slice (7.3).
 
-7.1.1. A world has one `*rand.PCG` (`math/rand/v2`) and one `*rand.Rand` built on
-it with `rand.New`, created once at construction (architecture.md 7.3). The world
-holds both: the `Rand` is what extensions receive (architecture.md 7.7), the `PCG`
-is what a checkpoint saves (12). No other source exists in the library.
+### 7.1 One seed, one source, and the key of a stream
 
-7.1.2. **The seeding rule** (a rule constant, part of the golden output; changing
-it is a behaviour change, architecture.md 6.6). The state of the PCG is the first
-two outputs of the SplitMix64 generator started from the seed:
+7.1.1. A world has one **seed**, a `uint64`: the argument of `WithSeed`, or, after a
+restore with `WithReseed`, the seed that CHK 6.8.2 derives (the **effective seed**). It
+has one `*rand.PCG` (`math/rand/v2`) and one `*rand.Rand` built on it with `rand.New`,
+created once at construction (architecture.md 7.3). The `Rand` is what extensions
+receive (architecture.md 7.7). Between two site calls the PCG holds the state the last
+stream left, and nothing reads it: **the position in a stream is not world state**, and a
+checkpoint saves the seed and no PCG state (12). No other source exists in the library.
+
+7.1.2. **The finaliser** (a rule constant, part of the golden output; changing it is a
+behaviour change, architecture.md 6.6). It is the finaliser of the SplitMix64 generator,
+without the increment, and the one helper of `internal/ordering` that the ration's key
+(`spec-resources.md` 5.3.3) shares:
 
 ```
+γ = 0x9E3779B97F4A7C15                                  the increment
 finalise(z):  z = (z xor (z >> 30)) * 0xBF58476D1CE4E5B9      (mod 2^64)
               z = (z xor (z >> 27)) * 0x94D049BB133111EB      (mod 2^64)
               return z xor (z >> 31)
-
-s  = seed
-s  = s + 0x9E3779B97F4A7C15 ;  hi = finalise(s)
-s  = s + 0x9E3779B97F4A7C15 ;  lo = finalise(s)
-source = rand.NewPCG(hi, lo)
 ```
 
-The finaliser is the one of `spec-resources.md` 5.3.3 (the ration's key): one
-function, one helper in `internal/ordering`.
+All arithmetic of this section is modulo 2^64 on `uint64`. In Go, `2 * γ` written as a
+constant expression overflows `uint64` and does not compile: write `s + γ + γ`, or hold
+γ in a variable.
 
-7.1.3. **Test vectors**, produced with Go 1.25 in Docker (`models/wld/seed.py`
-reproduces them in Python, 18). The first two words of `Uint64()` after seeding:
+7.1.3. **The key of a stream** (a rule constant, part of the golden output). A stream is
+named by the seed and by `(site, tick, id)`, with a fourth word `sub` for a site whose
+row says it needs one (7.3):
+
+```
+s = seed
+for w in (site, tick, id):                  (a fourth word, sub, when the row has one)
+    s = finalise(s + w + γ)
+hi = finalise(s + γ)
+lo = finalise(s + γ + γ)
+PCG.Seed(hi, lo)                            the first word taken is the first word of the stream
+```
+
+Types and widths:
+
+| Word | Type | Source |
+|------|------|--------|
+| `seed` | `uint64` | the effective seed (7.1.1) |
+| `site` | `uint64` | a constant of 7.1.4 |
+| `tick` | `int64` | the tick of the step the draw belongs to (7.3.2) |
+| `id` | `int64` | the ID the row names: an `AgentID`, a `RegionID`, a `CommodityID`, widened to `int64` |
+| `sub` | `int64` | the second ID of a row that names a pair (a commodity, with a region or an agent) |
+
+A signed value enters as its **two's-complement** `uint64` (in Go, `uint64(x)` of the
+`int64`), so `-1` is `0xFFFFFFFFFFFFFFFF`; there is no sign test and no error, and a
+negative tick or ID is never a reason to refuse a draw. The arity of a site (three words
+or four) is fixed by its row and never varies. An empty fold (`s = seed`, no word) is
+the seeding rule that this section replaces; no site draws from it, and its four rows in
+7.1.5 pin the finaliser and the generator.
+
+The cost of a site call is one `Seed` and `3 + 2` finaliser evaluations (`4 + 2` with a
+`sub`); it allocates nothing, because the PCG and the `Rand` are built once and
+`PCG.Seed` writes the two words in place. A `rand.Rand` holds no state beyond its source
+(checked on Go 1.25 and Go 1.27 over a battery of ten methods, after a reseed in the middle of a stream), so a
+reseed of the PCG resets the whole stream.
+
+7.1.4. **The site constants.** A site constant is a literal 64-bit value, fixed here and
+in `random.go`. It does not depend on the position of its row in 7.3, on the draw ID, on
+the number of sites or on the order of the modules: a later row **appends** its own
+name and value, and no constant ever changes (a change is a behaviour change, 6.6). The
+sites of the slice are:
+
+| Name | Row | Value | Arity: the words after `site` |
+|------|-----|-------|-------------------------------|
+| `siteConstruction` | D1 | `0xC103123756D13F20` | `tick` (always 0), `id` = the agent |
+| `siteWork` | D3 | `0xDE594838D3779A37` | `tick`, `id` = the agent |
+| `siteTrade` | D5 | `0xFC14CD10E8A8EF43` | `tick`, `id` = the agent |
+| `siteClearing` | D7 | `0xD364E6AE73E1313F` | `tick`, `id` = the region, `sub` = the commodity |
+| `siteOutcome` | D8 | `0xD9CC0A517EB0D9F5` | `tick`, `id` = the agent, `sub` = the commodity |
+| `siteSpawner` | D9 | `0xBE0B1D169200E9FF` | `tick`, `id` = the region |
+| `siteCreation` | D10 | `0x9B8FFA303CB545DC` | `tick`, `id` = the new agent |
+
+The rows D2, D4, D6, D11, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
+constant yet**: each is appended by the change that builds its module, with its name,
+its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
+code calls into an extension, or takes a word, at a row that has no constant (the
+modules of those rows are off in the slice). D16 takes no word (7.3).
+
+Why the values are what they are. The first step of the fold adds the site to the seed,
+so `(seed a, site X)` and `(seed b, site Y)` name one stream if and only if
+`a - b = Y - X`. Seeds are small integers chosen by people, so the sites must not be
+small or near each other: no two of them may differ by less than 2^32 (a `Guard:`
+test, testing.md 5.2). Each value is the first eight bytes, big-endian, of SHA-256 of
+`economy-sim/site/` and the name (`models/wld/seed.py` asserts it). That is a record of
+where the literal came from, which anyone can check, and not a rule: the literal is
+the rule.
+
+7.1.5. **Test vectors**, produced by `models/wld/seed.py` and printed again by a
+separate Go program that uses `math/rand/v2` only, on Go 1.25.14 and Go 1.27.2; the two
+are equal in every line. The PCG is a specified generator (the PCG-DXSM that its documentation names), so
+the words are a function of the state and the vectors above are the check; the reduction
+methods of `rand.Rand` are not part of the generator, which is why the world's own draw
+is defined from `Uint64()` alone (7.2). All values are hexadecimal unless marked.
+
+(a) **A bare seed** (the empty fold; the rows that were checked against Go 1.25 before
+ADR 0008 and that the finaliser test of the first code keeps):
 
 | Seed | `hi` | `lo` | First word | Second word |
 |-----:|------|------|------------|-------------|
@@ -1025,80 +1115,143 @@ reproduces them in Python, 18). The first two words of `Uint64()` after seeding:
 | 2 | `975835de1c9756ce` | `bfc846100bfc1e42` | `a28db69c539314fb` | `fe57a921339b50b9` |
 | 42 | `bdd732262feb6e95` | `28efe333b266f103` | `61c88529c9612c1b` | `2608d8a3075aa168` |
 
-7.1.4. **Why a mix, and what it does not claim.** Seeds are small integers chosen
-by people, so seeds 0 and 1 would differ in one bit of a 128-bit state if they
-were passed straight through (`rand.NewPCG(seed, 0)`). The mix makes every seed an
-unrelated point of the generator's cycle. The model of 18 measures that the first outputs of neighbouring
-seeds (0 to 2 000, four words each) differ in 31.99 bits of 64 on average under the
-mix and 31.94 under the plain rule, so the mix is chosen for the guarantee and for
-the cost of one function, not because the plain rule fails.
-The state of a PCG is two `uint64`; `PCG.MarshalBinary` writes 20 bytes
-(`"pcg:"` and 16 bytes) and `UnmarshalBinary` restores it exactly, which was
-checked.
+(b) **A stream key.** `s` is the value after the fold. The last two columns are the
+world's draw (7.2.1) of bound 1 on the first word and of bound 100 on the second: the
+first is 0 and **still consumes its word**, so the second draw sees the second word.
 
-7.1.5. The generator's sequence is a documented property of `rand.PCG`; the
-reduction methods of `rand.Rand` are not part of that guarantee. This is why the
-world's own draws are defined from `Uint64()` alone (7.2).
+| Row | Seed | Site | `tick` | `id` | `sub` | `s` | `hi` | `lo` | First word | Second word | `draw(1)` | `draw(100)` |
+|-----|-----:|------|-------:|-----:|------:|-----|------|------|------------|-------------|----------:|------------:|
+| k1 | 0 | `siteWork` | 0 | 0 | | `f26e83000fb3a188` | `79ae1abc6fb3c555` | `32a6affd0dbf0521` | `264d986499a1a1fa` | `0fb3474a976f0acf` | 0 | 6 |
+| k2 | 1 | `siteTrade` | 5 | 17 | | `0e4289002a489b3d` | `fba1decca480b034` | `59c9e7d8138ce36b` | `e87e37a8f2ed3a12` | `46c2cfef3d61d69c` | 0 | 27 |
+| k3 | 42 | `siteClearing` | 100 | 2 | 3 | `90d85e42a2621beb` | `92cfbdaff0085569` | `df1d7be0b72c91fe` | `366090c9bf387982` | `fe2c271dd54ed665` | 0 | 99 |
+| k4 | 42 | `siteOutcome` | 100 | 17 | 3 | `bb905db0b8a8bb2e` | `4c1a052c0514495c` | `1ebc9cbf8410ab07` | `30967dc8ee4ec36e` | `d5b237e50696f3bf` | 0 | 83 |
+| k5 | 2^64 - 1 | `siteConstruction` | 0 | 4 | | `a567852979e47fd7` | `7e12e8d9e610f1f3` | `11e76e20e84424df` | `64d9772cd475bf00` | `4dd6b1aa70460b76` | 0 | 30 |
+| k6 | 7 | `siteCreation` | -1 | 12 | | `8a6566c1ca36e2f3` | `290ef3893fee12ef` | `aa22a25ddaace732` | `1b6b4a321827daf5` | `240b83bc1e00988b` | 0 | 14 |
+| k7 | 7 | `siteSpawner` | 3 | -1 | | `ef7edb14a4433105` | `11f3bdf788e5ffb9` | `4a115493bf1bf035` | `eeeaa6fd69c7b339` | `3355b2e3c0d174dd` | 0 | 20 |
+| k8 | 7 | `siteSpawner` | -1 | -1 | | `b4a503670dc250f1` | `cc1b665a6f86d8ba` | `6901bc968a06bc0f` | `f5455bb2a283bc00` | `85eba190e6f38b27` | 0 | 52 |
+| k9 | 2^63 | `siteTrade` | 2^40 | 2^40 + 1 | | `f01e597ee04203eb` | `87e7225b79ecaea7` | `ca410d7c919c53eb` | `3c277642ea207186` | `510c6f3a642bcd9d` | 0 | 31 |
+
+Rows k6 to k8 pin the signed conversion (a negative tick or ID never occurs in a run,
+`NoRegion` and `NoAgent` aside, and the conversion is pinned all the same); k9 pins
+values above 2^32 in both words.
+
+(c) **`K(t, id)`**, the stateless key of 7.1.7:
+
+| `t` | `id` | `K(t, id)` |
+|----:|-----:|------------|
+| 0 | 0 | `e220a8397b1dcdaf` |
+| 1 | 0 | `6e789e6aa1b965f4` |
+| 0 | 1 | `910a2dec89025cc1` |
+| 5 | 17 | `14db9121e4c732ea` |
+| 100 | 3 | `a854cdf21653e5e5` |
+| 2^40 | 123456789 | `2cd5718615e1be22` |
+| -1 | -1 | `b4d055fcf2cbbd7b` |
+| -1 | 0 | `0000000000000000` |
+
+`K(0, 0)` and `K(1, 0)` equal the `hi` and `lo` of the bare seed 0 because all three are
+`finalise(γ)` and `finalise(2γ)`: a test that compares a stream state with a key must
+not take them for one rule. `K(-1, 0)` is 0 because `-γ + γ` is 0 and `finalise(0)` is 0;
+a key of 0 is a legal key.
+
+(d) **The reseed** `seed' = finalise(seed xor finalise(salt))` and its sixteen vectors are
+in `spec-checkpoint.md` 6.8.2 and 17.5, from the same file.
+
+7.1.6. **What the chain claims, and what it does not.** Three finaliser evaluations
+(four with a `sub`) separate the seed from the state, so a one-bit change in the seed, a
+site, a tick or an ID changes about half the bits of the first outputs: the model of
+`seed.py` measures 32.04, 32.03 and 32.03 differing bits of 64 on average over 2 000
+neighbouring IDs, ticks and seeds (the bare mix gives 31.99 and the plain
+`NewPCG(seed, 0)` 31.94, so the mix is chosen for the guarantee and for the cost of one
+function, not because the plain rule fails). The independence of two streams rests on the
+mixer, which is the assumption the stateless keys already make (`K`, the ration's key).
+A stream is a function of the 64-bit value `s`, so two keys collide, and then draw the
+same words, with probability about 2^-64 for one pair; over a run with `n` keys the chance
+of some pair is about `n^2 / 2^65`, so about 0.7% for `5 * 10^8` keys (5 000 agents, ten
+sites, 10 000 ticks), and the consequence is two draws of `n` that are equal, which
+changes no statistic and is deterministic. The mixer is not a cryptographic one and no
+claim is made that a stream cannot be predicted (the stream is not for secrets,
+`WithSeed` says so).
+
+7.1.7. **The stateless key `K(t, id)`** (a rule constant, part of the golden output),
+the key of RES 5.3.3 and the tie-break of 10.1.1, in the form that FR-RES-019 cites:
+
+```
+x = t * γ + id            (mod 2^64, with t and id as in 7.1.3)
+z = x + γ
+K(t, id) = finalise(z)
+```
+
+that is, `K(t, id) = finalise(t * γ + id + γ)`: the extra increment before the mix is
+part of the rule (FR-WLD-091 said `finalise(t * γ + id)` and omitted it, and RES 5.3.3
+and the vectors of 7.1.5 (c) have it). It takes no word, keeps no state and is not a
+stream. A tie broken by it is a total order that ends in the ID (10.1.1).
 
 ### 7.2 What a draw is
 
-7.2.1. **The world's draw.** For a bound `n` of at least 1:
+7.2.1. **The world's draw.** For a bound `n` of at least 1, from the stream in use:
 
 ```
 draw(n) = high word of ( Uint64() * n )              a value in [0, n)
 ```
 
-with `math/bits.Mul64`. It consumes exactly **one source word**, has no loop and
-no rejection, and its bias is at most `n / 2^64`, which is below any quantity the
-library handles. It is the reduction of `spec-beliefs.md` 5.2 and 6, adopted for
-every draw the world takes (ruling C8 of 6.12). A bound of 1 still consumes a word,
-so the stream does not depend on a bound that happens to be 1 (BEL 6). A range
-`[lo, hi]` is `lo + draw(hi - lo + 1)`. The raw `Uint64()` is used where a key is
+with `math/bits.Mul64`. It consumes exactly **one source word** of that stream, has no
+loop and no rejection, and its bias is at most `n / 2^64`, which is below any quantity
+the library handles. It is the reduction of `spec-beliefs.md` 5.2 and 6, adopted for
+every draw the world takes (ruling C8 of 6.12). A bound of 1 still consumes a word
+(row k1 of 7.1.5), so a stream does not depend on a bound that happens to be 1 (BEL 6).
+A range `[lo, hi]` is `lo + draw(hi - lo + 1)`. The raw `Uint64()` is used where a key is
 wanted (the tie-break key of a market, a contract key, the world's outcome draw).
 
-7.2.2. **An extension's draws.** A `Strategy`, `Spawner` or `Clearing` receives the
-world's `*rand.Rand` and may call any method of it. Such a method may consume more
-than one word: in the check of 7.1, `Int64N` with a bound below 2^32 took one word
-in each of 200 000 calls, and with a bound near 2^62 about 1.33. The number is a
-deterministic function of the source state, so it never breaks reproduction, but
-it is not one word per call, and this spec counts an extension's draws as "its
-own" (7.3).
+7.2.2. **An extension's draws.** A `Strategy`, `Spawner`, `Clearing` or `Policy`
+receives the world's `*rand.Rand`, reseeded for the call it is in, and may call any
+method of it. Such a method may consume more than one word: in the check of 7.1, `Int64N` with a
+bound below 2^32 took one word in each of 200 000 calls, and with a bound near 2^62
+about 1.33. The number is a deterministic function of the stream, so it never breaks
+reproduction, and it moves only **the later draws of the same stream** (a strategy that
+takes more words from its agent's `Trade` stream moves that agent's later words in that
+call and nothing else). The extension may not keep the `Rand` after the call returns
+(architecture.md 7.7).
 
-7.2.3. **The unit of this spec** is therefore the **word**: a row of 7.3 says how
-many words the world takes at that position, and a consumer's own calls are added
-in the order they are made.
+7.2.3. **The unit of this spec** is therefore the **word**: a row of 7.3 says how many
+words the world takes from its stream at that position, and a consumer's own calls are
+added to the same stream in the order they are made.
 
 ### 7.3 The draws of a run
 
-Every draw the library takes, in the order of a run. IDs are stable; a spec that
-adds a draw appends a row with a new ID and states its count.
+Every draw the library takes, in the order of a run. IDs are stable; a spec that adds a
+draw appends a row with a new ID, its count and its stream (7.1.4). The last column
+names the stream: the site, then the `id` (and the `sub`) with the `tick` of 7.3.2.
+`none yet` means that the row has no site constant (7.1.4); the `id` after it is the
+proposal of N-214 that the owner confirms when it appends the constant, and ADR 0008's
+open point 3 (a site with no natural entity: D2, D13) stays open for it.
 
-| ID | When and where | Taken by | How many | In what order | Owner |
-|----|----------------|----------|----------|---------------|-------|
-| D1 | construction, after the warm start (5.7) | the world, per household agent | 2: the target ratio, then the residue | ascending agent ID | WEL 5.1; PRO 6.6.2 |
-| D16 | construction, step 8c (5.1.2), after the creation draws and before the audit of step 9, only when the technology module has a field with `DiscoveryBP` above 0 | the world: the technology key | 1 | once | TEC 4.4.1 |
-| D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | PLC 7.1.1 |
-| D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | EXT 5.1, 6.4 |
-| D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | AGT 7.1 |
-| D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | RSK 4.2 |
-| D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | INF 5.5.2 |
-| D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | AGT 7.5.3 |
-| D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | RSK 4.1 |
-| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | MER 9.4.2 |
-| D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the world's `Rand` (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | CLR 4.2 |
-| D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | BEL 4.5, 5.1.1 |
-| D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | SPN 3.1.2, 10.2 |
-| D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | AGT 3.5.3 |
-| D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | MIG 6.2.1, 10.2.1; INF 6.1.3 |
-| D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | RSK 6.2 |
-| D12 | between ticks, at the call | the world, per agent that INT adds: D10's two | 2 | in the order of the calls | AGT 10 |
+| ID | When and where | Taken by | How many | In what order | Stream | Owner |
+|----|----------------|----------|----------|---------------|--------|-------|
+| D1 | construction, after the warm start (5.7) | the world, per household agent | 2: the target ratio, then the residue | ascending agent ID | `siteConstruction`, tick 0, the agent | WEL 5.1; PRO 6.6.2 |
+| D16 | construction, step 8c (5.1.2), only when the technology module has a field with `DiscoveryBP` above 0 | **no word**: TEC derives its key from the effective seed (`spec-technology.md` 4.4.1, owed under N-214) | 0 | | none | TEC 4.4.1 |
+| D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | none yet: the actor | PLC 7.1.1 |
+| D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | none yet: the line (open point 3) | EXT 5.1, 6.4 |
+| D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | `siteWork`, the tick, the agent | AGT 7.1 |
+| D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | none yet: the route row (open point 3) | RSK 4.2 |
+| D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | none yet: the agent | INF 5.5.2 |
+| D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | `siteTrade`, the tick, the agent | AGT 7.5.3 |
+| D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | none yet: the shipment | RSK 4.1 |
+| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | none yet: the offer or take | MER 9.4.2 |
+| D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the `Rand` it receives (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | `siteClearing`, the tick, the region, the commodity | CLR 4.2 |
+| D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own in `Revise`; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | `siteOutcome`, the tick, the agent, the commodity: **one stream per order** | BEL 4.5, 5.1.1 |
+| D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | `siteSpawner`, the tick, the region | SPN 3.1.2, 10.2 |
+| D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | `siteCreation`, the tick, the new agent | AGT 3.5.3 |
+| D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | none yet: the agent | MIG 6.2.1, 10.2.1; INF 6.1.3 |
+| D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | none yet: the row, or the agent and the store class | RSK 6.2 |
+| D12 | between ticks, at the call | the world, per agent that INT adds: D10's two creation words | 2 | in the order of the calls | none yet: the new agent, with the tick of the next step | AGT 10 |
 
-The rows are in the order of a run, not of the ID. The IDs D13 to D17 are the draw IDs of ruling C25 (6.12). D16 is not the damper D16 of the
-register (`spec-stability.md` 5): wherever the two could be meant a text says "draw D16".
-The draw D17 and D3, D5 and D9 of a consumer's extension are in call order and are not
-terms of 7.3.1.
+The rows are in the order of a run, not of the ID. The IDs D13 to D17 are the draw IDs
+of ruling C25 (6.12). D16 is not the damper D16 of the register (`spec-stability.md`
+5): wherever the two could be meant a text says "draw D16". The draw D17 and D3, D5 and
+D9 of a consumer's extension are in call order and are not terms of 7.3.1.
 
-7.3.1. **The words of one tick**, for a world with no consumer extension, is
+7.3.1. **The words of one tick**, for a world with no consumer extension, is the sum of
+the words of the streams of the tick:
 
 ```
 walk lines                                        D2
@@ -1114,47 +1267,73 @@ walk lines                                        D2
 + common store rows with P > 0 + stores drawn (Risk)  D15
 ```
 
-with `E` the information error. Each term is a function of the configuration and
-of the state at the start of the tick (7.4): the number of walking lines, of
-informed agents and the tradable pairs they can see, of intents the strategy
-considers, of orders the agents' budgets admit, of agents the ladder and the
-module of population create, of households that the migration rule pushes. The risk
-module's three terms are present only with `Modules.Risk`, and D16 (a construction word)
-and D17 (a consumer's own) are no term of a tick.
+with `E` the information error. Each term is a function of the configuration and of the
+state at the start of the tick (7.4): the number of walking lines, of informed agents
+and the tradable pairs they can see, of intents the strategy considers, of orders the
+agents' budgets admit, of agents the ladder and the module of population create, of
+households that the migration rule pushes. Under ADR 0008 the terms are counts of
+**separate streams** and no term moves a word of another: a number that changes a term
+changes the words of its own stream and of nothing else. The risk module's three terms
+are present only with `Modules.Risk`, and D17 (a consumer's own) is no term of a tick.
+
+7.3.2. **The tick of a key, and construction against a call between ticks.** The `tick`
+word is the tick of the step that takes the draw, the value `Tick()` has during that
+step, whatever the position (P7.1 of tick `t` keys `t`, though P7.2 reads as of
+`t + 1`). At construction it is 0. A call between ticks that draws (D12) uses `Tick()`,
+which is the tick the next step runs, and so is **0 for a call made before the first
+step, the same tick as construction**. The two are told apart **by the site alone**:
+construction draws at `siteConstruction` and a call at the site of its own row (D12,
+appended with its constant), and a draw about an agent is keyed by an ID that no other agent has (IDs are never
+reused, 5.3.1). A row whose key could be taken twice in one run for one `(site, tick, id)` is a
+defect of the row, and its owner adds a component (a `sub`) when it appends the site.
+
+7.3.3. **A site is called once per key.** D1 once per household agent at construction,
+D3 once per free agent per tick, D5 once per agent per tick, D7 once per market with an
+admitted order per tick, D8 once per admitted order of a household agent, D9 once per
+region per tick, D10 once per created agent. At each call the world reseeds before it
+calls the extension or takes its first word, so that what a consumer's code draws in the
+call is a function of the key and of its own earlier draws in the same call.
+A call to the default strategy at a site where the default takes no word needs no
+reseed: the reseed has no observable effect, so the world may skip it.
 
 ### 7.4 The count is a function of configuration and state
 
-7.4.1. **Rule.** The number of draws in a tick, and the order of every one of them,
-depend on the configuration, the state of the world, the registered extensions and
-the calls made between ticks. They do **not** depend on: an observer, a logger,
-`WithAudit`, whether an event was constructed, a snapshot or any read, the
-configuration hash, the number of `Run` calls the ticks were split into, or
-whether the world was checkpointed and restored in between.
+7.4.1. **Rule.** The number of draws in a tick, and the order of every one of them
+within its stream, depend on the configuration, the state of the world, the registered
+extensions and the calls made between ticks. They do **not** depend on: an observer, a
+logger, `WithAudit`, whether an event was constructed, a snapshot or any read, the
+configuration hash, the number of `Run` calls the ticks were split into, or whether the
+world was checkpointed and restored in between. And they do not depend on the number of
+words that **another** site, entity or tick took (7.6).
 
-7.4.2. **Modules.** A module that is on and does nothing takes no word and leaves
-the stream as it would be with the module off (FR-INF-047, FR-RES-045,
-FR-POP-036, FR-MON-041, FR-SUB-035, FR-EXT-021, FR-EMP-061, FR-ORG-017, FR-POL-020, FR-CAP-002, FR-STO-037). A
-module that adds a **creation** draw adds it to D1's table for every agent whatever its
-switches (5.7.2). The one word of a module that is not an agent's creation draw is taken at
-construction, once, by a module that is on **and has work to do** (the technology key,
-D16, 8c): a module that is on and has no field with a discovery rate takes none, and the
-creation draws are the same with it on or off.
+7.4.2. **Modules.** A module that is on and does nothing takes no word, because it calls
+no site (FR-INF-047, FR-RES-045, FR-POP-036, FR-MON-041, FR-SUB-035, FR-EXT-021,
+FR-EMP-061, FR-ORG-017, FR-POL-020, FR-CAP-002, FR-STO-037). Under keyed streams this is
+no longer what keeps two runs aligned, since a module's words are in streams of its
+own: it is kept because a site that is not called takes no `Seed` and no word. A module
+that adds a **creation** word adds it to D1's table for every agent whatever its switches
+(5.7.2), so that the words of an agent's creation stream do not depend on the modules
+that are on. There is no module-level word: D16 takes none (7.3).
 
-7.4.3. **A draw that might be skipped is taken anyway** when skipping would make
-the count depend on an outcome: the default strategy draws for every intent it
-considers even when affordability then removes the order (`spec-agents.md` 7.5.3),
-a pushed household draws for every candidate whether or not a rumour is offered, a
-belief draws for every outcome whether or not the gate opens. The draw is paid for
-the paired comparison it keeps exact (WEL 5.1; 7.6.1). The storage, saving and
-institutions modules change the **count** of D5 to D8 by what they refuse, cut or bar
-(a bid cut by the room, a project that changes a budget, a place a household is refused),
-because those counts are functions of state (7.4.1); none of them adds a word.
+7.4.3. **A draw that might be skipped is taken anyway** inside one stream, when
+skipping would make a later word of that stream depend on an outcome: the default
+strategy draws for every intent it considers even when affordability then removes the
+order (`spec-agents.md` 7.5.3), so that the later intents of the same agent keep their
+words; a pushed household draws for every candidate whether or not a rumour is offered.
+It is an owner's choice inside a stream and no longer a rule that keeps two runs aligned
+(the belief draw per outcome is a stream of its own, D8, and needs it for nothing). The
+storage, saving and institutions modules change the **count** of D5 to D8 by what they
+refuse, cut or bar (a bid cut by the room, a project that changes a budget, a place a
+household is refused), because those counts are functions of state (7.4.1); none of them
+adds a word, and a count that falls moves only the words of its own stream.
 
-7.4.4. **How it is tested.** A run with a recording observer and a capturing
-logger and a run with neither produce the same bytes of `Snapshot` at every tick and
-the same final state of the PCG (observability-and-logging.md 8.1); a run split
-into `Run(n)` calls, and a run checkpointed and restored at a tick boundary, equal
-an uninterrupted run (FR-WLD-063).
+7.4.4. **How it is tested.** A run with a recording observer and a capturing logger and a
+run with neither produce the same bytes of `Snapshot` at every tick and the same
+effective seed (observability-and-logging.md 8.1); a run split into `Run(n)` calls, and
+a run checkpointed and restored at a tick boundary, equal an uninterrupted run
+(FR-WLD-063). A world that draws is also tested for **alignment**: two runs of one seed
+that differ in a parameter, a shock or a module draw the same word at every
+`(site, tick, id[, sub])` they share (FR-WLD-069).
 
 ### 7.5 What does not draw
 
@@ -1169,28 +1348,36 @@ the credit round's and the cover round's order (the stateless key) and the settl
 remainders (CRD 6, 8; INS 7.3, 8), the tiers of tenure, the apportionment and the rent step
 (LND 8.2), the labour round (ties by the keyed `K(t, id)`, 10.1.1; EMP 5.3), the membership
 round (ORG 4), the fiscal flows' pro rata cut (a keyed tie, FIS 10.2.5), the technology
-step's keyed discovery hit (TEC 4.6.4), the settlement review, the facility step, the polity
+step's keyed discovery hit (TEC 4.6.4, whose key is derived from the effective seed and
+takes no word), the settlement review, the facility step, the polity
 and the built-in policies.
 
-### 7.6 Hazard: a stream is positional
+### 7.6 The positional hazard (WLD-A5), answered by ADR 0008
 
-7.6.1. One stream for the whole world is fixed by architecture.md 7.3. Its
-consequence is that **every draw's value depends on how many were taken before
-it**: one extra draw early in a run changes every later draw of the run. Two runs
-that differ in one datum that changes the draw count are statistically alike and
-no longer draw for draw. This is registered as WLD-A5 (17). The mitigations are the
-rules of 7.4.3 (draw anyway) and 5.7.2 (a creation draw is unconditional), and a
-note for EXP: a paired comparison is **exact**, draw for draw, and a variance
-reduction that the harness measures, only while the two runs are aligned (equal
-words drawn at every boundary, `spec-experiments.md` 7.3), as they are for a
-parameter that changes no draw count, such as the spread of the target (WEL 5.1).
-The estimate of a difference of means from seed-matched runs is unbiased, aligned
-or not (`spec-experiments.md` 7).
+7.6.1. Before ADR 0008 one stream served the whole world, and **every draw's value
+depended on how many were taken before it**: one extra draw early in a run changed every
+later draw (the model of `stream.py`: 98.00% of the later draws of a toy world differ). That
+hazard is closed between sites, entities and ticks: with a stream per `(site, tick,
+id)` one extra word moves only the later words of its own stream (the same model: 1 of 10 000,
+0.01%), and **two runs of one seed that differ in a parameter, a shock or a module are
+aligned by construction**: they draw the same value at every key they share and diverge
+through state only. A paired comparison is therefore exact in the draws for every knob,
+and the variance reduction that the harness measures (`spec-experiments.md` 7.4) is a
+number of the state's divergence alone. The estimate of a difference of means from
+seed-matched runs is unbiased, aligned or not.
 
-7.6.2. A derived sub-stream per purpose (seed mixed with the tick and the purpose)
-would remove the propagation, and was not adopted: the rule of architecture.md 7.3
-is one source, and the golden output and the checkpoint (one PCG state) are
-simpler for it. It is open question 4 (22).
+7.6.2. What remains is narrower. **Inside one stream the draws are still positional**: an
+intent added to an agent's `Trade` moves that agent's later intents' words in that tick; an
+admitted order added to a market moves the later keys of that market in that tick (D7). A
+change of an ID (adding a region, an outside node, a gate or a governed jurisdiction
+shifts every household's ID, 5.3.2) keys every per-agent stream by another ID, so a
+paired comparison across such a change is not aligned, and is made over seeds
+(N-162). And a draw that changes a state changes every later decision that reads it:
+that divergence is the effect being measured and not a defect.
+
+7.6.3. A stream per site call also means that markets no longer draw from one sequence in
+market order (ruling C22): P4.1 could clear its markets concurrently once architecture.md
+12.2 has an owner and a lifecycle for the goroutines (open question 7).
 
 ## 8. Between ticks
 
@@ -1216,7 +1403,8 @@ Consequences, which hold for every call of 8.2 and 8.3:
    calls** that architecture.md 7.4 names beside the seed and the configuration.
    `WithReseed` of a restore (4.1) is also a call of that sequence, and acts at the
    restore and not between ticks;
-6. a call that draws takes its draws at the call, in call order (D12).
+6. a call that draws takes its draws at the call, from the stream of its row (D12, 7.3),
+   keyed by the tick the next step runs.
 
 8.1.2. A call on a failed world returns `ErrWorldFailed` (3.5); during a step,
 `ErrInStep` (3.6).
@@ -1469,9 +1657,10 @@ No slot of 8.2 changes a cadence. A blackout that slows the news would be a slot
 | Proportional deaths and weights | P7.1 | per-agent carries with a Weyl start, so no agent is first |
 
 10.1.1. **The rule for new ties.** A tie between candidates of equal merit is
-broken by the stateless key `K(t, id)` of RES 5.3.3 (SplitMix64 of
-`t * 0x9E3779B97F4A7C15 + id` in modular `uint64` arithmetic, by design: the
-wrap is the hash, not an overflow, architecture.md 3.5), smaller first, then by ID. It takes no draw, needs
+broken by the stateless key `K(t, id)` of RES 5.3.3 (the SplitMix64 finaliser of
+`t * γ + id + γ`, γ = `0x9E3779B97F4A7C15`, in modular `uint64` arithmetic, by design: the
+wrap is the hash, not an overflow, architecture.md 3.5; the exact form and the vectors are
+7.1.7 and 7.1.5 (c)), smaller first, then by ID. It takes no draw, needs
 no state, and changes every tick, so a lower ID is never systematically first. In the model of 18 (`rotation.py`: 100 tied candidates, a cap of 5, 1 000 ticks, 50 admissions each in expectation) the lower ID wins all 5 000 admissions for the first five IDs and none for the rest, the key gives each candidate 36 to 73, and a rotation of the starting index gives exactly 50. A
 tie broken by "the lower ID" in a new spec needs a reason written in it.
 
@@ -1583,7 +1772,7 @@ world adds, as plain data in a fixed order (ADR 0002 decisions 3 and 5):
 | State | Why it cannot be derived |
 |-------|--------------------------|
 | The tick counter, `int64` | it is the clock; it is written in the checkpoint's header, so that `Info` needs no section (`spec-checkpoint.md` 5.4.3) |
-| The state of the PCG: `MarshalBinary`, 20 bytes | the stream resumes exactly (7.1) |
+| The seed, `uint64`: the effective seed (7.1.1) | it is the one random datum of the world and every stream is a function of it; it is written in the checkpoint's header (`spec-checkpoint.md` 5.4), so that no PCG state, and no position in any stream, is saved (ADR 0008; the section of CHK 4.2 that still lists a PCG state is stale under ADR 0008, see N-214) |
 | The next agent ID, `int64` | an agent's ID is never reused; the highest ID of the live agents is not enough if the highest was removed, and the closed accounts that would imply it may one day be compacted (`spec-ledger.md` open question 6) |
 | Whether the world is still in its construction phase (a flag) | a world checkpointed before its first `Step` is restored in construction, with its bucket, and a later call is totalled in it as on the original (5.5.3; `spec-checkpoint.md` 4.4, 6.7.2) |
 
@@ -1610,21 +1799,25 @@ construction bucket is saved only while the world is in its construction phase
 12.2. **What a restore needs from the world** is a way to build the derived tables
 and install the saved state without running steps 7 and 8 of 5.1 (the audit of
 step 9 and the events of step 10 are replaced by the restore's own, below): the
-validated configuration and options (steps 1 to 6 of 5.1), then the ledger, the
+validated configuration and options (steps 1 to 6 of 5.1, with the seed of the header as the seed, or the reseeded one, 12.3), then the ledger, the
 agents and every module's state from the checkpoint, then the tick counter, the
-PCG state, the next agent ID and the construction flag. A world restored from a
+next agent ID and the construction flag; **no random state is installed and no word is
+taken**. A world restored from a
 checkpoint taken after its first `Step` is not in construction; one taken before it
 is, and keeps its bucket (5.5.3). It emits no `WorldCreated`; its event is
 `WorldRestored`, the first event to the observers given to the restore
 (`spec-checkpoint.md` 6.7.3, `spec-observability.md` 4.4.5). The restore runs the
 audit whether or not `WithAudit` was given (`spec-checkpoint.md` 6.2.2).
 
-12.3. **The seed.** `WithSeed` is not hashed and the random state is in the
-checkpoint, so a seed given to a restore has no use. CHK adopts the recommendation
-of this spec (`spec-checkpoint.md` 6.4): `WithSeed` is **refused** on a restore
-(`ErrOptionContext`; an option that is accepted and ignored is a trap), and the
-original seed in the header is informational only. `WithReseed(salt)` is the one
-way to give a restored world its own stream (`spec-checkpoint.md` 6.8; 4.1).
+12.3. **The seed.** `WithSeed` is not hashed, and the checkpoint carries the seed in its
+header, so a seed given to a restore has no use. CHK adopts the recommendation of this
+spec (`spec-checkpoint.md` 6.4): `WithSeed` is **refused** on a restore (`ErrOptionContext`;
+an option that is accepted and ignored is a trap). The seed of a restored world is the
+seed of the header, and it is read back as the seed: the header's seed is the effective
+seed, not information only (`spec-checkpoint.md` 5.4 still says "informational only", stale
+under ADR 0008, see N-214). `WithReseed(salt)` is the one way to give a restored world its
+own streams: it replaces the effective seed by `finalise(seed xor finalise(salt))`
+(`spec-checkpoint.md` 6.8; 4.1).
 
 ## 13. What the world hands to the specs that come after it
 
@@ -1639,6 +1832,8 @@ Stated as requirements on the world, not as their content.
 | **STY** | a run is a function of (configuration, seed, sequence of calls); `Run(ctx, n)` runs `n` ticks and leaves a snapshot-able world; two runs with the same inputs are bit-identical across platforms (architecture.md 7.4); a golden test is enforced; a run with an observer equals one without |
 | **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison is exact, and a measured variance reduction, only while the draw counts are equal (7.6.1); the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
 
+Stale under ADR 0008, see N-214: the **CHK** row (12 holds no PCG state and CHK saves the seed alone) and the **EXP** row (a paired comparison is exact in the draws by construction, 7.6; the pairing gain is measured on the state's divergence alone). The rows are not rewritten here: their owners edit them.
+
 ## 14. Parameters
 
 This spec adds **one `Config` field**, the name `World.Clearing` (4.2, default
@@ -1650,9 +1845,9 @@ configuration. A test of the parameter registry (testing.md 6.7) needs the one r
 of 22 and the field.
 
 **Rule constants** (beside their code, not parameters, architecture.md 9.6): the
-order of the phases and the positions of section 6; the seeding rule and the
-constants of the SplitMix64 finaliser (7.1.2); the world's draw (7.2.1) and the list
-of draws (7.3); the rotation of starts (6.1.4); the Weyl multiplier
+order of the phases and the positions of section 6; the key of a stream, the
+constants of the SplitMix64 finaliser and the site constants (7.1.2 to 7.1.4), `K(t, id)`
+(7.1.7); the world's draw (7.2.1) and the list of draws with their streams (7.3); the rotation of starts (6.1.4); the Weyl multiplier
 `2 654 435 769` and the bucket (9.1.1); the keyed tie-break (10.1.1); the failed
 state (3.5) and the guard (3.6); the order of accounts (5.2) and of agent IDs
 (5.3); the sub-steps 8a to 8c of construction (5.1.2); the order of events (6.11).
@@ -1742,6 +1937,8 @@ events (6.1 there).
 16.5. **Snapshot.** The tick counter and the seed are in the snapshot. A failed
 world refuses a snapshot (3.5.1). The other fields are OBS's.
 
+Stale under ADR 0008, see N-214: the seed of the snapshot is the effective seed, which a reseed replaces (CHK 6.8); the wording of the field is OBS's.
+
 16.6. **Cost with no observer.** With the default logger and observer no event of
 this spec is constructed and no log call allocates (4.5 there); the guard of 3.6
 is one boolean test.
@@ -1826,6 +2023,8 @@ and the harness measures the gain (`spec-experiments.md` 7). *Test:* WLD-S4
 (`stream.py`: 98.0% of the later draws differ with one stream, 2.0% with a stream
 per tick). *Status:* model.
 
+Stale under ADR 0008, see N-214: WLD-A5 is closed between streams (7.6): one extra word moves the later words of its own stream only (`stream.py`: 0.01% of the later draws, against 98.0% for one positional stream). The register entry L120, WLD-D2 (D88: "draw anyway" is an owner's choice inside one stream, 7.4.3) and WLD-S4 are rewritten with STB, which owns them. A hazard remains for a change of an ID (7.6.2).
+
 **Dampers.** WLD-D1 *Ties and caps by key or rotation* (10.1.1): stated as the
 rule for new specs and proposed for O1 to O5, O9 and O10. D25 *Decision rates*, which the
 register lists as proposed with WLD as owner, is **specified** here (section 9);
@@ -1849,18 +2048,20 @@ of later draws that differ.
 
 All in Docker (`python:3.12-slim`, `PYTHONDONTWRITEBYTECODE=1`), Python standard
 library only, in `doc/specs/models/wld/`. They are models of the rules of this
-spec, not of the library, and they show no default to be stable (N-027). One
-check used Go 1.25 in Docker (`golang:1.25`, `go run` of a stdlib-only file that is
-not archived): the PCG seeding values of 7.1.3, the 20-byte `MarshalBinary`, the
-exact restore of a saved state, and the words consumed by `Int64N`.
+spec, not of the library, and they show no default to be stable (N-027). Two
+checks used Go in Docker (`golang:1.25`, and the installed Go 1.27; `go run` of stdlib-only
+files that are not archived): the PCG vectors of 7.1.5 and the reseed of CHK 6.8 against
+`seed.py` (every line equal), and that a `rand.Rand` holds no state beyond its source;
+earlier, on Go 1.25, the 20-byte `MarshalBinary` and the words consumed by `Int64N`
+(7.2.2).
 
 | Script | What it does | Result quoted |
 |--------|--------------|---------------|
-| `seed.py` | the seeding rule of 7.1.2 and a PCG-DXSM, asserted against the Go 1.25 values of seeds 0, 1, 2 and 42 for both the mix and the plain rule; the bits that differ between the first outputs of seeds `s` and `s + 1` | equal to Go for all eight; 31.99 bits (mix) and 31.94 (plain) of 64 |
+| `seed.py` | the finaliser, the key of a stream, the site constants, `K(t, id)`, the reseed rule and a PCG-DXSM; the vectors of 7.1.5 and of CHK 6.8 (one source for both), asserted against the four bare seeds Go 1.25 printed, and every line equal to a Go program's; the bits that differ between the first outputs of neighbouring seeds, ticks and IDs | 7.1.5; 31.99 bits (bare mix), 31.94 (plain), 32.04, 32.03 and 32.03 (keyed, by ID, tick and seed) of 64 |
 | `rotation.py` | a binding cap with tied candidates under the lower ID, the keyed tie and a rotation | 7.1; 10.1.1; WLD-S1 |
 | `cadence.py` | the reviews per tick of a rotation by raw ID, by `Weyl32 mod P`, by the Weyl32 bucket (correlated with MIG's margin), by the hash bucket (binomial, not adopted) and by the rule bucket of 9.1.1 (a second multiplier, `0x6A09E667`), for strides 1 to 31 and periods 10 and 30; the 400 households of a migration margin and the ticks they review on under each; the share of agents whose 30-tick review is also a 10-tick review; a group smaller than its period; the drift of a review against a year | 9.1.1, 9.3, WLD-S2 |
-| `stream.py` | the share of later draws that differ after one extra draw, with one stream and with a stream per tick | 7.6, WLD-A5, WLD-S4 |
-| `worked.py` | the arithmetic of the examples of 19 | 19 |
+| `stream.py` | the share of later draws that differ after one extra draw, with one positional stream and with a stream per tick (both rejected) and with a stream per (site, tick, agent) (ADR 0008) | 7.6, WLD-A5, WLD-S4: 98.00%, 2.00% and 0.01% |
+| `worked.py` | the arithmetic of the examples of 19: the buckets, the creation words of example A and the streams of the tick of example B | 19 |
 
 What they do not show: that the phase order is stable for any chain (nothing has
 run in the library), that the bucket is better than the raw ID for the layouts a
@@ -1894,36 +2095,56 @@ boundary accounts: `0 .. B-1` built-in boundaries; `B` the boundary of `stipend`
 Outside account of counterparty 3 (`B+10`); the agent accounts of agents 4 to 10
 (`B+11 .. B+17`).
 
-The creation draws are taken after the warm start, in ID order: agent 4 words 0
-(target) and 1 (residue), agent 5 words 2 and 3, and so on to agent 10 words 12 and
-13. Fourteen words are the whole construction **with the technology key off** (no field has a
-discovery rate); with it on the key is word 14, taken after the last creation draw (8c, D16), and
-the first word of tick 0 is word 15. Without it the first word of tick 0 is word 14
-(5.7.3). The events: `WorldCreated`, then `AgentSpawned` for agents 4 to 10, each
-with `Tick` 0.
+The creation draws are taken after the warm start, one stream for each agent, `(siteConstruction, 0, id)`
+(7.1.4): its word 0 is the target ratio and its word 1 the residue. Fourteen words are the whole
+construction, in seven streams, with the technology module on or off (5.7.3), and the first draw of
+tick 0 belongs to a stream of its own. For seed 0 (`worked.py`), the words of each agent and its
+residue `draw(10 000)` of word 1:
 
-### 19.2 Example B: the words of one tick
+| Agent | Word 0 (target) | Word 1 (residue) | Residue |
+|------:|-----------------|------------------|--------:|
+| 4 | `f4aa09314fe44644` | `ef7ea66b5a29b979` | 9355 |
+| 5 | `9c1eb28b41d67934` | `c1a4ddc74bcb96e2` | 7564 |
+| 6 | `0f06ca331ae3bce8` | `dc3ad5fd46bb3d42` | 8602 |
+| 7 | `0d2a6d25ba31d1f9` | `a5c78a135e49c31b` | 6475 |
+| 8 | `ee4a4ecf40900610` | `8cad7e44acddda54` | 5495 |
+| 9 | `9957ed1d2127e557` | `8dafe94e04a12c05` | 5534 |
+| 10 | `f9b97445db9bf2f2` | `5373bd0ce51ecc45` | 3259 |
 
-One region `r0`, commodities `grain` and `loaf`, roles `grower` (agents 1 and 2)
+The values do not depend on the order in which the agents are created. The events:
+`WorldCreated`, then `AgentSpawned` for agents 4 to 10, each with `Tick` 0.
+
+### 19.2 Example B: the streams of one tick
+
+One region `r0`, commodities `grain` (0) and `loaf` (1), roles `grower` (agents 1 and 2)
 and `baker` (agent 3), estate agent 0, no module, default strategies. In one tick
 the three agents consider 2, 2 and 3 intents; one of the seven is dropped by
-affordability, so six orders are admitted: the market `(r0, grain)` has 1 bid and
-2 asks and `(r0, loaf)` has 2 bids and 1 ask. The words of the tick, relative to
-its start (`worked.py`):
+affordability, so six orders are admitted: the market `(r0, grain)` has 1 bid (agent 3)
+and 2 asks (agents 1 and 2) and `(r0, loaf)` has 2 bids (agents 1 and 2) and 1 ask
+(agent 3). Each draw site is a stream of its own, and the words are counted from 0 in
+each. For seed 42 at tick 7 (`worked.py`):
 
-| Positions | Words | Draw |
-|-----------|-------|------|
-| P3.2, agent 1 `Trade` | 0, 1 | D5 |
-| P3.2, agent 2 `Trade` | 2, 3 | D5 |
-| P3.2, agent 3 `Trade` | 4, 5, 6 | D5 (seven intents, the dropped one included) |
-| P4.1, market `(r0, grain)` | 7, 8, 9 | D7: the bid, then the two asks |
-| P4.1, market `(r0, loaf)` | 10, 11, 12 | D7: the two bids, then the ask |
-| P5.4, six outcomes | 13 to 18 | D8, in (region, commodity, admission) order |
+| Position | Stream | Words | Draw | First word |
+|----------|--------|-------|------|------------|
+| P3.2, agent 1 `Trade` | `(siteTrade, 7, 1)` | 0, 1 | D5 | `e00b223f9aeed1d9` |
+| P3.2, agent 2 `Trade` | `(siteTrade, 7, 2)` | 0, 1 | D5 | `2f20f13dc103e16b` |
+| P3.2, agent 3 `Trade` | `(siteTrade, 7, 3)` | 0, 1, 2 | D5 (three intents, the dropped one included) | `7e13c409cdff5e06` |
+| P4.1, market `(r0, grain)` | `(siteClearing, 7, 0, 0)` | 0, 1, 2 | D7: the bid, then the two asks | `a0043220bd826c9b` |
+| P4.1, market `(r0, loaf)` | `(siteClearing, 7, 0, 1)` | 0, 1, 2 | D7: the two bids, then the ask | `9f4b829a3880ffc9` |
+| P5.4, the outcome of agent 1 in grain | `(siteOutcome, 7, 1, 0)` | 0 | D8 | `500ff86076a8245a` |
+| P5.4, the outcome of agent 2 in grain | `(siteOutcome, 7, 2, 0)` | 0 | D8 | `ca5031df09cef670` |
+| P5.4, the outcome of agent 3 in grain | `(siteOutcome, 7, 3, 0)` | 0 | D8 | `eb2a44a7538a0ffe` |
+| P5.4, the outcome of agent 1 in loaf | `(siteOutcome, 7, 1, 1)` | 0 | D8 | `71975eae0678752f` |
+| P5.4, the outcome of agent 2 in loaf | `(siteOutcome, 7, 2, 1)` | 0 | D8 | `3610982609122f2d` |
+| P5.4, the outcome of agent 3 in loaf | `(siteOutcome, 7, 3, 1)` | 0 | D8 | `7a47a487b36187e1` |
 
-Nineteen words. An observer, a logger or `WithAudit` adds none. If agent 3's role
-is informed with `RumourErrorBP` above 0 and its view has four candidates, four
-more words (D4) come just before its `Trade`, which then starts at word 8 and the
-tick takes 23: the count is a function of the configuration.
+Nineteen words in eleven streams. An observer, a logger or `WithAudit` adds none. If agent
+3's role is informed with `RumourErrorBP` above 0 and its view has four candidates, four more
+words (D4) are taken, from a stream of that agent's own (its site is appended with the
+information module, 7.1.4), and the tick takes 23 words: the count is a function of the
+configuration. **No word of any other stream moves**, agent 3's `Trade` included, which still
+starts at its own word 0; before ADR 0008 the same four words moved every later word of the
+tick (agent 3's `Trade` started at word 8).
 
 ### 19.3 Example C: a rotation and a review
 
@@ -1958,13 +2179,14 @@ handoff.
 | N-027 No default macro constant is stable | **Applied:** this spec sets no default; the numbers of the examples are placeholders; the models show no default stable | preamble, 14, 18 |
 | N-103 Running several spec writers in parallel | **Applied:** no shared file was edited; the proposals are in the handoff with provisional IDs (`WLD-A1` to `A5`, `WLD-D1`, `D2`, `WLD-S1` to `S4`); the models ran in Docker with no bytecode. **One slip:** the host `python3` was called once with `--version` early on; nothing else ran on the host | 17, 18 |
 | N-012 Events, metrics and log keys to define | **Leave open**, with this added: OBS accepted `Failed` on `RunEnded` and `TickEnded` and the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots without one (16) | 16 |
-| N-020 What each spec contributes to a checkpoint | **Leave open**, with this added: the PCG state, the next agent ID and the construction flag; the tick is written in the header (12) | 12 |
+| N-020 What each spec contributes to a checkpoint | **Leave open**, with this added: the effective seed (in the header, no PCG state: ADR 0008), the next agent ID and the construction flag; the tick is written in the header (12) | 12 |
 | N-045 Dampers that act silently | **Leave open**, with this added: the binding caps are counted by their modules' events and WLD-A2 asks the readers to check them (10.2.1) | 10.2 |
 | N-075 Mapping the ledger's sentinels | **Leave open**, with this added: `ErrUnknownClearing`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` and `ErrOptionContext` need a root mapping (15.1) | 15 |
 | N-091 The world slots INT must expose | **Leave open for INT**, with this added: the slots as one table with the position each is read at (8.2) and the calls that act on agents (8.3) | 8 |
 | N-019 Housekeeping for the first code change | **Leave open**, with this added: `random.go`, `tick.go` and `option.go` and the `internal/ordering` helpers (23); the options and terms for the glossary | 23 |
 | N-022 The player and other external agents | **Leave open**, with this added: an external agent is created at the call with the next ID and the two creation draws (8.3, D12) | 8.3 |
 | N-079 External agents are mortal only when the consumer says so | **Leave open** (INT); the removal call is between ticks (8.3) | 8.3 |
+| N-214 Keyed random streams (ADR 0008): the edits owed | **Applied for WLD 7** (the key, the site constants of the slice D1, D3, D5, D7, D8, D9 and D10, the vectors, `K(t, id)`, the draw table with its streams, 7.4 and 7.6 narrowed) and for 4.1, 4.4, 5.1, 5.7, 6.9.1, 6.12 (C22), 8.1.1, 12, 14, 19 and 22 (questions 4 and 7). **Leave open**: the sites of the rows outside the slice and their `id` (open point 3), and the passages marked "stale under ADR 0008" in 13, 16.5 and 17 | 7, 12, 22 |
 
 Proposed new notes are in the handoff.
 
@@ -2009,7 +2231,7 @@ has no default or bound of its own.
 | FR-WLD-046 | All calls of `Work` of P2.5 MUST precede every start of P2.7, whatever modules are on (6.4.1). |
 | FR-WLD-047 | In phase 3 the agents' plans MUST be executed in ascending agent ID, then the contract round, the credit round and the cover round, then the estates' asks, then the treasuries' orders, then the counterparties' orders, then the aggregate events, and a market's input order MUST be the agents' orders, the estates', the treasuries' and the counterparties' (6.5, 6.5.1). |
 | FR-WLD-048 | At P4.1 the markets MUST clear in ascending (`RegionID`, `CommodityID`); an invalid list MUST settle nothing of its market, release its reservations and fail the step before any later market clears (6.6.1). |
-| FR-WLD-049 | At P5.4 the world MUST take one `uint64` for each admitted order of a household agent, in ascending (`RegionID`, `CommodityID`) and admission order, and pass it as the outcome's `Draw`; an estate's ask, a treasury's order and a counterparty's order MUST have no outcome and take no word (6.7). |
+| FR-WLD-049 | At P5.4 the world MUST take one `uint64` for each admitted order of a household agent, in ascending (`RegionID`, `CommodityID`) and admission order, as the first word of the stream `(siteOutcome, t, agent, commodity)` of that order, and pass it as the outcome's `Draw`; an estate's ask, a treasury's order and a counterparty's order MUST have no outcome and take no word (6.7, 7.3). |
 | FR-WLD-050 | `Privation` MUST be set once per tick, at P6.1 with `Hunger`, and the spawner and the population module MUST read it (6.8, ruling C2). |
 | FR-WLD-051 | In phase 7 each region's computation, view, `Decide` and execution MUST run in ascending `RegionID` with the creation draws of that region before the next region's `Decide`, and the migration pass MUST run once after every region (6.9). |
 | FR-WLD-052 | The tick counter MUST advance after `TickEnded`; the audit MUST precede `TickEnded` and MUST NOT change any state (6.10). |
@@ -2020,28 +2242,31 @@ has no default or bound of its own.
 | FR-WLD-057 | A reader of the information record at P7.2 MUST read as of tick `t + 1` (ruling C17). |
 | FR-WLD-058 | P5.1 MUST push the price window only of a market in which units traded this tick, and P1.2 MUST read the published price left by P4.1 of the previous tick, the seed price at tick 0 (rulings C19, C20). |
 | FR-WLD-059 | The events of one removal MUST come in the order of 6.11 item 8, with `AgentBankrupted` as the only event that removes the agent (ruling C11). |
-| FR-WLD-060 | The world MUST hold one `*rand.PCG` and one `*rand.Rand` on it, and MUST seed the PCG from the seed by the two SplitMix64 outputs of 7.1.2; seeds 0, 1, 2 and 42 MUST give the states and the first two words of 7.1.3. |
+| FR-WLD-060 | The world MUST hold one seed, and one `*rand.PCG` and one `*rand.Rand` on it created once, and MUST reseed the PCG at the start of each draw site by `Seed(hi, lo)` of the key of 7.1.3: `s = seed`, `s = finalise(s + w + γ)` (γ = `0x9E3779B97F4A7C15`) for the site, the tick, the ID and, when its row has one, the `sub`, then `hi = finalise(s + γ)` and `lo = finalise(s + γ + γ)`; the bare seeds 0, 1, 2 and 42 and the keys k1 to k9 MUST give the states and the first two words of 7.1.5 (a) and (b). |
 | FR-WLD-061 | The world's bounded draw MUST be the high word of `Uint64()` times the bound, consuming one source word, and a range `[lo, hi]` MUST be `lo + draw(hi - lo + 1)` (7.2.1). |
-| FR-WLD-062 | The world MUST take no random number other than those of the rows of 7.3, in the order there. |
+| FR-WLD-062 | The world MUST take no random number other than those of the rows of 7.3, each from the stream of its row, in the order there within that stream. |
 | FR-WLD-063 | A run split into several `Run` calls, and a run checkpointed and restored at a tick boundary, MUST give the same draws, events, snapshots and final state as an uninterrupted run (7.4.1, 8.4.3). |
 | FR-WLD-064 | The number and order of the draws of a tick MUST NOT depend on an observer, a logger, `WithAudit`, a snapshot or other read, or the hash (7.4.1). |
-| FR-WLD-065 | A module that is on and inactive MUST take no word, and the stream MUST equal that of the module off (7.4.2). |
-| FR-WLD-066 | A creation draw MUST be a row of the table of 5.7.1 and MUST NOT be conditional on a module or an option (5.7.2). |
+| FR-WLD-065 | A module that is on and inactive MUST take no word and MUST NOT reseed a stream, and the streams of every other site MUST equal those of the module off (7.4.2). |
+| FR-WLD-066 | A creation draw MUST be a row of the table of 5.7.1, MUST be a word of its agent's creation stream, and MUST NOT be conditional on a module or an option (5.7.2). |
+| FR-WLD-067 | The site of each row that takes a word MUST be a literal 64-bit constant of 7.1.4 that does not depend on the position of its row in 7.3, no two sites MUST differ by less than 2^32, and a constant MUST NOT change once it has a golden output (7.1.4). |
+| FR-WLD-068 | A signed tick or ID MUST enter the key as the two's-complement `uint64` of its `int64` value with no sign test, a site MUST have the arity its row gives (three words or four) and keep it, and the rows k6 to k8 of 7.1.5 (b) MUST hold (7.1.3). |
+| FR-WLD-069 | Two runs of one seed that differ in a parameter, a shock or a module MUST draw the same word at every `(site, tick, id[, sub])` they share, and a change in the number of words taken from one stream MUST move no word of another (7.4.4, 7.6). |
 | FR-WLD-070 | A call that acts between ticks MUST validate in full and then apply or change nothing, MUST emit its event at the call, MUST NOT be part of the configuration hash and MUST be saved by the spec that owns the state (8.1). |
-| FR-WLD-071 | A call that draws MUST take its draws at the call, in call order (8.1.1). |
+| FR-WLD-071 | A call that draws MUST take its draws at the call, from the stream keyed by its row's site, by the tick the next step runs and by its ID, and a consumer's own draws in that call MUST follow in the order they are made (8.1.1, 7.3.2). |
 | FR-WLD-072 | Each slot of 8.2 MUST act at the position or at the call that 8.2 gives, and a slot MUST NOT edit a configured value (8.2.1). |
 | FR-WLD-073 | A checkpoint MUST be refused on a failed world and inside a step, and MUST be possible on a healthy world between ticks, including before the first step (8.4). |
 | FR-WLD-074 | The flow totals MUST be cleared at P8.6 and not at the entry of a step, so that a move made by a call between ticks is totalled in the tick the next step runs (8.1.3, ruling C18). |
 | FR-WLD-075 | A policy actor MUST write only the slots of kinds `flow`, `edge` and `transit`, at P0.3a, through the owners' internal setters and with the cause `policy`; the public setters MUST still return `ErrInStep` inside a step; and the slot events of the write MUST come after `TickStarted`, then `PolicyDecided` (8.2.2, 6.11 item 1). |
-| FR-WLD-076 | Step 8 of construction MUST run its sub-steps in the order of 5.1.2: the treasury pseudo-agents, the household agents, 8a the titles, the warm start, the creation draws, 8b the initial facilities, the settlement classes, 8c the technology key; the only construction draw that is not an agent's MUST be taken after all the creation draws (5.7.2, 5.7.3). |
+| FR-WLD-076 | Step 8 of construction MUST run its sub-steps in the order of 5.1.2: the treasury pseudo-agents, the household agents, 8a the titles, the warm start, the creation draws, 8b the initial facilities, the settlement classes, 8c the technology key; no construction word MUST be taken that is not an agent's creation word, and the technology key MUST take none (5.7.2, 5.7.3). |
 | FR-WLD-077 | The positions of the later modules MUST be those of 6.2 to 6.10 (P0.3a, P1.3a, P1.7a, P1.7b, P1.9a, P2.5a, P2.8b, P3.1a, P3.3b, P3.3c, P3.4a, P3.6a, P3.6b, P3.6c, P4.1a, P7.2a, P7.2b, P8.1a, P8.1b, P8.3a, P8.3b, P8.3c), the draws those of 7.3 (D13 to D17), and the removal steps those of `spec-agents.md` 3.6 (2b to 2g), with every event of a removal before `AgentBankrupted` (6.11 item 8, rulings C24 to C28). |
 | FR-WLD-080 | A rotation cadence MUST select an agent on the ticks where `(t + bucket(id, P)) mod P = 0`, with `bucket(id, P) = (Weyl2(id) * P) >> 32` and `Weyl2(id) = (id * 0x6A09E667) mod 2^32`, in `[0, P)` for every ID and every `P` from 1 to 1 000, and the bucket MUST NOT use `Weyl32` (9.1.1). |
 | FR-WLD-081 | A quantity stated per year MUST be applied by a carried remainder whose denominator contains `TicksPerYear`, and MUST NOT be converted to an integer number of ticks (9.3.2). |
 | FR-WLD-082 | A cadence that does not divide `TicksPerYear` MUST be accepted and applied unchanged (9.3.1). |
 | FR-WLD-083 | No cadence, window, gate probability or share MUST be a function of a measured aggregate of the world, and a cadence MUST be a datum of the configuration, in the hash and constant for a run (9.4). |
 | FR-WLD-090 | A tie between candidates of equal merit in a rule that a spec adds MUST be broken by `K(t, id)` and then the ID, unless the spec states a reason (10.1.1). |
-| FR-WLD-091 | `K(t, id)` MUST be the SplitMix64 finaliser of `t * 0x9E3779B97F4A7C15 + id` and MUST take no draw and keep no state (10.1.1). |
-| FR-WLD-100 | The world's contribution to a checkpoint MUST be the 20 bytes of the PCG state, the next agent ID and the construction flag, in a fixed order (the tick counter is written in the checkpoint's header), plus the flow totals that calls between ticks added since the last P8.6 when there are any, and nothing derived MUST be saved (12). |
+| FR-WLD-091 | `K(t, id)` MUST be `finalise(t * γ + id + γ)` modulo 2^64 with γ = `0x9E3779B97F4A7C15`, that is the SplitMix64 finaliser applied to `x + γ` with `x = t * γ + id` as in RES 5.3.3, with `t` and `id` as the two's-complement `uint64` of their `int64` values, and MUST take no draw and keep no state; the vectors of 7.1.5 (c) MUST hold (7.1.7, 10.1.1). |
+| FR-WLD-100 | The world's contribution to a checkpoint MUST be the effective seed, the next agent ID and the construction flag, in a fixed order (the tick counter and the seed are written in the checkpoint's header), plus the flow totals that calls between ticks added since the last P8.6 when there are any; no random state and nothing derived MUST be saved (12). |
 | FR-WLD-101 | A restore from those and the other specs' state MUST continue exactly as an uninterrupted run; a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be, with its bucket (12.2, 5.5.3). |
 | FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, the derived tables (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `Polity`, `TreasuryAgent`) MUST return their value, and the readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal` MUST return the state the failed step left, with no guarantee of consistency; `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
 
@@ -2074,13 +2299,14 @@ has no default or bound of its own.
 3. **Recovery of a failed step.** The world is failed (3.5). A journal of the
    step's writes would allow a rollback to the boundary; its cost is time and memory
    on every tick. Next step: when a consumer asks, with the measure of the cost.
-4. **Per-purpose streams.** A derived stream per (tick, purpose) would remove the
-   positional hazard (WLD-A5, 98% against 2% in the model) and make a parallel step
-   by region possible. It conflicts with architecture.md 7.3 (one source per world)
-   and changes the checkpoint to a tick and a seed. **Answered in part:** the harness
-   measures the pairing gain (`spec-experiments.md` 7), so the cost of the positional
-   stream is a number and not a guess; per-purpose streams stay open. Next step:
-   EXP's first paired experiment, and a rule change if the measured gain matters.
+4. **Per-purpose streams.** **Answered (ADR 0008, architecture.md 7.3, 7):** the world
+   holds one seed and reseeds its one PCG at each draw site from `(seed, site, tick, id)`,
+   so a count change moves only the later words of its own stream (WLD-A5: 98% of the
+   later draws before, 0.01% after, `stream.py`), and the checkpoint holds the seed and
+   no stream state (12). What stays open is narrower: ADR 0008 open point 3 (whether a
+   site with no natural entity, D2 and D13, is keyed by its row index or by the row's IDs)
+   for the rows outside the slice, and the cost of a site call against the budget of
+   `spec-scale.md` 6, which the first code measures (NFR-WLD-001 covers the reseed).
 5. **`RunEnded` and a failed step.** **Closed (OBS):** `RunEnded.Failed` is
    accepted as an added field, true only for a failed step and never together with
    `Cancelled` (`spec-observability.md` 4.4.3, 16.1 here).
@@ -2089,9 +2315,11 @@ has no default or bound of its own.
    tick that is several days is a calendar choice (`spec-calendar.md` 4). Next step:
    the first consumer's tick rate (N-030).
 7. **Parallel stepping.** Markets are independent within a tick (`spec-clearing.md`
-   7.2), so P4.1 could clear them concurrently, but the tie-break keys are drawn in
-   market order from one stream (7.3). Parallelism is forbidden by architecture.md
-   12.2 until an owner and a lifecycle exist; question 4 is its precondition.
+   7.2), and each draws its tie-break keys from its own stream
+   `(siteClearing, t, region, commodity)` (7.3, ruling C22), so P4.1 may clear them
+   concurrently: the stream is no longer a precondition (question 4 is answered).
+   Parallelism stays forbidden by architecture.md 12.2 until an owner and a lifecycle
+   exist for the goroutines.
 8. **A named position as data.** The positions of section 6 are in prose and in
    tables; a test could read them from this file the way the parameter registry
    does (testing.md 6.7) and compare them with the code's list. Next step: with the
@@ -2199,7 +2427,7 @@ table. A letter in brackets is the ruling of 6.12.
 | `spec-spawner.md` | 5.3.1, 13.1.1, FR-SPN-032 | "the only event that removes the agent" (C11) |
 | `spec-spawner.md` | 6.3, 7.3 | proposed, not owed: ties by `K(t, id)`; the roles served from a rotating start or by share (O1, O3) |
 | `spec-stability.md` | 4.8, D25, D33, D72, 10 (L22 row) | merge WLD-A1 to A5 (kinds: amplifier, bias, hazard); D25 specified; D33 and D72 cite the bucket; the WLD hook row goes; L22 cites WLD-A3 and S18's cold leg (WLD-S3) |
-| `spec-stability.md` | S63, MIG-S3 | "the same seeds" is a paired design that is exact only while the draw counts are equal (WLD-A5, 7.6.1); where a draw count moves the estimate of a difference of means is still unbiased and the harness measures the gain (`spec-experiments.md` 7) |
+| `spec-stability.md` | S63, MIG-S3 | "the same seeds" is a paired design that is exact only while the draw counts are equal (WLD-A5, 7.6.1); where a draw count moves the estimate of a difference of means is still unbiased and the harness measures the gain (`spec-experiments.md` 7) | stale under ADR 0008, see N-214: a paired design is exact in the draws by construction (7.6.1) |
 | `spec-subsistence.md` | 5.5 item 6, FR-SUB-023 | "`Work` acts as if not in the mode when the ration cut every request" cannot hold under two passes (`Work` is P2.5, the ration P2.6): applied, the household the ration cut entirely is `Blocked` at P2.7 and its next `Work` is the next tick's (open question 12) |
 | `spec-subsistence.md` | 7 | own-use ticks and units enter the welfare record from the per-agent scratch (P6.3) |
 | `spec-transport.md` | 5.3.2, 5.5.3, 5.7, FR-TRN-022, FR-TRN-024 | relief only in phase 1 (C1); `open_shipment` exposes the **shipment IDs** the agent is shipper or consignee of and, for an away traveller, its own trip; the arrival runs the guard ignoring its own shipment and the contract formed on it (C16) |
@@ -2230,7 +2458,7 @@ table. A letter in brackets is the ruling of 6.12.
 | `doc/overview.md` | 143 and its `Run` sample | `Run(ctx, ticks)` returns two values (3.4) |
 | `doc/adr/0002-persistence-by-checkpoint.md` | open point 4, decision 7 | open point 4 answered: between ticks only (8.4); an extension's own state is saved as decision 7 says, and its registration is not (12.1) |
 | `doc/adr/0005-delivery-contracts-are-matched-by-a-first-fit-round.md` | the position sentence | the position is P3.3 (6.5) |
-| `doc/roadmap.md` | the WLD row (line 181), the tier tables and the existing-specs table | `exists` |
+| `doc/spec-roadmap.md` | the WLD row (line 181), the tier tables and the existing-specs table | `exists` |
 | `doc/documentation_index.md` | rows | `spec-world.md` and `models/wld/` |
 
 ## 23. Where this lives in the code
@@ -2240,9 +2468,9 @@ table. A letter in brackets is the ruling of 6.12.
 | `World`, `NewWorld`, `Step`, `Run`, `Err`, `Tick`, the failed state and the in-step guard | root package, `world.go` |
 | The eight phases and their positions, each a method that calls into the module files | root package, `tick.go` |
 | `Option`, `options`, `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread`, `WithStrategy`, `WithSpawner`, `WithClearing`, `WithPolicy` | root package, `option.go` |
-| The source, the seeding rule and the world's draw | root package, `random.go` (a small struct holding the PCG and the Rand; internal packages receive plain `uint64`, architecture.md 2.9) |
+| The seed, the one PCG and `Rand`, the site constants and the stream key (reseed at a site), the world's draw and the pure reseed function | root package, `random.go` (a small struct holding the seed, the PCG and the Rand; the key arithmetic is `internal/ordering`, which receives and returns plain `uint64`, architecture.md 2.9) |
 | The sentinels `ErrUnknownClearing`, `ErrUnknownPolicy`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` | root package, `errors.go` |
 | `WorldCreated`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` | root package, `event.go` |
-| `Weyl32`, `Weyl2`, `Bucket(id, P)`, the finaliser and `Key(t, id)` (shared with the ration of RES) | `internal/ordering` |
+| `Weyl32`, `Weyl2`, `Bucket(id, P)`, the finaliser, `Key(t, id)` (shared with the ration of RES) and the stream key of 7.1.3 | `internal/ordering` |
 | The construction order, the warm start application, the creation draws | root package, `world.go` calling `internal/ledger` and the modules |
 | The models | `doc/specs/models/wld/` |

@@ -1,0 +1,220 @@
+# Delivery order of the code
+
+The order in which the code is built, stage by stage: which files and packages
+each stage creates (their homes are `doc/rules/architecture.md` 2.6, the
+module-file rule its 2.10), which specs it implements, and the tests that must
+pass before the next stage starts. It is the plan; the rules are the law. Where
+this file and `doc/rules/` disagree, the rules win and this file is corrected.
+
+The staging is [ADR 0003](adr/0003-version-1-scope.md) (`vision.md` section 4):
+the slice, version 1, later. The structure of the code is
+[ADR 0007](adr/0007-a-module-is-one-file-that-owns-its-touch-points.md) and the
+random stream [ADR 0008](adr/0008-random-draws-are-keyed-streams.md). Every
+stage ends with a golden file that runs; no stage starts a module file before
+the slice's golden runs (architecture.md 2.10.6).
+
+Status values: **planned**, **in progress**, **done** (with the commit). Update
+the status in the change that moves it.
+
+## Stage 0: foundations (no economics)
+
+Everything the slice needs that is not a rule of the economy. Nothing here
+draws, trades or produces: the world does not exist yet, so a file that serves
+a world later (`random.go`, the events, the options) is built and tested alone.
+The implementation plan is
+[plans/plan-phase-0-foundation.md](plans/plan-phase-0-foundation.md); the
+decisions it rests on (the owner's, 2026-10-12) are:
+
+- **D2.** Stage 0 ships `WithLogger`, `WithObserver`, `WithAudit`,
+  `WithTargetSpread` and `WithSeed`. The registration options `WithStrategy`,
+  `WithSpawner` and `WithClearing` ship in Stage 1 with their interfaces.
+- **D3.** Slice fields only: a struct or an event declares the fields the specs
+  give the core, that is every field no module of `Config.Modules` owns,
+  including every key the packs `one` and `second` set. Each module's change
+  appends its own fields at the end, never inserts (architecture.md 2.10.5).
+  `Modules` is declared with no field.
+- **D4.** The five viability rules of CFG 7.6, `ViabilityError` and the
+  solver-dependent warm-start checks ship with `internal/steady` in Stage 1.
+- **D5.** An append that is off leaves no trace: a module that is off, and an
+  appended field at its off value, contribute nothing to the configuration hash
+  (CFG 8.2) or to the golden rendering of an event (OBS 9.5.2), so
+  `testdata/golden/off/` does not move when a module is added.
+
+| Create | Specs | Status |
+|--------|-------|--------|
+| `go.mod` (`go 1.25`, no dependency until `config/`); `doc.go` (the package name `economysim`, the overview and the glossary of the terms Stage 0 uses; every later stage adds the terms it uses before it uses them: architecture.md 3.2, N-017) | architecture.md 2.2, 3.2 | done (uncommitted) |
+| `value.go` (`Money`, `Price`, `Quantity`, the typed IDs with `NoRegion`, `NoAgent` and `NoCommodity`: arithmetic, comparison and formatting only) | CUR, CFG 3.3 | done (uncommitted) |
+| `internal/checked` (the 128-bit product and ratio), `internal/ordering` (the finaliser, `Weyl32`, `Weyl2`, `Bucket`, `Key` in the `+gamma` form, the stream key with its optional fourth word), `internal/logkeys` (the key strings of the slice's log lines only) | WLD 7, 9, 10; RES 5.3.3; OBS 7 | done (uncommitted) |
+| `random.go`: the seed, the one PCG and `Rand`, the site constants of the slice (WLD 7.1.4), the keyed reseed, the world's draw (WLD 7.2.1) and the **pure** reseed function `seed' = finalise(seed xor finalise(salt))` (CHK 6.8.2). The option `WithReseed`, the restore step and `WorldRestored` are Stage 2 (`checkpoint.go`) | WLD 7 (as rewritten under N-214), CHK 6.8.2, ADR 0008 | done (uncommitted) |
+| `config.go` (`Config` and every section struct of the slice, slice fields only (D3); the `WarmStart` types live here, not in `viability.go`), `bounds.go`, `defaults.go`, `validate.go` (the framework, the structural rules of CFG 7.3, the contributed rules of 7.4.1 less the three name checks and the viability rules, which are Stage 1 (D2, D4), and the producibility fixpoint of 7.5), `hash.go` (`HashConfig`, the encoding of CFG 8.2 with its version byte and rule D5), `errors.go` (a sentinel with its first user). Sections: world, calendar, commodities, recipes, yields, roles, regions as one region, groups, warm start; `Modules` present and all nil | CFG 3, 4, 5, 7, 8, 9; GDS 8; PRO 11; AGT 12; BEL 11; SPN 11; WEL 4.2 and 12; SCL 3.1; CAL 3; VIA 8.1 | done (uncommitted) |
+| `event.go` (the sealed `Event`, `Side`, the events no module owns, slice fields only (D3), `Names`, `Amount`, `HaltRow`, and the `Reason`, `Cause` and `Kind` constants the slice can reach) and `observer.go` (`Observer`, `ObserverFunc`, the unexported `discardObserver` with its assertion, the delivery loop, the "observer supplied" flag, `warnRun`); `option.go` with `Option`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread` and `WithSeed` (the registration options are Stage 1) | OBS 3, 4, 8.1; WLD 4.1; WEL 5.2; `rules/observability-and-logging.md` 4 | done (uncommitted) |
+| `config/`: the TOML loader (the library is [ADR 0009](adr/0009-the-toml-library-is-pelletier-go-toml-v2.md), `pelletier/go-toml/v2`; the tree is mapped by hand, unknown keys are rejected by `config/` itself), the limits on untrusted input (CFG 6.3.1), pack layering | CFG 6 | done (uncommitted) |
+
+**Done when:** `FuzzLoad` and `FuzzValidate` run with seed corpora; every
+validation rule of CFG 7 for the slice's sections that is not deferred (D2, D4)
+has a failing-case test, and the PR that builds `validate.go` lists each rule row
+as built, deferred to Stage 1 or module; "every result-affecting field moves the
+hash" passes, with the allow-list of exactly the presentation-only fields of the
+slice, and the pinned hash of the all-off reference configuration is committed
+(FR-CFG-105); the parameter-registry test (testing.md 6.7) passes both ways in
+its staged form (a `notBuilt` list, architecture.md 9.7); the keying test vectors
+of WLD 7.1.5 and the reseed vectors of CHK 6.8 pass; the events of the slice
+pass the shape test and the staged catalogue test (FR-OBS-001, 003, 004, 006:
+`Tick` first, no pointer, map or float, the fields of 4.1 in order, every
+declared event a row and every row declared or listed); the delivery loop
+delivers to every observer in the order given, a nil observer is ignored and
+delivery with no observer allocates nothing; the options pass from an internal
+test (each option's effect, the bound and error of `WithTargetSpread`, the last
+`WithSeed` wins, the default seed 0); a reseed followed by a draw allocates
+nothing; the `Guard:` test of `internal/logkeys` (every constant is a row of
+`rules/observability-and-logging.md` 3.3.2) and the `Guard:` text search for the
+forbidden calls (architecture.md 7.1 to 7.3, 11.1, 11.2) pass; `doc.go` holds
+the package name and every term Stage 0 uses; `go vet`, `staticcheck` and
+`go mod tidy` are clean.
+
+## Stage 1: the slice
+
+One region, the reference chain, clearing, beliefs, the default strategy and
+spawner, the stability checks (`vision.md` section 4, "Slice"). The order below
+is the dependency order of `spec-roadmap.md` "Tier 1 dependencies".
+
+| Create | Specs | Status |
+|--------|-------|--------|
+| `internal/ledger` (accounts, the transfer primitive, reasons, lots, reservations, `Transform`, `Wear`, ageing, flow totals, the audit) and `ledger.go` | LED | planned |
+| `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the root types and their derived tables) | GDS, PRO 3, AGT 3, CAL | planned |
+| `internal/clearing` and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | planned |
+| `internal/beliefs` and `beliefs.go` | BEL | planned |
+| `internal/production` and `production.go` (jobs, yield table, `UnitCost`) | PRO | planned |
+| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | planned |
+| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0) | AGT | planned |
+| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | planned |
+| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | planned |
+| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState`, the reader of the warm-start table; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | planned |
+| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go`, `order.go`, `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | planned |
+| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 10, testing.md 7.1 | planned |
+
+**Done when:** the golden of `one.toml` runs for the length REF fixes and
+passes; the invariants of testing.md 6.3 hold over the seed range of REF 8;
+the same seed gives the same bytes with and without a logger and an observer,
+split into any number of `Run` calls; the position table test passes
+(testing.md 6.8); the configuration-only chain test passes on
+`testdata/chains/second/`; the viability rules have failing-case tests, the six
+overlays of `testdata/chains/defects/` load over the base layers REF names for
+each and fail the rule or give the warning REF assigns, and the registration
+options reject a name given twice and a nil extension; the first stability
+scenarios of STB that need one region only (S01, S04, S07, S16, S19) run and
+their outcomes are recorded, pass or not. The observability tests that need a
+world (`rules/observability-and-logging.md` 8, OBS 9), which Stage 0 could not
+run, pass: logs (the level, message and keys of every `Warn` and `Error` path,
+and no `Info` in the tick loop), non-interference (FR-CFG-026 world half,
+FR-OBS-024), cardinality (FR-OBS-005 over `one`), the counterpart of every
+`Warn`, the golden rendering of events (`testdata/golden/events-one.txt`, the
+zero-field rule of OBS 9.5.2), the emission order of a scripted step, the run
+lifecycle (`RunStarted` and `RunEnded`, also when cancelled or failed), the
+catalogue test over the declared events with the world emitting each of them,
+the option halves that needed a world (FR-WLD-003, FR-OBS-090), and the two
+allocation limits of the no-op path: every emission and logging call site of
+the tick loop allocates nothing, and a full `Step` stays within its baseline
+(observability-and-logging.md 8.2; NFR-OBS-001, NFR-WLD-001). The slice may
+move specs between stages (ADR 0003); record any move here and in `vision.md`.
+
+## Stage 2: version 1
+
+The first consumer's needs (`vision.md` section 2). Checkpoint first, because
+every later file adds state to it; then the region graph, because every module
+is per region; then the modules in the order of their `Modules` pointers,
+which is also their dependency order. The one exception is `Modules.Estates`
+(the 25th pointer): it is a version 1 part that the money flows need, so it is
+built with MON; its field id in the hash is 25 whatever its build order
+(CFG 8.2.2).
+
+| Create | Specs | Status |
+|--------|-------|--------|
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | planned |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, `Relocate`, the edge status) | REG | planned |
+| `scale.go` (weights, the census) | SCL | planned |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | planned |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | planned |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | planned |
+| `resources.go` and `internal/endowment`, `internal/curve` | RES | planned |
+| `subsistence.go` and `internal/ownuse` | SUB | planned |
+| `population.go` and `internal/population` | POP | planned |
+| `transport.go` and `internal/transit` | TRN, CAR | planned |
+| `information.go` and `internal/rumour` | INF | planned |
+| `migration.go` and `internal/migration` | MIG | planned |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | planned |
+| `external.go` and `internal/outside` | EXT | planned |
+| `integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player) | planned |
+| `indicator/` and `internal/measure` | IND | planned |
+| `internal/verdict` and the `stylised_long` build tag | STY | planned |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | planned |
+| `internal/calibration` and `testdata/calibration/` | CLB | planned |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | planned |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | planned |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | planned |
+
+Each module file ships in one PR with: its `internal/` package and unit tests,
+its overlay under `testdata/chains/overlay/`, its module-alone golden under
+`testdata/golden/<module>/`, the proof that `testdata/golden/off/` did not
+move, its checkpoint section and the fork-at-N test with it on, its events in
+the catalogue tests, and its rows in the parameter-registry test.
+
+**Done when:** the six criteria of `vision.md` section 5 hold: the reference
+chain runs to a stable state from a warm start on `five.toml` and passes the
+version 1 bands of STY; the invariant, determinism, golden and
+configuration-only chain tests pass on two architectures; a new chain needs
+only a configuration file, shown by the second setting; a checkpoint taken
+mid-run and resumed is bit-identical; the consumer example builds a complete
+server from the public API; the cost budget of SCL holds for the first
+consumer's world size.
+
+## Stage 3: later
+
+The fourteen later-stage modules, in the order of their `Modules` pointers
+(`spec-config.md` 3.1), which is the order in which each needs only the ones
+before it. SKL (`skills.go`) joins this stage although its spec was written
+with the slice (`vision.md` section 4).
+
+| Create | Specs | Needs |
+|--------|-------|-------|
+| `skills.go` | SKL | PRO, WEL |
+| `settlements.go`, `internal/settlement` | SET | REG, SCL |
+| `storage.go`, `internal/room` | STO | LED, GDS |
+| `employment.go`, `internal/employment` | EMP | AGT, WEL, PRO |
+| `tenure.go`, `internal/tenure` | LND | RES, EST, MON |
+| `polity.go`, `internal/polity` | POL | REG, LED, EST |
+| `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
+| `risk.go`, `internal/risk` | RSK | TRN, STO |
+| `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
+| `insurance.go`, `internal/insure` | INS | CRD, RSK |
+| `fiscal.go`, `internal/fiscal` | FIS | POL, MON, CLR, TRN, EXT |
+| `institutions.go`, `internal/institution` | ORG | POL, SKL, SET |
+| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
+| `saving.go`, `internal/saving` | SAV | CAP, WEL |
+| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL |
+
+Each ships as a stage 2 module does. The checkpoint tag of each is appended
+(`spec-checkpoint.md` 4.2); `testdata/golden/all/` moves once per module, with
+the explanation testing.md 7.2 requires.
+
+## What is deliberately not built
+
+- A `Module` interface, a hook registry, or a package per module
+  (ADR 0007, alternatives).
+- A persistence or transport layer, a `main` package outside `examples/`
+  (architecture.md 1.1).
+- Parallel stepping: ADR 0008 removes the stream as a blocker, but
+  architecture.md 12.2 still needs an owner and a lifecycle; not before a
+  consumer asks with a measurement.
+- The not-in-version-1 list of note N-131.
+- A CI configuration: it has no row and no owner yet (open item O3 of
+  `plans/plan-phase-0-foundation.md`), so the commands of `AGENTS.md`, the
+  coverage reading of testing.md 9.1 and the timed fuzz runs are done by hand
+  in each change until it does.
+
+## Updating this file
+
+Change a row's status in the change that starts or finishes it; add a row in
+the change that adds a file or package to architecture.md 2.6; record a spec
+that the slice moves between stages here, in `vision.md` section 4 and in
+`spec-roadmap.md`.

@@ -1155,9 +1155,9 @@ The overlay to pack `one` (`spec-reference-chain.md` 4.4.1), in the file layout 
 tables keyed by ID). The amount is a placeholder, 2% of the basket `B_r` of 1 000:
 
 ```toml
-[module.money_supply]
+[modules.money_supply]
 
-[module.money_supply.flow.stipend]
+[modules.money_supply.flow.stipend]
 kind = "grant"
 target = { kind = "households", role = "grower", region = "north" }
 amount = 20

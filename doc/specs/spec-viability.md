@@ -592,17 +592,17 @@ type WarmStart struct {
 // used as the pooled observed wage whenever that figure is unknown (8.2.5).
 type SeedWage struct {
 	Region string
-	Wage   int64 // minor units per working household-tick
+	Wage   Money // minor units per working household-tick
 }
 
 type SeedPrice struct {
 	Region, Commodity string
-	Price             int64 // minor units per unit
+	Price             Price // minor units per unit
 }
 
 type WarmGroup struct {
 	Region, Role string
-	Money        int64     // per household, minor units
+	Money        Money     // per household, minor units
 	Stock        []Item    // per household, sorted by commodity
 	Jobs         []JobSpec // sorted by recipe
 }
@@ -610,18 +610,20 @@ type WarmGroup struct {
 // JobSpec says what share of the group's agents start in progress on a recipe.
 type JobSpec struct {
 	Recipe       string
-	InProgressBP int64 // basis points of the group's agents, 0 to 10 000
+	InProgressBP int64 // basis points of the group's agents, 0 to 10 000; the file key is `in_progress` (`spec-config.md` 6.2.2)
 }
 
 type WarmPool struct {
 	Region string
-	Money  int64 // regional estate pool at the start; default 0
+	Money  Money // regional estate pool at the start; default 0
 }
 ```
 
-In a file: `[warm_start.region.<id>.price]` with one key per commodity,
-`[warm_start.region.<id>.group.<role>]` with `money`, `stock` and `jobs`, and
-`wage` and `pool` under the region (`spec-config.md` 6.2). A price missing for a
+In a file the four lists are written once per region (`spec-config.md` 6.2.2, which lists the
+mapping): `[warm_start.region.<id>]` with `wage` (`SeedWage.Wage`) and `pool`
+(`WarmPool.Money`), `[warm_start.region.<id>.price]` with one key per commodity, and
+`[warm_start.region.<id>.group.<role>]` with `money`, `stock` and `jobs`, a job as
+`{ recipe, in_progress }` (`in_progress` is `JobSpec.InProgressBP`). A price missing for a
 commodity falls back to the reference price; a group missing keeps the role's
 defaults; a region with no wage has an unknown wage whenever the pooled figure is unknown (8.2.5), and nothing is latched.
 
@@ -1023,16 +1025,16 @@ it (`spec-calibration.md` 4.2.1 reads it so).
 | `calendar.*` (`hours_per_day`, `days_per_week`, `months`, `ticks_per_day`, `days_per_tick`, `start_day`, `seasons`, `season_start`) | `TicksPerYear`, `SeasonAt` and the virtual starts of the jobs (3.1, 8.5.2) | yes |
 | `role.<id>.expected_work_ticks` | the available work share `phi` of the nominal case (3.2) | yes (the nominal case only) |
 | `role.<id>.recipes` | the checks that name a role and the assignment of jobs (3.3 item 2, 8.5); not the programme, which is free occupational choice | the jobs of the table |
-| `resources.resource.<id>.*`, `resources.endowment.<region>.<resource>.*`, `resources.horizon_years` | the resource row `Phi` and the abundance factor of `E` (3.1, 3.2, 4.8) | yes (module on) |
-| `demand.want.<id>.*`, `demand.taste.<role>.<want>.*`, `demand.region_taste.<region>.<want>.*` | the fixed term `W(c, P)` of the goods row (3.2) | yes (module on) |
-| `modules.transport.modes.*`, `region.<id>.edge.<id>.distance` | the lanes a consumer passes (9.4); the pooled programme reads the region graph only through them | yes (when lanes are used) |
+| `modules.resources.resource.<id>.*`, `modules.resources.endowment.<region>.<resource>.*`, `modules.resources.horizon_years` | the resource row `Phi` and the abundance factor of `E` (3.1, 3.2, 4.8) | yes (module on) |
+| `modules.demand.want.<id>.*`, `modules.demand.taste.<role>.<want>.*`, `modules.demand.region_taste.<region>.<want>.*` | the fixed term `W(c, P)` of the goods row (3.2) | yes (module on) |
+| `modules.transport.mode.*`, `region.<id>.edge.<id>.distance` | the lanes a consumer passes (9.4); the pooled programme reads the region graph only through them | yes (when lanes are used) |
 | `modules.infrastructure.*` | the facility row of each (role group, facility class) with `Needs`, the runnable test of V1 where an initial facility is held, and the gains of a route or ground facility at full condition (3.2, 4.2.2, 9.4); `Decay` and repair are not read | yes (module on) |
-| `module.external.node.*` | the import and export columns and the trade row of the open layer (4.8) | yes (module on) |
+| `modules.external.node.*` | the import and export columns and the trade row of the open layer (4.8) | yes (module on) |
 | `world.belief_step` | the resolution floor `ceil(10 000 / BeliefStep)` of a seed price (6.4); read by the programme only for a price at the floor, and by the checks of 8.2.2 to 8.2.4 | yes (a price at the floor only) |
 | `commodity.<id>.reference_price`, `region.<id>.reference_price.<commodity>`, `world.cost_floor`, `world.cost_ceiling`, `world.ref_band_low`, `world.ref_band_high` | the fallback and the checks of a seed price (8.2.2 to 8.2.4); the prices are an output of the programme, not an input | no (a check) |
 | `modules.storage.*` | the rule `room_below_warm_job`: a job of the table tested against the room at construction (8.7); the room is not in the programme | no (a check) |
 | `modules.institutions.control.<id>.*` | the warning `cap_below_seed_cost`: a control's cap against the full unit cost at the table's prices (`spec-institutions.md` 10.2, 8.2.3); a price is an output of the programme, so no table moves | no (a check) |
-| `modules.tenure.terms.*` | the warning `rent_off_dual`: a configured rent against the dual `Rent` of its row (10.2, 10.3); titles and holdings are not read | no (a report) |
+| `modules.tenure.term.*` | the warning `rent_off_dual`: a configured rent against the dual `Rent` of its row (10.2, 10.3); titles and holdings are not read | no (a report) |
 | `role.<id>.target_ratio`, `role.<id>.target_spread`, `world.welfare_window`, `world.window_cycles` | the reports `target_above_surplus` and `subsistence_exceeds_expected_work` (4.4, 10.2) and the longest job of the money rule (8.3.1) | no (a report) |
 
 Not read: the spawner, the migration, information, merchant and subsistence modules,
@@ -1387,7 +1389,8 @@ spec is written):
 
 | Concern | Home |
 |---------|------|
-| `WarmStart`, `SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec`, `WarmPool`, `Lane`, `SteadyState`, `Report`, `SolveOption` | root package, `viability.go`; `WarmStart` is a field of `Config` (`config.go`) |
+| `WarmStart`, `SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec`, `WarmPool` | root package, `config.go`, with `Config` (architecture.md 2.6: `config.go` holds "Config and every section struct"; an earlier draft said `viability.go`) |
+| `Lane`, `SteadyState`, `Report`, `SolveOption` | root package, `viability.go` |
 | `SolveSteadyState`, `CheckViability` | root package, `viability.go`, converting inline to `internal/steady` |
 | The tableau, Bland's rule, the certificate, the greedy start count, the component search, the programme per component | `internal/steady`: stdlib only (`math/big`), primitive slices (architecture.md 2.9) |
 | The stagger and the application of the table | root package, `world.go`, `agent.go` at construction |

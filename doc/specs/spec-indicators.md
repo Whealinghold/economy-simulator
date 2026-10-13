@@ -2273,7 +2273,7 @@ spec's recommendation.
 | `spec-subsistence.md` | 14, open question 11 | the duty cycle is `OwnUseChanged.Started` over `RecipeExecuted` for the own-use recipes (7.8.3) |
 | `spec-currency.md` | 5.1, 8 (not modelled) | the reference basket is the fixed basket of `BasketLevel`; an inflation index is a measure, not a behaviour |
 | `specs/README.md` | index, code table, glossary | the IND row (exists, FR-IND-001 to 055, NFR-IND-001 to 004), the new terms |
-| `doc/roadmap.md` | existing specs | the IND row exists; "Suggested next specs" drops IND |
+| `doc/spec-roadmap.md` | existing specs | the IND row exists; "Suggested next specs" drops IND |
 | `doc/documentation_index.md` | | the rows for the spec and for `specs/models/ind/` |
 | `doc/specs/models/README.md` | contents | the `ind/` row (`arith.py`, `worked.py`) |
 | `doc/notes.md` | open notes | in the handoff |

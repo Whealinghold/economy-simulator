@@ -4,14 +4,25 @@ A model of the encoding rules of spec-checkpoint.md 5, not code of the library. 
 library only. The Go values that the spec quotes were printed by Go 1.25 in Docker and are
 hard-coded here as the expected results.
 
-Run in Docker: docker run --rm -v "$PWD":/w -w /w python:3.12-slim python worked.py
+Run in Docker, never on the host, from the models folder so that wld/seed.py is importable
+(the finaliser, the key and the reseed rule are that file's, one source):
+  docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v "$PWD/..":/m -w /m/chk python:3.12-slim python worked.py
+
+Section 17.2 (the world section with a PCG state) and the toy frame of 17.3 are stale under
+ADR 0008, see N-214: the world section no longer holds a PCG state. They are kept as the
+byte-level examples of the primitives until 17.2 is rewritten. The reseed of 6.8 and 17.5 is
+the rule of ADR 0008 and is computed by wld/seed.py.
 """
 
 import hashlib
+import os
+import sys
 
-M64 = (1 << 64) - 1
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "wld"))
+
+from seed import PCG, SITES, M64, bare_state, reseed, stream_state, words  # noqa: E402
+
 GAMMA = 0x9E3779B97F4A7C15
-KEY = 0x243F6A8885A308D3
 
 
 # --- the primitives of 5.2 -------------------------------------------------------------
@@ -71,43 +82,11 @@ def read_b(buf, pos):
     return buf[pos] == 1, pos + 1
 
 
-# --- the world's source (spec-world.md 7.1), for the example state --------------------------
-
-def finalise(z):
-    z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & M64
-    z = ((z ^ (z >> 27)) * 0x94D049BB133111EB) & M64
-    return z ^ (z >> 31)
-
-
-class PCG:
-    MUL = (2549297995355413924 << 64) | 4865540595714422341
-    INC = (6364136223846793005 << 64) | 1442695040888963407
-
-    def __init__(self, hi, lo):
-        self.state = (hi << 64) | lo
-
-    def uint64(self):
-        self.state = (self.state * self.MUL + self.INC) & ((1 << 128) - 1)
-        hi, lo = self.state >> 64, self.state & M64
-        hi ^= hi >> 32
-        hi = (hi * 0xDA942042E4DD58B5) & M64
-        hi ^= hi >> 48
-        return (hi * (lo | 1)) & M64
-
-    def marshal(self):
-        return b"pcg:" + (self.state >> 64).to_bytes(8, "big") + (self.state & M64).to_bytes(8, "big")
-
+# --- the world section of 17.2 is stale under ADR 0008 (no PCG state is saved); the bare-seed state of
+# wld/seed.py stands in for it so that the primitive examples below keep their bytes
 
 def seed_state(seed):
-    s = (seed + GAMMA) & M64
-    hi = finalise(s)
-    s = (s + GAMMA) & M64
-    return hi, finalise(s)
-
-
-def reseed(hi, lo, salt):
-    x = finalise(salt ^ KEY)
-    return finalise(hi ^ x), finalise(lo ^ finalise((x + GAMMA) & M64))
+    return bare_state(seed)
 
 
 def main():
@@ -171,22 +150,35 @@ def main():
     closed = u(0) + b(True)
     print("closed account: %s" % closed.hex(" "))
 
-    # 17.5 reseed vectors from the state after 14 words
-    hi14, lo14 = q.state >> 64, q.state & M64
-    print("state words hi=%016x lo=%016x" % (hi14, lo14))
+    # 17.5 the reseed of ADR 0008: seed' = finalise(seed xor finalise(salt)), checked against the values
+    # printed by a Go program (stdlib math/rand/v2 PCG, Go 1.25 and 1.27: not archived)
     expected = {
-        0: ("0eec475500551da4", "64b50bad715e9bc6", "51798660ccefa5fa"),
-        1: ("8d300de17fda20a5", "52b5dbda40cf330c", "081f02238dd84e8c"),
-        2: ("c44be769bde5c5d0", "7603e7237b5b0efa", "e7b2f5564db971e6"),
-        42: ("26e84dab9a52f23d", "ca6855e42adbe836", "80c06a62e31cb550"),
+        (0, 0): ("0000000000000000", "264d986499a1a1fa"),
+        (0, 1): ("7ab40e090f363a7d", "9fea3673fd1e605f"),
+        (0, 2): ("52ead7e36ea7fea8", "73a2087f8eae98d5"),
+        (0, 42): ("97ea87f7e45c00a5", "1b4989fe2e01283b"),
+        (1, 0): ("5692161d100b05e5", "3a90ed51beb4e41d"),
+        (1, 1): ("83ec686c1600460a", "a5d0a8b51be8378f"),
+        (1, 2): ("3ec2d42f3a45cc6e", "47f38e4d9854e8fd"),
+        (1, 42): ("901883d2427428f4", "00c073c4d5d6c31a"),
+        (42, 0): ("a759ea27d4727622", "e3082397f3bc8ba6"),
+        (42, 1): ("c2a6eebdf3976ad0", "cd5e38f87f0ec634"),
+        (42, 2): ("7bfa87c92aa0cff0", "5b73a5b88ec53d5a"),
+        (42, 42): ("36cdb0593534a37b", "472c27560611be0f"),
+        (18446744073709551615, 0): ("b4d055fcf2cbbd7b", "9cbc3a9d395aed3d"),
+        (18446744073709551615, 1): ("f3759af4852e5904", "e6b61a2920e28083"),
+        (18446744073709551615, 2): ("ab47721b00f39ddb", "649e9d647ec06743"),
+        (18446744073709551615, 42): ("eab06b8e3b2074d7", "71829937eb038fa1"),
     }
-    for salt, want in expected.items():
-        h, l = reseed(hi14, lo14, salt)
-        first = PCG(h, l).uint64()
-        got = ("%016x" % h, "%016x" % l, "%016x" % first)
-        assert got == want, (salt, got, want)
-        print("  salt %d: hi=%s lo=%s first word=%s" % (salt, *got))
-    print("reseed matches Go 1.25 for salts", sorted(expected))
+    print("reseed, seed' = finalise(seed xor finalise(salt)); w0 is the first word of the stream (siteWork, 0, 0) of seed'")
+    for (seed, salt), (want_seed, want_w0) in expected.items():
+        s2 = reseed(seed, salt)
+        hi, lo = stream_state(s2, SITES["siteWork"], 0, 0)
+        got = ("%016x" % s2, "%016x" % words(hi, lo, 1)[0])
+        assert got == (want_seed, want_w0), (seed, salt, got)
+        print("  seed %d salt %d: seed'=%s w0=%s" % (seed, salt, got[0], got[1]))
+    assert reseed(0, 0) == 0  # finalise(0) = 0: the one known case where a reseed is the identity
+    print("reseed matches Go for 16 (seed, salt) pairs")
 
 
 if __name__ == "__main__":

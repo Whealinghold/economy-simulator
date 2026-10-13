@@ -27,7 +27,7 @@ glossary in `doc.go` before any code uses them (architecture.md 3.2). Two of the
 
 ## 1. Purpose and scope
 
-Stability is a requirement, not a hope (overview.md principle 7; roadmap.md
+Stability is a requirement, not a hope (overview.md principle 7; spec-roadmap.md
 "Stability"). A simulation of this kind fails in a few characteristic ways: a price
 runs to a bound, a market freezes, a role oscillates between full and empty, a
 region collapses and cannot recover. Each failure comes from a **feedback loop**: a
@@ -79,7 +79,7 @@ majority at this stage.
 
 2.6. **The register is documentation, not code.** The library carries no runtime
 stability controller. Macro aggregates are measured and never fed back to agents
-(roadmap.md "Macro is measured, never set"); an adaptive controller that read them
+(spec-roadmap.md "Macro is measured, never set"); an adaptive controller that read them
 would break that rule. All stability comes from local rules and their parameters.
 
 ## 3. The entry format
@@ -1664,7 +1664,7 @@ bound and a doc line (architecture.md 9.5 to 9.7), and a row in the
 parameter-owner table. A fixed one is a rule constant beside its code (9.6).
 
 5.1.3. **It acts locally.** A damper uses information the agent or the market has.
-It does not read a macro aggregate and feed it back (roadmap.md "Macro is measured,
+It does not read a macro aggregate and feed it back (spec-roadmap.md "Macro is measured,
 never set"; ADR 0001). A rule that reacts to measures is a policy actor (PLC), not
 a damper of the core. One narrow exception is owned and recorded in ADR 0006, which
 narrows ADR 0001 decision 7: a count of households of one region (or the derived rank of it, the
@@ -2605,7 +2605,7 @@ The parameters of the spawner's and the demand module's dampers, with `EntryShar
 | D87 | none: proposed, not adopted (a rule for a new tie, `spec-world.md` 10.1.1) | `spec-world.md` 10.1.1 | not applicable |
 | D88 | none: a rule constant (draw anyway) | `spec-world.md` 5.7.2, 7.4.3 | not applicable |
 | D89 | none: the `Stateful` interface is a rule of the extension contract, with no field | `spec-checkpoint.md` 7; architecture.md 4.3 | not applicable |
-| D90 | none: a rule constant (the reseed, `x = finalise(salt xor 0x243F6A8885A308D3)`); the salt is an argument of `WithReseed`, not a field | `spec-checkpoint.md` 6.8.2 | not applicable |
+| D90 | none: a rule (the reseed, `seed' = finalise(seed xor finalise(salt))`, with no constant of its own); the salt is an argument of `WithReseed`, not a field | `spec-checkpoint.md` 6.8.2 | not applicable |
 | D91 | none: the bounds are the owners' (`MaxYieldBP`, `MaxShockBP` and the rest of `spec-config.md` 4.1) | `spec-integration.md` 3.3, 5.2.6 | not applicable |
 | D92, D93, D94 | none: rules of the harness (`Used` beside a statistic; the confirm on another `Seed0`; `Planned = Used + Failed + Undefined + Missing`); `Replicas`, `Seed0` and `Transient` are the experiment's arguments and not fields | `spec-experiments.md` 8.3, 8.3.1, 12.4.2 | not applicable |
 | D95, D96, D97, D98 | none: rules of the procedure (a block serves one choice; no off value; the gate is no input; attempts are counted); the numbers (the review after three) are `spec-calibration.md`'s own constants, not `Config` fields | `spec-calibration.md` 4.3.1, 7.1, 7.4 | not applicable |

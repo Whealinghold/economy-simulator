@@ -60,6 +60,7 @@ def value(cell, n, lo, hi):
     return lo + ((2 * cell + 1) * (hi - lo + 1)) // (2 * n)
 
 
+# 0x243F6A8885A308D3 is the DesignSalt of the Latin-hypercube design (spec-experiments.md 7), a design constant; it is not the reseed rule (spec-checkpoint.md 6.8.2).
 def design(n, d, salt=0x243F6A8885A308D3):
     return [[perm(i, n, axis_key(salt, j, n)) for j in range(d)] for i in range(n)]
 

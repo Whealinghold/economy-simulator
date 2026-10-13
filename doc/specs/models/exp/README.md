@@ -19,3 +19,5 @@ docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v "$PWD/doc/specs/models/exp":/w -
 | `worked.py` | `worked.out` | The points of the worked examples of section 19: a grid, one at a time, a spread of 8, the overlay documents, the seeds and a branch plan |
 
 `worked.py` imports `lhs.py`; run it from this folder.
+
+The constant `0x243F6A8885A308D3` in `lhs.py`, `kronecker.py` and `worked.py` is the design constant of 4.4.2 (the default salt of a design), not a reseed constant: the reseed rule of `spec-checkpoint.md` 6.8.2 has none, and no script here reseeds a world.

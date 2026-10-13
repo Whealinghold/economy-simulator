@@ -51,6 +51,9 @@ shaped that way and is where a later reader looks when they want to reverse it.
 | [0004](0004-outside-trades-through-pass-through-counterparties.md) | The outside trades through pass-through counterparties | Accepted (human review pending) |
 | [0005](0005-delivery-contracts-are-matched-by-a-first-fit-round.md) | Delivery contracts are matched by a first-fit round | Accepted (human review pending) |
 | [0006](0006-structural-rank-may-gate-entry-rights-and-places.md) | A derived structural rank may gate an entry, a right or a place; no agent reacts to an aggregate | Accepted (human review pending) |
+| [0007](0007-a-module-is-one-file-that-owns-its-touch-points.md) | A module is one root file that owns every one of its touch points | Accepted |
+| [0008](0008-random-draws-are-keyed-streams.md) | Random draws come from keyed streams, not from one positional stream | Accepted |
+| [0009](0009-the-toml-library-is-pelletier-go-toml-v2.md) | The TOML library is pelletier/go-toml/v2, behind a guard pass | Proposed |
 
 ## Updating this file
 

@@ -293,11 +293,27 @@ of the parameter-owner table in `doc/specs/README.md`, and every row has a
 field, a default that passes validation, and a failing-case validation test
 (3.9). The test reads the table with a plain text parse, so it needs no
 extra dependency. It is written when `spec-config.md` fixes the configuration
-shape; until then reviewers check the table by hand. The registry of knobs of
+shape; until then reviewers check the table by hand. While the modules are
+being built it runs in the staged form of architecture.md 9.7: one explicit
+list, `notBuilt`, names the scopes (a Go type name) and the fields of a built
+scope (`Scope.Field`) that the code does not have yet, and the rows it names
+are skipped by the checks that need a field (a row has a field, the default
+passes validation, a failing case exists). The test fails when a listed entry
+exists in the code and when a row is neither built nor listed. The direction
+"every field has a row" is never staged. The change that builds a scope or a
+field deletes its entries. The catalogue test of events
+(`spec-observability.md`, FR-OBS-003) is staged the same way. The registry of
+knobs of
 `doc/specs/spec-calibration.md` section 6 has a second test of the same kind
 (that spec's 11.1): it reads the same table and the classification of the
 registry by the same plain text parse, and needs no extra dependency.
 **[project]**
+
+6.8. A position table test enforces architecture.md 2.10.3: the list of
+positions in `tick.go` (identifier, owner, in order) equals the table of
+`spec-world.md` 6, read by a plain text parse as 6.7 reads the parameter-owner
+table. A position in the spec with no call, a call with no row, or a different
+order fails it. **[project]**
 
 ## 7. End-to-end, golden-file and fuzz tests
 
@@ -306,6 +322,28 @@ ticks and compares a canonical rendering of the result (prices, volumes,
 inventories, event counts) to a file in `testdata/golden/`. It exists to detect
 unintended behaviour change. The golden-file and determinism tests **SHOULD**
 run in CI on at least two architectures (architecture.md 7.4). **[project]**
+
+7.1.1. There are three sets of golden files, under `testdata/golden/`
+(architecture.md 2.10.6): **[project]**
+- `off/`: the reference chain with every module off. A change that adds a
+  module **MUST** leave these files unchanged; a diff here is a non-interference
+  failure, not a golden to regenerate. A field a module appends to an event or
+  a row is omitted from the rendering at its off value
+  (`spec-observability.md` 9.5.2), so an unchanged file is what a correct
+  append produces.
+- `<module>/`: one directory per module, the reference chain with that module
+  alone on (its overlay from `testdata/chains/overlay/`). A module ships with
+  its golden in the same PR.
+- `all/`: every module on. The one set that may move when a module is added,
+  with the explanation 7.2 requires.
+
+7.1.2. A test-only per-position state hash: a hash of the ledger, the agents
+and every module's state after each position of a step, recorded for one
+scripted run of each golden set. When a golden file fails, the hash test
+reports the first tick and position at which the state diverged, so the
+failure names a position instead of a rendering. The hash is a test helper in
+the root package's `_test` files, not an exported API (architecture.md 10.2).
+**[project]**
 
 7.2. Golden files are updated only by an explicit flag (`-update`) and
 **MUST NOT** be regenerated to make a failing test pass without understanding
@@ -397,7 +435,9 @@ Fixtures shared by several packages live in the module root's `testdata/`
 (architecture.md 2.6). The reference supply chain is a configuration file in
 `testdata/chains/` and is the standard fixture for integration and end-to-end
 tests; tests in other packages read it by relative path
-(`../testdata/chains/...`), which stays inside the module (10.2).
+(`../testdata/chains/...`), which stays inside the module (10.2). Golden files
+are laid out as 7.1.1 says: `testdata/golden/off/`, one directory per module,
+and `testdata/golden/all/`.
 
 10.5. All tests pass with `-race`. Integration and end-to-end tests begin with
 `if testing.Short() { t.Skip("integration test, skipped with -short") }` (or
@@ -445,7 +485,9 @@ Reject a change that contains any of the following:
   seed (6.2)
 - a configuration field with no row in the parameter-owner table, or a row
   with no field, default or validation test (6.7)
-- a golden file regenerated without explanation (7.2)
+- a golden file regenerated without explanation (7.2), or an `off/` golden
+  file regenerated to absorb a module's change (7.1.1)
+- a module without its module-alone golden file (7.1.1)
 - a fuzz crash input not committed (7.5)
 - an unexplained `t.Skip` (5.7)
 - coverage that falls with no stated reason (9.2)
@@ -480,4 +522,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 22da929a3c00a99f79eb878e
+RULE-TAG: b3559bc6d47470c221bc4642

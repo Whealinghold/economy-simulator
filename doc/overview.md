@@ -2,7 +2,7 @@
 
 A short summary of what this library is, how it is shaped and why. It is the
 document to read first after the rules files that `AGENTS.md` requires. Detail lives in the specs (`specs/README.md`), the
-plan in [roadmap.md](roadmap.md), and the reasons for the main decisions in
+plan in [spec-roadmap.md](spec-roadmap.md) and [roadmap-v1.md](roadmap-v1.md), and the reasons for the main decisions in
 [adr/](adr/README.md). Where this file and one of those disagree, they win and
 this file is corrected.
 
@@ -18,7 +18,7 @@ It is inspired by bazaarBot (Doran and Parberry, "Emergent Economies for Role
 Playing Games"): agents with price beliefs trade in a double auction, and
 supply chains emerge from recipes. We keep that idea, fix its defects and
 extend it with regions, time delays, trade routes, carriers, perishability,
-population and migration. We do not aim to reproduce it exactly (`roadmap.md`,
+population and migration. We do not aim to reproduce it exactly (`spec-roadmap.md`,
 Decisions).
 
 ## 2. The picture
@@ -128,7 +128,7 @@ How the pieces are layered:
    or replace a whole layer through an extension point. Defaults are stable
    constants, claimed only once the acceptance checks exist.
 7. **Stable by design.** Stability is a requirement, not a hope. Every feedback
-   loop is named, damped and tested (`roadmap.md`, "Stability").
+   loop is named, damped and tested (`spec-roadmap.md`, "Stability").
 8. **A library, not an application.** No server, transport or storage in the
    core. Observability is optional and a no-op by default.
 9. **Persistable.** The library never stores anything. All state is plain data
@@ -203,12 +203,16 @@ player is an ordinary external agent whose strategy is the library's `Directed`
 
 ## 6. Where we are
 
-- **Status:** design only. There is no code. The documents are drafts, and none
-  of the behaviour has been run or validated.
+- **Status:** design, and the first code. Stage 0 of
+  [roadmap-v1.md](roadmap-v1.md) is written and tested: the value types, the
+  configuration and its validation, the TOML loader, the events, the observer,
+  the options and the keyed random stream. There is no `World` yet, so nothing
+  of the economy has been run, and none of its behaviour has been validated.
+  The specs are drafts.
 - **Written:** the rules (`rules/`), fifty-one economy specs (currency, goods,
   ledger, production, clearing, beliefs, agents, spawner, demand, scale, config, calendar, stability, viability, reference chain, welfare and wages, skill barriers, estates, carriage, regions, money supply, population, transport, resources, information, external sector, subsistence, migration, merchants, world, observability, integration, checkpoint, indicators, stylised facts, experiments, calibration, and the fourteen later-stage modules: settlements, storage, employment, land, polity, credit, risk, infrastructure, insurance, fiscal, institutions, policy, saving and investment, technology), the evidence file, the
   bazaarBot reference, the roadmap, a vision and version-1 scope
-  ([vision.md](vision.md), accepted by ADR 0003), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties), ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round) and ADR 0006 (accepted, human review pending; a derived structural rank may gate an entry, a right or a place). Every economy spec has a Requirements section.
+  ([vision.md](vision.md), accepted by ADR 0003), ADR 0001 (accepted), ADR 0002 (proposed), ADR 0003 (accepted), ADR 0004 (accepted by the supervisor, human review pending; the outside trades through pass-through counterparties), ADR 0005 (accepted by the supervisor, human review pending; delivery contracts are matched by a first-fit round), ADR 0006 (accepted, human review pending; a derived structural rank may gate an entry, a right or a place), ADR 0007 (accepted; a module is one root file that owns every one of its touch points) and ADR 0008 (accepted; random draws come from keyed streams, so a checkpoint holds no random state and `spec-world.md` 7 owes the keying rule). Every economy spec has a Requirements section.
 - **Planned:** no spec: every spec of the roadmap has a file (the fourteen later-stage modules are drafts, written on
   2026-10-12). The roadmap lists them with layers and dependencies, and a dependency picture of the first tier.
 - **Known gaps:** services as goods (land and hired labour are modules, not goods); authoring tools; no
@@ -223,7 +227,7 @@ player is an ordinary external agent whose strategy is the library's `Directed`
 |------|------|
 | What to read for a task | [documentation_index.md](documentation_index.md) |
 | What version 1 is for and what it leaves out | [vision.md](vision.md) |
-| The plan and the order, and which spec needs which | [roadmap.md](roadmap.md) |
+| The plan and the order, and which spec needs which | [spec-roadmap.md](spec-roadmap.md), [roadmap-v1.md](roadmap-v1.md) |
 | What to take into account before writing a spec | [notes.md](notes.md) |
 | Why a decision was taken | [adr/README.md](adr/README.md) |
 | The rules every change follows | [rules/](rules/architecture.md) |

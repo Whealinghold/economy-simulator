@@ -222,10 +222,9 @@ are `ErrUnknownRegion`, `ErrUnknownResource` and `ErrDuplicateID` (`spec-regions
 5.3.1, 5.3.2). The row needs a line in `spec-regions.md` 5.1.3 (handoff). The shock
 slots of 6.3 edit no row (`spec-regions.md` 5.3.6).
 
-3.3.2. **File layout** (`spec-config.md` 6.2; the spelling of the module table is
-open until N-102 is closed): the module is the table `[resources]`, a resource is
-`[resources.resource.<id>]` and a row `[resources.endowment.<region>.<resource>]`, in
-the way `[demand.want.<id>]` and `[demand.region_taste.<region>.<want>]` are, so that
+3.3.2. **File layout** (`spec-config.md` 6.2.1, the one rule for module tables, N-102 closed): the module is the table `[modules.resources]`, a resource is
+`[modules.resources.resource.<id>]` and a row `[modules.resources.endowment.<region>.<resource>]`, in
+the way `[modules.demand.want.<id>]` and `[modules.demand.region_taste.<region>.<want>]` are, so that
 layers merge by key (`spec-config.md` 6.4). The yield table is unchanged:
 `[region.<id>.yield.<recipe>]`.
 
@@ -1291,12 +1290,12 @@ The Earth calendar (365 ticks a year, one tick a day, seasons `spring` 92, `summ
 complete valid pack:
 
 ```toml
-[resources]
+[modules.resources]
 horizon_years = 50
 
 # Land that recovers in the fallow half of the year: a refill of 100% of the gap a year,
 # paid at twice the rate in autumn and winter and not at all in spring and summer.
-[resources.resource.arable]
+[modules.resources.resource.arable]
 shape = "refill"
 rate_bp = 10000
 initial_bp = 8500
@@ -1304,7 +1303,7 @@ seasons = [ { season = "autumn", bp = 20000 }, { season = "winter", bp = 20000 }
 
 # A stand that grows from itself: 30% a year, a refuge of 20 units, and a poorer yield
 # when it is thin.
-[resources.resource.woodland]
+[modules.resources.resource.woodland]
 shape = "logistic"
 rate_bp = 3000
 refuge = 20
@@ -1313,19 +1312,19 @@ abundance = [ { share = 0, factor = 0 }, { share = 2000, factor = 6000 },
 
 # A seam that does not renew: rate_per_year is 0, so it is finite and its depletion is
 # permanent. A poorer grade as it empties.
-[resources.resource.iron_seam]
+[modules.resources.resource.iron_seam]
 abundance = [ { share = 0, factor = 4000 }, { share = 10000, factor = 10000 } ]
 
-[resources.endowment.north.arable]
+[modules.resources.endowment.north.arable]
 capacity = 2000
-[resources.endowment.south.arable]
+[modules.resources.endowment.south.arable]
 capacity = 1600
 regen_scale_bp = 12000          # richer soil recovers a fifth faster
-[resources.endowment.north.woodland]
+[modules.resources.endowment.north.woodland]
 capacity = 50000
-[resources.endowment.north.iron_seam]
+[modules.resources.endowment.north.iron_seam]
 capacity = 400000
-[resources.endowment.far_south.iron_seam]
+[modules.resources.endowment.far_south.iron_seam]
 capacity = 900000
 ```
 
@@ -1372,25 +1371,25 @@ A calendar of 320 days at two ticks a day (`TicksPerYear` 640) with two seasons,
 12.2).
 
 ```toml
-[resources]
+[modules.resources]
 horizon_years = 15              # a pack that must last fifteen years, not fifty
 
 # A deposit with no renewal: finite, permanent depletion.
-[resources.resource.ice_field]
+[modules.resources.resource.ice_field]
 abundance = [ { share = 0, factor = 2000 }, { share = 2000, factor = 8000 },
               { share = 10000, factor = 10000 } ]
 
 # Culture vats: used up and cleaned, a refill of 200% of the gap a year.
-[resources.resource.vat_volume]
+[modules.resources.resource.vat_volume]
 shape = "refill"
 rate_bp = 20000
 plan_share_bp = 5000
 
-[resources.endowment.crater_rim.ice_field]
+[modules.resources.endowment.crater_rim.ice_field]
 capacity = 3000000
-[resources.endowment.deep_crater.ice_field]
+[modules.resources.endowment.deep_crater.ice_field]
 capacity = 12000000
-[resources.endowment.crater_rim.vat_volume]
+[modules.resources.endowment.crater_rim.vat_volume]
 capacity = 30000
 ```
 

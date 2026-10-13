@@ -801,9 +801,10 @@ default is a placeholder** (N-015, N-027); none comes from a source.
 `MaxKnots` is a bound of `spec-config.md` 4.1: **8** (provisional). The upper bound
 10 000 on a `Rate` is not a tunable: it is the largest probability per year.
 
-In a file the module is the table `[population]` with the two schedules as lists of
-`{ ratio, rate }` and the regions as tables keyed by region ID, so layers merge by key
-(`spec-config.md` 6). A region not listed has the defaults.
+In a file the module is the table `[modules.population]` with the keys `birth_schedule` and
+`death_schedule` (lists of `{ ratio, rate }`), `min_households` and `birth_stake`, and a region row
+as `[modules.population.region.<id>]` with `birth_scale`, `death_scale` and `household_cap`, so
+layers merge by key (`spec-config.md` 6.2.1). A region not listed has the defaults.
 
 **Region-keyed table, in REG's sense.** `Modules.Population.Regions[]` is a region-keyed
 table of the mechanism of `spec-regions.md` 5.1, one row per region, owned by this spec

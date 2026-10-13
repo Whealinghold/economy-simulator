@@ -1079,7 +1079,7 @@ Constant lowercase messages, typed attributes, `Enabled` guards (rules 3).
 - `Warn`, in the tick, one, bounded by the configuration (pattern B of
   `spec-observability.md` 7.3, the tenth tick and every tenth after): "body has waiting
   households", per (region, body), with `region`, `body`, `waiting` and `places`, when the
-  waiting count has been above 0 for `WarnRun` consecutive ticks. Counterpart:
+  waiting count has been above 0 for `warnRun` consecutive ticks. Counterpart:
   `MembershipChanged.Waiting`. A row owed to the table of 7.3 there.
 - `Debug`, per entity, guarded: "start refused" (existing line) with the reason
   `not_permitted`; "order rejected" (existing) with `not_permitted`; "place not open"

@@ -6,9 +6,10 @@ version 1: the slice may still move specs between stages when it has run. The
 conditions listed in section 6 that are still open are tracked in the ADR, not
 blocking.
 
-The approach is in [overview.md](overview.md), the plan in
-[roadmap.md](roadmap.md). This file says what the first release is for, what it
-must contain, and what it leaves out.
+The approach is in [overview.md](overview.md), the plan of the specs in
+[spec-roadmap.md](spec-roadmap.md) and the order in which the code is built in
+[roadmap-v1.md](roadmap-v1.md). This file says what the first release is for,
+what it must contain, and what it leaves out.
 
 ## 1. Vision
 
@@ -22,8 +23,8 @@ colony or a trading-card world by changing configuration only.
 
 The first consumer is a fantasy role-playing game (`AGENTS.md`). It sets the
 needs below, but not the vocabulary: the core stays setting-agnostic, and the
-game's content lives in a data pack under `examples/` (roadmap, "Deliverables
-that are not specs").
+game's content lives in a data pack under `examples/` (`spec-roadmap.md`,
+"Deliverables that are not specs").
 
 What the first consumer needs from the library:
 
@@ -73,19 +74,19 @@ core.
 
 ## 4. Proposed scope
 
-Each spec of the roadmap, written or planned, gets one of three stages.
+Each spec of `spec-roadmap.md`, written or planned, gets one of three stages.
 
 - **Slice**: the vertical slice of the overview, section 8: one region, a short
   chain, clearing, beliefs and stability checks. Its job is to show which of the
   other specs are really needed, so it comes first and may change this table.
 - **Version 1**: the first release that meets the first consumer's needs.
 - **Later**: valuable, but the first release works without it. The core leaves
-  room for it where the roadmap says so.
+  room for it where `spec-roadmap.md` says so.
 
 | Stage | Specs |
 |-------|-------|
-| Slice | GDS, LED, PRO, CLR, BEL, AGT, SPN, CUR (exists), EST (exists), WEL (exists), CAL (exists), WLD, CFG, STB, VIA, REF |
-| Version 1, in addition | SCL, DEM, REG, RES, SUB, POP, MIG, INF, TRN, CAR (exists), MER, EXT, MON, OBS, CHK, IND, STY, CLB, EXP, and a minimal INT limited to external shocks and a player agent |
+| Slice | GDS, LED, PRO, CLR, BEL, AGT, SPN, CUR (exists), EST (exists), WEL (exists), CAL (exists), WLD, CFG, STB, VIA, REF, and OBS except its metric adapter (moved here, below) |
+| Version 1, in addition | SCL, DEM, REG, RES, SUB, POP, MIG, INF, TRN, CAR (exists), MER, EXT, MON, OBS's metric adapter (`otelobserver/`), CHK, IND, STY, CLB, EXP, and a minimal INT limited to external shocks and a player agent |
 | Later | SKL (exists), SET, POL, STO, RSK, LND, ORG, CAP, EMP, SAV, TEC, FIS, PLC, CRD, INS |
 
 Reasons for the less obvious placements:
@@ -94,14 +95,23 @@ Reasons for the less obvious placements:
   (`TicksPerYear`) is derived from the calendar. The structure of time is core and
   Earth by default, so a consumer can model another planet; only the seasons are
   optional (`spec-calendar.md`).
+- **OBS is in the slice, except its metric adapter** (moved from version 1 when
+  `roadmap-v1.md` was written, 2026-10-12). Every module adds an event and a log
+  line, and the first golden file renders the events (`spec-observability.md`
+  9.5), so the event catalogue, the sealed `Event`, the observer, the options
+  `WithLogger` and `WithObserver` and the log keys are built from Stage 0, the
+  snapshot with the world in Stage 1. The metric adapter `otelobserver/` is a
+  separate module that nothing in the core imports, and stays in version 1
+  (Stage 2). The events are built in stages: a module declares its own events
+  and fields (`spec-observability.md` 3.3.4).
 - **SCL and DEM are in version 1** because they change the agent model and are
-  costly to retrofit (roadmap, Open 1).
+  costly to retrofit (`spec-roadmap.md`, Open 1).
 - **CHK is in version 1** because the consumer needs save and resume, and every
   spec lists the state it contributes, which is cheap to do while writing and
   costly to add afterwards (ADR 0002).
 - **MON, EXT, IND, STY, CLB and EXP are in version 1** because the macro layer
   is measured, and tuning needs the measure, compare, adjust and run loop
-  (roadmap, "Macro is measured, never set").
+  (`spec-roadmap.md`, "Macro is measured, never set").
 - **INT is cut down** to shocks and a player agent: STY needs a shock to test
   the response to a harvest failure, and the first consumer needs a player.
   The rest waits.
@@ -142,4 +152,4 @@ Reasons for the less obvious placements:
 - bazaarBot is run, so that "stable" has a reference (overview, section 8). The Doran and Parberry paper was read on 2026-10-10 and gives stability
   criteria (`spec-beliefs.md` section 19); the run is still missing.
 - The slice has run, since it may move specs between stages.
-- The answers to the roadmap's open questions 1 and 3 are recorded.
+- The answers to the open questions 1 and 3 of `spec-roadmap.md` are recorded.

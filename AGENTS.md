@@ -101,15 +101,24 @@ Every PR description and every agent's final summary has:
 
 ```
 economy-sim/
-├── go.mod
-├── go.work                 # local development only: core, otelobserver, examples
-├── doc.go                  # package economysim: docs and the glossary
-├── *.go                    # public API, one file per concept: world.go,
-│                           #   market.go, agent.go, order.go, value.go,
-│                           #   snapshot.go, strategy.go, clearing.go,
-│                           #   spawner.go, observer.go, event.go, errors.go,
-│                           #   checkpoint.go, option.go, random.go, tick.go,
-│                           #   integration.go
+├── go.mod  go.work  doc.go  bounds.go  defaults.go
+├── config.go validate.go hash.go errors.go event.go option.go tick.go
+│                           # the CATALOGUE files: the only files outside its own
+│                           #   file in which a module appears; append-only in
+│                           #   module order (architecture.md 2.10.2, 2.10.5);
+│                           #   tick.go is one line per position of spec-world.md 6
+├── value.go random.go world.go calendar.go commodity.go recipe.go role.go
+│   ledger.go market.go order.go clearing.go agent.go strategy.go spawner.go
+│   beliefs.go production.go estates.go welfare.go skills.go observer.go
+│   snapshot.go regions.go scale.go checkpoint.go integration.go moneyflow.go
+│   viability.go           # CORE concept files, one per concept; world.go holds
+│                           #   the four fan-ins (architecture.md 2.10.4)
+├── demand.go resources.go subsistence.go population.go transport.go
+│   information.go migration.go contract.go external.go settlements.go
+│   storage.go employment.go tenure.go polity.go credit.go risk.go
+│   infrastructure.go insurance.go fiscal.go institutions.go policy.go
+│   saving.go technology.go # MODULE files: one per optional module, owning every
+│                           #   touch point of the module (architecture.md 2.10.1)
 ├── config/                 # file format -> root Config structs; only package
 │                           #   that may import a third-party parser
 ├── strategy/               # additional strategies (add when a second strategy
@@ -120,25 +129,20 @@ economy-sim/
 │                           #   root and config/, imported by nothing
 ├── internal/               # stdlib only; never imports the root, config/,
 │   │                       #   strategy/, indicator/ or experiment/
-│   ├── clearing/           # order-matching algorithm over primitive structs
-│   ├── ledger/             # goods and money accounting
-│   ├── beliefs/            # price-belief updates
-│   ├── production/         # recipe execution
-│   ├── ordering/           # deterministic sorted iteration helpers, the
-│   │                       #   finaliser, and the Weyl, bucket and key helpers
-│   ├── checked/            # the checked 128-bit helper shared by the packages
-│   │                       #   that need one; imports nothing
-│   ├── codec/              # canonical encoding primitives of a checkpoint
-│   ├── measure/            # checked arithmetic of indicator/
-│   ├── verdict/            # detectors, seed rules and the band-setting rule
-│   ├── design/             # experiment design: grids, permutations, seeds
-│   ├── reduce/             # checked reductions of experiment/
-│   ├── calibration/        # grid, choice, alias test, record and overlay of a
-│   │                       #   calibration; stdlib and internal/design only
-│   └── logkeys/            # slog attribute key strings; imports nothing
+│   ├── checked/ logkeys/ ordering/ codec/        # leaf helpers; import nothing of
+│   │                       #   the root (ordering holds the stream key, ADR 0008)
+│   ├── ledger/ clearing/ beliefs/ production/ welfare/ steady/ graph/ curve/
+│   │                       # core rules over primitive structs
+│   ├── moneyflow/ population/ transit/ endowment/ rumour/ outside/ ownuse/
+│   │   migration/ merchant/ room/ employment/ settlement/ tenure/ polity/
+│   │   credit/ facility/ risk/ fiscal/ institution/ saving/ technology/
+│   │   policy/ insure/     # one package per module with arithmetic or matching
+│   └── measure/ verdict/ design/ reduce/ calibration/   # the platform
 ├── otelobserver/           # separate module: Observer backed by OpenTelemetry
-├── examples/<name>/        # each example is its own module
-├── testdata/               # shared fixtures: chains/ (config), golden/,
+├── examples/<name>/        # each example is its own module: the first consumer's
+│                           #   pack and a second, unrelated setting
+├── testdata/               # shared fixtures: chains/ (config), golden/ (off/, one
+│                           #   directory per module, all/: testing.md 7.1.1),
 │                           #   checkpoints/ (one all-modules-on fixture per
 │                           #   format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
@@ -148,11 +152,12 @@ economy-sim/
 │                           #   carries the FR-/NFR- IDs cited by tests
 ├── doc/documentation_index.md  # every file under doc/: summary and when to read it
 ├── doc/overview.md        # the approach in one page: pictures, principles, status
-├── doc/vision.md          # draft: first consumer, goals, version 1 scope
-├── doc/roadmap.md         # the specs still to write, in order, with area codes
-│                          #   and the tier 1 dependency picture
+├── doc/vision.md          # accepted: first consumer, goals, version 1 scope
+├── doc/spec-roadmap.md    # the specs, in order, with area codes and dependencies
+├── doc/roadmap-v1.md      # the delivery order of the code: stages, files, exit tests
 ├── doc/notes.md           # notes for future work, indexed by spec area code;
 │                          #   read before writing or changing a spec
+├── doc/plans/              # implementation plans, one per stage of roadmap-v1.md
 ├── doc/adr/              # architecture decision records, numbered NNNN-title.md
 └── doc/rules/              # normative rules (architecture, observability, testing)
 ```
@@ -160,12 +165,13 @@ economy-sim/
 Domain types live in the root package. `internal/` packages work on their own
 small structs (for example `clearing.Offer`) and the root (or `indicator/` or
 `experiment/`, for its own `internal/` package) converts to and from them inline
-at the call boundary (`doc/rules/architecture.md` rule 2.9). Packages under
-`internal/`, `indicator/` and `experiment/` are added when needed, not up front.
+at the call boundary (`doc/rules/architecture.md` rule 2.9). A file or package
+is added when needed, not up front, in the delivery order of `doc/roadmap-v1.md`;
+no module file before the slice's golden file runs (architecture.md 2.10.6).
 
-This is the target layout from `doc/rules/architecture.md` section 2.6; the
-repository is new, so most of it does not exist yet. Update this section when
-the structure changes.
+This is the target layout from `doc/rules/architecture.md` section 2.6, which
+is normative and wins over this summary; the module-file rule is its 2.10.
+Update this section when the structure changes.
 
 ## Commands
 

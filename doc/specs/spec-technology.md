@@ -1783,7 +1783,7 @@ Every edit is owed and is **not made here**. The full table with exact text is i
 | `spec-land.md`, `spec-saving-and-investment.md`, `spec-polity.md` | 7; 5.3.1 and 1; 5.4.2 and 1 | pointers only, no rule: LND's rent per drawn unit rises with `E` (8.10); SAV's `net_r` includes `tech`; POL's jurisdiction carries no lever on a gain (a consumer's call, 7.1.5) |
 | `spec-viability.md`, `spec-stylised-facts.md`, `spec-experiments.md`, `spec-calibration.md`, `spec-stability.md`, `spec-reference-chain.md`, `spec-indicators.md` | 11; 6.2, 7.3; 7.3; 4.3, 6; 4, 5, 8, 9.10; 7, 8; 7 | the path flag `no`; R9's units clause and the growth scenario; the note on alignment; the registry rows; the entries, dampers and scenarios; the overlay; one preset ask |
 | `doc/rules/observability-and-logging.md`, `doc/rules/architecture.md`, `AGENTS.md` | 3.3.2, 4.3, 5.3, 5.4.1; 2.6, 3.3; Layout | the keys, the events, the metrics and the attribute; `internal/technology/` and `technology.go`, `TechFieldID`; a fresh read-receipt tag on each rule file |
-| `doc/specs/README.md`, `doc/roadmap.md`, `doc/documentation_index.md`, `doc/notes.md` | index, code table, owner table, glossary, decisions; TEC row; rows; updates, the new notes, the index, a fresh tag | the usual |
+| `doc/specs/README.md`, `doc/spec-roadmap.md`, `doc/documentation_index.md`, `doc/notes.md` | index, code table, owner table, glossary, decisions; TEC row; rows; updates, the new notes, the index, a fresh tag | the usual |
 
 ### 17.3 Terms (N-017)
 

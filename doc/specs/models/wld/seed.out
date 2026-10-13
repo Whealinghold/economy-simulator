@@ -1,3 +1,53 @@
-mixed and naive seeding match Go 1.25 for seeds [0, 1, 2, 42]
-mixed seeds 0..2000: mean differing bits between seed s and s+1 = 31.99 (min 25.8, max 39.2 of 64)
-naive seeds 0..2000: mean differing bits between seed s and s+1 = 31.94 (min 24.0, max 38.0 of 64)
+bare-seed rule and plain NewPCG(seed, 0) match Go 1.25 for seeds [0, 1, 2, 42]
+properties hold
+--- vectors
+bare seed=0 hi=e220a8397b1dcdaf lo=6e789e6aa1b965f4 w0=b18c97843f57bb91 w1=d7046f21f79eba31
+bare seed=1 hi=910a2dec89025cc1 lo=beeb8da1658eec67 w0=af9d32bf75779748 w1=b7672df032bf0473
+bare seed=2 hi=975835de1c9756ce lo=bfc846100bfc1e42 w0=a28db69c539314fb w1=fe57a921339b50b9
+bare seed=42 hi=bdd732262feb6e95 lo=28efe333b266f103 w0=61c88529c9612c1b w1=2608d8a3075aa168
+key k1 seed=0 site=siteWork tick=0 id=0 sub=- s=f26e83000fb3a188 hi=79ae1abc6fb3c555 lo=32a6affd0dbf0521 w0=264d986499a1a1fa w1=0fb3474a976f0acf draw1(w0)=0 draw100(w1)=6
+key k2 seed=1 site=siteTrade tick=5 id=17 sub=- s=0e4289002a489b3d hi=fba1decca480b034 lo=59c9e7d8138ce36b w0=e87e37a8f2ed3a12 w1=46c2cfef3d61d69c draw1(w0)=0 draw100(w1)=27
+key k3 seed=42 site=siteClearing tick=100 id=2 sub=3 s=90d85e42a2621beb hi=92cfbdaff0085569 lo=df1d7be0b72c91fe w0=366090c9bf387982 w1=fe2c271dd54ed665 draw1(w0)=0 draw100(w1)=99
+key k4 seed=42 site=siteOutcome tick=100 id=17 sub=3 s=bb905db0b8a8bb2e hi=4c1a052c0514495c lo=1ebc9cbf8410ab07 w0=30967dc8ee4ec36e w1=d5b237e50696f3bf draw1(w0)=0 draw100(w1)=83
+key k5 seed=18446744073709551615 site=siteConstruction tick=0 id=4 sub=- s=a567852979e47fd7 hi=7e12e8d9e610f1f3 lo=11e76e20e84424df w0=64d9772cd475bf00 w1=4dd6b1aa70460b76 draw1(w0)=0 draw100(w1)=30
+key k6 seed=7 site=siteCreation tick=-1 id=12 sub=- s=8a6566c1ca36e2f3 hi=290ef3893fee12ef lo=aa22a25ddaace732 w0=1b6b4a321827daf5 w1=240b83bc1e00988b draw1(w0)=0 draw100(w1)=14
+key k7 seed=7 site=siteSpawner tick=3 id=-1 sub=- s=ef7edb14a4433105 hi=11f3bdf788e5ffb9 lo=4a115493bf1bf035 w0=eeeaa6fd69c7b339 w1=3355b2e3c0d174dd draw1(w0)=0 draw100(w1)=20
+key k8 seed=7 site=siteSpawner tick=-1 id=-1 sub=- s=b4a503670dc250f1 hi=cc1b665a6f86d8ba lo=6901bc968a06bc0f w0=f5455bb2a283bc00 w1=85eba190e6f38b27 draw1(w0)=0 draw100(w1)=52
+key k9 seed=9223372036854775808 site=siteTrade tick=1099511627776 id=1099511627777 sub=- s=f01e597ee04203eb hi=87e7225b79ecaea7 lo=ca410d7c919c53eb w0=3c277642ea207186 w1=510c6f3a642bcd9d draw1(w0)=0 draw100(w1)=31
+K t=0 id=0 key=e220a8397b1dcdaf
+K t=1 id=0 key=6e789e6aa1b965f4
+K t=0 id=1 key=910a2dec89025cc1
+K t=5 id=17 key=14db9121e4c732ea
+K t=100 id=3 key=a854cdf21653e5e5
+K t=1099511627776 id=123456789 key=2cd5718615e1be22
+K t=-1 id=-1 key=b4d055fcf2cbbd7b
+K t=-1 id=0 key=0000000000000000
+reseed seed=0 salt=0 seed2=0000000000000000 work(0,0).w0=264d986499a1a1fa
+reseed seed=0 salt=1 seed2=7ab40e090f363a7d work(0,0).w0=9fea3673fd1e605f
+reseed seed=0 salt=2 seed2=52ead7e36ea7fea8 work(0,0).w0=73a2087f8eae98d5
+reseed seed=0 salt=42 seed2=97ea87f7e45c00a5 work(0,0).w0=1b4989fe2e01283b
+reseed seed=1 salt=0 seed2=5692161d100b05e5 work(0,0).w0=3a90ed51beb4e41d
+reseed seed=1 salt=1 seed2=83ec686c1600460a work(0,0).w0=a5d0a8b51be8378f
+reseed seed=1 salt=2 seed2=3ec2d42f3a45cc6e work(0,0).w0=47f38e4d9854e8fd
+reseed seed=1 salt=42 seed2=901883d2427428f4 work(0,0).w0=00c073c4d5d6c31a
+reseed seed=42 salt=0 seed2=a759ea27d4727622 work(0,0).w0=e3082397f3bc8ba6
+reseed seed=42 salt=1 seed2=c2a6eebdf3976ad0 work(0,0).w0=cd5e38f87f0ec634
+reseed seed=42 salt=2 seed2=7bfa87c92aa0cff0 work(0,0).w0=5b73a5b88ec53d5a
+reseed seed=42 salt=42 seed2=36cdb0593534a37b work(0,0).w0=472c27560611be0f
+reseed seed=18446744073709551615 salt=0 seed2=b4d055fcf2cbbd7b work(0,0).w0=9cbc3a9d395aed3d
+reseed seed=18446744073709551615 salt=1 seed2=f3759af4852e5904 work(0,0).w0=e6b61a2920e28083
+reseed seed=18446744073709551615 salt=2 seed2=ab47721b00f39ddb work(0,0).w0=649e9d647ec06743
+reseed seed=18446744073709551615 salt=42 seed2=eab06b8e3b2074d7 work(0,0).w0=71829937eb038fa1
+site siteClearing d364e6ae73e1313f
+site siteConstruction c103123756d13f20
+site siteCreation 9b8ffa303cb545dc
+site siteOutcome d9cc0a517eb0d9f5
+site siteSpawner be0b1d169200e9ff
+site siteTrade fc14cd10e8a8ef43
+site siteWork de594838d3779a37
+--- distance between first outputs of neighbours (4 words each, 2000 pairs)
+bare mix                 0..2000: mean differing bits = 31.99 (min 25.8, max 39.2 of 64)
+naive                    0..2000: mean differing bits = 31.94 (min 24.0, max 38.0 of 64)
+keyed, id s vs s + 1     0..2000: mean differing bits = 32.04 (min 25.0, max 38.8 of 64)
+keyed, tick s vs s + 1   0..2000: mean differing bits = 32.03 (min 23.8, max 39.5 of 64)
+keyed, seed s vs s + 1   0..2000: mean differing bits = 32.03 (min 25.5, max 39.8 of 64)

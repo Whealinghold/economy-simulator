@@ -82,7 +82,7 @@ Assumptions about specs that are not final (so a change there names what to revi
    does not re-seed a role that has no agents (FR-SPN-042), so a region's missing role
    (a line not consumed there) is not a fault. Scenario S06 and S14 need its failure
    ladder (FR-SPN-013 to 015); its scenarios S26 and S27 are in 7.7.
-2. **DEM** (`spec-demand.md`). Base packs have no `[demand]` table; the module is
+2. **DEM** (`spec-demand.md`). Base packs have no `[modules.demand]` table; the module is
    switched on only by the overlay of 4.4.6 (FR-DEM-001). The names `Want`, `Taste`
    and the file layout of its 3.2 are taken as printed.
 3. **INT** (`spec-integration.md`). Yield shocks are set between steps by
@@ -631,7 +631,7 @@ relief begins only after the first removals.
 For the scenarios of `spec-demand.md` (S23 to S25; 7.7) the
 fixture needs a luxury role, a want with two alternatives and a taste table for two
 roles (note N-080). `demand.toml` adds three luxury commodities, three recipes, two
-roles, two wants and the tastes of eight roles. The module is on because the `[demand]`
+roles, two wants and the tastes of eight roles. The module is on because the `[modules.demand]`
 table is present (`spec-demand.md` 3.1). `one-demand.toml` is `one.toml` with the census
 re-solved for the wants.
 
@@ -662,13 +662,13 @@ recipes = [ "make_treat_a", "make_treat_b" ]
 [role.comfort_maker]
 recipes = [ "make_comfort" ]
 
-[demand.want.comfort]
+[modules.demand.want.comfort]
 items = [ { commodity = "comfort", weight = 10000 } ]
 quantity = 1
 period = 10
 rank = 1
 elasticity = 15000
-[demand.want.treat]
+[modules.demand.want.treat]
 items = [ { commodity = "treat_a", weight = 10000 }, { commodity = "treat_b", weight = 10000 } ]
 quantity = 1
 period = 5
@@ -676,27 +676,27 @@ rank = 2
 elasticity = 20000
 substitution = 2
 
-[demand.taste.comfort_maker.comfort]
+[modules.demand.taste.comfort_maker.comfort]
 scale = 10000
-[demand.taste.cook.comfort]
+[modules.demand.taste.cook.comfort]
 scale = 10000
-[demand.taste.cook.treat]
+[modules.demand.taste.cook.treat]
 scale = 5000
-[demand.taste.digger.comfort]
+[modules.demand.taste.digger.comfort]
 scale = 10000
-[demand.taste.forester.comfort]
+[modules.demand.taste.forester.comfort]
 scale = 10000
-[demand.taste.grower.comfort]
+[modules.demand.taste.grower.comfort]
 scale = 10000
-[demand.taste.grower.treat]
+[modules.demand.taste.grower.treat]
 scale = 10000
-[demand.taste.maker.comfort]
+[modules.demand.taste.maker.comfort]
 scale = 10000
-[demand.taste.refiner.comfort]
+[modules.demand.taste.refiner.comfort]
 scale = 10000
-[demand.taste.treat_maker.comfort]
+[modules.demand.taste.treat_maker.comfort]
 scale = 10000
-[demand.taste.treat_maker.treat]
+[modules.demand.taste.treat_maker.treat]
 scale = 10000
 ```
 
@@ -837,7 +837,7 @@ the variant's documents. The list, with its use:
 
 | Overlay | Content | Used by |
 |---------|---------|---------|
-| `overlay/estates.toml` | `[module.estates]`; the region fields keep their defaults | S14, S06, S19 variants that need a pool |
+| `overlay/estates.toml` | `[modules.estates]`; the region fields keep their defaults | S14, S06, S19 variants that need a pool |
 | `overlay/skill.toml` | `training_ticks = 120`, `max_trainees = 3`, `teaching_load = 1000` on `cook` and `crafter_a`; weight 1 only | S06 |
 | `overlay/a5.toml` | `south` of `two` cannot grow the staple: spring and autumn yields 0 | A5 |
 | `overlay/nofloor.toml` | `min_work_share = 0` for `grower` | S04 |
@@ -849,13 +849,13 @@ the variant's documents. The list, with its use:
 | `overlay/overhang.toml` | growers start with 1 992 `staple` (three times) | S16 |
 | `overlay/poor.toml` | every group starts with 1 000 money | S20 |
 | `overlay/perturbed.toml` | `prepare` makes 6, not 8 (`lambda*` 2.298): the warm table is stale | S22 |
-| `overlay/faucet.toml` | `[module.money_supply]` with one grant flow `stipend` on the `grower` households of `north`: 20 a tick (2% of the basket), a placeholder; defined by `spec-money-supply.md` 17.6 | S13 |
+| `overlay/faucet.toml` | `[modules.money_supply]` with one grant flow `stipend` on the `grower` households of `north`: 20 a tick (2% of the basket), a placeholder; defined by `spec-money-supply.md` 17.6 | S13 |
 | `overlay/faucet-sunk.toml` | the same, plus a rate levy on the same role (`rate_bp` 3650 a year, `exempt` 3000); `spec-money-supply.md` 17.6 | S13, S33 |
-| `overlay/sink.toml` | a rate levy on the households that have no paired grant (needs `[module.money_supply]`, `spec-money-supply.md` 17.6); a sink with no faucet beside it | R9's provoked run (`spec-stylised-facts.md` 6.5.3); no scenario of the register |
+| `overlay/sink.toml` | a rate levy on the households that have no paired grant (needs `[modules.money_supply]`, `spec-money-supply.md` 17.6); a sink with no faucet beside it | R9's provoked run (`spec-stylised-facts.md` 6.5.3); no scenario of the register |
 | `overlay/trade.toml` (edge part) | the directed edges of `spec-regions.md` 12.4 for `two`, `three` and `five` (`[region.<from>.edge.<to>]`, distances placeholders); the modes and carrier recipes are TRN's (`spec-transport.md` 3, 17.4); with them a `[modules.information]` table (`info_speed`, `rumour_error_bp`, `rumour_max_age`) and `informed = true` on the merchant role (`spec-information.md` 12.1 shows the keys); the merchant itself is MER's: a role with `strategy = "merchant"`, `informed = true`, a `[role.<id>.merchant]` block and `trades`, a consignee role with `consigns = true`, and `[modules.merchants]`, as in `spec-merchants.md` 19.1 (the Go line is `economysim.NewWorld(cfg, strategy.Options()...)`); the pack's weights are 1 for the merchant role (`ErrMerchantWeight`) and the role has no recipe (`ErrMerchantShape`) | X1, X2, S28, S29, S46, S47, S67 to S72 |
 | `overlay/population.toml` | `[modules.population]` with the birth and death schedules, `Renewal` 0 and wants on, at the placeholders of `spec-population.md` 18.3; the fixed factor is `overlay/resources.toml` (the binding set) or a fixed-factor double | S37 to S40, STY-W02, W03, W06, CLB C9 |
 | `overlay/resources.toml` | the resources and endowments of `spec-resources.md` 18.1: `arable` (a `refill` stock for `grow_staple`), `deposit` (a finite stock for `dig_mineral`) and `stand` (a `logistic` stock with a refuge for `cut_fuel`), at the capacities of 18.2; a slack set and a binding set | S41 to S45 |
-| `overlay/external.toml` | the outside world: one agentless node on a gate region of `one` or `three` with a few lines (`spec-external-sector.md` 18.2 is a worked configuration, `[module.external.node.<id>]`); placeholders | S51 to S55 |
+| `overlay/external.toml` | the outside world: one agentless node on a gate region of `one` or `three` with a few lines (`spec-external-sector.md` 18.2 is a worked configuration, `[modules.external.node.<id>]`); placeholders | S51 to S55 |
 | `overlay/own-use.toml` | the subsistence floor: an own-use recipe on the staple role of `one` (a sited source with no inputs or tools, `spec-subsistence.md` 3.2, 16.1 is the shape) with a yield row in each region that is to offer it, and `[modules.subsistence]` at the placeholders of `spec-subsistence.md` 12 (`enter_ticks` 2, `exit_ticks` 3, `retry_jobs` 10); the coverage is set to 6 667, 10 000 and 13 333 basis points of the upkeep for S56; for S59 a `refill` endowment that the recipe draws on (`spec-resources.md` 18.1 is the shape); an empty row `[modules.subsistence.role.<id>]` for a role that is not to take the mode | S56 to S60 |
 | `overlay/migration.toml` | the migration module on the trade overlay: `[modules.information]` and `[modules.migration]` with `move_speed` chosen against the edge lengths of `overlay/trade.toml` so that the shortest journey is 1 or 2 ticks and the longest under `CoverTicks`, no role `Fixed` (and `fixed = true` on the chain's roles for the second leg of S65), on `five` with the trade overlay (S61 uses two of its regions and S62 three); `spec-migration.md` 15.3 | S61 to S66 |
 | `overlay/settlements.toml` | `[modules.settlements]` on `five`: the classes of `spec-settlements.md` 12.1 with a `merchant` role gated by the flag `fair` and a ceiling, and a role with a group in each region whose class carries or lacks the flag; the merchants module is on, so it is layered on `overlay/trade.toml`; `famine` is the base of S104; the base packs keep the module off | S102 to S104 (S105 and S106 are harness tests) |
@@ -1608,7 +1608,7 @@ round 5; the register entries are `spec-stability.md`'s). The packs they need ar
 | S14, S26, S27 (the failure ladder, entry, exit) | FR-SPN-004, FR-SPN-012 to FR-SPN-016, FR-SPN-021 to FR-SPN-026, FR-SPN-032 to FR-SPN-036, FR-SPN-041, FR-SPN-042, FR-SPN-045, FR-SPN-046 |
 | S06 (role shares return, `Closed` visitor) | FR-SPN-018 to FR-SPN-021, FR-SPN-041, FR-SPN-049 |
 | S23, S24, S25 (wants) | FR-DEM-008 to FR-DEM-011 (shares, schedule, choke), FR-DEM-016 and FR-DEM-017 (budget, ladder), FR-DEM-020, FR-DEM-029 to FR-DEM-031 (Engel, closed economy, ceiling), FR-DEM-035 and FR-DEM-036 (`WantShortfall`, the `Warn`), FR-DEM-039 (conservation) |
-| X4 and the file tests of the demand overlay | FR-DEM-043 (the file keys `demand.want.<id>`, `demand.taste.<role>.<want>`, `demand.region_taste.<region>.<want>`, which `demand.toml` uses), FR-CFG-060 to FR-CFG-062 |
+| X4 and the file tests of the demand overlay | FR-DEM-043 (the file keys `modules.demand.want.<id>`, `modules.demand.taste.<role>.<want>`, `modules.demand.region_taste.<region>.<want>`, which `demand.toml` uses), FR-CFG-060 to FR-CFG-062 |
 | A1, A2, `Validate` on every pack | FR-VIA-055 to FR-VIA-059, FR-CFG-058, FR-CFG-059, FR-CFG-065, FR-CFG-066, FR-PRO-046 |
 | `famine` warm table | FR-VIA-058 |
 | `NewWorld` on `visitor` (no group), a closed role | FR-CFG-066, FR-SPN-041 |
@@ -1862,6 +1862,17 @@ UTF-8, LF. For a run of `T` ticks with a seed:
    totals; the jobs in progress by recipe.
 6. **Checkpoint digest:** the SHA-256 of the checkpoint at tick `T`: the 32 bytes of its
    trailer (`spec-checkpoint.md` 8.3).
+
+**A module that is off leaves no trace** (decision D5 of the plan of Stage 0;
+architecture.md 2.10.5). A count, an amount or a flag at zero is not written, a
+section or a row with nothing in it is not written, an event type or a reason with
+a count of 0 is not listed in item 3 or 4, and a warning is listed in the header
+only when it fired. So a field or an event that a module appends changes the file
+of a pack only when the module is on, the effective-configuration hash of the
+header is unchanged by an append (`spec-config.md` 8.2), and the files of
+`testdata/golden/off/` do not move when a module is added (testing.md 7.1.1).
+The rendering of the events of `spec-observability.md` 9.5.2 follows the same
+rule.
 
 For `one` this is about 150 lines; for `five` about 1 200 (85 markets at 11 samples).
 The file is regenerated only by the flag `-update` and a change needs the explanation of

@@ -12,8 +12,8 @@ engine holds no aggregate state that agents react to." Three more texts say the
 same rule in their own words: `spec-world.md` 9.4.1 (no cadence, period, window,
 gate probability or share is a function of a measured aggregate, "a count of
 households or agents" among them), `spec-stability.md` 5.1.3 with FR-STB-020 (a
-damper does not read a macro aggregate and feed it back), and the roadmap's
-section "Macro is measured, never set".
+damper does not read a macro aggregate and feed it back), and the
+section "Macro is measured, never set" of `spec-roadmap.md`.
 
 Three later specs each need one thing the letter of that rule forbids, and each
 named it as a conflict rather than hiding it:
@@ -60,7 +60,7 @@ ADR 0001 changes.
    spec that owns it, with its position and its entry in the register of
    `spec-stability.md`. A new reader, or a new kind of exception, is a new ADR.
 
-`spec-world.md` 9.4.1, `spec-stability.md` 5.1.3 and FR-STB-020, and the roadmap
+`spec-world.md` 9.4.1, `spec-stability.md` 5.1.3 and FR-STB-020, and `spec-roadmap.md`
 each take one sentence that names the exceptions and cites this ADR.
 
 ## Consequences
@@ -104,6 +104,6 @@ each take one sentence that names the exceptions and cites this ADR.
 
 - [ADR 0001](0001-macro-economy-as-replaceable-layers.md), decision 7
 - `doc/specs/spec-world.md` 9.4.1; `doc/specs/spec-stability.md` 5.1.3 and
-  FR-STB-020; `doc/roadmap.md`, "Macro is measured, never set"
+  FR-STB-020; `doc/spec-roadmap.md`, "Macro is measured, never set"
 - `doc/specs/spec-settlements.md` 7; `doc/specs/spec-institutions.md` 3.4.1;
   `doc/specs/spec-land.md`

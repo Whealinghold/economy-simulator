@@ -208,12 +208,11 @@ role, roles by `RoleID`; the errors are `ErrUnknownRegion`, `ErrUnknownResource`
 list of `spec-regions.md` 5.1.3 (section 18). A slot (9.1) edits no row
 (`spec-regions.md` 5.3.6).
 
-3.3.2. **File layout** (`spec-config.md` 6.2; the spelling of the module table is open
-until N-102 is closed): the module is `[modules.tenure]`, a term is
+3.3.2. **File layout** (`spec-config.md` 6.2.1, the one rule for module tables, N-102 closed): the module is `[modules.tenure]`, a term is
 `[modules.tenure.term.<region>.<resource>]` and a holding
 `[modules.tenure.holding.<region>.<resource>.<holder>]` with `<holder>` a role ID or the
 word `pool`, in the way of `[modules.subsistence.role.<id>]` and
-`[resources.endowment.<region>.<resource>]`, so that layers merge by key
+`[modules.resources.endowment.<region>.<resource>]`, so that layers merge by key
 (`spec-config.md` 6.4). A role whose ID is `pool` would collide with the word and is
 `ErrDuplicateID` (11.1). Section 15 shows the keys.
 
@@ -1778,7 +1777,7 @@ edits none (the process of N-103).
 | `spec-indicators.md` | presets | asks: `RentShare` (rent paid over value added of the drawing recipes), `LandlessShare` (households with no title in a region that draws), `TitleConcentration` (the share of the largest holder and a Gini of shares, from the snapshot rows and `TitleTransferred`) |
 | `spec-reference-chain.md` | overlays | an `overlay/tenure.toml` for LND-S1 to LND-S5 (a titled refill endowment on `one` and `five`; the closed case of 15.2) |
 | `README.md` (specs) | index, code table, owner table, glossary | the index row; `LND` exists with FR-LND-001 to 046 and NFR-LND-001 to 004; the rows of section 10; the terms of 21.2 |
-| `roadmap.md`, `documentation_index.md` | LND rows | LND `exists`; the files `spec-land.md` and `models/lnd/` |
+| `spec-roadmap.md`, `documentation_index.md` | LND rows | LND `exists`; the files `spec-land.md` and `models/lnd/` |
 | `models/README.md` | Contents table | a row for `lnd/`: `spec-land.md` sections 4, 5.5, 6.4, 15, 16 and 17; `tiers.py`, `rent.py`, `erosion.py` with outputs |
 | `notes.md` | N-046, N-104, N-108, N-107, N-090, N-091 and the new notes | updates and the three new notes of 18.1 |
 | `AGENTS.md`, `architecture.md` 2.6 | layout | `tenure.go` and `internal/tenure/` at the first code (N-019) |

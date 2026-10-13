@@ -1435,7 +1435,7 @@ comparison across that call is a different stream from there (11.4).
 | `spec-polity.md` | 6.3 | H10: RSK adds no cause and no call |
 | `spec-money-supply.md` | 10.3 and the later-specs row | RSK adds no money flow: the `loss` of RSK is goods only (10.1 there is boundary counterparties) |
 | `spec-reference-chain.md` | 7, 9 | an overlay `overlay/risk.toml` and the scenarios of 16 |
-| `specs/README.md`, `roadmap.md`, `documentation_index.md`, `models/README.md`, `notes.md` | | the index row, the code row, the owner rows, the terms, the decisions; the status; the rows; the notes of the handoff |
+| `specs/README.md`, `spec-roadmap.md`, `documentation_index.md`, `models/README.md`, `notes.md` | | the index row, the code row, the owner rows, the terms, the decisions; the status; the rows; the notes of the handoff |
 | `rules/observability-and-logging.md` | 3.3.2, 4.3, 5.3, 5.4.1 | the keys, the events, the metrics, the attribute (a rules change, with a fresh tag) |
 
 ### 19.3 Terms (N-017)

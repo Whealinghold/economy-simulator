@@ -1712,7 +1712,7 @@ No open note is tagged `INS`. The notes tagged `ALL` and the others read are:
 | `spec-viability.md` | none | the steady state has no cover: a policy is a transfer and a loss is RSK's expected loss, already in the lane |
 | `spec-polity.md`, `spec-settlements.md`, `spec-institutions.md` | none | ORG's price control on a loading is a refusal on the offer (11.2) |
 | `spec-reference-chain.md` | 7, 9 | an overlay `overlay/cover.toml` and the scenarios of 17 |
-| `specs/README.md`, `roadmap.md`, `documentation_index.md`, `models/README.md`, `notes.md` | | the index row, the code row, the owner rows, the terms, the decisions; the status; the rows; the notes of the handoff |
+| `specs/README.md`, `spec-roadmap.md`, `documentation_index.md`, `models/README.md`, `notes.md` | | the index row, the code row, the owner rows, the terms, the decisions; the status; the rows; the notes of the handoff |
 | `rules/observability-and-logging.md` | 3.3.2, 4.3, 5.3, 5.4.1 | the keys, the events, the metrics, the attributes (a rules change, with a fresh tag) |
 
 ### 20.3 Note on the registry of knobs (CLB)

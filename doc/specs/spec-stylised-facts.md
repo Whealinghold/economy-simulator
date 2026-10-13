@@ -1091,7 +1091,7 @@ run side by side as **R** (N-085). *Seeds:* SR2, tier G. *Band:*
 `h02.offset_bp` prior 2 000, `h02.money_bp` prior 2 000 (P), `x4.households_bp`
 (STY-G01), and STY-D03's swing. *Pass and fail:* outside the band without a
 regime fails the fact; leaving it for good is **R8** or **R6**. *Source:*
-internal requirement (`roadmap.md`, STY row: "a warm start that stays near the
+internal requirement (`spec-roadmap.md`, STY row: "a warm start that stays near the
 steady state"). *Confidence:* P. *Class:* B, tier G. *Loops:* STB-L53, L02, L04.
 
 **STY-H03 A warm start does not hide an instability.** *Property:* a perturbed
@@ -1163,7 +1163,7 @@ defect.
 
 "On" means the module's entry is in `Config.Modules` (`spec-config.md` 3.2);
 "off" means it must be absent for the fact to be the fact. A core mechanism
-(clearing, beliefs, agents, spawner, estates' pool when `[module.estates]` is
+(clearing, beliefs, agents, spawner, estates' pool when `[modules.estates]` is
 present) is not listed unless the fact names it. *Trade set* is the region
 graph's edges with transport, information and the merchant strategy
 (`overlay/trade.toml`).
@@ -2478,7 +2478,7 @@ recommendation.
 | `spec-checkpoint.md` | 11 (STY) | no change; STY-H uses FR-CHK-050 |
 | `spec-experiments.md` (A) | the section that lists what STY needs | the six rows of 10.1 |
 | `specs/README.md` | index, code table, glossary | the STY row (exists; FR-STY-001 to 098, NFR-STY-001 to 004), the new terms; **Decisions**: "Where does a band live?", "What is a regime?", "What may be called stable?" |
-| `doc/roadmap.md` | existing specs; "Suggested next specs" | the STY row exists; "Suggested next specs" drops STY; Open 4 gets the closing text of 8.6 |
+| `doc/spec-roadmap.md` | existing specs; "Suggested next specs" | the STY row exists; "Suggested next specs" drops STY; Open 4 gets the closing text of 8.6 |
 | `doc/documentation_index.md` | | the rows for the spec and for `specs/models/sty/` |
 | `doc/specs/models/README.md` | contents | the `sty/` row (`seeds.py`, `detectors.py`, `worked.py`) |
 | `doc/notes.md` | open notes | in the handoff: N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113 updated and six new notes |

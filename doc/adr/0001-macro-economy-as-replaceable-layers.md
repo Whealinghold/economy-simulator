@@ -13,7 +13,7 @@ behaviour (agents, orders, clearing, production) is the core. Macro behaviour
 government) is meant to emerge from it, but some of it cannot emerge without a
 structural piece. Without money creation a growing economy deflates, without
 hired labour there is no unemployment, and without a boundary there is no
-trade with the outside (`doc/roadmap.md`, "Macro is measured, never set").
+trade with the outside (`doc/spec-roadmap.md`, "Macro is measured, never set").
 
 Two risks pull in opposite directions:
 
@@ -147,7 +147,7 @@ read as summaries; CCP's own 2010 newsletter PDF could not be read.
    that returns the settings of levers (`spec-policy.md` 4.7;
    `doc/rules/architecture.md` 4.3).
 2. Which rule shapes ship for flows, and which parameters does each take?
-3. Which modules are in the first release (`doc/roadmap.md`, Open, item 1)?
+3. Which modules are in the first release (`doc/spec-roadmap.md`, Open, item 1)?
 4. What numeric acceptance bands define "stable", and what are the default
    constants? These belong to `spec-stylised-facts.md` and
    `spec-calibration.md`.
@@ -155,7 +155,7 @@ read as summaries; CCP's own 2010 newsletter PDF could not be read.
 ## Related
 
 - `AGENTS.md`, "Setting-agnostic"
-- `doc/roadmap.md`, "Macro is measured, never set"
+- `doc/spec-roadmap.md`, "Macro is measured, never set"
 - `doc/specs/README.md`, parameter owners
 - `doc/specs/spec-currency.md`, section 4 (the optional formatter, an earlier
   application of the same idea)

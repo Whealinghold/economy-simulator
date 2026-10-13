@@ -961,7 +961,7 @@ every number of the two example settings (3.1.2) and of the worked example (sect
 ## 12. Validation
 
 Each rule has a sentinel and a failing-case test (testing.md 3.9). Errors name the path,
-for example `modules.transport.modes.wagon.vehicle`.
+for example `modules.transport.mode.wagon.vehicle`.
 
 ### 12.1 Errors
 

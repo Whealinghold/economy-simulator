@@ -750,7 +750,7 @@ sentence that lists the three exceptions:
 | ADR 0001 decision 7 | a dated pointer to ADR 0006 under the decision; its status stays Accepted |
 | ADR 0006 | the decision itself, with an owner for each exception (this spec's 7, `spec-institutions.md` 3.4.1, `spec-land.md`) |
 | `spec-stability.md` 5.1.3 and FR-STB-020 | one clause each: "...except the three exceptions of ADR 0006, which are ranks, counts against places and local quantities, and not dampers" |
-| `roadmap.md` "Macro is measured, never set" | one sentence after the first paragraph naming the three exceptions and ADR 0006 |
+| `spec-roadmap.md` "Macro is measured, never set" | one sentence after the first paragraph naming the three exceptions and ADR 0006 |
 
 A reader that is added is a new reader of one of the exceptions and needs a new ADR (R7, G7).
 The alternative that was offered, **flags only** (a permission is a step function of a count

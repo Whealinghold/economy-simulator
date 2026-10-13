@@ -14,12 +14,25 @@ review ticks 0..8 at P=3 for ids 10..15 (an agent acts when (t + bucket) mod 3 =
   id 15: [0, 3, 6]
 reviews per tick, ids 10..15, ticks 0..8: [2, 2, 2, 2, 2, 2, 2, 2, 2]
 rotation start of a region of 4 agents (ids 10..13), ticks 0..7: [10, 11, 12, 13, 10, 11, 12, 13]
-example B stream positions in the tick (relative):
-  agent 1 Trade: words [0, 1]
-  agent 2 Trade: words [2, 3]
-  agent 3 Trade: words [4, 5, 6]
-  market grain keys (bids 1, asks 2): words [7, 8, 9]
-  market loaf keys (bids 2, asks 1): words [10, 11, 12]
-  outcomes: words [13, 14, 15, 16, 17, 18]
-  words in the tick: 19
-with agent 3 informed and 4 candidates at E > 0: words in the tick: 23 and agent 3's Trade starts at relative word 8
+example A, seed 0: the creation draws of agents 4..10, one stream each (siteConstruction, 0, id)
+  agent 4  target word f4aa09314fe44644  residue word ef7ea66b5a29b979  residue = draw(10000) = 9355
+  agent 5  target word 9c1eb28b41d67934  residue word c1a4ddc74bcb96e2  residue = draw(10000) = 7564
+  agent 6  target word 0f06ca331ae3bce8  residue word dc3ad5fd46bb3d42  residue = draw(10000) = 8602
+  agent 7  target word 0d2a6d25ba31d1f9  residue word a5c78a135e49c31b  residue = draw(10000) = 6475
+  agent 8  target word ee4a4ecf40900610  residue word 8cad7e44acddda54  residue = draw(10000) = 5495
+  agent 9  target word 9957ed1d2127e557  residue word 8dafe94e04a12c05  residue = draw(10000) = 5534
+  agent 10  target word f9b97445db9bf2f2  residue word 5373bd0ce51ecc45  residue = draw(10000) = 3259
+example B, seed 42, tick 7: one stream per site call, words counted from 0 in each
+  D5 agent 1 Trade, key (siteTrade, 7, 1): words 0..1  first word e00b223f9aeed1d9
+  D5 agent 2 Trade, key (siteTrade, 7, 2): words 0..1  first word 2f20f13dc103e16b
+  D5 agent 3 Trade, key (siteTrade, 7, 3): words 0..2  first word 7e13c409cdff5e06
+  D7 market (r0, commodity 0), key (siteClearing, 7, 0, 0): words 0..2 (1 bids then 2 asks)  first word a0043220bd826c9b
+  D7 market (r0, commodity 1), key (siteClearing, 7, 0, 1): words 0..2 (2 bids then 1 asks)  first word 9f4b829a3880ffc9
+  D8 outcome of agent 1 in commodity 0, key (siteOutcome, 7, 1, 0): word 0 = 500ff86076a8245a
+  D8 outcome of agent 2 in commodity 0, key (siteOutcome, 7, 2, 0): word 0 = ca5031df09cef670
+  D8 outcome of agent 3 in commodity 0, key (siteOutcome, 7, 3, 0): word 0 = eb2a44a7538a0ffe
+  D8 outcome of agent 1 in commodity 1, key (siteOutcome, 7, 1, 1): word 0 = 71975eae0678752f
+  D8 outcome of agent 2 in commodity 1, key (siteOutcome, 7, 2, 1): word 0 = 3610982609122f2d
+  D8 outcome of agent 3 in commodity 1, key (siteOutcome, 7, 3, 1): word 0 = 7a47a487b36187e1
+  words in the tick: 19, in 11 streams
+  with agent 3 informed and 4 candidates at E > 0: 23 words, the four more in agent 3's own D4 stream; no word of any other stream moves

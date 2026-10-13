@@ -132,20 +132,20 @@ type RegionTaste struct {
 }
 ```
 
-In a file (`spec-config.md` 6.2) the module is a `[demand]` table, and its presence
+In a file (`spec-config.md` 6.2) the module is a `[modules.demand]` table, and its presence
 switches the module on. Wants, tastes and region tastes are tables keyed by ID, so
 documents merge by key:
 
 ```toml
-[demand]
-[demand.want.comfort]
+[modules.demand]
+[modules.demand.want.comfort]
 items = [{ commodity = "cloth", weight = 10000 }]
 quantity = 1
 period = 4
 rank = 1
 elasticity = 15000
 
-[demand.want.treat]
+[modules.demand.want.treat]
 items = [{ commodity = "sweet_a", weight = 10000 }, { commodity = "sweet_b", weight = 10000 }]
 quantity = 1
 period = 5
@@ -153,18 +153,18 @@ rank = 2
 elasticity = 20000
 substitution = 2
 
-[demand.taste.worker.comfort]
+[modules.demand.taste.worker.comfort]
 scale = 10000
-[demand.taste.worker.treat]
+[modules.demand.taste.worker.treat]
 scale = 5000
-[demand.region_taste.north.comfort]
+[modules.demand.region_taste.north.comfort]
 scale = 15000
 ```
 
 The IDs above are neutral examples for the layout, not content of the core. The keys
 are the ones the reference chain uses for its demand overlay (`spec-reference-chain.md`
-4.4.6: `demand.want.<id>`, `demand.taste.<role>.<want>`, and by the same rule
-`demand.region_taste.<region>.<want>`); the two specs agree on them and a test loads
+4.4.6: `modules.demand.want.<id>`, `modules.demand.taste.<role>.<want>`, and by the same rule
+`modules.demand.region_taste.<region>.<want>`); the two specs agree on them and a test loads
 the overlay (FR-DEM-043).
 
 3.2.1. A want is **not** a commodity and not a recipe. It names no behaviour; only
@@ -741,7 +741,7 @@ constants 7 919 and 2 777 (primes, chosen to spread the start; any other would d
 ## 10. Validation
 
 Each rule has a sentinel and a failing-case test (testing.md 3.9). Errors name the
-path, for example `demand.want.treat.items[1].weight`.
+path, for example `modules.demand.want.treat.items[1].weight`.
 
 ### 10.1 Errors
 
@@ -1115,7 +1115,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-DEM-040 | A world with the same seed, configuration and calls MUST give identical bids, units and carries on every run. |
 | FR-DEM-041 | Each parameter of section 9 MUST have a default that passes validation, and a value outside its bound MUST be rejected with `ErrOutOfBounds` carrying its path, value and bound. |
 | FR-DEM-042 | On a role change the carries of wants in both ladders MUST be kept by want ID, those only in the new ladder MUST start by the formula of 4.4, those only in the old ladder MUST be dropped, and nothing MUST be drawn; an entry into an existing cohort MUST leave the carries unchanged. |
-| FR-DEM-043 | The keys `demand.want.<id>`, `demand.taste.<role>.<want>` and `demand.region_taste.<region>.<want>` MUST load the tables of 3.2, and the demand overlay of `spec-reference-chain.md` 4.4.6 MUST load without error and without an unexpected warning. |
+| FR-DEM-043 | The keys `modules.demand.want.<id>`, `modules.demand.taste.<role>.<want>` and `modules.demand.region_taste.<region>.<want>` MUST load the tables of 3.2, and the demand overlay of `spec-reference-chain.md` 4.4.6 MUST load without error and without an unexpected warning. |
 
 ### Non-functional
 

@@ -1736,7 +1736,7 @@ with the file, the section and the exact change. In short:
 | 27 | `spec-reference-chain.md` | 7 | the overlay `overlay/saving.toml` for SAV-S2 to SAV-S5 |
 | 28 | `spec-subsistence.md` | 5 | one sentence: the own-use mode bars a project (5.5.5) |
 | 29 | `specs/README.md` | index, code table, owners, glossary, decisions | the index row, the code row, the owner rows, the glossary, the decisions |
-| 30 | `roadmap.md`, `documentation_index.md` | the SAV row; the models | the roadmap row `exists`; the rows for the spec and `doc/specs/models/sav/` |
+| 30 | `spec-roadmap.md`, `documentation_index.md` | the SAV row; the models | the roadmap row `exists`; the rows for the spec and `doc/specs/models/sav/` |
 | 31 | `notes.md` | index, open notes | the note updates and the new notes; a fresh read-receipt tag |
 | 32 | `rules/architecture.md` 2.6 and `AGENTS.md` layout | at the first code (N-019) | `internal/saving` and `saving.go`; the SAV terms to the `doc.go` glossary |
 | 33 | `spec-stylised-facts.md` | 5.11, FR-STY-098 | rows in 5.11 for SAV-S2 to SAV-S5; SAV-S1 and SAV-S6 are two more scenarios of the class "harness test" in the list of FR-STY-098 (S77, S78, S84 to S90 become eleven) |

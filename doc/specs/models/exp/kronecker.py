@@ -57,6 +57,7 @@ def splitmix_fin(z):
     return z ^ (z >> 31)
 
 
+# 0x243F6A8885A308D3 is the DesignSalt of the Latin-hypercube design (spec-experiments.md 7), a design constant; it is not the reseed rule (spec-checkpoint.md 6.8.2).
 def hash_point(i, d, salt=0x243F6A8885A308D3):
     """A stateless random design: u_{i,j} = finalise(salt + (i * d + j + 1) * gamma)."""
     g = 0x9E3779B97F4A7C15

@@ -20,7 +20,7 @@ numbers in it are those constants and the placeholders of the cost model of sect
 10. Nothing has run in the library (notes N-015, N-027): the scripts of section 16
 are stylised Docker Python models of the rules of section 5, not claims about the
 library, and the facts taken from the Go standard library (`binary.Uvarint` accepts a
-non-minimal encoding, the 20-byte layout of the PCG state) were checked by running
+non-minimal encoding, the 20-byte layout of the PCG state) (the PCG layout is stale under ADR 0008, see N-214: a checkpoint no longer holds a PCG state) were checked by running
 Go 1.25 in Docker.
 
 Terms in **bold** on first use are new domain terms. They must be added to the
@@ -113,6 +113,7 @@ func (c *Checkpoint) UnmarshalBinary(data []byte) error
 // Info reports what the frame says, before any configuration is chosen.
 func (c Checkpoint) Info() CheckpointInfo
 
+// (stale under ADR 0008, see N-214: there is no PCG state to return and Stream goes.)
 // Stream returns the state of the world's random source at the boundary: the 16 bytes
 // that follow the "pcg:" prefix of the 20 bytes of section 1. It decodes that one
 // section and returns ErrCheckpointCorrupt for a checkpoint whose section 1 is not
@@ -152,7 +153,7 @@ verified the digest. It has no error result and no section is decoded for it. Th
 stream state of the random source, which `spec-experiments.md` 7.3.2 needs to pair
 two runs, is in section 1 and not in the frame, so it has its own accessor,
 `Stream`, which decodes that one section and has an error result (`Info`
-is unchanged).
+is unchanged). (3.1.2 and `Stream` are stale under ADR 0008, see N-214: no PCG state is saved, and the seed is in the header.)
 
 ### 3.2 When
 
@@ -242,7 +243,7 @@ default is **corrupt** (the one-spelling rule of 5.2, R10).
 
 | Tag | Section | Owner (and hosted fields) | State, in the order written | Present when |
 |-----|---------|---------------------------|-----------------------------|--------------|
-| 1 | World | WLD 12 | the state of the PCG (20 bytes, `MarshalBinary`), the next agent ID, whether the world is still in its construction phase. The tick, the seed and the hash are in the header (5.4) | always |
+| 1 | World | WLD 12 | the state of the PCG (20 bytes, `MarshalBinary`), the next agent ID, whether the world is still in its construction phase. The tick, the seed and the hash are in the header (5.4) (stale under ADR 0008, see N-214: the section saves no PCG state; the seed in the header is the effective seed) | always |
 | 2 | Ledger | LED 11, 7.4, 3; hosts the claims (CRD 17.1, INS 16.1) | every account that is not a boundary, in ID order: kind, closed flag and, if open, its region, owner reference, money, lots (commodity, quantity, `Born` signed, durability) in canonical order; the balance of each boundary account (a count the configuration implies); the **claims**: the next claim ID, then the open claims in ascending ID, each as the ledger numbers its accounts: ID, creditor and debtor (account IDs), `Principal`, `Interest`, `PrincipalOwed`, `InterestOwed`, `RateBP`, `Formed`, `Due`, `Overdue` (signed, -1 for none) and, with the insurance module on, `Origin` (`0` loan, `1` payout), then the six cumulative totals of `spec-credit.md` 3.3.2 and, with the insurance module on, `Awarded` (the count of claims is 0 and the totals are absent with neither module); the **pending totals** (the flow totals, the wear units and the relocation totals that calls between ticks added since the last P8.6, sparse); and, when the world is in construction, the **construction bucket** in the same layout | always |
 | 3 | Agents | AGT 15; hosts `RoleSince` (SPN 14), `DeathCarry` (POP 3.8), `OwnUse` and `OwnUseJobs` (SUB 5.3), `Journey` (MIG 8.2), the stores (STO 15.1) and the membership (ORG 12.1) | the table of strategy names used by agents (sorted); for each agent in ascending ID: ID, account, role, weight, `External` and `Mortal`, strategy name index, `Unfed`, `Hunger`, `Privation`, `RoleSince`, `DeathCarry`, `OwnUse`, `OwnUseJobs`, the journey (destination, arrival tick) if any, the directive if any (whether it carries a job request, since `Directive.Job` is a pointer, then the job request if it does, the intents, discards, holds, `Sticky`); then, when `Modules.Storage` is on, the stores (a count, then (class index, count) pairs in ascending class index, a count of 0 being the common case); then, when `Modules.Institutions` is on, the membership as `BodyID + 1` and `RegionID + 1` (0 and 0 for none; one of the two zero is corrupt); then the diagnostic run of consecutive unfed ticks per (region, role), sparse | always |
 | 4 | Markets | CLR 5.4, 5.5; BEL 7, 13; the report of INT 6.3 | for each (region, commodity) of a region that is not an outside node, region then commodity: the **market report of the last clearing**: the published price, the price age, the volume, the unmatched bid units and ask units, the best unmatched bid (present flag, price), the best unmatched ask (present flag, price); the price window (count, then the prices **oldest first**); and the diagnostic run `BoundRun` | always |
@@ -447,7 +448,7 @@ format        U         the format version (this spec defines format 1)
 hash version  U         the version of the configuration encoding that produced the hash (spec-config.md 8.2)
 config hash   32 bytes  SHA-256 of the effective configuration
 tick          U         the tick the next Step would run (Tick())
-seed          U         the seed the run began with: information only, never read back as a seed
+seed          U         the seed the run began with: information only, never read back as a seed  (stale under ADR 0008, see N-214: the header's seed is the effective seed and is read back, 6.8.3)
 sections      ...       for each present section in tag order: tag U, length U, body
 trailer       32 bytes  SHA-256 of every byte before it
 ```
@@ -466,7 +467,7 @@ because the decoder, the fuzz test and the golden digest all depend on them.
 | R1 | **U**: an unsigned integer as LEB128, least significant seven bits first, the high bit of a byte set when another byte follows. At most 10 bytes, the tenth at most 1. **Minimal**: the last byte of a value of more than one byte is not 0. `U(0)` is `00`, `U(128)` is `80 01`, `U(300)` is `ac 02` |
 | R2 | **I**: a signed integer as zigzag, `(v << 1) xor (v >> 63)`, then U. `I(0)` is `00`, `I(-1)` is `01`, `I(1)` is `02`, `I(10000)` is `a0 9c 01`; the whole `int64` range is representable |
 | R3 | **B**: one byte, `00` or `01`; any other value is corrupt |
-| R4 | **Raw**: a byte array whose length the format fixes (the 32 bytes of a hash, the 20 bytes of a PCG state) |
+| R4 | **Raw**: a byte array whose length the format fixes (the 32 bytes of a hash, the 20 bytes of a PCG state) (stale under ADR 0008, see N-214: no PCG state) |
 | R5 | **Bytes**: U length, then that many bytes; the length is at most the bytes remaining. Used for the names and the state blobs of extensions |
 | R6 | **Index or enum**: U, checked against its bound (the count of the thing it indexes, or the values the format defines); anything else is corrupt |
 | R7 | **Optional**: B, then the body if it is 1 |
@@ -522,6 +523,8 @@ state is in section 1, so a restore never seeds from it, and `WithSeed` is refus
 (6.4). It is saved so a consumer can show which run a checkpoint belongs to and so that a
 restored world reports the seed the run began with, as the snapshot does
 (`spec-world.md` 16.5).
+
+5.4.1 above is stale under ADR 0008, see N-214: the header's seed is the effective seed and a restore reads it back (6.8.3).
 
 5.4.2. **The trailer** is the SHA-256 of every byte before it. It detects truncation,
 bit flips and a partial write with certainty for practical purposes, and it is the
@@ -612,7 +615,7 @@ trusted); `RestoreWorld` begins at step 2.
 | 5 | **Derive** what is not state from the configuration: the calendar, the region graph tables, the lag table, the module tables, the weights of the groups (`spec-world.md` 5.1 step 5) | none: a validated configuration cannot fail here (programmer error, panics) |
 | 6 | **Sections**: in the order of the expected tag list, each decoded from exactly its bytes into new structures, with R1 to R13 checked as it is read and every reference to an earlier section checked | `ErrCheckpointCorrupt` naming the tag and the offset |
 | 7 | **Cross-checks** that need two sections: every open Agent account is the account of exactly one agent and of the agent that names it; every estate listing is a lot the estate holds; every Transit account of a shipment and Escrow account of a contract exists and holds what the record says; every trainee has its trainer and the converse; every money-flow carry is for an open account; every journey names a live agent and every other reference to an agent is live or one of the removable references of 4.2.3 (below the next agent ID); every Escrow account of a hire exists and holds what the record says; every claim's creditor and debtor are open accounts of the kinds of `spec-credit.md` 3.6; every open policy names a shipment in flight whose shipper is its insured; the account list holds exactly one Treasury account for each governed jurisdiction, in ascending `JurisdictionID` and in the seat's region (`spec-polity.md`, FR-POL-030), and a facility's owner is a live agent or the estate of its region | `ErrCheckpointCorrupt` |
-| 8 | **Install**: the PCG state is installed (`UnmarshalBinary` of the 20 bytes; its error is corrupt), the next agent ID, the tick; then the derived tables that need the state (the expiry hints, the tradable sets of the agents' roles, the Transit and Escrow free lists) | `ErrCheckpointCorrupt` |
+| 8 | **Install** (stale under ADR 0008, see N-214: no PCG state is installed; the seed is taken from the header): the PCG state is installed (`UnmarshalBinary` of the 20 bytes; its error is corrupt), the next agent ID, the tick; then the derived tables that need the state (the expiry hints, the tradable sets of the agents' roles, the Transit and Escrow free lists) | `ErrCheckpointCorrupt` |
 | 9 | **Reseed**, if `WithReseed` was given (6.8) | none |
 | 10 | **Audit**: the ledger's audit and every check of a module that is on, as `World.Audit` runs them, with the baseline of the boundary identity taken as the restored balance **less the pending totals** and, for a world restored in construction, with the saved bucket as the identity's construction term (`spec-ledger.md` 9.1). The audit runs whether or not `WithAudit` was given; `WithAudit` governs `NewWorld` and every `Step`, and this restore audit is a ruling of this spec that `spec-world.md` 3.3.3 and 12.2 are edited to state (20) | `ErrCheckpointCorrupt` wrapping `ErrAuditFailed` |
 | 11 | **Extension state**: `LoadState` of each `Stateful` extension in (kind, name) order with the version and the bytes of its entry | `ErrCheckpointExtension` wrapping the extension's error |
@@ -666,7 +669,7 @@ sees what it would see at construction, before any comparison with the checkpoin
 
 | Option | On a restore |
 |--------|--------------|
-| `WithSeed` | **refused**, `ErrOptionContext`: the random state is in the checkpoint, so a seed would be accepted and ignored, which is a trap (`spec-world.md` 12.3) |
+| `WithSeed` | **refused**, `ErrOptionContext`: the random state is in the checkpoint, so a seed would be accepted and ignored, which is a trap (`spec-world.md` 12.3) (stale under ADR 0008, see N-214: the seed is in the header and is read back) |
 | `WithReseed(salt uint64)` | **restore only** (6.8); on `NewWorld` it is `ErrOptionContext` |
 | `WithLogger`, `WithObserver`, `WithAudit` | as in `NewWorld` |
 | `WithTargetSpread` | accepted, and part of the effective configuration, so the value must be the one the original had or the hash differs (`ErrCheckpointConfig`) |
@@ -700,13 +703,13 @@ precedes the last 32 bytes is not those 32 bytes. Neither reaches a section.
 6.6.3. **The canonical property.** If `RestoreWorld` accepts a byte string, then
 `Checkpoint()` of the world it returns, taken at once, is **byte-equal** to it
 (FR-CHK-005), **when it was restored without `WithReseed`** (a reseed rewrites the random
-state, so section 1 of the next checkpoint differs by design, 6.8.3). That is the
+state, so section 1 of the next checkpoint differs by design, 6.8.3) (stale under ADR 0008, see N-214: a reseed rewrites the seed of the header). That is the
 property of one spelling (R10) and is the fuzz test's oracle: every accepted input is a
 fixed point of restore-then-save.
 
 ### 6.7 What the restored world is
 
-6.7.1. It is at tick `Info().Tick`, its random source is in the saved state, its next
+6.7.1. It is at tick `Info().Tick`, its random source is in the saved state (stale under ADR 0008, see N-214: it has the seed of the header, and no stream position), its next
 agent ID is the saved one, and `Err()` is nil, `Config()` is the effective configuration it was built from and `ConfigHash()` is the header's hash (FR-CHK-082). Every agent, account, job, belief,
 record, shipment and contract of the original is there with the same ID. The observers
 and the logger are the ones given to the restore, and have seen nothing of the world
@@ -741,33 +744,44 @@ emitted by `Checkpoint`.
 gets identical continuations unless something differs: the same randomness. For a
 different continuation it passes `WithReseed(salt)`.
 
-6.8.2. **The rule** (a rule constant, part of the golden output once used): with the
-saved PCG words `hi` and `lo`,
+6.8.2. **The rule** (a rule constant, part of the golden output once used): with the seed
+of the header, which is the effective seed of the world that was checkpointed
+(`spec-world.md` 7.1.1),
 
 ```
-x   = finalise(salt xor 0x243F6A8885A308D3)
-hi' = finalise(hi xor x)
-lo' = finalise(lo xor finalise(x + 0x9E3779B97F4A7C15))
+seed' = finalise(seed xor finalise(salt))
 ```
 
-with `finalise` the SplitMix64 finaliser of `spec-world.md` 7.1.2, and the PCG becomes
-`NewPCG(hi', lo')`. **A module that keeps a key re-derives it by its own rule at the same restore**: the technology
-module's `Key' = finalise(Key xor finalise(salt))` (`spec-technology.md` 4.4.6), taken at the
-restore and saved with the branch, so that the branch discovers on other ticks. It is a rule
-constant and part of the golden output like the rule above. Both `hi'` and `lo'` are bijections of the salt, so distinct salts
-give distinct states, and a salt of 0 is a reseed like any other (the option's absence
-is "no reseed"). The constant is the first digits of pi, so that the mix shares no
-structure with the seeding rule: a formula that reused the seeding constant gave the
-state `(0, 0)` for salt 0 on a world of seed 0, because `hi` was itself
-`finalise(0 + 0x9E37...)`, and was dropped. The vectors are in 17.5 and were computed with Go 1.25.
+with `finalise` the SplitMix64 finaliser of `spec-world.md` 7.1.2 (it holds no increment: the
+increment `0x9E3779B97F4A7C15` is in the keys of 7.1.3 and not in this rule). `seed'` is the
+effective seed of the restored world from its first draw: every stream is a function of the
+seed (`spec-world.md` 7), so the restore **installs no random state and takes no word**, and
+a module that keys anything from the seed (the technology key of `spec-technology.md` 4.4.1
+and 4.4.6) derives it from the effective seed and re-derives nothing of its own at the
+reseed (N-202, answered by ADR 0008). `finalise` and `xor` with a constant are bijections of
+`uint64`, so for one seed distinct salts give distinct `seed'`, and so distinct streams. A
+salt of 0 is a reseed like any other (the option's absence is "no reseed"): it gives
+`finalise(seed)`. One case is the identity: `finalise(0)` is 0, so **the seed 0 with the
+salt 0 gives `seed'` 0**, the streams of no reseed at all, and `WorldRestored` still
+reports it as reseeded with the salt 0 (the only such pair known: 0 is the one fixed point of
+`finalise` known). A harness that wants every branch to differ from the unreseeded
+continuation gives a salt other than 0, or a seed other than 0. The vectors, sixteen of them
+and each with the first word of a keyed stream under `seed'`, are in 17.5. **Stage 0 of the
+roadmap builds the pure function only** (`reseed(seed, salt)` in `random.go`, over the
+finaliser of `internal/ordering`); the option, the restore step 9 and `WorldRestored` are
+Stage 2 (`checkpoint.go`).
 
 6.8.3. A reseed is part of **the sequence of calls** of architecture.md 7.4 (like an
 external agent's `AddAgent`), is not hashed, and is reported in `WorldRestored`
 (`Reseeded`, `Salt`). It is the **one option** that is both restore-only and a call in
-the sequence: it changes what the next checkpoint saves (the random state and the key of a module that keeps one), which no other
-option does (`spec-world.md` 4.4 and FR-WLD-020, FR-WLD-021 are edited to say so, 20). The seed in the header stays the original seed; a second
-checkpoint of the reseeded world carries the same informational seed and the reseeded
-random state.
+the sequence: it changes what the next checkpoint saves (the seed of the header becomes
+`seed'`), which no other option does (`spec-world.md` 4.4 and FR-WLD-020, FR-WLD-021 are
+edited to say so, 20). **The header of the reseeded world's own checkpoints carries
+`seed'`, not the original seed**: the seed is the one random datum and a restore reads it
+back (5.4.1 still calls the header's seed "informational only", stale under ADR 0008, see
+N-214). A second reseed composes (`seed''` is the rule applied to `seed'` and the second
+salt), and a checkpoint of a reseeded world restores, with no `WithReseed`, to the same
+streams.
 
 ## 7. Extension state
 
@@ -959,7 +973,7 @@ for every sequence of later calls `S` (steps, runs, between-ticks calls) applied
    field for field;
 2. every `Snapshot` and every query of `W'` equals that of `W` at the same ticks;
 3. the checkpoints of `W'` and of `W` are **byte-equal** at every boundary after `t`;
-4. the state of the random source, and so every later draw, is the same;
+4. the state of the random source, and so every later draw, is the same; (stale under ADR 0008, see N-214: the seed is the same, and so is every stream)
 5. the errors the two return are the same, and one fails at the same step as the other.
 
 8.1.2. **Why byte-equal checkpoints are the test.** The checkpoint contains all state
@@ -1010,6 +1024,8 @@ digest includes the format version, a format change moves every golden digest at
 and says so in its PR (9.3).
 
 ### 8.4 The random source and the positional state
+
+This whole section is stale under ADR 0008, see N-214: a checkpoint saves the seed and no stream state, there is no positional state of the stream, and FR-CHK-051 holds trivially (a restore installs nothing and takes no word).
 
 8.4.1. The world's random state is **one** value: the 20 bytes of the PCG
 (`spec-world.md` 7.1, 12). There is no second stream, no per-agent source and no buffer
@@ -1092,7 +1108,7 @@ library version. A consumer that needs the old behaviour pins the release.
 | a primitive or a rule of 5.2, the frame, the header or the trailer | yes |
 | a piece of state becomes derived, or a derived value becomes state | yes |
 | a section added, dropped, renumbered or changing the condition under which it is present | yes |
-| the PCG, its seeding rule or the reseed rule | yes (the 20 bytes would mean something else) |
+| the seed, the key of a stream, the site constants or the reseed rule | yes (the streams would mean something else; the row is reworded under ADR 0008, see N-214) |
 | the encoding of the configuration hash | **no**: the header's hash version covers it (9.2.1 item 4) |
 | an extension's own bytes | **no**: its own version (7.4) |
 | a rule of behaviour that leaves the shape of state alone | no (and a golden change, testing.md 7.2) |
@@ -1216,7 +1232,7 @@ Stated as guarantees and asks on the surface of this spec.
 
 | To | Guarantee or request |
 |----|----------------------|
-| **EXP** | (1) `RestoreWorld` builds a **new** world that shares nothing with the checkpoint's source, so a harness may restore many worlds from one `Checkpoint` and step them on separate goroutines (`spec-world.md` 3.1.1). (2) **Branching** is checkpoint once, restore many: the cost of a branch is a restore (10.3), cheaper than a construction with a warm-start solve (`spec-viability.md`). (3) Two restores of one checkpoint continue **identically** given the same calls, so a paired comparison (same randomness, one parameter or shock differing; two restores of one checkpoint share the configuration, so a differing parameter is not a case between two restores: it would be `ErrCheckpointConfig`, 6.2.1, and the difference is a shock or a call) is exact when the difference moves no draw count (WLD-A5, `spec-world.md` 7.6). (4) For **independent** continuations from one state the harness passes `WithReseed(salt)` with a different salt per branch: deterministic, so a run is reproducible from (checkpoint, salt, calls). (5) A **cloned** world is `RestoreWorld(cfg, w.Checkpoint())`; there is no in-memory clone (open question 2 of 20). (6) A stateful extension is **one instance per world** (7.2 item 6): the harness registers a new instance for each branch; a shared one corrupts the others. (7) The key of a result is (`Info().ConfigHash`, the digest of the trailer, the salt) |
+| **EXP** | (1) `RestoreWorld` builds a **new** world that shares nothing with the checkpoint's source, so a harness may restore many worlds from one `Checkpoint` and step them on separate goroutines (`spec-world.md` 3.1.1). (2) **Branching** is checkpoint once, restore many: the cost of a branch is a restore (10.3), cheaper than a construction with a warm-start solve (`spec-viability.md`). (3) Two restores of one checkpoint continue **identically** given the same calls, so a paired comparison (same randomness, one parameter or shock differing; two restores of one checkpoint share the configuration, so a differing parameter is not a case between two restores: it would be `ErrCheckpointConfig`, 6.2.1, and the difference is a shock or a call) is exact when the difference moves no draw count (WLD-A5, `spec-world.md` 7.6). (stale under ADR 0008, see N-214: 7.6 says a paired comparison is aligned in the draws by construction, and the stream fingerprint of EXP 7.3 has nothing to read) (4) For **independent** continuations from one state the harness passes `WithReseed(salt)` with a different salt per branch: deterministic, so a run is reproducible from (checkpoint, salt, calls). (5) A **cloned** world is `RestoreWorld(cfg, w.Checkpoint())`; there is no in-memory clone (open question 2 of 20). (6) A stateful extension is **one instance per world** (7.2 item 6): the harness registers a new instance for each branch; a shared one corrupts the others. (7) The key of a result is (`Info().ConfigHash`, the digest of the trailer, the salt) |
 | **INT** | (1) The names are `World.Checkpoint`, `Checkpoint` (with `MarshalBinary`, `AppendBinary`, `UnmarshalBinary`, `Info`) and `RestoreWorld`; INT lists them in its surface and adds no second path. (2) `Checkpoint` is a **read** (WLD 3.7.1): it changes nothing, draws nothing and is refused with `ErrInStep` inside a step. (3) The **sequence of calls** is not saved (INT 9.2): a restored world has no history of calls, and a consumer that wants a replay log keeps one. (4) What a restored world answers (`Slots`, `Agent`, `Direct`, `Market`, `Region`) equals the original's at the same boundary (FR-CHK-052); INT's one piece of state, the rumours of the last view of an external agent, is section 22. (5) A restore **before the first step** keeps the construction phase (6.7.2), so INT 3.1.1 holds for a restored world. (6) An external agent's strategy name is checked at restore (6.2 step 4) |
 | **OBS** | (1) A restore emits `WorldRestored` as its first event with the snapshot at the restored boundary (OBS 4.4.5), and **no** `AgentSpawned`, `AgentBankrupted` or `BoundaryFlow` for the past. (2) A snapshot is a function of the checkpoint and the configuration (OBS 5.2.1), which this inventory makes testable: every field of a snapshot is derivable from the sections of 4.2 (FR-CHK-053). (3) `Checkpoint` emits no event (OBS 4.4.7: a read emits nothing), so reading cannot change the stream; a `Debug` line "checkpoint taken" with `tick` and `bytes` is the only trace. (4) Two log keys are new: `format` and `bytes` (14). (5) The adapter's instruments fed by deltas start from the levels of the event, not from zero (OBS 6.4) |
 | **STY, IND** | (1) A run split by a restore is **the same run**: the indicators and the stylised-fact tests may take a checkpoint anywhere without changing a measure (FR-CHK-050). (2) Events are not repeated across a restore, so an indicator that accumulates keeps its tally as the consumer's plain value (`spec-indicators.md` 10.5): it survives a restore as it is, and a consumer that lost it opens a new one at `WorldRestored` (IND 10.5.2). (3) The digest of the trailer is the golden check of a state (8.3) |
@@ -1233,7 +1249,7 @@ configuration (`spec-config.md` 9.2).
 **Rule constants** (beside their code, not parameters, architecture.md 9.6): the magic
 `45 53 43 4B`; the format version (1); the section tags of 4.2 and their order; the
 primitives and rules R1 to R13 (5.2); the kinds of an extension entry (7.1.2); the
-reseed rule and its constant `0x243F6A8885A308D3` (6.8.2); the order of validation (6.2);
+reseed rule `finalise(seed xor finalise(salt))` (6.8.2; the old constant `0x243F6A8885A308D3` is gone, ADR 0008); the order of validation (6.2);
 the one-spelling rules.
 
 **Not parameters**: the tick, the seed, the digest, the construction flag.
@@ -1321,7 +1337,7 @@ branches has one sample, not many. *Owner:* CHK 6.8, 11 (EXP). *Damper:* CHK-D2:
 `WithReseed(salt)`, one salt per branch, deterministic. *Undamped:* a harness that
 forgets it. *Condition:* a Monte Carlo over branches gives each its own salt; a paired
 comparison keeps the same one and changes only a parameter that moves no draw count
-(WLD-A5). *Test:* CHK-S2. *Status:* model (a bijection of the salt: the 10^6 first words
+(WLD-A5). (stale under ADR 0008, see N-214: a paired comparison is aligned in the draws by construction; WLD 7.6.) *Test:* CHK-S2. *Status:* model (a bijection of the salt: the 10^6 first words
 of the Go check are distinct).
 
 **CHK-A3 Closed accounts accumulate.** *Kind:* hazard. *Loop:* none: every removal
@@ -1353,7 +1369,7 @@ spec, not of the library, and they show no default to be stable (N-027).
 | Script | What it does | Result quoted |
 |--------|--------------|---------------|
 | `size.py` | the integers each section writes for the first consumer's world and larger, and the bytes as minimal varints and as 8-byte integers, with invented value magnitudes | 10.2: 2.1 MB against 13.6 MB; the welfare ring is 70% |
-| `worked.py` | the primitives of 5.2 with the rejected spellings, the world section of the construction of `spec-world.md` 19.1, a toy frame and its digest, an account, and the reseed vectors, each asserted against the values Go 1.25 printed | 17 |
+| `worked.py` | the primitives of 5.2 with the rejected spellings, the world section of the construction of `spec-world.md` 19.1 (stale under ADR 0008, see N-214: no PCG state), a toy frame and its digest, an account, and the reseed vectors of 6.8 (the rule of ADR 0008), each asserted against the values a Go program printed | 17 |
 | (Go, not archived: `go run` of a standard-library file in `golang:1.25`) | `binary.Uvarint` of `80 00` and `81 80 00` (accepted, two and three bytes read) and of an overflowing ten bytes (rejected, `n` negative); `rand.PCG.MarshalBinary` is `"pcg:"` and two big-endian words, 20 bytes, and `UnmarshalBinary` rejects a wrong length or prefix; `Seed(hi, lo)` equals `NewPCG(hi, lo)`; the state of seed 0 after 14 words; the reseed vectors; a million salts give a million distinct first words, and the first formula (the seeding constant) gave the state `(0, 0)` for salt 0 on seed 0, which is why the constant is the digits of pi | 5.2.1, 6.8, 17 |
 
 What they do not show: that the checkpoint of a real world has the sizes of the model
@@ -1385,6 +1401,8 @@ Rejected as corrupt (R1): `80 00` (zero in two bytes), `81 80 00` (one in three)
 `ff ff ff ff ff ff ff ff ff 02` (overflows 64 bits), `80` (truncated).
 
 ### 17.2 The world section of an example construction
+
+This example is stale under ADR 0008, see N-214: the world section no longer holds a PCG state (12 of `spec-world.md`); it is rewritten with 4.2 tag 1, and its bytes below are kept as an example of the primitives only.
 
 `spec-world.md` 19.1 (which states no seed; this example takes seed 0): three regions and seven household agents (IDs 4 to 10),
 14 words taken at construction, so the PCG has taken 14 words and the next agent ID is 11.
@@ -1431,17 +1449,33 @@ that made them (`spec-ledger.md` 5.1.3).
 
 ### 17.5 A reseed
 
-From the state of 17.2 (`hi` `8e3e6b7eff8db56c`, `lo` `b58e6a2f88e0bbfa`), the rule of
-6.8.2 gives, with the first word of the reseeded source:
+The rule of 6.8.2 on four seeds and four salts. The last column is the first word of the
+stream `(siteWork, 0, 0)` (`spec-world.md` 7.1.4) under `seed'`, which ties the rule to a
+keyed draw. Produced by `models/chk/worked.py` from `models/wld/seed.py` and printed again by
+a Go program (`math/rand/v2`, Go 1.25 and Go 1.27): every line equal.
 
-| Salt | `hi'` | `lo'` | First word |
-|-----:|-------|-------|------------|
-| 0 | `0eec475500551da4` | `64b50bad715e9bc6` | `51798660ccefa5fa` |
-| 1 | `8d300de17fda20a5` | `52b5dbda40cf330c` | `081f02238dd84e8c` |
-| 2 | `c44be769bde5c5d0` | `7603e7237b5b0efa` | `e7b2f5564db971e6` |
-| 42 | `26e84dab9a52f23d` | `ca6855e42adbe836` | `80c06a62e31cb550` |
+| Seed | Salt | `seed'` | First word of `(siteWork, 0, 0)` |
+|-----:|-----:|---------|----------------------------------|
+| 0 | 0 | `0000000000000000` | `264d986499a1a1fa` |
+| 0 | 1 | `7ab40e090f363a7d` | `9fea3673fd1e605f` |
+| 0 | 2 | `52ead7e36ea7fea8` | `73a2087f8eae98d5` |
+| 0 | 42 | `97ea87f7e45c00a5` | `1b4989fe2e01283b` |
+| 1 | 0 | `5692161d100b05e5` | `3a90ed51beb4e41d` |
+| 1 | 1 | `83ec686c1600460a` | `a5d0a8b51be8378f` |
+| 1 | 2 | `3ec2d42f3a45cc6e` | `47f38e4d9854e8fd` |
+| 1 | 42 | `901883d2427428f4` | `00c073c4d5d6c31a` |
+| 42 | 0 | `a759ea27d4727622` | `e3082397f3bc8ba6` |
+| 42 | 1 | `c2a6eebdf3976ad0` | `cd5e38f87f0ec634` |
+| 42 | 2 | `7bfa87c92aa0cff0` | `5b73a5b88ec53d5a` |
+| 42 | 42 | `36cdb0593534a37b` | `472c27560611be0f` |
+| 2^64 - 1 | 0 | `b4d055fcf2cbbd7b` | `9cbc3a9d395aed3d` |
+| 2^64 - 1 | 1 | `f3759af4852e5904` | `e6b61a2920e28083` |
+| 2^64 - 1 | 2 | `ab47721b00f39ddb` | `649e9d647ec06743` |
+| 2^64 - 1 | 42 | `eab06b8e3b2074d7` | `71829937eb038fa1` |
 
-(Go 1.25 and the Python model agree on all four.)
+The first row is the case of 6.8.2 in which a reseed is the identity (seed 0, salt 0, and
+`finalise(0)` is 0): its first word is that of the unreseeded seed 0, the row k1 of
+`spec-world.md` 7.1.5 (b).
 
 ### 17.6 What a corrupt input does
 
@@ -1498,7 +1532,7 @@ no default or bound of its own.
 | FR-CHK-003 | `MarshalBinary` and `AppendBinary` MUST return a copy, `UnmarshalBinary` MUST copy its argument, and a `Checkpoint` MUST be immutable, readable from other goroutines and usable for any number of restores (3.3). |
 | FR-CHK-004 | Equal states MUST give equal bytes: two checkpoints of one world at one boundary, and checkpoints of two worlds built from the same configuration, seed and sequence of calls, MUST be byte-equal. |
 | FR-CHK-005 | If `RestoreWorld` without `WithReseed` accepts a `Checkpoint`, a `Checkpoint()` of the world it returns, taken at once, MUST be byte-equal to it (6.6.3). |
-| FR-CHK-006 | `UnmarshalBinary` MUST check the magic, then the format (`ErrCheckpointVersion` before the digest is looked at), then the digest and the header ranges (`ErrCheckpointCorrupt`), and `Info` MUST report the format, the configuration hash, the tick, the seed and the length (5.1, 6.2 step 1), with no error result, and `Stream` MUST return the 16 bytes after the `"pcg:"` prefix of section 1 (3.1.2). |
+| FR-CHK-006 | `UnmarshalBinary` MUST check the magic, then the format (`ErrCheckpointVersion` before the digest is looked at), then the digest and the header ranges (`ErrCheckpointCorrupt`), and `Info` MUST report the format, the configuration hash, the tick, the seed and the length (5.1, 6.2 step 1), with no error result, and `Stream` MUST return the 16 bytes after the `"pcg:"` prefix of section 1 (3.1.2). (stale under ADR 0008, see N-214: `Stream` goes.) |
 | FR-CHK-007 | A checkpoint MUST NOT contain the configuration, the options, an observer, the logger, the code of an extension, or an event (3.5). |
 | FR-CHK-008 | The sections MUST be written in the tag order of 4.2, the set present MUST be a function of the configuration, an unexpected or missing tag MUST be corrupt, and every section MUST be consumed exactly (4.2.1, 5.3). |
 | FR-CHK-009 | The frame MUST be the magic, the format, the hash version, the configuration hash, the tick, the seed, the sections and a trailer of the SHA-256 of every byte before it, and nothing else (5.1, 5.4). |
@@ -1517,7 +1551,7 @@ no default or bound of its own.
 | FR-CHK-022 | Every strategy name of the table of section 3, including that of an external agent, MUST be registered at restore, or `ErrCheckpointExtension` joined with `ErrUnknownStrategy` MUST be returned (6.2 step 4). |
 | FR-CHK-023 | Restore MUST cross-check that each open Agent account is the account of exactly one agent, each estate listing is a lot the estate holds, each shipment's Transit account and each contract's Escrow account exists and holds what its record says, each trainee has its trainer and the converse, each flow carry is for an open account, each journey names a live agent, and each reference to an agent is to a live one except the shipper, traveller and consignee of a shipment and the payer of a contract, which need only be below the next agent ID (4.2.3, 6.2 step 7). |
 | FR-CHK-024 | Restore MUST run the ledger's audit and every check of a module that is on, with the boundary baseline taken as the restored balance less the pending totals (and, for a world restored in construction, the saved bucket as the construction term), whether or not `WithAudit` was given, and a failure MUST be `ErrCheckpointCorrupt` wrapping `ErrAuditFailed` (6.2.2). |
-| FR-CHK-025 | A restored world MUST be at the saved tick with the saved random state and next agent ID, MUST report `Err()` nil, and MUST share no state with the world that was checkpointed (6.7.1). |
+| FR-CHK-025 | A restored world MUST be at the saved tick with the saved seed (stale under ADR 0008, see N-214: it said "random state") and next agent ID, MUST report `Err()` nil, and MUST share no state with the world that was checkpointed (6.7.1). |
 | FR-CHK-082 | A restored world's `Config()` MUST be the effective configuration of the restore and its `ConfigHash()` MUST equal `Info().ConfigHash` (6.7.1). |
 | FR-CHK-026 | A world checkpointed before its first `Step` MUST be restored in its construction phase with its bucket, and a world checkpointed after it MUST NOT be, with the bucket neither saved nor emitted (4.4, 6.7.2). |
 | FR-CHK-027 | A successful restore MUST emit `WorldRestored` as its first event, and MUST emit no `AgentSpawned`, `AgentBankrupted` or `BoundaryFlow` for the past (6.7.3). |
@@ -1543,7 +1577,7 @@ no default or bound of its own.
 | FR-CHK-048 | The estate pseudo-agents, the counterparties and the treasury pseudo-agents MUST have no row in section 3 and MUST be rebuilt from the configuration and the account list (4.2.2). |
 | FR-CHK-049 | The region of an open account, the owner reference of an account and the agent's reference to its account MUST agree, and the first accounts MUST be those of 5.2 of `spec-world.md` in the order given there. |
 | FR-CHK-050 | A restored world MUST continue exactly as the uninterrupted one: equal events, snapshots, queries, errors and byte-equal checkpoints at every later boundary, for a range of seeds and for the checkpoint ticks of 8.2.1 (8.1.1). |
-| FR-CHK-051 | A restore MUST take no random word: the next word of the restored world MUST be the next word of the original (8.4.2). |
+| FR-CHK-051 | A restore MUST take no random word: the next word of the restored world MUST be the next word of the original (8.4.2). (stale under ADR 0008, see N-214: the next word of a stream is a function of its key, so the requirement holds trivially.) |
 | FR-CHK-052 | A restored world MUST answer every read between ticks (`Slots`, `Agent`, `Market`, `Region`, `Tick`, `Audit`, `Snapshot`) as the original did at that boundary (11). |
 | FR-CHK-053 | Every field of a `Snapshot` MUST be a function of the saved state and the configuration, so that a snapshot of a restored world equals that of the original at the same tick (OBS 5.2.1, 11). |
 | FR-CHK-054 | A run split into several `Run` calls, with a restore in each gap, MUST equal an uninterrupted run (8.2.2). |
@@ -1555,8 +1589,8 @@ no default or bound of its own.
 | FR-CHK-062 | Each released format version MUST have a committed fixture checkpoint that is restored and continued in a test (9.2.1 item 3). |
 | FR-CHK-063 | The header MUST record the version of the configuration encoding, and from 1.0 the library MUST retain the encoder of every version it wrote (9.2.1 item 4). |
 | FR-CHK-064 | A change of the digest of the reference chain's checkpoint MUST be accompanied by the explanation of testing.md 7.2 and, if the shape of state changed, by a format version (9.3). |
-| FR-CHK-070 | The reseed MUST be `x = finalise(salt xor 0x243F6A8885A308D3)`, `hi' = finalise(hi xor x)`, `lo' = finalise(lo xor finalise(x + 0x9E3779B97F4A7C15))` on the saved words, with the vectors of 17.5, and a salt of 0 MUST be a reseed (6.8.2). |
-| FR-CHK-071 | A reseed MUST be reported by `WorldRestored` (`Reseeded`, `Salt`), MUST leave the informational seed unchanged, and MUST take no random word (6.8.3). |
+| FR-CHK-070 | The reseed MUST be `seed' = finalise(seed xor finalise(salt))` on the seed of the header, with the vectors of 17.5; a salt of 0 MUST be a reseed (it is the identity only for the seed 0); and the restored world MUST install no random state and take no word (6.8.2). |
+| FR-CHK-071 | A reseed MUST be reported by `WorldRestored` (`Reseeded`, `Salt`), MUST make `seed'` the seed of the world and of the header of its later checkpoints, and MUST take no random word (6.8.3). |
 | FR-CHK-072 | Two restores of one checkpoint with one salt MUST continue identically, and with two salts MUST differ (CHK-S2). |
 | FR-CHK-080 | `WorldRestored` MUST be emitted, and its snapshot built, only when an observer was supplied, and a failed restore MUST emit nothing (6.7.3, 14.1). |
 | FR-CHK-081 | `Checkpoint` MUST emit no event and MUST log only a `Debug` line guarded by `Enabled` (14.1, 14.2). |
@@ -1616,12 +1650,12 @@ derived from this table.
 
 | File | Section | Change |
 |------|---------|--------|
-| `spec-world.md` | 5.5.3, 12.2, 8.4.1, 13 (CHK row), FR-WLD-100, FR-WLD-101 | a world restored from a checkpoint taken **before its first `Step`** stays in construction with its bucket (4.4, 6.7.2); one taken after is not in construction; 12.2 "is not in construction" says so; 12 table: the tick is in the header, not in section 1; **FR-WLD-101** "a restored world MUST NOT be in construction" becomes "a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be"; **FR-WLD-100** "the tick counter, the 20 bytes of the PCG state and the next agent ID" becomes "the 20 bytes of the PCG state, the next agent ID and the construction flag; the tick is written in the header of the checkpoint (`spec-checkpoint.md` 5.4.3)" |
+| `spec-world.md` | 5.5.3, 12.2, 8.4.1, 13 (CHK row), FR-WLD-100, FR-WLD-101 | (stale under ADR 0008, see N-214: rows applied by WLD 12 and FR-WLD-100 under ADR 0008, which drop the PCG state) a world restored from a checkpoint taken **before its first `Step`** stays in construction with its bucket (4.4, 6.7.2); one taken after is not in construction; 12.2 "is not in construction" says so; 12 table: the tick is in the header, not in section 1; **FR-WLD-101** "a restored world MUST NOT be in construction" becomes "a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be"; **FR-WLD-100** "the tick counter, the 20 bytes of the PCG state and the next agent ID" becomes "the 20 bytes of the PCG state, the next agent ID and the construction flag; the tick is written in the header of the checkpoint (`spec-checkpoint.md` 5.4.3)" |
 | `spec-world.md` | 4.1, 4.3, 15.1 | `WithReseed(salt)` in the options table (restore only, not hashed, in the sequence of calls) and `ErrOptionContext` (`WithSeed` on a restore, `WithReseed` on `NewWorld`) |
 | `spec-world.md` | 12.3, open question 16 | 12.3 adopted: `WithSeed` is refused on a restore, the original seed is informational in the header; question 16 answered: the pending totals are saved (4.4) |
 | `spec-world.md` | 4.4, FR-WLD-020, FR-WLD-021 | 4.4 "An option never changes what is saved in a checkpoint" gains "except `WithReseed`, the one restore-only option, which is a call in the sequence of calls like `AddAgent` and sets the random state by the rule of `spec-checkpoint.md` 6.8.2"; FR-WLD-020 "`WithSeed`, `WithLogger`, `WithObserver` and `WithAudit` MUST NOT change the configuration hash" gains "and neither MUST `WithReseed`"; FR-WLD-021 "every option that can change a result MUST be a datum ... or a registered name" gains "or, for `WithReseed`, a call of the sequence of calls (8.1.1)" |
 | `spec-world.md` | 3.3.3, 12.2 | 3.3.3 `ErrAuditFailed` row: add "and a restore always audits once; its failure is `ErrCheckpointCorrupt` wrapping `ErrAuditFailed`"; 12.2: "the restore runs the audit whether or not `WithAudit` was given (`spec-checkpoint.md` 6.2.2)" |
-| `doc/rules/architecture.md` | 7.3 | append one sentence: "On a restore the source is installed from the saved 20-byte state of the `rand.PCG` and not seeded; the one option that changes it is `WithReseed`, whose rule is part of the golden output as the seeding rule is." |
+| `doc/rules/architecture.md` | 7.3 | append one sentence: "On a restore the source is installed from the saved 20-byte state of the `rand.PCG` and not seeded; the one option that changes it is `WithReseed`, whose rule is part of the golden output as the seeding rule is." (stale under ADR 0008, see N-214: architecture.md 7.3 is rewritten by ADR 0008, and says the opposite) |
 | `spec-regions.md` | 11, FR-REG-042, FR-REG-052 | 11 "Not saved (derived): ... the relocation totals (6.4.1, like the flow totals)" becomes "the relocation totals of finished ticks; the relocation totals that a call between ticks added since the last tick's end are pending totals, saved with the ledger's (`spec-checkpoint.md` 4.2 tag 2)"; FR-REG-042 and FR-REG-052: "and nothing else of this spec" becomes "and nothing else of this spec's own state (the pending relocation totals are the ledger's section)" |
 | `spec-ledger.md` | FR-LED-029, FR-LED-054, 5.4.2 or 7.4 (wear units) | FR-LED-029 "MUST NOT contain reservations, flow totals, the construction bucket or expiry hints" becomes "... flow totals of finished ticks, the construction bucket once the world has stepped or expiry hints, and MUST contain the pending totals and, in construction, the bucket"; FR-LED-054 the same for "flow totals are not saved"; 7.4 names the wear units, the flow totals and the relocation totals together as the "pending totals" that a call between ticks adds to |
 | `spec-integration.md` | 13, 13.2 | 13: the rumours are saved in section 22 of the checkpoint (`spec-checkpoint.md` 4.2), in ascending agent ID, rows only for an external agent that has had a view; 13.2: "A world restored without them ... runs identically" becomes "The rumours are mandatory in a checkpoint: a restore without them would answer `Agent` differently (FR-CHK-052); they do not affect a result" |
@@ -1651,7 +1685,7 @@ derived from this table.
 | `doc/rules/observability-and-logging.md` | 3.3.2, 4.3 | the keys `format` and `bytes`; the `WorldRestored` row (when emitted; fields OBS's); a fresh read-receipt tag |
 | `doc/adr/0002-persistence-by-checkpoint.md` | decision 5, open points 1 to 5, status | the value implements `BinaryMarshaler`, `BinaryAppender` and `BinaryUnmarshaler`; open point 1: `Stateful` (7); 2: hand-written varints (5.2.2); 3: 9; 4: between ticks only; 5: no events (3.5.3); status to the human |
 | `specs/README.md` | index, reading order, area row `CHK`, decisions, glossary | CHK exists; the terms below; the decisions: checkpoint is an opaque value, varints, reseed, never compact |
-| `doc/roadmap.md` | the CHK row (line 184), tier tables, existing-specs table | `exists` |
+| `doc/spec-roadmap.md` | the CHK row (line 184), tier tables, existing-specs table | `exists` |
 | `doc/documentation_index.md` | rows | `spec-checkpoint.md` and `models/chk/` |
 | `doc/specs/models/README.md` | contents | a row for `chk/` |
 | `doc/notes.md` | the open notes of 18 | close N-020; update N-051, N-019, N-075, N-016, N-017, N-027, N-103, N-012, N-072; add the new notes of the handoff; the index; a fresh tag |
@@ -1676,6 +1710,6 @@ encoding, one spelling, sparse row, pending totals, construction flag, extension
 | The primitives U, I, B, raw and bytes, with the checks of R1 to R13 | `internal/codec` (stdlib only: `encoding/binary`; it does not know what a commodity or an agent is, architecture.md 2.9) |
 | The save and load of each module's state | beside the module: a method pair in the root file of its concept (`world.go`, `agent.go`, `market.go`, `resources.go`, ...), and in `internal/ledger` for the ledger, each over `internal/codec` |
 | The digest | root package, `crypto/sha256` |
-| The reseed rule (the finaliser and the constant) | root package, `random.go` with the seeding rule; the finaliser is the one helper of `internal/ordering` (`spec-world.md` 23) |
+| The reseed rule (`seed' = finalise(seed xor finalise(salt))`, a pure function) | root package, `random.go`; the finaliser is the one helper of `internal/ordering` (`spec-world.md` 23); built in Stage 0, the option in Stage 2 |
 | Fixtures per format version | `testdata/checkpoints/` |
 | The models | `doc/specs/models/chk/` |

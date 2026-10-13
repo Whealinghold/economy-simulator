@@ -1514,7 +1514,7 @@ and never spoils. The information module has `info_speed` 40. The merchants are 
 the consignees are the `broker`s in `lower` with `consigns`.
 
 ```toml
-[modules.transport.modes.barge]
+[modules.transport.mode.barge]
 speed = 30
 unit_mass = 1200
 unit_bulk = 900

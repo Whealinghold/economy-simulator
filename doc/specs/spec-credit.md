@@ -1460,7 +1460,7 @@ block.
 
 | # | Message | Pattern, condition | Keys | Cells bounded by | Counterpart |
 |---|---------|--------------------|------|------------------|-------------|
-| 20 | "claims overdue" | B: the debtors of a region owe overdue claims of origin `loan` at the end of P1.7a in each of `WarnRun` consecutive ticks | `region`, `claims`, `arrears` | regions | `CreditSettled.Arrears`; the `Claims` rows of the snapshot (`Overdue` at or above 0) |
+| 20 | "claims overdue" | B: the debtors of a region owe overdue claims of origin `loan` at the end of P1.7a in each of `warnRun` consecutive ticks | `region`, `claims`, `arrears` | regions | `CreditSettled.Arrears`; the `Claims` rows of the snapshot (`Overdue` at or above 0) |
 | 21 | "claim cap reached" | A: a request was cut because `MaxClaims` open claims (of either origin) exist | `claims` | the world | `CreditRound.TooMany`; the length of `Claims` |
 
 **New log keys** for `observability-and-logging.md` 3.3.2: `claim` (a claim ID,
@@ -1997,7 +1997,7 @@ One consolidated table; the exact text of each is in the handoff. None is made h
 | `spec-merchants.md`, `spec-employment.md`, `spec-skill-barriers.md`, `spec-land.md`, `spec-production.md` | 9.10 and 22 item 1; 7.3; 11.4 item 3; LND 2 (decisions-table row 10: "There is no credit in version 1"), LND 16 LND-A5 and LND 18.1 (a) ("CRD's credit"); PRO 16 (the bullet "Credit (`spec-credit.md`) is the real answer for a long job; version 1 has none") | one line each: credit is now `spec-credit.md`, not "version 1 has none" |
 | `spec-reference-chain.md`, `doc/notes.md` (N-092) | the overlays; N-092 | the credit overlay `testdata/chains/overlay/credit.toml` of 24: a borrower role on the 60-tick job role (C04) and a lender role on one region, with its warm start and the scenarios CRD-S1 to S5 |
 | `doc/notes.md` (N-019), `architecture.md` 2.6, `AGENTS.md` | the housekeeping note; the layout | `credit.go` and `internal/credit/` are homes to add at the first code that needs them, with the other homes of N-019 |
-| `README.md` (specs), `roadmap.md`, `documentation_index.md`, `notes.md`, `doc.go` | | the code row, the owner rows, the glossary, the roadmap row, the index row, the notes of 21.1, the terms of 21.3 |
+| `README.md` (specs), `spec-roadmap.md`, `documentation_index.md`, `notes.md`, `doc.go` | | the code row, the owner rows, the glossary, the roadmap row, the index row, the notes of 21.1, the terms of 21.3 |
 
 ### 21.3 Terms (N-017)
 

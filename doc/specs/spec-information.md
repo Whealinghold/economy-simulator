@@ -1167,5 +1167,6 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | The event `RumoursServed` | root package, `event.go` |
 | The bounds of section 8 | root package, `bounds.go` |
 | Validation, the derived checks of 9.2 and the warnings of 9.3 | root package, `validate.go` |
-| The reason constants `no_path`, `too_old`, `not_yet` and the log keys `rumours` and `lag` | `internal/logkeys` |
+| The reason constants `no_path`, `too_old`, `not_yet` | exported constants of the root package, `event.go` |
+| The log keys `rumours` and `lag` (key strings only) | `internal/logkeys` |
 | The file shape | `config/` (`spec-config.md` 6) |

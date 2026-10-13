@@ -65,7 +65,7 @@ Sources:
 
 ## Stability and macro-layer sources
 
-Added with the stability review (`../roadmap.md`, "Stability") and
+Added with the stability review (`../spec-roadmap.md`, "Stability") and
 `../adr/0001-macro-economy-as-replaceable-layers.md`. These support design
 direction, not numeric defaults. None sets a default.
 

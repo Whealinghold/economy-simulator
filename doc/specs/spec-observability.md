@@ -18,6 +18,15 @@ names the text that wins (section 4.5), and section 19 lists what must still be
 edited elsewhere. It does **not** edit the rules: the exact edits are in section
 19, for the supervisor to apply with fresh read-receipt tags.
 
+Stage: this spec is **in the slice**, except its metric adapter. The events
+and their observer, the options `WithLogger` and `WithObserver`, the log keys and
+the golden rendering are built from Stage 0 (`doc/roadmap-v1.md`), the snapshot
+and the world-dependent tests of section 9 in Stage 1, and `otelobserver/` in
+Stage 2 (it was "version 1" in `vision.md` section 4 before the roadmap of the
+code was written; the move is recorded there). The events are built in stages
+too: each module's change declares its own events and fields, and the catalogue
+test of 9.1.2 is staged to match (3.3.4, FR-OBS-003).
+
 This spec adds **no `Config` field and no default** (section 11). The only numbers
 in it are rule constants (the run length of a bounded `Warn`, 7.3) and the example
 numbers of sections 8 and 16, which are labelled placeholders (N-015, N-027).
@@ -146,8 +155,10 @@ ID. A **reason**, a **cause**, a **kind**
 string type (`Reason`, `Cause`, `Kind`, `ScaleKind`) **exported from the root
 package** (`event.go`) with its constants, so that a consumer and the separate
 `otelobserver` module can name them (architecture.md 2.9: domain types are the
-root's). `Side` is AGT's root type (`Bid`, `Ask`, `spec-agents.md` 6.3), which
-gains a `String` method for the golden rendering (`bid`, `ask`). `internal/logkeys`
+root's). `Side` is a root type declared in `event.go`, beside the events that carry it
+(`Bid`, `Ask`; AGT's `Intent` and `Order` use it, `spec-agents.md` 6.3, and it is
+in the root package whatever file declares it). It has a `String` method for the
+golden rendering (`bid`, `ask`). `internal/logkeys`
 holds the **key strings** of the logs only and imports nothing: it never aliases
 or imports a root type (architecture.md 2.9); the root owns the types and the
 constants and passes their values to the log calls.
@@ -228,6 +239,21 @@ event, so that a positional rendering of an older recording is a prefix. In this
 draft the fields marked `+` in 4.1 sit beside the identity they belong with
 (`Region` after `Agent`), because no recording exists yet; the golden rendering
 follows the declaration order of the code, whatever it is.
+
+**Staged form (decision D3 of the plan of Stage 0).** The table of 4.1 is the
+catalogue of the finished library, and the code is built in stages
+(`doc/roadmap-v1.md`), so an event declares the fields the specs give the core,
+that is every field no module of `Config.Modules` owns, and each module's change
+appends its own events and its own fields to the end of an existing event, in
+module order (architecture.md 2.10.5). The declaration order of a built event is
+therefore the order of its row in 4.1, less the fields not built yet. A module's
+change moves its fields to the end of the row in 4.1 in the same change, so that
+from then on the row order is the declaration order. An appended field is a
+count, an amount, a bool, a constant of a closed set or a slice, never a typed
+ID, so that a world with the module off renders as it did before (9.5.2,
+FR-OBS-091). The catalogue test of 9.1.2 is the form of architecture.md 9.7: it
+checks the events and fields that are built, and one explicit `notBuilt` list
+names the rest (FR-OBS-003, FR-OBS-004).
 
 3.3.5. **`Tick` is the tick the event belongs to.** For an event of a step it is
 the tick that step runs. For an event emitted by a call between ticks it is the
@@ -1346,19 +1372,23 @@ metric name or unit that changes here is not a breaking change: no code exists
 | Name | Instrument | Unit | Attributes | Fed by | Status |
 |------|-----------|------|------------|--------|--------|
 | `economysim.world.step.duration` | Histogram | `s` | none | `TickStarted` to `TickEnded`, with the adapter's own clock; **not recorded when `Failed`** (the step did not complete) | kept |
+| `economysim.world.step.failed` | Counter | `{step}` | none | `TickEnded` with `Failed` true, one per failed step (6.3.1) | **new**: the duration is not recorded for a failed step and the span is a sampled trace, so without it a world that failed leaves only a flat line |
 | `economysim.market.trades` | Counter | `{trade}` | `economysim.commodity` | `TradeExecuted` | kept |
 | `economysim.market.volume` | Counter | `{unit}` | `economysim.commodity` | `TradeExecuted` (`Quantity`); equals the sum of `MarketCleared.Volume` (FR-OBS-045) | kept |
 | `economysim.market.clearing_price` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`Price`) | **changed**: gains `economysim.region`; a gauge of one commodity across regions has no meaningful last value |
+| `economysim.market.price_age` | Gauge | `{tick}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`PriceAge`) | **new**: `clearing_price` is a held gauge (6.3.6), so a market that stopped trading shows a flat, healthy price; the age is the direct signal, and `market.volume` has no `region` to show which market it is |
 | `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed**: was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
 | `economysim.market.orders` | Counter | `{order}` | `economysim.commodity`, `economysim.side` | `OrderPlaced` | **new** |
 | `economysim.market.orders.rejected` | Counter | `{order}` | `economysim.commodity`, `economysim.reason` | `OrderRejected` | **new**: the hard budget's refusals, counted (FR-STB-013) |
 | `economysim.belief.centre` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`MeanCentre`) | **new** (answers `spec-beliefs.md` 12.4, N-088 3): event-fed, so it needs no snapshot |
+| `economysim.belief.at_bound` | Gauge | `{basis_point}` | `economysim.commodity`, `economysim.region`, `economysim.bound` (`floor`, `ceiling`) | `BeliefsUpdated` (`AtFloor`, `AtCeiling`, each `× 10 000 / Outcomes`, truncated toward zero; 3.5); the adapter holds the last value for a tick with no event (6.3.6) | **new**: the share the `Warn` "price beliefs at bound" tests (`spec-beliefs.md` 12.2, row 3 of 7.3), so a consumer with no logger sees it and the mean centre cannot say "converged" from "pinned" |
 | `economysim.recipe.executions` | Counter | `{execution}` | `economysim.recipe` | `RecipeExecuted` (`Executions`, not one per event) | kept |
 | `economysim.production.halted` | Counter | `{household}` | `economysim.role`, `economysim.recipe` | `ProductionHalted` (`Skipped` rows: a household counts once for each recipe skipped, so the sum over recipes is not the households halted; that figure, `Halted`, is in the event) | **new** (N-067) |
 | `economysim.agent.count` | UpDownCounter | `{agent}` | `economysim.role` | `AgentSpawned` (+1), `AgentBankrupted` (-1), `RoleChanged` (-1 `From`, +1 `To`) | kept |
 | `economysim.agent.removals` | Counter | `{agent}` | `economysim.role`, `economysim.cause` | `AgentBankrupted` | **renamed** from `economysim.agent.bankruptcies` (6.3.4) |
 | `economysim.household.count` | UpDownCounter | `{household}` | `economysim.role` | `AgentSpawned` (+`Weight`), `AgentBankrupted` (-`Weight`), `WeightChanged` (`To` less `From`), `RoleChanged` (-`Weight` `From`, +`Weight` `To`) | kept |
 | `economysim.household.unfed` | UpDownCounter | `{household}` | `economysim.role` | `UpkeepShortfall` (`Unfed`), with the adapter's per-(region, role) last value (6.3.1) | kept, rule made exact |
+| `economysim.household.exits` | Counter | `{household}` | `economysim.role`, `economysim.cause` (`insolvent`, `starved`, `consumer`) | `AgentBankrupted` (`Weight`) and `WeightChanged` (`From` less `To`, for a reduction); the cause `population` is left out, because `household.deaths` counts it (FR-OBS-059) | **new**: rung 3 of the ladder cuts a cohort by the unfed share and removes it only at weight 0 (`spec-spawner.md` 5.3), so `agent.removals` stays at 0 while households leave, and `household.count` nets the exits against entries |
 | `economysim.role.changes` | Counter | `{change}` | `economysim.role` (the destination) | `RoleChanged` (by `To`) | kept |
 | `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`) | **new** |
 | `economysim.want.unfunded` | Counter | `{unit}` | `economysim.want`, `economysim.role` | `WantShortfall` (`Planned` less `Funded`) | kept |
@@ -1483,7 +1513,8 @@ the last complete step, while the levels that move earlier (`in_transit`, `escro
 `on_journey`) already include phases 1 to 4; one that failed its audit at P8.4
 saw all of them). The
 next world is restored, not continued (`spec-world.md` 3.5), so an adapter
-attached to it is seeded again.
+attached to it is seeded again. The failed step itself is counted:
+`economysim.world.step.failed` adds 1 at that `TickEnded` (FR-OBS-058).
 
 6.3.2. **Item 2: the construction bucket.** Decided in 4.4.2: `BoundaryFlow` with
 `Tick` -1. The adapter records it into `economysim.money.flow` and
@@ -1514,7 +1545,7 @@ dashboard of relief is `ReliefPaid.Paid` summed.
 
 6.3.6. **The gauges that hold a last value** (`economysim.endowment.stock`,
 `economysim.household.own_use`, `economysim.external.price`,
-`economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.rent.rate`,
+`economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.belief.at_bound`, `economysim.rent.rate`,
 `economysim.settlement.class`, `economysim.technology.gain`): the adapter keeps
 the last recorded value per series and re-records every held series at
 `TickEnded`, so that a series whose event was silent in a tick is not stale at
@@ -1554,9 +1585,9 @@ boundary (4.4.5). The adapter seeds its levels from it, once:
 | `economysim.insurance.liability` | the sum of `Policies[].MaxPayout` |
 | `economysim.insurance.claims` | the sum of `PrincipalOwed` over the `Claims[]` rows of origin `payout` |
 
-`economysim.belief.centre` is **not** seeded: `Markets[].MeanCentre` is over all
+`economysim.belief.centre` and `economysim.belief.at_bound` are **not** seeded: `Markets[].MeanCentre` is over all
 beliefs and `BeliefsUpdated.MeanCentre` over those processed in the tick (BEL 12.1),
-so the series starts at the first event after the restore. The sparse held gauges (`endowment.stock`, `household.own_use`, `external.price`, `rent.rate`, `settlement.class`, `technology.gain`) are seeded for every key, whereas the original adapter has a series only for the keys that emitted, and `external.price` is seeded from the current quote where the original holds the last traded limit: they agree from the first event of each series, not before. A Counter is **not** seeded: it counts what this adapter saw, and a restore
+so a series starts at the first event after the restore. The sparse held gauges (`endowment.stock`, `household.own_use`, `external.price`, `rent.rate`, `settlement.class`, `technology.gain`) are seeded for every key, whereas the original adapter has a series only for the keys that emitted, and `external.price` is seeded from the current quote where the original holds the last traded limit: they agree from the first event of each series, not before. A Counter is **not** seeded: it counts what this adapter saw, and a restore
 starts it at 0, as a counter does when a process restarts.
 
 6.4.3. **Why a snapshot and not a list of levels.** A separate "levels" value
@@ -1572,10 +1603,11 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 
 | Attribute | Values | Added for |
 |-----------|--------|-----------|
-| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); a closed set of constants (4.2.3) | removals, relocations |
+| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, exits |
 | `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused` (nine) | `economysim.entry.limited` |
 | `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
+| `economysim.bound` | `floor`, `ceiling` | `economysim.belief.at_bound` |
 | `economysim.region` | the regions of the configuration (an existing attribute of RES) | `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price`, the snapshot gauges |
 | `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field`, `economysim.actor` | the entities of the configuration of the module (store classes, facility classes, bodies, rights, controls, technology fields, policy actors) | STO, CAP, ORG, TEC, PLC |
 | `economysim.dimension` | `mass`, `bulk` | `economysim.room.fill` |
@@ -1613,18 +1645,18 @@ the attribute sets, every cell that could occur:
 
 | Group | Series |
 |-------|-------|
-| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, belief centre 5 x 30) | 780 |
+| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2) | 1 230 |
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
 | production (executions 45, halted 20 roles x 45 recipes) | 945 |
-| agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20) | 200 |
+| agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20, exits 20 x 3) | 260 |
 | wants (6 x 20) and entry (9) | 129 |
 | money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
 | snapshot-fed (pending 150, stock 300, money supply 15, welfare ratio 100) | 565 |
-| duration | 1 |
+| duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 4 100** (4 142), for the instruments of the earlier modules |
+| **Total** | **about 4 700** (4 653), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1732,7 +1764,7 @@ result, and is saved so that a resumed run logs as the original did; rows 8 and 
 - **pattern A** (the first and the tenth): when the run is 1 and at every
   multiple of 10 after.
 
-The 10 is one **rule constant**, `WarnRun`, an unexported constant of the root
+The 10 is one **rule constant**, `warnRun` (unexported: it is not part of the API, and earlier drafts wrote `WarnRun`), a constant of the root
 package (`observer.go`; it is not a key and not a reason, so not in
 `internal/logkeys`), passed as a parameter to any `internal/` package that keeps a
 run (architecture.md 2.9), shared by every
@@ -1771,9 +1803,9 @@ which each uses.
 | 25 | "body has waiting households" | B: the households waiting for a place of a body in a region were above 0 in each tick of the run | `region`, `body`, `waiting`, `places` | regions x bodies | `MembershipChanged.Waiting`; `BodyRow` (`Eligible - Members`) | ORG 11.2 |
 
 7.3.1. **The bound.** Lines 2 to 18 and 20 to 25 each have a cell per entity of the
-configuration and emit at most once per `WarnRun` ticks per cell **within an uninterrupted run**
+configuration and emit at most once per `warnRun` ticks per cell **within an uninterrupted run**
 (pattern A adds the first tick of a run), so on average a tick emits the number of
-cells over `WarnRun`, and at most the number of cells in the worst tick. Line 19 is bounded per tick by
+cells over `warnRun`, and at most the number of cells in the worst tick. Line 19 is bounded per tick by
 the number of recipes, and line 13 by the number of sides over the whole run. For
 the reference world (placeholder sizes of 6.5.2: 5 regions, 20 roles, 150 markets,
 15 endowments, 6 wants) the cells of lines 2 to 18 are about 1 700 (eight kinds
@@ -1786,7 +1818,7 @@ can start in the same tick (a famine, a shock, all groups at construction) and
 pattern A fires on the first tick, so one tick may emit about 1 950 lines, plus
 the 45 of line 19. **Over a window of `w` ticks** the bound is the cells times `ceil(w / 2)` for pattern A
 (a condition true on alternate ticks starts a new run every other tick) and
-`ceil(w / WarnRun)` for pattern B, which is unbroken-run bound only; about 170 a
+`ceil(w / warnRun)` for pattern B, which is unbroken-run bound only; about 170 a
 tick is the mean, not the bound. The volume does not depend on the number of agents (rules 3.2.2, 10).
 
 7.3.2. **A `Warn` is actionable** (rules 3.2.4): each names where (`region`,
@@ -1798,7 +1830,7 @@ loses the line and not the fact.
 7.3.3. **Line 8 and its run.** SPN lists "group below floor" without a run
 pattern. It is a condition on a count of agents that changes only at a removal or
 entry, so the rule is: emitted when a group's agents first fall below `MinAgents`
-and at every multiple of `WarnRun` ticks it stays below; it is pattern A.
+and at every multiple of `warnRun` ticks it stays below; it is pattern A.
 
 ### 7.4 Every `Warn` has a counterpart: the check
 
@@ -1924,7 +1956,13 @@ changed after construction, and every event-construction site is guarded by it
 one and nothing is boxed.
 
 8.1.2. **The observers, in order**, as a slice (rules 6.2): one delivery loop per
-event, no allocation per delivery.
+event, no allocation per delivery. A nil observer given to `WithObserver` is
+ignored and never stored. The default observer is the **unexported**
+`discardObserver` of `observer.go`, with the assertion
+`var _ Observer = discardObserver{}` (architecture.md 4.5): a consumer has no
+need of a name for "no observer", which is no option or a nil one, so the type is
+not exported. No event is built for it, because the flag of 8.1.1 is false when
+only the default exists.
 
 8.1.3. **Tables derived once**: the names table (3.2.4), whose strings are the
 configuration's own (no copy of the string data); and, per module that emits
@@ -2020,17 +2058,18 @@ are the event's own (3.3.2), the recorder may keep them.
 
 | Test | Asserts | Requirement |
 |------|---------|-------------|
-| the catalogue is complete | every event type that the recorder sees over the scenarios of 9.7 is a row of the tables of 4.1; every row of 4.1 is seen at least once over them (the **all-modules** scenario of 9.7 exists for this); the classes and gates match (a plain text parse of 4.1, as testing.md 6.7 does for the parameter table) | FR-OBS-003 |
+| the catalogue is complete, **in the staged form** | every event type declared in the root package is a row of the tables of 4.1; every row of 4.1 is declared or named by the test's one explicit `notBuilt` list (event types, and `Event.Field` entries for the fields of a built event that its module has not appended yet); the test fails when a listed type or field is declared (a stale entry) and when a row is neither declared nor listed (a typo); every declared type is seen at least once over the scenarios of 9.7 (the **all-modules** scenario of 9.7 exists for this, and in a stage it holds the modules built); the classes and gates match (a plain text parse of 4.1, as testing.md 6.7 does for the parameter table). The list is empty when the last module is built | FR-OBS-003 |
 | event shape | every event has `Tick` first, no pointer, no map, no float (by reflection over the type: a test helper, not production code) | FR-OBS-001 |
 | slices are the event's | mutating a recorded slice changes no later event and no world state | FR-OBS-002 |
 | order | for a scripted step, the sequence of event types equals the order of `spec-world.md` 6.11 as amended by 4.4.8 and 4.5, and each event comes after the state change it describes (a snapshot taken after the step agrees with the last event of each kind) | FR-OBS-022 |
-| fields | for each event in the scenario, its fields equal the values the scenario's arithmetic gives (a worked example per event, with the arithmetic in a comment: testing.md 5.5) | FR-OBS-004 |
+| fields | for each declared event, its fields are the fields of its row in 4.1 less those of `notBuilt`, in the order of the row, and in the scenario they equal the values the scenario's arithmetic gives (a worked example per event, with the arithmetic in a comment: testing.md 5.5) | FR-OBS-004 |
 | pseudo-agents | no `AgentSpawned`, `AgentBankrupted`, `WeightChanged` or `RoleChanged` has an estate or a counterparty as subject, and no count includes one | FR-OBS-007 |
 | region on agent events | `RecipeExecuted`, `RecipeAbandoned` and the `Traineeship*` events carry the agent's region, equal to the region of its account at the event | FR-OBS-018 |
 | weight change money | the money and units of a `WeightChanged` equal the change of the agent's and the estate's balances | FR-OBS-019 |
 | entry step order | the traineeship events come in the order of 4.4.8 | FR-OBS-021 |
 | silent aggregates | an aggregate with "never when all are zero" is absent in a tick in which all its counts are zero | FR-OBS-009 |
 | module off | with a module off, none of its events is emitted, and the stream of the other events equals that of a world in which the module was never configured | FR-OBS-008 |
+| appended field | with a module off, the rendering of every event and row is byte-equal to that of the tree before the module was added (the events file of `testdata/golden/off/` does not move in a module's change), and a reflection test asserts that no field a module appended is of a typed ID type | FR-OBS-091 |
 | slot events | each slot call emits one event per changed cell and none for an unchanged one, in key order, with the next step's `Tick`, before its `TickStarted` | FR-OBS-017 |
 | removal order | one removal emits its events in the order of 4.4.8 | FR-OBS-020 |
 | bucket | `BoundaryFlow` with `Tick` -1 appears once, before the first `TickStarted`, with the totals of `Snapshot.Construction` taken before the step | FR-OBS-015 |
@@ -2048,7 +2087,7 @@ every level (so the guarded sites run).
 | Test | Asserts | Requirement |
 |------|---------|-------------|
 | each `Warn` path | for each row of 7.3, a scenario that makes its condition hold produces a record with the level, the constant message and the keys of the row, at the tick its pattern says (the 1st and the 10th for A; the 10th for B), and again at the next multiple of 10 | FR-OBS-071 |
-| bounded | in each uninterrupted run of N ticks no cell (row 19 excepted: one per recipe per tick) emits more than `ceil(N / WarnRun) + 1` lines of one message | FR-OBS-072 |
+| bounded | in each uninterrupted run of N ticks no cell (row 19 excepted: one per recipe per tick) emits more than `ceil(N / warnRun) + 1` lines of one message | FR-OBS-072 |
 | counterpart | for each row of 7.3, the event or snapshot field of its column "Counterpart" exists in sections 4 and 5 and, in the scenario, carries the number the line reports (a plain text parse of 7.3) | FR-OBS-051 |
 | no `Info` in the tick | between `TickStarted` and `TickEnded` of any step of any scenario, no record at `Info` or above other than a row of 7.3 | FR-OBS-070 |
 | no `Error` | no record at `Error` in any scenario of 9.7 | FR-OBS-074 |
@@ -2102,17 +2141,50 @@ t=<Tick> <Type> <Field>=<value> <Field>=<value> ...
 
 - `Tick` is rendered as `t=` first; every other field follows in **declaration
   order**; a field is `Name=value` with no spaces inside the value.
+- **A field at its zero value is not rendered** (decision D5 of the plan of
+  Stage 0). A field whose value is the zero value of its type (`0`, `false`, the
+  empty string, an empty or nil slice) is omitted from the line, whichever event
+  it belongs to and whether or not a module appended it, so the rule is one test
+  and not a list. Never omitted: `Tick` and the type name, and every field of a
+  typed ID type (3.2.1) or of `Side`, because zero names a region, a commodity or
+  an agent (`Region=alpha` is `RegionID` 0 and must show). The effect is the one D5
+  asks: a field that a module appends to an event is a count, an amount, a bool, a
+  constant or a slice (3.3.4), so with the module off it is zero and the line is
+  byte-equal to what it was before the module existed, and
+  `testdata/golden/off/` does not move when a module is added (testing.md
+  7.1.1). A reader reads an absent field as zero.
 - An integer, a `Money`, a `Price` and a `Quantity` are decimal; a `bool` is `true`
   or `false`; a `[32]byte` hash is the first 8 bytes in lower-case hex.
 - A typed ID is the **string ID** from the names table (`Region=north`,
   `Commodity=grain`); an ID outside the table is `#<n>`; `NoCommodity` is `-`. An
   `AgentID` is its integer. A reason, a cause and a side are their constants.
-- A slice is `[` rows `]` separated by spaces, a row is `{Name=value ...}`, an
-  empty slice is `[]`.
+- A slice is `[` rows `]` separated by spaces, a row is `{Name=value ...}`; an
+  empty slice is omitted (above), and the fields of a row follow the same
+  zero rule (`{Commodity=grain Quantity=3}` has no `Disposed`).
 - `Names` and `Snapshot` (in `WorldCreated` and `WorldRestored`) are **omitted**
   from the line; `WorldRestored` renders `SnapshotRows=<n>` instead, the number of
   rows of the snapshot.
 - Nothing else: no timestamp, no address, no map order.
+
+**Worked rendering of an appended field (an example).** `AgentSpawned` is declared
+by the slice with `Agent`, `Region`, `Role`, `Weight`, `StartMoney` and
+`External`. The storage module's change appends `StoresLocked` at the end. For
+the household `AgentID` 1 of 16.1, role `baker`, weight 1, start money 100, the
+slice renders and the tree with the storage module added but off renders the same
+line, byte for byte:
+
+```
+t=0 AgentSpawned Agent=1 Region=alpha Role=baker Weight=1 StartMoney=100
+```
+
+(`External=false` and `StoresLocked=0` are zero and absent). With the module on
+and two stores of the role row withheld by the class of the region, the line is
+
+```
+t=0 AgentSpawned Agent=1 Region=alpha Role=baker Weight=1 StartMoney=100 StoresLocked=2
+```
+
+and only the `testdata/golden/storage/` and `all/` files carry it.
 
 9.5.3. **The file** `testdata/golden/events-<pack>.txt` holds, for the reference
 chain on a fixed seed and a fixed number of ticks (a placeholder, REF 8.2):
@@ -2122,9 +2194,13 @@ chain on a fixed seed and a fixed number of ticks (a placeholder, REF 8.2):
 2. one line per tick of the whole run: `t=<n> events=<count> digest=<16 hex>`,
    the first 8 bytes of the SHA-256 of that tick's rendered lines (a test may use
    a hash: it is not randomness);
-3. the **count of each event type** over the run, in the order of 4.1;
-4. the final snapshot rendered in the same style: one line per row with its type
-   name and fields.
+3. the **count of each event type** over the run, in the order of 4.1; **a type
+   with a count of 0 is not listed**, so an event of a module that is off adds no
+   line (D5);
+4. the final snapshot rendered in the same style, with the same zero rule: one
+   line per row with its type name and fields, **a section with no rows is not
+   rendered**, and a snapshot field a module appends is omitted at zero as an
+   event field is.
 
 The renderer is test code (a `_test.go` helper using reflection over the
 exported fields), not an exported function: a library function that renders
@@ -2147,7 +2223,7 @@ Raising the constant is a reviewed change with a reason (NFR-OBS-001,
 NFR-OBS-002).
 
 9.6.2. **Every site is reached.** The test of (a) runs the **all-modules**
-scenario of 9.7, the same that FR-OBS-003 requires to emit every event type with
+scenario of 9.7, the same that FR-OBS-003 requires to emit every declared event type with
 an observer, so that the sites exercised by the allocation test and the
 types emitted by the recorder are the same set: a site that no scenario reaches
 would pass the allocation test and be untested.
@@ -2207,6 +2283,9 @@ In `otelobserver`, against the OpenTelemetry SDK's in-memory exporters (testing.
 | unfed | the sequence of 16.4 gives the level of 6.3.1 at every tick | FR-OBS-053 |
 | levels after a restore | an adapter attached at a restore and one attached at construction have equal level instruments after the same further steps | FR-OBS-054 |
 | removals | `economysim.agent.removals` by cause sums to the `AgentBankrupted` count | FR-OBS-057 |
+| step failed | over a scenario with one step failing at P4.1 and one failing its audit at P8.4, `economysim.world.step.failed` is 2 and, with the recordings of the duration, equals the `TickEnded` count | FR-OBS-058 |
+| exits | the cohort of 40 with 7 unfed households of `spec-spawner.md` 5.3 raises the instrument by 4 a tick while `economysim.agent.removals` stays at 0, then by the weight left at its removal; a population death is in `economysim.household.deaths` and not here | FR-OBS-059 |
+| price age, beliefs at bound | a market with no trade for `k` ticks reads an age of `k`; beliefs all on the ceiling read 10 000 for `ceiling` and 0 for `floor`; a tick with no `BeliefsUpdated` holds the last value | FR-OBS-060 |
 | volume | the SDK is called at most once per series per tick (6.6.2), with a counting meter | NFR-OBS-005 |
 | event-only counters | with no observer the counters that exist only for an event are not built (a scenario with a test hook on the flag in an internal test) | NFR-OBS-003 |
 | snapshot allocation | the allocations of `Snapshot` at scale 1 and at scale 40 of one configuration are equal | NFR-OBS-004 |
@@ -2290,7 +2369,7 @@ nothing from it.
 
 **Rule constants**, beside their code (architecture.md 9.6): the catalogue of
 events and their field order; the closed sets of `Reason`, `Cause`, `Kind` and
-`ScaleKind` constants (and AGT's `Side`); `NoCommodity` (-1); `WarnRun` (10; `warnRun` in code), the run length of a bounded
+`ScaleKind` constants (and `Side`, declared in `event.go`); `NoCommodity` (-1); `warnRun` (10), the run length of a bounded
 `Warn` (7.3); the golden rendering format (9.5.2); the order of the names table
 (canonical order, 3.2.4); the metric names, units and attributes (6.2). The
 number 10 was a literal in several owners' text; it is one constant here, shared.
@@ -2303,7 +2382,7 @@ number 10 was a literal in several owners' text; it is one constant here, shared
 No rule is added to `spec-config.md`. An option's argument is validated by its
 option (`spec-world.md` 4.1: a nil observer and a nil logger are the defaults, not
 errors). The one construction-time check that touches observation is a test, not a
-validator: the all-modules scenario of 9.7 must emit every event type
+validator: the all-modules scenario of 9.7 must emit every declared event type
 (FR-OBS-003).
 
 ## 13. Entries for the stability register
@@ -2377,16 +2456,16 @@ in the order of `spec-world.md` 6.11, in the format of 9.5.2:
 
 ```
 t=7 TickStarted
-t=7 RecipeExecuted Agent=2 Region=alpha Recipe=grow StartTick=7 Executions=1 Outputs=[{Commodity=grain Quantity=3}] Disposed=[] EffectiveYield=10000
+t=7 RecipeExecuted Agent=2 Region=alpha Recipe=grow StartTick=7 Executions=1 Outputs=[{Commodity=grain Quantity=3}] EffectiveYield=10000
 t=7 OrderPlaced Region=alpha Commodity=grain Agent=1 Side=bid Limit=45 Quantity=2
 t=7 OrderPlaced Region=alpha Commodity=grain Agent=2 Side=ask Limit=40 Quantity=3
 t=7 TradeExecuted Region=alpha Commodity=grain Buyer=1 Seller=2 Price=42 Quantity=2
-t=7 MarketCleared Region=alpha Commodity=grain Price=42 PriceAge=0 Volume=2 UnmatchedBid=0 UnmatchedAsk=1 BestBid=0 BestAsk=40 HasBestBid=false HasBestAsk=true
-t=7 MarketCleared Region=alpha Commodity=loaf Price=90 PriceAge=4 Volume=0 UnmatchedBid=0 UnmatchedAsk=0 BestBid=0 BestAsk=0 HasBestBid=false HasBestAsk=false
-t=7 BeliefsUpdated Region=alpha Commodity=grain Outcomes=2 Adjusted=1 Raised=1 Lowered=0 AtFloor=0 AtCeiling=0 Conflicts=0 Clamped=0 MeanCentre=44 LowCentre=40 HighCentre=47
+t=7 MarketCleared Region=alpha Commodity=grain Price=42 Volume=2 UnmatchedAsk=1 BestAsk=40 HasBestAsk=true
+t=7 MarketCleared Region=alpha Commodity=loaf Price=90 PriceAge=4
+t=7 BeliefsUpdated Region=alpha Commodity=grain Outcomes=2 Adjusted=1 Raised=1 MeanCentre=44 LowCentre=40 HighCentre=47
 t=7 BoundaryFlow Region=alpha Reason=recipe_output Kind=faucet Commodity=grain Total=3
 t=7 BoundaryFlow Region=alpha Reason=consumption Kind=sink Commodity=grain Total=2
-t=7 TickEnded Failed=false
+t=7 TickEnded
 ```
 
 Reading it. The grower completes a one-tick recipe in its start tick, so
@@ -2396,7 +2475,9 @@ agent order (1 before 2: the bid's agent has the lower ID). They cross, 45 again
 (`spec-clearing.md` 5.2), for the smaller quantity 2; one unit of the ask stays
 unmatched, so `UnmatchedAsk=1` and the best unmatched ask is 40. The `loaf` market
 cleared with no order: its price is the one carried forward, 90, four ticks old
-(`spec-clearing.md` 5.4), and `MarketCleared` is emitted anyway. No
+(`spec-clearing.md` 5.4), and `MarketCleared` is emitted anyway; every count and
+flag that is zero or false is absent from the line (9.5.2), so that line is short
+and `TickEnded` of a step that did not fail has no field. No
 `UpkeepShortfall`: both households were fed, so none is emitted (3.3.3). The
 `BoundaryFlow` rows are the two boundary reasons with a non-zero total in the
 registry order of 4.4.1.2: 3 units of `grain` created by `recipe_output`, 2 eaten
@@ -2485,8 +2566,8 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 |----|-------------|
 | FR-OBS-001 | Every event MUST be a plain struct of the root package that implements the sealed `Event` interface, MUST have `Tick int64` as its first field, and MUST contain no pointer, function, map, float or wall-clock time (3.3). |
 | FR-OBS-002 | A slice in an event MUST be a copy owned by the event, in a deterministic order, and the library MUST NOT reuse its backing array after the event is emitted (3.3.2). |
-| FR-OBS-003 | The event types of the root package MUST be exactly the rows of the tables of 4.1, each with an owner, a position, a volume class and a gate, and the all-modules scenario MUST emit every one of them at least once. |
-| FR-OBS-004 | Each event MUST carry exactly the fields that 4.1 lists for it, in that order, and each value MUST be the one the owning spec's rule gives. |
+| FR-OBS-003 | The event types declared in the root package MUST be rows of the tables of 4.1, each with an owner, a position, a volume class and a gate; every row that is not declared MUST be named by one explicit `notBuilt` list of the catalogue test, which MUST fail when a listed type is declared and when a row is neither declared nor listed (the staged form of architecture.md 9.7, 3.3.4); and the all-modules scenario MUST emit every declared type at least once. The list is empty when the last module is built. |
+| FR-OBS-004 | Each declared event MUST carry exactly the fields that 4.1 lists for it, less those of the same `notBuilt` list (the fields of a module that is not built), in the order of its row, and each value MUST be the one the owning spec's rule gives. A module's change appends its fields at the end of the event and moves them to the end of the row. |
 | FR-OBS-005 | Every field of an event or snapshot row that names a configured entity MUST carry the typed integer ID of its kind, in the range of the corresponding slice of the names table (3.2.1). |
 | FR-OBS-006 | A reason, a cause, a side, a kind and every other member of a closed set in an event MUST be a constant of that set, and no call of the library MUST accept consumer text for one (4.2.3). |
 | FR-OBS-007 | A pseudo-agent MUST NOT be counted in any `Agents` or `Households` field and MUST NOT be the subject of `AgentSpawned`, `AgentBankrupted`, `WeightChanged` or `RoleChanged` (3.3.6, 5.1.2). |
@@ -2521,20 +2602,24 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-051 | Every `Warn` of 7.3 MUST have a counterpart event or snapshot field that exists in sections 4 and 5. |
 | FR-OBS-052 | The attribute sets recorded on each instrument MUST be within the bounds of 6.5 for the configuration, and MUST contain no agent ID, order ID, tick, price, quantity, contract or shipment ID. |
 | FR-OBS-053 | `economysim.household.unfed` MUST equal, at every tick, the sum over regions of the households unfed in the last complete step, by the rule of 6.3.1, including the tick in which no event is emitted. |
-| FR-OBS-054 | An adapter attached at a restore MUST seed its level instruments from `WorldRestored` and MUST then agree with an adapter attached at construction, from the end of the first complete step after the restore, on every UpDownCounter and on every gauge that is fed every tick (`economysim.market.clearing_price`); a sparse held gauge (`economysim.endowment.stock`, `economysim.household.own_use`, `economysim.external.price`, `economysim.belief.centre`, `economysim.rent.rate`, `economysim.settlement.class`, `economysim.technology.gain`) agrees from the first event of its series (6.4.2). |
+| FR-OBS-054 | An adapter attached at a restore MUST seed its level instruments from `WorldRestored` and MUST then agree with an adapter attached at construction, from the end of the first complete step after the restore, on every UpDownCounter and on every gauge that is fed every tick (`economysim.market.clearing_price`); a sparse held gauge (`economysim.endowment.stock`, `economysim.household.own_use`, `economysim.external.price`, `economysim.belief.centre`, `economysim.belief.at_bound`, `economysim.rent.rate`, `economysim.settlement.class`, `economysim.technology.gain`) agrees from the first event of its series (6.4.2). |
 | FR-OBS-055 | A failed step MUST record no duration, MUST end its span with an error status and MUST run no reset: the level instruments are those after the events the adapter saw (6.3.1). |
 | FR-OBS-056 | The adapter MUST NOT call the `World` and MUST NOT keep a value keyed by an agent ID, an order, a trade, a shipment or a contract. |
 | FR-OBS-057 | `economysim.agent.removals` by `economysim.cause` MUST sum to the number of `AgentBankrupted` events. |
+| FR-OBS-058 | `economysim.world.step.failed` MUST equal the number of `TickEnded` events with `Failed` true, and the recordings of `economysim.world.step.duration` plus it MUST equal the number of `TickEnded` events. |
+| FR-OBS-059 | `economysim.household.exits` by `economysim.role` and `economysim.cause` MUST equal, with exact equality, the sum of `AgentBankrupted.Weight` and of `From` less `To` of each `WeightChanged` with `To` below `From`, over the events whose cause is not `population`. |
+| FR-OBS-060 | `economysim.market.price_age` MUST equal `MarketCleared.PriceAge` of the last step for each (commodity, region), and `economysim.belief.at_bound` MUST equal `AtFloor × 10 000 / Outcomes` and `AtCeiling × 10 000 / Outcomes` of the last `BeliefsUpdated` of the market, truncated toward zero, and hold that value in a tick with no such event. |
 | FR-OBS-070 | The library MUST emit no log record at `Info` or above inside a step other than the `Warn` rows of 7.3, and MUST emit no `Error` record. |
 | FR-OBS-071 | Each `Warn` of 7.3 MUST have the level, the constant message and the keys of its row, and, except row 19, MUST be emitted by the pattern (A or B) of its row over the run of consecutive ticks its owner keeps. |
-| FR-OBS-072 | In each uninterrupted run of `N` ticks no cell of a `Warn` other than row 19 MUST emit more than `ceil(N / WarnRun) + 1` records of one message (and over any window `ceil(w / 2)` for pattern A), and row 19 MUST emit at most one per recipe per tick. |
+| FR-OBS-072 | In each uninterrupted run of `N` ticks no cell of a `Warn` other than row 19 MUST emit more than `ceil(N / warnRun) + 1` records of one message (and over any window `ceil(w / 2)` for pattern A), and row 19 MUST emit at most one per recipe per tick. |
 | FR-OBS-073 | Every attribute key of every log record MUST be a key of the table of `rules/observability-and-logging.md` 3.3.2. |
 | FR-OBS-074 | No scenario MUST produce a record at `Error`; an inconsistency the library cannot repair MUST panic or, with `WithAudit`, return `ErrAuditFailed`. |
 | FR-OBS-075 | A log message MUST be a constant lowercase phrase with no interpolated value, and all records of one call site MUST have the same message. |
 | FR-OBS-076 | "world created", "warm start applied", "run started", "run ended" and "world restored" MUST be emitted once each, at the point and with the keys of 7.2. |
-| FR-OBS-080 | The golden rendering of an event MUST follow 9.5.2: `t=<Tick>`, the type, the fields in declaration order, typed IDs as their string IDs, no timestamp and no map order. |
-| FR-OBS-081 | `testdata/golden/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type, and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
+| FR-OBS-080 | The golden rendering of an event MUST follow 9.5.2: `t=<Tick>`, the type, the fields in declaration order, typed IDs as their string IDs, no timestamp and no map order; and a field at its zero value (not a typed ID and not `Side`) MUST NOT be rendered, so that a field a module appends at its off value leaves no trace. |
+| FR-OBS-081 | `testdata/golden/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
 | FR-OBS-090 | A world with no logger and no observer, and one given a nil logger or a nil observer, MUST build, step and run, write nothing to stdout or stderr and not panic. |
+| FR-OBS-091 | A field that a module appends to an event or to a snapshot row MUST be a count, an amount, a bool, a constant of a closed set or a slice, MUST NOT be a typed ID, and MUST be zero when the module is off; the rendering of every event and row of a world with the module off MUST be byte-equal to that of the tree before the module was added (9.5.2; architecture.md 2.10.5). |
 
 ### Non-functional
 
@@ -2616,7 +2701,7 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | | 6.2 | a class-O or class-R event is not a span event; the step span carries the counts as attributes (6.6.5) |
 | | 8.1 | add the tests of section 9: restore equality of the snapshot, the rebuild of counts and money from events, `WorldRestored`, the counterpart of each `Warn`, the golden rendering of events, the adapter's calls once per series |
 | | read receipt | a fresh tag |
-| `doc.go` (glossary) | | **names table**, **volume class**, **recorder**, **level** (of an instrument), **delta instrument**, **region state**, **snapshot row**, **pending totals**, **construction flow**, **run** (of a bounded `Warn`), **pattern A** and **pattern B**, `WarnRun`, `NoCommodity`; the public types `Names`, `Kind`, `ScaleKind`, `HaltRow`, `ArrivedLine`, `MarketRow`, `RegionState`; `WantID` as a typed ID |
+| `doc.go` (glossary) | | **names table**, **volume class**, **recorder**, **level** (of an instrument), **delta instrument**, **region state**, **snapshot row**, **pending totals**, **construction flow**, **run** (of a bounded `Warn`), **pattern A** and **pattern B**, `warnRun`, `NoCommodity`; the public types `Names`, `Kind`, `ScaleKind`, `HaltRow`, `ArrivedLine`, `MarketRow`, `RegionState`; `WantID` as a typed ID |
 | `doc/rules/architecture.md` | 2.6 (and 2.9 stands) | the description of `internal/logkeys` reads "slog attribute key strings; it imports nothing and holds no type of the root"; the reason and cause constants and the event field types are root exports (`event.go`) (R3, ARCH 2.9 wins); 12.5 as the rules 4.4 row above |
 
 ### The specs
@@ -2637,7 +2722,7 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `spec-estates.md` | 2.5, 2.6, FR-EST-020, FR-EST-021 | `ReliefPaid` gains `Households`; `EstateOpened` is emitted by every removal, with the pool policy on or off; `ReliefPaid` is the pool policy's |
 | `spec-spawner.md` | 13.1, 13.4 | `WeightChanged` gains `Money` and `Units`; the snapshot's last-tick `EntryLimited` counts are the event, not snapshot fields (5.8) |
 | `spec-agents.md` | 14.6 | the snapshot list reads `spec-observability.md` 5.3.4 here |
-| `spec-agents.md` | 6.3 | `Side` gains a `String` method (`bid`, `ask`) for the golden rendering of events (F8) |
+| `spec-agents.md` | 6.3, code-home row | `Side` is declared in `event.go` (not in `agent.go` or `strategy.go`) and has a `String` method (`bid`, `ask`) for the golden rendering of events (F8); applied 2026-10-12 |
 | `spec-demand.md` | 11.5, 3 or 9 | the per-want counts are `WantShortfall`, not snapshot fields; the type `WantID` is named |
 | `spec-subsistence.md` | 14.4 | `Blocked` is the event `OwnUseChanged`, not a snapshot field |
 | `spec-migration.md` | 13.4 | the last tick's `MigrationReviewed` counts are the event, not snapshot fields |
@@ -2676,14 +2761,14 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `spec-credit.md` | 16.1, 16.3 | say whether `CreditSettled` counts the payments of a claim of origin `payout` (the rebuild of `spec-observability.md` 4.3.3 item 10 needs them) or only those of a loan, and give a field for the other if the instruments `economysim.credit.*` are to count origin `loan` only (the rules 5.3.1); `Origin` on `LoanEnded` and on the `Claims` row (4.1.10, 5.3.8) |
 | `spec-insurance.md` | 15 | the events are `CoverFormed` and `CoverEnded`, the key `cover_policy`, the Debug lines "cover formed" and "cover ended"; INS counts its own outstanding payout claims in an instrument of its own (not in the catalogue of 6.2.1 yet) and feeds `economysim.credit.outstanding` by nothing |
 | `doc/notes.md` | the open notes of this spec | in the handoff |
-| `doc/specs/README.md`, `doc/roadmap.md`, `doc/documentation_index.md` | the OBS row, the existing-specs table, the parameter owners (none) | OBS exists |
+| `doc/specs/README.md`, `doc/spec-roadmap.md`, `doc/documentation_index.md` | the OBS row, the existing-specs table, the parameter owners (none) | OBS exists |
 
 ## 20. Where this lives in the code
 
 | Concern | Home |
 |---------|------|
 | the event types, the sealed `Event` interface, `Names`, `NoCommodity` | root package, `event.go` |
-| `Observer`, `ObserverFunc`, the delivery loop and the "has observer" flag | root package, `observer.go` |
+| `Observer`, `ObserverFunc`, the delivery loop, the "has observer" flag and the default observer, the unexported `discardObserver` with `var _ Observer = discardObserver{}` (architecture.md 4.5) | root package, `observer.go` |
 | `Snapshot`, its rows, `RegionState`, `MarketRow`, the scans and the builder shared with `WorldRestored` | root package, `snapshot.go` |
 | `Reason`, `Cause`, `Kind`, `ScaleKind` and their constants (and `Side` with its `String` method); `warnRun` | root package, `event.go`, `observer.go` |
 | the log key strings (and nothing else; no alias, no import) | `internal/logkeys` |

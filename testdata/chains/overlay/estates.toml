@@ -1,3 +1,4 @@
-# Turns the estates module on: the regional pool, starting money from the pool, relief.
+# Turns the estates module on: the pool policy, that is relief from the regional pool
+# (spec-config.md 6.2.4; the pool and its use for starting money exist in every world).
 # The region fields (estate_markdown, pool_release, relief_below) keep their defaults.
-[module.estates]
+[modules.estates]

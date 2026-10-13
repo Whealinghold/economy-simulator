@@ -1251,7 +1251,7 @@ closing of 5.5, once per vacancy). The reasons are the constants of 5.2 and 5.5.
 
 15.2.2. **`Warn`**, bounded by the configuration, two lines, pattern B of
 `spec-observability.md` 7.3 (the tenth tick of an uninterrupted run and every tenth after;
-`WarnRun` is the rule constant):
+`warnRun` is the rule constant):
 
 | Message | Condition | Keys | Cells bounded by | Counterpart |
 |---------|-----------|------|------------------|-------------|

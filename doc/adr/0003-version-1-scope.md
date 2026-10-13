@@ -6,11 +6,11 @@
 
 ## Context
 
-The roadmap lists more than fifty specs, and `vision.md` proposed which of them
+The roadmap of the specs (`spec-roadmap.md`) lists more than fifty specs, and `vision.md` proposed which of them
 the first release contains. The proposal stayed a draft until the human
 accepted it, and three roadmap questions depended on it: whether `spec-fiscal.md`
 (FIS), `spec-integration.md` (INT) and `spec-policy.md` (PLC) are in the first
-release (roadmap Open 1), whether a policy actor reuses `Strategy` (Open 2), and
+release (`spec-roadmap.md` Open 1), whether a policy actor reuses `Strategy` (Open 2), and
 whether a region holds one settlement or several (Open 3).
 
 Since the draft, the specs of the slice and of much of version 1 have been
@@ -28,7 +28,7 @@ changes what the remaining specs must supply.
    checks, which shows which other specs are really needed and may change the
    table), **version 1** (the first release that meets the first consumer's
    needs) and **later**. `vision.md` section 4 holds the table; a change to it
-   is a new ADR or an amendment recorded in the vision and the roadmap in the same
+   is a new ADR or an amendment recorded in the vision and `spec-roadmap.md` in the same
    change.
 2. **FIS and PLC are later; INT is in version 1 only as external shocks and a
    player agent.** The state-of-the-world shocks STY needs (a failed harvest) and
@@ -64,7 +64,7 @@ changes what the remaining specs must supply.
 - The next specs are the remaining slice and version-1 specs in dependency order:
   SPN, DEM and REF (tier 1), then WLD, REG, RES, SUB, POP, MIG, INF, TRN, MER, MON,
   EXT, OBS, CHK, IND, STY, CLB, EXP and the minimal INT. The "later" specs are not
-  written, but the core leaves room for them as the roadmap says.
+  written, but the core leaves room for them as `spec-roadmap.md` says.
 - Specs that serve version 1 do not wait for the later ones. A spec that needs a
   later one leaves a named hook and says what it assumes (for example, `spec-agents.md`
   assumes no spending beyond upkeep until DEM, MON or EXT exist).
@@ -79,7 +79,7 @@ changes what the remaining specs must supply.
   (credit, tax, policy, technology) cannot be validated before the slice runs.
 - **A smaller slice only (no regions).** Rejected: a realm of regions is the
   point of the library, and retrofitting regions into per-market specs is costly
-  (roadmap, "The per-region core").
+  (`spec-roadmap.md`, "The per-region core").
 - **Policy actors reuse `Strategy`.** Rejected: the signature differs (settings,
   not orders); ASSUME reuses one interface for actors that all bid, which supports
   one `Strategy` for those and a separate interface for the rest.
@@ -99,6 +99,6 @@ Conditions the vision listed that are still open and are tracked, not blocking:
 
 ## Related
 
-- [vision.md](../vision.md), [roadmap.md](../roadmap.md) (Open 1 to 3 and Decisions)
+- [vision.md](../vision.md), [spec-roadmap.md](../spec-roadmap.md) (Open 1 to 3 and Decisions)
 - [ADR 0001](0001-macro-economy-as-replaceable-layers.md), [ADR 0002](0002-persistence-by-checkpoint.md)
 - notes N-024, N-025, N-026, N-027, N-030

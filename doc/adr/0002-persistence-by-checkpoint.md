@@ -41,6 +41,11 @@ variables or an extension's private fields, no checkpoint can capture it.
    and a format version and a hash of the configuration. It excludes the
    configuration itself, observers and the logger.
 
+   *Note, 2026-10-12 (text above kept).* [ADR 0008](0008-random-draws-are-keyed-streams.md)
+   narrows "the state of the random source" to the seed: draws come from
+   streams keyed by the seed, the site, the tick and the entity, so a
+   checkpoint holds no random state beyond the effective seed in its header.
+
 4. **Restore is validated.** A restore function takes the configuration, the
    checkpoint and options, and returns an error (a sentinel the caller can match
    with `errors.Is`) if the format version is unsupported or the configuration
@@ -150,5 +155,5 @@ All five are answered (2026-10-11), by `spec-checkpoint.md` and `spec-world.md`:
 - `AGENTS.md`, "Pure library" and "Deterministic"
 - `doc/rules/architecture.md` 7.4, 12.3, 12.4, 12.6
 - `doc/adr/0001-macro-economy-as-replaceable-layers.md`
-- `doc/roadmap.md`, [spec-checkpoint.md](../specs/spec-checkpoint.md) (CHK) and
+- `doc/spec-roadmap.md`, [spec-checkpoint.md](../specs/spec-checkpoint.md) (CHK) and
   [spec-world.md](../specs/spec-world.md) (WLD)

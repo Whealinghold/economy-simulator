@@ -252,11 +252,22 @@ event, so that an observer that keeps no agent table can attribute it.
 **[project]**
 
 4.2. Adding fields to an event is allowed. Removing or renaming a field, or
-changing its meaning, is a breaking change (architecture.md 6.6). **[project]**
+changing its meaning, is a breaking change (architecture.md 6.6). A field is
+appended at the end of the event, and a field that a module appends to an event
+that exists without it **MUST** be a count, an amount, a bool, a constant of a
+closed set or a slice, never a typed ID: the golden rendering omits a field at
+its zero value, so a world with the module off renders as it did before the
+module existed (architecture.md 2.10.5, `spec-observability.md` 9.5.2).
+**[project]**
 
 4.3. The library **MUST** emit at least the following events. Adding a new
 state transition to the library without an event for it needs a written reason
-in the PR. **[project]**
+in the PR. The table is the catalogue of the finished library. The code is
+built in stages (`doc/roadmap-v1.md`), so the catalogue test checks the events
+that are declared and holds the rest in one explicit `notBuilt` list, in the
+staged form of architecture.md 9.7: "emit at least" binds the events that are
+built, and an event is declared in the change that builds its owner.
+**[project]**
 
 | Event type                | Emitted when                                         |
 |---------------------------|------------------------------------------------------|
@@ -433,19 +444,23 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | Name                                | Instrument      | Unit            | Attributes        |
 |-------------------------------------|-----------------|-----------------|-------------------|
 | `economysim.world.step.duration`    | Histogram       | `s`             | none              |
+| `economysim.world.step.failed`      | Counter         | `{step}`        | none              |
 | `economysim.market.trades`          | Counter         | `{trade}`       | `economysim.commodity` |
 | `economysim.market.volume`          | Counter         | `{unit}`        | `economysim.commodity` |
 | `economysim.market.clearing_price`  | Gauge           | `{minor_unit}`  | `economysim.commodity`, `economysim.region` |
+| `economysim.market.price_age`       | Gauge           | `{tick}`        | `economysim.commodity`, `economysim.region` |
 | `economysim.market.unmatched`       | Counter         | `{unit}`        | `economysim.commodity`, `economysim.side` |
 | `economysim.market.orders`          | Counter         | `{order}`       | `economysim.commodity`, `economysim.side` |
 | `economysim.market.orders.rejected` | Counter         | `{order}`       | `economysim.commodity`, `economysim.reason` |
 | `economysim.belief.centre`          | Gauge           | `{minor_unit}`  | `economysim.commodity`, `economysim.region` |
+| `economysim.belief.at_bound`        | Gauge           | `{basis_point}` | `economysim.commodity`, `economysim.region`, `economysim.bound` |
 | `economysim.recipe.executions`      | Counter         | `{execution}`   | `economysim.recipe` |
 | `economysim.production.halted`      | Counter         | `{household}`   | `economysim.role`, `economysim.recipe` |
 | `economysim.agent.count`            | UpDownCounter   | `{agent}`       | `economysim.role` |
 | `economysim.agent.removals`         | Counter         | `{agent}`       | `economysim.role`, `economysim.cause` |
 | `economysim.household.count`        | UpDownCounter   | `{household}`   | `economysim.role` |
 | `economysim.household.unfed`        | UpDownCounter   | `{household}`   | `economysim.role` |
+| `economysim.household.exits`        | Counter         | `{household}`   | `economysim.role`, `economysim.cause` |
 | `economysim.role.changes`           | Counter         | `{change}`      | `economysim.role` (the destination role) |
 | `economysim.entry.limited`          | Counter         | `{case}`        | `economysim.entry_limit` |
 | `economysim.want.unfunded`          | Counter         | `{unit}`        | `economysim.want`, `economysim.role` |
@@ -550,19 +565,23 @@ The instruments fed by a snapshot, not by events, are the rows of the second tab
 | Metric                               | Fed by                                  |
 |--------------------------------------|-----------------------------------------|
 | `economysim.world.step.duration`     | `TickStarted` to `TickEnded`, measured by the adapter; not recorded when `TickEnded` has `Failed` true |
+| `economysim.world.step.failed`       | `TickEnded` with `Failed` true (one per failed step) |
 | `economysim.market.trades`           | `TradeExecuted`                         |
 | `economysim.market.volume`           | `TradeExecuted` (quantity)              |
 | `economysim.market.clearing_price`   | `MarketCleared`                         |
+| `economysim.market.price_age`        | `MarketCleared` (`PriceAge`, in ticks; the event is per market per tick, so the series is never stale) |
 | `economysim.market.unmatched`        | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`, units) |
 | `economysim.market.orders`           | `OrderPlaced`                           |
 | `economysim.market.orders.rejected`  | `OrderRejected`                         |
 | `economysim.belief.centre`           | `BeliefsUpdated` (the mean centre)      |
+| `economysim.belief.at_bound`         | `BeliefsUpdated` (`AtFloor`, `AtCeiling`, each `× 10 000 / Outcomes`, by `bound`: `floor`, `ceiling`; the adapter holds the last value for a tick with no event) |
 | `economysim.recipe.executions`       | `RecipeExecuted` (its `Executions` field, not one per event) |
 | `economysim.production.halted`       | `ProductionHalted` (the households of each recipe skipped; a household counts once for each recipe skipped) |
 | `economysim.agent.count`             | `AgentSpawned` (+1, including initial agents), `AgentBankrupted` (-1); by role also `RoleChanged` (-1 for `From`, +1 for `To`) |
 | `economysim.agent.removals`          | `AgentBankrupted` (every `Cause`)       |
 | `economysim.household.count`         | `AgentSpawned` (+`Weight`, including initial agents), `AgentBankrupted` (-`Weight`), `WeightChanged` (`To` less `From`); by role also `RoleChanged` (-`Weight` for `From`, +`Weight` for `To`) |
 | `economysim.household.unfed`         | `UpkeepShortfall` (`Unfed`, by role; see below) |
+| `economysim.household.exits`         | `AgentBankrupted` (`Weight`) and `WeightChanged` (`From` less `To`, for a reduction), by role and `Cause`; the cause `population` is left out, because `economysim.household.deaths` counts it |
 | `economysim.role.changes`            | `RoleChanged` (by `To`)                 |
 | `economysim.entry.limited`           | `EntryLimited` (the counts of the limits and refusals that acted, by limit) |
 | `economysim.want.unfunded`           | `WantShortfall` (`Planned` less `Funded`, by want and role) |
@@ -674,7 +693,7 @@ fed, so the adapter keeps the last unfed count of each region and role, adds the
 change to `economysim.household.unfed` when the event comes, and at `TickEnded`
 sets to zero every cell that had no event in the step. At a `TickEnded` with
 `Failed` true it makes no correction. `economysim.household.count` and `economysim.household.unfed`
-count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.relocations`, `economysim.household.births`, `economysim.household.deaths`, `economysim.household.own_use` and the migration instruments count households (the sum of weights), never agents. `economysim.hire.escrow` and the other money instruments count minor units. The credit instruments (`economysim.credit.*`) and the `Warn` lines of the credit module count only the claims whose `Origin` is `loan`: a claim of origin `payout` is an insurance claim, counted by the insurance instruments.
+count households (the sum of weights), never agents. `economysim.role.changes` counts changes, not agents, and `economysim.want.unfunded` counts units of goods not funded. `economysim.household.exits` counts the households that left by the failure ladder or by a consumer's removal, the weight of each `AgentBankrupted` and each reduction of a `WeightChanged`; a cohort that is cut by the unfed share shows here and not in `economysim.agent.removals`, and the cause `population` is left out because `economysim.household.deaths` counts it. A step that fails is counted by `economysim.world.step.failed` and records no duration. `economysim.market.price_age` is in ticks, and `economysim.belief.at_bound` is the share of a market's order outcomes whose centre ended on a bound, `AtFloor × 10 000 / Outcomes` rounded toward zero (architecture.md 3.5), the quantity the `Warn` "price beliefs at bound" tests. `economysim.household.relocations`, `economysim.household.births`, `economysim.household.deaths`, `economysim.household.own_use` and the migration instruments count households (the sum of weights), never agents. `economysim.hire.escrow` and the other money instruments count minor units. The credit instruments (`economysim.credit.*`) and the `Warn` lines of the credit module count only the claims whose `Origin` is `loan`: a claim of origin `payout` is an insurance claim, counted by the insurance instruments.
 
 A new metric **MUST** be derivable from the existing events or from a field of
 the snapshot, and the tables above say which, or come with the event or field it
@@ -687,7 +706,7 @@ the time spent in every observer during the step.
 
 5.4.1. Metric attributes **MUST** have a number of values bounded by the
 configuration: `economysim.commodity`, `economysim.role`, `economysim.recipe`,
-`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the fiscal flow IDs, which share one namespace, and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, the refusal reasons of a vacancy and of a rent request, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, of the relocation causes `transport`, `migration` and `consumer`, and, per instrument, the closed set of the event that feeds it: `removal` and `consumer` for `economysim.title.transfers`, `repaid`, `written_off`, `debtor_removed` and `forgiven` for `economysim.credit.lost`), `economysim.entry_limit` (the nine constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`), `economysim.holder` (`agents`, `estate`, `treasury`), `economysim.sector` (`households`, `pool`, `contract`, `treasury`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). The attributes of the later modules are bounded in the same way: `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field` and `economysim.actor` by the entities of the configuration, and `economysim.dimension` (`mass`, `bulk`), `economysim.room_limit` (`start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`), `economysim.tier` (`own`, `commons`, `let`), `economysim.credit_limit` (`in_arrears`, `exposure`, `too_many_claims`, `overflow`), `economysim.facility_limit` (`cut`, `voided`), `economysim.risk_kind` (`route`, `store`), `economysim.clamp` (`cash`, `hold`, `stock`), `economysim.activity` (`produce`, `sell`, `buy`, `train`), `economysim.project` (`build`, `repair`), `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`, `duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`), `economysim.policy_hold` (`in_band`, `no_reading`), `economysim.cover_kind` (`route`, `store`), `economysim.cover_loss` (`dropped`, `cut`) and `economysim.cover_limit` (`in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`) by their closed sets. Metric attributes **MUST NOT** include agent IDs, order IDs,
+`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the fiscal flow IDs, which share one namespace, and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, the refusal reasons of a vacancy and of a rent request, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, of the relocation causes `transport`, `migration` and `consumer`, and, per instrument, the closed set of the event that feeds it: `removal` and `consumer` for `economysim.title.transfers`, `repaid`, `written_off`, `debtor_removed` and `forgiven` for `economysim.credit.lost`, `insolvent`, `starved` and `consumer` for `economysim.household.exits`), `economysim.bound` (`floor`, `ceiling`), `economysim.entry_limit` (the nine constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`), `economysim.holder` (`agents`, `estate`, `treasury`), `economysim.sector` (`households`, `pool`, `contract`, `treasury`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). The attributes of the later modules are bounded in the same way: `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field` and `economysim.actor` by the entities of the configuration, and `economysim.dimension` (`mass`, `bulk`), `economysim.room_limit` (`start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`), `economysim.tier` (`own`, `commons`, `let`), `economysim.credit_limit` (`in_arrears`, `exposure`, `too_many_claims`, `overflow`), `economysim.facility_limit` (`cut`, `voided`), `economysim.risk_kind` (`route`, `store`), `economysim.clamp` (`cash`, `hold`, `stock`), `economysim.activity` (`produce`, `sell`, `buy`, `train`), `economysim.project` (`build`, `repair`), `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`, `duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`), `economysim.policy_hold` (`in_band`, `no_reading`), `economysim.cover_kind` (`route`, `store`), `economysim.cover_loss` (`dropped`, `cut`) and `economysim.cover_limit` (`in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`) by their closed sets. Metric attributes **MUST NOT** include agent IDs, order IDs,
 ticks, prices, quantities or any other unbounded or per-entity value. Put those
 in logs, traces or events.
 
@@ -758,7 +777,9 @@ return quickly and hand work to their own goroutines if needed.
 - **Counterpart**: every `Warn` has an event or a snapshot field that tells the
   same fact, and a test checks it.
 - **Golden rendering**: the events of a scripted run, rendered in a fixed text
-  form, equal a file in `testdata/golden/` (testing.md 7.1, 7.2).
+  form, equal a file in `testdata/golden/` (testing.md 7.1, 7.2). A field at its
+  zero value is omitted from the rendering, so a field a module appends leaves
+  the files of `testdata/golden/off/` unchanged (`spec-observability.md` 9.5.2).
 - **Adapter calls**: in `otelobserver`, each series is recorded once per tick,
   however many orders and trades the tick had.
 - **Composition**: with several `WithObserver` options, every event reaches
@@ -857,4 +878,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 04876a7b0d8e097b549a7b06
+RULE-TAG: 748e621d4300d088eb469349

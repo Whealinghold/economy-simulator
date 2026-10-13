@@ -1810,7 +1810,7 @@ could depend on (nothing has run).
 | `doc.go` (when code lands) | glossary | agent state, forced move, market state, slot state, query class, entry, key |
 | `doc/notes.md` | the open notes of 17 | close N-022, N-079, N-091, N-116; update N-031, N-036, N-051, N-075, N-090, N-012, N-020, N-120, N-016, N-017, N-027, N-103; add the new notes of the handoff; the index; a fresh tag |
 | `doc/specs/README.md` | index, area row 92 (INT), decisions, glossary | INT exists; the terms; a decisions row for "no act-now operation" and "a shock has no timer" |
-| `doc/roadmap.md` | the INT row of tier 3 and the existing-specs table | `exists`; the open items of 19 |
+| `doc/spec-roadmap.md` | the INT row of tier 3 and the existing-specs table | `exists`; the open items of 19 |
 | `doc/documentation_index.md` | rows | `spec-integration.md` |
 
 ## 20. Where this lives in the code

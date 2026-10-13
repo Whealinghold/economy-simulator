@@ -26,13 +26,13 @@ recipes = [ "make_treat_a", "make_treat_b" ]
 [role.comfort_maker]
 recipes = [ "make_comfort" ]
 
-[demand.want.comfort]
+[modules.demand.want.comfort]
 items = [ { commodity = "comfort", weight = 10000 } ]
 quantity = 1
 period = 10
 rank = 1
 elasticity = 15000
-[demand.want.treat]
+[modules.demand.want.treat]
 items = [ { commodity = "treat_a", weight = 10000 }, { commodity = "treat_b", weight = 10000 } ]
 quantity = 1
 period = 5
@@ -40,25 +40,25 @@ rank = 2
 elasticity = 20000
 substitution = 2
 
-[demand.taste.comfort_maker.comfort]
+[modules.demand.taste.comfort_maker.comfort]
 scale = 10000
-[demand.taste.cook.comfort]
+[modules.demand.taste.cook.comfort]
 scale = 10000
-[demand.taste.cook.treat]
+[modules.demand.taste.cook.treat]
 scale = 5000
-[demand.taste.digger.comfort]
+[modules.demand.taste.digger.comfort]
 scale = 10000
-[demand.taste.forester.comfort]
+[modules.demand.taste.forester.comfort]
 scale = 10000
-[demand.taste.grower.comfort]
+[modules.demand.taste.grower.comfort]
 scale = 10000
-[demand.taste.grower.treat]
+[modules.demand.taste.grower.treat]
 scale = 10000
-[demand.taste.maker.comfort]
+[modules.demand.taste.maker.comfort]
 scale = 10000
-[demand.taste.refiner.comfort]
+[modules.demand.taste.refiner.comfort]
 scale = 10000
-[demand.taste.treat_maker.comfort]
+[modules.demand.taste.treat_maker.comfort]
 scale = 10000
-[demand.taste.treat_maker.treat]
+[modules.demand.taste.treat_maker.treat]
 scale = 10000

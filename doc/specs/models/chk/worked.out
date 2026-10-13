@@ -27,9 +27,21 @@ toy frame length 96, digest 727327a924d46a2dea28ae4cf4f36bec1e12ac1234e6f5405a7f
 header: 45 53 43 4b 01 01 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 00 00
 agent account: 00 00 01 04 a0 9c 01 01 03 05 00 00
 closed account: 00 01
-state words hi=8e3e6b7eff8db56c lo=b58e6a2f88e0bbfa
-  salt 0: hi=0eec475500551da4 lo=64b50bad715e9bc6 first word=51798660ccefa5fa
-  salt 1: hi=8d300de17fda20a5 lo=52b5dbda40cf330c first word=081f02238dd84e8c
-  salt 2: hi=c44be769bde5c5d0 lo=7603e7237b5b0efa first word=e7b2f5564db971e6
-  salt 42: hi=26e84dab9a52f23d lo=ca6855e42adbe836 first word=80c06a62e31cb550
-reseed matches Go 1.25 for salts [0, 1, 2, 42]
+reseed, seed' = finalise(seed xor finalise(salt)); w0 is the first word of the stream (siteWork, 0, 0) of seed'
+  seed 0 salt 0: seed'=0000000000000000 w0=264d986499a1a1fa
+  seed 0 salt 1: seed'=7ab40e090f363a7d w0=9fea3673fd1e605f
+  seed 0 salt 2: seed'=52ead7e36ea7fea8 w0=73a2087f8eae98d5
+  seed 0 salt 42: seed'=97ea87f7e45c00a5 w0=1b4989fe2e01283b
+  seed 1 salt 0: seed'=5692161d100b05e5 w0=3a90ed51beb4e41d
+  seed 1 salt 1: seed'=83ec686c1600460a w0=a5d0a8b51be8378f
+  seed 1 salt 2: seed'=3ec2d42f3a45cc6e w0=47f38e4d9854e8fd
+  seed 1 salt 42: seed'=901883d2427428f4 w0=00c073c4d5d6c31a
+  seed 42 salt 0: seed'=a759ea27d4727622 w0=e3082397f3bc8ba6
+  seed 42 salt 1: seed'=c2a6eebdf3976ad0 w0=cd5e38f87f0ec634
+  seed 42 salt 2: seed'=7bfa87c92aa0cff0 w0=5b73a5b88ec53d5a
+  seed 42 salt 42: seed'=36cdb0593534a37b w0=472c27560611be0f
+  seed 18446744073709551615 salt 0: seed'=b4d055fcf2cbbd7b w0=9cbc3a9d395aed3d
+  seed 18446744073709551615 salt 1: seed'=f3759af4852e5904 w0=e6b61a2920e28083
+  seed 18446744073709551615 salt 2: seed'=ab47721b00f39ddb w0=649e9d647ec06743
+  seed 18446744073709551615 salt 42: seed'=eab06b8e3b2074d7 w0=71829937eb038fa1
+reseed matches Go for 16 (seed, salt) pairs

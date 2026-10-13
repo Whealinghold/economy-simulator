@@ -84,8 +84,8 @@ spec that owns them.
 | `Edges` | the directed routes between regions: `From`, `To`, `Distance` (an integer in the pack's distance unit); a section of its own, a list sorted by `(From, To)` | `spec-regions.md` 4.1 |
 | `RegionPrices` | reference-price overrides by region and commodity, one row per key | `spec-regions.md` 5.2 |
 | `Groups` | the population: households of a role in a region, with an optional scale | `spec-scale.md` |
-| `WarmStart` | the steady-state seed table: seed prices, starting money, stock and jobs per group, estate pools. A pointer: nil means no warm start. It is a section and not a module: it switches no mechanism on | `spec-viability.md` 8.1 |
-| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`); `MoneySupply` (`Flows`), `Population` (schedules and `Regions`) and `Transport` (`Modes`) follow; `Resources` (`Resources`, `Endowments`, `HorizonYears`), `Information` (`InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`) and `External` (`Nodes`) come with the specs of wave 3; `Subsistence` (`Recipes`, `Roles`, `EnterTicks`, `ExitTicks`, `RetryJobs`), `Migration` (nine tunables and `Regions`) and `Merchants` (`MaxOpen`) come with the specs of wave 4; and the fourteen modules of wave 5 follow, in this order and no other: `Settlements`, `Storage`, `Employment`, `Tenure`, `Credit`, `Risk`, `Infrastructure`, `Insurance`, `Polity`, `Fiscal`, `Institutions`, `Policy`, `Saving` and `Technology` (their fields are in 3.7.1). The order of the pointer fields of `Modules` is a hash input (8.2): a module that is added later is appended, never inserted | each module's spec |
+| `WarmStart` | the steady-state seed table: seed prices, starting money, stock and jobs per group, estate pools. A pointer: nil means no warm start, and an empty non-nil `WarmStart` is a different configuration (8.2). It is a section and not a module: it switches no mechanism on | `spec-viability.md` 8.1 |
+| `Modules` | one optional entry per module (3.2); `Demand` is the first with its own tables (`Wants`, `Tastes`, `RegionTastes`); `MoneySupply` (`Flows`), `Population` (schedules and `Regions`) and `Transport` (`Modes`) follow; `Resources` (`Resources`, `Endowments`, `HorizonYears`), `Information` (`InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`) and `External` (`Nodes`) come with the specs of wave 3; `Subsistence` (`Recipes`, `Roles`, `EnterTicks`, `ExitTicks`, `RetryJobs`), `Migration` (nine tunables and `Regions`) and `Merchants` (`MaxOpen`) come with the specs of wave 4; and the fourteen modules of wave 5 follow, in this order and no other: `Settlements`, `Storage`, `Employment`, `Tenure`, `Credit`, `Risk`, `Infrastructure`, `Insurance`, `Polity`, `Fiscal`, `Institutions`, `Policy`, `Saving` and `Technology` (their fields are in 3.7.1); and `Estates`, the pool policy, the 25th and last (6.2.4). The position of a module in this row, counted from 1, is its field id in the hash (8.2.2): a module that is added later is appended, never inserted, and the order in which modules are built does not change it. A module that is off contributes nothing to the hash, and a field appended to an existing struct at its off value (its zero value) is written to nothing, the rule of D5 (8.1, 8.2; FR-CFG-105 pins the hash of the all-off reference configuration). At Stage 0 `Modules` is declared with no field and each module's pull request appends its pointer | each module's spec |
 
 The entity sections are slices of structs, each with an `ID` string. Package
 `config/` writes them from file tables (6.2).
@@ -166,6 +166,7 @@ absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 | `Regions[]` | `ID`, `ReferenceBasket`, `ExtraUpkeep` | `spec-currency.md` 5, `spec-agents.md` 5.2 |
 | `Regions[]` | `CapitalReturn` | `spec-skill-barriers.md` 2.5 |
 | `Regions[]` | `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | `spec-estates.md` 3 |
+| `Modules.Estates` | no field; present = the pool policy is on (relief, and the pool as a flow target). `PoolRelease` and `ReliefBelow` above are written only when it is on (8.2.1) | `spec-estates.md` 2.6, 6.2.4 here |
 | `Groups[]` | `Region`, `Role`, `Households`, `Scale` | `spec-scale.md` 3.1 |
 | `WarmStart` | `Prices`, `Wages` (the starting wage per region), `Groups`, `Pools` | `spec-viability.md` 8.1 |
 | `World` | `Spawner` (the registered name of the spawner, hashed; default `"default"`), `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare` | `spec-spawner.md` 3.1.3, 11 |
@@ -473,6 +474,56 @@ This is the catalogue of the fourteen modules of wave 5 (3.1), in the order of t
 
 Where the owner spec names the Go type of a module differently from the scope of its row (`TenureConfig` in `spec-land.md` 3.3, `PolicyConfig` in `spec-policy.md` 3.1.2, which cannot be `Policy`: that name is the extension interface of architecture.md 4.3), the scope here is the module's field name in `Modules`, as the owner tables use it.
 
+### 3.7.2 The slice at Stage 0 (decision D3 of the plan of Stage 0)
+
+The first code declares the fields that the specs give the **core**, which is every
+field that no module of `Config.Modules` owns, and nothing else: a module's pull
+request appends the fields it owns, to `Modules` and to the core structs, and never
+inserts one (architecture.md 2.10.5). The core includes the six presentation-only fields of the allow-list (8.3) and every key that the packs
+`one` and `second` of `testdata/chains/` set: `sited`, `trainee_eligible`,
+`trainee_yield`, `cost_share`, `discard`, `wear_per_use`, `unskilled`, `closed`,
+`trades`, `raw`, `classes`, `shelf_life`, `durability`, `seasons`, `season_start`, the
+yield, group and warm-start tables. Skill barriers (`TrainingTicks`, `MaxTrainees`,
+`TeachingLoad`, `TraineeEligible`, `TraineeYield`) are core: there is no module for them
+and `TrainingTicks` 0 is "no traineeship". The Go types are as follows; a field of a
+named type is a count, a tick or a basis point unless the table says `Money`, `Price` or
+`Quantity` (`value.go`, architecture.md 3.3). Fields are declared in the order given,
+which is also the order of their ids in the hash (8.2.2). A field marked (p) is
+presentation only (8.3) and has no id.
+
+| Struct | Fields, in order | Not in the slice, and why |
+|--------|------------------|---------------------------|
+| `Config` | `World World`, `Calendar Calendar`, `Commodities []Commodity`, `Recipes []Recipe`, `Yields []YieldProfile`, `Roles []Role`, `Regions []Region`, `Groups []Group`, `WarmStart *WarmStart`, `Modules Modules` | `Edges []Edge` and `RegionPrices []RegionPrice` (Stage 2, REG; their ids 8 and 9 are reserved) |
+| `World` | `Scale`, `MinAgents`, `BulkFactor`, `WelfareWindow`, `WindowCycles`, `Upkeep []Item`, `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance`, `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow`, `Spawner string`, `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare`, `Clearing string` (45 fields with an id), `DistanceLabel string` (p) | |
+| `Calendar` | `HoursPerDay`, `DaysPerWeek`, `Months []Month`, `TicksPerDay`, `DaysPerTick`, `StartDay`, `Seasons []Season`, `SeasonStart` | |
+| `Month`, `Season` | `ID string`, `Days` | |
+| `Commodity` | `ID string`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes []string`, `Raw bool`, `ReferencePrice Price`, `Label string` (p), `UnitLabel string` (p) | |
+| `Item` | `Commodity string`, `Quantity Quantity` | |
+| `Output` | `Commodity string`, `Quantity Quantity`, `CostShare`, `Discard bool` | |
+| `Tool` | `Commodity string`, `WearPerUse` | |
+| `Recipe` | `ID string`, `Duration`, `Inputs []Item`, `Outputs []Output`, `Requires []Tool`, `Sited bool`, `TraineeEligible bool`, `TraineeYield`, `Label string` (p) | `Draws` (resources), `Needs`, `Builds`, `Repairs` (infrastructure) |
+| `YieldProfile` | `Region string`, `Recipe string`, `HasAll bool`, `All`, `Seasons []SeasonYield` | |
+| `SeasonYield` | `Season string`, `BP` | |
+| `Role` | `ID string`, `Recipes []string`, `Upkeep []Item`, `Trades []string`, `StartMoney Money`, `StartStock []Item`, `Strategy string`, `Unskilled bool`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind`, `ExpectedWorkTicks`, `MinWorkShare`, `TrainingTicks`, `MaxTrainees`, `TeachingLoad`, `Closed bool`, `Label string` (p) | `Informed` (information), `Fixed` (migration), `Merchant` and `MerchantFeeShare` (merchants), `Needs` and `Ceiling` (settlements), `Hireable` and `Employer` (employment), `Credit`, `Cover`, `Saver` |
+| `Region` | `ID string`, `ReferenceBasket Money`, `ExtraUpkeep []Item`, `CapitalReturn`, `EstateMarkdown`, `Label string` (p) | `PoolRelease`, `ReliefBelow` (estates, 6.2.4) |
+| `Group` | `Region string`, `Role string`, `Households`, `Scale` (0: the world's `Scale`, FR-SCL-006) | |
+| `WarmStart` | `Prices []SeedPrice`, `Wages []SeedWage`, `Groups []WarmGroup`, `Pools []WarmPool` | |
+| `SeedPrice` | `Region string`, `Commodity string`, `Price Price` | |
+| `SeedWage` | `Region string`, `Wage Money` | |
+| `WarmGroup` | `Region string`, `Role string`, `Money Money`, `Stock []Item`, `Jobs []JobSpec` | |
+| `JobSpec` | `Recipe string`, `InProgressBP` | |
+| `WarmPool` | `Region string`, `Money Money` | |
+| `Modules` | no field | all 25 pointers, as 3.1 lists them |
+
+Entities refer to each other by ID string; the typed IDs (`CommodityID`, `RoleID`,
+`RegionID`, `RecipeID`) are assigned when a world is built (3.3). The types of
+`WarmStart` are declared in `config.go` with `Config` (architecture.md 2.6: `config.go`
+holds "Config and every section struct"), not in `viability.go`; `viability.go` keeps
+`SolveSteadyState` and the code that reads the table (`spec-viability.md` 21).
+`Item`, `Output` and `Tool` are the types of every list of (commodity, quantity)
+(`spec-production.md` 3.1, 3.2); no struct embeds another (architecture.md 4.7), so
+`Output` repeats the two fields of `Item`.
+
 ## 4. Constants and bounds
 
 Architecture.md 9.6 names three kinds of constant. For this spec:
@@ -503,6 +554,7 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxCommodities`, `MaxRoles`, `MaxRegions` | 1 000 each | validation and per-tick loops are bounded by the configuration |
 | `MaxRecipes` | 10 000 | |
 | `MaxGroups` | 100 000 | |
+| `MaxYields` | `MaxRegions * MaxRecipes` = 10 000 000 | one yield profile per region and recipe; derived, so the yield table has a bounded size (FR-CFG-101); provisional, unmeasured |
 | `MaxRecipeItems` | 16 per side of a recipe | |
 | `MaxIDLength` | 64 bytes | |
 | `MaxTicksPerYear` | 100 000 | `TicksPerYear` (derived from the calendar, `spec-calendar.md` 3.2) multiplies money and basis points in the calibration formulas; the bound keeps the checked 128-bit helper far from its limit and still allows a tick of a few minutes |
@@ -529,7 +581,7 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxEdges` | `20 * MaxRegions` | bounds the graph construction work |
 | `MaxEdgeFactorBP` | 100 000 | the largest length factor of an edge status: ten times |
 | `MaxRegionPrices` | `MaxRegions * MaxCommodities` | one override per region and commodity; derived, as `MaxSeedPrices` is |
-| `MaxLabelBytes` | 256 | a label, for the presentation-only fields |
+| `MaxLabelBytes` | 256 | a label, for every presentation-only text field, `UnitLabel` included: one bound, in bytes, checked with `ErrOutOfBounds` (FR-GDS-021 says the same) |
 | `MaxMoneyFlows` | 64 | flows of the money-supply module; the divisor of `MaxFlowTotal` (`spec-money-supply.md` 11.2) |
 | `MaxFlowAmount` | `MaxMoney / MaxWeight` = 10^12 | one household's due fits `MaxMoney` |
 | `MaxFlowRateBP` | 10 000 | at most the whole balance above the exemption per period |
@@ -650,7 +702,12 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxCatchUpBP` | 10 000 | the share of the gap to the frontier closed in a year: at most the whole gap (`spec-technology.md` 9.2) |
 | `MaxTechBP` | `10 000 + MaxGainBP` | the largest `tech` factor (`spec-technology.md` 9.2) |
 | `MaxExperience` | 2^50 | the cumulative executions of a cell, unreachable (`spec-technology.md` 9.2, 4.2.4) |
-| `MaxDocumentBytes` | 16 MiB | a parser limit (6.5) |
+| `MaxDocumentBytes` | 4 MiB | one document: a limit of the loader, checked before anything is decoded (6.3.1; ADR 0009 has the measurements; it was 16 MiB before them) |
+| `MaxDocuments` | 16 | the documents of one `Parse` or `LoadFS` (6.3.1) |
+| `MaxMergedBytes` | 16 MiB | the sum of the sizes of the documents of one call (6.3.1) |
+| `MaxLineBytes` | 256 KiB | one line of a document: it bounds what the guard pass of 6.3.1 holds at once |
+| `MaxNestingDepth` | 16 | segments of a dotted key or a table header, and nesting of arrays and inline tables in a value (6.3.1); the deepest key of a pack has 8 segments (`modules.external.node.<r>.line.<c>.sell.margin_bp`) and a value adds 2 (`window = [ { ... } ]`) |
+| `MaxTableKeys` | 10 000 | the direct children of one table of a document, equal to `MaxRecipes`, the largest table a pack writes (6.3.1) |
 
 `MaxPrice` and `MaxQuantity` are bounds, not tunables. Specs that call them
 "configured" (the clearing spec does) mean that validation checks every field
@@ -753,13 +810,17 @@ document (6.4).
 
 ## 6. The file format and `config/`
 
-### 6.1 Format: TOML (decided)
+### 6.1 Format: TOML (decided) and library (decided)
 
-The format is TOML, parsed by a third-party library confined to `config/`
-(architecture.md 5.2). **The format is decided; the library is not.** Choosing the
-library needs the justification that architecture.md 5.3 requires (what it
-provides, why the standard library is insufficient, maintenance status and
-licence). The choice is recorded as an ADR with the code that first imports it.
+The format is TOML, parsed by `github.com/pelletier/go-toml/v2`, a third-party
+library confined to `config/` (architecture.md 5.2). The choice is recorded, with
+the justification that architecture.md 5.3 requires (what it provides, why the
+standard library is insufficient, maintenance status and licence) and the
+experiments behind it, in [ADR 0009](../adr/0009-the-toml-library-is-pelletier-go-toml-v2.md).
+In short: the standard library has no TOML parser; the library parses into a
+generic tree with integers and floats told apart, has no dependency of its own, and
+bounds nested arrays and inline tables itself but not dotted keys, table headers or
+the number of keys of a table, which 6.3.1 bounds before it is called.
 
 Reasons TOML was chosen:
 
@@ -778,12 +839,14 @@ Alternatives:
 - **YAML**: comments, but implicit typing, anchors and a larger attack surface.
 - **A Go-only configuration:** always possible and always supported (2.2); it
   just gives no data-pack file for non-programmers.
+- **`github.com/BurntSushi/toml`**: measured and rejected in ADR 0009 (no bound on
+  nesting; out of memory at 10 000 nested inline tables).
 
-Facts about particular TOML libraries (strict decoding, unknown-key reporting)
-are to be checked against their documentation when one is chosen. This spec
-depends on none of them: `config/` decodes into a generic tree and builds the
-structs by hand (6.2), so only "parse TOML into a tree with integer and float
-distinguished" is needed of the library.
+This spec depends on one capability of the library: "parse TOML into a tree of
+`map[string]any`, `[]any`, `int64`, `float64`, `string` and `bool`, with integer and
+float distinguished". `config/` decodes into that tree and builds the structs by
+hand (6.2); it does not use the library's struct decoding, its strict mode or the
+text of its errors (6.3.2).
 
 ### 6.2 Layout of a file
 
@@ -863,53 +926,289 @@ money = 4200
 stock = [ { commodity = "grain", quantity = 6 } ]
 jobs = [ { recipe = "grow", in_progress = 2300 } ]
 
-[module.estates]
+[modules.estates]
 ```
 
-A demand module is a table of its own, `[demand]`, whose presence switches it on; its
+A demand module is a table of its own, `[modules.demand]`, whose presence switches it on; its
 wants and tastes are tables keyed by ID, so documents merge by key
 (`spec-demand.md` 3.2). A role that the default spawner must not fill is written
 `closed = true`:
 
 ```toml
-[demand]
-[demand.want.comfort]
+[modules.demand]
+[modules.demand.want.comfort]
 items = [ { commodity = "cloth", weight = 10000 } ]
 quantity = 1
 period = 4
 rank = 1
 elasticity = 15000
-[demand.taste.worker_a.comfort]
+[modules.demand.taste.worker_a.comfort]
 scale = 10000
-[demand.region_taste.north.comfort]
+[modules.demand.region_taste.north.comfort]
 scale = 15000
 
 [role.visitor]
 closed = true
 ```
 
-The presence of `[module.estates]` switches the module on (3.2); its parameters
-are region fields (`spec-estates.md` 3) and sit in the region table. The presence
-of `[warm_start]` switches nothing on: it supplies a start (3.1). `commodity.*` is
-elided; see `spec-goods.md`. No setting vocabulary is in the engine (AGENTS.md).
+The presence of `[modules.estates]` switches the module on (3.2); it is the
+pool policy (relief and the pool as a flow target, `spec-estates.md` 2.6), and its
+parameters are region fields (`spec-estates.md` 3) that sit in the region table.
+The presence of `[warm_start]` switches nothing on: it supplies a start (3.1).
+`commodity.*` is elided; see `spec-goods.md`. No setting vocabulary is in the engine
+(AGENTS.md).
 
-The other specs write their tables as follows, and this spec records each as its spec says. Edges and region prices are tables of the region, keyed by the other end or the commodity, with integer values (a float is `ErrNotInteger`): `[region.north.edge.south]` with `distance = 100`, and `[region.north.reference_price]` with `grain = 480` (`spec-regions.md` 4.1, 5.2). The money-supply module is `[module.money_supply]` with flows as tables `[module.money_supply.flow.<id>]` (`spec-money-supply.md` 17.6), like `[module.estates]`. The population module is the table `[population]`, schedules as lists of `{ ratio, rate }`, regions as tables keyed by region ID, like `[demand]` (`spec-population.md` 8). `spec-transport.md` states no file layout for its modes; a table of its own keyed by mode ID is assumed. The resources module is the table `[resources]` with `[resources.resource.<id>]` (keys `shape`, `rate_per_year`, `rate_bp`, `refuge`, `capacity`, `initial_bp`, `plan_share_bp`, `abundance = [{ share, factor }]`, `seasons = [{ season, bp }]`) and `[resources.endowment.<region>.<resource>]` (keys `capacity`, `initial`, `regen_scale_bp`) (`spec-resources.md` 3.3.2, 16). The information module is `[modules.information]` with `info_speed`, `rumour_error_bp` and `rumour_max_age`, and `informed = true` in `[role.<id>]` (`spec-information.md` 12.1). The external module is `[module.external.node.<region>]` with `[module.external.node.<region>.line.<commodity>]` (keys `base`, `trend_bp`, `floor_bp`, `ceiling_bp`, `walk_step_bp`, `walk_revert_bp`, `walk_bound_bp`, `price_by_season = [{ season, bp }]`), its sides `...line.<commodity>.sell` and `...line.<commodity>.buy` (keys `margin_bp`, `capacity`, `window = [{ season, bp }]`, `total_units`, `total_value`) and gates `[module.external.node.<region>.gate.<region>]` (key `scale_bp`) (`spec-external-sector.md` 3.3.1, 18.2). The subsistence module is `[modules.subsistence]` with `recipes`, `enter_ticks`, `exit_ticks` and `retry_jobs`, and a role row as `[modules.subsistence.role.<id>]` with `recipes` (`spec-subsistence.md` 3.2.2, 16.1). The migration module is `[modules.migration]` with `move_speed`, `move_review_ticks`, `move_below`, `move_gain`, `move_width`, `move_cooldown`, `move_horizon`, `move_out_share` and `move_in_share`, a region row as `[modules.migration.region.<id>]` with `out_share` and `in_share`, and `fixed = true` in `[role.<id>]` (`spec-migration.md` 11, 15.3). The merchant module is `[modules.merchants]` with `max_open`, and the merchant block is `[role.<id>.merchant]` with `modes`, `lot_units`, `fee_share_spread_bp`, `max_source_age`, `time_cost_bp`, `consignee_cut_bp`, `consigns`, `take_margin_bp` and `take_units`, beside the role keys `merchant_fee_share`, `informed` and `strategy = "merchant"` (`spec-merchants.md` 19.1). The modules of wave 5 all use the form `[modules.<name>]` of `[modules.merchants]` (N-102), with sub-tables keyed by ID, and each spec says its keys. The settlements module is `[modules.settlements]` with `band_bp` and `dwell`, a class as `[modules.settlements.class.<id>]` with `enter` and `flags`, its limits as `[modules.settlements.class.<id>.limits]` (`<name> = <value>`), a region row as `[modules.settlements.region.<id>]` with `threshold_bp` and `floor`, and `needs` and `ceiling` in `[role.<id>]` (`spec-settlements.md` 3.1). The storage module is `[modules.storage]` with a class as `[modules.storage.class.<id>]` (keys `mass`, `bulk`, `needs`; `spec-storage.md` 7.3); that spec states no file layout for the base room and the role rows, and tables of their own keyed by role ID are assumed. The employment module is `[modules.employment]` with `max_open`, `hireable = true` in `[role.<id>]` and the block `[role.<id>.employer]` (`recipes`, `max_hires`, `worker_share_bp`, `hire_yield_bp`; `spec-employment.md` 13). The tenure module is `[modules.tenure]` with a term as `[modules.tenure.term.<region>.<resource>]` and a holding as `[modules.tenure.holding.<region>.<resource>.<holder>]`, `<holder>` being a role ID or the word `pool` (`spec-land.md` 3.3.2). The credit module is `[modules.credit]` with the role blocks `[role.<id>.credit.lend]` and `[role.<id>.credit.borrow]` (`spec-credit.md` 4.2). The risk module is `[modules.risk]` with `[modules.risk.route.<from>.<to>.<mode>]` and `[modules.risk.store.<region>.<class>]`, keys `strike_bp`, `severity_bp` and `common` (`spec-risk.md` FR-RSK-001; a path of seven segments, within `spec-experiments.md` 3.2.1). The infrastructure module is `[modules.infrastructure]` with `[modules.infrastructure.class.<id>]` and `[[modules.infrastructure.initial]]`, and a recipe carries `needs`, `[recipe.<id>.builds]` and `[recipe.<id>.repairs]` (`spec-infrastructure.md` 12.1, 4.1.1). The insurance module is `[modules.insurance]` with `[role.<id>.cover.underwrite]` and `[role.<id>.cover.insure]` (`spec-insurance.md` 4.2). The polity module is `[modules.polity]` with `[modules.polity.jurisdiction.<id>]` (`parent`, `seat`, `start_money`) and `[modules.polity.member]` with `<region> = "<jurisdiction>"` (`spec-polity.md` 3.4). The fiscal module is `[modules.fiscal]` with `[modules.fiscal.tax.<id>]`, `.duty.<id>`, `.toll.<id>`, `.payout.<id>`, `.purchase.<id>` and `.release.<id>` (`spec-fiscal.md` 3.1). The institutions module is `[modules.institutions]` with `[modules.institutions.body.<id>]`, `.right.<id>`, `.control.<id>` and `.rate_limit.<id>` (`spec-institutions.md` 9). The policy module is `[modules.policy]` with `[modules.policy.actor.<id>]`, `[modules.policy.actor.<id>.lever.<id>]`, `[modules.policy.actor.<id>.schedule.<lever>.<tick>]` and `[modules.policy.actor.<id>.rule.<lever>]` (`spec-policy.md` 3.1.2). The saving module is `[modules.saving]` with the role block `[role.<id>.saver]` and its rows `[[role.<id>.saver.worth]]` (`spec-saving-and-investment.md` 3.2). The technology module is `[modules.technology]` with `[modules.technology.field.<id>]`, whose `recipes` is a list (`spec-technology.md` 9.1). The names of the earlier modules differ (`[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, `[resources]`, `[modules.information]`, `[module.external]`) and those of wave 5 follow one form; they are not unified here (13.11).
+#### 6.2.1 One rule for module tables (N-102, decided)
+
+Every spec used to spell its module's table its own way (the singular prefix `module` for
+estates, money supply and the external sector, bare top-level tables for demand, population
+and resources, and the plural prefix `modules` for the later modules). There is one
+rule now, applied to every spec and every fixture together, and no other spelling is
+read:
+
+- **The table of a module is `[modules.<name>]`**, where `<name>` is the snake case
+  (6.2) of the module's field in `Config.Modules`: `modules.demand`,
+  `modules.money_supply`, `modules.population`, `modules.transport`,
+  `modules.resources`, `modules.information`, `modules.external`,
+  `modules.subsistence`, `modules.migration`, `modules.merchants`, the fourteen
+  later modules in the order of 3.1, and `modules.estates`. A top-level table named
+  after a module (a bare `demand`) or a table under the singular prefix `module` is
+  `ErrUnknownKey`.
+- **A module is on if and only if its table is in the merged tree**, even with no
+  key in it (`[modules.estates]` alone is on). A sub-table such as
+  `[modules.demand.want.comfort]` makes `modules.demand` present, as TOML makes the
+  implicit table. A later document cannot turn a module off (6.4).
+- **The entities a module owns are tables one level below its table, keyed by ID**,
+  and the key is the *singular* snake case of the Go field: `Wants` is `want`,
+  `Flows` is `flow`, `Modes` is `mode`, `Nodes` is `node`, `Classes` is `class`,
+  `Jurisdictions` is `jurisdiction`. A row keyed by two IDs is two levels
+  (`[modules.demand.taste.<role>.<want>]`,
+  `[modules.tenure.term.<region>.<resource>]`). A list whose order is the data stays
+  an array (3.4).
+- **A block a module adds to a role or a recipe is a sub-table of that entity**, the
+  singular snake case of its Go field: `[role.<id>.merchant]`,
+  `[role.<id>.employer]`, `[role.<id>.credit.lend]`, `[recipe.<id>.builds]`. A flag
+  or a scalar a module adds is a key of the entity (`informed`, `fixed`,
+  `hireable`, `needs`, `ceiling`).
+- **A table of regional rows of a module is `[modules.<name>.region.<id>]`**.
+  A parameter that is a field of `Region` stays a key of `[region.<id>]` even when a
+  module owns it (`pool_release`, `relief_below`; 3.7.2).
+
+The spelling of every module's tables, in this rule's form, is in 6.2.3.
+
+#### 6.2.2 Key names and their exceptions
+
+A key is the snake case of the Go field name (6.2, the acronym rule) and an entity's
+`ID` is the key of its table, with these exceptions, which are all of the core's at
+Stage 0 (a module or a later section adds its own rows in the pull request that builds
+it). A test walks the fields of every section type and fails for a field that is neither
+its snake case nor a row of this table.
+
+| In the file | In Go | Why |
+|-------------|-------|-----|
+| `[region.<r>.group.<role>]` with `households`, `scale` | `Groups`: `Group{Region, Role, Households, Scale}` | a group is a role in a region: both are keys of the table's path, and the section is written under its region |
+| `[region.<r>.yield.<recipe>]` with `all` and `seasons = { <season> = <bp> }` | `Yields`: `YieldProfile{Region, Recipe, HasAll, All, Seasons []SeasonYield}` | keyed by region and recipe like a group; `all` present is `HasAll` (there is no key `has_all`); `seasons` is an inline table from a season ID to basis points and is a list sorted by season ID in Go |
+| `[region.<r>.edge.<to>]` with `distance`; `[region.<r>.reference_price]` with `<commodity> = <price>` | `Edges`: `Edge{From, To, Distance}`; `RegionPrices`: `RegionPrice{Region, Commodity, Price}` | rows written under their region, the other end or the commodity being the key (`spec-regions.md` 4.1, 5.2; built in Stage 2) |
+| `[warm_start.region.<r>]` with `wage` and `pool`; `[warm_start.region.<r>.price]` with `<commodity> = <price>`; `[warm_start.region.<r>.group.<role>]` with `money`, `stock`, `jobs` | `WarmStart{Prices, Wages, Groups, Pools}` of `SeedPrice`, `SeedWage`, `WarmGroup`, `WarmPool` | the four lists are written once per region; `wage` is `SeedWage.Wage` and `pool` is `WarmPool.Money` |
+| `in_progress` in a `jobs` entry | `JobSpec.InProgressBP` | the one key that is not the snake case of its field: the packs of `testdata/chains/` were written with it, and `spec-viability.md` 8.5.1 keeps the Go name |
+| `[calendar]` `months = [ { id, days } ]`, `seasons = [ { id, days } ]` | `Calendar.Months []Month{ID, Days}`, `Calendar.Seasons []Season{ID, Days}` | ordered lists: arrays of inline tables, not tables by ID (3.4); the `ID` of an element is the key `id` |
+| `schema` | none | the version of the file format (6.3), not a field |
+
+Entity lists are tables by ID named by the singular of the section: `[commodity.<id>]`
+for `Commodities`, `[recipe.<id>]`, `[role.<id>]`, `[region.<id>]`. That is the rule of
+6.2.1 and not an exception. A list of (commodity, quantity) is an array of inline
+tables with the keys `commodity` and `quantity` (a recipe's outputs add `cost_share`
+and `discard`, its tools `wear_per_use`). Module tables and later core sections follow
+their owner specs and add their exceptions to this table in the PR that builds them.
+
+A validation error's `Path` is not a file path. It is the path of the Go field in the
+section's own names (`roles.worker_a.target_ratio`: the plural list name, the ID, the
+snake case of the field, 7.1.1), and the loader's errors carry the file path
+(`role.worker_a.target_ratio`). The two differ by the plural and by the rows above.
+
+#### 6.2.3 The tables of each module
+
+Each spec says its keys; this is where the tables are in the form of 6.2.1. Edges and
+region prices are tables of the region (6.2.2). The estates module is `[modules.estates]`,
+with no key. The demand module is `[modules.demand]` with `[modules.demand.want.<id>]`,
+`[modules.demand.taste.<role>.<want>]` and `[modules.demand.region_taste.<region>.<want>]`
+(`spec-demand.md` 3.2). The money-supply module is `[modules.money_supply]` with
+flows as tables `[modules.money_supply.flow.<id>]` (`spec-money-supply.md` 17.6). The
+population module is `[modules.population]` with `birth_schedule` and `death_schedule` as
+lists of `{ ratio, rate }`, `min_households`, `birth_stake`, and regions as
+`[modules.population.region.<id>]` (`spec-population.md` 8). The transport module is
+`[modules.transport]` with its modes as `[modules.transport.mode.<id>]`
+(`spec-transport.md` 3.1, 11). The resources module is `[modules.resources]` with
+`horizon_years`, `[modules.resources.resource.<id>]` (keys `shape`, `rate_per_year`,
+`rate_bp`, `refuge`, `capacity`, `initial_bp`, `plan_share_bp`, `abundance = [{ share,
+factor }]`, `seasons = [{ season, bp }]`) and
+`[modules.resources.endowment.<region>.<resource>]` (keys `capacity`, `initial`,
+`regen_scale_bp`) (`spec-resources.md` 3.3.2, 16). The information module is
+`[modules.information]` with `info_speed`, `rumour_error_bp` and `rumour_max_age`, and
+`informed = true` in `[role.<id>]` (`spec-information.md` 12.1). The external module is
+`[modules.external.node.<region>]` with
+`[modules.external.node.<region>.line.<commodity>]` (keys `base`, `trend_bp`,
+`floor_bp`, `ceiling_bp`, `walk_step_bp`, `walk_revert_bp`, `walk_bound_bp`,
+`price_by_season = [{ season, bp }]`), its sides `...line.<commodity>.sell` and
+`...line.<commodity>.buy` (keys `margin_bp`, `capacity`, `window = [{ season, bp }]`,
+`total_units`, `total_value`) and gates `[modules.external.node.<region>.gate.<region>]`
+(key `scale_bp`) (`spec-external-sector.md` 3.3.1, 18.2). The subsistence module is
+`[modules.subsistence]` with `recipes`, `enter_ticks`, `exit_ticks` and `retry_jobs`, and a
+role row as `[modules.subsistence.role.<id>]` with `recipes` (`spec-subsistence.md`
+3.2.2, 16.1). The migration module is `[modules.migration]` with `move_speed`,
+`move_review_ticks`, `move_below`, `move_gain`, `move_width`, `move_cooldown`,
+`move_horizon`, `move_out_share` and `move_in_share`, a region row as
+`[modules.migration.region.<id>]` with `out_share` and `in_share`, and `fixed = true` in
+`[role.<id>]` (`spec-migration.md` 11, 15.3). The merchant module is
+`[modules.merchants]` with `max_open`, and the merchant block is `[role.<id>.merchant]`
+with `modes`, `lot_units`, `fee_share_spread_bp`, `max_source_age`, `time_cost_bp`,
+`consignee_cut_bp`, `consigns`, `take_margin_bp` and `take_units`, beside the role keys
+`merchant_fee_share`, `informed` and `strategy = "merchant"` (`spec-merchants.md` 19.1).
+The settlements module is `[modules.settlements]` with `band_bp` and `dwell`, a class as
+`[modules.settlements.class.<id>]` with `enter` and `flags`, its limits as
+`[modules.settlements.class.<id>.limits]` (`<name> = <value>`), a region row as
+`[modules.settlements.region.<id>]` with `threshold_bp` and `floor`, and `needs` and
+`ceiling` in `[role.<id>]` (`spec-settlements.md` 3.1). The storage module is
+`[modules.storage]` with a class as `[modules.storage.class.<id>]` (keys `mass`, `bulk`,
+`needs`; `spec-storage.md` 7.3); by 6.2.1 its base room is the sub-table
+`[modules.storage.base]` (keys `mass`, `bulk`; absent is unlimited) and a role row is
+`[modules.storage.role.<id>]` with `stores` and a `[modules.storage.role.<id>.base]`
+(`spec-storage.md` 12.1 states no layout for them: owed there, N-016). The employment
+module is `[modules.employment]` with `max_open`, `hireable = true` in `[role.<id>]` and
+the block `[role.<id>.employer]` (`recipes`, `max_hires`, `worker_share_bp`,
+`hire_yield_bp`; `spec-employment.md` 13). The tenure module is `[modules.tenure]` with a
+term as `[modules.tenure.term.<region>.<resource>]` and a holding as
+`[modules.tenure.holding.<region>.<resource>.<holder>]`, `<holder>` being a role ID or the
+word `pool` (`spec-land.md` 3.3.2). The credit module is `[modules.credit]` with the role
+blocks `[role.<id>.credit.lend]` and `[role.<id>.credit.borrow]` (`spec-credit.md` 4.2).
+The risk module is `[modules.risk]` with `[modules.risk.route.<from>.<to>.<mode>]` and
+`[modules.risk.store.<region>.<class>]`, keys `strike_bp`, `severity_bp` and `common`
+(`spec-risk.md` FR-RSK-001; a path of seven segments, within `spec-experiments.md`
+3.2.1). The infrastructure module is `[modules.infrastructure]` with
+`[modules.infrastructure.class.<id>]` and `[[modules.infrastructure.initial]]`, and a
+recipe carries `needs`, `[recipe.<id>.builds]` and `[recipe.<id>.repairs]`
+(`spec-infrastructure.md` 12.1, 4.1.1). The insurance module is `[modules.insurance]` with
+`[role.<id>.cover.underwrite]` and `[role.<id>.cover.insure]` (`spec-insurance.md` 4.2).
+The polity module is `[modules.polity]` with `[modules.polity.jurisdiction.<id>]`
+(`parent`, `seat`, `start_money`) and `[modules.polity.member]` with `<region> =
+"<jurisdiction>"` (`spec-polity.md` 3.4). The fiscal module is `[modules.fiscal]` with
+`[modules.fiscal.tax.<id>]`, `.duty.<id>`, `.toll.<id>`, `.payout.<id>`, `.purchase.<id>`
+and `.release.<id>` (`spec-fiscal.md` 3.1). The institutions module is
+`[modules.institutions]` with `[modules.institutions.body.<id>]`, `.right.<id>`,
+`.control.<id>` and `.rate_limit.<id>` (`spec-institutions.md` 9). The policy module is
+`[modules.policy]` with `[modules.policy.actor.<id>]`,
+`[modules.policy.actor.<id>.lever.<id>]`,
+`[modules.policy.actor.<id>.schedule.<lever>.<tick>]` and
+`[modules.policy.actor.<id>.rule.<lever>]` (`spec-policy.md` 3.1.2). The saving module is
+`[modules.saving]` with the role block `[role.<id>.saver]` and its rows
+`[[role.<id>.saver.worth]]` (`spec-saving-and-investment.md` 3.2). The technology module
+is `[modules.technology]` with `[modules.technology.field.<id>]`, whose `recipes` is a
+list (`spec-technology.md` 9.1).
+
+#### 6.2.4 The estates module and the Go that holds it
+
+The estate account, its pseudo-agent, its listings and the use of the pool to fund
+an entrant exist in every world (`spec-regions.md` 3.6.2, FR-EST-004, FR-EST-014,
+FR-EST-021). What `[modules.estates]` switches on is the **pool policy**: relief
+(`spec-estates.md` 2.6) and the pool as a target of a money flow
+(`spec-money-supply.md` 4.3.2). In Go it is `Modules.Estates *Estates`, the 25th
+pointer of 3.1, appended after `Technology`, with `type Estates struct{}` (no field:
+the policy's parameters are `Region.PoolRelease` and `Region.ReliefBelow`, which the
+module owns, and `Region.EstateMarkdown`, which the listing rule of the core owns).
+`ReliefPaid` is the module's event and is **not** an event of the slice. The two
+region fields are appended to `Region` with the module, so the slice's `Region` has
+`EstateMarkdown` only (3.7.2). This answers open question 8 of `spec-money-supply.md`
+(the account exists without the module; the pool target needs it, `ErrModuleDependency`
+stays) and the layer line of `spec-estates.md`, which says "module for the regional pool,
+starting money and relief" and should say "relief".
+
 ### 6.3 What the loader rejects
 
-- an **unknown key**, at any depth (`ErrUnknownKey`, with its path);
-- a value of the wrong type, including a floating point literal where an integer
-  is needed (`ErrNotInteger`) and a string where a number is needed;
+A pack may come from a third party, so the loader treats every byte as untrusted
+(6.3.1) and its errors as text built from untrusted input (6.3.2). It rejects:
+
+- a document that is not TOML (`ErrSyntax`; the error carries the line and the
+  column of the library's error and none of the document's text, 6.3.2);
+- an **unknown key**, at any depth (`ErrUnknownKey`, with its path), including a
+  module table the library does not know and a module table of a module that is not
+  built;
+- a floating point literal where an integer is needed (`ErrNotInteger`, rule 2.6),
+  and any other value of the wrong type: a string where a number or a bool is needed,
+  an integer where a string is needed, a date or a time anywhere (`ErrWrongType`);
 - a missing required field (`ErrMissingField`);
 - a missing or unsupported `schema` (`ErrUnsupportedSchema`). The schema number
   versions the file format and is independent of the checkpoint format version
   (ADR 0002, decision 8). It is checked on the **merged** tree (6.4): an overlay
   document, one that only changes a few keys, has no `schema` line of its own, and
   the first document of a pack has it;
-- a document longer than `MaxDocumentBytes` (`ErrTooLarge`), checked before
-  decoding allocates in proportion to the input.
+- a key present as a table in one document and as a scalar in another
+  (`ErrMergeConflict`, 6.4);
+- an input over a limit of 6.3.1 (`ErrTooLarge`).
 
-The loader does not check cross-references or bounds. That is validation (section
-7), the same code whether the `Config` came from a file or from Go.
+The eight sentinels are root sentinels in `errors.go` (14): `config/` returns them
+(wrapped with the path, `%w`) and a consumer matches them with `errors.Is`. The loader
+does not check cross-references or bounds. That is validation (section 7), the same
+code whether the `Config` came from a file or from Go.
+
+#### 6.3.1 Limits on untrusted input
+
+The limits are constants of `bounds.go` (4.1). Each is checked before the work it
+bounds, in this order, and a limit is `ErrTooLarge` with the name of the constant and
+the measured value in its message:
+
+| Check | Constant | Value | What it bounds |
+|-------|----------|-------|----------------|
+| documents passed or named | `MaxDocuments` | 16 | the count of documents of one `Parse` or `LoadFS`, checked before any is read or opened |
+| one document | `MaxDocumentBytes` | 4 MiB | the size of one document |
+| all documents | `MaxMergedBytes` | 16 MiB | the sum of the sizes of the documents of one call |
+| one line | `MaxLineBytes` | 256 KiB | the size of one line (up to a `\n`) of a document |
+| nesting | `MaxNestingDepth` | 16 | the segments of a dotted key or a table header, and the nesting of arrays and inline tables in a value, counted together from the document root |
+| keys of one table | `MaxTableKeys` | 10 000 | the keys that are direct children of one table, a table header and a dotted key both counting |
+
+The first four are byte counts and are checked on the bytes. `LoadFS` reads each file
+through a reader limited to `MaxDocumentBytes + 1` bytes and to what is left of
+`MaxMergedBytes`, whatever `fs.FileInfo` says of its size, because an `fs.FS` may
+report any size; a file that is longer than its limit is `ErrTooLarge`. The last two are
+checked by a **guard pass** that parses each document once, only to count, before the
+document is decoded (ADR 0009 says why and what it costs: the library bounds nested
+arrays and inline tables at 10 000 levels but not dotted keys or table headers, 2 MB of
+`a.a.a. ...` decodes to 600 MB of tables, and the number of keys of one table makes its
+decoding quadratic). With the six limits the decoding of a document that passes them
+is bounded in memory by about 64 times its size and in time by about two seconds
+per MiB (the measurements are in ADR 0009), and every recursion over the tree (the merge, the unknown-key walk, the mapping)
+is at most `MaxNestingDepth` deep, so none can overflow the stack. The values are
+placeholders in the sense of N-015: the reasons are in ADR 0009, and a pack that needs
+more splits into documents. A merged tree has no more depth than its deepest document.
+
+#### 6.3.2 Error text built from input
+
+A document's keys, a Go-built `Config`'s IDs and a value that fails a rule are
+input. Error text that includes them is bounded and cannot carry a control
+character:
+
+- each **path segment** is cut at the last rune boundary at or before `MaxIDLength`
+  (64) bytes and written with `%q`, followed by `...` outside the quotes when it was
+  cut; the path of an error is the segments joined by `.` and has at most
+  `MaxNestingDepth` of them (a Go path has at most the depth of the types);
+- a **value** in a message is written the same way when it is a string, and as a
+  decimal when it is an integer;
+- the loader **never copies the library's error text**. It reads the line and column
+  of a syntax error and writes its own message; a message of the library can hold
+  the whole text of a key (ADR 0009);
+- the field `Path` of a `*ValidationError` holds the segments as given (the typed
+  error carries the truth), and it is its `Error()` method that cuts and quotes.
+
+The rule is the same for the loader (6.3) and for `Validate` (7.1.1), and a test feeds
+each an oversized ID and an ID with control characters (FR-CFG-100).
+
+#### 6.3.3 How many errors the loader returns
+
+A limit (6.3.1) and a syntax error stop the load at once with one error, since there
+is nothing to map. The rejections of the mapping and the merge (unknown keys, wrong
+types, missing fields, merge conflicts) are collected over the whole merged tree and
+returned as `Validate` returns its errors (7.1): joined with `errors.Join`, sorted by
+path and then by rule, at most 100, followed by one `ErrTooManyErrors` that says how
+many were left out.
 
 ### 6.4 Packs and layering
 
@@ -920,13 +1219,14 @@ the order given, later over earlier:
 - a scalar or a list in a later document replaces the earlier one;
 - a key present as a table in one document and as a scalar in another is an error
   (`ErrMergeConflict`);
-- a document cannot delete an entity or a key in version 1 (open question 3);
+- a document cannot delete an entity or a key in version 1 (open question 3), and so
+  cannot turn a module off;
 - the `schema` key is merged like any scalar and checked once, on the merged tree
   (6.3), so a document that overlays a pack may omit it.
 
 This is how the three levels of ADR 0001 decision 3 look in files: a base pack
 (the chain), a pack that tweaks parameters (overrides scalars), and a pack that
-adjusts modules (adds a `[module.*]` table). Because entities are tables keyed by
+adjusts modules (adds a `[modules.*]` table). Because entities are tables keyed by
 ID, no merge rule for arrays of entities is needed.
 
 ### 6.5 The API
@@ -944,7 +1244,10 @@ func LoadFS(fsys fs.FS, names ...string) (economysim.Config, error)
 The library never opens a path itself: the consumer supplies bytes or an
 `fs.FS`, which keeps it a pure library (architecture.md 1.1) and makes tests use
 `testing/fstest` and fixtures under `testdata/`. `Parse` does not validate beyond
-6.3; `NewWorld` does.
+6.3; `NewWorld` does. `Parse` checks the count and the sizes of the documents before it
+decodes any (6.3.1); `LoadFS` checks the count of names before it opens any and reads
+each file with a bound (6.3.1). A name that cannot be read is the `fs` error wrapped
+with `%w` and the name written as a path segment (6.3.2).
 
 ## 7. Validation
 
@@ -955,13 +1258,19 @@ The library never opens a path itself: the consumer supplies bytes or an
 `roles.worker_a.target_ratio` or `regions.north.groups.worker_a.households`), a
 `Rule` (the sentinel), the offending value and, for a bound, the bound.
 `errors.Is` matches the sentinel and `errors.As` finds the typed error
-(architecture.md 8.4; testing.md 3.9).
+(architecture.md 8.4; testing.md 3.9). A `Path` is the path of the Go field, in the
+plural list names of the sections and the IDs of the entities as given, and is not a key
+path of a file (6.2.2). The `Error()` text cuts and quotes every segment and every string
+value as 6.3.2 says, so a message holds at most `MaxNestingDepth` segments of at most
+`MaxIDLength` bytes and no control character; the fields of the typed error keep the
+value as given.
 
 7.1.2. Errors are sorted by path and then by rule, so the output does not depend
 on map order and a test can compare it (architecture.md 7.5).
 
 7.1.3. At most 100 errors are returned, followed by one `ErrTooManyErrors` that
-says how many were left out. A pathological file cannot flood a log.
+says how many were left out. A pathological file cannot flood a log. The cap bounds the
+report; 7.1.6 bounds the work.
 
 7.1.4. `NewWorld` calls `Validate` and returns its error. The only other checks it
 makes on configuration are the four that need the options (`spec-world.md` 3.2.2).
@@ -983,6 +1292,29 @@ name of each kind (FR-CFG-038). Nothing else in `NewWorld` fails on configuratio
 7.1.5. `Validate` is pure and bounded. Its work is limited by the bounds of 4.1
 and, for the viability programmes, by `MaxViabilityPivots` and `MaxViabilityCells`
 (`spec-viability.md` 4.3); it starts no goroutine and draws no random number.
+
+7.1.6. **The order of the checks, and what `ErrTooMany` stops.** `Validate` runs in
+phases, in this order, and a phase runs only if every earlier phase that bounds its
+input found nothing to refuse (phase 1 always stops the rest):
+
+1. **Counts.** The length of every top-level collection of `Config` against its bound
+   (4.1), each a `len` and so constant work; then, only if all hold, the nested lists
+   (a recipe's items, a role's lists), a walk bounded by the first. A count over its
+   bound is `ErrTooMany` with its path. If phase 1 found any, `Validate` returns those
+   errors and nothing else: no sort, no set and no fixpoint is built on a collection
+   that is not known to be small.
+2. **Local rules.** IDs (`ErrInvalidID`), field bounds (`ErrOutOfBounds`), shapes, each
+   reading one entity.
+3. **Identity and references.** Duplicates (`ErrDuplicateID`) and unknown references
+   (`ErrUnknown*`), by sorting and by sets over collections that phase 1 bounded.
+4. **The structural fixpoint of 7.5** and the rules that read two sections.
+5. **The derived checks of 4.2** (`ErrOverflow`).
+6. **Viability** (7.6), which reads a well-formed configuration and so runs only when
+   phases 2 to 5 found no error, and is size-gated besides.
+
+Phases 2 to 5 collect every error they find (7.1.1); the rules that are super-linear in
+a count (3, 4, 5 and 6) are the ones `ErrTooMany` keeps from running. Without phase 1 a
+Go-built `Config` of 10^9 recipes would be sorted before it was refused.
 
 ### 7.2 Warnings
 
@@ -1013,8 +1345,8 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrUnproducible` | a commodity that something consumes but that cannot be produced from a raw source (7.5); the error names one cycle that has no way in when there is one (7.5) | architecture.md 8.5 |
 | `ErrOutOfBounds` | a value outside the bound of its field or of section 4.1 | architecture.md 3.5, 8.5 |
 | `ErrOverflow` | a derived product of 4.2 that does not fit | architecture.md 3.5 |
-| `ErrTooMany` | more entities of a kind than its bound | here |
-| `ErrModuleDependency` | a module on while a module it needs is off | here |
+| `ErrTooMany` | more entities of a kind than its bound; checked first, and it stops the other rules (7.1.6) | here |
+| `ErrModuleDependency` | a module on while a module it needs is off (declared at Stage 0 with no returner yet: the first rule that returns it is a module's own, such as a recipe with `Draws` while resources is off) | here |
 | `ErrNoRegions` | a configuration with no region | `spec-regions.md` 9.1 |
 | `ErrSelfEdge` | an edge whose `From` equals its `To` | `spec-regions.md` 9.1 |
 | `ErrUnknownResource` | a draw of a recipe or an endowment row that names a resource that is not defined | `spec-resources.md` 13.2 |
@@ -1262,27 +1594,22 @@ canonicalisation (3.4), with every option that affects results applied. An optio
 that affects results is part of the effective configuration, not outside it:
 `WithTargetSpread` (`spec-welfare-and-wages.md` 5.2) overrides the roles' spreads
 and so changes every run. A stand-alone `Config.Validate` and the pure hash function of 8.5 see a `Config` as given and not the options, so they do not see `WithTargetSpread`, and `World.ConfigHash` differs from the hash of the same `Config` whenever that option was given. The seed, the logger, the observers and `WithAudit`
-(`spec-ledger.md` 12.4) do not affect what the world *is* and are excluded; the random state travels in the checkpoint
-instead. `WithReseed` is excluded too: it is a restore-time option that changes the continuation and not what the world is (`spec-checkpoint.md` 6.8). Three further cases are settled here:
+(`spec-ledger.md` 12.4) do not affect what the world *is* and are excluded; the seed travels in the checkpoint
+instead (a checkpoint holds the seed and no stream state, ADR 0008). `WithReseed` is excluded too: it is a restore-time option that changes the continuation and not what the world is (`spec-checkpoint.md` 6.8). The cases settled here:
 
 - **Strategy.** The *names* in `Role.Strategy` (`default`, `directed` or a registered name) are hashed; the code behind a name
   is not and cannot be (`spec-agents.md` 6.6). The registrations made with
   `WithStrategy` are options and are not hashed beyond the names the roles use.
 - **The spawner, the clearing and the demand module.** The *name* in `World.Spawner` and the *name* in `World.Clearing` are hashed, not the
-  code behind them (`spec-spawner.md` 3.1.3, `spec-clearing.md` 8, as for strategies; a world with a custom rule does not hash like one with the default). `Modules.Demand` is
-  hashed with a presence byte and, when present, its wants, tastes and region tastes in
+  code behind them (`spec-spawner.md` 3.1.3, `spec-clearing.md` 8, as for strategies; a world with a custom rule does not hash like one with the default). `Modules.Demand`, when present, is hashed with its wants, tastes and region tastes in
   canonical order (wants by ID, items by commodity, tastes by role then want, region
   tastes by region then want), every field except `Label`; `Role.Closed` and the
   spawner's parameters are hashed as any field.
-- **The warm start.** `Config.WarmStart` is part of the configuration: its presence
-  byte, its prices, wages, groups and pools are hashed (`spec-viability.md` 8.1). The solve
+- **The warm start.** `Config.WarmStart` is part of the configuration: when it is non-nil its prices, wages, groups and pools are hashed (`spec-viability.md` 8.1), and a non-nil `WarmStart` with no row is not the same configuration as a nil one (8.2.1). The solve
   options that produced it (`StockCoverTicks` and the rest, `spec-viability.md`
   11) are not fields and not hashed; only the table is.
-- **Regions, edges and the new modules.** `Edges` and `RegionPrices` are hashed in canonical order, every field; `Region.Label` and `World.DistanceLabel` are not (`spec-regions.md` 4.1.2). `Modules.MoneySupply` is hashed with a presence byte and, when present, its flows in ID order, every field but `Label`; the flow scale is state, not configuration. `Modules.Population` is hashed with a presence byte, its schedules in knot order and its region rows by region; the effective scales a shock sets are state. `Modules.Transport` is hashed with a presence byte and its modes in ID order, every field but `Label`; the transit factor is state.
-- **The resources, information and external modules.** Each is hashed with a presence byte and, when present, every field but `Label`: `Modules.Resources` with its resources by ID (knots by share, seasons in the calendar's order) and its endowment rows by region then resource, and `HorizonYears`; `Modules.Information` with its three fields, and `Role.Informed` as any role field; `Modules.External` with its nodes by region, lines by commodity, gates by region and season factors by season. The shock scales, drift, carries and cumulative totals are state and not hashed.
-- **The subsistence, migration and merchant modules.** Each is hashed with a presence byte and, when present, every field: `Modules.Subsistence` with its default list and its role rows by role (each list by recipe ID) and its three tunables; `Modules.Migration` with its nine fields and its `Regions` rows by region; `Modules.Merchants` with `MaxOpen`; `Role.Fixed` and the `Role.Merchant` block (modes by ID) as any role field. The per-agent state (`OwnUse`, `OwnUseJobs`, journeys) and the contracts are state and not hashed.
-- **The modules of wave 5.** Each is hashed with a presence byte and, when present, every field but the presentation-only ones (8.3), in canonical order (3.4): `Modules.Settlements` with its classes by `Enter` (each class's `Flags` by name and `Limits` by `Name`), `BandBP`, `Dwell` and its region rows by region, and `Role.Needs` and `Role.Ceiling` as any role field; `Modules.Storage` with `Base`, its role rows by role and its classes by ID, and `FlowTarget.Store` as any flow field; `Modules.Employment` with `MaxOpen`, and `Role.Hireable` and the `Role.Employer` block (the hire list by recipe ID) as any role field; `Modules.Tenure` with its terms by (region, resource), its holdings by (region, resource, holder), the pool before the roles, and its five tunables; `Modules.Credit` with its four tunables, and the `Role.Credit` block as any role field; `Modules.Risk` with its route rows by (`From`, `To`, `Mode`) and its store rows by (`Region`, `Class`); `Modules.Infrastructure` with its classes by ID and its initial rows by key, and the `Needs`, `Builds` and `Repairs` of a recipe as any recipe field; `Modules.Insurance` with its five tunables, and the `Role.Cover` block as any role field; `Modules.Polity` with its jurisdictions by ID and then its members by region; `Modules.Fiscal` with its six lists each by ID, every field but `Label`, and the seasons of a window in the calendar's order; `Modules.Institutions` with its bodies, rights, controls and rate limits by ID; `Modules.Policy` with every field of every actor by ID, the policy by **name** only (a registered implementation and the mailbox are not hashed); `Modules.Saving` with its three tunables, and the `Role.Saver` block as any role field; `Modules.Technology` with its fields by ID. The state of each module (the rent scales, the rate scales, the legal levels and right suspensions, the risk scales, the hire records, the claims, the titles, the facilities, the policies, the experience and the advance of a cell, a store of an agent) is state and is not hashed.
-
+- **Regions, edges and the modules.** `Edges` and `RegionPrices` are hashed in canonical order, every field, and encode to nothing when empty; `Region.Label` and `World.DistanceLabel` are not hashed (`spec-regions.md` 4.1.2). A module is hashed **only when it is on** (its pointer is non-nil), with every field it owns but the presentation-only ones (8.3), and a field that a module adds to a core struct (`Role.Informed`, `Region.PoolRelease`, a recipe's `Builds`) is hashed only when its module is on: an off module leaves no trace (8.2.3). A module's lists are in the canonical order of 3.4 and its rows by the key the owner spec names: `Modules.MoneySupply` with its flows by ID; `Modules.Population` with its schedules in knot order and its region rows by region; `Modules.Transport` with its modes by ID; `Modules.Resources` with its resources by ID (knots by share, seasons in the calendar's order), its endowment rows by region then resource, and `HorizonYears`; `Modules.Information` with its three fields; `Modules.External` with its nodes by region, lines by commodity, gates by region and season factors by season; `Modules.Subsistence` with its default list and its role rows by role (each list by recipe ID) and its three tunables; `Modules.Migration` with its nine fields and its `Regions` rows by region; `Modules.Merchants` with `MaxOpen`, and the `Role.Merchant` block (modes by ID); `Role.Fixed` as any role field when migration is on. The per-agent state (`OwnUse`, `OwnUseJobs`, journeys), the contracts, the shock scales, the flow scale, the transit factor, the birth and death scales, the drift, the carries and the cumulative totals are state and not hashed.
+- **The modules of wave 5 and `Estates`.** Each is hashed when present, every field but the presentation-only ones (8.3), in canonical order (3.4): `Modules.Settlements` with its classes by `Enter` (each class's `Flags` by name and `Limits` by `Name`), `BandBP`, `Dwell` and its region rows by region, and `Role.Needs` and `Role.Ceiling`; `Modules.Storage` with `Base`, its role rows by role and its classes by ID, and `FlowTarget.Store`; `Modules.Employment` with `MaxOpen`, and `Role.Hireable` and the `Role.Employer` block (the hire list by recipe ID); `Modules.Tenure` with its terms by (region, resource), its holdings by (region, resource, holder), the pool before the roles, and its five tunables; `Modules.Credit` with its four tunables, and the `Role.Credit` block; `Modules.Risk` with its route rows by (`From`, `To`, `Mode`) and its store rows by (`Region`, `Class`); `Modules.Infrastructure` with its classes by ID and its initial rows by key, and the `Needs`, `Builds` and `Repairs` of a recipe; `Modules.Insurance` with its five tunables, and the `Role.Cover` block; `Modules.Polity` with its jurisdictions by ID and then its members by region; `Modules.Fiscal` with its six lists each by ID, every field but `Label`, and the seasons of a window in the calendar's order; `Modules.Institutions` with its bodies, rights, controls and rate limits by ID; `Modules.Policy` with every field of every actor by ID, the policy by **name** only (a registered implementation and the mailbox are not hashed); `Modules.Saving` with its three tunables, and the `Role.Saver` block; `Modules.Technology` with its fields by ID; `Modules.Estates` with no field, so that its presence is the whole of its contribution, and `Region.PoolRelease` and `Region.ReliefBelow`. The state of each module (the rent scales, the rate scales, the legal levels and right suspensions, the risk scales, the hire records, the claims, the titles, the facilities, the policies, the experience and the advance of a cell, a store of an agent) is state and is not hashed.
 - **Yields.** `Yields` is hashed in canonical order (region, then recipe, and
   each profile's season entries sorted by season ID, as `spec-production.md` 6.1
   has it). The yield shocks of
@@ -1292,25 +1619,150 @@ instead. `WithReseed` is excluded too: it is a restore-time option that changes 
 8.2. The **configuration hash** is the SHA-256 of a canonical binary encoding of
 the effective configuration. The checkpoint stores it and a restore with a
 different hash fails with `ErrCheckpointConfig` (ADR 0002, decision 4; `spec-checkpoint.md` 13.1). The encoding
-is written by hand in field order, with a version byte, integers as 8 bytes in
-big-endian order, strings and slices with a length prefix, entity slices in
-canonical order, the calendar's months and seasons in the order written, and a
-presence byte for each module and for `WarmStart`. The presence bytes of the modules are written in the order of the `Modules` row of 3.1: the earlier modules, then the fourteen of wave 5 in the order that row gives, `Settlements` first and `Technology` last. That order is a hash input, and a module that is added later is appended and never inserted. It uses no reflection and
-no map, so equal configurations give equal bytes on every platform. The version of this encoding is written in the header of a checkpoint (`spec-checkpoint.md` 5.1), a restore hashes the effective configuration with that version, and from 1.0 an implementation keeps the encoder of every version it has written (`spec-checkpoint.md` 9.2.1 item 4, FR-CHK-063).
+is written by hand, with a version byte, and uses no reflection and no map, so equal
+configurations give equal bytes on every platform. Its version is written in the header of a checkpoint (`spec-checkpoint.md` 5.1), a restore hashes the effective configuration with that version, and from 1.0 an implementation keeps the encoder of every version it has written (`spec-checkpoint.md` 9.2.1 item 4, FR-CHK-063).
+
+**The rule of D5: an append that is off leaves no trace.** Nothing in the encoding
+depends on how many fields a struct has or how many modules exist. A field that is at
+its zero value is not written, and a module that is off is not written. So a pull
+request that adds a field or a module, and whose default configuration leaves it at
+zero or off, does not change the hash of any configuration that existed before it, and
+`testdata/golden/off/` stays as it was (testing.md 7.1.1) by construction. This
+replaces the presence byte per module of the first draft of this section, which moved
+every hash whenever a module was added.
+
+8.2.1. **The encoding, version 1.** The bytes are the version byte `0x01`, then the
+encoding of `Config` as a struct. The SHA-256 is taken over exactly those bytes.
+
+- **A struct** is a sequence of *pairs* and then a terminator. A pair is a field id
+  (2 bytes, big-endian, from 1) and the value; pairs are in ascending id order; the
+  terminator is the two bytes `0x00 0x00`. A field is a pair only if its value is not
+  zero, and a presentation-only field (8.3) is never a pair.
+- **Zero** is: the integer 0, `false`, the empty string, a nil or empty slice, a
+  nil pointer, and a struct all of whose fields are zero. It is one rule for every
+  field of every type, so no field has an "off value" of its own.
+- **Values.** An integer or a named integer type (`Money`, `Price`, `Quantity`) is 8
+  bytes, two's complement, big-endian. A `bool` is the byte `0x01` (false is never
+  written). A string is its length as 8 bytes and then its bytes. A slice is its count
+  as 8 bytes and then its elements in the order the field's rule gives (3.4; an ordered
+  list as written), each encoded as a value of its element type: an integer, a string
+  or a struct. A struct, or a pointer to a struct that is not nil, is its pairs and
+  terminator.
+- **A non-nil pointer is always written**, even when its struct is zero: the pair is
+  the id, the empty pairs and the terminator. So `WarmStart: &WarmStart{}` and a nil
+  `WarmStart` are two configurations with two hashes, and a module that is on and has
+  no field (`Estates`) is the pair that names it.
+- **`Modules`** is a struct like any other whose fields are the 25 pointers. The field
+  id of a module is its position in the `Modules` row of 3.1, counted from 1 (`Demand` 1,
+  `MoneySupply` 2, `Population` 3, `Transport` 4, `Resources` 5, `Information` 6,
+  `External` 7, `Subsistence` 8, `Migration` 9, `Merchants` 10, `Settlements` 11 to
+  `Technology` 24, `Estates` 25). A module that is off is a nil pointer and is not a
+  pair. The ids do not depend on the order in which the modules are built.
+- **A field a module adds to a core struct** (`Role.Informed`, `Region.PoolRelease`,
+  a recipe's `Builds`) is a pair only when its module is on, whatever its value. With
+  the module off it is not written and not validated for its value.
+
+8.2.2. **Field ids.** A field's id is its position in the struct's declaration, counted
+from 1 and not counting presentation-only fields, as 3.7.2 lists the fields. A field a
+later module adds takes the next free id of its struct, in the pull request that adds it,
+and that pull request adds a row to this paragraph; an id is never reused or moved. So
+at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, `Yields`
+5, `Roles` 6, `Regions` 7, `Edges` 8, `RegionPrices` 9, `Groups` 10, `WarmStart` 11 and
+`Modules` 12. `World` has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45.
+`Calendar` has `HoursPerDay` 1 to `SeasonStart` 8; `Month` and `Season` have `ID` 1,
+`Days` 2. `Commodity` has `ID` 1, `Mass` 2, `Bulk` 3, `ShelfLife` 4, `Durability` 5,
+`Classes` 6, `Raw` 7, `ReferencePrice` 8. `Item` has `Commodity` 1, `Quantity` 2;
+`Output` has `Commodity` 1, `Quantity` 2, `CostShare` 3, `Discard` 4; `Tool` has
+`Commodity` 1, `WearPerUse` 2. `Recipe` has `ID` 1, `Duration` 2, `Inputs` 3,
+`Outputs` 4, `Requires` 5, `Sited` 6, `TraineeEligible` 7, `TraineeYield` 8.
+`YieldProfile` has `Region` 1, `Recipe` 2, `HasAll` 3, `All` 4, `Seasons` 5;
+`SeasonYield` has `Season` 1, `BP` 2. `Role` has `ID` 1, `Recipes` 2, `Upkeep` 3,
+`Trades` 4, `StartMoney` 5, `StartStock` 6, `Strategy` 7, `Unskilled` 8,
+`TargetRatio` 9, `TargetSpread` 10, `DefaultRatio` 11, `InKind` 12,
+`ExpectedWorkTicks` 13, `MinWorkShare` 14, `TrainingTicks` 15, `MaxTrainees` 16,
+`TeachingLoad` 17, `Closed` 18. `Region` has `ID` 1, `ReferenceBasket` 2, `ExtraUpkeep`
+3, `CapitalReturn` 4, `EstateMarkdown` 5. `Group` has `Region` 1, `Role` 2,
+`Households` 3, `Scale` 4. `WarmStart` has `Prices` 1, `Wages` 2, `Groups` 3, `Pools` 4;
+`SeedPrice` has `Region` 1, `Commodity` 2, `Price` 3; `SeedWage` has `Region` 1,
+`Wage` 2; `WarmGroup` has `Region` 1, `Role` 2, `Money` 3, `Stock` 4, `Jobs` 5;
+`JobSpec` has `Recipe` 1, `InProgressBP` 2; `WarmPool` has `Region` 1, `Money` 2. A
+struct has at most 65 534 fields.
+
+8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
+three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer
+takes its position in the `Modules` row and nothing else moves; (2) a field added to a
+core struct takes the next id and its **default value is its zero value**, because a
+default that is not zero would be written by every `DefaultX()` and so would move every
+existing hash: a field whose natural "off" is not zero (a cap of 10 000 that means "no
+cap") is declared so that zero is off, or belongs to a module; (3) a field a module adds
+to a core struct is written only when the module is on (8.2.1). A change to the encoding
+itself (a type, the terminator, an id) is a new version byte and a behaviour change
+(architecture.md 6.6).
+
+8.2.4. **Worked examples.** The bytes are in hex and the digests are the SHA-256 of
+the whole byte string, written by a reference encoder in Go and again in Python, which
+agree on every row. A count or a length is 8 bytes, big-endian.
+
+| Configuration | Bytes | SHA-256 |
+|---------------|-------|---------|
+| `Config{}`: everything zero, every module off | `01` `0000` (the version, the terminator) | `fb50dc0717ff266cf9baf82b1ce7a1c2ef6d9247859680b11a19fb7077f5f222` |
+| one region and nothing else, `Regions: [{ID: "north"}]` | `01` `0007` `0000000000000001` `0001` `0000000000000005` `6e6f727468` `0000` `0000` (version; `Regions` and its count; `ID` and its length and bytes; the region's terminator; the configuration's terminator) | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
+| the same with `WarmStart: &WarmStart{}` | the row above with `000b` `0000` inserted before the last `0000` | `a2f375f381fced5c69544bf3dfb14446d513d6e0eaceb9574964bbfe8ea8a812` |
+| the same with `Modules.Estates: &Estates{}`, a module on | the one-region row with `000c` `0019` `0000` `0000` inserted before the last `0000` (`Modules`; `Estates`, id 25, and its terminator; the terminator of `Modules`) | `0848fee29c503bda99a17acb2c44c42fbba8b730eadc2079e3d8123b2d3317ad` |
+| the one-region row with a field appended later (`Region.PoolRelease`) at its off value 0 | the bytes of the one-region row, unchanged | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
+
+The first row is the hash of an all-off configuration with nothing in it, the fourth
+shows a module costing exactly the bytes that name it, and the last shows an append
+costing nothing. A fuller configuration of one commodity `grain` (`Mass` 1, `Bulk` 1,
+`ReferencePrice` 100), one recipe `grow` (`Duration` 1, one output of 1 `grain` with
+`CostShare` 10 000), one role `farmer` (`Recipes` [`grow`], `StartMoney` 10 000,
+`Strategy` `default`, `TargetRatio` 15 000, `DefaultRatio` 10 000,
+`ExpectedWorkTicks` 250, `MinWorkShare` 4 000), one region `north`
+(`ReferenceBasket` 100) and one group of 10 households of `farmer` in `north`, with the
+world section left at zero (a configuration the validator would refuse, which still
+has a hash, 8.5), encodes to 350 bytes:
+
+```
+010003000000000000000100010000000000000005677261696e000200000000
+0000000100030000000000000001000800000000000000640000000400000000
+000000010001000000000000000467726f770002000000000000000100040000
+00000000000100010000000000000005677261696e0002000000000000000100
+0300000000000027100000000000060000000000000001000100000000000000
+066661726d657200020000000000000001000000000000000467726f77000500
+000000000027100007000000000000000764656661756c740009000000000000
+3a98000b0000000000002710000d00000000000000fa000e0000000000000fa0
+000000070000000000000001000100000000000000056e6f7274680002000000
+00000000640000000a0000000000000001000100000000000000056e6f727468
+000200000000000000066661726d65720003000000000000000a00000000
+```
+
+and its SHA-256 is `87a8a42335e50ea33777b9290b1adc14c80a8b8a1451e31b72dd664f72c2f0f5`.
+
+8.2.5. **The hash of the reference configuration is pinned.** The test of the
+reference configuration (the pack `one` of `spec-reference-chain.md`, built in Go,
+3.6; no module is on) compares its hash with a constant in the test file. A pull
+request that moves the constant has broken 8.2.3 or changed the encoding on purpose, and
+says which (testing.md 7.2). It is the earliest signal that an append was not off, before
+any golden file exists. A new pack's hash is pinned the same way when the pack is.
 
 8.3. Some fields are **presentation only**: a human-readable label, a display
 ladder (`spec-currency.md` 2.2). They do not change any result, so they are not
 hashed. A field is presentation only if and only if its doc comment says so. A
 test changes every field of `Config` in turn and checks that the hash changes,
-except for the fields on a short allow-list of presentation-only fields. A new
-field that the encoder forgets therefore fails a test. The allow-list is `Region.Label`, `World.DistanceLabel`, `Mode.Label`, `MoneyFlow.Label`, `Resource.Label`, `OutsideNode.Label` and the labels of the earlier specs, and, for the modules of wave 5, `StoreClass.Label`, `SettlementClass.Label`, `Jurisdiction.Label`, `FacilityClass.Label`, `TechField.Label`, `PolicyActor.Label`, the `Label` of a body, of a right, of a control and of a rate limit, and the `Label` of each of the six kinds of fiscal flow.
+except for the fields on a short allow-list of presentation-only fields. The test
+runs on a configuration with every module that is built switched on, because a
+field of a module that is off is not hashed (8.2.1); at Stage 0 no module is built.
+A new field that the encoder forgets therefore fails a test. The allow-list is
+checked against the doc comments: a field whose comment says presentation only and is not
+on the list fails, and so does a listed field whose comment does not say so. The allow-list is `Region.Label`, `World.DistanceLabel`, `Mode.Label`, `MoneyFlow.Label`, `Resource.Label`, `OutsideNode.Label` and the labels of the earlier specs, and, for the modules of wave 5, `StoreClass.Label`, `SettlementClass.Label`, `Jurisdiction.Label`, `FacilityClass.Label`, `TechField.Label`, `PolicyActor.Label`, the `Label` of a body, of a right, of a control and of a rate limit, and the `Label` of each of the six kinds of fiscal flow.
 
 8.4. The file's layout (comments, whitespace, key order, and the split into
 documents) does not affect the hash (2.5).
 
 8.5. **A pure hash function of a `Config`.** The root package exports one, taking a
-`Config` and returning the 32 bytes of 8.2 (the name is chosen with the code; this
-spec proposes `HashConfig`). It hashes the configuration **as given**: it applies no
+`Config` and returning the 32 bytes of 8.2 as `[32]byte`. Its name is **`HashConfig`**
+(adopted; architecture.md 2.6 lists it beside the validator, and `World.ConfigHash` and
+`WorldCreated.ConfigHash` are the fields that carry the same value). It hashes the configuration **as given**: it applies no
 option, so it differs from `World.ConfigHash` when `WithTargetSpread` was given (8.1),
 and it validates nothing (an invalid `Config` has a hash, which `NewWorld` then
 refuses). It lets a harness tell two documents apart, or find a change that leaves
@@ -1344,6 +1796,26 @@ Checks 1 and 2 are the two directions the brief of architecture.md 9.7 asks for 
 are MUST; check 3 is MUST; check 4 stays a SHOULD (FR-CFG-030) and check 5 is MUST
 (FR-CFG-031). If check 4 proves brittle it is relaxed to a review item (13.4).
 
+**How a row is read.** The scope cell of a row is the name of a Go type, the words before
+an optional parenthesis (`World (option; hashed, spec-config.md 8.1)` is `World`), and a row
+names one field of one type. A parameter that two types carry has two rows: `Scale` of
+`World` and `Scale` of `Group`, `Upkeep` of `World` and of `Role`. A section of `Config`
+has a row with the scope `Config` (`Yields` as `Edges` and `WarmStart`; there is no row
+`YieldProfile` for "a region and a recipe"). An element type has a row for each field it
+has (`Month`, `Season`, `SeasonYield`, `Item`, `Output`, `Tool`, `SeedPrice`, `SeedWage`,
+`WarmGroup`, `JobSpec`, `WarmPool`, and the yield rows with the scope `YieldProfile`).
+
+**Staged form** (decision A6 of the plan of Stage 0; architecture.md 9.7 and testing.md 6.7
+state the same rule). The specs describe all 25 modules and the code is built in stages,
+so checks 1, 3 and 5 run over the **built** rows only. The test holds one explicit list,
+`notBuilt`, of the scopes (a Go type name) and of the fields of a built scope
+(`Scope.Field`) that the code does not have yet, and it skips the rows named by it. It
+fails when a listed scope or field exists in the code, so a stale entry cannot hide a
+gap, and when a row is neither built nor listed, so a typo cannot hide one. Check 2 is not
+staged: a field the code has with no row fails at once. The pull request that builds a
+scope or a field deletes its entries in the same change, and the list is empty when the
+last module is built, so the staged form leaves no trace.
+
 The owner table and the fields of 3.7 have a **second reader**: the registry test of
 `spec-calibration.md` 11.1 (FR-CLB-001 to 003), which checks that every row of the
 owner table and every field of 3.7 and 3.7.1 has a row in CLB's registry of knobs, and the
@@ -1353,7 +1825,7 @@ unchanged, and a new field needs its registry row in the same change as its row 
 the owner table.
 
 **What is a row.** A row is a field of `Config`: a World, Role, Region, Group,
-Commodity, Recipe, Yield or Calendar field, a field of a module's tables (scopes Demand,
+Commodity, Recipe, YieldProfile or Calendar field, a field of a module's tables (scopes Demand,
 Want, Taste and RegionTaste for `Modules.Demand`, `spec-demand.md` 9; and the scopes of 3.7.1 for the fourteen modules of wave 5, written as Go type names: `Settlements`, `SettlementClass`, `ClassLimit`, `RegionSettlement`, `Storage`, `RoleRoom`, `StoreClass`, `Capacity`, `FlowTarget`, `Employment`, `Employer`, `Tenure`, `TenureTerm`, `Holding`, `Credit`, `CreditTerms`, `Lend`, `Borrow`, `Risk`, `RouteRisk`, `StoreRisk`, `Infrastructure`, `FacilityClass`, `InitialFacility`, `FacilityBuild`, `FacilityRepair`, `Insurance`, `CoverTerms`, `Underwrite`, `Insure`, `Polity`, `Jurisdiction`, `Member`, `Fiscal`, `Tax`, `Duty`, `Toll`, `Payout`, `Purchase`, `Release`, `Window`, `Institutions`, `Body`, `Right`, `Control`, `RateLimit`, `Policy`, `PolicyActor`, `Lever`, `ScheduleStep`, `Reaction`, `Saving`, `Saver`, `ProjectWorth`, `Technology` and `TechField`, and the fields they add to `Role` and `Recipe`), or a bound-checked
 section such as `WarmStart`. The `Label` of a store class, a settlement class, a jurisdiction, a facility class, a technology field, a policy actor, a body, a right, a control, a rate limit and a fiscal flow is presentation only and has no row (8.3). Two kinds of thing are NOT rows and the registry test MUST NOT look
 for a field behind them:
@@ -1400,7 +1872,9 @@ decided.
 | `MaxPrice` and `MaxQuantity` are referenced by the clearing spec as "configured" | CLR | **Resolved here, wording owed there.** They are bounds, not tunables, and 4.1 says so; `spec-clearing.md` 3.2 and its parameter lines should say "bounded by" and not "configured" |
 | A role's default `ExpectedWorkTicks` of 250 is invalid when the calendar gives fewer than 250 ticks a year | WEL, CAL | **Decided: keep the error** (13.5). The default is not scaled silently; the error names `TicksPerYear` |
 | `spec-spawner.md` adds eleven World fields and `Role.Closed`, and `spec-demand.md` adds the tables of `Modules.Demand`; the spawner's *name* has no field in either | SPN, DEM | **Resolved here, a choice to confirm.** `World.Spawner` (a registered name, default `"default"`, hashed) is the field for the name, as `Role.Strategy` is for a strategy (FR-CFG-063); it needs a row, owner `spec-spawner.md` 3.1.3. The other fields are rows already proposed by their owners (FR-CFG-064) |
-| The estates example in 6.2 put a region parameter (`pool_release`) in a module table | CFG | **Fixed** in 6.2: estate parameters are region fields (`spec-estates.md` 3) and `[module.estates]` is the switch |
+| The estates example in 6.2 put a region parameter (`pool_release`) in a module table | CFG | **Fixed** in 6.2: estate parameters are region fields (`spec-estates.md` 3) and `[modules.estates]` is the switch |
+| The owner table could not be read one row to one field: `Scale` (group, "world default 1"), `Upkeep` (world, "also Role"), `YieldProfile` (a region and a recipe), the scopes `Yield`, `Recipe tool`, `Recipe output` and `Want item`, and no row for the elements of the calendar, the yield seasons, the lists of items and the warm-start tables | CFG, README | **Fixed** (9.2, "How a row is read"): two rows each for `Scale` and `Upkeep`, `Yields` a section row, scopes spelled as Go type names (`YieldProfile`, `Tool`, `Output`, `WantItem`), and rows for `Month`, `Season`, `SeasonYield`, `Item`, `Output`, `Tool`, `SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec` and `WarmPool` |
+| `[modules.estates]` mapped to no field of `Modules` (3.1 listed 24 pointers and none was estates) | CFG, EST, OBS | **Fixed** in 6.2.4: `Modules.Estates`, the 25th pointer, empty struct, the pool policy; `ReliefPaid` is not a slice event |
 
 ## 10. Observability
 
@@ -1453,15 +1927,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-017 | More entities of a kind than its bound MUST be rejected with `ErrTooMany`. |
 | FR-CFG-018 | A warning MUST NOT fail validation, MUST be returned by `Warnings` with a path and a rule, and MUST be logged once at `Warn` by `NewWorld`. |
 | FR-CFG-019 | The loader MUST reject an unknown key at any depth with `ErrUnknownKey` and its path. |
-| FR-CFG-020 | The loader MUST reject a non-integer number, or a string where a number is needed, with `ErrNotInteger` or a type error naming the path. |
+| FR-CFG-020 | The loader MUST reject a floating point literal where an integer is needed with `ErrNotInteger`, and any other value of the wrong type (a string where a number or a bool is needed, an integer where a string is needed, a date or a time) with `ErrWrongType`, each naming the path. |
 | FR-CFG-021 | The loader MUST reject a missing or unsupported `schema` in the merged tree with `ErrUnsupportedSchema`, and a document that overlays another MUST NOT need a `schema` line of its own. |
-| FR-CFG-022 | The loader MUST reject a document longer than `MaxDocumentBytes` with `ErrTooLarge` before allocating in proportion to its size. |
+| FR-CFG-022 | The loader MUST reject a document longer than `MaxDocumentBytes` with `ErrTooLarge` before allocating in proportion to its size, and MUST reject with `ErrTooLarge`, before decoding any document, more than `MaxDocuments` documents or a sum above `MaxMergedBytes`, and, before decoding the document, a line above `MaxLineBytes`, a key or a value nested deeper than `MaxNestingDepth` and a table with more than `MaxTableKeys` keys (6.3.1). `LoadFS` MUST read each file through a bound whatever `fs.FileInfo` says. |
 | FR-CFG-023 | Documents MUST be merged in order, tables recursively by key and scalars and lists by replacement, and a table-versus-scalar conflict MUST be rejected with `ErrMergeConflict`. |
 | FR-CFG-024 | The loader MUST NOT panic on any input. |
-| FR-CFG-025 | The configuration hash MUST be the SHA-256 of the canonical encoding of the effective configuration, and equal effective configurations MUST give equal hashes on every platform. |
-| FR-CFG-026 | Changing any field of the configuration that is not on the presentation-only allow-list MUST change the hash, and changing a presentation-only field, the layout of a file, the seed, the logger or an observer MUST NOT. |
+| FR-CFG-025 | The configuration hash MUST be the SHA-256 of the canonical encoding of 8.2.1 of the effective configuration, and equal effective configurations MUST give equal hashes on every platform. |
+| FR-CFG-026 | Changing any field of the configuration that is not on the presentation-only allow-list MUST change the hash, provided the module that owns it is on (8.2.1), and changing a presentation-only field, the layout of a file, the seed, the logger or an observer MUST NOT. |
 | FR-CFG-027 | An option that affects results MUST be applied to the effective configuration before it is hashed. |
-| FR-CFG-028 | Every row of the parameter-owner table MUST correspond to a field of the configuration, and every non-presentation field MUST have a row. |
+| FR-CFG-028 | Every row of the parameter-owner table MUST correspond to a field of the configuration, and every non-presentation field MUST have a row. In the staged form of 9.2 the rows of a scope or a field that the code does not yet have MUST be skipped only by an explicit list in the test, and a listed scope or field that exists in the code, or a row that is neither built nor listed, MUST fail the test. |
 | FR-CFG-029 | The default of every field MUST pass validation. |
 | FR-CFG-030 | The default stated in an owner's parameter table SHOULD equal the default in the `Default` constructor. |
 | FR-CFG-031 | The validation tests MUST include a failing case for each parameter. |
@@ -1493,7 +1967,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-057 | `World.BeliefEvidenceShare` MUST be a configuration field with default 5 000 and bound 1 to 10 000, `World.CostFloor` MUST default to 7 000, and each MUST have a row in the parameter-owner table and a failing-case validation test. |
 | FR-CFG-058 | The error for an unproducible commodity MUST name one cycle with no source, the commodities and recipes in ID order, whenever the unproducible set contains a cycle, and a required tool MUST count as an input of that cycle. |
 | FR-CFG-059 | A commodity marked `Raw` MUST count as sourced in the producibility check and in V1, and `Validate` MUST warn, and MUST NOT fail, with `raw_without_source` when nothing real supplies it. |
-| FR-CFG-060 | `Config.Modules.Demand` MUST be on if and only if non-nil, MUST be written as the table `[demand]` with wants, tastes and region tastes keyed by ID, and MUST be part of the effective configuration and the hash, every field but `Label`, in canonical order. |
+| FR-CFG-060 | `Config.Modules.Demand` MUST be on if and only if non-nil, MUST be written as the table `[modules.demand]` with wants, tastes and region tastes keyed by ID, and MUST be part of the effective configuration and the hash, every field but `Label`, in canonical order. |
 | FR-CFG-061 | The demand module's bounds `MaxWants`, `MaxWantItems`, `MaxWantsPerRole`, `MaxWantPeriod`, `MaxWantRank`, `MaxElasticityBP`, `MaxCeilingBP`, `MaxSubstitution` and `MaxTasteScale` MUST be constants of `bounds.go`, and a field outside its bound MUST be rejected with `ErrOutOfBounds`. |
 | FR-CFG-062 | Validation MUST reject, with the sentinel for the kind, an unknown commodity, role, region or want in a want item, taste or region taste, a want with no item or all weights 0 (`ErrWantItems`), a durable want item (`ErrWantDurable`), a duplicate want, taste or region taste (`ErrDuplicateID`), and wants products that overflow (`ErrOverflow`). |
 | FR-CFG-063 | `World.Spawner` MUST be a registered name defaulting to `"default"`, checked by `NewWorld` and not by `Validate` (`ErrUnknownSpawner`), and the name MUST be hashed. |
@@ -1501,14 +1975,14 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-065 | Validation MUST warn, and MUST NOT fail, with `entry_share_window`, `renewal_with_population`, `no_open_role`, the warnings of `spec-demand.md` 10.2 and `wants_exceed_labour`; `group_below_floor` MUST be a bounded run-time `Warn` and not a validation result. |
 | FR-CFG-066 | A role with no group in any region MUST be valid and MUST draw no warning. |
 | FR-CFG-067 | `Edges` and `RegionPrices` MUST be sorted (edges by `(From, To)` as region index, prices by region then commodity), MUST be hashed with every field, and the graph rules of `spec-regions.md` 9.1 MUST run in `Validate`; `ErrNoRegions` and `ErrSelfEdge` MUST be matched with `errors.Is`. |
-| FR-CFG-068 | `Config.Modules.MoneySupply` MUST be on if and only if non-nil, MUST be written as `[module.money_supply]`, MUST be part of the effective configuration and the hash with every field but `Label`, and its bounds MUST be constants of `bounds.go`. |
-| FR-CFG-069 | `Config.Modules.Population` MUST be on if and only if non-nil, MUST be written as the table `[population]`, MUST be part of the hash with its schedules in knot order and its region rows in region order, and a schedule outside the bound `MaxKnots` MUST be rejected with `ErrOutOfBounds`. |
+| FR-CFG-068 | `Config.Modules.MoneySupply` MUST be on if and only if non-nil, MUST be written as `[modules.money_supply]`, MUST be part of the effective configuration and the hash with every field but `Label`, and its bounds MUST be constants of `bounds.go`. |
+| FR-CFG-069 | `Config.Modules.Population` MUST be on if and only if non-nil, MUST be written as the table `[modules.population]`, MUST be part of the hash with its schedules in knot order and its region rows in region order, and a schedule outside the bound `MaxKnots` MUST be rejected with `ErrOutOfBounds`. |
 | FR-CFG-070 | `Config.Modules.Transport` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while the region graph is off, MUST be part of the hash with its modes in ID order and every field but `Label`, and its modes MUST be validated by the rules of `spec-transport.md` 12.1. |
 | FR-CFG-071 | `Region.Label`, `World.DistanceLabel`, `Mode.Label` and `MoneyFlow.Label` MUST be presentation only: changing them MUST NOT change the hash, and they MUST be on the allow-list of the hash test. |
 | FR-CFG-072 | Validation MUST warn, and MUST NOT fail, with the warnings of `spec-regions.md` 9.2, `spec-money-supply.md` 12.2, `spec-population.md` 9.2 and `spec-transport.md` 12.2; the informational diagnostics `replacement_ratio` and `renewal_ignored` MUST NOT fail validation. |
-| FR-CFG-073 | `Config.Modules.Resources` MUST be on if and only if non-nil, MUST be written as the table `[resources]`, MUST be part of the hash with resources in ID order and endowment rows in (region, resource) order, and a draw of an undefined resource MUST be rejected with `ErrUnknownResource`, a bad shape or rate combination with `ErrResourceShape` and a bad abundance curve with `ErrCurve`. |
+| FR-CFG-073 | `Config.Modules.Resources` MUST be on if and only if non-nil, MUST be written as the table `[modules.resources]`, MUST be part of the hash with resources in ID order and endowment rows in (region, resource) order, and a draw of an undefined resource MUST be rejected with `ErrUnknownResource`, a bad shape or rate combination with `ErrResourceShape` and a bad abundance curve with `ErrCurve`. |
 | FR-CFG-074 | `Config.Modules.Information` MUST be on if and only if non-nil, MUST be written as the table `[modules.information]`, MUST be part of the hash, and `Role.Informed` MUST be rejected with `ErrModuleDependency` while it is nil; the derived checks of `spec-information.md` 9.2 MUST be rejected with `ErrTooMany`. |
-| FR-CFG-075 | `Config.Modules.External` MUST be on if and only if non-nil, MUST be written as `[module.external]`, MUST be rejected with `ErrModuleDependency` while the region graph is off, MUST be part of the hash with nodes, lines, gates and season factors in canonical order and every field but `Label`, and MUST NOT hash its runtime state; its rows MUST be validated by the rules of `spec-external-sector.md` 14.1. |
+| FR-CFG-075 | `Config.Modules.External` MUST be on if and only if non-nil, MUST be written as `[modules.external]`, MUST be rejected with `ErrModuleDependency` while the region graph is off, MUST be part of the hash with nodes, lines, gates and season factors in canonical order and every field but `Label`, and MUST NOT hash its runtime state; its rows MUST be validated by the rules of `spec-external-sector.md` 14.1. |
 | FR-CFG-076 | Validation MUST warn, and MUST NOT fail, with the warnings of `spec-resources.md` 13.3, `spec-information.md` 9.3 and `spec-external-sector.md` 14.2. |
 | FR-CFG-077 | `Config.Modules.Subsistence` MUST be on if and only if non-nil, MUST be written as the table `[modules.subsistence]` with role rows `[modules.subsistence.role.<id>]`, MUST be part of the hash with its lists and rows in canonical order and its three tunables, its bounds `MaxOwnUseRecipes`, `MaxOwnUseTicks` and `MaxRetryJobs` MUST be constants of `bounds.go`, and the rules of `spec-subsistence.md` 13.2 MUST be rejected with `ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited` and `ErrOwnUseOverlap`. |
 | FR-CFG-078 | `Config.Modules.Migration` MUST be on if and only if non-nil, MUST be written as `[modules.migration]`, MUST be part of the hash with its `Regions` rows in region order, MUST be rejected with `ErrModuleDependency` while `Modules.Information` is nil, and `Role.Fixed` MUST default to false and be hashed as any role field (`spec-migration.md` 11, 12). |
@@ -1519,7 +1993,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-083 | `Validate` MUST NOT see `WithTargetSpread`, and the pure hash function of 8.5 MUST hash a `Config` as given, so that it differs from `World.ConfigHash` when that option was given. |
 | FR-CFG-084 | `Config.Modules.Settlements` MUST be on if and only if non-nil and MUST need no other module, MUST be written as `[modules.settlements]` with classes, limits and region rows as tables keyed by ID, MUST be part of the hash with its classes sorted by `Enter` and not by ID, a class's `Flags` by name and its `Limits` by `Name`, every field but `Label`, MUST have its bounds `MaxSettlementClasses`, `MaxClassFlags`, `MaxClassLimits`, `MaxBandBP` and `MaxThresholdBP` as constants of `bounds.go`, MUST reject a `Role.Needs` or `Role.Ceiling` with `ErrModuleDependency` while it is nil and with `ErrUnknownSettlementFlag` or `ErrUnknownLimit` when no class carries it, and its warnings (`spec-settlements.md` 9.2) MUST NOT fail validation. |
 | FR-CFG-085 | `Config.Modules.Storage` MUST be on if and only if non-nil, MUST be written as `[modules.storage]` with classes as `[modules.storage.class.<id>]`, MUST be part of the hash with its role rows by role and its classes by ID, every field but `StoreClass.Label`, MUST have its bounds `MaxRoom`, `MaxStoresPerAgent` and `MaxStoreClasses` as constants of `bounds.go`, MUST reject the shapes of `spec-storage.md` 13.1 with `ErrStoreShape`, `ErrRoomShape`, `ErrNotLimited`, `ErrUnknownStoreClass` and `ErrModuleDependency`, MUST check `room_below_warm_job` at construction and not in `Validate`, and its warnings (`spec-storage.md` 13.2) MUST NOT fail validation. |
-| FR-CFG-086 | `Config.Modules.Employment` MUST be on if and only if non-nil, MUST be written as `[modules.employment]` with `hireable = true` and the block `[role.<id>.employer]` on a role, MUST be part of the hash with a presence byte, `MaxOpen`, `Role.Hireable` and the `Role.Employer` block with its hire list by recipe ID, MUST NOT hash the hire records or the next hire ID, MUST have its bounds `MaxEstablishment` and `MaxHireRecords` as constants of `bounds.go`, MUST reject a `Hireable` role or an employer block while the module is off with `ErrModuleDependency`, a role that is both with `ErrEmploymentShape` and an employer group of scale above 1 with `ErrEmployerWeight`, and its warnings (`spec-employment.md` 14.2) MUST NOT fail validation. |
+| FR-CFG-086 | `Config.Modules.Employment` MUST be on if and only if non-nil, MUST be written as `[modules.employment]` with `hireable = true` and the block `[role.<id>.employer]` on a role, MUST be part of the hash when on, with `MaxOpen`, `Role.Hireable` and the `Role.Employer` block with its hire list by recipe ID, MUST NOT hash the hire records or the next hire ID, MUST have its bounds `MaxEstablishment` and `MaxHireRecords` as constants of `bounds.go`, MUST reject a `Hireable` role or an employer block while the module is off with `ErrModuleDependency`, a role that is both with `ErrEmploymentShape` and an employer group of scale above 1 with `ErrEmployerWeight`, and its warnings (`spec-employment.md` 14.2) MUST NOT fail validation. |
 | FR-CFG-087 | `Config.Modules.Tenure` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Resources` is nil, MUST be written as `[modules.tenure]` with `[modules.tenure.term.<region>.<resource>]` and `[modules.tenure.holding.<region>.<resource>.<holder>]`, MUST be part of the hash with its terms and holdings in canonical order, MUST reserve the word `pool` as a role ID (`ErrDuplicateID`), MUST have its bounds `MaxRentStepBP`, `MaxRentCeilingBP`, `MaxHoldings` and `MaxTitleTransfers` as constants of `bounds.go`, MUST reject a title total above 10 000 with `ErrTitleShares` and a holder above `MaxHolderShareBP` with `ErrTitleCap`, and its warnings (`spec-land.md` 11.2) MUST NOT fail validation. |
 | FR-CFG-088 | `Config.Modules.Credit` MUST be on if and only if non-nil and MUST need no other module, MUST be written as `[modules.credit]` with the role blocks `[role.<id>.credit.lend]` and `[role.<id>.credit.borrow]`, MUST be part of the hash with the module and every block and MUST NOT hash the rate scales, MUST have its bounds `MaxCreditRateBP`, `MaxCreditTerm` and `MaxOpenClaims` as constants of `bounds.go`, MUST reject a block with both or neither of `Lend` and `Borrow` with `ErrCreditShape`, a block while the module is off with `ErrModuleDependency` and an absent `rate_bp` or `max_rate_bp` with `ErrMissingField`, and its warnings (`spec-credit.md` 15.2) MUST NOT fail validation. |
 | FR-CFG-089 | `Config.Modules.Risk` MUST be on if and only if non-nil, MUST be written as `[modules.risk]` with `[modules.risk.route.<from>.<to>.<mode>]` and `[modules.risk.store.<region>.<class>]`, MUST be part of the hash with every field, its route rows by (`From`, `To`, `Mode`) and its store rows by (`Region`, `Class`), MUST have its bound `MaxRiskRows` as a constant of `bounds.go`, MUST reject a probability or a severity outside 1 to 10 000 with `ErrRiskShape`, a route row while transport is off or a store row while storage is off with `ErrModuleDependency`, and its warnings (`spec-risk.md` 13.2) MUST NOT fail validation. |
@@ -1531,6 +2005,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-095 | `Config.Modules.Policy` MUST be on if and only if non-nil, MUST be rejected with `ErrModuleDependency` while `Modules.Polity` is nil or has no jurisdiction, MUST be written as `[modules.policy]` with `[modules.policy.actor.<id>]` and its lever, schedule and rule tables, MUST be part of the hash with the policy of an actor by name only and MUST NOT hash a registered implementation or the mailbox, MUST have its eight bounds, `MaxActors` to `MaxMoveBP`, as constants of `bounds.go`, MUST reject the shapes of `spec-policy.md` 11.1 with `ErrPolicyShape`, `ErrLeverNotInReach` and `ErrLeverShared`, and an unregistered name with `ErrUnknownPolicy` in `NewWorld` (7.1.4), and its warnings (`spec-policy.md` 11.2) MUST NOT fail validation. |
 | FR-CFG-096 | `Config.Modules.Saving` MUST be on if and only if non-nil, MUST be written as `[modules.saving]` with the role block `[role.<id>.saver]` and its rows `[[role.<id>.saver.worth]]`, MUST be part of the hash with the module and every block, MUST have its ten bounds, `MaxSafetyTicks` to `MaxWorthCount`, as constants of `bounds.go`, MUST reject a `Saver` block while the module is off and a `Worth` row while `Modules.Infrastructure` is nil with `ErrModuleDependency`, and its warnings (`spec-saving-and-investment.md` 11.2) MUST NOT fail validation. |
 | FR-CFG-097 | `Config.Modules.Technology` MUST be on if and only if non-nil, MUST be written as `[modules.technology]` with `[modules.technology.field.<id>]`, MUST be part of the hash with its fields by ID, every field but `Label`, and MUST NOT hash the experience or the advance of a cell, MUST have its bounds `MaxTechFields`, `MaxFieldRecipes`, `MaxTechBase`, `MaxDoublingBP`, `MaxTechTrendBP`, `MaxDiscoveryBP`, `MaxGainBP`, `MaxStepBP`, `MaxCatchUpBP`, `MaxTechBP` and `MaxExperience` as constants of `bounds.go`, MUST reject a field whose mechanism is off but set or on but unset with `ErrTechShape` and a recipe in two fields with `ErrTechRecipeOverlap`, and its warnings (`spec-technology.md` 10.2) MUST NOT fail validation. |
+| FR-CFG-098 | A module table MUST be written `[modules.<name>]` with `<name>` the snake case of its field of `Modules`, the module MUST be on if and only if the table is present in the merged tree (even with no key), and a table named after a module at the top level, or under the singular prefix `module`, MUST be rejected with `ErrUnknownKey` (6.2.1). |
+| FR-CFG-099 | `Config.Modules.Estates` MUST be on if and only if non-nil, MUST be written `[modules.estates]` with no key, MUST switch on relief (`spec-estates.md` 2.6) and the pool as a flow target and nothing else, and `ReliefPaid` MUST be emitted only when it is on; `Region.PoolRelease` and `Region.ReliefBelow` MUST be hashed only when it is on (6.2.4, 8.2.1). |
+| FR-CFG-100 | A path segment or a string value in the text of a loader error or of a `*ValidationError` MUST be cut at `MaxIDLength` bytes on a rune boundary and written with `%q`, so that the text holds no control character and at most `MaxNestingDepth` segments, and the loader MUST NOT copy the text of the library's errors (6.3.2). |
+| FR-CFG-101 | `Validate` MUST check the count bounds of every collection before any other rule, and a configuration with any count over its bound MUST return the `ErrTooMany` errors and no other error and build no sorted or hashed structure (7.1.6). |
+| FR-CFG-102 | The loader MUST return a limit error (6.3.1) or a syntax error alone, and MUST return the rejections of the mapping and the merge joined, sorted by path and then rule, at most 100, followed by `ErrTooManyErrors` (6.3.3). |
+| FR-CFG-103 | The loader's keys MUST be the snake case of the Go field names except for the exceptions of 6.2.2, and a test MUST walk the fields of every section type and fail for a field that is neither. |
+| FR-CFG-104 | The encoding of 8.2.1 MUST write a field only when its value is not zero, MUST write a module only when it is on, MUST write a non-nil pointer even when its struct is zero, and MUST give each field the id of 8.2.2, so that adding a module, or a field at its zero value, does not change the hash of any configuration that existed before it. |
+| FR-CFG-105 | The hash of the reference configuration MUST be pinned by a constant in a test (8.2.5), and the examples of 8.2.4 MUST be tests of the encoder. |
+| FR-CFG-106 | `HashConfig` MUST be the exported name of the pure hash function of 8.5 and MUST return a `[32]byte`. |
 
 ### Non-functional
 
@@ -1560,14 +2043,15 @@ For `spec-stability.md`:
 
 ## 13. Open questions
 
-1. **The TOML library.** The format is decided (6.1). Choose the library under
-   architecture.md 5.3 and record an ADR with the first code that imports it.
-2. **Strict decoding in a chosen library.** Whether it reports unknown keys with
-   their paths, or whether `config/` must check the tree itself (this spec assumes
-   the second, which is library-independent).
+1. **The TOML library. Decided (2026-10-12): `github.com/pelletier/go-toml/v2`**, with the
+   guard pass of 6.3.1, in [ADR 0009](../adr/0009-the-toml-library-is-pelletier-go-toml-v2.md)
+   (status Proposed until the first code that imports it). The experiments are in the ADR.
+2. **Strict decoding in a chosen library. Decided: `config/` checks the tree itself.**
+   The library is used for syntax and for the generic tree only; its struct decoding,
+   its strict mode and its error text are not used (6.1, 6.3.2).
 
-Questions 1 and 2 are code-time decisions and stay open. The rest are decided
-(2026-10-10); the answers are kept so the reasons are not lost.
+Questions 3 to 8 and 10 were decided on 2026-10-10 and question 11 on 2026-10-12; the
+answers are kept so the reasons are not lost.
 
 3. **Deleting in a later document. Decided: not in version 1.** A pack cannot
    remove an entity or reset a key to its default. No pack of the slice needs it:
@@ -1612,7 +2096,14 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
     `season_shorter_than_tick` and `tool_unaffordable` are named here (7.4.2) because
     the registry and the tests need a name. The calendar and skill-barriers specs
     should adopt them. Open until they do.
-11. **Unify the module table names before the loader is written.** The file layout of the modules differs from spec to spec: `[module.estates]`, `[demand]`, `[module.money_supply]`, `[population]`, and a table of its own for transport (6.2). The fourteen modules of wave 5 all use `[modules.<name>]` (6.2), the form of `[modules.information]`, `[modules.subsistence]`, `[modules.migration]` and `[modules.merchants]`, so the table has two spellings, `[module.<name>]` and `[modules.<name>]`, and the unnamed `[demand]`, `[population]` and `[resources]`. The framework records each as its spec says and does not unify them now. *Next step:* choose one rule (for example `[modules.<name>]` for every module, the form that all the later modules use) in the slice, before `config/` is written, and amend the specs and the reference packs together.
+11. **Unify the module table names before the loader is written. Decided (2026-10-12):
+    `[modules.<name>]` for every module (6.2.1).** The first draft recorded each spec's own
+    spelling (the singular prefix `module`, bare top-level tables and the plural prefix
+    `modules` for the later modules). The one
+    rule is the form the later modules already used, and the specs and the fixtures of
+    `testdata/chains/` were respelled in the same change: a text search for the old forms
+    finds none. The answer for estates is 6.2.4: it is the 25th module and its table is
+    `[modules.estates]`, with no key. N-102 is closed.
 
 ## 14. Where this lives in the code
 
@@ -1625,7 +2116,11 @@ Questions 1 and 2 are code-time decisions and stay open. The rest are decided
 | The producibility fixpoint (7.5) | root package, `validate.go`; a pure function over primitive slices that may live in `internal/` when it grows |
 | The viability rules of 7.6 and the sentinels `ErrNotViable`, `ErrWarmStartPrice`, `ErrWarmStartJob` and `ViabilityError` | root package, `validate.go`, `errors.go`; the programmes and checks in `internal/steady` (`spec-viability.md` 21) |
 | The four name checks (7.1.4: strategy, spawner, clearing, policy) | root package, `world.go` (they need the options); `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` and `ErrUnknownPolicy` in `errors.go` |
-| `WarmStart` and its types | root package, `viability.go` (`spec-viability.md` 21), a field of `Config` in `config.go` |
+| `WarmStart` and its types (`SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec`, `WarmPool`) | root package, `config.go` with `Config` (architecture.md 2.6: `config.go` holds "Config and every section struct"; `spec-viability.md` 21 said `viability.go` and is corrected); `viability.go` holds `SolveSteadyState` and the code that reads the table |
+| The loader sentinels `ErrSyntax`, `ErrUnknownKey`, `ErrNotInteger`, `ErrWrongType`, `ErrMissingField`, `ErrUnsupportedSchema`, `ErrMergeConflict`, `ErrTooLarge` (6.3) and `ErrTooManyErrors` | root package, `errors.go` (architecture.md 2.6: "every public sentinel"); `config/` imports the root and returns them, wrapped |
+| The loader limits (6.3.1) | root package, `bounds.go` as `MaxDocuments`, `MaxDocumentBytes`, `MaxMergedBytes`, `MaxLineBytes`, `MaxNestingDepth`, `MaxTableKeys`; `config/` reads them from the root, and the guard pass and the merge live in `config/` |
+| `HashConfig` (8.5) | root package, `hash.go` |
+| `Modules.Estates` and `Estates` (6.2.4) | root package, `config.go` (the type), `estates.go` (the policy, with the core estate) |
 | Canonical order and the hash encoding | root package, `hash.go` |
 | `Parse`, `LoadFS`, the merge and the key mapping | package `config/` (the only package with a third-party import) |
 | The registry test | the root package's external test package, reading `doc/specs/README.md` by relative path (testing.md 10.2 allows reading inside the module) |

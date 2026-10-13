@@ -1327,7 +1327,7 @@ no map:
 tax and payout sums of the tick (12.3), and the carry of a closed account (dropped with
 the account). No per-agent field is hosted (N-128). The flows themselves are
 configuration and are in the hash, the scale is not (ADR 0002 decision 3); the hash
-covers `Modules.Fiscal` with a presence byte and, when present, its six lists in the
+covers `Modules.Fiscal` when it is present (an off module writes nothing: `spec-config.md` 8.2.1) and then its six lists in the
 order of the `Fiscal` struct (taxes, duties, tolls, payouts, purchases, releases), each
 by ID, every field but `Label`, windows with their seasons in the calendar's
 order. A world restored between ticks continues exactly (FR-FIS-060).
@@ -1732,7 +1732,7 @@ Each row is an owed edit; the consolidated table with exact text is in the hando
 | `spec-estates.md` | 2.6 | one sentence: a tax on a pool collects at P1.7b after relief (5.6); the treasury is not the pool |
 | `spec-stability.md` | 4, 4.8, 5.1, 8, 10 | merge FIS-A1 to A8, D1 to D6, S1 to S5 with numbers; drop the FIS hook row of 4.8; the "FIS, PLC" row of 10 loses FIS |
 | `spec-reference-chain.md` | 9, 10 | overlays `fiscal.toml` and `fiscal-governed.toml`; scenarios FIS-S1 to S5 |
-| `README.md`, `roadmap.md`, `documentation_index.md`, `notes.md` | index, code and parameter-owner tables, glossary; FIS row; rows for `spec-fiscal.md` and `models/fis/`; the notes of 22.1 and the new notes (fresh `NOTES-TAG`) | the handoff's rows 1 to 4 |
+| `README.md`, `spec-roadmap.md`, `documentation_index.md`, `notes.md` | index, code and parameter-owner tables, glossary; FIS row; rows for `spec-fiscal.md` and `models/fis/`; the notes of 22.1 and the new notes (fresh `NOTES-TAG`) | the handoff's rows 1 to 4 |
 | `spec-indicators.md` | 8.2, 9 | the terms `FiscalIn_r` and `FiscalOut_r`; the preset asks below |
 | `spec-config.md` | 3.2, 3.7, 4.1, 7.3 to 7.6, 8 | the module row, the bounds, the sentinels and warnings, the hash |
 | `spec-merchants.md` | 5, 7 | the margin subtracts `Routes.Toll` |
@@ -1761,7 +1761,7 @@ standing orders, 060 to 063 state and determinism), and a gap is not a removed r
 | FR-FIS-002 | Every reason of the module MUST be internal: no transfer of this module MAY be a faucet or a sink, no boundary account MAY be created for it, no account ID MAY shift because of it, and the money supply `M` MUST be the same before and after every fiscal step (3.4, 4.1.1). |
 | FR-FIS-003 | In every tick `delta(households) + delta(public) + delta(contract) + delta(treasury)` MUST equal faucets less sinks, and the changes under each fiscal reason MUST sum to zero (4.1.1). |
 | FR-FIS-004 | The IDs of the six lists and of MON's flows MUST be one namespace: an ID repeated among the six lists MUST be `ErrDuplicateID`, an ID equal to a built-in reason, to a MON flow or to a later-declared reason `ErrReasonCollision`, and more than `MaxFiscalFlows` flows `ErrTooMany` (3.1.1). |
-| FR-FIS-005 | Each list MUST be sorted by ID before a world is built or a hash is taken; the hash MUST cover `Modules.Fiscal` with a presence byte and, when present, the six lists in the order of the `Fiscal` struct (17), every field except `Label`, windows with seasons in the calendar's order, and MUST NOT cover a scale (17). |
+| FR-FIS-005 | Each list MUST be sorted by ID before a world is built or a hash is taken; the hash MUST cover `Modules.Fiscal` when it is present (and nothing when it is off, `spec-config.md` 8.2.1): the six lists in the order of the `Fiscal` struct (17), every field except `Label`, windows with seasons in the calendar's order, and MUST NOT cover a scale (17). |
 | FR-FIS-006 | A flow MUST act in tick `t` exactly when `t >= Start`, `Until` is 0 or `t < Until`, and `Seasons` is empty or contains the season of `t`; it MUST apply nothing during the construction phase (3.1.2). |
 | FR-FIS-007 | An `Authority` or a target `Jurisdiction` that is undefined MUST be `ErrUnknownJurisdiction`, one that has no seat `ErrNotGoverned`, and a `Region` the authority does not cover, or a target treasury that is not a proper descendant of it, `ErrNotCovered` (15.1). |
 | FR-FIS-008 | `Modules.Fiscal` MUST be rejected with `ErrModuleDependency` while `Modules.Polity` is nil or has no governed jurisdiction; a pool target while the estates module is off, `import` or `export` scope while the external module is off, and a toll while the transport module is off MUST be rejected the same way (3.1, 15.1). |

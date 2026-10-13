@@ -181,7 +181,7 @@ type Reaction struct {
 }
 ```
 
-3.1.3. **Hash and file.** The module is hashed with a presence byte and, when present,
+3.1.3. **Hash and file.** The module is hashed, when present (a module that is off writes nothing: `spec-config.md` 8.2.1),
 the actors in ID order with every field except `Label`; the policy is hashed by its
 **name** only, as a strategy is (`spec-agents.md` 6.6): the code behind a name is not
 part of the hash and a consumer that changes it breaks bit-identity knowingly. The
@@ -1564,7 +1564,7 @@ Each row is an owed edit; the consolidated table with exact text is in the hando
 | `spec-reference-chain.md` | 9, 10 | an overlay `policy.toml` for `five` and the scenarios PLC-S1 to S5 |
 | `spec-stylised-facts.md` | 5, 8 | the class of PLC-S1, S4, S5; PLC-S2's pass is a band to set |
 | `spec-institutions.md`, `spec-credit.md`, `spec-land.md` | the slot's section | when integrated, the slot is a reserved lever kind (6.3.2): one sentence each |
-| `README.md`, `roadmap.md`, `documentation_index.md`, `notes.md` | index, code and parameter-owner tables, glossary; PLC row; rows for `spec-policy.md` and `models/plc/`; the notes of 17.1 and the new notes (fresh `NOTES-TAG`) | the handoff's rows |
+| `README.md`, `spec-roadmap.md`, `documentation_index.md`, `notes.md` | index, code and parameter-owner tables, glossary; PLC row; rows for `spec-policy.md` and `models/plc/`; the notes of 17.1 and the new notes (fresh `NOTES-TAG`) | the handoff's rows |
 | `AGENTS.md` | layout | `policy.go` and `internal/policy/` |
 | `doc/adr/0001-...`, `0003-...` | open point 1; decision 3 | a note that open point 1 is answered: a fifth extension point (4.7.2), the typed actions of ADR 0001 decision 4 narrow to one, and the second sentence of ADR 0003 decision 3 ("a ruler that also trades uses `Strategy` for its orders and the policy interface for its settings") is narrowed to two objects (9.2) |
 
@@ -1611,7 +1611,7 @@ observability, 090 to 093 state and determinism), and a gap is not a removed req
 |----|-------------|
 | FR-PLC-001 | With `Modules.Policy` nil, with the module on and every actor's policy `hold`, and with the module on and no actor due in a tick, no result, event, snapshot field or golden line of any world MAY differ from a world without the module, except the configuration hash, the names table, `Snapshot.Modules` and `Snapshot.Actors`, the construction summary and the module's warnings (1, 3.1). |
 | FR-PLC-002 | `Modules.Policy` MUST be rejected with `ErrModuleDependency` while `Modules.Polity` is nil or has no jurisdiction; a `flow` lever with neither the money supply nor the fiscal module on, a `transit` lever with transport off and MUST be rejected the same way (3.1.1, 11.1). |
-| FR-PLC-003 | Actors MUST be sorted by ID bytewise before a world is built or a hash taken, the `ActorID` MUST be the index in that order and the `LeverID` the index in the actor's lever order; the hash MUST cover the module with a presence byte and, when present, every field of every actor except `Label`, and the policy by name only (3.1.3, 3.2.2). |
+| FR-PLC-003 | Actors MUST be sorted by ID bytewise before a world is built or a hash taken, the `ActorID` MUST be the index in that order and the `LeverID` the index in the actor's lever order; the hash MUST cover the module when present (and nothing when it is off, `spec-config.md` 8.2.1), every field of every actor except `Label`, and the policy by name only (3.1.3, 3.2.2). |
 | FR-PLC-004 | At most one actor MUST attach to one jurisdiction (`ErrPolicyShape`, `one_actor_per_jurisdiction`); an actor ID, a lever ID within an actor, a step `(Lever, At)` or a reaction `Lever` repeated MUST be `ErrDuplicateID`; more than `MaxActors`, `MaxLevers`, `MaxScheduleSteps` or `MaxLeverKeys` MUST be `ErrTooMany` (3.2.1, 11.1). |
 | FR-PLC-005 | `Schedule` or `Cycle` with a policy other than `schedule`, and `Rules` with a policy other than `rule`, MUST be `ErrPolicyShape` (`policy_data`) (11.1). |
 | FR-PLC-006 | A lever MUST have exactly the key fields of its kind and `MayClose` only on kind `edge` (`ErrPolicyShape`, `lever_key`); a key that is not defined MUST be the unknown-entity sentinel of its kind; a `transit` lever MUST be a directed pair of two distinct regions that are not outside nodes, adjacent or not (`ErrPolicyShape`, `transit_pair`); and a kind that is not in 6.3.1, a reserved kind included, MUST be `ErrOutOfBounds` (11.1). |

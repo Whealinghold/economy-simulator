@@ -141,8 +141,7 @@ role that only external agents fill, a household that lives on a grant). One row
 (`ErrDuplicateID`), a row naming an unknown role is `ErrUnknownRole`, absence is the default
 with no warning (`spec-regions.md` 5.3.3).
 
-3.2.2. **File layout** (`spec-config.md` 6.2; the spelling of the module table is open until
-N-102 is closed, and follows `[modules.information]`): the module is the table
+3.2.2. **File layout** (`spec-config.md` 6.2.1, the one rule for module tables, N-102 closed): the module is the table
 `[modules.subsistence]` with the keys `recipes`, `enter_ticks`, `exit_ticks` and
 `retry_jobs`, and a role row is `[modules.subsistence.role.<id>]` with the key `recipes`, so
 that layers merge by key (`spec-config.md` 6.4).
@@ -1057,10 +1056,10 @@ draws = [ { resource = "common", quantity = 1 } ]
 all = 7500                          # a poor yield: 3.75 grain a tick (5 * 7 500 / 10 000)
                                     # highland has no row, so glean cannot run there
 
-[resources.resource.common]
+[modules.resources.resource.common]
 shape = "refill"
 rate_bp = 10000
-[resources.endowment.lowland.common]
+[modules.resources.endowment.lowland.common]
 capacity = 4000
 
 [modules.subsistence]
@@ -1122,10 +1121,10 @@ draws = [ { resource = "tray_volume", quantity = 2 } ]
 
 [region.ring_two.yield.tend_tray]
 all = 8000                          # 15 * 8 000 / 10 000 = 12 ration an execution, 4 a tick
-[resources.resource.tray_volume]
+[modules.resources.resource.tray_volume]
 shape = "refill"
 rate_bp = 20000
-[resources.endowment.ring_two.tray_volume]
+[modules.resources.endowment.ring_two.tray_volume]
 capacity = 80
 
 [modules.subsistence]

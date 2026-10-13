@@ -82,11 +82,38 @@ economy-sim/
   go.mod
   go.work                local development only (core, otelobserver, examples)
   doc.go                 package economysim: overview and the glossary (3.2)
-  *.go                   public API, one file per concept: world.go, market.go,
-                         agent.go, order.go, value.go, snapshot.go, strategy.go,
-                         clearing.go, spawner.go, observer.go, event.go, errors.go,
-                         checkpoint.go, option.go, random.go, tick.go,
-                         integration.go
+  bounds.go  defaults.go the validation bounds and the defaults, one home each (9.6)
+
+  # Catalogue files: the only files outside its own file in which a module
+  # appears (2.10.2). Append-only, in module order (2.10.5).
+  config.go              Config and every section struct; Modules has one
+                         pointer per module, nil = off
+  validate.go  hash.go   the validator (calls each file's validateX) and HashConfig
+  errors.go              every public sentinel, including those mapped from internal/
+  event.go               the sealed Event set, every event struct, the reason and
+                         cause constants
+  option.go              Option and every With*, including the registration options
+  tick.go                the tick: one line per position of spec-world.md 6, and
+                         the position table a test reads (2.10.3)
+
+  # Core concept files, one per concept.
+  value.go               Money, Price, Quantity and the typed IDs (3.3)
+  random.go              the seed, the one PCG and Rand, the site table and the
+                         keyed stream (7.3, ADR 0008)
+  world.go               World, NewWorld, Step, Run, the guards, and the four
+                         fan-ins (2.10.4)
+  calendar.go  commodity.go  recipe.go  role.go  ledger.go  market.go  order.go
+  clearing.go  agent.go  strategy.go  spawner.go  beliefs.go  production.go
+  estates.go  welfare.go  skills.go  observer.go  snapshot.go
+  regions.go  scale.go  checkpoint.go  integration.go  moneyflow.go  viability.go
+
+  # Module files, one per optional module (2.10.1), named after the concept.
+  demand.go  resources.go  subsistence.go  population.go  transport.go
+  information.go  migration.go  contract.go  external.go
+  settlements.go  storage.go  employment.go  tenure.go  polity.go  credit.go
+  risk.go  infrastructure.go  insurance.go  fiscal.go  institutions.go
+  policy.go  saving.go  technology.go
+
   config/                file format -> root Config structs; the only package
                          that may import a third-party parser
   strategy/              additional strategies (the default implementation of
@@ -95,47 +122,56 @@ economy-sim/
                          the root, and nothing in the module imports it
   experiment/            sweeps, replicas and reductions of runs; imports the
                          root and config/, and nothing in the module imports it
-  internal/              everything not meant to be public
-    clearing/            order-matching algorithm over primitive structs
-    ledger/              goods and money accounting
-    beliefs/             price-belief updates
-    production/          recipe execution
-    ordering/            deterministic sorted iteration helpers, the SplitMix64
-                         finaliser, and the Weyl, bucket and key helpers
-    checked/             the checked 128-bit helper (a product or ratio that
-                         can exceed int64), shared by every package that needs
-                         one; it imports nothing and holds no type of the root
-    codec/               canonical encoding primitives of a checkpoint
-    measure/             checked arithmetic of indicator/ over primitive types
-    verdict/             detectors, seed rules and the band-setting rule of the
-                         stylised facts
-    design/              experiment design: grids, permutations, seeds, overlay
-                         text
-    reduce/              checked reductions of experiment/ over primitive types
-    calibration/         the grid and neighbours, the seed blocks, the choice,
-                         the alias test, and the record and overlay of a
-                         calibration, over primitive values; standard library
-                         and internal/design only
-    logkeys/             slog attribute key strings; it imports nothing and
-                         holds no type of the root
+  internal/              everything not meant to be public; stdlib only; never
+                         imports the root (2.9)
+    checked/  logkeys/  ordering/  codec/      leaf helpers that import nothing
+                         of the root: the 128-bit helper; the slog keys; the
+                         finaliser, the Weyl, bucket and key helpers and the
+                         stream key; the checkpoint encoding primitives
+    ledger/  clearing/  beliefs/  production/  welfare/  steady/  graph/  curve/
+                         the core rules over primitive structs (steady: the
+                         exact solver, math/big allowed, 3.5)
+    moneyflow/  population/  transit/  endowment/  rumour/  outside/  ownuse/
+    migration/  merchant/  room/  employment/  settlement/  tenure/  polity/
+    credit/  facility/  risk/  fiscal/  institution/  saving/  technology/
+    policy/  insure/     one package per module whose rules need arithmetic or
+                         matching; the module file converts (2.9)
+    measure/  verdict/  design/  reduce/  calibration/
+                         the platform: the arithmetic of indicator/, the
+                         detectors and seed rules, the experiment designs and
+                         reductions, the calibration grid and record
   otelobserver/          separate module (own go.mod): Observer backed by OpenTelemetry
-  examples/<name>/       each example is its own module with its own go.mod
+  examples/<name>/       each example is its own module with its own go.mod; the
+                         first consumer's pack and a second, unrelated setting
   testdata/              fixtures shared across packages: chains/ (config
-                         fixtures, including the reference chain), golden/,
+                         fixtures, including the reference chain), golden/
+                         (off/, one directory per module, all/: 10.4),
                          checkpoints/ (one fixture per checkpoint format version,
                          with every module on; a module's restore test builds
                          its world from its overlay in the test),
                          calibration/ (the records of a calibration, per pack)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
+  doc/plans/             implementation plans: one per stage of
+                         doc/roadmap-v1.md, split into phases (a plan decides
+                         nothing: the specs, the ADRs and these rules do)
   doc/rules/             this directory
 ```
 
-The `internal/` packages, `strategy/`, `indicator/` and `experiment/` are
-created when first needed, not up front (2.1). The names above are the intended
-homes, not a checklist.
+A file or package is created when first needed, not up front (2.1); the names
+above are its home when it is. The build order is the staging of
+[ADR 0003](../adr/0003-version-1-scope.md): the catalogue and core files of the
+slice first, then the version 1 modules, then the later modules, each module
+file in the order of the `Modules` pointers (`spec-config.md` 3.1). A module
+file **MUST NOT** be created before the slice's golden file runs (2.10.6).
 `strategy/` exists once there is a second strategy; the default stays in the
-root package, which cannot import `strategy/` (2.7).
+root package, which cannot import `strategy/` (2.7). `estates.go` is a core
+file that also holds the part of the `Estates` pointer of `Config.Modules`
+(relief and the pool as a money-flow target, `spec-config.md` 6.2.4): the part
+is appended after the slice's golden file runs, as 2.10.6 says for any module.
+Every root file maps to one
+spec area code (`credit.go` to CRD), and its `_test.go` carries the
+`Requirement:` lines of that area (testing.md 4).
 
 Fuzz corpora are not in the root `testdata/`. `go test` reads and writes them
 in `testdata/fuzz/` of the package that owns the fuzz test (for example
@@ -179,6 +215,67 @@ on its own. **[project]**
   The internal package never copies or returns the caller's rich types.
 - Conversion allocates. In hot paths (10.6) benchmark it, and if it matters,
   reuse scratch slices held by the `World` rather than merging the types.
+
+2.10. Modules in the code
+([ADR 0007](../adr/0007-a-module-is-one-file-that-owns-its-touch-points.md)).
+**[project]** for the whole rule. An optional module (a pointer field of
+`Config.Modules`, ADR 0001 decision 2) is laid out so that a reader finds
+everything it does in one file and a new module touches nothing but its own
+file and the catalogue files.
+
+2.10.1. **One root file per module, and the file owns every touch point.** The
+file holds, in this order: the module's state struct (its per-agent state in
+the module's own slices indexed by agent slot, never as fields of the agent
+type); `validateX`; one method per position of `spec-world.md` 6 that the
+module owns; its filler of the `AgentView` and its checker of the `TradePlan`;
+its step of a removal (`spec-agents.md` 3.6) and its `region_bound` refusal
+(`spec-regions.md` 6.5.2); its snapshot rows; and its checkpoint encoder and
+decoder. The module's arithmetic and matching live under `internal/<module>`
+over primitive structs (2.9); the module file converts.
+
+2.10.2. **Outside its file a module appears only in the catalogue files**:
+its pointer in `World` and in `Config.Modules` (`config.go`), its one-line
+calls in `tick.go`, its event types in `event.go`, its sentinels in
+`errors.go`, its option in `option.go`, its bounds in `bounds.go` and its
+defaults in `defaults.go`. A module's logic in any other file is a defect.
+
+2.10.3. **`tick.go` is a straight line.** Each position of `spec-world.md` 6
+is one call, in the spec's order; a module's call is guarded by its pointer
+(`if w.credit != nil`). No position holds logic. The list of positions
+(identifier, owner, in order) is a value in `tick.go` that a test compares with
+the table of `spec-world.md` 6 (testing.md 6.8).
+
+2.10.4. **The fan-ins are compositions, with one entry point each.** The
+world has one `fillAgentView`, one `checkTradePlan`, one `removeAgent` and one
+`relocationRefusal`, each a fixed-order sequence of calls into the module
+files and nothing else. `removeAgent` serves P7.1 and the between-ticks calls
+of `spec-integration.md` 4 alike, so the event order of a removal is written
+once. A second removal path, or module logic inside a fan-in, is a defect.
+
+2.10.5. **Catalogue files are append-only in module order.** A new module
+appends its entries to `event.go`, `errors.go`, `Config.Modules`, the
+checkpoint tags and `tick.go`'s guarded calls; nothing is inserted or
+renumbered, because the configuration hash and the checkpoint format depend
+on the order (`spec-config.md` 3.2, `spec-checkpoint.md` 4.2).
+
+An append **MUST** leave no trace while it is off. A module that is off, and a
+field appended to an existing struct, event or snapshot row at its off value,
+contribute nothing to the configuration hash (`spec-config.md` 8.2) and nothing
+to the golden rendering of an event or a snapshot row (`spec-observability.md`
+9.5.2). So the default of an appended configuration field **MUST** be its zero
+value (`spec-config.md` 8.2.3), a field appended to an event or a snapshot row
+**MUST** be a count, an amount, a bool, a constant of a closed set or a slice and
+never a typed ID (zero is a valid ID), and the files of `testdata/golden/off/`
+and the pinned hash of the all-off reference configuration do not move when a
+module is added (testing.md 7.1.1). A change that moves either has broken this
+rule; it is not a golden to regenerate.
+
+2.10.6. **The slice before any module.** The catalogue files, the core files,
+`tick.go` with the core positions, the four fan-ins and the checkpoint shape
+exist and pass the slice's golden file before the first module file is
+created, so that every module is made to fit them. The tests a module must
+ship with are in testing.md 7.1 and 10.4: its module-alone golden file, and
+the proof that the off-only golden file did not move.
 
 ```go
 // internal/clearing: stdlib only, no root types.
@@ -355,6 +452,14 @@ var _ Clearing = AverageClearing{}
 
 Use `(*T)(nil)` instead when the methods have pointer receivers.
 
+The default `Observer` is the one default that is not exported: it is an
+unexported type (`discardObserver`, in `observer.go`) with the assertion
+`var _ Observer = discardObserver{}`. `WithObserver(nil)` and no option at all
+already mean "the default" (6.2), so no consumer needs a name for it, and an
+exported discard observer would be one more identifier promised for ever (2.8).
+The defaults of `Strategy`, `Clearing`, `Spawner` and `Policy` are exported,
+because a consumer wraps them.
+
 4.6. Do not use `any`/`interface{}` in public signatures. Use generics only
 where they remove duplication without obscuring intent (typed IDs, small
 containers). Generics **MUST NOT** replace the extension interfaces above.
@@ -479,20 +584,30 @@ tables that are never mutated). Inject dependencies instead.
 7.3. Code in the root package, `indicator/`, `experiment/` and `internal/`
 **MUST NOT** call `time.Now`, `time.Since`, the global `math/rand` or
 `math/rand/v2` functions, or `crypto/rand`. Time is simulated ticks. Randomness
-comes from one `*rand.Rand` (`math/rand/v2`) per world, built on a `rand.PCG`
-source seeded from `WithSeed`. The choice of source and the way the seed maps
-onto it are part of the golden output; changing either is a behaviour change
-(6.6).
+comes from one seed per world (`WithSeed`) and keyed streams derived from it
+([ADR 0008](../adr/0008-random-draws-are-keyed-streams.md)): the world holds one
+`rand.PCG` (`math/rand/v2`) and one `*rand.Rand` built on it, created once, and
+reseeds the PCG at the start of every draw site from the seed, the site, the
+tick and the entity the draw is about. No draw depends on how many draws other
+sites or other entities took. The keying rule, the table of sites and the way
+the seed maps onto a stream are part of the golden output; changing any of them
+is a behaviour change (6.6).
 
-- The seeding rule: the state of the `rand.PCG` is the first two outputs of the
-  SplitMix64 generator started from the seed (`spec-world.md` 7.1.2).
+- The keying rule: the state of the `rand.PCG` for a site call is two outputs
+  of the SplitMix64 finaliser over the seed, the site constant, the tick and
+  the entity ID and, for a site whose draw is about a pair (an order is a
+  household and a commodity, a market a region and a commodity), a second ID
+  (`spec-world.md` 7.1, which fixes the form, the constants and the test
+  vectors).
 - The world's draw for a bound `n` of at least 1 is the high word of
   `Uint64() * n` (`math/bits.Mul64`): one source word per draw, no loop and no
   rejection (`spec-world.md` 7.2.1). The methods of `rand.Rand` that an extension
-  may call can take more than one word per call (`spec-world.md` 7.2.2).
-- On a restore the source is installed from the saved 20-byte state of the
-  `rand.PCG` and not seeded; the one option that changes it is `WithReseed`,
-  whose rule is part of the golden output as the seeding rule is.
+  may call can take more than one word per call (`spec-world.md` 7.2.2); they
+  move only the later draws of the same stream.
+- A checkpoint saves no random state: the seed is the one random datum, and a
+  restore installs nothing. `WithReseed(salt)` on a restore replaces the seed by
+  a mix of the seed and the salt (`spec-checkpoint.md` 6.8); that rule is part
+  of the golden output as the keying rule is.
 
 7.4. For a given seed, configuration and sequence of calls, the output
 **MUST** be bit-identical across runs and platforms. This is enforced by a
@@ -607,6 +722,19 @@ directions (testing.md 6.7). This rule takes effect when `spec-config.md` fixes
 the shape of the configuration; until then, a spec that introduces a parameter
 adds its row to the table.
 
+**Staged form.** The specs describe every module and the code is built in
+stages (`doc/roadmap-v1.md`), so the test checks the rows of the scopes and
+fields that are built. It holds one explicit list, `notBuilt`, of the scopes (a
+Go type name) and of the fields of a built scope (`Scope.Field`) that the code
+does not have yet, and it skips the rows the list names. It **MUST** fail when
+a listed scope or field exists in the code, because a stale entry would hide a
+gap, and when a row is neither built nor listed, because a typo would hide one.
+A field the code has with no row fails at once: the direction "every field has
+a row" is never staged. The change that builds a scope or a field deletes its
+entries in the same change, and the list is empty when the last module is
+built. The catalogue test of the events has the same form
+(`spec-observability.md`, FR-OBS-003).
+
 9.8. A default is defined once. Changing it changes results, so the PR
 **MUST** say which behaviour changes and, if the golden file changes, follow
 testing.md 7.2.
@@ -639,8 +767,11 @@ Comparisons use the standard library (`reflect.DeepEqual`, `slices.Equal`,
 - **Configuration-only chain test** (testing.md 6.4): it enforces 9.4.
 - **Config tests** (testing.md 3.9): each validation rule in 8.5 has a
   failing-case test.
-- **Parameter registry test** (testing.md 6.7): it enforces 9.7, once
-  `spec-config.md` fixes the configuration shape.
+- **Parameter registry test** (testing.md 6.7): it enforces 9.7, in its staged
+  form while the modules are being built.
+- **Position table test** (testing.md 6.8): it enforces 2.10.3.
+- **Off-only, module-alone and all-on golden files, and the per-position
+  state hash** (testing.md 7.1): they enforce 2.10.6 and locate a divergence.
 
 10.5. Tests **MUST** pass with `go test -race ./...`. Tests **MUST NOT**
 sleep, depend on wall-clock time, or touch the network. **[project]**
@@ -736,6 +867,11 @@ Types in this module **MUST NOT** carry struct tags for any transport.
 Reject a change that contains any of the following:
 
 - a forbidden package name (2.4) or a layered directory structure (3.1)
+- module logic outside the module's own file and the catalogue files, a
+  position in `tick.go` that holds logic, a second removal or relocation path,
+  or a module's per-agent state as a field of the agent type (2.10)
+- a module file created before the slice's golden file runs, or a catalogue
+  entry inserted instead of appended (2.10.5, 2.10.6)
 - an interface with no second implementation and no test need (4.2)
 - a function returning an interface (4.4)
 - an embedded type in a public struct (4.7)
@@ -815,4 +951,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 72d15bb407b707a32eeb5c2b
+RULE-TAG: 905c0e578c4e662908638dd8
