@@ -23,20 +23,43 @@
 // The terms below are the ones the code of the foundations uses; the fuller
 // list is in doc/specs/README.md.
 //
+//   - Account: a slot of the ledger that holds money, and goods as lots, and has
+//     a kind, an owner reference and a region. IDs are assigned in creation
+//     order and never reused; a closed account keeps its slot.
+//   - Ageing: the end-of-tick pass of the ledger that moves every expired lot
+//     whole to the spoilage boundary; it visits only accounts whose expiry
+//     hint has been reached.
 //   - Agent: a participant of the market that holds an account, takes a role and
 //     trades. Identified by an AgentID.
 //   - Audit: an option (WithAudit) that makes a world check its invariants as it
 //     runs; it changes no result and is not part of the configuration hash.
+//   - Balance sheet: a read-only view of a non-boundary account: its money, its
+//     goods valued at prices the caller supplies, the claims it holds and the
+//     claims against it, and the net worth. It is measurement only; no rule of
+//     the engine reads one.
 //   - Basis point: one ten-thousandth. Ratios, rates and factors are integers in
 //     basis points and are applied as v * bp / 10 000.
 //   - Boundary flow: money or goods that enter the economy (a faucet) or leave
 //     it (a sink) through a ledger reason; BoundaryFlow reports the total per
 //     tick, region and reason.
+//   - Boundary account: the ledger account of one reason and one thing (money
+//     or a commodity) that stands for everything outside the economy's
+//     conservation. It is the only kind that may go negative, and its balance
+//     is the net amount of that reason that has entered or left.
+//   - Born tick: the tick a lot of a spoiling commodity was made; its age is
+//     measured from it. It is 0 for a commodity that does not spoil, and
+//     negative only for a lot created at construction.
 //   - Bound: a constant of bounds.go that a configuration value is checked
 //     against, so that arithmetic cannot overflow and validation work is
 //     bounded. A bound is not a tunable.
 //   - Bucket: a value in [0, P) derived from an agent's ID by the second Weyl
 //     value, which places the agent on a tick of a rotation of period P.
+//   - Construction bucket: the flow totals of what is moved while a world is
+//     being built, kept apart from the totals of tick 0. It is read-only and
+//     stays readable for the run.
+//   - Construction phase: the time from the first line of NewWorld to the
+//     start of the first step, in which the ledger's current tick is 0 and
+//     its moves are totalled in the construction bucket.
 //   - Calendar: the structure of time in a configuration: hours, days, months,
 //     the length of a tick and the seasons. Earth by default.
 //   - Canonical order: the order of the entities of a configuration after
@@ -44,22 +67,31 @@
 //     whatever order the entities were written in.
 //   - Cause: a member of a closed set (Cause) that names why an agent was removed,
 //     reduced or changed role, such as insolvent or starved.
+//   - Claim: the ledger's record of an amount one account owes another: a
+//     creditor, a debtor, a principal and an interest, with what is still
+//     owed. A claim with nothing owed does not exist.
 //   - Commodity: a good that can be held and traded, identified by a CommodityID.
 //     NoCommodity stands for money where a commodity field is also used for it.
 //   - Configuration: the Config value that defines a world; plain data that a
 //     file loader or Go code builds.
 //   - Configuration hash: the SHA-256 of the canonical encoding of a Config,
 //     which a checkpoint stores and a restore compares.
+//   - Creditor: the account a claim is owed to, an agent or an estate account.
+//   - Debtor: the agent account that owes a claim.
 //   - Default constructor: DefaultWorld, DefaultRole and the like, the one
 //     place a default is defined. The zero value of an entity is not a default.
 //   - Draw site: a place in the code where the world takes a random word, named
 //     by a constant that never changes and keyed by (site, tick, id).
+//   - Earmark: the units of a lot that a goods reservation has set aside; an
+//     unmarked move cannot take them and a move from reserved consumes them.
 //   - Effective seed: the seed a world draws from after any reseed; it is the one
 //     value of the random state that a checkpoint carries.
 //   - Configuration section: a struct of config.go that Config holds, one per
 //     part of the file: World, Calendar, Month, Season, Commodity, Item, Output,
 //     Tool, Recipe, YieldProfile, SeasonYield, Role, Region, Group, WarmStart,
 //     SeedPrice, SeedWage, WarmGroup, JobSpec and WarmPool.
+//   - Durable: a commodity that wears; its items are held as lots that share a
+//     remaining durability, and a move takes the most worn first.
 //   - Estate: the goods and money an agent leaves behind when it is removed; the
 //     money goes to the regional estate pool, the goods are listed for sale.
 //   - Estate pool: the money of a region's estates, which can fund the starting
@@ -78,6 +110,9 @@
 //     which the configuration hash writes it. An id is never reused or moved.
 //   - Finaliser: the SplitMix64 output function, a bijection of uint64 that mixes
 //     a word so that near inputs give unrelated outputs (ordering.Finalise).
+//   - Flow totals: the ledger's per-tick total moved for each region, reason
+//     and money or commodity, in plain integer slots cleared at the end of
+//     the tick.
 //   - Fixed point: money, prices and quantities are whole numbers of their
 //     smallest unit; no floating point affects a result.
 //   - Group: the households of one role in one region, with an optional scale.
@@ -91,13 +126,20 @@
 //     and sink.
 //   - Log key: the name of an attribute of a log line, defined once in
 //     internal/logkeys and listed in observability-and-logging.md 3.3.2.
+//   - Lot: goods of one commodity in an account that share a born tick and a
+//     remaining durability; equal lots are merged and an account's lots are
+//     kept sorted by commodity, born tick and durability (canonical form).
 //   - Minor unit: the smallest unit of money. Money and Price are counts of
 //     minor units; the library has no currency, denomination or decimal place.
 //   - Module: an optional mechanism that is off unless its entry in
 //     Config.Modules is non-nil.
+//   - Ledger: the single holder of all money and goods in a world, which
+//     changes them only by transfers; its rules live in internal/ledger.
 //   - Money: an amount of money, an int64 count of minor units.
 //   - Names table: the Names value that maps each typed ID of a world to the
 //     string ID of its configuration, carried by events and snapshots.
+//   - Named lot: a lot addressed by its key (commodity, born tick, remaining
+//     durability) in a reservation or a move, as the estate prices each lot.
 //   - Observer: the interface through which a consumer receives events; it is
 //     optional and discards by default. warnRun is the run length of a
 //     bounded warning.
@@ -115,6 +157,8 @@
 //   - Reason: a machine-readable member of a closed set (Reason) that names why
 //     an order was rejected, a job ended without output or a flow crossed the
 //     boundary.
+//   - Reservation: money, or goods, earmarked in an account so that an order
+//     placed now can be settled later; it exists only inside a tick.
 //   - Recipe: a rule that turns inputs into outputs over some ticks, identified
 //     by a RecipeID.
 //   - Region: a place with its own markets, identified by a RegionID. NoRegion
@@ -145,8 +189,21 @@
 //     source in the same sense.
 //   - Target spread: the spread, in basis points, of the target ratio of a role
 //     around its centre; WithTargetSpread overrides it for a whole world.
+//   - Stated lot key: the born tick and durability a creation under the
+//     initial reason names itself, allowed only while a world is being built.
+//   - Expiry hint: the earliest tick at which any lot of an account expires,
+//     derived from its lots and recomputed after a restore, never saved.
+//   - Transform: the ledger operation of one recipe execution: inputs leave an
+//     account to the recipe_input boundary and outputs enter from the
+//     recipe_output boundary, all or nothing.
+//   - Wear units: the durability removed by wear, counted by commodity in the
+//     ledger's per-tick totals, which an item destroyed counts at what it had.
+//     WearApplied reports them once per tick and commodity; BoundaryFlow under
+//     the wear reason counts only the items retired.
 //   - Tick: the unit of simulated time; there is no wall-clock time in the
 //     library.
+//   - Transfer: the one operation that changes a balance: an amount moves from
+//     one account to another under a reason, refused whole or applied whole.
 //   - Trainee: an agent that learns a role under a trainer for a number of
 //     ticks; a recipe may be trainee-eligible.
 //   - Upkeep: the goods one household must consume each tick to stay alive.

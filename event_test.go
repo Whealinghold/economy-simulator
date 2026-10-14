@@ -47,6 +47,7 @@ var declaredEvents = []economysim.Event{
 	economysim.RoleChanged{},
 	economysim.EntryLimited{},
 	economysim.BoundaryFlow{},
+	economysim.WearApplied{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -587,6 +588,14 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonConsumption, "consumption"},
 		{economysim.ReasonSpoilage, "spoilage"},
 		{economysim.ReasonWear, "wear"},
+		{economysim.ReasonTrade, "trade"},
+		{economysim.ReasonEstateMoney, "estate_money"},
+		{economysim.ReasonEstateGoods, "estate_goods"},
+		{economysim.ReasonStartMoney, "start_money"},
+		{economysim.ReasonSplit, "split"},
+		{economysim.ReasonMerge, "merge"},
+		{economysim.ReasonBirths, "births"},
+		{economysim.ReasonStarvation, "starvation"},
 	}
 	causes := []struct {
 		got  economysim.Cause
@@ -709,5 +718,59 @@ func TestSide_String(t *testing.T) {
 	}
 	if economysim.Bid == economysim.Ask {
 		t.Errorf("Bid == Ask = true, want distinct sides")
+	}
+}
+
+// metricNames returns the names in the first column of the rows of text that
+// start with "| `economysim.".
+func metricNames(text string) map[string]bool {
+	names := map[string]bool{}
+	for _, line := range strings.Split(text, "\n") {
+		if !strings.HasPrefix(line, "| `economysim.") {
+			continue
+		}
+		cell := strings.Split(line, "|")[1]
+		if m := backtickRe.FindStringSubmatch(cell); m != nil {
+			names[m[1]] = true
+		}
+	}
+	return names
+}
+
+// TestMetricCatalogue_FeedTablesAgree verifies that every instrument of the
+// catalogue of observability-and-logging.md 5.3 has a row in the feed tables of
+// 5.3.1 and that every row there names an instrument of the catalogue, so a
+// metric added to one table cannot be missing from the other.
+//
+// Guard: observability-and-logging.md 5.3.1 says a new metric must be derivable
+// from an event or a snapshot field, and the tables say which. A metric with no
+// feed row has no stated source, and a feed row with no instrument is dead text.
+func TestMetricCatalogue_FeedTablesAgree(t *testing.T) {
+	t.Parallel()
+	text := readFile(t, "doc/rules/observability-and-logging.md")
+	a := strings.Index(text, "### 5.3 Initial catalogue")
+	b := strings.Index(text, "### 5.3.1 ")
+	c := strings.Index(text, "### 5.4 ")
+	if a < 0 || b < a || c < b {
+		t.Fatalf("sections 5.3, 5.3.1 and 5.4 not found in order in observability-and-logging.md")
+	}
+	catalogue, feeds := metricNames(text[a:b]), metricNames(text[b:c])
+	if len(catalogue) == 0 || len(feeds) == 0 {
+		t.Fatalf("parsed %d instruments and %d feed rows, want both above 0", len(catalogue), len(feeds))
+	}
+	for n := range catalogue {
+		if !feeds[n] {
+			t.Errorf("instrument %s of 5.3 has no row in 5.3.1", n)
+		}
+	}
+	for n := range feeds {
+		if !catalogue[n] {
+			t.Errorf("row %s of 5.3.1 is not an instrument of 5.3", n)
+		}
+	}
+	for _, n := range []string{"economysim.commodity.wear", "economysim.ledger.lots"} {
+		if !catalogue[n] {
+			t.Errorf("instrument %s is missing from 5.3", n)
+		}
 	}
 }

@@ -114,6 +114,30 @@ const (
 	ReasonWear Reason = "wear"
 )
 
+// The internal ledger reasons of the built-in group (spec-ledger.md 7.2.2):
+// flows between two non-boundary accounts, so none is a faucet or a sink and
+// none appears in BoundaryFlow. They are the names the ledger's reasons map to
+// (ledger.go).
+const (
+	// ReasonTrade is money and goods moved by a matched trade.
+	ReasonTrade Reason = "trade"
+	// ReasonEstateMoney is the money of a removed agent moved to its estate.
+	ReasonEstateMoney Reason = "estate_money"
+	// ReasonEstateGoods is the goods of a removed agent moved to its estate.
+	ReasonEstateGoods Reason = "estate_goods"
+	// ReasonStartMoney is the starting money an estate pool gives a new agent.
+	ReasonStartMoney Reason = "start_money"
+	// ReasonSplit is money and goods moved when an agent is split.
+	ReasonSplit Reason = "split"
+	// ReasonMerge is money and goods moved when two agents are merged.
+	ReasonMerge Reason = "merge"
+	// ReasonBirths is the money given to households added to an existing agent.
+	ReasonBirths Reason = "births"
+	// ReasonStarvation is the money and goods of households cut by the failure
+	// ladder, moved to the estate.
+	ReasonStarvation Reason = "starvation"
+)
+
 // Cause is the machine-readable cause of a removal, a weight change or a role
 // change, a member of a closed set. Its values are the values of the cause log
 // key. The constants below are the ones the first slice can reach; a module
@@ -560,6 +584,21 @@ type BoundaryFlow struct {
 	Total int64
 }
 
+// WearApplied is emitted once per tick for each commodity whose wear units of
+// the tick are above 0, in ascending commodity order, after the tick's
+// BoundaryFlow rows (spec-ledger.md 12.1.1). The construction bucket's wear
+// units are emitted in the same form with Tick -1, after the construction
+// BoundaryFlow rows. It is not a flow of a reason: an item reaches the wear
+// boundary only when its durability is used up, so BoundaryFlow counts the
+// retirement and this counts the rate.
+type WearApplied struct {
+	Tick int64
+	// Commodity is the commodity whose items wore.
+	Commodity CommodityID
+	// Units is the durability actually removed, at least 1.
+	Units int64
+}
+
 func (WorldCreated) isEvent()     {}
 func (RunStarted) isEvent()       {}
 func (RunEnded) isEvent()         {}
@@ -581,3 +620,4 @@ func (WeightChanged) isEvent()    {}
 func (RoleChanged) isEvent()      {}
 func (EntryLimited) isEvent()     {}
 func (BoundaryFlow) isEvent()     {}
+func (WearApplied) isEvent()      {}
