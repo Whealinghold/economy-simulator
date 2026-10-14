@@ -1156,8 +1156,8 @@ agents, weighted by their households, it is the **household income** of a region
 and role for a tick, and the sum over the ticks of a window is the window's.
 OBS's `RoleRow` does not carry it (it carries a mean ratio). **The fields
 (`IncomeLast`, `ReliefLast`, `CostLast`, functions of the saved ring) are not
-adopted for version 1**, and the wear event of 7.6.2 is not either: they remain
-a **future ask** for OBS (22). Until then the income view is **not available**,
+adopted for version 1**: they remain a **future ask** for OBS (22). (The wear
+event of 7.6.2 has been adopted by OBS since 2026-10-14: `WearApplied`.) Until then the income view is **not available**,
 `HouseholdIncome` returns `OK` false in version 1, and the production and
 expenditure views do not need it.
 
@@ -1231,8 +1231,9 @@ and the closing of this equation, and the money moved by each such reason (7.8.2
 7.6.1. **What the library records.** An item of a durable that wears to nothing
 is retired to the `wear` boundary (LED 5.4.1) and counted in `Wear`, one unit
 per item. The **wear units** actually applied (durability removed) are counted
-by the ledger in its flow totals (LED 5.4.2, FR-LED-016) and are **not** in an
-event or a snapshot. The two are the same flow booked at two times: the item at
+by the ledger in its flow totals (LED 5.4.2, FR-LED-016) and reach a reader in the
+aggregate event `WearApplied` (OBS 4.1.5, LED 12.1.1; by commodity, not by region),
+and in no snapshot field. The two are the same flow booked at two times: the item at
 its end, the units as they happen.
 
 7.6.2. **Decision.** The version-1 depreciation is **the retired items valued at
@@ -1241,9 +1242,10 @@ sum over an item's life is the item's price, and its timing is lumpy (an item
 bought in one window may be retired in another). `NetProduct = GDP^P - sum p *
 Wear` is returned with the flag `Basis: retirement`. An **accrual** basis, `sum
 over c of WearUnits_c * p_c / Durability_c` rounded half to even once, needs the
-wear units by commodity: **not adopted for version 1** (an aggregate event of the
-wear units, or a field of `BoundaryFlow`, stays a future ask in 22), so
-depreciation is retirement-basis only. Until then `HeldByAgents` values a worn durable
+wear units by commodity: **not adopted for version 1** by IND, although the event
+now exists (`WearApplied`, OBS 4.1.5; a reader sums its `Units` over a window, the
+same flow as `Wear` booked as it happens), so depreciation is retirement-basis only
+until IND decides to read it (22). Until then `HeldByAgents` values a worn durable
 **as new** (the snapshot has no durability, 4.5.5), so a stock of tools is
 overstated by its accumulated wear and `StockChange` is correct only because the
 item's retirement is booked in `Written`: the **sum** of the two is right, the
@@ -2251,11 +2253,11 @@ spec's recommendation.
 | File | Section | Change |
 |------|---------|--------|
 | `spec-observability.md` (future ask, **not adopted for version 1**) | 5.3.4 `RoleRow` | `IncomeLast`, `ReliefLast`, `CostLast` (`Money`, household-weighted sums of `income_t`, `F_t` and `cost_t` of the last record of the welfare ring: a function of saved state, FR-OBS-043); until adopted `HouseholdIncome` is `OK` false. `RatioHouseholds` is already in OBS and needs nothing |
-| (future ask, **not adopted for version 1**) | 4.1.x, 4.4.1 | an aggregate event `WearApplied` (`Region`, `Commodity`, `Units`: the durability units removed in the tick; class A, never when zero), or the same as a field of `BoundaryFlow` for the reason `wear`; the ledger already counts them (FR-LED-016) |
+| (**adopted by OBS 2026-10-14**, N-130 item 2) | 4.1.5 | the aggregate event `WearApplied` (`Commodity`, `Units`: the durability units removed in the tick; class A, never when zero), with no `Region` because the ledger's wear totals are per commodity (LED 7.4); the ledger counts them (FR-LED-016) and OBS FR-OBS-092 fixes the emission. IND's accrual form of depreciation is still IND's decision (7.6.2) |
 | (A, optional) | 4.1.6 `AgentRelocated` | `Lines []Amount` (the goods that moved with the account, bounded by the tradable set); recommendation: not now (8.2) |
 | | 10.1 | the IND row points to `spec-indicators.md` 3.3 and 9; 18 question 8 is answered: IND adds no event and no metric (14) |
 | `spec-transport.md` (A) | 13.1 `ShipmentDispatched` | optional carrying units (the binding fill, TRN 3.2.1) per line, so that the freight per commodity is exact (8.4, open question 8); 15 TRN-A4: the delivered-price index is `spec-indicators.md` 8.4 |
-| `spec-ledger.md` | 5.4.2, 15 questions 4, 7, 10 | the wear units are not in an event (the ask above); question 4 answered (the valuation is the caller's table, 4.3); question 7 answered (retirement basis, 7.6); question 10 answered (pending output is in `NW_h` at the table price, 7.5.3) |
+| `spec-ledger.md` | 5.4.2, 15 questions 4, 7, 10 | the wear units are in `WearApplied` since 2026-10-14 (the ask above, adopted); question 4 answered (the valuation is the caller's table, 4.3); question 7 answered (retirement basis, 7.6); question 10 answered (pending output is in `NW_h` at the table price, 7.5.3) |
 | | 7.4 | "read by the observability and indicator specs" reads "reach them through `BoundaryFlow`" (WLD already asks) |
 | `spec-goods.md` | 6.1, 9 | `spec-indicators.md` exists; "a value added per class" reads "an output and an intermediate use per class, and a value added by recipe grouped by cost share" (7.2.3) |
 | `spec-scale.md` | 5.1, 9.2 | the inequality indicator reports `CohortShare` (6.2); the snapshot fields are OBS's |

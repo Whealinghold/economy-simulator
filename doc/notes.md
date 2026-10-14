@@ -44,18 +44,18 @@ PR description.
 
 | Area | Open notes |
 |------|-----------|
-| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214 |
+| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-235 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237 |
 | BEL | N-042, N-043, N-214 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221 |
-| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215 |
+| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-125, N-137, N-185, N-214 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212 |
-| DEM | N-080, N-089, N-145 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
+| DEM | N-080, N-089, N-145, N-226, N-228 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
 | EST | N-082, N-096, N-119, N-167, N-219 |
 | EVD | N-018, N-133 |
@@ -65,9 +65,9 @@ PR description.
 | GDS | N-031, N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208 |
 | INF | N-110, N-112, N-156, N-157, N-170, N-214 |
-| INS | N-176, N-179, N-213 |
+| INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205 |
-| LED | N-021, N-107, N-125, N-130, N-159, N-209 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214 |
@@ -76,10 +76,10 @@ PR description.
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192 |
-| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200 |
+| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168 |
 | REG | N-150, N-175, N-204 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222 |
 | SET | N-140, N-192 |
@@ -88,12 +88,12 @@ PR description.
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-154, N-162, N-169, N-179, N-210, N-211, N-214 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207 |
-| SUB | N-121 |
+| SUB | N-121, N-228 |
 | TEC | N-214 |
-| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204 |
+| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
-| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216 |
+| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226 |
 
 ## Open notes
 
@@ -184,6 +184,7 @@ PR description.
 - **Update (2026-10-13, STO, EMP, SET, LND, POL, CRD, CAP):** terms fixed, each in its spec and in the glossary of `specs/README.md`: STO: store, store class, base room, room (mass room, bulk room), limited (account), load, pledge, free room, stored load, commit (room is committed at the decision); "home" is not used. EMP: employment, employer, worker, hire, vacancy, positions, labour offer, reservation (wage), worker share, labour round, escrow of a hire, unemployment (a measure), hired yield. SET: settlement class (class), enter and leave threshold, band, dwell, settlement review, flag, limit, gate, class floor (qualified: "floor" has six uses already), held change, headroom, ceiling. LND: tenure, title (a claim of ownership of a share of an endowment, never a rank or an honorific), holder, commons share, entitlement, let, lessor, tenant, tier (of the ration; not STY's tier), posted rent, rent in force, enclosure, release, apportionment; "land" is a file name and an example only. POL: jurisdiction, polity, member, root, chain, covers, crossing, border, seat, governed, treasury (the account kind and its pseudo-agent; the region's account is the pool, N-163), combining mode (innermost, added, scaled). CRD: credit, loan, request, offer, lender, borrower, posted and effective rate, rate scale, term, principal, interest, shield, waterfall, passed, written off, forgiven, exposure cap, cash gap, round (its lane is a region: "lane of the credit round"). CAP: facility, facility class, kind (site, route, ground, store), condition, decay, use wear, effect fraction, gain (of a layer), ruin, repair, build, builder, commissioning, install, pending; "durability" and "capacity" are qualified "of the class". Setting words appear only in the flagged examples of each spec.
 - **Update (2026-10-13, RSK, FIS, ORG, SAV, TEC, PLC, INS):** terms fixed, each in its spec and in the glossary: RSK: risk row, route row, store row, exposure, strike, severity, common row, unit row, effective probability, loss share, kept share, expected loss, risk scale, total loss, trip account. FIS: fiscal flow, authority, tax (head tax, holding tax, remittance), duty (sales tax, purchase tax, tariff), toll, payout, standing order, base (of a duty), pro rata cut, treasury sector; qualified: window, release, payer, levy, base, scale. ORG: body, member, eligible (household), places, headroom (of a body), seniority, membership round, held completion, right, activity, prohibition, suspended, legal price, control, rate limit, legal range, clamp; qualified: place, right (not LND's title), control (not the controller of L121), cap, floor, round, need. SAV: saving (the module), saver, savings target, precaution buffer, drawdown, goal, project, margin test, hurdle, payback horizon, commit band, worth, idle money; "investment" is a build or a repair only, "hoard" only the measure, and "floor" has a seventh use (qualified). TEC: technology (not VIA's technology matrix), technology field, cell, experience, learned gain, advance, gain, technology factor, doubling, base, trend, discovery, contact, reach, frontier, catch-up, cap (of a field); "gain", "cap" and "field" are qualified. PLC: policy (the interface), policy actor, lever, mandate, reach, decision, due, cadence, mailbox, directive (of an actor; AGT's directive is another object), gauge, reading, target, deadband, span, move, rest, reaction, schedule. INS: cover, route and store policy ("cover policy" in prose), underwriter, insured, premium, sum insured, maximum payout, loading, store rate, capacity, open liability, loss value, due, payout, payout claim, shortfall, round of cover; "claim" stays the ledger's. Setting words appear only in the flagged examples of each spec. The terms go to the `doc.go` glossary before code uses them (N-019).
 - **Update (2026-10-12, ADR 0007 and 0008):** terms fixed: module file, touch point, position list, fan-in (a composition of per-module steps), draw site, site constant, stream key, keyed stream, effective seed (the seed after a reseed). "The world's stream" and "positional" are retired for the draws once WLD 7 is rewritten (N-214); "word" keeps its sense within one stream.
+- **Update (2026-10-13, Phase 1 of the ledger row):** terms fixed in `spec-ledger.md` 3.3.1, 3.4 and 7.2.2: built-in row (a registry row no module owns, which exists in every world), module row (declared only while its module is on), `B` (the count of the boundary accounts of the built-in group, `1 + 7 * C`), creation order (of the boundary accounts: commodity-major, not the reason-major order of `BoundaryFlow`). Add them to the glossary of `specs/README.md` and to `doc.go` before the ledger code uses them, with the terms of the plan (ledger, account, boundary account, transfer, reservation, flow totals, construction phase, construction bucket, lot, born, earmark, durable, claim, creditor, debtor, balance sheet).
 - **Update (2026-10-12, Phase 1 of the Stage 0 plan):** terms to add to the glossary of `specs/README.md` and to `doc.go` before code uses them: draw site, site constant, stream key, keyed stream, effective seed (WLD 7; `word` is "word (of a stream)" and `reseed` is "reseed (of the seed)"); guard pass (the counting pass of the loader, ADR 0009), field id (of the hash), zero value as off value (the one rule of CFG 8.2 and OBS 9.5.2), pool policy and the estates module (`Modules.Estates`, the pool policy only), `notBuilt` list (the staged form of the registry and catalogue tests); `discardObserver` is unexported and `warnRun` is the Go name of the bounded `Warn` run constant (earlier text wrote `warnRun`).
 
 ### N-018 Unverified evidence
@@ -252,6 +253,9 @@ PR description.
 - **Update (2026-10-10, MIG):** MIG adds no faucet, no sink and no ledger reason: a move is a relocation (no transfer), and the upkeep eaten on the journey is `consumption` (`spec-migration.md` 9.1).
 - **Update (2026-10-10, MER):** MER adds no faucet, no sink and no ledger reason (`spec-merchants.md` 9.6.1).
 - **Update (2026-10-13, STO, EMP, LND, CRD, CAP, RSK, FIS, SAV, TEC, PLC, INS):** none of them adds a faucet, a sink or a boundary account. STO adds no ledger reason either: the levy of its stores is a MON flow (a sink whose reason is the flow ID, `spec-storage.md` 7.1). EMP adds three internal reasons (`wage_escrow`, `wage_pay`, `wage_refund`; `spec-employment.md` 7.4.3), LND two internal reasons for a rent (5.1.2), CRD three (`loan_out`, `loan_repay`, `loan_interest`; the claims list is used as this note said), FIS declares each tax, duty, toll and payout as an internal reason and a purchase and a release are `trade` (`spec-fiscal.md` 3.4), INS two (a premium and a payout; an unpaid payout is a claim of the credit list, 9). CAP adds none (the cost of a build is its inputs, consumed by `recipe_input`), RSK uses the existing sink `loss` in its goods form and leaves its money form unused (7), SAV pays no return on savings (a faucet proportional to a balance is MON 9.5's exclusion), TEC and PLC add none (PLC at position 13). A tax or a mint of a ruler that creates or destroys money is a MON grant or levy with the target kind `treasury` (FIS 4.2). Still open for LED: the rows and the claim operations of the ledger (the edits owed to `spec-ledger.md`).
+- **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED in `spec-ledger.md` 3.4.1 to 3.4.3, 7.2.2 and 16.1: the built-in rows are `trade`, `initial`, `recipe_input`, `recipe_output`, `disposal`, `consumption`, `spoilage`, `wear`, `estate_money`, `estate_goods`, `start_money`, `split`, `merge`, `births` and `starvation`; every other row of the registry is a module row, declared only while its module is on, with no boundary account while it is off (decision D6 of `plans/plan-phase-1-1.md`; D5 of the Stage 0 plan applied to the registry). The boundary accounts of the built-in group are `1 + 7 * C`, created `initial` (money) first and then commodity-major (64 for the pack `one`, whose estate account is then ID 64). The rows of the modules, the six claim operations (`MarkOverdue` is new, N-227) and the reasons they declare are in the table of 7.2. **Stays owed:** the rows a module declares are appended with the module (architecture.md 2.10.5); the ledger code is Phases 2 to 7 of the plan; the public sentinels that map the ledger's errors are N-075.
+- **Update (2026-10-13, Phase 7 of the ledger row, built, uncommitted):** applied in code: `internal/ledger` holds the built-in registry as a fixed table and `ledger.go` builds the boundary accounts of the built-in group at construction in the order of `spec-ledger.md` 3.4.2 (money `initial` first, then commodity-major, the seven goods reasons in registry order; `B = 1 + 7 * C`, 64 and an estate account at ID 64 for the pack `one`, read from the spec by a test). `event.go` gained the eight internal reason constants (`ReasonTrade`, `ReasonEstateMoney`, `ReasonEstateGoods`, `ReasonStartMoney`, `ReasonSplit`, `ReasonMerge`, `ReasonBirths`, `ReasonStarvation`), and a guard test keeps the two ledger groups of `event.go` and the ledger's built-in rows equal both ways. Claims and the balance sheet are built with no module on and `MaxClaims` 0. **Stays owed:** a module appends its reasons to the ledger table and its names to `builtInReasons` in `ledger.go` with its own change, and the faucet or sink with no name panics as a programmer error until it does.
+- **Update (2026-10-14, ledger audit):** `spec-ledger.md` 3.3.1 now lists `ErrInvalidKind` for a boundary account, which `Close` already refused; no other change.
 
 ### N-027 No default macro constant is stable yet
 
@@ -481,7 +485,9 @@ PR description.
 - **Update (2026-10-11, INT):** INT adds `ErrModuleOff`, `ErrUnknownFlow`, `ErrUnknownLine`, `ErrAgentRemoved` (wraps `ErrUnknownAgent`), `ErrNotExternal`, `ErrNotDirected`, `ErrNotOnRole` and `ErrNotTradable` (`spec-integration.md` 11.2). `ErrUnknownAgent` is one sentinel of one meaning for REG and INT (7.1.1); `AddAgent` maps the ledger's `ErrBalanceOverflow` to `ErrOverflow` (AGT 13). `ErrUnknownMode` is a root sentinel with the transport module alone (`spec-transport.md` 12.1).
 - **Update (2026-10-11, EXP):** the sentinels of `experiment/` are `ErrBadSchedule`, `ErrBadFactor`, `ErrFactorOverlap`, `ErrBadDesign`, `ErrBadBranch`, `ErrUnknownMeasure`, `ErrOversize`, `ErrUnknownRun`, `ErrDuplicateRun` and `ErrRange` (`spec-experiments.md` 14.1); `ErrUnknownKey`, `ErrTooLarge`, `ErrDuplicateID` and `ErrTooManyErrors` are CFG's.
 - **Update (2026-10-13, STO, EMP, SET, LND, POL, CRD, CAP, RSK, FIS, ORG, SAV, TEC, PLC, INS):** the root sentinels the fourteen specs add, which the root needs a mapping for: STO `ErrNoRoom`, `ErrUnknownStoreClass`, `ErrStoreShape`, `ErrRoomShape`, `ErrNotLimited`, `ErrAgentAway`, `ErrStoreLocked`, `ErrStoreInUse`; EMP `ErrEmploymentShape`, `ErrEmployerWeight`; SET `ErrUnknownSettlementClass`, `ErrUnknownSettlementFlag` (reused by STO, ORG and SPN), `ErrUnknownLimit`; LND `ErrTitleShares`, `ErrTitleCap`, `ErrNoTitle`, `ErrNotAHolder`; POL `ErrJurisdictionCycle`, `ErrSeatNotCovered`, `ErrSeatOutsideNode`, `ErrStartWithoutSeat`, `ErrUnknownJurisdiction` (reused by FIS, ORG and PLC); CRD `ErrCreditShape` (and, ledger-level, `ErrOpenClaim`, `ErrUnknownClaim`, `ErrClaimShape`; `ErrTooManyClaims` is CRD's); CAP `ErrFacilityCap`, `ErrFacilityCount`, `ErrFacilityHolder`, `ErrFacilityLocked`, `ErrFacilityNoCost`, `ErrFacilityNotTransferable`, `ErrFacilityOwner`, `ErrFacilityRegion`, `ErrFacilityShape`, `ErrFacilityTarget`, `ErrUnknownFacility`, `ErrUnknownFacilityClass`; RSK `ErrRiskShape`, `ErrUnknownRiskRow`; FIS `ErrNotGoverned`, `ErrNotCovered`, `ErrFiscalShape`; ORG `ErrBodyOverlap`, `ErrBodyShape`, `ErrControlShape`, `ErrRightShape`, `ErrUnknownBody`, `ErrUnknownControl`, `ErrUnknownRight`; SAV `ErrNotSaver`; TEC `ErrTechShape`, `ErrTechRecipeOverlap`, `ErrUnknownField`; PLC `ErrPolicyShape`, `ErrLeverNotInReach`, `ErrLeverShared`, `ErrUnknownActor`, `ErrUnknownLever`, `ErrUnknownPolicy`; INS `ErrCoverShape`. `ErrUnknownClass` is IND's and is avoided.
+- **Update (2026-10-13, Phase 1 of the ledger row):** the first build of `internal/ledger` returns these sentinels, all ledger-level: `ErrInsufficientFunds`, `ErrInsufficientStock`, `ErrBalanceOverflow`, `ErrReasonMismatch`, `ErrUnknownAccount`, `ErrClosedAccount`, `ErrInvalidAmount`, `ErrBoundaryReserve`, `ErrReservationExceeds`, `ErrUnknownLot`, `ErrInvalidLot`, `ErrNotConstruction`, `ErrEmptyTransform`, `ErrOpenReservation` and `ErrNotEmpty` (new, `spec-ledger.md` 3.3.1; `ErrOpenReservation` is REG's name, `spec-regions.md` 6.1.3), and for the claims `ErrUnknownClaim`, `ErrClaimShape`, `ErrTooManyClaims` and `ErrOpenClaim`. `ErrNoRoom` waits for the storage module. **Stays owed:** which of them become public sentinels of the root, and the mapping to rejection reasons (`spec-clearing.md` 3.2), is decided with each first user (the clearing, production and world rows), not by the ledger row.
 - **Update (2026-10-12, CFG):** the loader sentinels are root sentinels in `errors.go` (`config/` imports the root and returns them wrapped): `ErrSyntax` (malformed TOML), `ErrUnknownKey`, `ErrNotInteger` (a float literal where an integer is needed), `ErrWrongType` (any other wrong type, a date anywhere), `ErrMissingField`, `ErrUnsupportedSchema`, `ErrMergeConflict`, `ErrTooLarge` (also the document count, the merged size, a line, the nesting depth and the keys of one table) and `ErrTooManyErrors`. `ErrSyntax` and `ErrWrongType` are new beyond the six of the plan.
+- **Update (2026-10-13, Phase 7 of the ledger row, built, uncommitted):** nothing is mapped to a public sentinel yet: no root code calls the ledger's operations, so `ledger.go` maps only the reasons (the ledger's number to the root's `Reason` and back). The seventeen ledger-level sentinels of the update of Phase 1 stay in `internal/ledger` (`errors.go` there); each becomes a public sentinel of the root, or a rejection reason of `spec-clearing.md` 3.2, with its first user (the clearing, production and world rows). `ledger.go` wraps the ledger's constructor error with `%w`, so `errors.Is(err, ledger.ErrInvalidConfig)` holds inside the module; that sentinel is not exported and is not reachable from a valid configuration.
 
 ### N-080 Wants in the steady-state programme use equal-price shares
 
@@ -640,7 +646,7 @@ PR description.
 
 ### N-107 New money faucets and sinks start from MON
 
-- **Areas:** FIS, CRD, MON, LED
+- **Areas:** FIS, CRD, MON
 - **Raised:** 2026-10-10, `spec-money-supply.md` 4.5, 9.5 and 10.1.
 - **Note:** Start from MON's mechanism: a grant or a levy on a class, a declared reason equal to the flow ID, closed for a run, with its boundary account created at construction, reported in `BoundaryFlow` and checked by the audit. Add a built-in ledger reason only for a mechanism that is not a grant or a levy (an interest flow, a trade with an external counterparty). MON's positions bind the later specs: no faucet reads an aggregate or grows with a balance (only a sink may be proportional to a balance), and a counterparty whose balance is created or destroyed outside conservation is a Boundary account. Tax, credit and the external sector are the likely first uses. A policy that changes a rate over time is PLC's, through the flow-scale slot (N-091).
 - **Update (2026-10-10, RES):** RES adds no faucet, no sink and no ledger reason: a draw and a regeneration are not transfers and an endowment is in no account (`spec-resources.md` 6.2.1). Depletion is made visible by events and an exact per-endowment identity (6.4), which a test and the audit check.
@@ -648,6 +654,7 @@ PR description.
 - **Update (2026-10-10, SUB):** applied for SUB: no faucet, no sink, no ledger reason; the form of the output is the ordinary recipe execution, and the in-kind channel was refused with reasons (`spec-subsistence.md` 6.2).
 - **Update (2026-10-10, MIG):** MIG adds no faucet or sink (`spec-migration.md` 9.1).
 - **Update (2026-10-10, MER):** the delivery contract moves money between non-boundary accounts and adds no faucet, no sink and no reason (`spec-merchants.md` 9.6.1); the three escrow reasons already in the registry change owner to MER.
+- **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the registry says which rows are built in and that every module row is declared with its module and has no boundary account while it is off (`spec-ledger.md` 3.4.1, 7.2.2, FR-LED-052). LED removed from the areas.
 - **Update (2026-10-13, STO, EMP, LND, CRD, CAP, RSK, FIS, SAV, TEC, PLC, INS):** each starts from MON's mechanism and adds a built-in internal reason only where the counterparty is not a grant or a levy, as the second sentence allows: EMP (three wage reasons), LND (a rent is not a grant or a levy: two reasons, a tax on rent is a MON levy on the holder role or FIS's), CRD (a loan moves existing money and interest is a transfer: three reasons; a creating lender is a MON grant with its own reason and a `Limit`), FIS (the carry, the declared reason, the scale and no aggregate; a ruler's creating or destroying flow is a MON target kind `treasury`), INS (a premium and a payout). STO's levy for a store is a MON flow (`spec-storage.md` 7.1); PLC changes a rate over time through the flow-scale slot (MON 10.4) and adds no flow. POL's `StartMoney` is `initial` into a Treasury account (`spec-polity.md` 5.4.1) and the reserved MON target name for a treasury is `treasury`, which FIS adds. CAP, RSK, SAV and TEC add no flow.
 
 ### N-108 What the resources module leaves to land, subsistence, infrastructure, the outside and migration
@@ -764,6 +771,7 @@ PR description.
 - **Areas:** CHK, LED, WLD, CLR, OBS
 - **Raised:** 2026-10-11, `spec-observability.md` 5.2 and `spec-checkpoint.md` 4.4, 4.5 (F1), 6.2 and 6.7.2.
 - **Note:** Every snapshot field must be derivable from what CHK saves, so a restored world's snapshot equals the original's (FR-OBS-043). Consequences: the market report of the last clearing (volume, unmatched units, best unmatched quotes) is boundary state that `Trade`, INT's `Market` and the snapshot read, so CLR holds a state section for it (`spec-clearing.md` 16, FR-CLR-034) and the checkpoint saves it whole; a count of the last tick is an event, not a snapshot field; a checkpoint taken before the first step keeps the construction phase and its bucket, so a call between ticks on the restored world is totalled as on the original and `BoundaryFlow` agrees; the audit baseline after a restore is the restored balance less the pending totals that calls between ticks added since the last P8.6 (`spec-ledger.md` 9.1). A spec that adds a snapshot field adds its state to the inventory (N-128).
+- **Update (2026-10-13, Phase 1 of the ledger row):** for LED: the audit's per-tick baseline of the boundary balances (`plans/plan-phase-1-1.md` A7) is not saved. After a restore it is the restored balances less the pending totals saved with them (`spec-ledger.md` 9.1, 11), so the checkpoint needs no field for it; the ledger records it when it clears the totals at P8.6 and a restore rebuilds it. The ledger code is Phase 6 of the plan.
 - **Update (2026-10-13, STO, LND, CRD, CAP, RSK, FIS, ORG, SAV, TEC, INS):** every snapshot field the later stage adds is a function of saved state: STO's room, load and pledge (derived from the stores and holdings saved), LND's rows (13.4), CRD's `Claims` and `Credit` (the claim list and its totals), CAP's rows and queries, FIS's `HeldByTreasury` and the treasury sector, SAV's four `RoleRow` fields (`SavingHouseholds`, `GoalMoney`, `BufferMoney`, `IdleMoney`), TEC's `TechRow` (the saved cells), INS's `Policies` and `Insurance`.
 
 ### N-126 A new event or `Warn` adds a row
@@ -798,7 +806,9 @@ PR description.
 - **Areas:** OBS, IND, WEL, LED, INT, TRN, PRO
 - **Raised:** 2026-10-11, `spec-indicators.md` 21 and 22.
 - **Note:** All six are asks that were not adopted for version 1, so the measure is approximate or reports `OK` false until the field exists. (1) `IncomeLast`, `ReliefLast` and `CostLast` on `RoleRow` (functions of the welfare ring, which is saved state): without them `HouseholdIncome` is `OK` false and the claim of N-054 cannot be measured from a snapshot. (2) Wear units by commodity: the ledger counts them (FR-LED-016) and no event or snapshot carries them, so depreciation is on the retirement basis only; an aggregate event `WearApplied` is the ask. (3) A bulk read of household rows: `Agents(r)` then `Agent(a)` costs about 23 reads and an allocation per agent, and a one-column `{Weight, Value}` read would be cheaper. (4) Goods lines on `AgentRelocated`: without them the regional goods identity holds in total units only (`spec-regions.md` 6.4, the reconciling item). (5) Carrying units per line of `ShipmentDispatched`: freight is per unit of cargo by convention, exact only for a one-line shipment, since the binding fill of `spec-transport.md` 3.2.1 cannot be apportioned to a line. (6) Wear units on `RecipeExecuted`: value added by recipe overstates a tool-using recipe by the wear. Each is added with its owner's spec; none blocks.
+- **Update (2026-10-13, Phase 1 of the ledger row):** for item (2): the first build of `internal/ledger` counts the wear units by commodity in the flow totals (FR-LED-016, FR-LED-042) and clears them at P8.6 with the totals; it reads them by an accessor and emits nothing, as `spec-ledger.md` 5.4.2 says. No event and no snapshot field carries them, so the ask stays with OBS and IND.
 - **Update (2026-10-13, EMP, CRD, FIS, INS, STO, SET, SAV, PLC, RSK):** EMP: the wage bill and the unemployment of a window are measurable from `LabourRound`, the income fields of item 1 are still an ask; CRD: interest paid and received are measurable from `CreditSettled` and `LoanEnded`, a debtor's income share still needs item 1; FIS: the income terms are inside `income_t`, so ask 1 covers them; INS: the loss ratio (payouts over premiums) is exact from `CoverSettled` and `CoverFormed`, and a premium rebuilt from a snapshot needs `Policies`, so no field is asked beyond `N_t`; STO adds one ask (`spec-storage.md` 19.1); SET: no slot sets a class, `Class` and `ClassTarget` are the snapshot fields a reader would use; SAV: the preset `Idle` needs the four `RoleRow` fields only; PLC: the gauge `mean_ratio` reads role rows and so differs from IND's mean by at most 1 bp of rounding; RSK: the loss preset reports lost units, not a rate of lost lines (N-178).
+- **Update (2026-10-14, observability review of the ledger branch):** item (2) is applied in OBS and LED: `spec-observability.md` 4.1.5 declares the aggregate event `WearApplied` (`Commodity`, `Units`; class A, core, P8.2 after `BoundaryFlow`, and `Tick` -1 for the construction bucket; FR-OBS-092), `spec-ledger.md` 12.1.1 owns it, and the metric is `economysim.commodity.wear` (`rules/observability-and-logging.md` 4.3, 5.3, 5.3.1). It has no `Region`, because the ledger's wear totals are per commodity (LED 7.4); IND's table row had asked for one. `event.go` declares it and `ledger.go` builds its rows (`wearApplied`); the **world** emits it at P8.2, so the Stage 1 world plan must call it after `boundaryFlows` and at the entry of the first step. **Still open here:** IND has not adopted the accrual form of depreciation (`spec-indicators.md` 7.6.2); until it does, `HeldByAgents` values a worn durable as new. Items (1), (3), (4) and (5) are unchanged. The same review added `Markets[].Lots` (FR-OBS-093) and the gauge `economysim.ledger.lots`, whose snapshot field waits for `snapshot.go`.
 
 ### N-131 Not in version 1: reopen when a consumer asks
 
@@ -969,6 +979,7 @@ PR description.
 - **Areas:** FIS, IND, LED, OBS
 - **Raised:** 2026-10-13, `spec-polity.md` 5.3.4 (POL-A2, L162) and `spec-fiscal.md` 4.3.2, 16.1.3.
 - **Note:** A transfer from the households of region A to a treasury seated in region B is a transfer between regions that no item of the identity of `spec-indicators.md` 8.2 named. Settled as: POL's treasury sector is reported in `Sectors` (IND 9.1, with `M_t`), and FIS's flows are reported beside it as `FiscalIn_r` and `FiscalOut_r` from `FiscalFlowApplied`, with the seat from the snapshot's `Jurisdictions` rows (IND 8.2). The alternative, the region `NoRegion` for a treasury, is `spec-polity.md` 17 question 5. A new reader of the identity (the regional report of IND, OBS's rebuild) must carry both.
+- **Update (2026-10-13, Phase 1 of the ledger row):** what the ledger does here, so that the readers do not assume otherwise: a flow between two non-boundary accounts is attributed to the region of the debited account (`spec-ledger.md` 3.5, FR-LED-053), so a tax paid by a household of A to a treasury seated in B is in A's flow totals and a payout from that treasury to a household of A is in B's. The ledger's audit takes the treasury term of the sectoral identity by account kind (`spec-ledger.md` 9.3; `plans/plan-phase-1-1.md` Phase 6, zero until a module opens a Treasury account). Nothing in the ledger carries the reconciling item; it stays IND's and OBS's.
 
 ### N-160 Readers keyed by jurisdiction use one combining rule
 
@@ -1269,9 +1280,10 @@ PR description.
 
 ### N-209 A payout claim has an origin
 
-- **Areas:** CRD, LED
+- **Areas:** CRD
 - **Raised:** 2026-10-13, `spec-insurance.md` 9.2.
 - **Note:** The credit list holds claims of two origins, `loan` and `payout`. The credit instruments and `Warn`s, `ForgiveClaims` and `CreditSettled` count loans only; the payments of a payout claim are INS's, in `CoverSettled` (`Stage` `claim`, fields `ClaimEnded`, `ClaimPaid`, `ClaimReceived`); the welfare record counts the principal of a payout claim as income and cost, and the identity of CRD 3.6 reads `Lent + Awarded`. INS counts its own outstanding payout claims in `economysim.insurance.claims`.
+- **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the ledger's section 10 and FR-LED-063 carry the origin, `Awarded` and `Obligate` (`spec-ledger.md` 10, FR-LED-064); the first build keeps both origins in one list and checks the principal identity with `Awarded`. LED removed from the areas.
 
 ### N-210 The premium is not in the merchant's margin
 
@@ -1330,6 +1342,7 @@ PR description.
 - **Areas:** ALL, CODE
 - **Raised:** 2026-10-12, decision D5 of `plans/plan-phase-0-foundation.md`; `rules/architecture.md` 2.10.5.
 - **Note:** A change that adds a module (or a field to a core struct, event or snapshot row) leaves no trace while it is off: an appended configuration field's default is its zero value and it is written to the hash only when not zero (a module's fields only when the module is on, `spec-config.md` 8.2.3); an appended event or snapshot field is a count, an amount, a bool, a constant or a slice, never a typed ID, and is omitted from the golden rendering at zero (`spec-observability.md` 9.5.2, FR-OBS-091); an event type with no occurrence is not listed. So the pinned hash of the all-off reference configuration (FR-CFG-105) and `testdata/golden/off/` do not move, and a diff there is a failure of the change, not a golden to regenerate (testing.md 7.1.1). The change also deletes its entries from the `notBuilt` lists of the registry test and the catalogue test (architecture.md 9.7).
+- **Update (2026-10-13, Phase 1 of the ledger row):** applied to the reason registry: a module that is off adds no row and no boundary account, so the account IDs of a world with every module off are a function of the commodity count alone (`spec-ledger.md` 3.4.1, 7.2.2). A module that is on appends its boundary accounts after the built-in group, the declared flows and the `outside_*` reasons, in the order of its pointer (`spec-world.md` 5.2 row 3a; N-226).
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -1380,6 +1393,48 @@ PR description.
 - **Known weaknesses of the guards:** (1) `FuzzLoad` does not by itself catch a `Parse` that returns a nil error and the zero `Config` for garbage, because a zero config is deterministic and `Validate` classifies it; `TestParse_SyntaxErrors`, `TestLoadFS_Limits` and `TestParse_Limits` catch it, so do not delete them as redundant. (2) `TestConstants_Values` reads the closed sets from the spec text by a plain parse, so a spec that reflows a table can fail it without a code change: fix the parse, not the constant. (3) The `Guard:` tests are Stage 0's: a module PR that adds a root file runs them all, so read their failure text before changing a list.
 - **Handoff to Stage 1:** the deferred rows of the Rule ledger are the first work of `viability.go` (the five viability rules, `ViabilityError`, the solver-dependent warm-start checks and the empty-virtual-start-offsets check of `ErrWarmStartJob`, which needs the calendar's season lookup); `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` arrive with their interfaces (D2); the world-dependent observability tests (logs, non-interference, cardinality, counterpart, golden rendering, emission order, run lifecycle, the call-site and full-`Step` allocation limits) are Stage 1's "Done when"; the glossary adds each stage's terms before it uses them (`notYetTerms`); the pinned all-off hash (`TestHashConfig_ReferencePinned`) and `testdata/golden/off/` must not move (N-217).
 - **Rule ledger:** the built, deferred and module rows of CFG 7.3 and 7.4.1 are in `plans/plan-phase-0-foundation.md`, "Rule ledger".
+
+### N-225 The ledger's reason constants are internal numbers
+
+- **Areas:** LED, CHK
+- **Raised:** 2026-10-13, `plans/plan-phase-1-1.md` A3 and Phase 1 (deliverable 4).
+- **Note:** `internal/ledger` names a reason by a small integer constant of its own and holds no string, so that it knows no identifiers (`spec-ledger.md` 2.7) and its registry is a fixed table (16). The numbers are free to change from one build to the next, and the rows a module declares take numbers that depend on which modules are on. A checkpoint must therefore never save one raw: the pending totals are per (region, reason, thing) and CHK writes the reason by its name (the names table of `WorldCreated`) or by its position in the closed registry, which the configuration hash fixes, and the boundary balances are keyed by account ID, which the creation order of `spec-ledger.md` 3.4.2 fixes. `ledger.go` maps the ledger's constant to the root's `Reason` both ways (plan Phase 7). CHK 4.2 tag 2 and its restore check say which of the two spellings is saved before `checkpoint.go` (Stage 2).
+
+### N-226 The creation position of the boundary accounts of the other module reasons
+
+- **Areas:** WLD, LED, DEM, TRN, RSK
+- **Raised:** 2026-10-13, `spec-ledger.md` 3.4.2 and `spec-world.md` 5.2 (Phase 1 of the ledger row).
+- **Note:** `spec-world.md` 5.2 had rows for the built-in reasons (1), the declared flows (2) and the `outside_*` reasons (3), and none for the other faucet and sink reasons that a module owns: `want_consumption` (DEM), `haul_use` and `transit_use` (TRN) and `loss` (RSK). Row 3a is added: after the `outside_*` accounts and before the estates, in the order of the `Modules` pointers, and within a module as the built-in group is ordered (money reasons first, then goods commodity-major). This is a proposal of the ledger row, because the account IDs of a world with such a module on depend on it and no module is built yet. Each of the three module specs confirms it, or says another place, in the change that builds its file (architecture.md 2.10.5: appended, never inserted); until then the position is not saved by any checkpoint. A reason that a module has in the goods form only creates one account per commodity, as the built-in group does.
+
+### N-227 Edits to CRD from the ledger row: `MarkOverdue` and a `Settle` of 0
+
+- **Areas:** CRD, INS
+- **Raised:** 2026-10-13, `plans/plan-phase-1-1.md` D9 and Phase 1 deliverable 1b.
+- **Note:** The owner accepted two recommendations and `spec-credit.md` is amended in this change: (i) CRD 8.5 had the settlement set `Overdue` and none of the five operations of 3.2 did, so a sixth ledger operation `MarkOverdue(claim, tick)` sets it (atomic, refused with `ErrUnknownClaim`, and, beyond the plan, with `ErrClaimShape` for a `tick` below the claim's `Due`, so that `Overdue` is -1 or in `[Due, tick)` by construction, CRD 17.5; an `Overdue` already set is left as it is); (ii) a `Settle` with one part 0 skips that transfer, because a transfer of 0 is refused by `spec-ledger.md` 4.2, and both parts 0 is `ErrInvalidAmount`. Edited: CRD 3.2 and 3.2.1, 8.5 (item 2), FR-CRD-003, 032 and 034 (the rows that count the operations or set `Overdue`), the edits table and the home table; LED 10, FR-LED-063 and 16. Still owed: the models of CRD were not re-run (in Docker only): `doc/specs/models/crd/loans.py` sets `over` as a field write (line 83, which is `MarkOverdue` in the library) and `doc/specs/models/crd/alloc.py` draws random operations on a mini ledger (`Lend`, `Settle`, ...) with no `MarkOverdue` and, to check, a `Settle` that may be given a part of 0 (legal now, and both parts 0 is not); `spec-insurance.md` 9.2 and FR-INS-004 name `Obligate` only and need no edit; `spec-integration.md` 13.2 (`ForgiveClaims` uses `WriteOff`) is unchanged. The ledger code of the six operations is Phase 5 of the plan.
+
+### N-228 A module's items in the tradable set have no touch point
+
+- **Areas:** AGT, DEM, SUB, CODE
+- **Raised:** 2026-10-13, `plans/plan-phase-1-2.md` (Phase 1, O1 and O2).
+- **Note:** The tradable set of a role (`spec-agents.md` 3.4) is core data plus two module terms: the items of the wants in the role's ladder (`spec-demand.md` 3.2.3, FR-DEM-006) and the non-discard outputs of the effective own-use recipes (`spec-subsistence.md` 3.6). `rules/architecture.md` 2.10.1 does not list "its items in the tradable set" among a module file's touch points, 2.10.2 lets a module appear outside its file only in the catalogue files, and the four fan-ins of 2.10.4 do not include it. `role.go` (Stage 1) builds the set once at construction from the core terms and must leave a place for the two modules (`validate.go`'s `tradableSets` already says they are "added with those modules"). Recommended: a fifth fan-in with one entry point, a fixed-order sequence of guarded calls into the module files that append items before the set is frozen, added to 2.10.4 (and to the list of 2.10.1) with a fresh tag, in the change that builds the first of the two modules (`demand.go`, Stage 2). Not blocking: both modules are Stage 2. Second point: `spec-agents.md` 22 homes the targets, tiers, spend cap and the tradable set in `internal/household`, which is not in the layout of 2.6 or in `AGENTS.md`; the tradable set is a union of lists and lives in `role.go`, and the agent row decides whether the arithmetic needs the package (2.1) and then adds it to 2.6.
+
+### N-235 One combined architecture.md edit for the fan-in and admission touch points
+
+- **Areas:** ALL
+- **Raised:** 2026-10-13, cross-plan consistency review of `plans/plan-phase-1-2.md` (O1) and `plans/plan-phase-1-3.md` (D38, O2); ruled by the coordinator.
+- **Note:** `architecture.md` 2.10.4 gains a fifth fan-in for tradable items (plan 1-2 O1; N-228) and the admission-table touch point for module rows (plan 1-3 D38/O2) in ONE combined edit, with a fresh RULE-TAG, before the first module PR (Stage 2, `demand.go`). The same edit fixes the example of 2.9, which omits the tie-break key and the random source of `clearing.Average` (plan 1-3 D31). No Stage 1 plan makes any of these edits; the sequencing owner is the first Stage 2 module PR. Not blocking Stage 1.
+
+### N-236 Three halves of FR-AGT-003, 010 and 011 are the agent row's
+
+- **Areas:** AGT
+- **Raised:** 2026-10-13, audit of `plans/plan-phase-1-2.md` (Testing summary, Phase 5 row).
+- **Note:** The role table of plan 1-2 covers the core terms of the tradable set (FR-AGT-003), the per-household merge of the effective upkeep (FR-AGT-011) and a role with no recipes being valid (FR-AGT-010), and nothing else of them. Three halves have no owner but the agent row, which has no plan yet (testing.md 4.5): (1) FR-AGT-011: each quantity of the effective upkeep is multiplied by the agent's weight, with checked arithmetic, in `agent.go` or `world.go`; (2) FR-AGT-010: an agent of a role with no recipes requests no job, in the default strategy and in the world's refusal; (3) FR-AGT-003: the items of the wants of the role's ladder, added with the demand module (N-228). The agent row's plan lists the first two as its requirements; the third is the demand module's PR.
+
+### N-237 A job stores its effective factor; its start tick is derived
+
+- **Areas:** PRO, CHK, AGT
+- **Raised:** 2026-10-13, audit of `plans/plan-phase-1-5.md` (the values of `RecipeExecuted`), decision D67 of plan-phase-1-5 (not the damper D67 of `spec-stability.md`).
+- **Note:** `RecipeExecuted` carries `StartTick` and `EffectiveYield`, and the job of PRO 5.1.1 held neither. `StartTick` is the completing tick minus `Duration` plus 1 (a job started in `s` completes in `s + d - 1`), derived and not stored, valid after a weight fall and for a warm-start job (where it may be negative). `EffectiveYield` is the job's new `Yield` field, the effective factor of 6.3 read at the start and not recomputable at completion (the season, shock and technology may have changed; a restored world has no start-time inputs). Written into PRO 5.1.1, 14.1, 15 and FR-PRO-041 and CHK 4.2 tag 6 (`Yield` after `Principal`); AGT holds the job as `*Job` defined in PRO and needs no change. The agent row stores the field with the job; the warm-start job (VIA 8.5, FR-VIA-035) sets it from the virtual season's factor; the checkpoint row (Stage 2) writes and reads it in tag 6; a test restores mid-job across a season change and checks the reported `EffectiveYield`.
 
 ## Closed notes
 
@@ -2307,4 +2362,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 2a4ef8f1b9a060323633c62d
+NOTES-TAG: a03c3e639ae6e08fdddcfafc
+

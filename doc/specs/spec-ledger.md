@@ -103,17 +103,98 @@ use the ID). The ledger iterates over accounts in ID order, never over a map.
 
 3.3. An account is **closed** when its owner ceases to exist. A closed account
 must have no money, no goods, no reservations and no open claim as creditor or
-debtor (`ErrOpenClaim`, `spec-credit.md` 3.2.1): the owner's holdings are moved out by
-transfers first and its claims ended or passed (an agent's go to the estate, in the
-order of `spec-agents.md` 3.6). A closed
+debtor: the owner's holdings are moved out by transfers first and its claims ended
+or passed (an agent's go to the estate, in the order of `spec-agents.md` 3.6). A closed
 account's slot stays so that IDs stay stable; it is saved as a kind and a closed
 flag and is never compacted in version 1 (`spec-checkpoint.md` 9.4).
+
+3.3.1. **The refusal of a `Close`.** `Close(account)` is atomic (2.6). It checks, in
+this order, so that one call has one answer, and the first that holds is returned:
+
+1. `ErrUnknownAccount`, then `ErrClosedAccount`, then `ErrInvalidKind` for a boundary account, which is never closed;
+2. `ErrOpenReservation`, if the account holds a reservation of money, an earmark of
+   goods or, with the storage module on, reserved room (6);
+3. `ErrNotEmpty`, if it holds money or goods;
+4. `ErrOpenClaim`, if it is the creditor or the debtor of an open claim (10;
+   `spec-credit.md` 3.2.1).
+
+`ErrOpenReservation` is the name `spec-regions.md` 6.1.3 already uses for a relocation
+(N-075: a ledger-level sentinel); `ErrNotEmpty` is new and ledger-level; `ErrOpenClaim`
+is CRD's. The reservation is checked before the holdings because an earmark is part
+of a holding: an account with only an earmarked unit says what is wrong with it. No
+check can pass and leave the account half closed.
 
 3.4. Boundary accounts are one per **reason** and one per kind of thing (money,
 or each commodity). The balance of a boundary account is therefore *the
 cumulative net amount of that reason that has entered or left the economy*: how
 much money a mint has created, how many units have spoiled. Reading the boundary
 balances is how a report finds every faucet and sink. The boundary accounts of the reasons that configured money flows declare are created at construction, in flow-ID order, after those of the built-in reasons and before any other account (`spec-money-supply.md` 4.5.1).
+
+3.4.1. **Which reasons have a boundary account.** Only a reason of kind faucet or sink
+has one; an internal reason has none (FR-LED-052). A reason that a module owns is a
+row of the registry, and so has a boundary account, only while its module is on: a
+module that is off leaves no trace (architecture.md 2.10.5; `spec-config.md` 8.2.3). So
+a world with every module off has the **built-in rows** of 7.2.2 and no other, and
+exactly these boundary accounts, a number `B` that depends on the number of
+commodities `C` and on nothing else:
+
+```
+B = 1 + 7 * C
+```
+
+one for money (`initial`) and, for each commodity, one for each of the seven goods
+reasons that are faucets or sinks among the built-in rows (`initial`, `recipe_input`,
+`recipe_output`, `disposal`, `consumption`, `spoilage`, `wear`). The count does not
+depend on which commodity spoils or wears: a commodity that never wears has a `wear`
+account that stays at 0, so that the layout, and with it every later account ID, is a
+function of `C` alone.
+
+3.4.2. **The creation order within the built-in group.** The accounts are created in
+this order, the first account being ID 0:
+
+1. the money reasons of the built-in group, in the order of 7.2: `initial` (money);
+2. then, for each commodity in ascending commodity index (the order of the IDs sorted
+   as strings, `spec-config.md` 3.3), the goods reasons of the built-in group in the
+   order of 7.2: `initial`, `recipe_input`, `recipe_output`, `disposal`,
+   `consumption`, `spoilage`, `wear`.
+
+So the goods accounts are commodity-major, the form the `outside_*` goods reasons
+already have (`spec-external-sector.md` 4.2.4). This is the **creation** order and is
+part of every account ID, the estates' and the agents' included. It is not the order
+of the `BoundaryFlow` rows, which is reason-major (`spec-observability.md` 4.4.1.2:
+the reason in the order of 7.2, money before goods, then ascending commodity): a test
+that reads both keeps the two lists apart.
+
+After the built-in group come, in this order: the boundary accounts of the declared
+money flows in flow-ID order, those of the six `outside_*` reasons with the external
+module on, then those of the other reasons of the modules that are on that are faucets
+or sinks (`want_consumption`, `haul_use`, `transit_use`, `loss`), in the order of the
+`Modules` pointers (`spec-config.md` 3.1) and, within a module, as 3.4.2 orders the
+built-in group (money reasons first, then goods commodity-major). The estates and the
+agents follow (`spec-world.md` 5.2). With every module off the last group is empty.
+
+3.4.3. **Worked count: the pack `one`.** `one` is `base.toml`, `one.toml` and
+`warm-one.toml`: one region (`north`) and nine commodities (`spec-reference-chain.md`
+4.4.1), so `C = 9` and `B = 1 + 7 * 9 = 64`. In the order of the IDs sorted as strings
+the commodities are `fuel` (0), `mineral` (1), `prepared` (2), `refined` (3), `seed`
+(4), `staple` (5), `tool_a` (6), `tool_b` (7) and `waste` (8). The accounts are:
+
+| Account ID | Reason | Of |
+|------------|--------|----|
+| 0 | `initial` | money |
+| 1 to 7 | `initial`, `recipe_input`, `recipe_output`, `disposal`, `consumption`, `spoilage`, `wear` | `fuel` |
+| 8 to 14 | the same seven | `mineral` |
+| 1 + 7 *i* to 7 + 7 *i* | the same seven | commodity *i*, for *i* = 2 to 7 (`prepared` 15 to 21, up to `tool_b` 50 to 56) |
+| 57 to 63 | the same seven | `waste` |
+
+The ID of reason *r* (0 for `initial`, 1 for `recipe_input`, up to 6 for `wear`) of
+commodity *c* is `1 + 7c + r`: `recipe_output` of `staple` is `1 + 35 + 2 = 38`, and
+`wear` of `tool_a` is `1 + 42 + 6 = 49`. The estate account of `north` is ID 64, the
+next one: `one` has no outside node and no governed jurisdiction, so no group sits
+between the estates and the agents, and the first household's account is ID 65. A test
+reads these numbers (plan `plan-phase-1-1.md`, Phase 7); adding a commodity moves
+every ID after its own boundary accounts by 7, as adding a region moves the agents
+(`spec-world.md` 5.3.2).
 
 3.5. An account has a **region**, except a boundary, which has none. Flows are
 attributed to the region of the non-boundary side; an internal flow between two non-boundary accounts (`transit_out`, `transit_in`, `trade`, ...) is attributed to the region of the debited account (7.4). A region can change only by
@@ -267,7 +348,7 @@ beyond the destruction of one item are not carried to the next. This matches
 5.4.2. Wear changes no quantity until an item is destroyed, so it is not a
 transfer. It is a change of the state of an item and is counted in the flow totals
 as **wear units** by commodity (7.4), so a depreciation measure is possible
-(`spec-indicators.md`); they are not reported by an event (`spec-indicators.md` 7.6.1). The units counted are the durability actually removed, so an
+(`spec-indicators.md`); they are reported by the aggregate event `WearApplied` (12.1). The units counted are the durability actually removed, so an
 item destroyed with less durability left than the wear asked for counts what it had.
 
 5.4.3. **`WearItems(account, commodity, n, units)`** wears `n` items at once, for a
@@ -443,6 +524,36 @@ the money and goods of an external agent added during a run (`spec-agents.md`
 by `disposal` inside the one atomic completion step of the job (`spec-production.md`
 5.3.1, 7.2); it is never held, and both flows show in the flow totals.
 
+7.2.2. **The built-in rows, and the rows a module declares.** The starting registry
+above is the catalogue of the finished library. A row is **built in** when no module
+owns it, and then it exists in every world; any other row is declared only when its
+module is on (2.3, FR-LED-052), has no boundary account while the module is off
+(3.4.1) and leaves no trace in the world, as a module that is off leaves none
+(architecture.md 2.10.5). The built-in rows, in the registry order of the table, are:
+
+| Built-in row | Kind | Has a boundary account |
+|--------------|------|------------------------|
+| `trade` | internal | no |
+| `initial` (money, goods) | faucet | yes: money, and each commodity |
+| `recipe_input` | sink | yes: each commodity |
+| `recipe_output` | faucet | yes: each commodity |
+| `disposal` | sink | yes: each commodity |
+| `consumption` | sink | yes: each commodity |
+| `spoilage` | sink | yes: each commodity |
+| `wear` | sink | yes: each commodity |
+| `estate_money`, `estate_goods`, `start_money` | internal | no |
+| `split`, `merge`, `births`, `starvation` | internal | no |
+
+Every other row of the table is a module row, declared with its module: `want_consumption`
+(the demand module); `relief` (the pool policy of `Modules.Estates`); the six `outside_*`
+(external); `escrow_in`, `escrow_out`, `escrow_refund` (merchants); `wage_escrow`,
+`wage_pay`, `wage_refund` (employment); `loan_out`, `loan_repay`, `loan_interest`
+(credit); `rent`, `title_sale` (tenure); `premium`, `payout` (insurance); `transit_out`,
+`transit_in`, `haul_use`, `transit_use` (transport); `loss` (risk); `deaths`
+(population); the reason of each configured money flow and each fiscal flow (money
+supply, fiscal). The count `B` of the boundary accounts of the built-in group is in
+3.4.1 and the order of their creation in 3.4.2.
+
 ### 7.3 Faucets and sinks are the only exceptions
 
 By 2.1 and 7.2, the only way for the total of non-boundary money, or of a
@@ -460,8 +571,9 @@ at its start, so a move that a call between ticks makes (an external agent's
 `initial`, a relocation) is totalled in the tick the next step runs
 (`spec-world.md` 8.1.3). They are kept as a slice in a fixed order. The transfer
 totals reach the observability and indicator specs through `BoundaryFlow` (12.1),
-which reports the faucet and sink reasons only; the wear units and the relocation
-totals are not reported by an event (5.4.2, `spec-indicators.md` 7.6.1). They are
+which reports the faucet and sink reasons only; the wear units reach them through
+`WearApplied` (12.1), and the relocation totals are not reported by an event
+(`spec-indicators.md` 7.6.1). They are
 aggregates, so their size is bounded by regions, reasons and commodities, not by
 the number of agents. A flow between two non-boundary accounts is attributed to the region of the debited account. Beside them the ledger keeps the **relocation totals** (`spec-regions.md` 6.4): the money and the units moved with accounts that changed region, per ordered pair of regions, with the same lifetime and order; a relocation is not a transfer and is in no flow total. The flow totals, the wear units and the relocation totals that calls between ticks have added since the last tick's end are the **pending totals**: they belong to the next tick and are saved in a checkpoint (11).
 
@@ -594,8 +706,9 @@ A **claim** is a record of an amount that one account owes another: a creditor, 
 debtor, a principal and terms. It is an asset of the creditor and a liability of
 the debtor on their balance sheets, and the pair always balances (a loan is a
 transfer of money from creditor to debtor *and* a claim). A claim is the record of
-`spec-credit.md` 3.1: the ledger keeps the list, the five operations of
-`spec-credit.md` 3.2 (`Lend`, `Settle`, `WriteOff`, `Reassign` and `Obligate`) and the cumulative totals of
+`spec-credit.md` 3.1: the ledger keeps the list, the six operations of
+`spec-credit.md` 3.2 (`Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate` and
+`MarkOverdue`) and the cumulative totals of
 `spec-credit.md` 3.3.2, and the balance sheet reads the list at the amount owed. The list
 is empty unless a module that creates a claim is on. A claim has an **origin**, `loan` or
 `payout`, fixed at formation: a loan is formed by `Lend`, a payout claim by the operation
@@ -651,6 +764,18 @@ emitted in the order of `spec-observability.md` 4.4.1.2 (ascending region, then
 reason, money before goods, then commodity), with no map in it. This is the
 "faucet-and-sink event with the reason" of ADR 0001. The construction bucket is
 emitted in the same form with `Tick` -1 (7.4.1).
+
+12.1.1. **Wear event.** The wear units of 5.4.2 are not a flow of any reason, so
+`BoundaryFlow` cannot carry them: an item that wears is moved to the `wear`
+boundary only when its durability reaches 0, and that retirement is lumpy where the
+units are the rate (N-130 item 2). The ledger feeds a second aggregate event,
+`WearApplied`, once per tick for each commodity with a wear total above 0, in
+ascending commodity order, after the tick's `BoundaryFlow` rows, with `Commodity`
+and `Units` (a magnitude, the durability actually removed). The totals are per
+commodity, not per region (7.4), so the event has no region. The construction
+bucket's wear units are emitted in the same form with `Tick` -1 after the
+construction `BoundaryFlow` rows (FR-OBS-092). It is bounded by the commodities of the
+configuration and never by agents.
 
 12.2. **Logs.** Nothing at `Info`, `Warn` or `Error`. Operation errors are returned
 (architecture.md 8.3) and the root turns them into order rejections
@@ -712,7 +837,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-006 | A transfer that would overflow `int64`, or take a non-boundary money balance above `MaxMoney` or a quantity above `MaxQuantity`, MUST be refused with `ErrBalanceOverflow`, and MUST NOT wrap. |
 | FR-LED-007 | A refused or failed operation MUST leave the ledger unchanged. |
 | FR-LED-008 | Account IDs MUST be assigned in order of creation and MUST NOT be reused in a run, and the ledger MUST iterate accounts in ID order. |
-| FR-LED-009 | An account MUST NOT be closed while it holds money, goods, reservations or an open claim as creditor or debtor (`ErrOpenClaim`), and an operation naming a closed account MUST be refused with `ErrClosedAccount`. |
+| FR-LED-009 | An account MUST NOT be closed while it holds a reservation, money or goods, or is the creditor or the debtor of an open claim, and `Close` MUST refuse it with the first of `ErrOpenReservation`, `ErrNotEmpty` and `ErrOpenClaim` that holds, in that order, after `ErrUnknownAccount` and `ErrClosedAccount` (3.3.1); an operation naming a closed account MUST be refused with `ErrClosedAccount`. |
 | FR-LED-010 | Goods in an account MUST be held as lots of a commodity, a quantity of at least 1, a born tick and a remaining durability, with equal lots merged and ordered by commodity, born and durability. |
 | FR-LED-011 | Equal holdings MUST have an identical representation whatever sequence of operations produced them. |
 | FR-LED-012 | A move MUST take lots oldest first and then lowest remaining durability, and the moved lots MUST keep their born tick and remaining durability. |
@@ -753,12 +878,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-047 | The output of a job in progress MUST be in no account, and every identity of section 9.1 MUST hold with jobs in progress, including at tick 0 of a world with a warm start. |
 | FR-LED-048 | `Expiring(account, commodity, tick)` MUST return the number of non-earmarked units of the commodity in the account whose lot has `Born + ShelfLife - 1` at most `tick`, MUST return 0 for a commodity that does not spoil and for a tick before the current one, and MUST change nothing. |
 | FR-LED-049 | `Expiring` MUST return 0 without reading a lot when the account's earliest-expiry hint is after `tick`, MUST fail with `ErrUnknownAccount` or `ErrClosedAccount` for an unknown or closed account, and the sum of its results over the commodities for the current tick MUST equal what the ageing of the same tick moves to `spoilage` from that account, when nothing is earmarked. |
-| FR-LED-050 | The registry MUST contain the goods sink `want_consumption`, agent to boundary, owner `spec-demand.md`, and a ledger with the demand module off MUST show no flow under it (`spec-demand.md` FR-DEM-001, FR-DEM-039). |
+| FR-LED-050 | With the demand module on, the registry MUST contain the goods sink `want_consumption`, agent to boundary, owner `spec-demand.md`; with the module off the registry MUST have no row for it and the ledger no boundary account for it, so a ledger with the demand module off shows no flow under it (`spec-demand.md` FR-DEM-001, FR-DEM-039; 3.4.1, 7.2.2). |
 | FR-LED-051 | A weight reduction by the failure ladder MUST be applied with the reason `starvation`, a reduction by the population module with the reason `deaths`, and an entry of households into an existing agent with the reason `births`, each as transfers between the agent and the estate account that conserve money and goods exactly (`spec-spawner.md` 4.1, 4.3; FR-LED-027). |
-| FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows, one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), one internal row for each configured fiscal flow, and the internal reasons of the modules that are on, and the boundary accounts of the declared money-flow reasons MUST be created at construction in flow-ID order after those of the built-in reasons and before any other account (`spec-money-supply.md` FR-MON-003); an internal reason has no boundary account. |
+| FR-LED-052 | The reason registry MUST be closed for a run and consist of the built-in rows of 7.2.2, one row for each configured money flow (reason equal to the flow ID, kind faucet for a grant and sink for a levy, money only), one internal row for each configured fiscal flow, and the rows of the modules that are on, and a module that is off MUST add no row and no boundary account; the boundary accounts MUST be created at construction in the order of 3.4.2 (the built-in group, `1 + 7 * C` accounts for `C` commodities, then those of the declared money-flow reasons in flow-ID order, then those of the modules that are on) before any other account (`spec-money-supply.md` FR-MON-003); an internal reason has no boundary account. |
 | FR-LED-053 | A flow between two non-boundary accounts MUST be attributed in the flow totals to the region of the debited account, and a flow with a boundary to the region of the non-boundary side. |
 | FR-LED-054 | The ledger MUST keep, for the current tick, the relocation totals of `spec-regions.md` 6.4 (money, and units per commodity, per ordered pair of regions) beside the flow totals, cleared at the end of each tick with them, the totals that calls between ticks added since the last tick's end being pending totals that are saved (7.4, 11); a relocation MUST involve no transfer, reason, boundary account or flow total, and MUST leave the total of money and of each commodity unchanged (`spec-regions.md` FR-REG-040, FR-REG-042). |
-| FR-LED-055 | The registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary, `transit_in` MUST also be accepted from a Transit account to an Estate account, `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account, and `births` as an internal transfer of money from an estate to an agent account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
+| FR-LED-055 | `births` MUST be accepted as an internal transfer of money from an estate to an agent account, and every other pairing of it refused with `ErrReasonMismatch`; with the transport module on, the registry MUST contain `haul_use` and `transit_use` as goods sinks from an agent to a boundary and `transit_in` MUST also be accepted from a Transit account to an Estate account, and with the population module on `deaths` MUST be accepted as an internal transfer of money and goods from an agent to an estate account; a module that is off MUST add none of these rows and no boundary account for them, and each other pairing MUST be refused with `ErrReasonMismatch` (`spec-transport.md` 7.2, `spec-population.md` 4.3, 4.7). |
 | FR-LED-056 | With a money-supply module on, the audit MUST also check, for each flow, that its total equals the absolute boundary balance of its reason with the right sign (`spec-money-supply.md` FR-MON-026, FR-MON-027). |
 | FR-LED-057 | With the external module on, the registry MUST also contain the six reasons `outside_budget` (money faucet), `outside_unspent` and `outside_receipts` (money sinks), `outside_offer` (goods faucet), `outside_unsold` and `outside_purchases` (goods sinks), declared at construction and closed for the run, and `trade` MUST be allowed between Agent, Estate, Outside and Treasury accounts (`spec-external-sector.md` 8.1, FR-EXT-017; `spec-fiscal.md` FR-FIS-052). |
 | FR-LED-058 | An Outside account MUST be a non-boundary account of the gate region that may not go negative, MUST be created at construction after the estate accounts and before any agent account, MUST NOT be closed or relocated, and MUST hold no money and no goods at any tick boundary (`spec-external-sector.md` 4.2.3, FR-EXT-012). |
@@ -766,7 +891,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-060 | The reasons `escrow_in`, `escrow_out` and `escrow_refund` MUST be internal transfers of money only: `escrow_in` from an Agent account to an Escrow account, `escrow_out` from an Escrow account to an Agent account, and `escrow_refund` from an Escrow account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch`, and a contract MUST add no faucet, no sink and no reason (`spec-merchants.md` 9.6.1). The reasons `wage_escrow`, `wage_pay` and `wage_refund` MUST be internal transfers of money only: `wage_escrow` from an Agent account to an Escrow account, `wage_pay` from an Escrow account to an Agent account, and `wage_refund` from an Escrow account to an Agent account; each other pairing MUST be refused with `ErrReasonMismatch`, and a hire MUST add no faucet, no sink and no `BoundaryFlow` row (`spec-employment.md` 7.1). |
 | FR-LED-061 | With the merchant module on, the audit MUST also check the conditions of `spec-merchants.md` 9.6 (each open contract's Escrow account holds exactly `price * quantity`, an Escrow account that no open contract or hire references is empty, contract IDs are unique, and the shipment of each contract is in flight) and report the contract of the first that fails (FR-MER-045). |
 | FR-LED-062 | With the credit module on, the registry MUST contain the reasons `loan_out`, `loan_repay` and `loan_interest` as internal transfers of money only, `loan_out` from an Agent account to an Agent account, and `loan_repay` and `loan_interest` from an Agent account to an Agent account or to an Estate account; each other pairing MUST be refused with `ErrReasonMismatch` (`spec-credit.md` 3.3). |
-| FR-LED-063 | `Lend`, `Settle`, `WriteOff`, `Reassign` and `Obligate` MUST each apply completely or change nothing, MUST create or destroy no money (the total of money over non-boundary accounts is unchanged by them), and `Obligate`, `WriteOff` and `Reassign` MUST move no money (`spec-credit.md` 3.2, `spec-insurance.md` 9.2). |
+| FR-LED-063 | `Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate` and `MarkOverdue` MUST each apply completely or change nothing, MUST create or destroy no money (the total of money over non-boundary accounts is unchanged by them), and `Obligate`, `WriteOff`, `Reassign` and `MarkOverdue` MUST move no money (`spec-credit.md` 3.2, `spec-insurance.md` 9.2). |
 | FR-LED-064 | With the credit module on, the audit MUST check the identities of `spec-credit.md` 3.6 and the identity of the principal owed with `Awarded` (10), and MUST report the ID of the first claim that fails (FR-CRD-082). |
 | FR-LED-065 | A Treasury account MUST be a non-boundary account that may not go negative, MUST be created at construction after the Outside accounts and before any agent account, and MUST NOT be closed or relocated (`spec-polity.md` 5.3). |
 
@@ -852,10 +977,28 @@ expiring lots (N-053, 5.3.3).
 
 | Concern | Home |
 |---------|------|
-| Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, the room operations of 6.8, claims and their five operations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
+| Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, the room operations of 6.8, claims and their six operations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
 | The registry of reasons and their kinds | `internal/ledger` (a fixed table); the reason names are exported constants of the root package (`event.go`), and `internal/logkeys` holds the key strings only |
 | Checked add and multiply | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 | Balance sheet valuation | `internal/ledger`, with the price table supplied by the root |
 | The event `BoundaryFlow` | root package, `event.go` (`spec-observability.md`) |
 | Opening and closing accounts for agents, estates, escrow and transit | the root package, in the specs that own them |
 | Sentinels (`ErrInsufficientFunds` and the rest) | `internal/ledger`; the root maps them to rejection reasons (`spec-clearing.md` 3.2) and to its own errors |
+
+16.1. **What the first build leaves out.** The table above is the finished library.
+The first build of `internal/ledger` (`doc/roadmap-v1.md` Stage 1, the ledger row;
+`doc/plans/plan-phase-1-1.md`) is the slice's, and the spec does not change by stage:
+
+| Left out of the first build | Built in | Why it waits |
+|-----------------------------|----------|--------------|
+| The room of a limited account (6.8; FR-STO-005 to 007, 009, 010, 040) | Stage 3, `storage.go` | the storage module owns it; an account that is not limited costs every operation what it did (6.8) |
+| `Relocate` and the relocation totals (3.5, 7.4; FR-LED-054) | Stage 2, `regions.go` | a relocation is REG's operation (`spec-regions.md` 6) |
+| The encoding of the ledger's state and its restore (11; FR-LED-029, 030 beyond the rebuild of the hints) | Stage 2, `checkpoint.go` | the checkpoint owns the format |
+| `World.Audit`, `WithAudit`, `ErrAuditFailed` and the emission of `BoundaryFlow` (12.1, 12.4; FR-LED-031, 035, 036) | Stage 1, `world.go` | they need a world; the ledger gives them `Audit` and the rows |
+| The opening and closing of the accounts of agents and estates and the weight-change transfers (FR-LED-027, 051) | Stage 1, `agent.go`, `estates.go`, `spawner.go` | "the root package, in the specs that own them" |
+| The rows, kinds and operations of a module (7.2.2: FR-LED-022, 050, 055 to 061, 065) | each module's own change, appended (architecture.md 2.10.5) | a module that is off adds no row and no boundary account (3.4.1) |
+
+The claims list, its six operations (10) and the balance sheet (9.2) are built in the
+first build, with no module on: the list stays empty and unusable until a module sets
+`MaxClaims`, so the checkpoint and the balance sheets do not change shape when credit
+arrives.

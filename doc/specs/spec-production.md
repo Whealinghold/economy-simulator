@@ -291,16 +291,24 @@ executions is one **job**. A job is state of its executor:
 ```go
 // Job is the one unit of work an agent has in progress. Plain data.
 type Job struct {
-	Recipe    int     // index into the canonical recipe list
-	Remaining int64   // ticks left, 1 or more while active
-	Executions int64  // k
-	Principal int     // the agent whose goods were used and who receives the output
-	Pending   []Item  // output quantities fixed at the start, per non-discard and discard output, in output order
+    Recipe    int     // index into the canonical recipe list
+    Remaining int64   // ticks left, 1 or more while active
+    Executions int64  // k
+    Principal int     // the agent whose goods were used and who receives the output
+    Yield     int64   // the effective factor E of 6.3 in basis points, read at the start (6.4)
+    Pending   []Item  // output quantities fixed at the start, per non-discard and discard output, in output order
 }
 ```
 
-The pending quantities are fixed when the job starts (yield is read then, 6.4) and
-saved with the job (section 15).
+The pending quantities and `Yield` are fixed when the job starts (yield is read
+then, 6.4) and saved with the job (section 15). `Yield` is the value
+`RecipeExecuted.EffectiveYield` reports (14.1): the factor cannot be recomputed at
+completion, because the season, the shock and the technology may have changed and a
+restored world has no start-time inputs. The start tick is not stored: a job
+completes in the tick `s + d - 1` (5.2), so `RecipeExecuted.StartTick` is the
+completing tick minus `Duration` plus 1, which holds after a weight change (5.4 does
+not move the completion) and for a job created at construction from a warm start
+(its virtual start tick is before the first tick and may be negative).
 
 5.1.2. **One job at a time.** An agent has at most one active job. An agent is a
 household or a cohort of identical households (`spec-scale.md` 2); a household does
@@ -1248,6 +1256,10 @@ parentheses. This spec owns the full field lists and fixes them:
 | `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity) (the part above `MaxQuantity` and, with the storage module on, the part that a cut of the room left no room for, 5.3.2), `EffectiveYield` in basis points |
 | `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Region`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
+`StartTick` is the completing tick minus the recipe's `Duration` plus 1 (5.1.1,
+5.2), not a stored field. `EffectiveYield` is the job's `Yield` (5.1.1): the effective
+factor of 6.3 as read when the job started, not recomputed at completion.
+
 They carry no map, no pointer, and only identifiers and fixed-point values, and
 they are emitted after the transition (observability-and-logging.md 4.1, 4.4). No
 event is emitted when a start is refused: the volume would be per agent per tick. The
@@ -1283,7 +1295,7 @@ Every spec lists the state it contributes (ADR 0002). Production's, all plain da
 sorted, with no maps:
 
 - for each agent, in agent ID order: its active job, if any (`Recipe`, `Remaining`,
-  `Executions`, `Principal`, `Pending` quantities in output order), and its residues,
+  `Executions`, `Principal`, `Yield`, `Pending` quantities in output order), and its residues,
   one per (recipe on its role's list or its effective own-use list, output item) in
   canonical order (an own-use recipe is not on `Role.Recipes`, 3.3, and produces through the
   same factor and residue);
@@ -1397,7 +1409,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-038 | A yield profile that names an unknown region, recipe or season MUST be rejected with the sentinel for that kind or `ErrUnknownSeason`, and a duplicate profile with `ErrDuplicateID`, and a value outside [0, `MaxYieldBP`] with `ErrOutOfBounds`. |
 | FR-PRO-039 | A configuration in which the largest weight times an input, a draw, or an output times the largest possible effective factor exceeds `MaxQuantity`, or in which the cost of the inputs can exceed `MaxMoney`, MUST be rejected with `ErrOverflow`; the largest possible effective factor includes `MaxTechBP` for a recipe in a technology field and the larger of the trainee factor and `HireYieldBP` for a recipe on a hire list (10.3). |
 | FR-PRO-040 | Validation MUST warn, and MUST NOT fail, for an unused recipe, an unrunnable recipe and a durable no recipe requires. |
-| FR-PRO-041 | `RecipeExecuted` MUST be emitted at completion with the fields of section 14.1, and `RecipeAbandoned` when a job is abandoned, each after the state change and with no map. |
+| FR-PRO-041 | `RecipeExecuted` MUST be emitted at completion with the fields of section 14.1, and `RecipeAbandoned` when a job is abandoned, each after the state change and with no map; `EffectiveYield` MUST be the factor read when the job started, and `StartTick` the completing tick minus `Duration` plus 1. |
 | FR-PRO-042 | The snapshot MUST report the pending output by region and commodity and the number of agents with a job by recipe. |
 | FR-PRO-043 | The state of section 15 MUST be saved as plain data in a fixed order with no maps, and a world restored mid-job MUST complete its jobs on the same ticks with the same quantities as an uninterrupted run. |
 | FR-PRO-044 | A recipe with a yield below 10 000 for a job MUST NOT create or destroy goods outside the `recipe_input`, `recipe_output`, `disposal` and `wear` flows. |

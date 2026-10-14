@@ -37,7 +37,7 @@ configuration packs, not in a layer of the engine.
 | Spec | Code | Layer | Status | Note |
 |------|------|-------|--------|------|
 | `specs/spec-currency.md` | CUR | core | exists | Minor unit, optional denomination formatter with an RPG preset, the reference basket |
-| `specs/spec-ledger.md` | LED | core | exists | Accounts and signed boundaries, the transfer primitive and the reason registry, lots, reservations, flow totals, conservation and sectoral identities, balance sheets, claims, checkpoint state. Has a Requirements section |
+| `specs/spec-ledger.md` | LED | core | exists | Accounts and signed boundaries, the transfer primitive and the reason registry, lots, reservations, flow totals, conservation and sectoral identities, balance sheets, claims, checkpoint state. Has a Requirements section. The slice builds all of it except the room of a limited account (STO), `Relocate` and the relocation totals (REG) and the checkpoint encoding (CHK): `spec-ledger.md` 16.1 |
 | `specs/spec-goods.md` | GDS | core | exists | Commodity attributes as data: unit and its choice, mass and bulk with loads and chargeable size, shelf life, durability, classes, raw goods, reference price. Has a Requirements section |
 | `specs/spec-config.md` | CFG | core | exists | The framework only, written ahead of the specs it needs: shape, bounds, defaults, the proposed file format and layering, validation machinery and structural rules, the configuration hash, and the parameter registry. Its field catalogue grows with each spec. Has a Requirements section |
 | `specs/spec-calendar.md` | CAL | core, module | exists | The structure of time (Earth by default, any planet by configuration), the derived `TicksPerYear`, the moment of a tick, and an optional season cycle. Has a Requirements section |
@@ -211,7 +211,7 @@ leave room for them: the ledger can hold an obligation between two parties
 
 | Spec | Code | Layer | Status | Covers | Needs |
 |------|------|-------|--------|--------|-------|
-| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
+| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. The claim record, its six ledger operations and the totals are built with LED in the slice (`plans/plan-phase-1-1.md`); the module is later. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
 | `spec-insurance.md` | INS | module | exists | Single-event cover of a cargo and of stored goods against the losses of `spec-risk.md`, priced from the expected loss, with an unpaid payout held as a credit claim. Draft, accepted. Has a Requirements section | CRD, RSK (and TRN, STO for the cover kinds) |
 
 ## Macro is measured, never set

@@ -419,9 +419,10 @@ the hash of a checkpoint. At construction the accounts are created in this order
 
 | Order | Accounts | Within the group | Source |
 |-------|----------|------------------|--------|
-| 1 | The Boundary accounts of the built-in reasons | the registry order of `spec-ledger.md` 7.2 | LED 3.4, 7.1 |
+| 1 | The Boundary accounts of the built-in reasons that are faucets or sinks: `initial` (money), then for each commodity in ascending commodity index the seven goods reasons `initial`, `recipe_input`, `recipe_output`, `disposal`, `consumption`, `spoilage`, `wear`; `1 + 7 * C` accounts for `C` commodities, whatever modules are on | the order of `spec-ledger.md` 3.4.2, which is not the registry order of 7.2 (the order of `BoundaryFlow` rows is reason-major, OBS 4.4.1.2) | LED 3.4.1 to 3.4.3, FR-LED-052 |
 | 2 | The Boundary accounts of the reasons of the declared money flows | ascending flow ID (a flow's reason is its ID) | LED FR-LED-052; MON 4.5 |
 | 3 | The Boundary accounts of the six `outside_*` reasons, with the module on: the money reasons first, then the goods reasons for each commodity that has a line side, in commodity order | | EXT 4.2.4 |
+| 3a | The Boundary accounts of the other faucet and sink reasons of the modules that are on (`want_consumption`, `haul_use`, `transit_use`, `loss`); a module that is off has none | the order of the `Modules` pointers, and within a module as row 1 (money reasons first, then goods by commodity) | LED 3.4.2, 7.2.2 |
 | 4 | The estate account of each region | ascending `RegionID` | REG 3.6.1 |
 | 5 | The Outside account of each counterparty | ascending agent ID of the counterparty (5.3) | EXT 4.2.3 |
 | 5a | The Treasury account of each governed jurisdiction, with the polity module on | ascending `JurisdictionID` | POL 5.2.1 |
