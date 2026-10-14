@@ -104,6 +104,14 @@ Reasons for the less obvious placements:
   separate module that nothing in the core imports, and stays in version 1
   (Stage 2). The events are built in stages: a module declares its own events
   and fields (`spec-observability.md` 3.3.4).
+- **LED is in the slice, with the claims list and the balance sheet** (decided
+  2026-10-13, `plans/plan-phase-1-1.md` D8): the first build of `internal/ledger`
+  keeps the list of claims, its six operations and the balance sheet of
+  `spec-ledger.md` 9.2 and 10, so that the checkpoint and the balance sheets do not
+  change shape when credit arrives. The credit and insurance modules that use them
+  stay in "Later". The room of a limited account (STO, "Later") and `Relocate`
+  with the relocation totals (REG, version 1) are built with their owners
+  (`spec-ledger.md` 16.1).
 - **SCL and DEM are in version 1** because they change the agent model and are
   costly to retrofit (`spec-roadmap.md`, Open 1).
 - **CHK is in version 1** because the consumer needs save and resume, and every

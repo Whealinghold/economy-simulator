@@ -78,7 +78,7 @@ Out of scope, with the owner:
 | # | Position | Section |
 |---|----------|---------|
 | 1 | There are three outputs and each fact goes to one: a **fact that happened** is an event, a **state at a boundary** is a snapshot field, a **thing for a human** is a log line. A metric is derived, never a fourth source of truth | 3.1 |
-| 2 | One catalogue of 88 events: the 47 of the first rules, `WorldRestored`, `ProductionHalted`, `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` (52), and the 36 of the fourteen later-stage modules (4.1.9 to 4.1.12 and the groups they name). Every event has one owner, one position, one volume class and one module gate | 4 |
+| 2 | One catalogue of 89 events: the 47 of the first rules, `WorldRestored`, `ProductionHalted`, `YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and `WearApplied` (53), and the 36 of the fourteen later-stage modules (4.1.9 to 4.1.12 and the groups they name). Every event has one owner, one position, one volume class and one module gate | 4 |
 | 3 | An event carries the **typed integer ID** of every configured entity (`RegionID`, `CommodityID`, `RoleID`, ...) and the agent ID; a reason, a cause and a side are constants of a closed set. The strings come from one **names table**, carried by `WorldCreated`, `WorldRestored` and the snapshot, and by `World.Config()`. This answers REG open question 4, RES 14.1 and N-012 | 3.2 |
 | 4 | An event of a transition of one agent carries the agent's region (and role where the metric needs it) so that a consumer with no agent table can attribute it | 3.3 |
 | 5 | `BoundaryFlow` is only for the reasons whose kind is faucet or sink. The internal reasons (`trade`, `relief`, `start_money`, `estate_*`, `escrow_*`, `transit_*`, the weight reasons) have their own events or are in the snapshot | 4.4.1 |
@@ -367,6 +367,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
 | `BoundaryFlow` | LED 12.1 | P8.2; and P0.2a with `Tick` -1 (4.4.2) | A | core | `Region`, `Reason`, `Kind`, `Commodity` (`NoCommodity` for money), `Total int64` |
+| `WearApplied` | LED 12.1, N-130 | P8.2, after the `BoundaryFlow` rows, ascending commodity; and P0.2a with `Tick` -1, after the construction `BoundaryFlow` rows (4.4.2) | A | core | `Commodity`, `Units int64` (the durability removed from the commodity's items, at least 1) |
 | `ReliefPaid` | EST 2.6, FR-EST-020 | P1.6 | A | estates (pool policy) | `Region`, `Paid Money`, `Recipients int64` (agents), `Households int64`+ |
 | `MoneyFlowLimited` | MON 13.1 | P1.7, after the step, flow order | A | money supply | `Flow string`, `Region`, `Due Money`, `Applied Money`, `Short`, `Headroom`, `Limit` (households) |
 | `MoneyFlowEnded` | MON 13.1 | P1.7, after `MoneyFlowLimited` of the same flow | E | money supply | `Flow string`, `Cause`, `Total Money` |
@@ -488,8 +489,8 @@ the later modules': the `Cause` of `MoneyFlowScaled`, `TransitFactorChanged` and
 `EdgeStatusChanged` gains the constant `policy` (PLC), and the fields `Toll`,
 `LossBP`, `Lost` and `AccountLost` are the fiscal and risk modules' (FIS, RSK).
 
-The count is 88: the 47 of the first table of `rules/observability-and-logging.md`
-4.3, the five marked `+` as new events (52), and the 36 of the later modules
+The count is 89: the 47 of the first table of `rules/observability-and-logging.md`
+4.3, the five marked `+` as new events and `WearApplied` (53), and the 36 of the later modules
 (`StoreChanged` and `RoomLimited` in 4.1.3 and 4.1.4, `StoreLoss` in 4.1.5, the two
 risk scales in 4.1.8, three in 4.1.9, six in 4.1.10, two in 4.1.11 and twenty in
 4.1.12: 2 + 1 + 2 + 3 + 6 + 2 + 20 = 36). Volume class by event, for the cost model of
@@ -498,13 +499,13 @@ section 8:
 | Class | Events |
 |-------|--------|
 | W (6) | `WorldCreated`, `WorldRestored`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` |
-| A (34) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound`, `CoverSettled` |
+| A (35) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `WearApplied`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound`, `CoverSettled` |
 | E (31) | `RecipeExecuted`, `RecipeAbandoned`, `AgentSpawned`, `AgentBankrupted`, `EstateOpened`, `WeightChanged`, `RoleChanged`, `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded`, `MoneyFlowEnded`, `AgentRelocated`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `ContractFormed`, `ContractSettled`, `MigrationStarted`, `OutsideEnded`, `StoreChanged`, `StoreLoss`, `HireFormed`, `HireEnded`, `LoanFormed`, `LoanEnded`, `LoanPassed`, `SettlementClassChanged`, `TitleTransferred`, `FacilityChanged`, `CoverFormed`, `CoverEnded` |
 | O (2) | `OrderPlaced`, `OrderRejected` |
 | R (1) | `TradeExecuted` |
 | C (14) | `MoneyFlowScaled`, `EdgeStatusChanged`, `TransitFactorChanged`, `EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `PopulationScaled`, `RentScaled`, `CreditRateScaled`, `RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`, `RightSuspensionSet`, `TechnologyAdjusted` |
 
-The six classes add to 88 (6 + 34 + 31 + 2 + 1 + 14). The first tables are the
+The six classes add to 89 (6 + 35 + 31 + 2 + 1 + 14). The first tables are the
 authority and this one is for reading: a test (FR-OBS-003) derives the class of
 each event from the tables of 4.1 and checks that every event type of the
 catalogue appears once.
@@ -1068,6 +1069,7 @@ outside node, in that order:
 |-------|------|---------|-----|------|
 | `State` | `MarketState` | the market report that INT's query `Market(region, commodity)` returns (`spec-integration.md` 6.3): `Region`, `Commodity`, the published `Price`, its `Age`, the `Volume` and the `UnmatchedBid` and `UnmatchedAsk` units of the last clearing, `BestBid`, `BestAsk` with `HasBid` and `HasAsk`, and the price window's `WindowLen`, `WindowMean`, `WindowLow` and `WindowHigh`, under INT's names. One type, so the snapshot and the query cannot disagree; the event `MarketCleared` carries the same values under its owner's names (`PriceAge`, `HasBestBid`, `HasBestAsk`). It is saved state: CLR 5.4 and 5.5 and BEL 7 (the last report is a request to CHK, section 19) | CLR 5.4, 5.5; INT 6.3 | K |
 | `HeldByAgents`, `HeldByEstate`, `HeldByTreasury` | `Quantity` | the stock at the boundary in the households' accounts, in the estate's and in the treasuries seated in the region: what no order of the tick sold (N-081 item 2). Goods in Transit accounts are in `Shipments` | OBS, FIS 16.3 | L |
+| `Lots` | `int64` | the number of lots of the commodity held by the accounts the three `HeldBy` fields count (`spec-ledger.md` 5.1.3: one per distinct key, so a spoiling good fragments by born tick and a durable by remaining durability). A count, a function of the saved lots (FR-OBS-043); 0 where nothing is held. Lots of Transit and Escrow accounts are not counted: their goods are in `Shipments` | LED 5.1.3, N-130 | L |
 | `Pending` | `Quantity` | the pending output of the jobs in progress in the region: in no account, so this is the only place it is measured | PRO 14.3 | S |
 | `Beliefs`, `MeanCentre`, `LowCentre`, `HighCentre`, `AtFloor`, `AtCeiling` | `int64`, `Price`, `Price`, `Price`, `int64`, `int64` | the beliefs of the region's agents for the commodity: how many, the mean (half to even), the lowest and the highest centre, and how many sit at the lower or upper bound of their effective range (the reference band or the cost band, BEL 12.1) (N-040) | BEL 12.1 | B |
 
@@ -1321,7 +1323,7 @@ input because nothing reads one back.
 | N-031 | the moment of the calendar | `Moment` in 5.3.1 |
 | N-040 | whether beliefs are in the snapshot | aggregates per market in 5.3.5; per agent in the query |
 | N-109 | whether a run measures the welfare ratio at a full draw | **No.** `r_full` is a counterfactual (what a household would earn at a full draw and a full stock), not a state, so it is not a snapshot field; it is a property of the pack's economy, and the steady-state solver of `spec-viability.md` is the place to compute it (a recommendation to POP and VIA, who own the decision whether a warning `population_cannot_grow` exists and whether the closed forms of `spec-resources.md` 8 read it from the solver). The note stays open for them |
-| IND 7.5.1, 7.7, 7.6.2 | per role the last tick's income, relief and cost (`IncomeLast`, `ReliefLast`, `CostLast`); the wear units removed, by commodity; the lines (commodity and units) of `AgentRelocated` | **Not adopted in version 1.** The income fields would be three `Money` fields of `RoleRow` (a function of the welfare ring, so of saved state, FR-OBS-043) and are a future ask; until then IND's `HouseholdIncome` is `OK` false. The wear units are a different quantity from the items retired that `wear` of `BoundaryFlow` counts (4.4.1). `Lines` of `AgentRelocated` would be new and is not needed |
+| IND 7.5.1, 7.7, 7.6.2 | per role the last tick's income, relief and cost (`IncomeLast`, `ReliefLast`, `CostLast`); the wear units removed, by commodity; the lines (commodity and units) of `AgentRelocated` | **The income fields are not adopted in version 1.** They would be three `Money` fields of `RoleRow` (a function of the welfare ring, so of saved state, FR-OBS-043) and are a future ask; until then IND's `HouseholdIncome` is `OK` false. **The wear units are adopted** (2026-10-14, N-130 item 2): the aggregate event `WearApplied` of 4.1.5 carries them by commodity. They are a different quantity from the items retired that `wear` of `BoundaryFlow` counts (4.4.1): an item is retired only when its durability reaches 0, so the retirement is lumpy and the wear units are the rate. IND's adoption of the accrual form of its depreciation measure is IND's decision (N-130). `Lines` of `AgentRelocated` would be new and is not needed |
 | EMP 15.4, STO 14.5, SET 10.5, LND 13.4, CRD 16.4, CAP 14.5, ORG 11.5, SAV 8.4.2 and 12.5, TEC 11.4, POL 10.5, PLC 12.3, INS 15.4, FIS 16.3 | the rows and fields of the later-stage modules: role, region, market and endowment fields, the in-flight sets `Hires`, `Claims` and `Policies`, and the new slices | **Adopted** as asked, in 5.3.2 to 5.3.6, 5.3.8 and 5.3.11; a count of the last tick of any of them is the module's event (5.2.2); the cost of the saving fields is the new class `Q` (5.5.1, SAV 12.5) |
 
 ## 6. Metrics
@@ -1395,6 +1397,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.household.relocations` | Counter | `{household}` | `economysim.region.from`, `economysim.region.to`, `economysim.cause` | `AgentRelocated` (`Weight`) | **changed**: gains `economysim.cause`, because a merchant's trips and a migrant's move are not one thing |
 | `economysim.money.flow` | Counter | `{minor_unit}` | `economysim.reason`, `economysim.kind` | `BoundaryFlow` (money); includes the bucket at `Tick` -1 (6.3.2) | kept |
 | `economysim.commodity.flow` | Counter | `{unit}` | `economysim.reason`, `economysim.kind`, `economysim.commodity` | `BoundaryFlow` (goods) | **new**: production, consumption, spoilage and wear, by commodity |
+| `economysim.commodity.wear` | Counter | `{unit}` | `economysim.commodity` | `WearApplied` (`Units`); includes the bucket at `Tick` -1 | **new**: the durability removed from the items of a commodity, a smooth measure of tool depreciation; `economysim.commodity.flow` under `wear` counts only the items retired |
 | `economysim.money.flow.unapplied` | Counter | `{minor_unit}` | `economysim.reason` | `MoneyFlowLimited` (`Due` less `Applied`) | kept |
 | `economysim.household.births` | Counter | `{household}` | `economysim.role` | `PopulationChanged` (`BirthsDone`) | kept |
 | `economysim.household.deaths` | Counter | `{household}` | `economysim.role` | `PopulationChanged` (`DeathsDone`) | kept |
@@ -1481,6 +1484,7 @@ adapter records each instrument below once per call, from the rows named.
 |------|-----------|------|------------|--------|
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
 | `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
+| `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
 | `economysim.welfare.ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].MeanRatioBP` where `HasMeanRatio` (N-081 1) |
 | `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
@@ -2620,6 +2624,8 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-081 | `testdata/golden/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
 | FR-OBS-090 | A world with no logger and no observer, and one given a nil logger or a nil observer, MUST build, step and run, write nothing to stdout or stderr and not panic. |
 | FR-OBS-091 | A field that a module appends to an event or to a snapshot row MUST be a count, an amount, a bool, a constant of a closed set or a slice, MUST NOT be a typed ID, and MUST be zero when the module is off; the rendering of every event and row of a world with the module off MUST be byte-equal to that of the tree before the module was added (9.5.2; architecture.md 2.10.5). |
+| FR-OBS-092 | `WearApplied` MUST be emitted once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows, with `Units` equal to the ledger's wear units of the commodity; the construction bucket MUST be emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows; it MUST NOT be emitted for a tick with no wear. |
+| FR-OBS-093 | `Markets[].Lots` MUST equal the number of lots of the commodity in the accounts counted by `HeldByAgents`, `HeldByEstate` and `HeldByTreasury` of the region, and a restored world's `Lots` MUST equal the original's (FR-OBS-043). |
 
 ### Non-functional
 

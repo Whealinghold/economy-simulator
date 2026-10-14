@@ -13,8 +13,11 @@ random stream [ADR 0008](adr/0008-random-draws-are-keyed-streams.md). Every
 stage ends with a golden file that runs; no stage starts a module file before
 the slice's golden runs (architecture.md 2.10.6).
 
-Status values: **planned**, **in progress**, **done** (with the commit). Update
-the status in the change that moves it.
+Status values, in the order a row moves through them: **not started** (no plan),
+**plan written** (a plan exists in `plans/`, not yet audited ready), **plan audited**
+(the plan passed its audit with no blocking issue, ready to implement), **in
+progress**, **done** (with the commit). Stages 0, 2 and 3 still use **planned** for
+a row that has no plan. Update the status in the change that moves it.
 
 ## Stage 0: foundations (no economics)
 
@@ -42,13 +45,13 @@ decisions it rests on (the owner's, 2026-10-12) are:
 
 | Create | Specs | Status |
 |--------|-------|--------|
-| `go.mod` (`go 1.25`, no dependency until `config/`); `doc.go` (the package name `economysim`, the overview and the glossary of the terms Stage 0 uses; every later stage adds the terms it uses before it uses them: architecture.md 3.2, N-017) | architecture.md 2.2, 3.2 | done (uncommitted) |
-| `value.go` (`Money`, `Price`, `Quantity`, the typed IDs with `NoRegion`, `NoAgent` and `NoCommodity`: arithmetic, comparison and formatting only) | CUR, CFG 3.3 | done (uncommitted) |
-| `internal/checked` (the 128-bit product and ratio), `internal/ordering` (the finaliser, `Weyl32`, `Weyl2`, `Bucket`, `Key` in the `+gamma` form, the stream key with its optional fourth word), `internal/logkeys` (the key strings of the slice's log lines only) | WLD 7, 9, 10; RES 5.3.3; OBS 7 | done (uncommitted) |
-| `random.go`: the seed, the one PCG and `Rand`, the site constants of the slice (WLD 7.1.4), the keyed reseed, the world's draw (WLD 7.2.1) and the **pure** reseed function `seed' = finalise(seed xor finalise(salt))` (CHK 6.8.2). The option `WithReseed`, the restore step and `WorldRestored` are Stage 2 (`checkpoint.go`) | WLD 7 (as rewritten under N-214), CHK 6.8.2, ADR 0008 | done (uncommitted) |
-| `config.go` (`Config` and every section struct of the slice, slice fields only (D3); the `WarmStart` types live here, not in `viability.go`), `bounds.go`, `defaults.go`, `validate.go` (the framework, the structural rules of CFG 7.3, the contributed rules of 7.4.1 less the three name checks and the viability rules, which are Stage 1 (D2, D4), and the producibility fixpoint of 7.5), `hash.go` (`HashConfig`, the encoding of CFG 8.2 with its version byte and rule D5), `errors.go` (a sentinel with its first user). Sections: world, calendar, commodities, recipes, yields, roles, regions as one region, groups, warm start; `Modules` present and all nil | CFG 3, 4, 5, 7, 8, 9; GDS 8; PRO 11; AGT 12; BEL 11; SPN 11; WEL 4.2 and 12; SCL 3.1; CAL 3; VIA 8.1 | done (uncommitted) |
-| `event.go` (the sealed `Event`, `Side`, the events no module owns, slice fields only (D3), `Names`, `Amount`, `HaltRow`, and the `Reason`, `Cause` and `Kind` constants the slice can reach) and `observer.go` (`Observer`, `ObserverFunc`, the unexported `discardObserver` with its assertion, the delivery loop, the "observer supplied" flag, `warnRun`); `option.go` with `Option`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread` and `WithSeed` (the registration options are Stage 1) | OBS 3, 4, 8.1; WLD 4.1; WEL 5.2; `rules/observability-and-logging.md` 4 | done (uncommitted) |
-| `config/`: the TOML loader (the library is [ADR 0009](adr/0009-the-toml-library-is-pelletier-go-toml-v2.md), `pelletier/go-toml/v2`; the tree is mapped by hand, unknown keys are rejected by `config/` itself), the limits on untrusted input (CFG 6.3.1), pack layering | CFG 6 | done (uncommitted) |
+| `go.mod` (`go 1.25`, no dependency until `config/`); `doc.go` (the package name `economysim`, the overview and the glossary of the terms Stage 0 uses; every later stage adds the terms it uses before it uses them: architecture.md 3.2, N-017) | architecture.md 2.2, 3.2 | done (023cf97) |
+| `value.go` (`Money`, `Price`, `Quantity`, the typed IDs with `NoRegion`, `NoAgent` and `NoCommodity`: arithmetic, comparison and formatting only) | CUR, CFG 3.3 | done (023cf97) |
+| `internal/checked` (the 128-bit product and ratio), `internal/ordering` (the finaliser, `Weyl32`, `Weyl2`, `Bucket`, `Key` in the `+gamma` form, the stream key with its optional fourth word), `internal/logkeys` (the key strings of the slice's log lines only) | WLD 7, 9, 10; RES 5.3.3; OBS 7 | done (023cf97) |
+| `random.go`: the seed, the one PCG and `Rand`, the site constants of the slice (WLD 7.1.4), the keyed reseed, the world's draw (WLD 7.2.1) and the **pure** reseed function `seed' = finalise(seed xor finalise(salt))` (CHK 6.8.2). The option `WithReseed`, the restore step and `WorldRestored` are Stage 2 (`checkpoint.go`) | WLD 7 (as rewritten under N-214), CHK 6.8.2, ADR 0008 | done (023cf97) |
+| `config.go` (`Config` and every section struct of the slice, slice fields only (D3); the `WarmStart` types live here, not in `viability.go`), `bounds.go`, `defaults.go`, `validate.go` (the framework, the structural rules of CFG 7.3, the contributed rules of 7.4.1 less the three name checks and the viability rules, which are Stage 1 (D2, D4), and the producibility fixpoint of 7.5), `hash.go` (`HashConfig`, the encoding of CFG 8.2 with its version byte and rule D5), `errors.go` (a sentinel with its first user). Sections: world, calendar, commodities, recipes, yields, roles, regions as one region, groups, warm start; `Modules` present and all nil | CFG 3, 4, 5, 7, 8, 9; GDS 8; PRO 11; AGT 12; BEL 11; SPN 11; WEL 4.2 and 12; SCL 3.1; CAL 3; VIA 8.1 | done (023cf97) |
+| `event.go` (the sealed `Event`, `Side`, the events no module owns, slice fields only (D3), `Names`, `Amount`, `HaltRow`, and the `Reason`, `Cause` and `Kind` constants the slice can reach) and `observer.go` (`Observer`, `ObserverFunc`, the unexported `discardObserver` with its assertion, the delivery loop, the "observer supplied" flag, `warnRun`); `option.go` with `Option`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread` and `WithSeed` (the registration options are Stage 1) | OBS 3, 4, 8.1; WLD 4.1; WEL 5.2; `rules/observability-and-logging.md` 4 | done (023cf97) |
+| `config/`: the TOML loader (the library is [ADR 0009](adr/0009-the-toml-library-is-pelletier-go-toml-v2.md), `pelletier/go-toml/v2`; the tree is mapped by hand, unknown keys are rejected by `config/` itself), the limits on untrusted input (CFG 6.3.1), pack layering | CFG 6 | done (023cf97) |
 
 **Done when:** `FuzzLoad` and `FuzzValidate` run with seed corpora; every
 validation rule of CFG 7 for the slice's sections that is not deferred (D2, D4)
@@ -78,20 +81,49 @@ One region, the reference chain, clearing, beliefs, the default strategy and
 spawner, the stability checks (`vision.md` section 4, "Slice"). The order below
 is the dependency order of `spec-roadmap.md` "Tier 1 dependencies".
 
-| Create | Specs | Status |
-|--------|-------|--------|
-| `internal/ledger` (accounts, the transfer primitive, reasons, lots, reservations, `Transform`, `Wear`, ageing, flow totals, the audit) and `ledger.go` | LED | planned |
-| `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the root types and their derived tables) | GDS, PRO 3, AGT 3, CAL | planned |
-| `internal/clearing` and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | planned |
-| `internal/beliefs` and `beliefs.go` | BEL | planned |
-| `internal/production` and `production.go` (jobs, yield table, `UnitCost`) | PRO | planned |
-| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | planned |
-| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0) | AGT | planned |
-| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | planned |
-| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | planned |
-| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState`, the reader of the warm-start table; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | planned |
-| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go`, `order.go`, `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | planned |
-| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 10, testing.md 7.1 | planned |
+The first row, the ledger, is built ahead of the others at the owner's request
+(2026-10-13). Its implementation plan is
+[plans/plan-phase-1-1.md](plans/plan-phase-1-1.md); it adds the claims list and the
+balance sheet of LED 9.2 and 10 to the row (decision D8), so the checkpoint and the
+balance sheets do not change shape when credit arrives (`vision.md` section 4). It
+leaves out the room of a limited account (Stage 3, `storage.go`), `Relocate` and
+the relocation totals (Stage 2, `regions.go`) and the encoding of the ledger's state
+(Stage 2, `checkpoint.go`); `spec-ledger.md` 16.1 lists them.
+
+Rows 2 to 6 were planned on 2026-10-13, one plan each (the Plan column). Notes on
+what each adds beyond the table cell:
+
+- Row 2: Stage 0 already built the structs, defaults, bounds and validation of the
+  four concerns, so the row adds only the derived tables and rules (the moment,
+  `SeasonAt` and the day table; the load and the chargeable size; the recipe table
+  and the makers of a commodity; the role table with the tradable set and the
+  effective upkeep).
+- Row 3: `order.go` (`Order`, `Trade`, `LotKey`) moved here from the world row
+  (decision D30), because `Clearing` cannot exist without them; `market.go` stays
+  with the world row.
+- Row 4: no configuration field is added (Stage 0 built all sixteen parameters and
+  their validation); the root holds the exported `Belief` and `Bounds`.
+- Row 5: emits no event and calls no other row; its Phase 2 adds two additive ledger
+  operations (`Discard` and `Holding`) in new files of `internal/ledger`.
+- Row 6: the role economics report of WEL 7 is the viability row's and in-kind pay
+  (WEL 6) is not built.
+
+Rows 7 to 12 have no plan yet.
+
+| Create | Specs | Plan | Status |
+|--------|-------|------|--------|
+| `internal/ledger` (accounts, the transfer primitive, reasons, lots, reservations, `Transform`, `Wear`, ageing, flow totals, the audit, the claims list with its six operations and the balance sheet) and `ledger.go` (the conversion of the configuration, the reason names both ways and the `BoundaryFlow` rows) | LED; CRD 3.1 to 3.3, 3.6 | [1-1](plans/plan-phase-1-1.md), 7 phases | done (uncommitted) |
+| `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the root types and their derived tables) | GDS, PRO 3, AGT 3, CAL | [1-2](plans/plan-phase-1-2.md), 6 phases | plan audited |
+| `internal/clearing`, `order.go` (`Order`, `Trade`, `LotKey`) and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement, the market report type and its computation) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | [1-3](plans/plan-phase-1-3.md), 6 phases | plan audited |
+| `internal/beliefs` and `beliefs.go` | BEL | [1-4](plans/plan-phase-1-4.md), 6 phases | plan audited |
+| `internal/production` and `production.go` (jobs, yield table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | plan audited |
+| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | plan audited |
+| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0) | AGT | none | not started |
+| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | none | not started |
+| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | none | not started |
+| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState`, the reader of the warm-start table; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | none | not started |
+| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go` (the state of each market's report and the price window; `order.go` is the clearing row's), `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | none | not started |
+| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 10, testing.md 7.1 | none | not started |
 
 **Done when:** the golden of `one.toml` runs for the length REF fixes and
 passes; the invariants of testing.md 6.3 hold over the seed range of REF 8;

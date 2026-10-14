@@ -169,21 +169,23 @@ origin; what differs is read by reports and by two rules: `ForgiveClaims` ends l
 
 ### 3.2 The operations of the ledger
 
-Five operations, each atomic (`spec-ledger.md` 2.6): it applies completely or
+Six operations, each atomic (`spec-ledger.md` 2.6): it applies completely or
 changes nothing and returns an error. They live in `internal/ledger`; the root maps
 the sentinels (N-075).
 
 | Operation | Does | Refused with |
 |-----------|------|--------------|
 | `Lend(creditor, debtor, principal, interest, rate, due)` | transfers `principal` from the creditor to the debtor with the reason `loan_out`, and appends a claim with the next ID, `PrincipalOwed` = `principal`, `InterestOwed` = `interest`, `Formed` the current tick, `Overdue` -1 | `ErrInsufficientFunds` (the creditor's available money is below `principal`), `ErrBalanceOverflow` (the debtor's balance would pass `MaxMoney`, or `principal + interest` does), `ErrReasonMismatch`, `ErrUnknownAccount`, `ErrClosedAccount`, `ErrInvalidAmount`, `ErrClaimShape` (the same account on both sides, a `due` not after `Formed`) |
-| `Settle(claim, interest, principal)` | transfers `interest` with the reason `loan_interest` and then `principal` with `loan_repay` from the debtor to the creditor, lowers the owed parts, and removes the claim if both are 0 | `ErrInsufficientFunds`, `ErrBalanceOverflow` (the creditor's balance would pass `MaxMoney`), `ErrUnknownClaim`, `ErrInvalidAmount` (an amount above what is owed), `ErrReasonMismatch` |
+| `Settle(claim, interest, principal)` | transfers `interest` with the reason `loan_interest` and then `principal` with `loan_repay` from the debtor to the creditor, lowers the owed parts, and removes the claim if both are 0. A part of 0 **skips** its transfer (a transfer of 0 is refused by `spec-ledger.md` 4.2, and an allocation can give a claim no interest or no principal: 8.3) | `ErrInsufficientFunds`, `ErrBalanceOverflow` (the creditor's balance would pass `MaxMoney`), `ErrUnknownClaim`, `ErrInvalidAmount` (a part below 0 or above what is owed, **or both parts 0**: a settlement that pays nothing is not an operation), `ErrReasonMismatch` |
 | `WriteOff(claim)` | removes the claim with no transfer and returns the principal and the interest that were still owed | `ErrUnknownClaim` |
 | `Reassign(claim, creditor)` | makes `creditor` (an Estate account) the creditor, with no transfer | `ErrUnknownClaim`, `ErrClosedAccount`, `ErrReasonMismatch` |
+| `MarkOverdue(claim, tick)` | sets `Overdue` to `tick` when it is -1, and leaves it as it is when it is already 0 or more (the first tick at which the claim went unpaid, 3.1.1); it moves no money and changes no other field. It is the one operation that sets `Overdue`: 8.5 calls it | `ErrUnknownClaim`, `ErrClaimShape` (a `tick` below the claim's `Due`: `Overdue` is -1 or in `[Due, tick)`, 17.5) |
 | `Obligate(creditor, debtor, amount, due)` | appends a claim of origin `payout` with the next ID, `Principal` = `PrincipalOwed` = `amount`, `Interest` 0, `Formed` the current tick, `Overdue` -1, with no transfer (called by `spec-insurance.md` 9.2 only) | `ErrInvalidAmount` (below 1), `ErrClaimShape` (the same account on both sides, a `due` not after `Formed`), `ErrUnknownAccount`, `ErrClosedAccount`, `ErrTooManyClaims` (`MaxClaims` claims are open) |
 
 3.2.1. An account **cannot be closed** while it is the creditor or the debtor of an
 open claim: `ErrOpenClaim`. `spec-ledger.md` 3.3 already says a closed account has no
-money, no goods and no reservation; the claim is the fourth thing, and the removal
+money, no goods and no reservation; the claim is the fourth thing, checked last, after
+`ErrOpenReservation` and `ErrNotEmpty` (`spec-ledger.md` 3.3.1), and the removal
 steps of 9.1 and 9.2 end or pass every claim before the account closes.
 
 3.2.2. A transfer that a claim operation makes obeys every rule of
@@ -753,7 +755,7 @@ Per claim, in ascending claim ID, with the owed left after the payment:
 1. **Ended: repaid.** Both owed parts are 0: the claim leaves the list, cause
    `repaid`, and `LoanEnded` is emitted.
 2. **Defaulted.** Owed is above 0 and `Due = t` and `Overdue` was -1: `Overdue` is
-   set to `t`. It is not an event of its own: it is counted in `CreditSettled`
+   set to `t` by `MarkOverdue(claim, t)` (3.2). It is not an event of its own: it is counted in `CreditSettled`
    (`Defaulted`) and the claim is in `Arrears`.
 3. **Written off.** `WriteOffTicks` is above 0 and `Overdue` is at or above 0 and
    `t >= Due + WriteOffTicks`: `WriteOff` removes the claim, cause `written_off`, and
@@ -1975,9 +1977,9 @@ One consolidated table; the exact text of each is in the handoff. None is made h
 
 | File | Section | Change |
 |------|---------|--------|
-| `spec-ledger.md` | 3.3, FR-LED-009 | an account is not closed while it is the creditor or debtor of an open claim (`ErrOpenClaim`) |
+| `spec-ledger.md` | 3.3, FR-LED-009 | an account is not closed while it is the creditor or debtor of an open claim (`ErrOpenClaim`); the order of the refusals of a `Close` is `spec-ledger.md` 3.3.1 (Phase 1 of the ledger row, plan-phase-1-1.md) |
 | `spec-ledger.md` | 7.2 | rows `loan_out`, `loan_repay`, `loan_interest` (money, internal), owner `spec-credit.md` |
-| `spec-ledger.md` | 10, 11, 12.4, 13 | the claim record with its `Origin`, five operations (with `Obligate`) and seven totals of CRD 3.1 to 3.3; the list saved with them; the audit identities of CRD 3.6; FR-LED-028 amended, new FR-LED-062 to 064 |
+| `spec-ledger.md` | 10, 11, 12.4, 13 | the claim record with its `Origin`, six operations (with `Obligate` and `MarkOverdue`) and seven totals of CRD 3.1 to 3.3; the list saved with them; the audit identities of CRD 3.6; FR-LED-028 amended, new FR-LED-062 to 064 |
 | `spec-agents.md` | 3.6, 2 (row 5), FR-AGT-008 | steps 2d and 2e (CRD 9.1, 9.2) and their events; "no order beyond available cash, no borrowing, no negative balance" gets "(no borrowing with the credit module off)"; FR-AGT-008 reads "move all its money, less what its creditors take in the waterfall of `spec-credit.md` 9.1, to the region's estate with the reason `estate_money`" |
 | `spec-agents.md` | 3.3, 6.3, 6.4.1, 6.5.2, 7, 10.3, 11.5 | the role field `Credit`; `TradePlan.Borrow`, `.Lend`; the view group; admission by the round; the default rules (a new 7.8); `Directive.Borrow`, `.Lend`; the wording of 11.5 |
 | `spec-welfare-and-wages.md` | 2.1, 2.1.7, 4.3, 13, 2.3.3 | `I^in_t` (in `G_t`) and `I^out_t` in `income_t`; both kept out of the earned ratio and `I^in_t` out of the wage; no new record field; the closing wording (applied by WEL 2.1.9) |
@@ -2031,7 +2033,7 @@ gap is a number not yet used, not a missing requirement.
 |----|-------------|
 | FR-CRD-001 | The module MUST run if and only if `Config.Modules.Credit` is non-nil, and a world with it nil MUST have no position P1.7a or P3.3b, no claim, none of the three reasons, no draw for it and none of its events, and MUST be bit-identical to a world built without this spec (4.1, 12). |
 | FR-CRD-002 | The reasons `loan_out` (Agent account to Agent account), `loan_repay` and `loan_interest` (Agent account to Agent or Estate account) MUST be internal, money only, and every other pairing MUST be refused with `ErrReasonMismatch` (3.3). |
-| FR-CRD-003 | No operation of the module MUST create or destroy money or goods: the total of money over non-boundary accounts MUST be unchanged by `Lend`, `Settle`, `WriteOff` and `Reassign`, and the module MUST add no faucet, no sink and no boundary account (3.4). |
+| FR-CRD-003 | No operation of the module MUST create or destroy money or goods: the total of money over non-boundary accounts MUST be unchanged by `Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate` and `MarkOverdue`, and the module MUST add no faucet, no sink and no boundary account (3.4). |
 | FR-CRD-004 | `Lend` MUST transfer the principal with `loan_out` and append the claim all or nothing, and MUST be refused with `ErrInsufficientFunds`, `ErrBalanceOverflow`, `ErrReasonMismatch`, `ErrUnknownAccount`, `ErrClosedAccount`, `ErrInvalidAmount` or `ErrClaimShape` leaving the ledger unchanged (3.2). |
 | FR-CRD-005 | A claim with both `PrincipalOwed` and `InterestOwed` equal to 0 MUST NOT exist: it MUST be removed from the list in the operation that brought it to 0 (3.1.2). |
 | FR-CRD-006 | A world with the module on and no other faucet or sink MUST have `M` equal to `M_init` at every tick boundary, for every seed (3.4; `spec-money-supply.md` 8.2). |
@@ -2058,9 +2060,9 @@ gap is a number not yet used, not a missing requirement.
 | FR-CRD-028 | In the admission of the round, after the last check of 5.2, a request's `MaxRateBP` above the rate cap in force for the borrower's region MUST be replaced by the cap, MUST NOT be refused for it, and the replacement MUST be counted in `PriceControlled` (`spec-institutions.md` 6.6.1; 5.2.3). |
 | FR-CRD-030 | The settlement MUST run once per tick at P1.7a, after P1.7 and before P1.8, over the debtors with a claim due or overdue in ascending agent ID (8.1). |
 | FR-CRD-031 | A debtor's payment MUST be `min(max(0, balance - ShieldTicks * U), owed)` over its due and overdue claims, with `balance` the one recorded at the entry of P1.7a for every debtor, so that no payment of the pass changes another debtor's pot (8.1.1.1, 8.2). |
-| FR-CRD-032 | A payment MUST be shared among the claims pro rata by what each owes with the largest remainder (ties by `K(t, claim ID)` then claim ID), MUST pay interest before principal within a claim, and no share MUST exceed what its claim owes (8.3). |
+| FR-CRD-032 | A payment MUST be shared among the claims pro rata by what each owes with the largest remainder (ties by `K(t, claim ID)` then claim ID), MUST pay interest before principal within a claim, and no share MUST exceed what its claim owes (8.3); a part of 0 of a `Settle` MUST move no money and a `Settle` of 0 and 0 MUST be refused `ErrInvalidAmount` (3.2). |
 | FR-CRD-033 | A payment MUST be cut to the creditor's headroom below `MaxMoney`, the part not paid MUST remain owed, and the cut MUST be counted in `CreditSettled.Headroom` (8.4). |
-| FR-CRD-034 | A claim with owed left at its due tick MUST be set overdue at that tick, and every overdue claim MUST be paid by the same pass on each later tick (8.5). |
+| FR-CRD-034 | A claim with owed left at its due tick MUST be set overdue at that tick by `MarkOverdue`, which MUST change nothing but `Overdue`, MUST leave an `Overdue` already set as it is and MUST be refused `ErrUnknownClaim` or `ErrClaimShape` (3.2), and every overdue claim MUST be paid by the same pass on each later tick (8.5). |
 | FR-CRD-035 | With `WriteOffTicks` above 0 an overdue claim MUST be written off at the tick `Due + WriteOffTicks` with the cause `written_off`, and with 0 it MUST never be (8.5). |
 | FR-CRD-036 | Arrears MUST bear no interest, no penalty and no re-scheduling, and the owed of a claim MUST NOT rise after formation (8.7, 7.2). |
 | FR-CRD-037 | A due claim MUST be settled before any request of the same tick is admitted, and no loan MUST be formed that is used to pay a claim of the same tick (6.1.3). |
@@ -2174,7 +2176,7 @@ Each with a next step.
 | Concern | Home |
 |---------|------|
 | `Credit`, `CreditTerms`, `LendTerms`, `BorrowTerms`, `CreditRequest`, `CreditOffer`, `ClaimFilter`, the refusal reasons and causes, `SetRateScales`, `ForgiveClaims`, the call sites of the round and the settlement, the view group, the default rules | root package, `credit.go` (and the view and plan types in `strategy.go` of `spec-agents.md` 6) |
-| `Claim`, `Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate`, `ErrOpenClaim`, `ErrTooManyClaims`, the totals, the audit of 3.6 | `internal/ledger` (stdlib only; architecture.md 2.9) |
+| `Claim`, `Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate`, `MarkOverdue`, `ErrOpenClaim`, `ErrTooManyClaims`, the totals, the audit of 3.6 | `internal/ledger` (stdlib only; architecture.md 2.9) |
 | The interest, the allocation by the largest remainder, the order and matching of the round and the waterfall, over primitive slices | `internal/credit` (new; stdlib only; it does not import the root, `internal/ledger` or `internal/ordering`: the stateless key is passed in) |
 | The stateless key `K(t, id)` | `internal/ordering` (shared with RES, `spec-world.md` 10.1.1) |
 | Log key strings | `internal/logkeys` |
