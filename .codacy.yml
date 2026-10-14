@@ -2,4 +2,9 @@
 engines:
   lizard:
     exclude_paths:
+      - "*_test.go"
+      - "**/*_test.go"
+  semgrep:
+    exclude_paths:
+      - "*_test.go"
       - "**/*_test.go"
