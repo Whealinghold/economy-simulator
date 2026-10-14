@@ -68,6 +68,46 @@ func inTotal(lines []Line, c int) (n int64) {
 //  6. ErrInsufficientStock;
 //  7. ErrBalanceOverflow, for the holding, a boundary or a flow total.
 func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
+	if err := transformShape(inputs, outputs); err != nil {
+		return err
+	}
+	a, err := l.open(id)
+	if err != nil {
+		return err
+	}
+	if err := l.transformRefusal(a, inputs, outputs); err != nil {
+		return err
+	}
+
+	flows := l.flows()
+	if err := l.checkTransformInputs(a, flows, inputs); err != nil {
+		return err
+	}
+	if err := l.checkTransformOutputs(a, flows, inputs, outputs); err != nil {
+		return err
+	}
+	l.applyTransform(a, flows, inputs, outputs)
+	return nil
+}
+
+// transformRefusal is checks 4 and 5 of Transform: the commodities, the
+// account's kind, and the boundary accounts of the lines.
+func (l *Ledger) transformRefusal(a *account, inputs, outputs []Line) error {
+	if l.linesUnknownCommodity(inputs) || l.linesUnknownCommodity(outputs) {
+		return ErrUnknownCommodity
+	}
+	if !transformKindsFit(a, inputs, outputs) {
+		return ErrReasonMismatch
+	}
+	if !l.boundariesOpen(RecipeInput, inputs) || !l.boundariesOpen(RecipeOutput, outputs) {
+		return ErrUnknownAccount
+	}
+	return nil
+}
+
+// transformShape is checks 1 and 2 of Transform: not empty, every line at
+// least 1.
+func transformShape(inputs, outputs []Line) error {
 	if len(inputs) == 0 && len(outputs) == 0 {
 		return ErrEmptyTransform
 	}
@@ -78,36 +118,50 @@ func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
 			}
 		}
 	}
-	a, err := l.open(id)
-	if err != nil {
-		return err
-	}
-	for _, side := range [2][]Line{inputs, outputs} {
-		for _, ln := range side {
-			if ln.Commodity < 0 || ln.Commodity >= len(l.comms) {
-				return ErrUnknownCommodity
-			}
-		}
-	}
-	if len(inputs) > 0 && !Allowed(RecipeInput, true, a.kind, KindBoundary) ||
-		len(outputs) > 0 && !Allowed(RecipeOutput, true, KindBoundary, a.kind) {
-		return ErrReasonMismatch
-	}
-	for _, ln := range inputs {
-		if l.boundaryAt(RecipeInput, ln.Commodity) == nil {
-			return ErrUnknownAccount
-		}
-	}
-	for _, ln := range outputs {
-		if l.boundaryAt(RecipeOutput, ln.Commodity) == nil {
-			return ErrUnknownAccount
-		}
-	}
+	return nil
+}
 
-	flows := l.flows()
-	slot := func(r Reason, c int) int { return a.region*l.stride + l.off[r][thingGoods] + c }
-	// The commodities are visited once each, at their first line. A line count
-	// is at most MaxRecipeItems, so the quadratic scan is small.
+// linesUnknownCommodity reports whether any line names a commodity outside the
+// table.
+func (l *Ledger) linesUnknownCommodity(lines []Line) bool {
+	for _, ln := range lines {
+		if ln.Commodity < 0 || ln.Commodity >= len(l.comms) {
+			return true
+		}
+	}
+	return false
+}
+
+// transformKindsFit reports whether the account's kind fits the RecipeInput and
+// RecipeOutput rows for the sides that are present.
+func transformKindsFit(a *account, inputs, outputs []Line) bool {
+	if len(inputs) > 0 && !Allowed(RecipeInput, true, a.kind, KindBoundary) {
+		return false
+	}
+	return len(outputs) == 0 || Allowed(RecipeOutput, true, KindBoundary, a.kind)
+}
+
+// boundariesOpen reports whether every line has an opened boundary account for
+// the reason.
+func (l *Ledger) boundariesOpen(r Reason, lines []Line) bool {
+	for _, ln := range lines {
+		if l.boundaryAt(r, ln.Commodity) == nil {
+			return false
+		}
+	}
+	return true
+}
+
+// slot is the index into the flow totals of reason r and commodity c in the
+// region of account a.
+func (l *Ledger) slot(a *account, r Reason, c int) int {
+	return a.region*l.stride + l.off[r][thingGoods] + c
+}
+
+// checkTransformInputs is check 6 and the input half of check 7. The
+// commodities are visited once each, at their first line. A line count is at
+// most MaxRecipeItems, so the quadratic scan is small.
+func (l *Ledger) checkTransformInputs(a *account, flows []int64, inputs []Line) error {
 	for i, ln := range inputs {
 		first, tot, ok := firstOf(inputs, i)
 		if !first {
@@ -116,13 +170,19 @@ func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
 		if !ok || a.held(ln.Commodity)-a.earmarkedOf(ln.Commodity) < tot {
 			return ErrInsufficientStock
 		}
-		if _, ok := checked.Add(flows[slot(RecipeInput, ln.Commodity)], tot); !ok {
+		if _, ok := checked.Add(flows[l.slot(a, RecipeInput, ln.Commodity)], tot); !ok {
 			return ErrBalanceOverflow
 		}
 		if _, ok := checked.Add(l.boundaryAt(RecipeInput, ln.Commodity).balance, tot); !ok {
 			return ErrBalanceOverflow
 		}
 	}
+	return nil
+}
+
+// checkTransformOutputs is the output half of check 7: an output is checked
+// against the holding left after the inputs.
+func (l *Ledger) checkTransformOutputs(a *account, flows []int64, inputs, outputs []Line) error {
 	for i, ln := range outputs {
 		first, tot, ok := firstOf(outputs, i)
 		if !first {
@@ -135,27 +195,30 @@ func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
 		if n, ok := checked.Add(after, tot); !ok || n > l.maxQty {
 			return ErrBalanceOverflow
 		}
-		if _, ok := checked.Add(flows[slot(RecipeOutput, ln.Commodity)], tot); !ok {
+		if _, ok := checked.Add(flows[l.slot(a, RecipeOutput, ln.Commodity)], tot); !ok {
 			return ErrBalanceOverflow
 		}
 		if _, ok := checked.Sub(l.boundaryAt(RecipeOutput, ln.Commodity).balance, tot); !ok {
 			return ErrBalanceOverflow
 		}
 	}
+	return nil
+}
 
-	// Nothing below can fail.
+// applyTransform makes the moves of a Transform whose checks passed; it cannot
+// fail.
+func (l *Ledger) applyTransform(a *account, flows []int64, inputs, outputs []Line) {
 	for _, ln := range inputs {
 		a.drain(ln.Commodity, ln.Quantity)
-		flows[slot(RecipeInput, ln.Commodity)] += ln.Quantity
+		flows[l.slot(a, RecipeInput, ln.Commodity)] += ln.Quantity
 		l.boundaryAt(RecipeInput, ln.Commodity).balance += ln.Quantity
 	}
 	a.compact()
 	for _, ln := range outputs {
 		l.add(a, l.creationKey(ln.Commodity), ln.Quantity)
-		flows[slot(RecipeOutput, ln.Commodity)] += ln.Quantity
+		flows[l.slot(a, RecipeOutput, ln.Commodity)] += ln.Quantity
 		l.boundaryAt(RecipeOutput, ln.Commodity).balance -= ln.Quantity
 	}
-	return nil
 }
 
 // drain takes n unearmarked units of commodity c, oldest first. The caller has
@@ -201,13 +264,82 @@ type wearSel struct {
 //  7. ErrBalanceOverflow, for the Wear boundary, the flow total or the wear
 //     units.
 func (l *Ledger) WearItems(id, commodity int, n, units int64) error {
-	if n < 1 || units < 1 {
-		return ErrInvalidAmount
-	}
-	a, err := l.open(id)
+	a, b, err := l.wearTarget(id, commodity, n, units)
 	if err != nil {
 		return err
 	}
+	l.selectWorn(a, commodity, n, units)
+	destroyed, removed, ok := l.wearTotals()
+	if !ok {
+		return ErrBalanceOverflow
+	}
+	flows, wear := l.flows(), l.wearUnitsSlice()
+	slot := l.slot(a, Wear, commodity)
+	if !(addFits(wear[commodity], removed) && addFits(flows[slot], destroyed) && addFits(b.balance, destroyed)) {
+		return ErrBalanceOverflow
+	}
+
+	// Nothing below can fail.
+	l.applyWorn(a)
+	wear[commodity] += removed
+	flows[slot] += destroyed
+	b.balance += destroyed
+	return nil
+}
+
+// addFits reports whether base + delta stays within int64.
+func addFits(base, delta int64) bool {
+	_, ok := checked.Add(base, delta)
+	return ok
+}
+
+// wearUnitsSlice returns the wear units WearItems adds to: the construction
+// bucket while in construction, else the tick's.
+func (l *Ledger) wearUnitsSlice() []int64 {
+	if l.construction {
+		return l.wearBucket
+	}
+	return l.wear
+}
+
+// applyWorn removes the selected items from their lots and adds the survivors
+// at their new durability.
+func (l *Ledger) applyWorn(a *account) {
+	for _, s := range l.sel {
+		a.lots[s.lot].Quantity -= s.n
+	}
+	a.compact()
+	for _, s := range l.sel {
+		if !s.destroyed {
+			l.add(a, s.survivor, s.n)
+		}
+	}
+}
+
+// wearTarget runs checks 1 to 6 of WearItems and returns the account and the
+// Wear boundary account.
+func (l *Ledger) wearTarget(id, commodity int, n, units int64) (a, b *account, err error) {
+	if n < 1 || units < 1 {
+		return nil, nil, ErrInvalidAmount
+	}
+	if a, err = l.open(id); err != nil {
+		return nil, nil, err
+	}
+	if err = l.wearRefusal(a, commodity); err != nil {
+		return nil, nil, err
+	}
+	if b = l.boundaryAt(Wear, commodity); b == nil {
+		return nil, nil, ErrUnknownAccount
+	}
+	if a.held(commodity)-a.earmarkedOf(commodity) < n {
+		return nil, nil, ErrInsufficientStock
+	}
+	return a, b, nil
+}
+
+// wearRefusal is checks 3 to 5 of WearItems before the boundary account: the
+// commodity, the kind and that the commodity is durable.
+func (l *Ledger) wearRefusal(a *account, commodity int) error {
 	if commodity < 0 || commodity >= len(l.comms) {
 		return ErrUnknownCommodity
 	}
@@ -217,27 +349,18 @@ func (l *Ledger) WearItems(id, commodity int, n, units int64) error {
 	if l.comms[commodity].Durability == 0 {
 		return ErrNotDurable
 	}
-	b := l.boundaryAt(Wear, commodity)
-	if b == nil {
-		return ErrUnknownAccount
-	}
-	if a.held(commodity)-a.earmarkedOf(commodity) < n {
-		return ErrInsufficientStock
-	}
+	return nil
+}
 
-	// Select, in order of (durability, canonical position), the n items. A
-	// durable's durability is at least 1, so 0 starts below every lot.
+// selectWorn fills l.sel with the n items to wear, in order of (durability,
+// canonical position). A durable's durability is at least 1, so 0 starts below
+// every lot.
+func (l *Ledger) selectWorn(a *account, commodity int, n, units int64) {
 	lo, hi := a.span(commodity)
 	l.sel = l.sel[:0]
 	remaining, prev := n, int64(0)
 	for remaining > 0 {
-		next, found := int64(math.MaxInt64), false
-		for i := lo; i < hi; i++ {
-			lt := a.lots[i]
-			if lt.Quantity > lt.Reserved && lt.Durability > prev && lt.Durability < next {
-				next, found = lt.Durability, true
-			}
-		}
+		next, found := a.nextDurability(lo, hi, prev)
 		if !found {
 			// Unreachable: the count above and this scan read the same lots.
 			invariantViolated("WearItems found fewer available items than it counted")
@@ -259,49 +382,37 @@ func (l *Ledger) WearItems(id, commodity int, n, units int64) error {
 		}
 		prev = next
 	}
+}
 
-	var destroyed, removed int64
-	for _, s := range l.sel {
-		w, ok := checked.Mul(s.n, s.removed)
-		if !ok {
-			return ErrBalanceOverflow
+// nextDurability returns the lowest durability above prev among the available
+// lots in [lo, hi).
+func (a *account) nextDurability(lo, hi int, prev int64) (next int64, found bool) {
+	next = math.MaxInt64
+	for i := lo; i < hi; i++ {
+		lt := a.lots[i]
+		if lt.Quantity > lt.Reserved && lt.Durability > prev && lt.Durability < next {
+			next, found = lt.Durability, true
 		}
-		if removed, ok = checked.Add(removed, w); !ok {
-			return ErrBalanceOverflow
+	}
+	return next, found
+}
+
+// wearTotals sums the selection: items destroyed and durability removed. ok is
+// false on overflow.
+func (l *Ledger) wearTotals() (destroyed, removed int64, ok bool) {
+	for _, s := range l.sel {
+		w, fits := checked.Mul(s.n, s.removed)
+		if !fits {
+			return 0, 0, false
+		}
+		if removed, fits = checked.Add(removed, w); !fits {
+			return 0, 0, false
 		}
 		if s.destroyed {
 			destroyed += s.n
 		}
 	}
-	flows, wear := l.flows(), l.wear
-	if l.construction {
-		wear = l.wearBucket
-	}
-	slot := a.region*l.stride + l.off[Wear][thingGoods] + commodity
-	if _, ok := checked.Add(wear[commodity], removed); !ok {
-		return ErrBalanceOverflow
-	}
-	if _, ok := checked.Add(flows[slot], destroyed); !ok {
-		return ErrBalanceOverflow
-	}
-	if _, ok := checked.Add(b.balance, destroyed); !ok {
-		return ErrBalanceOverflow
-	}
-
-	// Nothing below can fail.
-	for _, s := range l.sel {
-		a.lots[s.lot].Quantity -= s.n
-	}
-	a.compact()
-	for _, s := range l.sel {
-		if !s.destroyed {
-			l.add(a, s.survivor, s.n)
-		}
-	}
-	wear[commodity] += removed
-	flows[slot] += destroyed
-	b.balance += destroyed
-	return nil
+	return destroyed, removed, true
 }
 
 // Wear is WearItems with n = 1 (spec-ledger.md 5.4.3).

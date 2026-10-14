@@ -128,6 +128,7 @@ func (l *Ledger) parties(creditor, debtor int) (c, d *account, err error) {
 //  7. the refusals of the transfer: ErrInsufficientFunds and
 //     ErrBalanceOverflow, for the debtor's balance.
 func (l *Ledger) Lend(creditor, debtor int, principal, interest, rateBP, due int64) (int64, error) {
+	// #lizard forgives the parameter count: the signature is exported API.
 	if principal < 1 || interest < 0 {
 		return 0, ErrInvalidAmount
 	}
@@ -135,19 +136,11 @@ func (l *Ledger) Lend(creditor, debtor int, principal, interest, rateBP, due int
 	if err != nil {
 		return 0, err
 	}
-	if creditor == debtor || due <= l.tick {
-		return 0, ErrClaimShape
+	if err := l.checkLend(creditor, debtor, due, c, d); err != nil {
+		return 0, err
 	}
-	if !l.moneyFits(LoanOut, c, d) {
-		return 0, ErrReasonMismatch
-	}
-	if len(l.claims) >= l.maxClaims {
-		return 0, ErrTooManyClaims
-	}
-	owed, ok := checked.Add(principal, interest)
-	lent, ok2 := checked.Add(l.claimTot.Lent, principal)
-	fixed, ok3 := checked.Add(l.claimTot.InterestFixed, interest)
-	if !ok || !ok2 || !ok3 || owed > l.maxMoney {
+	lent, fixed, ok := l.lentTotals(principal, interest)
+	if !ok {
 		return 0, ErrBalanceOverflow
 	}
 	if err := l.transfer(creditor, debtor, principal, LoanOut, false); err != nil {
@@ -164,6 +157,36 @@ func (l *Ledger) Lend(creditor, debtor int, principal, interest, rateBP, due int
 	})
 	l.claimTot.Lent, l.claimTot.InterestFixed = lent, fixed
 	return id, nil
+}
+
+// checkLend makes checks 3 to 5 of Lend, in that order, once the accounts are
+// found.
+func (l *Ledger) checkLend(creditor, debtor int, due int64, c, d *account) error {
+	if l.sameOrDue(creditor, debtor, due) {
+		return ErrClaimShape
+	}
+	if !l.moneyFits(LoanOut, c, d) {
+		return ErrReasonMismatch
+	}
+	if len(l.claims) >= l.maxClaims {
+		return ErrTooManyClaims
+	}
+	return nil
+}
+
+// sameOrDue reports whether a claim has the same account on both sides or a
+// due not after the current tick.
+func (l *Ledger) sameOrDue(creditor, debtor int, due int64) bool {
+	return creditor == debtor || due <= l.tick
+}
+
+// lentTotals returns the Lent and InterestFixed totals after a loan, and false
+// when the amount owed passes MaxMoney or a total would leave int64.
+func (l *Ledger) lentTotals(principal, interest int64) (lent, fixed int64, ok bool) {
+	owed, ok1 := checked.Add(principal, interest)
+	lent, ok2 := checked.Add(l.claimTot.Lent, principal)
+	fixed, ok3 := checked.Add(l.claimTot.InterestFixed, interest)
+	return lent, fixed, ok1 && ok2 && ok3 && owed <= l.maxMoney
 }
 
 // Obligate appends a claim of origin OriginPayout with the next ID, Principal
@@ -183,7 +206,7 @@ func (l *Ledger) Obligate(creditor, debtor int, amount, due int64) (int64, error
 	if err != nil {
 		return 0, err
 	}
-	if creditor == debtor || due <= l.tick || !setAE.has(c.kind) || d.kind != KindAgent {
+	if l.sameOrDue(creditor, debtor, due) || !setAE.has(c.kind) || d.kind != KindAgent {
 		return 0, ErrClaimShape
 	}
 	if len(l.claims) >= l.maxClaims {
@@ -222,39 +245,9 @@ func (l *Ledger) Settle(claim, interest, principal int64) error {
 		return ErrUnknownClaim
 	}
 	c := &l.claims[i]
-	if interest < 0 || principal < 0 || interest > c.InterestOwed || principal > c.PrincipalOwed ||
-		interest == 0 && principal == 0 {
-		return ErrInvalidAmount
-	}
-	cr, db, err := l.parties(c.Creditor, c.Debtor)
-	if err != nil {
+	if err := l.checkSettle(c, interest, principal); err != nil {
 		return err
 	}
-	if interest > 0 && !l.moneyFits(LoanInterest, db, cr) || principal > 0 && !l.moneyFits(LoanRepay, db, cr) {
-		return ErrReasonMismatch
-	}
-	// Each part is at most what is owed, and a loan owes at most MaxMoney and
-	// a payout claim has no interest, so the sum cannot overflow.
-	total := interest + principal
-	if db.balance-db.reserved < total {
-		return ErrInsufficientFunds
-	}
-	if n, ok := checked.Add(cr.balance, total); !ok || n > l.maxMoney {
-		return ErrBalanceOverflow
-	}
-	flows := l.flows()
-	for _, p := range [2]struct {
-		r Reason
-		v int64
-	}{{LoanInterest, interest}, {LoanRepay, principal}} {
-		if p.v == 0 {
-			continue
-		}
-		if _, ok := checked.Add(flows[db.region*l.stride+l.off[p.r][thingMoney]], p.v); !ok {
-			return ErrBalanceOverflow
-		}
-	}
-
 	// Nothing below can fail: the checks above are those of transfer.
 	if interest > 0 {
 		l.mustTransfer(c.Debtor, c.Creditor, interest, LoanInterest)
@@ -270,6 +263,66 @@ func (l *Ledger) Settle(claim, interest, principal int64) error {
 		l.claims = slices.Delete(l.claims, i, i+1)
 	}
 	return nil
+}
+
+// checkSettle makes the checks of Settle after the claim is found, in the
+// order its doc comment gives.
+func (l *Ledger) checkSettle(c *Claim, interest, principal int64) error {
+	if !c.partsValid(interest, principal) {
+		return ErrInvalidAmount
+	}
+	cr, db, err := l.parties(c.Creditor, c.Debtor)
+	if err != nil {
+		return err
+	}
+	if !l.settleReasonsFit(cr, db, interest, principal) {
+		return ErrReasonMismatch
+	}
+	// Each part is at most what is owed, and a loan owes at most MaxMoney and
+	// a payout claim has no interest, so the sum cannot overflow.
+	total := interest + principal
+	if db.balance-db.reserved < total {
+		return ErrInsufficientFunds
+	}
+	if n, ok := checked.Add(cr.balance, total); !ok || n > l.maxMoney {
+		return ErrBalanceOverflow
+	}
+	if !l.flowsFit(db.region, interest, principal) {
+		return ErrBalanceOverflow
+	}
+	return nil
+}
+
+// settleReasonsFit reports whether the reason of each part to pay is declared
+// and fits the accounts.
+func (l *Ledger) settleReasonsFit(cr, db *account, interest, principal int64) bool {
+	return (interest == 0 || l.moneyFits(LoanInterest, db, cr)) &&
+		(principal == 0 || l.moneyFits(LoanRepay, db, cr))
+}
+
+// partsValid reports whether the interest and principal parts of a payment
+// are each within what is owed and not both 0.
+func (c *Claim) partsValid(interest, principal int64) bool {
+	return interest >= 0 && principal >= 0 && interest <= c.InterestOwed &&
+		principal <= c.PrincipalOwed && (interest != 0 || principal != 0)
+}
+
+// flowsFit reports whether the LoanInterest and LoanRepay flow totals of the
+// region can take the parts without leaving int64.
+func (l *Ledger) flowsFit(region int, interest, principal int64) bool {
+	flows := l.flows()
+	for _, p := range [2]struct {
+		r Reason
+		v int64
+	}{{LoanInterest, interest}, {LoanRepay, principal}} {
+		if p.v == 0 {
+			continue
+		}
+		if _, ok := checked.Add(flows[region*l.stride+l.off[p.r][thingMoney]], p.v); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // mustTransfer is a transfer whose refusal is a programmer error: the caller
@@ -345,49 +398,18 @@ func (l *Ledger) MarkOverdue(claim, tick int64) error {
 // commodities, ErrInvalidAmount for a negative price and ErrBalanceOverflow
 // for a sum outside int64. It changes nothing.
 func (l *Ledger) BalanceSheet(id int, prices []int64) (Sheet, error) {
-	a, err := l.open(id)
+	a, err := l.sheetAccount(id, prices)
 	if err != nil {
 		return Sheet{}, err
 	}
-	if a.kind == KindBoundary {
-		return Sheet{}, ErrInvalidKind
-	}
-	if len(prices) < len(l.comms) {
-		return Sheet{}, ErrUnknownCommodity
-	}
-	for _, p := range prices[:len(l.comms)] {
-		if p < 0 {
-			return Sheet{}, ErrInvalidAmount
-		}
-	}
 	s := Sheet{Money: a.balance}
-	for _, lt := range a.lots {
-		v, ok := checked.Mul(lt.Quantity, prices[lt.Commodity])
-		if !ok {
-			return Sheet{}, ErrBalanceOverflow
-		}
-		if s.Goods, ok = checked.Add(s.Goods, v); !ok {
-			return Sheet{}, ErrBalanceOverflow
-		}
-	}
-	for _, c := range l.claims {
-		if c.Creditor != id && c.Debtor != id {
-			continue
-		}
-		owed, ok := checked.Add(c.PrincipalOwed, c.InterestOwed)
-		if !ok {
-			return Sheet{}, ErrBalanceOverflow
-		}
-		if c.Creditor == id {
-			s.ClaimsHeld, ok = checked.Add(s.ClaimsHeld, owed)
-		} else {
-			s.ClaimsOwed, ok = checked.Add(s.ClaimsOwed, owed)
-		}
-		if !ok {
-			return Sheet{}, ErrBalanceOverflow
-		}
-	}
 	var ok bool
+	if s.Goods, ok = goodsValue(a.lots, prices); !ok {
+		return Sheet{}, ErrBalanceOverflow
+	}
+	if !l.sumClaims(id, &s) {
+		return Sheet{}, ErrBalanceOverflow
+	}
 	if s.Assets, ok = checked.Add(s.Money, s.Goods); ok {
 		s.Assets, ok = checked.Add(s.Assets, s.ClaimsHeld)
 	}
@@ -398,4 +420,64 @@ func (l *Ledger) BalanceSheet(id int, prices []int64) (Sheet, error) {
 		return Sheet{}, ErrBalanceOverflow
 	}
 	return s, nil
+}
+
+// sheetAccount opens account id for a balance sheet and validates the price
+// table, in the order BalanceSheet documents.
+func (l *Ledger) sheetAccount(id int, prices []int64) (*account, error) {
+	a, err := l.open(id)
+	if err != nil {
+		return nil, err
+	}
+	if a.kind == KindBoundary {
+		return nil, ErrInvalidKind
+	}
+	if len(prices) < len(l.comms) {
+		return nil, ErrUnknownCommodity
+	}
+	for _, p := range prices[:len(l.comms)] {
+		if p < 0 {
+			return nil, ErrInvalidAmount
+		}
+	}
+	return a, nil
+}
+
+// goodsValue is the sum of quantity times price over the lots, false on
+// overflow.
+func goodsValue(lots []Lot, prices []int64) (int64, bool) {
+	var sum int64
+	for _, lt := range lots {
+		v, ok := checked.Mul(lt.Quantity, prices[lt.Commodity])
+		if !ok {
+			return 0, false
+		}
+		if sum, ok = checked.Add(sum, v); !ok {
+			return 0, false
+		}
+	}
+	return sum, true
+}
+
+// sumClaims adds what the claims of account id owe and are owed into
+// s.ClaimsHeld and s.ClaimsOwed, false on overflow.
+func (l *Ledger) sumClaims(id int, s *Sheet) bool {
+	for _, c := range l.claims {
+		if c.Creditor != id && c.Debtor != id {
+			continue
+		}
+		owed, ok := checked.Add(c.PrincipalOwed, c.InterestOwed)
+		if !ok {
+			return false
+		}
+		if c.Creditor == id {
+			s.ClaimsHeld, ok = checked.Add(s.ClaimsHeld, owed)
+		} else {
+			s.ClaimsOwed, ok = checked.Add(s.ClaimsOwed, owed)
+		}
+		if !ok {
+			return false
+		}
+	}
+	return true
 }

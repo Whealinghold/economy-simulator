@@ -58,38 +58,58 @@ func (l *Ledger) RebuildHints() {
 // a boundary balance or a flow total would leave int64; both are found before
 // anything is moved.
 func (l *Ledger) Age() error {
+	due, err := l.sumExpired()
+	if err != nil {
+		clear(l.spoil)
+		return err
+	}
+	flows := l.flows()
+	if due {
+		err := l.checkSpoilage(flows)
+		clear(l.spoil)
+		if err != nil {
+			return err
+		}
+	}
+	l.moveExpired(flows)
+	return nil
+}
+
+// expired reports whether lot lt has spoiled by the current tick.
+func (l *Ledger) expired(lt Lot) bool {
+	s := l.comms[lt.Commodity].ShelfLife
+	return s != 0 && expiry(lt.Born, s) <= l.tick
+}
+
+// sumExpired is pass 1 of Age: it reads only, summing the expired units per
+// (region, commodity) into l.spoil, and reports whether any lot is due.
+func (l *Ledger) sumExpired() (bool, error) {
 	nc := len(l.comms)
 	due := false
-	// Pass 1 reads only: the expired units per (region, commodity).
 	for i := range l.accounts {
 		a := &l.accounts[i]
 		if !a.hasHint || a.hint > l.tick {
 			continue
 		}
 		for _, lt := range a.lots {
-			s := l.comms[lt.Commodity].ShelfLife
-			if s == 0 || expiry(lt.Born, s) > l.tick {
+			if !l.expired(lt) {
 				continue
 			}
 			slot := a.region*nc + lt.Commodity
 			v, ok := checked.Add(l.spoil[slot], lt.Quantity)
 			if !ok {
-				clear(l.spoil)
-				return ErrBalanceOverflow
+				return false, ErrBalanceOverflow
 			}
 			l.spoil[slot] = v
 			due = true
 		}
 	}
-	flows := l.flows()
-	if due {
-		if err := l.checkSpoilage(flows); err != nil {
-			clear(l.spoil)
-			return err
-		}
-		clear(l.spoil)
-	}
-	// Pass 2 applies. Accounts are in ID order and lots in canonical order.
+	return due, nil
+}
+
+// moveExpired is pass 2 of Age: it applies the moves. Accounts are in ID order
+// and lots in canonical order.
+func (l *Ledger) moveExpired(flows []int64) {
 	for i := range l.accounts {
 		a := &l.accounts[i]
 		if !a.hasHint || a.hint > l.tick {
@@ -97,8 +117,7 @@ func (l *Ledger) Age() error {
 		}
 		kept := a.lots[:0]
 		for _, lt := range a.lots {
-			s := l.comms[lt.Commodity].ShelfLife
-			if s == 0 || expiry(lt.Born, s) > l.tick {
+			if !l.expired(lt) {
 				kept = append(kept, lt)
 				continue
 			}
@@ -108,39 +127,46 @@ func (l *Ledger) Age() error {
 		a.lots = kept
 		l.rehint(a)
 	}
-	return nil
 }
 
 // checkSpoilage checks, from the per-(region, commodity) sums in l.spoil, that
 // every Spoilage boundary exists and that no balance or flow total overflows.
 func (l *Ledger) checkSpoilage(flows []int64) error {
-	nc := len(l.comms)
-	for c := 0; c < nc; c++ {
-		var total int64
-		for r := 0; r < l.regions; r++ {
-			v := l.spoil[r*nc+c]
-			if v == 0 {
-				continue
-			}
-			t, ok := checked.Add(total, v)
-			if !ok {
-				return ErrBalanceOverflow
-			}
-			total = t
-			if _, ok := checked.Add(flows[r*l.stride+l.off[Spoilage][thingGoods]+c], v); !ok {
-				return ErrBalanceOverflow
-			}
+	for c := range l.comms {
+		if err := l.checkSpoilageOf(c, flows); err != nil {
+			return err
 		}
-		if total == 0 {
+	}
+	return nil
+}
+
+// checkSpoilageOf is checkSpoilage for commodity c.
+func (l *Ledger) checkSpoilageOf(c int, flows []int64) error {
+	nc := len(l.comms)
+	var total int64
+	for r := 0; r < l.regions; r++ {
+		v := l.spoil[r*nc+c]
+		if v == 0 {
 			continue
 		}
-		id := l.boundary[l.off[Spoilage][thingGoods]+c]
-		if id < 0 {
-			return ErrUnknownAccount
-		}
-		if _, ok := checked.Add(l.accounts[id].balance, total); !ok {
+		t, ok := checked.Add(total, v)
+		if !ok {
 			return ErrBalanceOverflow
 		}
+		total = t
+		if !addFits(flows[r*l.stride+l.off[Spoilage][thingGoods]+c], v) {
+			return ErrBalanceOverflow
+		}
+	}
+	if total == 0 {
+		return nil
+	}
+	id := l.boundary[l.off[Spoilage][thingGoods]+c]
+	if id < 0 {
+		return ErrUnknownAccount
+	}
+	if !addFits(l.accounts[id].balance, total) {
+		return ErrBalanceOverflow
 	}
 	return nil
 }
@@ -169,18 +195,30 @@ func (l *Ledger) Expiring(id, commodity int, tick int64) (int64, error) {
 		return 0, ErrUnknownCommodity
 	}
 	s := l.comms[commodity].ShelfLife
-	if s == 0 || tick < l.tick || !a.hasHint || a.hint > tick {
+	if s == 0 || tick < l.tick || !a.mayExpireBy(tick) {
 		return 0, nil
 	}
+	return a.expiringUnits(commodity, s, tick), nil
+}
+
+// expiringUnits sums the unearmarked units of the commodity's lots that expire
+// by tick, given its shelf life.
+func (a *account) expiringUnits(commodity int, shelfLife, tick int64) int64 {
 	var n int64
 	lo, hi := a.span(commodity)
 	for _, lt := range a.lots[lo:hi] {
-		if expiry(lt.Born, s) > tick {
+		if expiry(lt.Born, shelfLife) > tick {
 			break
 		}
 		n += lt.Quantity - lt.Reserved
 	}
-	return n, nil
+	return n
+}
+
+// mayExpireBy reports whether any lot can expire by tick: the account has a
+// hint and it is not after tick.
+func (a *account) mayExpireBy(tick int64) bool {
+	return a.hasHint && a.hint <= tick
 }
 
 // compact removes the lots of quantity 0, in place.

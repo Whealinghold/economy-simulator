@@ -223,83 +223,22 @@ func (l *Ledger) creationKey(c int) Key {
 	return k
 }
 
+// move runs a goods move: the checks in order, then the flow total, then the
+// effects, which cannot fail.
 func (l *Ledger) move(m goodsMove) error {
-	if m.qty < 1 {
-		return ErrInvalidAmount
-	}
-	f, err := l.open(m.from)
+	f, t, err := l.checkMove(m)
 	if err != nil {
 		return err
 	}
-	t, err := l.open(m.to)
+	newFrom, err := debitCheck(f, m)
 	if err != nil {
 		return err
 	}
-	if m.commodity < 0 || m.commodity >= len(l.comms) {
-		return ErrUnknownCommodity
+	newTo, err := l.creditCheck(t, m)
+	if err != nil {
+		return err
 	}
-	rw, ok := rowOf(m.r, true)
-	if !ok || m.from == m.to || !rw.fits(f.kind, t.kind) {
-		return ErrReasonMismatch
-	}
-	for _, b := range [2]*account{f, t} {
-		if b.kind == KindBoundary && (b.reason != m.r || b.thing != m.commodity) {
-			return ErrReasonMismatch
-		}
-	}
-	if m.stated {
-		switch {
-		case f.kind != KindBoundary || m.r != Initial:
-			return ErrReasonMismatch
-		case !l.construction:
-			return ErrNotConstruction
-		case !l.validStated(m.key):
-			return ErrInvalidLot
-		}
-	}
-
-	// The debit.
-	var newFrom int64
-	switch {
-	case f.kind == KindBoundary:
-		switch {
-		case m.marked:
-			return ErrBoundaryReserve
-		case m.named:
-			return ErrUnknownLot
-		}
-		if newFrom, ok = checked.Sub(f.balance, m.qty); !ok {
-			return ErrBalanceOverflow
-		}
-	case m.named:
-		i, found := f.find(m.key)
-		if !found {
-			return ErrUnknownLot
-		}
-		if err := lotShort(f.lots[i].Quantity, f.lots[i].Reserved, m.qty, m.marked); err != nil {
-			return err
-		}
-	default:
-		held, reserved := f.held(m.commodity), f.earmarkedOf(m.commodity)
-		if err := lotShort(held, reserved, m.qty, m.marked); err != nil {
-			return err
-		}
-	}
-	// The credit.
-	var newTo int64
-	if t.kind == KindBoundary {
-		if newTo, ok = checked.Add(t.balance, m.qty); !ok {
-			return ErrBalanceOverflow
-		}
-	} else if n, ok := checked.Add(t.held(m.commodity), m.qty); !ok || n > l.maxQty {
-		return ErrBalanceOverflow
-	}
-	// The flow total.
-	region := f.region
-	if f.kind == KindBoundary {
-		region = t.region
-	}
-	slot := region*l.stride + l.off[m.r][thingGoods] + m.commodity
+	slot := l.flowSlot(f, t, l.off[m.r][thingGoods]+m.commodity)
 	flows := l.flows()
 	total, ok := checked.Add(flows[slot], m.qty)
 	if !ok {
@@ -308,33 +247,125 @@ func (l *Ledger) move(m goodsMove) error {
 
 	// Nothing below can fail.
 	flows[slot] = total
-	switch {
-	case f.kind == KindBoundary:
+	if f.kind == KindBoundary {
 		f.balance = newFrom
-		key := l.creationKey(m.commodity)
-		if m.stated {
-			key = m.key
-		}
-		l.add(t, key, m.qty)
+		l.add(t, l.moveKey(m), m.qty)
 		return nil
-	case t.kind == KindBoundary:
+	}
+	if t.kind == KindBoundary {
 		t.balance = newTo
 	}
+	l.takeLots(f, t, m)
+	return nil
+}
+
+// moveKey is the key of the lot a boundary source creates: the stated key, or
+// the key of the current tick.
+func (l *Ledger) moveKey(m goodsMove) Key {
+	if m.stated {
+		return m.key
+	}
+	return l.creationKey(m.commodity)
+}
+
+// checkMove runs the argument, account, commodity, reason and stated-key
+// checks of move, in order.
+func (l *Ledger) checkMove(m goodsMove) (f, t *account, err error) {
+	if m.qty < 1 {
+		return nil, nil, ErrInvalidAmount
+	}
+	if f, t, err = l.parties(m.from, m.to); err != nil {
+		return nil, nil, err
+	}
+	if m.commodity < 0 || m.commodity >= len(l.comms) {
+		return nil, nil, ErrUnknownCommodity
+	}
+	if err = l.checkReason(m, f, t); err != nil {
+		return nil, nil, err
+	}
+	if m.stated {
+		if err = l.checkStated(m, f); err != nil {
+			return nil, nil, err
+		}
+	}
+	return f, t, nil
+}
+
+// checkReason refuses a reason that does not fit the accounts (4.2).
+func (l *Ledger) checkReason(m goodsMove, f, t *account) error {
+	rw, ok := rowOf(m.r, true)
+	if !ok || m.from == m.to || !rw.fits(f.kind, t.kind) {
+		return ErrReasonMismatch
+	}
+	if !boundariesFit(f, t, m.r, m.commodity) {
+		return ErrReasonMismatch
+	}
+	return nil
+}
+
+// checkStated runs the extra checks of MoveStated.
+func (l *Ledger) checkStated(m goodsMove, f *account) error {
+	switch {
+	case f.kind != KindBoundary || m.r != Initial:
+		return ErrReasonMismatch
+	case !l.construction:
+		return ErrNotConstruction
+	case !l.validStated(m.key):
+		return ErrInvalidLot
+	}
+	return nil
+}
+
+// debitCheck checks the source of a move has the units and returns the new
+// balance of a boundary source.
+func debitCheck(f *account, m goodsMove) (newFrom int64, err error) {
+	switch {
+	case f.kind == KindBoundary:
+		switch {
+		case m.marked:
+			return 0, ErrBoundaryReserve
+		case m.named:
+			return 0, ErrUnknownLot
+		}
+		n, ok := checked.Sub(f.balance, m.qty)
+		if !ok {
+			return 0, ErrBalanceOverflow
+		}
+		return n, nil
+	case m.named:
+		i, found := f.find(m.key)
+		if !found {
+			return 0, ErrUnknownLot
+		}
+		return 0, lotShort(f.lots[i].Quantity, f.lots[i].Reserved, m.qty, m.marked)
+	}
+	return 0, lotShort(f.held(m.commodity), f.earmarkedOf(m.commodity), m.qty, m.marked)
+}
+
+// creditCheck checks the destination of a move can take the units and returns
+// the new balance of a boundary destination.
+func (l *Ledger) creditCheck(t *account, m goodsMove) (newTo int64, err error) {
+	if t.kind == KindBoundary {
+		n, ok := checked.Add(t.balance, m.qty)
+		if !ok {
+			return 0, ErrBalanceOverflow
+		}
+		return n, nil
+	}
+	if n, ok := checked.Add(t.held(m.commodity), m.qty); !ok || n > l.maxQty {
+		return 0, ErrBalanceOverflow
+	}
+	return 0, nil
+}
+
+// takeLots moves the units out of the source lots in canonical order and
+// credits the destination, then drops emptied lots.
+func (l *Ledger) takeLots(f, t *account, m goodsMove) {
 	remaining := m.qty
 	emptied := false
-	var lo, hi int
-	if m.named {
-		lo, _ = f.find(m.key)
-		hi = lo + 1
-	} else {
-		lo, hi = f.span(m.commodity)
-	}
+	lo, hi := f.takeSpan(m)
 	for i := lo; i < hi && remaining > 0; i++ {
-		avail := f.lots[i].Quantity - f.lots[i].Reserved
-		if m.marked {
-			avail = f.lots[i].Reserved
-		}
-		n := min(avail, remaining)
+		n := min(f.lots[i].takeable(m.marked), remaining)
 		if n == 0 {
 			continue
 		}
@@ -348,7 +379,25 @@ func (l *Ledger) move(m goodsMove) error {
 	if emptied {
 		f.lots = slices.DeleteFunc(f.lots, func(lt Lot) bool { return lt.Quantity == 0 })
 	}
-	return nil
+}
+
+// takeSpan is the range of lots a move takes from: the named lot, or every lot
+// of the commodity.
+func (a *account) takeSpan(m goodsMove) (lo, hi int) {
+	if m.named {
+		lo, _ = a.find(m.key)
+		return lo, lo + 1
+	}
+	return a.span(m.commodity)
+}
+
+// takeable is the units of the lot a take can use: the earmarked units for a
+// marked take, else the unearmarked ones.
+func (lt Lot) takeable(marked bool) int64 {
+	if marked {
+		return lt.Reserved
+	}
+	return lt.Quantity - lt.Reserved
 }
 
 // lotShort returns the refusal for taking qty from a holding of held units of
@@ -371,7 +420,7 @@ func lotShort(held, reserved, qty int64, marked bool) error {
 // ErrBoundaryReserve, and ErrInsufficientStock when more than the available
 // (unearmarked) units are asked.
 func (l *Ledger) ReserveGoods(id, commodity int, qty int64) error {
-	return l.reserve(id, commodity, qty, false, Key{}, false)
+	return l.reserve(reservation{id: id, commodity: commodity, qty: qty})
 }
 
 // ReleaseGoods returns qty earmarked units of a commodity to available (6.2).
@@ -379,62 +428,71 @@ func (l *Ledger) ReserveGoods(id, commodity int, qty int64) error {
 // reserve of n followed by a release of m leaves what a reserve of n-m would
 // have. More than is earmarked is ErrReservationExceeds.
 func (l *Ledger) ReleaseGoods(id, commodity int, qty int64) error {
-	return l.reserve(id, commodity, qty, false, Key{}, true)
+	return l.reserve(reservation{id: id, commodity: commodity, qty: qty, release: true})
 }
 
 // ReserveLot is ReserveGoods on exactly the named lot (6.7): ErrUnknownLot if
 // there is no such lot, ErrInsufficientStock if it has too few available.
 func (l *Ledger) ReserveLot(id int, key Key, qty int64) error {
-	return l.reserve(id, key.Commodity, qty, true, key, false)
+	return l.reserve(reservation{id: id, commodity: key.Commodity, qty: qty, named: true, key: key})
 }
 
 // ReleaseLot is ReleaseGoods on exactly the named lot: ErrUnknownLot if there
 // is no such lot, ErrReservationExceeds if it has fewer units earmarked.
 func (l *Ledger) ReleaseLot(id int, key Key, qty int64) error {
-	return l.reserve(id, key.Commodity, qty, true, key, true)
+	return l.reserve(reservation{id: id, commodity: key.Commodity, qty: qty, named: true, key: key, release: true})
 }
 
-func (l *Ledger) reserve(id, commodity int, qty int64, named bool, key Key, release bool) error {
-	if qty < 1 {
-		return ErrInvalidAmount
-	}
-	a, err := l.open(id)
+// reservation is one ReserveGoods, ReleaseGoods, ReserveLot or ReleaseLot:
+// qty units of commodity in account id, on the named lot key if named, and
+// released rather than earmarked if release.
+type reservation struct {
+	id, commodity int
+	qty           int64
+	key           Key
+	named         bool
+	release       bool
+}
+
+// reserve runs a reservation: the checks in order, then the earmark.
+func (l *Ledger) reserve(r reservation) error {
+	a, err := l.checkReserve(r)
 	if err != nil {
 		return err
 	}
-	if commodity < 0 || commodity >= len(l.comms) {
-		return ErrUnknownCommodity
+	if r.named {
+		return reserveLot(a, r.key, r.qty, r.release)
 	}
-	if a.kind == KindBoundary && !release {
-		return ErrBoundaryReserve
+	lo, hi := a.span(r.commodity)
+	if err := lotShort(a.held(r.commodity), a.earmarkedOf(r.commodity), r.qty, r.release); err != nil {
+		return err
 	}
-	sign := int64(1)
-	if release {
-		sign = -1
+	a.earmark(lo, hi, r.qty, r.release)
+	return nil
+}
+
+// checkReserve runs the amount, account, commodity and boundary checks of a
+// reservation, in order, and returns the account.
+func (l *Ledger) checkReserve(r reservation) (*account, error) {
+	if r.qty < 1 {
+		return nil, ErrInvalidAmount
 	}
-	if named {
-		i, found := a.find(key)
-		if !found {
-			return ErrUnknownLot
-		}
-		lt := &a.lots[i]
-		switch {
-		case release && lt.Reserved < qty:
-			return ErrReservationExceeds
-		case !release && lt.Quantity-lt.Reserved < qty:
-			return ErrInsufficientStock
-		}
-		lt.Reserved += sign * qty
-		return nil
+	a, err := l.open(r.id)
+	if err != nil {
+		return nil, err
 	}
-	lo, hi := a.span(commodity)
-	held, reserved := a.held(commodity), a.earmarkedOf(commodity)
-	switch {
-	case release && reserved < qty:
-		return ErrReservationExceeds
-	case !release && held-reserved < qty:
-		return ErrInsufficientStock
+	if r.commodity < 0 || r.commodity >= len(l.comms) {
+		return nil, ErrUnknownCommodity
 	}
+	if a.kind == KindBoundary && !r.release {
+		return nil, ErrBoundaryReserve
+	}
+	return a, nil
+}
+
+// earmark earmarks qty units over lots lo..hi, oldest first, or releases them
+// newest first.
+func (a *account) earmark(lo, hi int, qty int64, release bool) {
 	remaining := qty
 	if release {
 		for i := hi - 1; i >= lo && remaining > 0; i-- {
@@ -442,12 +500,28 @@ func (l *Ledger) reserve(id, commodity int, qty int64, named bool, key Key, rele
 			a.lots[i].Reserved -= n
 			remaining -= n
 		}
-		return nil
+		return
 	}
 	for i := lo; i < hi && remaining > 0; i++ {
 		n := min(a.lots[i].Quantity-a.lots[i].Reserved, remaining)
 		a.lots[i].Reserved += n
 		remaining -= n
 	}
+}
+
+// reserveLot earmarks or releases qty units on exactly the named lot.
+func reserveLot(a *account, key Key, qty int64, release bool) error {
+	i, found := a.find(key)
+	if !found {
+		return ErrUnknownLot
+	}
+	lt := &a.lots[i]
+	if err := lotShort(lt.Quantity, lt.Reserved, qty, release); err != nil {
+		return err
+	}
+	if release {
+		qty = -qty
+	}
+	lt.Reserved += qty
 	return nil
 }

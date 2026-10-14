@@ -135,38 +135,41 @@ type Flow struct {
 	Total     int64
 }
 
-// New builds an empty ledger in its construction phase. It returns an error
-// wrapping ErrInvalidConfig for a table it cannot use.
-func New(cfg Config) (*Ledger, error) {
+// validate checks cfg in the order of New's errors and returns the set of
+// declared reasons.
+func validate(cfg Config) (declared [NumReasons]bool, err error) {
 	switch {
 	case cfg.Regions < 1:
-		return nil, fmt.Errorf("%w: %d regions, want at least 1", ErrInvalidConfig, cfg.Regions)
+		return declared, fmt.Errorf("%w: %d regions, want at least 1", ErrInvalidConfig, cfg.Regions)
 	case cfg.MaxMoney < 1 || cfg.MaxQuantity < 1:
-		return nil, fmt.Errorf("%w: bounds must be at least 1", ErrInvalidConfig)
+		return declared, fmt.Errorf("%w: bounds must be at least 1", ErrInvalidConfig)
 	}
 	for i, c := range cfg.Commodities {
 		if c.ShelfLife < 0 || c.Durability < 0 {
-			return nil, fmt.Errorf("%w: commodity %d has a negative shelf life or durability", ErrInvalidConfig, i)
+			return declared, fmt.Errorf("%w: commodity %d has a negative shelf life or durability", ErrInvalidConfig, i)
 		}
 	}
 	if cfg.MaxClaims < 0 {
-		return nil, fmt.Errorf("%w: %d claims, want at least 0", ErrInvalidConfig, cfg.MaxClaims)
+		return declared, fmt.Errorf("%w: %d claims, want at least 0", ErrInvalidConfig, cfg.MaxClaims)
 	}
-	var declared [NumReasons]bool
-	for _, r := range cfg.Declared {
+	return declaredSet(cfg.Declared)
+}
+
+// declaredSet returns the set of reasons, or an error for one that is not
+// declarable or is listed twice.
+func declaredSet(reasons []Reason) (declared [NumReasons]bool, err error) {
+	for _, r := range reasons {
 		if r < firstDeclared || r >= NumReasons || declared[r] {
-			return nil, fmt.Errorf("%w: reason %d is not a declarable reason, or is declared twice", ErrInvalidConfig, r)
+			return declared, fmt.Errorf("%w: reason %d is not a declarable reason, or is declared twice", ErrInvalidConfig, r)
 		}
 		declared[r] = true
 	}
-	l := &Ledger{
-		maxClaims:    cfg.MaxClaims,
-		maxMoney:     cfg.MaxMoney,
-		maxQty:       cfg.MaxQuantity,
-		comms:        append([]Commodity(nil), cfg.Commodities...),
-		regions:      cfg.Regions,
-		construction: true,
-	}
+	return declared, nil
+}
+
+// layout assigns the flow-total offsets of every reason and thing that has a
+// row, and sets l.stride.
+func (l *Ledger) layout(declared *[NumReasons]bool) {
 	for r := range l.off {
 		for t := range l.off[r] {
 			l.off[r][t] = -1
@@ -181,6 +184,24 @@ func New(cfg Config) (*Ledger, error) {
 			}
 		}
 	}
+}
+
+// New builds an empty ledger in its construction phase. It returns an error
+// wrapping ErrInvalidConfig for a table it cannot use.
+func New(cfg Config) (*Ledger, error) {
+	declared, err := validate(cfg)
+	if err != nil {
+		return nil, err
+	}
+	l := &Ledger{
+		maxClaims:    cfg.MaxClaims,
+		maxMoney:     cfg.MaxMoney,
+		maxQty:       cfg.MaxQuantity,
+		comms:        append([]Commodity(nil), cfg.Commodities...),
+		regions:      cfg.Regions,
+		construction: true,
+	}
+	l.layout(&declared)
 	n, ok := checked.Mul(int64(l.stride), int64(cfg.Regions))
 	if !ok || n > int64(^uint(0)>>1) {
 		return nil, fmt.Errorf("%w: flow totals do not fit", ErrInvalidConfig)
@@ -369,17 +390,23 @@ func (l *Ledger) AppendFlows(dst []Flow, bucket bool) []Flow {
 		src = l.bucket
 	}
 	for region := 0; region < l.regions; region++ {
-		base := region * l.stride
 		for r := Reason(0); r < NumReasons; r++ {
-			if o := l.off[r][thingMoney]; o >= 0 && src[base+o] != 0 {
-				dst = append(dst, Flow{region, r, Money, src[base+o]})
-			}
-			if o := l.off[r][thingGoods]; o >= 0 {
-				for c := range l.comms {
-					if v := src[base+o+c]; v != 0 {
-						dst = append(dst, Flow{region, r, c, v})
-					}
-				}
+			dst = l.appendReason(dst, src[region*l.stride:], region, r)
+		}
+	}
+	return dst
+}
+
+// appendReason appends the non-zero totals of reason r in one region, money
+// before goods, to dst. base is the region's slice of the totals.
+func (l *Ledger) appendReason(dst []Flow, base []int64, region int, r Reason) []Flow {
+	if o := l.off[r][thingMoney]; o >= 0 && base[o] != 0 {
+		dst = append(dst, Flow{region, r, Money, base[o]})
+	}
+	if o := l.off[r][thingGoods]; o >= 0 {
+		for c := range l.comms {
+			if v := base[o+c]; v != 0 {
+				dst = append(dst, Flow{region, r, c, v})
 			}
 		}
 	}

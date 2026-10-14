@@ -17,43 +17,34 @@ const numBuiltInReasons = int(ledger.LoanOut)
 
 // reasonName returns the root's Reason of a ledger reason, and false for a
 // reason the root has no name for. The number is internal and never saved raw
-// (a checkpoint saves the name), so this switch is the one place the two meet.
-// A module that declares a reason adds its case with its own change
+// (a checkpoint saves the name), so this table is the one place the two meet.
+// A module that declares a reason adds its row with its own change
 // (architecture.md 2.10.5).
 func reasonName(r ledger.Reason) (Reason, bool) {
-	switch r {
-	case ledger.Trade:
-		return ReasonTrade, true
-	case ledger.Initial:
-		return ReasonInitial, true
-	case ledger.RecipeInput:
-		return ReasonRecipeInput, true
-	case ledger.RecipeOutput:
-		return ReasonRecipeOutput, true
-	case ledger.Disposal:
-		return ReasonDisposal, true
-	case ledger.Consumption:
-		return ReasonConsumption, true
-	case ledger.Spoilage:
-		return ReasonSpoilage, true
-	case ledger.Wear:
-		return ReasonWear, true
-	case ledger.EstateMoney:
-		return ReasonEstateMoney, true
-	case ledger.EstateGoods:
-		return ReasonEstateGoods, true
-	case ledger.StartMoney:
-		return ReasonStartMoney, true
-	case ledger.Split:
-		return ReasonSplit, true
-	case ledger.Merge:
-		return ReasonMerge, true
-	case ledger.Births:
-		return ReasonBirths, true
-	case ledger.Starvation:
-		return ReasonStarvation, true
+	if int(r) >= len(reasonNames) || reasonNames[r] == "" {
+		return "", false
 	}
-	return "", false
+	return reasonNames[r], true
+}
+
+// reasonNames is the table reasonName reads, never mutated. The declared loan
+// reasons have no row: they are not built in.
+var reasonNames = [...]Reason{
+	ledger.Trade:        ReasonTrade,
+	ledger.Initial:      ReasonInitial,
+	ledger.RecipeInput:  ReasonRecipeInput,
+	ledger.RecipeOutput: ReasonRecipeOutput,
+	ledger.Disposal:     ReasonDisposal,
+	ledger.Consumption:  ReasonConsumption,
+	ledger.Spoilage:     ReasonSpoilage,
+	ledger.Wear:         ReasonWear,
+	ledger.EstateMoney:  ReasonEstateMoney,
+	ledger.EstateGoods:  ReasonEstateGoods,
+	ledger.StartMoney:   ReasonStartMoney,
+	ledger.Split:        ReasonSplit,
+	ledger.Merge:        ReasonMerge,
+	ledger.Births:       ReasonBirths,
+	ledger.Starvation:   ReasonStarvation,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -95,29 +86,32 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
+	if err := openBuiltInBoundaries(l, len(comms)); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+// openBuiltInBoundaries opens the boundary accounts of the built-in group in
+// the order newLedger documents: money first, then commodity-major.
+func openBuiltInBoundaries(l *ledger.Ledger, commodities int) error {
 	open := func(r ledger.Reason, thing int) error {
 		if _, err := l.OpenBoundary(r, thing); err != nil {
 			return fmt.Errorf("open boundary account %d of thing %d: %w", r, thing, err)
 		}
 		return nil
 	}
-	for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
-		if class, ok := ledger.ClassOf(r, false); ok && class != ledger.Internal {
-			if err := open(r, ledger.Money); err != nil {
-				return nil, err
-			}
-		}
-	}
-	for c := range comms {
+	for thing := ledger.Money; thing < commodities; thing++ {
+		goods := thing != ledger.Money
 		for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
-			if class, ok := ledger.ClassOf(r, true); ok && class != ledger.Internal {
-				if err := open(r, c); err != nil {
-					return nil, err
+			if class, ok := ledger.ClassOf(r, goods); ok && class != ledger.Internal {
+				if err := open(r, thing); err != nil {
+					return err
 				}
 			}
 		}
 	}
-	return l, nil
+	return nil
 }
 
 // boundaryFlows appends to dst the BoundaryFlow rows for flows, which are the

@@ -40,27 +40,34 @@ func (l *Ledger) moneyFits(r Reason, f, t *account) bool {
 	return ok && l.off[r][thingMoney] >= 0 && rw.fits(f.kind, t.kind)
 }
 
-func (l *Ledger) transfer(from, to int, amount int64, r Reason, marked bool) error {
+// transferParties runs the checks of transfer that precede the debit, in the
+// documented order, and returns the two open accounts.
+func (l *Ledger) transferParties(from, to int, amount int64, r Reason) (f, t *account, err error) {
 	if amount < 1 {
-		return ErrInvalidAmount
+		return nil, nil, ErrInvalidAmount
 	}
-	f, err := l.open(from)
-	if err != nil {
-		return err
+	if f, t, err = l.parties(from, to); err != nil {
+		return nil, nil, err
 	}
-	t, err := l.open(to)
-	if err != nil {
-		return err
+	if from == to || !l.moneyFits(r, f, t) || !boundariesFit(f, t, r, Money) {
+		return nil, nil, ErrReasonMismatch
 	}
-	if from == to || !l.moneyFits(r, f, t) {
-		return ErrReasonMismatch
-	}
+	return f, t, nil
+}
+
+// boundariesFit reports whether each boundary account among f and t is the
+// account of reason r and thing (Money or a commodity).
+func boundariesFit(f, t *account, r Reason, thing int) bool {
 	for _, b := range [2]*account{f, t} {
-		if b.kind == KindBoundary && (b.reason != r || b.thing != Money) {
-			return ErrReasonMismatch
+		if b.kind == KindBoundary && (b.reason != r || b.thing != thing) {
+			return false
 		}
 	}
-	// The debit.
+	return true
+}
+
+// debitRefusal returns the refusal of the debit side of a transfer, or nil.
+func debitRefusal(f *account, amount int64, marked bool) error {
 	switch {
 	case marked && f.kind == KindBoundary:
 		return ErrBoundaryReserve
@@ -71,21 +78,28 @@ func (l *Ledger) transfer(from, to int, amount int64, r Reason, marked bool) err
 	case f.kind != KindBoundary && f.balance-f.reserved < amount:
 		return ErrInsufficientFunds
 	}
+	return nil
+}
+
+// transfer runs a money transfer: the checks in the order Transfer documents,
+// then the effects, which cannot fail.
+func (l *Ledger) transfer(from, to int, amount int64, r Reason, marked bool) error {
+	f, t, err := l.transferParties(from, to, amount, r)
+	if err != nil {
+		return err
+	}
+	if err := debitRefusal(f, amount, marked); err != nil {
+		return err
+	}
 	newFrom, ok := checked.Sub(f.balance, amount)
 	if !ok {
 		return ErrBalanceOverflow
 	}
-	// The credit.
-	newTo, ok := checked.Add(t.balance, amount)
-	if !ok || (t.kind != KindBoundary && newTo > l.maxMoney) {
-		return ErrBalanceOverflow
+	newTo, err := l.credited(t, amount)
+	if err != nil {
+		return err
 	}
-	// The flow total.
-	region := f.region
-	if f.kind == KindBoundary {
-		region = t.region
-	}
-	slot := region*l.stride + l.off[r][thingMoney]
+	slot := l.flowSlot(f, t, l.off[r][thingMoney])
 	flows := l.flows()
 	total, ok := checked.Add(flows[slot], amount)
 	if !ok {
@@ -96,6 +110,27 @@ func (l *Ledger) transfer(from, to int, amount int64, r Reason, marked bool) err
 		f.reserved -= amount
 	}
 	return nil
+}
+
+// credited returns the balance of t after it takes amount, or
+// ErrBalanceOverflow when it passes int64, or MaxMoney for a non-boundary
+// account.
+func (l *Ledger) credited(t *account, amount int64) (int64, error) {
+	n, ok := checked.Add(t.balance, amount)
+	if !ok || (t.kind != KindBoundary && n > l.maxMoney) {
+		return 0, ErrBalanceOverflow
+	}
+	return n, nil
+}
+
+// flowSlot is the flow slot at offset off in the region a flow is attributed
+// to: the non-boundary side's, and the debited account's for an internal flow.
+func (l *Ledger) flowSlot(f, t *account, off int) int {
+	region := f.region
+	if f.kind == KindBoundary {
+		region = t.region
+	}
+	return region*l.stride + off
 }
 
 // ReserveMoney earmarks amount of an account's available money so that an

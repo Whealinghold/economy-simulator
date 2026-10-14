@@ -174,3 +174,17 @@ func BenchmarkExpiring(b *testing.B) {
 		}
 	}
 }
+
+// TestCost_WearItemsAllocatesNothing verifies that a wear of one item, which
+// moves no lot, allocates nothing. Wear consumes durability, so the run count
+// stays under the stock (12 items of 5 units).
+//
+// Requirement: NFR-LED-001
+func TestCost_WearItemsAllocatesNothing(t *testing.T) {
+	c := newCostRig(t)
+	f := func() { c.must(c.l.WearItems(c.a, 1, 1, 1)) }
+	f() // warm up
+	if got := testing.AllocsPerRun(20, f); got != 0 {
+		t.Errorf("WearItems allocates %v times per run, want 0", got)
+	}
+}

@@ -99,8 +99,14 @@ func (e *AuditError) Error() string {
 // Unwrap lets errors.Is match ErrAuditFailed.
 func (e *AuditError) Unwrap() error { return ErrAuditFailed }
 
-func auditFail(id Identity, account, commodity int, claim int64, format string, args ...any) error {
-	return &AuditError{Identity: id, Account: account, Commodity: commodity, Claim: claim, Detail: fmt.Sprintf(format, args...)}
+// auditFail builds the AuditError of a failed identity that names no claim.
+func auditFail(id Identity, account, commodity int, format string, args ...any) error {
+	return &AuditError{Identity: id, Account: account, Commodity: commodity, Claim: -1, Detail: fmt.Sprintf(format, args...)}
+}
+
+// auditClaimFail builds the AuditError of a failed claim identity.
+func auditClaimFail(account int, claim int64, format string, args ...any) error {
+	return &AuditError{Identity: IdentityClaim, Account: account, Commodity: None, Claim: claim, Detail: fmt.Sprintf(format, args...)}
 }
 
 // wide is a signed 128-bit sum, so that a total of int64 balances cannot wrap.
@@ -177,39 +183,55 @@ func (l *Ledger) Audit() error {
 
 // auditAccount checks one slot of the account table.
 func (l *Ledger) auditAccount(id int, a *account) error {
-	switch {
-	case a.kind >= numKinds:
-		return auditFail(IdentityStructure, id, None, -1, "kind %d is not a kind", a.kind)
-	case a.closed:
-		if a.balance != 0 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint || a.owner != 0 || a.region != 0 || a.kind == KindBoundary {
-			return auditFail(IdentityStructure, id, None, -1, "a closed account holds state, or is a boundary")
+	if a.kind >= numKinds {
+		return auditFail(IdentityStructure, id, None, "kind %d is not a kind", a.kind)
+	}
+	if a.closed {
+		if closedHoldsState(a) {
+			return auditFail(IdentityStructure, id, None, "a closed account holds state, or is a boundary")
 		}
 		return nil
-	case a.kind == KindBoundary:
+	}
+	if a.kind == KindBoundary {
 		return l.auditBoundary(id, a)
-	case a.region < 0 || a.region >= l.regions:
-		return auditFail(IdentityStructure, id, None, -1, "region %d is outside the %d regions", a.region, l.regions)
-	case a.balance < 0:
-		return auditFail(IdentityNonNegative, id, Money, -1, "balance %d is negative", a.balance)
-	case a.reserved < 0 || a.reserved > a.balance:
-		return auditFail(IdentityNonNegative, id, Money, -1, "reserved %d is outside [0, balance %d]", a.reserved, a.balance)
-	case a.balance > l.maxMoney:
-		return auditFail(IdentityStructure, id, Money, -1, "balance %d is above MaxMoney %d", a.balance, l.maxMoney)
+	}
+	if err := l.auditMoney(id, a); err != nil {
+		return err
 	}
 	return l.auditLots(id, a)
+}
+
+// closedHoldsState reports whether a closed account is not wholly zeroed.
+func closedHoldsState(a *account) bool {
+	return a.balance != 0 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint || a.owner != 0 || a.region != 0 || a.kind == KindBoundary
+}
+
+// auditMoney checks the region and the money balance of a non-boundary account.
+func (l *Ledger) auditMoney(id int, a *account) error {
+	switch {
+	case a.region < 0 || a.region >= l.regions:
+		return auditFail(IdentityStructure, id, None, "region %d is outside the %d regions", a.region, l.regions)
+	case a.balance < 0:
+		return auditFail(IdentityNonNegative, id, Money, "balance %d is negative", a.balance)
+	case a.reserved < 0 || a.reserved > a.balance:
+		return auditFail(IdentityNonNegative, id, Money, "reserved %d is outside [0, balance %d]", a.reserved, a.balance)
+	case a.balance > l.maxMoney:
+		return auditFail(IdentityStructure, id, Money, "balance %d is above MaxMoney %d", a.balance, l.maxMoney)
+	}
+	return nil
 }
 
 // auditBoundary checks a boundary account against the boundary table.
 func (l *Ledger) auditBoundary(id int, a *account) error {
 	slot, err := l.slotOf(a.reason, a.thing)
 	if err != nil || l.boundary[slot] != id {
-		return auditFail(IdentityStructure, id, a.thing, -1, "a boundary account is not the account of its reason and thing in the boundary table")
+		return auditFail(IdentityStructure, id, a.thing, "a boundary account is not the account of its reason and thing in the boundary table")
 	}
 	if rw, _ := rowOf(a.reason, a.thing != Money); rw.class == Internal {
-		return auditFail(IdentityStructure, id, a.thing, -1, "a boundary account of an internal reason")
+		return auditFail(IdentityStructure, id, a.thing, "a boundary account of an internal reason")
 	}
 	if a.region != -1 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint {
-		return auditFail(IdentityStructure, id, a.thing, -1, "a boundary account has a region, a reservation, lots or a hint")
+		return auditFail(IdentityStructure, id, a.thing, "a boundary account has a region, a reservation, lots or a hint")
 	}
 	return nil
 }
@@ -218,47 +240,106 @@ func (l *Ledger) auditBoundary(id int, a *account) error {
 // non-negativity, the bounds of a key and the expiry hint.
 func (l *Ledger) auditLots(id int, a *account) error {
 	var (
-		prev     Key
 		sum      int64
 		earliest int64
 		spoils   bool
 	)
 	for i, lt := range a.lots {
-		if lt.Commodity < 0 || lt.Commodity >= len(l.comms) {
-			return auditFail(IdentityCanonical, id, lt.Commodity, -1, "lot %d names a commodity outside the table", i)
+		if err := l.auditLotShape(id, i, a.lots); err != nil {
+			return err
 		}
-		c, k := l.comms[lt.Commodity], lt.key()
-		switch {
-		case lt.Quantity < 0 || lt.Reserved < 0 || lt.Reserved > lt.Quantity:
-			return auditFail(IdentityNonNegative, id, lt.Commodity, -1, "lot %d has quantity %d and %d earmarked", i, lt.Quantity, lt.Reserved)
-		case lt.Quantity == 0:
-			return auditFail(IdentityCanonical, id, lt.Commodity, -1, "lot %d has quantity 0", i)
-		case i > 0 && cmpLot(a.lots[i-1], k) >= 0:
-			return auditFail(IdentityCanonical, id, lt.Commodity, -1, "lot %d is not after lot %d in (commodity, born, durability) order", i, i-1)
-		case c.ShelfLife == 0 && lt.Born != 0, c.ShelfLife > 0 && (lt.Born > l.tick || lt.Born < -(c.ShelfLife-1)):
-			return auditFail(IdentityCanonical, id, lt.Commodity, -1, "lot %d has born %d, outside its range", i, lt.Born)
-		case c.Durability == 0 && lt.Durability != 0, c.Durability > 0 && (lt.Durability < 1 || lt.Durability > c.Durability):
-			return auditFail(IdentityCanonical, id, lt.Commodity, -1, "lot %d has durability %d, outside its range", i, lt.Durability)
+		var err error
+		if sum, err = l.auditLotSum(id, i, a.lots, sum); err != nil {
+			return err
 		}
-		if i == 0 || prev.Commodity != lt.Commodity {
-			sum = 0
-		}
-		prev = k
-		var ok bool
-		if sum, ok = checked.Add(sum, lt.Quantity); !ok || sum > l.maxQty {
-			return auditFail(IdentityStructure, id, lt.Commodity, -1, "quantity is above MaxQuantity %d", l.maxQty)
-		}
-		if c.ShelfLife > 0 {
-			if e := expiry(lt.Born, c.ShelfLife); !spoils || e < earliest {
-				earliest, spoils = e, true
-			}
+		if s := l.comms[lt.Commodity].ShelfLife; s > 0 {
+			earliest, spoils = earlier(earliest, spoils, expiry(lt.Born, s))
 		}
 	}
+	return auditHint(id, a, spoils, earliest)
+}
+
+// auditLotSum adds lot i to the running quantity of its commodity (sum, which
+// restarts at the first lot of a commodity) and checks it against MaxQuantity.
+func (l *Ledger) auditLotSum(id, i int, lots []Lot, sum int64) (int64, error) {
+	lt := lots[i]
+	if i == 0 || lots[i-1].Commodity != lt.Commodity {
+		sum = 0
+	}
+	sum, ok := checked.Add(sum, lt.Quantity)
+	if !ok || sum > l.maxQty {
+		return sum, auditFail(IdentityStructure, id, lt.Commodity, "quantity is above MaxQuantity %d", l.maxQty)
+	}
+	return sum, nil
+}
+
+// earlier folds expiry e into the earliest expiry seen so far.
+func earlier(earliest int64, seen bool, e int64) (int64, bool) {
+	if !seen || e < earliest {
+		return e, true
+	}
+	return earliest, true
+}
+
+// auditLotShape checks lot i of lots: its commodity, quantities, order, born
+// and durability.
+func (l *Ledger) auditLotShape(id, i int, lots []Lot) error {
+	lt := lots[i]
+	if lt.Commodity < 0 || lt.Commodity >= len(l.comms) {
+		return auditFail(IdentityCanonical, id, lt.Commodity, "lot %d names a commodity outside the table", i)
+	}
+	if err := auditLotQuantity(id, i, lt); err != nil {
+		return err
+	}
+	if i > 0 && cmpLot(lots[i-1], lt.key()) >= 0 {
+		return auditFail(IdentityCanonical, id, lt.Commodity, "lot %d is not after lot %d in (commodity, born, durability) order", i, i-1)
+	}
+	return l.auditLotRange(id, i, lt)
+}
+
+// auditLotQuantity checks the quantity and earmark of lot i.
+func auditLotQuantity(id, i int, lt Lot) error {
+	switch {
+	case lt.Quantity < 0 || lt.Reserved < 0 || lt.Reserved > lt.Quantity:
+		return auditFail(IdentityNonNegative, id, lt.Commodity, "lot %d has quantity %d and %d earmarked", i, lt.Quantity, lt.Reserved)
+	case lt.Quantity == 0:
+		return auditFail(IdentityCanonical, id, lt.Commodity, "lot %d has quantity 0", i)
+	}
+	return nil
+}
+
+// auditLotRange checks the born and durability of lot i against its commodity.
+func (l *Ledger) auditLotRange(id, i int, lt Lot) error {
+	c := l.comms[lt.Commodity]
+	switch {
+	case outsideRange(c.ShelfLife, lt.Born, -(c.ShelfLife - 1), l.tick):
+		return auditFail(IdentityCanonical, id, lt.Commodity, "lot %d has born %d, outside its range", i, lt.Born)
+	case outsideRange(c.Durability, lt.Durability, 1, c.Durability):
+		return auditFail(IdentityCanonical, id, lt.Commodity, "lot %d has durability %d, outside its range", i, lt.Durability)
+	}
+	return nil
+}
+
+// outsideRange reports whether v breaks the range of a commodity attribute
+// whose limit is given: v must be 0 when limit is 0, and within [lo, hi] when
+// limit is positive.
+func outsideRange(limit, v, lo, hi int64) bool {
+	switch {
+	case limit == 0:
+		return v != 0
+	case limit > 0:
+		return v < lo || v > hi
+	}
+	return false
+}
+
+// auditHint checks the expiry hint of an account against its earliest expiry.
+func auditHint(id int, a *account, spoils bool, earliest int64) error {
 	switch {
 	case spoils && !a.hasHint:
-		return auditFail(IdentityHint, id, None, -1, "a spoiling lot is held and the account has no hint")
+		return auditFail(IdentityHint, id, None, "a spoiling lot is held and the account has no hint")
 	case spoils && a.hint > earliest:
-		return auditFail(IdentityHint, id, None, -1, "hint %d is later than the earliest expiry %d", a.hint, earliest)
+		return auditFail(IdentityHint, id, None, "hint %d is later than the earliest expiry %d", a.hint, earliest)
 	}
 	return nil
 }
@@ -266,8 +347,8 @@ func (l *Ledger) auditLots(id int, a *account) error {
 // auditCounters checks that the flow totals, the wear units and the claim
 // totals are never negative, and that the tables have their layout.
 func (l *Ledger) auditCounters() error {
-	if len(l.boundary) != l.stride || len(l.base) != l.stride || len(l.totals) != l.stride*l.regions || len(l.bucket) != len(l.totals) {
-		return auditFail(IdentityStructure, None, None, -1, "a table has the wrong length")
+	if !l.tablesFit() {
+		return auditFail(IdentityStructure, None, None, "a table has the wrong length")
 	}
 	for _, s := range [...]struct {
 		name string
@@ -275,14 +356,25 @@ func (l *Ledger) auditCounters() error {
 	}{{"flow total", l.totals}, {"construction bucket", l.bucket}, {"wear units", l.wear}, {"construction wear units", l.wearBucket}} {
 		for i, v := range s.v {
 			if v < 0 {
-				return auditFail(IdentityStructure, None, None, -1, "%s %d is %d", s.name, i, v)
+				return auditFail(IdentityStructure, None, None, "%s %d is %d", s.name, i, v)
 			}
 		}
 	}
+	return l.auditClaimCounters()
+}
+
+// tablesFit reports whether the flow tables have the lengths of the layout.
+func (l *Ledger) tablesFit() bool {
+	return len(l.boundary) == l.stride && len(l.base) == l.stride &&
+		len(l.totals) == l.stride*l.regions && len(l.bucket) == len(l.totals)
+}
+
+// auditClaimCounters checks that no claim total is negative.
+func (l *Ledger) auditClaimCounters() error {
 	t := l.claimTot
 	for i, v := range [...]int64{t.Lent, t.Awarded, t.Repaid, t.InterestPaid, t.InterestFixed, t.LostPrincipal, t.LostInterest} {
 		if v < 0 {
-			return auditFail(IdentityStructure, None, None, -1, "claim total %d is %d", i, v)
+			return auditFail(IdentityStructure, None, None, "claim total %d is %d", i, v)
 		}
 	}
 	return nil
@@ -293,31 +385,55 @@ func (l *Ledger) auditCounters() error {
 // parties (item 3). It names the first claim that fails (FR-LED-064).
 func (l *Ledger) auditClaims() error {
 	if len(l.claims) > l.maxClaims {
-		return auditFail(IdentityClaim, None, None, -1, "%d claims are open, MaxClaims is %d", len(l.claims), l.maxClaims)
+		return auditFail(IdentityClaim, None, None, "%d claims are open, MaxClaims is %d", len(l.claims), l.maxClaims)
 	}
 	prev := int64(-1)
 	for i := range l.claims {
 		c := &l.claims[i]
-		switch {
-		case c.ID <= prev || c.ID >= l.nextClaim:
-			return auditFail(IdentityClaim, None, None, c.ID, "IDs are not ascending or not below the next ID %d", l.nextClaim)
-		case c.Principal < 1 || c.Interest < 0 || c.Origin == OriginPayout && c.Interest != 0:
-			return auditFail(IdentityClaim, None, None, c.ID, "principal %d and interest %d are not valid", c.Principal, c.Interest)
-		case c.PrincipalOwed < 0 || c.PrincipalOwed > c.Principal || c.InterestOwed < 0 || c.InterestOwed > c.Interest:
-			return auditFail(IdentityClaim, None, None, c.ID, "owed %d and %d are outside [0, %d] and [0, %d]", c.PrincipalOwed, c.InterestOwed, c.Principal, c.Interest)
-		case c.PrincipalOwed == 0 && c.InterestOwed == 0:
-			return auditFail(IdentityClaim, None, None, c.ID, "an open claim owes nothing")
-		case c.Creditor == c.Debtor:
-			return auditFail(IdentityClaim, c.Debtor, None, c.ID, "creditor and debtor are the same account")
+		if err := l.auditClaimShape(c, prev); err != nil {
+			return err
 		}
 		prev = c.ID
-		cr, err := l.open(c.Creditor)
-		if err != nil || !setAE.has(cr.kind) {
-			return auditFail(IdentityClaim, c.Creditor, None, c.ID, "the creditor is not an open Agent or Estate account")
+		if err := l.auditClaimParties(c); err != nil {
+			return err
 		}
-		if db, err := l.open(c.Debtor); err != nil || db.kind != KindAgent {
-			return auditFail(IdentityClaim, c.Debtor, None, c.ID, "the debtor is not an open Agent account")
-		}
+	}
+	return nil
+}
+
+// auditClaimShape checks the ID order and the ranges of one open claim.
+func (l *Ledger) auditClaimShape(c *Claim, prev int64) error {
+	switch {
+	case c.ID <= prev || c.ID >= l.nextClaim:
+		return auditClaimFail(None, c.ID, "IDs are not ascending or not below the next ID %d", l.nextClaim)
+	case c.Principal < 1 || c.Interest < 0 || c.Origin == OriginPayout && c.Interest != 0:
+		return auditClaimFail(None, c.ID, "principal %d and interest %d are not valid", c.Principal, c.Interest)
+	}
+	return auditClaimOwed(c)
+}
+
+// auditClaimOwed checks the owed amounts and the parties of a claim differ.
+func auditClaimOwed(c *Claim) error {
+	switch {
+	case c.PrincipalOwed < 0 || c.PrincipalOwed > c.Principal || c.InterestOwed < 0 || c.InterestOwed > c.Interest:
+		return auditClaimFail(None, c.ID, "owed %d and %d are outside [0, %d] and [0, %d]", c.PrincipalOwed, c.InterestOwed, c.Principal, c.Interest)
+	case c.PrincipalOwed == 0 && c.InterestOwed == 0:
+		return auditClaimFail(None, c.ID, "an open claim owes nothing")
+	case c.Creditor == c.Debtor:
+		return auditClaimFail(c.Debtor, c.ID, "creditor and debtor are the same account")
+	}
+	return nil
+}
+
+// auditClaimParties checks that the creditor and the debtor of a claim are open
+// accounts of the right kinds.
+func (l *Ledger) auditClaimParties(c *Claim) error {
+	cr, err := l.open(c.Creditor)
+	if err != nil || !setAE.has(cr.kind) {
+		return auditClaimFail(c.Creditor, c.ID, "the creditor is not an open Agent or Estate account")
+	}
+	if db, err := l.open(c.Debtor); err != nil || db.kind != KindAgent {
+		return auditClaimFail(c.Debtor, c.ID, "the debtor is not an open Agent account")
 	}
 	return nil
 }
@@ -325,8 +441,22 @@ func (l *Ledger) auditClaims() error {
 // auditZeroTotals checks that money, and each commodity, sums to 0 over all
 // accounts, boundaries included (9.1 item 1).
 func (l *Ledger) auditZeroTotals() error {
-	var money wide
-	goods := make([]wide, len(l.comms))
+	money, goods := l.holdings()
+	if money != (wide{}) {
+		return auditFail(IdentityZeroTotal, None, Money, "the total of money is not 0")
+	}
+	for c, g := range goods {
+		if g != (wide{}) {
+			return auditFail(IdentityZeroTotal, None, c, "the total quantity is not 0")
+		}
+	}
+	return nil
+}
+
+// holdings sums money and each commodity over all accounts, boundaries
+// included.
+func (l *Ledger) holdings() (money wide, goods []wide) {
+	goods = make([]wide, len(l.comms))
 	for i := range l.accounts {
 		a := &l.accounts[i]
 		switch {
@@ -341,15 +471,7 @@ func (l *Ledger) auditZeroTotals() error {
 			}
 		}
 	}
-	if money != (wide{}) {
-		return auditFail(IdentityZeroTotal, None, Money, -1, "the total of money is not 0")
-	}
-	for c, g := range goods {
-		if g != (wide{}) {
-			return auditFail(IdentityZeroTotal, None, c, -1, "the total quantity is not 0")
-		}
-	}
-	return nil
+	return money, goods
 }
 
 // flowSum is the total moved under the flow slot over every region, from the
@@ -367,26 +489,36 @@ func (l *Ledger) flowSum(slot int) wide {
 	return w
 }
 
+// slotVisitor receives a flow slot of a faucet or a sink: its reason, class,
+// commodity (Money for money) and slot index.
+type slotVisitor func(r Reason, class Class, commodity, slot int) error
+
 // eachBoundarySlot calls f for every flow slot of a faucet or a sink: its
 // reason, class, commodity (Money for money) and slot index.
-func (l *Ledger) eachBoundarySlot(f func(r Reason, class Class, commodity, slot int) error) error {
+func (l *Ledger) eachBoundarySlot(f slotVisitor) error {
 	for r := Reason(0); r < NumReasons; r++ {
 		for t := range table[r] {
-			o := l.off[r][t]
-			if o < 0 || table[r][t].class == Internal {
-				continue
+			if err := l.eachThingSlot(r, t, f); err != nil {
+				return err
 			}
-			if t == thingMoney {
-				if err := f(r, table[r][t].class, Money, o); err != nil {
-					return err
-				}
-				continue
-			}
-			for c := range l.comms {
-				if err := f(r, table[r][t].class, c, o+c); err != nil {
-					return err
-				}
-			}
+		}
+	}
+	return nil
+}
+
+// eachThingSlot calls f for the slots of one reason and thing (money or
+// goods), if they are a faucet or a sink.
+func (l *Ledger) eachThingSlot(r Reason, t int, f slotVisitor) error {
+	o, class := l.off[r][t], table[r][t].class
+	if o < 0 || class == Internal {
+		return nil
+	}
+	if t == thingMoney {
+		return f(r, class, Money, o)
+	}
+	for c := range l.comms {
+		if err := f(r, class, c, o+c); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -404,13 +536,13 @@ func (l *Ledger) auditByReason() error {
 		id := l.boundary[slot]
 		if id < 0 {
 			if sum != (wide{}) {
-				return auditFail(IdentityConservation, None, commodity, -1, "reason %d has a flow total and no boundary account", r)
+				return auditFail(IdentityConservation, None, commodity, "reason %d has a flow total and no boundary account", r)
 			}
 			return nil
 		}
 		moved := wide{}.add(l.accounts[id].balance).plus(wide{}.add(l.base[slot]).neg())
 		if moved != sum {
-			return auditFail(IdentityConservation, id, commodity, -1, "reason %d: the boundary balance moved differently from its flow total", r)
+			return auditFail(IdentityConservation, id, commodity, "reason %d: the boundary balance moved differently from its flow total", r)
 		}
 		return nil
 	})
@@ -445,7 +577,30 @@ var kindSector = [numKinds]sector{
 // sinks of that period.
 func (l *Ledger) auditSectors() error {
 	nc := len(l.comms)
-	// held[s*(nc+1)] is money and held[s*(nc+1)+1+c] commodity c.
+	held := l.sectorHeld(nc)
+	out := int(sectorOutside) * (nc + 1)
+	for j := 0; j <= nc; j++ {
+		if held[out+j] != (wide{}) {
+			return auditFail(IdentitySectoral, None, j-1, "the outside sector holds something")
+		}
+	}
+	net, start := l.periodNet(nc)
+	for j := 0; j <= nc; j++ {
+		var now wide
+		for s := sectorHouseholds; s < sectorOutside; s++ {
+			now = now.plus(held[int(s)*(nc+1)+j])
+		}
+		// now - (-start) = net.
+		if now.plus(start[j]) != net[j] {
+			return auditFail(IdentitySectoral, None, j-1, "the four sectors changed by other than faucets less sinks")
+		}
+	}
+	return nil
+}
+
+// sectorHeld sums what each sector holds: held[s*(nc+1)] is money and
+// held[s*(nc+1)+1+c] commodity c.
+func (l *Ledger) sectorHeld(nc int) []wide {
 	held := make([]wide, int(sectorOutside+1)*(nc+1))
 	for i := range l.accounts {
 		a := &l.accounts[i]
@@ -458,15 +613,14 @@ func (l *Ledger) auditSectors() error {
 			held[base+1+lt.Commodity] = held[base+1+lt.Commodity].add(lt.Quantity)
 		}
 	}
-	out := int(sectorOutside) * (nc + 1)
-	for j := 0; j <= nc; j++ {
-		if held[out+j] != (wide{}) {
-			return auditFail(IdentitySectoral, None, j-1, -1, "the outside sector holds something")
-		}
-	}
-	// net[j] is faucets less sinks, and start[j] the boundary balances at the
-	// start of the period, for money (j 0) and each commodity (j 1+c).
-	net, start := make([]wide, nc+1), make([]wide, nc+1)
+	return held
+}
+
+// periodNet returns net[j], faucets less sinks, and start[j], the boundary
+// balances at the start of the period, for money (j 0) and each commodity
+// (j 1+c).
+func (l *Ledger) periodNet(nc int) (net, start []wide) {
+	net, start = make([]wide, nc+1), make([]wide, nc+1)
 	_ = l.eachBoundarySlot(func(_ Reason, class Class, commodity, slot int) error {
 		sum := l.flowSum(slot)
 		if class == Sink {
@@ -476,17 +630,7 @@ func (l *Ledger) auditSectors() error {
 		start[commodity+1] = start[commodity+1].add(l.base[slot])
 		return nil
 	})
-	for j := 0; j <= nc; j++ {
-		var now wide
-		for s := sectorHouseholds; s < sectorOutside; s++ {
-			now = now.plus(held[int(s)*(nc+1)+j])
-		}
-		// now - (-start) = net.
-		if now.plus(start[j]) != net[j] {
-			return auditFail(IdentitySectoral, None, j-1, -1, "the four sectors changed by other than faucets less sinks")
-		}
-	}
-	return nil
+	return net, start
 }
 
 // auditClaimTotals checks the pair of CRD 3.6 item 1: the principal owed over
@@ -501,11 +645,11 @@ func (l *Ledger) auditClaimTotals() error {
 	t := l.claimTot
 	want := wide{}.add(t.Lent).add(t.Awarded).add(-t.Repaid).add(-t.LostPrincipal)
 	if principal != want {
-		return auditFail(IdentityClaimTotals, None, Money, -1, "the principal owed is not Lent + Awarded - Repaid - LostPrincipal")
+		return auditFail(IdentityClaimTotals, None, Money, "the principal owed is not Lent + Awarded - Repaid - LostPrincipal")
 	}
 	paid := interest.add(t.InterestPaid).add(t.LostInterest)
 	if paid != (wide{}.add(t.InterestFixed)) {
-		return auditFail(IdentityClaimTotals, None, Money, -1, "the interest owed, paid and lost is not InterestFixed")
+		return auditFail(IdentityClaimTotals, None, Money, "the interest owed, paid and lost is not InterestFixed")
 	}
 	return nil
 }
