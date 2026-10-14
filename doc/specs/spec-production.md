@@ -291,12 +291,12 @@ executions is one **job**. A job is state of its executor:
 ```go
 // Job is the one unit of work an agent has in progress. Plain data.
 type Job struct {
-	Recipe    int     // index into the canonical recipe list
-	Remaining int64   // ticks left, 1 or more while active
-	Executions int64  // k
-	Principal int     // the agent whose goods were used and who receives the output
-	Yield     int64   // the effective factor E of 6.3 in basis points, read at the start (6.4)
-	Pending   []Item  // output quantities fixed at the start, per non-discard and discard output, in output order
+    Recipe    int     // index into the canonical recipe list
+    Remaining int64   // ticks left, 1 or more while active
+    Executions int64  // k
+    Principal int     // the agent whose goods were used and who receives the output
+    Yield     int64   // the effective factor E of 6.3 in basis points, read at the start (6.4)
+    Pending   []Item  // output quantities fixed at the start, per non-discard and discard output, in output order
 }
 ```
 

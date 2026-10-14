@@ -105,7 +105,7 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 		{
 			name: "balance below zero",
 			mut:  func(g *rig, ids map[string]int) { g.l.accounts[ids["a0"]].balance = -1 },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityNonNegative, ids["a0"], Money, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityNonNegative, ids["a0"], Money, -1} },
 		},
 		{
 			name: "reserved above the balance",
@@ -113,12 +113,12 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 				a := &g.l.accounts[ids["a1"]]
 				a.reserved = a.balance + 1
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityNonNegative, ids["a1"], Money, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityNonNegative, ids["a1"], Money, -1} },
 		},
 		{
 			name: "balance above MaxMoney",
 			mut:  func(g *rig, ids map[string]int) { g.l.accounts[ids["e0"]].balance = scriptMaxMoney + 1 },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityStructure, ids["e0"], Money, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityStructure, ids["e0"], Money, -1} },
 		},
 		{
 			name: "lots out of order",
@@ -126,7 +126,7 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 				lots := g.l.accounts[ids["a1"]].lots
 				lots[0], lots[1] = lots[1], lots[0]
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityCanonical, ids["a1"], anyThing, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityCanonical, ids["a1"], anyThing, -1} },
 		},
 		{
 			name: "lot of quantity zero",
@@ -147,7 +147,7 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 				lt := &g.l.accounts[ids["a1"]].lots[0]
 				lt.Reserved = lt.Quantity + 1
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityNonNegative, ids["a1"], 0, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityNonNegative, ids["a1"], 0, -1} },
 		},
 		{
 			name: "negative quantity",
@@ -186,7 +186,7 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 					}
 				}
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityCanonical, ids["a1"], 1, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityCanonical, ids["a1"], 1, -1} },
 		},
 		{
 			name: "quantity above MaxQuantity",
@@ -198,12 +198,12 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 					}
 				}
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityStructure, ids["a1"], 2, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityStructure, ids["a1"], 2, -1} },
 		},
 		{
 			name: "no hint for a spoiling lot",
 			mut:  func(g *rig, ids map[string]int) { g.l.accounts[ids["a1"]].hasHint = false },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityHint, ids["a1"], None, -1} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityHint, ids["a1"], None, -1} },
 		},
 		{
 			name: "hint later than the expiry",
@@ -214,36 +214,36 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 		},
 		{
 			name: "negative flow total",
-			mut:  func(g *rig, ids map[string]int) { g.l.totals[0] = -1 },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityStructure, None, None, -1} },
+			mut:  func(g *rig, _ map[string]int) { g.l.totals[0] = -1 },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityStructure, None, None, -1} },
 		},
 		{
 			name: "negative claim total",
-			mut:  func(g *rig, ids map[string]int) { g.l.claimTot.Repaid = -1 },
+			mut:  func(g *rig, _ map[string]int) { g.l.claimTot.Repaid = -1 },
 			want: func(ids map[string]int, g *rig) want { return want{IdentityStructure, None, None, -1} },
 		},
 		{
 			name: "claim IDs not ascending",
-			mut:  func(g *rig, ids map[string]int) { g.l.claims[1].ID = 0 },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityClaim, None, None, 0} },
+			mut:  func(g *rig, _ map[string]int) { g.l.claims[1].ID = 0 },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityClaim, None, None, 0} },
 		},
 		{
 			name: "more claims than MaxClaims",
-			mut:  func(g *rig, ids map[string]int) { g.l.maxClaims = 1 },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityClaim, None, None, -1} },
+			mut:  func(g *rig, _ map[string]int) { g.l.maxClaims = 1 },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityClaim, None, None, -1} },
 		},
 		{
 			name: "owed above principal",
-			mut:  func(g *rig, ids map[string]int) { g.l.claims[0].PrincipalOwed = g.l.claims[0].Principal + 1 },
+			mut:  func(g *rig, _ map[string]int) { g.l.claims[0].PrincipalOwed = g.l.claims[0].Principal + 1 },
 			want: func(ids map[string]int, g *rig) want { return want{IdentityClaim, None, None, 0} },
 		},
 		{
 			name: "open claim owes nothing",
-			mut: func(g *rig, ids map[string]int) {
+			mut: func(g *rig, _ map[string]int) {
 				g.l.claims[1].PrincipalOwed = 0
 				g.l.claims[1].InterestOwed = 0
 			},
-			want: func(ids map[string]int, g *rig) want { return want{IdentityClaim, None, None, 1} },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityClaim, None, None, 1} },
 		},
 		{
 			name: "payout claim with interest",
@@ -255,15 +255,15 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 		},
 		{
 			name: "creditor and debtor are one account",
-			mut:  func(g *rig, ids map[string]int) { g.l.claims[0].Creditor = g.l.claims[0].Debtor },
-			want: func(ids map[string]int, g *rig) want {
+			mut:  func(g *rig, _ map[string]int) { g.l.claims[0].Creditor = g.l.claims[0].Debtor },
+			want: func(_ map[string]int, g *rig) want {
 				return want{IdentityClaim, g.l.claims[0].Debtor, None, 0}
 			},
 		},
 		{
 			name: "debtor is not an agent",
 			mut:  func(g *rig, ids map[string]int) { g.l.claims[0].Debtor = ids["e0"] },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityClaim, ids["e0"], None, 0} },
+			want: func(ids map[string]int, _ *rig) want { return want{IdentityClaim, ids["e0"], None, 0} },
 		},
 		{
 			name: "claim outlives its debtor",
@@ -278,28 +278,28 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 		{
 			name: "money does not sum to zero",
 			mut:  func(g *rig, ids map[string]int) { g.l.accounts[ids["a2"]].balance++ },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityZeroTotal, None, Money, -1} },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityZeroTotal, None, Money, -1} },
 		},
 		{
 			name: "a commodity does not sum to zero",
 			mut:  func(g *rig, ids map[string]int) { g.l.accounts[ids["a1"]].lots[0].Quantity++ },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityZeroTotal, None, 0, -1} },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityZeroTotal, None, 0, -1} },
 		},
 		{
 			name: "money flow total moved without the boundary",
-			mut:  func(g *rig, ids map[string]int) { g.l.totals[slot(g.l, Initial, Money)]++ },
+			mut:  func(g *rig, _ map[string]int) { g.l.totals[slot(g.l, Initial, Money)]++ },
 			want: func(ids map[string]int, g *rig) want { return want{IdentityConservation, ids["mint"], Money, -1} },
 		},
 		{
 			name: "goods flow total moved without the boundary",
-			mut:  func(g *rig, ids map[string]int) { g.l.totals[slot(g.l, Disposal, 2)]++ },
+			mut:  func(g *rig, _ map[string]int) { g.l.totals[slot(g.l, Disposal, 2)]++ },
 			want: func(ids map[string]int, g *rig) want {
 				return want{IdentityConservation, g.bnd[Disposal][2], 2, -1}
 			},
 		},
 		{
 			name: "baseline of a boundary disagrees",
-			mut:  func(g *rig, ids map[string]int) { g.l.base[slot(g.l, Initial, 1)]++ },
+			mut:  func(g *rig, _ map[string]int) { g.l.base[slot(g.l, Initial, 1)]++ },
 			want: func(ids map[string]int, g *rig) want {
 				return want{IdentityConservation, g.bnd[Initial][1], 1, -1}
 			},
@@ -311,12 +311,12 @@ func TestAudit_OneCasePerIdentity(t *testing.T) {
 		},
 		{
 			name: "principal owed is not Lent + Awarded - Repaid - LostPrincipal",
-			mut:  func(g *rig, ids map[string]int) { g.l.claimTot.Lent++ },
-			want: func(ids map[string]int, g *rig) want { return want{IdentityClaimTotals, None, Money, -1} },
+			mut:  func(g *rig, _ map[string]int) { g.l.claimTot.Lent++ },
+			want: func(_ map[string]int, g *rig) want { return want{IdentityClaimTotals, None, Money, -1} },
 		},
 		{
 			name: "interest owed, paid and lost is not InterestFixed",
-			mut:  func(g *rig, ids map[string]int) { g.l.claimTot.InterestFixed++ },
+			mut:  func(g *rig, _ map[string]int) { g.l.claimTot.InterestFixed++ },
 			want: func(ids map[string]int, g *rig) want { return want{IdentityClaimTotals, None, Money, -1} },
 		},
 	}
@@ -467,7 +467,7 @@ func TestInvariantViolation_PanicsAsProgrammerError(t *testing.T) {
 	}{
 		{
 			name: "a claim transfer refused after its checks",
-			run: func(g *rig, ids map[string]int) {
+			run: func(g *rig, _ map[string]int) {
 				// A claim of an account with itself passes every check of
 				// Settle and is refused by the transfer.
 				g.l.claims[0].Creditor = g.l.claims[0].Debtor

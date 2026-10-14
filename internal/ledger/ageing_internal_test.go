@@ -228,7 +228,7 @@ func TestOverflowOnBoundariesAndFlowTotals(t *testing.T) {
 		},
 		{
 			name: "transform input flow",
-			poke: func(l *Ledger, a int) { l.totals[slot(l, 0, RecipeInput, 2)] = math.MaxInt64 },
+			poke: func(l *Ledger, _ int) { l.totals[slot(l, 0, RecipeInput, 2)] = math.MaxInt64 },
 			op: func(l *Ledger, a int) error {
 				return l.Transform(a, []Line{{Commodity: 2, Quantity: 1}}, nil)
 			},

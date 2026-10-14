@@ -669,8 +669,8 @@ functions; the package is pure), except the helper tests above.
   `pad_income = n * U * d_bp / 10 000` is exact, and the pad truncates. At
   `DefaultRatio` 10 000 it is exact for every `T` and `U` (`pad_income` is
   `n * U`, ratio 10 000). At 15 000 it is exact when `n * U` is even: `T` 30,
-  `U` 2 gives `pad_income` 30 * 2 * 15 000 / 10 000 = 90 and a ratio of
-  90 * 10 000 / 60 = 15 000; `T` 1, `U` 2 gives 3 and 3 * 10 000 / 2 = 15 000.
+  `U` 2 gives `pad_income` 30 × 2 × 15 000 / 10 000 = 90 and a ratio of
+  90 × 10 000 / 60 = 15 000; `T` 1, `U` 2 gives 3 and 3 × 10 000 / 2 = 15 000.
   One non-divisible case states the truncated value (FR-WEL-007, testing.md
   5.5): `T` 1, `U` 1, `DefaultRatio` 15 000 gives `pad_income` 15 000 / 10 000
   = 1 (truncated from 1.5) and a ratio of 1 * 10 000 / 1 = 10 000, not 15 000;
@@ -699,7 +699,7 @@ functions; the package is pure), except the helper tests above.
   is a violated invariant, an overflow saturating to `MaxInt64` (FR-WEL-003,
   010); and the case that tells per-execution from aggregate
   rounding: `WearPerUse` 3, price 10, `Durability` 4, `executions` 2 is
-  2 * ceil(30 / 4) = 2 * 8 = 16, where `ceil(2 * 30 / 4)` = 15 would be the
+  2 × ceil(30 / 4) = 2 × 8 = 16, where `ceil(2 × 30 / 4)` = 15 would be the
   wrong answer; `executions` 1 is 8; the weight is not a parameter.
 - **Fuzz** (NFR-WEL-002, testing.md 7.4 by the NFR): arbitrary `int64` inputs
   do not panic, the calibration formulas report `ok` false exactly where the
@@ -840,7 +840,7 @@ aggregates need the per-agent sums the ring keeps.
   = `MaxInt64 / maxWindow` the clamp and `maxWindow` the parameter):
   - the per-agent numerator: a full ring of `maxWindow` records with `income`
     `C` and `relief`, `unearned` and `ownReceipt` each `-C` has a numerator
-    `income - relief - unearned - ownReceipt` of 4 * `maxWindow` * `C`, above
+    `income - relief - unearned - ownReceipt` of 4 × `maxWindow` × `C`, above
     `MaxInt64`: it reads `MaxInt64` with a positive denominator, present, no
     panic, and the observed wage is `MaxInt64` over that denominator;
   - the set sums: two agents each at the clamp (numerators of about

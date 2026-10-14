@@ -789,8 +789,8 @@ func TestBalanceSheet_Refusals(t *testing.T) {
 		prices []int64
 		want   error
 	}{
-		{"unknown account", func(c *cfix) int { return 99 }, []int64{1, 1}, ledger.ErrUnknownAccount},
-		{"negative account", func(c *cfix) int { return -1 }, []int64{1, 1}, ledger.ErrUnknownAccount},
+		{"unknown account", func(_ *cfix) int { return 99 }, []int64{1, 1}, ledger.ErrUnknownAccount},
+		{"negative account", func(_ *cfix) int { return -1 }, []int64{1, 1}, ledger.ErrUnknownAccount},
 		{"boundary account", func(c *cfix) int { return c.mint }, []int64{1, 1}, ledger.ErrInvalidKind},
 		{"closed account", func(c *cfix) int {
 			if err := c.l.Close(c.third); err != nil {

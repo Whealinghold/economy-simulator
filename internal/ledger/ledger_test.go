@@ -20,7 +20,7 @@ func TestNew_RejectsUnusableTables(t *testing.T) {
 		cfg  func(c *ledger.Config)
 		want error
 	}{
-		{name: "smallest valid", cfg: func(c *ledger.Config) {}},
+		{name: "smallest valid", cfg: func(_ *ledger.Config) {}},
 		{name: "no regions", cfg: func(c *ledger.Config) { c.Regions = 0 }, want: ledger.ErrInvalidConfig},
 		{name: "no money bound", cfg: func(c *ledger.Config) { c.MaxMoney = 0 }, want: ledger.ErrInvalidConfig},
 		{name: "no quantity bound", cfg: func(c *ledger.Config) { c.MaxQuantity = 0 }, want: ledger.ErrInvalidConfig},
