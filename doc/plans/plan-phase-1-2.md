@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 2: the goods, recipe, role and calendar tables
 
-**Status: Proposed (2026-10-13); no phase started.** Sequences the second row
+**Status: Built (2026-10-14), all six phases; uncommitted.** Sequences the second row
 of Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`commodity.go`, `recipe.go`,
 `role.go`, `calendar.go` (the root types and their derived tables)", into six
 phases. It implements [spec-goods.md](../specs/spec-goods.md) (GDS),
@@ -811,7 +811,7 @@ tables. There is no integration or end-to-end test because there is no world.
 |-------|-----------------|--------------------------------|
 | 2 | FR-CAL-001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 017, 018, 019, 020, 022 (new, Phase 1); NFR-CAL-001, 003 | FR-CAL-011, 012, 013 (the validator's path-carrying rules are Stage 0's; here, agreement with the derivation); FR-CAL-015 (order kept through the hash is Stage 0's; here, the table keeps the written order); NFR-CAL-002 (`FuzzCalendarAt` is the `At` and derivation half; the validator half is Stage 0's `FuzzValidate`) |
 | 3 | FR-GDS-005, 006, 007 | FR-GDS-004 (the bounds are Stage 0's; here, zero mass and bulk in a load) |
-| 4 | FR-PRO-001, 002, 003, 032 | FR-PRO-028 (the yield table is the production row's) |
+| 4 | FR-PRO-001, 002, 003, 032 | none here for FR-PRO-028: the yield lookup and the run-in-a-new-region-by-table-change check are plan-phase-1-5's (no half of it lives in `recipe.go`) |
 | 5 | none | FR-AGT-003 (the core terms of the set, in canonical order with no duplicate and no discard output; the demand module's want items are deferred, O1 and N-228, and the module PR completes it); FR-AGT-010 (the table half: a role with no recipes is valid and keeps its upkeep and trades in its set; that an agent of such a role **requests no job** is the agent and strategy row's); FR-AGT-011 (the per-household merge with checked addition, canonical order; that **each quantity is multiplied by the weight**, with checked arithmetic, is the agent's and the world's, `agent.go` and `world.go`); FR-GDS-002 (the flag; the floor check is Stage 0's); FR-AGT-004 (the set; a belief per commodity is the beliefs row's) |
 | 6 | none | NFR-GDS-001 (reads of the tables here; the commodity attributes are read from the world's copy in the world row) |
 

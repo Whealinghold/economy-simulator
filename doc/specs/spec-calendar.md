@@ -133,6 +133,31 @@ number of ticks, the year in the wage formulas would not be a whole number eithe
 Earth with a 7-day tick (52.14 ticks) is therefore not allowed; a 5-day or a 73-day
 tick is (open question 2).
 
+3.2.1. **What is exported.** `DaysPerYear` is derived and unexported: no spec of
+version 1 reads it from outside the package. The exported surface is `Moment` (4) and
+three methods of `Calendar`, with these signatures (a consumer may call them on a
+hand-built value):
+
+```go
+func (c Calendar) At(tick int64) (Moment, error)
+func (c Calendar) SeasonAt(tick int64) int
+func (c Calendar) TicksPerYear() int64
+```
+
+3.2.2. **A calendar that fails the numeric rules.** The numeric rules are the four
+sentinels of 7.2 that carry a number (`ErrOutOfBounds`, `ErrCalendarTick`,
+`ErrCalendarSeasons`, `ErrOverflow`) and the two count bounds of `spec-config.md` 4.1
+that validation checks first (`len(Months) <= MaxMonths`, `len(Seasons) <=
+MaxSeasons`, `ErrTooMany`). The counts are checked first, so no walk is longer than
+`MaxMonths` plus `MaxSeasons` entries whatever a consumer hands in. For a calendar
+that fails one of them, `At` returns the error of the rule and no moment,
+`TicksPerYear` returns 0 (never a valid year) and `SeasonAt` returns -1 (FR-CAL-022).
+None of the three panics or divides by zero. The ID rules (`ErrInvalidID`,
+`ErrDuplicateID`, FR-CAL-014) are not numeric, since no number depends on an ID: the
+derivation does not apply them and the validator alone does. `SeasonAt` returning -1
+is also the answer for a calendar with no seasons (FR-CAL-019), so a caller that must
+tell the two apart reads `TicksPerYear() == 0` or the error of `At`.
+
 ## 4. From a tick to a moment
 
 `Calendar.At(tick)` returns a **moment**, a plain value. It is a pure function:
@@ -171,9 +196,12 @@ wants another first weekday shifts `StartDay` or its own labels.
 whole days. Hours exist for the consumer's clock and for rules that depend on the
 time of day; nothing in the core does yet.
 
-4.5. A negative tick, or a tick for which `t * DaysPerTick` or `StartDay + d` would
-overflow `int64`, is rejected with an error and no moment. The overflow is
-unreachable in a real run and is checked anyway (architecture.md 3.5).
+4.5. A negative tick is rejected with `ErrOutOfBounds`, and a tick for which
+`t * DaysPerTick` or `StartDay + d` would overflow `int64` is rejected with
+`ErrOverflow`; each is wrapped with the tick (`%w`, architecture.md 8.2) and returns
+no moment. No new sentinel is added. The overflow is unreachable in a real run and is
+checked anyway (architecture.md 3.5). A calendar that fails the numeric rules of 3.2.2
+returns the error of the rule instead.
 
 4.5.1. **The periodic extension.** A warm start places jobs that began before tick 0,
 and reads the yield by season at the virtual start tick `-o`
@@ -385,7 +413,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-CAL-001 | `Calendar` MUST be a plain struct in the root package, and its default MUST be Earth's: 24 hours a day, a 7-day week, 12 months of 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 days, one tick a day, `StartDay` 0, seasons of 92, 92, 91 and 90 days beginning on day 59. |
-| FR-CAL-002 | `DaysPerYear` MUST be the sum of the months' days and `TicksPerYear` MUST be `DaysPerYear * TicksPerDay / DaysPerTick`, and the world MUST have no separately configured `TicksPerYear`. |
+| FR-CAL-002 | `DaysPerYear` MUST be the sum of the months' days (derived, not exported) and `TicksPerYear` MUST be `DaysPerYear * TicksPerDay / DaysPerTick`, exported as `Calendar.TicksPerYear() int64`, and the world MUST have no separately configured `TicksPerYear`. |
 | FR-CAL-003 | With the default calendar `TicksPerYear` MUST be 365. |
 | FR-CAL-004 | `At` MUST be a pure function: equal calendar and tick MUST give an equal moment, and it MUST NOT read wall-clock time. |
 | FR-CAL-005 | The absolute day of a tick MUST be `StartDay + t / TicksPerDay` when `TicksPerDay` is above 1 and `StartDay + t * DaysPerTick` otherwise, and `TickOfDay` MUST be `t % TicksPerDay` or 0 respectively. |
@@ -393,7 +421,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CAL-007 | `DayOfWeek` MUST be the absolute day modulo `DaysPerWeek` and MUST NOT restart at a year boundary. |
 | FR-CAL-008 | `Hour` MUST be `TickOfDay * HoursPerDay / TicksPerDay`, truncated toward zero. |
 | FR-CAL-009 | Every day of the year MUST belong to exactly one season when seasons are configured, with the first season beginning on `SeasonStart` and the cycle wrapping past the year end; `Season` MUST be -1 when none are configured. |
-| FR-CAL-010 | A negative tick, or one whose day number would overflow `int64`, MUST be rejected with an error and no moment. |
+| FR-CAL-010 | A negative tick MUST be rejected with `ErrOutOfBounds`, and one whose day number would overflow `int64` with `ErrOverflow`, each wrapped with the tick and with no moment. |
 | FR-CAL-011 | A calendar with both `TicksPerDay` and `DaysPerTick` above 1, or whose `DaysPerYear * TicksPerDay` is not divisible by `DaysPerTick`, MUST be rejected with `ErrCalendarTick`. |
 | FR-CAL-012 | Seasons whose days do not add up to `DaysPerYear`, or a season of fewer than 1 day, MUST be rejected with `ErrCalendarSeasons`. |
 | FR-CAL-013 | A field outside its bound, `TicksPerYear` outside `[1, MaxTicksPerYear]`, or a `StartDay` or `SeasonStart` outside the year, MUST be rejected with `ErrOutOfBounds` carrying its path. |
@@ -405,6 +433,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CAL-019 | `SeasonAt` MUST accept any `int64` tick, MUST return -1 when no seasons are configured, and MUST equal `At(tick).Season` for every tick that `At` accepts. |
 | FR-CAL-020 | `SeasonAt(tick)` MUST equal `SeasonAt(tick - TicksPerYear)` for every tick, negative included, and MUST NOT overflow or panic for the smallest and largest `int64`. |
 | FR-CAL-021 | The warnings of 7.3 MUST be named `inexact_hour` and `season_shorter_than_tick`. |
+| FR-CAL-022 | For a calendar that fails a numeric rule of 3.2.2 (`ErrTooMany` for more than `MaxMonths` months or `MaxSeasons` seasons, `ErrOutOfBounds`, `ErrCalendarTick`, `ErrCalendarSeasons`, `ErrOverflow`), `At` MUST return the error of the rule and no moment, `TicksPerYear` MUST return 0 and `SeasonAt` MUST return -1, and none MUST panic or divide by zero; the ID rules of FR-CAL-014 MUST be the validator's alone. |
 
 ### Non-functional
 
@@ -444,7 +473,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `Calendar`, `Month`, `Season`, `Moment`, `At`, `SeasonAt` | root package, `calendar.go` |
+| The structs `Calendar`, `Month` and `Season` | root package, `config.go` (architecture.md 2.6; built in Stage 0) |
+| `Moment`, `Calendar.At`, `Calendar.SeasonAt`, `Calendar.TicksPerYear`, the derivation of `DaysPerYear` and `TicksPerYear` | root package, `calendar.go` |
 | `DefaultCalendar()` | root package, `defaults.go` |
 | The bounds of 7.1 | root package, `bounds.go` |
 | Validation and the sentinels | root package, `validate.go`, `errors.go` |

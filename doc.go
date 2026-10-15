@@ -62,6 +62,20 @@
 //     its moves are totalled in the construction bucket.
 //   - Calendar: the structure of time in a configuration: hours, days, months,
 //     the length of a tick and the seasons. Earth by default.
+//   - Absolute day: the calendar day of a tick counted from the first day of
+//     the year in which tick 0 falls, StartDay plus the days elapsed; its year
+//     and day of year are its quotient and remainder by the days of a year.
+//   - Calendar day: the calendar's unit of time, hours per day of it; a tick
+//     may be a part of one or a number of them, and is a calendar day only
+//     when TicksPerDay and DaysPerTick are both 1.
+//   - Moment: the value Calendar.At returns for a tick: year, day of year,
+//     month, day of month, weekday, tick of day, hour, season and day of
+//     season. It is derived from the calendar and the tick and never stored.
+//   - Tick of day: the zero-based position of a tick within its calendar day,
+//     0 unless TicksPerDay is above 1.
+//   - Ticks per year: the ticks in a year, derived as the days of the year times
+//     TicksPerDay over DaysPerTick, which must divide exactly; it is never
+//     configured.
 //   - Canonical order: the order of the entities of a configuration after
 //     sorting by ID, which fixes the typed IDs and the configuration hash
 //     whatever order the entities were written in.
@@ -94,6 +108,20 @@
 //     remaining durability, and a move takes the most worn first.
 //   - Estate: the goods and money an agent leaves behind when it is removed; the
 //     money goes to the regional estate pool, the goods are listed for sale.
+//   - Mass: the load-bearing weight of one unit of a commodity, a commodity
+//     attribute; with bulk it makes a load.
+//   - Bulk: the room one unit of a commodity takes up, a commodity attribute;
+//     with mass it makes a load.
+//   - Load: the pair of the sum of quantity times mass and the sum of quantity
+//     times bulk over a set of goods, computed with checked arithmetic.
+//   - Container: anything with a capacity, itself a pair of a mass capacity and
+//     a bulk capacity; a load fits it if and only if both sums are within them.
+//   - Chargeable size: the one number a price per unit would use for a unit of a
+//     commodity, the greater of its mass and its bulk times BulkFactor over
+//     10 000, rounded up. No module of version 1 reads it.
+//   - Chargeable capacity: the number of chargeable units of any single
+//     commodity a container is sure to carry, the smaller of its mass capacity
+//     and its bulk capacity times BulkFactor over 10 000, rounded down.
 //   - Estate pool: the money of a region's estates, which can fund the starting
 //     money of a new agent; WarmPool seeds it.
 //   - Event: a plain value that a world emits to its observers to report a
@@ -184,6 +212,21 @@
 //     of one draw; two equal keys give the same words.
 //   - Sink: a boundary flow that takes money or goods out of the economy; its
 //     Kind is KindSink.
+//   - Source: a recipe with no inputs (spec-production.md 3.1.2); it makes
+//     its outputs from nothing but time and tools. A recipe table row says so.
+//   - Maker: a recipe that has a commodity among its non-discard outputs; the
+//     recipe table lists the makers of each commodity in ascending RecipeID.
+//   - Recipe table: the recipes of a configuration in typed-ID form, built once
+//     at construction with the makers index; it is derived, not state.
+//   - Role table: the roles of a configuration in typed-ID form, built once at
+//     construction: recipes, trades, base upkeep, tradable set and the
+//     effective upkeep per region. It is derived, not state.
+//   - Tradable set: the commodities a role may trade (spec-agents.md 3.4): its
+//     effective upkeep in any region, the inputs, tools and non-discard outputs
+//     of its recipes, and its Trades; ascending, with no duplicate.
+//   - Effective upkeep: what one household of a role needs each tick: the role's
+//     list or the world's, merged with a region's extra upkeep by adding
+//     quantities of one commodity (spec-agents.md 5.2).
 //   - Sourced: a commodity the producibility check takes as supplied from
 //     outside the recipe graph: one marked Raw. A recipe with no inputs is a
 //     source in the same sense.
