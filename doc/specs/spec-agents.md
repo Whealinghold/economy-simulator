@@ -211,6 +211,12 @@ its stock. It also fixes the word *tradable* for validation: `spec-goods.md` 6.4
 **tradable** if it is in the tradable set of at least one role. A commodity in no
 set is never traded (it may exist only as a discard output).
 
+The set is derived once at construction into the role table (`role.go`), not by a
+function called in the tick, as a list in canonical commodity order with a membership
+flag per commodity; a module that is on adds its items inside the constructor, before
+it returns, and after that the table is a plain value that no code mutates, which is
+all "frozen" means here (N-228).
+
 3.4.1. A belief exists for every commodity in the set from the moment the agent is
 created (`spec-beliefs.md` 3.1, FR-BEL-001), so the number of beliefs of an agent
 never changes, except by a role change, which re-forms the set and the beliefs
@@ -412,7 +418,12 @@ in canonical commodity order, and every quantity is multiplied by `w`:
 U_c = w * (u_c(role or world) + u_c(region.ExtraUpkeep))
 ```
 
-All sums are checked. A world with no upkeep anywhere is legal (a pure trading
+All sums are checked. The merged list per household (before the multiplication by
+`w`, which is the agent's and the world's) is derived once at construction into the
+role table (`role.go`), in canonical commodity order, for each role and each region
+that has an `ExtraUpkeep`; a region with none reads the role's base list. It is a
+table, not a function called in the tick, and a module adds its items inside the
+constructor, before it returns (N-228). A world with no upkeep anywhere is legal (a pure trading
 toy); validation warns (`no_upkeep`, section 13) because no household can then
 starve and the welfare ratio is undefined (`spec-welfare-and-wages.md` 2.2.3).
 
@@ -2331,11 +2342,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `Agent`, `Role`, `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Purpose`, `Directive`, `AgentView`, `OutcomeView`, `Strategy`, `DefaultStrategy`, `Directed`, `WithStrategy` | root package: `agent.go`, `strategy.go`, `directive.go`, `option.go` |
+| The struct `Role` | root package, `config.go` (architecture.md 2.6; built in Stage 0), not `agent.go` |
+| The role table: the recipes, trades and base upkeep of each role by typed ID, its tradable set (3.4) and membership flag, the commodities tradable in some role, and the effective upkeep per region (5.2): derived, unexported, built once at construction | root package, `role.go` (a union of lists needs no package, architecture.md 2.1; the layout of 2.6 has no `internal/household`) |
+| `Agent`, `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Purpose`, `Directive`, `AgentView`, `OutcomeView`, `Strategy`, `DefaultStrategy`, `Directed`, `WithStrategy` | root package: `agent.go`, `strategy.go`, `directive.go`, `option.go` |
 | `Side` (`Bid`, `Ask`, with a `String` method for the golden rendering of events) | root package, `event.go`: it is first used by the events (`spec-observability.md` 3.2.1), so it is declared with them and `Intent` and `Order` use it from there; `RecipeID` and the other typed IDs are in `value.go` |
 | The tunables of section 12 and the role and region fields of 3.3 | root package, `config.go` and `defaults.go`; bounds in `bounds.go` (`MaxUpkeepItems` joins `spec-config.md` 4.1) |
 | Validation, the sentinels and the warnings of section 13 | root package, `validate.go`, `errors.go` |
-| Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the work share (7.1.2), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1), the tradable set (3.4); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |
+| Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the work share (7.1.2), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1) (the tradable set of 3.4 is `role.go`, above); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |
 | The consumption phase, the creation and removal of agents, the mailbox | root package, `world.go` and `agent.go`, calling `internal/ledger` and `internal/household` inline |
 | The events `AgentSpawned` (extended) and `UpkeepShortfall` | root package, `event.go` |
 | Reason constants (`not_tradable`, `not_permitted`, `not_on_role`, `no_room`, `over_budget`, `rest`, `halted`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |

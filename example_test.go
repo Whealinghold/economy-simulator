@@ -68,3 +68,20 @@ func ExampleHashConfig() {
 	// same configuration, same hash: true
 	// more households, different hash: true
 }
+
+// At reads the calendar's moment of a tick, SeasonAt only its season, and
+// TicksPerYear the derived length of a year. Tick 59 of the Earth default is
+// the first day of March and of the first season.
+func ExampleCalendar_At() {
+	cal := economysim.DefaultCalendar()
+	m, err := cal.At(59)
+	fmt.Println("error:", err)
+	fmt.Println("month:", m.Month, "day of month:", m.DayOfMonth, "season:", m.Season)
+	fmt.Println("season of tick 0:", cal.SeasonAt(0))
+	fmt.Println("ticks per year:", cal.TicksPerYear())
+	// Output:
+	// error: <nil>
+	// month: 2 day of month: 0 season: 0
+	// season of tick 0: 3
+	// ticks per year: 365
+}

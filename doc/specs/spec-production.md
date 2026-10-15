@@ -157,7 +157,9 @@ condition instead, and an output it has is a discard output.
 
 A role lists the recipes its agents may start (`Role.Recipes`, a list of recipe IDs,
 sorted; the field is owned by `spec-agents.md` 3.3, which also says that an empty
-list is legal). A role with an empty list has no recipes (a trader, a carrier). An
+list is legal). The tradable set that this list feeds (`spec-agents.md` 3.4) is
+derived once at construction into the role table, in canonical commodity order, and
+a module adds its items inside that constructor before it returns. A role with an empty list has no recipes (a trader, a carrier). An
 agent starts only a recipe on its role's list or on the role's effective own-use list
 (`spec-subsistence.md` 3.3; FR-PRO-008); a request for any other
 is refused with `not_on_role` (4.2). An own-use recipe is an ordinary recipe named on that
@@ -1479,7 +1481,8 @@ Still open:
 
 | Concern | Home |
 |---------|------|
-| `Recipe`, `Item`, `RecipeOutput`, `Requirement`, `Draw`, `YieldProfile`, `SeasonYield`, `DefaultRecipe()` | root package, `recipe.go`; defaults in `defaults.go` (`spec-config.md` 5.1) |
+| The structs `Recipe`, `Item`, `Output`, `Tool`, `YieldProfile` and `SeasonYield` (`Draw` is the resources module's, `spec-resources.md`) | root package, `config.go` (architecture.md 2.6; built in Stage 0); `DefaultRecipe()` in `defaults.go` (`spec-config.md` 5.1); `RecipeID` in `value.go` |
+| The recipe table (the items, outputs and tools of each recipe by typed ID in canonical commodity order, and whether it is a source, 3.1.2) and the makers of a commodity (9.3): derived, unexported, built once at construction; `Duration`, `Sited`, `TraineeEligible` and `TraineeYield` are read from the configuration by ID | root package, `recipe.go` |
 | The bounds of 10.1 | root package, `bounds.go` |
 | Validation, the sentinels and the warnings of section 10 | root package, `validate.go`, `errors.go` |
 | The execution-count rule (4.2), the yield lookup (6.2), the residue arithmetic (6.6), `UnitCost` and `TrainingPays` | `internal/production`: pure functions over primitive slices and indexes (architecture.md 2.9) |

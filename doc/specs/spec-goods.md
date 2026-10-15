@@ -458,8 +458,11 @@ Original entries:
 
 | Concern | Home |
 |---------|------|
-| `Commodity`, `CommodityID`, `DefaultCommodity()` | root package, `commodity.go` |
-| The fields of section 8 and their bounds | root package, `commodity.go`; bounds in `bounds.go` (`spec-config.md` 4.1) |
+| The struct `Commodity` and the fields of section 8 | root package, `config.go` (architecture.md 2.6; built in Stage 0) |
+| `CommodityID` | root package, `value.go` |
+| `DefaultCommodity()` | root package, `defaults.go` |
+| The bounds of section 8 | root package, `bounds.go` (`spec-config.md` 4.1) |
+| The load pair and whether it fits a container (3.2, FR-GDS-005), the chargeable size of a unit and the chargeable capacity of a container (3.3, 3.4, FR-GDS-006, FR-GDS-007): unexported, over primitive values, checked | root package, `commodity.go`. `load` and `fits` are what `transport.go` and `storage.go` test against (TRN 3.2, STO 3.4); `chargeableSize` and `chargeableCapacity` are read by no module of version 1 (3.3, 3.5; `spec-storage.md` 8.4) and exist only for FR-GDS-006 and FR-GDS-007 |
 | Validation of a commodity, and the warning of 7.2 | root package, `validate.go` |
 | Aging of lots, spoilage and wear | `internal/ledger` (`spec-ledger.md`) |
 | `Requires` and `WearPerUse` | `spec-production.md` 4.4, `internal/production` |

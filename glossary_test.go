@@ -115,7 +115,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 }
 
 // TestGlossary_DeclaredTypesNamed verifies that every exported type declared
-// in value.go and in config.go (the Config and its section structs) and every
+// in value.go, calendar.go and config.go (the Config and its section structs) and every
 // type of event.go (the Event, the event types and their row types) is named,
 // as the identifier, in doc.go, case-sensitively, so that a new type cannot
 // reach the API without a word in the glossary.
@@ -125,7 +125,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 func TestGlossary_DeclaredTypesNamed(t *testing.T) {
 	t.Parallel()
 	doc := readFile(t, "doc.go")
-	for _, file := range []string{"value.go", "config.go", "event.go"} {
+	for _, file := range []string{"value.go", "config.go", "event.go", "calendar.go"} {
 		names := exportedTypes(t, file)
 		if len(names) == 0 {
 			t.Fatalf("%s declares no exported type: the parse is looking at the wrong place", file)

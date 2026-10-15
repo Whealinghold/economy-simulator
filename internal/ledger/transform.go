@@ -65,8 +65,12 @@ func inTotal(lines []Line, c int) (n int64) {
 //  5. ErrReasonMismatch, if the account's kind does not fit the RecipeInput
 //     (agent to boundary) or RecipeOutput row, and ErrUnknownAccount if the
 //     boundary account of a line's reason and commodity was never opened;
-//  6. ErrInsufficientStock;
-//  7. ErrBalanceOverflow, for the holding, a boundary or a flow total.
+//  6. ErrInsufficientStock, then ErrBalanceOverflow (a flow total, then the
+//     boundary), for the inputs, one commodity at a time in the order of its
+//     first line, so a commodity that would overflow and is named before a
+//     short one is refused with ErrBalanceOverflow;
+//  7. ErrBalanceOverflow, for the outputs (the holding, a flow total, then the
+//     boundary), one commodity at a time in the same way.
 func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
 	if err := transformShape(inputs, outputs); err != nil {
 		return err
@@ -158,8 +162,9 @@ func (l *Ledger) slot(a *account, r Reason, c int) int {
 	return a.region*l.stride + l.off[r][thingGoods] + c
 }
 
-// checkTransformInputs is check 6 and the input half of check 7. The
-// commodities are visited once each, at their first line. A line count is at
+// checkTransformInputs is check 6: per commodity, the stock and then the two
+// overflow checks of its totals. The commodities are visited once each, at
+// their first line. A line count is at
 // most MaxRecipeItems, so the quadratic scan is small.
 func (l *Ledger) checkTransformInputs(a *account, flows []int64, inputs []Line) error {
 	for i, ln := range inputs {
@@ -180,7 +185,7 @@ func (l *Ledger) checkTransformInputs(a *account, flows []int64, inputs []Line) 
 	return nil
 }
 
-// checkTransformOutputs is the output half of check 7: an output is checked
+// checkTransformOutputs is check 7: an output is checked
 // against the holding left after the inputs.
 func (l *Ledger) checkTransformOutputs(a *account, flows []int64, inputs, outputs []Line) error {
 	for i, ln := range outputs {
