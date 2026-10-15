@@ -44,54 +44,88 @@ func (c Calendar) derive() (days, ticks int64, err error) {
 	if len(c.Months) > MaxMonths || len(c.Seasons) > MaxSeasons {
 		return 0, 0, ErrTooMany
 	}
+	if err = c.checkFields(); err != nil {
+		return 0, 0, err
+	}
+	if days, err = c.yearDays(); err != nil {
+		return 0, 0, err
+	}
+	if err = c.checkSeasons(days); err != nil {
+		return 0, 0, err
+	}
+	if ticks, err = c.yearTicks(days); err != nil {
+		return 0, 0, err
+	}
+	return days, ticks, nil
+}
+
+// checkFields is the first bounds rule of derive: the scalar fields.
+func (c Calendar) checkFields() error {
 	if c.HoursPerDay < 1 || c.HoursPerDay > MaxHoursPerDay ||
 		c.DaysPerWeek < 1 || c.DaysPerWeek > MaxDaysPerWeek ||
 		c.TicksPerDay < 1 || c.TicksPerDay > MaxTicksPerDay ||
 		c.DaysPerTick < 1 || len(c.Months) == 0 {
-		return 0, 0, ErrOutOfBounds
+		return ErrOutOfBounds
 	}
+	return nil
+}
+
+// yearDays sums the months, whose count derive has already bounded, and checks
+// the year length and the start day.
+func (c Calendar) yearDays() (days int64, err error) {
 	for _, m := range c.Months {
 		if m.Days < 1 || m.Days > MaxDaysPerMonth {
-			return 0, 0, ErrOutOfBounds
+			return 0, ErrOutOfBounds
 		}
 		// At most MaxMonths months of at most MaxDaysPerMonth days: no overflow.
 		days += m.Days
 	}
 	if days > MaxDaysPerYear || c.StartDay < 0 || c.StartDay >= days {
-		return 0, 0, ErrOutOfBounds
+		return 0, ErrOutOfBounds
 	}
-	if len(c.Seasons) > 0 {
-		var sum int64
-		for _, s := range c.Seasons {
-			if s.Days < 1 {
-				return 0, 0, ErrCalendarSeasons
-			}
-			// Capped one past the year, so the sum of at most MaxSeasons cannot
-			// overflow and a season longer than the year still breaks the rule.
-			sum += min(s.Days, MaxDaysPerYear+1)
-		}
-		if sum != days {
-			return 0, 0, ErrCalendarSeasons
-		}
-		if c.SeasonStart < 0 || c.SeasonStart >= days {
-			return 0, 0, ErrOutOfBounds
-		}
+	return days, nil
+}
+
+// checkSeasons checks that the seasons, if any, tile the year of days days.
+func (c Calendar) checkSeasons(days int64) error {
+	if len(c.Seasons) == 0 {
+		return nil
 	}
+	var sum int64
+	for _, s := range c.Seasons {
+		if s.Days < 1 {
+			return ErrCalendarSeasons
+		}
+		// Capped one past the year, so the sum of at most MaxSeasons cannot
+		// overflow and a season longer than the year still breaks the rule.
+		sum += min(s.Days, MaxDaysPerYear+1)
+	}
+	if sum != days {
+		return ErrCalendarSeasons
+	}
+	if c.SeasonStart < 0 || c.SeasonStart >= days {
+		return ErrOutOfBounds
+	}
+	return nil
+}
+
+// yearTicks derives the ticks of a year from the days and checks the tick shape.
+func (c Calendar) yearTicks(days int64) (int64, error) {
 	if c.TicksPerDay > 1 && c.DaysPerTick > 1 {
-		return 0, 0, ErrCalendarTick
+		return 0, ErrCalendarTick
 	}
 	prod, ok := checked.Mul(days, c.TicksPerDay)
 	if !ok {
-		return 0, 0, ErrOverflow
+		return 0, ErrOverflow
 	}
 	if prod%c.DaysPerTick != 0 {
-		return 0, 0, ErrCalendarTick
+		return 0, ErrCalendarTick
 	}
-	ticks = prod / c.DaysPerTick
+	ticks := prod / c.DaysPerTick
 	if ticks < 1 || ticks > MaxTicksPerYear {
-		return 0, 0, ErrOutOfBounds
+		return 0, ErrOutOfBounds
 	}
-	return days, ticks, nil
+	return ticks, nil
 }
 
 // TicksPerYear returns the ticks in a year, DaysPerYear * TicksPerDay /
@@ -119,20 +153,7 @@ func (c Calendar) At(tick int64) (Moment, error) {
 	if tick < 0 {
 		return Moment{}, fmt.Errorf("tick %d: %w", tick, ErrOutOfBounds)
 	}
-	var (
-		d         int64
-		tickOfDay int64
-		ok        = true
-	)
-	if c.TicksPerDay > 1 {
-		d, ok = checked.Add(c.StartDay, tick/c.TicksPerDay)
-		tickOfDay = tick % c.TicksPerDay
-	} else {
-		var span int64
-		if span, ok = checked.Mul(tick, c.DaysPerTick); ok {
-			d, ok = checked.Add(c.StartDay, span)
-		}
-	}
+	d, tickOfDay, ok := c.absoluteDay(tick)
 	if !ok {
 		return Moment{}, fmt.Errorf("tick %d: %w", tick, ErrOverflow)
 	}
@@ -147,6 +168,28 @@ func (c Calendar) At(tick int64) (Moment, error) {
 		Hour:   int(tickOfDay * c.HoursPerDay / c.TicksPerDay),
 		Season: -1,
 	}
+	m.fillMonthAndSeason(c, doy, days)
+	return m, nil
+}
+
+// absoluteDay returns the absolute day number of a non-negative tick and its
+// tick of the day, or false if the day number does not fit in int64.
+func (c Calendar) absoluteDay(tick int64) (day, tickOfDay int64, ok bool) {
+	if c.TicksPerDay > 1 {
+		day, ok = checked.Add(c.StartDay, tick/c.TicksPerDay)
+		return day, tick % c.TicksPerDay, ok
+	}
+	span, ok := checked.Mul(tick, c.DaysPerTick)
+	if !ok {
+		return 0, 0, false
+	}
+	day, ok = checked.Add(c.StartDay, span)
+	return day, 0, ok
+}
+
+// fillMonthAndSeason sets the month, day of month, season and day of season of
+// the zero-based day of the year doy.
+func (m *Moment) fillMonthAndSeason(c Calendar, doy, days int64) {
 	rest := doy
 	for i, mo := range c.Months {
 		if rest < mo.Days {
@@ -155,18 +198,18 @@ func (c Calendar) At(tick int64) (Moment, error) {
 		}
 		rest -= mo.Days
 	}
-	if len(c.Seasons) > 0 {
-		// Both operands are in [0, days), so the offset is the floor modulus.
-		rest = (doy - c.SeasonStart + days) % days
-		for i, s := range c.Seasons {
-			if rest < s.Days {
-				m.Season, m.DayOfSeason = i, int(rest)
-				break
-			}
-			rest -= s.Days
-		}
+	if len(c.Seasons) == 0 {
+		return
 	}
-	return m, nil
+	// Both operands are in [0, days), so the offset is the floor modulus.
+	rest = (doy - c.SeasonStart + days) % days
+	for i, s := range c.Seasons {
+		if rest < s.Days {
+			m.Season, m.DayOfSeason = i, int(rest)
+			break
+		}
+		rest -= s.Days
+	}
 }
 
 // SeasonAt returns the index of the season of a tick, or -1 with no seasons

@@ -3,7 +3,6 @@ package economysim_test
 import (
 	"errors"
 	"math"
-	"math/rand/v2"
 	"os"
 	"reflect"
 	"strconv"
@@ -458,7 +457,7 @@ func TestCalendar_DerivationAgreesWithValidator(t *testing.T) {
 	// Generated calendars: small values around every bound, so a good share
 	// are valid and the rest break one rule or several.
 	for seed := uint64(1); seed <= 400; seed++ {
-		r := rand.New(rand.NewPCG(seed, 7))
+		r := &splitmix{state: seed}
 		cal := economysim.Calendar{
 			HoursPerDay: int64(r.IntN(30)),
 			DaysPerWeek: int64(r.IntN(9)),
@@ -852,4 +851,19 @@ func TestCalendar_AtHourTruncates(t *testing.T) {
 			t.Errorf("At(%d) = hour %d tickOfDay %d err %v, want hour %d", tick, m.Hour, m.TickOfDay, err, want)
 		}
 	}
+}
+
+// splitmix is a fixed-seed SplitMix64 generator for the generated calendars:
+// the same seed gives the same calendar on every platform, so a failing seed
+// reproduces.
+type splitmix struct{ state uint64 }
+
+// IntN returns a value in [0, n) for n >= 1; the modulo bias is irrelevant to
+// a generator of test inputs.
+func (s *splitmix) IntN(n int) int {
+	s.state += 0x9e3779b97f4a7c15
+	z := s.state
+	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
+	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
+	return int((z ^ (z >> 31)) % uint64(n))
 }
