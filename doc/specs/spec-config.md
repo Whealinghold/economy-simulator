@@ -1281,7 +1281,9 @@ registered with `WithStrategy`, else `ErrUnknownStrategy`; `World.Spawner` is th
 built-in `"default"` or a name registered with `WithSpawner`, else
 `ErrUnknownSpawner` (`spec-spawner.md` 3.1.3); `World.Clearing` is the built-in
 `"average"` or a name registered with `WithClearing`, else `ErrUnknownClearing`
-(`spec-clearing.md` 8); and, with `Modules.Policy` present, every `PolicyActor.Policy` is `"hold"`, `"schedule"`, `"rule"` or `"directed"` (built in, `spec-policy.md` 4.4) or a name registered with `WithPolicy`, else `ErrUnknownPolicy` with the path `modules.policy.actors[i].policy` (`spec-policy.md` 4.5.1). The name `"merchant"` is checked like any name, and
+with the path `world.clearing` (`spec-clearing.md` 8; an empty configured name
+is that error, and an empty name given to `WithClearing` is `ErrInvalidID`,
+`spec-world.md` 4.1.1); and, with `Modules.Policy` present, every `PolicyActor.Policy` is `"hold"`, `"schedule"`, `"rule"` or `"directed"` (built in, `spec-policy.md` 4.4) or a name registered with `WithPolicy`, else `ErrUnknownPolicy` with the path `modules.policy.actors[i].policy` (`spec-policy.md` 4.5.1). The name `"merchant"` is checked like any name, and
 `strategy.Options()` registers it (`spec-merchants.md` 3.1). `Validate` takes no
 options, so it cannot know the registrations, and it does not see
 `WithTargetSpread` either (8.1); the four rules are therefore the config rules that

@@ -99,6 +99,16 @@ quadruple, so a trade can say which ask it filled. Because the estate never bids
 trade with itself. A **counterparty** of the external sector (`spec-external-sector.md` 4.2) is a second pseudo-agent of this kind: a buyer counterparty places only bids and a seller only asks, one order per commodity, so the rule above reads the same and an order of a counterparty is an ordinary order backed by a reservation in its own account (`spec-external-sector.md` 4.3).
 A **treasury** of a governed jurisdiction (`spec-polity.md` 5, `spec-fiscal.md` 9) is a third pseudo-agent of this kind. It places its standing orders at P3.4a (`spec-fiscal.md` 9.4.2) and may place a bid and an ask of one commodity in a tick, one of each side, with strictly ordered integer limits, validated at construction (`ErrFiscalShape`); two bids, or two asks, of one commodity of one treasury are never admitted from the configuration, and a second order of one side is `duplicate_order` all the same. A treasury never matches itself because the bid's limit is below the ask's, and the clearing may assume it (FR-FIS-053); the identity check of 8.2 stays as a guard. A treasury has no strategy and no belief, so its orders have no outcome (7.3).
 
+**Named and ordinary asks do not mix.** One agent must not place an ordinary ask
+(no lot) and a named-lot ask of one commodity in one book. The ledger earmarks
+the units of an ordinary ask by commodity, oldest lot first, so they could be the
+units a named ask earmarked. Only the estate names a lot and it names one always,
+so the library never builds such a pair; if one arrives, the book panics with a
+message that says it is a violated programmer invariant (architecture.md 8.1). It
+is not a rejection `reason`. The test sits in admission, beside the duplicate
+scan: two named asks of different lots are fine, two asks naming the same lot
+(or two ordinary asks) are `duplicate_order`.
+
 ### 3.2 Validation
 
 An order is **rejected** (not admitted) with a `reason` if any of these holds.
@@ -116,6 +126,8 @@ the key strings only.
 | `invalid_quantity` | the quantity is below 1 or above `MaxQuantity`, a validation bound of `spec-config.md` 4.1 |
 | `duplicate_order` | the agent already has an admitted order of this side for this commodity (and named lot, if any) this tick |
 | `overflow` | limit price times quantity does not fit in `int64` |
+| `holding_limit` | what a bid would settle does not fit the ledger's stock bound (3.2.2): the buyer's holding of the commodity plus the quantity exceeds `MaxQuantity` |
+| `receipt_limit` | what an ask would settle does not fit the ledger's balance bound (3.2.2): the seller's balance plus the worst-case receipt of every ask already admitted in the round plus `quantity * MaxPrice` exceeds `MaxMoney` |
 | `insufficient_funds` | a bid whose limit price times quantity exceeds the agent's available cash |
 | `insufficient_stock` | an ask whose quantity exceeds the agent's available stock |
 | `no_room` | with the storage module on, a bid of an agent whose account is limited, whose quantity times each size exceeds the free room of the account in either dimension (`spec-storage.md` 5.2.1, FR-STO-008). Not applied to an ask or to a pseudo-agent |
@@ -130,8 +142,8 @@ price, to a legal cap or floor (3.2.1), and it is counted, never silent.
 
 3.2.1. **The legal clamp.** With the institutions module on and a price control in
 force for (region, commodity) (`spec-institutions.md` 6.3), an order that has passed
-the checks of `invalid_price`, `invalid_quantity`, `duplicate_order` and `overflow`
-is clamped before the checks of funds, stock and room: a bid whose limit price is
+the checks of `invalid_price`, `invalid_quantity`, `duplicate_order`, `overflow`,
+`holding_limit` and `receipt_limit` is clamped before the checks of funds, stock and room: a bid whose limit price is
 above the cap has its limit replaced by the cap, and an ask whose limit price is
 below the floor has its limit raised to the floor. The admitted order carries the
 replaced limit: its reservation is `limit * quantity` at it, `OrderPlaced` shows it,
@@ -141,6 +153,66 @@ test of 3.2 sees the limit before the clamp, which is harmless: a floor raise ca
 lift an ask above the product tested, but an ask reserves no money, and a cap only
 lowers a bid. Every replaced limit is counted in `PriceControlled`
 (`spec-institutions.md` 11.1).
+
+3.2.2. **What `holding_limit` and `receipt_limit` close at settlement.** A trade
+moves money into the seller and goods into the buyer, and the ledger refuses a
+balance above `MaxMoney` or a stock above `MaxQuantity`. Settlement must not
+fail (2.3), so admission tests both, in the `holding_limit` and `receipt_limit`
+rows, in the subtraction form so that no sum wraps. They are two reasons and not
+one because they name two different causes that an operator has to tell apart in
+the rejection counts (`economysim.market.orders.rejected`): a holding at
+`MaxQuantity` is hoarding or runaway production, a receipt with no headroom is
+money supply or one agent's cumulative asks reaching `MaxMoney`:
+
+- **A bid** is rejected with `holding_limit` when
+  `quantity > MaxQuantity - held`, `held` being the buyer's holding of the
+  commodity. An agent has at most one bid per commodity and book, and a second
+  is `duplicate_order`, which is checked before `holding_limit`, so no tally of
+  bids exists: this single-order test is the whole rule.
+- **An ask** is rejected with `receipt_limit` when
+  `quantity * MaxPrice > MaxMoney - balance - tally`
+  (a negative headroom rejects), `balance` being the seller's money balance and
+  `tally` the worst-case receipt (`quantity * MaxPrice`) of every ask of the
+  same account already admitted in the round, in any market, commodity or lot.
+  The tally is cumulative because one agent has many asks. It is cleared at the
+  start of the round of P3.2 and added to by each admitted ask. Sums are formed
+  with checked arithmetic, never a bare `+`, because a tally over many asks can
+  exceed `int64`.
+
+Two edges of these rows, as built (`internal/clearing.Admit`):
+
+- **The product is tested against `int64`, not against `MaxMoney`.** The
+  `overflow` row rejects a bid whose `limit * quantity` does not fit `int64`. A
+  product above
+  `MaxMoney` that still fits is not `overflow`: it is `insufficient_funds`,
+  because no available cash exceeds `MaxMoney`. With the bounds of `bounds.go`
+  (`MaxPrice * MaxQuantity` = `MaxMoney`) the two cases cannot differ; the
+  statement holds if the bounds change.
+- **A negative holding, balance or tally is a violated invariant, not a
+  rejection.** `Held`, `Balance` and `Tally` are never negative in a ledger. A
+  negative one is a ledger or caller bug, and it would look like a market under
+  pressure if it were counted in the rejections. The root therefore panics with
+  the message of a violated programmer invariant (architecture.md 8.1) before it
+  calls `Admit`, and the pure function, being total, refuses such a fact as
+  `overflow` rather than wrapping a sum. A holding above `MaxQuantity` is
+  `holding_limit`.
+
+Worked case (`MaxQuantity` 10^9, `MaxPrice` 10^9, `MaxMoney` 10^18). A buyer
+holds 999 999 990 units: a bid of 10 is admitted (`10 > 10` is false), a bid of
+11 is `holding_limit` (`11 > 10`). A seller's balance is 4 * 10^17. Its first ask of
+5 * 10^8 units has a worst receipt of 5 * 10^17 and headroom 6 * 10^17, so it is
+admitted and the tally becomes 5 * 10^17. A second ask of 2 * 10^8 units (worst
+receipt 2 * 10^17) meets a headroom of `10^18 - 4 * 10^17 - 5 * 10^17 = 10^17`
+and is `receipt_limit`; one of 10^8 units (10^17) is admitted, the headroom being
+exactly equal.
+
+This holds while no other credit reaches the seller's balance or the buyer's
+stock between P3.2 and P4.1. A module that credits in that window (credit
+P3.3b, insurance P3.3c, fiscal) adds its worst case to the tally or keeps its own
+headroom. With it, a ledger refusal at settlement is a violated invariant of the
+library and panics with a message that says so (architecture.md 8.1), never an
+input-derived error. The quantity above `MaxQuantity` and the price above
+`MaxPrice` are rejected earlier by `invalid_quantity` and `invalid_price`.
 
 ### 3.3 Reservation
 
@@ -165,8 +237,10 @@ at a tick boundary (`FR-LED-020`).
 3.3.1. Money spent on a bid is not available to other orders in the same tick,
 and proceeds of a sale are not available until the next tick. So, given the
 tie-break keys (4.2), the order in which a tick's markets are cleared cannot change
-any result (section 7). The keys come from one stream in market order, so the fixed
-order of the markets is part of the draw sequence (`spec-world.md` D7, ruling C22).
+any result (section 7). Each market takes its keys from its own stream, keyed by
+the tick, the region and the commodity (`spec-world.md` 7.3, D7; ADR 0008), so no
+market's keys depend on how many orders another market had or on the order in
+which the markets are cleared.
 
 ## 4. Matching
 
@@ -306,7 +380,9 @@ For each trade of `q` units at price `p` between buyer `B` and seller `S`:
 All four happen or none does. They are ledger transfers with the `reason`
 `trade` (`spec-ledger.md`), so the faucets-and-sinks accounts show no creation or
 destruction. `p * q` was checked for overflow at admission, because `p` is at
-most the bid limit.
+most the bid limit, and so were the seller's balance and the buyer's stock
+against `MaxMoney` and `MaxQuantity` (3.2.2), so a ledger refusal here is a
+violated invariant and not a result of input.
 
 When a market has finished, the remaining reservation of every unmatched or
 partly filled order is released, and with the storage module on so is the reserved
@@ -329,9 +405,8 @@ price window (5.4). Orders do not persist. The state is listed in section 16.
 clears. A market clears from its admitted orders only. Since each order is
 already backed by a reservation (3.3), clearing the markets in any order gives
 the same trades, prices and balances **given the tie-break keys** (4.2). The keys
-come from one stream in market order, so the fixed order of the markets is part
-of the draw sequence (`spec-world.md` D7, ruling C22). The world clears them in a
-fixed order (by region, then commodity), which is also the order in which events
+of a market come from its own keyed stream (3.3.1), so they do not depend on the
+order of the markets. The world clears them in a fixed order (by region, then commodity), which is also the order in which events
 come out (section 9).
 
 7.3. Unmatched orders are not an error and are not retried. The agent learns the
@@ -356,7 +431,8 @@ and take no outcome draw (`spec-world.md` D8, ruling C21; `spec-fiscal.md` 9.5).
 `Clearing` is one of the four sanctioned extension interfaces
 (architecture.md 4.3). It is defined in the root package where it is consumed
 (4.1) and ships with `AverageClearing` as its default, with a compile-time
-assertion (4.5). A proposed shape (final form is decided with the code):
+assertion (4.5). The shapes below are the decided ones (the clearing row of
+`roadmap-v1.md`, decisions D31 and D32 of `plans/plan-phase-1-3.md`):
 
 **The owner of `World.Clearing` (ruling C7, `spec-world.md` 4.2).** The field
 `Config.World.Clearing` is a string that names the clearing a world uses. This section
@@ -364,24 +440,61 @@ owns it, as `spec-spawner.md` 3.1.3 owns `World.Spawner`: the default is `averag
 (from the defaults of `spec-config.md` 5, so an empty value is an error and not a
 default), `average` is `AverageClearing` and is built in, and a consumer's
 implementation is registered under another name by `WithClearing(name, c)`
-(`spec-world.md` 4.1). `NewWorld` rejects an empty name or one that is not registered
-with `ErrUnknownClearing`, a name registered twice (`average` is built in, so
-registering it is registering it twice) or the name `default` with `ErrDuplicateID`, as
-for the other extensions (`spec-world.md` FR-WLD-002), and a nil `Clearing` with
-`ErrNilExtension`.
+(`spec-world.md` 4.1). `NewWorld` rejects a configured name that is empty or not registered
+with `ErrUnknownClearing`, a `*ValidationError` with the path of the field
+(`spec-config.md` 7.1.4). `WithClearing` follows the one rule of `spec-world.md`
+4.1 for every registration: a name that is not an ID (`validID`) is `ErrInvalidID`,
+a name registered twice (`average` is built in, so registering it is registering
+it twice) is `ErrDuplicateID`, as for the other extensions (`spec-world.md`
+FR-WLD-002), and a nil `Clearing` is `ErrNilExtension`. `average` is the only
+name the library reserves for a clearing; there is no second reserved name.
 The **name** is in the effective configuration and its hash and the code behind it is
 not, so a world with a custom rule does not hash like one with the default
 (`spec-config.md` 8.1). An implementation that keeps state between calls implements
 `Stateful` (architecture.md 4.3, 7.7; ADR 0002 decision 7); `AverageClearing` keeps none.
 
 ```go
+// LotKey names the lot an ask is for. The zero value names none.
+type LotKey struct {
+	Named      bool
+	Born       int64
+	Durability int64
+}
+
+// Order is one admitted order of one market (3.1). The market is the region
+// and the commodity of the book, so the order carries no region.
+type Order struct {
+	Agent     AgentID
+	Commodity CommodityID
+	Side      Side
+	Price     Price    // the limit, as admitted (after the legal clamp, 3.2.1)
+	Quantity  Quantity
+	Lot       LotKey
+}
+
+// Trade is a trade of one buyer and one seller. Lot is the lot of the ask it
+// filled, so a trade says which ask it filled (3.1.2).
+type Trade struct {
+	Commodity CommodityID
+	Buyer     AgentID
+	Seller    AgentID
+	Price     Price
+	Quantity  Quantity
+	Lot       LotKey
+}
+
 // Clearing matches the admitted orders of one market and prices the trades.
 type Clearing interface {
 	Clear(bids, asks []Order, rng *rand.Rand) []Trade
 }
 ```
 
-8.1. **Randomness.** `rng` is the world's random source. An implementation must
+`Order` and `Trade` are plain structs with no pointer, so each is comparable. The slice a `Clearing` returns is read by the world and not owned
+by it, and `AverageClearing` is an empty struct with a value receiver.
+
+8.1. **Randomness.** `rng` is the world's random source, reseeded for the call to
+the market's own stream, keyed by the tick, the region and the commodity (3.3.1;
+`spec-world.md` 7.2.2, D7). An implementation must
 not create its own, use a global one, or keep `rng` after `Clear` returns
 (architecture.md 7.7). The doc comment on `Clearing` states this.
 
@@ -401,7 +514,17 @@ at P4.1 (`spec-world.md` 3.5): the step fails and the world is failed, so every
 later call with an error result returns `ErrWorldFailed`. The world does not also
 log it (architecture.md 8.3). A faulty extension
 therefore cannot create money or goods or break a budget; it can only fail
-loudly. The default `AverageClearing` never produces an invalid list.
+loudly. The default `AverageClearing` never produces an invalid list **except one**: it
+does not look at the owner of an order, so when one agent holds a crossing bid
+and a crossing ask in one book it pairs them, and the check above fails the step
+with `ErrInvalidTrade` (the self-trade clause). The guard is in the check, not in
+the matching, so the matching stays a function of limits and keys only. Whoever
+places both sides of one commodity must therefore keep them from crossing: an
+ordinary agent places one side per commodity (the strategy rows, `spec-agents.md`
+6.5.2, 7.3.3), and a pseudo-agent that places both sides, the treasury, orders
+its limits strictly (bid below ask, FR-FIS-053; the world rows of `spec-fiscal.md`
+9.4). A strategy or world row that can put a crossing pair of one agent into a
+book has a defect that the world reports by failing the step.
 
 Because of this, the original's behaviour of trading when the top bid is below
 the top ask cannot be reproduced by a `Clearing`: it would violate the price
@@ -412,12 +535,25 @@ bound. That is deliberate (section 10).
 them inline (architecture.md 2.9):
 
 ```go
-// internal/clearing: stdlib only, no root types, no random source.
+// internal/clearing: stdlib and internal/checked only, no root types, no
+// random source.
+type Lot struct {
+	Named      bool
+	Born       int64
+	Durability int64
+}
+
+// Code is a small integer the root maps to a rejection reason (Admit) or to
+// the failure of a list (Check). Zero means admitted or valid.
+type Code uint8
+
 type Offer struct {
-	Ref   int    // index into the caller's slice
+	Ref   int    // index into the caller's slice; also the input position
 	Price int64
 	Qty   int64
 	Key   uint64 // the tie-break key of 4.2, drawn by the root
+	Owner int64  // opaque owner; Average ignores it, Check uses it
+	Lot   Lot    // the lot an ask names; Average ignores it, Check uses it
 }
 
 type Match struct {
@@ -425,17 +561,81 @@ type Match struct {
 	Price, Qty     int64
 }
 
-func Average(bids, asks []Offer) []Match
+// Average sorts bids and asks in place (they are scratch the root owns) and
+// appends the matches to dst.
+func Average(dst []Match, bids, asks []Offer) []Match
 ```
 
 `AverageClearing.Clear` in the root draws one source word per order, bids first and then
 asks, each in input order (4.2; `spec-world.md` 7.2, ruling C8), puts it in `Key`, and
 calls `Average`, which sorts by (limit price, `Key`, position in the input) and draws
 nothing. The key is a raw `uint64`, so it needs no reduction. The internal package does
-not know about commodities, roles or agents. The
-checked arithmetic it needs (the midpoint, the 128-bit volume-weighted mean) is
-in the `internal/` checked-arithmetic helpers that `spec-currency.md` section 7
-names.
+not know about commodities, roles or agents. The root converts to and from these
+structs inline at the call (architecture.md 2.9), which is why the example of 2.9
+omits the key and the random source (N-235).
+
+The package also holds the other pure rules of the market, over primitive values:
+
+- `Admit(Facts) Code` returns the code of the first failing row of 3.2, in the
+  order of its table, or 0 (`Admitted`); `Facts` is what the root resolved for
+  one order: whether the agent is known, whether its side is allowed, whether the
+  commodity is known and tradable, whether the order is a duplicate, its side,
+  limit and quantity, the three bounds (`MaxPrice`, `MaxQuantity`, `MaxMoney`,
+  passed in, architecture.md 9.6), the available cash or stock, and for 3.2.2 the
+  buyer's holding, the seller's balance and the seller's receipt tally. The codes
+  are `UnknownAgent`, `SideNotAllowed`, `UnknownCommodity`, `NotTradable`,
+  `InvalidPrice`, `InvalidQuantity`, `DuplicateOrder`, `Overflow`,
+  `HoldingLimit`, `ReceiptLimit`, `InsufficientFunds` and `InsufficientStock`,
+  numbered in the order of the table, and the root maps each to its `Reason`
+  constant. The rows owned by a module (`not_permitted`, `no_room`) and the
+  legal clamp have their positions marked and no code until the module is
+  built. The edges of the settlement rows are in 3.2.2.
+- `Check(dst []Match, sc Scratch, commodity int64, bids, asks []Offer, fills
+  []Fill) ([]Match, Code)` is the check of a list of trades (8.2) over the
+  book's own admitted records, never the slices the `Clearing` was given. A
+  `Fill` is one trade of the list over opaque owners: `{Commodity, Buyer, Seller
+  int64; Lot Lot; Price, Qty int64}`. `Scratch` is `{Sums []int64; Index
+  []int32}`, each of length `len(bids)+len(asks)`, owned by the caller, so the
+  check allocates nothing and does not scan the matches per fill; it zeroes
+  `Sums` itself, and panics (a violated programmer invariant) if a slice is too
+  short. On success it appends one `Match` per fill, in fill order, to `dst`, and
+  leaves the units filled per order in `Sums` (bids first, then asks, in the
+  order given). On failure it returns `dst` at its passed length and the code, and
+  `Sums` is then meaningless. The failure codes are, in this order,
+  `BadCommodity` (the fill is for another commodity than the book's), `NoOrder`
+  (the buyer holds no bid, or the seller no ask of that lot), `BadQuantity`
+  (below 1), `BadPrice` (outside the ask's and the bid's limits), `SameOwner` and
+  `OverFilled` (the units summed per order exceed the order's). One fill with
+  several faults reports the first in that order; a list reports the **lowest**
+  code over its fills, with `OverFilled` only when no fill has another fault, so
+  the code does not depend on the order of the fills.
+- `Report(bids, asks []Offer, sums []int64, matches []Match, prevPrice, prevAge
+  int64) (Result, bool)` computes the market report (5.4, 5.5) from the offers,
+  the units filled per order that `Check` left in `Sums`, the valid matches, and
+  the previous price and age (the seed price and age 0 before the first
+  clearing). `Result` carries the published price, the age, the volume, the
+  unmatched units of each side and the best unmatched bid and ask with their
+  flags (false means none, not 0). The second result is false only when a sum
+  does not fit, which cannot happen for a checked list within the bounds; the
+  root treats it as a violated invariant.
+
+The checked arithmetic is split by what it is: `Midpoint` (5.2) is in
+`internal/clearing`, and the half-to-even division and the 128-bit accumulator of
+the volume-weighted mean (5.4) are in `internal/checked` (`Acc`, with `AddMul` and
+`DivHalfEven`), which every package that needs a 128-bit product or ratio
+imports (architecture.md 2.6). `Acc` accepts non-negative products only: a
+negative factor, or a sum above 128 bits, is refused (`AddMul` returns false and
+leaves the sum unchanged), and a divisor below 1 or a quotient above `int64` is
+refused by `DivHalfEven`.
+
+**Where the book lives.** The admitted entries of a market and the units filled
+per order live in the root's book, not in the scratch the world owns (`clearScratch`
+holds only the split sides, the fills, the matches, the lot read and the two
+`Check` slices). `spec-world.md` admits every market (P3.2) before any market
+clears (P4.1), so many books hold entries at once; a scratch that held them would
+be overwritten by the next market's admission. The outcomes of 7.3 are delivered
+after every market has cleared, from each book's units filled per order, in
+admission order.
 
 ## 9. Observability
 
@@ -457,8 +657,11 @@ was offered, so an observer can see a stale price. No event has a map.
 
 9.2. Logs (observability-and-logging.md section 3). Everything here is
 `Debug`, guarded by `Enabled`, with constant messages: "order rejected"
-(`commodity`, `agent`, `side`, `reason`) and "market cleared" (`commodity`,
-`price`, `quantity` for the volume). There is no `Info`, `Warn` or `Error` line:
+(`tick`, `region`, `commodity`, `agent`, `side`, `reason`) and "market cleared"
+(`tick`, `region`, `commodity`, `price`, `quantity` for the volume). `tick` and
+`region` come first on both lines because a market is one (region, commodity)
+and a line without them cannot be tied to its market in a world of more than one
+region. There is no `Info`, `Warn` or `Error` line:
 a rejected order is an event, not a degraded market; and the invalid-trade error
 is returned, not logged (8.2). A price clamped to a bound is a belief concern
 and is logged there, by the `Warn` "price beliefs at bound" of `spec-beliefs.md`
@@ -550,7 +753,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-004 | A second order from the same agent for the same commodity, the same named lot (none, for an ordinary agent) and the same side in the same tick MUST be rejected with `duplicate_order`; a bid and an ask of one commodity from one agent are not by that fact a duplicate (3.1.1). |
 | FR-CLR-005 | A bid MUST be admitted only if its limit price times its quantity does not exceed the agent's available cash, and on admission that amount MUST be reserved; otherwise it MUST be rejected with `insufficient_funds`. |
 | FR-CLR-006 | An ask MUST be admitted only if its quantity does not exceed the agent's available stock of the commodity, and on admission that quantity MUST be reserved; otherwise it MUST be rejected with `insufficient_stock`. |
-| FR-CLR-007 | If limit price times quantity overflows `int64`, the order MUST be rejected with `overflow`; no value MUST wrap and nothing MUST panic. |
+| FR-CLR-007 | If limit price times quantity overflows `int64`, or a bid's quantity exceeds `MaxQuantity` less the buyer's holding of the commodity, or an ask's quantity times `MaxPrice` exceeds `MaxMoney` less the seller's balance and the worst-case receipt of its asks already admitted in the round (3.2.2), the order MUST be rejected with `overflow`, `holding_limit` or `receipt_limit` respectively; no value MUST wrap and no order within the bounds MUST panic. A negative balance, holding or tally in the facts of an order is not an order: it is a violated invariant and MUST panic (3.2.2). |
 | FR-CLR-008 | Every order MUST expire when its market has cleared, with its remaining reservation released, and no order MUST be present in the next tick's book. |
 | FR-CLR-009 | A bid and an ask MUST NOT trade when the bid's limit price is below the ask's. |
 | FR-CLR-010 | Bids MUST be matched highest limit first and asks lowest limit first, with equal limits ordered by a tie-break key drawn from the world's random source and then by input position, so the order is total. |
@@ -566,7 +769,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-020 | When no unit traded, the market price MUST be the previous market price, and before the first trade ever it MUST be the seed price of the commodity in the region (the effective reference price, or the `WarmStart.Prices` entry when one is configured); the price age MUST be 0 after a tick in which units traded and otherwise one more than before. |
 | FR-CLR-021 | Each tick a market MUST report, per side, the unmatched units and the best unmatched limit price, or that there is none. |
 | FR-CLR-022 | The same seed, configuration and sequence of orders MUST give identical trades in an identical order, and `AverageClearing` MUST draw exactly one `uint64` per order, bids first, in input order. |
-| FR-CLR-023 | Given the tie-break keys, the trades, prices and balances of a tick MUST NOT depend on the order in which its markets are cleared; the fixed order of the markets is part of the draw sequence of the keys (3.3.1, 7.2). |
+| FR-CLR-023 | Given the tie-break keys, the trades, prices and balances of a tick MUST NOT depend on the order in which its markets are cleared; the keys of a market come from a stream keyed by the tick, the region and the commodity, so no draw depends on how many were taken in another market (3.3.1, 7.2). |
 | FR-CLR-024 | The world MUST validate the whole list of trades from a `Clearing` before settling any; if any trade breaks the rules of section 8.2 it MUST settle none of that market's trades, release its reservations and return an error wrapping `ErrInvalidTrade`. |
 | FR-CLR-025 | The total outcome (filled units, unfilled units) of each admitted order of a household agent, with the market report of its market (market price, price age, best unmatched bid and ask with flags), MUST be delivered once to the agent's `Revise` after all markets of the tick have cleared, however many trades filled the order, in order of region, commodity and admission; a rejected order, and an order of a pseudo-agent (an estate, a counterparty or a treasury), MUST have no outcome and MUST take no outcome draw (7.3). |
 | FR-CLR-026 | `OrderPlaced` MUST be emitted for each admitted order and `OrderRejected` with a `reason` from the table in section 3.2 for each rejected order, in the order submitted. The reason `no_room` is FR-STO-008 and the room of a settlement is FR-STO-009; the reason `not_permitted` is FR-ORG-024. |
@@ -576,7 +779,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CLR-030 | An intent for a commodity outside the tradable set of the agent's role MUST be rejected with `reason` `not_tradable` and an `OrderRejected` event, MUST NOT reach matching, and MUST NOT reserve cash or stock. |
 | FR-CLR-031 | The checks of section 3.2 MUST run in the order of its table, so an order that fails two of them MUST be rejected with the first. |
 | FR-CLR-032 | A market MUST push its market price into its price window once per tick, after it has cleared and before the outcomes are processed, if and only if units traded, and the `Clearing` MUST NOT read or write the window. |
-| FR-CLR-033 | The clearing path MUST emit no `Info`, `Warn` or `Error` log line, and each `Debug` line MUST be guarded by `Enabled`. |
+| FR-CLR-033 | The clearing path MUST emit no `Info`, `Warn` or `Error` log line, and each `Debug` line MUST be guarded by `Enabled`, and each `Debug` line MUST carry `tick` and `region` (9.2). |
 | FR-CLR-034 | The market report of the last clearing of each market (the published price, the price age, the volume, the unmatched units of each side and the best unmatched bid and ask with their flags) MUST be saved in a checkpoint, and a restored world MUST answer the same report as the original at the same boundary (7.1, 16). |
 | FR-CLR-035 | A price control in force for (region, commodity) MUST replace, in admission and after the checks of price, quantity, duplicate and overflow and before those of funds, stock and room, the limit of a bid above its cap by the cap and the limit of an ask below its floor by the floor; the admitted order MUST carry the replaced limit in its reservation, in `OrderPlaced`, in the orders given to `Clearing` and in the check of 8.2, and the clamp MUST add no `reason`, change no quantity and draw nothing (3.2.1). |
 
@@ -658,13 +861,15 @@ Original entries (each to be given its sign, delay, damper and test):
 
 | Concern | Home |
 |---------|------|
-| `Order`, `Trade`, `Clearing`, `AverageClearing`, `ErrInvalidTrade` | root package, `clearing.go`, `order.go`, `errors.go` |
-| Admission, reservation, the market price, the price age and the price window | root package, `market.go` |
-| The tie-break draw (one source word per order) and the registration of `World.Clearing` by name | root package, `clearing.go` (`AverageClearing.Clear`), `option.go` (`WithClearing`) |
-| The matching algorithm over the keys it is given | `internal/clearing` (stdlib only, no random source; `Offer` with its `Key`, `Match`, `Average`) |
-| Midpoint, half-to-even division, 128-bit volume-weighted mean, checked multiply | the `internal/` checked-arithmetic helpers |
+| `Order`, `Trade`, `LotKey` | root package, `order.go` |
+| `Clearing`, `AverageClearing`, `ErrInvalidTrade`, `ErrNilExtension`, `ErrUnknownClearing` | root package, `clearing.go`, `errors.go` |
+| Admission, reservation, settlement, release, the check of a list of trades, the market report type and its computation | root package, `clearing.go` |
+| The state of each market's report and the price window (the market price, the price age and the window) | root package, `market.go` (the world row of `roadmap-v1.md`; the report type is `clearing.go`'s) |
+| The tie-break draw (one source word per order) and the registration of `World.Clearing` by name | root package, `clearing.go` (`AverageClearing.Clear`), `option.go` (`WithClearing`, the name check) |
+| The matching algorithm over the keys it is given, the ordered admission checks over primitive facts, the check of a list, the report | `internal/clearing` (stdlib and `internal/checked` only, no random source; `Offer`, `Match`, `Average`, `Admit`, `Check`, `Report`, `Midpoint`) |
+| Half-to-even division and the 128-bit accumulator of the volume-weighted mean, checked multiply | `internal/checked` (`Midpoint` is `internal/clearing`'s) |
 | Rejection `reason` constants, including `not_tradable` | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |
-| State contributed to a checkpoint (section 16) | root package, `market.go` |
+| State contributed to a checkpoint (section 16) | root package, `market.go` (written by `checkpoint.go`) |
 | Reserve, release, `trade` transfers | `internal/ledger` (`spec-ledger.md`) |
 | Events `OrderPlaced`, `OrderRejected`, `TradeExecuted`, `MarketCleared` | root package, `event.go` |
 

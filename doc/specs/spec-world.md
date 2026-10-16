@@ -322,9 +322,21 @@ validates its argument and returns an error rather than panic.
 | `WithTargetSpread(bp int64)` | **yes**: it overrides the `TargetSpread` of every role (`spec-welfare-and-wages.md` 5.2) | **yes**: it is part of the effective configuration, so it is applied before the hash is taken and before validation (`spec-config.md` 8.1 lists it among the options that change results) | bound as the field's; the last one given wins; the creation draw is taken whatever the value (5.7) |
 | `WithStrategy(name string, s Strategy)` | yes (what a role that names it does) | the **name** only, through `Role.Strategy`; the code behind a name is not hashed (`spec-agents.md` 6.6) | additive; the names `default` and `directed` (the library's own, `spec-agents.md` 6.6) and a name given twice are `ErrDuplicateID`; a nil `Strategy` is `ErrNilExtension` |
 | `WithSpawner(name string, s Spawner)` | yes | the name only, through `World.Spawner` (`spec-spawner.md` 3.1.3) | registers under a name; `World.Spawner` selects it; same duplicate and nil rules |
-| `WithClearing(name string, c Clearing)` | yes | the name only, through `World.Clearing` (4.2) | same shape; the name `average` is `AverageClearing` and is built in; an empty name is `ErrUnknownClearing` |
+| `WithClearing(name string, c Clearing)` | yes | the name only, through `World.Clearing` (4.2) | same shape; the name `average` is `AverageClearing` and is built in; an empty configured `World.Clearing` is `ErrUnknownClearing` in `NewWorld` (3.2.2) |
 | `WithPolicy(name string, p Policy)` | yes (what an actor that names it decides) | the name only, through `Actor.Policy` (`spec-policy.md` 4.5): the code behind a name is not hashed | additive; the names `hold`, `schedule`, `rule` and `directed` (the library's own) and a name given twice are `ErrDuplicateID`; a nil `Policy` is `ErrNilExtension`; an actor's name that is neither built in nor registered is `ErrUnknownPolicy` in `NewWorld` (3.2.2) |
 | `WithReseed(salt uint64)` | yes: it replaces the seed at a restore by the rule of `spec-checkpoint.md` 6.8.2 | **no**: it is not configuration and not a registered name; it is a call of the **sequence of calls** (8.1.1), reported in `WorldRestored` | **restore only**: on `NewWorld` it is `ErrOptionContext`; a salt of 0 is a reseed like any other (`spec-checkpoint.md` 6.8) |
+
+4.1.1. **One rule for the four registrations.** `WithStrategy`, `WithSpawner`,
+`WithClearing` and `WithPolicy` validate the name the same way, once, and the
+rows above say only what is particular to each: a name satisfies the ID rule of
+`spec-config.md` 3.3 (`validID`: a lowercase letter, then lowercase letters,
+digits and `_`, at most `MaxIDLength` bytes), else `ErrInvalidID`, so an empty name given to an option is
+`ErrInvalidID`; a name given twice, or a name the library builds in, is
+`ErrDuplicateID`; a nil extension is `ErrNilExtension`. The three rules are
+checked in that order and all fail the option, so `NewWorld` fails before any
+state is built. An empty or unregistered name in the *configuration* is another
+thing: it is the `ErrUnknown*` of the field, a `*ValidationError` with its path,
+raised by `NewWorld` (3.2.2; `spec-config.md` 7.1.4).
 
 4.2. **A gap this spec fills.** `Clearing` is one of the four extension points
 (architecture.md 4.3), `spec-clearing.md` 8 defines its shape, and no written spec
@@ -339,7 +351,7 @@ world's `Rand` as it likes (7.2.2); D7 is the default's count. Without the name 
 with the default and a checkpoint would restore into the wrong rule silently. The
 edits are listed in 22.
 
-4.3. **Errors of options.** `ErrDuplicateID` (a name registered twice, or one of the library's own: `default` or `directed` of a strategy, `hold`, `schedule`, `rule` or `directed` of a policy), `ErrNilExtension` (a nil `Strategy`, `Spawner`, `Clearing` or `Policy`),
+4.3. **Errors of options.** `ErrInvalidID` (a name that is not an ID, empty included, 4.1.1), `ErrDuplicateID` (a name registered twice, or one of the library's own: `default` or `directed` of a strategy, `average` of a clearing, `hold`, `schedule`, `rule` or `directed` of a policy), `ErrNilExtension` (a nil `Strategy`, `Spawner`, `Clearing` or `Policy`),
 `ErrOutOfBounds` (an argument outside its bound), `ErrOptionContext` (`WithSeed`
 on a restore, `WithReseed` on `NewWorld`; `spec-checkpoint.md` 6.4). An option that
 fails fails `NewWorld` (or the restore) with its error before any world state is
@@ -2201,7 +2213,7 @@ has no default or bound of its own.
 | ID | Requirement |
 |----|-------------|
 | FR-WLD-001 | `NewWorld` MUST apply its options in the order given, MUST return `(nil, err)` and no world when an option or the validation fails, and MUST NOT return a partly built world (3.2.1). |
-| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner`, `World.Clearing` or `Actor.Policy` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` or `ErrUnknownPolicy`, a name registered twice or a built-in name (`default` and `directed` of a strategy; `hold`, `schedule`, `rule` and `directed` of a policy) with `ErrDuplicateID`, and a nil `Strategy`, `Spawner`, `Clearing` or `Policy` with `ErrNilExtension` (3.2.2, 4.1, 4.3). |
+| FR-WLD-002 | `NewWorld` MUST reject a `Role.Strategy`, `World.Spawner`, `World.Clearing` or `Actor.Policy` name that is not registered with `ErrUnknownStrategy`, `ErrUnknownSpawner`, `ErrUnknownClearing` or `ErrUnknownPolicy`, a name registered twice or a built-in name (`default` and `directed` of a strategy; `average` of a clearing; `hold`, `schedule`, `rule` and `directed` of a policy) with `ErrDuplicateID`, a name given to a `With...` option that is not an ID (empty included) with `ErrInvalidID`, and a nil `Strategy`, `Spawner`, `Clearing` or `Policy` with `ErrNilExtension` (3.2.2, 4.1, 4.1.1, 4.3). |
 | FR-WLD-003 | A nil logger or observer MUST mean the discard default and not an error; `WithObserver` MUST be additive and deliver each event to every observer in the order the options were given (4.1). |
 | FR-WLD-004 | `Step` MUST run the positions of section 6 in the order of their tables and MUST advance `Tick()` by one if and only if every position ran and the audit, when on, passed (3.3.1, 6, P8.6). |
 | FR-WLD-005 | `Step` MUST return an error wrapping `ErrInvalidTrade` when a clearing returns an invalid list and `ErrAuditFailed` when the audit fails, MUST name the tick, and MUST NOT return an error for any other condition of a running simulation (3.3.3). |

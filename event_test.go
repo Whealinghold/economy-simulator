@@ -577,6 +577,8 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonInvalidQuantity, "invalid_quantity"},
 		{economysim.ReasonDuplicateOrder, "duplicate_order"},
 		{economysim.ReasonOverflow, "overflow"},
+		{economysim.ReasonHoldingLimit, "holding_limit"},
+		{economysim.ReasonReceiptLimit, "receipt_limit"},
 		{economysim.ReasonInsufficientFunds, "insufficient_funds"},
 		{economysim.ReasonInsufficientStock, "insufficient_stock"},
 		{economysim.ReasonAgentRemoved, "agent_removed"},
@@ -622,9 +624,9 @@ func TestConstants_Values(t *testing.T) {
 	owner := map[string]string{}
 	for i, r := range reasons {
 		switch {
-		case i < 10:
-			owner[string(r.got)] = "doc/specs/spec-clearing.md"
 		case i < 12:
+			owner[string(r.got)] = "doc/specs/spec-clearing.md"
+		case i < 14:
 			owner[string(r.got)] = "doc/specs/spec-production.md"
 		default:
 			owner[string(r.got)] = "doc/specs/spec-ledger.md"
@@ -653,6 +655,14 @@ func TestConstants_Values(t *testing.T) {
 	to := strings.Index(clearing, "Checks run in the order of the table")
 	if from < 0 || to < from {
 		t.Fatalf("table of 3.2 not found in spec-clearing.md")
+	}
+	// The two settlement rows say which bound the order would break (3.2.2,
+	// D34): holding_limit names MaxQuantity and receipt_limit names MaxMoney.
+	for reason, want := range map[string]string{"holding_limit": "MaxQuantity", "receipt_limit": "MaxMoney"} {
+		row := regexp.MustCompile("(?m)^\\| `" + reason + "` \\|.*$").FindString(clearing[from:to])
+		if !strings.Contains(row, want) {
+			t.Errorf("%s row of spec-clearing.md 3.2 = %q, want it to name %s", reason, row, want)
+		}
 	}
 	rowRe := regexp.MustCompile("(?m)^\\| `([a-z_]+)` \\|")
 	for _, m := range rowRe.FindAllStringSubmatch(clearing[from:to], -1) {

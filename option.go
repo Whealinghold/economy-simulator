@@ -21,6 +21,7 @@ type options struct {
 	targetSpread      int64
 	targetSpreadGiven bool
 	seed              uint64
+	clearings         registry[Clearing]
 }
 
 // defaultOptions returns the options of a world built with no option: the
@@ -111,4 +112,70 @@ func WithSeed(seed uint64) Option {
 		o.seed = seed
 		return nil
 	}
+}
+
+// registry is the list of the extensions registered under one kind of name, in
+// the order given. A slice searched linearly keeps that order and needs no map
+// (architecture.md 7.5). The strategy, spawner and policy options reuse it.
+type registry[T any] struct {
+	names []string
+	vals  []T
+}
+
+// add registers v under name. The checks run in the order of spec-world.md
+// 4.1.1: a name that is not an ID is ErrInvalidID, a name already given or in
+// builtin is ErrDuplicateID, and isNil (the caller's nil test of v, which a
+// type parameter cannot make) is ErrNilExtension.
+func (r *registry[T]) add(name string, v T, isNil bool, builtin ...string) error {
+	if !validID(name) {
+		return fmt.Errorf("registration name %q: %w", name, ErrInvalidID)
+	}
+	if slices.Contains(builtin, name) || slices.Contains(r.names, name) {
+		return fmt.Errorf("registration name %q: %w", name, ErrDuplicateID)
+	}
+	if isNil {
+		return fmt.Errorf("registration %q: %w", name, ErrNilExtension)
+	}
+	r.names = append(r.names, name)
+	r.vals = append(r.vals, v)
+	return nil
+}
+
+// find returns the extension registered under name.
+func (r *registry[T]) find(name string) (v T, ok bool) {
+	if i := slices.Index(r.names, name); i >= 0 {
+		return r.vals[i], true
+	}
+	return v, false
+}
+
+// averageName is the name of the built-in clearing, AverageClearing.
+const averageName = "average"
+
+// WithClearing registers c under name, so that World.Clearing may name it. It
+// is additive. A name that is not an ID is ErrInvalidID, a name given twice or
+// "average" (the built-in AverageClearing) is ErrDuplicateID and a nil c is
+// ErrNilExtension. The name is part of the configuration hash and the code
+// behind it is not.
+func WithClearing(name string, c Clearing) Option {
+	return func(o *options) error {
+		return o.clearings.add(name, c, c == nil, averageName)
+	}
+}
+
+// resolveClearing returns the clearing a configured name selects: the built-in
+// for "average", else the registered one. An empty or unknown name is a
+// *ValidationError at path with rule ErrUnknownClearing and the name as value
+// (spec-config.md 7.1.4). NewWorld calls it once, after Validate succeeds.
+//
+// It returns the Clearing interface (architecture.md 4.4) because the result is
+// a consumer-registered extension: the concrete type is unknowable here.
+func resolveClearing(o *options, name string, path []string) (Clearing, error) {
+	if name == averageName {
+		return AverageClearing{}, nil
+	}
+	if c, ok := o.clearings.find(name); ok {
+		return c, nil
+	}
+	return nil, &ValidationError{Path: path, Rule: ErrUnknownClearing, Value: name}
 }

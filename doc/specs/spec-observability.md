@@ -1380,7 +1380,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.market.clearing_price` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`Price`) | **changed**: gains `economysim.region`; a gauge of one commodity across regions has no meaningful last value |
 | `economysim.market.price_age` | Gauge | `{tick}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`PriceAge`) | **new**: `clearing_price` is a held gauge (6.3.6), so a market that stopped trading shows a flat, healthy price; the age is the direct signal, and `market.volume` has no `region` to show which market it is |
 | `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed**: was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
-| `economysim.market.orders` | Counter | `{order}` | `economysim.commodity`, `economysim.side` | `OrderPlaced` | **new** |
+| `economysim.market.orders` | Counter | `{order}` | `economysim.commodity`, `economysim.region`, `economysim.side` | `OrderPlaced` | **new**; `economysim.region` added so that the orders of one market (its book size) can be read, which is what the admission scan of `spec-clearing.md` 3.2 grows with (N-241) |
 | `economysim.market.orders.rejected` | Counter | `{order}` | `economysim.commodity`, `economysim.reason` | `OrderRejected` | **new**: the hard budget's refusals, counted (FR-STB-013) |
 | `economysim.belief.centre` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`MeanCentre`) | **new** (answers `spec-beliefs.md` 12.4, N-088 3): event-fed, so it needs no snapshot |
 | `economysim.belief.at_bound` | Gauge | `{basis_point}` | `economysim.commodity`, `economysim.region`, `economysim.bound` (`floor`, `ceiling`) | `BeliefsUpdated` (`AtFloor`, `AtCeiling`, each `× 10 000 / Outcomes`, truncated toward zero; 3.5); the adapter holds the last value for a tick with no event (6.3.6) | **new**: the share the `Warn` "price beliefs at bound" tests (`spec-beliefs.md` 12.2, row 3 of 7.3), so a consumer with no logger sees it and the mean centre cannot say "converged" from "pinned" |
@@ -1627,7 +1627,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 | `economysim.cover_kind`, `economysim.cover_loss`, `economysim.cover_limit` | `route`, `store`; `dropped`, `cut`; `in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow` | `economysim.insurance.*` |
 
 `economysim.reason` takes, besides the money flow IDs and the built-in boundary
-reasons of rules 5.4.1, the **rejection reasons** of `OrderRejected` (ten
+reasons of rules 5.4.1, the **rejection reasons** of `OrderRejected` (twelve
 constants, `spec-agents.md` 14.2, and `not_permitted` and `no_room` of the later
 modules) for `economysim.market.orders.rejected`, the goods boundary reasons of 4.4.1
 for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namespace
