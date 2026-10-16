@@ -53,7 +53,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-137, N-229, N-238, N-239, N-240, N-241, N-242 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
 | DEM | N-080, N-089, N-145, N-226, N-228 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
@@ -76,7 +76,7 @@ PR description.
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192 |
-| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-232, N-233, N-237, N-242 |
+| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-232, N-233, N-237, N-242, N-243 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168 |
 | REG | N-150, N-175, N-204 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
@@ -1584,6 +1584,18 @@ PR description.
 - **Raised:** 2026-10-16, the observability review of plan 1-5 (`production.go`, `clearing.go`).
 - **Note:** The production row builds the values and emits nothing; the world row emits them, behind the "observer supplied" flag. It must: (1) make one `refusalTally` per world (`newRefusalTally(regions, recipes)`), call `add(region, recipe, reason, weight)` where a start returns `k = 0` with a reason, for a free household's job request only (not a halted request, a trainee, an own-use start or a hire), and call `flush(tick, emit)` once at P2.8a after `ProductionHalted`; a later module's reason is a new column of the tally and a new count field of `RecipeRefused`, appended in the master order, and `add` panics on a reason it does not count until then; (2) set `book.anchor` from `productionScratch.unitCost(region, commodity)` before each market's clearing, so `MarketCleared.CostAnchor` is the anchor in force for the tick; (3) build `RecipeExecuted` with `recipeExecuted(outs, disp, over, ...)` and feed the `Warn` "recipe output disposed" from `Overflow`, not from `Disposed`; (4) keep the allocation test of the production phase at zero with the tally. The adapter derives `economysim.recipe.in_progress` from `Jobs[].Executions`, which the snapshot row builds from `addPending`.
 
+### N-243 Follow-up of the Codacy gate on plan 1-5
+
+- **Areas:** CODE, PRO
+- **Raised:** 2026-10-16, PR 5 (`stage-1-5`), after the Codacy findings were fixed.
+- **Note:** The Codacy gate is zero new issues of any severity, so a PR must pass Lizard and markdownlint as Codacy runs them (test files are excluded by `.codacy.yml`). To do:
+  - **Lizard limits** are cyclomatic complexity 10, 8 parameters and a file of about 500 lines of code. Run `lizard -l go -C 10 -a 8 -L 100 -w <files>` before a push; the plan-1-5 PR needed `UnitCost` (now `UnitCost(inputs, tools, prices, Basis)`), `Anchors`, `Discard`, `start`, `complete`, `anchors` and `refusalTally.add` split, and `production.go` split into `production.go` and `production_report.go`. The agent, world and module rows will meet the same limits; a long step is split into helpers that keep its order of checks. `internal/checked.muldiv` (CCN 13) is over the limit and untouched: split it with the first change that edits it.
+  - **Markdown tables** use the spaced separator row (`| --- | --- |`); `|---|` fails MD060 (compact style).
+  - **`production_report.go`** is a new root file (events, refusal tally, snapshot aggregate, cost anchors) and is in neither `AGENTS.md` nor `architecture.md` 2.6 and `documentation_index.md` has no row for it. Add it in the change that next edits those files, with a fresh tag.
+  - **`production.Rescale`** now checks every pending quantity before it writes any (atomic), but its overflow branch cannot be reached for a valid input (`w < k` makes each result at most the quantity), so no test can make it fail. Keep it as the guard of a contract, with a coverage exclusion under testing.md 9.5 if the threshold needs one, or drop the branch.
+  - **Coverage** shows to Codacy as `MissingRequirements` and its reviewer saw an empty report: no CI uploads `coverage.out` (plan O3, N-019). Add the upload with the CI.
+  - **Still not built, and not this row's:** production in the agent lifecycle, the observer emission and the tick (N-232, N-242), and the checkpoint of jobs and yield shocks (N-237, tag 6, Stage 2). The Codacy review lists both as missing; they are the agent, world and checkpoint rows.
+
 ## Closed notes
 
 When a note is closed, move it here and add **Closed:** with the date, the
@@ -2510,5 +2522,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 5c08c940d6f7b08e4b1dd839
+NOTES-TAG: eec5f19154d4e3843856e4f3
 
