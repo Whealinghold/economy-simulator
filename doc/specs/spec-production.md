@@ -228,7 +228,7 @@ arrives with the module that owns it, appended to the root constants in this ord
 inserted (architecture.md 2.10.5).
 
 | Position | Reason | Owner | A slice start can return it |
-|----------|--------|-------|-----------------------------|
+| -------- | ------ | ----- | --------------------------- |
 | 1 | `not_on_role` | this spec (the world's check, `spec-agents.md` 6.5.1) | yes |
 | 2 | `not_permitted` | `spec-institutions.md` 5.2, 5.3 | no |
 | 3 | `zero_yield` | this spec (4.2.2) | yes |

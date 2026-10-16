@@ -71,7 +71,7 @@ func TestUnitCost_Cases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := production.UnitCost(tt.inputs, tt.tools, tt.prices, tt.share, tt.outQty, tt.yieldBP, tt.duration, tt.wage, tt.rent)
+			got := production.UnitCost(tt.inputs, tt.tools, tt.prices, production.Basis{Share: tt.share, OutQty: tt.outQty, YieldBP: tt.yieldBP, Duration: tt.duration, Wage: tt.wage, Rent: tt.rent})
 			if got != tt.want {
 				t.Errorf("UnitCost = %d, want %d", got, tt.want)
 			}
@@ -192,7 +192,9 @@ func TestCostCount_NoAllocs(t *testing.T) {
 		{"Count", func() { k, r := production.Count(10, 4, limits); sink += k + int64(r) }},
 		{"Cap", func() { sink += production.Cap(7, 2) + production.CapInputAndTool(7, 2) }},
 		{"YieldLimit", func() { c, b := production.YieldLimit(true, false, 0); _ = b; sink += c }},
-		{"UnitCost", func() { sink += production.UnitCost(exInputs, exTools, exPrices, 10000, 2, 8000, 1, 300, 0) }},
+		{"UnitCost", func() {
+			sink += production.UnitCost(exInputs, exTools, exPrices, production.Basis{Share: 10000, OutQty: 2, YieldBP: 8000, Duration: 1, Wage: 300})
+		}},
 		{"Anchors", func() { production.Anchors(row, recipes, makers, exPrices, 300); sink += row[2] }},
 	}
 	for _, tt := range tests {
@@ -216,7 +218,7 @@ func FuzzUnitCost(f *testing.F) {
 		prices := []int64{word(data, 1), word(data, 3)}
 		in := []production.Term{{Commodity: int(word(data, 12) % 3), Quantity: word(data, 0)}}
 		tools := []production.Wear{{Commodity: 1, WearPerUse: word(data, 4), Durability: word(data, 5)}}
-		got := production.UnitCost(in, tools, prices, word(data, 6), word(data, 7), word(data, 8), word(data, 9), word(data, 10), word(data, 11))
+		got := production.UnitCost(in, tools, prices, production.Basis{Share: word(data, 6), OutQty: word(data, 7), YieldBP: word(data, 8), Duration: word(data, 9), Wage: word(data, 10), Rent: word(data, 11)})
 		if got < 0 {
 			t.Fatalf("UnitCost(%v) = %d, want not negative", data, got)
 		}
@@ -291,7 +293,7 @@ func BenchmarkUnitCost(b *testing.B) {
 	b.ReportAllocs()
 	var sink int64
 	for b.Loop() {
-		sink += production.UnitCost(exInputs, exTools, exPrices, 10000, 2, 8000, 1, 300, 0)
+		sink += production.UnitCost(exInputs, exTools, exPrices, production.Basis{Share: 10000, OutQty: 2, YieldBP: 8000, Duration: 1, Wage: 300})
 	}
 	_ = sink
 }

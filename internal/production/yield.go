@@ -101,7 +101,8 @@ func Output(k, q, e, residue int64) (produced, newResidue int64, ok bool) {
 // executions (PRO 5.4): the executions become min(k, w) and each pending
 // quantity becomes floor(p * min(k, w) / k), in place. A weight that is not
 // below k changes nothing. It returns the new executions; ok is false, and
-// nothing changes, when k is not positive or w is negative.
+// nothing changes, when k is not positive, w is negative or any pending
+// quantity would overflow.
 func Rescale(k, w int64, pending []int64) (executions int64, ok bool) {
 	if k <= 0 || w < 0 {
 		return k, false
@@ -109,12 +110,13 @@ func Rescale(k, w int64, pending []int64) (executions int64, ok bool) {
 	if w >= k {
 		return k, true
 	}
-	for i, p := range pending {
-		v, ok := checked.MulDivFloor(p, w, k)
-		if !ok {
+	for _, p := range pending {
+		if _, ok := checked.MulDivFloor(p, w, k); !ok {
 			return k, false
 		}
-		pending[i] = v
+	}
+	for i, p := range pending {
+		pending[i], _ = checked.MulDivFloor(p, w, k)
 	}
 	return w, true
 }

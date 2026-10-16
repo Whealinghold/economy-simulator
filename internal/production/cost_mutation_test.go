@@ -82,7 +82,7 @@ func TestUnitCost_Boundaries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := production.UnitCost(tt.inputs, tt.tools, tt.prices, tt.share, tt.outQty, tt.yieldBP, tt.duration, tt.wage, tt.rent)
+			got := production.UnitCost(tt.inputs, tt.tools, tt.prices, production.Basis{Share: tt.share, OutQty: tt.outQty, YieldBP: tt.yieldBP, Duration: tt.duration, Wage: tt.wage, Rent: tt.rent})
 			if got != tt.want {
 				t.Errorf("UnitCost = %d, want %d", got, tt.want)
 			}

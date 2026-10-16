@@ -27,19 +27,9 @@ func (l *Ledger) Discard(id, commodity int, qty int64) error {
 	if qty < 1 {
 		return ErrInvalidAmount
 	}
-	a, err := l.open(id)
+	a, out, sink, err := l.discardTarget(id, commodity)
 	if err != nil {
 		return err
-	}
-	if commodity < 0 || commodity >= len(l.comms) {
-		return ErrUnknownCommodity
-	}
-	if !Allowed(RecipeOutput, true, KindBoundary, a.kind) || !Allowed(Disposal, true, a.kind, KindBoundary) {
-		return ErrReasonMismatch
-	}
-	out, sink := l.boundaryAt(RecipeOutput, commodity), l.boundaryAt(Disposal, commodity)
-	if out == nil || sink == nil {
-		return ErrUnknownAccount
 	}
 	flows := l.flows()
 	oSlot, dSlot := l.slot(a, RecipeOutput, commodity), l.slot(a, Disposal, commodity)
@@ -55,6 +45,25 @@ func (l *Ledger) Discard(id, commodity int, qty int64) error {
 	flows[oSlot] += qty
 	flows[dSlot] += qty
 	return nil
+}
+
+// discardTarget runs checks 2 to 4 of Discard and returns the account and the
+// RecipeOutput and Disposal boundary accounts of the commodity.
+func (l *Ledger) discardTarget(id, commodity int) (a, out, sink *account, err error) {
+	if a, err = l.open(id); err != nil {
+		return nil, nil, nil, err
+	}
+	if commodity < 0 || commodity >= len(l.comms) {
+		return nil, nil, nil, ErrUnknownCommodity
+	}
+	if !Allowed(RecipeOutput, true, KindBoundary, a.kind) || !Allowed(Disposal, true, a.kind, KindBoundary) {
+		return nil, nil, nil, ErrReasonMismatch
+	}
+	out, sink = l.boundaryAt(RecipeOutput, commodity), l.boundaryAt(Disposal, commodity)
+	if out == nil || sink == nil {
+		return nil, nil, nil, ErrUnknownAccount
+	}
+	return a, out, sink, nil
 }
 
 // Holding returns the units of a commodity that account id holds, earmarked

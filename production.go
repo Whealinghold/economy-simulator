@@ -424,27 +424,11 @@ func (s *productionScratch) start(l *ledger.Ledger, j *job, residues []int64, q 
 
 	// The pending output and the new residues are formed before the ledger
 	// is touched, so a value that does not fit refuses the start whole.
-	j.pending, s.newRes = j.pending[:0], s.newRes[:0]
-	for i, o := range row.outputs {
-		produced, rest, ok := production.Output(k, int64(o.quantity), q.effective, residues[i])
-		if !ok {
-			j.pending = j.pending[:0]
-			return startResult{}, fmt.Errorf("pending output of recipe %d does not fit: %w", q.recipe, ErrOverflow)
-		}
-		j.pending = append(j.pending, produced)
-		s.newRes = append(s.newRes, rest)
+	if err := s.formPending(j, row, residues, k, q); err != nil {
+		return startResult{}, err
 	}
-	s.inputs, s.spent = s.inputs[:0], s.spent[:0]
-	for _, in := range row.inputs {
-		n, ok := checked.Mul(k, int64(in.quantity))
-		if !ok {
-			// Excluded from coverage (testing.md 9.5): k is at most the stock
-			// over the quantity, so the product is at most the stock.
-			j.pending = j.pending[:0]
-			return startResult{}, fmt.Errorf("inputs of recipe %d do not fit: %w", q.recipe, ErrOverflow)
-		}
-		s.inputs = append(s.inputs, ledger.Line{Commodity: int(in.commodity), Quantity: n})
-		s.spent = append(s.spent, Amount{Commodity: in.commodity, Quantity: Quantity(n)})
+	if err := s.formInputs(j, row, k, q.recipe); err != nil {
+		return startResult{}, err
 	}
 	// A source or tool-only recipe has no input, and a Transform with both
 	// sides empty is refused.
@@ -454,9 +438,54 @@ func (s *productionScratch) start(l *ledger.Ledger, j *job, residues []int64, q 
 			return startResult{}, fmt.Errorf("take the inputs of recipe %d: %w", q.recipe, err)
 		}
 	}
+	s.wearTools(l, row, k, q.account)
+	copy(residues, s.newRes)
+	j.recipe, j.executions, j.principal, j.yield = q.recipe, k, q.principal, q.effective
+	j.remaining = s.cfg.Recipes[q.recipe].Duration
+	return startResult{k: k, effective: q.effective}, nil
+}
+
+// formPending fills j.pending and s.newRes for k executions of the recipe. On a
+// value that does not fit it clears j.pending and returns ErrOverflow.
+func (s *productionScratch) formPending(j *job, row *recipeRow, residues []int64, k int64, q *startReq) error {
+	j.pending, s.newRes = j.pending[:0], s.newRes[:0]
+	for i, o := range row.outputs {
+		produced, rest, ok := production.Output(k, int64(o.quantity), q.effective, residues[i])
+		if !ok {
+			j.pending = j.pending[:0]
+			return fmt.Errorf("pending output of recipe %d does not fit: %w", q.recipe, ErrOverflow)
+		}
+		j.pending = append(j.pending, produced)
+		s.newRes = append(s.newRes, rest)
+	}
+	return nil
+}
+
+// formInputs fills s.inputs and s.spent with k executions of the recipe's
+// inputs. On a product that does not fit it clears j.pending and returns
+// ErrOverflow.
+func (s *productionScratch) formInputs(j *job, row *recipeRow, k int64, recipe RecipeID) error {
+	s.inputs, s.spent = s.inputs[:0], s.spent[:0]
+	for _, in := range row.inputs {
+		n, ok := checked.Mul(k, int64(in.quantity))
+		if !ok {
+			// Excluded from coverage (testing.md 9.5): k is at most the stock
+			// over the quantity, so the product is at most the stock.
+			j.pending = j.pending[:0]
+			return fmt.Errorf("inputs of recipe %d do not fit: %w", recipe, ErrOverflow)
+		}
+		s.inputs = append(s.inputs, ledger.Line{Commodity: int(in.commodity), Quantity: n})
+		s.spent = append(s.spent, Amount{Commodity: in.commodity, Quantity: Quantity(n)})
+	}
+	return nil
+}
+
+// wearTools wears every tool of the recipe by k executions and records the
+// facts in s.wear.
+func (s *productionScratch) wearTools(l *ledger.Ledger, row *recipeRow, k int64, account int) {
 	s.wear = s.wear[:0]
 	for _, t := range row.tools {
-		if err := l.WearItems(q.account, int(t.commodity), k, t.wearPerUse); err != nil {
+		if err := l.WearItems(account, int(t.commodity), k, t.wearPerUse); err != nil {
 			// Excluded from coverage (testing.md 9.5): the count showed k
 			// unreserved items, so the ledger cannot refuse; the Stage 0
 			// determinism guard pins the word "invariant".
@@ -464,10 +493,6 @@ func (s *productionScratch) start(l *ledger.Ledger, j *job, residues []int64, q 
 		}
 		s.wear = append(s.wear, wearFact{commodity: t.commodity, items: k, units: t.wearPerUse})
 	}
-	copy(residues, s.newRes)
-	j.recipe, j.executions, j.principal, j.yield = q.recipe, k, q.principal, q.effective
-	j.remaining = s.cfg.Recipes[q.recipe].Duration
-	return startResult{k: k, effective: q.effective}, nil
 }
 
 // advance counts one tick of the job (spec-production.md 5.2): it lowers
@@ -501,15 +526,10 @@ type completion struct {
 	overflow   []int64
 }
 
-// complete creates the pending output of a finished job in the principal's
-// account (spec-production.md 5.3, D54, D58, D60) and clears the job. maxQty
-// must equal the ledger's maximum quantity. A refusal by the ledger cannot
-// come from input, so it panics.
-func (s *productionScratch) complete(l *ledger.Ledger, j *job, account int, maxQty int64) completion {
-	if j.executions <= 0 || j.remaining != 0 {
-		panic("economysim: invariant violated: completion of a job that is not finished")
-	}
-	row := s.recipes.row(j.recipe)
+// cutOutputs sorts the pending output of j into s.created, s.disposed and
+// s.overflow and cuts the lines to create into s.outputs, each to the room the
+// principal has left for its commodity.
+func (s *productionScratch) cutOutputs(l *ledger.Ledger, j *job, row *recipeRow, account int, maxQty int64) {
 	n := len(row.outputs)
 	s.created, s.disposed, s.overflow, s.outputs = s.created[:n], s.disposed[:n], s.overflow[:n], s.outputs[:0]
 	for i, o := range row.outputs {
@@ -538,6 +558,18 @@ func (s *productionScratch) complete(l *ledger.Ledger, j *job, account int, maxQ
 			}
 		}
 	}
+}
+
+// complete creates the pending output of a finished job in the principal's
+// account (spec-production.md 5.3, D54, D58, D60) and clears the job. maxQty
+// must equal the ledger's maximum quantity. A refusal by the ledger cannot
+// come from input, so it panics.
+func (s *productionScratch) complete(l *ledger.Ledger, j *job, account int, maxQty int64) completion {
+	if j.executions <= 0 || j.remaining != 0 {
+		panic("economysim: invariant violated: completion of a job that is not finished")
+	}
+	row := s.recipes.row(j.recipe)
+	s.cutOutputs(l, j, row, account, maxQty)
 	if len(s.outputs) > 0 {
 		if err := l.Transform(account, nil, s.outputs); err != nil {
 			// Excluded from coverage (testing.md 9.5): each line is cut to the
@@ -634,172 +666,4 @@ func (s *productionScratch) recipeExecuted(outs, disp, over []Amount, tick int64
 		StartTick: tick - duration + 1, Executions: c.executions,
 		Outputs: outs, Disposed: disp, EffectiveYield: c.yield, Overflow: over,
 	}
-}
-
-// recipeAbandoned writes the RecipeAbandoned value of an abandon.
-func recipeAbandoned(tick int64, agent AgentID, region RegionID, recipe RecipeID, executions int64, reason Reason) RecipeAbandoned {
-	return RecipeAbandoned{Tick: tick, Agent: agent, Region: region, Recipe: recipe, Executions: executions, Reason: reason}
-}
-
-// The columns of a refusalTally, in the master order of the reasons
-// (spec-production.md 4.2.1). A reason of a later module takes its place in
-// that order when the module is built.
-const (
-	refusedNotOnRole = iota
-	refusedZeroYield
-	refusedNoSite
-	refusedNoTool
-	refusedNoInput
-	refusedColumns
-)
-
-// refusalTally counts the households whose job request was refused, per
-// region, recipe and reason, for the RecipeRefused event of one tick
-// (spec-production.md 14.1). Its size is regions x recipes x reasons, fixed at
-// construction, so it is bounded by the configuration and allocates nothing
-// after it. The world row adds a refusal where a start returns k = 0 and
-// emits the rows once at P2.8a. It emits nothing itself.
-type refusalTally struct {
-	recipes int
-	counts  []int64 // region x recipe x column
-	dirty   bool
-}
-
-func newRefusalTally(regions, recipes int) *refusalTally {
-	return &refusalTally{recipes: recipes, counts: make([]int64, regions*recipes*refusedColumns)}
-}
-
-// add counts weight households refused for reason. A reason the slice does not
-// count, or a pair outside the tables, is a programmer error.
-func (t *refusalTally) add(region RegionID, recipe RecipeID, reason Reason, weight int64) {
-	var col int
-	switch reason {
-	case ReasonNotOnRole:
-		col = refusedNotOnRole
-	case ReasonZeroYield:
-		col = refusedZeroYield
-	case ReasonNoSite:
-		col = refusedNoSite
-	case ReasonNoTool:
-		col = refusedNoTool
-	case ReasonNoInput:
-		col = refusedNoInput
-	default:
-		panic("economysim: invariant violated: refusal of a start under the reason " + string(reason) + ", which the first slice does not count")
-	}
-	i := (int(region)*t.recipes+int(recipe))*refusedColumns + col
-	if region < 0 || recipe < 0 || int(recipe) >= t.recipes || i >= len(t.counts) || weight < 1 {
-		panic("economysim: invariant violated: refusal outside the tables or not a positive count")
-	}
-	sum, ok := checked.Add(t.counts[i], weight)
-	if !ok {
-		panic("economysim: invariant violated: refusal count does not fit int64")
-	}
-	t.counts[i] = sum
-	t.dirty = true
-}
-
-// flush calls emit with one RecipeRefused value for each (region, recipe) with
-// a non-zero count, in ascending RegionID then RecipeID, and zeroes the tally.
-// It does nothing, and costs nothing beyond the flag, in a tick with no
-// refusal.
-func (t *refusalTally) flush(tick int64, emit func(RecipeRefused)) {
-	if !t.dirty {
-		return
-	}
-	for p := 0; p*refusedColumns < len(t.counts); p++ {
-		c := t.counts[p*refusedColumns : (p+1)*refusedColumns]
-		if !slices.ContainsFunc(c, func(n int64) bool { return n != 0 }) {
-			continue
-		}
-		emit(RecipeRefused{
-			Tick: tick, Region: RegionID(p / t.recipes), Recipe: RecipeID(p % t.recipes),
-			NotOnRole: c[refusedNotOnRole], ZeroYield: c[refusedZeroYield], NoSite: c[refusedNoSite],
-			NoTool: c[refusedNoTool], NoInput: c[refusedNoInput],
-		})
-		clear(c)
-	}
-	t.dirty = false
-}
-
-// addPending adds the job into the snapshot aggregates (spec-production.md
-// 14.3): its pending quantities into pending, indexed by commodity, and one
-// into jobs, indexed by recipe. A cleared job adds nothing. The caller zeroes
-// the slices and calls it for the agents of one region. It returns false when
-// a sum would overflow; the slices are then unspecified.
-func (s *productionScratch) addPending(j *job, pending, jobs []int64) bool {
-	if j.executions <= 0 {
-		return true
-	}
-	for i, o := range s.recipes.row(j.recipe).outputs {
-		sum, ok := checked.Add(pending[o.commodity], j.pending[i])
-		if !ok {
-			return false
-		}
-		pending[o.commodity] = sum
-	}
-	jobs[j.recipe]++
-	return true
-}
-
-// anchors fills the cost anchor table (spec-production.md 9.3, FR-PRO-037,
-// 047 to 049): per region and commodity, the least non-zero unit cost over
-// the recipes that make the commodity and can run in the region. prices and
-// the table are region x commodity, the previous tick's published prices; wages
-// is per region (0 is unknown and gives an all-zero row); runnable lists per
-// region the recipes some agent has on its role's list, in any order. The
-// effective factor of each recipe is taken for the region and the season (a
-// calendar index, -1 for none). The recipe data is converted inline into the
-// scratch, once per call; nothing of it is kept. It allocates nothing.
-func (s *productionScratch) anchors(prices, wages []int64, runnable [][]RecipeID, yt *yieldTable, sh *yieldShocks, season int) {
-	rt := s.recipes
-	s.anchor, s.aTerms, s.aWears, s.aOuts = s.anchor[:len(rt.rows)], s.aTerms[:0], s.aWears[:0], s.aOuts[:0]
-	for i := range rt.rows {
-		row := &rt.rows[i]
-		r := &s.anchor[i]
-		t0, w0, o0 := len(s.aTerms), len(s.aWears), len(s.aOuts)
-		for _, in := range row.inputs {
-			s.aTerms = append(s.aTerms, production.Term{Commodity: int(in.commodity), Quantity: int64(in.quantity)})
-		}
-		for _, tl := range row.tools {
-			s.aWears = append(s.aWears, production.Wear{Commodity: int(tl.commodity), WearPerUse: tl.wearPerUse,
-				Durability: s.cfg.Commodities[tl.commodity].Durability})
-		}
-		for _, o := range row.outputs {
-			s.aOuts = append(s.aOuts, production.Out{Commodity: int(o.commodity), Quantity: int64(o.quantity), ShareBP: o.costShare, Discard: o.discard})
-		}
-		r.Inputs, r.Tools, r.Outputs = s.aTerms[t0:len(s.aTerms):len(s.aTerms)], s.aWears[w0:len(s.aWears):len(s.aWears)], s.aOuts[o0:len(s.aOuts):len(s.aOuts)]
-		r.Duration = s.cfg.Recipes[i].Duration
-	}
-	nc := len(s.cfg.Commodities)
-	for g := range s.cfg.Regions {
-		for i := range s.anchor {
-			r := &s.anchor[i]
-			r.Runnable, r.YieldBP = false, 0
-		}
-		if g < len(runnable) {
-			for _, id := range runnable[g] {
-				if int(id) < 0 || int(id) >= len(s.anchor) {
-					continue
-				}
-				r := &s.anchor[id]
-				e, _, ok := yt.effective(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited)
-				if ok {
-					r.Runnable, r.YieldBP = true, e
-				}
-			}
-		}
-		production.Anchors(s.costs[g*nc:(g+1)*nc], s.anchor, rt.byOutput, prices[g*nc:(g+1)*nc], wages[g])
-	}
-}
-
-// unitCost is the root's read of the cost anchor table (spec-production.md
-// 9.4): the anchor of a commodity in a region as of the last anchors call,
-// 0 when unknown or outside the table. It is not API.
-func (s *productionScratch) unitCost(region RegionID, c CommodityID) int64 {
-	nc := len(s.cfg.Commodities)
-	if region < 0 || c < 0 || int(c) >= nc || (int(region)+1)*nc > len(s.costs) {
-		return 0
-	}
-	return s.costs[int(region)*nc+int(c)]
 }

@@ -25,6 +25,41 @@ func WearCost(w Wear, price int64) (cost int64, ok bool) {
 	return checked.MulDivCeil(w.WearPerUse, price, w.Durability)
 }
 
+// Basis is the scalar part of a UnitCost: the cost share of the output in basis
+// points, its quantity per execution, the effective yield factor in basis
+// points, the duration of the job, the wage per unit of duration and the rent.
+type Basis struct {
+	Share, OutQty, YieldBP, Duration, Wage, Rent int64
+}
+
+func (b Basis) valid() bool {
+	return b.Wage > 0 && b.Share > 0 && b.YieldBP > 0 && b.OutQty > 0 && b.Duration >= 0 && b.Rent >= 0
+}
+
+// sum is a checked running total that stays bad once a step fails.
+type sum struct {
+	v   int64
+	bad bool
+}
+
+func (s *sum) add(v int64, ok bool) {
+	if s.bad || !ok {
+		s.bad = true
+		return
+	}
+	s.v, ok = checked.Add(s.v, v)
+	s.bad = !ok
+}
+
+// priceOf returns the known price of a commodity; ok is false when the
+// commodity is outside prices or its price is 0 or less.
+func priceOf(prices []int64, c int) (price int64, ok bool) {
+	if c < 0 || c >= len(prices) || prices[c] <= 0 {
+		return 0, false
+	}
+	return prices[c], true
+}
+
 // UnitCost returns the cost of one unit of an output, in minor units, rounded
 // up, or 0 if unknown (PRO 9.1.1):
 //
@@ -34,51 +69,32 @@ func WearCost(w Wear, price int64) (cost int64, ok bool) {
 // or tool price is 0 (or the commodity is outside prices), the wage is 0 or
 // less, yieldBP or share is 0 or less, or any step overflows. No side effect,
 // no allocation.
-func UnitCost(inputs []Term, tools []Wear, prices []int64, share, outQty, yieldBP, duration, wage, rent int64) int64 {
-	if wage <= 0 || share <= 0 || yieldBP <= 0 || outQty <= 0 || duration < 0 || rent < 0 {
+func UnitCost(inputs []Term, tools []Wear, prices []int64, b Basis) int64 {
+	if !b.valid() {
 		return 0
 	}
-	var cost int64
-	var ok bool
+	var s sum
 	for _, in := range inputs {
-		if in.Commodity < 0 || in.Commodity >= len(prices) || prices[in.Commodity] <= 0 || in.Quantity < 0 {
+		p, ok := priceOf(prices, in.Commodity)
+		if !ok || in.Quantity < 0 {
 			return 0
 		}
-		var v int64
-		if v, ok = checked.Mul(in.Quantity, prices[in.Commodity]); !ok {
-			return 0
-		}
-		if cost, ok = checked.Add(cost, v); !ok {
-			return 0
-		}
+		s.add(checked.Mul(in.Quantity, p))
 	}
 	for _, t := range tools {
-		if t.Commodity < 0 || t.Commodity >= len(prices) || prices[t.Commodity] <= 0 {
+		p, ok := priceOf(prices, t.Commodity)
+		if !ok {
 			return 0
 		}
-		var v int64
-		if v, ok = WearCost(t, prices[t.Commodity]); !ok {
-			return 0
-		}
-		if cost, ok = checked.Add(cost, v); !ok {
-			return 0
-		}
+		s.add(WearCost(t, p))
 	}
-	labour, ok := checked.Mul(duration, wage)
-	if !ok {
+	s.add(checked.Mul(b.Duration, b.Wage))
+	s.add(b.Rent, true)
+	den, ok := checked.Mul(b.OutQty, b.YieldBP)
+	if s.bad || !ok {
 		return 0
 	}
-	if cost, ok = checked.Add(cost, labour); !ok {
-		return 0
-	}
-	if cost, ok = checked.Add(cost, rent); !ok {
-		return 0
-	}
-	den, ok := checked.Mul(outQty, yieldBP)
-	if !ok {
-		return 0
-	}
-	unit, ok := checked.MulDivCeil(cost, share, den)
+	unit, ok := checked.MulDivCeil(s.v, b.Share, den)
 	if !ok {
 		return 0
 	}
@@ -122,23 +138,33 @@ func Anchors[I ~int](row []int64, recipes []Recipe, makers [][]I, prices []int64
 	}
 	for c := range min(len(row), len(makers)) {
 		for _, m := range makers[c] {
-			ri := int(m)
-			if ri < 0 || ri >= len(recipes) {
-				continue
-			}
-			r := &recipes[ri]
-			if !r.Runnable || r.YieldBP <= 0 {
-				continue
-			}
-			for _, o := range r.Outputs {
-				if o.Commodity != c || o.Discard {
-					continue
-				}
-				u := UnitCost(r.Inputs, r.Tools, prices, o.ShareBP, o.Quantity, r.YieldBP, r.Duration, wage, r.Rent)
-				if u > 0 && (row[c] == 0 || u < row[c]) {
-					row[c] = u
-				}
+			if ri := int(m); ri >= 0 && ri < len(recipes) {
+				row[c] = lower(row[c], makerCost(&recipes[ri], c, prices, wage))
 			}
 		}
 	}
+}
+
+// lower returns u when it is non-zero and below cur (or cur is 0), else cur.
+func lower(cur, u int64) int64 {
+	if u > 0 && (cur == 0 || u < cur) {
+		return u
+	}
+	return cur
+}
+
+// makerCost is the least non-zero UnitCost of commodity c over the outputs of
+// r that set an anchor; 0 when r cannot run or has none.
+func makerCost(r *Recipe, c int, prices []int64, wage int64) int64 {
+	if !r.Runnable || r.YieldBP <= 0 {
+		return 0
+	}
+	var best int64
+	for _, o := range r.Outputs {
+		if o.Commodity == c && !o.Discard {
+			b := Basis{Share: o.ShareBP, OutQty: o.Quantity, YieldBP: r.YieldBP, Duration: r.Duration, Wage: wage, Rent: r.Rent}
+			best = lower(best, UnitCost(r.Inputs, r.Tools, prices, b))
+		}
+	}
+	return best
 }
