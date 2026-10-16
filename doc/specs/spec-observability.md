@@ -1384,6 +1384,8 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.market.orders.rejected` | Counter | `{order}` | `economysim.commodity`, `economysim.reason` | `OrderRejected` | **new**: the hard budget's refusals, counted (FR-STB-013) |
 | `economysim.belief.centre` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`MeanCentre`) | **new** (answers `spec-beliefs.md` 12.4, N-088 3): event-fed, so it needs no snapshot |
 | `economysim.belief.at_bound` | Gauge | `{basis_point}` | `economysim.commodity`, `economysim.region`, `economysim.bound` (`floor`, `ceiling`) | `BeliefsUpdated` (`AtFloor`, `AtCeiling`, each `× 10 000 / Outcomes`, truncated toward zero; 3.5); the adapter holds the last value for a tick with no event (6.3.6) | **new**: the share the `Warn` "price beliefs at bound" tests (`spec-beliefs.md` 12.2, row 3 of 7.3), so a consumer with no logger sees it and the mean centre cannot say "converged" from "pinned" |
+| `economysim.belief.outcomes` | Counter | `{outcome}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`Outcomes`) | **new**: the denominator of `belief.at_bound`. `at_bound` is held across a tick with no event (6.3.6) while the `Warn` of row 3 of 7.3 resets on such a tick, so a market whose orders stopped looks pinned on a dashboard and is silent in the log; a flat counter shows why. It also tells a share of 1 of 1 from 300 of 400, which the `Warn` test `AtFloor + AtCeiling > Outcomes / 2` cannot (N-230) |
+| `economysim.belief.limited` | Counter | `{outcome}` | `economysim.commodity`, `economysim.region`, `economysim.belief_limit` (`conflict`, `clamped`) | `BeliefsUpdated` (`Conflicts` as `conflict`, `Clamped` as `clamped`) | **new**: `conflict` is a cost floor above the reference band, a belief pinned by the configuration (unit cost against reference price) and not by the market, which `at_bound` cannot tell apart; `clamped` is zero under the default strategy, so any count is a custom `Strategy` returning a belief out of its range, which the world corrects silently |
 | `economysim.recipe.executions` | Counter | `{execution}` | `economysim.recipe` | `RecipeExecuted` (`Executions`, not one per event) | kept |
 | `economysim.production.halted` | Counter | `{household}` | `economysim.role`, `economysim.recipe` | `ProductionHalted` (`Skipped` rows: a household counts once for each recipe skipped, so the sum over recipes is not the households halted; that figure, `Halted`, is in the event) | **new** (N-067) |
 | `economysim.agent.count` | UpDownCounter | `{agent}` | `economysim.role` | `AgentSpawned` (+1), `AgentBankrupted` (-1), `RoleChanged` (-1 `From`, +1 `To`) | kept |
@@ -1612,6 +1614,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 | `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
 | `economysim.bound` | `floor`, `ceiling` | `economysim.belief.at_bound` |
+| `economysim.belief_limit` | `conflict`, `clamped` | `economysim.belief.limited` |
 | `economysim.region` | the regions of the configuration (an existing attribute of RES) | `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price`, the snapshot gauges |
 | `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field`, `economysim.actor` | the entities of the configuration of the module (store classes, facility classes, bodies, rights, controls, technology fields, policy actors) | STO, CAP, ORG, TEC, PLC |
 | `economysim.dimension` | `mass`, `bulk` | `economysim.room.fill` |
@@ -1649,7 +1652,7 @@ the attribute sets, every cell that could occur:
 
 | Group | Series |
 |-------|-------|
-| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2) | 1 230 |
+| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2, belief outcomes 5 x 30, belief limited 5 x 30 x 2) | 1 680 |
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
 | production (executions 45, halted 20 roles x 45 recipes) | 945 |
 | agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20, exits 20 x 3) | 260 |
@@ -1660,7 +1663,7 @@ the attribute sets, every cell that could occur:
 | snapshot-fed (pending 150, stock 300, money supply 15, welfare ratio 100) | 565 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 4 700** (4 653), for the instruments of the earlier modules |
+| **Total** | **about 5 100** (5 103), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1782,7 +1785,7 @@ which each uses.
 |---|---------|--------------------|------|------------------|-------------------------|-------|
 | 1 | "configuration warning" | once per warning, at construction and at a restore | `rule`, `path` | the configuration | `Warnings()` (INT 6.4) | CFG 10.2 |
 | 2 | "households unfed" | B: a nonzero `Unfed` in the (region, role) | `region`, `role`, `households`, `unfed` | regions x roles | `UpkeepShortfall`; `RoleRow.Unfed` | AGT 14.3 |
-| 3 | "price beliefs at bound" | B: more than half of a market's outcomes ended on a bound (`BoundRun`) | `region`, `commodity`, `bound`, `agents` | markets | `BeliefsUpdated.AtFloor`, `AtCeiling`; `MarketRow` | BEL 12.2 |
+| 3 | "price beliefs at bound" | B: more than half of a market's outcomes ended on a bound (`BoundRun`) | `region`, `commodity`, `bound`, `agents`, `outcomes` | markets | `BeliefsUpdated.AtFloor`, `AtCeiling`, `Outcomes`; `MarketRow` | BEL 12.2 |
 | 4 | "work floor binding" | B: more than half of a role's households held by `MinWorkShare` | `region`, `role`, `households` | regions x roles | `RoleRow.HeldByFloor` (the same quantity evaluated at the boundary, which may differ from the count the `Warn` used, 5.3.4) | WEL 11.3 |
 | 5 | "no places open" | B: a role with applicants and no place open because `gain` is negative | `region`, `role`, `reason` | regions x roles | `RoleRow.Places`, `Queue` | SKL 8.3 |
 | 6 | "role extinct" | A: a role in a region that had at least one agent or has a configured group and has none; a closed role that only external agents fill is not extinct (FR-SPN-042) | `region`, `role` | regions x roles | `RoleRow.Agents` | SPN 13.3 |
@@ -1902,6 +1905,8 @@ dead):
 | `reason` | every refusal line, "agent bankrupt", "role changed", "contract settled"; "run ended" (`completed`, `cancelled`, `failed`) |
 | `error` | none in the library (an error is returned, not logged: architecture.md 8.3) |
 | `bound` | "price beliefs at bound" |
+| `outcomes` | "price beliefs at bound" |
+| `previous` | "belief updated" |
 | `agents`, `households`, `unfed` | "world created", "tick ended", the unfed and floor Warns |
 | `path`, `rule`, `config_hash` | "configuration warning", "world created", "world restored" |
 | `prices`, `wages`, `groups`, `jobs` | "warm start applied" and "world created" |
@@ -2626,6 +2631,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-091 | A field that a module appends to an event or to a snapshot row MUST be a count, an amount, a bool, a constant of a closed set or a slice, MUST NOT be a typed ID, and MUST be zero when the module is off; the rendering of every event and row of a world with the module off MUST be byte-equal to that of the tree before the module was added (9.5.2; architecture.md 2.10.5). |
 | FR-OBS-092 | `WearApplied` MUST be emitted once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows, with `Units` equal to the ledger's wear units of the commodity; the construction bucket MUST be emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows; it MUST NOT be emitted for a tick with no wear. |
 | FR-OBS-093 | `Markets[].Lots` MUST equal the number of lots of the commodity in the accounts counted by `HeldByAgents`, `HeldByEstate` and `HeldByTreasury` of the region, and a restored world's `Lots` MUST equal the original's (FR-OBS-043). |
+| FR-OBS-094 | `economysim.belief.outcomes` MUST add `BeliefsUpdated.Outcomes` and `economysim.belief.limited` MUST add `Conflicts` as `conflict` and `Clamped` as `clamped`, each by commodity and region, once per event; the series are absent, not zero, until the first event. |
 
 ### Non-functional
 

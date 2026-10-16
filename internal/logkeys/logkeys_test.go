@@ -120,13 +120,13 @@ func TestKeys_AreRowsOfTheTable(t *testing.T) {
 		t.Errorf("logkeys has %d imports, want 0", imports)
 	}
 
-	// The 33 keys the slice's log lines use (plan phase 2, assumption A2).
+	// The 35 keys the slice's log lines use (plan phase 2, assumption A2).
 	want := strings.Fields(`tick ticks seed commodity role recipe agent price
 		quantity side reason error region bound agents households unfed path rule
 		config_hash prices wages groups jobs cause commodities recipes roles
-		regions modules warm_start account amount`)
-	if len(want) != 33 {
-		t.Fatalf("test list holds %d keys, want 33", len(want))
+		regions modules warm_start account amount outcomes previous`)
+	if len(want) != 35 {
+		t.Fatalf("test list holds %d keys, want 35", len(want))
 	}
 
 	snake := regexp.MustCompile(`^[a-z]+(_[a-z]+)*$`)

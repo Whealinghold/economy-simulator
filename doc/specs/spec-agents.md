@@ -716,7 +716,7 @@ type JobRequest struct {
 ```
 
 `Belief` is the value of `spec-beliefs.md` 3.1, exported with its two fields,
-`Centre` and `Width`. `RecipeID` is a named value type like `CommodityID` and
+`Centre` (a `Price`) and `Width` (an `int64`, basis points). `RecipeID` is a named value type like `CommodityID` and
 `RoleID` (architecture.md 3.3); it is added to the glossary.
 
 ### 6.4 The views

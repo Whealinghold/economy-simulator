@@ -599,6 +599,18 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonBirths, "births"},
 		{economysim.ReasonStarvation, "starvation"},
 	}
+	// The belief reasons of the "belief updated" Debug line, spec-beliefs.md
+	// 12.2: a slice of their own, checked by the same closure below.
+	beliefReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonGateClosed, "gate_closed"},
+		{economysim.ReasonMoved, "moved"},
+		{economysim.ReasonHeld, "held"},
+		{economysim.ReasonAtFloor, "at_floor"},
+		{economysim.ReasonAtCeiling, "at_ceiling"},
+	}
 	causes := []struct {
 		got  economysim.Cause
 		want string
@@ -631,6 +643,9 @@ func TestConstants_Values(t *testing.T) {
 		default:
 			owner[string(r.got)] = "doc/specs/spec-ledger.md"
 		}
+	}
+	for _, r := range beliefReasons {
+		owner[string(r.got)] = "doc/specs/spec-beliefs.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -690,6 +705,9 @@ func TestConstants_Values(t *testing.T) {
 		}
 	}
 	for _, r := range reasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range beliefReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

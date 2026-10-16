@@ -143,6 +143,13 @@ type Belief struct {
 }
 ```
 
+The struct above is the internal package's, whose fields are plain `int64`
+(architecture.md 2.9). The exported `Belief` of the root, in `beliefs.go`, has the
+same two fields typed `Price` for `Centre` and `int64` for `Width` (a half-width in
+basis points, which has no named type), as architecture.md 3.3 asks of a domain
+quantity; the root converts by a plain cast at each call (`Price(x)`, `int64(p)`),
+inline and never in a function of its own (2.9).
+
 Two numbers, not a low and a high. bazaarBot keeps `[low, high]` and updates
 each end separately, which lets them cross (defect 10). A centre and a
 half-width cannot invert: the range is derived from them (3.3) and is ordered by
@@ -228,6 +235,12 @@ section 12 counts these conflicts.
 3.2.4. A belief for a commodity the agent buys but does not make has a unit cost
 of 0 and only the reference band. A merchant may supply its acquisition cost as
 the unit cost: this spec does not care where the number came from.
+
+3.2.5. **Degenerate inputs.** `Limits` reads a `Ref` below 1 as 1 (validation makes
+a reference price at least 1, so this is defence only) and a negative `UnitCost` as
+0, unknown: no cost band applies. A product `UnitCost * CostFloor` or `UnitCost *
+CostCeiling` that does not fit `int64` is read as `MaxPrice` (so the floor is
+`MaxPrice`); it never wraps and never panics.
 
 ### 3.3 The effective range and the invariant
 
@@ -325,7 +338,8 @@ The only randomness the rule uses is one `uint64`, supplied by the caller, drawn
 from the world's random source (architecture.md 7.7). Exactly one is drawn for
 each outcome, whether or not it is used (5.2). The strategy receives it as
 `OutcomeView.Draw` (`spec-agents.md` 6.4.4); the world, not the strategy, takes it
-in the order of 5.1.1.
+as the first word of the keyed stream of 5.1.1, so the package imports no random
+source and each of `Update` and `Draw` consumes exactly the one word it is given.
 
 ## 5. The update rule
 
@@ -334,9 +348,12 @@ in the order of 5.1.1.
 5.1.1. All orders of a tick are placed before any market clears
 (`spec-clearing.md` 7.2). After all markets have cleared, the world processes
 the outcomes of that tick, in order of region, then commodity, then the order in
-which the orders were admitted. This order is deterministic and is the order in
-which the one draw per outcome is taken, so the random stream does not depend on
-anything but the number and order of admitted orders.
+which the orders were admitted (`spec-clearing.md` 7.3). This order is
+deterministic and is the order of the `Revise` calls and of the events. It is not
+the order of the draws: the word of an outcome is the first word of the stream
+keyed by (`siteOutcome`, tick, agent, commodity), the draw D8 of `spec-world.md`
+7.3 (FR-WLD-049, ADR 0008), so it depends on none of the other outcomes, neither
+on their order nor on their count.
 
 5.1.2. Each admitted order of a household agent gives exactly one update, however many
 trades filled it. An agent with no order in a market gets no update there. An estate's
@@ -564,6 +581,18 @@ These follow from the rules above and are the basis of the tests:
 7. **Constant draw.** Exactly one `uint64` is consumed per outcome (the caller's
    responsibility, FR-BEL-008).
 
+5.9. **Degenerate inputs.** The rule holds on its own for an input outside the
+configuration bounds (a `Stock` above `MaxQuantity`, which `spec-agents.md` 6.5.2
+does not bound): it never wraps and never panics. A ratio or product that does not
+fit `int64` is read as larger than every bound it is compared with (a stock ratio
+above `BeliefStockHigh`, a gap above every step). A `Quantity` below 1 gives a fill
+share of 0; a `Filled` below 0 is read as 0 and a `Filled` above `Quantity` as
+`Quantity` (a fill share of at most 10 000); a `Limit` below 1 is read as 1; a
+negative `Stock` or `Target` is read as 0 (a `Target` of 0 is neutral, FR-BEL-014).
+The bounds passed are valid (`1 <= Floor <= Ceiling <= MaxPrice`, `WidthMin <=
+WidthMax`). No error result exists: an update that cannot be applied does not
+exist (12.2).
+
 ## 6. Drawing a limit price
 
 The default strategy draws the limit price of an order uniformly from the
@@ -629,6 +658,11 @@ clears and before the outcomes are processed, and only if units traded in the ti
 (the market price then has age 0), so every update of a tick sees the same window.
 It is state and goes in a checkpoint (section 13). The window mean after the push is also read by the price record of `spec-information.md` 4.3.
 
+7.5. **A price outside `[1, MaxPrice]`.** A push has no error result: a price below
+1 is stored as 1 and a price above `MaxPrice` as `MaxPrice`, and takes its slot of
+the ring like any price, so the entries stay one per tick in which units traded and
+nothing wraps. Only a restore from saved values refuses a price outside the range.
+
 ## 8. Seeding and the warm start
 
 8.1. **The seed price** of a commodity in a region is the price a new belief and
@@ -650,7 +684,7 @@ here is 20% (section 14).
 `Centre = clamp(window mean, Floor, Ceiling)` if the window is not empty and
 the market price otherwise, with `BeliefWidthInit`. An agent that changes role (`spec-spawner.md` 4.2) keeps the belief of every commodity that is in the tradable sets of both roles, with its centre and width unchanged apart from the re-clamp of 3.3 to the bounds of the new role's unit cost; a commodity new to its set gets a belief by this paragraph's rule; a belief for a commodity that left the set is dropped. This is bazaarBot's rule of
 starting a new agent from the average price over its lookback (bazaarbot-reference.md section 8),
-with the window of section 7. A migrant (`spec-migration.md` 8.4) and a self-carried traveller on arrival (`spec-merchants.md` 12.2, `spec-transport.md` 5.7) are reseeded at arrival by this rule: for every commodity of the agent's tradable set the centre is the clamp of the window mean of the market it arrives in (the market price if the window is empty) and the width is `BeliefWidthInit`; no draw is taken. **One helper serves every case**, `beliefs.Reseed` of `internal/beliefs` (primitive slices in and out, 2.9 of architecture.md): the arrival of a migrant, the arrival of a self-carried traveller, a forced `Relocate` (`spec-integration.md` 4.5.2, `spec-regions.md` 6.3), the creation of a later agent and an external agent added during a run (`spec-integration.md` 4.1.2, which before the first step reads the seed price of 8.2, as `spec-agents.md` 3.5.4 says). A new caller of the rule calls the helper and does not restate it.
+with the window of section 7. A migrant (`spec-migration.md` 8.4) and a self-carried traveller on arrival (`spec-merchants.md` 12.2, `spec-transport.md` 5.7) are reseeded at arrival by this rule: for every commodity of the agent's tradable set the centre is the clamp of the window mean of the market it arrives in (the market price if the window is empty) and the width is `BeliefWidthInit`; no draw is taken. **One helper serves every case**, `beliefs.Reseed` of `internal/beliefs` (primitive slices in and out, 2.9 of architecture.md): the arrival of a migrant, the arrival of a self-carried traveller, a forced `Relocate` (`spec-integration.md` 4.5.2, `spec-regions.md` 6.3), the creation of a later agent and an external agent added during a run (`spec-integration.md` 4.1.2, which before the first step reads the seed price of 8.2, as `spec-agents.md` 3.5.4 says). A new caller of the rule calls the helper and does not restate it. The initial agents of 8.2 and an agent added before the first step are the same call as a later entry, with the seed price as the market price and no window mean: the window of a market that has never traded is empty and its price is the seed price (FR-BEL-039), so one function serves every case.
 
 8.4. **The hook for a steady state.** `spec-viability.md` solves for the steady
 state of a chain and so gives a price for each commodity in each region. The seed
@@ -811,17 +845,57 @@ tick: the mean rounded half to even, the minimum and the maximum). No map and no
 slice; all fields are integers. It lets a designer see why a price moved
 (vision.md goal 4) and lets an observer build the series of belief centres.
 
+12.1.1. **What every count is a function of.** The world never sees the result of
+`Update`: at P5.4 it calls `Strategy.Revise`, which returns only a `Belief`, and
+applies that belief inside its bounds (`spec-world.md` P5.4; `spec-agents.md`
+6.5.3). A strategy that ignores the default rule returns a belief and no result,
+and `BeliefsUpdated` and the "belief updated" line are still emitted for every
+outcome. So every count and the reason of 12.2 are functions of what the world
+holds for one outcome: the stored belief before it; the belief after `Revise` and
+the clamp of 3.3 and 10.3; the bounds, with the conflict flag of 3.2.3; the gate of
+the outcome's draw (5.2, which the world holds, so it is the gate of the default
+rule whatever the strategy did with the word); and whether the clamp changed the
+strategy's belief. Then: `Outcomes` counts the outcomes; `Adjusted` the open gates;
+`Raised` the outcomes whose centre after is above the stored centre before, and
+`Lowered` those below it, the literal reading of "centres that increased or
+decreased", so a stored centre re-clamped to bounds that moved (the unit cost rose)
+under a closed gate counts as `Raised` or `Lowered`, because the centre did change,
+and its reason is `gate_closed`; `AtFloor` the outcomes whose centre after equals
+`Floor`, `AtCeiling` those whose centre after equals `Ceiling`; `Conflicts` the
+outcomes whose bounds have the conflict flag; `Clamped` the outcomes whose belief
+the clamp changed.
+
+12.1.2. **`Floor` equal to `Ceiling`.** A belief whose bounds have `Floor` equal to
+`Ceiling` is at both bounds: `AtFloor` and `AtCeiling` both count it, so their
+sum can exceed `Outcomes`. The rule is about that equality and not about the
+conflict of 3.2.3: the cost floor can win the conflict, and the lower end of the
+reference band can also meet the cost ceiling with no conflict (reference price
+1 000, unit cost 10: `refLow` is 100 and `costHigh` is 30, so `Floor` and `Ceiling`
+are both 100 and the conflict flag is false). The side effect is kept on purpose:
+the test `AtFloor + AtCeiling > Outcomes / 2` of 12.2 is literal, the counterpart
+metric reads the two fields (`spec-observability.md` 7.3), and one such belief
+counts twice, so fewer than half of the outcomes can then fire the `Warn`
+(notes N-230).
+
 12.2. **Logs.** All are guarded by `Enabled` and have constant messages.
 
-- `Debug`, "belief updated", per update: `commodity`, `agent`, `price` (the new
-  centre), `reason` (one of `gate_closed`, `moved`, `held`, `at_floor`,
-  `at_ceiling`).
+- `Debug`, "belief updated", per update: `region`, `commodity`, `agent`, `previous` (the
+  stored centre before the update), `price` (the new centre), `reason`: one of `gate_closed`, `moved`, `held`, `at_floor`,
+  `at_ceiling`, with one value per update and this precedence: `gate_closed` (the
+  gate is closed: nothing was evaluated), then `at_floor`, then `at_ceiling` (the
+  centre after is on that bound, whether or not it moved), then `moved` (the centre
+  after differs from the stored centre), then `held` (the gate is open and the
+  centre is unchanged). The reason is a function of the same per-outcome values as
+  the counts (12.1.1), not of an `Update` result.
 - `Warn`, "price beliefs at bound", **per market**, never per agent: emitted when
   more than half of a market's outcomes in a tick end on a bound
   (`AtFloor + AtCeiling > Outcomes / 2`), and that has held for `BoundRun`
   consecutive ticks (a count the market keeps, section 13), at the tenth tick and
   every tenth after. Attributes `region`, `commodity`, `bound` (`floor` or
-  `ceiling`, the one with more), `agents` (the number at that bound). So the volume is
+  `ceiling`, the one with more beliefs, and `floor` on a tie), `agents` (the number at that
+  bound) and `outcomes` (the market's outcomes of the tick, the denominator of "more than half", so 3 of 4 reads differently from 300 of 400). The run is advanced once per market per tick, also in a tick in which the
+  market had no outcome, and such a tick does not hold the condition and resets it
+  (`spec-observability.md` 7.3; notes N-230). So the volume is
   at most one line per market per ten ticks, bounded by the configuration
   (observability-and-logging.md 3.2.2). The line is actionable: it names where, which
   bound and how many.
@@ -829,14 +903,20 @@ slice; all fields are integers. It lets a designer see why a price moved
   every input is a bounded integer, and an input outside its bound is a
   configuration error caught at validation.
 
-12.3. **Log keys.** `region`, `bound` (`floor` or `ceiling`) and `agents` are in the
+12.3. **Log keys.** `region`, `bound` (`floor` or `ceiling`), `agents`, `outcomes` and `previous` are in the
 table of observability-and-logging.md 3.3.2. The `reason` values above are exported constants of the root package
 (`event.go`; `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only.
 
-12.4. **No new metric** is defined here. The metric is `economysim.belief.centre`, a Gauge by
-`economysim.commodity` and `economysim.region` (`spec-observability.md` 6.2.1), fed by the mean
-centre of `BeliefsUpdated` (`MeanCentre`) of a market; its name and attributes belong to
-`spec-observability.md`.
+12.4. **Metrics.** All three are fed by `BeliefsUpdated` and named in `spec-observability.md`
+(6.2.1): `economysim.belief.centre`, a Gauge by `economysim.commodity` and
+`economysim.region`, from `MeanCentre`; `economysim.belief.outcomes`, a Counter of
+`Outcomes`, the denominator of `economysim.belief.at_bound` (a tick with no outcome
+adds nothing, which is how a market that stopped trading is told from a pinned one);
+and `economysim.belief.limited`, a Counter of `Conflicts` (`conflict`: the configuration
+pins the belief, 3.2.3) and `Clamped` (`clamped`: a strategy returned a belief outside
+its range, always zero with the default strategy). No other count is a metric: the
+open-gate rate follows from `BeliefAdjustProb`, the direction from the centre, and the
+spread stays in the event (`LowCentre`, `HighCentre`).
 
 12.5. With the default no-op logger and observer, the update path allocates
 nothing: events are constructed only when an observer was supplied
@@ -999,7 +1079,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-BEL-005 | A unit cost of 0 MUST apply no cost floor or cost ceiling. |
 | FR-BEL-006 | Every product in the rule MUST use checked arithmetic, and no input within the configuration bounds MUST cause a wrap or a panic. |
 | FR-BEL-007 | Each admitted order of a household agent MUST give exactly one belief update after its market has cleared, however many trades filled it; a rejected order, and an agent with no order in a market, MUST give none. |
-| FR-BEL-008 | The world MUST draw exactly one `uint64` for each outcome of an order of a household agent, in order of region, commodity and admission, whether or not the update uses it; an estate's ask and a counterparty's order have no outcome and no draw. |
+| FR-BEL-008 | The world MUST draw exactly one `uint64` for each outcome of an order of a household agent, the first word of the stream keyed by (`siteOutcome`, tick, agent, commodity) so that it depends on no other outcome, whether or not the update uses it; the outcomes are processed in order of region, commodity and admission; an estate's ask and a counterparty's order have no outcome and no draw. |
 | FR-BEL-009 | The adjustment gate MUST be open if and only if the high word of the product of the draw and 10 000 is below `BeliefAdjustProb`; when closed, the centre and the width MUST be unchanged, apart from re-clamping to the bounds. |
 | FR-BEL-010 | One unit of adjustment `Δ` MUST be `max(1, Centre * BeliefStep / 10 000)`, truncated. |
 | FR-BEL-011 | For a bid that was not fully filled, the target price MUST be the smaller of the best unmatched ask and the market price when fresh and above the limit; for an ask that was not fully filled, the larger of the best unmatched bid and the market price when fresh and below the limit; and there MUST be no target if neither candidate exists. |
@@ -1172,26 +1252,36 @@ that 0.19% of 1.5 billion random rule sets passed them.
 
 | Concern | Home |
 |---------|------|
-| The belief per agent and commodity, the seed table (`Config.WarmStart.Prices`), the price window per market (beside the published price and age, outside `Clearing`), `BoundRun` | root package, `agent.go` and `market.go` |
-| `Bounds`, `Update`, `Draw`, `Reseed` (8.3), the window push and the position helper | `internal/beliefs` (stdlib only), over primitive structs: `Belief`, `Params`, `Bounds`, `Outcome`, `Quote`, `Inputs`, `Result`. The caller passes the one `uint64`; the package imports no random source |
+| The exported `Belief` and `Bounds` value types (`Belief{Centre Price; Width int64}`, `Bounds{Floor, Ceiling Price}`), the construction of the package's `Params` from the world's parameters, the mapping from a per-outcome `Change` to the `reason` of 12.2 and from a tally to `BeliefsUpdated` | root package, `beliefs.go` |
+| The belief per agent and commodity, the seed table (`Config.WarmStart.Prices`) | root package, `agent.go` |
+| The price window per market (beside the published price and age, outside `Clearing`), `BoundRun` | root package, `market.go` |
+| `Limits`, `Clamp`, `Gate`, `Update`, `Draw`, `Reseed` (8.3), the window with its push, statistics and restore, the position helper, the diagnostic run of 12.2 and the per-market `Tally` of 12.1 | `internal/beliefs` (stdlib and `internal/checked` only), over primitive structs: `Belief`, `Params`, `Bounds`, `Outcome`, `Quote`, `Result`, `Change`. The caller passes the one `uint64` to `Update`, to `Gate` and to `Draw`; the package imports no random source. `PriceWindow` is the capacity of the window and is not a field of `Params` |
 | The parameters of section 11 | root package, `config.go` and `defaults.go`; bounds in `bounds.go` |
 | Processing outcomes in order, the draw per outcome, the clamp of a strategy's belief | root package, the step logic of `spec-world.md`; `strategy.go` for the default strategy's use of the draw |
 | The event `BeliefsUpdated` | root package, `event.go` |
 | `reason` constants (exported, `spec-observability.md` 4.2.3) | root package, `event.go` |
 | The new log keys (key strings only) | `internal/logkeys` |
-| Checked multiply and divide, half-to-even mean | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
+| Checked multiply and divide, half-to-even mean | `internal/checked` |
+
+The sketch below is of the internal package, whose fields are plain `int64`
+(architecture.md 2.9); the exported `Belief` and `Bounds` of the root type their
+price fields `Price` (3.1).
 
 ```go
-// internal/beliefs: stdlib only, no root types. A sketch, not final.
+// internal/beliefs: stdlib and internal/checked only, no root types. A sketch, not final.
 type Belief struct{ Centre, Width int64 }
 
-type Bounds struct{ Floor, Ceiling int64 }
+type Bounds struct {
+	Floor, Ceiling int64
+	Conflict       bool // the cost floor exceeded the reference band (3.2.3)
+}
 
 type Params struct {
 	Step, AdjustProb, Significance int64 // basis points
 	EvidenceShare                 int64 // basis points of Step: the largest evidence move (5.4)
 	StockLow, StockHigh, MaxAge   int64
-	WidthMin, WidthMax, WidthStep int64
+	WidthInit, WidthMin           int64 // WidthInit is used by Reseed (8.2)
+	WidthMax, WidthStep           int64
 	CostFloor, CostCeiling        int64 // used by Limits
 	RefBandLow, RefBandHigh       int64 // used by Limits
 	MaxPrice                      int64 // the bound of spec-config.md 4.1, passed in (architecture.md 2.9)
@@ -1210,13 +1300,23 @@ type Quote struct { // the market report of spec-clearing.md 5.4 and 5.5
 	HasBid, HasAsk   bool
 }
 
+// Result is what Update alone knows. The world never sees it (12.1.1).
 type Result struct {
-	Adjusted             bool
-	AtFloor, AtCeiling   bool
-	Conflict             bool
+	Open bool // the adjustment gate (5.2)
+}
+
+// Change is what the world holds for one outcome (12.1.1); the tally and the
+// reason of 12.2 are functions of it.
+type Change struct {
+	Before, After Belief // the stored belief, and the belief after Revise and the clamp
+	Bounds        Bounds
+	Open          bool // Gate(u, AdjustProb) of the outcome's draw
+	Clamped       bool // the clamp changed the strategy's belief
 }
 
 func Limits(ref, unitCost int64, p Params) Bounds
+func Clamp(b Belief, bd Bounds, p Params) (Belief, bool)
+func Gate(u uint64, adjustProb int64) bool
 func Update(b Belief, bd Bounds, o Outcome, q Quote, stock, target int64, p Params, u uint64) (Belief, Result)
-func Draw(b Belief, bd Bounds, u uint64) int64
+func Draw(b Belief, bd Bounds, p Params, u uint64) int64 // p for the width limits of the re-clamp (3.3)
 ```

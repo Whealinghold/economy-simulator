@@ -124,7 +124,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 func TestGlossary_DeclaredTypesNamed(t *testing.T) {
 	t.Parallel()
 	doc := readFile(t, "doc.go")
-	for _, file := range []string{"value.go", "config.go", "event.go", "calendar.go", "order.go", "clearing.go"} {
+	for _, file := range []string{"value.go", "config.go", "event.go", "calendar.go", "order.go", "clearing.go", "beliefs.go"} {
 		names := exportedTypes(t, file)
 		if len(names) == 0 {
 			t.Fatalf("%s declares no exported type: the parse is looking at the wrong place", file)

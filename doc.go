@@ -288,4 +288,51 @@
 //     unmatched units and the best unmatched bid and ask.
 //   - Clearing: the rule that matches a market's orders and prices its trades;
 //     AverageClearing is the default and Order, Trade and LotKey are its data.
+//   - Price belief: what an agent holds, per commodity, instead of knowing the
+//     price: a Belief, a centre (its best guess, a Price) and a width (the
+//     half-width of its uncertainty, in basis points of the centre), from which
+//     the limit price of its orders is drawn.
+//   - Centre: the best guess of a price belief, in minor units per unit, kept
+//     between the belief floor and the belief ceiling.
+//   - Width: the half-width of a price belief, in basis points of its centre,
+//     kept between its minimum and maximum.
+//   - Effective range: the interval from the centre less the width to the centre
+//     plus it, cut to the belief floor and the belief ceiling, in which a limit
+//     price is drawn; it is never empty or inverted.
+//   - Belief floor and belief ceiling: the Bounds of a price belief, the lowest
+//     and highest centre allowed, computed from the reference band and the cost
+//     band each time they are needed and never stored. They are not a role's
+//     work floor or a settlement class's floor.
+//   - Reference band: the guard rail around the effective reference price, from
+//     RefBandLow to RefBandHigh basis points of it, that bounds a belief.
+//   - Cost band: the bound from cost, from CostFloor to CostCeiling basis points
+//     of the unit cost; it applies only when the unit cost is known.
+//   - Adjustment gate: the draw that lets an agent adjust its belief only some of
+//     the time, open with the probability BeliefAdjustProb; a closed gate leaves
+//     the belief as it was, apart from a re-clamp.
+//   - Unit of adjustment: the step of a belief, BeliefStep basis points of its
+//     centre and at least 1; one unit moves the centre for the stock, and a
+//     share of it for the evidence.
+//   - Evidence move: the part of a belief update that moves the centre toward the
+//     target price when the order's limit and the centre are on the same side of
+//     it; it is at most a share of the unit of adjustment.
+//   - Stock ratio: the units an agent holds over the units it wants to hold, in
+//     basis points; a target of 0 gives no signal.
+//   - Fresh price: a market price whose age is at most BeliefMaxAge; a stale
+//     price is not evidence.
+//   - Price window: the market prices of a market's last PriceWindow ticks in
+//     which units traded, kept as a ring beside the market's published price.
+//   - Window mean: the mean of the price window, rounded half to even.
+//   - Window low: the lowest price of the price window.
+//   - Window high: the highest price of the price window.
+//   - Position in the window: where a price lies between the window low and the
+//     window high, in basis points, clamped to 0 and 10 000.
+//   - Seed price: the price a belief and a market start from: the effective
+//     reference price, or the warm-start entry when there is one.
+//   - Target price: the one price an order's outcome points a belief toward: the
+//     best unmatched quote of the other side or a fresh market price.
+//   - Fill share: the units filled over the units ordered, in basis points; at
+//     least 5 000 narrows the width of a belief and less widens it.
+//   - Re-clamp: the cut of a stored belief to its current bounds, made whenever
+//     it is read for a draw or updated; it is not a step.
 package economysim

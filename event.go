@@ -48,7 +48,8 @@ func (s Side) String() string {
 
 // Reason is a machine-readable reason, a member of a closed set: the rejection
 // of an order, the end of a job without output or a ledger reason of a
-// boundary flow. Its values are the values of the reason log key. The
+// boundary flow, or the outcome of a belief update in the "belief updated"
+// Debug line. Its values are the values of the reason log key. The
 // constants below are the ones the first slice can reach; each module that
 // adds a reason appends its constants (`not_permitted`, `no_room`,
 // `principal_left`, `region_changed` and the reasons of its flows).
@@ -145,6 +146,22 @@ const (
 	// ReasonStarvation is the money and goods of households cut by the failure
 	// ladder, moved to the estate.
 	ReasonStarvation Reason = "starvation"
+)
+
+// The reasons of the "belief updated" Debug line, in the precedence of
+// spec-beliefs.md 12.2. They are log values only: no event carries them.
+const (
+	// ReasonGateClosed is a belief whose adjustment gate was closed: nothing
+	// was evaluated.
+	ReasonGateClosed Reason = "gate_closed"
+	// ReasonMoved is a belief whose centre changed and ended inside its bounds.
+	ReasonMoved Reason = "moved"
+	// ReasonHeld is a belief whose gate was open and whose centre did not change.
+	ReasonHeld Reason = "held"
+	// ReasonAtFloor is a belief whose centre ended on its floor, moved or not.
+	ReasonAtFloor Reason = "at_floor"
+	// ReasonAtCeiling is a belief whose centre ended on its ceiling, moved or not.
+	ReasonAtCeiling Reason = "at_ceiling"
 )
 
 // Cause is the machine-readable cause of a removal, a weight change or a role
@@ -353,19 +370,21 @@ type BeliefsUpdated struct {
 	Commodity CommodityID
 	// Outcomes is the number of order outcomes processed.
 	Outcomes int64
-	// Adjusted is the number of beliefs that moved.
+	// Adjusted is the number of outcomes whose adjustment gate was open.
 	Adjusted int64
-	// Raised is the number of beliefs raised.
+	// Raised is the number of outcomes whose centre ended above the stored one.
 	Raised int64
-	// Lowered is the number of beliefs lowered.
+	// Lowered is the number of outcomes whose centre ended below the stored one.
 	Lowered int64
-	// AtFloor is the number of beliefs on the floor of the price band.
+	// AtFloor is the number of outcomes whose centre ended on the belief floor.
 	AtFloor int64
-	// AtCeiling is the number of beliefs on the ceiling of the price band.
+	// AtCeiling is the number of outcomes whose centre ended on the belief ceiling.
 	AtCeiling int64
-	// Conflicts is the number of adjustments that conflicted.
+	// Conflicts is the number of outcomes for which the cost floor exceeded the
+	// reference band.
 	Conflicts int64
-	// Clamped is the number of adjustments cut by a bound.
+	// Clamped is the number of outcomes whose returned belief the world had to
+	// clamp.
 	Clamped int64
 	// MeanCentre is the mean centre of the beliefs.
 	MeanCentre Price
