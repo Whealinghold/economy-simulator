@@ -263,4 +263,29 @@
 //     In Config, World is the section of world-level parameters, such as the
 //     scale of a group and the bounds of its agents.
 //   - Yield profile: the factor, by season, of a recipe in a region.
+//   - Market: the book of one commodity in one region for one tick: the
+//     admitted bids and asks, cleared once per tick.
+//   - Order: one agent's offer in a market, a side, a limit price and a
+//     quantity, made for one tick and, for an ask, optionally of a named lot.
+//   - Bid: an order to buy up to a quantity at a limit price or below.
+//   - Ask: an order to sell up to a quantity at a limit price or above.
+//   - Limit price: the worst price an order accepts: the most a bid pays and
+//     the least an ask takes.
+//   - Trade: a quantity of a commodity that one buyer and one seller exchange
+//     at one price, within both limits.
+//   - Admission: the ordered checks that an order passes before it enters a
+//     book; the first failing check is its rejection reason.
+//   - Available: the units or money of an account that no reservation holds.
+//   - Tie-break key: the word drawn for an order in a market that orders equal
+//     limit prices; the input position ends the order.
+//   - Crossing: a bid whose limit is not below an ask's limit; only crossing
+//     pairs trade.
+//   - Market price: the volume-weighted mean of a market's trades in a tick,
+//     rounded half to even, or the previous price when nothing traded.
+//   - Price age: the ticks since a market price was last set by a trade.
+//   - Unmatched: the units of admitted orders that did not trade in a tick.
+//   - Market report: what one market publishes for a tick: price, age, volume,
+//     unmatched units and the best unmatched bid and ask.
+//   - Clearing: the rule that matches a market's orders and prices its trades;
+//     AverageClearing is the default and Order, Trade and LotKey are its data.
 package economysim

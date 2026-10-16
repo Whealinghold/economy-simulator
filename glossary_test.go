@@ -78,8 +78,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 	// they arrive with the world, the market and the module that owns them
 	// (roadmap-v1.md, Stage 1 and later). Delete an entry when its type does.
 	notYetTerms := []string{
-		"Market", "Order", "Trade", "Run", "Strategy", "Clearing",
-		"Spawner", "Snapshot", "Policy",
+		"Run", "Strategy", "Spawner", "Snapshot", "Policy",
 	}
 
 	terms := glossaryTerms(t)
@@ -94,7 +93,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 		seen[term] = true
 	}
 	var rootTypes []string
-	for _, f := range []string{"value.go", "config.go", "event.go", "observer.go", "option.go"} {
+	for _, f := range []string{"value.go", "config.go", "event.go", "observer.go", "option.go", "order.go", "clearing.go"} {
 		rootTypes = append(rootTypes, exportedTypes(t, f)...)
 	}
 	for _, v := range vocab {
@@ -125,7 +124,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 func TestGlossary_DeclaredTypesNamed(t *testing.T) {
 	t.Parallel()
 	doc := readFile(t, "doc.go")
-	for _, file := range []string{"value.go", "config.go", "event.go", "calendar.go"} {
+	for _, file := range []string{"value.go", "config.go", "event.go", "calendar.go", "order.go", "clearing.go"} {
 		names := exportedTypes(t, file)
 		if len(names) == 0 {
 			t.Fatalf("%s declares no exported type: the parse is looking at the wrong place", file)

@@ -829,7 +829,7 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
   does not apply to a pseudo-agent, which holds no membership (FR-AGT-085). Every other
   rejection is the market's (`spec-clearing.md` 3.2): `invalid_price`, `invalid_quantity`,
   `insufficient_funds`, `insufficient_stock`, `no_room` (with the storage module on),
-  `overflow`.
+  `overflow`, `holding_limit` and `receipt_limit`.
 - An intent's `Target` and `Reserve` above `MaxQuantity`, and a `Purpose` outside the
   enumeration, are treated as 0 and `PurposeOther`, with a `Debug` log. They are
   inputs to a belief rule, not orders, so they do not reject the order.
@@ -1765,9 +1765,9 @@ of `spec-clearing.md` 3.2, are: `unknown_agent`, `side_not_allowed` (not for a
 household), `unknown_commodity`, `not_tradable` (after `unknown_commodity`, and
 never for a pseudo-agent), `not_permitted` (after `not_tradable`, and never for a
 pseudo-agent), `invalid_price`, `invalid_quantity`, `duplicate_order`, `overflow`,
-`insufficient_funds`, `insufficient_stock` and `no_room`. A consumer's strategy can cause any of
+`holding_limit`, `receipt_limit`, `insufficient_funds`, `insufficient_stock` and `no_room`. A consumer's strategy can cause any of
 them; the default strategy causes none of `not_tradable`, `duplicate_order`,
-`insufficient_funds`, `insufficient_stock`, `no_room` and `overflow` (FR-AGT-044), and a right in
+`insufficient_funds`, `insufficient_stock`, `no_room`, `overflow`, `holding_limit` and `receipt_limit` (FR-AGT-044), and a right in
 force can still refuse an order of the default as `not_permitted`, because no rule of the default
 reads a right (`spec-institutions.md` 6.4). The refusals of the credit and cover fields of a plan
 (`credit_off`, `insurance_off` and the reasons of `spec-credit.md` 5.2 and
@@ -2207,7 +2207,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-041 | The sum over an agent's bids of limit price times quantity MUST NOT exceed its available money, and tiers 1 and 2 MUST be allocated before tier 3, in canonical commodity order within a tier. |
 | FR-AGT-042 | Tier 3 MUST be limited to the spend cap `SpendMaxShare * (e * H / (e + H)) / 10 000`, with `e` the money left after tiers 1 and 2 less the savings target (the reserve money, unless the saving module is on and the role has a `Saver` block, 7.4.2), floored at 0, and the cap MUST be 0 when `e` is 0, MUST NOT decrease as `e` rises and MUST NOT exceed `e`. |
 | FR-AGT-043 | The share of a tier-3 want bought MUST be `FavourFloor + (10 000 - FavourFloor) * (10 000 - pos) / 10 000`, with `pos` the position of the market price in the price window or 5 000 when the window is empty, and MUST NOT be applied to tiers 1 and 2 or to asks. |
-| FR-AGT-044 | With an accurate view the default strategy MUST NOT produce an order that the market rejects for `insufficient_funds`, `insufficient_stock`, `duplicate_order`, `not_tradable`, `no_room` (with the storage module on) or `overflow`, over a range of seeds. |
+| FR-AGT-044 | With an accurate view the default strategy MUST NOT produce an order that the market rejects for `insufficient_funds`, `insufficient_stock`, `duplicate_order`, `not_tradable`, `no_room` (with the storage module on), `overflow`, `holding_limit` or `receipt_limit`, over a range of seeds. |
 | FR-AGT-045 | One `uint64` MUST be taken from the world's source for each intent the default strategy considers, the limit MUST be drawn from the effective range of the belief with `beliefs.Draw`, and an agent with `Hunger` above 0 MUST bid the top of the range for tier 1. |
 | FR-AGT-046 | The quantities of an agent's orders, targets and reserves MUST be the weight times the per-household amounts, and the limit price MUST be the same whatever the weight. |
 | FR-AGT-047 | An ask MUST be for the whole surplus, units that expire at the end of the tick MUST be offered if no bid is placed, and an ask for a tool MUST be placed only by a role that makes it. |

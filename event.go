@@ -79,6 +79,15 @@ const (
 	// ReasonOverflow is an order whose limit price times quantity does not fit
 	// in int64.
 	ReasonOverflow Reason = "overflow"
+	// ReasonHoldingLimit is a bid whose quantity added to the buyer's holding
+	// of the commodity exceeds MaxQuantity, so settling it would break the
+	// ledger's stock bound (spec-clearing.md 3.2.2).
+	ReasonHoldingLimit Reason = "holding_limit"
+	// ReasonReceiptLimit is an ask whose worst-case receipt, added to the
+	// seller's balance and to the receipts of its asks already admitted in the
+	// round, exceeds MaxMoney, so settling it could break the ledger's balance
+	// bound (spec-clearing.md 3.2.2).
+	ReasonReceiptLimit Reason = "receipt_limit"
 	// ReasonInsufficientFunds is a bid whose value exceeds the agent's
 	// available cash.
 	ReasonInsufficientFunds Reason = "insufficient_funds"

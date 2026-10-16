@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 3: clearing
 
-**Status: Proposed (2026-10-13); no phase started.** Sequences the third row of
+**Status: Implemented (uncommitted), 2026-10-15. All six phases are built; where the code differs from what this plan says, "As built" at the end records it once. `FuzzBook` seeds (the six faulty-list failures, a valid book, the bound edge) are `f.Add` calls in `clearing_book_fuzz_internal_test.go`, so it has no `testdata/fuzz/FuzzBook` directory until the fuzzer finds a crasher.** Sequences the third row of
 Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`internal/clearing` and
 `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation,
 settlement) with `WithClearing`, and the name check `ErrUnknownClearing`", into
@@ -273,16 +273,20 @@ Sequencing and implementer-level calls. Challenge any of them in review.
   scratch and its result (the `Clearing` interface returns a fresh `[]Trade`,
   so an implementation of the extension point cannot be made allocation-free).
   Everything *else* in the market step uses scratch owned by one unexported
-  `clearScratch` struct (defined in `clearing.go`): the slices `bids`, `asks`
-  (the book split by side, in admission order), `offers`, `matches`, `fills`,
+  `clearScratch` struct (defined in `clearing.go`): the slices `ordB`, `ordA`
+  (the book's orders split by side, in admission order, for the `Clearing`),
+  `bids`, `asks` (the same, as offers, for the check), `matches`, `fills`,
   `lots`, and the two scratch slices of `Check`: `sums` (`[]int64`, the units
   filled per admitted order, bids then asks) and `index` (`[]int32`, the
-  sorted lookup index of the two sides). The world row owns one `clearScratch`
+  sorted lookup index of the two sides). The book's own entries and the units
+  filled per admitted order in admission order live in the **book**, not in
+  the scratch (see "As built"). The world row owns one `clearScratch`
   per world, passes it to `newBook`, and every market step resets the lengths
   to the number of admitted orders and reuses the capacity (spec 9.3 "scratch
   slices held by the world"). `Check` and `Report` take caller-owned `dst`
   and scratch slices and write only to them (D31). `sums` is the one
-  per-order tally: `Check` fills it, and `Report` and `book.filled()` read it. The
+  per-order tally: `Check` fills it, and `Report` and the book's `fill` (read
+  through `book.filled()`) are computed from it. The
   zero-allocation test uses a hand-written `Clearing` that returns a
   preallocated slice, so it measures `clearMarket` and not the implementation;
   `AverageClearing.Clear` itself is held by a baseline constant for one `Clear`
@@ -405,12 +409,14 @@ tests read other documents).
 
 ### Notes read for this plan
 
-Rule tags: architecture=905c0e578c4e662908638dd8,
-observability=748e621d4300d088eb469349, testing=b3559bc6d47470c221bc4642.
+Rule tags (current files, 2026-10-15): architecture=905c0e578c4e662908638dd8,
+observability=fff13abc42a9371ecff84c85, testing=b3559bc6d47470c221bc4642. The
+observability tag quoted when the plan was written (`748e621d...`) was stale.
 
 Notes tag: the tag at the end of `doc/notes.md` when the implementer starts
-(read the file again and quote that one; `6cc73d3abf2fd311fb034a21` was current
-on 2026-10-13 and moves with every note edit). Open notes tagged CLR: N-113, N-125,
+(read the file again and quote that one; it moves with every note edit; the
+file's tag when this section was corrected, on 2026-10-15 before the notes of
+the "As built" section were added, was `17d4bc0be6a670471d5253f2`). Open notes tagged CLR: N-113, N-125,
 N-137, N-185, N-214. Tagged ALL: N-016, N-017, N-027, N-103, N-126, N-128,
 N-163, N-217, N-235.
 
@@ -518,8 +524,11 @@ root pieces of Phases 4 and 5 call them.
   the price and the quantity; it resolves each fill to its bid and its ask by
   (owner) and (owner, lot), and fails with a code for: a commodity other than
   the book's (CLR 8.2 "in this market"), no bid or no ask, a quantity below 1,
-  a summed quantity above an order's, a price outside `[ask limit, bid
-  limit]`, the same owner on both sides: six failures. `bids` and `asks` are
+  a price outside `[ask limit, bid limit]`, the same owner on both sides, a
+  summed quantity above an order's (the last, `OverFilled`): six failures, with
+  codes in that order. A fill with several faults reports the first; a list
+  reports the lowest code over its fills (`OverFilled` only when no fill has
+  another fault), so the code does not depend on the order of the fills. `bids` and `asks` are
   the book's own admitted records (limits as admitted, after the clamp), never
   the slices the `Clearing` was given. It appends the matches (the references)
   to `dst`, and writes only to `dst` and to the caller-owned scratch `sc`.
@@ -536,8 +545,10 @@ root pieces of Phases 4 and 5 call them.
   of the matches per fill, and `Check` allocates nothing with a warmed scratch.
   On a failure `Check` returns `dst` with no match appended (its length as
   passed) and the code; `Sums` is then meaningless.
-- **The report** (CLR 5.4, 5.5): `Report(...)` takes the units filled per
-  order that `Check` left in `Sums` (no second tally), and computes the volume-weighted
+- **The report** (CLR 5.4, 5.5): `Report(bids, asks []Offer, sums []int64,
+  matches []Match, prevPrice, prevAge int64) (Result, bool)` takes the units filled per
+  order that `Check` left in `Sums` (no second tally), returns `ok` false only when a
+  sum does not fit (an invariant for the root), and computes the volume-weighted
   mean of the trade prices in 128 bits, rounded half to even; the previous price
   carried when nothing traded; the age (0 after a tick with units, else one
   more); the unmatched units per side and the best unmatched limit with a
@@ -563,7 +574,7 @@ root pieces of Phases 4 and 5 call them.
   passes and returns the references; a fill against a named lot resolves to the
   ask of that lot and not another ask of the same owner (FR-CLR-024, 018, 029
   in part). Fills given in any order, several fills of one order that sum to
-  exactly its quantity (valid) and to one more (the fourth failure), and an
+  exactly its quantity (valid) and to one more (the sixth failure, `OverFilled`), and an
   empty list (valid, no match) are cases. `Sums` after a valid list equals the
   per-order sums computed independently in the test. With a warmed `Scratch`
   and `dst`, `testing.AllocsPerRun` over a valid and an invalid list is 0
@@ -600,7 +611,7 @@ root pieces of Phases 4 and 5 call them.
     the order's, summed per order within the order's, each price within the
     two limits as given, buyer and seller differ, and the commodity is the
     book's); a list it rejects returns `dst` unchanged in length and a code
-    that is the failure the independent loop finds first; the result does not
+    that is the lowest failure code the independent loop finds over the list; the result does not
     depend on the order of the fills (FR-CLR-024, 014, 018).
   - `FuzzAdmit`: bytes decode to `Facts` (including every bound and the
     receipt tally and holdings at the D34 edges). Properties: it never panics;
@@ -736,7 +747,8 @@ ledger's goods and reservation operations and the observer.
   plan 1-4 build against (CLR 6, 7.2, 8.2, 9; O5 closed): the settled trades are
   appended to the caller-owned `trades` (no allocation when it has room) and
   the book exposes the filled units of each admitted order, in admission order
-  (`book.filled()`, read from the `Sums` that `Check` left in `clearScratch`),
+  (`book.filled()`, the book's own `fill` slice, copied from the `Sums` that
+  `Check` left in `clearScratch` and kept until the book is reset),
   for the outcome of CLR 7.3 and the welfare scratch; the
   world row maps an order to its purpose (`Order` has no `Purpose`, no new
   event, CLR 3.1 unchanged). The step: split the book into bids and asks in admission order (into the
@@ -917,7 +929,7 @@ roadmap row reads done.
 | Every ledger refusal at settlement is an invariant, not a public error | rule | plan-phase-1-1 (N-075 update) | decided here (D33) |
 | The tradable set of a role and a commodity's "tradable" flag, as a fact the caller passes in | derived table | plan-phase-1-2 Phase 5 (`role.go`) | Provided: `(*roleRow).isTradable(CommodityID) bool` and `(*roleTable).tradableSomewhere(CommodityID) bool` ("Cross-plan contract" of plan 1-2); this row takes a `bool` and does not read the table |
 | `receiptTally` (the per-account worst-case receipt of the round, cleared at the start of P3.2) | unexported | world row (owner and clearer; this row defines the type and the cumulative rule, D34) | **ASSUMED**: the world row owns it |
-| `clearScratch` (bids, asks, offers, matches, fills, lots, `sums`, `index` slices) | unexported | world row (owns one per world, passes it to `newBook`, never shrinks it; this row defines the type and resets lengths per market, A2) | **ASSUMED**: the world row owns it |
+| `clearScratch` (`ordB`, `ordA`, `bids`, `asks`, `fills`, `matches`, `lots`, `sums`, `index` slices; the entries and the filled units are the book's) | unexported | world row (owns one per world, passes it to `newBook`, never shrinks it; this row defines the type and resets lengths per market, A2) | **ASSUMED**: the world row owns it |
 | `ErrUnknownCommodity` for an order's commodity | sentinel | plan 0 | built; the rejection is the `Reason`, not this sentinel |
 | The agent table, `AgentID` to account, region membership, role and pseudo-agent kind | world state | world row (`agent.go`, `world.go`) | **ASSUMED**: resolved by the caller into `Facts` |
 
@@ -1100,3 +1112,42 @@ comparison in the crossing test and the midpoint's rounding tie.
    caller-owned slice and the book exposes filled units per admitted order.
 5. **`architecture.md` edits (2026-10-13):** none in this plan; N-235 holds the
    2.9 example and the admission-table touch point for one combined edit.
+
+## As built
+
+Implemented (uncommitted), 2026-10-15. Each point below is where the code differs
+from, or settles, something the plan said; the plan text above was corrected to
+agree. Nothing here changes a requirement ID.
+
+1. **Scratch ownership (A2).** The book's `entries` and the units filled per
+   order (`fill`, read by `book.filled()`) live in the `book`, not in
+   `clearScratch`, because P3.2 admits every market before P4.1 clears any
+   (N-240). `clearScratch` holds `ordB`, `ordA`, `bids`, `asks`, `fills`,
+   `matches`, `lots`, `sums`, `index` (there is no `offers` slice).
+2. **Order of the failures of `Check`.** The codes run `BadCommodity`,
+   `NoOrder`, `BadQuantity`, `BadPrice`, `SameOwner`, `OverFilled`: the
+   summed-quantity failure is the sixth, not the fourth, and a list reports the
+   lowest code over its fills, independent of the order of the fills.
+3. **`Report` signature.** `Report(bids, asks, sums, matches, prevPrice,
+   prevAge) (Result, bool)`; `ok` is false only when a sum does not fit, which
+   `clearMarket` treats as an invariant.
+4. **`Admit` at the edges.** A negative `Held`, `Balance` or `Tally`, and a
+   `Held` above `MaxQuantity`, are refused as `overflow` and never wrapped. The
+   product is tested against `int64` only, so a product above `MaxMoney` that
+   fits `int64` is `insufficient_funds` (the two cannot differ with the bounds
+   of `bounds.go`). `checked.Acc` accepts non-negative products only.
+5. **Mixed ordinary and named-lot asks** of one agent in one book are a violated
+   invariant and panic in `book.admit` (N-238; `spec-clearing.md` 3.1.2).
+6. **Self-trade.** `Average` ignores the owner, so one agent's crossing bid and
+   ask are paired and the check fails the step with `ErrInvalidTrade`; the
+   guard is the check, as Phase 2 says, and the avoidance is the strategy and
+   world rows' (N-239; `spec-clearing.md` 8.2).
+7. **Duplicate scan.** `book.admit` scans the book's entries linearly: O(n^2) in
+   the orders of one book, with a `shortcut:` comment and an upgrade trigger
+   (N-241).
+8. **Failure value.** `clearMarket` returns a pointer to the book's own
+   `invalid` value (`tradeListError`, wrapping `ErrInvalidTrade`), overwritten by
+   the book's next failure, so a failure allocates nothing.
+9. **`FuzzBook`.** Its seeds are `f.Add` calls in
+   `clearing_book_fuzz_internal_test.go`; there is no `testdata/fuzz/FuzzBook`
+   directory until the fuzzer finds a crasher.

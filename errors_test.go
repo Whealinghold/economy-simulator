@@ -204,6 +204,7 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 		economysim.ErrRecipeNoOutput, economysim.ErrOrphanCommodity, economysim.ErrUnproducible,
 		economysim.ErrOutOfBounds, economysim.ErrOverflow, economysim.ErrTooMany,
 		economysim.ErrNoRegions, economysim.ErrModuleDependency,
+		economysim.ErrNilExtension, economysim.ErrUnknownClearing, economysim.ErrInvalidTrade,
 	}
 	seen := map[string]bool{}
 	for _, s := range sentinels {

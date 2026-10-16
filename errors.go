@@ -110,6 +110,23 @@ var (
 // were left out. Both Validate and the loader return it.
 var ErrTooManyErrors = errors.New("too many errors")
 
+// The errors of registration and of the name check (spec-world.md 4.1.1, 4.3).
+var (
+	// ErrNilExtension is a registration option given a nil extension.
+	ErrNilExtension = errors.New("nil extension")
+	// ErrUnknownClearing is a configured World.Clearing that is empty or names
+	// no registered clearing; NewWorld returns it as a *ValidationError.
+	ErrUnknownClearing = errors.New("unknown clearing")
+)
+
+// The errors of the market step (spec-clearing.md 8.2).
+var (
+	// ErrInvalidTrade is a list of trades from a Clearing that breaks a rule of
+	// spec-clearing.md 8.2: the step settles none of that market's trades,
+	// releases its reservations and fails with an error that wraps it.
+	ErrInvalidTrade = errors.New("invalid trade list")
+)
+
 // ValidationError is one rejected rule of a configuration (spec-config.md
 // 7.1.1). Rule is the sentinel, so errors.Is(err, ErrOutOfBounds) matches and
 // errors.As finds the ValidationError.
