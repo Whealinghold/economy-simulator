@@ -100,3 +100,46 @@ func BeliefParams(w World) (flat [16]int64) {
 		p.MaxAge, p.WidthInit, p.WidthMin, p.WidthMax, p.WidthStep, p.CostFloor, p.CostCeiling,
 		p.RefBandLow, p.RefBandHigh, p.MaxPrice}
 }
+
+// YieldTable is the yield table of production.go.
+type YieldTable = yieldTable
+
+// NewYieldTable builds the yield table of a canonical configuration.
+func NewYieldTable(c *Config) YieldTable { return newYieldTable(c) }
+
+// YieldSite reads the site factor of a recipe in a region at a season index.
+func YieldSite(t *YieldTable, region RegionID, recipe RecipeID, season int, sited bool) (int64, bool) {
+	return t.site(region, recipe, season, sited)
+}
+
+// ResidueLen reads the length of the residue layout of a role's recipes.
+func ResidueLen(recipes []RecipeID, t *RecipeTable) int { return residueLen(recipes, t) }
+
+// ResidueOffset reads the offset of a recipe in the residue layout.
+func ResidueOffset(recipes []RecipeID, t *RecipeTable, recipe RecipeID) (int, bool) {
+	return residueOffset(recipes, t, recipe)
+}
+
+// ProductionScriptStats counts what a production script did.
+type ProductionScriptStats = scriptStats
+
+// ProductionScript runs the scripted run of the production steps of
+// production_script_test.go over a canonical configuration against a real
+// ledger and returns the first failed check, naming the seed and the
+// operation.
+func ProductionScript(c *Config, seed uint64, ops int) (ProductionScriptStats, error) {
+	return productionScript(c, seed, ops)
+}
+
+// ProductionAnchors builds the recipe and yield tables of a canonical
+// configuration, runs the cost anchor step of production.go with no yield shock
+// and returns a copy of the table (region x commodity) and the root's read of
+// it.
+func ProductionAnchors(c *Config, prices, wages []int64, runnable [][]RecipeID, season int) (table []int64, read func(RegionID, CommodityID) int64) {
+	rt := newRecipeTable(c)
+	yt := newYieldTable(c)
+	var sh yieldShocks
+	s := newProductionScratch(c, &rt)
+	s.anchors(prices, wages, runnable, &yt, &sh, season)
+	return append([]int64(nil), s.costs...), s.unitCost
+}

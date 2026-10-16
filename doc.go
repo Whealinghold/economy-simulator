@@ -129,7 +129,7 @@
 //   - Event type: one of the sealed struct types of event.go that implement
 //     Event: WorldCreated, RunStarted, RunEnded, TickStarted, TickEnded,
 //     OrderPlaced, OrderRejected, TradeExecuted, MarketCleared, BeliefsUpdated,
-//     RecipeExecuted, RecipeAbandoned, ProductionHalted, UpkeepShortfall,
+//     RecipeExecuted, RecipeRefused, RecipeAbandoned, ProductionHalted, UpkeepShortfall,
 //     AgentSpawned, AgentBankrupted, EstateOpened, WeightChanged, RoleChanged,
 //     EntryLimited and BoundaryFlow. The first field of each is Tick.
 //   - Faucet: a boundary flow that brings money or goods into the economy
@@ -335,4 +335,35 @@
 //     least 5 000 narrows the width of a belief and less widens it.
 //   - Re-clamp: the cut of a stored belief to its current bounds, made whenever
 //     it is read for a draw or updated; it is not a step.
+//   - Job: the work in progress of one agent on one recipe: the number of
+//     executions, the ticks left and the pending output, fixed when it starts
+//     and created when it completes (spec-production.md 5).
+//   - Executor: the agent whose account holds the inputs and receives the
+//     output of a job and whose region, role and weight the job depends on.
+//   - Principal: the agent a job is done for when that is not its executor: a
+//     trainer for a trainee, an employer for a hired worker. Its leaving
+//     abandons the job.
+//   - Residue: the fraction of a unit of an output, from 0 to 9 999 in
+//     ten-thousandths, that an agent carries from one job to the next so that
+//     the long-run output is exact without any random draw. It is not a good.
+//   - Site factor: the yield of a recipe in a region and season read from the
+//     yield table, in basis points; 0 means the recipe cannot run there.
+//   - Effective factor: the site factor multiplied in turn by the yield shock,
+//     the technology gain, the trainee or hire factor and the resource
+//     abundance, each step truncated; it scales the output of a job.
+//   - Unit cost: the cost of one unit of an output of a recipe, in minor units,
+//     rounded up: inputs, tool wear, labour at the regional wage and rent,
+//     times the output's cost share, over the output quantity and the
+//     effective factor; 0 means unknown (spec-production.md 9.1).
+//   - Cost anchor: the least non-zero unit cost over the recipes that make a
+//     commodity and can run in a region this tick, 0 if none; price beliefs
+//     read it as a ceiling (spec-production.md 9.3).
+//   - Pending output: the quantity of each output a job will create when it
+//     completes, fixed when it starts; it is in no account until then.
+//   - Yield shock: a factor, in basis points and 10 000 by default, that the
+//     world sets on one recipe in one region and that multiplies its site
+//     factor (spec-production.md 6.8).
+//   - Yield table: the site factors of the configuration, one profile per
+//     region and recipe with its seasons, read when a job starts
+//     (spec-production.md 6.1).
 package economysim

@@ -37,6 +37,7 @@ var declaredEvents = []economysim.Event{
 	economysim.MarketCleared{},
 	economysim.BeliefsUpdated{},
 	economysim.RecipeExecuted{},
+	economysim.RecipeRefused{},
 	economysim.RecipeAbandoned{},
 	economysim.ProductionHalted{},
 	economysim.UpkeepShortfall{},
@@ -563,7 +564,8 @@ func TestRowFieldNames(t *testing.T) {
 func TestConstants_Values(t *testing.T) {
 	t.Parallel()
 	// Sources: rejection reasons spec-clearing.md 3.2; abandon reasons
-	// spec-production.md 14.1; boundary reasons spec-ledger.md 7.2; causes
+	// spec-production.md 14.1; start refusals spec-production.md 4.2.1;
+	// boundary reasons spec-ledger.md 7.2; causes
 	// spec-spawner.md 3 and 13.1.1; kinds spec-observability.md 4.2.3.
 	reasons := []struct {
 		got  economysim.Reason
@@ -611,6 +613,19 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonAtFloor, "at_floor"},
 		{economysim.ReasonAtCeiling, "at_ceiling"},
 	}
+	// The refusal reasons of a start in the first slice, spec-production.md
+	// 4.2.1, in the order of its master table. A slice of their own, so the
+	// index ranges of the owners of reasons above are not touched.
+	productionReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonNotOnRole, "not_on_role"},
+		{economysim.ReasonZeroYield, "zero_yield"},
+		{economysim.ReasonNoSite, "no_site"},
+		{economysim.ReasonNoTool, "no_tool"},
+		{economysim.ReasonNoInput, "no_input"},
+	}
 	causes := []struct {
 		got  economysim.Cause
 		want string
@@ -646,6 +661,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range beliefReasons {
 		owner[string(r.got)] = "doc/specs/spec-beliefs.md"
+	}
+	for _, r := range productionReasons {
+		owner[string(r.got)] = "doc/specs/spec-production.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -692,6 +710,43 @@ func TestConstants_Values(t *testing.T) {
 			t.Errorf("deferredReasons lists %q, which is declared: delete the stale entry", m[1])
 		}
 	}
+	// Every reason of the master order of spec-production.md 4.2.1 that a
+	// slice start can return is a constant, in the table's order, and every
+	// other row is named here as built with its module.
+	deferredProduction := []string{
+		"not_permitted", "no_facility", "no_endowment", "no_title", "rent_funds", "not_unlocked",
+		"facility_cap", "no_target", "store_refused", "nothing_to_repair", "no_room",
+	}
+	prod := specText["doc/specs/spec-production.md"]
+	pFrom := strings.Index(prod, "4.2.1. **The master order.**")
+	pTo := strings.Index(prod, "A start of the first slice (the module-free core)")
+	if pFrom < 0 || pTo < pFrom {
+		t.Fatalf("master order table of 4.2.1 not found in spec-production.md")
+	}
+	var inSlice, notInSlice []string
+	masterRe := regexp.MustCompile("(?m)^\\| \\d+ \\| `([a-z_]+)` \\|.*\\| (yes|no) \\|$")
+	for _, m := range masterRe.FindAllStringSubmatch(prod[pFrom:pTo], -1) {
+		if m[2] == "yes" {
+			inSlice = append(inSlice, m[1])
+		} else {
+			notInSlice = append(notInSlice, m[1])
+		}
+	}
+	var gotSlice []string
+	for _, r := range productionReasons {
+		gotSlice = append(gotSlice, r.want)
+	}
+	if !slices.Equal(inSlice, gotSlice) {
+		t.Errorf("reasons marked yes in spec-production.md 4.2.1 = %v, constants (in order) = %v", inSlice, gotSlice)
+	}
+	if !slices.Equal(notInSlice, deferredProduction) {
+		t.Errorf("reasons marked no in spec-production.md 4.2.1 = %v, deferredProduction = %v", notInSlice, deferredProduction)
+	}
+	for _, d := range deferredProduction {
+		if _, ok := owner[d]; ok {
+			t.Errorf("deferredProduction lists %q, which is declared: delete the stale entry", d)
+		}
+	}
 	seen := map[string]bool{}
 	check := func(typ, got, want string) {
 		t.Helper()
@@ -708,6 +763,9 @@ func TestConstants_Values(t *testing.T) {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, r := range beliefReasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range productionReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

@@ -1007,7 +1007,9 @@ For a recipe `k` the **job value added** is
 `Input_kc` the per-execution input of the recipe from `Config`, summed over
 the executions that **completed** in the window. Its `Outputs` are valued gross
 of `Disposed` (a discard output is produced and thrown away; its value is shown
-as a loss in 7.3, not hidden). The table is grouped to a class by the output's
+as a loss in 7.3, not hidden); `Outputs` is the gross quantity created, discard
+outputs and the overflow part included, and `Disposed` the part of it never held
+(`spec-production.md` 14.1), so nothing is counted twice. The table is grouped to a class by the output's
 `CostShare` (PRO 3.2): the class of commodity `c` receives
 `value(c) - CostShare_c * (input value) / 10 000` of the recipe, with the
 rounding remainder of the shares going to the output with the largest share
