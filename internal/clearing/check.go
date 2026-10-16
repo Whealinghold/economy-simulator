@@ -139,25 +139,47 @@ func Check(dst []Match, sc Scratch, commodity int64, bids, asks []Offer, fills [
 	for _, f := range fills {
 		c, b, a := checkFill(f, commodity, bids, asks, bi, ai)
 		if c != 0 {
-			if worst == 0 || c < worst {
-				worst = c
-			}
+			worst = firstCode(worst, c)
 			continue
 		}
-		sb, ok1 := checked.Add(sums[b], f.Qty)
-		sa, ok2 := checked.Add(sums[nb+a], f.Qty)
-		if !ok1 || !ok2 || sb > bids[b].Qty || sa > asks[a].Qty {
+		if !addFill(sums, nb, b, a, bids, asks, f.Qty) {
 			over = true
 			continue
 		}
-		sums[b], sums[nb+a] = sb, sa
 		dst = append(dst, Match{BidRef: bids[b].Ref, AskRef: asks[a].Ref, Price: f.Price, Qty: f.Qty})
 	}
-	if worst == 0 && over {
-		worst = OverFilled
-	}
-	if worst != 0 {
+	if worst = finalCode(worst, over); worst != 0 {
 		return dst[:base], worst
 	}
 	return dst, 0
+}
+
+// firstCode returns the lower of two failure codes, where 0 means none yet.
+func firstCode(worst, c Code) Code {
+	if worst == 0 || c < worst {
+		return c
+	}
+	return worst
+}
+
+// finalCode is the code of a list: the lowest fault of its fills, else
+// OverFilled if any order was filled beyond its quantity, else 0.
+func finalCode(worst Code, over bool) Code {
+	if worst == 0 && over {
+		return OverFilled
+	}
+	return worst
+}
+
+// addFill adds qty to the units filled of bid b and ask a (positions in their
+// sides, asks after the nb bids in sums). It reports false, changing nothing,
+// when either order would pass its quantity or a sum would wrap.
+func addFill(sums []int64, nb, b, a int, bids, asks []Offer, qty int64) bool {
+	sb, ok1 := checked.Add(sums[b], qty)
+	sa, ok2 := checked.Add(sums[nb+a], qty)
+	if !ok1 || !ok2 || sb > bids[b].Qty || sa > asks[a].Qty {
+		return false
+	}
+	sums[b], sums[nb+a] = sb, sa
+	return true
 }

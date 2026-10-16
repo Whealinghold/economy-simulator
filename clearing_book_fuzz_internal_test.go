@@ -206,7 +206,7 @@ func runSpec(t testing.TB, s bookSpec, seed uint64) (fails []string) {
 			}
 			cl = fakeClearing{list}
 		}
-		_, trades, err := clearMarket(m.l, b, cl, avgRNG(seed, 0, 0, int64(c)), seedReport(5), 0, &quiet, discardLogger(), nil)
+		_, trades, err := clearMarket(m.l, b, cl, avgRNG(seed, 0, 0, int64(c)), seedReport(5), &quiet, discardLogger(), nil)
 		if err != nil {
 			if !errors.Is(err, ErrInvalidTrade) {
 				fail("market %d: error %v, want ErrInvalidTrade", c, err)

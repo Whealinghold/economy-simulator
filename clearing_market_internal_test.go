@@ -439,11 +439,11 @@ func TestBook_OneMarketPerBook(t *testing.T) {
 	m.admitAll(b1, m.bid(2, 1, 8, 2), m.ask(3, 1, 6, 2))
 	var trades []Trade
 	var err error
-	_, trades, err = clearMarket(m.l, b0, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(7), 0, &quiet, discardLogger(), trades)
+	_, trades, err = clearMarket(m.l, b0, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(7), &quiet, discardLogger(), trades)
 	if err != nil {
 		t.Fatalf("clearMarket b0: %v", err)
 	}
-	_, trades, err = clearMarket(m.l, b1, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(7), 0, &quiet, discardLogger(), trades)
+	_, trades, err = clearMarket(m.l, b1, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(7), &quiet, discardLogger(), trades)
 	if err != nil {
 		t.Fatalf("clearMarket b1: %v", err)
 	}
@@ -474,7 +474,7 @@ func TestClearMarket_ScratchReuse(t *testing.T) {
 	run := func(m *mkMarket, b *book, tick int64, prev marketReport, orders ...Order) (marketReport, []Trade, []int64) {
 		t.Helper()
 		m.admitAll(b, orders...)
-		rep, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(9, tick, 0, 0), prev, tick, &quiet, discardLogger(), nil)
+		rep, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(9, tick, 0, 0), prev, &quiet, discardLogger(), nil)
 		if err != nil {
 			t.Fatalf("clearMarket: %v", err)
 		}
@@ -539,7 +539,7 @@ func TestClearMarket_WorkedExample(t *testing.T) {
 		}
 	}
 	rec := &mkRecorder{}
-	rep, trades, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), seedReport(1), 0, rec.observers(), discardLogger(), nil)
+	rep, trades, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), seedReport(1), rec.observers(), discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket: %v", err)
 	}
@@ -607,7 +607,7 @@ func TestClearMarket_WorkedExample(t *testing.T) {
 
 	// A tick with no order carries the price and counts the age.
 	b.reset(1)
-	rep2, tr2, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 1, 0, 0), rep, 1, rec.observers(), discardLogger(), nil)
+	rep2, tr2, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 1, 0, 0), rep, rec.observers(), discardLogger(), nil)
 	if err != nil || len(tr2) != 0 {
 		t.Fatalf("empty market = %v, %v, want no trades and no error", tr2, err)
 	}
@@ -643,7 +643,7 @@ func TestBook_SettlementCannotOverflow(t *testing.T) {
 		if !slices.Equal(got, []Reason{"", ReasonDuplicateOrder, ""}) {
 			t.Fatalf("admission = %v, want admitted, duplicate_order, admitted", got)
 		}
-		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(5), 0, &quiet, discardLogger(), nil)
+		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(5), &quiet, discardLogger(), nil)
 		if err != nil || len(tr) != 1 {
 			t.Fatalf("clearMarket = %v, %v, want one trade", tr, err)
 		}
@@ -684,7 +684,7 @@ func TestBook_SettlementCannotOverflow(t *testing.T) {
 			t.Fatalf("admission = %v, want %v (the fourth ask of the third lot sum overflows)", got, want)
 		}
 		for i, b := range []*book{b0, b1} {
-			_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, int64(i)), seedReport(5), 0, &quiet, discardLogger(), nil)
+			_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, int64(i)), seedReport(5), &quiet, discardLogger(), nil)
 			if err != nil {
 				t.Fatalf("clearMarket(%d): %v", i, err)
 			}
@@ -734,7 +734,7 @@ func TestClearMarket_PriceAgeCarries(t *testing.T) {
 
 	m := newMkMarket(t, 1)
 	b := newBook(0, 0, 0, &m.sc)
-	rep, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), prev, 0, &quiet, discardLogger(), nil)
+	rep, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), prev, &quiet, discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket (empty): %v", err)
 	}
@@ -745,7 +745,7 @@ func TestClearMarket_PriceAgeCarries(t *testing.T) {
 	m, orders := mkWorked(t)
 	b = newBook(0, 0, 0, &m.sc)
 	m.admitAll(b, orders...)
-	rep, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), prev, 0, &quiet, discardLogger(), nil)
+	rep, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(3, 0, 0, 0), prev, &quiet, discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket (trading): %v", err)
 	}

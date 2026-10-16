@@ -180,14 +180,6 @@ func TestBook_InvariantPanics(t *testing.T) {
 		{"settlement step refused", func(*mkMarket) {
 			mustSettle(errors.New("refused"), "a step")
 		}},
-		{"clearMarket tick after the book's", func(m *mkMarket) {
-			b := newBook(0, 0, 5, &m.sc)
-			clearMarket(m.l, b, AverageClearing{}, nil, seedReport(1), 6, &quiet, nil, nil)
-		}},
-		{"clearMarket tick before the book's", func(m *mkMarket) {
-			b := newBook(0, 0, 5, &m.sc)
-			clearMarket(m.l, b, AverageClearing{}, nil, seedReport(1), 4, &quiet, nil, nil)
-		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -271,7 +263,7 @@ func TestBook_NilLoggerIsAllowed(t *testing.T) {
 	}
 	var err error
 	if v := panicked(func() {
-		_, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), 0, &quiet, nil, nil)
+		_, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), &quiet, nil, nil)
 	}); v != nil || err != nil {
 		t.Errorf("clearMarket with a nil logger = panic %v, error %v, want neither", v, err)
 	}

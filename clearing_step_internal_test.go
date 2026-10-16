@@ -33,7 +33,7 @@ func TestClearMarket_ReleasesNothingAtZero(t *testing.T) {
 		m.stock(1, 0, 5)
 		b := newBook(0, 0, 0, &m.sc)
 		m.admitAll(b, m.bid(0, 0, 10, 2), m.ask(1, 0, 10, 2))
-		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), 0, &quiet, discardLogger(), nil)
+		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), &quiet, discardLogger(), nil)
 		if err != nil || len(tr) != 1 || tr[0].Price != 10 {
 			t.Fatalf("clearMarket = %v, %v, want one trade at 10", tr, err)
 		}
@@ -57,7 +57,7 @@ func TestClearMarket_ReleasesNothingAtZero(t *testing.T) {
 		if _, res := m.money(0); res != 30 {
 			t.Fatalf("reserved %d, want 30 (10*3)", res)
 		}
-		_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), 0, &quiet, discardLogger(), nil)
+		_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), &quiet, discardLogger(), nil)
 		if err != nil {
 			t.Fatalf("clearMarket: %v", err)
 		}
@@ -79,7 +79,7 @@ func TestClearMarket_ReleasesNothingAtZero(t *testing.T) {
 		m.lot(1, 3, 2)
 		b := newBook(0, 1, 0, &m.sc)
 		m.admitAll(b, m.bid(0, 1, 7, 2), m.askLot(1, 1, 7, 2, 3))
-		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), 0, &quiet, discardLogger(), nil)
+		_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), &quiet, discardLogger(), nil)
 		if err != nil || len(tr) != 1 {
 			t.Fatalf("clearMarket = %v, %v, want one trade", tr, err)
 		}
@@ -97,7 +97,7 @@ func TestClearMarket_ReleasesNothingAtZero(t *testing.T) {
 		m.stock(1, 0, 5)
 		b := newBook(0, 0, 0, &m.sc)
 		m.admitAll(b, m.bid(0, 0, 10, 1), m.ask(1, 0, 4, 3))
-		if _, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), 0, &quiet, discardLogger(), nil); err != nil {
+		if _, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 0), seedReport(1), &quiet, discardLogger(), nil); err != nil {
 			t.Fatalf("clearMarket: %v", err)
 		}
 		if held, res := m.units(1, 0); held != 4 || res != 0 {
@@ -164,7 +164,7 @@ func TestClearMarket_NamedLot(t *testing.T) {
 	if !reflect.DeepEqual(before, m.state()) {
 		t.Errorf("a rejected named ask changed the ledger")
 	}
-	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), 0, &quiet, discardLogger(), nil)
+	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), &quiet, discardLogger(), nil)
 	if err != nil || len(tr) != 1 || tr[0].Lot != (LotKey{Named: true, Durability: 3}) {
 		t.Fatalf("clearMarket = %v, %v, want one trade of the lot of durability 3", tr, err)
 	}
@@ -245,7 +245,7 @@ func TestClearMarket_FaultyClearing(t *testing.T) {
 			good := Trade{Commodity: 0, Buyer: m.agent(0), Seller: m.agent(2), Price: 7, Quantity: 1}
 			rec := &mkRecorder{}
 			prev := seedReport(42)
-			rep, tr, err := clearMarket(m.l, b, fakeClearing{[]Trade{good, bad}}, rand.New(rand.NewPCG(1, 1)), prev, 0, rec.observers(), discardLogger(), nil)
+			rep, tr, err := clearMarket(m.l, b, fakeClearing{[]Trade{good, bad}}, rand.New(rand.NewPCG(1, 1)), prev, rec.observers(), discardLogger(), nil)
 			if !errors.Is(err, ErrInvalidTrade) {
 				t.Fatalf("clearMarket error = %v, want ErrInvalidTrade", err)
 			}
@@ -284,7 +284,7 @@ func TestClearMarket_TradesAndFills(t *testing.T) {
 	m.admitAll(b, orders...)
 	rec := &mkRecorder{}
 	pre := []Trade{{Commodity: 9}} // the caller's slice already holds a trade
-	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(5, 0, 0, 0), seedReport(1), 0, rec.observers(), discardLogger(), pre)
+	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(5, 0, 0, 0), seedReport(1), rec.observers(), discardLogger(), pre)
 	if err != nil {
 		t.Fatalf("clearMarket: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestClearMarket_TradesAndFills(t *testing.T) {
 	m2.admitAll(b2, orders2...)
 	pre2 := []Trade{{Commodity: 9}}
 	bad := fakeClearing{[]Trade{faultyTrades(m2)["quantity zero"]}}
-	_, tr2, err := clearMarket(m2.l, b2, bad, nil, seedReport(1), 0, &quiet, discardLogger(), pre2)
+	_, tr2, err := clearMarket(m2.l, b2, bad, nil, seedReport(1), &quiet, discardLogger(), pre2)
 	if !errors.Is(err, ErrInvalidTrade) || !slices.Equal(tr2, pre2) {
 		t.Errorf("clearMarket(invalid list, %v) = %v, %v, want the caller's slice unchanged and ErrInvalidTrade", pre2, tr2, err)
 	}
@@ -370,7 +370,7 @@ func TestClearMarket_ZeroAllocations(t *testing.T) {
 						t.Fatalf("admit(%+v) = %q", o, r)
 					}
 				}
-				_, _, err := clearMarket(m.l, b, c, nil, seedReport(5), 0, &quiet, log, trades[:0])
+				_, _, err := clearMarket(m.l, b, c, nil, seedReport(5), &quiet, log, trades[:0])
 				if wantInvalid := name == "invalid"; wantInvalid != (err != nil) || (wantInvalid && !errors.Is(err, ErrInvalidTrade)) {
 					t.Fatalf("clearMarket(%s list) error = %v, want invalid %v", name, err, wantInvalid)
 				}
@@ -425,7 +425,7 @@ func BenchmarkClearMarket(b *testing.B) {
 		for i, o := range orders {
 			bk.admit(m.l, facts[i], o)
 		}
-		clearMarket(m.l, bk, c, nil, seedReport(5), 0, &quiet, discardLogger(), trades[:0])
+		clearMarket(m.l, bk, c, nil, seedReport(5), &quiet, discardLogger(), trades[:0])
 	}
 }
 
@@ -450,7 +450,7 @@ func TestClearMarket_OrderOfMarkets(t *testing.T) {
 		m.admitAll(b1, m.bid(0, 1, 10, 3), m.bid(2, 1, 10, 3), m.ask(3, 1, 10, 3), m.ask(5, 1, 10, 3))
 		var tr [2][]Trade
 		clear := func(i int, b *book) {
-			_, got, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(77, 4, 0, int64(i)), seedReport(1), 4, &quiet, discardLogger(), nil)
+			_, got, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(77, 4, 0, int64(i)), seedReport(1), &quiet, discardLogger(), nil)
 			if err != nil {
 				t.Fatalf("clearMarket(%d): %v", i, err)
 			}
@@ -505,7 +505,7 @@ func TestClearMarket_Events(t *testing.T) {
 	submit(m.bid(0, 0, 9, 2)) // duplicate
 	submit(m.ask(1, 0, 5, 2))
 	submit(m.bid(2, 0, 0, 1)) // invalid price
-	_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(2, 6, 2, 0), seedReport(3), 6, obs, discardLogger(), nil)
+	_, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(2, 6, 2, 0), seedReport(3), obs, discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket: %v", err)
 	}
@@ -533,7 +533,7 @@ func TestClearMarket_Events(t *testing.T) {
 	// An empty market still reports.
 	b.reset(7)
 	rec.events = nil
-	_, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(2, 7, 2, 0), seedReport(3), 7, obs, discardLogger(), nil)
+	_, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(2, 7, 2, 0), seedReport(3), obs, discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket(empty): %v", err)
 	}
@@ -574,12 +574,12 @@ func TestClearMarket_LogsOnlyDebug(t *testing.T) {
 		}
 	}
 	bad := faultyTrades(m)["price above bid"]
-	if _, _, err := clearMarket(m.l, b, fakeClearing{[]Trade{bad}}, nil, seedReport(1), 0, &quiet, log, nil); !errors.Is(err, ErrInvalidTrade) {
+	if _, _, err := clearMarket(m.l, b, fakeClearing{[]Trade{bad}}, nil, seedReport(1), &quiet, log, nil); !errors.Is(err, ErrInvalidTrade) {
 		t.Fatalf("clearMarket error = %v, want ErrInvalidTrade", err)
 	}
 	b.reset(1)
 	m.admitAll(b, m.bid(0, 0, 10, 1), m.ask(2, 0, 5, 1))
-	if _, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 1, 0, 0), seedReport(1), 0+1, &quiet, log, nil); err != nil {
+	if _, _, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 1, 0, 0), seedReport(1), &quiet, log, nil); err != nil {
 		t.Fatalf("clearMarket: %v", err)
 	}
 	keys := map[string][]string{
@@ -635,7 +635,7 @@ func TestClearMarket_NonInterference(t *testing.T) {
 				b.emitPlaced(obs, o)
 			}
 		}
-		rep, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(8, 0, 0, 0), seedReport(1), 0, obs, log, nil)
+		rep, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(8, 0, 0, 0), seedReport(1), obs, log, nil)
 		if err != nil {
 			t.Fatalf("clearMarket: %v", err)
 		}
@@ -742,7 +742,7 @@ func TestClearMarket_NamedLotRemainderReleasedOnItsLot(t *testing.T) {
 	if !slices.Equal(got, []Reason{"", ""}) {
 		t.Fatalf("admission = %v, want both admitted", got)
 	}
-	if _, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), 0, &quiet, discardLogger(), nil); err != nil || len(tr) != 1 {
+	if _, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), &quiet, discardLogger(), nil); err != nil || len(tr) != 1 {
 		t.Fatalf("clearMarket = %v, %v, want one trade", tr, err)
 	}
 	lots, _ := m.l.AppendLots(nil, m.acct[1])
@@ -786,7 +786,7 @@ func TestClearMarket_NamedLotAsksRemaindersReleasedPerLot(t *testing.T) {
 	if !slices.Equal(got, []Reason{"", "", ""}) {
 		t.Fatalf("admission = %v, want all admitted", got)
 	}
-	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), 0, &quiet, discardLogger(), nil)
+	_, tr, err := clearMarket(m.l, b, AverageClearing{}, avgRNG(1, 0, 0, 1), seedReport(1), &quiet, discardLogger(), nil)
 	if err != nil || len(tr) != 1 || tr[0].Lot != (LotKey{Named: true, Durability: 5}) || tr[0].Quantity != 2 {
 		t.Fatalf("clearMarket = %v, %v, want one trade of 2 units of the lot of durability 5", tr, err)
 	}

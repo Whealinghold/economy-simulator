@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
+	"math/rand/v2" // nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- seeded simulation PRNG, never a secret
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/clearing"
@@ -561,27 +561,16 @@ func mustSettle(err error, step string) {
 // released and the error wraps ErrInvalidTrade; it is not logged, the caller
 // returns it (architecture.md 8.3). The error is the book's own value and is
 // overwritten by the book's next failure. The units filled per order are
-// b.filled() afterwards. tick must be the tick of the book.
+// b.filled() afterwards. The tick of the events and the log line is the book's.
 //
 // The per-trade money flow is an int64 sum at settlement and cannot overflow
 // unless total money passes int64, which MaxMoney per balance and the audit
 // exclude, so no check is made.
 func clearMarket(l *ledger.Ledger, b *book, c Clearing, rng *rand.Rand, prev marketReport,
-	tick int64, obs *observers, log *slog.Logger, trades []Trade) (marketReport, []Trade, error) {
-	if tick != b.tick {
-		invariant("clearMarket was given a tick other than the book's")
-	}
+	obs *observers, log *slog.Logger, trades []Trade) (marketReport, []Trade, error) {
 	sc, n := b.sc, len(b.entries)
 	sc.load(b)
-	listed := c.Clear(sc.ordB, sc.ordA, rng)
-	sc.fills = sc.fills[:0]
-	for _, t := range listed {
-		sc.fills = append(sc.fills, clearing.Fill{
-			Commodity: int64(t.Commodity), Buyer: int64(t.Buyer), Seller: int64(t.Seller),
-			Lot:   clearing.Lot{Named: t.Lot.Named, Born: t.Lot.Born, Durability: t.Lot.Durability},
-			Price: int64(t.Price), Qty: int64(t.Quantity),
-		})
-	}
+	sc.loadFills(c.Clear(sc.ordB, sc.ordA, rng))
 	sc.sums, sc.index = resize(sc.sums, n), resize(sc.index, n)
 	ms, code := clearing.Check(sc.matches[:0], clearing.Scratch{Sums: sc.sums, Index: sc.index},
 		int64(b.commodity), sc.bids, sc.asks, sc.fills)
@@ -590,11 +579,11 @@ func clearMarket(l *ledger.Ledger, b *book, c Clearing, rng *rand.Rand, prev mar
 	if code != 0 {
 		clear(b.fill)
 		b.release(l, nil)
-		b.invalid = tradeListError{tick: tick, region: b.region, commodity: b.commodity, what: listFailure(code)}
+		b.invalid = tradeListError{tick: b.tick, region: b.region, commodity: b.commodity, what: listFailure(code)}
 		return prev, trades, &b.invalid
 	}
 	for _, m := range ms {
-		trades = b.settle(l, m, tick, obs, trades)
+		trades = b.settle(l, m, b.tick, obs, trades)
 	}
 	b.release(l, sc.sums)
 	for i := range b.entries {
@@ -610,9 +599,29 @@ func clearMarket(l *ledger.Ledger, b *book, c Clearing, rng *rand.Rand, prev mar
 		BestBid: Price(r.BestBid), BestAsk: Price(r.BestAsk),
 		HasBestBid: r.HasBestBid, HasBestAsk: r.HasBestAsk,
 	}
+	b.emitCleared(obs, log, rep)
+	return rep, trades, nil
+}
+
+// loadFills converts the trades a Clearing returned into the fills Check takes.
+func (sc *clearScratch) loadFills(listed []Trade) {
+	sc.fills = sc.fills[:0]
+	for _, t := range listed {
+		sc.fills = append(sc.fills, clearing.Fill{
+			Commodity: int64(t.Commodity), Buyer: int64(t.Buyer), Seller: int64(t.Seller),
+			Lot:   clearing.Lot{Named: t.Lot.Named, Born: t.Lot.Born, Durability: t.Lot.Durability},
+			Price: int64(t.Price), Qty: int64(t.Quantity),
+		})
+	}
+}
+
+// emitCleared delivers MarketCleared, when an observer was supplied, and
+// writes the Debug line "market cleared", when the logger has Debug enabled
+// (spec-clearing.md 9.1).
+func (b *book) emitCleared(obs *observers, log *slog.Logger, rep marketReport) {
 	if obs.supplied {
 		obs.deliver(MarketCleared{
-			Tick: tick, Region: b.region, Commodity: b.commodity, Price: rep.Price,
+			Tick: b.tick, Region: b.region, Commodity: b.commodity, Price: rep.Price,
 			PriceAge: rep.Age, Volume: rep.Volume, UnmatchedBid: rep.UnmatchedBid,
 			UnmatchedAsk: rep.UnmatchedAsk, BestBid: rep.BestBid, BestAsk: rep.BestAsk,
 			HasBestBid: rep.HasBestBid, HasBestAsk: rep.HasBestAsk,
@@ -620,14 +629,13 @@ func clearMarket(l *ledger.Ledger, b *book, c Clearing, rng *rand.Rand, prev mar
 	}
 	if ctx := context.Background(); log != nil && log.Enabled(ctx, slog.LevelDebug) {
 		log.LogAttrs(ctx, slog.LevelDebug, "market cleared",
-			slog.Int64(logkeys.Tick, tick),
+			slog.Int64(logkeys.Tick, b.tick),
 			slog.Int(logkeys.Region, int(b.region)),
 			slog.Int(logkeys.Commodity, int(b.commodity)),
 			slog.Int64(logkeys.Price, int64(rep.Price)),
 			slog.Int64(logkeys.Quantity, int64(rep.Volume)),
 		)
 	}
-	return rep, trades, nil
 }
 
 // settle moves the money and goods of one checked match and emits its event

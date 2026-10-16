@@ -59,13 +59,8 @@ func Admit(f Facts) Code {
 		return c
 	}
 	// Position of not_permitted (institutions module): no code yet.
-	switch {
-	case f.Price < 1 || f.Price > f.MaxPrice:
-		return InvalidPrice
-	case f.Qty < 1 || f.Qty > f.MaxQuantity:
-		return InvalidQuantity
-	case f.Duplicate:
-		return DuplicateOrder
+	if c := limitsRow(f); c != Admitted {
+		return c
 	}
 	product, ok := checked.Mul(f.Price, f.Qty)
 	if !ok {
@@ -75,13 +70,31 @@ func Admit(f Facts) Code {
 		return c
 	}
 	// Position of the legal clamp (3.2.1, institutions module): no code yet.
+	// Position of no_room (storage module): no code yet, after the funds row.
+	return fundsRow(f, product)
+}
+
+// limitsRow is the price, quantity and duplicate rows of the table of CLR 3.2.
+func limitsRow(f Facts) Code {
+	switch {
+	case f.Price < 1 || f.Price > f.MaxPrice:
+		return InvalidPrice
+	case f.Qty < 1 || f.Qty > f.MaxQuantity:
+		return InvalidQuantity
+	case f.Duplicate:
+		return DuplicateOrder
+	}
+	return Admitted
+}
+
+// fundsRow is the insufficient_funds and insufficient_stock rows of CLR 3.2.
+func fundsRow(f Facts, product int64) Code {
 	if f.Bid && product > f.Available {
 		return InsufficientFunds
 	}
 	if !f.Bid && f.Qty > f.Available {
 		return InsufficientStock
 	}
-	// Position of no_room (storage module): no code yet.
 	return Admitted
 }
 
