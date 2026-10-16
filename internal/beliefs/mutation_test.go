@@ -128,6 +128,23 @@ func TestNextRun_Guards(t *testing.T) {
 	}
 }
 
+// TestNextRun_LargeCountsDoNotWrap verifies that the majority test holds for
+// counts whose sum exceeds MaxInt64, which the exported Tally fields allow.
+//
+// Guard: AtFloor + AtCeiling wrapped negative and read as "not pinned", so a
+// pinned market with huge counters lost its diagnostic. Removing the test lets
+// the sum form come back unnoticed.
+func TestNextRun_LargeCountsDoNotWrap(t *testing.T) {
+	t.Parallel()
+	// Both counts are MaxInt64/2+1 of MaxInt64 outcomes: the sum is MaxInt64+1,
+	// which wraps to MinInt64, yet each is above Outcomes/2 = (2^63-1)/2.
+	const half = math.MaxInt64/2 + 1
+	tally := beliefs.Tally{Outcomes: math.MaxInt64, AtFloor: half, AtCeiling: half}
+	if r := beliefs.NextRun(0, &tally, 10); r.Count != 1 {
+		t.Errorf("NextRun(0, %+v, 10) = %+v, want Count 1 (pinned)", tally, r)
+	}
+}
+
 // TestWindow_AcceptedEdges verifies that a window reports a value as present
 // after a push and that Restore accepts the extreme prices 1 and maxPrice.
 //

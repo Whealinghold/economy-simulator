@@ -82,7 +82,9 @@ type Run struct {
 // consecutive pinned tick, naming the bound with more beliefs and the floor on
 // a tie. Call it once per market per tick, also when the market had no outcome.
 func NextRun(before int64, t *Tally, every int64) Run {
-	if t.Outcomes == 0 || t.AtFloor+t.AtCeiling <= t.Outcomes/2 {
+	// AtFloor <= Outcomes/2 - AtCeiling is AtFloor + AtCeiling <= Outcomes/2
+	// without the sum, which wraps for counts near MaxInt64.
+	if t.Outcomes == 0 || t.AtFloor <= t.Outcomes/2-t.AtCeiling {
 		return Run{}
 	}
 	r := Run{Count: before, Outcomes: t.Outcomes}
