@@ -91,3 +91,12 @@ func RoleRow(t *RoleTable, id RoleID) RoleRowView {
 
 // RoleTradableSomewhere reads the union flag of a commodity.
 func RoleTradableSomewhere(t *RoleTable, c CommodityID) bool { return t.tradableSomewhere(c) }
+
+// BeliefParams exposes the construction of the belief parameters of beliefs.go
+// as a flat view, so the external test needs no internal type.
+func BeliefParams(w World) (flat [16]int64) {
+	p := beliefParams(w)
+	return [16]int64{p.Step, p.AdjustProb, p.Significance, p.EvidenceShare, p.StockLow, p.StockHigh,
+		p.MaxAge, p.WidthInit, p.WidthMin, p.WidthMax, p.WidthStep, p.CostFloor, p.CostCeiling,
+		p.RefBandLow, p.RefBandHigh, p.MaxPrice}
+}

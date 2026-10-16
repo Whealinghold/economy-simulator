@@ -74,4 +74,10 @@ const (
 	Account = "account"
 	// Amount is a sum of money in minor units.
 	Amount = "amount"
+	// Outcomes is a count of order outcomes, the denominator of the belief
+	// Warn.
+	Outcomes = "outcomes"
+	// Previous is a price in minor units before an update; Price is the one
+	// after.
+	Previous = "previous"
 )

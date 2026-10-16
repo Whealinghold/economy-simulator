@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 4: price beliefs
 
-**Status: Proposed (2026-10-13); no phase started.** Sequences the fourth row
+**Status: Done (2026-10-16), uncommitted on stage-1-4; Phases 1 to 6 built; Phase 6 gate 2026-10-16: root 99.3%, internal/beliefs 99.4%, all-packages total 99.4% (-coverpkg), FuzzUpdate 30 s clean (36M execs), corpus in internal/beliefs/testdata/fuzz/FuzzUpdate.** Sequences the fourth row
 of Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`internal/beliefs` and
 `beliefs.go`", into six phases. It implements
 [spec-beliefs.md](../specs/spec-beliefs.md) (BEL) for the slice. It is built

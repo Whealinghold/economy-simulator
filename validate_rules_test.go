@@ -600,7 +600,7 @@ func buildFieldCases() []fieldCase {
 // The cases are fieldCases, which the registry test reads to check that every
 // row of the parameter-owner table has a failing case.
 //
-// Requirement: FR-CFG-009, FR-CFG-031, FR-CFG-035, FR-CFG-036, FR-CFG-037, FR-CFG-039, FR-CFG-040, FR-CFG-048, FR-CFG-049, FR-CFG-050, FR-CFG-051, FR-CFG-052, FR-CFG-054, FR-CFG-055, FR-CFG-057, FR-CFG-064, FR-CAL-011, FR-CAL-012, FR-CAL-013, FR-GDS-002, FR-GDS-004, FR-GDS-008, FR-GDS-013, FR-GDS-016, FR-GDS-019, FR-GDS-021, FR-PRO-004, FR-PRO-005, FR-PRO-006, FR-PRO-033, FR-PRO-034, FR-PRO-038, FR-AGT-018, FR-SCL-020, FR-WEL-014, FR-WEL-025, FR-WEL-028, FR-VIA-030, FR-VIA-033, FR-VIA-051, FR-CUR-007, FR-CUR-022, FR-BEL-029
+// Requirement: FR-CFG-009, FR-CFG-031, FR-CFG-035, FR-CFG-036, FR-CFG-037, FR-CFG-039, FR-CFG-040, FR-CFG-048, FR-CFG-049, FR-CFG-050, FR-CFG-051, FR-CFG-052, FR-CFG-054, FR-CFG-055, FR-CFG-057, FR-CFG-064, FR-CAL-011, FR-CAL-012, FR-CAL-013, FR-GDS-002, FR-GDS-004, FR-GDS-008, FR-GDS-013, FR-GDS-016, FR-GDS-019, FR-GDS-021, FR-PRO-004, FR-PRO-005, FR-PRO-006, FR-PRO-033, FR-PRO-034, FR-PRO-038, FR-AGT-018, FR-SCL-020, FR-WEL-014, FR-WEL-025, FR-WEL-028, FR-VIA-030, FR-VIA-033, FR-VIA-051, FR-CUR-007, FR-CUR-022, FR-BEL-027, FR-BEL-028, FR-BEL-029, FR-BEL-037
 func TestValidate_FieldRules(t *testing.T) {
 	t.Parallel()
 	for _, tt := range fieldCases {
@@ -1006,7 +1006,7 @@ func hasWarning(ws []economysim.Warning, rule string, path ...string) bool {
 // names invalid is a configuration that Validate rejects for another reason,
 // because the rule is unreachable on a valid one.
 //
-// Requirement: FR-CFG-018, FR-CFG-053, FR-CFG-056, FR-CFG-059, FR-CFG-065, FR-CFG-066, FR-CFG-082, FR-AGT-060, FR-GDS-023, FR-PRO-040, FR-CAL-016, FR-CAL-021, FR-SKL-004, FR-WEL-009
+// Requirement: FR-CFG-018, FR-CFG-053, FR-CFG-056, FR-CFG-059, FR-CFG-065, FR-CFG-066, FR-CFG-082, FR-AGT-060, FR-GDS-023, FR-PRO-040, FR-CAL-016, FR-CAL-021, FR-SKL-004, FR-WEL-009, FR-BEL-038
 func TestWarnings(t *testing.T) {
 	t.Parallel()
 	// A recipe with no inputs that no role lists, and what it makes.
