@@ -105,12 +105,19 @@ purchase is capital that lasts `Durability` uses (`spec-skill-barriers.md` 2.6 a
 calls wear "a recipe cost"). Netting both the purchase and the wear would count a tool
 twice. This answers N-050.
 
-2.1.4. **The wear cost** of tick `t` is, for each execution started in the tick that
-wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of
-the tool in that tick (the price of `spec-clearing.md` 5.4; the effective reference
-price if it has never traded), summed over executions, with the weight of the executor, or of the principal for a hired execution (the tool is its
-capital, `spec-employment.md` 8.1), applied as for any amount. It is the `wear_cost` of `spec-production.md` 9.1 evaluated
-at the market price, and it uses no belief.
+2.1.4. **The wear cost** of tick `t` is recorded when the executions start and valued at P6.3,
+with `cost_t` and at the same prices, not at the price of P2.7: the tick's market clears at P4.1,
+after the wear is started. For each execution started in the tick that wears a tool it is
+`ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (the
+price of `spec-clearing.md` 5.4 published in the tick; the effective reference price if it has never
+traded), summed over the executions. There is **one ceiling per execution**, then the product, so a
+row of `n` executions of one tool costs `n * ceil(WearPerUse * price / Durability)` and never
+`ceil(n * WearPerUse * price / Durability)` (`WearPerUse` 3, price 10, `Durability` 4, `n` 2: 2 * 8 =
+16, against ceil(60 / 4) = 15). **The weight does not enter a second time:** an execution is one
+household's and the `k` executions of a job are at most the weight (FR-SCL-007), so the sum over the
+executions already counts the households. A hired execution is the principal's, and so are its `n`
+(the tool is its capital, `spec-employment.md` 8.1). It is the `wear_cost` of `spec-production.md`
+9.1 per execution, evaluated at the market price, and it uses no belief.
 
 2.1.5. **A commodity that is both an input and upkeep** (the seed that is also eaten)
 is classed as an input by the strategy (`spec-agents.md` 7.3.6), so the money spent on
@@ -197,6 +204,8 @@ pad_cost   = n * U
 ratio_bp   = (sum of income_t + pad_income) * 10_000 / (sum of cost_t + pad_cost)
 ```
 
+2.2.0. `U` is the effective upkeep valued at the prices published at the position of the read: P1.6 for relief, the view of P2.5, and phase 7 for the spawner and the estates, so the agent, estate and spawner rows agree on one figure. Padding is applied at read and never stored. The padded ratio equals `DefaultRatio` exactly when `n * U * d_bp` is divisible by 10 000 and is otherwise truncated (`pad_income` truncates): `n * U` of 1 with `d_bp` 15 000 pads 1 and reads 10 000, not 15 000.
+
 2.2.1. `d_bp` is the role's `DefaultRatio`, falling back to a global default of
 10 000 (a ratio of exactly 1.0). A ratio of 1.0 is neutral: it neither makes
 an agent migrate nor starve before real data arrives. A role may set a higher
@@ -219,8 +228,44 @@ a row in the parameter-owner table (N-016), owner this spec, bound 1 to 1 000
 of the formulas is the effective window of 2.3.3.
 
 2.3.2. The multiplications are overflow-checked (architecture.md 3.5). A
-window or income that would overflow is a configuration error caught at
-validation, not a runtime wrap. Rounding is truncation toward zero.
+window or income that validation can see would overflow is a configuration error caught at
+validation (`ErrOverflow`, 12.2), not a runtime wrap. Rounding is truncation toward zero.
+
+**What validation cannot see.** Validation bounds only the sales of a role's recipes against the
+window (12.2). The receipts of a role with no recipes, relief and the unearned flows are not bounded
+by it, and money up to `MaxMoney` times a window up to `MaxWelfareWindow` exceeds `int64`. An
+overflow that a valid configuration and a consumer's strategy can reach is handled where it occurs
+and never panics (`spec-world.md` 3.3.3; architecture.md 8.1, 13). Two rules, both deterministic,
+neither changing a result below its bounds, neither an error of `Step`:
+
+- **The clamp.** Storing a record clamps each of its fields to plus or minus
+  `MaxInt64 / MaxWelfareWindow`, so that a running sum over at most `MaxWelfareWindow` records cannot
+  overflow (the proof is that bound times the length of the ring, which is never above
+  `MaxWelfareWindow`, 2.3.4, and stays so after the resize of 2.3.3). The bound is a parameter of
+  the ring, because `MaxWelfareWindow` is a bound of the root, and the store reports that it clamped.
+- **One rule for everything formed from the bounded sums.** The proof covers one ring's sums and
+  nothing else: what is formed from several of them, or from several agents, can leave `int64` in a
+  valid configuration. Every value of the tick that is formed from them is a **named value of the
+  formulas** of this spec: a sum, a padded sum and `pad_cost` and `pad_income` (2.2), the per-agent
+  numerator `income_t - F_t - G_t - K^own_t` summed (4.3), a set's numerator and denominator, a
+  weighted sum (11.2), a quotient (the ratio, the earned ratio, the mean ratio, a wage, the premium),
+  and what the world forms in the tick (the cost of a tick, the wear cost of 2.1.4 and the income of
+  2.1). Each is computed by **saturating** arithmetic: a value that leaves `int64` is replaced by the
+  nearest extreme, `MaxInt64` where the exact value is above it and `MinInt64` where below (for a sum,
+  by the sign of the operands that overflowed, a difference by the sign of the exact result; for a
+  quotient, by the sign of the exact quotient). A quotient is one 128-bit product followed by one
+  truncating division, and **only its final value saturates**, so a ratio or a premium
+  (`num * 10 000 / den`) is exact whenever it fits, however large the product by 10 000. The terms of a
+  sum are taken in the order of the caller's slice (ascending agent slot), because a saturating sum is
+  not associative. Nothing wraps, nothing panics, and nothing becomes "absent" for this reason: the
+  only absent results are those of 2.2.3 and 4.3, applied to the saturated values unchanged. The
+  functions of the tick return no `ok`, because the world cannot refuse at P6.3; the calibration
+  formulas of 3.1 and 5, which run outside the tick, report an overflow (FR-WEL-010).
+
+**The clamp is not silent** (observability-and-logging.md 3.2, 9.1; FR-STB-013, N-045): a household whose
+ring holds a field at the bound is the evidence, a function of saved state, counted in
+`RoleRow.ClampedHouseholds` and reported by the `Warn` "welfare record clamped" (11.3,
+FR-WEL-042). `ErrOverflow` of validation (12.2) is unchanged.
 
 2.3.3. **The window of a role is derived, and is never shorter than its longest job
 (N-032).** A job consumes its inputs when it starts and its output is sold some time
@@ -239,7 +284,11 @@ holds the lump of an own-use job); and, for a role with a merchant block, `Kmax`
 travel time over the configured graph of the self-carried modes of that block
 (`spec-merchants.md` 12.3, a trip being the merchant's job). `WindowCycles` is a world
 parameter, default 2 (a placeholder), bound 1 to 100. A role
-with none of these, or only short ones, has the world's window. The window is **derived,
+with none of these, or only short ones, has the world's window. **A role change resizes the record and
+keeps the history** (`spec-spawner.md` 4.2, `spec-agents.md` 3.8): with `T'` the new role's effective
+window, the newest `min(held, T')` records are kept, and the ticks missing from `T'` are padded at read
+as in 2.2 with the new role's `DefaultRatio`. A change of weight does not resize it: the window is a
+function of the role and not of the weight (`spec-agents.md` 3.7). The window is **derived,
 not configured per role**, so an author cannot set it wrong; it appears in the
 `Snapshot` as the role's window.
 
@@ -429,9 +478,21 @@ gives the reason and the bias left, its open question 2). An own-use tick **is**
 work floor of 5.3 and for the target-income rule; it is left out of the wage only. A
 **working household-tick** is one household working for one tick: for an agent of
 weight `w` that has a job of `k` executions in progress it is `k` (the other
-`w - k` households rest, `spec-agents.md` 9.4), and for a role without recipes it is
-the weight when the agent traded or travelled. The **own-use household-ticks** of a tick are `k`
+`w - k` households rest, `spec-agents.md` 9.4). The **own-use household-ticks** of a tick are `k`
 for an own-use job of `k` executions in progress, and are part of the working household-ticks.
+For a role **with recipes** the working household-ticks are the `k` of its one job (an agent has at
+most one job in progress, FR-PRO-014) and the own-use household-ticks are that `k` when the job is an
+own-use job and 0 when it is a role job, so the difference is never negative. A role **without
+recipes** has no job of its own to give a `k`: it works by trading, and an own-use job is a second
+reason to work. Its working household-ticks are the weight when it traded or travelled; when it ran an
+own-use job of `k` executions and did not trade they are `k`, and so are its own-use household-ticks;
+when it traded and also ran an own-use job they are the weight and its own-use household-ticks are the
+own-use `k`, so the denominator of the wage is the weight less `k`, never negative (`k` is at most
+the weight). The world sets these once per tick and agent: a job continued or completed is seen at
+P2.1 and a job started at P2.7, never both, because an agent starts no job in a tick in which it
+continued or completed one (`spec-world.md` 6, P2.5; FR-PRO-014), so this spec states no rule for two
+jobs in a tick. A working tick of a role with recipes on a commercial trip has no household-ticks rule
+here and is left to `spec-merchants.md` (the merchants module).
 So the observed wage is per working household, and does not depend on the weight (FR-SCL-009). An agent that earns while
 resting under the target-income rule is not credited with working ticks.
 
@@ -458,6 +519,24 @@ A merchant has no recipes. Its purchases for a planned trip (the cargo, the haul
 feed) are bids with the purpose `Input` and are netted, so the income of a trip is its margin
 (`spec-merchants.md` 3.4.2).
 
+**Arithmetic and absence (D62).** Each wage of this section is one sum divided once: the numerator is
+the sum of `income_t - F_t - G_t - K^own_t` and the denominator is the sum of the working
+household-ticks less the sum of the own-use household-ticks, over the records of one agent, or over
+the records of a set of agents (a role in a region, the unskilled agents of a region, a region), and
+the quotient is **truncated toward zero** (architecture.md 3.5; the earned ratio and the mean ratio
+have their rules in 2.1.7 and FR-WEL-036). The sums come first and the division last, so no agent's
+wage is truncated before it is weighted: a set's wage is its summed numerators over its summed
+denominators, and each household-tick weighs the same. A wage whose denominator is 0 (no working
+household-tick outside own-use) is **absent**, not 0. Two reads differ on purpose. The **observed wage**
+of an agent, or of a role in a region, is present whenever the denominator is above 0, whatever the
+sign of the quotient, which may be zero or negative (the spawner's `HasWage` says only that someone
+worked, FR-WEL-037). The **pooled regional wage** is known only when the denominator is above 0 and
+the quotient is above 0; otherwise it is unknown and the starting wage is used (above). The function
+that reads it returns the wage and whether it is known, and the world writes 0 for an unknown wage
+into the cost-anchor table, which is the form `spec-production.md` 9.1.1 and FR-PRO-049 read. An
+unskilled agent with no working household-tick outside own-use has no wage and adds nothing to the
+unskilled wage below.
+
 The **observed premium** of a role in a region is its observed wage divided by
 the observed wage of the region's unskilled agents, in basis points:
 
@@ -465,11 +544,15 @@ the observed wage of the region's unskilled agents, in basis points:
 premium_bp = role_wage * 10_000 / unskilled_wage
 ```
 
-`unskilled_wage` is the mean observed wage of the agents of roles marked
-`Unskilled`, weighted by **households** (the sum of the weights, so that a cohort
-counts as the households it stands for, FR-SCL-015; the earlier "agent count" would
-count a cohort of 40 as one). If the region has no such agents, or the
-role has no working ticks, the premium is absent. Values are exposed per role
+`unskilled_wage` is the observed wage of the set of the region's agents of roles marked
+`Unskilled`, in the pooled form above: the sum of their numerators over the sum of their working
+household-ticks less own-use, one truncating division. That is the mean of their wages weighted by
+**households** (so that a cohort counts as the households it stands for, FR-SCL-015; the earlier
+"agent count" would count a cohort of 40 as one), and it can differ from the mean of the
+agents' truncated wages by up to one unit, which moves the premium. The same set function serves for
+a role, so there is one implementation. If the region has no such agents, or the
+role has no working ticks, or **the unskilled wage is not positive** (zero, which would divide by zero,
+or negative, which would flip the sign), the premium is absent. Values are exposed per role
 and region in `Snapshot` and are bounded by the configuration (observability
 rule 5.4.1).
 
@@ -550,10 +633,13 @@ works more days at a given wage than one with a lower target.
 `TargetRatio` is one value per role. An optional `TargetSpread` (basis points,
 default 0) gives each agent its own target, drawn once when the agent is
 created, uniformly between `TargetRatio * (10_000 - spread) / 10_000` and
-`TargetRatio * (10_000 + spread) / 10_000`, from the world's random source.
-One word of the world's draw (`spec-world.md` 7.2.1) is taken for every agent at creation,
-whatever the spread, in agent-creation order: it is the first of the two creation
-draws of `spec-world.md` 5.7.1 (the target ratio, then the residue). Drawing even when the spread is 0 keeps the random stream
+`TargetRatio * (10_000 + spread) / 10_000`. The range is the first row of the table of
+`spec-world.md` 5.7.1 (`lo + draw(hi - lo + 1)`), which owns it. The word is taken for every agent at
+creation, whatever the spread: it is the first of the agent's two creation words
+(`spec-world.md` 5.7.1, FR-WLD-066), from the agent's own creation stream, which is
+`(siteConstruction, 0, agent)` at construction, `(siteCreation, tick, new agent)` at P7.1(d) for a
+replacement or a birth, and the call's stream for an external agent between ticks
+(`spec-world.md` 7.3). Drawing even when the spread is 0 keeps the random stream
 identical across spread values, so an experiment can compare runs that differ
 only in the spread (a paired comparison). The drawn target is stored with the
 agent and appears in `Snapshot`. Validation requires the lowest possible target
@@ -566,7 +652,7 @@ The choice has these effects:
 | Aggregate labour supply | All agents of a role cross the threshold together. The role works and rests in lockstep, so supply moves in steps | The marginal worker changes continuously, so days worked respond smoothly to the wage |
 | Price stability | Lumpy supply swings prices, which swing wages, and can set up limit cycles (bazaarBot already oscillates) | Spread damps the swings |
 | Calibration and tests | The closed form in section 5 holds exactly for the whole role | The formula holds per agent. The role's total is a mean over draws, so a test uses a fixed seed and a tolerance, or spread 0 for exact checks |
-| Randomness | One word of the world's draw per agent at creation, unused when the spread is 0 | The same word, now used. The stream does not depend on the spread, but golden output changes when a spread is configured |
+| Randomness | One creation word per agent, unused when the spread is 0 | The same word, now used. The stream does not depend on the spread, but golden output changes when a spread is configured |
 | Inequality inside a role | None from this source | Low-target agents rest more and earn and save less |
 | Survival | Targets are at least 1.0, so below subsistence every agent works every day | Same, given the validation above |
 
@@ -612,7 +698,11 @@ outcome and the chosen default are recorded in the PR that changes it.
 `MinWorkShare`, in basis points, the least share of the ticks of an agent's window
 (2.3.3) that must be working ticks (4.3). The rule: if the working ticks in the agent's
 window are fewer than `MinWorkShare * T / 10_000`, the work share of section 5 is
-10 000 whatever the ratio is, so the agent starts a job when it is free. Own-use ticks count
+10 000 whatever the ratio is, so the agent starts a job when it is free. `T` is the effective window
+of 2.3.3 and not the number of records held, and the count is over that window: a missing tick (2.2)
+is not a working tick, so a new agent is held to work until its window holds the share. The
+comparison is `working < MinWorkShare * T / 10_000` with an integer division (truncation toward zero,
+architecture.md 3.5). Own-use ticks count
 as working ticks here (4.3, `spec-subsistence.md` 7.3). 0 turns the
 floor off. The default is 4 000, **a placeholder**: about 146 ticks of a 365-tick year,
 which is the same order as the lowest figure in the evidence (labourers under 150 days a
@@ -650,7 +740,7 @@ The floor acts silently (a household works though its ratio says rest), so by
 FR-STB-013 it is counted: the `Snapshot` reports, per region and role, the households
 held to work by the floor in the last tick, and a `Warn` "work floor binding" is
 emitted once per region and role when more than half of the role's households have been
-held by it for 10 consecutive ticks, at the tenth tick and every tenth after (12).
+held by it for 10 consecutive ticks, at the tenth tick and every tenth after (12). What "held", the count and the denominator are is stated once, in 11.3.
 
 The snapshot field `RoleRow.HeldByFloor` is **evaluated at the boundary**, over the agents
 with no job in progress on the welfare record as it stands after P6.3
@@ -776,9 +866,9 @@ in 1700s England, and up to about 4 for the best-off households.
 
 | Concern | Home |
 |---------|------|
-| Welfare ratio and its window (section 2) | computed by the root from ledger totals, the per-tick receipts and spending by purpose of `spec-agents.md` (FR-AGT-057) and a per-agent ring buffer with running sums; reported through `Snapshot`, never logged as float |
-| The pure arithmetic: the ratio, the padding, the wage and ratio formulas of 3.1, the closed form of 5, the work share and the floor | `internal/welfare` (stdlib only), over primitive slices and integers, converted inline at the call (architecture.md 2.9); named for what it provides |
-| Observed wage and premium (section 4.3) | computed by the root; reported in `Snapshot` per role and region |
+| Welfare ratio and its window (section 2) | `welfare.go` (root, unexported) turns a tick's flows into a record at P6.3: the per-agent scratch of the tick (the trade receipts and the spending by purpose of `spec-agents.md` FR-AGT-057, the wear facts, the working flags), its conversion to a record, the cost of a tick, the effective window of a role and the per-(region, role) summaries; the per-agent ring buffer with running sums is `internal/welfare`; reported through `Snapshot`, never logged as float |
+| The pure arithmetic and the ring: the ratio, the padding, the wage and ratio formulas of 3.1, the closed form of 5, the work share and the floor, the wear cost, the cost and income of a tick, the saturating arithmetic of 2.3.2, the record and the ring with its running sums and its resize | `internal/welfare` (stdlib and `internal/checked` only), over primitive slices and integers, converted inline at the call (architecture.md 2.9); named for what it provides |
+| Observed wage and premium (section 4.3) | the formulas are in `internal/welfare`; `welfare.go` reads the rings of a set of agents and the root reports them in `Snapshot` per role and region |
 | Calibration helper (sections 3.1, 5) | used by config tooling and tests; the running simulation does not depend on it |
 | Role parameters (section 4.2) | plain structs in the root package; parsed by `config/` |
 
@@ -799,7 +889,7 @@ premium are measures, read from the `Snapshot`, not events (observability-and-lo
 premium (4.3, absent as stated there), the role's effective window (2.3.3), the
 households held to work by the floor (`RoleRow.HeldByFloor`: evaluated at the boundary, over the agents with no
 job in progress on the record after P6.3, so it may differ from the count of the `Warn` in the tick, 5.3),
-and the **household-weighted mean
+the households whose welfare ring holds a field at the clamp of 2.3.2 (`RoleRow.ClampedHouseholds`, 11.3), and the **household-weighted mean
 welfare ratio** of the role (`MeanRatioBP`: the sum over its agents of weight times ratio over the sum of weights
 of the agents whose ratio exists, `RatioHouseholds`; absent if none), and the same mean over all roles of the region, which a consumer forms from the role rows weighted by `RatioHouseholds`.
 `MeanRatioBP` is rounded toward zero (FR-WEL-036); the mean of `spec-indicators.md` is rounded half to
@@ -811,15 +901,33 @@ records of 2, so it adds no state. Per agent, in a query
 (after the spread), the earned ratio beside the ratio (2.1.7), and the working ticks in its window. All are bounded by the
 configuration or are per agent in a query (observability-and-logging.md 5.4.1).
 
-11.3. **Logs.** One `Warn`, bounded by the configuration (observability-and-logging.md
-3.2.2): "work floor binding", per region and role, never per agent, emitted when more
+11.3. **Logs.** Two `Warn`s, bounded by the configuration (observability-and-logging.md
+3.2.2): "work floor binding" and "welfare record clamped".
+
+"Work floor binding", per region and role, never per agent, emitted when more
 than half of the role's households have been held to work by `MinWorkShare` for 10
 consecutive ticks, at the tenth tick and every tenth after, with `region`, `role` and
-`households` (the number held). It is actionable: a role that works because of the
+`households` (the number held). **Held** means: the agent is free (it has no job in progress when
+`Work` would be called), the floor condition of 5.3 holds, and the share that the ratio alone gives is
+below 10 000 (an absent ratio, or a ratio below `T_lo`, which already gives 10 000, is not held). The
+count is in **households** (the weights of the held agents) and is taken at P2.5 when `Work` is called.
+The denominator of "more than half" is every household of the role in the region, busy or free, so a
+busy agent never raises the share: strictly more than half warns and exactly half does not
+(`2 * held > households`). A role with no households has no run. It is actionable: a role that works because of the
 floor and not its target is a pinned labour market (STB-L14). The count behind it
 makes the floor, a damper that acts silently, observable (FR-STB-013, N-045); `RoleRow.HeldByFloor` is the same quantity evaluated at the boundary and may differ from it (5.3, 11.2). The
-run of consecutive ticks is diagnostic state (13). No `Info`, no `Error`, and nothing
-per agent above `Debug`.
+run of consecutive ticks is kept per (region, role) and is diagnostic state (13).
+
+"Welfare record clamped" (pattern A: the first tick of a run and every tenth after), per region and
+role, never per agent, emitted when at least one household of the role holds a field of its welfare
+record at the clamp of 2.3.2, with `region`, `role` and `households` (the households, by weight, of
+the agents whose ring holds a field at the bound). It is actionable: a field at the bound is a flow of
+the size of `MaxMoney`, which a pack or a strategy should not produce, and every ratio read from that
+ring is saturated. Its counterpart is `RoleRow.ClampedHouseholds`, derived from the saved records (the
+count of rings holding a field at the bound is rebuilt on restore and never saved), and its run is
+diagnostic state (13). FR-WEL-042.
+
+No `Info`, no `Error`, and nothing per agent above `Debug`.
 
 11.4. **Informational diagnostic** `window_extended`: reported once per role at
 validation, not a warning of the library's `Warn` level, naming the role, its effective
@@ -851,7 +959,10 @@ running sums and the work-share arithmetic allocate nothing (NFR-WEL-001).
 in 12.1 and for an effective window above `MaxWelfareWindow` (2.3.4), a new bound of
 `spec-config.md` 4.1 (3 650, provisional); `ErrOverflow` for a window times the largest
 daily income, or the calibration products of 3.1, that do not fit (2.3.2, using the
-checked 128-bit helper). `window_extended` is informational (11.4).
+checked 128-bit helper). Validation bounds only the sales of a role's recipes against the window:
+what it cannot see (the receipts of a role with no recipes, relief, the unearned flows) is handled at
+run time by the clamp and the saturating arithmetic of 2.3.2, which return no error, and
+`ErrOverflow` is unchanged. `window_extended` is informational (11.4).
 
 ## 13. State contributed to a checkpoint
 
@@ -863,12 +974,13 @@ Every spec lists the state it contributes (ADR 0002). This spec's, hosted in the
   unearned sum `G_t` of 2.1.9 that is inside `income_t` (signed `int64`, for the earned ratio of 2.1.7 and the observed wage of 4.3; one field, whose meaning widens with the modules that are on and whose shape is unchanged),
   the own-use receipt `K^own_t` (`int64`) and the own-use household-ticks, and the working flag
   and the working household-ticks; the number of records held (fewer than `T` for a
-  new agent); and the target ratio drawn at creation (5.1);
-- for each (region, role), in region then role order: the run of consecutive ticks used
-  by the `Warn` of 11.3 (diagnostic: it affects no result and is saved so that a resumed
-  run logs as the original did).
+  new agent); and the target ratio drawn at creation (5.1). A role change resizes the ring and keeps the newest `min(held, T')` records (2.3.3), so the number of records held is at most the current effective window;
+- for each (region, role), in region then role order: the two runs of consecutive ticks used
+  by the two `Warn`s of 11.3, the work floor run and the clamp run, one for each (diagnostic: they
+  affect no result and are saved so that a resumed run logs as the original did, sparse,
+  `spec-checkpoint.md` 4.2 tag 7).
 
-**Not saved (derived):** the running sums (recomputed from the buffer on restore), the effective
+**Not saved (derived):** the running sums and the count of fields at the clamp (recomputed from the buffer on restore), the effective
 window (derived from the configuration), the work share and the ratio (derived), the pooled
 regional wage and the choice of the starting wage in its place (4.3: a function of the rings
 and the configuration, with no latch, `spec-checkpoint.md` 4.5 F5).
@@ -934,11 +1046,11 @@ behaviour decided in the third round; the rest restate text that already existed
 |----|-------------|
 | FR-WEL-001 | The welfare ratio of an agent MUST be the sum of `income_t` times 10 000 divided by the sum of `cost_t` over the agent's window, in basis points, truncated toward zero, computed with checked arithmetic. |
 | FR-WEL-002 | `income_t` MUST equal the trade receipts plus the in-kind receipts plus the own-use receipts `K^own_t` (`spec-subsistence.md` 7.1) plus the wages received `Y_t`, plus the relief of the tick, plus the unearned sum `G_t` (the grants of the money-supply module that are not `NotIncome`, the payouts of a treasury that are not `NotIncome`, interest received, the insurance result and rent received, less the taxes, duties and tolls paid, 2.1.9), less the money spent on bids with the purpose `Input`, the wear cost of the tick, the wages paid `V_t`, the rent paid `Z_t` and the interest paid `I^out_t`, in signed minor units, and MUST NOT net spending with the purpose `Upkeep`, `Tool` or `Other`, a levy, the principal of a loan, a starting-money grant or a grant with `NotIncome`. (new) |
-| FR-WEL-003 | The wear cost of a tick MUST be, for each execution started that wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (its effective reference price if it has never traded), times the weight of the executor (of the principal for a hired execution), and a tool purchase MUST NOT be netted. (new) |
+| FR-WEL-003 | The wear cost of a tick MUST be, for each execution started that wears a tool, `ceil(WearPerUse * price / Durability)` at the region's market price of the tool in that tick (its effective reference price if it has never traded), one ceiling per execution and then the sum over the executions (a row of `n` executions costs `n` times one ceiling), recorded when the executions start and valued at P6.3 at the prices of the tick, with no second factor of the weight (an execution is one household's; the `n` of a hired execution are the principal's), equal to the `wear_cost` of `spec-production.md` 9.1 per execution, and a tool purchase MUST NOT be netted. (new) |
 | FR-WEL-004 | `cost_t` MUST be the cost of the agent's effective upkeep (`spec-agents.md` 5.2) at the prices of the region the agent was in during tick `t`. (new) |
 | FR-WEL-005 | While an agent has no region (reserved, unused in version 1) or is away on a trip, its upkeep MUST be valued at the prices of the last region it was in and its income MUST be zero unless it receives some in kind. |
 | FR-WEL-006 | An agent's records MUST stay with it when it changes region. |
-| FR-WEL-007 | An agent with fewer than `T` records MUST have the missing ticks padded with `pad_income = n * U * d_bp / 10 000` and `pad_cost = n * U`, with `d_bp` the role's `DefaultRatio`, default 10 000. |
+| FR-WEL-007 | An agent with fewer than `T` records MUST have the missing ticks padded with `pad_income = n * U * d_bp / 10 000` and `pad_cost = n * U`, with `d_bp` the role's `DefaultRatio`, default 10 000, `U` the effective upkeep at the prices published at the position of the read, and `pad_income` truncated toward zero (so the padded ratio is exactly `DefaultRatio` only when `n * U * d_bp` is divisible by 10 000, 2.2.0). |
 | FR-WEL-008 | The ratio MUST be reported as absent, and not as zero or infinity, when the agent has no upkeep. |
 | FR-WEL-009 | The effective window of an agent MUST be the greater of `WelfareWindow` and `WindowCycles` times the longest of the `Duration` among the recipes on its role's list, the `Duration` among the recipes on its role's effective own-use list, and, for a role with a merchant block, the longest travel time of the self-carried modes of that block, `WelfareWindow` MUST default to 30 and `WindowCycles` to 2, and the effective window MUST be at most `MaxWelfareWindow`. (new) |
 | FR-WEL-010 | A configuration in which a window, an income or a calibration product would overflow MUST be rejected with `ErrOverflow`, and no multiplication in this spec MUST wrap. |
@@ -949,30 +1061,31 @@ behaviour decided in the third round; the rest restate text that already existed
 | FR-WEL-015 | No configuration field MUST hold a wage or a wage multiplier, and a skill premium MUST be measured, never set. |
 | FR-WEL-016 | The role fields `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind` and `ExpectedWorkTicks` MUST have the defaults and bounds of section 12. |
 | FR-WEL-017 | For a role with recipes, a tick MUST be a working tick if the agent had a job in progress in it (started, continued or completed) or was in transit on a commercial trip, and for a role without recipes if it traded or was in transit on a commercial trip, and a tick with an own-use job in progress MUST be a working tick for a role with or without recipes; for a `Hireable` role a tick MUST be a working tick if a job, its own or a hired one, was in progress (its working household-ticks are the `k` of that job), and a tick in which the agent is the principal of a hired job in progress MUST be a working tick for the floor of 5.3 and add no working household-tick; migration travel, rest under the target-income rule and idle ticks MUST NOT be working ticks. (new for the job wording) |
-| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t - K^own_t` (`G_t` the unearned sum of 2.1.9) divided by the number of working household-ticks less the number of own-use household-ticks, and the same figure MUST be available for one agent over its own effective window, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and its weight for a role without recipes that traded or travelled. (new) |
-| FR-WEL-019 | The observed premium of a role in a region MUST be its observed wage times 10 000 divided by the mean observed wage of the region's agents of `Unskilled` roles weighted by households, and MUST be absent if the region has no such agents or the role has no working ticks. (new for the weighting) |
+| FR-WEL-018 | The observed wage over a window MUST be the sum of `income_t - F_t - G_t - K^own_t` (`G_t` the unearned sum of 2.1.9) divided by the number of working household-ticks less the number of own-use household-ticks, and the same figure MUST be available for one agent over its own effective window, where a working household-tick of an agent with a job of `k` executions in progress is `k`, and for a role without recipes it is its weight when it traded or travelled, and `k` when it ran an own-use job of `k` executions and did not trade (a tick with both has the weight as working household-ticks and the own-use `k` as own-use household-ticks, so the divisor is never negative); the quotient MUST be truncated toward zero, the sums taken before the one division, and the wage absent when the divisor is 0 and, for a role or an agent, present whatever the sign of the quotient. (new) |
+| FR-WEL-019 | The observed premium of a role in a region MUST be its observed wage times 10 000 divided by the mean observed wage of the region's agents of `Unskilled` roles weighted by households, and MUST be absent if the region has no such agents or the role has no working ticks. The mean of the unskilled agents MUST be the pooled form (the sum of their numerators over the sum of their working household-ticks less own-use, one truncating division), the premium MUST be truncated toward zero, and the premium MUST be absent when the unskilled wage is not positive. The pooled regional wage MUST be unknown when its divisor is not above 0 or its quotient is not above 0. (new for the weighting) |
 | FR-WEL-020 | The `Snapshot` MUST report the observed wage and premium per role and region, the effective window per role, the households held to work by the floor (`HeldByFloor`, evaluated at the boundary over the agents with no job in progress after P6.3, so it may differ from the count the `Warn` of FR-WEL-033 used), the household-weighted mean welfare ratio per role and region with the households whose ratio exists (`MeanRatioBP` and `RatioHouseholds`; absent when no agent has a ratio), each bounded by the configuration. |
 | FR-WEL-021 | The work share MUST be 10 000 if the ratio is below `T_lo`, 0 if it is at or above `T_hi = T_lo * (10 000 + RestBand) / 10 000`, and `(T_hi - ratio) * 10 000 / (T_hi - T_lo)` between, with `T_lo` the agent's own target, and the executions requested MUST be `ceil(weight * share / 10 000)`. (new for the band and the share) |
 | FR-WEL-022 | With `RestBand` 0 the days worked per year in steady state MUST be `min(D_year, ceil(r_bp * B_r * D_year / (10 000 * W)))`. |
 | FR-WEL-023 | An agent MUST be able to change its work or rest decision only when it has no job in progress. |
-| FR-WEL-024 | Each agent's target MUST be drawn once at creation uniformly between `TargetRatio * (10 000 - spread) / 10 000` and `TargetRatio * (10 000 + spread) / 10 000` from the world's random source, one word of the world's draw (`spec-world.md` 7.2.1) for every agent whatever the spread, the first of the two creation draws of `spec-world.md` 5.7.1, in the creation order of `spec-agents.md` 3.5.2, and MUST be stored with the agent. |
+| FR-WEL-024 | Each agent's target MUST be drawn once at creation uniformly between `TargetRatio * (10 000 - spread) / 10 000` and `TargetRatio * (10 000 + spread) / 10 000` with the first of the agent's two creation words (`spec-world.md` 5.7.1, FR-WLD-066), taken from its own creation stream for every agent whatever the spread (`spec-world.md` 7.3), in the creation order of `spec-agents.md` 3.5.2, and MUST be stored with the agent. |
 | FR-WEL-025 | Validation MUST reject a role whose lowest possible target is below 10 000, or whose `TargetSpread` is 10 000 or more. |
 | FR-WEL-026 | `WithTargetSpread(bp)` MUST override every role's spread, MUST return an error and not panic on an invalid value, and MUST distinguish "not given" from "given as 0". |
-| FR-WEL-027 | If the working ticks in an agent's window are fewer than `MinWorkShare * T / 10 000`, its work share MUST be 10 000 whatever its ratio, and with `MinWorkShare` 0 the floor MUST be off. (new) |
+| FR-WEL-027 | If the working ticks in an agent's window are fewer than `MinWorkShare * T / 10 000` (integer division, `T` the effective window and not the records held, a missing tick not being a working tick), its work share MUST be 10 000 whatever its ratio, and with `MinWorkShare` 0 the floor MUST be off. (new) |
 | FR-WEL-028 | Validation MUST reject a role whose `MinWorkShare * TicksPerYear / 10 000` exceeds its `ExpectedWorkTicks` with `ErrOutOfBounds`. (new) |
 | FR-WEL-029 | A role with `InKind = k_bp` MUST receive `income * k_bp / 10 000` of its income as upkeep goods valued at the prices of its region, and in-kind receipts MUST count in `income_t` at that value. |
 | FR-WEL-030 | A trainee's upkeep taken from its trainer's account MUST count as an in-kind receipt of the trainee and MUST be netted from the trainer's income in the tick of consumption. (new) |
 | FR-WEL-031 | The role economics check MUST NOT fail validation or world construction, and MUST be produced as a report with a number per role. (new) |
 | FR-WEL-032 | The default `TargetRatio` of 15 000 MUST NOT be changed by this spec's rules, with the demand module on or off; in a world with no spending beyond upkeep the check of FR-WEL-031 is then a report of an unmet aspiration. (new) |
-| FR-WEL-033 | The `Warn` "work floor binding" MUST be emitted per region and role, never per agent, only after more than half of the role's households have been held to work by the floor for 10 consecutive ticks, at the tenth tick and every tenth after, with the region, role and households held. (new) |
+| FR-WEL-033 | The `Warn` "work floor binding" MUST be emitted per region and role, never per agent, only after more than half of the role's households have been held to work by the floor for 10 consecutive ticks, at the tenth tick and every tenth after, with the region, role and households held, where an agent is held when it is free, the floor condition of FR-WEL-027 holds and the share its ratio alone gives is below 10 000, the count is in households taken at P2.5, the denominator is every household of the role in the region and the run requires `2 * held > households`, kept per (region, role). (new) |
 | FR-WEL-034 | The state of section 13 MUST be saved as plain data in a fixed order with no maps, and a world restored between ticks MUST give the same ratios, working flags and decisions as an uninterrupted run. |
 | FR-WEL-035 | A run with a logger and an observer attached MUST give results identical to a run without them. |
-| FR-WEL-036 | The household-weighted mean welfare ratio of a role in a region MUST be the sum of weight times ratio over the agents of the role whose ratio exists, divided by the sum of their weights, rounded toward zero, and MUST be absent when no such agent exists. (new, `spec-reference-chain.md` 9) |
+| FR-WEL-036 | The household-weighted mean welfare ratio of a role in a region MUST be the sum of weight times ratio over the agents of the role whose ratio exists, divided by the sum of their weights, rounded toward zero, and MUST be absent when no such agent exists. The observed wage, the pooled wage and the premium truncate toward zero likewise (4.3). (new, `spec-reference-chain.md` 9) |
 | FR-WEL-037 | The observed wage of 4.3 MUST be available per role and region as a value per working household-tick with a flag saying whether anyone worked in the window, for the spawner's occupation signal, and MUST exclude relief. (new, `spec-spawner.md` 6.1) |
 | FR-WEL-038 | With the demand module on, the role economics check of 7.3 MUST remain a report that never fails validation or construction, and the warning `target_above_demand` MUST be the demand module's. (new) |
 | FR-WEL-039 | The earned ratio of an agent MUST be `sum(income_t - F_t) * 10 000 / sum(cost_t)` over the same effective window, with the same padding and truncation as the ratio, MUST be absent when the ratio is absent, and MUST be available per agent in a query. (new, `spec-migration.md` 5.3) |
 | FR-WEL-040 | Each record MUST hold the relief `F_t` and the signed unearned sum `G_t` of 2.1.9 (one field, with no field added for interest, insurance, rent or a fiscal flow) inside `income_t`, the own-use receipt `K^own_t` and the own-use household-ticks, so that the earned ratio and the observed wage per agent are derived from the records alone. (new, `spec-migration.md` 5.4.3, `spec-subsistence.md` 7.3) |
 | FR-WEL-041 | Each flow of 2.1.9 MUST enter the record by its one rule: wages received and paid, rent paid and interest paid in `income_t` and in the observed wage; a payout, interest received, the insurance result and rent received in `income_t` and in `G_t`; a tax, a duty or a toll paid netted in `G_t`; a levy of the money-supply module and the principal of a loan in neither; and a flow that moves after the record of its tick was pushed MUST be added to that record. (new, 2.1.9) |
+| FR-WEL-042 | A record MUST be stored with each field clamped to plus or minus `MaxInt64 / MaxWelfareWindow` so that no running sum over a window overflows, and the clamp MUST be reported; every value of the tick formed from the sums MUST be computed by saturating arithmetic (never wrapping, never panicking, never absent for overflow); and a household whose ring holds a field at the clamp MUST be counted in `RoleRow.ClampedHouseholds` and reported by the `Warn` "welfare record clamped", per region and role, never per agent, with the region, role and households, by pattern A (the first tick of a run and every tenth after), its run saved as diagnostic state (2.3.2, 11.3, 13). (new) |
 
 ### Non-functional
 

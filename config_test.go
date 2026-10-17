@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -79,11 +80,53 @@ func TestDefaults_EarthCalendar(t *testing.T) {
 	}
 }
 
+// TestConfig_HoldsNoWageOrPremiumSetting verifies that no type reachable from
+// Config has a field named for a wage multiplier or a skill premium, and that
+// the only field named for a wage is the warm start's starting wage, a seed
+// that the first observed working household-tick replaces (WEL 4.3), so that a
+// wage and a premium are measured and never set.
+//
+// Guard: FR-WEL-015 is a negative requirement. A convenient SkillPremium or
+// WageBP field added later would pass every other test and quietly turn the
+// measured premium into a setting.
+//
+// Requirement: FR-WEL-015
+func TestConfig_HoldsNoWageOrPremiumSetting(t *testing.T) {
+	t.Parallel()
+	seen := map[reflect.Type]bool{}
+	var visit func(reflect.Type)
+	visit = func(typ reflect.Type) {
+		if seen[typ] {
+			return
+		}
+		seen[typ] = true
+		for i := range typ.NumField() {
+			f := typ.Field(i)
+			name := strings.ToLower(f.Name)
+			if strings.Contains(name, "premium") || strings.Contains(name, "multiplier") {
+				t.Errorf("%s.%s names a premium or a multiplier, want none (FR-WEL-015)", typ.Name(), f.Name)
+			}
+			seedWage := (typ.Name() == "WarmStart" && f.Name == "Wages") || (typ.Name() == "SeedWage" && f.Name == "Wage")
+			if strings.Contains(name, "wage") && !seedWage {
+				t.Errorf("%s.%s names a wage, want only the warm start's starting wage (FR-WEL-015)", typ.Name(), f.Name)
+			}
+			ft := f.Type
+			if ft.Kind() == reflect.Slice || ft.Kind() == reflect.Pointer {
+				ft = ft.Elem()
+			}
+			if ft.Kind() == reflect.Struct {
+				visit(ft)
+			}
+		}
+	}
+	visit(reflect.TypeOf(economysim.Config{}))
+}
+
 // TestDefaults_Values verifies the defaults the owner specs state, one row per
 // constructor, so that a change to a default is a visible, explained change
 // (architecture.md 9.8).
 //
-// Requirement: FR-CFG-007, FR-CFG-049, FR-CFG-050, FR-CFG-057
+// Requirement: FR-CFG-007, FR-CFG-049, FR-CFG-050, FR-CFG-057, FR-WEL-016, FR-WEL-032
 func TestDefaults_Values(t *testing.T) {
 	t.Parallel()
 	w := economysim.DefaultWorld()

@@ -32,6 +32,10 @@ type roleRow struct {
 	tradable     []CommodityID
 	member       []bool
 	regionUpkeep []regionUpkeep
+	// window is the effective welfare window of the role, the one
+	// effectiveWindow computes for the validator (spec-welfare-and-wages.md
+	// 2.3.3). Appended by the welfare row; modules join L inside that function.
+	window int64
 }
 
 // roleTable holds one row per role, indexed by RoleID, and anyTradable, which
@@ -62,11 +66,20 @@ func newRoleTable(c *Config) roleTable {
 		for _, id := range r.Recipes {
 			rid, ok := c.recipeID(id)
 			if !ok {
+				// Not covered by a test: validation rejects an unknown recipe before this
+				// runs, so no valid configuration reaches the panic (testing.md 9.5).
 				panic("economysim: invariant violated: role " + r.ID + " names unknown recipe " + id + " after validation")
 			}
 			row.recipes = append(row.recipes, rid)
 		}
 		slices.Sort(row.recipes)
+		w, ok := effectiveWindow(c, lk, r)
+		if !ok {
+			// Not covered by a test, for the same reason: the validator refuses a
+			// window field or a Duration outside its bounds, which is when ok is false.
+			panic("economysim: invariant violated: role " + r.ID + " has no effective welfare window after validation")
+		}
+		row.window = w
 		for _, id := range r.Trades {
 			row.trades = append(row.trades, roleCommodity(c, r.ID, id))
 		}

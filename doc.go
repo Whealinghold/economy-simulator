@@ -366,4 +366,42 @@
 //   - Yield table: the site factors of the configuration, one profile per
 //     region and recipe with its seasons, read when a job starts
 //     (spec-production.md 6.1).
+//   - Welfare ratio: an agent's income over the cost of its upkeep across its
+//     welfare window, in basis points, so that 10 000 earns exactly the
+//     upkeep; negative when the window's profit is, and absent when there is no
+//     upkeep (spec-welfare-and-wages.md 2.1).
+//   - Welfare window: the ticks a ring holds and a ratio reads, the larger of
+//     WelfareWindow and WindowCycles times the longest job of the role; derived,
+//     never configured per role (spec-welfare-and-wages.md 2.3.3).
+//   - Record of a tick: what one tick adds to a ring: income, cost, relief,
+//     unearned sum, own-use receipt, whether the tick was a working tick, and
+//     its working and own-use household-ticks (spec-welfare-and-wages.md 13).
+//   - Ring: the last records of an agent, one per tick of its welfare window,
+//     with running sums, so that reading a ratio costs the same at any window.
+//   - Earned ratio: the welfare ratio with the relief taken out of the income,
+//     with the same padding and truncation; the figure migration reads.
+//   - Working tick: a tick in which an agent had a job in progress, or traded
+//     or travelled if its role has no recipes; resting under the target-income
+//     rule is not one (spec-welfare-and-wages.md 4.3).
+//   - Working household-tick: one household working for one tick; an agent of
+//     weight w with a job of k executions in progress has k of them.
+//   - Own-use household-tick: a working household-tick spent on an own-use job;
+//     it counts for the work floor and is left out of the observed wage.
+//   - Observed wage: the sum of income less relief, unearned sum and own-use
+//     receipt over the working household-ticks less the own-use ones, truncated
+//     toward zero; absent when that denominator is 0.
+//   - Pooled regional wage: the observed wage taken over every agent of a
+//     region, each over its own window; unknown when not positive, and then the
+//     starting wage of the warm start stands in.
+//   - Observed premium: a role's observed wage over the observed wage of the
+//     region's unskilled agents, in basis points; absent when that is not
+//     positive.
+//   - Target ratio: the welfare ratio an agent aims for, drawn once at creation
+//     around the role's TargetRatio within its TargetSpread; the agent works
+//     while its ratio is below it.
+//   - Work share: the share, in basis points, of a household's executions
+//     requested by the target-income rule: 10 000 below the target ratio, 0 at
+//     the rest band above it and proportional between.
+//   - Work floor: the least share of the window that must be working ticks
+//     (MinWorkShare); below it the work share is 10 000 whatever the ratio.
 package economysim

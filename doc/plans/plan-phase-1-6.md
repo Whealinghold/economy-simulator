@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 6: the welfare record, the ratio and the observed wage
 
-**Status: Proposed (2026-10-13); no phase started.** Sequences the sixth row of
+**Status: done (2026-10-17, uncommitted, branch stage-1-6): phases 1 to 5 built and gated. Coverage by scope (testing.md 9.1, `-coverpkg=./...`): root 99.2%, `config/` 99.8%, `internal/welfare` 98.1%, every other package 98.9% to 100%. Fuzz: `FuzzArithmetic`, `FuzzRing`, `FuzzSetFunctions` 60 s each on one architecture, no crasher; committed corpora for all three. The 5-minute run of Phase 3 acceptance was not done (O3: no CI). Plan audit (2026-10-17): no blocking gaps; the minor ones were closed with added tests and `NextRun`.** Sequences the sixth row of
 Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`internal/welfare` and
 `welfare.go` (the record, the ratio, the observed wage)", into five phases. It
 implements [spec-welfare-and-wages.md](../specs/spec-welfare-and-wages.md) (WEL)
@@ -11,9 +11,8 @@ the determinism rules of section 7), `doc/rules/testing.md` and
 specs disagree, they win and this plan is corrected.
 
 Rule tags read for this plan: architecture=905c0e578c4e662908638dd8,
-observability=748e621d4300d088eb469349, testing=b3559bc6d47470c221bc4642.
-Notes tag (as read at the last revision, 2026-10-13; Phase 1 re-reads the file
-and quotes the tag then): 774432c8fc96fc1e2ea7efaa.
+observability=1eb1a7d0a285170e56f45bef, testing=b3559bc6d47470c221bc4642.
+Notes tag (as read at Phase 1, 2026-10-17, before its edits; Phase 1 gave the file the fresh tag 5246a162dba04d755067b1af, later re-rolled to c75039361ab40bc07b85e14c): eec5f19154d4e3843856e4f3.
 
 A plan decides nothing. Every decision below comes from a spec, a rule, an ADR
 or the decisions of [plan-phase-0-foundation.md](plan-phase-0-foundation.md)
@@ -562,7 +561,7 @@ reverted like any document change; nothing depends on it until Phase 4.
 **Acceptance:** WEL states D62 to D66, D69, D70, FR-WEL-042 and the creation-stream target; AGT 3.8
 and SPN 4.2 carry the role-change clause; every open note tagged WEL, ALL, AGT, SPN, WLD, OBS or CHK at
 that time has a row (the closing row names the ones left open untouched); the roadmap links this plan; the notes carry the dispositions and a fresh tag; the text
-search of `doc/` finds no `'"'"'` (N-103).
+search of `doc/` finds no stray shell-quoting sequence (N-103 describes it).
 
 ## Phase 2: the pure arithmetic of `internal/welfare`
 
@@ -951,7 +950,7 @@ what it builds.
   since an agent starts one job in a tick. The methods the other rows call
   (`addReceipt`, `addInputSpend`, `addWear(commodity, executions, wearPerUse)`,
   `markWorking(k, ownUse)` (once per tick per slot; a second call is a
-  violated invariant, D70), `markTraded`, ...) and `record(prices, upkeep)`
+  violated invariant, D70), `markTraded`, ...) and `record(slot, weight, working, workHH, ownHH, prices, upkeep)` (the working-tick result of `workingTick` is passed in; A1: names are indicative)
   that values each wear row at P6.3 as `n * ceil(WearPerUse * price /
   Durability)` (D66) and `cost_t` at the same prices (the published price of
   the tick, the effective reference price where the market has never traded),
@@ -1006,7 +1005,7 @@ what it builds.
 - **The floor run** (FR-WEL-033, D69): per (region, role) the count of
   consecutive ticks in which `2 * held > households`, `held` from the Phase 3
   count at P2.5 and `households` every household of the role in the region,
-  returning whether to warn at the tenth tick and every tenth after. It reuses
+  returning whether to warn at the tenth tick and every tenth after. The run counter increments through `welfare.NextRun` (saturating, `internal/welfare/run.go`), so `welfare.go` holds no arithmetic. It reuses
   the `warnRun` constant of `observer.go` (a rule constant, 10) and no new
   literal. The run is per (region, role), kept in the world's slices (WEL 13),
   and the world row emits the `Warn`; no logger is called here. **The clamp
@@ -1109,9 +1108,7 @@ what it builds.
   `time`, global rand and `init`; this one asserts `welfare.go` and the
   files of `internal/welfare` read no `.ID` selector of a role, recipe,
   commodity or region and compare no string literal, FR-WEL-013,
-  architecture.md 9.1: a text scan in the manner of that guard, over the
-  same `guardedFiles` scope function, to which `welfare.go` and
-  `internal/welfare/*.go` are added if they are not already covered).
+  architecture.md 9.1: an AST walk in `welfare_internal_test.go` (`TestWelfareFiles_Guards`) over `welfare.go` and `internal/welfare/*.go`; `guardedFiles` already covers both for the determinism guards).
 - Allocation (NFR-WEL-001, testing.md 4.5, 8.2): an ordinary
   `testing.AllocsPerRun` test in the internal test asserting zero allocations
   for `record(prices, upkeep)` including the wear-row valuation, `workingTick`,
