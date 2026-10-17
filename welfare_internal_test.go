@@ -102,6 +102,9 @@ func TestWorkingTick(t *testing.T) {
 		{"recipes, role job k 3 at weight 4: workHH 3, ownHH 0 (D70)", true, 3, false, false, false, 4, true, 3, 0},
 		{"recipes, own-use job k 3 at weight 4: workHH 3, ownHH 3 (D70)", true, 3, true, false, false, 4, true, 3, 3},
 		{"recipes, own-use job of 3 at weight 4", true, 3, true, false, false, 4, true, 3, 3},
+		// Fix: PR 6 review. A negative k was returned as workHH and ownHH.
+		{"recipes, negative own-use executions count as none", true, -1, true, false, false, 3, false, 0, 0},
+		{"recipes, negative executions count as none", true, -1, false, false, false, 3, false, 0, 0},
 		{"recipes, no job is rest", true, 0, false, false, false, 3, false, 0, 0},
 		{"recipes, trade alone is not work", true, 0, false, true, false, 3, false, 0, 0},
 		{"no recipes, traded at weight 3", false, 0, false, true, false, 3, true, 3, 0},
