@@ -315,6 +315,27 @@ positions in `tick.go` (identifier, owner, in order) equals the table of
 table. A position in the spec with no call, a call with no row, or a different
 order fails it. **[project]**
 
+It runs in the staged form of 6.7 (architecture.md 2.10.3): `tick.go` holds the
+list of every position of `spec-world.md` 6 that has a call, and one explicit
+list, `notBuiltPositions`, names the positions that have no call yet. The test
+compares identifier, owner and order with the table by a plain text parse. It
+fails when a listed position has a call (a stale entry) and when a spec
+position is neither called nor listed (a typo). A module's change deletes its
+entries and appends its guarded call.
+
+- **Owner.** The test compares the first area code of the Owner cell; the cell
+  "this spec" (P0.1, P8.6) reads as WLD.
+- **P0.2.** "Nothing is cleared at entry" is an empty position method `p02()`
+  called in the straight line of `tick.go`, a `line` entry; the parse does not
+  special-case it and it has no permanent `notBuiltPositions` entry.
+- **`where`.** Each list entry has a third field: `line` (a call in the
+  straight line) or `bracket` (run inside `beginStep` or `endStep`: P0.1,
+  P0.2a, P0.3, P8.5, P8.6). A `bracket` entry is compared for identifier, owner
+  and order like any other but has no call to find in the straight line.
+- **The straight line.** The test reads the straight-line function of
+  `tick.go` with `go/parser` and checks that it calls the `line` entries in the
+  listed order and nothing else, so a call with no row fails too.
+
 ## 7. End-to-end, golden-file and fuzz tests
 
 7.1. A golden-file test runs the reference supply chain for a fixed number of
@@ -343,7 +364,10 @@ scripted run of each golden set. When a golden file fails, the hash test
 reports the first tick and position at which the state diverged, so the
 failure names a position instead of a rendering. The hash is a test helper in
 the root package's `_test` files, not an exported API (architecture.md 10.2).
-**[project]**
+It is computed by the test file replaying the step through the unexported
+position methods in the order of the position table, so the hash adds no hook
+to production code, and a guard test compares the replay's final state hash and
+golden bytes with a plain `Run`. **[project]**
 
 7.2. Golden files are updated only by an explicit flag (`-update`) and
 **MUST NOT** be regenerated to make a failing test pass without understanding
@@ -522,4 +546,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: b3559bc6d47470c221bc4642
+RULE-TAG: 8d141d87287fe0130681bbe1

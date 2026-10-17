@@ -201,8 +201,10 @@
 //     that names the version of the file format; the loader accepts one.
 //   - Season: a named part of the year, in an ordered list of the calendar.
 //   - Row type: a small struct that an event carries in a slice or a field,
-//     such as Amount (a quantity of a commodity) and HaltRow (a recipe a
-//     production halt skipped and the households it was skipped for).
+//     such as Amount (a quantity of a commodity), HaltRow (a recipe a
+//     production halt skipped and the households it was skipped for) and
+//     ShortRow (an upkeep commodity the households of a role did not hold and
+//     the units short).
 //   - Seed: the value from which every random word of a world derives; with a
 //     configuration and a sequence of calls it fixes a run.
 //   - Site constant: the fixed value that names a draw site (siteWork and the
@@ -404,4 +406,65 @@
 //     the rest band above it and proportional between.
 //   - Work floor: the least share of the window that must be working ticks
 //     (MinWorkShare); below it the work share is 10 000 whatever the ratio.
+//   - Fed: the households of an agent that received their full basket of every
+//     upkeep good in a tick, the least over the goods of floor(consumed over the
+//     per-household quantity), capped at the weight; the rest are unfed
+//     (spec-agents.md 5.4).
+//   - Hunger: the consecutive ticks an agent has had unfed households; it
+//     resets on a tick with none. A strategy reads it (spec-agents.md 5.4.1).
+//   - Privation: the leaky count of unfed ticks the failure ladder reads: one
+//     more for each unfed tick, one less (to 0) for each other; not in the
+//     strategy's view (spec-agents.md 5.4.1).
+//   - Inventory target: the units of a commodity an agent wants to hold after
+//     this tick's upkeep: use and wants, else the output target. It is not the
+//     welfare target ratio or the target price.
+//   - Keep: the units of a commodity an agent wants to hold now: the reserve
+//     plus the use target plus the wants. A stock below it is a gap, above it a
+//     surplus (spec-agents.md 7.3).
+//   - Reserve: the units of a commodity to be eaten at the end of this tick, the
+//     agent's upkeep in total. The reserve money is a different thing: the
+//     ticks of upkeep cost an agent keeps as savings (spec-agents.md 7.4.2).
+//   - Cover: the ticks of use, or of output, an agent holds as a buffer
+//     (CoverTicks, OutputCoverTicks). It is not an insurance cover.
+//   - Tier: one of the parts a bid's gap is split into by priority: upkeep this
+//     tick, the inputs of the next job, then the buffer (spec-agents.md 7.3.4).
+//   - Budget stack: the order in which money is allocated to tiers, the first
+//     tiers limited by money only and the buffer by the spend cap
+//     (spec-agents.md 7.4.3).
+//   - Spend cap: the most money an agent spends on the buffer tier in a tick,
+//     a concave share of its excess over the savings target (spec-agents.md
+//     7.4.4).
+//   - Favourability: the share of a buffer want bought at the market price,
+//     higher when the price is low in its window (spec-agents.md 7.5.2).
+//   - Strategy: the extension interface (Strategy) that decides an agent's work
+//     (Work), its bids and asks (Trade) and its belief updates (Revise). It
+//     reads a view, takes the world's random source as a parameter and returns
+//     plain data; the world checks what it returns (spec-agents.md 6). The
+//     default is DefaultStrategy.
+//   - Agent view: the plain-data copy of an agent's state that Work and Trade
+//     read (AgentView). Its groups are CommodityView, RecipeView, UpkeepRow,
+//     RecipeLine, RecipeOutput, RecipeTool, MarketReport, PriceWindowView and
+//     Tunables, which holds BeliefTunables. It is valid for one call.
+//   - Outcome view: what Revise reads for one admitted order (OutcomeView).
+//   - Intent: one order a strategy wants placed (Intent), turned by the world
+//     into an Order; at most one per commodity.
+//   - Purpose: why a bid is placed (Purpose): upkeep, an input, a tool or
+//     other; it classifies spending only.
+//   - Trade plan: what Trade appends to (TradePlan): intents and discards
+//     (Discard, units to dispose of).
+//   - Job request: what Work returns (JobRequest): a recipe and the most
+//     executions, or none (NoJob).
+//   - Work report: the one pure function of the view that the default Work and
+//     the floor both read: the work share, whether the floor binds and the
+//     halt (spec-agents.md 7.1.3).
+//   - Production halt: the skipping of a recipe whose output stock is already
+//     at or above a ratio (ProduceHaltRatio) of its target, so a glut stays
+//     bounded (spec-agents.md 7.1.5).
+//   - Planned recipe: the recipe the agent expects to run next, chosen by
+//     margin and ignoring what it can afford this tick; its inputs and tools
+//     set the buffer tier of Trade (spec-agents.md 7.2).
+//   - Directive: what a consumer leaves in a directed agent's mailbox between
+//     steps (Directive).
+//   - Directed strategy: the Strategy (Directed) that does what the agent's
+//     Directive says and leaves the rest to its Fallback (spec-agents.md 10).
 package economysim

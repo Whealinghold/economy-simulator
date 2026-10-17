@@ -339,11 +339,11 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
 | `RecipeExecuted` | PRO 14.1 | P2.1, P2.7 | E | core | `Agent`, `Region`+, `Recipe`, `StartTick int64`, `Executions`, `Outputs []Amount`, `Disposed []Amount`, `EffectiveYield` (bp), `Overflow []Amount` (the part of `Disposed` that is not a discard output) |
-| `RecipeRefused` | PRO 14.1; OBS 4.4.6a | P2.8a, after `ProductionHalted`, ascending (`RegionID`, `RecipeID`); once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, never otherwise | A | core | `Region`, `Recipe`, `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (households refused for each reason of the master order of `spec-production.md` 4.2.1; a later module appends its reason's count) |
+| `RecipeRefused` | PRO 14.1; OBS 4.4.6a | P2.8a, after `ProductionHalted`, ascending (`RegionID`, `RecipeID`); once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, or was not made because the first recipe that could not run was blocked; never otherwise | A | core | `Region`, `Recipe`, `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (households refused for each reason of the master order of `spec-production.md` 4.2.1; a later module appends its reason's count) |
 | `RecipeAbandoned` | PRO 14.1 | P7.1, P7.2, a removal or a `Relocate` (`region_changed`) at a call | E | core | `Agent`, `Region`+, `Recipe`, `Executions`, `Reason` |
-| `ProductionHalted` + | OBS 4.4.6; AGT 7.1.5 | P2.8a (new) | A | core | `Region`, `Role`, `Free`, `Halted`, `Skipped []HaltRow` with `HaltRow{Recipe RecipeID; Households int64}` |
+| `ProductionHalted` + | OBS 4.4.6; AGT 7.1.5 | P2.8a (new) | A | core | `Region`, `Role`, `Free`, `Halted`, `Skipped []HaltRow` with `HaltRow{Recipe RecipeID; Households int64}`, `Rested`+ (free households whose work share was 0), `NoRecipe`+ (free households for which no recipe was worth running) |
 | `OwnUseChanged` | SUB 14.1 | P2.8 | A | subsistence | `Region`, `Role`, `Households`, `OnOwnUse`, `Entered`, `Left`, `Started`, `Blocked`, `Retried`, `Output []Amount` |
-| `UpkeepShortfall` | AGT 14.1 | P6.4 | A | core | `Region`, `Role`, `Households`, `Unfed`, `Agents`, `MaxHunger` |
+| `UpkeepShortfall` | AGT 14.1 | P6.4 | A | core | `Region`, `Role`, `Households`, `Unfed`, `Agents`, `MaxHunger`, `Short []ShortRow`+ with `ShortRow{Commodity CommodityID; Units int64}` (the upkeep units needed and not held, by commodity) |
 | `WantShortfall` | DEM 11.1 | P3.6 | A | demand | `Region`, `Role`, `Want`, `Households`, `Choked`, `Planned`, `Funded` |
 | `RoomLimited` | STO 14.1 | P3.6a, after `WantShortfall`, region then role ascending; never when `StartsCut`, `StartsRefused`, `BidsCut`, `BidsRejected`, `ShipmentsRefused` and `Discarded` are all 0 | A | storage | `Region`, `Role`, `LimitedHouseholds`, `FullHouseholds` (both ride along and do not trigger it), `StartsCut`, `StartsRefused`, `BidsCut`, `BidsRejected`, `ShipmentsRefused`, `Discarded` |
 
@@ -362,6 +362,13 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `TraineeshipCompleted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Agent`, `Region`+, `From`, `To` (roles) |
 | `TraineeshipEnded` | SKL 4.7, 8.1 | with a removal (4.4.8) | E | skill barriers | `Agent`, `Region`+, `Reason` |
 | `StoreChanged` | STO 14.1 | a call (`AddStore`, `RemoveStore`); P7.1 after the `RoleChanged` that ended the store; P8.3b for a store facility | E | storage | `Agent`, `Region`, `Role`, `Class StoreClassID`, `Kind` (`added`, `removed`), `Cause` (`consumer`, `role_changed`, `facility`), `Stores` (the agent's stores of the class after), `Room`, `Load` (the account's, as pairs, after) |
+
+`GoodsListed` (`AgentBankrupted`, `EstateOpened`, `RoleChanged`) counts **lots**,
+one for each distinct key of the agent's holdings that is passed to the estate, and
+the three events carry the same count for the same removal (the one function
+`acceptGoods` makes it, `spec-estates.md` 2.5). The units that move travel
+separately, in `WeightChanged.Units` (FR-OBS-019). The rows above stay as they are
+for the parser of the 4.1 tables; this paragraph is outside them.
 
 #### 4.1.5 Money, estates, boundary
 
@@ -791,7 +798,8 @@ builds the snapshot for it only in that case (8.2).
 
 **Decision.** One aggregate per region and role per tick in which at least one
 free household's job request was declined by the **production halt**
-(`spec-agents.md` 7.1.5): `Free` is the sum of weights of the role's agents in the
+(`spec-agents.md` 7.1.5), or at least one free household **rested** or found
+**no recipe worth running** (the amendment at the end of this section): `Free` is the sum of weights of the role's agents in the
 region that were passed to `Work` at P2.5 (the **free** households: a different
 denominator from `Households` of `UpkeepShortfall`, which is the whole role, and
 so a different name; it is not POP's `Exposed`), `Halted` the households of
@@ -802,7 +810,7 @@ weight), and `Skipped` one row per recipe of the role that the halt skipped for
 at least one free household, with the households for which it did (a household
 may appear under several recipes, so the rows do not sum to `Halted`; the metric
 fed by the rows counts a household once per recipe skipped, 6.2.1). The rows are in ascending `RecipeID`; a role
-has at most as many as its list. It is never emitted when `Halted` is zero.
+has at most as many as its list. It is never emitted when `Halted`, `Rested` and `NoRecipe` are all zero.
 
 It answers N-087's question by commodity: the recipe row names the output that
 was overstocked. The mechanism is AGT's and is settled (`spec-agents.md` 7.1.5): the
@@ -810,13 +818,26 @@ was overstocked. The mechanism is AGT's and is settled (`spec-agents.md` 7.1.5):
 household and each recipe of its role, from the agent's own stock and `OutputTarget`,
 and sums it per (region, role). `JobRequest` and `Work` are unchanged: a strategy
 cannot hide the halt or report a different count, so every strategy, the library's
-and a consumer's, is counted alike. A `rest` is **not** counted here: it is the target-income rule working as designed,
-not a clamp, and the households held to work by the floor are in the snapshot
-(5.3.4). The position is P2.8a, after `OwnUseChanged`, in ascending (`RegionID`,
+and a consumer's, is counted alike. The position is P2.8a, after `OwnUseChanged`, in ascending (`RegionID`,
 `RoleID`). `ProductionHalted` is the counter of the damper D24 (the production halt,
 `ProduceHaltRatio`; `spec-stability.md` register, K-AGT09 of
 `spec-calibration.md`): a halt that acts is visible here and nowhere else
 (FR-STB-013).
+
+**Rested and no recipe.** `Rested` is the households of the free agents whose work
+share is 0 (`spec-agents.md` 7.1.3): the target-income rule working as designed, not a
+clamp, and so not in `Halted`. `NoRecipe` is the households of the free agents that
+requested no job with the reason `no_recipe` of the work report: no recipe was eligible
+(a net value at or below 0, or a food cap of 0), the halt skipped none and none was
+blocked (4.4.6a). Both are counted by the world from the work report, as `Halted` is, so
+a consumer's strategy cannot hide them. They were left out of the first version of this
+event and are counted because a flat output has causes that nothing else separates:
+households that rested (the labour-supply decision of N-028, of which `floor_held` shows
+only the override), households with no recipe worth running, and a chain that could not
+start (`RecipeRefused`). Each free household is exactly one of: started, `Halted`,
+`Rested`, `NoRecipe` or blocked, so `Free` less the four is the households that started.
+Both fields are appended at the end, are sums of weights and are omitted from the golden
+rendering at 0 (FR-OBS-091). The metric is `economysim.work.declined` (6.2.1).
 
 #### 4.4.6a `RecipeRefused`
 
@@ -829,7 +850,13 @@ households refused. The first slice has five columns, `NotOnRole`, `ZeroYield`,
 `NoSite`, `NoTool` and `NoInput`; a module appends the count of its own reason
 (a count, never a typed ID: 4.2 of the rules). A request that started fewer
 executions than the weight is not a refusal and a request declined by the production
-halt is in `ProductionHalted`, so the two events are disjoint. The starts of a
+halt is in `ProductionHalted`, so the two events are disjoint. A free household that
+requested no job **because the first recipe of its role that could not run was
+blocked** is counted here too, under that recipe and the reason the view gives
+(`spec-agents.md` 7.1.4, FR-AGT-086), once, and only where the halt skipped none of its
+recipes: the default strategy never requests a recipe the view says cannot run, so
+without this its households would be counted by nothing and a stalled chain would show
+no `RecipeRefused` at all (N-308). The starts of a
 trainee, of an own-use job (`OwnUseChanged.Blocked`) and of a hire (`LabourRound`) are
 counted by their modules and not here.
 
@@ -843,6 +870,21 @@ P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`); the worl
 counts into the tally of `production.go` where a start returns 0 and flushes it once
 at P2.8a, behind the "observer supplied" flag (rules 4.5). It is never emitted when
 no request was refused (FR-OBS-095).
+
+#### 4.4.6b `UpkeepShortfall.Short`
+
+**Decision.** `UpkeepShortfall` gains `Short`, one `ShortRow{Commodity; Units}` for each
+upkeep commodity of the role that its households needed in the tick and did not hold, in
+ascending `CommodityID`, `Units` the sum over the role's agents of the total less the
+consumed (`spec-agents.md` 5.3: the weight is folded in, so a cohort of 5 short of 2 per
+household is 10), and no row where nothing was short. It is the quantity the consumption
+step already computes for the per-agent `Debug` line "upkeep unmet", summed per (region,
+role) and so bounded by the configuration. `Unfed`, `Agents` and `MaxHunger` say that
+households starve and how long, not of what: with an upkeep of food and fuel the two
+shortages have different cures (a staple chain against a fuel chain), and the goods
+already eaten are in `BoundaryFlow` under `consumption`, which is the supply side of the
+same gap and cannot give the need. It is appended at the end of the row, a slice, and
+empty when all were fed (FR-OBS-091). The metric is `economysim.upkeep.short` (6.2.1).
 
 #### 4.4.7 Events that are not added, with the reason
 
@@ -955,7 +997,9 @@ no state and takes no lock.
 households is the sum of weights (FR-SCL-015, N-013). The pseudo-agents (the
 estates and the counterparties of the outside) are in neither count and appear
 only where a row is about them (the pool of a region, 5.3.2; the counterparties,
-5.3.9).
+5.3.9). The estate has no row of its own among the agents of a snapshot and no marker: its identity is the
+`RegionID` of the region row and its money is `RegionRow.MoneyPool` (`spec-estates.md`
+2.7, FR-EST-010).
 
 5.1.3. **A field absent for want of a module is zero**, and `Modules` lists the
 modules that are on, so a consumer tells "zero" from "not measured". A row that
@@ -1018,7 +1062,7 @@ per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the m
 | Field | Type | Meaning | Src | Cost |
 |-------|------|---------|-----|------|
 | `Tick` | `int64` | the tick the next step will run (`World.Tick()`) | WLD 3.7.2 | K |
-| `Seed` | `uint64` | the seed the world was built with, **for information**; a restore carries it (`spec-world.md` 12.3) | WLD 16.5 | K |
+| `Seed` | `uint64` | the **effective** seed: the seed the world was built with, or the one a reseeding restore replaced it with; it is the seed read back (`spec-world.md` 12.3, ADR 0008). Stage 1 (the slice) has no `WorldRestored`, which arrives with the checkpoint | WLD 12.3, 16.5 | K |
 | `ConfigHash` | `[32]byte` | the configuration hash | CFG 8 | K |
 | `Moment` | `Moment` | `Calendar.At(Tick)`, a pure function of the tick (N-031) | CAL 4 | D |
 | `Names` | `Names` | the names table of 3.2.4 | OBS | D |
@@ -1028,6 +1072,12 @@ per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the m
 | `Money` | `Money` | money in non-boundary accounts, estates, escrow and treasuries included (the treasuries in `MoneyTreasury`, 5.3.2), counterparties excluded (they hold nothing at a boundary) | LED 9, POL 10.5 | K |
 
 #### 5.3.2 Regions: `Regions []RegionRow`, one per region by `RegionID`
+
+The Stage 1 snapshot declares the rows of the slice only: `RegionRow` has no
+`MoneyContract` and no `MoneyTreasury` until the module that owns the escrow or the
+treasuries is added, which appends the field at its end (it is omitted from the
+golden at zero, 9.5.2). Until then the identity of FR-OBS-041 reads `MoneyHouseholds`
+and `MoneyPool` only, the escrow being 0.
 
 An outside node has a row with `Outside` true and every other field zero
 (`spec-regions.md` 3.5): a consumer indexes by `RegionID` without a hole.
@@ -1420,10 +1470,12 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.recipe.overflow` | Counter | `{unit}` | `economysim.commodity` | `RecipeExecuted` (`Overflow` rows, units) | **new**: the units an output lost for want of room, the anomaly that the `Warn` of row 19 of 7.3 reports; `economysim.commodity.flow` under `disposal` also counts the discard outputs, which are waste by design, so it cannot separate the two, and a glut shows here first |
 | `economysim.production.cost_anchor` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`CostAnchor`), once per market per tick, so the series is never stale | **new**: the anchor caps price beliefs, so it says whether a market sits at its ceiling because of the cost anchor or the configured band (read with `belief.at_bound`); a value of 0 is an unknown anchor (no observed wage or price), which silently removes the cap. Event-fed and not a snapshot field, because the anchor is a function of the previous tick's prices and is recomputed each tick, not saved (`spec-production.md` 15), so a snapshot of a restored world could not equal the original's (FR-OBS-043) |
 | `economysim.production.halted` | Counter | `{household}` | `economysim.role`, `economysim.recipe` | `ProductionHalted` (`Skipped` rows: a household counts once for each recipe skipped, so the sum over recipes is not the households halted; that figure, `Halted`, is in the event) | **new** (N-067) |
+| `economysim.work.declined` | Counter | `{household}` | `economysim.role`, `economysim.work_decline` (`rest`, `no_recipe`) | `ProductionHalted` (`Rested` as `rest`, `NoRecipe` as `no_recipe`), once per event | **new** (4.4.6): the free households that requested no job because their work share was 0 or no recipe was worth running. Disjoint from `production.halted` (the halt) and from `recipe.refused` (a blocked recipe), so the four add up to the households that did not start; a flat output is otherwise indistinguishable between a rest (the target-income rule, N-028), a glut-halt, a missing recipe and a stalled chain |
 | `economysim.agent.count` | UpDownCounter | `{agent}` | `economysim.role` | `AgentSpawned` (+1), `AgentBankrupted` (-1), `RoleChanged` (-1 `From`, +1 `To`) | kept |
 | `economysim.agent.removals` | Counter | `{agent}` | `economysim.role`, `economysim.cause` | `AgentBankrupted` | **renamed** from `economysim.agent.bankruptcies` (6.3.4) |
 | `economysim.household.count` | UpDownCounter | `{household}` | `economysim.role` | `AgentSpawned` (+`Weight`), `AgentBankrupted` (-`Weight`), `WeightChanged` (`To` less `From`), `RoleChanged` (-`Weight` `From`, +`Weight` `To`) | kept |
 | `economysim.household.unfed` | UpDownCounter | `{household}` | `economysim.role` | `UpkeepShortfall` (`Unfed`), with the adapter's per-(region, role) last value (6.3.1) | kept, rule made exact |
+| `economysim.upkeep.short` | Counter | `{unit}` | `economysim.commodity`, `economysim.role` | `UpkeepShortfall` (`Short` rows: the units, by commodity) | **new** (4.4.6b): `household.unfed` says households starve and not of what; with more than one upkeep commodity the shortage of each has its own cure, and `BoundaryFlow` `consumption` is the supply side only |
 | `economysim.household.exits` | Counter | `{household}` | `economysim.role`, `economysim.cause` (`insolvent`, `starved`, `consumer`) | `AgentBankrupted` (`Weight`) and `WeightChanged` (`From` less `To`, for a reduction); the cause `population` is left out, because `household.deaths` counts it (FR-OBS-059) | **new**: rung 3 of the ladder cuts a cohort by the unfed share and removes it only at weight 0 (`spec-spawner.md` 5.3), so `agent.removals` stays at 0 while households leave, and `household.count` nets the exits against entries |
 | `economysim.role.changes` | Counter | `{change}` | `economysim.role` (the destination) | `RoleChanged` (by `To`) | kept |
 | `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`) | **new** |
@@ -1525,6 +1577,7 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.welfare.ratio.households` | Gauge | `{household}` | `economysim.role`, `economysim.region` | `Roles[].RatioHouseholds` where `HasMeanRatio`: the denominator of `economysim.welfare.ratio`, as `belief.outcomes` is of `belief.at_bound`; without it a mean over one household reads as a mean over four hundred, and a region's mean over roles (which WEL 11.2 says a consumer forms weighted by `RatioHouseholds`) cannot be formed from the metrics |
 | `economysim.welfare.floor_held` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].HeldByFloor * 10 000 / Households`, absent where `Households` is 0: the share of the role's households held to work by `MinWorkShare`, evaluated at the boundary (WEL 11.2), so it can differ from the count the `Warn` "work floor binding" used at P2.5. The `Warn` fires only above 5 000 for ten consecutive ticks and then every tenth, so the gauge is the only view of a role approaching the threshold or leaving it |
 | `economysim.wage.observed` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].WageObserved` where `HasWage` (WEL 4.3): the observed wage of the role. It is not the pooled regional wage that the cost anchor reads (WEL 4.3, with the warm-start wage as fallback), so it explains a wage trend, not an anchor by itself |
+| `economysim.household.privation.max` | Gauge | `{tick}` | `economysim.role`, `economysim.region` | `Roles[].MaxPrivation`: the largest privation of an agent of the role, the leaky count the failure ladder reads (`spec-spawner.md` 5.1, 5.2). It is a snapshot gauge because `UpkeepShortfall` is not emitted once everyone is fed again, which is exactly when privation is still high and falling: the gauge shows how close a role is to a role change (`ChangePrivation`) or a removal (`RemovePrivation`), which `agent.removals` shows only afterwards |
 | `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
 | `economysim.room.fill` | Gauge | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` | `Roles[]` room and load, `Load * 10 000 / Room` of a dimension (`mass`, `bulk`), absent where the room is 0 |
 | `economysim.credit.arrears` | Gauge | `{minor_unit}` | `economysim.region` | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region (a level that changes with no `CreditSettled`: a debtor removed in phase 7, `ForgiveClaims`, a relocation) |
@@ -1651,6 +1704,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
 | `economysim.bound` | `floor`, `ceiling` | `economysim.belief.at_bound` |
 | `economysim.belief_limit` | `conflict`, `clamped` | `economysim.belief.limited` |
+| `economysim.work_decline` | `rest`, `no_recipe` | `economysim.work.declined` |
 | `economysim.region` | the regions of the configuration (an existing attribute of RES) | `economysim.market.clearing_price`, `economysim.belief.centre`, `economysim.external.price`, the snapshot gauges |
 | `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field`, `economysim.actor` | the entities of the configuration of the module (store classes, facility classes, bodies, rights, controls, technology fields, policy actors) | STO, CAP, ORG, TEC, PLC |
 | `economysim.dimension` | `mass`, `bulk` | `economysim.room.fill` |
@@ -1690,16 +1744,16 @@ the attribute sets, every cell that could occur:
 |-------|-------|
 | market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, cost anchor 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2, belief outcomes 5 x 30, belief limited 5 x 30 x 2) | 1 830 |
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
-| production (executions 45, halted 20 roles x 45 recipes, refused 45 x 5 reasons, abandoned 45 x 4 reasons, overflow 30) | 1 380 |
-| agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20, exits 20 x 3) | 260 |
+| production (executions 45, halted 20 roles x 45 recipes, refused 45 x 5 reasons, abandoned 45 x 4 reasons, overflow 30, work declined 20 roles x 2) | 1 420 |
+| agents and households (count 20, removals 20 x 4, household count 20, unfed 20, upkeep short 30 x 20, changes 20, births 20, deaths 20, exits 20 x 3) | 860 |
 | wants (6 x 20) and entry (9) | 129 |
 | money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
-| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100) | 1 090 |
+| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100, privation 100) | 1 190 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 6 200** (6 213), for the instruments of the earlier modules |
+| **Total** | **about 7 000** (6 953), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -2120,7 +2174,8 @@ are the event's own (3.3.2), the recorder may keep them.
 | removal order | one removal emits its events in the order of 4.4.8 | FR-OBS-020 |
 | bucket | `BoundaryFlow` with `Tick` -1 appears once, before the first `TickStarted`, with the totals of `Snapshot.Construction` taken before the step | FR-OBS-015 |
 | `BoundaryFlow` scope | no internal reason appears; the order is that of 4.4.1.2 | FR-OBS-014 |
-| `ProductionHalted` | emitted only with `Halted` above 0, with a `Skipped` row for each recipe skipped | FR-OBS-016 |
+| `ProductionHalted` | emitted only with `Halted`, `Rested` or `NoRecipe` above 0, with a `Skipped` row for each recipe skipped; the three add to at most `Free` | FR-OBS-016 |
+| `UpkeepShortfall.Short` | one row for each commodity short, ascending, none where nothing was short, and a non-empty `Short` only with `Unfed` above 0 | FR-OBS-100 |
 | `RecipeRefused` | emitted only for a (region, recipe) with a refusal, in ascending order, the counts adding to the households refused, and no row for a tick with none | FR-OBS-095 |
 
 ### 9.2 The capturing handler and the logs
@@ -2233,11 +2288,15 @@ t=0 AgentSpawned Agent=1 Region=alpha Role=baker Weight=1 StartMoney=100 StoresL
 
 and only the `testdata/golden/storage/` and `all/` files carry it.
 
-9.5.3. **The file** `testdata/golden/events-<pack>.txt` holds, for the reference
+9.5.3. **The file** `testdata/golden/off/events-<pack>.txt` (the module-on sets are `testdata/golden/<module>/` and `all/`, testing.md 7.1.1) holds, for the reference
 chain on a fixed seed and a fixed number of ticks (a placeholder, REF 8.2):
 
-1. the **full rendering** of the first 5 ticks of the `one` pack (small enough to
-   read), after the events of construction;
+1. the events of construction as a block headed `construction` (every event
+   emitted before the first `TickStarted`, `RunStarted` excepted, in emission order:
+   the `Tick` -1 `BoundaryFlow` bucket, `WorldCreated` and the construction
+   `AgentSpawned` events, which carry `Tick` 0 and are not counted in tick 0's count),
+   then the **full rendering** of the first 5 ticks of the `one` pack (small enough
+   to read);
 2. one line per tick of the whole run: `t=<n> events=<count> digest=<16 hex>`,
    the first 8 bytes of the SHA-256 of that tick's rendered lines (a test may use
    a hash: it is not randomness);
@@ -2626,7 +2685,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-013 | Every step that emitted `TickStarted` MUST emit `TickEnded`, with `Failed` true when it returned an error, and a guard that refuses a step before `TickStarted`, and a step that ends in a panic (`spec-world.md` 3.5.4), MUST emit no `TickEnded`; a `Run` that ends in a panic emits no `RunEnded` and the run span stays open until the world is restored. |
 | FR-OBS-014 | `BoundaryFlow` MUST be emitted only for a (region, reason, money or commodity) whose reason has the kind faucet or sink and whose total is non-zero, in the order of region, registry order of the reason, money before goods, then commodity, with `Commodity` `NoCommodity` for money (4.4.1). |
 | FR-OBS-015 | The construction bucket MUST be emitted once as `BoundaryFlow` with `Tick` -1, at the entry of the first step of a world that is still in its construction phase and before its `TickStarted`, and MUST NOT be emitted by a world restored after its first step (4.4.2). |
-| FR-OBS-016 | `ProductionHalted` MUST be emitted once per region and role per tick in which at least one household's job request was declined by the production halt, with one `Skipped` row for each recipe the halt skipped, MUST be counted by the world from the view and not reported by a strategy (`JobRequest` and `Work` are unchanged, `spec-agents.md` 7.1.5), and MUST NOT be emitted when `Halted` is 0 (4.4.6). |
+| FR-OBS-016 | `ProductionHalted` MUST be emitted once per region and role per tick in which at least one household's job request was declined by the production halt, or at least one free household rested or found no recipe worth running, with one `Skipped` row for each recipe the halt skipped, `Rested` the free households whose work share was 0 and `NoRecipe` those that requested no job with the reason `no_recipe`; it MUST be counted by the world from the work report and not reported by a strategy (`JobRequest` and `Work` are unchanged, `spec-agents.md` 7.1.5), and MUST NOT be emitted when `Halted`, `Rested` and `NoRecipe` are all 0 (4.4.6). |
 | FR-OBS-017 | A call that sets a slot MUST emit one event per cell whose value changed, in the order of the key, after the whole call is applied, with the `Tick` of the next step and before its `TickStarted`, and MUST emit none for a cell set to the value it holds (4.4.4). |
 | FR-OBS-018 | `RecipeExecuted`, `RecipeAbandoned` and the three `Traineeship*` events MUST carry the region of the agent at the time of the event (3.3.7). |
 | FR-OBS-019 | `WeightChanged` MUST carry the money (signed, positive to the agent) and the units of goods that the change moved between the agent and the estate. |
@@ -2664,16 +2723,19 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-075 | A log message MUST be a constant lowercase phrase with no interpolated value, and all records of one call site MUST have the same message. |
 | FR-OBS-076 | "world created", "warm start applied", "run started", "run ended" and "world restored" MUST be emitted once each, at the point and with the keys of 7.2. |
 | FR-OBS-080 | The golden rendering of an event MUST follow 9.5.2: `t=<Tick>`, the type, the fields in declaration order, typed IDs as their string IDs, no timestamp and no map order; and a field at its zero value (not a typed ID and not `Side`) MUST NOT be rendered, so that a field a module appends at its off value leaves no trace. |
-| FR-OBS-081 | `testdata/golden/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
+| FR-OBS-081 | `testdata/golden/off/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
 | FR-OBS-090 | A world with no logger and no observer, and one given a nil logger or a nil observer, MUST build, step and run, write nothing to stdout or stderr and not panic. |
 | FR-OBS-091 | A field that a module appends to an event or to a snapshot row MUST be a count, an amount, a bool, a constant of a closed set or a slice, MUST NOT be a typed ID, and MUST be zero when the module is off; the rendering of every event and row of a world with the module off MUST be byte-equal to that of the tree before the module was added (9.5.2; architecture.md 2.10.5). |
 | FR-OBS-092 | `WearApplied` MUST be emitted once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows, with `Units` equal to the ledger's wear units of the commodity; the construction bucket MUST be emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows; it MUST NOT be emitted for a tick with no wear. |
 | FR-OBS-093 | `Markets[].Lots` MUST equal the number of lots of the commodity in the accounts counted by `HeldByAgents`, `HeldByEstate` and `HeldByTreasury` of the region, and a restored world's `Lots` MUST equal the original's (FR-OBS-043). |
 | FR-OBS-094 | `economysim.belief.outcomes` MUST add `BeliefsUpdated.Outcomes` and `economysim.belief.limited` MUST add `Conflicts` as `conflict` and `Clamped` as `clamped`, each by commodity and region, once per event; the series are absent, not zero, until the first event. |
-| FR-OBS-095 | `RecipeRefused` MUST be emitted once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0, each count MUST be the sum of the weights of the agents refused for that reason under the first applicable reason of the master order of `spec-production.md` 4.2.1, and it MUST NOT be emitted for a tick with no such refusal (4.4.6a). `economysim.recipe.refused` MUST add each count by recipe and reason, once per event. |
+| FR-OBS-095 | `RecipeRefused` MUST be emitted once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0, or the default `Work` requested no job because the first recipe that could not run was blocked (`spec-agents.md` 7.1.4, FR-AGT-086), each count MUST be the sum of the weights of the agents refused for that reason under the first applicable reason of the master order of `spec-production.md` 4.2.1 (a blocked household once, under its blocked recipe and the view's reason), and it MUST NOT be emitted for a tick with no such refusal (4.4.6a). `economysim.recipe.refused` MUST add each count by recipe and reason, once per event. |
 | FR-OBS-096 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs; `economysim.recipe.overflow` MUST add its units by commodity, and the `Warn` "recipe output disposed" MUST be fed by it. |
 | FR-OBS-097 | `economysim.recipe.abandoned` MUST add `RecipeAbandoned.Executions` by recipe and `Reason`; `economysim.recipe.in_progress` MUST equal `Jobs[].Executions` by recipe and region, absent and not zero until a snapshot is passed, and 0 for a pair with no row; `MarketCleared.CostAnchor` MUST equal the cost anchor of the commodity in the region as the production step read it for the tick, and `economysim.production.cost_anchor` MUST hold it by commodity and region once per market per tick. |
 | FR-OBS-098 | `economysim.welfare.ratio.households` MUST equal `Roles[].RatioHouseholds` and be recorded exactly where `economysim.welfare.ratio` is (where `HasMeanRatio`); `economysim.welfare.floor_held` MUST equal `Roles[].HeldByFloor * 10 000 / Households`, rounded toward zero (architecture.md 3.5), and be absent where `Households` is 0; `economysim.wage.observed` MUST equal `Roles[].WageObserved` where `HasWage` and be absent otherwise. Each is absent, not zero, until a snapshot is passed, and the three are by role and region. |
+| FR-OBS-099 | `economysim.work.declined` MUST add `ProductionHalted.Rested` as `rest` and `ProductionHalted.NoRecipe` as `no_recipe`, by role, once per event; the series are absent, not zero, until the first event. |
+| FR-OBS-100 | `UpkeepShortfall.Short` MUST list, in ascending `CommodityID`, one row for each upkeep commodity of the role whose total need exceeded what its agents held, `Units` the sum over the role's agents of the total less the consumed, and no row for a commodity with nothing short; it MUST be empty for a tick in which the event is not emitted, and `economysim.upkeep.short` MUST add each row by commodity and role, once per event (4.4.6b). |
+| FR-OBS-101 | `economysim.household.privation.max` MUST equal `Roles[].MaxPrivation` by role and region, and be absent, not zero, until a snapshot is passed. |
 
 ### Non-functional
 
@@ -2827,6 +2889,6 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `Reason`, `Cause`, `Kind`, `ScaleKind` and their constants (and `Side` with its `String` method); `warnRun` | root package, `event.go`, `observer.go` |
 | the log key strings (and nothing else; no alias, no import) | `internal/logkeys` |
 | the instruments, the accumulators, `RecordSnapshot`, the spans | `otelobserver/` (separate module) |
-| the golden rendering (a test helper) and the golden files | `*_test.go` of the root package, `testdata/golden/events-<pack>.txt` |
+| the golden rendering (a test helper) and the golden files | `*_test.go` of the root package, `testdata/golden/off/events-<pack>.txt` |
 | the recorder and the capturing handler | `_test.go` files (architecture.md 10.3) |
 | no model | `doc/specs/models/obs/` does not exist (15) |

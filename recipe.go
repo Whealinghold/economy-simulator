@@ -42,10 +42,14 @@ type recipeRow struct {
 }
 
 // recipeTable holds one row per recipe, indexed by RecipeID, and byOutput, the
-// makers of each commodity indexed by CommodityID.
+// makers of each commodity indexed by CommodityID. isTool says, for each
+// commodity, that some recipe of the configuration requires it as a tool
+// (spec-agents.md 6.4.1); it is derived from the whole configuration, whatever
+// the role.
 type recipeTable struct {
 	rows     []recipeRow
 	byOutput [][]RecipeID
+	isTool   []bool
 }
 
 // newRecipeTable builds the table from a canonical configuration that passed
@@ -57,6 +61,7 @@ func newRecipeTable(c *Config) recipeTable {
 	t := recipeTable{
 		rows:     make([]recipeRow, len(c.Recipes)),
 		byOutput: make([][]RecipeID, len(c.Commodities)),
+		isTool:   make([]bool, len(c.Commodities)),
 	}
 	for i := range c.Recipes {
 		r := &c.Recipes[i]
@@ -83,6 +88,7 @@ func newRecipeTable(c *Config) recipeTable {
 		row.tools = make([]toolRow, len(r.Requires))
 		for j, tl := range r.Requires {
 			row.tools[j] = toolRow{commodity: recipeCommodity(c, r.ID, tl.Commodity), wearPerUse: tl.WearPerUse}
+			t.isTool[row.tools[j].commodity] = true
 		}
 	}
 	return t
@@ -104,3 +110,9 @@ func (t *recipeTable) row(id RecipeID) *recipeRow { return &t.rows[id] }
 // ascending RecipeID; the list is empty when no recipe makes it. The caller
 // must not change it.
 func (t *recipeTable) makers(id CommodityID) []RecipeID { return t.byOutput[id] }
+
+// tool reports whether some recipe of the configuration requires the commodity
+// as a tool. A commodity out of range is not one.
+func (t *recipeTable) tool(c CommodityID) bool {
+	return int(c) >= 0 && int(c) < len(t.isTool) && t.isTool[c]
+}

@@ -184,6 +184,19 @@ const (
 	ReasonNoInput Reason = "no_input"
 )
 
+// The reasons of the "work declined" Debug line that no start refusal covers
+// (spec-agents.md 14.3). They are log values only: no event carries them, and
+// they are not values of the metric attribute economysim.reason.
+const (
+	// ReasonRest is a work share of 0: the agent rests.
+	ReasonRest Reason = "rest"
+	// ReasonHalted is no job because the production halt skipped every
+	// eligible recipe (spec-agents.md 7.1.5).
+	ReasonHalted Reason = "halted"
+	// ReasonNoRecipe is no job because no recipe is eligible.
+	ReasonNoRecipe Reason = "no_recipe"
+)
+
 // Cause is the machine-readable cause of a removal, a weight change or a role
 // change, a member of a closed set. Its values are the values of the cause log
 // key. The constants below are the ones the first slice can reach; a module
@@ -254,6 +267,16 @@ type HaltRow struct {
 	Recipe RecipeID
 	// Households is the households for which it was skipped.
 	Households int64
+}
+
+// ShortRow is the units of one upkeep commodity that the households of a role
+// in a region needed in a tick and did not hold.
+type ShortRow struct {
+	// Commodity is the upkeep commodity.
+	Commodity CommodityID
+	// Units is the units short, summed over the role's agents (the weight
+	// folded in), above 0.
+	Units int64
 }
 
 // WorldCreated is the first event of a constructed world, with Tick 0. It
@@ -494,8 +517,10 @@ type RecipeAbandoned struct {
 }
 
 // ProductionHalted is emitted once per region and role per tick in which the
-// production halt declined the job request of at least one free household; it
-// is never emitted when none was.
+// production halt declined the job request of at least one free household, or
+// at least one free household rested, or found no recipe worth running; it is
+// never emitted when none did. The name is the halt's, the first of the
+// three; the event is the aggregate of the work decision.
 type ProductionHalted struct {
 	Tick int64
 	// Region is the region.
@@ -509,6 +534,13 @@ type ProductionHalted struct {
 	// Skipped has one row for each recipe the halt skipped, in ascending
 	// RecipeID.
 	Skipped []HaltRow
+	// Rested is the free households that requested no job because their work
+	// share was 0: the target-income rule at work, not a clamp.
+	Rested int64
+	// NoRecipe is the free households that requested no job because no recipe
+	// was worth running: none was eligible, and the halt skipped none and no
+	// recipe was blocked.
+	NoRecipe int64
 }
 
 // UpkeepShortfall is emitted once per region and role per tick in which at
@@ -527,6 +559,9 @@ type UpkeepShortfall struct {
 	Agents int64
 	// MaxHunger is the largest hunger of an agent of the role.
 	MaxHunger int64
+	// Short has one row for each upkeep commodity the role's households
+	// needed and did not hold, in ascending CommodityID.
+	Short []ShortRow
 }
 
 // AgentSpawned is emitted when an agent enters the world, including each

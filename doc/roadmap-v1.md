@@ -113,7 +113,45 @@ what each adds beyond the table cell:
   two `Warn`s, and the holder of the ring is the agent row. Coverage: root 99.2%,
   `internal/welfare` 98.1%.
 
-Rows 7 to 12 have no plan yet.
+Rows 7 to 12 were planned on 2026-10-17, one plan each (the Plan column), in
+parallel and then checked against each other. Notes on what each adds beyond the
+table cell:
+
+- Row 7: adds `internal/household` (the pure rules of consumption, the targets,
+  the tiers, the spend cap and the work side) and builds the unexported `agent`
+  with the fields no module owns (a module's per-agent state is in the module's
+  slices, N-244). The belief parameters are an exported group of both views
+  (D82). The row gives the world per-agent functions (`newAgent`, `consume`,
+  `fillCore`, the work report), not the loops. `Directed` has no `SaveState` and
+  `LoadState` until the checkpoint row (N-247).
+- Row 8: `estates.go` is a core file with no `Modules` pointer; the module half
+  (relief, the pool as a money-flow target) is appended after the slice's golden
+  runs. `GoodsListed` counts lots (coordinator ruling, D101). The estate has no
+  snapshot row and no marker (FR-EST-010 is reworded). The checkpoint writes the
+  listing rows of held lots only (N-256).
+- Row 9: adds `internal/occupation` and `spawner_report.go`. It builds the
+  `Spawner` surface, the default `Decide` and the pure support; the EXECUTOR of
+  the plan is the world row's. Only the tool half of SKL is built, so a role with
+  `TrainingTicks` above 0 is never entered (N-264).
+- Row 10: adds `viability_check.go` and `viability_table.go`, the bounds
+  `MaxViabilityPivots` and `MaxViabilityCells` (`MaxLanes` comes with `WithLanes` in Stage 2), and the sentinels
+  `ErrNotViable`, `ErrNoUpkeep`, `ErrSolveLimit` and `ErrSolveInconsistent`. Its
+  Phase 5 PR flips the d1 to d5 line of `TestPacks_DefectOverlays` (N-299), and
+  the shape of `SteadyState` is what row 12's golden header reads.
+- Row 11: renames the configuration section type `World` to `WorldParams`
+  (Phase 2, N-284), adds `construct.go`, `construct_warm.go`, `fanin.go` and the `phase_*.go` files
+  (N-287) and owns the spawner's executor and `removeAgent`. The position table
+  test is staged (`notBuiltPositions`, N-285). No hook in `Step`: every position
+  is an unexported method and `Step` is `beginStep`, the straight line, `endStep`
+  (N-286). It owns the observability tests that need a world and no pack.
+- Row 12: test code, fixtures and documents only, no production code. Besides the
+  golden files (`testdata/golden/off/one.txt`, `events-one.txt`,
+  `one.positions.txt`; no checkpoint digest until Stage 2, N-294) it owns the
+  determinism matrix, the invariants over seeds, the configuration-only chain on
+  `second`, the d1 to d6 file tests, the scenarios S01, S04, S07, S16 and S19, and
+  the pack halves of the observability tests (cardinality and the allocation limit
+  of a full `Step`), the FR-REF-007 byte test of the `warm-*.toml` with its TOML
+  writer, and `expected/one.toml` and `expected/second.toml`.
 
 | Create | Specs | Plan | Status |
 |--------|-------|------|--------|
@@ -121,14 +159,14 @@ Rows 7 to 12 have no plan yet.
 | `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the derived tables and rules of the structs Stage 0 built in `config.go`: the moment, `SeasonAt` and the day table; the load and the chargeable size; the recipe table and the makers; the role table with the tradable set and the effective upkeep) | GDS, PRO 3, AGT 3, CAL | [1-2](plans/plan-phase-1-2.md), 6 phases | done (uncommitted) |
 | `internal/clearing`, `order.go` (`Order`, `Trade`, `LotKey`) and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement, the market report type and its computation) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | [1-3](plans/plan-phase-1-3.md), 6 phases | done (uncommitted) |
 | `internal/beliefs` and `beliefs.go` | BEL | [1-4](plans/plan-phase-1-4.md), 6 phases | done (uncommitted, stage-1-4) |
-| `internal/production` and `production.go` (jobs, yield table, the shock slot and the cost-anchor table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | done (uncommitted) |
+| `internal/production` and `production.go` (jobs, yield table, the shock slot and the cost-anchor table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | done |
 | `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | done (uncommitted, stage-1-6) |
-| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0). Requirements of this row that the tables of row 2 do not cover (N-236): the weight multiplication of the effective upkeep (FR-AGT-011), the "requests no job" half of FR-AGT-010 and, with the demand module, the want items of FR-AGT-003 | AGT | none | not started |
-| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | none | not started |
-| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | none | not started |
-| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState`, the reader of the warm-start table; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | none | not started |
-| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go` (the state of each market's report and the price window; `order.go` is the clearing row's), `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | none | not started |
-| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 10, testing.md 7.1 | none | not started |
+| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0). Requirements of this row that the tables of row 2 do not cover (N-236): the weight multiplication of the effective upkeep (FR-AGT-011), the "requests no job" half of FR-AGT-010 and, with the demand module, the want items of FR-AGT-003. The row also builds `internal/household` (the pure rules), the agent's creation and consumption step, the core view filler and the work report the world calls (plan 1-7 D80, D85) | AGT | [1-7](plans/plan-phase-1-7.md), 8 phases | done |
+| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | [1-8](plans/plan-phase-1-8.md), 5 phases | plan audited |
+| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | [1-9](plans/plan-phase-1-9.md), 7 phases | plan audited |
+| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState` and `virtualStartOffsets`; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | [1-10](plans/plan-phase-1-10.md), 7 phases | plan audited |
+| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go` (the state of each market's report and the price window; `order.go` is the clearing row's), `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | [1-11](plans/plan-phase-1-11.md), 11 phases | plan audited |
+| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 8.5, FR-REF-028 to 030, testing.md 7.1 | [1-12](plans/plan-phase-1-12.md), 9 phases | plan audited |
 
 **Done when:** the golden of `one.toml` runs for the length REF fixes and
 passes; the invariants of testing.md 6.3 hold over the seed range of REF 8;
@@ -144,8 +182,8 @@ their outcomes are recorded, pass or not. The observability tests that need a
 world (`rules/observability-and-logging.md` 8, OBS 9), which Stage 0 could not
 run, pass: logs (the level, message and keys of every `Warn` and `Error` path,
 and no `Info` in the tick loop), non-interference (FR-CFG-026 world half,
-FR-OBS-024), cardinality (FR-OBS-005 over `one`), the counterpart of every
-`Warn`, the golden rendering of events (`testdata/golden/events-one.txt`, the
+FR-OBS-023), cardinality (FR-OBS-005 over `one`), the counterpart of every
+`Warn`, the golden rendering of events (`testdata/golden/off/events-one.txt`, the
 zero-field rule of OBS 9.5.2), the emission order of a scripted step, the run
 lifecycle (`RunStarted` and `RunEnded`, also when cancelled or failed), the
 catalogue test over the declared events with the world emitting each of them,

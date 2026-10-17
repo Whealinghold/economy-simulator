@@ -41,7 +41,8 @@ func docOf(t *testing.T, file, name string) string {
 // TestDocComments_Contracts verifies that the doc comments that carry a
 // contract a consumer relies on still say it: the calling contract of
 // Observer (architecture.md 12.5, observability-and-logging.md 4.4) and the statement that a seed
-// is reproducible by design and not for secrets (WithSeed).
+// is reproducible by design and not for secrets (WithSeed), and the random-source
+// and state contract of Strategy (architecture.md 7.7).
 //
 // Guard: these comments are the only place a consumer reads the contract. A
 // rewrite that dropped one would change what an observer may do, or invite a
@@ -58,6 +59,18 @@ func TestDocComments_Contracts(t *testing.T) {
 			"MUST ignore event types it does not recognise",
 			"Return quickly",
 			"does not recover a panicking observer",
+		}},
+		{"strategy.go", "Strategy", []string{
+			"MUST NOT create its own random source",
+			"MUST NOT use a global one",
+			"MUST NOT keep the rng it is given after the call returns",
+			"MUST NOT block",
+			"optional pair of the checkpoint",
+			"MUST write every piece of state that can influence a result",
+			"equal bytes for equal states",
+			"MUST replace the whole state",
+			"MUST validate its input",
+			"MUST NOT be shared between worlds",
 		}},
 		{"option.go", "WithSeed", []string{
 			"reproducible stream by design",

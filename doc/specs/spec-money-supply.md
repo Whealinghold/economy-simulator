@@ -1303,8 +1303,9 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
    seasonal pulse, add a `Phase` by account ID, as the occupation review does
    (`spec-spawner.md` 6.2).
 8. **The pool target and the estates module.** Whether the pool and its account exist
-   without the module (`spec-estates.md` layer note). The spec assumes they do not.
-   *Next step:* EST confirms; if they do exist always, `ErrModuleDependency` is dropped.
+   without the module (`spec-estates.md` layer note). Answered (N-219): the pool's account
+   exists without the module (it is core, `spec-estates.md` layer line, `spec-regions.md` 3.6.2);
+   a pool target needs the module, and `ErrModuleDependency` stays.
 9. **A cap on a flow per region.** `Limit` is shared by the regions of a flow (4.4.2). A
    per-region limit would need `Limit` as a table.
 10. **Is the boundary account per reason created lazily or at construction?** This spec
