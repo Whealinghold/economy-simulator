@@ -307,6 +307,16 @@ job's inputs by `initial`, take them at once by `recipe_input` with a `Transform
 (8.1), and wear the tools with `WearItems` (5.4.3). Nothing else in the ledger
 differs between construction and a run, and every operation keeps 2.6.
 
+5.2.5. **The read `Holding(account, commodity)`.** It returns the units of the
+commodity the account holds, earmarked ones included, and how many of them are
+earmarked, so the available units are the first less the second (6.1). It is
+read-only and allocates nothing, so it affects no result. An account ID outside the
+table is `ErrUnknownAccount` and a commodity outside the table `ErrUnknownCommodity`;
+a closed account and a boundary account hold no lots and return 0 and 0, as the list
+of lots of such an account is empty (5.1). The completion of a job reads it for the
+room (`spec-production.md` 5.3.2), and any row that needs a count rather than a list
+of lots may.
+
 ### 5.3 Ageing
 
 5.3.1. At the end of each tick the ledger runs **ageing**: every lot whose
@@ -521,8 +531,9 @@ values of the `reason` attribute (observability-and-logging.md 3.3.2).
 the money and goods of an external agent added during a run (`spec-agents.md`
 3.5.4). Only the stated lot key is construction-only. `disposal` is a sink like
 `recipe_input`, so a discard output is created by `recipe_output` and moved out
-by `disposal` inside the one atomic completion step of the job (`spec-production.md`
-5.3.1, 7.2); it is never held, and both flows show in the flow totals.
+by `disposal` by the completion of the job: a `Transform` of the outputs that fit and
+a `Discard` (8.2.3) of each part that is never held (`spec-production.md` 5.3.1, 7.2);
+it is never held, and both flows show in the flow totals.
 
 7.2.2. **The built-in rows, and the rows a module declares.** The starting registry
 above is the catalogue of the finished library. A row is **built in** when no module
@@ -611,7 +622,8 @@ makes a source, or the completion of a job; an empty output list makes the start
 job. A transform with both empty is refused with `ErrEmptyTransform`. This is how
 `spec-production.md` uses the ledger: a job is two transforms, a start that takes the
 inputs and creates nothing (4.3.1) and a completion that takes nothing and creates
-the pending outputs (5.3.1), with no ledger holding between them.
+the pending outputs (for the part that is held, 5.3.1; the part that is never held is
+a `Discard`, 8.2.3), with no ledger holding between them.
 
 8.2.2. **Work in progress.** The output of a job in progress is in no account: it is
 fixed when the job starts and created at completion, so the ledger cannot see it. The
@@ -622,6 +634,29 @@ therefore the ledger's flows plus the pending output the snapshot reports
 the units created by `recipe_output` plus the pending units plus the units dropped
 from pending, which are never created: those of an abandoned job, and the share lost
 when the executor's weight falls (`spec-production.md` 5.4).
+
+8.2.3. **The operation `Discard(account, commodity, quantity)`.** It creates the
+quantity under `recipe_output` and sinks it under `disposal` in one step. The
+account's lots, holding and earmarks do not change; the `recipe_output` and
+`disposal` boundary accounts of the commodity and both flow totals move by the
+quantity, so the total over all accounts stays zero (9.1). No room check applies,
+since nothing is held, so a `Discard` succeeds for an account at `MaxQuantity` where a
+`Move` in from `recipe_output` is refused with `ErrBalanceOverflow`, and it takes no
+available stock, so it succeeds for more than the account holds. It is refused only
+for a quantity below 1 (`ErrInvalidAmount`), an unknown or closed account, an unknown
+commodity, an account of a kind that the `recipe_output` and `disposal` rows do not
+both allow (`ErrReasonMismatch`), a commodity whose `recipe_output` or `disposal`
+boundary account was never opened (`ErrUnknownAccount`), or an `int64` overflow of a
+boundary balance or a flow total (`ErrBalanceOverflow`), in that order, and then it
+changes nothing (2.6). It fits FR-LED-001 as the composition of a `Move` of the
+quantity in from `recipe_output` and a `Move` of it out to `disposal`, collapsed
+because the account is never credited: both are transfers with a reason, both flows
+are attributed to the account's region (2.1, 7.3), in the construction bucket during
+the construction phase (7.4.1), and the account's own balance does not change. It is
+a sibling of `Transform`, not a form of it: it adds no reason, no account and no
+boundary account (so it adds nothing to the registry of 7.2). The completion of a job
+calls it for each discard output and for each part of an output above `MaxQuantity`
+(`spec-production.md` 5.3.1, 5.3.2, 7.2).
 
 8.3. **Consumption** of upkeep is a move to the `consumption` boundary, and the consumption of a want beyond upkeep (`spec-demand.md`) is a move to the `want_consumption` boundary. Any other use of goods that does not make others is a move to `consumption` unless the spec that owns it adds a reason. A role change that leaves goods outside the new role's tradable set moves them to the estate with the existing reason `estate_goods` (`spec-spawner.md` 4.2), so no reason is added for it.
 
@@ -894,6 +929,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-LED-063 | `Lend`, `Settle`, `WriteOff`, `Reassign`, `Obligate` and `MarkOverdue` MUST each apply completely or change nothing, MUST create or destroy no money (the total of money over non-boundary accounts is unchanged by them), and `Obligate`, `WriteOff`, `Reassign` and `MarkOverdue` MUST move no money (`spec-credit.md` 3.2, `spec-insurance.md` 9.2). |
 | FR-LED-064 | With the credit module on, the audit MUST check the identities of `spec-credit.md` 3.6 and the identity of the principal owed with `Awarded` (10), and MUST report the ID of the first claim that fails (FR-CRD-082). |
 | FR-LED-065 | A Treasury account MUST be a non-boundary account that may not go negative, MUST be created at construction after the Outside accounts and before any agent account, and MUST NOT be closed or relocated (`spec-polity.md` 5.3). |
+| FR-LED-066 | `Discard(account, commodity, quantity)` MUST create the quantity under `recipe_output` and sink it under `disposal` in one step, with no change to the account's lots, holding or earmarks, so that both boundary accounts and both flow totals move by the quantity and the total over all accounts stays zero. It MUST apply no room check and take no available stock, so it MUST succeed for an account at `MaxQuantity` and for a quantity above what the account holds. It MUST be refused only for a quantity below 1 (`ErrInvalidAmount`), an unknown or closed account, an unknown commodity, a kind that the two rows do not allow (`ErrReasonMismatch`), a commodity with no `recipe_output` or no `disposal` boundary account (`ErrUnknownAccount`) or an `int64` overflow of a boundary balance or a flow total (`ErrBalanceOverflow`), and MUST then change nothing (8.2.3). |
+| FR-LED-067 | `Holding(account, commodity)` MUST return the units of the commodity the account holds, earmarked ones included, and how many are earmarked, change nothing and allocate nothing; an unknown account MUST be `ErrUnknownAccount`, an unknown commodity `ErrUnknownCommodity`, and a closed account and a boundary account MUST return 0 and 0 (5.2.5). |
 
 The ledger's part of the room of a limited account is FR-STO-005, FR-STO-006, FR-STO-007, FR-STO-009, FR-STO-010 and FR-STO-040 (`spec-storage.md` 13; 6.8). The ledger's part of a payout claim is FR-INS-002 to FR-INS-004 (`spec-insurance.md` 13). Their IDs are kept where they are defined and no FR-LED is added for them.
 
@@ -903,7 +940,7 @@ The ledger's part of the room of a limited account is FR-STO-005, FR-STO-006, FR
 |----|-------------|
 | NFR-LED-001 | With the default logger and observer, ledger operations in a step of the reference chain MUST allocate nothing beyond scratch held by the world and reused across ticks. |
 | NFR-LED-002 | The cost of ageing in a tick SHOULD be proportional to the number of accounts with an expiring lot plus the lots that expire, not to the number of lots. |
-| NFR-LED-003 | The ledger SHOULD have benchmarks of a transfer, a move, ageing and a transform, with `b.ReportAllocs()`. |
+| NFR-LED-003 | The ledger SHOULD have benchmarks of a transfer, a move, ageing, a transform, a discard and the read `Holding`, with `b.ReportAllocs()`. |
 | NFR-LED-004 | `Expiring` MUST NOT allocate, and `WearItems` and `Expiring` SHOULD have benchmarks with `b.ReportAllocs()`. |
 
 ## 14. Entries for the stability register
@@ -977,7 +1014,7 @@ expiring lots (N-053, 5.3.3).
 
 | Concern | Home |
 |---------|------|
-| Accounts, lots, `Transfer`, `Move`, `Transform`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, the room operations of 6.8, claims and their six operations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
+| Accounts, lots, `Transfer`, `Move`, `Transform`, `Discard`, `Holding`, `Wear`, `WearItems`, `Expiring`, ageing, reservations, the room operations of 6.8, claims and their six operations, flow totals and the construction bucket, `Audit` | `internal/ledger` (stdlib only; architecture.md 2.9) |
 | The registry of reasons and their kinds | `internal/ledger` (a fixed table); the reason names are exported constants of the root package (`event.go`), and `internal/logkeys` holds the key strings only |
 | Checked add and multiply | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 | Balance sheet valuation | `internal/ledger`, with the price table supplied by the root |

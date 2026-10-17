@@ -647,13 +647,13 @@ and order for this spec:
 | `OrderPlaced` | when an order is admitted | region, commodity, agent, side, limit price (the admitted limit, after the legal clamp of 3.2.1), quantity |
 | `OrderRejected` | when an order is not admitted | region, commodity, agent, side, `Reason` |
 | `TradeExecuted` | after a trade is settled | region, commodity, buyer, seller, price, quantity |
-| `MarketCleared` | once per market per tick, after its trades | region, commodity, market price, price age, volume, unmatched bid units, unmatched ask units, best unmatched bid and ask (with a flag for "none") |
+| `MarketCleared` | once per market per tick, after its trades | region, commodity, market price, price age, volume, unmatched bid units, unmatched ask units, best unmatched bid and ask (with a flag for "none"), the cost anchor in force for the market this tick (minor units, 0 when unknown; `spec-production.md` 9.3, 14.1) |
 
 9.1. `OrderPlaced` and `OrderRejected` are emitted in the order the orders were
 submitted. Then, for each market in order of region and commodity, the
 `TradeExecuted` events in the order the trades were made, and then that market's
 `MarketCleared`. `MarketCleared` is emitted even when nothing traded or nothing
-was offered, so an observer can see a stale price. No event has a map.
+was offered, so an observer can see a stale price. `CostAnchor` is set by the world row on the book before the clearing and read by no rule of this spec: the clearing reports it and draws no price from it. No event has a map.
 
 9.2. Logs (observability-and-logging.md section 3). Everything here is
 `Debug`, guarded by `Enabled`, with constant messages: "order rejected"

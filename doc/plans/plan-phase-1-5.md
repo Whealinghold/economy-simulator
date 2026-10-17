@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 5: production (jobs, the yield table, `UnitCost`)
 
-**Status: Proposed (2026-10-13); no phase started.** Sequences the fifth row of
+**Status: Done (2026-10-16), uncommitted on stage-1-5; Phases 1 to 8 built. Phase 8 gate 2026-10-16: root 99.2%, internal/production 96.0%, internal/ledger 99.6%, all-packages total 99.2% (-coverpkg); FuzzSite, FuzzEffective, FuzzUnitCost and FuzzExecutions 5 min each (about 42M execs each), no crasher; traceability: 58 cited IDs all in the specs.** Sequences the fifth row of
 Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`internal/production` and
 `production.go` (jobs, yield table, `UnitCost`)", into eight phases. It
 implements [spec-production.md](../specs/spec-production.md) (PRO) for the

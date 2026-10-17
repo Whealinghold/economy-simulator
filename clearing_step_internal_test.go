@@ -532,12 +532,13 @@ func TestClearMarket_Events(t *testing.T) {
 	}
 	// An empty market still reports.
 	b.reset(7)
+	b.anchor = 40 // the world row sets the cost anchor in force; MarketCleared reports it
 	rec.events = nil
 	_, _, err = clearMarket(m.l, b, AverageClearing{}, avgRNG(2, 7, 2, 0), seedReport(3), obs, discardLogger(), nil)
 	if err != nil {
 		t.Fatalf("clearMarket(empty): %v", err)
 	}
-	wantEmpty := []Event{MarketCleared{Tick: 7, Region: 2, Commodity: 0, Price: 3, PriceAge: 1}}
+	wantEmpty := []Event{MarketCleared{Tick: 7, Region: 2, Commodity: 0, Price: 3, PriceAge: 1, CostAnchor: 40}}
 	if !reflect.DeepEqual(rec.events, wantEmpty) {
 		t.Errorf("events of an empty market = %+v, want %+v", rec.events, wantEmpty)
 	}

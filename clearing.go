@@ -222,6 +222,11 @@ type book struct {
 	// clearMarket and kept until the next one (the outcomes of spec-clearing.md
 	// 7.3 are delivered after every market has cleared).
 	fill []int64
+	// anchor is the cost anchor in force for the market this tick, in minor
+	// units (0 when unknown): the world row sets it before the clearing from the
+	// production anchor table, and MarketCleared reports it (spec-production.md
+	// 9.3). The clearing reads no price from it.
+	anchor int64
 	// invalid is returned, by pointer, by a failed clearMarket so that the
 	// failure allocates nothing; it is overwritten by the next failure.
 	invalid tradeListError
@@ -624,7 +629,7 @@ func (b *book) emitCleared(obs *observers, log *slog.Logger, rep marketReport) {
 			Tick: b.tick, Region: b.region, Commodity: b.commodity, Price: rep.Price,
 			PriceAge: rep.Age, Volume: rep.Volume, UnmatchedBid: rep.UnmatchedBid,
 			UnmatchedAsk: rep.UnmatchedAsk, BestBid: rep.BestBid, BestAsk: rep.BestAsk,
-			HasBestBid: rep.HasBestBid, HasBestAsk: rep.HasBestAsk,
+			HasBestBid: rep.HasBestBid, HasBestAsk: rep.HasBestAsk, CostAnchor: Price(b.anchor),
 		})
 	}
 	if ctx := context.Background(); log != nil && log.Enabled(ctx, slog.LevelDebug) {

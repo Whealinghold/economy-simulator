@@ -535,7 +535,7 @@ r'_o = r_o if (q_o * E) mod D <> 0, else 0
 ```
 
 `o` runs over the recipe's **non-discard** outputs. A discard output (`spec-production.md`
-7.2) is created and moved to `disposal` in one `Transform` step at the completion and
+7.2) is created and disposed at the completion by the ledger's create-and-dispose operation and
 never sits in the account, so it takes no room, is not in `A_d` and is not pledged; the
 same holds for the part of an output that `MaxQuantity` disposes (5.3.4). `Free_d` is
 the principal's free room before the start, `U_d` the principal's upkeep room (3.4.5; the
@@ -574,17 +574,17 @@ pledge fits. A partial `k` is a partial start of a cohort, "`k` households work 
 rest could not" (`spec-production.md` 4.2, FR-PRO-009): not an error and not a
 warning. It is counted (14.1).
 
-5.3.4. **The completion.** At P2.1 the `Transform` creates the pending output
+5.3.4. **The completion.** At P2.1 the completion's `Transform` credits the pending output
 **from the pledge** (4.1.3) and the pledge falls to what remains. With the room as it was
 at the start, nothing is cut and the credit cannot fail. `spec-production.md` 5.3.2
 stands for `MaxQuantity`: output that would take a quantity above `MaxQuantity` is still
-created and disposed of in the same step. A job's completion never fails and never holds
+created and disposed of at the completion by the ledger's create-and-dispose operation. A job's completion never fails and never holds
 a job open for lack of room. That settles what N-002's update left to this spec: the
 start is where room is decided, and a job's output is lost for lack of room in one case
 only, a **cut of the room** while the job runs (5.5.3: the weight fell, and the job's
 pledge is not scaled with the room). The completion then credits the outputs in
 commodity order, each up to `RoomLeft` (4.1.3), whole units, and creates the rest and
-disposes of it in the same step under `disposal`, the way the `MaxQuantity` rule does;
+disposes of it by the create-and-dispose operation under `disposal`, the way the `MaxQuantity` rule does;
 `RecipeExecuted` reports the disposed quantities as it reports that overflow
 (FR-PRO-029), and `BoundaryFlow` reports `disposal`. The case is seen there and needs no
 counter of its own: `RoomLimited.Discarded` counts the strategy's discard of 6.3.2 only.
@@ -1772,7 +1772,7 @@ refused (3.4.4) and the default strategy's `f` is 0 (6.2.2).
 At P1.3 the cargo is credited line by line up to `RoomLeft = (600, 650)`: 40 of `C` fit,
 whole. At P2.1 the output is credited up to what is left, `(560, 610)`, 2 per unit in each
 dimension: `min(450, 560 / 2, 610 / 2) = 280` of `B`; the other 170 are created and
-disposed in the same step under `disposal`, and `RecipeExecuted` reports them. Nothing is
+disposed by the create-and-dispose operation under `disposal`, and `RecipeExecuted` reports them. Nothing is
 lost silently and the audit holds (4.4).
 
 ## 19. Notes settled, and what this spec needs from the other specs
@@ -1852,7 +1852,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-STO-010 | At every tick boundary the reserved room of every account MUST be 0. |
 | FR-STO-011 | The start of a job of a limited principal MUST use `k = min(k0, k_room)` executions, with `k_room` part of the `k0` derived at P2.5 and evaluated again at P2.7, MUST be refused with the reason `no_room`, consuming nothing, when `k` is 0 and `k0` was not, and `no_room` MUST be last in the order of the reasons: after `no_endowment` and, where a module adds them, after `no_title`, `rent_funds`, `no_facility` and the build reasons of `spec-infrastructure.md` 4.2.2 (the order is `spec-production.md` 4.2's). |
 | FR-STO-012 | `k_room` MUST be the largest `k` up to `k0` with `k * c_d <= R_d` in both dimensions (5.3.2), `R_d` taking `Free_d - U_d` and the non-discard outputs only, with the executor's own residues and the exemption for an output whose `q * E` is a multiple of 10 000, and the exact pending output of the `k` chosen MUST fit the free room less the upkeep room once the inputs are taken. |
-| FR-STO-013 | The start MUST set the principal's pledge to include the exact load of the job's pending output (a discard output and a `MaxQuantity` overflow take none); the completion MUST credit the output from the pledge, up to `RoomLeft`, and with the room as it was at the start MUST NOT fail; what a cut of the room leaves no room for MUST be created and disposed in the same step under `disposal`, in commodity order and whole units; the `MaxQuantity` rule of `spec-production.md` 5.3.2 MUST still apply. |
+| FR-STO-013 | The start MUST set the principal's pledge to include the exact load of the job's pending output (a discard output and a `MaxQuantity` overflow take none); the completion MUST credit the output from the pledge, up to `RoomLeft`, and with the room as it was at the start MUST NOT fail; what a cut of the room leaves no room for MUST be created and disposed by the ledger's create-and-dispose operation under `disposal`, in commodity order and whole units; the `MaxQuantity` rule of `spec-production.md` 5.3.2 MUST still apply. |
 | FR-STO-014 | A shipment to a consignee other than its shipper MUST be refused with `consignee_full`, after `consignee_elsewhere`, if the load of its lines exceeds the consignee's free room less its upkeep room in either dimension, and a dispatched one MUST pledge the load of its lines on the consignee. |
 | FR-STO-015 | The arrival of a cargo MUST credit each line from the consignee's pledge, in line order and up to `RoomLeft`, and MUST lower the pledge by the load of the line whatever part was delivered, spoiled or diverted, and cargo that does not fit MUST be diverted to the estate of the destination, whole units. |
 | FR-STO-016 | Every credit of goods to a limited account MUST be one of a settlement from reserved room, a job's output or a cargo's arrival from the pledge, a creation validated before it, or a move to the estate; any other MUST NOT exist, and a credit that meets `ErrNoRoom` where room was committed MUST be a programmer error that panics, or fails the step with `ErrAuditFailed` under `WithAudit`. |

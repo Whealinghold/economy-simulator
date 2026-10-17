@@ -213,19 +213,66 @@ force bars is then refused with `not_permitted` (`spec-institutions.md` 5.2, 5.3
 executor, the principal or both as the right says (the principal of a trainee's or a hire's
 job is tested as the executor is). Both checks come before `k` is derived.
 
-If `k` is 0 nothing is consumed, and the reason is the first of `zero_yield` (the yield
-factor is 0, section 6), `no_site` (a `Sited` recipe with no positive factor), `no_tool`,
-`no_facility` (`spec-infrastructure.md` 4.2.2), `no_input`, `no_endowment`, `no_title` and
-`rent_funds` (`spec-land.md` 4.5.1), `not_unlocked`, `facility_cap`, `no_target`,
-`store_refused` and `nothing_to_repair` (`spec-infrastructure.md` 4.2.2), and `no_room`
-(`spec-storage.md` 5.3.1), in that order, `no_room` last. With the two checks of the
-paragraph above in front, the whole **master order** of the reasons of a refused start is:
-`not_on_role`, `not_permitted`, `zero_yield`, `no_site`, `no_tool`, `no_facility`,
-`no_input`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`, `facility_cap`,
-`no_target`, `store_refused`, `nothing_to_repair`, `no_room`. This spec owns it and every
-other file quotes its own slice and cites this one; a reason of a module that is off
-cannot occur. This is the partial result of `spec-scale.md` 4.2: `k` households work and
-the rest could not. A partial `k` is not an error and not a warning (FR-PRO-009).
+If `k` is 0 nothing is consumed, and the reason is the first applicable one in the
+**master order** below, `no_room` last. The two checks of the paragraph above (`not_on_role`,
+`not_permitted`) come in front of the rest, which is the order of `k`'s limits. This spec
+owns the order and every other file quotes its own slice and cites this one; a reason of a
+module that is off cannot occur. This is the partial result of `spec-scale.md` 4.2: `k`
+households work and the rest could not. A partial `k` is not an error and not a warning
+(FR-PRO-009).
+
+4.2.1. **The master order.** One row per reason, in the order a refused start is
+attributed. The last column says whether a start can return the reason in the first slice
+(the core: the rules of this spec and the ledger, no optional module); every other reason
+arrives with the module that owns it, appended to the root constants in this order and never
+inserted (architecture.md 2.10.5).
+
+| Position | Reason | Owner | A slice start can return it |
+| -------- | ------ | ----- | --------------------------- |
+| 1 | `not_on_role` | this spec (the world's check, `spec-agents.md` 6.5.1) | yes |
+| 2 | `not_permitted` | `spec-institutions.md` 5.2, 5.3 | no |
+| 3 | `zero_yield` | this spec (4.2.2) | yes |
+| 4 | `no_site` | this spec (4.2.2) | yes |
+| 5 | `no_tool` | this spec (4.4) | yes |
+| 6 | `no_facility` | `spec-infrastructure.md` 4.2.2 | no |
+| 7 | `no_input` | this spec (4.3) | yes |
+| 8 | `no_endowment` | `spec-resources.md` 5.3 | no |
+| 9 | `no_title` | `spec-land.md` 4.5.1 | no |
+| 10 | `rent_funds` | `spec-land.md` 4.5.1 | no |
+| 11 | `not_unlocked` | `spec-infrastructure.md` 4.2.2 | no |
+| 12 | `facility_cap` | `spec-infrastructure.md` 4.2.2 | no |
+| 13 | `no_target` | `spec-infrastructure.md` 4.2.2 | no |
+| 14 | `store_refused` | `spec-infrastructure.md` 4.2.2 | no |
+| 15 | `nothing_to_repair` | `spec-infrastructure.md` 4.2.2 | no |
+| 16 | `no_room` | `spec-storage.md` 5.3.1 | no |
+
+A start of the first slice (the module-free core) can therefore be refused with `not_on_role`,
+`zero_yield`, `no_site`, `no_tool` or `no_input` and with nothing else.
+
+4.2.2. **`zero_yield` and `no_site` are disjoint, and the cause is the profile.** Let `has`
+be whether a yield profile row exists for the (region, recipe) pair (6.1) and `E` the
+effective factor of 6.3. The start is refused `no_site` if and only if the recipe is `Sited`
+and `has` is false, whatever the shock, technology, trainee and abundance terms are. It is
+refused `zero_yield` if and only if `E` is 0 and the start is not refused `no_site`: a profile
+of `all = 0`, a seasonal profile with no entry for the season, a site factor of 0 of a recipe
+that is not `Sited`, or a positive site factor with a shock, technology, trainee or abundance
+term of 0. A `Sited` recipe with no profile has `E` 0 too, and the master order lists
+`zero_yield` first, so the definition above, not the order, separates the two. The strategy
+sees the reason (`spec-agents.md` 7.3), so this is a rule and not an implementation choice.
+6.3 says the same of `no_site`, and `spec-technology.md` 5.1.2, `spec-infrastructure.md`
+4.1.3 and `spec-employment.md` 5.5 item 3 already name the two reasons on these terms.
+
+4.2.3. **A commodity in both `Inputs` and `Requires` (a defensive cap).** 4.4.3 says a tool
+never appears in `Inputs`, but no rule of 10.2 enforces it: the "both lists" of 3.1.1 are
+`Inputs` and `Outputs`, not `Requires`. Because the limits above are derived separately, a
+recipe that did list one commodity in both would let `k` exceed what the stock covers, and
+the start would then be refused by the ledger after the fact. The count therefore carries one
+defensive rule and does not make the combination legal: for a commodity found in both lists,
+with `stock` its available units and `q` its input quantity, the cap is `stock / (q + 1)`
+(rounded down), attributed to `no_tool`. The `1` is one tool item per execution (4.4.2: each
+execution wears a distinct item), not `WearPerUse`, which is a quantity of durability. Until
+validation rejects the combination, the rule costs one comparison and changes no result of a
+pack that follows 4.4.3.
 
 ### 4.3 The start step
 
@@ -359,12 +406,18 @@ window of such a role is derived to be longer than its longest job
 
 ### 5.3 Completion
 
-5.3.1. At completion one ledger `Transform` creates the pending outputs in the
+5.3.1. At completion one ledger `Transform` creates the pending outputs that fit in the
 principal's account from the `recipe_output` boundary and takes no inputs
-(`spec-ledger.md` 8.2). Each output lot has `Born` equal to the completing tick if
-the commodity spoils, and a durable has full durability (`spec-ledger.md` 5.2.3). A
-discard output is created and moved to the `disposal` boundary in the same step
-(7.2). A recipe with no output at all (a `Builds` or `Repairs` recipe may have none,
+(`spec-ledger.md` 8.2); "fit" is the room of 5.3.2. Each output lot has `Born` equal to the
+completing tick if the commodity spoils, and a durable has full durability
+(`spec-ledger.md` 5.2.3). A discard output, and the part of an output that has no room, are
+not in that `Transform`: the ledger's create-and-dispose operation creates each under
+`recipe_output` and sinks it under `disposal` in one operation, with no change to any
+account and no room check (`spec-ledger.md` 7.2.1, 8.2.1; 7.2). The completion is therefore
+one `Transform` followed by one create-and-dispose per discard output and per overflow part,
+not one atomic step: a `Transform` refuses an output line when the account's held units of
+the commodity (the earmarked ones included) plus the line would exceed `MaxQuantity`, and it
+has no form that disposes a line it creates. A recipe with no output at all (a `Builds` or `Repairs` recipe may have none,
 3.2.2) makes no `Transform` at the completion: there is nothing to create, and a
 `Transform` with both sides empty is refused (`spec-ledger.md` 8.2.1). With the storage
 module on the outputs are credited from the pledge up to `RoomLeft`
@@ -372,14 +425,16 @@ module on the outputs are credited from the pledge up to `RoomLeft`
 cannot fail for room.
 
 5.3.2. If creating an output would push the principal's quantity of that commodity
-above `MaxQuantity`, the part that fits is created and the rest is created and
-disposed in the same step (reason `disposal`), and the event reports the amount
-(FR-PRO-029). Production never fails and never holds a job open for lack of room.
+above `MaxQuantity`, the part that fits is created by the `Transform` of 5.3.1 and the rest
+is created and disposed by the create-and-dispose operation (reason `disposal`), and the
+event reports the amount (FR-PRO-029). The room of an output is `MaxQuantity` less the
+units the account holds, the reserved ones counted (the bound of the `Transform` is on the
+held units), and not the unreserved units. Production never fails and never holds a job open for lack of room.
 With the storage module on, room is decided at the start (4.2, `k_room`), so a full
 inventory is a refused start (`no_room`), not a lost output. The one exception is a cut
 of the room while the job runs (`spec-storage.md` 5.5.3): the outputs are then credited in
 commodity order, each up to `RoomLeft`, whole units, and the rest is created and disposed
-in the same step under `disposal` and reported in `RecipeExecuted` as the `MaxQuantity`
+by the create-and-dispose operation under `disposal` and reported in `RecipeExecuted` as the `MaxQuantity`
 overflow is (FR-PRO-029). N-002's update stands with that one exception.
 
 5.3.3. `RecipeExecuted` is emitted at completion (section 14).
@@ -506,7 +561,8 @@ E     = E * abundance / 10 000                      abundance: `spec-resources.m
 
 The four truncations lose less than 1 basis point in each step; they are a rule
 constant, not a tunable. `E = 0` means the job does not start (`zero_yield`,
-`no_site` when the cause is a `Sited` recipe with no profile).
+`no_site` when the cause is a `Sited` recipe with no profile; 4.2.2 gives the rule that
+separates the two).
 
 ### 6.4 When the factor is read
 
@@ -634,8 +690,8 @@ forces a market for it.
 
 7.2. **A discard output** is for waste that has no use or no market: slag, ash,
 exhaust. At completion it is created from the `recipe_output` boundary in the
-executor's account and at once moved to the `disposal` boundary, in one
-transform step. It never sits in inventory and never reaches a market. It is
+executor's account and at once moved to the `disposal` boundary, by the ledger's
+create-and-dispose operation (5.3.1), which changes no account. It never sits in inventory and never reaches a market. It is
 measured in the flow totals (`recipe_output` and `disposal`, by commodity), so an
 indicator can report waste produced (`Disp` in `Written` and in the `Disposed` of the
 recipe table, `spec-indicators.md` 7.2.1), which is how a pollution measure would be built.
@@ -838,10 +894,24 @@ type Wear struct {
 func UnitCost(inputs []Term, tools []Wear, prices []int64, share, outQty, yieldBP, duration, wage, rent int64) int64
 ```
 
-The root's `UnitCost(region, commodity)` over a whole configuration, and
-`TrainingPays`, are root-level wrappers that convert inline (architecture.md 2.9).
-`spec-beliefs.md` takes `UnitCost int64` as a parameter and does not import
-production.
+Only `Term`, `Wear` and `UnitCost` are fixed by this spec; every other name and signature
+of `internal/production` is the implementer's. Beyond `UnitCost` the package offers these
+capabilities, all pure functions over primitive slices and integers that allocate nothing:
+the site-factor lookup (6.2), the effective factor (6.3), the carried-remainder output
+(6.6), the rescale of a job at a weight fall (5.4), the execution count with the reason of
+the first limit that is 0 (4.2) and the cost anchor of a commodity (9.1, 9.3). The root
+builds the recipe table once at construction (`recipe.go`) and converts from it inline at
+each call, and holds no second copy of it (architecture.md 2.9). **Rounding is a rule, not a
+default found in code:** every division truncates toward zero (the four steps of 6.3, the
+output division of 6.6, the rescale of 5.4) except `UnitCost` and the wear cost of a tool,
+which round up (9.1, FR-PRO-035). Every product that can exceed `int64` is checked
+(architecture.md 3.5); an overflow makes the result "unknown", never a wrapped value.
+
+The root's read of the anchor is the unexported `unitCost(region, commodity)`, a read of
+the cost-anchor table of 9.3 built once per tick; it is not API (architecture.md 2.8), and
+the beliefs and the strategy view reach it inside the root. `TrainingPays` (8.3) is a pure
+function of the same package, built with the skill-barrier module. `spec-beliefs.md` takes
+`UnitCost int64` as a parameter and does not import production.
 
 ### 9.5 What the numbers showed (N-055)
 
@@ -1249,31 +1319,72 @@ structural or placeholders (section 11).
 ## 14. Observability
 
 14.1. **Events.** The table in observability-and-logging.md 4.3 has `RecipeExecuted`
-(a job completes, and a one-tick job completes in its start tick) and
-`RecipeAbandoned` (a job ends without output), with their main fields in
-parentheses. This spec owns the full field lists and fixes them:
+(a job completes, and a one-tick job completes in its start tick), `RecipeRefused`
+(an aggregate of the refused job requests of a tick) and `RecipeAbandoned` (a job ends
+without output), with their main fields in parentheses. This spec owns the full field lists and fixes them:
 
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
-| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, the outputs created as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity) (the part above `MaxQuantity` and, with the storage module on, the part that a cut of the room left no room for, 5.3.2), `EffectiveYield` in basis points |
+| `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, `Outputs`, the gross quantity created per output item as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity) in output order (the part of those units that was never held, below), `EffectiveYield` in basis points, `Overflow` as a slice of (commodity, quantity) in output order (the part of `Disposed` that is not a discard output, below) |
+| `RecipeRefused` | once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0; never otherwise | `Tick`, `Region`, `Recipe`, and the households refused for each reason of the master order of 4.2.1 that the build counts: `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (a later module appends the count of its reason) |
 | `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Region`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
 `StartTick` is the completing tick minus the recipe's `Duration` plus 1 (5.1.1,
 5.2), not a stored field. `EffectiveYield` is the job's `Yield` (5.1.1): the effective
 factor of 6.3 as read when the job started, not recomputed at completion.
 
+`Outputs` is the **gross** quantity the completion created for each output item, the
+discard outputs and the overflow part included, because both are created under
+`recipe_output`. `Disposed` is the part of those units that was never held: the whole
+quantity of each discard output plus, for another output, the part that `MaxQuantity` left
+no room for (and, with the storage module on, the part that a cut of the room left no room
+for, 5.3.2). So for every commodity the units added to the principal's account are
+`Outputs - Disposed`, the flow totals under `recipe_output` are the sum of `Outputs` and
+under `disposal` the sum of `Disposed` (and an indicator that values `Outputs` gross of
+`Disposed`, `spec-indicators.md` 7.2.4, double counts nothing). Both slices are in output
+order and list a row only for a quantity above 0 (the golden rendering omits a zero field,
+and a row of 0 would render as a bare commodity). `Overflow` is the part of `Disposed` that
+is not a discard output: for each non-discard output the quantity that `MaxQuantity` (and,
+with the storage module on, a cut of the room) left no room for, in output order, rows above
+0 only, so `Disposed` less `Overflow` is the discard outputs. A discard output is waste by
+design and not an anomaly; `Overflow` is the anomaly, and it is what the `Warn` of 14.2 and
+the metric `economysim.recipe.overflow` count, so neither needs the recipe's list of
+discard outputs (the names table the adapter holds does not carry it).
+
+`RecipeRefused` is the counter of the refusals of 4.2. Each count is the households, the
+sum of the weights of the agents, whose request was refused for the reason, under the
+first applicable reason of the master order, so the counts add to the households refused.
+A request that started fewer executions than its weight is not a refusal, a request the
+production halt declined is in `ProductionHalted` (`spec-observability.md` 4.4.6), and
+the starts of a trainee, of an own-use job and of a hire are counted by their own modules.
+The world adds a refusal to the `refusalTally` of `production.go` where a start returns 0
+and flushes it once at P2.8a; the tally is sized by regions times recipes and allocates
+nothing after construction. `spec-observability.md` 4.4.6a gives the decision.
+
 They carry no map, no pointer, and only identifiers and fixed-point values, and
 they are emitted after the transition (observability-and-logging.md 4.1, 4.4). No
-event is emitted when a start is refused: the volume would be per agent per tick. The
-metric `economysim.recipe.executions` is fed by `Executions` of `RecipeExecuted`,
-which is why that field is fixed. A new metric for work in progress is a gauge of the
-pending quantity by commodity, fed by the snapshot, not by an event.
+event is emitted for one refused start, which would be per agent per tick; the refusals
+are the aggregate `RecipeRefused`. The metric `economysim.recipe.executions` is fed by
+`Executions` of `RecipeExecuted`, which is why that field is fixed. The metrics of the
+production phase are `economysim.recipe.executions`, `economysim.recipe.refused`
+(`RecipeRefused`), `economysim.recipe.abandoned` (`RecipeAbandoned`),
+`economysim.recipe.overflow` (`RecipeExecuted.Overflow`), `economysim.production.halted`,
+and two fed by the snapshot, the gauges `economysim.production.pending` (the pending
+quantity by commodity) and `economysim.recipe.in_progress` (`Jobs[].Executions`, 14.3).
+The cost anchor of 9.3 is reported once per market per tick as `MarketCleared.CostAnchor`,
+the anchor in force for that tick (0 when unknown), and the gauge
+`economysim.production.cost_anchor` is fed by it. It is an event field and not a snapshot
+field because the table is recomputed each tick and not saved (15): a snapshot of a restored
+world could not equal the original's (`spec-observability.md` FR-OBS-043). The world sets it
+from `unitCost` before the clearing of the market.
 
 14.2. **Logs.** At `Debug`, guarded by `Enabled` in the per-agent loop: `recipe not
 started` with `agent`, `recipe` and `reason` from the set of 4.2, which includes
 `not_on_role` (a request off the role's list, `spec-agents.md` 6.5.1; N-049), `not_permitted`,
 `no_facility`, `no_title`, `rent_funds` and `no_room` and the other reasons of the master
-order of 4.2. No `Info`. A `Warn`
+order of 4.2. A start of the first slice can return five of them (the last column of the
+table of 4.2.1: `not_on_role`, `zero_yield`, `no_site`, `no_tool`, `no_input`); the others
+arrive with their modules, in the same order. No `Info`. A `Warn`
 for the overflow rule of 5.3.2 (`recipe output disposed`, with `recipe`,
 `commodity`, `quantity`; also for the part that a cut of the room left no room for, 5.3.2), at most one per recipe per tick, a bound that comes from
 the configuration (observability-and-logging.md 3.2.2). The reason constants are exported
@@ -1289,7 +1400,8 @@ makes it measurable (work in progress for `spec-indicators.md`).
 
 14.4. **Cost with no observer.** Event construction in the production phase is
 guarded by the world's "has observer" flag and allocates nothing otherwise
-(observability-and-logging.md 4.5; NFR-PRO-001).
+(observability-and-logging.md 4.5; NFR-PRO-001), and so does the `refusalTally` (add and
+flush).
 
 ## 15. State contributed to a checkpoint
 
@@ -1379,10 +1491,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-006 | A `Requires` entry MUST name a commodity with `Durability` above 0 (`ErrToolNotDurable`) and a `WearPerUse` from 1 to its `Durability`, with at most `MaxRequires` entries and no commodity twice. |
 | FR-PRO-007 | A recipe with `Draws` MUST be rejected with `ErrModuleDependency` while the resources module is off, and each `Draws` entry MUST be at most `MaxDraws`. |
 | FR-PRO-008 | An agent MUST start only a recipe on its role's list or on the role's effective own-use list, or, as a trainee, a trainee-eligible recipe on its trainer's role list, or, as a hired household, a recipe on its employer's hire list (checked at admission, `spec-employment.md` 5.2), and a request for any other recipe MUST start nothing and be refused with the reason `not_on_role`; a request that a right in force bars MUST start nothing and be refused with `not_permitted` immediately after (`spec-institutions.md` FR-ORG-020). |
-| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and, for a recipe that needs a facility, builds or repairs, with the capacity and the limits of `spec-infrastructure.md` 4.2.2, and (with the storage module on) `k_room`, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_facility`, `no_input`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`, `facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`, `no_room` (the order of 4.2). |
+| FR-PRO-009 | The number of executions started MUST be the least of the weight (or the strategy's maximum), the available stock over each input quantity, the unreserved tool items of each required tool, and (with the resources module on) the executions granted by the ration of `spec-resources.md` 5.3 for each draw, each rounded down, and, for a recipe that needs a facility, builds or repairs, with the capacity and the limits of `spec-infrastructure.md` 4.2.2, and (with the storage module on) `k_room`, and, for a commodity found in both `Inputs` and `Requires`, the available stock over the input quantity plus 1 (one tool item per execution, 4.2.3) attributed to `no_tool`, and when it is 0 nothing MUST be consumed and the reason MUST be the first applicable of `zero_yield`, `no_site`, `no_tool`, `no_facility`, `no_input`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`, `facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`, `no_room` (the order of the table of 4.2.1); the two are disjoint: `no_site` iff the recipe is `Sited` and has no profile for the region, otherwise `zero_yield` when the effective factor is 0 (a profile of 0, a seasonal profile with no entry for the season, or a shock, technology, trainee or abundance term of 0) (4.2.2). |
 | FR-PRO-010 | The start of a job MUST be one all-or-nothing ledger `Transform` of `k` times each input to the `recipe_input` boundary, and a refused transform MUST leave the ledger unchanged and the job unstarted. |
 | FR-PRO-011 | At the start of a job each of the `k` executions MUST wear a distinct item of each required tool by `WearPerUse`, most worn first, destroying an item whose durability reaches 0 with the reason `wear`, and wear MUST NOT be applied again for the rest of the job. |
-| FR-PRO-012 | At completion the pending outputs MUST be created in one ledger `Transform` from the `recipe_output` boundary with `Born` equal to the completing tick for a commodity that spoils and full durability for a durable. |
+| FR-PRO-012 | At completion the pending outputs, up to the room (`MaxQuantity` less the held units, reserved ones counted), MUST be created in one ledger `Transform` from the `recipe_output` boundary with `Born` equal to the completing tick for a commodity that spoils and full durability for a durable, and the rest (each discard output and each part that has no room) MUST be disposed by the ledger's create-and-dispose operation (5.3.1). |
 | FR-PRO-013 | A job of duration `d` started in tick `s` MUST complete in the production phase of tick `s + d - 1`, so a job of duration 1 completes in its start tick, and its outputs MUST be available to the orders placed after that phase. |
 | FR-PRO-014 | An agent MUST have at most one active job, and MUST NOT start a job in a tick in which it continued or completed one. |
 | FR-PRO-015 | Every tick from a job's start tick to its completing tick inclusive MUST be a working tick of the executor, and a resting decision MUST NOT interrupt a started job. |
@@ -1399,8 +1511,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-026 | When an agent is created the world MUST draw exactly one integer in [0, 10 000) from its random source (one source word, `spec-world.md` ruling C8), after the warm start and after the agent's target-ratio draw, whatever its recipes, and set every residue of the agent to it, and production MUST use no other random number; the pending output of a job created at construction from a warm start MUST use residue 0 (ruling C4). |
 | FR-PRO-027 | A job's start MUST take `k` times each draw quantity from the region's endowment through the all-or-nothing take of `spec-resources.md` 5.1 (`TakeEndowment`, internal), and production MUST NOT create or restore an endowment. |
 | FR-PRO-028 | A recipe with a yield profile MUST need no second recipe for another region or season: a recipe MUST run in a new region, or stop running in one, by a change of the yield table alone. |
-| FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete; with the storage module on the same MUST hold for the part of an output that a cut of the room left no room for (5.3.2). |
-| FR-PRO-030 | A discard output MUST be created and moved to the `disposal` boundary in the same step, MUST NOT appear in any account afterwards, and MUST appear in the flow totals under `recipe_output` and `disposal`. |
+| FR-PRO-029 | If creating an output would push the principal's quantity of a commodity above `MaxQuantity`, the part that fits MUST be created and the rest created and disposed with the reason `disposal`, the amount MUST be reported in `RecipeExecuted`, and the job MUST complete; with the storage module on the same MUST hold for the part of an output that a cut of the room left no room for (5.3.2). In `RecipeExecuted`, `Outputs` MUST be the gross quantity created for each output item (discard outputs and the overflow part included) and `Disposed` the part of it that was never held (the whole quantity of each discard output plus, for another output, the part that had no room), both in output order and listing a row only for a quantity above 0, so that the units added to the principal's account are `Outputs - Disposed` (14.1). |
+| FR-PRO-030 | A discard output MUST be created and moved to the `disposal` boundary by the ledger's create-and-dispose operation, MUST NOT appear in any account afterwards, and MUST appear in the flow totals under `recipe_output` and `disposal` (the sum of `Outputs` and of `Disposed` of the completions). |
 | FR-PRO-031 | The ledger reason registry MUST contain `disposal` as a goods sink from an agent to a boundary, owned by production. |
 | FR-PRO-032 | Production MUST NOT consult any `Tradable` attribute, and a byproduct (an output with a `CostShare` of 0 that is not discarded) MUST be handled by the same code as any other output. |
 | FR-PRO-033 | A trainee-eligible recipe MUST have no `Requires`, `Needs`, `Builds` or `Repairs` (`ErrEligibleHasTool`), and a trainee's job MUST take its inputs from, and create its outputs in, the principal's account. |
@@ -1421,6 +1533,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check (`not_on_role`), then against the rights in force (`not_permitted`) and before `k0` is derived, for the principal of a trainee's or a hire's job as for the executor as the right says, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
 | FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
 | FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
+| FR-PRO-052 | The refusals of a tick MUST be reported by `RecipeRefused`, one row per region and recipe with a refusal, in ascending (`RegionID`, `RecipeID`), each count the sum of the weights of the agents refused for the reason under the first applicable reason of 4.2.1, none for a tick without a refusal, and no refusal MUST be counted twice or in `ProductionHalted` (14.1). |
+| FR-PRO-053 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs (14.1). |
 | FR-PRO-049 | In a region whose wage is 0, the cost anchor of every commodity MUST be 0, so that only the reference band applies to beliefs there. |
 
 ### Non-functional
@@ -1486,7 +1600,8 @@ Still open:
 | The bounds of 10.1 | root package, `bounds.go` |
 | Validation, the sentinels and the warnings of section 10 | root package, `validate.go`, `errors.go` |
 | The execution-count rule (4.2), the yield lookup (6.2), the residue arithmetic (6.6), `UnitCost` and `TrainingPays` | `internal/production`: pure functions over primitive slices and indexes (architecture.md 2.9) |
-| The job, the residues and the production phase | root package, `agent.go` and `world.go`, calling `internal/production` and `internal/ledger` inline |
+| The job type, the rules over a job, the residue layout (15), the resolved yield table with the shock slot (6.8), the cost-anchor table and the steps that apply the rules to the ledger (start, continuation, completion, abandonment, the weight change, the job of a warm start) | root package, `production.go`, calling `internal/production` and `internal/ledger` inline; the steps take a pointer to a job and a slice of residues and emit nothing |
+| The storage of the job and the residues on the agent (`spec-agents.md` 3.1, 3.2), the residue draw at creation (FR-PRO-026), the reset of residues at a role change, and the production phase itself (the rotation, the two passes, the events) | root package, `agent.go` and `world.go`, calling the steps of `production.go` |
 | The reason `disposal` | `internal/ledger` registry (`spec-ledger.md` 7.2) |
 | The events `RecipeExecuted` (extended) and `RecipeAbandoned` | root package, `event.go` |
 | Reason constants for refused starts | exported constants of the root package, `event.go`; `internal/logkeys` holds the key strings only |

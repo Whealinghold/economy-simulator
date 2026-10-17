@@ -164,6 +164,26 @@ const (
 	ReasonAtCeiling Reason = "at_ceiling"
 )
 
+// The reasons a start of a recipe is refused in the first slice, in the
+// master order of spec-production.md 4.2.1. The rest of the order arrives
+// with the module that owns each reason, appended here in that order and
+// never inserted.
+const (
+	// ReasonNotOnRole is a request for a recipe that is not on the agent's
+	// role list.
+	ReasonNotOnRole Reason = "not_on_role"
+	// ReasonZeroYield is a start whose effective yield factor is 0 and whose
+	// recipe is not refused as having no site.
+	ReasonZeroYield Reason = "zero_yield"
+	// ReasonNoSite is a start of a sited recipe that the region has no yield
+	// profile for.
+	ReasonNoSite Reason = "no_site"
+	// ReasonNoTool is a start for which a tool item is missing.
+	ReasonNoTool Reason = "no_tool"
+	// ReasonNoInput is a start for which an input is not available.
+	ReasonNoInput Reason = "no_input"
+)
+
 // Cause is the machine-readable cause of a removal, a weight change or a role
 // change, a member of a closed set. Its values are the values of the cause log
 // key. The constants below are the ones the first slice can reach; a module
@@ -357,6 +377,9 @@ type MarketCleared struct {
 	HasBestBid bool
 	// HasBestAsk is whether an unmatched ask remained.
 	HasBestAsk bool
+	// CostAnchor is the cost anchor of the commodity in the region in force
+	// for the tick (spec-production.md 9.3), in minor units; 0 when unknown.
+	CostAnchor Price
 }
 
 // BeliefsUpdated is emitted once per market per tick that had at least one
@@ -409,12 +432,50 @@ type RecipeExecuted struct {
 	// Executions is the number of executions of the recipe, the sum of
 	// weights of the households that ran it.
 	Executions int64
-	// Outputs is the units created, in output order.
+	// Outputs is the gross units created per output item, in output order:
+	// discard outputs and the part of an output that had no room are included,
+	// a quantity of 0 has no row.
 	Outputs []Amount
-	// Disposed is the units of the outputs that were discarded.
+	// Disposed is the part of Outputs that was never held, in output order:
+	// the whole quantity of each discard output and, for any other output,
+	// the part the maximum quantity left no room for. The units added to the
+	// principal's account are Outputs less Disposed.
 	Disposed []Amount
 	// EffectiveYield is the yield applied, in basis points.
 	EffectiveYield int64
+	// Overflow is the part of Disposed that is not a discard output, in output
+	// order: the units an output lost because the maximum quantity left no
+	// room. Disposed less Overflow is the discard outputs, which are waste by
+	// design; Overflow is the anomaly the "recipe output disposed" Warn and
+	// the overflow metric count.
+	Overflow []Amount
+}
+
+// RecipeRefused is emitted once per region and recipe per tick in which the job
+// request of at least one free household was refused, so that the count of
+// executions was 0 (spec-production.md 4.2, 14.1); it is never emitted when
+// none was. Each count is the households refused for the reason (the sum of
+// the weights of the agents), and a request is counted under its first
+// applicable reason of the master order, so the counts add to the households
+// refused. A request declined by the production halt is in ProductionHalted
+// and a household that started fewer executions than its weight is in neither.
+type RecipeRefused struct {
+	Tick int64
+	// Region is the region.
+	Region RegionID
+	// Recipe is the recipe requested.
+	Recipe RecipeID
+	// NotOnRole is the households whose role does not list the recipe.
+	NotOnRole int64
+	// ZeroYield is the households for which the effective yield was 0.
+	ZeroYield int64
+	// NoSite is the households for which a sited recipe had no yield profile
+	// in the region.
+	NoSite int64
+	// NoTool is the households for which a tool item was missing.
+	NoTool int64
+	// NoInput is the households for which an input was not available.
+	NoInput int64
 }
 
 // RecipeAbandoned is emitted when a job ends without output.
@@ -638,6 +699,7 @@ func (TradeExecuted) isEvent()    {}
 func (MarketCleared) isEvent()    {}
 func (BeliefsUpdated) isEvent()   {}
 func (RecipeExecuted) isEvent()   {}
+func (RecipeRefused) isEvent()    {}
 func (RecipeAbandoned) isEvent()  {}
 func (ProductionHalted) isEvent() {}
 func (UpkeepShortfall) isEvent()  {}

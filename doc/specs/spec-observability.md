@@ -78,7 +78,7 @@ Out of scope, with the owner:
 | # | Position | Section |
 |---|----------|---------|
 | 1 | There are three outputs and each fact goes to one: a **fact that happened** is an event, a **state at a boundary** is a snapshot field, a **thing for a human** is a log line. A metric is derived, never a fourth source of truth | 3.1 |
-| 2 | One catalogue of 89 events: the 47 of the first rules, `WorldRestored`, `ProductionHalted`, `YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and `WearApplied` (53), and the 36 of the fourteen later-stage modules (4.1.9 to 4.1.12 and the groups they name). Every event has one owner, one position, one volume class and one module gate | 4 |
+| 2 | One catalogue of 90 events: the 47 of the first rules, `WorldRestored`, `ProductionHalted`, `RecipeRefused`, `YieldShocked`, `TransitFactorChanged`, `PopulationScaled` and `WearApplied` (54), and the 36 of the fourteen later-stage modules (4.1.9 to 4.1.12 and the groups they name). Every event has one owner, one position, one volume class and one module gate | 4 |
 | 3 | An event carries the **typed integer ID** of every configured entity (`RegionID`, `CommodityID`, `RoleID`, ...) and the agent ID; a reason, a cause and a side are constants of a closed set. The strings come from one **names table**, carried by `WorldCreated`, `WorldRestored` and the snapshot, and by `World.Config()`. This answers REG open question 4, RES 14.1 and N-012 | 3.2 |
 | 4 | An event of a transition of one agent carries the agent's region (and role where the metric needs it) so that a consumer with no agent table can attribute it | 3.3 |
 | 5 | `BoundaryFlow` is only for the reasons whose kind is faucet or sink. The internal reasons (`trade`, `relief`, `start_money`, `estate_*`, `escrow_*`, `transit_*`, the weight reasons) have their own events or are in the snapshot | 4.4.1 |
@@ -331,14 +331,15 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `OrderPlaced` | CLR 9 | P3.2(c), P3.4, P3.5 | O | core | `Region`, `Commodity`, `Agent`, `Side`, `Limit Price`, `Quantity` |
 | `OrderRejected` | CLR 9, 3.2 | P3.2(c), P3.4, P3.5 | O | core | `Region`, `Commodity`, `Agent`, `Side`, `Reason` |
 | `TradeExecuted` | CLR 9 | P4.1 | R | core | `Region`, `Commodity`, `Buyer`, `Seller`, `Price`, `Quantity` |
-| `MarketCleared` | CLR 9, 5.4 | P4.1, once per market, also with no trade | A | core | `Region`, `Commodity`, `Price` (the published price), `PriceAge int64`, `Volume Quantity`, `UnmatchedBid Quantity`, `UnmatchedAsk Quantity`, `BestBid Price`, `BestAsk Price`, `HasBestBid bool`, `HasBestAsk bool` |
+| `MarketCleared` | CLR 9, 5.4 | P4.1, once per market, also with no trade | A | core | `Region`, `Commodity`, `Price` (the published price), `PriceAge int64`, `Volume Quantity`, `UnmatchedBid Quantity`, `UnmatchedAsk Quantity`, `BestBid Price`, `BestAsk Price`, `HasBestBid bool`, `HasBestAsk bool`, `CostAnchor Price` (the cost anchor of the commodity in the region in force for the tick, `spec-production.md` 9.3, in minor units; 0 when unknown) |
 | `BeliefsUpdated` | BEL 12.1 | P5.4, after the last outcome of the market | A | core | `Region`, `Commodity`, `Outcomes`, `Adjusted`, `Raised`, `Lowered`, `AtFloor`, `AtCeiling`, `Conflicts`, `Clamped`, `MeanCentre Price`, `LowCentre Price`, `HighCentre Price` |
 
 #### 4.1.3 Production, work and wants
 
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
-| `RecipeExecuted` | PRO 14.1 | P2.1, P2.7 | E | core | `Agent`, `Region`+, `Recipe`, `StartTick int64`, `Executions`, `Outputs []Amount`, `Disposed []Amount`, `EffectiveYield` (bp) |
+| `RecipeExecuted` | PRO 14.1 | P2.1, P2.7 | E | core | `Agent`, `Region`+, `Recipe`, `StartTick int64`, `Executions`, `Outputs []Amount`, `Disposed []Amount`, `EffectiveYield` (bp), `Overflow []Amount` (the part of `Disposed` that is not a discard output) |
+| `RecipeRefused` | PRO 14.1; OBS 4.4.6a | P2.8a, after `ProductionHalted`, ascending (`RegionID`, `RecipeID`); once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, never otherwise | A | core | `Region`, `Recipe`, `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (households refused for each reason of the master order of `spec-production.md` 4.2.1; a later module appends its reason's count) |
 | `RecipeAbandoned` | PRO 14.1 | P7.1, P7.2, a removal or a `Relocate` (`region_changed`) at a call | E | core | `Agent`, `Region`+, `Recipe`, `Executions`, `Reason` |
 | `ProductionHalted` + | OBS 4.4.6; AGT 7.1.5 | P2.8a (new) | A | core | `Region`, `Role`, `Free`, `Halted`, `Skipped []HaltRow` with `HaltRow{Recipe RecipeID; Households int64}` |
 | `OwnUseChanged` | SUB 14.1 | P2.8 | A | subsistence | `Region`, `Role`, `Households`, `OnOwnUse`, `Entered`, `Left`, `Started`, `Blocked`, `Retried`, `Output []Amount` |
@@ -489,8 +490,8 @@ the later modules': the `Cause` of `MoneyFlowScaled`, `TransitFactorChanged` and
 `EdgeStatusChanged` gains the constant `policy` (PLC), and the fields `Toll`,
 `LossBP`, `Lost` and `AccountLost` are the fiscal and risk modules' (FIS, RSK).
 
-The count is 89: the 47 of the first table of `rules/observability-and-logging.md`
-4.3, the five marked `+` as new events and `WearApplied` (53), and the 36 of the later modules
+The count is 90: the 47 of the first table of `rules/observability-and-logging.md`
+4.3, the five marked `+` as new events, `WearApplied` and `RecipeRefused` (54), and the 36 of the later modules
 (`StoreChanged` and `RoomLimited` in 4.1.3 and 4.1.4, `StoreLoss` in 4.1.5, the two
 risk scales in 4.1.8, three in 4.1.9, six in 4.1.10, two in 4.1.11 and twenty in
 4.1.12: 2 + 1 + 2 + 3 + 6 + 2 + 20 = 36). Volume class by event, for the cost model of
@@ -499,13 +500,13 @@ section 8:
 | Class | Events |
 |-------|--------|
 | W (6) | `WorldCreated`, `WorldRestored`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` |
-| A (35) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `WearApplied`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound`, `CoverSettled` |
+| A (36) | `MarketCleared`, `BeliefsUpdated`, `ProductionHalted`, `RecipeRefused`, `OwnUseChanged`, `UpkeepShortfall`, `WantShortfall`, `EntryLimited`, `PopulationChanged`, `BoundaryFlow`, `WearApplied`, `ReliefPaid`, `MoneyFlowLimited`, `ContractRound`, `MerchantsPlanned`, `MigrationReviewed`, `EndowmentChanged`, `RumoursServed`, `OutsideTraded`, `RoomLimited`, `LabourRound`, `SettlementHeld`, `RentPaid`, `CreditRound`, `CreditSettled`, `FacilityLimited`, `FiscalFlowApplied`, `TreasuryOrdered`, `MembershipChanged`, `RightRefused`, `PriceControlled`, `SavingPlanned`, `TechnologyAdvanced`, `PolicyDecided`, `CoverRound`, `CoverSettled` |
 | E (31) | `RecipeExecuted`, `RecipeAbandoned`, `AgentSpawned`, `AgentBankrupted`, `EstateOpened`, `WeightChanged`, `RoleChanged`, `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded`, `MoneyFlowEnded`, `AgentRelocated`, `ShipmentDispatched`, `ShipmentArrived`, `ShipmentRejected`, `ContractFormed`, `ContractSettled`, `MigrationStarted`, `OutsideEnded`, `StoreChanged`, `StoreLoss`, `HireFormed`, `HireEnded`, `LoanFormed`, `LoanEnded`, `LoanPassed`, `SettlementClassChanged`, `TitleTransferred`, `FacilityChanged`, `CoverFormed`, `CoverEnded` |
 | O (2) | `OrderPlaced`, `OrderRejected` |
 | R (1) | `TradeExecuted` |
 | C (14) | `MoneyFlowScaled`, `EdgeStatusChanged`, `TransitFactorChanged`, `EndowmentAdjusted`, `OutsideShocked`, `YieldShocked`, `PopulationScaled`, `RentScaled`, `CreditRateScaled`, `RouteRiskScaled`, `StoreRiskScaled`, `LegalLevelSet`, `RightSuspensionSet`, `TechnologyAdjusted` |
 
-The six classes add to 89 (6 + 35 + 31 + 2 + 1 + 14). The first tables are the
+The six classes add to 90 (6 + 36 + 31 + 2 + 1 + 14). The first tables are the
 authority and this one is for reading: a test (FR-OBS-003) derives the class of
 each event from the tables of 4.1 and checks that every event type of the
 catalogue appears once.
@@ -816,6 +817,32 @@ not a clamp, and the households held to work by the floor are in the snapshot
 `ProduceHaltRatio`; `spec-stability.md` register, K-AGT09 of
 `spec-calibration.md`): a halt that acts is visible here and nowhere else
 (FR-STB-013).
+
+#### 4.4.6a `RecipeRefused`
+
+**Decision.** One aggregate per region and recipe per tick in which the job request
+of at least one free household was **refused with a count of 0** by the execution
+count of `spec-production.md` 4.2: the counts are the households (the sum of the
+weights of the agents) refused for each reason of the master order of 4.2.1 that the
+build counts, a request under its first applicable reason, so the counts add to the
+households refused. The first slice has five columns, `NotOnRole`, `ZeroYield`,
+`NoSite`, `NoTool` and `NoInput`; a module appends the count of its own reason
+(a count, never a typed ID: 4.2 of the rules). A request that started fewer
+executions than the weight is not a refusal and a request declined by the production
+halt is in `ProductionHalted`, so the two events are disjoint. The starts of a
+trainee, of an own-use job (`OwnUseChanged.Blocked`) and of a hire (`LabourRound`) are
+counted by their modules and not here.
+
+It exists because the refusal of a start was a per-agent `Debug` line and nothing
+else, and the per-agent volume that kept it out of the event list does not apply to
+an aggregate bounded by regions times recipes: the reason is what separates a stalled
+chain with an upstream shortage (`NoInput`), no capital (`NoTool`) or an error of the
+pack (`NoSite`, `ZeroYield`), which no snapshot field shows because a refused start
+changes no state. The metric is `economysim.recipe.refused` (6.2.1). The position is
+P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`); the world
+counts into the tally of `production.go` where a start returns 0 and flushes it once
+at P2.8a, behind the "observer supplied" flag (rules 4.5). It is never emitted when
+no request was refused (FR-OBS-095).
 
 #### 4.4.7 Events that are not added, with the reason
 
@@ -1387,6 +1414,10 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.belief.outcomes` | Counter | `{outcome}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`Outcomes`) | **new**: the denominator of `belief.at_bound`. `at_bound` is held across a tick with no event (6.3.6) while the `Warn` of row 3 of 7.3 resets on such a tick, so a market whose orders stopped looks pinned on a dashboard and is silent in the log; a flat counter shows why. It also tells a share of 1 of 1 from 300 of 400, which the `Warn` test `AtFloor + AtCeiling > Outcomes / 2` cannot (N-230) |
 | `economysim.belief.limited` | Counter | `{outcome}` | `economysim.commodity`, `economysim.region`, `economysim.belief_limit` (`conflict`, `clamped`) | `BeliefsUpdated` (`Conflicts` as `conflict`, `Clamped` as `clamped`) | **new**: `conflict` is a cost floor above the reference band, a belief pinned by the configuration (unit cost against reference price) and not by the market, which `at_bound` cannot tell apart; `clamped` is zero under the default strategy, so any count is a custom `Strategy` returning a belief out of its range, which the world corrects silently |
 | `economysim.recipe.executions` | Counter | `{execution}` | `economysim.recipe` | `RecipeExecuted` (`Executions`, not one per event) | kept |
+| `economysim.recipe.refused` | Counter | `{household}` | `economysim.recipe`, `economysim.reason` (the five constants of `RecipeRefused`) | `RecipeRefused` (each count, by its reason) | **new** (4.4.6a): a refused start changes no state, so without it a stalled chain (no input, no tool, a yield of 0, no site) is visible only in a per-agent `Debug` line; disjoint from `production.halted`, which counts requests the halt declined |
+| `economysim.recipe.abandoned` | Counter | `{execution}` | `economysim.recipe`, `economysim.reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) | `RecipeAbandoned` (`Executions`, by `Reason`) | **new**: an abandoned job drops its pending output while its inputs stay consumed, so it is destroyed value; a rise by `region_changed` or `principal_left` points at the migration or the trainer, and `recipe.executions` does not show it |
+| `economysim.recipe.overflow` | Counter | `{unit}` | `economysim.commodity` | `RecipeExecuted` (`Overflow` rows, units) | **new**: the units an output lost for want of room, the anomaly that the `Warn` of row 19 of 7.3 reports; `economysim.commodity.flow` under `disposal` also counts the discard outputs, which are waste by design, so it cannot separate the two, and a glut shows here first |
+| `economysim.production.cost_anchor` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`CostAnchor`), once per market per tick, so the series is never stale | **new**: the anchor caps price beliefs, so it says whether a market sits at its ceiling because of the cost anchor or the configured band (read with `belief.at_bound`); a value of 0 is an unknown anchor (no observed wage or price), which silently removes the cap. Event-fed and not a snapshot field, because the anchor is a function of the previous tick's prices and is recomputed each tick, not saved (`spec-production.md` 15), so a snapshot of a restored world could not equal the original's (FR-OBS-043) |
 | `economysim.production.halted` | Counter | `{household}` | `economysim.role`, `economysim.recipe` | `ProductionHalted` (`Skipped` rows: a household counts once for each recipe skipped, so the sum over recipes is not the households halted; that figure, `Halted`, is in the event) | **new** (N-067) |
 | `economysim.agent.count` | UpDownCounter | `{agent}` | `economysim.role` | `AgentSpawned` (+1), `AgentBankrupted` (-1), `RoleChanged` (-1 `From`, +1 `To`) | kept |
 | `economysim.agent.removals` | Counter | `{agent}` | `economysim.role`, `economysim.cause` | `AgentBankrupted` | **renamed** from `economysim.agent.bankruptcies` (6.3.4) |
@@ -1485,6 +1516,7 @@ adapter records each instrument below once per call, from the rows named.
 | Name | Instrument | Unit | Attributes | Fed by |
 |------|-----------|------|------------|--------|
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
+| `economysim.recipe.in_progress` | Gauge | `{execution}` | `economysim.recipe`, `economysim.region` | `Jobs[].Executions` (5.3.5): the executions of the jobs in progress, 0 where a pair has none; with `recipe.refused` it tells a producer that is working from one that is idle, and it needs no new field |
 | `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
 | `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
@@ -1636,7 +1668,7 @@ modules) for `economysim.market.orders.rejected`, the goods boundary reasons of 
 for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namespace
 of the money flow IDs) for `economysim.fiscal.*`, the refusal reasons of a vacancy
 (`employer_funds`, `no_input`, `no_tool`, `no_endowment`, `no_room`, `zero_yield`,
-`no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled` and of a
+`no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled`, the five refusal reasons of a start (`not_on_role`, `zero_yield`, `no_site`, `no_tool`, `no_input`) for `economysim.recipe.refused`, the abandon reasons (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) for `economysim.recipe.abandoned` and of a
 rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
 also takes, per instrument, the closed set of the event that feeds it (`removal` and
 `consumer` for `economysim.title.transfers`; `repaid`, `written_off`,
@@ -1652,18 +1684,18 @@ the attribute sets, every cell that could occur:
 
 | Group | Series |
 |-------|-------|
-| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2, belief outcomes 5 x 30, belief limited 5 x 30 x 2) | 1 680 |
+| market (trades 30, volume 30, unmatched 30 x 2, orders 30 x 2, rejected 30 x 10, clearing price 5 x 30, cost anchor 5 x 30, belief centre 5 x 30, price age 5 x 30, beliefs at bound 5 x 30 x 2, belief outcomes 5 x 30, belief limited 5 x 30 x 2) | 1 830 |
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
-| production (executions 45, halted 20 roles x 45 recipes) | 945 |
+| production (executions 45, halted 20 roles x 45 recipes, refused 45 x 5 reasons, abandoned 45 x 4 reasons, overflow 30) | 1 380 |
 | agents and households (count 20, removals 20 x 4, household count 20, unfed 20, changes 20, births 20, deaths 20, exits 20 x 3) | 260 |
 | wants (6 x 20) and entry (9) | 129 |
 | money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
-| snapshot-fed (pending 150, stock 300, money supply 15, welfare ratio 100) | 565 |
+| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100) | 790 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 5 100** (5 103), for the instruments of the earlier modules |
+| **Total** | **about 5 900** (5 913), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1801,7 +1833,7 @@ which each uses.
 | 16 | "migration blocked" | B: households pushed in each tick and none started | `region`, `households`, `reason` | regions | `MigrationReviewed` | MIG 13.2 |
 | 17 | "arrivals held" | B: a held arrival in each tick | `region`, `households` | regions | `MigrationReviewed.Held` | MIG 13.2 |
 | 18 | "wants choked" | B: all of a role's households choked for the want | `region`, `role`, `want`, `households` | regions x roles x wants | `WantShortfall.Choked` | DEM 11.2 |
-| 19 | "recipe output disposed" | **no run**: the overflow rule of PRO 5.3.2, at most one per recipe per tick (PRO 14.2), exempt from FR-OBS-071 and FR-OBS-072 and bounded by the recipes of the configuration | `recipe`, `commodity`, `quantity` | recipes | `RecipeExecuted.Disposed` | PRO 14.2 |
+| 19 | "recipe output disposed" | **no run**: the overflow rule of PRO 5.3.2, at most one per recipe per tick (PRO 14.2), exempt from FR-OBS-071 and FR-OBS-072 and bounded by the recipes of the configuration | `recipe`, `commodity`, `quantity` | recipes | `RecipeExecuted.Overflow` (the part of `Disposed` that is not a discard output, so no look-up of the recipe is needed) | PRO 14.2 |
 | 20 | "labour unmatched" | B: more than half of a worker role's offered households in a region were unmatched in each tick of the run | `region`, `role`, `households` | regions x roles | `LabourRound.Workers[].NoVacancy`; `RoleRow.Employed` | EMP 15.2 |
 | 21 | "vacancies unfilled" | B: positions of an employer role in a region were unfilled in each tick of the run | `region`, `role`, `vacancies`, `reason` | regions x roles | `LabourRound.Employers[].Unfilled` and the refusal fields | EMP 15.2 |
 | 22 | "tenure refusal" | A: requests of an endowment were refused for a reason (`no_title` or `rent_funds`) in the tick, the run of such ticks (saved by LND) being 1 or a multiple of 10 | `tick`, `region`, `resource`, `rent`, `agents`, `reason` | endowments x 2 reasons | `RentPaid.NoTitle`, `RentFunds` | LND 13.2 |
@@ -2084,6 +2116,7 @@ are the event's own (3.3.2), the recorder may keep them.
 | bucket | `BoundaryFlow` with `Tick` -1 appears once, before the first `TickStarted`, with the totals of `Snapshot.Construction` taken before the step | FR-OBS-015 |
 | `BoundaryFlow` scope | no internal reason appears; the order is that of 4.4.1.2 | FR-OBS-014 |
 | `ProductionHalted` | emitted only with `Halted` above 0, with a `Skipped` row for each recipe skipped | FR-OBS-016 |
+| `RecipeRefused` | emitted only for a (region, recipe) with a refusal, in ascending order, the counts adding to the households refused, and no row for a tick with none | FR-OBS-095 |
 
 ### 9.2 The capturing handler and the logs
 
@@ -2632,6 +2665,9 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-092 | `WearApplied` MUST be emitted once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows, with `Units` equal to the ledger's wear units of the commodity; the construction bucket MUST be emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows; it MUST NOT be emitted for a tick with no wear. |
 | FR-OBS-093 | `Markets[].Lots` MUST equal the number of lots of the commodity in the accounts counted by `HeldByAgents`, `HeldByEstate` and `HeldByTreasury` of the region, and a restored world's `Lots` MUST equal the original's (FR-OBS-043). |
 | FR-OBS-094 | `economysim.belief.outcomes` MUST add `BeliefsUpdated.Outcomes` and `economysim.belief.limited` MUST add `Conflicts` as `conflict` and `Clamped` as `clamped`, each by commodity and region, once per event; the series are absent, not zero, until the first event. |
+| FR-OBS-095 | `RecipeRefused` MUST be emitted once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0, each count MUST be the sum of the weights of the agents refused for that reason under the first applicable reason of the master order of `spec-production.md` 4.2.1, and it MUST NOT be emitted for a tick with no such refusal (4.4.6a). `economysim.recipe.refused` MUST add each count by recipe and reason, once per event. |
+| FR-OBS-096 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs; `economysim.recipe.overflow` MUST add its units by commodity, and the `Warn` "recipe output disposed" MUST be fed by it. |
+| FR-OBS-097 | `economysim.recipe.abandoned` MUST add `RecipeAbandoned.Executions` by recipe and `Reason`; `economysim.recipe.in_progress` MUST equal `Jobs[].Executions` by recipe and region, absent and not zero until a snapshot is passed, and 0 for a pair with no row; `MarketCleared.CostAnchor` MUST equal the cost anchor of the commodity in the region as the production step read it for the tick, and `economysim.production.cost_anchor` MUST hold it by commodity and region once per market per tick. |
 
 ### Non-functional
 
