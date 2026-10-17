@@ -1326,7 +1326,7 @@ without output), with their main fields in parentheses. This spec owns the full 
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
 | `RecipeExecuted` | a job completes (and a duration-1 job completes in its start tick) | `Tick`, `Agent`, `Region`, `Recipe`, `StartTick`, `Executions`, `Outputs`, the gross quantity created per output item as a slice of (commodity, quantity) in output order, `Disposed` as a slice of (commodity, quantity) in output order (the part of those units that was never held, below), `EffectiveYield` in basis points, `Overflow` as a slice of (commodity, quantity) in output order (the part of `Disposed` that is not a discard output, below) |
-| `RecipeRefused` | once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0; never otherwise | `Tick`, `Region`, `Recipe`, and the households refused for each reason of the master order of 4.2.1 that the build counts: `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (a later module appends the count of its reason) |
+| `RecipeRefused` | once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0, or was not made because the first recipe that could not run was blocked (`spec-agents.md` 7.1.4); never otherwise | `Tick`, `Region`, `Recipe`, and the households refused for each reason of the master order of 4.2.1 that the build counts: `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (a later module appends the count of its reason) |
 | `RecipeAbandoned` | a job ends without output (5.4) | `Tick`, `Agent`, `Region`, `Recipe`, `Executions`, `Reason` (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) |
 
 `StartTick` is the completing tick minus the recipe's `Duration` plus 1 (5.1.1,
@@ -1357,6 +1357,7 @@ first applicable reason of the master order, so the counts add to the households
 A request that started fewer executions than its weight is not a refusal, a request the
 production halt declined is in `ProductionHalted` (`spec-observability.md` 4.4.6), and
 the starts of a trainee, of an own-use job and of a hire are counted by their own modules.
+A free household that requested no job because the first recipe of its role that could not run was blocked is added to the same tally under that recipe and the view's reason (`spec-agents.md` 7.1.4, FR-AGT-086), since the default strategy never requests a recipe the view says cannot run.
 The world adds a refusal to the `refusalTally` of `production.go` where a start returns 0
 and flushes it once at P2.8a; the tally is sized by regions times recipes and allocates
 nothing after construction. `spec-observability.md` 4.4.6a gives the decision.
@@ -1533,7 +1534,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check (`not_on_role`), then against the rights in force (`not_permitted`) and before `k0` is derived, for the principal of a trainee's or a hire's job as for the executor as the right says, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
 | FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
 | FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
-| FR-PRO-052 | The refusals of a tick MUST be reported by `RecipeRefused`, one row per region and recipe with a refusal, in ascending (`RegionID`, `RecipeID`), each count the sum of the weights of the agents refused for the reason under the first applicable reason of 4.2.1, none for a tick without a refusal, and no refusal MUST be counted twice or in `ProductionHalted` (14.1). |
+| FR-PRO-052 | The refusals of a tick MUST be reported by `RecipeRefused`, one row per region and recipe with a refusal, a request refused with a count of 0 or a household blocked by the work report (`spec-agents.md` 7.1.4), in ascending (`RegionID`, `RecipeID`), each count the sum of the weights of the agents refused for the reason under the first applicable reason of 4.2.1, none for a tick without a refusal, and no refusal MUST be counted twice or in `ProductionHalted` (14.1). |
 | FR-PRO-053 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs (14.1). |
 | FR-PRO-049 | In a region whose wage is 0, the cost anchor of every commodity MUST be 0, so that only the reference band applies to beliefs there. |
 

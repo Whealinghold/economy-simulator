@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 7: the agent, the strategy and the default strategy
 
-**Status: plan written (2026-10-17), audit round 5 fixes applied (2026-10-17); coordinator rulings applied (O14 first-buyer rule final, Phase 6b folded into Phase 6, eight phases).** Sequences the seventh row of
+**Status: done (2026-10-17), phases 1 to 8 built and the exit gate passed; audit round done with the minor gaps fixed (glossary entries, traceability rows reworded to name the half each covers, long rows expanded); earlier: plan written, audit round 5 fixes applied, coordinator rulings applied (O14 first-buyer rule final, Phase 6b folded into Phase 6, eight phases).** Sequences the seventh row of
 Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`agent.go`, `strategy.go`
 (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy,
 `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`", into
@@ -1549,6 +1549,81 @@ Row 7 = this row. "World" = row 11. Module = the owner row of Stage 2/3.
 | NFR-AGT-002 | Row 7, Phase 7 (the benchmark across weights, listed in its tests) |
 | NFR-AGT-003 | Row 7, Phases 2, 3, 6 |
 | NFR-AGT-004 | Row 7, Phases 2, 3 (fuzz) |
+
+### Traceability result (Phase 8)
+
+Row-7 IDs and the tests that carry a `Requirement:` line for them (text search over the `*_test.go` files of the root and `internal/household`, 2026-10-17). IDs owned by the world, the estates, the spawner, the modules or the checkpoint row are tested there; a pure half tested here is listed too.
+
+| ID | Tests |
+|----|-------|
+| FR-AGT-001 | `TestAgent_HasJob`, `TestNewAgent_Weight` |
+| FR-AGT-002 | `TestAgent_HoldsNoMoneyQuantityOrRegion` |
+| FR-AGT-003 | `TestNewRoleTable_TradableSetAndUpkeep`, `TestRoleTable_AgreesWithValidator`, `TestTables_ConfigurationOnlyAddition` |
+| FR-AGT-004 | `TestNewAgent_BuildsFromRoleRow`, `TestReseedBeliefs_Creation`, `TestReseedBeliefs_RoleChange`, `TestRoleTable_AgreesWithValidator` |
+| FR-AGT-005 | `TestDefaultEndowment`, `TestDrawCreation_TakesTwoWordsInOrder`, `TestFundInitial`, `TestFundInitial_SkipsZeroAmounts`, `TestNewAgent_BuildsFromRoleRow`, `TestReseedBeliefs_Creation` |
+| FR-AGT-006 | `TestDrawCreation_RoleWithoutResiduesStillDrawsBoth`, `TestDrawCreation_TakesTwoWordsInOrder` |
+| FR-AGT-010 | `TestDefaultStrategyWork_AcceptedByProduction`, `TestDefaultStrategyWork_Cases`, `TestNewAgent_BuildsFromRoleRow`, `TestNewRoleTable_NoRecipes` |
+| FR-AGT-011 | `TestNewRoleTable_OverflowPanics`, `TestNewRoleTable_TradableSetAndUpkeep`, `TestRoleRow_UpkeepInSearchesEveryRegion`, `TestUpkeepTotals` |
+| FR-AGT-012 | `TestValidate_DuplicateRules` |
+| FR-AGT-013 | `TestConsume_Cohort`, `TestConsume_OldestLotsFirst`, `TestConsume_Table` |
+| FR-AGT-014 | `TestConsume_Cohort`, `TestConsume_Table`, `TestFed_CountsWholeBaskets` |
+| FR-AGT-015 | `TestConsume_Cohort`, `TestConsume_Table` |
+| FR-AGT-018 | `TestValidate_BasketToleranceBoundary`, `TestValidate_FieldRules` |
+| FR-AGT-019 | `TestDirected_MethodSet` |
+| FR-AGT-020 | `TestDefaultStrategyTrade_IsAFunctionOfViewAndWords`, `TestDefaultStrategyWork_TakesNoWord` |
+| FR-AGT-024 | `TestDefaultStrategyTrade_IsAFunctionOfViewAndWords`, `TestFillCore_AStrategyThatWritesTheViewChangesNothing`, `TestFillCore_AgreesWithIndependentComputation`, `TestFillCore_AppendingToAViewSliceChangesNothing`, `TestFillCore_DirectiveIsACopy`, `TestFillCore_Groups` |
+| FR-AGT-025 | `TestOrderOf`, `TestPlan_ThroughTheRealAdmission` |
+| FR-AGT-026 | `TestPlan_ThroughTheRealAdmission` |
+| FR-AGT-028 | `TestDefaultStrategyWork_AcceptedByProduction`, `TestFillCore_Executions` |
+| FR-AGT-030 | `TestIsDirected`, `TestResolveStrategy`, `TestWithStrategy_Rules` |
+| FR-AGT-031 | `TestDefaultStrategyTrade_IsAFunctionOfViewAndWords` |
+| FR-AGT-033 | `TestDefaultStrategyWork_Cases` |
+| FR-AGT-034 | `TestBetter_Examples`, `TestDefaultStrategyWork_Cases`, `TestDefaultStrategyWork_CohortShare`, `TestDefaultStrategyWork_ScalesWithTheWeight`, `TestNet_Examples`, `TestRequest` |
+| FR-AGT-035 | `FuzzWorkRules`, `TestDefaultStrategyWork_Cases`, `TestEligible` |
+| FR-AGT-036 | `FuzzWorkRules`, `TestDefaultStrategyWork_Cases`, `TestHalted`, `TestOutputTarget` |
+| FR-AGT-037 | `FuzzWorkRules`, `TestDefaultStrategyWork_Cases`, `TestDefaultStrategyWork_CutNotRefused`, `TestKeepFoodCap`, `TestRequest` |
+| FR-AGT-038 | `TestComputeTargets_Examples`, `TestCost_AccumulatesUpkeepCost`, `TestDefaultStrategyTrade_InputAndToolCommodity`, `TestDefaultStrategyTrade_ToolsAndPurposes`, `TestDefaultStrategyTrade_WorkedExamples`, `TestDefaultStrategyTrade_ZeroYieldIsNeverPlanned`, `TestFillCore_AgreesWithIndependentComputation`, `TestFillCore_Groups`, `TestFillCore_StartsIn`, `TestValidate_RoleTargetProductEdges` |
+| FR-AGT-039 | `FuzzTrade`, `TestDefaultStrategyTrade_Candidates`, `TestDefaultStrategyTrade_FirstBuyerOnAnotherCommodity`, `TestDefaultStrategyTrade_SpendsWithinTheMoney`, `TestDefaultStrategyTrade_WorkedExamples` |
+| FR-AGT-040 | `FuzzTiersAndCap`, `TestDefaultStrategyTrade_TierCombination`, `TestDefaultStrategyTrade_TiersAddToTheGap`, `TestDefaultStrategyTrade_WorkedExamples`, `TestTiers_AddToTheGap`, `TestTiers_Examples` |
+| FR-AGT-041 | `TestAfford`, `TestBudget_Example162`, `TestDefaultStrategyTrade_FirstBuyerOnAnotherCommodity`, `TestDefaultStrategyTrade_SpendsWithinTheMoney`, `TestDefaultStrategyTrade_TierCombination`, `TestDefaultStrategyTrade_TiersOneAndTwoComeFirst`, `TestDefaultStrategyTrade_WorkedExamples`, `TestExcess` |
+| FR-AGT-042 | `FuzzTiersAndCap`, `TestBudget_Example162`, `TestDefaultStrategyTrade_BufferCapIsSharedAcrossCommodities`, `TestDefaultStrategyTrade_CapNeverLowersALimit`, `TestDefaultStrategyTrade_TiersAddToTheGap`, `TestDefaultStrategyTrade_WorkedExamples`, `TestSpendCap_Examples`, `TestSpendCap_MonotoneAndBounded` |
+| FR-AGT-043 | `TestBudget_Example162`, `TestBuyShare`, `TestDefaultStrategyTrade_TiersAddToTheGap`, `TestDefaultStrategyTrade_WorkedExamples` |
+| FR-AGT-044 | `FuzzTrade`, `TestAfford`, `TestDefaultStrategyTrade_FirstBuyerOnAnotherCommodity`, `TestDefaultStrategyTrade_NeverRejectedByTheRealAdmission`, `TestDefaultStrategyTrade_SpendsWithinTheMoney`, `TestDefaultStrategyTrade_TierCombination` |
+| FR-AGT-045 | `TestDefaultStrategyTrade_Candidates`, `TestDefaultStrategyTrade_FirstBuyerOnAnotherCommodity`, `TestDefaultStrategyTrade_UrgentBidNeedsATierOneWant`, `TestDefaultStrategyTrade_UrgentBidUsesTheTop` |
+| FR-AGT-046 | `TestComputeTargets_Examples`, `TestComputeTargets_LinearInTheWeight`, `TestDefaultStrategyTrade_ScalesWithTheWeight`, `TestTiers_LinearInTheWeight` |
+| FR-AGT-047 | `TestDefaultStrategyTrade_Candidates` |
+| FR-AGT-048 | `TestDefaultStrategyTrade_InputAndToolCommodity`, `TestDefaultStrategyTrade_ToolsAndPurposes`, `TestDefaultStrategyTrade_WorkedExamples`, `TestFillCore_AgreesWithIndependentComputation`, `TestFillCore_UnitCostAndTool`, `TestNormalise` |
+| FR-AGT-049 | `TestOutcomeStock` |
+| FR-AGT-050 | `TestDefaultStrategyRevise_EqualsUpdate` |
+| FR-AGT-051 | `TestDefaultStrategyTrade_IsAFunctionOfViewAndWords` covers the first half only (no storage: the default never discards); the second half (discard only the surplus a tier 1 bid needs, with storage on) is owned by the STO row |
+| FR-AGT-052 | `TestComputeTargets_LinearInTheWeight`, `TestDefaultStrategyTrade_CohortInvariance`, `TestDefaultStrategyTrade_OutputTargetCeilsOnTheTotal`, `TestDefaultStrategyTrade_ScalesWithTheWeight`, `TestDefaultStrategyWork_CohortShare`, `TestDefaultStrategyWork_ScalesWithTheWeight`, `TestTiers_LinearInTheWeight` |
+| FR-AGT-053 | `TestNewAgent_BuildsFromRoleRow` covers only the weight-1 half of an agent built from a role row; the `External` flag, the same-rules admission and the spawner refusal `external_agent` are owned by the INT row (Stage 2) and the spawner row (row 9) |
+| FR-AGT-054 | `TestDirected_Revise`, `TestDirected_Trade`, `TestDirected_Work` |
+| FR-AGT-055 | `TestDirected_Trade`, `TestDirected_Work` |
+| FR-AGT-056 | `TestFillCore_DirectiveIsACopy` covers only that the view carries the directive as a copy a strategy cannot write through; "no strategy call waits for the consumer" (`Step` never blocks) is owned by the world row (row 11) and INT (Stage 2) |
+| FR-AGT-057 | `TestDefaultStrategyTrade_ToolsAndPurposes` covers only the `Purpose` a bid is given (the classification); the per-tick totals by purpose (money from trades, relief, in-kind receipts, wear cost) are owned by the world row (row 11) over plan 1-6 scratch |
+| FR-AGT-059 | `FuzzTrade`, `TestDefaultStrategyTrade_AbsurdViewsDoNotPanic` |
+| FR-AGT-060 | `TestWarnings`, `TestWarnings_BoundaryAndSourceEdges`, `TestWarnings_RoleStockMoneyAndLockstepEdges`, `TestWarnings_UpkeepSourcedFromARegionIsCounted` |
+| FR-AGT-061 | `TestDefaultEndowment`, `TestFundInitial_SkipsZeroAmounts` and `TestNewAgent_BuildsFromRoleRow` cover only the starting money received and the role and weight an agent is built with; the `AgentSpawned` event itself, its fields and its order after `WorldCreated` are owned by the world row (row 11) |
+| FR-AGT-062 | `TestRowFiles_NoLoggerNoObserver` covers only that row-7 files hold no logger or observer; the `Debug` level and `Enabled` guard of per-agent log lines are owned by the world row (row 11), where the lines are written |
+| FR-AGT-063 | `TestRowFiles_NoLoggerNoObserver` covers only that a strategy and the row-7 code cannot see a logger or observer; the identical-results run with both attached, and the draws taken in both, are owned by the world row (row 11) |
+| FR-AGT-065 | `TestRowFiles_NoBranchOnAnIdentifier` |
+| FR-AGT-066 | `TestConsume_ConservesGoodsOverSeeds`, `TestFundInitial` |
+| FR-AGT-067 | `TestConsume_FlowsAreConsumptionOnly` |
+| FR-AGT-068 | `TestConsume_EatsFromTheNamedAccount` |
+| FR-AGT-069 | `TestDefaultStrategyTrade_TierOneIgnoresPrices`, `TestTiers_LinearInTheWeight` |
+| FR-AGT-070 | `TestDefaultStrategyWork_Cases`, `TestHalted`, `TestWorkRules_IgnoreTheWeight` |
+| FR-AGT-071 | `TestFillCore_AgreesWithIndependentComputation`, `TestFillCore_Errors`, `TestFillCore_Executions`, `TestFillCore_ExpiringUnits`, `TestFillCore_Groups`, `TestFillCore_MoneyIsAvailableCash`, `TestFillCore_UnitCostAndTool`, `TestRecipeTable_Tool` |
+| FR-AGT-072 | `TestDefaultStrategyWork_Cases`, `TestWorkReport_AWritingStrategyDoesNotChangeIt`, `TestWorkReport_FloorChangedIsHeldByFloor` |
+| FR-AGT-073 | `TestDefaultStrategyTrade_ToolsAndPurposes`, `TestFillCore_AgreesWithIndependentComputation`, `TestFillCore_Groups` |
+| FR-AGT-074 | `TestDefaultStrategyWork_AcceptedByProduction` |
+| FR-AGT-075 | `TestConsume_Cohort`, `TestConsume_ConservesGoodsOverSeeds`, `TestConsume_Table`, `TestNextHungerAndPrivation`, `TestNextHungerAndPrivation_HungerNeverExceedsPrivation` |
+| NFR-AGT-001 | `TestBudget_AllocateNothing`, `TestConsume_AllocatesNothing`, `TestConsume_NoAllocsWhenWarm`, `TestDefaultStrategy_AllocatesNothingWithScratch`, `TestDirected_TradeAllocatesNothingOnAWarmedPlan`, `TestFillCore_AllocatesNothingWarmed`, `TestNewViewScratch_SizedFromTheLargestRole`, `TestReseedBeliefs_ReusesTheSlice`, `TestTargetsAndTiers_AllocateNothing`, `TestViewScratch_OutcomeViewAndPlanAreReset`, `TestWorkRules_AllocateNothing` |
+| NFR-AGT-002 | `TestTrade_CostAndDrawsDoNotDependOnTheWeight` |
+| NFR-AGT-003 | `TestNet_OverflowIsSticky`, `TestOutputTarget` |
+| NFR-AGT-004 | `FuzzTiersAndCap`, `FuzzWorkRules`, `TestComputeTargets_Overflow` |
+
+Exit gate record (2026-10-17): `gofmt`, `go vet`, `staticcheck`, `go test -short -race ./...` and `go mod tidy` clean; coverage by package with `-coverpkg=./...` (blocks deduplicated): root 98.8%, `internal/household` 99.3%, no package under 98.8%; Lizard (10, 8, 500) reports nothing over `agent.go`, the strategy files and `internal/household`; fuzz `FuzzTrade`, `FuzzTiersAndCap` and `FuzzWorkRules` 60 s each (time was short, not the 5 minutes), no new crasher, nothing new to commit under `testdata/fuzz`. Mutation check by a scratchpad copy (not `gomu`): tier order flipped, `Hunger > 0` dropped, a second draw per intent, the weight applied twice, the fallback's job returned over the directive's, intents emitted in reverse, a later tier's limit lowered, the least limit over the tiers: each fails the suite. The scans of Phase 8 are `TestRowFiles_NoBranchOnAnIdentifier` (FR-AGT-065), `TestRowFiles_NoLoggerNoObserver` (FR-AGT-062, 063) and `TestTrade_CostAndDrawsDoNotDependOnTheWeight` (NFR-AGT-002).
 
 ## Cross-plan contract
 

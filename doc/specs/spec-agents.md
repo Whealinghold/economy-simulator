@@ -798,7 +798,7 @@ type AgentView struct {
 
 	Commodities []CommodityView // the tradable set, canonical order
 	Recipes     []RecipeView    // the role's recipes, ascending RecipeID
-	Tunables    Tunables        // section 12, plus the fifteen belief parameters (BeliefParams)
+	Tunables    Tunables        // section 12, plus the fifteen belief parameters (BeliefTunables)
 	HasDirective bool
 	Directive    Directive // by value, its slices copied into the scratch (6.4.2)
 
@@ -810,7 +810,7 @@ type CommodityView struct {
 	Stock     int64 // the whole balance; no reservation exists yet
 	Expiring  int64 // units that spoil at the end of this tick
 	Belief    Belief
-	Bounds    BeliefBounds
+	Bounds    Bounds
 	Ref       Price // the effective reference price
 	Tool      bool  // a required tool of some recipe of the configuration; derived once from the whole configuration; read by 7.3.5
 	UnitCost  Price // 0 unknown; the filler zeroes it for a commodity the role has no recipe making (FR-AGT-048)
@@ -1095,6 +1095,16 @@ does not stop a household that must work to eat (`spec-land.md` 4.6.2). A recipe
 or `Repairs` has at least one input and only discard outputs (`spec-infrastructure.md` 4.1.2
 B2, B3), so its `value_r` is 0, it is not a source and its `net_r` is `-cost_r`: it is never
 eligible here, and only the project request of 7.1.11 asks for one.
+
+A recipe for which the view reports `MaxExecutions` 0 is never requested: production would
+refuse the start, and the recipe is passed over here. When no recipe is chosen the work
+report names the **blocked** recipe, the first recipe of the role (in list order) that
+could not run, with the reason the view gives, if the halt skipped none of the role's
+recipes and a share above 0 asked for work; it is what lets the world count the household
+as refused for that recipe and reason in `RecipeRefused` (`spec-observability.md` 4.4.6a,
+FR-AGT-086), since a refusal of a start never occurs for a request that is not made. A
+household that rests, whose recipe the halt skipped, or for which no recipe is eligible
+and none was blocked, has no blocked recipe.
 
 7.1.5. **The production halt.** A recipe is skipped if any of its outputs with a
 positive `CostShare` is overstocked:
@@ -1918,8 +1928,8 @@ spec owns the full field lists, as that document says, and they are below.
 | `AgentSpawned` | an agent enters, including each initial agent after `WorldCreated` | `Agent`, `Region`, `Role`, `Weight`, `StartMoney` (what it received), `External`, `StoresLocked` (the stores of the role's row not given because the region's class lacks the flag, 0 with no gate; `spec-storage.md` 3.2.3) |
 | `AgentBankrupted` | an agent is removed entirely (3.6): the only event that removes the agent, whatever the cause; the others of the removal accompany it, in the order of `spec-world.md` 6.11 item 8 | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause` (`insolvent`, `starved`, `consumer`, `population`; `spec-spawner.md` 13.1.1), `Money` and `GoodsListed` (the lots passed to the estate: one per distinct lot key, whatever the unit count; units travel in `WeightChanged.Units`) |
 | `WeightChanged`, `RoleChanged`, `EntryLimited` | a weight change without removal, a role change, and the aggregate of the spawner's silent limits | defined and owned by `spec-spawner.md` 13.1; listed here only because they act on the agent state of 3.7 and 3.8 |
-| `UpkeepShortfall` | once per region and role per tick in which at least one household was unfed, after the consumption phase, in order of region and role | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `Unfed` (households), `Agents` (agents with `Unfed` above 0), `MaxHunger` (the largest `Hunger`) |
-| `ProductionHalted` | once per region and role per tick in which the production halt (7.1.5) declined the job request of at least one free household, at P2.8a; never when none was | `Region`, `Role`, `Free`, `Halted`, and per recipe skipped the households for which it was; defined and owned by `spec-observability.md` 4.4.6 |
+| `UpkeepShortfall` | once per region and role per tick in which at least one household was unfed, after the consumption phase, in order of region and role | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `Unfed` (households), `Agents` (agents with `Unfed` above 0), `MaxHunger` (the largest `Hunger`), and `Short`, per upkeep commodity the units the role's households needed and did not hold (`spec-observability.md` 4.4.6b) |
+| `ProductionHalted` | once per region and role per tick in which the production halt (7.1.5) declined the job request of at least one free household, or at least one free household rested (a work share of 0) or found no recipe worth running, at P2.8a; never when none did | `Region`, `Role`, `Free`, `Halted`, and per recipe skipped the households for which it was, `Rested` and `NoRecipe`; defined and owned by `spec-observability.md` 4.4.6 |
 
 Events carry no map, no pointer and no wall-clock time, only identifiers and
 fixed-point values, and are emitted after the transition (observability-and-logging.md
@@ -1953,7 +1963,7 @@ message:
 
 - "work declined", with `agent`, `recipe` and `reason` (`rest`, `halted` and `no_recipe`, which
   the work report of 7.1.3 gives, and the refusal reasons of `spec-production.md` 4.2, `not_on_role`
-  and `not_permitted` among them). The strategy is pure and logs nothing: the world logs the line;
+  and `not_permitted` among them). The strategy is pure and logs nothing: the world logs the line. The aggregate of the same decisions is `ProductionHalted` (`Halted`, `Rested`, `NoRecipe`) and, for a recipe blocked from running, `RecipeRefused` (7.1.4);
 - "intent dropped", with `agent`, `commodity`, `side` and `reason` (`not_tradable`);
 - "upkeep unmet", with `agent`, `commodity` and `quantity` (the shortfall);
 - "discard refused", with `agent`, `commodity` and `quantity`;
@@ -1972,7 +1982,7 @@ inconsistency the library repaired.
 table of observability-and-logging.md 3.3.2; `role` was there already. The `reason`
 values above are exported constants of the root package (`event.go`, a closed set
 of `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only. `rest`, `halted`
-and `no_recipe` are log-only: values of the `reason` log key, not of a metric attribute.
+and `no_recipe` are log-only: values of the `reason` log key, not of a metric attribute; the metric `economysim.work.declined` counts `rest` and `no_recipe` under its own attribute (`economysim.work_decline`).
 
 14.5. **Metric.** None is defined here. `economysim.household.unfed`, an up-down
 counter by role fed by `UpkeepShortfall`, is in the catalogue of
@@ -1981,10 +1991,10 @@ observability-and-logging.md 5.3 (and 5.3.1), with `economysim.household.count`
 adapter treats a tick with no event for a region and role as zero unfed there
 (5.3.1). `economysim.production.halted`, a counter by role and recipe fed by the
 rows of `ProductionHalted` (a household counts once for each recipe it skipped), is
-in the same catalogue.
+in the same catalogue. Three more are fed by this spec's events and rows: `economysim.work.declined`, a counter by role and by `rest` or `no_recipe`, fed by `Rested` and `NoRecipe` of `ProductionHalted`; `economysim.upkeep.short`, a counter of units by commodity and role, fed by `Short` of `UpkeepShortfall`; and `economysim.household.privation.max`, a gauge by role and region fed by `RoleRow.MaxPrivation` of the snapshot, which unlike the event keeps showing the leaky count while it falls back after the household is fed again.
 
 14.6. **Snapshot.** The fields are `spec-observability.md`'s: per region and role the
-`RoleRow` (5.3.4: households and agents, households fed and unfed, the largest hunger, the
+`RoleRow` (5.3.4: households and agents, households fed and unfed, the largest hunger and the largest privation, the
 households held to work by the floor `MinWorkShare`, 7.1.3, N-065, which makes that silent
 damper observable (FR-STB-013), and with the subsistence module on the households in the
 own-use mode; the households blocked are the event `OwnUseChanged`, not a snapshot field).
@@ -2425,6 +2435,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-083 | A strategy registered as `"merchant"` MUST be provided by `strategy.Merchant` in the package `strategy/`, registered by `strategy.Options()`; `NewWorld` MUST reject the name with `ErrUnknownStrategy` when it is not registered. (new, `spec-merchants.md` 3.1) |
 | FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |
 | FR-AGT-085 | An order for a commodity under a `sell` or a `buy` right in force of a body that the agent is not a member of MUST be rejected by the world while it builds the orders, with the reason `not_permitted`, after `not_tradable` and before the market's checks, MUST NOT reach clearing and MUST have no outcome; the check MUST NOT apply to a pseudo-agent. (new, `spec-institutions.md` 5.6.2, FR-ORG-024) |
+| FR-AGT-086 | When the default `Work` requests no job, the work report MUST name the first recipe of the role that the view reports as unable to run (`MaxExecutions` 0), with the view's reason, if and only if the share is above 0 and the production halt skipped none of the role's recipes; the world MUST count that household once as refused for that recipe and reason in `RecipeRefused` (`spec-observability.md` 4.4.6a), and a household that rests, was halted, or has no eligible recipe and no blocked one MUST NOT be so counted. |
 
 ### Non-functional
 

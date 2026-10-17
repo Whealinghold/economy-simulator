@@ -22,6 +22,7 @@ type options struct {
 	targetSpreadGiven bool
 	seed              uint64
 	clearings         registry[Clearing]
+	strategies        registry[Strategy]
 }
 
 // defaultOptions returns the options of a world built with no option: the
@@ -178,4 +179,51 @@ func resolveClearing(o *options, name string, path []string) (Clearing, error) {
 		return c, nil
 	}
 	return nil, &ValidationError{Path: path, Rule: ErrUnknownClearing, Value: name}
+}
+
+// The built-in strategy names (spec-agents.md 6.6): "default" is
+// DefaultStrategy and "directed" is Directed with the default as its fallback.
+const (
+	defaultStrategyName  = "default"
+	directedStrategyName = "directed"
+)
+
+// WithStrategy registers s under name, so that Role.Strategy may name it. It is
+// additive. A name that is not an ID is ErrInvalidID, a name given twice or one
+// of the built-in names "default" and "directed" is ErrDuplicateID and a nil s
+// is ErrNilExtension, checked in that order. The name is part of the
+// configuration hash and the code behind it is not. A typed nil held in a
+// non-nil Strategy is not detected.
+func WithStrategy(name string, s Strategy) Option {
+	return func(o *options) error {
+		return o.strategies.add(name, s, s == nil, defaultStrategyName, directedStrategyName)
+	}
+}
+
+// resolveStrategy returns the strategy a configured name selects: DefaultStrategy
+// for "default", Directed with the default as its fallback for "directed", else
+// the registered one. An empty or unknown name is a *ValidationError at path
+// with rule ErrUnknownStrategy and the name as value (spec-config.md 7.1.4).
+// NewWorld calls it once for every role, after Validate succeeds.
+//
+// It returns the Strategy interface (architecture.md 4.4) because the result is
+// a consumer-registered extension: the concrete type is unknowable here.
+func resolveStrategy(o *options, name string, path []string) (Strategy, error) {
+	switch name {
+	case defaultStrategyName:
+		return DefaultStrategy{}, nil
+	case directedStrategyName:
+		return Directed{Fallback: DefaultStrategy{}}, nil
+	}
+	if s, ok := o.strategies.find(name); ok {
+		return s, nil
+	}
+	return nil, &ValidationError{Path: path, Rule: ErrUnknownStrategy, Value: name}
+}
+
+// isDirected reports whether s is a Directed. A consumer's wrapper that holds a
+// Directed in a field is not (spec-agents.md 6.6).
+func isDirected(s Strategy) bool {
+	_, ok := s.(Directed)
+	return ok
 }

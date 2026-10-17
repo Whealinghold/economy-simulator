@@ -45,7 +45,7 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-235, N-304 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-232, N-236, N-237, N-239, N-280, N-266, N-244, N-245, N-246, N-247 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-232, N-236, N-237, N-239, N-280, N-266, N-244, N-245, N-246, N-247, N-308 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
@@ -72,11 +72,11 @@ PR description.
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204 |
-| OBS | N-125, N-127, N-130, N-159, N-242, N-288, N-289, N-294, N-300 |
+| OBS | N-125, N-127, N-130, N-159, N-242, N-288, N-289, N-294, N-300, N-308 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
-| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-232, N-233, N-234, N-237, N-242, N-243 |
+| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-232, N-233, N-234, N-237, N-242, N-243, N-308 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-274, N-294, N-295, N-296, N-298, N-299, N-306, N-307 |
 | REG | N-150, N-175, N-204 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
@@ -93,7 +93,7 @@ PR description.
 | TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-274, N-276, N-277, N-279, N-280, N-281, N-306, N-307 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-234 |
-| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226, N-230, N-239, N-240, N-242, N-258, N-276, N-280, N-284, N-285, N-286, N-288, N-297, N-265, N-266, N-246 |
+| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226, N-230, N-239, N-240, N-242, N-258, N-276, N-280, N-284, N-285, N-286, N-288, N-297, N-265, N-266, N-246, N-308 |
 
 ## Open notes
 
@@ -161,6 +161,7 @@ PR description.
 - **Update (2026-10-16, plan 1-4 Phase 1):** the beliefs row adds no field, default, bound or validation rule (Stage 0 built all sixteen parameters); the registry test and its `notBuilt` list do not change. Left open for the other owners.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row adds no configuration field, default, bound or validation rule (Stage 0 built them all), so the registry test and its `notBuilt` list do not change. Applied for this row; left open for the other owners.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read for the welfare row: it adds no field and no default (every welfare field has its owner row from Stage 0) and deletes no `notBuilt` entry; `WelfareWindow` has its row since 2026-10-10. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: it adds no configuration field, default or bound (every AGT field has its owner row since Stage 0 and no `notBuilt` entry is left for it); the belief-parameter group of the views (D82) is a view and not a `Config` field, so it adds no row. Left open.
 
 
 ### N-017 Words and names
@@ -196,6 +197,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the terms of the production row (job, executor, principal, residue, effective factor, site factor, yield shock, pending output, cost anchor, unit cost, create-and-dispose) go to the `doc.go` glossary before `internal/production` and `production.go` use them. A standing note; left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied: the terms the welfare code uses go to the `doc.go` glossary before use (welfare ratio, window (qualified: the welfare window), working tick, working household-tick, own-use household-tick, observed wage, pooled regional wage, observed premium, earned ratio, work share, work floor, target ratio, record (of a tick; qualified from CLB's record), ring). A standing note; left open.
 - **Update (2026-10-17, owed-edits job):** read; terms of the new edits (lots, `RegionAgent`, `unsupported_cause`) follow the rule above. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied for the agent row: the terms its code uses go to the `doc.go` glossary before use (Phase 2 of the plan): strategy, agent view, outcome view, trade plan, intent, purpose, job request, directive (the mailbox; not PLC's), directed strategy, fed, unfed, hunger, privation, target (the inventory target; not the welfare target ratio), keep, reserve (the units for this tick's upkeep, and the reserve money), cover (ticks of use held; not INS's), tier, budget stack, spend cap, favourability, planned recipe, production halt, work share (exists), work report. `Strategy` leaves `notYetTerms` of `glossary_test.go` in Phase 5; each term is checked against `doc.go` first (a second entry fails `TestGlossary_Vocabulary`). A standing note; left open.
 
 ### N-018 Unverified evidence
 
@@ -289,6 +291,7 @@ PR description.
 - **Update (2026-10-16, plan 1-4 Phase 1):** the beliefs row sets no default and claims no stability: every default of `spec-beliefs.md` 11 stays a placeholder (the preamble of that spec). Left open.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row sets no default and claims no stability. A standing note; left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: every WEL default stays a labelled placeholder; the clamp bound `MaxInt64 / MaxWelfareWindow` is a derived proof bound and not a default. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: every default of AGT stays a labelled placeholder; no test of the agent row asserts a default as stable, and the worked examples of `spec-agents.md` 16 are hand-computed tests, not results. Left open.
 
 
 ### N-028 Can the target-income rule make a shortage worse?
@@ -440,6 +443,7 @@ PR description.
 - **Update (2026-10-11, STY):** read by STY: P04's prior is about 2.6 times the 5.7% offset of the revised rule, and says so (`spec-stylised-facts.md` 5.1).
 - **Update (2026-10-16, plan 1-4 Phase 1):** read for the beliefs row; left open. The row implements the revised rule of 5.4 as written (the limit-based, guarded, shared evidence move, FR-BEL-036, 037) and tests the guard case (`spec-beliefs.md` 15, case D). Whether the residual offset of 5.7% remains in the library is S01 with FR-STB-018, which needs a world; the Python model (`models/pb/`) is the only evidence until then.
 - **Update (2026-10-16, plan 1-4 Phase 6):** the guarded evidence rule is built and tested (FR-BEL-036, case D of `spec-beliefs.md` 15). Still open: whether the 5.7% residual remains is S01 with FR-STB-018, which needs a world; the cross-check against `models/pb/` (plan O5) was not run.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read for the belief parameters of the views: Phase 1 edits `spec-beliefs.md` 10.1 only for the parameter group of the `OutcomeView`; the evidence offset and scenario S01 are not this row's, and `Revise` calls `beliefs.Update` unchanged. Left open.
 
 ### N-043 Nothing anchors the price level if flows ignore price
 
@@ -456,6 +460,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. Nothing in the row prices or halts; the halt is the strategy and world rows'.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: no welfare clause concerns the price anchor; "held by the floor" is defined in WEL 11.3 and does not edit AGT 7.1.3, so scenarios S04 and S16 can run the floor on and off. Left open.
 - **Update (2026-10-17, owed-edits job):** the work report of the agent and beliefs edits is in `spec-agents.md` and `spec-beliefs.md`; no anchor was added.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: the flows (buffers, the halt, the recipe choice by margin) are built here as rules and the scenarios S04 and S16 decide whether they anchor a price. Learned: the work report (D88) lets S04 and S16 run the floor and the halt with their counts. Left open.
 
 ### N-045 Dampers that act silently
 
@@ -476,6 +481,7 @@ PR description.
 - **Update (2026-10-11, CHK):** the diagnostic runs that decide when a bounded `Warn` repeats are saved as sparse rows, so a resumed run logs as the original (FR-CHK-043).
 - **Update (2026-10-13, STO, EMP, SET, LND, CRD, CAP, RSK, FIS, ORG, SAV, TEC, PLC, INS):** every silent rule of the later stage is counted: STO by `RoomLimited` and `AgentSpawned.StoresLocked`; EMP by `LabourRound`; SET the dwell by `SettlementHeld`, the class floor by the snapshot field `ClassAtFloor` and a gate's refusals by the reader (`RoleCeiling`, `BirthsCeiling`, `NoViableRole`); LND the closure, the cut for rent and the band in `RentPaid`; CRD by `CreditRound` and `CreditSettled`; CAP by `FacilityLimited` (`Cut`, `Refused`, `Voided`, `Pending`); RSK by an event for every strike (`StoreLoss`, `ShipmentDispatched.LossBP`, `ShipmentArrived.Lost`), with no silent clamp; FIS by `FiscalFlowApplied` (`Short`, `Cut`, `Headroom`, `Exempt`) and `TreasuryOrdered` (`CutCash`, `CutHold`, `CutStock`); ORG every refusal, clamp, skip, bar, wait and hold by `MembershipChanged`, `RightRefused` and `PriceControlled`; SAV by `SavingPlanned`; TEC the cap by `ClampedBP` and `economysim.technology.clamped`; PLC every cut and refusal by `PolicyDecided`; INS by `CoverRound` and `CoverSettled`. What remains is STB's: to run the test of FR-STB-013 over the new events.
 - **Update (2026-10-16, observability review of plan 1-5):** the refusal of a start (`no_input`, `no_tool`, `zero_yield`, `no_site`, `not_on_role`) was a silent limit with a per-agent `Debug` line only; it is now counted by `RecipeRefused` (`spec-observability.md` 4.4.6a, FR-OBS-095). An abandoned job is counted by `economysim.recipe.abandoned` and an output lost for room by `RecipeExecuted.Overflow`. What remains is STB's.
+- **Update (2026-10-17, observability review of plan 1-7):** two silent decisions of the work report are now counted. A rest (a work share of 0, the target-income rule working as designed) and a household with no recipe worth running are `Rested` and `NoRecipe` of `ProductionHalted`; a household that requested no job because its recipe could not run is `RecipeRefused` (N-308). With the halt, the floor and the refusals this partitions the free households by outcome. What remains is STB's.
 
 ### N-061 The load-time size gate is a guess
 
@@ -493,6 +499,8 @@ PR description.
 - **Update (2026-10-11, OBS):** the event is `ProductionHalted`, one per region and role per tick in which the halt declined the job request of at least one free household, with the households and, per recipe, the households for which it was skipped (`spec-observability.md` 4.4.6, FR-OBS-016). A rested agent is `rest`, not a halt. OBS removed from the areas.
 - **Update (2026-10-11, AGT):** the halt count is computed by the world as a pure function of the view, as the floor is, so `JobRequest` and `Work` are unchanged (`spec-agents.md` 7.1.5, 14.1). Scenario S16 sets the threshold.
 - **Update (2026-10-17, owed-edits job):** the work report is in the specs (`spec-agents.md` 7.3.5 and `spec-beliefs.md`); the halt is still not an anchor and has no counter.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the halt count is the world's and is computed by the work report of `spec-agents.md` 7.1.3 and 7.1.5, a pure function of the view, so a consumer's strategy cannot hide it; the threshold is a placeholder for S16. Left open.
+- **Update (2026-10-17, observability review of plan 1-7):** the rest, which the note of 2026-10-11 left out of the event ("a rested agent is `rest`, not a halt"), is now counted beside the halt: `ProductionHalted.Rested`, with `NoRecipe`, so a flat output can be told from a halt (`spec-observability.md` 4.4.6). The event keeps the name of the halt, the first of its three counts.
 
 ### N-071 One wage per region and skilled recipes
 
@@ -577,6 +585,7 @@ PR description.
 - **Note:** Does the halt cut the supply of want goods in a downturn and deepen the wage and demand loop (L57)? Run S24 with the halt on and off.
 - **Update (2026-10-11, OBS):** the counter by recipe exists (`ProductionHalted`, `spec-observability.md` 4.4.6). The run of S24 with the halt on and off is AGT's and STB's. OBS removed from the areas.
 - **Update (2026-10-17, owed-edits job):** the work report is in the specs; the wants against the halt are not settled.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: no want exists in the slice, so S24 is a Stage 2 run. Left open.
 
 ### N-089 Model scripts of the demand, spawner and reference-chain specs
 
@@ -655,6 +664,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-transport.md` 9.1 and 20.7.
 - **Note:** The field `Inbound` exists in the agent view. The default strategy never ships, but a consignee can be sent goods (TRN-A2): decide whether the default `Target` counts what is in flight to the agent.
 - **Update (2026-10-10, MER):** the merchant counts its `Inbound` as a consignee (`spec-merchants.md` 8.2) and its `Outbound` as a shipper (7.1). The default strategy is never a consignee unless a consumer's strategy sends it goods, so its `Target` is still AGT's.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the view has no `Inbound` in the slice (transport is Stage 2) and the default ignores it until decided (`spec-agents.md` 21 question 20). Left open.
 
 ### N-103 Running several spec writers in parallel
 
@@ -686,6 +696,7 @@ PR description.
 - **Update (2026-10-16, plan 1-4 Phase 1):** applied in its lesson: the shared files (`doc.go`, this file, the roadmap, the index) are edited by targeted edits, and this file was read in chunks (point 5 of the update of 2026-10-13). Left open.
 - **Update (2026-10-16, plan 1-5 Phase 1):** applied in its lesson: the shared files (`doc.go`, `event.go`, this file, the specs, the roadmap, the index) are edited by targeted edits after a re-read, and this file was read in chunks. Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: a process note; the literal `'"'"'` search of `doc/` was run after this change and finds only the two passages that describe it. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: a process note. Applied in its lesson: the shared files (`doc.go`, `event.go`, `errors.go`, `option.go`, this file, the roadmap, `architecture.md`, `AGENTS.md`) are edited by small edits after a re-read, and this file was read in chunks. Left open.
 
 
 ### N-107 New money faucets and sinks start from MON
@@ -739,6 +750,7 @@ PR description.
 - **Update (2026-10-11, OBS):** `RumoursServed` counts the views of phase 3 only; MIG's calls are not in it (`spec-observability.md` 4.1.7); no new metric. OBS removed from the areas.
 - **Update (2026-10-11, CHK):** a restore takes no random word; the stream resumes from the saved PCG state (FR-CHK-051).
 - **Update (2026-10-12, ADR 0008):** the order of D4 and D11 no longer matters for alignment: each is a stream keyed by (site, tick, agent), so the two cannot interleave by construction and a restore resumes from the seed, not from a saved PCG state (N-214). The fixed order stays for the event order of `RumoursServed`.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: no informed role exists in the slice. Learned: the view of an informed agent is built before its `Trade`, and D93 keeps the draw count of the default a function of the view (candidates are decided by the view alone, `spec-agents.md` 7.3.5). Left open.
 
 ### N-112 An outside node as a remote information source
 
@@ -843,6 +855,8 @@ PR description.
 - **Update (2026-10-16, observability review of plan 1-5):** applied for PRO and OBS: the refusals are now an event. `RecipeRefused` is a new class A core row of `spec-observability.md` 4.1.3 and of `rules/observability-and-logging.md` 4.3 (4.4.6a, FR-OBS-095; `spec-production.md` 14.1, FR-PRO-052), declared in `event.go`, with the five reasons as `economysim.recipe.refused` values, so the five are no longer log-only. The same change appends `RecipeExecuted.Overflow` and `MarketCleared.CostAnchor` (FR-OBS-096, 097) and adds the metrics `economysim.recipe.abandoned`, `.overflow`, `.in_progress` and `economysim.production.cost_anchor`. N-242 says what the world row must call. Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied: the welfare row adds no event and one `Warn`, "welfare record clamped", as row 26 of `spec-observability.md` 7.3 with the counterpart `RoleRow.ClampedHouseholds` in 5.3.4 (FR-WEL-042); the prose counts of 7.3.1 are updated (20 to 26, about 350 more, about 2 050). The rules' event catalogue (4.3) is unchanged. A test reads both tables, so the row is in the same change as the code (Phase 4). Left open for later rows.
 - **Update (2026-10-17, observability review of plan 1-6):** applied: the welfare row adds three snapshot-fed gauges and no event and no `Warn` (`economysim.welfare.ratio.households`, `economysim.welfare.floor_held`, `economysim.wage.observed`; `rules/observability-and-logging.md` 5.3 and 5.3.1, `spec-observability.md` 6.2.2, FR-OBS-098). Each reads a snapshot field that is saved state (N-125), so none adds state; the series bound of 6.5.2 gains 300 (100 each). The `Warn` "work floor binding" fires only above half for ten ticks, so the gauge `floor_held` is the view of a role approaching or leaving it. Left open for later rows.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: it declares no event and no `Warn` (`AgentSpawned`, `UpkeepShortfall` and `ProductionHalted` exist since Stage 0 and the world row emits them; the "households unfed" `Warn` is the world's). The three reasons it adds (`rest`, `halted`, `no_recipe`) are log-only constants and not events. Left open.
+- **Update (2026-10-17, observability review of plan 1-7):** applied: the agent row's data gets three appended fields of existing events and no new event. `ProductionHalted` gains `Rested` and `NoRecipe` (counts of households, so the rest and the no-recipe decline are no longer log-only: the reasons stay log-only values and the metric `economysim.work.declined` has its own attribute `economysim.work_decline`), `UpkeepShortfall` gains `Short []ShortRow` (the upkeep units needed and not held, by commodity; `economysim.upkeep.short`), and the gauge `economysim.household.privation.max` reads the existing `RoleRow.MaxPrivation`. Rows changed in `spec-observability.md` 4.1, 4.4.6, 4.4.6a, 4.4.6b, 6.2, 6.5 and FR-OBS-016, 095, 099 to 101; the rules' 4.3, 5.3, 5.3.1 and 5.4.1 changed with a fresh tag. Left open.
 
 
 ### N-127 Event classes at the observer
@@ -931,6 +945,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for STO. The execution count takes the module's limit as a pair at the place of `no_room` in the master order (`spec-production.md` 4.2.1), and the completion never fails for room (FR-PRO-029): the part that has no room is created and disposed by the ledger's create-and-dispose operation.
 - **Update (2026-10-16, plan 1-5 Phase 8):** applied for the production row: the completion never fails for room (FR-PRO-029, FR-PRO-030, tested): one `Transform` of what fits, then `Discard` for each discard output and for the part above `MaxQuantity`, the room read by `Holding`; the execution count takes the module's limit as a pair at the place of `no_room`, with no code until STO. Still open for STO: the `no_room` pair and the invariant of `spec-storage.md` 4.4 over seeds (the world row).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: not touched; the room rules are STO's. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the room rules are STO's; the view has no room group in the slice. Left open.
 
 
 ### N-138 A role change moves excess goods to the estate
@@ -946,6 +961,7 @@ PR description.
 - **Areas:** AGT
 - **Raised:** 2026-10-13, `spec-storage.md` 6.3.2.
 - **Note:** `spec-agents.md` 8.2 said the default never discards. With the storage module on it discards, to make room for upkeep and for that only; an account with no base room is unlimited and never discards.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the default never discards in the slice (FR-AGT-051, first half); the storage case is STO's. Left open.
 
 ### N-140 Seams STO leaves
 
@@ -960,6 +976,7 @@ PR description.
 - **Note:** The pledge is the one thing nothing can discard, so the room in which a household buys its food is never committed by a start or a dispatch. It is a rule constant, not a tunable; the warnings `room_below_recipe` and `room_below_warm_job` carry it.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for STO. The room limit is a pair the module appends to the count.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: not touched. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: not touched; the upkeep room is STO's. Left open.
 
 
 ### N-143 No store is added to an agent away or on a journey
@@ -973,6 +990,7 @@ PR description.
 - **Areas:** AGT, WLD, EMP
 - **Raised:** 2026-10-13, `spec-employment.md` 4.1.3 and open question 4.
 - **Note:** `Work` is called only for a free agent, so an employer with a job in progress cannot post a vacancy. Posting from `Trade`, or calling `Work` for its `Hire` only, would change WLD 6.4 and AGT 6.2.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: `JobRequest` has no `Offer` or `Hire` in the slice. Left open for EMP.
 
 ### N-145 Profit with no outlet limits hired employment
 
@@ -1031,6 +1049,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-settlements.md` 6.3, 6.4.
 - **Note:** SPN and POP must implement them: a role with `Needs` is closed in a region whose class lacks the flag, as `Closed` is (no entrant, no switcher, no like-for-like replacement, no birth, no advance of the birth carry; households stay). A role with `Ceiling` has a headroom (the limit less its households); the default spawner admits only what fits it and counts a refusal (`EntryLimited.RoleCeiling`), births are capped and counted (`PopulationChanged.BirthsCeiling`), and the spawner's view carries the role's openness and headroom, never the class. A gate binds the default rules only, as `Closed` does; a world-enforced gate is SET open question 2. ORG's places are a second limit into the same headroom (N-192).
 - **Update (2026-10-17, spawner edits):** read; not settled by them. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: no view carries a settlement class (`spec-agents.md` 6.4.1). Left open for SPN and POP.
 
 ### N-154 A count of households gates a structure: the exceptions of `spec-world.md` 9.4.1
 
@@ -1050,6 +1069,7 @@ PR description.
 - **Areas:** SAV, CRD, AGT, LND, CAP, INF
 - **Raised:** 2026-10-13, `spec-land.md` 6.2 and `spec-saving-and-investment.md` 6.3, 19 (one decision, two sources).
 - **Note:** The decision to acquire a title is SAV's, with CRD's credit; it calls `TransferTitles` and needs a field in the plan a `Strategy` returns. It cannot be made until a holder's receipt is something a household can see: today a holder's receipts depend on others' draws and the attribution of `spec-land.md` 4.4.2, and the view carries the rent in force and no draws, and there is no seller (the pool holds and lets). The shape, if a consumer asks, is a plan field `TitleBids` matched in a round (SAV 6.3, open question 2). A facility bought for a price has the same two gaps (CAP 5.3.4: a ground facility is valued only by a `Worth` row).
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: `TradePlan` has `Intents` and `Discards` only and no `TitleBids`; the plan type is built so that a field is appended (architecture.md 2.10.5). Left open.
 
 ### N-157 MIG's estimate reads no rent and no title
 
@@ -1100,6 +1120,7 @@ PR description.
 - **Update (2026-10-16, plan 1-4 Phase 1):** the beliefs row does not use the word "treasury". Left open.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row does not use the word "treasury". Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the word "treasury" is not used by the welfare row; left open for its owners.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row does not use the word "treasury". Left open for its owners.
 
 
 ### N-164 Credit requests and offers are plan fields
@@ -1107,6 +1128,7 @@ PR description.
 - **Areas:** AGT, CRD, INT
 - **Raised:** 2026-10-13, `spec-credit.md` 5, 10, 21.2.
 - **Note:** The `TradePlan` of `spec-agents.md` 6.3 gains `Borrow []CreditRequest` and `Lend []CreditOffer`, the view a `Credit` group (with the field `CreditRoom`) and the `Directive` two optional fields; the default strategy appends them for a role with a block.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the credit fields of the plan and the view are appended with CRD; the plan and view types are built so that a field is appended. Left open.
 
 ### N-165 A warm start has no claims
 
@@ -1254,6 +1276,7 @@ PR description.
 - **Areas:** AGT, FIS
 - **Raised:** 2026-10-13, `spec-fiscal.md` 6.6 and 24 item 4.
 - **Note:** A view field would let the default strategy price a duty in; it is not adopted.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: no view field for a duty. Left open.
 
 ### N-189 A merchant's margin subtracts the toll
 
@@ -1304,6 +1327,7 @@ PR description.
 - **Areas:** AGT, CAP
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` (the plan and the view) and `spec-infrastructure.md` 9.1.
 - **Note:** CAP 9.1 leaves the `Trade` view without facilities; SAV's goal and planned recipe are decided in `Trade`, and the clauses go in the per-recipe group.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: no `Facilities` group in the slice view. Left open for CAP and SAV.
 
 ### N-197 FR-CAP-018 and CAP 4.5 carry a carve-out for a role with a `Saver` block
 
@@ -1437,6 +1461,7 @@ PR description.
 - **Update (2026-10-15, plan 1-3 Phase 1):** applied for CLR, which leaves the areas: D7 is one word per order from the market's own stream, keyed by (`siteClearing`, tick, region, commodity), and `spec-clearing.md` 3.3.1, 7.2 and FR-CLR-023 no longer say that the markets share one stream in market order. ADR 0008 open point 2 (a stateless key) is answered by `spec-world.md` 7.1 and 7.3 and is not reopened. Phase 4 of plan 1-3 pins the draw with the vector of WLD 7.3 (seed 42, tick 7, markets `(r0, grain)` and `(r0, loaf)`).
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied for WEL and checked for WLD: WEL 5.1 and FR-WEL-024 now say the target is the first of the agent's two creation words (`spec-world.md` 5.7.1, FR-WLD-066) from its own creation stream (D1 at construction, D10 at P7.1(d), the call's stream for an external agent, WLD 7.3), and the range stays in WLD 5.7.1, which already said so and needed no edit. The other owners' edits stay open.
 - **Update (2026-10-17, plan 1-11 Phase 1):** the seed text is applied in `spec-world.md` 16.5. The other edits owed by this note are not all made; left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied for AGT, left open for the rest: the keys are built (`siteWork`, `siteTrade`, `siteCreation`) and the agent row names its draws: `Work` takes none, `Trade` one per intent considered (candidates decided by the view alone, D93, N-246), the two creation draws in the order target then residue (`drawCreation`, D95). D12's site (the external agent's call) is INT's.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1463,6 +1488,8 @@ PR description.
 - **Update (2026-10-16, observability review of plan 1-5):** the review appends two fields to core events, `RecipeExecuted.Overflow` (a slice) and `MarketCleared.CostAnchor` (an amount), and adds one core event, `RecipeRefused`. They are core, not a module's, so they are not omitted for a module that is off; the golden rendering omits each at its zero value (a world with no overflow, no refusal and no known anchor renders as before). The pinned hash does not move (no configuration field). `testdata/golden/off/` does not exist yet; when the world row's golden files are first recorded they include these fields. Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied: nothing in the welfare row appends to the configuration, an event or a snapshot field before its code, and `RoleRow.ClampedHouseholds` is at 0 omitted from the golden rendering, so the pinned hash cannot move; the exit gate checks the pinned hash. Left open.
 - **Update (2026-10-17, plan 1-6 exit gate):** checked: `TestHashConfig_ReferencePinned` passes after the welfare row (nothing in it touches the configuration); `testdata/golden/off/` still does not exist, so that test alone is the gate until the world row records the first golden file. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied: nothing in the agent row appends to the configuration, an event or a snapshot field, so the pinned hash and `testdata/golden/off/` cannot move; the exit gate checks `TestHashConfig_ReferencePinned`. `Strategy` is already a hashed name through `Role.Strategy`. A standing rule; left open.
+- **Update (2026-10-17, observability review of plan 1-7):** three fields are appended to core events (`ProductionHalted.Rested`, `ProductionHalted.NoRecipe`, `UpkeepShortfall.Short`): counts and a slice, never a typed ID, omitted from the golden rendering at 0 and empty, so a world with nothing to report renders as before; they are not a module's, so the rule binds them as it bound `RecipeExecuted.Overflow`. The pinned hash does not move (no configuration field). Left open.
 
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
@@ -1537,6 +1564,7 @@ PR description.
 - **Note:** The tradable set of a role (`spec-agents.md` 3.4) is core data plus two module terms: the items of the wants in the role's ladder (`spec-demand.md` 3.2.3, FR-DEM-006) and the non-discard outputs of the effective own-use recipes (`spec-subsistence.md` 3.6). `rules/architecture.md` 2.10.1 does not list "its items in the tradable set" among a module file's touch points, 2.10.2 lets a module appear outside its file only in the catalogue files, and the four fan-ins of 2.10.4 do not include it. `role.go` (Stage 1) builds the set once at construction from the core terms and must leave a place for the two modules (`validate.go`'s `tradableSets` already says they are "added with those modules"). Recommended: a fifth fan-in with one entry point, a fixed-order sequence of guarded calls into the module files that append items before the set is frozen, added to 2.10.4 (and to the list of 2.10.1) with a fresh tag, in the change that builds the first of the two modules (`demand.go`, Stage 2). Not blocking: both modules are Stage 2. Second point: `spec-agents.md` 22 homes the targets, tiers, spend cap and the tradable set in `internal/household`, which is not in the layout of 2.6 or in `AGENTS.md`; the tradable set is a union of lists and lives in `role.go`, and the agent row decides whether the arithmetic needs the package (2.1) and then adds it to 2.6.
 - **Update (2026-10-14, Phase 1 of plan 1-2):** applied in the specs: `spec-agents.md` 3.4, 5.2 and 22, and `spec-production.md` 3.3, say that the tradable set and the effective upkeep are derived once at construction into the role table (`role.go`), in canonical commodity order, that a module adds its items inside that constructor before it returns, and that nothing mutates the table afterwards (that is all "frozen" means); AGT 22 now homes `Role` in `config.go` and the tradable set in `role.go`. **Still open:** the fifth fan-in in `architecture.md` 2.10.1 and 2.10.4 (held in N-235 for the first Stage 2 module PR, `demand.go`) and whether the agent row needs `internal/household` (it then adds the package to 2.6 and `AGENTS.md`).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: AGT 3.8 is the only AGT clause the welfare row edits and it concerns the length of the record; welfare adds no item to the tradable set and no fan-in, and its arithmetic is `internal/welfare`, not the `internal/household` of `spec-agents.md` 22. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied in part: D80 settles the second point (the agent row needs `internal/household` and adds it to `architecture.md` 2.6 and `AGENTS.md`). The first point (the fifth fan-in for the tradable set) stays for the edit of N-235; the want items of FR-AGT-003 join the role table with the demand module. Left open.
 
 ### N-230 The run of the "price beliefs at bound" `Warn` is advanced for every market every tick
 
@@ -1545,6 +1573,7 @@ PR description.
 - **Note:** `BoundRun` (`spec-beliefs.md` 12.2, 13) is advanced once per market per tick, also in a tick in which the market had no outcome: such a tick does not hold the condition and resets the run (`spec-observability.md` 7.3). The world row, which owns the market record and the call, must call the run function for every market every tick, not only for a market with a `BeliefsUpdated`. Second point: a belief with `Floor` equal to `Ceiling` is at both bounds, so `AtFloor + AtCeiling` can exceed `Outcomes` and fewer than half of the outcomes can fire the `Warn` (`spec-beliefs.md` 12.1.2); the literal test and the metric `economysim.belief.at_bound` (which reads both fields) keep it on purpose. The bound the `Warn` names is the one with more beliefs, `floor` on a tie. Decide with the first scenario that pins a market (S01, S04) whether the double count matters.
 - **Update (2026-10-16, observability review of plan 1-4):** applied in OBS and BEL: the metric `economysim.belief.outcomes` (the denominator of `belief.at_bound`, which the adapter holds across a tick with no event while the run resets) and the `outcomes` attribute of the `Warn` now let a reader see both points, a stale pinned gauge and a 1-of-1 pin; `economysim.belief.limited` counts `Conflicts` and `Clamped` (`spec-observability.md` 6.2.1, FR-OBS-094; `spec-beliefs.md` 12.2, 12.4). The world row must still call `beliefs.NextRun` for every market every tick and emit `BeliefsUpdated` before the `Warn`. Still open: whether the double count matters.
 - **Update (2026-10-17, plan 1-11 Phase 1):** `spec-world.md` 6.1.13 now says the world advances the bounded `Warn` runs for every cell every tick (this covers the `BoundRun`; the name `beliefs.NextRun` is not written there). Still open: whether the double count matters, and the code of the world row.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the run of the "price beliefs at bound" `Warn` is the world's (row 11 calls `BoundRun` for every market every tick); `Revise` returns the belief and discards the result. Left open.
 
 ### N-232 The job and the residues live on the agent; what the agent row must call
 
@@ -1552,6 +1581,7 @@ PR description.
 - **Raised:** 2026-10-16, Phase 1 of `plans/plan-phase-1-5.md` (D50).
 - **Note:** `production.go` defines the `job` type, the residue layout (one residue per output item of each recipe on the role's list, then of the effective own-use list, discards included; a function of the role and the recipe table, never saved) and the steps over them, and takes a pointer to a job and a slice of residues, so it decides no storage. The agent row keeps `Job` and `Residues` as the fields `spec-agents.md` 3.1 and 3.2 give the `Agent`, and writes them once, in section 6 in agent order (`spec-checkpoint.md` 4.2 tag 6, N-128). The agent and world rows must: (1) store the fields and call the steps (start, continue, complete, abandon, reweigh, the job of a warm start) at the positions of `spec-world.md` 6.4; (2) draw the one residue word at creation (FR-PRO-026, `spec-world.md` 5.7.1) and set every residue to it, residue 0 for a warm-start job; (3) reset the residues to 0 at a role change (`spec-agents.md` 3.7, `spec-spawner.md` 4.2) with the layout function; (4) emit `RecipeExecuted` and `RecipeAbandoned` from the values the steps return, behind the "observer supplied" flag, log the `Debug` and `Warn` lines and call the welfare scratch with the returned facts (D51: the production row emits nothing and calls no other row); (5) store `Yield` with the job (N-237). If the agent row prefers slices indexed by agent slot (`architecture.md` 2.10.1) the same functions serve.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read for AGT 3.8: a role change resets the residues (point 3) and also resizes the welfare ring (WEL 2.3.3, AGT 3.8, SPN 4.2); the agent and spawner rows do both in the one role-change step, in either order. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied for point (2): the residue word at creation is the agent row's (`drawCreation`, which calls the existing `setResidues` and `residueLen`). Point (3), the reset at a role change, is the executor's (row 11 composes `reseedBeliefs`, `setResidues`, `history.Resize` and `job.abandon` inline; this row builds no role-change helper); points (1), (4) and (5) are the world row's; the agent keeps the `job` by value and writes `Yield` with it (N-237). Left open.
 
 ### N-233 `Discard` and `Holding` exist: what each is for
 
@@ -1576,6 +1606,7 @@ PR description.
 - **Update (2026-10-16, plan 1-4 Phase 1):** left open, not the beliefs row's: it adds no fan-in, no admission and no touch point (`beliefs.go` is a core file, not a module file), so nothing here waits for the edit or changes it.
 - **Update (2026-10-16, plan 1-5 Phase 1):** left open (owner: the first Stage 2 module PR). The production row adds no fan-in, no admission and no touch point: the limit pairs of the execution count are a parameter of a function, not a touch point, and the tradable set is plan 1-2's.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no fan-in and no admission touch point (`welfare.go` is a core concept file; its scratch is called from other rows' positions), so the `architecture.md` edit still waits for the first Stage 2 module PR. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row adds no fan-in and no admission touch point. The core view filler and the intent conversion are called by the world's `fillAgentView` and `checkTradePlan`, and the admission of `not_tradable` and `duplicate_order` is the clearing row's. The edit of 2.6 for `internal/household` (D80) is separate from the combined edit this note holds. Left open for the first Stage 2 module PR.
 
 
 ### N-236 Three halves of FR-AGT-003, 010 and 011 are the agent row's
@@ -1593,6 +1624,7 @@ PR description.
 - **Note:** `RecipeExecuted` carries `StartTick` and `EffectiveYield`, and the job of PRO 5.1.1 held neither. `StartTick` is the completing tick minus `Duration` plus 1 (a job started in `s` completes in `s + d - 1`), derived and not stored, valid after a weight fall and for a warm-start job (where it may be negative). `EffectiveYield` is the job's new `Yield` field, the effective factor of 6.3 read at the start and not recomputable at completion (the season, shock and technology may have changed; a restored world has no start-time inputs). Written into PRO 5.1.1, 14.1, 15 and FR-PRO-041 and CHK 4.2 tag 6 (`Yield` after `Principal`); AGT holds the job as `*Job` defined in PRO and needs no change. The agent row stores the field with the job; the warm-start job (VIA 8.5, FR-VIA-035) sets it from the virtual season's factor; the checkpoint row (Stage 2) writes and reads it in tag 6; a test restores mid-job across a season change and checks the reported `EffectiveYield`.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the lines were checked in the production row's Phase 1: `spec-production.md` 5.1.1, 14.1, 15 and FR-PRO-041 and `spec-checkpoint.md` 4.2 tag 6 still carry `Yield` after `Principal` and the derived `StartTick`, and the two sentences below the table of 14.1 are intact. Left open for the agent row (stores the field), the checkpoint row (writes tag 6) and the warm-start job (sets it).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row edits `spec-checkpoint.md` 4.2 tag 7 and not tag 6 (the job, `Yield`). The tables are edited by several rows, so each re-reads just before the edit. Left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent holds `job` by value, `Yield` included; the world row stores it at P2.7; the warm-start job and the checkpoint are others'. Left open.
 
 
 ### N-238 One agent's ordinary and named-lot asks of one commodity must not share a book
@@ -1606,6 +1638,7 @@ PR description.
 - **Areas:** CLR, AGT, WLD
 - **Raised:** 2026-10-15, plan 1-3 as built (`internal/clearing.Average`, `Check`).
 - **Note:** `Average` does not look at the owner of an offer (plan 1-3 Phase 2 and D31), so one agent holding a crossing bid and a crossing ask in one book is paired with itself, and the check of `spec-clearing.md` 8.2 fails the step with `ErrInvalidTrade`. The guard is deliberately in the check and not in the matching: skipping the pair would change which units trade and the keys drawn per order. Who must avoid it: the strategy rows (an ordinary agent places one side per commodity, `spec-agents.md` 6.5.2, 7.3.3, so it cannot), the world's builders of pseudo-agent orders (the estate places asks only, a counterparty one side, and the treasury of `spec-fiscal.md` 9.4 places a bid strictly below its ask, FR-FIS-053, validated at construction with `ErrFiscalShape`). A module that lets one agent place a bid and an ask of one commodity adds the strict ordering of the limits to its own validation, and a test with the two sides of one agent through `clearMarket`. `spec-clearing.md` 8.2 says so.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied: the default places at most one order per commodity (`spec-agents.md` 7.3.3: a bid if there is a gap, else an ask), so it cannot trade with itself; Phase 6 of the plan asserts one order per commodity for every state of a table and by a fuzz. Left open for the pseudo-agents and the modules.
 
 ### N-240 The book holds its entries and filled units; the world's scratch does not
 
@@ -1626,6 +1659,7 @@ PR description.
 - **Raised:** 2026-10-16, the observability review of plan 1-5 (`production.go`, `clearing.go`).
 - **Note:** The production row builds the values and emits nothing; the world row emits them, behind the "observer supplied" flag. It must: (1) make one `refusalTally` per world (`newRefusalTally(regions, recipes)`), call `add(region, recipe, reason, weight)` where a start returns `k = 0` with a reason, for a free household's job request only (not a halted request, a trainee, an own-use start or a hire), and call `flush(tick, emit)` once at P2.8a after `ProductionHalted`; a later module's reason is a new column of the tally and a new count field of `RecipeRefused`, appended in the master order, and `add` panics on a reason it does not count until then; (2) set `book.anchor` from `productionScratch.unitCost(region, commodity)` before each market's clearing, so `MarketCleared.CostAnchor` is the anchor in force for the tick; (3) build `RecipeExecuted` with `recipeExecuted(outs, disp, over, ...)` and feed the `Warn` "recipe output disposed" from `Overflow`, not from `Disposed`; (4) keep the allocation test of the production phase at zero with the tally. The adapter derives `economysim.recipe.in_progress` from `Jobs[].Executions`, which the snapshot row builds from `addPending`.
 - **Update (2026-10-17, plan 1-11 Phase 1):** `spec-world.md` 6.1.13 now lists the `refusalTally` flush at P2.8a, the cost anchor set on the book before each P4.1 clearing, and the advance of the bounded `Warn` runs (points (1) and (2) in part); points (3) (`recipeExecuted` and the `Overflow`-fed `Warn`) and (4) (the allocation test) are not in that list. Left open until the world row merges.
+- **Update (2026-10-17, observability review of plan 1-7):** point (1) is widened (N-308): the world also adds to the tally each free household whose work report names a blocked recipe (`workReportBuf.blocked`, the first recipe of the view that could not run, with the view's reason), once, under that recipe and reason, because the default strategy never requests a recipe the view says cannot run and so never reaches the refusal of a start. The same pass fills `Rested` and `NoRecipe` of `ProductionHalted` from `rest` and `reason == no_recipe`. Left open until the world row merges.
 
 ### N-243 Follow-up of the Codacy gate on plan 1-5
 
@@ -1646,6 +1680,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-7.md` D81 (coordinator ruling).
 - **Note:** `spec-agents.md` 3.1 sketches an agent that hosts `DeathCarry`, `OwnUse`, `OwnUseJobs`, `Journey`, `Member`, `Stores` and `Trainee`. `rules/architecture.md` 2.10.1 puts a module's per-agent state in the module's own slices indexed by agent slot, never as fields of the agent type, and the rules win. The agent row builds the unexported `agent` with the fields no module owns only. Each module keeps its field in its slice; the checkpoint still writes it in the agent record (N-128, `spec-checkpoint.md` 4.2 tag 3). Phase 1 of the plan edits AGT 3.1 and 3.2 to say so.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in `spec-agents.md` 3.1 and 3.2 (module slices, never fields of the agent type). Kept open until the Phase 8 gate of plan 1-7 shows the agent row is built that way.
+- **Update (2026-10-17, plan 1-7 Phase 8):** the gate shows it: `agent.go` holds only the core fields (D81, `TestAgent_HoldsNoMoneyQuantityOrRegion`) and no module field. Kept open as the standing rule for each module's PR.
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1653,6 +1688,8 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-7.md` D82 (coordinator ruling).
 - **Note:** `DefaultStrategy` has no fields (AGT 7), so every number its rules read arrives in the view. The belief parameters (the fifteen of `beliefs.Params`, not `MaxPrice` or `PriceWindow`) are an exported plain-data group of `AgentView` and `OutcomeView`, filled by the world from `beliefParams` and converted inline. A module whose default rule reads a tunable (saving, credit, employment, insurance) appends it to the same group of the view, at the end, and to the spec's view table; it does not give the strategy a field.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in `spec-agents.md` 6.4 and `spec-beliefs.md` (the Tunables group of the view). Kept open: a later module's default rule appends its tunable to it.
+- **Update (2026-10-17, plan 1-7 Phase 8):** built; the group and its round trip against `beliefParams` are tested (Phases 5 and 7). Kept open for the modules.
+- **Update (2026-10-17, plan 1-7 Phase 1):** checked against D82 and the Phase 1 text of `spec-agents.md` 6.4.1: the group holds the fifteen fields of `beliefs.Params` only (not `MaxPrice`, not `PriceWindow`); a test in Phase 5 asserts the group converted back equals `beliefParams` field by field, so the two cannot drift.
 
 ### N-246 What the world row must do for the strategy streams and the draw count
 
@@ -1660,6 +1697,8 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-7.md` D93.
 - **Note:** The default `Work` takes no word. The default `Trade` takes one `rng.Uint64()` per intent it considers, in canonical commodity order: a bid candidate is `Gap > 0`, an ask candidate is `Gap == 0` with `Surplus > 0` or `Expiring - Reserve > 0`, decided by the view alone and never by affordability (a tool the role does not make is not a candidate; plan 1-7 D93, JC2), before any money is allocated, so the count is a function of the view. The world keys the stream before each call: `siteWork` for a consumer's `Work` only (the default takes no word, so the key is skipped), `siteTrade` for `Trade`, both with the tick and the agent; for `Revise` it takes the outcome's word `Draw` from `(siteOutcome, tick, agent, commodity)` first and passes the same `*rand.Rand`, so a consumer's own words follow the world's (WLD 7.3 D3, D5, D8). The creation draws are `drawCreation` (the target word, then the residue word) on the agent's creation stream.
 - **Update (2026-10-17, plan 1-7 Phase 1):** `spec-agents.md` 7.3.5 now carries the D93 rules: the candidate rules (bid `Gap > 0`; ask `Gap == 0` with `Surplus > 0` or `Expiring - Reserve > 0`), decided by the view alone and never by affordability, and a tool the role does not make is not an ask candidate. The world's keying of the streams is the world row's code; left open.
+- **Update (2026-10-17, plan 1-7 Phase 1):** checked against D93: the ask quantity is `max(Surplus, max(0, Expiring - Reserve))` (the expiring units are part of the stock, so the two are not added), and a bid candidate whose limit cannot buy one unit spends its word and forms no ask; the stream is keyed `(siteTrade, tick, agent)` before the call and the default reads it through the `*rand.Rand`, one source word per draw. The tier combination of D98 (only the first tier to buy may lower the order's limit) is written in `spec-agents.md` 7.5.3 and needs nothing from the world.
+- **Update (2026-10-17, plan 1-7 Phase 8):** the default is built to D93 and D98 (`TestTrade_CostAndDrawsDoNotDependOnTheWeight` shows the word count is the same at weights 1, 7 and `MaxWeight`; the many-state property of Phase 7 shows no admission rejection). Still open for the world row: the keying of the streams and the call position of `workReport`.
 
 ### N-247 `Directed`'s state methods and the directive in the checkpoint wait for the checkpoint row
 
@@ -1667,6 +1706,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-7.md` (Out of scope).
 - **Note:** `Stateful` does not exist before `checkpoint.go` (Stage 2), so the agent row builds `Directed` and the `Directive` type without `SaveState` and `LoadState`. The checkpoint row adds them (delegating to the fallback, `spec-agents.md` 10.3), the directive in the agent record (AGT 15), the table of strategy names (AGT 15) and the assertion that `Directed` is `Stateful`.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read; unchanged. Left open for the checkpoint row.
+- **Update (2026-10-17, plan 1-7 Phase 8):** `Directed` and `Directive` are built without the state methods, as planned. Still open for the checkpoint row.
 
 ### N-254 A lot that gains units keeps its listed price
 
@@ -1806,6 +1846,7 @@ PR description.
 - **Areas:** VIA, WLD, AGT
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (Provides).
 - **Note:** `virtualStartOffsets` (8.5.2, by `Calendar.SeasonAt`) is called by the empty-set rule of `validate.go` and, at construction, by the world row's jobs, so the rule and the construction cannot disagree (FR-VIA-053). The world row owns the stagger and the application of the table.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: not this row's; the world's job construction calls `virtualStartOffsets`. Left open.
 
 ### N-281 Three bounds of FR-CFG-046 were not built at Stage 0
 
@@ -1833,6 +1874,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-9.md` (Cross-plan contract).
 - **Note:** The spawner row builds the plan and the pure support and emits nothing; the executor is the world's (SPN 20, WLD 6.9 P7.1(d), coordinator Q1). Row 11 must: (1) build the `RegionView` of each region (roles in canonical order, agents in ascending ID, no pseudo-agent; `Wage` and `HasWage` from the welfare summary, `Upkeep` per household at the published prices, `PoolMoney` from the estate, `RenewalCarry`), set `Privation` at P6.1 with `household.NextPrivation` (plan 1-7), and give the view the one scratch of the world; (2) call `Decide` with the keyed stream `(siteSpawner, t, region)`; (3) execute the plan in order, checking each decision with `occupation.Refuse` against live state, taking the funded number from `occupation.Funded` and the placement from `occupation.Place`, sending a reduction's money through `acceptMoney` and its goods, per commodity, through `acceptUnits` with `occupation.Remaining`, and a role change's goods through `acceptGoods` (plan 1-8), counting `GoodsListed` in lots; (4) merge the executor's counts with the counts of the plan into one `EntryLimited` per region per tick (`entryTally.limited`), emit the `Debug` lines and the three bounded `Warn`s from `extinctRun`, `unfundedRun` and `belowFloorRun`; (5) call `resolveSpawner` once in `NewWorld` after `Validate`. The executor is row 11's: the role change and the weight change are composed there from the primitives of rows 5, 6 and 7 (`job.abandon`, `job.reweigh`, `setResidues`, `history.Resize`, `reseedBeliefs`) and the target carried over by `occupation.Retarget`; plan 1-7 builds no combined step (consistency pass, 2026-10-17).
 - **Update (2026-10-17, plan 1-8 D106):** the executor sends a reduction's goods through `acceptUnits`, and a role change's through `acceptGoods`; both count `GoodsListed` in lots (N-255). Left open until row 11 is built.
+- **Update (2026-10-17, plan 1-7 Phase 1):** read: row 11 calls `consume` and `household.NextPrivation` through it; the agent row builds no combined step. Learned: `consume` sets `privation` and the spawner's view reads it. Left open.
 
 ### N-267 An agent in a role with no wage counts as earning nothing
 
@@ -1852,6 +1894,7 @@ PR description.
 - **Areas:** ALL, CODE
 - **Raised:** 2026-10-17, WP1 report of the owed-edits job.
 - **Note:** `rules/architecture.md` 2.6 lists the continuation files (`construct*.go`, `fanin.go`, `phase_*.go`, `viability_*.go`, `production_report.go`); the layout in `AGENTS.md` repeats them. `AGENTS.md` says the architecture list wins. Any change to one lists the same files in the other in the same change, with a fresh tag for architecture.md.
+- **Update (2026-10-17, plan 1-7 Phase 1):** applied: this phase's layout edits (`agent.go`, `strategy.go`, `strategy_default.go`, `strategy_work.go`, `strategy_view.go`, `internal/household`) are in `architecture.md` 2.6 and in `AGENTS.md` with the same file lists, checked line by line, and `architecture.md` has a fresh tag. A standing rule; left open.
 
 ### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
 
@@ -1870,6 +1913,12 @@ PR description.
 - **Areas:** REF, VIA
 - **Raised:** 2026-10-17, WP6 report of the owed-edits job.
 - **Note:** The `grow_algae` row of the pack `second` differs between the prototype (5 232) and the Go solver (5 163). Settle it in plan 1-10 Phase 7 (the agreement run) and then fix the number in REF or in the solver, with the testing.md 7.2 explanation. N-274 applies to any regenerated warm document.
+
+### N-308 The refusal tally never fires for the default strategy unless the work report names the blocked recipe
+
+- **Areas:** AGT, PRO, OBS, WLD
+- **Raised:** 2026-10-17, the observability review of the branch of plan 1-7 (`strategy_work.go`, `spec-production.md` 14.1, N-242).
+- **Note:** The default `Work` passes over every recipe whose view says `MaxExecutions` 0, so it never requests a recipe production would refuse, and the `refusalTally` of N-242 (filled where a start returns 0) would stay empty for it: `economysim.recipe.refused` would read 0 on a chain stalled for want of an input or a tool, the case the event was added for. The work report now carries `blocked`, the index of the first recipe of the role that could not run when the share is above 0 and the halt skipped none (FR-AGT-086, `spec-agents.md` 7.1.4), and the world adds that household to the tally under the recipe and the view's reason. A household with several blocked recipes is counted once, under the first in list order, so the counts add to the households refused; the reason is the first applicable, as 4.2.1 says. A consumer's strategy that requests a blocked recipe is counted by the refusal of the start as before, and a household is never counted by both. **Open:** the world row must make the call (N-242 point 1), and the golden of a stalled chain must show a non-zero `RecipeRefused` under the default strategy; a later module's reason (`not_permitted`, `no_room`, `no_endowment`) arrives in the view as it does in the tally, a new column appended with the module.
 
 ## Closed notes
 
@@ -2868,5 +2917,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a9d0cdbd8ad4eddf30cdde4a
+NOTES-TAG: d698fdc3884c93b0f7193292
 
