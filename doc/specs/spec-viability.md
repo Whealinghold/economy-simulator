@@ -91,8 +91,13 @@ computes, with integer arithmetic (section 6):
 - the **start capacity** `J(r, rho)`: the number of jobs one household can start in a
   year of `TicksPerYear` ticks, counted greedily from tick 0 of the year: start at
   the first tick whose yield factor is positive (`spec-production.md` 6.2), be busy
-  for `d` ticks, repeat. For a recipe with no seasonal profile this is
-  `TicksPerYear / d` rounded down; for a crop that can be started only in spring, it
+  for `d` ticks, repeat. **A start counts at every tick `t < TicksPerYear` of the open
+  window, whether or not the job completes inside the year**: the steady state is
+  periodic, so a job begun late in one year completes early in the next, and the annual
+  flow of a stationary seasonal activity is its starts per year, the year boundary being
+  arbitrary. For a recipe with no seasonal profile this is
+  `TicksPerYear / d` rounded up (7 for a 60-tick job in a 365-tick year), so `J * d`
+  may exceed the year by up to `d - 1`; for a crop that can be started only in spring, it
   can be 1;
 - the **mean factor** `E(r, rho)`: the mean of the effective factors
   (`spec-production.md` 6.3, with shock 10 000 and trainee 10 000) at those starts,
@@ -198,7 +203,7 @@ If AGT settles any of these differently, only sections 3.3 and 8 change.
 | V0 | Well formed | IDs, references, bounds, the producibility fixpoint | error | `spec-config.md` 7.3, 7.5 |
 | V1 | Sourced and runnable | Every commodity in an upkeep or a recipe a role runs can be produced somewhere in the realm with a positive yield; every role with recipes has one that can run where its households live | error | graph, `O(commodities * recipes)` |
 | V2 | Productive cycles | Every strongly connected set of commodities in the material graph has a surplus: some mix of its recipes makes more of every commodity than it consumes | error | exact programme per set, bounded |
-| V3 | Labour sufficient | The reference programme (3.2) with `phi = 1` has `lambda* >= 1` | error pooled, warning per region | the programme, size-gated |
+| V3 | Labour sufficient | The reference programme (3.2) with `phi = 1` has `lambda* >= 1` (run when V1 and V2 found nothing, 4.4) | error pooled, warning per region | the programme, size-gated |
 | V4 | Storable | A commodity of the upkeep is not out of production for longer than its shelf life | error (upkeep), warning (inputs) | calendar scan |
 
 The layers are cumulative in cost, not in logic: each is checked on its own and
@@ -233,6 +238,8 @@ the marker. Marking a good `Raw` therefore does not close a cycle silently: the
 configuration loads, the warning names the good, and the cycle stands on the marker alone
 (`spec-reference-chain.md` 6.3). The fixture opens its cycles with real sources.
 
+A programme whose basket goods are **all** unsourced `Raw` markers (a `Raw` good is sourced everywhere, so the pack loads with the warning `raw_without_source`, and no real activity stands behind any of its basket) has nothing for V3 or the table to describe: V3 and the table are skipped for that programme. The same holds for a programme with an empty basket (4.4, 5.3 item 1).
+
 The real sources, now written, are three (W1 of the wave 3 integration): a recipe with no inputs and no `Draws` (labour-limited), a recipe with `Draws` on an endowment that can start once (`spec-resources.md` 9.2), and an import line with a sell side (`spec-external-sector.md` 10.1). Either of the last two satisfies `raw_without_source`; the structural pass of `spec-config.md` 7.5 keeps counting the marker and a `Sited` source with `Draws` as sourced. An import line with a sell side is a real source: `raw_without_source` is not raised for a raw commodity it supplies, and for V1 it makes the commodity producible in the gate regions (`spec-external-sector.md` 10.1.2). A raw commodity whose only sources are finite endowments draws `raw_source_exhaustible` (`spec-resources.md` 9.3), and one sourced only by an import line draws `import_only_source` (`spec-external-sector.md` 10.1.2); both are warnings and neither changes V1.
 
 The difference from `ErrUnproducible` (`spec-config.md` 7.5) is that V1 looks at
@@ -263,19 +270,51 @@ test is the minors themselves, computed exactly. The best case over regions is
 taken: an activity at its largest `E` in any region counts (the check is
 necessary, not sufficient).
 
+**Membership.** The activities of a component are every activity with a non-discard
+output in the component, each with its net vector restricted to the component's
+commodities. A **source activity** (one with no inputs) therefore belongs: a recipe
+that makes a commodity of the cycle from nothing adds to the programme, and a chain
+whose only supply of the cycle's commodity is such a source passes V2 (the cycle alone
+has `s* = 0`; with the wild source it is productive).
+
 A component that fails is `cycle_not_productive`. The commonest cause is a seed
 cycle: one execution returns fewer seed units than it takes.
 
-The cost is the size of the largest component; the programme is bounded by
-`MaxViabilityPivots` and `MaxViabilityCells` (section 11), above which the check is
-skipped with the warning `viability_check_skipped`, so validation time stays
-bounded (NFR-CFG-001).
+**The cycle gain.** The warning `cycle_cost_gain` (`spec-config.md` 7.6 item 3,
+FR-CFG-044) needs the ratio `q_in / q_out` around a cycle, in exact integers, with the
+**configured quantities** and no yield factor, because the ratio has no prices and the
+factor depends on region and season. A component can hold exponentially many cycles, so
+the cycles enumerated are the **simple cycles whose every commodity has one maker in the
+component, a maker being a non-source activity (one with inputs) that outputs the
+commodity**. A source activity is not counted, because a source supplies the commodity
+from outside the cycle. Worked case, the seed cycle of `one`: `gather_seed` is a source,
+`save_seed` is the one maker of `seed` and `grow_staple` the one maker of `staple`, so the
+cycle is enumerated, and `(40 / 1 800) * (20 / 20) = 1/45`: 40 `seed` in and 1 800
+`staple` out, then 20 `staple` in and 20 `seed` out, so it never warns inside the
+`CostFloor` bound. The enumeration is bounded by `MaxViabilityCells` steps; a component
+past the bound is the part "cycle gain" of the warning `viability_check_skipped`.
+
+**The size gate.** Before a tableau is built its size is computed with the checked
+helpers (`internal/checked`) and compared with `MaxViabilityCells`: the **rows** are the
+commodities of the programme, plus its regions, plus one row per activity with
+`J * d < TicksPerYear` (the capacity rows); the **columns** are the activities, plus one
+for `lambda`, plus the slack of each row (Stage 1 has no lane column: the pooled form
+merges the goods rows, 9.4). A product above `MaxViabilityCells`, or a solve that reaches
+`MaxViabilityPivots`, is in `Validate` not an error but the warning
+`viability_check_skipped`, whose message names the **part** that was not run: V2 of a
+component, V3 pooled, V3 of a region, the nominal warnings, or the cycle gain. V1 and V4
+are never skipped and are not programmes. In `SolveSteadyState` the same overshoot is
+`ErrSolveLimit`, and its `SolveError` carries the pivots, rows and columns (5.4). The
+cost is the size of the largest component; so validation time stays bounded
+(NFR-CFG-001).
 
 ### 4.4 V3: labour sufficient
 
 V3 is the reference programme with `phi = 1`. It fails when `lambda* < 1`: even with
 every household working every tick, with free trade among regions, the realm cannot
 make the upkeep. This is `labour_short`, an error.
+
+**The gate.** V3 is run whenever pooled `lambda* < 1` and V1 and V2 found nothing: when V1 found `unproducible_in_realm` or V2 found `cycle_not_productive` the programme is `lambda 0` for a structural reason, which is already reported, and `labour_short` is not added to it. A programme with an empty basket is never an error in `Validate` (`no_upkeep` is the warning of `spec-config.md` 7.4.2): V3 and the programme of V2 are skipped silently for it, and V1 and V4 still run. A programme whose basket goods are all unsourced `Raw` markers is skipped the same way (4.2.1).
 
 When the binding row of the programme at `lambda* < 1` is a resource row, the error is `resource_short` and not `labour_short` (`spec-resources.md` 11.3); the cause is reported.
 
@@ -290,21 +329,45 @@ a job of 120 ticks that yields 6 grain, against a household that eats a unit or
 more each tick. The quantities there are placeholders, and the check is what finds
 that they are not usable.
 
-Two warnings use the nominal case (`phi` equal to the expected work share):
+Two warnings use the nominal case (`phi` equal to the expected work share). Both are
+**per region, from the region's autarky programme** (also when the pooled form is used
+for V3), and a region with no programme (an empty basket, or no households) raises
+neither:
 
-- `subsistence_exceeds_expected_work`: `LabourShareBP` is above the household-
-  weighted mean `ExpectedWorkTicks / TicksPerYear` in basis points. Households
-  would have to work more than their role expects just to subsist.
-- `target_above_surplus`: the household-weighted mean `TargetRatio` is above the
-  nominal `SurplusBP`. The targets cannot be met even if every spare unit of
-  output goes to the households.
+- `subsistence_exceeds_expected_work`: the region's `LabourShareBP` is above the
+  household-weighted mean `ExpectedWorkTicks / TicksPerYear` of its groups in basis
+  points. Households would have to work more than their role expects just to
+  subsist. **When the labour share is absent (3.2, FR-VIA-012: a capacity row is
+  tight) the warning is not raised**: there is no quantity to compare.
+- `target_above_surplus`: the household-weighted mean `TargetRatio` of the region's
+  groups is above the `SurplusBP` of the region's **nominal** autarky programme
+  (`phi` the expected work share). The targets cannot be met even if every spare unit
+  of output goes to the households.
 
 ### 4.5 V4: storable
 
 For each commodity `c` the **supply gap** is the longest run of ticks in the year
 (cyclically) in which no existing activity in the region completes a job that
 outputs `c`. It is computed from the same start windows as `J` (3.1) and the
-durations. If `c` is in the upkeep of a group in the region and its `ShelfLife` is
+durations. **The completions are those of the greedy start sequence of `J`** (3.1): a
+start at `s` completes at `s + d - 1`, and the sequence repeats every year. A
+completion tick at or after `TicksPerYear` (a job begun late in the year, which the
+start rule counts) is taken modulo the year for the gap, because the steady state is
+periodic: a window on days 340 to 364 with `d` 60 starts once, at 340, and completes at
+tick 34 of the next year, one completion a year, gap 364. An activity whose start is open
+on every tick of the year (no season at zero yield) counts as completing on every tick:
+the group's households are spread over the `d` offsets (8.5.2, 8.4.3), so one of them
+completes at each tick and a `d` of 2 or 12 makes no gap; the greedy sequence of one
+household is read only for an activity with a closed tick. With no seasons, or an activity
+that completes every tick, the gap is 0.
+
+*Worked check.* `grow_staple` of `one` is open on days 59 to 150 (`defaults.go`) with
+`d` 60: the greedy starts are 59 and 119, the completions 118 and 178, and the longest
+cyclic run without one is 365 - 60 - 1 = **304**. Counting every open start tick as a
+completion (completions 118 to 209) would give 365 - 92 = 273, and is not the rule. Two
+plantings (spring and autumn, completions 118, 178, 302, 362) give 123.
+
+If `c` is in the upkeep of a group in the region and its `ShelfLife` is
 above 0 and below the supply gap, no stock can bridge the gap and the households
 go without: `storage_gap`, an error. For an input of an activity that exists all year
 the same condition is the warning `storage_gap_input`.
@@ -379,6 +442,13 @@ working tick, the **wage**, so no household gains by changing recipe, and (c) ha
 activity that would pay more than the wage. Conditions (b) and (c) are the dual
 constraints of the programme (5.2).
 
+**The flows are those of `lambda = 1`.** The programme maximises `lambda`, but a steady
+state is the programme at `lambda = 1` (condition (a)): the executions per tick `x` that
+the jobs (8.5.1), the census (5.2) and the lean reserve (8.4.1) use are `x* / lambda*`,
+the optimum scaled down, which keeps every row satisfied. Prices and wages are duals and
+are unchanged by the scaling. With alternative optima, Bland's rule picks the vector
+(FR-VIA-022).
+
 ### 5.2 Unknowns and equations
 
 | Unknown | Meaning | Where it comes from |
@@ -399,12 +469,42 @@ what each recipe must pay per working tick, and the wage is whatever equalises t
 **The census.** Version 1 has no population dynamics (POP, SPN come later), so the
 households of a group are data. The solver treats the census as given and reports,
 per recipe, the labour the steady state needs and, per group, the **imbalance**: the
-households in the group against the households its recipes need at the nominal work
-share. It does not change the census. The same programme with the role populations
-free is the **balanced census** of the report (`Report.Census`), which is a
-suggestion to the author: how many households per recipe would clear every market.
+households in the group against the households its recipes need. It does not change the
+census. The same programme with the role populations free is the **balanced census** of
+the report (`Report.Census`), which is a suggestion to the author: how many households
+per recipe would clear every market.
 When a recipe belongs to more than one role of the region, the census is reported per
 recipe only, flagged ambiguous.
+
+**The formula.** With `x` the executions per tick of lambda 1 (5.1), the **need** of a
+group `g` of a region, in households, is the larger of two figures: the labour of its
+recipes, `sum over r of d(r) * x(r)`, and the start capacity of any of them,
+`max over r of x(r) * TicksPerYear / J(r)` (the households that must exist for the
+capacity row of 3.2 to hold; a recipe without a capacity row has no such term). The
+balanced census of the region is the apportionment of its configured households
+`H(rho)` over the groups in proportion to `need(g)`, by the largest-remainder method
+(quotas `H(rho) * need(g) / sum of need`, floors first, the rest to the largest
+remainders, ties to the earlier group in canonical order: `architecture.md` 7.6); the
+imbalance of a group is its configured households minus its balanced figure. The
+available work share `phi` divides every term alike and cancels in the proportion, so it
+is not in the formula; a reading that divides the labour terms by `phi` and not the
+capacity term does not fit the worked case below. A group's need is taken from the flows
+the group runs: a recipe on the lists of several roles of the region is divided as 8.5.1
+says.
+
+*Worked case, `testdata/chains/one.toml` (600 households).* At lambda 1 the flows per tick
+are: `grow_staple` 0.76705 (`1 800 x - 20 s = 1 350`, `40 x = 20 s`), `save_seed` 1.5341,
+`prepare` 75, `make_tool_a` 0.76705, `make_tool_b` 9.375, `refine` 9.8864, `dig_mineral`
+16.477, `cut_fuel` 49.627. The needs are: cook 75, digger 16.477, forester 49.627,
+refiner 19.773 (2 ticks per `refine`), maker 30.426, and grower
+`max(60 * 0.76705 + 1.5341, 0.76705 * 365 / 2) = max(47.56, 139.99) = 139.99`, since
+`grow_staple` can start twice a year (59 and 119: 3.1), so growers need about three times
+the labour their work alone suggests. The sum is 331.29, the factor 600 / 331.29 = 1.8112,
+and the quotas are cook 135.83, digger 29.84, forester 89.88, grower 253.53, maker 55.11,
+refiner 35.81. The floors sum to 596; the four largest remainders (forester .88, digger .84,
+cook .83, refiner .81) take the remaining four, which gives cook 136, digger 30,
+forester 90, grower 253, maker 55, refiner 36: the groups of `one.toml`, which is
+therefore balanced (`spec-reference-chain.md` 4.4.1).
 
 **Why it is a competitive equilibrium.** The goods and labour rows with a
 fixed-proportion upkeep basket are the linear Fisher market with Leontief demand;
@@ -422,6 +522,15 @@ capacity rows break the theorem's conditions and the solver does not rely on it.
    then bound `lambda` when the basket is not empty. An optimum exists. If the basket
    is empty (no upkeep anywhere) the programme is unbounded and the solver returns
    `ErrNoUpkeep`; a configuration with no final demand has nothing to be viable for.
+   The test is per realm, not per programme: the solver returns `ErrNoUpkeep` only when
+   no group of any region has an upkeep. An autarky region whose own basket is empty
+   while another region's is not is **not a programme**: it has no table row and its
+   region is listed in `UnpricedWages`. A programme whose basket goods are all unsourced
+   `Raw` markers (4.2.1) is treated the same way (no table row, its region in
+   `UnpricedWages`, each such commodity in `UnpricedCommodities`), and `ErrNoUpkeep` is
+   then returned only when no programme remains. A region with no households is not a
+   programme. In `Validate` an empty basket is never an error (`no_upkeep` is a warning
+   of `spec-config.md` 7.4.2): the programme is skipped silently (4.4).
 2. **Uniqueness.** The optimal `lambda*` is unique. The primal `x` is not, when
    alternative optima exist (two recipes make the same good at the same value
    added). The dual `p` is unique when the primal optimum is non-degenerate. The
@@ -452,6 +561,19 @@ capacity rows break the theorem's conditions and the solver does not rely on it.
    (`UnpricedWages`). In the example the nominal table has a wage of 1 826 and a tool at
    12 432, against 0 and 0 at full labour, and at the unchanged yield of 4 000 the full
    labour table (wage 755) is used (FR-VIA-058).
+
+   **The fallback is per programme.** In an autarky programme the programme is the
+   region. In a pooled programme the prices are one vector, so the whole pooled table is
+   rebuilt from the nominal pooled programme (`phi` the household-weighted mean over the
+   regions), and every region whose full-labour wage was 0 with a tight capacity row is
+   listed in `NominalSeed`; a region whose nominal wage is also 0 stays in
+   `UnpricedWages`. **Which programme gives which part:** the seed prices and the wage
+   come from the nominal programme, but the flows (jobs, reserve, stock inputs, census)
+   come from the full-labour programme at lambda 1 (5.1), which is what the warm
+   document holds: in `famine` the nominal programme gives lambda 1.11247 and wage 1 624,
+   and the flows are those of lambda 96/73 = 1.3151 at full labour (`grow_staple` 2.5
+   and no `save_seed`, because its capacity row is tight; `make_tool_a` 2 272 =
+   2.5 * 3 / 33; reserve 393 = 383 + 10).
 5. **What the equilibrium is not.** It is the frictionless equilibrium of a planner.
    Whether the simulation, with beliefs, discrete agents and delays, converges to it,
    stays near it or leaves it is a question of stability (section 13), not of
@@ -521,8 +643,13 @@ seeds (this is the calibration use).
 6.4. **Bounds and floors.** A seed price is raised to the resolution floor
 `ceil(10 000 / BeliefStep)` (`spec-currency.md` 3.1) and capped at `MaxPrice`. A price
 raised to the floor, a price of 0, and a price outside the reference band
-(`spec-beliefs.md` 3.2.1) are recorded in the report. A quantity or money amount that
-does not fit `int64` or its bound is `ErrOverflow`.
+(`spec-beliefs.md` 3.2.1) are recorded in the report. **The table must pass `Validate`:**
+a seed price that the resolution floor binds, or that is a free good (dual 0), is lifted
+to the lower bound of the reference band that `Validate` enforces (8.2.2, FR-VIA-030), and
+a price above the upper bound of the band is capped to it. Each lift is listed in
+`Floored`, and the unclamped price is recorded in `OutsideReferenceBand`, so the record of
+this section is kept while the table loads. The band rule of the validator is unchanged. A
+quantity or money amount that does not fit `int64` or its bound is `ErrOverflow`.
 
 `world.belief_step` moves the table only for a price that the floor binds, which is the one case in which it is not a check (11).
 
@@ -547,6 +674,31 @@ func SolveSteadyState(ctx context.Context, cfg Config, opts ...SolveOption) (Ste
 
 The algorithm is in `internal/steady` over primitive slices (architecture.md 2.9).
 `Validate` calls a bounded form of the same code for V1 to V4 (4.6).
+
+**The result.** `SolveSteadyState` returns `SteadyState{Programmes []ProgrammeResult,
+Table WarmStart, Report Report}`. A `ProgrammeResult` is one programme solved:
+`Regions []string` (one region in autarky, all the regions of the component in the pooled
+case), `SurplusBP` (the floor of `lambda* * 10 000`), `LabourShareBP` with
+`HasLabourShare` (absent when a capacity row is tight: FR-VIA-012), `NominalSurplusBP`
+and `Pivots`. The `Report` holds the diagnostics of 10.3, every list in a stable order
+(region, then commodity or recipe ID) and no map. The exact flows are not exported: the
+census and the table are the only flow-derived outputs (architecture.md 2.8). The
+fields owned by a module (10.3: `Headroom`, `Rent`, `FacilityDecay`, `SurplusWantsBP`)
+are appended with their module and are empty while it is off.
+
+**Autarky is the default.** With no `WithFreeTrade`, each region with a group is solved
+alone: its own programme, its own numeraire `B_ref(rho)` (6.3), and the rows of the
+table for the region come from it. With `WithFreeTrade`, all the regions with a group
+are one pooled programme with one scale: the free-trade set only, the complete set of
+zero-cost lanes, collapsed to one goods row per commodity (the labour and capacity rows
+stay per region). A region with no group has no programme and no table row. There is
+no partial pooling in Stage 1 (9.4).
+
+**The options** are functional, of the type `SolveOption` (not the world's `Option`),
+and five: `WithStockCoverTicks`, `WithMoneyBufferTicks`, `WithResidualWarnBP`,
+`WithMaxPivots` and `WithFreeTrade`, with the bounds of 11. A value outside its bound
+returns `ErrOutOfBounds` from `SolveSteadyState` before any work; a nil option is
+ignored; the last option of a kind wins.
 
 7.2. **Why core.** (1) The warm start is part of "version 1 is done" and a consumer
 must be able to produce it with the public API alone (architecture.md 1.3); a
@@ -672,8 +824,12 @@ floor, which would bind exactly at 10 000; BEL's reduction to 7 000 is the answe
 chain whose price is not the full cost: a byproduct priced at the floor, a good
 whose only activity is inactive, or a rounding effect at the resolution floor.
 
-8.2.4. A commodity whose price is 0 or not unique (5.3) gets its reference price in
-the table and is listed in `Report.UnpricedCommodities`, not guessed.
+8.2.4. A commodity whose price is not unique (5.3) gets its reference price in the
+table, and one whose price is 0 (a free good, dual 0) gets **the larger of the
+resolution floor and the lower bound of the reference band** (6.4) instead of the
+reference price; both are listed in `Report.UnpricedCommodities`, not guessed, and the
+`Floored` and `OutsideReferenceBand` records of 6.4 are written for a lifted free good as
+for any other lift.
 
 8.2.5. **The starting wage.** `SeedWage` gives, per region, the money per working
 household-tick that the cost anchor uses whenever the pooled observed wage of the
@@ -706,7 +862,20 @@ Money = inputs_cost + U * (d_max + MoneyBufferTicks)
 
 `inputs_cost` is the cost at seed prices of the inputs of one execution of the
 group's main recipe; `U` the household's upkeep cost at seed prices; `d_max` the
-longest `Duration` among the group's active recipes. This is the rule that ties the
+longest `Duration` among the group's active recipes. An **active recipe** is one with a
+positive execution in the solver's final basis scaled to lambda 1 (5.1), so a long recipe
+the basis leaves unused, such as `salvage` of `second`, counts for neither `d_max` nor the
+main recipe. **The main recipe** of a group is its active recipe with the **longest
+`Duration`**, ties broken by the **largest inputs cost** at seed prices, then by the
+lower recipe ID. Worked case, `one` (`U` = 2 * 96 + 628 + 179 = 999, `MoneyBufferTicks`
+10): the grower's main recipe is `grow_staple`, and its money is 78 810 = 999 * (60 + 10)
++ 8 880, the 8 880 being `grow_staple`'s 40 `seed` at 222, not `save_seed`'s 20 at 96; the
+maker's is `make_tool_b`, 22 557 = 999 * 13 + 9 570, the 9 570 being its 3 `refined` at
+3 190. In `one` the longest duration and the largest inputs cost pick the same recipe in
+both groups; the rule is the one that reproduces every group of the five warm documents
+(the largest inputs cost alone would give the `second` fabber 52 189 from
+`make_fabricator`, duration 1, where the document has 19 423 from `fab_board`, duration
+3). This is the rule that ties the
 warm start to N-032: a household that holds less than `U * d` cannot live through a
 job. The welfare ratio itself no longer misreads a long job, because a role's window
 is never shorter than twice its longest job (`spec-welfare-and-wages.md` 2.3.3; the
@@ -729,13 +898,68 @@ Whether a default pool is wanted is open question 6.
 
 - the **cover** of the upkeep: `StockCoverTicks` ticks of each upkeep commodity;
 - for the group's active recipes, the inputs of one execution, so that an idle
-  agent can start at once;
+  agent can start at once (an **active** recipe is one with a positive execution in
+  the solver's final basis scaled to lambda 1, 5.1);
 - each required tool, one item per execution a household can run;
 - for a commodity with a **supply gap** (4.5) that the group's recipes produce, the
   **lean reserve**: the largest cumulative shortfall of consumption against
   production over the year starting at tick 0, computed from the start windows,
   durations and the upkeep rate. It is held by the groups that produce the
   commodity, in proportion to their output.
+
+**The composition of the stock per household** (pinned against `warm-one.toml`,
+`warm-second.toml` and `warm-famine.toml`; `one` is the worked example):
+
+1. The reserve counts the **whole consumption** of the commodity in the region at the
+   flows of lambda 1 (5.1): the upkeep `D(c, rho)` plus the inputs and the tool wear of
+   every active recipe of the region. Upkeep alone gives 560 `staple` where the document
+   has 644.
+2. A commodity's stock per household is the larger of its cover and the sum of the
+   one-execution inputs of the group's active recipes, **plus** the reserve and the tool
+   items: a cook holds `staple` 10 = max(cover 10, `prepare` input 2); a grower holds
+   `staple` 664 = 644 + max(10, `save_seed` input 20); a maker holds `refined` 5 = 2 + 3,
+   the inputs summed over the group's recipes, not their maximum.
+3. A recipe of duration 1 writes no job (8.5.2).
+4. `InProgressBP` rounds down (8.5.1): 28.125 / 55 = 5 113.6 gives the file's 5 113.
+5. No pool row is written (the documents have none).
+6. A commodity that appears in no input, tool, non-discard output or upkeep of the
+   programme (a discard output only, such as `waste`) has no row in the table and no
+   `UnpricedCommodities` entry.
+
+**The lean reserve, exactly.** Let `cons(c, rho)` be the whole consumption of `c` per
+tick (item 1) and, for each open start tick `t` of an activity that outputs `c`,
+`x1 * TicksPerYear / N_open` executions start (`x1` its flow at lambda 1, `N_open` the
+open ticks of the year: the rate of 8.5.1), each yielding its non-discard output at the
+factor of the start tick, credited at its completion tick (4.5). A start whose completion
+tick is at or after `TicksPerYear` adds nothing: it is not wrapped to the next year, and
+`N_open` still counts its tick. The asymmetry with the cyclic gap of 4.5 is deliberate:
+the reserve bridges the first year from tick 0, when nothing begun before tick 0 can
+complete (the jobs in progress at tick 0 are table rows, 8.5), so a start late in the
+year has produced nothing by the year's end, while the gap describes the periodic steady
+state. With `prod(t)` the output completing at `t`, the reserve of the realm for `c` is
+
+```
+max over t in [0, TicksPerYear) of  max(0, sum over u <= t of (cons(u) - prod(u)))
+```
+
+It is split among the groups that produce `c` in proportion to their output (largest
+remainder in whole units of the total, ties by role ID), and then **per household
+`ceil(the group's share / the group's households)`** (`warm-famine.toml` holds 383 + 10
+where 1 350 * 118 / 417 = 382.01: the household's figure rounds up, not the total), and
+cut to the shelf life (8.4.2). It exists only for a commodity with a supply gap in the
+sense of 4.5, which is every commodity the region's activities output, not only upkeep and
+all-year inputs (`storage_gap` and `storage_gap_input` are the findings that restrict
+themselves to upkeep and inputs); so an all-year activity (`refined`, `tool_a`, `tool_b`
+of `one`, `biomass` of `second`) has none. It reduces to the realm's whole use per tick
+times the ticks to the first harvest, shared among the producing households, when
+production is zero up to the first completion.
+
+*Worked case, `staple` in `one`.* The first completion is at tick 118. The realm uses
+1 200 `staple` a tick as upkeep, 150 as the input of `prepare` (75 executions a tick) and
+30.68 as the input of `save_seed`: 1 380.68 a tick. Over 118 ticks, shared among the 253
+growers, that is 1 380.68 * 118 / 253 = 643.95, which rounds up to **644** per grower; the
+664 of `warm-one.toml` is these 644 plus the 20 `staple` a grower holds as the input of
+one `save_seed` (item 2). In `famine` the figure is 393 = 383 + 10.
 
 8.4.2. Cover and reserve that would last longer than a commodity's `ShelfLife`
 are cut to the shelf life, and the report names the commodity.
@@ -763,8 +987,29 @@ construction are the sum of these amounts and those of 8.5.
 job in progress on the recipe. The solver sets it to the expected busy share at an
 arbitrary tick: `x * TicksPerYear * |V| / N_open` executions in progress per tick
 (for a recipe that runs all year, `|V| = d` and `N_open = TicksPerYear`, which gives
-`x * d`), divided by the households of the group, clamped to 10 000 basis points.
-`V` and `N_open` are defined next.
+`x * d`), divided by the households of the group, clamped to 10 000 basis points,
+rounded **down**. Here `x` is the flow at `lambda = 1` (5.1). `V` and `N_open` are
+defined next.
+
+**A recipe on the lists of several roles of a region** (3.3 item 2: the activities are
+open to any household). The executions in progress of the recipe are divided by the sum
+of the households of **all** the groups of the region that list it, and each such group
+gets that same share (each household is equally likely to be the one running it). If the
+shares of one group then sum above 10 000 they are scaled down in proportion, each
+rounded down, and the group is listed in `Report.Census` as short. A recipe active in a
+region where no group lists it gets no job and is listed in `Report.Census` too.
+
+**A seasonal job keeps the formula as written.** For a recipe that does not run all
+year the executions in progress are `x * TicksPerYear * |V| / N_open`, not `x * d`: the
+formula spreads the executions over the open start ticks at the rate the steady state
+has (the rate of 8.4.1), where `x * d` assumes a start at every tick. A warm document
+that differs from the formula is the stale one (FR-REF-007: the documents are the
+solver's output). Where the two differ (a recipe that does not run all year) the file is regenerated:
+`two` south has 3 341 in the document, from `floor(10 000 * x * 60 / growers)`, against
+3 110.5 from the formula; six job rows of `warm-two`, `warm-three` and `warm-five` differ
+this way, and none in `one`, `second` or `famine`, where the recipe runs all year and the
+two formulas coincide. Likewise the `grow_algae` row of `second` (5 163 in the document)
+is the solver's to settle: the rule of 3.1 gives a share of 5 232.
 
 8.5.2. **Spreading.** Let `V` be the **virtual start offsets** of the recipe: the
 offsets `o` in `0 .. d-1` such that the yield factor at the virtual tick `-o` is
@@ -773,8 +1018,11 @@ positive, where the season of tick `-o` is `Calendar.SeasonAt(-o)`
 calendar's and not an assumption made here, it accepts any `int64`, and it is
 `-1` when there are no seasons. `N_open` is the number of ticks in a year at which the
 factor is positive. For an agent given a job (the first `busy` agents of the group
-in agent order, `busy` by largest-remainder apportionment of the share), the `j`th
-takes the offset `V[floor(j * |V| / busy)]`, sorted ascending. Then:
+in agent order, `busy` by the joint apportionment below), the `j`th
+takes the offset `V[floor(j * |V| / busy)]`, sorted ascending. A recipe of duration 1
+writes **no job**: `V` would be `{0}` and the share positive, which contradicts the
+document ("the one-tick recipes have no job in progress at tick 0",
+`spec-reference-chain.md` 4.4.1). Then:
 
 - the job started `o` ticks before tick 0: `Remaining = d - o`;
 - the effective factor, and so the pending outputs, are those of the season of the
@@ -784,7 +1032,17 @@ takes the offset `V[floor(j * |V| / busy)]`, sorted ascending. Then:
   fixed before it and is not recomputed);
 - `Executions` equals the agent's weight, and `Principal` is the agent itself.
 
-If `V` is empty the table is rejected (`ErrWarmStartJob`, FR-VIA-033). A recipe
+**The agents in progress.** For a group of `n` agents the apportionment is **one joint
+largest-remainder apportionment** over the `n` agents: the quotas are
+`share * n / 10 000` for each `JobSpec` of the group in canonical order, with the idle
+share (`10 000` minus the shares) last; the floors are taken first, the remaining agents
+go to the largest remainders, and a tie goes to the earlier entry (`architecture.md`
+7.6). The busy agents are then assigned in agent order, **spec by spec**: the first
+agents to the first `JobSpec`, and so on, the idle agents last. Each `JobSpec` takes the
+offsets of its own `V` as above, with its own `busy`.
+
+If `V` is empty the table is rejected (`ErrWarmStartJob`, FR-VIA-033; the rule runs at
+the entry of phase 6 of `Validate`: 8.7). A recipe
 that can start in a single season therefore has all its in-progress agents inside
 that season's window, which is what a real calendar would give at that tick.
 
@@ -792,7 +1050,11 @@ that season's window, which is what a real calendar would give at that tick.
 its inputs were consumed before the run. The world makes the books say so:
 construction grants the agent the job's inputs by `initial` and takes them at once
 by `recipe_input` in one construction step, wears the tools by `WearPerUse`, and
-leaves the pending output in the job. The goods created at completion by
+leaves the pending output in the job. The input `Transform` consumes **oldest first**, so
+the stagger vector (8.4.3) is a property of the granted stock before the job's inputs
+are taken: the post-warm stock is the stagger lots plus the granted input lots (fresh,
+`Born` 0) minus the oldest-first consumption of the input quantity, so its total equals
+the stagger total (granted equals consumed). The goods created at completion by
 `recipe_output` are then paired with the inputs, and goods are conserved from the
 first tick (FR-VIA-036; the audit passes at tick 0, FR-LED-046). No new ledger reason
 is needed. The flows of construction are in the **construction bucket**, not in the
@@ -844,6 +1106,13 @@ list, shares summing above 10 000 or a share outside [0, 10 000], or an empty se
 of virtual start offsets (`ErrWarmStartJob`); two entries for one key
 (`ErrDuplicateID`). A warm start does not need the whole table: absent entries take
 the baseline.
+
+**Where the empty-offset rule runs.** The rule "the set of virtual start offsets of a job
+is empty" (`ErrWarmStartJob`, FR-VIA-033) needs the recipe, yield and role tables, which
+exist only for a canonical, validated configuration. It therefore runs at the entry of
+phase 6 of `Validate` (`spec-config.md` 7.1.6), on the canonical copy of a configuration
+that phases 1 to 5 found clean. The sub-rule "the shares of a group exceed 10 000" is
+already built, needs no table: it runs with the structural rules, before phase 6.
 
 With the storage module on, a group with a job in progress is also tested against the room at construction: its stock load plus the load of the job's pending output must fit the base room plus the given stores (`ErrRoomShape`, rule `room_below_warm_job`, `spec-storage.md` 13.1). It is a check: the room does not enter the programme and the table is not changed by it (11).
 
@@ -901,6 +1170,17 @@ lanes: autarky. The option `WithFreeTrade()` adds a lane of labour 0 and loss 0
 between every pair of regions for every commodity. It is a bound for comparison and
 the case `Validate` checks (4.6); it is not a model of any world.
 
+**Stage 1 realises only the free-trade lane set.** `Lane`, `Lanes` (the option that
+carries a lane list) and `MaxLanes` are not published in Stage 1: they come with the
+transport module, which defines `transport.Lanes` and adds the three together. The
+free-trade set is the complete set of zero-cost lanes, and the programme realises it as
+a **collapsed single goods row** per commodity (the labour and capacity rows stay per
+region): that row is the complete free-trade set of FR-VIA-043 and FR-VIA-044, and the
+lane columns, which a partial set needs, are TRN's. With no `WithFreeTrade` each region
+is solved alone (autarky, 7.1). When transport adds `WithLanes`, its lane validation is
+an error and not a warning (a configuration that cannot be honoured is rejected with a
+sentinel).
+
 With the infrastructure module on, a route facility at full condition raises the transit factor of the lanes of its edge by its `BoostBP` and a ground facility raises the capacity of its endowment (`spec-infrastructure.md` 13.4; `spec-resources.md` 11): a gain at full condition, a constant, so the programme stays linear. A facility with `Decay` above 0 and no repair has no steady state with it (4.2.2).
 
 9.5. **Import-dependent regions.** A region producible in the realm and not alone
@@ -933,6 +1213,22 @@ error rule.
 | `storage_gap` | `ErrNotViable` | V4: an upkeep good out of production longer than its shelf life |
 | `resource_short` | `ErrNotViable` | V3: pooled `lambda* < 1` at full labour where a tight row is a resource row (`spec-resources.md` 11.3; with the resources module on) |
 | (existing) | `ErrWarmStartPrice`, `ErrWarmStartJob`, `ErrUnknown*`, `ErrOverflow`, `ErrDuplicateID` | the table of 8.7 |
+
+**The error type and its fields.** `ViabilityError` is its own type (it does not embed
+`ValidationError`, `architecture.md` 4.7) with `Rule string` (the rule name above),
+`Path []string`, `Value string` (the offending value as text) and `Bound string` (the
+number that decides it, as text); `Unwrap` returns `ErrNotViable`. It joins the one sorted
+list of `Validate`: path, then rule name, then value and bound, cut at 100 with one
+`ErrTooManyErrors` (`spec-config.md` 7.1). The rule names are plain strings. The path,
+value, bound and count of each rule:
+
+| Rule | Count | Path | Value | Bound |
+|------|-------|------|-------|-------|
+| `unproducible_in_realm` | one per unproducible commodity | `commodities/<id>` | the commodity ID | empty |
+| `role_cannot_work` | one per role | `roles/<id>` | the first region where none of its recipes exists | empty |
+| `cycle_not_productive` | one per component | `commodities/<id>` of the lowest-index commodity of the component | `s*` in basis points (floor) | `0` |
+| `labour_short` | exactly one for the realm | `regions` | `SurplusBP` of the pooled programme | `10000` |
+| `storage_gap` | one per (region, commodity) | `regions/<region>/commodities/<id>` | the gap in ticks | the shelf life in ticks |
 
 ### 10.2 Warnings (`spec-config.md` 7.2)
 
@@ -988,9 +1284,16 @@ testing.md 6.7 requires a field behind every row (`spec-config.md` 9.2, FR-CFG-0
 | Solve option | `MoneyBufferTicks` | ticks of upkeep of money held beyond the job (8.3) | 10 | 0 to 10 000 |
 | Solve option | `ResidualWarnBP` | residual above which the report lists an activity (6.5) | 1 000 | 0 to 100 000 |
 | Solve option | `MaxPivots` | pivots allowed before `ErrSolveLimit` (5.4) | `MaxViabilityPivots` | 1 to `MaxViabilityPivots` |
-| Solve option | `Lanes` | routes between regions (9.4) | none | at most `MaxRegions * MaxRegions * MaxCommodities` |
+| Solve option | `Lanes` | routes between regions (9.4); **not in Stage 1**, with the transport module | none | at most `MaxRegions * MaxRegions * MaxCommodities` |
 
 `HorizonYears` (years a finite stock must last) is not a solve option: it is a field of the resources module (`spec-resources.md` 12), read from the configuration, and has its row there. The inputs of the open layer (4.8) are the pure function `Lines()` of the external module and add no solve option.
+
+**The option names (Stage 1).** The options are functions of the type `SolveOption`,
+unexported state, and five: `WithStockCoverTicks` (`StockCoverTicks`), `WithMoneyBufferTicks`
+(`MoneyBufferTicks`), `WithResidualWarnBP` (`ResidualWarnBP`), `WithMaxPivots`
+(`MaxPivots`) and `WithFreeTrade` (9.4, no value). A value outside the bound of the table
+returns `ErrOutOfBounds` from `SolveSteadyState` before any work. The `Lanes` row is
+realised by `WithLanes` with the transport module (9.4).
 
 Bounds, provisional, in `bounds.go` (`spec-config.md` 4.1):
 
@@ -998,7 +1301,7 @@ Bounds, provisional, in `bounds.go` (`spec-config.md` 4.1):
 |----------|-------|--------|
 | `MaxViabilityPivots` | 100 000 | a cap on the work of a solve; with Bland's rule larger instances are possible but not at load |
 | `MaxViabilityCells` | 4 000 000 | rows times columns of the tableau `Validate` will build; above it V2, V3 are skipped with a warning |
-| `MaxLanes` | `MaxRegions * MaxRegions * MaxCommodities` | the largest lane list |
+| `MaxLanes` | `MaxRegions * MaxRegions * MaxCommodities` | the largest lane list; added with the transport module, not in Stage 1 |
 
 The placeholders, listed so that none is mistaken for a result: `StockCoverTicks` 5,
 `MoneyBufferTicks` 10, `ResidualWarnBP` 1 000, `MaxViabilityPivots` 100 000,
@@ -1146,7 +1449,9 @@ the autarky range at its endpoints (9.2, 9.3).
 and bran at the floor 50. The exact wage is 2 980.47 per working tick (households work
 33.6% of ticks, so 1 000 a tick). Value added per execution against the wage times the
 duration is within 0.25% for every active activity except `mill_flour` (+10.16%,
-the bran at the floor adds revenue) and `grow_grain` (+1.58%).
+the bran at the floor adds revenue) and `grow_grain` (+1.58%). These digits were
+recomputed with `round.py` for the start rule of 3.1 (a start counts at every tick of the
+open window): they stand, and `bake_loaf` has `J` 183 = ceil(365 / 2) there.
 
 **Seed prices against unit cost.** Two versions, because the unit cost changed
 (`spec-production.md` 9, N-055).
@@ -1199,6 +1504,13 @@ wants. The nominal fallback of 5.3.4 was run on the one-region pack with the sta
 at 4 000, 3 800, 3 000 and 2 500: at full labour the wage is 755, 0, 0 and 0; nominal it
 is 1 868, 1 826, 1 624 and 755.
 
+The `s*` figures of this round (0.92, 1.92, 0.50, 0.20) come from the prototype of
+`spec-reference-chain.md` 14, which is not archived (N-274); they are the record of that
+run and are not recomputed here. A test of V2 asserts only what can be derived by hand:
+a one-recipe seed cycle that takes 1 `seed` and returns 1 has `s* = 0` (not productive),
+and one that returns 2 has `s* = 1 = 2 - 1` (productive); with a source recipe in the
+component the programme of 4.3 takes it as an activity.
+
 ## 16. Requirements
 
 Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
@@ -1208,15 +1520,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-VIA-001 | The labour of an execution MUST be the recipe's `Duration` in household-ticks, and the net vector of an activity MUST be `E * q / 10 000` per non-discard output minus the input quantities minus `WearPerUse / Durability` per required tool, discard outputs counting for nothing. |
-| FR-VIA-002 | The start capacity `J` of an activity MUST be the number of jobs one household can start in a year counted greedily from the first tick with a positive yield factor, and an activity with `J = 0` MUST NOT exist. |
+| FR-VIA-002 | The start capacity `J` of an activity MUST be the number of jobs one household can start in a year counted greedily from the first tick with a positive yield factor, a start counting at every tick of the open window whether or not the job completes inside the year, and an activity with `J = 0` MUST NOT exist. |
 | FR-VIA-003 | The reference programme MUST maximise `lambda` subject to the goods, labour and capacity rows of 3.2, and `SurplusBP` MUST be `floor(lambda* * 10 000)`. |
 | FR-VIA-004 | A configuration MUST be rejected with `ErrNotViable` and the rule `unproducible_in_realm` when an upkeep good, or an input or tool of a recipe that exists in a region where a role lists it, cannot be produced in any region with a positive yield. |
 | FR-VIA-005 | A configuration MUST be rejected with the rule `role_cannot_work` when a role that lists recipes has households in a region where none of its recipes has a positive yield; a role that lists none MUST be exempt. |
 | FR-VIA-006 | A configuration MUST be rejected with the rule `cycle_not_productive` when a strongly connected component of the material graph has no non-negative activity vector whose net product is positive in every commodity of the component, computed in exact arithmetic with the best yield across regions. |
-| FR-VIA-007 | A configuration MUST be rejected with the rule `labour_short` when the pooled free-trade programme has `lambda* < 1` at `phi = 10 000`. |
+| FR-VIA-007 | A configuration MUST be rejected with the rule `labour_short` when the pooled free-trade programme has `lambda* < 1` at `phi = 10 000` and V1 and V2 found nothing; V3 MUST be skipped silently for a programme with an empty basket or whose basket goods are all unsourced `Raw` markers. |
 | FR-VIA-008 | A configuration MUST be rejected with the rule `storage_gap` when an upkeep good has a shelf life above 0 and below its longest supply gap in the region, and MUST warn with `storage_gap_input` for an input of an all-year activity. |
 | FR-VIA-009 | `Validate` MUST warn, and MUST NOT fail, with `region_not_self_sufficient`, `subsistence_exceeds_expected_work`, `target_above_surplus` and `viability_check_skipped` under the conditions of 10.2. |
-| FR-VIA-010 | `Validate` MUST skip the programmes of V2 and V3 and warn with `viability_check_skipped` when the tableau would exceed `MaxViabilityCells` rows times columns or the pivots would exceed `MaxViabilityPivots`, and MUST NOT skip V1 or V4. |
+| FR-VIA-010 | `Validate` MUST skip the programmes of V2 and V3 and warn with `viability_check_skipped`, naming the part skipped, when the tableau would exceed `MaxViabilityCells` rows times columns (rows and columns as in 4.3, computed with the checked helpers) or the pivots would exceed `MaxViabilityPivots`, and MUST NOT skip V1 or V4; `SolveSteadyState` MUST return `ErrSolveLimit` carrying the pivots, rows and columns for the same overshoot. |
 | FR-VIA-011 | Every error of V1 to V4 MUST match `errors.Is(err, ErrNotViable)` and be a `*ViabilityError` with a `Rule`, a `Path` and the offending value. |
 | FR-VIA-012 | The labour share to subsist MUST be `ceil(10 000 * 10 000 / SurplusBP)` at full labour when no capacity row is tight, and absent otherwise. |
 | FR-VIA-013 | The dual of the reference programme MUST give prices and wages that satisfy dual feasibility for every activity and equality for every active activity, checked in exact arithmetic. |
@@ -1229,10 +1541,10 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-020 | `SolveSteadyState` MUST be a pure function of its arguments: it MUST draw no random number, MUST write no log, MUST start no goroutine, and MUST give the same result on every run and platform. |
 | FR-VIA-021 | `NewWorld` MUST NOT call `SolveSteadyState`. |
 | FR-VIA-022 | The tableau MUST be built in canonical order, commodities by ID and activities by region then recipe ID, so that the result does not depend on the order of the configuration. |
-| FR-VIA-023 | The seed price MUST be the solver's price times the scale of 6.3, rounded half to even, raised to the resolution floor and capped at `MaxPrice`, and a price so changed MUST be listed in the report. |
+| FR-VIA-023 | The seed price MUST be the solver's price times the scale of 6.3, rounded half to even, raised to the resolution floor and capped at `MaxPrice`, and a price floored by the resolution floor or a free good MUST be lifted to the lower bound of the reference band (and one above its upper bound capped to it) so that the table passes `Validate`; each such change MUST be listed in `Floored` and the unclamped price recorded in `OutsideReferenceBand`. |
 | FR-VIA-024 | The price scale MUST make the regional basket (autarky) or the household-weighted baskets (pooled) equal the configured reference basket values. |
 | FR-VIA-025 | The report MUST give, per commodity, the drift of the seed from the effective reference price, and the largest residual in basis points of the value added of an active activity at the integer prices against the wage times the duration. |
-| FR-VIA-026 | A commodity with a price of 0 or a non-unique price MUST have its reference price in the table and MUST be listed in `UnpricedCommodities`. |
+| FR-VIA-026 | A commodity with a non-unique price MUST have its reference price in the table, and one with a price of 0 MUST have the larger of the resolution floor and the lower bound of the reference band; both MUST be listed in `UnpricedCommodities`. |
 | FR-VIA-027 | The report MUST list every commodity whose seed price is below `UnitCost * CostFloor` or above `UnitCost * CostCeiling` at the seed prices, where `UnitCost` is the full unit cost of `spec-production.md` 9.1 (inputs, tool wear and `Duration` working ticks at the solver's wage, rounded up, computed from the integer seed prices). (changed: it was the cost of inputs and wear) |
 | FR-VIA-028 | The solver MUST report the census imbalance of each group and the balanced census per recipe, and MUST NOT change the census. |
 | FR-VIA-029 | `Config.WarmStart` MUST be nil by default, MUST be part of the effective configuration and the hash, and MUST be plain data with sorted slices and no map. |
@@ -1240,7 +1552,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-031 | A seed price MUST replace the effective reference price as the market's initial published price and as the initial centre of each initial agent's belief, clamped to the bounds. |
 | FR-VIA-032 | A group's `Money` MUST be per household, MUST be multiplied by the agent's weight, and the sum over the world MUST be the money created by `initial` at construction, with no other money created. |
 | FR-VIA-033 | A `JobSpec` MUST be rejected with `ErrWarmStartJob` when the recipe is not on the role's list, the share is outside [0, 10 000], the shares of a group exceed 10 000, or the set of virtual start offsets is empty. |
-| FR-VIA-034 | The agents of a group in progress MUST be the first `busy` agents in agent order, `busy` being the largest-remainder apportionment of the share, and the `j`th MUST take the offset `V[floor(j * |V| / busy)]` of the sorted virtual start offsets. |
+| FR-VIA-034 | The agents of a group in progress MUST be the first `busy` agents in agent order, `busy` coming from one joint largest-remainder apportionment over the group's agents (quotas `share * n / 10 000` per `JobSpec` in canonical order, the idle share last, floors first, ties to the earlier entry) with the busy agents assigned spec by spec, and the `j`th MUST take the offset `V[floor(j * |V| / busy)]` of the sorted virtual start offsets. |
 | FR-VIA-035 | A job created from a `JobSpec` MUST have `Remaining = Duration - o`, the effective factor of the season of the virtual start tick, `Executions` equal to the agent's weight, and the agent itself as principal. |
 | FR-VIA-036 | Construction MUST grant the inputs of each initial job by `initial` and take them by `recipe_input` in the same step and wear its tools, and goods MUST be conserved by audit from tick 0. |
 | FR-VIA-037 | The stagger MUST give agent `i` of `n` the phase `floor(i * P / n)` for a job duration, a tool durability and a perishable shelf life, using no random number. |
@@ -1390,8 +1702,11 @@ spec is written):
 | Concern | Home |
 |---------|------|
 | `WarmStart`, `SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec`, `WarmPool` | root package, `config.go`, with `Config` (architecture.md 2.6: `config.go` holds "Config and every section struct"; an earlier draft said `viability.go`) |
-| `Lane`, `SteadyState`, `Report`, `SolveOption` | root package, `viability.go` |
-| `SolveSteadyState`, `CheckViability` | root package, `viability.go`, converting inline to `internal/steady` |
+| `SteadyState`, `ProgrammeResult`, `Report`, `SolveOption` and the five `With*` options | root package, `viability.go`. Stage 1 publishes no `Lane`, `Lanes` or `MaxLanes`: they come with the transport module (9.4) |
+| `SolveSteadyState` | root package, `viability.go`, converting inline to `internal/steady` |
+| The checks of V1 to V4 | one unexported `checkViability`, in `viability_check.go`; `Validate` and `Warnings` both call it (`spec-config.md` 7.1.6), and it is not exported (architecture.md 2.8) |
+| The table from the solved programme | root package, `viability_table.go` |
+| The file split | the concept is split in three files, `viability.go` (the exported surface), `viability_check.go` and `viability_table.go`, for the size limits of N-243; a continuation file maps to this area code (`architecture.md` 2.6) |
 | The tableau, Bland's rule, the certificate, the greedy start count, the component search, the programme per component | `internal/steady`: stdlib only (`math/big`), primitive slices (architecture.md 2.9) |
 | The stagger and the application of the table | root package, `world.go`, `agent.go` at construction |
 | The bounds of section 11 | root package, `bounds.go` |

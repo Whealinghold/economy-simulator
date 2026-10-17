@@ -100,12 +100,23 @@ economy-sim/
   value.go               Money, Price, Quantity and the typed IDs (3.3)
   random.go              the seed, the one PCG and Rand, the site table and the
                          keyed stream (7.3, ADR 0008)
-  world.go               World, NewWorld, Step, Run, the guards, and the four
-                         fan-ins (2.10.4)
+  world.go               World, NewWorld, Step, Run, the guards (the four
+                         fan-ins of 2.10.4 are in fanin.go)
   calendar.go  commodity.go  recipe.go  role.go  ledger.go  market.go  order.go
   clearing.go  agent.go  strategy.go  spawner.go  beliefs.go  production.go
   estates.go  welfare.go  skills.go  observer.go  snapshot.go
   regions.go  scale.go  checkpoint.go  integration.go  moneyflow.go  viability.go
+
+  # Continuation files: a concept past the Lizard limits of N-243 is split, and
+  # each file maps to the area code of its concept. A continuation file's
+  # _test.go carries the Requirement: lines of that area.
+  strategy_default.go  strategy_work.go  strategy_view.go          (AGT)
+  spawner_report.go                                                (SPN)
+  production_report.go                                             (PRO)
+  viability_check.go  viability_table.go                           (VIA)
+  construct.go  construct_warm.go  fanin.go  phase_start.go
+  phase_production.go  phase_trade.go  phase_outcomes.go
+  phase_exit.go                                                    (WLD)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -128,9 +139,13 @@ economy-sim/
                          of the root: the 128-bit helper; the slog keys; the
                          finaliser, the Weyl, bucket and key helpers and the
                          stream key; the checkpoint encoding primitives
-    ledger/  clearing/  beliefs/  production/  welfare/  steady/  graph/  curve/
-                         the core rules over primitive structs (steady: the
-                         exact solver, math/big allowed, 3.5)
+    ledger/  clearing/  beliefs/  production/  welfare/  household/  occupation/
+    steady/  graph/  curve/
+                         the core rules over primitive structs (household: the
+                         agent's consumption, targets, tiers, spend cap and work
+                         rules; occupation: the spawner's signals, caps, ranking,
+                         renewal and placement; steady: the exact solver,
+                         math/big allowed, 3.5)
     moneyflow/  population/  transit/  endowment/  rumour/  outside/  ownuse/
     migration/  merchant/  room/  employment/  settlement/  tenure/  polity/
     credit/  facility/  risk/  fiscal/  institution/  saving/  technology/
@@ -243,7 +258,14 @@ defaults in `defaults.go`. A module's logic in any other file is a defect.
 is one call, in the spec's order; a module's call is guarded by its pointer
 (`if w.credit != nil`). No position holds logic. The list of positions
 (identifier, owner, in order) is a value in `tick.go` that a test compares with
-the table of `spec-world.md` 6 (testing.md 6.8).
+the table of `spec-world.md` 6 (testing.md 6.8). It is staged as 9.7 is:
+`tick.go` holds the list of every position of `spec-world.md` 6 that has a
+call, one explicit list `notBuiltPositions` names the positions that have no
+call yet, and the test fails on a listed position that has a call and on a spec
+position that is neither called nor listed. A module's change deletes its
+entries and appends its guarded call. Each entry says `where` it runs, `line`
+(a call in the straight line) or `bracket` (run inside `beginStep` or
+`endStep`), as testing.md 6.8 says.
 
 2.10.4. **The fan-ins are compositions, with one entry point each.** The
 world has one `fillAgentView`, one `checkTradePlan`, one `removeAgent` and one
@@ -951,4 +973,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 905c0e578c4e662908638dd8
+RULE-TAG: 135742da521a4608235fa59c

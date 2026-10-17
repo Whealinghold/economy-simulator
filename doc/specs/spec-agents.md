@@ -79,8 +79,12 @@ sections give the rule.
 ### 3.1 State
 
 An agent is plain data owned by the world. The fields marked with another spec
-are *hosted* here and defined there. The shape is a sketch; the exported form of an
-agent is a matter for `spec-integration.md` and `Snapshot`.
+are *hosted* here and defined there. The shape is a sketch of the agent's state; the
+exported form of an agent is a matter for `spec-integration.md` and `Snapshot`. The
+type in the code is unexported (`agent`). The fields that the sketch hosts for a module
+(`DeathCarry`, `OwnUse`, `OwnUseJobs`, `Journey`, `Member`, `Stores`, `Trainee`) are
+kept in the module's slices by agent slot (`architecture.md` 2.10.1), not in the core
+type; the checkpoint still writes them in the agent record (3.2).
 
 ```go
 // Agent is one household or a cohort of identical households. Plain data.
@@ -133,6 +137,11 @@ type Agent struct {
 | Membership of a body (`Member`) and the stores of the agent (`Stores`) | the agent | `spec-institutions.md` 12.1 and `spec-storage.md` 15.1, in the agent record of `spec-checkpoint.md` 4.2 tag 3 |
 | Upkeep, tradable set, targets, budgets, views, plans | derived or scratch, never state | not saved |
 | Price window, cost anchors | the market, or derived | `spec-beliefs.md` 13, `spec-production.md` 9.3 |
+
+The "home" column names the owner of a piece. A piece that a module owns (`DeathCarry`,
+`OwnUse`, `OwnUseJobs`, `Journey`, `Member`, `Stores`, `Trainee`) is kept in that module's
+slices by agent slot, and the "saved by" column is unchanged: the checkpoint writes it in the
+agent record all the same (N-128).
 
 3.2.1. The agent holds no balance and no quantity. A test that sums the agent's
 fields cannot find money (FR-AGT-002).
@@ -299,6 +308,10 @@ so that conservation is one rule:
 2f. each open cover of the agent, as insured or as underwriter, ends with no transfer (`spec-insurance.md` 8.6);
 2g. each facility of the agent is handled as `spec-infrastructure.md` 7.1 says: a site, route or ground facility passes to the estate of its region and a store facility is ruined; no money moves;
 3. all money that remains moves to the region's estate account with the reason `estate_money`;
+   one function moves the money and the lots (step 4), the lots in key order and keeping their keys;
+   the intake is counted in lots (`GoodsListed`, 14.1), and a refusal with no reservation open is
+   an invariant failure, except a balance overflow of the estate account, which is returned as
+   `ErrBalanceOverflow` (FR-EST-001, FR-EST-021);
 4. all goods move to the estate account with the reason `estate_goods`, and the
    estate lists them at the region's effective reference price, a used durable at that price times its remaining durability over its full durability (`spec-estates.md` 2.1, 2.7.3, FR-EST-008; decision of round 3: the anchor stays the effective reference price, `spec-skill-barriers.md` 2.7 follows it);
 5. the account is closed (`spec-ledger.md` 3.3); the agent's ID is never reused;
@@ -744,11 +757,96 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Room (only with the storage module on, and only for a limited agent) | `Limited`, `Room`, `Load`, `Pledge`, `Free` (pairs of mass and bulk), the agent's `Stores`, and `Mass` and `Bulk` per commodity of the tradable set (`spec-storage.md` 6.1.1). No other agent's room is visible |
 | Saving (only for an agent whose role has a saver block, in the `Work` and the `Trade` view) | `Block`, `SafetyTicks`, `HurdleSpreadBP`, `CommitBandBP`, `Drawdown`, `Facilities`, `Classes` (`spec-saving-and-investment.md` 5.2); the per-recipe group carries `Needs`, `Builds`, `Repairs` and `Standing` |
 | Facilities (only with the infrastructure module on) | in the `Work` view, the agent's own facilities in its region, ascending ID, at most `MaxFacilitiesPerAgent` (`FacilityView`, `spec-infrastructure.md` 9.1); the `Trade` view carries them only through the saving group above |
-| Tunables | the values of section 12 |
+| Tunables | the values of section 12, the role's `MinWorkShare` (read here, not in section 12), and the fifteen belief parameters that `beliefs.Params` holds, of `spec-beliefs.md` 11, as `beliefs.Params` names them (the `Belief` prefix of the first eleven is dropped: `Step`, `AdjustProb`, `Significance`, `EvidenceShare`, `StockLow`, `StockHigh`, `MaxAge`, `WidthInit`, `WidthMin`, `WidthMax`, `WidthStep`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`): plain data, filled by the world from the beliefs parameters and converted inline at the call; not `MaxPrice` and not `PriceWindow`. The default `Revise` reads them from the view because a strategy has no handle to the world (FR-AGT-050, section 7): the alternatives fail, for the world to call `beliefs.Update` itself would take the update out of the strategy's hands, and fields on `DefaultStrategy` would put a result-affecting value where the configuration hash cannot see it |
 | Mailbox | the pending `Directive`, if any (section 10) |
 | Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1) and `Outbound` (the mirror of `Inbound`: per destination region and commodity with units on the way, the total quantity of the shipments the agent is the shipper of and the earliest arrival, fixed at the start of phase 3; `spec-merchants.md` 4.1). An agent that is away or on a migration journey is never passed a view |
 | Endowments (only with the resources module on) | for the agent's own region only: each endowment that its role's recipes draw on, sorted by resource: `Resource`, `Stock`, `Capacity`, `AbundanceBP` (`spec-resources.md` 5.5.1) and, with the tenure module on, `Posted` (the rent in force per unit), `ShareBP`, `Entitled` and `Closed` (`spec-land.md` 4.6.1). No view carries another region's endowment or another holder's share |
 | Rumours (only with the information module on, and only in the view passed to `Trade` of an agent of a role with `Informed`) | `Rumours`: the rumours of `spec-information.md` 5, sorted by (`Region`, `Commodity`), a scratch slice valid for the call only. The `Work` view and the `OutcomeView` carry none |
+
+The Go shape of the core groups (Identity, Money, State, Upkeep, Job, per commodity, per
+recipe, Tunables, Mailbox) is below. The module groups of the table are **appended with
+their module** (architecture.md 2.10.5) and are not in the core shape. The type names are
+exported; a field a module group adds is the module's. The shape is a sketch of the groups
+and the fields of the table: the names of the element types that are not given elsewhere
+(`UpkeepRow`, `RecipeLine`, `RecipeOutput`, `RecipeTool`, `Tunables`) are the code's to settle.
+
+```go
+type AgentView struct {
+	// Identity
+	Tick   Moment
+	Agent  AgentID
+	Role   RoleID
+	Region RegionID
+	Weight int64
+	External bool
+	// Money
+	Money int64 // available cash
+	// State
+	Hunger, Unfed int64
+	Ratio         int64 // the welfare ratio, basis points; read with HasRatio
+	HasRatio      bool
+	TargetRatio   int64
+	WorkingTicks  int64 // working ticks in the effective window
+	Window        int64 // the effective window T
+	StartsIn      int64 // 6.4.3
+	MinWorkShare  int64 // the role's floor; a Role field owned by spec-welfare-and-wages.md, read here and not in section 12
+	// Upkeep, Job
+	Upkeep []UpkeepRow // per household; 5.2
+	HasJob bool
+	Recipe RecipeID
+	Remaining, Executions int64
+
+	Commodities []CommodityView // the tradable set, canonical order
+	Recipes     []RecipeView    // the role's recipes, ascending RecipeID
+	Tunables    Tunables        // section 12, plus the fifteen belief parameters (BeliefParams)
+	HasDirective bool
+	Directive    Directive // by value, its slices copied into the scratch (6.4.2)
+
+	scratch *viewScratch // unexported; nil in a view built by hand
+}
+
+type CommodityView struct {
+	Commodity CommodityID
+	Stock     int64 // the whole balance; no reservation exists yet
+	Expiring  int64 // units that spoil at the end of this tick
+	Belief    Belief
+	Bounds    BeliefBounds
+	Ref       Price // the effective reference price
+	Tool      bool  // a required tool of some recipe of the configuration; derived once from the whole configuration; read by 7.3.5
+	UnitCost  Price // 0 unknown; the filler zeroes it for a commodity the role has no recipe making (FR-AGT-048)
+	Market    MarketReport
+	Window    PriceWindowView
+}
+
+type MarketReport struct {
+	Price, Age, BestBid, BestAsk int64
+	HasBestBid, HasBestAsk       bool
+}
+
+type PriceWindowView struct {
+	Mean, Low, High, Position int64
+	HasWindow                 bool
+}
+
+type RecipeView struct {
+	Recipe        RecipeID
+	Duration      int64
+	Inputs        []RecipeLine
+	Outputs       []RecipeOutput // with CostShare and Discard
+	Tools         []RecipeTool   // with WearPerUse and Durability
+	Effective     int64          // the yield E
+	MaxExecutions int64
+	Reason        Reason // why MaxExecutions is 0
+}
+```
+
+The slices of a view are scratch copies valid for the call only; the unexported `scratch`
+field is set by the world's filler (a `viewScratch` sized once at construction from the
+largest role) and is nil in a view a consumer builds by hand, for which the default strategy
+allocates its small working arrays (NFR-AGT-001 binds the world's views, not a hand-built one).
+The default strategy never writes to a view. `Tool` is derived from the whole configuration
+(it is true for a commodity that is a required tool of any recipe, whatever the role), because no
+other group of the view carries the fact; 7.3.5 offers a tool for sale only by a role that makes it.
 
 No view carries a settlement class, a flag or a limit: a household reads its own state, and the
 effect of a class on a role is the spawner's and the population module's, not a strategy's
@@ -778,6 +876,7 @@ that can start at `t + StartsIn` must be bought no later than tick
 | `Stock` | the units held after the trades, less the units reserved for this tick's upkeep, not below 0 |
 | `Target`, `UnitCost` | the values the intent carried |
 | `Draw` | the one `uint64` the world drew for this outcome (`spec-beliefs.md` 4.5) |
+| Belief parameters | the fifteen belief parameters of the Tunables row of 6.4.1, the same group, so that `DefaultStrategy.Revise` can call `beliefs.Update` from the view alone |
 
 `Stock` is the stock the agent will have after eating, which is what a target means.
 A buyer holding exactly its target after this tick's upkeep therefore has a stock
@@ -832,7 +931,8 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
   `overflow`, `holding_limit` and `receipt_limit`.
 - An intent's `Target` and `Reserve` above `MaxQuantity`, and a `Purpose` outside the
   enumeration, are treated as 0 and `PurposeOther`, with a `Debug` log. They are
-  inputs to a belief rule, not orders, so they do not reject the order.
+  inputs to a belief rule, not orders, so they do not reject the order. A negative `Target`,
+  `Reserve` or `UnitCost` is treated as 0 in the same way, as one above `MaxQuantity` is (FR-AGT-048).
 - The world clamps no quantity to a budget: a strategy that sizes an order beyond its budget
   gets it rejected whole (`spec-clearing.md` 3.2), not reduced. A legal price is the one thing
   admission may replace: a limit above a cap or below a floor in force is replaced by it
@@ -906,9 +1006,9 @@ list requests nothing. A role with an empty `Recipes` list and a non-empty effec
 (7.1.9). A pure merchant role (no recipe) takes an empty row in the subsistence table
 (`spec-subsistence.md` 3.2.1) and so requests nothing.
 
-7.1.2. **Whether to work.** If the welfare module is off, the agent works whenever a
-recipe is worth starting (7.1.4). If it is on, the target-income rule of
-`spec-welfare-and-wages.md` section 5 applies, as a **work share** `s` in basis
+7.1.2. **Whether to work.** If the ratio is absent (the agent has no upkeep, 5.6), the
+agent works whenever a recipe is worth starting (7.1.4). If the ratio is present, the
+target-income rule of `spec-welfare-and-wages.md` section 5 applies, as a **work share** `s` in basis
 points:
 
 ```
@@ -964,6 +1064,11 @@ report it; the households of such agents are totalled per region and role for th
 `spec-observability.md` 5.3.4) is evaluated over the agents that have no job in progress on
 the record after P6.3 (`spec-world.md` 6.8), so it may differ from the count of the `Warn`,
 which is evaluated when `Work` is called (`spec-observability.md` 5.3.4, `HeldByFloor`).
+The world's count of the floor (and of the halt and the rest, 7.1.5) and the default `Work`
+both read one **work report**, a pure function of the view (the work share, whether the floor
+changed it, whether the agent rests, the recipes the halt skips and the reason a request would
+be declined with), so the count and the default cannot drift apart and a consumer's strategy
+cannot hide them; `JobRequest` is unchanged.
 
 7.1.4. **Which recipe.** For each recipe `r` of the role for which the view reports
 `MaxExecutions >= 1`, with effective yield `E_r`:
@@ -1000,7 +1105,10 @@ OutputTarget_o(r) = ceil(w * q_o * E_r * OutputCoverTicks / (10 000 * Duration_r
 ```
 
 A byproduct (`CostShare` 0) never halts a recipe, or a pile of waste would stop the
-main product. The halt does not apply to an own-use recipe: its stop is the exit cover of
+main product. An `OutputTarget` of 0 never halts a recipe: `OutputCoverTicks` may be 0 (`bounds.go`), and the
+literal inequality `Stock * 10 000 >= Ratio * 0` is then always true, which would halt every such
+recipe, so the rule is read only for an output whose target is above 0. The world's counts and the
+default `Work` read the one work report of 7.1.3 for the halt as for the floor. The halt does not apply to an own-use recipe: its stop is the exit cover of
 the mode (7.1.9). This is the inventory-driven part of production (a firm with too much
 inventory hires fewer, in Lengnick's model): a negative feedback from stock to supply,
 with the delay of the recipe's duration. It is the **production stop** that the
@@ -1034,9 +1142,15 @@ the point of starvation:
 k <= floor( (Stock_c - U_c) / q_c )     for each input c that is also upkeep,  (0 if Stock_c <= U_c)
 ```
 
+A recipe whose cap of this kind is 0 is **ineligible** for the request, and the next best
+eligible recipe of 7.1.4 is tried. The request is never `Executions` 0: 0 means "the most the
+agent can run" (6.3), and `production.Count` reads 0 as no maximum, so a 0 would start the whole
+job and eat the food. `NoJob` with the reason `no_recipe` is returned only if no eligible recipe is left.
+
 7.1.7. **How many.** The request is `Executions = min( ceil(w * s / 10 000), kcap )`
 with `kcap` the least of the view's `MaxExecutions` and the caps of 7.1.6, and at
-least 1 if `s > 0` and a recipe is eligible. Production starts `k` executions or
+least 1 if `s > 0` and a recipe is eligible, counting only the recipes whose cap
+`kcap` is at least 1 (7.1.6). Production starts `k` executions or
 reports a reason (`spec-production.md` 4.2); a request above what it can run is cut
 to what it can, not refused.
 
@@ -1128,11 +1242,16 @@ Job_c    = 0                           if r* is none or StartsIn > 1
          + k*                          if c is a tool of r*
 UseTgt_c = U_c * CoverTicks + Job_c    units to hold at the start of next tick
 Make_c   = k* * q_o * E / (10 000 * Duration)   if c is a non-discard output of r*
-OutTgt_c = ceil(Make_c * OutputCoverTicks)
+OutTgt_c = ceil(Make_c * OutputCoverTicks)   one ceiling over the whole product, Make_c the unrounded fraction
 Want_c   = 0 with the demand module off; with it on, the want units funded for c (spec-demand.md 4.5, 4.6)
 Target_c = UseTgt_c + Want_c   if either is above 0,   else OutTgt_c      (0 if both are 0)
 Keep_c   = Reserve + UseTgt_c + Want_c   units the agent wants to hold now
 ```
+
+`OutTgt_c` is one ceiling over the whole product, `ceil(k* * q_o * E * OutputCoverTicks / (10 000 *
+Duration))`, with `Make_c` left unrounded: it is the same number as the `OutputTarget` of 7.1.5 (with
+`w = k*`), so the target and the halt cannot disagree for one commodity. The tool term (`+ k*` for a
+tool of `r*`) is part of `Job_c`.
 
 `Want_c` is known only after tiers 1 to 3 are allocated, because the wants are paid from what
 the cap leaves (7.4.3); the tiers 1 to 3 do not depend on it, so the order is: 7.3 without
@@ -1193,7 +1312,16 @@ no earmark exists, so they are all of them); those not needed for this tick's up
 are offered even when there is no surplus above `Keep`, if no bid is
 placed for the commodity. A **tool** is offered only by a role that makes it (a
 non-discard output of one of its recipes): a holder's tool is bound to it
-(`spec-skill-barriers.md` 2.7), and the estate is the only seller of a used one. With the
+(`spec-skill-barriers.md` 2.7), and the estate is the only seller of a used one.
+
+The **candidates** are decided by the view alone, never by affordability, so that each takes
+exactly one word of the stream (7.5.3) whatever the money. A *bid candidate* is a commodity with
+`Gap_c > 0`. An *ask candidate* is a commodity with `Gap_c == 0` and (`Surplus_c > 0` or
+`Expiring_c - Reserve > 0`); "no bid is placed" above means `Gap_c == 0`, that is, not a bid
+candidate. The ask is `max(Surplus_c, max(0, Expiring_c - Reserve))`: the expiring units are part of
+the stock, so the two are not added. A bid candidate whose limit cannot buy one unit spends its word
+and forms no ask. A tool that the role does not make is not a candidate and takes no word. `Tool`
+(6.4.1) is derived from the whole configuration, not from the role. With the
 storage module on, a limited agent first discards, before it forms the asks, the surplus units
 that its tier 1 bids need room for, the minimum that lets them fit (`spec-storage.md` 6.3.2,
 5.5.2.1); the discard is a `Discard` of the plan (6.5.2), counted under `disposal` (8.2), and
@@ -1288,7 +1416,7 @@ saves when wealth is low**:
 - the cap never exceeds `e`, so the buffer spending never touches the reserve.
 
 The tier-3 want of each commodity is further scaled by favourability (7.5.2); the cap
-is applied to the scaled wants, in canonical order, each at its limit. Tier 4, when the demand module is on,
+is applied to the scaled wants, in canonical order, each at its limit. The cap bounds the quantities of tiers 3 and 4 only and never lowers a limit (7.5.4). Tier 4, when the demand module is on,
 takes `max(0, cap - spent in tier 3)` and so is bounded by the same excess: tiers 3 and 4 together never
 spend more than the cap and never touch the reserve (`spec-demand.md` 4.5, FR-DEM-020). Favourability
 does not apply to tier 4: the wants answer to price through their schedule.
@@ -1303,9 +1431,8 @@ point, architecture.md 3.5), and the exponent 0.9 is not adopted.
 ### 7.5 Building the orders
 
 7.5.1. **Order of work.** For each commodity in canonical order that has a gap or a
-surplus, the strategy forms an intent. With the demand module on, the want units of each commodity are determined after tiers 1 to 3 and joined to its intent (7.3.4); the intents stay in canonical commodity order. The intents are returned in the order of the
-tiers' priority, upkeep first, so that the world's submission in plan order is the
-order of the budget; because the budget is computed here the order matters only for
+surplus, the strategy forms an intent. With the demand module on, the want units of each commodity are determined after tiers 1 to 3 and joined to its intent (7.3.4); the intents stay in canonical commodity order. The intents are returned in canonical commodity order, one per commodity; the money is allocated tier by tier (7.4.3), so
+the budget is computed here and the order of the intents matters only for
 the world's check.
 
 7.5.2. **Favourability.** The market price's position in the price window
@@ -1336,17 +1463,30 @@ for a cohort of any weight (`spec-scale.md` 4.4). Two rules:
 - **Affordability.** A bid whose limit exceeds the money left for one unit is lowered
   to that money. If the money left cannot buy even one unit at the lowered limit
   there is no order, and the draw was spent. So a draw is taken for every intent the
-  strategy considers, and the number of draws is a function of state, not of the
+  strategy considers (a candidate of 7.3.5, decided by the view alone and never by
+  affordability), and the number of draws is a function of state, not of the
   outcome.
+
+One order has one limit: `L_c` is drawn once, and each tier buys at the order's limit. **Only the
+first tier to buy may have the limit lowered by `Afford`**: a first buyer whose money cannot buy one
+unit at `L_c` lowers the limit to the money it has and buys one unit. A later tier that cannot pay one
+unit at the order's current limit is **dropped, never lowered**. Every tier is charged at the limit it
+bought at, so `limit * qty` is at most the sum charged and the market cannot refuse the order for funds
+(FR-AGT-044). After a lowering the money left is 0, so at most one tier of one commodity is ever
+lowered. The reason: spending is by priority, necessities first, and a lower-priority want must not
+lower the limit price of a necessity. The spend cap of 7.4.4 bounds the quantities of tier 3 (and of tier 4 with the demand module) only and
+never lowers a limit.
 
 7.5.4. **The quantity.** `qty_c = q1 + q2 + q3 + q4`, each tier's quantity bounded by its
 want, by what the money at the limit allows in that tier, and (for tiers 3 and 4) by the
 cap, and, with the storage module on, by the free room, allocated in the order of the money
-stack (`spec-storage.md` 6.3.1); `q4` is the units of `Want_c` funded by `spec-demand.md` 4.5 (0 with the module off), at the
+stack (`spec-storage.md` 6.3.1), each tier at the order's one limit (7.5.3: the spend cap bounds the quantities of tier 3 (and of tier 4 with the demand module) and lowers no limit); `q4` is the units of `Want_c` funded by `spec-demand.md` 4.5 (0 with the module off), at the
 same limit as the rest of the bid. A commodity whose quantity is 0 gets no order. The intent carries `Target`,
 `Reserve`, `UnitCost` and `Purpose` (7.3.6).
 
-7.5.5. **The ask.** An ask's quantity is `Surplus_c` (7.3.5); its limit is a draw
+7.5.5. **The ask.** An ask's quantity is `max(Surplus_c, max(0, Expiring_c - Reserve))` (7.3.5): the
+oldest lots go to the upkeep first (`spec-ledger.md` 5.2.1), and the expiring units are part of the stock,
+so the two are not added. Its limit is a draw
 from the belief's effective range. The cost floor of the belief (`spec-beliefs.md`
 3.2.2) means a seller's limit is never below `CostFloor` of its full unit cost (70% by default, labour included, `spec-beliefs.md` 3.2.2 and 3.2.4 there), and there is no floor while the cost anchor is 0.
 
@@ -1413,10 +1553,44 @@ for upkeep (8.2).
 An agent of weight `w` stands for `w` identical households that act in lockstep
 (`spec-scale.md` 2.2). For this spec:
 
-9.1. **Amounts are `w` times the household amounts**: upkeep, targets, job inputs, the
-reserve, order quantities, the spend cap's `H`. The arithmetic is exact because
-amounts are integers (FR-AGT-054). The per-household decision rule is therefore
-scale-invariant: the rules compare totals to totals.
+9.1. **Invariance holds only where it is exact, and each claim has its condition.** A cohort
+of weight `w` holds `w` times the stock and money of a weight-1 household of the same role,
+with the same beliefs and the same drawn words. Then:
+
+- **Exactly `w` times** (the quantities are linear: sums, `max` and `min` of homogeneous
+  terms): the wants `T1`, `T2`, `T3` before the buy share and the cap, `Gap`, `Surplus`, the
+  asks (`Surplus`, `Expiring - Reserve`), the reserves, `Keep` and `UseTgt`, and a `Target` that
+  comes from `UseTgt`. The rules compare totals to totals.
+- **Closed form, not `w` times:** a `Target` that comes from `OutTgt` is `ceil(w * X)` with
+  `X = q_o * E * OutputCoverTicks / (10 000 * Duration)` (one ceiling over the whole product, 7.3), so
+  `w * X <= OutTgt <= w * ceil(X)`; it equals `w` times the weight-1 value only where `X` is an
+  integer (a recipe of `Duration` 3 and output 1 with `OutputCoverTicks` 1 gives 1 at `w` 1 and 3
+  at `w` 7, against `7 * 1`). The halt `w * s * 10 000 >= Ratio * ceil(w * X)` is not
+  scale-invariant at the threshold, so the planned recipe `r*`, and with it `Job_c`, `Keep` and the
+  asks, is the same at both weights only away from the halt threshold.
+- **Limits** are equal (the draw does not see the weight; a limit never scales) only while the
+  first tier to buy is not lowered by `Afford` (7.5.3): a first buyer that cannot pay one unit at
+  the limit lowers it to its money, and that can happen at weight 1 and not at weight 7 (money 50,
+  limit 105: one unit at limit 50; money 350: three units at 105).
+- **Allocated quantities** of tiers 1 and 2 are `w` times the weight-1 quantity only when both
+  households fund the tier in full at the drawn limit (ample money, no lowering). When money
+  binds the allocated quantity is `floor(w * m / L)`, which is not `w * floor(m / L)` (money 250,
+  limit 105, wants 3: 2 units at weight 1; with `w` 7 and wants 21, 16 units against 14).
+- **Tier 3, the cap, the executions and `Fed`** are floors: `floor(w*X*b/10 000)` is not
+  `w * floor(X*b/10 000)` (16.2 at `w = 7`: tier 3 of the staple is 33 against `7 * 4 = 28`; the cap
+  is `floor(e*H/(e+H))` of totals, 21 740 against `7 * 3 105 = 21 735`); the executions are
+  `ceil(w*s/10 000)` (weight 7, share 6 000 gives 5, which is not `7` times the 1 of weight 1); and `Fed = floor(w*h/u)` of holdings (identical
+  whole holdings of 2 against an upkeep of 3: weight 1 gives `Fed` 0, weight 40 gives 26). The tier-3
+  quantity is bounded by the want rule `floor(w*T3*b/10 000)` and, for the want-bound case only,
+  lies in `w * q1 <= q <= w * q1 + w - 1`; the spend cap, a cap-bound allocation and the
+  executions are compared with their closed form on the totals (no `w * q1` band: with
+  `SpendMaxShare` other than 5 000 the band fails, for example `e1 = 2, H1 = 3, SpendMaxShare = 9 000,
+  w = 7` gives cap 0 and cap 7); the `Fed` fraction is equal only when `w*h/u` is exact, otherwise it
+  is `floor(w*h/u)/w`.
+
+A test of weight invariance builds its states inside these conditions (ample money, an output
+target whose `X` is an integer or asserted in the `ceil(w * X)` form, a stock away from the halt
+threshold). The arithmetic is exact because amounts are integers (FR-AGT-054).
 
 9.2. **Prices are never scaled**: the limit price, the belief, the bounds and the unit
 cost are per unit (FR-SCL-010, `spec-beliefs.md` 9.1). A cohort draws one limit price
@@ -1511,7 +1685,8 @@ policy actor (`spec-policy.md` 8.4).
 2. `Work` returns the directive's `Job` if it has one (`Job` is non-nil), else the fallback's.
 3. `Trade` returns the fallback's plan with two changes: an intent in the directive
    *replaces* the fallback's intent for the same commodity, and a commodity in `Hold`
-   is removed from the fallback's plan. The directive's discards are added. A `Borrow` or a `Lend`
+   is removed from the fallback's plan. `Hold` removes only the fallback's intent, so the
+   directive's own intent for a held commodity survives. The directive's discards are added. A `Borrow` or a `Lend`
    replaces the fallback's credit request or offer (`spec-credit.md` 10.5); a directive carries no
    cover field in version 1 (`spec-insurance.md` 10.5).
 4. `Revise` is the fallback's (a player's price beliefs adjust by the default rule so
@@ -1741,7 +1916,7 @@ spec owns the full field lists, as that document says, and they are below.
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
 | `AgentSpawned` | an agent enters, including each initial agent after `WorldCreated` | `Agent`, `Region`, `Role`, `Weight`, `StartMoney` (what it received), `External`, `StoresLocked` (the stores of the role's row not given because the region's class lacks the flag, 0 with no gate; `spec-storage.md` 3.2.3) |
-| `AgentBankrupted` | an agent is removed entirely (3.6): the only event that removes the agent, whatever the cause; the others of the removal accompany it, in the order of `spec-world.md` 6.11 item 8 | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause` (`insolvent`, `starved`, `consumer`, `population`; `spec-spawner.md` 13.1.1), `Money` and `GoodsListed` (the goods passed to the estate) |
+| `AgentBankrupted` | an agent is removed entirely (3.6): the only event that removes the agent, whatever the cause; the others of the removal accompany it, in the order of `spec-world.md` 6.11 item 8 | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause` (`insolvent`, `starved`, `consumer`, `population`; `spec-spawner.md` 13.1.1), `Money` and `GoodsListed` (the lots passed to the estate: one per distinct lot key, whatever the unit count; units travel in `WeightChanged.Units`) |
 | `WeightChanged`, `RoleChanged`, `EntryLimited` | a weight change without removal, a role change, and the aggregate of the spawner's silent limits | defined and owned by `spec-spawner.md` 13.1; listed here only because they act on the agent state of 3.7 and 3.8 |
 | `UpkeepShortfall` | once per region and role per tick in which at least one household was unfed, after the consumption phase, in order of region and role | `Region`, `Role`, `Households` (the sum of the weights of the role in the region), `Unfed` (households), `Agents` (agents with `Unfed` above 0), `MaxHunger` (the largest `Hunger`) |
 | `ProductionHalted` | once per region and role per tick in which the production halt (7.1.5) declined the job request of at least one free household, at P2.8a; never when none was | `Region`, `Role`, `Free`, `Halted`, and per recipe skipped the households for which it was; defined and owned by `spec-observability.md` 4.4.6 |
@@ -1776,10 +1951,10 @@ reads a right (`spec-institutions.md` 6.4). The refusals of the credit and cover
 14.3. **Logs.** Everything per agent is `Debug`, guarded by `Enabled`, with a constant
 message:
 
-- "work declined", with `agent`, `recipe` and `reason` (`rest`, `halted`, `no_recipe` and the
-  refusal reasons of `spec-production.md` 4.2, `not_on_role` and `not_permitted` among them);
-- "intent dropped", with `agent`, `commodity`, `side` and `reason` (`not_tradable`,
-  `over_budget`);
+- "work declined", with `agent`, `recipe` and `reason` (`rest`, `halted` and `no_recipe`, which
+  the work report of 7.1.3 gives, and the refusal reasons of `spec-production.md` 4.2, `not_on_role`
+  and `not_permitted` among them). The strategy is pure and logs nothing: the world logs the line;
+- "intent dropped", with `agent`, `commodity`, `side` and `reason` (`not_tradable`);
 - "upkeep unmet", with `agent`, `commodity` and `quantity` (the shortfall);
 - "discard refused", with `agent`, `commodity` and `quantity`;
 - "request refused" and "offer refused" of the credit fields (`agent`, `reason`,
@@ -1796,7 +1971,8 @@ inconsistency the library repaired.
 14.4. **Log keys.** `households` and `unfed` (integers), and `region`, are in the
 table of observability-and-logging.md 3.3.2; `role` was there already. The `reason`
 values above are exported constants of the root package (`event.go`, a closed set
-of `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only.
+of `spec-observability.md` 4.2.3); `internal/logkeys` holds the key strings only. `rest`, `halted`
+and `no_recipe` are log-only: values of the `reason` log key, not of a metric attribute.
 
 14.5. **Metric.** None is defined here. `economysim.household.unfed`, an up-down
 counter by role fed by `UpkeepShortfall`, is in the catalogue of
@@ -2173,7 +2349,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-007 | A later agent MUST receive the lesser of `w` times `StartMoney` and the pool balance from its region's pool by the reason `start_money`, and no goods unless the spawner's rule grants some. |
 | FR-AGT-008 | Removing an agent MUST abandon its job, end its titles, hires, claims, covers and facilities in the steps 2b to 2g of 3.6, move all its money, less what its creditors take in the waterfall of `spec-credit.md` 9.1, to the region's estate with the reason `estate_money` and all its goods with `estate_goods`, close its account and emit `AgentBankrupted`, the only event that removes the agent, with the events of its job, traineeship, contracts and steps 2b to 2g preceding it and `EstateOpened` after it, in the order of `spec-world.md` 6.11 item 8, and MUST conserve money and goods exactly. |
 | FR-AGT-009 | A change of weight from `w` to `w'` MUST leave each money and goods holding at `floor(h * w' / w)`, the difference passing to or from the estate, MUST leave the beliefs, residues, welfare history and hunger unchanged, and MUST apply the job rule of `spec-production.md` 5.4. |
-| FR-AGT-010 | A role with an empty `Recipes` list MUST be valid, and an agent of it MUST request no job. |
+| FR-AGT-010 | A role with an empty `Recipes` list MUST be valid, and an agent of it MUST request no job (the default requests none); the world's refusal of a request from such a role is the `not_on_role` of the production admission (FR-PRO-048), which a role with an empty list refuses for every recipe. |
 | FR-AGT-011 | The effective upkeep of an agent MUST be the role's list, or the world's if the role has none, merged with the region's extra upkeep by adding quantities of one commodity, in canonical order, each quantity multiplied by the weight, with checked arithmetic. |
 | FR-AGT-012 | Each upkeep quantity MUST be an integer of at least 1, and the lists MUST have no duplicate commodity, or the configuration MUST be rejected. |
 | FR-AGT-013 | In the consumption phase an agent MUST consume of each upkeep commodity the lesser of what it holds and its effective upkeep quantity, as a move to the `consumption` boundary, oldest first, and MUST NOT fail or take more than it holds. |
@@ -2196,11 +2372,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-030 | A role's `Strategy` MUST be a registered name (the built-in `default` and `directed` are registered beside those of `WithStrategy`), an unknown name MUST be rejected with `ErrUnknownStrategy`, and the names MUST be part of the effective configuration and its hash. |
 | FR-AGT-031 | The default strategy MUST keep no state, and the same view and the same random source MUST give the same return. |
 | FR-AGT-032 | A pseudo-agent (an estate, a counterparty or a treasury) MUST NOT be passed to a strategy. |
-| FR-AGT-033 | With the welfare module off, the default `Work` MUST request a job whenever a recipe is eligible. |
-| FR-AGT-034 | With the welfare module on, the work share MUST be 10 000 when the agent's `Hunger` is above 0, or its money is below the reserve, or the working ticks in its effective window are fewer than `MinWorkShare * T / 10 000`; otherwise 10 000 below the target, 0 at or above the target raised by `RestBand`, and linear between; and the executions requested MUST be `ceil(w * s / 10 000)`, at least 1 when `s` is above 0. The effective window `T` MUST be `max(WelfareWindow, WindowCycles * longest Duration on the role's list)`. (changed in the sweep: the floor and the window) |
+| FR-AGT-033 | If the welfare ratio is absent (the agent has no upkeep), the default `Work` MUST request a job whenever a recipe is eligible. |
+| FR-AGT-034 | When the welfare ratio is present, the work share MUST be 10 000 when the agent's `Hunger` is above 0, or its money is below the reserve, or the working ticks in its effective window are fewer than `MinWorkShare * T / 10 000`; otherwise 10 000 below the target, 0 at or above the target raised by `RestBand`, and linear between; and the executions requested MUST be `ceil(w * s / 10 000)`, at least 1 when `s` is above 0. The effective window `T` MUST be `max(WelfareWindow, WindowCycles * longest Duration on the role's list)`. (changed in the sweep: the floor and the window) |
 | FR-AGT-035 | The default recipe MUST be the eligible recipe with the greatest net value per tick, where the net value is the non-discard outputs at the effective yield and the agent's belief centres less the inputs and the wear of the tools, compared by cross-multiplication with ties to the lower recipe ID, and a recipe MUST be eligible only if its net value is positive or it has no inputs. |
 | FR-AGT-036 | The default `Work` MUST skip a recipe one of whose outputs with a positive cost share has a stock at or above `ProduceHaltRatio` of its output target, and MUST NOT let a byproduct halt a recipe. |
-| FR-AGT-037 | The default `Work` MUST NOT request executions that would use an input which is also an upkeep commodity below the agent's upkeep for the tick. |
+| FR-AGT-037 | The default `Work` MUST NOT request executions that would use an input which is also an upkeep commodity below the agent's upkeep for the tick, MUST treat a recipe whose cap of 7.1.6 is 0 as ineligible and try the next best eligible recipe, and MUST NOT request `Executions` 0 (`NoJob` with `no_recipe` if none is left). |
 | FR-AGT-038 | The reserve, use target, job need, output target, target and keep of a commodity MUST be computed as in 7.3, from data and the agent's state alone, with the job need nonzero only when the agent can start a job in the next tick. |
 | FR-AGT-039 | For each commodity the default `Trade` MUST place at most one order: a bid for the gap if it is positive, otherwise an ask for the surplus if it is positive, and none otherwise. |
 | FR-AGT-040 | The three tiers of a bid MUST add to its gap, with tier 1 the upkeep short for this tick, tier 2 the inputs and tools of the next job short, and tier 3 the rest. |
@@ -2209,13 +2385,13 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-043 | The share of a tier-3 want bought MUST be `FavourFloor + (10 000 - FavourFloor) * (10 000 - pos) / 10 000`, with `pos` the position of the market price in the price window or 5 000 when the window is empty, and MUST NOT be applied to tiers 1 and 2 or to asks. |
 | FR-AGT-044 | With an accurate view the default strategy MUST NOT produce an order that the market rejects for `insufficient_funds`, `insufficient_stock`, `duplicate_order`, `not_tradable`, `no_room` (with the storage module on), `overflow`, `holding_limit` or `receipt_limit`, over a range of seeds. |
 | FR-AGT-045 | One `uint64` MUST be taken from the world's source for each intent the default strategy considers, the limit MUST be drawn from the effective range of the belief with `beliefs.Draw`, and an agent with `Hunger` above 0 MUST bid the top of the range for tier 1. |
-| FR-AGT-046 | The quantities of an agent's orders, targets and reserves MUST be the weight times the per-household amounts, and the limit price MUST be the same whatever the weight. |
+| FR-AGT-046 | Where 9.1 states a quantity exact, the quantities of an agent's orders, targets and reserves MUST be the weight times the per-household amounts (the wants before the buy share and the cap, `Gap`, `Surplus`, the asks, the reserves, `Keep` and `UseTgt`, and the allocation of a tier funded in full); a target from `OutTgt` MUST be `ceil(w * X)` of 9.1, with one ceiling over the whole product (7.3); and the limit price MUST be the same whatever the weight while the first tier to buy is not lowered by `Afford`. |
 | FR-AGT-047 | An ask MUST be for the whole surplus, units that expire at the end of the tick MUST be offered if no bid is placed, and an ask for a tool MUST be placed only by a role that makes it. |
 | FR-AGT-048 | Every intent MUST carry the target of 7.3, the units reserved for this tick's upkeep, a unit cost that is the cost anchor of `spec-production.md` 9.3 (which counts labour at the pooled observed wage of the previous tick and, with the tenure module on, the rent of the draws) only if the role can make the commodity and is 0 otherwise and whenever the region has no observed wage, and a purpose by the rule of 7.3.6. (changed in the sweep) |
 | FR-AGT-049 | The stock passed to `Revise` MUST be the units held after the trades less the units reserved for this tick's upkeep, not below 0. |
 | FR-AGT-050 | `DefaultStrategy.Revise` MUST return the result of `beliefs.Update` with the draw the world took. |
 | FR-AGT-051 | With the storage module off an agent MUST have no inventory capacity other than `MaxQuantity` and the default strategy MUST NOT discard; with it on the capacity MUST be the room of `spec-storage.md`, and the default strategy MUST discard only the surplus that its tier 1 bids need room for (`spec-storage.md` 6.3.2). |
-| FR-AGT-052 | An agent of weight `w` in the same per-household state as an agent of weight 1, with the same random draws, MUST produce orders whose limit prices are equal and whose quantities are `w` times as large, and the same `Fed` fraction. |
+| FR-AGT-052 | An agent of weight `w` in the same per-household state as an agent of weight 1, with the same random draws, MUST produce orders whose limit prices are equal and whose quantities are `w` times as large, and the same `Fed` fraction, in the conditions of 9.1 and only there (ample money, no limit lowered by `Afford`, an output target whose `X` is an integer or compared in the `ceil(w * X)` form, a stock away from the halt threshold, `w*h/u` exact for `Fed`); outside them the quantities MUST agree with the closed forms of 9.1 on the totals. |
 | FR-AGT-053 | An external agent MUST have weight 1 and the `External` flag, MUST be bound by the same admission and conservation rules as any agent, and MUST NOT be removed, reduced, replaced or moved to another role by any spawner, the world refusing the decision with the reason `external_agent`, unless the agent is mortal, a flag the consumer sets when it adds the agent (default false). (changed in round 5: `Mortal`, `spec-spawner.md` 9.2) |
 | FR-AGT-054 | `Directed` MUST return the directive's job request if it has one (`Job` non-nil), otherwise the fallback's; MUST replace the fallback's intent for a commodity by the directive's intent for it; MUST remove from the fallback's plan the commodities in `Hold`; and MUST add the directive's discards; a `Borrow` or a `Lend` of the directive MUST replace the fallback's credit request or offer. |
 | FR-AGT-055 | A directive MUST apply to the tick after it was set, MUST be discarded after that tick unless `Sticky`, and MUST be part of the checkpoint. |
@@ -2343,18 +2519,21 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Concern | Home |
 |---------|------|
 | The struct `Role` | root package, `config.go` (architecture.md 2.6; built in Stage 0), not `agent.go` |
-| The role table: the recipes, trades and base upkeep of each role by typed ID, its tradable set (3.4) and membership flag, the commodities tradable in some role, and the effective upkeep per region (5.2): derived, unexported, built once at construction | root package, `role.go` (a union of lists needs no package, architecture.md 2.1; the layout of 2.6 has no `internal/household`) |
-| `Agent`, `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Purpose`, `Directive`, `AgentView`, `OutcomeView`, `Strategy`, `DefaultStrategy`, `Directed`, `WithStrategy` | root package: `agent.go`, `strategy.go`, `directive.go`, `option.go` |
+| The role table: the recipes, trades and base upkeep of each role by typed ID, its tradable set (3.4) and membership flag, the commodities tradable in some role, and the effective upkeep per region (5.2): derived, unexported, built once at construction | root package, `role.go` (a union of lists needs no package, architecture.md 2.1) |
+| The agent type (unexported `agent`, a sketch in 3.1; the fields a module hosts are in the module's slices by agent slot, architecture.md 2.10.1), `Directive` | root package, `agent.go` |
+| `Intent`, `Discard`, `TradePlan`, `JobRequest`, `Purpose`, `AgentView`, `OutcomeView`, `Strategy`, `DefaultStrategy`, `Directed` | root package, `strategy.go` (with the continuation files `strategy_default.go`, `strategy_work.go`, `strategy_view.go` when the file passes the limits of N-243); there is no `directive.go` |
+| `WithStrategy` and the resolution of a strategy name (`resolveStrategy`, `ErrUnknownStrategy`) | root package, `option.go` |
 | `Side` (`Bid`, `Ask`, with a `String` method for the golden rendering of events) | root package, `event.go`: it is first used by the events (`spec-observability.md` 3.2.1), so it is declared with them and `Intent` and `Order` use it from there; `RecipeID` and the other typed IDs are in `value.go` |
 | The tunables of section 12 and the role and region fields of 3.3 | root package, `config.go` and `defaults.go`; bounds in `bounds.go` (`MaxUpkeepItems` joins `spec-config.md` 4.1) |
 | Validation, the sentinels and the warnings of section 13 | root package, `validate.go`, `errors.go` |
-| Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the work share (7.1.2), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1) (the tradable set of 3.4 is `role.go`, above); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |
-| The consumption phase, the creation and removal of agents, the mailbox | root package, `world.go` and `agent.go`, calling `internal/ledger` and `internal/household` inline |
+| Pure rules: the targets and tiers (7.3), the spend cap (7.4.4), the recipe value (7.1.4), `Fed` (5.4), `Privation` (5.4.1) (the tradable set of 3.4 is `role.go`, above); with the demand module also its ratio, shares, schedule, carry and allocation (`spec-demand.md` 20) | `internal/household` (stdlib only), over primitive slices and indexes, converted inline at the call (architecture.md 2.9); named for what it provides, not for a layer |
+| The consumption phase, the creation and removal of agents, the mailbox (the per-agent functions) | root package, `agent.go`, called by the world and calling `internal/ledger` and `internal/household` inline |
+| The work share `WorkShare` (7.1.2) | `internal/welfare` (built, `share.go`), not `internal/household` |
 | The events `AgentSpawned` (extended) and `UpkeepShortfall` | root package, `event.go` |
-| Reason constants (`not_tradable`, `not_permitted`, `not_on_role`, `no_room`, `over_budget`, `rest`, `halted`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
+| Reason constants (`not_tradable`, `not_permitted`, `not_on_role`, `no_room`, `rest`, `halted`, `no_recipe`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
 | The log keys `households` and `unfed` (key strings only) | `internal/logkeys` |
 | The ledger reasons `consumption`, `disposal` and `initial` (money and goods), the query `Expiring` (5.3.3), and `WearItems` (5.4.3) | `internal/ledger` registry and operations (`spec-ledger.md` 7.2, 5.3.3, 5.4.3) |
-| The strategy table and registration | root package, `world.go` |
+| The strategy table | root package, `world.go` |
 | The merchant strategy and its registration `strategy.Options()` | `strategy/merchant.go`, `strategy/options.go` (the package is created when the first code lands; `spec-merchants.md` 3.1.2) |
 | The pure rules of the merchant (margin, fee share, lot, matching, settlement) | `internal/merchant` (stdlib only; `spec-merchants.md` 23) |
 | The own-use flag step, `Cov`, the ramp | `internal/ownuse` (stdlib only; `spec-subsistence.md` 22) |
@@ -2362,10 +2541,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 ```go
 // internal/household: stdlib only, no root types. A sketch, not final.
+// WorkShare is not here: it lives in internal/welfare (share.go).
 type Need struct {
 	Upkeep   int64 // U_c: units eaten this tick
 	Job      int64 // Job_c: units for the next job (inputs and tools)
-	Make     int64 // units expected as output, per tick, truncated up
+	OutTgt   int64 // the output target OutTgt, already formed as one ceiling over the whole product (7.3); not a rounded Make
 }
 
 type Targets struct {
@@ -2375,6 +2555,5 @@ type Targets struct {
 func ComputeTargets(n Need, params Params) Targets
 func Tiers(t Targets, stock int64) (t1, t2, t3 int64)
 func SpendCap(e, upkeepCost int64, params Params) int64
-func WorkShare(ratio, target int64, hungry, poor bool, params Params) int64
 func Fed(consumed, perHousehold []int64) int64
 ```

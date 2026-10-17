@@ -116,7 +116,7 @@ no global to dirty).
 
 3.2.2. The errors are the validation errors of `spec-config.md` 7.1 (joined, each
 with a path and a rule), the errors of an option (4.3), `ErrAuditFailed` (5.1
-step 9, with `WithAudit`), and the four name checks that need the options and so
+step 9, with `WithAudit`; with `ErrWorldFailed` and `ErrInStep` it is a root sentinel whose first users are construction, P8.4 and the guards of P0.1), and the four name checks that need the options and so
 live in `NewWorld`: a `Role.Strategy` name that is neither `default`, `directed` nor
 registered (`ErrUnknownStrategy`, `spec-config.md` 7.1.4), a `World.Spawner` name that is not
 registered (`ErrUnknownSpawner`, `spec-spawner.md` 3.1.3), a `World.Clearing`
@@ -292,17 +292,17 @@ owners' internal setters, with the cause `policy`; the public setters keep retur
 ### 3.7 Reads and the other calls
 
 3.7.1. Between steps, on a healthy world, a consumer may call any read: `Tick`,
-`Err`, `Snapshot` (OBS), `Audit` (`spec-ledger.md` 12.4), `Checkpoint` (CHK), `Graph`
+`Err`, `Config`, `ConfigHash`, `Snapshot` (OBS), `Audit` (`spec-ledger.md` 12.4), `Checkpoint` (CHK), `Graph`
 (`spec-regions.md` 4.3), `Calendar`, `ReferencePrice` and `Warnings`, the transport
 reads `InTransit`, `Travel` and `Away` (`spec-transport.md` 9.2), `Endowment`
 (`spec-resources.md` 5.1), the queries `Agent`, `Agents`, `Market`, `Region` and
 `Slots` (`spec-integration.md` 6.2) the guard query `RelocationRefusal`
 (`spec-regions.md` 6.1.6) and, with the polity module on, `Polity` and `TreasuryAgent`
 (`spec-polity.md` 4.2, 5.5.1). Each returns a deep copy of plain data (architecture.md
-12.4), changes no state and draws no random number.
+12.4), changes no state and draws no random number. The readers of the first slice are `Tick`, `Err`, `Config`, `ConfigHash`, `Snapshot` and `Audit`; `Warnings`, `Calendar`, `ReferencePrice`, `Graph`, `Travel`, `Polity`, `TreasuryAgent` and the queries of `spec-integration.md` 6.2 arrive with their owners, and FR-WLD-110 is tested for the readers that exist.
 
 3.7.2. `Tick() int64` is the number of steps completed since tick 0: the tick the
-next `Step` will run. It is the clock of the whole library (architecture.md 7.3). The names `Err`, `Tick`, `ConfigHash` and `Config` are provisional until the code; `NewWorld`, `Step` and `Run` are fixed by the rules.
+next `Step` will run. It is the clock of the whole library (architecture.md 7.3). The names `Err`, `Tick`, `ConfigHash` and `Config` are confirmed by the code; `NewWorld`, `Step` and `Run` are fixed by the rules.
 
 ## 4. Options
 
@@ -535,7 +535,7 @@ original, and the bucket's `BoundaryFlow` is emitted at that first step (P0.2a).
    draw on staggered lots): the agents chosen by the selection rule of
    `spec-viability.md` 8.5.2 get `Remaining = d - o`, their inputs are granted by
    `initial` as separate lots at the default key and taken at once by
-   `recipe_input` in one construction `Transform` (8.5.3), their tools are worn by
+   `recipe_input` in one construction `Transform` (8.5.3; the `Transform` consumes oldest first, so the stagger vector is a property of the granted stock before the job's inputs are taken: the stock after the warm start is the stagger lots plus the granted input lots, fresh with `Born` 0, minus the oldest-first consumption of the input quantity, and its total equals the stagger total, granted equals consumed, FR-VIA-036), their tools are worn by
    `WearItems`, no endowment is drawn at construction (the virtual start precedes
    the run: a recommendation to VIA, 22), and the pending output is fixed from the virtual start with the
    effective factor of the season of that tick (shock at its default) and a
@@ -696,6 +696,25 @@ outside node has an estate that holds nothing (`spec-external-sector.md` 3.1.1),
 agents, no pool and no market. P7.1 is not run for it and no spawner is called for
 it (FR-SPN-002 is edited), so D9 takes no word for it.
 
+6.1.12. **The position test.** The table of this section is the text the position test
+parses (`testing.md` 6.8). The test compares, for each position, its identifier, its owner (the
+first area code of the Owner cell; "this spec" reads as WLD) and its order. Each
+position of the list in `tick.go` has a `where`: `line` (a call in the straight line of the
+step) or `bracket` (run inside `beginStep` or `endStep`: P0.1, P0.2a, P0.3, P8.5 and P8.6).
+P0.2 ("nothing is cleared at entry") is an empty position method, `p02()`, a `line` entry
+with a one-line comment; it is called in the straight line, after `beginStep` has run P0.1,
+P0.2a and P0.3, and takes no state, so the difference is unobservable.
+
+6.1.13. **The calls that earlier specs assumed the world makes.** The owner of each
+count calls it at its position. The world makes these calls, and no other position makes
+them: the welfare feeds (`markWorking` and `addWear` with the facts of P2.1 and P2.7, once per
+agent per tick; `markTraded` after each market clears at P4.1, for the buyer and the seller of
+each settled `Trade`; `addReceipt` and `addInputSpend` from the settled trades; `record`, the push
+and the reset of the scratch at P6.3, and the clear of the whole scratch at P8.6); the cost anchor
+of each market, set on the book before its clearing at P4.1 from the published price left by the
+previous P4.1 (P1.2); the flush of the `refusalTally` at P2.8a; and the advance of the bounded
+`Warn` runs for every cell every tick.
+
 ### 6.2 Entry
 
 | ID | What runs | Owner | Notes |
@@ -827,6 +846,13 @@ of phase 1 (P1.3, P1.5), which are guarded, and between ticks; `spec-regions.md`
 | P7.2 | After the entry step of **every** region: one migration pass for the world: the counts are taken once; each agent that is eligible, settled and pushed is evaluated in ascending agent ID with its rumours, **as of tick `t + 1`** (ruling C17); admission in order of earned ratio then agent ID against the guard, the caps and the provisioning; the departures in admission order | MIG 10.2 | counts, journeys, rumours; writes journeys, job abandons, the refusal `on_journey` | one per source pair for each pushed household that is evaluated (a pushed household whose role has no recipe ends in `no_estimate` before its candidates are formed, MIG 6.3.4, and takes none), in ascending agent ID, then (destination, commodity), when `RumourErrorBP` is above 0 | per departure in admission order the `RecipeAbandoned` of its job (if any) and then, after the last departure, `MigrationStarted` in admission order; then `MigrationReviewed` per region ascending |
 | P7.2a | The settlement review, with the settlements module on, per region ascending, an outside node skipped: the class by its thresholds, with the dwell | SET 4, 5.1 | the weights of the region's agents, the saved class and `Since`, the floor, the effective thresholds; writes class and `Since` | none | `SettlementClassChanged` or `SettlementHeld` per region |
 | P7.2b | The aggregates of the institutions module, per region ascending, then body, right or control | ORG 7.3.1 | the counts of P1.9a, P2.5, P3.2 and P7.1 (scratch) | none | `MembershipChanged`, `RightRefused`, `PriceControlled` |
+
+6.9.0. **Who executes the plan.** The world, not the spawner, executes the spawner's plan at P7.1(d): the
+executor composes the primitives of the ledger, the estates, the production and the welfare
+records (in `phase_exit.go`), and `removeAgent` is the one removal path (architecture.md 2.10.4; in `fanin.go`). The removal composes the steps of `spec-agents.md` 3.6 in order and its events
+in the order of 6.11 item 8. `GoodsListed` of `EstateOpened` counts lots: one per distinct
+lot key (commodity, born, durability) of the holdings that moved to the estate, whatever the unit
+count; units travel separately in `WeightChanged.Units` (`spec-estates.md` 2.1).
 
 6.9.1. **Per region, interleaved (ruling C3).** Region `r + 1`'s computation,
 view and `Decide` come after region `r`'s execution and its creation draws. A
@@ -1950,7 +1976,7 @@ events (6.1 there).
 16.5. **Snapshot.** The tick counter and the seed are in the snapshot. A failed
 world refuses a snapshot (3.5.1). The other fields are OBS's.
 
-Stale under ADR 0008, see N-214: the seed of the snapshot is the effective seed, which a reseed replaces (CHK 6.8); the wording of the field is OBS's.
+The seed of the snapshot is the effective seed, which a reseed replaces (12.3, ADR 0008, CHK 6.8); it is the seed read back, not information only. The event `WorldRestored` is not in the first slice.
 
 16.6. **Cost with no observer.** With the default logger and observer no event of
 this spec is constructed and no log call allocates (4.5 there); the guard of 3.6
@@ -2478,11 +2504,13 @@ table. A letter in brackets is the ruling of 6.12.
 
 | Concern | Home |
 |---------|------|
-| `World`, `NewWorld`, `Step`, `Run`, `Err`, `Tick`, the failed state and the in-step guard | root package, `world.go` |
-| The eight phases and their positions, each a method that calls into the module files | root package, `tick.go` |
+| `World`, `NewWorld`, `Step`, `Run`, `Err`, `Tick`, `Config`, `ConfigHash`, the failed state and the in-step guard | root package, `world.go` |
+| The eight phases and their positions, each a method that calls into the module files | root package: `tick.go` holds the list and the straight line; the methods are in `phase_start.go` (P0, P1), `phase_production.go` (P2), `phase_trade.go` (P3, P4), `phase_outcomes.go` (P5, P6) and `phase_exit.go` (P7, P8) |
+| `world.go` | the type, `NewWorld` steps 1 to 4, the readers, `Step`, `Run` and the guards; `construct.go` holds steps 5 to 10 and `construct_warm.go` the application of the warm start |
+| The fan-ins (architecture.md 2.10.4), the executor of the spawner's plan and `removeAgent` | root package, `fanin.go`; `market.go` holds the market records and `snapshot.go` the snapshot |
 | `Option`, `options`, `WithSeed`, `WithLogger`, `WithObserver`, `WithAudit`, `WithTargetSpread`, `WithStrategy`, `WithSpawner`, `WithClearing`, `WithPolicy` | root package, `option.go` |
 | The seed, the one PCG and `Rand`, the site constants and the stream key (reseed at a site), the world's draw and the pure reseed function | root package, `random.go` (a small struct holding the seed, the PCG and the Rand; the key arithmetic is `internal/ordering`, which receives and returns plain `uint64`, architecture.md 2.9) |
-| The sentinels `ErrUnknownClearing`, `ErrUnknownPolicy`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep` | root package, `errors.go` |
+| The sentinels `ErrUnknownClearing`, `ErrUnknownPolicy`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep`, `ErrAuditFailed` | root package, `errors.go` |
 | `WorldCreated`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` | root package, `event.go` |
 | `Weyl32`, `Weyl2`, `Bucket(id, P)`, the finaliser, `Key(t, id)` (shared with the ration of RES) and the stream key of 7.1.3 | `internal/ordering` |
 | The construction order, the warm start application, the creation draws | root package, `world.go` calling `internal/ledger` and the modules |

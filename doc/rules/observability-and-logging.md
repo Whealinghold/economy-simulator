@@ -285,13 +285,13 @@ built, and an event is declared in the change that builds its owner.
 | `RecipeRefused`           | once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, after `ProductionHalted` in phase 2; never when none was (households refused for each reason of the master order of the production spec: not on the role's list, zero yield, no site, no tool, no input) |
 | `RecipeAbandoned`         | a job ends without output (agent, region, recipe, executions, `Reason`) |
 | `ProductionHalted`        | once per region and role per tick in which the production halt declined the job request of at least one free household, after `OwnUseChanged` in phase 2; never when none was (free households, halted households, and per recipe skipped the households for which it was) |
-| `AgentBankrupted`         | an agent is removed entirely; the only event of a full removal, whatever the cause (weight at removal, `Cause`: `insolvent`, `starved`, `consumer` or `population`; money and `GoodsListed`, the number of goods passed to the estate) |
+| `AgentBankrupted`         | an agent is removed entirely; the only event of a full removal, whatever the cause (weight at removal, `Cause`: `insolvent`, `starved`, `consumer` or `population`; money and `GoodsListed`, the number of lots passed to the estate) |
 | `AgentSpawned`            | an agent enters the world, including each initial agent during construction, after `WorldCreated` (region, `Role`, `Weight`, `StartMoney` received, `External`, and `StoresLocked`, the stores of the role row not given because the region's class lacks the flag) |
 | `UpkeepShortfall`         | once per region and role per tick in which at least one household went unfed, after the consumption phase; never when all are fed (households, unfed households, agents unfed, largest hunger) |
 | `BeliefsUpdated`          | once per market per tick that had at least one order outcome, after the outcomes are processed (counts of outcomes, adjustments, raises, lowerings, beliefs at floor and ceiling, conflicts and clamps; mean, low and high centre) |
 | `BoundaryFlow`            | once per tick for each (region, reason, money or commodity) with a non-zero total, for the reasons of kind faucet or sink only, after the tick's transitions (reason, faucet or sink, total quantity); the construction bucket of a world that has not yet stepped is emitted once, with `Tick` -1, at the entry of its first step, before `TickStarted` |
 | `WearApplied`             | once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows; never when no item wore; the construction bucket's wear units are emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows (commodity, units: the durability actually removed, which is not the items retired that the `wear` reason of `BoundaryFlow` counts) |
-| `EstateOpened`            | an agent is removed and its estate is opened, accompanying the removal event (agent, region, balance, number of goods listed) |
+| `EstateOpened`            | an agent is removed and its estate is opened, accompanying the removal event (agent, region, balance, number of lots listed) |
 | `ReliefPaid`              | once per region per tick in which any relief is paid (total paid, number of recipients, households) |
 | `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded` | a traineeship starts, completes, or ends without completing (identifiers and region only, and `reason` for the end) |
 | `WeightChanged`           | an agent's weight changes without removing it: a reduction by the failure ladder, households added to an existing agent, a birth or death of the population module (agent, region, role, `From`, `To`, `Cause`, the money and the units of goods moved) |
@@ -357,6 +357,10 @@ built, and an event is declared in the change that builds its owner.
 | `CoverEnded`              | a cover ends, once: at P1.3a, at P8.1b, or with a removal (2f) (cover policy, `Kind`, insured, underwriter, their regions, `Cause`: `no_loss`, `claimed`, `insured_removed` or `underwriter_removed`, loss value, due, paid, short, the payout claim, dropped, cut, whether capped) |
 | `CoverRound`              | once per region per tick at P3.3c, in ascending `RegionID` after `CreditRound`, in which a request or an offer was submitted; never when all counts are zero (requests and offers admitted and refused, candidates, covers formed, sum and premium, sum unfilled, and the failures by reason) |
 | `CoverSettled`            | once per region and position (P1.3a or P8.1b) in which a cover was settled, in ascending `RegionID` after the `CoverEnded` events of the position; never when all counts are zero (covers ended and claimed, loss value, due, paid, short, dropped, cut, capped and kept out by the shield) |
+
+`GoodsListed`, in `AgentBankrupted`, `EstateOpened` and `RoleChanged`, counts
+lots: the number of lots passed to the estate, one per distinct lot key whatever
+the unit count. Units travel separately in `WeightChanged.Units`.
 
 The parentheses name the main fields; the fields of each event, and the order
 in which the events of one step are emitted, are fixed by the spec that owns
@@ -905,4 +909,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 35827912d1e3141a76af3937
+RULE-TAG: 50463640e4883648a4e05789

@@ -1216,7 +1216,7 @@ A **pack** is a set of documents (ADR 0001, decision 6). Documents are merged in
 the order given, later over earlier:
 
 - tables merge recursively by key;
-- a scalar or a list in a later document replaces the earlier one;
+- a scalar or a list in a later document replaces the earlier one, and an explicit `false` (or 0) replaces a `true` (or a non-zero value): a key that is present is never read as absent, so an overlay can turn `raw = true` of a base commodity off with `raw = false`;
 - a key present as a table in one document and as a scalar in another is an error
   (`ErrMergeConflict`);
 - a document cannot delete an entity or a key in version 1 (open question 3), and so
@@ -1258,7 +1258,7 @@ with `%w` and the name written as a path segment (6.3.2).
 `roles.worker_a.target_ratio` or `regions.north.groups.worker_a.households`), a
 `Rule` (the sentinel), the offending value and, for a bound, the bound.
 `errors.Is` matches the sentinel and `errors.As` finds the typed error
-(architecture.md 8.4; testing.md 3.9). A `Path` is the path of the Go field, in the
+(architecture.md 8.4; testing.md 3.9). The viability rules of 7.6 return a second typed error, `*ViabilityError`, with the fields `Rule` (the rule name, a plain string: `unproducible_in_realm`, `role_cannot_work`, `cycle_not_productive`, `labour_short` or `storage_gap`), `Path`, `Value` (the offending value as text) and `Bound` (the number that decides it, as text); its `Unwrap` returns `ErrNotViable`, it does not embed `ValidationError`, and its `Error()` text quotes and cuts as the `ValidationError` text does. Both types are in the one list of 7.1.2 and 7.1.3. A `Path` is the path of the Go field, in the
 plural list names of the sections and the IDs of the entities as given, and is not a key
 path of a file (6.2.2). The `Error()` text cuts and quotes every segment and every string
 value as 6.3.2 says, so a message holds at most `MaxNestingDepth` segments of at most
@@ -1266,7 +1266,7 @@ value as 6.3.2 says, so a message holds at most `MaxNestingDepth` segments of at
 value as given.
 
 7.1.2. Errors are sorted by path and then by rule, so the output does not depend
-on map order and a test can compare it (architecture.md 7.5).
+on map order and a test can compare it (architecture.md 7.5). A `*ViabilityError` is sorted in the same list as a `*ValidationError`, by path, then rule name, then value and then bound.
 
 7.1.3. At most 100 errors are returned, followed by one `ErrTooManyErrors` that
 says how many were left out. A pathological file cannot flood a log. The cap bounds the
@@ -1312,7 +1312,11 @@ input found nothing to refuse (phase 1 always stops the rest):
 4. **The structural fixpoint of 7.5** and the rules that read two sections.
 5. **The derived checks of 4.2** (`ErrOverflow`).
 6. **Viability** (7.6), which reads a well-formed configuration and so runs only when
-   phases 2 to 5 found no error, and is size-gated besides.
+   phases 1 to 5 found no error, on the canonical copy of the configuration (the recipe,
+   yield and role tables it needs exist only for a canonical, validated configuration), and is
+   size-gated besides. The rule "the set of virtual start offsets of a job is empty" (`ErrWarmStartJob`,
+   `spec-viability.md` 8.7) runs at the entry of this phase for the same reason. One unexported
+   `checkViability` serves `Validate` and `Warnings`.
 
 Phases 2 to 5 collect every error they find (7.1.1); the rules that are super-linear in
 a count (3, 4, 5 and 6) are the ones `ErrTooMany` keeps from running. Without phase 1 a
@@ -1330,7 +1334,7 @@ with no logger sees them (`spec-integration.md` 6.4). `NewWorld` logs each once 
 is bounded by the size of the configuration and happens once at construction
 (observability-and-logging.md 3.2.2). The warnings that exist are listed with
 their conditions in 7.4.2; a rule is a warning or an error, never both, and the
-severity of every rule is stated in 7.4.
+severity of every rule is stated in 7.4. `Warnings` appends the viability warnings (7.4.2) only when the structural phases (1 to 5 of 7.1.6) come back clean on a scratch report, and otherwise returns the others, so `Validate` and `Warnings` agree on when the check runs; both reach the one `checkViability`.
 
 ### 7.3 Structural rules
 
@@ -1408,7 +1412,7 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | a belief parameter outside its bound; `BeliefWidthMin` above `BeliefWidthInit` or `BeliefWidthInit` above `BeliefWidthMax`; `BeliefWidthMax` of 10 000 or more; `BeliefStockLow` not below `BeliefStockHigh`; `CostCeiling` below `CostFloor`; `RefBandLow` above 10 000; `RefBandHigh` below 10 000; `BeliefAdjustProb` of 0; `BeliefEvidenceShare` outside 1 to 10 000 | `ErrOutOfBounds` | `spec-beliefs.md` 11, FR-BEL-027, FR-BEL-028, FR-BEL-037 | `Validate` |
 | a seed price outside `[1, MaxPrice]`, below the resolution floor or outside the reference band; a starting wage outside `[1, MaxMoney]` or whose product with the longest `Duration` of a recipe exceeds `MaxMoney` | `ErrWarmStartPrice` | `spec-viability.md` 8.2.2, 8.2.5, FR-VIA-030, FR-VIA-051 | `Validate` |
 | a second starting wage for one region | `ErrDuplicateID` | `spec-viability.md` 8.7, FR-VIA-051 | `Validate` |
-| a `JobSpec` whose recipe is not on the role's list, whose share is outside [0, 10 000], whose group shares exceed 10 000, or whose set of virtual start offsets is empty | `ErrWarmStartJob` | `spec-viability.md` 8.7, FR-VIA-033 | `Validate` |
+| a `JobSpec` whose recipe is not on the role's list, whose share is outside [0, 10 000], whose group shares exceed 10 000, or whose set of virtual start offsets is empty (checked at the entry of phase 6 of 7.1.6, on the canonical copy) | `ErrWarmStartJob` | `spec-viability.md` 8.7, FR-VIA-033 | `Validate` |
 | a warm-start amount that overflows its bound, a duplicate key, or an unknown reference | `ErrOverflow`, `ErrDuplicateID`, `ErrUnknown*` | `spec-viability.md` 8.7, FR-VIA-041 | `Validate` |
 | **viability**, each with the `*ViabilityError` rule named in the next four rows: `errors.Is(err, ErrNotViable)` matches every one (7.6) | `ErrNotViable` | `spec-viability.md` 4, 10.1 | `Validate` |
 | rule `unproducible_in_realm`: an upkeep good, or an input or tool of a recipe that exists in a region where a role lists it, that no region can produce with a positive yield | `ErrNotViable` | FR-VIA-004 | `Validate` |
@@ -1547,15 +1551,16 @@ and 10); this section says how the framework runs it.
 1. **Where.** `Validate` runs V1 (sourced and runnable) and V4 (storable) always,
    and V2 (productive cycles) and V3 (labour sufficient) when the size gate allows:
    the tableau would have at most `MaxViabilityCells` entries and the pivots would
-   not pass `MaxViabilityPivots`. Above the gate the programmes are skipped and the
-   warning `viability_check_skipped` names what was not run, so the validation time
+   not pass `MaxViabilityPivots`. The size is computed before a tableau is built, with the checked arithmetic of `internal/checked`: `rows` is the commodities of the programme plus its regions plus one row per activity whose start capacity `J` times its duration `d` is below `TicksPerYear` (the capacity rows), `cols` is the activities plus one for the surplus factor plus the slack of each row, and `rows * cols` is compared with `MaxViabilityCells`. Above the gate, or on reaching `MaxViabilityPivots`, the programmes are skipped and the
+   warning `viability_check_skipped` names the part not run (V2 of a component, V3 pooled, V3 per region, the nominal warnings or the cycle gain), so the validation time
    stays bounded (NFR-CFG-001). The check is **necessary and optimistic**: pooled
    free trade, the best yield across regions.
 2. **The error.** A failure is `ErrNotViable` carried by a `*ViabilityError` with a
    `Rule` (`unproducible_in_realm`, `role_cannot_work`, `cycle_not_productive`,
    `labour_short`, `storage_gap`), a `Path`, the offending value and the number that
-   decides it. `errors.Is(err, ErrNotViable)` matches each (FR-CFG-033,
-   FR-VIA-011); the framework's ordering (7.1.2) applies.
+   decides it (the fields are those of 7.1.1). `errors.Is(err, ErrNotViable)` matches each (FR-CFG-033,
+   FR-VIA-011), and `errors.As` finds the `*ViabilityError`; the framework's ordering (7.1.2) and its
+   cut at 100 errors (7.1.3) apply to it. Phase 6 runs only on a configuration the earlier phases passed (7.1.6).
 3. **The cycle gain** (`spec-stability.md` FR-STB-017, STB-L10, STB-L52; restated
    after labour entered the unit cost, `spec-production.md` 9, N-066). The unit cost
    is now the full cost: inputs, wear and labour. A rise in a price passes round a
@@ -1580,6 +1585,14 @@ and 10); this section says how the framework runs it.
      1. It is flagged by its own warning `cost_floor_at_full_cost` (FR-BEL-038),
      not by `cycle_cost_gain`, because it needs no cycle of recipes: it exists in a
      chain with no cycle at all.
+   - *Which cycles.* A component can hold many cycles, so the ratio is taken over the simple
+   cycles whose every commodity has one maker in the component, a maker being a non-source
+   activity (one with inputs) that outputs the commodity; a source activity supplies the
+   commodity from outside the cycle and is not counted. `q_in` and `q_out` are the configured quantities, with no yield factor. The enumeration runs for at most
+   `MaxViabilityCells` steps; a component past that is the "cycle gain" part of
+   `viability_check_skipped`. Worked case: the seed cycle of the `one` pack, 40 `seed` in and 1 800 `staple` out, then 20
+   `staple` in and 20 `seed` out, has `q_in / q_out = (40 / 1 800) * (20 / 20) = 1/45`, so it never
+   warns inside the bound of `CostFloor`.
    The two tests use exact integer arithmetic. **FR-STB-017 follows** (owed to
    `spec-stability.md`): its formula should read `g = CostFloor / 10 000 * s` with
    `s` the full-cost share of the cycle's own inputs, `s = q_in / q_out` at the

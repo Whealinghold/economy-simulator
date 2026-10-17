@@ -363,6 +363,13 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `TraineeshipEnded` | SKL 4.7, 8.1 | with a removal (4.4.8) | E | skill barriers | `Agent`, `Region`+, `Reason` |
 | `StoreChanged` | STO 14.1 | a call (`AddStore`, `RemoveStore`); P7.1 after the `RoleChanged` that ended the store; P8.3b for a store facility | E | storage | `Agent`, `Region`, `Role`, `Class StoreClassID`, `Kind` (`added`, `removed`), `Cause` (`consumer`, `role_changed`, `facility`), `Stores` (the agent's stores of the class after), `Room`, `Load` (the account's, as pairs, after) |
 
+`GoodsListed` (`AgentBankrupted`, `EstateOpened`, `RoleChanged`) counts **lots**,
+one for each distinct key of the agent's holdings that is passed to the estate, and
+the three events carry the same count for the same removal (the one function
+`acceptGoods` makes it, `spec-estates.md` 2.5). The units that move travel
+separately, in `WeightChanged.Units` (FR-OBS-019). The rows above stay as they are
+for the parser of the 4.1 tables; this paragraph is outside them.
+
 #### 4.1.5 Money, estates, boundary
 
 | Event | Owner | Position | Class | Gate | Fields |
@@ -955,7 +962,9 @@ no state and takes no lock.
 households is the sum of weights (FR-SCL-015, N-013). The pseudo-agents (the
 estates and the counterparties of the outside) are in neither count and appear
 only where a row is about them (the pool of a region, 5.3.2; the counterparties,
-5.3.9).
+5.3.9). The estate has no row of its own among the agents of a snapshot and no marker: its identity is the
+`RegionID` of the region row and its money is `RegionRow.MoneyPool` (`spec-estates.md`
+2.7, FR-EST-010).
 
 5.1.3. **A field absent for want of a module is zero**, and `Modules` lists the
 modules that are on, so a consumer tells "zero" from "not measured". A row that
@@ -1018,7 +1027,7 @@ per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the m
 | Field | Type | Meaning | Src | Cost |
 |-------|------|---------|-----|------|
 | `Tick` | `int64` | the tick the next step will run (`World.Tick()`) | WLD 3.7.2 | K |
-| `Seed` | `uint64` | the seed the world was built with, **for information**; a restore carries it (`spec-world.md` 12.3) | WLD 16.5 | K |
+| `Seed` | `uint64` | the **effective** seed: the seed the world was built with, or the one a reseeding restore replaced it with; it is the seed read back (`spec-world.md` 12.3, ADR 0008). Stage 1 (the slice) has no `WorldRestored`, which arrives with the checkpoint | WLD 12.3, 16.5 | K |
 | `ConfigHash` | `[32]byte` | the configuration hash | CFG 8 | K |
 | `Moment` | `Moment` | `Calendar.At(Tick)`, a pure function of the tick (N-031) | CAL 4 | D |
 | `Names` | `Names` | the names table of 3.2.4 | OBS | D |
@@ -1028,6 +1037,12 @@ per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the m
 | `Money` | `Money` | money in non-boundary accounts, estates, escrow and treasuries included (the treasuries in `MoneyTreasury`, 5.3.2), counterparties excluded (they hold nothing at a boundary) | LED 9, POL 10.5 | K |
 
 #### 5.3.2 Regions: `Regions []RegionRow`, one per region by `RegionID`
+
+The Stage 1 snapshot declares the rows of the slice only: `RegionRow` has no
+`MoneyContract` and no `MoneyTreasury` until the module that owns the escrow or the
+treasuries is added, which appends the field at its end (it is omitted from the
+golden at zero, 9.5.2). Until then the identity of FR-OBS-041 reads `MoneyHouseholds`
+and `MoneyPool` only, the escrow being 0.
 
 An outside node has a row with `Outside` true and every other field zero
 (`spec-regions.md` 3.5): a consumer indexes by `RegionID` without a hole.
@@ -2233,11 +2248,15 @@ t=0 AgentSpawned Agent=1 Region=alpha Role=baker Weight=1 StartMoney=100 StoresL
 
 and only the `testdata/golden/storage/` and `all/` files carry it.
 
-9.5.3. **The file** `testdata/golden/events-<pack>.txt` holds, for the reference
+9.5.3. **The file** `testdata/golden/off/events-<pack>.txt` (the module-on sets are `testdata/golden/<module>/` and `all/`, testing.md 7.1.1) holds, for the reference
 chain on a fixed seed and a fixed number of ticks (a placeholder, REF 8.2):
 
-1. the **full rendering** of the first 5 ticks of the `one` pack (small enough to
-   read), after the events of construction;
+1. the events of construction as a block headed `construction` (every event
+   emitted before the first `TickStarted`, `RunStarted` excepted, in emission order:
+   the `Tick` -1 `BoundaryFlow` bucket, `WorldCreated` and the construction
+   `AgentSpawned` events, which carry `Tick` 0 and are not counted in tick 0's count),
+   then the **full rendering** of the first 5 ticks of the `one` pack (small enough
+   to read);
 2. one line per tick of the whole run: `t=<n> events=<count> digest=<16 hex>`,
    the first 8 bytes of the SHA-256 of that tick's rendered lines (a test may use
    a hash: it is not randomness);
@@ -2664,7 +2683,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-075 | A log message MUST be a constant lowercase phrase with no interpolated value, and all records of one call site MUST have the same message. |
 | FR-OBS-076 | "world created", "warm start applied", "run started", "run ended" and "world restored" MUST be emitted once each, at the point and with the keys of 7.2. |
 | FR-OBS-080 | The golden rendering of an event MUST follow 9.5.2: `t=<Tick>`, the type, the fields in declaration order, typed IDs as their string IDs, no timestamp and no map order; and a field at its zero value (not a typed ID and not `Side`) MUST NOT be rendered, so that a field a module appends at its off value leaves no trace. |
-| FR-OBS-081 | `testdata/golden/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
+| FR-OBS-081 | `testdata/golden/off/events-<pack>.txt` MUST hold the rendering of the first ticks of the `one` pack, one digest line per tick, the count of each event type that occurred (a type with a count of 0 is not listed), and the final snapshot, and MUST change only with `-update` and an explanation in the PR. |
 | FR-OBS-090 | A world with no logger and no observer, and one given a nil logger or a nil observer, MUST build, step and run, write nothing to stdout or stderr and not panic. |
 | FR-OBS-091 | A field that a module appends to an event or to a snapshot row MUST be a count, an amount, a bool, a constant of a closed set or a slice, MUST NOT be a typed ID, and MUST be zero when the module is off; the rendering of every event and row of a world with the module off MUST be byte-equal to that of the tree before the module was added (9.5.2; architecture.md 2.10.5). |
 | FR-OBS-092 | `WearApplied` MUST be emitted once per tick for each commodity whose wear units of the tick are above 0, in ascending commodity order, after the tick's `BoundaryFlow` rows, with `Units` equal to the ledger's wear units of the commodity; the construction bucket MUST be emitted in the same form with `Tick` -1 after the construction `BoundaryFlow` rows; it MUST NOT be emitted for a tick with no wear. |
@@ -2827,6 +2846,6 @@ changes shape. Rule files need a fresh read-receipt tag each.
 | `Reason`, `Cause`, `Kind`, `ScaleKind` and their constants (and `Side` with its `String` method); `warnRun` | root package, `event.go`, `observer.go` |
 | the log key strings (and nothing else; no alias, no import) | `internal/logkeys` |
 | the instruments, the accumulators, `RecordSnapshot`, the spans | `otelobserver/` (separate module) |
-| the golden rendering (a test helper) and the golden files | `*_test.go` of the root package, `testdata/golden/events-<pack>.txt` |
+| the golden rendering (a test helper) and the golden files | `*_test.go` of the root package, `testdata/golden/off/events-<pack>.txt` |
 | the recorder and the capturing handler | `_test.go` files (architecture.md 10.3) |
 | no model | `doc/specs/models/obs/` does not exist (15) |
