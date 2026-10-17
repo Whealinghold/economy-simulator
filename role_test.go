@@ -12,10 +12,10 @@ import (
 // Roles sort to idle 0, smith 1. Regions sort to north 0, south 1.
 func roleConfig() *Config {
 	c := Config{
-		World: World{Upkeep: []Item{{Commodity: "staple", Quantity: 3}, {Commodity: "fuel", Quantity: 1}}},
+		World: World{WelfareWindow: 30, WindowCycles: 2, Upkeep: []Item{{Commodity: "staple", Quantity: 3}, {Commodity: "fuel", Quantity: 1}}},
 		Commodities: []Commodity{{ID: "staple"}, {ID: "ore"}, {ID: "oven"}, {ID: "ingot"},
 			{ID: "gem"}, {ID: "fuel"}, {ID: "ash"}},
-		Recipes: []Recipe{{ID: "smelt",
+		Recipes: []Recipe{{ID: "smelt", Duration: 1,
 			Inputs: []Item{{Commodity: "ore", Quantity: 2}},
 			// ash is a discard: it must not join the set.
 			Outputs:  []Output{{Commodity: "ingot", Quantity: 1, CostShare: 10000}, {Commodity: "ash", Quantity: 1, Discard: true}},
@@ -178,6 +178,7 @@ func TestNewRoleTable_UnknownCommodityPanics(t *testing.T) {
 func TestRoleRow_UpkeepInSearchesEveryRegion(t *testing.T) {
 	t.Parallel()
 	c := Config{
+		World:       World{WelfareWindow: 30, WindowCycles: 2},
 		Commodities: []Commodity{{ID: "fuel"}, {ID: "staple"}},
 		Roles:       []Role{{ID: "worker", Upkeep: []Item{{Commodity: "staple", Quantity: 1}}}},
 	}

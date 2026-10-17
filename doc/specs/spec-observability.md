@@ -1081,6 +1081,7 @@ role row says so.
 | `Employed`, `Employing` | `int64` | households of the role on a hired job at the boundary; hired households working for agents of the role (employment on) | EMP 15.4 | S |
 | `LimitedHouseholds`, `RoomMass`, `RoomBulk`, `LoadMass`, `LoadBulk` | `int64` | the households of the limited agents of the role in the region, and the sums over them of the room and the load in each dimension, the weight folded into the room (storage on); `economysim.room.fill` is `Load * 10 000 / Room` of a dimension | STO 14.5 | S |
 | `SavingHouseholds`, `GoalMoney`, `BufferMoney`, `IdleMoney` | `int64`, `Money` | the households of agents with a goal above 0, and the sums over agents of `Goal`, of `max(0, Precaution - ReserveMoney)` and of `Idle` (saving on, a role with the block; a drawdown and a project test per agent, not a constant number of reads) | SAV 8.4.2 | Q |
+| `ClampedHouseholds` | `int64` | households (the weights) of the role's agents whose welfare ring holds a field at the clamp of WEL 2.3.2, derived from the saved records and never saved (N-125); appended last, and 0, so omitted from the golden rendering, when nothing is clamped (FR-OBS-091) | WEL 11.3, FR-WEL-042 | S |
 
 The `MeanRatio` per region over all roles is not a field: it is the household-
 weighted mean of the role rows, and a consumer computes it as the sum of `MeanRatioBP` times `RatioHouseholds` over
@@ -1356,7 +1357,7 @@ input because nothing reads one back.
 ## 6. Metrics
 
 Metrics are produced by the separate module `otelobserver` from the events of
-section 4 and, for fourteen instruments, from a snapshot that the consumer passes to
+section 4 and, for nineteen instruments, from a snapshot that the consumer passes to
 it (6.2.2). The core defines none and does not import OpenTelemetry
 (architecture.md 11.4). This section reconciles the catalogue of rules 5.3 with
 the events, resolves the five conflicts of N-088, and says what the adapter keeps.
@@ -1521,6 +1522,9 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
 | `economysim.welfare.ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].MeanRatioBP` where `HasMeanRatio` (N-081 1) |
+| `economysim.welfare.ratio.households` | Gauge | `{household}` | `economysim.role`, `economysim.region` | `Roles[].RatioHouseholds` where `HasMeanRatio`: the denominator of `economysim.welfare.ratio`, as `belief.outcomes` is of `belief.at_bound`; without it a mean over one household reads as a mean over four hundred, and a region's mean over roles (which WEL 11.2 says a consumer forms weighted by `RatioHouseholds`) cannot be formed from the metrics |
+| `economysim.welfare.floor_held` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].HeldByFloor * 10 000 / Households`, absent where `Households` is 0: the share of the role's households held to work by `MinWorkShare`, evaluated at the boundary (WEL 11.2), so it can differ from the count the `Warn` "work floor binding" used at P2.5. The `Warn` fires only above 5 000 for ten consecutive ticks and then every tenth, so the gauge is the only view of a role approaching the threshold or leaving it |
+| `economysim.wage.observed` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].WageObserved` where `HasWage` (WEL 4.3): the observed wage of the role. It is not the pooled regional wage that the cost anchor reads (WEL 4.3, with the warm-start wage as fallback), so it explains a wage trend, not an anchor by itself |
 | `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
 | `economysim.room.fill` | Gauge | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` | `Roles[]` room and load, `Load * 10 000 / Room` of a dimension (`mass`, `bulk`), absent where the room is 0 |
 | `economysim.credit.arrears` | Gauge | `{minor_unit}` | `economysim.region` | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region (a level that changes with no `CreditSettled`: a debtor removed in phase 7, `ForgiveClaims`, a relocation) |
@@ -1692,10 +1696,10 @@ the attribute sets, every cell that could occur:
 | money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
-| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100) | 790 |
+| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100) | 1 090 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 5 900** (5 913), for the instruments of the earlier modules |
+| **Total** | **about 6 200** (6 213), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1840,8 +1844,9 @@ which each uses.
 | 23 | "claims overdue" | B: the debtors of a region owe overdue claims of origin `loan` at the end of P1.7a | `region`, `claims`, `arrears` | regions | `CreditSettled.Arrears`; the `Claims` rows (`Overdue` at or above 0) | CRD 16.2 |
 | 24 | "claim cap reached" | A: a request was cut because `MaxClaims` open claims exist | `claims` | the world | `CreditRound.TooMany`; the length of `Claims` | CRD 16.2 |
 | 25 | "body has waiting households" | B: the households waiting for a place of a body in a region were above 0 in each tick of the run | `region`, `body`, `waiting`, `places` | regions x bodies | `MembershipChanged.Waiting`; `BodyRow` (`Eligible - Members`) | ORG 11.2 |
+| 26 | "welfare record clamped" | A: a household of the role holds a field of its welfare record at the clamp of WEL 2.3.2 (stored at the bound), the run of such ticks (saved by WEL, `spec-checkpoint.md` 4.2 tag 7) being 1 or a multiple of 10 | `region`, `role`, `households` | regions x roles | `RoleRow.ClampedHouseholds` | WEL 11.3 |
 
-7.3.1. **The bound.** Lines 2 to 18 and 20 to 25 each have a cell per entity of the
+7.3.1. **The bound.** Lines 2 to 18 and 20 to 26 each have a cell per entity of the
 configuration and emit at most once per `warnRun` ticks per cell **within an uninterrupted run**
 (pattern A adds the first tick of a run), so on average a tick emits the number of
 cells over `warnRun`, and at most the number of cells in the worst tick. Line 19 is bounded per tick by
@@ -1850,11 +1855,11 @@ the reference world (placeholder sizes of 6.5.2: 5 regions, 20 roles, 150 market
 15 endowments, 6 wants) the cells of lines 2 to 18 are about 1 700 (eight kinds
 over 100 (region, role) cells, 600 of line 18, 150 markets, 25 regions, 15
 endowments, 120 sides of 1 node, 2 gates, 30 commodities and 2 sides), and those of
-lines 20 to 25 about 250 more (200 of lines 20 and 21 over the 100 (region, role)
-cells, 30 of line 22, 5 of line 23, 1 of line 24 and, for a placeholder of two
-bodies, 10 of line 25), so about 1 950. **The per-tick bound is the number of cells**: every run
+lines 20 to 26 about 350 more (200 of lines 20 and 21 over the 100 (region, role)
+cells, 30 of line 22, 5 of line 23, 1 of line 24, for a placeholder of two
+bodies, 10 of line 25, and 100 of line 26 over the 100 (region, role) cells), so about 2 050. **The per-tick bound is the number of cells**: every run
 can start in the same tick (a famine, a shock, all groups at construction) and
-pattern A fires on the first tick, so one tick may emit about 1 950 lines, plus
+pattern A fires on the first tick, so one tick may emit about 2 050 lines, plus
 the 45 of line 19. **Over a window of `w` ticks** the bound is the cells times `ceil(w / 2)` for pattern A
 (a condition true on alternate ticks starts a new run every other tick) and
 `ceil(w / warnRun)` for pattern B, which is unbroken-run bound only; about 170 a
@@ -2668,6 +2673,7 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-095 | `RecipeRefused` MUST be emitted once per region and recipe per tick at P2.8a, after `ProductionHalted`, in ascending (`RegionID`, `RecipeID`), in which the job request of at least one free household was refused with a count of 0, each count MUST be the sum of the weights of the agents refused for that reason under the first applicable reason of the master order of `spec-production.md` 4.2.1, and it MUST NOT be emitted for a tick with no such refusal (4.4.6a). `economysim.recipe.refused` MUST add each count by recipe and reason, once per event. |
 | FR-OBS-096 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs; `economysim.recipe.overflow` MUST add its units by commodity, and the `Warn` "recipe output disposed" MUST be fed by it. |
 | FR-OBS-097 | `economysim.recipe.abandoned` MUST add `RecipeAbandoned.Executions` by recipe and `Reason`; `economysim.recipe.in_progress` MUST equal `Jobs[].Executions` by recipe and region, absent and not zero until a snapshot is passed, and 0 for a pair with no row; `MarketCleared.CostAnchor` MUST equal the cost anchor of the commodity in the region as the production step read it for the tick, and `economysim.production.cost_anchor` MUST hold it by commodity and region once per market per tick. |
+| FR-OBS-098 | `economysim.welfare.ratio.households` MUST equal `Roles[].RatioHouseholds` and be recorded exactly where `economysim.welfare.ratio` is (where `HasMeanRatio`); `economysim.welfare.floor_held` MUST equal `Roles[].HeldByFloor * 10 000 / Households`, rounded toward zero (architecture.md 3.5), and be absent where `Households` is 0; `economysim.wage.observed` MUST equal `Roles[].WageObserved` where `HasWage` and be absent otherwise. Each is absent, not zero, until a snapshot is passed, and the three are by role and region. |
 
 ### Non-functional
 

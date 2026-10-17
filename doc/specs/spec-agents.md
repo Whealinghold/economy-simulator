@@ -351,7 +351,7 @@ have: the weight changes the scale of the amounts and nothing else.
 ### 3.8 What a role change does to an agent
 
 The mechanics are `spec-spawner.md` 4.2 and are the spawner's: the agent keeps its account,
-money, welfare history, `Hunger`, `Unfed`, `Privation` and `DeathCarry`; goods outside the new role's tradable
+money, welfare history (resized to the new role's effective window: the newest `min(held, T')` records are kept and the rest of the window is padded at read with the new role's `DefaultRatio`, `spec-welfare-and-wages.md` 2.3.3), `Hunger`, `Unfed`, `Privation` and `DeathCarry`; goods outside the new role's tradable
 set (3.4) pass to the estate; the job is abandoned with `role_changed`; beliefs are kept for
 commodities in both sets; residues reset; the strategy becomes the new role's registered one.
 The carries of the demand module follow `spec-demand.md` 4.9. Nothing in this spec changes: the

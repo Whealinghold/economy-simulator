@@ -107,6 +107,11 @@ what each adds beyond the table cell:
   operations (`Discard` and `Holding`) in new files of `internal/ledger`.
 - Row 6: the role economics report of WEL 7 is the viability row's and in-kind pay
   (WEL 6) is not built.
+- Row 6: `internal/welfare` takes the weight once, in `TickCost`, and values wear at
+  P6.3 (`WearCost`, one ceiling per execution); every tick-called function
+  saturates and has no `ok` (D63), `NextRun` holds the saturating run counter of the
+  two `Warn`s, and the holder of the ring is the agent row. Coverage: root 99.2%,
+  `internal/welfare` 98.1%.
 
 Rows 7 to 12 have no plan yet.
 
@@ -117,7 +122,7 @@ Rows 7 to 12 have no plan yet.
 | `internal/clearing`, `order.go` (`Order`, `Trade`, `LotKey`) and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement, the market report type and its computation) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | [1-3](plans/plan-phase-1-3.md), 6 phases | done (uncommitted) |
 | `internal/beliefs` and `beliefs.go` | BEL | [1-4](plans/plan-phase-1-4.md), 6 phases | done (uncommitted, stage-1-4) |
 | `internal/production` and `production.go` (jobs, yield table, the shock slot and the cost-anchor table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | done (uncommitted) |
-| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | plan audited |
+| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | done (uncommitted, stage-1-6) |
 | `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0). Requirements of this row that the tables of row 2 do not cover (N-236): the weight multiplication of the effective upkeep (FR-AGT-011), the "requests no job" half of FR-AGT-010 and, with the demand module, the want items of FR-AGT-003 | AGT | none | not started |
 | `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | none | not started |
 | `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | none | not started |

@@ -143,3 +143,6 @@ func ProductionAnchors(c *Config, prices, wages []int64, runnable [][]RecipeID, 
 	s.anchors(prices, wages, runnable, &yt, &sh, season)
 	return append([]int64(nil), s.costs...), s.unitCost
 }
+
+// RoleWindow reads the stored effective welfare window of a role.
+func RoleWindow(t *RoleTable, id RoleID) int64 { return t.row(id).window }
