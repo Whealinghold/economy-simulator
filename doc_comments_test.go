@@ -47,6 +47,8 @@ func docOf(t *testing.T, file, name string) string {
 // Guard: these comments are the only place a consumer reads the contract. A
 // rewrite that dropped one would change what an observer may do, or invite a
 // seed to be used as a secret, with every behavioural test green.
+//
+// Requirement: FR-SPN-003
 func TestDocComments_Contracts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -70,6 +72,18 @@ func TestDocComments_Contracts(t *testing.T) {
 			"equal bytes for equal states",
 			"MUST replace the whole state",
 			"MUST validate its input",
+			"MUST NOT be shared between worlds",
+		}},
+		{"spawner.go", "Spawner", []string{
+			"MUST NOT create its own random source",
+			"MUST NOT use a global one",
+			"MUST NOT keep the rng it is given after the call returns",
+			"MUST NOT write to the view",
+			"MUST NOT keep the view or a slice in it",
+			"MUST NOT block",
+			"optional pair of the checkpoint",
+			"MUST write every piece of state that can influence a result",
+			"MUST replace the whole state",
 			"MUST NOT be shared between worlds",
 		}},
 		{"option.go", "WithSeed", []string{

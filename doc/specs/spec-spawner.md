@@ -473,7 +473,7 @@ cooldown) is a candidate each tick, not only on review ticks, and is judged by t
 even when it is also due for a review: it has no band, and if it has no destination it stays and is
 not re-judged by the review rule in that tick. Its destination is the open,
 **viable** role with the highest `E` that beats its own (`E_d > E_o`, no hysteresis band)
-and passes the capital test. If none exists it stays, and the ladder goes on to rung 3. The plan order (10.2) takes the
+and passes the capital test. If none exists it stays, and the ladder goes on to rung 3. The households that stay are counted in `EntryLimited.Stranded` (13.1.2). The plan order (10.2) takes the
 reductions before the switches, so an agent at `RemovePrivation` that is reduced in the plan is not
 switched, even if a viable role exists and it would only wait behind the entry cap; the phrase "the
 ladder goes on to rung 3" is read in that order, not as a retry of the switch after the cap (N-267).
@@ -676,7 +676,7 @@ Warnings (never fail validation):
 | `AgentBankrupted` (existing) | an agent is removed entirely, by rung 3 or at the consumer's request | `Agent`, `Region`, `Role`, `Weight` (at removal), `Cause`, `Money`, `GoodsListed` (lots) |
 | `WeightChanged` (new) | an agent's weight changes without removal: a rung-3 reduction, an entry into an existing agent, a POP birth or death | `Agent`, `Region`, `Role`, `From`, `To`, `Cause`, `Money` (signed, positive to the agent) and `Units` (goods moved to the estate) |
 | `RoleChanged` (new) | an agent changes role | `Agent`, `Region`, `From`, `To`, `Weight`, `Cause`, `GoodsListed` (lots) |
-| `EntryLimited` (new) | once per region per tick in which any limit or refusal acted | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
+| `EntryLimited` (new) | once per region per tick in which any count is above 0 | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`, `Stranded` |
 
 `GoodsListed` counts lots: one per distinct lot key (commodity, born, durability) of the holdings that moved to the estate, whatever the unit count; units travel separately in `WeightChanged.Units`.
 
@@ -699,10 +699,22 @@ funding limit). Each field is a count of households or decisions in the tick (`R
 `Cooldown`, `Hysteresis` and `ExitCap` are households, not agents, 6.3.0); it is not
 emitted when everything is zero, so a healthy world costs nothing. Bounded by the number
 of regions. `Refused` totals the world's refusals of section 4; their reasons are `Debug`.
+`Stranded` (appended last, a count of households) is the households at rung 1 that stayed because
+the default found no role for them (6.4): none open, viable and better than their own, or none
+whose tool the agent can afford. It is the one rung-1 outcome no cap, cooldown or band counts, and
+it leads `household.exits` of cause `starved` by up to `RemovePrivation` less `ChangePrivation`
+ticks. An agent held by the cooldown is in `Cooldown`, and an agent that reached a cap is in
+`RegionCap` or `RoleCap`, so none is counted twice. `Changed`, `Entered` and `Removed` are the
+executed counts, so the event is also emitted in a tick of ordinary entry and exit with no limit
+acting.
 
 13.2. **Metric proposals** (OBS decides): `economysim.role.changes`, a Counter `{change}`
 by `economysim.role` (the destination) fed by `RoleChanged`; `household.count` and
-`agent.count` as in 13.1.1.
+`agent.count` as in 13.1.1. Two more are fed by `EntryLimited`: `economysim.household.entries`, a Counter
+`{household}` by `economysim.region` that adds `Entered` (the gross entry that `household.count` nets
+against `household.exits`), and the `stranded` value of `economysim.entry_limit` for `economysim.entry.limited`;
+the snapshot gauges `economysim.role.expected_ratio` and `economysim.role.viable` read the signals of
+13.4 (`spec-observability.md` 6.2).
 
 13.3. **Logs.** Per agent, all `Debug`, guarded by `Enabled`, with constant messages:
 "agent bankrupt" (`agent`, `role`, `reason`), "role changed" (`agent`, `role`, `reason`),
@@ -983,7 +995,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-032 | `AgentBankrupted` MUST be the only event that removes the agent (the events that accompany a removal are those of `spec-world.md` 6.11 item 8), with `Agent`, `Region`, `Role`, `Weight`, `Cause`, `Money` and `GoodsListed`, and MUST NOT be emitted for a reduction that leaves households or for a role change (13.1.1). |
 | FR-SPN-033 | `WeightChanged` MUST be emitted for each weight change that is not a removal, with `From`, `To`, `Cause`, `Money` (signed, positive to the agent) and `Units` (goods moved to the estate; FR-OBS-019), and `RoleChanged` for each role change, with `From`, `To`, `Weight`, `Cause` and `GoodsListed` (13.1). |
 | FR-SPN-034 | The agent count rebuilt from `AgentSpawned` (+1) and `AgentBankrupted` (-1) MUST equal the world's agent count at every tick, and the household count rebuilt from the `Weight` of those two events and `To - From` of `WeightChanged` MUST equal the sum of the weights (13.1.1, as the rules now state in 4.3 and 5.3.1). |
-| FR-SPN-035 | `EntryLimited` MUST be emitted once per region per tick in which any limit or refusal acted, with the counts of 13.1, and MUST NOT be emitted when all are zero (13.1.2). |
+| FR-SPN-035 | `EntryLimited` MUST be emitted once per region per tick in which any of its counts is above 0 (a limit or refusal acted, or households changed role, entered or were removed), with the counts of 13.1, and MUST NOT be emitted when all are zero (13.1.2). |
 | FR-SPN-036 | The `Warn`s "role extinct", "entry unfunded" and "group below floor" MUST be bounded per region or role and carry the attributes of 13.3 (13.3). |
 | FR-SPN-037 | Every parameter of section 11 MUST be a field with the default and bound stated, and a value outside its bound MUST be rejected with `ErrOutOfBounds` (11, 12). |
 | FR-SPN-038 | `ChangePrivation` MUST be below `RemovePrivation`, or construction fails with `ErrOutOfBounds` (rule `ladder_order`) (12). |
@@ -1009,6 +1021,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-SPN-058 | The capital test MUST be the exact inequality `diff * ut >= price * CapitalReturn` of `spec-skill-barriers.md` 2.5, with `diff = E_d - E_o` and `ut = Upkeep * TicksPerYear`, both products formed in 128 bits and compared exactly; a `ToolPrice` of 0 MUST pass first, before any product is formed; a `diff` below 0 MUST fail; and the test MUST be denied, never wrapped, where `Upkeep * TicksPerYear` leaves `int64` (6.2). (new) |
 | FR-SPN-059 | An agent given a rung-3 reduction or removal in a plan MUST NOT be a switch candidate in the same plan, an agent MUST be eligible for any action only when `RoleSince < tick`, and an agent with `Unfed` 0 MUST be given no reduction; an `Upkeep * w` beyond `int64` MUST give the cause `insolvent` (5.3, 6.4, 10.2). (new) |
 | FR-SPN-060 | The candidates MUST be ordered rung 1 by privation then gap then ID, reviewers by gap then ID, and the cross-role replacements after them as one batch candidate per leaver role in leaver-role order; an agent at rung 1 that is also due for a review MUST be judged by the rung-1 rule only; and the `Enter` decisions MUST be appended per leaver role in role order, the like-for-like entry first and then its fallback entries (6.3.0, 6.4, 7.2). (new) |
+| FR-SPN-061 | `EntryLimited.Stranded` MUST count, in households, the weight of every agent at rung 1 (`Privation >= ChangePrivation`, not external, past its cooldown, not acted on by rung 3) that has no destination in the plan, and MUST NOT count an agent that is a reviewer, held by the cooldown or refused by a cap (6.4, 13.1.2). |
 
 ### Non-functional
 

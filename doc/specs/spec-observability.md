@@ -356,7 +356,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `EstateOpened` | EST 2.5 | with the removal, after `AgentBankrupted` (4.4.8) | E | core | `Agent`, `Region`, `Balance Money`, `GoodsListed int64` |
 | `WeightChanged` | SPN 13.1 | P7.1(d) (no consumer call changes a weight, WLD 8.3) | E | core | `Agent`, `Region`, `Role`, `From`, `To` (weights), `Cause`, `Money Money`+ (signed: positive to the agent), `Units int64`+ (goods moved to the estate) |
 | `RoleChanged` | SPN 13.1 | P7.1(a), (d) | E | core | `Agent`, `Region`, `From`, `To` (roles), `Weight`, `Cause`, `GoodsListed int64` |
-| `EntryLimited` | SPN 13.1 | P7.1, end of the region's step | A | core | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`+ (a refusal by the class ceiling of a role, SET 6.4), `Cooldown`, `Hysteresis`, `ExitCap`, `Refused` |
+| `EntryLimited` | SPN 13.1 | P7.1, end of the region's step | A | core | `Region`, `Changed`, `Entered`, `Removed`, `Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`+ (a refusal by the class ceiling of a role, SET 6.4), `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`, `Stranded` |
 | `PopulationChanged` | POP 10.1 | P7.1, after `EntryLimited`, roles ascending | A | population | `Region`, `Role`, `Exposed`, `Unfed`, `NoRatio`, `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsCeiling`+ (births cut by a role ceiling), `BirthsUnfunded`, `RateClamped`, `BirthsDone`, `DeathsDone` |
 | `TraineeshipStarted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Trainee`, `Trainer`, `Role`, `Region`+ |
 | `TraineeshipCompleted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Agent`, `Region`+, `From`, `To` (roles) |
@@ -1479,7 +1479,8 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.upkeep.short` | Counter | `{unit}` | `economysim.commodity`, `economysim.role` | `UpkeepShortfall` (`Short` rows: the units, by commodity) | **new** (4.4.6b): `household.unfed` says households starve and not of what; with more than one upkeep commodity the shortage of each has its own cure, and `BoundaryFlow` `consumption` is the supply side only |
 | `economysim.household.exits` | Counter | `{household}` | `economysim.role`, `economysim.cause` (`insolvent`, `starved`, `consumer`) | `AgentBankrupted` (`Weight`) and `WeightChanged` (`From` less `To`, for a reduction); the cause `population` is left out, because `household.deaths` counts it (FR-OBS-059) | **new**: rung 3 of the ladder cuts a cohort by the unfed share and removes it only at weight 0 (`spec-spawner.md` 5.3), so `agent.removals` stays at 0 while households leave, and `household.count` nets the exits against entries |
 | `economysim.role.changes` | Counter | `{change}` | `economysim.role` (the destination) | `RoleChanged` (by `To`) | kept |
-| `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`) | **new** |
+| `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`, `Stranded`) | **new**; `Stranded` added: a household at rung 1 with no role to move to is counted by no cap, cooldown or band, and it leads `household.exits` of cause `starved` by up to `RemovePrivation` less `ChangePrivation` ticks (`spec-spawner.md` 13.1.2) |
+| `economysim.household.entries` | Counter | `{household}` | `economysim.region` | `EntryLimited` (`Entered`) | **new**: `household.count` is a net and `household.exits` is the outflow only, so exits matched by replacement leave the count flat and the churn invisible; with `entry.limited{entry_limit=unfunded}` the entry volume tells a region whose pool cannot refill from one that has no exits |
 | `economysim.want.unfunded` | Counter | `{unit}` | `economysim.want`, `economysim.role` | `WantShortfall` (`Planned` less `Funded`) | kept |
 | `economysim.household.relocations` | Counter | `{household}` | `economysim.region.from`, `economysim.region.to`, `economysim.cause` | `AgentRelocated` (`Weight`) | **changed**: gains `economysim.cause`, because a merchant's trips and a migrant's move are not one thing |
 | `economysim.money.flow` | Counter | `{minor_unit}` | `economysim.reason`, `economysim.kind` | `BoundaryFlow` (money); includes the bucket at `Tick` -1 (6.3.2) | kept |
@@ -1581,6 +1582,8 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.welfare.floor_held` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].HeldByFloor * 10 000 / Households`, absent where `Households` is 0: the share of the role's households held to work by `MinWorkShare`, evaluated at the boundary (WEL 11.2), so it can differ from the count the `Warn` "work floor binding" used at P2.5. The `Warn` fires only above 5 000 for ten consecutive ticks and then every tenth, so the gauge is the only view of a role approaching the threshold or leaving it |
 | `economysim.wage.observed` | Gauge | `{minor_unit}` | `economysim.role`, `economysim.region` | `Roles[].WageObserved` where `HasWage` (WEL 4.3): the observed wage of the role. It is not the pooled regional wage that the cost anchor reads (WEL 4.3, with the warm-start wage as fallback), so it explains a wage trend, not an anchor by itself |
 | `economysim.household.privation.max` | Gauge | `{tick}` | `economysim.role`, `economysim.region` | `Roles[].MaxPrivation`: the largest privation of an agent of the role, the leaky count the failure ladder reads (`spec-spawner.md` 5.1, 5.2). It is a snapshot gauge because `UpkeepShortfall` is not emitted once everyone is fed again, which is exactly when privation is still high and falling: the gauge shows how close a role is to a role change (`ChangePrivation`) or a removal (`RemovePrivation`), which `agent.removals` shows only afterwards |
+| `economysim.role.expected_ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].ExpectedRatioBP` where `HasExpected` (SPN 6.1): the expected ratio `E` that ranks the roles for every switch and every entry | **new**: the default spawner moves a household by comparing `E` of two roles, and `wage.observed` and `welfare.ratio` do not show it (it also reads the upkeep and the expected work ticks), so without it "why did nobody enter this role" is answered only by the per-agent `Debug` line |
+| `economysim.role.viable` | Gauge | `{flag}` | `economysim.role`, `economysim.region` | `Roles[].Viable` where `HasExpected`: 1 if the role is viable at `EntryRatio` (SPN 6.1), else 0 | **new**: the gate of every entrant, of rung 1 and of replacement; a 0 beside a high `expected_ratio` is the reason `EntryLimited.NoViableRole` and `Stranded` count, and a role that is never 1 can never be entered |
 | `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
 | `economysim.room.fill` | Gauge | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` | `Roles[]` room and load, `Load * 10 000 / Room` of a dimension (`mass`, `bulk`), absent where the room is 0 |
 | `economysim.credit.arrears` | Gauge | `{minor_unit}` | `economysim.region` | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region (a level that changes with no `CreditSettled`: a debtor removed in phase 7, `ForgiveClaims`, a relocation) |
@@ -1702,7 +1705,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 | Attribute | Values | Added for |
 |-----------|--------|-----------|
 | `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, exits |
-| `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused` (nine) | `economysim.entry.limited` |
+| `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`, `stranded` (ten) | `economysim.entry.limited` |
 | `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
 | `economysim.bound` | `floor`, `ceiling` | `economysim.belief.at_bound` |
@@ -1749,15 +1752,15 @@ the attribute sets, every cell that could occur:
 | goods flow (14 goods reasons x 2 kinds x 30 commodities) | 840 |
 | production (executions 45, halted 20 roles x 45 recipes, refused 45 x 5 reasons, abandoned 45 x 4 reasons, overflow 30, work declined 20 roles x 2) | 1 420 |
 | agents and households (count 20, removals 20 x 4, household count 20, unfed 20, upkeep short 30 x 20, changes 20, births 20, deaths 20, exits 20 x 3) | 860 |
-| wants (6 x 20) and entry (9) | 129 |
+| wants (6 x 20), entry (10) and entries (5) | 135 |
 | money (flow 8 reasons x 2 kinds, unapplied 4; `loss` is a goods reason, 4.4.1) and relocations (20 ordered pairs x 3 causes) | 80 |
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
-| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100, privation 100) | 1 190 |
+| snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100, privation 100, expected ratio 100, viable 100) | 1 390 |
 | estate (sold 30 commodities x 5 regions, at floor 30 x 5) | 300 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 7 300** (7 253), for the instruments of the earlier modules |
+| **Total** | **about 7 500** (7 459), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -2740,6 +2743,8 @@ requirements of `spec-world.md` that bear on observation (FR-WLD-053, 054, 063,
 | FR-OBS-099 | `economysim.work.declined` MUST add `ProductionHalted.Rested` as `rest` and `ProductionHalted.NoRecipe` as `no_recipe`, by role, once per event; the series are absent, not zero, until the first event. |
 | FR-OBS-100 | `UpkeepShortfall.Short` MUST list, in ascending `CommodityID`, one row for each upkeep commodity of the role whose total need exceeded what its agents held, `Units` the sum over the role's agents of the total less the consumed, and no row for a commodity with nothing short; it MUST be empty for a tick in which the event is not emitted, and `economysim.upkeep.short` MUST add each row by commodity and role, once per event (4.4.6b). |
 | FR-OBS-101 | `economysim.household.privation.max` MUST equal `Roles[].MaxPrivation` by role and region, and be absent, not zero, until a snapshot is passed. |
+| FR-OBS-102 | `economysim.role.expected_ratio` MUST equal `Roles[].ExpectedRatioBP` and `economysim.role.viable` MUST be 1 for `Roles[].Viable` and 0 otherwise, each by role and region and only where `HasExpected`, and both MUST be absent, not zero, until a snapshot is passed. |
+| FR-OBS-103 | `economysim.household.entries` MUST add `EntryLimited.Entered` by region, and `economysim.entry.limited` MUST add `EntryLimited.Stranded` as `stranded`. |
 
 ### Non-functional
 
