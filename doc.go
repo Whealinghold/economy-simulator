@@ -124,6 +124,25 @@
 //     and its bulk capacity times BulkFactor over 10 000, rounded down.
 //   - Estate pool: the money of a region's estates, which can fund the starting
 //     money of a new agent; WarmPool seeds it.
+//   - Estate pseudo-agent: the one agent ID of a region's estate, equal to the
+//     RegionID; it places asks only, is in no count and has no strategy,
+//     belief or outcome.
+//   - Held lot: a lot an account holds now; the estate lists exactly its held
+//     lots.
+//   - Listing: the price state of one held lot of an estate, kept sorted by the
+//     lot's key; the estate places one ask for each.
+//   - Listed price: the limit price of a listing, which only the first price and
+//     the estate markdown set.
+//   - First price: the listed price of a lot with no listing: the effective
+//     reference price, scaled by remaining over full durability for a durable,
+//     truncated and never below the resolution floor.
+//   - Estate markdown: the fall of a listed price, in basis points of the last
+//     price with the reduction truncated, for a lot that had an ask and was not
+//     wholly sold; it never goes below the resolution floor.
+//   - Intake: the move of an agent's money and lots to the estate of its region
+//     on a removal or a role change.
+//   - Pool draw: the money the estate pool gives a new agent, at most the pool;
+//     it takes no random word.
 //   - Event: a plain value that a world emits to its observers to report a
 //     transition; the closed set of event types is sealed to this package.
 //   - Event type: one of the sealed struct types of event.go that implement

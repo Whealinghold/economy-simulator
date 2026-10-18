@@ -1146,6 +1146,7 @@ outside node, in that order:
 | Field | Type | Meaning | Src | Cost |
 |-------|------|---------|-----|------|
 | `State` | `MarketState` | the market report that INT's query `Market(region, commodity)` returns (`spec-integration.md` 6.3): `Region`, `Commodity`, the published `Price`, its `Age`, the `Volume` and the `UnmatchedBid` and `UnmatchedAsk` units of the last clearing, `BestBid`, `BestAsk` with `HasBid` and `HasAsk`, and the price window's `WindowLen`, `WindowMean`, `WindowLow` and `WindowHigh`, under INT's names. One type, so the snapshot and the query cannot disagree; the event `MarketCleared` carries the same values under its owner's names (`PriceAge`, `HasBestBid`, `HasBestAsk`). It is saved state: CLR 5.4 and 5.5 and BEL 7 (the last report is a request to CHK, section 19) | CLR 5.4, 5.5; INT 6.3 | K |
+| `EstateAtFloor` | `Quantity` | the units of the estate's listings whose listed price is at the resolution floor (`spec-estates.md` 2.7.3); 0 with no estate stock; it is a count of held units, so it never exceeds `HeldByEstate` | EST 2.7.3 | K |
 | `HeldByAgents`, `HeldByEstate`, `HeldByTreasury` | `Quantity` | the stock at the boundary in the households' accounts, in the estate's and in the treasuries seated in the region: what no order of the tick sold (N-081 item 2). Goods in Transit accounts are in `Shipments` | OBS, FIS 16.3 | L |
 | `Lots` | `int64` | the number of lots of the commodity held by the accounts the three `HeldBy` fields count (`spec-ledger.md` 5.1.3: one per distinct key, so a spoiling good fragments by born tick and a durable by remaining durability). A count, a function of the saved lots (FR-OBS-043); 0 where nothing is held. Lots of Transit and Escrow accounts are not counted: their goods are in `Shipments` | LED 5.1.3, N-130 | L |
 | `Pending` | `Quantity` | the pending output of the jobs in progress in the region: in no account, so this is the only place it is measured | PRO 14.3 | S |
@@ -1457,7 +1458,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.market.volume` | Counter | `{unit}` | `economysim.commodity` | `TradeExecuted` (`Quantity`); equals the sum of `MarketCleared.Volume` (FR-OBS-045) | kept |
 | `economysim.market.clearing_price` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`Price`) | **changed**: gains `economysim.region`; a gauge of one commodity across regions has no meaningful last value |
 | `economysim.market.price_age` | Gauge | `{tick}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`PriceAge`) | **new**: `clearing_price` is a held gauge (6.3.6), so a market that stopped trading shows a flat, healthy price; the age is the direct signal, and `market.volume` has no `region` to show which market it is |
-| `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed**: was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
+| `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed** (the ask side includes the estate's unsold lots, asked again every tick): was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
 | `economysim.market.orders` | Counter | `{order}` | `economysim.commodity`, `economysim.region`, `economysim.side` | `OrderPlaced` | **new**; `economysim.region` added so that the orders of one market (its book size) can be read, which is what the admission scan of `spec-clearing.md` 3.2 grows with (N-241) |
 | `economysim.market.orders.rejected` | Counter | `{order}` | `economysim.commodity`, `economysim.reason` | `OrderRejected` | **new**: the hard budget's refusals, counted (FR-STB-013) |
 | `economysim.belief.centre` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `BeliefsUpdated` (`MeanCentre`) | **new** (answers `spec-beliefs.md` 12.4, N-088 3): event-fed, so it needs no snapshot |
@@ -1571,6 +1572,8 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
 | `economysim.recipe.in_progress` | Gauge | `{execution}` | `economysim.recipe`, `economysim.region` | `Jobs[].Executions` (5.3.5): the executions of the jobs in progress, 0 where a pair has none; with `recipe.refused` it tells a producer that is working from one that is idle, and it needs no new field |
 | `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
+| `economysim.estate.sold` | Counter | `{unit}` | `economysim.commodity`, `economysim.region` | `TradeExecuted` (`Quantity`, where `Seller` is below the region count) | **new**: the estate is a forced seller, so its sales are kept apart from producers' supply, and they are the pool's inflow from trade |
+| `economysim.estate.at_floor` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].EstateAtFloor` | **new**: separates a slow markdown from a good nobody wants at the lowest price; the listed price is saved state that no other row shows |
 | `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
 | `economysim.welfare.ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].MeanRatioBP` where `HasMeanRatio` (N-081 1) |
@@ -1751,9 +1754,10 @@ the attribute sets, every cell that could occur:
 | transport (3 + 30 + 30), contracts (30 + 30 + 1) and merchants (11) | 135 |
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
 | snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, observed wage 100, privation 100) | 1 190 |
+| estate (sold 30 commodities x 5 regions, at floor 30 x 5) | 300 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 7 000** (6 953), for the instruments of the earlier modules |
+| **Total** | **about 7 300** (7 253), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so

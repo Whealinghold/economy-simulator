@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 8: the estate, its listings and the pool that funds an entrant
 
-**Status: plan written (2026-10-17, written in parallel with rows 7, 9, 10, 11 and 12; audited, not started).** Sequences the eighth row of Stage 1 of
+**Status: built and audited (2026-10-18; plan written 2026-10-17 in parallel with rows 7, 9, 10, 11 and 12; all five phases done, uncommitted on `stage-1-8`).** Sequences the eighth row of Stage 1 of
 [roadmap-v1.md](../roadmap-v1.md), "`estates.go`: the estate pseudo-agent and
 account, the listings, and the pool with its use to fund an entrant", into five
 phases. It implements [spec-estates.md](../specs/spec-estates.md) (EST) for the
@@ -718,6 +718,12 @@ because there is no world; the world and agent rows add them.
 | 3 | FR-EST-022 | FR-EST-004 (accounts open in region order with only boundary accounts before them, by the D108 guard; "before any household" is the world's order, row 11), FR-EST-014 (the cap `min(want, pool)` and no transfer below 1 here; `w * Role.StartMoney` and "no goods" are the executor's, rows 9 and 11), FR-EST-001 (the estate's part: money and goods in; the waterfall is CRD's), FR-EST-002 (`receive` takes the region from its caller; that it is the region of the agent's account is the fan-in's, row 11), FR-EST-013 (the pool read equals the account here; `MoneyPool` in the snapshot is row 11's), FR-EST-015 (the pool's `initial` seed here; initial agents' `initial` money is the world's), 016 (the reasons here; the sum over all flows is the world's), 021 (the counts here; the event is the world row's) |
 | 4 | FR-EST-006, 007, 009 (at P5.3 with an admitted ask), NFR-EST-001 (the walk and the markdown) | FR-EST-011 (only the `regionOf` ID test here; the real check, that no strategy path or agent event subject is an estate, is plan 1-11's), FR-EST-010 (the estate has no agent row: the snapshot is the world row's), FR-EST-012 (the order carries the estate's ID; the placement and the tie-break are the world's and the clearing's), FR-EST-024 (the read and rebuild here; the checkpoint section in Stage 2) |
 
+Owed to row 11 (the world), because the row has no `World` to drive: the
+public-API integration tests (testing.md 2.3) of FR-EST-006, 007, 009 and 013
+(an estate's asks, markdown and trade proceeds through `NewWorld` and `Step`),
+and the restored-equals-uninterrupted test of FR-EST-024 (with the checkpoint
+section in Stage 2).
+
 Deferred with their module or row: FR-EST-003 (a traveller or a diverted cargo:
 transport, Stage 2), FR-EST-017 to 020 (relief and `ReliefPaid`: the Stage 2
 estates module), FR-EST-023 (`EstateMarkdown` built and bounded in Stage 0; the
@@ -731,7 +737,7 @@ coverage and that its tests were run against a broken version (testing.md 9.3).
 
 ## Observability (summary, observability-and-logging.md section 9)
 
-No event, no metric, no log line is added by this row; "None, because" each:
+No event and no log line is added by this row. Two metrics are catalogued for the world row to feed (`economysim.estate.sold`, from `TradeExecuted`, and the snapshot gauge `economysim.estate.at_floor`, from `Markets[].EstateAtFloor`; N-309 item 6), and the errors of the intake name the region and the account. "None, because" each of the rest:
 (1) no failure path is survived rather than returned: a refusal is returned or an
 invariant (D106), and a rejected ask is the clearing's `OrderRejected`; (2) the
 state transitions it makes are covered by events that exist since Stage 0 and
