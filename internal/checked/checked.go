@@ -65,6 +65,27 @@ func MulDiv(a, b, c int64) (q int64, ok bool) {
 	return q, ok
 }
 
+// MulDivDiv returns a * b / (c * d), truncated toward zero, with the product held
+// in 128 bits and the divisor c * d never formed, so it is exact where c * d
+// leaves int64. ok is false when c or d is 0 or the quotient does not fit in
+// int64. Two truncated divisions of a magnitude equal one by the product.
+func MulDivDiv(a, b, c, d int64) (q int64, ok bool) {
+	if c == 0 || d == 0 {
+		return 0, false
+	}
+	uc, ud := abs(c), abs(d)
+	hi, lo := bits.Mul64(abs(a), abs(b))
+	// 128-bit / 64-bit, twice: the first quotient is up to 128 bits wide.
+	h1, r1 := hi/uc, hi%uc
+	l1, _ := bits.Div64(r1, lo, uc)
+	h2, r2 := h1/ud, h1%ud
+	l2, _ := bits.Div64(r2, l1, ud)
+	if h2 != 0 {
+		return 0, false
+	}
+	return signed(l2, (a < 0) != (b < 0) != ((c < 0) != (d < 0)))
+}
+
 // MulDivRem returns the quotient of a * b / c truncated toward zero and the
 // remainder r with a * b = q * c + r, which has the sign of a * b and magnitude
 // below |c|. ok is false when c is 0 or the quotient does not fit in int64.

@@ -78,7 +78,7 @@ func TestGlossary_Vocabulary(t *testing.T) {
 	// they arrive with the world, the market and the module that owns them
 	// (roadmap-v1.md, Stage 1 and later). Delete an entry when its type does.
 	notYetTerms := []string{
-		"Run", "Spawner", "Snapshot", "Policy",
+		"Run", "Snapshot", "Policy",
 	}
 
 	terms := glossaryTerms(t)

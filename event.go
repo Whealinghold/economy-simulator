@@ -59,7 +59,8 @@ type Reason string
 // (spec-clearing.md 3.2).
 const (
 	// ReasonUnknownAgent is an order of an agent that does not exist or is not
-	// in the market's region.
+	// in the market's region, or a decision of a spawner that names such an
+	// agent (spec-spawner.md 4).
 	ReasonUnknownAgent Reason = "unknown_agent"
 	// ReasonSideNotAllowed is an order of a pseudo-agent on a side it may not
 	// place.
@@ -195,6 +196,34 @@ const (
 	ReasonHalted Reason = "halted"
 	// ReasonNoRecipe is no job because no recipe is eligible.
 	ReasonNoRecipe Reason = "no_recipe"
+)
+
+// The reasons of a spawner decision the world refuses, in the order it checks
+// them, then the two "entry dropped" Debug reasons (spec-spawner.md 4, 13.3).
+// ReasonUnknownAgent, above, is the first check. in_traineeship,
+// needs_weight_one and on_journey are appended with the skills and migration
+// modules.
+const (
+	// ReasonUnknownRole is a decision that names a role that does not exist.
+	ReasonUnknownRole Reason = "unknown_role"
+	// ReasonExternalAgent is a decision on an agent that is external and not
+	// mortal.
+	ReasonExternalAgent Reason = "external_agent"
+	// ReasonSameRole is a switch to the agent's own role.
+	ReasonSameRole Reason = "same_role"
+	// ReasonBadHouseholds is a reduction by 0 or by more than the weight, or an
+	// entry of fewer than 1 household.
+	ReasonBadHouseholds Reason = "bad_households"
+	// ReasonUnsupportedCause is a reduction whose cause is neither starved nor
+	// insolvent. It is the last check.
+	ReasonUnsupportedCause Reason = "unsupported_cause"
+	// ReasonUnfunded is an "entry dropped" Debug reason, not a refusal: the
+	// households of an entry the pool could not fund. Refused does not count it.
+	ReasonUnfunded Reason = "unfunded"
+	// ReasonNoViableRole is an "entry dropped" Debug reason, not a refusal:
+	// households that replace households lost and have no viable role to enter.
+	// Refused does not count it.
+	ReasonNoViableRole Reason = "no_viable_role"
 )
 
 // Cause is the machine-readable cause of a removal, a weight change or a role
@@ -679,14 +708,19 @@ type EntryLimited struct {
 	RegionCap int64
 	// RoleCap is the entries cut by a role's cap.
 	RoleCap int64
-	// Cooldown is the changes held by a cooldown.
+	// Cooldown is the households of agents due for a change that a cooldown
+	// held.
 	Cooldown int64
-	// Hysteresis is the changes held by the hysteresis band.
+	// Hysteresis is the households of reviewers held by the hysteresis band.
 	Hysteresis int64
-	// ExitCap is the removals cut by the exit cap.
+	// ExitCap is the households the exit allowance kept from leaving.
 	ExitCap int64
 	// Refused is the decisions the world refused.
 	Refused int64
+	// Stranded is the households at rung 1 of the failure ladder that had no
+	// role to move to: none open, viable and better than their own, or none they
+	// can afford. They stay and go on to rung 3.
+	Stranded int64
 }
 
 // BoundaryFlow is emitted once per tick for each (region, reason, money or

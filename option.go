@@ -23,6 +23,7 @@ type options struct {
 	seed              uint64
 	clearings         registry[Clearing]
 	strategies        registry[Strategy]
+	spawners          registry[Spawner]
 }
 
 // defaultOptions returns the options of a world built with no option: the
@@ -226,4 +227,35 @@ func resolveStrategy(o *options, name string, path []string) (Strategy, error) {
 func isDirected(s Strategy) bool {
 	_, ok := s.(Directed)
 	return ok
+}
+
+// defaultSpawnerName is the name of the built-in spawner, DefaultSpawner.
+const defaultSpawnerName = "default"
+
+// WithSpawner registers s under name, so that World.Spawner may name it. It is
+// additive. A name that is not an ID is ErrInvalidID, a name given twice or
+// "default" (the built-in DefaultSpawner) is ErrDuplicateID and a nil s is
+// ErrNilExtension, checked in that order. The name is part of the configuration
+// hash and the code behind it is not.
+func WithSpawner(name string, s Spawner) Option {
+	return func(o *options) error {
+		return o.spawners.add(name, s, s == nil, defaultSpawnerName)
+	}
+}
+
+// resolveSpawner returns the spawner a configured name selects: the built-in for
+// "default", else the registered one. An empty or unknown name is a
+// *ValidationError at path with rule ErrUnknownSpawner and the name as value
+// (spec-config.md 7.1.4). NewWorld calls it once, after Validate succeeds.
+//
+// It returns the Spawner interface (architecture.md 4.4) because the result is
+// a consumer-registered extension: the concrete type is unknowable here.
+func resolveSpawner(o *options, name string, path []string) (Spawner, error) {
+	if name == defaultSpawnerName {
+		return DefaultSpawner{}, nil
+	}
+	if s, ok := o.spawners.find(name); ok {
+		return s, nil
+	}
+	return nil, &ValidationError{Path: path, Rule: ErrUnknownSpawner, Value: name}
 }

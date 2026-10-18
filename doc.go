@@ -486,4 +486,49 @@
 //     steps (Directive).
 //   - Directed strategy: the Strategy (Directed) that does what the agent's
 //     Directive says and leaves the rest to its Fallback (spec-agents.md 10).
+//   - Spawner: the extension interface (Spawner) that decides which agents leave,
+//     lose households or change role and how many households enter a region in
+//     a tick, as a plan of decisions the world checks and executes
+//     (spec-spawner.md 3). The default is DefaultSpawner.
+//   - Failure ladder: the rungs a household that cannot feed itself climbs:
+//     work full time, change role, relief, then reduction and removal
+//     (spec-spawner.md 5.2). It reads Privation.
+//   - Rung: one step of the failure ladder; rung 1 is the change of role at
+//     ChangePrivation, rung 3 the reduction and removal at RemovePrivation.
+//   - Bankruptcy: the rung-3 removal of an agent, reported by AgentBankrupted
+//     with the cause insolvent or starved; it is not a financial proceeding.
+//   - Reduction: the fall of an agent's weight by the unfed households of rung 3,
+//     which leave with their share of money and goods going to the estate; a
+//     reduction to 0 is a removal.
+//   - Role change: an agent taking up another role in its region, keeping its
+//     account and money; RoleSince is set to the tick.
+//   - Entry rule: the rule by which the default spawner chooses a role for a
+//     switcher or an entrant: open, with a signal and, for an entrant or a
+//     distressed agent, viable (spec-spawner.md 6, 7.2).
+//   - Entry limit: the cap on role changes per tick, a share (EntryShare) of the
+//     region's households and of each destination role's.
+//   - Entry share: EntryShare, the share of households, in basis points, that
+//     may change role or enter a role in a tick.
+//   - Entrant: a household that enters a region as a replacement, funded from the
+//     estate pool.
+//   - Replacement: the entry of households that replace those the ladder removed,
+//     at the rate Renewal, into the same role or another viable one.
+//   - Renewal: the rate, in basis points, at which removed households are
+//     replaced, with a carry per role so that no fraction is lost.
+//   - Like-for-like: a replacement into the role the leaver had; it is not
+//     capped by the entry limit.
+//   - Expected ratio: E, a role's observed wage over its upkeep, in basis points,
+//     for the ticks a household expects to work in a year; it ranks roles.
+//   - Viability: V, a role's observed wage over its upkeep, in basis points, for
+//     a household working every tick; a role is viable at EntryRatio or above.
+//   - Signal: the E and V of a role; a role with no observed wage or no upkeep
+//     has none and is not entered by the default spawner.
+//   - Review: the periodic look of an agent at the other roles, on the ticks of
+//     its rotation (ReviewTicks), after which it may change role.
+//   - Hysteresis: the margin, in basis points (RoleHysteresis), by which another
+//     role's expected ratio must beat the agent's own before it changes role.
+//   - Cooldown: the ticks (RoleCooldown) after a role change before an agent
+//     reviews again.
+//   - Exit allowance: the households that may leave a region by rung 3 in a tick,
+//     a share (ExitShare) of its households, rounded up.
 package economysim

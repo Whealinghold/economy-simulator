@@ -487,7 +487,7 @@ func TestValidate_WindowProductNotCheckedWithAnInvalidWindowField(t *testing.T) 
 // where the order is non-strict, and a pair that is the wrong way round is
 // refused with the value and the bound of the rule.
 //
-// Requirement: FR-CFG-007
+// Requirement: FR-CFG-007, FR-SPN-038
 func TestValidate_WorldOrderEdges(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1626,7 +1626,7 @@ func TestValidate_WarmProductsSelectionEdges(t *testing.T) {
 // which recipes count as a source of a raw good. The configurations are read
 // by Warnings only, which never fails on one that does not validate.
 //
-// Requirement: FR-CFG-018, FR-BEL-038, FR-AGT-060, FR-PRO-020, FR-PRO-040, FR-CAL-021
+// Requirement: FR-CFG-018, FR-BEL-038, FR-AGT-060, FR-PRO-020, FR-PRO-040, FR-CAL-021, FR-SPN-039
 func TestWarnings_BoundaryAndSourceEdges(t *testing.T) {
 	t.Parallel()
 	// The reference calendar has 365 days; a tick of 5 days over seasons that

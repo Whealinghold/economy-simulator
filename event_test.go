@@ -636,6 +636,21 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonHalted, "halted"},
 		{economysim.ReasonNoRecipe, "no_recipe"},
 	}
+	// The reasons of a spawner decision the world refuses (spec-spawner.md 4)
+	// and the two "entry dropped" Debug reasons (13.3), in the order the
+	// constants are declared. unknown_agent is in the first slice.
+	spawnerReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonUnknownRole, "unknown_role"},
+		{economysim.ReasonExternalAgent, "external_agent"},
+		{economysim.ReasonSameRole, "same_role"},
+		{economysim.ReasonBadHouseholds, "bad_households"},
+		{economysim.ReasonUnsupportedCause, "unsupported_cause"},
+		{economysim.ReasonUnfunded, "unfunded"},
+		{economysim.ReasonNoViableRole, "no_viable_role"},
+	}
 	causes := []struct {
 		got  economysim.Cause
 		want string
@@ -677,6 +692,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
+	}
+	for _, r := range spawnerReasons {
+		owner[string(r.got)] = "doc/specs/spec-spawner.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -784,6 +802,9 @@ func TestConstants_Values(t *testing.T) {
 	for _, r := range agentReasons {
 		check("Reason", string(r.got), r.want)
 	}
+	for _, r := range spawnerReasons {
+		check("Reason", string(r.got), r.want)
+	}
 	for _, c := range causes {
 		check("Cause", string(c.got), c.want)
 	}
@@ -873,6 +894,32 @@ func TestMetricCatalogue_FeedTablesAgree(t *testing.T) {
 	for _, n := range []string{"economysim.commodity.wear", "economysim.ledger.lots"} {
 		if !catalogue[n] {
 			t.Errorf("instrument %s is missing from 5.3", n)
+		}
+	}
+}
+
+// TestEntryLimited_AppendedFieldsAreCounts verifies that the fields the spawner
+// appended to EntryLimited (Stranded, and the counts it redefined) are
+// int64 counts, not typed IDs.
+//
+// Requirement: FR-SPN-061
+//
+// Guard: architecture.md 2.10.5 lets a field be appended to an existing event
+// only as a count, an amount, a bool, a closed-set constant or a slice, because
+// the golden rendering omits a field at zero and zero is a valid ID. A typed ID
+// here would make a world with the module off render differently and move
+// testdata/golden/off/.
+func TestEntryLimited_AppendedFieldsAreCounts(t *testing.T) {
+	t.Parallel()
+	typ := reflect.TypeOf(economysim.EntryLimited{})
+	for _, name := range []string{"Stranded", "Cooldown", "Hysteresis", "ExitCap"} {
+		f, ok := typ.FieldByName(name)
+		if !ok {
+			t.Errorf("EntryLimited has no field %s", name)
+			continue
+		}
+		if f.Type.Kind() != reflect.Int64 || f.Type.Name() != "int64" {
+			t.Errorf("EntryLimited.%s has type %v, want int64", name, f.Type)
 		}
 	}
 }
