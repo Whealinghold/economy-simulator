@@ -204,6 +204,15 @@ func TestFoodCap_Edges(t *testing.T) {
 			t.Errorf("foodCap() = %d, want 4", got)
 		}
 	})
+	t.Run("an upkeep row of a higher ID than the input is not the input", func(t *testing.T) {
+		t.Parallel()
+		v := workView()
+		v.Upkeep = []UpkeepRow{{Commodity: cStaple + 100, Quantity: 1000}} // a wrong match would cut by this total and cap at 0
+		r := RecipeView{MaxExecutions: 4, Inputs: []RecipeLine{{Commodity: cStaple, Quantity: 1}}}
+		if got := v.foodCap(&r); got != 4 {
+			t.Errorf("foodCap() = %d, want 4", got)
+		}
+	})
 	t.Run("an upkeep input is cut to what it leaves", func(t *testing.T) {
 		t.Parallel()
 		v := workView() // stock 10 staple, upkeep 3

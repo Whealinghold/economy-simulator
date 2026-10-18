@@ -50,14 +50,14 @@ PR description.
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-284, N-299 |
-| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247 |
+| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-137, N-238, N-239, N-240, N-241, N-242 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-258, N-274, N-276, N-277, N-284, N-285, N-286, N-294, N-295, N-297, N-300, N-244, N-245, N-247, N-254, N-290, N-304 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-258, N-274, N-276, N-277, N-284, N-285, N-286, N-294, N-295, N-297, N-300, N-244, N-245, N-247, N-254, N-290, N-304, N-309, N-310 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
-| EST | N-082, N-096, N-119, N-167, N-254, N-256, N-258, N-266 |
+| EST | N-082, N-096, N-119, N-167, N-254, N-256, N-258, N-266, N-309, N-310 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-214, N-220 |
 | EXT | N-108, N-112, N-113, N-214 |
@@ -72,7 +72,7 @@ PR description.
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204 |
-| OBS | N-125, N-127, N-130, N-159, N-242, N-288, N-289, N-294, N-300, N-308 |
+| OBS | N-125, N-127, N-130, N-159, N-242, N-288, N-289, N-294, N-300, N-308, N-309, N-310 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
@@ -93,7 +93,7 @@ PR description.
 | TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-274, N-276, N-277, N-279, N-280, N-281, N-306, N-307 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-234 |
-| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226, N-230, N-239, N-240, N-242, N-258, N-276, N-280, N-284, N-285, N-286, N-288, N-297, N-265, N-266, N-246, N-308 |
+| WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226, N-230, N-239, N-240, N-242, N-258, N-276, N-280, N-284, N-285, N-286, N-288, N-297, N-265, N-266, N-246, N-308, N-309, N-310 |
 
 ## Open notes
 
@@ -162,6 +162,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row adds no configuration field, default, bound or validation rule (Stage 0 built them all), so the registry test and its `notBuilt` list do not change. Applied for this row; left open for the other owners.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read for the welfare row: it adds no field and no default (every welfare field has its owner row from Stage 0) and deletes no `notBuilt` entry; `WelfareWindow` has its row since 2026-10-10. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: it adds no configuration field, default or bound (every AGT field has its owner row since Stage 0 and no `notBuilt` entry is left for it); the belief-parameter group of the views (D82) is a view and not a `Config` field, so it adds no row. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read for the estate row: it adds no configuration field and no default (`EstateMarkdown` is a Stage 0 row with hash field 5; `PoolRelease` and `ReliefBelow` arrive with the module, `spec-estates.md` 3) and deletes no `notBuilt` entry. Left open.
 
 
 ### N-017 Words and names
@@ -198,6 +199,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied: the terms the welfare code uses go to the `doc.go` glossary before use (welfare ratio, window (qualified: the welfare window), working tick, working household-tick, own-use household-tick, observed wage, pooled regional wage, observed premium, earned ratio, work share, work floor, target ratio, record (of a tick; qualified from CLB's record), ring). A standing note; left open.
 - **Update (2026-10-17, owed-edits job):** read; terms of the new edits (lots, `RegionAgent`, `unsupported_cause`) follow the rule above. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for the agent row: the terms its code uses go to the `doc.go` glossary before use (Phase 2 of the plan): strategy, agent view, outcome view, trade plan, intent, purpose, job request, directive (the mailbox; not PLC's), directed strategy, fed, unfed, hunger, privation, target (the inventory target; not the welfare target ratio), keep, reserve (the units for this tick's upkeep, and the reserve money), cover (ticks of use held; not INS's), tier, budget stack, spend cap, favourability, planned recipe, production halt, work share (exists), work report. `Strategy` leaves `notYetTerms` of `glossary_test.go` in Phase 5; each term is checked against `doc.go` first (a second entry fails `TestGlossary_Vocabulary`). A standing note; left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: the terms its code uses are in the `doc.go` glossary before use (estate pseudo-agent, listing, listed price, first price, estate markdown, estate pool, intake, pool draw, held lot); "draw" is qualified because it has the random sense, and "treasury" is not used for the estate. A standing note; left open.
 
 ### N-018 Unverified evidence
 
@@ -292,6 +294,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row sets no default and claims no stability. A standing note; left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: every WEL default stays a labelled placeholder; the clamp bound `MaxInt64 / MaxWelfareWindow` is a derived proof bound and not a default. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: every default of AGT stays a labelled placeholder; no test of the agent row asserts a default as stable, and the worked examples of `spec-agents.md` 16 are hand-computed tests, not results. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: `EstateMarkdown` 500 stays a labelled placeholder (N-015); no test of the estate row asserts a default as stable. Left open.
 
 
 ### N-028 Can the target-income rule make a shortage worse?
@@ -545,6 +548,7 @@ PR description.
 - **Update (2026-10-10, SUB):** the subsistence floor draws nothing from the pool and lowers the draw on it (`spec-subsistence.md` 8.4); a floor-fed household still draws relief on a ratio that includes its receipts. Whether relief should pay a household that feeds itself is `spec-subsistence.md` open question 8 (N-119).
 - **Update (2026-10-10, MIG):** the migration module draws nothing from any pool; its indirect effects are the relief a poor arrival draws from the destination's pool (L63, MIG-A4) and the money a migrant leaves to the origin's pool if it dies on the journey (`spec-migration.md` 9.2).
 - **Update (2026-10-11, WLD):** applied for WLD in `spec-world.md` 6.3 and 6.9: relief is paid at P1.6 and entry at P7.1, so the order holds; money flows with a pool target run at P1.7 after relief. WLD removed from the areas.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read for the estate row: relief is the Stage 2 module's; the entry draw of this row (`grant`) is the only P7.1 draw on the pool, and P1.6 relief then P7.1 entry stay in the world row's order. Left open.
 
 ### N-084 Scenarios that wait for trade, money and the coarse tick
 
@@ -639,6 +643,7 @@ PR description.
 - **Update (2026-10-13, CRD):** debt service to an estate that inherited a claim pays into the pool (`M_p`), and a removed debtor's money pays its creditors before it reaches the pool (`spec-credit.md` 9.1, 9.2).
 - **Update (2026-10-13, LND):** rent paid to the pool is a fifth thing that pays into a region's pool (`spec-land.md` 7.6); it leaves households (`M_h`) and returns only by relief and entry.
 - **Update (2026-10-17, spawner edits):** read; not settled by them. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: `grant` and `acceptMoney` are the one place the pool is drawn or paid by an entry, a birth or a weight reduction (`spec-estates.md` 2.3, 2.8.1); relief and a pool-targeted flow append to the same file in Stage 2. Left open for MON, POP and SPN.
 
 ### N-097 Migration and the population loop
 
@@ -697,6 +702,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** applied in its lesson: the shared files (`doc.go`, `event.go`, this file, the specs, the roadmap, the index) are edited by targeted edits after a re-read, and this file was read in chunks. Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: a process note; the literal `'"'"'` search of `doc/` was run after this change and finds only the two passages that describe it. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: a process note. Applied in its lesson: the shared files (`doc.go`, `event.go`, `errors.go`, `option.go`, this file, the roadmap, `architecture.md`, `AGENTS.md`) are edited by small edits after a re-read, and this file was read in chunks. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: a process note. Applied in its lesson: the shared files (this file, the specs, the roadmap, the index) are edited by small edits after a re-read, this file was read in chunks, and the shell-quoting search of `doc/` named under Traps was run after the change. Left open.
 
 
 ### N-107 New money faucets and sinks start from MON
@@ -788,6 +794,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-subsistence.md` 7.5, 8.4 and 21 (items 2, 8).
 - **Note:** The units of an own-use job are counted in the welfare ratio at creation, and a sale of the surplus is counted again as cash; relief may pay a household whose ratio is below the line only because its floor covers less than its upkeep. Decide a provenance, a consumption-side count, or accept the bound.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: `K^own_t` is a field of the record and stays 0 in the slice; the provenance question is SUB's and EST's. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: relief is not built in the slice; the provenance question is SUB's and EST's, for the module. Left open.
 
 ### N-120 A migrant carries its whole account for free
 
@@ -840,6 +847,7 @@ PR description.
 - **Update (2026-10-16, observability review of plan 1-5):** applied in a decision: the cost anchor is reported by an event field (`MarketCleared.CostAnchor`), not a snapshot field, because the anchor table is recomputed each tick from the previous tick's prices and is not saved (`spec-production.md` 15), so a snapshot of a restored world could not equal the original's, and "a count of the last tick is an event, not a snapshot field" (above). The jobs gauge uses the existing `Jobs[]` rows. Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied to the new field: `RoleRow.ClampedHouseholds` is derived from the saved records (the count of rings holding a field at the bound is rebuilt on restore and never saved) and the clamp run joins the diagnostic runs of `spec-checkpoint.md` 4.2 tag 7, so a restored world's snapshot and logs equal the original's (FR-OBS-043). Left open for the other modules.
 
+- **Update (2026-10-18, observability review of plan 1-8):** applied to the new field: `Markets[].EstateAtFloor` is the units of the estate's listings priced at the resolution floor, derived from the saved listing rows (`estates.rows`, checkpoint tag 8) and the lots the estate holds, so a restored world's snapshot equals the original's. Left open for the other modules.
 
 ### N-126 A new event or `Warn` adds a row
 
@@ -857,7 +865,9 @@ PR description.
 - **Update (2026-10-17, observability review of plan 1-6):** applied: the welfare row adds three snapshot-fed gauges and no event and no `Warn` (`economysim.welfare.ratio.households`, `economysim.welfare.floor_held`, `economysim.wage.observed`; `rules/observability-and-logging.md` 5.3 and 5.3.1, `spec-observability.md` 6.2.2, FR-OBS-098). Each reads a snapshot field that is saved state (N-125), so none adds state; the series bound of 6.5.2 gains 300 (100 each). The `Warn` "work floor binding" fires only above half for ten ticks, so the gauge `floor_held` is the view of a role approaching or leaving it. Left open for later rows.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: it declares no event and no `Warn` (`AgentSpawned`, `UpkeepShortfall` and `ProductionHalted` exist since Stage 0 and the world row emits them; the "households unfed" `Warn` is the world's). The three reasons it adds (`rest`, `halted`, `no_recipe`) are log-only constants and not events. Left open.
 - **Update (2026-10-17, observability review of plan 1-7):** applied: the agent row's data gets three appended fields of existing events and no new event. `ProductionHalted` gains `Rested` and `NoRecipe` (counts of households, so the rest and the no-recipe decline are no longer log-only: the reasons stay log-only values and the metric `economysim.work.declined` has its own attribute `economysim.work_decline`), `UpkeepShortfall` gains `Short []ShortRow` (the upkeep units needed and not held, by commodity; `economysim.upkeep.short`), and the gauge `economysim.household.privation.max` reads the existing `RoleRow.MaxPrivation`. Rows changed in `spec-observability.md` 4.1, 4.4.6, 4.4.6a, 4.4.6b, 6.2, 6.5 and FR-OBS-016, 095, 099 to 101; the rules' 4.3, 5.3, 5.3.1 and 5.4.1 changed with a fresh tag. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row declares no event and no `Warn`: `EstateOpened` is a Stage 0 core row that the world row emits, and what `GoodsListed` counts (lots) is stated once in `spec-observability.md` 4.1.4 and the rules' catalogue 4.3 with no new row. Left open for later rows.
 
+- **Update (2026-10-18, observability review of plan 1-8):** applied: the estate row adds no event and no `Warn` and two metrics, `economysim.estate.sold` (from `TradeExecuted` with an estate as `Seller`) and the snapshot gauge `economysim.estate.at_floor` (`rules/observability-and-logging.md` 5.3, 5.3.1; `spec-observability.md` 5.3 `EstateAtFloor` and 6.2). The ask side of `economysim.market.unmatched` includes the estate's unsold lots; both catalogues now say so. Left open for later rows.
 
 ### N-127 Event classes at the observer
 
@@ -877,6 +887,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** applied for the production row: the job and the residues are saved once, in section 6 in agent order (`spec-checkpoint.md` 4.2 tag 6), not in the agent record; N-232 says what the agent row must do.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the ring is the agent's hosted field (WEL 13) and not a field of the agent record, and the clamp run is a diagnostic run per (region, role): the rule of the note does not apply to either; `spec-checkpoint.md` 4.2 tag 7 now lists the two runs. The welfare row's `Records` read and `FromRecords` rebuild give CHK one place to write the ring. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in its lesson: `spec-agents.md` 3.1/3.2 now say a module's per-agent state lives in the module's slices (N-244) and is still saved once, in the agent record (tag 3). Left open as a standing rule.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: not applicable to the estate row: the listing prices are per region in CHK section 8 (tag 8), not an agent field, and the estate has no agent record (FR-CHK-048). Left open as a standing rule.
 
 ### N-129 A stateful extension is one instance per world
 
@@ -1121,6 +1132,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the production row does not use the word "treasury". Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the word "treasury" is not used by the welfare row; left open for its owners.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row does not use the word "treasury". Left open for its owners.
+- **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: code and comments say "pool" for the estate account and never "treasury" for it. Left open for its owners.
 
 
 ### N-164 Credit requests and offers are plan fields
@@ -1147,6 +1159,7 @@ PR description.
 - **Areas:** EST, CRD
 - **Raised:** 2026-10-13, `spec-credit.md` 9.1.2 and open question 8.
 - **Note:** The estate lists them at the reference price and the proceeds are the pool's; only the money of the debtor goes through the waterfall.
+- **Update (2026-10-18, plan 1-8 Phase 1):** applied for the slice: the intake lists every lot at the first price and the proceeds are the pool's (`spec-estates.md` 2.1, 2.7.3); a Phase 3 test shows a removal moves the goods to the estate with no payment to any claim. Left open for CRD's waterfall, which is money only.
 
 ### N-168 A lender with no other income eats its principal while it is out
 
@@ -1462,6 +1475,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied for WEL and checked for WLD: WEL 5.1 and FR-WEL-024 now say the target is the first of the agent's two creation words (`spec-world.md` 5.7.1, FR-WLD-066) from its own creation stream (D1 at construction, D10 at P7.1(d), the call's stream for an external agent, WLD 7.3), and the range stays in WLD 5.7.1, which already said so and needed no edit. The other owners' edits stay open.
 - **Update (2026-10-17, plan 1-11 Phase 1):** the seed text is applied in `spec-world.md` 16.5. The other edits owed by this note are not all made; left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for AGT, left open for the rest: the keys are built (`siteWork`, `siteTrade`, `siteCreation`) and the agent row names its draws: `Work` takes none, `Trade` one per intent considered (candidates decided by the view alone, D93, N-246), the two creation draws in the order target then residue (`drawCreation`, D95). D12's site (the external agent's call) is INT's.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate draws no random word (`spec-estates.md` 2.7.4: its orders take a tie-break key in the clearing like any order), so it adds no site. Left open.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1475,6 +1489,7 @@ PR description.
 - **Raised:** 2026-10-12, `spec-world.md` 7.1.4 (Phase 1 of the Stage 0 plan).
 - **Note:** The first step of the key fold adds the site constant to the seed, so (seed a, site X) and (seed b, site Y) are one stream when `a - b = Y - X`. The constants are far apart for that reason (FR-WLD-067: pairwise at least 2^32) and a module that appends a site takes the first 8 bytes of SHA-256 of `economy-sim/site/<name>`, never a small number. A `Guard:` test in `random.go`'s tests enforces the distance. D2, D4, D6, D11, D12, D13, D14, D15 and D17 have no constant yet (N-214).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no site; D1 is `siteConstruction`, D10 and D12 are the callers', and `internal/welfare` takes the creation word and names no site. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no site and no constant. Left open.
 
 ### N-217 D5 binds every module's change
 
@@ -1490,6 +1505,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 exit gate):** checked: `TestHashConfig_ReferencePinned` passes after the welfare row (nothing in it touches the configuration); `testdata/golden/off/` still does not exist, so that test alone is the gate until the world row records the first golden file. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied: nothing in the agent row appends to the configuration, an event or a snapshot field, so the pinned hash and `testdata/golden/off/` cannot move; the exit gate checks `TestHashConfig_ReferencePinned`. `Strategy` is already a hashed name through `Role.Strategy`. A standing rule; left open.
 - **Update (2026-10-17, observability review of plan 1-7):** three fields are appended to core events (`ProductionHalted.Rested`, `ProductionHalted.NoRecipe`, `UpkeepShortfall.Short`): counts and a slice, never a typed ID, omitted from the golden rendering at 0 and empty, so a world with nothing to report renders as before; they are not a module's, so the rule binds them as it bound `RecipeExecuted.Overflow`. The pinned hash does not move (no configuration field). Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** applied: the estate row appends nothing to the configuration, an event or a snapshot row, so the pinned hash cannot move; the exit gate checks `TestHashConfig_ReferencePinned`. `testdata/golden/off/` does not exist yet. A standing rule; left open.
 
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
@@ -1516,6 +1532,7 @@ PR description.
 - **Areas:** SCL, CODE
 - **Raised:** 2026-10-12, `spec-world.md` 7.1.3 and ADR 0008 (Consequences).
 - **Note:** A site call costs five finaliser evaluations (six with a fourth word) and one `PCG.Seed`, and is allocation-free (checked with `testing.AllocsPerRun`). The first slice should measure it against the cost model of `spec-scale.md` 6 and say whether the per-agent sites (D1, D3, D5, D8, D10) need a cheaper key.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no draw site. Left open.
 
 ### N-224 Stage 0 guards and what they pin
 
@@ -1565,6 +1582,7 @@ PR description.
 - **Update (2026-10-14, Phase 1 of plan 1-2):** applied in the specs: `spec-agents.md` 3.4, 5.2 and 22, and `spec-production.md` 3.3, say that the tradable set and the effective upkeep are derived once at construction into the role table (`role.go`), in canonical commodity order, that a module adds its items inside that constructor before it returns, and that nothing mutates the table afterwards (that is all "frozen" means); AGT 22 now homes `Role` in `config.go` and the tradable set in `role.go`. **Still open:** the fifth fan-in in `architecture.md` 2.10.1 and 2.10.4 (held in N-235 for the first Stage 2 module PR, `demand.go`) and whether the agent row needs `internal/household` (it then adds the package to 2.6 and `AGENTS.md`).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: AGT 3.8 is the only AGT clause the welfare row edits and it concerns the length of the record; welfare adds no item to the tradable set and no fan-in, and its arithmetic is `internal/welfare`, not the `internal/household` of `spec-agents.md` 22. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in part: D80 settles the second point (the agent row needs `internal/household` and adds it to `architecture.md` 2.6 and `AGENTS.md`). The first point (the fifth fan-in for the tradable set) stays for the edit of N-235; the want items of FR-AGT-003 join the role table with the demand module. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no item to the tradable set. Left open.
 
 ### N-230 The run of the "price beliefs at bound" `Warn` is advanced for every market every tick
 
@@ -1582,6 +1600,7 @@ PR description.
 - **Note:** `production.go` defines the `job` type, the residue layout (one residue per output item of each recipe on the role's list, then of the effective own-use list, discards included; a function of the role and the recipe table, never saved) and the steps over them, and takes a pointer to a job and a slice of residues, so it decides no storage. The agent row keeps `Job` and `Residues` as the fields `spec-agents.md` 3.1 and 3.2 give the `Agent`, and writes them once, in section 6 in agent order (`spec-checkpoint.md` 4.2 tag 6, N-128). The agent and world rows must: (1) store the fields and call the steps (start, continue, complete, abandon, reweigh, the job of a warm start) at the positions of `spec-world.md` 6.4; (2) draw the one residue word at creation (FR-PRO-026, `spec-world.md` 5.7.1) and set every residue to it, residue 0 for a warm-start job; (3) reset the residues to 0 at a role change (`spec-agents.md` 3.7, `spec-spawner.md` 4.2) with the layout function; (4) emit `RecipeExecuted` and `RecipeAbandoned` from the values the steps return, behind the "observer supplied" flag, log the `Debug` and `Warn` lines and call the welfare scratch with the returned facts (D51: the production row emits nothing and calls no other row); (5) store `Yield` with the job (N-237). If the agent row prefers slices indexed by agent slot (`architecture.md` 2.10.1) the same functions serve.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read for AGT 3.8: a role change resets the residues (point 3) and also resizes the welfare ring (WEL 2.3.3, AGT 3.8, SPN 4.2); the agent and spawner rows do both in the one role-change step, in either order. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for point (2): the residue word at creation is the agent row's (`drawCreation`, which calls the existing `setResidues` and `residueLen`). Point (3), the reset at a role change, is the executor's (row 11 composes `reseedBeliefs`, `setResidues`, `history.Resize` and `job.abandon` inline; this row builds no role-change helper); points (1), (4) and (5) are the world row's; the agent keeps the `job` by value and writes `Yield` with it (N-237). Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row touches neither the job nor the residues; a role change's goods move by `acceptGoods` (whole lots), independent of the residue reset. Left open.
 
 ### N-233 `Discard` and `Holding` exist: what each is for
 
@@ -1607,6 +1626,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** left open (owner: the first Stage 2 module PR). The production row adds no fan-in, no admission and no touch point: the limit pairs of the execution count are a parameter of a function, not a touch point, and the tradable set is plan 1-2's.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no fan-in and no admission touch point (`welfare.go` is a core concept file; its scratch is called from other rows' positions), so the `architecture.md` edit still waits for the first Stage 2 module PR. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row adds no fan-in and no admission touch point. The core view filler and the intent conversion are called by the world's `fillAgentView` and `checkTradePlan`, and the admission of `not_tradable` and `duplicate_order` is the clearing row's. The edit of 2.6 for `internal/household` (D80) is separate from the combined edit this note holds. Left open for the first Stage 2 module PR.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no fan-in and no admission touch point: the estate reaches the admission as a plain pseudo-agent through `orderFacts`, and `removeAgent` is the world row's. Learned: the estate is the first caller of a named lot, tested through the existing `book.admit`. Left open for the first Stage 2 module PR.
 
 
 ### N-236 Three halves of FR-AGT-003, 010 and 011 are the agent row's
@@ -1616,6 +1636,7 @@ PR description.
 - **Note:** The role table of plan 1-2 covers the core terms of the tradable set (FR-AGT-003), the per-household merge of the effective upkeep (FR-AGT-011) and a role with no recipes being valid (FR-AGT-010), and nothing else of them. Three halves have no owner but the agent row, which has no plan yet (testing.md 4.5): (1) FR-AGT-011: each quantity of the effective upkeep is multiplied by the agent's weight, with checked arithmetic, in `agent.go` or `world.go`; (2) FR-AGT-010: an agent of a role with no recipes requests no job, in the default strategy and in the world's refusal; (3) FR-AGT-003: the items of the wants of the role's ladder, added with the demand module (N-228). The agent row's plan lists the first two as its requirements; the third is the demand module's PR.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare cost function is the only place where the welfare cost multiplies an upkeep quantity by the weight (FR-WEL-004); the agent row's product (what the agent buys and eats, FR-AGT-011) is its own and is not handed over, so the agent row's plan confirms that no row multiplies twice. Left open for the agent row.
 - **Update (2026-10-17, plan 1-7 Phase 1):** parts (1) and (2) are applied: FR-AGT-011 (the product by the weight, checked) and FR-AGT-010 (an agent of a role with no recipes requests no job) are written in `spec-agents.md`. Part (3), the items of the wants, is the demand module's PR, so the note stays open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: not touched by the estate row (it multiplies no upkeep by a weight). Left open.
 
 ### N-237 A job stores its effective factor; its start tick is derived
 
@@ -1673,6 +1694,7 @@ PR description.
   - **Coverage** shows to Codacy as `MissingRequirements` and its reviewer saw an empty report: no CI uploads `coverage.out` (plan O3, N-019). Add the upload with the CI.
   - **Plan 1-6 gate (2026-10-17):** `lizard -l go -C 10 -a 8 -L 100 -w` found one warning in the welfare files, `HeldHouseholds` with 9 parameters; fixed by passing the role's window, floor and target as `welfare.Floor`. The helper and `Floor` were then removed as unused (the root counts per agent, because each agent has its own target), with their test. `markdownlint` was not run. The coverage reading of the full run is the hand reading of plan O3; no CI uploads it.
   - **Still not built, and not this row's:** production in the agent lifecycle, the observer emission and the tick (N-232, N-242), and the checkpoint of jobs and yield shocks (N-237, tag 6, Stage 2). The Codacy review lists both as missing; they are the agent, world and checkpoint rows.
+- **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row's files stay under the Lizard limits by one concept file, `estates.go`; the module half is appended after a marked comment line. Left open.
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -1714,6 +1736,8 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-8.md` D102.
 - **Note:** The estate's price is per lot key (`spec-estates.md` 2.7.5, `spec-checkpoint.md` 4.2 tag 8), and two lots with one key are one lot (EST 6.1(c)). So goods that a later removal moves into a held key join the lot at its current, possibly marked-down, price. A non-spoiling, non-wearing commodity is one lot per estate, so this is the common case. If a scenario (S02, S14, STB-L38) shows it lowers the local price too much, reprice a growing lot to the higher price: a one-line change. Phase 1 of the plan writes the rule into EST 2.7.3.
 - **Update (2026-10-17, spec edits):** `spec-estates.md` 2.7.3 now says "A lot that receives units keeps its price, and the joining units are listed at it" (the earlier grep missed the wording). The spec is written. Left open until the code merges and a scenario (S02, S14, STB-L38) shows whether the repricing is needed.
+- **Update (2026-10-18, plan 1-8 Phase 1):** `spec-estates.md` 2.7.3 also says a row is dropped when its lot is gone at P5.3 as well as at the P3.4 walk (D102), so goods that arrive under the key of a lot sold wholly are priced at the first price, as after a restore. Left open until the code merges.
+- **Update (2026-10-18, plan 1-8 Phase 5):** built in `estates.go`: one `reconcile` merge keeps a row whose lot is held (price and mark), drops a row whose lot is gone, and adds a row at the first price only in the insert-enabled walk of `asks`; `markdown` runs it filter-only, so a same-key arrival after a wholesale sale is priced at the first price (`TestEstateRound_ArrivingUnitsAndRepricing`, `TestEstateRows_StaleAndRoundTrip`). The gate's broken copy (a stale row kept) fails both. Still open: the Phase 1 to 4 code is in the working tree and the commit is pending; close it when that commit merges, unless a scenario shows the repricing is needed.
 
 ### N-256 The checkpoint saves listing rows of held lots only
 
@@ -1721,6 +1745,8 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-8.md` D109.
 - **Note:** A row of the estate's listing prices (`spec-checkpoint.md` 4.2 tag 8) whose lot sold or spoiled after the last P3.4 is stale at the boundary where a checkpoint is taken. The section writes only the rows of held lots; a held lot with no row is priced at the first price at the next listing, which equals the uninterrupted run (the first price is a function of the configuration). Restore refuses a row for a lot the estate does not hold (FR-CHK-023), rows out of order or repeated, and a price outside 1 to `MaxPrice`. The Stage 2 checkpoint row builds the section from `estates.rows` and `estates.restore`.
 - **Update (2026-10-17, plan 1-8 Phase 1):** written in `spec-checkpoint.md` 4.2 tag 8 and FR-CHK-023. Left open until the Stage 2 checkpoint code builds the section.
+- **Update (2026-10-18, plan 1-8 Phase 1):** `estates.rows` takes the ledger to know which lots are held and is filter-only (it inserts no row and needs no configuration); `restore` checks a key by requiring it to be a held lot, with `errListingRows` for the checkpoint row to wrap in `ErrCheckpointCorrupt` (D109). Left open until the code merges.
+- **Update (2026-10-18, plan 1-8 Phase 5):** built as written: `rows(l, r, dst)` has no `cfg`, omits a held lot with no row and drops a stale row; `restore(l, r, rows)` refuses a row out of order, repeated, out of range or for a lot not held with `errListingRows` (`estates_listing_internal_test.go`, `FuzzRestore`). The Stage 2 checkpoint row still has to build tag 8 from these two and wrap the error. Still open for that row; the Phase 1 to 4 commit is pending.
 
 ### N-258 What the world row calls on the estate
 
@@ -1728,6 +1754,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-8.md` Cross-plan contract.
 - **Note:** The estate is reached only through `estates.go`: `openEstates` at WLD 5.2 order 4, `seedPool` at 5.6 item 5, `asks` then `book.admit` with `facts(region, Ask, tally)` then `admitted` at P3.4 (after the agents' orders, WLD 6.5.1), `markdown` at P5.3, `receive` at removal steps 3 and 4, `grant`, `acceptMoney` and `acceptUnits` at the entry step and at weight changes. The world must not call the ledger on the estate account for money in any other way, so the minimum of FR-EST-014 and the bound of FR-EST-022 have one home. An estate's order has no outcome and takes no belief word (WLD C21).
 - **Update (2026-10-17, plan 1-8 D106):** `acceptUnits` (the goods of a weight change, with `occupation.Remaining`) and `acceptGoods` (the intake of a removal or role change, counting lots) are the two goods entries; `receive` is the common intake. Left open until the world row is built.
+- **Update (2026-10-18, plan 1-8 Phase 1):** the list gains `acceptUnits` for a weight reduction's goods and the stale-row drop at P5.3 (D102, D106); the world calls `admitted` only for an ask that `book.admit` accepted, so a rejected ask is not marked down (D103). Left open for row 11.
 
 ### N-284 The type `World` is the configuration section and the simulation
 
@@ -1875,6 +1902,7 @@ PR description.
 - **Note:** The spawner row builds the plan and the pure support and emits nothing; the executor is the world's (SPN 20, WLD 6.9 P7.1(d), coordinator Q1). Row 11 must: (1) build the `RegionView` of each region (roles in canonical order, agents in ascending ID, no pseudo-agent; `Wage` and `HasWage` from the welfare summary, `Upkeep` per household at the published prices, `PoolMoney` from the estate, `RenewalCarry`), set `Privation` at P6.1 with `household.NextPrivation` (plan 1-7), and give the view the one scratch of the world; (2) call `Decide` with the keyed stream `(siteSpawner, t, region)`; (3) execute the plan in order, checking each decision with `occupation.Refuse` against live state, taking the funded number from `occupation.Funded` and the placement from `occupation.Place`, sending a reduction's money through `acceptMoney` and its goods, per commodity, through `acceptUnits` with `occupation.Remaining`, and a role change's goods through `acceptGoods` (plan 1-8), counting `GoodsListed` in lots; (4) merge the executor's counts with the counts of the plan into one `EntryLimited` per region per tick (`entryTally.limited`), emit the `Debug` lines and the three bounded `Warn`s from `extinctRun`, `unfundedRun` and `belowFloorRun`; (5) call `resolveSpawner` once in `NewWorld` after `Validate`. The executor is row 11's: the role change and the weight change are composed there from the primitives of rows 5, 6 and 7 (`job.abandon`, `job.reweigh`, `setResidues`, `history.Resize`, `reseedBeliefs`) and the target carried over by `occupation.Retarget`; plan 1-7 builds no combined step (consistency pass, 2026-10-17).
 - **Update (2026-10-17, plan 1-8 D106):** the executor sends a reduction's goods through `acceptUnits`, and a role change's through `acceptGoods`; both count `GoodsListed` in lots (N-255). Left open until row 11 is built.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: row 11 calls `consume` and `household.NextPrivation` through it; the agent row builds no combined step. Learned: `consume` sets `privation` and the spawner's view reads it. Left open.
+- **Update (2026-10-18, plan 1-8 Phase 1):** checked against Provides: `acceptMoney`, `acceptUnits` (per commodity), `acceptGoods` (a role change's whole lots), `receive` and `grant` have the signatures of the Cross-plan contract of plan 1-8. Left open for row 11.
 
 ### N-267 An agent in a role with no wage counts as earning nothing
 
@@ -1920,10 +1948,25 @@ PR description.
 - **Raised:** 2026-10-17, the observability review of the branch of plan 1-7 (`strategy_work.go`, `spec-production.md` 14.1, N-242).
 - **Note:** The default `Work` passes over every recipe whose view says `MaxExecutions` 0, so it never requests a recipe production would refuse, and the `refusalTally` of N-242 (filled where a start returns 0) would stay empty for it: `economysim.recipe.refused` would read 0 on a chain stalled for want of an input or a tool, the case the event was added for. The work report now carries `blocked`, the index of the first recipe of the role that could not run when the share is above 0 and the halt skipped none (FR-AGT-086, `spec-agents.md` 7.1.4), and the world adds that household to the tally under the recipe and the view's reason. A household with several blocked recipes is counted once, under the first in list order, so the counts add to the households refused; the reason is the first applicable, as 4.2.1 says. A consumer's strategy that requests a blocked recipe is counted by the refusal of the start as before, and a household is never counted by both. **Open:** the world row must make the call (N-242 point 1), and the golden of a stalled chain must show a non-zero `RecipeRefused` under the default strategy; a later module's reason (`not_permitted`, `no_room`, `no_endowment`) arrives in the view as it does in the tally, a new column appended with the module.
 
+### N-309 What the estate row (plan 1-8) leaves to later rows
+
+- **Areas:** EST, WLD, CHK, CODE, OBS
+- **Raised:** 2026-10-18, the audit of `plans/plan-phase-1-8.md` (`estates.go`, built and tested without a world).
+- **Note:** `estates.go` is a set of unexported functions with no caller until the world row, so these requirements are only partly covered and are completed there; each needs a test in its owner's row. (1) **World row (11):** FR-EST-010 and 011 (no `AgentSpawned`, no snapshot row, no strategy call, belief or outcome for an estate, and no agent event whose subject is an estate; the row tests only `regionOf`); FR-EST-002 (the estate that receives is the one of the region of the agent's account); FR-EST-004 (the estates open before any household, WLD 5.2 order 4); FR-EST-012 (the asks are placed at P3.4 before any market clears, with the tie-break key; the row tests only that the order carries the estate's ID); FR-EST-013 (`Regions[].MoneyPool`, `Markets[].HeldByEstate` and `EntryBudget` in the snapshot); FR-EST-014 (`w * Role.StartMoney` and "an entrant gets no goods" are the executor's, with the whole-household budget); FR-EST-015 (the `initial` money of the initial agents, and the map of `WarmPool.Region`, a string, to a `RegionID` before `seedPool`); FR-EST-021 (emit `AgentBankrupted` then `EstateOpened` behind the observer flag; `EstateOpened.Balance` is read as `pool` after `receive`, plan open item O6, and `GoodsListed` counts lots, N-255). The call list is N-258 and N-266. (2) **Checkpoint row (Stage 2):** build tag 8 from `rows` and `restore`, wrap `errListingRows` in `ErrCheckpointCorrupt`, and make the cross-check of restore step 7 (FR-CHK-023) call them (N-256). (3) **The `Estates` module part (Stage 2, after MON):** `Region.PoolRelease` and `Region.ReliefBelow`, relief at P1.6 and `ReliefPaid`, the pool as a money-flow target with `ErrModuleDependency`, FR-EST-017 to 020, and the module fields of FR-EST-023; they append to `estates.go` after the marked comment line at its end. (4) **Other modules:** FR-EST-003 (a traveller who dies in transit, a diverted cargo) is TRN's and MER's; money the estate receives as creditor or title holder is CRD's and LND's; the tool-sale rule of SKL 2.7 beyond the first price is SKL's. (5) **After the first golden file:** the first price, the markdown and the keep-the-price rule of a lot that gains units (D102, D104; N-254) enter `testdata/golden/` at the end of Stage 1, and a later change is a behaviour change with the explanation of testing.md 7.2.
+- **Update (2026-10-18, test audit of the branch):** the audit against testing.md found the row tested at the unit level only, as the plan says (`estates.go` is 100% covered, every function; root package 98.8%), and left these test debts for later rows. Each needs a test in its owner's row; none can be written before there is a `World`. (a) **Public-API integration tests (testing.md 2.3), world row (11):** the only public-API test of the row is `TestEstates_PackOneAccountIDs` (FR-EST-004, 005). FR-EST-006 (a bid from an estate is `side_not_allowed`), 007 (one ask per held lot, a rejected ask is not an ask), 009 (the markdown at P5.3) and 013 (the proceeds are a `trade` transfer into the pool, `MoneyPool` equals the account) are consumer-visible and need a test through `NewWorld` and `Step` with a recording observer, beside the unit tests that exist. (b) **Restore equals uninterrupted (FR-EST-024), checkpoint row (Stage 2):** a restored world must list and price the same lots as an uninterrupted one; the unit tests cover `rows` and `restore` only (N-256). (c) **Mutation pass:** 22 hand-made mutants of `estates.go` were run; the two that survived were an equivalent one (`<=` against `<` at the floor in `markedDown`) and the clearing of the `asked` mark in `asks`, now covered by `TestEstateAsks_MarksOfTheLastTickAreCleared`. `gomu` was not run (Docker only, testing.md 9.4); it is the periodic pass for the core packages. (d) **Fuzz seeds:** `testdata/fuzz/FuzzPriceRules`, `FuzzReconcile` and `FuzzRestore` hold hand-written seeds, not crashers, so testing.md 7.5's `Fix:` rule does not apply; they must be committed with the row. (e) **The invariant branches** of `estates.go` (an unreadable account, a belief step out of bound, an overflowing first price, an admitted ask with no listing) are `Guard:` tests (`estates_errors_internal_test.go`), so no coverage exclusion under testing.md 9.5 is needed. Left open.
+
+### N-310 What the observability review of plan 1-8 leaves undone
+
+- **Areas:** EST, OBS, WLD, CODE
+- **Raised:** 2026-10-18, the observability review of the branch of plan 1-8 (`estates.go`, N-309 item 6).
+- **Note:** The catalogue and spec rows for `economysim.estate.sold`, `economysim.estate.at_floor` and `Markets[].EstateAtFloor` are written, and nothing can emit them until the world, the snapshot and `otelobserver` exist. Owed, each with its test in the row that builds it: (1) **World/snapshot row (11):** declare `EstateAtFloor` in `snapshot.go` and fill it as the units of the estate's lots whose row in `estates.listed` is at the resolution floor (`resolutionFloor`); it is 0 with no estate stock and never above `HeldByEstate`; a test builds a world, lets an estate lot fall to the floor and compares the field; the field is a function of saved state (N-125), so the restore test (FR-OBS-043) must cover it. (2) **`otelobserver` (Stage 2):** feed `estate.sold` from `TradeExecuted` where `Seller` is below the region count (the test of `spec-observability.md` 4.3.3 item 2, `estates.regionOf`), record `estate.at_floor` from the snapshot, and add both to the adapter's cardinality test (testing 8.1: commodity and region only; about 300 series, 6.5.2). (3) **Pool overflow through a step:** the world row needs a test that an `ErrBalanceOverflow` of an estate pool fails the step (`TickEnded` with `Failed`, `economysim.world.step.failed`) and that the error text names the region and the account, as `refused` now does; the unit test covers `refused` only. (4) **Allocation test:** `estates.asks` and `markdown` have a no-allocation test in isolation (NFR-EST-001); the full-step allocation limit of observability 8.2 includes them only once the world row calls them. (5) **Reading `economysim.market.unmatched`:** its ask side includes the estate's unsold lots; if the first dashboards show it misleads, split the series by a holder attribute (doubling its ask series) instead of subtracting `HeldByEstate`; decide with data from the first golden run, not now. (6) **Not done in this review:** `doc/notes.md` was not read in full before the spec edits (only the notes tagged OBS and EST that the edits touch, and N-125, N-126, N-127, N-289 and N-309); the next change to `spec-observability.md` should read it whole.
+- **Update:** none yet.
+
 ## Closed notes
 
 When a note is closed, move it here and add **Closed:** with the date, the
 resolution (applied or rejected, and why) and where it was settled.
+- **Update (2026-10-18, observability review of plan 1-8):** (6) **World row (11) and the adapter:** fill `Markets[].EstateAtFloor` from `estates.listed` against the resolution floor (units of lots whose row price equals it), and the adapter feeds `economysim.estate.sold` from `TradeExecuted` where `Seller` is below the region count (`regionOf`); each needs a test in that row. The errors of `receive`, `acceptUnits` and `acceptGoods` now name the region and the account, so a pool that overflows names itself in the failed step's error.
 
 ### N-223 `doc/roadmap.md` is `doc/spec-roadmap.md`
 
@@ -2917,5 +2960,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: d698fdc3884c93b0f7193292
+NOTES-TAG: 7617e245522824b3018f7f5e
 

@@ -600,7 +600,7 @@ type AgentBankrupted struct {
 	Cause Cause
 	// Money is the agent's money passed to the estate.
 	Money Money
-	// GoodsListed is the number of goods passed to the estate.
+	// GoodsListed is the number of lots passed to the estate.
 	GoodsListed int64
 }
 
@@ -613,7 +613,7 @@ type EstateOpened struct {
 	Region RegionID
 	// Balance is the money the estate holds.
 	Balance Money
-	// GoodsListed is the number of goods listed.
+	// GoodsListed is the number of lots listed.
 	GoodsListed int64
 }
 
@@ -653,7 +653,7 @@ type RoleChanged struct {
 	Weight int64
 	// Cause is why the role changed.
 	Cause Cause
-	// GoodsListed is the number of goods passed to the estate.
+	// GoodsListed is the number of lots passed to the estate.
 	GoodsListed int64
 }
 

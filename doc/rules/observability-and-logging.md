@@ -509,6 +509,8 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.merchant.decisions`     | Counter         | `{lane}`        | `economysim.decision` |
 | `economysim.production.pending`     | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region` |
 | `economysim.market.stock`           | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate` or `treasury`) |
+| `economysim.estate.sold`            | Counter         | `{unit}`        | `economysim.commodity`, `economysim.region` |
+| `economysim.estate.at_floor`        | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region` |
 | `economysim.ledger.lots`            | Gauge           | `{lot}`         | `economysim.commodity`, `economysim.region` |
 | `economysim.money.supply`           | Gauge           | `{minor_unit}`  | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract` or `treasury`) |
 | `economysim.welfare.ratio`          | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
@@ -589,10 +591,11 @@ The instruments fed by a snapshot, not by events, are the rows of the second tab
 | `economysim.world.step.duration`     | `TickStarted` to `TickEnded`, measured by the adapter; not recorded when `TickEnded` has `Failed` true |
 | `economysim.world.step.failed`       | `TickEnded` with `Failed` true (one per failed step) |
 | `economysim.market.trades`           | `TradeExecuted`                         |
+| `economysim.estate.sold`             | `TradeExecuted` (`Quantity`, where `Seller` is below the region count, so an estate's: the forced seller, kept apart from producers' supply and the pool's inflow from sales) |
 | `economysim.market.volume`           | `TradeExecuted` (quantity)              |
 | `economysim.market.clearing_price`   | `MarketCleared`                         |
 | `economysim.market.price_age`        | `MarketCleared` (`PriceAge`, in ticks; the event is per market per tick, so the series is never stale) |
-| `economysim.market.unmatched`        | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`, units) |
+| `economysim.market.unmatched`        | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`, units); the ask side includes the estate's unsold lots, which it asks again every tick, so read it with `economysim.market.stock` under `holder` `estate` |
 | `economysim.market.orders`           | `OrderPlaced`                           |
 | `economysim.market.orders.rejected`  | `OrderRejected`                         |
 | `economysim.belief.centre`           | `BeliefsUpdated` (the mean centre)      |
@@ -704,6 +707,7 @@ snapshot the consumer passes to it, between two steps, from these fields:
 | `economysim.production.pending`      | `Markets[].Pending`: the output of jobs in progress, which no account holds |
 | `economysim.recipe.in_progress`      | `Jobs[].Executions`: the executions of the jobs in progress, by recipe and region |
 | `economysim.market.stock`            | `Markets[].HeldByAgents`, `HeldByEstate` and `HeldByTreasury`, by holder |
+| `economysim.estate.at_floor`         | `Markets[].EstateAtFloor`: the units of the estate's listings whose listed price is at the resolution floor, where a markdown cannot lower them; with `economysim.market.stock` under `holder` `estate` it tells a slow markdown from a good nobody wants |
 | `economysim.ledger.lots`             | `Markets[].Lots`: the lots of the accounts those three fields count; the sum over the series is the ledger's lot count |
 | `economysim.money.supply`            | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` and `MoneyTreasury`, by sector |
 | `economysim.welfare.ratio`           | `Roles[].MeanRatioBP`, where the role has a mean ratio |
@@ -915,4 +919,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 84cd5de8bee080a472635bc2
+RULE-TAG: f3926b9ad4ec89afcd72eb54

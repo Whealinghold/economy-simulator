@@ -146,3 +146,18 @@ func ProductionAnchors(c *Config, prices, wages []int64, runnable [][]RecipeID, 
 
 // RoleWindow reads the stored effective welfare window of a role.
 func RoleWindow(t *RoleTable, id RoleID) int64 { return t.row(id).window }
+
+// EstateAccountIDs builds the ledger of a canonical configuration, opens the
+// estates and returns the account ID of each estate and the ID the next opened
+// account (the first household) would receive.
+func EstateAccountIDs(c Config) (estates []int, next int, err error) {
+	l, err := newLedger(c)
+	if err != nil {
+		return nil, 0, err
+	}
+	e, err := openEstates(l, len(c.Regions))
+	if err != nil {
+		return nil, 0, err
+	}
+	return e.accounts, l.Len(), nil
+}
