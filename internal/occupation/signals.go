@@ -15,13 +15,11 @@ import (
 // wage (HasWage false) and does not call this for it.
 //
 // A quotient beyond int64 saturates to the nearest extreme by the sign of wage
-// and is never an absence (6.1.2). It saturates only where the exact value
-// leaves int64: when upkeep * ticksPerYear does not fit, upkeep is above
-// MaxInt64 / MaxTicksPerYear and the exact value is below 1e14, so the quotient
-// by upkeep is formed first and then divided by ticksPerYear, which equals the
-// single quotient for a positive divisor. expectedWork is at most
-// MaxTicksPerYear, so expectedWork * 10 000 fits; a value for which it does not
-// (a hand-built view) saturates by the sign of wage.
+// and is never an absence (6.1.2). The division is exact in 128 bits and
+// upkeep * ticksPerYear is never formed, so it saturates only where the exact
+// value leaves int64. expectedWork is at most MaxTicksPerYear, so expectedWork *
+// 10 000 fits; a value for which it does not (a hand-built view) saturates by
+// the sign of wage.
 func Expected(wage, expectedWork, upkeep, ticksPerYear int64) (e int64, has bool) {
 	if upkeep <= 0 || ticksPerYear <= 0 {
 		return 0, false
@@ -30,17 +28,10 @@ func Expected(wage, expectedWork, upkeep, ticksPerYear int64) (e int64, has bool
 	if !ok {
 		return saturate(wage), true
 	}
-	if den, ok := checked.Mul(upkeep, ticksPerYear); ok {
-		if e, ok = checked.MulDiv(wage, num, den); !ok {
-			return saturate(wage), true
-		}
-		return e, true
-	}
-	q, ok := checked.MulDiv(wage, num, upkeep)
-	if !ok {
+	if e, ok = checked.MulDivDiv(wage, num, upkeep, ticksPerYear); !ok {
 		return saturate(wage), true
 	}
-	return q / ticksPerYear, true
+	return e, true
 }
 
 // Viability returns V, the ratio a household would reach working every tick,

@@ -19,8 +19,11 @@ import (
 // upkeep 1e14 and 1e5 ticks the product 1e19 does not fit: wage 1e18 gives
 // 1e18 * 1e9 / 1e19 = 1e8, and wage 1e18 - 1 gives 99 999 999.99999, so
 // 99 999 999 whichever way it is computed (1e13 - 1 over 1e5 in two steps).
-// Expected work of 9e14 with wage MaxInt64 over upkeep 1e14 leaves int64 in the
-// first step of case 2, which saturates by the sign of the wage.
+// Expected work of 9e14 with wage MaxInt64 over upkeep 1e14 and 1e5 ticks: the
+// quotient by upkeep alone is 8.3e23, beyond int64, but the exact value is
+// MaxInt64 * 9e18 / 1e19 = MaxInt64 * 0.9, 9 223 372 036 854 775 807 * 9 / 10 =
+// 8 301 034 833 169 298 226 (truncated), which fits and is returned, not
+// saturated.
 //
 // Requirement: FR-SPN-017
 func TestExpected_Cases(t *testing.T) {
@@ -44,8 +47,8 @@ func TestExpected_Cases(t *testing.T) {
 		{"product of upkeep and year beyond int64", 1e18, maxTicks, 1e14, maxTicks, 1e8, true},
 		{"second case truncates once", 1e18 - 1, maxTicks, 1e14, maxTicks, 99_999_999, true},
 		{"second case negative", -(1e18 - 1), maxTicks, 1e14, maxTicks, -99_999_999, true},
-		{"second case first step overflows", math.MaxInt64, 900_000_000_000_000, 1e14, maxTicks, math.MaxInt64, true},
-		{"second case first step overflows negative", math.MinInt64 + 1, 900_000_000_000_000, 1e14, maxTicks, math.MinInt64, true},
+		{"intermediate quotient overflows, final fits", math.MaxInt64, 900_000_000_000_000, 1e14, maxTicks, 8_301_034_833_169_298_226, true},
+		{"intermediate quotient overflows, final fits, negative", math.MinInt64 + 1, 900_000_000_000_000, 1e14, maxTicks, -8_301_034_833_169_298_226, true},
 		{"expected ticks times basis overflows", 5, math.MaxInt64 / 2, 1000, 365, math.MaxInt64, true},
 		{"expected ticks times basis overflows, zero wage", 0, math.MaxInt64 / 2, 1000, 365, 0, true},
 	}

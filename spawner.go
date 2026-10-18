@@ -3,7 +3,7 @@ package economysim
 import (
 	"cmp"
 	"math"
-	"math/rand/v2"
+	"math/rand/v2" // nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- only the *rand.Rand type of the injected, seeded source (architecture.md 7.3, 7.7)
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"

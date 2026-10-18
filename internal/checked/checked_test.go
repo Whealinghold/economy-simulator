@@ -295,3 +295,49 @@ func FuzzMulDiv(f *testing.F) {
 		}
 	})
 }
+
+// TestMulDivDiv_AgainstBig verifies a*b/(c*d) against math/big for edge cases
+// and a fixed-seed sample, including a product c*d beyond int64 and a zero
+// divisor. The first quotient a*b/c can leave int64 while the final one fits.
+//
+// MaxInt64 * 9e18 / (1e14 * 1e5): the divisor 1e19 is beyond int64, the exact
+// value is MaxInt64 * 0.9 = 8 301 034 833 169 298 226.
+//
+// Requirement: FR-CUR-003
+func TestMulDivDiv_AgainstBig(t *testing.T) {
+	t.Parallel()
+	ref := func(a, b, c, d int64) (int64, bool) {
+		if c == 0 || d == 0 {
+			return 0, false
+		}
+		p := new(big.Int).Mul(big.NewInt(a), big.NewInt(b))
+		q := new(big.Int).Quo(p, new(big.Int).Mul(big.NewInt(c), big.NewInt(d)))
+		if !q.IsInt64() {
+			return 0, false
+		}
+		return q.Int64(), true
+	}
+	edges := []int64{0, 1, -1, 7, -7, 1e5, 1e14, 9e18, math.MaxInt64, math.MinInt64, math.MinInt64 + 1}
+	check := func(a, b, c, d int64) {
+		t.Helper()
+		wq, wok := ref(a, b, c, d)
+		if gq, gok := checked.MulDivDiv(a, b, c, d); gq != wq || gok != wok {
+			t.Fatalf("MulDivDiv(%d, %d, %d, %d) = %d, %v, want %d, %v", a, b, c, d, gq, gok, wq, wok)
+		}
+	}
+	for _, a := range edges {
+		for _, b := range edges {
+			for _, c := range edges {
+				for _, d := range edges {
+					check(a, b, c, d)
+				}
+			}
+		}
+	}
+	const seed = 20261018
+	rng := rand.New(rand.NewPCG(seed, seed))
+	pick := func() int64 { return int64(rng.Uint64()) >> rng.UintN(64) }
+	for i := 0; i < 20000; i++ {
+		check(pick(), pick(), pick(), pick())
+	}
+}

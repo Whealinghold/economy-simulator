@@ -330,3 +330,23 @@ func TestRemaining_ShareNeverFalls(t *testing.T) {
 		}
 	}
 }
+
+// TestReviewDue_NegativeTickMatchesResidue verifies that a negative tick reviews
+// exactly when its positive equivalent mod period does (-1 is 9 for period 10).
+//
+// Guard: Go's % is negative for a negative tick, and a reader may fear that the
+// sum with the bucket then misses the zero residue. It cannot, since a sum is
+// divisible by the period whatever its sign; without this test a "fix" could
+// shift the rotation of the construction tick -1.
+func TestReviewDue_NegativeTickMatchesResidue(t *testing.T) {
+	t.Parallel()
+	const period = 10
+	for id := int64(0); id < 50; id++ {
+		for tick := int64(-25); tick < 0; tick++ {
+			want := occupation.ReviewDue(id, tick+3*period, period)
+			if got := occupation.ReviewDue(id, tick, period); got != want {
+				t.Errorf("ReviewDue(%d, %d, %d) = %v, want %v", id, tick, period, got, want)
+			}
+		}
+	}
+}
