@@ -291,7 +291,9 @@ func (e *estates) acceptGoods(l *ledger.Ledger, from int, r RegionID, reason led
 // receive is the intake of a removal (spec-agents.md 3.6 steps 3 and 4): the
 // whole balance of account from by estate_money, then every lot by
 // estate_goods. It returns the money passed and the lots moved. The caller
-// closes the account and emits the events.
+// closes the account and emits the events. It is not atomic: an error here
+// fails the step, and a failed world is never observed or saved half-way
+// (spec-world.md 3.5), so a rollback would only add a second path to test.
 func (e *estates) receive(l *ledger.Ledger, from int, r RegionID) (Money, int64, error) {
 	v, err := l.Account(from)
 	if err != nil {
