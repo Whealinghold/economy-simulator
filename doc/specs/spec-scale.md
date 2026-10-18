@@ -88,7 +88,8 @@ For a group with `H` households, scale `S` and floor `K` (section 5.2):
 2. If `n < K`, `n = min(K, H)`: the floor wins over the scale, and a group is
    never made of fewer than `K` agents unless it has fewer than `K` households.
 3. The weights are `H / n` (integer division) for every agent, and one more for
-   the first `H mod n` agents of the group, in agent order.
+   the first `H mod n` agents of the group, in agent order. This is the pure function `groupWeights(households, scale, minAgents)`
+   (section 13).
 
 So the weights add up to `H` exactly, and no two weights in a group differ by
 more than 1. No random number is drawn: the same configuration always gives the
@@ -356,8 +357,13 @@ within a tolerance of its value at scale 1. Two things still differ, and both ar
 noise the check measures: the stagger gives agent `i` of `n` the phase
 `floor(i * P / n)` (`spec-viability.md` 8.4.3), so a coarser scale has fewer distinct
 phases, and the creation draws are made for each agent (`spec-agents.md` 3.5.2). The
-agents in progress on a recipe are apportioned by largest remainder, so with 20 agents
-a share is rounded to a twentieth. The tolerance is a placeholder of 10% until
+agents in progress are apportioned by one joint largest-remainder apportionment over the
+group's `n` agents (`spec-viability.md` 8.5.2, FR-VIA-034): the quota of each `JobSpec`
+of the group is `share * n / 10 000`, in the canonical order of the table, with the idle
+share last; each `JobSpec` takes the floor of its quota first, the agents that remain go to the
+largest remainders, a tie to the earlier entry (architecture.md 7.6), and the busy agents
+are assigned in agent order, spec by spec. So with 20 agents a share is rounded to a twentieth,
+and the `JobSpec`s of one group share its agents without one agent holding two jobs. The tolerance is a placeholder of 10% until
 the slice has run; the place it belongs is `spec-stylised-facts.md`. The same
 check, run over a range of `K`, is how `K` is chosen (5.2). The reference chain's scenario S10 runs this check on the `one` pack with the overlay `h200` (200 households in each of six roles, `spec-reference-chain.md` 7.2, FR-REF-033), at `K` 10: 1 200, 300 and 120 agents; the roles of that pack have no group below `K` at scale 1.
 
@@ -496,7 +502,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Concern | Home |
 |---------|------|
 | `Weight` on the agent, `Households`, `Scale`, `MinAgents` in the configuration | root package, `agent.go`, `world.go`; parsed by `config/` |
-| Deriving the agents and weights from a group (3.2) | the root package, inline in world construction; a small pure function over integers, with a table-driven test |
+| Deriving the agents and weights from a group (3.2) | the root package, `construct.go`: the pure function `groupWeights(households, scale, minAgents int64) []int64`, over integers, with no random number and a table-driven test (FR-SCL-001 to 005); Stage 2's `scale.go` takes it over unchanged |
 | Scaling of production, upkeep and welfare | the specs listed in section 4, in `internal/production` and the root `Strategy` default |
 | Bounds check (4.5) | configuration validation, with the checked-arithmetic helpers of `spec-currency.md` section 7 |
 | The chance-event helper (4.6) | an `internal/` package over integers and the world's `*rand.Rand` |

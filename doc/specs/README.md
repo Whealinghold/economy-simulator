@@ -96,7 +96,7 @@ Rules for the IDs:
 | `AGT` | `spec-agents.md` | exists; Requirements section written (FR-AGT-001 to 085, NFR-AGT-001 to 004); all defaults are placeholders |
 | `LED` | `spec-ledger.md` | exists; Requirements section written (FR-LED-001 to 065, NFR-LED-001 to 004) |
 | `PRO` | `spec-production.md` | exists; Requirements section written (FR-PRO-001 to 051, NFR-PRO-001 to 004); all numbers are placeholders |
-| `SPN` | `spec-spawner.md` | exists; Requirements section written (FR-SPN-001 to 057, NFR-SPN-001 to 003); all numbers are placeholders |
+| `SPN` | `spec-spawner.md` | exists; Requirements section written (FR-SPN-001 to 060, NFR-SPN-001 to 003); all numbers are placeholders |
 | `WLD` | `spec-world.md` | exists; Requirements section written (FR-WLD-001 to 110, NFR-WLD-001 to 005); core; adds only the field `World.Clearing` (owned by `spec-clearing.md` 8); all numbers are placeholders |
 | `REG` | `spec-regions.md` | exists; Requirements section written (FR-REG-001 to 060, NFR-REG-001 to 004); core; the region, the directed graph, overrides, relocation; bounds are placeholders |
 | `CFG` | `spec-config.md` | exists; Requirements section written (FR-CFG-001 to 097, NFR-CFG-001 to 003); the field catalogue is section 3.7 (3.7.1 for the fourteen later-stage modules) |

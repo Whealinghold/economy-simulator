@@ -626,6 +626,16 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonNoTool, "no_tool"},
 		{economysim.ReasonNoInput, "no_input"},
 	}
+	// The log-only reasons of the "work declined" Debug line, spec-agents.md
+	// 14.3: no event carries them.
+	agentReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonRest, "rest"},
+		{economysim.ReasonHalted, "halted"},
+		{economysim.ReasonNoRecipe, "no_recipe"},
+	}
 	causes := []struct {
 		got  economysim.Cause
 		want string
@@ -664,6 +674,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range productionReasons {
 		owner[string(r.got)] = "doc/specs/spec-production.md"
+	}
+	for _, r := range agentReasons {
+		owner[string(r.got)] = "doc/specs/spec-agents.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -766,6 +779,9 @@ func TestConstants_Values(t *testing.T) {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, r := range productionReasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range agentReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

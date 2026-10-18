@@ -883,7 +883,7 @@ the variant's documents. The list, with its use:
 module on, so that every event type occurs) is not a variant and is not a file: the
 test builds it in memory as `five` with the overlays of this table that switch a module
 on (estates, faucet, trade, resources, external, own-use, population, migration, and the fourteen later overlays of this table in the layering order above, so that every module of the library is on), and
-the golden rendering of its events is `testdata/golden/events-all-modules.txt`. It names
+the golden rendering of its events is `testdata/golden/all/events-all-modules.txt`. It names
 its modules, so FR-REF-018 is not broken: no variant of 4.1 contains one unnamed.
 
 **The five-region endowment sizing is hand-derived.** The capacities of `spec-resources.md` 18.2 (a slack set at 2.2 times and a binding set at 1.1 times the reference programme's draw) come from the census of `five`, the mean site factor of each region's `grow_staple` and an upkeep of 2.25 `staple` a household a tick; they are an order of magnitude and not a calibration. When `overlay/resources.toml` is built, REF replaces them with the capacities derived from the solver's exact flows of `five` (`Capacity = draw a year / (load * (RateBP / 10^4) * (1 - share))`), so that no autarky `lambda*` is lowered by a resource row in the slack set and the fixed factor acts in the binding set (RES 18.2; N-092). The sizes are placeholders until the solver has produced them.
@@ -925,7 +925,7 @@ reject it (A2). The consequences listed come from the same defect:
 | File | Defect | Rule that must reject it | Also reported |
 |------|--------|--------------------------|---------------|
 | `defects/d1_seed_cycle.toml` | `grow_staple` returns 30 staple for 40 seed, and the wild seed source is switched off | `cycle_not_productive` | `unproducible_in_realm` for seed, staple, prepared |
-| `defects/d2_upkeep_unmade.toml` | the yield of `cut_fuel` is 0: no region makes fuel | `unproducible_in_realm` | fuel, prepared, refined, staple, tool_a, tool_b; `role_cannot_work` for `forester` |
+| `defects/d2_upkeep_unmade.toml` | the yield of `cut_fuel` is 0: no region makes fuel, and `fuel` is not marked `raw` in the overlay (it adds `[commodity.fuel]` with `raw = false`, because `base.toml` marks `fuel` raw and a raw good is sourced, `spec-viability.md` 4.2.1) | `unproducible_in_realm` | fuel, prepared, refined, staple, tool_a, tool_b; `role_cannot_work` for `forester` |
 | `defects/d3_idle_role.toml` | a role with a recipe that can run nowhere, 10 households | `role_cannot_work` | nothing else |
 | `defects/d4_long_job.toml` | `grow_staple` yields 90 (the first draft of `spec-production.md` 12.1 was of this kind) | `labour_short` (`lambda*` 0.219) | nothing else |
 | `defects/d5_storage_gap.toml` | `staple` lasts 200 ticks against a supply gap of 304 | `storage_gap` | nothing else |
@@ -985,7 +985,7 @@ none in `one` (1.721) and `two` (1.52). `subsistence_exceeds_expected_work` in `
 only (76.0%; the other labour shares are at most 61%, under 68.5%). `region_not_self_sufficient` in no
 pack but A5. Whether `start_stock_below_target`, `tool_unaffordable` and the
 `source_unbounded` family fire is decided by the Go validator; the packs were written to
-avoid them and the golden file is the authority (FR-REF-005).
+avoid them and the golden file is the authority (FR-REF-005). `famine` does not load in Stage 1, and its programme at full labour has a tight capacity row, so the labour share is absent there; its warnings (`subsistence_exceeds_expected_work` at 76.0% and `target_above_surplus` at 1.112) are a Stage 2 matter.
 
 `cold_start_lockstep` (`spec-world.md` 15.2, informational) is expected by every cold
 pack (a variant without its warm-start document, 4.1) and also by a warm pack whose
@@ -1069,7 +1069,7 @@ names the scenario ID, the pack, the seed and the measure (testing.md 6.2).
 
 7.1.3. **Shocks and agents.** A shock is a line of `scripts/<scenario>.toml`, applied
 between two steps through the integration calls of `spec-integration.md` (FR-STB-014:
-`SetYieldShocks`, `AddAgent` and `Direct`), never by editing state:
+`SetYieldShocks`, `AddAgent` and `Direct`), never by editing state (the Stage 1 exception is below):
 
 ```toml
 [[shock]]            # sets the yield multiplier of spec-production.md 6.8
@@ -1090,6 +1090,13 @@ A `[[shock]]` is one entry of `SetYieldShocks`; a `[[buyer]]` is an `AddAgent` w
 directive applies to the next step only unless it is `Sticky` (FR-INT-027), so the
 harness empties the mailbox after 60 ticks with a `Direct` of a directive with
 nothing in it (FR-INT-026).
+
+**Stage 1 seam.** `integration.go` is Stage 2, so in Stage 1 a `[[shock]]` is applied
+between steps by the world row's unexported yield-shock setter (the function
+`SetYieldShocks` will call), reached through `export_test.go`; the format of
+`scripts/<scenario>.toml` stays as above. A `[[buyer]]` is not buildable until `AddAgent`
+and `Direct` exist (N-296). This is an accepted Stage 1 exception to FR-REF-021 and
+FR-STB-014; Stage 2 replaces the seam with the public call.
 
 7.1.4. **Measures** are computed from events, the snapshot, INT's `Agent(a)` queries
 and IND's presets (`spec-indicators.md` 9) only (FR-STB-012; FR-REF-027) by a
@@ -1147,9 +1154,10 @@ Each entry: the packs; the setup; the measure; the form of the pass or fail (a b
 `<id>.<name>`); the requirements; the level.
 
 **S01. A shock to one commodity, one region.** *Packs:* `one`. *Setup:* 700 ticks. Two
-legs, run separately. (a) Supply: `cut_fuel` at 5 000 bp from tick 400 to 459. (b)
+legs, run separately. (a) Supply: `cut_fuel` at 5 000 bp from tick 400 to 459 (in Stage 1 through the seam of
+7.1.3). (b)
 Demand: from tick 400 for 60 ticks a visitor buys `fuel` at 5% of its market's mean
-volume over ticks 300 to 399. *Measure:* the price series of `fuel` in `north`; `P0` the
+volume over ticks 300 to 399 (leg (b) and the visitor wait for INT, N-296). *Measure:* the price series of `fuel` in `north`; `P0` the
 mean over ticks 300 to 399; the *recovery time* the first tick after the shock at which
 the mean price over ten ticks lies within `s01.band_bp` of `P0` and stays there to the
 end; the *long-run offset* the gap in basis points between the mean over the last 100
@@ -1191,7 +1199,9 @@ the ten-tick mean price `p` and quantity bought `q` before (`q0`, `p0`) and duri
 stays inside its belief bounds at every tick (exact, FR-STB-008); the longest pinned run
 is at most `s04.pinned_ticks` (F5); the elasticity is **recorded** with the pack
 (FR-STB-009) and asserted to be in `[0, s04.elasticity_max_bp]` (it should be 0 to 1,
-`spec-agents.md` 11.6). The run without the floor (`min_work_share` 0) shows the other
+`spec-agents.md` 11.6). The helper reports the elasticity signed (negative for a
+shortage) and the band check compares its absolute value. In Stage 1 the shock is applied
+through the seam of 7.1.3. The run without the floor (`min_work_share` 0) shows the other
 outcome of `spec-stability.md` 6.1 and is recorded beside it. *Requirements:* FR-STB-009,
 FR-STB-008, FR-AGT-072, FR-WEL-027, FR-WEL-021 to 023. *Loops:* STB-L14, L15 to L18, L44,
 L51. *Level:* end-to-end.
@@ -1344,7 +1354,10 @@ within `s19.ratio_band_bp` of 10 000 (the identity of `spec-viability.md` 4.7), 
 of money in the pool and escrow at most `m05.pool_share_bp`; `HouseholdIncome` is `OK`
 false in version 1 (`spec-indicators.md` 9 row 21: the income fields are a future ask of
 `spec-observability.md`), so until they exist the ratio band is **reported** with the mean
-of ratios beside it and not asserted (`spec-stylised-facts.md` STY-M03, class R); with the halt on the unsold stock of
+of ratios beside it and not asserted (`spec-stylised-facts.md` STY-M03, class R). In Stage 1 the
+measures are `RoleRow.MeanRatioBP` (the mean ratio per role), `HeldByAgents` and
+`HeldByEstate` of the market rows and `ProductionHalted`; the aggregate-ratio band is
+reported only. With the halt on the unsold stock of
 each produced good stays below `s19.stock_bound_bp` of the halt threshold; with the halt
 off the stock of at least one good grows past that bound (the measure can see the glut).
 *Requirements:* FR-STB-021, FR-AGT-070, FR-WEL-032, FR-WEL-031, FR-AGT-066. *Loops:*
@@ -1527,6 +1540,13 @@ Money and quantities are integers, so the checks are exact equality (testing.md 
 test runs with the audit option on (`WithAudit`, `spec-ledger.md` 12.4) and checks the
 events as well as the totals. A failure reports the seed.
 
+The rows of `famine`, `five` and `one-demand` need the estates part, regions that
+trade and the demand module, so the first slice runs `one`, `second` and `three` (`three`
+only if the probe of the slice shows that the Stage 1 world runs it) and the other rows are
+added with the module that makes each buildable (N-295). The table is not renumbered, and
+the invariant and determinism tests of 8.2 are table-driven so that a row is added and no
+test is rewritten.
+
 ### 7.6 What no scenario can run yet
 
 | Item | Waits for | Next step |
@@ -1545,6 +1565,7 @@ events as well as the totals. A failure reports the seed.
 | S61 to S66: a migration cobweb after a yield shock, herding on one destination, relief on and off, a journey beyond `CoverTicks`, emptying a chain, the invariants over seeds (MIG) | `overlay/migration.toml` on `overlay/trade.toml` (REF); S61 to S65 wait for the code; S66 needs the code and `WithAudit` | build the overlays (7.9); S66 can run once the code exists |
 | S67 to S72: the merchant lane with the lock and the spread, contracts and escrow, a thin source market, mode choice and relocation, a gate region, a checkpoint with contracts in flight (MER) | `overlay/trade.toml` with the merchant and consignee roles of `spec-merchants.md` 19.1 (REF); S71 needs `overlay/external.toml`; S72 needs the code and a checkpoint | add with `overlay/trade.toml` (7.9); S68 and S72 can run once the code exists |
 | S73 to S76, S79 to S83: the cap, the cadence, the cold start, the stream, a failed harvest, a closed road with a consumer rule, the sequence of calls, a player and a restore, a forced move (WLD, INT) | the code; INT is written; S80 needs `overlay/trade.toml` and its merchant as S28 | assigned in 7.11; S79 to S83 and the unit models of S73, S74 and S76 can run once the code exists |
+| A1, the run legs (a warm run within `a1.price_band_bp` for 30 ticks, a cold run not better); A7 and A8 (conservation, stagger) | a running world with the solver: the stage that owns it (the world row for A7 and A8; A1's legs need the warm start applied to a built world) | listed here and not tested in Stage 1; add them with that stage |
 | S12, the coarse-tick leg | CAL experience and STY | restate the pack at five days a tick and add the leg |
 | X5: checkpoint and resume | the code (`spec-checkpoint.md` exists) | add the test: byte-equal checkpoints at every boundary of the continuation (`spec-checkpoint.md` 8.2.1) |
 | All bands | the keys of `spec-stylised-facts.md` 3.6 and 5.11, then a run that a human reviews (STY 8.4) | STY 8.4 sets a band from a reviewed run of these packs; a calibration (CLB) never sets one, and EXP is the harness that runs the seeds |
@@ -1839,7 +1860,7 @@ golden file (8.7).
 
 ### 8.5 The golden rendering (testing.md 7.1)
 
-The golden file of a pack is a text rendering with no floating point, no map order, no
+The golden file of a pack (`testdata/golden/off/<pack>.txt`, testing.md 7.1.1) is a text rendering with no floating point, no map order, no
 pointer and no wall-clock time; integers in decimal, sections and lines in a fixed order,
 UTF-8, LF. For a run of `T` ticks with a seed:
 
@@ -1850,8 +1871,9 @@ UTF-8, LF. For a run of `T` ticks with a seed:
    region: for every tradable commodity the published price, its age, the volume, the
    unmatched bid and ask units and the best unmatched limits (`MarketCleared`); the total
    held by agents and by the estate; and for every role the agents, the households, the
-   unfed households, and the mean money per household rounded down. The pool balance and
-   the pending output by commodity.
+   unfed households; and for every region the mean money per household rounded down
+   (`MoneyHouseholds / Households` of the region row, since `RoleRow` has no money
+   field, FR-REF-027). The pool balance and the pending output by commodity.
 3. **Event counts:** for the whole run, the count of each event type and, for
    `OrderRejected`, `AgentBankrupted` and `RecipeAbandoned`, the count by reason or cause;
    per window of 100 ticks, the counts of `TradeExecuted`, `RecipeExecuted`,
@@ -1861,7 +1883,8 @@ UTF-8, LF. For a run of `T` ticks with a seed:
 5. **Final state:** the agents and households by region and role; the goods and money
    totals; the jobs in progress by recipe.
 6. **Checkpoint digest:** the SHA-256 of the checkpoint at tick `T`: the 32 bytes of its
-   trailer (`spec-checkpoint.md` 8.3).
+   trailer (`spec-checkpoint.md` 8.3). **Item 6 is added by the checkpoint change
+   (Stage 2); until then the file ends with item 5** and no line is reserved for it.
 
 **A module that is off leaves no trace** (decision D5 of the plan of Stage 0;
 architecture.md 2.10.5). A count, an amount or a flag at zero is not written, a
@@ -2020,7 +2043,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-018 | No variant except those that name them MUST contain a demand module, a money faucet or an external sector. |
 | FR-REF-019 | The seeds of every warm-start table MUST be at or above the resolution floor and inside the reference band, and the reference basket of every region MUST be within `BasketTolerance` of the cost of its baseline upkeep at the reference prices. |
 | FR-REF-020 | Each scenario of 7.2 to 7.4 that can run MUST have one test that runs the packs and setup stated for it, whose `Requirement:` line lists the IDs of its entry and whose failure message names the scenario, the pack, the seed and the measure. |
-| FR-REF-021 | A shock or an external agent in a scenario MUST be applied between steps through the integration calls of `spec-integration.md` (`SetYieldShocks`, `AddAgent`, `Direct`) from a script of `scripts/`, and MUST NOT be applied by editing state. |
+| FR-REF-021 | A shock or an external agent in a scenario MUST be applied between steps through the integration calls of `spec-integration.md` (`SetYieldShocks`, `AddAgent`, `Direct`) from a script of `scripts/`, and MUST NOT be applied by editing state. In Stage 1 a shock is applied through the unexported yield-shock setter of 7.1.3, until `integration.go` exists. |
 | FR-REF-022 | A band MUST be read from `bands/<pack>.toml` (a regime threshold from `bands/regimes.toml`), a scenario MUST assert a band only when its key has a value, and MUST otherwise report its measure and assert only its exact checks and its O checks (7.1.5). |
 | FR-REF-023 | The exact checks (class X of `spec-stylised-facts.md` 5.11) and the O checks (class O: a sign, an order or a derived bound) MUST be asserted whether or not a band exists, while its key is unset: X in S02, S03, S08 (the cycle gain), S09, S10, S11, S13, S14, S17, S18, S21, A2, A3, A5 and A7, and O in S01, S06, S08, S14, S19, S20 and S22. The scenarios of 7.6 and 7.9 assert theirs from the day they can run (FR-REF-038). |
 | FR-REF-024 | A band MUST be set only from a run over at least the seeds of 8.2 that a human has reviewed, MUST record the run that set it, and MUST NOT be set from one seed or from the code under test without review. |
@@ -2092,7 +2115,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 |---------|------|
 | The documents of 4 | `testdata/chains/` (architecture.md 2.6) |
 | The expected results, bands and shock scripts | `testdata/chains/expected/`, `bands/`, `scripts/` |
-| The golden files | `testdata/golden/` (`one.txt` and `five.txt` of 8.5; `events-<pack>.txt`, `spec-observability.md` 9.5.3; `experiment-one.txt`, `spec-experiments.md`; `stylised/<pack>.txt` and `stylised/<pack>.stability.txt`, `spec-stylised-facts.md` 7.3.3 and 8.5) |
+| The golden files | `testdata/golden/` (`off/one.txt` and `off/five.txt` of 8.5; `off/events-<pack>.txt`, `spec-observability.md` 9.5.3, and the module-on sets `<module>/` and `all/`, testing.md 7.1.1; `experiment-one.txt`, `spec-experiments.md`; `stylised/<pack>.txt` and `stylised/<pack>.stability.txt`, `spec-stylised-facts.md` 7.3.3 and 8.5; the last two are tied to no module set and stay outside `off/`) |
 | The records of a calibration | `testdata/calibration/<pack>/<stage>-<n>.txt` (`spec-calibration.md`), and its overlays in `testdata/chains/calibrated/` (4.1) |
 | The scenario tests, invariants, golden, determinism, X4, X5, X8 that need no `indicator` | the root package's external test package (`economysim_test`), in files named for the scenario group; skipped with `-short` |
 | The scenario tests that read an IND preset (REF) and the fact tests of STY | `indicator/scenario_*_test.go` and `indicator/stylised_*_test.go`, package `indicator_test`, sharing `stylised_helpers_test.go` (the recording observer, owned by STY); each re-runs its pack and seed and keeps its own small recorder, because FR-IND-001 lets no other package import `indicator` |

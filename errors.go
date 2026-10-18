@@ -117,6 +117,9 @@ var (
 	// ErrUnknownClearing is a configured World.Clearing that is empty or names
 	// no registered clearing; NewWorld returns it as a *ValidationError.
 	ErrUnknownClearing = errors.New("unknown clearing")
+	// ErrUnknownStrategy is a configured Role.Strategy that names no registered
+	// strategy; NewWorld returns it as a *ValidationError.
+	ErrUnknownStrategy = errors.New("unknown strategy")
 )
 
 // The errors of the market step (spec-clearing.md 8.2).

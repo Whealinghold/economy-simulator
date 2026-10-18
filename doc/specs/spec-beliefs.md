@@ -737,7 +737,8 @@ the default strategy reads the belief to draw limit prices (section 6) and the
 world, when it processes an outcome (5.1.3), calls the strategy's `Revise` method
 (`spec-agents.md` 6.2): `Revise(o *OutcomeView, rng *rand.Rand) Belief`. The
 `OutcomeView` (`spec-agents.md` 6.4.4) carries the order and its outcome, the current
-belief and bounds, the market report, `Stock`, `Target`, `UnitCost` and `Draw`, the
+belief and bounds, the market report, `Stock`, `Target`, `UnitCost` and `Draw` and the
+belief parameters of section 11 (`spec-agents.md` 6.4.1), the `Draw` being the
 one `uint64` the world drew for this outcome (4.5). The default is
 `DefaultStrategy.Revise`, which calls `beliefs.Update` and nothing else
 (`spec-agents.md` 7.6).

@@ -111,8 +111,17 @@ economy-sim/
 │   ledger.go market.go order.go clearing.go agent.go strategy.go spawner.go
 │   beliefs.go production.go estates.go welfare.go skills.go observer.go
 │   snapshot.go regions.go scale.go checkpoint.go integration.go moneyflow.go
-│   viability.go           # CORE concept files, one per concept; world.go holds
-│                           #   the four fan-ins (architecture.md 2.10.4)
+│   viability.go           # CORE concept files, one per concept; the four fan-ins
+│                           #   (architecture.md 2.10.4) are in fanin.go
+├── strategy_default.go strategy_work.go strategy_view.go (AGT)
+│   spawner_report.go (SPN)  production_report.go (PRO)
+│   viability_check.go viability_table.go (VIA)
+│   construct.go construct_warm.go fanin.go phase_start.go phase_production.go
+│   phase_trade.go phase_outcomes.go phase_exit.go (WLD)
+│                           # CONTINUATION files: a concept past the Lizard limits
+│                           #   of N-243 is split; each maps to the area code of
+│                           #   its concept, and its _test.go carries that area's
+│                           #   Requirement: lines (architecture.md 2.6)
 ├── demand.go resources.go subsistence.go population.go transport.go
 │   information.go migration.go contract.go external.go settlements.go
 │   storage.go employment.go tenure.go polity.go credit.go risk.go
@@ -131,8 +140,13 @@ economy-sim/
 │   │                       #   strategy/, indicator/ or experiment/
 │   ├── checked/ logkeys/ ordering/ codec/        # leaf helpers; import nothing of
 │   │                       #   the root (ordering holds the stream key, ADR 0008)
-│   ├── ledger/ clearing/ beliefs/ production/ welfare/ steady/ graph/ curve/
-│   │                       # core rules over primitive structs
+│   ├── ledger/ clearing/ beliefs/ production/ welfare/ household/ occupation/
+│   │   steady/ graph/ curve/
+│   │                       # core rules over primitive structs (household: the
+│   │                       #   agent's consumption, targets, tiers, spend cap and
+│   │                       #   work rules; occupation: the spawner's signals, caps,
+│   │                       #   ranking, renewal and placement; steady: the exact
+│   │                       #   solver, math/big allowed)
 │   ├── moneyflow/ population/ transit/ endowment/ rumour/ outside/ ownuse/
 │   │   migration/ merchant/ room/ employment/ settlement/ tenure/ polity/
 │   │   credit/ facility/ risk/ fiscal/ institution/ saving/ technology/
