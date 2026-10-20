@@ -30,11 +30,12 @@ type Warning struct {
 
 // Validate checks the configuration in full and returns every error it finds,
 // not the first, joined with errors.Join (spec-config.md 7.1). Each is a
-// *ValidationError, so errors.Is matches a rule's sentinel and errors.As finds
-// the path, value and bound. The errors are sorted by path and then by rule, so
-// the result is the same on every run, and at most 100 are returned, followed by
-// one ErrTooManyErrors that says how many were left out. A valid configuration
-// returns nil.
+// *ValidationError, or a *ViabilityError for a viability rule, so errors.Is
+// matches a rule's sentinel (ErrNotViable for every viability rule) and
+// errors.As finds the path, value and bound. The errors are sorted by path and
+// then by rule, so the result is the same on every run, and at most 100 are
+// returned, followed by one ErrTooManyErrors that says how many were left out. A
+// valid configuration returns nil.
 //
 // Validate is pure and bounded: it changes nothing in c, starts no goroutine and
 // draws no random number. It runs in the phases of spec-config.md 7.1.6. The
@@ -44,17 +45,59 @@ type Warning struct {
 // shape of each entity, the duplicates and references between them, and the
 // producibility of every commodity (spec-config.md 7.5).
 //
-// At Stage 0 it checks the structural rules of spec-config.md 7.3 that need no
-// module and the rules of 7.4.1 that the slice's sections own (fields and
-// bounds in phase 2, the rules that read two sections in phase 4, the derived
-// products of 4.2 in phase 5). The three name checks of 7.1.4 are NewWorld's,
-// and the viability rules of phase 6 and the checks that need a module come
-// with the stage or the module that builds them.
+// It checks the structural rules of spec-config.md 7.3 that need no module and
+// the rules of 7.4.1 that the slice's sections own (fields and bounds in phase
+// 2, the rules that read two sections in phase 4, the derived products of 4.2 in
+// phase 5). Phase 6, the viability rules of spec-config.md 7.6 and the empty set
+// of virtual start offsets of a warm-start job, runs only on a configuration the
+// earlier phases found clean, on its canonical copy, under the size gate. The
+// three name checks of 7.1.4 are NewWorld's, and the checks that need a module
+// come with the module that builds them.
 func (c Config) Validate() error {
 	v := &validator{c: c}
+	v.structural()
+	if len(v.rep.errs) == 0 {
+		v.viability()
+	}
+	return v.rep.err()
+}
+
+// Warnings returns the warnings of the configuration in order of path and then
+// rule (spec-config.md 7.2). It never fails and has no effect on Validate. It is
+// safe to call on a configuration that does not validate. The structural
+// warnings are linear in the size of the configuration (the lists a role holds
+// are read once per role); the viability check is not linear and is run again
+// here, so a caller that needs both Validate and Warnings pays for it twice. The
+// viability warnings of spec-config.md 7.4.2 are
+// appended only when phases 1 to 5 of Validate come back clean on a scratch
+// report, so Validate and Warnings agree on when the viability check runs, and
+// they are bounded by the size gate of spec-config.md 7.6. `group_below_floor` is
+// a run-time warning and is not here.
+func (c Config) Warnings() []Warning {
+	out := warnings(&c)
+	v := &validator{c: c}
+	v.structural()
+	if len(v.rep.errs) > 0 {
+		return out
+	}
+	cc := c.canonical()
+	out = append(out, checkViability(&cc, newLookup(&cc)).warnings...)
+	sortWarnings(out)
+	return out
+}
+
+// sortWarnings orders warnings by path and then rule.
+func sortWarnings(w []Warning) {
+	slices.SortStableFunc(w, func(a, b Warning) int {
+		return cmp.Or(slices.Compare(a.Path, b.Path), cmp.Compare(a.Rule, b.Rule))
+	})
+}
+
+// structural runs phases 1 to 5 of spec-config.md 7.1.6.
+func (v *validator) structural() {
 	v.counts()
 	if len(v.rep.errs) > 0 {
-		return v.rep.err()
+		return
 	}
 	v.declare()
 	v.local()
@@ -63,31 +106,83 @@ func (c Config) Validate() error {
 	v.structure()
 	v.economics()
 	v.overflow()
-	return v.rep.err()
 }
 
-// Warnings returns the warnings of the configuration in order of path and then
-// rule (spec-config.md 7.2). It never fails and has no effect on Validate. It is
-// safe to call on a configuration that does not validate; its work is linear in
-// the size of the configuration (the lists a role holds are read once per role).
-//
-// At Stage 0 it returns the warnings of spec-config.md 7.4.2 that no solver and
-// no module is needed for. The viability warnings come with the solver (Stage 1)
-// and the warnings of a module with the module. `group_below_floor` is a
-// run-time warning and is not here.
-func (c Config) Warnings() []Warning {
-	return warnings(&c)
+// viability is phase 6 (spec-config.md 7.1.6): on the canonical copy of a
+// configuration phases 1 to 5 found clean, the empty set of virtual start offsets
+// of a job and the viability rules (D125). A defect of the solver, which no
+// input can cause, is reported as ErrSolveInconsistent.
+func (v *validator) viability() {
+	cc := v.c.canonical()
+	m := newViaModel(&cc)
+	v.emptyOffsets(m)
+	v.addOutcome(m.check(newLookup(&cc)))
+}
+
+// addOutcome puts the errors of the viability checks in the report.
+func (v *validator) addOutcome(out viabilityOutcome) {
+	for _, e := range out.errs {
+		v.rep.addViability(e)
+	}
+	if out.fault != nil {
+		v.rep.add(out.fault, []string{"viability"}, "", "")
+	}
+}
+
+// emptyOffsets reports ErrWarmStartJob for a job row of the warm start whose
+// recipe has no virtual start offset in the group's region (spec-viability.md
+// 8.5.2, 8.7, FR-VIA-033). It needs the yield and recipe tables, so it runs at
+// the entry of phase 6 and not with the other warm-start rules of phase 4.
+func (v *validator) emptyOffsets(m *viaModel) {
+	ws := m.c.WarmStart
+	if ws == nil {
+		return
+	}
+	seen := map[[2]int]bool{} // a lookup only; no result depends on its order
+	for _, g := range ws.Groups {
+		region, _ := m.c.regionID(g.Region)
+		for _, j := range g.Jobs {
+			recipe, _ := m.c.recipeID(j.Recipe)
+			key := [2]int{int(region), int(recipe)}
+			empty, known := seen[key]
+			if !known {
+				empty = noVirtualStart(m.runsFor(region, recipe), m.year, m.c.Recipes[recipe].Duration)
+				seen[key] = empty
+			}
+			if empty {
+				v.rep.add(ErrWarmStartJob, []string{"warm_start", "groups", g.Region, g.Role, "jobs", j.Recipe}, j.Recipe, "")
+			}
+		}
+	}
+}
+
+// finding is one rejected rule of a report: the error to return and the key the
+// one sorted list orders by (path, rule name, value, bound), common to the two
+// error types.
+type finding struct {
+	err          error
+	path         []string
+	rule         string
+	value, bound string
 }
 
 // report collects the errors of one Validate call.
 type report struct {
-	errs []*ValidationError
+	errs []finding
 }
 
 // add records one rejected rule. The value and bound are text, as in
 // ValidationError.
 func (r *report) add(rule error, path []string, value, bound string) {
-	r.errs = append(r.errs, &ValidationError{Path: path, Rule: rule, Value: value, Bound: bound})
+	r.errs = append(r.errs, finding{
+		err:  &ValidationError{Path: path, Rule: rule, Value: value, Bound: bound},
+		path: path, rule: rule.Error(), value: value, bound: bound,
+	})
+}
+
+// addViability records one rejected viability rule in the same list.
+func (r *report) addViability(e *ViabilityError) {
+	r.errs = append(r.errs, finding{err: e, path: e.Path, rule: e.Rule, value: e.Value, bound: e.Bound})
 }
 
 // err returns nil for no error, and otherwise the errors sorted by path then
@@ -99,12 +194,12 @@ func (r *report) err() error {
 	if len(r.errs) == 0 {
 		return nil
 	}
-	slices.SortStableFunc(r.errs, func(a, b *ValidationError) int {
+	slices.SortStableFunc(r.errs, func(a, b finding) int {
 		return cmp.Or(
-			slices.Compare(a.Path, b.Path),
-			cmp.Compare(a.Rule.Error(), b.Rule.Error()),
-			cmp.Compare(a.Value, b.Value),
-			cmp.Compare(a.Bound, b.Bound),
+			slices.Compare(a.path, b.path),
+			cmp.Compare(a.rule, b.rule),
+			cmp.Compare(a.value, b.value),
+			cmp.Compare(a.bound, b.bound),
 		)
 	})
 	shown := r.errs
@@ -113,7 +208,7 @@ func (r *report) err() error {
 	}
 	out := make([]error, 0, len(shown)+1)
 	for _, e := range shown {
-		out = append(out, e)
+		out = append(out, e.err)
 	}
 	if left := len(r.errs) - len(shown); left > 0 {
 		out = append(out, fmt.Errorf("%w: %d more not shown", ErrTooManyErrors, left))
@@ -1894,9 +1989,7 @@ func warnings(c *Config) []Warning {
 		add("entry_share_window", "world", "entry_share")
 	}
 
-	slices.SortStableFunc(out, func(a, b Warning) int {
-		return cmp.Or(slices.Compare(a.Path, b.Path), cmp.Compare(a.Rule, b.Rule))
-	})
+	sortWarnings(out)
 	return out
 }
 

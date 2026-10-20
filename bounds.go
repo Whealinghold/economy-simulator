@@ -66,6 +66,17 @@ const (
 	// MaxSeedPrices is the most seed prices of a warm start: one per region and
 	// commodity.
 	MaxSeedPrices = MaxRegions * MaxCommodities
+	// MaxViabilityPivots is the most pivots the load-time viability check and a
+	// solve may use (spec-viability.md 11). Bland's rule terminates but may be
+	// slow, so this caps the work; a check that reaches it is skipped with a
+	// warning, a solve returns ErrSolveLimit. Provisional (N-015, N-061).
+	MaxViabilityPivots = 100_000
+	// MaxViabilityCells is the most rows times columns of the tableau Validate
+	// builds, and the most steps of the cycle-gain enumeration; above it the
+	// programmes of V2 and V3 are skipped with a warning (spec-viability.md
+	// 4.3). A tableau of 4 000 000 cells is, for example, 1 000 rows by 4 000
+	// columns. Provisional and unmeasured (N-015, N-061).
+	MaxViabilityCells = 4_000_000
 )
 
 // Calendar and time bounds (spec-calendar.md 7.1).
@@ -139,6 +150,18 @@ type fieldRange struct {
 
 // wholeBP is 10 000 basis points: a ratio of 1.
 const wholeBP = 10_000
+
+// The bounds of the solve options (spec-viability.md 11), unexported: an option
+// is a function of SolveSteadyState and not a Config field. The bound of
+// WithMaxPivots is MaxViabilityPivots. Provisional (N-015).
+const (
+	// maxStockCoverTicks is the most ticks of upkeep a warm stock may cover.
+	maxStockCoverTicks = 1_000
+	// maxMoneyBufferTicks is the most ticks of upkeep a warm money may add.
+	maxMoneyBufferTicks = 10_000
+	// maxResidualWarnBP is the largest residual threshold, in basis points.
+	maxResidualWarnBP = 100_000
+)
 
 // worldRanges returns the ranges of the integer fields of a World that do not
 // depend on another field: spec-agents.md 12, spec-beliefs.md 11,

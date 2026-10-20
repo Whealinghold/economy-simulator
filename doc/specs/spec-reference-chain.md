@@ -2000,7 +2000,7 @@ prototype of `spec-viability.md` 15), then scales the dual to a basket of 1 000,
 half to even with the floor 50, apportions the census by the largest remainder with the
 start-capacity row counted, and writes the seed table by the rules of 8.2 to 8.5 there.
 The lean reserve of `staple` is the use per tick at `lambda = 1` times the ticks to the
-first completion (an approximation: the Go rule of 8.4.1 may differ). Wants are counted in
+first completion (an approximation: the Go rule of 8.4.1 differs in `centre` of `five`, where the cumulative shortfall peaks at tick 301 and a grower holds 1 092 `staple` against the document's 1 087). Wants are counted in
 the demand pack as a fixed extra demand at the reference. The prices of the second
 setting reproduce those of `spec-viability.md` 15 (a check that the prototype is the same
 one). The prototype is not the Go design and decides nothing.

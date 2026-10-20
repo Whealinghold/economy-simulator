@@ -13,7 +13,8 @@ import (
 )
 
 // violations splits the error of Validate into its *ValidationError values, in
-// the order returned, and returns the rest (the ErrTooManyErrors entry) apart.
+// the order returned, and returns the rest apart: the ErrTooManyErrors entry and
+// every *ViabilityError of phase 6, which is not a *ValidationError.
 func violations(err error) (found []*economysim.ValidationError, other []error) {
 	joined, ok := err.(interface{ Unwrap() []error })
 	if !ok {
@@ -984,10 +985,19 @@ func TestValidate_UnproducibleRule(t *testing.T) {
 		tests := []struct {
 			name   string
 			mutate func(c *economysim.Config)
+			// viability is the one viability rule the case draws, "" for none. Raw
+			// marks a good sourced for the structural rule and for V1, and nothing
+			// real stands behind it.
+			viability string
 		}{
-			{"raw commodity is sourced", orePlusUpkeep(true)},
+			// A Raw upkeep good with no real source beside a produced basket is the
+			// documented consequence of spec-viability.md 4.2.1: V1 and the
+			// structural rule count it sourced, and the pooled programme (which has
+			// nothing to make it) is 0, so labour_short is the one finding.
+			{"raw commodity is sourced", orePlusUpkeep(true), "labour_short"},
 			{
-				// A recipe with no inputs is a source (FR-PRO-003).
+				// A recipe with no inputs is a source (FR-PRO-003). It makes 5 a tick
+				// for the 1 a household eats, so the chain is still productive.
 				"recipe with no inputs is a source",
 				func(c *economysim.Config) {
 					d := economysim.DefaultCommodity()
@@ -996,15 +1006,17 @@ func TestValidate_UnproducibleRule(t *testing.T) {
 					c.World.Upkeep = append(c.World.Upkeep, economysim.Item{Commodity: "ore_x", Quantity: 1})
 					r := economysim.DefaultRecipe()
 					r.ID = "mine_x"
-					r.Outputs = []economysim.Output{{Commodity: "ore_x", Quantity: 1, CostShare: 10_000}}
+					r.Outputs = []economysim.Output{{Commodity: "ore_x", Quantity: 5, CostShare: 10_000}}
 					c.Recipes = append(c.Recipes, r)
 				},
+				"",
 			},
 			{
 				// The cycle of the first case is fine once it has a way in: a
 				// recipe that makes loop_a from nothing.
 				"cycle with a way in",
 				func(c *economysim.Config) { loopWith(c, true) },
+				"",
 			},
 		}
 		for _, tt := range tests {
@@ -1012,8 +1024,16 @@ func TestValidate_UnproducibleRule(t *testing.T) {
 				t.Parallel()
 				c := referenceConfig()
 				tt.mutate(&c)
-				if err := c.Validate(); err != nil {
+				err := c.Validate()
+				if errors.Is(err, economysim.ErrUnproducible) {
+					t.Errorf("Validate(%s) = %v, want no ErrUnproducible: the good is sourced", tt.name, err)
+				}
+				var ve *economysim.ViabilityError
+				switch got := errors.As(err, &ve); {
+				case tt.viability == "" && err != nil:
 					t.Errorf("Validate(%s) = %v, want nil", tt.name, err)
+				case tt.viability != "" && (!got || ve.Rule != tt.viability):
+					t.Errorf("Validate(%s) = %v, want the viability rule %q", tt.name, err, tt.viability)
 				}
 			})
 		}

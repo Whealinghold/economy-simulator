@@ -128,3 +128,15 @@ func DefaultRegion() Region {
 		EstateMarkdown:  500,
 	}
 }
+
+// The defaults of the solve options (spec-viability.md 11), unexported for the
+// reason the bounds are: the options are not Config fields. Provisional
+// placeholders (N-015).
+const (
+	// defaultStockCoverTicks is the ticks of upkeep a household holds at the start.
+	defaultStockCoverTicks = 5
+	// defaultMoneyBufferTicks is the ticks of upkeep of money held beyond the job.
+	defaultMoneyBufferTicks = 10
+	// defaultResidualWarnBP is the residual above which an activity is listed.
+	defaultResidualWarnBP = 1_000
+)

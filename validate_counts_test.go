@@ -118,3 +118,28 @@ func TestValidate_EveryCountBound(t *testing.T) {
 		})
 	}
 }
+
+// TestBounds_ViabilityLimits verifies the two bounds of the viability check at
+// the values spec-config.md 4.1 gives, read as constants: they bound work, not a
+// collection of a Config, so they have no count case above. Their use as the
+// gate and the pivot cap of Validate is TestViaModel_GateIsTheBounds.
+//
+// Requirement: FR-CFG-046
+func TestBounds_ViabilityLimits(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		got, want int64
+	}{
+		{"MaxViabilityPivots", economysim.MaxViabilityPivots, 100_000},
+		{"MaxViabilityCells", economysim.MaxViabilityCells, 4_000_000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if tt.got != tt.want {
+				t.Errorf("%s = %d, want %d", tt.name, tt.got, tt.want)
+			}
+		})
+	}
+}

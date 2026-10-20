@@ -22,7 +22,8 @@ const (
 // config/, a package of the module that the importing package may not import
 // (internal/ never imports the root, config/, strategy/, indicator/ or
 // experiment/; the root imports none of config/, strategy/, indicator/,
-// experiment/). It reads the imports only.
+// experiment/), and math/big outside the non-test files of internal/steady
+// (architecture.md 3.5). It reads the imports only.
 func importProblems(name string, src any) ([]string, error) {
 	f, err := parser.ParseFile(token.NewFileSet(), name, src, parser.ImportsOnly)
 	if err != nil {
@@ -51,6 +52,10 @@ func importProblems(name string, src any) ([]string, error) {
 		}
 		first, _, _ := strings.Cut(p, "/")
 		switch {
+		case p == "math/big":
+			if !strings.HasPrefix(name, "internal/steady/") {
+				report("math/big is imported by internal/steady only (architecture.md 3.5)")
+			}
 		case p == tomlPath || strings.HasPrefix(p, tomlPath+"/"):
 			if top != "config" {
 				report("a file-format parser is imported by config/ only")
@@ -100,6 +105,13 @@ func TestImportGuard_Detects(t *testing.T) {
 		{"config parser", "config/c.go", `package p; import "` + tomlPath + `"; import "` + modulePath + `"`, 0},
 		{"config other third party", "config/c.go", `package p; import "gopkg.in/yaml.v3"`, 1},
 		{"indicator parser", "indicator/i.go", `package p; import "` + tomlPath + `"`, 1},
+		{"steady big", "internal/steady/s.go", `package p; import "math/big"`, 0},
+		{"steady subdirectory big", "internal/steady/x/s.go", `package p; import "math/big"`, 0},
+		{"root big", "a.go", `package p; import "math/big"`, 1},
+		{"other internal big", "internal/checked/c.go", `package p; import "math/big"`, 1},
+		{"lookalike steady big", "internal/steadyx/s.go", `package p; import "math/big"`, 1},
+		{"config big", "config/c.go", `package p; import "math/big"`, 1},
+		{"big sub-package is not math/big", "a.go", `package p; import "math/bits"`, 0},
 		{"lookalike module prefix", "a.go", `package p; import "` + modulePath + `-evil/x"`, 1},
 	}
 	for _, tt := range tests {

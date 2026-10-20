@@ -369,7 +369,9 @@ plantings (spring and autumn, completions 118, 178, 302, 362) give 123.
 
 If `c` is in the upkeep of a group in the region and its `ShelfLife` is
 above 0 and below the supply gap, no stock can bridge the gap and the households
-go without: `storage_gap`, an error. For an input of an activity that exists all year
+go without: `storage_gap`, an error. A commodity that no activity of the region
+outputs has no supply gap there (it comes from another region, so the pooled readings
+of 4.2 and 4.4 cover it) and is skipped, not given a gap of the whole year. For an input of an activity that exists all year
 the same condition is the warning `storage_gap_input`.
 
 For a non-perishable the gap is bridged by a stock, which the warm start provides
@@ -499,12 +501,21 @@ are: `grow_staple` 0.76705 (`1 800 x - 20 s = 1 350`, `40 x = 20 s`), `save_seed
 refiner 19.773 (2 ticks per `refine`), maker 30.426, and grower
 `max(60 * 0.76705 + 1.5341, 0.76705 * 365 / 2) = max(47.56, 139.99) = 139.99`, since
 `grow_staple` can start twice a year (59 and 119: 3.1), so growers need about three times
-the labour their work alone suggests. The sum is 331.29, the factor 600 / 331.29 = 1.8112,
+the labour their work alone suggests. The sum is 331.29, the factor 600 / 331.29 = 1.8111,
 and the quotas are cook 135.83, digger 29.84, forester 89.88, grower 253.53, maker 55.11,
 refiner 35.81. The floors sum to 596; the four largest remainders (forester .88, digger .84,
 cook .83, refiner .81) take the remaining four, which gives cook 136, digger 30,
 forester 90, grower 253, maker 55, refiner 36: the groups of `one.toml`, which is
 therefore balanced (`spec-reference-chain.md` 4.4.1).
+
+*The formula is pinned.* It reproduces the configured households of every group of every
+region of `one`, `two`, `three`, `five` and `famine` (each is its own balanced census), and
+no neighbouring reading does on `one`: the labour alone gives a grower 120 against 253, the
+labour plus the capacity term 297, and the labour divided by `phi` with the capacity term
+left whole 200. `second` is the one pack that is not balanced, by design (the tool sector
+is five households per role: `spec-reference-chain.md` 4.4.7); its needs are 313.92
+`algae_tender`, 194.34 `driller`, 0.164 `fabber`, 0.123 `smelter` and 0.011
+`regolith_miner` households.
 
 **Why it is a competitive equilibrium.** The goods and labour rows with a
 fixed-proportion upkeep basket are the linear Fisher market with Leontief demand;
@@ -558,8 +569,8 @@ capacity rows break the theorem's conditions and the solver does not rely on it.
    `lambda`-independent quantities from the **nominal** programme (the one with `phi` the
    expected work share, 3.2), where labour binds; the report lists the region under
    `NominalSeed`. If the nominal wage is also 0 the region stays unpriced as before
-   (`UnpricedWages`). In the example the nominal table has a wage of 1 826 and a tool at
-   12 432, against 0 and 0 at full labour, and at the unchanged yield of 4 000 the full
+   (`UnpricedWages`). In the example the nominal table has a wage of 1 826 and a `tool_b` at
+   12 432 (`tool_a` 10 114), against 0 and 0 at full labour, and at the unchanged yield of 4 000 the full
    labour table (wage 755) is used (FR-VIA-058).
 
    **The fallback is per programme.** In an autarky programme the programme is the
@@ -959,7 +970,20 @@ production is zero up to the first completion.
 30.68 as the input of `save_seed`: 1 380.68 a tick. Over 118 ticks, shared among the 253
 growers, that is 1 380.68 * 118 / 253 = 643.95, which rounds up to **644** per grower; the
 664 of `warm-one.toml` is these 644 plus the 20 `staple` a grower holds as the input of
-one `save_seed` (item 2). In `famine` the figure is 393 = 383 + 10.
+one `save_seed` (item 2). In `famine` the figure is 393 = 383 + 10 (1 350 a tick, since
+`save_seed` is idle at lambda 1: 1 350 * 118 / 417 = 382.01). In `two` the figures are
+723 (`north`: 162 920.45 / 232 = 702.2, 703 + 20) and 789 (`south`, which plants twice, so
+the first harvest is also at tick 118: 109 959.29 / 143 = 768.9, 769 + 20).
+
+*Where the cumulative maximum is not at the first harvest.* In `centre` of `five` (spring
+and autumn plantings, both at 8 000) the use is 2 314.29 `staple` a tick and the first
+harvest is at tick 118, so the shortfall is 273 085.71 at tick 117. The spring harvest
+(completions 118 to 209) then brings it down by 211 750.82, and the 92 ticks from 210 to
+the first autumn completion (tick 302) use 212 914.29, so the shortfall is back up at
+274 249.18 at tick 301, a little above the first peak. 274 249.18 / 256 growers = 1 071.3,
+so a grower holds 1 072 + 20 = 1 092. The first-harvest wording gives 1 067 + 20 = 1 087,
+which is what `warm-five.toml` holds. The two readings agree in every other region of
+`two`, `three` and `five`, and 8.4.1 as written (the cumulative maximum) decides.
 
 8.4.2. Cover and reserve that would last longer than a commodity's `ShelfLife`
 are cut to the shelf life, and the report names the commodity.
@@ -1546,7 +1570,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-025 | The report MUST give, per commodity, the drift of the seed from the effective reference price, and the largest residual in basis points of the value added of an active activity at the integer prices against the wage times the duration. |
 | FR-VIA-026 | A commodity with a non-unique price MUST have its reference price in the table, and one with a price of 0 MUST have the larger of the resolution floor and the lower bound of the reference band; both MUST be listed in `UnpricedCommodities`. |
 | FR-VIA-027 | The report MUST list every commodity whose seed price is below `UnitCost * CostFloor` or above `UnitCost * CostCeiling` at the seed prices, where `UnitCost` is the full unit cost of `spec-production.md` 9.1 (inputs, tool wear and `Duration` working ticks at the solver's wage, rounded up, computed from the integer seed prices). (changed: it was the cost of inputs and wear) |
-| FR-VIA-028 | The solver MUST report the census imbalance of each group and the balanced census per recipe, and MUST NOT change the census. |
+| FR-VIA-028 | The solver MUST report, for each group, its need in households (the larger of the labour of its recipes and the start-capacity term of 5.2, at the flows of lambda 1, with no available work share in either term), the balanced census (the largest-remainder apportionment of the region's configured households in proportion to need, ties to the earlier group in canonical order) and the imbalance (configured minus balanced), and per recipe where a recipe is on the lists of several roles of a region; and MUST NOT change the census. |
 | FR-VIA-029 | `Config.WarmStart` MUST be nil by default, MUST be part of the effective configuration and the hash, and MUST be plain data with sorted slices and no map. |
 | FR-VIA-030 | A seed price MUST be within `[1, MaxPrice]`, at or above the resolution floor and within the reference band, or the configuration MUST be rejected with `ErrWarmStartPrice`. |
 | FR-VIA-031 | A seed price MUST replace the effective reference price as the market's initial published price and as the initial centre of each initial agent's belief, clamped to the bounds. |

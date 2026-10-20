@@ -72,17 +72,24 @@ func FuzzLoad(f *testing.F) {
 	})
 }
 
-// classified reports whether a Validate error is a *ValidationError (alone or in
-// a join) whose rule is an exported sentinel, or the ErrTooManyErrors cut.
+// classified reports whether a Validate error is made only of *ValidationError
+// values (alone or in a join) whose rule is an exported sentinel, and
+// *ViabilityError values of the five viability rules, or is the ErrTooManyErrors
+// cut.
 func classified(err error) bool {
 	if errors.Is(err, economysim.ErrTooManyErrors) {
 		return true
 	}
-	ves := validationErrors(err)
+	ves, vias := validationErrors(err), viabilityErrors(err)
 	for _, ve := range ves {
 		if ve.Rule == nil || !slices.ContainsFunc(validationSentinels, func(s error) bool { return errors.Is(ve.Rule, s) }) {
 			return false
 		}
 	}
-	return len(ves) > 0
+	for _, ve := range vias {
+		if !slices.Contains(viabilityRules, ve.Rule) || !errors.Is(ve, economysim.ErrNotViable) {
+			return false
+		}
+	}
+	return len(ves)+len(vias) > 0
 }

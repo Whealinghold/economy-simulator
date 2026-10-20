@@ -53,7 +53,7 @@ stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quanti
 [warm_start.region.south.group.grower]
 money = 79800
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 789 }, { commodity = "tool_a", quantity = 1 } ]
-jobs = [ { recipe = "grow_staple", in_progress = 3341 } ]
+jobs = [ { recipe = "grow_staple", in_progress = 3110 } ]
 [warm_start.region.south.group.maker]
 money = 23851
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]

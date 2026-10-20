@@ -13,7 +13,7 @@ water = 346
 [warm_start.region.crater_rim.group.algae_tender]
 money = 23384
 stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "water", quantity = 5 } ]
-jobs = [ { recipe = "grow_algae", in_progress = 5163 } ]
+jobs = [ { recipe = "grow_algae", in_progress = 5232 } ]
 [warm_start.region.crater_rim.group.driller]
 money = 11112
 stock = [ { commodity = "biomass", quantity = 10 }, { commodity = "drill", quantity = 1 }, { commodity = "ice", quantity = 1 }, { commodity = "water", quantity = 5 } ]

@@ -349,7 +349,9 @@
 //   - Position in the window: where a price lies between the window low and the
 //     window high, in basis points, clamped to 0 and 10 000.
 //   - Seed price: the price a belief and a market start from: the effective
-//     reference price, or the warm-start entry when there is one.
+//     reference price, or the warm-start entry when there is one. The exact
+//     solver's seed price is its price in basket units times the scale of
+//     the regional numeraire, rounded half to even (spec-viability.md 6.3).
 //   - Target price: the one price an order's outcome points a belief toward: the
 //     best unmatched quote of the other side or a fresh market price.
 //   - Fill share: the units filled over the units ordered, in basis points; at
@@ -531,4 +533,50 @@
 //     reviews again.
 //   - Exit allowance: the households that may leave a region by rung 3 in a tick,
 //     a share (ExitShare) of its households, rounded up.
+//   - Viable chain: a configuration whose households can make their upkeep
+//     from the recipes, regions and labour it has (spec-viability.md 4); not the
+//     viability V of a role, which is a spawner signal.
+//   - Steady state: the flows and prices at which the surplus factor is 1, every
+//     active activity pays the same wage and none would pay more
+//     (spec-viability.md 5.1).
+//   - Activity: a recipe in a region, the column of the reference programme.
+//   - Start capacity: J, the jobs one household can start in a year, counted
+//     greedily from tick 0 at every tick of the open window.
+//   - Mean factor: E, the mean of the effective factors at those starts, in
+//     basis points; 0 when there is no start and the activity does not exist.
+//   - Net vector: the units of each commodity one execution of an activity
+//     makes less what it uses, tool wear included, as exact rationals.
+//   - Reference programme: the linear programme that maximises the surplus factor
+//     over the activities, subject to the goods, labour and capacity rows
+//     (spec-viability.md 3.2).
+//   - Surplus factor: lambda, how many times the upkeep basket the realm can make
+//     with the labour it has; reported in basis points, rounded down.
+//   - Labour share to subsist: the share of their ticks that households must
+//     work to make their own upkeep, in basis points, rounded up; absent when a
+//     capacity row is tight.
+//   - Available work share: phi, the share of ticks a household can work: 1 for
+//     the viability test, the expected work share for the nominal programme.
+//   - Nominal programme: the reference programme with the available work share
+//     set to the expected work share instead of 1.
+//   - Balanced census: the households per role the activities of a steady state
+//     need, apportioned to the configured total; a report, never a table.
+//   - Certificate: the exact check, from the original data, that a solution is
+//     primal feasible, dual feasible and has equal objectives; an answer without
+//     it is not returned.
+//   - Tableau: the exact table of the simplex method; a pivot changes its basis,
+//     and Bland's rule (the lowest index enters and leaves) makes the solve end.
+//   - Drift: how far a seed price lies from the commodity's reference price.
+//   - Residual: the largest deviation, in basis points, between the value added
+//     of an active activity at the integer prices and the wage times its
+//     duration.
+//   - Supply gap: the longest cyclic run of ticks in a year with no completion of
+//     any activity of a region that outputs a commodity.
+//   - Lean reserve: the units of a commodity a region's producers hold at tick 0
+//     to bridge the largest cumulative shortfall of the first year.
+//   - Virtual start offset: a tick before tick 0 at which a job in progress at
+//     construction is taken to have started, so the jobs of a group are
+//     staggered.
+//   - Lane: in the solver, a zero-cost route between regions of the free-trade
+//     set that merges their goods rows; not a lane of a credit round or of a
+//     merchant.
 package economysim

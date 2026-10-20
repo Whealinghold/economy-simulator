@@ -50,6 +50,30 @@ func validationErrors(err error) []*economysim.ValidationError {
 	return out
 }
 
+// viabilityRules are the five rules of a *ViabilityError (spec-viability.md 10.1).
+var viabilityRules = []string{"unproducible_in_realm", "role_cannot_work", "cycle_not_productive", "labour_short", "storage_gap"}
+
+// viabilityErrors returns every *ViabilityError of an error, in the order of a
+// joined error's list.
+func viabilityErrors(err error) []*economysim.ViabilityError {
+	var out []*economysim.ViabilityError
+	var walk func(error)
+	walk = func(e error) {
+		if j, ok := e.(interface{ Unwrap() []error }); ok {
+			for _, c := range j.Unwrap() {
+				walk(c)
+			}
+			return
+		}
+		var ve *economysim.ViabilityError
+		if errors.As(e, &ve) {
+			out = append(out, ve)
+		}
+	}
+	walk(err)
+	return out
+}
+
 // hasError reports whether err holds a ValidationError whose rule is rule and
 // whose path is path.
 func hasError(err error, rule error, path []string) bool {

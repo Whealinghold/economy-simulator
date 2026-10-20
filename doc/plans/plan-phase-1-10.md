@@ -227,8 +227,10 @@ Decided by this plan, to be written into the owning spec in Phase 1 before code
   (`storage_gap` and `storage_gap_input` are the findings that restrict to upkeep and inputs; the
   reserve does not). It reduces to REF's wording (the realm's whole
   use per tick times the 118 ticks to the first harvest of `staple`, shared among the
-  producing households) when production is zero up to the first completion. Written
-  into VIA 8.4.1; checked in Phase 7 against the five packs.
+  producing households) when production is zero up to the first completion. The two differ in one
+  cell of the packs: `centre` of `five` (cumulative peak at tick 301, 274 249.18 / 256 = 1 072 + 20 =
+  1 092, against REF's 118 * 2 314.29 / 256 = 1 067 + 20 = 1 087, which is the figure in `warm-five.toml`;
+  recomputed in Phase 1, VIA 8.4.1 states it). Written into VIA 8.4.1; checked in Phase 7 against the five packs.
 - **D124. `ViabilityError` is its own type and joins the one sorted list.**
   Fields: `Rule string` (the name of CFG 7.4.2: `unproducible_in_realm`,
   `role_cannot_work`, `cycle_not_productive`, `labour_short`, `storage_gap`),
@@ -368,7 +370,11 @@ Decided by this plan, to be written into the owning spec in Phase 1 before code
   largest remainder to the configured total) and written into VIA 5.2 as a
   formula with the 600-household figures of `one` as its worked example. It is a
   report only and changes no table (FR-VIA-028). Left to Phase 1 because the prose
-  does not fix whether the work share divides the capacity term; O1.
+  does not fix whether the work share divides the capacity term; O1. **Pinned in Phase 1** (recomputed
+  with an exact LP over the packs): `need(g) = max(sum of d * x, max of x * TicksPerYear / J)`, `phi` in
+  neither term; it reproduces every group of every region of `one`, `two`, `three`, `five` and `famine`,
+  while labour alone (grower 120), labour plus capacity (297) and labour over `phi` (200) do not fit
+  `one`, so only one reading fits and O1 is closed. Written into VIA 5.2.
 - **D133. Agreement with the warm documents is by loaded equality.** FR-REF-007
   asks the `warm-*.toml` to be byte-identical to the solver's table. The core
   module writes no TOML (architecture.md 5.1, 5.2), so Phase 7 loads each
@@ -422,7 +428,7 @@ Decided by this plan, to be written into the owning spec in Phase 1 before code
   emptiness and the offsets (no job where `V` is empty, 8.5.2); VIA 8.5.1 as it stands gives `x1 * TicksPerYear * |V| / N_open`, which
   differs for a recipe that does not run all year: `two` south 3 341 in the document against 3 110.5, `three` south 3 464 against 3 224.7 and
   far_south 1 736 against 3 250.8, `five` centre 3 766 against 3 506.0, east 4 124 against 3 838.9, south
-  2 506 against 4 692.0; six job rows in three packs, none visible in `one`, `second` or `famine`, where the recipe runs all year and the two
+  2 506 against 4 691.999 (rounds down to 4 691); six job rows in three packs, none visible in `one`, `second` or `famine`, where the recipe runs all year and the two
   formulas coincide. **Ruling: VIA 8.5.1 as written decides.** The spec is normative and the warm documents
   are derived output: FR-REF-007 defines them as the solver's output, so a document that differs from the
   spec's formula is the stale one. Reason: the as-written formula spreads the executions over the open
@@ -579,7 +585,7 @@ Deliverables, each in the document that owns it:
    `OutsideReferenceBand`, so VIA 6.4's record is kept while the table passes `Validate`. The
    validator's band rule is unchanged. **This also amends VIA 8.2.4 and FR-VIA-026 for a free good:** a
    dual-0 good takes max(resolution floor, band lower bound) instead of the reference price (a
-   non-unique price keeps the reference price); it stays listed in `UnpricedCommodities`, and the
+   non-unique price keeps the reference price, which Phase 6 does not detect: N-311); it stays listed in `UnpricedCommodities`, and the
    `Floored` and `OutsideReferenceBand` records are written for it as for any lift.
 
 3. **VIA 5.2 and FR-VIA-028** (D132). The census formula, with the worked example of
@@ -1097,7 +1103,7 @@ Phase 5, and it is the last piece before the agreement run.
   floor, **lifted into the reference band** (O11, ruled by the coordinator, reversible; the bounds are the ones `warmRules` checks, so a floored or free good such as `semi_a` and `semi_d` of `five` takes the band's lower bound, 51 and 52, and the table passes `Validate` with its band rule unchanged) and capped at `MaxPrice`, with the changes listed (`Floored`, the unclamped price in `OutsideReferenceBand`, FR-VIA-023, 024); the wage
   (the labour dual scaled the same way, rounded half to even, no entry for a region at 0, listed
   in `UnpricedWages`, FR-VIA-050); the commodities with a non-unique price take the
-  reference price and are listed (`UnpricedCommodities`, FR-VIA-026); a free good (dual 0) is listed
+  reference price and are listed (`UnpricedCommodities`, FR-VIA-026; **deferred, N-311**: the solver has no per-commodity uniqueness, so only the dual-0 half is built); a free good (dual 0) is listed
   the same way but its price is the band lift of O11 (max of the resolution floor and the band's lower
   bound, never the reference price: the one change of VIA 8.2.4 and FR-VIA-026 that 2e writes), except a commodity that is in no
   input, tool, non-discard output or upkeep, which has no row at all (D134 (7)); the money of 8.3.1 capped
@@ -1130,7 +1136,7 @@ Phase 5, and it is the last piece before the agreement run.
   half to even: seed 3 353, grain 373, flour 342, dough 277, loaf 376, fuel 248, iron 166, hoe 3 146,
   millstone and oven 3 312, straw and bran at the floor 50 (VIA 15; recompute and write the exact
   digits); this bullet tests the rounding and floor stage as a function that runs before the band lift, so 50 is the floored value there; the lifted value (the band's lower bound, O11) is asserted in the next bullet; the exact wage 2 980.47 rounds to 2 980; a value exactly half rounds to the even one.
-- A region at the floor, a free good, dual 0 (priced at the band's lower bound, listed in `UnpricedCommodities`), a non-unique price (reference price and listing), a floored or free price below the band (lifted to the band bound, listed in `Floored` and `OutsideReferenceBand`, and the table passes `Validate`), a price above `MaxPrice` and
+- A region at the floor, a free good, dual 0 (priced at the band's lower bound, listed in `UnpricedCommodities`), a non-unique price (deferred, N-311), a floored or free price below the band (lifted to the band bound, listed in `Floored` and `OutsideReferenceBand`, and the table passes `Validate`), a price above `MaxPrice` and
   an overflow of the money product each have a case that breaks only that rule.
 - The money of 8.3.1 on a hand group with two recipes where the longest duration and the largest inputs cost disagree (the `second` fabber, `fab_board` against `make_fabricator`, 19 423 not 52 189; a tie in duration falls to the larger inputs cost, then the lower recipe ID), and the stock of 8.4.1 (the arithmetic in the comment),
   including the cut to the shelf life (`prepared` 4 in `one`) and the lean reserve of D123.
@@ -1186,8 +1192,12 @@ world and golden rows.
   as a whole (no writer exists in this row, D133 puts it in plan 1-12: a throwaway generator, not
   committed, prints the canonical document from the solver's table and the file is replaced by its
   output; the three job rows of `warm-two` and `warm-three` are edited by hand): `semi_a` and `semi_d` lifted into the band (O11: 51 and 52), the six job rows, its prices and
-  wage (a constant 1.0039 for the centre and 1.0024 for the east times the exact dual scale of VIA 6.3)
-  and its centre grower staple reserve (1 087 against 1 092), its producer being unarchived (N-274;
+  wage (recomputed in Phase 1: the file's scale is not the exact dual scale of VIA 6.3 in any of the five
+  regions; the file over the exact scale is 1.0039 for the centre, 1.0024 for the east, 1.0129 for the north,
+  0.9909 for the south and 0.9910 for the west, and the north basket at the file's prices sums to 1 334 against
+  `reference_basket` 1 318, which FR-VIA-024 forbids; the relative prices agree with the solver's to the rounding of the wage, and so does every stock and job row except the six of item (1) and the centre reserve) and
+  its centre grower staple reserve (1 087 against 1 092: the first-harvest wording of REF, D123), its producer
+  being unarchived (N-274;
   `one`, `two`, `three` match to the unit apart from item (1)); (3) possibly the one `grow_algae` row of
   `warm-second.toml` (5 163 against the solver's, D134 (8); if it is regenerated, the pinned hash of
   `second/second.toml` + `second/warm-second.toml` in `config/integration_test.go` (line 42) is updated
@@ -1402,9 +1412,9 @@ and its keys `rule` and `path` exist (OBS 3.3.2).
 
 ## Open items
 
-- **O1.** D132: the census formula is not fixed by the prose of VIA 5.2 and REF 4.3 (whether the work share
-  divides the start-capacity term). Phase 1 pins it against the 600 households of `one.toml`; if two readings fit
-  the file, the owner chooses.
+- **O1 (closed in Phase 1).** D132: the census formula was not fixed by the prose of VIA 5.2 and REF 4.3 (whether
+  the work share divides the start-capacity term). Phase 1 pinned it against the 600 households of `one.toml` and
+  every other pack: `max(labour, capacity)` with no `phi`; no second reading fits, so the owner has nothing to choose.
 - **O2.** D120 (the flows of lambda 1), D121 (the shared recipe), D122 and D123 (the supply gap and the reserve)
   are spec-silent or change a reading, are made in Phase 1 and are flagged for the owner's override before the
   phase that implements each (D122 and D123 before Phase 4, D120 and D121 before Phase 6). If a REF document does

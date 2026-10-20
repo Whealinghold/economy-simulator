@@ -3,6 +3,7 @@ package economysim_test
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
@@ -205,6 +206,7 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 		economysim.ErrOutOfBounds, economysim.ErrOverflow, economysim.ErrTooMany,
 		economysim.ErrNoRegions, economysim.ErrModuleDependency,
 		economysim.ErrNilExtension, economysim.ErrUnknownClearing, economysim.ErrUnknownSpawner, economysim.ErrUnknownStrategy, economysim.ErrInvalidTrade,
+		economysim.ErrNotViable, economysim.ErrNoUpkeep, economysim.ErrSolveLimit, economysim.ErrSolveInconsistent,
 	}
 	seen := map[string]bool{}
 	for _, s := range sentinels {
@@ -218,5 +220,99 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 				t.Errorf("errors.Is(ValidationError{%v}, %v) = %v, want %v", s, other, got, other == s)
 			}
 		}
+	}
+}
+
+// TestViabilityError_Matching verifies that errors.Is(err, ErrNotViable) matches
+// a *ViabilityError alone, joined and wrapped, that it matches no other sentinel,
+// and that errors.As finds the rule, path, value and bound.
+//
+// Requirement: FR-VIA-011, FR-CFG-041
+func TestViabilityError_Matching(t *testing.T) {
+	t.Parallel()
+	ve := &economysim.ViabilityError{
+		Rule: "labour_short", Path: []string{"regions"}, Value: "5000", Bound: "10000",
+	}
+	joined := fmt.Errorf("validate: %w", errors.Join(errors.New("other"), ve))
+	if !errors.Is(joined, economysim.ErrNotViable) {
+		t.Errorf("errors.Is(%v, ErrNotViable) = false, want true", joined)
+	}
+	for _, s := range []error{economysim.ErrOutOfBounds, economysim.ErrNoUpkeep, economysim.ErrSolveLimit, economysim.ErrSolveInconsistent} {
+		if errors.Is(joined, s) {
+			t.Errorf("errors.Is(%v, %v) = true, want false", joined, s)
+		}
+	}
+	var got *economysim.ViabilityError
+	if !errors.As(joined, &got) || got.Rule != "labour_short" || got.Value != "5000" || got.Bound != "10000" || !slices.Equal(got.Path, []string{"regions"}) {
+		t.Errorf("errors.As(%v) = %+v, want the labour_short error with value 5000 and bound 10000", joined, got)
+	}
+	var verr *economysim.ValidationError
+	if errors.As(ve, &verr) {
+		t.Errorf("errors.As(ViabilityError, *ValidationError) = true, want false: it is its own type")
+	}
+}
+
+// TestViabilityError_Text verifies the text of a viability error: the path, value
+// and bound are cut at 64 bytes and quoted as a ValidationError's are, so a
+// hostile ID cannot flood a log or hold a control character, and a rule with no
+// value or bound writes neither.
+//
+// Requirement: FR-CFG-100
+func TestViabilityError_Text(t *testing.T) {
+	t.Parallel()
+	long := strings.Repeat("a", 200)
+	tests := []struct {
+		name string
+		err  *economysim.ViabilityError
+		want string
+	}{
+		{
+			"value and bound",
+			&economysim.ViabilityError{Rule: "labour_short", Path: []string{"regions"}, Value: "5000", Bound: "10000"},
+			`"regions": configuration is not viable: "labour_short" (value 5000, bound 10000)`,
+		},
+		{
+			"value only",
+			&economysim.ViabilityError{Rule: "role_cannot_work", Path: []string{"roles", "idle"}, Value: "north"},
+			`"roles"."idle": configuration is not viable: "role_cannot_work" (value "north")`,
+		},
+		{
+			"no value",
+			&economysim.ViabilityError{Rule: "storage_gap", Path: []string{"regions"}},
+			`"regions": configuration is not viable: "storage_gap"`,
+		},
+		{
+			"long and hostile segments",
+			&economysim.ViabilityError{Rule: "storage_gap", Path: []string{"regions", long, "a\x00b\nc"}, Value: "\x1b[31m"},
+			`"regions"."` + strings.Repeat("a", 64) + `"...."a\x00b\nc": configuration is not viable: "storage_gap" (value "\x1b[31m")`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tt.err.Error(); got != tt.want {
+				t.Errorf("Error() of %+v = %q, want %q", tt.err, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSolveError verifies that a SolveError reports the pivots, rows and columns
+// it carries and matches ErrSolveLimit.
+//
+// Requirement: FR-VIA-010, FR-VIA-017
+func TestSolveError(t *testing.T) {
+	t.Parallel()
+	var err error = &economysim.SolveError{Pivots: 7, Rows: 3, Columns: 9}
+	if !errors.Is(fmt.Errorf("solve: %w", err), economysim.ErrSolveLimit) {
+		t.Errorf("errors.Is(SolveError, ErrSolveLimit) = false, want true")
+	}
+	want := "solver limit reached: 7 pivots, 3 rows, 9 columns"
+	if got := err.Error(); got != want {
+		t.Errorf("Error() = %q, want %q", got, want)
+	}
+	var se *economysim.SolveError
+	if !errors.As(err, &se) || se.Rows != 3 || se.Columns != 9 || se.Pivots != 7 {
+		t.Errorf("errors.As = %+v, want the counts back", se)
 	}
 }

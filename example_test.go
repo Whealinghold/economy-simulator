@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -84,4 +85,35 @@ func ExampleCalendar_At() {
 	// month: 2 day of month: 0 season: 0
 	// season of tick 0: 3
 	// ticks per year: 365
+}
+
+// SolveSteadyState solves the reference programme of a configuration and makes
+// the warm-start table: here ten households that each make 4 grain a tick from
+// nothing and eat 1, so the surplus factor is 4 and the grain is priced at the
+// reference basket. The configuration it is given is not changed, and the table
+// is plain data that Validate accepts.
+func ExampleSolveSteadyState() {
+	c := exampleConfig()
+	c.Commodities[0].Raw = false
+	farm := economysim.DefaultRecipe()
+	farm.ID = "farm"
+	farm.Outputs = []economysim.Output{{Commodity: "grain", Quantity: 4, CostShare: 10_000}}
+	c.Recipes = []economysim.Recipe{farm}
+	c.Roles[0].Recipes = []string{"farm"}
+	c.Regions[0].ReferenceBasket = 1_000
+
+	st, err := economysim.SolveSteadyState(context.Background(), c)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	p := st.Programmes[0]
+	fmt.Printf("surplus %d bp, labour share %d bp\n", p.SurplusBP, p.LabourShareBP)
+	fmt.Println("grain price:", st.Table.Prices[0].Price, "wage:", st.Table.Wages[0].Wage)
+	c.WarmStart = &st.Table
+	fmt.Println("valid with its table:", c.Validate() == nil)
+	// Output:
+	// surplus 40000 bp, labour share 2500 bp
+	// grain price: 1000 wage: 4000
+	// valid with its table: true
 }
