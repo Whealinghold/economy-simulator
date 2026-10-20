@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"encoding/hex"
+	"errors"
 	"os"
 	"reflect"
 	"slices"
@@ -39,7 +40,7 @@ func TestPacks_LoadValidateAndHash(t *testing.T) {
 		hash   string
 	}{
 		{"pack one", []string{"base.toml", "one.toml", "warm-one.toml"}, 7, "9e3c1357520b0e052fee1e1d773d45e49ce992a8d1cfbd7029a6a24a91038285"},
-		{"pack second", []string{"second/second.toml", "second/warm-second.toml"}, 5, "3d16f1470bd2f00386962782d402fcd36258b8397b41031d6b7ab124f5b453d0"},
+		{"pack second", []string{"second/second.toml", "second/warm-second.toml"}, 5, "388a7d7e47361f9948027dd52d037baebd484fa4a99cdf26a07a010581d5ff8a"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,8 +98,9 @@ func TestPacks_WarmLayerChangesTheHash(t *testing.T) {
 // TestPacks_DefectOverlays verifies that the six defect overlays of
 // testdata/chains/defects load over the base layers of the reference chain, and
 // that each leaves the change it names in the configuration. The failures of d1
-// to d5 are viability rules (spec-reference-chain.md 5) and belong to Stage 1;
-// d6 gives the warning cost_floor_at_full_cost, asserted here. Each defect is
+// to d5 are viability rules (spec-reference-chain.md 5): Validate rejects each with
+// ErrNotViable (phase 6, Stage 1 row 10); d6 gives the warning
+// cost_floor_at_full_cost, asserted here. Each defect is
 // loaded over both layer sets the reference chain names for pack one
 // (spec-reference-chain.md 4.5, 5, 7.6 A2): base and one, and base, one and
 // warm-one, the defect last.
@@ -164,10 +166,15 @@ func TestPacks_DefectOverlays(t *testing.T) {
 				if warm := cfg.WarmStart != nil; warm != (b.name == "warm") {
 					t.Errorf("LoadFS(%q) has a warm start = %t, want %t", layers, warm, b.name == "warm")
 				}
-				// The Stage 0 rules do not see the defects: each is a viability rule
-				// (D4), whose failing assertion Stage 1 adds here.
-				if err := cfg.Validate(); err != nil {
-					t.Errorf("Validate(%q) = %v, want nil at Stage 0", layers, err)
+				// d1 to d5 are viability rules (D4, phase 6 of Validate): each is
+				// ErrNotViable. The rule names are plan 1-12's assertion; d6 is
+				// only a warning.
+				err = cfg.Validate()
+				if want := tt.name != "d6_floor_full"; errors.Is(err, economysim.ErrNotViable) != want {
+					t.Errorf("Validate(%q) = %v, want ErrNotViable = %t", layers, err, want)
+				}
+				if tt.name == "d6_floor_full" && err != nil {
+					t.Errorf("Validate(%q) = %v, want nil: the floor at the full cost is a warning", layers, err)
 				}
 				// d6 is the one defect that needs no solver: its warning is a Stage 0
 				// rule, so it is asserted here (FR-REF-016).

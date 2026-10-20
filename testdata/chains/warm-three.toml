@@ -21,7 +21,7 @@ stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quanti
 [warm_start.region.far_south.group.grower]
 money = 79470
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 1594 }, { commodity = "tool_a", quantity = 1 } ]
-jobs = [ { recipe = "grow_staple", in_progress = 1736 } ]
+jobs = [ { recipe = "grow_staple", in_progress = 3250 } ]
 [warm_start.region.far_south.group.maker]
 money = 21623
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]
@@ -86,7 +86,7 @@ stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quanti
 [warm_start.region.south.group.grower]
 money = 77520
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 1186 }, { commodity = "tool_a", quantity = 1 } ]
-jobs = [ { recipe = "grow_staple", in_progress = 3464 } ]
+jobs = [ { recipe = "grow_staple", in_progress = 3224 } ]
 [warm_start.region.south.group.maker]
 money = 24478
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]

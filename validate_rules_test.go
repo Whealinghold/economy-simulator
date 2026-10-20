@@ -1022,8 +1022,13 @@ func TestWarnings(t *testing.T) {
 	// calendarOf puts the reference configuration on another calendar: the roles
 	// expect 50 ticks of work a year, which a year of 73 ticks or more holds, and
 	// have no floor of work.
+	//
+	// The staple's shelf life of 700 ticks is nearly two years of daily ticks; on a
+	// finer tick it falls below the 304-day gap between harvests (V4, storage_gap),
+	// so it is raised to keep the pack viable.
 	calendarOf := func(c *economysim.Config, edit func(cal *economysim.Calendar)) {
 		edit(&c.Calendar)
+		commodityOf(c, "staple").ShelfLife = 2_000
 		for i := range c.Roles {
 			c.Roles[i].ExpectedWorkTicks, c.Roles[i].MinWorkShare = 50, 0
 		}
@@ -1096,7 +1101,10 @@ func TestWarnings(t *testing.T) {
 				c.Commodities = append(c.Commodities, cm)
 				c.World.Upkeep = append(c.World.Upkeep, economysim.Item{Commodity: "ore_y", Quantity: 1})
 			},
-			rule: "upkeep_unsourced", path: []string{"commodities", "ore_y"}, fires: false,
+			// A Raw upkeep good that nothing real makes beside a produced basket is the
+			// documented consequence of spec-viability.md 4.2.1: the pooled programme
+			// is 0 and labour_short rejects it, and raw_without_source names the good.
+			rule: "upkeep_unsourced", path: []string{"commodities", "ore_y"}, fires: false, invalid: true,
 		},
 		{
 			// The upkeep of staple is 2 a household and the start stock 1.
@@ -1162,14 +1170,19 @@ func TestWarnings(t *testing.T) {
 			mutate: func(c *economysim.Config) {
 				c.Yields[0].All = 0
 			},
-			rule: "unrunnable_recipe", path: []string{"recipes", "cut_fuel"}, fires: true,
+			// A fuel that no region can make is also not viable (phase 6,
+			// unproducible_in_realm and role_cannot_work): the warning is raised on a
+			// configuration that is rejected.
+			rule: "unrunnable_recipe", path: []string{"recipes", "cut_fuel"}, fires: true, invalid: true,
 		},
 		{
 			name: "unrunnable_recipe fires for a Sited recipe with no profile",
 			mutate: func(c *economysim.Config) {
 				c.Yields = slices.Delete(c.Yields, 2, 3) // gather_seed
 			},
-			rule: "unrunnable_recipe", path: []string{"recipes", "gather_seed"}, fires: true,
+			// Without gather_seed the seed cycle has no way in (phase 6,
+			// unproducible_in_realm): rejected, and the warning still fires.
+			rule: "unrunnable_recipe", path: []string{"recipes", "gather_seed"}, fires: true, invalid: true,
 		},
 		{
 			name: "durable_not_required fires for a durable no recipe requires",
@@ -1263,7 +1276,9 @@ func TestWarnings(t *testing.T) {
 		{
 			name: "cold_start_lockstep is not raised with a job row",
 			mutate: func(c *economysim.Config) {
-				c.WarmStart.Groups[3].Jobs = []economysim.JobSpec{{Recipe: "grow_staple", InProgressBP: 100}}
+				// grow_staple is spring only, so a job on it has no virtual start offset at
+				// tick 0 (phase 6, ErrWarmStartJob); save_seed runs all year.
+				c.WarmStart.Groups[3].Jobs = []economysim.JobSpec{{Recipe: "save_seed", InProgressBP: 100}}
 			},
 			rule: "cold_start_lockstep", path: []string{"roles", "grower", "recipes"}, fires: false,
 		},
@@ -1489,8 +1504,9 @@ func perturb(c *economysim.Config, kind, field uint8, value int64, count uint8) 
 // FuzzValidate verifies that Validate and Warnings never panic on a
 // configuration that is the reference with one section perturbed, that at most
 // 100 errors and one ErrTooManyErrors come back, that every error is a
-// *ValidationError or ErrTooManyErrors, that equal input gives equal output and
-// that the receiver is not changed. The calendar's rules and the yield profile's
+// *ValidationError, a *ViabilityError of ErrNotViable or ErrTooManyErrors, that
+// equal input gives equal output and that the receiver is not changed. A
+// perturbation that leaves the structural phases clean runs phase 6 as well. The calendar's rules and the yield profile's
 // are run through it by the section selectors 1 to 3 and 9.
 //
 // Requirement: NFR-CFG-002, NFR-CFG-003, NFR-CAL-002, NFR-PRO-004
@@ -1505,6 +1521,10 @@ func FuzzValidate(f *testing.F) {
 		{5, 1, 0, 0}, {6, 4, 9_999, 0}, {6, 7, math.MinInt64, 0}, {7, 1, 5, 0}, {8, 0, 0, 0},
 		{9, 0, 100_001, 0}, {9, 1, -1, 0}, {10, 0, 1, 120}, {10, 1, 1, 120}, {11, 0, 1, 250},
 		{11, 1, 100, 10}, {12, 0, 5, 20}, {13, 0, 0, 0}, {13, 1, math.MaxInt64, 0}, {13, 3, math.MaxInt64, 12},
+		// Structurally clean, so phase 6 runs: a yield of 0 and a short year of
+		// seasons (the viability rules fire), a shelf life under a supply gap, and
+		// a recipe that is longer than the pack was written for.
+		{9, 2, 0, 0}, {9, 0, 0, 0}, {4, 2, 1, 0}, {4, 2, 100, 0}, {5, 0, 1_000, 0}, {5, 0, 2, 0}, {8, 2, 1, 0},
 	}
 	for _, s := range seeds {
 		f.Add(s.kind, s.field, s.value, s.count)
@@ -1526,14 +1546,23 @@ func FuzzValidate(f *testing.F) {
 			t.Errorf("Validate(kind %d field %d value %d count %d) changed its receiver", kind, field, value, count)
 		}
 		if err != nil {
+			// violations puts a *ViabilityError among the others: it is not a
+			// *ValidationError.
 			vs, other := violations(err)
-			if len(vs) > 100 || len(other) > 1 {
-				t.Errorf("Validate(kind %d field %d value %d count %d) = %d errors and %d others, want at most 100 and 1", kind, field, value, count, len(vs), len(other))
-			}
+			cuts, via := 0, 0
 			for _, o := range other {
-				if !errors.Is(o, economysim.ErrTooManyErrors) {
-					t.Errorf("Validate returned %v that is neither a *ValidationError nor ErrTooManyErrors", o)
+				var ve *economysim.ViabilityError
+				switch {
+				case errors.Is(o, economysim.ErrTooManyErrors):
+					cuts++
+				case errors.As(o, &ve) && errors.Is(o, economysim.ErrNotViable) && ve.Rule != "" && len(ve.Path) > 0 && ve.Error() != "":
+					via++
+				default:
+					t.Errorf("Validate returned %v that is neither a *ValidationError, a *ViabilityError nor ErrTooManyErrors", o)
 				}
+			}
+			if len(vs)+via > 100 || cuts > 1 {
+				t.Errorf("Validate(kind %d field %d value %d count %d) = %d errors and %d cuts, want at most 100 and 1", kind, field, value, count, len(vs)+via, cuts)
 			}
 			for _, v := range vs {
 				if v.Rule == nil || len(v.Path) == 0 || v.Error() == "" {
@@ -1607,8 +1636,11 @@ func TestValidate_ValueAtTheBoundIsValid(t *testing.T) {
 			c.WarmStart.Wages[0].Wage = 4_000_000_000_000_000
 		}},
 		{"effective window of exactly MaxWelfareWindow", func(c *economysim.Config) {
-			// 2 cycles of 1 825 ticks is 3 650.
+			// 2 cycles of 1 825 ticks is 3 650. The job is 30 times longer than the
+			// 60 ticks it was written for, so its output is scaled to keep the chain
+			// productive (V3): 1 800 * 1 825 / 60 = 54 750.
 			recipeOf(c, "grow_staple").Duration = 1_825
+			recipeOf(c, "grow_staple").Outputs[0].Quantity = 54_750
 		}},
 		{"belief floor met exactly", func(c *economysim.Config) {
 			// 50 is the floor at BeliefStep 200; seed (tradable) is at 50 and the

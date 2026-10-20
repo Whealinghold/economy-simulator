@@ -201,8 +201,11 @@ func TestWarnings_YieldRowWithNoEntryIsTheDefaultOfTheRecipe(t *testing.T) {
 			c.Recipes = append(c.Recipes, r)
 			c.Roles[0].Recipes = []string{"dig"}
 			c.Yields = []economysim.YieldProfile{{Region: "home", Recipe: "dig"}}
-			if err := c.Validate(); err != nil {
-				t.Fatalf("Validate(empty yield row) = %v, want nil", err)
+			// A sited recipe with no yield runs nowhere, so the only role that lists it
+			// cannot work (phase 6, role_cannot_work); the other is valid.
+			err := c.Validate()
+			if sited && !errors.Is(err, economysim.ErrNotViable) || !sited && err != nil {
+				t.Fatalf("Validate(empty yield row, sited=%v) = %v, want ErrNotViable if sited and nil if not", sited, err)
 			}
 			got := slices.ContainsFunc(c.Warnings(), func(w economysim.Warning) bool {
 				return w.Rule == "unrunnable_recipe" && reflect.DeepEqual(w.Path, []string{"recipes", "dig"})

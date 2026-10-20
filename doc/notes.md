@@ -53,7 +53,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-137, N-238, N-239, N-240, N-241, N-242 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-258, N-274, N-276, N-277, N-284, N-285, N-286, N-294, N-295, N-297, N-300, N-244, N-245, N-247, N-254, N-290, N-304, N-309, N-310 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-258, N-274, N-276, N-277, N-284, N-285, N-286, N-294, N-295, N-297, N-300, N-244, N-245, N-247, N-254, N-290, N-304, N-309, N-310, N-311 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
@@ -91,7 +91,7 @@ PR description.
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-274, N-276, N-277, N-279, N-280, N-281, N-306, N-307 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-274, N-276, N-277, N-279, N-280, N-281, N-306, N-307, N-311 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-234 |
 | WLD | N-124, N-125, N-144, N-154, N-204, N-214, N-216, N-226, N-230, N-239, N-240, N-242, N-258, N-276, N-280, N-284, N-285, N-286, N-288, N-297, N-265, N-266, N-246, N-308, N-309, N-310 |
 
@@ -123,6 +123,8 @@ PR description.
 - **Update (2026-10-13, STO, EMP, SET, LND, POL, CRD, CAP, RSK, FIS, ORG, SAV, TEC, PLC, INS):** the fourteen specs add only placeholders, each labelled in its own section: SET `BandBP` 1 000, `Dwell` 30 and the bounds `MaxClasses` 16, `MaxFlags` 64, `MaxLimits` 64, `MaxBandBP` 5 000, `MaxThresholdBP` 100 000; EMP `MaxHires` 4, `WorkerShareBP` 5 000, `HireYieldBP` 10 000, `MaxOpen` 1 000, `MaxEstablishment` 1 000, `MaxHireRecords` 1 000 000; LND `RentStepBP` 0, `RentFloorBP` 0, `RentCeilingBP` 20 000, `MaxHolderShareBP` 10 000 (off), `RentDualTolBP` 5 000 and the bounds `MaxRentStepBP` 10 000, `MaxRentCeilingBP` 100 000, `MaxHoldings` 4 096, `MaxTitleTransfers` 1 024; POL `MaxJurisdictions` 1 000, `MaxPolityDepth` 8; CRD `MinPrincipal`, `ShieldTicks` 0, `WriteOffTicks` 0, `MaxClaims` and the bounds `MaxCreditRateBP` 100 000, `MaxCreditTerm` 3 650, `MaxOpenClaims` 1 000 000; CAP `MaxDurability` 1 000 000, `MaxFacilityCapacity` 100 000, `MaxBoostBP` 100 000, `MaxTotalBoostBP` 200 000, `MaxFacilities` 100 000, `MaxFacilitiesPerAgent` 64; RSK `MaxRiskRows` 4 096; SAV `SafetyTicks` 2, `HurdleSpreadBP` 20 000 (N-199), `CommitBandBP` 2 000, `PrecautionShareBP` 0, `PrecautionCapTicks` 30, `HurdleBP` 15 000, `PaybackTicks` 180, `RepairBelowBP` 5 000 and the unmeasured cost of the drawdown (N-198); TEC `Base` 100 000, `DoublingBP` 200, `CapBP` 3 000, `CatchUpBP` 2 000, `Reach` 100, `TrendBP` 40 and 50, `DiscoveryBP` 1 000, `StepBP` 300 and nine bounds (`MaxTechFields` 64, `MaxFieldRecipes` 64, `MaxTechBase` 10^12 and six more); INS `PayoutTicks` 1, `MaxCoverRequests` 4 and four bounds; every default, bound, cadence, target and gain of STO and PLC; and every number of the examples, cost tables and models of the fourteen.
 - **Update (2026-10-12, CFG, ADR 0009):** new placeholders from measurement of the TOML library, not from real packs: `MaxDocuments` 16, `MaxDocumentBytes` 4 MiB (was 16 MiB), `MaxMergedBytes` 16 MiB, `MaxLineBytes` 256 KiB, `MaxNestingDepth` 16 (key segments and value nesting together, from the deepest pack key plus 2) and `MaxTableKeys` 10 000 (tied to `MaxRecipes`; the library is quadratic in the keys of one table): `spec-config.md` 4.1, ADR 0009. `MaxLabelBytes` 256 is the one label bound (FR-GDS-021).
 - **Update (2026-10-13, CFG):** new placeholder: `MaxYields` = `MaxRegions * MaxRecipes` (10 000 000), the count bound of `Config.Yields` that FR-CFG-101 asks for (`spec-config.md` 4.1); derived and unmeasured. Both operands are placeholders, and a yield table of that size is not a realistic pack: lower the product when a real pack gives a size.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open, with a measurement owed. `StockCoverTicks` 5
+- **Update (2026-10-18, plan 1-10 Phase 7):** the first measurement of the Go solver. Measured on the development machine (one run, `go test -bench`, Go 1.25, 32 logical CPUs, one core used by the solver): `SolveSteadyState(five, WithFreeTrade)` takes 1.37 s with 202 pivots and allocates 474 MB in 10.2 million allocations per call (the prototype took 1.7 s); `Validate` of the cold `five` takes 0.59 s and `Warnings` 0.46 s after it. All five placeholders above stay as they are; the largest tableau entry in bits was not recorded. Left open., `MoneyBufferTicks` 10, `ResidualWarnBP` 1 000, `MaxViabilityPivots` 100 000 and `MaxViabilityCells` 4 000 000 stay placeholders; Phase 7 measures the Go speed of the solver (the first ever) and records the pivots and time of `five` here. No number is claimed stable.
 
 ### N-016 Keep the parameter registry true
 
@@ -164,7 +166,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read for the agent row: it adds no configuration field, default or bound (every AGT field has its owner row since Stage 0 and no `notBuilt` entry is left for it); the belief-parameter group of the views (D82) is a view and not a `Config` field, so it adds no row. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read for the estate row: it adds no configuration field and no default (`EstateMarkdown` is a Stage 0 row with hash field 5; `PoolRelease` and `ReliefBelow` arrive with the module, `spec-estates.md` 3) and deletes no `notBuilt` entry. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The spawner row adds no field and no default; the registry test and its notBuilt list do not change.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. This row adds no `Config` field and no row of the parameter-owner table: the solve options are rows of CLB's registry (`spec-viability.md` 11, FR-CFG-047) and `WarmStart` has its row. Phase 5 checks the registry test is unchanged.
 
 ### N-017 Words and names
 
@@ -202,6 +204,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for the agent row: the terms its code uses go to the `doc.go` glossary before use (Phase 2 of the plan): strategy, agent view, outcome view, trade plan, intent, purpose, job request, directive (the mailbox; not PLC's), directed strategy, fed, unfed, hunger, privation, target (the inventory target; not the welfare target ratio), keep, reserve (the units for this tick's upkeep, and the reserve money), cover (ticks of use held; not INS's), tier, budget stack, spend cap, favourability, planned recipe, production halt, work share (exists), work report. `Strategy` leaves `notYetTerms` of `glossary_test.go` in Phase 5; each term is checked against `doc.go` first (a second entry fails `TestGlossary_Vocabulary`). A standing note; left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: the terms its code uses are in the `doc.go` glossary before use (estate pseudo-agent, listing, listed price, first price, estate markdown, estate pool, intake, pool draw, held lot); "draw" is qualified because it has the random sense, and "treasury" is not used for the estate. A standing note; left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. The terms of the spawner row go to the doc.go glossary before use (Phase 2); Spawner leaves notYetTerms of glossary_test.go.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied. The terms of this row go to the `doc.go` glossary at the start of Phase 2, before use: viability, steady state, warm start (already there), surplus factor, activity, start capacity, mean factor, net vector, reference programme, labour share to subsist, available work share, nominal programme, census (balanced), certificate, seed price (as the solver's), drift, residual, supply gap, lean reserve, virtual start offset, lane. "Lane" is qualified (the lane of the solver is not the lane of a credit round or of a merchant's lane) and "census" is qualified (balanced census). The note stays open.
 
 ### N-018 Unverified evidence
 
@@ -247,6 +250,7 @@ PR description.
 - **Update (2026-10-12, Stage 0 built, uncommitted):** the first code is in the tree and passes `gofmt`, `go vet`, `staticcheck`, `go test -short -race ./...`, `go mod tidy` (no diff) and `govulncheck ./...` (no vulnerabilities); statement coverage from `-coverpkg=./...` is 99.3% for the root, 99.0% for `config/`, 98.3% for `internal/checked`, 100% for `internal/ordering` (`internal/logkeys` has no statements). Settled by it: (1) `doc.go` holds the glossary of the terms the code uses, added here: audit, effective seed, estate, estate pool, finaliser, guard pass, pack, pool policy, schema version, site constant, stream key, target spread, trainee, word. (2) The sentinels the Stage 0 rules and the loader return are in `errors.go` (N-075 for the rest). (3) `internal/checked` is `Add`, `Sub`, `Mul` and `MulDiv`, `MulDivRem`, `MulDivFloor`, `MulDivCeil`, `MulDivHalfEven` over a 128-bit intermediate with an `ok` result; `internal/ordering` is `Finalise`, `Weyl32`, `Weyl2`, `Bucket`, `Key`, `StreamKey` and `StreamKeySub`. (4) `config/` imports `pelletier/go-toml/v2` v2.4.3, so ADR 0009 is now due for the owner's acceptance (it said it stays Proposed until `config/` imports the library); `go.mod` has that one requirement and `go 1.25`. (5) Every fuzz target ran for five minutes without a crasher (`FuzzLoad`, `FuzzValidate`, `FuzzMulDiv`, `FuzzBucket`, `FuzzKey`, `FuzzStream_Draw`); `FuzzLoad` is slow on some inputs (it reached about 2 800 execs per second on average against 60 000 to 130 000 for the others) in bursts that stall for seconds (the cause was not investigated; the loader is quadratic in the keys of one table up to the 10 000-key limit, ADR 0009); a candidate for a look when CI sets a fuzz time. **Still owed:** the glossary terms of each later stage before it uses them; the sentinel mappings of the later modules (N-075); the architecture.md 4.3 and 7.7 amendment for extension state (ADR 0002, Stage 2); acceptance of ADR 0009 and of ADR 0002 (plan O2); a CI that runs the commands and the timed fuzz runs (plan O3); a mutation pass over `internal/checked` and `internal/ordering` (not run: non-gating, `gomu` runs only in Docker).
 
 - **Update (2026-10-13, minor gaps of the Stage 0 audit closed, uncommitted):** the audit's minor gaps are closed, each with a mutation check on a copy. Guards added: an import guard (stdlib and layer rules over every guarded file), a glossary guard (architecture.md 3.2 terms and the declared types against `doc.go`), a toolchain pin (`go 1.25`, no `toolchain` line), doc-comment contract phrases (`Observer`, `WithSeed`), a panic guard (a `panic(` must say "invariant"), the staged event catalogue deferral table, and a reason-constant cross-read against the specs; tests for every count bound (24 over-by-one cases, `MaxYields` new), the path cap of `ValidationError`, the declared sentinels, `FuzzKey` as a bijection per tick, the loader's read limits, the six defect overlays over cold and warm layer sets, the pinned pack hashes, and `FuzzLoad` classifying the `Validate` result. One defect found and fixed: `config.Parse` returned a partly mapped `Config` beside its errors, and now returns the zero `Config`. The five-minute fuzz runs are done (above). Nothing is committed. **Still owed**, unchanged: the items of the update of 2026-10-12 (Stage 0 built) other than the fuzz runs; N-224 lists the guards a module PR must update.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. The glossary, the sentinels and the layout of this row are done as above; the CI and the ADR acceptances stay plan 0's.
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -298,7 +302,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: every default of AGT stays a labelled placeholder; no test of the agent row asserts a default as stable, and the worked examples of `spec-agents.md` 16 are hand-computed tests, not results. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: `EstateMarkdown` 500 stays a labelled placeholder (N-015); no test of the estate row asserts a default as stable. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Every SPN default stays a labelled placeholder; no test asserts one as stable.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is a start, not a stability claim (`spec-viability.md` 13.1); no test of this row asserts a default as stable.
 
 ### N-028 Can the target-income rule make a shortage worse?
 
@@ -498,6 +502,8 @@ PR description.
 - **Raised:** 2026-10-10, `spec-config.md` 4.1.
 - **Note:** `MaxViabilityCells` and `MaxViabilityPivots` are placeholders and the speed of the exact solver in Go is unmeasured. Measure in the slice so that NFR-CFG-001 holds with the programmes on.
 - **Update (2026-10-10, REF):** `five` runs 202 pivots in the Python prototype; still unmeasured in Go.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied in part. Phase 7 measures `five` pooled;
+- **Update (2026-10-18, plan 1-10 Phase 7):** measured, see the update of N-015: `five` pooled is 1.37 s and 202 pivots in Go (`BenchmarkSolveFive`), `Validate` of `five` 0.59 s, so NFR-CFG-001 and NFR-VIA-002 (under one second) hold on this machine with the programmes on. `MaxViabilityCells` and `MaxViabilityPivots` stay placeholders; no work budget (cells times pivots) was added, and a hostile pack just under both caps (4 x 10^11 cell updates in the worst case) was not measured, so that residual risk of the plan stands. Left open. the gate constants stay placeholders and the note gets the measurement. NFR-CFG-001 is checked on the packs with the programmes on and skipped. Left open.
 
 ### N-067 The production halt is not an anchor and has no counter
 
@@ -517,6 +523,7 @@ PR description.
 - **Areas:** VIA, SKL
 - **Raised:** 2026-10-10, `spec-viability.md` open question 12.
 - **Note:** One wage per region costs a skilled recipe at the common wage. Decide whether the solver reports a wage per recipe class.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for SKL. The solver reports one wage per region (`spec-viability.md` 8.2.5); no per-class wage is built. Learned: `Report` appends a per-class field if SKL decides.
 
 ### N-075 Mapping the ledger's sentinels
 
@@ -540,12 +547,14 @@ PR description.
 - **Update (2026-10-13, Phase 7 of the ledger row, built, uncommitted):** nothing is mapped to a public sentinel yet: no root code calls the ledger's operations, so `ledger.go` maps only the reasons (the ledger's number to the root's `Reason` and back). The seventeen ledger-level sentinels of the update of Phase 1 stay in `internal/ledger` (`errors.go` there); each becomes a public sentinel of the root, or a rejection reason of `spec-clearing.md` 3.2, with its first user (the clearing, production and world rows). `ledger.go` wraps the ledger's constructor error with `%w`, so `errors.Is(err, ledger.ErrInvalidConfig)` holds inside the module; that sentinel is not exported and is not reachable from a valid configuration.
 - **Update (2026-10-15, plan 1-3 Phase 1):** the clearing row maps `ErrUnknownClearing`, `ErrNilExtension` and `ErrInvalidTrade` as root sentinels (`errors.go`, Phase 4 of the plan) and maps no ledger sentinel to a public error: every ledger refusal at settlement is a violated invariant (`spec-clearing.md` 3.2.2; D33, D34 of the plan), so `ErrBalanceOverflow` and its siblings stay in `internal/ledger`. A registration name that is not an ID is the existing `ErrInvalidID` (`spec-world.md` 4.1.1).
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply for this row. ErrUnknownSpawner is declared in errors.go and returned as a *ValidationError; the ledger's sentinels are not mapped here.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied for this row's sentinels: `ErrNotViable`, `ErrNoUpkeep`, `ErrSolveLimit`, `ErrSolveInconsistent` and the type `ViabilityError` are root sentinels in `errors.go` (D124); `ErrWarmStartPrice` and `ErrWarmStartJob` exist. `errors_test.go` and the declared-sentinel test gain the four. Left open for the other owners.
 
 ### N-080 Wants in the steady-state programme use equal-price shares
 
 - **Areas:** VIA, DEM
 - **Raised:** 2026-10-10, `spec-viability.md` 3.2.
 - **Note:** Wants enter the programme at the reference weights, fixed and unscaled by the surplus factor. Revisit with scenario S25 (a substitution flip changes the shares).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for DEM. Learned: the slice has no wants term (A5); the demand row adds the fixed term and the two-phase start (N-277).
 
 ### N-082 Relief and entry share the pool in time
 
@@ -581,6 +590,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-viability.md` 5.3.4.
 - **Note:** When the wage dual is 0 the warm start uses the nominal programme. Run both tables on `famine` and compare.
 - **Update (2026-10-11, STY):** applied as a report beside STY-H02 on `famine` (`spec-stylised-facts.md` 5.7); the comparison needs a run.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied in part. The solver builds both tables (D131) and reports `NominalSeed`; the comparison on `famine` is STY's run. Phase 7 asserts the nominal table of `famine` as `famine.toml` gives it: staple yield `spring = 3000`, nominal wage 1 624, the value of `warm-famine.toml` (the 1 826 of VIA 15 is the variant with a yield of 3 800; VIA 15 lists 1 868, 1 826, 1 624 and 755). Left open.
 
 ### N-086 Re-run the demand and spawner models under the register
 
@@ -606,6 +616,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-demand.md` 14, `spec-spawner.md` 16, `spec-reference-chain.md` 14.
 - **Note:** The scripts behind these specs are still in `/tmp/economy-boss/` (`dem/`, `spn/`, `ref/`). Archive them under `doc/specs/models/` like the others, and update the specs' paths.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The SPN models are not re-run; the worked cases of SPN 15 are tested as arithmetic.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open, with a learning: the REF prototype that wrote the warm documents is the one that is not archived (N-274).
 
 ### N-090 What MIG and the specs that tie obligations to a region must do with a relocation
 
@@ -642,6 +653,7 @@ PR description.
 - **Areas:** VIA, CFG
 - **Raised:** 2026-10-10, `spec-regions.md` 4.5.3, `spec-transport.md` 9.4, `spec-money-supply.md` 15.4.
 - **Note:** (1) `WithFreeTrade` links every pair of regions; with edges only regions in one strongly connected component can trade (`Graph.Components`), so the pooled check may use it (REG open question 2). (2) `transport.Lanes` derives lanes from hired modes with labour only; the carriers' feed and vehicle wear are not in the programme (TRN 9.4, 20.8), and VIA may want a lane with inputs. (3) With a rate levy a class's holdings are bounded by `m* = E + g/rho` (MON 9.3); VIA may seed a hoarder class at `min(Money, m*)` (MON 15.4), optional.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for TRN, REG and MON. Item (1): the pooled check uses free trade across all regions; strongly connected components wait for the region graph. Items (2) and (3), lanes and a hoarder class, are module inputs.
 
 ### N-096 The regional pool serves births, entry, relief and money flows
 
@@ -715,7 +727,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: a process note. Applied in its lesson: the shared files (`doc.go`, `event.go`, `errors.go`, `option.go`, this file, the roadmap, `architecture.md`, `AGENTS.md`) are edited by small edits after a re-read, and this file was read in chunks. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: a process note. Applied in its lesson: the shared files (this file, the specs, the roadmap, the index) are edited by small edits after a re-read, this file was read in chunks, and the shell-quoting search of `doc/` named under Traps was run after the change. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Process note; the plan was aligned with siblings only through the coordinator.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. Process note; this plan was written beside five others and reads only their contract.
 
 ### N-107 New money faucets and sinks start from MON
 
@@ -750,6 +762,7 @@ PR description.
 - **Update (2026-10-11, OBS):** rejected as a snapshot field: `r_full` is a counterfactual, not a state (`spec-observability.md` 5.8). OBS removed from the areas.
 - **Update (2026-10-11, IND):** no preset can compute `r_full` from a run; a proxy exists, the ratio of the households that draw at full abundance in a run with the resource unbound, as a consumer's measure over `RecipeExecuted` rows. The solver is the place for the figure (`spec-indicators.md` 21).
 - **Update (2026-10-13, TEC):** a technology gain scales `r_full`: `N*` is proportional to `T` for a quota and `a(sigma*) T = 10 000 r* / r_full` for a stock (`spec-technology.md` 13.1); a logistic stock is pushed past 1/2 at `a(5 000)(10 000 + CapBP) >= a(sig) 10 000` (10.3).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for POP and RES. `r_full` is not computed in the slice (no endowment, no population module).
 
 ### N-110 Version 1 rumours prices only
 
@@ -790,6 +803,7 @@ PR description.
 - **Areas:** VIA, REF
 - **Raised:** 2026-10-10, `spec-external-sector.md` 12.1.
 - **Note:** VIA adds optional import and export columns per gate and side (bounded by `Capacity` times the mean window), priced at the quotes at tick 0 with the gate scale, and a trade row (imports at the quotes not above exports at the quotes); EXT supplies `Lines()` as a pure read of the configuration. An import counts as a source in the gate regions for V1. REF builds an external overlay (EXT-S5, S55; N-084).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for EXT. The programme is closed; the type keeps no import column.
 
 ### N-118 One job per agent limits the subsistence floor
 
@@ -838,6 +852,7 @@ PR description.
 - **Areas:** CFG, VIA, REF, STY
 - **Raised:** 2026-10-11, `spec-world.md` 15.2 and question 2 of 22 (WLD-A3, merged into L22).
 - **Note:** A pack with no warm start, or a warm start that gives a role no job row, starts every group's first jobs together, so they complete together, a pulse of every `Duration` ticks. The informational warning `cold_start_lockstep` counts it at construction and never fails validation (`spec-config.md` 7.4.2, FR-CFG-082). REF reports the cold leg of S18 (S75 is the same leg) and does not assert it. Whether the world should stagger a cold start itself (a world-level stagger of the first jobs) is open question 2 of `spec-world.md`; the warm start's fixed stagger is VIA's (`spec-viability.md` 8.5).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. The warm start's stagger is the world row's (`spec-viability.md` 8.4.3); this row gives the offsets. The warning `cold_start_lockstep` exists (Stage 0).
 
 ### N-124 A paired comparison is exact only while aligned
 
@@ -884,6 +899,7 @@ PR description.
 - **Update (2026-10-18, observability review of plan 1-8):** applied: the estate row adds no event and no `Warn` and two metrics, `economysim.estate.sold` (from `TradeExecuted` with an estate as `Seller`) and the snapshot gauge `economysim.estate.at_floor` (`rules/observability-and-logging.md` 5.3, 5.3.1; `spec-observability.md` 5.3 `EstateAtFloor` and 6.2). The ask side of `economysim.market.unmatched` includes the estate's unsold lots; both catalogues now say so. Left open for later rows.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The row declares no event and no Warn; the staged catalogue test is unchanged.
 - **Update (2026-10-18, observability review of plan 1-9):** applied: the spawner row adds no event and no `Warn`, one appended field (`EntryLimited.Stranded`), three metrics (`economysim.household.entries` from `EntryLimited.Entered`, and the snapshot gauges `economysim.role.expected_ratio` and `economysim.role.viable` from the existing `Roles[].ExpectedRatioBP` and `Viable`) and one attribute value (`stranded`) (`rules/observability-and-logging.md` 4.3, 5.3, 5.3.1, 5.4.1; `spec-observability.md` 4.1, 6.2, 6.5, FR-OBS-102, 103). FR-SPN-035 now says the event is emitted when any count is above 0, as `limited()` does. Left open for later rows.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied. This row adds no event and no `Warn`: the solver logs nothing and the warnings are the existing "configuration warning" line with `rule` and `path` (CFG 7.2). Each new warning rule (`region_not_self_sufficient`, `subsistence_exceeds_expected_work`, `target_above_surplus`, `storage_gap_input`, `viability_check_skipped`, `cycle_cost_gain`; `raw_without_source` already exists) is a row of CFG 7.4.2 already. Left open.
 
 ### N-127 Event classes at the observer
 
@@ -891,6 +907,7 @@ PR description.
 - **Raised:** 2026-10-11, `spec-observability.md` 18 (open question 1) and 8.3.
 - **Note:** The order and trade classes are 92% to 99% of the events of the first consumer's world and cost a boxing allocation each. `WithObserver(o, classes...)` would build and deliver only the classes an observer wants, and with no observer wanting a class the world would build none. It changes `architecture.md` 6.2 and the options of `spec-world.md` 4.1. Not adopted: no measure shows the placeholder 6% of a tick to matter (N-015). At the first slice, measure the allocation per event, then decide. A sweep with only snapshot measures registers no observer and builds no event (`spec-experiments.md` 3.4.4), so it is not the case that needs the option.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no event; the one `Warn` is not an event class. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. No event here.
 
 ### N-128 A hosted per-agent field is saved once, in the agent record
 
@@ -905,6 +922,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in its lesson: `spec-agents.md` 3.1/3.2 now say a module's per-agent state lives in the module's slices (N-244) and is still saved once, in the agent record (tag 3). Left open as a standing rule.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: not applicable to the estate row: the listing prices are per region in CHK section 8 (tag 8), not an agent field, and the estate has no agent record (FR-CHK-048). Left open as a standing rule.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Privation and RoleSince are the agent's hosted fields; the renewal carry and the three runs are the world's (D118, N-265).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is configuration; the solver has no state (`spec-viability.md` 18).
 
 ### N-129 A stateful extension is one instance per world
 
@@ -938,6 +956,7 @@ PR description.
 - **Areas:** CFG, POP, STY
 - **Raised:** 2026-10-11, `spec-stylised-facts.md` 5.9 (C1) and `spec-population.md` 9.2.
 - **Note:** A pack with the population module on, no demand module and no faucet has no healthy start at the default schedules: the closed ceiling of the mean welfare ratio is 10 000 (N-054), below the replacement ratio 12 000. Acceptance reads the warning `replacement_above_closed_ceiling` as a rejection of that pack (`spec-population.md` 9.2). Whether the warning becomes a validation error is POP's and CFG's to decide.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for POP.
 
 ### N-133 No source read gives a distribution of wealth or a wage-and-population cycle
 
@@ -951,6 +970,7 @@ PR description.
 - **Raised:** 2026-10-11, `spec-experiments.md` 3.3.3, 14.4 and 22 (open question 7), `spec-calibration.md` 4.
 - **Note:** A sweep of a parameter that moves the steady state, with a warm start taken from the base, starts every point away from its own equilibrium (EXP-A5, L138). The hook is `Prepare`, which regenerates the table per point (`spec-experiments.md` 3.3.3), and the warning `stale_warm_start` is EXP's to specify (`spec-experiments.md` 14.4) from the list of paths the programme reads, which VIA 11 now publishes. CLB's flags `in`, `tbl` and `chk` on its registry rows follow that list, and its registry test fails a data field of the list without its flag (`spec-calibration.md` 4.2.1, FR-CLB-009). A point that changes an `in` or `tbl` knob regenerates the table or says it is a perturbation (7.3.11, FR-CLB-037). Open for VIA: whether `world.belief_step` moves the table (6.4 raises a seed price to the resolution floor, and the list says `no (a check)`); `spec-viability.md` 11 now says that a `.*` names every field of its table, as CLB reads it.
 - **Update (2026-10-13, TEC):** no parameter of TEC moves the table at tick 0 (the gain is 0 by construction): the path `modules.technology.*` is `no` in VIA 11's list and needs no regenerated warm start (`spec-technology.md` 3.3.2, 8.7).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for EXP. The list of paths in VIA 11 is unchanged by this row; Phase 7 reads it against the inputs the code reads (a path the code reads that the list lacks is a defect of one of them). The open question of `world.belief_step` is answered in the code: only the resolution floor of a seed price reads it (VIA 6.4).
 
 ### N-135 The hold-out set is a recommendation, not a requirement
 
@@ -1032,6 +1052,7 @@ PR description.
 - **Areas:** VIA, REF
 - **Raised:** 2026-10-13, `spec-employment.md` 22 item 7.
 - **Note:** `spec-viability.md` solves for prices at cost with labour at the wage dual; with a margin shared by `phi` the employer keeps `1 - phi` of it. A warm start has no hire in flight. A warm start has also no claims (N-165) and no rent column (N-158): three gaps, not one topic.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for CRD, EMP and LND. Learned: the table type carries no claim, hire or rent column, and this row adds none (D5).
 
 ### N-147 Pay in kind has no mechanism
 
@@ -1113,6 +1134,7 @@ PR description.
 - **Areas:** VIA, CLB
 - **Raised:** 2026-10-13, `spec-land.md` 12.3.
 - **Note:** The split of an endowment's row among roles and the money circuit of a rent are not in the programme. Part of three warm-start gaps (N-146, N-165).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open (see N-146).
 
 ### N-159 Region-attributed treasury and fiscal flows need a reconciling item in the regional money identity
 
@@ -1154,7 +1176,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row does not use the word "treasury". Left open for its owners.
 - **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: code and comments say "pool" for the estate account and never "treasury" for it. Left open for its owners.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The row says "pool" only.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the word "treasury" is not used here. Left open.
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1168,6 +1190,7 @@ PR description.
 - **Areas:** VIA, CFG, CRD
 - **Raised:** 2026-10-13, `spec-credit.md` 11.4 and open question 14.
 - **Note:** A pack that wants initial debt needs a configured table. One of three warm-start gaps (N-146, N-158).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open (see N-146).
 
 ### N-166 Collateral is not in version 1
 
@@ -1261,6 +1284,7 @@ PR description.
 - **Areas:** VIA, TRN, MER
 - **Raised:** 2026-10-13, `spec-risk.md` 8.
 - **Note:** `transport.Lanes` has a loss that is no longer 0 once a pack has route rows; VIA reads it as the share of a lane's output that never arrives.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for TRN and RSK. `Lane` and its `LossBP` are not published in Stage 1 (D127); the programme reads a loss only when TRN adds them.
 
 ### N-181 Not exposed in version 1: a household's base room, a migration journey, money
 
@@ -1273,6 +1297,7 @@ PR description.
 - **Areas:** CFG
 - **Raised:** 2026-10-13, `spec-risk.md` 3.2.3.
 - **Note:** A route row names a mode (TRN) and an edge (REG), a store row a class (STO): validation must run after the owners' tables exist and report `ErrModuleDependency` when an owner is off.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
 ### N-183 A tax is netted from income; a MON levy is not
 
@@ -1377,6 +1402,7 @@ PR description.
 - **Areas:** SCL, CODE
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` 4.1.4.
 - **Note:** Measure at the first slice; an incremental form needs a monotone queue saved as state.
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: not a solver concern. Left open.
 
 ### N-199 `HurdleSpreadBP` rests on one invented model
 
@@ -1501,12 +1527,14 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for AGT, left open for the rest: the keys are built (`siteWork`, `siteTrade`, `siteCreation`) and the agent row names its draws: `Work` takes none, `Trade` one per intent considered (candidates decided by the view alone, D93, N-246), the two creation draws in the order target then residue (`drawCreation`, D95). D12's site (the external agent's call) is INT's.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate draws no random word (`spec-estates.md` 2.7.4: its orders take a tie-break key in the clearing like any order), so it adds no site. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The default draws nothing (FR-SPN-029); a consumer's Decide gets the stream (siteSpawner, t, region).
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the solver draws nothing (FR-VIA-020, FR-VIA-040). Left open.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
 - **Areas:** CHK, CODE
 - **Raised:** 2026-10-12, `spec-checkpoint.md` 6.8.2 (Phase 1 of the Stage 0 plan).
 - **Note:** `seed' = finalise(seed xor finalise(salt))` and `finalise(0) = 0`, so seed 0 with salt 0 gives seed' 0: that reseed changes nothing. Distinct salts still give distinct seeds, and a salt of 0 is an ordinary reseed for any other seed. ADR 0008 decision 5 fixed the rule and CHK 6.8.2 documents the case. Decide before the first golden file records it whether to accept the identity or to change the rule (for example by adding a constant before the finaliser).
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no site, no reseed. Left open.
 
 ### N-216 A site constant is never a small integer
 
@@ -1515,6 +1543,7 @@ PR description.
 - **Note:** The first step of the key fold adds the site constant to the seed, so (seed a, site X) and (seed b, site Y) are one stream when `a - b = Y - X`. The constants are far apart for that reason (FR-WLD-067: pairwise at least 2^32) and a module that appends a site takes the first 8 bytes of SHA-256 of `economy-sim/site/<name>`, never a small number. A `Guard:` test in `random.go`'s tests enforces the distance. D2, D4, D6, D11, D12, D13, D14, D15 and D17 have no constant yet (N-214).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no site; D1 is `siteConstruction`, D10 and D12 are the callers', and `internal/welfare` takes the creation word and names no site. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no site and no constant. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no site, no reseed. Left open.
 
 ### N-217 D5 binds every module's change
 
@@ -1533,13 +1562,14 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** applied: the estate row appends nothing to the configuration, an event or a snapshot row, so the pinned hash cannot move; the exit gate checks `TestHashConfig_ReferencePinned`. `testdata/golden/off/` does not exist yet. A standing rule; left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. Nothing appends to the configuration, an event or a snapshot row; the pinned hash and testdata/golden/off/ cannot move.
 - **Update (2026-10-18, observability review of plan 1-9):** applied to the one field the review appended: `EntryLimited.Stranded` is a count added at the end of the event, never a typed ID, and is omitted from the golden rendering at 0, so a world with no stranded household renders as before. No configuration field is added; the pinned hash does not move.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied. The bounds and the sentinels are appended in order; no `Config` field, event or snapshot row is appended; `TestHashConfig_ReferencePinned` must not move, and Phase 7 checks it. Left open.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
 - **Areas:** CFG, CODE
 - **Raised:** 2026-10-12, `spec-config.md` 3.7.2, 8.2.2 (Phase 1 of the Stage 0 plan).
 - **Note:** The slice declares every field no module of `Config.Modules` owns, including the skill-barrier fields and every key the packs `one` and `second` set; `Modules` is declared with no field; `Edges` and `RegionPrices` are Stage 2 (field ids 8 and 9 reserved). The hash writes a field only when not zero; a non-nil pointer is always written, so `WarmStart` nil and `&WarmStart{}` differ and a field-less module (`Estates`) is the pair that names it; the id of a module's pointer is its position in the `Modules` row counted from 1 (Estates is 25), independent of build order. A field a module adds to a core struct (`Role.Informed`, `Region.PoolRelease`, `Recipe.Builds`) is written only when the module is on. `Group.Scale` 0 means "the world's `Scale`" and is hashed as written, so a `Group.Scale` equal to `World.Scale` and a 0 behave the same and hash differently; FR-CFG-004 compares like content and accepts it. The depth rule of the loader counts key segments and value nesting together against 16, derived from the deepest pack key (`modules.external.node.<r>.line.<c>.sell.margin_bp`) plus 2: a module with a deeper key raises `MaxNestingDepth`, which is a bounds change.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. `WarmStart` is hashed as Stage 0 built it; this row changes no hash.
 
 ### N-220 The registry of knobs needs the new owner rows
 
@@ -1553,6 +1583,7 @@ PR description.
 - **Areas:** STO, CFG
 - **Raised:** 2026-10-12, `spec-config.md` 6.2.1 (N-102, closed).
 - **Note:** `spec-storage.md` states only `[modules.storage.class.<id>]` (7.3). Rule 6.2.1 of CFG derives `[modules.storage.base]` (mass, bulk) and `[modules.storage.role.<id>]` (stores, base). STO confirms or restates them in its own section.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
 ### N-222 The cost of a reseed at every draw site is measured on paper only
 
@@ -1560,6 +1591,7 @@ PR description.
 - **Raised:** 2026-10-12, `spec-world.md` 7.1.3 and ADR 0008 (Consequences).
 - **Note:** A site call costs five finaliser evaluations (six with a fourth word) and one `PCG.Seed`, and is allocation-free (checked with `testing.AllocsPerRun`). The first slice should measure it against the cost model of `spec-scale.md` 6 and say whether the per-agent sites (D1, D3, D5, D8, D10) need a cheaper key.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no draw site. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no per-agent key. Left open.
 
 ### N-224 Stage 0 guards and what they pin
 
@@ -1580,6 +1612,7 @@ PR description.
 - **Handoff to Stage 1:** the deferred rows of the Rule ledger are the first work of `viability.go` (the five viability rules, `ViabilityError`, the solver-dependent warm-start checks and the empty-virtual-start-offsets check of `ErrWarmStartJob`, which needs the calendar's season lookup); `ErrUnknownStrategy`, `ErrUnknownSpawner` and `ErrUnknownClearing` arrive with their interfaces (D2); the world-dependent observability tests (logs, non-interference, cardinality, counterpart, golden rendering, emission order, run lifecycle, the call-site and full-`Step` allocation limits) are Stage 1's "Done when"; the glossary adds each stage's terms before it uses them (`notYetTerms`); the pinned all-off hash (`TestHashConfig_ReferencePinned`) and `testdata/golden/off/` must not move (N-217).
 - **Rule ledger:** the built, deferred and module rows of CFG 7.3 and 7.4.1 are in `plans/plan-phase-0-foundation.md`, "Rule ledger".
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. Phase 2 deletes Spawner from notYetTerms; Phase 4 extends TestConstants_Values and adds the contract-phrase test for the Spawner doc comment.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied. `validate_counts_test.go` and `errors_test.go` gain the checks of the two bounds (read as constants) and the four sentinels; `import_guard_test.go` gains the rule that only `internal/steady` imports `math/big` in its non-test files (seven existing test files use it as an exact oracle; architecture.md 3.5 restricts computing, not testing); `determinism_guard_test.go` must pass for the new files. Left open.
 
 ### N-225 The ledger's reason constants are internal numbers
 
@@ -1611,6 +1644,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: AGT 3.8 is the only AGT clause the welfare row edits and it concerns the length of the record; welfare adds no item to the tradable set and no fan-in, and its arithmetic is `internal/welfare`, not the `internal/household` of `spec-agents.md` 22. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in part: D80 settles the second point (the agent row needs `internal/household` and adds it to `architecture.md` 2.6 and `AGENTS.md`). The first point (the fifth fan-in for the tradable set) stays for the edit of N-235; the want items of FR-AGT-003 join the role table with the demand module. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no item to the tradable set. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. The solver reads the role table's tradable set only through V1's producibility, with no new touch point.
 
 ### N-230 The run of the "price beliefs at bound" `Warn` is advanced for every market every tick
 
@@ -1630,6 +1664,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied for point (2): the residue word at creation is the agent row's (`drawCreation`, which calls the existing `setResidues` and `residueLen`). Point (3), the reset at a role change, is the executor's (row 11 composes `reseedBeliefs`, `setResidues`, `history.Resize` and `job.abandon` inline; this row builds no role-change helper); points (1), (4) and (5) are the world row's; the agent keeps the `job` by value and writes `Yield` with it (N-237). Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row touches neither the job nor the residues; a role change's goods move by `acceptGoods` (whole lots), independent of the residue reset. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The role change resets the residues in the executor's one role-change step.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for the agent row. `virtualStartOffsets` and `warmJob` are what the world row calls.
 
 ### N-233 `Discard` and `Holding` exist: what each is for
 
@@ -1657,7 +1692,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent row adds no fan-in and no admission touch point. The core view filler and the intent conversion are called by the world's `fillAgentView` and `checkTradePlan`, and the admission of `not_tradable` and `duplicate_order` is the clearing row's. The edit of 2.6 for `internal/household` (D80) is separate from the combined edit this note holds. Left open for the first Stage 2 module PR.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no fan-in and no admission touch point: the estate reaches the admission as a plain pseudo-agent through `orderFacts`, and `removeAgent` is the world row's. Learned: the estate is the first caller of a named lot, tested through the existing `book.admit`. Left open for the first Stage 2 module PR.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The spawner adds no fan-in and no admission touch point; the edit waits for the first Stage 2 module PR.
-
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open. Not this row's: no fan-in, no admission. The layout edit of this row is separate and small.
 
 ### N-236 Three halves of FR-AGT-003, 010 and 011 are the agent row's
 
@@ -1727,6 +1762,7 @@ PR description.
   - **Still not built, and not this row's:** production in the agent lifecycle, the observer emission and the tick (N-232, N-242), and the checkpoint of jobs and yield shocks (N-237, tag 6, Stage 2). The Codacy review lists both as missing; they are the agent, world and checkpoint rows.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row's files stay under the Lizard limits by one concept file, `estates.go`; the module half is appended after a marked comment line. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply to this row's files: Lizard before every push, the spaced separator in Markdown tables, the new root file in the layout.
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied. The Lizard limits (complexity at most 10, at most 8 parameters, files of about 500 lines) are a design input of Phases 2 to 6; `lizard -l go -C 10 -a 8 -L 100 -w` runs before each push; `viability_check.go` and `viability_table.go` are named in the layout (architecture.md 2.6, `AGENTS.md`); markdown tables of the plan use the spaced separator. `internal/checked.muldiv` (CCN 13) is untouched unless this row edits it. Left open.
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -1735,6 +1771,7 @@ PR description.
 - **Note:** `spec-agents.md` 3.1 sketches an agent that hosts `DeathCarry`, `OwnUse`, `OwnUseJobs`, `Journey`, `Member`, `Stores` and `Trainee`. `rules/architecture.md` 2.10.1 puts a module's per-agent state in the module's own slices indexed by agent slot, never as fields of the agent type, and the rules win. The agent row builds the unexported `agent` with the fields no module owns only. Each module keeps its field in its slice; the checkpoint still writes it in the agent record (N-128, `spec-checkpoint.md` 4.2 tag 3). Phase 1 of the plan edits AGT 3.1 and 3.2 to say so.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in `spec-agents.md` 3.1 and 3.2 (module slices, never fields of the agent type). Kept open until the Phase 8 gate of plan 1-7 shows the agent row is built that way.
 - **Update (2026-10-17, plan 1-7 Phase 8):** the gate shows it: `agent.go` holds only the core fields (D81, `TestAgent_HoldsNoMoneyQuantityOrRegion`) and no module field. Kept open as the standing rule for each module's PR.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1744,6 +1781,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in `spec-agents.md` 6.4 and `spec-beliefs.md` (the Tunables group of the view). Kept open: a later module's default rule appends its tunable to it.
 - **Update (2026-10-17, plan 1-7 Phase 8):** built; the group and its round trip against `beliefParams` are tested (Phases 5 and 7). Kept open for the modules.
 - **Update (2026-10-17, plan 1-7 Phase 1):** checked against D82 and the Phase 1 text of `spec-agents.md` 6.4.1: the group holds the fifteen fields of `beliefs.Params` only (not `MaxPrice`, not `PriceWindow`); a test in Phase 5 asserts the group converted back equals `beliefParams` field by field, so the two cannot drift.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-246 What the world row must do for the strategy streams and the draw count
 
@@ -1761,6 +1799,7 @@ PR description.
 - **Note:** `Stateful` does not exist before `checkpoint.go` (Stage 2), so the agent row builds `Directed` and the `Directive` type without `SaveState` and `LoadState`. The checkpoint row adds them (delegating to the fallback, `spec-agents.md` 10.3), the directive in the agent record (AGT 15), the table of strategy names (AGT 15) and the assertion that `Directed` is `Stateful`.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read; unchanged. Left open for the checkpoint row.
 - **Update (2026-10-17, plan 1-7 Phase 8):** `Directed` and `Directive` are built without the state methods, as planned. Still open for the checkpoint row.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-254 A lot that gains units keeps its listed price
 
@@ -1770,6 +1809,7 @@ PR description.
 - **Update (2026-10-17, spec edits):** `spec-estates.md` 2.7.3 now says "A lot that receives units keeps its price, and the joining units are listed at it" (the earlier grep missed the wording). The spec is written. Left open until the code merges and a scenario (S02, S14, STB-L38) shows whether the repricing is needed.
 - **Update (2026-10-18, plan 1-8 Phase 1):** `spec-estates.md` 2.7.3 also says a row is dropped when its lot is gone at P5.3 as well as at the P3.4 walk (D102), so goods that arrive under the key of a lot sold wholly are priced at the first price, as after a restore. Left open until the code merges.
 - **Update (2026-10-18, plan 1-8 Phase 5):** built in `estates.go`: one `reconcile` merge keeps a row whose lot is held (price and mark), drops a row whose lot is gone, and adds a row at the first price only in the insert-enabled walk of `asks`; `markdown` runs it filter-only, so a same-key arrival after a wholesale sale is priced at the first price (`TestEstateRound_ArrivingUnitsAndRepricing`, `TestEstateRows_StaleAndRoundTrip`). The gate's broken copy (a stale row kept) fails both. Still open: the Phase 1 to 4 code is in the working tree and the commit is pending; close it when that commit merges, unless a scenario shows the repricing is needed.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-256 The checkpoint saves listing rows of held lots only
 
@@ -1788,24 +1828,28 @@ PR description.
 - **Update (2026-10-17, plan 1-8 D106):** `acceptUnits` (the goods of a weight change, with `occupation.Remaining`) and `acceptGoods` (the intake of a removal or role change, counting lots) are the two goods entries; `receive` is the common intake. Left open until the world row is built.
 - **Update (2026-10-18, plan 1-8 Phase 1):** the list gains `acceptUnits` for a weight reduction's goods and the stale-row drop at P5.3 (D102, D106); the world calls `admitted` only for an ask that `book.admit` accepted, so a rejected ask is not marked down (D103). Left open for row 11.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The calls the executor makes are listed in Consumes; N-266 lists what row 11 calls for the spawner.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-284 The type `World` is the configuration section and the simulation
 
 - **Areas:** WLD, CFG, CODE
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D140).
 - **Note:** `config.go` declares `type World struct` (the world-level parameters, `Config.World`), and architecture.md 2.2, 3.2, 6.1, 12.1 and `spec-world.md` 3.1 require the simulation type to be `World`. The plan renames the section type to `WorldParams` (and `DefaultWorld` to `DefaultWorldParams`) in its Phase 2 and keeps the field `Config.World`, the TOML table `[world]`, the hash ids and the owner-table scope cell "World" (the registry test maps the scope to the type). Phase 1 writes it into `spec-config.md` 3.7 and the glossary. **Answer (2026-10-17, coordinator): accepted** (the rules beat `spec-config.md` 3.7; the module is unreleased; no hash input changes). Still owner-confirmable (plan 1-11 O1).
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open, with what this row learned: row 11 renames the section to `WorldParams`; this row reads it through `Config.World` only (see the Consumes table of the plan).
 
 ### N-285 The position table test is staged
 
 - **Areas:** WLD, CODE
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D141).
 - **Note:** `testing.md` 6.8 and architecture.md 2.10.3 compare `tick.go`'s positions with the table of `spec-world.md` 6, which has about 70 positions of which most belong to modules built later. The plan gives the test the staged form of 6.7 and 9.7: an explicit `notBuiltPositions` list, failing on a stale entry and on a position that is neither called nor listed. A module's change deletes its entries and appends its guarded call. Phase 1 edits the two rules with fresh tags.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-286 The step is replayable from a test file
 
 - **Areas:** WLD, CODE
 - **Raised:** 2026-10-17, coordinator ruling 2 and `plans/plan-phase-1-11.md` (D166).
 - **Note:** No hook in the production `Step`: every position is an unexported method of `World` and the non-position parts (the guards, `TickStarted`, `TickEnded`, the marking of a failed world, the tick advance) are unexported methods (`beginStep`, `endStep`) that `Step` and a replay in a `_test.go` file both call, so the per-position state hash of testing.md 7.1.2 needs no exported back door (architecture.md 10.2). A module's position method is appended with its guarded call.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-288 What the world saves, and the diagnostic runs of its `Warn`s
 
@@ -1826,6 +1870,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (O10, Phase 7).
 - **Note:** In Stage 1 the executor of the spawner's plan accepts a `DecideReduce` only for the causes the default spawner emits (`starved`, `insolvent`, ledger reason `starvation`, SPN 4.1); any other cause is refused (counted in `EntryLimited.Refused`, `Debug` "decision refused"). A reduction's ledger reason must name what it is, so no reason is guessed now. The INT change (consumer-driven removal) and the POP change (`population`, reason `deaths`) each append their cause constant and their ledger reason together in their own change (architecture.md 2.10.5, append-only), and extend the executor's accepted causes and its refusal-table case in the same change.
 - **Update (2026-10-17, spawner edits):** the refusal `unsupported_cause` is written in `spec-spawner.md` 4.1.1 (line 180; checked last). Left open: INT and POP append their causes and reasons.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-294 The checkpoint change adds the digest to the off-only golden once
 
@@ -1833,6 +1878,7 @@ PR description.
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (D172).
 - **Note:** `testdata/golden/off/one.txt` of Stage 1 holds `spec-reference-chain.md` 8.5 items 1 to 5 and no item 6 (the SHA-256 of the checkpoint at tick `T`): no checkpoint exists before Stage 2 and no line is reserved. The checkpoint change adds item 6 and moves the off-only files once, with the testing.md 7.2 explanation. The checkpoint is a core file and not a module, so architecture.md 2.10.5 ("a module that is off leaves no trace") does not apply to it. After that change the files are held by the module rule again.
 - **Update (2026-10-17, observability/roadmap edits):** applied in substance (REF 8.5 and the roadmap say item 6 is Stage 2). Left open for the Stage 2 checkpoint change.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-295 The packs of REF 7.5 and 8.2 the slice cannot run
 
@@ -1840,6 +1886,7 @@ PR description.
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md`.
 - **Note:** The invariants and determinism tables of REF 7.5 and 8.2 list `three`, `five`, `famine` (with the estates module part) and `one-demand`. They need regions, the `Estates` part and the demand module, so Stage 1 runs `one` and `second`, and `three` if the probe of Phase 5 of `plans/plan-phase-1-12.md` shows the Stage 1 world runs it (its regions do not trade, REF 16.2). The tests are table-driven: the stage that makes a pack buildable adds its row, and the rule of N-217 applies to the files it adds under `testdata/golden/all/`.
 - **Update (2026-10-17, observability/roadmap edits):** REF 7.5 lists the packs; left open for the `three` probe of plan 1-12 Phase 5.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-296 S01 leg (b) and every visitor wait for `AddAgent` and `Direct`
 
@@ -1854,6 +1901,7 @@ PR description.
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (D174; ADR 0007 open point 2).
 - **Note:** The test-only state hash of testing.md 7.1.2 adds no hook to production code (architecture.md 10.2). The world row keeps every position of `tick.go` an unexported method of `World` and factors the non-position parts of `Step` (the guard, the tick advance, the `TickStarted`/`TickEnded` bracketing, the failed-world marking) into unexported methods that `Step` and the replay in a `_test.go` file both call. A module that adds a position adds its row to the table and one entry to the test's row-to-method map; a position with no method, or a method with no row, fails the test. A guard test compares the replay with a plain `Run`.
 - **Update (2026-10-17, config/world edits):** the WLD half is applied (the position test and the `beginStep`/`endStep` seam are in `spec-world.md` and testing.md 6.8). Left open for row 12.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-298 Which files of `expected/`, `bands/` and `scripts/` exist, and who creates them
 
@@ -1866,12 +1914,14 @@ PR description.
 - **Areas:** CFG, REF
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (A8).
 - **Note:** `TestPacks_DefectOverlays` asserts `Validate` is nil for d1 to d5 "at Stage 0". The viability row's change adds the rules and must flip that line to `errors.Is(err, ErrNotViable)` in its own PR so the suite stays green. Row 12 then adds the rule name per defect, "that rule only" for d3, d4 and d5, the warm layer set, and the case `d1` with the wild source on (`labour_short`, not `cycle_not_productive`).
+- **Update (2026-10-18, plan 1-10 Phase 1):** applied for this row: Phase 5 flips the d1 to d5 line of `TestPacks_DefectOverlays` from nil to `errors.Is(err, ErrNotViable)` in the PR that adds phase 6; plan 1-12 adds the rule names and the "that rule only" assertions. Left open for row 12.
 
 ### N-300 The first measurement of a `Step` of `one`
 
 - **Areas:** SCL, OBS, CODE
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (Phase 8).
 - **Note:** To be measured by Phase 8 and 9 of the plan: the allocations of a full `Step` of the pack `one` with the default logger and observer (the baseline constant of NFR-WLD-001 and NFR-OBS-002) and the time per tick. It is the measurement N-127 (the allocation per event) and N-222 (the cost of a reseed at every draw site) ask for at the first slice, and the first check of the cost model of `spec-scale.md` 6.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 
 ### N-274 The producer of the warm documents is not in the repository
 
@@ -1879,6 +1929,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (D133).
 - **Note:** `testdata/chains/warm-*.toml` were written by REF's prototype (`/tmp/economy-boss/ref/lp.py`), which is not archived (`doc/specs/models/via/` gives lambda and prices only, not money, stock or jobs). Once the Go solver passes the agreement run of Phase 7 it is the reference: a document that does not load equal to the solver's table is regenerated with the explanation of testing.md 7.2, or the code is fixed, by the owner's ruling (O2 of the plan). Do not archive anything from `/tmp`.
 - **Update (2026-10-17, viability edits):** `spec-viability.md` 15 now cites the unarchived `lp.py`. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 7):** the Go solver is now the reference. Loaded equality (D133) of `warm-one`, `warm-two`, `warm-three`, `warm-five` and `warm-second` with the solver's table holds, and each validates. Regenerated with the testing.md 7.2 explanation: `warm-five.toml` as a whole (prices and wage on the exact scale of VIA 6.3, the file's old scale being 0.9909 to 1.0129 of it; `semi_a` and `semi_d` lifted from 50 to 51 and 52, into the band; the three seasonal job rows and the centre grower reserve 1 092 for 1 087, D123); the seasonal `grow_staple` job rows of `warm-two` (south 3 341 to 3 110) and `warm-three` (far_south 1 736 to 3 250, south 3 464 to 3 224), which follow VIA 8.5.1 as written (D134 (9)); and the `grow_algae` row of `warm-second` (5 163 to 5 232, D134 (8): the producer is unarchived, so the cause is not known). The hash pin of `second` in `config/integration_test.go` moved with it. `warm-famine.toml` is unchanged (Stage 2). Left open.
 
 ### N-276 `Validate`, `Warnings` and `NewWorld` each reach the programmes
 
@@ -1886,6 +1937,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (D125).
 - **Note:** The viability programmes run in `Validate` (phase 6) and in `Warnings` (gated on a clean structure). `NewWorld` calls both, so the work is done twice. The unexported `checkViability` returns the errors and the warnings at once; the world row may call it once. Phase 7 measures the cost on `five`.
 - **Update (2026-10-17, viability edits):** `spec-viability.md` 21 now has one `checkViability` returning errors and warnings together. Left open for the world row and the Phase 7 measurement.
+- **Update (2026-10-18, plan 1-10 Phase 7):** measured on `five`: `Validate` 0.59 s, then `Warnings` 0.46 s (1.05 s in all; `BenchmarkValidateFive` runs the two together at 0.85 s a pair, 331 MB), against 1.37 s for one pooled `SolveSteadyState`. `NewWorld` calling both would pay the programmes twice, so the world row should call `checkViability` once. Left open for the world row.
 
 ### N-277 The programme with the wants needs a two-phase start
 
@@ -1913,6 +1965,7 @@ PR description.
 - **Areas:** VIA, CFG
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (Phase 5).
 - **Note:** `bounds.go` has `MaxSeedPrices` but not `MaxViabilityPivots`, `MaxViabilityCells` and `MaxLanes`. The solver row adds the first two (CFG 4.1 gives the values); `MaxLanes` bounds `WithLanes`, which Stage 1 does not publish, so it waits for the transport module (Stage 2). The Stage 0 plan's table that lists the viability rows as deferred also lists "group shares exceed 10 000" as deferred, but `warmRules` has it: correct the table.
+- **Update (2026-10-18, plan 1-10 Phase 1):** `spec-config.md` 4.1 already gives `MaxViabilityPivots` 100 000 and `MaxViabilityCells` 4 000 000; Phase 5 adds the two constants and their tests. The Stage 0 table is corrected here, not in the plan: the sub-rule "shares of a group above 10 000" is built in `warmRules`. Left open.
 
 ### N-264 Stage 3 `skills.go` appends the queue rule and the `Apply` emission
 
@@ -1961,6 +2014,7 @@ PR description.
 - **Raised:** 2026-10-17, WP1 report of the owed-edits job.
 - **Note:** `rules/architecture.md` 2.6 lists the continuation files (`construct*.go`, `fanin.go`, `phase_*.go`, `viability_*.go`, `production_report.go`); the layout in `AGENTS.md` repeats them. `AGENTS.md` says the architecture list wins. Any change to one lists the same files in the other in the same change, with a fresh tag for architecture.md.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied: this phase's layout edits (`agent.go`, `strategy.go`, `strategy_default.go`, `strategy_work.go`, `strategy_view.go`, `internal/household`) are in `architecture.md` 2.6 and in `AGENTS.md` with the same file lists, checked line by line, and `architecture.md` has a fresh tag. A standing rule; left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read: `viability_check.go` and `viability_table.go` are in both lists (architecture.md 2.6 and `AGENTS.md`), identical. Left open.
 
 ### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
 
@@ -1973,18 +2027,21 @@ PR description.
 - **Areas:** VIA, REF
 - **Raised:** 2026-10-17, WP6 report of the owed-edits job.
 - **Note:** `spec-viability.md` 5.2 (line 489) says the available work share divides every term alike and cancels, so it is not in the census formula. REF 4.3 and 4.4.1 should say the same, so the census of `one` is read the same way in both specs. Check them when REF is next edited.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read: the census formula is written in `spec-viability.md` 5.2 against `one` (deliverable 3); Phase 6 pins it in a test. Left open.
 
 ### N-307 The `second` `grow_algae` row: 5 163 against 5 232
 
 - **Areas:** REF, VIA
 - **Raised:** 2026-10-17, WP6 report of the owed-edits job.
 - **Note:** The `grow_algae` row of the pack `second` differs between the prototype (5 232) and the Go solver (5 163). Settle it in plan 1-10 Phase 7 (the agreement run) and then fix the number in REF or in the solver, with the testing.md 7.2 explanation. N-274 applies to any regenerated warm document.
+- **Update (2026-10-18, plan 1-10 Phase 1):** left open for Phase 7 (the agreement run), which settles the number and gives the testing.md 7.2 explanation.
 
 ### N-308 The refusal tally never fires for the default strategy unless the work report names the blocked recipe
 
 - **Areas:** AGT, PRO, OBS, WLD
 - **Raised:** 2026-10-17, the observability review of the branch of plan 1-7 (`strategy_work.go`, `spec-production.md` 14.1, N-242).
 - **Note:** The default `Work` passes over every recipe whose view says `MaxExecutions` 0, so it never requests a recipe production would refuse, and the `refusalTally` of N-242 (filled where a start returns 0) would stay empty for it: `economysim.recipe.refused` would read 0 on a chain stalled for want of an input or a tool, the case the event was added for. The work report now carries `blocked`, the index of the first recipe of the role that could not run when the share is above 0 and the halt skipped none (FR-AGT-086, `spec-agents.md` 7.1.4), and the world adds that household to the tally under the recipe and the view's reason. A household with several blocked recipes is counted once, under the first in list order, so the counts add to the households refused; the reason is the first applicable, as 4.2.1 says. A consumer's strategy that requests a blocked recipe is counted by the refusal of the start as before, and a household is never counted by both. **Open:** the world row must make the call (N-242 point 1), and the golden of a stalled chain must show a non-zero `RecipeRefused` under the default strategy; a later module's reason (`not_permitted`, `no_room`, `no_endowment`) arrives in the view as it does in the tally, a new column appended with the module.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
 ### N-309 What the estate row (plan 1-8) leaves to later rows
 
@@ -1992,6 +2049,7 @@ PR description.
 - **Raised:** 2026-10-18, the audit of `plans/plan-phase-1-8.md` (`estates.go`, built and tested without a world).
 - **Note:** `estates.go` is a set of unexported functions with no caller until the world row, so these requirements are only partly covered and are completed there; each needs a test in its owner's row. (1) **World row (11):** FR-EST-010 and 011 (no `AgentSpawned`, no snapshot row, no strategy call, belief or outcome for an estate, and no agent event whose subject is an estate; the row tests only `regionOf`); FR-EST-002 (the estate that receives is the one of the region of the agent's account); FR-EST-004 (the estates open before any household, WLD 5.2 order 4); FR-EST-012 (the asks are placed at P3.4 before any market clears, with the tie-break key; the row tests only that the order carries the estate's ID); FR-EST-013 (`Regions[].MoneyPool`, `Markets[].HeldByEstate` and `EntryBudget` in the snapshot); FR-EST-014 (`w * Role.StartMoney` and "an entrant gets no goods" are the executor's, with the whole-household budget); FR-EST-015 (the `initial` money of the initial agents, and the map of `WarmPool.Region`, a string, to a `RegionID` before `seedPool`); FR-EST-021 (emit `AgentBankrupted` then `EstateOpened` behind the observer flag; `EstateOpened.Balance` is read as `pool` after `receive`, plan open item O6, and `GoodsListed` counts lots, N-255). The call list is N-258 and N-266. (2) **Checkpoint row (Stage 2):** build tag 8 from `rows` and `restore`, wrap `errListingRows` in `ErrCheckpointCorrupt`, and make the cross-check of restore step 7 (FR-CHK-023) call them (N-256). (3) **The `Estates` module part (Stage 2, after MON):** `Region.PoolRelease` and `Region.ReliefBelow`, relief at P1.6 and `ReliefPaid`, the pool as a money-flow target with `ErrModuleDependency`, FR-EST-017 to 020, and the module fields of FR-EST-023; they append to `estates.go` after the marked comment line at its end. (4) **Other modules:** FR-EST-003 (a traveller who dies in transit, a diverted cargo) is TRN's and MER's; money the estate receives as creditor or title holder is CRD's and LND's; the tool-sale rule of SKL 2.7 beyond the first price is SKL's. (5) **After the first golden file:** the first price, the markdown and the keep-the-price rule of a lot that gains units (D102, D104; N-254) enter `testdata/golden/` at the end of Stage 1, and a later change is a behaviour change with the explanation of testing.md 7.2.
 - **Update (2026-10-18, test audit of the branch):** the audit against testing.md found the row tested at the unit level only, as the plan says (`estates.go` is 100% covered, every function; root package 98.8%), and left these test debts for later rows. Each needs a test in its owner's row; none can be written before there is a `World`. (a) **Public-API integration tests (testing.md 2.3), world row (11):** the only public-API test of the row is `TestEstates_PackOneAccountIDs` (FR-EST-004, 005). FR-EST-006 (a bid from an estate is `side_not_allowed`), 007 (one ask per held lot, a rejected ask is not an ask), 009 (the markdown at P5.3) and 013 (the proceeds are a `trade` transfer into the pool, `MoneyPool` equals the account) are consumer-visible and need a test through `NewWorld` and `Step` with a recording observer, beside the unit tests that exist. (b) **Restore equals uninterrupted (FR-EST-024), checkpoint row (Stage 2):** a restored world must list and price the same lots as an uninterrupted one; the unit tests cover `rows` and `restore` only (N-256). (c) **Mutation pass:** 22 hand-made mutants of `estates.go` were run; the two that survived were an equivalent one (`<=` against `<` at the floor in `markedDown`) and the clearing of the `asked` mark in `asks`, now covered by `TestEstateAsks_MarksOfTheLastTickAreCleared`. `gomu` was not run (Docker only, testing.md 9.4); it is the periodic pass for the core packages. (d) **Fuzz seeds:** `testdata/fuzz/FuzzPriceRules`, `FuzzReconcile` and `FuzzRestore` hold hand-written seeds, not crashers, so testing.md 7.5's `Fix:` rule does not apply; they must be committed with the row. (e) **The invariant branches** of `estates.go` (an unreadable account, a belief step out of bound, an overflowing first price, an admitted ask with no listing) are `Guard:` tests (`estates_errors_internal_test.go`), so no coverage exclusion under testing.md 9.5 is needed. Left open.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
 ### N-310 What the observability review of plan 1-8 leaves undone
 
@@ -1999,6 +2057,7 @@ PR description.
 - **Raised:** 2026-10-18, the observability review of the branch of plan 1-8 (`estates.go`, N-309 item 6).
 - **Note:** The catalogue and spec rows for `economysim.estate.sold`, `economysim.estate.at_floor` and `Markets[].EstateAtFloor` are written, and nothing can emit them until the world, the snapshot and `otelobserver` exist. Owed, each with its test in the row that builds it: (1) **World/snapshot row (11):** declare `EstateAtFloor` in `snapshot.go` and fill it as the units of the estate's lots whose row in `estates.listed` is at the resolution floor (`resolutionFloor`); it is 0 with no estate stock and never above `HeldByEstate`; a test builds a world, lets an estate lot fall to the floor and compares the field; the field is a function of saved state (N-125), so the restore test (FR-OBS-043) must cover it. (2) **`otelobserver` (Stage 2):** feed `estate.sold` from `TradeExecuted` where `Seller` is below the region count (the test of `spec-observability.md` 4.3.3 item 2, `estates.regionOf`), record `estate.at_floor` from the snapshot, and add both to the adapter's cardinality test (testing 8.1: commodity and region only; about 300 series, 6.5.2). (3) **Pool overflow through a step:** the world row needs a test that an `ErrBalanceOverflow` of an estate pool fails the step (`TickEnded` with `Failed`, `economysim.world.step.failed`) and that the error text names the region and the account, as `refused` now does; the unit test covers `refused` only. (4) **Allocation test:** `estates.asks` and `markdown` have a no-allocation test in isolation (NFR-EST-001); the full-step allocation limit of observability 8.2 includes them only once the world row calls them. (5) **Reading `economysim.market.unmatched`:** its ask side includes the estate's unsold lots; if the first dashboards show it misleads, split the series by a holder attribute (doubling its ask series) instead of subtracting `HeldByEstate`; decide with data from the first golden run, not now. (6) **Not done in this review:** `doc/notes.md` was not read in full before the spec edits (only the notes tagged OBS and EST that the edits touch, and N-125, N-126, N-127, N-289 and N-309); the next change to `spec-observability.md` should read it whole.
 - **Update:** none yet.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
 ## Closed notes
 
@@ -2957,6 +3016,7 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Areas:** SPN, AGT, CODE
 - **Raised:** 2026-10-17, the consistency pass over `plans/plan-phase-1-7.md` to `plan-phase-1-12.md`.
 - **Note:** Plan 1-7 exports `AgentView`, the strategy's view of one agent (AGT 6.4). The first text of plan 1-9 called the per-agent group of the spawner's `RegionView` `AgentView` too, and two types cannot share a name in the root package. `spec-spawner.md` 3.2 names no Go type for the group; plan 1-9 now says `RegionAgent`, and its Phase 1 writes the name into SPN 3.2 so that the spec and the code agree. A later view or row type is checked against the exported names of the root before it is declared.
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 - **Closed:** 2026-10-17. Applied: `spec-spawner.md` 3.2 names the per-agent group `RegionAgent` and lists it among the exported names, so spec and plan 1-9 agree. The standing advice (check a new view or row type against the root's exported names) belongs to the plans.
 
 ### N-275 The supply gap and the lean reserve
@@ -2965,6 +3025,7 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (D122, D123).
 - **Note:** VIA 4.5 says the gap uses "the same start windows as `J`", which is one household's greedy sequence, and the plan keeps that reading (round 1 audit): it gives REF's gaps (304 for `one`: starts 59 and 119, completions 118 and 178; 123; 184), where counting every open start tick would give 273 for the 92-day spring. The lean reserve of 8.4.1 has no formula in the spec; the plan states it (largest cumulative shortfall over a year from tick 0 of the whole consumption, upkeep plus the inputs of the active recipes: 644 plus the 20 `staple` of `save_seed`'s input is the 664 of `warm-one.toml`) and REF's "use per tick times the ticks to the first harvest" is its special case. Both are written into VIA in Phase 1 of the plan. An activity open on every tick completes every tick (8.5.2 staggers the group), so it has no gap and no reserve (ruled by the coordinator, reversible; option (a) of O10); a start counts at every tick of the open window (the prototype's `t < YEAR` reading, 7 starts of a 60-day job; ruled, reversible), the completion ticks wrap cyclically for the gap, but a start whose completion tick is at or after the year end adds nothing to the reserve and is not wrapped, while `N_open` still counts its tick (`two` south: 789 in `warm-two.toml`, 510 if wrapped).
 - **Closed:** 2026-10-17. Applied in `spec-viability.md` 4.5 (the supply gap on the same start windows as the jobs, the cyclic wrap, no gap for an activity open on every tick) and 8.4.1 (the lean reserve formula and the unwrapped start at or after the year end, the `N_open` count), settled by the owed-edits job. The numbers 304, 123, 184 and 664 are REF's, not changed.
+- **Update (2026-10-18, plan 1-10 Phase 7):** the code reproduces the gaps at the file level: with the `staple` shelf life lowered to 100 ticks `storage_gap` reports 304 for `one`, 304 and 123 for the north and south of `two`, 123 for the south of `three`, and 304, 123 and 184 in `five` (`TestSolveSteadyState_StorageGapsOfTheReferenceChain`).
 
 ### N-278 The viability files are split for the Lizard limits
 
@@ -2985,8 +3046,14 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Areas:** CODE
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D144).
 - **Note:** The row adds root files `construct.go`, `construct_warm.go` (the application of the warm start), `fanin.go`, `phase_start.go`, `phase_production.go`, `phase_trade.go`, `phase_outcomes.go` and `phase_exit.go` beside the listed `world.go`, `tick.go`, `market.go` and `snapshot.go`, to stay under the Lizard limits of N-243. They are listed in architecture.md 2.6 and `AGENTS.md` in Phase 1 (the omission of `production_report.go` in N-243 is the lesson).
+- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 - **Closed:** 2026-10-17. Applied: `construct.go`, `construct_warm.go`, `fanin.go` and the `phase_*.go` files are in `rules/architecture.md` 2.6 and `AGENTS.md`.
 
+### N-311 Per-commodity price uniqueness is not detected by the solver
+
+- **Areas:** VIA, CODE
+- **Raised:** 2026-10-18, `plans/plan-phase-1-10.md` (Phase 6 fix, FR-VIA-026).
+- **Note:** FR-VIA-026 and VIA 8.2.4 give a commodity whose price is not unique the reference price and list it in `UnpricedCommodities`. `steady.Outcome` carries only the global `Degenerate` and `Alternative` flags (FR-VIA-019), and telling which duals are non-unique needs a min and a max of each price over the optimal dual face (2n further programmes). Phase 6 builds the dual-0 half only; a non-unique non-zero dual is used as the price and the report's `Degenerate` and `AlternativeOptima` flags are the warning. Reversible: add a per-commodity flag to `steady.Outcome` and the reference-price rule in `prices()`.
 
 ## Read receipt
 
@@ -3000,5 +3067,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 71fa000b208f0f4b63846e27
+NOTES-TAG: 83d751634f6b94aaefb7f51e
 

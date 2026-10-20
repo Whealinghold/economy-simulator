@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -133,6 +134,25 @@ var (
 	ErrInvalidTrade = errors.New("invalid trade list")
 )
 
+// The viability rules and the solver (spec-viability.md 10, 5.4; spec-config.md
+// 7.6). Validate returns ErrNotViable inside a *ViabilityError; the other three
+// are the sentinels of SolveSteadyState.
+var (
+	// ErrNotViable is a configuration that cannot work: a *ViabilityError carries
+	// the rule and unwraps to it, so errors.Is matches every viability rule.
+	ErrNotViable = errors.New("configuration is not viable")
+	// ErrNoUpkeep is a solve of a configuration in which no group has an upkeep:
+	// the programme is unbounded and there is nothing to be viable for.
+	ErrNoUpkeep = errors.New("no group has an upkeep")
+	// ErrSolveLimit is a solve that reached MaxViabilityPivots, or the option
+	// that lowers it, or whose tableau is over MaxViabilityCells; a *SolveError
+	// carries the counts and unwraps to it.
+	ErrSolveLimit = errors.New("solver limit reached")
+	// ErrSolveInconsistent is a result that failed the exact certificate. No
+	// input can cause it: it is a defect of the solver.
+	ErrSolveInconsistent = errors.New("solver certificate failed")
+)
+
 // ValidationError is one rejected rule of a configuration (spec-config.md
 // 7.1.1). Rule is the sentinel, so errors.Is(err, ErrOutOfBounds) matches and
 // errors.As finds the ValidationError.
@@ -229,3 +249,64 @@ func quoteSegment(s string) string {
 	}
 	return q
 }
+
+// ViabilityError is one rejected viability rule of a configuration
+// (spec-viability.md 10.1, spec-config.md 7.6). It is its own type and does not
+// embed ValidationError. Unwrap returns ErrNotViable, so errors.Is(err,
+// ErrNotViable) matches every viability rule and errors.As finds the rule, path,
+// value and bound. Validate puts it in the one sorted list with the
+// ValidationErrors.
+type ViabilityError struct {
+	// Rule is the name of the rule: unproducible_in_realm, role_cannot_work,
+	// cycle_not_productive, labour_short or storage_gap.
+	Rule string
+	// Path is the segments of the path of the entity the rule is about, as a
+	// ValidationError's Path is.
+	Path []string
+	// Value is the offending value as text.
+	Value string
+	// Bound is the number that decides the rule, as text; empty when none does.
+	Bound string
+}
+
+// Error returns the path, the rule and, when set, the value and the bound, cut
+// and quoted as ValidationError.Error does.
+func (e *ViabilityError) Error() string {
+	var b strings.Builder
+	b.WriteString(quotePath(e.Path))
+	b.WriteString(": ")
+	b.WriteString(ErrNotViable.Error())
+	b.WriteString(": ")
+	b.WriteString(quoteSegment(e.Rule))
+	if e.Value != "" {
+		b.WriteString(" (value ")
+		b.WriteString(quoteValue(e.Value))
+		if e.Bound != "" {
+			b.WriteString(", bound ")
+			b.WriteString(quoteValue(e.Bound))
+		}
+		b.WriteByte(')')
+	}
+	return b.String()
+}
+
+// Unwrap returns ErrNotViable.
+func (e *ViabilityError) Unwrap() error { return ErrNotViable }
+
+// SolveError is a solve that stopped on a limit: it carries the pivots made and
+// the size of the tableau, and unwraps to ErrSolveLimit.
+type SolveError struct {
+	// Pivots is the number of pivots made, or 0 when the tableau was over
+	// MaxViabilityCells and never built.
+	Pivots int64
+	// Rows and Columns are the size of the tableau of the programme.
+	Rows, Columns int
+}
+
+// Error returns the counts.
+func (e *SolveError) Error() string {
+	return fmt.Sprintf("%s: %d pivots, %d rows, %d columns", ErrSolveLimit.Error(), e.Pivots, e.Rows, e.Columns)
+}
+
+// Unwrap returns ErrSolveLimit.
+func (e *SolveError) Unwrap() error { return ErrSolveLimit }
