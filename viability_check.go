@@ -127,7 +127,19 @@ func (m *viaModel) sourced(o *viabilityOutcome) (unproducible bool) {
 		id := c.Commodities[ms.Commodity].ID
 		o.reject("unproducible_in_realm", []string{"commodities", id}, id, "")
 	}
-	uses := make([]steady.RoleUse, len(c.Roles))
+	uses, exists := m.roleUses()
+	cannot := steady.CannotWork(uses, exists)
+	for _, st := range cannot {
+		o.reject("role_cannot_work", []string{"roles", c.Roles[st.Role].ID}, c.Regions[st.Region].ID, "")
+	}
+	return len(missing) > 0 || len(cannot) > 0
+}
+
+// roleUses lists, for each role, the regions of its groups and the recipes on
+// its list, and for each region which recipes exist there.
+func (m *viaModel) roleUses() (uses []steady.RoleUse, exists [][]bool) {
+	c := m.c
+	uses = make([]steady.RoleUse, len(c.Roles))
 	for _, g := range c.Groups {
 		r, _ := c.regionID(g.Region)
 		ro, _ := c.roleID(g.Role)
@@ -135,7 +147,7 @@ func (m *viaModel) sourced(o *viabilityOutcome) (unproducible bool) {
 			uses[ro].Regions = append(uses[ro].Regions, int(r))
 		}
 	}
-	exists := make([][]bool, len(c.Regions))
+	exists = make([][]bool, len(c.Regions))
 	for r := range exists {
 		exists[r] = make([]bool, len(c.Recipes))
 		for _, a := range m.acts[r] {
@@ -147,11 +159,7 @@ func (m *viaModel) sourced(o *viabilityOutcome) (unproducible bool) {
 			uses[i].Recipes = append(uses[i].Recipes, int(k))
 		}
 	}
-	cannot := steady.CannotWork(uses, exists)
-	for _, st := range cannot {
-		o.reject("role_cannot_work", []string{"roles", c.Roles[st.Role].ID}, c.Regions[st.Region].ID, "")
-	}
-	return len(missing) > 0 || len(cannot) > 0
+	return uses, exists
 }
 
 // candidates lists every existing activity for the cycle checks (4.3).
