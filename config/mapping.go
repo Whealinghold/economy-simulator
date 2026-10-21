@@ -216,7 +216,7 @@ func (t *tbl) items(key string, dst *[]economysim.Item) bool {
 func (l *loader) config(tree map[string]any) economysim.Config {
 	root := &tbl{l: l, m: tree, used: map[string]struct{}{}}
 	root.get("schema")
-	cfg := economysim.Config{World: economysim.DefaultWorld(), Calendar: economysim.DefaultCalendar()}
+	cfg := economysim.Config{World: economysim.DefaultWorldParams(), Calendar: economysim.DefaultCalendar()}
 
 	if w := root.sub("world"); w != nil {
 		l.world(w, &cfg.World)
@@ -252,8 +252,8 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 	return cfg
 }
 
-// world reads the [world] table over DefaultWorld (spec-config.md 3.7.2).
-func (l *loader) world(t *tbl, w *economysim.World) {
+// world reads the [world] table over DefaultWorldParams (spec-config.md 3.7.2).
+func (l *loader) world(t *tbl, w *economysim.WorldParams) {
 	readInts(t, []intField{
 		{"scale", &w.Scale}, {"min_agents", &w.MinAgents}, {"bulk_factor", &w.BulkFactor},
 		{"welfare_window", &w.WelfareWindow}, {"window_cycles", &w.WindowCycles},

@@ -795,7 +795,7 @@ func tradableSets(c *Config, lk lookup) []map[string]bool {
 // resolutionFloor is ceil(10 000 / BeliefStep), the least price a belief still
 // moves at (spec-currency.md 3.1). The second result is false when BeliefStep is
 // outside its bound, where the floor is not defined.
-func resolutionFloor(w World) (int64, bool) {
+func resolutionFloor(w WorldParams) (int64, bool) {
 	if w.BeliefStep < 1 || w.BeliefStep > 2_500 {
 		return 0, false
 	}
@@ -808,7 +808,7 @@ func resolutionFloor(w World) (int64, bool) {
 // largest is ceil(H / n). The last result is the scale in force: the group's, or
 // the world's when the group gives none. ok is false when a household count, a
 // scale or the floor is outside its bound, where the shape is not defined.
-func groupShape(w World, g Group) (agents, maxWeight, scale int64, ok bool) {
+func groupShape(w WorldParams, g Group) (agents, maxWeight, scale int64, ok bool) {
 	h, s := g.Households, g.Scale
 	if s == 0 {
 		s = w.Scale

@@ -140,7 +140,7 @@ func encodeList[T any](e *encoder, id uint16, s []T, pairs func(*encoder, T)) {
 
 // pairsWorld writes the pairs of a World: ids 1 to 45 in declaration order.
 // DistanceLabel is presentation only and has no id.
-func pairsWorld(e *encoder, w World) {
+func pairsWorld(e *encoder, w WorldParams) {
 	e.num(1, w.Scale)
 	e.num(2, w.MinAgents)
 	e.num(3, w.BulkFactor)

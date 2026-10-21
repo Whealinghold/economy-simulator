@@ -359,7 +359,7 @@ func TestFillCommodities_BeliefsLongerThanTheTradableSetIsAnError(t *testing.T) 
 // Requirement: FR-AGT-050
 func TestDefaultStrategyRevise_SideMatters(t *testing.T) {
 	t.Parallel()
-	bt := beliefTunablesOf(beliefParams(DefaultWorld()))
+	bt := beliefTunablesOf(beliefParams(DefaultWorldParams()))
 	par := beliefParamsOf(&bt)
 	view := func(s Side) *OutcomeView {
 		return &OutcomeView{Side: s, Limit: 60, Quantity: 10, Filled: 0,

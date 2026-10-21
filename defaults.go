@@ -6,11 +6,11 @@ package economysim
 // (N-015, N-027), not a setting: setting-specific values belong in a pack. The
 // zero value of an entity is not a valid default (spec-config.md 5.2).
 
-// DefaultWorld returns the world-level parameters with the defaults of their
+// DefaultWorldParams returns the world-level parameters with the defaults of their
 // owner specs. Upkeep is empty and Spawner and Clearing name the built-in
 // "default" and "average".
-func DefaultWorld() World {
-	return World{
+func DefaultWorldParams() WorldParams {
+	return WorldParams{
 		Scale:               1,
 		MinAgents:           10,
 		BulkFactor:          10_000,

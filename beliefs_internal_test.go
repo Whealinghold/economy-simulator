@@ -8,7 +8,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 )
 
-// TestBeliefParams_FieldByField verifies that the parameters of DefaultWorld
+// TestBeliefParams_FieldByField verifies that the parameters of DefaultWorldParams
 // reach the fifteen fields of beliefs.Params and MaxPrice, that changing one
 // World field changes exactly one field of the result (no two swapped), and
 // that PriceWindow changes none.
@@ -19,7 +19,7 @@ import (
 // compiler cannot see it, so each field is moved on its own.
 func TestBeliefParams_FieldByField(t *testing.T) {
 	t.Parallel()
-	d := DefaultWorld()
+	d := DefaultWorldParams()
 	base := beliefParams(d)
 	// The defaults of BEL 11 as literals, not read back from the World.
 	want := beliefs.Params{
@@ -30,7 +30,7 @@ func TestBeliefParams_FieldByField(t *testing.T) {
 		MaxPrice: 1_000_000_000,
 	}
 	if base != want {
-		t.Fatalf("beliefParams(DefaultWorld) = %+v, want %+v", base, want)
+		t.Fatalf("beliefParams(DefaultWorldParams) = %+v, want %+v", base, want)
 	}
 	fields := []string{
 		"BeliefStep", "BeliefAdjustProb", "BeliefSignificance", "BeliefStockLow", "BeliefStockHigh",
@@ -38,7 +38,7 @@ func TestBeliefParams_FieldByField(t *testing.T) {
 		"BeliefEvidenceShare", "CostFloor", "CostCeiling", "RefBandLow", "RefBandHigh",
 	}
 	for _, f := range fields {
-		w := DefaultWorld()
+		w := DefaultWorldParams()
 		reflect.ValueOf(&w).Elem().FieldByName(f).SetInt(7_777)
 		got, bv := beliefParams(w), reflect.ValueOf(base)
 		diff := 0
@@ -51,7 +51,7 @@ func TestBeliefParams_FieldByField(t *testing.T) {
 			t.Errorf("changing %s changed %d fields of Params, want exactly 1", f, diff)
 		}
 	}
-	w := DefaultWorld()
+	w := DefaultWorldParams()
 	w.PriceWindow = 7_777
 	if got := beliefParams(w); got != base {
 		t.Errorf("changing PriceWindow changed Params: %+v, want %+v", got, base)

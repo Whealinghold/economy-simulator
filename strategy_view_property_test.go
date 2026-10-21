@@ -364,7 +364,7 @@ func cohortPair(t *testing.T, h *economysim.ViewHarness, p *packIndex, rng *rand
 	t.Helper()
 	cfg := h.Cfg
 	role, region := cfg.Roles[ro], cfg.Regions[g]
-	rr := economysim.RoleRow(&p.roles, economysim.RoleID(ro))
+	rr := economysim.RoleTableRow(&p.roles, economysim.RoleID(ro))
 	one, many = h.Spawn(t, role.ID, region.ID, 1), h.Spawn(t, role.ID, region.ID, w)
 	h.Fund(t, one, 1_000_000)
 	h.Fund(t, many, 1_000_000*w)

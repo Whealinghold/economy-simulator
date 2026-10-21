@@ -1,0 +1,75 @@
+package economysim
+
+import "fmt"
+
+// This file holds the fan-ins of the world: compositions with one entry point
+// each, a fixed-order sequence of calls into the module files and nothing else
+// (architecture.md 2.10.4). The slice has no module, so a fan-in is the core
+// call alone, and a module's change appends its call after it.
+
+// fillAgentView fills v for agent a: the core groups by the one view builder
+// (strategy_view.go), from the context that refreshViewCtx assembled (market.go)
+// at the start of the position that calls it, then the module fillers, none in
+// the slice. It is the same builder at every use: P2.5 and P3.2 each refresh the
+// context first. A module's filler is appended below the core call.
+func (w *World) fillAgentView(v *AgentView, a *agent) error {
+	return w.views.fillCore(v, a, &w.tk.vctx)
+}
+
+// checkTradePlan checks the plan a strategy returned for agent a, in place and
+// in a fixed order (spec-agents.md 6.5.2): the clamps of each intent's belief
+// inputs, then the discards, each refused whole when the agent does not hold
+// the units. The conversion of an intent to an order and the tradable set are
+// the book's admission and run as the orders are submitted. A module appends its
+// checks (shipments, offers and takes, credit and cover requests) below the
+// core calls. Nothing here changes the ledger.
+func (w *World) checkTradePlan(a *agent, p *TradePlan) {
+	w.normalisePlan(a, p)
+	w.checkDiscards(a, p)
+}
+
+// removeAgent is the one removal path of an agent (spec-agents.md 3.6,
+// architecture.md 2.10.4): the job abandoned with agent_removed, the steps of the
+// modules (2b to 2g: none in the slice), the money and the lots to the estate of
+// the region the account is in (steps 3 and 4, counted in lots), the account
+// closed, the events in the order of spec-world.md 6.11 item 8 (RecipeAbandoned,
+// then AgentBankrupted, then EstateOpened) and the counters. The cause is the
+// caller's and is never recomputed here. The error is the estate's balance
+// overflow, which fails the step; every other refusal is a violated invariant.
+// A module's step is appended below its slot, and the events stay last.
+func (w *World) removeAgent(a *agent, cause Cause) error {
+	tick, region := w.Tick(), w.regionOf(a)
+	if a.hasJob() {
+		w.abandonJob(a, region, ReasonAgentRemoved)
+	}
+	money, lots, err := w.estates.receive(w.ledger, a.account, region)
+	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
+	// refusal of the world's own accounts, which a valid configuration cannot cause
+	// and no test can inject from the root (D190); the branch only wraps and returns
+	// it.
+	if err != nil {
+		return fmt.Errorf("remove agent %d at tick %d: %w", a.id, tick, err)
+	}
+	mustClose(w.ledger.Close(a.account))
+	if w.obs.supplied {
+		w.obs.deliver(AgentBankrupted{Tick: tick, Agent: a.id, Region: region, Role: a.role, Weight: a.weight, Cause: cause, Money: money, GoodsListed: lots})
+		w.obs.deliver(EstateOpened{Tick: tick, Agent: a.id, Region: region, Balance: w.estates.pool(w.ledger, region), GoodsListed: lots})
+	}
+	w.logRemoval(a, cause)
+	w.forget(a, region)
+	return nil
+}
+
+// relocationRefusal is the one entry point of the refusals that keep an agent
+// from being moved to another region (spec-integration.md 4.5, spec-migration.md
+// 8): the modules that are on append their checks here and the first refusal
+// returned wins. No module of the slice refuses, so it returns no reason.
+func (w *World) relocationRefusal(_ *agent) (Reason, bool) { return "", false }
+
+// mustClose panics when the ledger refuses to close the account of a removed
+// agent: the intake emptied it, so a refusal is a violated invariant.
+func mustClose(err error) {
+	if err != nil {
+		invariant("the ledger refused the closing of a removed agent's account: " + err.Error())
+	}
+}

@@ -394,6 +394,13 @@ func (e *estates) markdown(l *ledger.Ledger, cfg *Config, r RegionID) error {
 	return nil
 }
 
+// atFloor reports whether the estate of region r lists lot lt at or below the
+// resolution floor. A held lot with no row is not listed yet, so it is not.
+func (e *estates) atFloor(r RegionID, lt ledger.Lot, floor int64) bool {
+	i, found := findRow(e.listed[r], keyOf(lt))
+	return found && int64(e.listed[r][i].price) <= floor
+}
+
 // rows appends to dst[:0] the listings of the lots the estate of region r
 // holds, in key order, for the checkpoint (D109). It is filter-only: a stale
 // row is not returned and a held lot with no row is omitted.

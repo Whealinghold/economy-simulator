@@ -1,6 +1,6 @@
 # Plan: Stage 1, row 11: the world (`World`, the tick, the markets, the snapshot)
 
-**Status: plan written (2026-10-17), audited. Not started.** Sequences the eleventh row of
+**Status: done (uncommitted, stage-1-11; Phase 11 gate run 2026-10-20). See "As built" at the end.** Sequences the eleventh row of
 Stage 1 of [roadmap-v1.md](../roadmap-v1.md), "`world.go` (`World`, `NewWorld`,
 `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions
 and the position table, `market.go` (the state of each market's report and the
@@ -2062,6 +2062,44 @@ stops the phase at its start, not mid-way: Phase 2 for `resolveStrategy` and
 | NFR-OBS-001 (call sites) | allocation test (10) |
 | Owned by other rows | FR-WLD-060, 061, 063, 065, 067 to 069, 091, 100, 101 (Stage 0 for 060, 067 to 069, 091 and NFR-WLD-005; row 12 for 063, 064; CHK and modules for the rest; plan 1-12 audit round 3, NB-11); NFR-WLD-001, 004 (row 12); FR-VIA-039, the offsets function (row 10) |
 
+
+**Traceability as built (Phase 11, 2026-10-20).** Each row of the table above, with the tests that carry its IDs in a `Requirement:` line (testing.md 4.5). The list is every test of the row's own test files that names at least one ID of the row, so a test can appear under several rows. An ID of a row with no `Requirement:` line in the row's own files is named after the list.
+
+- **FR-WLD-001, 002, 003, 020, 021; FR-CFG-038 (world half)**: `TestDefaults_ANilLoggerAndObserverWriteNothing`, `TestNewObservers_SuppliedFlag`, `TestNewWorld_HashAndOptions`, `TestNewWorld_ObserversAreAdditiveAndOrdered`, `TestNewWorld_OptionsAndNames`, `TestNewWorld_SeedLastWins`, `TestObservers_CompositionOverAScenario`, `TestObservers_DeliverInOrder`, `TestWorld_ConfigIsACopy`.
+- **FR-WLD-004, 040, 044**: `TestFanIns_AreCompositionsOfTheExpectedCalls`, `TestFanIns_TheShapeCheckCanFail`, `TestP11Moment_IsTheMomentOfTheTick`, `TestP81Age_SpoilageIsASinkInTheTickItHappens`, `TestPositions_SwappedCallsInTickGoFail`, `TestPositions_TableMatchesTheSpec`, `TestPositions_TheCheckCanFail`, `TestRelocationRefusal_HasNoRefusalInTheSlice`, `TestStep_JobOfDurationThreeCompletesInSPlusTwo`, `TestStep_OneTickJobStartsAndCompletesInItsStartTick`, `TestStep_WarmJobsCompleteWithTheirConstructionBooks`, `TestTickEnded_DebugLineCarriesTheLiveCounts`, `TestTickInspecting_ReplayEqualsStep`.
+- **FR-WLD-041**: `TestWorldFiles_NoRangeOverAMap`.
+- **FR-WLD-005, 006, 007, 012, 110**: `TestAuditFailure`, `TestAuditFailure_MapsAndBracketsTheFailedStep`, `TestEndStep_FailureBracketsTheStep`, `TestRun_FailedStepEndsTheRun`, `TestRun_FailedStepEndsTheRunAndAFailedWorldEmitsNothing`, `TestStep_AnInvalidTradeListFailsTheStep`, `TestStep_EveryStartedStepEndsAndAPanicEmitsNoTickEnded`, `TestStep_FlagOnEveryPath`, `TestStep_RefusedCallKeepsTheCause`, `TestWork_PanicLeavesTheWorldFailed`, `TestWorld_AuditOnAHealthyWorld`, `TestWorld_ConfigIsACopy`, `TestWorld_GuardsInStep`, `TestWorld_PanicFailsTheWorld`, `TestWorld_Run`, `TestWorld_RunEndingInAPanic`.
+- **FR-WLD-008, 009**: `TestRun_FailedStepEndsTheRun`, `TestWorld_Run`.
+- **FR-WLD-010, 011**: `TestSnapshot_BoundaryPendingConstruction`, `TestSnapshot_ChangesNothing`, `TestSnapshot_DeepCopyAndNoRace`, `TestWorld_TwoWorldsShareNothing`.
+- **FR-WLD-030 to 038**: `TestBeginStep_ConstructionBucketIsEmittedOnceBeforeTheFirstTickStarted`, `TestFinishConstruction`, `TestNewWorld_ConstructionTakesOnlyTheCreationWords`, `TestNewWorld_EventsAndLogsAtConstruction`, `TestNewWorld_IDsAccountsAndEndowment`, `TestNewWorld_StateAndScratch`, `TestNewWorld_WarmStartEventsAndLogs`, `TestNewWorld_WarmStartPricesMoneyAndPools`, `TestNewWorld_WarmStartStaggerJobsAndBooks`, `TestWarmStart_StaggerBeforeTheOldestFirstTake`.
+- **FR-WLD-042 to 047**: `TestP53_AnUnsoldEstateLotIsMarkedDown`, `TestPositions_NoReservationIsOpenAfterP41`, `TestPositions_TableMatchesTheSpec`, `TestRotationAt`, `TestStep_APlanIsExecutedDiscardsThenOrders`, `TestStep_AnEstateSellsThroughTheMarketAndHasNoWelfareSlot`, `TestStep_AnOrderTheBookCannotAdmitIsRejectedWithItsReason`, `TestStep_NoReservationIsOpenAtAnyTickBoundary`, `TestStep_OneTickJobStartsAndCompletesInItsStartTick`, `TestStep_RegionOfEventsIsTheRegionOfTheAccount`, `TestStep_RegionOfRecipeExecutedOverTwoRegions`, `TestStep_ScriptedMarketClearsAtTheHalfEvenMidpoint`, `TestStep_TheRecordOfAnIntentIsParallelToTheBook`, `TestStep_WorkIsCalledForEveryFreeAgentBeforeAnyStart`, `TestWork_RefusalsAndTheHaltAreCountedFromTheViewAsFilled`, `TestWork_ViewIsBuiltFromTheStateAfterP21`.
+- **FR-WLD-045, 048**: `TestPositions_NoReservationIsOpenAfterP41`, `TestStep_AnInvalidTradeListFailsTheStep`, `TestStep_NoReservationIsOpenAtAnyTickBoundary`, `TestStep_ScriptedMarketClearsAtTheHalfEvenMidpoint`.
+- **FR-WLD-049, 050, 058**: `TestP12Anchors_WageAndPrices`, `TestP51_WindowIsPushedOnlyForAMarketThatTraded`, `TestP54_AMarketWithNoOutcomeEmitsNothingAndKeepsItsRun`, `TestP54_OutcomesAreDeliveredOnceInTheOrderOfTheSpec`, `TestP61_UpkeepUnfedHungerPrivationAndTheShortfall`, `TestP63_WelfareRecordOfAScriptedTick`, `TestStep_ABuyerFindsItsOwnEntryWhenAnotherRecordSitsFirst`, `TestStep_FirstTickCostAnchorsReadTheStartingWage`, `TestStep_ReceiptsAndInputSpendEqualTheTradeFlows`, `TestStep_TheBuyersPurposeReachesEveryTradeOfItsBid`.
+- **FR-WLD-051, 053, 056, 059**: `TestExecute_ARemovalInPhase7ReplacesTheAgentWithNewIDs`, `TestExecute_CountsHoldAtEveryTickOfAScriptedRun`, `TestExecute_RegionsInterleave`, `TestExecute_RemoveAndReductionToTheWholeWeight`, `TestExecute_TheBudgetIsTakenOnceAfterTheDeaths`, `TestExecute_TheWorldStepsThroughPhase7WithTheDefaultSpawner`, `TestRemoval_HasOneCallSiteOfTheCloseAndOneCompositionOfItsEvents`, `TestRemoveAgent_MovesEverythingToTheEstateOfItsRegionAndEmitsInOrder`, `TestStep_EventsComeInTheOrderOfTheTick`.
+- **FR-WLD-052, 074**: `TestAuditFailure_MapsAndBracketsTheFailedStep`, `TestPhase8_AuditPassesEveryTickAndTotalsClearOnlyAtP86`.
+- **FR-WLD-062, 064, 066, 076**: `TestConstruction_TextGuards`, `TestDecideRegion_EmptyPlanAndKeyedStream`, `TestNewWorld_ConstructionTakesOnlyTheCreationWords`, `TestNewWorld_WarmStartTakesNoRandomWord`, `TestObservers_ALoggerAndAnObserverChangeNothing`, `TestObservers_BeliefsAndSnapshotsAreTheSameWithAndWithoutALoggerAndAnObserver`. No test of this row: FR-WLD-076.
+- **FR-WLD-054**: `TestStep_EventsComeInTheOrderOfTheTick`, `TestStep_SnapshotAgreesWithTheEventsAfterEachStep`.
+- **FR-WLD-069 (half)**: `TestStep_AMarketIsClearedFromItsOwnStream`.
+- **FR-VIA-021, 040, 046, 047**: `FuzzStagger`, `TestConstruction_TextGuards`, `TestNewWorld_WarmStartEventsAndLogs`, `TestNewWorld_WarmStartTakesNoRandomWord`, `TestWarmStart_TextGuards`.
+- **FR-VIA-031 to 038, 042, 052, 053 (world side)**: `FuzzApportion`, `FuzzStagger`, `TestApportion`, `TestNewWorld_SeedPriceIsTheWarmEntryElseTheReference`, `TestNewWorld_WarmStartPricesMoneyAndPools`, `TestNewWorld_WarmStartStaggerJobsAndBooks`, `TestP12Anchors_WageAndPrices`, `TestP12Anchors_WageFallsBackToTheSeedWageWhenThePooledWageIsUnknown`, `TestPhase`, `TestPickOffset`, `TestStaggerKey`, `TestStep_FirstTickCostAnchorsReadTheStartingWage`, `TestStep_WarmJobsCompleteWithTheirConstructionBooks`, `TestWarmStart_JobWithoutItsToolIsRefused`, `TestWarmStart_PoolIsSeededByInitial`, `TestWarmStart_StaggerBeforeTheOldestFirstTake`.
+- **FR-PRO-016, 017, 048**: `TestP12Anchors_WageFallsBackToTheSeedWageWhenThePooledWageIsUnknown`, `TestRotationAt`, `TestStep_OneTickJobStartsAndCompletesInItsStartTick`, `TestStep_WorkIsCalledForEveryFreeAgentBeforeAnyStart`, `TestWork_RefusalsAndTheHaltAreCountedFromTheViewAsFilled`, `TestWork_ViewIsBuiltFromTheStateAfterP21`.
+- **FR-WEL-003, 017, 011, 020**: `TestMarkWorking_OncePerAgentPerTickOnEveryPath`, `TestP63_ANeverTradedMarketIsValuedAtTheReferencePrice`, `TestP63_NothingClampsIncomeToKeepTheRatioAboveOne`, `TestP63_WearIsValuedAtThePriceOfTheTick`, `TestP63_WelfareRecordOfAScriptedTick`, `TestSnapshot_JobsPendingAndSignals`, `TestStep_ABuyerFindsItsOwnEntryWhenAnotherRecordSitsFirst`, `TestStep_ARoleWithNoRecipesWorksByTrading`, `TestStep_AnEstateSellsThroughTheMarketAndHasNoWelfareSlot`, `TestStep_ReceiptsAndInputSpendEqualTheTradeFlows`, `TestStep_TheBuyersPurposeReachesEveryTradeOfItsBid`, `TestStep_WearFactsAreRecordedAtTheStart`.
+- **FR-BEL-007, 032, 033, 039; NFR-BEL-001; FR-CLR-025**: `TestCallSites_AllocateNothingWithTheDefaultLoggerAndObserver`, `TestLog_TheBeliefUpdateWritesNoInfoAndDebugOnly`, `TestMarketTable_OrderAndSeed`, `TestObservers_ALoggerAndAnObserverChangeNothing`, `TestObservers_BeliefsAndSnapshotsAreTheSameWithAndWithoutALoggerAndAnObserver`, `TestP51_WindowIsPushedOnlyForAMarketThatTraded`, `TestP54_AMarketWithNoOutcomeEmitsNothingAndKeepsItsRun`, `TestP54_DebugLinesCarryTheirKeys`, `TestP54_OutcomesAreDeliveredOnceInTheOrderOfTheSpec`.
+- **FR-SPN-002, 005, 006, 007, 026, 027, 032, 033, 034, 042, 044, 045; FR-OBS-019; FR-AGT-001, 007, 008, 077, 032**: `TestBuildRegionView_EveryFieldEqualsItsSource`, `TestBuildRegionView_ObservedFlagAndRemovedAgents`, `TestDecideRegion_EmptyPlanAndKeyedStream`, `TestExecute_ARemovalInPhase7ReplacesTheAgentWithNewIDs`, `TestExecute_CountsHoldAtEveryTickOfAScriptedRun`, `TestExecute_EnterIntoAnExistingAgentAndIntoANewAgent`, `TestExecute_EntryNeverOverdrawsThePool`, `TestExecute_ExtinctAndBelowFloorWarns`, `TestExecute_ReduceMovesTheDifferenceToTheEstate`, `TestExecute_RefusalsChangeNothingAndAreCounted`, `TestExecute_RegionsInterleave`, `TestExecute_RemoveAndReductionToTheWholeWeight`, `TestExecute_SwitchKeepsTheAccountAndMovesTheGoodsOutsideTheNewSet`, `TestExecute_TheBudgetIsTakenOnceAfterTheDeaths`, `TestExecute_TheWorldStepsThroughPhase7WithTheDefaultSpawner`, `TestExecute_WorkedReductionFloorsWhatTheAgentKeeps`, `TestGuardN265_PlannedRenewalEqualsTheRuleOnTheHouseholdsRemoved`, `TestNewWorld_IDsAccountsAndEndowment`, `TestOnlyOnce_SeesASecondPathAndAMissingOne`, `TestPseudoAgents_AreNeverTheSubjectOfAnAgentEvent`, `TestRemoval_HasOneCallSiteOfTheCloseAndOneCompositionOfItsEvents`, `TestRemoveAgent_MovesEverythingToTheEstateOfItsRegionAndEmitsInOrder`, `TestStep_AnEstateSellsThroughTheMarketAndHasNoWelfareSlot`, `TestStep_EventsComeInTheOrderOfTheTick`.
+- **FR-SPN-004, 008, 010, 015 (world half), 035; FR-EST-014, 022**: `TestBuildRegionView_ObservedFlagAndRemovedAgents`, `TestExecute_ARefusedDecisionDoesNotStopThePlan`, `TestExecute_ATickWithNothingEmitsNoEntryLimited`, `TestExecute_DecisionKindsAreTheKindsOfTheRefusalRules`, `TestExecute_EnterIntoAnExistingAgentAndIntoANewAgent`, `TestExecute_EntryNeverOverdrawsThePool`, `TestExecute_ReduceMovesTheDifferenceToTheEstate`, `TestExecute_RefusalsChangeNothingAndAreCounted`, `TestExecute_RemoveAndReductionToTheWholeWeight`, `TestExecute_TheBudgetIsTakenOnceAfterTheDeaths`, `TestExecute_UnfundedHouseholdsAreNotDeferred`, `TestGuardN265_PlannedRenewalEqualsTheRuleOnTheHouseholdsRemoved`.
+- **FR-SPN-046 (snapshot half); FR-PRO-042**: `TestSnapshot_JobsPendingAndSignals`.
+- **FR-SCL-001 to 005**: `TestGroupWeights`, `TestNewWorld_IDsAccountsAndEndowment`.
+- **NFR-VIA-004 (stagger and apportionment half), FR-VIA-034, 037**: `FuzzApportion`, `FuzzStagger`, `TestApportion`, `TestNewWorld_WarmStartStaggerJobsAndBooks`, `TestPhase`, `TestPickOffset`, `TestStaggerKey`, `TestWarmStart_StaggerBeforeTheOldestFirstTake`.
+- **FR-AGT-024, 072, 073**: `TestWork_FloorCountAndWarnRun`, `TestWork_RefusalsAndTheHaltAreCountedFromTheViewAsFilled`, `TestWork_ViewIsBuiltFromTheStateAfterP21`.
+- **FR-AGT-057, 079 (discards-then-intents half)**: `TestStep_ABuyerFindsItsOwnEntryWhenAnotherRecordSitsFirst`, `TestStep_ADiscardTheAgentCannotMakeIsRefusedWhole`, `TestStep_APlanIsExecutedDiscardsThenOrders`, `TestStep_ReceiptsAndInputSpendEqualTheTradeFlows`, `TestStep_TheBuyersPurposeReachesEveryTradeOfItsBid`. No test of this row: FR-AGT-079.
+- **FR-AGT-075**: `TestP61_PrivationFallsOneForEachFedTick`, `TestP61_UpkeepUnfedHungerPrivationAndTheShortfall`.
+- **FR-OBS-018**: `TestStep_RegionOfEventsIsTheRegionOfTheAccount`, `TestStep_RegionOfRecipeExecutedOverTwoRegions`.
+- **FR-EST-002, 011, 012, 013, 015, 016, 021**: `TestExecute_ARemovalInPhase7ReplacesTheAgentWithNewIDs`, `TestExecute_RemoveAndReductionToTheWholeWeight`, `TestNewWorld_WarmStartPricesMoneyAndPools`, `TestPseudoAgents_AreNeverTheSubjectOfAnAgentEvent`, `TestRemoveAgent_MovesEverythingToTheEstateOfItsRegionAndEmitsInOrder`, `TestSnapshot_PoolIsTheEstateAccount`, `TestSnapshot_RebuiltFromEvents`, `TestStep_AnEstateSellsThroughTheMarketAndHasNoWelfareSlot`, `TestStep_EventsComeInTheOrderOfTheTick`, `TestWarmStart_PoolIsSeededByInitial`.
+- **FR-OBS-003, 007 to 013, 022, 024, 030 to 033, 040 to 042, 045, 051, 070 to 076, 090, 092, 097**: `TestAggregates_AreSilentWhenAllTheirCountsAreZero`, `TestBoundWarn_FiresAtTheTenthPinnedTickWithTheBoundAndTheCounts`, `TestDefaults_ANilLoggerAndObserverWriteNothing`, `TestExecute_UnfundedWarnIsBounded`, `TestLog_KeysAreTheKeysOfTheRulesTable`, `TestLog_MessagesAreConstantAndInTheCatalogue`, `TestLog_NoInfoInTheTickAndNoError`, `TestLog_WorldCreatedHasTheKeysOfTheSpecWithTheScenariosValues`, `TestNewObservers_SuppliedFlag`, `TestNewWorld_EventsAndLogsAtConstruction`, `TestNewWorld_ObserversAreAdditiveAndOrdered`, `TestNewWorld_WarmStartEventsAndLogs`, `TestObservers_CompositionOverAScenario`, `TestObservers_DeliverInOrder`, `TestObservers_PanicPropagates`, `TestObservers_ReceiveTheEvent`, `TestP54_OutcomesAreDeliveredOnceInTheOrderOfTheSpec`, `TestP61_UpkeepUnfedHungerPrivationAndTheShortfall`, `TestP63_WelfareRecordClampedWarnsOnTheFirstTickAndEveryTenth`, `TestP64_HouseholdsUnfedWarnsAtTheTenthTickAndEveryTenthAfter`, `TestP82Flows_WearRowsFollowTheBoundaryRowsInCommodityOrder`, `TestPseudoAgents_AreNeverTheSubjectOfAnAgentEvent`, `TestRun_FailedStepEndsTheRunAndAFailedWorldEmitsNothing`, `TestScenarios_EmitEveryDeclaredEventOfTheSlice`, `TestSnapshot_BoundaryPendingConstruction`, `TestSnapshot_ChangesNothing`, `TestSnapshot_CountsAndScale`, `TestSnapshot_DeepCopyAndNoRace`, `TestSnapshot_Guards`, `TestSnapshot_PoolIsTheEstateAccount`, `TestSnapshot_RebuiltFromEvents`, `TestStep_EventsComeInTheOrderOfTheTick`, `TestStep_EveryStartedStepEndsAndAPanicEmitsNoTickEnded`, `TestStep_MarketClearedCarriesTheCostAnchorInForce`, `TestStep_ScriptedMarketClearsAtTheHalfEvenMidpoint`, `TestStep_SnapshotAgreesWithTheEventsAfterEachStep`, `TestWarnRun_IsTen`, `TestWarn_EachRowAtItsPatternAndAgainAtTheNextMultipleOfTen`, `TestWarn_EveryRowHasItsCounterpartCarryingTheNumberTheLineReports`, `TestWarn_NoCellWritesMoreThanOnePerRunPlusOne`, `TestWarn_WelfareRecordClampedThroughTheMethodOfP63`, `TestWarn_WorkFloorBindingOverARun`, `TestWorld_PanicFailsTheWorld`, `TestWorld_RunEndingInAPanic`, `TestWorld_RunLogs`. No test of this row: FR-OBS-011.
+- **NFR-OBS-001 (call sites)**: `TestCallSites_AllocateNothingWithTheDefaultLoggerAndObserver`, `TestCallSites_TheTableIsTheStraightLine`, `TestObservers_DeliverAllocs`, `TestStep_StepAllocatesNothingWithTheDefaultObserver`.
+
+The requirement IDs of the plan's list with no `Requirement:` line in this row's own files, and why: FR-AGT-079 (the discards-then-intents half) comes with the transport module, so only the Stage 1 half is covered (the other half is tested by `strategy_default_trade_internal_test.go`, row 7); FR-OBS-011 (the restore) is Stage 2 (`checkpoint.go`); FR-EST-021, FR-SPN-032 and FR-VIA-021, 047 were named in doc comments only and now carry a `Requirement:` line (`TestStep_EventsComeInTheOrderOfTheTick`, `TestConstruction_TextGuards`, `TestWarmStart_TextGuards`).
+
 2. **Lowest level**: unit for the rotation, the position list and the options;
    integration for the tick (a Go `Config` of one or two agents with hand-computed
    arithmetic in comments); no end-to-end test in this row (row 12 owns them).
@@ -2116,3 +2154,106 @@ stops the phase at its start, not mid-way: Phase 2 for `resolveStrategy` and
 - **O9.** CLOSED, FINAL (ruled by coordinator, reversible: revisit only if a module ever needs a P0.2 effect): option (a), `p02()` stays in the straight line of `tick.go` and its comment says so; the plan as written. Original statement (round 2 fix): O8 (2) keeps `p02()` in the straight line of `tick.go`, so it executes after `beginStep` has run P0.1, P0.2a and P0.3, while the list is in spec order. It is empty and takes no state, so nothing observes the difference. Options: (a) keep as ruled and say so in the comment of `p02()` (the plan as written); (b) call `p02()` from `beginStep` between the guard and P0.2a and make P0.2 a `bracket` entry (the executed order is then the spec order, but the O8 wording "called in `tick.go`" changes and the row 12 replay map gains a bracket position). Recommendation: (a), because the method is a no-op and the ruling stands; revisit only if a module ever needs a P0.2 effect.
 - **O10.** CLOSED by coordinator ruling (final, reversible: the cause set is not a public contract before INT and POP exist). In Stage 1 a `DecideReduce` is valid for the causes the default spawner emits (`starved`, `insolvent`); any other cause is refused through the existing refusal path (Phase 7, the refusal table of Phase 7, Phase 10), because a reduction's ledger reason must name what it is. A module that introduces a new cause (consumer-driven removal through INT, population) appends its cause constant and its ledger reason together in its own change (architecture.md 2.10.5); recorded as N-290.
 - **O11.** CLOSED by coordinator ruling (final, reversible: option (b) stays open if a later spec wants the stock untouched). Option (a), the literal spec: the input `Transform` consumes oldest first, so the stagger vector is a property of the granted stock before the job's inputs are taken (Phase 3 3f, Phase 1 deliverable 13).
+
+## As built
+
+Written at the exit gate (Phase 11, 2026-10-20). The code is in the working tree on
+`stage-1-11`, uncommitted: there is no commit hash yet.
+
+### Exit gate
+
+| Check | Result |
+| --- | --- |
+| `gofmt -l .` | prints nothing |
+| `go vet ./...`, `staticcheck ./...` | clean |
+| `go test -short -race ./...` | passes |
+| `go test -race -covermode=atomic -coverpkg=./... ./...` | passes (about 160 s for the root package) |
+| `go mod tidy` | no diff |
+| `TestHashConfig_ReferencePinned` | passes, the pinned all-off hash did not move (N-217) |
+| `lizard -l go -C 10 -a 8 -L 100 -w` on the production files of the row | clean after one split (below). The other warnings in the tree are in `validate.go` and `config/` (Stage 0, unchanged by this row but for a two-line edit) |
+
+Coverage by scope, from the merged `coverage.out` of `-coverpkg=./...` (statements
+covered over statements): root 98.6% (5384/5460); `config/` 99.8%; `internal/beliefs`
+99.4%; `internal/checked` 100%; `internal/clearing` 98.9%; `internal/household`
+99.3%; `internal/ledger` 99.8%; `internal/logkeys` has no statements; `internal/occupation` 100%;
+`internal/ordering` 100%; `internal/production` 99.2%; `internal/steady` 99.9%;
+`internal/welfare` 100%. Every scope is at 90% or more, so no test was added for
+coverage. (`go test` prints a per-package figure of the whole `-coverpkg` set, for example 91.7% for
+the root run; the figures above are per scope, as testing.md 9.1 reads them.)
+
+Mutation pass (testing.md 9.3), by hand on a copy of the tree in the scratchpad, each
+run with `go test -short -race .`:
+
+| Mutation | Tests that failed |
+| --- | --- |
+| two positions swapped in `tick.go` (`p12Anchors` and `p21Complete`) | `TestPositions_TableMatchesTheSpec`, `TestPositions_SwappedCallsInTickGoFail`, `TestPositions_TheCheckCanFail` |
+| `endStep` no longer marks the world failed | `TestStep_RefusedCallKeepsTheCause`, `TestRun_FailedStepEndsTheRunAndAFailedWorldEmitsNothing`, `TestStep_AnInvalidTradeListFailsTheStep`, `TestAuditFailure_MapsAndBracketsTheFailedStep`, `TestEndStep_FailureBracketsTheStep` |
+| flow totals cleared (`ClearTotals`) at the entry of a step | `TestP82Flows_WearRowsFollowTheBoundaryRowsInCommodityOrder`, `TestPhase8_AuditPassesEveryTickAndTotalsClearOnlyAtP86`, `TestEndStep_FailureBracketsTheStep` |
+
+`gomu` was not run (it needs the Docker CPU and memory caps of the global rule); the
+Phase 10 mutations (a flipped `Enabled` guard and so on) belong to that phase's acceptance
+and were not repeated here.
+
+Two edits made at the gate: `positions()` in `tick.go` had a cyclomatic complexity of 11
+(ten `if err` positions), so its second half is `positionsTail()`, reached by the last
+line of `positions()`; `straightLineCalls` in `tick_internal_test.go` reads both
+functions as one straight line and ignores only the hand-over call, so the test
+is no looser (a call in either function that is not a position still fails it). And
+`Requirement:` lines were added to four tests (above).
+
+### Hand-over for row 12
+
+**The step, in the order `Step` runs it** (D166; unexported, no hook in production code).
+`beginStep` runs P0.1 (the guards and the in-step flag), P0.2a (`p02aBucket`: ends the
+construction phase and delivers its bucket, `Tick` -1, once) and P0.3 (`TickStarted`).
+`positions` and `positionsTail` call, in this order: `p02` (empty), `p11Moment` (P1.1),
+`p12Anchors` (P1.2), `p21Complete` (P2.1), `p25Work` (P2.5), `p27Start` (P2.7),
+`p28aHalted` (P2.8a), `p32Trade` (P3.2), `p34Estates` (P3.4), `p41Clear` (P4.1), then
+`p51Window` (P5.1), `p53Markdown` (P5.3), `p54Outcomes` (P5.4), `p61Upkeep` (P6.1),
+`p63Welfare` (P6.3), `p64Shortfall` (P6.4), `p71Entry` (P7.1), `p81Age` (P8.1), `p82Flows`
+(P8.2) and `p84Audit` (P8.4). `endStep(err)` is P8.5 (a non-nil error fails the world before
+`TickEnded`, with `Failed` true) and P8.6 (on success `Ledger.EndTick` and the welfare reset). The
+replay in row 12 calls `beginStep`, the `line` positions of `positionList` in order and `endStep`;
+`positionList` and `notBuiltPositions` in `tick.go` carry the identifier, the owner and
+`where` (`line` or `bracket`; the brackets are P0.1, P0.2a, P0.3, P8.5 and P8.6). The four
+fan-ins are in `fanin.go`: `fillAgentView`, `checkTradePlan`, `removeAgent` (the one
+removal path; the executor's removal calls it) and `relocationRefusal` (no refusal in
+the slice). The executor of the spawner's plan is in `phase_exit.go` (`entryRegion`,
+`execute`, `execRemove`, `execReduce`, `execSwitch`, `execEnter`).
+
+**Fields row 12 reads.** `World.ledger` (a `*ledger.Ledger`), `World.shocks` (the
+`yieldShocks`), `World.markets` (the per-market records of `market.go`), `World.live`
+(agent and household counts), `World.estates`, `World.seedWage`. There is no draw-count
+reader: row 12 skips the draw-count assertion of FR-WLD-064 with a note.
+
+**Packs that run in this row's tests.** `one.toml` and `warm-one.toml`, `two.toml` and
+`warm-two.toml`, and `second/second.toml` with `second/warm-second.toml` (the construction
+and warm-start tests, `construct_pack_test.go`, `construct_warm_pack_test.go`), plus Go
+configurations built in the tests for the scripted steps (`observe_scenarios_test.go`:
+the scenarios `starving` and the like, seed `obsSeed`). `five.toml`, `three.toml`, the
+famine and demand packs and the defect overlays are row 12's.
+
+**Events the world emits** (behind `obs.supplied`): `WorldCreated`, `AgentSpawned`,
+`RunStarted`, `RunEnded`, `TickStarted`, `TickEnded`, `BoundaryFlow` and `WearApplied` (the
+construction bucket at `Tick` -1 and each tick's), `ProductionHalted`, `RecipeExecuted`,
+`RecipeRefused`, `RecipeAbandoned`, `OrderPlaced`, `OrderRejected`, `TradeExecuted`,
+`MarketCleared`, `BeliefsUpdated`, `UpkeepShortfall`, `AgentBankrupted`, `EstateOpened`,
+`WeightChanged`, `RoleChanged`, `EntryLimited`. No event or event field was added.
+
+**Test helpers row 12 may reuse.** `observe_helpers_test.go` (the recording `Observer`, the
+capturing `slog.Handler` and the level-counting handler); `construct_export_test.go`
+(`ConstructionRows`, `ConstructionAccounts`, `MarketRecords`, `WorldCounts`, `AgentLots`,
+`AgentJob`, `PoolMoney`, `StartOffsets`, `SeedWages`, `ConstructionFlows`, `PCGState`);
+`tick_export_test.go` (`UnitCostOf`, `HasReservation`); `snapshot_export_test.go`
+(`RoleSignalsOf`); `observe_scenarios_test.go` (`scenarios`, `play`, `who`).
+
+### Deviations from the plan, and what is left
+
+- `positions()` is split into two functions for the Lizard limit, and its test reads both (above).
+  The plan said "the straight-line function"; this is the smallest change that keeps the
+  position test strict and the file within N-243.
+- Coverage needed no new tests. The mutation pass is the three hand mutations of Phase 11,
+  not `gomu`.
+- FR-AGT-079 (transport half) and FR-OBS-011 (restore) have no test in this row; both are owned by later stages.
+- The roadmap row and the documentation index row say "uncommitted": the commit hash is added
+  by whoever commits.

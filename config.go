@@ -23,7 +23,7 @@ import (
 // only; each module's change appends its own (architecture.md 2.10.5).
 type Config struct {
 	// World holds the world-level parameters.
-	World World
+	World WorldParams
 	// Calendar is the structure of time.
 	Calendar Calendar
 	// Commodities are the goods, by ID in canonical order.
@@ -55,11 +55,11 @@ type Config struct {
 // configuration hash whatever the build order.
 type Modules struct{}
 
-// World holds the world-level parameters. Start from DefaultWorld: the zero
+// WorldParams holds the world-level parameters. Start from DefaultWorldParams: the zero
 // value is not a valid configuration. Every default is a provisional
 // placeholder, and the bounds are checked by Validate. All integer fields are
 // counts, ticks or basis points of 1/10 000 unless said otherwise.
-type World struct {
+type WorldParams struct {
 	// Scale is the number of households per agent of a group that gives no
 	// scale of its own (spec-scale.md 3.1).
 	Scale int64

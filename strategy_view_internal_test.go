@@ -22,7 +22,7 @@ import (
 // miller 4 and smith 5. The world upkeep is bread 1; the region south adds grain
 // 1. Regions sort to north 0 and south 1.
 func viewConfig() Config {
-	w := DefaultWorld()
+	w := DefaultWorldParams()
 	w.Upkeep = []Item{{Commodity: "bread", Quantity: 1}}
 	return Config{
 		World:       w,

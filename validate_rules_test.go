@@ -88,34 +88,34 @@ func buildFieldCases() []fieldCase {
 	bounds := []error{economysim.ErrOutOfBounds}
 
 	for _, wb := range worldBounds {
-		add(boundCase("World", wb.field, []string{"world", snake(wb.field)}, func(c *economysim.Config) {
+		add(boundCase("WorldParams", wb.field, []string{"world", snake(wb.field)}, func(c *economysim.Config) {
 			setInt(&c.World, wb.field, wb.bad)
 		}))
 	}
 	add(
 		// The orders between two fields of the world.
-		fieldCase{field: "World.BeliefStockLow", name: "not below BeliefStockHigh", rules: bounds,
+		fieldCase{field: "WorldParams.BeliefStockLow", name: "not below BeliefStockHigh", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.BeliefStockLow = c.World.BeliefStockHigh },
 			paths:  [][]string{{"world", "belief_stock_low"}}, value: "15000", bound: "14999"},
-		fieldCase{field: "World.BeliefWidthMin", name: "above BeliefWidthInit", rules: bounds,
+		fieldCase{field: "WorldParams.BeliefWidthMin", name: "above BeliefWidthInit", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.BeliefWidthMin = 3_000 },
 			paths:  [][]string{{"world", "belief_width_min"}}, value: "3000", bound: "2000"},
-		fieldCase{field: "World.BeliefWidthInit", name: "above BeliefWidthMax", rules: bounds,
+		fieldCase{field: "WorldParams.BeliefWidthInit", name: "above BeliefWidthMax", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.BeliefWidthInit = 6_000 },
 			paths:  [][]string{{"world", "belief_width_init"}}, value: "6000", bound: "5000"},
-		fieldCase{field: "World.BeliefWidthStep", name: "above BeliefWidthMax", rules: bounds,
+		fieldCase{field: "WorldParams.BeliefWidthStep", name: "above BeliefWidthMax", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.BeliefWidthStep = 6_000 },
 			paths:  [][]string{{"world", "belief_width_step"}}, value: "6000", bound: "5000"},
-		fieldCase{field: "World.CostCeiling", name: "below CostFloor", rules: bounds,
+		fieldCase{field: "WorldParams.CostCeiling", name: "below CostFloor", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.CostCeiling = 6_000 },
 			paths:  [][]string{{"world", "cost_ceiling"}}, value: "6000", bound: "7000"},
-		fieldCase{field: "World.ChangePrivation", name: "not below RemovePrivation (rule ladder_order)", rules: bounds,
+		fieldCase{field: "WorldParams.ChangePrivation", name: "not below RemovePrivation (rule ladder_order)", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.ChangePrivation = c.World.RemovePrivation },
 			paths:  [][]string{{"world", "change_privation"}}, value: "10", bound: "ladder_order"},
-		fieldCase{field: "World.Upkeep", name: "quantity of 0", rules: bounds,
+		fieldCase{field: "WorldParams.Upkeep", name: "quantity of 0", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.Upkeep[0].Quantity = 0 },
 			paths:  [][]string{{"world", "upkeep", "staple", "quantity"}}, value: "0", bound: "1"},
-		fieldCase{field: "World.DistanceLabel", name: "label over 256 bytes", rules: bounds,
+		fieldCase{field: "WorldParams.DistanceLabel", name: "label over 256 bytes", rules: bounds,
 			mutate: func(c *economysim.Config) { c.World.DistanceLabel = strings.Repeat("x", 257) },
 			paths:  [][]string{{"world", "distance_label"}}, value: "257", bound: "256"},
 	)
@@ -386,7 +386,7 @@ func buildFieldCases() []fieldCase {
 			rules:  []error{economysim.ErrBasketMismatch},
 			mutate: func(c *economysim.Config) { c.Regions[0].ReferenceBasket = 1_200 },
 			paths:  [][]string{{"regions", "north", "reference_basket"}}, value: "1200", bound: "999"},
-		fieldCase{field: "World.BasketTolerance", name: "the cost of an extra upkeep item moves the baseline",
+		fieldCase{field: "WorldParams.BasketTolerance", name: "the cost of an extra upkeep item moves the baseline",
 			rules: []error{economysim.ErrBasketMismatch},
 			// fuel 179 added: 999 + 179 = 1 178; |1 000 - 1 178| = 178 is above
 			// 1 000 * 1 000 / 10 000 = 100.
@@ -444,13 +444,13 @@ func buildFieldCases() []fieldCase {
 			paths:  [][]string{{"warm_start", "prices", "north", "fuel", "price"}}, value: "40", bound: "50"},
 		// RefBandLow of 10 000: the band starts at the reference price 179; a
 		// seed of 100 clears the floor and is below the band.
-		fieldCase{field: "World.RefBandLow", name: "a seed price below the reference band", rules: []error{economysim.ErrWarmStartPrice},
+		fieldCase{field: "WorldParams.RefBandLow", name: "a seed price below the reference band", rules: []error{economysim.ErrWarmStartPrice},
 			mutate: func(c *economysim.Config) {
 				c.World.RefBandLow = 10_000
 				c.WarmStart.Prices[0].Price = 100
 			},
 			paths: [][]string{{"warm_start", "prices", "north", "fuel", "price"}}, value: "100", bound: "179"},
-		fieldCase{field: "World.RefBandHigh", name: "a seed price above the reference band", rules: []error{economysim.ErrWarmStartPrice},
+		fieldCase{field: "WorldParams.RefBandHigh", name: "a seed price above the reference band", rules: []error{economysim.ErrWarmStartPrice},
 			mutate: func(c *economysim.Config) {
 				c.World.RefBandHigh = 10_000
 				c.WarmStart.Prices[0].Price = 200
@@ -704,7 +704,7 @@ func TestValidate_BasketToleranceBoundary(t *testing.T) {
 // upkeep, one region, one role and one group. Its basket is the default 1 000
 // and the upkeep costs 1 * 1 000, so it is valid with every default.
 func minimalConfig() economysim.Config {
-	world := economysim.DefaultWorld()
+	world := economysim.DefaultWorldParams()
 	world.Upkeep = []economysim.Item{{Commodity: "grain", Quantity: 1}}
 	grain := economysim.DefaultCommodity()
 	grain.ID, grain.ReferencePrice, grain.Raw = "grain", 1_000, true
@@ -968,8 +968,8 @@ func TestValidate_DefaultsAreInTheirBounds(t *testing.T) {
 	if err := c.Validate(); err != nil {
 		t.Errorf("Validate(defaults) = %v, want nil", err)
 	}
-	if got := economysim.DefaultWorld().Upkeep; len(got) != 0 {
-		t.Errorf("DefaultWorld().Upkeep = %v, want none: upkeep is a pack's", got)
+	if got := economysim.DefaultWorldParams().Upkeep; len(got) != 0 {
+		t.Errorf("DefaultWorldParams().Upkeep = %v, want none: upkeep is a pack's", got)
 	}
 	// The calendar default is the Earth year the specs state.
 	if cal := economysim.DefaultCalendar(); len(cal.Months) != 12 || cal.SeasonStart != 59 {
@@ -977,7 +977,7 @@ func TestValidate_DefaultsAreInTheirBounds(t *testing.T) {
 	}
 	// math.MaxInt64 is not a configuration value anywhere: a value of it is out
 	// of every range (no overflow in the range checks).
-	w := economysim.DefaultWorld()
+	w := economysim.DefaultWorldParams()
 	w.WelfareWindow = math.MaxInt64
 	c.World = w
 	c.World.Upkeep = []economysim.Item{{Commodity: "grain", Quantity: 1}}

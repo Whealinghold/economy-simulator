@@ -21,7 +21,7 @@ import (
 // to cold 0 (extra upkeep fuel 2) and warm 1.
 func agentConfig() *Config {
 	c := Config{
-		World: World{WelfareWindow: 30, WindowCycles: 2, RestBand: 500,
+		World: WorldParams{WelfareWindow: 30, WindowCycles: 2, RestBand: 500,
 			Upkeep: []Item{{Commodity: "staple", Quantity: 3}, {Commodity: "fuel", Quantity: 1}}},
 		Commodities: []Commodity{{ID: "fuel", ReferencePrice: 10}, {ID: "ore", ReferencePrice: 10},
 			{ID: "staple", ReferencePrice: 10, ShelfLife: 50}},

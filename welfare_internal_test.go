@@ -19,7 +19,7 @@ import (
 // `second` need config/ and live in welfare_pack_test.go.
 func welfareConfig() *Config {
 	c := Config{
-		World: World{WelfareWindow: 30, WindowCycles: 2, RestBand: 500, Upkeep: []Item{{Commodity: "food", Quantity: 2}}},
+		World: WorldParams{WelfareWindow: 30, WindowCycles: 2, RestBand: 500, Upkeep: []Item{{Commodity: "food", Quantity: 2}}},
 		Commodities: []Commodity{
 			{ID: "food", ReferencePrice: 10},
 			{ID: "hammer", Durability: 4, ReferencePrice: 10},

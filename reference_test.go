@@ -56,7 +56,7 @@ func referenceConfig() economysim.Config {
 		return append([]economysim.Item{item("fuel", 5), item("prepared", 4)}, extra...)
 	}
 
-	world := economysim.DefaultWorld()
+	world := economysim.DefaultWorldParams()
 	world.Upkeep = []economysim.Item{item("staple", 2), item("prepared", 1), item("fuel", 1)}
 
 	region := economysim.DefaultRegion()

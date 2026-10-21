@@ -11,7 +11,7 @@ import (
 // exampleConfig is the smallest valid configuration: one raw commodity that
 // households consume, one role, one region and one group of ten households.
 func exampleConfig() economysim.Config {
-	world := economysim.DefaultWorld()
+	world := economysim.DefaultWorldParams()
 	world.Upkeep = []economysim.Item{{Commodity: "grain", Quantity: 1}}
 	grain := economysim.DefaultCommodity()
 	grain.ID, grain.ReferencePrice, grain.Raw = "grain", 1_000, true

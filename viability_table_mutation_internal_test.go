@@ -154,25 +154,25 @@ func TestBuild_TableErrorsPropagate(t *testing.T) {
 // Requirement: FR-VIA-030
 func TestBand(t *testing.T) {
 	t.Parallel()
-	band := func(w World, ref int64) (int64, int64, error) {
+	band := func(w WorldParams, ref int64) (int64, int64, error) {
 		s := &viaSolve{m: &viaModel{c: &Config{World: w}}}
 		return s.band(ref)
 	}
-	w := DefaultWorld() // 1 000 to 100 000 basis points
+	w := DefaultWorldParams() // 1 000 to 100 000 basis points
 	if lo, hi, err := band(w, 101); err != nil || lo != 11 || hi != 1_010 {
 		t.Errorf("band(101) = %d, %d, %v, want 11, 1 010, nil (10.1 rounded up; 1 010 exactly)", lo, hi, err)
 	}
 	tests := []struct {
 		name string
-		edit func(*World)
+		edit func(*WorldParams)
 	}{
-		{"only the upper bound overflows", func(*World) {}}, // 2^62 * 100 000 / 10 000 = 10 * 2^62
-		{"only the lower bound overflows", func(w *World) { w.RefBandLow, w.RefBandHigh = 100_000, 1_000 }},
+		{"only the upper bound overflows", func(*WorldParams) {}}, // 2^62 * 100 000 / 10 000 = 10 * 2^62
+		{"only the lower bound overflows", func(w *WorldParams) { w.RefBandLow, w.RefBandHigh = 100_000, 1_000 }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			w := DefaultWorld()
+			w := DefaultWorldParams()
 			tt.edit(&w)
 			lo, hi, err := band(w, 1<<62)
 			if !errors.Is(err, ErrOverflow) || !strings.Contains(err.Error(), "reference band of a price of") || lo != 0 || hi != 0 {
@@ -193,7 +193,7 @@ func TestBand(t *testing.T) {
 // Requirement: FR-VIA-023, FR-VIA-025, FR-VIA-026, FR-VIA-030
 func TestPrices_ReportsTheSeedsTheBandChanged(t *testing.T) {
 	t.Parallel()
-	cfg := &Config{World: DefaultWorld(), Commodities: []Commodity{
+	cfg := &Config{World: DefaultWorldParams(), Commodities: []Commodity{
 		{ID: "a", ReferencePrice: 100}, {ID: "b", ReferencePrice: 5_000}, {ID: "c", ReferencePrice: 5},
 		{ID: "d", ReferencePrice: 1_000}, {ID: "e", ReferencePrice: 100},
 	}}
@@ -905,7 +905,7 @@ func TestResidual(t *testing.T) {
 // year at a mean factor of 10 000, makes the commodities of outs; the wage is the
 // given one, the duration 1 tick and the seed prices those given.
 func tblCostCtx(wage int64, prices []int64, outs []outputRow, floor, ceiling int64) *regionCtx {
-	cfg := &Config{World: World{CostFloor: floor, CostCeiling: ceiling}, Commodities: make([]Commodity, len(prices)), Recipes: []Recipe{{ID: "mk"}}}
+	cfg := &Config{World: WorldParams{CostFloor: floor, CostCeiling: ceiling}, Commodities: make([]Commodity, len(prices)), Recipes: []Recipe{{ID: "mk"}}}
 	for i := range cfg.Commodities {
 		cfg.Commodities[i].ID = string(rune('a' + i))
 	}

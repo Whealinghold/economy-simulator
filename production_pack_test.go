@@ -78,7 +78,7 @@ func TestYieldTable_TwoSettings(t *testing.T) {
 		roles := economysim.NewRoleTable(&cfg)
 		for ri, r := range cfg.Roles {
 			var list []economysim.RecipeID
-			for _, id := range economysim.RoleRow(&roles, economysim.RoleID(ri)).Recipes {
+			for _, id := range economysim.RoleTableRow(&roles, economysim.RoleID(ri)).Recipes {
 				list = append(list, economysim.RecipeID(id))
 			}
 			next := 0

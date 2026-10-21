@@ -114,7 +114,7 @@ func second[A, B any](_ A, b B) B { return b }
 func TestConfigCanonical_SharesNothing(t *testing.T) {
 	t.Parallel()
 	cfg := Config{
-		World:       World{Upkeep: []Item{{Commodity: "b", Quantity: 1}, {Commodity: "a", Quantity: 2}}},
+		World:       WorldParams{Upkeep: []Item{{Commodity: "b", Quantity: 1}, {Commodity: "a", Quantity: 2}}},
 		Calendar:    Calendar{Months: []Month{{ID: "m02", Days: 28}, {ID: "m01", Days: 31}}},
 		Commodities: []Commodity{{ID: "b", Classes: []string{"y", "x"}}, {ID: "a"}},
 		Recipes:     []Recipe{{ID: "r", Inputs: []Item{{Commodity: "b"}, {Commodity: "a"}}}},

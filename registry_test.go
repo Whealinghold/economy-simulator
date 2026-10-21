@@ -310,14 +310,14 @@ func TestParameterRegistry_StagedChecks(t *testing.T) {
 // Validate rejects, each with the reason (spec-config.md 9.2, check 5). A row
 // is here because no value is wrong, not because a test is missing.
 var noFailingCase = map[string]string{
-	"World.Spawner":  "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"World.Clearing": "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"Role.Strategy":  "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"Role.Unskilled": "a bool: both values are valid",
-	"Role.Closed":    "a bool: both values are valid",
-	"Recipe.Sited":   "a bool: both values are valid",
-	"Output.Discard": "a bool: both values are valid",
-	"Commodity.Raw":  "a bool: both values are valid",
+	"WorldParams.Spawner":  "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"WorldParams.Clearing": "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"Role.Strategy":        "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"Role.Unskilled":       "a bool: both values are valid",
+	"Role.Closed":          "a bool: both values are valid",
+	"Recipe.Sited":         "a bool: both values are valid",
+	"Output.Discard":       "a bool: both values are valid",
+	"Commodity.Raw":        "a bool: both values are valid",
 }
 
 // builtRows returns the rows of the owner table that are built and are not
@@ -405,7 +405,7 @@ func TestParameterRegistry_DefaultsPassValidation(t *testing.T) {
 	// or shared would differ between the two.
 	t.Run("constructors are pure", func(t *testing.T) {
 		t.Parallel()
-		if !reflect.DeepEqual(economysim.DefaultWorld(), economysim.DefaultWorld()) ||
+		if !reflect.DeepEqual(economysim.DefaultWorldParams(), economysim.DefaultWorldParams()) ||
 			!reflect.DeepEqual(economysim.DefaultCalendar(), economysim.DefaultCalendar()) ||
 			!reflect.DeepEqual(economysim.DefaultRole(), economysim.DefaultRole()) {
 			t.Errorf("two calls of a Default constructor differ")
@@ -423,7 +423,7 @@ func TestParameterRegistry_DefaultsPassValidation(t *testing.T) {
 	targets := []target{
 		{"World", func(c *economysim.Config) {
 			u := c.World.Upkeep
-			c.World = economysim.DefaultWorld()
+			c.World = economysim.DefaultWorldParams()
 			c.World.Upkeep = u
 		}},
 		{"Calendar", func(c *economysim.Config) { c.Calendar = economysim.DefaultCalendar() }},
@@ -491,7 +491,7 @@ func TestParameterRegistry_SpecDefaultsEqualConstructors(t *testing.T) {
 		"spec-goods.md", "spec-production.md", "spec-scale.md", "spec-skill-barriers.md", "spec-estates.md",
 	}
 	ctor := map[string]reflect.Value{
-		"World":     reflect.ValueOf(economysim.DefaultWorld()),
+		"World":     reflect.ValueOf(economysim.DefaultWorldParams()),
 		"Role":      reflect.ValueOf(economysim.DefaultRole()),
 		"Region":    reflect.ValueOf(economysim.DefaultRegion()),
 		"Commodity": reflect.ValueOf(economysim.DefaultCommodity()),

@@ -2513,5 +2513,5 @@ table. A letter in brackets is the ruling of 6.12.
 | The sentinels `ErrUnknownClearing`, `ErrUnknownPolicy`, `ErrNilExtension`, `ErrWorldFailed`, `ErrInStep`, `ErrAuditFailed` | root package, `errors.go` |
 | `WorldCreated`, `RunStarted`, `RunEnded`, `TickStarted`, `TickEnded` | root package, `event.go` |
 | `Weyl32`, `Weyl2`, `Bucket(id, P)`, the finaliser, `Key(t, id)` (shared with the ration of RES) and the stream key of 7.1.3 | `internal/ordering` |
-| The construction order, the warm start application, the creation draws | root package, `world.go` calling `internal/ledger` and the modules |
+| The construction order (steps 5 to 10 of 5.1), the warm start application, the creation draws | root package, `construct.go` and `construct_warm.go` (steps 1 to 4 are in `world.go`), calling `internal/ledger` and the modules |
 | The models | `doc/specs/models/wld/` |

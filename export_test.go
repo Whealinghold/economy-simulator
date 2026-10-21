@@ -72,8 +72,8 @@ type RoleRowView struct {
 	Member                    []bool
 }
 
-// RoleRow flattens the row of a role.
-func RoleRow(t *RoleTable, id RoleID) RoleRowView {
+// RoleTableRow flattens the row of a role.
+func RoleTableRow(t *RoleTable, id RoleID) RoleRowView {
 	r := t.row(id)
 	var v RoleRowView
 	for _, x := range r.recipes {
@@ -94,7 +94,7 @@ func RoleTradableSomewhere(t *RoleTable, c CommodityID) bool { return t.tradable
 
 // BeliefParams exposes the construction of the belief parameters of beliefs.go
 // as a flat view, so the external test needs no internal type.
-func BeliefParams(w World) (flat [16]int64) {
+func BeliefParams(w WorldParams) (flat [16]int64) {
 	p := beliefParams(w)
 	return [16]int64{p.Step, p.AdjustProb, p.Significance, p.EvidenceShare, p.StockLow, p.StockHigh,
 		p.MaxAge, p.WidthInit, p.WidthMin, p.WidthMax, p.WidthStep, p.CostFloor, p.CostCeiling,
