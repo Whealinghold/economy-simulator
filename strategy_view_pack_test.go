@@ -146,7 +146,7 @@ func sampleState(t *testing.T, h *economysim.ViewHarness, p *packIndex, rng *ran
 	t.Helper()
 	cfg := h.Cfg
 	role, region := cfg.Roles[roleID], cfg.Regions[regionID]
-	rr := economysim.RoleRow(&p.roles, economysim.RoleID(roleID))
+	rr := economysim.RoleTableRow(&p.roles, economysim.RoleID(roleID))
 	weights := []int64{1, 2, 7, 40, 500}
 	s := &state{
 		roleID: roleID, region: regionID, weight: weights[rng.IntN(len(weights))], tradableID: rr.Tradable,

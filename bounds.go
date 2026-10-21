@@ -168,7 +168,7 @@ const (
 // spec-spawner.md 11, spec-scale.md 3.1 and 5.2, spec-goods.md 8 and
 // spec-welfare-and-wages.md 12.1. The orders between two fields (a low below a
 // high) are rules of validate.go.
-func worldRanges(w World) []fieldRange {
+func worldRanges(w WorldParams) []fieldRange {
 	return []fieldRange{
 		{"scale", w.Scale, 1, MaxHouseholds},
 		{"min_agents", w.MinAgents, 1, MaxHouseholds},

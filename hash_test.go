@@ -20,12 +20,12 @@ import (
 // hash reads. At Stage 0 they are the six labels of the core. A module's change
 // adds its own labels here and in the doc comment of the field.
 var presentationOnly = map[string]bool{
-	"Commodity.Label":     true,
-	"Commodity.UnitLabel": true,
-	"Recipe.Label":        true,
-	"Role.Label":          true,
-	"Region.Label":        true,
-	"World.DistanceLabel": true,
+	"Commodity.Label":           true,
+	"Commodity.UnitLabel":       true,
+	"Recipe.Label":              true,
+	"Role.Label":                true,
+	"Region.Label":              true,
+	"WorldParams.DistanceLabel": true,
 }
 
 // pinnedReferenceHash is the hash of referenceConfig, the all-off reference

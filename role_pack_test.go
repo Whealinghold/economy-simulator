@@ -69,7 +69,7 @@ func TestRoleTable_AgreesWithValidator(t *testing.T) {
 		}
 		union := map[string]bool{}
 		for ri := range cfg.Roles {
-			v := economysim.RoleRow(&tab, economysim.RoleID(ri))
+			v := economysim.RoleTableRow(&tab, economysim.RoleID(ri))
 			var got []string
 			for _, id := range v.Tradable {
 				if id < 0 || id >= len(cfg.Commodities) {

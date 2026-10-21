@@ -18,7 +18,7 @@ import (
 // Requirement: FR-CFG-104
 func TestEncoder_NumWritesNegative(t *testing.T) {
 	t.Parallel()
-	got := encodeConfig(Config{World: World{Scale: -1}})
+	got := encodeConfig(Config{World: WorldParams{Scale: -1}})
 	want := []byte{
 		hashVersion,
 		0x00, 0x01, // World, field 1

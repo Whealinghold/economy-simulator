@@ -62,7 +62,7 @@ func TestTables_ConfigurationOnlyAddition(t *testing.T) {
 		if x.ID != "zz_new_role" {
 			continue
 		}
-		row := economysim.RoleRow(&ot, economysim.RoleID(i))
+		row := economysim.RoleTableRow(&ot, economysim.RoleID(i))
 		if !slices.Equal(row.Recipes, []int{int(rid)}) {
 			t.Errorf("role recipes = %v, want [%d]", row.Recipes, rid)
 		}

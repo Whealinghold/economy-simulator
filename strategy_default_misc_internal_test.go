@@ -21,7 +21,7 @@ import (
 // consumer's call of the default differ from the world's.
 func TestBeliefTunables_MatchBeliefParams(t *testing.T) {
 	t.Parallel()
-	w := DefaultWorld()
+	w := DefaultWorldParams()
 	bt := beliefTunablesOf(beliefParams(w))
 	if got, want := beliefParamsOf(&bt), beliefParams(w); got != want {
 		t.Errorf("beliefParamsOf = %+v, want %+v", got, want)
@@ -45,7 +45,7 @@ func (w wrapsDefault) Revise(o *OutcomeView, r *rand.Rand) Belief { return w.inn
 // Requirement: FR-AGT-050
 func TestDefaultStrategyRevise_EqualsUpdate(t *testing.T) {
 	t.Parallel()
-	bt := beliefTunablesOf(beliefParams(DefaultWorld()))
+	bt := beliefTunablesOf(beliefParams(DefaultWorldParams()))
 	par := beliefParamsOf(&bt)
 	wrapped := wrapsDefault{inner: DefaultStrategy{}}
 	for _, side := range []Side{Bid, Ask} {
@@ -88,7 +88,7 @@ func TestDefaultStrategy_AllocatesNothingWithScratch(t *testing.T) {
 	plan := &TradePlan{Intents: make([]Intent, 0, 16)}
 	rng := newRand(&wordSource{words: exampleWords()})
 	o := &OutcomeView{Side: Bid, Limit: 120, Quantity: 10, Filled: 3, Belief: Belief{Centre: 100, Width: 1000},
-		Bounds: Bounds{Floor: 50, Ceiling: 5000}, Params: beliefTunablesOf(beliefParams(DefaultWorld()))}
+		Bounds: Bounds{Floor: 50, Ceiling: 5000}, Params: beliefTunablesOf(beliefParams(DefaultWorldParams()))}
 	tests := []struct {
 		name string
 		fn   func()
@@ -250,7 +250,7 @@ func BenchmarkDefaultStrategy(b *testing.B) {
 	plan := &TradePlan{Intents: make([]Intent, 0, 16)}
 	rng := newRand(&wordSource{words: exampleWords()})
 	o := &OutcomeView{Side: Bid, Limit: 120, Quantity: 10, Filled: 3, Belief: Belief{Centre: 100, Width: 1000},
-		Bounds: Bounds{Floor: 50, Ceiling: 5000}, Params: beliefTunablesOf(beliefParams(DefaultWorld()))}
+		Bounds: Bounds{Floor: 50, Ceiling: 5000}, Params: beliefTunablesOf(beliefParams(DefaultWorldParams()))}
 	b.Run("Work", func(b *testing.B) {
 		b.ReportAllocs()
 		for b.Loop() {

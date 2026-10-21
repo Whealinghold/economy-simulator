@@ -16,7 +16,7 @@ import (
 // resolution floor is ceil(10 000 / 200) = 50 and the reference band runs from
 // 1 000 to 100 000 basis points of the reference price (a tenth to ten times).
 func seedConfig() *viaSolve {
-	cfg := Config{World: DefaultWorld()}
+	cfg := Config{World: DefaultWorldParams()}
 	return &viaSolve{m: &viaModel{c: &cfg}}
 }
 

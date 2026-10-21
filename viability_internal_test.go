@@ -20,7 +20,7 @@ import (
 // the surplus factor at full labour is 4 (SurplusBP 40 000, labour share
 // ceil(10^8 / 40 000) = 2 500) and 2.74 at the expected work (4 * 250 / 365).
 func viaToy() Config {
-	world := DefaultWorld()
+	world := DefaultWorldParams()
 	world.Upkeep = []Item{{Commodity: "grain", Quantity: 1}}
 	grain := DefaultCommodity()
 	grain.ID, grain.ReferencePrice = "grain", 100

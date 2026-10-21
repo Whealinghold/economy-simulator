@@ -129,7 +129,7 @@ func TestConfig_HoldsNoWageOrPremiumSetting(t *testing.T) {
 // Requirement: FR-CFG-007, FR-CFG-049, FR-CFG-050, FR-CFG-057, FR-WEL-016, FR-WEL-032
 func TestDefaults_Values(t *testing.T) {
 	t.Parallel()
-	w := economysim.DefaultWorld()
+	w := economysim.DefaultWorldParams()
 	r := economysim.DefaultRole()
 	tests := []struct {
 		name      string

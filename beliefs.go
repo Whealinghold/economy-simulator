@@ -22,7 +22,7 @@ type Bounds struct {
 // beliefParams returns the parameters the belief rule reads, built once at
 // world construction. PriceWindow is not among them: it is the capacity of a
 // market's window.
-func beliefParams(w World) beliefs.Params {
+func beliefParams(w WorldParams) beliefs.Params {
 	return beliefs.Params{
 		Step: w.BeliefStep, AdjustProb: w.BeliefAdjustProb, Significance: w.BeliefSignificance,
 		EvidenceShare: w.BeliefEvidenceShare,

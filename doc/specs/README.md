@@ -97,7 +97,7 @@ Rules for the IDs:
 | `LED` | `spec-ledger.md` | exists; Requirements section written (FR-LED-001 to 065, NFR-LED-001 to 004) |
 | `PRO` | `spec-production.md` | exists; Requirements section written (FR-PRO-001 to 051, NFR-PRO-001 to 004); all numbers are placeholders |
 | `SPN` | `spec-spawner.md` | exists; Requirements section written (FR-SPN-001 to 060, NFR-SPN-001 to 003); all numbers are placeholders |
-| `WLD` | `spec-world.md` | exists; Requirements section written (FR-WLD-001 to 110, NFR-WLD-001 to 005); core; adds only the field `World.Clearing` (owned by `spec-clearing.md` 8); all numbers are placeholders |
+| `WLD` | `spec-world.md` | exists; Requirements section written (FR-WLD-001 to 110, NFR-WLD-001 to 005); core; adds only the field `WorldParams.Clearing` (owned by `spec-clearing.md` 8); all numbers are placeholders |
 | `REG` | `spec-regions.md` | exists; Requirements section written (FR-REG-001 to 060, NFR-REG-001 to 004); core; the region, the directed graph, overrides, relocation; bounds are placeholders |
 | `CFG` | `spec-config.md` | exists; Requirements section written (FR-CFG-001 to 097, NFR-CFG-001 to 003); the field catalogue is section 3.7 (3.7.1 for the fourteen later-stage modules) |
 | `OBS` | `spec-observability.md` | exists; Requirements section written (FR-OBS-001 to 091, NFR-OBS-001 to 005); core; no `Config` field (`warnRun` is a rule constant); all numbers are placeholders |
@@ -183,7 +183,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `MerchantFeeShare` | Role | `spec-carriage.md` section 2.2 |
 | `Mass` | Commodity | `spec-goods.md` section 8 |
 | `Bulk` | Commodity | `spec-goods.md` section 8 |
-| `BulkFactor` | World | `spec-goods.md` section 8 |
+| `BulkFactor` | WorldParams | `spec-goods.md` section 8 |
 | `ShelfLife` | Commodity | `spec-goods.md` section 8 |
 | `Durability` | Commodity | `spec-goods.md` section 8 |
 | `Classes` | Commodity | `spec-goods.md` section 8 |
@@ -199,9 +199,9 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `SeasonStart` | Calendar | `spec-calendar.md` section 3.1 |
 | `ExpectedWorkTicks` | Role | `spec-welfare-and-wages.md` section 4.2 |
 | `Households` | Group (role in a region) | `spec-scale.md` section 3.1 |
-| `Scale` | World (the default of a group that gives none; default 1) | `spec-scale.md` section 3.1 |
+| `Scale` | WorldParams (the default of a group that gives none; default 1) | `spec-scale.md` section 3.1 |
 | `Scale` | Group (0: the world's `Scale`) | `spec-scale.md` section 3.1 |
-| `MinAgents` (`K`) | World | `spec-scale.md` section 5.2 |
+| `MinAgents` (`K`) | WorldParams | `spec-scale.md` section 5.2 |
 | `Duration` | Recipe | `spec-production.md` section 5 |
 | `Sited` | Recipe | `spec-production.md` section 6.2 |
 | `TraineeEligible` | Recipe | `spec-production.md` section 8 |
@@ -211,44 +211,44 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Discard` | Output | `spec-production.md` section 7.2 |
 | `Draws` | Recipe | the field: `spec-production.md` section 3.1; the resources it names: `spec-resources.md` section 3 |
 | `Yields` | Config (a section; the profiles of a region and a recipe) | values and authoring: `spec-resources.md` section 7; format and lookup: `spec-production.md` section 6.1 |
-| `BeliefStep` | World | `spec-beliefs.md` section 11 |
-| `BeliefAdjustProb` | World | `spec-beliefs.md` section 11 |
-| `BeliefSignificance` | World | `spec-beliefs.md` section 11 |
-| `BeliefStockLow` | World | `spec-beliefs.md` section 11 |
-| `BeliefStockHigh` | World | `spec-beliefs.md` section 11 |
-| `BeliefMaxAge` | World | `spec-beliefs.md` section 11 |
-| `BeliefWidthInit` | World | `spec-beliefs.md` section 11 |
-| `BeliefWidthMin` | World | `spec-beliefs.md` section 11 |
-| `BeliefWidthMax` | World | `spec-beliefs.md` section 11 |
-| `BeliefWidthStep` | World | `spec-beliefs.md` section 11 |
-| `CostFloor` | World | `spec-beliefs.md` section 11 |
-| `CostCeiling` | World | `spec-beliefs.md` section 11 |
-| `RefBandLow` | World | `spec-beliefs.md` section 11 |
-| `RefBandHigh` | World | `spec-beliefs.md` section 11 |
-| `PriceWindow` | World | `spec-beliefs.md` section 11 |
-| `Upkeep` | World | `spec-agents.md` section 5.2, 12 |
+| `BeliefStep` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefAdjustProb` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefSignificance` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefStockLow` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefStockHigh` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefMaxAge` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefWidthInit` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefWidthMin` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefWidthMax` | WorldParams | `spec-beliefs.md` section 11 |
+| `BeliefWidthStep` | WorldParams | `spec-beliefs.md` section 11 |
+| `CostFloor` | WorldParams | `spec-beliefs.md` section 11 |
+| `CostCeiling` | WorldParams | `spec-beliefs.md` section 11 |
+| `RefBandLow` | WorldParams | `spec-beliefs.md` section 11 |
+| `RefBandHigh` | WorldParams | `spec-beliefs.md` section 11 |
+| `PriceWindow` | WorldParams | `spec-beliefs.md` section 11 |
+| `Upkeep` | WorldParams | `spec-agents.md` section 5.2, 12 |
 | `Upkeep` | Role (replacing the world's) | `spec-agents.md` section 5.2, 12 |
 | `ExtraUpkeep` | Region | `spec-agents.md` section 5.2, 12 |
-| `CoverTicks` | World | `spec-agents.md` section 12 |
-| `InputJobs` | World | `spec-agents.md` section 12 |
-| `OutputCoverTicks` | World | `spec-agents.md` section 12 |
-| `FavourFloor` | World | `spec-agents.md` section 12 |
-| `ReserveTicks` | World | `spec-agents.md` section 12 |
-| `SpendMaxShare` | World | `spec-agents.md` section 12 |
-| `SpendHalfTicks` | World | `spec-agents.md` section 12 |
-| `RestBand` | World | `spec-agents.md` section 12 |
-| `ProduceHaltRatio` | World | `spec-agents.md` section 12 |
-| `BasketTolerance` | World | `spec-agents.md` section 12 (closes the unnamed tolerance of `spec-currency.md` 5.3) |
+| `CoverTicks` | WorldParams | `spec-agents.md` section 12 |
+| `InputJobs` | WorldParams | `spec-agents.md` section 12 |
+| `OutputCoverTicks` | WorldParams | `spec-agents.md` section 12 |
+| `FavourFloor` | WorldParams | `spec-agents.md` section 12 |
+| `ReserveTicks` | WorldParams | `spec-agents.md` section 12 |
+| `SpendMaxShare` | WorldParams | `spec-agents.md` section 12 |
+| `SpendHalfTicks` | WorldParams | `spec-agents.md` section 12 |
+| `RestBand` | WorldParams | `spec-agents.md` section 12 |
+| `ProduceHaltRatio` | WorldParams | `spec-agents.md` section 12 |
+| `BasketTolerance` | WorldParams | `spec-agents.md` section 12 (closes the unnamed tolerance of `spec-currency.md` 5.3) |
 | `Recipes` | Role | `spec-agents.md` section 3.3 |
 | `Trades` | Role | `spec-agents.md` section 3.3 |
 | `StartMoney` | Role | `spec-agents.md` section 3.3 |
 | `StartStock` | Role | `spec-agents.md` section 3.3 |
 | `Strategy` | Role (a registered name) | `spec-agents.md` section 6.6 |
 | `WarmStart` | Config (a section; nil = off) | `spec-viability.md` section 8.1 |
-| `WelfareWindow` | World | `spec-welfare-and-wages.md` section 2.3.1 |
-| `WindowCycles` | World | `spec-welfare-and-wages.md` section 2.3.3 |
+| `WelfareWindow` | WorldParams | `spec-welfare-and-wages.md` section 2.3.1 |
+| `WindowCycles` | WorldParams | `spec-welfare-and-wages.md` section 2.3.3 |
 | `MinWorkShare` | Role | `spec-welfare-and-wages.md` section 5.3 |
-| `BeliefEvidenceShare` | World | `spec-beliefs.md` section 11 |
+| `BeliefEvidenceShare` | WorldParams | `spec-beliefs.md` section 11 |
 | `ID` | Commodity | `spec-goods.md` section 8 |
 | `ID` | Recipe | `spec-production.md` section 3.1, 11 |
 | `Inputs` | Recipe | `spec-production.md` section 3.1, 11 |
@@ -291,19 +291,19 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Money` | WarmPool | `spec-viability.md` section 8.3.3 |
 | `Region` | Group | `spec-scale.md` section 3.1 |
 | `Seasons` | YieldProfile | `spec-resources.md` section 7 (format: `spec-production.md` section 6.1) |
-| `ReviewTicks` | World | `spec-spawner.md` section 11 |
-| `EntryShare` | World | `spec-spawner.md` section 11 |
-| `RoleHysteresis` | World | `spec-spawner.md` section 11 |
-| `RoleCooldown` | World | `spec-spawner.md` section 11 |
-| `EntryRatio` | World | `spec-spawner.md` section 11 |
-| `ChangePrivation` | World | `spec-spawner.md` section 11 |
-| `RemovePrivation` | World | `spec-spawner.md` section 11 |
-| `DeathStep` | World | `spec-spawner.md` section 11 |
-| `ExitShare` | World | `spec-spawner.md` section 11 |
-| `Renewal` | World | `spec-spawner.md` section 11 |
-| `EntryPoolShare` | World | `spec-spawner.md` section 11 |
-| `Spawner` | World | `spec-spawner.md` section 3.1.3 |
-| `Clearing` | World | `spec-clearing.md` section 8 |
+| `ReviewTicks` | WorldParams | `spec-spawner.md` section 11 |
+| `EntryShare` | WorldParams | `spec-spawner.md` section 11 |
+| `RoleHysteresis` | WorldParams | `spec-spawner.md` section 11 |
+| `RoleCooldown` | WorldParams | `spec-spawner.md` section 11 |
+| `EntryRatio` | WorldParams | `spec-spawner.md` section 11 |
+| `ChangePrivation` | WorldParams | `spec-spawner.md` section 11 |
+| `RemovePrivation` | WorldParams | `spec-spawner.md` section 11 |
+| `DeathStep` | WorldParams | `spec-spawner.md` section 11 |
+| `ExitShare` | WorldParams | `spec-spawner.md` section 11 |
+| `Renewal` | WorldParams | `spec-spawner.md` section 11 |
+| `EntryPoolShare` | WorldParams | `spec-spawner.md` section 11 |
+| `Spawner` | WorldParams | `spec-spawner.md` section 3.1.3 |
+| `Clearing` | WorldParams | `spec-clearing.md` section 8 |
 | `Closed` | Role | `spec-spawner.md` section 11 |
 | `Wants` | Demand | `spec-demand.md` section 9 |
 | `Items` | Want | `spec-demand.md` section 9 |

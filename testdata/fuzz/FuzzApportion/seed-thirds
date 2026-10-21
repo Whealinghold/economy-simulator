@@ -1,0 +1,3 @@
+go test fuzz v1
+[]byte("\x55\x55\x55")
+uint16(10)

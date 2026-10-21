@@ -92,7 +92,7 @@
 //     which a checkpoint stores and a restore compares.
 //   - Creditor: the account a claim is owed to, an agent or an estate account.
 //   - Debtor: the agent account that owes a claim.
-//   - Default constructor: DefaultWorld, DefaultRole and the like, the one
+//   - Default constructor: DefaultWorldParams, DefaultRole and the like, the one
 //     place a default is defined. The zero value of an entity is not a default.
 //   - Draw site: a place in the code where the world takes a random word, named
 //     by a constant that never changes and keyed by (site, tick, id).
@@ -101,7 +101,7 @@
 //   - Effective seed: the seed a world draws from after any reseed; it is the one
 //     value of the random state that a checkpoint carries.
 //   - Configuration section: a struct of config.go that Config holds, one per
-//     part of the file: World, Calendar, Month, Season, Commodity, Item, Output,
+//     part of the file: WorldParams, Calendar, Month, Season, Commodity, Item, Output,
 //     Tool, Recipe, YieldProfile, SeasonYield, Role, Region, Group, WarmStart,
 //     SeedPrice, SeedWage, WarmGroup, JobSpec and WarmPool.
 //   - Durable: a commodity that wears; its items are held as lots that share a
@@ -280,9 +280,10 @@
 //     modulo 2^32. It draws no random number. Weyl32 is used for carries and
 //     margins and Weyl2, a second sequence, for the bucket of a rotation.
 //   - Word: one uint64 taken from a keyed stream; a draw of n values uses one word.
-//   - World: the simulation that a configuration defines and a consumer steps.
-//     In Config, World is the section of world-level parameters, such as the
-//     scale of a group and the bounds of its agents.
+//   - World: the simulation that a configuration defines and a consumer steps;
+//     it is not safe for concurrent use. The section of world-level parameters
+//     that Config.World holds is WorldParams, such as the scale of a group and
+//     the bounds of its agents.
 //   - Yield profile: the factor, by season, of a recipe in a region.
 //   - Market: the book of one commodity in one region for one tick: the
 //     admitted bids and asks, cleared once per tick.
@@ -579,4 +580,41 @@
 //   - Lane: in the solver, a zero-cost route between regions of the free-trade
 //     set that merges their goods rows; not a lane of a credit round or of a
 //     merchant.
+//   - Step: one call of Step: the entry of a tick and its eight phases, run in
+//     the order of spec-world.md 6, which on success advances the tick counter by
+//     one. In phase 7 the world carries out the spawner's plan itself, decision by
+//     decision in plan order.
+//   - Run: the call that steps a world a number of ticks, checking its context
+//     before every tick and never inside one, and that emits RunStarted before
+//     its first tick and RunEnded before it returns, a cancelled or failed run
+//     included.
+//   - Tick boundary: the instant between two steps, with no reservation open, no
+//     job half started and every counterparty account empty; a reader, a setter
+//     and a snapshot act there.
+//   - Phase: one of the eight stages of a tick, numbered 1 to 8 and run in order;
+//     phase 0 is its entry.
+//   - Position: one named place in the order of a tick, written Pp.q (P3.2 is the
+//     second position of phase 3), owned by one spec and called once, in the order
+//     of the table of spec-world.md 6; tick.go holds the list of them.
+//   - Entry (of a tick): the part of a step that runs before phase 1: the guards,
+//     the end of the construction phase, the bucket events and TickStarted.
+//   - Failed world: a world one of whose steps returned an error; every later call
+//     with an error result returns ErrWorldFailed, and the failure is kept so Err
+//     can read it.
+//   - In-step guard: the flag a step sets at its entry and clears when it ends, so
+//     that a call made from inside a step (by an observer or an extension) returns
+//     ErrInStep and changes nothing.
+//   - Market record: the state the world keeps for one (region, commodity) market
+//     between its clearing and the next: its report, its price window, its run of
+//     the beliefs warning and its book.
+//   - Snapshot: the plain-data deep copy of a world's standing state at a tick
+//     boundary, read by World.Snapshot: the header, then the rows RegionRow,
+//     BoundaryRow, FlowTotal (the pending totals and the construction bucket),
+//     RoleRow, MarketRow with its MarketState, and JobRow, each slice in the
+//     canonical order of its key.
+//   - Snapshot row: a plain-data row of a snapshot that reports one region, role,
+//     market or job as a deep copy of saved state.
+//   - Fan-in: a fixed-order composition of calls into the module files with one
+//     entry point, such as the world's one removeAgent, so that a rule written once
+//     serves every caller (architecture.md 2.10.4).
 package economysim

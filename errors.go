@@ -134,6 +134,21 @@ var (
 	ErrInvalidTrade = errors.New("invalid trade list")
 )
 
+// The errors of the world's calls (spec-world.md 3.3.3, 3.5, 3.6). Each is
+// matched with errors.Is and none is logged by the library.
+var (
+	// ErrWorldFailed is a call on a world that an earlier step failed or whose
+	// step panicked. The error wraps the cause too, and Err returns it.
+	ErrWorldFailed = errors.New("world failed")
+	// ErrInStep is a call made from inside a running step, by an observer or an
+	// extension. It changes nothing.
+	ErrInStep = errors.New("call inside a step")
+	// ErrAuditFailed is an audit that found a violated identity: at
+	// construction with WithAudit, at the end of a step with WithAudit, or in a
+	// call of Audit. The error wraps the failing check as well.
+	ErrAuditFailed = errors.New("audit failed")
+)
+
 // The viability rules and the solver (spec-viability.md 10, 5.4; spec-config.md
 // 7.6). Validate returns ErrNotViable inside a *ViabilityError; the other three
 // are the sentinels of SolveSteadyState.

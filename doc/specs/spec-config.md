@@ -148,6 +148,14 @@ meaning, default and bound of each field. The parameter-owner table in
 `specs/README.md` is the registry (section 9); this table is the shape. A field
 absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 
+The section `Config.World` has the Go type `WorldParams` and its constructor is
+`DefaultWorldParams` (decision D140 of `plans/plan-phase-1-11.md`): the simulation type
+is `World` (architecture.md 2.2, 12.1; `spec-world.md` 3.1) and the root package cannot
+hold two. The field `Config.World`, the file table `[world]` and the field ids of 8.2.2
+do not change, so no hash input moves. In the tables of this spec and of the owner
+specs the scope word `World` names this section, as the word `Config` does; Go code
+reads it as `WorldParams`.
+
 | Section | Fields | Owner |
 |---------|--------|-------|
 | `World` | `Scale`, `MinAgents` | `spec-scale.md` |
@@ -493,8 +501,8 @@ presentation only (8.3) and has no id.
 
 | Struct | Fields, in order | Not in the slice, and why |
 |--------|------------------|---------------------------|
-| `Config` | `World World`, `Calendar Calendar`, `Commodities []Commodity`, `Recipes []Recipe`, `Yields []YieldProfile`, `Roles []Role`, `Regions []Region`, `Groups []Group`, `WarmStart *WarmStart`, `Modules Modules` | `Edges []Edge` and `RegionPrices []RegionPrice` (Stage 2, REG; their ids 8 and 9 are reserved) |
-| `World` | `Scale`, `MinAgents`, `BulkFactor`, `WelfareWindow`, `WindowCycles`, `Upkeep []Item`, `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance`, `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow`, `Spawner string`, `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare`, `Clearing string` (45 fields with an id), `DistanceLabel string` (p) | |
+| `Config` | `World WorldParams`, `Calendar Calendar`, `Commodities []Commodity`, `Recipes []Recipe`, `Yields []YieldProfile`, `Roles []Role`, `Regions []Region`, `Groups []Group`, `WarmStart *WarmStart`, `Modules Modules` | `Edges []Edge` and `RegionPrices []RegionPrice` (Stage 2, REG; their ids 8 and 9 are reserved) |
+| `WorldParams` | `Scale`, `MinAgents`, `BulkFactor`, `WelfareWindow`, `WindowCycles`, `Upkeep []Item`, `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance`, `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow`, `Spawner string`, `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare`, `Clearing string` (45 fields with an id), `DistanceLabel string` (p) | |
 | `Calendar` | `HoursPerDay`, `DaysPerWeek`, `Months []Month`, `TicksPerDay`, `DaysPerTick`, `StartDay`, `Seasons []Season`, `SeasonStart` | |
 | `Month`, `Season` | `ID string`, `Days` | |
 | `Commodity` | `ID string`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes []string`, `Raw bool`, `ReferencePrice Price`, `Label string` (p), `UnitLabel string` (p) | |
@@ -778,7 +786,7 @@ the configuration with `ErrOverflow` if one fails:
 ## 5. Defaults
 
 5.1. A default is defined once, in the root package, in `defaults.go`:
-`DefaultWorld()`, `DefaultRole()`, `DefaultRegion()` and one constructor for each
+`DefaultWorldParams()`, `DefaultRole()`, `DefaultRegion()` and one constructor for each
 other entity or module that has defaults (architecture.md 9.8). Each returns a
 fully populated value. Defaults are the stable constants of ADR 0001 (decision
 5): changing one changes behaviour and is explained in its PR.
@@ -789,7 +797,7 @@ fully populated value. Defaults are the stable constants of ADR 0001 (decision
 silently meant "use the default" cannot be told apart from a deliberate 0, and
 some fields (such as `TargetSpread`) have a valid 0 and a non-zero default. A name
 is the other case: `World.Clearing` empty fails (`ErrUnknownClearing`, 7.1.4), and
-the default `"average"` comes from `DefaultWorld()` and not from the zero value.
+the default `"average"` comes from `DefaultWorldParams()` and not from the zero value.
 The documentation of each config type says to start from its `Default` constructor.
 Architecture.md 6.3 requires this to be documented.
 
@@ -1683,7 +1691,7 @@ later module adds takes the next free id of its struct, in the pull request that
 and that pull request adds a row to this paragraph; an id is never reused or moved. So
 at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, `Yields`
 5, `Roles` 6, `Regions` 7, `Edges` 8, `RegionPrices` 9, `Groups` 10, `WarmStart` 11 and
-`Modules` 12. `World` has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45.
+`Modules` 12. `WorldParams` (the type of `Config.World`) has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45.
 `Calendar` has `HoursPerDay` 1 to `SeasonStart` 8; `Month` and `Season` have `ID` 1,
 `Days` 2. `Commodity` has `ID` 1, `Mass` 2, `Bulk` 3, `ShelfLife` 4, `Durability` 5,
 `Classes` 6, `Raw` 7, `ReferencePrice` 8. `Item` has `Commodity` 1, `Quantity` 2;
@@ -1819,6 +1827,11 @@ has a row with the scope `Config` (`Yields` as `Edges` and `WarmStart`; there is
 `YieldProfile` for "a region and a recipe"). An element type has a row for each field it
 has (`Month`, `Season`, `SeasonYield`, `Item`, `Output`, `Tool`, `SeedPrice`, `SeedWage`,
 `WarmGroup`, `JobSpec`, `WarmPool`, and the yield rows with the scope `YieldProfile`).
+The section of `Config.World` is the Go type `WorldParams` (3.7, D140): the scope of its rows
+is `WorldParams`, in the README table and in the `notBuilt` list, from the change that renames
+the type (the type `World` is the simulation, and the test reads a scope as a type name, so a
+cell that names a type that does not exist fails it); the owner specs' own tables keep the
+word `World`, and the test of their defaults (`spec-config.md` 9.2, check 4) keys on it.
 
 **Staged form** (decision A6 of the plan of Stage 0; architecture.md 9.7 and testing.md 6.7
 state the same rule). The specs describe all 25 modules and the code is built in stages,

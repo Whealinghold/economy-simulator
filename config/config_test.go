@@ -33,7 +33,7 @@ func TestParse_MinimalDocumentGetsTheDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse(minimal) error = %v, want nil", err)
 	}
-	want := economysim.Config{World: economysim.DefaultWorld(), Calendar: economysim.DefaultCalendar()}
+	want := economysim.Config{World: economysim.DefaultWorldParams(), Calendar: economysim.DefaultCalendar()}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Parse(minimal) = %+v, want the defaults %+v", got, want)
 	}
@@ -65,7 +65,7 @@ capital_return = 7
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
-	world := economysim.DefaultWorld()
+	world := economysim.DefaultWorldParams()
 	world.Scale = 40
 	commodity := economysim.DefaultCommodity()
 	commodity.ID, commodity.ReferencePrice = "grain", 10
@@ -166,7 +166,9 @@ func TestParse_Rejections(t *testing.T) {
 
 // TestParse_SyntaxErrors verifies that a document that is not TOML, or whose
 // values the library refuses, is ErrSyntax with the line and column and none of
-// the document's text.
+// the document's text. The location is part of the message only (ErrSyntax is a
+// sentinel with no fields), so the message text is checked for it; the identity of
+// the error is checked with errors.Is.
 //
 // Requirement: FR-CFG-024, FR-CFG-100
 func TestParse_SyntaxErrors(t *testing.T) {
@@ -507,7 +509,7 @@ func TestParse_SectionScalarKeysAreTheSnakeCaseOfTheGoName(t *testing.T) {
 		extra  string
 		pick   func(economysim.Config) reflect.Value
 	}{
-		{"World", reflect.TypeFor[economysim.World](), "[world]", "", func(c economysim.Config) reflect.Value { return reflect.ValueOf(c.World) }},
+		{"World", reflect.TypeFor[economysim.WorldParams](), "[world]", "", func(c economysim.Config) reflect.Value { return reflect.ValueOf(c.World) }},
 		{"Calendar", reflect.TypeFor[economysim.Calendar](), "[calendar]", "", func(c economysim.Config) reflect.Value { return reflect.ValueOf(c.Calendar) }},
 		{"Commodity", reflect.TypeFor[economysim.Commodity](), "[commodity.x]", "", func(c economysim.Config) reflect.Value { return reflect.ValueOf(c.Commodities[0]) }},
 		{"Recipe", reflect.TypeFor[economysim.Recipe](), "[recipe.x]", outputs, func(c economysim.Config) reflect.Value { return reflect.ValueOf(c.Recipes[0]) }},

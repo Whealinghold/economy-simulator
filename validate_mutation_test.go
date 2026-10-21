@@ -492,17 +492,17 @@ func TestValidate_WorldOrderEdges(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
-		mutate func(w *economysim.World)
+		mutate func(w *economysim.WorldParams)
 		path   string // the field refused, "" when the world is valid
 		value  string
 		bound  string
 	}{
-		{"stock low above stock high", func(w *economysim.World) { w.BeliefStockLow = 16_000 }, "belief_stock_low", "16000", "14999"},
-		{"width min equal to width init", func(w *economysim.World) { w.BeliefWidthMin = w.BeliefWidthInit }, "", "", ""},
-		{"width init equal to width max", func(w *economysim.World) { w.BeliefWidthInit = w.BeliefWidthMax }, "", "", ""},
-		{"width step equal to width max", func(w *economysim.World) { w.BeliefWidthStep = w.BeliefWidthMax }, "", "", ""},
-		{"cost ceiling equal to cost floor", func(w *economysim.World) { w.CostCeiling = w.CostFloor }, "", "", ""},
-		{"change privation above remove privation", func(w *economysim.World) { w.ChangePrivation = w.RemovePrivation + 1 }, "change_privation", "11", "ladder_order"},
+		{"stock low above stock high", func(w *economysim.WorldParams) { w.BeliefStockLow = 16_000 }, "belief_stock_low", "16000", "14999"},
+		{"width min equal to width init", func(w *economysim.WorldParams) { w.BeliefWidthMin = w.BeliefWidthInit }, "", "", ""},
+		{"width init equal to width max", func(w *economysim.WorldParams) { w.BeliefWidthInit = w.BeliefWidthMax }, "", "", ""},
+		{"width step equal to width max", func(w *economysim.WorldParams) { w.BeliefWidthStep = w.BeliefWidthMax }, "", "", ""},
+		{"cost ceiling equal to cost floor", func(w *economysim.WorldParams) { w.CostCeiling = w.CostFloor }, "", "", ""},
+		{"change privation above remove privation", func(w *economysim.WorldParams) { w.ChangePrivation = w.RemovePrivation + 1 }, "change_privation", "11", "ladder_order"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

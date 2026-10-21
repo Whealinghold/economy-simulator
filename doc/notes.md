@@ -167,6 +167,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read for the estate row: it adds no configuration field and no default (`EstateMarkdown` is a Stage 0 row with hash field 5; `PoolRelease` and `ReliefBelow` arrive with the module, `spec-estates.md` 3) and deletes no `notBuilt` entry. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The spawner row adds no field and no default; the registry test and its notBuilt list do not change.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. This row adds no `Config` field and no row of the parameter-owner table: the solve options are rows of CLB's registry (`spec-viability.md` 11, FR-CFG-047) and `WarmStart` has its row. Phase 5 checks the registry test is unchanged.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no configuration field. `spec-config.md` 3.7 and 9.2 now say that the section type of `Config.World` is `WorldParams` and that the scope cells of `specs/README.md` (read as Go type names) change with the rename in Phase 2, not before (a cell naming a type that does not exist fails the registry test).
 
 ### N-017 Words and names
 
@@ -205,6 +206,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: the terms its code uses are in the `doc.go` glossary before use (estate pseudo-agent, listing, listed price, first price, estate markdown, estate pool, intake, pool draw, held lot); "draw" is qualified because it has the random sense, and "treasury" is not used for the estate. A standing note; left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. The terms of the spawner row go to the doc.go glossary before use (Phase 2); Spawner leaves notYetTerms of glossary_test.go.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The terms of this row go to the `doc.go` glossary at the start of Phase 2, before use: viability, steady state, warm start (already there), surplus factor, activity, start capacity, mean factor, net vector, reference programme, labour share to subsist, available work share, nominal programme, census (balanced), certificate, seed price (as the solver's), drift, residual, supply gap, lean reserve, virtual start offset, lane. "Lane" is qualified (the lane of the solver is not the lane of a credit round or of a merchant's lane) and "census" is qualified (balanced census). The note stays open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the terms of the row (Step, Tick boundary, Phase, Position, Entry (of a tick), Failed world, In-step guard, Market record, Snapshot row, Fan-in) are in the `doc.go` glossary before the code uses them. "Run" and "Snapshot" stay in `notYetTerms` and are added in Phases 2 and 9; "World" gains `WorldParams` in Phase 2; "Executor" stays the job's. Standing; left open.
 
 ### N-018 Unverified evidence
 
@@ -251,6 +253,7 @@ PR description.
 
 - **Update (2026-10-13, minor gaps of the Stage 0 audit closed, uncommitted):** the audit's minor gaps are closed, each with a mutation check on a copy. Guards added: an import guard (stdlib and layer rules over every guarded file), a glossary guard (architecture.md 3.2 terms and the declared types against `doc.go`), a toolchain pin (`go 1.25`, no `toolchain` line), doc-comment contract phrases (`Observer`, `WithSeed`), a panic guard (a `panic(` must say "invariant"), the staged event catalogue deferral table, and a reason-constant cross-read against the specs; tests for every count bound (24 over-by-one cases, `MaxYields` new), the path cap of `ValidationError`, the declared sentinels, `FuzzKey` as a bijection per tick, the loader's read limits, the six defect overlays over cold and warm layer sets, the pinned pack hashes, and `FuzzLoad` classifying the `Validate` result. One defect found and fixed: `config.Parse` returned a partly mapped `Config` beside its errors, and now returns the zero `Config`. The five-minute fuzz runs are done (above). Nothing is committed. **Still owed**, unchanged: the items of the update of 2026-10-12 (Stage 0 built) other than the fuzz runs; N-224 lists the guards a module PR must update.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The glossary, the sentinels and the layout of this row are done as above; the CI and the ADR acceptances stay plan 0's.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read: the layout of this row's files is already in architecture.md 2.6 and `AGENTS.md` (N-287); nothing to add. Left open.
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -303,6 +306,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: `EstateMarkdown` 500 stays a labelled placeholder (N-015); no test of the estate row asserts a default as stable. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Every SPN default stays a labelled placeholder; no test asserts one as stable.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is a start, not a stability claim (`spec-viability.md` 13.1); no test of this row asserts a default as stable.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row sets no default and asserts no number of the economy.
 
 ### N-028 Can the target-income rule make a shortage worse?
 
@@ -728,6 +732,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: a process note. Applied in its lesson: the shared files (this file, the specs, the roadmap, the index) are edited by small edits after a re-read, this file was read in chunks, and the shell-quoting search of `doc/` named under Traps was run after the change. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Process note; the plan was aligned with siblings only through the coordinator.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. Process note; this plan was written beside five others and reads only their contract.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. Process note: the shared files (`doc.go`, `spec-config.md`, `spec-world.md`, this file) are edited by targeted edits after a re-read, this file was read in chunks, and the shell-quoting search of `doc/` named under Traps is run after the change.
 
 ### N-107 New money faucets and sinks start from MON
 
@@ -863,6 +868,7 @@ PR description.
 - **Update (2026-10-13, EMP, CRD, CAP, RSK, SAV, TEC, PLC, INS):** which parameters are the flag `d` of CLB: EMP, CRD and INS take no word of the world's stream (EMP's ties are by the stateless key `K(t, id)`), so none of their parameters is `d`; RSK: a pair across a scale of 0 is misaligned from there (the row takes no word at 0) and a sweep above 0 stays aligned (`spec-risk.md` 11.4, N-179); SAV takes no draw but a target above the reserve lowers the budgets that admit an order (WLD 7.3.1, D7 and D8), so every field carries `d` and a pair is exact only until some household's target exceeds its reserve (`spec-saving-and-investment.md` 9.2); TEC takes one word at construction only when a field has `DiscoveryBP` above 0 (D16), so a pair is aligned from construction except one that turns discovery on or off (N-203); PLC's built-ins draw nothing and a consumer's policy that draws is PLC-A7 (a case of L120). The modules whose presence or binding shifts a count (POL, FIS, ORG) are N-162.
 - **Answer (2026-10-12, ADR 0008):** per-purpose streams are adopted, keyed by (seed, site, tick, entity): a count change moves only the later draws of its own stream, so two runs of one seed are aligned by construction and diverge through state only; the fingerprint of EXP 7.3 and the flag `d` of CLB 4.2.1 go. The note stays open until WLD 7, EXP 7 and CLB 4.2.1 are rewritten (N-214); the pairing gain is still a measured number (EXP 7.4), now of the state's divergence alone.
 - **Update (2026-10-12, Phase 1):** the WLD part is applied: WLD 7.6 says paired runs are aligned in the draws by construction (model: 98.00% of later draws differ under the positional stream, 0.01% under keyed streams). Open for EXP 7.3 and 7.4 (the pairing gain is measured on the divergence of state alone) and CLB 4.2.1 (the flag `d` goes).
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for EXP, STB and CLB. The world adds no draw (FR-WLD-062); the draws are keyed (ADR 0008).
 
 ### N-125 A snapshot is a function of saved state
 
@@ -877,6 +883,8 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** applied to the new field: `RoleRow.ClampedHouseholds` is derived from the saved records (the count of rings holding a field at the bound is rebuilt on restore and never saved) and the clamp run joins the diagnostic runs of `spec-checkpoint.md` 4.2 tag 7, so a restored world's snapshot and logs equal the original's (FR-OBS-043). Left open for the other modules.
 
 - **Update (2026-10-18, observability review of plan 1-8):** applied to the new field: `Markets[].EstateAtFloor` is the units of the estate's listings priced at the resolution floor, derived from the saved listing rows (`estates.rows`, checkpoint tag 8) and the lots the estate holds, so a restored world's snapshot equals the original's. Left open for the other modules.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the slice: every field of the slice's snapshot (D146) is a function of saved agent, ledger, market and welfare state, and the market record's report and window are saved state that the world holds in one place (Phase 3). Left open for CHK.
+- **Update (2026-10-20, observability review of the branch of plan 1-11):** applied to the field the review adds to the slice's snapshot: `MarketRow.EstateAtFloor` (appended last, a `Quantity` count, omitted at 0) is derived from the saved listing rows and the lots the estate holds, so a restored world's snapshot equals the original's once the checkpoint row saves tag 8. Left open for CHK.
 
 ### N-126 A new event or `Warn` adds a row
 
@@ -900,6 +908,8 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The row declares no event and no Warn; the staged catalogue test is unchanged.
 - **Update (2026-10-18, observability review of plan 1-9):** applied: the spawner row adds no event and no `Warn`, one appended field (`EntryLimited.Stranded`), three metrics (`economysim.household.entries` from `EntryLimited.Entered`, and the snapshot gauges `economysim.role.expected_ratio` and `economysim.role.viable` from the existing `Roles[].ExpectedRatioBP` and `Viable`) and one attribute value (`stranded`) (`rules/observability-and-logging.md` 4.3, 5.3, 5.3.1, 5.4.1; `spec-observability.md` 4.1, 6.2, 6.5, FR-OBS-102, 103). FR-SPN-035 now says the event is emitted when any count is above 0, as `limited()` does. Left open for later rows.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. This row adds no event and no `Warn`: the solver logs nothing and the warnings are the existing "configuration warning" line with `rule` and `path` (CFG 7.2). Each new warning rule (`region_not_self_sufficient`, `subsistence_exceeds_expected_work`, `target_above_surplus`, `storage_gap_input`, `viability_check_skipped`, `cycle_cost_gain`; `raw_without_source` already exists) is a row of CFG 7.4.2 already. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no event and no `Warn` row (all are rows already); the catalogue test is staged and Phase 10 moves the world-emitted events out of `notBuiltEvents` only if they were listed.
+- **Update (2026-10-20, observability review of the branch of plan 1-11):** applied: the review adds no event and no `Warn` and two snapshot-fed gauges that give existing `Warn`s a metric: `economysim.welfare.clamped` (`Roles[].ClampedHouseholds`, the counterpart of row 26 of `spec-observability.md` 7.3, whose `Warn` fires only on the first tick of a run and then every tenth) and `economysim.role.agents` (`Roles[].Agents` by role and region, the counterpart of "role extinct" and "group below floor", which the event-fed `economysim.agent.count` by role alone cannot show for one region). Rows in `rules/observability-and-logging.md` 5.3 and 5.3.1 (fresh tag) and `spec-observability.md` 6.2.2, FR-OBS-104 and the series bound of 6.5.2 (+200, about 7 700). Both read snapshot fields that exist; `otelobserver` (Stage 2) builds them. Left open for later rows.
 
 ### N-127 Event classes at the observer
 
@@ -908,6 +918,7 @@ PR description.
 - **Note:** The order and trade classes are 92% to 99% of the events of the first consumer's world and cost a boxing allocation each. `WithObserver(o, classes...)` would build and deliver only the classes an observer wants, and with no observer wanting a class the world would build none. It changes `architecture.md` 6.2 and the options of `spec-world.md` 4.1. Not adopted: no measure shows the placeholder 6% of a tick to matter (N-015). At the first slice, measure the allocation per event, then decide. A sweep with only snapshot measures registers no observer and builds no event (`spec-experiments.md` 3.4.4), so it is not the case that needs the option.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no event; the one `Warn` is not an event class. Left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. No event here.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row measures nothing; the baseline of NFR-OBS-002 is row 12's.
 
 ### N-128 A hosted per-agent field is saved once, in the agent record
 
@@ -923,6 +934,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: not applicable to the estate row: the listing prices are per region in CHK section 8 (tag 8), not an agent field, and the estate has no agent record (FR-CHK-048). Left open as a standing rule.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Privation and RoleSince are the agent's hosted fields; the renewal carry and the three runs are the world's (D118, N-265).
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is configuration; the solver has no state (`spec-viability.md` 18).
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world holds no per-agent field; the ring, the job and the residues are the agent row's hosted fields.
 
 ### N-129 A stateful extension is one instance per world
 
@@ -942,6 +954,7 @@ PR description.
 - **Update (2026-10-16, observability review of plan 1-5):** item (6) is still not adopted. `RecipeExecuted` gains `Overflow` (the part of `Disposed` that is not a discard output), which is not wear and changes no value: `Outputs` and `Disposed` keep their meaning, so value added still reads `Outputs` gross of `Disposed` (`spec-production.md` 14.1, FR-PRO-053). Left open.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read, both sides: `IncomeLast`, `ReliefLast` and `CostLast` are not adopted in version 1; the welfare summary returns the three sums as unexported values so the ask costs one snapshot field if adopted. OBS 5.3.4 gains `ClampedHouseholds` only and adopts none of the six asks. Item 2 (wear units) is the ledger's. Left open.
 - **Update (2026-10-17, observability review of plan 1-6):** read: the three gauges added for the welfare row (`welfare.ratio.households`, `welfare.floor_held`, `wage.observed`) read `RatioHouseholds`, `HeldByFloor` and `WageObserved`, fields that already exist; none of the six asks is adopted and the income, relief and cost sums stay declined. `economysim.wage.observed` is the per-role observed wage, not the pooled regional wage the cost anchor reads. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read: the row emits `WearApplied` at P8.2 (item 2) and adopts none of the other asks. Left open.
 
 
 ### N-131 Not in version 1: reopen when a consumer asks
@@ -1040,6 +1053,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-employment.md` 4.1.3 and open question 4.
 - **Note:** `Work` is called only for a free agent, so an employer with a job in progress cannot post a vacancy. Posting from `Trade`, or calling `Work` for its `Hire` only, would change WLD 6.4 and AGT 6.2.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `JobRequest` has no `Offer` or `Hire` in the slice. Left open for EMP.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (EMP, Stage 3). `Work` is called only for a free agent at P2.5, as written.
 
 ### N-145 Profit with no outlet limits hired employment
 
@@ -1109,6 +1123,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-settlements.md` 7 and `spec-land.md` 5 (the rent step; one decision, two sources).
 - **Note:** Settled by ADR 0006 (`Narrows: 0001 decision 7`): `spec-world.md` 9.4.1 forbids a rate, share, probability, period or window to be a function of a count of households, and names three exceptions: a derived structural rank, a count of households of one region against a place count (the settlement class and a body's places), and a quantity local to one endowment (the rent step reads the units unserved at one endowment; BEL's unmatched units are the precedent). `spec-stability.md` 5.1.3 and FR-STB-020 carry the same sentence. The note stays so that a later spec that wants a fourth exception reads it first. The fallback for the settlement class (flags only: drop `Limits`) is `spec-settlements.md` 7.4.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: no new exception. The "work floor binding" `Warn` compares held households with half the role's households, a diagnostic threshold and not a rate, share, probability, period or window of a decision, so WLD 9.4.1 is not edited. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read: the world reads no count of households into a rate (the "work floor binding" and "households unfed" diagnostics compare counts with a threshold, which is not a decision), so WLD 9.4.1 is not edited. Left open.
 
 ### N-155 Reserved hooks of the settlement class
 
@@ -1144,6 +1159,7 @@ PR description.
 - **Update (2026-10-13, Phase 1 of the ledger row):** what the ledger does here, so that the readers do not assume otherwise: a flow between two non-boundary accounts is attributed to the region of the debited account (`spec-ledger.md` 3.5, FR-LED-053), so a tax paid by a household of A to a treasury seated in B is in A's flow totals and a payout from that treasury to a household of A is in B's. The ledger's audit takes the treasury term of the sectoral identity by account kind (`spec-ledger.md` 9.3; `plans/plan-phase-1-1.md` Phase 6, zero until a module opens a Treasury account). Nothing in the ledger carries the reconciling item; it stays IND's and OBS's.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). No treasury is involved. `Discard`'s two flows are attributed to the account's region like every other goods flow (FR-LED-053, `spec-ledger.md` 8.2.3), so a reader of the regional identity needs no extra term for them.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the new snapshot field is a count of households and not a money flow, so it takes no part in the regional money identity. Left open for FIS and IND.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (FIS, IND). The world reports `Pending` and `Construction` as the ledger gives them.
 
 ### N-160 Readers keyed by jurisdiction use one combining rule
 
@@ -1177,6 +1193,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** applied for the estate row: code and comments say "pool" for the estate account and never "treasury" for it. Left open for its owners.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The row says "pool" only.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the word "treasury" is not used here. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row says "pool" for the estate account and never "treasury".
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1403,6 +1420,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` 4.1.4.
 - **Note:** Measure at the first slice; an incremental form needs a monotone queue saved as state.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: not a solver concern. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. Phase 10 records the allocation count of a site call; nothing is measured in time.
 
 ### N-199 `HurdleSpreadBP` rests on one invented model
 
@@ -1448,6 +1466,7 @@ PR description.
 - **Note:** The owners' setters have an internal form that PLC calls inside the step at P0.3a, before any position that reads a slot, with the cause `policy`; the public call keeps `ErrInStep` for a caller inside a step. The last write wins; an actor writes only the keys it returns, and a `schedule` returns its value at every decision, so it re-asserts over a consumer's call. Accepted by ruling F8(b) (`spec-world.md` 8.1.1, 3.6.3, 8.2.2).
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. The yield-shock slot is a story shock and PLC offers no lever for it (`spec-policy.md` 6.3.3), so it has one writer: the row's setter is unexported and validates [0, `MaxYieldBP`]; the public call is INT's and the sparse shock list is written in tag 6.
 - **Update (2026-10-17, config/world/scale edits):** read; the two-writer slot rule is unchanged. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slots are Stage 2 and P0.3a is a module position; `beginStep` leaves the place.
 
 ### N-205 A new slot is a candidate lever kind; the kinds `rate`, `rent` and `legal` are reserved
 
@@ -1528,6 +1547,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate draws no random word (`spec-estates.md` 2.7.4: its orders take a tie-break key in the clearing like any order), so it adds no site. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The default draws nothing (FR-SPN-029); a consumer's Decide gets the stream (siteSpawner, t, region).
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the solver draws nothing (FR-VIA-020, FR-VIA-040). Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the world's sites (D155): D1, D7, D8 and D10 are called with the keys of WLD 7.3, D5 `siteTrade` before every `Trade` and D3 `siteWork` only for a consumer's `Work`; the draws of D2, D4, D6, D11 to D15 and D17 are modules'. Left open for the other owners.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1544,6 +1564,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row adds no site; D1 is `siteConstruction`, D10 and D12 are the callers', and `internal/welfare` takes the creation word and names no site. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no site and no constant. Left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no site, no reseed. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read: the row adds no site and no constant. Left open.
 
 ### N-217 D5 binds every module's change
 
@@ -1563,6 +1584,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. Nothing appends to the configuration, an event or a snapshot row; the pinned hash and testdata/golden/off/ cannot move.
 - **Update (2026-10-18, observability review of plan 1-9):** applied to the one field the review appended: `EntryLimited.Stranded` is a count added at the end of the event, never a typed ID, and is omitted from the golden rendering at 0, so a world with no stranded household renders as before. No configuration field is added; the pinned hash does not move.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The bounds and the sentinels are appended in order; no `Config` field, event or snapshot row is appended; `TestHashConfig_ReferencePinned` must not move, and Phase 7 checks it. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Applied: the row appends no configuration, event or snapshot field to anything that exists; the snapshot is new and declares slice fields only; the pinned hash and `testdata/golden/off/` do not move (the rename of D140 changes no hash input: the field id of `Config.World` is 1 and the ids of its fields are unchanged). Standing; left open.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -1592,6 +1614,7 @@ PR description.
 - **Note:** A site call costs five finaliser evaluations (six with a fourth word) and one `PCG.Seed`, and is allocation-free (checked with `testing.AllocsPerRun`). The first slice should measure it against the cost model of `spec-scale.md` 6 and say whether the per-agent sites (D1, D3, D5, D8, D10) need a cheaper key.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row adds no draw site. Left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no per-agent key. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. Phase 10 records the allocation count of a site call; nothing is measured in time.
 
 ### N-224 Stage 0 guards and what they pin
 
@@ -1613,6 +1636,7 @@ PR description.
 - **Rule ledger:** the built, deferred and module rows of CFG 7.3 and 7.4.1 are in `plans/plan-phase-0-foundation.md`, "Rule ledger".
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. Phase 2 deletes Spawner from notYetTerms; Phase 4 extends TestConstants_Values and adds the contract-phrase test for the Spawner doc comment.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. `validate_counts_test.go` and `errors_test.go` gain the checks of the two bounds (read as constants) and the four sentinels; `import_guard_test.go` gains the rule that only `internal/steady` imports `math/big` in its non-test files (seven existing test files use it as an exact oracle; architecture.md 3.5 restricts computing, not testing); `determinism_guard_test.go` must pass for the new files. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: `guardedFiles` is a directory walk and needs no edit; `deferredCore` loses nothing (the events of the slice are built); `notYetTerms` loses `Run` in Phase 2 and `Snapshot` in Phase 9, each with its glossary entry in the same change. Left open.
 
 ### N-225 The ledger's reason constants are internal numbers
 
@@ -1628,6 +1652,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-ledger.md` 3.4.2 and `spec-world.md` 5.2 (Phase 1 of the ledger row).
 - **Note:** `spec-world.md` 5.2 had rows for the built-in reasons (1), the declared flows (2) and the `outside_*` reasons (3), and none for the other faucet and sink reasons that a module owns: `want_consumption` (DEM), `haul_use` and `transit_use` (TRN) and `loss` (RSK). Row 3a is added: after the `outside_*` accounts and before the estates, in the order of the `Modules` pointers, and within a module as the built-in group is ordered (money reasons first, then goods commodity-major). This is a proposal of the ledger row, because the account IDs of a world with such a module on depend on it and no module is built yet. Each of the three module specs confirms it, or says another place, in the change that builds its file (architecture.md 2.10.5: appended, never inserted); until then the position is not saved by any checkpoint. A reason that a module has in the goods form only creates one account per commodity, as the built-in group does.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). `Discard` uses only boundary accounts of the built-in group (`recipe_output` and `disposal`, created at construction in the order of `spec-ledger.md` 3.4.2); it adds no account and no module reason.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slice has no module reason: the world creates the accounts in the order of WLD 5.2 rows 1, 4 and 6 and leaves rows 2, 3, 3a, 5 and 5a to the modules.
 
 ### N-227 Edits to CRD from the ledger row: `MarkOverdue` and a `Settle` of 0
 
@@ -1654,6 +1679,7 @@ PR description.
 - **Update (2026-10-16, observability review of plan 1-4):** applied in OBS and BEL: the metric `economysim.belief.outcomes` (the denominator of `belief.at_bound`, which the adapter holds across a tick with no event while the run resets) and the `outcomes` attribute of the `Warn` now let a reader see both points, a stale pinned gauge and a 1-of-1 pin; `economysim.belief.limited` counts `Conflicts` and `Clamped` (`spec-observability.md` 6.2.1, FR-OBS-094; `spec-beliefs.md` 12.2, 12.4). The world row must still call `beliefs.NextRun` for every market every tick and emit `BeliefsUpdated` before the `Warn`. Still open: whether the double count matters.
 - **Update (2026-10-17, plan 1-11 Phase 1):** `spec-world.md` 6.1.13 now says the world advances the bounded `Warn` runs for every cell every tick (this covers the `BoundRun`; the name `beliefs.NextRun` is not written there). Still open: whether the double count matters, and the code of the world row.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the run of the "price beliefs at bound" `Warn` is the world's (row 11 calls `BoundRun` for every market every tick); `Revise` returns the belief and discards the result. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (D156, Phase 6): `beliefs.NextRun` is called for every market every tick and `BeliefsUpdated` is emitted before the `Warn`; `spec-world.md` 6.1.13 states the call. Whether the double count of a pinned market matters stays open for S01 and S04 (row 12).
 
 ### N-232 The job and the residues live on the agent; what the agent row must call
 
@@ -1665,6 +1691,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row touches neither the job nor the residues; a role change's goods move by `acceptGoods` (whole lots), independent of the residue reset. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The role change resets the residues in the executor's one role-change step.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for the agent row. `virtualStartOffsets` and `warmJob` are what the world row calls.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 7 (it stores the fields); the world calls the steps at the positions of WLD 6.4.
 
 ### N-233 `Discard` and `Holding` exist: what each is for
 
@@ -1679,6 +1706,7 @@ PR description.
 - **Note:** WEL 2.1.4 and FR-WEL-003 said the wear cost was summed over executions "with the weight of the executor". Read literally beside FR-SCL-007 (the tools a job requires are the per-household amounts times the weight) that counts a cohort of weight 3 running 2 executions as 6. Both are now written once: one ceiling per execution, then the sum over the executions, with no second factor (an execution is one household's and the `k` executions of a job are at most the weight). The owner may rule the other reading (the weight is a factor and `n` is per household): then `n` is 1 in the welfare scratch and only that row changes. Check with the production row's wear facts (`plans/plan-phase-1-5.md` D51), which hand over `n` executions started, and with `spec-production.md` 4.4.2 (each execution wears its own item).
 - **Update (2026-10-17, plan 1-6 exit gate):** settled in code: `welfare.WearCost(wearPerUse, price, durability, executions)` takes the executions started and no weight, and `welfareScratch.addWear` merges rows by (commodity, wear per use), so the reading above is what is built; the other reading would change only the `n` the world row hands to `addWear`. Left open for the owner's ruling and for the world row's call.
 - **Also read in the same change and left open, not touched by the welfare edits:** N-229, N-230, N-239, N-240 (clearing and beliefs registration, runs and books), N-242 (the production observability the world row emits), N-243 (the Codacy gate: a PR from the welfare rows passes Lizard and uses the spaced separator row in a Markdown table).
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply as built: the world hands `addWear` the executions started (D158).
 
 ### N-235 One combined architecture.md edit for the fan-in and admission touch points
 
@@ -1703,6 +1731,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** parts (1) and (2) are applied: FR-AGT-011 (the product by the weight, checked) and FR-AGT-010 (an agent of a role with no recipes requests no job) are written in `spec-agents.md`. Part (3), the items of the wants, is the demand module's PR, so the note stays open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: not touched by the estate row (it multiplies no upkeep by a weight). Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for the agent row; this row uses only the cause test Money < Upkeep * w.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 7.
 
 ### N-237 A job stores its effective factor; its start tick is derived
 
@@ -1712,6 +1741,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** the lines were checked in the production row's Phase 1: `spec-production.md` 5.1.1, 14.1, 15 and FR-PRO-041 and `spec-checkpoint.md` 4.2 tag 6 still carry `Yield` after `Principal` and the derived `StartTick`, and the two sentences below the table of 14.1 are intact. Left open for the agent row (stores the field), the checkpoint row (writes tag 6) and the warm-start job (sets it).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row edits `spec-checkpoint.md` 4.2 tag 7 and not tag 6 (the job, `Yield`). The tables are edited by several rows, so each re-reads just before the edit. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent holds `job` by value, `Yield` included; the world row stores it at P2.7; the warm-start job and the checkpoint are others'. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 7 and Stage 2; the world stores `Yield` with the job at P2.7 and the warm-start job sets it from the virtual season (Phase 3).
 
 
 ### N-238 One agent's ordinary and named-lot asks of one commodity must not share a book
@@ -1726,12 +1756,14 @@ PR description.
 - **Raised:** 2026-10-15, plan 1-3 as built (`internal/clearing.Average`, `Check`).
 - **Note:** `Average` does not look at the owner of an offer (plan 1-3 Phase 2 and D31), so one agent holding a crossing bid and a crossing ask in one book is paired with itself, and the check of `spec-clearing.md` 8.2 fails the step with `ErrInvalidTrade`. The guard is deliberately in the check and not in the matching: skipping the pair would change which units trade and the keys drawn per order. Who must avoid it: the strategy rows (an ordinary agent places one side per commodity, `spec-agents.md` 6.5.2, 7.3.3, so it cannot), the world's builders of pseudo-agent orders (the estate places asks only, a counterparty one side, and the treasury of `spec-fiscal.md` 9.4 places a bid strictly below its ask, FR-FIS-053, validated at construction with `ErrFiscalShape`). A module that lets one agent place a bid and an ask of one commodity adds the strict ordering of the limits to its own validation, and a test with the two sides of one agent through `clearMarket`. `spec-clearing.md` 8.2 says so.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied: the default places at most one order per commodity (`spec-agents.md` 7.3.3: a bid if there is a gap, else an ask), so it cannot trade with itself; Phase 6 of the plan asserts one order per commodity for every state of a table and by a fuzz. Left open for the pseudo-agents and the modules.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the step fails with `ErrInvalidTrade` and the world is failed (D151); the test uses a faulty `Clearing` fake (Phases 5 and 10).
 
 ### N-240 The book holds its entries and filled units; the world's scratch does not
 
 - **Areas:** CLR, WLD
 - **Raised:** 2026-10-15, plan 1-3 as built (plan A2 said the scratch holds them).
 - **Note:** The admitted entries of a market and the units filled per order live in the `book` (`entries`, `fill`), and `clearScratch` holds only what one market step needs and discards (the split sides, the fills, the matches, the lot read, `Check`'s `Sums` and `Index`). Reason: `spec-world.md` P3.2 admits every market before P4.1 clears any, so many books hold entries at once, and a scratch that held them would be overwritten by the next market's admission; and the outcomes of `spec-clearing.md` 7.3 read the filled units after every market has cleared. The world row owns one `clearScratch` per world and one `book` per market, and keeps each book's `fill` until the outcomes are delivered. `spec-clearing.md` 8.3 says so.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the world owns one `clearScratch` and one `book` per market and keeps each `fill` until the outcomes are delivered (D154, Phase 6).
 
 ### N-241 The duplicate-order scan is linear: O(n^2) in the orders of one book
 
@@ -1747,6 +1779,7 @@ PR description.
 - **Note:** The production row builds the values and emits nothing; the world row emits them, behind the "observer supplied" flag. It must: (1) make one `refusalTally` per world (`newRefusalTally(regions, recipes)`), call `add(region, recipe, reason, weight)` where a start returns `k = 0` with a reason, for a free household's job request only (not a halted request, a trainee, an own-use start or a hire), and call `flush(tick, emit)` once at P2.8a after `ProductionHalted`; a later module's reason is a new column of the tally and a new count field of `RecipeRefused`, appended in the master order, and `add` panics on a reason it does not count until then; (2) set `book.anchor` from `productionScratch.unitCost(region, commodity)` before each market's clearing, so `MarketCleared.CostAnchor` is the anchor in force for the tick; (3) build `RecipeExecuted` with `recipeExecuted(outs, disp, over, ...)` and feed the `Warn` "recipe output disposed" from `Overflow`, not from `Disposed`; (4) keep the allocation test of the production phase at zero with the tally. The adapter derives `economysim.recipe.in_progress` from `Jobs[].Executions`, which the snapshot row builds from `addPending`.
 - **Update (2026-10-17, plan 1-11 Phase 1):** `spec-world.md` 6.1.13 now lists the `refusalTally` flush at P2.8a, the cost anchor set on the book before each P4.1 clearing, and the advance of the bounded `Warn` runs (points (1) and (2) in part); points (3) (`recipeExecuted` and the `Overflow`-fed `Warn`) and (4) (the allocation test) are not in that list. Left open until the world row merges.
 - **Update (2026-10-17, observability review of plan 1-7):** point (1) is widened (N-308): the world also adds to the tally each free household whose work report names a blocked recipe (`workReportBuf.blocked`, the first recipe of the view that could not run, with the view's reason), once, under that recipe and reason, because the default strategy never requests a recipe the view says cannot run and so never reaches the refusal of a start. The same pass fills `Rested` and `NoRecipe` of `ProductionHalted` from `rest` and `reason == no_recipe`. Left open until the world row merges.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply in part (D157, D158, Phases 4 and 5): the `refusalTally` per world, `add` at a refused free household's request and `flush` at P2.8a (and the blocked recipe of the work report, N-308), `book.anchor` set before each clearing, `RecipeExecuted` built with `recipeExecuted(outs, disp, over, ...)` and the "recipe output disposed" `Warn` fed from `Overflow`, and the allocation test of the production phase at zero with the tally. Points (3) and (4) are not yet in `spec-world.md` 6.1.13 (the list there has points (1) and (2)); left open until the world row merges.
 
 ### N-243 Follow-up of the Codacy gate on plan 1-5
 
@@ -1763,6 +1796,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: the estate row's files stay under the Lizard limits by one concept file, `estates.go`; the module half is appended after a marked comment line. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply to this row's files: Lizard before every push, the spaced separator in Markdown tables, the new root file in the layout.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The Lizard limits (complexity at most 10, at most 8 parameters, files of about 500 lines) are a design input of Phases 2 to 6; `lizard -l go -C 10 -a 8 -L 100 -w` runs before each push; `viability_check.go` and `viability_table.go` are named in the layout (architecture.md 2.6, `AGENTS.md`); markdown tables of the plan use the spaced separator. `internal/checked.muldiv` (CCN 13) is untouched unless this row edits it. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: each file of the row passes `lizard -l go -C 10 -a 8 -L 100 -w`; the Markdown tables of the row use the spaced separator row; the files are in the layout (N-287).
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -1772,6 +1806,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied in `spec-agents.md` 3.1 and 3.2 (module slices, never fields of the agent type). Kept open until the Phase 8 gate of plan 1-7 shows the agent row is built that way.
 - **Update (2026-10-17, plan 1-7 Phase 8):** the gate shows it: `agent.go` holds only the core fields (D81, `TestAgent_HoldsNoMoneyQuantityOrRegion`) and no module field. Kept open as the standing rule for each module's PR.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read. The world holds no per-agent field of a module; row 7 builds the unexported agent with the fields no module owns, and the checkpoint writes the rest (Stage 2). Left open.
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1782,6 +1817,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 8):** built; the group and its round trip against `beliefParams` are tested (Phases 5 and 7). Kept open for the modules.
 - **Update (2026-10-17, plan 1-7 Phase 1):** checked against D82 and the Phase 1 text of `spec-agents.md` 6.4.1: the group holds the fifteen fields of `beliefs.Params` only (not `MaxPrice`, not `PriceWindow`); a test in Phase 5 asserts the group converted back equals `beliefParams` field by field, so the two cannot drift.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the slice: `fillCore` (row 7, called by `fillAgentView`) fills the belief group of `AgentView` from `beliefParams`, converted inline; the world builds `viewCtx` (`refreshViewCtx`, Phase 4) and fills the belief group of `OutcomeView` itself in P5.4; a module appends its tunable to the same group. Left open.
 
 ### N-246 What the world row must do for the strategy streams and the draw count
 
@@ -1791,6 +1827,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** `spec-agents.md` 7.3.5 now carries the D93 rules: the candidate rules (bid `Gap > 0`; ask `Gap == 0` with `Surplus > 0` or `Expiring - Reserve > 0`), decided by the view alone and never by affordability, and a tool the role does not make is not an ask candidate. The world's keying of the streams is the world row's code; left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** checked against D93: the ask quantity is `max(Surplus, max(0, Expiring - Reserve))` (the expiring units are part of the stock, so the two are not added), and a bid candidate whose limit cannot buy one unit spends its word and forms no ask; the stream is keyed `(siteTrade, tick, agent)` before the call and the default reads it through the `*rand.Rand`, one source word per draw. The tier combination of D98 (only the first tier to buy may lower the order's limit) is written in `spec-agents.md` 7.5.3 and needs nothing from the world.
 - **Update (2026-10-17, plan 1-7 Phase 8):** the default is built to D93 and D98 (`TestTrade_CostAndDrawsDoNotDependOnTheWeight` shows the word count is the same at weights 1, 7 and `MaxWeight`; the many-state property of Phase 7 shows no admission rejection). Still open for the world row: the keying of the streams and the call position of `workReport`.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (D155): the stream is keyed before each call to an extension, `siteTrade` before every `Trade`, `siteWork` only for a consumer's `Work`, and for `Revise` the outcome's word `Draw` is taken first from `(siteOutcome, tick, agent, commodity)` and the same `*rand.Rand` is passed on; the creation draws are `drawCreation`. Left open for row 7.
 
 ### N-247 `Directed`'s state methods and the directive in the checkpoint wait for the checkpoint row
 
@@ -1829,6 +1866,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** the list gains `acceptUnits` for a weight reduction's goods and the stale-row drop at P5.3 (D102, D106); the world calls `admitted` only for an ask that `book.admit` accepted, so a rejected ask is not marked down (D103). Left open for row 11.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The calls the executor makes are listed in Consumes; N-266 lists what row 11 calls for the spawner.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the estate is reached only through `estates.go`, at the positions of the note (Phases 3, 5, 6 and 7); a text-search guard in Phase 7 fails a second ledger call on the estate account for money. Left open until the world row merges.
 
 ### N-284 The type `World` is the configuration section and the simulation
 
@@ -1836,6 +1874,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D140).
 - **Note:** `config.go` declares `type World struct` (the world-level parameters, `Config.World`), and architecture.md 2.2, 3.2, 6.1, 12.1 and `spec-world.md` 3.1 require the simulation type to be `World`. The plan renames the section type to `WorldParams` (and `DefaultWorld` to `DefaultWorldParams`) in its Phase 2 and keeps the field `Config.World`, the TOML table `[world]`, the hash ids and the owner-table scope cell "World" (the registry test maps the scope to the type). Phase 1 writes it into `spec-config.md` 3.7 and the glossary. **Answer (2026-10-17, coordinator): accepted** (the rules beat `spec-config.md` 3.7; the module is unreleased; no hash input changes). Still owner-confirmable (plan 1-11 O1).
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open, with what this row learned: row 11 renames the section to `WorldParams`; this row reads it through `Config.World` only (see the Consumes table of the plan).
+- **Update (2026-10-20, plan 1-11 Phase 1):** Phase 1 wrote the decision into `spec-config.md` 3.1, 3.7, 3.7.2, 5.1, 8.2.2 and 9.2 (the section type `WorldParams`, the constructor `DefaultWorldParams`, the field `Config.World`, the table `[world]` and the field ids unchanged) and into the `doc.go` glossary entry of "World" (Phase 2, with the type). Left open until Phase 2 renames the type and the README scope cells.
 
 ### N-285 The position table test is staged
 
@@ -1843,6 +1882,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D141).
 - **Note:** `testing.md` 6.8 and architecture.md 2.10.3 compare `tick.go`'s positions with the table of `spec-world.md` 6, which has about 70 positions of which most belong to modules built later. The plan gives the test the staged form of 6.7 and 9.7: an explicit `notBuiltPositions` list, failing on a stale entry and on a position that is neither called nor listed. A module's change deletes its entries and appends its guarded call. Phase 1 edits the two rules with fresh tags.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: `testing.md` 6.8 and `architecture.md` 2.10.3 already carry the staged form (`notBuiltPositions`, the `where` field, the owner rule, P0.2, the `go/parser` check of the straight line) and `spec-world.md` 6.1.12 states the same, so no rule file is edited and no tag changes. Left open until the test is written (Phase 4).
 
 ### N-286 The step is replayable from a test file
 
@@ -1850,6 +1890,7 @@ PR description.
 - **Raised:** 2026-10-17, coordinator ruling 2 and `plans/plan-phase-1-11.md` (D166).
 - **Note:** No hook in the production `Step`: every position is an unexported method of `World` and the non-position parts (the guards, `TickStarted`, `TickEnded`, the marking of a failed world, the tick advance) are unexported methods (`beginStep`, `endStep`) that `Step` and a replay in a `_test.go` file both call, so the per-position state hash of testing.md 7.1.2 needs no exported back door (architecture.md 10.2). A module's position method is appended with its guarded call.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: `spec-world.md` 6.1.12 and `testing.md` 7.1.2 carry the replay seam (`beginStep`, `endStep`, the position methods). Left open until Phase 4 builds it and row 12 replays it.
 
 ### N-288 What the world saves, and the diagnostic runs of its `Warn`s
 
@@ -1857,12 +1898,14 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D145, D156).
 - **Note:** The world keeps in one struct what a checkpoint must save: the effective seed, the next agent ID, the construction flag, the diagnostic runs of the bounded `Warn`s it owns (households unfed, price beliefs at bound, work floor binding, welfare record clamped, role extinct, group below floor, entry unfunded), so a resumed run logs as the original did, and the spawner's state per (region, role), which is result-affecting and not a diagnostic: the renewal carry and the "had an agent" bit (N-265, plan 1-11 D145). `spec-checkpoint.md` 4.2 places them by owner: the `BoundRun` in tag 4, the work floor and clamp runs in tag 7, the spawner's three runs and the renewal carry in tag 9; it lists no section for the run of "households unfed", which the checkpoint row decides. The tick counter is the ledger's. The row writes no encoding.
 - **Update (2026-10-17, checkpoint/world edits):** consistent with `spec-checkpoint.md` 4.2 tags 4, 7 and 9 as edited. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: the note already says the renewal carry and the "had an agent" bit are saved state and not a diagnostic run (D145). Left open for the checkpoint row.
 
 ### N-289 The slice's snapshot and `MarketState`
 
 - **Areas:** OBS, INT
 - **Raised:** 2026-10-17, `plans/plan-phase-1-11.md` (D146, D147).
 - **Note:** The slice declares the snapshot sections it has state for (the header, regions, roles, markets, jobs, the boundary, pending and construction rows) and no module slice; a module appends its rows at the end. `MarketState` is declared in `snapshot.go` because the snapshot needs it now; INT's query `Market` (Stage 2) returns the same type, so the two cannot disagree.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: the note matches D146 and D147. Left open until Phase 9.
 
 ### N-290 A module that adds a reduction cause appends its cause and its ledger reason together
 
@@ -1871,6 +1914,7 @@ PR description.
 - **Note:** In Stage 1 the executor of the spawner's plan accepts a `DecideReduce` only for the causes the default spawner emits (`starved`, `insolvent`, ledger reason `starvation`, SPN 4.1); any other cause is refused (counted in `EntryLimited.Refused`, `Debug` "decision refused"). A reduction's ledger reason must name what it is, so no reason is guessed now. The INT change (consumer-driven removal) and the POP change (`population`, reason `deaths`) each append their cause constant and their ledger reason together in their own change (architecture.md 2.10.5, append-only), and extend the executor's accepted causes and its refusal-table case in the same change.
 - **Update (2026-10-17, spawner edits):** the refusal `unsupported_cause` is written in `spec-spawner.md` 4.1.1 (line 180; checked last). Left open: INT and POP append their causes and reasons.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: the note carries no WLD, OBS or ALL tag, so no disposition is owed here; Phase 7 builds the accepted causes and the refusal. Left open.
 
 ### N-294 The checkpoint change adds the digest to the off-only golden once
 
@@ -1879,6 +1923,7 @@ PR description.
 - **Note:** `testdata/golden/off/one.txt` of Stage 1 holds `spec-reference-chain.md` 8.5 items 1 to 5 and no item 6 (the SHA-256 of the checkpoint at tick `T`): no checkpoint exists before Stage 2 and no line is reserved. The checkpoint change adds item 6 and moves the off-only files once, with the testing.md 7.2 explanation. The checkpoint is a core file and not a module, so architecture.md 2.10.5 ("a module that is off leaves no trace") does not apply to it. After that change the files are held by the module rule again.
 - **Update (2026-10-17, observability/roadmap edits):** applied in substance (REF 8.5 and the roadmap say item 6 is Stage 2). Left open for the Stage 2 checkpoint change.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read. No checkpoint item in Stage 1; the world adds none. Left open.
 
 ### N-295 The packs of REF 7.5 and 8.2 the slice cannot run
 
@@ -1887,6 +1932,7 @@ PR description.
 - **Note:** The invariants and determinism tables of REF 7.5 and 8.2 list `three`, `five`, `famine` (with the estates module part) and `one-demand`. They need regions, the `Estates` part and the demand module, so Stage 1 runs `one` and `second`, and `three` if the probe of Phase 5 of `plans/plan-phase-1-12.md` shows the Stage 1 world runs it (its regions do not trade, REF 16.2). The tests are table-driven: the stage that makes a pack buildable adds its row, and the rule of N-217 applies to the files it adds under `testdata/golden/all/`.
 - **Update (2026-10-17, observability/roadmap edits):** REF 7.5 lists the packs; left open for the `three` probe of plan 1-12 Phase 5.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read and applied: Stage 1 runs `one` and `second` (with `two` and `warm-two` for the interleave test only); no `famine`, `five` or `three` in this row's acceptance or scenarios. Left open.
 
 ### N-296 S01 leg (b) and every visitor wait for `AddAgent` and `Direct`
 
@@ -1894,6 +1940,7 @@ PR description.
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (O3).
 - **Note:** `integration.go` (`AddAgent`, `Direct`, `SetYieldShocks`) is Stage 2. In Stage 1 a shock of `scripts/` is applied between steps by the world row's unexported yield-shock setter through `export_test.go`, an exception to FR-REF-021 and FR-STB-014 (ruled by the coordinator, reversible); the visitor of S01 (b) is a skipped subtest that carries this note as its ID. The Stage 2 integration change replaces the seam by the public calls and un-skips the leg.
 - **Update (2026-10-17, observability/roadmap edits):** REF 7.1.3 states the seam. Left open until INT.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Read: the shock seam is row 12's. Left open.
 
 ### N-297 The per-position hash replays the step through unexported methods
 
@@ -1902,6 +1949,7 @@ PR description.
 - **Note:** The test-only state hash of testing.md 7.1.2 adds no hook to production code (architecture.md 10.2). The world row keeps every position of `tick.go` an unexported method of `World` and factors the non-position parts of `Step` (the guard, the tick advance, the `TickStarted`/`TickEnded` bracketing, the failed-world marking) into unexported methods that `Step` and the replay in a `_test.go` file both call. A module that adds a position adds its row to the table and one entry to the test's row-to-method map; a position with no method, or a method with no row, fails the test. A guard test compares the replay with a plain `Run`.
 - **Update (2026-10-17, config/world edits):** the WLD half is applied (the position test and the `beginStep`/`endStep` seam are in `spec-world.md` and testing.md 6.8). Left open for row 12.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (D166): every position is an unexported method, `beginStep` and `endStep(err)` are the non-position parts, no hook. Left open for row 12.
 
 ### N-298 Which files of `expected/`, `bands/` and `scripts/` exist, and who creates them
 
@@ -1922,6 +1970,7 @@ PR description.
 - **Raised:** 2026-10-17, Phase 1 of `plans/plan-phase-1-12.md` (Phase 8).
 - **Note:** To be measured by Phase 8 and 9 of the plan: the allocations of a full `Step` of the pack `one` with the default logger and observer (the baseline constant of NFR-WLD-001 and NFR-OBS-002) and the time per tick. It is the measurement N-127 (the allocation per event) and N-222 (the cost of a reseed at every draw site) ask for at the first slice, and the first check of the cost model of `spec-scale.md` 6.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 12. This row's allocation test asserts the call sites only and its benchmark reports (Phase 10).
 
 ### N-274 The producer of the warm documents is not in the repository
 
@@ -1938,6 +1987,7 @@ PR description.
 - **Note:** The viability programmes run in `Validate` (phase 6) and in `Warnings` (gated on a clean structure). `NewWorld` calls both, so the work is done twice. The unexported `checkViability` returns the errors and the warnings at once; the world row may call it once. Phase 7 measures the cost on `five`.
 - **Update (2026-10-17, viability edits):** `spec-viability.md` 21 now has one `checkViability` returning errors and warnings together. Left open for the world row and the Phase 7 measurement.
 - **Update (2026-10-18, plan 1-10 Phase 7):** measured on `five`: `Validate` 0.59 s, then `Warnings` 0.46 s (1.05 s in all; `BenchmarkValidateFive` runs the two together at 0.85 s a pair, 331 MB), against 1.37 s for one pooled `SolveSteadyState`. `NewWorld` calling both would pay the programmes twice, so the world row should call `checkViability` once. Left open for the world row.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (A10): `NewWorld` calls `Validate` once and reads the warnings from the same outcome if row 10 exposes `checkViability`; otherwise it accepts the double work, which row 10's Phase 7 measured (0.59 s then 0.46 s on `five`). Left open for row 10.
 
 ### N-277 The programme with the wants needs a two-phase start
 
@@ -1959,6 +2009,7 @@ PR description.
 - **Raised:** 2026-10-17, `plans/plan-phase-1-10.md` (Provides).
 - **Note:** `virtualStartOffsets` (8.5.2, by `Calendar.SeasonAt`) is called by the empty-set rule of `validate.go` and, at construction, by the world row's jobs, so the rule and the construction cannot disagree (FR-VIA-053). The world row owns the stagger and the application of the table.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: not this row's; the world's job construction calls `virtualStartOffsets`. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: Phase 3 deliverable 3e calls `virtualStartOffsets`, so the rule of `validate.go` and the construction cannot disagree (FR-VIA-053); the stagger and the application of the table are this row's. Left open.
 
 ### N-281 Three bounds of FR-CFG-046 were not built at Stage 0
 
@@ -1982,6 +2033,7 @@ PR description.
 - **Note:** The default spawner has no state (SPN 14). The renewal carry per (region, role) is held by the world and read through `RoleView.RenewalCarry`; `Decide` sizes the renewal entries by `occupation.Renewal` on a copy and the executor calls the same function with the households it actually removed and stores the result (checkpoint tag 9, with the runs of "role extinct", "entry unfunded" and "group below floor" and the per (region, role) "had at least one agent" bit that FR-SPN-042 needs for "role extinct": `Extinct(agents, everHad, configured)`; SPN 14 does not list the bit yet, plan 1-9 Phase 1 adds it). The world row must add a `Guard:` test that the entries `Decide` planned equal the ones the executor's carry gives; a refusal of a default decision would break it and is a bug.
 - **Update (2026-10-17, spawner edits):** applied for tag 9: `spec-spawner.md` 14 now lists the carry and the `everHad` bit, and `spec-checkpoint.md` 4.2 tag 9 saves them. Left open until the code merges (the `Guard:` test).
 - **Update (2026-10-18, plan 1-9 exit gate):** built: `Decide` reads `RoleView.RenewalCarry`, `occupation.Renewal` and `Extinct(agents, everHad, configured)` exist, the `Guard:` test of the carry is still row 11's. Left open until the code merges.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (D145, D192): `worldState` holds the renewal carry per (region, role), the "had an agent" bit and the three runs; the executor advances the carry with `occupation.Renewal`; the `Guard:` test the note asks for is in Phase 7. Left open for CHK.
 
 ### N-266 What the world row calls for the spawner
 
@@ -1992,6 +2044,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: row 11 calls `consume` and `household.NextPrivation` through it; the agent row builds no combined step. Learned: `consume` sets `privation` and the spawner's view reads it. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** checked against Provides: `acceptMoney`, `acceptUnits` (per commodity), `acceptGoods` (a role change's whole lots), `receive` and `grant` have the signatures of the Cross-plan contract of plan 1-8. Left open for row 11.
 - **Update (2026-10-18, plan 1-9 exit gate):** the support functions of the Cross-plan contract exist with the planned names (`Refuse`, `Funded`, `Place`, `Remaining`, `Retarget`, `entryTally`, the three runs). Left open for row 11.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply (Phase 7): the five items of the note are Phase 7's deliverables 2 to 4 and the `resolveSpawner` call of Phase 2; `GoodsListed` counts lots. Left open until the world row merges.
 
 ### N-267 An agent in a role with no wage counts as earning nothing
 
@@ -2015,6 +2068,7 @@ PR description.
 - **Note:** `rules/architecture.md` 2.6 lists the continuation files (`construct*.go`, `fanin.go`, `phase_*.go`, `viability_*.go`, `production_report.go`); the layout in `AGENTS.md` repeats them. `AGENTS.md` says the architecture list wins. Any change to one lists the same files in the other in the same change, with a fresh tag for architecture.md.
 - **Update (2026-10-17, plan 1-7 Phase 1):** applied: this phase's layout edits (`agent.go`, `strategy.go`, `strategy_default.go`, `strategy_work.go`, `strategy_view.go`, `internal/household`) are in `architecture.md` 2.6 and in `AGENTS.md` with the same file lists, checked line by line, and `architecture.md` has a fresh tag. A standing rule; left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read: `viability_check.go` and `viability_table.go` are in both lists (architecture.md 2.6 and `AGENTS.md`), identical. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the continuation files of this row (`construct.go`, `construct_warm.go`, `fanin.go`, `phase_start.go`, `phase_production.go`, `phase_trade.go`, `phase_outcomes.go`, `phase_exit.go`) and `production_report.go` are in `architecture.md` 2.6 and in `AGENTS.md` with identical lists, checked line by line in Phase 1; no layout edit was needed, so no tag changed. A standing rule; left open.
 
 ### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
 
@@ -2042,6 +2096,7 @@ PR description.
 - **Raised:** 2026-10-17, the observability review of the branch of plan 1-7 (`strategy_work.go`, `spec-production.md` 14.1, N-242).
 - **Note:** The default `Work` passes over every recipe whose view says `MaxExecutions` 0, so it never requests a recipe production would refuse, and the `refusalTally` of N-242 (filled where a start returns 0) would stay empty for it: `economysim.recipe.refused` would read 0 on a chain stalled for want of an input or a tool, the case the event was added for. The work report now carries `blocked`, the index of the first recipe of the role that could not run when the share is above 0 and the halt skipped none (FR-AGT-086, `spec-agents.md` 7.1.4), and the world adds that household to the tally under the recipe and the view's reason. A household with several blocked recipes is counted once, under the first in list order, so the counts add to the households refused; the reason is the first applicable, as 4.2.1 says. A consumer's strategy that requests a blocked recipe is counted by the refusal of the start as before, and a household is never counted by both. **Open:** the world row must make the call (N-242 point 1), and the golden of a stalled chain must show a non-zero `RecipeRefused` under the default strategy; a later module's reason (`not_permitted`, `no_room`, `no_endowment`) arrives in the view as it does in the tally, a new column appended with the module.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The plan does not yet list the call this note asks (the work report's blocked recipe added to the tally at P2.5, with `Rested` and `NoRecipe` of `ProductionHalted`): Phase 4 must make it, with N-242 point 1, and the golden of a stalled chain (row 12) must show a non-zero `RecipeRefused` under the default strategy.
 
 ### N-309 What the estate row (plan 1-8) leaves to later rows
 
@@ -2050,14 +2105,22 @@ PR description.
 - **Note:** `estates.go` is a set of unexported functions with no caller until the world row, so these requirements are only partly covered and are completed there; each needs a test in its owner's row. (1) **World row (11):** FR-EST-010 and 011 (no `AgentSpawned`, no snapshot row, no strategy call, belief or outcome for an estate, and no agent event whose subject is an estate; the row tests only `regionOf`); FR-EST-002 (the estate that receives is the one of the region of the agent's account); FR-EST-004 (the estates open before any household, WLD 5.2 order 4); FR-EST-012 (the asks are placed at P3.4 before any market clears, with the tie-break key; the row tests only that the order carries the estate's ID); FR-EST-013 (`Regions[].MoneyPool`, `Markets[].HeldByEstate` and `EntryBudget` in the snapshot); FR-EST-014 (`w * Role.StartMoney` and "an entrant gets no goods" are the executor's, with the whole-household budget); FR-EST-015 (the `initial` money of the initial agents, and the map of `WarmPool.Region`, a string, to a `RegionID` before `seedPool`); FR-EST-021 (emit `AgentBankrupted` then `EstateOpened` behind the observer flag; `EstateOpened.Balance` is read as `pool` after `receive`, plan open item O6, and `GoodsListed` counts lots, N-255). The call list is N-258 and N-266. (2) **Checkpoint row (Stage 2):** build tag 8 from `rows` and `restore`, wrap `errListingRows` in `ErrCheckpointCorrupt`, and make the cross-check of restore step 7 (FR-CHK-023) call them (N-256). (3) **The `Estates` module part (Stage 2, after MON):** `Region.PoolRelease` and `Region.ReliefBelow`, relief at P1.6 and `ReliefPaid`, the pool as a money-flow target with `ErrModuleDependency`, FR-EST-017 to 020, and the module fields of FR-EST-023; they append to `estates.go` after the marked comment line at its end. (4) **Other modules:** FR-EST-003 (a traveller who dies in transit, a diverted cargo) is TRN's and MER's; money the estate receives as creditor or title holder is CRD's and LND's; the tool-sale rule of SKL 2.7 beyond the first price is SKL's. (5) **After the first golden file:** the first price, the markdown and the keep-the-price rule of a lot that gains units (D102, D104; N-254) enter `testdata/golden/` at the end of Stage 1, and a later change is a behaviour change with the explanation of testing.md 7.2.
 - **Update (2026-10-18, test audit of the branch):** the audit against testing.md found the row tested at the unit level only, as the plan says (`estates.go` is 100% covered, every function; root package 98.8%), and left these test debts for later rows. Each needs a test in its owner's row; none can be written before there is a `World`. (a) **Public-API integration tests (testing.md 2.3), world row (11):** the only public-API test of the row is `TestEstates_PackOneAccountIDs` (FR-EST-004, 005). FR-EST-006 (a bid from an estate is `side_not_allowed`), 007 (one ask per held lot, a rejected ask is not an ask), 009 (the markdown at P5.3) and 013 (the proceeds are a `trade` transfer into the pool, `MoneyPool` equals the account) are consumer-visible and need a test through `NewWorld` and `Step` with a recording observer, beside the unit tests that exist. (b) **Restore equals uninterrupted (FR-EST-024), checkpoint row (Stage 2):** a restored world must list and price the same lots as an uninterrupted one; the unit tests cover `rows` and `restore` only (N-256). (c) **Mutation pass:** 22 hand-made mutants of `estates.go` were run; the two that survived were an equivalent one (`<=` against `<` at the floor in `markedDown`) and the clearing of the `asked` mark in `asks`, now covered by `TestEstateAsks_MarksOfTheLastTickAreCleared`. `gomu` was not run (Docker only, testing.md 9.4); it is the periodic pass for the core packages. (d) **Fuzz seeds:** `testdata/fuzz/FuzzPriceRules`, `FuzzReconcile` and `FuzzRestore` hold hand-written seeds, not crashers, so testing.md 7.5's `Fix:` rule does not apply; they must be committed with the row. (e) **The invariant branches** of `estates.go` (an unreadable account, a belief step out of bound, an overflowing first price, an admitted ask with no listing) are `Guard:` tests (`estates_errors_internal_test.go`), so no coverage exclusion under testing.md 9.5 is needed. Left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world-row items (1) are spread over Phases 3 to 10 (the estate opened before any household, the asks at P3.4, `MoneyPool`, `HeldByEstate` and `EntryBudget` in the snapshot, `AgentBankrupted` then `EstateOpened` behind the observer flag); the plan names no test of FR-EST-006, 007 and 009 (a bid from an estate is refused, one ask per held lot, the markdown at P5.3) through `NewWorld` and `Step`, which Phase 10 should carry. Items (2) to (5) are not this row's.
 
 ### N-310 What the observability review of plan 1-8 leaves undone
 
 - **Areas:** EST, OBS, WLD, CODE
 - **Raised:** 2026-10-18, the observability review of the branch of plan 1-8 (`estates.go`, N-309 item 6).
 - **Note:** The catalogue and spec rows for `economysim.estate.sold`, `economysim.estate.at_floor` and `Markets[].EstateAtFloor` are written, and nothing can emit them until the world, the snapshot and `otelobserver` exist. Owed, each with its test in the row that builds it: (1) **World/snapshot row (11):** declare `EstateAtFloor` in `snapshot.go` and fill it as the units of the estate's lots whose row in `estates.listed` is at the resolution floor (`resolutionFloor`); it is 0 with no estate stock and never above `HeldByEstate`; a test builds a world, lets an estate lot fall to the floor and compares the field; the field is a function of saved state (N-125), so the restore test (FR-OBS-043) must cover it. (2) **`otelobserver` (Stage 2):** feed `estate.sold` from `TradeExecuted` where `Seller` is below the region count (the test of `spec-observability.md` 4.3.3 item 2, `estates.regionOf`), record `estate.at_floor` from the snapshot, and add both to the adapter's cardinality test (testing 8.1: commodity and region only; about 300 series, 6.5.2). (3) **Pool overflow through a step:** the world row needs a test that an `ErrBalanceOverflow` of an estate pool fails the step (`TickEnded` with `Failed`, `economysim.world.step.failed`) and that the error text names the region and the account, as `refused` now does; the unit test covers `refused` only. (4) **Allocation test:** `estates.asks` and `markdown` have a no-allocation test in isolation (NFR-EST-001); the full-step allocation limit of observability 8.2 includes them only once the world row calls them. (5) **Reading `economysim.market.unmatched`:** its ask side includes the estate's unsold lots; if the first dashboards show it misleads, split the series by a holder attribute (doubling its ask series) instead of subtracting `HeldByEstate`; decide with data from the first golden run, not now. (6) **Not done in this review:** `doc/notes.md` was not read in full before the spec edits (only the notes tagged OBS and EST that the edits touch, and N-125, N-126, N-127, N-289 and N-309); the next change to `spec-observability.md` should read it whole.
-- **Update:** none yet.
+- **Update (2026-10-20, observability review of the branch of plan 1-11):** item (1) is applied: `Markets[].EstateAtFloor` is declared in `snapshot.go` and filled in `snapRegion` from `estates.listed` (`estates.atFloor`: a held lot whose row price is at or below `resolutionFloor`; a lot with no row is not at the floor), tested by `TestSnapshot_EstateAtFloorCountsUnitsListedAtTheResolutionFloor` (fails with the check broken). The restore-equality half of the test (FR-OBS-043) is the checkpoint row's, since the field is derived from the saved listing rows (tag 8). Items (2) to (6) are unchanged; item (3), the pool-overflow step test, is still not in Phase 10. Left open.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
+- **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. Item (1), `Markets[].EstateAtFloor` filled from `estates.listed` against the resolution floor, and item (3), the pool-overflow step test, are not in the plan's Phase 9 and Phase 10 lists: they must be added to Phase 9 (the field and its test) and Phase 10 (the failed step) when those phases are built. Items (2), (4) and (5) are not this row's.
+
+### N-311 Per-commodity price uniqueness is not detected by the solver
+
+- **Areas:** VIA, CODE
+- **Raised:** 2026-10-18, `plans/plan-phase-1-10.md` (Phase 6 fix, FR-VIA-026).
+- **Note:** FR-VIA-026 and VIA 8.2.4 give a commodity whose price is not unique the reference price and list it in `UnpricedCommodities`. `steady.Outcome` carries only the global `Degenerate` and `Alternative` flags (FR-VIA-019), and telling which duals are non-unique needs a min and a max of each price over the optimal dual face (2n further programmes). Phase 6 builds the dual-0 half only; a non-unique non-zero dual is used as the price and the report's `Degenerate` and `AlternativeOptima` flags are the warning. Reversible: add a per-commodity flag to `steady.Outcome` and the reference-price rule in `prices()`.
 
 ## Closed notes
 
@@ -3049,12 +3112,6 @@ resolution (applied or rejected, and why) and where it was settled.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 - **Closed:** 2026-10-17. Applied: `construct.go`, `construct_warm.go`, `fanin.go` and the `phase_*.go` files are in `rules/architecture.md` 2.6 and `AGENTS.md`.
 
-### N-311 Per-commodity price uniqueness is not detected by the solver
-
-- **Areas:** VIA, CODE
-- **Raised:** 2026-10-18, `plans/plan-phase-1-10.md` (Phase 6 fix, FR-VIA-026).
-- **Note:** FR-VIA-026 and VIA 8.2.4 give a commodity whose price is not unique the reference price and list it in `UnpricedCommodities`. `steady.Outcome` carries only the global `Degenerate` and `Alternative` flags (FR-VIA-019), and telling which duals are non-unique needs a min and a max of each price over the optimal dual face (2n further programmes). Phase 6 builds the dual-0 half only; a non-unique non-zero dual is used as the price and the report's `Degenerate` and `AlternativeOptima` flags are the warning. Reversible: add a per-commodity flag to `steady.Outcome` and the reference-price rule in `prices()`.
-
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -3067,5 +3124,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 83d751634f6b94aaefb7f51e
+NOTES-TAG: e3d54093697f1844a53e3c91
 

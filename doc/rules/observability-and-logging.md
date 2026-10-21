@@ -517,10 +517,12 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.welfare.ratio`          | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
 | `economysim.welfare.ratio.households` | Gauge         | `{household}`   | `economysim.role`, `economysim.region` |
 | `economysim.welfare.floor_held`     | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
+| `economysim.welfare.clamped`        | Gauge           | `{household}`   | `economysim.role`, `economysim.region` |
 | `economysim.wage.observed`          | Gauge           | `{minor_unit}`  | `economysim.role`, `economysim.region` |
 | `economysim.household.privation.max` | Gauge          | `{tick}`        | `economysim.role`, `economysim.region` |
 | `economysim.role.expected_ratio`    | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
 | `economysim.role.viable`            | Gauge           | `{flag}`        | `economysim.role`, `economysim.region` |
+| `economysim.role.agents`            | Gauge           | `{agent}`       | `economysim.role`, `economysim.region` |
 | `economysim.storage.limited`        | Counter         | `{case}`        | `economysim.region`, `economysim.role`, `economysim.room_limit` |
 | `economysim.store.count`            | Gauge           | `{store}`       | `economysim.region`, `economysim.store_class` |
 | `economysim.room.fill`              | Gauge           | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` |
@@ -717,10 +719,12 @@ snapshot the consumer passes to it, between two steps, from these fields:
 | `economysim.welfare.ratio`           | `Roles[].MeanRatioBP`, where the role has a mean ratio |
 | `economysim.welfare.ratio.households` | `Roles[].RatioHouseholds`, where the role has a mean ratio: the denominator of `economysim.welfare.ratio`, and the only way to tell a mean over one household from a mean over four hundred, or to weight a region's mean across roles |
 | `economysim.welfare.floor_held`      | `Roles[].HeldByFloor * 10 000 / Households`, absent where `Households` is 0: the share of the role's households held to work by `MinWorkShare` at the boundary, the quantity the `Warn` "work floor binding" tests against 5 000, but visible below the threshold and between the `Warn`'s tenth-tick lines |
+| `economysim.welfare.clamped`         | `Roles[].ClampedHouseholds`: the households whose welfare record holds a field at the clamp, the counterpart of the `Warn` "welfare record clamped"; the `Warn` fires on the first tick of a run and then every tenth, so the gauge is the view between lines and for a consumer with no logger. A clamped record feeds the spawner a saturated ratio |
 | `economysim.wage.observed`           | `Roles[].WageObserved`, where `HasWage`: the observed wage of the role, in minor units per working household-tick; not the pooled regional wage the cost anchor reads |
 | `economysim.household.privation.max` | `Roles[].MaxPrivation`: the largest privation of an agent of the role, the leaky count that the failure ladder reads; a snapshot gauge, because `UpkeepShortfall` is not emitted once everyone is fed again and privation is still falling then |
 | `economysim.role.expected_ratio`     | `Roles[].ExpectedRatioBP`, where `HasExpected`: the expected ratio `E` of the spawner (`spec-spawner.md` 6.1) that ranks the roles for every switch and every entry |
 | `economysim.role.viable`             | `Roles[].Viable`, 1 or 0, where `HasExpected`: the gate of the entrant, of rung 1 and of replacement; a 0 beside a high `expected_ratio` is what `EntryLimited.NoViableRole` and `Stranded` count |
+| `economysim.role.agents`             | `Roles[].Agents`, by role and region: the counterpart of the `Warn`s "role extinct" (0) and "group below floor" (below `MinAgents`). `economysim.agent.count` is event-fed by role only, so a role that dies out in one region while another still has agents shows only here |
 | `economysim.store.count`             | `Stores[]` rows of the snapshot, by region and store class |
 | `economysim.room.fill`               | `Roles[]` room and load, `load * 10 000 / room`, absent where the room is 0 |
 | `economysim.credit.arrears`          | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region |
@@ -925,4 +929,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 65aa8c6cda436475e0f84eb5
+RULE-TAG: c1fad2f660b8e9f5d2c6d901
