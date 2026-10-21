@@ -202,9 +202,11 @@ code that depends on it (each is ruled by the coordinator and reversible):
   (30 ticks, which covers the first stagger completions of the short recipes and the
   first tool replacements' start but not the 60-tick harvest), recorded to
   `testdata/golden/off/one.positions.txt` as one line per position,
-  `t=<tick> <position> <16 hex>`: the first 8 bytes of the SHA-256. About 30 ticks
-  by the core positions of the table of `spec-world.md` 6 (about 40) is about 1 200
-  lines. The file is a golden (testing.md 7.2: `-update` only).
+  `t=<tick> <position> <16 hex>`: the first 8 bytes of the SHA-256. The recorded
+  file has 660 lines: 22 lines per tick times 30 ticks, the 20 positions that ran in
+  Stage 1 plus the `begin` and `end` lines. The "about 40" positions of the table of
+  `spec-world.md` 6 is the table's count, but the file lists only the positions that
+  ran (above), so the earlier estimate of about 1 200 lines was too high. The file is a golden (testing.md 7.2: `-update` only).
 - **D179.** The invariants test (Phase 5) computes conservation **from the identities
   of `spec-ledger.md` 9.1 and FR-OBS-042 and the snapshot**, exactly, after every
   tick: (i) per commodity, the units held in accounts (the `Markets` rows'
@@ -1206,7 +1208,7 @@ only test files and fixtures. It adds no trust boundary and no production code.
   maintainers'; tests are `-short`-skipped and use no sleep or network. The reflection
   walk of D177 is bounded by the size of the world, run for 30 ticks only, and detects
   cycles (a self-referencing structure would otherwise recurse for ever); its recursion
-  depth is limited (a depth over 64 is a `t.Fatal`).
+  depth is limited (a depth over `maxWalkDepth`, 64, is an error of the walk, and `hashWorld` panics on it, which fails the test).
 - **Determinism hazards in the tests themselves.** No test iterates a map into an
   output without sorting; the renderer and the walk sort keys; no test reads the clock.
 - **Mutation of production state by a test.** The Stage 1 shock seam writes a slot

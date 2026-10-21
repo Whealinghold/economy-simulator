@@ -1,0 +1,14 @@
+# Scenario S01 leg (a), spec-reference-chain.md 7.2 and 7.1.3: a supply shock to
+# one commodity in one region. Each [[shock]] is applied between steps, before
+# the step of its tick (Stage 1: through the unexported seam, plan 1-12 O3).
+# yield_bp 10000 clears the shock.
+[[shock]]
+tick = 400
+region = "north"
+recipe = "cut_fuel"
+yield_bp = 5000
+[[shock]]
+tick = 460
+region = "north"
+recipe = "cut_fuel"
+yield_bp = 10000

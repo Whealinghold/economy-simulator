@@ -1,0 +1,14 @@
+# What the load of the pack must give (spec-reference-chain.md 8.4). Recorded with
+# -update by config_test TestExpected_Packs; the top-level keys are those of the
+# cold layer set (the set SolveSteadyState solves), the warm_ keys those of the
+# set with the warm-start document. Change it by the rule for the golden files
+# (testing.md 7.2).
+config_hash = "db2abc681b316c12fad3da3e8215f799267622a69689fa43716dd6fb4c219603"
+surplus_bp = 19663
+labour_share_bp = 5086
+pivots = 10
+unpriced = []
+unpriced_wages = []
+warnings = [{ rule = "source_unbounded", path = "recipes/dig_regolith" }, { rule = "source_unbounded", path = "recipes/salvage" }, { rule = "target_above_surplus", path = "regions/crater_rim" }, { rule = "cold_start_lockstep", path = "roles/algae_tender/recipes" }, { rule = "start_stock_below_target", path = "roles/algae_tender/start_stock" }, { rule = "tool_unaffordable", path = "roles/driller/start_money" }, { rule = "start_stock_below_target", path = "roles/driller/start_stock" }, { rule = "cold_start_lockstep", path = "roles/fabber/recipes" }, { rule = "window_extended", path = "roles/fabber/recipes" }, { rule = "tool_unaffordable", path = "roles/fabber/start_money" }, { rule = "start_stock_below_target", path = "roles/fabber/start_stock" }, { rule = "start_stock_below_target", path = "roles/regolith_miner/start_stock" }, { rule = "start_stock_below_target", path = "roles/smelter/start_stock" }, { rule = "entry_share_window", path = "world/entry_share" }]
+warm_config_hash = "388a7d7e47361f9948027dd52d037baebd484fa4a99cdf26a07a010581d5ff8a"
+warm_warnings = [{ rule = "source_unbounded", path = "recipes/dig_regolith" }, { rule = "source_unbounded", path = "recipes/salvage" }, { rule = "target_above_surplus", path = "regions/crater_rim" }, { rule = "start_stock_below_target", path = "roles/algae_tender/start_stock" }, { rule = "tool_unaffordable", path = "roles/driller/start_money" }, { rule = "start_stock_below_target", path = "roles/driller/start_stock" }, { rule = "window_extended", path = "roles/fabber/recipes" }, { rule = "tool_unaffordable", path = "roles/fabber/start_money" }, { rule = "start_stock_below_target", path = "roles/fabber/start_stock" }, { rule = "start_stock_below_target", path = "roles/regolith_miner/start_stock" }, { rule = "start_stock_below_target", path = "roles/smelter/start_stock" }, { rule = "entry_share_window", path = "world/entry_share" }]

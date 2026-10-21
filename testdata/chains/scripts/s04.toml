@@ -1,0 +1,14 @@
+# Scenario S04, spec-reference-chain.md 7.2 and 7.1.3: a half harvest in the
+# second spring (ticks 424 to 515). Each [[shock]] is applied between steps,
+# before the step of its tick (Stage 1 seam, plan 1-12 O3). yield_bp 10000
+# clears the shock.
+[[shock]]
+tick = 424
+region = "north"
+recipe = "grow_staple"
+yield_bp = 5000
+[[shock]]
+tick = 516
+region = "north"
+recipe = "grow_staple"
+yield_bp = 10000
