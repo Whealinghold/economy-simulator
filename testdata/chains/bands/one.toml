@@ -1,0 +1,42 @@
+# The bands of the scenarios on pack one (spec-reference-chain.md 7.1.5). Every
+# key is unset: a key with no `value` line makes the test report its measure and
+# assert nothing on it. A value is set by a reviewed run (STY 8.4), with a
+# `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line (FR-REF-024).
+
+# S01: the ten-tick mean price lies within this band of P0 (basis points).
+[s01.band_bp]
+unit = "bp"
+# S01: the most ticks after the shock until the price is back in the band and stays.
+[s01.recover_ticks]
+unit = "ticks"
+# S01: the most gap between the mean of the last 100 ticks and the seed price.
+[s01.offset_bp]
+unit = "bp"
+# S01: the most share of household-ticks of the shock window that were unfed.
+[s01.unmet_bp]
+unit = "bp"
+# S04: the longest run of ticks the staple price may sit at a bound.
+[s04.pinned_ticks]
+unit = "ticks"
+# S04: the largest absolute measured demand elasticity of the staple.
+[s04.elasticity_max_bp]
+unit = "bp"
+# S07: the longest freeze (no trade while both sides have unmatched orders).
+[s07.freeze_ticks]
+unit = "ticks"
+# S07: the most share of prepared made that spoiled.
+[s07.spoiled_bp]
+unit = "bp"
+# S16: the most share of ticks of the last year the staple price is at a bound.
+[s16.pinned_share_bp]
+unit = "bp"
+# S19: the aggregate welfare ratio lies within this band of 10 000 (reported only
+# in version 1: HouseholdIncome is not OK).
+[s19.ratio_band_bp]
+unit = "bp"
+# S19: the most unsold stock of a produced good, as a share of the halt threshold.
+[s19.stock_bound_bp]
+unit = "bp"
+# M05 (used by S19): the most share of money in the pool and escrow.
+[m05.pool_share_bp]
+unit = "bp"

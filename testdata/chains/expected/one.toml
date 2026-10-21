@@ -1,0 +1,14 @@
+# What the load of the pack must give (spec-reference-chain.md 8.4). Recorded with
+# -update by config_test TestExpected_Packs; the top-level keys are those of the
+# cold layer set (the set SolveSteadyState solves), the warm_ keys those of the
+# set with the warm-start document. Change it by the rule for the golden files
+# (testing.md 7.2).
+config_hash = "48882a822487f81d9618e9bddcc90f5fec3bdbfebf16b9bfe8d5b7eb2d94796d"
+surplus_bp = 25119
+labour_share_bp = 3982
+pivots = 10
+unpriced = []
+unpriced_wages = []
+warnings = [{ rule = "tool_unaffordable", path = "roles/cook/start_money" }, { rule = "cold_start_lockstep", path = "roles/grower/recipes" }, { rule = "window_extended", path = "roles/grower/recipes" }, { rule = "tool_unaffordable", path = "roles/grower/start_money" }, { rule = "cold_start_lockstep", path = "roles/maker/recipes" }, { rule = "cold_start_lockstep", path = "roles/refiner/recipes" }, { rule = "entry_share_window", path = "world/entry_share" }]
+warm_config_hash = "9e3c1357520b0e052fee1e1d773d45e49ce992a8d1cfbd7029a6a24a91038285"
+warm_warnings = [{ rule = "tool_unaffordable", path = "roles/cook/start_money" }, { rule = "cold_start_lockstep", path = "roles/grower/recipes" }, { rule = "window_extended", path = "roles/grower/recipes" }, { rule = "tool_unaffordable", path = "roles/grower/start_money" }, { rule = "entry_share_window", path = "world/entry_share" }]

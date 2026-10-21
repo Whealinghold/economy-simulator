@@ -1,0 +1,123 @@
+# Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
+# Read by the reviewer of STY 8.4; no test compares it.
+
+## S01 one leg-a seeds 1-10, 700 ticks
+measure P0 fuel mean 300-399: 1=39 2=41 3=102 4=125 5=116 6=116 7=123 8=129 9=146 10=46 | median=116 n=10
+measure fuel mean 400-459: 1=22 2=21 3=94 4=127 5=104 6=130 7=162 8=153 9=166 10=52 | median=116 n=10
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure market-ticks outside a maker's belief interval (reported): 1=564 2=532 3=321 4=439 5=553 6=343 7=276 8=238 9=289 10=531 | median=391 n=10
+measure market-ticks outside the band with an estate sale (exempt): 1=0 2=35 3=0 4=0 5=0 6=0 7=0 8=0 9=1 10=51 | median=0 n=10
+measure offset bp last 100 vs seed price: 1=-7095 2=-7654 3=-4693 4=-3073 5=-4190 6=-2793 7=-950 8=-1173 9=-950 10=-7095 | median=-3632 n=10
+measure recovery ticks after 460 (band 1000 bp): 1=absent 2=absent 3=0 4=0 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent | median=0 n=2
+measure unmet bp over 400-459: 1=193 2=106 3=1524 4=1389 5=602 6=6829 7=30000 8=2500 9=4286 10=5299 | median=2012 n=10
+check O check: shock mean fuel price > P0: 6/10 pass
+  01:FAIL measure mean fuel price over ticks 400-459 = 22, P0 = 39, want above
+  02:FAIL measure mean fuel price over ticks 400-459 = 21, P0 = 41, want above
+  03:FAIL measure mean fuel price over ticks 400-459 = 94, P0 = 102, want above
+  05:FAIL measure mean fuel price over ticks 400-459 = 104, P0 = 116, want above
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+
+
+
+
+## S04 one seeds 1-10, 1400 ticks
+measure demand elasticity bp (signed): 1=absent 2=absent 3=-1070000 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent | median=-1070000 n=1
+measure grower working share bp, ticks 424-515: 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest pinned run, staple: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure market-ticks outside a maker's belief interval (reported): 1=515 2=502 3=321 4=439 5=553 6=343 7=276 8=238 9=289 10=531 | median=391 n=10
+measure staple price mean 414-423: 1=51 2=52 3=53 4=52 5=52 6=53 7=54 8=52 9=52 10=52 | median=52 n=10
+measure staple price mean 506-515: 1=51 2=52 3=54 4=52 5=52 6=53 7=54 8=52 9=52 10=52 | median=52 n=10
+measure staple volume mean 414-423: 1=208 2=204 3=5 4=3 5=13 6=0 7=0 8=4 9=0 10=42 | median=4 n=10
+measure staple volume mean 506-515: 1=201 2=169 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+
+
+## S04 one+nofloor seeds 1-10, 1400 ticks
+measure demand elasticity bp (signed): 1=absent 2=absent 3=-1070000 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent | median=-1070000 n=1
+measure grower working share bp, ticks 424-515: 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest pinned run, staple: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure market-ticks outside a maker's belief interval (reported): 1=515 2=502 3=321 4=439 5=553 6=343 7=276 8=238 9=289 10=531 | median=391 n=10
+measure staple price mean 414-423: 1=51 2=52 3=53 4=52 5=52 6=53 7=54 8=52 9=52 10=52 | median=52 n=10
+measure staple price mean 506-515: 1=51 2=52 3=54 4=52 5=52 6=53 7=54 8=52 9=52 10=52 | median=52 n=10
+measure staple volume mean 414-423: 1=208 2=204 3=5 4=3 5=13 6=0 7=0 8=4 9=0 10=42 | median=4 n=10
+measure staple volume mean 506-515: 1=201 2=169 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+
+
+
+## S07 one+glut-prepared seeds 1-10, 400 ticks, cost_floor 10000/9000/7000/5000
+measure floor 10000 households at end: 1=30 2=0 3=16 4=61 5=15 6=11 7=32 8=154 9=40 10=63 | median=31 n=10
+measure floor 10000 longest freeze, prepared: 1=0 2=2 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure floor 10000 prepared made: 1=97936 2=62852 3=79672 4=131556 5=79088 6=74356 7=107304 8=157120 9=120768 10=130240 | median=102620 n=10
+measure floor 10000 price-bound violations (recorded): 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure floor 10000 spoiled share bp, prepared: 1=3460 2=3480 3=3362 4=3258 5=3419 6=3292 7=3506 8=3503 9=3765 10=3473 | median=3466 n=10
+measure floor 10000 trade share bp, prepared: 1=4150 2=2800 3=3475 4=5025 5=2975 6=2775 7=5125 8=7325 9=3725 10=6350 | median=3938 n=10
+measure floor 5000 households at end: 1=54 2=0 3=0 4=0 5=0 6=50 7=0 8=0 9=19 10=0 | median=0 n=10
+measure floor 5000 longest freeze, prepared: 1=0 2=3 3=2 4=7 5=0 6=0 7=3 8=5 9=4 10=0 | median=2 n=10
+measure floor 5000 prepared made: 1=139764 2=52060 3=55284 4=49140 5=83056 6=100964 7=57440 8=68856 9=99088 10=49248 | median=63148 n=10
+measure floor 5000 price-bound violations (recorded): 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure floor 5000 spoiled share bp, prepared: 1=3609 2=2790 3=2771 4=2720 5=3690 6=2725 7=2950 8=2707 9=3703 10=2769 | median=2780 n=10
+measure floor 5000 trade share bp, prepared: 1=4825 2=3925 3=3225 4=2675 5=3125 6=4600 7=3600 8=2725 9=3525 10=2775 | median=3375 n=10
+measure floor 7000 households at end: 1=60 2=0 3=0 4=0 5=35 6=0 7=0 8=0 9=40 10=0 | median=0 n=10
+measure floor 7000 longest freeze, prepared: 1=0 2=4 3=0 4=1 5=0 6=1 7=0 8=0 9=0 10=17 | median=0 n=10
+measure floor 7000 prepared made: 1=124512 2=67052 3=45944 4=81528 5=91840 6=67568 7=57372 8=75516 9=91652 10=74764 | median=75140 n=10
+measure floor 7000 spoiled share bp, prepared: 1=3320 2=3079 3=2769 4=2887 5=3479 6=2996 7=3373 8=3483 9=3336 10=3274 | median=3297 n=10
+measure floor 7000 trade share bp, prepared: 1=7125 2=2950 3=1450 4=3575 5=3600 6=3175 7=2125 8=2600 9=3775 10=3825 | median=3375 n=10
+measure floor 9000 households at end: 1=100 2=0 3=40 4=88 5=102 6=0 7=118 8=0 9=0 10=57 | median=48 n=10
+measure floor 9000 longest freeze, prepared: 1=0 2=7 3=0 4=0 5=0 6=4 7=0 8=1 9=7 10=0 | median=0 n=10
+measure floor 9000 prepared made: 1=131288 2=65760 3=91432 4=121052 5=148280 6=68032 7=123660 8=68212 9=67496 10=87480 | median=89456 n=10
+measure floor 9000 price-bound violations (recorded): 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure floor 9000 spoiled share bp, prepared: 1=3564 2=3112 3=2805 4=3314 5=3298 6=2968 7=2887 8=3113 9=3429 10=2885 | median=3112 n=10
+measure floor 9000 trade share bp, prepared: 1=5800 2=3100 3=6050 4=6925 5=7225 6=3500 7=6425 8=3325 9=3050 10=5700 | median=5750 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds at the default floor (FR-STB-008): 10/10 pass
+
+## S16 one+overhang seeds 1-10, 1095 ticks
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure staple belief outcomes mostly at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure staple price at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+
+## S19 one halt on/off seeds 1-10, 1095 ticks
+measure ProductionHalted events halt-off: 1=359 2=388 3=679 4=472 5=475 6=449 7=356 8=265 9=162 10=410 | median=399 n=10
+measure ProductionHalted events halt-on: 1=1651 2=1540 3=1036 4=1049 5=1386 6=1015 7=787 8=972 9=1123 10=1207 | median=1086 n=10
+measure ProductionHalted households halt-on: 1=68652 2=60614 3=50425 4=42812 5=46815 6=54027 7=42820 8=43993 9=47670 10=53178 | median=49048 n=10
+measure goods where the halt-off stock exceeds the halt-on maximum: 1=4 2=4 3=4 4=4 5=4 6=4 7=4 8=4 9=4 10=4 | median=4 n=10
+measure pool share bp of money, halt-on: 1=10000 2=10000 3=10000 4=10000 5=10000 6=10000 7=10000 8=10000 9=10000 10=10000 | median=10000 n=10
+measure stock end halt-off fuel: 1=41962 2=43268 3=73148 4=41340 5=47789 6=57623 7=41092 8=31949 9=58183 10=35825 | median=42615 n=10
+measure stock end halt-off mineral: 1=6956 2=4937 3=3185 4=5807 5=4459 6=5935 7=6135 8=5128 9=6653 10=5527 | median=5667 n=10
+measure stock end halt-off prepared: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure stock end halt-off refined: 1=821 2=671 3=730 4=806 5=765 6=790 7=772 8=747 9=759 10=811 | median=768 n=10
+measure stock end halt-off seed: 1=130264 2=134784 3=135004 4=166104 5=155004 6=159506 7=164190 8=139724 9=159664 10=174404 | median=157255 n=10
+measure stock end halt-off staple: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure stock end halt-off tool_a: 1=88 2=87 3=166 4=96 5=46 6=145 7=72 8=51 9=153 10=65 | median=88 n=10
+measure stock end halt-off tool_b: 1=2 2=168 3=34 4=0 5=0 6=175 7=174 8=170 9=168 10=46 | median=107 n=10
+measure stock end halt-on fuel: 1=26628 2=10730 3=6128 4=9451 5=326 6=17887 7=3092 8=3748 9=6734 10=16706 | median=8092 n=10
+measure stock end halt-on mineral: 1=375 2=433 3=410 4=368 5=0 6=357 7=347 8=395 9=384 10=407 | median=380 n=10
+measure stock end halt-on prepared: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure stock end halt-on refined: 1=283 2=279 3=271 4=280 5=3 6=275 7=267 8=295 9=294 10=296 | median=280 n=10
+measure stock end halt-on seed: 1=21738 2=18214 3=17346 4=22574 5=15072 6=20420 7=18620 8=19180 9=21458 10=19774 | median=19477 n=10
+measure stock end halt-on staple: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure stock end halt-on tool_a: 1=76 2=49 3=78 4=78 5=153 6=129 7=90 8=77 9=37 10=0 | median=78 n=10
+measure stock end halt-on tool_b: 1=1 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure stock max halt-on fuel: 1=27400 2=18792 3=17641 4=16688 5=11337 6=24778 7=14861 8=16656 9=20210 10=19758 | median=18216 n=10
+measure stock max halt-on mineral: 1=387 2=453 3=425 4=368 5=590 6=408 7=369 8=400 9=388 10=407 | median=404 n=10
+measure stock max halt-on prepared: 1=2667 2=2617 3=2660 4=2638 5=2671 6=2667 7=2658 8=2666 9=2642 10=2669 | median=2663 n=10
+measure stock max halt-on refined: 1=318 2=318 3=318 4=313 5=315 6=314 7=320 8=317 9=319 10=319 | median=318 n=10
+measure stock max halt-on seed: 1=23880 2=22890 3=20994 4=23618 5=18372 6=23544 7=21678 8=23144 9=23538 10=21852 | median=23017 n=10
+measure stock max halt-on staple: 1=164930 2=164930 3=164930 4=183385 5=164930 6=164930 7=164930 8=164930 9=164930 10=181710 | median=164930 n=10
+measure stock max halt-on tool_a: 1=413 2=415 3=416 4=413 5=416 6=411 7=412 8=413 9=412 10=414 | median=413 n=10
+measure stock max halt-on tool_b: 1=194 2=187 3=188 4=187 5=212 6=201 7=190 8=183 9=193 10=193 | median=192 n=10
+check O check: halt-off end stock exceeds halt-on maximum for some good: 10/10 pass
+check price within belief bounds, halt off (FR-STB-008): 10/10 pass
+check price within belief bounds, halt on (FR-STB-008): 10/10 pass

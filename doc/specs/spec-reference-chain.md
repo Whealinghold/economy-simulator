@@ -420,7 +420,9 @@ The census is the **balanced census** of the solver (`spec-viability.md` 8.1; FR
 the households of a role are those its activities need at `lambda = 1`, with the
 start-capacity row counted (growers can start only two jobs a year, so they need three
 times the labour their work alone suggests), and the 600 households are the largest-
-remainder apportionment of those needs. Because the realm can make 2.512 baskets, the
+remainder apportionment of those needs. The available work share divides every term alike
+and cancels in the proportion, so it is not in the census formula (`spec-viability.md` 5.2;
+N-306). Because the realm can make 2.512 baskets, the
 census gives every role about 1.8 times the households a basket needs, which is the
 glut of `spec-viability.md` 4.7 and the reason the production halt exists (S19).
 

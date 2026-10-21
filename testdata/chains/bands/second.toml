@@ -1,0 +1,18 @@
+# The bands of the scenarios on pack second (spec-reference-chain.md 7.1.5). Every
+# key is unset: a key with no `value` line makes the test report its measure and
+# assert nothing on it. A value is set by a reviewed run (STY 8.4), with a
+# `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line.
+
+# X4, the stable-state predicate over the last 365 ticks of 1 095 (spec-reference-chain.md 7.4).
+# (b) the least share of the window's ticks in which a tradable commodity with a producer trades.
+[x4.trade_share_bp]
+unit = "bp"
+# (d) the most share of the window's ticks in which a market is pinned at a belief bound.
+[x4.pinned_share_bp]
+unit = "bp"
+# (e) the least households at any tick of the window, as a share of the start.
+[x4.households_bp]
+unit = "bp"
+# (f) the most ratio of the highest to the lowest price of a commodity in the window.
+[x4.range_factor]
+unit = "ratio"
