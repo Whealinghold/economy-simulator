@@ -160,13 +160,10 @@ func warnTicksByCell(r observedRun, msg string, cell []string) map[string][]int6
 }
 
 // startOf is the tick from which the condition of a cell holds. Every cell of the
-// cases starts at start, except the market of the second commodity of the bound
-// case, whose first outcome comes at tick 2 (its recipe's output is sold from
-// then): the run of a market advances only in ticks with an outcome.
+// cases starts at start: the run of a market advances only in ticks with an
+// outcome, and every market of the cases has one from the first tick (before
+// N-313 the second commodity of the bound case had its first outcome at tick 2).
 func (c warnCase) startOf(cell string) int64 {
-	if c.msg == "price beliefs at bound" && strings.HasSuffix(cell, "commodity=1") {
-		return 2
-	}
 	return c.start
 }
 

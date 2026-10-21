@@ -1249,6 +1249,7 @@ U_c      = w * upkeep per household of c (0 if not upkeep)                (5.2)
 Reserve  = U_c                         units to be eaten at the end of this tick
 Job_c    = 0                           if r* is none or StartsIn > 1
          = InputJobs * k* * q_c        if c is an input of r* and StartsIn = 1
+         + U_c                         if c is such an input and also an upkeep commodity (7.1.6)
          + k*                          if c is a tool of r*
 UseTgt_c = U_c * CoverTicks + Job_c    units to hold at the start of next tick
 Make_c   = k* * q_o * E / (10 000 * Duration)   if c is a non-discard output of r*
@@ -1268,8 +1269,9 @@ the cap leaves (7.4.3); the tiers 1 to 3 do not depend on it, so the order is: 7
 `Want_c`, the tiers, the demand module's allocation, then `Keep_c`, `Target_c` and the gap are
 raised by `Want_c` for the bid. An agent without the module has `Want_c` = 0 throughout. For an employer
 (`spec-employment.md` 9.2.1) `Job_c` also counts the inputs and tools of its planned hires:
-`Job_c = InputJobs * (k* * q_c(r*) + H* * q_c(r_h))` for an input of either recipe and
-`k* + H*` for a tool, `StartsIn` being 1; the rest of 7.3 to 7.5 is unchanged.
+`Job_c = InputJobs * (k* * q_c(r*) + H* * q_c(r_h))` for an input of either recipe (plus `U_c` if `c` is
+also an upkeep commodity, as above) and `k* + H*` for a tool, `StartsIn` being 1; the rest of 7.3 to 7.5
+is unchanged.
 
 7.3.1. **The target.** `Target_c` is the number the belief rule receives
 (`spec-beliefs.md` 4.4), the units the agent wants to hold *after* this tick's
@@ -1281,6 +1283,13 @@ is `CoverTicks` for use and `OutputCoverTicks` for output, and "recent demand" o
 history and no state. The two readings of "a missing ideal stock as 0" (N-007, N-037)
 are one rule: 0 means the agent has no use for the commodity, so it buys none, sells
 any it holds, and the belief rule is told there is no stock signal.
+
+7.3.1a. **The upkeep under an input.** The work rule of 7.1.6 does not let a job use an input that is
+also an upkeep commodity below the upkeep of the tick, so a job on such an input starts only with `U_c + q`
+in stock. `Job_c` therefore counts `U_c` besides the input, in tier 2: an agent that held only the upkeep
+bought the input, ate the upkeep at the end of the tick and started the next with the upkeep again, so the
+cap of 7.1.6 was 0 and the whole role stalled (N-313). Tier 3 cannot be relied on to fill the gap: the buy
+share of 7.5.2 can be 20% of the buffer or less.
 
 7.3.2. **The lump.** A job consumes its inputs at its start (`spec-production.md`
 4.3). An agent mid-job does not need the next job's inputs until it is free, so

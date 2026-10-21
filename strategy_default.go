@@ -197,6 +197,13 @@ func (t *tradeCtx) jobTerm(c CommodityID) (int64, bool) {
 			j.add(n, ok1 && ok2)
 		}
 	}
+	if j.v > 0 {
+		// The work rule keeps the next tick's upkeep out of the inputs (7.1.6), so
+		// a job needs that upkeep in stock besides the inputs (N-313).
+		if u, isUpkeep, ok := t.upkeepUnits(c); isUpkeep {
+			j.add(u, ok)
+		}
+	}
 	for _, tl := range r.Tools {
 		if tl.Commodity == c {
 			j.add(v.Weight, true)

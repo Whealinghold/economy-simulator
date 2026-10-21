@@ -386,7 +386,8 @@ func TestDefaultStrategyTrade_UrgentBidUsesTheTop(t *testing.T) {
 // not PurposeInput), and that UnitCost passes through unchanged.
 //
 // The recipe uses 1 ore and the tool and makes an item worth 900: weight 2,
-// InputJobs 1, so Job(ore) = 1 * 2 * 1 = 2 and Job(tool) = k* = 2.
+// InputJobs 1. The ore is also upkeep (U = 2), so Job(ore) = 1 * 2 * 1 + U = 4
+// (N-313: the work rule keeps the upkeep out of the inputs) and Job(tool) = k* = 2.
 //
 // Requirement: FR-AGT-038, FR-AGT-048, FR-AGT-057, FR-AGT-073
 func TestDefaultStrategyTrade_ToolsAndPurposes(t *testing.T) {
@@ -407,8 +408,8 @@ func TestDefaultStrategyTrade_ToolsAndPurposes(t *testing.T) {
 			Tunables: testTunables(),
 		}
 	}
-	// StartsIn 1: ore: U = 2, Job = 2, UseTgt = 2 * 3 + 2 = 8, Keep = 10, Target 8;
-	// tier 1 is 2, tier 2 is 2, tier 3 is 6. The tool: Job = 2, Keep = 2, bought as tier 2.
+	// StartsIn 1: ore: U = 2, Job = 2 + 2 = 4, UseTgt = 2 * 3 + 4 = 10, Keep = 12, Target 10;
+	// tier 1 is 2, tier 2 is 4, tier 3 is 6. The tool: Job = 2, Keep = 2, bought as tier 2.
 	got, _ := runTrade(view(1), nil)
 	byCommodity := func(p TradePlan, c CommodityID) (Intent, bool) {
 		for _, in := range p.Intents {
@@ -423,8 +424,8 @@ func TestDefaultStrategyTrade_ToolsAndPurposes(t *testing.T) {
 		t.Errorf("tool order = %+v, %v, want 2 units, PurposeTool, target 2", tool, ok)
 	}
 	ore, ok := byCommodity(got, xOre)
-	if !ok || ore.Purpose != PurposeInput || ore.Reserve != 2 || ore.Target != 8 || ore.UnitCost != 77 {
-		t.Errorf("ore order = %+v, %v, want PurposeInput, reserve 2, target 8, unit cost 77", ore, ok)
+	if !ok || ore.Purpose != PurposeInput || ore.Reserve != 2 || ore.Target != 10 || ore.UnitCost != 77 {
+		t.Errorf("ore order = %+v, %v, want PurposeInput, reserve 2, target 10, unit cost 77", ore, ok)
 	}
 	// StartsIn 3: no job next tick, so nothing is bought for it and the ore is upkeep only.
 	got, _ = runTrade(view(3), nil)

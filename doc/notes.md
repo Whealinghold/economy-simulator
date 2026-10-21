@@ -46,7 +46,7 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-235, N-304 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-232, N-236, N-237, N-244, N-245, N-247, N-313 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-232, N-236, N-237, N-244, N-245, N-247 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-137, N-241, N-242 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-304, N-309, N-310, N-311, N-312, N-313 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-232, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-304, N-309, N-310, N-311, N-312 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
@@ -86,7 +86,7 @@ PR description.
 | SET | N-140, N-192, N-268 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305 |
 | SPN | N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
-| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-313 |
+| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207 |
 | SUB | N-121, N-228, N-268, N-244 |
@@ -1958,15 +1958,7 @@ PR description.
 - **Note:** None of this is row 12's code to fix; row 12 only adds tests, fixtures and docs, and the owner's ruling is needed on each point. (1) In the recorded golden `testdata/golden/off/one.txt` the households of `one` fall from about 600 to 81 by tick 400, and every S01, S04 and S16 run ends with 0 households. (2) The S01 O check (the mean fuel price over the shock, ticks 400 to 459, above P0, the mean over 300 to 399) fails for seeds 1, 2, 3 and 5: the shock mean is 22, 21, 94 and 104 against P0 of 39, 41, 102 and 116. (3) The price-bounds check of S01 and S04 uses the loosest maker interval (`marketInterval` in `scenario_helpers_test.go`) and exempts the ticks where an estate sold at the tick the published price was set (an estate's ask is priced by the markdown of EST 2.7.3, not by a belief); the strict per-maker violations are only reported (564 market-ticks on seed 1). Whether FR-STB-008 is the loose or the strict interval, and whether an estate sale may leave the interval, is the owner's ruling. (4) A rendering detail found on the way: the snapshot line of `events-one.txt` carries `Modules=[]` because the renderer omits a field only at `IsZero`, and a non-nil empty slice is not; treating an empty slice as zero (OBS 9.5.2) would move that one golden line, so it was not changed (testing.md 7.2).
 - **Update (2026-10-21):** S01 `unmet` was 30 000 bp on seed 7 because the numerator (households unfed at the consumption phase) and the denominator (the snapshot after the exits of the tick) counted different things; the test now divides by the households at the start of each tick (seed 7: 10 000 bp, every household unfed), which is a fix to the test, not to the engine.
 - **Update (2026-10-21, observability review of the branch of plan 1-12):** two metrics were proposed for the two reconstructions the scenario tests made, and both were dropped after reading the code. (a) A `MarketCleared` field for "the price was set by an estate" is ill-defined: `clearing.Report` sets the price as the volume-weighted mean of all trades of the tick, and `economysim.estate.sold` with `economysim.market.price_age` already gives the join. (b) An `economysim.household.exposed` metric cannot come from `UpkeepShortfall.Households`, which is absent when all are fed. Both traps are now written in `observability-and-logging.md` 5.3.1 (the unfed share divides by `household.count` at the end of the previous tick; the estate join). Point (3) of the note stays the owner's ruling.
-- **Update (2026-10-21, collapse investigation):** point (1) is confirmed on every pack, not only `one`: warm `five` and `two` reach 0 households by tick about 500, `three` about 600. With the failure ladder at its maximum bound nobody is removed, yet about 450 of 600 households stay unfed for 300 ticks, the mineral, refining and tool jobs stop by tick 200 and the staple price falls to 10, so it is not a shortage of money. One defect is N-313; the staple glut and the idle growers are not fixed.
-
-### N-313 The default trade side does not buy the upkeep that the work side holds back (the cook stall)
-
-- **Areas:** AGT, STB, CODE
-- **Raised:** 2026-10-21, the investigation of the collapse of N-312.
-- **Note:** `foodCap` (`spec-agents.md` 7.1.6, `strategy_work.go`) lets a recipe use an input that is also an upkeep commodity only while `stock - U >= q`, so a job on fuel or staple needs `U + q` in stock when it starts. `jobTerm` (`spec-agents.md` 7.3, `strategy_default.go`) gives tier 2 only `InputJobs * k * q`. A cook with the stock of one tick's fuel (`U`) buys `q`, eats `U` at the end of the tick and starts the next tick with `U` again, so `foodCap` is 0 and it cannot work. Tier 3 (the cover `U * CoverTicks`) does not fill the gap: `BuyShare` is 2 000 bp when the price is at the top of its 15-tick window, which rounds the buffer to 0. Every household of a role has the same view, so the whole role stalls together. On pack `one` (warm, seed 1; scratch runs, no repo change) all 122 to 136 cooks were idle on whole ticks, in runs of up to 10 in a row. Cooks are the only source of `prepared`, and a missing upkeep unit counts the household as unfed, so the stall starts the unfed run that the failure ladder turns into removals.
-- **Proposed fix:** in `spec-agents.md` 7.3 and `jobTerm`, `Job_c` also counts `U_c` when `c` is an input of `r*` and an upkeep commodity (when the input term is above 0). In a scratch copy of the repo this gives 136 of 136 cooks working, households at tick 100 from about 417 to about 500, and no seed at 0 households at tick 600 (3 seeds). It does not stop the decline, so N-312 stays open. It needs the spec edit, a `Fix:` test that fails first (`testing.md` 5.3) and the golden files regenerated with the reason (`testing.md` 7.2).
-- **Also found, not fixed by it:** growers have no recipe outside the spring season (`ZeroYield`) for about 60 ticks and live on the staple stock of the warm start; with about 150 000 units in stock the staple price falls from 96 to 12, they become insolvent and `grow_staple` stops. Raising `tool_b` durability, the shelf life of `prepared`, the privation thresholds, `cover_ticks`, `reserve_ticks`, `input_jobs` or the output of `prepare_basic`, or removing the tool requirements, only delayed the collapse (3 seeds each).
+- **Update (2026-10-21, collapse investigation):** point (1) is confirmed on every pack, not only `one`: warm `five` and `two` reach 0 households by tick about 500, `three` about 600. With the failure ladder at its maximum bound nobody is removed, yet about 450 of 600 households stay unfed for 300 ticks, the mineral, refining and tool jobs stop by tick 200 and the staple price falls to 10, so it is not a shortage of money. The cook stall (the trade side did not buy the upkeep that the work side holds back) is fixed: `Job_c` counts `U_c` for an input that is also upkeep, and the `one` golden ends at 132 households instead of 81, with five S01 seeds ending above 0. What is left: growers have no recipe outside the spring season (`ZeroYield`) for about 60 ticks and live on the staple stock of the warm start; with about 150 000 units in stock the staple price falls from 96 to 12, they become insolvent and `grow_staple` stops. The S01 O check now fails on all 10 seeds (the fuel price after the shock is about half of P0, because fuel stays in glut), where it failed on 4. Raising `tool_b` durability, the shelf life of `prepared`, the privation thresholds, `cover_ticks`, `reserve_ticks`, `input_jobs` or the output of `prepare_basic`, or removing the tool requirements, only delayed the collapse (3 seeds each).
 
 ## Read receipt
 
@@ -1980,5 +1972,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 1201e88c158d1d4460313b1a
+NOTES-TAG: 72567dbcd5c6aabda7e2fd21
 
