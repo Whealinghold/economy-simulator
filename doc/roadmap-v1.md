@@ -205,30 +205,32 @@ which is also their dependency order. The one exception is `Modules.Estates`
 built with MON; its field id in the hash is 25 whatever its build order
 (CFG 8.2.2).
 
-| Create | Specs | Status |
-|--------|-------|--------|
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | planned |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, `Relocate`, the edge status) | REG | planned |
-| `scale.go` (weights, the census) | SCL | planned |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | planned |
-| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | planned |
-| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | planned |
-| `resources.go` and `internal/endowment`, `internal/curve` | RES | planned |
-| `subsistence.go` and `internal/ownuse` | SUB | planned |
-| `population.go` and `internal/population` | POP | planned |
-| `transport.go` and `internal/transit` | TRN, CAR | planned |
-| `information.go` and `internal/rumour` | INF | planned |
-| `migration.go` and `internal/migration` | MIG | planned |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | planned |
-| `external.go` and `internal/outside` | EXT | planned |
-| `integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player) | planned |
-| `indicator/` and `internal/measure` | IND | planned |
-| `internal/verdict` and the `stylised_long` build tag | STY | planned |
-| `experiment/`, `internal/design`, `internal/reduce` | EXP | planned |
-| `internal/calibration` and `testdata/calibration/` | CLB | planned |
-| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | planned |
-| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | planned |
-| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | planned |
+| Create | Specs | Plan | Status |
+| --- | --- | --- | --- |
+| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | [2-1](plans/plan-2-1.md) | plan written |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | [2-2](plans/plan-2-2.md) | plan written |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, `Relocate`, the edge status) | REG | [2-3](plans/plan-2-3.md) | plan written |
+| `scale.go` (weights, the census) | SCL | [2-4](plans/plan-2-4.md) | plan written |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | [2-5](plans/plan-2-5.md) | plan written |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | [2-6](plans/plan-2-6.md) | plan written |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | plan written |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | [2-8](plans/plan-2-8.md) | plan written |
+| `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | plan written |
+| `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | plan written |
+| `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | plan written |
+| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
+| `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
+| `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
+| `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | plan written |
+| `integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | plan written |
+| `indicator/` and `internal/measure` | IND | [2-18](plans/plan-2-18.md) | plan written |
+| `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | plan written |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | plan written |
+| `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | plan written |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | plan written |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
 its overlay under `testdata/chains/overlay/`, its module-alone golden under
