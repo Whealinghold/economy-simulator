@@ -100,7 +100,7 @@ economy-sim/
   value.go               Money, Price, Quantity and the typed IDs (3.3)
   random.go              the seed, the one PCG and Rand, the site table and the
                          keyed stream (7.3, ADR 0008)
-  world.go               World, NewWorld, Step, Run, the guards (the four
+  world.go               World, NewWorld, Step, Run, the guards (the five
                          fan-ins of 2.10.4 are in fanin.go)
   calendar.go  commodity.go  recipe.go  role.go  ledger.go  market.go  order.go
   clearing.go  agent.go  strategy.go  spawner.go  beliefs.go  production.go
@@ -243,7 +243,8 @@ file holds, in this order: the module's state struct (its per-agent state in
 the module's own slices indexed by agent slot, never as fields of the agent
 type); `validateX`; one method per position of `spec-world.md` 6 that the
 module owns; its filler of the `AgentView` and its checker of the `TradePlan`;
-its step of a removal (`spec-agents.md` 3.6) and its `region_bound` refusal
+its items in the tradable set of a role (`spec-agents.md` 3.4); its admission
+fact and row (`spec-clearing.md` 3.2); its step of a removal (`spec-agents.md` 3.6) and its `region_bound` refusal
 (`spec-regions.md` 6.5.2); its snapshot rows; and its checkpoint encoder and
 decoder. The module's arithmetic and matching live under `internal/<module>`
 over primitive structs (2.9); the module file converts.
@@ -268,11 +269,24 @@ entries and appends its guarded call. Each entry says `where` it runs, `line`
 `endStep`), as testing.md 6.8 says.
 
 2.10.4. **The fan-ins are compositions, with one entry point each.** The
-world has one `fillAgentView`, one `checkTradePlan`, one `removeAgent` and one
-`relocationRefusal`, each a fixed-order sequence of calls into the module
+world has one `fillAgentView`, one `checkTradePlan`, one `removeAgent`, one
+`relocationRefusal` and one `tradableItems` (the fifth, below), each a fixed-order sequence of calls into the module
 files and nothing else. `removeAgent` serves P7.1 and the between-ticks calls
 of `spec-integration.md` 4 alike, so the event order of a removal is written
 once. A second removal path, or module logic inside a fan-in, is a defect.
+
+The fifth is `tradableItems`, called once by the role-table constructor in
+`role.go`: a fixed-order sequence of guarded calls (`if cfg.Modules.Demand !=
+nil`) into the module files, each appending its items to the tradable set of a
+role before the table is frozen (`spec-agents.md` 3.4). Nothing mutates the
+table afterwards.
+
+An admission row of a module (`not_permitted`, `no_room`; `spec-clearing.md`
+3.2) is not a sixth fan-in. The module file resolves its fact as a field of
+`clearing.Facts`, appended in module order, and the world's one `orderFacts`
+resolver calls it under the module's pointer; `clearing.Admit` stays pure, with
+a marked position for the row in the order of the table. `not_permitted` is also
+checked while orders are built, beside `not_tradable` (FR-CLR-031 spans the two).
 
 2.10.5. **Catalogue files are append-only in module order.** A new module
 appends its entries to `event.go`, `errors.go`, `Config.Modules`, the
@@ -293,7 +307,7 @@ module is added (testing.md 7.1.1). A change that moves either has broken this
 rule; it is not a golden to regenerate.
 
 2.10.6. **The slice before any module.** The catalogue files, the core files,
-`tick.go` with the core positions, the four fan-ins and the checkpoint shape
+`tick.go` with the core positions, the five fan-ins and the checkpoint shape
 exist and pass the slice's golden file before the first module file is
 created, so that every module is made to fit them. The tests a module must
 ship with are in testing.md 7.1 and 10.4: its module-alone golden file, and
@@ -305,6 +319,7 @@ type Offer struct {
 	Ref   int // index into the caller's slice, returned in Match
 	Price int64
 	Qty   int64
+	Key   uint64 // tie-break key, drawn by the root from the injected source
 }
 
 type Match struct {
@@ -312,20 +327,21 @@ type Match struct {
 	Price, Qty     int64
 }
 
-func Average(bids, asks []Offer) []Match { /* ... */ }
+func Average(dst []Match, bids, asks []Offer) []Match { /* ... */ }
 
-// Root package: convert in, call, convert out.
+// Root package: convert in, call, convert out. The root draws the Key of each
+// order from the world's random source in input order (spec-clearing.md 8.3).
 func (AverageClearing) Clear(bids, asks []Order) []Trade {
 	b := make([]clearing.Offer, len(bids))
 	for i, o := range bids {
-		b[i] = clearing.Offer{Ref: i, Price: int64(o.Price), Qty: int64(o.Quantity)}
+		b[i] = clearing.Offer{Ref: i, Price: int64(o.Price), Qty: int64(o.Quantity), Key: w.rand.Uint64()}
 	}
 	a := make([]clearing.Offer, len(asks))
 	for i, o := range asks {
-		a[i] = clearing.Offer{Ref: i, Price: int64(o.Price), Qty: int64(o.Quantity)}
+		a[i] = clearing.Offer{Ref: i, Price: int64(o.Price), Qty: int64(o.Quantity), Key: w.rand.Uint64()}
 	}
 
-	matches := clearing.Average(b, a)
+	matches := clearing.Average(w.matches[:0], b, a)
 
 	trades := make([]Trade, len(matches))
 	for i, m := range matches {
@@ -973,4 +989,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f6a32524c5c8c180c76887c5
+RULE-TAG: 403404277d5a40376fd91790

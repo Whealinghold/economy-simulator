@@ -191,6 +191,7 @@ rounded half to even; a price below the resolution floor 50 would be raised to i
 schema = 1
 
 [world]
+anchor_hold = 5000
 upkeep = [ { commodity = "staple", quantity = 2 }, { commodity = "prepared", quantity = 1 }, { commodity = "fuel", quantity = 1 } ]
 
 [commodity.seed]

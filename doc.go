@@ -381,7 +381,11 @@
 //     effective factor; 0 means unknown (spec-production.md 9.1).
 //   - Cost anchor: the least non-zero unit cost over the recipes that make a
 //     commodity and can run in a region this tick, 0 if none; price beliefs
-//     read it as a ceiling (spec-production.md 9.3).
+//     read it as a ceiling (spec-production.md 9.3). A recipe with no factor in
+//     the current season is costed at its best factor of any season.
+//   - Anchor hold: the share of a region's starting wage, AnchorHold basis
+//     points, below which the cost anchor does not read the pooled observed wage;
+//     0 is off (spec-production.md 9.3).
 //   - Pending output: the quantity of each output a job will create when it
 //     completes, fixed when it starts; it is in no account until then.
 //   - Yield shock: a factor, in basis points and 10 000 by default, that the

@@ -304,6 +304,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `EntryPoolShare` | WorldParams | `spec-spawner.md` section 11 |
 | `Spawner` | WorldParams | `spec-spawner.md` section 3.1.3 |
 | `Clearing` | WorldParams | `spec-clearing.md` section 8 |
+| `AnchorHold` | WorldParams | `spec-production.md` section 9.3 |
 | `Closed` | Role | `spec-spawner.md` section 11 |
 | `Wants` | Demand | `spec-demand.md` section 9 |
 | `Items` | Want | `spec-demand.md` section 9 |

@@ -296,15 +296,16 @@ func (b *readBuf) observedWage(rings []*welfare.Ring) (wage int64, present bool)
 }
 
 // regionWage is the wage the cost anchor reads for a region (4.3): the pooled
-// wage over the region's rings when known and positive, else the starting wage
-// of the warm start, else unknown. It keeps no state, so it gives the same
-// answer after the rings are rebuilt from records. seed is the starting wage,
-// 0 when there is none; the world row writes 0 for an unknown wage into the
+// wage over the region's rings when known and positive, raised to floorBP basis
+// points of the starting wage (World.WageFloor, spec-production.md 9.3), else the
+// starting wage of the warm start, else unknown. It keeps no state, so it gives
+// the same answer after the rings are rebuilt from records. seed is the starting
+// wage, 0 when there is none; the world row writes 0 for an unknown wage into the
 // cost-anchor table.
-func (b *readBuf) regionWage(rings []*welfare.Ring, seed int64) (wage int64, known bool) {
+func (b *readBuf) regionWage(rings []*welfare.Ring, seed, floorBP int64) (wage int64, known bool) {
 	b.parts(rings)
 	if w, ok := welfare.PooledWage(b.nums, b.dens); ok {
-		return w, true
+		return welfare.FloorWage(w, seed, floorBP), true
 	}
 	if seed > 0 {
 		return seed, true

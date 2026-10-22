@@ -196,6 +196,12 @@ type WorldParams struct {
 	// DistanceLabel names the pack's distance unit. It is presentation only: it
 	// changes no result and is not hashed (spec-regions.md 4.1.2).
 	DistanceLabel string
+	// AnchorHold is the share of a region's starting wage (the warm start's) below
+	// which the cost anchor does not read the pooled observed wage, in basis
+	// points; 0 turns it off, which is the default (spec-production.md 9.3). It
+	// bounds how far a measured wage pulls the anchor and sets no wage (FR-WEL-015).
+	// It is the 46th field, appended after the presentation-only DistanceLabel.
+	AnchorHold int64
 }
 
 // Calendar is the structure of time: one section, not an entity

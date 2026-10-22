@@ -571,8 +571,7 @@ asks, each in input order (4.2; `spec-world.md` 7.2, ruling C8), puts it in `Key
 calls `Average`, which sorts by (limit price, `Key`, position in the input) and draws
 nothing. The key is a raw `uint64`, so it needs no reduction. The internal package does
 not know about commodities, roles or agents. The root converts to and from these
-structs inline at the call (architecture.md 2.9), which is why the example of 2.9
-omits the key and the random source (N-235).
+structs inline at the call (architecture.md 2.9).
 
 The package also holds the other pure rules of the market, over primitive values:
 

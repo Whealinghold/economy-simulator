@@ -57,6 +57,7 @@ func referenceConfig() economysim.Config {
 	}
 
 	world := economysim.DefaultWorldParams()
+	world.AnchorHold = 5_000 // the pack's base.toml sets it; the library default is 0
 	world.Upkeep = []economysim.Item{item("staple", 2), item("prepared", 1), item("fuel", 1)}
 
 	region := economysim.DefaultRegion()

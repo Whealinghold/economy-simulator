@@ -186,6 +186,7 @@ func pairsWorld(e *encoder, w WorldParams) {
 	e.num(43, w.Renewal)
 	e.num(44, w.EntryPoolShare)
 	e.text(45, w.Clearing)
+	e.num(46, w.AnchorHold)
 }
 
 // pairsCalendar writes the pairs of a Calendar: ids 1 to 8. Months and Seasons

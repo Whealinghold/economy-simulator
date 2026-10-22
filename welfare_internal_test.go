@@ -382,9 +382,11 @@ func ringWith(t *testing.T, window int64, recs ...welfare.Record) *welfare.Ring 
 // unknown with neither. The pooled wage of two rings is (900 + 300) / (3 + 1)
 // = 300; a ring that worked at a loss gives a pooled wage that is not positive
 // and so the seed; a ring that never worked gives the seed; the same answer
-// follows a rebuild of the rings from their records (no latch).
+// follows a rebuild of the rings from their records (no latch). With a floor of
+// 5 000 bp and a seed of 1 000 the floor is 500: a pooled wage of 300 is raised to
+// 500, one of 600 is kept, and a floor with no seed changes nothing.
 //
-// Requirement: FR-WEL-018, FR-WEL-019, FR-WEL-034
+// Requirement: FR-WEL-018, FR-WEL-019, FR-WEL-034, FR-PRO-055
 func TestRegionWage(t *testing.T) {
 	t.Parallel()
 	good1 := welfare.Record{Income: 900, Working: true, WorkHH: 3}
@@ -395,21 +397,25 @@ func TestRegionWage(t *testing.T) {
 		name      string
 		rings     []*welfare.Ring
 		seed      int64
+		floorBP   int64
 		wantWage  int64
 		wantKnown bool
 	}{
-		{"pooled over two agents", []*welfare.Ring{ringWith(t, 5, good1), ringWith(t, 5, good2)}, 77, 300, true},
-		{"loss falls back to the seed", []*welfare.Ring{ringWith(t, 5, loss)}, 77, 77, true},
-		{"nobody worked falls back to the seed", []*welfare.Ring{ringWith(t, 5, idle)}, 77, 77, true},
-		{"loss and no seed is unknown", []*welfare.Ring{ringWith(t, 5, loss)}, 0, 0, false},
-		{"no agents and no seed is unknown", nil, 0, 0, false},
-		{"a negative seed is not a starting wage", []*welfare.Ring{ringWith(t, 5, loss)}, -5, 0, false},
+		{"pooled over two agents", []*welfare.Ring{ringWith(t, 5, good1), ringWith(t, 5, good2)}, 77, 0, 300, true},
+		{"pooled below the floor is raised", []*welfare.Ring{ringWith(t, 5, good1), ringWith(t, 5, good2)}, 1_000, 5_000, 500, true},
+		{"pooled above the floor is kept", []*welfare.Ring{ringWith(t, 5, good1), ringWith(t, 5, good2)}, 500, 5_000, 300, true},
+		{"a floor with no seed changes nothing", []*welfare.Ring{ringWith(t, 5, good1), ringWith(t, 5, good2)}, 0, 5_000, 300, true},
+		{"loss falls back to the seed", []*welfare.Ring{ringWith(t, 5, loss)}, 77, 0, 77, true},
+		{"nobody worked falls back to the seed", []*welfare.Ring{ringWith(t, 5, idle)}, 77, 0, 77, true},
+		{"loss and no seed is unknown", []*welfare.Ring{ringWith(t, 5, loss)}, 0, 0, 0, false},
+		{"no agents and no seed is unknown", nil, 0, 0, 0, false},
+		{"a negative seed is not a starting wage", []*welfare.Ring{ringWith(t, 5, loss)}, -5, 0, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			b := newReadBuf(3)
-			w, known := b.regionWage(tt.rings, tt.seed)
+			w, known := b.regionWage(tt.rings, tt.seed, tt.floorBP)
 			if w != tt.wantWage || known != tt.wantKnown {
 				t.Errorf("regionWage = %d, %v, want %d, %v", w, known, tt.wantWage, tt.wantKnown)
 			}
@@ -417,7 +423,7 @@ func TestRegionWage(t *testing.T) {
 			for i, r := range tt.rings {
 				rebuilt[i] = ringWith(t, r.Window(), r.AppendRecords(nil)...)
 			}
-			if w2, k2 := b.regionWage(rebuilt, tt.seed); w2 != w || k2 != known {
+			if w2, k2 := b.regionWage(rebuilt, tt.seed, tt.floorBP); w2 != w || k2 != known {
 				t.Errorf("regionWage after a rebuild = %d, %v, want %d, %v", w2, k2, w, known)
 			}
 		})
@@ -587,7 +593,7 @@ func TestSummarise_NegativeObservedWageIsPresent(t *testing.T) {
 	if !sum.HasWage || sum.Wage != -30 {
 		t.Errorf("observed wage = %d, %v, want -30, true", sum.Wage, sum.HasWage)
 	}
-	if w, known := b.regionWage(set.rings, 0); known {
+	if w, known := b.regionWage(set.rings, 0, 0); known {
 		t.Errorf("pooled wage = %d, %v, want unknown", w, known)
 	}
 }
@@ -635,7 +641,7 @@ func TestWelfareAllocations(t *testing.T) {
 		{"floorRun", func() { r, _ := floorRun(9, 6, 10); sink += r }},
 		{"clampRun", func() { r, _ := clampRun(9, 1); sink += r }},
 		{"heldByFloor", func() { sink += b.heldByFloor(set, p, upkeep, prices) }},
-		{"regionWage", func() { w, _ := b.regionWage(set.rings, 77); sink += w }},
+		{"regionWage", func() { w, _ := b.regionWage(set.rings, 77, 0); sink += w }},
 		{"summarise", func() { sink += b.summarise(set, p, upkeep, prices, 100, true).Wage }},
 		{"newTarget", func() {
 			st.keyed(siteConstruction, 0, 1)

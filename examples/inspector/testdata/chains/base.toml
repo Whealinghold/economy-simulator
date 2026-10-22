@@ -1,0 +1,102 @@
+schema = 1
+
+[world]
+upkeep = [ { commodity = "staple", quantity = 2 }, { commodity = "prepared", quantity = 1 }, { commodity = "fuel", quantity = 1 } ]
+
+[commodity.seed]
+reference_price = 222
+[commodity.staple]
+reference_price = 96
+shelf_life = 700
+classes = [ "food" ]
+[commodity.prepared]
+reference_price = 628
+shelf_life = 4
+classes = [ "food" ]
+[commodity.fuel]
+reference_price = 179
+raw = true
+classes = [ "fuel" ]
+[commodity.mineral]
+reference_price = 837
+raw = true
+classes = [ "material" ]
+[commodity.refined]
+reference_price = 3190
+classes = [ "material" ]
+[commodity.waste]
+reference_price = 50
+[commodity.tool_a]
+reference_price = 13915
+durability = 10
+classes = [ "tool" ]
+[commodity.tool_b]
+reference_price = 17105
+durability = 8
+classes = [ "tool" ]
+
+[recipe.grow_staple]
+duration = 60
+sited = true
+inputs   = [ { commodity = "seed", quantity = 40 } ]
+outputs  = [ { commodity = "staple", quantity = 1800, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 10 } ]
+[recipe.gather_seed]
+sited = true
+outputs = [ { commodity = "seed", quantity = 2, cost_share = 10000 } ]
+[recipe.save_seed]
+inputs  = [ { commodity = "staple", quantity = 20 } ]
+outputs = [ { commodity = "seed", quantity = 20, cost_share = 10000 } ]
+[recipe.prepare]
+inputs   = [ { commodity = "staple", quantity = 2 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "prepared", quantity = 8, cost_share = 10000 } ]
+requires = [ { commodity = "tool_b", wear_per_use = 1 } ]
+[recipe.prepare_basic]
+trainee_eligible = true
+trainee_yield = 7000
+inputs   = [ { commodity = "staple", quantity = 2 }, { commodity = "fuel", quantity = 1 } ]
+outputs  = [ { commodity = "prepared", quantity = 4, cost_share = 10000 } ]
+[recipe.cut_fuel]
+sited = true
+outputs  = [ { commodity = "fuel", quantity = 14, cost_share = 10000 } ]
+[recipe.dig_mineral]
+sited = true
+outputs  = [ { commodity = "mineral", quantity = 3, cost_share = 10000 } ]
+[recipe.refine]
+duration = 2
+inputs   = [ { commodity = "mineral", quantity = 5 }, { commodity = "fuel", quantity = 2 } ]
+outputs  = [ { commodity = "refined", quantity = 3, cost_share = 10000 }, { commodity = "waste", quantity = 1, cost_share = 0, discard = true } ]
+
+[recipe.make_tool_a]
+duration = 3
+inputs  = [ { commodity = "refined", quantity = 2 } ]
+outputs = [ { commodity = "tool_a", quantity = 1, cost_share = 10000 } ]
+[recipe.make_tool_b]
+duration = 3
+inputs  = [ { commodity = "refined", quantity = 3 } ]
+outputs = [ { commodity = "tool_b", quantity = 1, cost_share = 10000 } ]
+
+[role.grower]
+recipes = [ "grow_staple", "save_seed", "gather_seed" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 10 }, { commodity = "tool_a", quantity = 1 } ]
+[role.cook]
+recipes = [ "prepare", "prepare_basic" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 }, { commodity = "tool_b", quantity = 1 } ]
+[role.forester]
+unskilled = true
+recipes = [ "cut_fuel" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+[role.digger]
+unskilled = true
+recipes = [ "dig_mineral" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+[role.refiner]
+recipes = [ "refine" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "mineral", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+[role.maker]
+recipes = [ "make_tool_a", "make_tool_b" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]
+[role.visitor]
+# an external agent (the player or a scripted buyer) is added to this role at run time; it has no recipes
+closed = true       # the spawner places nobody in it (spec-spawner.md 6.2)
+trades = [ "fuel", "prepared", "staple" ]

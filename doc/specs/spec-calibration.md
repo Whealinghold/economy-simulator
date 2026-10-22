@@ -712,6 +712,7 @@ freeze). It is "the most consequential default" of BEL (open question 1 there).
 | K-SKL03 | Role.TeachingLoad | K | SKL 4.2 | bp | U | lin500 | C6 | - | D03/RoleShares.Swing:? | L37 | I23 |
 | K-SKL04 | Region.CapitalReturn | K | SKL 2.5 | bp | U | lin500 | C6 | - | D03/RoleShares.Swing:? | L36 | - |
 | K-PRO01 | Recipe.TraineeYield | S | PRO 8.2 | bp | - | - | C2 | - | D03/RoleShares.Swing:? | L37 | I23 |
+| K-PRO02 | World.AnchorHold | D | PRO 9.3 | bp | U | lin1000 | C4 | off=0 | P02/Pinned.Share:? | L09 L10 L52 D04=BeliefsUpdated | I02 |
 
 Notes. **K-SPN02**: `EntryShare` at 0 turns role change **off** (a structural choice);
 at 10 000 it removes the cap (its off value). The condition is on the product with the
