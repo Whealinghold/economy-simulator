@@ -26,6 +26,9 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 	if !raceEnabled {
 		t.Skipf("baseline measured under -race (race=%v); counts differ without it (testing.md 5.7)", raceEnabled)
 	}
+	if testing.CoverMode() != "" {
+		t.Skipf("baseline measured without coverage (cover mode %q); the count was 70 with and without, but gate R takes no coverage (testing.md 5.7)", testing.CoverMode())
+	}
 	cfg := loadValidPack(t, packOne...)
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
 	if err != nil {

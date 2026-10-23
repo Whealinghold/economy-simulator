@@ -175,7 +175,6 @@ def fixed_sections(n_markets, n_sources, rumour_age, price_window, n_boundary, n
                 c.u(random.randint(50, 3000))
                 c.u(random.randint(0, 5))
     c = sec("world")
-    c.s(3650)
     c.u(10000)
     c.u(0)
     return secs

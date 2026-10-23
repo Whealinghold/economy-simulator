@@ -8,8 +8,8 @@ A. first consumer, default window: 5000 agents, |T_a| 7.7, window 30, modules no
   markets            1955         3444        15640
   production        56406        88988       451248
   welfare         1210000      1475051      9680000
-  world                 3            5           24
-  total           1694269      2110097     13554242   (fixed/varint = 6.4)
+  world                 2            3           16
+  total           1694268      2110095     13554234   (fixed/varint = 6.4)
 
 B. first consumer, long-job window: 5000 agents, |T_a| 7.7, window 120, modules ['demand', 'information', 'population'], closed accounts 0
   section            ints     varint B      fixed B
@@ -22,8 +22,8 @@ B. first consumer, long-job window: 5000 agents, |T_a| 7.7, window 120, modules 
   markets            1955         3439        15640
   production        55790        88296       446320
   welfare         4810000      5849814     38480000
-  world                 3            5           24
-  total           5324038      6551168     42592394   (fixed/varint = 6.5)
+  world                 2            3           16
+  total           5324037      6551166     42592386   (fixed/varint = 6.5)
 
 C. first consumer, modules, 10 000 deaths: 5000 agents, |T_a| 7.7, window 30, modules ['demand', 'information', 'population'], closed accounts 10000
   section            ints     varint B      fixed B
@@ -36,8 +36,8 @@ C. first consumer, modules, 10 000 deaths: 5000 agents, |T_a| 7.7, window 30, mo
   markets            1955         3442        15640
   production        55839        88349       446712
   welfare         1210000      1475229      9680000
-  world                 3            5           24
-  total           1744087      2218767     13952786   (fixed/varint = 6.3)
+  world                 2            3           16
+  total           1744086      2218765     13952778   (fixed/varint = 6.3)
 
 D. full-detail realm: 200000 agents, |T_a| 8.0, window 30, modules ['demand', 'information', 'population'], closed accounts 0
   section            ints     varint B      fixed B
@@ -50,5 +50,5 @@ D. full-detail realm: 200000 agents, |T_a| 8.0, window 30, modules ['demand', 'i
   markets            1955         3438        15640
   production      2239237      3653807     17913896
   welfare        48400000     59009294    387200000
-  world                 3            5           24
-  total          68257485     86201420    546059970   (fixed/varint = 6.3)
+  world                 2            3           16
+  total          68257484     86201418    546059962   (fixed/varint = 6.3)

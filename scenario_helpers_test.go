@@ -48,7 +48,7 @@ var gateFPrefixes = []string{
 }
 
 // TestMain refuses -update under -race before any test runs, so the refusal
-// does not wait for the scenarios (plan 2-1 D228; flush keeps the same check).
+// does not wait for the scenarios (plan 2-1 D228); it is the only place.
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if !updateAllowed(raceEnabled, *updateFlag) {
@@ -679,9 +679,6 @@ func (r *scenReport) flush(t testing.TB) {
 	t.Log("\n" + strings.Join(lines, "\n"))
 	if !*updateFlag {
 		return
-	}
-	if !updateAllowed(raceEnabled, *updateFlag) {
-		t.Fatalf("-update is refused under -race: the seed set is reduced, so %q would be recorded as a run that did not happen (plan 2-1 D228); run without -race", r.title)
 	}
 	if err := r.write(expectedDir); err != nil {
 		t.Errorf("record %s: %v", r.title, err)
@@ -1332,7 +1329,7 @@ func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue 
 func isSkipCall(c *ast.CallExpr) bool {
 	switch f := c.Fun.(type) {
 	case *ast.SelectorExpr:
-		return strings.HasPrefix(f.Sel.Name, "Skip")
+		return f.Sel.Name == "Skip" || f.Sel.Name == "Skipf" || f.Sel.Name == "SkipNow"
 	case *ast.Ident:
 		return strings.HasPrefix(strings.ToLower(f.Name), "skip")
 	}

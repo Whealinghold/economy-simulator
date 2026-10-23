@@ -250,6 +250,11 @@ func TestDeterminism_RaceCasesKeepEveryGroup(t *testing.T) {
 			t.Errorf("detCases(true) lacks the chunking extreme %q", name)
 		}
 	}
+	for name := range detRaceCases {
+		if !all[name] {
+			t.Errorf("detRaceCases names %q, which is no case of detCases(false) (renamed?)", name)
+		}
+	}
 	if len(got) != len(detRaceCases) {
 		t.Errorf("detCases(true) has %d cases, detRaceCases names %d", len(got), len(detRaceCases))
 	}
