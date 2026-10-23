@@ -8,10 +8,9 @@ Run in Docker, never on the host, from the models folder so that wld/seed.py is 
 (the finaliser, the key and the reseed rule are that file's, one source):
   docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v "$PWD/..":/m -w /m/chk python:3.12-slim python worked.py
 
-Section 17.2 (the world section with a PCG state) and the toy frame of 17.3 are stale under
-ADR 0008, see N-214: the world section no longer holds a PCG state. They are kept as the
-byte-level examples of the primitives until 17.2 is rewritten. The reseed of 6.8 and 17.5 is
-the rule of ADR 0008 and is computed by wld/seed.py.
+The world section of 17.2 holds the next agent ID and the construction flag only (ADR 0008:
+a checkpoint saves the seed, in the header, and no stream state). The reseed of 6.8 and 17.5
+is the rule of ADR 0008 and is computed by wld/seed.py.
 """
 
 import hashlib
@@ -20,7 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "wld"))
 
-from seed import PCG, SITES, M64, bare_state, reseed, stream_state, words  # noqa: E402
+from seed import SITES, M64, reseed, stream_state, words  # noqa: E402
 
 GAMMA = 0x9E3779B97F4A7C15
 
@@ -82,13 +81,6 @@ def read_b(buf, pos):
     return buf[pos] == 1, pos + 1
 
 
-# --- the world section of 17.2 is stale under ADR 0008 (no PCG state is saved); the bare-seed state of
-# wld/seed.py stands in for it so that the primitive examples below keep their bytes
-
-def seed_state(seed):
-    return bare_state(seed)
-
-
 def main():
     # 17.1 primitives
     cases_u = [0, 1, 127, 128, 300, 16383, 16384, 2**63, M64]
@@ -117,22 +109,11 @@ def main():
         except Corrupt as e:
             print("  %-30s -> %s" % (name, e))
 
-    # 17.2 the world section of the construction of spec-world.md 19.1 (seed 0, 14 words)
-    hi, lo = seed_state(0)
-    p = PCG(hi, lo)
-    for _ in range(14):
-        p.uint64()
-    state = p.marshal()
-    assert state.hex() == "7063673a8e3e6b7eff8db56cb58e6a2f88e0bbfa", state.hex()
-    assert "%016x" % p.uint64() == "212416c8026d6a45"
-    # a fresh PCG of seed 0 for the reseed vectors is the state after the 14 words
-    hi14, lo14 = p.state >> 64, p.state & M64
-    # p advanced one more word above; rebuild the state after 14 words for the section
-    q = PCG(hi, lo)
-    for _ in range(14):
-        q.uint64()
-    body = q.marshal() + u(11) + b(True)
+    # 17.2 the world section of the construction of spec-world.md 19.1: seven household agents (IDs 4 to 10),
+    # so the next agent ID is 11, and the world has not stepped, so the construction flag is set
+    body = u(11) + b(True)
     section = u(1) + u(len(body)) + body
+    assert section.hex() == "01020b01", section.hex()
     print("world section (tag 1): %s" % section.hex(" "))
 
     # 17.3 a toy frame: header, the world section, trailer

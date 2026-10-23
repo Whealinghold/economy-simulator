@@ -583,8 +583,7 @@ external agent) takes the same two, in this order, at its creation
 pair from the stream `(siteConstruction, 0, agent ID)` of its agent (7.1.4). No word has a
 position in a sequence, so the first draw of the first tick is not "the next word of the
 construction", and a pair of runs that differs in whether a discovery field exists is
-aligned from the first tick (the pair of `spec-technology.md` 6.3.2 is no longer
-misaligned: that text is stale under ADR 0008, see N-214).
+aligned from the first tick.
 
 ### 5.8 Events and logs at construction
 
@@ -1811,9 +1810,9 @@ world adds, as plain data in a fixed order (ADR 0002 decisions 3 and 5):
 | State | Why it cannot be derived |
 |-------|--------------------------|
 | The tick counter, `int64` | it is the clock; it is written in the checkpoint's header, so that `Info` needs no section (`spec-checkpoint.md` 5.4.3) |
-| The seed, `uint64`: the effective seed (7.1.1) | it is the one random datum of the world and every stream is a function of it; it is written in the checkpoint's header (`spec-checkpoint.md` 5.4), so that no PCG state, and no position in any stream, is saved (ADR 0008; the section of CHK 4.2 that still lists a PCG state is stale under ADR 0008, see N-214) |
+| The seed, `uint64`: the effective seed (7.1.1) | it is the one random datum of the world and every stream is a function of it; it is written in the checkpoint's header (`spec-checkpoint.md` 5.4), so that no PCG state, and no position in any stream, is saved (ADR 0008) |
 | The next agent ID, `int64` | an agent's ID is never reused; the highest ID of the live agents is not enough if the highest was removed, and the closed accounts that would imply it may one day be compacted (`spec-ledger.md` open question 6) |
-| Whether the world is still in its construction phase (a flag) | a world checkpointed before its first `Step` is restored in construction, with its bucket, and a later call is totalled in it as on the original (5.5.3; `spec-checkpoint.md` 4.4, 6.7.2) |
+| Whether the world is still in its construction phase (a flag) | a world checkpointed before its first `Step` is restored in construction, with its bucket, and a later call is totalled in it as on the original (5.5.3; `spec-checkpoint.md` 4.4, 6.7.2); the bucket and the pending totals themselves are the ledger's contribution, written in tag 2 of `spec-checkpoint.md` 4.2 |
 
 The configuration hash is stored by CHK and is not world state. The world's other
 contributions are those of the specs that own them (section 8.2 lists the slots).
@@ -1853,8 +1852,7 @@ header, so a seed given to a restore has no use. CHK adopts the recommendation o
 spec (`spec-checkpoint.md` 6.4): `WithSeed` is **refused** on a restore (`ErrOptionContext`;
 an option that is accepted and ignored is a trap). The seed of a restored world is the
 seed of the header, and it is read back as the seed: the header's seed is the effective
-seed, not information only (`spec-checkpoint.md` 5.4 still says "informational only", stale
-under ADR 0008, see N-214). `WithReseed(salt)` is the one way to give a restored world its
+seed, not information only (`spec-checkpoint.md` 5.4.1). `WithReseed(salt)` is the one way to give a restored world its
 own streams: it replaces the effective seed by `finalise(seed xor finalise(salt))`
 (`spec-checkpoint.md` 6.8; 4.1).
 
@@ -1865,13 +1863,11 @@ Stated as requirements on the world, not as their content.
 | To | The world guarantees |
 |----|----------------------|
 | **OBS** | every event carries `Tick`; the events of a step come in the order of 6.11 and **every** step that emitted `TickStarted` is closed by `TickEnded`, a failed one with `Failed` true, which describes the end of the step and not a completed tick (3.5.6); events are constructed only when an observer was supplied; a snapshot is available only at a boundary on a healthy world (3.7, 8.4); construction events carry `Tick` 0 and come in the order of 5.8 (`AgentSpawned`, then the initial `FacilityChanged`, then the founding `SettlementClassChanged`); a between-ticks call emits its event at the call with the tick of the next step, and a policy actor's write emits its slot events at P0.3a after `TickStarted`, then `PolicyDecided` (6.11 item 1). OBS **adds** what this spec asked for: a `Failed` field on `TickEnded` (3.5.6) and on `RunEnded` (3.4.2), the events `YieldShocked`, `TransitFactorChanged` and `PopulationScaled` for the slots that had none (8.2), the names table on `WorldCreated` (5.8.2), and the construction bucket as a `BoundaryFlow` with `Tick` -1 at the entry of the first step (P0.2a, N-072) |
-| **CHK** | the contribution of 12 (the PCG state, the next agent ID and the construction flag with the bucket while in construction; the tick in the header); the boundary of 8.4; a failed world is refused; the register of extension names is in the hash; `WithSeed` is refused by a restore and `WithReseed` is the restore-only option (4.1, 12.3); `Tick()`, `ConfigHash` and `Config` are readable |
+| **CHK** | the contribution of 12 (the effective seed in the header, the next agent ID, the construction flag with the bucket while in construction; the tick in the header); the boundary of 8.4; a failed world is refused; the register of extension names is in the hash; `WithSeed` is refused by a restore and `WithReseed` is the restore-only option (4.1, 12.3); `Tick()`, `ConfigHash` and `Config` are readable |
 | **INT** | every call acts between ticks (8.1), is atomic, emits its event at the call, takes its draws at the call, and is refused with `ErrInStep` or `ErrWorldFailed`; the slots of 8.2 and the calls of 8.3 (add, remove, relocate, direct; add and remove a store; add, adjust and transfer facilities; transfer titles; forgive claims; the cancel of a journey is inside `Relocate`) are the whole list of mechanisms; INT names them and fixes their bounds and errors; a slot never edits a configured value; no "act now" exists inside a step, and the one writer inside a step is a policy actor at P0.3a through the owners' internal setters (8.2.2), which no public call reaches |
 | **IND** | indicators are a function of the events and the snapshot at a boundary; the flow totals of a finished tick reach IND through `BoundaryFlow` only; the snapshot holds the pending totals of 8.1.3 and no more; counts of agents and households are separate (the weights); a tick is the finest resolution: no value exists between `TickStarted` and `TickEnded`; the counters that reveal a binding cap (O1 to O5, O9 and O10) are events |
 | **STY** | a run is a function of (configuration, seed, sequence of calls); `Run(ctx, n)` runs `n` ticks and leaves a snapshot-able world; two runs with the same inputs are bit-identical across platforms (architecture.md 7.4); a golden test is enforced; a run with an observer equals one without |
-| **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison is exact, and a measured variance reduction, only while the draw counts are equal (7.6.1); the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
-
-Stale under ADR 0008, see N-214: the **CHK** row (12 holds no PCG state and CHK saves the seed alone) and the **EXP** row (a paired comparison is exact in the draws by construction, 7.6; the pairing gain is measured on the state's divergence alone). The rows are not rewritten here: their owners edit them.
+| **EXP** | worlds share nothing, so a harness may build many and step them on separate goroutines (3.1.1); `Config()` returns the effective configuration and `ConfigHash` keys a result; a paired comparison is aligned in the draws by construction (7.6), and the variance reduction a harness measures is of the state's divergence alone; the cost shape of 11 budgets a sweep; a failed world is detectable by `Err()` and is discarded |
 
 ## 14. Parameters
 
@@ -2062,7 +2058,7 @@ and the harness measures the gain (`spec-experiments.md` 7). *Test:* WLD-S4
 (`stream.py`: 98.0% of the later draws differ with one stream, 2.0% with a stream
 per tick). *Status:* model.
 
-Stale under ADR 0008, see N-214: WLD-A5 is closed between streams (7.6): one extra word moves the later words of its own stream only (`stream.py`: 0.01% of the later draws, against 98.0% for one positional stream). The register entry L120, WLD-D2 (D88: "draw anyway" is an owner's choice inside one stream, 7.4.3) and WLD-S4 are rewritten with STB, which owns them. A hazard remains for a change of an ID (7.6.2).
+WLD-A5 is closed between streams (7.6): one extra word moves the later words of its own stream only (`stream.py`: 0.01% of the later draws, against 98.0% for one positional stream). The register entry L120, WLD-D2 (D88: "draw anyway" is an owner's choice inside one stream, 7.4.3) and WLD-S4 stay with STB, which owns them. A hazard remains for a change of an ID (7.6.2).
 
 **Dampers.** WLD-D1 *Ties and caps by key or rotation* (10.1.1): stated as the
 rule for new specs and proposed for O1 to O5, O9 and O10. D25 *Decision rates*, which the
@@ -2225,7 +2221,7 @@ handoff.
 | N-019 Housekeeping for the first code change | **Leave open**, with this added: `random.go`, `tick.go` and `option.go` and the `internal/ordering` helpers (23); the options and terms for the glossary | 23 |
 | N-022 The player and other external agents | **Leave open**, with this added: an external agent is created at the call with the next ID and the two creation draws (8.3, D12) | 8.3 |
 | N-079 External agents are mortal only when the consumer says so | **Leave open** (INT); the removal call is between ticks (8.3) | 8.3 |
-| N-214 Keyed random streams (ADR 0008): the edits owed | **Applied for WLD 7** (the key, the site constants of the slice D1, D3, D5, D7, D8, D9 and D10, the vectors, `K(t, id)`, the draw table with its streams, 7.4 and 7.6 narrowed) and for 4.1, 4.4, 5.1, 5.7, 6.9.1, 6.12 (C22), 8.1.1, 12, 14, 19 and 22 (questions 4 and 7). **Leave open**: the sites of the rows outside the slice and their `id` (open point 3), and the passages marked "stale under ADR 0008" in 13, 16.5 and 17 | 7, 12, 22 |
+| N-214 Keyed random streams (ADR 0008): the edits owed | **Applied for WLD 7, 12, 13, 17 and 22** (the key, the site constants of the slice D1, D3, D5, D7, D8, D9 and D10, the vectors, `K(t, id)`, the draw table with its streams, 7.4 and 7.6 narrowed) and for 4.1, 4.4, 5.1, 5.7, 6.9.1, 6.12 (C22), 8.1.1, 14, 16.5, 19 and 22 (questions 4 and 7). **Leave open**: the sites of the rows outside the slice and their `id` (open point 3) | 7, 12, 22 |
 
 Proposed new notes are in the handoff.
 
@@ -2305,7 +2301,7 @@ has no default or bound of its own.
 | FR-WLD-083 | No cadence, window, gate probability or share MUST be a function of a measured aggregate of the world, and a cadence MUST be a datum of the configuration, in the hash and constant for a run (9.4). |
 | FR-WLD-090 | A tie between candidates of equal merit in a rule that a spec adds MUST be broken by `K(t, id)` and then the ID, unless the spec states a reason (10.1.1). |
 | FR-WLD-091 | `K(t, id)` MUST be `finalise(t * γ + id + γ)` modulo 2^64 with γ = `0x9E3779B97F4A7C15`, that is the SplitMix64 finaliser applied to `x + γ` with `x = t * γ + id` as in RES 5.3.3, with `t` and `id` as the two's-complement `uint64` of their `int64` values, and MUST take no draw and keep no state; the vectors of 7.1.5 (c) MUST hold (7.1.7, 10.1.1). |
-| FR-WLD-100 | The world's contribution to a checkpoint MUST be the effective seed, the next agent ID and the construction flag, in a fixed order (the tick counter and the seed are written in the checkpoint's header), plus the flow totals that calls between ticks added since the last P8.6 when there are any; no random state and nothing derived MUST be saved (12). |
+| FR-WLD-100 | The world's contribution to a checkpoint MUST be the effective seed, the next agent ID and the construction flag, in a fixed order (the tick counter and the seed are written in the checkpoint's header), and, as the ledger's contribution (`spec-checkpoint.md` 4.2 tag 2), the construction bucket while the world is in construction and the pending flow totals that calls between ticks added since the last P8.6 when there are any; no random state and nothing derived MUST be saved (12). |
 | FR-WLD-101 | A restore from those and the other specs' state MUST continue exactly as an uninterrupted run; a world restored from a checkpoint taken after its first `Step` MUST NOT be in construction, and one taken before it MUST be, with its bucket (12.2, 5.5.3). |
 | FR-WLD-110 | On a failed world `Err`, `Tick`, `ConfigHash` and `Config` MUST remain callable and return the failure, the tick the failed step was running, the hash and a deep copy of the effective configuration, the derived tables (`Calendar`, `ReferencePrice`, `Warnings`, `Graph`, `Travel`, `Polity`, `TreasuryAgent`) MUST return their value, and the readers of live state (`Endowment`, `InTransit`, `Away`) and `RelocationRefusal` MUST return the state the failed step left, with no guarantee of consistency; `Tick`, `ConfigHash` and `Config` MUST return their value on a world in a step (3.5.1, 3.6). |
 

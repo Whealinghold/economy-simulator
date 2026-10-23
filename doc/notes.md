@@ -843,6 +843,7 @@ PR description.
 - **Answer (2026-10-12, ADR 0008):** per-purpose streams are adopted, keyed by (seed, site, tick, entity): a count change moves only the later draws of its own stream, so two runs of one seed are aligned by construction and diverge through state only; the fingerprint of EXP 7.3 and the flag `d` of CLB 4.2.1 go. The note stays open until WLD 7, EXP 7 and CLB 4.2.1 are rewritten (N-214); the pairing gain is still a measured number (EXP 7.4), now of the state's divergence alone.
 - **Update (2026-10-12, Phase 1):** the WLD part is applied: WLD 7.6 says paired runs are aligned in the draws by construction (model: 98.00% of later draws differ under the positional stream, 0.01% under keyed streams). Open for EXP 7.3 and 7.4 (the pairing gain is measured on the divergence of state alone) and CLB 4.2.1 (the flag `d` goes).
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for EXP, STB and CLB. The world adds no draw (FR-WLD-062); the draws are keyed (ADR 0008).
+- **Update (2026-10-23, plan 2-1 Phase 1):** the CHK part is applied: the EXP row of CHK 11 and CHK-S2 say that a paired comparison is aligned in the draws by construction (`spec-world.md` 7.6) and that the stream fingerprint of EXP 7.3 reads nothing; the WLD part was applied earlier and the 13 EXP row is now the same. Still open for EXP 7.3 and 7.4, STB and CLB 4.2.1.
 
 ### N-125 A snapshot is a function of saved state
 
@@ -1514,6 +1515,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The default draws nothing (FR-SPN-029); a consumer's Decide gets the stream (siteSpawner, t, region).
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the solver draws nothing (FR-VIA-020, FR-VIA-040). Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the world's sites (D155): D1, D7, D8 and D10 are called with the keys of WLD 7.3, D5 `siteTrade` before every `Trade` and D3 `siteWork` only for a consumer's `Work`; the draws of D2, D4, D6, D11 to D15 and D17 are modules'. Left open for the other owners.
+- **Update (2026-10-23, plan 2-1 Phase 1):** applied for CHK and WLD: every passage marked "stale under ADR 0008" in `spec-checkpoint.md` (header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4, 6.6.3, 6.7.1, 6.8, 8.1 item 4, 8.4, the EXP row of 11, CHK-A2, 16, 17.2 and 17.3, FR-CHK-006, 025, 051 and the edits-owed rows of 20) and of `spec-world.md` (7.x residue at the construction paragraph, 12, 13, 17 WLD-A5, the N-214 row of 20) is rewritten; the world section (tag 1) holds the next agent ID and the construction flag, the bucket and the pending totals are the ledger's (tag 2), and the header's seed is the effective seed, read back. `models/chk/worked.py`, `size.py` and their outputs are regenerated in Docker. Left open for EXP 7.3 and FR-EXP-062 (plan 2-20), CLB 4.2.1, 7.2.3 and FR-CLB-024 (plan 2-21), STB L120, L124, D88 and the D90 row, TEC 4.4.1 and 4.4.6, the `spec-stability.md` row of `spec-world.md` 22 (S63 and MIG-S3), and the sites and IDs of the module rows.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1942,5 +1944,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 172835bff95143155de0cc7e
+NOTES-TAG: bb9d63594caa115dcbf82efb
 
