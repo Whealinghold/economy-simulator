@@ -600,6 +600,28 @@ func TestState_Corrupt(t *testing.T) {
 		{"wear commodity out of range", wear([2]uint64{3, 3}), 0, 10, false},
 		{"wear commodity far out of range", wear([2]uint64{4, 3}), 0, 10, false},
 		{"wear units 0", wear([2]uint64{0, 0}), 0, 10, false},
+		{"lots after a bad lot", one(func(w *codec.Writer) {
+			acct(w, 0, 0, 0, 0, [4]int64{2, 0, 0, 0}, [4]int64{2, 1, 0, 0})
+		}), 0, 10, false},
+		{"claims after a bad claim", claim(2, 1, 0, 2, 4), 2, 10, false},
+		{"flow rows after a bad row", flow([4]uint64{2, 1, 0, 1}, [4]uint64{2, 1, 0, 2}), 0, 10, false},
+		{"wear rows after a bad row", wear([2]uint64{4, 3}, [2]uint64{5, 1}), 0, 10, false},
+		{"relocation rows after a bad row", func(w *codec.Writer) {
+			w.Count(0)
+			for range 4 { // next claim, claims, flow rows, wear rows
+				w.U(0)
+			}
+			w.Count(2)
+			for _, v := range []uint64{1, 1, 0, 5, 0, 1, 0, 5} { // a row within a region, then a valid one
+				w.U(v)
+			}
+		}, 0, 10, false},
+		{"accounts after a bad account", func(w *codec.Writer) {
+			w.Count(2)
+			acct(w, 0, 2, 0, 0)
+			acct(w, 0, 0, 0, 0)
+			tail(w)
+		}, 0, 10, false},
 		{"count beyond the bytes", func(w *codec.Writer) { w.U(1 << 40) }, 0, 10, false},
 		{"trailing byte", func(w *codec.Writer) { w.Count(0); tail(w); w.U(0) }, 0, 10, false},
 		{"truncated", func(w *codec.Writer) { w.Count(0) }, 0, 10, false},
