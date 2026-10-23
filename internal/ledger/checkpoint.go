@@ -214,6 +214,9 @@ func (l *Ledger) ReadState(r *codec.Reader, tick int64, construction bool) error
 	if tick < 0 {
 		r.Failf("tick %d is below 0", tick)
 	}
+	if construction && tick != 0 {
+		r.Failf("tick %d in the construction phase, which ends at the first step", tick)
+	}
 	l.tick, l.construction, l.cleared = tick, construction, !construction
 	l.readBody(r, first, construction)
 	l.finish(r, construction)

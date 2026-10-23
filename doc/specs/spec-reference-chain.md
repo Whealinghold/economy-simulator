@@ -1887,12 +1887,12 @@ UTF-8, LF. For a run of `T` ticks with a seed:
    totals; the jobs in progress by recipe.
 6. **Checkpoint digest:** the SHA-256 of the checkpoint at tick `T`: the 32 bytes of its
    trailer (`spec-checkpoint.md` 8.3), as the last line of the file, `checkpoint_digest `
-   and the 64 lower-case hexadecimal digits. **Item 6 was added by the checkpoint change
-   (Stage 2) and `testdata/golden/off/one.txt` moved once for it**, with the explanation
-   of testing.md 7.2 (item 6 is new and nothing else in the file changes); before that
-   change the file ended with item 5. The line is rendered for every pack and every set
-   (off, module-alone, all) from then on, and the digest moves with every change of a
-   pack's economy (a rebalance), which gives the explanation for item 6 too.
+   and the 64 lower-case hexadecimal digits. **Item 6 is added by the restore change
+   (Stage 2), which moves `testdata/golden/off/one.txt` once for it**, with the
+   explanation of testing.md 7.2 (item 6 is new and nothing else in the file changes);
+   until then the file ends with item 5. From then on the line is rendered for every
+   pack and every set (off, module-alone, all), and the digest moves with every change
+   of a pack's economy (a rebalance), which gives the explanation for item 6 too.
 
 **A module that is off leaves no trace** (decision D5 of the plan of Stage 0;
 architecture.md 2.10.5). A count, an amount or a flag at zero is not written, a

@@ -427,6 +427,20 @@ func TestState_ConstructionBucketOnlyInConstruction(t *testing.T) {
 	}
 }
 
+// TestState_ConstructionRefusesAStepTaken verifies that a section flagged as in
+// construction with a tick above 0 is refused: construction ends at the first
+// step, so the pair cannot come from a world.
+//
+// Requirement: FR-CHK-026
+func TestState_ConstructionRefusesAStepTaken(t *testing.T) {
+	t.Parallel()
+	g := newRig(t, scriptMaxMoney)
+	g.fund(t)
+	if err := read(freshLike(t, g), saved(g.l), 1, true); !errors.Is(err, codec.ErrMalformed) {
+		t.Errorf("ReadState(construction, tick 1) = %v, want ErrMalformed", err)
+	}
+}
+
 // craft writes a section by hand.
 func craft(f func(w *codec.Writer)) []byte {
 	w := codec.NewWriter(nil)
