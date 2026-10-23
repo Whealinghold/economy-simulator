@@ -1330,8 +1330,8 @@ func evalUnderRace(cond ast.Expr) tri {
 // skips unless it runs under -race, is not one.
 func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
 
-// Known limit: a skip behind an alias of raceEnabled (race := raceEnabled) or in a
-// helper not named skip* is not seen; name such helpers skip*.
+// Known limit: a skip behind an alias of raceEnabled (race := raceEnabled), in a
+// switch, or in a helper not named skip* is not seen; name such helpers skip*.
 
 // isSkipCall reports whether c is t.Skip*, or a call of a helper named skip*
 // (skipIfRace(t)), which is how a test could hide its skip from raceSkippers.
@@ -1433,7 +1433,7 @@ func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 		t.Fatalf("read testing.md: %v", err)
 	}
 	if want := "-run '" + strings.Join(gateFPrefixes, "|") + "'"; !strings.Contains(string(doc), want) {
-		t.Errorf("doc/rules/testing.md 9.1 lacks the quick-run pattern %s built from gateFPrefixes", want)
+		t.Errorf("doc/rules/testing.md 9.1 lacks the quick-run pattern %s built from gateFPrefixes (same prefixes, same order, one line)", want)
 	}
 	files, err := filepath.Glob("*_test.go")
 	if err != nil || len(files) == 0 {
