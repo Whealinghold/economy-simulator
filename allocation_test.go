@@ -7,7 +7,7 @@ import (
 )
 
 // stepAllocBaseline is the number of allocations of one full Step of pack one
-// after 50 ticks, measured under -race (coverage adds no allocation: 70 either way) with
+// after 50 ticks, measured under -race (measured once with coverage as well, 70 either way, D231; the test skips under coverage, so only gate R checks it) with
 // the logger and observer at their no-op defaults and WithAudit off. It is a
 // baseline: raising it is a reviewed change with a reason (rule 8.2).
 const stepAllocBaseline = 70

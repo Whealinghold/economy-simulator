@@ -149,7 +149,7 @@ meaning, default and bound of each field. The parameter-owner table in
 absent from both is a gap (9.2). Fields marked (p) are presentation only (8.3).
 
 The section `Config.World` has the Go type `WorldParams` and its constructor is
-`DefaultWorldParams` (decision D140 of `plans/plan-phase-1-11.md`): the simulation type
+`DefaultWorldParams` (decision D140 of `plan-phase-1-11.md` (git history, `2abbe62^`)): the simulation type
 is `World` (architecture.md 2.2, 12.1; `spec-world.md` 3.1) and the root package cannot
 hold two. The field `Config.World`, the file table `[world]` and the field ids of 8.2.2
 do not change, so no hash input moves. In the tables of this spec and of the owner

@@ -211,7 +211,7 @@ leave room for them: the ledger can hold an obligation between two parties
 
 | Spec | Code | Layer | Status | Covers | Needs |
 |------|------|-------|--------|--------|-------|
-| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. The claim record, its six ledger operations and the totals are built with LED in the slice (`plan-phase-1-1.md`, git history, `2abbe62^`); the module is later. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
+| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. The claim record, its six ledger operations and the totals are built with LED in the slice (`plan-phase-1-1.md` (git history, `2abbe62^`), git history, `2abbe62^`); the module is later. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
 | `spec-insurance.md` | INS | module | exists | Single-event cover of a cargo and of stored goods against the losses of `spec-risk.md`, priced from the expected loss, with an unpaid payout held as a credit claim. Draft, accepted. Has a Requirements section | CRD, RSK (and TRN, STO for the cover kinds) |
 
 ## Macro is measured, never set

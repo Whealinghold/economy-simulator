@@ -47,7 +47,8 @@ var gateFPrefixes = []string{
 	"TestStylised", "TestCost", "TestStable",
 }
 
-// TestMain refuses -update under -race before any test runs, so the refusal
+// TestMain (the only one in the root test binary: a second is a build error)
+// refuses -update under -race before any test runs, so the refusal
 // does not wait for the scenarios (plan 2-1 D228); it is the only place.
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -1307,6 +1308,14 @@ func evalUnderRace(cond ast.Expr) tri {
 		}
 	case *ast.BinaryExpr:
 		switch e.Op {
+		case token.EQL, token.NEQ:
+			if id, ok := e.Y.(*ast.Ident); ok && (id.Name == "true" || id.Name == "false") {
+				v := evalUnderRace(e.X)
+				if (id.Name == "true") == (e.Op == token.EQL) {
+					return v
+				}
+				return negate(v)
+			}
 		case token.LOR:
 			return max(evalUnderRace(e.X), evalUnderRace(e.Y))
 		case token.LAND:
@@ -1363,6 +1372,9 @@ func raceSkippers(t *testing.T, files map[string]string) []string {
 				case skipsUnderRace(ifs.Cond):
 					taken = ifs.Body
 				case evalUnderRace(ifs.Cond) == triFalse && ifs.Else != nil:
+					if _, chain := ifs.Else.(*ast.IfStmt); chain {
+						return true // the else-if is visited on its own by the walk
+					}
 					taken = ifs.Else
 				default:
 					return true
@@ -1408,11 +1420,13 @@ func TestD(t *testing.T) { if raceEnabled && testing.Short() { t.Skip("x") } }
 func TestE(t *testing.T) { if raceEnabled || testing.Short() { t.Skip("x") } }
 func TestF(t *testing.T) { if raceEnabled { t.Log("x") } }
 func TestG(t *testing.T) { if raceEnabled { skipIfRace(t) } }
+func TestJ(t *testing.T) { if raceEnabled == true { t.Skip("x") } }
+func TestK(t *testing.T) { if !raceEnabled { t.Log("x") } else if testing.Short() { t.Skip("x") } }
 func TestI(t *testing.T) { if raceEnabled { if testing.Short() { t.Skip("x") } } }
 func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 `}
-	if got := raceSkippers(t, probe); !(len(got) == 5 && slices.Contains(got, "TestI") && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
-		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG, TestH and TestI only", got)
+	if got := raceSkippers(t, probe); !(len(got) == 6 && slices.Contains(got, "TestJ") && slices.Contains(got, "TestI") && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
+		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG, TestH, TestI and TestJ only", got)
 	}
 	doc, err := os.ReadFile("doc/rules/testing.md")
 	if err != nil {

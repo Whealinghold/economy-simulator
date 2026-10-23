@@ -192,7 +192,7 @@ commodity *c* is `1 + 7c + r`: `recipe_output` of `staple` is `1 + 35 + 2 = 38`,
 `wear` of `tool_a` is `1 + 42 + 6 = 49`. The estate account of `north` is ID 64, the
 next one: `one` has no outside node and no governed jurisdiction, so no group sits
 between the estates and the agents, and the first household's account is ID 65. A test
-reads these numbers (plan `plan-phase-1-1.md`, Phase 7); adding a commodity moves
+reads these numbers (plan `plan-phase-1-1.md` (git history, `2abbe62^`), Phase 7); adding a commodity moves
 every ID after its own boundary accounts by 7, as adding a region moves the agents
 (`spec-world.md` 5.3.2).
 
@@ -1024,7 +1024,7 @@ expiring lots (N-053, 5.3.3).
 
 16.1. **What the first build leaves out.** The table above is the finished library.
 The first build of `internal/ledger` (`doc/roadmap-v1.md` Stage 1, the ledger row;
-`doc/plans/plan-phase-1-1.md`) is the slice's, and the spec does not change by stage:
+`plan-phase-1-1.md` (git history, `2abbe62^`)) is the slice's, and the spec does not change by stage:
 
 | Left out of the first build | Built in | Why it waits |
 |-----------------------------|----------|--------------|

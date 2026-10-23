@@ -212,4 +212,4 @@ nested to a total depth of 16 are accepted, and one more is refused.
 - [`doc/specs/spec-config.md`](../specs/spec-config.md) 4.1, 6.1, 6.3
 - [ADR 0002](0002-persistence-by-checkpoint.md) decision 8 (the schema number)
 - `doc/notes.md` N-019, N-015
-- `doc/plans/plan-phase-0-foundation.md` Phase 1 item 4, Phase 5
+- `plan-phase-0-foundation.md` (git history, `2abbe62^`) Phase 1 item 4, Phase 5

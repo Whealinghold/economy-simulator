@@ -432,7 +432,7 @@ and take no outcome draw (`spec-world.md` D8, ruling C21; `spec-fiscal.md` 9.5).
 (architecture.md 4.3). It is defined in the root package where it is consumed
 (4.1) and ships with `AverageClearing` as its default, with a compile-time
 assertion (4.5). The shapes below are the decided ones (the clearing row of
-`roadmap-v1.md`, decisions D31 and D32 of `plans/plan-phase-1-3.md`):
+`roadmap-v1.md`, decisions D31 and D32 of `plan-phase-1-3.md` (git history, `2abbe62^`)):
 
 **The owner of `World.Clearing` (ruling C7, `spec-world.md` 4.2).** The field
 `Config.World.Clearing` is a string that names the clearing a world uses. This section
