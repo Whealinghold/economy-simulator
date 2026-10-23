@@ -33,9 +33,9 @@ func TestScenarioS16_StapleOverhang(t *testing.T) {
 	}
 	const scenario, pack = "S16", "one+overhang"
 	cfg := loadValidPack(t, append(slices.Clone(packOne), "overlay/overhang.toml")...)
-	rep := newScenReport("S16 one+overhang seeds 1-10, 1095 ticks")
+	rep := newScenReport(fmt.Sprintf("S16 one+overhang seeds 1-%d, 1095 ticks", scenarioSeedCount()))
 	t.Run("seeds", func(t *testing.T) {
-		for _, seed := range seedList(scenarioSeeds) {
+		for _, seed := range seedList(scenarioSeedCount()) {
 			t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 				t.Parallel()
 				run := runScenario(t, cfg, scenarioSpec{Seed: seed, Ticks: s16Ticks})

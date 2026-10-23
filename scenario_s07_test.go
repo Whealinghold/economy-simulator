@@ -36,7 +36,7 @@ func TestScenarioS07_PerishableGlut(t *testing.T) {
 		t.Skip("integration scenario, skipped with -short")
 	}
 	layers := append(slices.Clone(packOne), "overlay/glut-prepared.toml")
-	rep := newScenReport("S07 one+glut-prepared seeds 1-10, 400 ticks, cost_floor 10000/9000/7000/5000")
+	rep := newScenReport(fmt.Sprintf("S07 one+glut-prepared seeds 1-%d, 400 ticks, cost_floor 10000/9000/7000/5000", scenarioSeedCount()))
 	t.Run("floors", func(t *testing.T) {
 		for _, floor := range []int64{10000, 9000, s07DefaultFloor, 5000} {
 			cfg := loadPackBytes(t, []byte(fmt.Sprintf("[world]\ncost_floor = %d\n", floor)), layers...)
@@ -44,7 +44,7 @@ func TestScenarioS07_PerishableGlut(t *testing.T) {
 				t.Fatalf("S07: cost_floor = %d after the layer, want %d", cfg.World.CostFloor, floor)
 			}
 			t.Run(fmt.Sprintf("floor %d", floor), func(t *testing.T) {
-				for _, seed := range seedList(scenarioSeeds) {
+				for _, seed := range seedList(scenarioSeedCount()) {
 					t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 						t.Parallel()
 						s07Seed(t, cfg, floor, seed, rep)

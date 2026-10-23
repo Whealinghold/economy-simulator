@@ -406,9 +406,23 @@ observability-and-logging.md 8.2), is enforced by an ordinary test using
 
 ## 9. Coverage
 
-9.1. CI **MUST** run
-`go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...`
-and fail the build when coverage falls below the thresholds. **[project]**
+9.1. CI **MUST** run two commands and fail the build when either fails or when
+coverage falls below the thresholds. **[project]**
+
+- **R**, the race run: `go test -race -timeout 60m ./...`. Under `-race` the
+  scenario and determinism tests run a reduced seed set (`raceSeeds`, one).
+- **F**, the full run with coverage, without `-race`:
+  `go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...`.
+  All seeds and all cases run, and the thresholds below are read from its profile.
+
+Coverage is not taken under `-race`: with atomic coverage of `-coverpkg=./...`
+the race run took 48 to 58 minutes, against 164 seconds without coverage and 15
+minutes for F. A quick run before a push is
+`go test -timeout 60m -run 'TestScenario|TestDeterminism|TestGolden|TestInvariants|TestCheckpoint|TestFork|TestConfigOnly|TestFixture|TestPacks|TestCensus|TestExpected|TestStylised|TestCost|TestStable' ./...`
+(about half a minute, all seeds, no coverage). A root-package test that skips under
+`raceEnabled` **MUST** have a name that starts with one of the prefixes of that
+pattern (`gateFPrefixes` in `scenario_helpers_test.go`), so the quick run selects
+it; `TestRaceSkips_HaveAnFPrefix` enforces it. `-update` is refused under `-race`.
 
 `-coverpkg=./...` counts a statement as covered when any test in the module
 executes it. Without it, `go test` counts only the package under test, so code
@@ -466,7 +480,9 @@ and `testdata/golden/all/`.
 10.5. All tests pass with `-race`. Integration and end-to-end tests begin with
 `if testing.Short() { t.Skip("integration test, skipped with -short") }` (or
 "end-to-end test"). CI runs `go test -short -race ./...` first, so the unit
-tests fail fast, and then the full suite with coverage (9.1).
+tests fail fast, and then the full suite with coverage (9.1). Under `-race` the
+scenario and determinism tests run a reduced seed set; the full set runs in F,
+without `-race` (9.1).
 
 ## 11. Considerations when writing code
 
@@ -546,4 +562,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 8d141d87287fe0130681bbe1
+RULE-TAG: 0dd4dbd5d57ecd27376b462d

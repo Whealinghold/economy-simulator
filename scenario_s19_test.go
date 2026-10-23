@@ -125,9 +125,9 @@ func TestScenarioS19_HaltOnAndOff(t *testing.T) {
 	on := loadValidPack(t, packOne...)
 	off := loadPackBytes(t, []byte(fmt.Sprintf("[world]\nproduce_halt_ratio = %d\n", s19HaltOff)), packOne...)
 	goods := producedGoods(on)
-	rep := newScenReport("S19 one halt on/off seeds 1-10, 1095 ticks")
+	rep := newScenReport(fmt.Sprintf("S19 one halt on/off seeds 1-%d, 1095 ticks", scenarioSeedCount()))
 	t.Run("seeds", func(t *testing.T) {
-		for _, seed := range seedList(scenarioSeeds) {
+		for _, seed := range seedList(scenarioSeedCount()) {
 			t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 				t.Parallel()
 				ron, roff := s19Run(t, on, seed), s19Run(t, off, seed)

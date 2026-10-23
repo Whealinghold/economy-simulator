@@ -71,9 +71,9 @@ func TestScenarioS04_StapleShortage(t *testing.T) {
 		t.Run(pk.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := loadValidPack(t, pk.layers...)
-			rep := newScenReport(fmt.Sprintf("S04 %s seeds 1-10, 1400 ticks", pk.name))
+			rep := newScenReport(fmt.Sprintf("S04 %s seeds 1-%d, 1400 ticks", pk.name, scenarioSeedCount()))
 			t.Run("seeds", func(t *testing.T) {
-				for _, seed := range seedList(scenarioSeeds) {
+				for _, seed := range seedList(scenarioSeedCount()) {
 					t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 						t.Parallel()
 						s04Seed(t, cfg, script, pk.name, seed, rep, pk.bands)

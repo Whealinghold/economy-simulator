@@ -1,6 +1,6 @@
 # 0009. The TOML library is pelletier/go-toml/v2, behind a guard pass
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-12
 - Supersedes: none
 
@@ -201,6 +201,8 @@ nested to a total depth of 16 are accepted, and one more is refused.
 3. The status stays Proposed until the first code that imports the library (Phase 5 of
    the plan of Stage 0), whose pull request carries this justification
    (architecture.md 5.3) and `FuzzLoad` with a nested seed and a flat 10 000-key seed.
+   *Note, 2026-10-23.* Accepted: `config/guard.go` imports `unstable` and
+   `config/fuzz_test.go` holds `FuzzLoad`; the condition of Open point 3 is met.
 4. Whether a pack authoring tool should write documents already split under the
    limits is the data-pack deliverable's, not the loader's.
 
@@ -210,4 +212,4 @@ nested to a total depth of 16 are accepted, and one more is refused.
 - [`doc/specs/spec-config.md`](../specs/spec-config.md) 4.1, 6.1, 6.3
 - [ADR 0002](0002-persistence-by-checkpoint.md) decision 8 (the schema number)
 - `doc/notes.md` N-019, N-015
-- `doc/plans/plan-phase-0-foundation.md` Phase 1 item 4, Phase 5
+- `plan-phase-0-foundation.md` (git history, `2abbe62^`) Phase 1 item 4, Phase 5

@@ -1977,7 +1977,7 @@ One consolidated table; the exact text of each is in the handoff. None is made h
 
 | File | Section | Change |
 |------|---------|--------|
-| `spec-ledger.md` | 3.3, FR-LED-009 | an account is not closed while it is the creditor or debtor of an open claim (`ErrOpenClaim`); the order of the refusals of a `Close` is `spec-ledger.md` 3.3.1 (Phase 1 of the ledger row, plan-phase-1-1.md) |
+| `spec-ledger.md` | 3.3, FR-LED-009 | an account is not closed while it is the creditor or debtor of an open claim (`ErrOpenClaim`); the order of the refusals of a `Close` is `spec-ledger.md` 3.3.1 (Phase 1 of the ledger row, plan-phase-1-1.md, git history `2abbe62^`) |
 | `spec-ledger.md` | 7.2 | rows `loan_out`, `loan_repay`, `loan_interest` (money, internal), owner `spec-credit.md` |
 | `spec-ledger.md` | 10, 11, 12.4, 13 | the claim record with its `Origin`, six operations (with `Obligate` and `MarkOverdue`) and seven totals of CRD 3.1 to 3.3; the list saved with them; the audit identities of CRD 3.6; FR-LED-028 amended, new FR-LED-062 to 064 |
 | `spec-agents.md` | 3.6, 2 (row 5), FR-AGT-008 | steps 2d and 2e (CRD 9.1, 9.2) and their events; "no order beyond available cash, no borrowing, no negative balance" gets "(no borrowing with the credit module off)"; FR-AGT-008 reads "move all its money, less what its creditors take in the waterfall of `spec-credit.md` 9.1, to the region's estate with the reason `estate_money`" |

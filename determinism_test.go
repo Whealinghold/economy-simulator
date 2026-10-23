@@ -71,6 +71,86 @@ func hashingObserver() economysim.Observer {
 	})
 }
 
+// detStep drives a spec by Step with a snapshot at every tick.
+func detStep(s runSpec) runSpec { s.Drive, s.Snapshots = driveStep, snapEvery; return s }
+
+// detCase is one variant of a run of pack one that must end in the bare run's
+// state (TestDeterminism_SameBytes).
+type detCase struct {
+	name string
+	spec func() runSpec // a fresh spec per run (handlers and observers are stateful)
+}
+
+// detRaceCases are the cases kept under -race (plan 2-1 D226): one per lettered
+// group (a) to (e) at least, and the two chunking extremes.
+var detRaceCases = map[string]bool{
+	"(a) second observed run":      true,
+	"(b) Run(400) bare":            true,
+	"(b) Run(1)+Run(399) observed": true,
+	"(b) 400 Run(1) observed":      true,
+	"(c) logger":                   true,
+	"(d) audit on":                 true,
+	"(e) the same with Run chunks": true,
+}
+
+// detCases is the variant list for one world: every case, or under race only the
+// detRaceCases. A module or pack world is run by its own TestDeterminism_<Name>
+// that takes cases from detCases(true) by name.
+func detCases(race bool) []detCase {
+	seven := []int64{1, 2, 3, 50, 100, 121, 123}
+	ones := make([]int64, detTicks)
+	for i := range ones {
+		ones[i] = 1
+	}
+	run := func(observe bool, chunks ...int64) func() runSpec {
+		return func() runSpec { return runSpec{Drive: driveRun(chunks...), Observe: observe} }
+	}
+	all := []detCase{
+		{"(a) second plain run", func() runSpec { return detStep(runSpec{}) }},
+		{"(a) second observed run", func() runSpec { return detStep(runSpec{Observe: true}) }},
+		{"(b) Run(400) bare", run(false, detTicks)},
+		{"(b) Run(400) observed", run(true, detTicks)},
+		{"(b) Run(1)+Run(399) bare", run(false, 1, detTicks-1)},
+		{"(b) Run(1)+Run(399) observed", run(true, 1, detTicks-1)},
+		{"(b) seven chunks bare", run(false, seven...)},
+		{"(b) seven chunks observed", run(true, seven...)},
+		{"(b) 400 Run(1) bare", run(false, ones...)},
+		{"(b) 400 Run(1) observed", run(true, ones...)},
+		{"(c) logger", func() runSpec { return detStep(runSpec{Logger: newCaptureHandler()}) }},
+		{"(c) nil observer", func() runSpec {
+			return detStep(runSpec{Extra: []economysim.Option{economysim.WithObserver(nil)}})
+		}},
+		{"(c) recording observer", func() runSpec { return detStep(runSpec{Observe: true}) }},
+		{"(c) logger and Run(1) chunks", func() runSpec {
+			s := run(true, ones...)()
+			s.Logger = newCaptureHandler()
+			return s
+		}},
+		{"(d) audit on", func() runSpec { return detStep(runSpec{Audit: true}) }},
+		{"(d) audit on, observed", func() runSpec { return detStep(runSpec{Audit: true, Observe: true}) }},
+		{"(e) logger, recorder, hashing observer, audit", func() runSpec {
+			return detStep(runSpec{Logger: newCaptureHandler(), Observe: true, Audit: true,
+				Extra: []economysim.Option{economysim.WithObserver(hashingObserver())}})
+		}},
+		{"(e) the same with Run chunks", func() runSpec {
+			s := run(true, seven...)()
+			s.Logger, s.Audit = newCaptureHandler(), true
+			s.Extra = []economysim.Option{economysim.WithObserver(hashingObserver())}
+			return s
+		}},
+	}
+	if !race {
+		return all
+	}
+	var kept []detCase
+	for _, c := range all {
+		if detRaceCases[c.name] {
+			kept = append(kept, c)
+		}
+	}
+	return kept
+}
+
 // TestDeterminism_SameBytes verifies pack one, seeds 1 and 2, 400 ticks: a run
 // split into any number of Run calls, with or without a logger, an observer or
 // the audit, ends in the snapshot and config hash of the bare Step run, and the
@@ -78,6 +158,9 @@ func hashingObserver() economysim.Observer {
 // RunStarted and RunEnded) and its one.txt bytes.
 //
 // Requirement: FR-REF-025, FR-REF-030, FR-OBS-023, FR-WLD-063, FR-WLD-064, FR-WLD-020, FR-CFG-026, NFR-WLD-004
+//
+// Under -race it runs detCases(true), a subset that keeps every group (plan 2-1
+// D226); the full list runs in gate F.
 //
 // Guard: observation, logging, the audit and the chunking of Run must not move
 // the world.
@@ -88,58 +171,12 @@ func TestDeterminism_SameBytes(t *testing.T) {
 	}
 	cfg := loadValidPack(t, packOne...)
 	report := solveCold(t)
-	seven := []int64{1, 2, 3, 50, 100, 121, 123}
-	ones := make([]int64, detTicks)
-	for i := range ones {
-		ones[i] = 1
-	}
-	type detCase struct {
-		name string
-		spec func() runSpec // a fresh spec per run (handlers and observers are stateful)
-	}
-	step := func(s runSpec) runSpec { s.Drive, s.Snapshots = driveStep, snapEvery; return s }
-	run := func(observe bool, chunks ...int64) func() runSpec {
-		return func() runSpec { return runSpec{Drive: driveRun(chunks...), Observe: observe} }
-	}
-	cases := []detCase{
-		{"(a) second plain run", func() runSpec { return step(runSpec{}) }},
-		{"(a) second observed run", func() runSpec { return step(runSpec{Observe: true}) }},
-		{"(b) Run(400) bare", run(false, detTicks)},
-		{"(b) Run(400) observed", run(true, detTicks)},
-		{"(b) Run(1)+Run(399) bare", run(false, 1, detTicks-1)},
-		{"(b) Run(1)+Run(399) observed", run(true, 1, detTicks-1)},
-		{"(b) seven chunks bare", run(false, seven...)},
-		{"(b) seven chunks observed", run(true, seven...)},
-		{"(b) 400 Run(1) bare", run(false, ones...)},
-		{"(b) 400 Run(1) observed", run(true, ones...)},
-		{"(c) logger", func() runSpec { return step(runSpec{Logger: newCaptureHandler()}) }},
-		{"(c) nil observer", func() runSpec {
-			return step(runSpec{Extra: []economysim.Option{economysim.WithObserver(nil)}})
-		}},
-		{"(c) recording observer", func() runSpec { return step(runSpec{Observe: true}) }},
-		{"(c) logger and Run(1) chunks", func() runSpec {
-			s := run(true, ones...)()
-			s.Logger = newCaptureHandler()
-			return s
-		}},
-		{"(d) audit on", func() runSpec { return step(runSpec{Audit: true}) }},
-		{"(d) audit on, observed", func() runSpec { return step(runSpec{Audit: true, Observe: true}) }},
-		{"(e) logger, recorder, hashing observer, audit", func() runSpec {
-			return step(runSpec{Logger: newCaptureHandler(), Observe: true, Audit: true,
-				Extra: []economysim.Option{economysim.WithObserver(hashingObserver())}})
-		}},
-		{"(e) the same with Run chunks", func() runSpec {
-			s := run(true, seven...)()
-			s.Logger, s.Audit = newCaptureHandler(), true
-			s.Extra = []economysim.Option{economysim.WithObserver(hashingObserver())}
-			return s
-		}},
-	}
+	cases := detCases(raceEnabled)
 	for _, seed := range []uint64{1, 2} {
 		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 			t.Parallel()
-			base := runPack(t, cfg, step(runSpec{Seed: seed, Ticks: detTicks}))
-			ref := runPack(t, cfg, step(runSpec{Seed: seed, Ticks: detTicks, Observe: true}))
+			base := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks}))
+			ref := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks, Observe: true}))
 			refEvents := renderEvents(withoutRunBrackets(ref))
 			refGolden := oneTxt(cfg, seed, detTicks, ref, report)
 			if d := firstTickDiff(base.Samples, ref.Samples); d != "" {
@@ -175,6 +212,51 @@ func TestDeterminism_SameBytes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestDeterminism_RaceCasesKeepEveryGroup verifies detCases(true) has at least
+// one case in each lettered group (a) to (e) and the two chunking extremes, and
+// that every name in it is a name of detCases(false).
+//
+// Guard: the reduction under -race (plan 2-1 D226) drops cases, never a group; a
+// typo in detRaceCases would silently drop a case from gate R.
+func TestDeterminism_RaceCasesKeepEveryGroup(t *testing.T) {
+	t.Parallel()
+	all := map[string]bool{}
+	for _, c := range detCases(false) {
+		all[c.name] = true
+	}
+	got := map[string]bool{}
+	for _, c := range detCases(true) {
+		got[c.name] = true
+		if !all[c.name] {
+			t.Errorf("detCases(true) has %q, which detCases(false) lacks", c.name)
+		}
+	}
+	for _, g := range []string{"(a) ", "(b) ", "(c) ", "(d) ", "(e) "} {
+		n := 0
+		for name := range got {
+			if strings.HasPrefix(name, g) {
+				n++
+			}
+		}
+		if n == 0 {
+			t.Errorf("detCases(true) has no case of group %s", g)
+		}
+	}
+	for _, name := range []string{"(b) Run(1)+Run(399) observed", "(b) 400 Run(1) observed"} {
+		if !got[name] {
+			t.Errorf("detCases(true) lacks the chunking extreme %q", name)
+		}
+	}
+	for name := range detRaceCases {
+		if !all[name] {
+			t.Errorf("detRaceCases names %q, which is no case of detCases(false) (renamed?)", name)
+		}
+	}
+	if len(got) != len(detRaceCases) {
+		t.Errorf("detCases(true) has %d cases, detRaceCases names %d", len(got), len(detRaceCases))
 	}
 }
 

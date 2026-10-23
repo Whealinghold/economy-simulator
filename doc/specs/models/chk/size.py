@@ -30,7 +30,7 @@ class Count:
     def __init__(self):
         self.ints = 0
         self.var = 0
-        self.raw = 0  # bytes that are not integers (hashes, the PCG state)
+        self.raw = 0  # bytes that are not integers (hashes)
 
     def u(self, v):
         self.ints += 1
@@ -175,10 +175,8 @@ def fixed_sections(n_markets, n_sources, rumour_age, price_window, n_boundary, n
                 c.u(random.randint(50, 3000))
                 c.u(random.randint(0, 5))
     c = sec("world")
-    c.s(3650)
-    c.b(20)
     c.u(10000)
-    c.u(0)
+    c.u(0)  # the construction flag, counted as one integer (worked.py encodes it as a bool byte)
     return secs
 
 

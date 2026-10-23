@@ -171,7 +171,9 @@ economy-sim/
 ├── doc/roadmap-v1.md      # the delivery order of the code: stages, files, exit tests
 ├── doc/notes.md           # notes for future work, indexed by spec area code;
 │                          #   read before writing or changing a spec
-├── doc/plans/              # implementation plans, one per stage of roadmap-v1.md
+├── doc/plans/              # implementation plans, one or more per stage of roadmap-v1.md;
+│                          #   working documents, deleted after the stage's sign-off (the
+│                          #   commit is recorded in the roadmap); a plan decides nothing
 ├── doc/adr/              # architecture decision records, numbered NNNN-title.md
 └── doc/rules/              # normative rules (architecture, observability, testing)
 ```
@@ -197,7 +199,8 @@ gofmt -l .                     # must print nothing
 go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
-go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+go test -race -timeout 60m ./...   # gate R: reduced seeds under -race
+go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...   # gate F
 go mod tidy                    # must produce no diff
 ```
 
