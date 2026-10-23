@@ -1356,6 +1356,9 @@ func evalUnderRace(cond ast.Expr) tri {
 
 // Known limit: a skip behind an alias of raceEnabled (race := raceEnabled), in a
 // switch, or in a helper not named skip* is not seen; name such helpers skip*.
+// A condition that skips under -race only through an unknown term
+// (`!raceEnabled || testing.CoverMode() != "atomic"`) reads as unknown and is
+// not seen either; write the race skip as its own `if raceEnabled`.
 
 // isSkipCall reports whether c is t.Skip*, or a call of a helper named skip*
 // (skipIfRace(t)), which is how a test could hide its skip from raceSkippers.
