@@ -86,7 +86,7 @@ var scenSem = make(chan struct{}, scenarioWorlds)
 
 // seedList returns 1..n.
 func seedList(n int) []uint64 {
-	out := make([]uint64, n)
+	out := make([]uint64, max(n, 0)) // a negative count is an empty list, not a make panic
 	for i := range out {
 		out[i] = uint64(i + 1)
 	}
@@ -689,8 +689,13 @@ func (r *scenReport) flush(t testing.TB) {
 // scenariosPath is the recorded file of a pack inside dir.
 func scenariosPath(dir, pack string) string { return filepath.Join(dir, pack+".scenarios.txt") }
 
-// write records the block in the file of its pack under dir and in no other.
+// write records the block in the file of its pack under dir and in no other. A
+// pack name that is empty or is not a bare file-name stem is refused, so a typo
+// cannot write ".scenarios.txt" or a file outside dir.
 func (r *scenReport) write(dir string) error {
+	if r.pack == "" || r.pack != filepath.Base(r.pack) || r.pack == "." || r.pack == ".." {
+		return fmt.Errorf("scenario report %q: pack %q is not a bare name", r.title, r.pack)
+	}
 	return writeScenarioBlock(scenariosPath(dir, r.pack), r.title, r.lines())
 }
 
@@ -1259,6 +1264,29 @@ func TestScenReport_PerPackPath(t *testing.T) {
 	}
 	if got := newScenReport("t").pack; got != "one" {
 		t.Errorf("newScenReport pack = %q, want one", got)
+	}
+}
+
+// TestScenReport_WriteRefusesBadPack verifies a report whose pack name is empty
+// or has a path element is refused and writes nothing, and that seedList of a
+// negative count is empty.
+//
+// Guard: the pack name becomes a file name under expected/; "" would write
+// ".scenarios.txt" and "../x" would write outside the directory.
+func TestScenReport_WriteRefusesBadPack(t *testing.T) {
+	t.Parallel()
+	for _, pack := range []string{"", ".", "..", "../x", "a/b"} {
+		dir := t.TempDir()
+		r := newPackScenReport(pack, "S00 bad seeds 1-1, 1 ticks")
+		if err := r.write(dir); err == nil {
+			t.Errorf("write with pack %q = nil, want an error", pack)
+		}
+		if entries, err := os.ReadDir(dir); err != nil || len(entries) != 0 {
+			t.Errorf("pack %q left %d files, %v, want none", pack, len(entries), err)
+		}
+	}
+	if got := seedList(-1); len(got) != 0 {
+		t.Errorf("seedList(-1) = %v, want empty", got)
 	}
 }
 
