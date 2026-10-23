@@ -1353,11 +1353,6 @@ func evalUnderRace(cond ast.Expr) tri {
 	return triUnknown
 }
 
-// skipsUnderRace reports whether cond is certainly true under -race. A term such
-// as testing.CoverMode() != "" is unknown, and !raceEnabled is false under -race,
-// so the allocation test, which skips unless it runs under -race, is not one.
-func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
-
 // Known limit: a skip behind an alias of raceEnabled (race := raceEnabled), in a
 // switch, or in a helper not named skip* is not seen; name such helpers skip*.
 
