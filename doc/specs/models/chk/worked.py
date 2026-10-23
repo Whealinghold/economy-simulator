@@ -113,7 +113,8 @@ def main():
     # so the next agent ID is 11, and the world has not stepped, so the construction flag is set
     body = u(11) + b(True)
     section = u(1) + u(len(body)) + body
-    assert section.hex() == "01020b01", section.hex()
+    if section.hex() != "01020b01":
+        raise AssertionError(section.hex())
     print("world section (tag 1): %s" % section.hex(" "))
 
     # 17.3 a toy frame: header, the world section, trailer
