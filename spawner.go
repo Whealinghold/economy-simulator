@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/occupation"
 )
 
@@ -615,4 +616,31 @@ func refusalReason(r occupation.Refusal) Reason {
 		return ReasonUnsupportedCause
 	}
 	return ""
+}
+
+// saveSpawner is tag 9 (spec-checkpoint.md 4.2; plan 2-2 D250): the sparse renewal
+// carry of each (region, role), the (region, role) pairs that ever had an agent
+// (only the set bits), the sparse run of ticks with unfunded entrants of each
+// region, and the sparse runs of empty ticks and of ticks below the floor of each
+// (region, role).
+func (w *World) saveSpawner(cw *codec.Writer) error {
+	roles := len(w.cfg.Roles)
+	writeSparse(cw, w.state.renewalCarry, roles)
+	had := 0
+	for _, b := range w.state.hadAgent {
+		if b {
+			had++
+		}
+	}
+	cw.Count(had)
+	for i, b := range w.state.hadAgent {
+		if b {
+			cw.U(uint64(i / roles))
+			cw.U(uint64(i % roles))
+		}
+	}
+	writeSparseByRegion(cw, w.state.unfundedRun)
+	writeSparse(cw, w.state.extinctRun, roles)
+	writeSparse(cw, w.state.belowFloorRun, roles)
+	return nil
 }

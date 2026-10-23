@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
@@ -438,3 +439,27 @@ func (e *estates) restore(l *ledger.Ledger, r RegionID, rows []listing) error {
 
 // The pool policy of the Estates module (relief, the pool as a money-flow
 // target) is appended here in Stage 2.
+
+// saveEstates is tag 8 (spec-checkpoint.md 4.2; plan 2-2 D249): for each region in
+// ascending RegionID the count and the rows of the listings of the lots its estate
+// holds, each as the commodity, the born tick (signed), the durability and the
+// listed price. The asked mark is scratch and is not written.
+func (w *World) saveEstates(cw *codec.Writer) error {
+	var rows []listing
+	for r := range w.cfg.Regions {
+		var err error
+		// Excluded from coverage (testing.md 9.5): rows has no way to fail today and
+		// keeps the error result of the restore's counterpart; the branch only wraps it.
+		if rows, err = w.estates.rows(w.ledger, RegionID(r), rows[:0]); err != nil {
+			return fmt.Errorf("checkpoint: listings of region %d: %w", r, err)
+		}
+		cw.Count(len(rows))
+		for _, l := range rows {
+			cw.U(uint64(l.key.Commodity))
+			cw.I(l.key.Born)
+			cw.U(uint64(l.key.Durability))
+			cw.U(uint64(l.price))
+		}
+	}
+	return nil
+}

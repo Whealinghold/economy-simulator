@@ -6,6 +6,7 @@ import (
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
@@ -288,4 +289,107 @@ func consume(l *ledger.Ledger, a *agent, from int, per []itemRow, sc *consumeScr
 	a.hunger = household.NextHunger(a.hunger, a.unfed)
 	a.privation = household.NextPrivation(a.privation, a.unfed)
 	return nil
+}
+
+// The bits of the flag word of an agent record (spec-checkpoint.md 4.2.4).
+const (
+	flagExternal uint64 = 1 << iota
+	flagMortal
+)
+
+// saveAgents is tag 3 (spec-checkpoint.md 4.2; plan 2-2 D247): the table of the
+// strategy names the live agents use, sorted, a count of agents, each live agent
+// in ascending ID, the blocks of the modules that follow the list, and the sparse
+// run of unfed ticks. A removed agent is a zero slot and writes nothing.
+func (w *World) saveAgents(cw *codec.Writer) error {
+	var names []string
+	w.eachLive(func(a *agent) { names = append(names, w.strategyName(a)) })
+	slices.Sort(names)
+	names = slices.Compact(names)
+	cw.Count(len(names))
+	for _, n := range names {
+		cw.Bytes([]byte(n))
+	}
+	n := 0
+	w.eachLive(func(*agent) { n++ })
+	cw.Count(n)
+	w.eachLive(func(a *agent) { w.saveAgent(cw, a, names) })
+	for _, t := range agentTails {
+		if t.present(&w.cfg) {
+			t.save(w, cw)
+		}
+	}
+	writeSparse(cw, w.state.unfedRun, len(w.cfg.Roles))
+	return nil
+}
+
+// saveAgent writes the record of one agent. The fields a module hosts are always
+// written (spec-checkpoint.md R10, plan 2-2 D247): OwnUse and OwnUseJobs as 0 and
+// the journey as absent while their modules are off, DeathCarry as its start; the
+// module that builds the field replaces the value and the module-on check here and
+// moves nothing.
+func (w *World) saveAgent(cw *codec.Writer, a *agent, names []string) {
+	var flags uint64
+	if a.external {
+		flags |= flagExternal
+	}
+	if a.mortal {
+		flags |= flagMortal
+	}
+	idx, _ := slices.BinarySearch(names, w.strategyName(a))
+	cw.U(uint64(a.id))
+	cw.U(uint64(a.account))
+	cw.U(uint64(a.role))
+	cw.U(uint64(a.weight))
+	cw.U(flags)
+	cw.U(uint64(idx))
+	cw.U(uint64(a.unfed))
+	cw.U(uint64(a.hunger))
+	cw.U(uint64(a.privation))
+	cw.I(a.roleSince)
+	cw.I(w.deathCarry(a.id))
+	cw.U(0) // OwnUse: the subsistence module is off
+	cw.U(0) // OwnUseJobs
+	cw.B(false)
+	saveDirective(cw, a.directive)
+}
+
+// saveDirective writes the directive of an agent: whether there is one and, when
+// there is, whether it carries a job request (Job is a pointer) and the request,
+// the intents, the discards, the holds and Sticky. A negative amount a consumer
+// put in a directive is written as the unsigned number it converts to and refused
+// by the restore (shortcut: the integration change that sets a directive validates
+// it then, plan 2-17).
+func saveDirective(cw *codec.Writer, d *Directive) {
+	cw.B(d != nil)
+	if d == nil {
+		return
+	}
+	cw.B(d.Job != nil)
+	if d.Job != nil {
+		cw.B(d.Job.NoJob)
+		cw.U(uint64(d.Job.Recipe))
+		cw.U(uint64(d.Job.Executions))
+	}
+	cw.Count(len(d.Intents))
+	for _, in := range d.Intents {
+		cw.U(uint64(in.Commodity))
+		cw.U(uint64(in.Side))
+		cw.U(uint64(in.Quantity))
+		cw.U(uint64(in.Limit))
+		cw.U(uint64(in.Target))
+		cw.U(uint64(in.Reserve))
+		cw.U(uint64(in.UnitCost))
+		cw.U(uint64(in.Purpose))
+	}
+	cw.Count(len(d.Discards))
+	for _, ds := range d.Discards {
+		cw.U(uint64(ds.Commodity))
+		cw.U(uint64(ds.Quantity))
+	}
+	cw.Count(len(d.Hold))
+	for _, c := range d.Hold {
+		cw.U(uint64(c))
+	}
+	cw.B(d.Sticky)
 }

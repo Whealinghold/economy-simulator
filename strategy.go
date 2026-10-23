@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 )
@@ -425,3 +426,30 @@ type OutcomeView struct {
 }
 
 var _ Strategy = Directed{}
+
+var _ Stateful = Directed{}
+
+// SaveState implements Stateful by delegating: it returns the fallback's state
+// when the fallback is Stateful and (0, nil, nil) otherwise, since Directed keeps
+// no state of its own (the directive is in the agent, spec-checkpoint.md 7.5). So
+// Directed{Fallback: x} is saved exactly when x is.
+func (d Directed) SaveState() (version uint32, state []byte, err error) {
+	if s, ok := d.Fallback.(Stateful); ok {
+		return s.SaveState()
+	}
+	return 0, nil, nil
+}
+
+// LoadState implements Stateful by delegating: it hands the version and the bytes
+// to the fallback when the fallback is Stateful. When it is not, there is nothing
+// to load, and anything but version 0 and no bytes is an error: it was written by
+// another fallback.
+func (d Directed) LoadState(version uint32, state []byte) error {
+	if s, ok := d.Fallback.(Stateful); ok {
+		return s.LoadState(version, state)
+	}
+	if version != 0 || len(state) != 0 {
+		return fmt.Errorf("directed has no state to load: version %d with %d bytes", version, len(state))
+	}
+	return nil
+}

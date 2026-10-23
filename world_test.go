@@ -278,6 +278,12 @@ func TestNewWorld_HashAndOptions(t *testing.T) {
 	if got := w.Config().Roles[0].TargetSpread; got != 1 {
 		t.Errorf("WithTargetSpread(1): Config().Roles[0].TargetSpread = %d, want 1", got)
 	}
+	// WithReseed is a restore option: NewWorld refuses it, so it has no row of the
+	// table above (the restore change tests that it leaves the hash alone).
+	if _, err := economysim.NewWorld(base, economysim.WithReseed(1)); !errors.Is(err, economysim.ErrOptionContext) {
+		t.Errorf("NewWorld(WithReseed) error = %v, want ErrOptionContext", err)
+	}
+	covered = append(covered, "WithReseed")
 	for _, name := range optionFuncs(t) {
 		if !slices.Contains(covered, name) {
 			t.Errorf("option %s of option.go has no row in the table: classify it as a datum, a registered name or neither", name)

@@ -1,6 +1,9 @@
 package economysim
 
-import "github.com/Whealinghold/economy-sim/internal/beliefs"
+import (
+	"github.com/Whealinghold/economy-sim/internal/beliefs"
+	"github.com/Whealinghold/economy-sim/internal/codec"
+)
 
 // This file is the record of the markets (spec-clearing.md 5.4, 16;
 // spec-beliefs.md 7): for every (region, commodity) the report the market
@@ -157,4 +160,40 @@ func (t *marketTable) intentOf(i int, buyer AgentID) intentRec {
 		invariant("a settled trade names a buyer with no bid in the market")
 	}
 	return t.intents[i][t.slotOf[buyer]-1]
+}
+
+// saveMarkets is tag 4 (spec-checkpoint.md 4.2; plan 2-2 D248): for each market in
+// table order, the report of its last clearing, its price window oldest first and
+// its run of the Warn "price beliefs at bound", dense.
+func (w *World) saveMarkets(cw *codec.Writer) error {
+	t := &w.markets
+	var prices []int64
+	for i := range t.reports {
+		saveReport(cw, &t.reports[i])
+		prices = t.windows[i].Values(prices[:0])
+		cw.Count(len(prices))
+		for _, p := range prices {
+			cw.U(uint64(p))
+		}
+		cw.U(uint64(t.boundRun[i]))
+	}
+	return nil
+}
+
+// saveReport writes the market report: the price, the age, the volume, the
+// unmatched units of each side and each best unmatched price as an optional value.
+func saveReport(cw *codec.Writer, r *marketReport) {
+	cw.U(uint64(r.Price))
+	cw.U(uint64(r.Age))
+	cw.U(uint64(r.Volume))
+	cw.U(uint64(r.UnmatchedBid))
+	cw.U(uint64(r.UnmatchedAsk))
+	cw.B(r.HasBestBid)
+	if r.HasBestBid {
+		cw.U(uint64(r.BestBid))
+	}
+	cw.B(r.HasBestAsk)
+	if r.HasBestAsk {
+		cw.U(uint64(r.BestAsk))
+	}
 }

@@ -55,9 +55,11 @@ var emittedBy = []struct{ event, scenario string }{
 }
 
 // sliceNotEmitted names the declared events that no scenario of the slice emits:
-// the staged list of FR-OBS-003. It is empty because the slice emits every event
-// it declares; an entry that a scenario does emit fails the test as stale.
-var sliceNotEmitted = []string{}
+// the staged list of FR-OBS-003. WorldRestored is declared with the write path of
+// the checkpoint and emitted by RestoreWorld, which the restore change builds
+// (plan 2-2 Phase 5) and which deletes the entry; an entry that a scenario does
+// emit fails the test as stale.
+var sliceNotEmitted = []string{"WorldRestored"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

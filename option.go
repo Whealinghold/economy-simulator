@@ -21,6 +21,9 @@ type options struct {
 	targetSpread      int64
 	targetSpreadGiven bool
 	seed              uint64
+	seedGiven         bool
+	reseed            uint64
+	reseedGiven       bool
 	clearings         registry[Clearing]
 	strategies        registry[Strategy]
 	spawners          registry[Spawner]
@@ -111,7 +114,19 @@ func WithTargetSpread(bp int64) Option {
 // not use it where unpredictability matters.
 func WithSeed(seed uint64) Option {
 	return func(o *options) error {
-		o.seed = seed
+		o.seed, o.seedGiven = seed, true
+		return nil
+	}
+}
+
+// WithReseed sets the salt of a restore, which replaces the seed of the
+// checkpoint by a mix of the two, so that one checkpoint can continue on
+// several streams (spec-checkpoint.md 6.8). Every salt is valid, 0 included;
+// the last one given wins. It is for a restore only: NewWorld refuses it with
+// ErrOptionContext.
+func WithReseed(salt uint64) Option {
+	return func(o *options) error {
+		o.reseed, o.reseedGiven = salt, true
 		return nil
 	}
 }
@@ -149,6 +164,15 @@ func (r *registry[T]) find(name string) (v T, ok bool) {
 		return r.vals[i], true
 	}
 	return v, false
+}
+
+// registrations are the extensions registered by name, which the world keeps
+// after construction so that a checkpoint finds the Stateful ones, used or not
+// (spec-checkpoint.md 7.3.1).
+type registrations struct {
+	clearings  registry[Clearing]
+	strategies registry[Strategy]
+	spawners   registry[Spawner]
 }
 
 // averageName is the name of the built-in clearing, AverageClearing.

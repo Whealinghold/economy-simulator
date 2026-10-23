@@ -101,13 +101,16 @@ func constants(t *testing.T) (consts map[string]string, imports int) {
 // TestKeys_AreRowsOfTheTable verifies that every key constant is a key of the
 // table in observability-and-logging.md 3.3.2, that the keys are lowercase
 // snake_case and unique, that the package imports nothing and declares only
-// constants, and that the slice's 33 keys are all present.
+// constants, and that the 35 keys of Stage 1 are all still present. The count
+// of constants is not compared: a module adds a constant and a table row and
+// edits no test (plan 2-2, Catalogue appends).
 //
 // Requirement: FR-OBS-073
 //
 // Guard: a key spelled differently from the table would make a log line
-// unsearchable by the documented name, and a key absent from the table would
-// escape the rule that a key is added to the table in the same change.
+// unsearchable by the documented name, a key absent from the table would
+// escape the rule that a key is added to the table in the same change, and a
+// Stage 1 key that went missing would break the lines that use it.
 func TestKeys_AreRowsOfTheTable(t *testing.T) {
 	t.Parallel()
 	table := tableKeys(t)
@@ -120,7 +123,8 @@ func TestKeys_AreRowsOfTheTable(t *testing.T) {
 		t.Errorf("logkeys has %d imports, want 0", imports)
 	}
 
-	// The 35 keys the slice's log lines use (plan phase 2, assumption A2).
+	// The 35 keys the Stage 1 log lines use (plan phase 2, assumption A2); a
+	// later change adds constants and table rows, never removes one of these.
 	want := strings.Fields(`tick ticks seed commodity role recipe agent price
 		quantity side reason error region bound agents households unfed path rule
 		config_hash prices wages groups jobs cause commodities recipes roles
@@ -147,10 +151,7 @@ func TestKeys_AreRowsOfTheTable(t *testing.T) {
 	}
 	for _, k := range want {
 		if _, ok := seen[k]; !ok {
-			t.Errorf("no constant has the value %q, want one of the 33 slice keys", k)
+			t.Errorf("no constant has the value %q, want one of the 35 Stage 1 keys", k)
 		}
-	}
-	if len(consts) != len(want) {
-		t.Errorf("logkeys declares %d constants, want %d", len(consts), len(want))
 	}
 }

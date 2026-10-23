@@ -757,6 +757,28 @@ type WearApplied struct {
 	Units int64
 }
 
+// WorldRestored is the first event a successful RestoreWorld delivers to the
+// observers given to it, with Tick the restored tick; a restore that fails
+// delivers nothing. It is not a replay: no AgentSpawned follows it for the agents
+// that exist, so an observer that counts from deltas starts from the levels of
+// Snapshot, the state at the restored boundary (spec-observability.md 4.4.5).
+type WorldRestored struct {
+	Tick int64
+	// ConfigHash is the whole hash of the configuration, the checkpoint's.
+	ConfigHash [32]byte
+	// Format is the format version of the checkpoint, as CheckpointInfo.Format.
+	Format uint32
+	// Reseeded says the restore was given WithReseed; Salt is its salt and is
+	// meaningful only then.
+	Reseeded bool
+	Salt     uint64
+	// Names maps every typed ID to its string ID.
+	Names Names
+	// Snapshot is the snapshot at the restored boundary; its header holds the
+	// effective seed, the agents and the households.
+	Snapshot Snapshot
+}
+
 func (WorldCreated) isEvent()     {}
 func (RunStarted) isEvent()       {}
 func (RunEnded) isEvent()         {}
@@ -780,3 +802,4 @@ func (RoleChanged) isEvent()      {}
 func (EntryLimited) isEvent()     {}
 func (BoundaryFlow) isEvent()     {}
 func (WearApplied) isEvent()      {}
+func (WorldRestored) isEvent()    {}

@@ -80,4 +80,8 @@ const (
 	// Previous is a price in minor units before an update; Price is the one
 	// after.
 	Previous = "previous"
+	// Format is the checkpoint format version, logged as slog.Int64(int64(f)).
+	Format = "format"
+	// Bytes is the size of an encoded checkpoint, in bytes.
+	Bytes = "bytes"
 )

@@ -1,6 +1,9 @@
 package economysim
 
-import "github.com/Whealinghold/economy-sim/internal/welfare"
+import (
+	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/welfare"
+)
 
 // This file is the root glue of the welfare record (spec-welfare-and-wages.md
 // 9; plan-phase-1-6.md Phase 4): the history an agent holds, the scratch of a
@@ -412,4 +415,36 @@ func (b *readBuf) summarise(set roleSet, p welfareParams, upkeep []itemRow, pric
 	sum.ClampedHouseholds = b.clampedHouseholds(set)
 	sum.MeanRatioBP, sum.RatioHouseholds, sum.HasMean = welfare.MeanRatio(set.weights, b.ratios, b.present)
 	return sum
+}
+
+// saveWelfare is tag 7 (spec-checkpoint.md 4.2; plan 2-2 D248): for each live
+// agent in ascending ID the records its ring holds, oldest first, and its target
+// ratio, then the sparse runs of the two Warns of welfare, the work floor and the
+// clamp.
+func (w *World) saveWelfare(cw *codec.Writer) error {
+	var recs []welfare.Record
+	w.eachLive(func(a *agent) {
+		recs = a.history.AppendRecords(recs[:0])
+		cw.Count(len(recs))
+		for i := range recs {
+			saveRecord(cw, &recs[i])
+		}
+		cw.U(uint64(a.target))
+	})
+	writeSparse(cw, w.state.floorRun, len(w.cfg.Roles))
+	writeSparse(cw, w.state.clampRun, len(w.cfg.Roles))
+	return nil
+}
+
+// saveRecord writes one welfare record: the five money fields signed, the
+// own-use household-ticks, the working flag and the working household-ticks.
+func saveRecord(cw *codec.Writer, r *welfare.Record) {
+	cw.I(r.Income)
+	cw.I(r.Cost)
+	cw.I(r.Relief)
+	cw.I(r.Unearned)
+	cw.I(r.OwnReceipt)
+	cw.U(uint64(r.OwnHH))
+	cw.B(r.Working)
+	cw.U(uint64(r.WorkHH))
 }
