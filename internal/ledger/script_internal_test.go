@@ -65,19 +65,24 @@ type rig struct {
 // scriptReasons are the reasons whose goods boundaries the rig opens.
 var scriptReasons = []Reason{Initial, RecipeInput, RecipeOutput, Disposal, Consumption, Spoilage, Wear}
 
-// newRig builds the scripted ledger in its construction phase: four
-// commodities (spoils; wears; neither; both), two regions, four agents, two
-// estates, and every boundary account the operations use.
-func newRig(tb testing.TB, maxMoney int64) *rig {
-	tb.Helper()
-	l, err := New(Config{
+// rigConfig is the configuration of the scripted ledger.
+func rigConfig(maxMoney int64) Config {
+	return Config{
 		Commodities: []Commodity{{ShelfLife: 3}, {Durability: 5}, {}, {ShelfLife: 4, Durability: 6}},
 		Regions:     scriptRegions,
 		MaxMoney:    maxMoney,
 		MaxQuantity: scriptMaxQty,
 		Declared:    []Reason{LoanOut, LoanRepay, LoanInterest},
 		MaxClaims:   scriptMaxClaims,
-	})
+	}
+}
+
+// newRig builds the scripted ledger in its construction phase: four
+// commodities (spoils; wears; neither; both), two regions, four agents, two
+// estates, and every boundary account the operations use.
+func newRig(tb testing.TB, maxMoney int64) *rig {
+	tb.Helper()
+	l, err := New(rigConfig(maxMoney))
 	if err != nil {
 		tb.Fatalf("New: %v", err)
 	}
