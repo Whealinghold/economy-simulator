@@ -155,18 +155,18 @@ table cell:
 
 | Create | Specs | Plan | Status |
 |--------|-------|------|--------|
-| `internal/ledger` (accounts, the transfer primitive, reasons, lots, reservations, `Transform`, `Wear`, ageing, flow totals, the audit, the claims list with its six operations and the balance sheet) and `ledger.go` (the conversion of the configuration, the reason names both ways and the `BoundaryFlow` rows) | LED; CRD 3.1 to 3.3, 3.6 | [1-1](plans/plan-phase-1-1.md), 7 phases | done (uncommitted) |
-| `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the derived tables and rules of the structs Stage 0 built in `config.go`: the moment, `SeasonAt` and the day table; the load and the chargeable size; the recipe table and the makers; the role table with the tradable set and the effective upkeep) | GDS, PRO 3, AGT 3, CAL | [1-2](plans/plan-phase-1-2.md), 6 phases | done (uncommitted) |
-| `internal/clearing`, `order.go` (`Order`, `Trade`, `LotKey`) and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement, the market report type and its computation) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | [1-3](plans/plan-phase-1-3.md), 6 phases | done (uncommitted) |
-| `internal/beliefs` and `beliefs.go` | BEL | [1-4](plans/plan-phase-1-4.md), 6 phases | done (uncommitted, stage-1-4) |
-| `internal/production` and `production.go` (jobs, yield table, the shock slot and the cost-anchor table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | done |
-| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | done (uncommitted, stage-1-6) |
-| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0). Requirements of this row that the tables of row 2 do not cover (N-236): the weight multiplication of the effective upkeep (FR-AGT-011), the "requests no job" half of FR-AGT-010 and, with the demand module, the want items of FR-AGT-003. The row also builds `internal/household` (the pure rules), the agent's creation and consumption step, the core view filler and the work report the world calls (plan 1-7 D80, D85) | AGT | [1-7](plans/plan-phase-1-7.md), 8 phases | done |
-| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | [1-8](plans/plan-phase-1-8.md), 5 phases | done (uncommitted) |
-| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | [1-9](plans/plan-phase-1-9.md), 7 phases | done (uncommitted, stage-1-9) |
-| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState` and `virtualStartOffsets`; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | [1-10](plans/plan-phase-1-10.md), 7 phases | done (uncommitted, stage-1-10) |
-| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins), `tick.go` with the core positions and the position table, `market.go` (the state of each market's report and the price window; `order.go` is the clearing row's), `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | [1-11](plans/plan-phase-1-11.md), 11 phases | done (uncommitted, stage-1-11) |
-| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 8.5, FR-REF-028 to 030, testing.md 7.1 | [1-12](plans/plan-phase-1-12.md), 9 phases | plan audited |
+| `internal/ledger` (accounts, the transfer primitive, reasons, lots, reservations, `Transform`, `Wear`, ageing, flow totals, the audit, the claims list with its six operations and the balance sheet) and `ledger.go` (the conversion of the configuration, the reason names both ways and the `BoundaryFlow` rows) | LED; CRD 3.1 to 3.3, 3.6 | [1-1](plans/plan-phase-1-1.md), 7 phases | done (262a0d1) |
+| `commodity.go`, `recipe.go`, `role.go`, `calendar.go` (the derived tables and rules of the structs Stage 0 built in `config.go`: the moment, `SeasonAt` and the day table; the load and the chargeable size; the recipe table and the makers; the role table with the tradable set and the effective upkeep) | GDS, PRO 3, AGT 3, CAL | [1-2](plans/plan-phase-1-2.md), 6 phases | done (10fc5fa) |
+| `internal/clearing`, `order.go` (`Order`, `Trade`, `LotKey`) and `clearing.go` (`Clearing`, `AverageClearing`, admission, reservation, settlement, the market report type and its computation) with `WithClearing`, and the name check `ErrUnknownClearing` | CLR; WLD 4.1; CFG 7.4.1 | [1-3](plans/plan-phase-1-3.md), 6 phases | done (481d288) |
+| `internal/beliefs` and `beliefs.go` | BEL | [1-4](plans/plan-phase-1-4.md), 6 phases | done (1dfda90) |
+| `internal/production` and `production.go` (jobs, yield table, the shock slot and the cost-anchor table, `UnitCost`) | PRO | [1-5](plans/plan-phase-1-5.md), 8 phases | done (597479c) |
+| `internal/welfare` and `welfare.go` (the record, the ratio, the observed wage) | WEL | [1-6](plans/plan-phase-1-6.md), 5 phases | done (cc7f74c) |
+| `agent.go`, `strategy.go` (`Strategy`, `AgentView`, `TradePlan`, `JobRequest`, the default strategy, `Directed`) with `WithStrategy`, and the name check `ErrUnknownStrategy`; `Side` is already in `event.go` (Stage 0). Requirements of this row that the tables of row 2 do not cover (N-236): the weight multiplication of the effective upkeep (FR-AGT-011), the "requests no job" half of FR-AGT-010 and, with the demand module, the want items of FR-AGT-003. The row also builds `internal/household` (the pure rules), the agent's creation and consumption step, the core view filler and the work report the world calls (plan 1-7 D80, D85) | AGT | [1-7](plans/plan-phase-1-7.md), 8 phases | done (99f383e) |
+| `estates.go`: the estate pseudo-agent and account, the listings, and the pool with its use to fund an entrant. The `Estates` module part (relief, and the pool as a money-flow target) is appended after the slice's golden runs, in Stage 2 (CFG 6.2.4, architecture.md 2.6) | EST | [1-8](plans/plan-phase-1-8.md), 5 phases | done (5b4d864) |
+| `spawner.go` (`Spawner`, the ladder, the entry rule, the default) with `WithSpawner`, and the name check `ErrUnknownSpawner` | SPN | [1-9](plans/plan-phase-1-9.md), 7 phases | done (881abd5) |
+| `internal/steady` (the exact solver, `math/big`) and `viability.go` (`SolveSteadyState` and `virtualStartOffsets`; the `WarmStart` types stay in `config.go`), with the five viability rules of CFG 7.6, `ViabilityError` and the solver-dependent warm-start checks in `validate.go` (D4: FR-CFG-033, 041 to 044) | VIA; CFG 7.4.1, 7.6 | [1-10](plans/plan-phase-1-10.md), 7 phases | done (c603a08) |
+| `world.go` (`World`, `NewWorld`, `Step`, `Run`, the guards, the four fan-ins built at Stage 1; `tradableItems`, the fifth, comes with the first module PR), `tick.go` with the core positions and the position table, `market.go` (the state of each market's report and the price window; `order.go` is the clearing row's), `snapshot.go` | WLD 3, 5, 6, 8, 9; OBS 5 | [1-11](plans/plan-phase-1-11.md), 11 phases | done (4153fdd) |
+| `testdata/golden/off/` for `one.toml` (and `warm-one.toml`); the per-position hash helper | REF 8.5, FR-REF-028 to 030, testing.md 7.1 | [1-12](plans/plan-phase-1-12.md), 9 phases | done (7f9e006) |
 
 **Done when:** the golden of `one.toml` runs for the length REF fixes and
 passes; the invariants of testing.md 6.3 hold over the seed range of REF 8;
@@ -193,6 +193,8 @@ the tick loop allocates nothing, and a full `Step` stays within its baseline
 (observability-and-logging.md 8.2; NFR-OBS-001, NFR-WLD-001). The slice may
 move specs between stages (ADR 0003); record any move here and in `vision.md`.
 
+**Signed off (2026-10-22), with these stated exceptions.** Every row above is done. `gofmt`, `go vet`, `staticcheck`, `go mod tidy` and `go test -short -race ./...` are clean, and the coverage run without `-race` passes. The full command with `-race` and `-coverpkg` did not finish: the root package timed out after 2 hours on an idle machine (no assertion failed), because the scenario tests S19, S07, S04 and the determinism seeds are too slow under the race detector. The scenarios run and their outcomes are recorded as the "Done when" allows, and pack `one` collapses (about 600 households fall to 20 to 100 by tick 600): the cause and the probes are N-312 and N-314, and the goldens in `testdata/golden/off/` are recorded from that run, so a later fix to the pack moves them (testing.md 7.2). `testdata/chains/expected/one.scenarios.txt` is stale.
+
 ## Stage 2: version 1
 
 The first consumer's needs (`vision.md` section 2). Checkpoint first, because
@@ -203,30 +205,32 @@ which is also their dependency order. The one exception is `Modules.Estates`
 built with MON; its field id in the hash is 25 whatever its build order
 (CFG 8.2.2).
 
-| Create | Specs | Status |
-|--------|-------|--------|
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | planned |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, `Relocate`, the edge status) | REG | planned |
-| `scale.go` (weights, the census) | SCL | planned |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | planned |
-| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | planned |
-| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | planned |
-| `resources.go` and `internal/endowment`, `internal/curve` | RES | planned |
-| `subsistence.go` and `internal/ownuse` | SUB | planned |
-| `population.go` and `internal/population` | POP | planned |
-| `transport.go` and `internal/transit` | TRN, CAR | planned |
-| `information.go` and `internal/rumour` | INF | planned |
-| `migration.go` and `internal/migration` | MIG | planned |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | planned |
-| `external.go` and `internal/outside` | EXT | planned |
-| `integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player) | planned |
-| `indicator/` and `internal/measure` | IND | planned |
-| `internal/verdict` and the `stylised_long` build tag | STY | planned |
-| `experiment/`, `internal/design`, `internal/reduce` | EXP | planned |
-| `internal/calibration` and `testdata/calibration/` | CLB | planned |
-| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | planned |
-| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | planned |
-| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | planned |
+| Create | Specs | Plan | Status |
+| --- | --- | --- | --- |
+| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | [2-1](plans/plan-2-1.md) | plan written |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | [2-2](plans/plan-2-2.md) | plan written |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, `Relocate`, the edge status) | REG | [2-3](plans/plan-2-3.md) | plan written |
+| `scale.go` (weights, the census) | SCL | [2-4](plans/plan-2-4.md) | plan written |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | [2-5](plans/plan-2-5.md) | plan written |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | [2-6](plans/plan-2-6.md) | plan written |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | plan written |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | [2-8](plans/plan-2-8.md) | plan written |
+| `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | plan written |
+| `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | plan written |
+| `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | plan written |
+| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
+| `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
+| `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
+| `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | plan written |
+| `integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | plan written |
+| `indicator/` and `internal/measure` | IND | [2-18](plans/plan-2-18.md) | plan written |
+| `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | plan written |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | plan written |
+| `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | plan written |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | plan written |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
 its overlay under `testdata/chains/overlay/`, its module-alone golden under

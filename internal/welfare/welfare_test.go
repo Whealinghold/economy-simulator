@@ -611,3 +611,43 @@ func TestSetFunctions_PanicOnMismatchedSlices(t *testing.T) {
 		})
 	}
 }
+
+// TestFloorWage_RaisesTheWageToAShareOfTheSeed verifies that the wage the cost
+// anchor reads is at least floorBP basis points of the starting wage, truncated
+// toward zero, and is the wage itself when the floor is off (floorBP 0), when
+// there is no starting wage, or when the wage is already above the floor.
+//
+// Arithmetic: seed 2 512 at 5 000 bp is 2 512 * 5 000 / 10 000 = 1 256; at 3 333
+// bp it is 2 512 * 3 333 / 10 000 = 837.3, truncated to 837. A seed near the top
+// of int64 at 10 000 bp is the seed itself, not an overflow.
+//
+// Requirement: FR-PRO-055
+//
+// Fix: the cost anchor read the pooled observed wage alone, so a price crash that
+// lowered the wage lowered the anchor and the belief floor with it.
+func TestFloorWage_RaisesTheWageToAShareOfTheSeed(t *testing.T) {
+	t.Parallel()
+	const maxI = math.MaxInt64
+	tests := []struct {
+		name                string
+		wage, seed, floorBP int64
+		want                int64
+	}{
+		{"below the floor is raised", 80, 2_512, 5_000, 1_256},
+		{"at the floor is unchanged", 1_256, 2_512, 5_000, 1_256},
+		{"above the floor is unchanged", 3_000, 2_512, 5_000, 3_000},
+		{"the floor truncates toward zero", 1, 2_512, 3_333, 837},
+		{"floor off", 80, 2_512, 0, 80},
+		{"no starting wage", 80, 0, 5_000, 80},
+		{"negative starting wage", 80, -1, 5_000, 80},
+		{"whole seed at 10 000", 80, maxI - 1, 10_000, maxI - 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := welfare.FloorWage(tt.wage, tt.seed, tt.floorBP); got != tt.want {
+				t.Errorf("FloorWage(%d, %d, %d) = %d, want %d", tt.wage, tt.seed, tt.floorBP, got, tt.want)
+			}
+		})
+	}
+}

@@ -384,3 +384,50 @@ func TestDefaultStrategyTrade_NeverDiscards(t *testing.T) {
 		t.Fatal("no plan was made")
 	}
 }
+
+// TestDefaultStrategyTrade_JobKeepsTheNextTicksUpkeep verifies that tier 2 of an
+// input that is also an upkeep commodity asks for the next tick's upkeep as well
+// as the input: the work rule leaves the upkeep out of the inputs (FR-AGT-037,
+// foodCap), so a job needs U + q in stock when it starts.
+//
+// One household eats 1 fuel a tick, holds 1 and plans a job that needs 1 fuel.
+// It eats its 1 at the end of this tick (reserve 1, so tier 1 is 0), and the
+// next tick it must hold the upkeep 1 plus the input 1: tier 2 is 1 + 1 = 2. A
+// fuel that is not upkeep, with none held, stays the input alone: tier 2 is 1.
+//
+// Requirement: FR-AGT-038, FR-AGT-040
+//
+// Fix: N-313. Tier 2 was only the input, so a cook holding one tick of fuel
+// bought 1, ate 1, started the next tick with 1 and foodCap was 0: the whole
+// role stalled on every tick.
+func TestDefaultStrategyTrade_JobKeepsTheNextTicksUpkeep(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		upkeep []UpkeepRow
+		stock  int64
+		want   int64
+	}{
+		{"an input that is also upkeep adds the upkeep", []UpkeepRow{{Commodity: xFuel, Quantity: 1}}, 1, 2},
+		{"an input that is not upkeep is the input alone", nil, 0, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			v := &AgentView{
+				Weight: 1, Money: 100_000, StartsIn: 1, Upkeep: tt.upkeep,
+				Commodities: []CommodityView{cview(xFuel, tt.stock, 100, 0), cview(xItem, 0, 900, 0)},
+				Recipes: []RecipeView{{
+					Recipe: 0, Duration: 1, Effective: 10000, MaxExecutions: 1,
+					Inputs:  []RecipeLine{{Commodity: xFuel, Quantity: 1}},
+					Outputs: []RecipeOutput{{Commodity: xItem, Quantity: 1, CostShare: 10000}},
+				}},
+				Tunables: testTunables(),
+			}
+			ctx, _ := considered(v, nil)
+			if r := ctx.rows[0]; r.t2 != tt.want {
+				t.Errorf("considered(...) tier 2 = %d, want %d", r.t2, tt.want)
+			}
+		})
+	}
+}

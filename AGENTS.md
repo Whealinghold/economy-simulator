@@ -111,7 +111,7 @@ economy-sim/
 │   ledger.go market.go order.go clearing.go agent.go strategy.go spawner.go
 │   beliefs.go production.go estates.go welfare.go skills.go observer.go
 │   snapshot.go regions.go scale.go checkpoint.go integration.go moneyflow.go
-│   viability.go           # CORE concept files, one per concept; the four fan-ins
+│   viability.go           # CORE concept files, one per concept; the five fan-ins
 │                           #   (architecture.md 2.10.4) are in fanin.go
 ├── strategy_default.go strategy_work.go strategy_view.go (AGT)
 │   spawner_report.go (SPN)  production_report.go (PRO)
@@ -185,7 +185,8 @@ no module file before the slice's golden file runs (architecture.md 2.10.6).
 
 This is the target layout from `doc/rules/architecture.md` section 2.6, which
 is normative and wins over this summary; the module-file rule is its 2.10.
-Update this section when the structure changes.
+Update this section when the structure changes, in the same change as
+`architecture.md` 2.6 and with the same files in both lists.
 
 ## Commands
 

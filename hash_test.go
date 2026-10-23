@@ -30,7 +30,13 @@ var presentationOnly = map[string]bool{
 
 // pinnedReferenceHash is the hash of referenceConfig, the all-off reference
 // configuration (spec-config.md 8.2.5).
-const pinnedReferenceHash = "9e3c1357520b0e052fee1e1d773d45e49ce992a8d1cfbd7029a6a24a91038285"
+const pinnedReferenceHash = "9abf7b8fa64bc36b9f223f7d195b81e7934fa9d88c297085ca4128d0a98275a0"
+
+// pinnedReferenceHashAnchorHoldOff is the pin that held before the field
+// WorldParams.AnchorHold existed: the hash of referenceConfig with that field at
+// its off value. It must not move, since a field at its off value is not written
+// (FR-CFG-104, architecture.md 2.10.5).
+const pinnedReferenceHashAnchorHoldOff = "9e3c1357520b0e052fee1e1d773d45e49ce992a8d1cfbd7029a6a24a91038285"
 
 // hexHash renders the hash of cfg as lower-case hex, the form of the spec.
 func hexHash(cfg economysim.Config) string {
@@ -368,6 +374,28 @@ func TestHashConfig_ReferencePinned(t *testing.T) {
 	t.Parallel()
 	if got := hexHash(referenceConfig()); got != pinnedReferenceHash {
 		t.Errorf("HashConfig(referenceConfig()) = %s, want %s", got, pinnedReferenceHash)
+	}
+}
+
+// TestHashConfig_AnchorHoldOffLeavesNoTrace verifies that the reference
+// configuration with AnchorHold at 0 hashes to the value the pin had before the
+// field was appended, and that 5 000 changes it.
+//
+// Requirement: FR-CFG-104, FR-CFG-107
+//
+// Guard: the pack opts into the anchor hold and so moved the pin of
+// referenceConfig on purpose (a pack edit, testing.md 7.2). This test keeps the
+// rule of architecture.md 2.10.5 under test: an appended field at its off value
+// leaves no trace, so a library user who never sets it keeps every hash.
+func TestHashConfig_AnchorHoldOffLeavesNoTrace(t *testing.T) {
+	t.Parallel()
+	cfg := referenceConfig()
+	cfg.World.AnchorHold = 0
+	if got := hexHash(cfg); got != pinnedReferenceHashAnchorHoldOff {
+		t.Errorf("HashConfig(referenceConfig() with AnchorHold 0) = %s, want %s", got, pinnedReferenceHashAnchorHoldOff)
+	}
+	if hexHash(cfg) == hexHash(referenceConfig()) {
+		t.Errorf("HashConfig with AnchorHold 0 equals HashConfig with 5 000, want them to differ")
 	}
 }
 

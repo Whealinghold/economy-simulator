@@ -1,5 +1,7 @@
 package welfare
 
+import "github.com/Whealinghold/economy-sim/internal/checked"
+
 // sumParts adds the numerators and the denominators of a set in the slice
 // order, saturating (a saturating sum is not associative, so the order is the
 // rule; the caller passes ascending agent slot, D63).
@@ -30,6 +32,23 @@ func PooledWage(nums, dens []int64) (wage int64, known bool) {
 		return 0, false
 	}
 	return w, true
+}
+
+// FloorWage raises wage to floorBP basis points of the starting wage seed,
+// truncated toward zero, and returns wage unchanged when the floor is off
+// (floorBP 0), there is no starting wage (seed 0 or less) or the wage is already
+// above the floor. It is a pure function of its arguments (4.3, the wage the cost
+// anchor reads): a price crash lowers the observed wage, and the floor stops
+// the anchor, and so the belief floor, from following it down.
+func FloorWage(wage, seed, floorBP int64) int64 {
+	if seed <= 0 || floorBP <= 0 {
+		return wage
+	}
+	floor, ok := checked.MulDiv(seed, floorBP, bp)
+	if !ok { // seed times floorBP cannot leave int64 for floorBP of at most bp
+		return wage
+	}
+	return max(wage, floor)
 }
 
 // MeanRatio is the household-weighted mean ratio of the agents whose ratio

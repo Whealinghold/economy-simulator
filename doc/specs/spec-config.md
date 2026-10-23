@@ -163,6 +163,7 @@ reads it as `WorldParams`.
 | `World` | `WelfareWindow` (the base window, default 30), `WindowCycles` (default 2); the effective window of a role is derived (4.2, 7.4.1), see 9.3 | `spec-welfare-and-wages.md` 2.3.1, 2.3.3 |
 | `World` | `Upkeep` (the baseline list), `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance` | `spec-agents.md` 12 |
 | `World` | `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare` (default 5 000, the sixteenth), `CostFloor` (default 7 000), `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow` | `spec-beliefs.md` 11 |
+| `World` | `AnchorHold` (basis points of the starting wage, 0 to 10 000, default 0 which is off; appended, the 46th field with an id) | `spec-production.md` 9.3 |
 | `Calendar` | `HoursPerDay`, `DaysPerWeek`, `Months`, `TicksPerDay`, `DaysPerTick`, `StartDay`, `Seasons`, `SeasonStart` | `spec-calendar.md` 3.1 |
 | `Commodities[]` | `ID`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes`, `Raw`, `ReferencePrice`, `Label` (p), `UnitLabel` (p) | `spec-goods.md` 8 |
 | `Recipes[]` | `ID`, `Duration`, `Inputs`, `Outputs` (each with `CostShare`, `Discard`), `Requires` (each with `WearPerUse`), `Draws`, `Sited`, `TraineeEligible`, `TraineeYield`, `Label` (p) | `spec-production.md` 3.1, 11 |
@@ -502,7 +503,7 @@ presentation only (8.3) and has no id.
 | Struct | Fields, in order | Not in the slice, and why |
 |--------|------------------|---------------------------|
 | `Config` | `World WorldParams`, `Calendar Calendar`, `Commodities []Commodity`, `Recipes []Recipe`, `Yields []YieldProfile`, `Roles []Role`, `Regions []Region`, `Groups []Group`, `WarmStart *WarmStart`, `Modules Modules` | `Edges []Edge` and `RegionPrices []RegionPrice` (Stage 2, REG; their ids 8 and 9 are reserved) |
-| `WorldParams` | `Scale`, `MinAgents`, `BulkFactor`, `WelfareWindow`, `WindowCycles`, `Upkeep []Item`, `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance`, `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow`, `Spawner string`, `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare`, `Clearing string` (45 fields with an id), `DistanceLabel string` (p) | |
+| `WorldParams` | `Scale`, `MinAgents`, `BulkFactor`, `WelfareWindow`, `WindowCycles`, `Upkeep []Item`, `CoverTicks`, `InputJobs`, `OutputCoverTicks`, `FavourFloor`, `ReserveTicks`, `SpendMaxShare`, `SpendHalfTicks`, `RestBand`, `ProduceHaltRatio`, `BasketTolerance`, `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow`, `Spawner string`, `ReviewTicks`, `EntryShare`, `RoleHysteresis`, `RoleCooldown`, `EntryRatio`, `ChangePrivation`, `RemovePrivation`, `DeathStep`, `ExitShare`, `Renewal`, `EntryPoolShare`, `Clearing string` (45 fields with an id), `DistanceLabel string` (p), `AnchorHold` (the 46th with an id, appended by the anchor fix) | |
 | `Calendar` | `HoursPerDay`, `DaysPerWeek`, `Months []Month`, `TicksPerDay`, `DaysPerTick`, `StartDay`, `Seasons []Season`, `SeasonStart` | |
 | `Month`, `Season` | `ID string`, `Days` | |
 | `Commodity` | `ID string`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes []string`, `Raw bool`, `ReferencePrice Price`, `Label string` (p), `UnitLabel string` (p) | |
@@ -1691,7 +1692,7 @@ later module adds takes the next free id of its struct, in the pull request that
 and that pull request adds a row to this paragraph; an id is never reused or moved. So
 at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, `Yields`
 5, `Roles` 6, `Regions` 7, `Edges` 8, `RegionPrices` 9, `Groups` 10, `WarmStart` 11 and
-`Modules` 12. `WorldParams` (the type of `Config.World`) has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45.
+`Modules` 12. `WorldParams` (the type of `Config.World`) has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45, and `AnchorHold` 46 (appended after the presentation-only `DistanceLabel`, which has no id).
 `Calendar` has `HoursPerDay` 1 to `SeasonStart` 8; `Month` and `Season` have `ID` 1,
 `Days` 2. `Commodity` has `ID` 1, `Mass` 2, `Bulk` 3, `ShelfLife` 4, `Durability` 5,
 `Classes` 6, `Raw` 7, `ReferencePrice` 8. `Item` has `Commodity` 1, `Quantity` 2;
@@ -2041,6 +2042,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-103 | The loader's keys MUST be the snake case of the Go field names except for the exceptions of 6.2.2, and a test MUST walk the fields of every section type and fail for a field that is neither. |
 | FR-CFG-104 | The encoding of 8.2.1 MUST write a field only when its value is not zero, MUST write a module only when it is on, MUST write a non-nil pointer even when its struct is zero, and MUST give each field the id of 8.2.2, so that adding a module, or a field at its zero value, does not change the hash of any configuration that existed before it. |
 | FR-CFG-105 | The hash of the reference configuration MUST be pinned by a constant in a test (8.2.5), and the examples of 8.2.4 MUST be tests of the encoder. |
+| FR-CFG-107 | `World.AnchorHold` MUST be a configuration field with default 0 (off) and bound 0 to 10 000, an out-of-bound value MUST be rejected with `ErrOutOfBounds` at `world.anchor_hold`, and it MUST be written to the hash as field 46 only when not zero, so that the pinned hash of the all-off reference configuration does not move (FR-CFG-105). |
 | FR-CFG-106 | `HashConfig` MUST be the exported name of the pure hash function of 8.5 and MUST return a `[32]byte`. |
 
 ### Non-functional

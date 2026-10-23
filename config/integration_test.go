@@ -40,7 +40,7 @@ func TestPacks_LoadValidateAndHash(t *testing.T) {
 		roles  int
 		hash   string
 	}{
-		{"pack one", []string{"base.toml", "one.toml", "warm-one.toml"}, 7, "9e3c1357520b0e052fee1e1d773d45e49ce992a8d1cfbd7029a6a24a91038285"},
+		{"pack one", []string{"base.toml", "one.toml", "warm-one.toml"}, 7, "9abf7b8fa64bc36b9f223f7d195b81e7934fa9d88c297085ca4128d0a98275a0"},
 		{"pack second", []string{"second/second.toml", "second/warm-second.toml"}, 5, "388a7d7e47361f9948027dd52d037baebd484fa4a99cdf26a07a010581d5ff8a"},
 	}
 	for _, tt := range tests {

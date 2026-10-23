@@ -173,6 +173,10 @@ different asks. The price of an ask is
   128-bit helper; a price at or below the floor stays where it is, and with `EstateMarkdown`
   0 nothing falls.
 
+  An estate's ask is priced by this rule and not by a belief, so it may lie outside the belief interval
+  of its market, and the published price of a tick in which an estate sold is bounded below by the
+  resolution floor only (`spec-stability.md` FR-STB-008).
+
 The ask is for all units of the lot. A row of the listing state (2.7.5) is created at the first
 walk that sees the lot held with no row, and dropped when the lot is gone, at the P3.4 walk and
 at P5.3. A lot that receives units keeps its price, and the joining units are listed at it. An

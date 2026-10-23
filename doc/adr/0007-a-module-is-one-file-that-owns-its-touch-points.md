@@ -63,7 +63,7 @@ risk this decision addresses.
 
 3. **The fan-in functions are compositions of per-module steps, never module
    logic.** The world has one `fillAgentView`, one `checkTradePlan`, one
-   `removeAgent` and one `relocationRefusal`, each a fixed-order sequence of
+   `removeAgent`, one `relocationRefusal` and one `tradableItems`, each a fixed-order sequence of
    calls into the module files. `removeAgent` is the one entry point for a
    removal, used by P7.1 and by the between-ticks calls alike, so the event
    order of `spec-agents.md` 3.6 is written once. The same holds for the view
@@ -100,7 +100,7 @@ risk this decision addresses.
   hash and the off-only, module-alone and all-on golden files. Both are rules
   changes with a fresh read-receipt tag, made with the first code (note N-019).
 - The slice comes first ([ADR 0003](0003-version-1-scope.md)): the 28 core
-  positions, with `tick.go`, the four fan-in functions and the checkpoint shape
+  positions, with `tick.go`, the fan-in functions and the checkpoint shape
   of this decision in place before any module file exists, so that every module
   is made to fit them rather than the other way round.
 - `strategy/` (the merchant, `spec-merchants.md`) is a strategy and not a

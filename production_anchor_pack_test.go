@@ -16,13 +16,15 @@ import (
 // non-discard output of share above 0 and a factor above 0, of
 // ceil(cost * share / (outQty * factor)) with cost = sum q*100 + sum
 // ceil(wear*100/durability) + duration*300, a tool of durability 0 making the
-// cost unknown (0); and that the root's read returns the same cells.
+// cost unknown (0); and that the root's read returns the same cells. The factor
+// is the best factor over the calendar's seasons when there is none at season -1
+// (a spring-only crop, FR-PRO-054).
 //
 // Arithmetic: a recipe of 2 inputs of 1, no tool, duration 1, one output of 1
 // at share 10 000 and factor 10 000 costs ceil((200+300)*10000/(1*10000)) =
 // 500.
 //
-// Requirement: FR-PRO-037, FR-PRO-001, FR-PRO-028
+// Requirement: FR-PRO-037, FR-PRO-054, FR-PRO-001, FR-PRO-028
 //
 // Guard: architecture.md 9.4, an anchor tuned to one pack's names would pass
 // the reference chain and fail the other.
@@ -71,6 +73,13 @@ func TestProductionAnchors_TwoSettings(t *testing.T) {
 			want := make([]int64, nc)
 			for ri, r := range cfg.Recipes {
 				e, _ := economysim.YieldSite(&yt, economysim.RegionID(g), economysim.RecipeID(ri), -1, r.Sited)
+				// A recipe with no factor at season -1 is costed at its best factor of
+				// any season of the calendar (FR-PRO-054).
+				for s := range cfg.Calendar.Seasons {
+					if e2, _ := economysim.YieldSite(&yt, economysim.RegionID(g), economysim.RecipeID(ri), s, r.Sited); e2 > e {
+						e = e2
+					}
+				}
 				if e <= 0 {
 					continue
 				}

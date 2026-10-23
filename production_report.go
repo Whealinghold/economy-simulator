@@ -178,11 +178,28 @@ func (s *productionScratch) markRunnable(g int, runnable [][]RecipeID, yt *yield
 			}
 			r := &s.anchor[id]
 			e, _, ok := yt.effective(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited)
+			if ok && e == 0 {
+				e = s.bestSeasonFactor(yt, sh, g, id)
+			}
 			if ok {
 				r.Runnable, r.YieldBP = true, e
 			}
 		}
 	}
+}
+
+// bestSeasonFactor is the largest effective factor of recipe id in region g over
+// the seasons of the calendar, 0 when it has none (spec-production.md 9.3): a
+// recipe with a factor of 0 only in this season is costed at the factor it has in
+// its open season, so a seasonal crop keeps its anchor all year. It is a function
+// of the table and the shocks, with no state.
+func (s *productionScratch) bestSeasonFactor(yt *yieldTable, sh *yieldShocks, g int, id RecipeID) (best int64) {
+	for season := range s.cfg.Calendar.Seasons {
+		if e, _, ok := yt.effective(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited); ok {
+			best = max(best, e)
+		}
+	}
+	return best
 }
 
 // unitCost is the root's read of the cost anchor table (spec-production.md

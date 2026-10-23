@@ -846,7 +846,15 @@ the region keeps one noisy agent from moving the anchor, and using the previous 
 value means that this tick's cost does not depend on this tick's prices, so there is no
 circle. A warm start may supply the starting wage (`spec-viability.md` 8), used whenever
 the pooled figure is unknown (a function of the welfare rings, not a latch;
-`spec-checkpoint.md` F5).
+`spec-checkpoint.md` F5). **The anchor hold.** The wage the anchor reads is raised to
+`AnchorHold` basis points of the starting wage when the pooled figure is below that
+share (`World.AnchorHold`, default 0, which is off; a region with no starting wage is
+not held). A price crash lowers the observed wage, so without the hold it lowers the
+anchor and with it the cost band of the belief rule (`spec-beliefs.md` 3.2), which
+lets the crash feed itself (found on the reference chain: the observed wage of a
+glutted role fell to 80 against a starting wage of 2 512). The hold is a pure function
+of the pooled wage and the starting wage, keeps no state, and sets no wage: the wage
+stays measured (FR-WEL-015); it bounds how far a measurement moves the anchor.
 
 The wage is the region's, not the role's: a skilled recipe is costed at the common
 wage, with the skill premium left to the tool wear and the market (open question 10).
@@ -857,7 +865,14 @@ labour, so a region where households subsist does not pull the anchor toward 0.
 **The anchor.** The cost anchor of a commodity in a region is the smallest
 `unit_cost` over the recipes that make it and that can run in the region this tick
 (`E` above 0 and some agent of the region has the recipe on its role's list),
-ignoring those whose cost is 0. A recipe that is only on an own-use list never sets an
+ignoring those whose cost is 0. **A seasonal recipe is costed at its best season.** A
+recipe whose factor `E` is 0 in this season only, because its yield profile has a
+factor of 0 in the season (a crop that grows in spring), is costed at the largest `E`
+it has over the seasons of the calendar, so that it keeps its anchor all year; a recipe
+whose factor is 0 in every season (no site, a yield shock of 0) has no anchor. Without
+this a seasonal crop's anchor was 0 outside its season, the belief floor fell to the
+reference band's low edge, and a glut of the crop sold at a tenth of its reference
+price. The choice reads only the table and the shocks, so it is no state. A recipe that is only on an own-use list never sets an
 anchor (`spec-subsistence.md` 3.6): the cost of a household's own labour is not what a
 seller's price is anchored to. It is 0 if there is none. Ties are impossible (a
 number). The root computes the anchor of every (region, commodity) **once per tick**,
@@ -1520,7 +1535,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-034 | `TraineeYield` MUST be an integer from 1 to 10 000, default 5 000, applied as the trainee factor of the effective factor, and a trainee's inputs MUST NOT be reduced; for a hired job the factor MUST be the employer's `HireYieldBP` in its place (`spec-employment.md` 6.1). |
 | FR-PRO-035 | `UnitCost` MUST equal the sum of quantity times price over the inputs, plus the sum of `ceil(WearPerUse * tool price / Durability)` over the tools, plus `Duration` times the wage, plus (with the tenure module on) the sum over the draws of quantity times the posted rent (`spec-land.md` 5.7.1), times `CostShare`, divided by the output quantity times the effective factor, rounded up, in checked integer arithmetic. |
 | FR-PRO-036 | `UnitCost` MUST be 0 when any input or tool price is 0, the wage is 0 or less, the effective factor is 0, the cost share is 0, or the arithmetic would overflow, and MUST have no side effect and allocate nothing. |
-| FR-PRO-037 | The cost anchor of a commodity in a region MUST be the smallest non-zero `UnitCost` over the recipes that make it and can run there this tick, or 0 if none, computed once per tick before orders from the previous clearing's published prices and the regional wage of FR-PRO-047. |
+| FR-PRO-037 | The cost anchor of a commodity in a region MUST be the smallest non-zero `UnitCost` over the recipes that make it and can run there this tick, or 0 if none, computed once per tick before orders from the previous clearing's published prices and the regional wage of FR-PRO-047; a seasonal recipe counts as FR-PRO-054 says. |
 | FR-PRO-038 | A yield profile that names an unknown region, recipe or season MUST be rejected with the sentinel for that kind or `ErrUnknownSeason`, and a duplicate profile with `ErrDuplicateID`, and a value outside [0, `MaxYieldBP`] with `ErrOutOfBounds`. |
 | FR-PRO-039 | A configuration in which the largest weight times an input, a draw, or an output times the largest possible effective factor exceeds `MaxQuantity`, or in which the cost of the inputs can exceed `MaxMoney`, MUST be rejected with `ErrOverflow`; the largest possible effective factor includes `MaxTechBP` for a recipe in a technology field and the larger of the trainee factor and `HireYieldBP` for a recipe on a hire list (10.3). |
 | FR-PRO-040 | Validation MUST warn, and MUST NOT fail, for an unused recipe, an unrunnable recipe and a durable no recipe requires. |
@@ -1530,12 +1545,14 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-PRO-044 | A recipe with a yield below 10 000 for a job MUST NOT create or destroy goods outside the `recipe_input`, `recipe_output`, `disposal` and `wear` flows. |
 | FR-PRO-045 | Goods MUST be conserved except by those flows after every tick of a run that contains multi-tick jobs and abandoned jobs, checked by audit. |
 | FR-PRO-046 | The two example packs of section 12, completed with the elided commodities and with their sources (`gather_seed`, `salvage`), MUST load, validate, pass the viability checks V1 to V4 of `spec-viability.md` (V1 included: a cycle with no source outside it is rejected, `unproducible_in_realm`; `lambda*` of at least 1 with every household working every tick) and run for a stated number of ticks with the invariants of testing.md 6.3 holding, with no Go code specific to either; that the run reaches a stable state is the claim of `spec-stylised-facts.md`, not of this requirement. |
-| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the pooled observed wage as `spec-welfare-and-wages.md` 4.3 defines it (the definition and the cases in which it is unknown are that spec's: FR-WEL-018, FR-WEL-020), as it stood at the end of the previous tick, and MUST be 0 when that wage is unknown. |
+| FR-PRO-047 | The regional wage used for `UnitCost` MUST be the pooled observed wage as `spec-welfare-and-wages.md` 4.3 defines it (the definition and the cases in which it is unknown are that spec's: FR-WEL-018, FR-WEL-020), as it stood at the end of the previous tick, raised by the anchor hold of FR-PRO-055, and MUST be 0 when that wage is unknown. |
 | FR-PRO-048 | A request for a job MUST be checked against the role's recipe list and effective own-use list before any other check (`not_on_role`), then against the rights in force (`not_permitted`) and before `k0` is derived, for the principal of a trainee's or a hire's job as for the executor as the right says, and the cost anchors of 9.3 MUST be computed once per tick before `Work` is called. |
 | FR-PRO-050 | A job in progress MUST be abandoned with the reason `region_changed` when the executor's account is to change region by a migration journey, at its departure, and `RecipeAbandoned` MUST carry that reason. (new, `spec-migration.md` 8.2) |
 | FR-PRO-051 | A recipe that is only on an own-use list MUST NOT set a cost anchor, and MUST count as a use for `unused_recipe`. (new, `spec-subsistence.md` 3.6) |
 | FR-PRO-052 | The refusals of a tick MUST be reported by `RecipeRefused`, one row per region and recipe with a refusal, a request refused with a count of 0 or a household blocked by the work report (`spec-agents.md` 7.1.4), in ascending (`RegionID`, `RecipeID`), each count the sum of the weights of the agents refused for the reason under the first applicable reason of 4.2.1, none for a tick without a refusal, and no refusal MUST be counted twice or in `ProductionHalted` (14.1). |
 | FR-PRO-053 | `RecipeExecuted.Overflow` MUST list, in output order and for a quantity above 0 only, the part of `Disposed` that is not a discard output, so that `Disposed` less `Overflow` is the discard outputs (14.1). |
+| FR-PRO-054 | A recipe with a factor of 0 in the current season and a factor above 0 in another season of the calendar MUST be costed for the anchor at the largest factor it has over the seasons, so a seasonal crop's cost anchor MUST be above 0 at every tick while some agent of the region has the recipe on its role's list and its inputs and tools have prices; a recipe whose factor is 0 in every season MUST set no anchor. (new, 9.3) |
+| FR-PRO-055 | The regional wage used for `UnitCost` MUST be raised to `World.AnchorHold` basis points of the region's starting wage (truncated toward zero) when the pooled observed wage is below that share, MUST be unchanged when `AnchorHold` is 0 or the region has no starting wage, and MUST be a pure function of the pooled wage and the starting wage. (new, 9.3) |
 | FR-PRO-049 | In a region whose wage is 0, the cost anchor of every commodity MUST be 0, so that only the reference band applies to beliefs there. |
 
 ### Non-functional

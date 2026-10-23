@@ -119,7 +119,7 @@ func (w *World) p12Anchors() {
 		}
 	}
 	for g := range t.wages {
-		t.wages[g], _ = w.reads.regionWage(t.rings[g], w.seedWage[g])
+		t.wages[g], _ = w.reads.regionWage(t.rings[g], w.seedWage[g], w.cfg.World.AnchorHold)
 	}
 	w.setRunnable()
 	w.prod.anchors(t.prices, t.wages, w.runnable, &w.yields, &w.shocks, t.moment.Season)
