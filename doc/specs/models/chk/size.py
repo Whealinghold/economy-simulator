@@ -176,7 +176,7 @@ def fixed_sections(n_markets, n_sources, rumour_age, price_window, n_boundary, n
                 c.u(random.randint(0, 5))
     c = sec("world")
     c.u(10000)
-    c.u(0)
+    c.u(0)  # the construction flag, counted as one integer (worked.py encodes it as a bool byte)
     return secs
 
 

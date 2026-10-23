@@ -1354,8 +1354,8 @@ func evalUnderRace(cond ast.Expr) tri {
 }
 
 // skipsUnderRace reports whether cond is certainly true under -race. A term such
-// as testing.CoverMode() != "atomic" is unknown, so the allocation test, which
-// skips unless it runs under -race, is not one.
+// as testing.CoverMode() != "" is unknown, and !raceEnabled is false under -race,
+// so the allocation test, which skips unless it runs under -race, is not one.
 func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
 
 // Known limit: a skip behind an alias of raceEnabled (race := raceEnabled), in a
@@ -1373,8 +1373,36 @@ func isSkipCall(c *ast.CallExpr) bool {
 	return false
 }
 
+// skipsOnRacePath reports whether n holds a skip call that runs under -race
+// whatever the other terms are: every if on the path to it has a condition that
+// is certainly true there (or certainly false, for its else), and there is at
+// least one such if (in is set once a certain if has been entered). A nested
+// condition that is unknown, such as testing.Short(), breaks the certainty, so
+// `if raceEnabled { if testing.Short() {...} }` reads as `raceEnabled &&
+// testing.Short()`.
+func skipsOnRacePath(n ast.Node, in bool) (found bool) {
+	ast.Inspect(n, func(m ast.Node) bool {
+		switch x := m.(type) {
+		case *ast.IfStmt:
+			switch v := evalUnderRace(x.Cond); {
+			case v == triTrue:
+				found = found || skipsOnRacePath(x.Body, true)
+			case v == triFalse && x.Else != nil:
+				found = found || skipsOnRacePath(x.Else, true)
+			}
+			return false
+		case *ast.CallExpr:
+			if in && isSkipCall(x) {
+				found = true
+			}
+		}
+		return true
+	})
+	return found
+}
+
 // raceSkippers returns the Test functions of the files that call a t.Skip* in
-// an if whose condition holds under -race (skipsUnderRace).
+// an if whose condition holds under -race (skipsOnRacePath).
 func raceSkippers(t *testing.T, files map[string]string) []string {
 	t.Helper()
 	var out []string
@@ -1389,32 +1417,7 @@ func raceSkippers(t *testing.T, files map[string]string) []string {
 			if !ok || fd.Body == nil || !strings.HasPrefix(fd.Name.Name, "Test") {
 				continue
 			}
-			skips := false
-			ast.Inspect(fd.Body, func(n ast.Node) bool {
-				ifs, ok := n.(*ast.IfStmt)
-				if !ok {
-					return true
-				}
-				var taken ast.Node // the branch that runs under -race
-				switch {
-				case skipsUnderRace(ifs.Cond):
-					taken = ifs.Body
-				case evalUnderRace(ifs.Cond) == triFalse && ifs.Else != nil:
-					if _, chain := ifs.Else.(*ast.IfStmt); chain {
-						return true // the else-if is visited on its own by the walk
-					}
-					taken = ifs.Else
-				default:
-					return true
-				}
-				ast.Inspect(taken, func(m ast.Node) bool {
-					if c, ok := m.(*ast.CallExpr); ok && isSkipCall(c) {
-						skips = true
-					}
-					return true
-				})
-				return true
-			})
+			skips := skipsOnRacePath(fd.Body, false)
 			if skips {
 				out = append(out, fd.Name.Name)
 			}
@@ -1453,8 +1456,8 @@ func TestK(t *testing.T) { if !raceEnabled { t.Log("x") } else if testing.Short(
 func TestI(t *testing.T) { if raceEnabled { if testing.Short() { t.Skip("x") } } }
 func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 `}
-	if got := raceSkippers(t, probe); !(len(got) == 6 && slices.Contains(got, "TestJ") && slices.Contains(got, "TestI") && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
-		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG, TestH, TestI and TestJ only", got)
+	if got := raceSkippers(t, probe); !(len(got) == 5 && slices.Contains(got, "TestJ") && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
+		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG, TestH and TestJ only (TestI, nested under testing.Short(), skips only under -short as TestD does)", got)
 	}
 	doc, err := os.ReadFile("doc/rules/testing.md")
 	if err != nil {

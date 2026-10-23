@@ -7,9 +7,9 @@ import (
 )
 
 // stepAllocBaseline is the number of allocations of one full Step of pack one
-// after 50 ticks, measured under -race (70 re-measured without coverage; D231 recorded the same with it; the test skips under coverage, so only gate R checks it) with
-// the logger and observer at their no-op defaults and WithAudit off. It is a
-// baseline: raising it is a reviewed change with a reason (rule 8.2).
+// after 50 ticks, measured under -race with the logger and observer at their
+// no-op defaults and WithAudit off. Only gate R checks it: counts differ without
+// -race. It is a baseline: raising it is a reviewed change with a reason (rule 8.2).
 const stepAllocBaseline = 70
 
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
@@ -25,9 +25,6 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 	}
 	if !raceEnabled {
 		t.Skipf("baseline measured under -race (race=%v); counts differ without it (testing.md 5.7)", raceEnabled)
-	}
-	if testing.CoverMode() != "" {
-		t.Skipf("baseline measured without coverage (cover mode %q); the count was 70 with and without, but gate R takes no coverage (testing.md 5.7)", testing.CoverMode())
 	}
 	cfg := loadValidPack(t, packOne...)
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
