@@ -294,6 +294,9 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64) {
 // Requirement: FR-REF-028, FR-REF-025, FR-REF-026, FR-STB-008, FR-OBS-042, FR-OBS-015, FR-LED-035, FR-LED-045, FR-LED-046, FR-CLR-019
 // Guard: a unit created without a boundary reason breaks conservation; a trade
 // price outside the matched limits breaks the price check.
+//
+// Under -race each row runs its first invariantSeeds(seeds) seeds (plan 2-1
+// D226); gate F runs them all.
 func TestInvariants_Packs(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end: 400 ticks per (pack, seed); run without -short")
@@ -301,7 +304,7 @@ func TestInvariants_Packs(t *testing.T) {
 	t.Parallel()
 	for _, tc := range invariantTable {
 		cfg := loadValidPack(t, tc.layers...)
-		for seed := uint64(1); seed <= uint64(tc.seeds); seed++ {
+		for seed := uint64(1); seed <= uint64(invariantSeeds(tc.seeds)); seed++ {
 			t.Run(fmt.Sprintf("%s/seed%d", tc.name, seed), func(t *testing.T) {
 				t.Parallel()
 				runInvariants(t, cfg, seed)

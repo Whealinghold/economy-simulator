@@ -2,6 +2,9 @@ package economysim_test
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,10 +29,43 @@ import (
 const (
 	bandsPath      = "testdata/chains/bands/one.toml"
 	scriptsDir     = "testdata/chains/scripts"
-	scenariosPath  = "testdata/chains/expected/one.scenarios.txt"
+	expectedDir    = "testdata/chains/expected"
 	scenarioSeeds  = 10
 	scenarioWorlds = 4
+	// raceSeeds is the seed count of the gate run under -race (plan 2-1 D226): seed 1
+	// is the golden seed; the rest run in gate F (D229). Two seeds took 58 min (D230).
+	raceSeeds = 1
 )
+
+// gateFPrefixes are the name prefixes of the tests gate F runs without -race
+// (plan 2-1 D229). A root-package test that skips under raceEnabled must start
+// with one, or it runs in neither gate (TestRaceSkips_HaveAnFPrefix).
+var gateFPrefixes = []string{
+	"TestScenario", "TestDeterminism", "TestGolden", "TestInvariants", "TestCheckpoint",
+	"TestFork", "TestConfigOnly", "TestFixture", "TestPacks", "TestCensus", "TestExpected",
+	"TestStylised", "TestCost", "TestStable",
+}
+
+// seedsFor is the seed count of a test with `full` seeds: all of them, or the
+// first raceSeeds when race is set; never below 1.
+func seedsFor(race bool, full int) int {
+	if race {
+		full = min(full, raceSeeds)
+	}
+	return max(full, 1)
+}
+
+// scenarioSeedCount is the seed count of a scenario test in this build.
+func scenarioSeedCount() int { return seedsFor(raceEnabled, scenarioSeeds) }
+
+// invariantSeeds is the seed count of a row of invariantTable (or of a
+// determinism test) that has `full` seeds, in this build.
+func invariantSeeds(full int) int { return seedsFor(raceEnabled, full) }
+
+// updateAllowed reports whether -update may write a recorded file: not under
+// -race, where the seed set is reduced and a written file would say "seeds 1-10"
+// of a run that did not make it (plan 2-1 D228).
+func updateAllowed(race, updating bool) bool { return !(race && updating) }
 
 // scenSem bounds the worlds the scenario tests run at once (the machine is
 // shared; the tests are still parallel).
@@ -516,18 +552,24 @@ func medianOf(vs []int64) int64 {
 // ---- the report of D181 -------------------------------------------------------
 
 // scenReport collects the measures of one scenario block per seed and the
-// verdicts of its checks; the block is written to expected/one.scenarios.txt
+// verdicts of its checks; the block is written to expected/<pack>.scenarios.txt
 // with -update and never compared (D181, FR-REF-024).
 type scenReport struct {
 	mu     sync.Mutex
+	pack   string
 	title  string
 	vals   map[string]map[uint64]string
 	nums   map[string][]int64
 	checks map[string][]string // check -> "seed:PASS" / "seed:FAIL detail"
 }
 
-func newScenReport(title string) *scenReport {
-	return &scenReport{title: title, vals: map[string]map[uint64]string{}, nums: map[string][]int64{}, checks: map[string][]string{}}
+// newScenReport is the report of a block on pack `one`.
+func newScenReport(title string) *scenReport { return newPackScenReport("one", title) }
+
+// newPackScenReport is the report of a block on the named pack; flush writes
+// it to that pack's file only.
+func newPackScenReport(pack, title string) *scenReport {
+	return &scenReport{pack: pack, title: title, vals: map[string]map[uint64]string{}, nums: map[string][]int64{}, checks: map[string][]string{}}
 }
 
 // num records a numeric measure of a seed.
@@ -626,9 +668,20 @@ func (r *scenReport) flush(t testing.TB) {
 	if !*updateFlag {
 		return
 	}
-	if err := writeScenarioBlock(scenariosPath, r.title, lines); err != nil {
+	if !updateAllowed(raceEnabled, true) {
+		t.Fatalf("-update is refused under -race: the seed set is reduced, so %q would be recorded as a run that did not happen (plan 2-1 D228); run without -race", r.title)
+	}
+	if err := r.write(expectedDir); err != nil {
 		t.Errorf("record %s: %v", r.title, err)
 	}
+}
+
+// scenariosPath is the recorded file of a pack inside dir.
+func scenariosPath(dir, pack string) string { return filepath.Join(dir, pack+".scenarios.txt") }
+
+// write records the block in the file of its pack under dir and in no other.
+func (r *scenReport) write(dir string) error {
+	return writeScenarioBlock(scenariosPath(dir, r.pack), r.title, r.lines())
 }
 
 // writeScenarioBlock replaces the block that starts with "## <title>" in the
@@ -1086,5 +1139,251 @@ func TestScenarioHelpers_UnmetCounts(t *testing.T) {
 	// A window past the end of the series counts no unfed household.
 	if num, den, _ = unmetCounts([]int64{1}, 5, []int64{4, 4}); num != 0 || den != 8 {
 		t.Errorf("unmetCounts past the series = %d, %d, want 0, 8", num, den)
+	}
+}
+
+// TestScenarioSeedCount_RaceAware verifies the seed count of a scenario is all
+// of the seeds in a normal build and raceSeeds under -race, is at least 1, and
+// that seedList of it starts at seed 1, the golden seed.
+//
+// Guard: if the count could reach 0 a scenario would assert nothing and pass; if
+// seed 1 were dropped the reduced run would not cover the golden seed.
+func TestScenarioSeedCount_RaceAware(t *testing.T) {
+	t.Parallel()
+	want := scenarioSeeds
+	if raceEnabled {
+		want = raceSeeds
+	}
+	got := scenarioSeedCount()
+	if got != want {
+		t.Errorf("scenarioSeedCount() = %d with raceEnabled=%t, want %d", got, raceEnabled, want)
+	}
+	if got < 1 {
+		t.Errorf("scenarioSeedCount() = %d, want at least 1", got)
+	}
+	if l := seedList(got); len(l) != got || l[0] != 1 {
+		t.Errorf("seedList(%d) = %v, want %d seeds starting at 1", got, l, got)
+	}
+}
+
+// TestInvariantSeeds_RaceAware verifies a row's seed count is its full count in
+// a normal build and at most raceSeeds under -race, never below 1, for both
+// builds (seedsFor) and for this one (invariantSeeds).
+//
+// Guard: a row of invariantTable with 16 seeds is the slowest test under -race;
+// the count is what keeps gate R inside its budget (plan 2-1 D226, D230).
+func TestInvariantSeeds_RaceAware(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		race       bool
+		full, want int
+	}{
+		{"16 seeds, normal", false, 16, 16},
+		{"4 seeds, normal", false, 4, 4},
+		{"16 seeds, race", true, 16, raceSeeds},
+		{"4 seeds, race", true, 4, raceSeeds},
+		{"1 seed, race", true, 1, 1},
+		{"1 seed, normal", false, 1, 1},
+		{"0 seeds is raised to 1, race", true, 0, 1},
+		{"0 seeds is raised to 1, normal", false, 0, 1},
+	}
+	for _, tt := range tests {
+		if got := seedsFor(tt.race, tt.full); got != tt.want {
+			t.Errorf("%s: seedsFor(%t, %d) = %d, want %d", tt.name, tt.race, tt.full, got, tt.want)
+		}
+	}
+	for _, full := range []int{1, 4, 16} {
+		if got, want := invariantSeeds(full), seedsFor(raceEnabled, full); got != want {
+			t.Errorf("invariantSeeds(%d) = %d with raceEnabled=%t, want %d", full, got, raceEnabled, want)
+		}
+	}
+}
+
+// TestUpdateAllowed_NeverUnderRace verifies -update is refused only when both
+// -race and -update are set.
+//
+// Guard: a reduced run that wrote the recorded scenarios file would put a
+// "seeds 1-10" title over two seeds (plan 2-1 D228).
+func TestUpdateAllowed_NeverUnderRace(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		race, updating, want bool
+	}{{true, true, false}, {true, false, true}, {false, true, true}, {false, false, true}} {
+		if got := updateAllowed(tt.race, tt.updating); got != tt.want {
+			t.Errorf("updateAllowed(race=%t, updating=%t) = %t, want %t", tt.race, tt.updating, got, tt.want)
+		}
+	}
+}
+
+// TestScenReport_PerPackPath verifies a report for pack X writes only
+// X.scenarios.txt and leaves the file of another pack as it was.
+//
+// Guard: one file per pack lets plans 5, 7, 12 and 24 record their packs without
+// rewriting the recorded outcomes of pack one.
+func TestScenReport_PerPackPath(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	other := scenariosPath(dir, "one")
+	if err := os.WriteFile(other, []byte("untouched\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := newPackScenReport("x", "S00 x seeds 1-2, 1 ticks")
+	r.num(1, "m", 7)
+	if err := r.write(dir); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if b, err := os.ReadFile(other); err != nil || string(b) != "untouched\n" {
+		t.Errorf("file of pack one = %q, %v, want it untouched", b, err)
+	}
+	b, err := os.ReadFile(scenariosPath(dir, "x"))
+	if err != nil || !strings.Contains(string(b), "## S00 x seeds 1-2, 1 ticks") {
+		t.Errorf("file of pack x = %q, %v, want the block of the report", b, err)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 2 {
+		t.Errorf("directory holds %d files, %v, want exactly one.scenarios.txt and x.scenarios.txt", len(entries), err)
+	}
+	if got, want := scenariosPath("d", "one"), filepath.Join("d", "one.scenarios.txt"); got != want {
+		t.Errorf("scenariosPath(d, one) = %q, want %q", got, want)
+	}
+	if got := newScenReport("t").pack; got != "one" {
+		t.Errorf("newScenReport pack = %q, want one", got)
+	}
+}
+
+// hasFPrefix reports whether a test name starts with a prefix of gateFPrefixes.
+func hasFPrefix(name string) bool {
+	for _, p := range gateFPrefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// tri is a three-valued truth: a condition is evaluated with raceEnabled true and
+// every other term unknown.
+type tri int
+
+const (
+	triFalse tri = iota
+	triUnknown
+	triTrue
+)
+
+// evalUnderRace evaluates cond with raceEnabled true and any other term unknown.
+func evalUnderRace(cond ast.Expr) tri {
+	switch e := cond.(type) {
+	case *ast.Ident:
+		if e.Name == "raceEnabled" {
+			return triTrue
+		}
+	case *ast.ParenExpr:
+		return evalUnderRace(e.X)
+	case *ast.UnaryExpr:
+		if e.Op == token.NOT {
+			return 2 - evalUnderRace(e.X)
+		}
+	case *ast.BinaryExpr:
+		switch e.Op {
+		case token.LOR:
+			return max(evalUnderRace(e.X), evalUnderRace(e.Y))
+		case token.LAND:
+			return min(evalUnderRace(e.X), evalUnderRace(e.Y))
+		}
+	}
+	return triUnknown
+}
+
+// skipsUnderRace reports whether cond is certainly true under -race. A term such
+// as testing.CoverMode() != "atomic" is unknown, so the allocation test, which
+// skips unless it runs under -race, is not one.
+func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
+
+// raceSkippers returns the Test functions of the files that call a t.Skip* in
+// an if whose condition holds under -race (skipsUnderRace).
+func raceSkippers(t *testing.T, files map[string]string) []string {
+	t.Helper()
+	var out []string
+	fset := token.NewFileSet()
+	for name, src := range files {
+		f, err := parser.ParseFile(fset, name, src, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		for _, d := range f.Decls {
+			fd, ok := d.(*ast.FuncDecl)
+			if !ok || fd.Body == nil || !strings.HasPrefix(fd.Name.Name, "Test") {
+				continue
+			}
+			skips := false
+			ast.Inspect(fd.Body, func(n ast.Node) bool {
+				ifs, ok := n.(*ast.IfStmt)
+				if !ok || !skipsUnderRace(ifs.Cond) {
+					return true
+				}
+				ast.Inspect(ifs.Body, func(m ast.Node) bool {
+					if c, ok := m.(*ast.CallExpr); ok {
+						if sel, ok := c.Fun.(*ast.SelectorExpr); ok && strings.HasPrefix(sel.Sel.Name, "Skip") {
+							skips = true
+						}
+					}
+					return true
+				})
+				return true
+			})
+			if skips {
+				out = append(out, fd.Name.Name)
+			}
+		}
+	}
+	return out
+}
+
+// TestRaceSkips_HaveAnFPrefix verifies every root-package test that skips under
+// raceEnabled has a name that starts with a prefix of gateFPrefixes, so gate F
+// (which runs those prefixes without -race) runs it (plan 2-1 D229). The matcher
+// and the detector are checked on small sources first.
+//
+// Guard: a test skipped under -race whose name gate F does not select runs in
+// neither gate, and nothing would say so.
+func TestRaceSkips_HaveAnFPrefix(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name string
+		want bool
+	}{{"TestScenarioS19_HaltOnAndOff", true}, {"TestInvariants_Packs", true}, {"TestStep_AllocationsStayAtTheBaseline", false}} {
+		if got := hasFPrefix(tt.name); got != tt.want {
+			t.Errorf("hasFPrefix(%q) = %t, want %t", tt.name, got, tt.want)
+		}
+	}
+	probe := map[string]string{"probe_test.go": `package p
+func TestA(t *testing.T) { if raceEnabled { t.Skip("x") } }
+func TestB(t *testing.T) { if !raceEnabled || testing.CoverMode() != "atomic" { t.Skipf("x") } }
+func TestC(t *testing.T) { if testing.Short() { t.Skip("x") } }
+func TestD(t *testing.T) { if raceEnabled && testing.Short() { t.Skip("x") } }
+func TestE(t *testing.T) { if raceEnabled || testing.Short() { t.Skip("x") } }
+func TestF(t *testing.T) { if raceEnabled { t.Log("x") } }
+`}
+	if got := raceSkippers(t, probe); !(len(got) == 2 && (got[0]+got[1] == "TestATestE" || got[0]+got[1] == "TestETestA")) {
+		t.Errorf("raceSkippers(probe) = %v, want TestA and TestE only", got)
+	}
+	files, err := filepath.Glob("*_test.go")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("glob *_test.go = %v, %v, want the root test files", files, err)
+	}
+	srcs := map[string]string{}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		srcs[f] = string(b)
+	}
+	for _, name := range raceSkippers(t, srcs) {
+		if !hasFPrefix(name) {
+			t.Errorf("%s skips under raceEnabled but starts with none of %v, so it runs in neither gate R nor gate F; rename it", name, gateFPrefixes)
+		}
 	}
 }

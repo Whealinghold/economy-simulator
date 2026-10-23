@@ -71,37 +71,42 @@ func hashingObserver() economysim.Observer {
 	})
 }
 
-// TestDeterminism_SameBytes verifies pack one, seeds 1 and 2, 400 ticks: a run
-// split into any number of Run calls, with or without a logger, an observer or
-// the audit, ends in the snapshot and config hash of the bare Step run, and the
-// cases that can produce them match its per-tick snapshots, its events (without
-// RunStarted and RunEnded) and its one.txt bytes.
-//
-// Requirement: FR-REF-025, FR-REF-030, FR-OBS-023, FR-WLD-063, FR-WLD-064, FR-WLD-020, FR-CFG-026, NFR-WLD-004
-//
-// Guard: observation, logging, the audit and the chunking of Run must not move
-// the world.
-func TestDeterminism_SameBytes(t *testing.T) {
-	t.Parallel()
-	if testing.Short() {
-		t.Skip("end-to-end test, skipped with -short")
-	}
-	cfg := loadValidPack(t, packOne...)
-	report := solveCold(t)
+// detStep drives a spec by Step with a snapshot at every tick.
+func detStep(s runSpec) runSpec { s.Drive, s.Snapshots = driveStep, snapEvery; return s }
+
+// detCase is one variant of a run of pack one that must end in the bare run's
+// state (TestDeterminism_SameBytes).
+type detCase struct {
+	name string
+	spec func() runSpec // a fresh spec per run (handlers and observers are stateful)
+}
+
+// detRaceCases are the cases kept under -race (plan 2-1 D226): one per lettered
+// group (a) to (e) at least, and the two chunking extremes.
+var detRaceCases = map[string]bool{
+	"(a) second observed run":      true,
+	"(b) Run(400) bare":            true,
+	"(b) Run(1)+Run(399) observed": true,
+	"(b) 400 Run(1) observed":      true,
+	"(c) logger":                   true,
+	"(d) audit on":                 true,
+	"(e) the same with Run chunks": true,
+}
+
+// detCases is the variant list for one world: every case, or under race only the
+// detRaceCases. A module or pack world is run by its own TestDeterminism_<Name>
+// that takes cases from detCases(true) by name.
+func detCases(race bool) []detCase {
 	seven := []int64{1, 2, 3, 50, 100, 121, 123}
 	ones := make([]int64, detTicks)
 	for i := range ones {
 		ones[i] = 1
 	}
-	type detCase struct {
-		name string
-		spec func() runSpec // a fresh spec per run (handlers and observers are stateful)
-	}
-	step := func(s runSpec) runSpec { s.Drive, s.Snapshots = driveStep, snapEvery; return s }
+	step := detStep
 	run := func(observe bool, chunks ...int64) func() runSpec {
 		return func() runSpec { return runSpec{Drive: driveRun(chunks...), Observe: observe} }
 	}
-	cases := []detCase{
+	all := []detCase{
 		{"(a) second plain run", func() runSpec { return step(runSpec{}) }},
 		{"(a) second observed run", func() runSpec { return step(runSpec{Observe: true}) }},
 		{"(b) Run(400) bare", run(false, detTicks)},
@@ -135,11 +140,44 @@ func TestDeterminism_SameBytes(t *testing.T) {
 			return s
 		}},
 	}
+	if !race {
+		return all
+	}
+	var kept []detCase
+	for _, c := range all {
+		if detRaceCases[c.name] {
+			kept = append(kept, c)
+		}
+	}
+	return kept
+}
+
+// TestDeterminism_SameBytes verifies pack one, seeds 1 and 2, 400 ticks: a run
+// split into any number of Run calls, with or without a logger, an observer or
+// the audit, ends in the snapshot and config hash of the bare Step run, and the
+// cases that can produce them match its per-tick snapshots, its events (without
+// RunStarted and RunEnded) and its one.txt bytes.
+//
+// Requirement: FR-REF-025, FR-REF-030, FR-OBS-023, FR-WLD-063, FR-WLD-064, FR-WLD-020, FR-CFG-026, NFR-WLD-004
+//
+// Under -race it runs detCases(true), a subset that keeps every group (plan 2-1
+// D226); the full list runs in gate F.
+//
+// Guard: observation, logging, the audit and the chunking of Run must not move
+// the world.
+func TestDeterminism_SameBytes(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	report := solveCold(t)
+	cases := detCases(raceEnabled)
 	for _, seed := range []uint64{1, 2} {
 		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 			t.Parallel()
-			base := runPack(t, cfg, step(runSpec{Seed: seed, Ticks: detTicks}))
-			ref := runPack(t, cfg, step(runSpec{Seed: seed, Ticks: detTicks, Observe: true}))
+			base := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks}))
+			ref := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks, Observe: true}))
 			refEvents := renderEvents(withoutRunBrackets(ref))
 			refGolden := oneTxt(cfg, seed, detTicks, ref, report)
 			if d := firstTickDiff(base.Samples, ref.Samples); d != "" {
@@ -175,6 +213,46 @@ func TestDeterminism_SameBytes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestDeterminism_RaceCasesKeepEveryGroup verifies detCases(true) has at least
+// one case in each lettered group (a) to (e) and the two chunking extremes, and
+// that every name in it is a name of detCases(false).
+//
+// Guard: the reduction under -race (plan 2-1 D226) drops cases, never a group; a
+// typo in detRaceCases would silently drop a case from gate R.
+func TestDeterminism_RaceCasesKeepEveryGroup(t *testing.T) {
+	t.Parallel()
+	all := map[string]bool{}
+	for _, c := range detCases(false) {
+		all[c.name] = true
+	}
+	got := map[string]bool{}
+	for _, c := range detCases(true) {
+		got[c.name] = true
+		if !all[c.name] {
+			t.Errorf("detCases(true) has %q, which detCases(false) lacks", c.name)
+		}
+	}
+	for _, g := range []string{"(a) ", "(b) ", "(c) ", "(d) ", "(e) "} {
+		n := 0
+		for name := range got {
+			if strings.HasPrefix(name, g) {
+				n++
+			}
+		}
+		if n == 0 {
+			t.Errorf("detCases(true) has no case of group %s", g)
+		}
+	}
+	for _, name := range []string{"(b) Run(1)+Run(399) observed", "(b) 400 Run(1) observed"} {
+		if !got[name] {
+			t.Errorf("detCases(true) lacks the chunking extreme %q", name)
+		}
+	}
+	if len(got) != len(detRaceCases) {
+		t.Errorf("detCases(true) has %d cases, detRaceCases names %d", len(got), len(detRaceCases))
 	}
 }
 

@@ -40,9 +40,9 @@ func TestScenarioS01_FuelSupplyShock(t *testing.T) {
 	}
 	cfg := loadValidPack(t, packOne...)
 	script := loadScript(t, "s01.toml")
-	rep := newScenReport("S01 one leg-a seeds 1-10, 700 ticks")
+	rep := newScenReport(fmt.Sprintf("S01 one leg-a seeds 1-%d, 700 ticks", scenarioSeedCount()))
 	t.Run("leg a supply", func(t *testing.T) {
-		for _, seed := range seedList(scenarioSeeds) {
+		for _, seed := range seedList(scenarioSeedCount()) {
 			t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 				t.Parallel()
 				s01Seed(t, cfg, script, seed, rep)
