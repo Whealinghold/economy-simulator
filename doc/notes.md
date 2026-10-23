@@ -1937,7 +1937,7 @@ PR description.
 
 - **Areas:** CODE, ALL
 - **Raised:** 2026-10-23, plan 2-1 Phase 2.
-- **Note:** Under `-race` the scenario tests run `scenarioSeedCount()` seeds (`raceSeeds`, now 1), `TestInvariants_Packs` runs `invariantSeeds(tc.seeds)` and `TestDeterminism_SameBytes` runs `detCases(true)`; the full set runs without `-race`; `-update` is refused under `-race`; the gate is two runs, R and F (`testing.md` 9.1). A row that adds a long scenario uses `scenarioSeedCount()`, a row of `invariantTable` calls `invariantSeeds`, and a test that skips under `raceEnabled` starts with a prefix of `gateFPrefixes`. **Open:** gate R takes 48 min with one seed and 58 min with two against the 30 min budget of D230, because fixed-cost tests dominate under `-race` with atomic coverage; the owner decides D231 (split R into `go test -race ./...`, 164 s reduced, and a non-race atomic coverage run, 927 s).
+- **Note:** Under `-race` the scenario tests run `scenarioSeedCount()` seeds (`raceSeeds`, now 1), `TestInvariants_Packs` runs `invariantSeeds(tc.seeds)` and `TestDeterminism_SameBytes` runs `detCases(true)`; the full set runs without `-race`; `-update` is refused under `-race`; the gate is two runs, R (`go test -race -timeout 60m ./...`, reduced seeds) and F (the non-race atomic-coverage run, all seeds; `testing.md` 9.1). A row that adds a long scenario uses `scenarioSeedCount()`, a row of `invariantTable` calls `invariantSeeds`, and a test that skips under `raceEnabled` starts with a prefix of `gateFPrefixes`. **Settled (owner, 2026-10-23, D231):** with atomic coverage under `-race` gate R took 48 min (one seed) to 58 min (two) against the 30 min budget, because fixed-cost tests dominate; R was split from the coverage run: R is 160 s, F 15 min. The allocation test runs under `-race` alone (70 allocations per `Step` with or without coverage; the constant 113 is loose). Close this note when a row has used `scenarioSeedCount()` and `invariantSeeds`.
 
 ## Read receipt
 
@@ -1951,5 +1951,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 990b09a3c4e60ca3a730f223
+NOTES-TAG: e352b3a02001a1bd9885937b
 

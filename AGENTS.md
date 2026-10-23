@@ -199,7 +199,8 @@ gofmt -l .                     # must print nothing
 go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
-go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+go test -race -timeout 60m ./...   # gate R: reduced seeds under -race
+go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...   # gate F
 go mod tidy                    # must produce no diff
 ```
 

@@ -121,7 +121,7 @@ Exit check: S10's exact half passes; the report lines are recorded; `bands/one.t
 
 Goal: D289 to D293. Read-only on the library; the only files are the benchmark file and the measurement record.
 Files: `scale_bench_test.go`, `testdata/chains/expected/one.scenarios.txt` unchanged by this phase.
-Steps (run one at a time, on an otherwise idle machine, not under `-race` for time and under `-race -covermode=atomic -coverpkg=./...` only for the allocation count; other agents' jobs distort a time, so the record says whether the machine was idle):
+Steps (run one at a time, on an otherwise idle machine, not under `-race` for time and under `-race` only for the allocation count; other agents' jobs distort a time, so the record says whether the machine was idle):
 1. Probe: `NewWorld` on `base`, `lines`, `five`, `warm-five` for 3 steps. Record whether it builds and steps. If yes, add `BenchmarkStepFive` (5 000 agents at scale 1, mean `|T_a|` 7.7 printed by the benchmark); if no, record the error and use the multiplied `one` of D291.
 2. `go test -run '^$' -bench 'Step(Agents|Weights|Five)' -benchmem -count 6` and `benchstat` over the six; keep the median and spread.
 3. The ratios of NFR-SCL-001 (time at 1 200 over 600 agents, 2 400 over 1 200) are written next to the 2.2 limit; the cost per agent-tick against `c_0 + |T_a| * c_t` of NFR-SCL-002; the 6% clearing share of spec-scale.md 6.3 is read from `BenchmarkPhase` (`observe_bench_internal_test.go:61`, phases P3 and P4).

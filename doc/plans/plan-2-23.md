@@ -149,7 +149,7 @@ Exit check: `go test -short -race -run 'TestImport|TestGuardedFiles|TestGlossary
 ### Phase 6: exit gate
 
 1. `gofmt -l .` empty; `go vet ./...`; `staticcheck ./...`; `go mod tidy` with no diff (`go.mod` and `go.sum` unchanged: the package is stdlib only).
-2. Tests: `go test -short -race ./...` and, per plan 1's D229, gate R (`go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...`) and gate F; the plan states what each reported.
+2. Tests: `go test -short -race ./...` and, per plan 1's D229, gate R (`go test -race -timeout 60m ./...`) and gate F (`go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...`); the plan states what each reported.
 3. Coverage: `denomination/` at least 90% in `coverage.out`; the root's coverage does not fall (`testing.md` 9.2).
 4. `lizard -l go -C 10 -a 8 -L 100 -w denomination/*.go` (non-test files) prints nothing. Markdownlint on this plan is clean.
 5. Mutation: `gomu` on `denomination/` in Docker with the caps of D677; the survivors are listed in the PR with a reason each (equivalent mutants such as the order of the two unit checks that cannot both fail).
