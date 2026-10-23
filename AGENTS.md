@@ -118,6 +118,7 @@ economy-sim/
 │   viability_check.go viability_table.go viability_report.go (VIA)
 │   construct.go construct_warm.go fanin.go phase_start.go phase_production.go
 │   phase_trade.go phase_outcomes.go phase_exit.go (WLD)
+│   checkpoint_save.go checkpoint_restore.go checkpoint_sections.go (CHK)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's
@@ -157,8 +158,8 @@ economy-sim/
 │                           #   pack and a second, unrelated setting
 ├── testdata/               # shared fixtures: chains/ (config), golden/ (off/, one
 │                           #   directory per module, all/: testing.md 7.1.1),
-│                           #   checkpoints/ (one all-modules-on fixture per
-│                           #   format version), calibration/ (records per pack); fuzz
+│                           #   checkpoints/ (one fixture of pack one and one
+│                           #   all-modules-on fixture per format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
 ├── doc/specs/              # design specs, one area per file (README.md indexes
 │                           #   them and assigns area codes; evidence.md holds

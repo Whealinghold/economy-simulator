@@ -51,11 +51,11 @@ PR description.
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281 |
-| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309 |
-| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
+| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
+| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310 |
@@ -68,7 +68,7 @@ PR description.
 | INF | N-110, N-112, N-156, N-157, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244 |
@@ -78,13 +78,13 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314 |
-| REG | N-150, N-175, N-204 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318 |
+| REG | N-150, N-175, N-204, N-317, N-319 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305 |
+| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
 | SPN | N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244 |
@@ -170,6 +170,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. This row adds no `Config` field and no row of the parameter-owner table: the solve options are rows of CLB's registry (`spec-viability.md` 11, FR-CFG-047) and `WarmStart` has its row. Phase 5 checks the registry test is unchanged.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no configuration field. `spec-config.md` 3.7 and 9.2 now say that the section type of `Config.World` is `WorldParams` and that the scope cells of `specs/README.md` (read as Go type names) change with the rename in Phase 2, not before (a cell naming a type that does not exist fails the registry test).
 - **Update (2026-10-21, anchor fix):** applied for one field: `World.AnchorHold` has its row in the parameter-owner table, its place in `spec-config.md` 3.7 and 8.2.2 (id 46), a bound and a failing-case test, and the registry row K-PRO02 of `spec-calibration.md`; the registry test passes with no `notBuilt` change. Left open as a standing rule.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row adds no configuration field, default, bound or owner row. Left open.
 
 ### N-017 Words and names
 
@@ -209,6 +210,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply. The terms of the spawner row go to the doc.go glossary before use (Phase 2); Spawner leaves notYetTerms of glossary_test.go.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The terms of this row go to the `doc.go` glossary at the start of Phase 2, before use: viability, steady state, warm start (already there), surplus factor, activity, start capacity, mean factor, net vector, reference programme, labour share to subsist, available work share, nominal programme, census (balanced), certificate, seed price (as the solver's), drift, residual, supply gap, lean reserve, virtual start offset, lane. "Lane" is qualified (the lane of the solver is not the lane of a credit round or of a merchant's lane) and "census" is qualified (balanced census). The note stays open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the terms of the row (Step, Tick boundary, Phase, Position, Entry (of a tick), Failed world, In-step guard, Market record, Snapshot row, Fan-in) are in the `doc.go` glossary before the code uses them. "Run" and "Snapshot" stay in `notYetTerms` and are added in Phases 2 and 9; "World" gains `WorldParams` in Phase 2; "Executor" stays the job's. Standing; left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** applied: the terms of the checkpoint row (checkpoint, restore, format version, frame, header, section, trailer, digest, canonical encoding, one spelling, sparse row, pending totals, construction flag, extension state, `Stateful`, entry of an extension, salt, branch, fixture) and the event name `WorldRestored` are in the `doc.go` glossary before the code uses them; `Reseed` and `Effective seed` were already there and are not repeated. A standing note; left open.
 
 ### N-018 Unverified evidence
 
@@ -311,6 +313,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Every SPN default stays a labelled placeholder; no test asserts one as stable.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is a start, not a stability claim (`spec-viability.md` 13.1); no test of this row asserts a default as stable.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row sets no default and asserts no number of the economy.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row sets no default and asserts no number of the economy. Left open.
 
 ### N-028 Can the target-income rule make a shortage worse?
 
@@ -709,6 +712,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Process note; the plan was aligned with siblings only through the coordinator.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. Process note; this plan was written beside five others and reads only their contract.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. Process note: the shared files (`doc.go`, `spec-config.md`, `spec-world.md`, this file) are edited by targeted edits after a re-read, this file was read in chunks, and the shell-quoting search of `doc/` named under Traps is run after the change.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: a process note. The shared files (`doc.go`, `architecture.md`, `AGENTS.md`, `spec-checkpoint.md`, `spec-reference-chain.md`, this file) are edited by targeted edits and this file was read in chunks. Left open.
 
 ### N-107 New money faucets and sinks start from MON
 
@@ -862,6 +866,7 @@ PR description.
 - **Update (2026-10-18, observability review of plan 1-8):** applied to the new field: `Markets[].EstateAtFloor` is the units of the estate's listings priced at the resolution floor, derived from the saved listing rows (`estates.rows`, checkpoint tag 8) and the lots the estate holds, so a restored world's snapshot equals the original's. Left open for the other modules.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the slice: every field of the slice's snapshot (D146) is a function of saved agent, ledger, market and welfare state, and the market record's report and window are saved state that the world holds in one place (Phase 3). Left open for CHK.
 - **Update (2026-10-20, observability review of the branch of plan 1-11):** applied to the field the review adds to the slice's snapshot: `MarketRow.EstateAtFloor` (appended last, a `Quantity` count, omitted at 0) is derived from the saved listing rows and the lots the estate holds, so a restored world's snapshot equals the original's once the checkpoint row saves tag 8. Left open for CHK.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read for the checkpoint row: `Info().Seed` and the seed of the snapshot header are the effective seed, read back from the frame; the equality of a restored snapshot with the original's is `TestSnapshot_FunctionOfSavedState` (plan 2-2 Phase 6), and the note closes when it passes. Left open.
 
 ### N-126 A new event or `Warn` adds a row
 
@@ -887,6 +892,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. This row adds no event and no `Warn`: the solver logs nothing and the warnings are the existing "configuration warning" line with `rule` and `path` (CFG 7.2). Each new warning rule (`region_not_self_sufficient`, `subsistence_exceeds_expected_work`, `target_above_surplus`, `storage_gap_input`, `viability_check_skipped`, `cycle_cost_gain`; `raw_without_source` already exists) is a row of CFG 7.4.2 already. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no event and no `Warn` row (all are rows already); the catalogue test is staged and Phase 10 moves the world-emitted events out of `notBuiltEvents` only if they were listed.
 - **Update (2026-10-20, observability review of the branch of plan 1-11):** applied: the review adds no event and no `Warn` and two snapshot-fed gauges that give existing `Warn`s a metric: `economysim.welfare.clamped` (`Roles[].ClampedHouseholds`, the counterpart of row 26 of `spec-observability.md` 7.3, whose `Warn` fires only on the first tick of a run and then every tenth) and `economysim.role.agents` (`Roles[].Agents` by role and region, the counterpart of "role extinct" and "group below floor", which the event-fed `economysim.agent.count` by role alone cannot show for one region). Rows in `rules/observability-and-logging.md` 5.3 and 5.3.1 (fresh tag) and `spec-observability.md` 6.2.2, FR-OBS-104 and the series bound of 6.5.2 (+200, about 7 700). Both read snapshot fields that exist; `otelobserver` (Stage 2) builds them. Left open for later rows.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row declares one event, `WorldRestored`, which has its row in `rules/observability-and-logging.md` 4.3 and in `spec-observability.md`; it leaves `deferredCore` and `notBuiltEvents` with its code, and adds no `Warn` row. Left open.
 
 ### N-127 Event classes at the observer
 
@@ -912,12 +918,14 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Privation and RoleSince are the agent's hosted fields; the renewal carry and the three runs are the world's (D118, N-265).
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The table is configuration; the solver has no state (`spec-viability.md` 18).
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world holds no per-agent field; the ring, the job and the residues are the agent row's hosted fields.
+- **Update (2026-10-23, plan 2-2 Phase 1):** applied in its lesson: the hosted fields are written once, in the agent record, always (plan 2-2 D247), and the row adds none. A standing rule; left open.
 
 ### N-129 A stateful extension is one instance per world
 
 - **Areas:** EXP, INT, CHK
 - **Raised:** 2026-10-11, `spec-checkpoint.md` 7.2 (item 6) and 11.
 - **Note:** A `Stateful` extension (architecture.md 4.3) must not be shared between worlds: `LoadState` into a shared instance changes the others. A harness that restores many worlds from one checkpoint (branching) registers a new instance of each stateful extension for every branch (`spec-experiments.md` 5.5), and a consumer that builds two worlds does the same. The library cannot detect a shared instance.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: `forkAtN` (plan 2-2 D258) takes the options as a function and builds a fresh set for each world, so a stateful extension is never shared. Left open.
 
 ### N-130 What IND cannot measure exactly until another spec adds a field
 
@@ -1163,6 +1171,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The row says "pool" only.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the word "treasury" is not used here. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row says "pool" for the estate account and never "treasury".
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row does not use the word "treasury" except as the account kind of the format (4.2.4). Left open.
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1421,6 +1430,7 @@ PR description.
 - **Answer (2026-10-12, ADR 0008):** generalised to the seed itself: a reseed sets `seed' = finalise(seed xor finalise(salt))` and every keyed stream and module key derives from the effective seed, so no module re-derives anything of its own. TEC 4.4.1 and 4.4.6 and CHK 6.8 are rewritten under N-214; close then.
 - **Update (2026-10-12, Phase 1):** CHK 6.8.2 now states `seed' = finalise(seed xor finalise(salt))` and that no module re-derives a key at a reseed (the technology key derives from the effective seed). Close when TEC 4.4.1 and 4.4.6 are rewritten.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare record keeps no key and draws nothing at a reseed (the target is a creation word); the stale-marked passages of CHK are not edited here. Left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: no module keeps a key in the slice, so the checkpoint row has nothing to re-derive at a reseed. Close when TEC 4.4.1 and 4.4.6 are rewritten. Left open.
 
 ### N-203 A stability claim is made with the module off
 
@@ -1436,6 +1446,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. The yield-shock slot is a story shock and PLC offers no lever for it (`spec-policy.md` 6.3.3), so it has one writer: the row's setter is unexported and validates [0, `MaxYieldBP`]; the public call is INT's and the sparse shock list is written in tag 6.
 - **Update (2026-10-17, config/world/scale edits):** read; the two-writer slot rule is unchanged. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slots are Stage 2 and P0.3a is a module position; `beginStep` leaves the place.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the slot setters are INT's; the checkpoint of the slice saves no slot. Left open.
 
 ### N-205 A new slot is a candidate lever kind; the kinds `rate`, `rent` and `legal` are reserved
 
@@ -1518,6 +1529,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the solver draws nothing (FR-VIA-020, FR-VIA-040). Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the world's sites (D155): D1, D7, D8 and D10 are called with the keys of WLD 7.3, D5 `siteTrade` before every `Trade` and D3 `siteWork` only for a consumer's `Work`; the draws of D2, D4, D6, D11 to D15 and D17 are modules'. Left open for the other owners.
 - **Update (2026-10-23, plan 2-1 Phase 1):** applied for CHK and WLD: every passage marked "stale under ADR 0008" in `spec-checkpoint.md` (header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4, 6.6.3, 6.7.1, 6.8, 8.1 item 4, 8.4, the EXP row of 11, CHK-A2, 16, 17.2 and 17.3, FR-CHK-006, 025, 051 and the edits-owed rows of 20) and of `spec-world.md` (7.x residue at the construction paragraph, 12, 13, 17 WLD-A5, the N-214 row of 20) is rewritten; the world section (tag 1) holds the next agent ID and the construction flag, the bucket and the pending totals are the ledger's (tag 2), and the header's seed is the effective seed, read back. `models/chk/worked.py`, `size.py` and their outputs are regenerated in Docker. Left open for EXP 7.3 and FR-EXP-062 (plan 2-20), CLB 4.2.1, 7.2.3 and FR-CLB-024 (plan 2-21), STB L120, L124, D88 and the D90 row, TEC 4.4.1 and 4.4.6, the `spec-stability.md` row of `spec-world.md` 22 (S63 and MIG-S3), and the sites and IDs of the module rows.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the CHK passages were rewritten by plan 2-1; the checkpoint row builds without `Stream` and with the header seed read back (plan 2-2 D241). EXP 7.3, FR-EXP-062, CLB 4.2.1, STB and TEC passages remain. Left open.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1525,6 +1537,7 @@ PR description.
 - **Raised:** 2026-10-12, `spec-checkpoint.md` 6.8.2 (Phase 1 of the Stage 0 plan).
 - **Note:** `seed' = finalise(seed xor finalise(salt))` and `finalise(0) = 0`, so seed 0 with salt 0 gives seed' 0: that reseed changes nothing. Distinct salts still give distinct seeds, and a salt of 0 is an ordinary reseed for any other seed. ADR 0008 decision 5 fixed the rule and CHK 6.8.2 documents the case. Decide before the first golden file records it whether to accept the identity or to change the rule (for example by adding a constant before the finaliser).
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: no site, no reseed. Left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** accepted: seed 0 with salt 0 is the identity (CHK 6.8.2 documents it); the 16 vectors of CHK 17.5 and `TestRestore_Reseed` (plan 2-2, PR B) pin it, and the golden uses no reseed. Close with the merge of PR B.
 
 ### N-216 A site constant is never a small integer
 
@@ -1556,6 +1569,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The bounds and the sentinels are appended in order; no `Config` field, event or snapshot row is appended; `TestHashConfig_ReferencePinned` must not move, and Phase 7 checks it. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Applied: the row appends no configuration, event or snapshot field to anything that exists; the snapshot is new and declares slice fields only; the pinned hash and `testdata/golden/off/` do not move (the rename of D140 changes no hash input: the field id of `Config.World` is 1 and the ids of its fields are unchanged). Standing; left open.
 - **Update (2026-10-21, anchor fix):** applied to a core field: `World.AnchorHold` defaults to 0 and is written to the hash only when not zero (field 46), so a configuration that never sets it hashes as before; `TestHashConfig_AnchorHoldOffLeavesNoTrace` keeps the old pin. The reference chain (`base.toml`) sets `anchor_hold = 5000`, which is a pack edit: the pins of pack `one` (`TestHashConfig_ReferencePinned`, `TestPacks_LoadValidateAndHash`, `expected/one.toml`) and `testdata/golden/off/` moved once, explained in the change under testing.md 7.2. Pack `second` is unchanged. Standing; left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** applied: the checkpoint row appends no configuration field and no field to an event or a snapshot row (`WorldRestored` is a new event); the pinned hash does not move, `events-one.txt` and `one.positions.txt` do not move, and `testdata/golden/off/one.txt` gains the one digest line of N-294 (plan 2-2 D257), which is not a module's append. A standing rule; left open.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -1615,6 +1629,7 @@ PR description.
 - **Raised:** 2026-10-13, `plan-phase-1-1.md` (git history, `2abbe62^`) A3 and Phase 1 (deliverable 4).
 - **Note:** `internal/ledger` names a reason by a small integer constant of its own and holds no string, so that it knows no identifiers (`spec-ledger.md` 2.7) and its registry is a fixed table (16). The numbers are free to change from one build to the next, and the rows a module declares take numbers that depend on which modules are on. A checkpoint must therefore never save one raw: the pending totals are per (region, reason, thing) and CHK writes the reason by its name (the names table of `WorldCreated`) or by its position in the closed registry, which the configuration hash fixes, and the boundary balances are keyed by account ID, which the creation order of `spec-ledger.md` 3.4.2 fixes. `ledger.go` maps the ledger's constant to the root's `Reason` both ways (plan Phase 7). CHK 4.2 tag 2 and its restore check say which of the two spellings is saved before `checkpoint.go` (Stage 2).
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for CHK (Stage 2). The create-and-dispose operation names `recipe_output` and `disposal` by the ledger's constants and the root names the five production reasons by its own `Reason` constants (a refusal is a returned value and is never saved); tag 6 saves no reason.
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D246: a reason is saved by a pinned code, the position in the table of `spec-ledger.md` 7.2 (42 named rows) and 42 plus the position of a configured flow; written in CHK 4.2.7 (applied) and built in `internal/ledger/checkpoint.go` with `TestReasonCode_Pinned`. Close with the merge.
 
 
 ### N-226 The creation position of the boundary accounts of the other module reasons
@@ -1672,6 +1687,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare row edits `spec-checkpoint.md` 4.2 tag 7 and not tag 6 (the job, `Yield`). The tables are edited by several rows, so each re-reads just before the edit. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: the agent holds `job` by value, `Yield` included; the world row stores it at P2.7; the warm-start job and the checkpoint are others'. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 7 and Stage 2; the world stores `Yield` with the job at P2.7 and the warm-start job sets it from the virtual season (Phase 3).
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D248: `Yield` is written after `Principal` in tag 6 and the mid-job season test is in PR B (`TestFork_OneAtN`). Close with the merge.
 
 
 ### N-241 The duplicate-order scan is linear: O(n^2) in the orders of one book
@@ -1708,6 +1724,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 8):** the gate shows it: `agent.go` holds only the core fields (D81, `TestAgent_HoldsNoMoneyQuantityOrRegion`) and no module field. Kept open as the standing rule for each module's PR.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read. The world holds no per-agent field of a module; row 7 builds the unexported agent with the fields no module owns, and the checkpoint writes the rest (Stage 2). Left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row writes the hosted fields in the agent record and adds none to the agent type. Left open as a standing rule.
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1728,6 +1745,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read; unchanged. Left open for the checkpoint row.
 - **Update (2026-10-17, plan 1-7 Phase 8):** `Directed` and `Directive` are built without the state methods, as planned. Still open for the checkpoint row.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D255: `Directed.SaveState` and `LoadState` delegate to the fallback, the directive is in the agent record, and `var _ Stateful = Directed{}` is asserted in `strategy.go`. Close with the merge.
 
 ### N-254 A lot that gains units keeps its listed price
 
@@ -1738,6 +1756,7 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** `spec-estates.md` 2.7.3 also says a row is dropped when its lot is gone at P5.3 as well as at the P3.4 walk (D102), so goods that arrive under the key of a lot sold wholly are priced at the first price, as after a restore. Left open until the code merges.
 - **Update (2026-10-18, plan 1-8 Phase 5):** built in `estates.go`: one `reconcile` merge keeps a row whose lot is held (price and mark), drops a row whose lot is gone, and adds a row at the first price only in the insert-enabled walk of `asks`; `markdown` runs it filter-only, so a same-key arrival after a wholesale sale is priced at the first price (`TestEstateRound_ArrivingUnitsAndRepricing`, `TestEstateRows_StaleAndRoundTrip`). The gate's broken copy (a stale row kept) fails both. Still open: the Phase 1 to 4 code is in the working tree and the commit is pending; close it when that commit merges, unless a scenario shows the repricing is needed.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: not a scenario of the checkpoint row (the listing price is saved per lot key, D249). Left open until a scenario shows whether the repricing is needed.
 
 ### N-256 The checkpoint saves listing rows of held lots only
 
@@ -1747,6 +1766,7 @@ PR description.
 - **Update (2026-10-17, plan 1-8 Phase 1):** written in `spec-checkpoint.md` 4.2 tag 8 and FR-CHK-023. Left open until the Stage 2 checkpoint code builds the section.
 - **Update (2026-10-18, plan 1-8 Phase 1):** `estates.rows` takes the ledger to know which lots are held and is filter-only (it inserts no row and needs no configuration); `restore` checks a key by requiring it to be a held lot, with `errListingRows` for the checkpoint row to wrap in `ErrCheckpointCorrupt` (D109). Left open until the code merges.
 - **Update (2026-10-18, plan 1-8 Phase 5):** built as written: `rows(l, r, dst)` has no `cfg`, omits a held lot with no row and drops a stale row; `restore(l, r, rows)` refuses a row out of order, repeated, out of range or for a lot not held with `errListingRows` (`estates_listing_internal_test.go`, `FuzzRestore`). The Stage 2 checkpoint row still has to build tag 8 from these two and wrap the error. Still open for that row; the Phase 1 to 4 commit is pending.
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D249: tag 8 is built from `estates.rows` and `estates.restore`, and `errListingRows` is wrapped in `ErrCheckpointCorrupt`. Close with the merge.
 
 ### N-288 What the world saves, and the diagnostic runs of its `Warn`s
 
@@ -1755,6 +1775,7 @@ PR description.
 - **Note:** The world keeps in one struct what a checkpoint must save: the effective seed, the next agent ID, the construction flag, the diagnostic runs of the bounded `Warn`s it owns (households unfed, price beliefs at bound, work floor binding, welfare record clamped, role extinct, group below floor, entry unfunded), so a resumed run logs as the original did, and the spawner's state per (region, role), which is result-affecting and not a diagnostic: the renewal carry and the "had an agent" bit (N-265, plan 1-11 D145). `spec-checkpoint.md` 4.2 places them by owner: the `BoundRun` in tag 4, the work floor and clamp runs in tag 7, the spawner's three runs and the renewal carry in tag 9; it lists no section for the run of "households unfed", which the checkpoint row decides. The tick counter is the ledger's. The row writes no encoding.
 - **Update (2026-10-17, checkpoint/world edits):** consistent with `spec-checkpoint.md` 4.2 tags 4, 7 and 9 as edited. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Verified in Phase 1: the note already says the renewal carry and the "had an agent" bit are saved state and not a diagnostic run (D145). Left open for the checkpoint row.
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D247 to D250: every run is placed (the `BoundRun` in tag 4, the unfed run in tag 3, the floor and clamp runs in tag 7, the rest in tag 9). Close with the merge.
 
 ### N-289 The slice's snapshot and `MarketState`
 
@@ -1781,6 +1802,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row: it concerns the agent, estate, world, checkpoint or golden rows; no symbol this row consumes or provides changes. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read. No checkpoint item in Stage 1; the world adds none. Left open.
 - **Update (2026-10-21, plan 1-12 Phase 1):** Verified against REF 8.5 item 6 ("added by the checkpoint change (Stage 2); until then the file ends with item 5") and roadmap-v1.md. No amendment. Left open for the Stage 2 checkpoint change.
+- **Update (2026-10-23, plan 2-2 Phase 1):** decided by plan 2-2 D257: `testdata/golden/off/one.txt` gains the last line `checkpoint_digest <hex>` once, `spec-reference-chain.md` 8.5 item 6 says so (applied), and the other two off files do not move. Close only after plan 8 re-records the digest line.
 
 ### N-295 The packs of REF 7.5 and 8.2 the slice cannot run
 
@@ -1897,6 +1919,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world-row items (1) are spread over Phases 3 to 10 (the estate opened before any household, the asks at P3.4, `MoneyPool`, `HeldByEstate` and `EntryBudget` in the snapshot, `AgentBankrupted` then `EstateOpened` behind the observer flag); the plan names no test of FR-EST-006, 007 and 009 (a bid from an estate is refused, one ask per held lot, the markdown at P5.3) through `NewWorld` and `Step`, which Phase 10 should carry. Items (2) to (5) are not this row's.
 - **Update (2026-10-21, plan 1-12 Phase 1):** Leave open: item (5), the first price, the markdown and the keep-the-price rule, enter `testdata/golden/off/` in Phase 3 with this row's golden; items (1) to (4) are not this row's.
+- **Update (2026-10-23, plan 2-2 Phase 1):** item (2) is decided by plan 2-2 D249 (tag 8 from `rows` and `restore`). The note stays open for plan 7 (items 1a and 3), plan 12 (FR-EST-003) and the golden item (5).
 
 ### N-310 What the observability review of plan 1-8 leaves undone
 
@@ -1940,6 +1963,31 @@ PR description.
 - **Areas:** CODE, ALL
 - **Raised:** 2026-10-23, plan 2-1 Phase 2.
 - **Note:** Under `-race` the scenario tests run `scenarioSeedCount()` seeds (`raceSeeds`, now 1), `TestInvariants_Packs` runs `invariantSeeds(tc.seeds)` and `TestDeterminism_SameBytes` runs `detCases(true)`; the full set runs without `-race`; `-update` is refused under `-race`; the gate is two runs, R (`go test -race -timeout 60m ./...`, reduced seeds) and F (the non-race atomic-coverage run, all seeds; `testing.md` 9.1). A row that adds a long scenario uses `scenarioSeedCount()`, a row of `invariantTable` calls `invariantSeeds`, and a test that skips under `raceEnabled` starts with a prefix of `gateFPrefixes`. **Settled (owner, 2026-10-23, D231):** with atomic coverage under `-race` gate R took 48 min (one seed) to 58 min (two) against the 30 min budget, because fixed-cost tests dominate; R was split from the coverage run: R is 160 s, F 15 min. The allocation test runs under `-race` alone (70 allocations per `Step` with or without coverage; the constant 113 is loose). Close this note when a row has used `scenarioSeedCount()` and `invariantSeeds`.
+- **Update (2026-10-23, plan 2-2 Phase 1):** read: the fork matrix and the two-architecture test of plan 2-2 use `scenarioSeedCount()` and the `gateFPrefixes` names. Left open.
+
+### N-316 A module's checkpoint section is appended by a fixed protocol
+
+- **Areas:** CHK, CODE
+- **Raised:** 2026-10-23, plan 2-2 D243.
+- **Note:** A module's checkpoint section is appended to `checkpointSections` (`checkpoint_sections.go`) at its tag, with its `saveX` and `loadX` in its own root file over `internal/codec`; its tag is deleted from `notBuiltSections`; its cross-checks are appended to `checkpointCross` in the order of step 7 of CHK 6.2; its fork-at-N test calls `forkAtN` (D258) with its overlay; its restore-failure cases are added to the restore tests. Nothing already in the table is renumbered or moved, and the layout follows CHK 4.1.4 (sparse) and R10 (one spelling). A test compares the table with the tags, names and "Present when" cells of CHK 4.2.
+
+### N-317 Tags 10 and 11 are written as zero-row skeletons
+
+- **Areas:** CHK, SKL, REG
+- **Raised:** 2026-10-23, plan 2-2 D244.
+- **Note:** The checkpoint change writes tag 10 as four counts of 0 (trainees, trainers, queued rows, warn-run rows) and tag 11 as one count of 0 (CHK 4.2.8, applied). The owner (SKL, REG) replaces the writer and the reader and keeps the skeleton as the prefix of its layout, so a world with no row keeps its bytes and the digest does not move when the owner lands.
+
+### N-318 The golden digest moves with every rebalance of a pack
+
+- **Areas:** CHK, CLB, REF
+- **Raised:** 2026-10-23, plan 2-2 D257.
+- **Note:** `checkpoint_digest` in the golden file is the SHA-256 of the whole state at tick `T`, so any change of a pack's economy (a rebalance, a calibration) moves it. Each such change gives the testing.md 7.2 explanation for item 6 as well as for the rest of the file, and re-records `testdata/checkpoints/format-1-one.bin` and its sidecar (plan 8 owns the first).
+
+### N-319 What the ledger section leaves to the modules and to plan 3
+
+- **Areas:** CHK, LED, REG, CRD
+- **Raised:** 2026-10-23, plan 2-2 Phase 3 (`internal/ledger/checkpoint.go`).
+- **Note:** (1) The pending relocation list is written always (count 0 in the slice) and the ledger keeps validated rows in an unexported field so that a non-zero list round-trips; plan 3 replaces the field by its `Moved` rows, `AppendRelocations` and `RestoreRelocations` with no change to the bytes. (2) The claim block is `next claim ID`, a count, and, when `MaxClaims` is above 0, the seven cumulative totals and `Origin` of every claim: CHK 4.2 said `Origin` and `Awarded` only with the insurance module on, and the ledger cannot tell the two modules apart, so the layout keys on `MaxClaims`; CRD and INS keep it. (3) The code of a configured flow reason (42 plus its position) cannot be read or written until the ledger has flow reasons: MON and FIS add the Go constants and the case to `reasonCode` with their change.
 
 ## Read receipt
 
@@ -1953,5 +2001,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 2dfbaae5cbcda7722cf6f51e
+NOTES-TAG: edaf92bf4130a9469044feb4
 
