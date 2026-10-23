@@ -256,6 +256,7 @@ PR description.
 - **Update (2026-10-13, minor gaps of the Stage 0 audit closed, uncommitted):** the audit's minor gaps are closed, each with a mutation check on a copy. Guards added: an import guard (stdlib and layer rules over every guarded file), a glossary guard (architecture.md 3.2 terms and the declared types against `doc.go`), a toolchain pin (`go 1.25`, no `toolchain` line), doc-comment contract phrases (`Observer`, `WithSeed`), a panic guard (a `panic(` must say "invariant"), the staged event catalogue deferral table, and a reason-constant cross-read against the specs; tests for every count bound (24 over-by-one cases, `MaxYields` new), the path cap of `ValidationError`, the declared sentinels, `FuzzKey` as a bijection per tick, the loader's read limits, the six defect overlays over cold and warm layer sets, the pinned pack hashes, and `FuzzLoad` classifying the `Validate` result. One defect found and fixed: `config.Parse` returned a partly mapped `Config` beside its errors, and now returns the zero `Config`. The five-minute fuzz runs are done (above). Nothing is committed. **Still owed**, unchanged: the items of the update of 2026-10-12 (Stage 0 built) other than the fuzz runs; N-224 lists the guards a module PR must update.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The glossary, the sentinels and the layout of this row are done as above; the CI and the ADR acceptances stay plan 0's.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read: the layout of this row's files is already in architecture.md 2.6 and `AGENTS.md` (N-287); nothing to add. Left open.
+- **Update (2026-10-23, plan 2-1 Phase 3):** the owner accepted ADR 0002 and ADR 0009 (status, `doc/adr/README.md` and `documentation_index.md` agree; ADR 0009 Open point 3 carries a dated note that its condition is met); "accept ADR 0002 before Stage 2" of the update of 2026-10-12 is closed. Still open: the CI that runs the commands and the timed fuzz runs (plan O3, now decided in the roadmap).
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -1951,5 +1952,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: e352b3a02001a1bd9885937b
+NOTES-TAG: 274a0822fe8244c206e75a90
 

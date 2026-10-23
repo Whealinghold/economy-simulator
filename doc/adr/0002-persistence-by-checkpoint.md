@@ -1,6 +1,6 @@
 # 0002. State is persisted by the consumer, from a checkpoint the library produces
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-09
 - Supersedes: none
 
