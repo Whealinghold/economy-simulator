@@ -314,6 +314,8 @@ func (w *World) saveAgents(cw *codec.Writer) error {
 	w.eachLive(func(*agent) { n++ })
 	cw.Count(n)
 	w.eachLive(func(a *agent) { w.saveAgent(cw, a, names) })
+	// Excluded from coverage (testing.md 9.5): agentTails is empty until the storage
+	// and institutions modules append to it, and their change tests the loop.
 	for _, t := range agentTails {
 		if t.present(&w.cfg) {
 			t.save(w, cw)

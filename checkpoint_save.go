@@ -64,6 +64,8 @@ func (w *World) strategyName(a *agent) string { return w.cfg.Roles[a.role].Strat
 // not change when the module lands (spec-checkpoint.md R10, N-217). With the
 // module off the carry never moves from it.
 func (w *World) deathCarry(id AgentID) int64 {
+	// Excluded from coverage (testing.md 9.5): validation bounds the calendar, so
+	// neither product overflows and the two checks only name a violated invariant.
 	d, ok := checked.Mul(wholeBP, w.cfg.Calendar.TicksPerYear())
 	if !ok {
 		invariant("the death carry bound overflows after validation")

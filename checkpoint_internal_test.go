@@ -1,0 +1,524 @@
+package economysim
+
+import (
+	"bytes"
+	"os"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/welfare"
+)
+
+// This file tests the write path of the checkpoint from inside the package: the
+// section table against the spec, the options, and the layout of each section
+// against the state it was written from, read with the test's own codec.Reader
+// calls (plan 2-2 Phase 4). The synthetic values are set on the world's own
+// fields, because only a few ticks of a small mill give a state with a job, an
+// estate listing or a run above 0.
+
+// saveTag writes the section with the tag of w and returns its bytes.
+func saveTag(t *testing.T, w *World, tag uint64) []byte {
+	t.Helper()
+	for i := range checkpointSections {
+		if checkpointSections[i].tag == tag {
+			cw := codec.NewWriter(nil)
+			if err := checkpointSections[i].save(w, cw); err != nil {
+				t.Fatalf("save of tag %d error = %v, want nil", tag, err)
+			}
+			return cw.Out()
+		}
+	}
+	t.Fatalf("no section with tag %d", tag)
+	return nil
+}
+
+// ckptMill builds the world of millConfig(3, 4): one estate (agent 0) and four
+// agents (1 to 4) of weight 1, with a recipe of 3 ticks, stepped n times.
+func ckptMill(t *testing.T, n int, opts ...Option) *World {
+	t.Helper()
+	w := newMill(t, millConfig(3, 4), append([]Option{WithSeed(5)}, opts...)...)
+	step(t, w, n)
+	return w
+}
+
+// TestSections_AgreeWithSpec verifies that the section table and the list of
+// sections not built are the table of spec-checkpoint.md 4.2, read by a plain
+// text parse: every tag of the spec is built or listed, once, in ascending order,
+// with the name of the spec and, for a section of a module, the module that gates
+// it; a section with no gate is present with no condition.
+//
+// Requirement: FR-CHK-008, FR-CHK-040
+//
+// Guard: a section dropped from the table, or one built and still listed, would
+// change the shape of every checkpoint without a test noticing.
+func TestSections_AgreeWithSpec(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("doc/specs/spec-checkpoint.md")
+	if err != nil {
+		t.Fatalf("read the spec: %v", err)
+	}
+	type row struct{ name, gate string }
+	spec := map[uint64]row{}
+	rowRe := regexp.MustCompile(`^\| (\d+) \| ([A-Za-z]+) \|`)
+	gateRe := regexp.MustCompile("`Modules\\.([A-Za-z]+)`")
+	in := false
+	for _, line := range strings.Split(string(raw), "\n") {
+		switch {
+		case strings.HasPrefix(line, "### 4.2 The sections"):
+			in = true
+		case strings.HasPrefix(line, "4.2.1."):
+			in = false
+		case in && rowRe.MatchString(line):
+			m := rowRe.FindStringSubmatch(line)
+			tag, _ := strconv.ParseUint(m[1], 10, 64)
+			cells := strings.Split(line, "|")
+			last := strings.TrimSpace(cells[len(cells)-2])
+			r := row{name: m[2]}
+			if g := gateRe.FindStringSubmatch(last); g != nil {
+				r.gate = g[1]
+			} else if !strings.HasPrefix(last, "always") {
+				t.Fatalf("tag %d: Present when = %q, want \"always\" or a module", tag, last)
+			}
+			spec[tag] = r
+		}
+	}
+	if len(spec) != 34 {
+		t.Fatalf("parsed %d rows of 4.2, want 34: the parse is broken", len(spec))
+	}
+	seen := map[uint64]bool{}
+	var prev uint64
+	for _, s := range checkpointSections {
+		want, ok := spec[s.tag]
+		switch {
+		case !ok:
+			t.Errorf("section %d (%s) is not a row of 4.2", s.tag, s.name)
+		case s.name != want.name:
+			t.Errorf("section %d is named %q, want %q", s.tag, s.name, want.name)
+		case want.gate != "" || s.present != nil:
+			t.Errorf("section %d is built with present = %v, the spec gates it by %q: a module's section is a change of its module", s.tag, s.present != nil, want.gate)
+		case s.tag <= prev:
+			t.Errorf("section %d follows %d, want ascending tags", s.tag, prev)
+		}
+		prev, seen[s.tag] = s.tag, true
+	}
+	prev = 0
+	for _, n := range notBuiltSections {
+		want, ok := spec[n.tag]
+		switch {
+		case !ok:
+			t.Errorf("not built section %d (%s) is not a row of 4.2", n.tag, n.name)
+		case seen[n.tag]:
+			t.Errorf("section %d is built and still listed in notBuiltSections: delete the stale entry", n.tag)
+		case n.name != want.name || n.gate != want.gate:
+			t.Errorf("not built section %d = %q gated by %q, want %q gated by %q", n.tag, n.name, n.gate, want.name, want.gate)
+		case n.tag <= prev:
+			t.Errorf("not built section %d follows %d, want ascending tags", n.tag, prev)
+		}
+		prev, seen[n.tag] = n.tag, true
+	}
+	for tag := range spec {
+		if !seen[tag] {
+			t.Errorf("tag %d of 4.2 is neither built nor listed in notBuiltSections", tag)
+		}
+	}
+}
+
+// seedOptions is the part of options the seed options set, which is comparable.
+type seedOptions struct {
+	seed, reseed           uint64
+	seedGiven, reseedGiven bool
+}
+
+// TestOptions_ReseedFields verifies what the options record for the restore: a
+// seed given is recorded as given even at 0, a salt is recorded as given even at
+// 0, the last of each wins, and none given leaves both unset.
+//
+// Requirement: FR-CHK-020
+func TestOptions_ReseedFields(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		opts []Option
+		want seedOptions
+	}{
+		{"none", nil, seedOptions{}},
+		{"WithSeed(0) is given", []Option{WithSeed(0)}, seedOptions{seedGiven: true}},
+		{"WithReseed(0) is given", []Option{WithReseed(0)}, seedOptions{reseedGiven: true}},
+		{"last of each wins", []Option{WithSeed(1), WithReseed(2), WithSeed(3), WithReseed(4)},
+			seedOptions{seed: 3, seedGiven: true, reseed: 4, reseedGiven: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			o, err := applyOptions(tt.opts)
+			if err != nil {
+				t.Fatalf("applyOptions() error = %v, want nil", err)
+			}
+			got := seedOptions{seed: o.seed, seedGiven: o.seedGiven, reseed: o.reseed, reseedGiven: o.reseedGiven}
+			if got != tt.want {
+				t.Errorf("applyOptions() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSave_Sections verifies the layout of tags 1, 9, 10, 11 and 34 against bytes
+// computed by hand, for the world of millConfig(3, 4): one region, one role, an
+// estate and four agents.
+//
+// Arithmetic. Tag 1: the next agent ID is 5 (the estate is 0, the agents 1 to 4)
+// and the world has not stepped, so U(5) B(true) = 05 01; after one step the flag
+// is 00. Tag 9 with the synthetic values renewal carry 7, unfunded run 2, empty
+// run 3 and no run below the floor: the renewal rows are count 1 then (0, 0, 7) =
+// 01 00 00 07; the bit "had an agent" is set for (0, 0): 01 00 00; the unfunded run
+// by region is count 1 then (0, 2) = 01 00 02; the empty run is 01 00 00 03; the
+// run below the floor is 00. Tag 10 is four counts of 0 and tag 11 one count of 0
+// (the skeletons of spec-checkpoint.md 4.2.8). Tag 34: one entry, kind 00, the
+// name "directed" as its length 08 and the eight bytes, version 00 and no state
+// (length 00), after the count 01.
+//
+// Requirement: FR-CHK-040, FR-CHK-043, FR-CHK-044
+func TestSave_Sections(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 0)
+	w.state.renewalCarry[0], w.state.unfundedRun[0], w.state.extinctRun[0] = 7, 2, 3
+	// The step comes last: it runs the spawner, which resets the synthetic runs.
+	tests := []struct {
+		name string
+		tag  uint64
+		prep func()
+		want []byte
+	}{
+		{"world before the first step", 1, nil, []byte{5, 1}},
+		{"spawner", 9, nil, []byte{1, 0, 0, 7, 1, 0, 0, 1, 0, 2, 1, 0, 0, 3, 0}},
+		{"skills skeleton", 10, nil, []byte{0, 0, 0, 0}},
+		{"regions skeleton", 11, nil, []byte{0}},
+		{"extensions", 34, nil, append([]byte{1, 0, 8}, append([]byte("directed"), 0, 0)...)},
+		{"world after a step", 1, func() { step(t, w, 1) }, []byte{5, 0}},
+	}
+	for _, tt := range tests {
+		if tt.prep != nil {
+			tt.prep()
+		}
+		if got := saveTag(t, w, tt.tag); !bytes.Equal(got, tt.want) {
+			t.Errorf("%s: tag %d = %x, want %x", tt.name, tt.tag, got, tt.want)
+		}
+	}
+}
+
+// TestSave_SparseRowsSkipDefaults verifies that a run at 0 is not a row: an all
+// zero list is one count of 0, and the rows that differ are written in ascending
+// key order as (region, role, value), or (region, value) for a run kept by
+// region.
+//
+// Arithmetic: with 3 roles the index 1 is (region 0, role 1) and the index 5 is
+// (region 1, role 2). The rows are count 2, then 00 01 05 and 01 02 09.
+//
+// Requirement: FR-CHK-014
+func TestSave_SparseRowsSkipDefaults(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		f    func(*codec.Writer)
+		want []byte
+	}{
+		{"all zero", func(cw *codec.Writer) { writeSparse(cw, make([]int64, 6), 3) }, []byte{0}},
+		{"two rows", func(cw *codec.Writer) { writeSparse(cw, []int64{0, 5, 0, 0, 0, 9}, 3) }, []byte{2, 0, 1, 5, 1, 2, 9}},
+		{"by region, all zero", func(cw *codec.Writer) { writeSparseByRegion(cw, make([]int64, 3)) }, []byte{0}},
+		{"by region", func(cw *codec.Writer) { writeSparseByRegion(cw, []int64{0, 4, 0, 130}) }, []byte{2, 1, 4, 3, 0x82, 1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cw := codec.NewWriter(nil)
+			tt.f(cw)
+			if got := cw.Out(); !bytes.Equal(got, tt.want) {
+				t.Errorf("rows = %x, want %x", got, tt.want)
+			}
+		})
+	}
+}
+
+// ckptAgent is one decoded agent record of tag 3.
+type ckptAgent struct {
+	id, account, role, weight, flags, strat, unfed, hunger, privation uint64
+	roleSince, deathCarry                                             int64
+	ownUse, ownUseJobs                                                uint64
+	journey, directive                                                bool
+}
+
+// readAgent reads the fixed part of an agent record.
+func readAgent(r *codec.Reader) ckptAgent {
+	var a ckptAgent
+	a.id, a.account, a.role, a.weight, a.flags, a.strat = r.U(), r.U(), r.U(), r.U(), r.U(), r.U()
+	a.unfed, a.hunger, a.privation = r.U(), r.U(), r.U()
+	a.roleSince, a.deathCarry = r.I(), r.I()
+	a.ownUse, a.ownUseJobs, a.journey, a.directive = r.U(), r.U(), r.B(), r.B()
+	return a
+}
+
+// TestSave_AgentsAndHostedFields verifies tag 3: the table of strategy names, the
+// count, one record per live agent in ascending ID with the fields of
+// spec-checkpoint.md 4.2 in order, a removed agent leaving a gap and no row, and
+// the hosted fields written always: DeathCarry as offset(ID), OwnUse and
+// OwnUseJobs as 0, the journey and the directive as absent.
+//
+// Arithmetic: offset(17) = ((17 * 2 654 435 769) mod 2^32) * D / 2^32 = 1 849 008
+// for D = 3 650 000 (spec-population.md 3.8.3 and its worked example), which is
+// 10 000 times the 365 ticks of the default year.
+//
+// Requirement: FR-CHK-041, FR-CHK-046; N-217
+func TestSave_AgentsAndHostedFields(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 4)
+	if got := w.deathCarry(17); got != 1_849_008 {
+		t.Errorf("deathCarry(17) = %d, want 1849008 (spec-population.md 3.8.3)", got)
+	}
+	// Agent 2 leaves: its slot is the zero agent and the next ID stays 5.
+	if err := w.removeAgent(&w.agents[2], CauseStarved); err != nil {
+		t.Fatalf("removeAgent() error = %v, want nil", err)
+	}
+	w.state.unfedRun[0] = 3
+	r := codec.NewReader(saveTag(t, w, 3))
+	if n := r.Count(1); n != 1 || string(r.Bytes()) != "default" {
+		t.Fatalf("strategy name table has %d entries, want the one name \"default\"", n)
+	}
+	if n := r.Count(1); n != 3 {
+		t.Fatalf("agent count = %d, want 3 (agents 1, 3 and 4)", n)
+	}
+	for _, id := range []AgentID{1, 3, 4} {
+		a := w.agents[id]
+		want := ckptAgent{
+			id: uint64(id), account: uint64(a.account), role: 0, weight: 1, strat: 0,
+			unfed: uint64(a.unfed), hunger: uint64(a.hunger), privation: uint64(a.privation),
+			roleSince: a.roleSince, deathCarry: w.deathCarry(id),
+		}
+		if got := readAgent(r); got != want {
+			t.Errorf("record of agent %d = %+v, want %+v", id, got, want)
+		}
+	}
+	// The unfed run: one row, (region 0, role 0, 3).
+	if rows := r.Count(3); rows != 1 || r.U() != 0 || r.U() != 0 || r.U() != 3 {
+		t.Errorf("unfed run rows = %d, want the one row (0, 0, 3)", rows)
+	}
+	if err := r.Done(); err != nil {
+		t.Errorf("tag 3 has trailing bytes or an error: %v", err)
+	}
+}
+
+// TestSave_Directive verifies the bytes of a directive in the record of an agent:
+// the flag, the job request when there is one, the intents, the discards, the
+// holds and Sticky.
+//
+// Arithmetic: the directive holds the job (recipe 1, 2 executions, NoJob false),
+// one intent (commodity 1, Ask, 3 units, limit 4, target 5, reserve 6, unit cost
+// 7, purpose input) and one discard (commodity 1, 9 units), the hold list {0} and
+// Sticky. The bytes are present 01, job 01, NoJob 00, 01 02, one intent 01, then
+// 01 side 03 04 05 06 07 purpose, one discard 01 then 01 09, one hold 01 then 00
+// and Sticky 01. Side is the int value of Ask and purpose that of PurposeInput.
+//
+// Requirement: FR-CHK-041
+func TestSave_Directive(t *testing.T) {
+	t.Parallel()
+	d := &Directive{
+		Job:      &JobRequest{Recipe: 1, Executions: 2},
+		Intents:  []Intent{{Commodity: 1, Side: Ask, Quantity: 3, Limit: 4, Target: 5, Reserve: 6, UnitCost: 7, Purpose: PurposeInput}},
+		Discards: []Discard{{Commodity: 1, Quantity: 9}},
+		Hold:     []CommodityID{0},
+		Sticky:   true,
+	}
+	cw := codec.NewWriter(nil)
+	saveDirective(cw, d)
+	want := []byte{1, 1, 0, 1, 2, 1, 1, byte(Ask), 3, 4, 5, 6, 7, byte(PurposeInput), 1, 1, 9, 1, 0, 1}
+	if got := cw.Out(); !bytes.Equal(got, want) {
+		t.Errorf("directive = %x, want %x", got, want)
+	}
+	cw = codec.NewWriter(nil)
+	saveDirective(cw, &Directive{})
+	if got, want := cw.Out(), []byte{1, 0, 0, 0, 0, 0}; !bytes.Equal(got, want) {
+		t.Errorf("empty directive = %x, want %x (present, no job, three counts of 0, not sticky)", got, want)
+	}
+	cw = codec.NewWriter(nil)
+	saveDirective(cw, nil)
+	if got := cw.Out(); !bytes.Equal(got, []byte{0}) {
+		t.Errorf("no directive = %x, want 00", got)
+	}
+	// The agent record carries the same bytes at its end, with the flags.
+	w := ckptMill(t, 0)
+	w.agents[1].external, w.agents[1].mortal, w.agents[1].directive = true, true, d
+	body := saveTag(t, w, 3)
+	if !bytes.Contains(body, want) {
+		t.Errorf("tag 3 = %x, want it to contain the directive %x", body, want)
+	}
+	r := codec.NewReader(body[1+len("default")+1+1:]) // table: count, length, name; then the agent count
+	if a := readAgent(r); a.flags != 3 || !a.directive {
+		t.Errorf("first record = %+v, want flags 3 (External and Mortal) and a directive", a)
+	}
+}
+
+// TestSave_MarketsBeliefsJobsWelfare verifies tags 4 to 7 against the state of a
+// mill that has run 4 ticks, with the synthetic values the run leaves at 0 set on
+// it: a best bid and ask in a report, a bound run, a yield shock and the runs of
+// the floor and the clamp.
+//
+// Requirement: FR-CHK-042
+func TestSave_MarketsBeliefsJobsWelfare(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 4)
+	w.markets.reports[0].HasBestBid, w.markets.reports[0].BestBid = true, 1_234
+	w.markets.reports[1].HasBestAsk, w.markets.reports[1].BestAsk = true, 4_321
+	w.markets.boundRun[1] = 3
+	if err := w.shocks.set(0, 0, 5_000); err != nil {
+		t.Fatalf("shock set error = %v, want nil", err)
+	}
+	w.state.floorRun[0], w.state.clampRun[0] = 2, 0
+	t.Run("markets", func(t *testing.T) {
+		r := codec.NewReader(saveTag(t, w, 4))
+		for i := range w.markets.reports {
+			rep := w.markets.reports[i]
+			got := marketReport{Price: Price(r.U()), Age: int64(r.U()), Volume: Quantity(r.U()), UnmatchedBid: Quantity(r.U()), UnmatchedAsk: Quantity(r.U())}
+			if got.HasBestBid = r.B(); got.HasBestBid {
+				got.BestBid = Price(r.U())
+			}
+			if got.HasBestAsk = r.B(); got.HasBestAsk {
+				got.BestAsk = Price(r.U())
+			}
+			if got != rep {
+				t.Errorf("market %d report = %+v, want %+v", i, got, rep)
+			}
+			var prices []int64
+			for range r.Count(1) {
+				prices = append(prices, int64(r.U()))
+			}
+			if want := w.markets.windows[i].Values(nil); !slices.Equal(prices, want) {
+				t.Errorf("market %d window = %v, want %v, oldest first", i, prices, want)
+			}
+			if run := int64(r.U()); run != w.markets.boundRun[i] {
+				t.Errorf("market %d bound run = %d, want %d", i, run, w.markets.boundRun[i])
+			}
+		}
+		if err := r.Done(); err != nil {
+			t.Errorf("tag 4: %v", err)
+		}
+	})
+	t.Run("beliefs", func(t *testing.T) {
+		r := codec.NewReader(saveTag(t, w, 5))
+		for id := 1; id <= 4; id++ {
+			for i, b := range w.agents[id].beliefs {
+				if c, wd := r.U(), r.U(); int64(c) != b.Centre || int64(wd) != b.Width {
+					t.Errorf("agent %d belief %d = (%d, %d), want (%d, %d)", id, i, c, wd, b.Centre, b.Width)
+				}
+			}
+		}
+		if err := r.Done(); err != nil {
+			t.Errorf("tag 5: %v", err)
+		}
+	})
+	t.Run("jobs", func(t *testing.T) {
+		r := codec.NewReader(saveTag(t, w, 6))
+		jobs := 0
+		for id := 1; id <= 4; id++ {
+			a := &w.agents[id]
+			if has := r.B(); has != a.hasJob() {
+				t.Fatalf("agent %d has a job = %v, want %v", id, has, a.hasJob())
+			} else if has {
+				jobs++
+				j := a.job
+				if got := [5]int64{int64(r.U()), int64(r.U()), int64(r.U()), int64(r.U()), int64(r.U())}; got != [5]int64{int64(j.recipe), j.remaining, j.executions, int64(j.principal), j.yield} {
+					t.Errorf("agent %d job = %v, want %+v", id, got, j)
+				}
+				for i, p := range j.pending {
+					if got := int64(r.U()); got != p {
+						t.Errorf("agent %d pending %d = %d, want %d", id, i, got, p)
+					}
+				}
+			}
+			for i, res := range a.residues {
+				if got := int64(r.U()); got != res {
+					t.Errorf("agent %d residue %d = %d, want %d", id, i, got, res)
+				}
+			}
+		}
+		if jobs == 0 {
+			t.Errorf("no agent has a job after 4 ticks of a 3-tick recipe, want at least one to read")
+		}
+		if n := r.Count(3); n != 1 || r.U() != 0 || r.U() != 0 || r.U() != 5_000 {
+			t.Errorf("yield shock rows = %d, want the one row (0, 0, 5000)", n)
+		}
+		if err := r.Done(); err != nil {
+			t.Errorf("tag 6: %v", err)
+		}
+	})
+	t.Run("welfare", func(t *testing.T) {
+		r := codec.NewReader(saveTag(t, w, 7))
+		for id := 1; id <= 4; id++ {
+			a := &w.agents[id]
+			recs := a.history.AppendRecords(nil)
+			if n := r.Count(1); n != len(recs) || n == 0 {
+				t.Fatalf("agent %d holds %d records, want %d and at least one", id, n, len(recs))
+			}
+			for i, rec := range recs {
+				got := welfare.Record{Income: r.I(), Cost: r.I(), Relief: r.I(), Unearned: r.I(), OwnReceipt: r.I(), OwnHH: int64(r.U())}
+				got.Working, got.WorkHH = r.B(), int64(r.U())
+				if got != rec {
+					t.Errorf("agent %d record %d = %+v, want %+v", id, i, got, rec)
+				}
+			}
+			if target := int64(r.U()); target != a.target {
+				t.Errorf("agent %d target = %d, want %d", id, target, a.target)
+			}
+		}
+		if n := r.Count(3); n != 1 || r.U() != 0 || r.U() != 0 || r.U() != 2 {
+			t.Errorf("floor run rows = %d, want the one row (0, 0, 2)", n)
+		}
+		if n := r.Count(3); n != 0 {
+			t.Errorf("clamp run rows = %d, want 0", n)
+		}
+		if err := r.Done(); err != nil {
+			t.Errorf("tag 7: %v", err)
+		}
+	})
+}
+
+// TestSave_EstateListings verifies tag 8: after an agent is removed its estate
+// holds its goods, a listing for one of the lots is written as (commodity, born,
+// durability, price), a held lot with no listing writes no row, and a region with
+// none writes a count of 0.
+//
+// Arithmetic: the agent holds 10 grain at the start and eats 1 per tick of the 4
+// ticks it lived, so the estate gets the rest of its stock; the one lot of grain
+// (born at the creation tick, durability 0) is listed at 777.
+//
+// Requirement: FR-CHK-042, FR-EST-024; N-256
+func TestSave_EstateListings(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 0)
+	if got := saveTag(t, w, 8); !bytes.Equal(got, []byte{0}) {
+		t.Errorf("tag 8 before any removal = %x, want 00 (one region, no listing)", got)
+	}
+	if err := w.removeAgent(&w.agents[1], CauseStarved); err != nil {
+		t.Fatalf("removeAgent() error = %v, want nil", err)
+	}
+	lots := w.estates.heldLots(w.ledger, 0)
+	if len(lots) == 0 {
+		t.Fatalf("the estate holds no lot after a removal, want the agent's goods")
+	}
+	if got := saveTag(t, w, 8); !bytes.Equal(got, []byte{0}) {
+		t.Errorf("tag 8 with held lots and no listing = %x, want 00: a lot with no row is not written", got)
+	}
+	w.estates.listed[0] = []listing{{key: keyOf(lots[0]), price: 777}}
+	r := codec.NewReader(saveTag(t, w, 8))
+	if n := r.Count(4); n != 1 {
+		t.Fatalf("listing rows = %d, want 1", n)
+	}
+	if c, born, dur, price := int(r.U()), r.I(), int64(r.U()), r.U(); c != lots[0].Commodity || born != lots[0].Born || dur != lots[0].Durability || price != 777 {
+		t.Errorf("listing = (%d, %d, %d, %d), want (%d, %d, %d, 777)", c, born, dur, price, lots[0].Commodity, lots[0].Born, lots[0].Durability)
+	}
+	if err := r.Done(); err != nil {
+		t.Errorf("tag 8: %v", err)
+	}
+}

@@ -198,6 +198,9 @@ func (w *World) Checkpoint() (Checkpoint, error) {
 	out.U(w.state.seed)
 	for i := range checkpointSections {
 		s := &checkpointSections[i]
+		// Excluded from coverage (testing.md 9.5): every row of the table is present
+		// with no condition until a module appends its section, and that change
+		// tests the guard.
 		if s.present != nil && !s.present(&w.cfg) {
 			continue
 		}
