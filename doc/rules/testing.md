@@ -407,8 +407,16 @@ observability-and-logging.md 8.2), is enforced by an ordinary test using
 ## 9. Coverage
 
 9.1. CI **MUST** run
-`go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...`
+`go test -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...`
 and fail the build when coverage falls below the thresholds. **[project]**
+
+Under `-race` the scenario and determinism tests run a reduced seed set; the full
+set runs without `-race`. The gate is therefore two runs: **R**, the command above,
+and **F**, `go test -timeout 60m -run 'TestScenario|TestDeterminism|TestGolden|TestInvariants|TestCheckpoint|TestFork|TestConfigOnly|TestFixture|TestPacks|TestCensus|TestExpected|TestStylised|TestCost|TestStable' ./...`
+without `-race`, with all seeds and all cases. A root-package test that skips under
+`raceEnabled` **MUST** have a name that starts with one of the prefixes of F
+(`gateFPrefixes` in `scenario_helpers_test.go`), or it runs in neither run;
+`TestRaceSkips_HaveAnFPrefix` enforces it. `-update` is refused under `-race`.
 
 `-coverpkg=./...` counts a statement as covered when any test in the module
 executes it. Without it, `go test` counts only the package under test, so code
@@ -466,7 +474,9 @@ and `testdata/golden/all/`.
 10.5. All tests pass with `-race`. Integration and end-to-end tests begin with
 `if testing.Short() { t.Skip("integration test, skipped with -short") }` (or
 "end-to-end test"). CI runs `go test -short -race ./...` first, so the unit
-tests fail fast, and then the full suite with coverage (9.1).
+tests fail fast, and then the full suite with coverage (9.1). Under `-race` the
+scenario and determinism tests run a reduced seed set; the full set runs without
+`-race` (9.1).
 
 ## 11. Considerations when writing code
 
@@ -546,4 +556,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 8d141d87287fe0130681bbe1
+RULE-TAG: 9f7d9835760655cfada0cee0

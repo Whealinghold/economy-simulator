@@ -45,7 +45,7 @@ PR description.
 
 | Area | Open notes |
 |------|-----------|
-| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217 |
+| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315 |
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
@@ -1695,6 +1695,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply to this row's files: Lizard before every push, the spaced separator in Markdown tables, the new root file in the layout.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The Lizard limits (complexity at most 10, at most 8 parameters, files of about 500 lines) are a design input of Phases 2 to 6; `lizard -l go -C 10 -a 8 -L 100 -w` runs before each push; `viability_check.go` and `viability_table.go` are named in the layout (architecture.md 2.6, `AGENTS.md`); markdown tables of the plan use the spaced separator. `internal/checked.muldiv` (CCN 13) is untouched unless this row edits it. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: each file of the row passes `lizard -l go -C 10 -a 8 -L 100 -w`; the Markdown tables of the row use the spaced separator row; the files are in the layout (N-287).
+- **Update (2026-10-23, plan 2-1 Phase 6):** Lizard baseline recorded: 20 warnings over the non-test files (`validate.go` 16, `config/guard.go` 2, `config/config.go` 1, `internal/checked.muldiv` CCN 13), not only `muldiv` as expected; Codacy's enabled patterns are CCN 10, function NLOC 50, 8 parameters and file NLOC 500, and `-L 100` is the function length. `muldiv` stays open. Markdownlint is enabled in Codacy and uses the repository config; its version is not exposed by the API. Coverage upload is still the CI job of plan 2-1 Phase 5 (owner's decision).
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -1932,6 +1933,12 @@ PR description.
 - **Update (2026-10-21, income, floor and self-provisioning probes, outside the repository, seed 1 unless stated):** (a) The warm-start prices are the solver's dual: every recipe pays about 2 512 per working tick (`prepare` 2 515, `cut_fuel` 2 506, `dig_mineral` 2 511, `refine` 2 513, `make_tool_*` 2 512, `grow_staple` 2 500). At those prices, with one basket per household a tick, income per household-tick is about 1 380 for cook, digger, forester, maker and refiner (138% of the 999 upkeep) and about 445 for a grower (45%): staple is 19% of the basket's value and growers are 42% of the households, so the role's pool (about 112 000 a tick) is shared by 253. Starts read the season at the start tick, so two 60-tick jobs fit in the 92-day spring and about 137 growers would supply the staple; at full use they would earn about 82% of upkeep (two jobs of 2 500 a tick over 365 ticks), so the census of 253 and the working share both matter. The first reading of the probe assumed one job a year and is corrected here. (b) The tool chain dies before the cooks stop wanting tools: `prepare` is 35%, 22% and 4% of the cook executions in ticks 0 to 50, 50 to 100 and 100 to 150, then none; makers go 55, 11, 0 (ticks 0, 50, 100); at tick 50 `tool_b` sells at 9 796 (reference 17 105) with refined at 2 804 (3 190), a margin of about 460 a tick against an upkeep of 999. (c) A strategy that raises every staple ask to a floor: at 96 the economy ends at 127 households at tick 600 (45 without it), growers still 135 of 322 unfed at tick 100; at 190 it is gone by tick 450. (d) Growers given `cut_fuel`: 57 households at tick 600, no cure. (e) Growers given `cut_fuel` and `prepare_basic` (a data-only stand-in for self-provisioning, not SUB): 253 grower households stay fed to tick 600 on seeds 1 and 3 and 50 remain on seed 2; the cooks, foresters and tool chain are extinct by tick 150 because no one buys from them beyond upkeep. SUB as written cannot express home baking (an own-use recipe has no inputs, `spec-subsistence.md` 3.4.1, open question 3) and covers staple and fuel only. For whoever fixes the pack or builds the demand module: the census should follow the labour each role needs (each role works about 40% of its ticks at `lambda*` 2.512), a seasonal crop wants a positive yield outside spring or a second recipe, the tool chain needs a customer beyond the cooks' wear, and money must return to the non-farm roles; none of the single changes tried (a)-(e) cures the collapse.
 - **Update (2026-10-22, one pack-fix attempt, outside the repository, in Go and not in the TOML files):** `grow_staple` given a positive yield in every season (spring 10 000, summer and autumn 6 000, winter 3 000), the households of each group set to the solver's balanced census for those yields, and the warm start regenerated by two `SolveSteadyState` passes. `lambda*` falls from 2.512 to 2.217 and the balanced census is cook 166, digger 38, forester 110, grower 170, maker 71, refiner 45 (growers 253 before). Households at ticks 100, 300 and 600: seed 1 527, 303, 94; seed 2 492, 284, 99; seed 3 506, 336, 117 (baseline 557, 193, 45 / 538, 182, 99 / 544, 311, 20). It delays the collapse and does not cure it: on seed 1 the tool chain is gone by tick 300, growers fall from 152 at tick 100 to 55 at tick 300, and only unfed cooks and foresters remain at tick 600. Income per role was not measured for this variant. Rebalancing the data alone does not give a stable pack, so the pack is left as it is and the rebalance is owed with the demand module and the two-phase start (N-277), which re-solve the census and the warm start anyway.
 
+### N-315 Under -race the scenario and determinism tests run a reduced seed set
+
+- **Areas:** CODE, ALL
+- **Raised:** 2026-10-23, plan 2-1 Phase 2.
+- **Note:** Under `-race` the scenario tests run `scenarioSeedCount()` seeds (`raceSeeds`, now 1), `TestInvariants_Packs` runs `invariantSeeds(tc.seeds)` and `TestDeterminism_SameBytes` runs `detCases(true)`; the full set runs without `-race`; `-update` is refused under `-race`; the gate is two runs, R and F (`testing.md` 9.1). A row that adds a long scenario uses `scenarioSeedCount()`, a row of `invariantTable` calls `invariantSeeds`, and a test that skips under `raceEnabled` starts with a prefix of `gateFPrefixes`. **Open:** gate R takes 48 min with one seed and 58 min with two against the 30 min budget of D230, because fixed-cost tests dominate under `-race` with atomic coverage; the owner decides D231 (split R into `go test -race ./...`, 164 s reduced, and a non-race atomic coverage run, 927 s).
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -1944,5 +1951,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bb9d63594caa115dcbf82efb
+NOTES-TAG: 990b09a3c4e60ca3a730f223
 
