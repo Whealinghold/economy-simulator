@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -1473,9 +1474,75 @@ func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 		}
 		srcs[f] = string(b)
 	}
-	for _, name := range raceSkippers(t, srcs) {
+	for _, name := range unprefixedRaceSkippers(t, srcs) {
+		t.Errorf("%s skips under raceEnabled but starts with none of %v, so it runs in neither gate R nor gate F; rename it", name, gateFPrefixes)
+	}
+}
+
+// unprefixedRaceSkippers returns the tests of the sources that skip under -race
+// and whose name no gate F prefix selects: the violations of the rule.
+func unprefixedRaceSkippers(t *testing.T, files map[string]string) []string {
+	t.Helper()
+	var out []string
+	for _, name := range raceSkippers(t, files) {
 		if !hasFPrefix(name) {
-			t.Errorf("%s skips under raceEnabled but starts with none of %v, so it runs in neither gate R nor gate F; rename it", name, gateFPrefixes)
+			out = append(out, name)
 		}
+	}
+	return out
+}
+
+// TestRaceSkips_ViolatingFixtureIsCaught verifies the whole check end to end on
+// a fixture file with one violation (a race-skipping test no gate F prefix
+// selects) among compliant tests: exactly the violation is reported.
+//
+// Guard: the real check passes on a clean tree, so it never shows it can fail; a
+// detector that silently found nothing would also pass.
+func TestRaceSkips_ViolatingFixtureIsCaught(t *testing.T) {
+	t.Parallel()
+	fixture := map[string]string{"fixture_test.go": `package p
+func TestStep_TooSlowForRace(t *testing.T) { if raceEnabled { t.Skip("slow") } }
+func TestScenarioX_Fine(t *testing.T) { if raceEnabled { t.Skip("slow") } }
+func TestStep_NoRaceSkip(t *testing.T) { if testing.Short() { t.Skip("short") } }
+`}
+	if got := unprefixedRaceSkippers(t, fixture); !slices.Equal(got, []string{"TestStep_TooSlowForRace"}) {
+		t.Errorf("unprefixedRaceSkippers(fixture) = %v, want [TestStep_TooSlowForRace]", got)
+	}
+}
+
+// TestMain_UpdateRefusal runs this test binary again with -update and no tests
+// and verifies TestMain exits 2 with a message under -race, and runs cleanly
+// (exit 0) without it.
+//
+// Guard: the refusal is the only barrier between a reduced-seed run and a
+// recorded file that says "seeds 1-10"; updateAllowed is unit-tested, but not
+// that TestMain calls it before anything runs (plan 2-1 D228).
+func TestMain_UpdateRefusal(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable() error = %v, want nil", err)
+	}
+	cmd := exec.Command(exe, "-update", "-test.run=^$")
+	cmd.Dir = t.TempDir() // nothing under the module can be written even if the guard fails
+	out, err := cmd.CombinedOutput()
+	code := 0
+	if ee, ok := err.(*exec.ExitError); ok {
+		code = ee.ExitCode()
+	} else if err != nil {
+		t.Fatalf("run %s -update: %v", exe, err)
+	}
+	wantCode := 0
+	if raceEnabled {
+		wantCode = 2
+	}
+	if code != wantCode {
+		t.Errorf("test binary with -update exit code = %d (raceEnabled=%t), want %d; output %q", code, raceEnabled, wantCode, out)
+	}
+	if refused := strings.Contains(string(out), "-update is refused under -race"); refused != raceEnabled {
+		t.Errorf("refusal message printed = %t (raceEnabled=%t), want %t; output %q", refused, raceEnabled, raceEnabled, out)
 	}
 }
