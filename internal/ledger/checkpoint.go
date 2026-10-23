@@ -71,11 +71,21 @@ func (l *Ledger) WriteState(w *codec.Writer) {
 		w.U(uint64(x.from))
 		w.U(uint64(x.to))
 		w.U(uint64(x.thing))
-		w.U(uint64(x.total))
+		w.U(unsigned(x.total))
 	}
 	if l.construction {
 		l.writeFlows(w, l.bucket, l.wearBucket)
 	}
+}
+
+// unsigned returns v for a field the checkpoint writes unsigned. A negative v
+// would wrap to a number the reader refuses, so it is a violated invariant, found
+// when the checkpoint is made and not when it is restored.
+func unsigned(v int64) uint64 {
+	if v < 0 {
+		invariantViolated("a negative value in a field a checkpoint writes unsigned")
+	}
+	return uint64(v)
 }
 
 // boundaries returns the number of leading boundary accounts: the ones a
@@ -106,13 +116,13 @@ func (l *Ledger) writeAccounts(w *codec.Writer, first int) {
 		}
 		w.U(uint64(a.region))
 		w.U(uint64(a.owner))
-		w.U(uint64(a.balance))
+		w.U(unsigned(a.balance))
 		w.Count(len(a.lots))
 		for _, lt := range a.lots {
 			w.U(uint64(lt.Commodity))
-			w.U(uint64(lt.Quantity))
+			w.U(unsigned(lt.Quantity))
 			w.I(lt.Born)
-			w.U(uint64(lt.Durability))
+			w.U(unsigned(lt.Durability))
 		}
 	}
 }
@@ -120,19 +130,19 @@ func (l *Ledger) writeAccounts(w *codec.Writer, first int) {
 // writeClaims writes the next claim ID and the count of open claims, and, when
 // the ledger can hold a claim, the seven totals and the claims (N-319).
 func (l *Ledger) writeClaims(w *codec.Writer) {
-	w.U(uint64(l.nextClaim))
+	w.U(unsigned(l.nextClaim))
 	w.Count(len(l.claims))
 	if l.maxClaims == 0 {
 		return
 	}
 	t := l.claimTot
 	for _, v := range [...]int64{t.Lent, t.Awarded, t.Repaid, t.InterestPaid, t.InterestFixed, t.LostPrincipal, t.LostInterest} {
-		w.U(uint64(v))
+		w.U(unsigned(v))
 	}
 	for i := range l.claims {
 		c := &l.claims[i]
 		for _, v := range [...]int64{c.ID, int64(c.Creditor), int64(c.Debtor), c.Principal, c.Interest, c.PrincipalOwed, c.InterestOwed, c.RateBP, c.Formed, c.Due} {
-			w.U(uint64(v))
+			w.U(unsigned(v))
 		}
 		w.I(c.Overdue)
 		w.U(uint64(c.Origin))
@@ -150,7 +160,7 @@ func (l *Ledger) writeFlows(w *codec.Writer, src, wear []int64) {
 		w.U(uint64(region))
 		w.U(code)
 		w.U(thing)
-		w.U(uint64(v))
+		w.U(unsigned(v))
 	})
 	n = 0
 	for _, v := range wear {
@@ -162,7 +172,7 @@ func (l *Ledger) writeFlows(w *codec.Writer, src, wear []int64) {
 	for c, v := range wear {
 		if v != 0 {
 			w.U(uint64(c))
-			w.U(uint64(v))
+			w.U(unsigned(v))
 		}
 	}
 }
@@ -211,11 +221,16 @@ func (l *Ledger) ReadState(r *codec.Reader, tick int64, construction bool) error
 	if l.boundaries() != first || l.tick != 0 || !l.construction {
 		invariantViolated("a restore needs a ledger with only its boundary accounts, still in construction")
 	}
-	if tick < 0 {
+	switch {
+	case tick < 0:
 		r.Failf("tick %d is below 0", tick)
-	}
-	if construction && tick != 0 {
+	case construction && tick != 0:
 		r.Failf("tick %d in the construction phase, which ends at the first step", tick)
+	case !construction && tick == 0:
+		r.Failf("tick 0 after the construction phase, which a tick ends")
+	}
+	if r.Err() != nil {
+		return r.Err()
 	}
 	l.tick, l.construction, l.cleared = tick, construction, !construction
 	l.readBody(r, first, construction)

@@ -319,7 +319,7 @@ func TestState_PendingRelocationListAlwaysPresent(t *testing.T) {
 	// Row keys: (from, to, thing): money first, then commodity 0 as thing 1.
 	valid := [][4]uint64{{0, 1, 0, 5}, {0, 1, 1, 7}, {1, 0, 0, 3}}
 	l := tiny(t, 0)
-	if err := read(l, build(valid), 0, false); err != nil {
+	if err := read(l, build(valid), 1, false); err != nil {
 		t.Fatalf("ReadState of a valid list: %v", err)
 	}
 	if want := []reloc{{0, 1, 0, 5}, {0, 1, 1, 7}, {1, 0, 0, 3}}; !slices.Equal(l.relocs, want) {
@@ -737,6 +737,35 @@ func TestState_WriteRefusesWhatCannotBeBetweenTicks(t *testing.T) {
 			if _, err := l.OpenBoundary(Initial, Money); err != nil {
 				t.Fatalf("OpenBoundary: %v", err)
 			}
+			return l
+		}},
+		{"negative balance", func(t *testing.T) *Ledger {
+			l := tiny(t, 0)
+			id, _ := l.Open(KindAgent, 3, 0)
+			l.accounts[id].balance = -1
+			return l
+		}},
+		{"negative lot", func(t *testing.T) *Ledger {
+			l := tiny(t, 0)
+			id, _ := l.Open(KindAgent, 3, 0)
+			l.accounts[id].lots = []Lot{{Commodity: 0, Quantity: -1}}
+			return l
+		}},
+		{"negative flow total", func(t *testing.T) *Ledger {
+			l, mint, agent := pendingRig(t)
+			if err := l.Transfer(mint, agent, 40, Initial); err != nil {
+				t.Fatalf("Transfer: %v", err)
+			}
+			for i := range l.totals {
+				if l.totals[i] != 0 {
+					l.totals[i] = -l.totals[i]
+				}
+			}
+			return l
+		}},
+		{"negative relocation total", func(t *testing.T) *Ledger {
+			l := tiny(t, 0)
+			l.relocs = []reloc{{0, 1, 0, -5}}
 			return l
 		}},
 		{"negative owner", func(t *testing.T) *Ledger {
@@ -1231,4 +1260,21 @@ func FuzzReadState(f *testing.F) {
 			t.Fatalf("accepted % x and wrote % x", data, again)
 		}
 	})
+}
+
+// TestState_TickZeroOutsideConstructionIsMalformed verifies that a section that
+// says the world stepped but is at tick 0 is refused: the first step ends the
+// construction phase and a tick ends with the tick advanced, so no world has
+// both.
+//
+// Requirement: FR-CHK-012
+func TestState_TickZeroOutsideConstructionIsMalformed(t *testing.T) {
+	t.Parallel()
+	l := tiny(t, 0)
+	if err := l.EndConstruction(); err != nil {
+		t.Fatalf("EndConstruction: %v", err)
+	}
+	if err := read(tiny(t, 0), saved(l), 0, false); !errors.Is(err, codec.ErrMalformed) {
+		t.Errorf("ReadState(past construction, tick 0) = %v, want ErrMalformed", err)
+	}
 }
