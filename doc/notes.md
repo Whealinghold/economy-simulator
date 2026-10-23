@@ -257,6 +257,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. The glossary, the sentinels and the layout of this row are done as above; the CI and the ADR acceptances stay plan 0's.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read: the layout of this row's files is already in architecture.md 2.6 and `AGENTS.md` (N-287); nothing to add. Left open.
 - **Update (2026-10-23, plan 2-1 Phase 3):** the owner accepted ADR 0002 and ADR 0009 (status, `doc/adr/README.md` and `documentation_index.md` agree; ADR 0009 Open point 3 carries a dated note that its condition is met); "accept ADR 0002 before Stage 2" of the update of 2026-10-12 is closed. Still open: the CI that runs the commands and the timed fuzz runs (plan O3, now decided in the roadmap).
+- **Update (2026-10-23, plan 2-1 Phase 5):** CI decided by the owner: yes, with an arm64 job; `roadmap-v1.md` carries a planned CI row and the owner's rulings, `vision.md` item 2 the decision. The workflow is not written yet. arm64 shown by hand: binfmt installed, `TestGolden_OneOff` passes under emulation (7 s), `BenchmarkStep_OneNoObserver` 15.8 ms a tick emulated against 1.76 ms native. Open until the workflow row is built.
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -1696,7 +1697,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Apply to this row's files: Lizard before every push, the spaced separator in Markdown tables, the new root file in the layout.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The Lizard limits (complexity at most 10, at most 8 parameters, files of about 500 lines) are a design input of Phases 2 to 6; `lizard -l go -C 10 -a 8 -L 100 -w` runs before each push; `viability_check.go` and `viability_table.go` are named in the layout (architecture.md 2.6, `AGENTS.md`); markdown tables of the plan use the spaced separator. `internal/checked.muldiv` (CCN 13) is untouched unless this row edits it. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: each file of the row passes `lizard -l go -C 10 -a 8 -L 100 -w`; the Markdown tables of the row use the spaced separator row; the files are in the layout (N-287).
-- **Update (2026-10-23, plan 2-1 Phase 6):** Lizard baseline recorded: 20 warnings over the non-test files (`validate.go` 16, `config/guard.go` 2, `config/config.go` 1, `internal/checked.muldiv` CCN 13), not only `muldiv` as expected; Codacy's enabled patterns are CCN 10, function NLOC 50, 8 parameters and file NLOC 500, and `-L 100` is the function length. `muldiv` stays open. Markdownlint is enabled in Codacy and uses the repository config; its version is not exposed by the API. Coverage upload is still the CI job of plan 2-1 Phase 5 (owner's decision).
+- **Update (2026-10-23, plan 2-1 Phase 6):** Lizard baseline recorded: 20 warnings over the non-test files (`validate.go` 16, `config/guard.go` 2, `config/config.go` 1, `internal/checked.muldiv` CCN 13), not only `muldiv` as expected; Codacy's enabled patterns are CCN 10, function NLOC 50, 8 parameters and file NLOC 500, and `-L 100` is the function length. `muldiv` stays open. Markdownlint is enabled in Codacy and uses the repository config; its version is not exposed by the API. Coverage upload is the `full` job of the planned CI row (owner's decision of 2026-10-23: CI yes).
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -1952,5 +1953,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 274a0822fe8244c206e75a90
+NOTES-TAG: a8be197ecb591b223b633bee
 

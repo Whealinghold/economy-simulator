@@ -145,9 +145,10 @@ Reasons for the less obvious placements:
    convergence between connected regions within transport cost, a recovery after
    a harvest shock, and a famine in a closed region.
 2. The invariant, determinism, golden-file and configuration-only chain tests of
-   `rules/testing.md` pass on two architectures (amd64 and arm64: by the CI of
-   `roadmap-v1.md` Stage 2 once the owner has decided it, plan 2-1 Phase 5, or by
-   hand with an emulated arm64 run).
+   `rules/testing.md` pass on two architectures (amd64 and arm64). The owner
+   decided on 2026-10-23: CI yes, with an arm64 job (`roadmap-v1.md` Stage 2, plan
+   2-1 Phase 5); until the workflow exists the arm64 run is by hand under
+   emulation, which works on the development host (`TestGolden_OneOff` passes).
 3. A new commodity or chain needs only a configuration file (architecture.md
    9.4). This holds for a second, unrelated setting's recipes as well as for
    the reference chain, so the recipe format is shown to be adaptable and not

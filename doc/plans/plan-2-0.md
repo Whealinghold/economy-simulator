@@ -1,7 +1,7 @@
 # Plan: Stage 2, overview and the contract between the plans
 
 **Status: contract written (2026-10-22). Every plan `plan-2-1.md` to `plan-2-24.md` is written against this file and checked against it and against the other plans.**
-This file sequences [roadmap-v1.md](../roadmap-v1.md) Stage 2 into 24 plans: the roadmap Stage 2 table has 24 rows (plans 1 and 8 are now rows). It fixes what the plans must agree on. A plan decides nothing: the specs, the ADRs and `doc/rules/` decide, and where a plan and they disagree they win and the plan is corrected. Stage 1 is signed off ([roadmap-v1.md](../roadmap-v1.md), commit `6dd4f86`).
+This file sequences [roadmap-v1.md](../roadmap-v1.md) Stage 2 into 24 plans: the roadmap Stage 2 table has 24 plan rows (plans 1 and 8 are now rows) and one planned CI row without a plan (owner decision of 2026-10-23). It fixes what the plans must agree on. A plan decides nothing: the specs, the ADRs and `doc/rules/` decide, and where a plan and they disagree they win and the plan is corrected. Stage 1 is signed off ([roadmap-v1.md](../roadmap-v1.md), commit `6dd4f86`).
 
 Rule tags read for this contract (the tags at the time of writing): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1. Every plan quotes the tags it read; each plan, when implemented, quotes the tags in the files then. A mismatch is a finding only if the file was not edited by an earlier plan's Phase 1 (the supervisor replaces a tag once per file per change). When the supervisor applies Phase 1 spec edits it follows `AGENTS.md` "Before writing or changing a spec": it reads `doc/notes.md` in full, quotes the Notes tag, and replaces it when it edits the notes.
 

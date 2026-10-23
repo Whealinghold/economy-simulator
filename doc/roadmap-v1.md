@@ -212,6 +212,25 @@ the other modules in the order of the table. DEM is first because money has to
 return to the non-farm roles (N-314, N-277); the rebalance comes after the pool
 part of EST for the same reason. Plans 1 and 8 are rows of the table.
 
+**Owner rulings of 2026-10-23** (plan 2-1 Phase 5; the plans are written against
+them). CI: yes, with an arm64 job; the workflow (`.github/workflows/ci.yml`, three
+jobs: check, full, arm64) is not written by plan 2-1 and has its own row below.
+The gate is two runs (`rules/testing.md` 9.1): R, `go test -race -timeout 60m ./...`
+with reduced seeds, and F, the non-race atomic-coverage run with all seeds.
+Answers to the questions asked at the start of Stage 2: (5) plan 8 E0: yes, the
+seasonal-crop feature C04 may move from the pack to an overlay; (6) plan 24 R2(a):
+the realm pack is `five` renamed, and R3: the reference machine for the SCL time is
+the machine used for plan 4's record; (7) the text of FR-VIA-060, FR-REF-041 and
+FR-REF-042 and the two gate figures of plan 8 D365 are approved as drafted in the
+plans; (8) ADR 0010 is accepted when plan 5 drafts it; (9) the `RPG` preset of
+`denomination/` is accepted as the one display-only exception to the
+setting-agnostic rule of `AGENTS.md`, and the `AGENTS.md` edit itself belongs to
+plan 23. Second architecture, measured by hand on 2026-10-23 (binfmt installed on
+the development host): `TestGolden_OneOff` passes on emulated linux/arm64 against
+the committed files (7 s wall), and `BenchmarkStep_OneNoObserver` costs 15.8 ms a
+tick emulated against 1.76 ms native (about 9 times; plan 24 estimates `five` and
+all-on from it).
+
 | Create | Specs | Plan | Status |
 | --- | --- | --- | --- |
 | Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | [2-1](plans/plan-2-1.md) | plan written |
@@ -237,6 +256,7 @@ part of EST for the same reason. Plans 1 and 8 are rows of the table.
 | `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
 | `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | plan written |
 | `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | plan written |
+| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
@@ -293,10 +313,11 @@ the explanation testing.md 7.2 requires.
   architecture.md 12.2 still needs an owner and a lifecycle; not before a
   consumer asks with a measurement.
 - The not-in-version-1 list of note N-131.
-- A CI configuration: it has no row and no owner yet (open item O3 of
-  `plan-phase-0-foundation.md`, git history, `2abbe62^`), so the commands of `AGENTS.md`, the
-  coverage reading of testing.md 9.1 and the timed fuzz runs are done by hand
-  in each change until it does.
+- The CI workflow file itself, until its row in the Stage 2 table is built. The
+  owner decided on 2026-10-23 that CI is wanted, with an arm64 job (open item O3
+  of `plan-phase-0-foundation.md`, git history, `2abbe62^`); until the workflow
+  exists the commands of `AGENTS.md`, the coverage reading of testing.md 9.1 and
+  the timed fuzz runs are done by hand in each change.
 
 ## Updating this file
 
