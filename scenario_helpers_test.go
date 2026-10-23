@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -44,6 +45,17 @@ var gateFPrefixes = []string{
 	"TestScenario", "TestDeterminism", "TestGolden", "TestInvariants", "TestCheckpoint",
 	"TestFork", "TestConfigOnly", "TestFixture", "TestPacks", "TestCensus", "TestExpected",
 	"TestStylised", "TestCost", "TestStable",
+}
+
+// TestMain refuses -update under -race before any test runs, so the refusal
+// does not wait for the scenarios (plan 2-1 D228; flush keeps the same check).
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if !updateAllowed(raceEnabled, *updateFlag) {
+		fmt.Fprintln(os.Stderr, "-update is refused under -race: the seed set is reduced (plan 2-1 D228); run without -race")
+		os.Exit(2)
+	}
+	os.Exit(m.Run())
 }
 
 // seedsFor is the seed count of a test with `full` seeds: all of them, or the
@@ -668,7 +680,7 @@ func (r *scenReport) flush(t testing.TB) {
 	if !*updateFlag {
 		return
 	}
-	if !updateAllowed(raceEnabled, true) {
+	if !updateAllowed(raceEnabled, *updateFlag) {
 		t.Fatalf("-update is refused under -race: the seed set is reduced, so %q would be recorded as a run that did not happen (plan 2-1 D228); run without -race", r.title)
 	}
 	if err := r.write(expectedDir); err != nil {
@@ -1301,6 +1313,18 @@ func evalUnderRace(cond ast.Expr) tri {
 // skips unless it runs under -race, is not one.
 func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
 
+// isSkipCall reports whether c is t.Skip*, or a call of a helper named skip*
+// (skipIfRace(t)), which is how a test could hide its skip from raceSkippers.
+func isSkipCall(c *ast.CallExpr) bool {
+	switch f := c.Fun.(type) {
+	case *ast.SelectorExpr:
+		return strings.HasPrefix(f.Sel.Name, "Skip")
+	case *ast.Ident:
+		return strings.HasPrefix(strings.ToLower(f.Name), "skip")
+	}
+	return false
+}
+
 // raceSkippers returns the Test functions of the files that call a t.Skip* in
 // an if whose condition holds under -race (skipsUnderRace).
 func raceSkippers(t *testing.T, files map[string]string) []string {
@@ -1320,14 +1344,21 @@ func raceSkippers(t *testing.T, files map[string]string) []string {
 			skips := false
 			ast.Inspect(fd.Body, func(n ast.Node) bool {
 				ifs, ok := n.(*ast.IfStmt)
-				if !ok || !skipsUnderRace(ifs.Cond) {
+				if !ok {
 					return true
 				}
-				ast.Inspect(ifs.Body, func(m ast.Node) bool {
-					if c, ok := m.(*ast.CallExpr); ok {
-						if sel, ok := c.Fun.(*ast.SelectorExpr); ok && strings.HasPrefix(sel.Sel.Name, "Skip") {
-							skips = true
-						}
+				var taken ast.Node // the branch that runs under -race
+				switch {
+				case skipsUnderRace(ifs.Cond):
+					taken = ifs.Body
+				case evalUnderRace(ifs.Cond) == triFalse && ifs.Else != nil:
+					taken = ifs.Else
+				default:
+					return true
+				}
+				ast.Inspect(taken, func(m ast.Node) bool {
+					if c, ok := m.(*ast.CallExpr); ok && isSkipCall(c) {
+						skips = true
 					}
 					return true
 				})
@@ -1365,9 +1396,18 @@ func TestC(t *testing.T) { if testing.Short() { t.Skip("x") } }
 func TestD(t *testing.T) { if raceEnabled && testing.Short() { t.Skip("x") } }
 func TestE(t *testing.T) { if raceEnabled || testing.Short() { t.Skip("x") } }
 func TestF(t *testing.T) { if raceEnabled { t.Log("x") } }
+func TestG(t *testing.T) { if raceEnabled { skipIfRace(t) } }
+func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 `}
-	if got := raceSkippers(t, probe); !(len(got) == 2 && (got[0]+got[1] == "TestATestE" || got[0]+got[1] == "TestETestA")) {
-		t.Errorf("raceSkippers(probe) = %v, want TestA and TestE only", got)
+	if got := raceSkippers(t, probe); !(len(got) == 4 && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
+		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG and TestH only", got)
+	}
+	doc, err := os.ReadFile("doc/rules/testing.md")
+	if err != nil {
+		t.Fatalf("read testing.md: %v", err)
+	}
+	if want := "-run '" + strings.Join(append([]string(nil), gateFPrefixes...), "|") + "'"; !strings.Contains(string(doc), want) {
+		t.Errorf("doc/rules/testing.md 9.1 lacks the quick-run pattern %s built from gateFPrefixes", want)
 	}
 	files, err := filepath.Glob("*_test.go")
 	if err != nil || len(files) == 0 {

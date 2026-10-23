@@ -10,7 +10,7 @@ import (
 // after 50 ticks, measured under -race (coverage adds no allocation: 70 either way) with
 // the logger and observer at their no-op defaults and WithAudit off. It is a
 // baseline: raising it is a reviewed change with a reason (rule 8.2).
-const stepAllocBaseline = 113
+const stepAllocBaseline = 70
 
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun

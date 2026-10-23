@@ -760,7 +760,7 @@ PR description.
 - **Update (2026-10-10, MIG, X3):** a second reader. The migration pass of phase 7 reads rumours for the household under review through INF's read function, whatever the role's `Informed` flag says, and takes INF's error draws itself: among the reviewed households in ascending agent ID, one draw per source pair (candidate) whether or not a rumour is offered, none when `RumourErrorBP` is 0 or no agent is pushed (`spec-migration.md` 6.2.1, 10.2.1). They belong to the migration pass of phase 7 and never to a view of phase 3, so INF's stream (before each `Trade`) and MIG's (after the entry step) cannot interleave, and the draw count in a tick stays a function of the configuration and of which agents are pushed. `spec-information.md` (the reader, 5.5.2, 7, and the requirement that rumours reach only `Informed` views) carries the matching edit. AGT, WLD and OBS keep the fixed order of both; `RumoursServed` does not count MIG's calls.
 - **Update (2026-10-11, WLD):** applied for WLD in `spec-world.md` 7.3: the view of an informed agent is built immediately before its `Trade`, its draws in ascending source `RegionID` then `CommodityID`; the migration pass takes its own at P7.2, so the two cannot interleave; the draw count is a function of the configuration and the informed agents present (D4, D11).
 - **Update (2026-10-11, OBS):** `RumoursServed` counts the views of phase 3 only; MIG's calls are not in it (`spec-observability.md` 4.1.7); no new metric. OBS removed from the areas.
-- **Update (2026-10-11, CHK):** a restore takes no random word; the stream resumes from the saved PCG state (FR-CHK-051).
+- **Update (2026-10-11, CHK):** a restore takes no random word; superseded by the update of 2026-10-12: a restore saves no PCG state (FR-CHK-051).
 - **Update (2026-10-12, ADR 0008):** the order of D4 and D11 no longer matters for alignment: each is a stream keyed by (site, tick, agent), so the two cannot interleave by construction and a restore resumes from the seed, not from a saved PCG state (N-214). The fixed order stays for the event order of `RumoursServed`.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: no informed role exists in the slice. Learned: the view of an informed agent is built before its `Trade`, and D93 keeps the draw count of the default a function of the view (candidates are decided by the view alone, `spec-agents.md` 7.3.5). Left open.
 
@@ -1953,5 +1953,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a8be197ecb591b223b633bee
+NOTES-TAG: 2cab1798746dfa020da8f0e9
 
