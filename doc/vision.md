@@ -105,7 +105,7 @@ Reasons for the less obvious placements:
   (Stage 2). The events are built in stages: a module declares its own events
   and fields (`spec-observability.md` 3.3.4).
 - **LED is in the slice, with the claims list and the balance sheet** (decided
-  2026-10-13, `plans/plan-phase-1-1.md` D8): the first build of `internal/ledger`
+  2026-10-13, `plan-phase-1-1.md` D8, git history, `2abbe62^`): the first build of `internal/ledger`
   keeps the list of claims, its six operations and the balance sheet of
   `spec-ledger.md` 9.2 and 10, so that the checkpoint and the balance sheets do not
   change shape when credit arrives. The credit and insurance modules that use them
@@ -120,6 +120,11 @@ Reasons for the less obvious placements:
 - **MON, EXT, IND, STY, CLB and EXP are in version 1** because the macro layer
   is measured, and tuning needs the measure, compare, adjust and run loop
   (`spec-roadmap.md`, "Macro is measured, never set").
+- **Version 1 is built in the order of `roadmap-v1.md` Stage 2 and
+  `plans/plan-2-0.md`**: checkpoint, the region graph and scale first, then DEM
+  as the first module (money has to return to the non-farm roles, N-314), then
+  MON and the pool part of EST, then the rebalance of the reference pack, then
+  the other modules.
 - **INT is cut down** to shocks and a player agent: STY needs a shock to test
   the response to a harvest failure, and the first consumer needs a player.
   The rest waits.
@@ -140,7 +145,9 @@ Reasons for the less obvious placements:
    convergence between connected regions within transport cost, a recovery after
    a harvest shock, and a famine in a closed region.
 2. The invariant, determinism, golden-file and configuration-only chain tests of
-   `rules/testing.md` pass on two architectures.
+   `rules/testing.md` pass on two architectures (amd64 and arm64: by the CI of
+   `roadmap-v1.md` Stage 2 once the owner has decided it, plan 2-1 Phase 5, or by
+   hand with an emulated arm64 run).
 3. A new commodity or chain needs only a configuration file (architecture.md
    9.4). This holds for a second, unrelated setting's recipes as well as for
    the reference chain, so the recipe format is shown to be adaptable and not

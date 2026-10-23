@@ -167,9 +167,11 @@ economy-sim/
                          calibration/ (the records of a calibration, per pack)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
-  doc/plans/             implementation plans: one per stage of
-                         doc/roadmap-v1.md, split into phases (a plan decides
-                         nothing: the specs, the ADRs and these rules do)
+  doc/plans/             implementation plans: one or more per stage of
+                         doc/roadmap-v1.md, split into phases; working
+                         documents, deleted after the stage's sign-off (the
+                         commit is recorded in the roadmap); a plan decides
+                         nothing: the specs, the ADRs and these rules do
   doc/rules/             this directory
 ```
 
@@ -989,4 +991,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 403404277d5a40376fd91790
+RULE-TAG: 51f0eed5a9e8b1636b2aec5e

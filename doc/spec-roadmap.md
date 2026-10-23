@@ -211,7 +211,7 @@ leave room for them: the ledger can hold an obligation between two parties
 
 | Spec | Code | Layer | Status | Covers | Needs |
 |------|------|-------|--------|--------|-------|
-| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. The claim record, its six ledger operations and the totals are built with LED in the slice (`plans/plan-phase-1-1.md`); the module is later. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
+| `spec-credit.md` | CRD | module | exists | Claims and loans at posted rates matched in a round, interest as a transfer, settlement, arrears and the waterfall at a removal; working capital and seasonal credit. The claim record, its six ledger operations and the totals are built with LED in the slice (`plan-phase-1-1.md`, git history, `2abbe62^`); the module is later. Draft, reviewed (one finding, fix owed, not re-verified). Has a Requirements section | LED, MON, AGT, EST, WEL, WLD |
 | `spec-insurance.md` | INS | module | exists | Single-event cover of a cargo and of stored goods against the losses of `spec-risk.md`, priced from the expected loss, with an unpaid payout held as a credit claim. Draft, accepted. Has a Requirements section | CRD, RSK (and TRN, STO for the cover kinds) |
 
 ## Macro is measured, never set
@@ -297,6 +297,7 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
 | What is in version 1? | The staging of `vision.md` section 4: the slice, then version 1, then later; FIS and PLC later; INT only as shocks and a player agent. Accepted by the human | [ADR 0003](adr/0003-version-1-scope.md) |
 | Which stage is OBS in? | The slice, except its metric adapter. The events and their observer, the options `WithLogger` and `WithObserver`, the log keys and the golden rendering are built from Stage 0 and the snapshot in Stage 1 (`roadmap-v1.md`); `otelobserver/` stays in version 1 (Stage 2). Moved from version 1 on 2026-10-12 and recorded in `vision.md` section 4 |
 | How is a module laid out in the code? | One root file per module that owns every touch point; `tick.go` a straight line of one-line position calls; the view, plan, removal and relocation fan-ins are compositions with one entry point each; per-agent module state in the module's own slices. See [ADR 0007](adr/0007-a-module-is-one-file-that-owns-its-touch-points.md) |
+| In what order is Stage 2 built? | The order of `plans/plan-2-0.md`: checkpoint, the region graph, scale, then DEM as the first module, MON, EST, the rebalance of the reference pack (after the pool part of EST), then the other modules in dependency order. The reason is N-314 (money has to return to the non-farm roles) and N-277 (the solver and the census are solved again with the module on) |
 | Is the random stream positional? | No. One seed and a stream per (site, tick, entity), the one PCG reseeded by a SplitMix64 key at each draw site: no draw depends on how many others were taken, the checkpoint holds the seed only, and paired runs are aligned by construction. `spec-world.md` 7 owes the keying rule (N-214). See [ADR 0008](adr/0008-random-draws-are-keyed-streams.md) |
 
 ## Open
