@@ -1284,6 +1284,17 @@ const (
 	triTrue
 )
 
+// negate is the three-valued NOT.
+func negate(v tri) tri {
+	switch v {
+	case triTrue:
+		return triFalse
+	case triFalse:
+		return triTrue
+	}
+	return triUnknown
+}
+
 // evalUnderRace evaluates cond with raceEnabled true and any other term unknown.
 func evalUnderRace(cond ast.Expr) tri {
 	switch e := cond.(type) {
@@ -1295,7 +1306,7 @@ func evalUnderRace(cond ast.Expr) tri {
 		return evalUnderRace(e.X)
 	case *ast.UnaryExpr:
 		if e.Op == token.NOT {
-			return 2 - evalUnderRace(e.X)
+			return negate(evalUnderRace(e.X))
 		}
 	case *ast.BinaryExpr:
 		switch e.Op {
@@ -1312,6 +1323,9 @@ func evalUnderRace(cond ast.Expr) tri {
 // as testing.CoverMode() != "atomic" is unknown, so the allocation test, which
 // skips unless it runs under -race, is not one.
 func skipsUnderRace(cond ast.Expr) bool { return evalUnderRace(cond) == triTrue }
+
+// Known limit: a skip behind an alias of raceEnabled (race := raceEnabled) or in a
+// helper not named skip* is not seen; name such helpers skip*.
 
 // isSkipCall reports whether c is t.Skip*, or a call of a helper named skip*
 // (skipIfRace(t)), which is how a test could hide its skip from raceSkippers.
@@ -1397,16 +1411,17 @@ func TestD(t *testing.T) { if raceEnabled && testing.Short() { t.Skip("x") } }
 func TestE(t *testing.T) { if raceEnabled || testing.Short() { t.Skip("x") } }
 func TestF(t *testing.T) { if raceEnabled { t.Log("x") } }
 func TestG(t *testing.T) { if raceEnabled { skipIfRace(t) } }
+func TestI(t *testing.T) { if raceEnabled { if testing.Short() { t.Skip("x") } } }
 func TestH(t *testing.T) { if !raceEnabled { t.Log("x") } else { t.Skip("x") } }
 `}
-	if got := raceSkippers(t, probe); !(len(got) == 4 && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
-		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG and TestH only", got)
+	if got := raceSkippers(t, probe); !(len(got) == 5 && slices.Contains(got, "TestI") && slices.Contains(got, "TestA") && slices.Contains(got, "TestE") && slices.Contains(got, "TestG") && slices.Contains(got, "TestH")) {
+		t.Errorf("raceSkippers(probe) = %v, want TestA, TestE, TestG, TestH and TestI only", got)
 	}
 	doc, err := os.ReadFile("doc/rules/testing.md")
 	if err != nil {
 		t.Fatalf("read testing.md: %v", err)
 	}
-	if want := "-run '" + strings.Join(append([]string(nil), gateFPrefixes...), "|") + "'"; !strings.Contains(string(doc), want) {
+	if want := "-run '" + strings.Join(gateFPrefixes, "|") + "'"; !strings.Contains(string(doc), want) {
 		t.Errorf("doc/rules/testing.md 9.1 lacks the quick-run pattern %s built from gateFPrefixes", want)
 	}
 	files, err := filepath.Glob("*_test.go")

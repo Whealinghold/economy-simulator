@@ -102,13 +102,12 @@ func detCases(race bool) []detCase {
 	for i := range ones {
 		ones[i] = 1
 	}
-	step := detStep
 	run := func(observe bool, chunks ...int64) func() runSpec {
 		return func() runSpec { return runSpec{Drive: driveRun(chunks...), Observe: observe} }
 	}
 	all := []detCase{
-		{"(a) second plain run", func() runSpec { return step(runSpec{}) }},
-		{"(a) second observed run", func() runSpec { return step(runSpec{Observe: true}) }},
+		{"(a) second plain run", func() runSpec { return detStep(runSpec{}) }},
+		{"(a) second observed run", func() runSpec { return detStep(runSpec{Observe: true}) }},
 		{"(b) Run(400) bare", run(false, detTicks)},
 		{"(b) Run(400) observed", run(true, detTicks)},
 		{"(b) Run(1)+Run(399) bare", run(false, 1, detTicks-1)},
@@ -117,20 +116,20 @@ func detCases(race bool) []detCase {
 		{"(b) seven chunks observed", run(true, seven...)},
 		{"(b) 400 Run(1) bare", run(false, ones...)},
 		{"(b) 400 Run(1) observed", run(true, ones...)},
-		{"(c) logger", func() runSpec { return step(runSpec{Logger: newCaptureHandler()}) }},
+		{"(c) logger", func() runSpec { return detStep(runSpec{Logger: newCaptureHandler()}) }},
 		{"(c) nil observer", func() runSpec {
-			return step(runSpec{Extra: []economysim.Option{economysim.WithObserver(nil)}})
+			return detStep(runSpec{Extra: []economysim.Option{economysim.WithObserver(nil)}})
 		}},
-		{"(c) recording observer", func() runSpec { return step(runSpec{Observe: true}) }},
+		{"(c) recording observer", func() runSpec { return detStep(runSpec{Observe: true}) }},
 		{"(c) logger and Run(1) chunks", func() runSpec {
 			s := run(true, ones...)()
 			s.Logger = newCaptureHandler()
 			return s
 		}},
-		{"(d) audit on", func() runSpec { return step(runSpec{Audit: true}) }},
-		{"(d) audit on, observed", func() runSpec { return step(runSpec{Audit: true, Observe: true}) }},
+		{"(d) audit on", func() runSpec { return detStep(runSpec{Audit: true}) }},
+		{"(d) audit on, observed", func() runSpec { return detStep(runSpec{Audit: true, Observe: true}) }},
 		{"(e) logger, recorder, hashing observer, audit", func() runSpec {
-			return step(runSpec{Logger: newCaptureHandler(), Observe: true, Audit: true,
+			return detStep(runSpec{Logger: newCaptureHandler(), Observe: true, Audit: true,
 				Extra: []economysim.Option{economysim.WithObserver(hashingObserver())}})
 		}},
 		{"(e) the same with Run chunks", func() runSpec {
