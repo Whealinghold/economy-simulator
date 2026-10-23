@@ -80,6 +80,11 @@ func TestErrorsMutation_SentinelText(t *testing.T) {
 		{economysim.ErrNoUpkeep, "no group has an upkeep"},
 		{economysim.ErrSolveLimit, "solver limit reached"},
 		{economysim.ErrSolveInconsistent, "solver certificate failed"},
+		{economysim.ErrCheckpointVersion, "checkpoint format version not supported"},
+		{economysim.ErrCheckpointCorrupt, "checkpoint is corrupt"},
+		{economysim.ErrCheckpointConfig, "checkpoint is of another configuration"},
+		{economysim.ErrCheckpointExtension, "checkpoint extension mismatch"},
+		{economysim.ErrOptionContext, "option not valid in this call"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
