@@ -63,7 +63,11 @@ type frame struct {
 // digest, so a newer format is reported as such), the digest and the ranges of
 // the header. It returns ErrCheckpointCorrupt or ErrCheckpointVersion, wrapped
 // with what failed.
-func parseFrame(b []byte) (frame, error) {
+func parseFrame(b []byte) (frame, error) { return readFrame(b, true) }
+
+// readFrame is parseFrame with the digest check optional: Info skips it, because
+// a checkpoint in hand was verified when it was made or unmarshalled.
+func readFrame(b []byte, verify bool) (frame, error) {
 	corrupt := func(format string, args ...any) error {
 		return fmt.Errorf("%w: %s", ErrCheckpointCorrupt, fmt.Sprintf(format, args...))
 	}
@@ -82,8 +86,10 @@ func parseFrame(b []byte) (frame, error) {
 		return frame{}, corrupt("%d bytes is too short for a trailer", len(b))
 	}
 	body, trailer := b[:len(b)-digestSize], b[len(b)-digestSize:]
-	if sum := sha256.Sum256(body); !bytes.Equal(sum[:], trailer) {
-		return frame{}, corrupt("the digest does not match the bytes")
+	if verify {
+		if sum := sha256.Sum256(body); !bytes.Equal(sum[:], trailer) {
+			return frame{}, corrupt("the digest does not match the bytes")
+		}
 	}
 	return parseHeader(codec.NewReader(body[len(checkpointMagic):]), format, len(b))
 }
@@ -118,7 +124,7 @@ const maxTick = 1<<63 - 1
 // section: a checkpoint made by Checkpoint or accepted by UnmarshalBinary has a
 // valid frame, and the zero Checkpoint reports the zero CheckpointInfo.
 func (c Checkpoint) Info() CheckpointInfo {
-	f, err := parseFrame(c.b)
+	f, err := readFrame(c.b, false)
 	if err != nil {
 		return CheckpointInfo{}
 	}
