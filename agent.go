@@ -564,7 +564,13 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 	nc, nr := uint64(len(w.cfg.Commodities)), uint64(len(w.cfg.Recipes))
 	d := &Directive{}
 	if r.B() {
-		d.Job = &JobRequest{NoJob: r.B(), Recipe: RecipeID(r.Index(nr)), Executions: r.Bounded("executions", math.MaxInt64)}
+		d.Job = &JobRequest{NoJob: r.B()}
+		if d.Job.NoJob { // the other fields are ignored and written as 0, even in a world with no recipe
+			r.Bounded("recipe", 0)
+			r.Bounded("executions", 0)
+		} else {
+			d.Job.Recipe, d.Job.Executions = RecipeID(r.Index(nr)), r.Bounded("executions", math.MaxInt64)
+		}
 	}
 	for range r.Count(8) {
 		if r.Err() != nil {

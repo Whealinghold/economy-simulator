@@ -209,3 +209,23 @@ func TestRestore_ClosedAccountsCostAConstantPerByte(t *testing.T) {
 		t.Errorf("RestoreWorld() allocated %d bytes for a checkpoint of %d, want at most %d times that", got, size, 400)
 	}
 }
+
+// TestRestore_NoJobDirectiveWithJunkFieldsRestores verifies that a directive whose
+// job request has NoJob set restores, with the ignored recipe and executions read
+// back as 0 whatever they held when it was set.
+//
+// Fix: review of stage-2-2b. Those fields were written as given, and the restore
+// bounded them like a live job's, so a recipe out of range made a checkpoint that
+// the same library refused.
+func TestRestore_NoJobDirectiveWithJunkFieldsRestores(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 2)
+	w.agents[1].directive = &Directive{Job: &JobRequest{NoJob: true, Recipe: 9999, Executions: 7}}
+	r, err := restoreOf(t, w)
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	if got, want := r.agents[1].directive, (&Directive{Job: &JobRequest{NoJob: true}}); !reflect.DeepEqual(got, want) {
+		t.Errorf("restored directive = %+v, want %+v", got.Job, want.Job)
+	}
+}
