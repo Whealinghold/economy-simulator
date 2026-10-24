@@ -38,7 +38,8 @@ type restoreCtx struct {
 // reference, audits the ledger whether or not WithAudit was given, and only then
 // loads the state of the Stateful extensions. A failure at any step before the last
 // touches nothing the consumer owns; a failure in a LoadState leaves that instance
-// as the extension left it. The error is ErrCheckpointVersion, ErrCheckpointCorrupt,
+// as the extension left it, and the instances loaded before it (in kind, name order)
+// already hold the checkpoint's state. The error is ErrCheckpointVersion, ErrCheckpointCorrupt,
 // ErrCheckpointConfig, ErrCheckpointExtension, ErrOptionContext (WithSeed is refused:
 // the checkpoint holds the seed, and WithReseed is the way to another continuation)
 // or what NewWorld returns for the configuration.
@@ -254,17 +255,14 @@ func sameExtensions(have []extEntry, recs []extRecord) error {
 // requires each to be registered. A table it cannot read is corrupt.
 func (w *World) checkStrategyNames(body []byte) error {
 	r := codec.NewReader(body)
-	for range r.Count(1) {
-		name := string(r.Bytes())
-		if r.Err() != nil {
-			break
-		}
+	names := readStrategyNames(r)
+	if err := r.Err(); err != nil {
+		return fmt.Errorf("%w: section %d (Agents): %w", ErrCheckpointCorrupt, tagAgents, err)
+	}
+	for _, name := range names {
 		if !w.strategyRegistered(name) {
 			return fmt.Errorf("%w: strategy %q of an agent: %w", ErrCheckpointExtension, name, ErrUnknownStrategy)
 		}
-	}
-	if err := r.Err(); err != nil {
-		return fmt.Errorf("%w: section %d (Agents): %w", ErrCheckpointCorrupt, tagAgents, err)
 	}
 	return nil
 }
@@ -394,40 +392,39 @@ func (w *World) announceRestore(info CheckpointInfo, o options) {
 
 // readSparse reads the rows writeSparse wrote into vals, which are all 0 and
 // indexed by region * roles + role: a count, then (region, role, value) in strictly
-// ascending key order, the value from 1 to max (a row at the default is corrupt, R10;
-// a run counts ticks, so the caller passes the tick as max).
-func readSparse(r *codec.Reader, vals []int64, regions, roles int, max int64) {
-	n := r.Count(3)
+// ascending key order, the value from 1 to limit (a row at the default is corrupt, R10;
+// a run counts ticks, so the caller passes the tick as limit).
+func readSparse(r *codec.Reader, vals []int64, regions, roles int, limit int64) {
+	readSparseRows(r, vals, 3, limit, func() (uint64, string) {
+		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
+		return region*uint64(roles) + role, fmt.Sprintf("region %d, role %d", region, role)
+	})
+}
+
+// readSparseByRegion is readSparse for a run kept per region: (region, value).
+func readSparseByRegion(r *codec.Reader, vals []int64, limit int64) {
+	readSparseRows(r, vals, 2, limit, func() (uint64, string) {
+		region := r.Index(uint64(len(vals)))
+		return region, fmt.Sprintf("region %d", region)
+	})
+}
+
+// readSparseRows is the loop of both: a count of rows of at least minBytes, each a
+// key from readKey (with its text for an error) and a value from 1 to limit, the
+// keys strictly ascending.
+func readSparseRows(r *codec.Reader, vals []int64, minBytes int, limit int64, readKey func() (uint64, string)) {
+	n := r.Count(minBytes)
 	prev := uint64(0)
 	for i := range n {
-		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
-		key := region*uint64(roles) + role
-		v := r.Bounded("run", max)
+		key, what := readKey()
+		v := r.Bounded("run", limit)
 		if r.Err() != nil {
 			return
 		}
 		if v == 0 || (i > 0 && key <= prev) {
-			r.Failf("sparse row (region %d, role %d) is at its default or out of order", region, role)
+			r.Failf("sparse row (%s) is at its default or out of order", what)
 			return
 		}
 		vals[key], prev = v, key
-	}
-}
-
-// readSparseByRegion is readSparse for a run kept per region: (region, value).
-func readSparseByRegion(r *codec.Reader, vals []int64, max int64) {
-	n := r.Count(2)
-	prev := uint64(0)
-	for i := range n {
-		region := r.Index(uint64(len(vals)))
-		v := r.Bounded("run", max)
-		if r.Err() != nil {
-			return
-		}
-		if v == 0 || (i > 0 && region <= prev) {
-			r.Failf("sparse row (region %d) is at its default or out of order", region)
-			return
-		}
-		vals[region], prev = v, region
 	}
 }

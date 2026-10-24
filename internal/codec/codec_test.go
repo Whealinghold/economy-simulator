@@ -705,7 +705,8 @@ func TestReader_BytesLengthBeyondInputFailsAtTheLength(t *testing.T) {
 }
 
 // TestReader_BoundedEdges verifies that Bounded accepts a value equal to its
-// maximum, refuses the next one naming what was read, and returns 0 for it.
+// maximum, refuses the next one naming what was read at the offset where the read
+// began, and returns 0 for it.
 //
 // Requirement: FR-CHK-013
 func TestReader_BoundedEdges(t *testing.T) {
@@ -714,7 +715,7 @@ func TestReader_BoundedEdges(t *testing.T) {
 	if got := r.Bounded("run", 5); got != 5 || r.Err() != nil {
 		t.Fatalf("Bounded(5 of 5) = %d, %v, want 5 and no error", got, r.Err())
 	}
-	if got := r.Bounded("run", 5); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 2: run 6 is above 5" {
+	if got := r.Bounded("run", 5); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 1: run 6 is above 5" {
 		t.Errorf("Bounded(6 of 5) = %d, %v, want 0 and the error naming run 6 above 5", got, r.Err())
 	}
 }
@@ -726,7 +727,7 @@ func TestReader_BoundedEdges(t *testing.T) {
 func TestReader_BoundedNegativeMaxRefusesEverything(t *testing.T) {
 	t.Parallel()
 	r := codec.NewReader([]byte{0})
-	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 1: run has a negative bound -1" {
+	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 0: run has a negative bound -1" {
 		t.Errorf("Bounded(0 of -1) = %d, %v, want 0 and an error", got, r.Err())
 	}
 }
