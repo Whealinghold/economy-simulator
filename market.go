@@ -206,18 +206,18 @@ func (w *World) loadMarkets(rs *restoreCtx, r *codec.Reader) error {
 	var prices []int64
 	for i := range t.reports {
 		rep := &t.reports[i]
-		rep.Price = Price(readBounded(r, "price", MaxPrice))
-		rep.Age = readBounded(r, "age", rs.tick)
-		rep.Volume = Quantity(readBounded(r, "volume", MaxQuantity))
-		rep.UnmatchedBid = Quantity(readBounded(r, "unmatched bid", MaxQuantity))
-		rep.UnmatchedAsk = Quantity(readBounded(r, "unmatched ask", MaxQuantity))
+		rep.Price = Price(r.Bounded("price", MaxPrice))
+		rep.Age = r.Bounded("age", rs.tick)
+		rep.Volume = Quantity(r.Bounded("volume", MaxQuantity))
+		rep.UnmatchedBid = Quantity(r.Bounded("unmatched bid", MaxQuantity))
+		rep.UnmatchedAsk = Quantity(r.Bounded("unmatched ask", MaxQuantity))
 		rep.HasBestBid, rep.BestBid = readOptionalPrice(r)
 		rep.HasBestAsk, rep.BestAsk = readOptionalPrice(r)
 		prices = prices[:0]
 		for range r.Count(1) {
-			prices = append(prices, readBounded(r, "window price", MaxPrice))
+			prices = append(prices, r.Bounded("window price", MaxPrice))
 		}
-		t.boundRun[i] = readBounded(r, "bound run", rs.tick)
+		t.boundRun[i] = r.Bounded("bound run", rs.tick)
 		switch {
 		case r.Err() != nil:
 			return nil
@@ -238,7 +238,7 @@ func readOptionalPrice(r *codec.Reader) (bool, Price) {
 	if !r.B() {
 		return false, 0
 	}
-	p := readBounded(r, "best price", MaxPrice)
+	p := r.Bounded("best price", MaxPrice)
 	if r.Err() == nil && p < 1 {
 		r.Failf("best price %d is below 1", p)
 	}

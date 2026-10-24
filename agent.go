@@ -425,12 +425,21 @@ func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 		}
 		prev = w.loadAgent(rs, r, names, prev, i > 0)
 	}
+	// Every name in the table is a live agent's strategy (the table is the sorted
+	// set saveAgents writes), so an unused name is a non-canonical encoding (R10).
+	if r.Err() == nil {
+		used := map[string]struct{}{}
+		w.eachLive(func(a *agent) { used[w.strategyName(a)] = struct{}{} })
+		if len(used) != len(names) {
+			r.Failf("the table of strategy names has %d names, the agents use %d", len(names), len(used))
+		}
+	}
 	for _, t := range agentTails {
 		if t.present(&w.cfg) {
 			t.load(w, r)
 		}
 	}
-	readSparse(r, w.state.unfedRun, regions, roles)
+	readSparse(r, w.state.unfedRun, regions, roles, rs.tick)
 	return nil
 }
 
@@ -469,12 +478,12 @@ func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, pr
 	rec := agentRec{id: r.Strict(prev, started)}
 	rec.acct = int(r.Index(uint64(w.ledger.Len())))
 	rec.role = r.Index(uint64(len(w.cfg.Roles)))
-	rec.weight = readBounded(r, "weight", MaxWeight)
+	rec.weight = r.Bounded("weight", MaxWeight)
 	rec.flags = int64(r.Index(1)) // External and Mortal are the integration module's; no agent has one yet
 	rec.nameIdx = int64(r.Index(uint64(len(names))))
-	rec.unfed = readBounded(r, "unfed", rec.weight)
-	rec.hunger = readBounded(r, "hunger", rs.tick)
-	rec.privation = readBounded(r, "privation", rs.tick)
+	rec.unfed = r.Bounded("unfed", rec.weight)
+	rec.hunger = r.Bounded("hunger", rs.tick)
+	rec.privation = r.Bounded("privation", rs.tick)
 	rec.since, rec.carry = r.I(), r.I()
 	rec.ownUse, rec.ownUseJobs, rec.journey = r.U() != 0, r.U() != 0, r.B()
 	rec.directive = w.loadDirective(r)
@@ -548,7 +557,7 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 	nc, nr := uint64(len(w.cfg.Commodities)), uint64(len(w.cfg.Recipes))
 	d := &Directive{}
 	if r.B() {
-		d.Job = &JobRequest{NoJob: r.B(), Recipe: RecipeID(r.Index(nr)), Executions: readBounded(r, "executions", math.MaxInt64)}
+		d.Job = &JobRequest{NoJob: r.B(), Recipe: RecipeID(r.Index(nr)), Executions: r.Bounded("executions", math.MaxInt64)}
 	}
 	for range r.Count(8) {
 		if r.Err() != nil {
@@ -556,16 +565,16 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 		}
 		d.Intents = append(d.Intents, Intent{
 			Commodity: CommodityID(r.Index(nc)), Side: Side(r.Index(2)),
-			Quantity: Quantity(readBounded(r, "quantity", MaxQuantity)), Limit: Price(readBounded(r, "limit", MaxPrice)),
-			Target: Quantity(readBounded(r, "target", MaxQuantity)), Reserve: Quantity(readBounded(r, "reserve", MaxQuantity)),
-			UnitCost: Price(readBounded(r, "unit cost", MaxPrice)), Purpose: Purpose(r.Index(uint64(PurposeTool) + 1)),
+			Quantity: Quantity(r.Bounded("quantity", MaxQuantity)), Limit: Price(r.Bounded("limit", MaxPrice)),
+			Target: Quantity(r.Bounded("target", MaxQuantity)), Reserve: Quantity(r.Bounded("reserve", MaxQuantity)),
+			UnitCost: Price(r.Bounded("unit cost", MaxPrice)), Purpose: Purpose(r.Index(uint64(PurposeTool) + 1)),
 		})
 	}
 	for range r.Count(2) {
 		if r.Err() != nil {
 			return nil
 		}
-		d.Discards = append(d.Discards, Discard{Commodity: CommodityID(r.Index(nc)), Quantity: Quantity(readBounded(r, "quantity", MaxQuantity))})
+		d.Discards = append(d.Discards, Discard{Commodity: CommodityID(r.Index(nc)), Quantity: Quantity(r.Bounded("quantity", MaxQuantity))})
 	}
 	for range r.Count(1) {
 		d.Hold = append(d.Hold, CommodityID(r.Index(nc)))

@@ -649,9 +649,9 @@ func (w *World) saveSpawner(cw *codec.Writer) error {
 // ever had an agent, and the sparse runs of unfunded entrants, of empty ticks and
 // of ticks below the floor. A pair of the bit list repeated or out of order is
 // corrupt, as is a sparse row at its default.
-func (w *World) loadSpawner(_ *restoreCtx, r *codec.Reader) error {
+func (w *World) loadSpawner(rs *restoreCtx, r *codec.Reader) error {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
-	readSparse(r, w.state.renewalCarry, regions, roles)
+	readSparse(r, w.state.renewalCarry, regions, roles, occupation.Basis-1)
 	prev := uint64(0)
 	for i := range r.Count(2) {
 		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
@@ -665,8 +665,8 @@ func (w *World) loadSpawner(_ *restoreCtx, r *codec.Reader) error {
 		}
 		w.state.hadAgent[key], prev = true, key
 	}
-	readSparseByRegion(r, w.state.unfundedRun)
-	readSparse(r, w.state.extinctRun, regions, roles)
-	readSparse(r, w.state.belowFloorRun, regions, roles)
+	readSparseByRegion(r, w.state.unfundedRun, rs.tick)
+	readSparse(r, w.state.extinctRun, regions, roles, rs.tick)
+	readSparse(r, w.state.belowFloorRun, regions, roles, rs.tick)
 	return nil
 }

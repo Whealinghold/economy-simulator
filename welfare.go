@@ -459,14 +459,14 @@ const recordMin = 8
 // holds, oldest first, and its target ratio, then the sparse runs of the work floor
 // and the clamp. The ring is rebuilt by welfare.FromRecords, which refuses more
 // records than the window and a field beyond the clamp.
-func (w *World) loadWelfare(_ *restoreCtx, r *codec.Reader) error {
+func (w *World) loadWelfare(rs *restoreCtx, r *codec.Reader) error {
 	var recs []welfare.Record
 	w.eachLive(func(a *agent) {
 		recs = recs[:0]
 		for range r.Count(recordMin) {
 			recs = append(recs, loadRecord(r))
 		}
-		a.target = readBounded(r, "target ratio", MaxBasisPoints)
+		a.target = r.Bounded("target ratio", MaxBasisPoints)
 		if r.Err() != nil {
 			return
 		}
@@ -478,8 +478,8 @@ func (w *World) loadWelfare(_ *restoreCtx, r *codec.Reader) error {
 		a.history = h
 	})
 	roles := len(w.cfg.Roles)
-	readSparse(r, w.state.floorRun, len(w.cfg.Regions), roles)
-	readSparse(r, w.state.clampRun, len(w.cfg.Regions), roles)
+	readSparse(r, w.state.floorRun, len(w.cfg.Regions), roles, rs.tick)
+	readSparse(r, w.state.clampRun, len(w.cfg.Regions), roles, rs.tick)
 	return nil
 }
 
@@ -487,7 +487,7 @@ func (w *World) loadWelfare(_ *restoreCtx, r *codec.Reader) error {
 func loadRecord(r *codec.Reader) welfare.Record {
 	return welfare.Record{
 		Income: r.I(), Cost: r.I(), Relief: r.I(), Unearned: r.I(), OwnReceipt: r.I(),
-		OwnHH: readBounded(r, "own-use household-ticks", math.MaxInt64), Working: r.B(),
-		WorkHH: readBounded(r, "working household-ticks", math.MaxInt64),
+		OwnHH: r.Bounded("own-use household-ticks", math.MaxInt64), Working: r.B(),
+		WorkHH: r.Bounded("working household-ticks", math.MaxInt64),
 	}
 }

@@ -722,7 +722,7 @@ func (w *World) loadJobs(_ *restoreCtx, r *codec.Reader) error {
 			w.loadJob(r, a)
 		}
 		for i := range a.residues {
-			if a.residues[i] = readBounded(r, "residue", residueBound-1); r.Err() != nil {
+			if a.residues[i] = r.Bounded("residue", residueBound-1); r.Err() != nil {
 				return
 			}
 		}
@@ -731,7 +731,7 @@ func (w *World) loadJobs(_ *restoreCtx, r *codec.Reader) error {
 	for i := range n {
 		reg := RegionID(r.Index(uint64(len(w.cfg.Regions))))
 		rec := RecipeID(r.Index(uint64(len(w.cfg.Recipes))))
-		bp := readBounded(r, "yield shock", MaxYieldBP)
+		bp := r.Bounded("yield shock", MaxYieldBP)
 		if r.Err() != nil {
 			return nil
 		}
@@ -752,11 +752,11 @@ func (w *World) loadJob(r *codec.Reader, a *agent) {
 		return
 	}
 	j := job{recipe: rec}
-	j.remaining = readBounded(r, "ticks remaining", w.cfg.Recipes[rec].Duration)
-	j.executions = readBounded(r, "executions", MaxQuantity)
-	principal := readBounded(r, "principal", math.MaxInt64)
+	j.remaining = r.Bounded("ticks remaining", w.cfg.Recipes[rec].Duration)
+	j.executions = r.Bounded("executions", MaxQuantity)
+	principal := r.Bounded("principal", math.MaxInt64)
 	j.principal = AgentID(principal)
-	j.yield = readBounded(r, "yield", MaxYieldBP)
+	j.yield = r.Bounded("yield", MaxYieldBP)
 	_, onList := slices.BinarySearch(w.roles.row(a.role).recipes, rec)
 	switch {
 	case r.Err() != nil:
@@ -770,7 +770,7 @@ func (w *World) loadJob(r *codec.Reader, a *agent) {
 	}
 	j.pending = make([]int64, len(w.recipes.row(rec).outputs))
 	for i := range j.pending {
-		j.pending[i] = readBounded(r, "pending quantity", MaxQuantity)
+		j.pending[i] = r.Bounded("pending quantity", MaxQuantity)
 	}
 	a.job = j
 }

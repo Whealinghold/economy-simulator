@@ -407,6 +407,71 @@ func TestRestore_Corrupt(t *testing.T) {
 	}
 }
 
+// TestRestore_RunsAboveTheirBound verifies that a sparse run above the ticks
+// elapsed (6 at tick 5) and a renewal carry at or above 10 000 are corrupt, each
+// found by the bound on the value and not by another rule.
+//
+// Arithmetic: the unfed run closes tag 3 and the clamp run closes tag 7, each
+// written as a count of 0 at tick 5 in the mill; the rows (0, 0, 6) replace it.
+// The renewal carry opens tag 9 as the row (0, 0, 10 000), 10 000 being 0x90 0x4e.
+//
+// Requirement: FR-CHK-013
+func TestRestore_RunsAboveTheirBound(t *testing.T) {
+	t.Parallel()
+	raw := restoreMillBytes(t)
+	endRow := func(b []byte) []byte {
+		if b[len(b)-1] != 0 {
+			t.Fatalf("section ends in %d, want a count of 0", b[len(b)-1])
+		}
+		return append(b[:len(b)-1:len(b)-1], 1, 0, 0, 6)
+	}
+	tests := []struct {
+		name string
+		tag  uint64
+		edit func([]byte) []byte
+		want string
+	}{
+		{"unfed run", 3, endRow, "run 6 is above 5"},
+		{"clamp run", 7, endRow, "run 6 is above 5"},
+		{"renewal carry", 9, func([]byte) []byte { return []byte{1, 0, 0, 0x90, 0x4e} }, "run 10000 is above 9999"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := reframe(t, raw, func(s []section) []section { return editSection(s, tt.tag, tt.edit) })
+			_, err := economysim.RestoreWorld(millCfg(3, 4), c)
+			if !errors.Is(err, economysim.ErrCheckpointCorrupt) || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("RestoreWorld(%s) error = %v, want ErrCheckpointCorrupt naming %q", tt.name, err, tt.want)
+			}
+		})
+	}
+}
+
+// TestRestore_UnusedStrategyNameIsCorrupt verifies that a table of strategy names
+// with a registered name no agent uses is corrupt, since the table is the sorted
+// set of the names agents use and one world has one byte string (R10).
+//
+// Arithmetic: every agent of the mill uses "default", so the table is the count 1,
+// the length 7 and the name; "directed" (length 8) is registered and sorts after it.
+//
+// Requirement: FR-CHK-012
+func TestRestore_UnusedStrategyNameIsCorrupt(t *testing.T) {
+	t.Parallel()
+	c := reframe(t, restoreMillBytes(t), func(s []section) []section {
+		return editSection(s, 3, func(b []byte) []byte {
+			head := append([]byte{2, 7}, "default"...)
+			if !bytes.HasPrefix(b, append([]byte{1, 7}, "default"...)) {
+				t.Fatalf("tag 3 starts % x, want the table of one name, default", b[:9])
+			}
+			head = append(append(head, 8), "directed"...)
+			return append(head, b[9:]...)
+		})
+	})
+	if _, err := economysim.RestoreWorld(millCfg(3, 4), c); !errors.Is(err, economysim.ErrCheckpointCorrupt) {
+		t.Errorf("RestoreWorld() error = %v, want ErrCheckpointCorrupt", err)
+	}
+}
+
 // TestRestore_AuditAlwaysRuns verifies that a checkpoint whose ledger no longer
 // conserves money (one minor unit added to the balance of the estate, edited and
 // re-digested) is refused as ErrCheckpointCorrupt wrapping ErrAuditFailed, with

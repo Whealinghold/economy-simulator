@@ -290,12 +290,11 @@ func (w *World) loadExtensionState(recs []extRecord) error {
 	return nil
 }
 
-// loadExtensions is the reader of tag 34 in the table. The entries were read at
-// step 4, before any section, and their state is loaded last at step 11 (spec-
-// checkpoint.md 6.2.1); here the bytes are read again so that the section is
-// consumed whole like any other.
+// loadExtensions is the reader of tag 34 in the table. The entries were read and
+// checked whole at step 4, before any section, and their state is loaded last at
+// step 11 (spec-checkpoint.md 6.2.1); here the section is only consumed.
 func (w *World) loadExtensions(_ *restoreCtx, r *codec.Reader) error {
-	readExtensions(r)
+	r.Raw(r.Remaining())
 	return nil
 }
 
@@ -391,27 +390,17 @@ func (w *World) announceRestore(info CheckpointInfo, o options) {
 	})
 }
 
-// readBounded reads a U that is at most max, or records a violation of R13 and
-// returns 0.
-func readBounded(r *codec.Reader, what string, max int64) int64 {
-	v := r.U()
-	if v > uint64(max) {
-		r.Failf("%s %d is above %d", what, v, max)
-		return 0
-	}
-	return int64(v)
-}
-
 // readSparse reads the rows writeSparse wrote into vals, which are all 0 and
 // indexed by region * roles + role: a count, then (region, role, value) in strictly
-// ascending key order, the value at least 1 (a row at the default is corrupt, R10).
-func readSparse(r *codec.Reader, vals []int64, regions, roles int) {
+// ascending key order, the value from 1 to max (a row at the default is corrupt, R10;
+// a run counts ticks, so the caller passes the tick as max).
+func readSparse(r *codec.Reader, vals []int64, regions, roles int, max int64) {
 	n := r.Count(3)
 	prev := uint64(0)
 	for i := range n {
 		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
 		key := region*uint64(roles) + role
-		v := readBounded(r, "run", math.MaxInt64)
+		v := r.Bounded("run", max)
 		if r.Err() != nil {
 			return
 		}
@@ -424,12 +413,12 @@ func readSparse(r *codec.Reader, vals []int64, regions, roles int) {
 }
 
 // readSparseByRegion is readSparse for a run kept per region: (region, value).
-func readSparseByRegion(r *codec.Reader, vals []int64) {
+func readSparseByRegion(r *codec.Reader, vals []int64, max int64) {
 	n := r.Count(2)
 	prev := uint64(0)
 	for i := range n {
 		region := r.Index(uint64(len(vals)))
-		v := readBounded(r, "run", math.MaxInt64)
+		v := r.Bounded("run", max)
 		if r.Err() != nil {
 			return
 		}

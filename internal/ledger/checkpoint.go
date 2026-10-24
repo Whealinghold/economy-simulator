@@ -280,17 +280,6 @@ func (l *Ledger) readBody(r *codec.Reader, first int, construction bool) {
 	}
 }
 
-// readInt reads a U that is at most max, or records a violation of R13 and
-// returns 0.
-func readInt(r *codec.Reader, what string, max int64) int64 {
-	v := r.U()
-	if v > uint64(max) {
-		r.Failf("%s %d is above %d", what, v, max)
-		return 0
-	}
-	return int64(v)
-}
-
 // readAccounts reads the count of non-boundary accounts and each account in
 // ID order, appending them to the ledger.
 func (l *Ledger) readAccounts(r *codec.Reader) {
@@ -306,8 +295,8 @@ func (l *Ledger) readAccounts(r *codec.Reader) {
 		}
 		a := account{kind: kind}
 		a.region = int(r.Index(uint64(l.regions)))
-		a.owner = int(readInt(r, "owner", math.MaxInt))
-		a.balance = readInt(r, "balance", l.maxMoney)
+		a.owner = int(r.Bounded("owner", math.MaxInt))
+		a.balance = r.Bounded("balance", l.maxMoney)
 		a.lots = l.readLots(r)
 		l.accounts = append(l.accounts, a)
 	}
@@ -345,9 +334,9 @@ func (l *Ledger) readLots(r *codec.Reader) []Lot {
 // commodity.
 func (l *Ledger) readLot(r *codec.Reader) Lot {
 	lt := Lot{Commodity: int(r.Index(uint64(len(l.comms))))}
-	lt.Quantity = readInt(r, "quantity", l.maxQty)
+	lt.Quantity = r.Bounded("quantity", l.maxQty)
 	lt.Born = r.I()
-	lt.Durability = readInt(r, "durability", math.MaxInt64)
+	lt.Durability = r.Bounded("durability", math.MaxInt64)
 	if r.Err() != nil {
 		return lt
 	}
@@ -366,7 +355,7 @@ func (l *Ledger) readLot(r *codec.Reader) Lot {
 // readClaims reads the next claim ID, the count and, when the ledger can hold
 // a claim, the totals and the claims in ascending ID.
 func (l *Ledger) readClaims(r *codec.Reader) {
-	l.nextClaim = readInt(r, "next claim ID", math.MaxInt64)
+	l.nextClaim = r.Bounded("next claim ID", math.MaxInt64)
 	n := r.Count(12)
 	if n > l.maxClaims {
 		r.Failf("%d claims are open, MaxClaims is %d", n, l.maxClaims)
@@ -377,7 +366,7 @@ func (l *Ledger) readClaims(r *codec.Reader) {
 	}
 	t := &l.claimTot
 	for _, p := range [...]*int64{&t.Lent, &t.Awarded, &t.Repaid, &t.InterestPaid, &t.InterestFixed, &t.LostPrincipal, &t.LostInterest} {
-		*p = readInt(r, "claim total", math.MaxInt64)
+		*p = r.Bounded("claim total", math.MaxInt64)
 	}
 	l.claims = make([]Claim, 0, n)
 	var prev uint64
@@ -402,7 +391,7 @@ func (l *Ledger) readClaim(r *codec.Reader, id uint64) Claim {
 	n := uint64(len(l.accounts))
 	c.Creditor, c.Debtor = int(r.Index(n)), int(r.Index(n))
 	for _, p := range [...]*int64{&c.Principal, &c.Interest, &c.PrincipalOwed, &c.InterestOwed, &c.RateBP, &c.Formed, &c.Due} {
-		*p = readInt(r, "claim field", math.MaxInt64)
+		*p = r.Bounded("claim field", math.MaxInt64)
 	}
 	c.Overdue = r.I()
 	c.Origin = int(r.Index(2))
@@ -423,7 +412,7 @@ func (l *Ledger) readFlows(r *codec.Reader, dst, wear []int64) int {
 		region := r.Index(uint64(l.regions))
 		reason, ok := reasonFromCode(r.U())
 		thing := r.Index(nc + 1)
-		total := readInt(r, "flow total", math.MaxInt64)
+		total := r.Bounded("flow total", math.MaxInt64)
 		slot, err := l.slotOf(reason, int(thing)-1)
 		key := (region*pinnedRows+reasonCode(reason))*(nc+1) + thing
 		switch {
@@ -450,7 +439,7 @@ func (l *Ledger) readWear(r *codec.Reader, wear []int64, nc uint64) int {
 			break
 		}
 		prev = r.Strict(prev, i > 0)
-		units := readInt(r, "wear units", math.MaxInt64)
+		units := r.Bounded("wear units", math.MaxInt64)
 		switch {
 		case r.Err() != nil:
 		case prev >= nc || units == 0:
@@ -476,7 +465,7 @@ func (l *Ledger) readRelocs(r *codec.Reader) int {
 		}
 		from, to := r.Index(nr), r.Index(nr)
 		thing := r.Index(nc + 1)
-		total := readInt(r, "relocation total", math.MaxInt64)
+		total := r.Bounded("relocation total", math.MaxInt64)
 		key := (from*nr+to)*(nc+1) + thing
 		switch {
 		case r.Err() != nil:

@@ -88,8 +88,8 @@ func (w *World) loadBeliefs(_ *restoreCtx, r *codec.Reader) error {
 	w.eachLive(func(a *agent) {
 		n := r.Implied(len(w.roles.row(a.role).tradable), 2)
 		for range n {
-			c := readBounded(r, "centre", MaxPrice)
-			wd := readBounded(r, "width", wholeBP)
+			c := r.Bounded("centre", MaxPrice)
+			wd := r.Bounded("width", wholeBP)
 			if r.Err() == nil && c < 1 {
 				r.Failf("belief centre %d is below 1", c)
 			}

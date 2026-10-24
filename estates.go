@@ -498,8 +498,8 @@ func (w *World) loadEstates(_ *restoreCtx, r *codec.Reader) error {
 		for range r.Count(4) {
 			c := r.Index(uint64(len(w.cfg.Commodities)))
 			born := r.I()
-			dur := readBounded(r, "durability", math.MaxInt64)
-			price := readBounded(r, "price", MaxPrice)
+			dur := r.Bounded("durability", math.MaxInt64)
+			price := r.Bounded("price", MaxPrice)
 			if r.Err() != nil {
 				return nil
 			}

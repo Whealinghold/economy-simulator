@@ -52,8 +52,8 @@ func TestRestore_SyntheticStateRoundTrips(t *testing.T) {
 		t.Fatalf("shocks.set() error = %v, want nil", err)
 	}
 	st := &w.state
-	st.unfedRun[0], st.floorRun[0], st.clampRun[0], st.extinctRun[0], st.belowFloorRun[0] = 2, 3, 4, 5, 6
-	st.renewalCarry[0], st.unfundedRun[0] = 7, 8
+	st.unfedRun[0], st.floorRun[0], st.clampRun[0], st.extinctRun[0], st.belowFloorRun[0] = 2, 3, 4, 5, 1
+	st.renewalCarry[0], st.unfundedRun[0] = 7, 2
 	r, err := restoreOf(t, w)
 	if err != nil {
 		t.Fatalf("RestoreWorld() error = %v, want nil", err)
