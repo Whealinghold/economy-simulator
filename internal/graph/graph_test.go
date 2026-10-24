@@ -152,6 +152,25 @@ func checkAgainstRef(t *testing.T, label string, m matrix) {
 			}
 		}
 	}
+	for a := 0; a < n; a++ {
+		for _, limit := range []int64{0, 2, 4, 1 << 40} {
+			var want []Hop
+			for b := 0; b < n; b++ {
+				if d, _, ok := refBest(m, a, b); ok && b != a && d <= limit {
+					want = append(want, Hop{Region: b, Distance: d})
+				}
+			}
+			slices.SortFunc(want, func(x, y Hop) int {
+				if x.Distance != y.Distance {
+					return int(x.Distance - y.Distance)
+				}
+				return x.Region - y.Region
+			})
+			if got := tb.AppendWithin(nil, a, limit); !slices.Equal(got, want) {
+				t.Fatalf("%s: AppendWithin(nil, %d, %d) = %v, want %v (edges %v)", label, a, limit, got, want, m.edges())
+			}
+		}
+	}
 	wantC, wantN := refComps(m)
 	if tb.Comps() != wantN {
 		t.Fatalf("%s: Comps() = %d, want %d (edges %v)", label, tb.Comps(), wantN, m.edges())
@@ -272,9 +291,13 @@ func TestBuild_RejectsBrokenInput(t *testing.T) {
 		open []Edge
 	}{
 		{"negative count", -1, nil},
+		{"count beyond int32", math.MaxInt32 + 1, nil},
+		{"from far out of range", 2, []Edge{{5, 0, 1}}},
+		{"to far out of range", 2, []Edge{{0, 5, 1}}},
 		{"from out of range", 2, []Edge{{2, 0, 1}}},
 		{"to out of range", 2, []Edge{{0, 2, 1}}},
 		{"negative from", 2, []Edge{{-1, 0, 1}}},
+		{"negative to", 2, []Edge{{0, -1, 1}}},
 		{"self edge", 2, []Edge{{1, 1, 1}}},
 		{"zero length", 2, []Edge{{0, 1, 0}}},
 		{"negative length", 2, []Edge{{0, 1, -3}}},
@@ -558,8 +581,10 @@ func TestWithin_Order(t *testing.T) {
 // Requirement: FR-REG-025, FR-REG-016
 func TestQueries_OutOfRange(t *testing.T) {
 	t.Parallel()
+	// A cycle 0 > 1 > 2 > 0 with an extra chord, so that every pair is reachable
+	// and an index that wrapped into the next row would read a defined value.
 	m := newMatrix(3)
-	m[0][1], m[1][2] = 1, 1
+	m[0][1], m[1][2], m[2][0], m[0][2] = 1, 1, 1, 5
 	tb := m.build(t)
 	for _, bad := range []int{-1, 3, math.MaxInt32, math.MinInt32} {
 		for _, other := range []int{0, 1, bad} {
@@ -600,10 +625,13 @@ func TestQueries_OutOfRange(t *testing.T) {
 			t.Errorf("AppendPath(nil, %d, %d) = %v, %v, want [%d], true", r, r, p, ok, r)
 		}
 	}
-	if v, ok := tb.Next(2, 0); v != 0 || ok {
+	one := newMatrix(3)
+	one[0][1], one[1][2] = 1, 1
+	ow := one.build(t)
+	if v, ok := ow.Next(2, 0); v != 0 || ok {
 		t.Errorf("Next(2, 0) = %d, %v, want 0, false: 0 is unreachable from 2", v, ok)
 	}
-	if p, ok := tb.AppendPath([]int{7}, 2, 0); ok || !slices.Equal(p, []int{7}) {
+	if p, ok := ow.AppendPath([]int{7}, 2, 0); ok || !slices.Equal(p, []int{7}) {
 		t.Errorf("AppendPath([7], 2, 0) = %v, %v, want [7] unchanged, false", p, ok)
 	}
 }
@@ -657,6 +685,40 @@ func TestImports_StdlibAndChecked(t *testing.T) {
 			if p := imp.Path.Value; p != checked && strings.Contains(strings.Split(strings.Trim(p, `"`), "/")[0], ".") {
 				t.Errorf("%s imports %s, want the standard library and internal/checked only", name, p)
 			}
+		}
+	}
+}
+
+// TestHeap_PopsInOrder verifies that the hand-written heap pops items in
+// ascending (distance, region) order, with equal items allowed.
+//
+// Guard: the search stays correct for any pop order, because a shorter
+// distance found later is pushed and relaxed again, so a broken heap would
+// pass every other test and only cost time. This pins the order itself.
+func TestHeap_PopsInOrder(t *testing.T) {
+	t.Parallel()
+	rng := splitmix(11)
+	for round := 0; round < 200; round++ {
+		var h heap
+		var want []item
+		for i, n := 0, 1+rng.below(40); i < n; i++ {
+			it := item{d: int64(rng.below(8)), v: int32(rng.below(5))}
+			h.push(it)
+			want = append(want, it)
+		}
+		slices.SortFunc(want, func(a, b item) int {
+			if a.d != b.d {
+				return int(a.d - b.d)
+			}
+			return int(a.v - b.v)
+		})
+		for i, w := range want {
+			if got := h.pop(); got != w {
+				t.Fatalf("round %d: pop %d = %v, want %v", round, i, got, w)
+			}
+		}
+		if len(h) != 0 {
+			t.Fatalf("round %d: %d items left", round, len(h))
 		}
 	}
 }
