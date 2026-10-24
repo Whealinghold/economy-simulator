@@ -457,3 +457,29 @@ func TestState_NoAllocs(t *testing.T) {
 	}
 	_ = sink
 }
+
+// TestWindow_RestoreEmptyEqualsNew verifies that a window emptied by Restore reports
+// the same low, high and mean as a window that was never pushed to: the statistics
+// of an empty window are 0, so a snapshot of a restored world equals the original's.
+//
+// Fix: plan 2-2 Phase 5. Restore of no values left the cached low at maxPrice and the
+// high at 1, which Snapshot reported as WindowLow and WindowHigh of a market that had
+// not traded, so a restored world's snapshot differed from the original's.
+func TestWindow_RestoreEmptyEqualsNew(t *testing.T) {
+	t.Parallel()
+	fresh := beliefs.NewWindow(5, 100)
+	w := beliefs.NewWindow(5, 100)
+	w.Push(7)
+	if !w.Restore(nil) {
+		t.Fatalf("Restore(nil) = false, want true")
+	}
+	fl, _ := fresh.Low()
+	fh, _ := fresh.High()
+	fm, _ := fresh.Mean()
+	wl, _ := w.Low()
+	wh, _ := w.High()
+	wm, _ := w.Mean()
+	if fl != wl || fh != wh || fm != wm {
+		t.Errorf("emptied window low, high, mean = %d, %d, %d, want those of a new window, %d, %d, %d", wl, wh, wm, fl, fh, fm)
+	}
+}
