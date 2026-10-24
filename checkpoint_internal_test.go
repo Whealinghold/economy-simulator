@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -699,5 +700,54 @@ func TestFields_EveryLiveFieldSavedOrDerived(t *testing.T) {
 		if !found[key] {
 			t.Errorf("savedOrDerived names %s, which is not a field of the structs in %v", key, files)
 		}
+	}
+}
+
+// TestCheckpoint_NoFloatsNoMapsNoTime verifies by syntax that the code which writes
+// and reads a checkpoint (checkpoint*.go and internal/codec, tests excluded) has no
+// floating-point type, no map type, no reference to the time or rand packages and no
+// goroutine: the bytes are the same on every platform and every run.
+//
+// Requirement: FR-CHK-015, NFR-CHK-005
+//
+// Guard: a map range in a writer gives a different byte order on each run, and a
+// float gives a different one on arm64 (architecture.md 3.5, 7.5); neither shows in
+// a single-platform test.
+func TestCheckpoint_NoFloatsNoMapsNoTime(t *testing.T) {
+	t.Parallel()
+	var files []string
+	for _, pattern := range []string{"checkpoint*.go", "internal/codec/*.go"} {
+		m, err := filepath.Glob(pattern)
+		if err != nil {
+			t.Fatalf("Glob(%q) error = %v, want nil", pattern, err)
+		}
+		files = append(files, m...)
+	}
+	files = slices.DeleteFunc(files, func(f string) bool { return strings.HasSuffix(f, "_test.go") })
+	if len(files) < 5 {
+		t.Fatalf("found %v, want the checkpoint files and the codec", files)
+	}
+	for _, f := range files {
+		file, err := parser.ParseFile(token.NewFileSet(), f, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", f, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch n := n.(type) {
+			case *ast.MapType:
+				t.Errorf("%s: map type", f)
+			case *ast.GoStmt:
+				t.Errorf("%s: go statement", f)
+			case *ast.Ident:
+				if n.Name == "float32" || n.Name == "float64" {
+					t.Errorf("%s: %s", f, n.Name)
+				}
+			case *ast.SelectorExpr:
+				if x, ok := n.X.(*ast.Ident); ok && (x.Name == "time" || x.Name == "rand") {
+					t.Errorf("%s: %s.%s", f, x.Name, n.Sel.Name)
+				}
+			}
+			return true
+		})
 	}
 }
