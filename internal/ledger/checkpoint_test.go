@@ -355,7 +355,7 @@ func TestState_PendingRelocationListAlwaysPresent(t *testing.T) {
 			if rows == nil {
 				b = append(b[:5], 9) // a relocation count of 9 with no row after it
 			}
-			if err := read(tiny(t, 0), b, 0, false); !errors.Is(err, codec.ErrMalformed) {
+			if err := read(tiny(t, 0), b, 1, false); !errors.Is(err, codec.ErrMalformed) {
 				t.Errorf("ReadState of relocation rows %v = %v, want ErrMalformed", rows, err)
 			}
 		})
