@@ -590,6 +590,9 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 		d.Discards = append(d.Discards, Discard{Commodity: CommodityID(r.Index(nc)), Quantity: Quantity(r.Bounded("quantity", MaxQuantity))})
 	}
 	for range r.Count(1) {
+		if r.Err() != nil {
+			return nil
+		}
 		d.Hold = append(d.Hold, CommodityID(r.Index(nc)))
 	}
 	d.Sticky = r.B()
