@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
@@ -153,6 +154,11 @@ func TestRestore_RefusesStateBeyondItsBounds(t *testing.T) {
 		{"hunger beyond the ticks run", func(w *World) { w.agents[1].hunger = 6 }},
 		{"unfed above the weight", func(w *World) { w.agents[1].unfed = 2 }},
 		{"role-since after the tick", func(w *World) { w.agents[1].roleSince = 6 }},
+		{"yield shock at the neutral 10 000", func(w *World) { w.shocks.entries = []shockEntry{{region: 0, recipe: 0, bp: 10_000}} }},
+		{"yield shocks out of order", func(w *World) {
+			w.shocks.entries = []shockEntry{{region: 0, recipe: 0, bp: 5_000}, {region: 0, recipe: 0, bp: 6_000}}
+		}},
+		{"next agent ID below the regions", func(w *World) { w.state.nextAgent = 0 }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,5 +233,85 @@ func TestRestore_NoJobDirectiveWithJunkFieldsRestores(t *testing.T) {
 	}
 	if got, want := r.agents[1].directive, (&Directive{Job: &JobRequest{NoJob: true}}); !reflect.DeepEqual(got, want) {
 		t.Errorf("restored directive = %+v, want %+v", got.Job, want.Job)
+	}
+}
+
+// TestLoadDirective_NoJobFieldsAreNeutral verifies, on hand-written bytes, that a
+// NoJob request reads its recipe and executions as 0 even in a world with no
+// recipe, and that any other value there is refused.
+//
+// Requirement: FR-CHK-041
+//
+// Fix: review of stage-2-2b. The restore bounded the ignored recipe like a live
+// job's, so the 0 that saveDirective writes was out of range in a world with no
+// recipe. TestRestore_NoJobDirectiveWithJunkFieldsRestores cannot see this: the
+// save already writes 0 and its world has recipes.
+func TestLoadDirective_NoJobFieldsAreNeutral(t *testing.T) {
+	t.Parallel()
+	// present, job, NoJob, recipe, executions, then three counts of 0 and not sticky.
+	tests := []struct {
+		name    string
+		b       []byte
+		wantErr bool
+	}{
+		{"zeros in a world with no recipe", []byte{1, 1, 1, 0, 0, 0, 0, 0, 0}, false},
+		{"recipe above 0", []byte{1, 1, 1, 1, 0, 0, 0, 0, 0}, true},
+		{"executions above 0", []byte{1, 1, 1, 0, 7, 0, 0, 0, 0}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := codec.NewReader(tt.b)
+			d := (&World{}).loadDirective(r)
+			err := r.Err()
+			if tt.wantErr {
+				if !errors.Is(err, codec.ErrMalformed) {
+					t.Errorf("loadDirective(%x) error = %v, want codec.ErrMalformed", tt.b, err)
+				}
+				return
+			}
+			if want := (&Directive{Job: &JobRequest{NoJob: true}}); err != nil || !reflect.DeepEqual(d, want) {
+				t.Errorf("loadDirective(%x) = %+v, error %v, want %+v and nil", tt.b, d, err, want)
+			}
+		})
+	}
+}
+
+// TestRead_RefusesUnorderedNamesAndTruncatedLists verifies, on hand-written bytes,
+// that the table of strategy names refuses a name that is not above the one before
+// it (equal or lower), and that a directive whose first intent, discard or hold is
+// out of range is refused as malformed, with no directive returned. The world has
+// no commodity, so every commodity index is out of range.
+//
+// Requirement: FR-CHK-012, FR-CHK-014
+func TestRead_RefusesUnorderedNamesAndTruncatedLists(t *testing.T) {
+	t.Parallel()
+	zeros := func(n int) []byte { return make([]byte, n) }
+	// Directive bytes: present, no job, then the counts of intents, discards and
+	// holds. A count of 2 needs 8 bytes per intent, 2 per discard and 1 per hold left
+	// in the input, or the count check refuses it before the first item.
+	tests := []struct {
+		name string
+		b    []byte
+		read func(r *codec.Reader) bool // reports whether a value came back
+	}{
+		{"names equal", []byte{2, 1, 'a', 1, 'a'}, func(r *codec.Reader) bool { return readStrategyNames(r) != nil }},
+		{"names descending", []byte{2, 1, 'b', 1, 'a'}, func(r *codec.Reader) bool { return readStrategyNames(r) != nil }},
+		{"two intents", append([]byte{1, 0, 2}, zeros(16)...), func(r *codec.Reader) bool { return (&World{}).loadDirective(r) != nil }},
+		{"two discards", append([]byte{1, 0, 0, 2}, zeros(4)...), func(r *codec.Reader) bool { return (&World{}).loadDirective(r) != nil }},
+		{"two holds", append([]byte{1, 0, 0, 0, 2}, zeros(2)...), func(r *codec.Reader) bool { return (&World{}).loadDirective(r) != nil }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := codec.NewReader(tt.b)
+			got := tt.read(r)
+			if err := r.Err(); !errors.Is(err, codec.ErrMalformed) {
+				t.Errorf("read of %x error = %v, want codec.ErrMalformed", tt.b, err)
+			}
+			if tt.name[:5] != "names" && got {
+				t.Errorf("read of %x returned a directive, want nil with the error", tt.b)
+			}
+		})
 	}
 }

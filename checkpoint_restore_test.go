@@ -772,7 +772,7 @@ type follower struct {
 // continuation needs is missing from the sections. The long matrix with the fork
 // helper, the logs and the observers added later is Phase 6.
 //
-// Requirement: FR-CHK-005, FR-CHK-050
+// Requirement: FR-CHK-005, FR-CHK-050, FR-CHK-051
 func TestRestore_ResaveIsAFixedPointAndContinues(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -832,6 +832,50 @@ func TestRestore_ResaveIsAFixedPointAndContinues(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestRestore_MillContinuesWithAnObserver verifies, at the integration level, that
+// a world restored from the mill at tick 4 steps six more ticks to the same
+// checkpoint bytes, snapshot and events as the original, with an Observer wired
+// to the restored world and the first event it sees being the restore's own.
+//
+// Requirement: FR-CHK-050, FR-CHK-051
+func TestRestore_MillContinuesWithAnObserver(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	orig := &recorder{}
+	w, err := economysim.NewWorld(millCfg(3, 4), economysim.WithSeed(3), economysim.WithObserver(orig))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	for range 4 {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+	}
+	mark := len(orig.events)
+	rec := &recorder{}
+	r, err := economysim.RestoreWorld(millCfg(3, 4), mustCheckpoint(t, w), economysim.WithObserver(rec))
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	for tick := 4; tick < 10; tick++ {
+		for _, x := range []*economysim.World{w, r} {
+			if err := x.Step(); err != nil {
+				t.Fatalf("tick %d: Step() error = %v, want nil", tick, err)
+			}
+		}
+		ws, _ := w.Snapshot()
+		rs, _ := r.Snapshot()
+		if !reflect.DeepEqual(ws, rs) || !bytes.Equal(mustMarshal(t, mustCheckpoint(t, w)), mustMarshal(t, mustCheckpoint(t, r))) {
+			t.Fatalf("tick %d: the restored world's snapshot or checkpoint differs from the original's", tick)
+		}
+	}
+	if len(rec.events) < 2 || !reflect.DeepEqual(orig.events[mark:], rec.events[1:]) {
+		t.Errorf("events after the restore = %d, want the restore event and then the original's %d events", len(rec.events), len(orig.events)-mark)
 	}
 }
 

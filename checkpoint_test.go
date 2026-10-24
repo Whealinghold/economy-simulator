@@ -922,6 +922,8 @@ func benchWorld(b *testing.B) (economysim.Config, *economysim.World, economysim.
 // BenchmarkCheckpoint reports the cost of a checkpoint of pack one at tick 60 and its
 // size in bytes (NFR-CHK-004). Benchmarks report; the allocation limit that must hold is
 // TestSave_AllocationOutsideTheStep.
+//
+// Requirement: NFR-CHK-004
 func BenchmarkCheckpoint(b *testing.B) {
 	_, w, c := benchWorld(b)
 	b.ReportAllocs()
@@ -938,7 +940,9 @@ func BenchmarkCheckpoint(b *testing.B) {
 }
 
 // BenchmarkRestoreWorld reports the cost of restoring the checkpoint of
-// BenchmarkCheckpoint (NFR-CHK-004).
+// BenchmarkCheckpoint.
+//
+// Requirement: NFR-CHK-004
 func BenchmarkRestoreWorld(b *testing.B) {
 	cfg, _, c := benchWorld(b)
 	b.ReportAllocs()

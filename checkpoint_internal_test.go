@@ -559,6 +559,35 @@ func TestUnsignedRefusesNegative(t *testing.T) {
 	}
 }
 
+// TestSave_EstatesHaveNoAgentRowAndRestoreRebuildsThem verifies that tag 3 holds
+// a record for each of the four agents and none for the estate (ID 0, past the
+// regions), and that the restored world binds its estate to the same ledger
+// account the original held.
+//
+// Arithmetic: ckptMill has one region, so the estate is agent 0 and the agents are
+// 1 to 4; the records carry the IDs 1, 2, 3 and 4.
+//
+// Requirement: FR-CHK-048
+func TestSave_EstatesHaveNoAgentRowAndRestoreRebuildsThem(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 3)
+	r := codec.NewReader(saveTag(t, w, 3)[1+len("default")+1:]) // past the strategy table
+	var ids []uint64
+	for range r.Count(1) {
+		ids = append(ids, readAgent(r).id)
+	}
+	if want := []uint64{1, 2, 3, 4}; !slices.Equal(ids, want) {
+		t.Errorf("tag 3 record IDs = %v, want %v (no row for the estate)", ids, want)
+	}
+	got, err := restoreOf(t, w)
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	if !slices.Equal(got.estates.accounts, w.estates.accounts) {
+		t.Errorf("restored estate accounts = %v, want %v", got.estates.accounts, w.estates.accounts)
+	}
+}
+
 // TestEachLive_SkipsEstatesAndRemovedSlots verifies that eachLive, the one liveness
 // rule of tags 3, 5, 6 and 7, visits exactly the slots past the estates that are
 // not the zero agent of a removed agent, in ascending ID.
