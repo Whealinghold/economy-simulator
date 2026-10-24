@@ -410,14 +410,7 @@ const agentRecordMin = 15
 // the regions plus the accounts.
 func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
-	names := make([]string, 0, 1)
-	for range r.Count(1) {
-		n := string(r.Bytes())
-		if k := len(names) - 1; k >= 0 && r.Err() == nil && names[k] >= n {
-			r.Failf("strategy name %q is not above the one before it", n)
-		}
-		names = append(names, n)
-	}
+	names := readStrategyNames(r)
 	if r.Err() == nil && int(w.state.nextAgent)-regions > w.ledger.Len() {
 		r.Failf("next agent ID %d, but the ledger has %d accounts", w.state.nextAgent, w.ledger.Len())
 	}
@@ -441,54 +434,107 @@ func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 	return nil
 }
 
-// loadAgent reads the record of one agent, checks every field against the rule of
-// its owner and puts the agent in its slot. It returns the agent's ID, the key the
-// next record must exceed. The fields a module hosts are read always (R10): while
-// the module is off, OwnUse and OwnUseJobs must be 0, there is no journey, and
-// DeathCarry must be its start.
-func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
-	id := r.Strict(prev, started)
-	acct := int(r.Index(uint64(w.ledger.Len())))
-	role := r.Index(uint64(len(w.cfg.Roles)))
-	weight := readBounded(r, "weight", MaxWeight)
-	flags := r.Index(1) // External and Mortal are the integration module's; no agent has one yet
-	name := r.Index(uint64(len(names)))
-	unfed := readBounded(r, "unfed", weight)
-	hunger := readBounded(r, "hunger", rs.tick)
-	privation := readBounded(r, "privation", rs.tick)
-	since := r.I()
-	carry := r.I()
-	ownUse, ownUseJobs, journey := r.U(), r.U(), r.B()
-	d := w.loadDirective(r)
-	if r.Err() != nil {
-		return id
+// readStrategyNames reads the table of strategy names that heads tag 3: a count and
+// the names in strictly ascending order.
+func readStrategyNames(r *codec.Reader) []string {
+	names := make([]string, 0, 1)
+	for range r.Count(1) {
+		n := string(r.Bytes())
+		if k := len(names) - 1; k >= 0 && r.Err() == nil && names[k] >= n {
+			r.Failf("strategy name %q is not above the one before it", n)
+		}
+		names = append(names, n)
 	}
-	v, err := w.ledger.Account(acct)
+	return names
+}
+
+// agentRec is the record of one agent as read, before any field is checked against
+// the world: the fields in the order of spec-checkpoint.md 4.2 tag 3. nameIdx is
+// the index into the table of strategy names.
+type agentRec struct {
+	id                          uint64
+	acct                        int
+	role                        uint64
+	weight, flags, nameIdx      int64
+	unfed, hunger, privation    int64
+	since, carry                int64
+	ownUse, ownUseJobs, journey bool
+	directive                   *Directive
+}
+
+// readAgentRec reads the 15 fields of an agent record, each against its own bound
+// (R6, R13). ownUse and ownUseJobs are read as the numbers they are and reported as
+// whether they are non-zero, since the module that owns them is off.
+func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) agentRec {
+	rec := agentRec{id: r.Strict(prev, started)}
+	rec.acct = int(r.Index(uint64(w.ledger.Len())))
+	rec.role = r.Index(uint64(len(w.cfg.Roles)))
+	rec.weight = readBounded(r, "weight", MaxWeight)
+	rec.flags = int64(r.Index(1)) // External and Mortal are the integration module's; no agent has one yet
+	rec.nameIdx = int64(r.Index(uint64(len(names))))
+	rec.unfed = readBounded(r, "unfed", rec.weight)
+	rec.hunger = readBounded(r, "hunger", rs.tick)
+	rec.privation = readBounded(r, "privation", rs.tick)
+	rec.since, rec.carry = r.I(), r.I()
+	rec.ownUse, rec.ownUseJobs, rec.journey = r.U() != 0, r.U() != 0, r.B()
+	rec.directive = w.loadDirective(r)
+	return rec
+}
+
+// checkAgentRec requires the record to describe an agent this world can hold. It
+// returns the agent's account.
+func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (ledger.View, error) {
+	v, err := w.ledger.Account(rec.acct)
 	switch {
-	case id < uint64(len(w.cfg.Regions)) || id >= uint64(w.state.nextAgent):
-		r.Failf("agent ID %d outside %d to %d", id, len(w.cfg.Regions), w.state.nextAgent)
-	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(id):
-		r.Failf("agent %d names account %d, which is not its open Agent account", id, acct)
-	case weight < 1 || flags != 0 || names[name] != w.cfg.Roles[role].Strategy:
-		r.Failf("agent %d has weight %d or a strategy %q that is not its role's", id, weight, names[name])
-	case since < 0 || since > rs.tick:
-		r.Failf("agent %d has RoleSince %d outside 0 to %d", id, since, rs.tick)
-	case carry != w.deathCarry(AgentID(id)):
-		r.Failf("agent %d has DeathCarry %d, not its start %d, while the population module is off", id, carry, w.deathCarry(AgentID(id)))
-	case ownUse != 0 || ownUseJobs != 0 || journey:
-		r.Failf("agent %d has own-use or journey state while its module is off", id)
+	case rec.id < uint64(len(w.cfg.Regions)) || rec.id >= uint64(w.state.nextAgent):
+		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, len(w.cfg.Regions), w.state.nextAgent)
+	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(rec.id):
+		err = fmt.Errorf("agent %d names account %d, which is not its open Agent account", rec.id, rec.acct)
+	default:
+		err = w.checkAgentFields(rs, rec, names)
 	}
+	return v, err
+}
+
+// checkAgentFields requires a weight, the strategy of the agent's role, a
+// role-since within the run, the death carry that is its start and none of the
+// state of a module that is off.
+func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) error {
+	switch id := AgentID(rec.id); {
+	case rec.weight < 1 || rec.flags != 0 || names[rec.nameIdx] != w.cfg.Roles[rec.role].Strategy:
+		return fmt.Errorf("agent %d has weight %d or a strategy %q that is not its role's", rec.id, rec.weight, names[rec.nameIdx])
+	case rec.since < 0 || rec.since > rs.tick:
+		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
+	case rec.carry != w.deathCarry(id):
+		return fmt.Errorf("agent %d has DeathCarry %d, not its start %d, while the population module is off", rec.id, rec.carry, w.deathCarry(id))
+	case rec.ownUse || rec.ownUseJobs || rec.journey:
+		return fmt.Errorf("agent %d has own-use or journey state while its module is off", rec.id)
+	}
+	return nil
+}
+
+// loadAgent reads the record of one agent, checks it and puts the agent in its
+// slot. It returns the agent's ID, the key the next record must exceed. The fields
+// a module hosts are read always (R10): while the module is off, OwnUse and
+// OwnUseJobs must be 0, there is no journey, and DeathCarry must be its start.
+func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
+	rec := w.readAgentRec(rs, r, names, prev, started)
 	if r.Err() != nil {
-		return id
+		return rec.id
 	}
-	a := newAgent(agentInit{id: AgentID(id), account: acct, role: RoleID(role), weight: weight, strategy: int(role), tick: since},
-		w.roles.row(RoleID(role)), &w.recipes)
-	a.unfed, a.hunger, a.privation, a.directive = unfed, hunger, privation, d
-	w.agents[id] = a
+	v, err := w.checkAgentRec(rs, &rec, names)
+	if err != nil {
+		r.Failf("%v", err)
+		return rec.id
+	}
+	a := newAgent(agentInit{id: AgentID(rec.id), account: rec.acct, role: RoleID(rec.role), weight: rec.weight, strategy: int(rec.role), tick: rec.since},
+		w.roles.row(RoleID(rec.role)), &w.recipes)
+	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
+	w.agents[rec.id] = a
 	w.live.agents++
-	w.live.households += weight
-	w.live.inRole[v.Region*len(w.cfg.Roles)+int(role)]++
-	return id
+	w.live.households += rec.weight
+	w.live.inRole[v.Region*len(w.cfg.Roles)+int(rec.role)]++
+	return rec.id
 }
 
 // loadDirective reads saveDirective's bytes: whether there is a directive, its

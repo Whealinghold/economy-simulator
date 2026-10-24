@@ -367,6 +367,15 @@ func TestRestore_Corrupt(t *testing.T) {
 		{"section that ends early", 5, func(_ *testing.T, b []byte) []byte { return b[:len(b)-1] }},
 		{"section that runs over", 5, func(_ *testing.T, b []byte) []byte { return append(b, 0) }},
 		{"rows in a skeleton", 11, constant(1)},
+		{"rows in the skills skeleton", 10, constant(0, 0, 1, 0)},
+		{"welfare field beyond the clamp", 7, func(t *testing.T, b []byte) []byte {
+			// The body starts with the count of records of agent 1, then its first record.
+			starts, _ := varintStarts(t, b, 0, 2)
+			if b[starts[0]] == 0 {
+				t.Fatalf("agent 1 holds no welfare record at tick 5, want at least one")
+			}
+			return setVarint(t, b, starts[1], 1<<62)
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -918,4 +927,36 @@ func TestRestore_ReportsEventAndLog(t *testing.T) {
 	if err := r.Step(); err != nil {
 		t.Errorf("Step() of the restored world error = %v, want nil", err)
 	}
+}
+
+// ExampleRestoreWorld takes the checkpoint of a world after three ticks and
+// restores a second world from it: the restored world is at the same tick and its
+// own checkpoint is the same bytes.
+func ExampleRestoreWorld() {
+	cfg := millCfg(3, 4)
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
+	if err != nil {
+		panic(err)
+	}
+	for range 3 {
+		if err := w.Step(); err != nil {
+			panic(err)
+		}
+	}
+	c, err := w.Checkpoint()
+	if err != nil {
+		panic(err)
+	}
+	r, err := economysim.RestoreWorld(cfg, c)
+	if err != nil {
+		panic(err)
+	}
+	again, err := r.Checkpoint()
+	if err != nil {
+		panic(err)
+	}
+	a, _ := c.MarshalBinary()
+	b, _ := again.MarshalBinary()
+	fmt.Println(r.Tick(), bytes.Equal(a, b))
+	// Output: 3 true
 }

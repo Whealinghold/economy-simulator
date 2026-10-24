@@ -52,12 +52,28 @@ func RestoreWorld(cfg Config, c Checkpoint, opts ...Option) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	o, err := applyOptions(opts)
+	w, o, err := restoreShell(cfg, f, opts)
 	if err != nil {
 		return nil, err
 	}
+	rs := &restoreCtx{tick: f.info.Tick}
+	if err := w.restoreState(rs, f.sections); err != nil {
+		return nil, err
+	}
+	w.announceRestore(f.info, o)
+	return w, nil
+}
+
+// restoreShell is steps 2 and 3: the options (WithSeed is refused, the effective
+// seed is the header's or the reseeded one), the configuration through the one
+// path construction uses, and the comparison of the hashes.
+func restoreShell(cfg Config, f frame, opts []Option) (*World, options, error) {
+	o, err := applyOptions(opts)
+	if err != nil {
+		return nil, o, err
+	}
 	if o.seedGiven {
-		return nil, fmt.Errorf("WithSeed on RestoreWorld, the checkpoint holds the seed: %w", ErrOptionContext)
+		return nil, o, fmt.Errorf("WithSeed on RestoreWorld, the checkpoint holds the seed: %w", ErrOptionContext)
 	}
 	o.seed = f.info.Seed
 	if o.reseedGiven {
@@ -65,37 +81,40 @@ func RestoreWorld(cfg Config, c Checkpoint, opts ...Option) (*World, error) {
 	}
 	w, err := buildShell(cfg, o)
 	if err != nil {
-		return nil, err
+		return nil, o, err
 	}
 	if w.hash != f.info.ConfigHash {
-		return nil, fmt.Errorf("%w: checkpoint hash %x, configuration hash %x, encoding version %d",
+		return nil, o, fmt.Errorf("%w: checkpoint hash %x, configuration hash %x, encoding version %d",
 			ErrCheckpointConfig, f.info.ConfigHash, w.hash, f.hashVersion)
 	}
-	rs := &restoreCtx{tick: f.info.Tick}
-	bodies, err := splitSections(&w.cfg, f.sections)
+	return w, o, nil
+}
+
+// restoreState is steps 4 to 11 on a shell: the extensions are matched, the
+// sections are read, the cross-checks and the audit run, and last the extensions
+// load their state. A failure at any step before the last touches nothing the
+// consumer owns.
+func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
+	bodies, err := splitSections(&w.cfg, sections)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if rs.entries, err = w.matchExtensions(bodies); err != nil {
-		return nil, err
+		return err
 	}
 	w.allocate()
 	if err := w.loadSections(rs, bodies); err != nil {
-		return nil, err
+		return err
 	}
 	if err := w.checkpointCross(); err != nil {
-		return nil, err
+		return err
 	}
 	w.finishScratch()
 	w.seedWage = seedWages(&w.cfg)
 	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
 	}
-	if err := w.loadExtensionState(rs.entries); err != nil {
-		return nil, err
-	}
-	w.announceRestore(f.info, o)
-	return w, nil
+	return w.loadExtensionState(rs.entries)
 }
 
 // sectionBody is the body of one section the configuration expects, with its row.
@@ -214,16 +233,21 @@ func (w *World) matchExtensions(bodies []sectionBody) ([]extRecord, error) {
 			}
 		}
 	}
-	have := w.statefulEntries()
+	return recs, sameExtensions(w.statefulEntries(), recs)
+}
+
+// sameExtensions requires the registered Stateful extensions and the entries, both
+// in (kind, name) order, to be the same set.
+func sameExtensions(have []extEntry, recs []extRecord) error {
 	for i := 0; i < len(have) || i < len(recs); i++ {
 		switch {
 		case i >= len(recs) || (i < len(have) && compareExt(have[i].kind, have[i].name, recs[i].kind, recs[i].name) < 0):
-			return nil, fmt.Errorf("%w: %q (kind %d) is registered and Stateful but has no entry", ErrCheckpointExtension, have[i].name, have[i].kind)
+			return fmt.Errorf("%w: %q (kind %d) is registered and Stateful but has no entry", ErrCheckpointExtension, have[i].name, have[i].kind)
 		case i >= len(have) || compareExt(have[i].kind, have[i].name, recs[i].kind, recs[i].name) > 0:
-			return nil, fmt.Errorf("%w: entry %q (kind %d) is not registered or not Stateful", ErrCheckpointExtension, recs[i].name, recs[i].kind)
+			return fmt.Errorf("%w: entry %q (kind %d) is not registered or not Stateful", ErrCheckpointExtension, recs[i].name, recs[i].kind)
 		}
 	}
-	return recs, nil
+	return nil
 }
 
 // checkStrategyNames reads the table of strategy names at the head of tag 3 and
