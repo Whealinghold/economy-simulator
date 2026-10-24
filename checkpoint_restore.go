@@ -354,7 +354,10 @@ func (w *World) checkpointCross() error {
 	}
 	var missing error
 	w.eachLive(func(a *agent) {
-		v, _ := w.ledger.Account(a.account)
+		v, err := w.ledger.Account(a.account)
+		if err != nil && missing == nil {
+			missing = fmt.Errorf("%w: agent %d has no account %d: %w", ErrCheckpointCorrupt, a.id, a.account, err)
+		}
 		if cell := v.Region*roles + int(a.role); !w.state.hadAgent[cell] && missing == nil {
 			missing = fmt.Errorf("%w: agent %d lives in region %d, role %d, whose had-an-agent bit is not set", ErrCheckpointCorrupt, a.id, v.Region, a.role)
 		}

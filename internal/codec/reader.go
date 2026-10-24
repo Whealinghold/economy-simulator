@@ -188,17 +188,17 @@ func (r *Reader) Done() error {
 	return r.err
 }
 
-// Bounded reads a U that is at most max, or records a violation of R13 naming
+// Bounded reads a U that is at most limit, or records a violation of R13 naming
 // what was read and returns 0.
-func (r *Reader) Bounded(what string, max int64) int64 {
+func (r *Reader) Bounded(what string, limit int64) int64 {
 	at := r.off
-	if max < 0 {
-		r.fail(at, fmt.Sprintf("%s has a negative bound %d", what, max))
+	if limit < 0 {
+		r.fail(at, fmt.Sprintf("%s has a negative bound %d", what, limit))
 		return 0
 	}
 	v := r.U()
-	if v > uint64(max) {
-		r.fail(at, fmt.Sprintf("%s %d is above %d", what, v, max))
+	if v > uint64(limit) {
+		r.fail(at, fmt.Sprintf("%s %d is above %d", what, v, limit))
 		return 0
 	}
 	return int64(v)
