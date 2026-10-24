@@ -66,6 +66,20 @@ const (
 	// MaxSeedPrices is the most seed prices of a warm start: one per region and
 	// commodity.
 	MaxSeedPrices = MaxRegions * MaxCommodities
+	// MaxDistance is the longest edge, in the pack's distance unit. A shortest
+	// path has at most MaxRegions - 1 edges and an effective edge is at most
+	// MaxDistance * MaxEdgeFactorBP / 10 000, so a path sum stays below 10^13
+	// (spec-regions.md 4.2). Provisional (N-027).
+	MaxDistance = 1_000_000_000
+	// MaxEdges is the most edges: an average out-degree of 20, which bounds the
+	// construction work of the region graph (spec-regions.md 4.2). Provisional.
+	MaxEdges = 20 * MaxRegions
+	// MaxEdgeFactorBP is the largest length factor of an edge status, in basis
+	// points: ten times (spec-regions.md 7.2). Provisional.
+	MaxEdgeFactorBP = 100_000
+	// MaxRegionPrices is the most reference-price overrides: one per region and
+	// commodity, derived as MaxSeedPrices is (spec-regions.md 4.2).
+	MaxRegionPrices = MaxRegions * MaxCommodities
 	// MaxViabilityPivots is the most pivots the load-time viability check and a
 	// solve may use (spec-viability.md 11). Bland's rule terminates but may be
 	// slow, so this caps the work; a check that reaches it is skipped with a

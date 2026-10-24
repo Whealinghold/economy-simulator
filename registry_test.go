@@ -36,8 +36,6 @@ type registryInput struct {
 // field deletes its entries; the test fails when an entry exists in the code,
 // and when a row is neither built nor listed.
 var notBuilt = []string{
-	// Sections of Config built in Stage 2 (regions graph and price overrides).
-	"Config.Edges", "Config.RegionPrices", "Edge", "RegionPrice",
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here. Modules.MoneySupply is the scope token the table spells for the
 	// rows of that module's flows.

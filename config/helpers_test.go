@@ -26,7 +26,7 @@ var validationSentinels = []error{
 	economysim.ErrNoRegions, economysim.ErrModuleDependency, economysim.ErrBasketMismatch,
 	economysim.ErrCalendarTick, economysim.ErrCalendarSeasons, economysim.ErrCostShares,
 	economysim.ErrToolNotDurable, economysim.ErrEligibleHasTool, economysim.ErrUnknownSeason,
-	economysim.ErrWarmStartPrice, economysim.ErrWarmStartJob,
+	economysim.ErrWarmStartPrice, economysim.ErrWarmStartJob, economysim.ErrSelfEdge,
 }
 
 // validationErrors returns every *ValidationError of an error, in the order of

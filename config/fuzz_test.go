@@ -38,6 +38,8 @@ func FuzzLoad(f *testing.F) {
 	f.Add([]byte(minimal), []byte("[world]\nscale = 2\n"), []byte("[world]\nscale = 3\n"))
 	f.Add([]byte(minimal+"[a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q]\n"), []byte("x = [[[[[[1]]]]]]\n"), []byte("y = { a = { b = 1 } }\n"))
 	f.Add([]byte(minimal+"[modules.estates]\n"), []byte("[role.a]\ntarget_ratio = 1.5\n"), []byte("world = 1\n"))
+	f.Add([]byte(minimal+"[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 0\n"), []byte("[region.a.edge.a]\ndistance = 2\n"), []byte("[region.a.reference_price]\nx = 1\n"))
+	f.Add([]byte(minimal+"[region.a.edge.b]\n"), []byte("[region.a.edge.b]\ndistance = 1.5\n"), []byte("[region.a.reference_price]\nx = \"1\"\n"))
 	f.Fuzz(func(t *testing.T, a, b, c []byte) {
 		cfg, err := config.Parse(a, b, c)
 		if err != nil {

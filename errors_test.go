@@ -210,6 +210,8 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 		economysim.ErrNotViable, economysim.ErrNoUpkeep, economysim.ErrSolveLimit, economysim.ErrSolveInconsistent,
 		economysim.ErrCheckpointVersion, economysim.ErrCheckpointCorrupt, economysim.ErrCheckpointConfig,
 		economysim.ErrCheckpointExtension, economysim.ErrOptionContext,
+		economysim.ErrSelfEdge, economysim.ErrUnknownEdge, economysim.ErrUnknownAgent, economysim.ErrClosedAccount,
+		economysim.ErrNotRelocatable, economysim.ErrSameRegion, economysim.ErrOpenReservation, economysim.ErrRegionBound,
 	}
 	seen := map[string]bool{}
 	for _, s := range sentinels {
@@ -317,5 +319,31 @@ func TestSolveError(t *testing.T) {
 	var se *economysim.SolveError
 	if !errors.As(err, &se) || se.Rows != 3 || se.Columns != 9 || se.Pivots != 7 {
 		t.Errorf("errors.As = %+v, want the counts back", se)
+	}
+}
+
+// TestRegionBoundError_MatchesAndNames verifies that a *RegionBoundError matches
+// ErrRegionBound with errors.Is, alone and wrapped, matches no other sentinel,
+// is found by errors.As with its obligation, and says the obligation in its text.
+//
+// Requirement: FR-REG-047, FR-REG-060
+func TestRegionBoundError_MatchesAndNames(t *testing.T) {
+	t.Parallel()
+	err := error(&economysim.RegionBoundError{Obligation: "open_shipment"})
+	wrapped := fmt.Errorf("relocate: %w", err)
+	for _, e := range []error{err, wrapped} {
+		if !errors.Is(e, economysim.ErrRegionBound) {
+			t.Errorf("errors.Is(%v, ErrRegionBound) = false, want true", e)
+		}
+		if errors.Is(e, economysim.ErrSameRegion) || errors.Is(e, economysim.ErrOpenReservation) {
+			t.Errorf("errors.Is(%v, another refusal) = true, want false", e)
+		}
+	}
+	var rb *economysim.RegionBoundError
+	if !errors.As(wrapped, &rb) || rb.Obligation != "open_shipment" {
+		t.Errorf("errors.As(%v, *RegionBoundError) = %v, want the obligation open_shipment", wrapped, rb)
+	}
+	if got, want := err.Error(), economysim.ErrRegionBound.Error()+": open_shipment"; got != want {
+		t.Errorf("RegionBoundError.Error() = %q, want %q", got, want)
 	}
 }

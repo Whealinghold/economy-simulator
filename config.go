@@ -37,6 +37,14 @@ type Config struct {
 	Roles []Role
 	// Regions are the places, by ID in canonical order.
 	Regions []Region
+	// Edges are the directed routes between regions, by (From, To) in canonical
+	// order; none means no region can reach another (spec-regions.md 4.1). Its
+	// hash id is 8, between Regions (7) and Groups (10); id 9 is RegionPrices.
+	Edges []Edge
+	// RegionPrices are the reference-price overrides, by (Region, Commodity) in
+	// canonical order; none means every region uses the commodity's price
+	// (spec-regions.md 5.2). Its hash id is 9.
+	RegionPrices []RegionPrice
 	// Groups are the population: the households of a role in a region, in
 	// canonical order (by region, then role).
 	Groups []Group
@@ -434,6 +442,31 @@ type Region struct {
 	Label string
 }
 
+// Edge is a directed route. It says that a carrier can go directly from From to
+// To, over Distance. It says nothing about who, how fast or how much: those are
+// the transport module's (spec-regions.md 4.1).
+type Edge struct {
+	// From is the ID of the region the route leaves.
+	From string
+	// To is the ID of the region the route enters; it differs from From.
+	To string
+	// Distance is the length of the route in the pack's distance unit, 1 to
+	// MaxDistance. It has no default.
+	Distance int64
+}
+
+// RegionPrice replaces, in one region, the reference price of one commodity
+// (spec-regions.md 5.2).
+type RegionPrice struct {
+	// Region is the ID of the region whose reference price differs.
+	Region string
+	// Commodity is the ID of the commodity whose reference price differs.
+	Commodity string
+	// Price is the reference price in that region, in minor units, 1 to
+	// MaxPrice. It has no default.
+	Price Price
+}
+
 // Group is the population of one role in one region (spec-scale.md 3.1).
 type Group struct {
 	// Region is the ID of the region.
@@ -554,6 +587,12 @@ func (c Config) canonical() Config {
 	for i := range out.Regions {
 		out.Regions[i].ExtraUpkeep = sortedBy(out.Regions[i].ExtraUpkeep, byCommodity)
 	}
+	out.Edges = sortedBy(c.Edges, func(a, b Edge) int {
+		return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.To, b.To))
+	})
+	out.RegionPrices = sortedBy(c.RegionPrices, func(a, b RegionPrice) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Commodity, b.Commodity))
+	})
 	out.Groups = sortedBy(c.Groups, func(a, b Group) int {
 		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Role, b.Role))
 	})

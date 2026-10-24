@@ -224,6 +224,7 @@ type validator struct {
 	rep report
 
 	commodity, recipe, role, region map[string]bool
+	override                        map[[2]string]Price
 	lk                              lookup
 	cal                             calendarFacts
 }
@@ -273,6 +274,8 @@ func (v *validator) counts() {
 	over(len(c.Recipes), MaxRecipes, "recipes")
 	over(len(c.Roles), MaxRoles, "roles")
 	over(len(c.Regions), MaxRegions, "regions")
+	over(len(c.Edges), MaxEdges, "edges")
+	over(len(c.RegionPrices), MaxRegionPrices, "region_prices")
 	over(len(c.Groups), MaxGroups, "groups")
 	over(len(c.Yields), MaxYields, "yields")
 	over(len(c.Calendar.Months), MaxMonths, "calendar", "months")
@@ -334,6 +337,7 @@ func (v *validator) declare() {
 		v.region[e.ID] = true
 	}
 	v.lk = newLookup(&v.c)
+	v.override = overrides(c.RegionPrices)
 }
 
 // local is phase 2: the rules that read one entity. It reports ErrNoRegions,
@@ -461,6 +465,8 @@ func (v *validator) references() {
 	for _, e := range c.Regions {
 		items([]string{"regions", e.ID, "extra_upkeep"}, e.ExtraUpkeep)
 	}
+
+	v.graphRules()
 
 	yield := make(map[[2]string]bool, len(c.Yields))
 	for _, y := range c.Yields {
@@ -924,6 +930,7 @@ func (v *validator) fields() {
 	v.yieldRules()
 	v.roleRules()
 	v.regionRules()
+	v.edgeRules()
 	v.groupRules()
 	v.warmRules()
 }
@@ -1243,14 +1250,13 @@ func (v *validator) warmRules() {
 		if floorOK && price < floor {
 			v.rep.add(ErrWarmStartPrice, p, i64(price), i64(floor))
 		}
-		cm := v.lk.commodity[s.Commodity]
-		if cm == nil || !bandOK || cm.ReferencePrice < 1 || cm.ReferencePrice > MaxPrice {
+		ref, refOK := v.refPrice(s.Region, s.Commodity)
+		if !refOK || !bandOK {
 			continue
 		}
 		// The band runs from RefBandLow to RefBandHigh basis points of the
-		// effective reference price (spec-beliefs.md 3.2.1); the products are at
-		// most 10^9 * 10^6.
-		ref := int64(cm.ReferencePrice)
+		// effective reference price of the seed's region (spec-beliefs.md 3.2.1,
+		// spec-regions.md 5.2.2); the products are at most 10^9 * 10^6.
 		lo, hi := ref*w.RefBandLow, ref*w.RefBandHigh
 		switch scaled := price * wholeBP; {
 		case scaled < lo:
@@ -1335,21 +1341,7 @@ func (v *validator) warmRules() {
 func (v *validator) economics() {
 	c := &v.c
 	if floor, ok := resolutionFloor(c.World); ok {
-		// A commodity is tradable if it is in the tradable set of some role
-		// (spec-agents.md 3.4); the cheapest of them must clear the floor, so each
-		// one that does not is reported.
-		tradable := map[string]bool{}
-		for _, set := range tradableSets(c, v.lk) {
-			for id := range set {
-				tradable[id] = true
-			}
-		}
-		for _, cm := range c.Commodities {
-			price := int64(cm.ReferencePrice)
-			if tradable[cm.ID] && price >= 1 && price <= MaxPrice && price < floor {
-				v.rep.add(ErrOutOfBounds, []string{"commodities", cm.ID, "reference_price"}, i64(price), i64(floor))
-			}
-		}
+		v.priceFloor(floor)
 	}
 
 	tol := c.World.BasketTolerance
@@ -1360,7 +1352,7 @@ func (v *validator) economics() {
 		if rg.ReferenceBasket < 0 || rg.ReferenceBasket > MaxMoney {
 			continue
 		}
-		cost, ok := v.baselineCost(rg.ExtraUpkeep)
+		cost, ok := v.baselineCost(rg.ID, rg.ExtraUpkeep)
 		if !ok {
 			continue
 		}
@@ -1378,20 +1370,62 @@ func (v *validator) economics() {
 	}
 }
 
+// priceFloor checks that the effective reference price of every tradable
+// commodity, in every region, clears the resolution floor (spec-regions.md
+// 5.2.3). A commodity is tradable if it is in the tradable set of some role
+// (spec-agents.md 3.4). A default price below the floor is reported once, at
+// the commodity, when some region still uses it; an override below the floor is
+// reported at its own row.
+func (v *validator) priceFloor(floor int64) {
+	c := &v.c
+	tradable := map[string]bool{}
+	for _, set := range tradableSets(c, v.lk) {
+		for id := range set {
+			tradable[id] = true
+		}
+	}
+	overridden := v.overridesBelow(floor, tradable)
+	for _, cm := range c.Commodities {
+		price := int64(cm.ReferencePrice)
+		inUse := overridden[cm.ID] == 0 || len(v.region) > overridden[cm.ID]
+		if tradable[cm.ID] && inUse && price >= 1 && price <= MaxPrice && price < floor {
+			v.rep.add(ErrOutOfBounds, []string{"commodities", cm.ID, "reference_price"}, i64(price), i64(floor))
+		}
+	}
+}
+
+// overridesBelow reports an override of a tradable commodity below the floor at
+// its row, and returns the number of regions that override each commodity (a
+// count only; no result depends on the iteration order of the map).
+func (v *validator) overridesBelow(floor int64, tradable map[string]bool) map[string]int {
+	overridden := map[string]int{}
+	for i, p := range v.c.RegionPrices {
+		if !v.region[p.Region] || !v.commodity[p.Commodity] {
+			continue
+		}
+		overridden[p.Commodity]++
+		if price := int64(p.Price); tradable[p.Commodity] && price >= 1 && price <= MaxPrice && price < floor {
+			v.rep.add(ErrOutOfBounds, []string{"region_prices[" + itoa(i) + "]", "price"}, i64(price), i64(floor))
+		}
+	}
+	return overridden
+}
+
 // baselineCost is the cost of the world's upkeep plus a region's extra upkeep
-// at the commodities' reference prices (spec-currency.md 5.1). ok is false when
-// a commodity is not declared, a price or a quantity is outside its bound (the
-// rules for those have spoken) so the cost is not defined; inside the bounds the
-// sum is at most 32 items of 1 000 units at 10^9, which fits.
-func (v *validator) baselineCost(extra []Item) (cost int64, ok bool) {
+// at the region's effective reference prices (spec-currency.md 5.1,
+// spec-regions.md 5.2.3). ok is false when a commodity is not declared, a price
+// or a quantity is outside its bound (the rules for those have spoken) so the
+// cost is not defined; inside the bounds the sum is at most 32 items of 1 000
+// units at 10^9, which fits.
+func (v *validator) baselineCost(region string, extra []Item) (cost int64, ok bool) {
 	for _, list := range [][]Item{v.c.World.Upkeep, extra} {
 		for _, it := range list {
-			cm := v.lk.commodity[it.Commodity]
+			price, priceOK := v.refPrice(region, it.Commodity)
 			q := int64(it.Quantity)
-			if cm == nil || cm.ReferencePrice < 1 || cm.ReferencePrice > MaxPrice || q < 1 || q > perHousehold {
+			if !priceOK || q < 1 || q > perHousehold {
 				return 0, false
 			}
-			cost += q * int64(cm.ReferencePrice)
+			cost += q * price
 		}
 	}
 	return cost, true
@@ -1989,6 +2023,7 @@ func warnings(c *Config) []Warning {
 		add("entry_share_window", "world", "entry_share")
 	}
 
+	out = append(out, regionWarnings(c)...)
 	sortWarnings(out)
 	return out
 }
