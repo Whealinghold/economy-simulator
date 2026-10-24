@@ -122,7 +122,7 @@ func (w *World) revise(i, j int, commodity CommodityID, filled int64, t *beliefs
 	if err != nil {
 		invariant("the ledger refused the holding of a live agent: " + err.Error())
 	}
-	bd := beliefs.Limits(int64(w.cfg.Commodities[commodity].ReferencePrice), int64(rec.unitCost), w.bp)
+	bd := beliefs.Limits(int64(w.refs[i]), int64(rec.unitCost), w.bp)
 	before := a.beliefs[ci]
 	w.rnd.keyedPair(siteOutcome, w.Tick(), int64(a.id), int64(commodity))
 	draw := w.rnd.word()
@@ -315,13 +315,12 @@ func (w *World) p63Welfare() {
 // (spec-welfare-and-wages.md 2.1, FR-WEL-003). The window is pushed at P5.1 in
 // every tick with a trade and never shrinks, so Len() == 0 says never traded.
 func (w *World) valuePrices() {
-	nc := len(w.cfg.Commodities)
 	for i := range w.oc.valued {
 		if w.markets.windows[i].Len() > 0 {
 			w.oc.valued[i] = int64(w.markets.reports[i].Price)
 			continue
 		}
-		w.oc.valued[i] = int64(w.cfg.Commodities[i%nc].ReferencePrice)
+		w.oc.valued[i] = int64(w.refs[i])
 	}
 }
 

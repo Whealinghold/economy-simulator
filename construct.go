@@ -203,15 +203,15 @@ func (w *World) allocate() {
 
 // seedPrices returns the function that gives the seed price of a market: the
 // entry of the warm start when there is one, else the commodity's effective
-// reference price (spec-beliefs.md 8.1, FR-BEL-024, FR-CLR-020). The slice has
-// no regional override of the reference price (the regions module's).
+// reference price in the region (spec-beliefs.md 8.1, FR-BEL-024, FR-CLR-020,
+// spec-regions.md 5.2.2). A warm-start price replaces the seed only.
 func seedPrices(c *Config) func(RegionID, CommodityID) Price {
 	warm := warmPriceTable(c)
 	return func(r RegionID, k CommodityID) Price {
 		if p := warm[int(r)*len(c.Commodities)+int(k)]; p > 0 {
 			return p
 		}
-		return c.Commodities[k].ReferencePrice
+		return c.refPrice(r, k)
 	}
 }
 
@@ -284,7 +284,7 @@ func (b *builder) seedBeliefs(a *agent, region RegionID) {
 	seeds := b.seeds[:len(row.tradable)]
 	for i, c := range row.tradable {
 		seeds[i] = beliefSeed{
-			Ref:      int64(w.cfg.Commodities[c].ReferencePrice),
+			Ref:      int64(w.refPrice(region, c)),
 			UnitCost: w.prod.unitCost(region, c),
 			Empty:    true,
 			Price:    int64(w.markets.reports[w.markets.index(region, c)].Price),

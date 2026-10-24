@@ -852,6 +852,21 @@ func TestValidate_DerivedProducts(t *testing.T) {
 			value:  "2000000000000000000",
 		},
 		{
+			// The same inputs at a default of 1 000 are fine; the override of the
+			// only region makes each 10^9, so the derived product is checked at the
+			// dearest price a region can have (spec-regions.md 5.2).
+			name: "cost of the inputs at an overriding price",
+			mutate: func(c *economysim.Config) {
+				withSmelt(c, 1_000, 1_000, 1_000_000_000, 1)
+				c.RegionPrices = []economysim.RegionPrice{
+					{Region: "home", Commodity: "coal", Price: economysim.MaxPrice},
+					{Region: "home", Commodity: "ore", Price: economysim.MaxPrice},
+				}
+			},
+			paths: [][]string{{"recipes", "smelt", "inputs"}},
+			value: "2000000000000000000",
+		},
+		{
 			// An output of 10^6 at ten times the yield (10^7) with a weight of 1 000
 			// is 10^10, above MaxQuantity.
 			name: "weight times an output at the largest yield",

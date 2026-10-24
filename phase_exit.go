@@ -499,7 +499,7 @@ func (w *World) fillSeeds(g RegionID, row *roleRow) {
 		m := w.markets.index(g, c)
 		mean, has := w.markets.windows[m].Mean()
 		x.seeds[i] = beliefSeed{
-			Ref: int64(w.cfg.Commodities[c].ReferencePrice), UnitCost: w.prod.unitCost(g, c),
+			Ref: int64(w.refPrice(g, c)), UnitCost: w.prod.unitCost(g, c),
 			Mean: mean, Empty: !has, Price: int64(w.markets.reports[m].Price),
 		}
 	}

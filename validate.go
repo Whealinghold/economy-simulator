@@ -225,6 +225,7 @@ type validator struct {
 
 	commodity, recipe, role, region map[string]bool
 	override                        map[[2]string]Price
+	dearest                         map[string]Price // the highest in-bounds override of each commodity
 	lk                              lookup
 	cal                             calendarFacts
 }
@@ -338,6 +339,12 @@ func (v *validator) declare() {
 	}
 	v.lk = newLookup(&v.c)
 	v.override = overrides(c.RegionPrices)
+	v.dearest = make(map[string]Price, len(c.RegionPrices))
+	for _, p := range c.RegionPrices {
+		if p.Price <= MaxPrice {
+			v.dearest[p.Commodity] = max(v.dearest[p.Commodity], p.Price)
+		}
+	}
 }
 
 // local is phase 2: the rules that read one entity. It reports ErrNoRegions,
@@ -1475,12 +1482,14 @@ func (v *validator) overflow() {
 		}
 		return top * MaxYieldBP / wholeBP
 	}
+	// price is the dearest a commodity can be in any region (spec-regions.md
+	// 5.2), because a product must fit wherever the household is.
 	price := func(id string) (int64, bool) {
 		cm := v.lk.commodity[id]
 		if cm == nil || cm.ReferencePrice < 1 || cm.ReferencePrice > MaxPrice {
 			return 0, false
 		}
-		return int64(cm.ReferencePrice), true
+		return int64(max(cm.ReferencePrice, v.dearest[id])), true
 	}
 	over := func(p []string, product int64, ok bool, bound int64) {
 		switch {

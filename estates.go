@@ -338,7 +338,7 @@ func (e *estates) asks(l *ledger.Ledger, cfg *Config, r RegionID, dst []Order) (
 	lots := e.heldLots(l, r)
 	first := func(lt ledger.Lot) Price {
 		c := &cfg.Commodities[lt.Commodity]
-		p, ok := firstPrice(c.ReferencePrice, c.Durability, lt.Durability, floor)
+		p, ok := firstPrice(cfg.refPrice(r, CommodityID(lt.Commodity)), c.Durability, lt.Durability, floor)
 		if !ok {
 			invariant("the first price of an estate lot overflows")
 		}

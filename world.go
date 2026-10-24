@@ -52,6 +52,11 @@ type World struct {
 	days    dayTable
 	yields  yieldTable
 	shocks  yieldShocks
+	// geo is the region graph as the world reads it, and refs the effective
+	// reference price of every (region, commodity), at index region *
+	// len(Commodities) + commodity (regions.go). Both are derived from cfg.
+	geo  regionState
+	refs []Price
 
 	// rnd is the one random source (random.go).
 	rnd *stream
@@ -222,6 +227,12 @@ func buildShell(cfg Config, o options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
+	geo, err := newGraph(&c, nil)
+	// Excluded from coverage (testing.md 9.5): the bounds keep every length and
+	// path below int64, so a validated configuration builds its graph.
+	if err != nil {
+		return nil, err
+	}
 	return &World{
 		cfg:     c,
 		hash:    HashConfig(c),
@@ -235,6 +246,8 @@ func buildShell(cfg Config, o options) (*World, error) {
 		roles:   newRoleTable(&c),
 		days:    newDayTable(c.Calendar),
 		yields:  newYieldTable(&c),
+		geo:     regionState{g: geo},
+		refs:    resolveRefPrices(&c),
 		shocks:  yieldShocks{},
 		rnd:     newStream(o.seed),
 		state:   newWorldState(o.seed, len(c.Regions), len(c.Roles)),

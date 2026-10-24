@@ -57,8 +57,7 @@ func TestSeedPrice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			cm := Commodity{ID: "x", ReferencePrice: tt.ref}
-			seed, raw, lifted, err := seedConfig().seedPrice(tt.dual, tt.scale, &cm)
+			seed, raw, lifted, err := seedConfig().seedPrice(tt.dual, tt.scale, int64(tt.ref))
 			if err != nil || seed != tt.seed || raw != tt.raw || lifted != tt.lifted {
 				t.Errorf("seedPrice(%s) = %d, %d, %v, %v, want %d, %d, %v, nil", tt.name, seed, raw, lifted, err, tt.seed, tt.raw, tt.lifted)
 			}

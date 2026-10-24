@@ -267,7 +267,7 @@ func (sc *viewScratch) fillCommodities(v *AgentView, row *roleRow, a *agent, c *
 			return fmt.Errorf("fill view of agent %d: expiring units of commodity %d: %w", a.id, id, err)
 		}
 		rep, win := c.market(region, id)
-		ref := c.cfg.Commodities[id].ReferencePrice
+		ref := c.cfg.refPrice(region, id)
 		var unitCost int64
 		if makesIn(v.Recipes, id) {
 			unitCost = c.prod.unitCost(region, id)
