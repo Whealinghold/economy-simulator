@@ -251,18 +251,20 @@ func sameExtensions(have []extEntry, recs []extRecord) error {
 }
 
 // checkStrategyNames reads the table of strategy names at the head of tag 3 and
-// requires each to be registered. A table it cannot read is left to the reader of
-// the section, which names the fault.
+// requires each to be registered. A table it cannot read is corrupt.
 func (w *World) checkStrategyNames(body []byte) error {
 	r := codec.NewReader(body)
 	for range r.Count(1) {
 		name := string(r.Bytes())
 		if r.Err() != nil {
-			return nil
+			break
 		}
 		if !w.strategyRegistered(name) {
 			return fmt.Errorf("%w: strategy %q of an agent: %w", ErrCheckpointExtension, name, ErrUnknownStrategy)
 		}
+	}
+	if err := r.Err(); err != nil {
+		return fmt.Errorf("%w: section %d (Agents): %w", ErrCheckpointCorrupt, tagAgents, err)
 	}
 	return nil
 }

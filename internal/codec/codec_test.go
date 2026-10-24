@@ -718,3 +718,15 @@ func TestReader_BoundedEdges(t *testing.T) {
 		t.Errorf("Bounded(6 of 5) = %d, %v, want 0 and the error naming run 6 above 5", got, r.Err())
 	}
 }
+
+// TestReader_BoundedNegativeMaxRefusesEverything verifies that a negative maximum
+// fails closed: it is not read as a huge unsigned limit that accepts any value.
+//
+// Requirement: FR-CHK-013
+func TestReader_BoundedNegativeMaxRefusesEverything(t *testing.T) {
+	t.Parallel()
+	r := codec.NewReader([]byte{0})
+	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil {
+		t.Errorf("Bounded(0 of -1) = %d, %v, want 0 and an error", got, r.Err())
+	}
+}
