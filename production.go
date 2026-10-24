@@ -676,7 +676,7 @@ func (w *World) saveJobs(cw *codec.Writer) error {
 	w.eachLive(func(a *agent) {
 		w.saveJob(cw, a)
 		for _, r := range a.residues {
-			cw.U(uint64(r))
+			cw.U(unsigned(r))
 		}
 	})
 	shocks := w.shocks.ordered()
@@ -684,7 +684,7 @@ func (w *World) saveJobs(cw *codec.Writer) error {
 	for _, s := range shocks {
 		cw.U(uint64(s.region))
 		cw.U(uint64(s.recipe))
-		cw.U(uint64(s.bp))
+		cw.U(unsigned(s.bp))
 	}
 	return nil
 }
@@ -701,11 +701,11 @@ func (w *World) saveJob(cw *codec.Writer, a *agent) {
 	}
 	j := &a.job
 	cw.U(uint64(j.recipe))
-	cw.U(uint64(j.remaining))
-	cw.U(uint64(j.executions))
-	cw.U(uint64(j.principal))
-	cw.U(uint64(j.yield))
+	cw.U(unsigned(j.remaining))
+	cw.U(unsigned(j.executions))
+	cw.U(unsigned(j.principal))
+	cw.U(unsigned(j.yield))
 	for i := range w.recipes.row(j.recipe).outputs {
-		cw.U(uint64(j.pending[i]))
+		cw.U(unsigned(j.pending[i]))
 	}
 }

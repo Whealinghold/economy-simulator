@@ -173,9 +173,9 @@ func (w *World) saveMarkets(cw *codec.Writer) error {
 		prices = t.windows[i].Values(prices[:0])
 		cw.Count(len(prices))
 		for _, p := range prices {
-			cw.U(uint64(p))
+			cw.U(unsigned(p))
 		}
-		cw.U(uint64(t.boundRun[i]))
+		cw.U(unsigned(t.boundRun[i]))
 	}
 	return nil
 }
@@ -183,17 +183,17 @@ func (w *World) saveMarkets(cw *codec.Writer) error {
 // saveReport writes the market report: the price, the age, the volume, the
 // unmatched units of each side and each best unmatched price as an optional value.
 func saveReport(cw *codec.Writer, r *marketReport) {
-	cw.U(uint64(r.Price))
-	cw.U(uint64(r.Age))
-	cw.U(uint64(r.Volume))
-	cw.U(uint64(r.UnmatchedBid))
-	cw.U(uint64(r.UnmatchedAsk))
+	cw.U(unsigned(r.Price))
+	cw.U(unsigned(r.Age))
+	cw.U(unsigned(r.Volume))
+	cw.U(unsigned(r.UnmatchedBid))
+	cw.U(unsigned(r.UnmatchedAsk))
 	cw.B(r.HasBestBid)
 	if r.HasBestBid {
-		cw.U(uint64(r.BestBid))
+		cw.U(unsigned(r.BestBid))
 	}
 	cw.B(r.HasBestAsk)
 	if r.HasBestAsk {
-		cw.U(uint64(r.BestAsk))
+		cw.U(unsigned(r.BestAsk))
 	}
 }

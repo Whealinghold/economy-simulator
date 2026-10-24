@@ -74,8 +74,8 @@ func beliefsEvent(tick int64, region RegionID, commodity CommodityID, t *beliefs
 func (w *World) saveBeliefs(cw *codec.Writer) error {
 	w.eachLive(func(a *agent) {
 		for _, b := range a.beliefs {
-			cw.U(uint64(b.Centre))
-			cw.U(uint64(b.Width))
+			cw.U(unsigned(b.Centre))
+			cw.U(unsigned(b.Width))
 		}
 	})
 	return nil

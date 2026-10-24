@@ -522,3 +522,19 @@ func TestSave_EstateListings(t *testing.T) {
 		t.Errorf("tag 8: %v", err)
 	}
 }
+
+// A negative value in a field the checkpoint writes unsigned is a violated
+// invariant at write time, not a number the restore refuses.
+//
+// Requirement: FR-CHK-040
+func TestUnsignedRefusesNegative(t *testing.T) {
+	if got := unsigned(int64(7)); got != 7 {
+		t.Errorf("unsigned(7) = %d, want 7", got)
+	}
+	if got := unsigned(0); got != 0 {
+		t.Errorf("unsigned(0) = %d, want 0", got)
+	}
+	if msg := invariantMessage(func() { unsigned(int64(-1)) }); !strings.Contains(msg, "negative value") {
+		t.Errorf("unsigned(-1) panic = %q, want the negative-value invariant", msg)
+	}
+}

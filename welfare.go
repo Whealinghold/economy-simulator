@@ -429,7 +429,7 @@ func (w *World) saveWelfare(cw *codec.Writer) error {
 		for i := range recs {
 			saveRecord(cw, &recs[i])
 		}
-		cw.U(uint64(a.target))
+		cw.U(unsigned(a.target))
 	})
 	writeSparse(cw, w.state.floorRun, len(w.cfg.Roles))
 	writeSparse(cw, w.state.clampRun, len(w.cfg.Roles))
@@ -444,7 +444,7 @@ func saveRecord(cw *codec.Writer, r *welfare.Record) {
 	cw.I(r.Relief)
 	cw.I(r.Unearned)
 	cw.I(r.OwnReceipt)
-	cw.U(uint64(r.OwnHH))
+	cw.U(unsigned(r.OwnHH))
 	cw.B(r.Working)
-	cw.U(uint64(r.WorkHH))
+	cw.U(unsigned(r.WorkHH))
 }

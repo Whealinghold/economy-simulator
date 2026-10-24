@@ -457,8 +457,8 @@ func (w *World) saveEstates(cw *codec.Writer) error {
 		for _, l := range rows {
 			cw.U(uint64(l.key.Commodity))
 			cw.I(l.key.Born)
-			cw.U(uint64(l.key.Durability))
-			cw.U(uint64(l.price))
+			cw.U(unsigned(l.key.Durability))
+			cw.U(unsigned(l.price))
 		}
 	}
 	return nil

@@ -92,7 +92,7 @@ func writeSparse(cw *codec.Writer, vals []int64, roles int) {
 		if v != 0 {
 			cw.U(uint64(i / roles))
 			cw.U(uint64(i % roles))
-			cw.U(uint64(v))
+			cw.U(unsigned(v))
 		}
 	}
 }
@@ -110,7 +110,7 @@ func writeSparseByRegion(cw *codec.Writer, vals []int64) {
 	for i, v := range vals {
 		if v != 0 {
 			cw.U(uint64(i))
-			cw.U(uint64(v))
+			cw.U(unsigned(v))
 		}
 	}
 }
@@ -174,4 +174,14 @@ func (w *World) saveExtensions(cw *codec.Writer) error {
 		cw.Bytes(state)
 	}
 	return nil
+}
+
+// unsigned returns v for a field the checkpoint writes unsigned. A negative v
+// would wrap to a number the restore refuses, so it is a violated invariant, found
+// when the checkpoint is made and not when it is restored.
+func unsigned[T ~int | ~int32 | ~int64](v T) uint64 {
+	if v < 0 {
+		invariant("a negative value in a field a checkpoint writes unsigned")
+	}
+	return uint64(v)
 }
