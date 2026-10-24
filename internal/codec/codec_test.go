@@ -726,7 +726,7 @@ func TestReader_BoundedEdges(t *testing.T) {
 func TestReader_BoundedNegativeMaxRefusesEverything(t *testing.T) {
 	t.Parallel()
 	r := codec.NewReader([]byte{0})
-	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil {
+	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 1: run has a negative bound -1" {
 		t.Errorf("Bounded(0 of -1) = %d, %v, want 0 and an error", got, r.Err())
 	}
 }

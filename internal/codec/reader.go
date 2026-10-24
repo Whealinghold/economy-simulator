@@ -192,7 +192,11 @@ func (r *Reader) Done() error {
 // what was read and returns 0.
 func (r *Reader) Bounded(what string, max int64) int64 {
 	v := r.U()
-	if max < 0 || v > uint64(max) {
+	switch {
+	case max < 0:
+		r.Failf("%s has a negative bound %d", what, max)
+		return 0
+	case v > uint64(max):
 		r.Failf("%s %d is above %d", what, v, max)
 		return 0
 	}

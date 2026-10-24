@@ -472,6 +472,34 @@ func TestRestore_UnusedStrategyNameIsCorrupt(t *testing.T) {
 	}
 }
 
+// TestRestore_UnreadableStrategyTableIsCorrupt verifies that a table of strategy
+// names that ends early, a count of 2 with one name or a name longer than the
+// bytes left, is ErrCheckpointCorrupt and not a fault of the extensions.
+//
+// Requirement: FR-CHK-012
+func TestRestore_UnreadableStrategyTableIsCorrupt(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		table []byte
+	}{
+		{"count above the names", append([]byte{2, 7}, "default"...)},
+		{"name beyond the bytes left", []byte{1, 9, 'd'}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := reframe(t, restoreMillBytes(t), func(s []section) []section {
+				return editSection(s, 3, func([]byte) []byte { return tt.table })
+			})
+			_, err := economysim.RestoreWorld(millCfg(3, 4), c)
+			if !errors.Is(err, economysim.ErrCheckpointCorrupt) || errors.Is(err, economysim.ErrCheckpointExtension) {
+				t.Errorf("RestoreWorld(%s) error = %v, want ErrCheckpointCorrupt only", tt.name, err)
+			}
+		})
+	}
+}
+
 // TestRestore_AuditAlwaysRuns verifies that a checkpoint whose ledger no longer
 // conserves money (one minor unit added to the balance of the estate, edited and
 // re-digested) is refused as ErrCheckpointCorrupt wrapping ErrAuditFailed, with
