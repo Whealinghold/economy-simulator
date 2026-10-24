@@ -126,6 +126,7 @@ func TestPositionHash_ReplayEqualsRun(t *testing.T) {
 			t.Fatalf("Snapshot error = %v, want nil", err)
 		}
 		res.Events = rec.events
+		res.Digest = checkpointDigest(t, w)
 		want, err := os.ReadFile(goldenPath("one.txt"))
 		if err != nil {
 			t.Fatalf("read golden one.txt: %v", err)

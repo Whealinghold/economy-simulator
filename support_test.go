@@ -198,12 +198,7 @@ func runPack(t testing.TB, cfg economysim.Config, spec runSpec) result {
 	}
 	res.Events = rec.events
 	if spec.Digest {
-		c, err := w.Checkpoint()
-		if err != nil {
-			t.Fatalf("Checkpoint at tick %d (seed %d) error = %v, want nil", w.Tick(), spec.Seed, err)
-		}
-		b, _ := c.MarshalBinary() // never fails: it copies
-		res.Digest = hex.EncodeToString(b[len(b)-sha256.Size:])
+		res.Digest = checkpointDigest(t, w)
 	}
 	return res
 }
@@ -570,4 +565,15 @@ func TestRunPack_Run(t *testing.T) {
 	if run.Final.Tick != 3 {
 		t.Errorf("split run final tick = %d, want 3", run.Final.Tick)
 	}
+}
+
+// checkpointDigest is the hex of the trailer of w's checkpoint (golden item 6).
+func checkpointDigest(t testing.TB, w *economysim.World) string {
+	t.Helper()
+	c, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint at tick %d error = %v, want nil", w.Tick(), err)
+	}
+	b, _ := c.MarshalBinary() // never fails: it copies
+	return hex.EncodeToString(b[len(b)-sha256.Size:])
 }
