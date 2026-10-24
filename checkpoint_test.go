@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log/slog"
 	"reflect"
 	"slices"
@@ -768,5 +769,53 @@ func TestSave_AllocationOutsideTheStep(t *testing.T) {
 	mustCheckpoint(t, w)
 	if after := testing.AllocsPerRun(5, step); after > before {
 		t.Errorf("allocs per Step after a Checkpoint = %v, before = %v, want no more", after, before)
+	}
+}
+
+// snapshotAtTicks are the boundaries at which TestSnapshot_FunctionOfSavedState
+// compares the snapshots: before any step, after one, mid-job, across a season change.
+var snapshotAtTicks = []int{0, 1, 60, 100, 150}
+
+// TestSnapshot_FunctionOfSavedState verifies that the snapshot of a restored world
+// equals the original's at the same boundary, field for field, on pack one over
+// several seeds and at several ticks.
+//
+// Requirement: FR-CHK-053, FR-OBS-043
+//
+// Fix: N-125. The market rows counted the beliefs at the floor of their range, and the
+// range of a made good depends on the cost anchor, which is scratch (derived at P1.2 of
+// every tick, not saved). The original read the anchors left by the last step and a
+// restored world had none, so AtFloor and AtCeiling differed at the boundary (55 and 0
+// on seed 1 at tick 60) although every saved byte was equal.
+func TestSnapshot_FunctionOfSavedState(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	for seed := uint64(1); seed <= uint64(invariantSeeds(8)); seed++ {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed))
+			if err != nil {
+				t.Fatalf("seed %d: NewWorld() error = %v, want nil", seed, err)
+			}
+			for tick := 0; tick <= snapshotAtTicks[len(snapshotAtTicks)-1]; tick++ {
+				if slices.Contains(snapshotAtTicks, tick) {
+					r, err := economysim.RestoreWorld(cfg, mustCheckpoint(t, w))
+					if err != nil {
+						t.Fatalf("seed %d, tick %d: RestoreWorld() error = %v, want nil", seed, tick, err)
+					}
+					want, _ := w.Snapshot()
+					got, _ := r.Snapshot()
+					if !reflect.DeepEqual(want, got) {
+						t.Errorf("seed %d, tick %d: the snapshot of the restored world differs from the original's", seed, tick)
+					}
+				}
+				if err := w.Step(); err != nil {
+					t.Fatalf("seed %d, tick %d: Step() error = %v, want nil", seed, tick, err)
+				}
+			}
+		})
 	}
 }
