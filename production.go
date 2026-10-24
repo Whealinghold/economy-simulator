@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/production"
 )
@@ -665,5 +666,46 @@ func (s *productionScratch) recipeExecuted(outs, disp, over []Amount, tick int64
 		Tick: tick, Agent: agent, Region: region, Recipe: c.recipe,
 		StartTick: tick - duration + 1, Executions: c.executions,
 		Outputs: outs, Disposed: disp, EffectiveYield: c.yield, Overflow: over,
+	}
+}
+
+// saveJobs is tag 6 (spec-checkpoint.md 4.2; plan 2-2 D248): for each live agent in
+// ascending ID, its job and its residues, then the yield shocks that are not
+// neutral, sparse.
+func (w *World) saveJobs(cw *codec.Writer) error {
+	w.eachLive(func(a *agent) {
+		w.saveJob(cw, a)
+		for _, r := range a.residues {
+			cw.U(unsigned(r))
+		}
+	})
+	shocks := w.shocks.ordered()
+	cw.Count(len(shocks))
+	for _, s := range shocks {
+		cw.U(uint64(s.region))
+		cw.U(uint64(s.recipe))
+		cw.U(unsigned(s.bp))
+	}
+	return nil
+}
+
+// saveJob writes whether the agent has a job and, when it has, the job: the
+// recipe, the executions left and made, the principal, the yield fixed at the
+// start and the pending quantity of each output of the recipe in output order. The
+// number of residues and of outputs is the role's and the recipe's and is not
+// written.
+func (w *World) saveJob(cw *codec.Writer, a *agent) {
+	cw.B(a.hasJob())
+	if !a.hasJob() {
+		return
+	}
+	j := &a.job
+	cw.U(uint64(j.recipe))
+	cw.U(unsigned(j.remaining))
+	cw.U(unsigned(j.executions))
+	cw.U(unsigned(j.principal))
+	cw.U(unsigned(j.yield))
+	for i := range w.recipes.row(j.recipe).outputs {
+		cw.U(unsigned(j.pending[i]))
 	}
 }

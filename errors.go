@@ -168,6 +168,31 @@ var (
 	ErrSolveInconsistent = errors.New("solver certificate failed")
 )
 
+// The checkpoint and the option context (spec-checkpoint.md 6.3, 13.1): each is
+// matched with errors.Is, the error that wraps it names what failed, and none is
+// logged by the library.
+var (
+	// ErrCheckpointVersion is a checkpoint whose format version this library does
+	// not read. The error that wraps it carries the version read and the one
+	// supported.
+	ErrCheckpointVersion = errors.New("checkpoint format version not supported")
+	// ErrCheckpointCorrupt is bytes that are not a checkpoint: too short, a wrong
+	// magic or digest, a malformed value, a section that is wrong or a state that
+	// fails a cross-check or the audit. The error that wraps it names the tag or
+	// the offset.
+	ErrCheckpointCorrupt = errors.New("checkpoint is corrupt")
+	// ErrCheckpointConfig is a checkpoint taken from a world of another
+	// configuration: the hashes differ. The error that wraps it carries both.
+	ErrCheckpointConfig = errors.New("checkpoint is of another configuration")
+	// ErrCheckpointExtension is an extension that does not match the checkpoint,
+	// or a SaveState that failed: the error that wraps it names the extension and
+	// wraps the extension's own error.
+	ErrCheckpointExtension = errors.New("checkpoint extension mismatch")
+	// ErrOptionContext is an option that is not valid in this call: WithSeed on a
+	// restore, WithReseed on NewWorld.
+	ErrOptionContext = errors.New("option not valid in this call")
+)
+
 // ValidationError is one rejected rule of a configuration (spec-config.md
 // 7.1.1). Rule is the sentinel, so errors.Is(err, ErrOutOfBounds) matches and
 // errors.As finds the ValidationError.

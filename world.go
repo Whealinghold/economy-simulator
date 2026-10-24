@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
@@ -36,8 +37,10 @@ type World struct {
 	log   *slog.Logger
 	audit bool
 
-	// ext is what the configured names resolved to, once, after Validate.
+	// ext is what the configured names resolved to, once, after Validate; reg is
+	// everything that was registered, which a checkpoint walks (checkpoint_save.go).
 	ext extensions
+	reg registrations
 
 	// ledger holds all money and goods. shocks is the shock slot of the yield
 	// factors; the field name is read by the test seam (plan 1-12). The tables
@@ -187,6 +190,9 @@ func newShell(cfg Config, opts []Option) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.reseedGiven {
+		return nil, fmt.Errorf("WithReseed on NewWorld: %w", ErrOptionContext)
+	}
 	c := cfg.canonical()
 	if o.targetSpreadGiven {
 		for i := range c.Roles {
@@ -213,6 +219,7 @@ func newShell(cfg Config, opts []Option) (*World, error) {
 		log:     o.logger,
 		audit:   o.audit,
 		ext:     ext,
+		reg:     registrations{clearings: o.clearings, strategies: o.strategies, spawners: o.spawners},
 		ledger:  l,
 		recipes: newRecipeTable(&c),
 		roles:   newRoleTable(&c),
@@ -441,4 +448,14 @@ func (w *World) runEnded(ctx context.Context, completed int64, err error) {
 		w.log.LogAttrs(ctx, slog.LevelInfo, "run ended",
 			slog.Int64(logkeys.Ticks, completed), slog.String(logkeys.Reason, reason))
 	}
+}
+
+// saveWorld is tag 1 (spec-checkpoint.md 4.2): the next agent ID and whether the
+// world is still in its construction phase. The tick and the effective seed are in
+// the header, and the construction bucket and the pending totals are the ledger's,
+// in tag 2 (plan 2-2 D244).
+func (w *World) saveWorld(cw *codec.Writer) error {
+	cw.U(uint64(w.state.nextAgent))
+	cw.B(w.ledger.InConstruction())
+	return nil
 }

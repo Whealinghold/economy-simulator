@@ -208,6 +208,8 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 		economysim.ErrNilExtension, economysim.ErrUnknownClearing, economysim.ErrUnknownSpawner, economysim.ErrUnknownStrategy, economysim.ErrInvalidTrade,
 		economysim.ErrWorldFailed, economysim.ErrInStep, economysim.ErrAuditFailed,
 		economysim.ErrNotViable, economysim.ErrNoUpkeep, economysim.ErrSolveLimit, economysim.ErrSolveInconsistent,
+		economysim.ErrCheckpointVersion, economysim.ErrCheckpointCorrupt, economysim.ErrCheckpointConfig,
+		economysim.ErrCheckpointExtension, economysim.ErrOptionContext,
 	}
 	seen := map[string]bool{}
 	for _, s := range sentinels {

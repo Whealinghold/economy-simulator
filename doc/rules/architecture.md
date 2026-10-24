@@ -117,6 +117,7 @@ economy-sim/
   construct.go  construct_warm.go  fanin.go  phase_start.go
   phase_production.go  phase_trade.go  phase_outcomes.go
   phase_exit.go                                                    (WLD)
+  checkpoint_save.go  checkpoint_restore.go  checkpoint_sections.go    (CHK)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -161,9 +162,10 @@ economy-sim/
   testdata/              fixtures shared across packages: chains/ (config
                          fixtures, including the reference chain), golden/
                          (off/, one directory per module, all/: 10.4),
-                         checkpoints/ (one fixture per checkpoint format version,
-                         with every module on; a module's restore test builds
-                         its world from its overlay in the test),
+                         checkpoints/ (one fixture of pack one and one all-modules-on
+                         fixture per checkpoint format version; a module's
+                         restore test builds its world from its overlay in the
+                         test),
                          calibration/ (the records of a calibration, per pack)
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
@@ -991,4 +993,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 51f0eed5a9e8b1636b2aec5e
+RULE-TAG: 3a147e9602bcba3e09256c40

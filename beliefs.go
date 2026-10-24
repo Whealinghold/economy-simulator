@@ -1,6 +1,9 @@
 package economysim
 
-import "github.com/Whealinghold/economy-sim/internal/beliefs"
+import (
+	"github.com/Whealinghold/economy-sim/internal/beliefs"
+	"github.com/Whealinghold/economy-sim/internal/codec"
+)
 
 // Belief is the price belief of one agent for one commodity (spec-beliefs.md
 // 3.1): the Centre, its best guess, and the Width, its half-width in basis
@@ -62,4 +65,18 @@ func beliefsEvent(tick int64, region RegionID, commodity CommodityID, t *beliefs
 		AtFloor: t.AtFloor, AtCeiling: t.AtCeiling, Conflicts: t.Conflicts, Clamped: t.Clamped,
 		MeanCentre: Price(mean), LowCentre: Price(t.Low()), HighCentre: Price(t.High()),
 	}
+}
+
+// saveBeliefs is tag 5 (spec-checkpoint.md 4.2): for each live agent in ascending
+// ID, the centre and the width of its belief for each commodity of its role's
+// tradable set, in commodity order. The count is the size of that set and is not
+// written.
+func (w *World) saveBeliefs(cw *codec.Writer) error {
+	w.eachLive(func(a *agent) {
+		for _, b := range a.beliefs {
+			cw.U(unsigned(b.Centre))
+			cw.U(unsigned(b.Width))
+		}
+	})
+	return nil
 }

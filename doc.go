@@ -621,4 +621,46 @@
 //   - Fan-in: a fixed-order composition of calls into the module files with one
 //     entry point, such as the world's one removeAgent, so that a rule written once
 //     serves every caller (architecture.md 2.10.4).
+//   - Checkpoint: the complete state of a world at a tick boundary, in one
+//     canonical binary encoding; an immutable value that a restore reads and a
+//     consumer stores (spec-checkpoint.md 3).
+//   - Restore: the construction of a new world from a configuration and a
+//     checkpoint; it validates the bytes in full and installs no random state.
+//   - Format version: the integer in the frame that names the layout of the
+//     bytes; a library never reads a format newer than its own.
+//   - Frame: the whole byte string of a checkpoint: the header, the sections
+//     in tag order and the trailer.
+//   - Header: the fields at the start of a frame that a consumer reads before it
+//     has chosen a configuration: format, hash version, configuration hash,
+//     tick and effective seed.
+//   - Section: the state one spec contributes to a checkpoint, one tag, one
+//     length and one body; a section of a module that is off is absent.
+//   - Trailer: the last 32 bytes of a frame, the SHA-256 of every byte before.
+//   - Digest (of a checkpoint): the trailer; the golden file records it.
+//   - Canonical encoding: the one spelling of a state in bytes (varints, no
+//     padding, sorted sequences), so equal states give equal bytes.
+//   - One spelling: the rule that a state has exactly one valid encoding; a
+//     decoder refuses a second.
+//   - Sparse row: a row of a section written only when it differs from its
+//     default, in ascending key order; a row at its default is corrupt.
+//   - Pending totals: the flow totals, the wear units and the relocation totals
+//     that calls between ticks have added since the last tick's end; they
+//     belong to the next tick and a checkpoint saves them.
+//   - Construction flag: whether a world is still in its construction phase,
+//     which a checkpoint saves with the construction bucket.
+//   - Extension state: the bytes a Stateful extension saves, held in a
+//     checkpoint beside the version that wrote them.
+//   - Stateful: the optional two-method interface (SaveState, LoadState) of an
+//     extension that keeps state between calls.
+//   - Entry (of an extension): the (kind, name, version, bytes) record of one
+//     Stateful extension in the extensions section of a checkpoint.
+//   - Salt: the value a restore mixes into the effective seed when it reseeds a
+//     branch (Reseed).
+//   - Branch (of a checkpoint): a world restored from a checkpoint, alone or with
+//     a reseed, that continues apart from the world that was checkpointed.
+//   - Fixture (of a format): a checkpoint committed under testdata/checkpoints
+//     for one format version, so that a later library still reads it.
+//   - WorldRestored: the event delivered first to an observer given to a restore,
+//     with the configuration hash, the format, whether the run was reseeded, the
+//     names table and the snapshot at the restored boundary.
 package economysim

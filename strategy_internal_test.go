@@ -127,16 +127,16 @@ func TestIsDirected(t *testing.T) {
 }
 
 // TestDirected_MethodSet verifies that Directed has exactly the three methods
-// of Strategy and no others.
+// of Strategy and the two of Stateful, and no others.
 //
-// Requirement: FR-AGT-019
+// Requirement: FR-AGT-019, FR-CHK-035
 func TestDirected_MethodSet(t *testing.T) {
 	t.Parallel()
 	typ := reflect.TypeOf(Directed{})
-	if typ.NumMethod() != 3 {
-		t.Fatalf("Directed has %d methods, want 3", typ.NumMethod())
+	if typ.NumMethod() != 5 {
+		t.Fatalf("Directed has %d methods, want 5", typ.NumMethod())
 	}
-	for i, want := range []string{"Revise", "Trade", "Work"} {
+	for i, want := range []string{"LoadState", "Revise", "SaveState", "Trade", "Work"} {
 		if got := typ.Method(i).Name; got != want {
 			t.Errorf("Directed method %d = %q, want %q", i, got, want)
 		}

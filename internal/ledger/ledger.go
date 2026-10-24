@@ -107,6 +107,9 @@ type Ledger struct {
 	// wear and wearBucket are the wear units per commodity of the current
 	// tick and of the construction phase (5.4.2, 7.4).
 	wear, wearBucket []int64
+	// relocs are the pending relocation totals (checkpoint.go), cleared with the
+	// flow totals.
+	relocs []reloc
 	// spoil and sel are scratch, empty between calls: expired units per
 	// (region, commodity) for Age, and the selection of WearItems.
 	spoil []int64
@@ -371,6 +374,7 @@ func (l *Ledger) EndConstruction() error {
 func (l *Ledger) ClearTotals() {
 	clear(l.totals)
 	clear(l.wear)
+	l.relocs = l.relocs[:0]
 	for i, id := range l.boundary {
 		if id >= 0 {
 			l.base[i] = l.accounts[id].balance

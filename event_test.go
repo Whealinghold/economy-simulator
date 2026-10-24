@@ -49,6 +49,7 @@ var declaredEvents = []economysim.Event{
 	economysim.EntryLimited{},
 	economysim.BoundaryFlow{},
 	economysim.WearApplied{},
+	economysim.WorldRestored{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -57,7 +58,7 @@ var declaredEvents = []economysim.Event{
 // the pool policy of the estates module (spec-config.md 6.2.4). The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"WorldRestored", "OwnUseChanged", "WantShortfall", "RoomLimited",
+	"OwnUseChanged", "WantShortfall", "RoomLimited",
 	"PopulationChanged", "TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "ReliefPaid", "MoneyFlowLimited",
 	"MoneyFlowEnded", "MoneyFlowScaled", "StoreLoss", "AgentRelocated",
@@ -83,7 +84,6 @@ var notBuiltEvents = []string{
 // declared in the code is stale. The change that declares the event deletes
 // its entry here and in notBuiltEvents.
 var deferredCore = map[string]string{
-	"WorldRestored":     "Stage 2, checkpoint.go (CHK, roadmap-v1.md)",
 	"AgentRelocated":    "Stage 2, regions.go (REG 10.1, roadmap-v1.md)",
 	"EdgeStatusChanged": "Stage 2, regions.go (REG 10.1, roadmap-v1.md)",
 	"YieldShocked":      "Stage 2, integration.go (INT, PRO 6.8, roadmap-v1.md)",
