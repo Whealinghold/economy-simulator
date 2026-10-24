@@ -28,6 +28,7 @@ type restoreCtx struct {
 	tick         int64
 	construction bool
 	entries      []extRecord
+	have         []extEntry // the registered Stateful extensions, the same set step 4 matched
 }
 
 // RestoreWorld builds a new world from cfg, the options and the checkpoint c, or
@@ -100,7 +101,7 @@ func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
 	if err != nil {
 		return err
 	}
-	if rs.entries, err = w.matchExtensions(bodies); err != nil {
+	if rs.entries, err = w.matchExtensions(rs, bodies); err != nil {
 		return err
 	}
 	w.allocate()
@@ -115,7 +116,7 @@ func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
 	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
 		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
 	}
-	return w.loadExtensionState(rs.entries)
+	return loadExtensionState(rs.have, rs.entries)
 }
 
 // sectionBody is the body of one section the configuration expects, with its row.
@@ -218,7 +219,7 @@ func compareExt(ak uint64, an string, bk uint64, bn string) int {
 // matchExtensions is step 4: the registered extensions that implement Stateful
 // are the entries of tag 34 by (kind, name), and every strategy name in the table
 // of tag 3 is registered. It returns the entries for step 11.
-func (w *World) matchExtensions(bodies []sectionBody) ([]extRecord, error) {
+func (w *World) matchExtensions(rs *restoreCtx, bodies []sectionBody) ([]extRecord, error) {
 	var recs []extRecord
 	for _, sb := range bodies {
 		switch sb.row.tag {
@@ -234,7 +235,8 @@ func (w *World) matchExtensions(bodies []sectionBody) ([]extRecord, error) {
 			}
 		}
 	}
-	return recs, sameExtensions(w.statefulEntries(), recs)
+	rs.have = w.statefulEntries()
+	return recs, sameExtensions(rs.have, recs)
 }
 
 // sameExtensions requires the registered Stateful extensions and the entries, both
@@ -281,8 +283,8 @@ func (w *World) strategyRegistered(name string) bool {
 // name) order, with the version and a copy of the bytes of its entry (the
 // extension must not keep the slice, and a copy keeps a faulty one from altering
 // the checkpoint).
-func (w *World) loadExtensionState(recs []extRecord) error {
-	for i, e := range w.statefulEntries() {
+func loadExtensionState(have []extEntry, recs []extRecord) error {
+	for i, e := range have {
 		if err := e.s.LoadState(recs[i].version, bytes.Clone(recs[i].state)); err != nil {
 			return fmt.Errorf("%w: LoadState of %q (kind %d): %w", ErrCheckpointExtension, e.name, e.kind, err)
 		}
@@ -354,10 +356,8 @@ func (w *World) checkpointCross() error {
 	}
 	var missing error
 	w.eachLive(func(a *agent) {
-		v, err := w.ledger.Account(a.account)
-		if err != nil && missing == nil {
-			missing = fmt.Errorf("%w: agent %d has no account %d: %w", ErrCheckpointCorrupt, a.id, a.account, err)
-		}
+		// The account exists: step 7's loop above and the agent record check own it.
+		v, _ := w.ledger.Account(a.account)
 		if cell := v.Region*roles + int(a.role); !w.state.hadAgent[cell] && missing == nil {
 			missing = fmt.Errorf("%w: agent %d lives in region %d, role %d, whose had-an-agent bit is not set", ErrCheckpointCorrupt, a.id, v.Region, a.role)
 		}
