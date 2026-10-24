@@ -833,7 +833,7 @@ keeps an account away or committed adds a row (N-090). CRD (`spec-credit.md` 9.4
 the modules that are on (a module that is off registers nothing), so it is part of the
 world's behaviour and not a callback into consumer code. With none of those modules on
 it is empty. Each registered obligation also reports the **instance keys** it holds
-for an agent (the column above), each a fixed-size key (obligation, number). A module
+for an agent (the column above), each a fixed-size key (obligation, number). In a `skip` argument the textual form of a key is `<obligation>:<number>` with the number in decimal (`on_journey:7`); a name alone, without a colon, matches every instance of that obligation. A module
 that moves an account itself (TRN for a traveller, MIG for a migrant) does so by the
 ledger-level `Relocate` and not through the guarded `relocate`, because its own refusal
 would block it; before it does, it asks the query of 6.1.6 with its own obligation
@@ -1092,7 +1092,10 @@ attributes are proposals for OBS.
 
 10.5. **Snapshot.** Per region: the households and agents (`spec-scale.md` 9.2) and the
 pool (`spec-estates.md` 2.4) are already there; this spec adds the edges whose status
-is not the default (from, to, closed, factor) and the number of components. Bounded by
+is not the default (from, to, closed, factor) and the number of components. The number is
+0 when the world has one region and the count of components of the graph as it is now
+otherwise: a count of 1 for the one-region world would print in the header of every
+`off` golden (`spec-observability.md` 9.5.2, architecture.md 2.10.5). Bounded by
 the edges. The names of the fields are OBS's.
 
 10.6. **No observer, no logger.** The graph is built once and the queries allocate
@@ -1249,7 +1252,10 @@ fast a mode moves:
 IDs sort as `far_south` 0, `north` 1, `south` 2 in `three`, and `centre` 0, `east` 1,
 `north` 2, `south` 3, `west` 4 in `five`. The overlay is a document of tables
 `[region.<from>.edge.<to>]`, layered after the variant like any overlay
-(`spec-config.md` 6.4).
+(`spec-config.md` 6.4). It is one file per variant, `overlay/trade-two.toml`,
+`overlay/trade-three.toml` and `overlay/trade-five.toml`, because an edge table
+named in a pack that lacks its region (`centre` in `two`) would create a bare
+region, which is invalid.
 
 ## 13. Entries for the stability register
 
@@ -1375,7 +1381,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REG-017 | `Distance(a, b)` and `Distance(b, a)` MUST be allowed to differ when the edges do, and one may be defined while the other is not (4.1.4; example A of 12.1 and the one-way variant of 12.2). |
 | FR-REG-018 | `NextHop(a, b)` MUST be, for `a != b` with `b` reachable, the smallest `RegionID` `v` among the open out-neighbours of `a` with `w(a, v) + dist(v, b) = dist(a, b)`, and `false` otherwise (4.3.1). |
 | FR-REG-019 | `Path(a, b)` MUST be `a` followed by repeated `NextHop` to `b`, which is the lexicographically smallest of all shortest paths as sequences of `RegionID`s; `[a]` when `a` equals `b`; `(nil, false)` when unreachable (4.3.1). |
-| FR-REG-020 | `Distance`, `NextHop` and `Path` MUST NOT depend on the order in which the edges and regions were listed, on map iteration or on the algorithm, and MUST equal the result of enumerating every simple path on every directed graph of up to seven regions in the test (4.3.1, 4.4.2). |
+| FR-REG-020 | `Distance`, `NextHop` and `Path` MUST NOT depend on the order in which the edges and regions were listed, on map iteration or on the algorithm, and MUST equal the result of enumerating every simple path on directed graphs of up to seven regions in the test: every graph of up to three regions with lengths 1 and 2, and a seeded sample of graphs of four to seven (4.3.1, 4.4.2). |
 | FR-REG-021 | A tie between two shortest paths MUST resolve by `RegionID`: renaming a region so that it sorts differently MUST be able to change the path and listing the edges differently MUST NOT (example C of 12.3). |
 | FR-REG-022 | `Edge(a, b)` MUST return the direct route, closed or not, with its configured and effective distance; and an edge longer than the shortest path through other edges MUST be valid, with `Edge(a, b).Distance` greater than `Distance(a, b)` (4.1.5). |
 | FR-REG-023 | `Out(a)` and `In(b)` MUST list the open edges in ascending `To` and ascending `From` with their effective length, and a closed edge MUST NOT appear (4.3.2). |
@@ -1463,7 +1469,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 |---------|------|
 | `Region` (the entity, with the fields of other specs), `RegionID`, `NoRegion`, `Edge`, `EdgeID`, `RegionPrice`, `EdgeView`, `Hop`, `EdgeStatus`, `Graph`, `NewGraph`, `World.Graph`, `World.ReferencePrice` | root package, `regions.go` |
 | `World.SetEdgeStatuses(changes)`, the public face of the status slot (an internal form keeps the `cause`) | root package, `integration.go` (`spec-integration.md` 5.1) |
-| The estate creation at construction, `relocate`, `RelocationRefusal`, the lists of agents by region | root package, `world.go` |
+| The estate creation at construction | root package, `estates.go` (already built) |
+| `relocate`, `moveAgent`, `RelocationRefusal`, the lists of agents by region | root package, `regions_relocate.go` (a continuation file of `regions.go`; `regions_status.go` holds the edge status and the checkpoint section, `architecture.md` 2.6) |
 | The single-source searches, the next-hop table, the components, the lengths with a factor, over primitive slices | `internal/graph` (standard library only, converted inline at the call, architecture.md 2.9) |
 | `Relocate(account, region)` and the relocation totals | `internal/ledger` |
 | `DefaultRegion()` | root package, `defaults.go` |

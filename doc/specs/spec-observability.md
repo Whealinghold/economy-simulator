@@ -1210,7 +1210,7 @@ in the snapshot because REG and TRN asked, and they are the same rows as in
 | Slice or field | Row | Meaning | Src | Cost |
 |----------------|-----|---------|-----|------|
 | `Edges []EdgeRow` | `From`, `To`, `Closed bool`, `FactorBP int64` | only the edges whose status is not the default, by `EdgeID` | REG 10.5 | K |
-| `Components int64` | | strongly connected components of the graph as it is now | REG 10.5 | K |
+| `Components int64` | | strongly connected components of the graph as it is now; 0 when the world has one region, so the header of an `off` golden does not move (9.5.2) | REG 10.5 | K |
 | `TransitFactors []TransitFactorRow` | `From`, `To`, `Mode`, `BP` | the non-default factors, by (from, to, mode) | TRN 13.5 | K |
 
 #### 5.3.8 What is in flight

@@ -103,7 +103,7 @@
 //   - Configuration section: a struct of config.go that Config holds, one per
 //     part of the file: WorldParams, Calendar, Month, Season, Commodity, Item, Output,
 //     Tool, Recipe, YieldProfile, SeasonYield, Role, Region, Group, WarmStart,
-//     SeedPrice, SeedWage, WarmGroup, JobSpec and WarmPool.
+//     SeedPrice, SeedWage, WarmGroup, JobSpec, WarmPool, Edge and RegionPrice.
 //   - Durable: a commodity that wears; its items are held as lots that share a
 //     remaining durability, and a move takes the most worn first.
 //   - Estate: the goods and money an agent leaves behind when it is removed; the
@@ -210,6 +210,29 @@
 //     by a RecipeID.
 //   - Region: a place with its own markets, identified by a RegionID. NoRegion
 //     stands for no region.
+//   - Edge: a directed route from one region to another with a distance, an
+//     entry of Config.Edges identified by an EdgeID, its index in ascending
+//     (From, To). EdgeView is its state, EdgeRow its non-default status in a
+//     snapshot. It says nothing about who travels, how fast or how much.
+//   - Distance: the length of an edge or of the shortest route between two
+//     regions, an integer in a unit the pack chooses; it is not a duration.
+//   - Route: the chain of edges a journey follows, the lexicographically
+//     smallest of the shortest paths; a Hop is one region and a length of it.
+//   - Graph: the regions and their open edges as plain data, with the tables
+//     of distances, next hops and components; built by NewGraph or World.Graph.
+//   - Component: a strongly connected component of the open edges, numbered
+//     from 0 in ascending order of its smallest RegionID.
+//   - Edge status: the closed flag and the length factor in basis points that
+//     a shock sets on an edge between ticks (EdgeStatus); the default is open
+//     at 10 000. EdgeStatusChanged reports a change.
+//   - Region price: a row of Config.RegionPrices (RegionPrice) that replaces
+//     the reference price of one commodity in one region.
+//   - Relocation: the change of the region of an agent's account, which moves
+//     no money and no goods between accounts; AgentRelocated reports it, and
+//     RelocationRefusal says why one would be refused.
+//   - Obligation (region-bound): an open fact that makes a relocation refuse,
+//     such as a shipment in flight; the world keeps the table of those the
+//     modules that are on register, and a refusal is a RegionBoundError.
 //   - Reseed: the pure function that derives a new effective seed from a seed
 //     and a salt, as a restore does; it installs nothing.
 //   - Role: the occupation of an agent, which fixes the recipes it may run and
