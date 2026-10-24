@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -193,6 +194,15 @@ func newShell(cfg Config, opts []Option) (*World, error) {
 	if o.reseedGiven {
 		return nil, fmt.Errorf("WithReseed on NewWorld: %w", ErrOptionContext)
 	}
+	return buildShell(cfg, o)
+}
+
+// buildShell is newShell after the options are applied and checked for the call:
+// NewWorld and RestoreWorld each make their own context check and then build the
+// world through this one path, so a restore validates, resolves names, hashes and
+// derives its tables exactly as a construction does (plan 2-2 D252). o.seed is
+// the effective seed.
+func buildShell(cfg Config, o options) (*World, error) {
 	c := cfg.canonical()
 	if o.targetSpreadGiven {
 		for i := range c.Roles {
@@ -457,5 +467,18 @@ func (w *World) runEnded(ctx context.Context, completed int64, err error) {
 func (w *World) saveWorld(cw *codec.Writer) error {
 	cw.U(uint64(w.state.nextAgent))
 	cw.B(w.ledger.InConstruction())
+	return nil
+}
+
+// loadWorld is tag 1: the next agent ID and the construction flag. The tick is the
+// header's and reaches the ledger through the context. The ID is checked against
+// the ledger's accounts when the agents are read, since the ledger is not read yet.
+func (w *World) loadWorld(rs *restoreCtx, r *codec.Reader) error {
+	next := r.U()
+	rs.construction = r.B()
+	if r.Err() == nil && (next < uint64(len(w.cfg.Regions)) || next > math.MaxInt64) {
+		r.Failf("next agent ID %d outside %d to %d", next, len(w.cfg.Regions), int64(math.MaxInt64))
+	}
+	w.state.nextAgent = AgentID(next)
 	return nil
 }
