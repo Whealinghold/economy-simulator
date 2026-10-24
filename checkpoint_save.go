@@ -135,6 +135,7 @@ type extEntry struct {
 // or not, plus the built-in strategy "directed", in the order of (kind, name)
 // with the names as byte strings (spec-checkpoint.md 7.3.1, 7.5).
 func (w *World) statefulEntries() []extEntry {
+	// This must use the world's resolved strategy once DefaultStrategy gains state.
 	out := []extEntry{{extStrategy, directedStrategyName, Directed{Fallback: DefaultStrategy{}}}}
 	for i, s := range w.reg.strategies.vals {
 		if st, ok := s.(Stateful); ok {

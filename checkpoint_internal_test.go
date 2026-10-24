@@ -3,6 +3,7 @@ package economysim
 import (
 	"bytes"
 	"os"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -536,5 +537,69 @@ func TestUnsignedRefusesNegative(t *testing.T) {
 	}
 	if msg := invariantMessage(func() { unsigned(int64(-1)) }); !strings.Contains(msg, "negative value") {
 		t.Errorf("unsigned(-1) panic = %q, want the negative-value invariant", msg)
+	}
+}
+
+// TestEachLive_SkipsEstatesAndRemovedSlots verifies that eachLive, the one liveness
+// rule of tags 3, 5, 6 and 7, visits exactly the slots past the estates that are
+// not the zero agent of a removed agent, in ascending ID.
+//
+// Arithmetic: ckptMill has one estate (slot 0) and agents 1 to 4; zeroing slot 3
+// leaves 1, 2 and 4.
+//
+// Requirement: FR-CHK-014
+//
+// Guard: a liveness test that drifts from the removed-agent slot would add or drop
+// a record in every per-agent section with no error.
+func TestEachLive_SkipsEstatesAndRemovedSlots(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 0)
+	w.agents[3] = agent{}
+	var want, got []AgentID
+	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+		if !reflect.DeepEqual(w.agents[i], agent{}) {
+			want = append(want, w.agents[i].id)
+		}
+	}
+	w.eachLive(func(a *agent) { got = append(got, a.id) })
+	if !slices.Equal(got, want) || len(got) != 3 {
+		t.Errorf("eachLive visited %v, want %v (three agents)", got, want)
+	}
+}
+
+// TestCheckpointConstructors_GoThroughParseFrame verifies that the bytes of a
+// Checkpoint are set in two places only, Checkpoint (which makes the frame) and
+// UnmarshalBinary (which parses it first), so Info may skip the digest.
+//
+// Requirement: FR-CHK-001
+//
+// Guard: a third place that sets the bytes would let Info report the header of
+// bytes nobody checked.
+func TestCheckpointConstructors_GoThroughParseFrame(t *testing.T) {
+	t.Parallel()
+	src, err := os.ReadFile("checkpoint.go")
+	if err != nil {
+		t.Fatalf("read checkpoint.go: %v", err)
+	}
+	set := regexp.MustCompile(`Checkpoint\{b:|\bc\.b = `)
+	if n := len(set.FindAll(src, -1)); n != 2 {
+		t.Errorf("checkpoint.go sets the bytes of a Checkpoint in %d places, want 2", n)
+	}
+	files, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read the directory: %v", err)
+	}
+	for _, f := range files {
+		name := f.Name()
+		if name == "checkpoint.go" || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if set.Match(b) {
+			t.Errorf("%s sets the bytes of a Checkpoint outside checkpoint.go", name)
+		}
 	}
 }

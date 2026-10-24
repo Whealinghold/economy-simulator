@@ -328,6 +328,11 @@ func TestState_PendingRelocationListAlwaysPresent(t *testing.T) {
 	if got := saved(l); !bytes.Equal(got, build(valid)) {
 		t.Errorf("WriteState gave % x, want the bytes read % x", got, build(valid))
 	}
+	// Rows recorded out of order are written ascending, so the section reads back.
+	l.relocs = []reloc{{1, 0, 0, 3}, {0, 1, 1, 7}, {0, 1, 0, 5}}
+	if got := saved(l); !bytes.Equal(got, build(valid)) {
+		t.Errorf("WriteState of unsorted rows gave % x, want % x", got, build(valid))
+	}
 	l.EndTick()
 	if len(l.relocs) != 0 {
 		t.Errorf("relocs after EndTick = %v, want none", l.relocs)

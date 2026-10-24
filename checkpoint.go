@@ -122,7 +122,9 @@ const maxTick = 1<<63 - 1
 
 // Info reports what the frame says. It has no error result and decodes no
 // section: a checkpoint made by Checkpoint or accepted by UnmarshalBinary has a
-// valid frame, and the zero Checkpoint reports the zero CheckpointInfo.
+// valid frame, and the zero Checkpoint reports the zero CheckpointInfo. The
+// digest is not checked again: the only constructors of a Checkpoint with bytes
+// are Checkpoint and UnmarshalBinary (TestCheckpointConstructors_GoThroughParseFrame).
 func (c Checkpoint) Info() CheckpointInfo {
 	f, err := readFrame(c.b, false)
 	if err != nil {
@@ -189,7 +191,9 @@ type Stateful interface {
 // Two checkpoints of one boundary are byte-equal. It returns ErrWorldFailed on a
 // failed world (the error wraps the cause) and ErrInStep inside a step, and
 // ErrCheckpointExtension wrapping the error of an extension whose SaveState
-// failed. It may be taken before the first Step: the world is then still in its
+// failed. A value that breaks an invariant of the state (a negative amount in a
+// field written unsigned) panics, as a violated invariant does everywhere in the
+// library; it is not an error result. It may be taken before the first Step: the world is then still in its
 // construction phase and the checkpoint says so.
 func (w *World) Checkpoint() (Checkpoint, error) {
 	if err := w.guard(); err != nil {

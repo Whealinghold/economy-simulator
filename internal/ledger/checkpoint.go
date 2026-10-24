@@ -1,7 +1,9 @@
 package ledger
 
 import (
+	"cmp"
 	"math"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -67,7 +69,13 @@ func (l *Ledger) WriteState(w *codec.Writer) {
 	l.writeClaims(w)
 	l.writeFlows(w, l.totals, l.wear)
 	w.Count(len(l.relocs))
-	for _, x := range l.relocs {
+	// The reader requires rows ascending by (from, to, thing); no writer keeps
+	// the slice in that order, so the rows are written sorted.
+	rows := slices.Clone(l.relocs)
+	slices.SortFunc(rows, func(a, b reloc) int {
+		return cmp.Or(cmp.Compare(a.from, b.from), cmp.Compare(a.to, b.to), cmp.Compare(a.thing, b.thing))
+	})
+	for _, x := range rows {
 		w.U(uint64(x.from))
 		w.U(uint64(x.to))
 		w.U(uint64(x.thing))
