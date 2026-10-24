@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
@@ -394,4 +395,135 @@ func saveDirective(cw *codec.Writer, d *Directive) {
 		cw.U(uint64(c))
 	}
 	cw.B(d.Sticky)
+}
+
+// agentRecordMin is the fewest bytes the record of an agent takes: fifteen fields
+// of at least one byte each, which bounds the count of agents by the bytes left
+// (R8).
+const agentRecordMin = 15
+
+// loadAgents is tag 3 (plan 2-2 D247): the table of strategy names, the agents in
+// strictly ascending ID, the blocks of the modules that follow the list and the
+// sparse run of unfed ticks. The agent table is allocated here, once the count of
+// slots the ledger can account for is known (spec-checkpoint.md 6.6.1): every
+// agent ever created has an account, open or closed, so the next ID cannot exceed
+// the regions plus the accounts.
+func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
+	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	names := make([]string, 0, 1)
+	for range r.Count(1) {
+		n := string(r.Bytes())
+		if k := len(names) - 1; k >= 0 && r.Err() == nil && names[k] >= n {
+			r.Failf("strategy name %q is not above the one before it", n)
+		}
+		names = append(names, n)
+	}
+	if r.Err() == nil && int(w.state.nextAgent)-regions > w.ledger.Len() {
+		r.Failf("next agent ID %d, but the ledger has %d accounts", w.state.nextAgent, w.ledger.Len())
+	}
+	if r.Err() != nil {
+		return nil
+	}
+	w.agents = make([]agent, w.state.nextAgent)
+	prev := uint64(0)
+	for i := range r.Count(agentRecordMin) {
+		if r.Err() != nil {
+			return nil
+		}
+		prev = w.loadAgent(rs, r, names, prev, i > 0)
+	}
+	for _, t := range agentTails {
+		if t.present(&w.cfg) {
+			t.load(w, r)
+		}
+	}
+	readSparse(r, w.state.unfedRun, regions, roles)
+	return nil
+}
+
+// loadAgent reads the record of one agent, checks every field against the rule of
+// its owner and puts the agent in its slot. It returns the agent's ID, the key the
+// next record must exceed. The fields a module hosts are read always (R10): while
+// the module is off, OwnUse and OwnUseJobs must be 0, there is no journey, and
+// DeathCarry must be its start.
+func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
+	id := r.Strict(prev, started)
+	acct := int(r.Index(uint64(w.ledger.Len())))
+	role := r.Index(uint64(len(w.cfg.Roles)))
+	weight := readBounded(r, "weight", MaxWeight)
+	flags := r.Index(1) // External and Mortal are the integration module's; no agent has one yet
+	name := r.Index(uint64(len(names)))
+	unfed := readBounded(r, "unfed", weight)
+	hunger := readBounded(r, "hunger", rs.tick)
+	privation := readBounded(r, "privation", rs.tick)
+	since := r.I()
+	carry := r.I()
+	ownUse, ownUseJobs, journey := r.U(), r.U(), r.B()
+	d := w.loadDirective(r)
+	if r.Err() != nil {
+		return id
+	}
+	v, err := w.ledger.Account(acct)
+	switch {
+	case id < uint64(len(w.cfg.Regions)) || id >= uint64(w.state.nextAgent):
+		r.Failf("agent ID %d outside %d to %d", id, len(w.cfg.Regions), w.state.nextAgent)
+	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(id):
+		r.Failf("agent %d names account %d, which is not its open Agent account", id, acct)
+	case weight < 1 || flags != 0 || names[name] != w.cfg.Roles[role].Strategy:
+		r.Failf("agent %d has weight %d or a strategy %q that is not its role's", id, weight, names[name])
+	case since < 0 || since > rs.tick:
+		r.Failf("agent %d has RoleSince %d outside 0 to %d", id, since, rs.tick)
+	case carry != w.deathCarry(AgentID(id)):
+		r.Failf("agent %d has DeathCarry %d, not its start %d, while the population module is off", id, carry, w.deathCarry(AgentID(id)))
+	case ownUse != 0 || ownUseJobs != 0 || journey:
+		r.Failf("agent %d has own-use or journey state while its module is off", id)
+	}
+	if r.Err() != nil {
+		return id
+	}
+	a := newAgent(agentInit{id: AgentID(id), account: acct, role: RoleID(role), weight: weight, strategy: int(role), tick: since},
+		w.roles.row(RoleID(role)), &w.recipes)
+	a.unfed, a.hunger, a.privation, a.directive = unfed, hunger, privation, d
+	w.agents[id] = a
+	w.live.agents++
+	w.live.households += weight
+	w.live.inRole[v.Region*len(w.cfg.Roles)+int(role)]++
+	return id
+}
+
+// loadDirective reads saveDirective's bytes: whether there is a directive, its
+// optional job request, intents, discards, holds and Sticky. Every amount is
+// checked against its bound (R13), which also refuses the number a negative one
+// was written as (plan 2-17 validates a directive when it is set).
+func (w *World) loadDirective(r *codec.Reader) *Directive {
+	if !r.B() {
+		return nil
+	}
+	nc, nr := uint64(len(w.cfg.Commodities)), uint64(len(w.cfg.Recipes))
+	d := &Directive{}
+	if r.B() {
+		d.Job = &JobRequest{NoJob: r.B(), Recipe: RecipeID(r.Index(nr)), Executions: readBounded(r, "executions", math.MaxInt64)}
+	}
+	for range r.Count(8) {
+		if r.Err() != nil {
+			return nil
+		}
+		d.Intents = append(d.Intents, Intent{
+			Commodity: CommodityID(r.Index(nc)), Side: Side(r.Index(2)),
+			Quantity: Quantity(readBounded(r, "quantity", MaxQuantity)), Limit: Price(readBounded(r, "limit", MaxPrice)),
+			Target: Quantity(readBounded(r, "target", MaxQuantity)), Reserve: Quantity(readBounded(r, "reserve", MaxQuantity)),
+			UnitCost: Price(readBounded(r, "unit cost", MaxPrice)), Purpose: Purpose(r.Index(uint64(PurposeTool) + 1)),
+		})
+	}
+	for range r.Count(2) {
+		if r.Err() != nil {
+			return nil
+		}
+		d.Discards = append(d.Discards, Discard{Commodity: CommodityID(r.Index(nc)), Quantity: Quantity(readBounded(r, "quantity", MaxQuantity))})
+	}
+	for range r.Count(1) {
+		d.Hold = append(d.Hold, CommodityID(r.Index(nc)))
+	}
+	d.Sticky = r.B()
+	return d
 }

@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"math"
+
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/welfare"
 )
@@ -447,4 +449,45 @@ func saveRecord(cw *codec.Writer, r *welfare.Record) {
 	cw.U(unsigned(r.OwnHH))
 	cw.B(r.Working)
 	cw.U(unsigned(r.WorkHH))
+}
+
+// recordMin is the fewest bytes a welfare record takes: five signed fields, the
+// household-ticks, the flag and the working household-ticks, one byte each.
+const recordMin = 8
+
+// loadWelfare is tag 7: for each live agent in ascending ID the records its ring
+// holds, oldest first, and its target ratio, then the sparse runs of the work floor
+// and the clamp. The ring is rebuilt by welfare.FromRecords, which refuses more
+// records than the window and a field beyond the clamp.
+func (w *World) loadWelfare(_ *restoreCtx, r *codec.Reader) error {
+	var recs []welfare.Record
+	w.eachLive(func(a *agent) {
+		recs = recs[:0]
+		for range r.Count(recordMin) {
+			recs = append(recs, loadRecord(r))
+		}
+		a.target = readBounded(r, "target ratio", MaxBasisPoints)
+		if r.Err() != nil {
+			return
+		}
+		h, err := welfare.FromRecords(recs, w.roles.row(a.role).window, MaxWelfareWindow)
+		if err != nil {
+			r.Failf("agent %d: %v", a.id, err)
+			return
+		}
+		a.history = h
+	})
+	roles := len(w.cfg.Roles)
+	readSparse(r, w.state.floorRun, len(w.cfg.Regions), roles)
+	readSparse(r, w.state.clampRun, len(w.cfg.Regions), roles)
+	return nil
+}
+
+// loadRecord reads one welfare record, the counterpart of saveRecord.
+func loadRecord(r *codec.Reader) welfare.Record {
+	return welfare.Record{
+		Income: r.I(), Cost: r.I(), Relief: r.I(), Unearned: r.I(), OwnReceipt: r.I(),
+		OwnHH: readBounded(r, "own-use household-ticks", math.MaxInt64), Working: r.B(),
+		WorkHH: readBounded(r, "working household-ticks", math.MaxInt64),
+	}
 }
