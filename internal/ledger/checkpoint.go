@@ -284,6 +284,9 @@ func (l *Ledger) readBody(r *codec.Reader, first int, construction bool) {
 // ID order, appending them to the ledger.
 func (l *Ledger) readAccounts(r *codec.Reader) {
 	n := r.Count(2)
+	// n is at most half the bytes left (R8), so growing once costs a constant
+	// times the input, where appending one by one would double past it.
+	l.accounts = slices.Grow(l.accounts, n)
 	for range n {
 		if r.Err() != nil {
 			break

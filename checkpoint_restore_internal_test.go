@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"runtime"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
 // This file tests the restore of state that a few ticks of a small mill never
@@ -160,5 +163,49 @@ func TestRestore_RefusesStateBeyondItsBounds(t *testing.T) {
 				t.Errorf("RestoreWorld(%s) error = %v, want ErrCheckpointCorrupt", tt.name, err)
 			}
 		})
+	}
+}
+
+// TestRestore_ClosedAccountsCostAConstantPerByte verifies that a checkpoint whose
+// ledger holds many closed Agent accounts (two bytes each, and an agent slot of the
+// table each) restores into at most a fixed multiple of its size.
+//
+// Requirement: FR-CHK-016, NFR-CHK-001
+//
+// Guard: the agent table is sized by the next ID, which the ledger's accounts
+// bound but do not shrink; a change that made a slot dearer, or sized the table
+// by another number, would turn 6.6.1's constant into a multiplier nothing
+// noticed.
+func TestRestore_ClosedAccountsCostAConstantPerByte(t *testing.T) {
+	// No t.Parallel: the figure is the process-wide allocation counter.
+	const closed = 100_000
+	w := ckptMill(t, 5)
+	for range closed {
+		id, err := w.ledger.Open(ledger.KindAgent, int(w.state.nextAgent), 0)
+		if err == nil {
+			err = w.ledger.Close(id)
+		}
+		if err != nil {
+			t.Fatalf("opening and closing an account error = %v, want nil", err)
+		}
+		w.state.nextAgent++
+	}
+	c, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	r, err := RestoreWorld(w.Config(), c)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	runtime.KeepAlive(r)
+	got, size := after.TotalAlloc-before.TotalAlloc, uint64(len(c.b))
+	t.Logf("restore allocated %d bytes for %d: %d per byte", got, size, got/size)
+	if got > 400*size {
+		t.Errorf("RestoreWorld() allocated %d bytes for a checkpoint of %d, want at most %d times that", got, size, 400)
 	}
 }
