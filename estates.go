@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -459,6 +460,56 @@ func (w *World) saveEstates(cw *codec.Writer) error {
 			cw.I(l.key.Born)
 			cw.U(unsigned(l.key.Durability))
 			cw.U(unsigned(l.price))
+		}
+	}
+	return nil
+}
+
+// attachEstates binds the estate of every region to the account a restored ledger
+// holds for it: the estates are the first non-boundary accounts, in region order,
+// each open, of kind Estate, with its region as owner and region (spec-checkpoint.md
+// 4.2.2, FR-CHK-049). It is openEstates for a ledger that already has them.
+func attachEstates(l *ledger.Ledger, regions int) (*estates, error) {
+	first := 0
+	for first < l.Len() {
+		if v, _ := l.Account(first); v.Kind != ledger.KindBoundary {
+			break
+		}
+		first++
+	}
+	e := &estates{accounts: make([]int, regions), listed: make([][]listing, regions)}
+	for r := range regions {
+		v, err := l.Account(first + r)
+		if err != nil || v.Kind != ledger.KindEstate || v.Closed || v.Owner != r || v.Region != r {
+			return nil, fmt.Errorf("account %d is not the open estate account of region %d", first+r, r)
+		}
+		e.accounts[r] = first + r
+	}
+	return e, nil
+}
+
+// loadEstates is tag 8: for each region the listings of the lots its estate holds.
+// estates.restore refuses rows out of order, a price outside its bounds or a lot the
+// estate does not hold.
+func (w *World) loadEstates(_ *restoreCtx, r *codec.Reader) error {
+	var rows []listing
+	for reg := range w.cfg.Regions {
+		rows = rows[:0]
+		for range r.Count(4) {
+			c := r.Index(uint64(len(w.cfg.Commodities)))
+			born := r.I()
+			dur := r.Bounded("durability", math.MaxInt64)
+			price := r.Bounded("price", MaxPrice)
+			if r.Err() != nil {
+				return nil
+			}
+			rows = append(rows, listing{key: ledger.Key{Commodity: int(c), Born: born, Durability: dur}, price: Price(price)})
+		}
+		if r.Err() != nil {
+			return nil
+		}
+		if err := w.estates.restore(w.ledger, RegionID(reg), rows); err != nil {
+			return err
 		}
 	}
 	return nil

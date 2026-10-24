@@ -80,3 +80,21 @@ func (w *World) saveBeliefs(cw *codec.Writer) error {
 	})
 	return nil
 }
+
+// loadBeliefs is tag 5: for each live agent in ascending ID, the centre and the
+// width of its belief for each commodity of its role's tradable set. The count is
+// the size of that set and is not stored.
+func (w *World) loadBeliefs(_ *restoreCtx, r *codec.Reader) error {
+	w.eachLive(func(a *agent) {
+		n := r.Implied(len(w.roles.row(a.role).tradable), 2)
+		for range n {
+			c := r.Bounded("centre", MaxPrice)
+			wd := r.Bounded("width", wholeBP)
+			if r.Err() == nil && c < 1 {
+				r.Failf("belief centre %d is below 1", c)
+			}
+			a.beliefs = append(a.beliefs, beliefs.Belief{Centre: c, Width: wd})
+		}
+	})
+	return nil
+}

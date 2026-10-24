@@ -161,3 +161,8 @@ func EstateAccountIDs(c Config) (estates []int, next int, err error) {
 	}
 	return e.accounts, l.Len(), nil
 }
+
+// SetAgentDirective sets the pending directive of an agent between ticks. The public
+// call is the integration change's (plan 2-17); until it lands the fork tests reach
+// the field here (architecture.md 10.2).
+func SetAgentDirective(w *World, id AgentID, d *Directive) { w.agents[id].directive = d }

@@ -197,3 +197,50 @@ func saveReport(cw *codec.Writer, r *marketReport) {
 		cw.U(unsigned(r.BestAsk))
 	}
 }
+
+// loadMarkets is tag 4: for each market in table order its report, its price
+// window and its run, all dense. The counters of a market cannot exceed what a run
+// of tick ticks could have made of them: the age and the run count ticks.
+func (w *World) loadMarkets(rs *restoreCtx, r *codec.Reader) error {
+	t := &w.markets
+	var prices []int64
+	for i := range t.reports {
+		rep := &t.reports[i]
+		rep.Price = Price(r.Bounded("price", MaxPrice))
+		rep.Age = r.Bounded("age", rs.tick)
+		rep.Volume = Quantity(r.Bounded("volume", MaxQuantity))
+		rep.UnmatchedBid = Quantity(r.Bounded("unmatched bid", MaxQuantity))
+		rep.UnmatchedAsk = Quantity(r.Bounded("unmatched ask", MaxQuantity))
+		rep.HasBestBid, rep.BestBid = readOptionalPrice(r)
+		rep.HasBestAsk, rep.BestAsk = readOptionalPrice(r)
+		prices = prices[:0]
+		for range r.Count(1) {
+			prices = append(prices, r.Bounded("window price", MaxPrice))
+		}
+		t.boundRun[i] = r.Bounded("bound run", rs.tick)
+		switch {
+		case r.Err() != nil:
+			return nil
+		case rep.Price < 1:
+			r.Failf("market %d has published price %d", i, rep.Price)
+		case !t.windows[i].Restore(prices):
+			r.Failf("market %d has a price window the window refuses", i)
+		}
+		if r.Err() != nil {
+			return nil
+		}
+	}
+	return nil
+}
+
+// readOptionalPrice reads a present flag and, when set, a price in [1, MaxPrice].
+func readOptionalPrice(r *codec.Reader) (bool, Price) {
+	if !r.B() {
+		return false, 0
+	}
+	p := r.Bounded("best price", MaxPrice)
+	if r.Err() == nil && p < 1 {
+		r.Failf("best price %d is below 1", p)
+	}
+	return true, Price(p)
+}

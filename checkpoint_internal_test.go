@@ -2,7 +2,11 @@ package economysim
 
 import (
 	"bytes"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -361,6 +365,21 @@ func TestSave_Directive(t *testing.T) {
 	}
 }
 
+// TestSave_DirectiveNoJobIgnoresTheOtherJobFields verifies that a job request with
+// NoJob writes 0 for its recipe and executions, whatever they hold.
+//
+// Fix: review of stage-2-2b. The fields are documented as ignored with NoJob, but
+// were written as they were, and a recipe out of range made a checkpoint that
+// RestoreWorld refused.
+func TestSave_DirectiveNoJobIgnoresTheOtherJobFields(t *testing.T) {
+	t.Parallel()
+	cw := codec.NewWriter(nil)
+	saveDirective(cw, &Directive{Job: &JobRequest{NoJob: true, Recipe: 9999, Executions: 7}})
+	if got, want := cw.Out(), []byte{1, 1, 1, 0, 0, 0, 0, 0, 0}; !bytes.Equal(got, want) {
+		t.Errorf("saveDirective(NoJob with recipe 9999) = %x, want %x (present, job, NoJob, recipe 0, executions 0, three counts of 0, not sticky)", got, want)
+	}
+}
+
 // TestSave_MarketsBeliefsJobsWelfare verifies tags 4 to 7 against the state of a
 // mill that has run 4 ticks, with the synthetic values the run leaves at 0 set on
 // it: a best bid and ask in a report, a bound run, a yield shock and the runs of
@@ -540,6 +559,35 @@ func TestUnsignedRefusesNegative(t *testing.T) {
 	}
 }
 
+// TestSave_EstatesHaveNoAgentRowAndRestoreRebuildsThem verifies that tag 3 holds
+// a record for each of the four agents and none for the estate (ID 0, past the
+// regions), and that the restored world binds its estate to the same ledger
+// account the original held.
+//
+// Arithmetic: ckptMill has one region, so the estate is agent 0 and the agents are
+// 1 to 4; the records carry the IDs 1, 2, 3 and 4.
+//
+// Requirement: FR-CHK-048
+func TestSave_EstatesHaveNoAgentRowAndRestoreRebuildsThem(t *testing.T) {
+	t.Parallel()
+	w := ckptMill(t, 3)
+	r := codec.NewReader(saveTag(t, w, 3)[1+len("default")+1:]) // past the strategy table
+	var ids []uint64
+	for range r.Count(1) {
+		ids = append(ids, readAgent(r).id)
+	}
+	if want := []uint64{1, 2, 3, 4}; !slices.Equal(ids, want) {
+		t.Errorf("tag 3 record IDs = %v, want %v (no row for the estate)", ids, want)
+	}
+	got, err := restoreOf(t, w)
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	if !slices.Equal(got.estates.accounts, w.estates.accounts) {
+		t.Errorf("restored estate accounts = %v, want %v", got.estates.accounts, w.estates.accounts)
+	}
+}
+
 // TestEachLive_SkipsEstatesAndRemovedSlots verifies that eachLive, the one liveness
 // rule of tags 3, 5, 6 and 7, visits exactly the slots past the estates that are
 // not the zero agent of a removed agent, in ascending ID.
@@ -601,5 +649,149 @@ func TestCheckpointConstructors_GoThroughParseFrame(t *testing.T) {
 		if set.Match(b) {
 			t.Errorf("%s sets the bytes of a Checkpoint outside checkpoint.go", name)
 		}
+	}
+}
+
+// savedOrDerived says, for every field of the state structs, where its value lives in
+// a checkpoint ("saved N": the section with tag N) or why it needs none ("derived":
+// CHK 4.3's rows; "scratch": rewritten before it is read; "not state": an option, the
+// error of a failed step). A field of these structs that is in no row fails
+// TestFields_EveryLiveFieldSavedOrDerived: a new field must be placed here, in the
+// change that adds it, so a field that holds state cannot be forgotten by a section.
+var savedOrDerived = map[string]string{
+	"World.cfg": "derived: the configuration is the caller's (CHK 4.3, 6.2 step 3)", "World.hash": "derived: of cfg",
+	"World.obs": "not state: an option", "World.log": "not state: an option", "World.audit": "not state: an option",
+	"World.ext": "not state: the registered extensions, matched at restore (CHK 7)", "World.reg": "not state: the registrations, walked for tag 34",
+	"World.ledger": "saved 2", "World.recipes": "derived: of cfg", "World.roles": "derived: of cfg", "World.days": "derived: CAL row",
+	"World.yields": "derived: PRO row", "World.shocks": "saved 6", "World.rnd": "derived: the seed is in the header (ADR 0008)",
+	"World.estates": "saved 8", "World.agents": "saved 3", "World.live": "derived: counters rebuilt from the agents",
+	"World.markets": "saved 4", "World.bp": "derived: of cfg", "World.clr": "scratch", "World.receipts": "scratch",
+	"World.prod": "scratch: the cost anchors, derived at P1.2 (PRO row)", "World.refused": "scratch", "World.welfare": "scratch",
+	"World.reads": "scratch", "World.views": "scratch", "World.tk": "scratch", "World.pr": "scratch", "World.oc": "scratch",
+	"World.ex": "scratch", "World.tally": "scratch", "World.runnable": "scratch: rebuilt at P1.2", "World.seedWage": "derived: of cfg",
+	"World.state": "saved 1, 3, 7, 9", "World.lotBuf": "scratch", "World.failed": "not state: a failed world is not checkpointed",
+	"World.stepping": "not state: the in-step flag",
+
+	"worldState.seed": "saved: the header", "worldState.nextAgent": "saved 1", "worldState.unfedRun": "saved 3",
+	"worldState.floorRun": "saved 7", "worldState.extinctRun": "saved 9", "worldState.belowFloorRun": "saved 9",
+	"worldState.clampRun": "saved 7", "worldState.unfundedRun": "saved 9", "worldState.renewalCarry": "saved 9",
+	"worldState.hadAgent": "saved 9",
+
+	"agent.id": "saved 3", "agent.account": "saved 3", "agent.role": "saved 3", "agent.weight": "saved 3",
+	"agent.external": "saved 3", "agent.mortal": "saved 3", "agent.strategy": "saved 3", "agent.beliefs": "saved 5",
+	"agent.job": "saved 6", "agent.residues": "saved 6", "agent.history": "saved 7", "agent.target": "saved 7",
+	"agent.unfed": "saved 3", "agent.hunger": "saved 3", "agent.privation": "saved 3", "agent.roleSince": "saved 3",
+	"agent.directive": "saved 3",
+
+	"job.recipe": "saved 6", "job.remaining": "saved 6", "job.executions": "saved 6", "job.principal": "saved 6",
+	"job.yield": "saved 6", "job.pending": "saved 6",
+
+	"marketTable.commodities": "derived: of cfg", "marketTable.reports": "saved 4", "marketTable.windows": "saved 4",
+	"marketTable.boundRun": "saved 4", "marketTable.books": "scratch: the book of the tick in progress",
+	"marketTable.intents": "scratch", "marketTable.slotOf": "scratch", "marketTable.asks": "scratch", "marketTable.trades": "scratch",
+
+	"estates.accounts": "derived: the first non-boundary accounts of the ledger (attachEstates)", "estates.listed": "saved 8",
+	"estates.lots": "scratch", "estates.scratch": "scratch",
+}
+
+// TestFields_EveryLiveFieldSavedOrDerived verifies, by reading the source, that every
+// field of World, worldState, agent, job, marketTable and estates is named in
+// savedOrDerived, and that the table names no field that is gone. A field added to
+// one of these structs fails the test until the author says whether a section
+// saves it or why none need.
+//
+// Requirement: FR-CHK-045
+//
+// Guard: the restore tests compare a restored world with the original over a few
+// ticks, and a new field holding state that no section saves gives the same
+// bytes until the day it matters; this fails the day the field is added.
+func TestFields_EveryLiveFieldSavedOrDerived(t *testing.T) {
+	t.Parallel()
+	structs := map[string]bool{"World": true, "worldState": true, "agent": true, "job": true, "marketTable": true, "estates": true}
+	files := []string{"world.go", "agent.go", "market.go", "production.go", "welfare.go", "spawner.go", "estates.go"}
+	fset := token.NewFileSet()
+	found := map[string]bool{}
+	for _, name := range files {
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("ParseFile(%s) error = %v, want nil", name, err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok || !structs[ts.Name.Name] {
+				return true
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+			for _, fl := range st.Fields.List {
+				if len(fl.Names) == 0 {
+					t.Errorf("%s.%s: an embedded field has no name to list; name it", ts.Name.Name, name)
+				}
+				for _, id := range fl.Names {
+					key := ts.Name.Name + "." + id.Name
+					found[key] = true
+					if _, ok := savedOrDerived[key]; !ok {
+						t.Errorf("%s (%s) is in no row of savedOrDerived: say which section saves it or why none need", key, name)
+					}
+				}
+			}
+			return true
+		})
+	}
+	for key := range savedOrDerived {
+		if !found[key] {
+			t.Errorf("savedOrDerived names %s, which is not a field of the structs in %v", key, files)
+		}
+	}
+}
+
+// TestCheckpoint_NoFloatsNoMapsNoTime verifies by syntax that the code which writes
+// and reads a checkpoint (checkpoint*.go and internal/codec, tests excluded) has no
+// floating-point type, no map type, no reference to the time or rand packages and no
+// goroutine: the bytes are the same on every platform and every run.
+//
+// Requirement: FR-CHK-015, NFR-CHK-005
+//
+// Guard: a map range in a writer gives a different byte order on each run, and a
+// float gives a different one on arm64 (architecture.md 3.5, 7.5); neither shows in
+// a single-platform test.
+func TestCheckpoint_NoFloatsNoMapsNoTime(t *testing.T) {
+	t.Parallel()
+	var files []string
+	for _, pattern := range []string{"checkpoint*.go", "internal/codec/*.go"} {
+		m, err := filepath.Glob(pattern)
+		if err != nil {
+			t.Fatalf("Glob(%q) error = %v, want nil", pattern, err)
+		}
+		files = append(files, m...)
+	}
+	files = slices.DeleteFunc(files, func(f string) bool { return strings.HasSuffix(f, "_test.go") })
+	if len(files) < 5 {
+		t.Fatalf("found %v, want the checkpoint files and the codec", files)
+	}
+	for _, f := range files {
+		file, err := parser.ParseFile(token.NewFileSet(), f, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", f, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch n := n.(type) {
+			case *ast.MapType:
+				t.Errorf("%s: map type", f)
+			case *ast.GoStmt:
+				t.Errorf("%s: go statement", f)
+			case *ast.Ident:
+				if n.Name == "float32" || n.Name == "float64" {
+					t.Errorf("%s: %s", f, n.Name)
+				}
+			case *ast.SelectorExpr:
+				if x, ok := n.X.(*ast.Ident); ok && (x.Name == "time" || x.Name == "rand") {
+					t.Errorf("%s: %s.%s", f, x.Name, n.Sel.Name)
+				}
+			}
+			return true
+		})
 	}
 }

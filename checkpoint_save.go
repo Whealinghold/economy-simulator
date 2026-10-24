@@ -1,10 +1,8 @@
 package economysim
 
 import (
-	"cmp"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -81,25 +79,21 @@ func (w *World) deathCarry(id AgentID) int64 {
 // differ from 0, as a count and then (region, role, value) in ascending key
 // order (spec-checkpoint.md 4.1.4): a row at its default is not written.
 func writeSparse(cw *codec.Writer, vals []int64, roles int) {
-	n := 0
-	for _, v := range vals {
-		if v != 0 {
-			n++
-		}
-	}
-	cw.Count(n)
-	for i, v := range vals {
-		if v != 0 {
-			cw.U(uint64(i / roles))
-			cw.U(uint64(i % roles))
-			cw.U(unsigned(v))
-		}
-	}
+	writeSparseRows(cw, vals, func(i int) {
+		cw.U(uint64(i / roles))
+		cw.U(uint64(i % roles))
+	})
 }
 
 // writeSparseByRegion is writeSparse for a run kept per region: a count and then
 // (region, value).
 func writeSparseByRegion(cw *codec.Writer, vals []int64) {
+	writeSparseRows(cw, vals, func(i int) { cw.U(uint64(i)) })
+}
+
+// writeSparseRows is the loop of both: a count of the non-zero rows, then for each
+// the key written by writeKey and the value.
+func writeSparseRows(cw *codec.Writer, vals []int64, writeKey func(i int)) {
 	n := 0
 	for _, v := range vals {
 		if v != 0 {
@@ -109,7 +103,7 @@ func writeSparseByRegion(cw *codec.Writer, vals []int64) {
 	cw.Count(n)
 	for i, v := range vals {
 		if v != 0 {
-			cw.U(uint64(i))
+			writeKey(i)
 			cw.U(unsigned(v))
 		}
 	}
@@ -153,7 +147,7 @@ func (w *World) statefulEntries() []extEntry {
 		}
 	}
 	slices.SortFunc(out, func(a, b extEntry) int {
-		return cmp.Or(cmp.Compare(a.kind, b.kind), strings.Compare(a.name, b.name))
+		return compareExt(a.kind, a.name, b.kind, b.name)
 	})
 	return out
 }

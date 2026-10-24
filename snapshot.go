@@ -214,7 +214,8 @@ func (a *snapAcc) reset() {
 
 // Snapshot returns a deep copy of the standing state at the tick boundary. It
 // returns ErrInStep from inside a step and ErrWorldFailed on a failed world; it
-// draws no random number and changes no state (spec-observability.md 5.2).
+// draws no random number and changes no saved state (spec-observability.md 5.2); it
+// rewrites only the scratch that P1.2 of the next step rewrites first.
 func (w *World) Snapshot() (Snapshot, error) {
 	if err := w.guard(); err != nil {
 		return Snapshot{}, err
@@ -227,6 +228,12 @@ func (w *World) Snapshot() (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
 	}
+	// The cost anchors are derived scratch and are not saved. Derive them from the
+	// saved state as P1.2 of the next step will, so that the range a belief is
+	// counted against is a function of the saved state and a restored world reports
+	// what the original does (FR-CHK-053).
+	w.tk.moment = moment
+	w.p12Anchors()
 	nr, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
 	s := Snapshot{
 		Tick: w.Tick(), Seed: w.state.seed, ConfigHash: w.hash, Moment: moment,

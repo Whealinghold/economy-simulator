@@ -3,6 +3,7 @@ package economysim
 import (
 	"cmp"
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -708,4 +709,68 @@ func (w *World) saveJob(cw *codec.Writer, a *agent) {
 	for i := range w.recipes.row(j.recipe).outputs {
 		cw.U(unsigned(j.pending[i]))
 	}
+}
+
+// loadJobs is tag 6: for each live agent in ascending ID its job and its residues,
+// then the sparse yield shocks. A job names a recipe on its role's list, at least
+// one execution and one tick left (and no more ticks than the recipe lasts), a
+// yield within its bound and a principal that is a live agent; the residues are
+// below the bound of their draw.
+func (w *World) loadJobs(_ *restoreCtx, r *codec.Reader) error {
+	w.eachLive(func(a *agent) {
+		if r.B() {
+			w.loadJob(r, a)
+		}
+		for i := range a.residues {
+			if a.residues[i] = r.Bounded("residue", residueBound-1); r.Err() != nil {
+				return
+			}
+		}
+	})
+	n := r.Count(3)
+	for i := range n {
+		reg := RegionID(r.Index(uint64(len(w.cfg.Regions))))
+		rec := RecipeID(r.Index(uint64(len(w.cfg.Recipes))))
+		bp := r.Bounded("yield shock", MaxYieldBP)
+		if r.Err() != nil {
+			return nil
+		}
+		if k := len(w.shocks.entries) - 1; bp == production.BP || (i > 0 && cmp.Or(cmp.Compare(w.shocks.entries[k].region, reg), cmp.Compare(w.shocks.entries[k].recipe, rec)) >= 0) {
+			r.Failf("yield shock (region %d, recipe %d) is neutral or out of order", reg, rec)
+			return nil
+		}
+		w.shocks.entries = append(w.shocks.entries, shockEntry{region: reg, recipe: rec, bp: bp})
+	}
+	return nil
+}
+
+// loadJob reads the job of a, whose flag was set: the recipe, the executions left
+// and made, the principal, the yield and the pending quantity of each output.
+func (w *World) loadJob(r *codec.Reader, a *agent) {
+	rec := RecipeID(r.Index(uint64(len(w.cfg.Recipes))))
+	if r.Err() != nil {
+		return
+	}
+	j := job{recipe: rec}
+	j.remaining = r.Bounded("ticks remaining", w.cfg.Recipes[rec].Duration)
+	j.executions = r.Bounded("executions", MaxQuantity)
+	principal := r.Bounded("principal", math.MaxInt64)
+	j.principal = AgentID(principal)
+	j.yield = r.Bounded("yield", MaxYieldBP)
+	_, onList := slices.BinarySearch(w.roles.row(a.role).recipes, rec)
+	switch {
+	case r.Err() != nil:
+		return
+	case !onList || j.remaining < 1 || j.executions < 1:
+		r.Failf("agent %d has a job of recipe %d that is not on its role's list or has nothing left", a.id, rec)
+		return
+	case principal < int64(len(w.cfg.Regions)) || principal >= int64(len(w.agents)) || w.agents[principal].weight < 1:
+		r.Failf("agent %d has a job whose principal %d is not a live agent", a.id, principal)
+		return
+	}
+	j.pending = make([]int64, len(w.recipes.row(rec).outputs))
+	for i := range j.pending {
+		j.pending[i] = r.Bounded("pending quantity", MaxQuantity)
+	}
+	a.job = j
 }

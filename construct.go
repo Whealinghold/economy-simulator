@@ -154,8 +154,7 @@ func (w *World) beginConstruction() *builder {
 // finish is steps 9 and 10: the audit with WithAudit, then the logs and events.
 func (b *builder) finish(warnings []Warning) error {
 	w := b.w
-	w.receipts.v = make([]int64, w.ledger.Len())
-	w.welfare = newWelfareScratch(&w.cfg, len(w.agents))
+	w.finishScratch()
 	var auditErr error
 	if w.audit {
 		auditErr = w.ledger.Audit()
@@ -169,6 +168,14 @@ func (b *builder) finish(warnings []Warning) error {
 	}
 	b.announce(warnings)
 	return nil
+}
+
+// finishScratch builds the scratch that depends on the account list and the agent
+// table once both are complete: the receipt tally and the welfare flows. A restore
+// builds it after the sections are loaded, as the construction does (plan 2-2 D252).
+func (w *World) finishScratch() {
+	w.receipts.v = make([]int64, w.ledger.Len())
+	w.welfare = newWelfareScratch(&w.cfg, len(w.agents))
 }
 
 // allocate builds what the agents and the first step need and the constructor
@@ -342,12 +349,7 @@ func modulesOn(*Config) []string { return []string{} }
 func (b *builder) announce(warnings []Warning) {
 	w := b.w
 	ctx := context.Background()
-	if w.log.Enabled(ctx, slog.LevelWarn) {
-		for _, wn := range warnings {
-			w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning",
-				slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, ".")))
-		}
-	}
+	w.logWarnings(ctx, warnings)
 	b.logWarm(ctx)
 	if w.log.Enabled(ctx, slog.LevelInfo) {
 		w.log.LogAttrs(ctx, slog.LevelInfo, "world created", w.summary()...)
@@ -359,6 +361,18 @@ func (b *builder) announce(warnings []Warning) {
 	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg)})
 	for _, e := range b.spawned {
 		w.obs.deliver(e)
+	}
+}
+
+// logWarnings logs each configuration warning at Warn, once, with its rule and
+// path: at construction and at a restore alike.
+func (w *World) logWarnings(ctx context.Context, warnings []Warning) {
+	if !w.log.Enabled(ctx, slog.LevelWarn) {
+		return
+	}
+	for _, wn := range warnings {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning",
+			slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, ".")))
 	}
 }
 

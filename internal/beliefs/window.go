@@ -43,6 +43,11 @@ func (w *Window) Push(price int64) {
 // subtraction of the evicted price), and a running int64 sum could overflow at a
 // large maxPrice; upgrade if a profile shows PriceWindow large enough to matter.
 func (w *Window) refresh() {
+	if w.n == 0 {
+		// An empty window reads as a new one: the statistics are 0 and unread.
+		w.mean, w.low, w.high = 0, 0, 0
+		return
+	}
 	var sum checked.Acc
 	w.low, w.high = w.maxPrice, 1
 	for i := range w.n {
@@ -50,7 +55,7 @@ func (w *Window) refresh() {
 		sum.AddMul(v, 1) // v is at least 1: cannot fail
 		w.low, w.high = min(w.low, v), max(w.high, v)
 	}
-	w.mean, _ = sum.DivHalfEven(int64(w.n)) // a mean of values <= maxPrice fits; n = 0 gives 0, unread
+	w.mean, _ = sum.DivHalfEven(int64(w.n)) // a mean of values <= maxPrice fits
 }
 
 // Len returns the number of prices held.

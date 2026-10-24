@@ -672,3 +672,62 @@ func TestReader_ExactFitsAreAccepted(t *testing.T) {
 		}
 	})
 }
+
+// TestReader_BytesLengthBeyondInputFailsAtTheLength verifies that a length
+// above the bytes remaining is reported by Bytes itself, at the offset where
+// the length began, and not by the fixed-size read after it, which would
+// report the offset after the length and, where int is 32 bits, would accept
+// a length that wraps (2^32+1 reads as 1).
+//
+// Requirement: FR-CHK-012
+func TestReader_BytesLengthBeyondInputFailsAtTheLength(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		in   []byte
+		off  int
+	}{
+		{"one past the bytes remaining", []byte{4, 'a', 'b', 'c'}, 0},
+		{"wraps a 32-bit int", []byte{0x81, 0x80, 0x80, 0x80, 0x10, 'x'}, 0},
+		{"above the largest int", []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := codec.NewReader(tt.in)
+			got := r.Bytes()
+			var ce *codec.Error
+			if got != nil || !errors.As(r.Err(), &ce) || ce.Offset != tt.off || ce.Msg != "length exceeds the bytes remaining" {
+				t.Errorf("Bytes() = %v, %v, want nil and %q at offset %d", got, r.Err(), "length exceeds the bytes remaining", tt.off)
+			}
+		})
+	}
+}
+
+// TestReader_BoundedEdges verifies that Bounded accepts a value equal to its
+// maximum, refuses the next one naming what was read at the offset where the read
+// began, and returns 0 for it.
+//
+// Requirement: FR-CHK-013
+func TestReader_BoundedEdges(t *testing.T) {
+	t.Parallel()
+	r := codec.NewReader([]byte{5, 6})
+	if got := r.Bounded("run", 5); got != 5 || r.Err() != nil {
+		t.Fatalf("Bounded(5 of 5) = %d, %v, want 5 and no error", got, r.Err())
+	}
+	if got := r.Bounded("run", 5); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 1: run 6 is above 5" {
+		t.Errorf("Bounded(6 of 5) = %d, %v, want 0 and the error naming run 6 above 5", got, r.Err())
+	}
+}
+
+// TestReader_BoundedNegativeMaxRefusesEverything verifies that a negative maximum
+// fails closed: it is not read as a huge unsigned limit that accepts any value.
+//
+// Requirement: FR-CHK-013
+func TestReader_BoundedNegativeMaxRefusesEverything(t *testing.T) {
+	t.Parallel()
+	r := codec.NewReader([]byte{0})
+	if got := r.Bounded("run", -1); got != 0 || r.Err() == nil || r.Err().Error() != "codec: malformed input at byte 0: run has a negative bound -1" {
+		t.Errorf("Bounded(0 of -1) = %d, %v, want 0 and an error", got, r.Err())
+	}
+}

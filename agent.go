@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
@@ -370,8 +371,15 @@ func saveDirective(cw *codec.Writer, d *Directive) {
 	cw.B(d.Job != nil)
 	if d.Job != nil {
 		cw.B(d.Job.NoJob)
-		cw.U(uint64(d.Job.Recipe))
-		cw.U(uint64(d.Job.Executions))
+		if d.Job.NoJob {
+			// The other fields are ignored with NoJob and may hold any value, which the
+			// restore would refuse; write the neutral ones.
+			cw.U(0)
+			cw.U(0)
+		} else {
+			cw.U(uint64(d.Job.Recipe))
+			cw.U(uint64(d.Job.Executions))
+		}
 	}
 	cw.Count(len(d.Intents))
 	for _, in := range d.Intents {
@@ -394,4 +402,199 @@ func saveDirective(cw *codec.Writer, d *Directive) {
 		cw.U(uint64(c))
 	}
 	cw.B(d.Sticky)
+}
+
+// agentRecordMin is the fewest bytes the record of an agent takes: fifteen fields
+// of at least one byte each, which bounds the count of agents by the bytes left
+// (R8).
+const agentRecordMin = 15
+
+// loadAgents is tag 3 (plan 2-2 D247): the table of strategy names, the agents in
+// strictly ascending ID, the blocks of the modules that follow the list and the
+// sparse run of unfed ticks. The agent table is allocated here, once the count of
+// slots the ledger can account for is known (spec-checkpoint.md 6.6.1): every
+// agent ever created has an account, open or closed, so the next ID cannot exceed
+// the regions plus the accounts.
+func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
+	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	names := readStrategyNames(r)
+	if r.Err() == nil && int(w.state.nextAgent)-regions > w.ledger.Len() {
+		r.Failf("next agent ID %d, but the ledger has %d accounts", w.state.nextAgent, w.ledger.Len())
+	}
+	if r.Err() != nil {
+		return nil
+	}
+	w.agents = make([]agent, w.state.nextAgent)
+	prev := uint64(0)
+	for i := range r.Count(agentRecordMin) {
+		if r.Err() != nil {
+			return nil
+		}
+		prev = w.loadAgent(rs, r, names, prev, i > 0)
+	}
+	// Every name in the table is a live agent's strategy (the table is the sorted
+	// set saveAgents writes), so an unused name is a non-canonical encoding (R10).
+	if r.Err() == nil {
+		used := map[string]struct{}{}
+		w.eachLive(func(a *agent) { used[w.strategyName(a)] = struct{}{} })
+		if len(used) != len(names) {
+			r.Failf("the table of strategy names has %d names, the agents use %d", len(names), len(used))
+		}
+	}
+	for _, t := range agentTails {
+		if t.present(&w.cfg) {
+			t.load(w, r)
+		}
+	}
+	readSparse(r, w.state.unfedRun, regions, roles, rs.tick)
+	return nil
+}
+
+// readStrategyNames reads the table of strategy names that heads tag 3: a count and
+// the names in strictly ascending order.
+func readStrategyNames(r *codec.Reader) []string {
+	names := make([]string, 0, 1)
+	for range r.Count(1) {
+		n := string(r.Bytes())
+		if k := len(names) - 1; k >= 0 && r.Err() == nil && names[k] >= n {
+			r.Failf("strategy name %q is not above the one before it", n)
+		}
+		names = append(names, n)
+	}
+	return names
+}
+
+// agentRec is the record of one agent as read, before any field is checked against
+// the world: the fields in the order of spec-checkpoint.md 4.2 tag 3. nameIdx is
+// the index into the table of strategy names.
+type agentRec struct {
+	id                          uint64
+	acct                        int
+	role                        uint64
+	weight, flags, nameIdx      int64
+	unfed, hunger, privation    int64
+	since, carry                int64
+	ownUse, ownUseJobs, journey bool
+	directive                   *Directive
+}
+
+// readAgentRec reads the 15 fields of an agent record, each against its own bound
+// (R6, R13). ownUse and ownUseJobs are read as the numbers they are and reported as
+// whether they are non-zero, since the module that owns them is off.
+func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) agentRec {
+	rec := agentRec{id: r.Strict(prev, started)}
+	rec.acct = int(r.Index(uint64(w.ledger.Len())))
+	rec.role = r.Index(uint64(len(w.cfg.Roles)))
+	rec.weight = r.Bounded("weight", MaxWeight)
+	rec.flags = int64(r.Index(1)) // External and Mortal are the integration module's; no agent has one yet
+	rec.nameIdx = int64(r.Index(uint64(len(names))))
+	rec.unfed = r.Bounded("unfed", rec.weight)
+	rec.hunger = r.Bounded("hunger", rs.tick)
+	rec.privation = r.Bounded("privation", rs.tick)
+	rec.since, rec.carry = r.I(), r.I()
+	rec.ownUse, rec.ownUseJobs, rec.journey = r.U() != 0, r.U() != 0, r.B()
+	rec.directive = w.loadDirective(r)
+	return rec
+}
+
+// checkAgentRec requires the record to describe an agent this world can hold. It
+// returns the agent's account.
+func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (ledger.View, error) {
+	v, err := w.ledger.Account(rec.acct)
+	switch {
+	case rec.id < uint64(len(w.cfg.Regions)) || rec.id >= uint64(w.state.nextAgent):
+		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, len(w.cfg.Regions), w.state.nextAgent)
+	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(rec.id):
+		err = fmt.Errorf("agent %d names account %d, which is not its open Agent account", rec.id, rec.acct)
+	default:
+		err = w.checkAgentFields(rs, rec, names)
+	}
+	return v, err
+}
+
+// checkAgentFields requires a weight, the strategy of the agent's role, a
+// role-since within the run, the death carry that is its start and none of the
+// state of a module that is off.
+func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) error {
+	switch id := AgentID(rec.id); {
+	case rec.weight < 1 || rec.flags != 0 || names[rec.nameIdx] != w.cfg.Roles[rec.role].Strategy:
+		return fmt.Errorf("agent %d has weight %d or a strategy %q that is not its role's", rec.id, rec.weight, names[rec.nameIdx])
+	case rec.since < 0 || rec.since > rs.tick:
+		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
+	case rec.carry != w.deathCarry(id):
+		return fmt.Errorf("agent %d has DeathCarry %d, not its start %d, while the population module is off", rec.id, rec.carry, w.deathCarry(id))
+	case rec.ownUse || rec.ownUseJobs || rec.journey:
+		return fmt.Errorf("agent %d has own-use or journey state while its module is off", rec.id)
+	}
+	return nil
+}
+
+// loadAgent reads the record of one agent, checks it and puts the agent in its
+// slot. It returns the agent's ID, the key the next record must exceed. The fields
+// a module hosts are read always (R10): while the module is off, OwnUse and
+// OwnUseJobs must be 0, there is no journey, and DeathCarry must be its start.
+func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
+	rec := w.readAgentRec(rs, r, names, prev, started)
+	if r.Err() != nil {
+		return rec.id
+	}
+	v, err := w.checkAgentRec(rs, &rec, names)
+	if err != nil {
+		r.Failf("%v", err)
+		return rec.id
+	}
+	a := newAgent(agentInit{id: AgentID(rec.id), account: rec.acct, role: RoleID(rec.role), weight: rec.weight, strategy: int(rec.role), tick: rec.since},
+		w.roles.row(RoleID(rec.role)), &w.recipes)
+	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
+	w.agents[rec.id] = a
+	w.live.agents++
+	w.live.households += rec.weight
+	w.live.inRole[v.Region*len(w.cfg.Roles)+int(rec.role)]++
+	return rec.id
+}
+
+// loadDirective reads saveDirective's bytes: whether there is a directive, its
+// optional job request, intents, discards, holds and Sticky. Every amount is
+// checked against its bound (R13), which also refuses the number a negative one
+// was written as (plan 2-17 validates a directive when it is set).
+func (w *World) loadDirective(r *codec.Reader) *Directive {
+	if !r.B() {
+		return nil
+	}
+	nc, nr := uint64(len(w.cfg.Commodities)), uint64(len(w.cfg.Recipes))
+	d := &Directive{}
+	if r.B() {
+		d.Job = &JobRequest{NoJob: r.B()}
+		if d.Job.NoJob { // the other fields are ignored and written as 0, even in a world with no recipe
+			r.Bounded("recipe", 0)
+			r.Bounded("executions", 0)
+		} else {
+			d.Job.Recipe, d.Job.Executions = RecipeID(r.Index(nr)), r.Bounded("executions", math.MaxInt64)
+		}
+	}
+	for range r.Count(8) {
+		if r.Err() != nil {
+			return nil
+		}
+		d.Intents = append(d.Intents, Intent{
+			Commodity: CommodityID(r.Index(nc)), Side: Side(r.Index(2)),
+			Quantity: Quantity(r.Bounded("quantity", MaxQuantity)), Limit: Price(r.Bounded("limit", MaxPrice)),
+			Target: Quantity(r.Bounded("target", MaxQuantity)), Reserve: Quantity(r.Bounded("reserve", MaxQuantity)),
+			UnitCost: Price(r.Bounded("unit cost", MaxPrice)), Purpose: Purpose(r.Index(uint64(PurposeTool) + 1)),
+		})
+	}
+	for range r.Count(2) {
+		if r.Err() != nil {
+			return nil
+		}
+		d.Discards = append(d.Discards, Discard{Commodity: CommodityID(r.Index(nc)), Quantity: Quantity(r.Bounded("quantity", MaxQuantity))})
+	}
+	for range r.Count(1) {
+		if r.Err() != nil {
+			return nil
+		}
+		d.Hold = append(d.Hold, CommodityID(r.Index(nc)))
+	}
+	d.Sticky = r.B()
+	return d
 }

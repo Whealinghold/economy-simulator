@@ -378,6 +378,9 @@ func renderGolden(cfgName string, seed uint64, ticks int64, res result, report s
 	writeFlows(&b, names, res.Events)
 	b.WriteString("final\n")
 	writeFinal(&b, res.Final)
+	if res.Digest != "" {
+		b.WriteString("checkpoint_digest " + res.Digest + "\n")
+	}
 	return []byte(b.String())
 }
 
