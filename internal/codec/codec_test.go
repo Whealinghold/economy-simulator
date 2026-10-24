@@ -672,3 +672,34 @@ func TestReader_ExactFitsAreAccepted(t *testing.T) {
 		}
 	})
 }
+
+// TestReader_BytesLengthBeyondInputFailsAtTheLength verifies that a length
+// above the bytes remaining is reported by Bytes itself, at the offset where
+// the length began, and not by the fixed-size read after it, which would
+// report the offset after the length and, where int is 32 bits, would accept
+// a length that wraps (2^32+1 reads as 1).
+//
+// Requirement: FR-CHK-012
+func TestReader_BytesLengthBeyondInputFailsAtTheLength(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		in   []byte
+		off  int
+	}{
+		{"one past the bytes remaining", []byte{4, 'a', 'b', 'c'}, 0},
+		{"wraps a 32-bit int", []byte{0x81, 0x80, 0x80, 0x80, 0x10, 'x'}, 0},
+		{"above the largest int", []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := codec.NewReader(tt.in)
+			got := r.Bytes()
+			var ce *codec.Error
+			if got != nil || !errors.As(r.Err(), &ce) || ce.Offset != tt.off || ce.Msg != "length exceeds the bytes remaining" {
+				t.Errorf("Bytes() = %v, %v, want nil and %q at offset %d", got, r.Err(), "length exceeds the bytes remaining", tt.off)
+			}
+		})
+	}
+}
