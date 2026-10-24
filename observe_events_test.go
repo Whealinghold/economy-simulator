@@ -51,15 +51,14 @@ var emittedBy = []struct{ event, scenario string }{
 	{"RecipeRefused", "starving"},
 	{"RecipeAbandoned", "spawner script"}, {"WeightChanged", "spawner script"},
 	{"RoleChanged", "spawner script"}, {"EntryLimited", "spawner script"},
-	{"OrderRejected", "bad order"},
+	{"OrderRejected", "bad order"}, {"WorldRestored", "restored"},
 }
 
 // sliceNotEmitted names the declared events that no scenario of the slice emits:
-// the staged list of FR-OBS-003. WorldRestored is declared with the write path of
-// the checkpoint and emitted by RestoreWorld, which the restore change builds
-// (plan 2-2 Phase 5) and which deletes the entry; an entry that a scenario does
-// emit fails the test as stale.
-var sliceNotEmitted = []string{"WorldRestored"}
+// the staged list of FR-OBS-003. It is empty: every declared event is emitted
+// (WorldRestored by the scenario "restored" that emittedTypes adds); an entry that
+// a scenario does emit fails the test as stale.
+var sliceNotEmitted = []string{}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.
@@ -73,7 +72,38 @@ func emittedTypes(t *testing.T, list []scenario) map[string]map[string]bool {
 			seen[sc.name][typeName(e)] = true
 		}
 	}
+	seen["restored"] = restoredTypes(t, scenarioNamed(t, list, "one"))
 	return seen
+}
+
+// restoredTypes checkpoints the world of sc after its ticks and returns the names
+// of the event types a restore of it delivers to an observer: the scenario
+// "restored" of the staged emission test (plan 2-2 Phase 5).
+func restoredTypes(t *testing.T, sc scenario) map[string]bool {
+	t.Helper()
+	w, _, _ := build(t, sc, who{})
+	for range sc.ticks {
+		if err := w.Step(); err != nil {
+			t.Fatalf("scenario %q (seed %d): Step() error = %v, want nil", sc.name, obsSeed, err)
+		}
+	}
+	ck, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("scenario %q (seed %d): Checkpoint() error = %v, want nil", sc.name, obsSeed, err)
+	}
+	rec := &recorder{}
+	opts := []economysim.Option{economysim.WithObserver(rec)}
+	if sc.opts != nil {
+		opts = append(opts, sc.opts()...)
+	}
+	if _, err := economysim.RestoreWorld(sc.cfg(t), ck, opts...); err != nil {
+		t.Fatalf("scenario %q (seed %d): RestoreWorld() error = %v, want nil", sc.name, obsSeed, err)
+	}
+	out := map[string]bool{}
+	for _, e := range rec.events {
+		out[typeName(e)] = true
+	}
+	return out
 }
 
 // checkStagedEmission fails on a declared event that no scenario emitted and that

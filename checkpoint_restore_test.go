@@ -819,3 +819,103 @@ func TestRestore_StatefulHiddenState(t *testing.T) {
 		t.Errorf("a strategy that keeps its counter outside SaveState did not diverge, want the test to show the hidden state")
 	}
 }
+
+// TestOptions_ContextOnRestore verifies the options of a restore (spec-checkpoint.md
+// 6.4): WithSeed is ErrOptionContext, WithReseed is accepted with any salt, 0
+// included, and WithTargetSpread is accepted and is part of the effective
+// configuration, so a restore that does not repeat the original's value is
+// ErrCheckpointConfig.
+//
+// Requirement: FR-CHK-020
+func TestOptions_ContextOnRestore(t *testing.T) {
+	t.Parallel()
+	plain := mustCheckpoint(t, ckptWorld(t, 2))
+	spread := mustCheckpoint(t, ckptWorld(t, 2, economysim.WithTargetSpread(100)))
+	tests := []struct {
+		name string
+		ck   economysim.Checkpoint
+		opts []economysim.Option
+		want error
+	}{
+		{"WithSeed", plain, []economysim.Option{economysim.WithSeed(1)}, economysim.ErrOptionContext},
+		{"WithSeed after WithReseed", plain, []economysim.Option{economysim.WithReseed(1), economysim.WithSeed(1)}, economysim.ErrOptionContext},
+		{"WithReseed(0)", plain, []economysim.Option{economysim.WithReseed(0)}, nil},
+		{"WithReseed(5)", plain, []economysim.Option{economysim.WithReseed(5)}, nil},
+		{"WithTargetSpread the original had", spread, []economysim.Option{economysim.WithTargetSpread(100)}, nil},
+		{"WithTargetSpread the original lacked", plain, []economysim.Option{economysim.WithTargetSpread(100)}, economysim.ErrCheckpointConfig},
+		{"WithTargetSpread missing", spread, nil, economysim.ErrCheckpointConfig},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w, err := economysim.RestoreWorld(millCfg(3, 4), tt.ck, tt.opts...)
+			if !errors.Is(err, tt.want) && (tt.want != nil || err != nil) {
+				t.Fatalf("RestoreWorld(%s) error = %v, want %v", tt.name, err, tt.want)
+			}
+			if (w == nil) != (tt.want != nil) {
+				t.Errorf("RestoreWorld(%s) world = %v, want a world only without an error", tt.name, w)
+			}
+		})
+	}
+}
+
+// TestRestore_ReportsEventAndLog verifies step 12: the observer given to a restore
+// receives WorldRestored first and alone (no AgentSpawned, no WorldCreated), with
+// the tick, the hash, the format, the names and a snapshot equal to the original's
+// at that boundary; the logger receives the configuration warnings of construction, once each, and
+// the Info line "world restored" with its seven attributes; and a restore with no observer builds no event.
+//
+// Requirement: FR-CHK-027, FR-CHK-028, FR-CHK-081
+func TestRestore_ReportsEventAndLog(t *testing.T) {
+	t.Parallel()
+	w := ckptWorld(t, 4)
+	ck := mustCheckpoint(t, w)
+	rec, h := &recorder{}, newCaptureHandler()
+	r := mustRestore(t, ck, economysim.WithObserver(rec), economysim.WithLogger(slog.New(h)))
+	if len(rec.events) != 1 {
+		t.Fatalf("a restore delivered %d events, want exactly WorldRestored", len(rec.events))
+	}
+	ev, ok := rec.events[0].(economysim.WorldRestored)
+	want, _ := w.Snapshot()
+	if !ok || ev.Tick != 4 || ev.ConfigHash != w.ConfigHash() || ev.Format != 1 || ev.Reseeded || ev.Salt != 0 ||
+		!reflect.DeepEqual(ev.Snapshot, want) || !reflect.DeepEqual(ev.Names, want.Names) {
+		t.Errorf("first event = %+v, want WorldRestored at tick 4 with the original's hash, format 1, no reseed and the original's snapshot and names", rec.events[0])
+	}
+	// The mill has configuration warnings; construction logs each once at Warn, and a
+	// restore must log the same ones, once each.
+	hc := newCaptureHandler()
+	if _, err := economysim.NewWorld(millCfg(3, 4), economysim.WithSeed(ckptSeed), economysim.WithLogger(slog.New(hc))); err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	var info, warns, wantWarns []logLine
+	for _, l := range h.records() {
+		switch l.level {
+		case slog.LevelInfo:
+			info = append(info, l)
+		case slog.LevelWarn:
+			warns = append(warns, l)
+		}
+	}
+	for _, l := range hc.records() {
+		if l.level == slog.LevelWarn {
+			wantWarns = append(wantWarns, l)
+		}
+	}
+	if len(info) != 1 || info[0].msg != "world restored" {
+		t.Fatalf("Info lines = %+v, want the one line %q", info, "world restored")
+	}
+	if !reflect.DeepEqual(warns, wantWarns) || len(warns) == 0 {
+		t.Errorf("Warn lines of the restore = %+v, want the %d of construction, %+v", warns, len(wantWarns), wantWarns)
+	}
+	for _, key := range []string{"tick", "seed", "config_hash", "agents", "households", "format", "bytes"} {
+		if _, ok := info[0].attr(key); !ok {
+			t.Errorf("line %q has no attribute %q", info[0].msg, key)
+		}
+	}
+	if v, _ := info[0].attr("bytes"); v.Int64() != int64(ck.Info().Bytes) {
+		t.Errorf("bytes = %d, want %d", v.Int64(), ck.Info().Bytes)
+	}
+	if err := r.Step(); err != nil {
+		t.Errorf("Step() of the restored world error = %v, want nil", err)
+	}
+}
