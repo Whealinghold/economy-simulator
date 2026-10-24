@@ -1,10 +1,8 @@
 package economysim
 
 import (
-	"cmp"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -149,7 +147,7 @@ func (w *World) statefulEntries() []extEntry {
 		}
 	}
 	slices.SortFunc(out, func(a, b extEntry) int {
-		return cmp.Or(cmp.Compare(a.kind, b.kind), strings.Compare(a.name, b.name))
+		return compareExt(a.kind, a.name, b.kind, b.name)
 	})
 	return out
 }
