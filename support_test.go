@@ -3,6 +3,8 @@ package economysim_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -108,6 +110,7 @@ type runSpec struct {
 	Audit     bool         // WithAudit
 	Logger    slog.Handler // nil: no logger
 	Snapshots snapMode     // needs driveStep unless snapNone
+	Digest    bool         // take the checkpoint after the run and keep its trailer in result.Digest
 	Extra     []economysim.Option
 }
 
@@ -119,6 +122,7 @@ type result struct {
 	Samples map[int64]economysim.Snapshot
 	Final   economysim.Snapshot
 	Ticks   int64
+	Digest  string // hex of the final checkpoint's trailer; empty unless runSpec.Digest
 }
 
 // isSample reports whether the snapshot after step t is asked for.
@@ -193,6 +197,14 @@ func runPack(t testing.TB, cfg economysim.Config, spec runSpec) result {
 		t.Fatalf("Snapshot error = %v, want nil", err)
 	}
 	res.Events = rec.events
+	if spec.Digest {
+		c, err := w.Checkpoint()
+		if err != nil {
+			t.Fatalf("Checkpoint at tick %d (seed %d) error = %v, want nil", w.Tick(), spec.Seed, err)
+		}
+		b, _ := c.MarshalBinary() // never fails: it copies
+		res.Digest = hex.EncodeToString(b[len(b)-sha256.Size:])
+	}
 	return res
 }
 
