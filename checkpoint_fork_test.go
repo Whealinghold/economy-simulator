@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -258,21 +259,16 @@ var forkCells = []struct {
 // TestFork_OneAtN verifies the fork-at-N of pack one of the reference chain, warm
 // start, for several seeds: at N in {0, 1, inside a job, across a season change, 60}
 // the original and two restores (one a restore of a restore) give the same events,
-// snapshot, audit and checkpoint bytes for 30 ticks. For the cell across the season
-// change it also checks that a job started before the boundary completes with the
-// yield it was started with.
+// snapshot, audit and checkpoint bytes for 30 ticks. The cell across the season
+// change is the one that checkpoints jobs that complete after the season changes; the
+// yield they carry is checked by TestFork_YieldCarriedAcrossSeasonChange.
 //
 // Arithmetic: the default calendar begins its first season on day 59 and a season is
-// 92 days, so the season changes at ticks 59 and 151. grow_staple lasts 60 ticks and
-// yields in spring only, so at tick 100 jobs of recipe 3 are in progress (170 or
-// more executions, probed) and at tick 150 they still are, one tick before the
-// season changes: a restore that took the yield from the season of the completion
-// tick would give 0 at tick 151 or later instead of the 10 000 it started with.
+// 92 days, so the season changes at ticks 59 and 151. grow_staple lasts 60 ticks, so
+// at tick 100 jobs of recipe 3 are in progress (probed: 234 executions on seed 1) and
+// at tick 150 they still are, one tick before the season changes.
 //
 // Requirement: FR-CHK-050, FR-CHK-052, FR-CHK-053, FR-CHK-026
-//
-// Guard: N-237. The yield of a job is part of the saved job; a reader that
-// recomputed it would pass every test that restores outside a season change.
 func TestFork_OneAtN(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -283,29 +279,8 @@ func TestFork_OneAtN(t *testing.T) {
 		for _, cell := range forkCells {
 			t.Run(fmt.Sprintf("seed %d %s", seed, cell.name), func(t *testing.T) {
 				t.Parallel()
-				forkAtN(t, forkCase{
-					Name: "one", Cfg: cfg, Seed: seed, N: cell.n, M: forkM,
-					Inspect: func(t *testing.T, _, since []economysim.Event) {
-						if cell.n != 150 {
-							return
-						}
-						checkCarriedYield(t, seed, int64(cell.n), since)
-					},
-				})
+				forkAtN(t, forkCase{Name: "one", Cfg: cfg, Seed: seed, N: cell.n, M: forkM})
 			})
-		}
-	}
-}
-
-// checkCarriedYield fails if a job that started before tick n and completed after the
-// season changed at tick 151 did not complete with the yield of 10 000 it started with.
-// A run with no such job passes, so a seed whose jobs all ended earlier proves nothing
-// here; the comparison of forkAtN still holds for it.
-func checkCarriedYield(t *testing.T, seed uint64, n int64, since []economysim.Event) {
-	t.Helper()
-	for _, e := range since {
-		if ev, ok := e.(economysim.RecipeExecuted); ok && ev.StartTick < n && ev.Tick >= 151 && ev.EffectiveYield != 10_000 {
-			t.Errorf("seed %d: job of recipe %d started at %d completed at %d with yield %d, want 10000 (the yield it started with)", seed, ev.Recipe, ev.StartTick, ev.Tick, ev.EffectiveYield)
 		}
 	}
 }
@@ -343,6 +318,299 @@ func TestFork_WithObserversAndLogger(t *testing.T) {
 				if bf, ok := e.(economysim.BoundaryFlow); ok && bf.Tick < 0 {
 					t.Errorf("the restored world delivered the construction BoundaryFlow (tick -1) of a world past its first step")
 				}
+			}
+		},
+	})
+}
+
+// TestFork_SplitRunsWithRestoreInEachGap verifies that a run of 40 ticks of pack one
+// given as eight calls of Run(5), the world replaced by a restore of its checkpoint
+// in each gap, has the same checkpoint at every gap, and ends in the same snapshot
+// and with the same events (each restored world's WorldRestored left out), as eight
+// calls of Run(5) on one world.
+//
+// Requirement: FR-CHK-054, FR-WLD-063
+func TestFork_SplitRunsWithRestoreInEachGap(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	const gaps, per = 8, 5
+	whole := &recorder{}
+	straight, err := economysim.NewWorld(cfg, economysim.WithSeed(2), economysim.WithObserver(whole))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	rec := &recorder{}
+	chain, err := economysim.NewWorld(cfg, economysim.WithSeed(2), economysim.WithObserver(rec))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	var chained []economysim.Event
+	for gap := range gaps {
+		for name, w := range map[string]*economysim.World{"straight": straight, "restored": chain} {
+			if n, err := w.Run(context.Background(), per); err != nil || n != per {
+				t.Fatalf("gap %d: Run(%d) of the %s world = %d, %v, want %d, nil", gap, per, name, n, err, per)
+			}
+		}
+		ck := mustCheckpoint(t, chain)
+		if want := mustMarshal(t, mustCheckpoint(t, straight)); !bytes.Equal(want, mustMarshal(t, ck)) {
+			t.Fatalf("gap %d (tick %d): the checkpoint of the restored chain differs from the straight run's", gap, (gap+1)*per)
+		}
+		chained = append(chained, rec.events...)
+		rec = &recorder{}
+		if chain, err = economysim.RestoreWorld(cfg, ck, economysim.WithObserver(rec)); err != nil {
+			t.Fatalf("gap %d: RestoreWorld() error = %v, want nil", gap, err)
+		}
+		rec.events = rec.events[1:] // WorldRestored
+	}
+	if !reflect.DeepEqual(whole.events, chained) {
+		t.Errorf("the events of the split run differ from the straight run's (%d and %d events)", len(chained), len(whole.events))
+	}
+	want, _ := straight.Snapshot()
+	if got, _ := chain.Snapshot(); !reflect.DeepEqual(want, got) {
+		t.Errorf("the final snapshot of the split run differs from the straight run's")
+	}
+}
+
+// TestFork_RestoreOfRestore verifies that a checkpoint of a restored world is the
+// checkpoint it was restored from, through five generations, and that the last
+// generation continues like the original for 20 ticks.
+//
+// Requirement: FR-CHK-055
+func TestFork_RestoreOfRestore(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	orig, err := economysim.NewWorld(cfg, economysim.WithSeed(3))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	for range 70 {
+		if err := orig.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+	}
+	first := mustMarshal(t, mustCheckpoint(t, orig))
+	ck := mustCheckpoint(t, orig)
+	var gen *economysim.World
+	for g := 1; g <= 5; g++ {
+		if gen, err = economysim.RestoreWorld(cfg, ck); err != nil {
+			t.Fatalf("generation %d: RestoreWorld() error = %v, want nil", g, err)
+		}
+		ck = mustCheckpoint(t, gen)
+		if !bytes.Equal(first, mustMarshal(t, ck)) {
+			t.Fatalf("generation %d: the checkpoint differs from the first one", g)
+		}
+	}
+	for i := range 20 {
+		for _, w := range []*economysim.World{orig, gen} {
+			if err := w.Step(); err != nil {
+				t.Fatalf("tick %d: Step() error = %v, want nil", 70+i, err)
+			}
+		}
+		if !bytes.Equal(mustMarshal(t, mustCheckpoint(t, orig)), mustMarshal(t, mustCheckpoint(t, gen))) {
+			t.Fatalf("tick %d: the fifth generation's checkpoint differs from the original's", 70+i)
+		}
+	}
+}
+
+// directiveMill is the mill of the scenarios with its role on the built-in
+// "directed" strategy, so a directive set on an agent is read.
+func directiveMill() economysim.Config {
+	cfg := millCfg(3, 4)
+	cfg.Roles[0].Strategy = "directed"
+	return cfg
+}
+
+// TestFork_DirectiveInAgent verifies that the directives of agents survive a restore
+// and act in the restored world as in the original: agent 1 has a sticky directive
+// that holds every commodity and agent 2 a one-tick directive that takes no job, both
+// set after tick N, and the worlds continue to the same bytes, snapshots and events.
+//
+// Requirement: FR-CHK-041, FR-AGT-055
+//
+// Guard: a directive is part of an agent's saved state, and no other end-to-end test
+// sets one, so a record that dropped it would pass all of them.
+func TestFork_DirectiveInAgent(t *testing.T) {
+	t.Parallel()
+	for _, n := range []int{0, 2, 5} {
+		t.Run(fmt.Sprintf("N %d", n), func(t *testing.T) {
+			t.Parallel()
+			forkAtN(t, forkCase{
+				Name: "directed mill", Cfg: directiveMill(), Seed: 5, N: n, M: 12,
+				Before: func(w *economysim.World) {
+					economysim.SetAgentDirective(w, 1, &economysim.Directive{Hold: []economysim.CommodityID{0, 1}, Sticky: true})
+					economysim.SetAgentDirective(w, 2, &economysim.Directive{Job: &economysim.JobRequest{NoJob: true}})
+				},
+			})
+		})
+	}
+}
+
+// removeOdd is a spawner plan that removes the agents with an odd ID at tick 2 and
+// replaces none, leaving gaps in the agent table.
+func removeOdd(v *economysim.RegionView) []economysim.Decision {
+	if v.Tick != 2 {
+		return nil
+	}
+	var d []economysim.Decision
+	for _, a := range v.Agents {
+		if a.Agent%2 == 1 {
+			d = append(d, economysim.Decision{Kind: economysim.DecideRemove, Agent: a.Agent, Cause: economysim.CauseStarved})
+		}
+	}
+	return d
+}
+
+// TestFork_RemovedAgentsLeaveGaps verifies that a world in which agents 1 and 3 of
+// four are removed at tick 2 forks to the same continuation from before the removal
+// (N 1) and from after it (N 5, where the restored world has two agents, the second
+// and fourth, and the slots of the removed ones are gaps that keep the IDs).
+//
+// Requirement: FR-CHK-046, FR-SPN-052
+func TestFork_RemovedAgentsLeaveGaps(t *testing.T) {
+	t.Parallel()
+	for _, n := range []int{1, 5} {
+		t.Run(fmt.Sprintf("N %d", n), func(t *testing.T) {
+			t.Parallel()
+			forkAtN(t, forkCase{
+				Name: "mill with removals", Cfg: withSpawner(millCfg(3, 4)), Opts: scripted(removeOdd), Seed: 9, N: n, M: 12,
+				Inspect: func(t *testing.T, restored, _ []economysim.Event) {
+					if n != 5 {
+						return
+					}
+					if got := restored[0].(economysim.WorldRestored).Snapshot.Agents; got != 2 {
+						t.Errorf("agents at the boundary = %d, want 2 (agents 2 and 4)", got)
+					}
+				},
+			})
+		})
+	}
+}
+
+// x5Legs is the length of each leg of X5: 200 ticks, then 200 more. Under -race the
+// legs are 20 and 20, because the long run is slow there and gate F runs it whole.
+func x5Legs() int {
+	if raceEnabled {
+		return 20
+	}
+	return 200
+}
+
+// TestFork_X5 verifies X5 of the reference chain on pack one: a run of 200 ticks,
+// saved, restored into a new world and run for 200 more gives the events and the
+// final snapshot of an uninterrupted run of 400, and the two worlds' checkpoints
+// are byte-equal at every boundary of the continuation.
+//
+// Requirement: FR-CHK-057, FR-CHK-056
+func TestFork_X5(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	leg := x5Legs()
+	whole := &recorder{}
+	straight, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithObserver(whole))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	first := &recorder{}
+	half, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithObserver(first))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	for i := range leg {
+		for _, w := range []*economysim.World{straight, half} {
+			if err := w.Step(); err != nil {
+				t.Fatalf("tick %d: Step() error = %v, want nil", i, err)
+			}
+		}
+	}
+	second := &recorder{}
+	resumed, err := economysim.RestoreWorld(cfg, mustCheckpoint(t, half), economysim.WithObserver(second))
+	if err != nil {
+		t.Fatalf("RestoreWorld() at tick %d error = %v, want nil", leg, err)
+	}
+	for i := leg; i < 2*leg; i++ {
+		for _, w := range []*economysim.World{straight, resumed} {
+			if err := w.Step(); err != nil {
+				t.Fatalf("tick %d: Step() error = %v, want nil", i, err)
+			}
+		}
+		if !bytes.Equal(mustMarshal(t, mustCheckpoint(t, straight)), mustMarshal(t, mustCheckpoint(t, resumed))) {
+			t.Fatalf("tick %d: the checkpoint of the resumed run differs from the uninterrupted run's", i+1)
+		}
+	}
+	joined := append(first.events[:len(first.events):len(first.events)], second.events[1:]...)
+	if !reflect.DeepEqual(whole.events, joined) {
+		t.Errorf("the events of the 200+200 run differ from the uninterrupted run's (%d and %d events)", len(joined), len(whole.events))
+	}
+	want, _ := straight.Snapshot()
+	if got, _ := resumed.Snapshot(); !reflect.DeepEqual(want, got) {
+		t.Errorf("the final snapshot of the resumed run differs from the uninterrupted run's")
+	}
+}
+
+// TestFork_Reseed verifies the fork under WithReseed: two restores of one checkpoint
+// with one salt (the salt 0 included) agree for 10 ticks on every observable, WorldRestored
+// reports the salt, and a restore of the reseeded world's checkpoint without the option
+// continues as they do.
+//
+// Requirement: FR-CHK-070, FR-CHK-071, FR-CHK-072
+func TestFork_Reseed(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	for _, salt := range []uint64{0, 7} {
+		t.Run(fmt.Sprintf("salt %d", salt), func(t *testing.T) {
+			t.Parallel()
+			forkAtN(t, forkCase{Name: "one reseeded", Cfg: cfg, Seed: 1, N: 30, M: 10, Reseed: &salt})
+		})
+	}
+}
+
+// TestFork_YieldCarriedAcrossSeasonChange verifies that a job started in spring at a
+// yield of 7 000 and completed in summer, where the recipe yields 10 000, completes
+// at 7 000 in the restored world as in the original: the yield is saved with the job,
+// not recomputed from the season of the completion tick.
+//
+// Arithmetic: the season changes at tick 151 (see TestFork_OneAtN). grow_staple lasts
+// 60 ticks, so the jobs running at tick 150 started at tick 91 or later, in spring, at
+// 7 000 basis points; the test requires at least one to complete at tick 151 or later.
+//
+// Requirement: FR-CHK-050, FR-CHK-052
+//
+// Guard: N-237. In pack one the spring yield is the full 10 000, so a reader that
+// restored every yield as 10 000 passes TestFork_OneAtN; only a yield that differs
+// between the seasons shows it.
+func TestFork_YieldCarriedAcrossSeasonChange(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadPackBytes(t, []byte("[region.north.yield.grow_staple]\nseasons = { spring = 7000, summer = 10000 }\n"), packOne...)
+	forkAtN(t, forkCase{
+		Name: "one with a spring yield of 7000", Cfg: cfg, Seed: 1, N: 150, M: forkM,
+		Inspect: func(t *testing.T, _, since []economysim.Event) {
+			var carried int
+			for _, e := range since {
+				ev, ok := e.(economysim.RecipeExecuted)
+				if !ok || ev.StartTick >= 150 || ev.Tick < 151 {
+					continue
+				}
+				if carried++; ev.EffectiveYield != 7_000 {
+					t.Errorf("job started at %d completed at %d with yield %d, want 7000 (the yield it started with)", ev.StartTick, ev.Tick, ev.EffectiveYield)
+				}
+			}
+			if carried == 0 {
+				t.Errorf("no job started before tick 150 completed after the season changed at 151, want at least one")
 			}
 		},
 	})
