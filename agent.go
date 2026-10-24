@@ -371,8 +371,15 @@ func saveDirective(cw *codec.Writer, d *Directive) {
 	cw.B(d.Job != nil)
 	if d.Job != nil {
 		cw.B(d.Job.NoJob)
-		cw.U(uint64(d.Job.Recipe))
-		cw.U(uint64(d.Job.Executions))
+		if d.Job.NoJob {
+			// The other fields are ignored with NoJob and may hold any value, which the
+			// restore would refuse; write the neutral ones.
+			cw.U(0)
+			cw.U(0)
+		} else {
+			cw.U(uint64(d.Job.Recipe))
+			cw.U(uint64(d.Job.Executions))
+		}
 	}
 	cw.Count(len(d.Intents))
 	for _, in := range d.Intents {

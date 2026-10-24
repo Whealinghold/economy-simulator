@@ -365,6 +365,21 @@ func TestSave_Directive(t *testing.T) {
 	}
 }
 
+// TestSave_DirectiveNoJobIgnoresTheOtherJobFields verifies that a job request with
+// NoJob writes 0 for its recipe and executions, whatever they hold.
+//
+// Fix: review of stage-2-2b. The fields are documented as ignored with NoJob, but
+// were written as they were, and a recipe out of range made a checkpoint that
+// RestoreWorld refused.
+func TestSave_DirectiveNoJobIgnoresTheOtherJobFields(t *testing.T) {
+	t.Parallel()
+	cw := codec.NewWriter(nil)
+	saveDirective(cw, &Directive{Job: &JobRequest{NoJob: true, Recipe: 9999, Executions: 7}})
+	if got, want := cw.Out(), []byte{1, 1, 1, 0, 0, 0, 0, 0, 0}; !bytes.Equal(got, want) {
+		t.Errorf("saveDirective(NoJob with recipe 9999) = %x, want %x (present, job, NoJob, recipe 0, executions 0, three counts of 0, not sticky)", got, want)
+	}
+}
+
 // TestSave_MarketsBeliefsJobsWelfare verifies tags 4 to 7 against the state of a
 // mill that has run 4 ticks, with the synthetic values the run leaves at 0 set on
 // it: a best bid and ask in a report, a bound run, a yield shock and the runs of
