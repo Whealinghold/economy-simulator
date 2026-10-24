@@ -819,3 +819,132 @@ func TestSnapshot_FunctionOfSavedState(t *testing.T) {
 		})
 	}
 }
+
+// fixedPointCase is a world TestCheckpoint_FixedPoint saves and restores at the ticks
+// in steps. Opts gives fresh options for the world and for each restore.
+type fixedPointCase struct {
+	name   string
+	cfg    economysim.Config
+	opts   func() []economysim.Option
+	seed   uint64
+	steps  []int
+	before func(*economysim.World)
+}
+
+// fixedPointCases are the worlds of the test: pack one over four seeds at the ticks of
+// the fork matrix and every tenth tick up to 160, the mill with agents removed, and
+// the directed mill with a directive set.
+func fixedPointCases(t *testing.T) []fixedPointCase {
+	cfg := loadValidPack(t, packOne...)
+	var packSteps []int
+	for i := 0; i <= 160; i += 10 {
+		packSteps = append(packSteps, i)
+	}
+	packSteps = append(packSteps, 1, 59, 60, 150, 151)
+	cases := []fixedPointCase{
+		{name: "mill with removals", cfg: withSpawner(millCfg(3, 4)), opts: scripted(removeOdd), seed: 9, steps: []int{0, 1, 2, 3, 5, 9}},
+		{name: "directed mill", cfg: directiveMill(), seed: 5, steps: []int{0, 1, 4, 8}, before: func(w *economysim.World) {
+			economysim.SetAgentDirective(w, 1, &economysim.Directive{Hold: []economysim.CommodityID{0}, Sticky: true})
+		}},
+	}
+	for seed := uint64(1); seed <= uint64(invariantSeeds(4)); seed++ {
+		cases = append(cases, fixedPointCase{name: fmt.Sprintf("pack one seed %d", seed), cfg: cfg, seed: seed, steps: packSteps})
+	}
+	return cases
+}
+
+// TestCheckpoint_FixedPoint verifies that every checkpoint of the matrix worlds
+// restores and checkpoints again to the same bytes (the one spelling): restore is the
+// inverse of save on everything save writes.
+//
+// Requirement: FR-CHK-005
+func TestCheckpoint_FixedPoint(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	for _, tt := range fixedPointCases(t) {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			opts := func() []economysim.Option {
+				if tt.opts == nil {
+					return nil
+				}
+				return tt.opts()
+			}
+			w, err := economysim.NewWorld(tt.cfg, append(opts(), economysim.WithSeed(tt.seed))...)
+			if err != nil {
+				t.Fatalf("NewWorld() error = %v, want nil", err)
+			}
+			if tt.before != nil {
+				tt.before(w)
+			}
+			for tick := 0; tick <= slices.Max(tt.steps); tick++ {
+				if slices.Contains(tt.steps, tick) {
+					ck := mustCheckpoint(t, w)
+					r, err := economysim.RestoreWorld(tt.cfg, ck, opts()...)
+					if err != nil {
+						t.Fatalf("tick %d: RestoreWorld() error = %v, want nil", tick, err)
+					}
+					if !bytes.Equal(mustMarshal(t, ck), mustMarshal(t, mustCheckpoint(t, r))) {
+						t.Errorf("tick %d: the restored world's checkpoint differs from the one it was restored from", tick)
+					}
+				}
+				if err := w.Step(); err != nil {
+					t.Fatalf("tick %d: Step() error = %v, want nil", tick, err)
+				}
+			}
+		})
+	}
+}
+
+// benchWorld returns pack one after 60 ticks and its checkpoint, the figures of
+// BenchmarkCheckpoint and BenchmarkRestoreWorld.
+func benchWorld(b *testing.B) (economysim.Config, *economysim.World, economysim.Checkpoint) {
+	b.Helper()
+	cfg := loadValidPack(b, packOne...)
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
+	if err != nil {
+		b.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	for range 60 {
+		if err := w.Step(); err != nil {
+			b.Fatalf("Step() error = %v, want nil", err)
+		}
+	}
+	c, err := w.Checkpoint()
+	if err != nil {
+		b.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	return cfg, w, c
+}
+
+// BenchmarkCheckpoint reports the cost of a checkpoint of pack one at tick 60 and its
+// size in bytes (NFR-CHK-004). Benchmarks report; the allocation limit that must hold is
+// TestSave_AllocationOutsideTheStep.
+func BenchmarkCheckpoint(b *testing.B) {
+	_, w, c := benchWorld(b)
+	b.ReportAllocs()
+	raw, err := c.MarshalBinary()
+	if err != nil {
+		b.Fatalf("MarshalBinary() error = %v, want nil", err)
+	}
+	for b.Loop() {
+		if _, err := w.Checkpoint(); err != nil {
+			b.Fatalf("Checkpoint() error = %v, want nil", err)
+		}
+	}
+	b.ReportMetric(float64(len(raw)), "bytes")
+}
+
+// BenchmarkRestoreWorld reports the cost of restoring the checkpoint of
+// BenchmarkCheckpoint (NFR-CHK-004).
+func BenchmarkRestoreWorld(b *testing.B) {
+	cfg, _, c := benchWorld(b)
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := economysim.RestoreWorld(cfg, c); err != nil {
+			b.Fatalf("RestoreWorld() error = %v, want nil", err)
+		}
+	}
+}

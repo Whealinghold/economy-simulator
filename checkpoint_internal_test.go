@@ -2,6 +2,9 @@ package economysim
 
 import (
 	"bytes"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"reflect"
 	"regexp"
@@ -600,6 +603,101 @@ func TestCheckpointConstructors_GoThroughParseFrame(t *testing.T) {
 		}
 		if set.Match(b) {
 			t.Errorf("%s sets the bytes of a Checkpoint outside checkpoint.go", name)
+		}
+	}
+}
+
+// savedOrDerived says, for every field of the state structs, where its value lives in
+// a checkpoint ("saved N": the section with tag N) or why it needs none ("derived":
+// CHK 4.3's rows; "scratch": rewritten before it is read; "not state": an option, the
+// error of a failed step). A field of these structs that is in no row fails
+// TestFields_EveryLiveFieldSavedOrDerived: a new field must be placed here, in the
+// change that adds it, so a field that holds state cannot be forgotten by a section.
+var savedOrDerived = map[string]string{
+	"World.cfg": "derived: the configuration is the caller's (CHK 4.3, 6.2 step 3)", "World.hash": "derived: of cfg",
+	"World.obs": "not state: an option", "World.log": "not state: an option", "World.audit": "not state: an option",
+	"World.ext": "not state: the registered extensions, matched at restore (CHK 7)", "World.reg": "not state: the registrations, walked for tag 34",
+	"World.ledger": "saved 2", "World.recipes": "derived: of cfg", "World.roles": "derived: of cfg", "World.days": "derived: CAL row",
+	"World.yields": "derived: PRO row", "World.shocks": "saved 6", "World.rnd": "derived: the seed is in the header (ADR 0008)",
+	"World.estates": "saved 8", "World.agents": "saved 3", "World.live": "derived: counters rebuilt from the agents",
+	"World.markets": "saved 4", "World.bp": "derived: of cfg", "World.clr": "scratch", "World.receipts": "scratch",
+	"World.prod": "scratch: the cost anchors, derived at P1.2 (PRO row)", "World.refused": "scratch", "World.welfare": "scratch",
+	"World.reads": "scratch", "World.views": "scratch", "World.tk": "scratch", "World.pr": "scratch", "World.oc": "scratch",
+	"World.ex": "scratch", "World.tally": "scratch", "World.runnable": "scratch: rebuilt at P1.2", "World.seedWage": "derived: of cfg",
+	"World.state": "saved 1, 3, 7, 9", "World.lotBuf": "scratch", "World.failed": "not state: a failed world is not checkpointed",
+	"World.stepping": "not state: the in-step flag",
+
+	"worldState.seed": "saved: the header", "worldState.nextAgent": "saved 1", "worldState.unfedRun": "saved 3",
+	"worldState.floorRun": "saved 7", "worldState.extinctRun": "saved 9", "worldState.belowFloorRun": "saved 9",
+	"worldState.clampRun": "saved 7", "worldState.unfundedRun": "saved 9", "worldState.renewalCarry": "saved 9",
+	"worldState.hadAgent": "saved 9",
+
+	"agent.id": "saved 3", "agent.account": "saved 3", "agent.role": "saved 3", "agent.weight": "saved 3",
+	"agent.external": "saved 3", "agent.mortal": "saved 3", "agent.strategy": "saved 3", "agent.beliefs": "saved 5",
+	"agent.job": "saved 6", "agent.residues": "saved 6", "agent.history": "saved 7", "agent.target": "saved 7",
+	"agent.unfed": "saved 3", "agent.hunger": "saved 3", "agent.privation": "saved 3", "agent.roleSince": "saved 3",
+	"agent.directive": "saved 3",
+
+	"job.recipe": "saved 6", "job.remaining": "saved 6", "job.executions": "saved 6", "job.principal": "saved 6",
+	"job.yield": "saved 6", "job.pending": "saved 6",
+
+	"marketTable.commodities": "derived: of cfg", "marketTable.reports": "saved 4", "marketTable.windows": "saved 4",
+	"marketTable.boundRun": "saved 4", "marketTable.books": "scratch: the book of the tick in progress",
+	"marketTable.intents": "scratch", "marketTable.slotOf": "scratch", "marketTable.asks": "scratch", "marketTable.trades": "scratch",
+
+	"estates.accounts": "derived: the first non-boundary accounts of the ledger (attachEstates)", "estates.listed": "saved 8",
+	"estates.lots": "scratch", "estates.scratch": "scratch",
+}
+
+// TestFields_EveryLiveFieldSavedOrDerived verifies, by reading the source, that every
+// field of World, worldState, agent, job, marketTable and estates is named in
+// savedOrDerived, and that the table names no field that is gone. A field added to
+// one of these structs fails the test until the author says whether a section
+// saves it or why none need.
+//
+// Requirement: FR-CHK-045
+//
+// Guard: the restore tests compare a restored world with the original over a few
+// ticks, and a new field holding state that no section saves gives the same
+// bytes until the day it matters; this fails the day the field is added.
+func TestFields_EveryLiveFieldSavedOrDerived(t *testing.T) {
+	t.Parallel()
+	structs := map[string]bool{"World": true, "worldState": true, "agent": true, "job": true, "marketTable": true, "estates": true}
+	files := []string{"world.go", "agent.go", "market.go", "production.go", "welfare.go", "spawner.go", "estates.go"}
+	fset := token.NewFileSet()
+	found := map[string]bool{}
+	for _, name := range files {
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("ParseFile(%s) error = %v, want nil", name, err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok || !structs[ts.Name.Name] {
+				return true
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+			for _, fl := range st.Fields.List {
+				if len(fl.Names) == 0 {
+					t.Errorf("%s.%s: an embedded field has no name to list; name it", ts.Name.Name, name)
+				}
+				for _, id := range fl.Names {
+					key := ts.Name.Name + "." + id.Name
+					found[key] = true
+					if _, ok := savedOrDerived[key]; !ok {
+						t.Errorf("%s (%s) is in no row of savedOrDerived: say which section saves it or why none need", key, name)
+					}
+				}
+			}
+			return true
+		})
+	}
+	for key := range savedOrDerived {
+		if !found[key] {
+			t.Errorf("savedOrDerived names %s, which is not a field of the structs in %v", key, files)
 		}
 	}
 }
