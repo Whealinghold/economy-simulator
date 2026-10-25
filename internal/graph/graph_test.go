@@ -320,6 +320,26 @@ func TestBuild_RejectsBrokenInput(t *testing.T) {
 	}
 }
 
+// TestBuild_AcceptsMaxRegions verifies that a graph of exactly MaxRegions
+// regions is built, with one component for each (no edge), and the last region
+// is addressable.
+//
+// Guard: the bound is inclusive. The rejection test starts at MaxRegions+1, so a
+// check written as n >= MaxRegions would refuse the largest world the root
+// admits and no other test would notice.
+func TestBuild_AcceptsMaxRegions(t *testing.T) {
+	tb, err := Build(MaxRegions, nil)
+	if err != nil {
+		t.Fatalf("Build(%d, nil) error = %v, want nil", MaxRegions, err)
+	}
+	if got := tb.Comps(); got != MaxRegions {
+		t.Errorf("Build(%d, nil).Comps() = %d, want %d", MaxRegions, got, MaxRegions)
+	}
+	if c, ok := tb.Comp(MaxRegions - 1); !ok || c != MaxRegions-1 {
+		t.Errorf("Comp(%d) = %d, %v, want %d, true", MaxRegions-1, c, ok, MaxRegions-1)
+	}
+}
+
 // TestBuild_Components verifies the numbering of the components: a graph with
 // no edge has one per region, one region has one, a one-way pair has two, a
 // pair both ways has one, and the numbers ascend with the smallest member.
