@@ -48,6 +48,10 @@ func groupWeights(households, scale, minAgents int64) []int64 {
 	return out
 }
 
+// scaleOf is the per-agent scale in force for a group: its own, or the world's
+// when it gives none (FR-SCL-006). Validation and construction both read it.
+func scaleOf(w WorldParams, g Group) int64 { return cmp.Or(g.Scale, w.Scale) }
+
 // groupShape returns the number of agents of a group and the largest weight of
 // one (spec-scale.md 3.2): agentCount agents, and weights of H / n and one more
 // for the first H mod n, so the largest is ceil(H / n). The last result is the
@@ -55,10 +59,7 @@ func groupWeights(households, scale, minAgents int64) []int64 {
 // false when a household count, a scale or the floor is outside its bound, where
 // the shape is not defined.
 func groupShape(w WorldParams, g Group) (agents, maxWeight, scale int64, ok bool) {
-	h, s := g.Households, g.Scale
-	if s == 0 {
-		s = w.Scale
-	}
+	h, s := g.Households, scaleOf(w, g)
 	if h < 1 || h > MaxHouseholds || s < 1 || s > MaxHouseholds || w.MinAgents < 1 || w.MinAgents > MaxHouseholds {
 		return 0, 0, 0, false
 	}
@@ -89,7 +90,7 @@ func groupPlans(c *Config) []groupPlan {
 		if !rok || !ook {
 			invariant("a group names an unknown region or role after validation")
 		}
-		weights := groupWeights(g.Households, cmp.Or(g.Scale, c.World.Scale), c.World.MinAgents)
+		weights := groupWeights(g.Households, scaleOf(c.World, g), c.World.MinAgents)
 		plans[i] = groupPlan{region: r, role: ro, weights: weights, warm: warmGroupOf(c, g.Region, g.Role)}
 	}
 	return plans

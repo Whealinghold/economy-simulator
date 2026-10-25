@@ -626,18 +626,16 @@ func refusalReason(r occupation.Refusal) Reason {
 func (w *World) saveSpawner(cw *codec.Writer) error {
 	roles := len(w.cfg.Roles)
 	writeSparse(cw, w.state.renewalCarry, roles)
-	had := 0
-	for _, b := range w.state.hadAgent {
-		if b {
-			had++
-		}
-	}
-	cw.Count(had)
+	var had []int
 	for i, b := range w.state.hadAgent {
 		if b {
-			cw.U(uint64(i / roles))
-			cw.U(uint64(i % roles))
+			had = append(had, i)
 		}
+	}
+	cw.Count(len(had))
+	for _, i := range had {
+		cw.U(uint64(i / roles))
+		cw.U(uint64(i % roles))
 	}
 	writeSparseByRegion(cw, w.state.unfundedRun)
 	writeSparse(cw, w.state.extinctRun, roles)
