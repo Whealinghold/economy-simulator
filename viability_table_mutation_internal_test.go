@@ -193,7 +193,7 @@ func TestBand(t *testing.T) {
 // Requirement: FR-VIA-023, FR-VIA-025, FR-VIA-026, FR-VIA-030
 func TestPrices_ReportsTheSeedsTheBandChanged(t *testing.T) {
 	t.Parallel()
-	cfg := &Config{World: DefaultWorldParams(), Commodities: []Commodity{
+	cfg := &Config{World: DefaultWorldParams(), Regions: []Region{{ID: "r"}}, Commodities: []Commodity{
 		{ID: "a", ReferencePrice: 100}, {ID: "b", ReferencePrice: 5_000}, {ID: "c", ReferencePrice: 5},
 		{ID: "d", ReferencePrice: 1_000}, {ID: "e", ReferencePrice: 100},
 	}}

@@ -584,3 +584,92 @@ func TestSnake_RunsOfCapitalsAreOneWord(t *testing.T) {
 		})
 	}
 }
+
+// TestLoad_EdgesAndPrices verifies the keys [region.<from>.edge.<to>] (with a
+// required distance) and [region.<r>.reference_price] (one integer per
+// commodity): the rows come out in the canonical order of the regions, then the
+// ends or commodities, whatever order the document is written in, an unknown key
+// is ErrUnknownKey, a float is ErrNotInteger, and a missing distance is
+// ErrMissingField.
+//
+// Requirement: FR-REG-054, FR-REG-002
+func TestLoad_EdgesAndPrices(t *testing.T) {
+	t.Parallel()
+	doc := minimal + `
+[region.south.edge.north]
+distance = 40
+[region.north.edge.south]
+distance = 30
+[region.north.edge.far]
+distance = 7
+[region.north.reference_price]
+staple = 120
+fuel = 15
+[region.far.reference_price]
+staple = 99
+`
+	cfg, err := parseStrings(doc)
+	if err != nil {
+		t.Fatalf("Parse(edges and prices) error = %v, want nil", err)
+	}
+	wantEdges := []economysim.Edge{
+		{From: "north", To: "far", Distance: 7},
+		{From: "north", To: "south", Distance: 30},
+		{From: "south", To: "north", Distance: 40},
+	}
+	if !reflect.DeepEqual(cfg.Edges, wantEdges) {
+		t.Errorf("Parse(edges).Edges = %+v, want %+v (by from, then to)", cfg.Edges, wantEdges)
+	}
+	wantPrices := []economysim.RegionPrice{
+		{Region: "far", Commodity: "staple", Price: 99},
+		{Region: "north", Commodity: "fuel", Price: 15},
+		{Region: "north", Commodity: "staple", Price: 120},
+	}
+	if !reflect.DeepEqual(cfg.RegionPrices, wantPrices) {
+		t.Errorf("Parse(prices).RegionPrices = %+v, want %+v (by region, then commodity)", cfg.RegionPrices, wantPrices)
+	}
+
+	tests := []struct {
+		name string
+		doc  string
+		rule error
+		path []string
+	}{
+		{"unknown key in an edge", "[region.a.edge.b]\ndistance = 3\nlength = 4\n", economysim.ErrUnknownKey, []string{"region", "a", "edge", "b", "length"}},
+		{"missing distance", "[region.a.edge.b]\n", economysim.ErrMissingField, []string{"region", "a", "edge", "b", "distance"}},
+		{"float distance", "[region.a.edge.b]\ndistance = 3.5\n", economysim.ErrNotInteger, []string{"region", "a", "edge", "b", "distance"}},
+		{"string distance", "[region.a.edge.b]\ndistance = \"3\"\n", economysim.ErrWrongType, []string{"region", "a", "edge", "b", "distance"}},
+		{"float price", "[region.a.reference_price]\nstaple = 1.5\n", economysim.ErrNotInteger, []string{"region", "a", "reference_price", "staple"}},
+		{"string price", "[region.a.reference_price]\nstaple = \"9\"\n", economysim.ErrWrongType, []string{"region", "a", "reference_price", "staple"}},
+		{"scalar where the edge table", "[region.a]\nedge = 1\n", economysim.ErrWrongType, []string{"region", "a", "edge"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := parseStrings(minimal + tt.doc)
+			if !errors.Is(err, tt.rule) || !hasError(err, tt.rule, tt.path) {
+				t.Errorf("Parse(%q) errors = %s, want %v at %q", tt.doc, describe(err), tt.rule, tt.path)
+			}
+		})
+	}
+}
+
+// TestLoad_EdgeListOrderIsFree verifies that the order in which edges and
+// regions are written in a document, and the document a key is in, change
+// neither the Config nor its hash: documents merge by key (spec-config.md 6.4).
+//
+// Requirement: FR-REG-002, FR-REG-014
+func TestLoad_EdgeListOrderIsFree(t *testing.T) {
+	t.Parallel()
+	a, err := parseStrings(minimal + "[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 4\n")
+	if err != nil {
+		t.Fatalf("Parse(a) error = %v, want nil", err)
+	}
+	b, err := parseStrings(minimal+"[region.b.edge.a]\ndistance = 4\n", "[region.a.edge.b]\ndistance = 3\n")
+	if err != nil {
+		t.Fatalf("Parse(b) error = %v, want nil", err)
+	}
+	if !reflect.DeepEqual(a, b) || economysim.HashConfig(a) != economysim.HashConfig(b) {
+		t.Errorf("Parse(edges in two orders) = %+v and %+v, want equal Configs and hashes", a.Edges, b.Edges)
+	}
+}

@@ -31,7 +31,7 @@ func HashConfig(cfg Config) [32]byte {
 // encodeConfig returns the bytes of the encoding of a canonical Config. The
 // field ids are the positions of the fields in spec-config.md 8.2.2, counted
 // from 1 and not counting presentation-only fields; ids 8 (Edges) and 9
-// (RegionPrices) are reserved for Stage 2. An id is never reused or moved.
+// (RegionPrices) sit between Regions and Groups. An id is never reused or moved.
 func encodeConfig(c Config) []byte {
 	e := &encoder{buf: []byte{hashVersion}}
 	e.nested(1, func(e *encoder) { pairsWorld(e, c.World) })
@@ -41,6 +41,8 @@ func encodeConfig(c Config) []byte {
 	encodeList(e, 5, c.Yields, pairsYield)
 	encodeList(e, 6, c.Roles, pairsRole)
 	encodeList(e, 7, c.Regions, pairsRegion)
+	encodeList(e, 8, c.Edges, pairsEdge)
+	encodeList(e, 9, c.RegionPrices, pairsRegionPrice)
 	encodeList(e, 10, c.Groups, pairsGroup)
 	if c.WarmStart != nil {
 		e.id(11)
@@ -306,6 +308,21 @@ func pairsRegion(e *encoder, r Region) {
 	encodeList(e, 3, r.ExtraUpkeep, pairsItem)
 	e.num(4, r.CapitalReturn)
 	e.num(5, r.EstateMarkdown)
+}
+
+// pairsEdge writes the pairs of an Edge: From 1, To 2, Distance 3.
+func pairsEdge(e *encoder, g Edge) {
+	e.text(1, g.From)
+	e.text(2, g.To)
+	e.num(3, g.Distance)
+}
+
+// pairsRegionPrice writes the pairs of a RegionPrice: Region 1, Commodity 2,
+// Price 3.
+func pairsRegionPrice(e *encoder, p RegionPrice) {
+	e.text(1, p.Region)
+	e.text(2, p.Commodity)
+	e.num(3, int64(p.Price))
 }
 
 // pairsGroup writes the pairs of a Group: ids 1 to 4.

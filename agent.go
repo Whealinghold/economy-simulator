@@ -311,9 +311,7 @@ func (w *World) saveAgents(cw *codec.Writer) error {
 	for _, n := range names {
 		cw.Bytes([]byte(n))
 	}
-	n := 0
-	w.eachLive(func(*agent) { n++ })
-	cw.Count(n)
+	cw.Count(int(w.live.agents))
 	w.eachLive(func(a *agent) { w.saveAgent(cw, a, names) })
 	// Excluded from coverage (testing.md 9.5): agentTails is empty until the storage
 	// and institutions modules append to it, and their change tests the loop.

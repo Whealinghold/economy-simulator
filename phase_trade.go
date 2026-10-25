@@ -196,7 +196,7 @@ func (w *World) submit(a *agent, region RegionID, in Intent) {
 func (w *World) p34Estates() error {
 	for r := range w.cfg.Regions {
 		region := RegionID(r)
-		orders, err := w.estates.asks(w.ledger, &w.cfg, region, w.markets.asks[:0])
+		orders, err := w.estates.asks(w.ledger, &w.cfg, w.refs, region, w.markets.asks[:0])
 		if err != nil { // excluded from coverage (testing.md 9.5): asks returns a nil error today
 			return fmt.Errorf("estate asks at tick %d: %w", w.Tick(), err)
 		}

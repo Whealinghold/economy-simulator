@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
@@ -68,18 +68,18 @@ PR description.
 | INF | N-110, N-112, N-156, N-157, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
-| MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244 |
+| MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318 |
-| REG | N-150, N-175, N-204, N-317, N-319 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321 |
+| REG | N-150, N-175, N-204, N-317, N-319, N-320, N-321, N-322 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
@@ -91,10 +91,10 @@ PR description.
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
-| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279 |
+| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
-| WLD | N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310 |
+| WLD | N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
 
 ## Open notes
 
@@ -615,6 +615,7 @@ PR description.
 - **Update (2026-10-13, STO, EMP, SET, LND, POL, CRD, CAP, RSK, FIS, ORG, SAV, TEC, PLC, INS):** the full list of `region_bound` refusals is now six: `open_shipment` (TRN), `on_journey` (MIG), `open_contract` (MER), `in_traineeship` (SKL), `open_hire` (EMP: for a principal with open hires; a worker needs none, its job is abandoned when its account changes region; `spec-employment.md` 6.5.1) and `has_store` (STO: for an owner of a store, one obligation; `spec-storage.md` 9.2). `spec-regions.md` 6.5.2 and FR-REG-060 carry the list. STO also guards the other side: a store is never added to an agent that is away or on a journey (`ErrAgentAway`, N-143). The other twelve register none, each with its reason: SET, POL (a treasury is neither away nor committed and its kind is not relocatable), CRD (a claim needs no account in a region), FIS, SAV, TEC (knowledge stays in its cell when a household moves), PLC, ORG, LND (a title does not move with a household), RSK (what it exposes is bound by `open_shipment` and `has_store`), CAP (a site, a route and a ground facility register none, with three reasons in `spec-infrastructure.md` 7.5.1; a store facility is bound by `has_store`) and INS (a route policy is bound by `open_shipment`, a store policy ends in its tick, a payout is a transfer). The rule stands for any later module that keeps an account away or committed.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. The abandon function takes a reason and `region_changed` is appended with MIG, never inserted. A job of a self-carried trip cannot start (TRN).
 - **Update (2026-10-16, plan 1-5 Phase 8):** nothing further applied. the reason is an argument of `recipeAbandoned`, the value builder of the event, and not of `job.abandon`, so MIG's `region_changed` is appended to the reasons with MIG and changes no function of the row. Still open for MIG (the call at departure), SKL (`in_traineeship`) and INT.
+- **Update (2026-10-25, plan 2-3, REG):** the registry of obligations is built here (D270): a table `w.bounds` made at construction by the modules that are on, one `*RegionBoundError` per name, so the refusal path allocates nothing; Stage 2 registers none (`relocationRefusal` is an empty fixed-order sequence). Each module appends its name in its own plan: TRN `open_shipment`, MIG `on_journey`, MER `open_contract`. `has_store`, `open_hire` and `in_traineeship` belong to Stage 3. The textual form of an instance key in `skip` is `<obligation>:<number>`; a bare name matches every instance (`spec-regions.md` 6.1.6). Left open.
 
 
 ### N-092 Overlays and scenarios that the wave 2 specs hand to REF
@@ -1577,6 +1578,7 @@ PR description.
 - **Raised:** 2026-10-12, `spec-config.md` 3.7.2, 8.2.2 (Phase 1 of the Stage 0 plan).
 - **Note:** The slice declares every field no module of `Config.Modules` owns, including the skill-barrier fields and every key the packs `one` and `second` set; `Modules` is declared with no field; `Edges` and `RegionPrices` are Stage 2 (field ids 8 and 9 reserved). The hash writes a field only when not zero; a non-nil pointer is always written, so `WarmStart` nil and `&WarmStart{}` differ and a field-less module (`Estates`) is the pair that names it; the id of a module's pointer is its position in the `Modules` row counted from 1 (Estates is 25), independent of build order. A field a module adds to a core struct (`Role.Informed`, `Region.PoolRelease`, `Recipe.Builds`) is written only when the module is on. `Group.Scale` 0 means "the world's `Scale`" and is hashed as written, so a `Group.Scale` equal to `World.Scale` and a 0 behave the same and hash differently; FR-CFG-004 compares like content and accepts it. The depth rule of the loader counts key segments and value nesting together against 16, derived from the deepest pack key (`modules.external.node.<r>.line.<c>.sell.margin_bp`) plus 2: a module with a deeper key raises `MaxNestingDepth`, which is a bounds change.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open. `WarmStart` is hashed as Stage 0 built it; this row changes no hash.
+- **Update (2026-10-25, plan 2-3, REG):** ids 8 and 9 are now used: `Config.Edges` (`Edge`: `From` 1, `To` 2, `Distance` 3) and `Config.RegionPrices` (`RegionPrice`: `Region` 1, `Commodity` 2, `Price` 3), written between ids 7 and 10 and not at all when empty, so the pinned hash of the all-off reference configuration does not move (D265). Left open for the other Stage 2 fields.
 
 ### N-220 The registry of knobs needs the new owner rows
 
@@ -1814,6 +1816,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read and applied: Stage 1 runs `one` and `second` (with `two` and `warm-two` for the interleave test only); no `famine`, `five` or `three` in this row's acceptance or scenarios. Left open.
 - **Update (2026-10-21, plan 1-12 Phase 1):** Verified: REF 7.5 carries the conditional paragraph (`three` only if the Phase 5 probe shows the Stage 1 world runs it). Left open for the probe.
 - **Update (2026-10-21, plan 1-12 audit fixes, J1 probe outcome):** `three` IS in the invariants table (`invariantTable` of `invariants_test.go`: `three` with `base.toml`, `three.toml`, `warm-three.toml`), 400 ticks (`invTicks`), seeds 1 to 4. `go test -run 'TestInvariants_Packs/three' .` passed when run for this update (about 2 s, without `-race`), so the Stage 1 world runs `three`; the determinism and golden rows for `three` are not added. `five`, `famine` and `one-demand` still wait. Left open.
+- **Update (2026-10-25, plan 2-3, REG):** `three` loads, validates and runs with no edge, and draws `region_isolated` for each region and `graph_not_strongly_connected` (`components` 3) until its trade overlay `testdata/chains/overlay/trade-three.toml` exists (plan 2-3 Phase 9; `trade-two.toml` and `trade-five.toml` come with it). The invariants row for `three` stands. Left open.
 
 ### N-296 S01 leg (b) and every visitor wait for `AddAgent` and `Direct`
 
@@ -1989,6 +1992,24 @@ PR description.
 - **Raised:** 2026-10-23, plan 2-2 Phase 3 (`internal/ledger/checkpoint.go`).
 - **Note:** (1) The pending relocation list is written always (count 0 in the slice) and the ledger keeps validated rows in an unexported field so that a non-zero list round-trips; plan 3 replaces the field by its `Moved` rows, `AppendRelocations` and `RestoreRelocations` with no change to the bytes. (2) The claim block is `next claim ID`, a count, and, when `MaxClaims` is above 0, the seven cumulative totals and `Origin` of every claim: CHK 4.2 said `Origin` and `Awarded` only with the insurance module on, and the ledger cannot tell the two modules apart, so the layout keys on `MaxClaims`; CRD and INS keep it. (3) The code of a configured flow reason (42 plus its position) cannot be read or written until the ledger has flow reasons: MON and FIS add the Go constants and the case to `reasonCode` with their change.
 
+### N-320 `ErrClosedAccount` and `ErrUnknownAgent` carry new root texts
+
+- **Areas:** REG, LED, CODE
+- **Raised:** 2026-10-25, plan 2-3 (R6).
+- **Note:** The root sentinels `ErrClosedAccount` and `ErrUnknownAgent` are new and carry their own texts, listed in `errors_test.go`. `spec-regions.md` 9.1 says the ledger's sentinels "map to the same value"; the mapping is by `errors.Is` in `relocate` (N-075), and `spec-config.md` 7 now says so. A test that compares an error by text is wrong (testing.md 3.9).
+
+### N-321 The trade overlays are placeholders
+
+- **Areas:** REG, TRN, REF
+- **Raised:** 2026-10-25, plan 2-3 (R7).
+- **Note:** `overlay/trade-two.toml`, `trade-three.toml` and `trade-five.toml` use the 100 and 130 of `spec-regions.md` 12.4 as distances until TRN fixes what a distance unit costs (plan 2-12). TRN may change the values in the files; it may not change their names, which other plans consume.
+
+### N-322 Region-keyed tick scratch is stale for the arrival tick of a relocation
+
+- **Areas:** WLD, TRN, MIG
+- **Raised:** 2026-10-25, plan 2-3 (R3).
+- **Note:** `w.tk.rings`, `w.runnable`, the pooled wage and the cost anchors are built at P1.1 and P1.2, before the arrivals of P1.3 and P1.5, so an agent that arrives in a region works that tick on anchors that did not count it (`phase_start.go`). The spec defines the anchors from the previous tick, so the lag is allowed; TRN and MIG confirm it in their plans and tests.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2001,5 +2022,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: edaf92bf4130a9469044feb4
+NOTES-TAG: 88db12d17e2a787169c4eea5
 

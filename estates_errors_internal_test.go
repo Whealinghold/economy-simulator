@@ -119,7 +119,7 @@ func TestEstates_BadConfigurationIsAnInvariant(t *testing.T) {
 		t.Parallel()
 		f := newListFixture(t, 1)
 		f.cfg.World.BeliefStep = 0
-		mustPanicInvariant(t, "asks", func() { _, _ = f.e.asks(f.l, f.cfg, 0, nil) })
+		mustPanicInvariant(t, "asks", func() { _, _ = f.e.asks(f.l, f.cfg, resolveRefPrices(f.cfg), 0, nil) })
 	})
 	t.Run("markdown with a belief step out of bound", func(t *testing.T) {
 		t.Parallel()
@@ -136,7 +136,7 @@ func TestEstates_BadConfigurationIsAnInvariant(t *testing.T) {
 		f.give(t, 0, lstTool, 6, 1)
 		f.cfg.Commodities[lstTool].ReferencePrice = math.MaxInt64 / 2
 		f.cfg.Commodities[lstTool].Durability = 1
-		mustPanicInvariant(t, "asks", func() { _, _ = f.e.asks(f.l, f.cfg, 0, nil) })
+		mustPanicInvariant(t, "asks", func() { _, _ = f.e.asks(f.l, f.cfg, resolveRefPrices(f.cfg), 0, nil) })
 	})
 	t.Run("an admitted ask with no listing", func(t *testing.T) {
 		t.Parallel()

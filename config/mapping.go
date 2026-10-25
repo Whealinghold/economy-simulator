@@ -401,7 +401,8 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 }
 
 // region reads one [region.<id>] table over DefaultRegion, and appends the
-// groups and yield profiles written under it to cfg (spec-config.md 6.2.2).
+// edges, reference-price overrides, groups and yield profiles written under it
+// to cfg (spec-config.md 6.2.2, spec-regions.md 4.1, 5.2).
 // Regions are read in ID order and, under each, roles and recipes in ID order,
 // so the lists come out in the canonical order of spec-config.md 3.4.
 func (l *loader) region(id string, t *tbl, cfg *economysim.Config) economysim.Region {
@@ -412,6 +413,18 @@ func (l *loader) region(id string, t *tbl, cfg *economysim.Config) economysim.Re
 	integer(t, "capital_return", &r.CapitalReturn)
 	integer(t, "estate_markdown", &r.EstateMarkdown)
 	t.text("label", &r.Label)
+	t.entities("edge", func(to string, e *tbl) {
+		edge := economysim.Edge{From: id, To: to}
+		e.need("distance", integer(e, "distance", &edge.Distance))
+		cfg.Edges = append(cfg.Edges, edge)
+	})
+	if p := t.sub("reference_price"); p != nil {
+		for _, commodity := range slices.Sorted(maps.Keys(p.m)) {
+			price := economysim.RegionPrice{Region: id, Commodity: commodity}
+			integer(p, commodity, &price.Price)
+			cfg.RegionPrices = append(cfg.RegionPrices, price)
+		}
+	}
 	t.entities("yield", func(recipe string, e *tbl) {
 		y := economysim.YieldProfile{Region: id, Recipe: recipe}
 		y.HasAll = integer(e, "all", &y.All)

@@ -404,7 +404,7 @@ func (w *World) snapAgent(g RegionID, a *agent, acc *snapAcc, makes [][]bool) er
 		if makes[a.role][id] {
 			unitCost = w.prod.unitCost(g, id)
 		}
-		bd := beliefs.Limits(int64(w.cfg.Commodities[id].ReferencePrice), unitCost, w.bp)
+		bd := beliefs.Limits(int64(w.refPrice(g, id)), unitCost, w.bp)
 		acc.bel[id].add(a.beliefs[i].Centre, bd)
 	}
 	if !a.hasJob() {

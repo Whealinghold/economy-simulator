@@ -58,7 +58,7 @@ func NewViewHarness(t testing.TB, raw Config) *ViewHarness {
 	}
 	h.ctx = viewCtx{
 		cfg: h.Cfg, roles: &h.roles, recipes: &h.rt, l: l, prod: h.prod, yields: &h.yt, shocks: &h.sh,
-		bp: beliefParams(cfg.World), moment: m,
+		bp: beliefParams(cfg.World), moment: m, refs: resolveRefPrices(h.Cfg),
 	}
 	nc := len(cfg.Commodities)
 	for range cfg.Regions {

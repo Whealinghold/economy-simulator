@@ -53,6 +53,15 @@ var skipFields = []string{
 	// lots of the account being read, exitTick.sets, sums and unskilled the role
 	// summaries it fills through fillRoles. All are rebuilt before each use.
 	"World.lotBuf", "estates.lots", "exitTick.sets", "exitTick.sums", "exitTick.unskilled",
+	// The region graph and the table of effective reference prices are tables derived
+	// from cfg and the edge statuses (regions.go): the world's value is in cfg and in
+	// regionState.status, which the walk does hash and which is nil while every status
+	// is the default. A derived table that existed before the golden was recorded is in
+	// the walk; one appended after it must not move the off files (testing.md 7.1.1).
+	"World.refs", "regionState.g",
+	// viewCtx.refs is World.refs again, assembled with the rest of the view context
+	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
+	"viewCtx.refs",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.

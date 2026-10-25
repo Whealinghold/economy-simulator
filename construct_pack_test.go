@@ -320,6 +320,9 @@ func checkWorldCreatedLine(t *testing.T, l logLine, cfg *economysim.Config, w *e
 		{"households", func(v slog.Value) bool { return v.Int64() == households }},
 		{"modules", func(v slog.Value) bool { m, ok := v.Any().([]string); return ok && len(m) == 0 }},
 		{"warm_start", func(v slog.Value) bool { return !v.Bool() }},
+		// The pack is one region with no edge: no graph, so both are 0 (FR-REG-056).
+		{"edges", func(v slog.Value) bool { return v.Int64() == int64(len(cfg.Edges)) && len(cfg.Regions) == 1 }},
+		{"components", func(v slog.Value) bool { return v.Int64() == 0 && len(cfg.Regions) == 1 }},
 	}
 	if l.level != slog.LevelInfo || l.msg != "world created" || len(l.attrs) != len(want) {
 		t.Fatalf("last line = %v, want an Info \"world created\" with %d keys", l, len(want))

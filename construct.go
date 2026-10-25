@@ -203,15 +203,15 @@ func (w *World) allocate() {
 
 // seedPrices returns the function that gives the seed price of a market: the
 // entry of the warm start when there is one, else the commodity's effective
-// reference price (spec-beliefs.md 8.1, FR-BEL-024, FR-CLR-020). The slice has
-// no regional override of the reference price (the regions module's).
+// reference price in the region (spec-beliefs.md 8.1, FR-BEL-024, FR-CLR-020,
+// spec-regions.md 5.2.2). A warm-start price replaces the seed only.
 func seedPrices(c *Config) func(RegionID, CommodityID) Price {
 	warm := warmPriceTable(c)
 	return func(r RegionID, k CommodityID) Price {
 		if p := warm[int(r)*len(c.Commodities)+int(k)]; p > 0 {
 			return p
 		}
-		return c.Commodities[k].ReferencePrice
+		return c.refPrice(r, k)
 	}
 }
 
@@ -284,7 +284,7 @@ func (b *builder) seedBeliefs(a *agent, region RegionID) {
 	seeds := b.seeds[:len(row.tradable)]
 	for i, c := range row.tradable {
 		seeds[i] = beliefSeed{
-			Ref:      int64(w.cfg.Commodities[c].ReferencePrice),
+			Ref:      int64(w.refPrice(region, c)),
 			UnitCost: w.prod.unitCost(region, c),
 			Empty:    true,
 			Price:    int64(w.markets.reports[w.markets.index(region, c)].Price),
@@ -379,7 +379,8 @@ func (w *World) logWarnings(ctx context.Context, warnings []Warning) {
 // summary is the attributes of the Info line "world created" (spec-world.md
 // 5.8.1): the seed, the first 8 bytes of the hash, the counts of the
 // configuration and of the agents, the modules that are on and whether a warm
-// start is present, and its counts when it is.
+// start is present, and its counts when it is, then the edges and the components
+// of the region graph (spec-regions.md 10.2).
 func (w *World) summary() []slog.Attr {
 	warm, present := warmCountsOf(&w.cfg)
 	attrs := []slog.Attr{
@@ -398,5 +399,12 @@ func (w *World) summary() []slog.Attr {
 		attrs = append(attrs, slog.Int64(logkeys.Prices, warm.prices), slog.Int64(logkeys.Wages, warm.wages),
 			slog.Int64(logkeys.Groups, warm.groups), slog.Int64(logkeys.Jobs, warm.jobs))
 	}
+	// The count the warning graph_not_strongly_connected cannot carry (a Warning
+	// has a path and a rule only): 0 with one region, as Snapshot.Components is.
+	components := 0
+	if len(w.cfg.Regions) > 1 {
+		components = w.geo.components()
+	}
+	attrs = append(attrs, slog.Int(logkeys.Edges, len(w.cfg.Edges)), slog.Int(logkeys.Components, components))
 	return attrs
 }

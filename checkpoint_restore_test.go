@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"math/rand/v2" // nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- only the *rand.Rand type of the injected source in a test fake (architecture.md 7.7)
 	"reflect"
 	"slices"
@@ -346,9 +347,9 @@ func TestRestore_Corrupt(t *testing.T) {
 		{"non-minimal varint", 1, func(_ *testing.T, b []byte) []byte { return append([]byte{b[0] | 0x80, 0}, b[1:]...) }},
 		{"boolean that is neither", 1, func(_ *testing.T, b []byte) []byte { b[len(b)-1] = 2; return b }},
 		{"count above the bytes left", 3, func(_ *testing.T, b []byte) []byte { return append(binary.AppendUvarint(nil, 1<<40), b[1:]...) }},
-		{"quantity above its bound", 4, func(t *testing.T, b []byte) []byte {
+		{"market sum above int64", 4, func(t *testing.T, b []byte) []byte {
 			starts, _ := varintStarts(t, b, 0, 3)
-			return setVarint(t, b, starts[2], 1_000_000_001)
+			return setVarint(t, b, starts[2], uint64(math.MaxInt64)+1)
 		}},
 		{"agent ID repeated", 3, fieldOf(1, 0, 0)},
 		{"agent ID descending", 3, field(0, 0, 9)},

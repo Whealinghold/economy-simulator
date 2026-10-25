@@ -466,7 +466,8 @@ func (w *World) loadWelfare(rs *restoreCtx, r *codec.Reader) error {
 		for range r.Count(recordMin) {
 			recs = append(recs, loadRecord(r))
 		}
-		a.target = r.Bounded("target ratio", MaxBasisPoints)
+		// The draw reaches TargetRatio * (10 000 + spread) / 10 000, below twice MaxBasisPoints.
+		a.target = r.Bounded("target ratio", 2*MaxBasisPoints)
 		if r.Err() != nil {
 			return
 		}

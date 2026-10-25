@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"math"
+
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/codec"
 )
@@ -109,7 +111,7 @@ func (w *World) refreshViewCtx() {
 	w.tk.vctx = viewCtx{
 		cfg: &w.cfg, roles: &w.roles, recipes: &w.recipes, l: w.ledger, prod: w.prod,
 		yields: &w.yields, shocks: &w.shocks, bp: w.bp, moment: w.tk.moment,
-		reports: w.markets.reports, windows: w.markets.windows,
+		reports: w.markets.reports, windows: w.markets.windows, refs: w.refs,
 	}
 }
 
@@ -208,9 +210,9 @@ func (w *World) loadMarkets(rs *restoreCtx, r *codec.Reader) error {
 		rep := &t.reports[i]
 		rep.Price = Price(r.Bounded("price", MaxPrice))
 		rep.Age = r.Bounded("age", rs.tick)
-		rep.Volume = Quantity(r.Bounded("volume", MaxQuantity))
-		rep.UnmatchedBid = Quantity(r.Bounded("unmatched bid", MaxQuantity))
-		rep.UnmatchedAsk = Quantity(r.Bounded("unmatched ask", MaxQuantity))
+		rep.Volume = Quantity(r.Bounded("volume", math.MaxInt64))
+		rep.UnmatchedBid = Quantity(r.Bounded("unmatched bid", math.MaxInt64))
+		rep.UnmatchedAsk = Quantity(r.Bounded("unmatched ask", math.MaxInt64))
 		rep.HasBestBid, rep.BestBid = readOptionalPrice(r)
 		rep.HasBestAsk, rep.BestAsk = readOptionalPrice(r)
 		prices = prices[:0]

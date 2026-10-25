@@ -233,14 +233,14 @@ func (s *viaSolve) band(ref int64) (lo, hi int64, err error) {
 // into (or capped to) the reference band so the table passes Validate (O11).
 // unclamped is the price before the band, and lifted says the floor or the band
 // raised it.
-func (s *viaSolve) seedPrice(dual, scale steady.Frac, cm *Commodity) (seed, unclamped int64, lifted bool, err error) {
+func (s *viaSolve) seedPrice(dual, scale steady.Frac, ref int64) (seed, unclamped int64, lifted bool, err error) {
 	floor, _ := resolutionFloor(s.m.c.World) // in bounds: Validate passed
 	p0, ok := dual.Times(scale).Round(0, MaxPrice)
 	if !ok {
 		p0 = MaxPrice
 	}
 	p1 := min(max(p0, floor), MaxPrice)
-	lo, hi, err := s.band(int64(cm.ReferencePrice))
+	lo, hi, err := s.band(ref)
 	if err != nil {
 		return 0, 0, false, err
 	}
@@ -254,7 +254,8 @@ func (rc *regionCtx) prices() error {
 	for _, c := range rc.table {
 		cm := &rc.s.m.c.Commodities[c]
 		dual := rc.p.pr.Price[c]
-		seed, p1, lifted, err := rc.s.seedPrice(dual, rc.scale, cm)
+		ref := int64(rc.s.m.c.refPrice(rc.r, CommodityID(c)))
+		seed, p1, lifted, err := rc.s.seedPrice(dual, rc.scale, ref)
 		if err != nil {
 			return err
 		}
@@ -271,7 +272,7 @@ func (rc *regionCtx) prices() error {
 		if seed != p1 {
 			rep.OutsideReferenceBand = append(rep.OutsideReferenceBand, PriceRecord{key.Region, key.Commodity, p1, seed})
 		}
-		rep.Drift = append(rep.Drift, driftOf(key, seed, int64(cm.ReferencePrice)))
+		rep.Drift = append(rep.Drift, driftOf(key, seed, ref))
 	}
 	return nil
 }

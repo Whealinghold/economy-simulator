@@ -77,7 +77,7 @@ func (f *listFixture) round(t *testing.T, bidIn int, bidLimit, bidQty int64) ([]
 	t.Helper()
 	f.tick++
 	f.tally.reset()
-	orders, err := f.e.asks(f.l, f.cfg, 0, nil)
+	orders, err := f.e.asks(f.l, f.cfg, resolveRefPrices(f.cfg), 0, nil)
 	if err != nil {
 		t.Fatalf("asks: %v", err)
 	}
@@ -123,7 +123,7 @@ func (f *listFixture) prices() map[ledger.Key]Price {
 
 func ordersOf(t *testing.T, f *listFixture) []Order {
 	t.Helper()
-	o, err := f.e.asks(f.l, f.cfg, 0, nil)
+	o, err := f.e.asks(f.l, f.cfg, resolveRefPrices(f.cfg), 0, nil)
 	if err != nil {
 		t.Fatalf("asks: %v", err)
 	}
@@ -415,9 +415,10 @@ func TestEstates_WarmedWalkAllocatesNothing(t *testing.T) {
 		f.give(t, r, lstTool, 6, 4)
 	}
 	dst := make([]Order, 0, 16)
+	refs := resolveRefPrices(f.cfg)
 	walk := func() {
 		for r := range RegionID(3) {
-			dst, _ = f.e.asks(f.l, f.cfg, r, dst[:0])
+			dst, _ = f.e.asks(f.l, f.cfg, refs, r, dst[:0])
 			for _, o := range dst {
 				f.e.admitted(r, o)
 			}

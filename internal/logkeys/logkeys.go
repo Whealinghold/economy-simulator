@@ -66,6 +66,12 @@ const (
 	Roles = "roles"
 	// Regions is a count of regions in the construction summary.
 	Regions = "regions"
+	// Edges is a count of directed edges of the region graph in the construction
+	// summary.
+	Edges = "edges"
+	// Components is a count of strongly connected components of the region graph
+	// in the construction summary; 0 when the world has one region.
+	Components = "components"
 	// Modules is the names of the modules that are on.
 	Modules = "modules"
 	// WarmStart is whether a warm start was present, a bool.

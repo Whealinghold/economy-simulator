@@ -193,6 +193,51 @@ var (
 	ErrOptionContext = errors.New("option not valid in this call")
 )
 
+// The errors of the region graph and of the relocation of an account
+// (spec-regions.md 9.1). ErrSelfEdge is a rule of Validate and NewGraph; the
+// others are the errors of the world's calls. They are matched with errors.Is
+// and none is logged by the library.
+var (
+	// ErrSelfEdge is an edge whose From equals its To.
+	ErrSelfEdge = errors.New("edge from a region to itself")
+	// ErrUnknownEdge is an edge status that names no configured edge.
+	ErrUnknownEdge = errors.New("unknown edge")
+	// ErrUnknownAgent is an agent ID that names no agent.
+	ErrUnknownAgent = errors.New("unknown agent")
+	// ErrClosedAccount is a call on the account of an agent that was removed.
+	// The ledger's own error of that name maps to this one, by errors.Is.
+	ErrClosedAccount = errors.New("closed account")
+	// ErrNotRelocatable is a relocation of an account that is not an agent's: an
+	// estate, an escrow, a transit or a boundary account.
+	ErrNotRelocatable = errors.New("account is not relocatable")
+	// ErrSameRegion is a relocation into the region the account is already in.
+	ErrSameRegion = errors.New("account is already in the region")
+	// ErrOpenReservation is a relocation of an account that has a reservation of
+	// money or goods.
+	ErrOpenReservation = errors.New("account has an open reservation")
+	// ErrRegionBound is a relocation refused by a registered obligation that is
+	// tied to the account's region; a *RegionBoundError names it.
+	ErrRegionBound = errors.New("relocation refused by a region-bound obligation")
+)
+
+// RegionBoundError is a relocation refused by a registered obligation
+// (spec-regions.md 6.5.2): it names the obligation and unwraps to
+// ErrRegionBound, so errors.Is matches the sentinel and errors.As finds the
+// name. The world makes one per obligation when it is built, so the refusal path
+// allocates nothing.
+type RegionBoundError struct {
+	// Obligation is the registered name of the obligation, such as open_shipment.
+	Obligation string
+}
+
+// Error returns the sentinel's text and the name of the obligation.
+func (e *RegionBoundError) Error() string {
+	return ErrRegionBound.Error() + ": " + e.Obligation
+}
+
+// Is reports whether target is ErrRegionBound.
+func (e *RegionBoundError) Is(target error) bool { return target == ErrRegionBound }
+
 // ValidationError is one rejected rule of a configuration (spec-config.md
 // 7.1.1). Rule is the sentinel, so errors.Is(err, ErrOutOfBounds) matches and
 // errors.As finds the ValidationError.

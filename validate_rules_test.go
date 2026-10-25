@@ -396,6 +396,73 @@ func buildFieldCases() []fieldCase {
 			paths: [][]string{{"regions", "north", "reference_basket"}}, value: "1000", bound: "1178"},
 	)
 
+	// Edges and reference-price overrides (spec-regions.md 9.1). The reference
+	// configuration has one region, north; a case adds south when it needs a
+	// second end.
+	south := func(c *economysim.Config) {
+		r := economysim.DefaultRegion()
+		r.ID = "south"
+		r.ReferenceBasket = c.Regions[0].ReferenceBasket
+		c.Regions = append(c.Regions, r)
+	}
+	edge := func(from, to string, d int64) economysim.Edge {
+		return economysim.Edge{From: from, To: to, Distance: d}
+	}
+	price := func(region, commodity string, p economysim.Price) economysim.RegionPrice {
+		return economysim.RegionPrice{Region: region, Commodity: commodity, Price: p}
+	}
+	add(
+		fieldCase{field: "Config.Edges", name: "more than MaxEdges", rules: []error{economysim.ErrTooMany},
+			mutate: func(c *economysim.Config) { c.Edges = make([]economysim.Edge, economysim.MaxEdges+1) },
+			paths:  [][]string{{"edges"}}, value: "20001", bound: "20000"},
+		fieldCase{field: "Config.Edges", name: "a pair twice", rules: []error{economysim.ErrDuplicateID},
+			mutate: func(c *economysim.Config) {
+				south(c)
+				c.Edges = []economysim.Edge{edge("north", "south", 5), edge("north", "south", 6)}
+			},
+			paths: [][]string{{"edges[1]"}}, value: "north/south"},
+		fieldCase{field: "Edge.From", name: "unknown region", rules: []error{economysim.ErrUnknownRegion},
+			mutate: func(c *economysim.Config) { c.Edges = []economysim.Edge{edge("nowhere", "north", 5)} },
+			paths:  [][]string{{"edges[0]", "from"}}, value: "nowhere"},
+		fieldCase{field: "Edge.To", name: "unknown region", rules: []error{economysim.ErrUnknownRegion},
+			mutate: func(c *economysim.Config) { c.Edges = []economysim.Edge{edge("north", "nowhere", 5)} },
+			paths:  [][]string{{"edges[0]", "to"}}, value: "nowhere"},
+		fieldCase{field: "Edge.To", name: "equal to From", rules: []error{economysim.ErrSelfEdge},
+			mutate: func(c *economysim.Config) { c.Edges = []economysim.Edge{edge("north", "north", 5)} },
+			paths:  [][]string{{"edges[0]", "to"}}, value: "north"},
+		fieldCase{field: "Edge.Distance", name: "below 1", rules: bounds,
+			mutate: func(c *economysim.Config) {
+				south(c)
+				c.Edges = []economysim.Edge{edge("north", "south", 0)}
+			},
+			paths: [][]string{{"edges[0]", "distance"}}, value: "0", bound: "1"},
+		fieldCase{field: "Edge.Distance", name: "above MaxDistance", rules: bounds,
+			mutate: func(c *economysim.Config) {
+				south(c)
+				c.Edges = []economysim.Edge{edge("north", "south", economysim.MaxDistance+1)}
+			},
+			paths: [][]string{{"edges[0]", "distance"}}, value: "1000000001", bound: "1000000000"},
+		fieldCase{field: "Config.RegionPrices", name: "a key twice", rules: []error{economysim.ErrDuplicateID},
+			mutate: func(c *economysim.Config) {
+				c.RegionPrices = []economysim.RegionPrice{price("north", "fuel", 90), price("north", "fuel", 91)}
+			},
+			paths: [][]string{{"region_prices[1]"}}, value: "north/fuel"},
+		fieldCase{field: "RegionPrice.Region", name: "unknown region", rules: []error{economysim.ErrUnknownRegion},
+			mutate: func(c *economysim.Config) { c.RegionPrices = []economysim.RegionPrice{price("nowhere", "fuel", 90)} },
+			paths:  [][]string{{"region_prices[0]", "region"}}, value: "nowhere"},
+		fieldCase{field: "RegionPrice.Commodity", name: "unknown commodity", rules: []error{economysim.ErrUnknownCommodity},
+			mutate: func(c *economysim.Config) { c.RegionPrices = []economysim.RegionPrice{price("north", "ghost", 90)} },
+			paths:  [][]string{{"region_prices[0]", "commodity"}}, value: "ghost"},
+		fieldCase{field: "RegionPrice.Price", name: "below 1", rules: bounds,
+			mutate: func(c *economysim.Config) { c.RegionPrices = []economysim.RegionPrice{price("north", "fuel", 0)} },
+			paths:  [][]string{{"region_prices[0]", "price"}}, value: "0", bound: "1"},
+		fieldCase{field: "RegionPrice.Price", name: "above MaxPrice", rules: bounds,
+			mutate: func(c *economysim.Config) {
+				c.RegionPrices = []economysim.RegionPrice{price("north", "fuel", economysim.MaxPrice+1)}
+			},
+			paths: [][]string{{"region_prices[0]", "price"}}, value: "1000000001", bound: "1000000000"},
+	)
+
 	// Groups.
 	add(
 		boundCase("Group", "Households", []string{"groups", "north", "cook", "households"}, func(c *economysim.Config) {
@@ -783,6 +850,21 @@ func TestValidate_DerivedProducts(t *testing.T) {
 			mutate: func(c *economysim.Config) { withSmelt(c, economysim.MaxPrice, 1_000, 1_000_000_000, 1) },
 			paths:  [][]string{{"recipes", "smelt", "inputs"}},
 			value:  "2000000000000000000",
+		},
+		{
+			// The same inputs at a default of 1 000 are fine; the override of the
+			// only region makes each 10^9, so the derived product is checked at the
+			// dearest price a region can have (spec-regions.md 5.2).
+			name: "cost of the inputs at an overriding price",
+			mutate: func(c *economysim.Config) {
+				withSmelt(c, 1_000, 1_000, 1_000_000_000, 1)
+				c.RegionPrices = []economysim.RegionPrice{
+					{Region: "home", Commodity: "coal", Price: economysim.MaxPrice},
+					{Region: "home", Commodity: "ore", Price: economysim.MaxPrice},
+				}
+			},
+			paths: [][]string{{"recipes", "smelt", "inputs"}},
+			value: "2000000000000000000",
 		},
 		{
 			// An output of 10^6 at ten times the yield (10^7) with a weight of 1 000

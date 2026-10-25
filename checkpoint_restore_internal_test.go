@@ -150,7 +150,7 @@ func TestRestore_RefusesStateBeyondItsBounds(t *testing.T) {
 		{"best bid of 0", func(w *World) { w.markets.reports[0].HasBestBid, w.markets.reports[0].BestBid = true, 0 }},
 		{"bound run beyond the ticks run", func(w *World) { w.markets.boundRun[0] = 6 }},
 		{"residue at the bound of its draw", func(w *World) { w.agents[1].residues[0] = residueBound }},
-		{"target ratio above its bound", func(w *World) { w.agents[1].target = MaxBasisPoints + 1 }},
+		{"target ratio above its bound", func(w *World) { w.agents[1].target = 2*MaxBasisPoints + 1 }},
 		{"hunger beyond the ticks run", func(w *World) { w.agents[1].hunger = 6 }},
 		{"unfed above the weight", func(w *World) { w.agents[1].unfed = 2 }},
 		{"role-since after the tick", func(w *World) { w.agents[1].roleSince = 6 }},
