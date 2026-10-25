@@ -72,6 +72,16 @@ const (
 	// Components is a count of strongly connected components of the region graph
 	// in the construction summary; 0 when the world has one region.
 	Components = "components"
+	// FromRegion and ToRegion are the region IDs of the two ends of a relocation
+	// (Region stays the key for a single region).
+	FromRegion = "from_region"
+	ToRegion   = "to_region"
+	// Distance is an edge length, int64, in the pack's distance unit.
+	Distance = "distance"
+	// Closed is whether an edge is closed, a bool.
+	Closed = "closed"
+	// FactorBP is an edge length factor in basis points, int64.
+	FactorBP = "factor_bp"
 	// Modules is the names of the modules that are on.
 	Modules = "modules"
 	// WarmStart is whether a warm start was present, a bool.

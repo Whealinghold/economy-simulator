@@ -1216,6 +1216,38 @@ func TestState_PendingInConstructionIsRefused(t *testing.T) {
 	}
 }
 
+// TestState_RelocationInConstructionIsAccepted verifies that a relocation total
+// alone in a ledger that is in construction is read, and that the section
+// written again is the same bytes. Relocate keeps its totals through the
+// construction phase, so a checkpoint taken there holds them.
+//
+// Fix: review of stage 2-3 PR B. A world relocated an agent before its first
+// step, made a checkpoint, and the restore refused it as pending totals in the
+// construction phase.
+func TestState_RelocationInConstructionIsAccepted(t *testing.T) {
+	t.Parallel()
+	b := craft(func(w *codec.Writer) {
+		w.Count(0)
+		w.U(0)
+		w.U(0)
+		w.Count(0) // flows
+		w.Count(0) // wear
+		w.Count(1) // one relocation row: from 0 to 1, thing 0, total 1
+		w.U(0)
+		w.U(1)
+		w.U(0)
+		w.U(1)
+	})
+	b = append(b, 0, 0) // an empty bucket
+	l := tiny(t, 0)
+	if err := read(l, b, 0, true); err != nil {
+		t.Fatalf("ReadState in construction = %v, want nil", err)
+	}
+	if got := saved(l); !slices.Equal(got, b) {
+		t.Errorf("WriteState after ReadState = %x, want %x", got, b)
+	}
+}
+
 // FuzzReadState feeds arbitrary bytes to ReadState on a small ledger, and
 // asserts that nothing panics and that every section it accepts is written
 // back as the same bytes (one spelling, FR-CHK-005), whether the ledger is

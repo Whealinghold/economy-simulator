@@ -55,10 +55,15 @@ var emittedBy = []struct{ event, scenario string }{
 }
 
 // sliceNotEmitted names the declared events that no scenario of the slice emits:
-// the staged list of FR-OBS-003. It is empty: every declared event is emitted
+// the staged list of FR-OBS-003. Every other declared event is emitted
 // (WorldRestored by the scenario "restored" that emittedTypes adds); an entry that
-// a scenario does emit fails the test as stale.
-var sliceNotEmitted = []string{}
+// a scenario does emit fails the test as stale. AgentRelocated and
+// EdgeStatusChanged are emitted by no scenario because a scenario reaches the
+// world through its public API, and the public relocation and edge status calls
+// are INT's (plan 2-17): TestRelocate_EventAndOrder and TestEdgeStatus_Events in
+// the internal tests of regions emit them until then, and plan 17 deletes these
+// entries with its scenarios.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

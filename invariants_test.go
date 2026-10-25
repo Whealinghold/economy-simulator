@@ -221,11 +221,14 @@ type invariantCase struct {
 
 // invariantTable is the Stage 1 table: N-295 lists the rows that wait. The
 // three row is the J1 probe's: it builds and runs, its regions do not trade
-// (REF 16.2).
+// (REF 16.2); the two +trade rows are the packs with the edge part of their trade
+// overlay (plan 2-3 Phase 9; the edges do not change a run until TRN reads them).
 var invariantTable = []invariantCase{
 	{"one", packOne, 16},
 	{"second", packSecond, 4},
 	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4},
+	{"two+trade", tradeWarm("two"), 4},
+	{"three+trade", tradeWarm("three"), 4},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and

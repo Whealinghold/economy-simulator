@@ -1,0 +1,25 @@
+# The edge part of the trade overlay of the variant (spec-regions.md 12.4): both directions of each pair, distances placeholders until TRN fixes what a unit of distance costs.
+[region.centre.edge.east]
+distance = 100
+[region.east.edge.centre]
+distance = 100
+[region.centre.edge.north]
+distance = 100
+[region.north.edge.centre]
+distance = 100
+[region.centre.edge.south]
+distance = 100
+[region.south.edge.centre]
+distance = 100
+[region.centre.edge.west]
+distance = 100
+[region.west.edge.centre]
+distance = 100
+[region.north.edge.east]
+distance = 130
+[region.east.edge.north]
+distance = 130
+[region.south.edge.west]
+distance = 130
+[region.west.edge.south]
+distance = 130

@@ -50,6 +50,8 @@ func (c capture) Handle(_ context.Context, r slog.Record) error {
 			l.attrs[a.Key] = a.Value.Int64()
 		case slog.KindString:
 			l.strs[a.Key] = a.Value.String()
+		case slog.KindBool:
+			l.attrs[a.Key] = map[bool]int64{false: 0, true: 1}[a.Value.Bool()]
 		}
 		return true
 	})

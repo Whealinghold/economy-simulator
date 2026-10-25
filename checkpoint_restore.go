@@ -325,15 +325,6 @@ func (w *World) loadSkills(_ *restoreCtx, r *codec.Reader) error {
 	return nil
 }
 
-// loadRegions is tag 11, a zero-row skeleton: one count that must be 0 until the
-// regions module is built.
-func (w *World) loadRegions(_ *restoreCtx, r *codec.Reader) error {
-	if r.Count(1) != 0 {
-		r.Failf("rows in the regions section, whose module is not built")
-	}
-	return nil
-}
-
 // checkpointCross is step 7, the checks that need two sections. Modules append
 // theirs here in the order of spec-checkpoint.md 6.2: every account after the
 // estates is an Agent account, and an open one is the account of the live agent
@@ -356,9 +347,14 @@ func (w *World) checkpointCross() error {
 	}
 	var missing error
 	w.eachLive(func(a *agent) {
-		// The account exists: step 7's loop above and the agent record check own it.
-		v, _ := w.ledger.Account(a.account)
-		if cell := v.Region*roles + int(a.role); !w.state.hadAgent[cell] && missing == nil {
+		v, err := w.ledger.Account(a.account)
+		// Excluded from coverage (testing.md 9.5): step 7's loop and the agent record
+		// check already proved the account readable; this only keeps a later loosening
+		// of those checks from reading a zero View.
+		if err != nil && missing == nil {
+			missing = fmt.Errorf("%w: agent %d names account %d, which the ledger cannot read", ErrCheckpointCorrupt, a.id, a.account)
+		}
+		if cell := v.Region*roles + int(a.role); err == nil && !w.state.hadAgent[cell] && missing == nil {
 			missing = fmt.Errorf("%w: agent %d lives in region %d, role %d, whose had-an-agent bit is not set", ErrCheckpointCorrupt, a.id, v.Region, a.role)
 		}
 	})
@@ -398,34 +394,34 @@ func (w *World) announceRestore(info CheckpointInfo, o options) {
 // ascending key order, the value from 1 to limit (a row at the default is corrupt, R10;
 // a run counts ticks, so the caller passes the tick as limit).
 func readSparse(r *codec.Reader, vals []int64, regions, roles int, limit int64) {
-	readSparseRows(r, vals, 3, limit, func() (uint64, string) {
+	readSparseRows(r, vals, 3, limit, func() uint64 {
 		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
-		return region*uint64(roles) + role, fmt.Sprintf("region %d, role %d", region, role)
+		return region*uint64(roles) + role
+	}, func(key uint64) string {
+		return fmt.Sprintf("region %d, role %d", key/uint64(roles), key%uint64(roles))
 	})
 }
 
 // readSparseByRegion is readSparse for a run kept per region: (region, value).
 func readSparseByRegion(r *codec.Reader, vals []int64, limit int64) {
-	readSparseRows(r, vals, 2, limit, func() (uint64, string) {
-		region := r.Index(uint64(len(vals)))
-		return region, fmt.Sprintf("region %d", region)
-	})
+	readSparseRows(r, vals, 2, limit, func() uint64 { return r.Index(uint64(len(vals))) },
+		func(key uint64) string { return fmt.Sprintf("region %d", key) })
 }
 
 // readSparseRows is the loop of both: a count of rows of at least minBytes, each a
 // key from readKey (with its text for an error) and a value from 1 to limit, the
 // keys strictly ascending.
-func readSparseRows(r *codec.Reader, vals []int64, minBytes int, limit int64, readKey func() (uint64, string)) {
+func readSparseRows(r *codec.Reader, vals []int64, minBytes int, limit int64, readKey func() uint64, describe func(key uint64) string) {
 	n := r.Count(minBytes)
 	prev := uint64(0)
 	for i := range n {
-		key, what := readKey()
+		key := readKey()
 		v := r.Bounded("run", limit)
 		if r.Err() != nil {
 			return
 		}
 		if v == 0 || (i > 0 && key <= prev) {
-			r.Failf("sparse row (%s) is at its default or out of order", what)
+			r.Failf("sparse row (%s) is at its default or out of order", describe(key))
 			return
 		}
 		vals[key], prev = v, key

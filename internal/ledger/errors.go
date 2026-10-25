@@ -28,7 +28,8 @@ var (
 	// ErrReservationExceeds means a release, or a transfer marked from
 	// reserved, asked for more than is reserved.
 	ErrReservationExceeds = errors.New("ledger: amount exceeds the reservation")
-	// ErrOpenReservation means a Close found a reservation on the account.
+	// ErrOpenReservation means a Close or a Relocate found a reservation of
+	// money or an earmark of goods on the account.
 	ErrOpenReservation = errors.New("ledger: account holds a reservation")
 	// ErrNotEmpty means a Close found money or goods on the account.
 	ErrNotEmpty = errors.New("ledger: account holds money or goods")
@@ -73,6 +74,11 @@ var (
 	// ErrOpenClaim means a Close found the account the creditor or the
 	// debtor of an open claim (spec-ledger.md 3.3.1).
 	ErrOpenClaim = errors.New("ledger: account is party to an open claim")
+	// ErrNotRelocatable means a Relocate of an account that is not of kind
+	// Agent: an estate, an escrow, a transit or a boundary account.
+	ErrNotRelocatable = errors.New("ledger: account is not relocatable")
+	// ErrSameRegion means a Relocate into the region the account is in.
+	ErrSameRegion = errors.New("ledger: account is already in the region")
 	// ErrAuditFailed means Audit found an identity false. The error is an
 	// *AuditError that names it, and matches this sentinel.
 	ErrAuditFailed = errors.New("ledger: audit failed")

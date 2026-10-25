@@ -58,6 +58,10 @@ type World struct {
 	geo  regionState
 	refs []Price
 
+	// bounds is the table of the region-bound obligations of the modules that
+	// are on (regions_relocate.go); empty while none is.
+	bounds regionBounds
+
 	// rnd is the one random source (random.go).
 	rnd *stream
 

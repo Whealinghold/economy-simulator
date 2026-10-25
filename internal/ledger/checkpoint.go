@@ -1,7 +1,6 @@
 package ledger
 
 import (
-	"cmp"
 	"math"
 	"slices"
 
@@ -69,11 +68,12 @@ func (l *Ledger) WriteState(w *codec.Writer) {
 	l.writeClaims(w)
 	l.writeFlows(w, l.totals, l.wear)
 	w.Count(len(l.relocs))
-	// The reader requires rows ascending by (from, to, thing); no writer keeps
-	// the slice in that order, so the rows are written sorted.
+	// The reader requires rows ascending by (from, to, thing). Relocate keeps the
+	// slice in that order; the sort stays so that the bytes are canonical for any
+	// slice a test builds.
 	rows := slices.Clone(l.relocs)
 	slices.SortFunc(rows, func(a, b reloc) int {
-		return cmp.Or(cmp.Compare(a.from, b.from), cmp.Compare(a.to, b.to), cmp.Compare(a.thing, b.thing))
+		return cmpReloc(a, [3]int{b.from, b.to, b.thing})
 	})
 	for _, x := range rows {
 		w.U(uint64(x.from))
@@ -271,7 +271,10 @@ func (l *Ledger) readBody(r *codec.Reader, first int, construction bool) {
 	}
 	l.readClaims(r)
 	rows := l.readFlows(r, l.totals, l.wear)
-	rows += l.readRelocs(r)
+	// A relocation before the first step is totalled like one in a tick (Relocate
+	// has no bucket for it) and is cleared with the totals of that step, so
+	// the construction phase may hold relocation rows.
+	l.readRelocs(r)
 	if construction {
 		if rows != 0 {
 			r.Failf("pending totals in the construction phase")
