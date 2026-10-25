@@ -826,28 +826,45 @@ type AgentRelocated struct {
 	Cause Cause
 }
 
-func (WorldCreated) isEvent()     {}
-func (RunStarted) isEvent()       {}
-func (RunEnded) isEvent()         {}
-func (TickStarted) isEvent()      {}
-func (TickEnded) isEvent()        {}
-func (OrderPlaced) isEvent()      {}
-func (OrderRejected) isEvent()    {}
-func (TradeExecuted) isEvent()    {}
-func (MarketCleared) isEvent()    {}
-func (BeliefsUpdated) isEvent()   {}
-func (RecipeExecuted) isEvent()   {}
-func (RecipeRefused) isEvent()    {}
-func (RecipeAbandoned) isEvent()  {}
-func (ProductionHalted) isEvent() {}
-func (UpkeepShortfall) isEvent()  {}
-func (AgentSpawned) isEvent()     {}
-func (AgentBankrupted) isEvent()  {}
-func (EstateOpened) isEvent()     {}
-func (WeightChanged) isEvent()    {}
-func (RoleChanged) isEvent()      {}
-func (EntryLimited) isEvent()     {}
-func (BoundaryFlow) isEvent()     {}
-func (WearApplied) isEvent()      {}
-func (WorldRestored) isEvent()    {}
-func (AgentRelocated) isEvent()   {}
+// EdgeStatusChanged is emitted once per edge whose status changed, in ascending
+// EdgeID, after the world's tables for the new status are in place (spec-regions.md
+// 7.3.2, 10.1). A change equal to the status in force is no event. The names of
+// the regions are in the names table.
+type EdgeStatusChanged struct {
+	Tick int64
+	// From and To are the ends of the edge.
+	From, To RegionID
+	// Closed and FactorBP are the new status: closed or open, and the factor of
+	// the configured distance in basis points.
+	Closed   bool
+	FactorBP int64
+	// Cause is who set the status: consumer, or policy for a policy actor.
+	Cause Cause
+}
+
+func (WorldCreated) isEvent()      {}
+func (RunStarted) isEvent()        {}
+func (RunEnded) isEvent()          {}
+func (TickStarted) isEvent()       {}
+func (TickEnded) isEvent()         {}
+func (OrderPlaced) isEvent()       {}
+func (OrderRejected) isEvent()     {}
+func (TradeExecuted) isEvent()     {}
+func (MarketCleared) isEvent()     {}
+func (BeliefsUpdated) isEvent()    {}
+func (RecipeExecuted) isEvent()    {}
+func (RecipeRefused) isEvent()     {}
+func (RecipeAbandoned) isEvent()   {}
+func (ProductionHalted) isEvent()  {}
+func (UpkeepShortfall) isEvent()   {}
+func (AgentSpawned) isEvent()      {}
+func (AgentBankrupted) isEvent()   {}
+func (EstateOpened) isEvent()      {}
+func (WeightChanged) isEvent()     {}
+func (RoleChanged) isEvent()       {}
+func (EntryLimited) isEvent()      {}
+func (BoundaryFlow) isEvent()      {}
+func (WearApplied) isEvent()       {}
+func (WorldRestored) isEvent()     {}
+func (AgentRelocated) isEvent()    {}
+func (EdgeStatusChanged) isEvent() {}

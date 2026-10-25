@@ -76,6 +76,10 @@ const (
 	// (Region stays the key for a single region).
 	FromRegion = "from_region"
 	ToRegion   = "to_region"
+	// Distance is an edge length, int64, in the pack's distance unit.
+	Distance = "distance"
+	// Closed is whether an edge is closed, a bool.
+	Closed = "closed"
 	// Modules is the names of the modules that are on.
 	Modules = "modules"
 	// WarmStart is whether a warm start was present, a bool.

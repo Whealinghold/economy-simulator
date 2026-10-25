@@ -185,3 +185,10 @@ func RegisterBoundForTest(w *World, name string, held func(a AgentID, skip []str
 // SkipHasForTest reports whether skip names the instance key of an obligation,
 // by name or as "name:key" (spec-regions.md 6.5.2).
 func SkipHasForTest(skip []string, name string, key int64) bool { return skipHas(skip, name, key) }
+
+// SetEdgeStatusesForTest applies a batch of edge statuses with the cause by the
+// world's one internal form (regions_status.go). The public SetEdgeStatuses is
+// INT's (plan 2-17); this seam goes with it.
+func SetEdgeStatusesForTest(w *World, changes []EdgeStatus, cause Cause) error {
+	return w.setEdgeStatuses(changes, cause)
+}

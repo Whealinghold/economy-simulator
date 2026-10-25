@@ -593,6 +593,9 @@ func (g Graph) Component(r RegionID) (int, bool) { return g.t.Comp(int(r)) }
 type regionState struct {
 	g      Graph
 	status []edgeState
+	// rebuilds counts the rebuilds of g after construction: one for each batch of
+	// edge statuses that changed any (spec-regions.md 4.4.4).
+	rebuilds int
 }
 
 // distance returns the shortest distance between two regions over the open edges.

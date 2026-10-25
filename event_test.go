@@ -51,6 +51,7 @@ var declaredEvents = []economysim.Event{
 	economysim.WearApplied{},
 	economysim.WorldRestored{},
 	economysim.AgentRelocated{},
+	economysim.EdgeStatusChanged{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -63,7 +64,7 @@ var notBuiltEvents = []string{
 	"PopulationChanged", "TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "ReliefPaid", "MoneyFlowLimited",
 	"MoneyFlowEnded", "MoneyFlowScaled", "StoreLoss",
-	"EdgeStatusChanged", "ShipmentDispatched", "ShipmentArrived",
+	"ShipmentDispatched", "ShipmentArrived",
 	"ShipmentRejected", "TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
 	"MigrationReviewed", "EndowmentChanged", "EndowmentAdjusted",
@@ -85,8 +86,7 @@ var notBuiltEvents = []string{
 // declared in the code is stale. The change that declares the event deletes
 // its entry here and in notBuiltEvents.
 var deferredCore = map[string]string{
-	"EdgeStatusChanged": "Stage 2, regions.go (REG 10.1, roadmap-v1.md)",
-	"YieldShocked":      "Stage 2, integration.go (INT, PRO 6.8, roadmap-v1.md)",
+	"YieldShocked": "Stage 2, integration.go (INT, PRO 6.8, roadmap-v1.md)",
 }
 
 // notBuiltFields names the Event.Field entries of a row of 4.1 whose module
