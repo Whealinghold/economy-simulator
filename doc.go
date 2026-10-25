@@ -163,6 +163,10 @@
 //   - Fixed point: money, prices and quantities are whole numbers of their
 //     smallest unit; no floating point affects a result.
 //   - Group: the households of one role in one region, with an optional scale.
+//   - Census: the configured households of the groups of a world
+//     (Group.Households), from which the agents and their weights are derived.
+//   - Agent floor: MinAgents, the fewest agents a scaled group may have.
+//   - Cohort: an agent of weight above 1.
 //   - Guard pass: the counting-only parse of a document in config/ that checks
 //     nesting depth and keys per table before any tree is built.
 //   - Household: the unit of population; an agent holds a weight of them.

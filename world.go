@@ -225,15 +225,15 @@ func buildShell(cfg Config, o options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	l, err := newLedger(c)
 	// Excluded from coverage (testing.md 9.5): Validate has accepted the
 	// configuration, so the ledger opens its built-in accounts.
+	l, err := newLedger(c)
 	if err != nil {
 		return nil, err
 	}
-	geo, err := newGraph(&c, nil)
 	// Excluded from coverage (testing.md 9.5): the bounds keep every length and
 	// path below int64, so a validated configuration builds its graph.
+	geo, err := newGraph(&c, nil)
 	if err != nil {
 		return nil, err
 	}

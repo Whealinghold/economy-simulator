@@ -244,7 +244,7 @@ func TestExecute_ReduceMovesTheDifferenceToTheEstate(t *testing.T) {
 // starvation, which the ledger allows both ways), leaving 10, 6 and 0. The pool is
 // then 25 000 + 30 and ends at 25 030 + 3 = 25 033.
 //
-// Requirement: FR-SPN-005, FR-OBS-019, FR-LED-035
+// Requirement: FR-SPN-005, FR-OBS-019, FR-LED-035, FR-SCL-014
 func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 	t.Parallel()
 	c := execConfig()
@@ -272,6 +272,36 @@ func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 	auditOK(t, "worked reduction", w)
 }
 
+// TestExecute_ReductionKeepsTheUnfedCountWithinTheWeight verifies that a reduction
+// by 1 household, of an agent of weight 4 whose last consumption left 4 households
+// unfed, leaves an unfed count of 3, the new weight, and an agent that had 2 unfed
+// keeps 2.
+//
+// Requirement: FR-SCL-014, FR-CHK-005
+//
+// Fix: plan 2-4. The unfed count stayed at 4 above the weight 3, and the checkpoint
+// of that world was refused as corrupt (unfed above the weight) at restore.
+func TestExecute_ReductionKeepsTheUnfedCountWithinTheWeight(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name         string
+		before, want int64
+	}{{"unfed above the new weight", 4, 3}, {"unfed within the new weight", 2, 2}} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := execConfig()
+			c.Groups[0] = Group{Region: "home", Role: "miller", Households: 4, Scale: 4}
+			sp := &scriptSpawner{plan: regionPlans([]Decision{{Kind: DecideReduce, Agent: 1, Households: 1, Cause: CauseStarved}})}
+			w, rec, _ := execWorld(t, c, 25_000, sp)
+			w.agents[1].unfed = tt.before
+			runEntry(t, w, rec)
+			if got := w.agents[1].unfed; got != tt.want || w.agents[1].weight != 3 {
+				t.Errorf("seed %d: unfed %d at weight %d after reducing 4 to 3 from unfed %d, want %d at weight 3", execSeed, got, w.agents[1].weight, tt.before, tt.want)
+			}
+		})
+	}
+}
+
 // TestExecute_RemoveAndReductionToTheWholeWeight verifies that a removal, and a
 // reduction by the whole weight, take the one removal path: the events are
 // RecipeAbandoned (agent_removed, if a job), AgentBankrupted with the cause of the
@@ -284,7 +314,7 @@ func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 // 3 (the weaver, weight 1) holds 3 000 and no goods, so the pool is 28 000. The
 // EntryLimited of the tick counts the households removed: 2 and 1.
 //
-// Requirement: FR-SPN-005, FR-SPN-015, FR-SPN-034, FR-WLD-051, FR-WLD-056, FR-AGT-001, FR-OBS-020, FR-EST-002
+// Requirement: FR-SPN-005, FR-SPN-015, FR-SPN-034, FR-WLD-051, FR-WLD-056, FR-AGT-001, FR-OBS-020, FR-EST-002, FR-SCL-014
 func TestExecute_RemoveAndReductionToTheWholeWeight(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1404,7 +1434,7 @@ func TestRegionView_FieldsAreReadFromTheirOwnRegionAndRole(t *testing.T) {
 // yonder weaver cell (index 3) starts with no agent and no flag; one weaver household
 // enters at 3 000 and the cell has 1 agent.
 //
-// Requirement: FR-SPN-006, FR-SPN-007, FR-SPN-033, FR-SPN-044
+// Requirement: FR-SPN-006, FR-SPN-007, FR-SPN-033, FR-SPN-044, FR-SCL-014
 // Guard: a host list that took agents of another region would put a household's money
 // in the wrong region's account.
 func TestExecute_EntrantsGoToTheHostsOfTheirOwnRegionAndScale(t *testing.T) {

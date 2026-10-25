@@ -502,7 +502,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | Concern | Home |
 |---------|------|
 | `Weight` on the agent, `Households`, `Scale`, `MinAgents` in the configuration | root package, `agent.go`, `world.go`; parsed by `config/` |
-| Deriving the agents and weights from a group (3.2) | the root package, `construct.go`: the pure function `groupWeights(households, scale, minAgents int64) []int64`, over integers, with no random number and a table-driven test (FR-SCL-001 to 005); Stage 2's `scale.go` takes it over unchanged |
+| Deriving the agents and weights from a group (3.2) | the root package, `scale.go`: `agentCount`, `groupWeights(households, scale, minAgents int64) []int64`, `groupShape`, `groupPlans` and the census invariant `checkCensus`, over integers, with no random number and table-driven tests (FR-SCL-001 to 005, 019) |
 | Scaling of production, upkeep and welfare | the specs listed in section 4, in `internal/production` and the root `Strategy` default |
 | Bounds check (4.5) | configuration validation, with the checked-arithmetic helpers of `spec-currency.md` section 7 |
-| The chance-event helper (4.6) | an `internal/` package over integers and the world's `*rand.Rand` |
+| The chance-event helper (4.6) | the carried remainder of `internal/population` (`spec-population.md` 3.8), no separate package; FR-SCL-012 is tested there |

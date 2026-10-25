@@ -193,7 +193,8 @@ type Stateful interface {
 // ErrCheckpointExtension wrapping the error of an extension whose SaveState
 // failed. A value that breaks an invariant of the state (a negative amount in a
 // field written unsigned) panics, as a violated invariant does everywhere in the
-// library; it is not an error result. It may be taken before the first Step: the world is then still in its
+// library; it is not an error result. The one exception is a negative amount in a
+// Directive, which is written as is and refused by the restore (saveDirective). It may be taken before the first Step: the world is then still in its
 // construction phase and the checkpoint says so.
 func (w *World) Checkpoint() (Checkpoint, error) {
 	if err := w.guard(); err != nil {

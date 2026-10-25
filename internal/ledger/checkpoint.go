@@ -68,14 +68,9 @@ func (l *Ledger) WriteState(w *codec.Writer) {
 	l.writeClaims(w)
 	l.writeFlows(w, l.totals, l.wear)
 	w.Count(len(l.relocs))
-	// The reader requires rows ascending by (from, to, thing). Relocate keeps the
-	// slice in that order; the sort stays so that the bytes are canonical for any
-	// slice a test builds.
-	rows := slices.Clone(l.relocs)
-	slices.SortFunc(rows, func(a, b reloc) int {
-		return cmpReloc(a, [3]int{b.from, b.to, b.thing})
-	})
-	for _, x := range rows {
+	// The reader requires rows ascending by (from, to, thing); Relocate keeps the
+	// slice in that order.
+	for _, x := range l.relocs {
 		w.U(uint64(x.from))
 		w.U(uint64(x.to))
 		w.U(uint64(x.thing))

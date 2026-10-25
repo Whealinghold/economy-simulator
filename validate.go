@@ -824,27 +824,6 @@ func resolutionFloor(w WorldParams) (int64, bool) {
 	return (wholeBP + w.BeliefStep - 1) / w.BeliefStep, true
 }
 
-// groupShape returns the number of agents of a group and the largest weight of
-// one (spec-scale.md 3.2): n = ceil(H / S), raised to min(K, H) when below the
-// floor K, and weights of H / n and one more for the first H mod n, so the
-// largest is ceil(H / n). The last result is the scale in force: the group's, or
-// the world's when the group gives none. ok is false when a household count, a
-// scale or the floor is outside its bound, where the shape is not defined.
-func groupShape(w WorldParams, g Group) (agents, maxWeight, scale int64, ok bool) {
-	h, s := g.Households, g.Scale
-	if s == 0 {
-		s = w.Scale
-	}
-	if h < 1 || h > MaxHouseholds || s < 1 || s > MaxHouseholds || w.MinAgents < 1 || w.MinAgents > MaxHouseholds {
-		return 0, 0, 0, false
-	}
-	n := (h + s - 1) / s
-	if n < w.MinAgents {
-		n = min(w.MinAgents, h)
-	}
-	return n, (h + n - 1) / n, s, true
-}
-
 // longestDuration is the longest Duration among the declared recipes of a role,
 // and whether every declared recipe has a Duration inside its bound. A
 // Duration outside it is reported by its own rule and the rules that read a

@@ -241,7 +241,7 @@ func TestRecord_WearRowsOverCapacityIsAnInvariantViolation(t *testing.T) {
 // weight 3 costs 2 * 10 * 3 = 60. A one-tick ring reads 710 * 10 000 / 60. An
 // Upkeep, Tool or Other spend has no method and so is never netted.
 //
-// Requirement: FR-WEL-002, FR-WEL-003, FR-WEL-004
+// Requirement: FR-WEL-002, FR-WEL-003, FR-WEL-004, FR-SCL-009
 func TestRecord_FormsIncomeAndCost(t *testing.T) {
 	t.Parallel()
 	c := welfareConfig()
