@@ -379,7 +379,8 @@ func (w *World) logWarnings(ctx context.Context, warnings []Warning) {
 // summary is the attributes of the Info line "world created" (spec-world.md
 // 5.8.1): the seed, the first 8 bytes of the hash, the counts of the
 // configuration and of the agents, the modules that are on and whether a warm
-// start is present, and its counts when it is.
+// start is present, and its counts when it is, then the edges and the components
+// of the region graph (spec-regions.md 10.2).
 func (w *World) summary() []slog.Attr {
 	warm, present := warmCountsOf(&w.cfg)
 	attrs := []slog.Attr{
@@ -398,5 +399,12 @@ func (w *World) summary() []slog.Attr {
 		attrs = append(attrs, slog.Int64(logkeys.Prices, warm.prices), slog.Int64(logkeys.Wages, warm.wages),
 			slog.Int64(logkeys.Groups, warm.groups), slog.Int64(logkeys.Jobs, warm.jobs))
 	}
+	// The count the warning graph_not_strongly_connected cannot carry (a Warning
+	// has a path and a rule only): 0 with one region, as Snapshot.Components is.
+	components := 0
+	if len(w.cfg.Regions) > 1 {
+		components = w.geo.components()
+	}
+	attrs = append(attrs, slog.Int(logkeys.Edges, len(w.cfg.Edges)), slog.Int(logkeys.Components, components))
 	return attrs
 }

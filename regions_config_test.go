@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"log/slog"
 	"slices"
 	"strings"
 	"testing"
@@ -510,4 +511,65 @@ func TestWarnings_OverrideEqualsDefaultUsesTheFirstOfARepeatedCommodity(t *testi
 		}
 	}
 	t.Errorf("Warnings() has no override_equals_default for an override equal to the first row's price %d", first.ReferencePrice)
+}
+
+// TestLog_WorldCreatedCarriesTheEdgesAndComponents verifies that the Info line
+// "world created" carries the number of edges and the number of strongly
+// connected components of the region graph, 0 for a world of one region as
+// Snapshot.Components is, and that the same count is on the line whose warning
+// graph_not_strongly_connected cannot carry it.
+//
+// Requirement: FR-REG-056
+//
+// Guard: the warning has a rule and a path only, so without these two keys the
+// log would say the graph is split and not into how many parts.
+func TestLog_WorldCreatedCarriesTheEdgesAndComponents(t *testing.T) {
+	t.Parallel()
+	grouped := func(edges ...economysim.Edge) economysim.Config {
+		c := withRegions(referenceConfig(), "south")
+		c.Groups = append(c.Groups, economysim.Group{Region: "south", Role: "cook", Households: 10})
+		c.Edges = edges
+		return c
+	}
+	tests := []struct {
+		name              string
+		cfg               economysim.Config
+		edges, components int64
+		warned            bool
+	}{
+		{"one region", referenceConfig(), 0, 0, false},
+		{"two regions and no edge", grouped(), 0, 2, true},
+		{"two regions joined one way", grouped(edgeOf("north", "south", 5)), 1, 2, true},
+		{"two regions joined both ways", grouped(edgeOf("north", "south", 5), edgeOf("south", "north", 6)), 2, 1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			h := newCaptureHandler()
+			if _, err := economysim.NewWorld(tt.cfg, economysim.WithLogger(slog.New(h))); err != nil {
+				t.Fatalf("NewWorld(%s) error = %v, want nil", tt.name, err)
+			}
+			var line logLine
+			warned := false
+			for _, l := range h.records() {
+				switch {
+				case l.msg == "world created":
+					line = l
+				case l.msg == "configuration warning":
+					if rule, _ := l.attr("rule"); rule.String() == "graph_not_strongly_connected" {
+						warned = true
+					}
+				}
+			}
+			if got := line.intAttr("edges"); got != tt.edges {
+				t.Errorf("world created edges = %d, want %d", got, tt.edges)
+			}
+			if got := line.intAttr("components"); got != tt.components {
+				t.Errorf("world created components = %d, want %d", got, tt.components)
+			}
+			if warned != tt.warned {
+				t.Errorf("graph_not_strongly_connected logged = %v, want %v", warned, tt.warned)
+			}
+		})
+	}
 }

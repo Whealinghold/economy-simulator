@@ -633,7 +633,9 @@ func worldCreatedKeys(t *testing.T) []string {
 }
 
 // checkWorldCreated checks the line of one scenario: the first ten keys of the row
-// in order, and the values of the configuration and of the world at tick 0.
+// in order, then edges and components of the region graph (spec-regions.md 10.2,
+// which the row lists after the warm start counts), and the values of the
+// configuration and of the world at tick 0.
 func checkWorldCreated(t *testing.T, sc scenario, specKeys []string) {
 	t.Helper()
 	w, _, h := build(t, sc, who{logger: true})
@@ -643,8 +645,12 @@ func checkWorldCreated(t *testing.T, sc scenario, specKeys []string) {
 			line = l
 		}
 	}
-	if keys := keysOfLine(line); line.level != slog.LevelInfo || !slices.Equal(keys, specKeys[:10]) {
-		t.Fatalf("%s (seed %d): world created has the keys %v at %v, want an Info line with %v", sc.name, obsSeed, keys, line.level, specKeys[:10])
+	want10 := append(slices.Clone(specKeys[:10]), "edges", "components")
+	if i, j := slices.Index(specKeys, "edges"), slices.Index(specKeys, "components"); i < 10 || j != i+1 {
+		t.Fatalf("the row \"world created\" has edges at %d and components at %d, want them in order after the first ten", i, j)
+	}
+	if keys := keysOfLine(line); line.level != slog.LevelInfo || !slices.Equal(keys, want10) {
+		t.Fatalf("%s (seed %d): world created has the keys %v at %v, want an Info line with %v", sc.name, obsSeed, keys, line.level, want10)
 	}
 	cfg, snap := w.Config(), mustSnapshot(t, w)
 	want := map[string]int64{
@@ -664,7 +670,8 @@ func checkWorldCreated(t *testing.T, sc scenario, specKeys []string) {
 // TestLog_WorldCreatedHasTheKeysOfTheSpecWithTheScenariosValues verifies the
 // Info line "world created": its keys are the first ten of the row of 7.2 (the
 // keys of the modules that are on come after, and none is on), in that order,
-// and its values are those of the configuration and of the world at tick 0.
+// then edges and components, and its values are those of the configuration and of
+// the world at tick 0.
 //
 // Requirement: FR-OBS-076
 func TestLog_WorldCreatedHasTheKeysOfTheSpecWithTheScenariosValues(t *testing.T) {
