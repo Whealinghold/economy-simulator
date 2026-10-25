@@ -15,7 +15,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -29,6 +28,10 @@ var (
 	// ErrOverflow is returned by Build when a path sum does not fit in int64.
 	ErrOverflow = errors.New("graph: path length overflows int64")
 )
+
+// MaxRegions is the most regions Build accepts: the tables take n*n values of
+// 12 bytes, 200 MB at the bound. The root package's MaxRegions must not exceed it.
+const MaxRegions = 4096
 
 // basisPoints is the denominator of an edge status factor (architecture.md 3.5).
 const basisPoints = 10_000
@@ -72,8 +75,8 @@ type Tables struct {
 
 // Build derives the tables of n regions from the open edges, which must be in
 // strictly ascending (From, To) order. A closed edge is simply not in the list.
-// n is bounded by the caller (the tables take n*n values). It returns
-// ErrInvalid for an edge list that breaks its contract and ErrOverflow for a
+// n is at most MaxRegions and the list at most n*(n-1) edges, checked before
+// anything is allocated. It returns ErrInvalid for an edge list that breaks its contract and ErrOverflow for a
 // path sum that does not fit in int64.
 func Build(n int, open []Edge) (*Tables, error) {
 	t, err := newTables(n, open)
@@ -90,8 +93,11 @@ func Build(n int, open []Edge) (*Tables, error) {
 
 // newTables validates the input and lays the open edges out by source.
 func newTables(n int, open []Edge) (*Tables, error) {
-	if n < 0 || n > math.MaxInt32 {
-		return nil, fmt.Errorf("%w: %d regions", ErrInvalid, n)
+	if n < 0 || n > MaxRegions {
+		return nil, fmt.Errorf("%w: %d regions, at most %d", ErrInvalid, n, MaxRegions)
+	}
+	if len(open) > n*(n-1) { // strictly ascending pairs without a loop cannot be more
+		return nil, fmt.Errorf("%w: %d edges for %d regions", ErrInvalid, len(open), n)
 	}
 	t := &Tables{
 		n:    n,

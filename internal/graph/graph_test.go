@@ -292,6 +292,8 @@ func TestBuild_RejectsBrokenInput(t *testing.T) {
 	}{
 		{"negative count", -1, nil},
 		{"count beyond int32", math.MaxInt32 + 1, nil},
+		{"count beyond the bound", MaxRegions + 1, nil},
+		{"more edges than ordered pairs", 2, []Edge{{0, 1, 1}, {1, 0, 1}, {1, 0, 1}}},
 		{"from far out of range", 2, []Edge{{5, 0, 1}}},
 		{"to far out of range", 2, []Edge{{0, 5, 1}}},
 		{"from out of range", 2, []Edge{{2, 0, 1}}},

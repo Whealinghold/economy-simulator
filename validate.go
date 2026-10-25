@@ -1421,7 +1421,9 @@ func (v *validator) overridesBelow(floor int64, tradable map[string]bool) map[st
 		if !v.region[p.Region] || !v.commodity[p.Commodity] {
 			continue
 		}
-		// A repeated row (ErrDuplicateID, reported elsewhere) is one region, once.
+		// A repeated row (ErrDuplicateID, reported elsewhere) is one region, once. A
+		// row whose price is out of bounds still counts: edgeRules refuses it, so the
+		// configuration fails either way and the default is reported once the row is fixed.
 		if key := [2]string{p.Region, p.Commodity}; !seen[key] {
 			seen[key] = true
 			overridden[p.Commodity]++

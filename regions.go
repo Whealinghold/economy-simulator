@@ -9,6 +9,9 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/graph"
 )
 
+// The tables of internal/graph take n*n values, so its bound must hold ours.
+const _ = uint(graph.MaxRegions - MaxRegions)
+
 // edgeRules is the field phase of the edges and the overrides: the bounds of a
 // distance and of a price (spec-regions.md 9.1). A path names the row by its
 // index in the list as given, as a calendar month does.
