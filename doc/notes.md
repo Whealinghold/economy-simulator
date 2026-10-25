@@ -50,7 +50,7 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
@@ -68,18 +68,18 @@ PR description.
 | INF | N-110, N-112, N-156, N-157, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310, N-324 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321 |
-| REG | N-150, N-175, N-204, N-317, N-319, N-320, N-321, N-322 |
+| REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
@@ -1448,6 +1448,7 @@ PR description.
 - **Update (2026-10-17, config/world/scale edits):** read; the two-writer slot rule is unchanged. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slots are Stage 2 and P0.3a is a module position; `beginStep` leaves the place.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the slot setters are INT's; the checkpoint of the slice saves no slot. Left open.
+- **Update (2026-10-25, plan 2-3 Phase 7):** REG's internal form is `setEdgeStatuses(changes, cause)` (`regions_status.go`). It validates the batch and applies it all or none, and checks no world state: the `ErrInStep` and failed-world guards of the public call belong to INT's `SetEdgeStatuses`, and PLC's call at P0.3a runs inside the step by design. The edge slot is saved in tag 11, so a restored world answers as the original does. Left open.
 
 ### N-205 A new slot is a candidate lever kind; the kinds `rate`, `rent` and `legal` are reserved
 
@@ -1976,9 +1977,10 @@ PR description.
 
 ### N-317 Tags 10 and 11 are written as zero-row skeletons
 
-- **Areas:** CHK, SKL, REG
+- **Areas:** CHK, SKL
 - **Raised:** 2026-10-23, plan 2-2 D244.
 - **Note:** The checkpoint change writes tag 10 as four counts of 0 (trainees, trainers, queued rows, warn-run rows) and tag 11 as one count of 0 (CHK 4.2.8, applied). The owner (SKL, REG) replaces the writer and the reader and keeps the skeleton as the prefix of its layout, so a world with no row keeps its bytes and the digest does not move when the owner lands.
+- **Update (2026-10-25, plan 2-3 Phase 8):** REG's half is done and settled: `saveRegions` and `loadRegions` (`regions_status.go`) replace the tag 11 skeleton with the real layout (count, then `From`, `To`, `Closed`, `FactorBP` in ascending `EdgeID`), the count 0 being its prefix, so no fixture and no digest moved. The decoder refuses an unknown edge, a row not above the one before, a default row and a factor outside `[1, MaxEdgeFactorBP]`. Tag 10 (SKL) stays open.
 
 ### N-318 The golden digest moves with every rebalance of a pack
 
@@ -1988,9 +1990,10 @@ PR description.
 
 ### N-319 What the ledger section leaves to the modules and to plan 3
 
-- **Areas:** CHK, LED, REG, CRD
+- **Areas:** CHK, LED, CRD
 - **Raised:** 2026-10-23, plan 2-2 Phase 3 (`internal/ledger/checkpoint.go`).
 - **Note:** (1) The pending relocation list is written always (count 0 in the slice) and the ledger keeps validated rows in an unexported field so that a non-zero list round-trips; plan 3 replaces the field by its `Moved` rows, `AppendRelocations` and `RestoreRelocations` with no change to the bytes. (2) The claim block is `next claim ID`, a count, and, when `MaxClaims` is above 0, the seven cumulative totals and `Origin` of every claim: CHK 4.2 said `Origin` and `Awarded` only with the insurance module on, and the ledger cannot tell the two modules apart, so the layout keys on `MaxClaims`; CRD and INS keep it. (3) The code of a configured flow reason (42 plus its position) cannot be read or written until the ledger has flow reasons: MON and FIS add the Go constants and the case to `reasonCode` with their change.
+- **Update (2026-10-25, plan 2-3 Phase 8):** item (1) is settled, differently from the note: the ledger kept its validated rows (`readRelocs`, `WriteState`) and `Moved` and `AppendRelocations` (`internal/ledger/relocate.go`) read the same rows, so the checkpoint needed no change and no `RestoreRelocations` exists (a second validator would duplicate `readRelocs`). `TestCheckpoint_PendingRelocationTotals` proves the round trip. Items (2) and (3) stay open.
 
 ### N-320 `ErrClosedAccount` and `ErrUnknownAgent` carry new root texts
 
@@ -2010,6 +2013,18 @@ PR description.
 - **Raised:** 2026-10-25, plan 2-3 (R3).
 - **Note:** `w.tk.rings`, `w.runnable`, the pooled wage and the cost anchors are built at P1.1 and P1.2, before the arrivals of P1.3 and P1.5, so an agent that arrives in a region works that tick on anchors that did not count it (`phase_start.go`). The spec defines the anchors from the previous tick, so the lag is allowed; TRN and MIG confirm it in their plans and tests.
 
+### N-323 A relocation whose pending totals would pass int64 has no row in the refusals of REG 6.1.3
+
+- **Areas:** REG, LED
+- **Raised:** 2026-10-25, plan 2-3 Phase 5 and 6.
+- **Note:** `Ledger.Relocate` adds the balance and each lot to the pending relocation totals with checked arithmetic, and a total past `int64` is `ErrBalanceOverflow` (`internal/ledger/relocate.go`). The table of `spec-regions.md` 6.1.3 has no row for it. The root refuses it as `ReasonOverflow` with `ErrOverflow`, after `open_reservation` and before the obligations, in both the query and `relocate`, so they agree (FR-REG-059). It is reachable only by moving stock worth about 2^63 in one tick. REG should name the row (or say the case is unreachable by the bounds) and LED 7.4 the bound of the totals.
+
+### N-324 A warning logged at construction indexes the canonical lists, not the lists as written
+
+- **Areas:** CFG, REG, OBS
+- **Raised:** 2026-10-25, plan 2-3 Phase 8 (`TestWarnLines_FiveRules`).
+- **Note:** `Config.Warnings()` called on a configuration reports a path such as `edges[2]` against the lists as written, while a world logs the warnings of its own canonical configuration (`world.go` calls `w.cfg.Warnings()`), so the same warning reads `edges[1]` in the `Warn` line when the edge list was not already sorted. `spec-regions.md` 9.2 and `spec-observability.md` 7.3 say only that the line carries `rule` and `path`. CFG or OBS should say which list the path indexes in the logged line, or the world should log the warnings of the configuration as given; the test reads the world's.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2022,5 +2037,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 88db12d17e2a787169c4eea5
+NOTES-TAG: 84a471e3546f00b7b30aebec
 
