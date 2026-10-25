@@ -59,15 +59,7 @@ func TestScaleCheckpoint_SizeAndRoundTripDoNotDependOnTheWeights(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	cfgOf := func(scale int64) economysim.Config {
-		cfg := loadValidPack(t, scalePacks[0].layers...)
-		cfg.World.Scale, cfg.World.MinAgents = scale, 1
-		for i := range cfg.Groups {
-			cfg.Groups[i].Households *= scale
-		}
-		return cfg
-	}
-	cfgs := map[int64]economysim.Config{1: cfgOf(1), 40: cfgOf(40)}
+	cfgs := map[int64]economysim.Config{1: ckptConfigOf(t, 1), 40: ckptConfigOf(t, 40)}
 	worlds := map[int64]*economysim.World{}
 	for scale, cfg := range cfgs {
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
@@ -76,28 +68,56 @@ func TestScaleCheckpoint_SizeAndRoundTripDoNotDependOnTheWeights(t *testing.T) {
 		}
 		worlds[scale] = w
 	}
-	if a, b := shapeOf(t, worlds[1]), shapeOf(t, worlds[40]); !slices.Equal(a.tags, b.tags) || a.state != b.state || a.lots != b.lots {
+	if a, b := shapeOf(t, worlds[1]), shapeOf(t, worlds[40]); !a.sameState(b) {
 		t.Errorf("checkpoint shape at tick 0, weight 1 = %+v, weight 40 = %+v, want equal", a, b)
 	}
 	for scale, w := range worlds {
-		for i := range 20 {
-			if err := w.Step(); err != nil {
-				t.Fatalf("Step at tick %d (scale %d) error = %v, want nil", i, scale, err)
-			}
-		}
+		stepN(t, scale, w, 20)
+		checkRoundTrip(t, scale, cfgs[scale], w)
 	}
 	if a, b := shapeOf(t, worlds[1]), shapeOf(t, worlds[40]); !slices.Equal(a.tags, b.tags) {
 		t.Errorf("section tags at tick 20, weight 1 = %v, weight 40 = %v, want equal", a.tags, b.tags)
 	}
-	for scale, w := range worlds {
-		ck := mustCheckpoint(t, w)
-		r, err := economysim.RestoreWorld(cfgs[scale], ck)
-		if err != nil {
-			t.Fatalf("RestoreWorld(weight %d) error = %v, want nil", scale, err)
+}
+
+// sameState reports whether two shapes have the same sections and the same counts.
+func (s ckptShape) sameState(o ckptShape) bool {
+	return slices.Equal(s.tags, o.tags) && s.state == o.state && s.lots == o.lots
+}
+
+// stepN steps w n times.
+func stepN(t *testing.T, scale int64, w *economysim.World, n int) {
+	t.Helper()
+	for i := range n {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step at tick %d (scale %d) error = %v, want nil", i, scale, err)
 		}
-		if got, want := mustMarshal(t, mustCheckpoint(t, r)), mustMarshal(t, ck); !bytes.Equal(got, want) {
-			t.Errorf("checkpoint of the restored world of weight %d differs from the one it was restored from (%d and %d bytes)", scale, len(got), len(want))
-		}
+	}
+}
+
+// ckptConfigOf is `one` with 200 households per role times scale, at that scale and
+// floor 1: 200 agents per role of weight scale.
+func ckptConfigOf(t *testing.T, scale int64) economysim.Config {
+	t.Helper()
+	cfg := loadValidPack(t, scalePacks[0].layers...)
+	cfg.World.Scale, cfg.World.MinAgents = scale, 1
+	for i := range cfg.Groups {
+		cfg.Groups[i].Households *= scale
+	}
+	return cfg
+}
+
+// checkRoundTrip restores w's checkpoint over cfg and asserts that checkpointing the
+// restored world gives the same bytes.
+func checkRoundTrip(t *testing.T, scale int64, cfg economysim.Config, w *economysim.World) {
+	t.Helper()
+	ck := mustCheckpoint(t, w)
+	r, err := economysim.RestoreWorld(cfg, ck)
+	if err != nil {
+		t.Fatalf("RestoreWorld(weight %d) error = %v, want nil", scale, err)
+	}
+	if got, want := mustMarshal(t, mustCheckpoint(t, r)), mustMarshal(t, ck); !bytes.Equal(got, want) {
+		t.Errorf("checkpoint of the restored world of weight %d differs from the one it was restored from (%d and %d bytes)", scale, len(got), len(want))
 	}
 }
 

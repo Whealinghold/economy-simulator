@@ -86,7 +86,7 @@ import (
 // steps after the 3 warm-up steps before the world is built again.
 const (
 	scaleBenchSeed uint64 = 1
-	benchWindow           = 30
+	benchWindow    int    = 30
 )
 
 // benchLayers are the layers of the benchmarked packs.

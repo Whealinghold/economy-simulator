@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -50,26 +51,26 @@ func TestScenarioS10_Exact(t *testing.T) {
 		if b.snap.Agents != s.agents || b.snap.Households != 1200 {
 			t.Errorf("scale %d: snapshot %d agents, %d households, want %d and 1200", s.scale, b.snap.Agents, b.snap.Households, s.agents)
 		}
-		var m int64
-		for _, r := range b.snap.Regions {
-			m += int64(r.MoneyHouseholds)
-		}
-		g := map[string]int64{}
-		for _, mk := range b.snap.Markets {
-			g[b.names.Commodities[mk.State.Commodity]] += int64(mk.HeldByAgents)
-		}
+		m, g := heldTotals(b)
 		money, goods = append(money, m), append(goods, g)
 	}
 	for i := 1; i < len(s10Scales); i++ {
-		if money[i] != money[0] {
-			t.Errorf("money at scale %d = %d, at scale 1 = %d, want equal", s10Scales[i].scale, money[i], money[0])
-		}
-		for c, q := range goods[0] {
-			if goods[i][c] != q {
-				t.Errorf("units of %s at scale %d = %d, at scale 1 = %d, want equal", c, s10Scales[i].scale, goods[i][c], q)
-			}
+		if money[i] != money[0] || !maps.Equal(goods[i], goods[0]) {
+			t.Errorf("money and goods at scale %d = %d and %v, at scale 1 = %d and %v, want equal", s10Scales[i].scale, money[i], goods[i], money[0], goods[0])
 		}
 	}
+}
+
+// heldTotals is the money of the households and the units of each good they hold.
+func heldTotals(b scaleBuilt) (money int64, goods map[string]int64) {
+	for _, r := range b.snap.Regions {
+		money += int64(r.MoneyHouseholds)
+	}
+	goods = map[string]int64{}
+	for _, mk := range b.snap.Markets {
+		goods[b.names.Commodities[mk.State.Commodity]] += int64(mk.HeldByAgents)
+	}
+	return money, goods
 }
 
 // s10Obs keeps, per market, the sum of the published prices and the sum of the
@@ -152,22 +153,38 @@ func TestScenarioS10_PricesAcrossScales(t *testing.T) {
 		rep.num(s10Seed, fmt.Sprintf("agents at end scale %d", s.scale), fin.Agents)
 		rep.num(s10Seed, fmt.Sprintf("households at end scale %d", s.scale), fin.Households)
 	}
-	var worstGap, minDisp int64
-	haveDisp := false
-	for k, p1 := range obs[0].price {
+	worstGap, minDisp, haveDisp := s10Report(rep, obs, names)
+	rep.num(s10Seed, "largest absolute gap bp", worstGap)
+	checkBand(t, rep, scenario, pack, s10Seed, "s10.tolerance_bp", worstGap, true, func(b int64) bool { return worstGap > b })
+	checkBand(t, rep, scenario, pack, s10Seed, "s10.dispersion_min_bp", minDisp, haveDisp, func(b int64) bool { return minDisp < b })
+	rep.flush(t)
+}
+
+// avgOf is the mean of a {sum, count} cell, half to even; ok is false for no cell.
+func avgOf(c *[2]int64) (int64, bool) {
+	if c == nil || c[1] == 0 {
+		return 0, false
+	}
+	return divHE(c[0], c[1])
+}
+
+// s10Report records the average price, the dispersion and the gap to scale 1 of each
+// market at each scale, and returns the largest absolute gap and the least
+// dispersion (haveDisp is false when no market had a belief outcome).
+func s10Report(rep *scenReport, obs []*s10Obs, names economysim.Names) (worstGap, minDisp int64, haveDisp bool) {
+	for k := range obs[0].price {
 		c := names.Commodities[k[1]]
-		base, ok := divHE(p1[0], p1[1])
+		base, baseOK := avgOf(obs[0].price[k])
 		for i, s := range s10Scales {
-			avg, aok := divHE(obs[i].price[k][0], obs[i].price[k][1])
+			avg, ok := avgOf(obs[i].price[k])
 			rep.num(s10Seed, fmt.Sprintf("average price %s scale %d", c, s.scale), avg)
-			if d := obs[i].disp[k]; d != nil && d[1] > 0 {
-				disp, _ := divHE(d[0], d[1])
+			if disp, dok := avgOf(obs[i].disp[k]); dok {
 				rep.num(s10Seed, fmt.Sprintf("dispersion bp %s scale %d", c, s.scale), disp)
 				if !haveDisp || disp < minDisp {
 					minDisp, haveDisp = disp, true
 				}
 			}
-			if i == 0 || !ok || !aok || base == 0 {
+			if i == 0 || !ok || !baseOK || base == 0 {
 				continue
 			}
 			gap, _ := divHE((avg-base)*10_000, base)
@@ -175,8 +192,5 @@ func TestScenarioS10_PricesAcrossScales(t *testing.T) {
 			worstGap = max(worstGap, absInt(gap))
 		}
 	}
-	rep.num(s10Seed, "largest absolute gap bp", worstGap)
-	checkBand(t, rep, scenario, pack, s10Seed, "s10.tolerance_bp", worstGap, true, func(b int64) bool { return worstGap > b })
-	checkBand(t, rep, scenario, pack, s10Seed, "s10.dispersion_min_bp", minDisp, haveDisp, func(b int64) bool { return minDisp < b })
-	rep.flush(t)
+	return worstGap, minDisp, haveDisp
 }
