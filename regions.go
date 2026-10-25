@@ -82,14 +82,11 @@ func overrides(rows []RegionPrice) map[[2]string]Price {
 // the price is outside [1, MaxPrice]; the rule for that has spoken, and the
 // rules that read the price skip it.
 func (v *validator) refPrice(region, commodity string) (price int64, ok bool) {
-	p, has := v.override[[2]string{region, commodity}]
-	if !has {
-		cm := v.lk.commodity[commodity]
-		if cm == nil {
-			return 0, false
-		}
-		p = cm.ReferencePrice
+	cm := v.lk.commodity[commodity]
+	if cm == nil {
+		return 0, false
 	}
+	p := v.lk.price(region, cm)
 	if p < 1 || p > MaxPrice {
 		return 0, false
 	}

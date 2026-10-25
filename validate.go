@@ -224,7 +224,6 @@ type validator struct {
 	rep report
 
 	commodity, recipe, role, region map[string]bool
-	override                        map[[2]string]Price
 	dearest                         map[string]Price // the highest in-bounds override of each commodity
 	lk                              lookup
 	cal                             calendarFacts
@@ -338,7 +337,6 @@ func (v *validator) declare() {
 		v.region[e.ID] = true
 	}
 	v.lk = newLookup(&v.c)
-	v.override = overrides(c.RegionPrices)
 	v.dearest = make(map[string]Price, len(c.RegionPrices))
 	for _, p := range c.RegionPrices {
 		if p.Price <= MaxPrice && v.region[p.Region] && v.commodity[p.Commodity] {
