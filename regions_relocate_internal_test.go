@@ -482,6 +482,9 @@ func TestRelocate_TotalOverflowIsRefusedAsOverflow(t *testing.T) {
 // Requirement: FR-OBS-040, FR-REG-046, FR-REG-045
 func TestRelocate_CountsByRegionFromEvents(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	rec := &evLog{}
 	w := relocWorld(t, WithObserver(rec))
 	moves := []struct {
@@ -535,6 +538,9 @@ func TestRelocate_CountsByRegionFromEvents(t *testing.T) {
 // Requirement: FR-REG-045, FR-REG-039
 func TestRelocate_NextTickPlacesOrdersInNewRegion(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	rec := &evLog{}
 	w := relocWorld(t, WithObserver(rec))
 	if err := w.relocate(3, 1, CauseConsumer); err != nil {
@@ -591,6 +597,9 @@ func moneyAndUnits(t *testing.T, w *World) (money, units int64) {
 // Requirement: FR-REG-040, FR-REG-057, FR-LED-054
 func TestRelocate_Audit(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	run := func(t *testing.T, seed uint64, opts ...Option) Snapshot {
 		w := newMill(t, removalConfig(), append([]Option{WithSeed(seed)}, opts...)...)
 		x := seed

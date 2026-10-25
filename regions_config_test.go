@@ -586,6 +586,9 @@ func TestLog_WorldCreatedCarriesTheEdgesAndComponents(t *testing.T) {
 // Requirement: FR-REG-056, FR-REG-031, FR-REG-034, FR-REG-007
 func TestWarnLines_FiveRules(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	c := withRegions(referenceConfig(), "east", "south", "west")
 	for _, id := range []string{"east", "south"} {
 		c.Groups = append(c.Groups, economysim.Group{Region: id, Role: "cook", Households: 10})

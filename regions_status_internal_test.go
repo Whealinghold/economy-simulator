@@ -318,6 +318,9 @@ func TestEdgeStatus_EventAndLog(t *testing.T) {
 // every pack with edges.
 func TestEdgeStatus_NoEffectOnRun(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	run := func(shock bool) ([32]byte, []Event) {
 		rec := &evLog{}
 		w := newMill(t, edgeMill(), WithSeed(7), WithObserver(rec))
@@ -430,6 +433,9 @@ func TestSnapshot_EdgeRowsAreTheNonDefaultStatuses(t *testing.T) {
 // Requirement: FR-REG-042, FR-REG-052
 func TestCheckpoint_PendingRelocationTotals(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	w := relocWorld(t)
 	if err := w.Step(); err != nil {
 		t.Fatalf("Step() = %v, want nil", err)
