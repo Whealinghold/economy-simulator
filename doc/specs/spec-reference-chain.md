@@ -154,7 +154,8 @@ testdata/chains/
   second/second.toml  second/warm-second.toml
                             the second setting, which shares no ID with the first
   expected/<pack>.toml      the effective-configuration hash, the warnings, the solver report
-  bands/<pack>.toml         the bands of the scenarios (values: STY)
+  bands/<pack>.toml         the bands of the scenarios (values: STY); bands/one.toml declares
+                            s10.tolerance_bp and s10.dispersion_min_bp, unset
   bands/regimes.toml        the regime thresholds, one file for every pack (STY 6.5.1)
   scripts/<scenario>.toml   shock scripts of 7.1
 ```
@@ -1267,14 +1268,14 @@ STB-L05, L08. *Level:* integration.
 
 **S10. The same chain at scales 1, 4 and 10.** *Packs:* `one` + `overlay/h200` (200
 households in each of six roles, 1 200 in all), with `world.scale` 1, 4 and 10 and
-`min_agents` 10 (1 200, 300 and 120 agents). *Setup:* the warm start of `one`, which is per
+`min_agents` 10 (1 200, 300 and 120 agents). *Setup:* the warm start of `one` (the warm layer `warm-one.toml`), which is per
 household, so the totals of money and goods are the same at every scale (FR-SCL-007);
 365 ticks from tick 0 with no settling. *Measure:* the time-averaged price of each
 commodity at scales 4 and 10 against scale 1; the dispersion of belief centres (the
 difference between `HighCentre` and `LowCentre` of `BeliefsUpdated`, as a share of the
 mean) per market. *Pass:* the averaged price at each scale stays within `s10.tolerance_bp`
 of its value at scale 1 (the placeholder is 10%, `spec-scale.md` 7.2); the dispersion
-stays above `s10.dispersion_min_bp`. **Exact:** the weights of each group add up to 200
+stays above `s10.dispersion_min_bp` (both keys are declared in `bands/one.toml` and unset until STY gives them values). **Exact:** the weights of each group add up to 200
 (FR-SCL-003) and money and goods at tick 0 are equal at the three scales. *Requirements:*
 FR-SCL-002, FR-SCL-003, FR-SCL-007, FR-SCL-010, FR-SCL-016, FR-SCL-017, FR-AGT-052. *Loops:* STB-L13,
 L33, L34. *Level:* end-to-end.
