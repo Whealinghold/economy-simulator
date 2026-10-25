@@ -1,6 +1,9 @@
 package economysim
 
-import "cmp"
+import (
+	"cmp"
+	"math"
+)
 
 // This file is the derivation of the agents of a world from its census
 // (spec-scale.md 3.2, 13): how many agents a group has and the weight of each,
@@ -90,4 +93,41 @@ func groupPlans(c *Config) []groupPlan {
 		plans[i] = groupPlan{region: r, role: ro, weights: weights, warm: warmGroupOf(c, g.Region, g.Role)}
 	}
 	return plans
+}
+
+// checkCensus is the census invariant (spec-scale.md 7.1, FR-SCL-003, 005, 019),
+// run once the agents of every group are created: for each group the weights sum
+// to its Households, differ by at most 1 and are each at least 1, a group of
+// weight above 1 has at least min(MinAgents, Households) agents, and the totals
+// of the plans equal the live counters agents and households. A validated
+// configuration cannot break it, so a violation is a programmer invariant and
+// panics, like the other invariants of construction (D283). It is O(groups) and
+// allocation-free.
+func checkCensus(plans []groupPlan, c *Config, agents, households int64) {
+	var nAgents, nHouseholds int64
+	for i := range plans {
+		var sum int64
+		lo, hi := int64(math.MaxInt64), int64(0)
+		for _, w := range plans[i].weights {
+			sum += w
+			lo, hi = min(lo, w), max(hi, w)
+		}
+		g := c.Groups[i]
+		n := int64(len(plans[i].weights))
+		switch {
+		case sum != g.Households:
+			invariant("the weights of a group do not sum to its households")
+		case lo < 1:
+			invariant("an agent of a group has a weight below 1")
+		case hi-lo > 1:
+			invariant("the weights of a group differ by more than 1")
+		case hi > 1 && n < min(c.World.MinAgents, g.Households):
+			invariant("a group of weight above 1 has fewer agents than its floor")
+		}
+		nAgents += n
+		nHouseholds += sum
+	}
+	if nAgents != agents || nHouseholds != households {
+		invariant("the agents or households of the world differ from the census")
+	}
 }

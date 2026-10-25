@@ -71,6 +71,7 @@ type builder struct {
 func (w *World) construct(warnings []Warning) error {
 	b := w.beginConstruction()
 	b.createAgents()
+	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
 	if err := b.warm(); err != nil {
 		return err
 	}

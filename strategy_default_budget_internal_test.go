@@ -207,7 +207,7 @@ func consideredHook(v *AgentView, words []uint64, hook func(rows []tradeRow)) (*
 // asserted, not assumed, and the buffer is checked against the closed form of
 // the spend cap on the totals.
 //
-// Requirement: FR-AGT-046, FR-AGT-052
+// Requirement: FR-AGT-046, FR-AGT-052, FR-SCL-010
 func TestDefaultStrategyTrade_ScalesWithTheWeight(t *testing.T) {
 	t.Parallel()
 	// bare is the run with the buffer wants set to 0: what tiers 1 and 2 are allocated.

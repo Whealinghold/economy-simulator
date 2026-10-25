@@ -165,7 +165,7 @@ func TestDefaultStrategyWork_AcceptedByProduction(t *testing.T) {
 // the target is exactly 7 times as large, and for the others the band
 // [7*q1 - 6, 7*q1] holds.
 //
-// Requirement: FR-AGT-052
+// Requirement: FR-AGT-052, FR-SCL-008, FR-SCL-010
 func TestDefaultStrategyTrade_CohortInvariance(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")

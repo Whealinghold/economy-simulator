@@ -244,7 +244,7 @@ func TestExecute_ReduceMovesTheDifferenceToTheEstate(t *testing.T) {
 // starvation, which the ledger allows both ways), leaving 10, 6 and 0. The pool is
 // then 25 000 + 30 and ends at 25 030 + 3 = 25 033.
 //
-// Requirement: FR-SPN-005, FR-OBS-019, FR-LED-035
+// Requirement: FR-SPN-005, FR-OBS-019, FR-LED-035, FR-SCL-014
 func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 	t.Parallel()
 	c := execConfig()
@@ -284,7 +284,7 @@ func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 // 3 (the weaver, weight 1) holds 3 000 and no goods, so the pool is 28 000. The
 // EntryLimited of the tick counts the households removed: 2 and 1.
 //
-// Requirement: FR-SPN-005, FR-SPN-015, FR-SPN-034, FR-WLD-051, FR-WLD-056, FR-AGT-001, FR-OBS-020, FR-EST-002
+// Requirement: FR-SPN-005, FR-SPN-015, FR-SPN-034, FR-WLD-051, FR-WLD-056, FR-AGT-001, FR-OBS-020, FR-EST-002, FR-SCL-014
 func TestExecute_RemoveAndReductionToTheWholeWeight(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1404,7 +1404,7 @@ func TestRegionView_FieldsAreReadFromTheirOwnRegionAndRole(t *testing.T) {
 // yonder weaver cell (index 3) starts with no agent and no flag; one weaver household
 // enters at 3 000 and the cell has 1 agent.
 //
-// Requirement: FR-SPN-006, FR-SPN-007, FR-SPN-033, FR-SPN-044
+// Requirement: FR-SPN-006, FR-SPN-007, FR-SPN-033, FR-SPN-044, FR-SCL-014
 // Guard: a host list that took agents of another region would put a household's money
 // in the wrong region's account.
 func TestExecute_EntrantsGoToTheHostsOfTheirOwnRegionAndScale(t *testing.T) {

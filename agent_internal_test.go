@@ -493,7 +493,7 @@ func TestFundInitial_NoBoundaryIsAnError(t *testing.T) {
 // region's merged list (fuel 1 + 2 = 3), and that a product past int64 reports
 // not ok.
 //
-// Requirement: FR-AGT-011
+// Requirement: FR-AGT-011, FR-SCL-007
 func TestUpkeepTotals(t *testing.T) {
 	t.Parallel()
 	f := newAgentFixture(t, false)
@@ -530,7 +530,7 @@ func TestUpkeepTotals(t *testing.T) {
 // min(floor(100 / 3), floor(40 / 1)) = min(33, 40) = 33 and Unfed = 40 - 33 =
 // 7; hunger and privation become 1; the shortfall is 20 staple and 0 fuel.
 //
-// Requirement: FR-AGT-013, FR-AGT-014, FR-AGT-015, FR-AGT-075
+// Requirement: FR-AGT-013, FR-AGT-014, FR-AGT-015, FR-AGT-075, FR-SCL-007
 func TestConsume_Cohort(t *testing.T) {
 	t.Parallel()
 	f := newAgentFixture(t, false)
