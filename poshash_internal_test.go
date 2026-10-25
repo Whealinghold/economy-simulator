@@ -59,6 +59,9 @@ var skipFields = []string{
 	// is the default. A derived table that existed before the golden was recorded is in
 	// the walk; one appended after it must not move the off files (testing.md 7.1.1).
 	"World.refs", "regionState.g",
+	// viewCtx.refs is World.refs again, assembled with the rest of the view context
+	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
+	"viewCtx.refs",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.
