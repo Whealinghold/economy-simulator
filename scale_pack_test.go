@@ -408,3 +408,52 @@ func snapshotShapeDiffers(a, b economysim.Snapshot) string {
 	return fmt.Sprintf("lots %d and %d, rows %d/%d/%d and %d/%d/%d, want equal", lotsA, lotsB,
 		len(a.Regions), len(a.Roles), len(a.Markets), len(b.Regions), len(b.Roles), len(b.Markets))
 }
+
+// TestScalePack_RecipeExecutionsRunOnTheCohort verifies, over 30 ticks of `one`
+// with 200 households per role at scale 4, that the executions of a recipe
+// follow the agent's weight: no RecipeExecuted carries more executions than the
+// weight of its agent, every one carries at least 1, and at least one agent of
+// weight above 1 runs more than one execution in a job, so a cohort is not
+// stepped as a single household.
+//
+// Requirement: FR-SCL-007, FR-SCL-008
+// Guard: a production step that ignored the weight would run one execution per
+// agent, and the goods totals of a scaled world would fall short of the households.
+func TestScalePack_RecipeExecutionsRunOnTheCohort(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	b := buildScaled(t, scalePacks[0].layers, 4, 10, nil)
+	weight := map[economysim.AgentID]int64{}
+	seen, executed, cohort := 0, 0, 0
+	absorb := func() {
+		for _, ev := range b.rec.events[seen:] {
+			switch ev := ev.(type) {
+			case economysim.AgentSpawned:
+				weight[ev.Agent] = ev.Weight
+			case economysim.WeightChanged:
+				weight[ev.Agent] = ev.To
+			case economysim.RecipeExecuted:
+				executed++
+				if ev.Executions < 1 || ev.Executions > weight[ev.Agent] {
+					t.Errorf("tick %d: agent %d ran %d executions at weight %d, want 1 to the weight", ev.Tick, ev.Agent, ev.Executions, weight[ev.Agent])
+				}
+				if weight[ev.Agent] > 1 && ev.Executions > 1 {
+					cohort++
+				}
+			}
+		}
+		seen = len(b.rec.events)
+	}
+	absorb()
+	for tick := 0; tick < 30; tick++ {
+		if err := b.w.Step(); err != nil {
+			t.Fatalf("Step at tick %d error = %v, want nil", tick, err)
+		}
+		absorb()
+	}
+	if executed == 0 || cohort == 0 {
+		t.Errorf("30 ticks at scale 4 held %d RecipeExecuted, %d of a cohort running more than one execution, want some of each", executed, cohort)
+	}
+}
