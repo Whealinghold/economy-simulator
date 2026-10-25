@@ -186,8 +186,7 @@ func TestRestore_RegionsSectionCorrupt(t *testing.T) {
 // TestFork_Regions verifies the fork-at-N of pack three with its trade edges and two
 // closed edges set between ticks: at each N of the matrix the original and two
 // restores give the same events, snapshot, audit and checkpoint bytes for 30 ticks.
-// The pack is three with the edges of the overlay of spec-regions.md 12.4 written
-// in Go, the file being Phase 9's.
+// The pack is three with the edges of the overlay trade-three.toml (spec-regions.md 12.4).
 //
 // Requirement: FR-REG-052, FR-CHK-050
 func TestFork_Regions(t *testing.T) {
@@ -196,7 +195,7 @@ func TestFork_Regions(t *testing.T) {
 		t.Skip("end-to-end test, skipped with -short")
 	}
 	cfg := loadValidPack(t, packLayers["three"]...)
-	cfg.Edges = tradeEdges("three")
+	cfg.Edges = tradeEdges(t, "three")
 	// far_south (0), north (1), south (2) sort by ID; close south>north both ways.
 	closeLink := func(w *economysim.World) {
 		g := w.Graph()
@@ -247,7 +246,7 @@ func TestSnapshot_EdgesAndComponents(t *testing.T) {
 			t.Parallel()
 			cfg := loadValidPack(t, packLayers[tt.pack]...)
 			if tt.edges {
-				cfg.Edges = tradeEdges(tt.pack)
+				cfg.Edges = tradeEdges(t, tt.pack)
 			}
 			w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
 			if err != nil {

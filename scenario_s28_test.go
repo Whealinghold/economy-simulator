@@ -49,7 +49,7 @@ func TestScenarioS28_MiddleLinkClosure(t *testing.T) {
 		t.Run(tt.pack, func(t *testing.T) {
 			t.Parallel()
 			cfg := loadValidPack(t, packLayers[tt.pack]...)
-			cfg.Edges = tradeEdges(tt.pack)
+			cfg.Edges = tradeEdges(t, tt.pack)
 			for _, seed := range seedList(scenarioSeedCount()) {
 				t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 					t.Parallel()

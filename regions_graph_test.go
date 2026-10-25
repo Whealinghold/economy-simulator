@@ -8,27 +8,16 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// tradeEdges returns the edges of the trade overlay of a variant as
-// spec-regions.md 12.4 proposes them: placeholder distances, both directions.
-// The overlay files wait for Phase 9; the tables are the same.
-func tradeEdges(pack string) []economysim.Edge {
-	both := func(a, b string, d int64) []economysim.Edge {
-		return []economysim.Edge{edgeOf(a, b, d), edgeOf(b, a, d)}
+// tradeEdges returns the edges of the trade overlay of a variant
+// (testdata/chains/overlay/trade-<pack>.toml, spec-regions.md 12.4): placeholder
+// distances, both directions. It is the file's edges, loaded over the variant.
+func tradeEdges(t testing.TB, pack string) []economysim.Edge {
+	t.Helper()
+	if pack == "one" || pack == "second" {
+		return nil // a single region has no trade overlay
 	}
-	var out []economysim.Edge
-	switch pack {
-	case "two":
-		out = both("north", "south", 100)
-	case "three":
-		out = append(both("south", "north", 100), both("south", "far_south", 100)...)
-	case "five":
-		for _, r := range []string{"east", "north", "south", "west"} {
-			out = append(out, both("centre", r, 100)...)
-		}
-		out = append(out, both("north", "east", 130)...)
-		out = append(out, both("south", "west", 130)...)
-	}
-	return out
+	layers := append(slices.Clone(packLayers[pack]), "overlay/trade-"+pack+".toml")
+	return loadValidPack(t, layers...).Edges
 }
 
 // TestGraph_QueriesOnPacks verifies the graph of the packs of the reference chain
@@ -65,7 +54,7 @@ func TestGraph_QueriesOnPacks(t *testing.T) {
 			if g.Components() != g.Len() || g.Edges() != 0 {
 				t.Errorf("Graph(%s) with no edge: %d components and %d edges, want %d and 0", name, g.Components(), g.Edges(), g.Len())
 			}
-			edges := tradeEdges(name)
+			edges := tradeEdges(t, name)
 			if len(edges) == 0 {
 				return
 			}
