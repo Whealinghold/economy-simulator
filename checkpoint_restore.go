@@ -347,9 +347,14 @@ func (w *World) checkpointCross() error {
 	}
 	var missing error
 	w.eachLive(func(a *agent) {
-		// The account exists: step 7's loop above and the agent record check own it.
-		v, _ := w.ledger.Account(a.account)
-		if cell := v.Region*roles + int(a.role); !w.state.hadAgent[cell] && missing == nil {
+		v, err := w.ledger.Account(a.account)
+		// Excluded from coverage (testing.md 9.5): step 7's loop and the agent record
+		// check already proved the account readable; this only keeps a later loosening
+		// of those checks from reading a zero View.
+		if err != nil && missing == nil {
+			missing = fmt.Errorf("%w: agent %d names account %d, which the ledger cannot read", ErrCheckpointCorrupt, a.id, a.account)
+		}
+		if cell := v.Region*roles + int(a.role); err == nil && !w.state.hadAgent[cell] && missing == nil {
 			missing = fmt.Errorf("%w: agent %d lives in region %d, role %d, whose had-an-agent bit is not set", ErrCheckpointCorrupt, a.id, v.Region, a.role)
 		}
 	})
