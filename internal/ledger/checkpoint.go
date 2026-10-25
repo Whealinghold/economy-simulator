@@ -1,7 +1,6 @@
 package ledger
 
 import (
-	"cmp"
 	"math"
 	"slices"
 
@@ -74,7 +73,7 @@ func (l *Ledger) WriteState(w *codec.Writer) {
 	// slice a test builds.
 	rows := slices.Clone(l.relocs)
 	slices.SortFunc(rows, func(a, b reloc) int {
-		return cmp.Or(cmp.Compare(a.from, b.from), cmp.Compare(a.to, b.to), cmp.Compare(a.thing, b.thing))
+		return cmpReloc(a, [3]int{b.from, b.to, b.thing})
 	})
 	for _, x := range rows {
 		w.U(uint64(x.from))
