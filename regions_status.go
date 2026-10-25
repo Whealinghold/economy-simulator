@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
@@ -57,7 +59,7 @@ func (w *World) setEdgeStatuses(changes []EdgeStatus, cause Cause) error {
 	}
 	w.geo.g = g
 	w.geo.status = next
-	if !anyNonDefaultStatus(next) {
+	if !slices.ContainsFunc(next, func(s edgeState) bool { return !s.isDefault() }) {
 		w.geo.status = nil
 	}
 	w.geo.rebuilds++
@@ -65,16 +67,6 @@ func (w *World) setEdgeStatuses(changes []EdgeStatus, cause Cause) error {
 		w.edgeStatusChanged(g.view(i), next[i], cause)
 	}
 	return nil
-}
-
-// anyNonDefaultStatus reports whether some status is not the default.
-func anyNonDefaultStatus(s []edgeState) bool {
-	for _, e := range s {
-		if e != (edgeState{factorBP: defaultFactorBP}) {
-			return true
-		}
-	}
-	return false
 }
 
 // nextEdgeStatuses returns the statuses by EdgeID that the changes would give,
@@ -113,4 +105,100 @@ func (w *World) edgeStatusChanged(e EdgeView, s edgeState, cause Cause) {
 			slog.Int64(logkeys.FromRegion, int64(e.From)), slog.Int64(logkeys.ToRegion, int64(e.To)),
 			slog.Bool(logkeys.Closed, s.closed), slog.String(logkeys.Cause, string(cause)))
 	}
+}
+
+// isDefault reports whether the status is the default: open at 10 000.
+func (s edgeState) isDefault() bool { return s == edgeState{factorBP: defaultFactorBP} }
+
+// edgeRows returns the edges whose status is not the default, by EdgeID: the rows
+// of the snapshot and of tag 11. It is nil while every status is the default.
+func (w *World) edgeRows() []EdgeRow {
+	var rows []EdgeRow
+	for i, s := range w.geo.status {
+		if !s.isDefault() {
+			e := w.geo.g.edges[i]
+			rows = append(rows, EdgeRow{From: e.from, To: e.to, Closed: s.closed, FactorBP: s.factorBP})
+		}
+	}
+	return rows
+}
+
+// componentCount is Snapshot.Components: the components of the graph as it is now,
+// and 0 for a world of one region (spec-regions.md 10.5).
+func (w *World) componentCount() int64 {
+	if len(w.cfg.Regions) < 2 {
+		return 0
+	}
+	return int64(w.geo.components())
+}
+
+// saveRegions is tag 11 (spec-checkpoint.md 4.2): a count, then the edges whose
+// status is not the default in ascending EdgeID, each as From, To, Closed and
+// FactorBP. A world with none writes the count 0, the layout's prefix, so the
+// bytes of a world with no status did not change when the rows were added (plan
+// 2-2 D244).
+func (w *World) saveRegions(cw *codec.Writer) error {
+	rows := w.edgeRows()
+	cw.Count(len(rows))
+	for _, e := range rows {
+		cw.U(uint64(e.From))
+		cw.U(uint64(e.To))
+		cw.B(e.Closed)
+		cw.U(uint64(e.FactorBP))
+	}
+	return nil
+}
+
+// loadRegions is the reader of tag 11. It refuses a row that names no configured
+// edge, one not above the one before it in EdgeID order, one at the default
+// status and a factor outside [1, MaxEdgeFactorBP]; then it builds the world's
+// tables from the configuration and the statuses, as a world that had them set
+// would hold them (spec-regions.md 11).
+func (w *World) loadRegions(_ *restoreCtx, r *codec.Reader) error {
+	count := r.Count(4)
+	status := make([]edgeState, len(w.cfg.Edges))
+	for i := range status {
+		status[i] = edgeState{factorBP: defaultFactorBP}
+	}
+	prev := EdgeID(-1)
+	for range count {
+		id, s := w.readEdgeStatus(r, prev)
+		if r.Err() != nil {
+			return nil
+		}
+		prev, status[id] = id, s
+	}
+	if count == 0 {
+		return nil
+	}
+	g, err := newGraph(&w.cfg, status)
+	if err != nil {
+		return err
+	}
+	w.geo.g, w.geo.status = g, status
+	return nil
+}
+
+// readEdgeStatus reads one row of tag 11 and checks it: it must name a configured
+// edge (a check that needs the configuration only, so it is made here and not in
+// checkpointCross), come after the edge before it, and not be the default.
+func (w *World) readEdgeStatus(r *codec.Reader, prev EdgeID) (EdgeID, edgeState) {
+	n := uint64(len(w.cfg.Regions))
+	from, to := RegionID(r.Index(n)), RegionID(r.Index(n))
+	s := edgeState{closed: r.B(), factorBP: r.Bounded("edge factor", MaxEdgeFactorBP)}
+	if r.Err() != nil {
+		return 0, s
+	}
+	e, ok := w.geo.g.Edge(from, to)
+	switch {
+	case !ok:
+		r.Failf("edge status row for regions %d to %d, which is not a configured edge", from, to)
+	case e.ID <= prev:
+		r.Failf("edge status row for edge %d is not above the one before it", e.ID)
+	case s.factorBP < 1:
+		r.Failf("edge status row for edge %d has the factor %d, below 1", e.ID, s.factorBP)
+	case s.isDefault():
+		r.Failf("edge status row for edge %d holds the default status", e.ID)
+	}
+	return e.ID, s
 }

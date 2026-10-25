@@ -367,7 +367,7 @@ func TestRestore_Corrupt(t *testing.T) {
 		{"listing for a lot the estate does not hold", 8, constant(1, 0, 0, 0, 5)},
 		{"section that ends early", 5, func(_ *testing.T, b []byte) []byte { return b[:len(b)-1] }},
 		{"section that runs over", 5, func(_ *testing.T, b []byte) []byte { return append(b, 0) }},
-		{"rows in a skeleton", 11, constant(1)},
+		{"a status row where the mill has no edge", 11, constant(1, 0, 0, 1, 0x90, 0x4e)},
 		{"rows in the skills skeleton", 10, constant(0, 0, 1, 0)},
 		{"welfare field beyond the clamp", 7, func(t *testing.T, b []byte) []byte {
 			// The body starts with the count of records of agent 1, then its first record.

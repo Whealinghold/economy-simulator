@@ -325,15 +325,6 @@ func (w *World) loadSkills(_ *restoreCtx, r *codec.Reader) error {
 	return nil
 }
 
-// loadRegions is tag 11, a zero-row skeleton: one count that must be 0 until the
-// regions module is built.
-func (w *World) loadRegions(_ *restoreCtx, r *codec.Reader) error {
-	if r.Count(1) != 0 {
-		r.Failf("rows in the regions section, whose module is not built")
-	}
-	return nil
-}
-
 // checkpointCross is step 7, the checks that need two sections. Modules append
 // theirs here in the order of spec-checkpoint.md 6.2: every account after the
 // estates is an Agent account, and an open one is the account of the live agent

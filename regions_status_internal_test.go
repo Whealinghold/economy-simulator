@@ -366,3 +366,118 @@ func TestEdgeStatusChanged_NoMapNoObserverNoAlloc(t *testing.T) {
 		t.Errorf("edgeStatusChanged with no observer allocates %v times, want 0", got)
 	}
 }
+
+// TestSnapshot_EdgeRowsAreTheNonDefaultStatuses verifies Snapshot.Edges and
+// Snapshot.Components: no row while every status is the default, one row for each
+// edge whose status is not, in ascending EdgeID with the new status, no row for an
+// edge set back to the default, a list the caller may change without changing the
+// world, and the component count of the graph as it is now, 0 for one region.
+//
+// Arithmetic: edgeMill has 3 regions in one cycle (away>zone>home>away through the
+// open edges), so one component; closing away>home and away>zone leaves away
+// alone, so two.
+//
+// Requirement: FR-REG-052, FR-OBS-091
+func TestSnapshot_EdgeRowsAreTheNonDefaultStatuses(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, edgeMill())
+	snap := func() Snapshot {
+		s, err := w.Snapshot()
+		if err != nil {
+			t.Fatalf("Snapshot() error = %v, want nil", err)
+		}
+		return s
+	}
+	if s := snap(); s.Edges != nil || s.Components != 1 {
+		t.Errorf("Snapshot() Edges = %v, Components = %d, want nil and 1", s.Edges, s.Components)
+	}
+	set := func(changes ...EdgeStatus) {
+		if err := w.setEdgeStatuses(changes, CauseConsumer); err != nil {
+			t.Fatalf("setEdgeStatuses(%+v) = %v, want nil", changes, err)
+		}
+	}
+	set(EdgeStatus{From: 1, To: 2, FactorBP: 15_000}, EdgeStatus{From: 0, To: 2, Closed: true, FactorBP: 10_000}, EdgeStatus{From: 0, To: 1, Closed: true, FactorBP: 10_000})
+	want := []EdgeRow{{From: 0, To: 1, Closed: true, FactorBP: 10_000}, {From: 0, To: 2, Closed: true, FactorBP: 10_000}, {From: 1, To: 2, FactorBP: 15_000}}
+	s := snap()
+	if !slices.Equal(s.Edges, want) || s.Components != 2 {
+		t.Errorf("Snapshot() Edges = %+v, Components = %d, want %+v and 2", s.Edges, s.Components, want)
+	}
+	s.Edges[0].FactorBP = 1
+	if again := snap(); !slices.Equal(again.Edges, want) {
+		t.Errorf("Snapshot() Edges after the caller changed a copy = %+v, want %+v: the rows are a copy", again.Edges, want)
+	}
+	set(EdgeStatus{From: 1, To: 2, FactorBP: 10_000})
+	if s := snap(); len(s.Edges) != 2 {
+		t.Errorf("Snapshot() Edges = %+v, want 2 rows: an edge back at the default has none", s.Edges)
+	}
+	one := newMill(t, millConfig(1, 2))
+	if s, err := one.Snapshot(); err != nil || s.Components != 0 || s.Edges != nil {
+		t.Errorf("Snapshot() of one region = Components %d, Edges %v, %v, want 0, nil, nil", s.Components, s.Edges, err)
+	}
+}
+
+// TestCheckpoint_PendingRelocationTotals verifies that the relocation totals that a
+// call between ticks added since the last tick's end are saved with the ledger's
+// state and restored: after a relocation and before a step the restored world holds
+// the same rows (its next checkpoint has the same bytes), and after one step both
+// worlds have cleared them (P8.6). The ledger's reader of tag 2 restores and
+// validates them, so there is no separate restore of the totals.
+//
+// Arithmetic: agent 2, a miller of home with 2 households, holds 14 000 money and
+// 22 units of goods (the test of the event), so the moved rows are money 14 000 and
+// the units of each commodity it holds, from region 0 to region 1.
+//
+// Requirement: FR-REG-042, FR-REG-052
+func TestCheckpoint_PendingRelocationTotals(t *testing.T) {
+	t.Parallel()
+	w := relocWorld(t)
+	if err := w.Step(); err != nil {
+		t.Fatalf("Step() = %v, want nil", err)
+	}
+	if rows := w.ledger.AppendRelocations(nil); len(rows) != 0 {
+		t.Fatalf("setup: relocation rows after a step = %v, want none: P8.6 clears them", rows)
+	}
+	if err := w.relocate(2, 1, CauseConsumer); err != nil {
+		t.Fatalf("relocate(2, 1) = %v, want nil", err)
+	}
+	before := w.ledger.AppendRelocations(nil)
+	if len(before) < 2 || before[0].From != 0 || before[0].To != 1 || before[0].Total <= 0 {
+		t.Fatalf("pending relocation rows = %+v, want money and goods from region 0 to 1", before)
+	}
+	ck, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() = %v, want nil", err)
+	}
+	r, err := RestoreWorld(removalConfig(), ck)
+	if err != nil {
+		t.Fatalf("RestoreWorld() = %v, want nil", err)
+	}
+	if got := r.ledger.AppendRelocations(nil); !slices.Equal(got, before) {
+		t.Errorf("restored relocation rows = %+v, want %+v", got, before)
+	}
+	again, err := r.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() of the restored world = %v, want nil", err)
+	}
+	if a, b := mustBytes(t, ck), mustBytes(t, again); !slices.Equal(a, b) {
+		t.Errorf("the restored world's checkpoint differs from the one it was restored from")
+	}
+	for _, x := range []*World{w, r} {
+		if err := x.Step(); err != nil {
+			t.Fatalf("Step() = %v, want nil", err)
+		}
+		if rows := x.ledger.AppendRelocations(nil); len(rows) != 0 {
+			t.Errorf("relocation rows after the next step = %+v, want none", rows)
+		}
+	}
+}
+
+// mustBytes returns the bytes of a checkpoint.
+func mustBytes(t *testing.T, c Checkpoint) []byte {
+	t.Helper()
+	b, err := c.MarshalBinary()
+	if err != nil {
+		t.Fatalf("MarshalBinary() = %v, want nil", err)
+	}
+	return b
+}

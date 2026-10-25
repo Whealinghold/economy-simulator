@@ -52,6 +52,23 @@ type Snapshot struct {
 	Markets []MarketRow
 	// Jobs has one row per (region, recipe) with at least one job in progress.
 	Jobs []JobRow
+	// Edges has one row per edge whose status is not the default, by EdgeID
+	// (spec-regions.md 10.5).
+	Edges []EdgeRow
+	// Components is the number of strongly connected components of the graph as it
+	// is now, and 0 when the world has one region, so that the header of an off
+	// golden does not move (architecture.md 2.10.5).
+	Components int64
+}
+
+// EdgeRow reports an edge whose status is not the default.
+type EdgeRow struct {
+	// From and To are the ends of the edge.
+	From, To RegionID
+	// Closed says the edge is closed.
+	Closed bool
+	// FactorBP is the length factor of the status in basis points.
+	FactorBP int64
 }
 
 // RegionRow reports one region. MoneyContract and MoneyTreasury are appended
@@ -245,6 +262,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 		Jobs:     make([]JobRow, 0, len(w.cfg.Regions)*len(w.cfg.Recipes)),
 		Boundary: w.boundaryRows(),
 	}
+	s.Edges, s.Components = w.edgeRows(), w.componentCount()
 	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false))
 	if w.ledger.InConstruction() {
 		s.Construction = flowTotals(w.ledger.AppendFlows(nil, true))

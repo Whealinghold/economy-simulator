@@ -31,14 +31,6 @@ func (w *World) saveSkills(cw *codec.Writer) error {
 	return nil
 }
 
-// saveRegions is tag 11 as a zero-row skeleton: one count of 0, the edges whose
-// status is not the default (spec-checkpoint.md 4.2.8). The regions module keeps
-// it as the prefix of its layout.
-func (w *World) saveRegions(cw *codec.Writer) error {
-	cw.Count(0)
-	return nil
-}
-
 // eachLive calls f for every live agent in ascending ID: the household agents
 // whose slot is not the zero agent of an estate or of a removed agent.
 func (w *World) eachLive(f func(a *agent)) {

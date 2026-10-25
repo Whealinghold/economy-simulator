@@ -573,3 +573,77 @@ func TestLog_WorldCreatedCarriesTheEdgesAndComponents(t *testing.T) {
 		})
 	}
 }
+
+// TestWarnLines_FiveRules verifies that construction logs each of the five region
+// warnings of spec-regions.md 9.2 once, at Warn, as the line "configuration
+// warning" with the rule and the path of the Warning, and that running the world
+// logs none of them again and nothing at Info (the tick has no Info line).
+//
+// Setup: north, east and south joined by the detour of TestWarnings_RegionRules
+// (the edge east>south, 90, against 30 + 30), a region west with no edge and no
+// group, and an override of north's waste at the commodity's own price 50.
+//
+// Requirement: FR-REG-056, FR-REG-031, FR-REG-034, FR-REG-007
+func TestWarnLines_FiveRules(t *testing.T) {
+	t.Parallel()
+	c := withRegions(referenceConfig(), "east", "south", "west")
+	for _, id := range []string{"east", "south"} {
+		c.Groups = append(c.Groups, economysim.Group{Region: id, Role: "cook", Households: 10})
+	}
+	c.Edges = []economysim.Edge{edgeOf("east", "north", 30), edgeOf("north", "south", 30), edgeOf("east", "south", 90), edgeOf("north", "east", 30), edgeOf("south", "north", 30)}
+	c.RegionPrices = []economysim.RegionPrice{{Region: "north", Commodity: "waste", Price: 50}}
+	rules := []string{"region_isolated", "graph_not_strongly_connected", "edge_not_shortest", "region_without_agents", "override_equals_default"}
+	h := newCaptureHandler()
+	w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	// The world holds the canonical configuration, so the paths it logs index the
+	// sorted lists (the edge east>south is edges[1] there, edges[2] as written).
+	var want []string
+	for _, wn := range w.Config().Warnings() {
+		if slices.Contains(rules, wn.Rule) {
+			want = append(want, wn.Rule+" "+strings.Join(wn.Path, "."))
+		}
+	}
+	for _, rule := range rules {
+		if !slices.ContainsFunc(want, func(s string) bool { return strings.HasPrefix(s, rule+" ") }) {
+			t.Fatalf("setup: the configuration draws no %s, want all five rules (got %q)", rule, want)
+		}
+	}
+	logged := func() (lines []string, infos int) {
+		for _, l := range h.records() {
+			if l.level == slog.LevelInfo {
+				infos++
+			}
+			if l.msg != "configuration warning" {
+				continue
+			}
+			rule, _ := l.attr("rule")
+			path, _ := l.attr("path")
+			if l.level != slog.LevelWarn {
+				t.Errorf("configuration warning %s logged at %v, want Warn", rule, l.level)
+			}
+			if slices.Contains(rules, rule.String()) {
+				lines = append(lines, rule.String()+" "+path.String())
+			}
+		}
+		return lines, infos
+	}
+	got, infosAtStart := logged()
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf("logged region warnings = %q, want each of %q once", got, want)
+	}
+	for range 5 {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+	}
+	again, infos := logged()
+	slices.Sort(again)
+	if !slices.Equal(again, want) || infos != infosAtStart {
+		t.Errorf("after 5 ticks the region warnings are %q (want the same) and there are %d Info lines (want %d: none in the tick)", again, infos, infosAtStart)
+	}
+}
