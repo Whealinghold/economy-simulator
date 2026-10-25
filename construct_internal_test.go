@@ -13,62 +13,6 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/ordering"
 )
 
-// TestGroupWeights verifies the pure derivation of the agents and weights of a
-// group: ceil(H / S) agents, raised to min(K, H), weights that sum to H and
-// differ by at most 1, the first H mod a agents taking the extra household
-// (spec-scale.md 3.2). The expected weights are worked out in each row.
-//
-// Requirement: FR-SCL-001, FR-SCL-002, FR-SCL-003, FR-SCL-004, FR-SCL-005
-func TestGroupWeights(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name              string
-		households, scale int64
-		minAgents         int64
-		want              []int64
-	}{
-		// H 1, S 1: one agent of weight 1 (the floor min(K, H) is 1).
-		{"one household", 1, 1, 10, []int64{1}},
-		// H 10, S 4: ceil(10 / 4) = 3 agents; 10 = 3 * 3 + 1, so the first agent takes
-		// the extra household: 4, 3, 3.
-		{"ten over scale four", 10, 4, 1, []int64{4, 3, 3}},
-		// H 2 below K 3: ceil(2 / 100) = 1, raised to min(3, 2) = 2 agents of 1.
-		{"fewer households than the floor", 2, 100, 3, []int64{1, 1}},
-		// H 40, S 40, K 1: one agent holding all forty households.
-		{"one agent holds the group", 40, 40, 1, []int64{40}},
-		// H 7, S 100, K 3: ceil(7 / 100) = 1, raised to min(3, 7) = 3 agents; 7 = 3 * 2 + 1:
-		// 3, 2, 2.
-		{"floor raises the count", 7, 100, 3, []int64{3, 2, 2}},
-		// H 100, S 1, K 10: ceil(100 / 1) = 100 agents of weight 1 (the floor is below).
-		{"scale one gives one household each", 100, 1, 10, slices.Repeat([]int64{1}, 100)},
-		// H 10, S 3, K 1: ceil(10 / 3) = 4 agents; 10 = 4 * 2 + 2: 3, 3, 2, 2.
-		{"two extras", 10, 3, 1, []int64{3, 3, 2, 2}},
-		// No household or no scale is a group validation rejects: no agents.
-		{"no household", 0, 1, 1, nil},
-		{"no scale", 5, 0, 1, nil},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := groupWeights(tt.households, tt.scale, tt.minAgents)
-			if !slices.Equal(got, tt.want) {
-				t.Errorf("groupWeights(%d, %d, %d) = %v, want %v", tt.households, tt.scale, tt.minAgents, got, tt.want)
-			}
-			if tt.want == nil {
-				return
-			}
-			var sum int64
-			for _, w := range got {
-				sum += w
-			}
-			if lo, hi := slices.Min(got), slices.Max(got); sum != tt.households || hi-lo > 1 || lo < 1 {
-				t.Errorf("groupWeights(%d, %d, %d) = %v: sum %d, spread %d, min %d, want sum %d, spread at most 1, min at least 1",
-					tt.households, tt.scale, tt.minAgents, got, sum, hi-lo, lo, tt.households)
-			}
-		})
-	}
-}
-
 // TestFinishConstruction verifies the mapping of the audit of construction
 // (step 9): no failure is no error, and a failure of the ledger's audit is an
 // error that wraps ErrAuditFailed and the ledger's error. The mapping is a pure

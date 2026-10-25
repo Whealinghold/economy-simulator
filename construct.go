@@ -1,7 +1,6 @@
 package economysim
 
 import (
-	"cmp"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -29,63 +28,6 @@ import (
 type liveCounts struct {
 	agents, households int64
 	inRole             []int64
-}
-
-// groupWeights returns the weights of the agents of a group of households
-// households, per-agent scale scale and floor minAgents (spec-scale.md 3.2,
-// FR-SCL-001 to 005): ceil(households / scale) agents, raised to
-// min(minAgents, households), with weights that sum to households and differ by
-// at most 1, the first households mod agents of them taking the extra household.
-// It takes no random number. It returns nil for a group with no household or a
-// scale below 1, which validation rejects. Stage 2's scale.go takes it over
-// unchanged.
-func groupWeights(households, scale, minAgents int64) []int64 {
-	if households < 1 || scale < 1 {
-		return nil
-	}
-	n := households / scale
-	if households%scale != 0 {
-		n++
-	}
-	n = max(n, min(minAgents, households))
-	base, extra := households/n, households%n
-	out := make([]int64, n)
-	for i := range out {
-		out[i] = base
-		if int64(i) < extra {
-			out[i]++
-		}
-	}
-	return out
-}
-
-// groupPlan is one group of the configuration resolved to IDs, with the weights
-// of its agents.
-type groupPlan struct {
-	region  RegionID
-	role    RoleID
-	weights []int64
-	// warm is the group's entry in the warm start, nil when it has none; first is
-	// the agent ID of its first agent, set when the agents are created.
-	warm  *WarmGroup
-	first int
-}
-
-// groupPlans resolves the groups of a canonical, validated configuration, in
-// canonical order (region, then role), and derives their weights. The scale of
-// a group is its own, or the world's when it gives none (FR-SCL-006).
-func groupPlans(c *Config) []groupPlan {
-	plans := make([]groupPlan, len(c.Groups))
-	for i, g := range c.Groups {
-		r, rok := c.regionID(g.Region)
-		ro, ook := c.roleID(g.Role)
-		if !rok || !ook {
-			invariant("a group names an unknown region or role after validation")
-		}
-		weights := groupWeights(g.Households, cmp.Or(g.Scale, c.World.Scale), c.World.MinAgents)
-		plans[i] = groupPlan{region: r, role: ro, weights: weights, warm: warmGroupOf(c, g.Region, g.Role)}
-	}
-	return plans
 }
 
 // mustBuild panics when the ledger refuses a step of construction. A validated

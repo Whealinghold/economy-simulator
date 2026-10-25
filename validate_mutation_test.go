@@ -291,7 +291,7 @@ func TestValidate_InvalidGroupAddsNoRegionToTheRole(t *testing.T) {
 // MaxHouseholds and a floor of 1 and MaxHouseholds, and it does not for one
 // past the upper bound.
 //
-// Requirement: FR-CFG-054, FR-SCL-020
+// Requirement: FR-CFG-054, FR-SCL-001, FR-SCL-020
 func TestValidate_GroupShapeBounds(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -302,6 +302,7 @@ func TestValidate_GroupShapeBounds(t *testing.T) {
 		want       bool
 		world      int64 // the world's Scale when not 0
 	}{
+		{"no household", 0, 2, 10, false, 0},
 		{"one household", 1, 2, 10, true, 0},
 		{"MaxHouseholds households", economysim.MaxHouseholds, 2, 10, true, 0},
 		{"one household too many", economysim.MaxHouseholds + 1, 2, 10, false, 0},
