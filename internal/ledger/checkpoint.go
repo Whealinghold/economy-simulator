@@ -272,7 +272,10 @@ func (l *Ledger) readBody(r *codec.Reader, first int, construction bool) {
 	}
 	l.readClaims(r)
 	rows := l.readFlows(r, l.totals, l.wear)
-	rows += l.readRelocs(r)
+	// A relocation before the first step is totalled like one in a tick (Relocate
+	// has no bucket for it) and is cleared with the totals of that step, so
+	// the construction phase may hold relocation rows.
+	l.readRelocs(r)
 	if construction {
 		if rows != 0 {
 			r.Failf("pending totals in the construction phase")

@@ -660,3 +660,19 @@ func TestRelocate_NoObserverAllocatesNothing(t *testing.T) {
 		t.Errorf("a relocation and its way back allocate %v times, want 0", got)
 	}
 }
+
+// TestLedgerRefusal_ClosedAccountMapsToTheRootSentinel verifies that the
+// ledger's own closed-account error maps to ReasonClosedAccount and to the
+// root's ErrClosedAccount, as spec-regions.md 9.1 says, and is not taken for a
+// violated invariant.
+//
+// Requirement: FR-REG-059
+// Fix: review of stage 2-3 PR B. The mapping was documented and absent, so the
+// ledger's error would have panicked as an invariant.
+func TestLedgerRefusal_ClosedAccountMapsToTheRootSentinel(t *testing.T) {
+	t.Parallel()
+	reason, err := ledgerRefusal(ledger.ErrClosedAccount)
+	if reason != ReasonClosedAccount || !errors.Is(err, ErrClosedAccount) {
+		t.Errorf("ledgerRefusal(ledger.ErrClosedAccount) = (%q, %v), want (%q, ErrClosedAccount)", reason, err, ReasonClosedAccount)
+	}
+}

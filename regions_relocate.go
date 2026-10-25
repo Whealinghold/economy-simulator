@@ -148,6 +148,8 @@ func ledgerRefusal(err error) (Reason, error) {
 	switch {
 	case err == nil:
 		return "", nil
+	case errors.Is(err, ledger.ErrClosedAccount):
+		return ReasonClosedAccount, ErrClosedAccount
 	case errors.Is(err, ledger.ErrSameRegion):
 		return ReasonSameRegion, ErrSameRegion
 	case errors.Is(err, ledger.ErrOpenReservation):

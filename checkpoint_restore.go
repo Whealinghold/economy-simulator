@@ -394,34 +394,34 @@ func (w *World) announceRestore(info CheckpointInfo, o options) {
 // ascending key order, the value from 1 to limit (a row at the default is corrupt, R10;
 // a run counts ticks, so the caller passes the tick as limit).
 func readSparse(r *codec.Reader, vals []int64, regions, roles int, limit int64) {
-	readSparseRows(r, vals, 3, limit, func() (uint64, string) {
+	readSparseRows(r, vals, 3, limit, func() uint64 {
 		region, role := r.Index(uint64(regions)), r.Index(uint64(roles))
-		return region*uint64(roles) + role, fmt.Sprintf("region %d, role %d", region, role)
+		return region*uint64(roles) + role
+	}, func(key uint64) string {
+		return fmt.Sprintf("region %d, role %d", key/uint64(roles), key%uint64(roles))
 	})
 }
 
 // readSparseByRegion is readSparse for a run kept per region: (region, value).
 func readSparseByRegion(r *codec.Reader, vals []int64, limit int64) {
-	readSparseRows(r, vals, 2, limit, func() (uint64, string) {
-		region := r.Index(uint64(len(vals)))
-		return region, fmt.Sprintf("region %d", region)
-	})
+	readSparseRows(r, vals, 2, limit, func() uint64 { return r.Index(uint64(len(vals))) },
+		func(key uint64) string { return fmt.Sprintf("region %d", key) })
 }
 
 // readSparseRows is the loop of both: a count of rows of at least minBytes, each a
 // key from readKey (with its text for an error) and a value from 1 to limit, the
 // keys strictly ascending.
-func readSparseRows(r *codec.Reader, vals []int64, minBytes int, limit int64, readKey func() (uint64, string)) {
+func readSparseRows(r *codec.Reader, vals []int64, minBytes int, limit int64, readKey func() uint64, describe func(key uint64) string) {
 	n := r.Count(minBytes)
 	prev := uint64(0)
 	for i := range n {
-		key, what := readKey()
+		key := readKey()
 		v := r.Bounded("run", limit)
 		if r.Err() != nil {
 			return
 		}
 		if v == 0 || (i > 0 && key <= prev) {
-			r.Failf("sparse row (%s) is at its default or out of order", what)
+			r.Failf("sparse row (%s) is at its default or out of order", describe(key))
 			return
 		}
 		vals[key], prev = v, key
