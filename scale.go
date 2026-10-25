@@ -110,28 +110,33 @@ func checkCensus(plans []groupPlan, c *Config, agents, households int64) {
 	}
 	var nAgents, nHouseholds int64
 	for i := range plans {
-		var sum int64
-		lo, hi := int64(math.MaxInt64), int64(0)
-		for _, w := range plans[i].weights {
-			sum += w
-			lo, hi = min(lo, w), max(hi, w)
-		}
-		g := c.Groups[i]
-		n := int64(len(plans[i].weights))
-		switch {
-		case sum != g.Households:
-			invariant("the weights of a group do not sum to its households")
-		case lo < 1:
-			invariant("an agent of a group has a weight below 1")
-		case hi-lo > 1:
-			invariant("the weights of a group differ by more than 1")
-		case hi > 1 && n < min(c.World.MinAgents, g.Households):
-			invariant("a group of weight above 1 has fewer agents than its floor")
-		}
+		n, sum := checkGroupWeights(plans[i], c, c.Groups[i])
 		nAgents += n
 		nHouseholds += sum
 	}
 	if nAgents != agents || nHouseholds != households {
 		invariant("the agents or households of the world differ from the census")
 	}
+}
+
+// checkGroupWeights is the per-group part of checkCensus; it returns the group's
+// agent count and the sum of its weights.
+func checkGroupWeights(p groupPlan, c *Config, g Group) (n, sum int64) {
+	lo, hi := int64(math.MaxInt64), int64(0)
+	for _, w := range p.weights {
+		sum += w
+		lo, hi = min(lo, w), max(hi, w)
+	}
+	n = int64(len(p.weights))
+	switch {
+	case sum != g.Households:
+		invariant("the weights of a group do not sum to its households")
+	case lo < 1:
+		invariant("an agent of a group has a weight below 1")
+	case hi-lo > 1:
+		invariant("the weights of a group differ by more than 1")
+	case hi > 1 && n < min(c.World.MinAgents, g.Households):
+		invariant("a group of weight above 1 has fewer agents than its floor")
+	}
+	return n, sum
 }
