@@ -269,6 +269,26 @@ func TestCheckCensus_PanicsOnABrokenPlan(t *testing.T) {
 	}
 }
 
+// TestCheckCensus_PanicsOnPlansThatDoNotMatchTheGroups verifies that a plan
+// slice shorter or longer than the configured groups panics through the
+// invariant, not through an index error.
+//
+// Requirement: FR-SCL-003, FR-SCL-019
+// Guard: a group dropped from or added to the plans slips past the sums.
+func TestCheckCensus_PanicsOnPlansThatDoNotMatchTheGroups(t *testing.T) {
+	t.Parallel()
+	cfg := &Config{World: WorldParams{MinAgents: 1}, Groups: []Group{{Households: 2}}}
+	for name, plans := range map[string][]groupPlan{
+		"no plan":   nil,
+		"two plans": {{weights: []int64{2}}, {weights: []int64{1}}},
+	} {
+		msg := invariantMessage(func() { checkCensus(plans, cfg, 1, 2) })
+		if !strings.Contains(msg, "do not match its groups") {
+			t.Errorf("checkCensus(%s) panicked with %q, want an invariant panic about the groups", name, msg)
+		}
+	}
+}
+
 // TestScale_BankruptcyCarriesTheWeight verifies that removing a cohort emits
 // AgentBankrupted with the weight of the agent, and that the household count
 // falls by that weight.

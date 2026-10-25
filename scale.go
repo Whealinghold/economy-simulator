@@ -105,6 +105,9 @@ func groupPlans(c *Config) []groupPlan {
 // panics, like the other invariants of construction (D283). It is O(groups) and
 // allocation-free.
 func checkCensus(plans []groupPlan, c *Config, agents, households int64) {
+	if len(plans) != len(c.Groups) {
+		invariant("the plans of a world do not match its groups")
+	}
 	var nAgents, nHouseholds int64
 	for i := range plans {
 		var sum int64
