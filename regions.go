@@ -313,7 +313,9 @@ type Graph struct {
 
 // NewGraph runs the graph rules of spec-regions.md 9 on cfg alone and builds the
 // graph of its edges, all open at their configured distance. It returns the first
-// error, as a *ValidationError, in the order Validate sorts them in.
+// error of those rules, as a *ValidationError, in the order Validate sorts them
+// in. It runs no other rule (the fields of a region, the commodities), so it
+// accepts a configuration that Validate would refuse for one of those.
 func NewGraph(cfg Config) (Graph, error) {
 	c := cfg.canonical()
 	if err := graphRulesError(c); err != nil {
@@ -506,7 +508,7 @@ func (g Graph) EdgeAt(e EdgeID) (EdgeView, bool) {
 }
 
 // Out returns the open edges that leave a region, in ascending To, with their
-// effective length. The slice is the caller's.
+// effective length. Each call allocates the slice, which is the caller's.
 func (g Graph) Out(from RegionID) []Hop {
 	if !g.has(from) {
 		return nil
@@ -521,7 +523,7 @@ func (g Graph) Out(from RegionID) []Hop {
 }
 
 // In returns the open edges that enter a region, in ascending From, with their
-// effective length. The slice is the caller's.
+// effective length. Each call allocates the slice, which is the caller's.
 func (g Graph) In(to RegionID) []Hop {
 	if !g.has(to) {
 		return nil
@@ -562,7 +564,7 @@ func (g Graph) Path(from, to RegionID) ([]RegionID, bool) {
 
 // Within returns every region other than from whose shortest distance from it is
 // at most limit, in ascending distance and, for equal distances, ascending
-// RegionID. A negative limit gives none. The slice is the caller's.
+// RegionID. A negative limit gives none. Each call allocates the slice, which is the caller's.
 func (g Graph) Within(from RegionID, limit int64) []Hop {
 	hops := g.t.AppendWithin(nil, int(from), limit)
 	out := make([]Hop, len(hops))

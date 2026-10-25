@@ -341,7 +341,7 @@ func (v *validator) declare() {
 	v.override = overrides(c.RegionPrices)
 	v.dearest = make(map[string]Price, len(c.RegionPrices))
 	for _, p := range c.RegionPrices {
-		if p.Price <= MaxPrice {
+		if p.Price <= MaxPrice && v.region[p.Region] && v.commodity[p.Commodity] {
 			v.dearest[p.Commodity] = max(v.dearest[p.Commodity], p.Price)
 		}
 	}
@@ -1402,15 +1402,21 @@ func (v *validator) priceFloor(floor int64) {
 }
 
 // overridesBelow reports an override of a tradable commodity below the floor at
-// its row, and returns the number of regions that override each commodity (a
+// its row, and returns the number of regions that override each commodity, a
+// repeated row counted once (a
 // count only; no result depends on the iteration order of the map).
 func (v *validator) overridesBelow(floor int64, tradable map[string]bool) map[string]int {
 	overridden := map[string]int{}
+	seen := make(map[[2]string]bool, len(v.c.RegionPrices))
 	for i, p := range v.c.RegionPrices {
 		if !v.region[p.Region] || !v.commodity[p.Commodity] {
 			continue
 		}
-		overridden[p.Commodity]++
+		// A repeated row (ErrDuplicateID, reported elsewhere) is one region, once.
+		if key := [2]string{p.Region, p.Commodity}; !seen[key] {
+			seen[key] = true
+			overridden[p.Commodity]++
+		}
 		if price := int64(p.Price); tradable[p.Commodity] && price >= 1 && price <= MaxPrice && price < floor {
 			v.rep.add(ErrOutOfBounds, []string{"region_prices[" + itoa(i) + "]", "price"}, i64(price), i64(floor))
 		}

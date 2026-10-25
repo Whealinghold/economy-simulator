@@ -109,7 +109,7 @@ func (w *World) refreshViewCtx() {
 	w.tk.vctx = viewCtx{
 		cfg: &w.cfg, roles: &w.roles, recipes: &w.recipes, l: w.ledger, prod: w.prod,
 		yields: &w.yields, shocks: &w.shocks, bp: w.bp, moment: w.tk.moment,
-		reports: w.markets.reports, windows: w.markets.windows,
+		reports: w.markets.reports, windows: w.markets.windows, refs: w.refs,
 	}
 }
 

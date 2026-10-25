@@ -109,6 +109,9 @@ type viewCtx struct {
 	// (region, commodity).
 	reports []marketReport
 	windows []beliefs.Window
+	// refs is the effective reference price of every (region, commodity), the
+	// world's dense table (World.refs).
+	refs []Price
 }
 
 // market returns the report and the price window of a market.
@@ -267,7 +270,7 @@ func (sc *viewScratch) fillCommodities(v *AgentView, row *roleRow, a *agent, c *
 			return fmt.Errorf("fill view of agent %d: expiring units of commodity %d: %w", a.id, id, err)
 		}
 		rep, win := c.market(region, id)
-		ref := c.cfg.refPrice(region, id)
+		ref := c.refs[int(region)*len(c.cfg.Commodities)+int(id)]
 		var unitCost int64
 		if makesIn(v.Recipes, id) {
 			unitCost = c.prod.unitCost(region, id)

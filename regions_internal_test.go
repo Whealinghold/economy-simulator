@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"encoding/binary"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -144,5 +145,20 @@ func TestReadGeometry_SkipsWhatIsInvalid(t *testing.T) {
 	big = Config{Edges: make([]Edge, MaxEdges+1)}
 	if _, ok := readGeometry(&big); ok {
 		t.Errorf("readGeometry(MaxEdges+1 edges) = true, want false")
+	}
+}
+
+// TestRegionWarnings_ExternalModuleNotBuilt verifies that the external module
+// has no entry in Modules yet.
+//
+// Guard: regionWarnings exempts no region from region_without_agents because
+// the outside node of the external module (spec-regions.md 9.2) does not exist.
+// When the module is built, this test fails and the exemption in regionWarnings
+// has to be filled in the same change; without it every pack with an outside
+// node would draw a spurious warning.
+func TestRegionWarnings_ExternalModuleNotBuilt(t *testing.T) {
+	t.Parallel()
+	if _, ok := reflect.TypeOf(Modules{}).FieldByName("External"); ok {
+		t.Fatal("Modules.External exists: fill the outside-node exemption of region_without_agents in regionWarnings")
 	}
 }

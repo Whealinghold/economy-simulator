@@ -703,3 +703,52 @@ func TestPrices_SeedsFollowTheRegionsReferencePrice(t *testing.T) {
 		t.Errorf("prices of b = %v, %v, record %+v, want seed 500, one outside-band record and a drift of -9000", b.price, err, b.s.rep)
 	}
 }
+
+// TestValidatorDeclare_DearestIgnoresRowsOfNoRegion verifies that the dearest
+// price of a commodity counts only the override rows of a declared region and
+// commodity: a stray row for an unknown region must not raise the bound that the
+// derived-product overflow rule reads.
+//
+// Guard: without the filter a row that ErrUnknownRegion already reports would
+// also fail the overflow rule of every recipe that reads the commodity.
+//
+// Requirement: FR-REG-037
+func TestValidatorDeclare_DearestIgnoresRowsOfNoRegion(t *testing.T) {
+	t.Parallel()
+	c := regionMill(
+		RegionPrice{Region: "away", Commodity: "grain", Price: 1_500},
+		RegionPrice{Region: "nowhere", Commodity: "grain", Price: 900_000},
+		RegionPrice{Region: "away", Commodity: "unknown", Price: 800_000},
+	)
+	v := &validator{c: c.canonical()}
+	v.declare()
+	if got, want := v.dearest["grain"], Price(1_500); got != want {
+		t.Errorf("dearest[grain] = %d, want %d (the unknown region's 900000 is not counted)", got, want)
+	}
+	if _, ok := v.dearest["unknown"]; ok {
+		t.Error("dearest has an entry for an undeclared commodity, want none")
+	}
+}
+
+// TestOverridesBelow_RepeatedRowCountsOnce verifies that a repeated override row
+// counts its region once, so a default below the floor is still reported while
+// another region uses it.
+//
+// Guard: two rows for one region (ErrDuplicateID, reported elsewhere) would
+// otherwise equal the region count and hide the default's error until the
+// duplicate is fixed.
+//
+// Requirement: FR-REG-037
+func TestOverridesBelow_RepeatedRowCountsOnce(t *testing.T) {
+	t.Parallel()
+	c := regionMill(
+		RegionPrice{Region: "away", Commodity: "grain", Price: 1_100},
+		RegionPrice{Region: "away", Commodity: "grain", Price: 1_200},
+	)
+	v := &validator{c: c.canonical()}
+	v.declare()
+	got := v.overridesBelow(1, map[string]bool{"grain": true})
+	if got["grain"] != 1 {
+		t.Errorf("overridesBelow(...)[grain] = %d, want 1 region for two rows of one region", got["grain"])
+	}
+}
