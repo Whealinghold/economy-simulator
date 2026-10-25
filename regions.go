@@ -229,7 +229,9 @@ func regionWarnings(c *Config) []Warning {
 
 	prices := make(map[string]Price, len(c.Commodities))
 	for _, cm := range c.Commodities {
-		prices[cm.ID] = cm.ReferencePrice
+		if _, dup := prices[cm.ID]; !dup { // the first row of a repeated ID, as newLookup keeps
+			prices[cm.ID] = cm.ReferencePrice
+		}
 	}
 	for i, p := range c.RegionPrices {
 		if def, ok := prices[p.Commodity]; ok && def == p.Price {

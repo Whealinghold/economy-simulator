@@ -488,3 +488,26 @@ func TestNewGraph_ErrorPathIndexesTheListAsGiven(t *testing.T) {
 		t.Errorf("Validate paths = %v, want one at edges[1].to as NewGraph reports", vs)
 	}
 }
+
+// TestWarnings_OverrideEqualsDefaultUsesTheFirstOfARepeatedCommodity verifies
+// that on a configuration with a repeated commodity ID, override_equals_default
+// compares with the first row, the one the validator's lookup keeps.
+//
+// Guard: the last row would make the warning depend on the order of a list that
+// Validate rejects anyway (ErrDuplicateID), and Warnings is documented to work
+// on a configuration that does not validate.
+func TestWarnings_OverrideEqualsDefaultUsesTheFirstOfARepeatedCommodity(t *testing.T) {
+	t.Parallel()
+	c := referenceConfig()
+	first := c.Commodities[0]
+	dup := first
+	dup.ReferencePrice = first.ReferencePrice + 7
+	c.Commodities = append(c.Commodities, dup)
+	c.RegionPrices = []economysim.RegionPrice{{Region: "north", Commodity: first.ID, Price: first.ReferencePrice}}
+	for _, w := range c.Warnings() {
+		if w.Rule == "override_equals_default" {
+			return
+		}
+	}
+	t.Errorf("Warnings() has no override_equals_default for an override equal to the first row's price %d", first.ReferencePrice)
+}
