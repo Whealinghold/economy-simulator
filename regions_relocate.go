@@ -130,10 +130,6 @@ func (w *World) relocateRefusal(id AgentID, to RegionID, skip []string) (Reason,
 	return "", nil
 }
 
-// moveAgent changes only the live counters of the source and target cells; an
-// extinction of the source cell is seen by the next exit phase, as for any other
-// departure between phases.
-//
 // ledgerRefusal maps the ledger's refusal of a relocation to its reason and the
 // root's error. The ledger's sentinels are matched by errors.Is, and the root
 // returns its own bare sentinels so that the query allocates nothing. The root
@@ -179,7 +175,9 @@ func (w *World) relocate(id AgentID, to RegionID, cause Cause) error {
 // the caller owns: relocate checks all of them, and TRN and MIG ask
 // RelocationRefusal with their own skip first. The agent's role, weight, job,
 // beliefs and the rest of its state are not touched (6.3). The error is the
-// ledger's refusal, mapped as the query maps it.
+// ledger's refusal, mapped as the query maps it. Only the live counters of the
+// source and target cells change; an extinction of the source cell is seen by the
+// next exit phase, as for any other departure between phases.
 func (w *World) moveAgent(a *agent, to RegionID, cause Cause) error {
 	from := w.regionOf(a)
 	if _, err := ledgerRefusal(w.ledger.Relocate(a.account, int(to))); err != nil {
