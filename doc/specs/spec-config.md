@@ -579,6 +579,8 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxWants` | 1 000 | want entities in the demand module (as `MaxCommodities`) |
 | `MaxWantItems` | 4 | alternatives of one want; the loop over alternatives and the carry state |
 | `MaxWantsPerRole` | 32 | taste rows of one role: the per-agent loop and the carry state |
+| `MaxTastes` | `MaxRoles * MaxWantsPerRole` | taste rows in all (`Modules.Demand.Tastes`); derived, so the list is bounded before the per-role count is read |
+| `MaxRegionTastes` | `MaxRegions * MaxWants` | region taste rows in all (`Modules.Demand.RegionTastes`); derived |
 | `MaxWantPeriod` | 100 000 | ticks of a want's period; equal to `MaxTicksPerYear` |
 | `MaxWantRank` | 1 000 | ladder position |
 | `MaxElasticityBP` | 100 000 | a slope of ten |
@@ -1313,7 +1315,7 @@ input found nothing to refuse (phase 1 always stops the rest):
    (a recipe's items, a role's lists), a walk bounded by the first. A count over its
    bound is `ErrTooMany` with its path. If phase 1 found any, `Validate` returns those
    errors and nothing else: no sort, no set and no fixpoint is built on a collection
-   that is not known to be small.
+   that is not known to be small. The demand module's counts are among them: the wants, the two taste lists, and then the taste rows of each role, in that order (`spec-demand.md` 10.1).
 2. **Local rules.** IDs (`ErrInvalidID`), field bounds (`ErrOutOfBounds`), shapes, each
    reading one entity.
 3. **Identity and references.** Duplicates (`ErrDuplicateID`) and unknown references
@@ -1412,7 +1414,8 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | a spawner name that is not registered | `ErrUnknownSpawner` | `spec-spawner.md` 3.1.3, 12 | **`NewWorld` only**, as the strategy |
 | `World.Clearing` empty or naming no registered clearing (`average` is built in) | `ErrUnknownClearing` | `spec-clearing.md` 8, `spec-world.md` 3.2.2 | **`NewWorld` only**, as the strategy |
 | a spawner parameter outside its bound; `ChangePrivation` not below `RemovePrivation` (rule `ladder_order`) | `ErrOutOfBounds` | `spec-spawner.md` 11, 12, FR-SPN-037, FR-SPN-038 | `Validate` |
-| a want field outside its bound or a `Quantity` below 1, a `Ceiling` below 10 000, more than `MaxWantsPerRole` taste rows of a role | `ErrOutOfBounds` | `spec-demand.md` 9, 10.1 | `Validate` |
+| a want field outside its bound or a `Quantity` below 1, a `Ceiling` below 10 000 | `ErrOutOfBounds` | `spec-demand.md` 9, 10.1 | `Validate` |
+| more than `MaxWants` wants, more than `MaxWantsPerRole` taste rows of a role, more than `MaxTastes` taste rows or `MaxRegionTastes` region taste rows in all | `ErrTooMany` | `spec-demand.md` 10.1, 7.1.6 here | `Validate` (phase 1) |
 | a want ID, a (role, want) pair or a (region, want) pair twice, or a commodity twice in one want | `ErrDuplicateID` | `spec-demand.md` 10.1 | `Validate` |
 | a want item, taste or region taste naming something undefined | `ErrUnknownCommodity`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownWant` | `spec-demand.md` 10.1 | `Validate` |
 | a want with no item or with all weights 0 | `ErrWantItems` | `spec-demand.md` 10.1 | `Validate` |
@@ -1712,6 +1715,18 @@ at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, 
 `JobSpec` has `Recipe` 1, `InProgressBP` 2; `WarmPool` has `Region` 1, `Money` 2. A
 struct has at most 65 534 fields.
 
+The demand module (`Modules.Demand`, id 1 in `Modules`) adds: `Demand` has `Wants` 1,
+`Tastes` 2, `RegionTastes` 3; `Want` has `ID` 1, `Items` 2, `Quantity` 3, `Period` 4,
+`Rank` 5, `Elasticity` 6, `Ceiling` 7, `Substitution` 8, and `Label`, which is
+presentation only and has no id; `WantItem` has `Commodity` 1, `Weight` 2; `Taste` has
+`Role` 1, `Want` 2, `Scale` 3; `RegionTaste` has `Region` 1, `Want` 2, `Scale` 3.
+The pairs of `Modules` are written in ascending id order: the function that writes
+them places a module's pair at its id, not at the end of the function, so a module with a
+smaller id than one already built is inserted between the pairs and moves no id. The pair
+of a non-nil pointer is the id, the pairs of its struct and the terminator, written
+explicitly and not through the helper that writes nothing for an empty body, so
+`Modules.Demand: &Demand{}` (on, empty) differs from a nil pointer (8.2.1, 8.2.4).
+
 8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
 three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer
 takes its position in the `Modules` row and nothing else moves; (2) a field added to a
@@ -1997,7 +2012,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-058 | The error for an unproducible commodity MUST name one cycle with no source, the commodities and recipes in ID order, whenever the unproducible set contains a cycle, and a required tool MUST count as an input of that cycle. |
 | FR-CFG-059 | A commodity marked `Raw` MUST count as sourced in the producibility check and in V1, and `Validate` MUST warn, and MUST NOT fail, with `raw_without_source` when nothing real supplies it. |
 | FR-CFG-060 | `Config.Modules.Demand` MUST be on if and only if non-nil, MUST be written as the table `[modules.demand]` with wants, tastes and region tastes keyed by ID, and MUST be part of the effective configuration and the hash, every field but `Label`, in canonical order. |
-| FR-CFG-061 | The demand module's bounds `MaxWants`, `MaxWantItems`, `MaxWantsPerRole`, `MaxWantPeriod`, `MaxWantRank`, `MaxElasticityBP`, `MaxCeilingBP`, `MaxSubstitution` and `MaxTasteScale` MUST be constants of `bounds.go`, and a field outside its bound MUST be rejected with `ErrOutOfBounds`. |
+| FR-CFG-061 | The demand module's bounds `MaxWants`, `MaxWantItems`, `MaxWantsPerRole`, `MaxWantPeriod`, `MaxWantRank`, `MaxElasticityBP`, `MaxCeilingBP`, `MaxSubstitution` and `MaxTasteScale` MUST be constants of `bounds.go`, and a field outside its bound MUST be rejected with `ErrOutOfBounds`. The counts (`MaxWants`, `MaxWantsPerRole`, `MaxTastes` and `MaxRegionTastes`) are count bounds: a count over its bound MUST be rejected with `ErrTooMany` in phase 1 of 7.1.6, and the other bounds are value bounds (`ErrOutOfBounds`). |
 | FR-CFG-062 | Validation MUST reject, with the sentinel for the kind, an unknown commodity, role, region or want in a want item, taste or region taste, a want with no item or all weights 0 (`ErrWantItems`), a durable want item (`ErrWantDurable`), a duplicate want, taste or region taste (`ErrDuplicateID`), and wants products that overflow (`ErrOverflow`). |
 | FR-CFG-063 | `World.Spawner` MUST be a registered name defaulting to `"default"`, checked by `NewWorld` and not by `Validate` (`ErrUnknownSpawner`), and the name MUST be hashed. |
 | FR-CFG-064 | The eleven spawner parameters and `Role.Closed` MUST be configuration fields with the defaults and bounds of `spec-spawner.md` 11, each with a row in the parameter-owner table and a failing-case test, and `ChangePrivation` not below `RemovePrivation` MUST be rejected with `ErrOutOfBounds` (rule `ladder_order`). |

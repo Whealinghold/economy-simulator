@@ -185,6 +185,12 @@ canonical order of wants by ID (3.2.2), as `CommodityID` is of commodities
 of the IDs are in the names table (`spec-observability.md` 3.2.1). `Want.ID` stays the
 string of the configuration.
 
+3.2.2b. **A taste row has a default.** A `Taste` or `RegionTaste` row starts from its
+constructor (`DefaultTaste`, `DefaultRegionTaste`: `Scale` 10 000), so a `scale` that a file
+does not give is 10 000, and a `scale = 0` that it does give is a row that removes the want:
+the row is kept and hashed as written, and the want is not in the ladder of that role (or,
+for a region taste, has no quantity in that region).
+
 3.2.3. The items of the wants in a role's ladder join the role's tradable set
 (`spec-agents.md` 3.4; a change AGT owns, section 17). A belief exists for each from
 creation (FR-AGT-004). A want item that is in no role's set cannot exist, because
@@ -329,6 +335,12 @@ agents of a role do not all place a unit in the same tick (DEM-A5). Units the
 household cannot fund are lost; the carry keeps only the fraction, so a rich tick
 does not repay a poor one (no pent-up demand).
 
+The carry is advanced and committed once per agent per tick, by the checker of the
+`TradePlan` after `Trade` has returned (P3.2), and not by the filler of the view: a view
+built for any other reason advances no carry. The filler reports, for each want of the
+ladder in rank order, the planned units and whether the want is choked; the checker commits
+the new carries and clamps what the strategy placed (4.6).
+
 ### 4.5 The budget and the ladder
 
 After `spec-agents.md` 7.4.3 has allocated tiers 1 to 3, the **want budget** is
@@ -364,8 +376,9 @@ large budget goes further up. Section 5.3 shows that this gives Engel's law.
 
 Clearing admits one order per agent and commodity (`spec-clearing.md` 3.1.1), so
 the want units do not make a second order. They become a part of the bid that
-`spec-agents.md` 7.3 builds. With `Want_c` the sum over the wants funded in 4.5 of
-the units of commodity `c`:
+`spec-agents.md` 7.3 builds. With `Want_c` the sum over the wants of the ladder of the
+**planned** units of commodity `c` (the units of 4.4, split among the items by 4.5's
+shares, before any money is allocated):
 
 ```
 Keep_c    = Reserve + UseTgt_c + Want_c                      (AGT 7.3, with the third term new)
@@ -373,6 +386,12 @@ Target_c  = UseTgt_c + Want_c   if either is positive, else OutTgt_c        (AGT
 T4_c      = Gap_c - T1_c - T2_c - T3_c                       (at least 0; the part of the bid that is a want)
 qty_c     = q1 + q2 + q3 + q4,    q4 <= T4_c
 ```
+
+`Want_c` is the planned units, not the units the budget of 4.5 then funds: the money left
+after tiers 1 to 3 depends on the gap that these very units enlarge, and `spec-agents.md`
+7.3.5 decides a candidate by the view alone, so `Keep`, `Target` and the draws depend on
+the view and nothing else. The funded units are what tier 4 buys, in ladder order, at the
+bid's own limit, and they are what `TradePlan.WantFunded` reports (11.1).
 
 `Purpose` follows `spec-agents.md` 7.3.6: a commodity that is a want item only has
 `PurposeOther`, so it is not netted from income (`spec-welfare-and-wages.md` 2.1:
@@ -423,6 +442,8 @@ and want, so:
   each want that is in both ladders (by want ID, so a reordered rank does not matter),
   a want only in the new ladder starts at the formula of 4.4 with its position in the
   new ladder (and the agent's `AgentIndex` at the change), and a carry of a want only in the old ladder is dropped. Nothing is drawn.
+  The carry is formed when the agent is created and when its role changes, and at no other
+  time: a weight change calls nothing (4.8).
   `spec-spawner.md` 4.2 gets a row for it (handoff). The goods a household bought for
   a want of the old role and still holds are treated by the spawner's rule for goods
   outside the new tradable set (kept if they are in it, else listed by the estate).
@@ -710,6 +731,8 @@ validation bounds in `bounds.go` (`spec-config.md` 4.1).
 | Scope | Field | Meaning | Default | Bound |
 |-------|-------|---------|---------|-------|
 | Demand | `Wants` | the want entities (3.2) | none | at most `MaxWants` |
+| Demand | `Tastes` | the (role, want) rows: the ladder of each role (3.2, 3.3) | none | at most `MaxTastes`; at most `MaxWantsPerRole` for one role |
+| Demand | `RegionTastes` | the (region, want) rows (3.2) | none | at most `MaxRegionTastes` |
 | Want | `Items` | alternatives; each a commodity and a weight | required | 1 to `MaxWantItems`; weight 1 to `MaxBasisPoints`; no duplicate commodity; each commodity known and not durable |
 | Want | `Quantity` | units per household per `Period` at the reference price | required | 1 to `MaxQuantity / MaxWeight` |
 | Want | `Period` | ticks over which `Quantity` is wanted | 1 | 1 to `MaxWantPeriod` |
@@ -725,7 +748,7 @@ New bounds for `bounds.go` (provisional, with the reasons): `MaxWants` 1 000 (as
 32 (the per-agent loop and the carry state), `MaxWantPeriod` 100 000
 (`MaxTicksPerYear`), `MaxWantRank` 1 000, `MaxElasticityBP` 100 000 (a slope of ten),
 `MaxCeilingBP` 50 000 (five times the base), `MaxSubstitution` 4, `MaxTasteScale`
-100 000 (ten times). The products of 4.4 go through the 128-bit helper; the largest
+100 000 (ten times). Two list bounds are derived: `MaxTastes` = `MaxRoles * MaxWantsPerRole` for `Tastes` and `MaxRegionTastes` = `MaxRegions * MaxWants` for `RegionTastes` (`spec-config.md` 4.1); a count over a bound is `ErrTooMany` (10.1). The products of 4.4 go through the 128-bit helper; the largest
 is `1 000 * 10^6 * 10^5 * 10^5 * 5 * 10^4` and does not fit `int64`, which is why
 (architecture.md 3.5).
 
@@ -747,7 +770,8 @@ path, for example `modules.demand.want.treat.items[1].weight`.
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrOutOfBounds` | a field outside its bound in section 9; a `Quantity` below 1; a `Ceiling` below 10 000; more than `MaxWantsPerRole` tastes for one role |
+| `ErrOutOfBounds` | a field outside its bound in section 9; a `Quantity` below 1; a `Ceiling` below 10 000 |
+| `ErrTooMany` | a count over its bound (`spec-config.md` 7.1.6 decides: `ErrOutOfBounds` is for a value, FR-CFG-061): more than `MaxWants` wants; more than `MaxWantsPerRole` tastes for one role; more than `MaxRoles * MaxWantsPerRole` tastes in all; more than `MaxRegions * MaxWants` region tastes |
 | `ErrDuplicateID` | a want ID twice; a (role, want) pair twice; a (region, want) pair twice; a commodity twice in one want |
 | `ErrUnknownCommodity`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownWant` (new) | a reference in a want item, a taste or a region taste that is not defined |
 | `ErrWantItems` (new) | a want with no item, or with all weights 0 |
@@ -778,7 +802,7 @@ in the style of `UpkeepShortfall`:
 
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
-| `WantShortfall` (new) | once per region, role and want per tick in which the want was choked or unfunded for at least one household, after the trade phase, in order of region, role and want | `Region`, `Role`, `Want`, `Households`, `Choked` (households whose price ratio was at the choke), `Planned` (units from the carry), `Funded` (units placed in bids) |
+| `WantShortfall` (new) | once per region, role and want per tick in which the want was choked or unfunded for at least one household, after the trade phase, in order of region, role and want | `Region`, `Role`, `Want`, `Households`, `Choked` (households whose price ratio was at the choke), `Planned` (units from the carry), `Funded` (units the strategy placed in bids, the sum of its `TradePlan.WantFunded`; a strategy that ignores wants reports 0) |
 
 It carries no map, no pointer and no wall-clock time (observability-and-logging.md
 4.1), is constructed only when an observer was supplied (4.5 there) and is not
@@ -1085,7 +1109,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-DEM-010 | The schedule MUST be `clamp(10 000 + trunc(Elasticity * (10 000 - r) / 10 000), 0, Ceiling)`, MUST equal 10 000 at the reference price, MUST NOT increase as the price ratio rises, and MUST be 0 at and above the choke price. |
 | FR-DEM-011 | An agent whose want price ratio gives a schedule of 0 MUST skip the want for the tick, MUST be counted as choked, and MUST place no bid for it. |
 | FR-DEM-012 | The desired rate of a want MUST be `Quantity * weight * taste scale * region scale * schedule / (Period * 10^8)` ten-thousandths of a unit, computed with a checked 128-bit product, and the agent MUST want `floor((carry + rate) / 10 000)` units, keeping the remainder as its carry. |
-| FR-DEM-013 | The carry of a new agent MUST be `(AgentIndex * 7 919 + position * 2 777) mod 10 000`, with `AgentIndex` the 0-based position of the agent in its region's agent list, away agents included (`spec-world.md` 6.1.4), and MUST NOT use the random source. |
+| FR-DEM-013 | The carry of a new agent MUST be `(AgentIndex * 7 919 + position * 2 777) mod 10 000`, with `AgentIndex` the 0-based position of the agent in its region's agent list, away agents included (`spec-world.md` 6.1.4), is formed when the agent is created and when its role changes (4.4, 4.9), and MUST NOT use the random source. |
 | FR-DEM-014 | Over a long run the units wanted of a want MUST equal the rate times the number of ticks to within one unit per household, whatever the weight and whatever the changes of price. |
 | FR-DEM-015 | Units that an agent does not fund in a tick MUST be lost and the carry MUST keep only the fraction. |
 | FR-DEM-016 | The want budget MUST be the cap of `spec-agents.md` 7.4.4 less the tier 3 spending, floored at 0, and never more than the money left after tiers 1 to 3. |
@@ -1104,7 +1128,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-DEM-029 | With the default rules, the upkeep share of an agent's spending MUST fall as its money above the reserve rises, and the spending on a want of higher rank MUST be zero until the wants of lower rank are satiated or choked. |
 | FR-DEM-030 | The mean welfare ratio of a closed economy in which households buy wants MUST be the total income over the total upkeep cost, and MUST exceed 1 when want spending is positive, with no faucet. |
 | FR-DEM-031 | The mean welfare ratio MUST NOT exceed `1 + Wmax / U`, and a role whose mean `TargetRatio` is above `1 + Wref / U` MUST give the warning `target_above_demand`. |
-| FR-DEM-032 | Validation MUST reject, with the sentinels of 10.1: a bound violation, a duplicate ID, an unknown commodity, role, region or want, a want with no item or all weights 0, a durable item, and an overflow. |
+| FR-DEM-032 | Validation MUST reject, with the sentinels of 10.1: a bound violation, a count over its bound (`ErrTooMany`), a duplicate ID, an unknown commodity, role, region or want, a want with no item or all weights 0, a durable item, and an overflow. |
 | FR-DEM-033 | Validation MUST warn, and MUST NOT fail, for `want_unused`, `want_unsourced`, `want_inelastic`, `wants_exceed_spend_cap`, `target_above_demand`, `class_without_income` and `region_taste_without_taste`. |
 | FR-DEM-034 | The carries and the choke runs of section 12 MUST be saved as plain data in a fixed order with no maps, and a world restored between ticks MUST give the same bids and consumption as an uninterrupted one. |
 | FR-DEM-035 | `WantShortfall` MUST be emitted once per region, role and want per tick with a choked or unfunded household, in order of region, role and want, MUST contain no map, and MUST NOT be emitted when all households are fully funded. |
@@ -1113,8 +1137,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-DEM-038 | A run with a logger and an observer attached MUST give results identical to a run without them. |
 | FR-DEM-039 | Goods and money MUST be conserved after every tick of a run with wants, checked by audit, and the want consumption MUST appear in `BoundaryFlow` under `want_consumption` by region and commodity and nowhere else. |
 | FR-DEM-040 | A world with the same seed, configuration and calls MUST give identical bids, units and carries on every run. |
-| FR-DEM-041 | Each parameter of section 9 MUST have a default that passes validation, and a value outside its bound MUST be rejected with `ErrOutOfBounds` carrying its path, value and bound. |
-| FR-DEM-042 | On a role change the carries of wants in both ladders MUST be kept by want ID, those only in the new ladder MUST start by the formula of 4.4, those only in the old ladder MUST be dropped, and nothing MUST be drawn; an entry into an existing cohort MUST leave the carries unchanged. |
+| FR-DEM-041 | Each parameter of section 9 MUST have a default that passes validation, and a value outside its bound MUST be rejected with `ErrOutOfBounds` carrying its path, value and bound. A count over its bound (the wants, the tastes of a role, the two lists) MUST be rejected with `ErrTooMany`. |
+| FR-DEM-042 | On a role change the carries of wants in both ladders MUST be kept by want ID, those only in the new ladder MUST start by the formula of 4.4, those only in the old ladder MUST be dropped, and nothing MUST be drawn; an entry into an existing cohort MUST leave the carries unchanged. A weight change MUST leave them unchanged. |
 | FR-DEM-043 | The keys `modules.demand.want.<id>`, `modules.demand.taste.<role>.<want>` and `modules.demand.region_taste.<region>.<want>` MUST load the tables of 3.2, and the demand overlay of `spec-reference-chain.md` 4.4.6 MUST load without error and without an unexpected warning. |
 
 ### Non-functional
@@ -1167,10 +1191,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | Concern | Home |
 |---------|------|
-| `Want`, `WantItem`, `Taste`, `RegionTaste`, `DemandConfig`, the `Modules.Demand` pointer | root package, `config.go` (types) and `defaults.go`; bounds in `bounds.go` |
+| `Want`, `WantItem`, `Taste`, `RegionTaste`, `Demand`, the `Modules.Demand` pointer | root package, `config.go` (types) and `defaults.go`; bounds in `bounds.go` |
 | Validation, the sentinels `ErrUnknownWant`, `ErrWantItems`, `ErrWantDurable`, and the warnings | root package, `validate.go`, `errors.go` |
 | Pure rules: the ratio (4.2), the shares (4.2), the schedule (4.3), the carry and units (4.4), the ladder allocation (4.5), the want consumption amount (4.7) | `internal/household` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9); the same package as AGT's pure rules, because they share the budget |
-| The merge into the bid and the consumption phase | root package, `strategy.go` (`DefaultStrategy.Trade`) and `world.go` |
+| The module's state, `validateDemand`, the per-position methods (P3.6, P6.2), the filler of the want group of `AgentView` and the checker of the `TradePlan`, the items for the tradable set, the removal step, the checkpoint encoder and decoder, the term of the reference programme | root package, `demand.go` (`architecture.md` 2.10.1); split into `demand_plan.go` and `demand_state.go` only if the Lizard limits force it |
+| The module's hooks outside its file | the call sites of the fan-ins in `fanin.go`, guarded calls from the `DefaultStrategy` files (`strategy_default.go`, `strategy_work.go`, `strategy_view.go`) into methods defined in `demand.go`, the term in `viability.go`, `p36Aggregates` in `phase_trade.go`, the agent-lifecycle calls (`agentJoined`, `agentRoleChanged`) and the loader keys in `config/mapping.go`; these are the hooks of ADR 0010 |
 | The event `WantShortfall` | root package, `event.go` |
 | Reason constants (`choked`, `over_budget`, `no_budget`, `no_stock`) | root package, `event.go` (exported constants, `spec-observability.md` 4.2.3) |
 | The log key `want` (key string only) | `internal/logkeys` |

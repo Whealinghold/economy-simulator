@@ -434,7 +434,7 @@ the hash of a checkpoint. At construction the accounts are created in this order
 | 1 | The Boundary accounts of the built-in reasons that are faucets or sinks: `initial` (money), then for each commodity in ascending commodity index the seven goods reasons `initial`, `recipe_input`, `recipe_output`, `disposal`, `consumption`, `spoilage`, `wear`; `1 + 7 * C` accounts for `C` commodities, whatever modules are on | the order of `spec-ledger.md` 3.4.2, which is not the registry order of 7.2 (the order of `BoundaryFlow` rows is reason-major, OBS 4.4.1.2) | LED 3.4.1 to 3.4.3, FR-LED-052 |
 | 2 | The Boundary accounts of the reasons of the declared money flows | ascending flow ID (a flow's reason is its ID) | LED FR-LED-052; MON 4.5 |
 | 3 | The Boundary accounts of the six `outside_*` reasons, with the module on: the money reasons first, then the goods reasons for each commodity that has a line side, in commodity order | | EXT 4.2.4 |
-| 3a | The Boundary accounts of the other faucet and sink reasons of the modules that are on (`want_consumption`, `haul_use`, `transit_use`, `loss`); a module that is off has none | the order of the `Modules` pointers, and within a module as row 1 (money reasons first, then goods by commodity) | LED 3.4.2, 7.2.2 |
+| 3a | The Boundary accounts of the other faucet and sink reasons of the modules that are on (`want_consumption`, `haul_use`, `transit_use`, `loss`); a module that is off has none | the order of the `Modules` pointers, and within a module as row 1 (money reasons first, then goods by commodity) | LED 3.4.2, 7.2.2; N-226 confirmed by DEM: `want_consumption` is the first of them and its accounts are opened in the fourth group of the ledger constructor, after the built-in group and before the estates |
 | 4 | The estate account of each region | ascending `RegionID` | REG 3.6.1 |
 | 5 | The Outside account of each counterparty | ascending agent ID of the counterparty (5.3) | EXT 4.2.3 |
 | 5a | The Treasury account of each governed jurisdiction, with the polity module on | ascending `JurisdictionID` | POL 5.2.1 |
@@ -785,7 +785,7 @@ strategy sees depend on a module switch.
 | P3.4 | The estates' asks, per region ascending: one ask for each lot held, named, at the lot's current price | EST 2.7 | estate lots and prices; writes reservations, order lists | none | `OrderPlaced`, and `OrderRejected` for an ask the clearing refuses |
 | P3.4a | The treasuries' standing orders, with the fiscal module on, for each authority in ascending jurisdiction order: the purchases and the releases of its goods, each order admitted with its reservation or rejected | FIS 9 | the treasuries' balances and stocks, the published prices; writes reservations, order lists | none (a treasury's order has no outcome and takes no word, ruling C21) | `OrderPlaced` or `OrderRejected`, then `TreasuryOrdered` per authority |
 | P3.5 | The counterparties of the outside, ascending agent ID: for each line of its node in commodity order whose side is present: the wanted units, whether the edge is open, the quote, the offered units, the top-up from the boundary, the order | EXT 5.2 | line state, moment, edge status; writes the Outside account, the order lists, carries | none | `OrderPlaced`, `OrderRejected` |
-| P3.6 | The aggregate events of the phase: `RumoursServed` per reader region ascending, then `WantShortfall` per (region, role, want) ascending | INF 10.1; DEM 11 | the counts of P3.2 | none | those events |
+| P3.6 | The aggregate events of the phase, one call (`p36Aggregates`) that is a fixed sequence of guarded calls: `RumoursServed` per reader region ascending, then `WantShortfall` per (region, role, want) ascending (the demand module's call is the first member at Stage 2; the information module appends `RumoursServed` before it) | INF 10.1; DEM 11 | the counts of P3.2 | none | those events |
 | P3.6a | The room aggregate, with the storage module on, per region ascending then role, where any count is above zero | STO 14.1 | the counts of P1.3, P2.1, P2.5, P2.7, P3.2 and P7.1 (scratch) | none | `RoomLimited` |
 | P3.6b | The saving aggregate, with a role that has the saving block: per region ascending then role, where a triggering count is above zero | SAV 9, 14 | the counts of the saving steps inside P2.5, P3.2(b) and P8.6 (scratch) | none | `SavingPlanned` |
 | P3.6c | The toll aggregate, with the fiscal module on: the tolls charged at dispatch in P3.2(c) and P3.3, per flow and region, in the order of the flows | FIS 10.1 | the toll counts of the tick (scratch) | none | `FiscalFlowApplied` (kind `toll`) |
@@ -2384,10 +2384,8 @@ has no default or bound of its own.
     **Answered (SUB 5.5 item 6, FR-SUB-023):** a household whose own-use requests the
     ration cut entirely and which started nothing is counted in `Blocked` at P2.7, the
     flag stays, and its next `Work` is the next tick's; P2.8 reports the count.
-13. **The carrier of planned want units.** The demand module plans want units at P3.2
-    and consumes them at P6.2, and `Intent` and `TradePlan` have no field for them
-    (DEM 4.7, AGT 6). Recommendation: `Intent.WantUnits`, saved nowhere (scratch of
-    the tick). Owners: AGT and DEM, routed.
+13. **The carrier of planned want units.** *Answered.* The demand module plans want units
+    (the filler of the view) and commits them at P3.2 (the checker of the plan, once per agent after `Trade`), and consumes them at P6.2. `Intent.WantUnits` is the part of a bid that is a want (the sum over the wants for its commodity, scratch of the tick, saved nowhere) and `TradePlan.WantFunded` is one `WantFunding` (`Want`, `Units`) for each want the strategy funded (DEM 4.6, 11.1; AGT 6.3). Both are zero with the module off and for a strategy that ignores wants.
 14. **`Role.InKind` has no mover and no position (WEL 6.1).** Not in version 1: income
     paid as upkeep goods would be a goods faucet and needs a ledger reason (N-021,
     testing.md 6.3) and a position. Owners: WEL and MON, routed.

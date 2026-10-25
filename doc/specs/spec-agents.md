@@ -667,12 +667,20 @@ type Intent struct {
 	Reserve   Quantity // units of this commodity set aside for this tick's upkeep (see Stock in OutcomeView)
 	UnitCost  Price    // cost anchor passed to the belief update; 0 means unknown
 	Purpose   Purpose
+	WantUnits Quantity // the part of this bid that is a want: the sum over the wants of the ladder of the units of this commodity the strategy funded (spec-demand.md 4.6); 0 with the demand module off or for a strategy that ignores wants. A part of Quantity, never in addition to it
 }
 
 // Discard is a quantity the strategy wants disposed of.
 type Discard struct {
 	Commodity CommodityID
 	Quantity  Quantity
+}
+
+// WantFunding is the units of one want a strategy placed in its bids this tick
+// (spec-demand.md 4.6): the carrier of the Funded count of WantShortfall.
+type WantFunding struct {
+	Want  WantID
+	Units Quantity
 }
 
 // TradePlan collects what Trade returns. The world gives the strategy a plan
@@ -689,6 +697,7 @@ type TradePlan struct {
 	Cover     []LaneCover       // spec-insurance.md 5.1; the default appends them only for a role with an Insure block
 	Store     []StoreCover      // spec-insurance.md 5.1; at most one
 	Offer     []CoverOffer      // spec-insurance.md 5.1; at most one, for a role with an Underwrite block (beside the merchants' Offers: another type)
+	WantFunded []WantFunding     // spec-demand.md 4.6, 11.1; one row per want the strategy funded, in ladder order; empty with the module off or for a strategy that ignores wants (its households place no want bid and report Funded 0)
 }
 
 // ShipmentRequest and Line are defined by spec-transport.md 5.3.1:
@@ -757,6 +766,7 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Room (only with the storage module on, and only for a limited agent) | `Limited`, `Room`, `Load`, `Pledge`, `Free` (pairs of mass and bulk), the agent's `Stores`, and `Mass` and `Bulk` per commodity of the tradable set (`spec-storage.md` 6.1.1). No other agent's room is visible |
 | Saving (only for an agent whose role has a saver block, in the `Work` and the `Trade` view) | `Block`, `SafetyTicks`, `HurdleSpreadBP`, `CommitBandBP`, `Drawdown`, `Facilities`, `Classes` (`spec-saving-and-investment.md` 5.2); the per-recipe group carries `Needs`, `Builds`, `Repairs` and `Standing` |
 | Facilities (only with the infrastructure module on) | in the `Work` view, the agent's own facilities in its region, ascending ID, at most `MaxFacilitiesPerAgent` (`FacilityView`, `spec-infrastructure.md` 9.1); the `Trade` view carries them only through the saving group above |
+| Wants (only with the demand module on, and only for an agent whose role has a ladder) | `Wants []WantView`: for each want of the ladder in rank order, its planned units this tick (the carry advanced in the checker, not here), whether it is choked, and the planned units split among its items by the shares of `spec-demand.md` 4.2 and 4.5 (`WantView`, `spec-demand.md` 4.6). The filler commits nothing: a view built at any other time advances no carry |
 | Tunables | the values of section 12, the role's `MinWorkShare` (read here, not in section 12), and the fifteen belief parameters that `beliefs.Params` holds, of `spec-beliefs.md` 11, as `beliefs.Params` names them (the `Belief` prefix of the first eleven is dropped: `Step`, `AdjustProb`, `Significance`, `EvidenceShare`, `StockLow`, `StockHigh`, `MaxAge`, `WidthInit`, `WidthMin`, `WidthMax`, `WidthStep`, `CostFloor`, `CostCeiling`, `RefBandLow`, `RefBandHigh`): plain data, filled by the world from the beliefs parameters and converted inline at the call; not `MaxPrice` and not `PriceWindow`. The default `Revise` reads them from the view because a strategy has no handle to the world (FR-AGT-050, section 7): the alternatives fail, for the world to call `beliefs.Update` itself would take the update out of the strategy's hands, and fields on `DefaultStrategy` would put a result-affecting value where the configuration hash cannot see it |
 | Mailbox | the pending `Directive`, if any (section 10) |
 | Transport (only with the transport module on) | `Inbound` (per commodity on the way to the agent: the total and the earliest arrival tick, fixed at the start of phase 3) and `Routes` (per other region and mode: whether a route exists, the travel time, and for a hired mode the haul units per carrying unit) (`spec-transport.md` 9.1) and `Outbound` (the mirror of `Inbound`: per destination region and commodity with units on the way, the total quantity of the shipments the agent is the shipper of and the earliest arrival, fixed at the start of phase 3; `spec-merchants.md` 4.1). An agent that is away or on a migration journey is never passed a view |
@@ -1254,7 +1264,7 @@ Job_c    = 0                           if r* is none or StartsIn > 1
 UseTgt_c = U_c * CoverTicks + Job_c    units to hold at the start of next tick
 Make_c   = k* * q_o * E / (10 000 * Duration)   if c is a non-discard output of r*
 OutTgt_c = ceil(Make_c * OutputCoverTicks)   one ceiling over the whole product, Make_c the unrounded fraction
-Want_c   = 0 with the demand module off; with it on, the want units funded for c (spec-demand.md 4.5, 4.6)
+Want_c   = 0 with the demand module off; with it on, the PLANNED want units of c, a function of the view alone (spec-demand.md 4.4, 4.6)
 Target_c = UseTgt_c + Want_c   if either is above 0,   else OutTgt_c      (0 if both are 0)
 Keep_c   = Reserve + UseTgt_c + Want_c   units the agent wants to hold now
 ```
@@ -1264,10 +1274,7 @@ Duration))`, with `Make_c` left unrounded: it is the same number as the `OutputT
 `w = k*`), so the target and the halt cannot disagree for one commodity. The tool term (`+ k*` for a
 tool of `r*`) is part of `Job_c`.
 
-`Want_c` is known only after tiers 1 to 3 are allocated, because the wants are paid from what
-the cap leaves (7.4.3); the tiers 1 to 3 do not depend on it, so the order is: 7.3 without
-`Want_c`, the tiers, the demand module's allocation, then `Keep_c`, `Target_c` and the gap are
-raised by `Want_c` for the bid. An agent without the module has `Want_c` = 0 throughout. For an employer
+`Want_c` is the planned units: it is a function of the view (the carry, the schedule and the shares), known before any money is allocated, so `Keep_c`, `Target_c`, the gap and the number of random words depend on the view alone (7.3.5). What the module funds, from the cap that tier 3 leaves, is a part of that planned amount (7.4.3), and the funded units are what the bid carries as `T4`. The tiers 1 to 3 do not depend on `Want_c`, and tier 3 is computed on the keep without it. An agent without the module has `Want_c` = 0 throughout. For an employer
 (`spec-employment.md` 9.2.1) `Job_c` also counts the inputs and tools of its planned hires:
 `Job_c = InputJobs * (k* * q_c(r*) + H* * q_c(r_h))` for an input of either recipe (plus `U_c` if `c` is
 also an upkeep commodity, as above) and `k* + H*` for a tool, `StartsIn` being 1; the rest of 7.3 to 7.5
@@ -1316,9 +1323,8 @@ T3_c = Gap_c - T1_c - T2_c                             buffer: the cover periods
 ```
 
 The three add to the gap by construction (worked in 16.2). With the demand module on, the gap is first the gap of 7.3.3 without `Want_c`, and the bid carries a fourth part
-`T4_c = Want_c`, the units the module funded in rank order from the cap that tier 3 left
-(`spec-demand.md` 4.5): the total gap is `T1 + T2 + T3 + T4` and the three parts above are
-unchanged.
+`T4_c`, the units the module funded in rank order from the cap that tier 3 left
+(`spec-demand.md` 4.5), at most the planned `Want_c`: the gap raised by `Want_c` is split `T1 + T2 + T3 + T4` with `T3` the share of the gap without the wants and `T4_c` at most `Gap_c - T1_c - T2_c - T3_c`, and the three parts above are unchanged. The unfunded part of `Want_c` stays in `Keep_c` and `Target_c` and is not bought this tick.
 
 7.3.5. **Asks.** The agent offers all of the surplus: it holds no unsold goods back
 to wait for a better price. The stock rule of `spec-beliefs.md` 5.5 already lets the
@@ -1335,7 +1341,7 @@ non-discard output of one of its recipes): a holder's tool is bound to it
 
 The **candidates** are decided by the view alone, never by affordability, so that each takes
 exactly one word of the stream (7.5.3) whatever the money. A *bid candidate* is a commodity with
-`Gap_c > 0`. An *ask candidate* is a commodity with `Gap_c == 0` and (`Surplus_c > 0` or
+`Gap_c > 0`. With the demand module on, `Gap_c` includes the planned `Want_c` (7.3), not the funded part, so a commodity whose only gap is a planned want is a candidate and takes its word whether or not the money funds it. An *ask candidate* is a commodity with `Gap_c == 0` and (`Surplus_c > 0` or
 `Expiring_c - Reserve > 0`); "no bid is placed" above means `Gap_c == 0`, that is, not a bid
 candidate. The ask is `max(Surplus_c, max(0, Expiring_c - Reserve))`: the expiring units are part of
 the stock, so the two are not added. A bid candidate whose limit cannot buy one unit spends its word
@@ -2434,7 +2440,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-073 | The cost anchor passed to the view and to the intents MUST be computed by the world once per tick before `Work` is called, and the default strategy MUST pass it through unchanged and MUST NOT compute a cost. (new) |
 | FR-AGT-074 | A job request for a recipe not on the role's list or its effective own-use list MUST be refused before any other check of production, and an intent for a commodity unknown to the configuration MUST be rejected as `unknown_commodity` and not as `not_tradable`. (new, FR-PRO-048, `spec-clearing.md` 3.2) |
 | FR-AGT-075 | In each consumption phase the world MUST set `Privation` to `Privation + 1` if `Unfed` is above 0 and to `max(0, Privation - 1)` otherwise, after setting `Hunger`, MUST do so in the world and not in a strategy, MUST leave it unchanged by a weight change or a role change, and `Hunger` MUST NOT exceed `Privation`. (new, `spec-spawner.md` 5.1) |
-| FR-AGT-076 | With the demand module on, the want units funded by `spec-demand.md` 4.5 MUST join the agent's bid for the commodity as a fourth part `T4`, MUST add to `Keep` and `Target`, MUST be funded only from the cap that tier 3 leaves, and with the module off the bid MUST be exactly as without it. (new, `spec-demand.md` FR-DEM-001, 016, 019) |
+| FR-AGT-076 | With the demand module on, the want units funded by `spec-demand.md` 4.5 MUST join the agent's bid for the commodity as a fourth part `T4` (reported in `Intent.WantUnits` and `TradePlan.WantFunded`), the PLANNED units MUST be what adds to `Keep` and `Target` (so the candidates and the draws depend on the view alone), MUST be funded only from the cap that tier 3 leaves, and with the module off the bid MUST be exactly as without it. (new, `spec-demand.md` FR-DEM-001, 016, 019) |
 | FR-AGT-077 | `AgentBankrupted` MUST be the only event that removes the agent (the others of the removal accompany it), carrying `Weight` at removal, `Cause` (`insolvent`, `starved`, `consumer` or `population`), the money and the goods listed passed to the estate; a weight change that leaves households and a role change MUST NOT emit it. (new, `spec-spawner.md` 13.1.1) |
 | FR-AGT-078 | An agent MUST carry a `DeathCarry` in `[0, 10 000 * TicksPerYear)`, started at `offset(ID)` of `spec-population.md` 3.8.3 without a draw, unchanged by a weight or role change, saved in the checkpoint in agent ID order. (new, `spec-population.md` FR-POP-010, 024, 035) |
 | FR-AGT-079 | The world MUST execute a `TradePlan` in the order discards, shipments (in plan order), then intents, MUST NOT call `Work` or `Trade` for an agent that is away or on a migration journey, and MUST pass no view to it; with the transport module off a shipment request MUST be refused `unknown_mode`. The default strategy MUST append no shipment. (new, `spec-transport.md` 5.3, 5.4; `spec-migration.md` 8.3) |

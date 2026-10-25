@@ -307,6 +307,8 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `AnchorHold` | WorldParams | `spec-production.md` section 9.3 |
 | `Closed` | Role | `spec-spawner.md` section 11 |
 | `Wants` | Demand | `spec-demand.md` section 9 |
+| `Tastes` | Demand | `spec-demand.md` section 9 |
+| `RegionTastes` | Demand | `spec-demand.md` section 9 |
 | `Items` | Want | `spec-demand.md` section 9 |
 | `Quantity` | Want | `spec-demand.md` section 9 |
 | `Period` | Want | `spec-demand.md` section 9 |

@@ -690,4 +690,42 @@
 //   - WorldRestored: the event delivered first to an observer given to a restore,
 //     with the configuration hash, the format, whether the run was reseeded, the
 //     names table and the snapshot at the restored boundary.
+//   - Want: a need slot beyond upkeep, as data: alternatives (items), a quantity per
+//     period, a rank, a schedule and a substitution exponent (spec-demand.md 3.2).
+//     Not a commodity and not a recipe; the type is Want, an entry of Demand.
+//   - Demand (module): the optional module that gives roles wants beyond upkeep; its
+//     configuration is the pointer Modules.Demand of type Demand, with the lists Wants,
+//     Tastes and RegionTastes (spec-demand.md 3.1).
+//   - WantItem: one alternative commodity that can satisfy a want, with a taste
+//     weight (spec-demand.md 3.2).
+//   - Ladder: the wants of a role in the order they are funded, by rank and then by
+//     ID (spec-demand.md 3.2.2). Qualified from the failure ladder, which is the
+//     spawner's.
+//   - Rank: the position of a want on the ladder; a lower rank is funded first.
+//   - Taste: the row that puts a want in a role's ladder, with a scale in basis
+//     points; a scale of 0 removes the want (spec-demand.md 3.2).
+//   - RegionTaste: the row that scales a want in one region (spec-demand.md 3.2).
+//   - WantID: the typed ID of a want, its index in the canonical order of wants by
+//     ID (spec-demand.md 3.2.2a).
+//   - Demand schedule: the piecewise-linear function of the price ratio that gives a
+//     want its units, falling to 0 at the choke price and rising to the ceiling
+//     (spec-demand.md 4.3).
+//   - Choke price: the price ratio at and above which the schedule of a want is 0 and
+//     the household skips it (spec-demand.md 4.3).
+//   - Ceiling (of a schedule): the most the schedule of a want can reach, in basis
+//     points of its quantity (spec-demand.md 3.2).
+//   - Substitution share: the share of a want's units that goes to one alternative,
+//     from the price ratios raised to the substitution exponent (spec-demand.md 4.2).
+//   - Want carry: the fraction of a unit, below 10 000 ten-thousandths, that a household
+//     carries from tick to tick so that its whole units add up exactly
+//     (spec-demand.md 4.4).
+//   - Discretionary budget: the money a household may spend on wants in a tick, the
+//     part of the spend cap that the buffers leave (spec-demand.md 4.5).
+//   - Supernumerary excess: the money a household holds above its reserve, of which
+//     the discretionary budget is a concave function (spec-agents.md 7.4.4).
+//   - WantView: the part of the agent view that reports, for each want of the ladder,
+//     its planned units and whether it is choked (spec-demand.md 4.6).
+//   - WantShortfall: the event emitted once per region, role and want per tick in
+//     which a want was choked or unfunded for at least one household
+//     (spec-demand.md 11.1).
 package economysim

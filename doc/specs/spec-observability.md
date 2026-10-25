@@ -184,12 +184,17 @@ appears:
 // Names maps each typed ID of a world to the string ID of its configuration.
 // The slice of a kind is indexed by that kind's ID type. Plain data: a deep copy.
 type Names struct {
-	Regions, Commodities, Roles, Recipes, Resources, Modes, Wants, Seasons []string
+	Regions, Commodities, Roles, Recipes, Seasons []string
+	// Appended after Seasons in build order, not in the order of this sketch:
+	// Wants (demand), Resources (resources) and Modes (transport).
+	Wants, Resources, Modes []string
 	// Kinds of the later-stage modules; each is empty with its module off.
 	StoreClasses, SettlementClasses, FacilityClasses, TechFields []string
 	Jurisdictions, Actors, Bodies, Rights, Controls              []string
 }
 ```
+
+The fields of `Names` are in build order: the order in which the modules are built (`architecture.md` 2.10.5), not the order of this sketch, so that adding a module appends a field and moves none. `Wants`, `Resources` and `Modes` are appended after `Seasons`.
 
 The slice of a later module's kind is named by the plural of the ID type, one field
 for each kind (the settlement classes are not the commodity classes of IND, so the
@@ -711,7 +716,9 @@ side, `spec-external-sector.md` 8.1), not the node; the node is in `OutsideTrade
 then the money flows in ID order, then the six `outside_*` in the order money
 reasons first and then goods reasons (a definition of its own: it is not the
 creation order of the accounts, which for the `outside_*` goods reasons is
-commodity-major, `spec-external-sector.md` 4.2.4), then money before goods, then
+commodity-major, `spec-external-sector.md` 4.2.4), then the other reasons of the modules that
+are on, in the order of the table of `spec-ledger.md` 7.2 among themselves (`want_consumption` is one: it comes
+after the `outside_*` rows, not among the built-in reasons), then money before goods, then
 ascending `Commodity`. (`spec-money-supply.md` 13.4 and FR-MON-042 say "sorted by
 reason"; the order here is the same list.) No map is iterated.
 
@@ -1066,7 +1073,7 @@ per agent, **F** a copy of an in-flight set. **Src** is the spec that owns the m
 | `ConfigHash` | `[32]byte` | the configuration hash | CFG 8 | K |
 | `Moment` | `Moment` | `Calendar.At(Tick)`, a pure function of the tick (N-031) | CAL 4 | D |
 | `Names` | `Names` | the names table of 3.2.4 | OBS | D |
-| `Modules` | `[]string` | the modules that are on, in the order of `spec-config.md` 3.2 | CFG | D |
+| `Modules` | `[]string` | the modules that are on, in build order: the order in which the modules are appended to the list (`modulesOn`), as the `Names` slices are (3.2.4), not the order of the `Modules` rows of `spec-config.md` 3.1 and 3.2. Sorting by hash id is rejected: it would change the line of every module a later change appends | CFG | D |
 | `Agents` | `int64` | live agents; pseudo-agents excluded | SCL 9 | K |
 | `Households` | `int64` | the sum of the weights of the live agents | SCL 9 | K |
 | `Money` | `Money` | money in non-boundary accounts, estates, escrow and treasuries included (the treasuries in `MoneyTreasury`, 5.3.2), counterparties excluded (they hold nothing at a boundary) | LED 9, POL 10.5 | K |

@@ -151,7 +151,7 @@ proportion to their weights, which is the substitution share at equal price rati
 (`spec-demand.md` 4.2). `W` is **not** multiplied by `lambda`: the basket is the
 subsistence part and the wants are final demand at their reference level, so `lambda*`
 says how many baskets the realm can make *after* meeting the wants. With the module off
-`W = 0` and nothing changes (FR-VIA-055). The census and the warm-start table of a world
+`W = 0` and nothing changes (FR-VIA-055). The fixed term is an exact fraction (`Model.Fixed` is a slice of `Ratio`, one per goods row; an integer cannot hold it), and the goods row is written  -n x + D lambda <= -W, so a positive term gives a negative right-hand side. The solver then runs a **first phase** (an artificial variable for each such row, Bland's rule in both phases, artificials that end in the basis at 0 pivoted out); the certificate of FR-VIA-014 is checked against the original programme. A first phase that ends above 0 means the wants cannot be met at any `lambda >= 0`: the solver returns `steady.ErrInfeasible`, and the check treats it as a case of `wants_exceed_labour` with no `SurplusWantsBP`, the census falling back to the upkeep-only programme (FR-VIA-057). With every term 0 no right-hand side is negative, the first phase does not run and the result, pivots included, is that of the programme without a term. The census and the warm-start table of a world
 with wants come from this programme; the error rule `labour_short` (V3) does **not**: it
 keeps the upkeep-only programme, because a want is not subsistence and a pack must not be
 rejected for a luxury it cannot afford (FR-VIA-056). The diagnostic of 10.2,
@@ -1282,7 +1282,7 @@ value, bound and count of each rule:
 `CapacityTight` (the activities whose capacity row is tight), `FacilityDecay` (each facility class with `Decay` or `WearPerUse` above 0, informational: it is not in the programme, 4.2.2), `Headroom` and `Rent` (per endowment and region: the sustainable draw over the draw at the reference programme at `lambda` 1, and the dual of its row; `spec-resources.md` 11.3), `endowment_runway` (a finite stock's years at the optimum), `Advantage` (9.2),
 `CapShortened` (stock cover cut to shelf life, 8.4.2), `NominalSeed` (the regions whose
 table came from the nominal programme, 5.3.4), `SurplusWantsBP` (`lambda*` of the
-programme with the wants, absent when the module is off, 3.2), `RegionSurplusBP` (per region, the autarky `SurplusBP`, and the pooled one for a region that trades: the figures that `spec-subsistence.md` 4.2 compares with `FloorBP`; absent when a part was not run), `WageBelowTarget` (the
+programme with the wants, absent when the module is off and when that programme is infeasible, 3.2), `RegionSurplusBP` (per region, the autarky `SurplusBP`, and the pooled one for a region that trades: the figures that `spec-subsistence.md` 4.2 compares with `FloorBP`; absent when a part was not run), `WageBelowTarget` (the
 role-economics check of `spec-welfare-and-wages.md` 7: value added per working tick
 against `TargetRatio * B_r * TicksPerYear / ExpectedWorkTicks`). It is a **report and
 never an error** (WEL 7.1, N-054): with the identity of 4.7 it fails for every role in a
@@ -1599,7 +1599,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-054 | The seed-band check of FR-VIA-027 MUST use the solver's own wage, so that the check and the starting wage agree, and for the rescaled example chains the seed over the full unit cost MUST be within 1% of 1 at the integer prices (the prototype gives 0.991 to 1.000). |
 | FR-VIA-055 | With the demand module off the goods rows of the reference programme MUST be unchanged, and with it on they MUST carry the fixed term `W(c, P)` of 3.2, not multiplied by `lambda`, computed as an exact fraction from the groups' households, tastes, region tastes, quantities, periods and item weights. |
 | FR-VIA-056 | The error rule `labour_short` MUST use the programme without the wants, and the programme with the wants MUST be used for the census, the seed table and `SurplusWantsBP`. |
-| FR-VIA-057 | `Validate` MUST warn, and MUST NOT fail, with `wants_exceed_labour` when the demand module is on and the programme with the wants has `lambda* < 1` while the upkeep-only programme has `lambda* >= 1`, and with `raw_without_source` for a commodity marked `Raw` that nothing real supplies. |
+| FR-VIA-057 | `Validate` MUST warn, and MUST NOT fail, with `wants_exceed_labour` when the demand module is on and the programme with the wants has `lambda* < 1` while the upkeep-only programme has `lambda* >= 1`, or when the programme with the wants is infeasible (3.2) while the upkeep-only one has `lambda* >= 1`, and with `raw_without_source` for a commodity marked `Raw` that nothing real supplies. |
 | FR-VIA-058 | For a region whose labour dual at full labour is 0 while a capacity row has a positive dual, the solver MUST build its seeds and wage from the nominal programme, MUST list the region in `NominalSeed`, and MUST leave a region whose nominal wage is also 0 unpriced (`UnpricedWages`). |
 | FR-VIA-059 | A commodity marked `Raw` MUST count as sourced in V1 as in the structural check of `spec-config.md` 7.5, so the two checks MUST agree on every configuration. |
 
