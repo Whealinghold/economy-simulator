@@ -719,6 +719,16 @@ type lookup struct {
 	recipe    map[string]*Recipe
 	role      map[string]*Role
 	region    map[string]*Region
+	override  map[[2]string]Price // reference-price overrides by (region, commodity)
+}
+
+// price returns the effective reference price of a declared commodity in a
+// region (spec-regions.md 5.2.2); cm must not be nil.
+func (l lookup) price(region string, cm *Commodity) Price {
+	if p, ok := l.override[[2]string{region, cm.ID}]; ok {
+		return p
+	}
+	return cm.ReferencePrice
 }
 
 // newLookup indexes c. The result is valid while c's slices are unchanged.
@@ -728,6 +738,7 @@ func newLookup(c *Config) lookup {
 		recipe:    make(map[string]*Recipe, len(c.Recipes)),
 		role:      make(map[string]*Role, len(c.Roles)),
 		region:    make(map[string]*Region, len(c.Regions)),
+		override:  overrides(c.RegionPrices),
 	}
 	for i := range c.Commodities {
 		if e := &c.Commodities[i]; l.commodity[e.ID] == nil {
@@ -1403,8 +1414,8 @@ func (v *validator) priceFloor(floor int64) {
 
 // overridesBelow reports an override of a tradable commodity below the floor at
 // its row, and returns the number of regions that override each commodity, a
-// repeated row counted once (a
-// count only; no result depends on the iteration order of the map).
+// repeated row counted once (a count only; no result depends on the iteration
+// order of the map).
 func (v *validator) overridesBelow(floor int64, tradable map[string]bool) map[string]int {
 	overridden := map[string]int{}
 	seen := make(map[[2]string]bool, len(v.c.RegionPrices))
@@ -2137,7 +2148,7 @@ func roleWarnings(c *Config, lk lookup, ro *Role, gs []*Group, base []string, ad
 		if rg == nil {
 			continue
 		}
-		cost, ok := listCost(lk, effectiveUpkeep(c, ro), rg.ExtraUpkeep)
+		cost, ok := listCost(lk, g.Region, effectiveUpkeep(c, ro), rg.ExtraUpkeep)
 		if need, nok := checked.Mul(cost, w.ReserveTicks); ok && nok && int64(ro.StartMoney) < need {
 			add("reserve_exceeds_money", "roles", ro.ID, "start_money")
 			break
@@ -2145,16 +2156,29 @@ func roleWarnings(c *Config, lk lookup, ro *Role, gs []*Group, base []string, ad
 	}
 
 	// tool_unaffordable: StartMoney cannot buy a required tool at the reference
-	// price, so the role could never be entered (spec-skill-barriers.md 2.3).
+	// price, so the role could never be entered (spec-skill-barriers.md 2.3). The
+	// price is the effective one in each region the role has a group in (the
+	// commodity's own when it has none), and one dear region is enough, as for
+	// reserve_exceeds_money.
 	unaffordable := false
+	regions := []string{""} // "" has no override: the commodity's price
+	if len(gs) > 0 {
+		regions = regions[:0]
+		for _, g := range gs {
+			regions = append(regions, g.Region)
+		}
+	}
 	for _, id := range ro.Recipes {
 		rc := lk.recipe[id]
 		if rc == nil {
 			continue
 		}
 		for _, t := range rc.Requires {
-			if cm := lk.commodity[t.Commodity]; cm != nil && int64(ro.StartMoney) < int64(cm.ReferencePrice) {
-				unaffordable = true
+			cm := lk.commodity[t.Commodity]
+			for _, r := range regions {
+				if cm != nil && int64(ro.StartMoney) < int64(lk.price(r, cm)) {
+					unaffordable = true
+				}
 			}
 		}
 	}
@@ -2163,17 +2187,17 @@ func roleWarnings(c *Config, lk lookup, ro *Role, gs []*Group, base []string, ad
 	}
 }
 
-// listCost is the cost of the items of two lists at the commodities' reference
-// prices, in checked arithmetic. ok is false when a commodity is not declared or
-// the sum does not fit.
-func listCost(lk lookup, a, b []Item) (cost int64, ok bool) {
+// listCost is the cost of the items of two lists at the commodities' effective
+// reference prices in a region, in checked arithmetic. ok is false when a
+// commodity is not declared or the sum does not fit.
+func listCost(lk lookup, region string, a, b []Item) (cost int64, ok bool) {
 	for _, list := range [][]Item{a, b} {
 		for _, it := range list {
 			cm := lk.commodity[it.Commodity]
 			if cm == nil {
 				return 0, false
 			}
-			line, lok := checked.Mul(int64(it.Quantity), int64(cm.ReferencePrice))
+			line, lok := checked.Mul(int64(it.Quantity), int64(lk.price(region, cm)))
 			sum, sok := checked.Add(cost, line)
 			if !lok || !sok {
 				return 0, false

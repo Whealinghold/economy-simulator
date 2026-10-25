@@ -328,9 +328,9 @@ func (e *estates) heldLots(l *ledger.Ledger, r RegionID) []ledger.Lot {
 
 // asks appends to dst one named-lot ask per lot the estate of region r holds,
 // in key order, at the lot's listed price, for all its units (spec-estates.md
-// 2.7.3, D103). A held lot with no listing gets one at the first price. The
+// 2.7.3, D103), refs being the world's table of effective reference prices. A held lot with no listing gets one at the first price. The
 // marks of the last tick are cleared. It allocates only when dst has no room.
-func (e *estates) asks(l *ledger.Ledger, cfg *Config, r RegionID, dst []Order) ([]Order, error) {
+func (e *estates) asks(l *ledger.Ledger, cfg *Config, refs []Price, r RegionID, dst []Order) ([]Order, error) {
 	floor, ok := resolutionFloor(cfg.World)
 	if !ok {
 		invariant("the belief step is outside its bound")
@@ -338,7 +338,7 @@ func (e *estates) asks(l *ledger.Ledger, cfg *Config, r RegionID, dst []Order) (
 	lots := e.heldLots(l, r)
 	first := func(lt ledger.Lot) Price {
 		c := &cfg.Commodities[lt.Commodity]
-		p, ok := firstPrice(cfg.refPrice(r, CommodityID(lt.Commodity)), c.Durability, lt.Durability, floor)
+		p, ok := firstPrice(refs[int(r)*len(cfg.Commodities)+lt.Commodity], c.Durability, lt.Durability, floor)
 		if !ok {
 			invariant("the first price of an estate lot overflows")
 		}

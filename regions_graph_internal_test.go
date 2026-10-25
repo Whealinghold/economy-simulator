@@ -102,7 +102,7 @@ func TestReferencePrice_EstateFirstPrice(t *testing.T) {
 		f.give(t, r, lstTool, 3, 2)
 	}
 	prices := func(r RegionID) map[int]Price {
-		orders, err := f.e.asks(f.l, f.cfg, r, nil)
+		orders, err := f.e.asks(f.l, f.cfg, resolveRefPrices(f.cfg), r, nil)
 		if err != nil {
 			t.Fatalf("asks(region %d) error = %v, want nil", r, err)
 		}

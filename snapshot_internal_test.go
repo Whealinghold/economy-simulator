@@ -123,7 +123,7 @@ func TestSnapshot_EstateAtFloorCountsUnitsListedAtTheResolutionFloor(t *testing.
 	if held, got := at(); held < 1 || got != 0 {
 		t.Fatalf("before listing: HeldByEstate %d, EstateAtFloor %d, want held above 0 and 0", held, got)
 	}
-	if _, err := w.estates.asks(w.ledger, &w.cfg, 0, nil); err != nil {
+	if _, err := w.estates.asks(w.ledger, &w.cfg, w.refs, 0, nil); err != nil {
 		t.Fatalf("asks() error = %v, want nil", err)
 	}
 	if held, got := at(); held < 1 || got != 0 {
@@ -329,7 +329,7 @@ func TestSnapshot_JobsPendingEstateAndMoneyByRegion(t *testing.T) {
 	if _, _, err := w.estates.receive(w.ledger, w.agents[3].account, 0); err != nil {
 		t.Fatalf("receive() error = %v, want nil", err)
 	}
-	if _, err := w.estates.asks(w.ledger, &w.cfg, 0, nil); err != nil {
+	if _, err := w.estates.asks(w.ledger, &w.cfg, w.refs, 0, nil); err != nil {
 		t.Fatalf("asks() error = %v, want nil", err)
 	}
 	floor, _ := resolutionFloor(w.cfg.World)

@@ -317,10 +317,12 @@ type Graph struct {
 // in. It runs no other rule (the fields of a region, the commodities), so it
 // accepts a configuration that Validate would refuse for one of those.
 func NewGraph(cfg Config) (Graph, error) {
-	c := cfg.canonical()
-	if err := graphRulesError(c); err != nil {
+	// The rules read the lists as given, so a path indexes the caller's list as it
+	// does in Validate.
+	if err := graphRulesError(cfg); err != nil {
 		return Graph{}, err
 	}
+	c := cfg.canonical()
 	return newGraph(&c, nil)
 }
 

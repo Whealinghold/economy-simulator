@@ -411,3 +411,80 @@ func FuzzValidateGraph(f *testing.F) {
 		}
 	})
 }
+
+// TestWarnings_ToolUnaffordableReadsTheRegionsPrice verifies that tool_unaffordable
+// compares StartMoney with the effective price in the regions the role has a
+// group in (spec-regions.md 5.2.2): a dear override raises it where the
+// commodity's own price would not, and a cheap one silences it.
+//
+// The cook's tool is tool_b at 17 105 and its StartMoney is set to 17 105, which
+// buys it at the commodity's price.
+//
+// Requirement: FR-REG-036
+func TestWarnings_ToolUnaffordableReadsTheRegionsPrice(t *testing.T) {
+	t.Parallel()
+	fires := func(c economysim.Config) bool {
+		for _, w := range c.Warnings() {
+			if w.Rule == "tool_unaffordable" && slices.Equal(w.Path, []string{"roles", "cook", "start_money"}) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, tt := range []struct {
+		name  string
+		price economysim.Price
+		want  bool
+	}{
+		{"no override", 0, false},
+		{"dear override in the group's region", 17_106, true},
+		{"cheap override in the group's region", 100, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := referenceConfig()
+			for i := range c.Roles {
+				if c.Roles[i].ID == "cook" {
+					c.Roles[i].StartMoney = 17_105
+				}
+			}
+			if tt.price != 0 {
+				c.RegionPrices = []economysim.RegionPrice{{Region: "north", Commodity: "tool_b", Price: tt.price}}
+			}
+			if got := fires(c); got != tt.want {
+				t.Errorf("tool_unaffordable fires = %v, want %v (tool_b override %d)", got, tt.want, tt.price)
+			}
+		})
+	}
+}
+
+// TestNewGraph_ErrorPathIndexesTheListAsGiven verifies that NewGraph reports a
+// row by its index in the list as given, as Validate does, not by its place in
+// the canonical order.
+//
+// Guard: the edges are given as b->a, a->a; sorted, the self edge is first. A
+// NewGraph that read the canonical copy would say edges[0] where Validate says
+// edges[1].
+//
+// Requirement: FR-REG-001, FR-REG-009
+func TestNewGraph_ErrorPathIndexesTheListAsGiven(t *testing.T) {
+	t.Parallel()
+	c := withRegions(referenceConfig(), "south")
+	c.Edges = []economysim.Edge{edgeOf("south", "north", 5), edgeOf("north", "north", 5)}
+	_, err := economysim.NewGraph(c)
+	var ve *economysim.ValidationError
+	if !errors.Is(err, economysim.ErrSelfEdge) || !errors.As(err, &ve) {
+		t.Fatalf("NewGraph(self edge second) error = %v, want ErrSelfEdge", err)
+	}
+	if want := []string{"edges[1]", "to"}; !slices.Equal(ve.Path, want) {
+		t.Errorf("NewGraph(self edge second) path = %v, want %v", ve.Path, want)
+	}
+	vs, _ := violations(c.Validate())
+	found := false
+	for _, v := range vs {
+		found = found || slices.Equal(v.Path, []string{"edges[1]", "to"})
+	}
+	if !found {
+		t.Errorf("Validate paths = %v, want one at edges[1].to as NewGraph reports", vs)
+	}
+}
