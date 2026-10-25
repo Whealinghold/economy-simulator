@@ -380,6 +380,7 @@ func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 	}
 	a.job.reweigh(to)
 	a.weight = to
+	a.unfed = min(a.unfed, to) // the last count stays within the weight until the next consumption phase
 	w.live.households -= d.Households
 	w.ex.removed[a.role] = satAdd(w.ex.removed[a.role], d.Households)
 	w.tally.addExecuted(g, 0, 0, d.Households, 0, 0)

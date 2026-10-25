@@ -40,3 +40,11 @@ unit = "bp"
 # M05 (used by S19): the most share of money in the pool and escrow.
 [m05.pool_share_bp]
 unit = "bp"
+# S10: the largest gap of a commodity's time-averaged price at scales 4 and 10 from
+# its value at scale 1 (the placeholder is 1 000, spec-scale.md 7.2).
+[s10.tolerance_bp]
+unit = "bp"
+# S10: the least time-averaged dispersion of belief centres of a market (the
+# placeholder is 100, spec-scale.md 7.2).
+[s10.dispersion_min_bp]
+unit = "bp"

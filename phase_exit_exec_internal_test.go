@@ -272,6 +272,36 @@ func TestExecute_WorkedReductionFloorsWhatTheAgentKeeps(t *testing.T) {
 	auditOK(t, "worked reduction", w)
 }
 
+// TestExecute_ReductionKeepsTheUnfedCountWithinTheWeight verifies that a reduction
+// by 1 household, of an agent of weight 4 whose last consumption left 4 households
+// unfed, leaves an unfed count of 3, the new weight, and an agent that had 2 unfed
+// keeps 2.
+//
+// Requirement: FR-SCL-014, FR-CHK-005
+//
+// Fix: plan 2-4. The unfed count stayed at 4 above the weight 3, and the checkpoint
+// of that world was refused as corrupt (unfed above the weight) at restore.
+func TestExecute_ReductionKeepsTheUnfedCountWithinTheWeight(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name         string
+		before, want int64
+	}{{"unfed above the new weight", 4, 3}, {"unfed within the new weight", 2, 2}} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := execConfig()
+			c.Groups[0] = Group{Region: "home", Role: "miller", Households: 4, Scale: 4}
+			sp := &scriptSpawner{plan: regionPlans([]Decision{{Kind: DecideReduce, Agent: 1, Households: 1, Cause: CauseStarved}})}
+			w, rec, _ := execWorld(t, c, 25_000, sp)
+			w.agents[1].unfed = tt.before
+			runEntry(t, w, rec)
+			if got := w.agents[1].unfed; got != tt.want || w.agents[1].weight != 3 {
+				t.Errorf("seed %d: unfed %d at weight %d after reducing 4 to 3 from unfed %d, want %d at weight 3", execSeed, got, w.agents[1].weight, tt.before, tt.want)
+			}
+		})
+	}
+}
+
 // TestExecute_RemoveAndReductionToTheWholeWeight verifies that a removal, and a
 // reduction by the whole weight, take the one removal path: the events are
 // RecipeAbandoned (agent_removed, if a job), AgentBankrupted with the cause of the

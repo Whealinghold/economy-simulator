@@ -29,6 +29,7 @@ check unfed households never exceed the households at the start of the tick: 10/
 
 
 
+
 ## S04 one seeds 1-10, 1400 ticks
 measure demand elasticity bp (signed): 1=95030 2=63431 3=61760 4=absent 5=55089 6=81746 7=absent 8=47907 9=54818 10=44168 | median=58424 n=8
 measure grower working share bp, ticks 424-515: 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
@@ -44,6 +45,7 @@ check price within belief bounds (FR-STB-008): 10/10 pass
 
 
 
+
 ## S04 one+nofloor seeds 1-10, 1400 ticks
 measure demand elasticity bp (signed): 1=95030 2=63431 3=61760 4=absent 5=55089 6=81746 7=absent 8=47907 9=54818 10=44168 | median=58424 n=8
 measure grower working share bp, ticks 424-515: 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
@@ -56,6 +58,7 @@ measure staple volume mean 414-423: 1=367 2=362 3=274 4=317 5=325 6=374 7=355 8=
 measure staple volume mean 506-515: 1=305 2=320 3=243 4=299 5=292 6=319 7=286 8=328 9=338 10=279 | median=302 n=10
 check market series in tick order: 10/10 pass
 check price within belief bounds (FR-STB-008): 10/10 pass
+
 
 
 
@@ -87,12 +90,92 @@ measure floor 9000 trade share bp, prepared: 1=9050 2=9000 3=9075 4=9075 5=8875 
 check market series in tick order: 10/10 pass
 check price within belief bounds at the default floor (FR-STB-008): 10/10 pass
 
+
+## S10 one+h200 scales 1/4/10, 365 ticks, seed 1
+measure agents at end scale 1: 1=195 | median=195 n=1
+measure agents at end scale 10: 1=17 | median=17 n=1
+measure agents at end scale 4: 1=105 | median=105 n=1
+measure average price fuel scale 1: 1=101 | median=101 n=1
+measure average price fuel scale 10: 1=137 | median=137 n=1
+measure average price fuel scale 4: 1=199 | median=199 n=1
+measure average price mineral scale 1: 1=374 | median=374 n=1
+measure average price mineral scale 10: 1=185 | median=185 n=1
+measure average price mineral scale 4: 1=201 | median=201 n=1
+measure average price prepared scale 1: 1=525 | median=525 n=1
+measure average price prepared scale 10: 1=1149 | median=1149 n=1
+measure average price prepared scale 4: 1=1352 | median=1352 n=1
+measure average price refined scale 1: 1=1849 | median=1849 n=1
+measure average price refined scale 10: 1=4799 | median=4799 n=1
+measure average price refined scale 4: 1=4418 | median=4418 n=1
+measure average price seed scale 1: 1=153 | median=153 n=1
+measure average price seed scale 10: 1=116 | median=116 n=1
+measure average price seed scale 4: 1=116 | median=116 n=1
+measure average price staple scale 1: 1=59 | median=59 n=1
+measure average price staple scale 10: 1=60 | median=60 n=1
+measure average price staple scale 4: 1=57 | median=57 n=1
+measure average price tool_a scale 1: 1=7953 | median=7953 n=1
+measure average price tool_a scale 10: 1=3024 | median=3024 n=1
+measure average price tool_a scale 4: 1=8012 | median=8012 n=1
+measure average price tool_b scale 1: 1=14697 | median=14697 n=1
+measure average price tool_b scale 10: 1=15381 | median=15381 n=1
+measure average price tool_b scale 4: 1=13472 | median=13472 n=1
+measure average price waste scale 1: 1=50 | median=50 n=1
+measure average price waste scale 10: 1=50 | median=50 n=1
+measure average price waste scale 4: 1=50 | median=50 n=1
+measure dispersion bp fuel scale 1: 1=9543 | median=9543 n=1
+measure dispersion bp fuel scale 10: 1=13676 | median=13676 n=1
+measure dispersion bp fuel scale 4: 1=26941 | median=26941 n=1
+measure dispersion bp mineral scale 1: 1=3742 | median=3742 n=1
+measure dispersion bp mineral scale 10: 1=1526 | median=1526 n=1
+measure dispersion bp mineral scale 4: 1=3219 | median=3219 n=1
+measure dispersion bp prepared scale 1: 1=14466 | median=14466 n=1
+measure dispersion bp prepared scale 10: 1=7449 | median=7449 n=1
+measure dispersion bp prepared scale 4: 1=10333 | median=10333 n=1
+measure dispersion bp refined scale 1: 1=1814 | median=1814 n=1
+measure dispersion bp refined scale 10: 1=3784 | median=3784 n=1
+measure dispersion bp refined scale 4: 1=7054 | median=7054 n=1
+measure dispersion bp seed scale 1: 1=2428 | median=2428 n=1
+measure dispersion bp seed scale 10: 1=1583 | median=1583 n=1
+measure dispersion bp seed scale 4: 1=2325 | median=2325 n=1
+measure dispersion bp staple scale 1: 1=6098 | median=6098 n=1
+measure dispersion bp staple scale 10: 1=23370 | median=23370 n=1
+measure dispersion bp staple scale 4: 1=23615 | median=23615 n=1
+measure dispersion bp tool_a scale 1: 1=1138 | median=1138 n=1
+measure dispersion bp tool_a scale 10: 1=1772 | median=1772 n=1
+measure dispersion bp tool_a scale 4: 1=1668 | median=1668 n=1
+measure dispersion bp tool_b scale 1: 1=5922 | median=5922 n=1
+measure dispersion bp tool_b scale 10: 1=894 | median=894 n=1
+measure dispersion bp tool_b scale 4: 1=2852 | median=2852 n=1
+measure gap bp fuel scale 10 vs 1: 1=3564 | median=3564 n=1
+measure gap bp fuel scale 4 vs 1: 1=9703 | median=9703 n=1
+measure gap bp mineral scale 10 vs 1: 1=-5053 | median=-5053 n=1
+measure gap bp mineral scale 4 vs 1: 1=-4626 | median=-4626 n=1
+measure gap bp prepared scale 10 vs 1: 1=11886 | median=11886 n=1
+measure gap bp prepared scale 4 vs 1: 1=15752 | median=15752 n=1
+measure gap bp refined scale 10 vs 1: 1=15955 | median=15955 n=1
+measure gap bp refined scale 4 vs 1: 1=13894 | median=13894 n=1
+measure gap bp seed scale 10 vs 1: 1=-2418 | median=-2418 n=1
+measure gap bp seed scale 4 vs 1: 1=-2418 | median=-2418 n=1
+measure gap bp staple scale 10 vs 1: 1=169 | median=169 n=1
+measure gap bp staple scale 4 vs 1: 1=-339 | median=-339 n=1
+measure gap bp tool_a scale 10 vs 1: 1=-6198 | median=-6198 n=1
+measure gap bp tool_a scale 4 vs 1: 1=74 | median=74 n=1
+measure gap bp tool_b scale 10 vs 1: 1=465 | median=465 n=1
+measure gap bp tool_b scale 4 vs 1: 1=-834 | median=-834 n=1
+measure gap bp waste scale 10 vs 1: 1=0 | median=0 n=1
+measure gap bp waste scale 4 vs 1: 1=0 | median=0 n=1
+measure households at end scale 1: 1=195 | median=195 n=1
+measure households at end scale 10: 1=160 | median=160 n=1
+measure households at end scale 4: 1=413 | median=413 n=1
+measure largest absolute gap bp: 1=15955 | median=15955 n=1
+
 ## S16 one+overhang seeds 1-10, 1095 ticks
 measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
 measure staple belief outcomes mostly at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
 measure staple price at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
 check market series in tick order: 10/10 pass
 check price within belief bounds (FR-STB-008): 10/10 pass
+
 
 
 
