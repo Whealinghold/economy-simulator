@@ -157,6 +157,12 @@ func reconcile(dst, rows []listing, lots []ledger.Lot, first func(ledger.Lot) Pr
 	return dst
 }
 
+// newEstates is the estates of regions regions with no account bound yet; openEstates
+// and attachEstates fill the accounts.
+func newEstates(regions int) *estates {
+	return &estates{accounts: make([]int, regions), listed: make([][]listing, regions)}
+}
+
 // openEstates opens the estate account of every region, in ascending RegionID
 // order, and returns the estates (spec-estates.md 2.7.1, D108). Every account
 // that exists must be a boundary account, since FR-EST-005 and the account
@@ -169,7 +175,7 @@ func openEstates(l *ledger.Ledger, regions int) (*estates, error) {
 			invariant("an account that is not a boundary account exists before the estates are opened")
 		}
 	}
-	e := &estates{accounts: make([]int, regions), listed: make([][]listing, regions)}
+	e := newEstates(regions)
 	for r := range regions {
 		id, err := l.Open(ledger.KindEstate, r, r)
 		if err != nil {
@@ -477,7 +483,7 @@ func attachEstates(l *ledger.Ledger, regions int) (*estates, error) {
 		}
 		first++
 	}
-	e := &estates{accounts: make([]int, regions), listed: make([][]listing, regions)}
+	e := newEstates(regions)
 	for r := range regions {
 		v, err := l.Account(first + r)
 		if err != nil || v.Kind != ledger.KindEstate || v.Closed || v.Owner != r || v.Region != r {
