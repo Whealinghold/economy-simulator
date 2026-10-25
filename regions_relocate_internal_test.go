@@ -231,6 +231,38 @@ func TestRelocationRegistry_AddTwiceIsAnInvariant(t *testing.T) {
 	}
 }
 
+// TestRelocationRegistry_MalformedIsAnInvariant verifies that an obligation with
+// an empty name, a name with a colon or no test is a violated invariant at
+// registration, and leaves the table unchanged.
+//
+// Guard: a colon would make a skip entry ambiguous, and a nil test would panic in
+// the refusal path instead of at the module that registered it.
+func TestRelocationRegistry_MalformedIsAnInvariant(t *testing.T) {
+	t.Parallel()
+	never := func(*agent, []string) bool { return false }
+	cases := []struct {
+		name string
+		reg  string
+		held func(*agent, []string) bool
+	}{
+		{"empty name", "", never},
+		{"colon in name", "open:shipment", never},
+		{"nil test", "open_shipment", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			w := relocWorld(t)
+			if msg := invariantMessage(func() { w.bounds.add(tc.reg, tc.held) }); msg == "" {
+				t.Errorf("add(%q) did not panic, want a violated invariant", tc.reg)
+			}
+			if n := len(w.bounds.rows); n != 0 {
+				t.Errorf("obligations after the refused add = %d, want 0", n)
+			}
+		})
+	}
+}
+
 // TestRelocationRefusal_AllocatesNothing verifies that the query allocates
 // nothing for a success and for each refusal, with an obligation registered and
 // with a skip by key.

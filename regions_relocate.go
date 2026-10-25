@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"math"
+	"strconv"
+	"strings"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -34,6 +36,11 @@ type regionBounds struct{ rows []regionBound }
 // construction, so a name given twice is a violated invariant of the module that
 // registers it.
 func (b *regionBounds) add(name string, held func(a *agent, skip []string) bool) {
+	// A name with a ':' would read as an instance key in skip, and a nil test
+	// would panic in the refusal path, far from the module that registered it.
+	if name == "" || strings.Contains(name, ":") || held == nil {
+		invariant("the region-bound obligation " + strconv.Quote(name) + " has no name, a name with a colon, or no test")
+	}
 	for _, r := range b.rows {
 		if r.err.Obligation == name {
 			invariant("the region-bound obligation " + name + " is registered twice")
