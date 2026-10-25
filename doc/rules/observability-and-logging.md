@@ -161,6 +161,7 @@ constants in an internal package and reused. The standard keys are:
 | `from_region`, `to_region` | region IDs of the two ends of a relocation or an edge (`region` stays the key for a single region) |
 | `distance` | an edge length, `int64`, in the pack's distance unit |
 | `closed` | whether an edge is closed (a bool) |
+| `factor_bp` | an edge length factor in basis points, `int64` |
 | `flow` | money flow ID |
 | `due`, `applied` | money, in minor units: the amount a money flow computed for a recipient or region, and the amount actually applied |
 | `births`, `deaths` | counts of households born and of households that died |
@@ -929,4 +930,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: e70199779a159d4cb303d273
+RULE-TAG: a1571111c97a8bd40359de34

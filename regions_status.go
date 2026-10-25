@@ -103,7 +103,7 @@ func (w *World) edgeStatusChanged(e EdgeView, s edgeState, cause Cause) {
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "edge status changed",
 			slog.Int64(logkeys.FromRegion, int64(e.From)), slog.Int64(logkeys.ToRegion, int64(e.To)),
-			slog.Bool(logkeys.Closed, s.closed), slog.String(logkeys.Cause, string(cause)))
+			slog.Bool(logkeys.Closed, s.closed), slog.Int64(logkeys.FactorBP, s.factorBP), slog.String(logkeys.Cause, string(cause)))
 	}
 }
 
@@ -149,7 +149,9 @@ func (w *World) saveRegions(cw *codec.Writer) error {
 	return nil
 }
 
-// loadRegions is the reader of tag 11. It refuses a row that names no configured
+// loadRegions is the reader of tag 11. It runs only on a world just built from
+// the configuration, whose statuses are the defaults, so a count of 0 changes
+// nothing. It refuses a row that names no configured
 // edge, one not above the one before it in EdgeID order, one at the default
 // status and a factor outside [1, MaxEdgeFactorBP]; then it builds the world's
 // tables from the configuration and the statuses, as a world that had them set

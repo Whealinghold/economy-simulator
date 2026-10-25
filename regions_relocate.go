@@ -130,6 +130,10 @@ func (w *World) relocateRefusal(id AgentID, to RegionID, skip []string) (Reason,
 	return "", nil
 }
 
+// moveAgent changes only the live counters of the source and target cells; an
+// extinction of the source cell is seen by the next exit phase, as for any other
+// departure between phases.
+//
 // ledgerRefusal maps the ledger's refusal of a relocation to its reason and the
 // root's error. The ledger's sentinels are matched by errors.Is, and the root
 // returns its own bare sentinels so that the query allocates nothing. The root
@@ -185,6 +189,8 @@ func (w *World) moveAgent(a *agent, to RegionID, cause Cause) error {
 	w.live.inRole[int(from)*roles+int(a.role)]--
 	w.live.inRole[int(to)*roles+int(a.role)]++
 	w.state.hadAgent[int(to)*roles+int(a.role)] = true
+	// Units cannot overflow here: a commodity holds at most MaxQuantity, and
+	// there are at most MaxCommodities of them.
 	if w.obs.supplied {
 		v, err := w.ledger.Account(a.account)
 		units, uerr := w.ledger.Units(a.account)

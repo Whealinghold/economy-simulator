@@ -80,6 +80,8 @@ const (
 	Distance = "distance"
 	// Closed is whether an edge is closed, a bool.
 	Closed = "closed"
+	// FactorBP is an edge length factor in basis points, int64.
+	FactorBP = "factor_bp"
 	// Modules is the names of the modules that are on.
 	Modules = "modules"
 	// WarmStart is whether a warm start was present, a bool.
