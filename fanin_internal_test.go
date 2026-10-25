@@ -88,7 +88,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		{"fillAgentView", []string{"fillCore"}},
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards"}},
 		{"removeAgent", []string{"Tick", "regionOf", "hasJob", "abandonJob", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "logRemoval", "forget"}},
-		{"relocationRefusal", nil},
+		{"relocationRefusal", []string{"refusal"}},
 	} {
 		t.Run(tt.fn, func(t *testing.T) {
 			t.Parallel()

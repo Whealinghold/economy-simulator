@@ -117,6 +117,7 @@ func TestRelocate_Refusals(t *testing.T) {
 		// does not exist is not relocatable first.
 		{name: "estate to an unknown region", id: func(f *fix) int { return f.e0 }, to: 7, want: ledger.ErrNotRelocatable},
 		{name: "region past the last", id: func(f *fix) int { return f.a0 }, to: 2, want: ledger.ErrUnknownRegion},
+		{name: "region far past the last", id: func(f *fix) int { return f.a0 }, to: 99, want: ledger.ErrUnknownRegion},
 		{name: "no region", id: func(f *fix) int { return f.a0 }, to: -1, want: ledger.ErrUnknownRegion},
 		{name: "same region", id: func(f *fix) int { return f.a0 }, to: 0, want: ledger.ErrSameRegion},
 		{
@@ -311,8 +312,8 @@ func TestRelocationTotals_OrderAndClear(t *testing.T) {
 func TestUnits_Errors(t *testing.T) {
 	t.Parallel()
 	f := goodsFix(t)
-	if _, err := f.l.Units(99); !errors.Is(err, ledger.ErrUnknownAccount) {
-		t.Errorf("Units(99) error = %v, want ErrUnknownAccount", err)
+	if got, err := f.l.Units(99); !errors.Is(err, ledger.ErrUnknownAccount) || got != 0 {
+		t.Errorf("Units(99) = %d, %v, want 0, ErrUnknownAccount", got, err)
 	}
 	if got, err := f.l.Units(f.a1); err != nil || got != 0 {
 		t.Errorf("Units(a1) = %d, %v, want 0", got, err)
@@ -451,7 +452,49 @@ func TestUnits_OverflowIsReported(t *testing.T) {
 			t.Fatalf("Move: %v", err)
 		}
 	}
-	if got, err := l.Units(a); !errors.Is(err, ledger.ErrBalanceOverflow) {
-		t.Errorf("Units(a) = %d, %v, want ErrBalanceOverflow", got, err)
+	if got, err := l.Units(a); !errors.Is(err, ledger.ErrBalanceOverflow) || got != 0 {
+		t.Errorf("Units(a) = %d, %v, want 0, ErrBalanceOverflow", got, err)
+	}
+}
+
+// TestRelocationTotals_ExactAmounts verifies the amounts totalled: an account
+// with no money and no goods adds no row, a balance of exactly 1 is totalled as
+// 1, and the several lots of one commodity (born in different ticks) add up to
+// one row.
+//
+// Requirement: FR-REG-042
+//
+// Guard: a zero row would break the reader (a total of 0 is refused), and a lot
+// counted without its siblings would understate the units a region received.
+func TestRelocationTotals_ExactAmounts(t *testing.T) {
+	t.Parallel()
+	f := goodsFix(t)
+	if err := f.l.Relocate(f.a1, 0); err != nil {
+		t.Fatalf("Relocate(a1, 0) = %v, want nil", err)
+	}
+	if got := f.l.AppendRelocations(nil); len(got) != 0 {
+		t.Errorf("AppendRelocations after an empty account moved = %v, want none", got)
+	}
+	// a1 now holds exactly 1 money and, from two ticks, 2 and 3 units of commodity
+	// 0 (shelf life 3, so the lots are told apart by their born tick).
+	if err := f.l.Transfer(f.mint, f.a1, 1, ledger.Initial); err != nil {
+		t.Fatalf("setup: Transfer: %v", err)
+	}
+	for _, qty := range []int64{2, 3} {
+		if err := f.l.Move(f.goodsBoundary, f.a1, 0, qty, ledger.Initial); err != nil {
+			t.Fatalf("setup: Move: %v", err)
+		}
+		f.l.AdvanceTick()
+	}
+	f.l.ClearTotals()
+	if err := f.l.Relocate(f.a1, 1); err != nil {
+		t.Fatalf("Relocate(a1, 1) = %v, want nil", err)
+	}
+	want := []ledger.Moved{
+		{From: 0, To: 1, Commodity: ledger.Money, Total: 1},
+		{From: 0, To: 1, Commodity: 0, Total: 5},
+	}
+	if got := f.l.AppendRelocations(nil); !slices.Equal(got, want) {
+		t.Errorf("AppendRelocations = %v, want %v (1 money; 2 + 3 units in two lots)", got, want)
 	}
 }

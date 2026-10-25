@@ -55,10 +55,14 @@ var emittedBy = []struct{ event, scenario string }{
 }
 
 // sliceNotEmitted names the declared events that no scenario of the slice emits:
-// the staged list of FR-OBS-003. It is empty: every declared event is emitted
+// the staged list of FR-OBS-003. Every other declared event is emitted
 // (WorldRestored by the scenario "restored" that emittedTypes adds); an entry that
-// a scenario does emit fails the test as stale.
-var sliceNotEmitted = []string{}
+// a scenario does emit fails the test as stale. AgentRelocated is emitted by no
+// scenario because a scenario reaches the world through its public API, and the
+// public relocation is INT's (plan 2-17): TestRelocate_EventAndOrder in
+// regions_relocate_internal_test.go emits it until then, and plan 17 deletes this
+// entry with its scenario.
+var sliceNotEmitted = []string{"AgentRelocated"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

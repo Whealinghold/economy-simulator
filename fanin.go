@@ -60,11 +60,15 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	return nil
 }
 
-// relocationRefusal is the one entry point of the refusals that keep an agent
-// from being moved to another region (spec-integration.md 4.5, spec-migration.md
-// 8): the modules that are on append their checks here and the first refusal
-// returned wins. No module of the slice refuses, so it returns no reason.
-func (w *World) relocationRefusal(_ *agent) (Reason, bool) { return "", false }
+// relocationRefusal is the one entry point of the region_bound refusals that
+// keep an agent from being moved to another region (spec-regions.md 6.1.3 row 7,
+// 6.5.2): the first obligation that the agent holds and that skip does not name
+// is returned. The table is built at construction by the modules that are on, in
+// module order, and each module adds its obligation there (regionBounds.add), so
+// this stays one call; with no module on the table is empty and nothing refuses.
+func (w *World) relocationRefusal(a *agent, skip []string) (*RegionBoundError, bool) {
+	return w.bounds.refusal(a, skip)
+}
 
 // mustClose panics when the ledger refuses to close the account of a removed
 // agent: the intake emptied it, so a refusal is a violated invariant.

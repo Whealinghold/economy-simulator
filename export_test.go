@@ -166,3 +166,22 @@ func EstateAccountIDs(c Config) (estates []int, next int, err error) {
 // call is the integration change's (plan 2-17); until it lands the fork tests reach
 // the field here (architecture.md 10.2).
 func SetAgentDirective(w *World, id AgentID, d *Directive) { w.agents[id].directive = d }
+
+// RelocateForTest moves the account of agent a to region to with the cause, by
+// the world's one relocation path (regions_relocate.go). The public Relocate is
+// INT's; this seam goes with it.
+func RelocateForTest(w *World, a AgentID, to RegionID, cause Cause) error {
+	return w.relocate(a, to, cause)
+}
+
+// RegisterBoundForTest registers a region-bound obligation of the given name,
+// held by the agent when held returns true. held names each instance it holds
+// through SkipHasForTest, as a module does. No module is on in Stage 2, so the
+// table of obligations would otherwise be empty.
+func RegisterBoundForTest(w *World, name string, held func(a AgentID, skip []string) bool) {
+	w.bounds.add(name, func(a *agent, skip []string) bool { return held(a.id, skip) })
+}
+
+// SkipHasForTest reports whether skip names the instance key of an obligation,
+// by name or as "name:key" (spec-regions.md 6.5.2).
+func SkipHasForTest(skip []string, name string, key int64) bool { return skipHas(skip, name, key) }

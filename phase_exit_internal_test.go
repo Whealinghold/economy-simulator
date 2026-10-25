@@ -350,8 +350,8 @@ func TestRelocationRefusal_HasNoRefusalInTheSlice(t *testing.T) {
 	t.Parallel()
 	w := newMill(t, removalConfig(), WithSeed(exitSeed))
 	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
-		if r, refused := w.relocationRefusal(&w.agents[i]); refused || r != "" {
-			t.Errorf("seed %d: relocationRefusal(agent %d) = %q, %v, want no refusal", exitSeed, i, r, refused)
+		if e, refused := w.relocationRefusal(&w.agents[i], nil); refused || e != nil {
+			t.Errorf("seed %d: relocationRefusal(agent %d) = %v, %v, want no refusal", exitSeed, i, e, refused)
 		}
 	}
 }

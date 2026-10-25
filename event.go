@@ -79,7 +79,7 @@ const (
 	// commodity of an agent in a tick.
 	ReasonDuplicateOrder Reason = "duplicate_order"
 	// ReasonOverflow is an order whose limit price times quantity does not fit
-	// in int64.
+	// in int64, or a relocation whose pending totals would pass int64.
 	ReasonOverflow Reason = "overflow"
 	// ReasonHoldingLimit is a bid whose quantity added to the buyer's holding
 	// of the commodity exceeds MaxQuantity, so settling it would break the
@@ -226,6 +226,27 @@ const (
 	ReasonNoViableRole Reason = "no_viable_role"
 )
 
+// The reasons of a refused relocation, in the order of the checks (spec-regions.md
+// 6.1.3). ReasonUnknownAgent, above, is the second. outside_node is appended with
+// the external module.
+const (
+	// ReasonUnknownRegion is a destination that is not a region.
+	ReasonUnknownRegion Reason = "unknown_region"
+	// ReasonClosedAccount is an agent that was removed.
+	ReasonClosedAccount Reason = "closed_account"
+	// ReasonNotRelocatable is an account that is not an agent's: an estate
+	// pseudo-agent.
+	ReasonNotRelocatable Reason = "not_relocatable"
+	// ReasonSameRegion is a destination that is the agent's own region.
+	ReasonSameRegion Reason = "same_region"
+	// ReasonOpenReservation is an account with a reservation of money or an
+	// earmark of goods.
+	ReasonOpenReservation Reason = "open_reservation"
+	// ReasonRegionBound is an obligation, registered by a module, that is tied to
+	// the region of the account; the error names it.
+	ReasonRegionBound Reason = "region_bound"
+)
+
 // Cause is the machine-readable cause of a removal, a weight change or a role
 // change, a member of a closed set. Its values are the values of the cause log
 // key. The constants below are the ones the first slice can reach; a module
@@ -250,6 +271,10 @@ const (
 	CauseReview Cause = "review"
 	// CauseRenewal is households entering to replace households lost.
 	CauseRenewal Cause = "renewal"
+	// CauseTransport is a relocation at the arrival of a traveller.
+	CauseTransport Cause = "transport"
+	// CauseMigration is a relocation at the arrival of a migration journey.
+	CauseMigration Cause = "migration"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -779,6 +804,28 @@ type WorldRestored struct {
 	Snapshot Snapshot
 }
 
+// AgentRelocated is emitted once per relocation, after the move is complete: an
+// agent's account changed region (spec-regions.md 6.2, 10.1). A household leaves
+// From and joins To, so a consumer that counts households by region needs it
+// beside AgentSpawned, AgentBankrupted, WeightChanged and RoleChanged. An estate
+// pseudo-agent is not an agent and causes none.
+type AgentRelocated struct {
+	Tick int64
+	// Agent is the agent that moved.
+	Agent AgentID
+	// Role is the agent's role.
+	Role RoleID
+	// From and To are the regions the account left and joined.
+	From, To RegionID
+	// Weight is the households the agent stands for.
+	Weight int64
+	// Money is what the account held, and Units the units of goods it held.
+	Money Money
+	Units int64
+	// Cause is why the agent moved: transport, migration or consumer.
+	Cause Cause
+}
+
 func (WorldCreated) isEvent()     {}
 func (RunStarted) isEvent()       {}
 func (RunEnded) isEvent()         {}
@@ -803,3 +850,4 @@ func (EntryLimited) isEvent()     {}
 func (BoundaryFlow) isEvent()     {}
 func (WearApplied) isEvent()      {}
 func (WorldRestored) isEvent()    {}
+func (AgentRelocated) isEvent()   {}
