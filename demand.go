@@ -873,8 +873,11 @@ func (d *demandState) rung(v *AgentView, a *agent, rg rung, carry int64, its []W
 			units, next = 0, carry
 		}
 	}
-	choked = !ok || sched == 0 || !uok // an overflow of the units chokes the want like one of the schedule
-	split, _ := household.Split(d.split[:0], units, shares)
+	split, sok := household.Split(d.split[:0], units, shares)
+	if !sok { // no item could carry the units: choke the want and keep the carry
+		units, next, split = 0, carry, split[:0]
+	}
+	choked = !ok || sched == 0 || !uok || !sok // an overflow chokes the want like one of the schedule
 	for j, it := range wt.items {
 		its[j] = WantItemView{Commodity: it.commodity}
 		if len(shares) > j {
