@@ -52,6 +52,8 @@ risk this decision addresses.
    bans as a directory is still allowed as a file, as `infrastructure.go` is,
    note N-019.)
 
+   *Note, 2026-10-26: narrowed by [ADR 0010](0010-a-module-has-named-hooks-outside-its-file.md) decision 1.*
+
 2. **`tick.go` is a straight line of one-line position calls, and the position
    list is data a test can read.** Each of the positions of `spec-world.md` 6 is
    one call, a module's guarded by its pointer (`if w.credit != nil`), in the
@@ -61,6 +63,8 @@ risk this decision addresses.
    `specs/README.md` (`doc/rules/testing.md` 6.7); this answers
    `spec-world.md` open question 8.
 
+   *Note, 2026-10-26: narrowed by [ADR 0010](0010-a-module-has-named-hooks-outside-its-file.md) decision 2.*
+
 3. **The fan-in functions are compositions of per-module steps, never module
    logic.** The world has one `fillAgentView`, one `checkTradePlan`, one
    `removeAgent`, one `relocationRefusal` and one `tradableItems`, each a fixed-order sequence of
@@ -69,6 +73,8 @@ risk this decision addresses.
    order of `spec-agents.md` 3.6 is written once. The same holds for the view
    and the plan: a module's group of the view is filled by the module's own
    function, in the order the spec fixes.
+
+   *Note, 2026-10-26: narrowed by [ADR 0010](0010-a-module-has-named-hooks-outside-its-file.md) decision 3.*
 
 4. **A module's per-agent state lives in the module's own slices, indexed by
    agent slot, not in fields of the agent type.** The checkpoint's hosting of
