@@ -830,6 +830,11 @@ func TestSplit(t *testing.T) {
 		{"one item", 5, []int64{10_000}, []int64{5}, true},
 		{"negative total is zero", -4, []int64{10_000}, []int64{0}, true},
 		{"over 10 000", 3, []int64{9_000, 9_000}, nil, false},
+		// With a total of 1 the floors are 0, so only the guard on the sum refuses.
+		{"over 10 000, nothing floored", 1, []int64{9_000, 9_000}, nil, false},
+		// Two passes, the first item first: the pass after it must skip it.
+		{"two remainders, first item largest", 2, []int64{3_334, 3_333, 3_333}, []int64{1, 1, 0}, true},
+		{"a zero share has no remainder", 1, []int64{0, 1}, []int64{0, 1}, true},
 	}
 	for _, tt := range tests {
 		got, ok := household.Split(nil, tt.total, tt.shares)
