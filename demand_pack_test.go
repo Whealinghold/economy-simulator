@@ -1,9 +1,11 @@
 package economysim_test
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -53,6 +55,57 @@ func TestPacks_OneDemand(t *testing.T) {
 	}
 	if err := w.Audit(); err != nil {
 		t.Errorf("Audit after 10 ticks = %v, want nil", err)
+	}
+}
+
+// TestNewWorld_DemandAnnouncement verifies what the demand module adds to the
+// announcement of a world (spec-world.md 5.8, spec-observability.md 3.2.4): each
+// warning of the configuration, the module's included, is one Warn line
+// "configuration warning" with its rule and dotted path, before the Info line;
+// the Info line "world created" lists "demand" among the modules; and WorldCreated
+// carries the string ID of each want in the names table, in WantID order.
+//
+// Requirement: FR-DEM-033, FR-WLD-037, FR-OBS-010
+//
+// Guard: the construction summary and the names table are what an operator and an
+// adapter read to tell that the module is on and which wants it holds; a line or a
+// table that dropped the module would leave both blind to it.
+func TestNewWorld_DemandAnnouncement(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOneDemand...)
+	rec := &recorder{}
+	h := newCaptureHandler()
+	if _, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithObserver(rec), economysim.WithLogger(slog.New(h))); err != nil {
+		t.Fatalf("NewWorld(one-demand) error = %v, want nil", err)
+	}
+	wc, ok := rec.events[0].(economysim.WorldCreated)
+	if !ok || !slices.Equal(wc.Names.Wants, []string{"comfort", "treat"}) {
+		t.Errorf("first event = %+v, want WorldCreated with wants [comfort treat]", rec.events[0])
+	}
+	lines, warnings := h.records(), cfg.Warnings()
+	// The pack has a warm start, so one Info line "warm start applied" sits between.
+	if len(lines) != len(warnings)+2 {
+		t.Fatalf("construction wrote %d lines, want %d warnings, \"warm start applied\" and the Info line: %v", len(lines), len(warnings), lines)
+	}
+	var sawDemand bool
+	for i, wn := range warnings {
+		rule, _ := lines[i].attr("rule")
+		path, _ := lines[i].attr("path")
+		if lines[i].level != slog.LevelWarn || lines[i].msg != "configuration warning" || rule.String() != wn.Rule || path.String() != strings.Join(wn.Path, ".") {
+			t.Errorf("line %d = %v, want a Warn \"configuration warning\" with rule %q and path %q", i, lines[i], wn.Rule, strings.Join(wn.Path, "."))
+		}
+		sawDemand = sawDemand || slices.Contains(demandWarningRules, wn.Rule)
+	}
+	if !sawDemand {
+		t.Errorf("Warnings(one-demand) = %v, want one rule of the module (target_above_demand) to be logged", warnings)
+	}
+	info := lines[len(lines)-1]
+	mods, _ := info.attr("modules")
+	if m, ok := mods.Any().([]string); info.level != slog.LevelInfo || info.msg != "world created" || !ok || !slices.Equal(m, []string{"demand"}) {
+		t.Errorf("last line = %v, want an Info \"world created\" with modules [demand]", info)
 	}
 }
 
