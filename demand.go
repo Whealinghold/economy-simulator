@@ -1268,10 +1268,10 @@ func (w *World) readChokedRuns(rs *restoreCtx, r *codec.Reader) {
 		region, role, want := r.Index(regions), r.Index(roles), r.Index(wants)
 		run := r.Bounded("run", rs.tick)
 		key := (region*roles+role)*wants + want
-		k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return uint64(rg.want) == want })
 		if r.Err() != nil {
 			return
 		}
+		k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return uint64(rg.want) == want })
 		if run == 0 || k < 0 || (i > 0 && key <= prev) {
 			r.Failf("choke run (region %d, role %d, want %d) is at its default, out of order or not in the ladder", region, role, want)
 			return
@@ -1326,8 +1326,14 @@ type wantScratch struct {
 }
 
 // rowOf is the trade row of the commodity, parallel to the view's tradable set.
+// It is nil for a commodity outside the view's tradable set, which only a view
+// built by hand can have (the world's filler checks FR-DEM-006).
 func (t *tradeCtx) rowOf(c CommodityID) *tradeRow {
-	return &t.rows[t.v.commodityIndex(c)]
+	i, ok := slices.BinarySearchFunc(t.v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
+	if !ok || i >= len(t.rows) {
+		return nil
+	}
+	return &t.rows[i]
 }
 
 // fundWants is tier 4 (spec-demand.md 4.5, D310): after the buffers it spends the
@@ -1364,7 +1370,7 @@ func (t *tradeCtx) fundWants(avail, spendCap int64) {
 // bidLimit is the limit of the commodity's bid if it has room for want units, else
 // 0, which funds nothing.
 func (t *tradeCtx) bidLimit(c CommodityID) int64 {
-	if r := t.rowOf(c); r.kind == bidOrder && r.t4 > r.q4 {
+	if r := t.rowOf(c); r != nil && r.kind == bidOrder && r.t4 > r.q4 {
 		return r.limit
 	}
 	return 0
@@ -1380,6 +1386,9 @@ func (t *tradeCtx) buyWants() {
 			q := ws.out[off]
 			off++
 			r := t.rowOf(it.Commodity)
+			if r == nil {
+				continue
+			}
 			if q = min(q, r.t4-r.q4); q < 1 {
 				continue
 			}

@@ -29,6 +29,11 @@ func FixedTerm(commodities int, rows []WantRow) ([]Ratio, error) {
 		total[c] = Rat(0, 1)
 	}
 	for _, r := range rows {
+		for _, it := range r.Items {
+			if it.Commodity < 0 || it.Commodity >= commodities {
+				return nil, ErrBadProgramme
+			}
+		}
 		r.addTo(total)
 	}
 	out := make([]Ratio, commodities)

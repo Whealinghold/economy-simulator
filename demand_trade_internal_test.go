@@ -151,3 +151,18 @@ func TestDemand_Engel(t *testing.T) {
 		t.Errorf("no money level funded the second want, want one that does")
 	}
 }
+
+// TestDemand_HandBuiltViewMissingItem verifies that a hand-built view whose want
+// item is not in its tradable set funds nothing for it and does not panic.
+//
+// Guard: DefaultStrategy.Trade is public and a consumer can build a view by hand;
+// only the world's filler guarantees FR-DEM-006.
+func TestDemand_HandBuiltViewMissingItem(t *testing.T) {
+	t.Parallel()
+	v := wantsView(100_000, 5, 5)
+	v.Wants[0].Items[0].Commodity = CommodityID(99)
+	p := tradeOf(v)
+	if got := fundedOf(p, 0); got != 0 {
+		t.Errorf("Trade(item outside the tradable set) funded want 0 = %d, want 0", got)
+	}
+}

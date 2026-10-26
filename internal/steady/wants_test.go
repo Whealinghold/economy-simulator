@@ -66,3 +66,19 @@ func TestFixedTerm_Overflow(t *testing.T) {
 		t.Errorf("FixedTerm(huge) error = %v, want ErrOverflow", err)
 	}
 }
+
+// TestFixedTerm_ItemOutOfRange verifies that an item whose commodity is outside
+// the commodities is ErrBadProgramme and not an index panic.
+//
+// Guard: the rows come from a caller; without the check a bad index would panic
+// the viability check.
+func TestFixedTerm_ItemOutOfRange(t *testing.T) {
+	t.Parallel()
+	for _, c := range []int{-1, 2} {
+		row := steady.WantRow{Households: 1, Taste: 10000, Region: 10000, Quantity: 1, Period: 1,
+			Items: []steady.WantWeight{{Commodity: c, Weight: 1}}}
+		if _, err := steady.FixedTerm(2, []steady.WantRow{row}); !errors.Is(err, steady.ErrBadProgramme) {
+			t.Errorf("FixedTerm(item commodity %d of 2) error = %v, want ErrBadProgramme", c, err)
+		}
+	}
+}
