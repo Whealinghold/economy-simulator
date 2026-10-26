@@ -564,6 +564,9 @@ func (s *viaSolve) solveAt(ctx context.Context, regions []RegionID, phi steady.R
 	}
 	md := s.m.model(regions, phi)
 	out, err := s.m.solveStrict(ctx, md)
+	if errors.Is(err, errWantsInfeasible) { // the sentinel is internal: the upkeep-only programme has no fallback
+		err = fmt.Errorf("%w: the programme is infeasible", ErrSolveInconsistent)
+	}
 	return md, out, false, err
 }
 

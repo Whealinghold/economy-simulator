@@ -972,7 +972,7 @@ func (d *demandState) tallyFunded(p *TradePlan, ladder []rung) {
 	for _, f := range p.WantFunded {
 		for k, rg := range ladder {
 			if rg.want == f.Want {
-				d.funded[k] = min(d.cur.planned[k], d.funded[k]+max(0, int64(f.Units)))
+				d.funded[k] += min(max(0, int64(f.Units)), d.cur.planned[k]-d.funded[k]) // no sum, so no wrap
 			}
 		}
 	}
