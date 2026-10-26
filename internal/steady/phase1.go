@@ -69,6 +69,9 @@ func (t *tableau) endPhase1(ctx context.Context, maxPivots, done int64, obj []*b
 		if c < 0 {
 			return pivots, fmt.Errorf("%w: the first phase left an artificial basic in a row with no other entry", ErrInconsistent)
 		}
+		if t.a[r][t.rhs()].Sign() != 0 {
+			return pivots, fmt.Errorf("%w: the first phase ended at 0 with an artificial basic above 0", ErrInconsistent)
+		}
 		if err := ctx.Err(); err != nil {
 			return pivots, fmt.Errorf("steady: solve cancelled after %d pivots: %w", done+pivots, err)
 		}

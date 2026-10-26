@@ -81,13 +81,20 @@ func ratio(num, den *big.Int) (Ratio, bool) {
 
 // checkModel panics on a Model whose activities are not in canonical order or
 // name a region or commodity out of range (programmer invariants) and returns
-// ErrBadProgramme for a fixed term with no goods row or a bad denominator.
+// ErrBadProgramme for a fixed term with no goods row, a bad denominator, or a
+// negative household count or work share (which the first phase would otherwise
+// read as an infeasible labour row).
 func checkModel(m Model) error {
 	if len(m.Fixed) > m.Commodities {
 		return ErrBadProgramme
 	}
 	for _, f := range m.Fixed {
 		if f.Den <= 0 {
+			return ErrBadProgramme
+		}
+	}
+	for _, rg := range m.Regions {
+		if rg.Households < 0 {
 			return ErrBadProgramme
 		}
 	}
@@ -101,7 +108,7 @@ func checkModel(m Model) error {
 		}
 		prev = a.Region
 	}
-	if m.Phi.Den <= 0 || m.Year < 1 {
+	if m.Phi.Den <= 0 || m.Phi.Num < 0 || m.Year < 1 {
 		return ErrBadProgramme
 	}
 	return nil

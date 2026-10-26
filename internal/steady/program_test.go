@@ -120,6 +120,9 @@ func TestBuild_Errors(t *testing.T) {
 			m.Regions = append(m.Regions, steady.Region{Households: 1, Upkeep: []int64{0, math.MaxInt64}})
 			m.Regions[0].Upkeep[1] = math.MaxInt64
 		}), steady.ErrOverflow},
+		{"negative households", with(func(m *steady.Model) { m.Regions[0].Households = -1 }), steady.ErrBadProgramme},
+		{"negative work share", with(func(m *steady.Model) { m.Phi = steady.Ratio{Num: -1, Den: 1} }), steady.ErrBadProgramme},
+		{"zero fixed denominator", with(func(m *steady.Model) { m.Fixed = []steady.Ratio{{Num: 1, Den: 0}} }), steady.ErrBadProgramme},
 		{"zero year", with(func(m *steady.Model) { m.Year = 0 }), steady.ErrBadProgramme},
 		{"zero work denominator", with(func(m *steady.Model) { m.Phi = steady.Ratio{Num: 1, Den: 0} }), steady.ErrBadProgramme},
 		{"commodity out of range", with(func(m *steady.Model) { m.Activities[0].Outputs[0].Commodity = 7 }), steady.ErrBadProgramme},

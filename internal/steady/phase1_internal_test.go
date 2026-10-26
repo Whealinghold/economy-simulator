@@ -427,3 +427,20 @@ func TestEndPhase1_DropsArtificialColumns(t *testing.T) {
 		t.Errorf("after endPhase1: na = %d, row widths %d and %d, want 0, %d and %d", tb.na, len(tb.a[0]), len(tb.a[tb.m]), tb.n+tb.m+1, tb.n+tb.m+1)
 	}
 }
+
+// TestEndPhase1_ArtificialAboveZeroIsInconsistent: a first phase that reports
+// 0 cannot leave an artificial basic above 0; a corrupt tableau that does is
+// ErrInconsistent, not a pivot that turns the row's right-hand side negative.
+//
+// Guard: the drive-out step negates and pivots a row on the assumption that its
+// right-hand side is 0.
+func TestEndPhase1_ArtificialAboveZeroIsInconsistent(t *testing.T) {
+	t.Parallel()
+	p := Programme{Rows: 1, RHS: []Ratio{{Num: -1, Den: 1}}, Cols: []Column{{Cost: Ratio{Num: 1, Den: 1}, Entries: []Entry{{Row: 0, Val: Ratio{Num: 1, Den: 1}}}}}}
+	tb := newTableau(p)
+	obj := tb.startPhase1()
+	tb.a[tb.m][tb.rhs()].SetInt64(0) // pretend the first phase reached 0; the row still holds 1
+	if _, err := tb.endPhase1(context.Background(), 1<<20, 0, obj); !errors.Is(err, ErrInconsistent) {
+		t.Errorf("endPhase1(artificial at 1) error = %v, want ErrInconsistent", err)
+	}
+}
