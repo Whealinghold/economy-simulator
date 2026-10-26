@@ -68,6 +68,7 @@ type viaModel struct {
 	// held here so a test can lower them and reach the skipped parts with a small
 	// configuration.
 	maxCells, maxPivots, maxSteps int64
+	pooled                        *pooledSolve // the V3 solve, once labour has run
 	// withHouseholds lists, ascending, the regions with at least one household:
 	// the only regions that have a programme or an activity (a region with no
 	// household has no labour).

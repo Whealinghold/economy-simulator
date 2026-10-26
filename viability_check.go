@@ -291,6 +291,7 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 		return
 	}
 	res, skipped, err := m.solve(m.model(regions, steady.Ratio{Num: 1, Den: 1}))
+	m.pooled = &pooledSolve{res, skipped, err}
 	switch {
 	case err != nil:
 		o.fail(err)
@@ -299,6 +300,14 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 	case res.SurplusBP < wholeBP:
 		o.reject("labour_short", []string{"regions"}, i64(res.SurplusBP), i64(wholeBP))
 	}
+}
+
+// pooledSolve is the solve of the pooled upkeep-only programme at full labour,
+// kept so labour and wantsExceed do not run the simplex twice.
+type pooledSolve struct {
+	out     steady.Outcome
+	skipped bool
+	err     error
 }
 
 // wantsExceed warns wants_exceed_labour (FR-VIA-057): the demand module is on,
@@ -311,7 +320,11 @@ func (m *viaModel) wantsExceed(o *viabilityOutcome) {
 		return
 	}
 	one := steady.Ratio{Num: 1, Den: 1}
-	base, skipped, err := m.solve(m.model(regions, one))
+	if m.pooled == nil { // labour has not run: solve the upkeep-only programme here
+		base, skipped, err := m.solve(m.model(regions, one))
+		m.pooled = &pooledSolve{base, skipped, err}
+	}
+	base, skipped, err := m.pooled.out, m.pooled.skipped, m.pooled.err // an error is labour's to report
 	if skipped {
 		o.skipped("wants_pooled")
 	}

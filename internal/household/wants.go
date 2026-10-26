@@ -84,7 +84,7 @@ func term(it WantItem, sigma int64) (int64, bool) {
 		return 0, false
 	}
 	v := Basis
-	for i := int64(0); i < sigma; i++ {
+	for i := int64(0); i < sigma && v > 0; i++ { // 0 stays 0
 		if v, ok = checked.MulDiv(v, x, Basis); !ok {
 			return 0, false
 		}

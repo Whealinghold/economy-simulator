@@ -1099,6 +1099,7 @@ func (w *World) p62Wants() error {
 	if d == nil {
 		return nil
 	}
+	defer func() { d.use = d.use[:0] }() // a ledger refusal must not leave this tick's rows for the next
 	for _, u := range d.use {
 		a := &w.agents[u.agent]
 		if a.weight < 1 {
@@ -1125,7 +1126,6 @@ func (w *World) p62Wants() error {
 				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Commodity, int64(c)), slog.Int64(logkeys.Quantity, n))
 		}
 	}
-	d.use = d.use[:0]
 	return nil
 }
 
