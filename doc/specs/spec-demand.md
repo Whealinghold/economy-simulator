@@ -801,7 +801,7 @@ question 3).
 in the style of `UpkeepShortfall`:
 
 | Event | Emitted | Fields (besides `Tick`) |
-|-------|---------|-------------------------|
+| --- | --- | --- |
 | `WantShortfall` (new) | once per region, role and want per tick in which the want was choked or unfunded for at least one household, after the trade phase, in order of region, role and want | `Region`, `Role`, `Want`, `Households` (the households of the role in the region that have the want in their ladder, short or not, so that `Choked` over `Households` is the choked share and the `Warn` of 11.2 fires when they are equal), `Choked` (households whose price ratio was at the choke), `Planned` (units from the carry), `Funded` (units the strategy placed in bids, the sum of its `TradePlan.WantFunded`; a strategy that ignores wants reports 0) |
 
 It carries no map, no pointer and no wall-clock time (observability-and-logging.md
