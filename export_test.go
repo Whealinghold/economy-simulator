@@ -192,3 +192,24 @@ func SkipHasForTest(skip []string, name string, key int64) bool { return skipHas
 func SetEdgeStatusesForTest(w *World, changes []EdgeStatus, cause Cause) error {
 	return w.setEdgeStatuses(changes, cause)
 }
+
+// DemandLadders flattens the ladder of each role of a canonical, validated
+// configuration to the want IDs in funding order, indexed by RoleID. The second
+// result is false when the demand module is off, where there is no state.
+func DemandLadders(c *Config) ([][]WantID, bool) {
+	st := newDemandState(c)
+	if st == nil {
+		return nil, false
+	}
+	out := make([][]WantID, len(st.ladder))
+	for i, l := range st.ladder {
+		for _, r := range l {
+			out[i] = append(out[i], r.want)
+		}
+	}
+	return out, true
+}
+
+// WorldHasDemandState reports whether the world holds the state of the demand
+// module, which it does if and only if the module is on.
+func WorldHasDemandState(w *World) bool { return w.demand != nil }

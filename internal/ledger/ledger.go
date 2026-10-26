@@ -29,8 +29,8 @@ type Config struct {
 	MaxMoney int64
 	// MaxQuantity bounds a non-boundary quantity of one commodity.
 	MaxQuantity int64
-	// Declared lists the declared reasons (LoanOut, LoanRepay, LoanInterest)
-	// this ledger has, because the module that owns them is on. A reason not
+	// Declared lists the declared reasons (LoanOut, LoanRepay, LoanInterest,
+	// WantConsumption) this ledger has, because the module that owns them is on. A reason not
 	// listed has no row and no flow slot. It names a reason at most once.
 	Declared []Reason
 	// MaxClaims is the most claims that may be open at once (spec-credit.md
@@ -73,7 +73,12 @@ type Ledger struct {
 	// stride is the number of flow slots of one region and off the offset of
 	// each (reason, thing) in a region's block, -1 for a pair no row moves.
 	stride int
-	off    [NumReasons][2]int
+	off    [numStage1Reasons][2]int
+	// later holds the offsets of the reasons past the Stage 1 size, indexed by
+	// reason minus numStage1Reasons. It is nil while none of them is declared,
+	// so a ledger built with no module has the layout of Stage 1 (offOf reads
+	// both).
+	later [][2]int
 
 	accounts []account
 	// boundary is the account ID of each (reason, thing), indexed like a
@@ -162,7 +167,7 @@ func validate(cfg Config) (declared [NumReasons]bool, err error) {
 // declarable or is listed twice.
 func declaredSet(reasons []Reason) (declared [NumReasons]bool, err error) {
 	for _, r := range reasons {
-		if r < firstDeclared || r >= NumReasons || declared[r] {
+		if !isDeclared(r) || declared[r] {
 			return declared, fmt.Errorf("%w: reason %d is not a declarable reason, or is declared twice", ErrInvalidConfig, r)
 		}
 		declared[r] = true
@@ -171,22 +176,54 @@ func declaredSet(reasons []Reason) (declared [NumReasons]bool, err error) {
 }
 
 // layout assigns the flow-total offsets of every reason and thing that has a
-// row, and sets l.stride.
+// row, and sets l.stride. A declared row has an offset only if its reason is in
+// declared.
 func (l *Ledger) layout(declared *[NumReasons]bool) {
-	for r := range l.off {
-		for t := range l.off[r] {
-			l.off[r][t] = -1
-			if !table[r][t].ok || (Reason(r) >= firstDeclared && !declared[r]) {
-				continue
+	for r := Reason(0); r < NumReasons; r++ {
+		for t := range table[r] {
+			o := -1
+			if table[r][t].ok && (!table[r][t].declared || declared[r]) {
+				o = l.stride
+				if t == thingMoney {
+					l.stride++
+				} else {
+					l.stride += len(l.comms)
+				}
 			}
-			l.off[r][t] = l.stride
-			if t == thingMoney {
-				l.stride++
-			} else {
-				l.stride += len(l.comms)
-			}
+			l.setOff(r, t, o)
 		}
 	}
+}
+
+// setOff records the offset of (r, t). The slice of later reasons is made when
+// the first of them has an offset, so it stays nil in a ledger with no module.
+func (l *Ledger) setOff(r Reason, t, o int) {
+	if int(r) < numStage1Reasons {
+		l.off[r][t] = o
+		return
+	}
+	if o >= 0 && l.later == nil {
+		l.later = make([][2]int, int(NumReasons)-numStage1Reasons)
+		for i := range l.later {
+			l.later[i] = [2]int{-1, -1}
+		}
+	}
+	if l.later != nil {
+		l.later[int(r)-numStage1Reasons][t] = o
+	}
+}
+
+// offOf returns the offset of (r, t) in a region's block of flow slots, and -1
+// for a pair no row moves, a declared row that was not declared, or a reason out
+// of range.
+func (l *Ledger) offOf(r Reason, t int) int {
+	switch {
+	case int(r) < numStage1Reasons:
+		return l.off[r][t]
+	case l.later == nil || r >= NumReasons:
+		return -1
+	}
+	return l.later[int(r)-numStage1Reasons][t]
 }
 
 // New builds an empty ledger in its construction phase. It returns an error
@@ -279,7 +316,7 @@ func (l *Ledger) slotOf(r Reason, commodity int) (int, error) {
 		return 0, ErrReasonMismatch
 	}
 	if commodity == Money {
-		if o := l.off[r][thingMoney]; o >= 0 {
+		if o := l.offOf(r, thingMoney); o >= 0 {
 			return o, nil
 		}
 		return 0, ErrReasonMismatch
@@ -287,7 +324,7 @@ func (l *Ledger) slotOf(r Reason, commodity int) (int, error) {
 	if commodity < 0 || commodity >= len(l.comms) {
 		return 0, ErrUnknownCommodity
 	}
-	if o := l.off[r][thingGoods]; o >= 0 {
+	if o := l.offOf(r, thingGoods); o >= 0 {
 		return o + commodity, nil
 	}
 	return 0, ErrReasonMismatch
@@ -404,10 +441,10 @@ func (l *Ledger) AppendFlows(dst []Flow, bucket bool) []Flow {
 // appendReason appends the non-zero totals of reason r in one region, money
 // before goods, to dst. base is the region's slice of the totals.
 func (l *Ledger) appendReason(dst []Flow, base []int64, region int, r Reason) []Flow {
-	if o := l.off[r][thingMoney]; o >= 0 && base[o] != 0 {
+	if o := l.offOf(r, thingMoney); o >= 0 && base[o] != 0 {
 		dst = append(dst, Flow{region, r, Money, base[o]})
 	}
-	if o := l.off[r][thingGoods]; o >= 0 {
+	if o := l.offOf(r, thingGoods); o >= 0 {
 		for c := range l.comms {
 			if v := base[o+c]; v != 0 {
 				dst = append(dst, Flow{region, r, c, v})

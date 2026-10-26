@@ -306,8 +306,8 @@ func TestPacks_DefectOverlays_WildSource(t *testing.T) {
 }
 
 // TestPacks_ModuleOverlaysAreRejectedUntilBuilt verifies that the fixtures that
-// switch a module on are rejected at Stage 0 with the module table as the
-// unknown key, because no module is built.
+// switch a module on that is not built are rejected with the module table as the
+// unknown key. The demand module is built, so its pack loads (TestPacks_OneDemand).
 //
 // Requirement: FR-CFG-019, FR-CFG-098
 func TestPacks_ModuleOverlaysAreRejectedUntilBuilt(t *testing.T) {
@@ -322,7 +322,6 @@ func TestPacks_ModuleOverlaysAreRejectedUntilBuilt(t *testing.T) {
 		path   []string
 	}{
 		{"estates overlay", []string{"base.toml", "one.toml", "overlay/estates.toml"}, []string{"modules", "estates"}},
-		{"demand pack", []string{"base.toml", "one.toml", "demand.toml"}, []string{"modules", "demand"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -332,5 +331,45 @@ func TestPacks_ModuleOverlaysAreRejectedUntilBuilt(t *testing.T) {
 				t.Errorf("LoadFS(%q) errors = %s, want ErrUnknownKey at %q", tt.layers, describe(err), tt.path)
 			}
 		})
+	}
+}
+
+// TestPacks_OneDemand verifies that the pack one-demand, the layers base,
+// demand, one-demand and warm-one-demand, loads, validates, hashes the same on
+// every load and differently from pack one, and carries the demand module with
+// its two wants and its tastes (D315 of plan 2-5, FR-DEM-043).
+//
+// Requirement: FR-DEM-043, FR-CFG-060, FR-CFG-025, FR-REF-005
+func TestPacks_OneDemand(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	fsys := os.DirFS(chains)
+	layers := []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}
+	cfg, err := config.LoadFS(fsys, layers...)
+	if err != nil {
+		t.Fatalf("LoadFS(%q) error = %v, want nil", layers, err)
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("Validate(%q) = %v, want nil", layers, err)
+	}
+	d := cfg.Modules.Demand
+	if d == nil || len(d.Wants) != 2 || len(d.Tastes) != 11 || len(d.RegionTastes) != 0 || cfg.WarmStart == nil {
+		t.Fatalf("LoadFS(%q) = demand %+v and warm start %v, want 2 wants, 11 tastes, no region taste and a warm start", layers, d, cfg.WarmStart != nil)
+	}
+	again, err := config.LoadFS(fsys, layers...)
+	if err != nil {
+		t.Fatalf("LoadFS(%q) second time error = %v, want nil", layers, err)
+	}
+	if !reflect.DeepEqual(cfg, again) || economysim.HashConfig(cfg) != economysim.HashConfig(again) {
+		t.Errorf("LoadFS(%q) twice: configurations or hashes differ", layers)
+	}
+	one, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml")
+	if err != nil {
+		t.Fatalf("LoadFS(pack one) error = %v, want nil", err)
+	}
+	if economysim.HashConfig(cfg) == economysim.HashConfig(one) {
+		t.Errorf("HashConfig(one-demand) = HashConfig(one), want different hashes")
 	}
 }

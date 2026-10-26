@@ -45,6 +45,8 @@ var reasonNames = [...]Reason{
 	ledger.Merge:        ReasonMerge,
 	ledger.Births:       ReasonBirths,
 	ledger.Starvation:   ReasonStarvation,
+	// The declared module rows with a name: the loan rows have none yet.
+	ledger.WantConsumption: ReasonWantConsumption,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -52,8 +54,8 @@ var reasonNames = [...]Reason{
 // table has fewer than twenty rows, so a scan is simpler than a map and keeps
 // the order fixed (architecture.md 7.5).
 func ledgerReason(r Reason) (ledger.Reason, bool) {
-	for i := range numBuiltInReasons {
-		if name, _ := reasonName(ledger.Reason(i)); name == r {
+	for i := range reasonNames {
+		if reasonNames[i] != "" && reasonNames[i] == r {
 			return ledger.Reason(i), true
 		}
 	}
@@ -62,50 +64,95 @@ func ledgerReason(r Reason) (ledger.Reason, bool) {
 
 // newLedger builds the ledger of a configuration in canonical order
 // (Config.canonical): the commodity table from ShelfLife and Durability in
-// commodity-ID order, the bounds of bounds.go, and the boundary accounts of the
-// built-in group in the creation order of spec-ledger.md 3.4.2, so that the
-// first account of an estate or an agent has the ID that section counts. It
-// opens no other account. The claims limit is 0 and no reason is declared:
-// the credit module sets both when it is on (plan-phase-1-1.md A1).
-//
-// The order is money first, then commodity-major: for each commodity, the
-// goods reasons of the built-in group that are a faucet or a sink, in the
-// registry order. It reads the classes from the ledger's table, so no reason
-// or commodity is named here (architecture.md 9.1).
+// commodity-ID order, the bounds of bounds.go, the reasons the modules that are
+// on declare (moduleReasons), and the boundary accounts in the four groups of
+// openBoundaries (spec-ledger.md 3.4.2), so that the first account of an estate
+// or an agent has the ID that section counts. It opens no other account. The
+// claims limit is 0: the credit module sets it when it is on
+// (plan-phase-1-1.md A1).
 func newLedger(cfg Config) (*ledger.Ledger, error) {
 	comms := make([]ledger.Commodity, len(cfg.Commodities))
 	for i, c := range cfg.Commodities {
 		comms[i] = ledger.Commodity{ShelfLife: c.ShelfLife, Durability: c.Durability}
+	}
+	modules := moduleReasons(&cfg)
+	var declared []ledger.Reason
+	for _, m := range modules {
+		declared = append(declared, m...)
 	}
 	l, err := ledger.New(ledger.Config{
 		Commodities: comms,
 		Regions:     len(cfg.Regions),
 		MaxMoney:    MaxMoney,
 		MaxQuantity: MaxQuantity,
+		Declared:    declared,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
-	if err := openBuiltInBoundaries(l, len(comms)); err != nil {
-		return nil, err
+	for _, g := range boundaryGroups(len(comms), modules) {
+		if err := g.open(l); err != nil {
+			return nil, fmt.Errorf("open the %s boundary accounts: %w", g.name, err)
+		}
 	}
 	return l, nil
 }
 
-// openBuiltInBoundaries opens the boundary accounts of the built-in group in
-// the order newLedger documents: money first, then commodity-major.
-func openBuiltInBoundaries(l *ledger.Ledger, commodities int) error {
-	open := func(r ledger.Reason, thing int) error {
-		if _, err := l.OpenBoundary(r, thing); err != nil {
-			return fmt.Errorf("open boundary account %d of thing %d: %w", r, thing, err)
-		}
-		return nil
+// moduleReasons returns the ledger reasons each module that is on declares, one
+// list per module in the order of the Modules pointers (spec-config.md 3.1). A
+// module's change appends its own case (architecture.md 2.10.5).
+func moduleReasons(c *Config) [][]ledger.Reason {
+	var m [][]ledger.Reason
+	if c.Modules.Demand != nil {
+		m = append(m, demandReasons())
 	}
+	return m
+}
+
+// boundaryGroup is one of the four groups of boundary accounts of
+// spec-ledger.md 3.4.2: its name, for an error, and the function that opens it.
+type boundaryGroup struct {
+	name string
+	open func(*ledger.Ledger) error
+}
+
+// boundaryGroups returns the four groups in the order the accounts are created:
+// (1) the built-in group; (2) the declared money-flow reasons; (3) the six
+// outside_* reasons; (4) the other reasons of the modules that are on, in module
+// order. Groups 2 and 3 are empty hooks until plans 6 and 16 fill them; each
+// module's change fills its own group and no other.
+func boundaryGroups(commodities int, modules [][]ledger.Reason) [4]boundaryGroup {
+	return [4]boundaryGroup{
+		{"built-in", func(l *ledger.Ledger) error { return openBuiltInBoundaries(l, commodities) }},
+		{"money-flow", func(*ledger.Ledger) error { return nil }},
+		{"outside", func(*ledger.Ledger) error { return nil }},
+		{"module", func(l *ledger.Ledger) error { return openModuleBoundaries(l, commodities, modules) }},
+	}
+}
+
+// openBuiltInBoundaries opens the boundary accounts of the built-in group: money
+// first, then commodity-major, the reasons in registry order. It reads the
+// classes from the ledger's table, so no reason or commodity is named here
+// (architecture.md 9.1).
+func openBuiltInBoundaries(l *ledger.Ledger, commodities int) error {
 	for thing := ledger.Money; thing < commodities; thing++ {
-		goods := thing != ledger.Money
 		for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
-			if class, ok := ledger.ClassOf(r, goods); ok && class != ledger.Internal {
-				if err := open(r, thing); err != nil {
+			if err := openBoundary(l, r, thing); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// openModuleBoundaries opens the boundary accounts of group 4: module by module,
+// and within a module as the built-in group is ordered (money first, then
+// commodity-major, the module's reasons in the order it lists them).
+func openModuleBoundaries(l *ledger.Ledger, commodities int, modules [][]ledger.Reason) error {
+	for _, reasons := range modules {
+		for thing := ledger.Money; thing < commodities; thing++ {
+			for _, r := range reasons {
+				if err := openBoundary(l, r, thing); err != nil {
 					return err
 				}
 			}
@@ -114,19 +161,59 @@ func openBuiltInBoundaries(l *ledger.Ledger, commodities int) error {
 	return nil
 }
 
+// openBoundary opens the boundary account of reason r for a thing (Money or a
+// commodity index) when the reason is a faucet or a sink for it, and nothing
+// otherwise.
+func openBoundary(l *ledger.Ledger, r ledger.Reason, thing int) error {
+	class, ok := ledger.ClassOf(r, thing != ledger.Money)
+	if !ok || class == ledger.Internal {
+		return nil
+	}
+	if _, err := l.OpenBoundary(r, thing); err != nil {
+		return fmt.Errorf("open boundary account %d of thing %d: %w", r, thing, err)
+	}
+	return nil
+}
+
 // boundaryFlows appends to dst the BoundaryFlow rows for flows, which are the
 // totals of one tick or the construction bucket as Ledger.AppendFlows returns
 // them, and returns the extended slice. tick is the tick of the rows, or
 // constructionTick for the bucket. Only faucet and sink reasons are reported,
-// and a zero total is not in flows. The rows follow the order of flows:
-// ascending region, then reason in the order of spec-ledger.md 7.2, money
-// before goods, then ascending commodity (spec-observability.md 4.4.1.2).
+// and a zero total is not in flows. The rows are in ascending region, then in
+// the group order of spec-observability.md 4.4.1.2: the built-in reasons in the
+// order of flows (the order of spec-ledger.md 7.2), then, where the money flows
+// and the outside_* reasons will go, the declared module rows by the rank of
+// their registry row (not by the number of the reason), each with money before
+// goods and then ascending commodity.
 //
 // It allocates only when dst has no room, so the world reuses one slice. A
 // faucet or a sink with no root name is a programmer error: its module
 // declared the reason and did not add its case to reasonName.
 func boundaryFlows(dst []BoundaryFlow, flows []ledger.Flow, tick int64) []BoundaryFlow {
+	var scratch [ledger.NumReasons]ledger.Reason
+	module := ledger.DeclaredByRank(scratch[:0])
+	for lo := 0; lo < len(flows); {
+		hi := lo + 1
+		for hi < len(flows) && flows[hi].Region == flows[lo].Region {
+			hi++
+		}
+		dst = appendGroup(dst, flows[lo:hi], tick, 0, false)
+		for _, r := range module {
+			dst = appendGroup(dst, flows[lo:hi], tick, r, true)
+		}
+		lo = hi
+	}
+	return dst
+}
+
+// appendGroup appends the rows of the faucet and sink flows of one region that
+// belong to a group: the flows of reason only when declared is true, else the
+// flows of every reason that is not declared.
+func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledger.Reason, declared bool) []BoundaryFlow {
 	for _, f := range flows {
+		if _, d := ledger.Rank(f.Reason); d != declared || (declared && f.Reason != only) {
+			continue
+		}
 		goods := f.Commodity != ledger.Money
 		class, ok := ledger.ClassOf(f.Reason, goods)
 		if !ok || class == ledger.Internal {

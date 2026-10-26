@@ -63,8 +63,8 @@ func composition(t *testing.T, src, fn string) (calls, problems []string) {
 }
 
 // TestFanIns_AreCompositionsOfTheExpectedCalls verifies the shape of the fan-ins
-// that are built (D195, architecture.md 2.10.4): the body of fillAgentView, checkTradePlan, removeAgent
-// and relocationRefusal is only calls, guards and literals, with no loop and no
+// that are built (D195, architecture.md 2.10.4): the body of fillAgentView, checkTradePlan, removeAgent,
+// relocationRefusal and tradableItems is only calls, guards and literals, with no loop and no
 // arithmetic, and the calls are the expected ones in the expected order. A
 // fan-in has no list to append a test fake to and no hook is allowed (D166), so its
 // composition is tested by shape. What the shape cannot show, that a module step
@@ -89,6 +89,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards"}},
 		{"removeAgent", []string{"Tick", "regionOf", "hasJob", "abandonJob", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "logRemoval", "forget"}},
 		{"relocationRefusal", []string{"refusal"}},
+		{"tradableItems", []string{"demandItems"}},
 	} {
 		t.Run(tt.fn, func(t *testing.T) {
 			t.Parallel()

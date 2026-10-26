@@ -646,6 +646,8 @@ func buildFieldCases() []fieldCase {
 			paths: [][]string{{"warm_start", "groups", "north", "maker", "jobs", "make_tool_a", "recipe"}}},
 	)
 
+	add(demandFieldCases()...)
+
 	// A case is named by its field, its description and the path it breaks, so
 	// two cases for one field are two subtests.
 	seen := map[string]int{}

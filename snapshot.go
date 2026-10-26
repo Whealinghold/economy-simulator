@@ -285,33 +285,49 @@ func (w *World) Snapshot() (Snapshot, error) {
 func satMoney(m, a, b Money) Money { return Money(satAdd(satAdd(int64(m), int64(a)), int64(b))) }
 
 // boundaryRows reads the balance of every boundary account that was opened, in
-// the order newLedger opens them: money, then each commodity, the reasons in
-// registry order.
+// the group order of spec-ledger.md 3.4.2: the built-in group (money, then each
+// commodity, the reasons in registry order), then the declared module rows by
+// the rank of their registry row, each with money before goods and then
+// ascending commodity.
 func (w *World) boundaryRows() []BoundaryRow {
-	rows := make([]BoundaryRow, 0, (1+len(w.cfg.Commodities))*numBuiltInReasons)
+	var scratch [ledger.NumReasons]ledger.Reason
+	declared := ledger.DeclaredByRank(scratch[:0])
+	rows := make([]BoundaryRow, 0, (1+len(w.cfg.Commodities))*(numBuiltInReasons+len(declared)))
 	for thing := ledger.Money; thing < len(w.cfg.Commodities); thing++ {
 		for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
-			class, ok := ledger.ClassOf(r, thing != ledger.Money)
-			id, open := w.ledger.Boundary(r, thing)
-			if !ok || !open {
-				continue
-			}
-			v, err := w.ledger.Account(id)
-			if err != nil {
-				invariant("a boundary account is unreadable: " + err.Error())
-			}
-			name, _ := reasonName(r)
-			row := BoundaryRow{Reason: name, Kind: KindFaucet, Commodity: NoCommodity, Balance: v.Balance}
-			if class == ledger.Sink {
-				row.Kind = KindSink
-			}
-			if thing != ledger.Money {
-				row.Commodity = CommodityID(thing)
-			}
-			rows = append(rows, row)
+			rows = w.appendBoundaryRow(rows, r, thing)
+		}
+	}
+	for _, r := range declared {
+		for thing := ledger.Money; thing < len(w.cfg.Commodities); thing++ {
+			rows = w.appendBoundaryRow(rows, r, thing)
 		}
 	}
 	return rows
+}
+
+// appendBoundaryRow appends the row of the boundary account of reason r and a
+// thing (Money or a commodity index), or nothing when the reason has no row for
+// the thing or no account was opened.
+func (w *World) appendBoundaryRow(rows []BoundaryRow, r ledger.Reason, thing int) []BoundaryRow {
+	class, ok := ledger.ClassOf(r, thing != ledger.Money)
+	id, open := w.ledger.Boundary(r, thing)
+	if !ok || !open {
+		return rows
+	}
+	v, err := w.ledger.Account(id)
+	if err != nil {
+		invariant("a boundary account is unreadable: " + err.Error())
+	}
+	name, _ := reasonName(r)
+	row := BoundaryRow{Reason: name, Kind: KindFaucet, Commodity: NoCommodity, Balance: v.Balance}
+	if class == ledger.Sink {
+		row.Kind = KindSink
+	}
+	if thing != ledger.Money {
+		row.Commodity = CommodityID(thing)
+	}
+	return append(rows, row)
 }
 
 // flowTotals converts the totals of the ledger to the rows of a snapshot,

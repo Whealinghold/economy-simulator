@@ -110,7 +110,7 @@ func TestParse_Rejections(t *testing.T) {
 		{"unknown key in a yield", []string{minimal + "[region.n.yield.r]\nhas_all = true\n"}, economysim.ErrUnknownKey, []string{"region", "n", "yield", "r", "has_all"}},
 		{"unknown key in a warm job", []string{minimal + "[warm_start.region.n.group.g]\nmoney = 1\njobs = [ { recipe = \"r\", in_progress_bp = 3 } ]\n"}, economysim.ErrUnknownKey, []string{"warm_start", "region", "n", "group", "g", "jobs", "[0]", "in_progress_bp"}},
 		{"module table of a module not built", []string{minimal + "[modules.estates]\n"}, economysim.ErrUnknownKey, []string{"modules", "estates"}},
-		{"module sub-table makes the module unknown", []string{minimal + "[modules.demand.want.comfort]\nquantity = 1\n"}, economysim.ErrUnknownKey, []string{"modules", "demand"}},
+		{"module sub-table makes the module unknown", []string{minimal + "[modules.money_supply.flow.stipend]\nlabel = \"x\"\n"}, economysim.ErrUnknownKey, []string{"modules", "money_supply"}},
 		{"old singular prefix", []string{minimal + "[module.estates]\n"}, economysim.ErrUnknownKey, []string{"module"}},
 		{"bare module table", []string{minimal + "[demand]\n"}, economysim.ErrUnknownKey, []string{"demand"}},
 		{"float where integer", []string{minimal + "[role.a]\ntarget_ratio = 1.5\n"}, economysim.ErrNotInteger, []string{"role", "a", "target_ratio"}},

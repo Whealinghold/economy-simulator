@@ -52,17 +52,17 @@ var notBuilt = []string{
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
 	"AbundanceKnot", "Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
-	"CreditTerms", "Demand", "Duty", "Employer", "Employment", "Endowment", "External",
+	"CreditTerms", "Duty", "Employer", "Employment", "Endowment", "External",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "FlowTarget", "Holding",
 	"Information", "Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Jurisdiction", "Knot", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration", "Mode",
 	"Modules.MoneySupply", "MoneyFlow", "OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "Population", "ProjectWorth", "Purchase",
-	"RateLimit", "Reaction", "RegionMove", "RegionPopulation", "RegionSettlement", "RegionTaste",
+	"RateLimit", "Reaction", "RegionMove", "RegionPopulation", "RegionSettlement",
 	"Release", "Resource", "Resources", "Right", "Risk", "RoleOwnUse", "RoleRoom", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SeasonRegen", "SettlementClass",
-	"Settlements", "Storage", "StoreClass", "StoreRisk", "Subsistence", "Taste", "Tax", "TechField",
-	"Technology", "Tenure", "TenureTerm", "Toll", "Transport", "Underwrite", "Want", "WantItem",
+	"Settlements", "Storage", "StoreClass", "StoreRisk", "Subsistence", "Tax", "TechField",
+	"Technology", "Tenure", "TenureTerm", "Toll", "Transport", "Underwrite",
 	"Window",
 }
 
@@ -75,6 +75,9 @@ var exemptFields = map[string]bool{
 	"Config.World": true, "Config.Calendar": true, "Config.Commodities": true,
 	"Config.Recipes": true, "Config.Roles": true, "Config.Regions": true,
 	"Config.Groups": true, "Config.Modules": true,
+	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
+	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
+	"Modules.Demand": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 }
 
@@ -477,7 +480,7 @@ func specDefault(cells []string) (scope, field string, def int64, ok bool) {
 
 // TestParameterRegistry_SpecDefaultsEqualConstructors verifies check 4 of
 // spec-config.md 9.2 (a SHOULD, FR-CFG-030): the default that an owner spec's
-// parameter table states for a World, Role, Region or Commodity field is the
+// parameter table states for a World, Role, Region, Commodity, Recipe or demand field is the
 // default of its Default constructor. It reads the pipe rows of the owner specs
 // by a plain text parse and compares the integers it can read.
 //
@@ -487,13 +490,18 @@ func TestParameterRegistry_SpecDefaultsEqualConstructors(t *testing.T) {
 	files := []string{
 		"spec-agents.md", "spec-beliefs.md", "spec-spawner.md", "spec-welfare-and-wages.md",
 		"spec-goods.md", "spec-production.md", "spec-scale.md", "spec-skill-barriers.md", "spec-estates.md",
+		"spec-demand.md",
 	}
 	ctor := map[string]reflect.Value{
-		"World":     reflect.ValueOf(economysim.DefaultWorldParams()),
-		"Role":      reflect.ValueOf(economysim.DefaultRole()),
-		"Region":    reflect.ValueOf(economysim.DefaultRegion()),
-		"Commodity": reflect.ValueOf(economysim.DefaultCommodity()),
-		"Recipe":    reflect.ValueOf(economysim.DefaultRecipe()),
+		"World":       reflect.ValueOf(economysim.DefaultWorldParams()),
+		"Role":        reflect.ValueOf(economysim.DefaultRole()),
+		"Region":      reflect.ValueOf(economysim.DefaultRegion()),
+		"Commodity":   reflect.ValueOf(economysim.DefaultCommodity()),
+		"Recipe":      reflect.ValueOf(economysim.DefaultRecipe()),
+		"Want":        reflect.ValueOf(economysim.DefaultWant()),
+		"WantItem":    reflect.ValueOf(economysim.DefaultWantItem()),
+		"Taste":       reflect.ValueOf(economysim.DefaultTaste()),
+		"RegionTaste": reflect.ValueOf(economysim.DefaultRegionTaste()),
 	}
 	checked := 0
 	for _, name := range files {

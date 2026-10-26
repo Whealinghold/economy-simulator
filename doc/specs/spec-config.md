@@ -1748,6 +1748,7 @@ agree on every row. A count or a length is 8 bytes, big-endian.
 | one region and nothing else, `Regions: [{ID: "north"}]` | `01` `0007` `0000000000000001` `0001` `0000000000000005` `6e6f727468` `0000` `0000` (version; `Regions` and its count; `ID` and its length and bytes; the region's terminator; the configuration's terminator) | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
 | the same with `WarmStart: &WarmStart{}` | the row above with `000b` `0000` inserted before the last `0000` | `a2f375f381fced5c69544bf3dfb14446d513d6e0eaceb9574964bbfe8ea8a812` |
 | the same with `Modules.Estates: &Estates{}`, a module on | the one-region row with `000c` `0019` `0000` `0000` inserted before the last `0000` (`Modules`; `Estates`, id 25, and its terminator; the terminator of `Modules`) | `0848fee29c503bda99a17acb2c44c42fbba8b730eadc2079e3d8123b2d3317ad` |
+| the same with `Modules.Demand: &Demand{}`, a module on | the one-region row with `000c` `0001` `0000` `0000` inserted before the last `0000` (`Modules`; `Demand`, id 1, and its terminator; the terminator of `Modules`) | `d4a84ffadc64ea332b99fe14423ca67eb052928dd5a16d91d054b27eeb1493d0` |
 | the one-region row with a field appended later (`Region.PoolRelease`) at its off value 0 | the bytes of the one-region row, unchanged | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
 
 The first row is the hash of an all-off configuration with nothing in it, the fourth

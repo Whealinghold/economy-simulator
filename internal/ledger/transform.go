@@ -15,7 +15,7 @@ type Line struct {
 // boundaryAt returns the boundary account of a goods reason and commodity, or
 // nil if none was opened. The commodity must be in range.
 func (l *Ledger) boundaryAt(r Reason, c int) *account {
-	if id := l.boundary[l.off[r][thingGoods]+c]; id >= 0 {
+	if id := l.boundary[l.offOf(r, thingGoods)+c]; id >= 0 {
 		return &l.accounts[id]
 	}
 	return nil
@@ -159,7 +159,7 @@ func (l *Ledger) boundariesOpen(r Reason, lines []Line) bool {
 // slot is the index into the flow totals of reason r and commodity c in the
 // region of account a.
 func (l *Ledger) slot(a *account, r Reason, c int) int {
-	return a.region*l.stride + l.off[r][thingGoods] + c
+	return a.region*l.stride + l.offOf(r, thingGoods) + c
 }
 
 // checkTransformInputs is check 6: per commodity, the stock and then the two

@@ -600,6 +600,7 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonMerge, "merge"},
 		{economysim.ReasonBirths, "births"},
 		{economysim.ReasonStarvation, "starvation"},
+		{economysim.ReasonWantConsumption, "want_consumption"},
 	}
 	// The belief reasons of the "belief updated" Debug line, spec-beliefs.md
 	// 12.2: a slice of their own, checked by the same closure below.

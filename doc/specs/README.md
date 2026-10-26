@@ -306,6 +306,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Clearing` | WorldParams | `spec-clearing.md` section 8 |
 | `AnchorHold` | WorldParams | `spec-production.md` section 9.3 |
 | `Closed` | Role | `spec-spawner.md` section 11 |
+| `ID` | Want | `spec-demand.md` section 9 |
 | `Wants` | Demand | `spec-demand.md` section 9 |
 | `Tastes` | Demand | `spec-demand.md` section 9 |
 | `RegionTastes` | Demand | `spec-demand.md` section 9 |

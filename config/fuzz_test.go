@@ -40,38 +40,65 @@ func FuzzLoad(f *testing.F) {
 	f.Add([]byte(minimal+"[modules.estates]\n"), []byte("[role.a]\ntarget_ratio = 1.5\n"), []byte("world = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 0\n"), []byte("[region.a.edge.a]\ndistance = 2\n"), []byte("[region.a.reference_price]\nx = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\n"), []byte("[region.a.edge.b]\ndistance = 1.5\n"), []byte("[region.a.reference_price]\nx = \"1\"\n"))
-	f.Fuzz(func(t *testing.T, a, b, c []byte) {
-		cfg, err := config.Parse(a, b, c)
+	f.Fuzz(loadProperties)
+}
+
+// loadProperties is the property of FuzzLoad and FuzzLoadDemand, for any three
+// documents: see FuzzLoad.
+func loadProperties(t *testing.T, a, b, c []byte) {
+	cfg, err := config.Parse(a, b, c)
+	if err != nil {
+		known := false
+		for _, s := range loaderSentinels {
+			known = known || errors.Is(err, s)
+		}
+		if !known {
+			t.Errorf("Parse(%q, %q, %q) error = %v, want a loader sentinel", a, b, c, err)
+		}
+		if !reflect.DeepEqual(cfg, economysim.Config{}) {
+			t.Errorf("Parse(%q, %q, %q) rejected but returned a non-zero Config", a, b, c)
+		}
+		if strings.ContainsAny(err.Error(), "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f\x1b\x7f") {
+			t.Errorf("Parse(%q, %q, %q) error text has a control character: %q", a, b, c, err.Error())
+		}
+		return
+	}
+	if verr := cfg.Validate(); verr != nil && !classified(verr) {
+		t.Errorf("Validate() of an accepted set = %v, want nil, a sentinel or a *ValidationError", verr)
+	}
+	again, err := config.Parse(a, b, c)
+	if err != nil {
+		t.Fatalf("Parse(%q, %q, %q) accepted and then rejected: %v", a, b, c, err)
+	}
+	if !reflect.DeepEqual(cfg, again) {
+		t.Errorf("Parse(%q, %q, %q) twice: %+v and %+v, want equal", a, b, c, cfg, again)
+	}
+	if economysim.HashConfig(cfg) != economysim.HashConfig(again) {
+		t.Errorf("HashConfig of an accepted document differs between loads")
+	}
+}
+
+// FuzzLoadDemand is FuzzLoad with the seeds of the demand module: the pack
+// one-demand, a [modules.demand] table in every shape the loader reads, and
+// documents that break each key of it. It asserts the same properties, so the
+// rows of the module (wants, items, tastes and region tastes) never panic the
+// loader or leave a Config that does not load again equal.
+//
+// Requirement: FR-CFG-024, FR-DEM-043, NFR-CFG-002
+func FuzzLoadDemand(f *testing.F) {
+	read := func(name string) []byte {
+		b, err := os.ReadFile(filepath.Join("..", "testdata", "chains", filepath.FromSlash(name)))
 		if err != nil {
-			known := false
-			for _, s := range loaderSentinels {
-				known = known || errors.Is(err, s)
-			}
-			if !known {
-				t.Errorf("Parse(%q, %q, %q) error = %v, want a loader sentinel", a, b, c, err)
-			}
-			if !reflect.DeepEqual(cfg, economysim.Config{}) {
-				t.Errorf("Parse(%q, %q, %q) rejected but returned a non-zero Config", a, b, c)
-			}
-			if strings.ContainsAny(err.Error(), "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f\x1b\x7f") {
-				t.Errorf("Parse(%q, %q, %q) error text has a control character: %q", a, b, c, err.Error())
-			}
-			return
+			f.Fatalf("read seed %s: %v", name, err)
 		}
-		if verr := cfg.Validate(); verr != nil && !classified(verr) {
-			t.Errorf("Validate() of an accepted set = %v, want nil, a sentinel or a *ValidationError", verr)
-		}
-		again, err := config.Parse(a, b, c)
-		if err != nil {
-			t.Fatalf("Parse(%q, %q, %q) accepted and then rejected: %v", a, b, c, err)
-		}
-		if !reflect.DeepEqual(cfg, again) {
-			t.Errorf("Parse(%q, %q, %q) twice: %+v and %+v, want equal", a, b, c, cfg, again)
-		}
-		if economysim.HashConfig(cfg) != economysim.HashConfig(again) {
-			t.Errorf("HashConfig of an accepted document differs between loads")
-		}
-	})
+		return b
+	}
+	f.Add(read("base.toml"), read("demand.toml"), read("one-demand.toml"))
+	f.Add([]byte(demandDoc), []byte(minimal+"[modules.demand]\n"), []byte(nil))
+	f.Add([]byte(demandDoc), []byte("[modules.demand.want.treat]\nquantity = 9\n"), []byte("[modules.demand.taste.worker.treat]\nscale = 0\n"))
+	f.Add([]byte(minimal+"[modules.demand.want.w]\nquantity = 1.5\nitems = []\n"), []byte("[modules.demand.taste.r]\nw = 1\n"), []byte("[modules]\ndemand = 1\n"))
+	f.Add([]byte(minimal+"[modules.demand.taste.r.w]\nscale = \"5\"\n"), []byte("[modules.demand.region_taste.g.w]\nscale = 9223372036854775807\n"), []byte("[modules.demand.want.w]\nitems = [ { commodity = 1 } ]\n"))
+	f.Fuzz(loadProperties)
 }
 
 // classified reports whether a Validate error is made only of *ValidationError

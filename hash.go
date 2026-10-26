@@ -378,9 +378,57 @@ func pairsWarmPool(e *encoder, p WarmPool) {
 	e.num(2, int64(p.Money))
 }
 
-// pairsModules writes the pairs of Modules. No module is built at Stage 0, so
-// there is none. A module's change adds its pointer here under the id of its
-// position in the Modules row of spec-config.md 3.1 (Demand 1 to Estates 25),
-// writing a non-nil pointer as its id, its pairs and a terminator, and never a
-// nil one.
-func pairsModules(*encoder, Modules) {}
+// pairsModules writes the pairs of Modules in ascending id order. A module's
+// change adds its pointer here at the place of its id in the Modules row of
+// spec-config.md 3.1 (Demand 1 to Estates 25), not at the end, so a module with a
+// smaller id than one already built moves no id. A non-nil pointer is written
+// explicitly as its id, its pairs and a terminator, and not through nested, which
+// writes nothing for an empty body: a module that is on and empty differs from
+// one that is off (spec-config.md 8.2.1, 8.2.2).
+func pairsModules(e *encoder, m Modules) {
+	if m.Demand != nil {
+		e.id(1)
+		pairsDemand(e, *m.Demand)
+		e.end()
+	}
+}
+
+// pairsDemand writes the pairs of a Demand: Wants 1, Tastes 2, RegionTastes 3.
+func pairsDemand(e *encoder, d Demand) {
+	encodeList(e, 1, d.Wants, pairsWant)
+	encodeList(e, 2, d.Tastes, pairsTaste)
+	encodeList(e, 3, d.RegionTastes, pairsRegionTaste)
+}
+
+// pairsWant writes the pairs of a Want: ids 1 to 8. Label is presentation only
+// and has no id.
+func pairsWant(e *encoder, w Want) {
+	e.text(1, w.ID)
+	encodeList(e, 2, w.Items, pairsWantItem)
+	e.num(3, w.Quantity)
+	e.num(4, w.Period)
+	e.num(5, w.Rank)
+	e.num(6, w.Elasticity)
+	e.num(7, w.Ceiling)
+	e.num(8, w.Substitution)
+}
+
+// pairsWantItem writes the pairs of a WantItem: Commodity 1, Weight 2.
+func pairsWantItem(e *encoder, i WantItem) {
+	e.text(1, i.Commodity)
+	e.num(2, i.Weight)
+}
+
+// pairsTaste writes the pairs of a Taste: Role 1, Want 2, Scale 3.
+func pairsTaste(e *encoder, t Taste) {
+	e.text(1, t.Role)
+	e.text(2, t.Want)
+	e.num(3, t.Scale)
+}
+
+// pairsRegionTaste writes the pairs of a RegionTaste: Region 1, Want 2, Scale 3.
+func pairsRegionTaste(e *encoder, t RegionTaste) {
+	e.text(1, t.Region)
+	e.text(2, t.Want)
+	e.num(3, t.Scale)
+}

@@ -129,6 +129,32 @@ func DefaultRegion() Region {
 	}
 }
 
+// DefaultWant returns a want with a period of one tick, an elasticity and a
+// ceiling of 15 000 basis points and a substitution exponent of 2
+// (spec-demand.md 9). ID, Items and Quantity have no default and are required.
+func DefaultWant() Want {
+	return Want{Period: 1, Elasticity: 15_000, Ceiling: 15_000, Substitution: 2}
+}
+
+// DefaultWantItem returns a want item of weight 10 000 basis points. Commodity
+// has no default and is required.
+func DefaultWantItem() WantItem {
+	return WantItem{Weight: 10_000}
+}
+
+// DefaultTaste returns a taste of scale 10 000 basis points: the want's whole
+// quantity. Role and Want have no default and are required. A scale of 0 is a
+// row that removes the want.
+func DefaultTaste() Taste {
+	return Taste{Scale: 10_000}
+}
+
+// DefaultRegionTaste returns a region taste of scale 10 000 basis points. Region
+// and Want have no default and are required.
+func DefaultRegionTaste() RegionTaste {
+	return RegionTaste{Scale: 10_000}
+}
+
 // The defaults of the solve options (spec-viability.md 11), unexported for the
 // reason the bounds are: the options are not Config fields. Provisional
 // placeholders (N-015).

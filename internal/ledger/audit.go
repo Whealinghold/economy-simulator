@@ -509,7 +509,7 @@ func (l *Ledger) eachBoundarySlot(f slotVisitor) error {
 // eachThingSlot calls f for the slots of one reason and thing (money or
 // goods), if they are a faucet or a sink.
 func (l *Ledger) eachThingSlot(r Reason, t int, f slotVisitor) error {
-	o, class := l.off[r][t], table[r][t].class
+	o, class := l.offOf(r, t), table[r][t].class
 	if o < 0 || class == Internal {
 		return nil
 	}
