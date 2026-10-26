@@ -166,3 +166,29 @@ func TestDemand_HandBuiltViewMissingItem(t *testing.T) {
 		t.Errorf("Trade(item outside the tradable set) funded want 0 = %d, want 0", got)
 	}
 }
+
+// TestClampIntents_BidsOfOneCommodityShareThePlannedUnits verifies that two bids
+// for a commodity cannot claim more WantUnits between them than the planned
+// units, and that an ask claims none.
+//
+// Fix: review stage 3, iteration 1. Each bid was clamped to the full planned
+// units on its own, so a custom strategy could claim them twice.
+//
+// Requirement: FR-DEM-021
+func TestClampIntents_BidsOfOneCommodityShareThePlannedUnits(t *testing.T) {
+	t.Parallel()
+	d := &demandState{merged: []wantUse{{commodity: 3, units: 5}}}
+	p := &TradePlan{Intents: []Intent{
+		{Side: Bid, Commodity: 3, Quantity: 4, WantUnits: 4},
+		{Side: Ask, Commodity: 3, Quantity: 9, WantUnits: 9},
+		{Side: Bid, Commodity: 3, Quantity: 4, WantUnits: 4},
+	}}
+	d.clampIntents(p)
+	// 5 planned: the first bid takes 4, the second the 1 left, the ask none.
+	want := []Quantity{4, 0, 1}
+	for i, in := range p.Intents {
+		if in.WantUnits != want[i] {
+			t.Errorf("clampIntents intent %d WantUnits = %d, want %d", i, in.WantUnits, want[i])
+		}
+	}
+}

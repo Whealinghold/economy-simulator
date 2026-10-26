@@ -320,12 +320,13 @@ func (m *viaModel) wantsExceed(o *viabilityOutcome) {
 		return
 	}
 	one := steady.Ratio{Num: 1, Den: 1}
-	if m.pooled == nil { // labour has not run: solve the upkeep-only programme here
+	own := m.pooled == nil
+	if own { // labour has not run: solve the upkeep-only programme here
 		base, skipped, err := m.solve(m.model(regions, one))
 		m.pooled = &pooledSolve{base, skipped, err}
 	}
 	base, skipped, err := m.pooled.out, m.pooled.skipped, m.pooled.err // an error is labour's to report
-	if skipped {
+	if skipped && own {                                                // otherwise labour has already noted the skip as v3_pooled
 		o.skipped("wants_pooled")
 	}
 	if err != nil || skipped || base.SurplusBP < wholeBP {

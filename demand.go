@@ -959,13 +959,19 @@ func (d *demandState) mergeItems(agent AgentID, ladder []rung) {
 }
 
 // clampIntents limits the WantUnits of each intent to its quantity and to the
-// planned units of its commodity; an ask has none.
+// planned units of its commodity less what the earlier bids of the plan already
+// claim; an ask has none.
 func (d *demandState) clampIntents(p *TradePlan) {
 	for i := range p.Intents {
 		in := &p.Intents[i]
 		planned := int64(0)
 		if j, ok := slices.BinarySearchFunc(d.merged, in.Commodity, func(e wantUse, t CommodityID) int { return cmp.Compare(e.commodity, t) }); ok && in.Side == Bid {
 			planned = d.merged[j].units
+			for _, e := range p.Intents[:i] {
+				if e.Side == Bid && e.Commodity == in.Commodity {
+					planned -= int64(e.WantUnits) // already clamped, so no wrap
+				}
+			}
 		}
 		in.WantUnits = Quantity(max(0, min(int64(in.WantUnits), int64(in.Quantity), planned)))
 	}

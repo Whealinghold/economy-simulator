@@ -204,3 +204,21 @@ func TestWantsModel_OverflowIsErrOverflow(t *testing.T) {
 		t.Errorf("wantsModel error = %v, want ErrOverflow", err)
 	}
 }
+
+// TestWantsExceed_SkippedPooledSolveIsNotedOnce verifies that when labour has
+// already solved the pooled programme and it was skipped, wantsExceed adds no
+// second skip note for the same solve.
+//
+// Fix: review stage 3, iteration 1. wantsExceed reported wants_pooled for the
+// pooled solve that labour had already reported as v3_pooled.
+func TestWantsExceed_SkippedPooledSolveIsNotedOnce(t *testing.T) {
+	t.Parallel()
+	cc := viaWanting(7, 2).canonical()
+	m := newViaModel(&cc)
+	m.pooled = &pooledSolve{skipped: true}
+	var o viabilityOutcome
+	m.wantsExceed(&o)
+	if len(o.warnings) != 0 || len(o.errs) != 0 {
+		t.Errorf("wantsExceed after a skipped pooled solve: warnings %v, errors %v, want none", o.warnings, o.errs)
+	}
+}
