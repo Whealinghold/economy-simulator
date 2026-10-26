@@ -5,8 +5,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -178,5 +182,146 @@ func TestGolden_EventsAndPositionsUnchanged(t *testing.T) {
 				t.Errorf("sha256(%s) = %s, want %s", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+// demandPosLines is the number of positions that ran per tick in pack one-demand:
+// the 22 of the off set and P3.6 and P6.2 of the module.
+const demandPosLines = 24
+
+// solveColdDemand solves the cold layer set of one-demand (base, demand,
+// one-demand: no warm start), the programme with the wants.
+func solveColdDemand(t testing.TB) solveReport {
+	t.Helper()
+	ss, err := economysim.SolveSteadyState(context.Background(), loadValidPack(t, packOneDemandCold...))
+	if err != nil {
+		t.Fatalf("SolveSteadyState(cold one-demand) error = %v, want nil", err)
+	}
+	return newSolveReport(ss)
+}
+
+// TestGolden_OneDemand verifies the module-alone golden of the demand module:
+// the pack one-demand (it carries its own census, so it is the module's pack and
+// not the reference chain with an overlay: testing.md 7.1.1), seed 1, 400 ticks,
+// run as a Step loop with the recorder and WithAudit, against
+// testdata/golden/demand/one-demand.txt (REF 8.5 items 1 to 6, the digest line
+// included).
+//
+// Requirement: FR-REF-025, FR-REF-026, FR-DEM-039, FR-DEM-040, FR-OBS-023
+//
+// Guard: a behaviour change of the module moves the file; it is regenerated with
+// -update only after the diff is understood (testing.md 7.2).
+func TestGolden_OneDemand(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOneDemand...)
+	res := runPack(t, cfg, runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveStep, Observe: true, Audit: true, Snapshots: snapSample, Digest: true})
+	got := renderGolden("one-demand", goldenSeed, goldenTicks, samplesOnly(res, goldenTicks), solveColdDemand(t), cfg.Warnings())
+	if want, err := os.ReadFile(moduleGoldenPath("demand", "one-demand.txt")); err == nil && !bytes.Equal(want, got) && !*updateFlag {
+		t.Errorf("one-demand.txt differs from the golden: %s (testing.md 7.1.2)", demandPositionsNote(t, cfg))
+	}
+	checkModuleGolden(t, "demand", "one-demand.txt", got)
+}
+
+// TestGolden_OneDemandEvents verifies the golden rendering of the events of
+// one-demand, seed 1, one Run of 400 ticks, against
+// testdata/golden/demand/events-one-demand.txt, and that the Run and a bare Step
+// loop end in the same snapshot.
+//
+// Requirement: FR-OBS-080, FR-OBS-081, FR-REF-025, FR-DEM-035
+//
+// Guard: the file holds WantShortfall events; without them the golden would not
+// see the module's events.
+func TestGolden_OneDemandEvents(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOneDemand...)
+	res := runPack(t, cfg, runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveRun(goldenTicks), Observe: true})
+	step := runPack(t, cfg, runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveStep})
+	if !reflect.DeepEqual(res.Final, step.Final) {
+		t.Errorf("final snapshot of Run(400) differs from the Step loop's (seed %d)", goldenSeed)
+	}
+	got := renderEvents(res)
+	if !bytes.Contains(got, []byte("WantShortfall")) {
+		t.Errorf("events of one-demand hold no WantShortfall, want the module's event in the golden")
+	}
+	checkModuleGolden(t, "demand", "events-one-demand.txt", got)
+}
+
+// TestPositionHash_OneDemandGolden verifies the per-position state hash of
+// one-demand, seed 1, ticks 0 to 29, against testdata/golden/demand/
+// one-demand.positions.txt: one line per position that ran, 24 per tick (P3.6
+// and P6.2 run with the module on, and not in the off set).
+//
+// Requirement: testing.md 7.1.2, FR-WLD-004, FR-DEM-040
+//
+// Guard: when the golden fails, the first differing line names the tick and
+// position at which the demand state diverged.
+func TestPositionHash_OneDemandGolden(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	lines := positionLines(t, loadValidPack(t, packOneDemand...), goldenSeed, posTicks)
+	if want := posTicks * demandPosLines; len(lines) != want {
+		t.Errorf("recorded %d lines, want %d (%d positions per tick)", len(lines), want, demandPosLines)
+	}
+	checkModuleGolden(t, "demand", "one-demand.positions.txt", []byte(strings.Join(lines, "\n")+"\n"))
+}
+
+// demandPositionsNote replays the scripted run on cfg against the recorded
+// positions file of the module, so a failing golden says where the state first
+// moved.
+func demandPositionsNote(t testing.TB, cfg economysim.Config) string {
+	t.Helper()
+	b, err := os.ReadFile(moduleGoldenPath("demand", "one-demand.positions.txt"))
+	if err != nil {
+		return "positions golden unreadable: " + err.Error()
+	}
+	want := strings.Split(strings.TrimSuffix(string(b), "\n"), "\n")
+	if note := divergenceNote(want, positionLines(t, cfg, goldenSeed, posTicks)); note != "" {
+		return note
+	}
+	return fmt.Sprintf("positions of ticks 0 to %d agree with one-demand.positions.txt: the divergence is later", posTicks-1)
+}
+
+// offOneTxtSha256 is the sha256 of testdata/golden/off/one.txt as it stands,
+// digest line included.
+const offOneTxtSha256 = "6ce2e8fd1d260688695234380ac93b8d1fdd30934fada60747224d19b8795c96"
+
+// TestGolden_OffUnchanged verifies the proof of testing.md 7.1.1 for the demand
+// module: the three files of the off set are byte-identical to the ones the
+// module found (one.txt by its full hash, the events and positions files by the
+// hashes of TestGolden_EventsAndPositionsUnchanged), and the set holds no other
+// file.
+//
+// Requirement: FR-DEM-001, FR-REF-029
+//
+// Guard: an off file regenerated to absorb the module's change would fail here;
+// a diff in golden/off is a failure of the change, not a golden to regenerate
+// (architecture.md 2.10.5).
+func TestGolden_OffUnchanged(t *testing.T) {
+	t.Parallel()
+	b, err := os.ReadFile(goldenPath("one.txt"))
+	if err != nil {
+		t.Fatalf("read one.txt: %v", err)
+	}
+	if got := sha256Hex(b); got != offOneTxtSha256 {
+		t.Errorf("sha256(off/one.txt) = %s, want %s", got, offOneTxtSha256)
+	}
+	entries, err := os.ReadDir(filepath.Dir(goldenPath("one.txt")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	if want := []string{"events-one.txt", "one.positions.txt", "one.txt"}; !slices.Equal(names, want) {
+		t.Errorf("files of golden/off = %v, want %v", names, want)
 	}
 }
