@@ -208,7 +208,8 @@ func TestNewLedger_BoundaryAccountOrder(t *testing.T) {
 
 // TestReasonNames_RoundTrip verifies that every built-in ledger reason has a
 // distinct, non-empty name, that the name maps back to the same reason, that
-// the declared reasons have no name until their module appends one, and that a
+// the declared reasons have no name until their module appends one (want_consumption has),
+// and that a
 // Reason that is not a ledger reason maps to nothing.
 //
 // Requirement: FR-LED-004
@@ -217,7 +218,7 @@ func TestReasonNames_RoundTrip(t *testing.T) {
 	seen := map[Reason]ledger.Reason{}
 	for r := ledger.Reason(0); r < ledger.NumReasons; r++ {
 		name, ok := reasonName(r)
-		if r >= ledger.LoanOut {
+		if r >= ledger.LoanOut && r <= ledger.LoanInterest {
 			if ok {
 				t.Errorf("reasonName(%d) = %q, want none for a declared reason", r, name)
 			}
@@ -267,7 +268,7 @@ func TestReasonNames_EventConstantsHaveLedgerRows(t *testing.T) {
 			continue
 		}
 		doc := g.Doc.Text()
-		if !strings.HasPrefix(doc, "The ledger reasons of the flows") && !strings.HasPrefix(doc, "The internal ledger reasons") {
+		if !strings.HasPrefix(doc, "The ledger reasons of the flows") && !strings.HasPrefix(doc, "The internal ledger reasons") && !strings.HasPrefix(doc, "The declared ledger reasons") {
 			continue
 		}
 		for _, s := range g.Specs {
@@ -285,18 +286,28 @@ func TestReasonNames_EventConstantsHaveLedgerRows(t *testing.T) {
 			}
 		}
 	}
-	if len(values) != numBuiltInReasons {
-		t.Errorf("event.go declares %d ledger reason constants, the ledger has %d built-in reasons", len(values), numBuiltInReasons)
+	named := 0
+	for r := ledger.Reason(0); r < ledger.NumReasons; r++ {
+		if _, ok := reasonName(r); ok {
+			named++
+		}
+	}
+	if len(values) != named {
+		t.Errorf("event.go declares %d ledger reason constants, the ledger has %d named reasons", len(values), named)
 	}
 	for _, v := range values {
 		if _, ok := ledgerReason(Reason(v)); !ok {
 			t.Errorf("Reason constant %q has no ledger row", v)
 		}
 	}
-	for r := range numBuiltInReasons {
+	for r := range int(ledger.NumReasons) {
 		name, ok := reasonName(ledger.Reason(r))
 		if !ok {
+			if r >= numBuiltInReasons && ledger.Reason(r) <= ledger.LoanInterest {
+				continue // a loan row: unnamed until the credit module appends one
+			}
 			t.Errorf("ledger reason %d has no Reason name", r)
+			continue
 		}
 		if !slices.Contains(values, string(name)) {
 			t.Errorf("ledger reason %d (%q) has no Reason constant in event.go", r, name)

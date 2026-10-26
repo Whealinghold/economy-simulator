@@ -149,6 +149,15 @@ const (
 	ReasonStarvation Reason = "starvation"
 )
 
+// The declared ledger reasons that cross the boundary: rows a module owns, in
+// the ledger only while the module is on (spec-ledger.md 7.2.2). They are
+// appended in build order, one per module change (architecture.md 2.10.5).
+const (
+	// ReasonWantConsumption is goods consumed as a want beyond upkeep, with the
+	// demand module on (spec-demand.md 4.7).
+	ReasonWantConsumption Reason = "want_consumption"
+)
+
 // The reasons of the "belief updated" Debug line, in the precedence of
 // spec-beliefs.md 12.2. They are log values only: no event carries them.
 const (

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
 // This file is the demand module (spec-demand.md; architecture.md 2.10.1): the
@@ -662,3 +663,7 @@ func classWithoutIncome(c *Config, ro *Role, upkeep, wref int64) bool {
 	need, nok := checked.Add(reserve, year)
 	return yok && rok && nok && c.Calendar.TicksPerYear() > 0 && int64(ro.StartMoney) < need
 }
+
+// demandReasons returns the ledger reasons the demand module declares: the goods
+// sink for the consumption of a want (spec-ledger.md 7.2.2, FR-LED-050).
+func demandReasons() []ledger.Reason { return []ledger.Reason{ledger.WantConsumption} }

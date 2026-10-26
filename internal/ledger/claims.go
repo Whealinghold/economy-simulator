@@ -318,7 +318,7 @@ func (l *Ledger) flowsFit(region int, interest, principal int64) bool {
 		if p.v == 0 {
 			continue
 		}
-		if _, ok := checked.Add(flows[region*l.stride+l.off[p.r][thingMoney]], p.v); !ok {
+		if _, ok := checked.Add(flows[region*l.stride+l.offOf(p.r, thingMoney)], p.v); !ok {
 			return false
 		}
 	}

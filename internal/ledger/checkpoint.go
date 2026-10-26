@@ -24,7 +24,7 @@ const pinnedRows = 42
 var reasonCodes = [NumReasons]uint64{
 	Trade: 0, Initial: 1, RecipeInput: 2, RecipeOutput: 3, Disposal: 4, Consumption: 5,
 	Spoilage: 7, Wear: 8, EstateMoney: 9, EstateGoods: 10, StartMoney: 11,
-	LoanOut: 25, LoanRepay: 26, LoanInterest: 27,
+	LoanOut: 25, LoanRepay: 26, LoanInterest: 27, WantConsumption: 6,
 	Split: 37, Merge: 38, Births: 39, Starvation: 40,
 }
 
@@ -197,10 +197,10 @@ func (l *Ledger) eachFlow(src []int64, f func(region int, code, thing uint64, v 
 // eachThing calls f for the non-zero totals of reason r in one region's block:
 // money first, then the commodities in order.
 func (l *Ledger) eachThing(base []int64, r Reason, f func(thing uint64, v int64)) {
-	if o := l.off[r][thingMoney]; o >= 0 && base[o] != 0 {
+	if o := l.offOf(r, thingMoney); o >= 0 && base[o] != 0 {
 		f(0, base[o])
 	}
-	if o := l.off[r][thingGoods]; o >= 0 {
+	if o := l.offOf(r, thingGoods); o >= 0 {
 		for c := range l.comms {
 			if v := base[o+c]; v != 0 {
 				f(uint64(c)+1, v)

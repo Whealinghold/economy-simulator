@@ -238,7 +238,7 @@ func (l *Ledger) move(m goodsMove) error {
 	if err != nil {
 		return err
 	}
-	slot := l.flowSlot(f, t, l.off[m.r][thingGoods]+m.commodity)
+	slot := l.flowSlot(f, t, l.offOf(m.r, thingGoods)+m.commodity)
 	flows := l.flows()
 	total, ok := checked.Add(flows[slot], m.qty)
 	if !ok {

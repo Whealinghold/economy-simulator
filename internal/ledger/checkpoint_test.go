@@ -843,6 +843,7 @@ var reasonNames = map[Reason]string{
 	EstateMoney: "estate_money", EstateGoods: "estate_goods", StartMoney: "start_money",
 	Split: "split", Merge: "merge", Births: "births", Starvation: "starvation",
 	LoanOut: "loan_out", LoanRepay: "loan_repay", LoanInterest: "loan_interest",
+	WantConsumption: "want_consumption",
 }
 
 // TestReasonCode_Pinned verifies that the code of every reason is the position

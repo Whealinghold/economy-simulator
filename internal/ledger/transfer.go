@@ -37,7 +37,7 @@ func (l *Ledger) TransferReserved(from, to int, amount int64, r Reason) error {
 // the kind of t.
 func (l *Ledger) moneyFits(r Reason, f, t *account) bool {
 	rw, ok := rowOf(r, false)
-	return ok && l.off[r][thingMoney] >= 0 && rw.fits(f.kind, t.kind)
+	return ok && l.offOf(r, thingMoney) >= 0 && rw.fits(f.kind, t.kind)
 }
 
 // transferParties runs the checks of transfer that precede the debit, in the
@@ -99,7 +99,7 @@ func (l *Ledger) transfer(from, to int, amount int64, r Reason, marked bool) err
 	if err != nil {
 		return err
 	}
-	slot := l.flowSlot(f, t, l.off[r][thingMoney])
+	slot := l.flowSlot(f, t, l.offOf(r, thingMoney))
 	flows := l.flows()
 	total, ok := checked.Add(flows[slot], amount)
 	if !ok {
