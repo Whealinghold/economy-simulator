@@ -219,7 +219,10 @@ type scenarioObs struct {
 	halted  int64                            // households the halt declined, summed (ProductionHalted)
 	haltEv  int64                            // ProductionHalted events
 	badSeq  string                           // first MarketCleared out of order
-	regions economysim.AgentID               // agent IDs below this are estates (plan 1-8 regionOf)
+	// wantPlanned and wantFunded are the units of WantShortfall (Planned, Funded)
+	// summed per tick; a tick with no event reads as 0 for both.
+	wantPlanned, wantFunded []int64
+	regions                 economysim.AgentID // agent IDs below this are estates (plan 1-8 regionOf)
 }
 
 func newScenarioObs() *scenarioObs {
@@ -277,6 +280,12 @@ func (o *scenarioObs) Observe(e economysim.Event) {
 		if e.Reason == economysim.ReasonSpoilage && e.Commodity != economysim.NoCommodity {
 			o.spoiled[e.Commodity] += e.Total
 		}
+	case economysim.WantShortfall:
+		for int64(len(o.wantPlanned)) <= e.Tick {
+			o.wantPlanned, o.wantFunded = append(o.wantPlanned, 0), append(o.wantFunded, 0)
+		}
+		o.wantPlanned[e.Tick] += e.Planned
+		o.wantFunded[e.Tick] += e.Funded
 	case economysim.ProductionHalted:
 		o.haltEv++
 		o.halted += e.Halted
