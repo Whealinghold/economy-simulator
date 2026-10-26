@@ -819,12 +819,13 @@ Each rule has a sentinel and a failing-case test (testing.md 3.9); an error name
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per`, a `Kind` or a target `Kind` that is not one of its values; `Until` not above `Start` when set; more than `MaxMoneyFlows` flows |
+| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per`, a `Kind` or a target `Kind` that is not one of its values; `Until` not above `Start` when set |
+| `ErrTooMany` | more than `MaxMoneyFlows` flows (a count bound, checked in phase 1 with the others, `spec-config.md` 7.1.6) |
 | `ErrFlowShape` (new) | a grant with `RateBP` or `Exempt`, or with both `Amount` and `Level` or neither; a levy with `Level`, or with both `Amount` and `RateBP` or neither; a household target with no role; a pool target with a role; `NotIncome` on a levy or on a target that is not households; `Level` with `Per` `year`; a stores target with `Level` or `RateBP`, a role, or a jurisdiction; a treasury target with a region, a role or a store class |
 | `ErrDuplicateID` | two flows with one ID |
 | `ErrReasonCollision` (new) | a flow ID that equals a built-in reason of the registry or a reason a later spec declares |
 | `ErrUnknownRole`, `ErrUnknownRegion` | a target naming an undefined role or region |
-| `ErrModuleDependency` | a pool target while the estates module is off; a stores target while the storage module is off |
+| `ErrModuleDependency` | a pool target while the estates module is off; a stores target while the storage module is off; a treasury target while the polity or fiscal module is not built or is off (the nearest sentinel until POL and FIS give the treasury its own, `ErrUnknownJurisdiction` and `ErrNotGoverned`, which they keep once built) |
 | `ErrUnknownStoreClass` (STO) | a stores target naming a store class that is not configured |
 | `ErrUnknownJurisdiction` (POL) | a treasury target naming a jurisdiction that is not defined |
 | `ErrNotGoverned` (FIS) | a treasury target naming a jurisdiction that has no seat |
@@ -1260,11 +1261,11 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-031 | Events MUST contain no map and no pointer, fixed-point values only, and MUST be emitted after the step's transfers. |
 | FR-MON-032 | The step MUST NOT log at `Info`, `Warn` or `Error`; its `Debug` lines MUST be guarded by `Enabled`, have constant messages and use the keys `flow`, `region`, `due`, `applied`, `cause`. |
 | FR-MON-033 | With the default logger and observer the step MUST build no event and allocate nothing beyond scratch held by the world. |
-| FR-MON-034 | A field outside its bound, an unknown `Kind` or `Per`, `Until` not above `Start` when set, or more than `MaxMoneyFlows` flows MUST be rejected with `ErrOutOfBounds`. |
+| FR-MON-034 | A field outside its bound, an unknown `Kind` or `Per`, `Until` not above `Start` when set MUST be rejected with `ErrOutOfBounds`, and more than `MaxMoneyFlows` flows MUST be rejected with `ErrTooMany`. |
 | FR-MON-035 | Two flows with one ID MUST be rejected with `ErrDuplicateID`. |
 | FR-MON-036 | A flow ID equal to a built-in reason, or to a reason a later spec declares, MUST be rejected with `ErrReasonCollision`. |
 | FR-MON-037 | A target naming an undefined role or region MUST be rejected with `ErrUnknownRole` or `ErrUnknownRegion`. |
-| FR-MON-038 | A pool target while the estates module is off, and a stores target while the storage module is off, MUST be rejected with `ErrModuleDependency`; a stores target naming an unconfigured class MUST be `ErrUnknownStoreClass`, a treasury target naming an undefined jurisdiction `ErrUnknownJurisdiction` and one with no seat `ErrNotGoverned`. |
+| FR-MON-038 | A pool target while the estates module is off, , a stores target while the storage module is off, and a treasury target while the polity or fiscal module is not built or is off, MUST be rejected with `ErrModuleDependency`; a stores target naming an unconfigured class MUST be `ErrUnknownStoreClass`, a treasury target naming an undefined jurisdiction `ErrUnknownJurisdiction` and one with no seat `ErrNotGoverned`. |
 | FR-MON-039 | The warnings `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty`, `grant_to_pool_no_outlet` and `store_levy_below_upkeep` MUST NOT fail validation, and each MUST name its path. |
 | FR-MON-040 | The state of 14 MUST be saved in the order given, a restored world MUST apply the same payments as an uninterrupted one, and a carry that is not started, or of a removed agent, MUST NOT be saved. |
 | FR-MON-041 | The module MUST draw no random number, and the draws made at agent creation (`spec-agents.md` 3.5.2) MUST NOT depend on whether it is on. |

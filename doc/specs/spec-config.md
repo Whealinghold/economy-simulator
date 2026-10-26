@@ -1315,7 +1315,7 @@ input found nothing to refuse (phase 1 always stops the rest):
    (a recipe's items, a role's lists), a walk bounded by the first. A count over its
    bound is `ErrTooMany` with its path. If phase 1 found any, `Validate` returns those
    errors and nothing else: no sort, no set and no fixpoint is built on a collection
-   that is not known to be small. The demand module's counts are among them: the wants, the two taste lists, and then the taste rows of each role, in that order (`spec-demand.md` 10.1).
+   that is not known to be small. The demand module's counts are among them: the wants, the two taste lists, and then the taste rows of each role, in that order (`spec-demand.md` 10.1). The money-supply module's flow count (`MaxMoneyFlows`) is among them, `ErrTooMany` like every count bound (`spec-money-supply.md` 12.1, FR-MON-034).
 2. **Local rules.** IDs (`ErrInvalidID`), field bounds (`ErrOutOfBounds`), shapes, each
    reading one entity.
 3. **Identity and references.** Duplicates (`ErrDuplicateID`) and unknown references
@@ -1432,7 +1432,7 @@ severity: an **error** fails `Validate` (or `NewWorld`, where stated); a
 | rule `cycle_not_productive`: a strongly connected component of the material graph with no surplus (the Hawkins-Simon test, with the best yield across regions) | `ErrNotViable` | FR-VIA-006 | `Validate`, size-gated |
 | rule `labour_short`: the pooled free-trade programme has a surplus factor below 1 at full labour; rule `storage_gap`: an upkeep good with a shelf life below its longest supply gap | `ErrNotViable` | FR-VIA-007, FR-VIA-008 | `Validate`; `labour_short` size-gated |
 | the region graph: no region (`ErrNoRegions`), a self edge (`ErrSelfEdge`), an unknown region or commodity in an edge or a price override, a duplicate edge or override, a `Distance` outside `[1, MaxDistance]`, a price outside `[1, MaxPrice]`, more than `MaxEdges` edges | `ErrNoRegions`, `ErrSelfEdge`, `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrDuplicateID`, `ErrOutOfBounds`, `ErrTooMany` | `spec-regions.md` 9.1, FR-REG-001 to 013, 033 | `Validate` |
-| a money flow: a field outside its bound or an unknown `Kind` or `Per`; a wrong field combination; a flow ID equal to a built-in reason or a duplicate; an unknown role or region; a pool target while the estates module is off | `ErrOutOfBounds`, `ErrFlowShape`, `ErrReasonCollision`, `ErrDuplicateID`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrModuleDependency` | `spec-money-supply.md` 12.1, FR-MON-034 to 038 | `Validate` |
+| a money flow: a field outside its bound or an unknown `Kind` or `Per`; a wrong field combination; a flow ID equal to a built-in reason or a duplicate; an unknown role or region; a pool target while the estates module is off, a stores target while the storage module is off, a treasury target while the polity or fiscal module is not built or is off (the treasury row keeps its own sentinels once they build); more than `MaxMoneyFlows` flows | `ErrOutOfBounds`, `ErrFlowShape`, `ErrReasonCollision`, `ErrDuplicateID`, `ErrUnknownRole`, `ErrUnknownRegion`, `ErrModuleDependency`, `ErrTooMany` | `spec-money-supply.md` 12.1, FR-MON-034 to 038 | `Validate` |
 | a population schedule with no knot or more than `MaxKnots`, knot ratios not strictly increasing or out of bound, a `Rate` outside 0 to 10 000, `MinHouseholds`, `BirthStake`, `BirthScale`, `DeathScale` or `HouseholdCap` out of bound; an unknown or duplicate region row (the rules of `spec-regions.md` 5.3.1, 5.3.2, not restated) | `ErrOutOfBounds`, `ErrUnknownRegion`, `ErrDuplicateID` | `spec-population.md` 9.1, FR-POP-025 to 027 | `Validate` |
 | a transport mode: a field outside its bound, `UnitMass` and `UnitBulk` both 0, a duplicate mode or feed commodity, an unknown commodity, a `Vehicle` without `Durability`, a wrong field combination for a hired or a self-carried mode, the module on while the region graph is off, a product that overflows | `ErrOutOfBounds`, `ErrDuplicateID`, `ErrUnknownCommodity`, `ErrVehicleNotDurable`, `ErrModeShape`, `ErrModuleDependency`, `ErrOverflow` | `spec-transport.md` 12.1 | `Validate` |
 | the resources module: a field outside its bound, an unknown resource or region in a row, a duplicate resource or row or a resource twice in the draws of a recipe, a wrong shape or rate combination, a bad abundance curve, an unknown season, a product that overflows | `ErrOutOfBounds`, `ErrUnknownResource`, `ErrUnknownRegion`, `ErrDuplicateID`, `ErrResourceShape`, `ErrCurve`, `ErrUnknownSeason`, `ErrOverflow` | `spec-resources.md` 13.2 | `Validate` |
@@ -1726,6 +1726,15 @@ smaller id than one already built is inserted between the pairs and moves no id.
 of a non-nil pointer is the id, the pairs of its struct and the terminator, written
 explicitly and not through the helper that writes nothing for an empty body, so
 `Modules.Demand: &Demand{}` (on, empty) differs from a nil pointer (8.2.1, 8.2.4).
+
+The money-supply module (`Modules.MoneySupply`, id 2 in `Modules`) adds: `MoneySupply` has
+`Flows` 1, written in ID order (the canonical order); `MoneyFlow` has `ID` 1, `Kind` 2,
+`Target` 3, `Amount` 4, `Level` 5, `RateBP` 6, `Exempt` 7, `Per` 8, `Start` 9, `Until` 10,
+`Limit` 11, `NotIncome` 12, and `Label`, which is presentation only and has no id;
+`FlowTarget` has `Kind` 1, `Region` 2, `Role` 3 (`Store` 4 and `Jurisdiction` 5 are added by
+the storage and fiscal modules). `Kind`, `Per` and the target `Kind` are hashed as their
+strings, and an empty `Per` is rewritten to `tick` by the canonical copy, so the two
+spellings of one configuration hash alike (`spec-money-supply.md` 4.1, 11, NFR-MON-003).
 
 8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
 three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer
