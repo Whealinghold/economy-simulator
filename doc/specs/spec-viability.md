@@ -151,7 +151,18 @@ proportion to their weights, which is the substitution share at equal price rati
 (`spec-demand.md` 4.2). `W` is **not** multiplied by `lambda`: the basket is the
 subsistence part and the wants are final demand at their reference level, so `lambda*`
 says how many baskets the realm can make *after* meeting the wants. With the module off
-`W = 0` and nothing changes (FR-VIA-055). The fixed term is an exact fraction (`Model.Fixed` is a slice of `Ratio`, one per goods row; an integer cannot hold it), and the goods row is written  -n x + D lambda <= -W, so a positive term gives a negative right-hand side. The solver then runs a **first phase** (an artificial variable for each such row, Bland's rule in both phases, artificials that end in the basis at 0 pivoted out); the certificate of FR-VIA-014 is checked against the original programme. A first phase that ends above 0 means the wants cannot be met at any `lambda >= 0`: the solver returns `steady.ErrInfeasible`, and the check treats it as a case of `wants_exceed_labour` with no `SurplusWantsBP`, the census falling back to the upkeep-only programme (FR-VIA-057). With every term 0 no right-hand side is negative, the first phase does not run and the result, pivots included, is that of the programme without a term. The census and the warm-start table of a world
+`W = 0` and nothing changes (FR-VIA-055). The fixed term is an exact fraction
+(`Model.Fixed` is a slice of `Ratio`, one per goods row; an integer cannot hold it), and
+the goods row is written -n x + D lambda <= -W, so a positive term gives a negative
+right-hand side. The solver then runs a **first phase** (an artificial variable for each
+such row, Bland's rule in both phases, artificials that end in the basis at 0 pivoted
+out); the certificate of FR-VIA-014 is checked against the original programme. A first
+phase that ends above 0 means the wants cannot be met at any `lambda >= 0`: the solver
+returns `steady.ErrInfeasible`, and the check treats it as a case of
+`wants_exceed_labour` with no `SurplusWantsBP`, the census falling back to the
+upkeep-only programme (FR-VIA-057). With every term 0 no right-hand side is negative,
+the first phase does not run and the result, pivots included, is that of the programme
+without a term. The census and the warm-start table of a world
 with wants come from this programme; the error rule `labour_short` (V3) does **not**: it
 keeps the upkeep-only programme, because a want is not subsistence and a pack must not be
 rejected for a luxury it cannot afford (FR-VIA-056). The diagnostic of 10.2,

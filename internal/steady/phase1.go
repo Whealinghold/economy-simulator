@@ -15,11 +15,16 @@ import (
 
 // negateForPhase1 negates row i and makes artificial column col basic in it.
 func (t *tableau) negateForPhase1(i, col int) {
-	for j := range t.a[i] {
-		t.a[i][j].Neg(t.a[i][j])
-	}
+	t.negateRow(i)
 	t.a[i][col].SetInt64(1)
 	t.basis[i] = col
+}
+
+// negateRow negates every entry of row i, the right-hand side included.
+func (t *tableau) negateRow(i int) {
+	for _, v := range t.a[i] {
+		v.Neg(v)
+	}
 }
 
 // startPhase1 replaces the objective row by the first phase's, priced out
@@ -71,9 +76,7 @@ func (t *tableau) endPhase1(ctx context.Context, maxPivots, done int64, obj []*b
 			return pivots, &LimitError{Pivots: done + pivots, Rows: t.m, Cols: t.rhs()}
 		}
 		if t.a[r][c].Sign() < 0 {
-			for _, v := range t.a[r] {
-				v.Neg(v)
-			}
+			t.negateRow(r)
 		}
 		if err := t.pivot(r, c); err != nil {
 			return pivots, err
@@ -81,7 +84,20 @@ func (t *tableau) endPhase1(ctx context.Context, maxPivots, done int64, obj []*b
 		pivots++
 	}
 	t.restoreObjective(obj)
+	t.dropArtificials()
 	return pivots, nil
+}
+
+// dropArtificials cuts the artificial columns off every row, moving the
+// right-hand side left, so that the second phase does not carry them through
+// its pivots. No artificial is basic and none is read again.
+func (t *tableau) dropArtificials() {
+	w := t.n + t.m
+	for i, row := range t.a {
+		row[w] = row[t.rhs()]
+		t.a[i] = row[:w+1]
+	}
+	t.na = 0
 }
 
 // firstNonzero returns the lowest structural or slack column with a non-zero

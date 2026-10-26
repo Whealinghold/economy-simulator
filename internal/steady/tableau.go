@@ -79,7 +79,9 @@ var (
 )
 
 // LimitError is the error of a solve that reached its pivot cap. It carries the
-// pivots made and the size of the tableau, and matches ErrLimit.
+// pivots made and the size of the tableau, and matches ErrLimit. Cols counts the
+// columns of the tableau at that moment, so it includes the artificial columns
+// until the first phase has ended.
 type LimitError struct {
 	Pivots     int64
 	Rows, Cols int

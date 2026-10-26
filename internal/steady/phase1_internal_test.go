@@ -405,3 +405,25 @@ func TestEndPhase1_HonoursCapAndContext(t *testing.T) {
 		t.Errorf("endPhase1(cancelled) error = %v, want context.Canceled", err)
 	}
 }
+
+// TestEndPhase1_DropsArtificialColumns verifies that after the first phase the
+// tableau has no artificial column and the right-hand side is the last entry.
+//
+// Same programme as TestEndPhase1_PivotsOnEitherSign, with v = -1.
+//
+// Guard: artificial columns left in place are carried through every second-phase
+// pivot for nothing.
+func TestEndPhase1_DropsArtificialColumns(t *testing.T) {
+	t.Parallel()
+	p := Programme{Rows: 1, RHS: []Ratio{{Num: -1, Den: 1}}, Cols: []Column{{Cost: Ratio{Num: 1, Den: 1}, Entries: []Entry{{Row: 0, Val: Ratio{Num: -1, Den: 1}}}}}}
+	tb := newTableau(p)
+	obj := tb.startPhase1()
+	tb.a[0][tb.rhs()].SetInt64(0)
+	tb.a[tb.m][tb.rhs()].SetInt64(0)
+	if _, err := tb.endPhase1(context.Background(), 1<<20, 0, obj); err != nil {
+		t.Fatal(err)
+	}
+	if tb.na != 0 || len(tb.a[0]) != tb.n+tb.m+1 || len(tb.a[tb.m]) != tb.n+tb.m+1 {
+		t.Errorf("after endPhase1: na = %d, row widths %d and %d, want 0, %d and %d", tb.na, len(tb.a[0]), len(tb.a[tb.m]), tb.n+tb.m+1, tb.n+tb.m+1)
+	}
+}
