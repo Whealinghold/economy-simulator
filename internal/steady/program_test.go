@@ -107,7 +107,7 @@ func TestBuild_Errors(t *testing.T) {
 		m    steady.Model
 		want error
 	}{
-		{"fixed term", with(func(m *steady.Model) { m.Fixed = []int64{0, 1} }), steady.ErrFixedTerm},
+		{"fixed term past the goods rows", with(func(m *steady.Model) { m.Fixed = make([]steady.Ratio, m.Commodities+1) }), steady.ErrBadProgramme},
 		// phi * H = 2 * MaxInt64 does not fit int64.
 		{"labour overflow", with(func(m *steady.Model) { m.Regions[0].Households = math.MaxInt64; m.Phi = steady.Ratio{Num: 2, Den: 1} }), steady.ErrOverflow},
 		// H * J / year = 3 * MaxInt64 / 4: the numerator 3 * MaxInt64 does not fit.

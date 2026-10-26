@@ -45,9 +45,9 @@ type Column struct {
 }
 
 // Programme is "maximise Cost . x subject to A x <= RHS, x >= 0" with Rows
-// rows. RHS is the signed fixed term of each row; this solver needs every one
-// non-negative, so that the slack basis is feasible and no first phase is
-// needed (a negative one is ErrInfeasibleStart).
+// rows. RHS is the signed fixed term of each row. When every one is non-negative
+// the slack basis starts the solve; a negative one is started by a first phase
+// (phase1.go), and a programme that phase cannot make feasible is ErrInfeasible.
 type Programme struct {
 	Rows int
 	RHS  []Ratio
@@ -67,9 +67,9 @@ var (
 	// ErrBadProgramme reports data that is not a programme: a row out of range,
 	// a denominator that is not positive, or an RHS of the wrong length.
 	ErrBadProgramme = errors.New("steady: malformed programme")
-	// ErrInfeasibleStart reports a negative fixed term, which the slack basis
-	// cannot start from.
-	ErrInfeasibleStart = errors.New("steady: negative right-hand side needs a first phase")
+	// ErrInfeasible reports a programme with no feasible point: the first phase
+	// ends above 0 (N-277).
+	ErrInfeasible = errors.New("steady: programme is infeasible")
 	// ErrUnbounded reports a programme whose objective can grow without limit.
 	ErrUnbounded = errors.New("steady: programme is unbounded")
 	// ErrInconsistent reports that the certificate failed.
@@ -95,9 +95,10 @@ func (e *LimitError) Unwrap() error { return ErrLimit }
 
 // tableau holds the integer tableau a[i][j] / d. Rows 0..m-1 are the
 // constraints, row m is the objective (z - c.x = 0), columns 0..n-1 the
-// structural variables, n..n+m-1 the slacks and n+m the right-hand side.
+// structural variables, n..n+m-1 the slacks, then na artificial variables of the
+// first phase (phase1.go) and the right-hand side.
 type tableau struct {
-	m, n     int
+	m, n, na int
 	a        [][]*big.Int
 	d        *big.Int
 	basis    []int
@@ -106,7 +107,7 @@ type tableau struct {
 }
 
 // rhs is the index of the right-hand-side column.
-func (t *tableau) rhs() int { return t.n + t.m }
+func (t *tableau) rhs() int { return t.n + t.m + t.na }
 
 // checkProgramme validates the data of p before any work.
 func checkProgramme(p Programme) error {
@@ -116,9 +117,6 @@ func checkProgramme(p Programme) error {
 	for _, b := range p.RHS {
 		if b.Den <= 0 {
 			return ErrBadProgramme
-		}
-		if b.Num < 0 {
-			return ErrInfeasibleStart
 		}
 	}
 	for _, c := range p.Cols {
@@ -163,16 +161,28 @@ func scaleParts(num, den, l *big.Int) *big.Int {
 	return f.Mul(f, num)
 }
 
+// negatives counts the negative right-hand sides: the artificial variables of
+// the first phase.
+func negatives(rhs []Ratio) int {
+	k := 0
+	for _, b := range rhs {
+		if b.Num < 0 {
+			k++
+		}
+	}
+	return k
+}
+
 // newTableau builds the starting tableau of p, which checkProgramme accepted:
 // every row, and the objective, multiplied by the least common multiple of its
 // denominators so that all entries are integers and the slack basis has
 // coefficient 1.
 func newTableau(p Programme) *tableau {
 	m, n := p.Rows, len(p.Cols)
-	t := &tableau{m: m, n: n, d: big.NewInt(1), basis: make([]int, m)}
+	t := &tableau{m: m, n: n, na: negatives(p.RHS), d: big.NewInt(1), basis: make([]int, m)}
 	t.a = make([][]*big.Int, m+1)
 	for i := range t.a {
-		t.a[i] = make([]*big.Int, n+m+1)
+		t.a[i] = make([]*big.Int, n+m+t.na+1)
 		for j := range t.a[i] {
 			t.a[i][j] = new(big.Int)
 		}
@@ -196,10 +206,15 @@ func newTableau(p Programme) *tableau {
 			t.a[e.Row][j].Add(t.a[e.Row][j], scaleParts(num, den, t.rowScale[e.Row]))
 		}
 	}
+	art := n + m
 	for i := 0; i < m; i++ {
 		t.a[i][n+i].SetInt64(1)
-		t.a[i][n+m] = scaleTo(p.RHS[i], t.rowScale[i])
+		t.a[i][t.rhs()] = scaleTo(p.RHS[i], t.rowScale[i])
 		t.basis[i] = n + i
+		if p.RHS[i].Num < 0 {
+			t.negateForPhase1(i, art)
+			art++
+		}
 	}
 	return t
 }

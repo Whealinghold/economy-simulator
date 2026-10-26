@@ -10,9 +10,6 @@ var (
 	// ErrOverflow reports a right-hand side or an upkeep total that does not fit
 	// int64 once reduced.
 	ErrOverflow = errors.New("steady: value out of int64 range")
-	// ErrFixedTerm reports a non-zero fixed term on a goods row: the wants term
-	// of the demand module needs a first phase this row does not build (A5).
-	ErrFixedTerm = errors.New("steady: invariant violated: fixed term on a goods row needs a first phase")
 )
 
 // Region is the data of one region of a programme: its households and the
@@ -32,8 +29,12 @@ type Model struct {
 	Regions     []Region
 	Year        int64 // TicksPerYear
 	Phi         Ratio // available work share; 1/1 for the viability test
-	Fixed       []int64
-	Activities  []Activity
+	// Fixed is the exact fixed term W(c) of each goods row, by commodity; a
+	// missing entry is 0. The goods row is  -n x + D lambda <= -W, so a positive
+	// term makes the right-hand side negative and the solve start with a first
+	// phase (N-277).
+	Fixed      []Ratio
+	Activities []Activity
 }
 
 // Layout tells where the rows and columns of a built programme are: goods rows
@@ -80,11 +81,14 @@ func ratio(num, den *big.Int) (Ratio, bool) {
 
 // checkModel panics on a Model whose activities are not in canonical order or
 // name a region or commodity out of range (programmer invariants) and returns
-// ErrFixedTerm for a non-zero fixed term.
+// ErrBadProgramme for a fixed term with no goods row or a bad denominator.
 func checkModel(m Model) error {
+	if len(m.Fixed) > m.Commodities {
+		return ErrBadProgramme
+	}
 	for _, f := range m.Fixed {
-		if f != 0 {
-			return ErrFixedTerm
+		if f.Den <= 0 {
+			return ErrBadProgramme
 		}
 	}
 	prev := 0
@@ -107,8 +111,8 @@ func checkModel(m Model) error {
 // lambda subject to the goods rows  sum x n_c - lambda D_c >= 0 (written as
 // -n x + D lambda <= 0), the labour rows  sum d x <= phi H  and the capacity
 // rows  x <= H J / TicksPerYear. The columns are the activities in the order
-// given, then lambda. Every right-hand side is non-negative, so the slack basis
-// starts the solve (A5).
+// given, then lambda. A fixed term W(c) writes the goods row as  -n x + D lambda
+// <= -W(c)  (N-277).
 func Build(m Model) (Programme, Layout, error) {
 	if err := checkModel(m); err != nil {
 		return Programme{}, Layout{}, err
@@ -119,14 +123,12 @@ func Build(m Model) (Programme, Layout, error) {
 	for i := range p.RHS {
 		p.RHS[i] = Ratio{Num: 0, Den: 1}
 	}
+	if err := writeFixed(p.RHS, m.Fixed); err != nil {
+		return Programme{}, Layout{}, err
+	}
 	nextCap := m.Commodities + len(m.Regions)
-	for r, rg := range m.Regions {
-		num := new(big.Int).Mul(big.NewInt(rg.Households), big.NewInt(m.Phi.Num))
-		v, ok := ratio(num, big.NewInt(m.Phi.Den))
-		if !ok {
-			return Programme{}, Layout{}, ErrOverflow
-		}
-		p.RHS[l.LabourRow(r)] = v
+	if err := writeLabour(p.RHS, m, l); err != nil {
+		return Programme{}, Layout{}, err
 	}
 	for _, a := range m.Activities {
 		col := activityColumn(a, l)
@@ -153,6 +155,31 @@ func Build(m Model) (Programme, Layout, error) {
 		return Programme{}, Layout{}, err // a commodity out of range
 	}
 	return p, l, nil
+}
+
+// writeLabour writes the labour row of each region of rhs: phi * H.
+func writeLabour(rhs []Ratio, m Model, l Layout) error {
+	for r, rg := range m.Regions {
+		num := new(big.Int).Mul(big.NewInt(rg.Households), big.NewInt(m.Phi.Num))
+		v, ok := ratio(num, big.NewInt(m.Phi.Den))
+		if !ok {
+			return ErrOverflow
+		}
+		rhs[l.LabourRow(r)] = v
+	}
+	return nil
+}
+
+// writeFixed writes the goods rows of rhs from the fixed terms: row c is -W(c).
+func writeFixed(rhs, fixed []Ratio) error {
+	for c, f := range fixed {
+		v, ok := ratio(new(big.Int).Neg(big.NewInt(f.Num)), big.NewInt(f.Den))
+		if !ok {
+			return ErrOverflow
+		}
+		rhs[c] = v
+	}
+	return nil
 }
 
 // lambdaColumn builds the column of the surplus factor: cost 1 and the total

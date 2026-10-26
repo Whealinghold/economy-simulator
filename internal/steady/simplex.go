@@ -38,7 +38,7 @@ func Solve(ctx context.Context, p Programme, maxPivots int64) (Result, error) {
 		return Result{}, err
 	}
 	t := newTableau(p)
-	pivots, err := t.run(ctx, maxPivots)
+	pivots, err := t.solve(ctx, maxPivots)
 	if err != nil {
 		return Result{}, err
 	}
@@ -49,9 +49,28 @@ func Solve(ctx context.Context, p Programme, maxPivots int64) (Result, error) {
 	return res, nil
 }
 
-// run pivots until no reduced cost is negative and returns the pivot count.
-func (t *tableau) run(ctx context.Context, maxPivots int64) (int64, error) {
-	var pivots int64
+// solve runs the first phase when a right-hand side was negative and then the
+// second, which is the whole solve otherwise. The pivot cap counts both phases.
+func (t *tableau) solve(ctx context.Context, maxPivots int64) (int64, error) {
+	if t.na == 0 {
+		return t.run(ctx, maxPivots, 0)
+	}
+	obj := t.startPhase1()
+	pivots, err := t.run(ctx, maxPivots, 0)
+	if err != nil {
+		return pivots, err
+	}
+	out, err := t.endPhase1(obj)
+	if err != nil {
+		return pivots, err
+	}
+	return t.run(ctx, maxPivots, pivots+out)
+}
+
+// run pivots until no reduced cost is negative and returns the pivot count,
+// which starts at done.
+func (t *tableau) run(ctx context.Context, maxPivots, done int64) (int64, error) {
+	pivots := done
 	for {
 		if err := ctx.Err(); err != nil {
 			return pivots, fmt.Errorf("steady: solve cancelled after %d pivots: %w", pivots, err)
@@ -126,7 +145,7 @@ func (t *tableau) result(pivots int64) Result {
 		Pivots: pivots,
 	}
 	zero := new(big.Int)
-	basic := make([]bool, t.n+t.m)
+	basic := make([]bool, t.n+t.m+t.na)
 	for i, b := range t.basis {
 		basic[b] = true
 		if t.a[i][t.rhs()].Sign() == 0 {

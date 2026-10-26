@@ -3,6 +3,7 @@ package steady
 import (
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"slices"
 	"testing"
@@ -18,9 +19,8 @@ func TestErrorTextsMutation(t *testing.T) {
 		want string
 	}{
 		{ErrOverflow, "steady: value out of int64 range"},
-		{ErrFixedTerm, "steady: invariant violated: fixed term on a goods row needs a first phase"},
 		{ErrBadProgramme, "steady: malformed programme"},
-		{ErrInfeasibleStart, "steady: negative right-hand side needs a first phase"},
+		{ErrInfeasible, "steady: programme is infeasible"},
 		{ErrUnbounded, "steady: programme is unbounded"},
 		{ErrInconsistent, "steady: certificate failed"},
 		{ErrLimit, "steady: pivot limit reached"},
@@ -50,7 +50,7 @@ func TestCheckProgrammeMutation(t *testing.T) {
 		{"negative rows", Programme{Rows: -1}, ErrBadProgramme},
 		{"negative rhs denominator", Programme{Rows: 1, RHS: []Ratio{{Num: 1, Den: -1}}}, ErrBadProgramme},
 		{"zero rhs denominator", Programme{Rows: 1, RHS: []Ratio{{Num: 1, Den: 0}}}, ErrBadProgramme},
-		{"negative rhs", Programme{Rows: 1, RHS: []Ratio{{Num: -1, Den: 1}}}, ErrInfeasibleStart},
+		{"negative rhs is a programme", Programme{Rows: 1, RHS: []Ratio{{Num: -1, Den: 1}}}, nil},
 		{"negative cost denominator", Programme{Rows: 1, RHS: []Ratio{one}, Cols: []Column{{Cost: Ratio{Num: 1, Den: -1}}}}, ErrBadProgramme},
 		{"zero cost denominator", Programme{Rows: 1, RHS: []Ratio{one}, Cols: []Column{{Cost: Ratio{Num: 1, Den: 0}}}}, ErrBadProgramme},
 		{"zero entry denominator", Programme{Rows: 1, RHS: []Ratio{one}, Cols: []Column{{Cost: one, Entries: []Entry{{Row: 0, Val: Ratio{Num: 1, Den: 0}}}}}}, ErrBadProgramme},
@@ -122,9 +122,9 @@ func TestBuildMutation(t *testing.T) {
 	t.Run("fixed terms", func(t *testing.T) {
 		t.Parallel()
 		for _, tc := range []struct {
-			fixed []int64
+			fixed []Ratio
 			want  error
-		}{{[]int64{0, 0}, nil}, {[]int64{5}, ErrFixedTerm}, {[]int64{-5}, ErrFixedTerm}} {
+		}{{[]Ratio{{0, 1}}, nil}, {[]Ratio{{5, 1}}, nil}, {[]Ratio{{-5, 2}}, nil}, {[]Ratio{{0, 1}, {0, 1}}, ErrBadProgramme}, {[]Ratio{{1, 0}}, ErrBadProgramme}, {[]Ratio{{1, -1}}, ErrBadProgramme}, {[]Ratio{{math.MinInt64, 1}}, ErrOverflow}} {
 			m := base()
 			m.Fixed = tc.fixed
 			if _, _, err := Build(m); !errors.Is(err, tc.want) {
