@@ -315,7 +315,7 @@ func (t *tradeCtx) consider(i int, rng *rand.Rand) {
 	if !ok {
 		return
 	}
-	gap, surplus, t1, t2, t3 := household.Tiers(tg.Keep, c.Stock, tg.Reserve, job)
+	gap, surplus, t1, t2, t3, _ := household.Tiers(tg.Keep, c.Stock, tg.Reserve, job, 0)
 	kind, ask := t.candidate(c, gap, surplus, max(c.Expiring, 0)-tg.Reserve)
 	if kind == noOrder {
 		return

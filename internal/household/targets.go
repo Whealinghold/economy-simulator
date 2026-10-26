@@ -63,25 +63,32 @@ func ComputeTargets(n Need, p Params) (t Targets, ok bool) {
 }
 
 // Tiers splits the position of one commodity into its gap, its surplus and the
-// three tiers of a bid (spec-agents.md 7.3.3, 7.3.4):
+// four tiers of a bid (spec-agents.md 7.3.3, 7.3.4; spec-demand.md 4.6):
 //
 //	gap     = max(0, keep - stock)       a bid, if above 0
 //	surplus = max(0, stock - keep)       an ask, if above 0 and no bid
 //	t1      = min(gap, max(0, reserve - stock))
 //	t2      = min(gap - t1, max(0, jobwant - max(0, stock - reserve)))
-//	t3      = gap - t1 - t2
+//	t3      = max(0, min(gap, keep - want - stock) - t1 - t2)
+//	t4      = gap - t1 - t2 - t3
 //
-// The three tiers add to the gap by construction. The function takes no price,
-// so the tiers are the same at every price (FR-AGT-069). A negative argument
-// counts as 0, which keeps every subtraction in range. With keep at least
-// reserve, as ComputeTargets gives, the min in t1 never acts.
-func Tiers(keep, stock, reserve, jobwant int64) (gap, surplus, t1, t2, t3 int64) {
-	keep, stock, reserve, jobwant = max(keep, 0), max(stock, 0), max(reserve, 0), max(jobwant, 0)
+// keep includes the planned want units of the commodity (Targets.Keep), and
+// want is those units: tier 3 is the gap of the keep without the want, tier 4
+// the rest, the part of the bid that is a want. With want 0, t4 is 0 and t3 is
+// gap - t1 - t2, the three tiers of Stage 1. The four tiers add to the gap by
+// construction. The function takes no price, so the tiers are the same at every
+// price (FR-AGT-069). A negative argument counts as 0, which keeps every
+// subtraction in range. With keep at least reserve, as ComputeTargets gives,
+// the min in t1 never acts.
+func Tiers(keep, stock, reserve, jobwant, want int64) (gap, surplus, t1, t2, t3, t4 int64) {
+	keep, stock, reserve = max(keep, 0), max(stock, 0), max(reserve, 0)
+	jobwant, want = max(jobwant, 0), max(want, 0)
 	gap = max(0, keep-stock)
 	surplus = max(0, stock-keep)
 	t1 = min(gap, max(0, reserve-stock))
 	left := max(0, stock-reserve)
 	t2 = min(gap-t1, max(0, jobwant-left))
-	t3 = gap - t1 - t2
-	return gap, surplus, t1, t2, t3
+	t3 = max(0, min(gap, max(0, keep-want-stock))-t1-t2)
+	t4 = gap - t1 - t2 - t3
+	return gap, surplus, t1, t2, t3, t4
 }

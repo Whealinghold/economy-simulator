@@ -22,8 +22,8 @@ func FuzzTiersAndCap(f *testing.F) {
 	f.Add(int64(-1), int64(1<<62), int64(1<<62), int64(-5), int64(1<<62), int64(1<<62), int64(1<<62), int64(20000), int64(-1), int64(0), int64(1<<62))
 	f.Add(int64(0), int64(0), int64(0), int64(0), int64(0), int64(0), int64(0), int64(0), int64(50), int64(105), int64(0))
 	f.Fuzz(func(t *testing.T, keep, stock, reserve, job, e, uc, half, share, avail, limit, want int64) {
-		gap, surplus, t1, t2, t3 := household.Tiers(keep, stock, reserve, job)
-		if t1 < 0 || t2 < 0 || t3 < 0 || t1+t2+t3 != gap || (gap > 0 && surplus > 0) {
+		gap, surplus, t1, t2, t3, t4 := household.Tiers(keep, stock, reserve, job, 0)
+		if t1 < 0 || t2 < 0 || t3 < 0 || t4 != 0 || t1+t2+t3 != gap || (gap > 0 && surplus > 0) {
 			t.Fatalf("Tiers(%d, %d, %d, %d) = %d, %d, %d, %d, %d", keep, stock, reserve, job, gap, surplus, t1, t2, t3)
 		}
 		p := household.Params{SpendHalfTicks: half, SpendMaxShare: share}

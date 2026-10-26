@@ -130,8 +130,8 @@ func TestTiers_Examples(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			gap, surplus, t1, t2, t3 := household.Tiers(tt.keep, tt.stock, tt.reserve, tt.jobwant)
-			if gap != tt.gap || surplus != tt.surplus || t1 != tt.tier1 || t2 != tt.tier2 || t3 != tt.tier3 {
+			gap, surplus, t1, t2, t3, t4 := household.Tiers(tt.keep, tt.stock, tt.reserve, tt.jobwant, 0)
+			if gap != tt.gap || surplus != tt.surplus || t1 != tt.tier1 || t2 != tt.tier2 || t3 != tt.tier3 || t4 != 0 {
 				t.Errorf("Tiers(%d, %d, %d, %d) = %d, %d, %d, %d, %d, want %d, %d, %d, %d, %d",
 					tt.keep, tt.stock, tt.reserve, tt.jobwant, gap, surplus, t1, t2, t3,
 					tt.gap, tt.surplus, tt.tier1, tt.tier2, tt.tier3)
@@ -152,8 +152,8 @@ func TestTiers_AddToTheGap(t *testing.T) {
 		for _, stock := range vals {
 			for _, reserve := range vals {
 				for _, job := range vals {
-					gap, surplus, t1, t2, t3 := household.Tiers(keep, stock, reserve, job)
-					if t1 < 0 || t2 < 0 || t3 < 0 || t1+t2+t3 != gap || (gap > 0 && surplus > 0) {
+					gap, surplus, t1, t2, t3, t4 := household.Tiers(keep, stock, reserve, job, 0)
+					if t1 < 0 || t2 < 0 || t3 < 0 || t4 != 0 || t1+t2+t3 != gap || (gap > 0 && surplus > 0) {
 						t.Fatalf("Tiers(%d, %d, %d, %d) = %d, %d, %d, %d, %d: tiers must be non-negative and add to the gap",
 							keep, stock, reserve, job, gap, surplus, t1, t2, t3)
 					}
@@ -176,8 +176,8 @@ func TestTiers_LinearInTheWeight(t *testing.T) {
 			for _, stock := range vals {
 				for _, reserve := range vals {
 					for _, job := range vals {
-						g1, s1, a1, b1, c1 := household.Tiers(keep, stock, reserve, job)
-						g, s, a, b, c := household.Tiers(w*keep, w*stock, w*reserve, w*job)
+						g1, s1, a1, b1, c1, _ := household.Tiers(keep, stock, reserve, job, 0)
+						g, s, a, b, c, _ := household.Tiers(w*keep, w*stock, w*reserve, w*job, 0)
 						if g != w*g1 || s != w*s1 || a != w*a1 || b != w*b1 || c != w*c1 {
 							t.Fatalf("weight %d, Tiers(%d, %d, %d, %d): got %d,%d,%d,%d,%d, want %d times %d,%d,%d,%d,%d",
 								w, keep, stock, reserve, job, g, s, a, b, c, w, g1, s1, a1, b1, c1)
@@ -197,7 +197,7 @@ func TestTargetsAndTiers_AllocateNothing(t *testing.T) {
 	var sink int64
 	allocs := testing.AllocsPerRun(100, func() {
 		tg, _ := household.ComputeTargets(household.Need{Upkeep: 3, Job: 2}, params)
-		g, s, a, b, c := household.Tiers(tg.Keep, 4, tg.Reserve, 2)
+		g, s, a, b, c, _ := household.Tiers(tg.Keep, 4, tg.Reserve, 2, 0)
 		sink += g + s + a + b + c
 	})
 	if allocs != 0 {
@@ -216,7 +216,7 @@ func BenchmarkComputeTargets(b *testing.B) {
 func BenchmarkTiers(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
-		household.Tiers(12, 4, 3, 2)
+		household.Tiers(12, 4, 3, 2, 0)
 	}
 }
 
