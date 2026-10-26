@@ -809,3 +809,39 @@ func BenchmarkWants(b *testing.B) {
 		household.Consumed(u, 10, 8)
 	}
 }
+
+// TestSplit verifies that Split divides the units among the shares by largest
+// remainder, ties to the lower index, so the parts add to the total, and refuses
+// shares that add to more than 10 000.
+//
+// Requirement: FR-DEM-018
+func TestSplit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		total  int64
+		shares []int64
+		want   []int64
+		ok     bool
+	}{
+		{"two thirds", 3, []int64{6_667, 3_333}, []int64{2, 1}, true},
+		{"tie goes to the lower index", 1, []int64{5_000, 5_000}, []int64{1, 0}, true},
+		{"worked example", 7, []int64{5_728, 4_272}, []int64{4, 3}, true},
+		{"one item", 5, []int64{10_000}, []int64{5}, true},
+		{"negative total is zero", -4, []int64{10_000}, []int64{0}, true},
+		{"over 10 000", 3, []int64{9_000, 9_000}, nil, false},
+		// With a total of 1 the floors are 0, so only the guard on the sum refuses.
+		{"over 10 000, nothing floored", 1, []int64{9_000, 9_000}, nil, false},
+		// Two passes, the first item first: the pass after it must skip it.
+		{"two remainders, first item largest", 2, []int64{3_334, 3_333, 3_333}, []int64{1, 1, 0}, true},
+		// Floors [0, 1] leave 2 units; the zero share must not take the second.
+		{"short weights never feed a zero share", 3, []int64{0, 5_000}, nil, false},
+		{"a zero share has no remainder", 1, []int64{0, 1}, []int64{0, 1}, true},
+	}
+	for _, tt := range tests {
+		got, ok := household.Split(nil, tt.total, tt.shares)
+		if ok != tt.ok || (ok && !slices.Equal(got, tt.want)) {
+			t.Errorf("%s: Split(%d, %v) = %v, %v, want %v, %v", tt.name, tt.total, tt.shares, got, ok, tt.want, tt.ok)
+		}
+	}
+}

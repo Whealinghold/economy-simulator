@@ -84,7 +84,7 @@ func term(it WantItem, sigma int64) (int64, bool) {
 		return 0, false
 	}
 	v := Basis
-	for i := int64(0); i < sigma; i++ {
+	for i := int64(0); i < sigma && v > 0; i++ { // 0 stays 0
 		if v, ok = checked.MulDiv(v, x, Basis); !ok {
 			return 0, false
 		}
@@ -282,6 +282,9 @@ func nextRemainder(total int64, w []int64, den, prevRem int64, prev int) (best i
 		if !ok {
 			return -1, 0, false
 		}
+		if wj <= 0 { // an item of no weight never takes a leftover unit
+			continue
+		}
 		if prev >= 0 && (r > prevRem || (r == prevRem && j <= prev)) {
 			continue
 		}
@@ -290,6 +293,17 @@ func nextRemainder(total int64, w []int64, den, prevRem int64, prev int) (best i
 		}
 	}
 	return best, bestRem, best >= 0
+}
+
+// Split divides total units among the shares by largest remainder, ties to the
+// lower index (spec-demand.md 4.5), appended to dst[:0]: the units of each item
+// of a want. ok is false when the shares add to more than 10 000 or on an
+// overflow. A negative total counts as 0.
+func Split(dst []int64, total int64, shares []int64) ([]int64, bool) {
+	if !sharesFit(shares) {
+		return dst[:0], false
+	}
+	return apportion(dst, max(total, 0), shares, Basis)
 }
 
 // Consumed returns the units of a commodity a household consumes for its wants

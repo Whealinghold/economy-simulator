@@ -103,8 +103,8 @@ func TestSections_AgreeWithSpec(t *testing.T) {
 			t.Errorf("section %d (%s) is not a row of 4.2", s.tag, s.name)
 		case s.name != want.name:
 			t.Errorf("section %d is named %q, want %q", s.tag, s.name, want.name)
-		case want.gate != "" || s.present != nil:
-			t.Errorf("section %d is built with present = %v, the spec gates it by %q: a module's section is a change of its module", s.tag, s.present != nil, want.gate)
+		case (want.gate != "") != (s.present != nil):
+			t.Errorf("section %d is built with present set = %v, the spec gates it by %q: present is set exactly for a module's section", s.tag, s.present != nil, want.gate)
 		case s.tag <= prev:
 			t.Errorf("section %d follows %d, want ascending tags", s.tag, prev)
 		}

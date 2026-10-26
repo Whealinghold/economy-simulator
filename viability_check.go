@@ -69,6 +69,7 @@ func (m *viaModel) check(lk lookup) viabilityOutcome {
 	m.storage(&o, lk)
 	if !unproducible && !unproductive {
 		m.labour(&o)
+		m.wantsExceed(&o)
 	}
 	m.regions(&o)
 	return o
@@ -290,6 +291,7 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 		return
 	}
 	res, skipped, err := m.solve(m.model(regions, steady.Ratio{Num: 1, Den: 1}))
+	m.pooled = &pooledSolve{res, skipped, err}
 	switch {
 	case err != nil:
 		o.fail(err)
@@ -297,6 +299,60 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 		o.skipped("v3_pooled")
 	case res.SurplusBP < wholeBP:
 		o.reject("labour_short", []string{"regions"}, i64(res.SurplusBP), i64(wholeBP))
+	}
+}
+
+// pooledSolve is the solve of the pooled upkeep-only programme at full labour,
+// kept so labour and wantsExceed do not run the simplex twice.
+type pooledSolve struct {
+	out     steady.Outcome
+	skipped bool
+	err     error
+}
+
+// wantsExceed warns wants_exceed_labour (FR-VIA-057): the demand module is on,
+// the pooled programme with the wants has a surplus factor below 1 or is
+// infeasible, and the upkeep-only one reaches 1. Size-gated like V3 and never an
+// error.
+func (m *viaModel) wantsExceed(o *viabilityOutcome) {
+	regions := m.withHouseholds
+	if m.c.Modules.Demand == nil || m.noProgramme(regions) {
+		return
+	}
+	one := steady.Ratio{Num: 1, Den: 1}
+	own := m.pooled == nil
+	if own { // labour has not run: solve the upkeep-only programme here
+		base, skipped, err := m.solve(m.model(regions, one))
+		m.pooled = &pooledSolve{base, skipped, err}
+	}
+	base, skipped, err := m.pooled.out, m.pooled.skipped, m.pooled.err // an error is labour's to report
+	if skipped && own {                                                // otherwise labour has already noted the skip as v3_pooled
+		o.skipped("wants_pooled")
+	}
+	if err != nil || skipped || base.SurplusBP < wholeBP {
+		return
+	}
+	md, err := m.wantsModel(regions, one)
+	if err != nil {
+		o.fail(err) // the same overflow SolveSteadyState reports
+		return
+	}
+	res, skipped, err := m.solve(md)
+	m.wantsVerdict(o, res, skipped, err)
+}
+
+// wantsVerdict turns the solve of the programme with the wants into the warning
+// of wantsExceed: infeasible, or a surplus factor below 1.
+func (m *viaModel) wantsVerdict(o *viabilityOutcome, res steady.Outcome, skipped bool, err error) {
+	switch {
+	case errors.Is(err, steady.ErrInfeasible):
+		o.warn("wants_exceed_labour", "regions")
+	case err != nil:
+		o.fail(err)
+	case skipped:
+		o.skipped("wants_pooled")
+	case res.SurplusBP < wholeBP:
+		o.warn("wants_exceed_labour", "regions")
 	}
 }
 

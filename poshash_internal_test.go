@@ -317,6 +317,9 @@ type replayRow struct {
 	on     func(w *World) bool
 }
 
+// demandOn is the guard of the rows of the demand module (D177).
+func demandOn(w *World) bool { return w.demand != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -337,11 +340,13 @@ var replayRows = []replayRow{
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.4", run: (*World).p34Estates},
+	{id: "P3.6", run: noErr((*World).p36Aggregates), on: demandOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P5.1", run: noErr((*World).p51Window)},
 	{id: "P5.3", run: (*World).p53Markdown},
 	{id: "P5.4", run: noErr((*World).p54Outcomes)},
 	{id: "P6.1", run: (*World).p61Upkeep},
+	{id: "P6.2", run: (*World).p62Wants, on: demandOn},
 	{id: "P6.3", run: noErr((*World).p63Welfare)},
 	{id: "P6.4", run: noErr((*World).p64Shortfall)},
 	{id: "P7.1", run: (*World).p71Entry},

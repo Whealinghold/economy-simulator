@@ -331,6 +331,17 @@ func (w *World) loadSkills(_ *restoreCtx, r *codec.Reader) error {
 // that is its owner and names it; a live agent's (region, role) has its
 // had-an-agent bit set.
 func (w *World) checkpointCross() error {
+	if err := w.coreCross(); err != nil {
+		return err
+	}
+	if w.demand != nil {
+		return w.demandCross()
+	}
+	return nil
+}
+
+// coreCross is the checks of checkpointCross that the sections of the core need.
+func (w *World) coreCross() error {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
 	first := w.estates.accounts[0]
 	for id := first + regions; id < w.ledger.Len(); id++ {

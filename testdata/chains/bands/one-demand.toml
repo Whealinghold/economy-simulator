@@ -1,0 +1,14 @@
+# The bands of the demand scenarios on pack one-demand (spec-reference-chain.md
+# 7.7, plan 2-5 D319). Every key is unset: a key with no `value` line makes the
+# test report its measure and assert nothing on it. A value is set by a reviewed
+# run (STY 8.4), with a `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line
+# (FR-REF-024).
+
+# S23: the mean treat_a price of the last 100 ticks lies within this band of the
+# reference price, from a start 10% above and 10% below (basis points).
+[s23.band_bp]
+unit = "bp"
+# S25: the most swing, over a year, of the share of one alternative of the
+# substituted want between the two items (basis points).
+[s25.swing_bp]
+unit = "bp"

@@ -219,7 +219,10 @@ type scenarioObs struct {
 	halted  int64                            // households the halt declined, summed (ProductionHalted)
 	haltEv  int64                            // ProductionHalted events
 	badSeq  string                           // first MarketCleared out of order
-	regions economysim.AgentID               // agent IDs below this are estates (plan 1-8 regionOf)
+	// wantPlanned and wantFunded are the units of WantShortfall (Planned, Funded)
+	// summed per tick; a tick with no event reads as 0 for both.
+	wantPlanned, wantFunded []int64
+	regions                 economysim.AgentID // agent IDs below this are estates (plan 1-8 regionOf)
 }
 
 func newScenarioObs() *scenarioObs {
@@ -277,6 +280,12 @@ func (o *scenarioObs) Observe(e economysim.Event) {
 		if e.Reason == economysim.ReasonSpoilage && e.Commodity != economysim.NoCommodity {
 			o.spoiled[e.Commodity] += e.Total
 		}
+	case economysim.WantShortfall:
+		for int64(len(o.wantPlanned)) <= e.Tick {
+			o.wantPlanned, o.wantFunded = append(o.wantPlanned, 0), append(o.wantFunded, 0)
+		}
+		o.wantPlanned[e.Tick] += e.Planned
+		o.wantFunded[e.Tick] += e.Funded
 	case economysim.ProductionHalted:
 		o.haltEv++
 		o.halted += e.Halted
@@ -291,6 +300,8 @@ type scenarioSpec struct {
 	// Snap, when set, says after which step tick OnSnap gets a Snapshot.
 	Snap   func(tick int64) bool
 	OnSnap func(tick int64, s economysim.Snapshot)
+	// Probe, when set, is called with the world after step tick.
+	Probe func(tick int64, w *economysim.World)
 }
 
 // scenarioRun is what runScenario kept.
@@ -320,6 +331,9 @@ func runScenario(t testing.TB, cfg economysim.Config, spec scenarioSpec) scenari
 		applyScript(t, w, s0.Names, spec.Script)
 		if err := w.Step(); err != nil {
 			t.Fatalf("Step at tick %d (seed %d) error = %v, want nil", i, spec.Seed, err)
+		}
+		if spec.Probe != nil {
+			spec.Probe(i, w)
 		}
 		if spec.Snap != nil && spec.Snap(i) {
 			s, err := w.Snapshot()
@@ -712,7 +726,7 @@ func writeScenarioBlock(path, title string, lines []string) error {
 			if strings.HasPrefix(l, "## ") {
 				cur = l[3:]
 			}
-			if cur != "" {
+			if cur != "" && l != "" { // the blank line between blocks is written back, not kept
 				blocks[cur] = append(blocks[cur], l)
 			}
 		}

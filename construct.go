@@ -198,6 +198,7 @@ func (b *builder) createAgent(p *groupPlan, i int, weight int64) {
 	if w.obs.supplied {
 		b.spawned = append(b.spawned, AgentSpawned{Agent: id, Region: p.region, Role: p.role, Weight: weight, StartMoney: money})
 	}
+	w.agentJoined(&w.agents[id], p.region)
 }
 
 // fundAgent gives agent i of group p its money and goods, by the reason initial,

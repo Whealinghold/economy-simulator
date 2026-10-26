@@ -2,32 +2,73 @@ package economysim
 
 import (
 	"cmp"
+	"context"
+	"fmt"
+	"log/slog"
 	"maps"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the demand module (spec-demand.md; architecture.md 2.10.1): the
 // module's state, its validator and counts, the items it adds to the tradable
 // set of a role, its warnings and the names of its IDs. The pure rules of the
-// per-tick arithmetic are in internal/household/wants.go. The module has no world
-// effect yet: nothing steps demandState, which the hooks of ADR 0010 (the
-// per-position methods, the filler and the checker, the agent-lifecycle calls)
-// will do when they are admitted. Outside this file the module appears only in
+// per-tick arithmetic are in internal/household/wants.go. The hooks of ADR 0010
+// step demandState: the filler and the checker (fanin.go), P3.6 and P6.2
+// (tick.go) and the agent-lifecycle calls. Outside this file the module appears only in
 // the catalogue files (config.go, hash.go, bounds.go, defaults.go, errors.go,
 // validate.go) and the fan-in call in fanin.go.
 
 // demandState is the state of the module in a world, nil when the module is off
-// (spec-demand.md 12). It holds what is derived from the configuration: the
-// ladder of each role. The per-agent carries and the choke runs are state and
-// are added with the hooks that form and advance them.
+// (spec-demand.md 12). It holds what is derived from the configuration (the
+// ladder of each role and the wants as the rules read them), the saved state (the
+// carries of each agent, indexed by agent slot, N-244) and the scratch of a tick
+// (the plan being checked, the tallies of P3.6 and the planned units that P6.2
+// consumes).
 type demandState struct {
 	// ladder[role] is the wants of the role's ladder, by rank and then by want ID,
 	// indexed by RoleID. A role with no taste row of nonzero scale has an empty
 	// ladder and no want state (FR-DEM-004).
 	ladder [][]rung
+	// wants are the wants by WantID; regionBP the region scale of each (region,
+	// want), region * len(wants) + want, 10 000 where no row says otherwise.
+	wants    []wantRT
+	regionBP []int64
+	// carry[slot] is the carries of the agent in that slot, one per rung of its
+	// role's ladder, each below 10 000 (spec-demand.md 4.4).
+	carry [][]int64
+	// off[role] is the first tally cell of the role within a region and block the
+	// cells of a region: the rungs of all the ladders. byWant[role] is the ladder
+	// positions of the role in ascending want ID, the order of the event.
+	off    []int
+	block  int
+	byWant [][]int
+	tally  []wantTally
+	// chokedRun[cell] is the consecutive ticks in which all the households of the
+	// cell were choked, the run of the Warn "wants choked" (saved, diagnostic).
+	chokedRun []int64
+	// cur is the plan of the agent last filled: the filler writes it and the
+	// checker commits it. use is the planned units of the agents checked this tick,
+	// by agent then commodity, which P6.2 consumes.
+	cur wantCur
+	use []wantUse
+	// scratch of the filler, sized once from the largest ladder.
+	viewWants []WantView
+	viewItems []WantItemView
+	hItems    []household.WantItem
+	shares    []int64
+	split     []int64
+	merged    []wantUse
+	funded    []int64
+	oldIDs    []int64
+	newIDs    []int64
+	kept      []int64
 }
 
 // rung is one want of a ladder: the want and the taste scale of the role for it
@@ -35,6 +76,41 @@ type demandState struct {
 type rung struct {
 	want  WantID
 	scale int64
+}
+
+// wantRT is a want as the rules read it: its items by commodity ID and its
+// numbers.
+type wantRT struct {
+	items                                               []wantItemRT
+	quantity, period, elasticity, ceiling, substitution int64
+}
+
+// wantItemRT is one item of a want: the commodity and its weight in basis points.
+type wantItemRT struct {
+	commodity CommodityID
+	weight    int64
+}
+
+// wantTally is what P3.2 counts for one (region, role, want) in a tick.
+type wantTally struct{ households, choked, planned, funded int64 }
+
+// wantUse is the planned units of one commodity of one agent.
+type wantUse struct {
+	agent     AgentID
+	commodity CommodityID
+	units     int64
+}
+
+// wantCur is the plan of one agent that the filler formed: the new carries, the
+// planned units and the choke of each rung, and the units of each item, rung
+// after rung. It is valid between the filler and the checker of one agent.
+type wantCur struct {
+	agent   AgentID
+	valid   bool
+	next    []int64
+	planned []int64
+	choked  []bool
+	items   []wantUse // the commodity and units of each item (the agent is unused)
 }
 
 // newDemandState builds the state of the module for a canonical, validated
@@ -63,7 +139,76 @@ func newDemandState(c *Config) *demandState {
 			return cmp.Or(cmp.Compare(d.Wants[a.want].Rank, d.Wants[b.want].Rank), cmp.Compare(a.want, b.want))
 		})
 	}
+	st.build(c)
 	return st
+}
+
+// build forms the runtime tables of the wants, the region scales, the tally
+// layout and the scratch.
+func (st *demandState) build(c *Config) {
+	d := c.Modules.Demand
+	st.wants = make([]wantRT, len(d.Wants))
+	for i, w := range d.Wants {
+		rt := wantRT{quantity: w.Quantity, period: w.Period, elasticity: w.Elasticity, ceiling: w.Ceiling, substitution: w.Substitution}
+		for _, it := range w.Items {
+			id, ok := c.commodityID(it.Commodity)
+			if !ok {
+				invariant("a want item names an unknown commodity after validation")
+			}
+			rt.items = append(rt.items, wantItemRT{commodity: id, weight: it.Weight})
+		}
+		st.wants[i] = rt
+	}
+	st.regionBP = slices.Repeat([]int64{wholeBP}, len(c.Regions)*len(d.Wants))
+	for _, r := range d.RegionTastes {
+		region, rok := c.regionID(r.Region)
+		want, wok := c.wantID(r.Want)
+		if !rok || !wok {
+			invariant("a region taste names an unknown region or want after validation")
+		}
+		st.regionBP[int(region)*len(d.Wants)+int(want)] = r.Scale
+	}
+	st.layout(len(c.Regions))
+}
+
+// layout fixes the tally cells of the roles and sizes the scratch from the
+// largest ladder.
+func (st *demandState) layout(regions int) {
+	var rungs, items, perWant int
+	st.off, st.byWant = make([]int, len(st.ladder)), make([][]int, len(st.ladder))
+	for role, l := range st.ladder {
+		st.off[role] = rungs
+		rungs += len(l)
+		n := 0
+		for _, rg := range l {
+			n += len(st.wants[rg.want].items)
+			perWant = max(perWant, len(st.wants[rg.want].items))
+		}
+		items = max(items, n)
+		st.byWant[role] = slices.SortedFunc(slices.Values(positions(len(l))), func(a, b int) int {
+			return cmp.Compare(l[a].want, l[b].want)
+		})
+	}
+	st.block, st.tally = rungs, make([]wantTally, regions*rungs)
+	st.chokedRun = make([]int64, regions*rungs)
+	widest := 0
+	for _, l := range st.ladder {
+		widest = max(widest, len(l))
+	}
+	st.viewWants, st.viewItems = make([]WantView, widest), make([]WantItemView, items)
+	st.hItems, st.shares, st.split = make([]household.WantItem, 0, perWant), make([]int64, 0, perWant), make([]int64, 0, perWant)
+	st.cur = wantCur{next: make([]int64, widest), planned: make([]int64, widest), choked: make([]bool, widest), items: make([]wantUse, items)}
+	st.merged, st.funded = make([]wantUse, 0, items), make([]int64, widest)
+	st.oldIDs, st.newIDs, st.kept = make([]int64, 0, widest), make([]int64, 0, widest), make([]int64, 0, widest)
+}
+
+// positions returns 0 to n-1.
+func positions(n int) []int {
+	out := make([]int, n)
+	for i := range out {
+		out[i] = i
+	}
+	return out
 }
 
 // canonical returns a deep copy of d in canonical order (spec-config.md 3.4,
@@ -667,3 +812,653 @@ func classWithoutIncome(c *Config, ro *Role, upkeep, wref int64) bool {
 // demandReasons returns the ledger reasons the demand module declares: the goods
 // sink for the consumption of a want (spec-ledger.md 7.2.2, FR-LED-050).
 func demandReasons() []ledger.Reason { return []ledger.Reason{ledger.WantConsumption} }
+
+// commodityRow returns the view's row of the commodity, found by binary search
+// in the canonical order of the tradable set. A want item is always in the set
+// (FR-DEM-006), so a missing row is a programmer error.
+func (v *AgentView) commodityRow(c CommodityID) *CommodityView {
+	return &v.Commodities[v.commodityIndex(c)]
+}
+
+// commodityIndex is the position of the commodity in the view's tradable set.
+func (v *AgentView) commodityIndex(c CommodityID) int {
+	i, ok := v.findCommodity(c)
+	if !ok {
+		invariant("a want item is not in the tradable set of the role")
+	}
+	return i
+}
+
+// findCommodity is the binary search of commodityIndex without the invariant.
+func (v *AgentView) findCommodity(c CommodityID) (int, bool) {
+	return slices.BinarySearchFunc(v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
+}
+
+// fillWants is the filler of the want group of AgentView (spec-demand.md 4.4,
+// D308): for each want of the ladder in rank order its planned units, a Choked
+// flag and the units split among its items. It commits nothing: the new carries
+// wait in d.cur for the checker, so a view built at P2.5 advances no carry.
+func (w *World) fillWants(v *AgentView, a *agent) {
+	d := w.demand
+	ladder := d.ladder[a.role]
+	if len(ladder) == 0 {
+		return
+	}
+	cur := &d.cur
+	cur.agent, cur.valid = a.id, true
+	carries, o := d.carry[a.id], 0
+	for k, rg := range ladder {
+		its := d.viewItems[o : o+len(d.wants[rg.want].items) : o+len(d.wants[rg.want].items)]
+		cur.planned[k], cur.choked[k], cur.next[k] = d.rung(v, a, rg, carries[k], its)
+		for j := range its {
+			cur.items[o+j] = wantUse{commodity: its[j].Commodity, units: int64(its[j].Units)}
+		}
+		d.viewWants[k] = WantView{Want: rg.want, Planned: Quantity(cur.planned[k]), Choked: cur.choked[k], Items: its}
+		o += len(its)
+	}
+	v.Wants = d.viewWants[:len(ladder):len(ladder)]
+}
+
+// rung forms one want of an agent's ladder: the price ratio of its items, the
+// schedule, the whole units from the carry and their split among the items,
+// written into its (commodity, share, units). An agent whose ratio or schedule
+// cannot be formed, or is 0, is choked and keeps its carry (FR-DEM-011).
+func (d *demandState) rung(v *AgentView, a *agent, rg rung, carry int64, its []WantItemView) (planned int64, choked bool, next int64) {
+	wt := &d.wants[rg.want]
+	hs := d.hItems[:0]
+	for _, it := range wt.items {
+		cv := v.commodityRow(it.commodity)
+		hs = append(hs, household.WantItem{Centre: int64(cv.Belief.Centre), Ref: int64(cv.Ref), Weight: it.weight})
+	}
+	shares, sched, ok := d.schedule(hs, wt)
+	units, next := int64(0), carry
+	uok := true
+	if ok && sched > 0 {
+		units, next, uok = household.Units(carry, wt.quantity, a.weight, rg.scale, d.regionBP[int(v.Region)*len(d.wants)+int(rg.want)], sched, wt.period)
+		if !uok {
+			units, next = 0, carry
+		}
+	}
+	split, sok := household.Split(d.split[:0], units, shares)
+	if !sok { // no item could carry the units: choke the want and keep the carry
+		units, next, split = 0, carry, split[:0]
+	}
+	choked = !ok || sched == 0 || !uok || !sok // an overflow chokes the want like one of the schedule
+	for j, it := range wt.items {
+		its[j] = WantItemView{Commodity: it.commodity}
+		if len(shares) > j {
+			its[j].Share = shares[j]
+		}
+		if len(split) > j {
+			its[j].Units = Quantity(split[j])
+		}
+	}
+	return units, choked, next
+}
+
+// schedule is the shares, the price ratio and the schedule value of a want at the
+// items hs. ok is false when any of them cannot be formed (a reference below 1, a
+// centre below 1, an overflow), which counts as a choke.
+func (d *demandState) schedule(hs []household.WantItem, wt *wantRT) (shares []int64, sched int64, ok bool) {
+	shares, ok = household.Shares(d.shares[:0], hs, wt.substitution)
+	if !ok {
+		return nil, 0, false
+	}
+	ratio, ok := household.WantRatio(hs, shares)
+	if !ok {
+		return shares, 0, false
+	}
+	sched, ok = household.Schedule(ratio, wt.elasticity, wt.ceiling)
+	return shares, sched, ok
+}
+
+// checkWants is the checker of the TradePlan for the want group (spec-demand.md
+// 4.4, 4.6, D308), called once per agent at P3.2 after Trade: it commits the new
+// carries, clamps Intent.WantUnits to the quantity and the planned units, tallies
+// planned, funded and choked units for the event, and keeps the planned units per
+// commodity for P6.2.
+func (w *World) checkWants(a *agent, p *TradePlan) {
+	d := w.demand
+	ladder := d.ladder[a.role]
+	if len(ladder) == 0 {
+		for i := range p.Intents {
+			p.Intents[i].WantUnits = 0
+		}
+		p.WantFunded = p.WantFunded[:0]
+		return
+	}
+	cur := &d.cur
+	if !cur.valid || cur.agent != a.id {
+		invariant("the want plan of an agent was not formed by its filler")
+	}
+	cur.valid = false
+	copy(d.carry[a.id], cur.next[:len(ladder)])
+	d.mergeItems(a.id, ladder)
+	ctx := context.Background()
+	debug := w.log.Enabled(ctx, slog.LevelDebug)
+	var claimed []Quantity // the WantUnits the strategy set, to log what the clamp cut
+	if debug {
+		for _, in := range p.Intents {
+			claimed = append(claimed, in.WantUnits)
+		}
+	}
+	d.clampIntents(p)
+	d.tallyFunded(p, ladder)
+	d.tallyRungs(int(w.regionOf(a)), a, ladder)
+	d.use = append(d.use, d.merged...)
+	if debug {
+		w.logWantCuts(ctx, a, p, ladder, claimed)
+		w.logWantSkips(ctx, a, p, ladder)
+	}
+}
+
+// logWantCuts writes the Debug lines "want units cut" for each intent whose
+// WantUnits the clamp lowered (quantity is the part cut) and "want funding cut"
+// for each want of the ladder whose WantFunded rows exceed the planned units, and
+// for each row of a want outside the ladder (quantity is the part not counted).
+// A strategy that reports more than the world accepts is corrected silently
+// otherwise, and WantShortfall then differs from what the strategy placed.
+func (w *World) logWantCuts(ctx context.Context, a *agent, p *TradePlan, ladder []rung, claimed []Quantity) {
+	for i, in := range p.Intents {
+		if claimed[i] > in.WantUnits {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want units cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Commodity, int64(in.Commodity)),
+				slog.Int64(logkeys.Quantity, int64(claimed[i]-in.WantUnits)))
+		}
+	}
+	for k, rg := range ladder {
+		var rows int64
+		for _, f := range p.WantFunded {
+			if f.Want != rg.want {
+				continue
+			}
+			sum, ok := checked.Add(rows, max(0, int64(f.Units)))
+			if !ok {
+				sum = math.MaxInt64
+			}
+			rows = sum
+		}
+		if rows > w.demand.funded[k] {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want funding cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(rg.want)),
+				slog.Int64(logkeys.Quantity, rows-w.demand.funded[k]))
+		}
+	}
+	for _, f := range p.WantFunded {
+		if f.Units > 0 && !slices.ContainsFunc(ladder, func(rg rung) bool { return rg.want == f.Want }) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want funding cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(f.Want)),
+				slog.Int64(logkeys.Quantity, int64(f.Units)))
+		}
+	}
+}
+
+// mergeItems sums the planned units of the agent's ladder per commodity into
+// d.merged, in ascending commodity ID.
+func (d *demandState) mergeItems(agent AgentID, ladder []rung) {
+	d.merged = d.merged[:0]
+	n := 0
+	for _, rg := range ladder {
+		n += len(d.wants[rg.want].items)
+	}
+	for _, it := range d.cur.items[:n] {
+		if it.units < 1 {
+			continue
+		}
+		i, found := slices.BinarySearchFunc(d.merged, it.commodity, func(e wantUse, t CommodityID) int { return cmp.Compare(e.commodity, t) })
+		if found {
+			d.merged[i].units += it.units
+			continue
+		}
+		d.merged = slices.Insert(d.merged, i, wantUse{agent: agent, commodity: it.commodity, units: it.units})
+	}
+}
+
+// clampIntents limits the WantUnits of each intent to its quantity and to the
+// planned units of its commodity less what the earlier bids of the plan already
+// claim; an ask has none.
+func (d *demandState) clampIntents(p *TradePlan) {
+	for i := range p.Intents {
+		in := &p.Intents[i]
+		planned := int64(0)
+		if j, ok := slices.BinarySearchFunc(d.merged, in.Commodity, func(e wantUse, t CommodityID) int { return cmp.Compare(e.commodity, t) }); ok && in.Side == Bid {
+			planned = d.merged[j].units
+			for _, e := range p.Intents[:i] {
+				if e.Side == Bid && e.Commodity == in.Commodity {
+					planned -= int64(e.WantUnits) // already clamped, so no wrap
+				}
+			}
+		}
+		in.WantUnits = Quantity(max(0, min(int64(in.WantUnits), int64(in.Quantity), planned)))
+	}
+}
+
+// tallyFunded reads TradePlan.WantFunded into d.funded, one number per rung,
+// each at most the planned units of its want and the sum of the rows of a want
+// at most that too. A row for a want not in the ladder counts for nothing.
+func (d *demandState) tallyFunded(p *TradePlan, ladder []rung) {
+	clear(d.funded[:len(ladder)])
+	for _, f := range p.WantFunded {
+		for k, rg := range ladder {
+			if rg.want == f.Want {
+				d.funded[k] += min(max(0, int64(f.Units)), d.cur.planned[k]-d.funded[k]) // no sum, so no wrap
+			}
+		}
+	}
+}
+
+// tallyRungs adds the agent's households, choked households, planned and funded
+// units to the cell of each of its wants.
+func (d *demandState) tallyRungs(region int, a *agent, ladder []rung) {
+	base := region*d.block + d.off[a.role]
+	for k := range ladder {
+		c := &d.tally[base+k]
+		c.households += a.weight
+		c.planned += d.cur.planned[k]
+		c.funded += d.funded[k]
+		if d.cur.choked[k] {
+			c.choked += a.weight
+		}
+	}
+}
+
+// p36Wants is the demand module's part of P3.6 (spec-demand.md 11.1, 11.2, D312):
+// for each region, role (ascending) and want (ascending ID) it advances the run of
+// the Warn "wants choked", delivers WantShortfall where a household was choked or
+// unfunded, and closes the tallies of P3.2 for the tick.
+func (w *World) p36Wants() {
+	d := w.demand
+	ctx := context.Background()
+	for region := range w.cfg.Regions {
+		for role := range d.ladder {
+			for _, k := range d.byWant[role] {
+				w.closeWant(ctx, region, RoleID(role), k)
+			}
+		}
+	}
+	clear(d.tally)
+}
+
+// closeWant is p36Wants for the want at ladder position k of the role in the
+// region. All households choked is the condition of the run: a cell with no
+// household has none.
+func (w *World) closeWant(ctx context.Context, region int, role RoleID, k int) {
+	d := w.demand
+	cell := region*d.block + d.off[role] + k
+	c := d.tally[cell]
+	want := d.ladder[role][k].want
+	run, warn := advanceRun(d.chokedRun[cell], c.households > 0 && c.choked == c.households, false)
+	d.chokedRun[cell] = run
+	if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "wants choked",
+			slog.Int64(logkeys.Region, int64(region)), slog.Int64(logkeys.Role, int64(role)),
+			slog.Int64(logkeys.Want, int64(want)), slog.Int64(logkeys.Households, c.households))
+	}
+	if w.obs.supplied && (c.choked > 0 || c.funded < c.planned) {
+		w.obs.deliver(WantShortfall{
+			Tick: w.Tick(), Region: RegionID(region), Role: role, Want: want,
+			Households: c.households, Choked: c.choked, Planned: c.planned, Funded: c.funded,
+		})
+	}
+}
+
+// logWantSkips writes the Debug line "want skipped" for each want of the agent's
+// ladder that did not get its planned units: choked, or planned but not fully
+// funded. The reason of a planned want is no_stock when the plan holds no bid for
+// any item, no_budget when it holds a bid but the want got no funds and
+// over_budget when it got part (spec-demand.md 11.2; the definitions are the
+// implementation's, the spec names the values only).
+func (w *World) logWantSkips(ctx context.Context, a *agent, p *TradePlan, ladder []rung) {
+	d := w.demand
+	for k, rg := range ladder {
+		reason := Reason("")
+		switch {
+		case d.cur.choked[k]:
+			reason = ReasonChoked
+		case d.cur.planned[k] > d.funded[k]:
+			reason = wantShortReason(p, &d.wants[rg.want], d.funded[k])
+		}
+		if reason != "" {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want skipped",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(rg.want)),
+				slog.String(logkeys.Reason, string(reason)))
+		}
+	}
+}
+
+// wantShortReason is the reason a planned want was funded short: no bid for an
+// item, none funded, or part funded.
+func wantShortReason(p *TradePlan, wt *wantRT, funded int64) Reason {
+	switch {
+	case funded > 0:
+		return ReasonOverBudget
+	case !slices.ContainsFunc(p.Intents, func(in Intent) bool {
+		return in.Side == Bid && in.WantUnits > 0 && slices.ContainsFunc(wt.items, func(it wantItemRT) bool { return it.commodity == in.Commodity })
+	}):
+		return ReasonNoStock
+	}
+	return ReasonNoBudget
+}
+
+// nextUpkeep is the units of the commodity the agent eats next tick (its
+// households times the per-household quantity), 0 if it is not upkeep.
+func (w *World) nextUpkeep(a *agent, region RegionID, c CommodityID) int64 {
+	for _, it := range w.roles.row(a.role).upkeepIn(region) {
+		if it.commodity == c {
+			n, ok := checked.Mul(a.weight, int64(it.quantity))
+			if !ok {
+				invariant("upkeep times weight overflows after validation")
+			}
+			return n
+		}
+	}
+	return 0
+}
+
+// p62Wants is P6.2 (spec-demand.md 4.7, FR-DEM-025): for each agent ascending and
+// each planned commodity, the lesser of the planned units and what the agent
+// holds above the next tick's upkeep of the commodity moves to the
+// want_consumption boundary, oldest lots first. The error is a ledger refusal.
+func (w *World) p62Wants() error {
+	d := w.demand
+	if d == nil {
+		return nil
+	}
+	defer func() { d.use = d.use[:0] }() // a ledger refusal must not leave this tick's rows for the next
+	for _, u := range d.use {
+		a := &w.agents[u.agent]
+		if a.weight < 1 {
+			continue
+		}
+		c := int(u.commodity)
+		held, _, err := w.ledger.Holding(a.account, c)
+		if err != nil {
+			return fmt.Errorf("want consumption at tick %d: %w", w.Tick(), err)
+		}
+		n := household.Consumed(u.units, held, w.nextUpkeep(a, w.regionOf(a), u.commodity))
+		if n < 1 {
+			continue
+		}
+		sink, ok := w.ledger.Boundary(ledger.WantConsumption, c)
+		if !ok {
+			invariant("a commodity has no want_consumption boundary account")
+		}
+		if err := w.ledger.Move(a.account, sink, c, n, ledger.WantConsumption); err != nil {
+			return fmt.Errorf("want consumption at tick %d: %w", w.Tick(), err)
+		}
+		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want consumed",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Commodity, int64(c)), slog.Int64(logkeys.Quantity, n))
+		}
+	}
+	return nil
+}
+
+// agentIndex is the 0-based position of the agent in its region's agent list,
+// away agents included: the live agents of the region with a lower ID
+// (spec-demand.md 4.4, FR-DEM-013).
+func (w *World) agentIndex(a *agent, region RegionID) int64 {
+	var n int64
+	for i := len(w.cfg.Regions); i < int(a.id); i++ {
+		if o := &w.agents[i]; o.weight >= 1 && w.regionOf(o) == region {
+			n++
+		}
+	}
+	return n
+}
+
+// joinedDemand forms the carries of a new agent (FR-DEM-013): the formula of 4.4
+// for each rung of its role's ladder, with no draw.
+func (w *World) joinedDemand(a *agent, region RegionID) {
+	d := w.demand
+	for len(d.carry) <= int(a.id) {
+		d.carry = append(d.carry, nil)
+	}
+	ladder := d.ladder[a.role]
+	if len(ladder) == 0 {
+		d.carry[a.id] = nil
+		return
+	}
+	index := w.agentIndex(a, region)
+	carries := make([]int64, len(ladder))
+	for k := range ladder {
+		c, ok := household.InitialCarry(index, int64(k))
+		if !ok {
+			invariant("the initial carry of a want overflows")
+		}
+		carries[k] = c
+	}
+	d.carry[a.id] = carries
+}
+
+// roleChangedDemand re-forms the carries of an agent whose role changed
+// (FR-DEM-042): kept by want ID for a want in both ladders, the formula for a
+// want only in the new one, dropped for one only in the old.
+func (w *World) roleChangedDemand(a *agent, from RoleID, region RegionID) {
+	d := w.demand
+	old, ladder := d.ladder[from], d.ladder[a.role]
+	if len(ladder) == 0 {
+		d.carry[a.id] = nil
+		return
+	}
+	d.oldIDs, d.newIDs = d.oldIDs[:0], d.newIDs[:0]
+	for _, rg := range old {
+		d.oldIDs = append(d.oldIDs, int64(rg.want))
+	}
+	for _, rg := range ladder {
+		d.newIDs = append(d.newIDs, int64(rg.want))
+	}
+	kept, ok := household.KeepCarries(d.kept[:0], d.oldIDs, d.carry[a.id], d.newIDs, w.agentIndex(a, region))
+	if !ok {
+		invariant("the carries of a role change overflow")
+	}
+	d.carry[a.id] = slices.Clone(kept)
+}
+
+// dropAgent is the module's step of removeAgent: the carries go with the agent.
+func (d *demandState) dropAgent(a *agent) {
+	if int(a.id) < len(d.carry) {
+		d.carry[a.id] = nil
+	}
+}
+
+// saveDemand is tag 12 (spec-checkpoint.md 4.2, spec-demand.md 12): for each live
+// agent whose role has a ladder, in ascending ID, a count and its carries; then
+// the non-zero choke runs as (region, role, want, run) in that order. Nothing
+// derived is saved.
+func (w *World) saveDemand(cw *codec.Writer) error {
+	d := w.demand
+	w.eachLive(func(a *agent) {
+		if len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cw.Count(len(d.carry[a.id]))
+		for _, c := range d.carry[a.id] {
+			cw.I(c)
+		}
+	})
+	n := 0
+	for _, run := range d.chokedRun {
+		if run != 0 {
+			n++
+		}
+	}
+	cw.Count(n)
+	for region := range w.cfg.Regions {
+		for role := range d.ladder {
+			for _, k := range d.byWant[role] {
+				if run := d.chokedRun[region*d.block+d.off[role]+k]; run != 0 {
+					cw.U(uint64(region))
+					cw.U(uint64(role))
+					cw.U(uint64(d.ladder[role][k].want))
+					cw.U(unsigned(run))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// loadDemand reads tag 12 into the world loadAgents built: it sizes the carries to
+// the agent slots and reads them for every live agent whose role has a ladder. The
+// count and the range of the carries are checked by demandCross (step 7).
+func (w *World) loadDemand(rs *restoreCtx, r *codec.Reader) error {
+	d := w.demand
+	d.carry = make([][]int64, len(w.agents))
+	w.eachLive(func(a *agent) {
+		if len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cs := make([]int64, r.Count(1))
+		for i := range cs {
+			cs[i] = r.I()
+		}
+		d.carry[a.id] = cs
+	})
+	w.readChokedRuns(rs, r)
+	return nil
+}
+
+// readChokedRuns reads the sparse choke runs of tag 12: a count, then (region,
+// role, want, run) in strictly ascending key order, the want in the role's ladder
+// and the run from 1 to the tick.
+func (w *World) readChokedRuns(rs *restoreCtx, r *codec.Reader) {
+	d := w.demand
+	regions, roles, wants := uint64(len(w.cfg.Regions)), uint64(len(w.cfg.Roles)), uint64(len(d.wants))
+	prev := uint64(0)
+	for i := range r.Count(4) {
+		region, role, want := r.Index(regions), r.Index(roles), r.Index(wants)
+		run := r.Bounded("run", rs.tick)
+		key := (region*roles+role)*wants + want
+		if r.Err() != nil {
+			return
+		}
+		k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return uint64(rg.want) == want })
+		if run == 0 || k < 0 || (i > 0 && key <= prev) {
+			r.Failf("choke run (region %d, role %d, want %d) is at its default, out of order or not in the ladder", region, role, want)
+			return
+		}
+		d.chokedRun[int(region)*d.block+d.off[role]+k], prev = run, key
+	}
+}
+
+// demandCross is the module's part of step 7: every live agent whose role has a
+// ladder holds one carry for each rung, each in [0, 9 999].
+func (w *World) demandCross() error {
+	d := w.demand
+	var bad error
+	w.eachLive(func(a *agent) {
+		if bad != nil || len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cs := d.carry[a.id]
+		if len(cs) != len(d.ladder[a.role]) {
+			bad = fmt.Errorf("%w: agent %d has %d want carries, its role's ladder has %d", ErrCheckpointCorrupt, a.id, len(cs), len(d.ladder[a.role]))
+		}
+		for _, c := range cs {
+			if bad == nil && (c < 0 || c >= wholeBP) {
+				bad = fmt.Errorf("%w: agent %d has a want carry %d outside [0, %d]", ErrCheckpointCorrupt, a.id, c, wholeBP-1)
+			}
+		}
+	})
+	return bad
+}
+
+// wantOf is Want_c: the planned units of the commodity over the wants of the
+// view (spec-demand.md 4.6).
+func (t *tradeCtx) wantOf(c CommodityID) int64 {
+	var n int64
+	for k := range t.v.Wants {
+		for _, it := range t.v.Wants[k].Items {
+			if it.Commodity == c {
+				n += int64(it.Units)
+			}
+		}
+	}
+	return n
+}
+
+// wantScratch is the scratch of tier 4 of Trade: the ladder in the form of
+// household.Fund and the funded units per want, grown once.
+type wantScratch struct {
+	rungs          []household.Rung
+	shares, limits []int64
+	out            []int64
+	funded         []WantFunding
+}
+
+// rowOf is the trade row of the commodity, parallel to the view's tradable set.
+// It is nil for a commodity outside the view's tradable set, which only a view
+// built by hand can have (the world's filler checks FR-DEM-006).
+func (t *tradeCtx) rowOf(c CommodityID) *tradeRow {
+	i, ok := t.v.findCommodity(c)
+	if !ok || i >= len(t.rows) {
+		return nil
+	}
+	return &t.rows[i]
+}
+
+// fundWants is tier 4 (spec-demand.md 4.5, D310): after the buffers it spends the
+// rest of the cap, never more than the money left, down the ladder at each bid's
+// own limit. A want item with no bid or no room in its tier 4 gets nothing. The
+// units bought join the row's quantity and the funded units per want are kept for
+// the plan.
+func (t *tradeCtx) fundWants(avail, spendCap int64) {
+	v := t.v
+	if len(v.Wants) == 0 {
+		return
+	}
+	ws := t.ws
+	ws.funded = ws.funded[:0]
+	total := 0
+	for k := range v.Wants {
+		total += len(v.Wants[k].Items)
+	}
+	ws.shares, ws.limits = slices.Grow(ws.shares[:0], total), slices.Grow(ws.limits[:0], total)
+	ws.out, ws.rungs = slices.Grow(ws.out[:0], total)[:total], ws.rungs[:0]
+	for k := range v.Wants {
+		s0 := len(ws.shares)
+		for _, it := range v.Wants[k].Items {
+			ws.shares = append(ws.shares, it.Share)
+			ws.limits = append(ws.limits, t.bidLimit(it.Commodity))
+		}
+		ws.rungs = append(ws.rungs, household.Rung{Units: int64(v.Wants[k].Planned), Shares: ws.shares[s0:], Limits: ws.limits[s0:]})
+	}
+	if _, ok := household.Fund(spendCap, 0, avail, ws.rungs, ws.out); ok {
+		t.buyWants()
+	}
+}
+
+// bidLimit is the limit of the commodity's bid if it has room for want units, else
+// 0, which funds nothing.
+func (t *tradeCtx) bidLimit(c CommodityID) int64 {
+	if r := t.rowOf(c); r != nil && r.kind == bidOrder && r.t4 > r.q4 {
+		return r.limit
+	}
+	return 0
+}
+
+// buyWants adds the units Fund allocated to the rows, at most the tier 4 of each,
+// and records the funded units per want.
+func (t *tradeCtx) buyWants() {
+	v, ws, off := t.v, t.ws, 0
+	for k := range v.Wants {
+		var funded int64
+		for _, it := range v.Wants[k].Items {
+			q := ws.out[off]
+			off++
+			r := t.rowOf(it.Commodity)
+			if r == nil {
+				continue
+			}
+			if q = min(q, r.t4-r.q4); q < 1 {
+				continue
+			}
+			r.qty, r.q4, r.bought = r.qty+q, r.q4+q, true
+			funded += q
+		}
+		if funded > 0 {
+			ws.funded = append(ws.funded, WantFunding{Want: v.Wants[k].Want, Units: Quantity(funded)})
+		}
+	}
+}

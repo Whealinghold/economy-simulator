@@ -37,6 +37,9 @@ type expectedPack struct {
 	Warnings       []expectedWarning `toml:"warnings"`
 	WarmConfigHash string            `toml:"warm_config_hash"`
 	WarmWarnings   []expectedWarning `toml:"warm_warnings"`
+	// SurplusWantsBP is lambda* of the programme with the wants, recorded only
+	// for a pack with the demand module on (0 is not recorded).
+	SurplusWantsBP int64 `toml:"surplus_wants_bp"`
 }
 
 // warnings converts the warnings of a configuration to the file's form.
@@ -85,6 +88,7 @@ func measureExpected(t testing.TB, cold, warm []string) expectedPack {
 		Unpriced: []string{}, UnpricedWages: append([]string{}, st.Report.UnpricedWages...),
 		Warnings: warningRows(c), WarmConfigHash: hashHex(w), WarmWarnings: warningRows(w),
 	}
+	e.SurplusWantsBP = st.Report.SurplusWantsBP
 	for _, u := range st.Report.UnpricedCommodities {
 		e.Unpriced = append(e.Unpriced, u.Region+"/"+u.Commodity)
 	}
@@ -121,10 +125,18 @@ unpriced_wages = %s
 warnings = %s
 warm_config_hash = %q
 warm_warnings = %s
-`, e.ConfigHash, e.SurplusBP, e.LabourShareBP, e.Pivots, list(e.Unpriced), list(e.UnpricedWages), ws(e.Warnings), e.WarmConfigHash, ws(e.WarmWarnings)))
+%s`, e.ConfigHash, e.SurplusBP, e.LabourShareBP, e.Pivots, list(e.Unpriced), list(e.UnpricedWages), ws(e.Warnings), e.WarmConfigHash, ws(e.WarmWarnings), wantsLine(e)))
 }
 
-// TestExpected_Packs verifies, for the packs one and second, the hash of the
+// wantsLine is the line of lambda* with the wants, empty for a pack without it.
+func wantsLine(e expectedPack) string {
+	if e.SurplusWantsBP == 0 {
+		return ""
+	}
+	return fmt.Sprintf("surplus_wants_bp = %d\n", e.SurplusWantsBP)
+}
+
+// TestExpected_Packs verifies, for the packs one, second and one-demand, the hash of the
 // effective configuration, the solver's report (surplus, labour share, pivots,
 // unpriced) and the warnings against testdata/chains/expected/<pack>.toml, for
 // the cold layer set and the warm one. The file is recorded with -update from the
@@ -150,6 +162,7 @@ func TestExpected_Packs(t *testing.T) {
 	}{
 		{"one", []string{"base.toml", "one.toml"}, []string{"base.toml", "one.toml", "warm-one.toml"}, 25_119, 10},
 		{"second", []string{"second/second.toml"}, []string{"second/second.toml", "second/warm-second.toml"}, 19_663, 10},
+		{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 22_803, 15},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

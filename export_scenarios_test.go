@@ -11,3 +11,18 @@ package economysim
 func SetYieldShockForTest(w *World, region RegionID, recipe RecipeID, bp int64) error {
 	return w.shocks.set(region, recipe, bp)
 }
+
+// RoleMoneyForTest returns the money held by the agents of each role, by RoleID
+// (S04 with and without the demand module reads the cooks' share; the snapshot
+// has no per-role money). A removed agent keeps its slot with weight 0 and no
+// account of its own, so only agents of weight above 0 count.
+func RoleMoneyForTest(w *World, roles int) []int64 {
+	out := make([]int64, roles)
+	for i := range w.agents {
+		a := &w.agents[i]
+		if v, err := w.ledger.Account(a.account); err == nil && a.weight > 0 && int(a.role) < roles {
+			out[a.role] += int64(v.Balance)
+		}
+	}
+	return out
+}

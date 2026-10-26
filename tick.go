@@ -37,11 +37,13 @@ var positionList = [...]position{
 	{"P2.8a", "OBS", line},
 	{"P3.2", "AGT", line},
 	{"P3.4", "EST", line},
+	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
 	{"P5.1", "CLR", line},
 	{"P5.3", "EST", line},
 	{"P5.4", "CLR", line},
 	{"P6.1", "AGT", line},
+	{"P6.2", "DEM", line},
 	{"P6.3", "WEL", line},
 	{"P6.4", "AGT", line},
 	{"P7.1", "SPN", line},
@@ -60,10 +62,9 @@ var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3", "P1.3a", "P1.4", "P1.5", "P1.6", "P1.7", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.3", "P2.4", "P2.5a", "P2.6", "P2.8", "P2.8b",
-	"P3.1", "P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6", "P3.6a", "P3.6b", "P3.6c",
+	"P3.1", "P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
 	"P5.2",
-	"P6.2",
 	"P7.2", "P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3", "P8.3a", "P8.3b", "P8.3c",
 }
@@ -99,6 +100,7 @@ func (w *World) positions() error {
 	if err := w.p34Estates(); err != nil {
 		return err
 	}
+	w.p36Aggregates()
 	if err := w.p41Clear(); err != nil {
 		return err
 	}
@@ -115,6 +117,9 @@ func (w *World) positionsTail() error {
 	}
 	w.p54Outcomes()
 	if err := w.p61Upkeep(); err != nil {
+		return err
+	}
+	if err := w.p62Wants(); err != nil {
 		return err
 	}
 	w.p63Welfare()

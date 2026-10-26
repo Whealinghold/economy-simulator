@@ -1,5 +1,10 @@
 package economysim
 
+import (
+	"slices"
+	"testing"
+)
+
 // This file is the test-only seam of the root package (architecture.md 10.2):
 // it reaches the unexported tables from the external test package, so nothing
 // is exported from production code. Each row of Stage 1 appends its own
@@ -213,3 +218,130 @@ func DemandLadders(c *Config) ([][]WantID, bool) {
 // WorldHasDemandState reports whether the world holds the state of the demand
 // module, which it does if and only if the module is on.
 func WorldHasDemandState(w *World) bool { return w.demand != nil }
+
+// WantCarries returns a copy of the carries of an agent's wants, in ladder order.
+func WantCarries(w *World, id AgentID) []int64 { return slices.Clone(w.demand.carry[id]) }
+
+// LadderOf returns the want IDs of a role's ladder in rank order.
+func LadderOf(w *World, role RoleID) []WantID {
+	var out []WantID
+	for _, rg := range w.demand.ladder[role] {
+		out = append(out, rg.want)
+	}
+	return out
+}
+
+// AgentRole returns the role and weight of a live agent, and the number of agents.
+func AgentRole(w *World, id AgentID) (RoleID, int64) { return w.agents[id].role, w.agents[id].weight }
+
+// AgentCount is the number of agent slots, estates included.
+func AgentCount(w *World) int { return len(w.agents) }
+
+// ChangeRoleForTest gives agent id the role to as the spawner does, with the
+// fan-in call (takeRole).
+func ChangeRoleForTest(w *World, id AgentID, to RoleID) {
+	a := &w.agents[id]
+	w.takeRole(a, w.regionOf(a), to)
+}
+
+// SetWeightForTest changes an agent's weight without touching anything else, as
+// a merge or a birth does to its host.
+func SetWeightForTest(w *World, id AgentID, weight int64) { w.agents[id].weight = weight }
+
+// DemandAgentIndex is the 0-based position of an agent in its region's list.
+func DemandAgentIndex(w *World, id AgentID) int64 {
+	a := &w.agents[id]
+	return w.agentIndex(a, w.regionOf(a))
+}
+
+// DemandPlanAllocs measures the allocations of the filler and the checker for
+// one live agent of the role over runs calls, with the plan the default strategy
+// made for it.
+func DemandPlanAllocs(w *World, id AgentID, runs int) float64 {
+	a := &w.agents[id]
+	w.refreshViewCtx()
+	if err := w.fillAgentView(&w.tk.view, a); err != nil {
+		panic(err)
+	}
+	p := w.views.tradePlan()
+	DefaultStrategy{}.Trade(&w.tk.view, w.rnd.rnd, p)
+	return testing.AllocsPerRun(runs, func() {
+		_ = w.fillAgentView(&w.tk.view, a)
+		w.checkWants(a, p)
+		w.demand.use = w.demand.use[:0]
+	})
+}
+
+// PlannedWants returns the planned units of the agent's view, in ladder order.
+func PlannedWants(w *World, id AgentID) []Quantity {
+	a := &w.agents[id]
+	w.refreshViewCtx()
+	if err := w.fillAgentView(&w.tk.view, a); err != nil {
+		panic(err)
+	}
+	var out []Quantity
+	for _, wv := range w.tk.view.Wants {
+		out = append(out, wv.Planned)
+	}
+	w.demand.cur.valid = false
+	return out
+}
+
+// ConsumeWantForTest plans units of the commodity for the agent and runs P6.2. It
+// returns what the agent held before and after, its upkeep of the commodity next
+// tick, and its unfed, hunger and privation before and after.
+func ConsumeWantForTest(w *World, id AgentID, c CommodityID, units int64) (before, after, upkeep int64, welfareBefore, welfareAfter [3]int64) {
+	a := &w.agents[id]
+	before, _, _ = w.ledger.Holding(a.account, int(c))
+	upkeep = w.nextUpkeep(a, w.regionOf(a), c)
+	welfareBefore = [3]int64{a.unfed, a.hunger, a.privation}
+	w.demand.use = append(w.demand.use[:0], wantUse{agent: id, commodity: c, units: units})
+	if err := w.p62Wants(); err != nil {
+		panic(err)
+	}
+	after, _, _ = w.ledger.Holding(a.account, int(c))
+	welfareAfter = [3]int64{a.unfed, a.hunger, a.privation}
+	return before, after, upkeep, welfareBefore, welfareAfter
+}
+
+// UpkeepCommodity returns the first upkeep commodity of an agent's role.
+func UpkeepCommodity(w *World, id AgentID) CommodityID {
+	a := &w.agents[id]
+	return w.roles.row(a.role).upkeepIn(w.regionOf(a))[0].commodity
+}
+
+// SetWantTally sets the P3.2 tally of the want in the (region, role) cell, as the
+// checker would have left it, so a test of P3.6 can pose a tick. The want must be in
+// the role's ladder.
+func SetWantTally(w *World, region RegionID, role RoleID, want WantID, households, choked, planned, funded int64) {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	d.tally[int(region)*d.block+d.off[role]+k] = wantTally{households, choked, planned, funded}
+}
+
+// P36WantsForTest runs the demand module's part of P3.6 once.
+func P36WantsForTest(w *World) { w.p36Wants() }
+
+// SetChokedRun sets the run of the Warn "wants choked" of a cell.
+func SetChokedRun(w *World, region RegionID, role RoleID, want WantID, run int64) {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	d.chokedRun[int(region)*d.block+d.off[role]+k] = run
+}
+
+// ChokedRun returns the run of the Warn "wants choked" of a cell.
+func ChokedRun(w *World, region RegionID, role RoleID, want WantID) int64 {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	return d.chokedRun[int(region)*d.block+d.off[role]+k]
+}
+
+// WantShortReason is wantShortReason for a plan with the intents given and a want
+// with the item commodities given.
+func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason {
+	wt := wantRT{}
+	for _, c := range items {
+		wt.items = append(wt.items, wantItemRT{commodity: c})
+	}
+	return wantShortReason(&TradePlan{Intents: intents}, &wt, funded)
+}

@@ -149,3 +149,87 @@ func s04Seed(t *testing.T, cfg economysim.Config, script []shockStep, pack strin
 	}
 	rep.num(seed, "households at end", run.Final.Households)
 }
+
+// s04DemandTicks are the ticks at which S04 with and without the wants records
+// the households, the cooks' share of money and the staple price.
+var s04DemandTicks = []int64{100, 300, 600}
+
+// TestScenarioS04_WithAndWithoutDemand records, for N-314 and D317 of plan 2-5,
+// what the demand module does to the money trap of the reference packs: pack one
+// (the module off) and pack one-demand (the module on, its own census), seeds 1
+// to 3, 600 ticks, no shock. At ticks 100, 300 and 600 it records the households,
+// the cooks' share of all the money held by agents in basis points and the staple
+// price, for both packs. Exact: no price leaves its belief interval in either
+// pack (FR-STB-008) and the cooks' share lies in [0, 10 000]. The numbers are
+// written to testdata/chains/expected/one-demand.scenarios.txt with -update and
+// asserted on nothing else: D317 predicts that the cooks' hoard still grows with
+// the module on, so the share is a measurement, not a pass condition.
+//
+// Requirement: FR-DEM-023, FR-STB-008
+//
+// Guard: a share outside [0, 10 000] means the per-role money probe is wrong.
+func TestScenarioS04_WithAndWithoutDemand(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end scenario, skipped with -short")
+	}
+	const scenario, pack = "S04", "one-demand"
+	last := s04DemandTicks[len(s04DemandTicks)-1]
+	rep := newPackScenReport(pack, fmt.Sprintf("S04 with and without the wants seeds 1-%d, %d ticks", min(3, scenarioSeedCount()), last))
+	t.Run("seeds", func(t *testing.T) {
+		for _, seed := range seedList(min(3, scenarioSeedCount())) {
+			t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+				t.Parallel()
+				for _, pk := range []struct {
+					name   string
+					layers []string
+				}{{"wants off (pack one)", packOne}, {"wants on", packOneDemand}} {
+					cfg := loadValidPack(t, pk.layers...)
+					var cooks int
+					households := map[int64]int64{}
+					shares := map[int64]int64{}
+					run := runScenario(t, cfg, scenarioSpec{
+						Seed: seed, Ticks: last,
+						Probe: func(tick int64, w *economysim.World) {
+							at := tick + 1
+							if !slices.Contains(s04DemandTicks, at) {
+								return
+							}
+							s, err := w.Snapshot()
+							if err != nil {
+								t.Fatalf("Snapshot after tick %d error = %v, want nil", tick, err)
+							}
+							cooks = indexOf(s.Names.Roles, "cook")
+							money := economysim.RoleMoneyForTest(w, len(s.Names.Roles))
+							var total int64
+							for _, m := range money {
+								total += m
+							}
+							households[at] = s.Households
+							if share, ok := shareBP(money[cooks], total); ok {
+								shares[at] = share
+							} else {
+								shares[at] = -1
+							}
+						},
+					})
+					checkExact(t, rep, scenario, pack, seed, "price within belief bounds (FR-STB-008)", len(boundsViolations(cfg, run.Names, run.Obs, 3).Violations) == 0,
+						"%s: a price left its belief interval", pk.name)
+					staple := marketOf(t, run, "north", "staple")
+					for _, at := range s04DemandTicks {
+						rep.num(seed, fmt.Sprintf("households at tick %d, %s", at, pk.name), households[at])
+						checkExact(t, rep, scenario, pack, seed, "cooks' share of money in [0, 10 000]", shares[at] >= -1 && shares[at] <= 10_000,
+							"%s tick %d: share %d", pk.name, at, shares[at])
+						if shares[at] < 0 {
+							rep.absent(seed, fmt.Sprintf("cooks' share of money bp at tick %d, %s", at, pk.name))
+						} else {
+							rep.num(seed, fmt.Sprintf("cooks' share of money bp at tick %d, %s", at, pk.name), shares[at])
+						}
+						rep.num(seed, fmt.Sprintf("staple price at tick %d, %s", at, pk.name), staple.Price[at-1])
+					}
+				}
+			})
+		}
+	})
+	rep.flush(t)
+}

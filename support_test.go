@@ -38,7 +38,8 @@ var (
 	packSecond  = []string{"second/second.toml", "second/warm-second.toml"}
 	// packOneDemand is pack one with the demand module on, its own census (D315 of
 	// plan 2-5): the demand overlay is layered over base, not over one.
-	packOneDemand = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}
+	packOneDemand     = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}
+	packOneDemandCold = []string{"base.toml", "demand.toml", "one-demand.toml"}
 )
 
 const chainsDir = "testdata/chains"
@@ -319,6 +320,24 @@ func splitPlainList(s string) []string {
 
 // goldenPath is the path of a file of the off set (testing.md 7.1.1).
 func goldenPath(name string) string { return filepath.Join("testdata", "golden", "off", name) }
+
+// moduleGoldenPath is the path of a file of a module-alone set (testing.md 7.1.1):
+// testdata/golden/<module>/<name>.
+func moduleGoldenPath(module, name string) string {
+	return filepath.Join("testdata", "golden", module, name)
+}
+
+// checkModuleGolden compares got with the file name of the module-alone set of
+// module, or writes it with -update. The off set is never reached through it.
+func checkModuleGolden(t testing.TB, module, name string, got []byte) {
+	t.Helper()
+	if module == "off" || module == "all" {
+		t.Fatalf("checkModuleGolden(%q): the off and all sets have their own helpers", module)
+	}
+	if err := compareGolden(moduleGoldenPath(module, name), got, *updateFlag); err != nil {
+		t.Error(err)
+	}
+}
 
 // checkGolden compares got with the golden file name, or writes it with -update.
 func checkGolden(t testing.TB, name string, got []byte) {
