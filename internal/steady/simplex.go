@@ -62,7 +62,7 @@ func (t *tableau) solve(ctx context.Context, maxPivots int64) (int64, error) {
 	}
 	out, err := t.endPhase1(ctx, maxPivots, pivots, obj)
 	if err != nil {
-		return pivots, err
+		return pivots + out, err
 	}
 	return t.run(ctx, maxPivots, pivots+out)
 }
