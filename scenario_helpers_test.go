@@ -291,6 +291,8 @@ type scenarioSpec struct {
 	// Snap, when set, says after which step tick OnSnap gets a Snapshot.
 	Snap   func(tick int64) bool
 	OnSnap func(tick int64, s economysim.Snapshot)
+	// Probe, when set, is called with the world after step tick.
+	Probe func(tick int64, w *economysim.World)
 }
 
 // scenarioRun is what runScenario kept.
@@ -320,6 +322,9 @@ func runScenario(t testing.TB, cfg economysim.Config, spec scenarioSpec) scenari
 		applyScript(t, w, s0.Names, spec.Script)
 		if err := w.Step(); err != nil {
 			t.Fatalf("Step at tick %d (seed %d) error = %v, want nil", i, spec.Seed, err)
+		}
+		if spec.Probe != nil {
+			spec.Probe(i, w)
 		}
 		if spec.Snap != nil && spec.Snap(i) {
 			s, err := w.Snapshot()
