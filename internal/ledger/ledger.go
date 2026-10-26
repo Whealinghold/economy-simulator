@@ -2,6 +2,8 @@ package ledger
 
 import (
 	"fmt"
+	"math"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 )
@@ -36,6 +38,12 @@ type Config struct {
 	// MaxClaims is the most claims that may be open at once (spec-credit.md
 	// 6.4). 0 means no claim may be opened.
 	MaxClaims int
+	// Flows lists the money flows of the money supply module in flow-ID order,
+	// each as the class of its reason, Faucet for a grant or Sink for a levy
+	// (spec-money-supply.md 4.5.1). Flow i has the reason FlowReason(i), a
+	// money-only row, and no state is added to a ledger whose Flows is nil
+	// (plan 2-6 D323).
+	Flows []Class
 }
 
 // account is one slot of the account table. A closed account keeps its kind
@@ -79,6 +87,10 @@ type Ledger struct {
 	// so a ledger built with no module has the layout of Stage 1 (offOf reads
 	// both).
 	later [][2]int
+	// flowClass is the class of each flow reason and flowOff the offset of its
+	// money slot; both are nil in a ledger with no flow.
+	flowClass []Class
+	flowOff   []int
 
 	accounts []account
 	// boundary is the account ID of each (reason, thing), indexed like a
@@ -160,7 +172,24 @@ func validate(cfg Config) (declared [NumReasons]bool, err error) {
 	if cfg.MaxClaims < 0 {
 		return declared, fmt.Errorf("%w: %d claims, want at least 0", ErrInvalidConfig, cfg.MaxClaims)
 	}
+	if err := validateFlows(cfg.Flows); err != nil {
+		return declared, err
+	}
 	return declaredSet(cfg.Declared)
+}
+
+// validateFlows checks that every flow is a faucet or a sink and that the
+// reasons fit the Reason type.
+func validateFlows(flows []Class) error {
+	if len(flows) > math.MaxUint8-int(NumReasons) {
+		return fmt.Errorf("%w: %d flows do not fit the reason numbers", ErrInvalidConfig, len(flows))
+	}
+	for i, c := range flows {
+		if c != Faucet && c != Sink {
+			return fmt.Errorf("%w: flow %d is neither a faucet nor a sink", ErrInvalidConfig, i)
+		}
+	}
+	return nil
 }
 
 // declaredSet returns the set of reasons, or an error for one that is not
@@ -193,6 +222,28 @@ func (l *Ledger) layout(declared *[NumReasons]bool) {
 			l.setOff(r, t, o)
 		}
 	}
+	// The flow slots follow every row of the table, so a ledger with no flow
+	// has the layout it had before (plan 2-6 D323).
+	for range l.flowClass {
+		l.flowOff = append(l.flowOff, l.stride)
+		l.stride++
+	}
+}
+
+// reasons is the number of reason numbers the ledger knows: the table's and
+// its flows'.
+func (l *Ledger) reasons() int { return int(NumReasons) + len(l.flowClass) }
+
+// rowOf returns the row of a reason for money or goods, flows included. A flow
+// moves money only.
+func (l *Ledger) rowOf(r Reason, goods bool) (row, bool) {
+	if r < NumReasons {
+		return rowOf(r, goods)
+	}
+	if i := int(r) - int(NumReasons); !goods && i < len(l.flowClass) {
+		return flowRow(l.flowClass[i]), true
+	}
+	return row{}, false
 }
 
 // setOff records the offset of (r, t). The slice of later reasons is made when
@@ -220,7 +271,12 @@ func (l *Ledger) offOf(r Reason, t int) int {
 	switch {
 	case int(r) < numStage1Reasons:
 		return l.off[r][t]
-	case l.later == nil || r >= NumReasons:
+	case r >= NumReasons:
+		if i := int(r) - int(NumReasons); t == thingMoney && i < len(l.flowOff) {
+			return l.flowOff[i]
+		}
+		return -1
+	case l.later == nil:
 		return -1
 	}
 	return l.later[int(r)-numStage1Reasons][t]
@@ -240,6 +296,9 @@ func New(cfg Config) (*Ledger, error) {
 		comms:        append([]Commodity(nil), cfg.Commodities...),
 		regions:      cfg.Regions,
 		construction: true,
+	}
+	if len(cfg.Flows) > 0 {
+		l.flowClass = slices.Clone(cfg.Flows)
 	}
 	l.layout(&declared)
 	n, ok := checked.Mul(int64(l.stride), int64(cfg.Regions))
@@ -312,7 +371,7 @@ func (l *Ledger) Open(kind Kind, owner, region int) (int, error) {
 // slotOf returns the index of (reason, commodity) in a region's block and
 // false when no row moves that thing or the commodity is out of range.
 func (l *Ledger) slotOf(r Reason, commodity int) (int, error) {
-	if r >= NumReasons {
+	if int(r) >= l.reasons() {
 		return 0, ErrReasonMismatch
 	}
 	if commodity == Money {
@@ -338,7 +397,7 @@ func (l *Ledger) OpenBoundary(r Reason, commodity int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if rw, _ := rowOf(r, commodity != Money); rw.class == Internal {
+	if rw, _ := l.rowOf(r, commodity != Money); rw.class == Internal {
 		return 0, ErrReasonMismatch
 	}
 	if l.boundary[i] >= 0 {
@@ -422,7 +481,8 @@ func (l *Ledger) ClearTotals() {
 
 // AppendFlows appends the non-zero totals of the current tick, or of the
 // construction bucket, to dst and returns it. The order is ascending region,
-// then reason, money before goods, then commodity. It allocates only when dst
+// then the built-in reasons, the flows in flow order and the declared reasons
+// in number order, money before goods, then commodity. It allocates only when dst
 // has no room, so the world can reuse a slice. It reports internal reasons
 // too: the root keeps the faucets and sinks (spec-ledger.md 12.1).
 func (l *Ledger) AppendFlows(dst []Flow, bucket bool) []Flow {
@@ -431,8 +491,19 @@ func (l *Ledger) AppendFlows(dst []Flow, bucket bool) []Flow {
 		src = l.bucket
 	}
 	for region := 0; region < l.regions; region++ {
+		base := src[region*l.stride:]
 		for r := Reason(0); r < NumReasons; r++ {
-			dst = l.appendReason(dst, src[region*l.stride:], region, r)
+			if !isDeclared(r) {
+				dst = l.appendReason(dst, base, region, r)
+			}
+		}
+		for i := range l.flowClass {
+			dst = l.appendReason(dst, base, region, FlowReason(i))
+		}
+		for r := Reason(0); r < NumReasons; r++ {
+			if isDeclared(r) {
+				dst = l.appendReason(dst, base, region, r)
+			}
 		}
 	}
 	return dst

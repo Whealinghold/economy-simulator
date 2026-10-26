@@ -36,7 +36,7 @@ func (l *Ledger) TransferReserved(from, to int, amount int64, r Reason) error {
 // declared reason only if it was declared) that runs from the kind of f to
 // the kind of t.
 func (l *Ledger) moneyFits(r Reason, f, t *account) bool {
-	rw, ok := rowOf(r, false)
+	rw, ok := l.rowOf(r, false)
 	return ok && l.offOf(r, thingMoney) >= 0 && rw.fits(f.kind, t.kind)
 }
 

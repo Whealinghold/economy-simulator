@@ -227,7 +227,7 @@ func (l *Ledger) auditBoundary(id int, a *account) error {
 	if err != nil || l.boundary[slot] != id {
 		return auditFail(IdentityStructure, id, a.thing, "a boundary account is not the account of its reason and thing in the boundary table")
 	}
-	if rw, _ := rowOf(a.reason, a.thing != Money); rw.class == Internal {
+	if rw, _ := l.rowOf(a.reason, a.thing != Money); rw.class == Internal {
 		return auditFail(IdentityStructure, id, a.thing, "a boundary account of an internal reason")
 	}
 	if a.region != -1 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint {
@@ -496,8 +496,8 @@ type slotVisitor func(r Reason, class Class, commodity, slot int) error
 // eachBoundarySlot calls f for every flow slot of a faucet or a sink: its
 // reason, class, commodity (Money for money) and slot index.
 func (l *Ledger) eachBoundarySlot(f slotVisitor) error {
-	for r := Reason(0); r < NumReasons; r++ {
-		for t := range table[r] {
+	for r := Reason(0); int(r) < l.reasons(); r++ {
+		for t := range [2]struct{}{} {
 			if err := l.eachThingSlot(r, t, f); err != nil {
 				return err
 			}
@@ -509,7 +509,8 @@ func (l *Ledger) eachBoundarySlot(f slotVisitor) error {
 // eachThingSlot calls f for the slots of one reason and thing (money or
 // goods), if they are a faucet or a sink.
 func (l *Ledger) eachThingSlot(r Reason, t int, f slotVisitor) error {
-	o, class := l.offOf(r, t), table[r][t].class
+	rw, _ := l.rowOf(r, t == thingGoods)
+	o, class := l.offOf(r, t), rw.class
 	if o < 0 || class == Internal {
 		return nil
 	}
