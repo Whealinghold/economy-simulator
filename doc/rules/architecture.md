@@ -273,10 +273,11 @@ agent-lifecycle fan-ins from `createAgent`, `spawnEntrant`, the integration add
 and `takeRole`, guarded calls from the `DefaultStrategy` files into methods
 defined in the module file (the Work and Trade seams of later modules, plan 10,
 included), the term in `viability.go`, named `phase_*.go` calls such as
-`p36Aggregates`, the audit call and the `offStage` extensions. A hook holds no
-branch on the module's data and no arithmetic.
+`p36Aggregates`, the audit call, the `offStage` extensions and the module keys
+of the loader in `config/mapping.go`. A hook holds no branch on the module's
+data and no arithmetic.
 
-2.10.2. **Outside its file a module appears only in the catalogue files**:
+2.10.2. **Outside its file a module appears only in the catalogue files and at the named hooks of 2.10.1**:
 its pointer in `World` and in `Config.Modules` (`config.go`), its one-line
 calls in `tick.go`, its event types in `event.go`, its sentinels in
 `errors.go`, its option in `option.go`, its bounds in `bounds.go` and its
@@ -329,8 +330,8 @@ a "sixth fan-in" means an agent-lifecycle fan-in.
 
 2.10.5. **Catalogue files are append-only in module order.** A new module
 appends its entries to `event.go`, `errors.go`, `Config.Modules`, the
-checkpoint tags and `tick.go`'s guarded calls; nothing is inserted or
-renumbered, because the configuration hash and the checkpoint format depend
+checkpoint tags and `tick.go`'s guarded calls, and a hook that is a list of calls
+is appended the same way; nothing is inserted or renumbered, because the configuration hash and the checkpoint format depend
 on the order (`spec-config.md` 3.2, `spec-checkpoint.md` 4.2).
 
 An append **MUST** leave no trace while it is off. A module that is off, and a
@@ -944,7 +945,8 @@ Types in this module **MUST NOT** carry struct tags for any transport.
 Reject a change that contains any of the following:
 
 - a forbidden package name (2.4) or a layered directory structure (3.1)
-- module logic outside the module's own file and the catalogue files, a
+- module logic outside the module's own file and the catalogue files (a named
+  hook of 2.10.1 holds none), a
   position in `tick.go` that holds logic, a second removal or relocation path,
   or a module's per-agent state as a field of the agent type (2.10)
 - a module file created before the slice's golden file runs, or a catalogue
@@ -1028,4 +1030,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: ceeca136ce373c4daa252932
+RULE-TAG: b83c4da60ee4dfd034eaf163

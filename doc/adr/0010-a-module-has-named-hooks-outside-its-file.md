@@ -1,8 +1,7 @@
 # 0010. A module has named hooks outside its file
 
-- Status: Accepted
+- Status: Accepted (by the repository owner, 2026-10-26)
 - Date: 2026-10-25
-- Accepted: 2026-10-26, by the repository owner
 - Supersedes: none
 - Narrows: 0007 decisions 1, 2 and 3
 
