@@ -128,31 +128,41 @@ func (v *validator) flowShape(base []string, f MoneyFlow) {
 	bad := func(field string) { v.rep.add(ErrFlowShape, path(base, field), "", "") }
 	switch f.Kind {
 	case FlowGrant:
-		if f.RateBP != 0 {
-			bad("rate_bp")
-		}
-		if f.Exempt != 0 {
-			bad("exempt")
-		}
-		if (f.Amount != 0) == (f.Level != 0) {
-			bad("amount")
-		}
-		if f.Level != 0 && f.Per == PerYear {
-			bad("per")
-		}
-		if f.NotIncome && f.Target.Kind != TargetHouseholds {
-			bad("not_income")
-		}
+		grantShape(f, bad)
 	case FlowLevy:
-		if f.Level != 0 {
-			bad("level")
-		}
-		if (f.Amount != 0) == (f.RateBP != 0) {
-			bad("amount")
-		}
-		if f.NotIncome {
-			bad("not_income")
-		}
+		levyShape(f, bad)
+	}
+}
+
+// grantShape reports the fields of a grant that break its shape.
+func grantShape(f MoneyFlow, bad func(field string)) {
+	if f.RateBP != 0 {
+		bad("rate_bp")
+	}
+	if f.Exempt != 0 {
+		bad("exempt")
+	}
+	if (f.Amount != 0) == (f.Level != 0) {
+		bad("amount")
+	}
+	if f.Level != 0 && f.Per == PerYear {
+		bad("per")
+	}
+	if f.NotIncome && f.Target.Kind != TargetHouseholds {
+		bad("not_income")
+	}
+}
+
+// levyShape reports the fields of a levy that break its shape.
+func levyShape(f MoneyFlow, bad func(field string)) {
+	if f.Level != 0 {
+		bad("level")
+	}
+	if (f.Amount != 0) == (f.RateBP != 0) {
+		bad("amount")
+	}
+	if f.NotIncome {
+		bad("not_income")
 	}
 }
 
@@ -210,24 +220,30 @@ func moneyWarnings(c *Config, lk lookup) []Warning {
 	}
 	hasLevy := slices.ContainsFunc(m.Flows, func(f MoneyFlow) bool { return f.Kind == FlowLevy })
 	for _, f := range m.Flows {
-		p := []string{"modules", "money_supply", "flows", f.ID}
-		if f.Kind == FlowGrant && f.Limit == 0 && !hasLevy {
-			add("faucet_without_sink", p...)
-		}
-		if f.Target.Kind != TargetHouseholds {
-			continue
-		}
-		if !roleHasGroup(c, f.Target) {
-			add("class_empty", p...)
-		}
-		if f.Kind == FlowLevy && levyBelowUpkeep(c, lk, f) {
-			add("levy_below_upkeep", p...)
-		}
+		flowWarnings(c, lk, f, hasLevy, add)
 	}
 	if pairUnbalanced(c, m) {
 		add("pair_unbalanced", "modules", "money_supply")
 	}
 	return out
+}
+
+// flowWarnings raises the warnings of one flow: faucet_without_sink,
+// class_empty and levy_below_upkeep.
+func flowWarnings(c *Config, lk lookup, f MoneyFlow, hasLevy bool, add func(string, ...string)) {
+	p := []string{"modules", "money_supply", "flows", f.ID}
+	if f.Kind == FlowGrant && f.Limit == 0 && !hasLevy {
+		add("faucet_without_sink", p...)
+	}
+	if f.Target.Kind != TargetHouseholds {
+		return
+	}
+	if !roleHasGroup(c, f.Target) {
+		add("class_empty", p...)
+	}
+	if f.Kind == FlowLevy && levyBelowUpkeep(c, lk, f) {
+		add("levy_below_upkeep", p...)
+	}
 }
 
 // targets reports whether a group is in the class of a household target.
@@ -266,32 +282,45 @@ func levyBelowUpkeep(c *Config, lk lookup, f MoneyFlow) bool {
 // over the census differ by more than pairTolerance basis points of the larger
 // (spec-money-supply.md 9.2). Rate levies and top-ups are not compared.
 func pairUnbalanced(c *Config, m *MoneySupply) bool {
-	var grants, levies int64
-	var hasGrant, hasLevy bool
-	ok := true
+	grant, levy := yearSum{}, yearSum{}
 	for _, f := range m.Flows {
-		if f.Target.Kind != TargetHouseholds || f.Amount == 0 {
-			continue
+		switch {
+		case f.Target.Kind != TargetHouseholds || f.Amount == 0:
+		case f.Kind == FlowGrant:
+			grant.add(c, f)
+		case f.Kind == FlowLevy:
+			levy.add(c, f)
 		}
-		total, tok := yearlyTotal(c, f)
-		ok = ok && tok
-		switch f.Kind {
-		case FlowGrant:
-			hasGrant = true
-			grants, tok = checked.Add(grants, total)
-		case FlowLevy:
-			hasLevy = true
-			levies, tok = checked.Add(levies, total)
-		}
-		ok = ok && tok
 	}
-	if !ok || !hasGrant || !hasLevy {
-		return false
-	}
-	larger, diff := max(grants, levies), max(grants, levies)-min(grants, levies)
-	lhs, lok := checked.Mul(diff, wholeBP)
+	return grant.usable() && levy.usable() && beyondTolerance(grant.total, levy.total)
+}
+
+// beyondTolerance reports whether two totals differ by more than pairTolerance
+// basis points of the larger.
+func beyondTolerance(a, b int64) bool {
+	larger := max(a, b)
+	lhs, lok := checked.Mul(larger-min(a, b), wholeBP)
 	rhs, rok := checked.Mul(larger, pairTolerance)
 	return lok && rok && lhs > rhs
+}
+
+// yearSum is the running yearly total of the fixed flows of one kind, and whether
+// there was one and whether every sum fitted.
+type yearSum struct {
+	total    int64
+	has, bad bool
+}
+
+// usable reports whether the sum has a flow and every sum fitted.
+func (y yearSum) usable() bool { return y.has && !y.bad }
+
+// add adds the yearly total of f; a sum that does not fit makes the pair not
+// comparable.
+func (y *yearSum) add(c *Config, f MoneyFlow) {
+	year, yok := yearlyTotal(c, f)
+	sum, sok := checked.Add(y.total, year)
+	y.total, y.has = sum, true
+	y.bad = y.bad || !yok || !sok
 }
 
 // yearlyTotal is the nominal amount a fixed flow moves in a year over the census
