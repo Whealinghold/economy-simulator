@@ -18,10 +18,9 @@ import (
 // This file is the demand module (spec-demand.md; architecture.md 2.10.1): the
 // module's state, its validator and counts, the items it adds to the tradable
 // set of a role, its warnings and the names of its IDs. The pure rules of the
-// per-tick arithmetic are in internal/household/wants.go. The module has no world
-// effect yet: nothing steps demandState, which the hooks of ADR 0010 (the
-// per-position methods, the filler and the checker, the agent-lifecycle calls)
-// will do when they are admitted. Outside this file the module appears only in
+// per-tick arithmetic are in internal/household/wants.go. The hooks of ADR 0010
+// step demandState: the filler and the checker (fanin.go), P3.6 and P6.2
+// (tick.go) and the agent-lifecycle calls. Outside this file the module appears only in
 // the catalogue files (config.go, hash.go, bounds.go, defaults.go, errors.go,
 // validate.go) and the fan-in call in fanin.go.
 

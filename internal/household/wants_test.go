@@ -834,6 +834,8 @@ func TestSplit(t *testing.T) {
 		{"over 10 000, nothing floored", 1, []int64{9_000, 9_000}, nil, false},
 		// Two passes, the first item first: the pass after it must skip it.
 		{"two remainders, first item largest", 2, []int64{3_334, 3_333, 3_333}, []int64{1, 1, 0}, true},
+		// Floors [0, 1] leave 2 units; the zero share must not take the second.
+		{"short weights never feed a zero share", 3, []int64{0, 5_000}, nil, false},
 		{"a zero share has no remainder", 1, []int64{0, 1}, []int64{0, 1}, true},
 	}
 	for _, tt := range tests {

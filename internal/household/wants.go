@@ -282,6 +282,9 @@ func nextRemainder(total int64, w []int64, den, prevRem int64, prev int) (best i
 		if !ok {
 			return -1, 0, false
 		}
+		if wj <= 0 { // an item of no weight never takes a leftover unit
+			continue
+		}
 		if prev >= 0 && (r > prevRem || (r == prevRem && j <= prev)) {
 			continue
 		}
