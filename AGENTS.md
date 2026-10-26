@@ -121,7 +121,7 @@ economy-sim/
 │   phase_trade.go phase_outcomes.go phase_exit.go (WLD)
 │   checkpoint_save.go checkpoint_restore.go checkpoint_sections.go (CHK)
 │   regions_relocate.go regions_status.go (REG)
-│   demand_plan.go demand_state.go (DEM, demand; only if Lizard forces the
+│   demand_plan.go demand_state.go (demand (DEM); only if Lizard forces the
 │   split of demand.go)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
