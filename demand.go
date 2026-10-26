@@ -817,11 +817,16 @@ func demandReasons() []ledger.Reason { return []ledger.Reason{ledger.WantConsump
 // in the canonical order of the tradable set. A want item is always in the set
 // (FR-DEM-006), so a missing row is a programmer error.
 func (v *AgentView) commodityRow(c CommodityID) *CommodityView {
+	return &v.Commodities[v.commodityIndex(c)]
+}
+
+// commodityIndex is the position of the commodity in the view's tradable set.
+func (v *AgentView) commodityIndex(c CommodityID) int {
 	i, ok := slices.BinarySearchFunc(v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
 	if !ok {
 		invariant("a want item is not in the tradable set of the role")
 	}
-	return &v.Commodities[i]
+	return i
 }
 
 // fillWants is the filler of the want group of AgentView (spec-demand.md 4.4,
@@ -862,14 +867,14 @@ func (d *demandState) rung(v *AgentView, a *agent, rg rung, carry int64, its []W
 	}
 	shares, sched, ok := d.schedule(hs, wt)
 	units, next := int64(0), carry
+	uok := true
 	if ok && sched > 0 {
-		var uok bool
 		units, next, uok = household.Units(carry, wt.quantity, a.weight, rg.scale, d.regionBP[int(v.Region)*len(d.wants)+int(rg.want)], sched, wt.period)
 		if !uok {
 			units, next = 0, carry
 		}
 	}
-	choked = !ok || sched == 0
+	choked = !ok || sched == 0 || !uok // an overflow of the units chokes the want like one of the schedule
 	split, _ := household.Split(d.split[:0], units, shares)
 	for j, it := range wt.items {
 		its[j] = WantItemView{Commodity: it.commodity}
@@ -1320,8 +1325,7 @@ type wantScratch struct {
 
 // rowOf is the trade row of the commodity, parallel to the view's tradable set.
 func (t *tradeCtx) rowOf(c CommodityID) *tradeRow {
-	i, _ := slices.BinarySearchFunc(t.v.Commodities, c, func(e CommodityView, x CommodityID) int { return cmp.Compare(e.Commodity, x) })
-	return &t.rows[i]
+	return &t.rows[t.v.commodityIndex(c)]
 }
 
 // fundWants is tier 4 (spec-demand.md 4.5, D310): after the buffers it spends the

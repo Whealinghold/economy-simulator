@@ -320,6 +320,7 @@ func (m *viaModel) wantsExceed(o *viabilityOutcome) {
 	}
 	md, err := m.wantsModel(regions, one)
 	if err != nil {
+		o.fail(err) // the same overflow SolveSteadyState reports
 		return
 	}
 	res, skipped, err := m.solve(md)
