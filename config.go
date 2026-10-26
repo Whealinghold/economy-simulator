@@ -57,11 +57,95 @@ type Config struct {
 }
 
 // Modules has one pointer per optional module, in the order of the Modules row
-// of spec-config.md 3.1; a nil pointer is a module that is off. No module is
-// built at Stage 0, so it has no field: each module's change appends its
-// pointer, and the position of the module in that row is its field id in the
-// configuration hash whatever the build order.
-type Modules struct{}
+// of spec-config.md 3.1; a nil pointer is a module that is off. Each module's
+// change appends its pointer, and the position of the module in that row is its
+// field id in the configuration hash whatever the build order (Demand is 1).
+type Modules struct {
+	// Demand is the demand module: wants beyond upkeep, the tastes of the roles
+	// and the regional scales (spec-demand.md). Nil is off; non-nil is on, even
+	// when empty. Its hash id is 1.
+	Demand *Demand
+}
+
+// Demand is the configuration of the demand module (spec-demand.md 3.2, 9). The
+// zero value is a module that is on with no want. Every list is in canonical
+// order after construction: wants by ID, tastes by role then want, region tastes
+// by region then want (spec-config.md 3.4).
+type Demand struct {
+	// Wants are the want entities, by ID in canonical order.
+	Wants []Want
+	// Tastes are the (role, want) rows that put a want in a role's ladder, by
+	// role then want in canonical order.
+	Tastes []Taste
+	// RegionTastes are the (region, want) rows that scale a want in a region, by
+	// region then want in canonical order.
+	RegionTastes []RegionTaste
+}
+
+// Want is a need slot beyond upkeep: alternatives, a quantity per period, a rank
+// and the shape of the schedule (spec-demand.md 3.2). It is not a commodity and
+// not a recipe. Start from DefaultWant; ID, Items and Quantity have no default
+// and are required.
+type Want struct {
+	// ID names the want.
+	ID string
+	// Items are the alternative commodities that satisfy the want, by commodity
+	// in canonical order, 1 to MaxWantItems.
+	Items []WantItem
+	// Quantity is the units per household per Period at the reference price, 1 to
+	// MaxQuantity / MaxWeight.
+	Quantity int64
+	// Period is the ticks over which Quantity is wanted, 1 to MaxWantPeriod.
+	Period int64
+	// Rank is the position on the ladder; a lower rank is funded first, 0 to
+	// MaxWantRank.
+	Rank int64
+	// Elasticity is the slope of the schedule at the reference price in basis
+	// points, 0 to MaxElasticityBP; 10 000 is unit-elastic.
+	Elasticity int64
+	// Ceiling is the most the schedule can reach in basis points, 10 000 to
+	// MaxCeilingBP.
+	Ceiling int64
+	// Substitution is the integer exponent of the substitution shares, 0 to
+	// MaxSubstitution.
+	Substitution int64
+	// Label is a display name. It is presentation only: it changes no result and
+	// is not hashed.
+	Label string
+}
+
+// WantItem is one alternative that can satisfy a want (spec-demand.md 3.2).
+type WantItem struct {
+	// Commodity is the ID of the commodity; it is not durable.
+	Commodity string
+	// Weight is the taste for this alternative in basis points, 1 to
+	// MaxBasisPoints.
+	Weight int64
+}
+
+// Taste is a role's taste for a want: the want is in the role's ladder
+// (spec-demand.md 3.2). A Scale of 0 removes the want from the ladder.
+type Taste struct {
+	// Role is the ID of the role.
+	Role string
+	// Want is the ID of the want.
+	Want string
+	// Scale is the multiplier of the want's Quantity for the role in basis
+	// points, 0 to MaxTasteScale.
+	Scale int64
+}
+
+// RegionTaste scales a want in one region (spec-demand.md 3.2); a want with no
+// row for a region is scaled by 10 000 there.
+type RegionTaste struct {
+	// Region is the ID of the region.
+	Region string
+	// Want is the ID of the want.
+	Want string
+	// Scale is the multiplier of the want's Quantity in the region in basis
+	// points, 0 to MaxTasteScale.
+	Scale int64
+}
 
 // WorldParams holds the world-level parameters. Start from DefaultWorldParams: the zero
 // value is not a valid configuration. Every default is a provisional
@@ -612,6 +696,7 @@ func (c Config) canonical() Config {
 		w.Pools = sortedBy(w.Pools, func(a, b WarmPool) int { return cmp.Compare(a.Region, b.Region) })
 		out.WarmStart = &w
 	}
+	out.Modules.Demand = c.Modules.Demand.canonical()
 	return out
 }
 

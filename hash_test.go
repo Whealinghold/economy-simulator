@@ -17,13 +17,14 @@ import (
 
 // presentationOnly is the allow-list of the hash test (spec-config.md 8.3): the
 // fields whose doc comment says presentation only and that no result and no
-// hash reads. At Stage 0 they are the six labels of the core. A module's change
-// adds its own labels here and in the doc comment of the field.
+// hash reads. They are the six labels of the core and the label of a want. A
+// module's change adds its own labels here and in the doc comment of the field.
 var presentationOnly = map[string]bool{
 	"Commodity.Label":           true,
 	"Commodity.UnitLabel":       true,
 	"Recipe.Label":              true,
 	"Role.Label":                true,
+	"Want.Label":                true,
 	"Region.Label":              true,
 	"WorldParams.DistanceLabel": true,
 }
@@ -180,9 +181,9 @@ func change(v reflect.Value) {
 
 // TestHashConfig_SpecVectors verifies the encoder against the worked examples of
 // spec-config.md 8.2.4: the empty Config, one region, the same with an empty
-// WarmStart, and the five-entity configuration whose 350 bytes the spec lists.
-// The Estates row of that table needs the Estates module, which is built later,
-// and is added with it.
+// WarmStart, the same with the demand module on and empty, and the five-entity
+// configuration whose 350 bytes the spec lists. The Estates row of that table
+// needs the Estates module, which is built later, and is added with it.
 //
 // Requirement: FR-CFG-025, FR-CFG-104, FR-CFG-105
 func TestHashConfig_SpecVectors(t *testing.T) {
@@ -203,6 +204,8 @@ func TestHashConfig_SpecVectors(t *testing.T) {
 	oneRegion := economysim.Config{Regions: []economysim.Region{{ID: "north"}}}
 	oneRegionWarm := oneRegion
 	oneRegionWarm.WarmStart = &economysim.WarmStart{}
+	oneRegionDemand := oneRegion
+	oneRegionDemand.Modules.Demand = &economysim.Demand{}
 	tests := []struct {
 		name string
 		cfg  economysim.Config
@@ -211,6 +214,7 @@ func TestHashConfig_SpecVectors(t *testing.T) {
 		{"empty config", economysim.Config{}, "fb50dc0717ff266cf9baf82b1ce7a1c2ef6d9247859680b11a19fb7077f5f222"},
 		{"one region", oneRegion, "ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013"},
 		{"one region with empty warm start", oneRegionWarm, "a2f375f381fced5c69544bf3dfb14446d513d6e0eaceb9574964bbfe8ea8a812"},
+		{"one region with the demand module on", oneRegionDemand, "d4a84ffadc64ea332b99fe14423ca67eb052928dd5a16d91d054b27eeb1493d0"},
 		{"five entities", fiveEntities, "87a8a42335e50ea33777b9290b1adc14c80a8b8a1451e31b72dd664f72c2f0f5"},
 	}
 	for _, tt := range tests {

@@ -305,6 +305,8 @@ type Names struct {
 	Recipes []string
 	// Seasons holds the string ID of each season of the calendar.
 	Seasons []string
+	// Wants holds the string ID of each WantID; nil when the demand module is off.
+	Wants []string
 }
 
 // Amount is a quantity of one commodity.

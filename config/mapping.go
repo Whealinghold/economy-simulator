@@ -169,12 +169,17 @@ func (t *tbl) sub(key string) *tbl {
 // entries are tables keyed by ID, and rejects the keys each did not read. The
 // table itself is not finished: its keys are all entities.
 func (t *tbl) entities(key string, each func(id string, e *tbl)) {
-	et := t.sub(key)
-	if et == nil {
-		return
+	if et := t.sub(key); et != nil {
+		et.eachSub(each)
 	}
-	for _, id := range slices.Sorted(maps.Keys(et.m)) {
-		e := et.sub(id)
+}
+
+// eachSub calls each, in the order of the keys, for every key of the table, all
+// of whose values must be tables, and rejects the keys each did not read. It is
+// the second level of a row keyed by two IDs.
+func (t *tbl) eachSub(each func(id string, e *tbl)) {
+	for _, id := range slices.Sorted(maps.Keys(t.m)) {
+		e := t.sub(id)
 		if e == nil {
 			continue
 		}
@@ -242,10 +247,15 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 		cfg.WarmStart = l.warmStart(ws)
 		ws.finish()
 	}
-	// No module is built at Stage 0 (spec-config.md 3.7.2): Modules has no
-	// field, so every key under [modules] is unknown, including a module table
-	// of a later stage. Each module's change adds its table here.
+	// The table of a module is [modules.<name>] and is present if and only if the
+	// module is on (spec-config.md 6.2.1). A module that is not built stays an
+	// unknown key; each module's change adds its table here, in the order of the
+	// Modules row.
 	if m := root.sub("modules"); m != nil {
+		if d := m.sub("demand"); d != nil {
+			cfg.Modules.Demand = l.demand(d)
+			d.finish()
+		}
 		m.finish()
 	}
 	root.finish()
@@ -485,4 +495,55 @@ func (l *loader) warmStart(t *tbl) *economysim.WarmStart {
 	// The lists come out sorted by region, then commodity or role, because the
 	// regions are read in ID order and each inner key in ID order.
 	return ws
+}
+
+// demand reads [modules.demand] (spec-config.md 6.2.3, spec-demand.md 3.2): the
+// wants as [want.<id>], the tastes as [taste.<role>.<want>] and the region tastes
+// as [region_taste.<region>.<want>]. The table being present switches the module
+// on, even with no key. Each row starts from its constructor, so an absent scale
+// is 10 000 and a scale of 0 that the file gives is kept. The lists come out in
+// canonical order because every level is read in ID order.
+func (l *loader) demand(t *tbl) *economysim.Demand {
+	d := &economysim.Demand{}
+	t.entities("want", func(id string, e *tbl) { d.Wants = append(d.Wants, l.want(id, e)) })
+	t.entities("taste", func(role string, r *tbl) {
+		r.eachSub(func(want string, e *tbl) {
+			row := economysim.DefaultTaste()
+			row.Role, row.Want = role, want
+			integer(e, "scale", &row.Scale)
+			d.Tastes = append(d.Tastes, row)
+		})
+	})
+	t.entities("region_taste", func(region string, r *tbl) {
+		r.eachSub(func(want string, e *tbl) {
+			row := economysim.DefaultRegionTaste()
+			row.Region, row.Want = region, want
+			integer(e, "scale", &row.Scale)
+			d.RegionTastes = append(d.RegionTastes, row)
+		})
+	})
+	return d
+}
+
+// want reads one [modules.demand.want.<id>] table over DefaultWant. The items and
+// the quantity are required; an empty items array is read and left to Validate
+// (ErrWantItems).
+func (l *loader) want(id string, t *tbl) economysim.Want {
+	w := economysim.DefaultWant()
+	w.ID = id
+	var items []economysim.WantItem
+	t.need("items", t.rows("items", func(e *tbl) {
+		it := economysim.DefaultWantItem()
+		e.need("commodity", e.text("commodity", &it.Commodity))
+		integer(e, "weight", &it.Weight)
+		items = append(items, it)
+	}))
+	w.Items = items
+	t.need("quantity", integer(t, "quantity", &w.Quantity))
+	readInts(t, []intField{
+		{"period", &w.Period}, {"rank", &w.Rank}, {"elasticity", &w.Elasticity},
+		{"ceiling", &w.Ceiling}, {"substitution", &w.Substitution},
+	})
+	t.text("label", &w.Label)
+	return w
 }

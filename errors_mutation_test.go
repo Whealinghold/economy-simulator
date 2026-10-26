@@ -85,6 +85,9 @@ func TestErrorsMutation_SentinelText(t *testing.T) {
 		{economysim.ErrCheckpointConfig, "checkpoint is of another configuration"},
 		{economysim.ErrCheckpointExtension, "checkpoint extension mismatch"},
 		{economysim.ErrOptionContext, "option not valid in this call"},
+		{economysim.ErrUnknownWant, "unknown want"},
+		{economysim.ErrWantItems, "want has no usable item"},
+		{economysim.ErrWantDurable, "want item is durable"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

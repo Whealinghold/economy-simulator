@@ -126,6 +126,7 @@ func (w *World) finishScratch() {
 // scratch of D154 and the per-region tables.
 func (w *World) allocate() {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	w.demand = newDemandState(&w.cfg)
 	w.agents = make([]agent, regions) // the estate pseudo-agents have no household
 	w.state.nextAgent = AgentID(regions)
 	w.live = liveCounts{inRole: make([]int64, regions*roles)}
@@ -276,13 +277,20 @@ func namesOf(c *Config) Names {
 	for i := range c.Calendar.Seasons {
 		n.Seasons[i] = c.Calendar.Seasons[i].ID
 	}
+	n.Wants = demandNames(c)
 	return n
 }
 
 // modulesOn returns the lower-case names of the modules that are on, for the
-// construction summary. The slice has no module, so it is empty and not nil; a
-// module's change appends its name.
-func modulesOn(*Config) []string { return []string{} }
+// construction summary, in build order. It is empty and not nil when none is on;
+// a module's change appends its name.
+func modulesOn(c *Config) []string {
+	on := []string{}
+	if c.Modules.Demand != nil {
+		on = append(on, "demand")
+	}
+	return on
+}
 
 // announce is step 10 (spec-world.md 5.8): the logs, then the events. Each
 // configuration warning is one Warn line, then one Info line summarises the

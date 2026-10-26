@@ -34,6 +34,11 @@ type RecipeID int
 // Use the string ID to persist or exchange a region.
 type RegionID int
 
+// WantID identifies a want of the demand module: its index in the canonical
+// Wants, in ascending order of ID string (spec-demand.md 3.2.2a). It is not
+// stable across configurations; use the string ID to persist or exchange a want.
+type WantID int
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64

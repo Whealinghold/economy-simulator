@@ -193,6 +193,18 @@ var (
 	ErrOptionContext = errors.New("option not valid in this call")
 )
 
+// The sentinels of the demand module (spec-demand.md 10.1), rules of Validate.
+var (
+	// ErrUnknownWant is a taste or region taste that names a want that is not
+	// defined.
+	ErrUnknownWant = errors.New("unknown want")
+	// ErrWantItems is a want with no item, or whose items all have weight 0.
+	ErrWantItems = errors.New("want has no usable item")
+	// ErrWantDurable is a want item whose commodity is durable: a want is
+	// consumed, and the replacement of a durable is not modelled.
+	ErrWantDurable = errors.New("want item is durable")
+)
+
 // The errors of the region graph and of the relocation of an account
 // (spec-regions.md 9.1). ErrSelfEdge is a rule of Validate and NewGraph; the
 // others are the errors of the world's calls. They are matched with errors.Is

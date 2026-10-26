@@ -36,6 +36,9 @@ var (
 	packOne     = []string{"base.toml", "one.toml", "warm-one.toml"}
 	packOneCold = []string{"base.toml", "one.toml"}
 	packSecond  = []string{"second/second.toml", "second/warm-second.toml"}
+	// packOneDemand is pack one with the demand module on, its own census (D315 of
+	// plan 2-5): the demand overlay is layered over base, not over one.
+	packOneDemand = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}
 )
 
 const chainsDir = "testdata/chains"

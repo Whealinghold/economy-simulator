@@ -77,6 +77,8 @@ type World struct {
 	live    liveCounts
 	markets marketTable
 	bp      beliefs.Params
+	// demand is the state of the demand module, nil when it is off (demand.go).
+	demand *demandState
 
 	// The scratch of one tick, allocated at construction and reused (D154): it
 	// is never saved and never shrinks. runnable is the recipes some agent has

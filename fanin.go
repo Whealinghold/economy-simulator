@@ -77,3 +77,15 @@ func mustClose(err error) {
 		invariant("the ledger refused the closing of a removed agent's account: " + err.Error())
 	}
 }
+
+// tradableItems is the fifth fan-in (architecture.md 2.10.4): a fixed-order
+// sequence of guarded calls into the module files, each adding its items to the
+// tradable set of one role before the role table is frozen (spec-agents.md 3.4,
+// FR-DEM-006). It is called from tradableSets (validate.go), the one function the
+// role table, the validator and the warnings share, so they cannot disagree. A
+// module's change appends its guarded call below the last.
+func tradableItems(c *Config, lk lookup, role *Role, set map[string]bool) {
+	if c.Modules.Demand != nil {
+		demandItems(lk, role, set)
+	}
+}

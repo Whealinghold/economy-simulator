@@ -93,6 +93,38 @@ const (
 	MaxViabilityCells = 4_000_000
 )
 
+// Bounds of the demand module (spec-demand.md 9, spec-config.md 4.1). All are
+// provisional (N-015, N-027).
+const (
+	// MaxWants is the most want entities, as MaxCommodities.
+	MaxWants = 1_000
+	// MaxWantItems is the most alternatives of one want: the loop over
+	// alternatives and the carry state.
+	MaxWantItems = 4
+	// MaxWantsPerRole is the most taste rows of one role: the per-agent loop and
+	// the carry state.
+	MaxWantsPerRole = 32
+	// MaxTastes is the most taste rows in all; derived, so the list is bounded
+	// before the per-role count is read.
+	MaxTastes = MaxRoles * MaxWantsPerRole
+	// MaxRegionTastes is the most region taste rows in all; derived.
+	MaxRegionTastes = MaxRegions * MaxWants
+	// MaxWantPeriod is the longest period of a want in ticks, equal to
+	// MaxTicksPerYear.
+	MaxWantPeriod = 100_000
+	// MaxWantRank is the highest rank on a ladder.
+	MaxWantRank = 1_000
+	// MaxElasticityBP is the steepest slope of a schedule: a slope of ten.
+	MaxElasticityBP = 100_000
+	// MaxCeilingBP is the highest ceiling of a schedule: five times the base
+	// quantity.
+	MaxCeilingBP = 50_000
+	// MaxSubstitution is the largest integer exponent of the substitution shares.
+	MaxSubstitution = 4
+	// MaxTasteScale is the largest taste or region scale: ten times.
+	MaxTasteScale = 100_000
+)
+
 // Calendar and time bounds (spec-calendar.md 7.1).
 const (
 	// MaxTicksPerYear is the most ticks in a year. TicksPerYear is derived from

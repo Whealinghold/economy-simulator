@@ -103,6 +103,7 @@ func (v *validator) structural() {
 	v.local()
 	v.fields()
 	v.references()
+	v.validateDemand()
 	v.structure()
 	v.economics()
 	v.overflow()
@@ -287,6 +288,7 @@ func (v *validator) counts() {
 		over(len(w.Groups), MaxGroups, "warm_start", "groups")
 		over(len(w.Pools), MaxRegions, "warm_start", "pools")
 	}
+	demandCounts(c.Modules.Demand, over)
 	if len(r.errs) > 0 {
 		return
 	}
@@ -314,6 +316,7 @@ func (v *validator) counts() {
 			over(len(g.Jobs), MaxRecipes, "warm_start", "groups", g.Region, g.Role, "jobs")
 		}
 	}
+	demandNestedCounts(c.Modules.Demand, over)
 }
 
 // declare fills the sets of declared IDs. An entity with an invalid ID is
@@ -718,6 +721,7 @@ type lookup struct {
 	role      map[string]*Role
 	region    map[string]*Region
 	override  map[[2]string]Price // reference-price overrides by (region, commodity)
+	demand    *demandIndex        // the demand module's tables by ID, nil when it is off
 }
 
 // price returns the effective reference price of a declared commodity in a
@@ -737,6 +741,7 @@ func newLookup(c *Config) lookup {
 		role:      make(map[string]*Role, len(c.Roles)),
 		region:    make(map[string]*Region, len(c.Regions)),
 		override:  overrides(c.RegionPrices),
+		demand:    newDemandIndex(c),
 	}
 	for i := range c.Commodities {
 		if e := &c.Commodities[i]; l.commodity[e.ID] == nil {
@@ -774,8 +779,8 @@ func effectiveUpkeep(c *Config, r *Role) []Item {
 // tradableSets returns the tradable set of each role of c, in the order of
 // c.Roles (spec-agents.md 3.4): the commodities of the role's effective upkeep
 // in any region, the inputs, tools and non-discard outputs of the recipes on its
-// list, and its Trades. The demand module's want items and the own-use
-// outputs are added with those modules.
+// list, and its Trades, then the items the modules that are on add (tradableItems,
+// fanin.go): the demand module's want items now, the own-use outputs with that module.
 func tradableSets(c *Config, lk lookup) []map[string]bool {
 	sets := make([]map[string]bool, len(c.Roles))
 	for i := range c.Roles {
@@ -809,6 +814,7 @@ func tradableSets(c *Config, lk lookup) []map[string]bool {
 		for _, id := range r.Trades {
 			set[id] = true
 		}
+		tradableItems(c, lk, r, set)
 		sets[i] = set
 	}
 	return sets
@@ -2029,6 +2035,7 @@ func warnings(c *Config) []Warning {
 	}
 
 	out = append(out, regionWarnings(c)...)
+	out = append(out, demandWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }
