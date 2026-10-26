@@ -69,6 +69,7 @@ func (m *viaModel) check(lk lookup) viabilityOutcome {
 	m.storage(&o, lk)
 	if !unproducible && !unproductive {
 		m.labour(&o)
+		m.wantsExceed(&o)
 	}
 	m.regions(&o)
 	return o
@@ -297,6 +298,46 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 		o.skipped("v3_pooled")
 	case res.SurplusBP < wholeBP:
 		o.reject("labour_short", []string{"regions"}, i64(res.SurplusBP), i64(wholeBP))
+	}
+}
+
+// wantsExceed warns wants_exceed_labour (FR-VIA-057): the demand module is on,
+// the pooled programme with the wants has a surplus factor below 1 or is
+// infeasible, and the upkeep-only one reaches 1. Size-gated like V3 and never an
+// error.
+func (m *viaModel) wantsExceed(o *viabilityOutcome) {
+	regions := m.withHouseholds
+	if m.c.Modules.Demand == nil || m.noProgramme(regions) {
+		return
+	}
+	one := steady.Ratio{Num: 1, Den: 1}
+	base, skipped, err := m.solve(m.model(regions, one))
+	if skipped {
+		o.skipped("wants_pooled")
+	}
+	if err != nil || skipped || base.SurplusBP < wholeBP {
+		return
+	}
+	md, err := m.wantsModel(regions, one)
+	if err != nil {
+		return
+	}
+	res, skipped, err := m.solve(md)
+	m.wantsVerdict(o, res, skipped, err)
+}
+
+// wantsVerdict turns the solve of the programme with the wants into the warning
+// of wantsExceed: infeasible, or a surplus factor below 1.
+func (m *viaModel) wantsVerdict(o *viabilityOutcome, res steady.Outcome, skipped bool, err error) {
+	switch {
+	case errors.Is(err, steady.ErrInfeasible):
+		o.warn("wants_exceed_labour", "regions")
+	case err != nil:
+		o.fail(err)
+	case skipped:
+		o.skipped("wants_pooled")
+	case res.SurplusBP < wholeBP:
+		o.warn("wants_exceed_labour", "regions")
 	}
 }
 

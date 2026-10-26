@@ -378,6 +378,7 @@ type viaProgramme struct {
 	out, pr     steady.Outcome
 	nominalBP   int64
 	nominalSeed []int // indexes into regions
+	wants       bool  // the model carries the fixed term of the wants
 	base        []int // the first column of each region's activities
 }
 
@@ -505,12 +506,11 @@ func (s *viaSolve) autarkies(ctx context.Context, set []RegionID) error {
 
 // full solves a set of regions at full labour.
 func (s *viaSolve) full(ctx context.Context, regions []RegionID) (*viaProgramme, error) {
-	md := s.m.model(regions, steady.Ratio{Num: 1, Den: 1})
-	out, err := s.m.solveStrict(ctx, md)
+	md, out, wants, err := s.solveAt(ctx, regions, steady.Ratio{Num: 1, Den: 1}, true)
 	if err != nil {
 		return nil, err
 	}
-	p := &viaProgramme{regions: regions, md: md, out: out, pr: out}
+	p := &viaProgramme{regions: regions, md: md, out: out, pr: out, wants: wants}
 	var at int
 	for _, r := range regions {
 		p.base = append(p.base, at)
@@ -531,7 +531,7 @@ func (s *viaSolve) programme(ctx context.Context, regions []RegionID) (*viaProgr
 	if !ok {
 		return p, nil
 	}
-	nom, err := s.m.solveStrict(ctx, s.m.model(regions, phi))
+	_, nom, _, err := s.solveAt(ctx, regions, phi, p.wants)
 	if err != nil {
 		return nil, err
 	}
@@ -546,6 +546,74 @@ func (s *viaSolve) programme(ctx context.Context, regions []RegionID) (*viaProgr
 	}
 	return p, nil
 }
+
+// solveAt solves the regions at the work share phi, with the fixed term of the
+// wants when the module is on and wants is set. A wants programme that is
+// infeasible falls back to the upkeep-only one (FR-VIA-057); the bool says which
+// was solved.
+func (s *viaSolve) solveAt(ctx context.Context, regions []RegionID, phi steady.Ratio, wants bool) (steady.Model, steady.Outcome, bool, error) {
+	if wants && s.m.c.Modules.Demand != nil {
+		md, err := s.m.wantsModel(regions, phi)
+		if err != nil {
+			return md, steady.Outcome{}, false, err
+		}
+		out, err := s.m.solveStrict(ctx, md)
+		if !errors.Is(err, errWantsInfeasible) {
+			return md, out, err == nil, err
+		}
+	}
+	md := s.m.model(regions, phi)
+	out, err := s.m.solveStrict(ctx, md)
+	return md, out, false, err
+}
+
+// wantsModel is the programme of the regions with the fixed term of the wants.
+func (m *viaModel) wantsModel(regions []RegionID, phi steady.Ratio) (steady.Model, error) {
+	md := m.model(regions, phi)
+	fixed, err := wantsTerm(m.c, regions)
+	if errors.Is(err, steady.ErrOverflow) {
+		return md, fmt.Errorf("%w: the wants term is out of int64 range", ErrOverflow)
+	}
+	md.Fixed = fixed
+	return md, err
+}
+
+// wantsTerm (the term of the demand module in the programme, FR-VIA-055) returns the exact fixed term W(c) of the goods rows of a programme
+// over the regions (spec-viability.md 3.2): for each group in them, each want of
+// its role's ladder with a taste row of nonzero scale, the households times the
+// taste and region scales in basis points times the quantity over the period,
+// split among the items by weight, summed by commodity. It is nil when the
+// module is off. c is canonical and valid, so every reference resolves.
+func wantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) {
+	ix := newDemandIndex(c)
+	if ix == nil {
+		return nil, nil
+	}
+	var rows []steady.WantRow
+	for _, g := range c.Groups {
+		r, _ := c.regionID(g.Region)
+		if !slices.Contains(regions, r) {
+			continue
+		}
+		for _, t := range ix.tastes[g.Role] {
+			w := ix.want[t.Want]
+			if w == nil || t.Scale <= 0 {
+				continue
+			}
+			row := steady.WantRow{Households: g.Households, Taste: t.Scale, Region: ix.regionScale(g.Region, w.ID), Quantity: w.Quantity, Period: w.Period}
+			for _, it := range w.Items {
+				k, _ := c.commodityID(it.Commodity)
+				row.Items = append(row.Items, steady.WantWeight{Commodity: int(k), Weight: it.Weight})
+			}
+			rows = append(rows, row)
+		}
+	}
+	return steady.FixedTerm(len(c.Commodities), rows)
+}
+
+// errWantsInfeasible says the programme with the wants has no feasible point at
+// any surplus factor (the first phase of the solver ended above 0).
+var errWantsInfeasible = errors.New("the wants programme is infeasible")
 
 // capacityScarce reports that region k of the programme has a labour dual of 0
 // while a capacity row of its activities has a positive dual.
@@ -596,6 +664,8 @@ func mapSolveErr(err error) error {
 		return nil
 	case errors.As(err, &le):
 		return &SolveError{Pivots: le.Pivots, Rows: le.Rows, Columns: le.Cols}
+	case errors.Is(err, steady.ErrInfeasible):
+		return errWantsInfeasible
 	case errors.Is(err, steady.ErrUnbounded):
 		return ErrNoUpkeep
 	case errors.Is(err, steady.ErrOverflow):

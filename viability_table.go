@@ -66,6 +66,7 @@ func (s *viaSolve) build() error {
 	}
 	s.advantage()
 	s.surpluses()
+	s.surplusWants()
 	return nil
 }
 

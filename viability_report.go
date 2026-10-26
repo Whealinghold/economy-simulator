@@ -193,6 +193,12 @@ type Report struct {
 	// WageBelowTarget lists the roles whose seed wage is below the wage their
 	// target ratio needs.
 	WageBelowTarget []RoleWage
+	// SurplusWantsBP is lambda* of the programme with the wants (the lowest of the
+	// programmes solved with them), in basis points, when HasSurplusWants: the
+	// demand module is on and a programme with the wants was feasible
+	// (spec-viability.md 3.2, 10.3).
+	SurplusWantsBP  int64
+	HasSurplusWants bool
 }
 
 // normalise puts every list of the report in ascending region then commodity or
@@ -456,6 +462,16 @@ func (s *viaSolve) surpluses() {
 	for _, r := range s.m.withHouseholds {
 		if row[r] != nil {
 			s.rep.RegionSurplusBP = append(s.rep.RegionSurplusBP, *row[r])
+		}
+	}
+}
+
+// surplusWants fills SurplusWantsBP: the lowest surplus factor of the programmes
+// solved with the wants.
+func (s *viaSolve) surplusWants() {
+	for _, p := range s.progs {
+		if p.wants && (!s.rep.HasSurplusWants || p.out.SurplusBP < s.rep.SurplusWantsBP) {
+			s.rep.SurplusWantsBP, s.rep.HasSurplusWants = p.out.SurplusBP, true
 		}
 	}
 }
