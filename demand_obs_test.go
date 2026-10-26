@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"reflect"
 	"slices"
 	"testing"
@@ -400,5 +401,73 @@ func TestFork_Demand(t *testing.T) {
 				},
 			})
 		})
+	}
+}
+
+// overclaim is the default strategy that then claims more than it was given: each
+// bid's WantUnits is raised by 1000, each funded row is doubled and a row is added
+// for a want outside every ladder.
+type overclaim struct{ recStrategy }
+
+func (o *overclaim) Trade(v *economysim.AgentView, rng *rand.Rand, p *economysim.TradePlan) {
+	o.recStrategy.Trade(v, rng, p)
+	for i := range p.Intents {
+		if p.Intents[i].Side == economysim.Bid {
+			p.Intents[i].WantUnits += 1000
+		}
+	}
+	for i := range p.WantFunded {
+		p.WantFunded[i].Units *= 2
+	}
+	p.WantFunded = append(p.WantFunded, economysim.WantFunding{Want: 99, Units: 7})
+}
+
+// TestDemandLogs_StrategyOverclaimIsLogged verifies that a strategy that sets
+// WantUnits above what the world accepts, or reports funded units above the
+// planned ones or for a want outside the ladder, gets a Debug line "want units
+// cut" (agent, commodity, quantity cut) or "want funding cut" (agent, want,
+// quantity not counted), so the gap between what it placed and WantShortfall
+// is explained.
+//
+// Guard: the clamps are otherwise silent; the sibling clamps of the plan
+// ("intent normalised", "discard refused") are each a Debug line.
+func TestDemandLogs_StrategyOverclaimIsLogged(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	lg := newCaptureHandler()
+	cfg := demandConfig()
+	for i := range cfg.Roles {
+		cfg.Roles[i].Strategy = "overclaim"
+	}
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithLogger(slog.New(lg)),
+		economysim.WithStrategy("overclaim", &overclaim{recStrategy{wants: true}}))
+	if err != nil {
+		t.Fatalf("NewWorld error = %v, want nil", err)
+	}
+	step(t, w, 10)
+	var units, funding, bogus int
+	for _, l := range lg.records() {
+		q, _ := l.attr("quantity")
+		switch l.msg {
+		case "want units cut":
+			units++
+			if _, ok := l.attr("commodity"); !ok || l.level != slog.LevelDebug || q.Int64() < 1 {
+				t.Errorf("want units cut line %+v, want commodity, quantity >= 1, Debug", l)
+			}
+		case "want funding cut":
+			funding++
+			wt, ok := l.attr("want")
+			if !ok || l.level != slog.LevelDebug || q.Int64() < 1 {
+				t.Errorf("want funding cut line %+v, want want, quantity >= 1, Debug", l)
+			}
+			if wt.Int64() == 99 {
+				bogus++
+			}
+		}
+	}
+	if units == 0 || funding == 0 || bogus == 0 {
+		t.Errorf("10 ticks gave %d want units cut, %d want funding cut (%d for the want outside the ladder), want some of each", units, funding, bogus)
 	}
 }

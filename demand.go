@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -928,12 +929,62 @@ func (w *World) checkWants(a *agent, p *TradePlan) {
 	cur.valid = false
 	copy(d.carry[a.id], cur.next[:len(ladder)])
 	d.mergeItems(a.id, ladder)
+	ctx := context.Background()
+	debug := w.log.Enabled(ctx, slog.LevelDebug)
+	var claimed []Quantity // the WantUnits the strategy set, to log what the clamp cut
+	if debug {
+		for _, in := range p.Intents {
+			claimed = append(claimed, in.WantUnits)
+		}
+	}
 	d.clampIntents(p)
 	d.tallyFunded(p, ladder)
 	d.tallyRungs(int(w.regionOf(a)), a, ladder)
 	d.use = append(d.use, d.merged...)
-	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+	if debug {
+		w.logWantCuts(ctx, a, p, ladder, claimed)
 		w.logWantSkips(ctx, a, p, ladder)
+	}
+}
+
+// logWantCuts writes the Debug lines "want units cut" for each intent whose
+// WantUnits the clamp lowered (quantity is the part cut) and "want funding cut"
+// for each want of the ladder whose WantFunded rows exceed the planned units, and
+// for each row of a want outside the ladder (quantity is the part not counted).
+// A strategy that reports more than the world accepts is corrected silently
+// otherwise, and WantShortfall then differs from what the strategy placed.
+func (w *World) logWantCuts(ctx context.Context, a *agent, p *TradePlan, ladder []rung, claimed []Quantity) {
+	for i, in := range p.Intents {
+		if claimed[i] > in.WantUnits {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want units cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Commodity, int64(in.Commodity)),
+				slog.Int64(logkeys.Quantity, int64(claimed[i]-in.WantUnits)))
+		}
+	}
+	for k, rg := range ladder {
+		var rows int64
+		for _, f := range p.WantFunded {
+			if f.Want != rg.want {
+				continue
+			}
+			sum, ok := checked.Add(rows, max(0, int64(f.Units)))
+			if !ok {
+				sum = math.MaxInt64
+			}
+			rows = sum
+		}
+		if rows > w.demand.funded[k] {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want funding cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(rg.want)),
+				slog.Int64(logkeys.Quantity, rows-w.demand.funded[k]))
+		}
+	}
+	for _, f := range p.WantFunded {
+		if f.Units > 0 && !slices.ContainsFunc(ladder, func(rg rung) bool { return rg.want == f.Want }) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want funding cut",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(f.Want)),
+				slog.Int64(logkeys.Quantity, int64(f.Units)))
+		}
 	}
 }
 
