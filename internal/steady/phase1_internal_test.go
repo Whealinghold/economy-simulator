@@ -104,7 +104,7 @@ func TestEndPhase1_RowWithoutAColumnIsInconsistent(t *testing.T) {
 	}
 	tb.a[0][tb.rhs()].SetInt64(0)
 	tb.a[tb.m][tb.rhs()].SetInt64(0)
-	if _, err := tb.endPhase1(obj); !errors.Is(err, ErrInconsistent) {
+	if _, err := tb.endPhase1(context.Background(), 1<<20, 0, obj); !errors.Is(err, ErrInconsistent) {
 		t.Errorf("endPhase1(row of zeros) error = %v, want ErrInconsistent", err)
 	}
 }
@@ -294,7 +294,7 @@ func TestEndPhase1_PivotsOnEitherSign(t *testing.T) {
 		obj := tb.startPhase1()
 		tb.a[0][tb.rhs()].SetInt64(0)
 		tb.a[tb.m][tb.rhs()].SetInt64(0)
-		pivots, err := tb.endPhase1(obj)
+		pivots, err := tb.endPhase1(context.Background(), 1<<20, 0, obj)
 		if err != nil || pivots != 1 {
 			t.Fatalf("endPhase1(entry %d) = %d pivots, error %v, want 1, nil", v, pivots, err)
 		}
@@ -371,5 +371,37 @@ func TestFirstNonzero_ScansStructuralAndSlackColumnsOnly(t *testing.T) {
 		if got := tb.firstNonzero(0); got != tc.want {
 			t.Errorf("firstNonzero(%s) = %d, want %d", tc.name, got, tc.want)
 		}
+	}
+}
+
+// TestEndPhase1_HonoursCapAndContext verifies that the pivots that remove an
+// artificial from the basis count against the cap and notice a cancelled
+// context, and that the LimitError counts the artificial columns.
+//
+// Same programme as TestEndPhase1_PivotsOnEitherSign: one pivot is needed.
+//
+// Guard: without the checks a solve could exceed maxPivots by one pivot per
+// negative row, each a big.Int pass over the whole tableau.
+func TestEndPhase1_HonoursCapAndContext(t *testing.T) {
+	t.Parallel()
+	p := Programme{Rows: 1, RHS: []Ratio{{Num: -1, Den: 1}}, Cols: []Column{{Cost: Ratio{Num: 1, Den: 1}, Entries: []Entry{{Row: 0, Val: Ratio{Num: -1, Den: 1}}}}}}
+	prepare := func() (*tableau, []*big.Int) {
+		tb := newTableau(p)
+		obj := tb.startPhase1()
+		tb.a[0][tb.rhs()].SetInt64(0)
+		tb.a[tb.m][tb.rhs()].SetInt64(0)
+		return tb, obj
+	}
+	tb, obj := prepare()
+	_, err := tb.endPhase1(context.Background(), 3, 3, obj)
+	var le *LimitError
+	if !errors.As(err, &le) || le.Pivots != 3 || le.Rows != 1 || le.Cols != 3 {
+		t.Errorf("endPhase1(cap 3, done 3) error = %v, want LimitError{3 pivots, 1 row, 3 columns}", err)
+	}
+	tb, obj = prepare()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := tb.endPhase1(ctx, 1<<20, 0, obj); !errors.Is(err, context.Canceled) {
+		t.Errorf("endPhase1(cancelled) error = %v, want context.Canceled", err)
 	}
 }

@@ -43,7 +43,9 @@ hooks have to be admitted by a decision and not by the plan.
 1. **A module may be called from outside its file at a named hook, and a hook is
    a guarded call into a method the module file defines.** The module's logic stays
    in the module file (ADR 0007 decision 1). The hooks are these and no others:
-   the call sites of the fan-ins in `fanin.go`; guarded calls from the
+   the call sites of the fan-ins in `fanin.go`, and the calls of the two
+   agent-lifecycle fan-ins of decision 3 from `createAgent`, `spawnEntrant`, the
+   integration add and `takeRole`; guarded calls from the
    `DefaultStrategy` files (`strategy_default.go`, `strategy_work.go`,
    `strategy_view.go`) into methods defined in the module file, including the Work
    and Trade seams that later modules add; the term of the reference programme in
@@ -122,7 +124,8 @@ plans cite.
    the sub-step of a position is a guarded call inside the position's method, not a
    position (plan 11); (f) a field added by a module to a core view or row type
    (`RegionAgent.OwnUse` in `spawner.go`, plan 10); and the hooks of decision 1 of
-   ADR 0010: the call sites of the fan-ins, guarded calls from the `DefaultStrategy`
+   ADR 0010: the call sites of the fan-ins, the calls of the agent-lifecycle fan-ins
+   from `createAgent`, `spawnEntrant`, the integration add and `takeRole`, guarded calls from the `DefaultStrategy`
    files into methods defined in the module file (the Work and Trade seams of later
    modules, plan 10, included), the term in `viability.go`, named `phase_*.go` calls
    such as `p36Aggregates`, the audit call and the `offStage` extensions." In 2.10.2

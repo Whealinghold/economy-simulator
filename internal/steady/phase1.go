@@ -1,6 +1,10 @@
 package steady
 
-import "math/big"
+import (
+	"context"
+	"fmt"
+	"math/big"
+)
 
 // The first phase of the simplex method (N-277). A row with a negative
 // right-hand side cannot start from its slack, so the row is negated, which
@@ -41,11 +45,13 @@ func (t *tableau) startPhase1() []*big.Int {
 }
 
 // endPhase1 reports ErrInfeasible when the first phase ended below 0, pivots
-// every artificial still in the basis (at 0) out, counting the pivots, and restores the second
+// every artificial still in the basis (at 0) out, and restores the second
 // phase's objective row, priced out against the basis. Every row has its own
 // slack, so a row whose artificial is basic at 0 always has a non-zero entry in
-// a slack or structural column.
-func (t *tableau) endPhase1(obj []*big.Int) (int64, error) {
+// a slack or structural column. It returns the pivots it made; each one is
+// checked against the context and against maxPivots, with done pivots already
+// made, as run checks its own.
+func (t *tableau) endPhase1(ctx context.Context, maxPivots, done int64, obj []*big.Int) (int64, error) {
 	if t.a[t.m][t.rhs()].Sign() != 0 {
 		return 0, ErrInfeasible
 	}
@@ -57,6 +63,12 @@ func (t *tableau) endPhase1(obj []*big.Int) (int64, error) {
 		c := t.firstNonzero(r)
 		if c < 0 {
 			return pivots, ErrInconsistent
+		}
+		if err := ctx.Err(); err != nil {
+			return pivots, fmt.Errorf("steady: solve cancelled after %d pivots: %w", done+pivots, err)
+		}
+		if done+pivots >= maxPivots {
+			return pivots, &LimitError{Pivots: done + pivots, Rows: t.m, Cols: t.rhs()}
 		}
 		if t.a[r][c].Sign() < 0 {
 			for _, v := range t.a[r] {
@@ -73,7 +85,8 @@ func (t *tableau) endPhase1(obj []*big.Int) (int64, error) {
 }
 
 // firstNonzero returns the lowest structural or slack column with a non-zero
-// entry in row r, or -1.
+// entry in row r, or -1. A basic column is zero in every other row, so the
+// column found is never basic in another row.
 func (t *tableau) firstNonzero(r int) int {
 	for j := 0; j < t.n+t.m; j++ {
 		if t.a[r][j].Sign() != 0 {

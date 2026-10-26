@@ -60,7 +60,7 @@ func (t *tableau) solve(ctx context.Context, maxPivots int64) (int64, error) {
 	if err != nil {
 		return pivots, err
 	}
-	out, err := t.endPhase1(obj)
+	out, err := t.endPhase1(ctx, maxPivots, pivots, obj)
 	if err != nil {
 		return pivots, err
 	}
@@ -80,7 +80,7 @@ func (t *tableau) run(ctx context.Context, maxPivots, done int64) (int64, error)
 			return pivots, nil
 		}
 		if pivots >= maxPivots {
-			return pivots, &LimitError{Pivots: pivots, Rows: t.m, Cols: t.n + t.m}
+			return pivots, &LimitError{Pivots: pivots, Rows: t.m, Cols: t.rhs()}
 		}
 		r := t.ratio(c)
 		if r < 0 {
