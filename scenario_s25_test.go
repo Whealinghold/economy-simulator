@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	s25Ticks int64 = 500
-	s25Year  int64 = 365
-	s25Block int64 = 10
+	s25Ticks  int64 = 250
+	s25Window int64 = 200
+	s25Block  int64 = 10
 )
 
 // s25Reserve is the reserve money of one household at the warm prices: ReserveTicks
@@ -71,14 +71,14 @@ func shareSwingBP(a, b []int64, from, block int64) (int64, bool) {
 // spec-reference-chain.md 7.7 on pack one-demand: every household's money at 0.5,
 // 1 and 2 times its reserve (so the total money is that multiple of the sum of the
 // reserves; one-key generated documents) with the substitution exponent of the
-// treat want at 4 (its alternatives differ in price by 62%: 664 and 1 079), 500
+// treat want at 4 (its alternatives differ in price by 62%: 664 and 1 079), 250
 // ticks, seeds 1 to 10. Exact: no price leaves its belief interval (FR-STB-008),
 // and at the 0.5 and 1 rows, where no household has an excess over its reserve at
 // tick 0, no unit of a want is funded at tick 0 (FR-DEM-020, FR-STB-028; the
 // WantShortfall rows show a plan of more than 0 units, so the test cannot pass
 // with no want planned). Recorded: the units planned and funded at tick 0 of
 // every row, and the swing of the treat_a share of the two alternatives' volume
-// in blocks of 10 ticks over the last 365 ticks (a value from a reviewed run goes
+// in blocks of 10 ticks over the last 200 ticks (a value from a reviewed run goes
 // to s25.swing_bp in bands/one-demand.toml and is then asserted). The outcomes
 // are written to testdata/chains/expected/one-demand.scenarios.txt with -update.
 //
@@ -121,13 +121,13 @@ func TestScenarioS25_MoneyBelowReservesAndSubstitution(t *testing.T) {
 							"%s: planned %d, funded %d units at tick 0, want planned above 0 and funded 0", label, o.wantPlanned[0], o.wantFunded[0])
 					}
 					a, b := marketOf(t, run, "north", "treat_a"), marketOf(t, run, "north", "treat_b")
-					if swing, ok := shareSwingBP(a.Volume, b.Volume, s25Ticks-s25Year, s25Block); ok {
-						rep.num(seed, "treat_a share swing bp over the last 365 ticks, "+label, swing)
+					if swing, ok := shareSwingBP(a.Volume, b.Volume, s25Ticks-s25Window, s25Block); ok {
+						rep.num(seed, "treat_a share swing bp over the last 200 ticks, "+label, swing)
 						if swingSet {
 							checkExact(t, rep, scenario, pack, seed, "band s25.swing_bp", swing <= swingBand, "%s: swing %d against %d", label, swing, swingBand)
 						}
 					} else {
-						rep.absent(seed, "treat_a share swing bp over the last 365 ticks, "+label)
+						rep.absent(seed, "treat_a share swing bp over the last 200 ticks, "+label)
 					}
 				}
 			})

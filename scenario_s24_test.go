@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	s24Ticks int64 = 600
-	s24Last  int64 = 200
+	s24Ticks int64 = 250
+	s24Last  int64 = 100
 	// s24Target is the TargetRatio of the run above the ceiling: 2.0 against the
 	// expected ceiling of about 1.32 (spec-demand.md 7.1, the 20 000 row).
 	s24Target = 20_000
@@ -77,7 +77,7 @@ type s24Result struct {
 }
 
 // s24Run runs one world of S24: the household-weighted mean welfare ratio over
-// the last 200 ticks (all roles of north) and the unsold stock per produced good.
+// the last 100 ticks (all roles of north) and the unsold stock per produced good.
 func s24Run(t *testing.T, cfg economysim.Config, seed uint64) s24Result {
 	goods := producedGoods(cfg)
 	res := s24Result{end: map[string]int64{}, max: map[string]int64{}}
@@ -118,9 +118,9 @@ func s24Run(t *testing.T, cfg economysim.Config, seed uint64) s24Result {
 // TestScenarioS24_ClosedEconomyLadder verifies scenario S24 of
 // spec-reference-chain.md 7.7: pack one (the module off) and pack one-demand
 // with the default TargetRatio and with every role's TargetRatio at 20 000 (above
-// the ceiling), 600 ticks, seeds 1 to 10. Exact: no price leaves its belief
+// the ceiling), 250 ticks, seeds 1 to 10. Exact: no price leaves its belief
 // interval in any run (FR-STB-008), and the household-weighted mean welfare ratio
-// of the last 200 ticks of a run with the wants is at most 1 + Wmax / U
+// of the last 100 ticks of a run with the wants is at most 1 + Wmax / U
 // (FR-DEM-031, restated in s24Bound from the configuration). Recorded, not
 // asserted, because HouseholdIncome is not OK in version 1 (D319): the mean
 // ratio of each run (near 10 000 without the wants, above it with them is

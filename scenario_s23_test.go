@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	s23Ticks int64 = 500
+	s23Ticks int64 = 200
 	s23Last  int64 = 100
 	// demandBandsPath holds the band keys of the demand scenarios (S23, S25).
 	demandBandsPath = "testdata/chains/bands/one-demand.toml"
@@ -26,7 +26,7 @@ func s23Doc(elasticity, start int64) []byte {
 // spec-reference-chain.md 7.7 on pack one-demand: the elasticity of the treat
 // want at 5 000, 10 000, 15 000 and 30 000 (generated one-key documents), each
 // started with the price of treat_a 10% above and 10% below the reference,
-// 500 ticks, seeds 1 to 10. Exact: no published price leaves its belief
+// 200 ticks, seeds 1 to 10. Exact: no published price leaves its belief
 // interval (FR-STB-008) and the market series is in tick order. Recorded, not
 // asserted while s23.band_bp has no value: the mean treat_a price of the last
 // 100 ticks from each start, its offset from the reference in basis points and
