@@ -127,6 +127,8 @@ func TestShares_SumTo10000AndSigmaZero(t *testing.T) {
 		{"all weights 0", []household.WantItem{{Centre: 5, Ref: 5}, {Centre: 5, Ref: 5}}, 2, nil, false},
 		{"centre below 1", []household.WantItem{{Centre: 0, Ref: 5, Weight: 10_000}}, 2, nil, false},
 		{"power overflows", []household.WantItem{{Centre: 1, Ref: 1 << 40, Weight: 10_000}}, 4, nil, false},
+		// ref * 10 000 / centre = 2^62 * 10 000 does not fit in int64 before any power is taken.
+		{"price ratio overflows", []household.WantItem{{Centre: 1, Ref: 1 << 62, Weight: 10_000}}, 1, nil, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -452,6 +454,10 @@ func TestFund_LadderOrder(t *testing.T) {
 		// 10 units with shares 6 000 and 6 000: floors 6 and 6 give 12 above 10.
 		{"shares above 10 000", []household.Rung{{Units: 10, Shares: []int64{6_000, 6_000}, Limits: []int64{1, 1}}}, 2},
 		{"units overflow", []household.Rung{{Units: math.MaxInt64, Shares: []int64{math.MaxInt64}, Limits: []int64{1}}}, 1},
+		// Shares add to 2 000, under 10 000 and so tolerated by the share check, but 3 units
+		// give floor(3 * 2 000 / 10 000) = 0 and the one item takes a single unit left over:
+		// 2 units have no item to take them, so the rung cannot be funded.
+		{"shares under-sum leave units unplaced", []household.Rung{{Units: 3, Shares: []int64{2_000}, Limits: []int64{1}}}, 1},
 	}
 	for _, tt := range bad {
 		t.Run(tt.name, func(t *testing.T) {
