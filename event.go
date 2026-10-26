@@ -299,6 +299,10 @@ const (
 	CauseTransport Cause = "transport"
 	// CauseMigration is a relocation at the arrival of a migration journey.
 	CauseMigration Cause = "migration"
+	// CauseLimit is a money flow that ended at its limit.
+	CauseLimit Cause = "limit"
+	// CauseCap is a money flow that ended at the cap of MaxFlowTotal.
+	CauseCap Cause = "cap"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -889,6 +893,46 @@ type EdgeStatusChanged struct {
 	Cause Cause
 }
 
+// MoneyFlowLimited is emitted once per money flow and region in a tick in which
+// part of a due was not applied, after the step of P1.7, flows in ID order and
+// regions in ascending order; never when all was applied (spec-money-supply.md
+// 13.1). A household is counted in the first count that cut it only.
+type MoneyFlowLimited struct {
+	Tick int64
+	// Flow is the flow's ID, also the Reason of its BoundaryFlow rows.
+	Flow   string
+	Region RegionID
+	// Due and Applied are the amounts the flow computed and applied in the region.
+	Due, Applied Money
+	// Short is the households whose levy found too little, Headroom the
+	// households whose credit was cut at MaxMoney and Limit the households cut by
+	// the flow's limit.
+	Short, Headroom, Limit int64
+}
+
+// MoneyFlowEnded is emitted once, in the tick a money flow reaches its effective
+// limit and ends, after the MoneyFlowLimited events of the same flow
+// (spec-money-supply.md 13.1).
+type MoneyFlowEnded struct {
+	Tick int64
+	Flow string
+	// Cause is CauseLimit or CauseCap.
+	Cause Cause
+	// Total is the cumulative amount the flow applied.
+	Total Money
+}
+
+// MoneyFlowScaled is emitted once per money flow whose scale is changed, at the
+// call or at P0.3a (spec-money-supply.md 13.1).
+type MoneyFlowScaled struct {
+	Tick int64
+	Flow string
+	// From and To are the scale before and after, in basis points.
+	From, To int64
+	// Cause is CauseConsumer or, for a policy actor, CausePolicy.
+	Cause Cause
+}
+
 func (WorldCreated) isEvent()      {}
 func (RunStarted) isEvent()        {}
 func (RunEnded) isEvent()          {}
@@ -916,3 +960,6 @@ func (WearApplied) isEvent()       {}
 func (WorldRestored) isEvent()     {}
 func (AgentRelocated) isEvent()    {}
 func (EdgeStatusChanged) isEvent() {}
+func (MoneyFlowLimited) isEvent()  {}
+func (MoneyFlowEnded) isEvent()    {}
+func (MoneyFlowScaled) isEvent()   {}

@@ -37,14 +37,15 @@ type registryInput struct {
 // and when a row is neither built nor listed.
 var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
-	// entry here. Modules.MoneySupply is the scope token the table spells for the
-	// rows of that module's flows.
+	// entry here.
 	"Modules.Credit", "Modules.Employment", "Modules.Estates", "Modules.External", "Modules.Fiscal",
 	"Modules.Information", "Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
 	"Modules.Population", "Modules.Resources", "Modules.Risk", "Modules.Saving",
 	"Modules.Settlements", "Modules.Storage", "Modules.Subsistence", "Modules.Technology",
 	"Modules.Tenure", "Modules.Transport",
+	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
+	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Recipe.Builds", "Recipe.Draws", "Recipe.Needs", "Recipe.Repairs", "Region.PoolRelease",
 	"Region.ReliefBelow", "Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
@@ -53,10 +54,10 @@ var notBuilt = []string{
 	// Scopes (Go type names) of the modules that are not built.
 	"AbundanceKnot", "Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
 	"CreditTerms", "Duty", "Employer", "Employment", "Endowment", "External",
-	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "FlowTarget", "Holding",
+	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Information", "Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Jurisdiction", "Knot", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration", "Mode",
-	"Modules.MoneySupply", "MoneyFlow", "OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
+	"OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "Population", "ProjectWorth", "Purchase",
 	"RateLimit", "Reaction", "RegionMove", "RegionPopulation", "RegionSettlement",
 	"Release", "Resource", "Resources", "Right", "Risk", "RoleOwnUse", "RoleRoom", "RouteRisk",
@@ -77,7 +78,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 }
 

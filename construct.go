@@ -290,6 +290,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.Demand != nil {
 		on = append(on, "demand")
 	}
+	if c.Modules.MoneySupply != nil {
+		on = append(on, "money_supply")
+	}
 	return on
 }
 

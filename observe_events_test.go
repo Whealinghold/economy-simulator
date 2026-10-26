@@ -63,8 +63,10 @@ var emittedBy = []struct{ event, scenario string }{
 // are INT's (plan 2-17): TestRelocate_EventAndOrder and TestEdgeStatus_Events in
 // the internal tests of regions emit them until then, and plan 17 deletes these
 // entries with its scenarios. WantShortfall is emitted only with the demand module on,
-// by the one-demand scenarios and the tests of that module.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall"}
+// by the one-demand scenarios and the tests of that module. The three MoneyFlow
+// events are declared with the money supply module's configuration and are emitted
+// by its step and its scenarios, which the module's step change adds (plan 2-6).
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

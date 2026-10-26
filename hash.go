@@ -391,6 +391,33 @@ func pairsModules(e *encoder, m Modules) {
 		pairsDemand(e, *m.Demand)
 		e.end()
 	}
+	if m.MoneySupply != nil {
+		e.id(2)
+		encodeList(e, 1, m.MoneySupply.Flows, pairsMoneyFlow)
+		e.end()
+	}
+}
+
+// pairsMoneyFlow writes the pairs of a MoneyFlow: ID 1, Kind 2, Target 3, Amount
+// 4, Level 5, RateBP 6, Exempt 7, Per 8, Start 9, Until 10, Limit 11, NotIncome 12.
+// Label is presentation only and has no id.
+func pairsMoneyFlow(e *encoder, f MoneyFlow) {
+	e.text(1, f.ID)
+	e.text(2, f.Kind)
+	e.nested(3, func(e *encoder) {
+		e.text(1, f.Target.Kind)
+		e.text(2, f.Target.Region)
+		e.text(3, f.Target.Role)
+	})
+	e.num(4, f.Amount)
+	e.num(5, f.Level)
+	e.num(6, f.RateBP)
+	e.num(7, f.Exempt)
+	e.text(8, f.Per)
+	e.num(9, f.Start)
+	e.num(10, f.Until)
+	e.num(11, f.Limit)
+	e.flag(12, f.NotIncome)
 }
 
 // pairsDemand writes the pairs of a Demand: Wants 1, Tastes 2, RegionTastes 3.

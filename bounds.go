@@ -322,3 +322,23 @@ func groupRanges(g Group) []fieldRange {
 		{"scale", g.Scale, 0, MaxHouseholds},
 	}
 }
+
+// Bounds of the money supply module (spec-money-supply.md 11.2, spec-config.md
+// 4.1). All are provisional (N-015, N-027).
+const (
+	// MaxMoneyFlows is the most money flows: the step loops over the active flows
+	// and their classes each tick, and it divides MaxFlowTotal.
+	MaxMoneyFlows = 64
+	// MaxFlowAmount is the largest Amount, Level or Exempt: for the largest
+	// weight, w * Amount is at most MaxMoney.
+	MaxFlowAmount = MaxMoney / MaxWeight
+	// MaxFlowRateBP is the largest RateBP: the whole balance above the exemption
+	// per period.
+	MaxFlowRateBP = 10_000
+	// MaxFlowScale is the largest flow scale in basis points: ten times the
+	// configured value, so a numerator stays inside 128 bits.
+	MaxFlowScale = 100_000
+	// MaxFlowTotal is the largest effective limit of a flow: all flows together
+	// create at most MaxMoney, so the supply stays inside int64.
+	MaxFlowTotal = MaxMoney / MaxMoneyFlows
+)
