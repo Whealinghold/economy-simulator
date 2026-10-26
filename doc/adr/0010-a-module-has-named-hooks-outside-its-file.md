@@ -1,7 +1,8 @@
 # 0010. A module has named hooks outside its file
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
+- Accepted: 2026-10-26, by the repository owner
 - Supersedes: none
 - Narrows: 0007 decisions 1, 2 and 3
 
@@ -77,15 +78,15 @@ hooks have to be admitted by a decision and not by the plan.
 
 ## Consequences
 
-- `doc/rules/architecture.md` and `AGENTS.md` gain the text under "Proposed edit"
-  below, with a fresh read-receipt tag on `architecture.md`. That edit is made when
-  the owner accepts this ADR, in the same change that sets the status, because an
-  accepted ADR (0007) protects those two files and a rule edit alone would conflict
-  with it. Nothing else in the rules changes.
-- Plan 2-5 PR B2 (Phase 6, the world side of `demand.go`) does not start until
-  this ADR is accepted and the edit is applied. Its PR A (the edits owed and the
-  solver) and PR B1 (the pure rules, the catalogue, the loader and the ledger
-  reason) do not depend on it.
+- `doc/rules/architecture.md` and `AGENTS.md` gained the text under "Applied
+  edit" below, with a fresh read-receipt tag on `architecture.md`. The edit was
+  made in the same change that set the status, because an accepted ADR (0007)
+  protects those two files and a rule edit alone would conflict with it. Nothing
+  else in the rules changed.
+- Plan 2-5 PR B2 (Phase 6, the world side of `demand.go`) may start: the ADR is
+  accepted and the edit is applied. Its PR A (the edits owed and the solver) and
+  PR B1 (the pure rules, the catalogue, the loader and the ledger reason) did not
+  depend on it.
 - The later plans that cite these hooks (plans 9, 10, 11, 13, 14, 16 and 17, as plan
   2-5 E1 lists them) drop any "sixth fan-in" wording in favour of "agent-lifecycle
   fan-in".
@@ -106,11 +107,12 @@ hooks have to be admitted by a decision and not by the plan.
   the carry is formed (FR-DEM-013) and the layout of checkpoint tag 12, and keeps
   no agent-lifecycle call.
 
-## Proposed edit to `doc/rules/architecture.md` and `AGENTS.md`
+## Applied edit to `doc/rules/architecture.md` and `AGENTS.md`
 
-This is plan 2-5 edit E1, one consolidated edit for the stage. It is not applied:
-the owner applies it with the acceptance of this ADR. It enumerates the cases later
-plans cite.
+This is plan 2-5 edit E1, one consolidated edit for the stage. It was applied on
+2026-10-26 with the owner's acceptance of this ADR; the list below is the record
+of what was applied (architecture.md 2.6, 2.10.1, 2.10.2, 2.10.4, 2.10.6 and
+the `AGENTS.md` layout). It enumerates the cases later plans cite.
 
 1. **2.10.1 and 2.10.2 (the touch points and where a module appears).** After the
    list of touch points add: "A module may also be called at a named hook outside
@@ -149,8 +151,8 @@ plans cite.
 1. Whether the hooks of decision 1 should be a test as well as a rule: a Guard test
    that reads the foreign files for calls into the module files and fails on any
    call not in the list. Decide with the second module file.
-2. Plan 2-5 open item O5: if the owner refuses this ADR, the fallback above applies
-   and the checkpoint layout of tag 12 changes with it.
+2. Plan 2-5 open item O5: the owner accepted this ADR, so the fallback above does
+   not apply and the checkpoint layout of tag 12 is the one of `agentJoined`.
 
 ## Related
 

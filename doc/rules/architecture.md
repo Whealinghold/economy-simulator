@@ -101,7 +101,8 @@ economy-sim/
   random.go              the seed, the one PCG and Rand, the site table and the
                          keyed stream (7.3, ADR 0008)
   world.go               World, NewWorld, Step, Run, the guards (the five
-                         fan-ins of 2.10.4 are in fanin.go)
+                         fan-ins and the two agent-lifecycle fan-ins of 2.10.4
+                         are in fanin.go)
   calendar.go  commodity.go  recipe.go  role.go  ledger.go  market.go  order.go
   clearing.go  agent.go  strategy.go  spawner.go  beliefs.go  production.go
   estates.go  welfare.go  skills.go  observer.go  snapshot.go
@@ -119,6 +120,8 @@ economy-sim/
   phase_exit.go                                                    (WLD)
   checkpoint_save.go  checkpoint_restore.go  checkpoint_sections.go    (CHK)
   regions_relocate.go  regions_status.go                               (REG)
+  demand_plan.go  demand_state.go                                      (DEM)
+                         only if Lizard forces the split of demand.go
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -254,11 +257,30 @@ fact and row (`spec-clearing.md` 3.2); its step of a removal (`spec-agents.md` 3
 decoder. The module's arithmetic and matching live under `internal/<module>`
 over primitive structs (2.9); the module file converts.
 
+A module may also be called at a named hook outside its file
+([ADR 0010](../adr/0010-a-module-has-named-hooks-outside-its-file.md)): a
+guarded call into a method the module file defines. The hooks are: (a) a method
+added to a core concept file by a module (`effectiveAt` in `production.go`, plan
+9); (b) a new argument on a fan-in and its callers (`kind viewKind` on
+`fillAgentView`, `workAgent`, `tradeAgent`, plan 13); (c) a guarded call inside
+`entryRegion` and the spawner refusal in `internal/occupation` and
+`phase_exit.go` (plans 11, 14); (d) the construction calls and `firstHousehold`
+(plan 16); (e) the sub-step of a position is a guarded call inside the
+position's method, not a position (plan 11); (f) a field added by a module to a
+core view or row type (`RegionAgent.OwnUse` in `spawner.go`, plan 10); and the
+hooks of decision 1 of ADR 0010: the call sites of the fan-ins, the calls of the
+agent-lifecycle fan-ins from `createAgent`, `spawnEntrant`, the integration add
+and `takeRole`, guarded calls from the `DefaultStrategy` files into methods
+defined in the module file (the Work and Trade seams of later modules, plan 10,
+included), the term in `viability.go`, named `phase_*.go` calls such as
+`p36Aggregates`, the audit call and the `offStage` extensions. A hook holds no
+branch on the module's data and no arithmetic.
+
 2.10.2. **Outside its file a module appears only in the catalogue files**:
 its pointer in `World` and in `Config.Modules` (`config.go`), its one-line
 calls in `tick.go`, its event types in `event.go`, its sentinels in
 `errors.go`, its option in `option.go`, its bounds in `bounds.go` and its
-defaults in `defaults.go`. A module's logic in any other file is a defect.
+defaults in `defaults.go`. A module's logic in any other file is a defect; a hook of 2.10.1 holds no logic.
 
 2.10.3. **`tick.go` is a straight line.** Each position of `spec-world.md` 6
 is one call, in the spec's order; a module's call is guarded by its pointer
@@ -293,6 +315,18 @@ resolver calls it under the module's pointer; `clearing.Admit` stays pure, with
 a marked position for the row in the order of the table. `not_permitted` is also
 checked while orders are built, beside `not_tradable` (FR-CLR-031 spans the two).
 
+`tradableItems` is called from `role.go` through `tradableSets` of `validate.go`,
+the one function that `newRoleTable`, `economics` and `warnings` share, so the
+validator and the world cannot disagree.
+
+A module that keeps per-agent state forms it in two **agent-lifecycle
+fan-ins**, also in `fanin.go` and each with one entry point: `agentJoined(a,
+region)`, called from `createAgent`, `spawnEntrant` and the integration add, and
+`agentRoleChanged(a, from)`, called from `takeRole`. They are not counted among
+the five; `removeAgent` already carries the step of a removal. The audit call and
+the construction calls are hooks (2.10.1), not fan-ins, and a plan that speaks of
+a "sixth fan-in" means an agent-lifecycle fan-in.
+
 2.10.5. **Catalogue files are append-only in module order.** A new module
 appends its entries to `event.go`, `errors.go`, `Config.Modules`, the
 checkpoint tags and `tick.go`'s guarded calls; nothing is inserted or
@@ -312,7 +346,7 @@ module is added (testing.md 7.1.1). A change that moves either has broken this
 rule; it is not a golden to regenerate.
 
 2.10.6. **The slice before any module.** The catalogue files, the core files,
-`tick.go` with the core positions, the five fan-ins and the checkpoint shape
+`tick.go` with the core positions, the five fan-ins, the two agent-lifecycle fan-ins and the checkpoint shape
 exist and pass the slice's golden file before the first module file is
 created, so that every module is made to fit them. The tests a module must
 ship with are in testing.md 7.1 and 10.4: its module-alone golden file, and
@@ -994,4 +1028,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f6b80193d08b836b646b8b6d
+RULE-TAG: ceeca136ce373c4daa252932

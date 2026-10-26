@@ -112,6 +112,7 @@ economy-sim/
 │   beliefs.go production.go estates.go welfare.go skills.go observer.go
 │   snapshot.go regions.go scale.go checkpoint.go integration.go moneyflow.go
 │   viability.go           # CORE concept files, one per concept; the five fan-ins
+│                           #   and the two agent-lifecycle fan-ins
 │                           #   (architecture.md 2.10.4) are in fanin.go
 ├── strategy_default.go strategy_work.go strategy_view.go (AGT)
 │   spawner_report.go (SPN)  production_report.go (PRO)
@@ -120,6 +121,8 @@ economy-sim/
 │   phase_trade.go phase_outcomes.go phase_exit.go (WLD)
 │   checkpoint_save.go checkpoint_restore.go checkpoint_sections.go (CHK)
 │   regions_relocate.go regions_status.go (REG)
+│   demand_plan.go demand_state.go (DEM; only if Lizard forces the split of
+│   demand.go)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's

@@ -54,7 +54,7 @@ shaped that way and is where a later reader looks when they want to reverse it.
 | [0007](0007-a-module-is-one-file-that-owns-its-touch-points.md) | A module is one root file that owns every one of its touch points | Accepted |
 | [0008](0008-random-draws-are-keyed-streams.md) | Random draws come from keyed streams, not from one positional stream | Accepted |
 | [0009](0009-the-toml-library-is-pelletier-go-toml-v2.md) | The TOML library is pelletier/go-toml/v2, behind a guard pass | Accepted |
-| [0010](0010-a-module-has-named-hooks-outside-its-file.md) | A module has named hooks outside its file (narrows 0007 decisions 1, 2, 3) | Proposed |
+| [0010](0010-a-module-has-named-hooks-outside-its-file.md) | A module has named hooks outside its file (narrows 0007 decisions 1, 2, 3) | Accepted |
 
 ## Updating this file
 
