@@ -355,6 +355,10 @@ run in CI on at least two architectures (architecture.md 7.4). **[project]**
 - `<module>/`: one directory per module, the reference chain with that module
   alone on (its overlay from `testdata/chains/overlay/`). A module ships with
   its golden in the same PR.
+  One exception: a module whose pack carries its own census (the warm start is solved
+  again for the module, as the pack `one-demand` does for the wants) has that pack as its
+  module-alone golden, not the reference chain with an overlay. The proof that `off/` did
+  not move is the same.
 - `all/`: every module on. The one set that may move when a module is added,
   with the explanation 7.2 requires.
 
@@ -562,4 +566,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 0dd4dbd5d57ecd27376b462d
+RULE-TAG: f9a534ad31fa07e5cb0818c0

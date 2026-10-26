@@ -173,6 +173,16 @@ or sinks (`want_consumption`, `haul_use`, `transit_use`, `loss`), in the order o
 built-in group (money reasons first, then goods commodity-major). The estates and the
 agents follow (`spec-world.md` 5.2). With every module off the last group is empty.
 
+In the code the accounts are opened by one function with four named groups, in this order:
+(1) the built-in group; (2) the declared money-flow reasons; (3) the six `outside_*`
+reasons; (4) the other reasons of the modules that are on, in the order of the `Modules`
+pointers. Each module's change fills its group and no other. The `BoundaryFlow` rows and
+the boundary rows of the snapshot follow the same group order (built-in, money flows,
+`outside_*`, then the declared module rows ordered by a rank column of the registry row, which
+is the order of the table of 7.2 among the module rows), applied where the rows are built
+and not through the numeric order of the reason constants. `want_consumption` is a module
+row, so it comes after the `outside_*` rows and the money flows.
+
 3.4.3. **Worked count: the pack `one`.** `one` is `base.toml`, `one.toml` and
 `warm-one.toml`: one region (`north`) and nine commodities (`spec-reference-chain.md`
 4.4.1), so `C = 9` and `B = 1 + 7 * 9 = 64`. In the order of the IDs sorted as strings
@@ -564,6 +574,16 @@ Every other row of the table is a module row, declared with its module: `want_co
 (population); the reason of each configured money flow and each fiscal flow (money
 supply, fiscal). The count `B` of the boundary accounts of the built-in group is in
 3.4.1 and the order of their creation in 3.4.2.
+
+**Numbering.** The numeric order of the reasons is the order in which they are built, not
+the order of the table: a declared reason is appended after the last one that exists
+(`LoanInterest` at Stage 2) in the change that builds its module, and nothing is
+inserted or renumbered. Whether a reason is declared is a bit of its registry row, not a
+threshold on its number. A ledger built with no module keeps the size of the Stage 1
+ledger: every array the position hash walks has its Stage 1 length, and the offsets of
+later reasons live in a slice that is nil while the reason is undeclared. The code a
+checkpoint saves for a reason is the pinned position of the row in the table of 7.2
+(`spec-checkpoint.md` 4.2.7), which does not depend on the numbering.
 
 ### 7.3 Faucets and sinks are the only exceptions
 

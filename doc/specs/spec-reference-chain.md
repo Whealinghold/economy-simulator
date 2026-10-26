@@ -637,7 +637,7 @@ fixture needs a luxury role, a want with two alternatives and a taste table for 
 roles (note N-080). `demand.toml` adds three luxury commodities, three recipes, two
 roles, two wants and the tastes of eight roles. The module is on because the `[modules.demand]`
 table is present (`spec-demand.md` 3.1). `one-demand.toml` is `one.toml` with the census
-re-solved for the wants.
+re-solved for the wants. The demand overlay is the file `testdata/chains/demand.toml` (not a file under `overlay/`), and the module-alone golden of the module is the pack `one-demand`, which carries its own census, so it departs from testing.md 7.1.1 (the reference chain with an overlay): see that rule.
 
 ```toml
 [commodity.treat_a]

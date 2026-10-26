@@ -260,7 +260,7 @@ all-on from it).
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
-its overlay under `testdata/chains/overlay/`, its module-alone golden under
+its overlay under `testdata/chains/overlay/` (the demand module's is `testdata/chains/demand.toml`, where `spec-reference-chain.md` 4.4.6 puts it), its module-alone golden under
 `testdata/golden/<module>/`, the proof that `testdata/golden/off/` did not
 move, its checkpoint section and the fork-at-N test with it on, its events in
 the catalogue tests, and its rows in the parameter-registry test.

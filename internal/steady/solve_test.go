@@ -298,7 +298,7 @@ func TestSolve_Errors(t *testing.T) {
 		{"unbounded column", steady.Programme{Rows: 1, RHS: ints(1), Cols: []steady.Column{
 			col(1, e(0, 1, 1)), col(0, e(0, -1, 1))}}, steady.ErrUnbounded},
 		{"unbounded with no rows", steady.Programme{Cols: []steady.Column{col(1)}}, steady.ErrUnbounded},
-		{"negative right-hand side", steady.Programme{Rows: 1, RHS: ints(-1), Cols: []steady.Column{col(1, e(0, 1, 1))}}, steady.ErrInfeasibleStart},
+		{"negative right-hand side with no feasible point", steady.Programme{Rows: 1, RHS: ints(-1), Cols: []steady.Column{col(1, e(0, 1, 1))}}, steady.ErrInfeasible},
 		{"rhs of the wrong length", steady.Programme{Rows: 2, RHS: ints(1)}, steady.ErrBadProgramme},
 		{"negative rows", steady.Programme{Rows: -1}, steady.ErrBadProgramme},
 		{"zero rhs denominator", steady.Programme{Rows: 1, RHS: []steady.Ratio{r(1, 0)}}, steady.ErrBadProgramme},

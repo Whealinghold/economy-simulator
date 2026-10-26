@@ -115,7 +115,7 @@ func TestTableau_WrongPivotIsCaught(t *testing.T) {
 			if tt.before {
 				tt.corrupt(tb, true)
 			}
-			pivots, err := tb.run(context.Background(), 100)
+			pivots, err := tb.run(context.Background(), 100, 0)
 			if err != nil {
 				t.Fatalf("run(%s) error = %v", tt.name, err)
 			}
@@ -140,7 +140,7 @@ func TestTableau_InexactDivisionIsAnError(t *testing.T) {
 	t.Parallel()
 	tb := newTableau(twoVar())
 	tb.d = big.NewInt(7) // the true denominator is 1, so 7 does not divide
-	if _, err := tb.run(context.Background(), 100); !errors.Is(err, ErrInconsistent) {
+	if _, err := tb.run(context.Background(), 100, 0); !errors.Is(err, ErrInconsistent) {
 		t.Errorf("run with a wrong common denominator error = %v, want %v", err, ErrInconsistent)
 	}
 }
