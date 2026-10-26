@@ -822,11 +822,16 @@ func (v *AgentView) commodityRow(c CommodityID) *CommodityView {
 
 // commodityIndex is the position of the commodity in the view's tradable set.
 func (v *AgentView) commodityIndex(c CommodityID) int {
-	i, ok := slices.BinarySearchFunc(v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
+	i, ok := v.findCommodity(c)
 	if !ok {
 		invariant("a want item is not in the tradable set of the role")
 	}
 	return i
+}
+
+// findCommodity is the binary search of commodityIndex without the invariant.
+func (v *AgentView) findCommodity(c CommodityID) (int, bool) {
+	return slices.BinarySearchFunc(v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
 }
 
 // fillWants is the filler of the want group of AgentView (spec-demand.md 4.4,
@@ -1386,7 +1391,7 @@ type wantScratch struct {
 // It is nil for a commodity outside the view's tradable set, which only a view
 // built by hand can have (the world's filler checks FR-DEM-006).
 func (t *tradeCtx) rowOf(c CommodityID) *tradeRow {
-	i, ok := slices.BinarySearchFunc(t.v.Commodities, c, func(e CommodityView, t CommodityID) int { return cmp.Compare(e.Commodity, t) })
+	i, ok := t.v.findCommodity(c)
 	if !ok || i >= len(t.rows) {
 		return nil
 	}
