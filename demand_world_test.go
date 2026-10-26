@@ -383,9 +383,9 @@ func TestDemand_CarryAcrossWeightChange(t *testing.T) {
 }
 
 // TestDemand_AllocationsStayAtTheBaseline verifies that the filler and the checker
-// allocate nothing once the scratch is grown (the world has no observer here), and
-// TestDemand_CostIndependentOfWeight that a cohort of a thousand households costs
-// the same to plan as one household.
+// allocate nothing once the scratch is grown (the world has no observer here), at
+// weight 1 and at weight 1 000: the plan is the same size for a cohort of a
+// thousand households as for one, so its cost does not depend on the weight.
 //
 // Requirement: NFR-DEM-001, NFR-DEM-002, FR-AGT-046
 func TestDemand_AllocationsStayAtTheBaseline(t *testing.T) {
