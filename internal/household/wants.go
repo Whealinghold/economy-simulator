@@ -58,7 +58,7 @@ func PriceRatio(centre, ref int64) (int64, bool) {
 // example 15.1 (5 728 and 4 272, where t gives 5 729 and 4 271) is the largest
 // remainder rule, which this function follows.
 func Shares(dst []int64, items []WantItem, substitution int64) ([]int64, bool) {
-	var buf [8]int64
+	var buf [8]int64 // twice the root's MaxWantItems (4): no allocation within the bound
 	terms := buf[:0]
 	var sum int64
 	for _, it := range items {
@@ -201,7 +201,7 @@ func Fund(spendCap, spent3, avail int64, ladder []Rung, out []int64) (left int64
 	off := 0
 	for _, r := range ladder {
 		n := len(r.Shares)
-		if n != len(r.Limits) || off+n > len(out) {
+		if n != len(r.Limits) || off+n > len(out) || !sharesFit(r.Shares) {
 			return 0, false
 		}
 		split, ok := apportion(out[off:off], max(r.Units, 0), r.Shares, Basis)
@@ -219,6 +219,19 @@ func Fund(spendCap, spent3, avail int64, ladder []Rung, out []int64) (left int64
 		off += n
 	}
 	return budget, true
+}
+
+// sharesFit reports whether the shares (a negative one counts as 0) add to at
+// most 10 000, which apportion alone does not see when the units are few.
+func sharesFit(shares []int64) bool {
+	var sum int64
+	for _, s := range shares {
+		sum += max(s, 0)
+		if sum > Basis {
+			return false
+		}
+	}
+	return sum <= Basis
 }
 
 // apportion divides total in proportion to w / den, by largest remainder:

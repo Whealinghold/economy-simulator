@@ -444,6 +444,9 @@ func TestFund_LadderOrder(t *testing.T) {
 	}{
 		{"out too short", ladder, 2},
 		{"more limits than shares", []household.Rung{{Units: 1, Shares: []int64{10_000}, Limits: []int64{1, 2}}}, 2},
+		// Shares 6 000 + 6 000 add to more than 10 000: invalid even with one unit, where
+		// both floors are 0 and apportion alone would not notice.
+		{"shares above 10 000", []household.Rung{{Units: 1, Shares: []int64{6_000, 6_000}, Limits: []int64{1, 1}}}, 2},
 		{"more shares than limits", []household.Rung{{Units: 1, Shares: []int64{5_000, 5_000}, Limits: []int64{1}}}, 2},
 		{"out too short for the second rung", []household.Rung{{Units: 1, Shares: []int64{10_000}, Limits: []int64{1}}, {Units: 1, Shares: []int64{10_000}, Limits: []int64{1}}}, 1},
 		// 10 units with shares 6 000 and 6 000: floors 6 and 6 give 12 above 10.

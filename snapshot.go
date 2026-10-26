@@ -290,7 +290,8 @@ func satMoney(m, a, b Money) Money { return Money(satAdd(satAdd(int64(m), int64(
 // the rank of their registry row, each with money before goods and then
 // ascending commodity.
 func (w *World) boundaryRows() []BoundaryRow {
-	declared := ledger.DeclaredByRank(nil)
+	var scratch [ledger.NumReasons]ledger.Reason
+	declared := ledger.DeclaredByRank(scratch[:0])
 	rows := make([]BoundaryRow, 0, (1+len(w.cfg.Commodities))*(numBuiltInReasons+len(declared)))
 	for thing := ledger.Money; thing < len(w.cfg.Commodities); thing++ {
 		for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {

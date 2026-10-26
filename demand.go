@@ -611,8 +611,8 @@ func regionFlags(c *Config, lk lookup, ro *Role, g Group) roleFlags {
 // class_without_income. Each is raised once per role, for any region of the
 // role's groups that trips it.
 func demandRoleWarnings(c *Config, lk lookup, ro *Role, add func(string, ...string)) {
-	if len(lk.demand.tastes[ro.ID]) == 0 {
-		return
+	if !slices.ContainsFunc(lk.demand.tastes[ro.ID], func(t *Taste) bool { return t.Scale > 0 }) {
+		return // a scale 0 row is not in the ladder (D304)
 	}
 	var f roleFlags
 	for _, g := range c.Groups {
