@@ -115,6 +115,30 @@ func MulDivHalfEven(a, b, c int64) (q int64, ok bool) {
 	return q, ok
 }
 
+// MulAddDivSat returns q = floor((a*b + add) / c) with the numerator held in
+// 128 bits, and the exact remainder r of that division. q saturates at
+// math.MaxInt64 when the exact quotient does not fit, and r is exact either
+// way. ok is false when a, b or add is negative or c is not positive, and
+// then q and r are zero. A money flow uses it to add a carry before the
+// division and to keep the remainder as the next carry (spec-money-supply.md
+// 6.4).
+func MulAddDivSat(a, b, add, c int64) (q, r int64, ok bool) {
+	if a < 0 || b < 0 || add < 0 || c <= 0 {
+		return 0, 0, false
+	}
+	uc := uint64(c)
+	hi, lo := bits.Mul64(uint64(a), uint64(b))
+	lo, carry := bits.Add64(lo, uint64(add), 0)
+	hi += carry // a*b < 2^126, so the sum cannot wrap
+	qhi, rem := hi/uc, hi%uc
+	qlo, ur := bits.Div64(rem, lo, uc)
+	r = int64(ur) // ur < uc <= MaxInt64
+	if qhi != 0 || qlo > math.MaxInt64 {
+		return math.MaxInt64, r, true
+	}
+	return int64(qlo), r, true
+}
+
 // muldiv works on magnitudes in uint64 (|MinInt64| is 2^63) and applies the
 // sign and the rounding rule at the end. The remainder returned is that of the
 // truncated division, whatever the mode.
