@@ -38,6 +38,7 @@ var checkpointSections = [...]section{
 	{tag: 9, name: "Spawner", save: (*World).saveSpawner, load: (*World).loadSpawner},
 	{tag: 10, name: "Skills", save: (*World).saveSkills, load: (*World).loadSkills},
 	{tag: 11, name: "Regions", save: (*World).saveRegions, load: (*World).loadRegions},
+	{tag: 12, name: "Demand", present: func(c *Config) bool { return c.Modules.Demand != nil }, save: (*World).saveDemand, load: (*World).loadDemand},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
 }
 
@@ -56,11 +57,11 @@ type notBuiltSection struct {
 	gate string
 }
 
-// notBuiltSections names the sections 12 to 33, which the modules that own them
+// notBuiltSections names the sections 13 to 33, which the modules that own them
 // append. The test fails on a listed tag that has a row in checkpointSections and
 // on a tag of the spec that is neither built nor listed.
 var notBuiltSections = [...]notBuiltSection{
-	{12, "Demand", "Demand"}, {13, "MoneySupply", "MoneySupply"}, {14, "Population", "Population"},
+	{13, "MoneySupply", "MoneySupply"}, {14, "Population", "Population"},
 	{15, "Resources", "Resources"}, {16, "Information", "Information"}, {17, "Transport", "Transport"},
 	{18, "External", "External"}, {19, "Subsistence", "Subsistence"}, {20, "Migration", "Migration"},
 	{21, "Merchants", "Merchants"}, {22, "Integration", "Information"}, {23, "Settlements", "Settlements"},

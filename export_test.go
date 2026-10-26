@@ -309,3 +309,39 @@ func UpkeepCommodity(w *World, id AgentID) CommodityID {
 	a := &w.agents[id]
 	return w.roles.row(a.role).upkeepIn(w.regionOf(a))[0].commodity
 }
+
+// SetWantTally sets the P3.2 tally of the want in the (region, role) cell, as the
+// checker would have left it, so a test of P3.6 can pose a tick. The want must be in
+// the role's ladder.
+func SetWantTally(w *World, region RegionID, role RoleID, want WantID, households, choked, planned, funded int64) {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	d.tally[int(region)*d.block+d.off[role]+k] = wantTally{households, choked, planned, funded}
+}
+
+// P36WantsForTest runs the demand module's part of P3.6 once.
+func P36WantsForTest(w *World) { w.p36Wants() }
+
+// SetChokedRun sets the run of the Warn "wants choked" of a cell.
+func SetChokedRun(w *World, region RegionID, role RoleID, want WantID, run int64) {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	d.chokedRun[int(region)*d.block+d.off[role]+k] = run
+}
+
+// ChokedRun returns the run of the Warn "wants choked" of a cell.
+func ChokedRun(w *World, region RegionID, role RoleID, want WantID) int64 {
+	d := w.demand
+	k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return rg.want == want })
+	return d.chokedRun[int(region)*d.block+d.off[role]+k]
+}
+
+// WantShortReason is wantShortReason for a plan with the intents given and a want
+// with the item commodities given.
+func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason {
+	wt := wantRT{}
+	for _, c := range items {
+		wt.items = append(wt.items, wantItemRT{commodity: c})
+	}
+	return wantShortReason(&TradePlan{Intents: intents}, &wt, funded)
+}

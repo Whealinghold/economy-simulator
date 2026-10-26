@@ -2,13 +2,17 @@ package economysim
 
 import (
 	"cmp"
+	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the demand module (spec-demand.md; architecture.md 2.10.1): the
@@ -46,6 +50,9 @@ type demandState struct {
 	block  int
 	byWant [][]int
 	tally  []wantTally
+	// chokedRun[cell] is the consecutive ticks in which all the households of the
+	// cell were choked, the run of the Warn "wants choked" (saved, diagnostic).
+	chokedRun []int64
 	// cur is the plan of the agent last filled: the filler writes it and the
 	// checker commits it. use is the planned units of the agents checked this tick,
 	// by agent then commodity, which P6.2 consumes.
@@ -183,6 +190,7 @@ func (st *demandState) layout(regions int) {
 		})
 	}
 	st.block, st.tally = rungs, make([]wantTally, regions*rungs)
+	st.chokedRun = make([]int64, regions*rungs)
 	widest := 0
 	for _, l := range st.ladder {
 		widest = max(widest, len(l))
@@ -917,6 +925,9 @@ func (w *World) checkWants(a *agent, p *TradePlan) {
 	d.tallyFunded(p, ladder)
 	d.tallyRungs(int(w.regionOf(a)), a, ladder)
 	d.use = append(d.use, d.merged...)
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.logWantSkips(ctx, a, p, ladder)
+	}
 }
 
 // mergeItems sums the planned units of the agent's ladder per commodity into
@@ -982,10 +993,82 @@ func (d *demandState) tallyRungs(region int, a *agent, ladder []rung) {
 	}
 }
 
-// p36Wants is the demand module's part of P3.6 (spec-demand.md 11.1, D312): it
-// closes the tallies of P3.2 for the tick.
+// p36Wants is the demand module's part of P3.6 (spec-demand.md 11.1, 11.2, D312):
+// for each region, role (ascending) and want (ascending ID) it advances the run of
+// the Warn "wants choked", delivers WantShortfall where a household was choked or
+// unfunded, and closes the tallies of P3.2 for the tick.
 func (w *World) p36Wants() {
-	clear(w.demand.tally)
+	d := w.demand
+	ctx := context.Background()
+	for region := range w.cfg.Regions {
+		for role := range d.ladder {
+			for _, k := range d.byWant[role] {
+				w.closeWant(ctx, region, RoleID(role), k)
+			}
+		}
+	}
+	clear(d.tally)
+}
+
+// closeWant is p36Wants for the want at ladder position k of the role in the
+// region. All households choked is the condition of the run: a cell with no
+// household has none.
+func (w *World) closeWant(ctx context.Context, region int, role RoleID, k int) {
+	d := w.demand
+	cell := region*d.block + d.off[role] + k
+	c := d.tally[cell]
+	want := d.ladder[role][k].want
+	run, warn := advanceRun(d.chokedRun[cell], c.households > 0 && c.choked == c.households, false)
+	d.chokedRun[cell] = run
+	if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "wants choked",
+			slog.Int64(logkeys.Region, int64(region)), slog.Int64(logkeys.Role, int64(role)),
+			slog.Int64(logkeys.Want, int64(want)), slog.Int64(logkeys.Households, c.households))
+	}
+	if w.obs.supplied && (c.choked > 0 || c.funded < c.planned) {
+		w.obs.deliver(WantShortfall{
+			Tick: w.Tick(), Region: RegionID(region), Role: role, Want: want,
+			Households: c.households, Choked: c.choked, Planned: c.planned, Funded: c.funded,
+		})
+	}
+}
+
+// logWantSkips writes the Debug line "want skipped" for each want of the agent's
+// ladder that did not get its planned units: choked, or planned but not fully
+// funded. The reason of a planned want is no_stock when the plan holds no bid for
+// any item, no_budget when it holds a bid but the want got no funds and
+// over_budget when it got part (spec-demand.md 11.2; the definitions are the
+// implementation's, the spec names the values only).
+func (w *World) logWantSkips(ctx context.Context, a *agent, p *TradePlan, ladder []rung) {
+	d := w.demand
+	for k, rg := range ladder {
+		reason := Reason("")
+		switch {
+		case d.cur.choked[k]:
+			reason = ReasonChoked
+		case d.cur.planned[k] > d.funded[k]:
+			reason = wantShortReason(p, &d.wants[rg.want], d.funded[k])
+		}
+		if reason != "" {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want skipped",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Want, int64(rg.want)),
+				slog.String(logkeys.Reason, string(reason)))
+		}
+	}
+}
+
+// wantShortReason is the reason a planned want was funded short: no bid for an
+// item, none funded, or part funded.
+func wantShortReason(p *TradePlan, wt *wantRT, funded int64) Reason {
+	switch {
+	case funded > 0:
+		return ReasonOverBudget
+	case !slices.ContainsFunc(p.Intents, func(in Intent) bool {
+		return in.Side == Bid && in.WantUnits > 0 && slices.ContainsFunc(wt.items, func(it wantItemRT) bool { return it.commodity == in.Commodity })
+	}):
+		return ReasonNoStock
+	}
+	return ReasonNoBudget
 }
 
 // nextUpkeep is the units of the commodity the agent eats next tick (its
@@ -1032,6 +1115,10 @@ func (w *World) p62Wants() error {
 		}
 		if err := w.ledger.Move(a.account, sink, c, n, ledger.WantConsumption); err != nil {
 			return fmt.Errorf("want consumption at tick %d: %w", w.Tick(), err)
+		}
+		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "want consumed",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Commodity, int64(c)), slog.Int64(logkeys.Quantity, n))
 		}
 	}
 	d.use = d.use[:0]
@@ -1104,6 +1191,108 @@ func (d *demandState) dropAgent(a *agent) {
 	if int(a.id) < len(d.carry) {
 		d.carry[a.id] = nil
 	}
+}
+
+// saveDemand is tag 12 (spec-checkpoint.md 4.2, spec-demand.md 12): for each live
+// agent whose role has a ladder, in ascending ID, a count and its carries; then
+// the non-zero choke runs as (region, role, want, run) in that order. Nothing
+// derived is saved.
+func (w *World) saveDemand(cw *codec.Writer) error {
+	d := w.demand
+	w.eachLive(func(a *agent) {
+		if len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cw.Count(len(d.carry[a.id]))
+		for _, c := range d.carry[a.id] {
+			cw.I(c)
+		}
+	})
+	n := 0
+	for _, run := range d.chokedRun {
+		if run != 0 {
+			n++
+		}
+	}
+	cw.Count(n)
+	for region := range w.cfg.Regions {
+		for role := range d.ladder {
+			for _, k := range d.byWant[role] {
+				if run := d.chokedRun[region*d.block+d.off[role]+k]; run != 0 {
+					cw.U(uint64(region))
+					cw.U(uint64(role))
+					cw.U(uint64(d.ladder[role][k].want))
+					cw.U(unsigned(run))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// loadDemand reads tag 12 into the world loadAgents built: it sizes the carries to
+// the agent slots and reads them for every live agent whose role has a ladder. The
+// count and the range of the carries are checked by demandCross (step 7).
+func (w *World) loadDemand(rs *restoreCtx, r *codec.Reader) error {
+	d := w.demand
+	d.carry = make([][]int64, len(w.agents))
+	w.eachLive(func(a *agent) {
+		if len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cs := make([]int64, r.Count(1))
+		for i := range cs {
+			cs[i] = r.I()
+		}
+		d.carry[a.id] = cs
+	})
+	w.readChokedRuns(rs, r)
+	return nil
+}
+
+// readChokedRuns reads the sparse choke runs of tag 12: a count, then (region,
+// role, want, run) in strictly ascending key order, the want in the role's ladder
+// and the run from 1 to the tick.
+func (w *World) readChokedRuns(rs *restoreCtx, r *codec.Reader) {
+	d := w.demand
+	regions, roles, wants := uint64(len(w.cfg.Regions)), uint64(len(w.cfg.Roles)), uint64(len(d.wants))
+	prev := uint64(0)
+	for i := range r.Count(4) {
+		region, role, want := r.Index(regions), r.Index(roles), r.Index(wants)
+		run := r.Bounded("run", rs.tick)
+		key := (region*roles+role)*wants + want
+		k := slices.IndexFunc(d.ladder[role], func(rg rung) bool { return uint64(rg.want) == want })
+		if r.Err() != nil {
+			return
+		}
+		if run == 0 || k < 0 || (i > 0 && key <= prev) {
+			r.Failf("choke run (region %d, role %d, want %d) is at its default, out of order or not in the ladder", region, role, want)
+			return
+		}
+		d.chokedRun[int(region)*d.block+d.off[role]+k], prev = run, key
+	}
+}
+
+// demandCross is the module's part of step 7: every live agent whose role has a
+// ladder holds one carry for each rung, each in [0, 9 999].
+func (w *World) demandCross() error {
+	d := w.demand
+	var bad error
+	w.eachLive(func(a *agent) {
+		if bad != nil || len(d.ladder[a.role]) == 0 {
+			return
+		}
+		cs := d.carry[a.id]
+		if len(cs) != len(d.ladder[a.role]) {
+			bad = fmt.Errorf("%w: agent %d has %d want carries, its role's ladder has %d", ErrCheckpointCorrupt, a.id, len(cs), len(d.ladder[a.role]))
+		}
+		for _, c := range cs {
+			if bad == nil && (c < 0 || c >= wholeBP) {
+				bad = fmt.Errorf("%w: agent %d has a want carry %d outside [0, %d]", ErrCheckpointCorrupt, a.id, c, wholeBP-1)
+			}
+		}
+	})
+	return bad
 }
 
 // wantOf is Want_c: the planned units of the commodity over the wants of the

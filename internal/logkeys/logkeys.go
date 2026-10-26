@@ -58,6 +58,8 @@ const (
 	Jobs = "jobs"
 	// Cause is the machine-readable cause of a removal or a change.
 	Cause = "cause"
+	// Want is a want ID.
+	Want = "want"
 	// Commodities is a count of commodities in the construction summary.
 	Commodities = "commodities"
 	// Recipes is a count of recipes in the construction summary.

@@ -358,6 +358,9 @@ func (w *World) checkpointCross() error {
 			missing = fmt.Errorf("%w: agent %d lives in region %d, role %d, whose had-an-agent bit is not set", ErrCheckpointCorrupt, a.id, v.Region, a.role)
 		}
 	})
+	if missing == nil && w.demand != nil {
+		return w.demandCross()
+	}
 	return missing
 }
 

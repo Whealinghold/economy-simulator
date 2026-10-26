@@ -90,30 +90,3 @@ func TestDemand_OneDemandIsDeterministic(t *testing.T) {
 		t.Errorf("one-demand at seeds 1 and 2 gave the same %d events, want different runs", len(aEv))
 	}
 }
-
-// TestFork_DemandOn verifies that a world with the demand module on survives a
-// checkpoint: restored at tick N (at the start and inside the run), it and a
-// restore of its restore give the same events, snapshots and checkpoint bytes as
-// the world that never stopped. The module's state is derived of the
-// configuration in this slice, so the restore must rebuild it and the
-// configuration hash must carry the module.
-//
-// Requirement: FR-DEM-034
-//
-// Guard: the carries and the choke runs are saved in the checkpoint tag 12 of the
-// next PR; until then a restore that lost the module (a hash without it, a world
-// built without its state) would pass every other fork test, which run with it off.
-func TestFork_DemandOn(t *testing.T) {
-	t.Parallel()
-	t.Skip("the carries are saved by tag 12, which lands with the checkpoint of Phase 7 of plan 2-5 (TestFork_Demand)")
-	if testing.Short() {
-		t.Skip("end-to-end test, skipped with -short")
-	}
-	cfg := loadValidPack(t, packOneDemand...)
-	for _, n := range []int{0, 7} {
-		t.Run(fmt.Sprintf("N %d", n), func(t *testing.T) {
-			t.Parallel()
-			forkAtN(t, forkCase{Name: "one-demand", Cfg: cfg, Seed: 1, N: n, M: 10})
-		})
-	}
-}
