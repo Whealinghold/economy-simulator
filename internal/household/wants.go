@@ -315,7 +315,8 @@ func InitialCarry(agentIndex, position int64) (int64, bool) {
 // both keeps its carry (matched by ID, so a new rank does not matter), a want
 // only in the new ladder starts at InitialCarry with its position in the new
 // ladder and the agent's index, and a want only in the old ladder is dropped.
-// The carries are appended to dst[:0] in the order of newIDs. ok is false when
+// The carries are appended to dst[:0] in the order of newIDs; dst must not
+// share its array with oldIDs or oldCarries. ok is false when
 // oldIDs and oldCarries differ in length or InitialCarry overflows.
 func KeepCarries(dst, oldIDs, oldCarries, newIDs []int64, agentIndex int64) ([]int64, bool) {
 	dst = dst[:0]
