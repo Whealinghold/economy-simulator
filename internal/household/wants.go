@@ -195,7 +195,10 @@ func Units(carry, quantity, weight, tasteBP, regionBP, sched, period int64) (uni
 // it needs room for the sum of len(Shares); the unfunded units of a rung are its
 // Units less its funded ones. The money spent never exceeds B, so the sum of
 // out * Limits is at most B. ok is false when out is too short, a rung's Shares
-// and Limits differ in length or its shares add to more than 10 000.
+// and Limits differ in length or its shares add to more than 10 000; out is
+// then undefined (rungs before the bad one may be written), and the caller drops
+// it. Shares that add to less than 10 000 are tolerated only while the units
+// still find an item to take them: otherwise apportion, and so Fund, reports false.
 func Fund(spendCap, spent3, avail int64, ladder []Rung, out []int64) (left int64, ok bool) {
 	budget := min(max(0, max(spendCap, 0)-max(spent3, 0)), max(avail, 0))
 	off := 0
@@ -231,7 +234,7 @@ func sharesFit(shares []int64) bool {
 			return false
 		}
 	}
-	return sum <= Basis
+	return true
 }
 
 // apportion divides total in proportion to w / den, by largest remainder:
