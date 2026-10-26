@@ -726,7 +726,7 @@ func writeScenarioBlock(path, title string, lines []string) error {
 			if strings.HasPrefix(l, "## ") {
 				cur = l[3:]
 			}
-			if cur != "" {
+			if cur != "" && l != "" { // the blank line between blocks is written back, not kept
 				blocks[cur] = append(blocks[cur], l)
 			}
 		}
