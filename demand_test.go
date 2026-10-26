@@ -334,6 +334,10 @@ func TestWarnings_Demand(t *testing.T) {
 		{"target above the closed economy ceiling", func(c *economysim.Config) { roleOf(c, "cook").TargetRatio = 40_000 }, "target_above_demand",
 			[]string{"roles", "cook", "target_ratio"}},
 		{"class with a ladder and no income", pensioner, "class_without_income", []string{"roles", "pensioner", "start_money"}},
+		{"class whose only taste has scale 0 has no ladder", func(c *economysim.Config) {
+			pensioner(c)
+			c.Modules.Demand.Tastes[len(c.Modules.Demand.Tastes)-1].Scale = 0
+		}, "", nil},
 		{"class with Trades", func(c *economysim.Config) { pensioner(c); roleOf(c, "pensioner").Trades = []string{"fuel"} }, "", nil},
 		{"class with a recipe", func(c *economysim.Config) { pensioner(c); roleOf(c, "pensioner").Recipes = []string{"cut_fuel"} }, "", nil},
 		{"class with money for a year of wants", func(c *economysim.Config) {
