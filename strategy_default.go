@@ -25,6 +25,7 @@ var _ Strategy = DefaultStrategy{}
 // tradeScratch is the per-commodity working state of Trade.
 type tradeScratch struct {
 	rows []tradeRow
+	want wantScratch
 }
 
 // reset returns n zeroed rows, growing the backing array only when it is short.
@@ -59,6 +60,7 @@ type tradeRow struct {
 	windowPos       int64
 	unitCost        int64
 	commodity       CommodityID
+	t4, q4          int64 // the want tier and the units bought in it (spec-demand.md 4.6)
 }
 
 // tradeCtx is what the passes of Trade share.
@@ -68,6 +70,7 @@ type tradeCtx struct {
 	bp    beliefs.Params
 	rows  []tradeRow
 	rstar int
+	ws    *wantScratch
 }
 
 // beliefParamsOf converts the view's belief group to the parameters of the
@@ -127,7 +130,8 @@ func (DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 	if sc == nil {
 		sc = &local
 	}
-	t := tradeCtx{v: v, par: householdParams(&v.Tunables), bp: beliefParamsOf(&v.Tunables.Beliefs), rows: sc.trade.reset(len(v.Commodities))}
+	t := tradeCtx{v: v, par: householdParams(&v.Tunables), bp: beliefParamsOf(&v.Tunables.Beliefs), rows: sc.trade.reset(len(v.Commodities)), ws: &sc.trade.want}
+	t.ws.funded = t.ws.funded[:0] // read by emit only with wants in the view
 	cost, ok := v.upkeepCost()
 	if !ok {
 		return
@@ -311,11 +315,12 @@ func (t *tradeCtx) consider(i int, rng *rand.Rand) {
 	if !ok1 || !ok2 {
 		return
 	}
-	tg, ok := household.ComputeTargets(household.Need{Upkeep: u, Job: job, OutTgt: out}, t.par)
+	want := t.wantOf(c.Commodity)
+	tg, ok := household.ComputeTargets(household.Need{Upkeep: u, Job: job, OutTgt: out, Want: want}, t.par)
 	if !ok {
 		return
 	}
-	gap, surplus, t1, t2, t3, _ := household.Tiers(tg.Keep, c.Stock, tg.Reserve, job, 0)
+	gap, surplus, t1, t2, t3, t4 := household.Tiers(tg.Keep, c.Stock, tg.Reserve, job, want)
 	kind, ask := t.candidate(c, gap, surplus, max(c.Expiring, 0)-tg.Reserve)
 	if kind == noOrder {
 		return
@@ -330,7 +335,7 @@ func (t *tradeCtx) consider(i int, rng *rand.Rand) {
 		beliefs.Belief{Centre: int64(c.Belief.Centre), Width: c.Belief.Width},
 		beliefs.Bounds{Floor: int64(c.Bounds.Floor), Ceiling: int64(c.Bounds.Ceiling)}, t.bp, word)
 	r.commodity, r.purpose, r.reserve, r.target = c.Commodity, t.purposeOf(c.Commodity, job, isUpkeep), tg.Reserve, tg.Target
-	r.t1, r.t2, r.t3, r.limit, r.unitCost = t1, t2, t3, min(limit, MaxPrice), int64(c.UnitCost)
+	r.t1, r.t2, r.t3, r.t4, r.limit, r.unitCost = t1, t2, t3, t4, min(limit, MaxPrice), int64(c.UnitCost)
 	r.windowPos = household.EmptyPos
 	if c.Window.HasWindow {
 		r.windowPos = c.Window.Position
@@ -378,14 +383,15 @@ func (t *tradeCtx) allocate(cost, savings int64) {
 		}
 	}
 	if spendCap, ok := household.SpendCap(household.Excess(avail, savings), cost, t.par); ok {
-		t.buffer(avail, spendCap)
+		avail, spendCap = t.buffer(avail, spendCap)
+		t.fundWants(avail, spendCap)
 	}
 }
 
 // buffer is tier 3: each bid buys its buffer want scaled by the buy share, at
 // its limit, bounded in quantity by the money left and by the cap that all the
 // bids share (FR-AGT-042). It never lowers a limit.
-func (t *tradeCtx) buffer(avail, spendCap int64) {
+func (t *tradeCtx) buffer(avail, spendCap int64) (int64, int64) {
 	for i := range t.rows {
 		r := &t.rows[i]
 		if r.kind != bidOrder || r.limit < 1 {
@@ -405,6 +411,7 @@ func (t *tradeCtx) buffer(avail, spendCap int64) {
 		avail -= q * r.limit
 		spendCap -= q * r.limit
 	}
+	return avail, spendCap
 }
 
 // emit appends the intents, in canonical commodity order (D86): a bid for the
@@ -425,7 +432,10 @@ func (t *tradeCtx) emit(p *TradePlan) {
 		p.Intents = append(p.Intents, Intent{
 			Commodity: r.commodity, Side: side, Quantity: Quantity(qty), Limit: Price(r.limit),
 			Target: Quantity(r.target), Reserve: Quantity(r.reserve),
-			UnitCost: Price(r.unitCost), Purpose: r.purpose,
+			UnitCost: Price(r.unitCost), Purpose: r.purpose, WantUnits: Quantity(r.q4),
 		})
+	}
+	if t.ws != nil {
+		p.WantFunded = append(p.WantFunded, t.ws.funded...)
 	}
 }

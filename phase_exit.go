@@ -486,7 +486,9 @@ func (w *World) takeRole(a *agent, g RegionID, to RoleID) {
 	setResidues(a.residues, 0)
 	w.fillSeeds(g, newRow)
 	reseedBeliefs(a, newRow, oldRow, w.ex.seeds, w.bp)
+	from := a.role
 	a.role, a.strategy, a.roleSince = to, int(to), w.Tick()
+	w.agentRoleChanged(a, from, g)
 }
 
 // fillSeeds fills the belief seeds of the tradable set of row in region g: the
@@ -617,6 +619,7 @@ func (w *World) spawnEntrant(g RegionID, d Decision) error {
 	w.live.households++
 	w.live.inRole[cell]++
 	w.state.hadAgent[cell] = true
+	w.agentJoined(&w.agents[id], g)
 	if w.obs.supplied {
 		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: d.Role, Weight: 1, StartMoney: given})
 	}

@@ -13,7 +13,13 @@ import "fmt"
 // the slice. It is the same builder at every use: P2.5 and P3.2 each refresh the
 // context first. A module's filler is appended below the core call.
 func (w *World) fillAgentView(v *AgentView, a *agent) error {
-	return w.views.fillCore(v, a, &w.tk.vctx)
+	if err := w.views.fillCore(v, a, &w.tk.vctx); err != nil {
+		return err
+	}
+	if w.demand != nil {
+		w.fillWants(v, a)
+	}
+	return nil
 }
 
 // checkTradePlan checks the plan a strategy returned for agent a, in place and
@@ -26,6 +32,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	w.normalisePlan(a, p)
 	w.checkDiscards(a, p)
+	if w.demand != nil {
+		w.checkWants(a, p)
+	}
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
@@ -55,9 +64,31 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.obs.deliver(AgentBankrupted{Tick: tick, Agent: a.id, Region: region, Role: a.role, Weight: a.weight, Cause: cause, Money: money, GoodsListed: lots})
 		w.obs.deliver(EstateOpened{Tick: tick, Agent: a.id, Region: region, Balance: w.estates.pool(w.ledger, region), GoodsListed: lots})
 	}
+	if w.demand != nil {
+		w.demand.dropAgent(a)
+	}
 	w.logRemoval(a, cause)
 	w.forget(a, region)
 	return nil
+}
+
+// agentJoined is the first agent-lifecycle fan-in (architecture.md 2.10.4, ADR
+// 0010): the steps of the modules for an agent that has just been created, called
+// from createAgent, spawnEntrant and the integration add after the agent is in
+// the world and the live counters are updated. Nothing is drawn.
+func (w *World) agentJoined(a *agent, region RegionID) {
+	if w.demand != nil {
+		w.joinedDemand(a, region)
+	}
+}
+
+// agentRoleChanged is the second agent-lifecycle fan-in: the steps of the modules
+// for an agent whose role has just changed from the given one, called from
+// takeRole once the agent holds its new role. Nothing is drawn.
+func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
+	if w.demand != nil {
+		w.roleChangedDemand(a, from, region)
+	}
 }
 
 // relocationRefusal is the one entry point of the region_bound refusals that

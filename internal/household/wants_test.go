@@ -809,3 +809,32 @@ func BenchmarkWants(b *testing.B) {
 		household.Consumed(u, 10, 8)
 	}
 }
+
+// TestSplit verifies that Split divides the units among the shares by largest
+// remainder, ties to the lower index, so the parts add to the total, and refuses
+// shares that add to more than 10 000.
+//
+// Requirement: FR-DEM-018
+func TestSplit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		total  int64
+		shares []int64
+		want   []int64
+		ok     bool
+	}{
+		{"two thirds", 3, []int64{6_667, 3_333}, []int64{2, 1}, true},
+		{"tie goes to the lower index", 1, []int64{5_000, 5_000}, []int64{1, 0}, true},
+		{"worked example", 7, []int64{5_728, 4_272}, []int64{4, 3}, true},
+		{"one item", 5, []int64{10_000}, []int64{5}, true},
+		{"negative total is zero", -4, []int64{10_000}, []int64{0}, true},
+		{"over 10 000", 3, []int64{9_000, 9_000}, nil, false},
+	}
+	for _, tt := range tests {
+		got, ok := household.Split(nil, tt.total, tt.shares)
+		if ok != tt.ok || (ok && !slices.Equal(got, tt.want)) {
+			t.Errorf("%s: Split(%d, %v) = %v, %v, want %v, %v", tt.name, tt.total, tt.shares, got, ok, tt.want, tt.ok)
+		}
+	}
+}

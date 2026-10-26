@@ -292,6 +292,17 @@ func nextRemainder(total int64, w []int64, den, prevRem int64, prev int) (best i
 	return best, bestRem, best >= 0
 }
 
+// Split divides total units among the shares by largest remainder, ties to the
+// lower index (spec-demand.md 4.5), appended to dst[:0]: the units of each item
+// of a want. ok is false when the shares add to more than 10 000 or on an
+// overflow. A negative total counts as 0.
+func Split(dst []int64, total int64, shares []int64) ([]int64, bool) {
+	if !sharesFit(shares) {
+		return dst[:0], false
+	}
+	return apportion(dst, max(total, 0), shares, Basis)
+}
+
 // Consumed returns the units of a commodity a household consumes for its wants
 // in the consumption phase, after upkeep (spec-demand.md 4.7, D32, FR-DEM-025):
 // min(want, max(0, held - upkeep)). The subtraction is the guard that a want

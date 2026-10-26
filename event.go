@@ -158,6 +158,21 @@ const (
 	ReasonWantConsumption Reason = "want_consumption"
 )
 
+// The reasons of the "want skipped" Debug line of the demand module
+// (spec-demand.md 11.2). They are log values only: no event carries them.
+const (
+	// ReasonChoked is a want whose price ratio is at or above its choke price.
+	ReasonChoked Reason = "choked"
+	// ReasonOverBudget is a want funded in part: the budget ran out inside it.
+	ReasonOverBudget Reason = "over_budget"
+	// ReasonNoBudget is a want with units the strategy funded none of, though
+	// a bid was placed for one of its items.
+	ReasonNoBudget Reason = "no_budget"
+	// ReasonNoStock is a want with units for which the plan holds no bid of any
+	// of its items: the agent already holds what it keeps.
+	ReasonNoStock Reason = "no_stock"
+)
+
 // The reasons of the "belief updated" Debug line, in the precedence of
 // spec-beliefs.md 12.2. They are log values only: no event carries them.
 const (
@@ -629,6 +644,27 @@ type UpkeepShortfall struct {
 	Short []ShortRow
 }
 
+// WantShortfall is emitted once per region, role and want per tick in which the
+// want was choked or unfunded for at least one household (spec-demand.md 11.1),
+// in order of region, role and want; it is never emitted when every household
+// is fully funded.
+type WantShortfall struct {
+	Tick int64
+	// Region, Role and Want identify the cell.
+	Region RegionID
+	Role   RoleID
+	Want   WantID
+	// Households is the households of the role in the region that have the want
+	// in their ladder, short or not.
+	Households int64
+	// Choked is the households whose price ratio was at the choke price.
+	Choked int64
+	// Planned is the units wanted from the carry, over the households.
+	Planned int64
+	// Funded is the units the strategy placed in bids (TradePlan.WantFunded).
+	Funded int64
+}
+
 // AgentSpawned is emitted when an agent enters the world, including each
 // initial agent after WorldCreated. The stores withheld by the storage module
 // are appended with that module.
@@ -868,6 +904,7 @@ func (RecipeRefused) isEvent()     {}
 func (RecipeAbandoned) isEvent()   {}
 func (ProductionHalted) isEvent()  {}
 func (UpkeepShortfall) isEvent()   {}
+func (WantShortfall) isEvent()     {}
 func (AgentSpawned) isEvent()      {}
 func (AgentBankrupted) isEvent()   {}
 func (EstateOpened) isEvent()      {}

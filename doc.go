@@ -725,6 +725,10 @@
 //     the discretionary budget is a concave function (spec-agents.md 7.4.4).
 //   - WantView: the part of the agent view that reports, for each want of the ladder,
 //     its planned units and whether it is choked (spec-demand.md 4.6).
+//   - WantItemView: one item of a WantView: its commodity, its substitution share and
+//     its planned units (spec-demand.md 4.5).
+//   - WantFunding: the units of one want that a TradePlan funded, the rows of
+//     TradePlan.WantFunded (spec-demand.md 11.1).
 //   - WantShortfall: the event emitted once per region, role and want per tick in
 //     which a want was choked or unfunded for at least one household
 //     (spec-demand.md 11.1).

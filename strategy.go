@@ -92,6 +92,11 @@ type Intent struct {
 	UnitCost Price
 	// Purpose says why a bid is placed.
 	Purpose Purpose
+	// WantUnits is the part of a bid's Quantity that is a want of the demand
+	// module, the sum over the wants that have the commodity as an item
+	// (spec-demand.md 4.6). It is 0 for an ask and with the module off, and the
+	// world clamps it to Quantity and to the planned want units.
+	WantUnits Quantity
 }
 
 // Discard is a quantity of a commodity the strategy wants disposed of.
@@ -110,6 +115,16 @@ type TradePlan struct {
 	Intents []Intent
 	// Discards are the quantities to dispose of, executed before the intents.
 	Discards []Discard
+	// WantFunded is, for each want the strategy funded, the units it placed in
+	// bids (spec-demand.md 11.1). A strategy that ignores wants leaves it empty.
+	WantFunded []WantFunding
+}
+
+// WantFunding is the units of one want that a plan funded.
+type WantFunding struct {
+	// Want is the want and Units the units funded across its items.
+	Want  WantID
+	Units Quantity
 }
 
 // JobRequest names the recipe to start. Executions is a maximum; 0 means the
@@ -391,10 +406,38 @@ type AgentView struct {
 	// value into the view (6.4.2).
 	HasDirective bool
 	Directive    Directive
+	// Wants is the ladder of the agent's role in rank order, with the planned
+	// units of each want this tick; nil when the demand module is off or the
+	// role has no ladder (spec-demand.md 4.4).
+	Wants []WantView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).
 	scratch *viewScratch
+}
+
+// WantView is one want of the agent's ladder at this tick, computed by the
+// filler from the agent's carry and its beliefs; it commits nothing.
+type WantView struct {
+	// Want is the want.
+	Want WantID
+	// Planned is the whole units wanted this tick, over all items and the weight
+	// of the agent; 0 when Choked.
+	Planned Quantity
+	// Choked says the price ratio is at or above the choke price, so the want is
+	// skipped.
+	Choked bool
+	// Items splits Planned among the want's items by largest remainder, in
+	// ascending CommodityID.
+	Items []WantItemView
+}
+
+// WantItemView is one item of a want: its commodity, its substitution share in
+// basis points and the planned units.
+type WantItemView struct {
+	Commodity CommodityID
+	Share     int64
+	Units     Quantity
 }
 
 // OutcomeView is what Revise reads for one admitted order, after its market

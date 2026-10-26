@@ -73,6 +73,14 @@ func (w *World) tradeAgent(a *agent) error {
 	return nil
 }
 
+// p36Aggregates is P3.6: the per-region, per-role aggregates of the trade phase,
+// a fixed sequence of guarded calls into the module files (spec-world.md 6, D312).
+func (w *World) p36Aggregates() {
+	if w.demand != nil {
+		w.p36Wants()
+	}
+}
+
 // normalisePlan applies the clamps of the belief inputs to every intent of the
 // plan and logs a Debug line for each one it changed (spec-agents.md 6.5.2).
 func (w *World) normalisePlan(a *agent, p *TradePlan) {

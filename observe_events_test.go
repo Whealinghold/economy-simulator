@@ -62,8 +62,9 @@ var emittedBy = []struct{ event, scenario string }{
 // world through its public API, and the public relocation and edge status calls
 // are INT's (plan 2-17): TestRelocate_EventAndOrder and TestEdgeStatus_Events in
 // the internal tests of regions emit them until then, and plan 17 deletes these
-// entries with its scenarios.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged"}
+// entries with its scenarios. WantShortfall is emitted only with the demand module on,
+// by the one-demand scenarios and the tests of that module.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.
