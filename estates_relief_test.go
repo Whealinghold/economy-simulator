@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"log/slog"
 	"slices"
 	"testing"
 
@@ -140,5 +141,55 @@ func TestReliefPaid_Events(t *testing.T) {
 		if ev := reliefRun(t, c.on, c.release); len(ev) != 0 {
 			t.Errorf("%s: %d ReliefPaid events, want none: %+v", c.name, len(ev), ev[0])
 		}
+	}
+}
+
+// TestReliefReleased_DebugLine verifies the Debug line of the pass: one per
+// region and tick in which the pool released, with the due and the applied
+// amounts, at no level above Debug, and none with a release of 0.
+// Requirement: FR-EST-017
+func TestReliefReleased_DebugLine(t *testing.T) {
+	t.Parallel()
+	run := func(release int64) (lines int, h *captureHandler) {
+		c := minimalConfig()
+		c.Modules.Estates = &economysim.Estates{}
+		c.Regions[0].PoolRelease = release
+		c.Regions[0].ReliefBelow = economysim.MaxBasisPoints
+		c.WarmStart = &economysim.WarmStart{Pools: []economysim.WarmPool{{Region: "home", Money: 100_000}}}
+		h = newCaptureHandler()
+		w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+		if err != nil {
+			t.Fatalf("NewWorld() error = %v, want nil", err)
+		}
+		h.forget()
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+		for _, l := range h.records() {
+			if l.level > slog.LevelDebug {
+				t.Errorf("line %q at level %v, want Debug only from the step", l.msg, l.level)
+			}
+			if l.msg == "relief released" {
+				lines++
+			}
+		}
+		return lines, h
+	}
+	n, h := run(100)
+	if n != 1 {
+		t.Fatalf("%d relief released lines, want 1", n)
+	}
+	for _, l := range h.records() {
+		if l.msg != "relief released" {
+			continue
+		}
+		for _, key := range []string{"region", "due", "applied", "agents", "households"} {
+			if _, ok := l.attr(key); !ok {
+				t.Errorf("relief released line has no %q attribute: %+v", key, l.attrs)
+			}
+		}
+	}
+	if n, _ := run(0); n != 0 {
+		t.Errorf("%d relief released lines with PoolRelease 0, want 0", n)
 	}
 }

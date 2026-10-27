@@ -2,14 +2,17 @@ package economysim
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the estate of a region (spec-estates.md): its identity, the
@@ -610,13 +613,25 @@ func (w *World) p16Relief() error {
 	return nil
 }
 
-// reliefReport delivers ReliefPaid for every region that paid, in ascending
-// RegionID (FR-EST-020). The event is built only with an observer.
+// reliefReport logs, at Debug, every region whose pool released at least 1 with
+// what was due and what was paid (so a tick with no ReliefPaid says whether the
+// pool was empty, nobody was below the line or the shares truncated to 0), then
+// delivers ReliefPaid for every region that paid, in ascending RegionID
+// (FR-EST-020). The event is built only with an observer.
 func (w *World) reliefReport() {
+	rp := w.relief
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		for r := range w.cfg.Regions {
+			if rp.release[r] >= 1 {
+				w.log.LogAttrs(ctx, slog.LevelDebug, "relief released", slog.Int64(logkeys.Region, int64(r)),
+					slog.Int64(logkeys.Due, rp.release[r]), slog.Int64(logkeys.Applied, rp.paid[r]),
+					slog.Int64(logkeys.Agents, rp.recipients[r]), slog.Int64(logkeys.Households, rp.households[r]))
+			}
+		}
+	}
 	if !w.obs.supplied {
 		return
 	}
-	rp := w.relief
 	for r := range w.cfg.Regions {
 		if rp.paid[r] >= 1 {
 			w.obs.deliver(ReliefPaid{Tick: w.Tick(), Region: RegionID(r), Paid: Money(rp.paid[r]),
