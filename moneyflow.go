@@ -1011,7 +1011,8 @@ func (f *flowState) endConsistent() bool {
 }
 
 // loadPoolCarries reads the pairs of one pool flow: the region index strictly
-// ascending and inside the regions, the carry inside its denominator.
+// ascending and inside the regions the flow targets, the carry inside its
+// denominator.
 func loadPoolCarries(r *codec.Reader, f *flowState) {
 	for g := range f.poolCarry {
 		f.poolCarry[g] = carryUnset
@@ -1025,6 +1026,10 @@ func loadPoolCarries(r *codec.Reader, f *flowState) {
 		}
 		if g >= uint64(len(f.poolCarry)) {
 			r.Failf("flow carry names region %d, outside the %d regions", g, len(f.poolCarry))
+			return
+		}
+		if f.region >= 0 && g != uint64(f.region) {
+			r.Failf("flow carry names region %d, but the flow targets region %d", g, f.region)
 			return
 		}
 		prev, f.poolCarry[g] = g, carry

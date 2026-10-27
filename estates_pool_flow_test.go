@@ -356,6 +356,34 @@ func TestCheckpoint_PoolCarryCorrupt(t *testing.T) {
 	}
 }
 
+// TestCheckpoint_PoolCarryOfAnUntargetedRegion verifies that tag 13 of a flow that
+// targets one region is refused when its pair names another region.
+//
+// Requirement: FR-MON-046, FR-CHK-023
+func TestCheckpoint_PoolCarryOfAnUntargetedRegion(t *testing.T) {
+	t.Parallel()
+	f := poolFlow("aid", economysim.FlowGrant, "home")
+	f.Amount, f.Per = 7, economysim.PerYear
+	cfg := func() economysim.Config { return poolConfig(f) }
+	w := moneyWorld(t, cfg())
+	step(t, w, 5)
+	raw := mustMarshal(t, mustCheckpoint(t, w))
+	base := bodyValues(t, tagBody(t, raw, 13))
+	if len(base) != 6 {
+		t.Fatalf("tag 13 after 5 ticks = %v, want a header, a count and one pair", base)
+	}
+	ck := reframe(t, raw, func(s []section) []section {
+		return editSection(s, 13, func([]byte) []byte {
+			v := slices.Clone(base)
+			v[4] = 0 // "away", which the flow does not target
+			return bodyBytes(v)
+		})
+	})
+	if _, err := economysim.RestoreWorld(cfg(), ck); !errors.Is(err, economysim.ErrCheckpointCorrupt) {
+		t.Errorf("RestoreWorld error = %v, want ErrCheckpointCorrupt", err)
+	}
+}
+
 // TestFork_Estates verifies fork-at-N with the estates module on, on pack famine
 // with a seeded pool and a rate grant to the pool of the north (so a pool carry
 // is mid-year), at tick 0, inside a job (37), inside a season (150), and after a
