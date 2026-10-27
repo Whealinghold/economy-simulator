@@ -573,6 +573,9 @@ func (w *World) runFlow(m *moneyFlows, i int) {
 
 // visitFlow computes the due of one recipient, cuts it by the room bound and then
 // the limit, moves what is left and ends the flow when it reaches its limit.
+// The cells are scanned at the start of P1.7 and nothing relocates an account
+// during the pass, so region is the recipient's region (a module that moved one
+// here would credit the aggregate row to the wrong region).
 func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
 	f := &m.flows[i]
 	v, err := w.ledger.Account(a.account)
