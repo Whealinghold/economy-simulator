@@ -416,8 +416,10 @@ coverage falls below the thresholds. **[project]**
 - **R**, the race run: `go test -race -timeout 60m ./...`. Under `-race` the
   scenario and determinism tests run a reduced seed set (`raceSeeds`, one).
 - **F**, the full run with coverage, without `-race`:
-  `go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...`.
+  `go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...`.
   All seeds and all cases run, and the thresholds below are read from its profile.
+  Its timeout is 120m, not 60m: the root package needs about 60 minutes under atomic
+  coverage, so 60m left no margin (owner ruling, stage 2-6).
 
 Coverage is not taken under `-race`: with atomic coverage of `-coverpkg=./...`
 the race run took 48 to 58 minutes, against 164 seconds without coverage and 15
@@ -566,4 +568,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f9a534ad31fa07e5cb0818c0
+RULE-TAG: cb434ac287a78ec8e68eee2f
