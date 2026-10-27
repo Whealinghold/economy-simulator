@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"fmt"
+	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
 )
@@ -249,4 +250,117 @@ func x4Conservation(s economysim.Snapshot) []string {
 		bad = append(bad, fmt.Sprintf("tick %d: money of the accounts plus boundary = %d, want 0", s.Tick, v))
 	}
 	return bad
+}
+
+// flatRun builds a ten-tick run (window 5) of one region with two commodities,
+// "a" producible and "b" not: every tick each market trades 5 units at 100,
+// holds 10 belief outcomes with none at a bound, and the households stay at the
+// 1 000 of the start, with no boundary and no money. edit may change a snapshot
+// before it is stored.
+func flatRun(edit func(tick int64, s *economysim.Snapshot)) stableRun {
+	const ticks, window = 10, 5
+	run := stableRun{Samples: map[int64]economysim.Snapshot{}, Start: 1_000, Producible: map[string]bool{"a": true}, Ticks: ticks, Window: window}
+	for tick := int64(0); tick < ticks; tick++ {
+		s := economysim.Snapshot{
+			Tick: tick + 1, Households: 1_000, Names: economysim.Names{Regions: []string{"r"}, Commodities: []string{"a", "b"}},
+			Markets: []economysim.MarketRow{
+				{State: economysim.MarketState{Commodity: 0, Price: 100, Volume: 5}, Beliefs: 10},
+				{State: economysim.MarketState{Commodity: 1, Price: 100, Volume: 5}, Beliefs: 10},
+			},
+		}
+		if edit != nil {
+			edit(tick, &s)
+		}
+		run.Samples[tick] = s
+	}
+	return run
+}
+
+// failing returns the keys of the criteria that do not pass, in order.
+func failing(crit []x4Criterion) string {
+	var keys string
+	for _, c := range crit {
+		if !c.Pass {
+			keys += c.Key
+		}
+	}
+	return keys
+}
+
+// TestScenarioHelpers_StablePredicate verifies the X4 predicate on hand-built
+// series: a flat series passes (a) to (f) with the D363 priors, six variants each
+// break exactly one criterion and the predicate names it, and a threshold set
+// with no value is reported and not asserted.
+//
+// Window of 5 ticks, two markets. (a) one unit of money outside the boundary;
+// (b) "a" never trades, a trade share of 0; (c) both markets trade 1 unit in 4 of
+// the 5 ticks, a mean volume of 8 / (2 * 5) = 0.8 below 1 while each still trades
+// in 8 000 bp of the ticks, the prior of (b); (d) 6 of 10 outcomes at the floor is
+// more than half, a market pinned in every tick; (e) households at 800 of 1 000;
+// (f) a price of 250 against 100 is a range of 2.5, above the prior 2. The last
+// case breaks (b), (c) with no trade at all, (d), (e) and (f), and only the two
+// whose thresholds are set (the households, and (c) which always is) are named.
+//
+// Requirement: FR-REF-027, FR-REF-042 (proposed)
+func TestScenarioHelpers_StablePredicate(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		edit func(tick int64, s *economysim.Snapshot)
+		th   x4Thresholds
+		want string // the keys that fail, in order
+		not  string // the keys that are not asserted
+	}{
+		{"flat series passes", nil, x4Priors, "", ""},
+		{"a: money outside the boundary", func(tick int64, s *economysim.Snapshot) {
+			if tick == 3 {
+				s.Money = 1
+			}
+		}, x4Priors, "a", ""},
+		{"b: the producible commodity does not trade", func(tick int64, s *economysim.Snapshot) { s.Markets[0].State.Volume = 0 }, x4Priors, "b", ""},
+		{"c: thin markets that still trade in 8 000 bp of the ticks", func(tick int64, s *economysim.Snapshot) {
+			for i := range s.Markets {
+				s.Markets[i].State.Volume = 1
+				if tick%5 == 4 {
+					s.Markets[i].State.Volume = 0
+				}
+			}
+		}, x4Priors, "c", ""},
+		{"d: a market pinned at the floor", func(tick int64, s *economysim.Snapshot) { s.Markets[1].AtFloor = 6 }, x4Priors, "d", ""},
+		{"e: households fall to 800 bp of the start", func(tick int64, s *economysim.Snapshot) {
+			if tick == 9 {
+				s.Households = 800
+			}
+		}, x4Priors, "e", ""},
+		{"f: the price range reaches 2.5", func(tick int64, s *economysim.Snapshot) {
+			if tick == 9 {
+				s.Markets[0].State.Price = 250
+			}
+		}, x4Priors, "f", ""},
+		{"unset thresholds are reported, not asserted", func(tick int64, s *economysim.Snapshot) {
+			s.Markets[0].State.Volume, s.Markets[1].State.Volume, s.Markets[1].AtFloor = 0, 0, 6
+			s.Households = 800
+		}, x4Thresholds{HouseholdsBP: x4Threshold{V: 9_000, Set: true}}, "ce", "bdf"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			crit := stablePredicate(flatRun(tt.edit), tt.th)
+			if len(crit) != 6 {
+				t.Fatalf("stablePredicate returned %d criteria, want 6", len(crit))
+			}
+			if got := failing(crit); got != tt.want {
+				t.Errorf("stablePredicate failing criteria = %q, want %q: %+v", got, tt.want, crit)
+			}
+			var notAsserted string
+			for _, c := range crit {
+				if !c.Asserted {
+					notAsserted += c.Key
+				}
+			}
+			if notAsserted != tt.not {
+				t.Errorf("stablePredicate unasserted criteria = %q, want %q", notAsserted, tt.not)
+			}
+		})
+	}
 }
