@@ -3,6 +3,7 @@ package economysim_test
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -212,6 +213,24 @@ func noMoneyFlowAfterConstruction(evs []economysim.Event) []string {
 	return bad
 }
 
+// withoutConfiguredFlows drops the BoundaryFlow events of the money flows of the
+// configuration: a flow of the money supply module is a named faucet or sink, the
+// one way money may move after construction (FR-MON-002), and its accounting is
+// the module's own tests.
+func withoutConfiguredFlows(cfg economysim.Config, evs []economysim.Event) []economysim.Event {
+	if cfg.Modules.MoneySupply == nil {
+		return evs
+	}
+	var out []economysim.Event
+	for _, e := range evs {
+		if f, ok := e.(economysim.BoundaryFlow); ok && slices.ContainsFunc(cfg.Modules.MoneySupply.Flows, func(m economysim.MoneyFlow) bool { return economysim.Reason(m.ID) == f.Reason }) {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
 // invariantCase is one row of the invariants table (REF 7.5).
 type invariantCase struct {
 	name   string
@@ -270,7 +289,7 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64) {
 		if err != nil {
 			t.Fatalf("seed %d tick %d: Snapshot error = %v", seed, i, err)
 		}
-		fail(i, "money flow", noMoneyFlowAfterConstruction(rec.events))
+		fail(i, "money flow", noMoneyFlowAfterConstruction(withoutConfiguredFlows(cfg, rec.events)))
 		fail(i, "agents, orders and prices", c.events(rec.events))
 		rec.forget()
 		fail(i, "conservation", c.balances(s))
