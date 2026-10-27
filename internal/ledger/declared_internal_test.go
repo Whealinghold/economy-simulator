@@ -26,7 +26,7 @@ func wantRowCfg(declared ...Reason) Config {
 // Requirement: FR-LED-050, FR-LED-052
 func TestLedger_DeclaredBitReplacesThreshold(t *testing.T) {
 	t.Parallel()
-	declarable := []Reason{LoanOut, LoanRepay, LoanInterest, WantConsumption}
+	declarable := []Reason{LoanOut, LoanRepay, LoanInterest, WantConsumption, Relief}
 	for r := Reason(0); r <= NumReasons; r++ {
 		want := slices.Contains(declarable, r)
 		t.Run(fmt.Sprintf("reason %d", r), func(t *testing.T) {
@@ -87,9 +87,9 @@ func TestLedger_DeclaredBitReplacesThreshold(t *testing.T) {
 func TestRank_DeclaredRowsFollowTheTable(t *testing.T) {
 	t.Parallel()
 	got := DeclaredByRank(nil)
-	// want_consumption is row 6 of the table, the loan rows 25 to 27; its number
-	// is the highest, so the two orders differ.
-	want := []Reason{WantConsumption, LoanOut, LoanRepay, LoanInterest}
+	// want_consumption is row 6 of the table, relief row 12, the loan rows 25 to
+	// 27; the numbers of the first two are the highest, so the two orders differ.
+	want := []Reason{WantConsumption, Relief, LoanOut, LoanRepay, LoanInterest}
 	if !slices.Equal(got, want) {
 		t.Errorf("DeclaredByRank(nil) = %v, want %v", got, want)
 	}

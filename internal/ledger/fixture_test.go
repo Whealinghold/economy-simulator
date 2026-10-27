@@ -31,7 +31,7 @@ func newFix(t *testing.T, maxMoney int64) *fix {
 		Regions:     2,
 		MaxMoney:    maxMoney,
 		MaxQuantity: testMaxQuantity,
-		Declared:    []ledger.Reason{ledger.LoanOut, ledger.LoanRepay, ledger.LoanInterest},
+		Declared:    []ledger.Reason{ledger.LoanOut, ledger.LoanRepay, ledger.LoanInterest, ledger.Relief},
 		MaxClaims:   4,
 	})
 	if err != nil {

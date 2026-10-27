@@ -63,6 +63,10 @@ const (
 	// 4.7): the consumption of a want beyond upkeep. It is a declared row, and
 	// the first one past the Stage 1 size (numStage1Reasons).
 	WantConsumption
+	// Relief is the money the estates module's pool pays a household below the
+	// relief line (spec-estates.md 2.6): estate to agent. It is a declared row
+	// past the Stage 1 size; it opens no boundary account.
+	Relief
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -147,6 +151,8 @@ var table = [NumReasons][2]row{
 	// want_consumption is a goods sink from an agent to a boundary (spec-demand.md
 	// 4.7); its rank is its position in the table of 7.2.
 	WantConsumption: {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 6}},
+	// relief runs from an estate to an agent (spec-ledger.md 7.2).
+	Relief: {thingMoney: {true, Internal, setEstate, setAgent, false, true, 12}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

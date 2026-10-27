@@ -246,22 +246,26 @@ func (l *Ledger) rowOf(r Reason, goods bool) (row, bool) {
 	return row{}, false
 }
 
-// setOff records the offset of (r, t). The slice of later reasons is made when
-// the first of them has an offset, so it stays nil in a ledger with no module.
+// setOff records the offset of (r, t). The slice of later reasons grows only as
+// far as the last of them that has an offset, so it stays nil in a ledger with no
+// module and a ledger that declares only an earlier one has the same slice as it
+// had before a later reason was added (the per-position state hash walks it).
 func (l *Ledger) setOff(r Reason, t, o int) {
 	if int(r) < numStage1Reasons {
 		l.off[r][t] = o
 		return
 	}
-	if o >= 0 && l.later == nil {
-		l.later = make([][2]int, int(NumReasons)-numStage1Reasons)
-		for i := range l.later {
-			l.later[i] = [2]int{-1, -1}
+	i := int(r) - numStage1Reasons
+	if o < 0 {
+		if i < len(l.later) {
+			l.later[i][t] = o
 		}
+		return
 	}
-	if l.later != nil {
-		l.later[int(r)-numStage1Reasons][t] = o
+	for len(l.later) <= i {
+		l.later = append(l.later, [2]int{-1, -1})
 	}
+	l.later[i][t] = o
 }
 
 // offOf returns the offset of (r, t) in a region's block of flow slots, and -1
@@ -276,7 +280,7 @@ func (l *Ledger) offOf(r Reason, t int) int {
 			return l.flowOff[i]
 		}
 		return -1
-	case l.later == nil:
+	case int(r)-numStage1Reasons >= len(l.later):
 		return -1
 	}
 	return l.later[int(r)-numStage1Reasons][t]
