@@ -22,9 +22,9 @@ import (
 // is internal/moneyflow.
 
 // The target kinds that are recognised but not built (plan 2-6 D320): a flow
-// naming one is ErrModuleDependency until its module is built.
+// naming one is ErrModuleDependency until its module is built. The pool is built
+// with the estates module (plan 2-7 D353).
 const (
-	targetPool     = "pool"
 	targetStores   = "stores"
 	targetTreasury = "treasury"
 )
@@ -190,10 +190,26 @@ func (v *validator) flowTarget(base []string, f MoneyFlow) {
 		if t.Region != "" && !v.region[t.Region] {
 			v.rep.add(ErrUnknownRegion, path(tp, "region"), t.Region, "")
 		}
-	case targetPool, targetStores, targetTreasury:
+	case TargetPool:
+		v.poolTarget(tp, t)
+	case targetStores, targetTreasury:
 		v.rep.add(ErrModuleDependency, path(tp, "kind"), t.Kind, "")
 	default:
 		v.rep.add(ErrOutOfBounds, path(tp, "kind"), t.Kind, "")
+	}
+}
+
+// poolTarget checks a pool target (spec-money-supply.md 4.3.2, 12.1): it needs the
+// estates module, has no role and names a region that is defined or none.
+func (v *validator) poolTarget(tp []string, t FlowTarget) {
+	switch {
+	case v.c.Modules.Estates == nil:
+		v.rep.add(ErrModuleDependency, path(tp, "kind"), t.Kind, "")
+	case t.Role != "":
+		v.rep.add(ErrFlowShape, path(tp, "role"), t.Role, "")
+	}
+	if t.Region != "" && !v.region[t.Region] {
+		v.rep.add(ErrUnknownRegion, path(tp, "region"), t.Region, "")
 	}
 }
 
@@ -210,8 +226,8 @@ func moneyGrantsIncome(c *Config, ro *Role) bool {
 	})
 }
 
-// moneyWarnings returns the five warnings of the module that this build can
-// raise (spec-money-supply.md 12.2, plan 2-6 D338), or nil when it is off. Like
+// moneyWarnings returns the warnings of the module that this build can raise
+// (spec-money-supply.md 12.2, plan 2-6 D338, plan 2-7 D353), or nil when it is off. Like
 // warnings it reads a configuration as given, skips what is not defined and
 // never fails.
 func moneyWarnings(c *Config, lk lookup) []Warning {
@@ -236,11 +252,14 @@ func moneyWarnings(c *Config, lk lookup) []Warning {
 }
 
 // flowWarnings raises the warnings of one flow: faucet_without_sink,
-// class_empty and levy_below_upkeep.
+// grant_to_pool_no_outlet, class_empty and levy_below_upkeep.
 func flowWarnings(c *Config, lk lookup, f MoneyFlow, hasLevy bool, add func(string, ...string)) {
 	p := []string{"modules", "money_supply", "flows", f.ID}
 	if f.Kind == FlowGrant && f.Limit == 0 && !hasLevy {
 		add("faucet_without_sink", p...)
+	}
+	if f.Kind == FlowGrant && poolNoOutlet(c, f.Target) {
+		add("grant_to_pool_no_outlet", p...)
 	}
 	if f.Target.Kind != TargetHouseholds {
 		return
@@ -251,6 +270,19 @@ func flowWarnings(c *Config, lk lookup, f MoneyFlow, hasLevy bool, add func(stri
 	if f.Kind == FlowLevy && levyBelowUpkeep(c, lk, f) {
 		add("levy_below_upkeep", p...)
 	}
+}
+
+// poolNoOutlet is the condition of grant_to_pool_no_outlet: the target is a pool
+// and a region it names has PoolRelease 0, so the money reaches nobody except
+// entrants (spec-money-supply.md 7.4, 12.2). It needs the estates module, which a
+// pool target is refused without.
+func poolNoOutlet(c *Config, t FlowTarget) bool {
+	if t.Kind != TargetPool || c.Modules.Estates == nil {
+		return false
+	}
+	return slices.ContainsFunc(c.Regions, func(r Region) bool {
+		return (t.Region == "" || r.ID == t.Region) && r.PoolRelease == 0
+	})
 }
 
 // targets reports whether a group is in the class of a household target.
@@ -387,6 +419,19 @@ type flowState struct {
 	// visit; it is kept for an agent that leaves the class and dropped with the
 	// agent (spec-money-supply.md 4.3.1, 14).
 	carry []int64
+	// poolCarry is the carry of each region's pool for a flow with a pool target,
+	// by RegionID, carryUnset until the first visit (spec-money-supply.md 6.2, 14).
+	// It is nil for any other target.
+	poolCarry []int64
+}
+
+// recipient is one account a flow visits: the account, its weight (1 for a pool),
+// its carry and the agent that owns it, nil for a pool (plan 2-7 D353).
+type recipient struct {
+	account int
+	weight  int64
+	carry   *int64
+	agent   *agent
 }
 
 // flowAgg is the per-tick aggregate of one flow in one region: the amounts and
@@ -467,12 +512,15 @@ func newMoneyFlows(c *Config, l *ledger.Ledger) *moneyFlows {
 func newFlowState(c *Config, l *ledger.Ledger, i int, f MoneyFlow) flowState {
 	reason := ledger.FlowReason(i)
 	boundary, ok := l.Boundary(reason, ledger.Money)
-	role := slices.IndexFunc(c.Roles, func(r Role) bool { return r.ID == f.Target.Role })
+	role := -1
+	if f.Target.Kind == TargetHouseholds {
+		role = slices.IndexFunc(c.Roles, func(r Role) bool { return r.ID == f.Target.Role })
+	}
 	region := -1
 	if f.Target.Region != "" {
 		region = slices.IndexFunc(c.Regions, func(r Region) bool { return r.ID == f.Target.Region })
 	}
-	if !ok || role < 0 || (f.Target.Region != "" && region < 0) {
+	if !ok || (f.Target.Kind == TargetHouseholds && role < 0) || (f.Target.Region != "" && region < 0) {
 		invariant("a money flow's boundary, role or region does not resolve after validation: " + f.ID)
 	}
 	st := flowState{
@@ -481,6 +529,12 @@ func newFlowState(c *Config, l *ledger.Ledger, i int, f MoneyFlow) flowState {
 	}
 	if f.Per == PerYear {
 		st.period = c.Calendar.TicksPerYear()
+	}
+	if f.Target.Kind == TargetPool {
+		st.poolCarry = make([]int64, len(c.Regions))
+		for g := range st.poolCarry {
+			st.poolCarry[g] = carryUnset
+		}
 	}
 	if f.Limit > 0 {
 		st.limit = min(f.Limit, MaxFlowTotal)
@@ -574,8 +628,13 @@ func (w *World) runFlow(m *moneyFlows, i int) {
 		lo, hi = f.region, f.region+1
 	}
 	for g := lo; g < hi; g++ {
+		if f.poolCarry != nil {
+			w.visitFlow(m, i, g, recipient{account: w.estates.account(RegionID(g)), weight: 1, carry: &f.poolCarry[g]})
+			continue
+		}
 		for _, id := range m.cells[g*m.roles+int(f.role)] {
-			w.visitFlow(m, i, g, &w.agents[id])
+			a := &w.agents[id]
+			w.visitFlow(m, i, g, recipient{account: a.account, weight: a.weight, carry: &f.carry[a.id], agent: a})
 		}
 	}
 }
@@ -585,7 +644,7 @@ func (w *World) runFlow(m *moneyFlows, i int) {
 // The cells are scanned at the start of P1.7 and nothing relocates an account
 // during the pass, so region is the recipient's region (a module that moved one
 // here would credit the aggregate row to the wrong region).
-func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
+func (w *World) visitFlow(m *moneyFlows, i, region int, a recipient) {
 	f := &m.flows[i]
 	v, err := w.ledger.Account(a.account)
 	if err != nil {
@@ -595,7 +654,7 @@ func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
 	if f.flow.Kind == FlowLevy {
 		bal -= v.Reserved // Transfer spends only balance less reserved
 	}
-	due, room := f.plan(a, bal)
+	due, room := f.plan(a.weight, f.started(a, region), bal)
 	applied, cut := moneyflow.Clamp(due, room, f.limit-f.total)
 	if applied > 0 {
 		w.moveFlow(f, a, applied)
@@ -616,26 +675,26 @@ func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
 	}
 }
 
-// plan returns the due of a recipient with the balance and the room its bound
-// leaves, and advances the recipient's carry by the due (FR-MON-006, 022).
-func (f *flowState) plan(a *agent, bal int64) (due, room int64) {
+// plan returns the due of a recipient of weight weight, with carry c, the balance
+// and the room its bound leaves, and advances the carry by the due (FR-MON-006,
+// 022).
+func (f *flowState) plan(weight int64, c *int64, bal int64) (due, room int64) {
 	fl := &f.flow
 	if fl.Kind == FlowGrant && fl.Level != 0 {
-		due, ok := moneyflow.TopUp(a.weight, fl.Level, f.scale, bal, MaxMoney)
+		due, ok := moneyflow.TopUp(weight, fl.Level, f.scale, bal, MaxMoney)
 		if !ok {
 			invariant("a money flow's top-up left its validated bounds: " + fl.ID)
 		}
 		return due, MaxMoney - bal
 	}
-	c := f.carryOf(a)
-	avail := availableAbove(bal, a.weight, fl.Exempt)
+	avail := availableAbove(bal, weight, fl.Exempt)
 	var ok bool
 	switch {
 	case fl.Kind == FlowLevy && fl.RateBP != 0:
 		due, *c, ok = moneyflow.RateLevy(avail, fl.RateBP, f.scale, *c, f.period, MaxMoney)
 		room = avail
 	default:
-		due, *c, ok = moneyflow.Spread(a.weight, fl.Amount, f.scale, *c, f.period, MaxMoney)
+		due, *c, ok = moneyflow.Spread(weight, fl.Amount, f.scale, *c, f.period, MaxMoney)
 		room = avail
 		if fl.Kind == FlowGrant {
 			room = MaxMoney - bal
@@ -647,13 +706,19 @@ func (f *flowState) plan(a *agent, bal int64) (due, room int64) {
 	return due, room
 }
 
-// carryOf returns the carry of a recipient, starting it at the first visit.
-func (f *flowState) carryOf(a *agent) *int64 {
-	c := &f.carry[a.id]
-	if *c == carryUnset {
+// started returns the carry of a recipient, starting it at the first visit: from
+// the account ID for a household and from the region's index for a pool
+// (spec-money-supply.md 6.2).
+func (f *flowState) started(a recipient, region int) *int64 {
+	c := a.carry
+	if *c == carryUnset && f.hasCarry() {
 		*c = 0
+		id := int64(a.account)
+		if a.agent == nil {
+			id = int64(region)
+		}
 		if !(f.flow.Kind == FlowLevy && f.flow.RateBP != 0) {
-			*c = moneyflow.StartCarry(int64(a.account), f.period)
+			*c = moneyflow.StartCarry(id, f.period)
 		}
 	}
 	return c
@@ -672,7 +737,7 @@ func availableAbove(bal, weight, exempt int64) int64 {
 // moveFlow transfers an applied amount between the flow's boundary and the
 // recipient, adds it to the flow's total and, for a grant that is income, to the
 // recipient's unearned income of the tick (plan 2-6 D332).
-func (w *World) moveFlow(f *flowState, a *agent, amount int64) {
+func (w *World) moveFlow(f *flowState, a recipient, amount int64) {
 	from, to := f.boundary, a.account
 	if f.flow.Kind == FlowLevy {
 		from, to = to, from
@@ -681,8 +746,8 @@ func (w *World) moveFlow(f *flowState, a *agent, amount int64) {
 		invariant("the ledger refused a money flow's transfer: " + err.Error())
 	}
 	f.total += amount
-	if f.flow.Kind == FlowGrant && !f.flow.NotIncome {
-		w.welfare.addUnearned(int(a.id), amount)
+	if f.flow.Kind == FlowGrant && !f.flow.NotIncome && a.agent != nil {
+		w.welfare.addUnearned(int(a.agent.id), amount)
 	}
 }
 
@@ -837,7 +902,9 @@ func (w *World) flowBoundaryRows(rows []BoundaryRow) []BoundaryRow {
 // ID order its total, scale and end, then per flow that keeps a carry the started
 // carries as (account ID, carry) pairs in ascending account ID. An agent has one
 // account and the IDs rise with the account, so the pairs are in ascending order;
-// the carries of removed agents were dropped.
+// the carries of removed agents were dropped. A flow with a pool target writes
+// its started carries as (region index, carry) pairs in ascending index instead
+// (plan 2-7 D355).
 func (w *World) saveMoneySupply(cw *codec.Writer) error {
 	for _, f := range w.money.flows {
 		cw.U(uint64(f.total))
@@ -846,11 +913,33 @@ func (w *World) saveMoneySupply(cw *codec.Writer) error {
 	}
 	for i := range w.money.flows {
 		f := &w.money.flows[i]
-		if f.hasCarry() {
+		switch {
+		case !f.hasCarry():
+		case f.poolCarry != nil:
+			savePoolCarries(cw, f)
+		default:
 			w.saveCarries(cw, f)
 		}
 	}
 	return nil
+}
+
+// savePoolCarries writes the started carries of one pool flow: a count, then the
+// pairs of region index and carry in ascending index.
+func savePoolCarries(cw *codec.Writer, f *flowState) {
+	n := 0
+	for _, c := range f.poolCarry {
+		if c != carryUnset {
+			n++
+		}
+	}
+	cw.Count(n)
+	for g, c := range f.poolCarry {
+		if c != carryUnset {
+			cw.U(uint64(g))
+			cw.U(uint64(c))
+		}
+	}
 }
 
 // saveCarries writes the started carries of one flow: a count, then the pairs.
@@ -891,7 +980,12 @@ func (w *World) loadMoneySupply(_ *restoreCtx, r *codec.Reader) error {
 		}
 	}
 	for i := range m.flows {
-		if f := &m.flows[i]; f.hasCarry() && r.Err() == nil {
+		f := &m.flows[i]
+		switch {
+		case !f.hasCarry() || r.Err() != nil:
+		case f.poolCarry != nil:
+			loadPoolCarries(r, f)
+		default:
 			w.loadCarries(r, f)
 		}
 	}
@@ -909,6 +1003,27 @@ func (f *flowState) endConsistent() bool {
 		return f.total == f.limit && f.flow.Limit > 0
 	default:
 		return f.total == f.limit && f.flow.Limit == 0
+	}
+}
+
+// loadPoolCarries reads the pairs of one pool flow: the region index strictly
+// ascending and inside the regions, the carry inside its denominator.
+func loadPoolCarries(r *codec.Reader, f *flowState) {
+	for g := range f.poolCarry {
+		f.poolCarry[g] = carryUnset
+	}
+	den, prev := f.carryDen(), uint64(0)
+	for i := range r.Count(2) {
+		g := r.Strict(prev, i > 0)
+		carry := r.Bounded("flow carry", den-1)
+		if r.Err() != nil {
+			return
+		}
+		if g >= uint64(len(f.poolCarry)) {
+			r.Failf("flow carry names region %d, outside the %d regions", g, len(f.poolCarry))
+			return
+		}
+		prev, f.poolCarry[g] = g, carry
 	}
 }
 

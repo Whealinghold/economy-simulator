@@ -785,6 +785,9 @@ const (
 	PerYear = "year"
 	// TargetHouseholds is the class of the households of a role.
 	TargetHouseholds = "households"
+	// TargetPool is the estate pool of a region, or of every region when the
+	// target names none. It needs the estates module.
+	TargetPool = "pool"
 )
 
 // MoneyFlow is one configured faucet (Kind FlowGrant) or sink (Kind FlowLevy)
@@ -826,14 +829,14 @@ type MoneyFlow struct {
 	Label string
 }
 
-// FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kind
-// TargetHouseholds is built; the other kinds are recognised and refused with
-// ErrModuleDependency until their modules are built.
+// FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kinds
+// TargetHouseholds and TargetPool are built; the other kinds are recognised and
+// refused with ErrModuleDependency until their modules are built.
 type FlowTarget struct {
-	// Kind is TargetHouseholds.
+	// Kind is TargetHouseholds or TargetPool.
 	Kind string
 	// Region is the region of the class; empty is every region.
 	Region string
-	// Role is the role of the households.
+	// Role is the role of the households; a pool has none.
 	Role string
 }

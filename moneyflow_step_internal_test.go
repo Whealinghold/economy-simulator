@@ -321,19 +321,19 @@ func TestPlanFlow_DueIgnoresEverythingElse(t *testing.T) {
 	w.money.scan(w)
 	f := &w.money.flows[0]
 	f.carry[1] = 0
-	first, _ := f.plan(a, 0)
+	first, _ := f.plan(a.weight, &f.carry[1], 0)
 	f.carry[1] = 0
-	second, _ := f.plan(a, 777)
+	second, _ := f.plan(a.weight, &f.carry[1], 777)
 	if first != second || first != 13*a.weight {
 		t.Errorf("rate grant due = %d at balance 0 and %d at 777, want 13 * %d = %d for both", first, second, a.weight, 13*a.weight)
 	}
 	b := &w2.agents[1]
 	w2.money.scan(w2)
 	g := &w2.money.flows[0]
-	if due, _ := g.plan(b, 100); due != 500*b.weight-100 {
+	if due, _ := g.plan(b.weight, &g.carry[1], 100); due != 500*b.weight-100 {
 		t.Errorf("top-up due at balance 100 = %d, want 500 * %d - 100", due, b.weight)
 	}
-	if due, _ := g.plan(b, 500*b.weight+9); due != 0 {
+	if due, _ := g.plan(b.weight, &g.carry[1], 500*b.weight+9); due != 0 {
 		t.Errorf("top-up due above the level = %d, want 0", due)
 	}
 }
