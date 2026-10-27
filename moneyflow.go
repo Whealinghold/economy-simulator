@@ -591,7 +591,11 @@ func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
 	if err != nil {
 		invariant("the account of an agent is unreadable: " + err.Error())
 	}
-	due, room := f.plan(a, v.Balance)
+	bal := v.Balance
+	if f.flow.Kind == FlowLevy {
+		bal -= v.Reserved // Transfer spends only balance less reserved
+	}
+	due, room := f.plan(a, bal)
 	applied, cut := moneyflow.Clamp(due, room, f.limit-f.total)
 	if applied > 0 {
 		w.moveFlow(f, a, applied)

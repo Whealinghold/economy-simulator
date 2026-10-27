@@ -80,18 +80,19 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 	for _, m := range modules {
 		declared = append(declared, m...)
 	}
+	classes := flowClasses(&cfg)
 	l, err := ledger.New(ledger.Config{
 		Commodities: comms,
 		Regions:     len(cfg.Regions),
 		MaxMoney:    MaxMoney,
 		MaxQuantity: MaxQuantity,
 		Declared:    declared,
-		Flows:       flowClasses(&cfg),
+		Flows:       classes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
-	for _, g := range boundaryGroups(len(comms), modules, len(flowClasses(&cfg))) {
+	for _, g := range boundaryGroups(len(comms), modules, len(classes)) {
 		if err := g.open(l); err != nil {
 			return nil, fmt.Errorf("open the %s boundary accounts: %w", g.name, err)
 		}

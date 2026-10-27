@@ -379,3 +379,25 @@ func TestMoneyCross_RefusesACarryOfAClosedAccount(t *testing.T) {
 		t.Errorf("moneyCross with a carry of a removed agent = %v, want ErrCheckpointCorrupt", err)
 	}
 }
+
+// TestFlow_LevyIgnoresReservedMoney verifies that a levy sizes its due from the
+// balance less the part a reservation holds, so a household whose money is all
+// reserved pays nothing instead of the transfer being refused.
+//
+// Requirement: FR-MON-009
+//
+// Fix: stage-2-6 review. The levy read the raw balance, so Ledger.Transfer, which
+// spends only balance less reserved, refused it and moveFlow panicked.
+func TestFlow_LevyIgnoresReservedMoney(t *testing.T) {
+	t.Parallel()
+	w, _ := moneyMill(t, 1, millerFlow("tax", FlowLevy, 5))
+	a := &w.agents[1]
+	held := holds(t, w, 1)
+	if err := w.ledger.ReserveMoney(a.account, held); err != nil {
+		t.Fatalf("reserve the whole balance: %v", err)
+	}
+	w.p17Flows()
+	if got := holds(t, w, 1); got != held {
+		t.Errorf("balance after a levy on fully reserved money = %d, want %d unchanged", got, held)
+	}
+}
