@@ -236,7 +236,7 @@ func TestRegionOf(t *testing.T) {
 	}
 	defer func() {
 		msg, _ := recover().(string)
-		if !strings.Contains(msg, "invariant") || !strings.Contains(msg, "the account of a recipient is unreadable: ") {
+		if !strings.Contains(msg, "invariant") || !strings.Contains(msg, "the account of an agent is unreadable: ") {
 			t.Errorf("regionOf(unknown account) panicked with %q, want an invariant panic naming the unreadable account", msg)
 		}
 	}()
