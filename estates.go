@@ -602,7 +602,26 @@ func (w *World) p16Relief() error {
 	if err := w.reliefNeeds(); err != nil {
 		return err
 	}
-	return w.reliefPay()
+	if err := w.reliefPay(); err != nil {
+		return err
+	}
+	w.reliefReport()
+	return nil
+}
+
+// reliefReport delivers ReliefPaid for every region that paid, in ascending
+// RegionID (FR-EST-020). The event is built only with an observer.
+func (w *World) reliefReport() {
+	if !w.obs.supplied {
+		return
+	}
+	rp := w.relief
+	for r := range w.cfg.Regions {
+		if rp.paid[r] >= 1 {
+			w.obs.deliver(ReliefPaid{Tick: w.Tick(), Region: RegionID(r), Paid: Money(rp.paid[r]),
+				Recipients: rp.recipients[r], Households: rp.households[r]})
+		}
+	}
 }
 
 // reliefReleases fills the release of every region and clears the totals of the

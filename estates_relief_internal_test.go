@@ -289,12 +289,18 @@ func FuzzReliefShares(f *testing.F) {
 // whole window, gives the ratio r exactly.
 func reliefWorld(t *testing.T, pool Money, release int64, ratios ...int64) *World {
 	t.Helper()
+	return reliefWorldWith(t, nil, pool, release, ratios...)
+}
+
+// reliefWorldWith is reliefWorld with options given to NewWorld.
+func reliefWorldWith(t *testing.T, opts []Option, pool Money, release int64, ratios ...int64) *World {
+	t.Helper()
 	c := shellConfig()
 	c.Modules.Estates = &Estates{}
 	c.Regions[0].PoolRelease = release
 	c.Groups[0].Households = int64(len(ratios))
 	c.WarmStart = &WarmStart{Pools: []WarmPool{{Region: "home", Money: pool}}}
-	w := newMill(t, c)
+	w := newMill(t, c, opts...)
 	for i, r := range ratios {
 		scriptRatio(w, AgentID(1+i), r)
 	}
@@ -512,5 +518,74 @@ func TestRelief_OverflowFailsStep(t *testing.T) {
 	}
 	if now, _ := balance(t, w, 1); now != before || w.estates.pool(w.ledger, 0) != 1_000_000 {
 		t.Errorf("after the refusal agent 1 holds %d (was %d) and the pool %d, want nothing paid", now, before, w.estates.pool(w.ledger, 0))
+	}
+}
+
+// TestRelief_NotWage verifies that relief is income of the ratio and not earned:
+// after the pass and P6.3 the newest record of a household on relief holds the
+// relief, its total ratio is above its earned ratio, and the earned ratio is the
+// one the household had without relief.
+//
+// Arithmetic: the ring is at 3 000 over a window of cost 1 000 per tick. The
+// pass pays this lone household min(450, its need of 700) = 450, so the new
+// record has income 450 (it earned nothing) and the record it replaces had 300.
+// The total ratio rises; the earned one falls, as the new record earned 0.
+//
+// Requirement: FR-WEL-037, FR-WEL-040
+func TestRelief_NotWage(t *testing.T) {
+	t.Parallel()
+	w := reliefWorld(t, 45_000, 100, 3_000)
+	if err := w.p16Relief(); err != nil {
+		t.Fatalf("p16Relief() error = %v, want nil", err)
+	}
+	w.p63Welfare()
+	h := &w.agents[1].history
+	recs := h.AppendRecords(nil)
+	if last := recs[len(recs)-1]; last.Relief != 450 || last.Income < 450 {
+		t.Errorf("newest record = %+v, want Relief 450 inside its Income", last)
+	}
+	total, ok1 := h.Ratio(1_000, 10_000)
+	earned, ok2 := h.EarnedRatio(1_000, 10_000)
+	if !ok1 || !ok2 || earned >= total {
+		t.Errorf("ratio %d (%v), earned ratio %d (%v), want the earned ratio below the total by the relief", total, ok1, earned, ok2)
+	}
+}
+
+// TestRelief_TimingAfterEntry verifies the timing of relief across ticks: the
+// pool that relief reads at tick t+1 is the pool tick t left (after its entry
+// step), and the relief of a tick is in that tick's welfare record, not the
+// previous one's.
+//
+// Arithmetic: one household at ratio 0 has a need of its whole upkeep, 1 000. The
+// pool 50 000 releases 500, below the need, so tick 0 pays exactly 500. Later
+// ticks pay at most the release of the pool the previous tick left, which falls
+// by 500 a tick and is refilled by nothing; relief raises the household's ratio, so
+// its need falls and a later tick may pay less than the release.
+//
+// Requirement: FR-EST-017, FR-WEL-002
+func TestRelief_TimingAfterEntry(t *testing.T) {
+	t.Parallel()
+	var paid []ReliefPaid
+	obs := ObserverFunc(func(e Event) {
+		if r, ok := e.(ReliefPaid); ok {
+			paid = append(paid, r)
+		}
+	})
+	w := reliefWorldWith(t, []Option{WithObserver(obs)}, 50_000, 100, 0)
+	for range 3 {
+		before := w.estates.pool(w.ledger, 0)
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+		tick := w.Tick() - 1
+		last := paid[len(paid)-1]
+		release := int64(before) * 100 / 10_000
+		if last.Tick != tick || int64(last.Paid) > release || (tick == 0 && int64(last.Paid) != release) {
+			t.Errorf("tick %d: ReliefPaid = %+v, want Paid within the release %d of the pool %d the previous tick left (equal at tick 0)", tick, last, release, before)
+		}
+		recs := w.agents[1].history.AppendRecords(nil)
+		if got := recs[len(recs)-1].Relief; got != int64(last.Paid) {
+			t.Errorf("tick %d: newest welfare record holds relief %d, want %d: the relief of its own tick", tick, got, last.Paid)
+		}
 	}
 }
