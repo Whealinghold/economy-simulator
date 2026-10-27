@@ -484,3 +484,45 @@ func executionsOf(c *incomeCell, names economysim.Names) string {
 	}
 	return out
 }
+
+// TestScenarioHelpers_ProducibleAndConservation verifies the two small readers
+// of the X4 predicate on hand-built input: x4Producible lists the commodities
+// that a recipe makes and does not discard, and x4Conservation reports exactly
+// the broken identities of criterion (a): goods in accounts plus the boundary
+// (per commodity) and money in accounts plus the money boundary, each 0.
+//
+// Guard: if x4Producible kept a discarded output, criterion (b) would demand
+// trade in a waste product; if x4Conservation summed commodities together, two
+// opposite imbalances would cancel and (a) would pass on a leaking ledger.
+func TestScenarioHelpers_ProducibleAndConservation(t *testing.T) {
+	t.Parallel()
+	cfg := economysim.Config{Recipes: []economysim.Recipe{
+		{ID: "r", Outputs: []economysim.Output{{Commodity: "a"}, {Commodity: "waste", Discard: true}}},
+		{ID: "s", Outputs: []economysim.Output{{Commodity: "b"}}},
+	}}
+	if got := x4Producible(cfg); len(got) != 2 || !got["a"] || !got["b"] {
+		t.Errorf("x4Producible = %v, want {a, b} without the discarded output", got)
+	}
+	names := economysim.Names{Commodities: []string{"a", "b"}}
+	tests := []struct {
+		name string
+		s    economysim.Snapshot
+		want int
+	}{
+		{"balanced", economysim.Snapshot{Names: names,
+			Boundary: []economysim.BoundaryRow{{Commodity: 0, Balance: -5}, {Commodity: economysim.NoCommodity, Balance: -7}},
+			Markets:  []economysim.MarketRow{{State: economysim.MarketState{Commodity: 0}, HeldByAgents: 3, HeldByEstate: 2}},
+			Money:    7}, 0},
+		{"opposite goods imbalances do not cancel", economysim.Snapshot{Names: names,
+			Boundary: []economysim.BoundaryRow{{Commodity: 0, Balance: -1}, {Commodity: 1, Balance: 1}}}, 2},
+		{"money leaks", economysim.Snapshot{Names: names, Money: 3}, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := x4Conservation(tt.s); len(got) != tt.want {
+				t.Errorf("x4Conservation(%s) = %v, want %d violations", tt.name, got, tt.want)
+			}
+		})
+	}
+}

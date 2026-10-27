@@ -292,3 +292,30 @@ func TestScenarioHelpers_IncomeIgnoresUnknownAgents(t *testing.T) {
 		t.Errorf("inputCost = %d, ok, want not ok on overflow", cost)
 	}
 }
+
+// TestScenarioHelpers_IncomeRowGuards verifies the cases in which Row gives no
+// figure or a partial one: an upkeep cost below 1, and a recipe input that was
+// never traded in the window, which is left out of the input cost and not
+// valued at zero price by division.
+//
+// Guard: a division by a zero upkeep or by a zero traded volume would panic in a
+// logged run of 1 095 ticks; the skip must stay a skip, not an error.
+func TestScenarioHelpers_IncomeRowGuards(t *testing.T) {
+	t.Parallel()
+	cfg := economysim.Config{Recipes: []economysim.Recipe{{ID: "r", Inputs: []economysim.Item{{Commodity: "g", Quantity: 2}}}}}
+	o := newIncomeObs(cfg, economysim.Names{Commodities: []string{"g"}, Recipes: []string{"r"}})
+	for _, e := range []economysim.Event{
+		economysim.AgentSpawned{Agent: 7, Role: 0, Weight: 1},
+		economysim.RecipeExecuted{Tick: 0, Agent: 7, Recipe: 0, Executions: 4},
+		economysim.TickEnded{Tick: 0},
+	} {
+		o.Observe(e)
+	}
+	if r := o.Row(0, 0, 0); r.OK {
+		t.Errorf("Row(0, role 0, upkeep 0) = %+v, want not OK", r)
+	}
+	// No trade at all: sales 0, input cost 0 (nothing to value the inputs at).
+	if got, want := o.Row(0, 0, 100), (incomeRow{OK: true}); got != want {
+		t.Errorf("Row(0, role 0, 100) with no trade = %+v, want %+v", got, want)
+	}
+}

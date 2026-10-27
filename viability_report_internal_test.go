@@ -3,9 +3,12 @@ package economysim
 import (
 	"context"
 	"errors"
+	"math"
 	"reflect"
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/steady"
 )
 
 // This file tests the jobs, the census and the report of SolveSteadyState on
@@ -551,5 +554,80 @@ func TestCensus_IncomeBP_Overflow(t *testing.T) {
 		if row.HasIncome || row.IncomeBP != 0 {
 			t.Errorf("Census row %+v, want no income figure: wage * 10 000 overflows int64", row)
 		}
+	}
+}
+
+// TestUpkeepCost verifies the upkeep cost U of one household at the seed prices
+// that IncomeBP divides by: the sum of quantity times price, and an absent
+// figure (not a smaller sum, not a wrapped one) for an upkeep commodity with no
+// seed price and for a product or a sum that does not fit int64.
+//
+// Guard: a zero price skipped silently would understate U and overstate every
+// IncomeBP of the group; an unchecked product would wrap to a wrong positive U.
+func TestUpkeepCost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		up     []int64
+		price  []int64
+		want   int64
+		wantOK bool
+	}{
+		{"sum of products", []int64{2, 3}, []int64{100, 1_000}, 2*100 + 3*1_000, true},
+		{"unneeded commodity may be unpriced", []int64{2, 0}, []int64{100, 0}, 200, true},
+		{"needed commodity with no price", []int64{2, 1}, []int64{100, 0}, 0, false},
+		{"product overflows", []int64{1 << 40, 0}, []int64{1 << 40, 1}, 0, false},
+		{"sum overflows", []int64{1, 1}, []int64{math.MaxInt64, 1}, 0, false}, // each product fits, the sum does not
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rc, gc := moneyContext()
+			gc.up, rc.price = tt.up, tt.price
+			got, ok := rc.upkeepCost(gc)
+			if got != tt.want || ok != tt.wantOK {
+				t.Errorf("upkeepCost(up %v, price %v) = %d, %t, want %d, %t", tt.up, tt.price, got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+}
+
+// TestIncome_Guards verifies the guards of income() on a hand-built region: a
+// priced group gets its figure, and each guard returns an absent figure, not 0.
+// Wage 2 000, labour 3, 5 households, upkeep 1 at price 100: U = 100 and
+// IncomeBP = 2 000 * 3 * 10 000 / (5 * 100) = 120 000.
+//
+// Requirement: FR-VIA-060 (proposed)
+func TestIncome_Guards(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(rc *regionCtx, gc *groupCtx)
+		labour steady.Frac
+		want   int64
+		wantOK bool
+	}{
+		{"priced group", func(*regionCtx, *groupCtx) {}, steady.Rat(3, 1), 120_000, true},
+		{"no labour", func(*regionCtx, *groupCtx) {}, steady.Rat(0, 1), 0, false},
+		{"wage below one", func(rc *regionCtx, _ *groupCtx) { rc.wage = 0 }, steady.Rat(3, 1), 0, false},
+		{"no labour share", func(rc *regionCtx, _ *groupCtx) { rc.p.out.HasLabourShare = false }, steady.Rat(3, 1), 0, false},
+		{"no households", func(_ *regionCtx, gc *groupCtx) { gc.g.Households = 0 }, steady.Rat(3, 1), 0, false},
+		{"no active recipe", func(_ *regionCtx, gc *groupCtx) { gc.active = nil }, steady.Rat(3, 1), 0, false},
+		{"upkeep commodity with no price", func(rc *regionCtx, _ *groupCtx) { rc.price[0] = 0 }, steady.Rat(3, 1), 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rc, gc := moneyContext(steady.Activity{Duration: 3})
+			rc.p = &viaProgramme{out: steady.Outcome{HasLabourShare: true}}
+			rc.wage, rc.price, gc.up = 2_000, []int64{100, 0}, []int64{1, 0}
+			gc.g, gc.row = &Group{Households: 5}, &roleRow{recipes: []RecipeID{0}}
+			rc.groups = []groupCtx{*gc}
+			tt.mutate(rc, gc)
+			got, ok := rc.income(gc, tt.labour)
+			if got != tt.want || ok != tt.wantOK {
+				t.Errorf("income(%s) = %d, %t, want %d, %t", tt.name, got, ok, tt.want, tt.wantOK)
+			}
+		})
 	}
 }
