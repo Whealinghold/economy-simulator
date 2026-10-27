@@ -468,3 +468,31 @@ func TestState_FlowRowOrderAcrossRegions(t *testing.T) {
 		})
 	}
 }
+
+// TestNew_MostFlowsThatFitTheReasonNumbers verifies that a ledger accepts as
+// many flows as there are reason numbers left after the table (255 less
+// NumReasons, as a Reason is a uint8) and refuses one more, and that the last
+// flow's reason works.
+//
+// Guard: the bound is the one place that keeps FlowReason(i) from wrapping
+// into a table reason; an off-by-one either refuses a legal 64th-flow world
+// or lets a flow alias reason 0.
+func TestNew_MostFlowsThatFitTheReasonNumbers(t *testing.T) {
+	t.Parallel()
+	most := 255 - int(NumReasons)
+	flows := make([]Class, most)
+	for i := range flows {
+		flows[i] = Faucet
+	}
+	l, err := New(Config{Commodities: []Commodity{{}}, Regions: 1, MaxMoney: 1, MaxQuantity: 1, Flows: flows})
+	if err != nil {
+		t.Fatalf("New with %d flows = %v, want nil", most, err)
+	}
+	if _, err := l.OpenBoundary(FlowReason(most-1), Money); err != nil {
+		t.Errorf("OpenBoundary(last of %d flows) = %v, want nil", most, err)
+	}
+	_, err = New(Config{Commodities: []Commodity{{}}, Regions: 1, MaxMoney: 1, MaxQuantity: 1, Flows: append(flows, Faucet)})
+	if !errors.Is(err, ErrInvalidConfig) {
+		t.Errorf("New with %d flows = %v, want ErrInvalidConfig", most+1, err)
+	}
+}
