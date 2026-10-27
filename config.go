@@ -69,7 +69,17 @@ type Modules struct {
 	// (spec-money-supply.md). Nil is off; non-nil is on, even with no flow. Its
 	// hash id is 2.
 	MoneySupply *MoneySupply
+	// Estates is the pool policy of the estates module: relief at P1.6 and the
+	// pool as the target of a money flow (spec-estates.md 2.6, spec-config.md
+	// 6.2.4). Nil is off; non-nil is on, even though it has no field. Its hash id
+	// is 25, whatever its place in this struct.
+	Estates *Estates
 }
+
+// Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
+// no field: a non-nil pointer switches relief and the pool as a flow target on,
+// and the tunables are Region.PoolRelease and Region.ReliefBelow.
+type Estates struct{}
 
 // Demand is the configuration of the demand module (spec-demand.md 3.2, 9). The
 // zero value is a module that is on with no want. Every list is in canonical
@@ -525,6 +535,14 @@ type Region struct {
 	// EstateMarkdown is the per-tick price reduction of an unsold estate
 	// listing, in basis points (spec-estates.md 3).
 	EstateMarkdown int64
+	// PoolRelease is the share of the region's estate pool released as relief
+	// each tick, in basis points, 0 to 10 000 (spec-estates.md 2.6, 3). It is
+	// read, hashed and validated only while Modules.Estates is on.
+	PoolRelease int64
+	// ReliefBelow is the welfare ratio, in basis points, under which a
+	// household draws relief, 0 to MaxBasisPoints (spec-estates.md 2.6, 3). It is
+	// read, hashed and validated only while Modules.Estates is on.
+	ReliefBelow int64
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -767,6 +785,9 @@ const (
 	PerYear = "year"
 	// TargetHouseholds is the class of the households of a role.
 	TargetHouseholds = "households"
+	// TargetPool is the estate pool of a region, or of every region when the
+	// target names none. It needs the estates module.
+	TargetPool = "pool"
 )
 
 // MoneyFlow is one configured faucet (Kind FlowGrant) or sink (Kind FlowLevy)
@@ -808,14 +829,14 @@ type MoneyFlow struct {
 	Label string
 }
 
-// FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kind
-// TargetHouseholds is built; the other kinds are recognised and refused with
-// ErrModuleDependency until their modules are built.
+// FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kinds
+// TargetHouseholds and TargetPool are built; the other kinds are recognised and
+// refused with ErrModuleDependency until their modules are built.
 type FlowTarget struct {
-	// Kind is TargetHouseholds.
+	// Kind is TargetHouseholds or TargetPool.
 	Kind string
 	// Region is the region of the class; empty is every region.
 	Region string
-	// Role is the role of the households.
+	// Role is the role of the households; a pool has none.
 	Role string
 }

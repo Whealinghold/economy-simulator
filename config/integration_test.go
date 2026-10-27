@@ -305,35 +305,6 @@ func TestPacks_DefectOverlays_WildSource(t *testing.T) {
 	}
 }
 
-// TestPacks_ModuleOverlaysAreRejectedUntilBuilt verifies that the fixtures that
-// switch a module on that is not built are rejected with the module table as the
-// unknown key. The demand module is built, so its pack loads (TestPacks_OneDemand).
-//
-// Requirement: FR-CFG-019, FR-CFG-098
-func TestPacks_ModuleOverlaysAreRejectedUntilBuilt(t *testing.T) {
-	t.Parallel()
-	if testing.Short() {
-		t.Skip("integration test, skipped with -short")
-	}
-	fsys := os.DirFS(chains)
-	tests := []struct {
-		name   string
-		layers []string
-		path   []string
-	}{
-		{"estates overlay", []string{"base.toml", "one.toml", "overlay/estates.toml"}, []string{"modules", "estates"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			_, err := config.LoadFS(fsys, tt.layers...)
-			if !hasError(err, economysim.ErrUnknownKey, tt.path) {
-				t.Errorf("LoadFS(%q) errors = %s, want ErrUnknownKey at %q", tt.layers, describe(err), tt.path)
-			}
-		})
-	}
-}
-
 // TestPacks_OneDemand verifies that the pack one-demand, the layers base,
 // demand, one-demand and warm-one-demand, loads, validates, hashes the same on
 // every load and differently from pack one, and carries the demand module with

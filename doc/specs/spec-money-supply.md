@@ -814,6 +814,11 @@ slice runs.
 
 ### 12.1 Errors
 
+The rule that a pool target needs the estates module (`ErrModuleDependency`) and the
+warning `grant_to_pool_no_outlet` (12.2) are written and tested with the estates module
+(`spec-estates.md` 2.6, plan 2-7), because they read `Modules.Estates` and
+`PoolRelease`; this spec owns their text.
+
 Each rule has a sentinel and a failing-case test (testing.md 3.9); an error names the path
 `modules.money_supply.flows.<id>.<field>` (`spec-config.md` 7.1.1).
 

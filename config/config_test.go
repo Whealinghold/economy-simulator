@@ -109,9 +109,9 @@ func TestParse_Rejections(t *testing.T) {
 		{"unknown key in an item", []string{minimal + "[world]\nupkeep = [ { commodity = \"g\", quantity = 1, extra = 2 } ]\n"}, economysim.ErrUnknownKey, []string{"world", "upkeep", "[0]", "extra"}},
 		{"unknown key in a yield", []string{minimal + "[region.n.yield.r]\nhas_all = true\n"}, economysim.ErrUnknownKey, []string{"region", "n", "yield", "r", "has_all"}},
 		{"unknown key in a warm job", []string{minimal + "[warm_start.region.n.group.g]\nmoney = 1\njobs = [ { recipe = \"r\", in_progress_bp = 3 } ]\n"}, economysim.ErrUnknownKey, []string{"warm_start", "region", "n", "group", "g", "jobs", "[0]", "in_progress_bp"}},
-		{"module table of a module not built", []string{minimal + "[modules.estates]\n"}, economysim.ErrUnknownKey, []string{"modules", "estates"}},
+		{"module table of a module not built", []string{minimal + "[modules.storage]\n"}, economysim.ErrUnknownKey, []string{"modules", "storage"}},
 		{"module sub-table makes the module unknown", []string{minimal + "[modules.credit.loan.stipend]\nlabel = \"x\"\n"}, economysim.ErrUnknownKey, []string{"modules", "credit"}},
-		{"old singular prefix", []string{minimal + "[module.estates]\n"}, economysim.ErrUnknownKey, []string{"module"}},
+		{"old singular prefix", []string{minimal + "[module.storage]\n"}, economysim.ErrUnknownKey, []string{"module"}},
 		{"bare module table", []string{minimal + "[demand]\n"}, economysim.ErrUnknownKey, []string{"demand"}},
 		{"float where integer", []string{minimal + "[role.a]\ntarget_ratio = 1.5\n"}, economysim.ErrNotInteger, []string{"role", "a", "target_ratio"}},
 		{"integral float where integer", []string{minimal + "[world]\nscale = 1e3\n"}, economysim.ErrNotInteger, []string{"world", "scale"}},
@@ -671,5 +671,49 @@ func TestLoad_EdgeListOrderIsFree(t *testing.T) {
 	}
 	if !reflect.DeepEqual(a, b) || economysim.HashConfig(a) != economysim.HashConfig(b) {
 		t.Errorf("Parse(edges in two orders) = %+v and %+v, want equal Configs and hashes", a.Edges, b.Edges)
+	}
+}
+
+// TestLoad_EstatesTable verifies the estates module in a file: [modules.estates]
+// switches the module on and takes no key, and pool_release and relief_below
+// load in a region whatever the module (they are inert while it is off).
+//
+// Requirement: FR-CFG-099, FR-REF-001
+func TestLoad_EstatesTable(t *testing.T) {
+	t.Parallel()
+	const region = "[region.north]\npool_release = 7\nrelief_below = 9000\n"
+	tests := []struct {
+		name    string
+		doc     string
+		on      bool
+		release int64
+		below   int64
+		badKey  bool
+	}{
+		{"table switches the module on", minimal + "[region.north]\n[modules.estates]\n", true, 100, 10_000, false},
+		{"fields load with the module on", minimal + region + "[modules.estates]\n", true, 7, 9_000, false},
+		{"fields load with the module off", minimal + region, false, 7, 9_000, false},
+		{"a key under the table is unknown", minimal + "[region.north]\n[modules.estates]\npool_release = 1\n", true, 100, 10_000, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := parseStrings(tt.doc)
+			if tt.badKey {
+				if !errors.Is(err, economysim.ErrUnknownKey) {
+					t.Errorf("Parse(%s) error = %v, want ErrUnknownKey", tt.name, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Parse(%s) error = %v, want nil", tt.name, err)
+			}
+			if (got.Modules.Estates != nil) != tt.on {
+				t.Errorf("Parse(%s).Modules.Estates = %v, want on = %v", tt.name, got.Modules.Estates, tt.on)
+			}
+			if r := got.Regions[0]; r.PoolRelease != tt.release || r.ReliefBelow != tt.below {
+				t.Errorf("Parse(%s) region pool fields = %d and %d, want %d and %d", tt.name, r.PoolRelease, r.ReliefBelow, tt.release, tt.below)
+			}
+		})
 	}
 }

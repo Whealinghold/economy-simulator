@@ -302,6 +302,8 @@ type scenarioSpec struct {
 	OnSnap func(tick int64, s economysim.Snapshot)
 	// Probe, when set, is called with the world after step tick.
 	Probe func(tick int64, w *economysim.World)
+	// Options are given to NewWorld after the seed and the streaming observer.
+	Options []economysim.Option
 }
 
 // scenarioRun is what runScenario kept.
@@ -318,7 +320,9 @@ func runScenario(t testing.TB, cfg economysim.Config, spec scenarioSpec) scenari
 	scenSem <- struct{}{}
 	defer func() { <-scenSem }()
 	obs := newScenarioObs()
-	w, err := economysim.NewWorld(cfg, economysim.WithSeed(spec.Seed), economysim.WithObserver(obs))
+	opts := []economysim.Option{economysim.WithSeed(spec.Seed), economysim.WithObserver(obs)}
+	opts = append(opts, spec.Options...)
+	w, err := economysim.NewWorld(cfg, opts...)
 	if err != nil {
 		t.Fatalf("NewWorld(seed %d) error = %v, want nil", spec.Seed, err)
 	}

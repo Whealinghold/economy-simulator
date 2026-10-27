@@ -260,6 +260,10 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 			cfg.Modules.MoneySupply = l.moneySupply(ms)
 			ms.finish()
 		}
+		if es := m.sub("estates"); es != nil {
+			cfg.Modules.Estates = &economysim.Estates{}
+			es.finish()
+		}
 		m.finish()
 	}
 	root.finish()
@@ -426,6 +430,8 @@ func (l *loader) region(id string, t *tbl, cfg *economysim.Config) economysim.Re
 	t.items("extra_upkeep", &r.ExtraUpkeep)
 	integer(t, "capital_return", &r.CapitalReturn)
 	integer(t, "estate_markdown", &r.EstateMarkdown)
+	integer(t, "pool_release", &r.PoolRelease)
+	integer(t, "relief_below", &r.ReliefBelow)
 	t.text("label", &r.Label)
 	t.entities("edge", func(to string, e *tbl) {
 		edge := economysim.Edge{From: id, To: to}

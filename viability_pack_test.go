@@ -20,6 +20,8 @@ var packLayers = map[string][]string{
 	"three":  {"base.toml", "three.toml"},
 	"five":   {"base.toml", "lines.toml", "five.toml"},
 	"second": {"second/second.toml"},
+	// famine is the cold layer set of REF 4.5 (warm-famine.toml is layered last).
+	"famine": {"base.toml", "famine.toml", "overlay/estates.toml"},
 }
 
 // loadPack loads the layers of testdata/chains.

@@ -66,7 +66,8 @@ var emittedBy = []struct{ event, scenario string }{
 // by the one-demand scenarios and the tests of that module. The three MoneyFlow
 // events are declared with the money supply module's configuration and are emitted
 // by its step and its scenarios, which the module's step change adds (plan 2-6).
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled"}
+// ReliefPaid is emitted only with the estates module on (plan 2-7).
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

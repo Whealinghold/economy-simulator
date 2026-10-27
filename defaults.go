@@ -120,12 +120,16 @@ func DefaultRole() Role {
 
 // DefaultRegion returns a region with a reference basket of 1 000 minor units,
 // a capital return of 1 000 basis points and an estate markdown of 500 basis
-// points. ID has no default and is required.
+// points, and, for the estates module, a pool release of 100 basis points and a
+// relief line of 10 000 (the pool fields are inert and unhashed while the module
+// is off, spec-config.md 8.2.3). ID has no default and is required.
 func DefaultRegion() Region {
 	return Region{
 		ReferenceBasket: 1_000,
 		CapitalReturn:   1_000,
 		EstateMarkdown:  500,
+		PoolRelease:     100,
+		ReliefBelow:     10_000,
 	}
 }
 

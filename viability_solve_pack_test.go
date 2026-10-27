@@ -259,22 +259,12 @@ func TestSolveSteadyState_FreeTradePivots(t *testing.T) {
 	}
 }
 
-// famine builds the pack of REF 4.4.5 from `one`: the staple yield in spring
-// falls to 3 000 and the groups to 68, 17, 45, 417, 33 and 20 households. The
-// estates keys of famine.toml move no programme, and the file does not load in
-// Stage 1.
+// famine loads the pack of REF 4.4.5, its cold layer set: `one` with poor land
+// (the staple yield in spring 3 000), the groups of REF 4.4.5 and the estates
+// module on.
 func famine(t *testing.T) economysim.Config {
 	t.Helper()
-	c := loadPack(t, packLayers["one"]...)
-	for i, y := range c.Yields {
-		if y.Recipe == "grow_staple" {
-			c.Yields[i].Seasons = []economysim.SeasonYield{{Season: "spring", BP: 3_000}}
-		}
-	}
-	for i, g := range c.Groups {
-		c.Groups[i].Households = map[string]int64{"cook": 68, "digger": 17, "forester": 45, "grower": 417, "maker": 33, "refiner": 20}[g.Role]
-	}
-	return c
+	return loadPack(t, packLayers["famine"]...)
 }
 
 // TestSolveSteadyState_Famine verifies the nominal fallback on the famine
@@ -305,7 +295,7 @@ func TestSolveSteadyState_Famine(t *testing.T) {
 	if want := []economysim.SeedWage{{Region: "north", Wage: 1_624}}; !reflect.DeepEqual(st.Table.Wages, want) {
 		t.Errorf("Wages = %v, want %v", st.Table.Wages, want)
 	}
-	doc := loadWarm(t, "base.toml", "one.toml", "warm-famine.toml")
+	doc := loadWarm(t, "base.toml", "famine.toml", "overlay/estates.toml", "warm-famine.toml")
 	// The document holds the maker's two job rows unscaled, 2 272 + 8 522 = 10 794
 	// (Validate rejects shares above 10 000); the solver scales them down in
 	// proportion, each rounded down: 2 272 * 10 000 / 10 794 = 2 104 and
@@ -339,7 +329,7 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	notOnOne := []string{"estates.toml", "overhang.toml"}
+	notOnOne := []string{"overhang.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

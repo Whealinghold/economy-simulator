@@ -22,13 +22,14 @@ var byName = map[string]ledger.Reason{
 	"start_money": ledger.StartMoney, "split": ledger.Split, "merge": ledger.Merge,
 	"births": ledger.Births, "starvation": ledger.Starvation,
 	"loan_out": ledger.LoanOut, "loan_repay": ledger.LoanRepay, "loan_interest": ledger.LoanInterest,
+	"relief": ledger.Relief,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
 // that the ledger does not have yet, in the staged form of architecture.md
 // 9.7. A module's change deletes its entries.
 var notBuilt = []string{
-	"want_consumption", "relief", "outside_budget", "outside_unspent",
+	"want_consumption", "outside_budget", "outside_unspent",
 	"outside_receipts", "outside_offer", "outside_unsold", "outside_purchases",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
 	"wage_refund", "rent",
@@ -276,4 +277,71 @@ func TestRegistry_RowsAndFlowSlots(t *testing.T) {
 	if _, err := l.OpenBoundary(ledger.Spoilage, ledger.Money); !errors.Is(err, ledger.ErrReasonMismatch) {
 		t.Errorf("OpenBoundary(Spoilage, Money) = %v, want ErrReasonMismatch (goods only)", err)
 	}
+}
+
+// TestRegistry_Relief verifies the relief row of spec-ledger.md 7.2: a transfer
+// by relief from an estate to an agent is accepted when the reason is declared,
+// every other pairing is ErrReasonMismatch, an undeclared ledger refuses it, and
+// declaring it opens no boundary account.
+//
+// Requirement: FR-LED-052, FR-EST-016
+func TestRegistry_Relief(t *testing.T) {
+	t.Parallel()
+	// The estate is funded with 40 by the initial faucet, so a payment can clear.
+	fund := func(f *fix) {
+		t.Helper()
+		if err := f.l.Transfer(f.mint, f.e0, 40, ledger.Initial); err != nil {
+			t.Fatalf("fund the estate: %v", err)
+		}
+	}
+	tests := []struct {
+		name     string
+		from, to func(f *fix) int
+		want     error
+	}{
+		{"estate to agent", func(f *fix) int { return f.e0 }, func(f *fix) int { return f.a0 }, nil},
+		{"agent to estate", func(f *fix) int { return f.a0 }, func(f *fix) int { return f.e0 }, ledger.ErrReasonMismatch},
+		{"agent to agent", func(f *fix) int { return f.a0 }, func(f *fix) int { return f.a1 }, ledger.ErrReasonMismatch},
+		{"boundary to agent", func(f *fix) int { return f.mint }, func(f *fix) int { return f.a1 }, ledger.ErrReasonMismatch},
+		{"estate to boundary", func(f *fix) int { return f.e0 }, func(f *fix) int { return f.mint }, ledger.ErrReasonMismatch},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			f := newFix(t, testMaxMoney)
+			fund(f)
+			err := f.l.Transfer(tt.from(f), tt.to(f), 5, ledger.Relief)
+			if !errors.Is(err, tt.want) || (tt.want == nil && err != nil) {
+				t.Errorf("Transfer(relief, %s) = %v, want %v", tt.name, err, tt.want)
+			}
+		})
+	}
+
+	t.Run("an undeclared ledger refuses it", func(t *testing.T) {
+		t.Parallel()
+		l, err := ledger.New(ledger.Config{Regions: 1, MaxMoney: testMaxMoney, MaxQuantity: testMaxQuantity})
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		mint, _ := l.OpenBoundary(ledger.Initial, ledger.Money)
+		est, _ := l.Open(ledger.KindEstate, 0, 0)
+		ag, _ := l.Open(ledger.KindAgent, 1, 0)
+		if err := l.Transfer(mint, est, 10, ledger.Initial); err != nil {
+			t.Fatalf("fund: %v", err)
+		}
+		if err := l.Transfer(est, ag, 5, ledger.Relief); !errors.Is(err, ledger.ErrReasonMismatch) {
+			t.Errorf("Transfer(relief) on a ledger that did not declare it = %v, want ErrReasonMismatch", err)
+		}
+	})
+
+	t.Run("declaring it opens no boundary account", func(t *testing.T) {
+		t.Parallel()
+		l, err := ledger.New(ledger.Config{Regions: 1, MaxMoney: testMaxMoney, MaxQuantity: testMaxQuantity, Declared: []ledger.Reason{ledger.Relief}})
+		if err != nil {
+			t.Fatalf("New(Declared: relief) = %v, want nil", err)
+		}
+		if _, err := l.OpenBoundary(ledger.Relief, ledger.Money); err == nil {
+			t.Errorf("OpenBoundary(relief) = nil, want an error: an internal reason has no boundary account")
+		}
+	})
 }

@@ -353,8 +353,10 @@ An append **MUST** leave no trace while it is off. A module that is off, and a
 field appended to an existing struct, event or snapshot row at its off value,
 contribute nothing to the configuration hash (`spec-config.md` 8.2) and nothing
 to the golden rendering of an event or a snapshot row (`spec-observability.md`
-9.5.2). So the default of an appended configuration field **MUST** be its zero
-value (`spec-config.md` 8.2.3), a field appended to an event or a snapshot row
+9.5.2). So the default of an appended configuration field of a core struct **MUST**
+be its zero value (`spec-config.md` 8.2.3); a field that a module owns (it is
+written only when the module is on) **MAY** default to a value that is not zero, as
+`Region.PoolRelease` and `Region.ReliefBelow` do. A field appended to an event or a snapshot row
 **MUST** be a count, an amount, a bool, a constant of a closed set or a slice and
 never a typed ID (zero is a valid ID), and the files of `testdata/golden/off/`
 and the pinned hash of the all-off reference configuration do not move when a
@@ -1045,4 +1047,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 5d10f9701f2e6003c356546c
+RULE-TAG: 1c35b22e3cc29662b4fc805a

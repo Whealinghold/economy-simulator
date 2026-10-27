@@ -31,6 +31,7 @@ var positionList = [...]position{
 	{"P0.3", "OBS", bracket},  // TickStarted, in beginStep
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
+	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P2.1", "PRO", line},
 	{"P2.5", "AGT", line},
@@ -61,7 +62,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3", "P1.3a", "P1.4", "P1.5", "P1.6", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3", "P1.3a", "P1.4", "P1.5", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.3", "P2.4", "P2.5a", "P2.6", "P2.8", "P2.8b",
 	"P3.1", "P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
@@ -87,6 +88,9 @@ func (w *World) positions() error {
 		return err
 	}
 	w.p12Anchors()
+	if err := w.p16Relief(); err != nil {
+		return err
+	}
 	w.p17Flows()
 	w.p21Complete()
 	if err := w.p25Work(); err != nil {

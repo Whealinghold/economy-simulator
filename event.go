@@ -156,6 +156,9 @@ const (
 	// ReasonWantConsumption is goods consumed as a want beyond upkeep, with the
 	// demand module on (spec-demand.md 4.7).
 	ReasonWantConsumption Reason = "want_consumption"
+	// ReasonRelief is the money the pool of a region pays a household below the
+	// relief line, with the estates module on (spec-estates.md 2.6).
+	ReasonRelief Reason = "relief"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -893,6 +896,20 @@ type EdgeStatusChanged struct {
 	Cause Cause
 }
 
+// ReliefPaid is emitted once per region and tick in which the estates module paid
+// any relief, in ascending RegionID, at P1.6 and so before the MoneyFlowLimited
+// events of the same tick; never when nothing was paid and never with the
+// module off (spec-estates.md 2.6, FR-EST-020). It carries no per-agent rows.
+type ReliefPaid struct {
+	Tick   int64
+	Region RegionID
+	// Paid is the money the pool paid, by the reason relief.
+	Paid Money
+	// Recipients is the number of agents paid and Households the sum of their
+	// weights.
+	Recipients, Households int64
+}
+
 // MoneyFlowLimited is emitted once per money flow and region in a tick in which
 // part of a due was not applied, after the step of P1.7, flows in ID order and
 // regions in ascending order; never when all was applied (spec-money-supply.md
@@ -961,6 +978,7 @@ func (WearApplied) isEvent()       {}
 func (WorldRestored) isEvent()     {}
 func (AgentRelocated) isEvent()    {}
 func (EdgeStatusChanged) isEvent() {}
+func (ReliefPaid) isEvent()        {}
 func (MoneyFlowLimited) isEvent()  {}
 func (MoneyFlowEnded) isEvent()    {}
 func (MoneyFlowScaled) isEvent()   {}

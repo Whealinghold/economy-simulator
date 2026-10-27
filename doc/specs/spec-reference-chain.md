@@ -1304,7 +1304,11 @@ FR-CAL-009, FR-CAL-019, FR-CAL-020. *Loops:* STB-L23, L24, L28. *Level:* end-to-
 **S14. A region that loses its income.** *Packs:* `famine` (the estates module is in the
 pack). *Setup:* 1 800 ticks. The spring of the second year is hit by a harvest failure of
 depth `m` in `{7 000, 5 000, 2 500, 0}` bp: `grow_staple` at `m` from tick 424 to 515.
-Four runs. *Measure:* the households (sum of weights) over time as a share of the start;
+Four runs, one script each: `scripts/s14-7000.toml`, `scripts/s14-5000.toml`,
+`scripts/s14-2500.toml` and `scripts/s14-0.toml` (7.1.3); the bands are
+`bands/famine.toml`, with `s14.recover_band_bp`, `s14.recover_ticks` and `s14.fall_bp`
+declared and unset until STY gives them values (7.1.5); the outcomes are written to
+`expected/famine.scenarios.txt`. *Measure:* the households (sum of weights) over time as a share of the start;
 the unfed households and the longest run of ticks with any unfed (`UpkeepShortfall`);
 relief paid and the pool balance; the removals by cause; the tick at which households
 return to within `s14.recover_band_bp` of the pre-shock level, if they do. *Pass:*

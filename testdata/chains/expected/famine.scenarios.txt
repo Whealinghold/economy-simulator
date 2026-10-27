@@ -1,0 +1,70 @@
+# Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
+# Read by the reviewer of STY 8.4; no test compares it.
+
+## S14 depth 0 seeds 1-10, 1800 ticks
+measure households at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households removed, insolvent: 1=169 2=157 3=144 4=178 5=169 6=167 7=195 8=173 9=141 10=150 | median=168 n=10
+measure households removed, starved: 1=580 2=594 3=611 4=570 5=582 6=581 7=557 8=575 9=620 10=602 | median=582 n=10
+measure households share bp at tick 1007: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 1799: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 423: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 515: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 695: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest run of ticks with any unfed: 1=284 2=285 3=286 4=284 5=285 6=284 7=284 8=284 9=286 10=286 | median=284 n=10
+measure lowest households share bp sampled: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure pool at the end: 1=6000000 2=6000000 3=6000000 4=6000000 5=6000000 6=6000000 7=6000000 8=6000000 9=6000000 10=6000000 | median=6000000 n=10
+measure relief paid: 1=6058106 2=5897564 3=6033417 4=5884198 5=6131782 6=5981321 7=5998139 8=5964111 9=6136029 10=6004054 | median=6001096 n=10
+measure unfed household-ticks: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+## S14 depth 2500 seeds 1-10, 1800 ticks
+measure households at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households removed, insolvent: 1=169 2=157 3=144 4=178 5=169 6=167 7=195 8=173 9=141 10=150 | median=168 n=10
+measure households removed, starved: 1=580 2=594 3=611 4=570 5=582 6=581 7=557 8=575 9=620 10=602 | median=582 n=10
+measure households share bp at tick 1007: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 1799: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 423: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 515: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 695: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest run of ticks with any unfed: 1=284 2=285 3=286 4=284 5=285 6=284 7=284 8=284 9=286 10=286 | median=284 n=10
+measure lowest households share bp sampled: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure pool at the end: 1=6000000 2=6000000 3=6000000 4=6000000 5=6000000 6=6000000 7=6000000 8=6000000 9=6000000 10=6000000 | median=6000000 n=10
+measure relief paid: 1=6058106 2=5897564 3=6033417 4=5884198 5=6131782 6=5981321 7=5998139 8=5964111 9=6136029 10=6004054 | median=6001096 n=10
+measure unfed household-ticks: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+## S14 depth 5000 seeds 1-10, 1800 ticks
+measure households at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households removed, insolvent: 1=169 2=157 3=144 4=178 5=169 6=167 7=195 8=173 9=141 10=150 | median=168 n=10
+measure households removed, starved: 1=580 2=594 3=611 4=570 5=582 6=581 7=557 8=575 9=620 10=602 | median=582 n=10
+measure households share bp at tick 1007: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 1799: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 423: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 515: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 695: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest run of ticks with any unfed: 1=284 2=285 3=286 4=284 5=285 6=284 7=284 8=284 9=286 10=286 | median=284 n=10
+measure lowest households share bp sampled: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure pool at the end: 1=6000000 2=6000000 3=6000000 4=6000000 5=6000000 6=6000000 7=6000000 8=6000000 9=6000000 10=6000000 | median=6000000 n=10
+measure relief paid: 1=6058106 2=5897564 3=6033417 4=5884198 5=6131782 6=5981321 7=5998139 8=5964111 9=6136029 10=6004054 | median=6001096 n=10
+measure unfed household-ticks: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+
+## S14 depth 7000 seeds 1-10, 1800 ticks
+measure households at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households removed, insolvent: 1=169 2=157 3=144 4=178 5=169 6=167 7=195 8=173 9=141 10=150 | median=168 n=10
+measure households removed, starved: 1=580 2=594 3=611 4=570 5=582 6=581 7=557 8=575 9=620 10=602 | median=582 n=10
+measure households share bp at tick 1007: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 1799: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 423: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 515: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households share bp at tick 695: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure longest run of ticks with any unfed: 1=284 2=285 3=286 4=284 5=285 6=284 7=284 8=284 9=286 10=286 | median=284 n=10
+measure lowest households share bp sampled: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure pool at the end: 1=6000000 2=6000000 3=6000000 4=6000000 5=6000000 6=6000000 7=6000000 8=6000000 9=6000000 10=6000000 | median=6000000 n=10
+measure relief paid: 1=6058106 2=5897564 3=6033417 4=5884198 5=6131782 6=5981321 7=5998139 8=5964111 9=6136029 10=6004054 | median=6001096 n=10
+measure unfed household-ticks: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass

@@ -510,3 +510,39 @@ func TestEstates_ConservationOverSeeds(t *testing.T) {
 		}
 	}
 }
+
+// TestPoolNoOutlet_Table verifies the condition of grant_to_pool_no_outlet on its
+// own, without a validator: only a pool target, with the estates module on, in a
+// region (or, with no region named, any region) whose PoolRelease is 0.
+//
+// Arithmetic: regions "a" (PoolRelease 0) and "b" (PoolRelease 100). A target
+// that names "b" has an outlet; one that names "a" has none; one that names no
+// region has none because "a" is among every region.
+//
+// Requirement: FR-MON-039
+func TestPoolNoOutlet_Table(t *testing.T) {
+	t.Parallel()
+	regions := []Region{{ID: "a", PoolRelease: 0}, {ID: "b", PoolRelease: 100}}
+	tests := []struct {
+		name   string
+		target FlowTarget
+		module *Estates
+		want   bool
+	}{
+		{"pool of a region with no release", FlowTarget{Kind: TargetPool, Region: "a"}, &Estates{}, true},
+		{"pool of a region that releases", FlowTarget{Kind: TargetPool, Region: "b"}, &Estates{}, false},
+		{"pool of every region, one releases nothing", FlowTarget{Kind: TargetPool}, &Estates{}, true},
+		{"pool of an unknown region", FlowTarget{Kind: TargetPool, Region: "z"}, &Estates{}, false},
+		{"households target", FlowTarget{Kind: TargetHouseholds, Region: "a"}, &Estates{}, false},
+		{"module off", FlowTarget{Kind: TargetPool, Region: "a"}, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Config{Regions: regions, Modules: Modules{Estates: tt.module}}
+			if got := poolNoOutlet(c, tt.target); got != tt.want {
+				t.Errorf("poolNoOutlet(%+v, estates=%v) = %v, want %v", tt.target, tt.module != nil, got, tt.want)
+			}
+		})
+	}
+}

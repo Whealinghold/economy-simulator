@@ -122,6 +122,17 @@ truncated, and overflow-checked. Amounts that are not paid out (truncation, or
 depends only on its own need and the totals, so no ordering of agents affects
 the result.
 
+An agent whose welfare ratio is absent (no record yet, so no padded cost) is not
+eligible and has no need. The ratio is the **total** ratio, which counts the relief of
+earlier ticks as income (`spec-welfare-and-wages.md` 2.1), padded as at the welfare
+record. `U_i` is priced as `spec-welfare-and-wages.md` 2.2.0 prices it: at the
+published price of the previous clearing, and at the reference price while the market
+has never traded, so a warm pool on tick 1 is valued at reference prices and never at
+0. External agents and cohorts are eligible; the estate pseudo-agents are not
+(FR-EST-011). A subtraction, product or sum that does not fit `int64` is `ErrOverflow`
+naming the region and the agent and fails the step; no value is saturated, and every
+need is computed before the first payment is made.
+
 - Relief counts as income in the welfare ratio (`spec-welfare-and-wages.md` section 2.1), but is excluded
   from the observed wage (`spec-welfare-and-wages.md` section 4.3), because it is not earned by working.
 - Relief tops agents up to the relief line only, and the target-income rule

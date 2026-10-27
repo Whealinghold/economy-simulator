@@ -53,6 +53,7 @@ var declaredEvents = []economysim.Event{
 	economysim.WorldRestored{},
 	economysim.AgentRelocated{},
 	economysim.EdgeStatusChanged{},
+	economysim.ReliefPaid{},
 	economysim.MoneyFlowLimited{},
 	economysim.MoneyFlowEnded{},
 	economysim.MoneyFlowScaled{},
@@ -60,13 +61,12 @@ var declaredEvents = []economysim.Event{
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
 // that event.go does not declare yet: the events of the modules, of the
-// regions, checkpoint and skill stages, and of ReliefPaid, which belongs to
-// the pool policy of the estates module (spec-config.md 6.2.4). The change that
+// regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"OwnUseChanged", "RoomLimited",
 	"PopulationChanged", "TraineeshipStarted", "TraineeshipCompleted",
-	"TraineeshipEnded", "StoreChanged", "ReliefPaid", "StoreLoss",
+	"TraineeshipEnded", "StoreChanged", "StoreLoss",
 	"ShipmentDispatched", "ShipmentArrived",
 	"ShipmentRejected", "TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
@@ -435,7 +435,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && !strings.HasPrefix(row.gate, "money supply") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {
@@ -925,5 +925,33 @@ func TestEntryLimited_AppendedFieldsAreCounts(t *testing.T) {
 		if f.Type.Kind() != reflect.Int64 || f.Type.Name() != "int64" {
 			t.Errorf("EntryLimited.%s has type %v, want int64", name, f.Type)
 		}
+	}
+}
+
+// TestReliefPaid_Catalogue verifies that ReliefPaid is the row of
+// spec-observability.md 4.1.5: gate "estates (pool policy)", the fields of the
+// row in its order after Tick, and counts and money only, so that a world with
+// the module off renders as before (OBS 9.5.2).
+//
+// Requirement: FR-OBS-003, FR-OBS-004, FR-OBS-080
+func TestReliefPaid_Catalogue(t *testing.T) {
+	t.Parallel()
+	rows, _ := specRows(t)
+	row, ok := rows["ReliefPaid"]
+	if !ok {
+		t.Fatal("ReliefPaid is not a row of 4.1")
+	}
+	if row.gate != "estates (pool policy)" {
+		t.Errorf("gate of ReliefPaid = %q, want %q", row.gate, "estates (pool policy)")
+	}
+	typ := reflect.TypeOf(economysim.ReliefPaid{})
+	want := []string{"Tick", "Region", "Paid", "Recipients", "Households"}
+	for i, name := range want {
+		if typ.NumField() <= i || typ.Field(i).Name != name {
+			t.Errorf("field %d of ReliefPaid is not %s", i, name)
+		}
+	}
+	if typ.NumField() != len(want) {
+		t.Errorf("ReliefPaid has %d fields, want %d: %v", typ.NumField(), len(want), want)
 	}
 }
