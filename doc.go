@@ -205,6 +205,12 @@
 //   - Pool policy: what the estates module switches on: the release of the
 //     estate pool as relief and its use as a money-flow target.
 //   - Quantity: a count of whole units of a commodity.
+//   - Relief: money the pool of a region pays each tick, with the reason relief,
+//     to the households whose welfare ratio is below the relief line. The
+//     estates module (Estates, the pool policy) switches it on, and ReliefPaid
+//     reports it.
+//   - Relief line: the welfare ratio, in basis points, under which a household
+//     draws relief (Region.ReliefBelow).
 //   - Reason: a machine-readable member of a closed set (Reason) that names why
 //     an order was rejected, a job ended without output or a flow crossed the
 //     boundary.

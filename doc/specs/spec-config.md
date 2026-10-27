@@ -1686,8 +1686,9 @@ encoding of `Config` as a struct. The SHA-256 is taken over exactly those bytes.
   `Technology` 24, `Estates` 25). A module that is off is a nil pointer and is not a
   pair. The ids do not depend on the order in which the modules are built.
 - **A field a module adds to a core struct** (`Role.Informed`, `Region.PoolRelease`,
-  a recipe's `Builds`) is a pair only when its module is on, whatever its value. With
-  the module off it is not written and not validated for its value.
+  a recipe's `Builds`) is a pair only when its module is on and its value is not zero
+  (the first bullet applies to it as to any field). With the module off it is not
+  written and not validated for its value.
 
 8.2.2. **Field ids.** A field's id is its position in the struct's declaration, counted
 from 1 and not counting presentation-only fields, as 3.7.2 lists the fields. A field a
@@ -1708,7 +1709,7 @@ at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, 
 `TargetRatio` 9, `TargetSpread` 10, `DefaultRatio` 11, `InKind` 12,
 `ExpectedWorkTicks` 13, `MinWorkShare` 14, `TrainingTicks` 15, `MaxTrainees` 16,
 `TeachingLoad` 17, `Closed` 18. `Region` has `ID` 1, `ReferenceBasket` 2, `ExtraUpkeep`
-3, `CapitalReturn` 4, `EstateMarkdown` 5. `Group` has `Region` 1, `Role` 2,
+3, `CapitalReturn` 4, `EstateMarkdown` 5, `PoolRelease` 6, `ReliefBelow` 7. `Group` has `Region` 1, `Role` 2,
 `Households` 3, `Scale` 4. `Edge` has `From` 1, `To` 2, `Distance` 3; `RegionPrice` has `Region` 1, `Commodity` 2, `Price` 3. `WarmStart` has `Prices` 1, `Wages` 2, `Groups` 3, `Pools` 4;
 `SeedPrice` has `Region` 1, `Commodity` 2, `Price` 3; `SeedWage` has `Region` 1,
 `Wage` 2; `WarmGroup` has `Region` 1, `Role` 2, `Money` 3, `Stock` 4, `Jobs` 5;
@@ -1743,7 +1744,10 @@ core struct takes the next id and its **default value is its zero value**, becau
 default that is not zero would be written by every `DefaultX()` and so would move every
 existing hash: a field whose natural "off" is not zero (a cap of 10 000 that means "no
 cap") is declared so that zero is off, or belongs to a module; (3) a field a module adds
-to a core struct is written only when the module is on (8.2.1). A change to the encoding
+to a core struct is written only when the module is on (8.2.1). Rule (2) binds a field of
+a core struct: a field a module owns may default to a value that is not zero, because it is
+written only when its module is on, so no existing hash moves (the first case is
+`Region.PoolRelease`, 100, and `Region.ReliefBelow`, 10 000; `architecture.md` 2.10.5). A change to the encoding
 itself (a type, the terminator, an id) is a new version byte and a behaviour change
 (architecture.md 6.6).
 
@@ -1757,6 +1761,7 @@ agree on every row. A count or a length is 8 bytes, big-endian.
 | one region and nothing else, `Regions: [{ID: "north"}]` | `01` `0007` `0000000000000001` `0001` `0000000000000005` `6e6f727468` `0000` `0000` (version; `Regions` and its count; `ID` and its length and bytes; the region's terminator; the configuration's terminator) | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
 | the same with `WarmStart: &WarmStart{}` | the row above with `000b` `0000` inserted before the last `0000` | `a2f375f381fced5c69544bf3dfb14446d513d6e0eaceb9574964bbfe8ea8a812` |
 | the same with `Modules.Estates: &Estates{}`, a module on | the one-region row with `000c` `0019` `0000` `0000` inserted before the last `0000` (`Modules`; `Estates`, id 25, and its terminator; the terminator of `Modules`) | `0848fee29c503bda99a17acb2c44c42fbba8b730eadc2079e3d8123b2d3317ad` |
+| the one-region row with `Modules.Estates: &Estates{}` on and the region at the defaults of the module, `PoolRelease` 100 and `ReliefBelow` 10 000 | the Estates row with `0006` `0000000000000064` `0007` `0000000000002710` inserted in the region before its terminator (`PoolRelease` 100, `ReliefBelow` 10 000), and `000c` `0019` `0000` `0000` as in that row | `75e8cca7e5d584f612e87b572b7d4113cda12ba8dc5f1456bddcca95949d869d` |
 | the same with `Modules.Demand: &Demand{}`, a module on | the one-region row with `000c` `0001` `0000` `0000` inserted before the last `0000` (`Modules`; `Demand`, id 1, and its terminator; the terminator of `Modules`) | `d4a84ffadc64ea332b99fe14423ca67eb052928dd5a16d91d054b27eeb1493d0` |
 | the one-region row with a field appended later (`Region.PoolRelease`) at its off value 0 | the bytes of the one-region row, unchanged | `ed652dfd86904c18fd76feb17175e7efeef6d4afe94bec1e3b4f5a2e2409f013` |
 
