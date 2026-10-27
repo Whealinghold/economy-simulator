@@ -498,3 +498,58 @@ func TestSolveSteadyState_RegionThatCannotFeedItself(t *testing.T) {
 		t.Errorf("pooled UnpricedWages, Groups = %v, %+v, want [south] unpriced and both groups", pooled.Report.UnpricedWages, pooled.Table.Groups)
 	}
 }
+
+// TestCensus_IncomeBP_SharedRecipeIsAbsent verifies that a group whose active
+// recipe is on the lists of two roles has no income figure: the flow of the
+// recipe is the two groups' together (D121), so neither group's labour is known
+// (spec-viability.md 5.2: the recipe row is the ambiguous one). Both group rows
+// carry no IncomeBP and the flag HasIncome false, not a zero.
+//
+// Requirement: FR-VIA-028, FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_SharedRecipeIsAbsent(t *testing.T) {
+	t.Parallel()
+	c := viaToy()
+	c.Recipes[0].Duration, c.Recipes[0].Outputs[0].Quantity = 2, 8
+	miller := DefaultRole()
+	miller.ID, miller.Recipes = "miller", []string{"farm"}
+	c.Roles = append(c.Roles, miller)
+	c.Groups = []Group{{Region: "north", Role: "farmer", Households: 6}, {Region: "north", Role: "miller", Households: 4}}
+	groups := 0
+	for _, row := range solveToy(t, c).Report.Census {
+		if row.Role == "" {
+			continue
+		}
+		groups++
+		if row.HasIncome || row.IncomeBP != 0 {
+			t.Errorf("Census row of %s = IncomeBP %d, HasIncome %t, want 0, false: its recipe is shared", row.Role, row.IncomeBP, row.HasIncome)
+		}
+	}
+	if groups != 2 {
+		t.Errorf("group rows = %d, want 2", groups)
+	}
+}
+
+// TestCensus_IncomeBP_Overflow verifies that a figure that does not fit int64
+// is an absent figure and never a wrapped one (architecture.md 3.5): a chain
+// priced at MaxPrice with an output of two million units a start has a wage of
+// 2 * 10^15, so wage * 10 000 = 2 * 10^19 passes int64 (9.22 * 10^18) and an
+// unchecked product would wrap to 2 * 10^19 - 2^64 = 1.55 * 10^18, a positive
+// and wrong figure.
+//
+// Requirement: FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_Overflow(t *testing.T) {
+	t.Parallel()
+	c := viaToy()
+	c.Commodities[0].ReferencePrice = MaxPrice
+	c.Regions[0].ReferenceBasket = MaxPrice
+	c.Recipes[0].Duration, c.Recipes[0].Outputs[0].Quantity = 1, 2_000_000
+	st := solveToy(t, c)
+	if st.Table.Wages[0].Wage <= maxInt64/wholeBP {
+		t.Fatalf("seed wage = %d, want above %d so that wage * 10 000 overflows int64", st.Table.Wages[0].Wage, maxInt64/wholeBP)
+	}
+	for _, row := range st.Report.Census {
+		if row.HasIncome || row.IncomeBP != 0 {
+			t.Errorf("Census row %+v, want no income figure: wage * 10 000 overflows int64", row)
+		}
+	}
+}
