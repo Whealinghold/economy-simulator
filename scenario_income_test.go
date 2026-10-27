@@ -95,16 +95,25 @@ func (o *incomeObs) Observe(e economysim.Event) {
 		o.agents[e.Agent] = incomeAgent{e.Role, e.Weight}
 		o.live[e.Role] += e.Weight
 	case economysim.RoleChanged:
-		a := o.agents[e.Agent]
+		a, ok := o.agents[e.Agent]
+		if !ok { // an agent the observer never saw spawn: nothing to move
+			return
+		}
 		o.live[a.role] -= a.weight
 		o.agents[e.Agent] = incomeAgent{e.To, a.weight}
 		o.live[e.To] += a.weight
 	case economysim.WeightChanged:
-		a := o.agents[e.Agent]
+		a, ok := o.agents[e.Agent]
+		if !ok {
+			return
+		}
 		o.live[a.role] += e.To - e.From
 		o.agents[e.Agent] = incomeAgent{a.role, e.To}
 	case economysim.AgentBankrupted:
-		a := o.agents[e.Agent]
+		a, ok := o.agents[e.Agent]
+		if !ok {
+			return
+		}
 		o.live[a.role] -= a.weight
 		delete(o.agents, e.Agent)
 	case economysim.TradeExecuted:
@@ -138,9 +147,10 @@ func (o *incomeObs) inputCost(window int64, c *incomeCell) (cost int64, ok bool)
 			if o.vwmUnits[k] == 0 { // nothing traded: no price to value the inputs at
 				continue
 			}
-			v, ok1 := checked.MulDivHalfEven(o.vwmValue[k], int64(in.Quantity)*n, o.vwmUnits[k])
+			units, ok0 := checked.Mul(int64(in.Quantity), n)
+			v, ok1 := checked.MulDivHalfEven(o.vwmValue[k], units, o.vwmUnits[k])
 			sum, ok2 := checked.Add(cost, v)
-			if !ok1 || !ok2 {
+			if !ok0 || !ok1 || !ok2 {
 				return 0, false
 			}
 			cost = sum
@@ -237,5 +247,36 @@ func TestScenarioHelpers_Income(t *testing.T) {
 	}
 	if c := o.cells[[2]int64{1, 1}]; c == nil || c.Sales != 1 || c.HouseholdTicks != 3 {
 		t.Errorf("role 1 window 1 = %+v, want Sales 1, HouseholdTicks 3 (agent 8 weight 1 and agent 7 weight 2)", c)
+	}
+}
+
+// TestScenarioHelpers_IncomeIgnoresUnknownAgents verifies that a role change, a
+// weight change or a removal of an agent the observer never saw spawn moves no
+// household, and that a recipe input cost that overflows int64 is reported as
+// not OK instead of wrapped.
+//
+// Guard: a zero-valued agent record would otherwise subtract 0 from role 0 and
+// move an unknown agent into the new role; an unchecked quantity times
+// executions would wrap and report a wrong margin as valid.
+func TestScenarioHelpers_IncomeIgnoresUnknownAgents(t *testing.T) {
+	t.Parallel()
+	cfg := economysim.Config{Recipes: []economysim.Recipe{{ID: "r", Inputs: []economysim.Item{{Commodity: "g", Quantity: 1 << 40}}}}}
+	o := newIncomeObs(cfg, economysim.Names{Commodities: []string{"g"}, Recipes: []string{"r"}})
+	for _, e := range []economysim.Event{
+		economysim.AgentSpawned{Agent: 1, Role: 0, Weight: 3},
+		economysim.RoleChanged{Agent: 99, From: 0, To: 1},
+		economysim.WeightChanged{Agent: 99, From: 1, To: 5},
+		economysim.AgentBankrupted{Agent: 99},
+	} {
+		o.Observe(e)
+	}
+	if o.live[0] != 3 || o.live[1] != 0 {
+		t.Errorf("live households = %v after events of an unknown agent, want role 0: 3 and role 1: 0", o.live)
+	}
+	// 2^40 units per execution times 2^30 executions = 2^70 overflows int64.
+	o.vwmValue[[2]int64{0, 0}], o.vwmUnits[[2]int64{0, 0}] = 10, 1
+	c := &incomeCell{Executions: map[economysim.RecipeID]int64{0: 1 << 30}}
+	if cost, ok := o.inputCost(0, c); ok {
+		t.Errorf("inputCost = %d, ok, want not ok on overflow", cost)
 	}
 }

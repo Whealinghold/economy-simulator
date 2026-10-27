@@ -101,11 +101,15 @@ type CensusRow struct {
 	// at the seed prices, rounded half to even. It is a report field: no table and
 	// no census figure reads it. Valid only when HasIncome.
 	IncomeBP int64
-	// HasIncome is false for a recipe row, for a group with no households, no
-	// upkeep cost or no active recipe, for a group with an active recipe on the lists of several roles
-	// (its flow is not the group's alone), for a region with no wage or a
-	// programme with no labour share (a tight capacity row, FR-VIA-012), and when
-	// the figure does not fit int64.
+	// HasIncome is false in these cases, and IncomeBP is then 0 and not a figure:
+	//   - a recipe row;
+	//   - a group with no households, no upkeep cost, no active recipe or no
+	//     labour at lambda 1 (every active share rounds to a zero flow);
+	//   - a group with an active recipe on the lists of several roles (its flow
+	//     is not the group's alone);
+	//   - a region whose starting wage is below 1;
+	//   - a programme with no labour share (a tight capacity row, FR-VIA-012);
+	//   - a figure that does not fit int64.
 	HasIncome bool
 }
 
@@ -433,6 +437,9 @@ func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool
 	if !ok || !ok1 || !ok2 || den < 1 {
 		return 0, false
 	}
+	if labour.Cmp(steady.Rat(0, 1)) <= 0 { // no labour: an absent figure, not a group paid nothing
+		return 0, false
+	}
 	return labour.Mul(num, den).Round(0, maxInt64)
 }
 
@@ -462,13 +469,18 @@ func (rc *regionCtx) upkeepCost(gc *groupCtx) (sum int64, ok bool) {
 
 // rolesListing counts the groups of the region whose role lists the recipe.
 func (rc *regionCtx) rolesListing(recipe RecipeID) int {
-	roles := 0
-	for gi := range rc.groups {
-		if slices.Contains(rc.groups[gi].row.recipes, recipe) {
-			roles++
+	if rc.roles == nil {
+		rc.roles = map[RecipeID]int{}
+		for gi := range rc.groups {
+			rs := rc.groups[gi].row.recipes
+			for i, r := range rs {
+				if slices.Index(rs, r) == i { // a recipe listed twice by one role counts once
+					rc.roles[r]++
+				}
+			}
 		}
 	}
-	return roles
+	return rc.roles[recipe]
 }
 
 // recipeCensus adds the rows of the active recipes that are on the lists of

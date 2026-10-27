@@ -152,6 +152,9 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 		s, ok := run.Samples[tick]
 		if !ok {
 			bad = append(bad, fmt.Sprintf("no snapshot after tick %d", tick))
+			if tick >= run.Ticks-run.Window { // a partial window would judge (b) to (f) on missing data
+				return m, bad
+			}
 			continue
 		}
 		bad = append(bad, x4Conservation(s)...)
@@ -220,7 +223,8 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 	}
 	// (d)
 	for k, n := range pinned {
-		if bp := n * 10_000 / run.Window; bp > m.maxPinnedBP || (bp == m.maxPinnedBP && m.mostPinned == "") {
+		// A tie goes to the lesser name, not to the map's iteration order.
+		if bp := n * 10_000 / run.Window; bp > m.maxPinnedBP || (bp == m.maxPinnedBP && (m.mostPinned == "" || name(k) < m.mostPinned)) {
 			m.maxPinnedBP, m.mostPinned = bp, name(k)
 		}
 	}

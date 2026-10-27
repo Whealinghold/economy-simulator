@@ -35,6 +35,7 @@ type regionCtx struct {
 	table   []int   // the commodities with a row, ascending
 	groups  []groupCtx
 	nVirt   map[RecipeID]int64 // by recipe: the count of its virtual start offsets, once asked
+	roles   map[RecipeID]int   // by recipe: the groups that list it, built on first ask
 }
 
 // groupCtx is one group of a region.
