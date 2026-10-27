@@ -128,7 +128,7 @@ check can pass and leave the account half closed.
 or each commodity). The balance of a boundary account is therefore *the
 cumulative net amount of that reason that has entered or left the economy*: how
 much money a mint has created, how many units have spoiled. Reading the boundary
-balances is how a report finds every faucet and sink. The boundary accounts of the reasons that configured money flows declare are created at construction, in flow-ID order, after those of the built-in reasons and before any other account (`spec-money-supply.md` 4.5.1).
+balances is how a report finds every faucet and sink. The boundary accounts of the reasons that configured money flows declare are created at construction, in flow-ID order, after those of the built-in reasons and before any other account (`spec-money-supply.md` 4.5.1). The ledger takes them as a list, `Config.Flows` (nil = none), of the class of each flow in flow-ID order (`Faucet` for a grant, `Sink` for a levy: a count could not say which way a flow runs), and the root opens one money-only boundary account for each at construction (3.4.2); it knows no flow ID, and the root names each flow reason by the flow ID.
 
 3.4.1. **Which reasons have a boundary account.** Only a reason of kind faucet or sink
 has one; an internal reason has none (FR-LED-052). A reason that a module owns is a
@@ -585,6 +585,8 @@ later reasons live in a slice that is nil while the reason is undeclared. The co
 checkpoint saves for a reason is the pinned position of the row in the table of 7.2
 (`spec-checkpoint.md` 4.2.7), which does not depend on the numbering.
 
+**Flow reasons are dynamic.** The registry is a fixed table, so the reasons of the configured money flows are not rows of it. `Config.Flows`, a list of `n` classes, makes the reasons `NumReasons + i` for flow `i` in ID order (the in-memory number, internal to the ledger and never saved), each a money-only row: a faucet from its boundary account to an agent or estate account for a grant, a sink from an agent or estate account to its boundary account for a levy (`spec-money-supply.md` 4.5.1), and with no goods row. `Boundary`, `OpenBoundary`, `Transfer` and the flow totals accept them like any reason. The code a checkpoint saves for flow `i` is `pinnedRows + i`, where `pinnedRows` is the count of the table of 7.2 (42), so the saved code does not move when a later change declares a reason; the in-memory number is never saved (`spec-checkpoint.md` 4.2.7). The state added for flows is nil slices at zero flows, so a ledger built with `Flows` nil has the layout, the stride and every array the position hash walks of one built without the field. `AppendFlows` emits the rows in the order of 3.4.2: the built-in reasons, then the flow reasons in flow-ID order, then the `outside_*` rows, then the other module rows by rank (`spec-observability.md` 4.4.1.2); there is no constant that places the block, its rank is the second group of the account-opening function.
+
 ### 7.3 Faucets and sinks are the only exceptions
 
 By 2.1 and 7.2, the only way for the total of non-boundary money, or of a
@@ -1039,6 +1041,7 @@ expiring lots (N-053, 5.3.3).
 | Checked add and multiply | the `internal/` checked-arithmetic helpers (`spec-currency.md` section 7) |
 | Balance sheet valuation | `internal/ledger`, with the price table supplied by the root |
 | The event `BoundaryFlow` | root package, `event.go` (`spec-observability.md`) |
+| The reasons of the money flows: `Config.Flows`, the dynamic numbering, the accounts of group 2 and `AppendFlows` (3.4, 7.2.2) | `internal/ledger`; the root passes the class of each flow and names the reasons by the flow IDs (`moneyflow.go`, `ledger.go`) |
 | Opening and closing accounts for agents, estates, escrow and transit | the root package, in the specs that own them |
 | Sentinels (`ErrInsufficientFunds` and the rest) | `internal/ledger`; the root maps them to rejection reasons (`spec-clearing.md` 3.2) and to its own errors |
 

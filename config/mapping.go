@@ -256,6 +256,10 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 			cfg.Modules.Demand = l.demand(d)
 			d.finish()
 		}
+		if ms := m.sub("money_supply"); ms != nil {
+			cfg.Modules.MoneySupply = l.moneySupply(ms)
+			ms.finish()
+		}
 		m.finish()
 	}
 	root.finish()
@@ -546,4 +550,35 @@ func (l *loader) want(id string, t *tbl) economysim.Want {
 	})
 	t.text("label", &w.Label)
 	return w
+}
+
+// moneySupply reads [modules.money_supply] (spec-config.md 6.2.4,
+// spec-money-supply.md 4.1): the flows as [flow.<id>], each with an inline or
+// nested target = { kind, region, role }. The table being present switches the
+// module on, even with no flow. Every default is the zero value, so an absent
+// key is absent in the struct and the flows come out in ID order.
+func (l *loader) moneySupply(t *tbl) *economysim.MoneySupply {
+	m := &economysim.MoneySupply{}
+	t.entities("flow", func(id string, e *tbl) {
+		f := economysim.MoneyFlow{ID: id}
+		e.need("kind", e.text("kind", &f.Kind))
+		tg := e.sub("target")
+		e.need("target", tg != nil)
+		if tg != nil {
+			tg.text("kind", &f.Target.Kind)
+			tg.text("region", &f.Target.Region)
+			tg.text("role", &f.Target.Role)
+			tg.finish()
+		}
+		readInts(e, []intField{
+			{"amount", &f.Amount}, {"level", &f.Level}, {"rate_bp", &f.RateBP},
+			{"exempt", &f.Exempt}, {"start", &f.Start}, {"until", &f.Until},
+			{"limit", &f.Limit},
+		})
+		e.text("per", &f.Per)
+		e.flag("not_income", &f.NotIncome)
+		e.text("label", &f.Label)
+		m.Flows = append(m.Flows, f)
+	})
+	return m
 }

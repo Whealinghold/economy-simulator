@@ -277,11 +277,26 @@ included), the term in `viability.go`, named `phase_*.go` calls such as
 of the loader in `config/mapping.go`. A hook holds no branch on the module's
 data and no arithmetic.
 
+The audit call and the restore are one hook: `World.Audit` and `p84Audit` each
+call the module's `auditModules` (defined in the module file, `moneyflow.go` for
+the money flows), and a restore reaches it through `Audit`
+(`checkpoint_restore.go`). The module's step of a removal is called from
+`removeAgent` as `dropAgent` (`fanin.go`), a guarded one-line call beside the
+estate intake. A module may add one accessor to a core concept file, as
+(a) says of `effectiveAt`: `addUnearned` in `welfare.go` takes the income a money
+flow pays outside work, beside `addReceipt`, and holds no logic of the module.
+The ledger rows of the module's flows (the boundary accounts opened and the
+`BoundaryFlow` rows named by the flow IDs) are built in `ledger.go` from the
+configuration, as the built-in reasons are, and hold no rule of the module. These
+are named hooks of
+[ADR 0010](../adr/0010-a-module-has-named-hooks-outside-its-file.md) (plan 2-6
+D324, D332, D333).
+
 2.10.2. **Outside its file a module appears only in the catalogue files and at the named hooks of 2.10.1**:
 its pointer in `World` and in `Config.Modules` (`config.go`), its one-line
 calls in `tick.go`, its event types in `event.go`, its sentinels in
 `errors.go`, its option in `option.go`, its bounds in `bounds.go` and its
-defaults in `defaults.go`. A module's logic in any other file is a defect; a hook of 2.10.1 holds no logic.
+defaults in `defaults.go`. A module's logic in any other file is a defect; a hook of 2.10.1 holds no logic (the audit and restore call, `dropAgent` in `removeAgent`, `addUnearned` in `welfare.go` and the flow rows of `ledger.go` are such hooks).
 
 2.10.3. **`tick.go` is a straight line.** Each position of `spec-world.md` 6
 is one call, in the spec's order; a module's call is guarded by its pointer
@@ -1030,4 +1045,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: b83c4da60ee4dfd034eaf163
+RULE-TAG: 5d10f9701f2e6003c356546c

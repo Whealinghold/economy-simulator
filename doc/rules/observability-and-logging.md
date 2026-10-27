@@ -155,7 +155,7 @@ constants in an internal package and reused. The standard keys are:
 | `cause`      | machine-readable cause of a removal, a weight change, a role change, a relocation, an edge status change, the end of a money flow or of an outside side, or a slot set by the consumer or by a policy actor (a constant, like `reason`; each event has its own closed set, listed by the spec that owns the event) |
 | `want`       | want ID |
 | `commodities`, `recipes`, `roles`, `regions` | counts of the entities of each kind, in the construction summary (`region`, an ID, is a different key) |
-| `modules`    | the names of the modules that are on, in the construction summary (the lower-case name of each `Modules` key, such as `storage` or `insurance`) |
+| `modules`    | the names of the modules that are on, in the construction summary (the snake-case name of each `Modules` key, as the configuration file spells it, such as `storage`, `insurance` or `money_supply`) |
 | `warm_start` | whether a warm start was present, in the construction summary (a bool) |
 | `edges`, `components` | counts of the directed edges and of the strongly connected components of the region graph, in the construction summary |
 | `from_region`, `to_region` | region IDs of the two ends of a relocation or an edge (`region` stays the key for a single region) |
@@ -930,4 +930,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: a1571111c97a8bd40359de34
+RULE-TAG: 6f33cecb115ff6341f485169

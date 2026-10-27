@@ -102,4 +102,14 @@ const (
 	Format = "format"
 	// Bytes is the size of an encoded checkpoint, in bytes.
 	Bytes = "bytes"
+	// Flow is a money flow ID, also the reason of its boundary rows.
+	Flow = "flow"
+	// Due and Applied are money in minor units: the amount a money flow computed
+	// for a recipient or region, and the amount actually applied.
+	Due     = "due"
+	Applied = "applied"
+	// From and To are a value before and after a change, in basis points
+	// (FromRegion and ToRegion stay the keys of two regions).
+	From = "from"
+	To   = "to"
 )

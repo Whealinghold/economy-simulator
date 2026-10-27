@@ -333,7 +333,8 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Region` | RegionPrice | `spec-regions.md` section 5.2 |
 | `Commodity` | RegionPrice | `spec-regions.md` section 5.2 |
 | `Price` | RegionPrice | `spec-regions.md` section 5.2 |
-| `Flows` | Modules.MoneySupply (module; nil = off) | `spec-money-supply.md` section 4.1 |
+| `MoneySupply` | Modules (module; nil = off) | `spec-money-supply.md` section 4.1 |
+| `Flows` | MoneySupply | `spec-money-supply.md` section 4.1 |
 | `ID` | MoneyFlow (also the ledger reason) | `spec-money-supply.md` sections 4.5, 11.1 |
 | `Kind` | MoneyFlow | `spec-money-supply.md` sections 4.1, 11.1 |
 | `Target` | MoneyFlow | `spec-money-supply.md` sections 4.3, 11.1 |

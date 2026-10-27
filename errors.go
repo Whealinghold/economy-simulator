@@ -407,3 +407,14 @@ func (e *SolveError) Error() string {
 
 // Unwrap returns ErrSolveLimit.
 func (e *SolveError) Unwrap() error { return ErrSolveLimit }
+
+// The sentinels of the money supply module (spec-money-supply.md 12.1, 10.4).
+var (
+	// ErrFlowShape is a money flow that is not exactly one of the four shapes, or
+	// whose target has a field its kind does not read or lacks one it needs.
+	ErrFlowShape = errors.New("money flow has the wrong shape")
+	// ErrReasonCollision is a flow ID that equals a reason of the registry.
+	ErrReasonCollision = errors.New("flow ID collides with a reason")
+	// ErrUnknownFlow is a call that names a money flow that is not configured.
+	ErrUnknownFlow = errors.New("unknown money flow")
+)

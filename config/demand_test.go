@@ -90,7 +90,7 @@ func TestLoad_DemandKeys(t *testing.T) {
 		{"unknown key in a region taste", []string{minimal + "[modules.demand.region_taste.g.w]\nweight = 1\n"}, economysim.ErrUnknownKey, []string{"modules", "demand", "region_taste", "g", "w", "weight"}},
 		{"wants in the plural", []string{minimal + "[modules.demand.wants.w]\n" + wantOK}, economysim.ErrUnknownKey, []string{"modules", "demand", "wants"}},
 		{"bare demand table", []string{minimal + "[demand]\n"}, economysim.ErrUnknownKey, []string{"demand"}},
-		{"a module that is not built", []string{minimal + "[modules.money_supply]\n"}, economysim.ErrUnknownKey, []string{"modules", "money_supply"}},
+		{"a module that is not built", []string{minimal + "[modules.credit]\n"}, economysim.ErrUnknownKey, []string{"modules", "credit"}},
 		{"missing quantity", []string{minimal + "[modules.demand.want.w]\nitems = [ { commodity = \"a\" } ]\n"}, economysim.ErrMissingField, []string{"modules", "demand", "want", "w", "quantity"}},
 		{"missing items", []string{minimal + "[modules.demand.want.w]\nquantity = 1\n"}, economysim.ErrMissingField, []string{"modules", "demand", "want", "w", "items"}},
 		{"missing item commodity", []string{minimal + "[modules.demand.want.w]\nquantity = 1\nitems = [ { weight = 5 } ]\n"}, economysim.ErrMissingField, []string{"modules", "demand", "want", "w", "items", "[0]", "commodity"}},

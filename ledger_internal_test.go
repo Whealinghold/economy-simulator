@@ -376,7 +376,7 @@ func TestBoundaryFlows_Rows(t *testing.T) {
 	// The tick: region 0 has recipe_input c0 3 (sink), recipe_output c1 9
 	// (faucet) and consumption c1 2 (sink); region 1 has initial money 5
 	// (faucet) and spoilage c1 1 (sink). The trade of 10 is internal.
-	got := boundaryFlows(nil, l.AppendFlows(nil, false), 7)
+	got := boundaryFlows(nil, l.AppendFlows(nil, false), 7, nil)
 	want := []BoundaryFlow{
 		{Tick: 7, Region: 0, Reason: ReasonRecipeInput, Kind: KindSink, Commodity: 0, Total: 3},
 		{Tick: 7, Region: 0, Reason: ReasonRecipeOutput, Kind: KindFaucet, Commodity: 1, Total: 9},
@@ -385,24 +385,24 @@ func TestBoundaryFlows_Rows(t *testing.T) {
 		{Tick: 7, Region: 1, Reason: ReasonSpoilage, Kind: KindSink, Commodity: 1, Total: 1},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("boundaryFlows(tick totals, 7) =\n %+v\nwant\n %+v", got, want)
+		t.Errorf("boundaryFlows(tick totals, 7, nil) =\n %+v\nwant\n %+v", got, want)
 	}
 
 	// The bucket: initial money 100 and 4 units of c0 in region 0, 6 units of
 	// c1 in region 1, money before goods.
-	gotBucket := boundaryFlows(nil, l.AppendFlows(nil, true), constructionTick)
+	gotBucket := boundaryFlows(nil, l.AppendFlows(nil, true), constructionTick, nil)
 	wantBucket := []BoundaryFlow{
 		{Tick: -1, Region: 0, Reason: ReasonInitial, Kind: KindFaucet, Commodity: NoCommodity, Total: 100},
 		{Tick: -1, Region: 0, Reason: ReasonInitial, Kind: KindFaucet, Commodity: 0, Total: 4},
 		{Tick: -1, Region: 1, Reason: ReasonInitial, Kind: KindFaucet, Commodity: 1, Total: 6},
 	}
 	if !reflect.DeepEqual(gotBucket, wantBucket) {
-		t.Errorf("boundaryFlows(bucket, -1) =\n %+v\nwant\n %+v", gotBucket, wantBucket)
+		t.Errorf("boundaryFlows(bucket, -1, nil) =\n %+v\nwant\n %+v", gotBucket, wantBucket)
 	}
 
 	// A call appends: the rows already in dst stay in front.
 	prefix := []BoundaryFlow{{Tick: 1, Total: 1}}
-	got = boundaryFlows(prefix, l.AppendFlows(nil, true), -1)
+	got = boundaryFlows(prefix, l.AppendFlows(nil, true), -1, nil)
 	if len(got) != 1+len(wantBucket) || got[0] != prefix[0] {
 		t.Errorf("boundaryFlows appended to a prefix = %+v, want the prefix then %d rows", got, len(wantBucket))
 	}
@@ -415,7 +415,7 @@ func TestBoundaryFlows_Rows(t *testing.T) {
 func TestBoundaryFlows_NothingMoved(t *testing.T) {
 	t.Parallel()
 	l := mustLedger(t, Config{Commodities: []Commodity{{ID: "c"}}, Regions: []Region{{ID: "r"}}})
-	if got := boundaryFlows(nil, l.AppendFlows(nil, false), 0); len(got) != 0 {
+	if got := boundaryFlows(nil, l.AppendFlows(nil, false), 0, nil); len(got) != 0 {
 		t.Errorf("boundaryFlows of empty totals = %+v, want none", got)
 	}
 	internal := []ledger.Flow{
@@ -424,7 +424,7 @@ func TestBoundaryFlows_NothingMoved(t *testing.T) {
 		{Region: 0, Reason: ledger.EstateMoney, Commodity: ledger.Money, Total: 5},
 		{Region: 0, Reason: ledger.LoanOut, Commodity: ledger.Money, Total: 5},
 	}
-	if got := boundaryFlows(nil, internal, 0); len(got) != 0 {
+	if got := boundaryFlows(nil, internal, 0, nil); len(got) != 0 {
 		t.Errorf("boundaryFlows of internal reasons = %+v, want none", got)
 	}
 }
@@ -439,14 +439,14 @@ func TestBoundaryFlows_NoAllocationWithRoom(t *testing.T) {
 	l := scriptedFlows(t) // not parallel: AllocsPerRun must not run beside other tests
 	flows := l.AppendFlows(nil, false)
 	dst := make([]BoundaryFlow, 0, 16)
-	if got := testing.AllocsPerRun(100, func() { dst = boundaryFlows(dst[:0], flows, 7) }); got != 0 {
+	if got := testing.AllocsPerRun(100, func() { dst = boundaryFlows(dst[:0], flows, 7, nil) }); got != 0 {
 		t.Errorf("boundaryFlows with room allocated %v times per run, want 0", got)
 	}
 	if len(dst) != 5 {
 		t.Errorf("rows = %d, want 5", len(dst))
 	}
 	var tight []BoundaryFlow
-	if got := testing.AllocsPerRun(10, func() { tight = boundaryFlows(nil, flows, 7) }); got == 0 || len(tight) != 5 {
+	if got := testing.AllocsPerRun(10, func() { tight = boundaryFlows(nil, flows, 7, nil) }); got == 0 || len(tight) != 5 {
 		t.Errorf("boundaryFlows with no room allocated %v times for %d rows, want more than 0 and 5", got, len(tight))
 	}
 }
@@ -574,7 +574,7 @@ func TestWearApplied_RetirementIsNotTheRate(t *testing.T) {
 	t.Parallel()
 	l := scriptedWear(t)
 	retired := map[CommodityID]int64{}
-	for _, f := range boundaryFlows(nil, l.AppendFlows(nil, false), 7) {
+	for _, f := range boundaryFlows(nil, l.AppendFlows(nil, false), 7, nil) {
 		if f.Reason == ReasonWear {
 			retired[f.Commodity] += f.Total
 		}

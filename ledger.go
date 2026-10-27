@@ -80,17 +80,19 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 	for _, m := range modules {
 		declared = append(declared, m...)
 	}
+	classes := flowClasses(&cfg)
 	l, err := ledger.New(ledger.Config{
 		Commodities: comms,
 		Regions:     len(cfg.Regions),
 		MaxMoney:    MaxMoney,
 		MaxQuantity: MaxQuantity,
 		Declared:    declared,
+		Flows:       classes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
-	for _, g := range boundaryGroups(len(comms), modules) {
+	for _, g := range boundaryGroups(len(comms), modules, len(classes)) {
 		if err := g.open(l); err != nil {
 			return nil, fmt.Errorf("open the %s boundary accounts: %w", g.name, err)
 		}
@@ -117,14 +119,14 @@ type boundaryGroup struct {
 }
 
 // boundaryGroups returns the four groups in the order the accounts are created:
-// (1) the built-in group; (2) the declared money-flow reasons; (3) the six
-// outside_* reasons; (4) the other reasons of the modules that are on, in module
-// order. Groups 2 and 3 are empty hooks until plans 6 and 16 fill them; each
-// module's change fills its own group and no other.
-func boundaryGroups(commodities int, modules [][]ledger.Reason) [4]boundaryGroup {
+// (1) the built-in group; (2) the declared money-flow reasons, one money
+// boundary for each of the flows; (3) the six outside_* reasons; (4) the other
+// reasons of the modules that are on, in module order. Group 3 is an empty hook
+// until plan 16 fills it; each module's change fills its own group and no other.
+func boundaryGroups(commodities int, modules [][]ledger.Reason, flows int) [4]boundaryGroup {
 	return [4]boundaryGroup{
 		{"built-in", func(l *ledger.Ledger) error { return openBuiltInBoundaries(l, commodities) }},
-		{"money-flow", func(*ledger.Ledger) error { return nil }},
+		{"money-flow", func(l *ledger.Ledger) error { return openFlowBoundaries(l, flows) }},
 		{"outside", func(*ledger.Ledger) error { return nil }},
 		{"module", func(l *ledger.Ledger) error { return openModuleBoundaries(l, commodities, modules) }},
 	}
@@ -140,6 +142,17 @@ func openBuiltInBoundaries(l *ledger.Ledger, commodities int) error {
 			if err := openBoundary(l, r, thing); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// openFlowBoundaries opens the money boundary account of each of the n money
+// flows, in flow-ID order (spec-money-supply.md 4.5.1, plan 2-6 D324).
+func openFlowBoundaries(l *ledger.Ledger, n int) error {
+	for i := range n {
+		if _, err := l.OpenBoundary(ledger.FlowReason(i), ledger.Money); err != nil {
+			return fmt.Errorf("open the boundary account of money flow %d: %w", i, err)
 		}
 	}
 	return nil
@@ -186,10 +199,14 @@ func openBoundary(l *ledger.Ledger, r ledger.Reason, thing int) error {
 // their registry row (not by the number of the reason), each with money before
 // goods and then ascending commodity.
 //
+// mf is the money flows of the configuration in ID order (nil with the module
+// off): the reasons NumReasons+i of the ledger are their flows, named by the ID
+// and classed by the kind (spec-money-supply.md 4.5.1).
+//
 // It allocates only when dst has no room, so the world reuses one slice. A
 // faucet or a sink with no root name is a programmer error: its module
 // declared the reason and did not add its case to reasonName.
-func boundaryFlows(dst []BoundaryFlow, flows []ledger.Flow, tick int64) []BoundaryFlow {
+func boundaryFlows(dst []BoundaryFlow, flows []ledger.Flow, tick int64, mf []MoneyFlow) []BoundaryFlow {
 	var scratch [ledger.NumReasons]ledger.Reason
 	module := ledger.DeclaredByRank(scratch[:0])
 	for lo := 0; lo < len(flows); {
@@ -197,9 +214,9 @@ func boundaryFlows(dst []BoundaryFlow, flows []ledger.Flow, tick int64) []Bounda
 		for hi < len(flows) && flows[hi].Region == flows[lo].Region {
 			hi++
 		}
-		dst = appendGroup(dst, flows[lo:hi], tick, 0, false)
+		dst = appendGroup(dst, flows[lo:hi], tick, 0, false, mf)
 		for _, r := range module {
-			dst = appendGroup(dst, flows[lo:hi], tick, r, true)
+			dst = appendGroup(dst, flows[lo:hi], tick, r, true, mf)
 		}
 		lo = hi
 	}
@@ -209,19 +226,15 @@ func boundaryFlows(dst []BoundaryFlow, flows []ledger.Flow, tick int64) []Bounda
 // appendGroup appends the rows of the faucet and sink flows of one region that
 // belong to a group: the flows of reason only when declared is true, else the
 // flows of every reason that is not declared.
-func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledger.Reason, declared bool) []BoundaryFlow {
+func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledger.Reason, declared bool, mf []MoneyFlow) []BoundaryFlow {
 	for _, f := range flows {
 		if _, d := ledger.Rank(f.Reason); d != declared || (declared && f.Reason != only) {
 			continue
 		}
 		goods := f.Commodity != ledger.Money
-		class, ok := ledger.ClassOf(f.Reason, goods)
-		if !ok || class == ledger.Internal {
-			continue
-		}
-		name, ok := reasonName(f.Reason)
+		class, name, ok := classAndName(f.Reason, goods, mf)
 		if !ok {
-			panic(fmt.Sprintf("economysim: invariant violated (programmer error): boundary flow of ledger reason %d has no Reason name", f.Reason))
+			continue
 		}
 		kind, commodity := KindFaucet, NoCommodity
 		if class == ledger.Sink {
@@ -236,6 +249,30 @@ func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledge
 		})
 	}
 	return dst
+}
+
+// classAndName returns the class and the root name of a faucet or a sink reason
+// of the ledger for money or goods, and false for a reason that is neither (an
+// internal one, or one with no row for the thing). A flow reason is classed by
+// the kind of its flow and named by its ID; a built-in or declared one by the
+// ledger's table and reasonName.
+func classAndName(r ledger.Reason, goods bool, mf []MoneyFlow) (ledger.Class, Reason, bool) {
+	if r >= ledger.NumReasons {
+		i := int(r - ledger.NumReasons)
+		if goods || i >= len(mf) {
+			panic(fmt.Sprintf("economysim: invariant violated (programmer error): boundary flow of ledger reason %d has no Reason name", r))
+		}
+		return flowClass(mf[i]), Reason(mf[i].ID), true
+	}
+	class, ok := ledger.ClassOf(r, goods)
+	if !ok || class == ledger.Internal {
+		return 0, "", false
+	}
+	name, ok := reasonName(r)
+	if !ok {
+		panic(fmt.Sprintf("economysim: invariant violated (programmer error): boundary flow of ledger reason %d has no Reason name", r))
+	}
+	return class, name, true
 }
 
 // wearApplied appends to dst the WearApplied rows of l: for each of the

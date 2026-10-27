@@ -104,6 +104,7 @@ func (v *validator) structural() {
 	v.fields()
 	v.references()
 	v.validateDemand()
+	v.validateMoneySupply()
 	v.structure()
 	v.economics()
 	v.overflow()
@@ -289,6 +290,7 @@ func (v *validator) counts() {
 		over(len(w.Pools), MaxRegions, "warm_start", "pools")
 	}
 	demandCounts(c.Modules.Demand, over)
+	moneyCounts(c.Modules.MoneySupply, over)
 	if len(r.errs) > 0 {
 		return
 	}
@@ -2036,6 +2038,7 @@ func warnings(c *Config) []Warning {
 
 	out = append(out, regionWarnings(c)...)
 	out = append(out, demandWarnings(c, lk)...)
+	out = append(out, moneyWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

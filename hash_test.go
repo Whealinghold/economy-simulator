@@ -25,6 +25,7 @@ var presentationOnly = map[string]bool{
 	"Recipe.Label":              true,
 	"Role.Label":                true,
 	"Want.Label":                true,
+	"MoneyFlow.Label":           true,
 	"Region.Label":              true,
 	"WorldParams.DistanceLabel": true,
 }

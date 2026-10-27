@@ -405,6 +405,12 @@ Three things can leave part of a due unapplied. None is an error; each is counte
 - **Limit** (both): the flow's total would pass its effective limit (4.4.2). The amount is
   cut, then the flow ends.
 
+When a due is cut by two bounds, the room bound acts first (a levy's available balance:
+Short; a grant's headroom: Headroom) and then the flow's remaining limit (Limit), applied to
+what the room bound left. A household is counted once, in the first count that cut it, so
+`Short + Headroom + Limit` never exceeds the households short of their due. The carry
+advances by the due in every case (6.1.2).
+
 A transfer the ledger refuses for any other reason (an unknown or closed account cannot
 occur here) is a programmer error and panics with a message that says so
 (architecture.md 8.1; `spec-ledger.md` 12.2).
@@ -461,7 +467,8 @@ figure converts. The carry of a rate levy starts at 0 and is in units of `1/(P*1
 6.4.1. Every product goes through the checked multiply-divide helper with a 128-bit
 intermediate (`spec-currency.md` 7; architecture.md 3.5). The largest numerator is
 `MaxWeight * MaxFlowAmount * MaxFlowScale = 10^6 * 10^12 * 10^5 = 10^23`, which does not fit
-`int64` but fits 128 bits. A quotient above `MaxMoney` is treated as `MaxMoney` in the
+`int64` but fits 128 bits. A rate levy's numerator is
+`base * (RateBP * S) + carry`, at most `MaxMoney * (10^4 * 10^5) + carry`, about `10^27`, which also fits 128 bits; the one helper `checked.MulAddDivSat` (`floor((a*b + add) / c)` saturated at `MaxInt64`, with the exact remainder) forms both. A quotient above `MaxMoney` is treated as `MaxMoney` in the
 comparisons of 5.4: a credit never exceeds the recipient's headroom, which is at most
 `MaxMoney`, so the saturation can never produce a wrong payment, only a larger forfeited
 due. The carry is the exact 128-bit remainder in every case.
@@ -812,12 +819,13 @@ Each rule has a sentinel and a failing-case test (testing.md 3.9); an error name
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per`, a `Kind` or a target `Kind` that is not one of its values; `Until` not above `Start` when set; more than `MaxMoneyFlows` flows |
+| `ErrOutOfBounds` | a field outside its bound in 11.1; a `Per`, a `Kind` or a target `Kind` that is not one of its values; `Until` not above `Start` when set |
+| `ErrTooMany` | more than `MaxMoneyFlows` flows (a count bound, checked in phase 1 with the others, `spec-config.md` 7.1.6) |
 | `ErrFlowShape` (new) | a grant with `RateBP` or `Exempt`, or with both `Amount` and `Level` or neither; a levy with `Level`, or with both `Amount` and `RateBP` or neither; a household target with no role; a pool target with a role; `NotIncome` on a levy or on a target that is not households; `Level` with `Per` `year`; a stores target with `Level` or `RateBP`, a role, or a jurisdiction; a treasury target with a region, a role or a store class |
 | `ErrDuplicateID` | two flows with one ID |
 | `ErrReasonCollision` (new) | a flow ID that equals a built-in reason of the registry or a reason a later spec declares |
 | `ErrUnknownRole`, `ErrUnknownRegion` | a target naming an undefined role or region |
-| `ErrModuleDependency` | a pool target while the estates module is off; a stores target while the storage module is off |
+| `ErrModuleDependency` | a pool target while the estates module is off; a stores target while the storage module is off; a treasury target while the polity or fiscal module is not built or is off (the nearest sentinel until POL and FIS give the treasury its own, `ErrUnknownJurisdiction` and `ErrNotGoverned`, which they keep once built) |
 | `ErrUnknownStoreClass` (STO) | a stores target naming a store class that is not configured |
 | `ErrUnknownJurisdiction` (POL) | a treasury target naming a jurisdiction that is not defined |
 | `ErrNotGoverned` (FIS) | a treasury target naming a jurisdiction that has no seat |
@@ -857,7 +865,7 @@ events carry what `BoundaryFlow` cannot.
 | Event | Emitted | Fields (besides `Tick`) |
 |-------|---------|-------------------------|
 | `BoundaryFlow` (existing) | once per tick per (region, reason, money) with a non-zero total | `Region`, `Reason` (the flow ID), faucet or sink, total |
-| `MoneyFlowLimited` (new) | once per flow and region in a tick in which any due was not applied; never when all was applied | `Flow`, `Region`, `Due`, `Applied`, `Short` (households whose levy found too little), `Headroom` (households whose credit was cut at `MaxMoney`), `Limit` (households cut by the limit) |
+| `MoneyFlowLimited` (new) | once per flow and region in a tick in which any due was not applied; never when all was applied | `Flow`, `Region`, `Due`, `Applied`, `Short` (households whose levy found too little), `Headroom` (households whose credit was cut at `MaxMoney`), `Limit` (households cut by the limit); a household is in the first count that cut it only (5.4) |
 | `MoneyFlowEnded` (new) | once, in the tick a flow reaches its effective limit and ends | `Flow`, `Cause` (`limit` or `cap`), `Total` |
 | `MoneyFlowScaled` (new) | once per changed flow of a call of `SetFlowScales`, or of a policy actor's write at P0.3a; also for a fiscal flow | `Flow`, `From`, `To` (basis points), `Cause` (`consumer` or `policy`) |
 
@@ -930,7 +938,8 @@ All plain data in a fixed order, no maps (ADR 0002):
   ended, 1 limit, 2 cap);
 - per flow with a household target and a carry shape (a rate grant, a fixed levy or a rate
   levy), in ID order: the carries, as (account ID, carry) pairs in ascending account ID, only
-  for open accounts;
+  for started accounts (an account the flow has visited; the start value is a function of the
+  account ID alone, so a lazy start equals a start at creation);
 - per flow with a pool target and a carry shape: one carry per region, in region order;
 - per flow with a stores target and a carry shape: the carries as (account ID, carry) pairs in
   ascending account ID, only for open accounts, one per account and not per store;
@@ -939,9 +948,9 @@ All plain data in a fixed order, no maps (ADR 0002):
 
 A top-up has no carry. The boundary balances of the declared reasons are in the ledger's
 saved state (`spec-ledger.md` 11), not here. Not saved: the due, the per-tick aggregates and
-`Applied` of the last tick (derived or cleared each tick), and the carry of a closed
-account (dropped when the account closes, so the saved size is bounded by the open
-accounts). The flows themselves are configuration and are in the hash, `Scale` is not
+`Applied` of the last tick (derived or cleared each tick), and the carry of a removed
+agent (dropped when the agent is removed, so the saved size is bounded by the started
+accounts of agents that exist; an agent that leaves the class keeps its carry and resumes it on return, 4.3.1). The flows themselves are configuration and are in the hash, `Scale` is not
 (ADR 0002 decision 3). A world restored between ticks continues exactly (FR-MON-040).
 
 ## 15. The warm start and the steady state with money flows
@@ -1238,9 +1247,9 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-017 | Every product of the step MUST use checked arithmetic with a 128-bit intermediate, MUST NOT wrap, and a quotient above `MaxMoney` MUST be treated as `MaxMoney` in the limits of FR-MON-020 to FR-MON-022. |
 | FR-MON-018 | In each tick the grants MUST be applied before the levies, each in ascending flow ID, within a flow regions in region order and accounts in ascending account ID. |
 | FR-MON-019 | The flows MUST run in phase 1 after relief is paid and before production begins, so a grant is available to the same tick's `Trade`. |
-| FR-MON-020 | A levy MUST collect at most the balance above `w*Exempt` and MUST NOT take a balance below it; the uncollected part MUST be forgiven, not carried, and counted as `Short`. |
+| FR-MON-020 | A levy MUST collect at most the balance above `w*Exempt` and MUST NOT take a balance below it; the uncollected part MUST be forgiven, not carried, and counted as `Short`. The room bound MUST act before the limit (5.4). |
 | FR-MON-021 | A grant MUST NOT take a balance above `MaxMoney`; the part not issued MUST be counted as `Headroom`. |
-| FR-MON-022 | An amount cut by the limit MUST be counted as `Limit`, and the carry MUST advance by the due and not by what was applied. |
+| FR-MON-022 | An amount cut by the limit MUST be counted as `Limit`, and the carry MUST advance by the due and not by what was applied. A household cut by both the room bound and the limit MUST be counted in `Short` or `Headroom` only. |
 | FR-MON-023 | A flow's scale MUST default to 10 000, MUST be changed only by `SetFlowScales` between steps or by a policy actor at P0.3a within 0 to `MaxFlowScale`, MUST apply from the next P1.7, MUST be refused with `ErrModuleOff` (module off), `ErrUnknownFlow` (a flow that is not declared) or `ErrOutOfBounds`, and `MoneyFlowScaled` MUST be emitted for each changed flow with its `Cause`. |
 | FR-MON-024 | The engine MUST NOT change a flow's scale or any other field of a flow by itself; no rule of this module MUST read the money supply, a price, an index or a count of accounts of a class. |
 | FR-MON-025 | A grant to households that is not `NotIncome` MUST be added to the recipient's `income_t` for the tick and excluded from the observed wage, a grant with `NotIncome` MUST NOT, and a levy MUST NOT be netted from income. |
@@ -1248,17 +1257,17 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 | FR-MON-027 | The audit (`World.Audit`, `WithAudit`) MUST check FR-MON-026 and MUST report the first flow whose boundary balance and total disagree. |
 | FR-MON-028 | A world with no active flow MUST keep `M` equal to `M_init` at every tick boundary, for every seed. |
 | FR-MON-029 | `BoundaryFlow` MUST report the amounts of a flow under its ID as the `Reason`, for the region of the non-boundary side, with the kind faucet or sink. |
-| FR-MON-030 | `MoneyFlowLimited` MUST be emitted once per flow and region per tick in which any due was not applied, with `Due`, `Applied`, `Short`, `Headroom` and `Limit`, and MUST NOT be emitted when everything was applied. |
+| FR-MON-030 | `MoneyFlowLimited` MUST be emitted once per flow and region per tick in which any due was not applied, with `Due`, `Applied`, `Short`, `Headroom` and `Limit`, and MUST NOT be emitted when everything was applied. `Short + Headroom + Limit` MUST NOT exceed the households short of their due. |
 | FR-MON-031 | Events MUST contain no map and no pointer, fixed-point values only, and MUST be emitted after the step's transfers. |
 | FR-MON-032 | The step MUST NOT log at `Info`, `Warn` or `Error`; its `Debug` lines MUST be guarded by `Enabled`, have constant messages and use the keys `flow`, `region`, `due`, `applied`, `cause`. |
 | FR-MON-033 | With the default logger and observer the step MUST build no event and allocate nothing beyond scratch held by the world. |
-| FR-MON-034 | A field outside its bound, an unknown `Kind` or `Per`, `Until` not above `Start` when set, or more than `MaxMoneyFlows` flows MUST be rejected with `ErrOutOfBounds`. |
+| FR-MON-034 | A field outside its bound, an unknown `Kind` or `Per`, `Until` not above `Start` when set MUST be rejected with `ErrOutOfBounds`, and more than `MaxMoneyFlows` flows MUST be rejected with `ErrTooMany`. |
 | FR-MON-035 | Two flows with one ID MUST be rejected with `ErrDuplicateID`. |
 | FR-MON-036 | A flow ID equal to a built-in reason, or to a reason a later spec declares, MUST be rejected with `ErrReasonCollision`. |
 | FR-MON-037 | A target naming an undefined role or region MUST be rejected with `ErrUnknownRole` or `ErrUnknownRegion`. |
-| FR-MON-038 | A pool target while the estates module is off, and a stores target while the storage module is off, MUST be rejected with `ErrModuleDependency`; a stores target naming an unconfigured class MUST be `ErrUnknownStoreClass`, a treasury target naming an undefined jurisdiction `ErrUnknownJurisdiction` and one with no seat `ErrNotGoverned`. |
+| FR-MON-038 | A pool target while the estates module is off, , a stores target while the storage module is off, and a treasury target while the polity or fiscal module is not built or is off, MUST be rejected with `ErrModuleDependency`; a stores target naming an unconfigured class MUST be `ErrUnknownStoreClass`, a treasury target naming an undefined jurisdiction `ErrUnknownJurisdiction` and one with no seat `ErrNotGoverned`. |
 | FR-MON-039 | The warnings `no_flows`, `faucet_without_sink`, `pair_unbalanced`, `levy_below_upkeep`, `class_empty`, `grant_to_pool_no_outlet` and `store_levy_below_upkeep` MUST NOT fail validation, and each MUST name its path. |
-| FR-MON-040 | The state of 14 MUST be saved in the order given, a restored world MUST apply the same payments as an uninterrupted one, and a carry of a closed account MUST NOT be saved. |
+| FR-MON-040 | The state of 14 MUST be saved in the order given, a restored world MUST apply the same payments as an uninterrupted one, and a carry that is not started, or of a removed agent, MUST NOT be saved. |
 | FR-MON-041 | The module MUST draw no random number, and the draws made at agent creation (`spec-agents.md` 3.5.2) MUST NOT depend on whether it is on. |
 | FR-MON-042 | The Snapshot MUST carry `M_h`, `M_p`, `M_c`, `M_t` per region, `M` and `H`, the money boundary balance per reason sorted by reason, and each flow's `Total`, `Scale` and whether it ended, as plain data; the boundary balances MUST be in the order of `spec-observability.md` 4.4.1.2. |
 | FR-MON-043 | A faucet or sink reason MUST have a Boundary account on its boundary side, so a counterparty whose balance is created or destroyed outside conservation is a Boundary account; a transfer under such a reason between two non-boundary accounts MUST be refused with `ErrReasonMismatch` (`spec-ledger.md` FR-LED-004). |
@@ -1322,21 +1331,34 @@ a bound or a placeholder owned by this spec; none is calibrated (N-015, N-027).
 |---------|------|
 | `MoneySupply`, `MoneyFlow`, `FlowTarget` and the `Modules.MoneySupply` pointer | root package, `config.go` (types) and `defaults.go`; bounds in `bounds.go` |
 | Validation, the sentinels `ErrFlowShape`, `ErrReasonCollision` and the warnings | root package, `validate.go`, `errors.go` |
-| The pure rules: the carry (6.1), the rate levy (6.3), the top-up, the limits (5.4) | `internal/moneyflow` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9); name provisional, and it MAY live in `internal/ledger` helpers if small |
-| The step (5) and the flow state | root package, `world.go` (phase 1) and `moneysupply.go` |
-| `SetFlowScales` | root package, `integration.go` (`spec-integration.md` 5.1); the flow state is in `moneysupply.go` |
+| The pure rules: the carry (6.1), the rate levy (6.3), the top-up, the limits (5.4) | `internal/moneyflow` (stdlib only, over primitive slices, converted inline at the call, architecture.md 2.9; the name is confirmed, architecture.md 2.6) |
+| The step (5) and the flow state | root package, `moneyflow.go` (position P1.7, `tick.go` one line) |
+| `SetFlowScales` | root package, `integration.go` (`spec-integration.md` 5.1); the flow state is in `moneyflow.go` |
 | The events `MoneyFlowLimited`, `MoneyFlowEnded`, `MoneyFlowScaled` | root package, `event.go` |
 | The declared reasons | `internal/ledger` registry, built at construction from the flow list |
 | Log keys `flow`, `due`, `applied` | `internal/logkeys` (key strings only) |
 
 ```go
-// internal/moneyflow: stdlib only, no root types. A sketch, not final.
-// Spread returns the payment of one tick and the new carry. num = w*amount*scale + carry.
-func Spread(w, amount, scale, carry, den int64) (pay, newCarry int64, ok bool)
+// internal/moneyflow: stdlib only, no root types. All amounts are int64 fixed point.
+// ok is false only for an input outside the bounds the caller validated.
 
-// RateLevy returns the amount due from a balance above the exemption.
-func RateLevy(base, rateBP, scale, carry, den int64) (due, newCarry int64, ok bool)
+// StartCarry is the initial carry of a rate grant or a fixed levy: (id mod period) * 10^4
+// (6.2); a rate levy starts at 0. A function of the account ID alone.
+func StartCarry(id, period int64) int64
 
-// TopUp returns the amount that raises balance to w*level*scale/10_000.
-func TopUp(w, level, scale, balance int64) (due int64, ok bool)
+// Spread returns the due of one tick and the new carry. The numerator
+// w*amount*scale + carry is formed in 128 bits (checked.MulAddDivSat); a quotient at or
+// above maxMoney is returned as maxMoney (6.4.1).
+func Spread(w, amount, scale, carry, period, maxMoney int64) (due, newCarry int64, ok bool)
+
+// RateLevy returns the due from the balance above the exemption (base); the numerator
+// is base * (rateBP*scale) + carry, up to 10^27 (6.4.1), over period * 10^8.
+func RateLevy(base, rateBP, scale, carry, period, maxMoney int64) (due, newCarry int64, ok bool)
+
+// TopUp returns the amount that raises balance to w*level*scale/10_000. A top-up has no carry.
+func TopUp(w, level, scale, balance, maxMoney int64) (due int64, ok bool)
+
+// Clamp applies the room bound first (a levy's available balance, a grant's headroom),
+// then the flow's remaining limit, and says which bound cut the due (5.4).
+func Clamp(due, room, remaining int64) (applied int64, cut Cut) // CutNone, CutRoom, CutLimit
 ```

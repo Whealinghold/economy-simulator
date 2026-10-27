@@ -115,7 +115,7 @@ func TestNewLedger_BoundaryGroupOrder(t *testing.T) {
 	t.Parallel()
 	const c = 2
 	modules := moduleReasons(&Config{Modules: Modules{Demand: &Demand{}}})
-	groups := boundaryGroups(c, modules)
+	groups := boundaryGroups(c, modules, 0)
 	names := []string{groups[0].name, groups[1].name, groups[2].name, groups[3].name}
 	if want := []string{"built-in", "money-flow", "outside", "module"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("boundaryGroups names = %v, want %v", names, want)
@@ -194,8 +194,8 @@ func TestBoundaryFlow_RowOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := boundaryFlows(nil, tt.flows, 9); !reflect.DeepEqual(got, wantRows) {
-				t.Errorf("boundaryFlows(%+v, 9) =\n %+v\nwant\n %+v", tt.flows, got, wantRows)
+			if got := boundaryFlows(nil, tt.flows, 9, nil); !reflect.DeepEqual(got, wantRows) {
+				t.Errorf("boundaryFlows(%+v, 9, nil) =\n %+v\nwant\n %+v", tt.flows, got, wantRows)
 			}
 		})
 	}

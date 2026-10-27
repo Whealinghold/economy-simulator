@@ -341,3 +341,100 @@ func TestMulDivDiv_AgainstBig(t *testing.T) {
 		check(pick(), pick(), pick(), pick())
 	}
 }
+
+// refMulAddDivSat is the math/big oracle of MulAddDivSat: the floor quotient
+// saturated at MaxInt64 and the exact remainder.
+func refMulAddDivSat(a, b, add, c int64) (q, r int64) {
+	n := new(big.Int).Mul(big.NewInt(a), big.NewInt(b))
+	n.Add(n, big.NewInt(add))
+	bq, br := new(big.Int).QuoRem(n, big.NewInt(c), new(big.Int))
+	if !bq.IsInt64() {
+		return math.MaxInt64, br.Int64()
+	}
+	return bq.Int64(), br.Int64()
+}
+
+// TestMulAddDivSat_ExactAndSaturating verifies the carry-adding division of a
+// money flow: the floor quotient and exact remainder over a 128-bit numerator,
+// the saturation of a quotient past int64, and the refusal of a negative
+// argument or a non-positive divisor.
+//
+// The grant numerator is MaxMoney*S (S = 10^4 here) near 10^23 and the rate
+// levy numerator near 10^27 (D327): MaxInt64 * 10^9 is about 9.2e27.
+//
+// Requirement: FR-MON-017
+func TestMulAddDivSat_ExactAndSaturating(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		a, b, add, c int64
+		wantQ, wantR int64
+		wantOK       bool
+	}{
+		{"carry is added before dividing", 7, 10, 5, 4, 18, 3, true}, // (70+5)/4 = 18 r 3
+		{"exact division", 6, 5, 0, 10, 3, 0, true},
+		{"zero numerator", 0, 9, 0, 3, 0, 0, true},
+		{"quotient at the int64 edge", math.MaxInt64, 1, 0, 1, math.MaxInt64, 0, true},
+		{"quotient one past int64 saturates", math.MaxInt64, 1, 1, 1, math.MaxInt64, 0, true},
+		{"grant numerator near 1e23", math.MaxInt64, 10_000, 9_999, 3_650_000, 25269512429739111, 2929999, true},
+		{"rate levy numerator near 1e27", math.MaxInt64, 1_000_000_000, 0, 1, math.MaxInt64, 0, true},
+		{"b is zero", 5, 0, 3, 2, 1, 1, true}, // (0+3)/2 = 1 r 1
+		// (2^32-1)(2^32+1) = 2^64-1 and the carry of 1 makes 2^64, which only the
+		// carry out of the low word reaches: 2^64 / 2^32 = 2^32.
+		{"the carry crosses into the high word", 1<<32 - 1, 1<<32 + 1, 1, 1 << 32, 1 << 32, 0, true},
+		// 2^32 * 2^32 = 2^64 over 1 has a quotient whose low word is 0: only the high
+		// word says it does not fit.
+		{"the high word alone saturates", 1 << 32, 1 << 32, 0, 1, math.MaxInt64, 0, true},
+		{"zero divisor", 1, 1, 0, 0, 0, 0, false},
+		{"negative divisor", 1, 1, 0, -3, 0, 0, false},
+		{"negative a", -1, 1, 0, 3, 0, 0, false},
+		{"negative b", 1, -1, 0, 3, 0, 0, false},
+		{"negative carry", 1, 1, -1, 3, 0, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			q, r, ok := checked.MulAddDivSat(tt.a, tt.b, tt.add, tt.c)
+			if ok != tt.wantOK {
+				t.Fatalf("MulAddDivSat(%d, %d, %d, %d) ok = %v, want %v", tt.a, tt.b, tt.add, tt.c, ok, tt.wantOK)
+			}
+			if !ok {
+				if q != 0 || r != 0 {
+					t.Errorf("MulAddDivSat(%d, %d, %d, %d) = %d, %d on refusal, want 0, 0", tt.a, tt.b, tt.add, tt.c, q, r)
+				}
+				return
+			}
+			wq, wr := refMulAddDivSat(tt.a, tt.b, tt.add, tt.c)
+			if q != wq || r != wr {
+				t.Errorf("MulAddDivSat(%d, %d, %d, %d) = %d, %d, want %d, %d (math/big)", tt.a, tt.b, tt.add, tt.c, q, r, wq, wr)
+			}
+			if q != tt.wantQ || r != tt.wantR {
+				t.Errorf("MulAddDivSat(%d, %d, %d, %d) = %d, %d, want %d, %d", tt.a, tt.b, tt.add, tt.c, q, r, tt.wantQ, tt.wantR)
+			}
+		})
+	}
+}
+
+// FuzzMulAddDivSat checks the quotient and remainder against math/big for any
+// operands and the refusal of a negative argument or a non-positive divisor.
+//
+// Requirement: FR-MON-017
+func FuzzMulAddDivSat(f *testing.F) {
+	f.Add(int64(7), int64(10), int64(5), int64(4))
+	f.Add(int64(math.MaxInt64), int64(math.MaxInt64), int64(math.MaxInt64), int64(1))
+	f.Add(int64(math.MaxInt64), int64(1_000_000_000), int64(0), int64(math.MaxInt64))
+	f.Add(int64(1), int64(1), int64(0), int64(0))
+	f.Add(int64(-1), int64(1), int64(0), int64(3))
+	f.Fuzz(func(t *testing.T, a, b, add, c int64) {
+		q, r, ok := checked.MulAddDivSat(a, b, add, c)
+		if wantOK := a >= 0 && b >= 0 && add >= 0 && c > 0; ok != wantOK {
+			t.Fatalf("MulAddDivSat(%d, %d, %d, %d) ok = %v, want %v", a, b, add, c, ok, wantOK)
+		}
+		if !ok {
+			return
+		}
+		if wq, wr := refMulAddDivSat(a, b, add, c); q != wq || r != wr {
+			t.Fatalf("MulAddDivSat(%d, %d, %d, %d) = %d, %d, want %d, %d", a, b, add, c, q, r, wq, wr)
+		}
+	})
+}

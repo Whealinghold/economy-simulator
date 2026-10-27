@@ -28,11 +28,11 @@ var reasonCodes = [NumReasons]uint64{
 	Split: 37, Merge: 38, Births: 39, Starvation: 40,
 }
 
-// reasonCode returns the pinned code of reason r.
+// reasonCode returns the pinned code of reason r of the table.
 func reasonCode(r Reason) uint64 { return reasonCodes[r] }
 
-// reasonFromCode returns the reason of a pinned code, and false for a code no
-// reason of this ledger has.
+// reasonFromCode returns the reason of a pinned code of the table, and false
+// for a code no reason of this ledger has.
 func reasonFromCode(code uint64) (Reason, bool) {
 	for r, c := range reasonCodes {
 		if c == code {
@@ -40,6 +40,29 @@ func reasonFromCode(code uint64) (Reason, bool) {
 		}
 	}
 	return 0, false
+}
+
+// codeOf returns the pinned code of reason r in this ledger: its row of the
+// table, or pinnedRows plus its position for a flow reason, which the Go number
+// NumReasons plus its position never is (plan 2-6 D323(e)).
+func (l *Ledger) codeOf(r Reason) uint64 {
+	if r >= NumReasons {
+		return pinnedRows + uint64(r-NumReasons)
+	}
+	return reasonCode(r)
+}
+
+// reasonOfCode returns the reason of a pinned code in this ledger, and false
+// for a code no reason has: a code of the table that is not a row, or a flow
+// code at or above pinnedRows plus the number of flows.
+func (l *Ledger) reasonOfCode(code uint64) (Reason, bool) {
+	if code >= pinnedRows {
+		if i := code - pinnedRows; i < uint64(len(l.flowClass)) {
+			return FlowReason(int(i)), true
+		}
+		return 0, false
+	}
+	return reasonFromCode(code)
 }
 
 // reloc is one row of the pending relocation totals: the money (thing 0) or
@@ -186,8 +209,8 @@ func (l *Ledger) writeFlows(w *codec.Writer, src, wear []int64) {
 func (l *Ledger) eachFlow(src []int64, f func(region int, code, thing uint64, v int64)) {
 	for region := range l.regions {
 		base := src[region*l.stride:]
-		for code := range uint64(pinnedRows) {
-			if r, ok := reasonFromCode(code); ok {
+		for code := range uint64(pinnedRows + len(l.flowClass)) {
+			if r, ok := l.reasonOfCode(code); ok {
 				l.eachThing(base, r, func(thing uint64, v int64) { f(region, code, thing, v) })
 			}
 		}
@@ -411,11 +434,11 @@ func (l *Ledger) readFlows(r *codec.Reader, dst, wear []int64) int {
 			break
 		}
 		region := r.Index(uint64(l.regions))
-		reason, ok := reasonFromCode(r.U())
+		reason, ok := l.reasonOfCode(r.U())
 		thing := r.Index(nc + 1)
 		total := r.Bounded("flow total", math.MaxInt64)
 		slot, err := l.slotOf(reason, int(thing)-1)
-		key := (region*pinnedRows+reasonCode(reason))*(nc+1) + thing
+		key := (region*uint64(pinnedRows+len(l.flowClass))+l.codeOf(reason))*(nc+1) + thing
 		switch {
 		case r.Err() != nil:
 		case !ok || err != nil:

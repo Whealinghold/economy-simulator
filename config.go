@@ -65,6 +65,10 @@ type Modules struct {
 	// and the regional scales (spec-demand.md). Nil is off; non-nil is on, even
 	// when empty. Its hash id is 1.
 	Demand *Demand
+	// MoneySupply is the money supply module: configured faucets and sinks
+	// (spec-money-supply.md). Nil is off; non-nil is on, even with no flow. Its
+	// hash id is 2.
+	MoneySupply *MoneySupply
 }
 
 // Demand is the configuration of the demand module (spec-demand.md 3.2, 9). The
@@ -697,6 +701,7 @@ func (c Config) canonical() Config {
 		out.WarmStart = &w
 	}
 	out.Modules.Demand = c.Modules.Demand.canonical()
+	out.Modules.MoneySupply = c.Modules.MoneySupply.canonical()
 	return out
 }
 
@@ -738,4 +743,79 @@ func (c Config) recipeID(id string) (RecipeID, bool) {
 func (c Config) regionID(id string) (RegionID, bool) {
 	i, ok := slices.BinarySearchFunc(c.Regions, id, func(e Region, t string) int { return cmp.Compare(e.ID, t) })
 	return RegionID(i), ok
+}
+
+// MoneySupply is the configuration of the money supply module
+// (spec-money-supply.md 4.1): the money flows, each a grant (a faucet) or a levy
+// (a sink) on a class of accounts. The zero value is a module that is on with no
+// flow. After construction the flows are in ID order (spec-config.md 3.4).
+type MoneySupply struct {
+	// Flows are the money flows, by ID in canonical order, at most MaxMoneyFlows.
+	Flows []MoneyFlow
+}
+
+// The values of MoneyFlow.Kind, MoneyFlow.Per and FlowTarget.Kind that are
+// built.
+const (
+	// FlowGrant is a flow that issues money to its class: a faucet.
+	FlowGrant = "grant"
+	// FlowLevy is a flow that collects money from its class: a sink.
+	FlowLevy = "levy"
+	// PerTick is a period of one tick, the default of MoneyFlow.Per.
+	PerTick = "tick"
+	// PerYear is a period of the calendar's ticks in a year.
+	PerYear = "year"
+	// TargetHouseholds is the class of the households of a role.
+	TargetHouseholds = "households"
+)
+
+// MoneyFlow is one configured faucet (Kind FlowGrant) or sink (Kind FlowLevy)
+// (spec-money-supply.md 4.1, 11.1). It has exactly one shape: a rate grant
+// (Amount), a top-up (Level), a fixed levy (Amount) or a rate levy (RateBP).
+// Every default is the zero value, and ID, Kind and Target have no default.
+type MoneyFlow struct {
+	// ID names the flow and is its ledger reason; it is not a built-in reason.
+	ID string
+	// Kind is FlowGrant or FlowLevy.
+	Kind string
+	// Target is the class of accounts that receives or pays.
+	Target FlowTarget
+	// Amount is the minor units per household per Per: a grant's rate or a fixed
+	// levy, 0 to MaxFlowAmount.
+	Amount int64
+	// Level is a top-up grant's target balance per household, 0 to MaxFlowAmount.
+	Level int64
+	// RateBP is a rate levy's basis points per Per of the balance above Exempt,
+	// 0 to MaxFlowRateBP.
+	RateBP int64
+	// Exempt is the minor units per household a levy never collects, 0 to
+	// MaxFlowAmount.
+	Exempt int64
+	// Per is PerTick (also ""), the default, or PerYear.
+	Per string
+	// Start is the first tick the flow is active, 0 to math.MaxInt64 - 1.
+	Start int64
+	// Until is the first tick the flow is no longer active; 0 is never, else it
+	// is above Start.
+	Until int64
+	// Limit is the most the flow ever applies, in minor units; 0 is none, else up
+	// to MaxFlowTotal.
+	Limit int64
+	// NotIncome makes a grant to households not income for the welfare ratio.
+	NotIncome bool
+	// Label is a display name. It is presentation only: it changes no result and
+	// is not hashed.
+	Label string
+}
+
+// FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kind
+// TargetHouseholds is built; the other kinds are recognised and refused with
+// ErrModuleDependency until their modules are built.
+type FlowTarget struct {
+	// Kind is TargetHouseholds.
+	Kind string
+	// Region is the region of the class; empty is every region.
+	Region string
+	// Role is the role of the households.
+	Role string
 }

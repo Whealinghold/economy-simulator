@@ -45,7 +45,7 @@ func TestBeginStep_ConstructionBucketIsEmittedOnceBeforeTheFirstTickStarted(t *t
 			t.Fatalf("a BoundaryFlow was emitted by a world that never stepped, want none")
 		}
 	}
-	wantFlows := boundaryFlows(nil, w.ledger.AppendFlows(nil, true), constructionTick)
+	wantFlows := boundaryFlows(nil, w.ledger.AppendFlows(nil, true), constructionTick, nil)
 	wantWear := wearApplied(nil, w.ledger, len(w.cfg.Commodities), constructionTick, true)
 	if len(wantFlows) < 3 || !slices.Equal(wantWear, []WearApplied{{Tick: -1, Commodity: pan, Units: 3}}) {
 		t.Fatalf("bucket = %v and %v, want at least the money and two goods flows, and 3 units of wear of the pan", wantFlows, wantWear)

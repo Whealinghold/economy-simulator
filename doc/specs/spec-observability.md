@@ -1742,7 +1742,7 @@ for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namesp
 of the money flow IDs) for `economysim.fiscal.*`, the refusal reasons of a vacancy
 (`employer_funds`, `no_input`, `no_tool`, `no_endowment`, `no_room`, `zero_yield`,
 `no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled`, the five refusal reasons of a start (`not_on_role`, `zero_yield`, `no_site`, `no_tool`, `no_input`) for `economysim.recipe.refused`, the abandon reasons (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) for `economysim.recipe.abandoned` and of a
-rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
+rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. The flow IDs of `economysim.reason` are bounded by `MaxMoneyFlows` (and `MaxFiscalFlows` for the fiscal flows) and by the adapter's intern cap; there is no `Names.Flows`,, because a flow ID is its own string (3.2.4, 3.2.5). rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
 also takes, per instrument, the closed set of the event that feeds it (`removal` and
 `consumer` for `economysim.title.transfers`; `repaid`, `written_off`,
 `debtor_removed` and `forgiven` for `economysim.credit.lost`). No attribute is an
@@ -2236,12 +2236,12 @@ of 6.5.1: store class, facility class, body, right, control, field and actor
 (a typed ID in the range of its names slice), and the closed sets of the room limit,
 the tier, the credit and cover limits, the risk kind, the clamp, the activity, the
 project, the bar, the entry outcome, the policy cut and hold, the cover kind and the
-cover loss. Requirement FR-OBS-005 and FR-OBS-006.
+cover loss. Requirement FR-OBS-005 and FR-OBS-006. The flow IDs of the `Reason` of `BoundaryFlow` and the `Flow` of the money flow events are not a range check against a names slice (there is no `Names.Flows`); their number is bounded by `MaxMoneyFlows`.
 
 9.4.2. **In `otelobserver`**, a test asserts the attribute sets recorded on each
 instrument, using a configuration built in Go inside its own tests (it cannot read
 the core module's `testdata/`, testing.md 10.2), against the series bound of
-6.5.2 for that configuration (FR-OBS-052).
+6.5.2 for that configuration (FR-OBS-052). For the flow IDs of `economysim.reason` the adapter test checks the intern cap (the number of distinct flow IDs it admits is bounded and an extra one does not add a series), not the names.
 
 ### 9.5 The golden rendering of events
 

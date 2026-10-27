@@ -345,3 +345,10 @@ func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason
 	}
 	return wantShortReason(&TradePlan{Intents: intents}, &wt, funded)
 }
+
+// P17Flows runs P1.7 alone, for the benchmark of the money supply module.
+func P17Flows(w *World) { w.p17Flows() }
+
+// SetFlowScale sets the scale of the money flow at index i in ID order, as the
+// public call of the integration module will (plan 17).
+func SetFlowScale(w *World, i int, bp int64) error { return w.setFlowScale(i, bp, CauseConsumer) }

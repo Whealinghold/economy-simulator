@@ -116,6 +116,9 @@ func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
 	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
 		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
 	}
+	if err := w.auditModules(); err != nil {
+		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+	}
 	return loadExtensionState(rs.have, rs.entries)
 }
 
@@ -335,7 +338,12 @@ func (w *World) checkpointCross() error {
 		return err
 	}
 	if w.demand != nil {
-		return w.demandCross()
+		if err := w.demandCross(); err != nil {
+			return err
+		}
+	}
+	if w.money != nil {
+		return w.moneyCross()
 	}
 	return nil
 }

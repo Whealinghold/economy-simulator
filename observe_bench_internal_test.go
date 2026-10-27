@@ -33,7 +33,7 @@ var benchPhases = []struct {
 	sites []string
 }{
 	{"P0", []string{"P0.2"}},
-	{"P1", []string{"P1.1", "P1.2"}},
+	{"P1", []string{"P1.1", "P1.2", "P1.7"}},
 	{"P2", []string{"P2.1", "P2.5", "P2.7", "P2.8a"}},
 	{"P3", []string{"P3.2", "P3.4"}},
 	{"P4", []string{"P4.1"}},

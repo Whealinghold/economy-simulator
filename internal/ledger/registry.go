@@ -166,7 +166,24 @@ func Rank(r Reason) (int, bool) {
 	return int(rankOf(r)), true
 }
 
-// rowOf returns the row of a reason for money or goods.
+// FlowReason returns the reason of the money flow at position i of
+// Config.Flows, 0-based, the flows being in ID order. A flow reason is a
+// dynamic reason: its number follows the built-in and declared ones, so it is
+// never saved raw (checkpoint.go saves pinnedRows plus its position).
+func FlowReason(i int) Reason { return NumReasons + Reason(i) }
+
+// flowRow is the row of a money flow of the given class: a faucet runs from
+// its boundary to an agent or an estate, a sink the other way round
+// (spec-money-supply.md 4.5.1). It moves money only.
+func flowRow(c Class) row {
+	if c == Faucet {
+		return row{ok: true, class: Faucet, from: setBoundary, to: setAE}
+	}
+	return row{ok: true, class: Sink, from: setAE, to: setBoundary}
+}
+
+// rowOf returns the row of a reason of the table for money or goods. A flow
+// reason is not in the table: Ledger.rowOf knows it.
 func rowOf(r Reason, goods bool) (row, bool) {
 	if r >= NumReasons {
 		return row{}, false

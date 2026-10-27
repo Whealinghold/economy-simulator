@@ -666,6 +666,7 @@ var savedOrDerived = map[string]string{
 	"World.yields": "derived: PRO row", "World.geo": "saved 11: the edge statuses; the tables are derived of cfg and the statuses",
 	"World.refs": "derived: of cfg (REG 5.3.5)", "World.bounds": "derived: built at construction by the modules that are on, empty with none (REG 6.5.2)", "World.shocks": "saved 6", "World.rnd": "derived: the seed is in the header (ADR 0008)",
 	"World.demand":  "derived: the ladders of cfg; the carries and the choke runs are saved 12 when the module's hooks are built (DEM 12)",
+	"World.money":   "saved 13: the flows' totals, scales, ends and started carries (moneyflow.go); the scratch is derived and never saved",
 	"World.estates": "saved 8", "World.agents": "saved 3", "World.live": "derived: counters rebuilt from the agents",
 	"World.markets": "saved 4", "World.bp": "derived: of cfg", "World.clr": "scratch", "World.receipts": "scratch",
 	"World.prod": "scratch: the cost anchors, derived at P1.2 (PRO row)", "World.refused": "scratch", "World.welfare": "scratch",

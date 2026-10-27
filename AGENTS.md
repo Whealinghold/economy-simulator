@@ -205,7 +205,7 @@ go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
 go test -race -timeout 60m ./...   # gate R: reduced seeds under -race
-go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 60m ./...   # gate F
+go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (the root package needs about 60 min under coverage)
 go mod tidy                    # must produce no diff
 ```
 

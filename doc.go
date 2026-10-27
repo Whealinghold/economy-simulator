@@ -732,4 +732,53 @@
 //   - WantShortfall: the event emitted once per region, role and want per tick in
 //     which a want was choked or unfunded for at least one household
 //     (spec-demand.md 11.1).
+//   - Money supply: the total of money over the non-boundary accounts, M; it equals the
+//     initial money plus grants less levies, and only a money flow or an external agent's
+//     initial money changes it (spec-money-supply.md 3.1).
+//   - Money flow: the one configured mechanism by which money enters or leaves, as data:
+//     a grant or a levy on an account class, with a schedule, a limit and a runtime scale;
+//     the type is MoneyFlow, an entry of MoneySupply (spec-money-supply.md 4).
+//   - Grant: a money flow that transfers money from a boundary account to the households of
+//     a class (spec-money-supply.md 4.2).
+//   - Levy: a money flow that transfers money from the households of a class to a boundary
+//     account, either a fixed amount or a rate on the balance above an exemption, capped by
+//     what the household holds (spec-money-supply.md 4.2).
+//   - Top-up: a grant that raises a household's balance to a stated level at the start of
+//     the tick, the primitive for a pass-through counterparty; it has no carry
+//     (spec-money-supply.md 10.2).
+//   - Account class: the set of accounts a money flow acts on, chosen by a FlowTarget (the
+//     households of a role, in one region or all); not a commodity class
+//     (spec-money-supply.md 4.3).
+//   - Flow carry: the remainder, in ten-thousandths of a minor unit, that a flow keeps for
+//     each recipient so that a fractional amount per tick adds up exactly
+//     (spec-money-supply.md 6.1).
+//   - Flow scale: the runtime factor of a money flow, in basis points, default 10 000; it
+//     is world state, not configuration, and is not hashed (spec-money-supply.md 4.4.3).
+//   - Declared reason: the ledger reason of a money flow, equal to the flow's ID, created at
+//     construction with its own boundary account and closed for the run
+//     (spec-money-supply.md 4.5).
+//   - Holding charge: a rate levy on the balance above an exemption, which bounds what a
+//     household that spends nothing can hold (spec-money-supply.md 9.3).
+//   - Liquidity floor: the money per household below which the upkeep cannot be bought out
+//     of cash on hand, one tick of the basket at the household's beliefs
+//     (spec-money-supply.md 8.5).
+//   - Spending threshold: the money per household, ReserveTicks times the upkeep cost,
+//     below which buffers and wants are not funded (spec-money-supply.md 8.5).
+//   - Closed economy: a world in which no money faucet or sink acts after construction, so
+//     the money supply is constant (spec-money-supply.md 8.1).
+//   - Balanced pair: a faucet and a sink declared together whose nominal yearly totals over
+//     the census are equal; validation warns when they differ (spec-money-supply.md 9.2).
+//   - MoneySupply: the module Modules.MoneySupply, the list of money flows; nil is off
+//     (spec-money-supply.md 4.1).
+//   - FlowTarget: the account class of a MoneyFlow: its kind, region and role
+//     (spec-money-supply.md 4.3).
+//   - MoneyFlowLimited: the event emitted once per flow and region per tick in which a due
+//     was not wholly applied, with the households short, headroom-cut and limit-cut
+//     (spec-money-supply.md 13.1).
+//   - MoneyFlowEnded: the event emitted once, in the tick a flow reaches its effective
+//     limit and ends (spec-money-supply.md 13.1).
+//   - MoneyFlowScaled: the event emitted when the flow scale of a flow changes
+//     (spec-money-supply.md 13.1).
+//   - FlowRow: the snapshot row of one money flow: its ID, cumulative total, scale and
+//     whether it has ended (spec-observability.md 5.3).
 package economysim

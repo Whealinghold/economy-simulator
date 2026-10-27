@@ -147,6 +147,13 @@ func (s *welfareScratch) addReceipt(slot int, amount int64) {
 	f.receipts = satAdd(f.receipts, amount)
 }
 
+// addUnearned adds money received that is not earned by working (G_t): a grant
+// of the money supply module that counts as income (spec-money-supply.md 7.2).
+func (s *welfareScratch) addUnearned(slot int, amount int64) {
+	f := s.at(slot)
+	f.unearned = satAdd(f.unearned, amount)
+}
+
 // addInputSpend adds the money spent on a bid with the purpose Input (S_t).
 func (s *welfareScratch) addInputSpend(slot int, amount int64) {
 	f := s.at(slot)
