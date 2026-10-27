@@ -459,6 +459,9 @@ func (rc *regionCtx) sharesRecipe(gc *groupCtx) bool {
 // upkeepCost is the cost of one household's upkeep at the seed prices, checked.
 func (rc *regionCtx) upkeepCost(gc *groupCtx) (sum int64, ok bool) {
 	for c, q := range gc.up {
+		if q > 0 && rc.price[c] == 0 { // an upkeep commodity with no seed price would understate U
+			return 0, false
+		}
 		v, ok1 := checked.Mul(q, rc.price[c])
 		next, ok2 := checked.Add(sum, v)
 		if !ok1 || !ok2 {

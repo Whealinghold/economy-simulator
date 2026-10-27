@@ -97,7 +97,8 @@ type x4Measures struct {
 }
 
 // x4Producible returns the commodities that some recipe makes and does not
-// discard, from the configuration alone: the tradable commodities with a producer.
+// discard, from the configuration alone. It does not look at tradability: a
+// commodity that is made and never offered counts, and fails criterion (b).
 func x4Producible(cfg economysim.Config) map[string]bool {
 	out := map[string]bool{}
 	for _, r := range cfg.Recipes {
@@ -230,8 +231,9 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 	}
 	// (f)
 	for c, hi := range high {
-		if r := float64(hi) / float64(low[c]); r > m.maxRange {
-			m.maxRange, m.widest = r, final.Names.Commodities[c]
+		// A tie goes to the lesser name, not to the map's iteration order.
+		if r, id := float64(hi)/float64(low[c]), final.Names.Commodities[c]; r > m.maxRange || (r == m.maxRange && id < m.widest) {
+			m.maxRange, m.widest = r, id
 		}
 	}
 	return m, bad

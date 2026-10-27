@@ -52,6 +52,7 @@ type incomeObs struct {
 	// volume-weighted mean price of the window.
 	vwmValue, vwmUnits map[[2]int64]int64 // (window, commodity)
 	inputs             map[economysim.RecipeID][]economysim.Amount
+	overflow           bool // a sum of the stream did not fit int64: every Row is then absent
 }
 
 // newIncomeObs makes the observer for cfg whose names are names (the Names of a
@@ -68,7 +69,7 @@ func newIncomeObs(cfg economysim.Config, names economysim.Names) *incomeObs {
 				return i
 			}
 		}
-		return -1
+		panic("incomeObs: " + id + " is not in the names of the world") // a mismatched probe, not input
 	}
 	for _, r := range cfg.Recipes {
 		ri := index(names.Recipes, r.ID)
@@ -117,12 +118,23 @@ func (o *incomeObs) Observe(e economysim.Event) {
 		o.live[a.role] -= a.weight
 		delete(o.agents, e.Agent)
 	case economysim.TradeExecuted:
-		v := int64(e.Price) * int64(e.Quantity)
 		k := [2]int64{e.Tick / incomeWindow, int64(e.Commodity)}
-		o.vwmValue[k] += v
-		o.vwmUnits[k] += int64(e.Quantity)
+		v, ok1 := checked.Mul(int64(e.Price), int64(e.Quantity))
+		value, ok2 := checked.Add(o.vwmValue[k], v)
+		units, ok3 := checked.Add(o.vwmUnits[k], int64(e.Quantity))
+		if !ok1 || !ok2 || !ok3 {
+			o.overflow = true
+			return
+		}
+		o.vwmValue[k], o.vwmUnits[k] = value, units
 		if a, ok := o.agents[e.Seller]; ok { // an estate is not an agent of a role
-			o.cell(e.Tick, a.role).Sales += v
+			c := o.cell(e.Tick, a.role)
+			sales, ok := checked.Add(c.Sales, v)
+			if !ok {
+				o.overflow = true
+				return
+			}
+			c.Sales = sales
 		}
 	case economysim.RecipeExecuted:
 		if a, ok := o.agents[e.Agent]; ok {
@@ -171,7 +183,7 @@ type incomeRow struct {
 // on), with upkeep the upkeep cost of a household-tick at the published prices.
 func (o *incomeObs) Row(window int64, role economysim.RoleID, upkeep int64) incomeRow {
 	c := o.cells[[2]int64{window, int64(role)}]
-	if c == nil || c.HouseholdTicks == 0 || upkeep < 1 {
+	if o.overflow || c == nil || c.HouseholdTicks == 0 || upkeep < 1 {
 		return incomeRow{}
 	}
 	cost, ok := o.inputCost(window, c)
