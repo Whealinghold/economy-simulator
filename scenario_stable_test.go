@@ -158,8 +158,10 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 		if tick < run.Ticks-run.Window {
 			continue
 		}
-		if bp := s.Households * 10_000 / run.Start; m.minHouseholdsBP < 0 || bp < m.minHouseholdsBP {
-			m.minHouseholdsBP = bp
+		if run.Start > 0 { // a start of 0 households has no share to fall from
+			if bp := s.Households * 10_000 / run.Start; m.minHouseholdsBP < 0 || bp < m.minHouseholdsBP {
+				m.minHouseholdsBP = bp
+			}
 		}
 		for _, row := range s.Markets {
 			k := key{int(row.State.Region), int(row.State.Commodity)}
@@ -181,6 +183,9 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 			}
 		}
 	}
+	if m.minHouseholdsBP < 0 { // no start households: nothing fell
+		m.minHouseholdsBP = 10_000
+	}
 	final, ok := run.Samples[run.Ticks-1]
 	if !ok {
 		return m, bad
@@ -200,6 +205,9 @@ func x4Measure(run stableRun) (x4Measures, []string) {
 		if bp := best[c] * 10_000 / run.Window; m.minTradeShareBP < 0 || bp < m.minTradeShareBP {
 			m.minTradeShareBP, m.leastTraded = bp, id
 		}
+	}
+	if m.minTradeShareBP < 0 { // no producible commodity: (b) is vacuous, not a failure at -1
+		m.minTradeShareBP = 10_000
 	}
 	// (c): the mean volume of the markets that traded in the window.
 	var total int64
@@ -435,13 +443,14 @@ func logRealised(t *testing.T, cfg economysim.Config, res result, obs *incomeObs
 	for _, tick := range []int64{100, 300, 600, x4Ticks} {
 		hh = append(hh, res.Samples[tick-1].Households)
 	}
-	t.Logf("households at ticks 100, 300, 600, %d = %v (start %d)", x4Ticks, hh, res.Samples[0].Households)
+	t.Logf("households at ticks 100, 300, 600, %d = %v (start %d)", x4Ticks, hh, newStableRun(cfg, res).Start)
 	for _, m := range res.Samples[x4Ticks-1].Markets {
 		ref := int64(res.World.ReferencePrice(m.State.Region, m.State.Commodity))
 		if bp, ok := shareBP(int64(m.State.Price), ref); ok {
 			t.Logf("price of %s/%s = %d bp of its reference %d", names.Regions[m.State.Region], names.Commodities[m.State.Commodity], bp, ref)
 		}
 	}
+	// shortcut: region 0's basket for every role, right for the single-region pack one; use a per-region basket before reusing this for five.
 	upkeep := int64(cfg.Regions[0].ReferenceBasket)
 	for window := int64(0); window < x4Ticks/incomeWindow+1; window++ {
 		for role, id := range names.Roles {

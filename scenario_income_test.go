@@ -22,6 +22,10 @@ import (
 // difference. The share of all household money that a role holds (D364 (2)) is
 // not here: neither the events nor the snapshot say what one role holds.
 
+// The mean trade price is pooled across regions, as the role cells are, so the
+// margins are right for a single-region pack (one) only; key both by region
+// before reusing the observer for a multi-region pack such as five.
+
 // incomeWindow is the window of D364 in ticks.
 const incomeWindow = 100
 
