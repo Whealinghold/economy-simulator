@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/welfare"
 )
 
@@ -588,4 +589,70 @@ func TestRelief_TimingAfterEntry(t *testing.T) {
 			t.Errorf("tick %d: newest welfare record holds relief %d, want %d: the relief of its own tick", tick, got, last.Paid)
 		}
 	}
+}
+
+// topUp raises the balance of account acct to just below MaxMoney by the reason
+// initial, which the ledger accepts outside construction.
+func topUp(t *testing.T, w *World, acct int, room int64) {
+	t.Helper()
+	src, ok := w.ledger.Boundary(ledger.Initial, ledger.Money)
+	if !ok {
+		t.Fatal("no boundary account of initial money")
+	}
+	v, err := w.ledger.Account(acct)
+	if err != nil {
+		t.Fatalf("Account(%d) error = %v, want nil", acct, err)
+	}
+	if err := w.ledger.Transfer(src, acct, MaxMoney-room-v.Balance, ledger.Initial); err != nil {
+		t.Fatalf("topUp error = %v, want nil", err)
+	}
+}
+
+// TestEstates_PoolOverflowFailsStep verifies that a credit that would take an
+// account past MaxMoney fails the step and the world rather than wrapping or
+// being dropped: a relief payment to a household with 10 of room and a removal
+// that passes money to a pool with 10 of room each return an error that wraps
+// ErrBalanceOverflow and names the region (and the agent or account), and after
+// the failed step TickEnded has Failed and every call returns ErrWorldFailed.
+//
+// Requirement: FR-EST-001, FR-WLD-004
+func TestEstates_PoolOverflowFailsStep(t *testing.T) {
+	t.Parallel()
+	t.Run("relief to a full household", func(t *testing.T) {
+		t.Parallel()
+		var ended []TickEnded
+		obs := ObserverFunc(func(e Event) {
+			if te, ok := e.(TickEnded); ok {
+				ended = append(ended, te)
+			}
+		})
+		w := reliefWorldWith(t, []Option{WithObserver(obs)}, 400_000, 10_000, 0)
+		w.cfg.Regions[0].ReliefBelow = MaxBasisPoints
+		topUp(t, w, w.agents[1].account, 10)
+		err := w.Step()
+		if !errors.Is(err, ledger.ErrBalanceOverflow) {
+			t.Fatalf("Step() = %v, want it to wrap ErrBalanceOverflow", err)
+		}
+		if msg := err.Error(); !strings.Contains(msg, "agent 1") || !strings.Contains(msg, "region 0") {
+			t.Errorf("error %q does not name the agent and the region", msg)
+		}
+		if len(ended) != 1 || !ended[0].Failed {
+			t.Errorf("TickEnded events = %+v, want one with Failed true", ended)
+		}
+		if err := w.Step(); !errors.Is(err, ErrWorldFailed) {
+			t.Errorf("Step() after the failure = %v, want ErrWorldFailed", err)
+		}
+	})
+	t.Run("a removal into a full pool", func(t *testing.T) {
+		t.Parallel()
+		w := reliefWorld(t, 1, 0, 5_000)
+		topUp(t, w, w.estates.account(0), 10)
+		err := w.removeAgent(&w.agents[1], CauseConsumer)
+		if !errors.Is(err, ledger.ErrBalanceOverflow) {
+			t.Fatalf("removeAgent() = %v, want it to wrap ErrBalanceOverflow", err)
+		}
+		if msg := err.Error(); !strings.Contains(msg, "estate of region 0") {
+			t.Errorf("error %q does not name the estate of the region", msg)
+		}
+	})
 }

@@ -355,3 +355,34 @@ func TestCheckpoint_PoolCarryCorrupt(t *testing.T) {
 		})
 	}
 }
+
+// TestFork_Estates verifies fork-at-N with the estates module on, on pack famine
+// with a seeded pool and a rate grant to the pool of the north (so a pool carry
+// is mid-year), at tick 0, inside a job (37), inside a season (150), and after a
+// call between ticks (a yield shock at 90). Relief has paid and the estate holds
+// listed lots at the later points. The original, the restore and the restore of
+// the restore must agree on snapshots, events and the state hash.
+//
+// Requirement: FR-EST-024, FR-CHK-023, FR-CHK-050, FR-MON-046
+func TestFork_Estates(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packLayers["famine"]...)
+	cfg.WarmStart = &economysim.WarmStart{Pools: []economysim.WarmPool{{Region: "north", Money: 400_000}}}
+	cfg.Modules.MoneySupply = &economysim.MoneySupply{Flows: []economysim.MoneyFlow{{ID: "pool_grant", Kind: economysim.FlowGrant,
+		Target: economysim.FlowTarget{Kind: economysim.TargetPool, Region: "north"}, Amount: 700, Per: economysim.PerYear}}}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate = %v, want nil", err)
+	}
+	for _, n := range []int{0, 37, 150} {
+		forkAtN(t, forkCase{Name: "famine+estates", Cfg: cfg, Seed: 1, N: n, M: forkM})
+	}
+	shock := func(w *economysim.World) {
+		if err := economysim.SetYieldShockForTest(w, 0, 0, 3_000); err != nil {
+			t.Fatalf("SetYieldShockForTest error = %v, want nil", err)
+		}
+	}
+	forkAtN(t, forkCase{Name: "famine+estates after a shock", Cfg: cfg, Seed: 1, N: 90, M: forkM, Before: shock})
+}
