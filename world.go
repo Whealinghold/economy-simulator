@@ -82,6 +82,9 @@ type World struct {
 	// money is the state of the money supply module, nil when it is off
 	// (moneyflow.go).
 	money *moneyFlows
+	// relief is the scratch of the relief pass P1.6, nil when the estates module
+	// is off (estates.go).
+	relief *reliefPass
 
 	// The scratch of one tick, allocated at construction and reused (D154): it
 	// is never saved and never shrinks. runnable is the recipes some agent has

@@ -444,8 +444,8 @@ func (e *estates) restore(l *ledger.Ledger, r RegionID, rows []listing) error {
 	return nil
 }
 
-// The pool policy of the Estates module (relief, the pool as a money-flow
-// target) is appended here in Stage 2.
+// The pool policy of the Estates module (relief at P1.6, the pool as a
+// money-flow target) is at the end of the file, after the checkpoint section.
 
 // saveEstates is tag 8 (spec-checkpoint.md 4.2; plan 2-2 D249): for each region in
 // ascending RegionID the count and the rows of the listings of the lots its estate
@@ -517,6 +517,171 @@ func (w *World) loadEstates(_ *restoreCtx, r *codec.Reader) error {
 		if err := w.estates.restore(w.ledger, RegionID(reg), rows); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// reliefRelease is the money region's pool releases as relief this tick,
+// pool * PoolRelease / 10 000 truncated (spec-estates.md 2.6, FR-EST-017). ok is
+// false only when the product does not fit, which a pool below MaxMoney and a
+// PoolRelease within its bound cannot cause.
+func reliefRelease(pool Money, poolRelease int64) (release int64, ok bool) {
+	return checked.MulDiv(int64(pool), poolRelease, wholeBP)
+}
+
+// reliefNeed is the money that lifts an agent's income to the relief line,
+// upkeep * (line - ratio) / 10 000 truncated, for an agent whose ratio is
+// present and below the line, else 0 (FR-EST-018). ok is false when the
+// subtraction or the product does not fit.
+func reliefNeed(upkeep, line, ratio int64, present bool) (need int64, ok bool) {
+	if !present || ratio >= line {
+		return 0, true
+	}
+	gap, ok := checked.Sub(line, ratio)
+	if !ok {
+		return 0, false
+	}
+	return checked.MulDiv(upkeep, gap, wholeBP)
+}
+
+// reliefShare is the payment of an agent of need need among agents whose needs
+// sum to sumNeed, from a release of release: release * need / sumNeed
+// truncated, and never more than need (FR-EST-018). It depends on the agent's
+// need and the totals only, so no order of agents changes it (FR-EST-019). A
+// need or a sum below 1 pays nothing.
+func reliefShare(release, need, sumNeed int64) (pay int64, ok bool) {
+	if need < 1 || sumNeed < 1 {
+		return 0, true
+	}
+	share, ok := checked.MulDiv(release, need, sumNeed)
+	return min(share, need), ok
+}
+
+// reliefRow is what P1.6 keeps of one agent between its two passes: the region
+// and the need.
+type reliefRow struct {
+	region RegionID
+	need   int64
+}
+
+// reliefPass is the scratch of P1.6, built when the module is on and reused
+// every tick. rows is by agent slot and grows only when agents are added.
+// release and sumNeed are by region; paid, recipients and households are what
+// the pass paid in each region, for the event.
+type reliefPass struct {
+	rows                         []reliefRow
+	release, sumNeed             []int64
+	paid, recipients, households []int64
+}
+
+// newReliefPass builds the scratch of a configuration.
+func newReliefPass(regions int) *reliefPass {
+	return &reliefPass{
+		release: make([]int64, regions), sumNeed: make([]int64, regions),
+		paid: make([]int64, regions), recipients: make([]int64, regions),
+		households: make([]int64, regions),
+	}
+}
+
+// estatesReasons is the ledger reasons the estates module declares.
+func estatesReasons() []ledger.Reason { return []ledger.Reason{ledger.Relief} }
+
+// p16Relief is P1.6 (spec-estates.md 2.6, plan 2-7 D347 to D350): in ascending
+// RegionID each pool releases pool * PoolRelease / 10 000, shared among the
+// agents of the region whose welfare ratio is below ReliefBelow in proportion to
+// their needs. Every need is computed before the first payment, so a refusal
+// leaves the pool as it was; what is not paid stays in the pool. It keeps no
+// state across ticks. It returns the first overflow or ledger refusal, which
+// fails the step.
+func (w *World) p16Relief() error {
+	rp := w.relief
+	if rp == nil || !w.reliefReleases() {
+		return nil
+	}
+	w.valuePrices()
+	if err := w.reliefNeeds(); err != nil {
+		return err
+	}
+	return w.reliefPay()
+}
+
+// reliefReleases fills the release of every region and clears the totals of the
+// pass. It reports whether any region releases at least 1.
+func (w *World) reliefReleases() bool {
+	rp, any := w.relief, false
+	for r := range w.cfg.Regions {
+		rel, ok := reliefRelease(w.estates.pool(w.ledger, RegionID(r)), w.cfg.Regions[r].PoolRelease)
+		if !ok {
+			invariant("a release of the pool does not fit in int64")
+		}
+		rp.release[r], rp.sumNeed[r] = rel, 0
+		rp.paid[r], rp.recipients[r], rp.households[r] = 0, 0, 0
+		any = any || rel >= 1
+	}
+	return any
+}
+
+// reliefNeeds is the first pass over the agents: the need of every household of a
+// region that releases, and the sum of the needs of each region. The estate
+// pseudo-agents, below the region count, are not households and have none.
+func (w *World) reliefNeeds() error {
+	rp, nc := w.relief, len(w.cfg.Commodities)
+	if cap(rp.rows) < len(w.agents) {
+		rp.rows = make([]reliefRow, len(w.agents))
+	}
+	rp.rows = rp.rows[:len(w.agents)]
+	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+		a := &w.agents[i]
+		rp.rows[i] = reliefRow{}
+		if a.weight < 1 {
+			continue
+		}
+		g := w.regionOf(a)
+		if rp.release[g] < 1 {
+			continue
+		}
+		role := &w.cfg.Roles[a.role]
+		u := w.welfare.cost.tick(w.roles.row(a.role).upkeepIn(g), w.oc.valued[int(g)*nc:(int(g)+1)*nc], a.weight)
+		ratio, present := a.history.Ratio(u, role.DefaultRatio)
+		need, ok := reliefNeed(u, w.cfg.Regions[g].ReliefBelow, ratio, present)
+		sum, ok2 := checked.Add(rp.sumNeed[g], need)
+		if !ok || !ok2 {
+			return fmt.Errorf("relief need of agent %d in region %d: %w", a.id, g, ErrOverflow)
+		}
+		rp.rows[i], rp.sumNeed[g] = reliefRow{region: g, need: need}, sum
+	}
+	return nil
+}
+
+// reliefPay is the second pass: each agent with a need is paid its share by the
+// reason relief, which is income of the tick in its welfare record, in ascending
+// agent ID.
+func (w *World) reliefPay() error {
+	rp := w.relief
+	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+		row := rp.rows[i]
+		if row.need < 1 {
+			continue
+		}
+		a := &w.agents[i]
+		pay, ok := reliefShare(rp.release[row.region], row.need, rp.sumNeed[row.region])
+		if !ok {
+			return fmt.Errorf("relief share of agent %d in region %d: %w", a.id, row.region, ErrOverflow)
+		}
+		if pay < 1 {
+			continue
+		}
+		given, err := w.estates.grant(w.ledger, row.region, a.account, Money(pay), ledger.Relief)
+		if err != nil {
+			return fmt.Errorf("relief to agent %d in region %d: %w", a.id, row.region, err)
+		}
+		if given != Money(pay) {
+			invariant("the pool of a region cannot pay a relief within its release")
+		}
+		f := w.welfare.at(i)
+		f.relief = satAdd(f.relief, pay)
+		rp.paid[row.region], rp.recipients[row.region] = rp.paid[row.region]+pay, rp.recipients[row.region]+1
+		rp.households[row.region] += a.weight
 	}
 	return nil
 }

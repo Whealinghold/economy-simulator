@@ -156,6 +156,9 @@ const (
 	// ReasonWantConsumption is goods consumed as a want beyond upkeep, with the
 	// demand module on (spec-demand.md 4.7).
 	ReasonWantConsumption Reason = "want_consumption"
+	// ReasonRelief is the money the pool of a region pays a household below the
+	// relief line, with the estates module on (spec-estates.md 2.6).
+	ReasonRelief Reason = "relief"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module

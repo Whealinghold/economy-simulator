@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
 // This file is the per-position state hash of testing.md 7.1.2 (plan 1-12,
@@ -133,6 +135,22 @@ func (h *hasher) zero(v reflect.Value) bool {
 	return true // func, chan, unsafe.Pointer: not walked
 }
 
+// legacyFlowBase is the number the first money-flow reason had when the position
+// goldens were recorded: ledger.NumReasons then, 19. A money-flow reason is
+// NumReasons plus its position and moves up by one whenever a reason is added to
+// the ledger; the number is internal and never saved (ledger.Reason), so the walk
+// writes a flow reason as legacyFlowBase plus its position and the goldens do not
+// move with the Go constants. A reason of the table is written as it is.
+const legacyFlowBase = 19
+
+// walkedReason is the number the walk writes for a ledger reason.
+func walkedReason(n uint64) uint64 {
+	if n >= uint64(ledger.NumReasons) {
+		return n - uint64(ledger.NumReasons) + legacyFlowBase
+	}
+	return n
+}
+
 // fieldInfo is what the walk needs of a struct type, read once: the fields in
 // name order and which are skipped (skip list entries are "Type.field").
 type fieldInfo struct {
@@ -178,7 +196,11 @@ func (h *hasher) write(v reflect.Value, depth int) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		h.buf = strconv.AppendInt(h.buf, v.Int(), 10)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		h.buf = strconv.AppendUint(h.buf, v.Uint(), 10)
+		u := v.Uint()
+		if v.Type() == reflect.TypeFor[ledger.Reason]() {
+			u = walkedReason(u)
+		}
+		h.buf = strconv.AppendUint(h.buf, u, 10)
 	case reflect.Float32, reflect.Float64:
 		h.buf = binary.BigEndian.AppendUint64(h.buf, math.Float64bits(v.Float()))
 	case reflect.Complex64, reflect.Complex128:
@@ -299,11 +321,24 @@ func hashValue(v reflect.Value, extraSkip ...string) ([32]byte, error) {
 // hashWorld is the state hash of D177: a walk of the whole World value graph. A
 // walk that goes too deep panics, which fails the calling test.
 func hashWorld(w *World) [32]byte {
-	sum, err := hashValue(reflect.ValueOf(w))
+	sum, err := hashValue(reflect.ValueOf(w), inertFields(w)...)
 	if err != nil {
 		panic(fmt.Sprintf("hashWorld: %v", err))
 	}
 	return sum
+}
+
+// inertFields are the configuration fields the walk leaves out for a world in
+// which their module is off: Region.PoolRelease and Region.ReliefBelow belong to
+// the estates module, are not read while it is off and are not in the
+// configuration hash (spec-config.md 8.2.1), but DefaultRegion gives them a
+// value, which would otherwise move the off goldens of every pack (testing.md
+// 7.1.1).
+func inertFields(w *World) []string {
+	if w.cfg.Modules.Estates != nil {
+		return nil
+	}
+	return []string{"Region.PoolRelease", "Region.ReliefBelow"}
 }
 
 // replayRow is one call of the replay: the position it records under, how to
@@ -324,6 +359,10 @@ func demandOn(w *World) bool { return w.demand != nil }
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
 
+// reliefOn is the guard of the row of the relief pass: a world with the estates
+// module off has no pass, and the replay leaves the row out.
+func reliefOn(w *World) bool { return w.relief != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -338,6 +377,7 @@ var replayRows = []replayRow{
 	{id: "P0.2", run: noErr((*World).p02)},
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
+	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
 	{id: "P2.5", run: (*World).p25Work},
