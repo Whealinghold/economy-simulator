@@ -424,27 +424,40 @@ func (rc *regionCtx) census() {
 // says so; an overflow of int64 is an absent figure, never a wrapped one
 // (architecture.md 3.5).
 func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
-	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 {
+	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 || rc.sharesRecipe(gc) {
 		return 0, false
 	}
-	for _, ar := range gc.active {
-		if rc.rolesListing(rc.acts[ar.i].recipe) > 1 {
-			return 0, false
-		}
-	}
-	var upkeep int64
-	for c, q := range gc.up {
-		v, ok := checked.Mul(q, rc.price[c])
-		if upkeep, ok = checked.Add(upkeep, v); !ok {
-			return 0, false
-		}
-	}
+	upkeep, ok := rc.upkeepCost(gc)
 	num, ok1 := checked.Mul(rc.wage, wholeBP)
 	den, ok2 := checked.Mul(gc.g.Households, upkeep)
-	if !ok1 || !ok2 || den < 1 {
+	if !ok || !ok1 || !ok2 || den < 1 {
 		return 0, false
 	}
 	return labour.Mul(num, den).Round(0, maxInt64)
+}
+
+// sharesRecipe reports an active recipe of the group on the lists of several
+// roles of the region: its flow is not the group's alone.
+func (rc *regionCtx) sharesRecipe(gc *groupCtx) bool {
+	for _, ar := range gc.active {
+		if rc.rolesListing(rc.acts[ar.i].recipe) > 1 {
+			return true
+		}
+	}
+	return false
+}
+
+// upkeepCost is the cost of one household's upkeep at the seed prices, checked.
+func (rc *regionCtx) upkeepCost(gc *groupCtx) (sum int64, ok bool) {
+	for c, q := range gc.up {
+		v, ok1 := checked.Mul(q, rc.price[c])
+		next, ok2 := checked.Add(sum, v)
+		if !ok1 || !ok2 {
+			return 0, false
+		}
+		sum = next
+	}
+	return sum, true
 }
 
 // rolesListing counts the groups of the region whose role lists the recipe.
