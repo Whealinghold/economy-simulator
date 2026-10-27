@@ -1,0 +1,14 @@
+# Scenario S14, spec-reference-chain.md 7.2: a harvest failure in the second spring
+# (ticks 424 to 515) on the pack famine, at depth 7000 (yield_bp 7000 of the staple
+# yield; 10000 clears the shock). Each [[shock]] is applied between steps, before
+# the step of its tick.
+[[shock]]
+tick = 424
+region = "north"
+recipe = "grow_staple"
+yield_bp = 7000
+[[shock]]
+tick = 516
+region = "north"
+recipe = "grow_staple"
+yield_bp = 10000

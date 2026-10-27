@@ -120,8 +120,7 @@ money = 4
 }
 
 // warmPacks are the packs whose committed warm document is the solver's table
-// for the layered configuration without it. famine (estates part) waits with its
-// module (N-295). one-demand is solved with the wants as fixed demand.
+// for the layered configuration without it. one-demand is solved with the wants as fixed demand.
 var warmPacks = []struct {
 	name string
 	cold []string
@@ -133,6 +132,7 @@ var warmPacks = []struct {
 	{"five", []string{"base.toml", "lines.toml", "five.toml"}, "warm-five.toml"},
 	{"second", []string{"second/second.toml"}, "second/warm-second.toml"},
 	{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, "warm-one-demand.toml"},
+	{"famine", []string{"base.toml", "famine.toml", "overlay/estates.toml"}, "warm-famine.toml"},
 }
 
 // TestWarmDocuments_Bytes verifies that each committed warm-start document is,

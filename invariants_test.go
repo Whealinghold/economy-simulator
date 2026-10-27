@@ -236,6 +236,10 @@ type invariantCase struct {
 	name   string
 	layers []string
 	seeds  int // seeds 1 .. seeds
+	// ticks is the length of a run; 0 is invTicks. script, when set, is a file of
+	// testdata/chains/scripts applied between steps.
+	ticks  int64
+	script string
 }
 
 // invariantTable is the Stage 1 table: N-295 lists the rows that wait. The
@@ -243,18 +247,20 @@ type invariantCase struct {
 // (REF 16.2); the two +trade rows are the packs with the edge part of their trade
 // overlay (plan 2-3 Phase 9; the edges do not change a run until TRN reads them).
 var invariantTable = []invariantCase{
-	{"one", packOne, 16},
-	{"second", packSecond, 4},
-	{"one-demand", packOneDemand, 4},
-	{"one+faucet-sunk", packOneFaucetSunk, 4},
-	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4},
-	{"two+trade", tradeWarm("two"), 4},
-	{"three+trade", tradeWarm("three"), 4},
+	{"one", packOne, 16, 0, ""},
+	{"second", packSecond, 4, 0, ""},
+	{"one-demand", packOneDemand, 4, 0, ""},
+	{"one+faucet-sunk", packOneFaucetSunk, 4, 0, ""},
+	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, ""},
+	{"two+trade", tradeWarm("two"), 4, 0, ""},
+	{"three+trade", tradeWarm("three"), 4, 0, ""},
+	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
+	{"famine", append(slices.Clone(packLayers["famine"]), "warm-famine.toml"), 4, 800, "s14-0.toml"},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
 // invariant of the first tick that breaks one (testing.md 6.2).
-func runInvariants(t *testing.T, cfg economysim.Config, seed uint64) {
+func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []shockStep) {
 	t.Helper()
 	rec := &recorder{}
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())
@@ -278,7 +284,8 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64) {
 	c.events(rec.events)
 	rec.forget()
 	fail(0, "conservation (before the first step)", c.balances(pre))
-	for i := int64(0); i < invTicks; i++ {
+	for i := int64(0); i < ticks; i++ {
+		applyScript(t, w, pre.Names, script)
 		if err := w.Step(); err != nil {
 			t.Fatalf("seed %d tick %d: Step error = %v, want nil (reproduce with WithSeed(%d))", seed, i, err, seed)
 		}
@@ -305,7 +312,7 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64) {
 			}
 		}
 	}
-	t.Logf("seed %d: %d tick(s); trades checked against both limits: %d, one limit only: %d, none: %d", seed, invTicks, c.bothSided, c.oneSided, c.noSide)
+	t.Logf("seed %d: %d tick(s); trades checked against both limits: %d, one limit only: %d, none: %d", seed, ticks, c.bothSided, c.oneSided, c.noSide)
 }
 
 // TestInvariants_Packs runs the invariants of testing.md 6.3 over the packs
@@ -328,10 +335,17 @@ func TestInvariants_Packs(t *testing.T) {
 	t.Parallel()
 	for _, tc := range invariantTable {
 		cfg := loadValidPack(t, tc.layers...)
+		ticks, script := invTicks, []shockStep(nil)
+		if tc.ticks > 0 {
+			ticks = tc.ticks
+		}
+		if tc.script != "" {
+			script = loadScript(t, tc.script)
+		}
 		for seed := uint64(1); seed <= uint64(invariantSeeds(tc.seeds)); seed++ {
 			t.Run(fmt.Sprintf("%s/seed%d", tc.name, seed), func(t *testing.T) {
 				t.Parallel()
-				runInvariants(t, cfg, seed)
+				runInvariants(t, cfg, seed, ticks, script)
 			})
 		}
 	}
