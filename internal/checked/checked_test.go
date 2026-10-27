@@ -378,6 +378,13 @@ func TestMulAddDivSat_ExactAndSaturating(t *testing.T) {
 		{"quotient one past int64 saturates", math.MaxInt64, 1, 1, 1, math.MaxInt64, 0, true},
 		{"grant numerator near 1e23", math.MaxInt64, 10_000, 9_999, 3_650_000, 25269512429739111, 2929999, true},
 		{"rate levy numerator near 1e27", math.MaxInt64, 1_000_000_000, 0, 1, math.MaxInt64, 0, true},
+		{"b is zero", 5, 0, 3, 2, 1, 1, true}, // (0+3)/2 = 1 r 1
+		// (2^32-1)(2^32+1) = 2^64-1 and the carry of 1 makes 2^64, which only the
+		// carry out of the low word reaches: 2^64 / 2^32 = 2^32.
+		{"the carry crosses into the high word", 1<<32 - 1, 1<<32 + 1, 1, 1 << 32, 1 << 32, 0, true},
+		// 2^32 * 2^32 = 2^64 over 1 has a quotient whose low word is 0: only the high
+		// word says it does not fit.
+		{"the high word alone saturates", 1 << 32, 1 << 32, 0, 1, math.MaxInt64, 0, true},
 		{"zero divisor", 1, 1, 0, 0, 0, 0, false},
 		{"negative divisor", 1, 1, 0, -3, 0, 0, false},
 		{"negative a", -1, 1, 0, 3, 0, 0, false},

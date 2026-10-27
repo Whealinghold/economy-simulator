@@ -345,3 +345,77 @@ func FuzzSpread(f *testing.F) {
 		}
 	})
 }
+
+// TestInputs_OutsideTheBoundsAreNotOK verifies, for Spread, RateLevy, TopUp and
+// StartCarry, that each argument below its bound (a negative amount, balance,
+// weight, carry or scale, a period below 1, a negative maxMoney, a negative
+// account ID) gives ok false and zero results, that the lowest valid value of each
+// is accepted, and that a product that leaves int64 is refused the same way: ok
+// is false only for an input outside the bounds the caller validated.
+//
+// Requirement: FR-MON-017, FR-MON-012, FR-MON-015, FR-MON-016
+//
+// Guard: the root passes validated values, so no run reaches these branches; a
+// mutant that dropped one check would change nothing but the contract.
+func TestInputs_OutsideTheBoundsAreNotOK(t *testing.T) {
+	t.Parallel()
+	const big = math.MaxInt64
+	// Spread(w, amount, scale, carry, period, maxMoney) and RateLevy(base, rateBP,
+	// scale, carry, period, maxMoney) take their six arguments in the same order of
+	// bounds: four non-negative, a period of at least 1, a non-negative maxMoney.
+	six := func(name string, overflow [][6]int64, f func(a [6]int64) (int64, int64, bool)) {
+		valid := [6]int64{1, 1, 1, 0, 1, 10}
+		if _, _, ok := f([6]int64{0, 0, 0, 0, 1, 0}); !ok {
+			t.Errorf("%s with every argument at its lowest valid value: not ok, want ok", name)
+		}
+		for i := range valid {
+			bad := valid
+			bad[i] = -1
+			if i == 4 {
+				bad[i] = 0 // a period of 0
+			}
+			if due, c, ok := f(bad); ok || due != 0 || c != 0 {
+				t.Errorf("%s(%v) = %d, %d, %v, want 0, 0, false", name, bad, due, c, ok)
+			}
+		}
+		for _, bad := range overflow {
+			if due, c, ok := f(bad); ok || due != 0 || c != 0 {
+				t.Errorf("%s(%v) = %d, %d, %v, want 0, 0, false: the product leaves int64", name, bad, due, c, ok)
+			}
+		}
+	}
+	six("Spread", [][6]int64{{big, 2, 1, 0, 1, 10}, {1, 1, 1, 0, big, 10}}, func(a [6]int64) (int64, int64, bool) {
+		return moneyflow.Spread(a[0], a[1], a[2], a[3], a[4], a[5])
+	})
+	six("RateLevy", [][6]int64{{1, big, 2, 0, 1, 10}, {1, 1, 1, 0, 100_000_000_000, 10}}, func(a [6]int64) (int64, int64, bool) {
+		return moneyflow.RateLevy(a[0], a[1], a[2], a[3], a[4], a[5])
+	})
+	// TopUp(w, level, scale, balance, maxMoney).
+	if _, ok := moneyflow.TopUp(0, 0, 0, 0, 0); !ok {
+		t.Error("TopUp with every argument at its lowest valid value: not ok, want ok")
+	}
+	valid := [5]int64{1, 1, 1, 0, 10}
+	for i := range valid {
+		bad := valid
+		bad[i] = -1
+		if due, ok := moneyflow.TopUp(bad[0], bad[1], bad[2], bad[3], bad[4]); ok || due != 0 {
+			t.Errorf("TopUp(%v) = %d, %v, want 0, false", bad, due, ok)
+		}
+	}
+	// At or above the level nothing is due: 5 000 * 10 000 / 10 000 = 5 000.
+	for _, balance := range []int64{5_000, 6_300} {
+		if due, ok := moneyflow.TopUp(1, 5_000, 10_000, balance, maxMoney); !ok || due != 0 {
+			t.Errorf("TopUp(level 5000, balance %d) = %d, %v, want 0, true", balance, due, ok)
+		}
+	}
+	if due, ok := moneyflow.TopUp(big, 2, 1, 0, 10); ok || due != 0 {
+		t.Errorf("TopUp(w*level overflows) = %d, %v, want 0, false", due, ok)
+	}
+	// StartCarry: a negative ID or a period below 1 starts at 0, not at a value the
+	// formula would give for the number.
+	for _, tt := range []struct{ id, period, want int64 }{{-1, 5, 0}, {7, 0, 0}, {7, -3, 0}, {7, 5, 20_000}} {
+		if got := moneyflow.StartCarry(tt.id, tt.period); got != tt.want {
+			t.Errorf("StartCarry(%d, %d) = %d, want %d", tt.id, tt.period, got, tt.want)
+		}
+	}
+}
