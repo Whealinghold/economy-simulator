@@ -656,3 +656,66 @@ func TestEstates_PoolOverflowFailsStep(t *testing.T) {
 		}
 	})
 }
+
+// TestRelief_InvariantAndShareGuards verifies the three branches of the pass that
+// a validated configuration cannot reach, by setting what Validate would refuse
+// or by scripting the scratch between the passes: a PoolRelease past its bound
+// makes the release overflow (a programmer invariant, so a panic that says so), a
+// need above the sum makes the share overflow (ErrOverflow naming the agent and
+// the region, nothing paid), and a release above the pool is a violated invariant
+// rather than a short payment.
+//
+// Arithmetic: pool 1 000 000 * 2^62 / 10 000 is about 4.6e20, past MaxInt64; the
+// share 2^62 * 2^62 / 1 is 2^124, past MaxInt64; the release 2 000 000 against a
+// pool of 1 000 000 gives min(2 000 000, 1 000 000) = 1 000 000 from the pool, not
+// the payment 2 000 000.
+//
+// Guard: without it the three defensive branches of reliefReleases and reliefPay
+// are executed by no test, and a refactor could turn the invariant into a wrap.
+//
+// Requirement: FR-EST-018
+func TestRelief_InvariantAndShareGuards(t *testing.T) {
+	t.Parallel()
+	t.Run("release overflow is an invariant", func(t *testing.T) {
+		t.Parallel()
+		w := reliefWorld(t, 1_000_000, 100, 0)
+		w.cfg.Regions[0].PoolRelease = 1 << 62
+		if msg := invariantMessage(func() { w.reliefReleases() }); !strings.Contains(msg, "release of the pool") {
+			t.Errorf("reliefReleases() panic = %q, want the invariant naming the release of the pool", msg)
+		}
+	})
+	t.Run("share overflow fails the pass", func(t *testing.T) {
+		t.Parallel()
+		w := reliefWorld(t, 1_000_000, 100, 0)
+		w.reliefReleases()
+		if err := w.reliefNeeds(); err != nil {
+			t.Fatalf("reliefNeeds() error = %v, want nil", err)
+		}
+		w.relief.release[0], w.relief.sumNeed[0] = 1<<62, 1
+		w.relief.rows[1].need = 1 << 62
+		before, _ := balance(t, w, 1)
+		err := w.reliefPay()
+		if !errors.Is(err, ErrOverflow) {
+			t.Fatalf("reliefPay() error = %v, want ErrOverflow", err)
+		}
+		if msg := err.Error(); !strings.Contains(msg, "agent 1") || !strings.Contains(msg, "region 0") {
+			t.Errorf("reliefPay() error = %q, want it to name agent 1 and region 0", msg)
+		}
+		if now, _ := balance(t, w, 1); now != before {
+			t.Errorf("agent 1 balance %d -> %d, want nothing paid", before, now)
+		}
+	})
+	t.Run("release above the pool is an invariant", func(t *testing.T) {
+		t.Parallel()
+		w := reliefWorld(t, 1_000_000, 100, 0)
+		w.reliefReleases()
+		if err := w.reliefNeeds(); err != nil {
+			t.Fatalf("reliefNeeds() error = %v, want nil", err)
+		}
+		w.relief.release[0], w.relief.sumNeed[0] = 2_000_000, 2_000_000
+		w.relief.rows[1].need = 2_000_000
+		if msg := invariantMessage(func() { _ = w.reliefPay() }); !strings.Contains(msg, "cannot pay a relief within its release") {
+			t.Errorf("reliefPay() panic = %q, want the invariant that the pool cannot pay within its release", msg)
+		}
+	})
+}
