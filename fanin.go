@@ -67,6 +67,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.demand != nil {
 		w.demand.dropAgent(a)
 	}
+	if w.money != nil {
+		w.money.dropAgent(a)
+	}
 	w.logRemoval(a, cause)
 	w.forget(a, region)
 	return nil

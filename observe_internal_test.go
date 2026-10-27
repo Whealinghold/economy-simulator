@@ -246,6 +246,7 @@ var stepSites = []site{
 	{"P0.2", noError((*World).p02)},
 	{"P1.1", (*World).p11Moment},
 	{"P1.2", noError((*World).p12Anchors)},
+	{"P1.7", noError((*World).p17Flows)},
 	{"P2.1", noError((*World).p21Complete)},
 	{"P2.5", (*World).p25Work},
 	{"P2.7", (*World).p27Start},

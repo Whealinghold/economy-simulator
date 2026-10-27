@@ -79,6 +79,9 @@ type World struct {
 	bp      beliefs.Params
 	// demand is the state of the demand module, nil when it is off (demand.go).
 	demand *demandState
+	// money is the state of the money supply module, nil when it is off
+	// (moneyflow.go).
+	money *moneyFlows
 
 	// The scratch of one tick, allocated at construction and reused (D154): it
 	// is never saved and never shrinks. runnable is the recipes some agent has
@@ -325,7 +328,10 @@ func (w *World) Audit() error {
 	if err := w.guard(); err != nil {
 		return err
 	}
-	return auditFailure(w.Tick(), w.ledger.Audit())
+	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
+		return err
+	}
+	return w.auditModules()
 }
 
 // auditFailure maps the result of the ledger's audit at tick to the world's

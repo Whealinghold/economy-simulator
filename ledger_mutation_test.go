@@ -92,14 +92,14 @@ func TestOpenBuiltInBoundaries_NegativeCountOpensNothing(t *testing.T) {
 func TestBoundaryFlows_MoneyIsReadFromTheCommodity(t *testing.T) {
 	t.Parallel()
 	money := []ledger.Flow{{Region: 0, Reason: ledger.RecipeInput, Commodity: ledger.Money, Total: 5}}
-	if got := boundaryFlows(nil, money, 0); len(got) != 0 {
-		t.Errorf("boundaryFlows(money flow of a goods-only reason) = %+v, want none", got)
+	if got := boundaryFlows(nil, money, 0, nil); len(got) != 0 {
+		t.Errorf("boundaryFlows(money flow of a goods-only reason, nil) = %+v, want none", got)
 	}
 	goods := []ledger.Flow{{Region: 0, Reason: ledger.RecipeInput, Commodity: -2, Total: 5}}
 	want := []BoundaryFlow{{Tick: 3, Region: 0, Reason: ReasonRecipeInput, Kind: KindSink, Commodity: -2, Total: 5}}
-	got := boundaryFlows(nil, goods, 3)
+	got := boundaryFlows(nil, goods, 3, nil)
 	if len(got) != 1 || got[0] != want[0] {
-		t.Errorf("boundaryFlows(index below Money) = %+v, want %+v", got, want)
+		t.Errorf("boundaryFlows(index below Money, nil) = %+v, want %+v", got, want)
 	}
 }
 

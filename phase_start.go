@@ -71,7 +71,7 @@ func (w *World) p02aBucket() {
 	}
 	t := &w.tk
 	t.flows = w.ledger.AppendFlows(t.flows[:0], true)
-	t.boundary = boundaryFlows(t.boundary[:0], t.flows, constructionTick)
+	t.boundary = boundaryFlows(t.boundary[:0], t.flows, constructionTick, w.moneyFlowList())
 	for _, e := range t.boundary {
 		w.obs.deliver(e)
 	}

@@ -127,6 +127,7 @@ func (w *World) finishScratch() {
 func (w *World) allocate() {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
 	w.demand = newDemandState(&w.cfg)
+	w.money = newMoneyFlows(&w.cfg, w.ledger)
 	w.agents = make([]agent, regions) // the estate pseudo-agents have no household
 	w.state.nextAgent = AgentID(regions)
 	w.live = liveCounts{inRole: make([]int64, regions*roles)}

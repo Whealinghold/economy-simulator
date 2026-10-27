@@ -741,7 +741,7 @@ func (w *World) p82Flows() {
 	}
 	t := &w.tk
 	t.flows = w.ledger.AppendFlows(t.flows[:0], false)
-	t.boundary = boundaryFlows(t.boundary[:0], t.flows, w.Tick())
+	t.boundary = boundaryFlows(t.boundary[:0], t.flows, w.Tick(), w.moneyFlowList())
 	for _, e := range t.boundary {
 		w.obs.deliver(e)
 	}
@@ -758,7 +758,10 @@ func (w *World) p84Audit() error {
 	if !w.audit {
 		return nil
 	}
-	return auditFailure(w.Tick(), w.ledger.Audit())
+	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
+		return err
+	}
+	return w.auditModules()
 }
 
 // logTickEnded writes the Debug line "tick ended" (D163) from the live

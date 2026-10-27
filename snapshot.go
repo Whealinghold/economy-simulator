@@ -59,6 +59,21 @@ type Snapshot struct {
 	// is now, and 0 when the world has one region, so that the header of an off
 	// golden does not move (architecture.md 2.10.5).
 	Components int64
+	// Flows has one row per money flow, in flow ID order (spec-money-supply.md
+	// 13.4); empty with the module off.
+	Flows []FlowRow
+}
+
+// FlowRow is the state of one money flow: its cumulative total, its scale in
+// basis points and whether it has ended (spec-observability.md 5.3.3).
+type FlowRow struct {
+	// Flow is the flow's ID, also the Reason of its boundary row.
+	Flow string
+	// Total is the amount the flow has applied; ScaleBP its scale; Ended whether
+	// it reached its effective limit.
+	Total   Money
+	ScaleBP int64
+	Ended   bool
 }
 
 // EdgeRow reports an edge whose status is not the default.
@@ -261,11 +276,12 @@ func (w *World) Snapshot() (Snapshot, error) {
 		Markets:  make([]MarketRow, len(w.cfg.Regions)*nc),
 		Jobs:     make([]JobRow, 0, len(w.cfg.Regions)*len(w.cfg.Recipes)),
 		Boundary: w.boundaryRows(),
+		Flows:    w.snapshotFlows(),
 	}
 	s.Edges, s.Components = w.edgeRows(), w.componentCount()
-	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false))
+	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false), w.moneyFlowList())
 	if w.ledger.InConstruction() {
-		s.Construction = flowTotals(w.ledger.AppendFlows(nil, true))
+		s.Construction = flowTotals(w.ledger.AppendFlows(nil, true), w.moneyFlowList())
 	}
 	acc, makes := newSnapAcc(nc, len(w.cfg.Recipes)), w.makesTable()
 	for g := range w.cfg.Regions {
@@ -292,12 +308,13 @@ func satMoney(m, a, b Money) Money { return Money(satAdd(satAdd(int64(m), int64(
 func (w *World) boundaryRows() []BoundaryRow {
 	var scratch [ledger.NumReasons]ledger.Reason
 	declared := ledger.DeclaredByRank(scratch[:0])
-	rows := make([]BoundaryRow, 0, (1+len(w.cfg.Commodities))*(numBuiltInReasons+len(declared)))
+	rows := make([]BoundaryRow, 0, (1+len(w.cfg.Commodities))*(numBuiltInReasons+len(declared))+len(w.moneyFlowList()))
 	for thing := ledger.Money; thing < len(w.cfg.Commodities); thing++ {
 		for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
 			rows = w.appendBoundaryRow(rows, r, thing)
 		}
 	}
+	rows = w.flowBoundaryRows(rows)
 	for _, r := range declared {
 		for thing := ledger.Money; thing < len(w.cfg.Commodities); thing++ {
 			rows = w.appendBoundaryRow(rows, r, thing)
@@ -332,8 +349,8 @@ func (w *World) appendBoundaryRow(rows []BoundaryRow, r ledger.Reason, thing int
 
 // flowTotals converts the totals of the ledger to the rows of a snapshot,
 // faucets and sinks only, in the order of the ledger.
-func flowTotals(flows []ledger.Flow) []FlowTotal {
-	bf := boundaryFlows(nil, flows, 0)
+func flowTotals(flows []ledger.Flow, mf []MoneyFlow) []FlowTotal {
+	bf := boundaryFlows(nil, flows, 0, mf)
 	out := make([]FlowTotal, 0, len(bf))
 	for _, f := range bf {
 		out = append(out, FlowTotal{Region: f.Region, Reason: f.Reason, Kind: f.Kind, Commodity: f.Commodity, Total: f.Total})
