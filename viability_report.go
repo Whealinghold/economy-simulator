@@ -94,6 +94,19 @@ type CensusRow struct {
 	Short bool
 	// Unlisted marks an active recipe that no group of the region lists.
 	Unlisted bool
+	// IncomeBP is the static income per household of a group at the solved flows
+	// and prices, in basis points of the group's upkeep cost: w * labour * 10 000 /
+	// (Households * U), with w the starting wage, labour the sum of duration times
+	// flow of the group's recipes at lambda 1 and U the upkeep cost of a household
+	// at the seed prices, rounded half to even. It is a report field: no table and
+	// no census figure reads it. Valid only when HasIncome.
+	IncomeBP int64
+	// HasIncome is false for a recipe row, for a group with no households or no
+	// upkeep cost, for a group with an active recipe on the lists of several roles
+	// (its flow is not the group's alone), for a region with no wage or a
+	// programme with no labour share (a tight capacity row, FR-VIA-012), and when
+	// the figure does not fit int64.
+	HasIncome bool
 }
 
 // ActiveIn lists the regions in which a recipe is active in the pooled solution.
@@ -369,6 +382,7 @@ func (rc *regionCtx) need(a *viaActivity, flow steady.Frac) steady.Frac {
 func (rc *regionCtx) census() {
 	rep := &rc.s.rep
 	needs := make([]steady.Frac, len(rc.groups))
+	labour := make([]steady.Frac, len(rc.groups))
 	var configured int64
 	for gi := range rc.groups {
 		gc := &rc.groups[gi]
@@ -382,6 +396,7 @@ func (rc *regionCtx) census() {
 				capacity = c
 			}
 		}
+		labour[gi] = needs[gi]
 		if len(gc.active) > 0 && capacity.Cmp(needs[gi]) > 0 {
 			needs[gi] = capacity
 		}
@@ -393,11 +408,54 @@ func (rc *regionCtx) census() {
 		if slices.Max(balanced) == 0 { // no flow anywhere: nothing to balance against
 			b = h
 		}
-		rep.Census = append(rep.Census, CensusRow{
+		row := CensusRow{
 			Region: rc.id, Role: rc.s.m.c.Roles[gc.role].ID, Households: h, Balanced: b, Imbalance: h - b, Short: gc.short,
-		})
+		}
+		row.IncomeBP, row.HasIncome = rc.income(gc, labour[gi])
+		rep.Census = append(rep.Census, row)
 	}
 	rc.recipeCensus()
+}
+
+// income returns the IncomeBP of a group (D372): the starting wage times the
+// labour of its recipes at the flows of lambda 1 (the wage already carries
+// lambda*), over its households times the upkeep cost of one at the seed prices,
+// in basis points, rounded half to even. ok is false where CensusRow.HasIncome
+// says so; an overflow of int64 is an absent figure, never a wrapped one
+// (architecture.md 3.5).
+func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
+	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 {
+		return 0, false
+	}
+	for _, ar := range gc.active {
+		if rc.rolesListing(rc.acts[ar.i].recipe) > 1 {
+			return 0, false
+		}
+	}
+	var upkeep int64
+	for c, q := range gc.up {
+		v, ok := checked.Mul(q, rc.price[c])
+		if upkeep, ok = checked.Add(upkeep, v); !ok {
+			return 0, false
+		}
+	}
+	num, ok1 := checked.Mul(rc.wage, wholeBP)
+	den, ok2 := checked.Mul(gc.g.Households, upkeep)
+	if !ok1 || !ok2 || den < 1 {
+		return 0, false
+	}
+	return labour.Mul(num, den).Round(0, maxInt64)
+}
+
+// rolesListing counts the groups of the region whose role lists the recipe.
+func (rc *regionCtx) rolesListing(recipe RecipeID) int {
+	roles := 0
+	for gi := range rc.groups {
+		if slices.Contains(rc.groups[gi].row.recipes, recipe) {
+			roles++
+		}
+	}
+	return roles
 }
 
 // recipeCensus adds the rows of the active recipes that are on the lists of
@@ -408,12 +466,7 @@ func (rc *regionCtx) recipeCensus() {
 		if !rc.activeAt(i) {
 			continue
 		}
-		roles := 0
-		for gi := range rc.groups {
-			if slices.Contains(rc.groups[gi].row.recipes, a.recipe) {
-				roles++
-			}
-		}
+		roles := rc.rolesListing(a.recipe)
 		if roles == 1 {
 			continue
 		}
