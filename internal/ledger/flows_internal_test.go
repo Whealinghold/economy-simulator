@@ -428,6 +428,8 @@ func TestState_FlowRowOrderAcrossRegions(t *testing.T) {
 		{"flow codes descending in a region", [][4]uint64{row(1, hi, 0, 1), row(1, lo+1, 0, 1)}, false},
 		{"flow row repeated", [][4]uint64{row(1, hi, 0, 1), row(1, hi, 0, 1)}, false},
 		{"a table reason after the last flow of the region before", [][4]uint64{row(0, hi, 0, 1), row(1, 1, 0, 1)}, true},
+		{"a table reason before a flow of the same region", [][4]uint64{row(0, 1, 0, 1), row(0, lo, 0, 1)}, true},
+		{"a flow before a table reason of the same region", [][4]uint64{row(0, lo, 0, 1), row(0, 1, 0, 1)}, false},
 		{"flow code one past the last flow", [][4]uint64{row(0, hi+1, 0, 1)}, false},
 		{"flow code of the last flow", [][4]uint64{row(0, hi, 0, 1)}, true},
 		{"flow row of a commodity", [][4]uint64{row(0, lo, 1, 1)}, false},
