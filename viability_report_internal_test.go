@@ -58,9 +58,19 @@ func TestSolveSteadyState_JobsAreScaledDownWhenTheyOverfillAGroup(t *testing.T) 
 	}
 	// The farmer's need is the labour of both recipes, 2 * 12.5 * 2 = 50 + 50 = 100
 	// households; the idle role's is 0, so all 100 households balance to the farmer.
+	//
+	// IncomeBP of the farmer: the seed wage 400 times its labour, 25 + 25 = 50
+	// (executions in progress, x * d, of both recipes), over 1 household times the
+	// upkeep of 200 (one grain and one water at 100): 400 * 50 * 10 000 / 200 =
+	// 1 000 000, that is 100 times its upkeep. The idle role has no active recipe,
+	// so no income figure.
+	wage := st.Table.Wages[0].Wage
 	want := []CensusRow{
-		{Region: "north", Role: "farmer", Households: 1, Balanced: 100, Imbalance: -99, Short: true},
+		{Region: "north", Role: "farmer", Households: 1, Balanced: 100, Imbalance: -99, Short: true, IncomeBP: 1_000_000, HasIncome: true},
 		{Region: "north", Role: "idle", Households: 99, Balanced: 0, Imbalance: 99},
+	}
+	if wage != 400 {
+		t.Errorf("seed wage = %d, want 400", wage)
 	}
 	if !reflect.DeepEqual(st.Report.Census, want) {
 		t.Errorf("Census = %+v, want %+v", st.Report.Census, want)
@@ -197,20 +207,29 @@ func TestSolveSteadyState_Imbalance(t *testing.T) {
 		name               string
 		farmers, drillers  int64
 		wantFarm, wantWell int64
+		wantFarmIncome     int64
+		wantWellIncome     int64
 	}{
 		// Needs per tick: grain 30 / 8 = 3.75 households, water 30 / 4 = 7.5; of the
 		// 30 households the quotas are 30 * 3.75 / 11.25 = 10 and 20.
-		{"imbalanced", 20, 10, 10, 20},
-		{"balanced", 10, 20, 10, 20},
+		{"imbalanced", 20, 10, 10, 20, 4_997, 19_988},
+		{"balanced", 10, 20, 10, 20, 9_994, 9_994},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			st := solveToy(t, build(tt.farmers, tt.drillers))
 			// Rows are sorted by role: driller, then farmer.
+			// IncomeBP is wage * labour * 10 000 / (households * upkeep) with the wage
+			// 533, the upkeep 67 + 133 = 200 and the labour of a household count at
+			// lambda 1: the farm 3.75, the well 7.5 (the needs above). Balanced, the
+			// farmers' 533 * 3.75 * 10 000 / (10 * 200) = 9 993.75 and the drillers'
+			// 533 * 7.5 * 10 000 / (20 * 200) = 9 993.75 both round to 9 994; with
+			// 20 farmers 19 987.5 / 2 = 4 996.875 rounds to 4 997, and with 10
+			// drillers 39 975 000 / 2 000 = 19 987.5 rounds half to even to 19 988.
 			want := []CensusRow{
-				{Region: "north", Role: "driller", Households: tt.drillers, Balanced: tt.wantWell, Imbalance: tt.drillers - tt.wantWell},
-				{Region: "north", Role: "farmer", Households: tt.farmers, Balanced: tt.wantFarm, Imbalance: tt.farmers - tt.wantFarm},
+				{Region: "north", Role: "driller", Households: tt.drillers, Balanced: tt.wantWell, Imbalance: tt.drillers - tt.wantWell, IncomeBP: tt.wantWellIncome, HasIncome: true},
+				{Region: "north", Role: "farmer", Households: tt.farmers, Balanced: tt.wantFarm, Imbalance: tt.farmers - tt.wantFarm, IncomeBP: tt.wantFarmIncome, HasIncome: true},
 			}
 			if !reflect.DeepEqual(st.Report.Census, want) {
 				t.Errorf("Census(%d farmers, %d drillers) = %+v, want %+v", tt.farmers, tt.drillers, st.Report.Census, want)

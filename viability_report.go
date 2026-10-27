@@ -101,8 +101,8 @@ type CensusRow struct {
 	// at the seed prices, rounded half to even. It is a report field: no table and
 	// no census figure reads it. Valid only when HasIncome.
 	IncomeBP int64
-	// HasIncome is false for a recipe row, for a group with no households or no
-	// upkeep cost, for a group with an active recipe on the lists of several roles
+	// HasIncome is false for a recipe row, for a group with no households, no
+	// upkeep cost or no active recipe, for a group with an active recipe on the lists of several roles
 	// (its flow is not the group's alone), for a region with no wage or a
 	// programme with no labour share (a tight capacity row, FR-VIA-012), and when
 	// the figure does not fit int64.
@@ -424,7 +424,7 @@ func (rc *regionCtx) census() {
 // says so; an overflow of int64 is an absent figure, never a wrapped one
 // (architecture.md 3.5).
 func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
-	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 {
+	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 {
 		return 0, false
 	}
 	for _, ar := range gc.active {
