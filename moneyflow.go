@@ -566,8 +566,12 @@ func (f *flowState) carryDen() int64 {
 	return den
 }
 
-// fit grows the carry table to n agents, the new ones unstarted.
+// fit grows the carry table to n agents, the new ones unstarted. A flow with a
+// pool target keeps its carry in poolCarry and leaves this table empty.
 func (f *flowState) fit(n int) {
+	if f.poolCarry != nil {
+		return
+	}
 	for len(f.carry) < n {
 		f.carry = append(f.carry, carryUnset)
 	}

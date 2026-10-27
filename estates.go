@@ -589,8 +589,9 @@ func estatesReasons() []ledger.Reason { return []ledger.Reason{ledger.Relief} }
 // p16Relief is P1.6 (spec-estates.md 2.6, plan 2-7 D347 to D350): in ascending
 // RegionID each pool releases pool * PoolRelease / 10 000, shared among the
 // agents of the region whose welfare ratio is below ReliefBelow in proportion to
-// their needs. Every need is computed before the first payment, so a refusal
-// leaves the pool as it was; what is not paid stays in the pool. It keeps no
+// their needs. Every need is computed before the first payment, so a need
+// overflow leaves the pool as it was; a refusal while paying fails the step with
+// the earlier payments made. What is not paid stays in the pool. It keeps no
 // state across ticks. It returns the first overflow or ledger refusal, which
 // fails the step.
 func (w *World) p16Relief() error {
@@ -627,7 +628,7 @@ func (w *World) reliefReport() {
 // reliefReleases fills the release of every region and clears the totals of the
 // pass. It reports whether any region releases at least 1.
 func (w *World) reliefReleases() bool {
-	rp, any := w.relief, false
+	rp, anyRel := w.relief, false
 	for r := range w.cfg.Regions {
 		rel, ok := reliefRelease(w.estates.pool(w.ledger, RegionID(r)), w.cfg.Regions[r].PoolRelease)
 		if !ok {
@@ -635,9 +636,9 @@ func (w *World) reliefReleases() bool {
 		}
 		rp.release[r], rp.sumNeed[r] = rel, 0
 		rp.paid[r], rp.recipients[r], rp.households[r] = 0, 0, 0
-		any = any || rel >= 1
+		anyRel = anyRel || rel >= 1
 	}
-	return any
+	return anyRel
 }
 
 // reliefNeeds is the first pass over the agents: the need of every household of a
