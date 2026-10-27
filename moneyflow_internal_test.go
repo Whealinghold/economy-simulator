@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"slices"
 	"testing"
 )
@@ -52,5 +53,55 @@ func TestMoneySupply_CanonicalIsACopy(t *testing.T) {
 	}
 	if m.Flows[0].ID != "b" || m.Flows[1].Per != PerYear || m.Flows[0].Per != "" {
 		t.Errorf("canonical changed its receiver: %+v", m.Flows)
+	}
+}
+
+// TestPairUnbalanced_InvalidConfigIsNotComparable verifies that Warnings, which
+// runs on a configuration that does not validate, never raises pair_unbalanced
+// from a wrapped or meaningless total: a household count that overflows, a
+// negative amount and a calendar with no year are not comparable.
+//
+// Requirement: FR-MON-039
+//
+// Guard: an unchecked sum of households wrapped negative, and a calendar with no
+// year gave a per-tick total of 0, so either made the pair look unbalanced.
+func TestPairUnbalanced_InvalidConfigIsNotComparable(t *testing.T) {
+	t.Parallel()
+	target := FlowTarget{Kind: TargetHouseholds, Role: "r"}
+	pair := func(grant, levy int64) *MoneySupply {
+		return &MoneySupply{Flows: []MoneyFlow{
+			{ID: "g", Kind: FlowGrant, Target: target, Amount: grant, Per: PerYear},
+			{ID: "l", Kind: FlowLevy, Target: target, Amount: levy, Per: PerYear},
+		}}
+	}
+	tests := []struct {
+		name   string
+		groups []Group
+		ms     *MoneySupply
+		want   bool
+	}{
+		{"unbalanced and valid", []Group{{Role: "r", Households: 10}}, pair(100, 1), true},
+		{"balanced", []Group{{Role: "r", Households: 10}}, pair(5, 5), false},
+		{"household sum overflows", []Group{{Role: "r", Households: math.MaxInt64}, {Role: "r", Households: 1}}, pair(100, 1), false},
+		{"negative households", []Group{{Role: "r", Households: -5}}, pair(100, 1), false},
+		{"negative amount", []Group{{Role: "r", Households: 10}}, pair(-100, 1), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Config{Groups: tt.groups}
+			if got := pairUnbalanced(c, tt.ms); got != tt.want {
+				t.Errorf("pairUnbalanced = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	// A per-tick pair on a zero calendar has no year to multiply by.
+	c := &Config{Groups: []Group{{Role: "r", Households: 10}}}
+	ms := &MoneySupply{Flows: []MoneyFlow{
+		{ID: "g", Kind: FlowGrant, Target: target, Amount: 100},
+		{ID: "l", Kind: FlowLevy, Target: target, Amount: 1},
+	}}
+	if pairUnbalanced(c, ms) {
+		t.Error("pairUnbalanced on a calendar with no year = true, want false")
 	}
 }

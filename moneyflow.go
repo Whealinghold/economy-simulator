@@ -305,6 +305,9 @@ func pairUnbalanced(c *Config, m *MoneySupply) bool {
 // beyondTolerance reports whether two totals differ by more than pairTolerance
 // basis points of the larger.
 func beyondTolerance(a, b int64) bool {
+	if a < 0 || b < 0 {
+		return false
+	}
 	larger := max(a, b)
 	lhs, lok := checked.Mul(larger-min(a, b), wholeBP)
 	rhs, rok := checked.Mul(larger, pairTolerance)
@@ -332,20 +335,26 @@ func (y *yearSum) add(c *Config, f MoneyFlow) {
 
 // yearlyTotal is the nominal amount a fixed flow moves in a year over the census
 // of its class: the households of the targeted groups times Amount, times the
-// ticks of a year for a period of a tick.
+// ticks of a year for a period of a tick. The warnings run on a configuration
+// that may not validate, so a negative field, a sum that leaves int64 and a
+// calendar with no year are not comparable (false), never a wrapped total.
 func yearlyTotal(c *Config, f MoneyFlow) (int64, bool) {
 	var households int64
+	ok := f.Amount >= 0
 	for _, g := range c.Groups {
 		if f.Target.targets(g) {
-			households += g.Households
+			var hok bool
+			households, hok = checked.Add(households, g.Households)
+			ok = ok && hok && g.Households >= 0
 		}
 	}
-	total, ok := checked.Mul(households, f.Amount)
+	total, mok := checked.Mul(households, f.Amount)
 	if f.Per == PerYear {
-		return total, ok
+		return total, ok && mok
 	}
-	total, tok := checked.Mul(total, c.Calendar.TicksPerYear())
-	return total, ok && tok
+	ticks := c.Calendar.TicksPerYear()
+	total, tok := checked.Mul(total, ticks)
+	return total, ok && mok && tok && ticks > 0
 }
 
 // carryUnset marks a recipient a flow has not visited yet: its carry starts at
@@ -591,9 +600,9 @@ func (w *World) visitFlow(m *moneyFlows, i, region int, a *agent) {
 	g.due, g.applied = satAdd(g.due, due), satAdd(g.applied, applied)
 	switch cut {
 	case moneyflow.CutRoom:
-		g.room += a.weight
+		g.room = satAdd(g.room, a.weight)
 	case moneyflow.CutLimit:
-		g.limit += a.weight
+		g.limit = satAdd(g.limit, a.weight)
 	}
 	if f.total >= f.limit && f.ended == 0 {
 		f.ended, f.endedNow = 2, true
