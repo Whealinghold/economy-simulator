@@ -904,7 +904,8 @@ type MoneyFlowLimited struct {
 	Region RegionID
 	// Due and Applied are the amounts the flow computed and applied in the region.
 	Due, Applied Money
-	// Short is the households whose levy found too little, Headroom the
+	// Short, Headroom and Limit are counts of households (the sum of agent
+	// weights), not money. Short is the households whose levy found too little, Headroom the
 	// households whose credit was cut at MaxMoney and Limit the households cut by
 	// the flow's limit.
 	Short, Headroom, Limit int64

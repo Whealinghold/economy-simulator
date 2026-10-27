@@ -57,7 +57,10 @@ func StartCarry(id, period int64) int64 {
 // weight w: floor((w*amount*scale + carry) / (period*10^4)), and the carry
 // that remains, in [0, period*10^4). scale is the flow scale in basis points.
 // The due is at most maxMoney. Over n ticks with unchanged w and scale the
-// total due is floor((n*w*amount*scale + carry0) / (period*10^4)), exactly.
+// total due is floor((n*w*amount*scale + carry0) / (period*10^4)), exactly,
+// as long as no due reaches maxMoney: a quotient above it is cut to maxMoney and
+// the excess is neither applied nor carried (unreachable under the validated
+// bounds).
 func Spread(w, amount, scale, carry, period, maxMoney int64) (due, newCarry int64, ok bool) {
 	if w < 0 || amount < 0 || scale < 0 || carry < 0 || period < 1 || maxMoney < 0 {
 		return 0, 0, false
