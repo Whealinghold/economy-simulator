@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"cmp"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -98,18 +99,24 @@ func measureExpected(t testing.TB, cold, warm []string) expectedPack {
 		ConfigHash: hashHex(c), Unpriced: []string{}, UnpricedWages: append([]string{}, st.Report.UnpricedWages...),
 		Warnings: warningRows(c), WarmConfigHash: hashHex(w), WarmWarnings: warningRows(w),
 	}
+	if len(st.Programmes) == 0 {
+		t.Fatalf("SolveSteadyState(%q) has no programme", cold)
+	}
 	if len(st.Programmes) == 1 {
 		p := st.Programmes[0]
 		e.SurplusBP, e.LabourShareBP, e.Pivots = p.SurplusBP, p.LabourShareBP, p.Pivots
 	} else {
 		for _, p := range st.Programmes {
+			if len(p.Regions) != 1 {
+				t.Fatalf("SolveSteadyState(%q) programme has %d regions, want 1 (no free trade)", cold, len(p.Regions))
+			}
 			r := expectedRegion{Region: p.Regions[0], SurplusBP: p.SurplusBP, LabourShareBP: p.LabourShareBP, Pivots: p.Pivots}
 			for _, row := range st.Report.Census {
 				if row.Region == r.Region && row.Role != "" {
 					r.Balanced = append(r.Balanced, row.Balanced)
 				}
 			}
-			slices.SortFunc(r.Balanced, func(a, b int64) int { return int(b - a) })
+			slices.SortFunc(r.Balanced, func(a, b int64) int { return cmp.Compare(b, a) })
 			e.Regions = append(e.Regions, r)
 		}
 	}

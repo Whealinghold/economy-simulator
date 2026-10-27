@@ -424,7 +424,7 @@ func (rc *regionCtx) census() {
 // says so; an overflow of int64 is an absent figure, never a wrapped one
 // (architecture.md 3.5).
 func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
-	if rc.wage == 0 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 || rc.sharesRecipe(gc) {
+	if rc.wage < 1 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 || rc.sharesRecipe(gc) {
 		return 0, false
 	}
 	upkeep, ok := rc.upkeepCost(gc)

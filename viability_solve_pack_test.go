@@ -459,7 +459,10 @@ func TestCensus_IncomeBP_Identity(t *testing.T) {
 				if !p.HasLabourShare {
 					continue
 				}
-				region := p.Regions[0] // no free trade: one region a programme
+				if len(p.Regions) != 1 {
+					t.Fatalf("%s: programme has %d regions, want 1 (no free trade)", name, len(p.Regions))
+				}
+				region := p.Regions[0]
 				var wage int64
 				for _, w := range st.Table.Wages {
 					if w.Region == region {
@@ -483,11 +486,15 @@ func TestCensus_IncomeBP_Identity(t *testing.T) {
 					u += int64(it.Quantity) * price[it.Commodity]
 				}
 				for _, row := range st.Report.Census {
-					if row.Region != region || row.Role == "" || row.Households == 0 {
+					// a row with no figure (HasIncome false) is left out, not counted as 0
+					if row.Region != region || row.Role == "" || row.Households == 0 || !row.HasIncome {
 						continue
 					}
 					households += row.Households
 					sum += row.IncomeBP * row.Households
+				}
+				if u < 1 || households == 0 {
+					t.Fatalf("%s %s: upkeep cost %d and %d households with an income figure, want both positive", name, region, u, households)
 				}
 				// mean = sum / households, want = wage * LabourShareBP / u:
 				// |sum * u - households * wage * LabourShareBP| <= 5 * households * u.
