@@ -69,7 +69,17 @@ type Modules struct {
 	// (spec-money-supply.md). Nil is off; non-nil is on, even with no flow. Its
 	// hash id is 2.
 	MoneySupply *MoneySupply
+	// Estates is the pool policy of the estates module: relief at P1.6 and the
+	// pool as the target of a money flow (spec-estates.md 2.6, spec-config.md
+	// 6.2.4). Nil is off; non-nil is on, even though it has no field. Its hash id
+	// is 25, whatever its place in this struct.
+	Estates *Estates
 }
+
+// Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
+// no field: a non-nil pointer switches relief and the pool as a flow target on,
+// and the tunables are Region.PoolRelease and Region.ReliefBelow.
+type Estates struct{}
 
 // Demand is the configuration of the demand module (spec-demand.md 3.2, 9). The
 // zero value is a module that is on with no want. Every list is in canonical
@@ -525,6 +535,14 @@ type Region struct {
 	// EstateMarkdown is the per-tick price reduction of an unsold estate
 	// listing, in basis points (spec-estates.md 3).
 	EstateMarkdown int64
+	// PoolRelease is the share of the region's estate pool released as relief
+	// each tick, in basis points, 0 to 10 000 (spec-estates.md 2.6, 3). It is
+	// read, hashed and validated only while Modules.Estates is on.
+	PoolRelease int64
+	// ReliefBelow is the welfare ratio, in basis points, under which a
+	// household draws relief, 0 to MaxBasisPoints (spec-estates.md 2.6, 3). It is
+	// read, hashed and validated only while Modules.Estates is on.
+	ReliefBelow int64
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string

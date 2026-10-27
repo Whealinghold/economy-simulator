@@ -1198,7 +1198,7 @@ func (v *validator) roleRules() {
 func (v *validator) regionRules() {
 	for _, rg := range v.c.Regions {
 		base := []string{"regions", rg.ID}
-		v.ranges(base, regionRanges(rg))
+		v.ranges(base, regionRanges(rg, v.c.Modules.Estates != nil))
 		v.quantities(path(base, "extra_upkeep"), rg.ExtraUpkeep, perHousehold)
 		v.label(base, "label", rg.Label)
 	}

@@ -306,12 +306,22 @@ func roleRanges(r Role) []fieldRange {
 
 // regionRanges returns the ranges of the integer fields of a Region
 // (spec-currency.md 5, spec-skill-barriers.md 5, spec-estates.md 3).
-func regionRanges(r Region) []fieldRange {
-	return []fieldRange{
+//
+// The pool fields belong to the estates module and are ranged only while it is
+// on (estatesOn), so a value outside the bound with the module off is no error
+// (spec-config.md 8.2.1).
+func regionRanges(r Region, estatesOn bool) []fieldRange {
+	rs := []fieldRange{
 		{"reference_basket", int64(r.ReferenceBasket), 0, MaxMoney},
 		{"capital_return", r.CapitalReturn, 0, MaxBasisPoints},
 		{"estate_markdown", r.EstateMarkdown, 0, wholeBP},
 	}
+	if estatesOn {
+		rs = append(rs,
+			fieldRange{"pool_release", r.PoolRelease, 0, wholeBP},
+			fieldRange{"relief_below", r.ReliefBelow, 0, MaxBasisPoints})
+	}
+	return rs
 }
 
 // groupRanges returns the ranges of the integer fields of a Group

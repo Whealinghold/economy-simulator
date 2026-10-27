@@ -38,7 +38,7 @@ type registryInput struct {
 var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here.
-	"Modules.Credit", "Modules.Employment", "Modules.Estates", "Modules.External", "Modules.Fiscal",
+	"Modules.Credit", "Modules.Employment", "Modules.External", "Modules.Fiscal",
 	"Modules.Information", "Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
 	"Modules.Population", "Modules.Resources", "Modules.Risk", "Modules.Saving",
@@ -47,8 +47,8 @@ var notBuilt = []string{
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
-	"Recipe.Builds", "Recipe.Draws", "Recipe.Needs", "Recipe.Repairs", "Region.PoolRelease",
-	"Region.ReliefBelow", "Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
+	"Recipe.Builds", "Recipe.Draws", "Recipe.Needs", "Recipe.Repairs",
+	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
 	"Role.Hireable", "Role.Informed", "Role.Merchant", "Role.MerchantFeeShare", "Role.Needs",
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
@@ -78,7 +78,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.MoneySupply": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 }
 

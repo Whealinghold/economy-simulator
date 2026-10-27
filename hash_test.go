@@ -183,8 +183,8 @@ func change(v reflect.Value) {
 // TestHashConfig_SpecVectors verifies the encoder against the worked examples of
 // spec-config.md 8.2.4: the empty Config, one region, the same with an empty
 // WarmStart, the same with the demand module on and empty, and the five-entity
-// configuration whose 350 bytes the spec lists. The Estates row of that table
-// needs the Estates module, which is built later, and is added with it.
+// configuration whose 350 bytes the spec lists. The two Estates rows are in
+// estates_config_test.go.
 //
 // Requirement: FR-CFG-025, FR-CFG-104, FR-CFG-105
 func TestHashConfig_SpecVectors(t *testing.T) {

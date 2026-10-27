@@ -76,7 +76,7 @@ func TestHash_DemandOnEmptyDiffersFromNil(t *testing.T) {
 // moduleIDs are the field ids of the modules that are built, by field name: the
 // position of the module in the Modules row of spec-config.md 3.1 (8.2.2). Each
 // module's change appends its row.
-var moduleIDs = map[string]uint16{"Demand": 1, "MoneySupply": 2}
+var moduleIDs = map[string]uint16{"Demand": 1, "MoneySupply": 2, "Estates": 25}
 
 // TestHashConfig_ModulePairsAscending verifies, from the bytes, that the pairs of
 // Modules are written in ascending id order and under the id of the module's
@@ -170,8 +170,23 @@ func (r *idReader) structOf(t reflect.Type, name string) error {
 		if id == 0 {
 			return nil
 		}
-		if int(id) > len(fields) {
-			return fmt.Errorf("%s: id %d beyond its %d fields", name, id, len(fields))
+		field := reflect.StructField{}
+		if name == "Modules" {
+			// A module's id is its position in the Modules row, not its index
+			// among the fields that are built.
+			for _, f := range fields {
+				if moduleIDs[f.Name] == id {
+					field = f
+				}
+			}
+			if field.Name == "" {
+				return fmt.Errorf("%s: id %d is the id of no built module", name, id)
+			}
+		} else {
+			if int(id) > len(fields) {
+				return fmt.Errorf("%s: id %d beyond its %d fields", name, id, len(fields))
+			}
+			field = fields[id-1]
 		}
 		if id <= last {
 			return fmt.Errorf("%s: pair id %d after %d, want strictly ascending", name, id, last)
@@ -180,7 +195,7 @@ func (r *idReader) structOf(t reflect.Type, name string) error {
 		if name == "Modules" {
 			r.modules = append(r.modules, id)
 		}
-		if err := r.value(fields[id-1].Type, name+"."+fields[id-1].Name); err != nil {
+		if err := r.value(field.Type, name+"."+field.Name); err != nil {
 			return err
 		}
 	}

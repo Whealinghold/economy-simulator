@@ -294,6 +294,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.MoneySupply != nil {
 		on = append(on, "money_supply")
 	}
+	if c.Modules.Estates != nil {
+		on = append(on, "estates")
+	}
 	return on
 }
 

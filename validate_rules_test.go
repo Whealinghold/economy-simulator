@@ -375,6 +375,19 @@ func buildFieldCases() []fieldCase {
 			[]string{"regions", "north", "capital_return"}),
 		reg("Region.EstateMarkdown", func(r *economysim.Region) { r.EstateMarkdown = 10_001 }, economysim.ErrOutOfBounds,
 			[]string{"regions", "north", "estate_markdown"}),
+		// The pool fields are ranged only while the estates module is on.
+		fieldCase{field: "Region.PoolRelease", name: "region north, estates on", rules: []error{economysim.ErrOutOfBounds},
+			mutate: func(c *economysim.Config) {
+				c.Modules.Estates = &economysim.Estates{}
+				c.Regions[0].PoolRelease = 10_001
+			},
+			paths: [][]string{{"regions", "north", "pool_release"}}},
+		fieldCase{field: "Region.ReliefBelow", name: "region north, estates on", rules: []error{economysim.ErrOutOfBounds},
+			mutate: func(c *economysim.Config) {
+				c.Modules.Estates = &economysim.Estates{}
+				c.Regions[0].ReliefBelow = economysim.MaxBasisPoints + 1
+			},
+			paths: [][]string{{"regions", "north", "relief_below"}}},
 		reg("Region.ExtraUpkeep", func(r *economysim.Region) {
 			r.ExtraUpkeep = []economysim.Item{{Commodity: "fuel", Quantity: 0}}
 		}, economysim.ErrOutOfBounds, []string{"regions", "north", "extra_upkeep", "fuel", "quantity"}),

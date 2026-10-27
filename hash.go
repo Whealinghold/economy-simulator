@@ -40,7 +40,9 @@ func encodeConfig(c Config) []byte {
 	encodeList(e, 4, c.Recipes, pairsRecipe)
 	encodeList(e, 5, c.Yields, pairsYield)
 	encodeList(e, 6, c.Roles, pairsRole)
-	encodeList(e, 7, c.Regions, pairsRegion)
+	encodeList(e, 7, c.Regions, func(e *encoder, r Region) {
+		pairsRegion(e, r, c.Modules.Estates != nil)
+	})
 	encodeList(e, 8, c.Edges, pairsEdge)
 	encodeList(e, 9, c.RegionPrices, pairsRegionPrice)
 	encodeList(e, 10, c.Groups, pairsGroup)
@@ -300,14 +302,19 @@ func pairsRole(e *encoder, r Role) {
 	e.flag(18, r.Closed)
 }
 
-// pairsRegion writes the pairs of a Region: ids 1 to 5. Label is presentation
-// only and has no id.
-func pairsRegion(e *encoder, r Region) {
+// pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
+// only and has no id. PoolRelease 6 and ReliefBelow 7 are the estates module's
+// and are pairs only while it is on (estatesOn) and not zero.
+func pairsRegion(e *encoder, r Region, estatesOn bool) {
 	e.text(1, r.ID)
 	e.num(2, int64(r.ReferenceBasket))
 	encodeList(e, 3, r.ExtraUpkeep, pairsItem)
 	e.num(4, r.CapitalReturn)
 	e.num(5, r.EstateMarkdown)
+	if estatesOn {
+		e.num(6, r.PoolRelease)
+		e.num(7, r.ReliefBelow)
+	}
 }
 
 // pairsEdge writes the pairs of an Edge: From 1, To 2, Distance 3.
@@ -394,6 +401,10 @@ func pairsModules(e *encoder, m Modules) {
 	if m.MoneySupply != nil {
 		e.id(2)
 		encodeList(e, 1, m.MoneySupply.Flows, pairsMoneyFlow)
+		e.end()
+	}
+	if m.Estates != nil {
+		e.id(25)
 		e.end()
 	}
 }
