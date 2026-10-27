@@ -512,15 +512,8 @@ func newMoneyFlows(c *Config, l *ledger.Ledger) *moneyFlows {
 func newFlowState(c *Config, l *ledger.Ledger, i int, f MoneyFlow) flowState {
 	reason := ledger.FlowReason(i)
 	boundary, ok := l.Boundary(reason, ledger.Money)
-	role := -1
-	if f.Target.Kind == TargetHouseholds {
-		role = slices.IndexFunc(c.Roles, func(r Role) bool { return r.ID == f.Target.Role })
-	}
-	region := -1
-	if f.Target.Region != "" {
-		region = slices.IndexFunc(c.Regions, func(r Region) bool { return r.ID == f.Target.Region })
-	}
-	if !ok || (f.Target.Kind == TargetHouseholds && role < 0) || (f.Target.Region != "" && region < 0) {
+	role, region, found := resolveTarget(c, f.Target)
+	if !ok || !found {
 		invariant("a money flow's boundary, role or region does not resolve after validation: " + f.ID)
 	}
 	st := flowState{
@@ -531,15 +524,26 @@ func newFlowState(c *Config, l *ledger.Ledger, i int, f MoneyFlow) flowState {
 		st.period = c.Calendar.TicksPerYear()
 	}
 	if f.Target.Kind == TargetPool {
-		st.poolCarry = make([]int64, len(c.Regions))
-		for g := range st.poolCarry {
-			st.poolCarry[g] = carryUnset
-		}
+		st.poolCarry = slices.Repeat([]int64{carryUnset}, len(c.Regions))
 	}
 	if f.Limit > 0 {
 		st.limit = min(f.Limit, MaxFlowTotal)
 	}
 	return st
+}
+
+// resolveTarget returns the index of the targeted role (-1 for a pool, which has
+// none) and of the targeted region (-1 for every region), and whether both
+// resolve.
+func resolveTarget(c *Config, t FlowTarget) (role, region int, found bool) {
+	role, region = -1, -1
+	if t.Kind == TargetHouseholds {
+		role = slices.IndexFunc(c.Roles, func(r Role) bool { return r.ID == t.Role })
+	}
+	if t.Region != "" {
+		region = slices.IndexFunc(c.Regions, func(r Region) bool { return r.ID == t.Region })
+	}
+	return role, region, (t.Kind != TargetHouseholds || role >= 0) && (t.Region == "" || region >= 0)
 }
 
 // active reports whether the flow runs in the tick: inside its window, not ended
