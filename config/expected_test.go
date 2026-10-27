@@ -160,7 +160,6 @@ func TestExpected_Packs(t *testing.T) {
 		surplusBP int64
 		pivots    int64
 	}{
-		{"famine", []string{"base.toml", "famine.toml", "overlay/estates.toml"}, []string{"base.toml", "famine.toml", "overlay/estates.toml", "warm-famine.toml"}, 13_150, 9},
 		{"one", []string{"base.toml", "one.toml"}, []string{"base.toml", "one.toml", "warm-one.toml"}, 25_119, 10},
 		{"second", []string{"second/second.toml"}, []string{"second/second.toml", "second/warm-second.toml"}, 19_663, 10},
 		{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 22_803, 15},

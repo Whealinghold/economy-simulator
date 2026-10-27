@@ -24,7 +24,7 @@ stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quanti
 [warm_start.region.north.group.maker]
 money = 19173
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "refined", quantity = 5 }, { commodity = "staple", quantity = 10 } ]
-jobs = [ { recipe = "make_tool_a", in_progress = 2104 }, { recipe = "make_tool_b", in_progress = 7895 } ]
+jobs = [ { recipe = "make_tool_a", in_progress = 2272 }, { recipe = "make_tool_b", in_progress = 8522 } ]
 [warm_start.region.north.group.refiner]
 money = 14925
 stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "mineral", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]

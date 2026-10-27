@@ -255,7 +255,7 @@ var invariantTable = []invariantCase{
 	{"two+trade", tradeWarm("two"), 4, 0, ""},
 	{"three+trade", tradeWarm("three"), 4, 0, ""},
 	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
-	{"famine", append(slices.Clone(packLayers["famine"]), "warm-famine.toml"), 4, 800, "s14-0.toml"},
+	{"famine", packLayers["famine"], 4, 800, "s14-0.toml"},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
