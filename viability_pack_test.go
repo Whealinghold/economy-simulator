@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"reflect"
@@ -306,5 +307,100 @@ func TestPacks_FiveWithItsWarmStartValidates(t *testing.T) {
 	cfg := loadPack(t, "base.toml", "lines.toml", "five.toml", "warm-five.toml")
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("Validate(five + warm-five) = %v, want nil", err)
+	}
+}
+
+// incomeGateSkip is the reason TestPacks_IncomeBalance is skipped while the packs
+// are unbalanced; plan 2-8 Phase 4 empties it with the accepted rebalance, or the
+// supervisor re-points the issue ID on a stop (D369).
+const incomeGateSkip = "N-314: the unchanged packs fail the income gate (the grower of `one` earns 47% of its upkeep)"
+
+// incomeGateMin and incomeGateSpread are the screening values of plan 2-8 D365,
+// which the owner confirms or replaces: the least IncomeBP of a pack is at least
+// 8 000 basis points and the greatest at most 1.5 times the least. Only the spread
+// is gated, because the households-weighted mean is fixed near 10 000 by the
+// identity of D372 (TestCensus_IncomeBP_Identity).
+const (
+	incomeGateMin       = 8_000
+	incomeGateSpreadNum = 3 // the greatest is at most incomeGateSpreadNum / incomeGateSpreadDen times the least
+	incomeGateSpreadDen = 2
+)
+
+// incomeExceptions are the groups outside the gate, by pack, region and role,
+// each with its reason. A group with no IncomeBP must be here, and a group here
+// must have none, or be a thin group that cannot be fixed (REF 16 question 9).
+var incomeExceptions = map[string]map[string]string{
+	"famine": {
+		"north/cook": "no labour share: the capacity row is tight (FR-VIA-012)", "north/digger": "no labour share: the capacity row is tight (FR-VIA-012)",
+		"north/forester": "no labour share: the capacity row is tight (FR-VIA-012)", "north/grower": "no labour share: the capacity row is tight (FR-VIA-012)",
+		"north/maker": "no labour share: the capacity row is tight (FR-VIA-012)", "north/refiner": "no labour share: the capacity row is tight (FR-VIA-012)",
+	},
+}
+
+// TestPacks_IncomeBalance verifies the static income gate of plan 2-8 D365 on
+// every pack that layers on `base`: before any simulation the groups of a pack
+// that have an IncomeBP have the least at least 8 000 and the greatest at most
+// 1.5 times the least, so no group is designed to starve (N-314 (a): the growers
+// of `one` earn 47% of their upkeep and the others 138%). A group without an
+// IncomeBP (no labour share, or an active recipe shared by several roles) is in
+// incomeExceptions with its reason. The pack `one-demand` is its own balanced
+// census (D315 of plan 2-5).
+//
+// Requirement: FR-REF-041 (proposed)
+//
+// Guard: a pack edit, a new good or a new role (the runbook of D370) that reopens
+// the grower gap is a test failure and not a memory; the gate is exact and cheap,
+// the run is not. It fails on the unchanged packs, so it is skipped with the issue
+// ID until the rebalance lands.
+func TestPacks_IncomeBalance(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	if incomeGateSkip != "" {
+		t.Skip(incomeGateSkip)
+	}
+	packs := map[string][]string{"one-demand": packOneDemandCold}
+	for _, name := range []string{"one", "two", "three", "famine", "five"} {
+		packs[name] = packLayers[name]
+	}
+	for name, layers := range packs {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			st, err := economysim.SolveSteadyState(context.Background(), loadPack(t, layers...))
+			if err != nil {
+				t.Fatalf("SolveSteadyState(%s) = %v, want nil", name, err)
+			}
+			lo, hi, loAt, hiAt := int64(-1), int64(0), "", ""
+			for _, row := range st.Report.Census {
+				if row.Role == "" {
+					continue
+				}
+				key := row.Region + "/" + row.Role
+				reason, listed := incomeExceptions[name][key]
+				switch {
+				case !row.HasIncome && !listed:
+					t.Errorf("%s %s has no IncomeBP and is not in incomeExceptions: say why (no labour share, or a shared recipe)", name, key)
+				case row.HasIncome && listed:
+					t.Errorf("%s %s has an IncomeBP of %d and is listed as an exception (%s): delete the entry", name, key, row.IncomeBP, reason)
+				case row.HasIncome:
+					if lo < 0 || row.IncomeBP < lo {
+						lo, loAt = row.IncomeBP, key
+					}
+					if row.IncomeBP > hi {
+						hi, hiAt = row.IncomeBP, key
+					}
+				}
+			}
+			if lo < 0 {
+				return // every group is an exception: no gate, the run alone judges the pack (D365)
+			}
+			if lo < incomeGateMin {
+				t.Errorf("%s: least IncomeBP = %d (%s), want >= %d", name, lo, loAt, incomeGateMin)
+			}
+			if hi*incomeGateSpreadDen > lo*incomeGateSpreadNum {
+				t.Errorf("%s: greatest IncomeBP = %d (%s), want <= 1.5 * %d (%s) = %d", name, hi, hiAt, lo, loAt, lo*incomeGateSpreadNum/incomeGateSpreadDen)
+			}
+		})
 	}
 }
