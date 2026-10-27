@@ -339,7 +339,7 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	notOnOne := []string{"estates.toml", "overhang.toml"}
+	notOnOne := []string{"overhang.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)
