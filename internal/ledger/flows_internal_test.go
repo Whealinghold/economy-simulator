@@ -299,3 +299,170 @@ func TestNew_NoFlowsLeavesLayoutUnchanged(t *testing.T) {
 		t.Errorf("stride %d, flow offsets %v, want stride %d and the flows at %d, %d", with.stride, with.flowOff, plain.stride+2, plain.stride, plain.stride+1)
 	}
 }
+
+// threeFlowLedger returns a two-region, two-commodity ledger with three flows
+// (faucet, sink, faucet) and their boundaries; with agents it also has one
+// agent per region and is past construction, without it it is in construction
+// with only its boundaries, which is what a restore needs.
+func threeFlowLedger(t *testing.T, agents bool) (l *Ledger, boundary, agent []int) {
+	t.Helper()
+	l, err := New(Config{
+		Commodities: []Commodity{{}, {}}, Regions: 2, MaxMoney: 1000, MaxQuantity: 100,
+		Flows: []Class{Faucet, Sink, Faucet},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	for i := range 3 {
+		id, err := l.OpenBoundary(FlowReason(i), Money)
+		if err != nil {
+			t.Fatalf("OpenBoundary(flow %d): %v", i, err)
+		}
+		boundary = append(boundary, id)
+	}
+	if !agents {
+		return l, boundary, nil
+	}
+	for region := range 2 {
+		id, err := l.Open(KindAgent, region, region)
+		if err != nil {
+			t.Fatalf("Open(region %d): %v", region, err)
+		}
+		agent = append(agent, id)
+	}
+	if err := l.EndConstruction(); err != nil {
+		t.Fatalf("EndConstruction: %v", err)
+	}
+	l.EndTick()
+	return l, boundary, agent
+}
+
+// TestState_RoundTripThreeFlowsTwoRegions verifies that the totals of every
+// flow in every region survive a save and a restore, that they are written in
+// the order (region, code, thing) with the codes pinnedRows, +1 and +2 for the
+// three flows, and that the last flow's code is the largest one accepted.
+//
+// Guard: the code arithmetic (codeOf, reasonOfCode, the loop bound of eachFlow
+// and the row key of readFlows) is invisible with one or two flows in one
+// region; a mutation of any of them passed the two-flow round trip. Without
+// this test a third flow, or a flow total in a second region, could be lost or
+// read out of order on a restore.
+func TestState_RoundTripThreeFlowsTwoRegions(t *testing.T) {
+	t.Parallel()
+	l, b, a := threeFlowLedger(t, true)
+	// Region r gets a grant of flow 0 (10+r, then 20 more to fund the levy), a
+	// levy of flow 1 (5+r) and a grant of flow 2 (3+r): totals 30+r, 5+r, 3+r.
+	for r := range 2 {
+		for i, amount := range []int64{int64(10 + r), int64(5 + r), int64(3 + r)} {
+			var err error
+			if i == 1 {
+				if err = l.Transfer(b[0], a[r], 20, FlowReason(0)); err == nil {
+					err = l.Transfer(a[r], b[1], amount, FlowReason(1))
+				}
+			} else {
+				err = l.Transfer(b[i], a[r], amount, FlowReason(i))
+			}
+			if err != nil {
+				t.Fatalf("region %d flow %d: %v", r, i, err)
+			}
+		}
+	}
+	out := saved(l)
+	var flows []Flow
+	flows = l.AppendFlows(flows, false)
+	wantRows := map[[2]int]int64{}
+	for _, f := range flows {
+		wantRows[[2]int{f.Region, int(f.Reason)}] = f.Total
+	}
+	for r := range 2 {
+		for i := range 3 {
+			if wantRows[[2]int{r, int(FlowReason(i))}] == 0 {
+				t.Fatalf("setup: no total for flow %d in region %d", i, r)
+			}
+		}
+	}
+	// The last flow's rows carry the code pinnedRows+2.
+	for r, want := range []byte{3, 4} {
+		if row := []byte{byte(r), pinnedRows + 2, 0, want}; !bytes.Contains(out, row) {
+			t.Errorf("WriteState wrote % x, want it to contain the flow row % x (region %d, code %d, total %d)", out, row, r, pinnedRows+2, want)
+		}
+	}
+	build := func() *Ledger { f, _, _ := threeFlowLedger(t, false); return f }
+	fresh := build()
+	if err := read(fresh, out, l.Tick(), false); err != nil {
+		t.Fatalf("ReadState: %v", err)
+	}
+	if want, got := normal(l), normal(fresh); !reflect.DeepEqual(want, got) {
+		t.Errorf("restored three-flow ledger differs from the original")
+	}
+	// A code one past the last flow is refused, the last flow's own is not.
+	last := []byte{0, pinnedRows + 2, 0, 3}
+	if !bytes.Contains(out, last) {
+		t.Fatalf("setup: no row % x in % x", last, out)
+	}
+	bad := bytes.Replace(out, last, []byte{0, pinnedRows + 3, 0, 3}, 1)
+	if err := read(build(), bad, l.Tick(), false); !errors.Is(err, codec.ErrMalformed) {
+		t.Errorf("ReadState with the code pinnedRows+3 of three flows = %v, want codec.ErrMalformed", err)
+	}
+}
+
+// TestState_FlowRowOrderAcrossRegions verifies the strict ascent of flow rows
+// when flow codes and regions interleave: region 1 with the lowest flow code
+// follows region 0 with the highest, and the reverse, a repeat or a
+// descending code inside a region is refused.
+//
+// Guard: the row key mixes region, code and thing; a wrong stride in it
+// accepts a descending pair or refuses a valid one.
+func TestState_FlowRowOrderAcrossRegions(t *testing.T) {
+	t.Parallel()
+	row := func(region, code, thing, total uint64) [4]uint64 { return [4]uint64{region, code, thing, total} }
+	hi, lo := uint64(pinnedRows+2), uint64(pinnedRows)
+	tests := []struct {
+		name string
+		rows [][4]uint64
+		ok   bool
+	}{
+		{"region 1 low code after region 0 high code", [][4]uint64{row(0, hi, 0, 1), row(1, lo, 0, 1)}, true},
+		{"region 0 high code after region 1 low code", [][4]uint64{row(1, lo, 0, 1), row(0, hi, 0, 1)}, false},
+		{"flow codes ascending in a region", [][4]uint64{row(1, lo, 0, 1), row(1, lo+1, 0, 1), row(1, hi, 0, 1)}, true},
+		{"flow codes descending in a region", [][4]uint64{row(1, hi, 0, 1), row(1, lo+1, 0, 1)}, false},
+		{"flow row repeated", [][4]uint64{row(1, hi, 0, 1), row(1, hi, 0, 1)}, false},
+		{"a table reason after the last flow of the region before", [][4]uint64{row(0, hi, 0, 1), row(1, 1, 0, 1)}, true},
+		{"flow code one past the last flow", [][4]uint64{row(0, hi+1, 0, 1)}, false},
+		{"flow code of the last flow", [][4]uint64{row(0, hi, 0, 1)}, true},
+		{"flow row of a commodity", [][4]uint64{row(0, lo, 1, 1)}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// No boundary is opened, so the section lists no account.
+			l, err := New(Config{
+				Commodities: []Commodity{{}, {}}, Regions: 2, MaxMoney: 1000, MaxQuantity: 100,
+				Flows: []Class{Faucet, Sink, Faucet},
+			})
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+			w := codec.NewWriter(nil)
+			w.Count(0) // accounts
+			w.U(0)     // next claim
+			w.U(0)     // claims
+			w.Count(len(tt.rows))
+			for _, r := range tt.rows {
+				for _, v := range r {
+					w.U(v)
+				}
+			}
+			w.U(0) // wear
+			w.U(0) // relocations
+			// Only the byte format is under test, not the audit of balances.
+			err = read(l, w.Out(), 1, false)
+			if tt.ok && errors.Is(err, codec.ErrMalformed) {
+				t.Errorf("ReadState(%v) = %v, want the rows accepted", tt.rows, err)
+			}
+			if !tt.ok && !errors.Is(err, codec.ErrMalformed) {
+				t.Errorf("ReadState(%v) = %v, want codec.ErrMalformed", tt.rows, err)
+			}
+		})
+	}
+}
