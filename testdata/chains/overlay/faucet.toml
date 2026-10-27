@@ -1,0 +1,10 @@
+# Turns the money supply module on with one grant and no sink (scenario S13,
+# spec-money-supply.md 17.6): 20 a household-tick, 2% of the basket of 1 000, to the
+# growers of the north. The amount is a placeholder, not a calibrated figure (N-027).
+[modules.money_supply]
+
+[modules.money_supply.flow.stipend]
+kind = "grant"
+target = { kind = "households", role = "grower", region = "north" }
+amount = 20
+per = "tick"

@@ -345,3 +345,6 @@ func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason
 	}
 	return wantShortReason(&TradePlan{Intents: intents}, &wt, funded)
 }
+
+// P17Flows runs P1.7 alone, for the benchmark of the money supply module.
+func P17Flows(w *World) { w.p17Flows() }

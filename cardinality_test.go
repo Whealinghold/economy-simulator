@@ -60,7 +60,19 @@ type cardChecker struct {
 	seed   uint64
 	names  economysim.Names
 	consts map[string]map[string]bool
-	seen   map[string]int
+	// flows are the IDs of the money flows of the configuration: the Reason of a
+	// BoundaryFlow may be one, and the Flow of a money flow event must be (MON 4.5.2,
+	// observability-and-logging.md 5.4.1).
+	flows map[string]bool
+	seen  map[string]int
+}
+
+// flow checks that a money flow event names a flow of the configuration.
+func (c *cardChecker) flow(ev string, tick int64, id string) {
+	c.seen["Flow"]++
+	if !c.flows[id] {
+		c.t.Errorf("seed %d tick %d %s.Flow = %q, not a flow of the configuration", c.seed, tick, ev, id)
+	}
 }
 
 func (c *cardChecker) id(ev string, tick int64, field string, v, n int) {
@@ -162,8 +174,21 @@ func (c *cardChecker) check(e economysim.Event) {
 		if e.Commodity != economysim.NoCommodity { // money flows carry NoCommodity
 			c.commodity("BoundaryFlow", e.Tick, e.Commodity)
 		}
-		c.member("BoundaryFlow", e.Tick, "Reason", string(e.Reason))
+		if c.flows[string(e.Reason)] {
+			c.seen["Flow"]++
+		} else {
+			c.member("BoundaryFlow", e.Tick, "Reason", string(e.Reason))
+		}
 		c.member("BoundaryFlow", e.Tick, "Kind", string(e.Kind))
+	case economysim.MoneyFlowLimited:
+		c.region("MoneyFlowLimited", e.Tick, e.Region)
+		c.flow("MoneyFlowLimited", e.Tick, e.Flow)
+	case economysim.MoneyFlowEnded:
+		c.flow("MoneyFlowEnded", e.Tick, e.Flow)
+		c.member("MoneyFlowEnded", e.Tick, "Cause", string(e.Cause))
+	case economysim.MoneyFlowScaled:
+		c.flow("MoneyFlowScaled", e.Tick, e.Flow)
+		c.member("MoneyFlowScaled", e.Tick, "Cause", string(e.Cause))
 	case economysim.WearApplied:
 		c.commodity("WearApplied", e.Tick, e.Commodity)
 	}
@@ -202,6 +227,43 @@ func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestCardinality_MoneyFlowAttributesTakeConfiguredValues runs pack one with the
+// money supply module on (overlay/faucet-sunk.toml, with a limit on the stipend so
+// the flow ends in the run) and checks that the Reason of a BoundaryFlow is a
+// built-in reason or a flow of the configuration, and that the Flow, Region and
+// Cause of the three money flow events take values of the configuration or of
+// their closed sets: the flow IDs are at most MaxMoneyFlows, so the metric
+// attribute economysim.reason stays bounded by the configuration.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-MON-003, FR-MON-029, FR-MON-031
+//
+// Guard: a flow reason that reached BoundaryFlow under a name that is not an
+// ID of the configuration would be an unbounded attribute value.
+func TestCardinality_MoneyFlowAttributesTakeConfiguredValues(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end: 120 ticks of pack one; skipped under -short")
+	}
+	cfg := loadValidPack(t, packOneFaucetSunk...)
+	cfg.Modules.MoneySupply.Flows[1].Limit = 300_000 // stipend (flows are in ID order): 5 060 a tick, so it ends at tick 59
+	flows := map[string]bool{}
+	for _, f := range cfg.Modules.MoneySupply.Flows {
+		flows[f.ID] = true
+	}
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: 120, Observe: true})
+	c := &cardChecker{t: t, seed: 1, names: res.Final.Names, consts: eventConstants(t), flows: flows, seen: map[string]int{}}
+	ended := 0
+	for _, e := range res.Events {
+		c.check(e)
+		if _, ok := e.(economysim.MoneyFlowEnded); ok {
+			ended++
+		}
+	}
+	if c.seen["Flow"] == 0 || ended != 1 {
+		t.Errorf("flow values checked %d times and %d MoneyFlowEnded events, want some and exactly 1: the run exercised nothing", c.seen["Flow"], ended)
 	}
 }
 

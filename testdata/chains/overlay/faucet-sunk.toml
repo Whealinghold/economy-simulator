@@ -1,0 +1,20 @@
+# The faucet of overlay/faucet.toml with a sink (scenarios S13 and S33,
+# spec-money-supply.md 17.6): a rate levy on the same role, 3 650 basis points a year
+# above an exemption of 3 000. For a household that never spends the money held is
+# bounded by 3 000 + 20 / rho with rho = 3650 / (10000 * 365) = 1/1000, that is 23 000
+# (9.3). The amounts are placeholders (N-027). Layer it after `one`, not after
+# overlay/faucet.toml: it defines the stipend itself.
+[modules.money_supply]
+
+[modules.money_supply.flow.stipend]
+kind = "grant"
+target = { kind = "households", role = "grower", region = "north" }
+amount = 20
+per = "tick"
+
+[modules.money_supply.flow.charge]
+kind = "levy"
+target = { kind = "households", role = "grower", region = "north" }
+rate_bp = 3650
+per = "year"
+exempt = 3000

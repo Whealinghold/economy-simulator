@@ -337,3 +337,45 @@ func TestPlanFlow_DueIgnoresEverythingElse(t *testing.T) {
 		t.Errorf("top-up due above the level = %d, want 0", due)
 	}
 }
+
+// TestP17Flows_AllocatesNothing verifies that the step of the module allocates
+// nothing once its scratch has grown, with the default logger and observer: the
+// class lists, the carries and the aggregates are reused, no event is built and no
+// log argument is evaluated.
+//
+// Requirement: FR-MON-033, NFR-MON-001
+//
+// Guard: a slice or a boxed event built per recipient would make the step cost
+// grow with the households; the world's baseline (allocation_test.go) would show
+// it only as a sum with the rest of the tick.
+func TestP17Flows_AllocatesNothing(t *testing.T) {
+	// Not parallel: testing.AllocsPerRun panics in a parallel test.
+	short := millerFlow("tax", FlowLevy, 100) // short: the MoneyFlowLimited path runs
+	rate := MoneyFlow{ID: "rate", Kind: FlowLevy, RateBP: 500, Per: PerYear, Target: FlowTarget{Kind: TargetHouseholds, Role: "miller"}}
+	w, _ := moneyMill(t, 50, millerFlow("aid", FlowGrant, 7), short, rate)
+	w.obs = observers{}
+	for range 5 {
+		w.p17Flows()
+	}
+	if got := testing.AllocsPerRun(50, func() { w.p17Flows() }); got != 0 {
+		t.Errorf("allocations per P1.7 = %v, want 0", got)
+	}
+}
+
+// TestMoneyCross_RefusesACarryOfAClosedAccount verifies cross-check 7: a started
+// carry of an agent that is not live is refused with ErrCheckpointCorrupt, and the
+// carries of live agents pass.
+//
+// Requirement: FR-MON-040
+func TestMoneyCross_RefusesACarryOfAClosedAccount(t *testing.T) {
+	t.Parallel()
+	w, _ := moneyMill(t, 4, millerFlow("aid", FlowGrant, 7))
+	w.p17Flows()
+	if err := w.moneyCross(); err != nil {
+		t.Fatalf("moneyCross with live agents = %v, want nil", err)
+	}
+	w.agents[2] = agent{}
+	if err := w.moneyCross(); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("moneyCross with a carry of a removed agent = %v, want ErrCheckpointCorrupt", err)
+	}
+}

@@ -385,3 +385,79 @@ func TestLogs_MoneyFlowDebugOnly(t *testing.T) {
 		t.Errorf("%d money flow limited lines, want 1", limited)
 	}
 }
+
+// TestInvariants_ClosedEconomyMoneyConstant verifies that a world with the module
+// on and no active flow (a flow whose window starts after the run, and the module
+// with no flow at all) holds the same money as the world with the module off at
+// every tick, and the same households, for seeds 1 and 2 over pack one: the
+// module changes the money only through a flow that runs, and its presence moves
+// nothing.
+//
+// Requirement: FR-MON-001, FR-MON-028
+func TestInvariants_ClosedEconomyMoneyConstant(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end: 3 x 150 ticks of pack one per seed; skipped under -short")
+	}
+	off := loadValidPack(t, packOne...)
+	idle := loadValidPack(t, packOneFaucetSunk...)
+	idle.Modules.MoneySupply.Flows[0].Start, idle.Modules.MoneySupply.Flows[1].Start = 1_000, 1_000
+	empty := loadValidPack(t, packOne...)
+	empty.Modules.MoneySupply = &economysim.MoneySupply{}
+	for _, seed := range seedList(min(2, scenarioSeedCount())) {
+		for name, cfg := range map[string]economysim.Config{"idle flows": idle, "no flows": empty} {
+			w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed), economysim.WithAudit())
+			if err != nil {
+				t.Fatalf("seed %d: NewWorld(%s) error = %v, want nil", seed, name, err)
+			}
+			r2, err := economysim.NewWorld(off, economysim.WithSeed(seed))
+			if err != nil {
+				t.Fatalf("seed %d: NewWorld(off) error = %v, want nil", seed, err)
+			}
+			for tick := range 150 {
+				if err := w.Step(); err != nil {
+					t.Fatalf("seed %d, %s: Step at tick %d error = %v, want nil", seed, name, tick, err)
+				}
+				if err := r2.Step(); err != nil {
+					t.Fatalf("seed %d: Step of the off world at tick %d error = %v, want nil", seed, tick, err)
+				}
+				a, _ := w.Snapshot()
+				b, _ := r2.Snapshot()
+				if a.Money != b.Money || a.Households != b.Households {
+					t.Fatalf("seed %d, %s: tick %d: money %d and households %d against %d and %d with the module off", seed, name, tick, a.Money, a.Households, b.Money, b.Households)
+				}
+			}
+		}
+	}
+}
+
+// BenchmarkP17Flows reports the time and the allocations of P1.7 over four flows
+// (a rate grant, a top-up, a fixed levy and a rate levy) on the census of pack one,
+// 600 households in six roles, in steady state: the cost is the flows times the
+// accounts of their classes, which this reports for the first consumer's size
+// (NFR-MON-002). It reports and asserts nothing (testing.md 8.2).
+//
+// Requirement: NFR-MON-002
+func BenchmarkP17Flows(b *testing.B) {
+	cfg := loadValidPack(b, packOne...)
+	to := func(role string) economysim.FlowTarget {
+		return economysim.FlowTarget{Kind: economysim.TargetHouseholds, Role: role}
+	}
+	cfg.Modules.MoneySupply = &economysim.MoneySupply{Flows: []economysim.MoneyFlow{
+		{ID: "a", Kind: economysim.FlowGrant, Target: to("grower"), Amount: 20},
+		{ID: "b", Kind: economysim.FlowGrant, Target: to("cook"), Level: 5_000},
+		{ID: "c", Kind: economysim.FlowLevy, Target: to("forester"), Amount: 5},
+		{ID: "d", Kind: economysim.FlowLevy, Target: to("maker"), RateBP: 3_650, Per: economysim.PerYear, Exempt: 3_000},
+	}}
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
+	if err != nil {
+		b.Fatalf("NewWorld error = %v, want nil", err)
+	}
+	for range 3 {
+		economysim.P17Flows(w)
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		economysim.P17Flows(w)
+	}
+}
