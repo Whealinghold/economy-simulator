@@ -319,3 +319,64 @@ func TestScenarioHelpers_IncomeRowGuards(t *testing.T) {
 		t.Errorf("Row(0, role 0, 100) with no trade = %+v, want %+v", got, want)
 	}
 }
+
+// TestIncomeObs_OnePackReconciles runs the unchanged pack `one` warm for 205
+// ticks (two full windows and a part) with the realised-income observer attached
+// and reconciles it with the snapshots of the same run: per window, the
+// household-ticks of the roles add up to the households of the snapshots, the
+// sales credited to roles never exceed the value traded, and the first window
+// has sales. It is the integration of the observer with a real world, the one
+// thing the hand-built streams cannot show (the event order and the weights a
+// real run emits).
+//
+// Requirement: FR-REF-027
+//
+// Guard: a change in the order of AgentSpawned, RoleChanged and TickEnded events
+// or in the weight of an agent would make the realised table of
+// TestScenarioStable_OneWarm wrong with no failure at all.
+func TestIncomeObs_OnePackReconciles(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test (205 ticks of pack one), skipped with -short")
+	}
+	cfg := loadValidPack(t, packOne...)
+	probe, err := economysim.NewWorld(cfg)
+	if err != nil {
+		t.Fatalf("NewWorld error = %v, want nil", err)
+	}
+	s0, err := probe.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot error = %v, want nil", err)
+	}
+	obs := newIncomeObs(cfg, s0.Names)
+	const ticks = 2*incomeWindow + 5
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: ticks, Drive: driveStep, Audit: true, Snapshots: snapEvery,
+		Extra: []economysim.Option{economysim.WithObserver(obs)}})
+	if obs.overflow {
+		t.Fatalf("observer overflowed int64 on a 205-tick run")
+	}
+	for window := int64(0); window < 3; window++ {
+		var wantHH, gotHH, sales int64
+		for tick := window * incomeWindow; tick < min((window+1)*incomeWindow, ticks); tick++ {
+			wantHH += res.Samples[tick].Households
+		}
+		for role := range s0.Names.Roles {
+			if c := obs.cells[[2]int64{window, int64(role)}]; c != nil {
+				gotHH += c.HouseholdTicks
+				sales += c.Sales
+			}
+		}
+		var traded int64
+		for k, v := range obs.vwmValue {
+			if k[0] == window {
+				traded += v
+			}
+		}
+		if gotHH != wantHH {
+			t.Errorf("window %d household-ticks over roles = %d, want %d (sum of snapshot households)", window, gotHH, wantHH)
+		}
+		if sales > traded || (window == 0 && sales == 0) {
+			t.Errorf("window %d sales credited to roles = %d, want in (0, %d] (value traded)", window, sales, traded)
+		}
+	}
+}
