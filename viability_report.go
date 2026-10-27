@@ -428,16 +428,18 @@ func (rc *regionCtx) census() {
 // says so; an overflow of int64 is an absent figure, never a wrapped one
 // (architecture.md 3.5).
 func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
-	if rc.wage < 1 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 || rc.sharesRecipe(gc) {
+	// No labour is an absent figure, not a group paid nothing.
+	if rc.wage < 1 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 ||
+		labour.Cmp(steady.Rat(0, 1)) <= 0 || rc.sharesRecipe(gc) {
 		return 0, false
 	}
-	upkeep, ok := rc.upkeepCost(gc)
+	upkeep, upOK := rc.upkeepCost(gc)
+	if !upOK {
+		return 0, false
+	}
 	num, ok1 := checked.Mul(rc.wage, wholeBP)
 	den, ok2 := checked.Mul(gc.g.Households, upkeep)
-	if !ok || !ok1 || !ok2 || den < 1 {
-		return 0, false
-	}
-	if labour.Cmp(steady.Rat(0, 1)) <= 0 { // no labour: an absent figure, not a group paid nothing
+	if !ok1 || !ok2 || den < 1 {
 		return 0, false
 	}
 	return labour.Mul(num, den).Round(0, maxInt64)
@@ -472,9 +474,10 @@ func (rc *regionCtx) rolesListing(recipe RecipeID) int {
 	if rc.roles == nil {
 		rc.roles = map[RecipeID]int{}
 		for gi := range rc.groups {
-			rs := rc.groups[gi].row.recipes
-			for i, r := range rs {
-				if slices.Index(rs, r) == i { // a recipe listed twice by one role counts once
+			seen := map[RecipeID]bool{} // a recipe listed twice by one role counts once
+			for _, r := range rc.groups[gi].row.recipes {
+				if !seen[r] {
+					seen[r] = true
 					rc.roles[r]++
 				}
 			}
