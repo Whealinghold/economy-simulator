@@ -2,6 +2,8 @@ package economysim_test
 
 import (
 	"fmt"
+	"slices"
+	"strconv"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -363,4 +365,107 @@ func TestScenarioHelpers_StablePredicate(t *testing.T) {
 			}
 		})
 	}
+}
+
+// stableOneSkip is the reason TestScenarioStable_OneWarm is skipped while `one`
+// collapses under its own rules (N-312, N-314); plan 2-8 Phase 4 empties it with
+// the accepted rebalance, or the supervisor re-points the issue ID on a stop
+// (D369).
+const stableOneSkip = "N-314: `one` collapses under its own rules; un-skipped when the rebalance lands"
+
+// TestScenarioStable_OneWarm records the run that a human reviews for pack `one`
+// (STY 8.4): `one` warm, 1 095 ticks, seeds 1 to 4, audit on, no shock, judged by
+// the X4 predicate at the D363 priors (which are priors, not bands: no value line
+// is written to a bands file, FR-REF-024). It logs the realised table of plan 2-8
+// D364 for every role and window of 100 ticks (sales and recipe-input cost per
+// household-tick, the margin as basis points of the upkeep cost, unfed households,
+// executions of each recipe), the households at ticks 100, 300, 600 and 1 095, and
+// the last price of each market against its reference. The words "stable" and
+// "stable state" are the predicate's name, not a claim: a pack passes the
+// predicate, it is not stable (STY 7.3.2).
+//
+// Requirement: FR-REF-042 (proposed), FR-REF-039, FR-STB-015
+//
+// Fix: N-314. `one` fell from about 600 households to 20 to 100 by tick 600; this
+// test fails on the Stage 1 pack and passes on the rebalanced one.
+func TestScenarioStable_OneWarm(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test (1 095 ticks, four seeds), skipped with -short")
+	}
+	if raceEnabled {
+		t.Skip("gate F runs it without -race (plan 2-1 D229)")
+	}
+	if stableOneSkip != "" {
+		t.Skip(stableOneSkip)
+	}
+	cfg := loadValidPack(t, packOne...)
+	probe, err := economysim.NewWorld(cfg)
+	if err != nil {
+		t.Fatalf("NewWorld error = %v, want nil", err)
+	}
+	s0, err := probe.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot error = %v, want nil", err)
+	}
+	t.Logf("X4 thresholds are the priors of plan 2-8 D363, not bands: %+v", x4Priors)
+	for _, seed := range x4Seeds {
+		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
+			t.Parallel()
+			obs := newIncomeObs(cfg, s0.Names)
+			res := runPack(t, cfg, runSpec{Seed: seed, Ticks: x4Ticks, Drive: driveStep, Audit: true, Snapshots: snapEvery,
+				Extra: []economysim.Option{economysim.WithObserver(obs)}})
+			logRealised(t, cfg, res, obs, s0.Names)
+			for _, c := range stablePredicate(newStableRun(cfg, res), x4Priors) {
+				t.Logf("X4 one seed %d: (%s) %s: %s", seed, c.Key, c.Name, c.Detail)
+				if !c.Pass {
+					t.Errorf("X4 (%s) one seed %d: %s", c.Key, seed, c.Detail)
+				}
+			}
+		})
+	}
+}
+
+// logRealised logs the D364 table of one run: the households at the four ticks of
+// N-312, the last price of each market against its reference price, and the income
+// of each role in each window.
+func logRealised(t *testing.T, cfg economysim.Config, res result, obs *incomeObs, names economysim.Names) {
+	t.Helper()
+	var hh []int64
+	for _, tick := range []int64{100, 300, 600, x4Ticks} {
+		hh = append(hh, res.Samples[tick-1].Households)
+	}
+	t.Logf("households at ticks 100, 300, 600, %d = %v (start %d)", x4Ticks, hh, res.Samples[0].Households)
+	for _, m := range res.Samples[x4Ticks-1].Markets {
+		ref := int64(res.World.ReferencePrice(m.State.Region, m.State.Commodity))
+		if bp, ok := shareBP(int64(m.State.Price), ref); ok {
+			t.Logf("price of %s/%s = %d bp of its reference %d", names.Regions[m.State.Region], names.Commodities[m.State.Commodity], bp, ref)
+		}
+	}
+	upkeep := int64(cfg.Regions[0].ReferenceBasket)
+	for window := int64(0); window < x4Ticks/incomeWindow+1; window++ {
+		for role, id := range names.Roles {
+			row := obs.Row(window, economysim.RoleID(role), upkeep)
+			if !row.OK {
+				continue
+			}
+			c := obs.cells[[2]int64{window, int64(role)}]
+			t.Logf("window %d role %s: sales %d and recipe inputs %d per household-tick, margin %d bp of the upkeep %d, unfed %d household-ticks, executions %s",
+				window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep, c.Unfed, executionsOf(c, names))
+		}
+	}
+}
+
+// executionsOf renders the executions of a cell by recipe name, in recipe order.
+func executionsOf(c *incomeCell, names economysim.Names) string {
+	var ids []economysim.RecipeID
+	for r := range c.Executions {
+		ids = append(ids, r)
+	}
+	slices.Sort(ids)
+	out := ""
+	for _, r := range ids {
+		out += fmt.Sprintf("%s=%d ", names.Recipes[r], c.Executions[r])
+	}
+	return out
 }
