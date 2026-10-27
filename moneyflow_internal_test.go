@@ -105,3 +105,65 @@ func TestPairUnbalanced_InvalidConfigIsNotComparable(t *testing.T) {
 		t.Error("pairUnbalanced on a calendar with no year = true, want false")
 	}
 }
+
+// TestAvailableAbove_TakesOnlyWhatIsHeldAboveTheExemption verifies the balance
+// a levy may take: the balance less weight*exempt, never negative, and nothing
+// when the product does not fit in an int64.
+//
+// Requirement: FR-MON-015, FR-MON-020
+//
+// Guard: an overflowed product must leave nothing to take, not wrap into a
+// negative exemption that would let a levy take more than the account holds.
+func TestAvailableAbove_TakesOnlyWhatIsHeldAboveTheExemption(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		bal, weight, exempt int64
+		want                int64
+	}{
+		{"balance above the exemption", 100, 3, 10, 70},  // 100 - 3*10
+		{"balance equal to the exemption", 30, 3, 10, 0}, // 30 - 30
+		{"balance below the exemption", 5, 3, 10, 0},     // 5 - 30 < 0
+		{"no exemption", 7, 3, 0, 7},
+		{"product overflows", 100, math.MaxInt64, 2, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := availableAbove(tt.bal, tt.weight, tt.exempt); got != tt.want {
+				t.Errorf("availableAbove(%d, %d, %d) = %d, want %d", tt.bal, tt.weight, tt.exempt, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBeyondTolerance_PairTotals verifies the balanced-pair comparison: totals
+// that differ by more than pairTolerance basis points of the larger are beyond
+// it, equal or close ones are not, and a negative total (an input that did not
+// fit) or an overflowing product is never reported.
+//
+// Requirement: FR-MON-039
+func TestBeyondTolerance_PairTotals(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		a, b int64
+		want bool
+	}{
+		{"equal", 1000, 1000, false},
+		{"exactly at the tolerance", 10_000, 9_000, false}, // 1000 of 10000 is 1000 bp
+		{"one past the tolerance", 10_000, 8_999, true},
+		{"order does not matter", 8_999, 10_000, true},
+		{"negative a", -1, 10_000, false},
+		{"negative b", 10_000, -1, false},
+		{"product overflows", math.MaxInt64, 1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := beyondTolerance(tt.a, tt.b); got != tt.want {
+				t.Errorf("beyondTolerance(%d, %d) = %v, want %v", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}

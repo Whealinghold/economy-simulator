@@ -82,6 +82,9 @@ func roleMoney(t *testing.T, w *economysim.World) economysim.Money {
 //
 // Requirement: FR-MON-007, FR-MON-012, FR-MON-004
 func TestFlow_ClassIsRoleRegionAndWeight(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	// 25 farmer households make agents of weight above 1 (MinAgents 10 caps the
 	// agents at 10): 7 a household-tick is 7 * 25 = 175 a tick, whatever the split.
@@ -114,6 +117,9 @@ func TestFlow_ClassIsRoleRegionAndWeight(t *testing.T) {
 //
 // Requirement: FR-MON-010, FR-MON-044
 func TestFlow_WindowAndStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	g := flowTo("burst", economysim.FlowGrant, "farmer")
 	g.Amount, g.Start, g.Until = 3, 2, 4
@@ -135,6 +141,9 @@ func TestFlow_WindowAndStart(t *testing.T) {
 //
 // Requirement: FR-MON-044
 func TestFlow_ConstructionBucketHoldsInitialOnly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	g := flowTo("stipend", economysim.FlowGrant, "farmer")
 	g.Amount = 5
@@ -164,6 +173,9 @@ func TestFlow_ConstructionBucketHoldsInitialOnly(t *testing.T) {
 //
 // Requirement: FR-MON-014, FR-CUR-004
 func TestFlow_PerYearUsesCalendar(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	for _, daysPerTick := range []int64{1, 5} {
 		c := moneyWorldConfig(10, 10)
@@ -196,6 +208,9 @@ func TestFlow_PerYearUsesCalendar(t *testing.T) {
 //
 // Requirement: FR-MON-018, FR-MON-019
 func TestFlow_GrantsBeforeLevies(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	levy := flowTo("a", economysim.FlowLevy, "farmer")
 	levy.Amount = 10
@@ -226,6 +241,9 @@ func TestFlow_GrantsBeforeLevies(t *testing.T) {
 //
 // Requirement: FR-MON-020, FR-MON-022, FR-MON-030
 func TestFlow_ShortHeadroomLimitCounts(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	// Each farmer holds 30. The levy asks 100 each: 30 each is taken (Short 10
 	// households), Due 1 000, Applied 300. The grant to the bakers asks 10 each
@@ -276,6 +294,9 @@ func TestFlow_ShortHeadroomLimitCounts(t *testing.T) {
 //
 // Requirement: FR-MON-026, FR-MON-046, FR-MON-001
 func TestInvariants_SectoralIdentityPerTick(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	grant := flowTo("g", economysim.FlowGrant, "farmer")
 	grant.Amount = 20
@@ -307,6 +328,9 @@ func TestInvariants_SectoralIdentityPerTick(t *testing.T) {
 //
 // Requirement: FR-MON-042, FR-MON-003, FR-MON-029
 func TestSnapshot_FlowRowsAndBoundaryOrder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	grant := flowTo("zz", economysim.FlowGrant, "farmer")
 	grant.Amount = 1
@@ -355,6 +379,9 @@ func TestSnapshot_FlowRowsAndBoundaryOrder(t *testing.T) {
 //
 // Requirement: FR-MON-032
 func TestLogs_MoneyFlowDebugOnly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	levy := flowTo("tax", economysim.FlowLevy, "farmer")
 	levy.Amount = 100

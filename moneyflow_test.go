@@ -133,6 +133,20 @@ func TestValidate_MoneySupply(t *testing.T) {
 		{"pool target", flow(func(f *economysim.MoneyFlow) { f.Target = economysim.FlowTarget{Kind: "pool"} }), economysim.ErrModuleDependency, []string{"target", "kind"}},
 		{"stores target", flow(func(f *economysim.MoneyFlow) { f.Target = economysim.FlowTarget{Kind: "stores"} }), economysim.ErrModuleDependency, []string{"target", "kind"}},
 		{"treasury target", flow(func(f *economysim.MoneyFlow) { f.Target = economysim.FlowTarget{Kind: "treasury"} }), economysim.ErrModuleDependency, []string{"target", "kind"}},
+		{"id that is not an identifier", flow(func(f *economysim.MoneyFlow) { f.ID = "Not An ID" }), economysim.ErrInvalidID, []string{"id"}},
+		{"duplicate id", func(c *economysim.Config) {
+			withMoney(c)
+			fl := &c.Modules.MoneySupply.Flows
+			dup := (*fl)[0]
+			*fl = append(*fl, dup)
+		}, economysim.ErrDuplicateID, []string{"id"}},
+		{"until not after start", flow(func(f *economysim.MoneyFlow) { f.Start, f.Until = 5, 5 }), economysim.ErrOutOfBounds, []string{"until"}},
+		{"unknown kind", flow(func(f *economysim.MoneyFlow) { f.Kind = "tax" }), economysim.ErrOutOfBounds, []string{"kind"}},
+		{"unknown per", flow(func(f *economysim.MoneyFlow) { f.Per = "decade" }), economysim.ErrOutOfBounds, []string{"per"}},
+		{"unknown region", flow(func(f *economysim.MoneyFlow) { f.Target.Region = "nowhere" }), economysim.ErrUnknownRegion, []string{"target", "region"}},
+		{"unknown target kind", flow(func(f *economysim.MoneyFlow) { f.Target = economysim.FlowTarget{Kind: "moon"} }), economysim.ErrOutOfBounds, []string{"target", "kind"}},
+		{"grant NotIncome to a pool", flow(func(f *economysim.MoneyFlow) { f.NotIncome, f.Target = true, economysim.FlowTarget{Kind: "pool"} }), economysim.ErrFlowShape, []string{"not_income"}},
+		{"levy NotIncome", levy(func(f *economysim.MoneyFlow) { f.NotIncome = true }), economysim.ErrFlowShape, []string{"not_income"}},
 		{"too many flows stops the other rules", func(c *economysim.Config) {
 			withMoney(c)
 			c.Modules.MoneySupply.Flows = make([]economysim.MoneyFlow, economysim.MaxMoneyFlows+1)

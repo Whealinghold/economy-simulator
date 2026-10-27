@@ -95,6 +95,9 @@ func TestCheckpointTable_Tag13(t *testing.T) {
 //
 // Requirement: FR-MON-040
 func TestCheckpoint_MoneySupplyBytesCanonical(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	if body := bodyValues(t, tagBody(t, moneyCheckpointRaw(t, 0), 13)); !slices.Equal(body, []uint64{0, 10_000, 0, 0, 10_000, 0, 0, 0}) {
 		t.Errorf("tag 13 before the first step = %v, want two flows at total 0, scale 10 000, not ended, and two empty carry lists", body)
@@ -130,6 +133,9 @@ func TestCheckpoint_MoneySupplyBytesCanonical(t *testing.T) {
 //
 // Requirement: FR-MON-040, FR-CHK-013
 func TestCheckpoint_MoneySupplyCorrupt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	t.Parallel()
 	// Two ticks: the levy has collected 60 of its limit of 100 and has not ended.
 	raw := moneyCheckpointRaw(t, 2)
