@@ -59,8 +59,9 @@ func StartCarry(id, period int64) int64 {
 // The due is at most maxMoney. Over n ticks with unchanged w and scale the
 // total due is floor((n*w*amount*scale + carry0) / (period*10^4)), exactly,
 // as long as no due reaches maxMoney: a quotient above it is cut to maxMoney and
-// the excess is neither applied nor carried (unreachable under the validated
-// bounds).
+// the excess is neither applied nor carried. That is reachable: with a scale
+// above 10^4 and a period of one tick the quotient can pass maxMoney, and the
+// caller then sees a capped due.
 func Spread(w, amount, scale, carry, period, maxMoney int64) (due, newCarry int64, ok bool) {
 	if w < 0 || amount < 0 || scale < 0 || carry < 0 || period < 1 || maxMoney < 0 {
 		return 0, 0, false
