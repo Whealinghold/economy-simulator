@@ -652,7 +652,7 @@ func (w *World) visitFlow(m *moneyFlows, i, region int, a recipient) {
 	f := &m.flows[i]
 	v, err := w.ledger.Account(a.account)
 	if err != nil {
-		invariant("the account of an agent is unreadable: " + err.Error())
+		invariant("the account of a recipient is unreadable: " + err.Error())
 	}
 	bal := v.Balance
 	if f.flow.Kind == FlowLevy {
