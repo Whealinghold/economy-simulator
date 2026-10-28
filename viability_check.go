@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/curve"
 	"github.com/Whealinghold/economy-sim/internal/steady"
 )
 
@@ -553,4 +554,160 @@ func shareAboveMean(share, expected, year, households int64) bool {
 func targetAboveSurplus(targets, surplusBP, households int64) bool {
 	limit, ok := checked.Mul(surplusBP, households)
 	return ok && targets > limit
+}
+
+// apply sets the draws of a programme activity from the draws of its recipe and
+// its mean factor's abundance: the least over the draws of the curve at the plan
+// share, 10 000 for a flat curve (spec-resources.md 4.7.4, 11.2).
+func (s *resSupply) apply(a *steady.Activity, draws []Draw) {
+	for i, d := range draws {
+		j := s.idx[d.Resource]
+		a.Draws = append(a.Draws, steady.Draw{Resource: j, Qty: int64(d.Quantity)})
+		r := &s.c.Modules.Resources.Resources[j]
+		y := int64(wholeBP)
+		if len(r.Abundance) > 0 {
+			y, _ = curve.Eval(curveKnots(r.Abundance), r.PlanShareBP) // in range: Validate passed
+		}
+		if i == 0 || y < a.AbundanceBP {
+			a.AbundanceBP = y
+		}
+	}
+}
+
+// endows returns the resource rows of a programme over the regions: one for each
+// resource that an activity of the region draws on, ascending by region then
+// resource, from the configuration (spec-resources.md 11.1). seasons is the
+// year as stretches of one season.
+func (s *resSupply) endows(regions []RegionID, acts [][]viaActivity, seasons []seasonRun) []steady.Endow {
+	if s == nil {
+		return nil
+	}
+	var out []steady.Endow
+	for k, reg := range regions {
+		var used []int
+		for _, a := range acts[reg] {
+			for _, d := range a.act.Draws {
+				if !slices.Contains(used, d.Resource) {
+					used = append(used, d.Resource)
+				}
+			}
+		}
+		slices.Sort(used)
+		for _, j := range used {
+			out = append(out, s.endow(k, s.c.Regions[reg].ID, j, seasons))
+		}
+	}
+	return out
+}
+
+// endow is the resource row of resource j in region k (named id).
+func (s *resSupply) endow(k int, id string, j int, seasons []seasonRun) steady.Endow {
+	m := s.c.Modules.Resources
+	r := &m.Resources[j]
+	capacity, stock := s.levels(id, r)
+	e := steady.Endow{
+		Resource: j, Region: k, Capacity: capacity, Stock: stock, PlanShareBP: r.PlanShareBP,
+		ScaleBP: wholeBP, Horizon: m.HorizonYears, Seasons: s.seasonFactors(r, seasons),
+	}
+	switch r.Shape {
+	case ShapeRefill:
+		e.Shape, e.Rate = steady.Refill, r.RateBP
+	case ShapeLogistic:
+		e.Shape, e.Rate = steady.Logistic, r.RateBP
+	default:
+		e.Shape, e.Rate = steady.Constant, r.RatePerYear
+	}
+	if row := s.rows[[2]string{id, r.ID}]; row != nil && row.HasRegenScale {
+		e.ScaleBP = row.RegenScaleBP
+	}
+	return e
+}
+
+// seasonFactors turns the regeneration profile of a resource into runs of the
+// year: the factor of the season each stretch is in, 0 for a season the profile
+// does not list (spec-resources.md 4.5.1). It is nil, 10 000 on every tick, for
+// a resource with no profile.
+func (s *resSupply) seasonFactors(r *Resource, seasons []seasonRun) []steady.Run {
+	if len(r.Seasons) == 0 {
+		return nil
+	}
+	out := make([]steady.Run, len(seasons))
+	for i, sr := range seasons {
+		out[i] = steady.Run{Length: sr.length}
+		if sr.season < 0 {
+			continue
+		}
+		id := s.c.Calendar.Seasons[sr.season].ID
+		if k := slices.IndexFunc(r.Seasons, func(x SeasonRegen) bool { return x.Season == id }); k >= 0 {
+			out[i].FactorBP = r.Seasons[k].BP
+		}
+	}
+	return out
+}
+
+// cause names the first resource row of a solved model that limits the surplus,
+// its draw holding the sustainable draw with a positive rent, as the path
+// regions, <region>, resources, <resource> (spec-resources.md 11.3); nil when
+// none does, or while the module is off. regions are the regions of the model.
+func (s *resSupply) cause(regions []RegionID, md steady.Model, out steady.Outcome) []string {
+	if s == nil {
+		return nil
+	}
+	for j, e := range md.Resources {
+		if out.ResTight[j] && out.ResRent[j].Sign() > 0 {
+			return []string{"regions", s.c.Regions[regions[e.Region]].ID, "resources", s.c.Modules.Resources.Resources[e.Resource].ID}
+		}
+	}
+	return nil
+}
+
+// peaks reports the season peak of one draw of an activity a in region k of the
+// model md, whose flow at lambda 1 is flow executions a tick: some window of its
+// starts draws more than the stock at the window's opening (spec-resources.md
+// 11.3, steady.Endow.PeakExceeds).
+func (s *resSupply) peaks(md steady.Model, k int, a viaActivity, d steady.Draw, flow steady.Frac) bool {
+	var row steady.Endow
+	for _, e := range md.Resources {
+		if e.Region == k && e.Resource == d.Resource {
+			row = e
+		}
+	}
+	perTick := flow.Mul(d.Qty, 1)
+	for _, w := range startWindows(a) {
+		if row.PeakExceeds(s.c.Calendar.TicksPerYear(), w, a.count.Starts, perTick) {
+			return true
+		}
+	}
+	return false
+}
+
+// startWindows returns the windows of an activity's year: the maximal stretches
+// of ticks with a positive yield factor, each with the starts that fall in it.
+// A start is the tick its job completes at less the duration plus 1.
+func startWindows(a viaActivity) []steady.Window {
+	var ws []steady.Window
+	var at int64
+	open := false
+	for _, r := range a.runs {
+		switch {
+		case r.FactorBP <= 0:
+			open = false
+		case !open:
+			ws, open = append(ws, steady.Window{Start: at}), true
+			fallthrough
+		default:
+			ws[len(ws)-1].End = at + r.Length
+		}
+		at += r.Length
+	}
+	for _, c := range a.count.Completions {
+		start := c - a.act.Duration + 1
+		for i := range ws {
+			if start >= ws[i].Start && start < ws[i].End {
+				ws[i].Starts++
+				break
+			}
+		}
+	}
+	return ws
 }

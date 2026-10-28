@@ -699,3 +699,43 @@ func ratioOf(o steady.Outcome, a, b int) (steady.Frac, bool) {
 	}
 	return o.Price[a].Quo(o.Price[b])
 }
+
+// endowments adds the rows of the resources module to the report for the
+// programme p: the headroom and the rent of each resource row and the run-down
+// time of each finite stock that the reference programme draws (spec-resources.md
+// 11.3). scale is the price scale of the programme, as for the wages.
+func (s *viaSolve) endowments(p *viaProgramme, scale steady.Frac) {
+	for j, e := range p.md.Resources {
+		region := s.m.c.Regions[p.regions[e.Region]].ID
+		res := &s.m.c.Modules.Resources.Resources[e.Resource]
+		rent, ok := p.out.ResRent[j].Times(scale).Round(0, MaxMoney)
+		if !ok {
+			rent = MaxMoney
+		}
+		s.rep.Rent = append(s.rep.Rent, RentRow{Region: region, Resource: res.ID, Rent: rent})
+		if draw := p.out.ResDraw[j]; draw.Sign() > 0 {
+			s.headroom(region, res, e, p.out.ResPhi[j], draw)
+		}
+	}
+}
+
+// headroom adds the headroom of a resource row that the reference programme
+// draws on, phi over the draw in basis points, and for a finite stock its
+// runway, the starting stock over the draw in ticks.
+func (s *viaSolve) headroom(region string, res *Resource, e steady.Endow, phi, draw steady.Frac) {
+	q, _ := phi.Quo(draw) // the draw is positive
+	bp, fits := q.Mul(wholeBP, 1).Floor(0, maxInt64)
+	if !fits {
+		bp = maxInt64
+	}
+	s.rep.Headroom = append(s.rep.Headroom, HeadroomRow{Region: region, Resource: res.ID, BP: bp})
+	if res.RatePerYear != 0 || res.RateBP != 0 {
+		return
+	}
+	runway, _ := steady.Rat(e.Stock, 1).Quo(draw)
+	ticks, fits := runway.Floor(0, maxInt64)
+	if !fits {
+		ticks = maxInt64
+	}
+	s.rep.Runway = append(s.rep.Runway, RunwayRow{Region: region, Resource: res.ID, Ticks: ticks})
+}
