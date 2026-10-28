@@ -598,3 +598,100 @@ func TestRation_RootBuildsDistinctRefs(t *testing.T) {
 		t.Errorf("p26Ration with two requests of one agent on one endowment did not panic, want an invariant")
 	}
 }
+
+// twoResourceMill is oreMill with a second finite stock "wood" in home (holding
+// wood units) that the mill draws 2 units of as well, so the recipe draws on two
+// endowments.
+func twoResourceMill(households, ore, wood int64) Config {
+	c := oreMill(1, households, ore)
+	timber := DefaultResource()
+	timber.ID, timber.Capacity = "wood", 1_000
+	c.Modules.Resources.Resources = append(c.Modules.Resources.Resources, timber)
+	c.Modules.Resources.Endowments = append(c.Modules.Resources.Endowments,
+		Endowment{Region: "home", Resource: "wood", HasCapacity: true, Capacity: 1_000, HasInitial: true, Initial: wood})
+	c.Recipes[0].Draws = append(c.Recipes[0].Draws, Draw{Resource: "wood", Quantity: 2})
+	return c
+}
+
+// viewOfMiller builds the world c, runs the positions up to the snapshot of the
+// tick and returns it with the view of the first miller.
+func viewOfMiller(t *testing.T, c Config) (*World, AgentView) {
+	t.Helper()
+	w := newMill(t, c)
+	if err := w.beginStep(); err != nil {
+		t.Fatalf("beginStep() error = %v, want nil", err)
+	}
+	w.p02()
+	if err := w.p11Moment(); err != nil {
+		t.Fatalf("p11Moment() error = %v, want nil", err)
+	}
+	w.p12Anchors()
+	w.p21Complete()
+	w.p23Snapshot()
+	w.refreshViewCtx()
+	var v AgentView
+	if err := w.fillAgentView(&v, &w.agents[2]); err != nil {
+		t.Fatalf("fillAgentView() error = %v, want nil", err)
+	}
+	return w, v
+}
+
+// TestView_DrawCapIsTheMinimumOverDraws verifies that the executions a view
+// reports are capped by the scarcest draw of the recipe, floor(snapshot stock /
+// draw) for each, and that a recipe with no draw has no cap.
+//
+// Arithmetic: ore 20 / 3 = 6 and wood 5 / 2 = 2, so the cap is min(6, 2) = 2. With
+// wood 1 the cap is 1 / 2 = 0, below the one execution a weight-1 agent could start,
+// so the view reports 0.
+//
+// Requirement: FR-RES-041
+func TestView_DrawCapIsTheMinimumOverDraws(t *testing.T) {
+	t.Parallel()
+	w, v := viewOfMiller(t, twoResourceMill(10, 20, 5))
+	if limit, has := w.res.viewCap(0, 0); limit != 2 || !has {
+		t.Errorf("viewCap(home, mill) with ore 20, wood 5 = %d, %v, want 2, true", limit, has)
+	}
+	if got := v.Recipes[0].MaxExecutions; got != 1 {
+		t.Errorf("view with ore 20, wood 5: MaxExecutions = %d, want 1 (a weight-1 agent, cap 2)", got)
+	}
+	_, v = viewOfMiller(t, twoResourceMill(10, 20, 1))
+	if got := v.Recipes[0].MaxExecutions; got != 0 {
+		t.Errorf("view with ore 20, wood 1: MaxExecutions = %d, want 0 (wood 1 / 2 = 0)", got)
+	}
+	w.res.drawsOf[0] = nil
+	if limit, has := w.res.viewCap(0, 0); limit != 0 || has {
+		t.Errorf("viewCap of a recipe with no draw = %d, %v, want 0, false", limit, has)
+	}
+}
+
+// TestStep_EndowmentsOfTwoRegionsRationApart verifies that two regions' endowments
+// of one resource are rationed apart in one step: the scarce one is shared out
+// under the ration, the plentiful one serves every request, and neither draws on
+// the other's stock.
+//
+// Arithmetic: home holds 20 against 10 * 3 = 30 asked, so 6 agents start and 18 are
+// drawn (as in TestStart_GrantCapsExecutions), leaving 2; yonder holds 50 against 30
+// asked, so all ten start and 30 are drawn, leaving 20. A constant default resource
+// regenerates nothing.
+//
+// Requirement: FR-RES-043
+func TestStep_EndowmentsOfTwoRegionsRationApart(t *testing.T) {
+	t.Parallel()
+	c := oreMill(1, 10, 20)
+	yonder := DefaultRegion()
+	yonder.ID = "yonder"
+	c.Regions = append(c.Regions, yonder)
+	c.Groups = append(c.Groups, Group{Region: "yonder", Role: "miller", Households: 10})
+	c.Modules.Resources.Endowments = append(c.Modules.Resources.Endowments,
+		Endowment{Region: "yonder", Resource: "ore", HasCapacity: true, Capacity: 1_000, HasInitial: true, Initial: 50})
+	w := newMill(t, c, WithAudit())
+	if err := w.Step(); err != nil {
+		t.Fatalf("Step() error = %v, want nil", err)
+	}
+	if got := w.Endowment(0, 0); got != 2 {
+		t.Errorf("Endowment(home, ore) = %d, want 2 (20 - 18 drawn)", got)
+	}
+	if got := w.Endowment(1, 0); got != 20 {
+		t.Errorf("Endowment(yonder, ore) = %d, want 20 (50 - 30 drawn)", got)
+	}
+}
