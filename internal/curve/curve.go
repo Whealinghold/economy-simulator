@@ -38,11 +38,8 @@ func Eval(knots []Knot, x int64) (y int64, ok bool) {
 	if !ok {
 		return 0, false
 	}
-	off, ok := checked.Sub(x, x0)
-	if !ok {
-		return 0, false
-	}
-	step, ok := checked.MulDiv(dy, off, dx)
+	// x0 <= x < x1, so x - x0 is below dx and cannot overflow once dx did not.
+	step, ok := checked.MulDiv(dy, x-x0, dx)
 	if !ok {
 		return 0, false
 	}

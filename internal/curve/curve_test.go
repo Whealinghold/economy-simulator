@@ -108,6 +108,8 @@ func TestEval_OverflowReported(t *testing.T) {
 		{"dy overflows", []curve.Knot{{X: 0, Y: -5}, {X: 10, Y: math.MaxInt64}}, 5, 0, false},
 		// dx = MaxInt64 - (-MaxInt64) leaves int64.
 		{"dx overflows", []curve.Knot{{X: -math.MaxInt64, Y: 0}, {X: math.MaxInt64, Y: 10}}, 0, 0, false},
+		// Equal Y over a span of 2^64 - 2: a wrapped dx would give a quotient that fits and hide the overflow.
+		{"dx overflows with a flat segment", []curve.Knot{{X: -math.MaxInt64, Y: 5}, {X: math.MaxInt64, Y: 5}}, 0, 0, false},
 		// dy = MaxInt64, x - x0 = 1, dx = 2: the product needs 128 bits and the
 		// quotient trunc((2^63 - 1) / 2) = 2^62 - 1 fits.
 		{"wide product fits", []curve.Knot{{X: 0, Y: 0}, {X: 2, Y: math.MaxInt64}}, 1, math.MaxInt64 / 2, true},
@@ -141,6 +143,7 @@ func TestCheck_Rejections(t *testing.T) {
 		{"negative Y", []curve.Knot{{0, 0}, {1, -1}}, 1},
 		{"Y above the maximum", []curve.Knot{{0, 100001}}, 0},
 		{"equal X", []curve.Knot{{0, 0}, {5, 0}, {5, 1}}, 2},
+		{"equal X at the second knot", []curve.Knot{{5, 0}, {5, 1}}, 1},
 		{"falling X", []curve.Knot{{0, 0}, {5, 0}, {4, 1}}, 2},
 		{"first bad knot wins", []curve.Knot{{0, 0}, {5, 200000}, {4, 0}}, 1},
 	}
@@ -169,6 +172,7 @@ func TestNonDecreasing(t *testing.T) {
 		{"single", []curve.Knot{{1, 5}}, true},
 		{"rising and flat", []curve.Knot{{0, 1}, {1, 1}, {2, 3}}, true},
 		{"one fall", []curve.Knot{{0, 1}, {1, 3}, {2, 2}}, false},
+		{"fall at the second knot", []curve.Knot{{0, 3}, {1, 1}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
