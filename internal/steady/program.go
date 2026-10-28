@@ -96,6 +96,21 @@ func ratio(num, den *big.Int) (Ratio, bool) {
 // negative household count or work share (which the first phase would otherwise
 // read as an infeasible labour row).
 func checkModel(m Model) error {
+	if err := checkFixed(m); err != nil {
+		return err
+	}
+	if err := checkActivities(m); err != nil {
+		return err
+	}
+	if m.Phi.Den <= 0 || m.Phi.Num < 0 || m.Year < 1 {
+		return ErrBadProgramme
+	}
+	return checkResources(m)
+}
+
+// checkFixed returns ErrBadProgramme for a fixed term with no goods row or a bad
+// denominator, or a negative household count.
+func checkFixed(m Model) error {
 	if len(m.Fixed) > m.Commodities {
 		return ErrBadProgramme
 	}
@@ -109,6 +124,12 @@ func checkModel(m Model) error {
 			return ErrBadProgramme
 		}
 	}
+	return nil
+}
+
+// checkActivities panics on activities out of canonical order or in a region out
+// of range, and returns the error of checkDraws.
+func checkActivities(m Model) error {
 	prev := 0
 	rows := resRows(m.Resources)
 	for _, a := range m.Activities {
@@ -123,10 +144,7 @@ func checkModel(m Model) error {
 			return err
 		}
 	}
-	if m.Phi.Den <= 0 || m.Phi.Num < 0 || m.Year < 1 {
-		return ErrBadProgramme
-	}
-	return checkResources(m)
+	return nil
 }
 
 // resRows maps (resource, region) to the index of its entry in rs. A repeated
@@ -170,10 +188,7 @@ func checkResources(m Model) error {
 			panic("steady: invariant violated: resource row out of range or repeated")
 		}
 		seen[[2]int{e.Resource, e.Region}] = true
-		bad := e.Capacity < 0 || e.Stock < 0 || e.Rate < 0 || e.ScaleBP < 0 ||
-			e.PlanShareBP < 0 || e.PlanShareBP > wholeBP || e.Shape < Constant || e.Shape > Logistic ||
-			e.Shape == Constant && e.Horizon < 1
-		if bad {
+		if e.negative() || e.badShape() {
 			return ErrBadProgramme
 		}
 	}

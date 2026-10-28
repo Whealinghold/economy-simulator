@@ -137,3 +137,14 @@ func (e Endow) PeakExceeds(year int64, w Window, starts int64, perTick Frac) boo
 	}
 	return draw.Cmp(open) > 0
 }
+
+// negative reports a negative quantity in the row, or a plan share above one.
+func (e Endow) negative() bool {
+	return e.Capacity < 0 || e.Stock < 0 || e.Rate < 0 || e.ScaleBP < 0 || e.PlanShareBP < 0 || e.PlanShareBP > wholeBP
+}
+
+// badShape reports a shape that is none of the three, or a constant stock with
+// no horizon to spread it over.
+func (e Endow) badShape() bool {
+	return e.Shape < Constant || e.Shape > Logistic || e.Shape == Constant && e.Horizon < 1
+}
