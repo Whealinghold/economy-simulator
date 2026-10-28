@@ -51,6 +51,7 @@ func Ration(available int64, reqs []Request, grants []int64) (ok bool) {
 	left := available
 	for i := range reqs {
 		r := &reqs[i]
+		// ok is always true: wanted > available >= 0 and the quotient is at most Executions.
 		p, phi, _ := checked.MulDivRem(r.Executions, available, wanted)
 		r.phi = phi
 		grants[r.Ref] = p

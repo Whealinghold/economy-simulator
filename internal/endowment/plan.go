@@ -39,7 +39,11 @@ func Elasticity(knots []curve.Knot, shareBP int64) (eps int64, ok bool) {
 	if !ok {
 		return 0, false
 	}
-	den, ok := checked.Mul(x1-x0, a)
+	dx, ok := checked.Sub(x1, x0)
+	if !ok {
+		return 0, false
+	}
+	den, ok := checked.Mul(dx, a)
 	if !ok {
 		return 0, false
 	}
