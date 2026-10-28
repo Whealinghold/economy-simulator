@@ -17,7 +17,7 @@ import (
 // int64, or a numerator beyond 128 bits; nothing is wrapped.
 func Regen(p Params, in Step) (Result, bool) {
 	d, ok := checked.Mul(ticksDenominator, p.TicksPerYear)
-	if !ok || p.TicksPerYear < 1 || !valid(p, in, d) {
+	if !ok || !valid(p, in, d) {
 		return Result{}, false
 	}
 	if p.Capacity == 0 {
@@ -41,7 +41,8 @@ func Regen(p Params, in Step) (Result, bool) {
 	return Result{Stock: in.Stock + int64(q.lo), Carry: int64(r), Added: int64(q.lo)}, true
 }
 
-// valid reports whether the parameters and the state are in range.
+// valid reports whether the parameters and the state are in range. A carry
+// below d also rejects a d of 0 or less, that is a TicksPerYear below 1.
 func valid(p Params, in Step, d int64) bool {
 	return p.Capacity >= 0 && p.Rate >= 0 && p.Refuge >= 0 && p.ScaleBP >= 0 &&
 		in.SeasonBP >= 0 && in.Stock >= 0 && in.Stock <= p.Capacity &&
@@ -53,9 +54,7 @@ func numerator(p Params, in Step) (u128, bool) {
 	m, s := uint64(p.ScaleBP), uint64(in.SeasonBP)
 	switch p.Shape {
 	case Refill:
-		if in.Stock >= p.Capacity {
-			return u128{}, true
-		}
+		// A full stock has a gap of 0 and so a numerator of 0.
 		return product(uint64(p.Rate), uint64(p.Capacity-in.Stock), m, s)
 	case Logistic:
 		return product(uint64(p.Rate), logisticW(p, in.Stock), m, s)
@@ -69,9 +68,7 @@ func numerator(p Params, in Step) (u128, bool) {
 // the capacity can regrow.
 func logisticW(p Params, stock int64) uint64 {
 	sp := max(stock, min(p.Refuge, p.Capacity-1))
-	if sp <= 0 || sp >= p.Capacity {
-		return 0
-	}
+	// At sp = 0 and at sp = C the product below is 0, so w is 0 there too.
 	c := uint64(p.Capacity)
 	prod := mul64(uint64(sp), c-uint64(sp))
 	// The quotient is at most C / 4, so prod.hi < C and Div64 cannot panic.

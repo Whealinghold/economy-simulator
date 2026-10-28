@@ -190,6 +190,11 @@ func TestRegen_ClampBanksNothing(t *testing.T) {
 		{"full stock banks no carry", base, endowment.Step{Stock: 100, Carry: 999, SeasonBP: 10_000},
 			endowment.Result{Stock: 100}},
 		{"capacity 0 constant", endowment.Params{Shape: endowment.Constant, Rate: 5, TicksPerYear: 1}, endowment.Step{SeasonBP: 10_000}, endowment.Result{}},
+		// Capacity 0 returns before the numerator is computed (4.4.2): a rate, scale and season
+		// whose product leaves 128 bits do not make it an error.
+		{"capacity 0 skips the numerator", endowment.Params{Shape: endowment.Constant, Rate: math.MaxInt64, ScaleBP: math.MaxInt64, TicksPerYear: 1}, endowment.Step{SeasonBP: math.MaxInt64}, endowment.Result{}},
+		// Capacity 1 is not 0: a rate of 10x a year with one tick a year fills the one unit.
+		{"capacity 1 fills", endowment.Params{Shape: endowment.Refill, Rate: 100_000, Capacity: 1, ScaleBP: 10_000, TicksPerYear: 1}, endowment.Step{SeasonBP: 10_000}, endowment.Result{Stock: 1, Added: 1}},
 		{"capacity 0 logistic", endowment.Params{Shape: endowment.Logistic, Rate: 5, Refuge: 9, TicksPerYear: 1}, endowment.Step{SeasonBP: 10_000}, endowment.Result{}},
 	}
 	for _, tt := range tests {
@@ -306,6 +311,11 @@ func TestRegen_MaxBoundsDoNotOverflow(t *testing.T) {
 		{"logistic at the bounds", endowment.Params{Shape: endowment.Logistic, Rate: 100_000, Capacity: maxC, ScaleBP: 1_000_000, TicksPerYear: 100_000},
 			endowment.Step{Stock: maxC / 2, SeasonBP: 100_000}},
 		// TPY 1: D = 10^12, so the quotient 10^19 exceeds int64 and is clamped to the room.
+		// n = 949 640 990 * 10^15 * 4 257 629 * 455 760 = 1.8e33, q = n / 10^12 has a high word of
+		// 99 895 and a low word of 679 713 050 919 680, below the room 10^15: only the high word says
+		// the stock is full.
+		{"quotient beyond 64 bits with a small low word is clamped", endowment.Params{Shape: endowment.Refill, Rate: 949_640_990, Capacity: maxC, ScaleBP: 4_257_629, TicksPerYear: 1},
+			endowment.Step{SeasonBP: 455_760}},
 		{"quotient beyond int64 is clamped", endowment.Params{Shape: endowment.Refill, Rate: 100_000, Capacity: maxC, ScaleBP: 1_000_000, TicksPerYear: 1},
 			endowment.Step{SeasonBP: 100_000}},
 	}
@@ -375,6 +385,10 @@ func TestRegen_RejectsOutOfRange(t *testing.T) {
 		{"negative stock", ok0, endowment.Step{Stock: -1, SeasonBP: 10_000}},
 		{"stock above the capacity", ok0, endowment.Step{Stock: 101, SeasonBP: 10_000}},
 		{"negative carry", ok0, endowment.Step{Carry: -1, SeasonBP: 10_000}},
+		{"carry above D", ok0, endowment.Step{Carry: 12_000_000_000_001, SeasonBP: 10_000}},
+		// 2^128 - 1 = (2^32 - 1)(2^32 + 1) * 274 177 * 67 280 421 310 721, so this numerator is the
+		// largest 128-bit value and adding any carry overflows.
+		{"numerator plus carry beyond 128 bits", endowment.Params{Shape: endowment.Refill, Rate: 67_280_421_310_721, Capacity: 4_294_967_295, ScaleBP: 4_294_967_297, TicksPerYear: 1}, endowment.Step{Carry: 1, SeasonBP: 274_177}},
 		{"carry at D", ok0, endowment.Step{Carry: 12_000_000_000_000, SeasonBP: 10_000}},
 		{"negative season factor", ok0, endowment.Step{SeasonBP: -1}},
 		{"zero ticks a year", endowment.Params{Capacity: 1}, endowment.Step{}},

@@ -35,6 +35,12 @@ func TestEffective_CapacityAndScale(t *testing.T) {
 		{"negative row", -1, 10_000, 0, maxCap, 0, false},
 		{"negative scale", 1, -1, 0, maxCap, 0, false},
 		{"negative facility", 1, 1, -1, maxCap, 0, false},
+		{"negative maximum", 1, 1, 0, -1, 0, false},
+		{"zero row", 0, 10_000, 0, maxCap, 0, true},
+		{"zero scale", 1000, 0, 0, maxCap, 0, true},
+		{"zero maximum cuts everything", 1000, 10_000, 0, 0, 0, true},
+		// 9.2e18 * 10^5 * 10^4 / 10^8 = 9.2e19 needs more than 64 bits: cut to the maximum.
+		{"quotient beyond 64 bits", math.MaxInt64, 100_000, 0, maxCap, maxCap, true},
 		{"beyond 128 bits", math.MaxInt64, math.MaxInt64, math.MaxInt64, maxCap, 0, false},
 	}
 	for _, tt := range capTests {
@@ -58,6 +64,8 @@ func TestEffective_CapacityAndScale(t *testing.T) {
 		{"truncates", 3, 3333, 0, true},
 		{"negative row", -1, 10_000, 0, false},
 		{"negative shock", 10_000, -1, 0, false},
+		{"zero row", 0, 10_000, 0, true},
+		{"zero shock", 10_000, 0, 0, true},
 		{"beyond int64", math.MaxInt64, math.MaxInt64, 0, false},
 	}
 	for _, tt := range scaleTests {
