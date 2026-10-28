@@ -99,6 +99,7 @@ var notBuiltFields = []string{
 	"WorldCreated.Jurisdictions", // polity module, POL 10.7
 	"AgentSpawned.StoresLocked",  // storage module, STO 14.1
 	"EntryLimited.RoleCeiling",   // settlements module, SET 6.4
+	"RecipeRefused.NoEndowment",  // resources module, RES 14.1 (plan 2-9 phase 5 appends the count)
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.

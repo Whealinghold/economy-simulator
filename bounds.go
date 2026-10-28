@@ -352,3 +352,37 @@ const (
 	// create at most MaxMoney, so the supply stays inside int64.
 	MaxFlowTotal = MaxMoney / MaxMoneyFlows
 )
+
+// Bounds of the resources module (spec-resources.md 4.6, spec-config.md 4.1).
+// All are provisional (N-015, N-027). The largest regeneration numerator is
+// MaxRegenBP * MaxEndowment * (MaxRegenScaleBP * MaxShockBP / 10_000) *
+// MaxSeasonRegenBP, about 10^31, held in 128 bits; the largest denominator is
+// 10^12 * MaxTicksPerYear, below int64.
+const (
+	// MaxResources is the most resources in the module.
+	MaxResources = 256
+	// MaxEndowments is the most rows of the endowment table.
+	MaxEndowments = MaxRegions * MaxResources
+	// MaxEndowment is the largest capacity, starting stock or adjustment of an
+	// endowment, in units. It exceeds MaxQuantity because a stock in the ground
+	// can exceed any holding.
+	MaxEndowment = 1_000_000_000_000_000
+	// MaxRegenRatePerYear is the largest rate of a constant stock, in units a
+	// year.
+	MaxRegenRatePerYear = 1_000_000_000_000_000
+	// MaxRegenBP is the largest annual rate of a refill or logistic stock.
+	MaxRegenBP = 100_000
+	// MaxRegenScaleBP is the largest regeneration scale of an endowment row.
+	MaxRegenScaleBP = 100_000
+	// MaxSeasonRegenBP is the largest regeneration factor of a season.
+	MaxSeasonRegenBP = 100_000
+	// MaxShockBP is the largest capacity or regeneration scale of a shock.
+	MaxShockBP = 100_000
+	// MaxHorizonYears is the largest viability horizon of a finite stock.
+	MaxHorizonYears = 1_000
+	// MaxKnots is the most knots in one curve: a population schedule or the
+	// abundance curve of a resource.
+	MaxKnots = 8
+	// MaxDraws is the most endowments one recipe draws on.
+	MaxDraws = 4
+)
