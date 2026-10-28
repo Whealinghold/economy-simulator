@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"context"
 	"slices"
 	"testing"
 )
@@ -369,4 +370,25 @@ func ShockRegen(w *World, region RegionID, resource ResourceID, bp int64) {
 // AdjustStock changes the stock of an endowment by a signed delta (see ShockCapacity).
 func AdjustStock(w *World, region RegionID, resource ResourceID, delta int64) {
 	w.adjustEndowments(region, resource, delta)
+}
+
+// SteadyReportUnchecked solves the programmes of c and returns their report
+// without validating c first, so a pack that is not viable (resource_short) still
+// has a report to read. c must otherwise be valid.
+func SteadyReportUnchecked(c Config) (Report, error) {
+	o, err := newSolveOptions(nil)
+	if err != nil {
+		return Report{}, err
+	}
+	cc := c.canonical()
+	s := &viaSolve{m: newViaModel(&cc), o: o}
+	s.m.maxPivots = o.maxPivots
+	if err := s.solve(context.Background()); err != nil {
+		return Report{}, err
+	}
+	if err := s.build(); err != nil {
+		return Report{}, err
+	}
+	s.rep.normalise()
+	return s.rep, nil
 }

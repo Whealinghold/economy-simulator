@@ -250,6 +250,7 @@ func TestEndowment_Read(t *testing.T) {
 	// A pair with no capacity has a stock of 0 whatever the resource's start.
 	c := oreMill(1, 10, 20)
 	c.Modules.Resources.Endowments, c.Modules.Resources.Resources[0].Capacity = nil, 0
+	c.Recipes[0].Draws = nil // a draw on a stock of no capacity could never start (spec-resources.md 9.2)
 	if got := newMill(t, c).Endowment(0, 0); got != 0 {
 		t.Errorf("Endowment of a pair with no row = %d, want 0: the default capacity is 0", got)
 	}
