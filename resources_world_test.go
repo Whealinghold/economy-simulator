@@ -67,6 +67,9 @@ func shapes() map[string]economysim.Resource {
 // Requirement: FR-RES-025
 func TestIdentity_EveryTick(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	for name, res := range shapes() {
 		for seed := range uint64(scenarioSeedCount()) {
 			t.Run(name, func(t *testing.T) {
@@ -160,6 +163,9 @@ func TestSnapshot_EndowmentRows(t *testing.T) {
 // Requirement: FR-RES-046
 func TestObservationDoesNotChangeResults(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
 	res := shapes()["logistic"]
 	plain, err := economysim.NewWorld(oreWorld(res, 300), economysim.WithSeed(5))
 	if err != nil {
