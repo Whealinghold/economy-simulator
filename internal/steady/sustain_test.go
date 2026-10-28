@@ -52,6 +52,7 @@ func TestSustain_PhiPerShape(t *testing.T) {
 		{"refill scaled", steady.Endow{Shape: steady.Refill, Capacity: 30000, Rate: 20000, PlanShareBP: 5000, ScaleBP: 12000}, 640, 375 * 12, 8 * 10},
 		{"logistic at the maximum", steady.Endow{Shape: steady.Logistic, Capacity: 50000, Rate: 3000, PlanShareBP: 5000, ScaleBP: 10000}, 365, 750, 73},
 		{"constant with a rate and a stock", steady.Endow{Shape: steady.Constant, Rate: 100, Stock: 36500, Horizon: 10, ScaleBP: 10000}, 365, 750, 73},
+		{"constant reserve over one year", steady.Endow{Shape: steady.Constant, Stock: 10, Horizon: 1, ScaleBP: 10000}, 10, 1, 1},
 		{"logistic with no capacity", steady.Endow{Shape: steady.Logistic, Rate: 3000, PlanShareBP: 5000, ScaleBP: 10000}, 365, 0, 1},
 	}
 	for _, tt := range tests {
@@ -350,7 +351,9 @@ func TestPeakExceeds(t *testing.T) {
 // so 1 250 is held. One start of one a year drawing 12.5 a tick draws 12.5 * 100 =
 // 1 250: equal, so no peak; 12.51 draws 1 251: a peak. With a profile of 50 ticks
 // at 0 and 50 at 10 000, the window [25, 75) has 25 ticks at 0 and 25 at 10 000,
-// the same 250. A profile of 100 ticks at 20 000 gives a window of 25 ticks 500.
+// the same 250. A profile of two runs of 10 000 under the window [25, 75) regrows
+// 1 000 * 50/100 = 500, so 1 500 is held and 12.51 a tick (1 251) is no peak. A
+// profile of 100 ticks at 20 000 gives a window of 25 ticks 500.
 //
 // Requirement: FR-RES-040
 func TestPeakExceeds_Boundaries(t *testing.T) {
@@ -360,6 +363,8 @@ func TestPeakExceeds_Boundaries(t *testing.T) {
 	half.Seasons = []steady.Run{{Length: 50, FactorBP: 0}, {Length: 50, FactorBP: 10000}}
 	double := base
 	double.Seasons = []steady.Run{{Length: 100, FactorBP: 20000}}
+	two := base
+	two.Seasons = []steady.Run{{Length: 50, FactorBP: 10000}, {Length: 50, FactorBP: 10000}}
 	tests := []struct {
 		name    string
 		e       steady.Endow
@@ -371,6 +376,8 @@ func TestPeakExceeds_Boundaries(t *testing.T) {
 		{"flat, a hundredth above", base, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(1251, 100), true},
 		{"profile, equal", half, steady.Window{Start: 25, End: 75, Starts: 1}, steady.Rat(25, 2), false},
 		{"profile, above", half, steady.Window{Start: 25, End: 75, Starts: 1}, steady.Rat(1251, 100), true},
+		{"flat, window past the start", base, steady.Window{Start: 50, End: 75, Starts: 1}, steady.Rat(25, 2), false},
+		{"two runs under one window", two, steady.Window{Start: 25, End: 75, Starts: 1}, steady.Rat(1251, 100), false},
 		{"double profile, equal to 1 500", double, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(15, 1), false},
 		{"double profile, above 1 500", double, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(1501, 100), true},
 	}
