@@ -537,7 +537,7 @@ original, and the bucket's `BoundaryFlow` is emitted at that first step (P0.2a).
    `initial` as separate lots at the default key and taken at once by
    `recipe_input` in one construction `Transform` (8.5.3; the `Transform` consumes oldest first, so the stagger vector is a property of the granted stock before the job's inputs are taken: the stock after the warm start is the stagger lots plus the granted input lots, fresh with `Born` 0, minus the oldest-first consumption of the input quantity, and its total equals the stagger total, granted equals consumed, FR-VIA-036), their tools are worn by
    `WearItems`, no endowment is drawn at construction (the virtual start precedes
-   the run: a recommendation to VIA, 22), and the pending output is fixed from the virtual start with the
+   the run: a recommendation to VIA, 22; accepted with the resources module: a warm job draws no endowment and its pending output reads the neutral abundance, because the warm stock is `InitialBP`, `spec-resources.md` 11.4), and the pending output is fixed from the virtual start with the
    effective factor of the season of that tick (shock at its default) and a
    starting residue of 0, and, with the storage module on, **pledged**: the load of the
    pending output is counted in the agent's load from the first tick, as it is for a job
@@ -2389,7 +2389,7 @@ has no default or bound of its own.
 14. **`Role.InKind` has no mover and no position (WEL 6.1).** Not in version 1: income
     paid as upkeep goods would be a goods faucet and needs a ledger reason (N-021,
     testing.md 6.3) and a position. Owners: WEL and MON, routed.
-15. **An endowment drawn at construction by a warm job.** Unstated (VIA 8.5.3).
+15. **An endowment drawn at construction by a warm job.** *Accepted (plan 2-9):* a warm job draws no endowment and its pending output reads the neutral abundance, because the warm stock is `InitialBP` (`spec-resources.md` 11.4; VIA 8.5.3, 5.6.1 item 4).
     Recommendation: no draw, since the virtual start precedes the run and the stock at
     tick 0 is the stock after it. Owner: VIA, routed.
 16. **The totals of a call between ticks at a checkpoint.** A move that a call made

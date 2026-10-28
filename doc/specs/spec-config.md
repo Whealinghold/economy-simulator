@@ -510,7 +510,7 @@ presentation only (8.3) and has no id.
 | `Item` | `Commodity string`, `Quantity Quantity` | |
 | `Output` | `Commodity string`, `Quantity Quantity`, `CostShare`, `Discard bool` | |
 | `Tool` | `Commodity string`, `WearPerUse` | |
-| `Recipe` | `ID string`, `Duration`, `Inputs []Item`, `Outputs []Output`, `Requires []Tool`, `Sited bool`, `TraineeEligible bool`, `TraineeYield`, `Label string` (p) | `Draws` (resources), `Needs`, `Builds`, `Repairs` (infrastructure) |
+| `Recipe` | `ID string`, `Duration`, `Inputs []Item`, `Outputs []Output`, `Requires []Tool`, `Sited bool`, `TraineeEligible bool`, `TraineeYield`, `Label string` (p) | `Draws []Draw` (resources; `Draw` is `Resource string`, `Quantity Quantity`), `Needs`, `Builds`, `Repairs` (infrastructure) |
 | `YieldProfile` | `Region string`, `Recipe string`, `HasAll bool`, `All`, `Seasons []SeasonYield` | |
 | `SeasonYield` | `Season string`, `BP` | |
 | `Role` | `ID string`, `Recipes []string`, `Upkeep []Item`, `Trades []string`, `StartMoney Money`, `StartStock []Item`, `Strategy string`, `Unskilled bool`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind`, `ExpectedWorkTicks`, `MinWorkShare`, `TrainingTicks`, `MaxTrainees`, `TeachingLoad`, `Closed bool`, `Label string` (p) | `Informed` (information), `Fixed` (migration), `Merchant` and `MerchantFeeShare` (merchants), `Needs` and `Ceiling` (settlements), `Hireable` and `Employer` (employment), `Credit`, `Cover`, `Saver` |
@@ -1736,6 +1736,17 @@ The money-supply module (`Modules.MoneySupply`, id 2 in `Modules`) adds: `MoneyS
 the storage and fiscal modules). `Kind`, `Per` and the target `Kind` are hashed as their
 strings, and an empty `Per` is rewritten to `tick` by the canonical copy, so the two
 spellings of one configuration hash alike (`spec-money-supply.md` 4.1, 11, NFR-MON-003).
+
+The resources module (`Modules.Resources`, id 5 in `Modules`; the module type is `Resources`, not `ResourcesConfig`, because the registry scope is the Go type name) adds: `Resources` has
+`Resources` 1, `Endowments` 2, `HorizonYears` 3; `Resource` has `ID` 1, `Shape` 2,
+`RatePerYear` 3, `RateBP` 4, `Refuge` 5, `Capacity` 6, `InitialBP` 7, `PlanShareBP` 8,
+`Abundance` 9, `Seasons` 10 (`Label` has none); `AbundanceKnot` has `Share` 1, `Factor` 2;
+`SeasonRegen` has `Season` 1, `BP` 2; `Endowment` has `Region` 1, `Resource` 2,
+`HasCapacity` 3, `Capacity` 4, `HasInitial` 5, `Initial` 6, `HasRegenScale` 7,
+`RegenScaleBP` 8. The module adds `Draws` 9 to `Recipe` (the next free id), written only
+while the module is on, and `Draw` has `Resource` 1, `Quantity` 2. The pointer is written
+even when the struct is zero, so `Modules.Resources: &Resources{}` is `0005 0000`; and the
+pair of id 5 goes between the pairs of ids 3 or 4 and those of ids 6 or 8.
 
 8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
 three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer

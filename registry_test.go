@@ -53,7 +53,7 @@ var notBuilt = []string{
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
 	"AbundanceKnot", "Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
-	"CreditTerms", "Duty", "Employer", "Employment", "Endowment", "External",
+	"CreditTerms", "Draw", "Duty", "Employer", "Employment", "Endowment", "External",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Information", "Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Jurisdiction", "Knot", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration", "Mode",
