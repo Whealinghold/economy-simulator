@@ -392,3 +392,19 @@ func SteadyReportUnchecked(c Config) (Report, error) {
 	s.rep.normalise()
 	return s.rep, nil
 }
+
+// StepGrants steps w once through the position methods and, after the ration of
+// P2.6, calls grant with the agent, the executions it asked and the executions it
+// was granted for each request of the tick, in the order the requests were made. It
+// is the one place an external test can read a grant, which the world clears at
+// the end of the step (spec-resources.md 5.3).
+func StepGrants(w *World, grant func(agent AgentID, asked, granted int64)) error {
+	return replayStep(w, func(position string) {
+		if position != "P2.6" || w.res == nil {
+			return
+		}
+		for _, q := range w.res.reqs {
+			grant(q.agent, q.executions, q.grant)
+		}
+	})
+}
