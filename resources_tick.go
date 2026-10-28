@@ -261,7 +261,7 @@ func (r *resourcesState) regen(cell, season int) {
 		invariant("the regeneration scale of an endowment does not fit after validation")
 	}
 	factor := int64(wholeBP)
-	if sb := r.seasonBP[res]; sb != nil && season >= 0 {
+	if sb := r.seasonBP[res]; season >= 0 && season < len(sb) {
 		factor = sb[season]
 	}
 	out, ok := endowment.Regen(
@@ -347,7 +347,11 @@ func (w *World) adjustEndowments(region RegionID, resource ResourceID, delta int
 	r := w.res
 	cell := r.cellOf(region, resource)
 	before := r.stock[cell]
-	after := min(max(before+delta, 0), r.effectiveCapacity(cell))
+	sum, ok := checked.Add(before, delta)
+	if !ok {
+		invariant("an endowment adjustment does not fit after validation")
+	}
+	after := min(max(sum, 0), r.effectiveCapacity(cell))
 	if after == before {
 		return
 	}
