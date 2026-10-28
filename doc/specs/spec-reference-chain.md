@@ -112,7 +112,7 @@ the text) and checks each row (FR-REF-002).
 | C06 | A role with a **job longer than the base welfare window** (30) | `grower`: effective window 120 (`window_extended`) | S11 |
 | C07 | A **region that can lose its income**: an estate with a pool, relief and a failure ladder | variant `famine`, with the `estates` overlay | S14 |
 | C08 | A **warm start** | the `warm-*.toml` documents, solver output | A1, S18, S22 |
-| C09 | A world with **upkeep as the only demand** | every variant without the `demand` overlay | S19 |
+| C09 | A world with **upkeep as the only demand**: the control of S19, which carries no stability claim (FR-REF-018, FR-REF-042; `spec-viability.md` 4.7) | every variant without the `demand` overlay | S19 |
 | C10 | A **source** (no inputs), a **sited** recipe, a **discard** output | `cut_fuel`, `dig_mineral`, `gather_seed`; `refine` discards `waste` | A1, FR-PRO-030 |
 | C11 | **Several inputs, outputs and tools**, a recipe that needs a tool and one that does not | `prepare` (tool), `prepare_basic` (none); `refine` (two inputs, two outputs) | A1 |
 | C12 | **Climate as data**: yields that differ by region and season, 0 where a recipe cannot run | `two`, `three`, `five` | A3, A5, X1 to X3 |
@@ -2066,7 +2066,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-015 | The demand overlay MUST contain a self-employed luxury role, a want with two alternatives and a taste table for at least two roles, and with it the module MUST be on. |
 | FR-REF-016 | Each defect pack of 4.5 MUST be rejected with the rule named for it, `d3`, `d4` and `d5` with that rule only, and `d6` MUST load with the warning `cost_floor_at_full_cost`. |
 | FR-REF-017 | The second setting MUST build, validate and run from its documents alone, and a test MUST also build it as a Go `Config` and compare the hash (FR-CFG-004). |
-| FR-REF-018 | No variant except those that name them MUST contain a demand module, a money faucet or an external sector. |
+| FR-REF-018 | No variant except those that name them MUST contain a demand module, a money faucet or an external sector. `one` is the upkeep-only control that S19 needs and MUST stay free of them; it carries no claim to pass the predicate of X4, which rides on `one-demand` (FR-REF-042). |
 | FR-REF-019 | The seeds of every warm-start table MUST be at or above the resolution floor and inside the reference band, and the reference basket of every region MUST be within `BasketTolerance` of the cost of its baseline upkeep at the reference prices. |
 | FR-REF-020 | Each scenario of 7.2 to 7.4 that can run MUST have one test that runs the packs and setup stated for it, whose `Requirement:` line lists the IDs of its entry and whose failure message names the scenario, the pack, the seed and the measure. |
 | FR-REF-021 | A shock or an external agent in a scenario MUST be applied between steps through the integration calls of `spec-integration.md` (`SetYieldShocks`, `AddAgent`, `Direct`) from a script of `scripts/`, and MUST NOT be applied by editing state. In Stage 1 a shock is applied through the unexported yield-shock setter of 7.1.3, until `integration.go` exists. |
@@ -2090,7 +2090,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The configuration documents of `testdata/chains/` (not the files of `expected/`, `bands/` and `scripts/`) MUST be the seed corpus of the loader fuzz test. |
 | FR-REF-041 | Every group of every variant on the base except `second` (4.4.7, unbalanced by design) MUST have a static `IncomeBP` (FR-VIA-060) of at least 8 000, and the highest of a pack MUST be at most 1.5 times its lowest; a group without an `IncomeBP` (no labour share, as in `famine`; a recipe shared by several roles; a thin gatherer group named in `expected/<pack>.toml`) MUST be listed there with its reason, and a test over the solver MUST check every pack. |
-| FR-REF-042 | The variant `one` MUST pass the predicate of X4 (7.4) from its warm start over 1 095 ticks on seeds 1 to 4, with the invariants of 7.5 asserted every tick; the word "stable" is not used of the pack (`spec-stylised-facts.md` 7.3.2). |
+| FR-REF-042 | The variant `one-demand` (the pack that names the demand module) MUST pass the predicate of X4 (7.4) from its warm start over 1 095 ticks on seeds 1 to 4, with the invariants of 7.5 asserted every tick; the word "stable" is not used of the pack (`spec-stylised-facts.md` 7.3.2). `one` carries no such requirement: a closed upkeep-only pack with `lambda*` above 1 is a glut (`spec-viability.md` 4.7). **Status: not met.** `one-demand` ends at 0 households by tick 1 095 on seeds 1 to 4, unchanged and with the rebalanced yields of plan 2-8 M1 (N-325); a pack that survives is a new work package, and this requirement stays unmet until it lands. |
 
 ### Non-functional
 

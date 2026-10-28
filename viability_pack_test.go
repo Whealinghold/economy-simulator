@@ -311,9 +311,9 @@ func TestPacks_FiveWithItsWarmStartValidates(t *testing.T) {
 }
 
 // incomeGateSkip is the reason TestPacks_IncomeBalance is skipped while the packs
-// are unbalanced; plan 2-8 Phase 4 empties it with the accepted rebalance, or the
-// supervisor re-points the issue ID on a stop (D369).
-const incomeGateSkip = "N-314: the unchanged packs fail the income gate (the grower of `one` earns 47% of its upkeep)"
+// are unbalanced; plan 2-8 stopped without an accepted rebalance (N-325), so it
+// stays skipped until a later work package rebalances the packs.
+const incomeGateSkip = "N-325: the unchanged packs fail the income gate (the grower of `one` earns 47% of its upkeep); no rebalance was accepted"
 
 // incomeGateMin and incomeGateSpread are the screening values of plan 2-8 D365,
 // which the owner confirms or replaces: the least IncomeBP of a pack is at least
