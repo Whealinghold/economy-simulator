@@ -285,6 +285,7 @@ func namesOf(c *Config) Names {
 		n.Seasons[i] = c.Calendar.Seasons[i].ID
 	}
 	n.Wants = demandNames(c)
+	n.Resources = resourceNames(c)
 	return n
 }
 

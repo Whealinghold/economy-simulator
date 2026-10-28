@@ -205,6 +205,7 @@ func replayFrom51(w *World) error {
 		return err
 	}
 	w.p82Flows()
+	w.p83Regen()
 	return w.p84Audit()
 }
 

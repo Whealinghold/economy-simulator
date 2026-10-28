@@ -406,6 +406,7 @@ var replayRows = []replayRow{
 	{id: "P7.1", run: (*World).p71Entry},
 	{id: "P8.1", run: (*World).p81Age},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
+	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 }
 
 // endCovers are the positions of positionList that run inside endStep.

@@ -112,4 +112,9 @@ const (
 	// (FromRegion and ToRegion stay the keys of two regions).
 	From = "from"
 	To   = "to"
+	// Resource is a resource ID; Stock the units in an endowment; Short the units
+	// asked of an endowment and not granted.
+	Resource = "resource"
+	Stock    = "stock"
+	Short    = "short"
 )

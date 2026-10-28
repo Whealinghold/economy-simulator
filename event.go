@@ -341,6 +341,9 @@ type Names struct {
 	Seasons []string
 	// Wants holds the string ID of each WantID; nil when the demand module is off.
 	Wants []string
+	// Resources holds the string ID of each ResourceID; nil when the resources
+	// module is off.
+	Resources []string
 }
 
 // Amount is a quantity of one commodity.
@@ -957,6 +960,62 @@ type MoneyFlowScaled struct {
 	Cause Cause
 }
 
+// EndowmentChanged is emitted once per endowment in a tick in which any of the units
+// drawn, regenerated, short or lost is non-zero, after its regeneration at P8.3
+// and in ascending (RegionID, ResourceID) order; never otherwise and never with
+// the resources module off (spec-resources.md 14.1, FR-RES-026). It carries no
+// per-agent rows.
+type EndowmentChanged struct {
+	Tick     int64
+	Region   RegionID
+	Resource ResourceID
+	// Stock is the units held after the tick and Capacity the effective capacity;
+	// AbundanceBP is the abundance of the snapshot of the tick.
+	Stock, Capacity, AbundanceBP int64
+	// Requested is the units asked (the sum of executions times draw), Granted the
+	// units the ration granted, Drawn the units the starts took (at most Granted)
+	// and Short is Requested less Granted.
+	Requested, Granted, Drawn, Short int64
+	// Regenerated is the units kept by the regeneration after the clamp at the
+	// capacity, and Lost the units a capacity clamp removed this tick.
+	Regenerated, Lost int64
+	// AgentsDenied counts the requests granted 0 and AgentsReduced those granted
+	// less than they asked but more than 0.
+	AgentsDenied, AgentsReduced int64
+}
+
+// AdjustKind says what changed an endowment between ticks (spec-resources.md 14.1).
+type AdjustKind string
+
+// The kinds of EndowmentAdjusted, a closed set.
+const (
+	// AdjustKindAdjust is a signed change of the stock by the consumer.
+	AdjustKindAdjust AdjustKind = "adjust"
+	// AdjustKindShock is a change of a capacity or regeneration scale.
+	AdjustKindShock AdjustKind = "shock"
+	// AdjustKindFacility is a clamp of the stock by a facility that lowers the
+	// effective capacity.
+	AdjustKindFacility AdjustKind = "facility"
+)
+
+// EndowmentAdjusted is emitted once per changed endowment of a call that adjusts a
+// stock or sets a shock scale between ticks (spec-resources.md 14.1, 6.3). Its
+// Tick is the tick the next step runs.
+type EndowmentAdjusted struct {
+	Tick     int64
+	Region   RegionID
+	Resource ResourceID
+	Kind     AdjustKind
+	// Delta is the signed change of the stock for the kind adjust, after the clamp
+	// to [0, capacity]; 0 for the others.
+	Delta int64
+	// CapacityBP and RegenBP are the scales after the call, in basis points.
+	CapacityBP, RegenBP int64
+	// StockBefore and StockAfter are the stock around the call, and Lost the units
+	// a capacity clamp removed.
+	StockBefore, StockAfter, Lost int64
+}
+
 func (WorldCreated) isEvent()      {}
 func (RunStarted) isEvent()        {}
 func (RunEnded) isEvent()          {}
@@ -988,3 +1047,5 @@ func (ReliefPaid) isEvent()        {}
 func (MoneyFlowLimited) isEvent()  {}
 func (MoneyFlowEnded) isEvent()    {}
 func (MoneyFlowScaled) isEvent()   {}
+func (EndowmentChanged) isEvent()  {}
+func (EndowmentAdjusted) isEvent() {}

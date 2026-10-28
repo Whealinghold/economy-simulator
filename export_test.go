@@ -352,3 +352,21 @@ func P17Flows(w *World) { w.p17Flows() }
 // SetFlowScale sets the scale of the money flow at index i in ID order, as the
 // public call of the integration module will (plan 17).
 func SetFlowScale(w *World, i int, bp int64) error { return w.setFlowScale(i, bp, CauseConsumer) }
+
+// ShockCapacity, ShockRegen and AdjustStock reach the helpers that the public shock and
+// adjustment calls of the integration stage will wrap (plan 2-9 D387), so the
+// external tests of the resources module can make a call between ticks. The caller
+// has checked the key and the range, as the public call will.
+func ShockCapacity(w *World, region RegionID, resource ResourceID, bp int64) {
+	w.setCapacityScales(region, resource, bp)
+}
+
+// ShockRegen sets the regeneration scale of an endowment (see ShockCapacity).
+func ShockRegen(w *World, region RegionID, resource ResourceID, bp int64) {
+	w.setRegenScales(region, resource, bp)
+}
+
+// AdjustStock changes the stock of an endowment by a signed delta (see ShockCapacity).
+func AdjustStock(w *World, region RegionID, resource ResourceID, delta int64) {
+	w.adjustEndowments(region, resource, delta)
+}

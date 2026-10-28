@@ -453,6 +453,8 @@ func TestNoRandomWord(t *testing.T) {
 		b, errB := off.Snapshot()
 		// The hash and the list of modules are what the module is.
 		a.ConfigHash, a.Modules = b.ConfigHash, b.Modules
+		// The rows and the names of the resources are the module's too.
+		a.Endowments, a.Names.Resources = b.Endowments, b.Names.Resources
 		if errA != nil || errB != nil || !reflect.DeepEqual(a, b) {
 			t.Fatalf("seed 9: the snapshots differ at tick %d with the module on and no draw, want equal", i)
 		}

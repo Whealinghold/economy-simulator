@@ -136,18 +136,40 @@ type resourcesState struct {
 	knots    [][]curve.Knot
 	drawsOf  [][]resDraw
 	roleRes  [][]ResourceID
-	// stock is the units in each endowment and capScale the capacity scale of its
-	// shock slot in basis points, 10 000 by default. Both are saved.
-	stock    []int64
-	capScale []int64
+	// shape, rate and refuge are the regeneration rule of each resource (rate is
+	// units a year for a constant stock, basis points a year for the others);
+	// seasonBP its factor by season of the calendar, nil for 10 000 in every
+	// season; regenRow the regeneration scale of the row of each endowment, 10 000
+	// without one. ticksPerYear is the calendar's. All are derived from the
+	// configuration and never saved.
+	shape        []endowment.Shape
+	rate, refuge []int64
+	seasonBP     [][]int64
+	regenRow     []int64
+	ticksPerYear int64
+	// stock is the units in each endowment, carry the remainder of its regeneration
+	// in units of 1/D, exhaustedRun the consecutive ticks with units short, and
+	// capScale and regenScale the scales of its shock slots in basis points, 10 000
+	// by default. All are saved.
+	stock, carry, exhaustedRun []int64
+	capScale, regenScale       []int64
+	// base is the stock at the last tick boundary (the end of P8.3 of the last
+	// tick, or the start): the first term of the identity of spec-resources.md 6.4,
+	// read by the audit. It is rebuilt from the stock at a restore.
+	base []int64
 	// snapStock and snapAbundance are the stock and the abundance of each
 	// endowment taken at P2.3: fixed for the tick (spec-resources.md 4.7.3, 5.2).
 	snapStock, snapAbundance []int64
 	// requested, granted, drawn, denied and reduced count the tick for the event of
 	// 14.1: the units asked, the units the ration granted, the units the starts took,
-	// and the requests granted 0 and granted less than asked. They are kept whether
-	// or not an observer is attached and cleared at P8.6.
+	// and the requests granted 0 and granted less than asked. regenerated is the
+	// units the regeneration kept, lost the units a capacity clamp removed and
+	// adjusted the signed sum of the effective adjustments; the last two include the
+	// calls made between ticks since the last tick, which belong to the tick that
+	// follows (spec-resources.md 6.4). They are kept whether or not an observer is
+	// attached and cleared at P8.6.
 	requested, granted, drawn, denied, reduced []int64
+	regenerated, lost, adjusted                []int64
 	// reqs are the requests of the tick in the order P2.5 made them, order the
 	// indexes of reqs sorted by endowment then agent, ration the requests of one
 	// endowment as internal/endowment takes them and grants its result by agent
@@ -172,6 +194,11 @@ func newResourcesState(c *Config) *resourcesState {
 	r := &resourcesState{
 		regions: regions, resources: resources,
 		capacity: make([]int64, cells), stock: make([]int64, cells), capScale: make([]int64, cells),
+		carry: make([]int64, cells), exhaustedRun: make([]int64, cells), regenScale: make([]int64, cells),
+		base: make([]int64, cells), regenRow: make([]int64, cells), regenerated: make([]int64, cells),
+		lost: make([]int64, cells), adjusted: make([]int64, cells), ticksPerYear: c.Calendar.TicksPerYear(),
+		shape: make([]endowment.Shape, resources), rate: make([]int64, resources), refuge: make([]int64, resources),
+		seasonBP:  make([][]int64, resources),
 		snapStock: make([]int64, cells), snapAbundance: make([]int64, cells),
 		requested: make([]int64, cells), granted: make([]int64, cells), drawn: make([]int64, cells),
 		denied: make([]int64, cells), reduced: make([]int64, cells),
@@ -181,6 +208,7 @@ func newResourcesState(c *Config) *resourcesState {
 	}
 	for i := range m.Resources {
 		r.knots[i] = curveKnots(m.Resources[i].Abundance)
+		r.setRule(i, &m.Resources[i], c.Calendar.Seasons)
 	}
 	rows := make(map[[2]string]*Endowment, len(m.Endowments))
 	for i := range m.Endowments {
@@ -192,7 +220,32 @@ func newResourcesState(c *Config) *resourcesState {
 		}
 	}
 	r.deriveDraws(c)
+	copy(r.base, r.stock)
 	return r
+}
+
+// setRule sets the regeneration rule of resource i: its shape, its rate and refuge
+// and, when it has a profile, the factor of each season of the calendar (a season
+// the profile does not list has 0; spec-resources.md 4.5.1).
+func (r *resourcesState) setRule(i int, res *Resource, seasons []Season) {
+	r.refuge[i] = res.Refuge
+	switch res.Shape {
+	case ShapeRefill:
+		r.shape[i], r.rate[i] = endowment.Refill, res.RateBP
+	case ShapeLogistic:
+		r.shape[i], r.rate[i] = endowment.Logistic, res.RateBP
+	default:
+		r.shape[i], r.rate[i] = endowment.Constant, res.RatePerYear
+	}
+	if len(res.Seasons) == 0 || len(seasons) == 0 {
+		return
+	}
+	r.seasonBP[i] = make([]int64, len(seasons))
+	for _, sr := range res.Seasons {
+		if k := slices.IndexFunc(seasons, func(s Season) bool { return s.ID == sr.Season }); k >= 0 {
+			r.seasonBP[i][k] = sr.BP
+		}
+	}
 }
 
 // deriveDraws sets the draws of each recipe, in ascending resource order, and the
@@ -230,7 +283,10 @@ func (r *resourcesState) start(cell int, res *Resource, row *Endowment) {
 		}
 		initial, hasInitial = row.Initial, row.HasInitial
 	}
-	r.capacity[cell], r.capScale[cell] = capacity, wholeBP
+	r.capacity[cell], r.capScale[cell], r.regenScale[cell], r.regenRow[cell] = capacity, wholeBP, wholeBP, wholeBP
+	if row != nil && row.HasRegenScale {
+		r.regenRow[cell] = row.RegenScaleBP
+	}
 	if !hasInitial {
 		var ok bool
 		if initial, ok = checked.MulDiv(capacity, res.InitialBP, wholeBP); !ok {
@@ -281,15 +337,20 @@ func (r *resourcesState) recipeAbundance(region RegionID, recipe RecipeID, live 
 }
 
 // clearTick zeroes the counts of the tick (P8.6): the requests, the grants, the
-// units drawn and the requests cut, and empties the lists of requests. The saved
-// state stays; the snapshot and the grants are rebuilt at P2.3 and P2.6 and are
-// left out of the position hash (poshash_internal_test.go).
+// units drawn and the requests cut, the units regenerated, lost and adjusted, and
+// empties the lists of requests, and the stock becomes the base of the next tick.
+// The saved state stays; the snapshot and the grants are rebuilt at P2.3 and P2.6
+// and are left out of the position hash (poshash_internal_test.go).
 func (r *resourcesState) clearTick() {
 	clear(r.requested)
 	clear(r.granted)
 	clear(r.drawn)
 	clear(r.denied)
 	clear(r.reduced)
+	clear(r.regenerated)
+	clear(r.lost)
+	clear(r.adjusted)
+	copy(r.base, r.stock)
 	r.reqs, r.order, r.ration = r.reqs[:0], r.order[:0], r.ration[:0]
 }
 
@@ -301,4 +362,35 @@ func (c Config) resourceID(id string) (ResourceID, bool) {
 	}
 	i, ok := slices.BinarySearchFunc(c.Modules.Resources.Resources, id, func(e Resource, t string) int { return cmp.Compare(e.ID, t) })
 	return ResourceID(i), ok
+}
+
+// resourceNames returns the string ID of each ResourceID, nil with the module off.
+func resourceNames(c *Config) []string {
+	m := c.Modules.Resources
+	if m == nil {
+		return nil
+	}
+	out := make([]string, len(m.Resources))
+	for i := range m.Resources {
+		out[i] = m.Resources[i].ID
+	}
+	return out
+}
+
+// snapshotEndowments returns the Endowments rows of the snapshot, one per region and
+// resource in that order, empty with the module off (spec-resources.md 14.4).
+func (w *World) snapshotEndowments() []EndowmentRow {
+	r := w.res
+	if r == nil {
+		return nil
+	}
+	rows := make([]EndowmentRow, len(r.stock))
+	for cell := range rows {
+		rows[cell] = EndowmentRow{
+			Region: RegionID(cell / r.resources), Resource: ResourceID(cell % r.resources),
+			Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.abundanceOf(cell, r.stock[cell]),
+			ExhaustedRun: r.exhaustedRun[cell], CapacityScaleBP: r.capScale[cell], RegenScaleBP: r.regenScale[cell],
+		}
+	}
+	return rows
 }

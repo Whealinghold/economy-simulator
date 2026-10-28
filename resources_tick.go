@@ -1,19 +1,24 @@
 package economysim
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/endowment"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/ordering"
 )
 
 // This file is the resources module at run time (spec-resources.md 5, 6;
 // architecture.md 2.10.1): the snapshot of P2.3, the requests that P2.5 records,
 // the ration of P2.6, the cap and the take of the start at P2.7, the read of a
-// stock and the agent's view of the endowments of its region. The state and the
-// derived tables are in resources.go.
+// stock and the agent's view of the endowments of its region, then the
+// regeneration of P8.3 with its event and its Warn, the shock and adjustment
+// helpers and the audit of the identity of an endowment. The state and the derived
+// tables are in resources.go.
 
 // Endowment returns the units of the resource available in the region now
 // (spec-resources.md 5.1). It returns 0 for an unknown region or resource, for a
@@ -102,6 +107,23 @@ func (w *World) p26Ration() {
 	for lo, hi := 0, 0; lo < len(r.order); lo = hi {
 		hi = r.runEnd(lo)
 		r.rationRun(lo, hi, w.Tick())
+		w.logRationed(r.reqs[r.order[lo]].cell)
+	}
+}
+
+// logRationed writes the Debug line "draw rationed" for an endowment whose requests
+// the ration had to cut (spec-resources.md 14.2): once per endowment per tick.
+func (w *World) logRationed(cell int) {
+	r := w.res
+	short := r.requested[cell] - r.granted[cell]
+	if short == 0 {
+		return
+	}
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "draw rationed", slog.Int64(logkeys.Tick, w.Tick()),
+			slog.Int(logkeys.Region, cell/r.resources), slog.Int(logkeys.Resource, cell%r.resources),
+			slog.Int64(logkeys.Quantity, r.requested[cell]), slog.Int64(logkeys.Short, short))
 	}
 }
 
@@ -211,4 +233,158 @@ func (w *World) fillEndowments(v *AgentView, a *agent) {
 	}
 	sc.endowments = rows
 	v.Endowments = rows[:len(rows):len(rows)]
+}
+
+// p83Regen is P8.3: every endowment, in (RegionID, ResourceID) order, regenerates
+// once with the season of the tick, from the stock the draws left (spec-resources.md
+// 4.1). It then advances the run of ticks with units short, writes the Warn
+// "endowment exhausted" and emits EndowmentChanged. The counts stay until P8.6, so
+// the audit of P8.4 reads them.
+func (w *World) p83Regen() {
+	r := w.res
+	if r == nil {
+		return
+	}
+	season := w.tk.moment.Season
+	for cell := range r.stock {
+		r.regen(cell, season)
+		w.reportEndowment(cell)
+	}
+}
+
+// regen applies one tick of regeneration to an endowment (internal/endowment.Regen)
+// and records the units kept.
+func (r *resourcesState) regen(cell, season int) {
+	res := cell % r.resources
+	m, ok := endowment.EffectiveScale(r.regenRow[cell], r.regenScale[cell])
+	if !ok {
+		invariant("the regeneration scale of an endowment does not fit after validation")
+	}
+	factor := int64(wholeBP)
+	if sb := r.seasonBP[res]; sb != nil && season >= 0 {
+		factor = sb[season]
+	}
+	out, ok := endowment.Regen(
+		endowment.Params{Shape: r.shape[res], Rate: r.rate[res], Refuge: r.refuge[res],
+			Capacity: r.effectiveCapacity(cell), ScaleBP: m, TicksPerYear: r.ticksPerYear},
+		endowment.Step{Stock: r.stock[cell], Carry: r.carry[cell], SeasonBP: factor})
+	if !ok {
+		invariant("the regeneration of an endowment is out of range after validation")
+	}
+	r.stock[cell], r.carry[cell], r.regenerated[cell] = out.Stock, out.Carry, out.Added
+}
+
+// reportEndowment advances the run of an endowment and reports its tick: the Warn at
+// the first tick with units short and every tenth consecutive one, and the event if
+// any of the units drawn, regenerated, short or lost is non-zero (spec-resources.md
+// 14.1, 14.2). Without tenure data the Warn's condition is Short above 0.
+func (w *World) reportEndowment(cell int) {
+	r := w.res
+	short := r.requested[cell] - r.granted[cell]
+	if short > 0 {
+		r.exhaustedRun[cell]++
+	} else {
+		r.exhaustedRun[cell] = 0
+	}
+	if run := r.exhaustedRun[cell]; short > 0 && (run == 1 || run%10 == 0) {
+		ctx := context.Background()
+		if w.log.Enabled(ctx, slog.LevelWarn) {
+			w.log.LogAttrs(ctx, slog.LevelWarn, "endowment exhausted", slog.Int64(logkeys.Tick, w.Tick()),
+				slog.Int(logkeys.Region, cell/r.resources), slog.Int(logkeys.Resource, cell%r.resources),
+				slog.Int64(logkeys.Stock, r.stock[cell]), slog.Int64(logkeys.Short, short))
+		}
+	}
+	if !w.obs.supplied || r.drawn[cell]+r.regenerated[cell]+short+r.lost[cell] == 0 {
+		return
+	}
+	w.obs.deliver(EndowmentChanged{
+		Tick: w.Tick(), Region: RegionID(cell / r.resources), Resource: ResourceID(cell % r.resources),
+		Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.snapAbundance[cell],
+		Requested: r.requested[cell], Granted: r.granted[cell], Drawn: r.drawn[cell], Short: short,
+		Regenerated: r.regenerated[cell], Lost: r.lost[cell], AgentsDenied: r.denied[cell], AgentsReduced: r.reduced[cell],
+	})
+}
+
+// setCapacityScales sets the capacity scale of the shock slot of one endowment (the
+// helper that plan 17's SetCapacityScales wraps; the caller has checked the key
+// and the range 0 to MaxShockBP). The effective capacity is recomputed; a stock
+// above it is clamped and the excess counted as lost. Nothing happens, and
+// nothing is emitted, if the scale is the one in force.
+func (w *World) setCapacityScales(region RegionID, resource ResourceID, bp int64) {
+	r := w.res
+	cell := r.cellOf(region, resource)
+	if r.capScale[cell] == bp {
+		return
+	}
+	before := r.stock[cell]
+	r.capScale[cell] = bp
+	var lost int64
+	if c := r.effectiveCapacity(cell); before > c {
+		lost, r.stock[cell] = before-c, c
+		r.lost[cell] += lost
+	}
+	w.deliverAdjusted(cell, EndowmentAdjusted{Kind: AdjustKindShock, StockBefore: before, Lost: lost})
+}
+
+// setRegenScales sets the regeneration scale of the shock slot of one endowment,
+// as setCapacityScales does for the capacity; the stock is not touched.
+func (w *World) setRegenScales(region RegionID, resource ResourceID, bp int64) {
+	r := w.res
+	cell := r.cellOf(region, resource)
+	if r.regenScale[cell] == bp {
+		return
+	}
+	r.regenScale[cell] = bp
+	w.deliverAdjusted(cell, EndowmentAdjusted{Kind: AdjustKindShock, StockBefore: r.stock[cell]})
+}
+
+// adjustEndowments changes the stock of one endowment by a signed delta clamped to
+// [0, effective capacity] (spec-resources.md 6.3.2; the caller has checked the key
+// and that delta is at most MaxEndowment in magnitude). The change that took
+// effect is counted as adjusted and reported as Delta; a delta with no effect
+// emits nothing.
+func (w *World) adjustEndowments(region RegionID, resource ResourceID, delta int64) {
+	r := w.res
+	cell := r.cellOf(region, resource)
+	before := r.stock[cell]
+	after := min(max(before+delta, 0), r.effectiveCapacity(cell))
+	if after == before {
+		return
+	}
+	r.stock[cell] = after
+	r.adjusted[cell] += after - before
+	w.deliverAdjusted(cell, EndowmentAdjusted{Kind: AdjustKindAdjust, Delta: after - before, StockBefore: before})
+}
+
+// deliverAdjusted completes and delivers the EndowmentAdjusted of a call on one endowment:
+// the key, the tick the next step runs, the scales and the stock after.
+func (w *World) deliverAdjusted(cell int, e EndowmentAdjusted) {
+	if !w.obs.supplied {
+		return
+	}
+	r := w.res
+	e.Tick, e.Region, e.Resource = w.Tick(), RegionID(cell/r.resources), ResourceID(cell%r.resources)
+	e.CapacityBP, e.RegenBP, e.StockAfter = r.capScale[cell], r.regenScale[cell], r.stock[cell]
+	w.obs.deliver(e)
+}
+
+// auditEndowments is the endowment part of P8.4 (spec-resources.md 6.4, FR-RES-025,
+// FR-RES-005): every stock lies in [0, effective capacity] and equals the stock at
+// the last boundary less the units drawn plus those regenerated, less those lost
+// plus those adjusted. The first endowment that disagrees is named with the tick and
+// the difference.
+func (w *World) auditEndowments() error {
+	r := w.res
+	if r == nil {
+		return nil
+	}
+	for cell, got := range r.stock {
+		want := r.base[cell] - r.drawn[cell] + r.regenerated[cell] - r.lost[cell] + r.adjusted[cell]
+		if got != want || got < 0 || got > r.effectiveCapacity(cell) {
+			return auditFailure(w.Tick(), fmt.Errorf("endowment %q in %q: stock %d, want %d from %d at the last boundary, %d drawn, %d regenerated, %d lost and %d adjusted (difference %d), capacity %d",
+				w.cfg.Modules.Resources.Resources[cell%r.resources].ID, w.cfg.Regions[cell/r.resources].ID,
+				got, want, r.base[cell], r.drawn[cell], r.regenerated[cell], r.lost[cell], r.adjusted[cell], got-want, r.effectiveCapacity(cell)))
+		}
+	}
+	return nil
 }

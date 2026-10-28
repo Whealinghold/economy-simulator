@@ -53,6 +53,7 @@ var positionList = [...]position{
 	{"P7.1", "SPN", line},
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
+	{"P8.3", "RES", line},
 	{"P8.4", "LED", line},
 	{"P8.5", "OBS", bracket}, // TickEnded, in endStep
 	{"P8.6", "WLD", bracket}, // the tick advance, in endStep
@@ -70,7 +71,7 @@ var notBuiltPositions = [...]string{
 	"P4.1a", "P4.2",
 	"P5.2",
 	"P7.2", "P7.2a", "P7.2b",
-	"P8.1a", "P8.1b", "P8.3", "P8.3a", "P8.3b", "P8.3c",
+	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -141,6 +142,7 @@ func (w *World) positionsTail() error {
 		return err
 	}
 	w.p82Flows()
+	w.p83Regen()
 	return w.p84Audit()
 }
 

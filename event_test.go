@@ -57,6 +57,8 @@ var declaredEvents = []economysim.Event{
 	economysim.MoneyFlowLimited{},
 	economysim.MoneyFlowEnded{},
 	economysim.MoneyFlowScaled{},
+	economysim.EndowmentChanged{},
+	economysim.EndowmentAdjusted{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -70,7 +72,7 @@ var notBuiltEvents = []string{
 	"ShipmentDispatched", "ShipmentArrived",
 	"ShipmentRejected", "TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
-	"MigrationReviewed", "EndowmentChanged", "EndowmentAdjusted",
+	"MigrationReviewed",
 	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked",
 	"YieldShocked", "PopulationScaled", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
@@ -365,6 +367,7 @@ func TestEvents_Shape(t *testing.T) {
 	byEventField := map[string]reflect.Type{
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
+		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
@@ -435,7 +438,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {
