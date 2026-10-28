@@ -42,6 +42,13 @@ func (o *viabilityOutcome) warn(rule string, path ...string) {
 	o.warnings = append(o.warnings, Warning{Path: path, Rule: rule})
 }
 
+// warnOnce adds a warning unless the same rule and path are already there.
+func (o *viabilityOutcome) warnOnce(rule string, path ...string) {
+	if !slices.ContainsFunc(o.warnings, func(w Warning) bool { return w.Rule == rule && slices.Equal(w.Path, path) }) {
+		o.warn(rule, path...)
+	}
+}
+
 // skipped adds viability_check_skipped naming the part not run.
 func (o *viabilityOutcome) skipped(part string, ids ...string) {
 	o.warn("viability_check_skipped", append([]string{"viability", part}, ids...)...)
@@ -70,6 +77,7 @@ func (m *viaModel) check(lk lookup) viabilityOutcome {
 	if !unproducible && !unproductive {
 		m.labour(&o)
 		m.wantsExceed(&o)
+		m.seasonPeak(&o)
 	}
 	m.regions(&o)
 	return o
@@ -237,6 +245,7 @@ func (m *viaModel) model(regions []RegionID, phi steady.Ratio) steady.Model {
 			md.Activities = append(md.Activities, act)
 		}
 	}
+	md.Resources = m.sup.endows(regions, m.acts, m.seasons)
 	return md
 }
 
@@ -284,13 +293,16 @@ func (m *viaModel) hasSource(regions []RegionID, ci int) bool {
 }
 
 // labour is V3 (4.4): labour_short when the pooled free-trade programme at full
-// labour has a surplus factor below 1.
+// labour has a surplus factor below 1, and resource_short in its place when a
+// resource row binds (spec-resources.md 11.3), with the region and resource in
+// the path.
 func (m *viaModel) labour(o *viabilityOutcome) {
 	regions := m.withHouseholds
 	if m.noProgramme(regions) {
 		return
 	}
-	res, skipped, err := m.solve(m.model(regions, steady.Ratio{Num: 1, Den: 1}))
+	md := m.model(regions, steady.Ratio{Num: 1, Den: 1})
+	res, skipped, err := m.solve(md)
 	m.pooled = &pooledSolve{res, skipped, err}
 	switch {
 	case err != nil:
@@ -298,7 +310,37 @@ func (m *viaModel) labour(o *viabilityOutcome) {
 	case skipped:
 		o.skipped("v3_pooled")
 	case res.SurplusBP < wholeBP:
+		if cause := m.sup.cause(regions, md, res); cause != nil {
+			o.reject("resource_short", cause, i64(res.SurplusBP), i64(wholeBP))
+			return
+		}
 		o.reject("labour_short", []string{"regions"}, i64(res.SurplusBP), i64(wholeBP))
+	}
+}
+
+// seasonPeak warns endowment_season_peak (spec-resources.md 11.3) from the
+// pooled solve: an activity drawing on an endowment whose starts are confined to
+// windows draws, in a window, more than the stock holds at its opening. The draw
+// of the year is spread over the windows by their starts, which is the
+// approximation of the rule; an activity open all year has no window. It is
+// never an error, and it is not run when the pooled solve was skipped.
+func (m *viaModel) seasonPeak(o *viabilityOutcome) {
+	p := m.pooled
+	if m.sup == nil || p == nil || p.skipped || p.err != nil {
+		return
+	}
+	regions := m.withHouseholds
+	md := m.model(regions, steady.Ratio{Num: 1, Den: 1})
+	col := 0
+	for k, r := range regions {
+		for _, a := range m.acts[r] {
+			for _, d := range a.act.Draws {
+				if !a.allYear && m.sup.peaks(md, k, a, d, p.out.Flow[col]) {
+					o.warnOnce("endowment_season_peak", "regions", m.c.Regions[r].ID, "resources", m.c.Modules.Resources.Resources[d.Resource].ID)
+				}
+			}
+			col++
+		}
 	}
 }
 
@@ -448,7 +490,8 @@ func (m *viaModel) imports(o *viabilityOutcome, r RegionID, prod steady.Producib
 // mean expected work share; it then runs the nominal programme.
 func (m *viaModel) autarky(o *viabilityOutcome, r RegionID) {
 	id := m.c.Regions[r].ID
-	res, skipped, err := m.solve(m.model([]RegionID{r}, steady.Ratio{Num: 1, Den: 1}))
+	md := m.model([]RegionID{r}, steady.Ratio{Num: 1, Den: 1})
+	res, skipped, err := m.solve(md)
 	switch {
 	case err != nil:
 		o.fail(err)
@@ -456,7 +499,11 @@ func (m *viaModel) autarky(o *viabilityOutcome, r RegionID) {
 	case skipped:
 		o.skipped("v3_region", id)
 	case res.SurplusBP < wholeBP:
-		o.warn("region_not_self_sufficient", "regions", id)
+		if cause := m.sup.cause([]RegionID{r}, md, res); cause != nil {
+			o.warn("region_not_self_sufficient", cause...)
+		} else {
+			o.warn("region_not_self_sufficient", "regions", id)
+		}
 	}
 	if !m.sumsOK[r] {
 		return

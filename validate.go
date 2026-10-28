@@ -1925,6 +1925,7 @@ func warnings(c *Config) []Warning {
 		g := &c.Groups[i]
 		groups[g.Role] = append(groups[g.Role], g)
 	}
+	supply := newResSupply(c)
 	for id, gs := range groups {
 		ro := lk.role[id]
 		if ro == nil {
@@ -1932,7 +1933,7 @@ func warnings(c *Config) []Warning {
 		}
 		for _, g := range gs {
 			for _, rid := range ro.Recipes {
-				if rc := lk.recipe[rid]; rc != nil && runs(rc, g.Region) {
+				if rc := lk.recipe[rid]; rc != nil && runs(rc, g.Region) && supply.supplies(g.Region, rc.Draws) {
 					started[rid] = true
 				}
 			}
