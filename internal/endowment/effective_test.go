@@ -41,6 +41,9 @@ func TestEffective_CapacityAndScale(t *testing.T) {
 		{"zero maximum cuts everything", 1000, 10_000, 0, 0, 0, true},
 		// 9.2e18 * 10^5 * 10^4 / 10^8 = 9.2e19 needs more than 64 bits: cut to the maximum.
 		{"quotient beyond 64 bits", math.MaxInt64, 100_000, 0, maxCap, maxCap, true},
+		// 1 844 674 407 370 955 162 * 10^5 * 10^4 / 10^8 = 2^64 + 4: the low word is 4, below the
+		// maximum, so only the high word says the capacity is cut.
+		{"quotient of 2^64 + 4", 1_844_674_407_370_955_162, 100_000, 0, maxCap, maxCap, true},
 		{"beyond 128 bits", math.MaxInt64, math.MaxInt64, math.MaxInt64, maxCap, 0, false},
 	}
 	for _, tt := range capTests {
