@@ -2389,7 +2389,7 @@ has no default or bound of its own.
 14. **`Role.InKind` has no mover and no position (WEL 6.1).** Not in version 1: income
     paid as upkeep goods would be a goods faucet and needs a ledger reason (N-021,
     testing.md 6.3) and a position. Owners: WEL and MON, routed.
-15. **An endowment drawn at construction by a warm job.** Unstated (VIA 8.5.3).
+15. **An endowment drawn at construction by a warm job.** *Accepted (plan 2-9):* a warm job draws no endowment and its pending output reads the neutral abundance, because the warm stock is `InitialBP` (`spec-resources.md` 11.4; VIA 8.5.3, 5.6.1 item 4).
     Recommendation: no draw, since the virtual start precedes the run and the stock at
     tick 0 is the stock after it. Owner: VIA, routed.
 16. **The totals of a call between ticks at a checkpoint.** A move that a call made
