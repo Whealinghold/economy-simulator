@@ -825,6 +825,8 @@
 //     (spec-resources.md 14.1).
 //   - EndowmentAdjusted: the event emitted when a shock slot or an adjustment changes an
 //     endowment between ticks (spec-resources.md 14.1).
+//   - AdjustKind: the closed set of the kinds of EndowmentAdjusted, adjust, shock and
+//     facility (spec-resources.md 14.1).
 //   - EndowmentRow: the snapshot row of one endowment (spec-observability.md 5.3.6).
 //   - EndowmentView: the entry of the agent view for an endowment in the agent's own
 //     region (spec-resources.md 5.5.1).

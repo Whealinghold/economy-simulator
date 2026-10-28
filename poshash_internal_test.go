@@ -65,6 +65,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// The resources module's snapshot of the tick and its grants by agent slot are
+	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
+	// has them empty until then (spec-resources.md 15).
+	"resourcesState.snapStock", "resourcesState.snapAbundance", "resourcesState.grants",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
@@ -355,6 +359,9 @@ type replayRow struct {
 // demandOn is the guard of the rows of the demand module (D177).
 func demandOn(w *World) bool { return w.demand != nil }
 
+// resourcesOn is the guard of the rows of the resources module (D177).
+func resourcesOn(w *World) bool { return w.res != nil }
+
 // moneyOn is the guard of the row of the money supply module: an off world
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
@@ -380,7 +387,9 @@ var replayRows = []replayRow{
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
+	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.5", run: (*World).p25Work},
+	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.2", run: (*World).p32Trade},
@@ -397,6 +406,7 @@ var replayRows = []replayRow{
 	{id: "P7.1", run: (*World).p71Entry},
 	{id: "P8.1", run: (*World).p81Age},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
+	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 }
 
 // endCovers are the positions of positionList that run inside endStep.

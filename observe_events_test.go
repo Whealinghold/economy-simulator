@@ -66,8 +66,11 @@ var emittedBy = []struct{ event, scenario string }{
 // by the one-demand scenarios and the tests of that module. The three MoneyFlow
 // events are declared with the money supply module's configuration and are emitted
 // by its step and its scenarios, which the module's step change adds (plan 2-6).
-// ReliefPaid is emitted only with the estates module on (plan 2-7).
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid"}
+// ReliefPaid is emitted only with the estates module on (plan 2-7). EndowmentChanged
+// and EndowmentAdjusted are emitted only with the resources module on: the tests of
+// that module emit them, and its scenarios (S42 to S45, plan 2-9 phase 9) delete
+// these entries.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "EndowmentChanged", "EndowmentAdjusted"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

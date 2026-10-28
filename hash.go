@@ -37,7 +37,9 @@ func encodeConfig(c Config) []byte {
 	e.nested(1, func(e *encoder) { pairsWorld(e, c.World) })
 	e.nested(2, func(e *encoder) { pairsCalendar(e, c.Calendar) })
 	encodeList(e, 3, c.Commodities, pairsCommodity)
-	encodeList(e, 4, c.Recipes, pairsRecipe)
+	encodeList(e, 4, c.Recipes, func(e *encoder, r Recipe) {
+		pairsRecipe(e, r, c.Modules.Resources != nil)
+	})
 	encodeList(e, 5, c.Yields, pairsYield)
 	encodeList(e, 6, c.Roles, pairsRole)
 	encodeList(e, 7, c.Regions, func(e *encoder, r Region) {
@@ -251,9 +253,11 @@ func pairsTool(e *encoder, t Tool) {
 	e.num(2, t.WearPerUse)
 }
 
-// pairsRecipe writes the pairs of a Recipe: ids 1 to 8. Label is presentation
-// only and has no id.
-func pairsRecipe(e *encoder, r Recipe) {
+// pairsRecipe writes the pairs of a Recipe: ids 1 to 9. Label is presentation
+// only and has no id. Draws (9) is written only while the resources module is on
+// (spec-config.md 8.2.3), so a draw in a configuration that fails validation for
+// want of the module changes no hash.
+func pairsRecipe(e *encoder, r Recipe, resources bool) {
 	e.text(1, r.ID)
 	e.num(2, r.Duration)
 	encodeList(e, 3, r.Inputs, pairsItem)
@@ -262,6 +266,15 @@ func pairsRecipe(e *encoder, r Recipe) {
 	e.flag(6, r.Sited)
 	e.flag(7, r.TraineeEligible)
 	e.num(8, r.TraineeYield)
+	if resources {
+		encodeList(e, 9, r.Draws, pairsDraw)
+	}
+}
+
+// pairsDraw writes the pairs of a Draw: Resource 1, Quantity 2.
+func pairsDraw(e *encoder, d Draw) {
+	e.text(1, d.Resource)
+	e.num(2, int64(d.Quantity))
 }
 
 // pairsYield writes the pairs of a YieldProfile: ids 1 to 5.
@@ -403,6 +416,11 @@ func pairsModules(e *encoder, m Modules) {
 		encodeList(e, 1, m.MoneySupply.Flows, pairsMoneyFlow)
 		e.end()
 	}
+	if m.Resources != nil {
+		e.id(5)
+		pairsResources(e, *m.Resources)
+		e.end()
+	}
 	if m.Estates != nil {
 		e.id(25)
 		e.end()
@@ -469,4 +487,48 @@ func pairsRegionTaste(e *encoder, t RegionTaste) {
 	e.text(1, t.Region)
 	e.text(2, t.Want)
 	e.num(3, t.Scale)
+}
+
+// pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,
+// HorizonYears 3.
+func pairsResources(e *encoder, r Resources) {
+	encodeList(e, 1, r.Resources, pairsResource)
+	encodeList(e, 2, r.Endowments, pairsEndowment)
+	e.num(3, r.HorizonYears)
+}
+
+// pairsResource writes the pairs of a Resource: ID 1, Shape 2, RatePerYear 3,
+// RateBP 4, Refuge 5, Capacity 6, InitialBP 7, PlanShareBP 8, Abundance 9,
+// Seasons 10. Label is presentation only and has no id.
+func pairsResource(e *encoder, r Resource) {
+	e.text(1, r.ID)
+	e.text(2, r.Shape)
+	e.num(3, r.RatePerYear)
+	e.num(4, r.RateBP)
+	e.num(5, r.Refuge)
+	e.num(6, r.Capacity)
+	e.num(7, r.InitialBP)
+	e.num(8, r.PlanShareBP)
+	encodeList(e, 9, r.Abundance, func(e *encoder, k AbundanceKnot) {
+		e.num(1, k.Share)
+		e.num(2, k.Factor)
+	})
+	encodeList(e, 10, r.Seasons, func(e *encoder, s SeasonRegen) {
+		e.text(1, s.Season)
+		e.num(2, s.BP)
+	})
+}
+
+// pairsEndowment writes the pairs of an Endowment: Region 1, Resource 2,
+// HasCapacity 3, Capacity 4, HasInitial 5, Initial 6, HasRegenScale 7,
+// RegenScaleBP 8.
+func pairsEndowment(e *encoder, r Endowment) {
+	e.text(1, r.Region)
+	e.text(2, r.Resource)
+	e.flag(3, r.HasCapacity)
+	e.num(4, r.Capacity)
+	e.flag(5, r.HasInitial)
+	e.num(6, r.Initial)
+	e.flag(7, r.HasRegenScale)
+	e.num(8, r.RegenScaleBP)
 }

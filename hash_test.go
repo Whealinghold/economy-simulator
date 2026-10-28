@@ -23,6 +23,7 @@ var presentationOnly = map[string]bool{
 	"Commodity.Label":           true,
 	"Commodity.UnitLabel":       true,
 	"Recipe.Label":              true,
+	"Resource.Label":            true,
 	"Role.Label":                true,
 	"Want.Label":                true,
 	"MoneyFlow.Label":           true,

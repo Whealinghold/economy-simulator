@@ -105,6 +105,7 @@ func (v *validator) structural() {
 	v.references()
 	v.validateDemand()
 	v.validateMoneySupply()
+	v.validateResources()
 	v.structure()
 	v.economics()
 	v.overflow()
@@ -722,8 +723,9 @@ type lookup struct {
 	recipe    map[string]*Recipe
 	role      map[string]*Role
 	region    map[string]*Region
-	override  map[[2]string]Price // reference-price overrides by (region, commodity)
-	demand    *demandIndex        // the demand module's tables by ID, nil when it is off
+	override  map[[2]string]Price  // reference-price overrides by (region, commodity)
+	demand    *demandIndex         // the demand module's tables by ID, nil when it is off
+	resource  map[string]*Resource // the resources module's definitions by ID, nil when it is off
 }
 
 // price returns the effective reference price of a declared commodity in a
@@ -744,6 +746,7 @@ func newLookup(c *Config) lookup {
 		region:    make(map[string]*Region, len(c.Regions)),
 		override:  overrides(c.RegionPrices),
 		demand:    newDemandIndex(c),
+		resource:  resourceIndex(c),
 	}
 	for i := range c.Commodities {
 		if e := &c.Commodities[i]; l.commodity[e.ID] == nil {
@@ -1519,7 +1522,7 @@ func (v *validator) overflow() {
 			continue
 		}
 		base := []string{"recipes", rc.ID}
-		ym := yieldMax(rc)
+		ym := v.withAbundance(rc, yieldMax(rc))
 		for _, it := range rc.Inputs {
 			if q := int64(it.Quantity); q >= 1 && q <= MaxQuantity {
 				p, ok := checked.Mul(wt, q)
@@ -1533,6 +1536,7 @@ func (v *validator) overflow() {
 				over(path(base, "outputs", o.Commodity, "quantity"), p, ok, MaxQuantity)
 			}
 		}
+		v.drawProducts(rc, wt, over)
 		// The cost of the inputs at the largest reference price is at most
 		// MaxMoney, so UnitCost cannot overflow (spec-production.md 10.3).
 		var cost int64
@@ -2039,6 +2043,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, regionWarnings(c)...)
 	out = append(out, demandWarnings(c, lk)...)
 	out = append(out, moneyWarnings(c, lk)...)
+	out = append(out, resourceWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

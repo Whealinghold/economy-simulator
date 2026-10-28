@@ -41,27 +41,27 @@ var notBuilt = []string{
 	"Modules.Credit", "Modules.Employment", "Modules.External", "Modules.Fiscal",
 	"Modules.Information", "Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
-	"Modules.Population", "Modules.Resources", "Modules.Risk", "Modules.Saving",
+	"Modules.Population", "Modules.Risk", "Modules.Saving",
 	"Modules.Settlements", "Modules.Storage", "Modules.Subsistence", "Modules.Technology",
 	"Modules.Tenure", "Modules.Transport",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
-	"Recipe.Builds", "Recipe.Draws", "Recipe.Needs", "Recipe.Repairs",
+	"Recipe.Builds", "Recipe.Needs", "Recipe.Repairs",
 	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
 	"Role.Hireable", "Role.Informed", "Role.Merchant", "Role.MerchantFeeShare", "Role.Needs",
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
-	"AbundanceKnot", "Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
-	"CreditTerms", "Draw", "Duty", "Employer", "Employment", "Endowment", "External",
+	"Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
+	"CreditTerms", "Duty", "Employer", "Employment", "External",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Information", "Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Jurisdiction", "Knot", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration", "Mode",
 	"OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "Population", "ProjectWorth", "Purchase",
 	"RateLimit", "Reaction", "RegionMove", "RegionPopulation", "RegionSettlement",
-	"Release", "Resource", "Resources", "Right", "Risk", "RoleOwnUse", "RoleRoom", "RouteRisk",
-	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SeasonRegen", "SettlementClass",
+	"Release", "Right", "Risk", "RoleOwnUse", "RoleRoom", "RouteRisk",
+	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SettlementClass",
 	"Settlements", "Storage", "StoreClass", "StoreRisk", "Subsistence", "Tax", "TechField",
 	"Technology", "Tenure", "TenureTerm", "Toll", "Transport", "Underwrite",
 	"Window",
@@ -78,8 +78,10 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
+	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
+	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
 }
 
 // readOwnerTable reads the parameter-owner table of doc/specs/README.md by a
@@ -491,7 +493,7 @@ func TestParameterRegistry_SpecDefaultsEqualConstructors(t *testing.T) {
 	files := []string{
 		"spec-agents.md", "spec-beliefs.md", "spec-spawner.md", "spec-welfare-and-wages.md",
 		"spec-goods.md", "spec-production.md", "spec-scale.md", "spec-skill-barriers.md", "spec-estates.md",
-		"spec-demand.md",
+		"spec-demand.md", "spec-resources.md",
 	}
 	ctor := map[string]reflect.Value{
 		"World":       reflect.ValueOf(economysim.DefaultWorldParams()),
@@ -503,6 +505,7 @@ func TestParameterRegistry_SpecDefaultsEqualConstructors(t *testing.T) {
 		"WantItem":    reflect.ValueOf(economysim.DefaultWantItem()),
 		"Taste":       reflect.ValueOf(economysim.DefaultTaste()),
 		"RegionTaste": reflect.ValueOf(economysim.DefaultRegionTaste()),
+		"Resource":    reflect.ValueOf(economysim.DefaultResource()),
 	}
 	checked := 0
 	for _, name := range files {

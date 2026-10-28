@@ -122,7 +122,7 @@ economy-sim/
 │   checkpoint_save.go checkpoint_restore.go checkpoint_sections.go (CHK)
 │   regions_relocate.go regions_status.go (REG)
 │   demand_plan.go demand_state.go (demand (DEM); only if Lizard forces the
-│   split of demand.go)  resources_check.go resources_tick.go (RES)
+│   split of demand.go)  resources_check.go resources_warn.go resources_tick.go (RES)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's

@@ -57,6 +57,8 @@ var declaredEvents = []economysim.Event{
 	economysim.MoneyFlowLimited{},
 	economysim.MoneyFlowEnded{},
 	economysim.MoneyFlowScaled{},
+	economysim.EndowmentChanged{},
+	economysim.EndowmentAdjusted{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -70,7 +72,7 @@ var notBuiltEvents = []string{
 	"ShipmentDispatched", "ShipmentArrived",
 	"ShipmentRejected", "TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
-	"MigrationReviewed", "EndowmentChanged", "EndowmentAdjusted",
+	"MigrationReviewed",
 	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked",
 	"YieldShocked", "PopulationScaled", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
@@ -99,7 +101,6 @@ var notBuiltFields = []string{
 	"WorldCreated.Jurisdictions", // polity module, POL 10.7
 	"AgentSpawned.StoresLocked",  // storage module, STO 14.1
 	"EntryLimited.RoleCeiling",   // settlements module, SET 6.4
-	"RecipeRefused.NoEndowment",  // resources module, RES 14.1 (plan 2-9 phase 5 appends the count)
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
@@ -366,6 +367,7 @@ func TestEvents_Shape(t *testing.T) {
 	byEventField := map[string]reflect.Type{
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
+		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
@@ -436,7 +438,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {
@@ -695,6 +697,7 @@ func TestConstants_Values(t *testing.T) {
 	for _, r := range productionReasons {
 		owner[string(r.got)] = "doc/specs/spec-production.md"
 	}
+	owner[string(economysim.ReasonNoEndowment)] = "doc/specs/spec-resources.md"
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
 	}
@@ -778,9 +781,13 @@ func TestConstants_Values(t *testing.T) {
 	if !slices.Equal(notInSlice, deferredProduction) {
 		t.Errorf("reasons marked no in spec-production.md 4.2.1 = %v, deferredProduction = %v", notInSlice, deferredProduction)
 	}
+	// A row marked no that a module has built is a constant of the root: the module's
+	// change names it here and the constant is checked below (no_endowment: RES 5.3).
+	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment}
 	for _, d := range deferredProduction {
-		if _, ok := owner[d]; ok {
-			t.Errorf("deferredProduction lists %q, which is declared: delete the stale entry", d)
+		_, declared := owner[d]
+		if built := slices.Contains(builtByModule, economysim.Reason(d)); declared != built {
+			t.Errorf("deferredProduction lists %q: declared = %v, built by a module = %v, want them equal (a stale entry, or a module's reason with no constant)", d, declared, built)
 		}
 	}
 	seen := map[string]bool{}

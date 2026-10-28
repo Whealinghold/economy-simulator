@@ -761,7 +761,10 @@ func (w *World) p84Audit() error {
 	if err := auditFailure(w.Tick(), w.ledger.Audit()); err != nil {
 		return err
 	}
-	return w.auditModules()
+	if err := w.auditModules(); err != nil {
+		return err
+	}
+	return w.auditEndowments()
 }
 
 // logTickEnded writes the Debug line "tick ended" (D163) from the live

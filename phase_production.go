@@ -30,6 +30,10 @@ type jobAsk struct {
 	recipe  RecipeID
 	maximum int64
 	set     bool
+	// first and draws locate the records of the request on the endowments its
+	// recipe draws on (resources.go): draws is 0 for a recipe with no draw or while
+	// the module is off.
+	first, draws int
 }
 
 // productionTick is the scratch of phase 2, one per world: the rotation lists
@@ -257,7 +261,8 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 // spec-production.md 4.2): the recipe is checked against the role's list first
 // and refused not_on_role, then the executions k0 the request could start are
 // derived and a count of 0 is refused with the first applicable reason. An
-// admitted request is kept for P2.7.
+// admitted request is kept for P2.7, and its draws on the endowments are recorded
+// for the ration of P2.6, which ignores them here (spec-resources.md 5.2).
 func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 	row := w.roles.row(a.role)
 	if reason := admit(row.recipes, req.Recipe); reason != "" {
@@ -276,14 +281,18 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
-	w.pr.asks[a.id] = jobAsk{recipe: req.Recipe, maximum: req.Executions, set: true}
+	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, set: true}
+	ask.first, ask.draws = w.recordDraws(a, region, req.Recipe, k0)
+	w.pr.asks[a.id] = ask
 }
 
 // startReq is the request to start a recipe for agent a in a region at the
-// moment of the tick: the effective factor of the region and the season
-// (spec-production.md 6.3) and the weight of the agent.
+// moment of the tick: the effective factor of the region and the season, with the
+// abundance of the snapshot for a recipe that draws (spec-production.md 6.3), and
+// the weight of the agent.
 func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int64) startReq {
-	e, has, ok := w.yields.effective(&w.shocks, region, recipe, w.tk.moment.Season, w.cfg.Recipes[recipe].Sited)
+	e, has, ok := w.yields.effectiveAt(&w.shocks, region, recipe, w.tk.moment.Season, w.cfg.Recipes[recipe].Sited,
+		w.prod.abundance(region, recipe, false))
 	if !ok {
 		// Excluded from coverage (testing.md 9.5): the bounds of validation keep
 		// the effective yield in range.
@@ -360,6 +369,9 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	row := w.roles.row(a.role)
 	off, _ := residueOffset(row.recipes, &w.recipes, ask.recipe)
 	q := w.startReq(a, region, ask.recipe, ask.maximum)
+	if w.res != nil {
+		w.capDraws(&q, ask.first, ask.draws)
+	}
 	res, err := w.prod.start(w.ledger, &a.job, a.residues[off:off+len(w.recipes.row(ask.recipe).outputs)], &q)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
@@ -368,12 +380,14 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	if err != nil {
 		return fmt.Errorf("start of recipe %d for agent %d at tick %d: %w", ask.recipe, a.id, w.Tick(), err)
 	}
-	// Excluded from coverage (testing.md 9.5): P2.7 starts the request that P2.5
-	// admitted from the same ledger state, and nothing changes the agent's holdings in
-	// between, so the start cannot yield 0 executions.
 	if res.k == 0 {
+		// Reached only when the cap of a draw is 0: the ration granted nothing, or the
+		// live stock is below one execution (reason no_endowment).
 		w.refuse(a, region, ask.recipe, res.reason)
 		return nil
+	}
+	if w.res != nil {
+		w.takeDraws(ask.first, ask.draws, res.k)
 	}
 	for _, f := range w.prod.wear {
 		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)

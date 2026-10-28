@@ -25,6 +25,7 @@ const (
 	refusedNoSite
 	refusedNoTool
 	refusedNoInput
+	refusedNoEndowment
 	refusedColumns
 )
 
@@ -58,6 +59,8 @@ func refusalColumn(reason Reason) int {
 		return refusedNoTool
 	case ReasonNoInput:
 		return refusedNoInput
+	case ReasonNoEndowment:
+		return refusedNoEndowment
 	default:
 		panic("economysim: invariant violated: refusal of a start under the reason " + string(reason) + ", which the first slice does not count")
 	}
@@ -95,7 +98,7 @@ func (t *refusalTally) flush(tick int64, emit func(RecipeRefused)) {
 		emit(RecipeRefused{
 			Tick: tick, Region: RegionID(p / t.recipes), Recipe: RecipeID(p % t.recipes),
 			NotOnRole: c[refusedNotOnRole], ZeroYield: c[refusedZeroYield], NoSite: c[refusedNoSite],
-			NoTool: c[refusedNoTool], NoInput: c[refusedNoInput],
+			NoTool: c[refusedNoTool], NoInput: c[refusedNoInput], NoEndowment: c[refusedNoEndowment],
 		})
 		clear(c)
 	}
@@ -177,9 +180,10 @@ func (s *productionScratch) markRunnable(g int, runnable [][]RecipeID, yt *yield
 				continue
 			}
 			r := &s.anchor[id]
-			e, _, ok := yt.effective(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited)
+			ab := s.abundance(RegionID(g), id, true)
+			e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, ab)
 			if ok && e == 0 {
-				e = s.bestSeasonFactor(yt, sh, g, id)
+				e = s.bestSeasonFactor(yt, sh, g, id, ab)
 			}
 			if ok {
 				r.Runnable, r.YieldBP = true, e
@@ -193,9 +197,9 @@ func (s *productionScratch) markRunnable(g int, runnable [][]RecipeID, yt *yield
 // recipe with a factor of 0 only in this season is costed at the factor it has in
 // its open season, so a seasonal crop keeps its anchor all year. It is a function
 // of the table and the shocks, with no state.
-func (s *productionScratch) bestSeasonFactor(yt *yieldTable, sh *yieldShocks, g int, id RecipeID) (best int64) {
+func (s *productionScratch) bestSeasonFactor(yt *yieldTable, sh *yieldShocks, g int, id RecipeID, abundance int64) (best int64) {
 	for season := range s.cfg.Calendar.Seasons {
-		if e, _, ok := yt.effective(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited); ok {
+		if e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, abundance); ok {
 			best = max(best, e)
 		}
 	}

@@ -39,6 +39,10 @@ type RegionID int
 // stable across configurations; use the string ID to persist or exchange a want.
 type WantID int
 
+// ResourceID is the index of a resource in ascending order of its ID string. It
+// is not stable across configurations; use the string ID to persist or exchange.
+type ResourceID int
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64

@@ -249,7 +249,9 @@ var stepSites = []site{
 	{"P1.6", (*World).p16Relief},
 	{"P1.7", noError((*World).p17Flows)},
 	{"P2.1", noError((*World).p21Complete)},
+	{"P2.3", noError((*World).p23Snapshot)},
 	{"P2.5", (*World).p25Work},
+	{"P2.6", noError((*World).p26Ration)},
 	{"P2.7", (*World).p27Start},
 	{"P2.8a", noError((*World).p28aHalted)},
 	{"P3.2", (*World).p32Trade},
@@ -266,6 +268,7 @@ var stepSites = []site{
 	{"P7.1", (*World).p71Entry},
 	{"P8.1", (*World).p81Age},
 	{"P8.2", noError((*World).p82Flows)},
+	{"P8.3", noError((*World).p83Regen)},
 	{"P8.4", (*World).p84Audit},
 }
 

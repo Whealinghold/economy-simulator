@@ -128,6 +128,7 @@ func (w *World) allocate() {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
 	w.demand = newDemandState(&w.cfg)
 	w.money = newMoneyFlows(&w.cfg, w.ledger)
+	w.res = newResourcesState(&w.cfg)
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
@@ -137,6 +138,7 @@ func (w *World) allocate() {
 	w.bp = beliefParams(w.cfg.World)
 	w.clr = &clearScratch{}
 	w.prod = newProductionScratch(&w.cfg, &w.recipes)
+	w.prod.res = w.res
 	w.refused = newRefusalTally(regions, len(w.cfg.Recipes))
 	w.reads = newReadBuf(len(w.cfg.Commodities))
 	w.views = newViewScratch(&w.cfg, &w.roles, &w.recipes)
@@ -283,6 +285,7 @@ func namesOf(c *Config) Names {
 		n.Seasons[i] = c.Calendar.Seasons[i].ID
 	}
 	n.Wants = demandNames(c)
+	n.Resources = resourceNames(c)
 	return n
 }
 
@@ -299,6 +302,9 @@ func modulesOn(c *Config) []string {
 	}
 	if c.Modules.Estates != nil {
 		on = append(on, "estates")
+	}
+	if c.Modules.Resources != nil {
+		on = append(on, "resources")
 	}
 	return on
 }

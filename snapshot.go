@@ -62,6 +62,22 @@ type Snapshot struct {
 	// Flows has one row per money flow, in flow ID order (spec-money-supply.md
 	// 13.4); empty with the module off.
 	Flows []FlowRow
+	// Endowments has one row per (region, resource), in that order (spec-resources.md
+	// 14.4); empty with the resources module off.
+	Endowments []EndowmentRow
+}
+
+// EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
+type EndowmentRow struct {
+	Region   RegionID
+	Resource ResourceID
+	// Stock is the units held, Capacity the effective capacity and AbundanceBP the
+	// abundance of the stock now.
+	Stock, Capacity, AbundanceBP int64
+	// ExhaustedRun is the consecutive ticks with units short up to the last tick.
+	ExhaustedRun int64
+	// CapacityScaleBP and RegenScaleBP are the shock scales, 10 000 when not shocked.
+	CapacityScaleBP, RegenScaleBP int64
 }
 
 // FlowRow is the state of one money flow: its cumulative total, its scale in
@@ -271,12 +287,13 @@ func (w *World) Snapshot() (Snapshot, error) {
 		Tick: w.Tick(), Seed: w.state.seed, ConfigHash: w.hash, Moment: moment,
 		Names: namesOf(&w.cfg), Modules: modulesOn(&w.cfg),
 		Agents: w.live.agents, Households: w.live.households,
-		Regions:  make([]RegionRow, len(w.cfg.Regions)),
-		Roles:    make([]RoleRow, len(w.cfg.Regions)*nr),
-		Markets:  make([]MarketRow, len(w.cfg.Regions)*nc),
-		Jobs:     make([]JobRow, 0, len(w.cfg.Regions)*len(w.cfg.Recipes)),
-		Boundary: w.boundaryRows(),
-		Flows:    w.snapshotFlows(),
+		Regions:    make([]RegionRow, len(w.cfg.Regions)),
+		Roles:      make([]RoleRow, len(w.cfg.Regions)*nr),
+		Markets:    make([]MarketRow, len(w.cfg.Regions)*nc),
+		Jobs:       make([]JobRow, 0, len(w.cfg.Regions)*len(w.cfg.Recipes)),
+		Boundary:   w.boundaryRows(),
+		Flows:      w.snapshotFlows(),
+		Endowments: w.snapshotEndowments(),
 	}
 	s.Edges, s.Components = w.edgeRows(), w.componentCount()
 	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false), w.moneyFlowList())
