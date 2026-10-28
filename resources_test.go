@@ -546,3 +546,37 @@ func TestWarnings_NoComparativeAdvantagePacks(t *testing.T) {
 		})
 	}
 }
+
+// TestValidate_ResourceNamespaceIsSeparate verifies that a resource ID and a
+// commodity ID are separate namespaces: a resource may carry the ID of a commodity
+// and the configuration is valid, a draw resolves against the resources only, and
+// an input of a recipe that names a resource and no commodity is rejected as an
+// unknown commodity.
+//
+// Requirement: FR-RES-002
+func TestValidate_ResourceNamespaceIsSeparate(t *testing.T) {
+	t.Parallel()
+	c := resourcesConfig()
+	commodity := c.Commodities[0].ID
+	resourceOf(&c, "arable").ID = commodity
+	recipeOf(&c, "grow_staple").Draws[0].Resource = commodity
+	c.Modules.Resources.Endowments[0].Resource = commodity
+	if err := c.Validate(); err != nil {
+		t.Errorf("Validate(resource %q beside a commodity of the same ID) = %v, want nil", commodity, err)
+	}
+
+	// A draw of an ID that is a commodity and no resource finds no resource.
+	c = resourcesConfig()
+	recipeOf(&c, "grow_staple").Draws[0].Resource = commodity
+	if err := c.Validate(); !errors.Is(err, economysim.ErrUnknownResource) {
+		t.Errorf("Validate(draw of commodity %q) = %v, want ErrUnknownResource", commodity, err)
+	}
+
+	// A resource is no input: it is in no recipe list but Draws.
+	c = resourcesConfig()
+	rc := recipeOf(&c, "grow_staple")
+	rc.Inputs = append(rc.Inputs, economysim.Item{Commodity: "arable", Quantity: 1})
+	if err := c.Validate(); !errors.Is(err, economysim.ErrUnknownCommodity) {
+		t.Errorf("Validate(input naming resource arable) = %v, want ErrUnknownCommodity", err)
+	}
+}
