@@ -29,13 +29,16 @@ type Request struct {
 // then ascending Key, then ascending Ref, each that still fits (one pass; what
 // remains is not taken). The order is total, so the result does not depend on
 // how the requests were listed. Ration sorts reqs in place and allocates
-// nothing. ok is false, and every grant is 0, for a negative number, a Draw
-// below 1 or a sum of units wanted beyond int64.
+// nothing. The Refs must be distinct slots of grants. ok is false, and every
+// grant that has a slot is 0, for a negative number, a Draw below 1, a Ref
+// outside grants or a sum of units wanted beyond int64.
 func Ration(available int64, reqs []Request, grants []int64) (ok bool) {
-	wanted, ok := unitsWanted(available, reqs)
+	wanted, ok := unitsWanted(available, reqs, len(grants))
 	if !ok {
 		for _, r := range reqs {
-			grants[r.Ref] = 0
+			if r.Ref >= 0 && r.Ref < len(grants) {
+				grants[r.Ref] = 0
+			}
 		}
 		return false
 	}
@@ -64,14 +67,14 @@ func Ration(available int64, reqs []Request, grants []int64) (ok bool) {
 }
 
 // unitsWanted returns the sum of Executions * Draw and whether the input is
-// valid and the sum fits.
-func unitsWanted(available int64, reqs []Request) (int64, bool) {
+// valid (a Ref inside the n slots of grants) and the sum fits.
+func unitsWanted(available int64, reqs []Request, n int) (int64, bool) {
 	if available < 0 {
 		return 0, false
 	}
 	var total int64
 	for _, r := range reqs {
-		if r.Executions < 0 || r.Draw < 1 {
+		if r.Executions < 0 || r.Draw < 1 || r.Ref < 0 || r.Ref >= n {
 			return 0, false
 		}
 		u, ok := checked.Mul(r.Executions, r.Draw)

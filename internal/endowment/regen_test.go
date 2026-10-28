@@ -208,6 +208,21 @@ func TestRegen_ClampBanksNothing(t *testing.T) {
 	}
 }
 
+// TestRegen_RefusesUnknownShape verifies a Shape outside the closed set is
+// refused with ok false, not regenerated as a constant flow.
+//
+// Guard: the numerator once fell through to the constant rule for any other
+// value, so a corrupt Shape produced a plausible stock instead of a refusal.
+func TestRegen_RefusesUnknownShape(t *testing.T) {
+	t.Parallel()
+	for _, shape := range []endowment.Shape{-1, 3, 7} {
+		p := endowment.Params{Shape: shape, Rate: 5, Capacity: 100, ScaleBP: 10_000, TicksPerYear: 1}
+		if got, ok := endowment.Regen(p, endowment.Step{Stock: 10, SeasonBP: 10_000}); ok {
+			t.Errorf("Regen(%+v) = %+v, true, want not ok", p, got)
+		}
+	}
+}
+
 // TestRegen_FiniteExtinctRefuge verifies a constant stock of rate 0 never
 // changes, that a logistic stock of 0 with no refuge is extinct for ever, that
 // a refuge restarts growth, and that a refuge at or above the capacity is

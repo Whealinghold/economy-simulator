@@ -24,7 +24,8 @@ type Plan struct {
 // elasticity of the abundance curve at the share, with the slope of the
 // segment that contains it (factor over share), rounded half to even. It is 0
 // for a curve that is flat there, outside the knots, or whose factor is 0
-// (spec-resources.md 8.3.1). ok is false on overflow.
+// (spec-resources.md 8.3.1). A falling segment gives a negative value, which
+// Overshoot and UnstablePlan treat as out of range (false). ok is false on overflow.
 func Elasticity(knots []curve.Knot, shareBP int64) (eps int64, ok bool) {
 	x0, y0, x1, y1, found := curve.Segment(knots, shareBP)
 	if !found || y1 == y0 {

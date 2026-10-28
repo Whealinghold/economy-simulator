@@ -58,8 +58,11 @@ func numerator(p Params, in Step) (u128, bool) {
 		return product(uint64(p.Rate), uint64(p.Capacity-in.Stock), m, s)
 	case Logistic:
 		return product(uint64(p.Rate), logisticW(p, in.Stock), m, s)
+	case Constant:
+		return product(uint64(p.Rate), m, s, BP)
 	}
-	return product(uint64(p.Rate), m, s, BP)
+	// The set of shapes is closed; an unknown one is refused, not treated as Constant.
+	return u128{}, false
 }
 
 // logisticW is the logistic factor w = ceil(S' * (C - S') / C) with

@@ -192,7 +192,7 @@ func TestRation_SkipsWhatDoesNotFit(t *testing.T) {
 }
 
 // TestRation_RejectsBadInput verifies a negative stock or request, a draw below
-// 1, or a sum beyond int64 is reported with ok false and every grant 0.
+// 1, a Ref outside grants, or a sum beyond int64 is reported with ok false and every grant 0.
 //
 // Requirement: NFR-RES-003
 func TestRation_RejectsBadInput(t *testing.T) {
@@ -207,6 +207,8 @@ func TestRation_RejectsBadInput(t *testing.T) {
 		{"negative executions", 5, []endowment.Request{{Ref: 0, Executions: -1, Draw: 1}}},
 		{"draw below 1", 5, []endowment.Request{{Ref: 0, Executions: 1, Draw: 0}}},
 		{"product beyond int64", 5, []endowment.Request{{Ref: 0, Executions: big, Draw: 4}}},
+		{"ref past grants", 5, []endowment.Request{{Ref: 1, Executions: 1, Draw: 1}}},
+		{"negative ref", 5, []endowment.Request{{Ref: -1, Executions: 1, Draw: 1}}},
 		{"sum beyond int64", 5, []endowment.Request{{Ref: 0, Executions: big, Draw: 1}, {Ref: 1, Executions: big, Draw: 1}, {Ref: 2, Executions: big, Draw: 1}}},
 	}
 	for _, tt := range tests {
@@ -219,9 +221,10 @@ func TestRation_RejectsBadInput(t *testing.T) {
 			if ok := endowment.Ration(tt.available, slices.Clone(tt.reqs), grants); ok {
 				t.Errorf("Ration(%d, %+v) = ok, want not ok", tt.available, tt.reqs)
 			}
-			for i, g := range grants {
-				if g != 0 {
-					t.Errorf("Ration(%d, %+v) left grant %d = %d, want 0", tt.available, tt.reqs, i, g)
+			// A Ref outside grants has no slot to zero; the other slots are untouched.
+			for _, r := range tt.reqs {
+				if r.Ref >= 0 && r.Ref < len(grants) && grants[r.Ref] != 0 {
+					t.Errorf("Ration(%d, %+v) left grant %d = %d, want 0", tt.available, tt.reqs, r.Ref, grants[r.Ref])
 				}
 			}
 		})
