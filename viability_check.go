@@ -701,7 +701,10 @@ func startWindows(a viaActivity) []steady.Window {
 		at += r.Length
 	}
 	for _, c := range a.count.Completions {
-		start := c - a.act.Duration + 1
+		if at < 1 {
+			break
+		}
+		start := ((c-a.act.Duration+1)%at + at) % at // a job started late in the year completes early in the next
 		for i := range ws {
 			if start >= ws[i].Start && start < ws[i].End {
 				ws[i].Starts++

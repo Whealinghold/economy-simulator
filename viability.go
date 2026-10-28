@@ -211,7 +211,7 @@ func (m *viaModel) activity(region RegionID, recipe RecipeID) (viaActivity, bool
 	for _, t := range row.tools {
 		a.Tools = append(a.Tools, steady.Tool{Commodity: int(t.commodity), Wear: t.wearPerUse, Durability: m.c.Commodities[t.commodity].Durability})
 	}
-	if len(rc.Draws) > 0 {
+	if len(rc.Draws) > 0 && m.sup != nil {
 		m.sup.apply(&a, rc.Draws)
 	}
 	return viaActivity{region: region, recipe: recipe, runs: runs, count: count, act: a, allYear: allOpen(runs)}, true
