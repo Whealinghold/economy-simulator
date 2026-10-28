@@ -65,6 +65,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// The resources module's snapshot of the tick and its grants by agent slot are
+	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
+	// has them empty until then (spec-resources.md 15).
+	"resourcesState.snapStock", "resourcesState.snapAbundance", "resourcesState.grants",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",

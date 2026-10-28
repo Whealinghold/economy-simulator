@@ -281,14 +281,16 @@ func (r *resourcesState) recipeAbundance(region RegionID, recipe RecipeID, live 
 }
 
 // clearTick zeroes the counts of the tick (P8.6): the requests, the grants, the
-// units drawn and the requests cut. The saved state and the snapshot stay.
+// units drawn and the requests cut, and empties the lists of requests. The saved
+// state stays; the snapshot and the grants are rebuilt at P2.3 and P2.6 and are
+// left out of the position hash (poshash_internal_test.go).
 func (r *resourcesState) clearTick() {
 	clear(r.requested)
 	clear(r.granted)
 	clear(r.drawn)
 	clear(r.denied)
 	clear(r.reduced)
-	r.reqs = r.reqs[:0]
+	r.reqs, r.order, r.ration = r.reqs[:0], r.order[:0], r.ration[:0]
 }
 
 // resourceID returns the typed ID of a resource, its index in the canonical

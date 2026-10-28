@@ -85,8 +85,9 @@ func TestStart_GrantCapsExecutions(t *testing.T) {
 	if len(refused) != 1 || refused[0].NoEndowment != 4 || refused[0].NoInput != 0 {
 		t.Errorf("RecipeRefused = %+v, want one row with NoEndowment 4", refused)
 	}
-	if got := w.res.requested[0]; got != 0 {
-		t.Errorf("requested after the tick = %d, want 0: P8.6 clears the counts", got)
+	if r := w.res; r.requested[0] != 0 || len(r.reqs) != 0 || len(r.order) != 0 || len(r.ration) != 0 {
+		t.Errorf("after the tick requested = %d with %d, %d and %d listed, want all clear: P8.6 clears the counts and the lists",
+			r.requested[0], len(r.reqs), len(r.order), len(r.ration))
 	}
 }
 
