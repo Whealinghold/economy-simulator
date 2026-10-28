@@ -321,12 +321,12 @@ func (r *resourcesState) abundanceOf(cell int, stock int64) int64 {
 	return a
 }
 
-// cellOf is the dense index of an endowment.
 // regionOf and resourceOf are the inverse of cellOf.
 func (r *resourcesState) regionOf(cell int) RegionID { return RegionID(cell / r.resources) }
 
 func (r *resourcesState) resourceOf(cell int) ResourceID { return ResourceID(cell % r.resources) }
 
+// cellOf is the dense index of an endowment.
 func (r *resourcesState) cellOf(region RegionID, resource ResourceID) int {
 	return int(region)*r.resources + int(resource)
 }

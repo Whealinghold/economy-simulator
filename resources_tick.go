@@ -261,7 +261,10 @@ func (r *resourcesState) regen(cell, season int) {
 		invariant("the regeneration scale of an endowment does not fit after validation")
 	}
 	factor := int64(wholeBP)
-	if sb := r.seasonBP[res]; season >= 0 && season < len(sb) {
+	if sb := r.seasonBP[res]; len(sb) > 0 {
+		if season < 0 || season >= len(sb) {
+			invariant("the season of the tick is outside the profile of a resource after validation")
+		}
 		factor = sb[season]
 	}
 	out, ok := endowment.Regen(
