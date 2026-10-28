@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"cmp"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -40,6 +41,21 @@ type expectedPack struct {
 	// SurplusWantsBP is lambda* of the programme with the wants, recorded only
 	// for a pack with the demand module on (0 is not recorded).
 	SurplusWantsBP int64 `toml:"surplus_wants_bp"`
+	// Regions are the programmes of a pack with several regions (five), one row
+	// each in region order; the top-level surplus_bp, labour_share_bp and pivots
+	// are then not recorded (0), as spec-reference-chain.md 8.4 says "per region".
+	Regions []expectedRegion `toml:"regions"`
+}
+
+// expectedRegion is the solver's figures for one region of a pack with several:
+// the three of the single-region file and the balanced census, one figure for
+// each group, sorted descending (the multiset, which a rename of the roles keeps).
+type expectedRegion struct {
+	Region        string  `toml:"region"`
+	SurplusBP     int64   `toml:"surplus_bp"`
+	LabourShareBP int64   `toml:"labour_share_bp"`
+	Pivots        int64   `toml:"pivots"`
+	Balanced      []int64 `toml:"balanced"`
 }
 
 // warnings converts the warnings of a configuration to the file's form.
@@ -79,14 +95,30 @@ func measureExpected(t testing.TB, cold, warm []string) expectedPack {
 	if err != nil {
 		t.Fatalf("SolveSteadyState(%q) error = %v, want nil", cold, err)
 	}
-	if len(st.Programmes) != 1 {
-		t.Fatalf("SolveSteadyState(%q) has %d programmes, want 1 (a single-region pack)", cold, len(st.Programmes))
-	}
-	p := st.Programmes[0]
 	e := expectedPack{
-		ConfigHash: hashHex(c), SurplusBP: p.SurplusBP, LabourShareBP: p.LabourShareBP, Pivots: p.Pivots,
-		Unpriced: []string{}, UnpricedWages: append([]string{}, st.Report.UnpricedWages...),
+		ConfigHash: hashHex(c), Unpriced: []string{}, UnpricedWages: append([]string{}, st.Report.UnpricedWages...),
 		Warnings: warningRows(c), WarmConfigHash: hashHex(w), WarmWarnings: warningRows(w),
+	}
+	if len(st.Programmes) == 0 {
+		t.Fatalf("SolveSteadyState(%q) has no programme", cold)
+	}
+	if len(st.Programmes) == 1 {
+		p := st.Programmes[0]
+		e.SurplusBP, e.LabourShareBP, e.Pivots = p.SurplusBP, p.LabourShareBP, p.Pivots
+	} else {
+		for _, p := range st.Programmes {
+			if len(p.Regions) != 1 {
+				t.Fatalf("SolveSteadyState(%q) programme has %d regions, want 1 (no free trade)", cold, len(p.Regions))
+			}
+			r := expectedRegion{Region: p.Regions[0], SurplusBP: p.SurplusBP, LabourShareBP: p.LabourShareBP, Pivots: p.Pivots}
+			for _, row := range st.Report.Census {
+				if row.Region == r.Region && row.Role != "" {
+					r.Balanced = append(r.Balanced, row.Balanced)
+				}
+			}
+			slices.SortFunc(r.Balanced, func(a, b int64) int { return cmp.Compare(b, a) })
+			e.Regions = append(e.Regions, r)
+		}
 	}
 	e.SurplusWantsBP = st.Report.SurplusWantsBP
 	for _, u := range st.Report.UnpricedCommodities {
@@ -117,15 +149,39 @@ func renderExpected(e expectedPack) []byte {
 # set with the warm-start document. Change it by the rule for the golden files
 # (testing.md 7.2).
 config_hash = %q
-surplus_bp = %d
-labour_share_bp = %d
-pivots = %d
-unpriced = %s
+%sunpriced = %s
 unpriced_wages = %s
 warnings = %s
 warm_config_hash = %q
 warm_warnings = %s
-%s`, e.ConfigHash, e.SurplusBP, e.LabourShareBP, e.Pivots, list(e.Unpriced), list(e.UnpricedWages), ws(e.Warnings), e.WarmConfigHash, ws(e.WarmWarnings), wantsLine(e)))
+%s`, e.ConfigHash, figuresLine(e), list(e.Unpriced), list(e.UnpricedWages), ws(e.Warnings), e.WarmConfigHash, ws(e.WarmWarnings), wantsLine(e)+regionsLine(e)))
+}
+
+// figuresLine is the three lines of surplus, labour share and pivots of a pack
+// with one programme, empty for a pack that records them per region.
+func figuresLine(e expectedPack) string {
+	if len(e.Regions) > 0 {
+		return ""
+	}
+	return fmt.Sprintf("surplus_bp = %d\nlabour_share_bp = %d\npivots = %d\n", e.SurplusBP, e.LabourShareBP, e.Pivots)
+}
+
+// regionsLine is the line of the per-region figures, empty for a pack with one
+// programme.
+func regionsLine(e expectedPack) string {
+	if len(e.Regions) == 0 {
+		return ""
+	}
+	rows := make([]string, len(e.Regions))
+	for i, r := range e.Regions {
+		bal := make([]string, len(r.Balanced))
+		for j, b := range r.Balanced {
+			bal[j] = fmt.Sprint(b)
+		}
+		rows[i] = fmt.Sprintf("{ region = %q, surplus_bp = %d, labour_share_bp = %d, pivots = %d, balanced = [%s] }",
+			r.Region, r.SurplusBP, r.LabourShareBP, r.Pivots, strings.Join(bal, ", "))
+	}
+	return "regions = [\n  " + strings.Join(rows, ",\n  ") + ",\n]\n"
 }
 
 // wantsLine is the line of lambda* with the wants, empty for a pack without it.
@@ -136,7 +192,7 @@ func wantsLine(e expectedPack) string {
 	return fmt.Sprintf("surplus_wants_bp = %d\n", e.SurplusWantsBP)
 }
 
-// TestExpected_Packs verifies, for the packs one, second and one-demand, the hash of the
+// TestExpected_Packs verifies, for the packs one, second, one-demand and five, the hash of the
 // effective configuration, the solver's report (surplus, labour share, pivots,
 // unpriced) and the warnings against testdata/chains/expected/<pack>.toml, for
 // the cold layer set and the warm one. The file is recorded with -update from the
@@ -159,10 +215,14 @@ func TestExpected_Packs(t *testing.T) {
 		warm      []string
 		surplusBP int64
 		pivots    int64
+		regions   []int64 // surplus_bp of each region in region order, for a pack with several
 	}{
-		{"one", []string{"base.toml", "one.toml"}, []string{"base.toml", "one.toml", "warm-one.toml"}, 25_119, 10},
-		{"second", []string{"second/second.toml"}, []string{"second/second.toml", "second/warm-second.toml"}, 19_663, 10},
-		{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 22_803, 15},
+		{"one", []string{"base.toml", "one.toml"}, []string{"base.toml", "one.toml", "warm-one.toml"}, 25_119, 10, nil},
+		{"second", []string{"second/second.toml"}, []string{"second/second.toml", "second/warm-second.toml"}, 19_663, 10, nil},
+		{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 22_803, 15, nil},
+		// five: REF 7.3, centre, east, north, south, west (1.904, 1.704, 1.915, 1.642, 1.805).
+		{"five", []string{"base.toml", "lines.toml", "five.toml"}, []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 0, 0,
+			[]int64{19_038, 17_038, 19_145, 16_415, 18_054}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -170,6 +230,13 @@ func TestExpected_Packs(t *testing.T) {
 			got := measureExpected(t, tt.cold, tt.warm)
 			if got.SurplusBP != tt.surplusBP || got.Pivots != tt.pivots {
 				t.Errorf("%s: surplus_bp = %d and pivots = %d, want %d and %d", tt.name, got.SurplusBP, got.Pivots, tt.surplusBP, tt.pivots)
+			}
+			var regions []int64
+			for _, r := range got.Regions {
+				regions = append(regions, r.SurplusBP)
+			}
+			if !slices.Equal(regions, tt.regions) {
+				t.Errorf("%s: surplus_bp by region = %v, want %v", tt.name, regions, tt.regions)
 			}
 			// The warm document gives a job row to the roles with a long recipe,
 			// so it lifts the lockstep warning of those roles (REF 5: it stays for a

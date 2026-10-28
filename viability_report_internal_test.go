@@ -3,9 +3,12 @@ package economysim
 import (
 	"context"
 	"errors"
+	"math"
 	"reflect"
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/steady"
 )
 
 // This file tests the jobs, the census and the report of SolveSteadyState on
@@ -58,9 +61,19 @@ func TestSolveSteadyState_JobsAreScaledDownWhenTheyOverfillAGroup(t *testing.T) 
 	}
 	// The farmer's need is the labour of both recipes, 2 * 12.5 * 2 = 50 + 50 = 100
 	// households; the idle role's is 0, so all 100 households balance to the farmer.
+	//
+	// IncomeBP of the farmer: the seed wage 400 times its labour, 25 + 25 = 50
+	// (executions in progress, x * d, of both recipes), over 1 household times the
+	// upkeep of 200 (one grain and one water at 100): 400 * 50 * 10 000 / 200 =
+	// 1 000 000, that is 100 times its upkeep. The idle role has no active recipe,
+	// so no income figure.
+	wage := st.Table.Wages[0].Wage
 	want := []CensusRow{
-		{Region: "north", Role: "farmer", Households: 1, Balanced: 100, Imbalance: -99, Short: true},
+		{Region: "north", Role: "farmer", Households: 1, Balanced: 100, Imbalance: -99, Short: true, IncomeBP: 1_000_000, HasIncome: true},
 		{Region: "north", Role: "idle", Households: 99, Balanced: 0, Imbalance: 99},
+	}
+	if wage != 400 {
+		t.Errorf("seed wage = %d, want 400", wage)
 	}
 	if !reflect.DeepEqual(st.Report.Census, want) {
 		t.Errorf("Census = %+v, want %+v", st.Report.Census, want)
@@ -197,20 +210,29 @@ func TestSolveSteadyState_Imbalance(t *testing.T) {
 		name               string
 		farmers, drillers  int64
 		wantFarm, wantWell int64
+		wantFarmIncome     int64
+		wantWellIncome     int64
 	}{
 		// Needs per tick: grain 30 / 8 = 3.75 households, water 30 / 4 = 7.5; of the
 		// 30 households the quotas are 30 * 3.75 / 11.25 = 10 and 20.
-		{"imbalanced", 20, 10, 10, 20},
-		{"balanced", 10, 20, 10, 20},
+		{"imbalanced", 20, 10, 10, 20, 4_997, 19_988},
+		{"balanced", 10, 20, 10, 20, 9_994, 9_994},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			st := solveToy(t, build(tt.farmers, tt.drillers))
 			// Rows are sorted by role: driller, then farmer.
+			// IncomeBP is wage * labour * 10 000 / (households * upkeep) with the wage
+			// 533, the upkeep 67 + 133 = 200 and the labour of a household count at
+			// lambda 1: the farm 3.75, the well 7.5 (the needs above). Balanced, the
+			// farmers' 533 * 3.75 * 10 000 / (10 * 200) = 9 993.75 and the drillers'
+			// 533 * 7.5 * 10 000 / (20 * 200) = 9 993.75 both round to 9 994; with
+			// 20 farmers 19 987.5 / 2 = 4 996.875 rounds to 4 997, and with 10
+			// drillers 39 975 000 / 2 000 = 19 987.5 rounds half to even to 19 988.
 			want := []CensusRow{
-				{Region: "north", Role: "driller", Households: tt.drillers, Balanced: tt.wantWell, Imbalance: tt.drillers - tt.wantWell},
-				{Region: "north", Role: "farmer", Households: tt.farmers, Balanced: tt.wantFarm, Imbalance: tt.farmers - tt.wantFarm},
+				{Region: "north", Role: "driller", Households: tt.drillers, Balanced: tt.wantWell, Imbalance: tt.drillers - tt.wantWell, IncomeBP: tt.wantWellIncome, HasIncome: true},
+				{Region: "north", Role: "farmer", Households: tt.farmers, Balanced: tt.wantFarm, Imbalance: tt.farmers - tt.wantFarm, IncomeBP: tt.wantFarmIncome, HasIncome: true},
 			}
 			if !reflect.DeepEqual(st.Report.Census, want) {
 				t.Errorf("Census(%d farmers, %d drillers) = %+v, want %+v", tt.farmers, tt.drillers, st.Report.Census, want)
@@ -477,5 +499,135 @@ func TestSolveSteadyState_RegionThatCannotFeedItself(t *testing.T) {
 	}
 	if !slices.Equal(pooled.Report.UnpricedWages, []string{"south"}) || len(pooled.Table.Groups) != 2 {
 		t.Errorf("pooled UnpricedWages, Groups = %v, %+v, want [south] unpriced and both groups", pooled.Report.UnpricedWages, pooled.Table.Groups)
+	}
+}
+
+// TestCensus_IncomeBP_SharedRecipeIsAbsent verifies that a group whose active
+// recipe is on the lists of two roles has no income figure: the flow of the
+// recipe is the two groups' together (D121), so neither group's labour is known
+// (spec-viability.md 5.2: the recipe row is the ambiguous one). Both group rows
+// carry no IncomeBP and the flag HasIncome false, not a zero.
+//
+// Requirement: FR-VIA-028, FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_SharedRecipeIsAbsent(t *testing.T) {
+	t.Parallel()
+	c := viaToy()
+	c.Recipes[0].Duration, c.Recipes[0].Outputs[0].Quantity = 2, 8
+	miller := DefaultRole()
+	miller.ID, miller.Recipes = "miller", []string{"farm"}
+	c.Roles = append(c.Roles, miller)
+	c.Groups = []Group{{Region: "north", Role: "farmer", Households: 6}, {Region: "north", Role: "miller", Households: 4}}
+	groups := 0
+	for _, row := range solveToy(t, c).Report.Census {
+		if row.Role == "" {
+			continue
+		}
+		groups++
+		if row.HasIncome || row.IncomeBP != 0 {
+			t.Errorf("Census row of %s = IncomeBP %d, HasIncome %t, want 0, false: its recipe is shared", row.Role, row.IncomeBP, row.HasIncome)
+		}
+	}
+	if groups != 2 {
+		t.Errorf("group rows = %d, want 2", groups)
+	}
+}
+
+// TestCensus_IncomeBP_Overflow verifies that a figure that does not fit int64
+// is an absent figure and never a wrapped one (architecture.md 3.5): a chain
+// priced at MaxPrice with an output of two million units a start has a wage of
+// 2 * 10^15, so wage * 10 000 = 2 * 10^19 passes int64 (9.22 * 10^18) and an
+// unchecked product would wrap to 2 * 10^19 - 2^64 = 1.55 * 10^18, a positive
+// and wrong figure.
+//
+// Requirement: FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_Overflow(t *testing.T) {
+	t.Parallel()
+	c := viaToy()
+	c.Commodities[0].ReferencePrice = MaxPrice
+	c.Regions[0].ReferenceBasket = MaxPrice
+	c.Recipes[0].Duration, c.Recipes[0].Outputs[0].Quantity = 1, 2_000_000
+	st := solveToy(t, c)
+	if st.Table.Wages[0].Wage <= maxInt64/wholeBP {
+		t.Fatalf("seed wage = %d, want above %d so that wage * 10 000 overflows int64", st.Table.Wages[0].Wage, maxInt64/wholeBP)
+	}
+	for _, row := range st.Report.Census {
+		if row.HasIncome || row.IncomeBP != 0 {
+			t.Errorf("Census row %+v, want no income figure: wage * 10 000 overflows int64", row)
+		}
+	}
+}
+
+// TestUpkeepCost verifies the upkeep cost U of one household at the seed prices
+// that IncomeBP divides by: the sum of quantity times price, and an absent
+// figure (not a smaller sum, not a wrapped one) for an upkeep commodity with no
+// seed price and for a product or a sum that does not fit int64.
+//
+// Guard: a zero price skipped silently would understate U and overstate every
+// IncomeBP of the group; an unchecked product would wrap to a wrong positive U.
+func TestUpkeepCost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		up     []int64
+		price  []int64
+		want   int64
+		wantOK bool
+	}{
+		{"sum of products", []int64{2, 3}, []int64{100, 1_000}, 2*100 + 3*1_000, true},
+		{"unneeded commodity may be unpriced", []int64{2, 0}, []int64{100, 0}, 200, true},
+		{"needed commodity with no price", []int64{2, 1}, []int64{100, 0}, 0, false},
+		{"product overflows", []int64{1 << 40, 0}, []int64{1 << 40, 1}, 0, false},
+		{"sum overflows", []int64{1, 1}, []int64{math.MaxInt64, 1}, 0, false}, // each product fits, the sum does not
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rc, gc := moneyContext()
+			gc.up, rc.price = tt.up, tt.price
+			got, ok := rc.upkeepCost(gc)
+			if got != tt.want || ok != tt.wantOK {
+				t.Errorf("upkeepCost(up %v, price %v) = %d, %t, want %d, %t", tt.up, tt.price, got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+}
+
+// TestIncome_Guards verifies the guards of income() on a hand-built region: a
+// priced group gets its figure, and each guard returns an absent figure, not 0.
+// Wage 2 000, labour 3, 5 households, upkeep 1 at price 100: U = 100 and
+// IncomeBP = 2 000 * 3 * 10 000 / (5 * 100) = 120 000.
+//
+// Requirement: FR-VIA-060 (proposed)
+func TestIncome_Guards(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(rc *regionCtx, gc *groupCtx)
+		labour steady.Frac
+		want   int64
+		wantOK bool
+	}{
+		{"priced group", func(*regionCtx, *groupCtx) {}, steady.Rat(3, 1), 120_000, true},
+		{"no labour", func(*regionCtx, *groupCtx) {}, steady.Rat(0, 1), 0, false},
+		{"wage below one", func(rc *regionCtx, _ *groupCtx) { rc.wage = 0 }, steady.Rat(3, 1), 0, false},
+		{"no labour share", func(rc *regionCtx, _ *groupCtx) { rc.p.out.HasLabourShare = false }, steady.Rat(3, 1), 0, false},
+		{"no households", func(_ *regionCtx, gc *groupCtx) { gc.g.Households = 0 }, steady.Rat(3, 1), 0, false},
+		{"no active recipe", func(_ *regionCtx, gc *groupCtx) { gc.active = nil }, steady.Rat(3, 1), 0, false},
+		{"upkeep commodity with no price", func(rc *regionCtx, _ *groupCtx) { rc.price[0] = 0 }, steady.Rat(3, 1), 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rc, gc := moneyContext(steady.Activity{Duration: 3})
+			rc.p = &viaProgramme{out: steady.Outcome{HasLabourShare: true}}
+			rc.wage, rc.price, gc.up = 2_000, []int64{100, 0}, []int64{1, 0}
+			gc.g, gc.row = &Group{Households: 5}, &roleRow{recipes: []RecipeID{0}}
+			rc.groups = []groupCtx{*gc}
+			tt.mutate(rc, gc)
+			got, ok := rc.income(gc, tt.labour)
+			if got != tt.want || ok != tt.wantOK {
+				t.Errorf("income(%s) = %d, %t, want %d, %t", tt.name, got, ok, tt.want, tt.wantOK)
+			}
+		})
 	}
 }

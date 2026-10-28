@@ -392,3 +392,144 @@ func TestSolveSteadyState_SecondMatchesVIA15(t *testing.T) {
 		t.Errorf("below, above, residual = %v, %v, %d, want none, none and at most 100 basis points", r.SeedBelowCostFloor, r.SeedAboveCostCeiling, r.ResidualBP)
 	}
 }
+
+// TestCensus_IncomeBP_One verifies the static income per household of the
+// groups of `one` as it is today (plan 2-8 D360, D372): each group's wage 2 512
+// times the labour of its recipes at the flows of lambda 1, over its households
+// times the upkeep cost of 999, in basis points. The grower's labour is 47.56
+// against 253 households, 2 512 * 47.56 * 10 000 / (253 * 999) = 4 727, the 47%
+// of N-314; every other group earns about 138% of its upkeep. The exact values
+// are the pin; the 47% and the 138% are the sanity check within 300 basis points.
+//
+// Requirement: FR-VIA-028, FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_One(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	st, err := economysim.SolveSteadyState(context.Background(), loadPack(t, packLayers["one"]...))
+	if err != nil {
+		t.Fatalf("SolveSteadyState(one) = %v, want nil", err)
+	}
+	want := map[string]int64{"cook": 13_867, "digger": 13_811, "forester": 13_865, "grower": 4_727, "maker": 13_910, "refiner": 13_811}
+	got := map[string]int64{}
+	for _, row := range st.Report.Census {
+		if !row.HasIncome {
+			t.Errorf("Census row %+v of one has no income figure, want one", row)
+		}
+		got[row.Role] = row.IncomeBP
+		sane := int64(13_800)
+		if row.Role == "grower" {
+			sane = 4_700
+		}
+		if d := row.IncomeBP - sane; d < -300 || d > 300 {
+			t.Errorf("IncomeBP of %s = %d, want %d within 300 (N-314: 445 and 1 380 against an upkeep of 999)", row.Role, row.IncomeBP, sane)
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("IncomeBP of one by role = %v, want %v", got, want)
+	}
+}
+
+// TestCensus_IncomeBP_Identity verifies, for every pack of packLayers that has a
+// labour share, the identity that fixes the households-weighted mean of the
+// column: the mean is w * LabourShareBP / U, where w is the starting wage and U
+// the upkeep cost of a household at the seed prices (the labour of all groups at
+// lambda 1 is the households times the labour share). The mean here is over all
+// the households of the region, a group with no income figure adding none; the
+// two sides differ by the ceil of LabourShareBP and the rounding of the wage and
+// of each figure, under 5 basis points of the mean. A pack without a labour share
+// (`famine`) is skipped.
+//
+// Requirement: FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_Identity(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	for name, layers := range packLayers {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cfg := loadPack(t, layers...)
+			st, err := economysim.SolveSteadyState(context.Background(), cfg)
+			if err != nil {
+				t.Fatalf("SolveSteadyState(%s) = %v, want nil", name, err)
+			}
+			for _, p := range st.Programmes {
+				if !p.HasLabourShare {
+					continue
+				}
+				if len(p.Regions) != 1 {
+					t.Fatalf("%s: programme has %d regions, want 1 (no free trade)", name, len(p.Regions))
+				}
+				region := p.Regions[0]
+				var wage int64
+				for _, w := range st.Table.Wages {
+					if w.Region == region {
+						wage = int64(w.Wage)
+					}
+				}
+				price := map[string]int64{}
+				for _, sp := range st.Table.Prices {
+					if sp.Region == region {
+						price[sp.Commodity] = int64(sp.Price)
+					}
+				}
+				upkeep := slices.Clone(cfg.World.Upkeep)
+				for _, r := range cfg.Regions {
+					if r.ID == region {
+						upkeep = append(upkeep, r.ExtraUpkeep...)
+					}
+				}
+				var u, sum, households int64
+				for _, it := range upkeep {
+					u += int64(it.Quantity) * price[it.Commodity]
+				}
+				for _, row := range st.Report.Census {
+					// a row with no figure (HasIncome false) is left out, not counted as 0
+					if row.Region != region || row.Role == "" || row.Households == 0 || !row.HasIncome {
+						continue
+					}
+					households += row.Households
+					sum += row.IncomeBP * row.Households
+				}
+				if u < 1 || households == 0 {
+					t.Fatalf("%s %s: upkeep cost %d and %d households with an income figure, want both positive", name, region, u, households)
+				}
+				// mean = sum / households, want = wage * LabourShareBP / u:
+				// |sum * u - households * wage * LabourShareBP| <= 5 * households * u.
+				lhs, rhs := sum*u, households*wage*p.LabourShareBP
+				if d := lhs - rhs; d < -5*households*u || d > 5*households*u {
+					t.Errorf("%s %s: mean IncomeBP = %.2f, want w * LabourShareBP / U = %d * %d / %d = %.2f within 5",
+						name, region, float64(sum)/float64(households), wage, p.LabourShareBP, u, float64(wage*p.LabourShareBP)/float64(u))
+				}
+			}
+		})
+	}
+}
+
+// TestCensus_IncomeBP_AbsentWithoutLabourShare verifies that `famine`, whose
+// capacity row is tight and which has no labour share (FR-VIA-012), reports the
+// column as absent and flagged on every group, never as a zero that a gate would
+// read as a starving group. The same holds for a row on an ambiguous recipe
+// (TestCensus_IncomeBP_SharedRecipeIsAbsent, a hand-built chain).
+//
+// Requirement: FR-VIA-012, FR-VIA-060 (proposed)
+func TestCensus_IncomeBP_AbsentWithoutLabourShare(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	st, err := economysim.SolveSteadyState(context.Background(), famine(t))
+	if err != nil {
+		t.Fatalf("SolveSteadyState(famine) = %v, want nil", err)
+	}
+	if len(st.Programmes) != 1 || st.Programmes[0].HasLabourShare {
+		t.Fatalf("Programmes = %+v, want one with no labour share", st.Programmes)
+	}
+	for _, row := range st.Report.Census {
+		if row.HasIncome || row.IncomeBP != 0 {
+			t.Errorf("Census row %+v of famine, want IncomeBP 0 and HasIncome false: no labour share", row)
+		}
+	}
+}
