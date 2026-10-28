@@ -14,7 +14,7 @@ import (
 // This file is the resources module (spec-resources.md; architecture.md 2.10.1):
 // its shapes, its canonical form and the lookup of a resource by ID. The pure
 // rules (regeneration, abundance, the ration) are in internal/endowment and
-// internal/curve. The validator and the warnings are in resources_check.go, the
+// internal/curve. The validator is in resources_check.go and the warnings in resources_warn.go, the
 // tick positions and the take in resources_tick.go. Outside these files the
 // module appears only in the catalogue files (config.go, hash.go, bounds.go,
 // defaults.go, errors.go, validate.go) and at the named hooks of ADR 0010.
