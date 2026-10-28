@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"reflect"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -76,4 +77,98 @@ func TestFork_ShockBeforeCheckpoint(t *testing.T) {
 				t.Error("the reference world delivered no event after the boundary, want some")
 			}
 		}})
+}
+
+// twoByTwoOre is the world of the multi-cell tests: two regions ("home" and "far")
+// of ten households each, a mill that draws 3 units of "ore" and 2 of "wood" at once,
+// and four endowments of different shapes and stocks, so that the rationed cells, the
+// events and the saved section have more than one row in each of the two keys.
+func twoByTwoOre() economysim.Config {
+	sh := shapes()
+	c := oreWorld(sh["refill"], 400)
+	wood := sh["logistic"]
+	wood.ID, wood.Capacity = "wood", 800
+	far := economysim.DefaultRegion()
+	far.ID = "far"
+	c.Regions = append(c.Regions, far)
+	c.Groups = append(c.Groups, economysim.Group{Region: "far", Role: "miller", Households: 10})
+	c.Recipes[0].Draws = []economysim.Draw{{Resource: "ore", Quantity: 3}, {Resource: "wood", Quantity: 2}}
+	m := c.Modules.Resources
+	m.Resources = append(m.Resources, wood)
+	m.Endowments = []economysim.Endowment{
+		{Region: "far", Resource: "ore", HasInitial: true, Initial: 90},
+		{Region: "far", Resource: "wood", HasInitial: true, Initial: 300},
+		{Region: "home", Resource: "ore", HasInitial: true, Initial: 400},
+		{Region: "home", Resource: "wood", HasInitial: true, Initial: 40},
+	}
+	return c
+}
+
+// TestIntegration_TwoRegionsTwoResources verifies the module through the public API
+// over four endowments at once: the identity of each cell every tick (audit on), that a
+// start draws all its resources or none (the units drawn of ore and wood in one region
+// stand 3 to 2), that the EndowmentChanged events come in (region, resource) order, that
+// two runs of one seed are identical, and that a fork at a boundary with the cells
+// mid-regeneration runs on as the original does.
+//
+// Requirement: FR-RES-018, FR-RES-025, FR-RES-042, FR-RES-043
+func TestIntegration_TwoRegionsTwoResources(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	run := func() []economysim.Event {
+		rec := &recorder{}
+		w, err := economysim.NewWorld(twoByTwoOre(), economysim.WithSeed(5), economysim.WithObserver(rec), economysim.WithAudit())
+		if err != nil {
+			t.Fatalf("NewWorld() error = %v, want nil", err)
+		}
+		if _, err := w.Run(t.Context(), 30); err != nil {
+			t.Fatalf("Run(30) error = %v, want nil", err)
+		}
+		return rec.events
+	}
+	events := run()
+	type key struct {
+		tick             int64
+		region, resource int
+	}
+	drawn := map[key]int64{}
+	last := map[int64]key{}
+	for _, e := range events {
+		c, ok := e.(economysim.EndowmentChanged)
+		if !ok {
+			continue
+		}
+		k := key{c.Tick, int(c.Region), int(c.Resource)}
+		drawn[k] = c.Drawn
+		if p, seen := last[c.Tick]; seen && (k.region < p.region || (k.region == p.region && k.resource <= p.resource)) {
+			t.Errorf("tick %d: EndowmentChanged for (%d, %d) after (%d, %d), want ascending (region, resource)", c.Tick, k.region, k.resource, p.region, p.resource)
+		}
+		last[c.Tick] = k
+	}
+	if len(drawn) == 0 {
+		t.Fatalf("no EndowmentChanged in 30 ticks, want draws")
+	}
+	total := map[int]int64{}
+	for k, n := range drawn {
+		total[k.region] += n
+	}
+	if total[0] == 0 || total[1] == 0 {
+		t.Errorf("units drawn by region = %v, want both regions to draw", total)
+	}
+	for k, ore := range drawn {
+		// Resource 0 is ore and 1 is wood in canonical order; a start draws 3 and 2.
+		if k.resource != 0 {
+			continue
+		}
+		if wood := drawn[key{k.tick, k.region, 1}]; ore*2 != wood*3 {
+			t.Errorf("tick %d region %d: ore drawn %d, wood drawn %d, want 3 : 2 (all or nothing)", k.tick, k.region, ore, wood)
+		}
+	}
+	if again := run(); !reflect.DeepEqual(events, again) {
+		t.Errorf("two runs of seed 5 differ in their events, want identical")
+	}
+	forkAtN(t, forkCase{Name: "two by two", Cfg: twoByTwoOre(), Seed: 5, N: 12, M: 15,
+		Opts: func() []economysim.Option { return []economysim.Option{economysim.WithAudit()} }})
 }
