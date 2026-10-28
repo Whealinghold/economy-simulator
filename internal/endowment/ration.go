@@ -35,11 +35,7 @@ type Request struct {
 func Ration(available int64, reqs []Request, grants []int64) (ok bool) {
 	wanted, ok := unitsWanted(available, reqs, len(grants))
 	if !ok {
-		for _, r := range reqs {
-			if r.Ref >= 0 && r.Ref < len(grants) {
-				grants[r.Ref] = 0
-			}
-		}
+		zeroGrants(reqs, grants)
 		return false
 	}
 	if wanted <= available {
@@ -65,6 +61,15 @@ func Ration(available int64, reqs []Request, grants []int64) (ok bool) {
 		}
 	}
 	return true
+}
+
+// zeroGrants writes 0 to every grant that has a slot.
+func zeroGrants(reqs []Request, grants []int64) {
+	for _, r := range reqs {
+		if r.Ref >= 0 && r.Ref < len(grants) {
+			grants[r.Ref] = 0
+		}
+	}
 }
 
 // unitsWanted returns the sum of Executions * Draw and whether the input is

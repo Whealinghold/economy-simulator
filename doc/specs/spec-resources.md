@@ -1845,10 +1845,10 @@ func Abundance(knots []curve.Knot, stock, capacity int64) int64
 // Request is one agent's demand on one endowment: w executions of a draw of d units.
 // Key is ordering.Key(tick, agent): the finaliser of 5.3.3 is not repeated here.
 type Request struct {
-	Ref        int // index into the caller's grants slice, where the grant is written
-	Executions int64
-	Draw       int64
-	Key        uint64
+    Ref        int // index into the caller's grants slice, where the grant is written
+    Executions int64
+    Draw       int64
+    Key        uint64
 }
 
 // Ration sorts reqs in place and writes the executions granted to the slot of

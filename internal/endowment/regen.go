@@ -45,9 +45,13 @@ func Regen(p Params, in Step) (Result, bool) {
 // included whatever the capacity. A carry below d also rejects a d of 0 or
 // less, that is a TicksPerYear below 1.
 func valid(p Params, in Step, d int64) bool {
-	return p.Shape >= Constant && p.Shape <= Logistic && p.Capacity >= 0 && p.Rate >= 0 && p.Refuge >= 0 && p.ScaleBP >= 0 &&
-		in.SeasonBP >= 0 && in.Stock >= 0 && in.Stock <= p.Capacity &&
+	return validParams(p) && in.SeasonBP >= 0 && in.Stock >= 0 && in.Stock <= p.Capacity &&
 		in.Carry >= 0 && in.Carry < d
+}
+
+// validParams reports whether the shape is known and the parameters are not negative.
+func validParams(p Params) bool {
+	return p.Shape >= Constant && p.Shape <= Logistic && p.Capacity >= 0 && p.Rate >= 0 && p.Refuge >= 0 && p.ScaleBP >= 0
 }
 
 // numerator returns the numerator of one tick over D (spec-resources.md 4.2).
