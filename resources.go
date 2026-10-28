@@ -160,7 +160,8 @@ type resourcesState struct {
 	// read by the audit. It is rebuilt from the stock at a restore.
 	base []int64
 	// snapStock and snapAbundance are the stock and the abundance of each
-	// endowment taken at P2.3: fixed for the tick (spec-resources.md 4.7.3, 5.2).
+	// endowment taken at P2.3: fixed for the tick (spec-resources.md 4.7.3, 5.2). They
+	// are zero until the first P2.3 and are not saved: every read is after P2.3 of a step.
 	snapStock, snapAbundance []int64
 	// requested, granted, drawn, denied and reduced count the tick for the event of
 	// 14.1: the units asked, the units the ration granted, the units the starts took,
@@ -264,7 +265,10 @@ func (r *resourcesState) deriveDraws(c *Config) {
 	}
 	for i := range c.Roles {
 		for _, id := range c.Roles[i].Recipes {
-			rc, _ := c.recipeID(id)
+			rc, ok := c.recipeID(id)
+			if !ok {
+				invariant("a role names the recipe " + id + " after validation")
+			}
 			for _, d := range r.drawsOf[rc] {
 				if !slices.Contains(r.roleRes[i], d.resource) {
 					r.roleRes[i] = append(r.roleRes[i], d.resource)
@@ -310,7 +314,7 @@ func (r *resourcesState) effectiveCapacity(cell int) int64 {
 
 // abundanceOf is the abundance factor of an endowment holding stock units.
 func (r *resourcesState) abundanceOf(cell int, stock int64) int64 {
-	a, ok := endowment.Abundance(r.knots[cell%r.resources], stock, r.effectiveCapacity(cell))
+	a, ok := endowment.Abundance(r.knots[int(r.resourceOf(cell))], stock, r.effectiveCapacity(cell))
 	if !ok {
 		invariant("the abundance of an endowment does not fit after validation")
 	}
@@ -318,6 +322,11 @@ func (r *resourcesState) abundanceOf(cell int, stock int64) int64 {
 }
 
 // cellOf is the dense index of an endowment.
+// regionOf and resourceOf are the inverse of cellOf.
+func (r *resourcesState) regionOf(cell int) RegionID { return RegionID(cell / r.resources) }
+
+func (r *resourcesState) resourceOf(cell int) ResourceID { return ResourceID(cell % r.resources) }
+
 func (r *resourcesState) cellOf(region RegionID, resource ResourceID) int {
 	return int(region)*r.resources + int(resource)
 }
@@ -389,7 +398,7 @@ func (w *World) snapshotEndowments() []EndowmentRow {
 	rows := make([]EndowmentRow, len(r.stock))
 	for cell := range rows {
 		rows[cell] = EndowmentRow{
-			Region: RegionID(cell / r.resources), Resource: ResourceID(cell % r.resources),
+			Region: r.regionOf(cell), Resource: r.resourceOf(cell),
 			Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.abundanceOf(cell, r.stock[cell]),
 			ExhaustedRun: r.exhaustedRun[cell], CapacityScaleBP: r.capScale[cell], RegenScaleBP: r.regenScale[cell],
 		}
@@ -422,8 +431,8 @@ func (w *World) saveResources(cw *codec.Writer) error {
 	cw.Count(n)
 	for cell := range r.capScale {
 		if r.shocked(cell) {
-			cw.U(uint64(cell / r.resources))
-			cw.U(uint64(cell % r.resources))
+			cw.U(uint64(r.regionOf(cell)))
+			cw.U(uint64(r.resourceOf(cell)))
 			cw.U(uint64(r.capScale[cell]))
 			cw.U(uint64(r.regenScale[cell]))
 		}

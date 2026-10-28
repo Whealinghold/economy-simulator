@@ -122,7 +122,7 @@ func (w *World) logRationed(cell int) {
 	ctx := context.Background()
 	if w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "draw rationed", slog.Int64(logkeys.Tick, w.Tick()),
-			slog.Int(logkeys.Region, cell/r.resources), slog.Int(logkeys.Resource, cell%r.resources),
+			slog.Int(logkeys.Region, int(r.regionOf(cell))), slog.Int(logkeys.Resource, int(r.resourceOf(cell))),
 			slog.Int64(logkeys.Quantity, r.requested[cell]), slog.Int64(logkeys.Short, short))
 	}
 }
@@ -255,7 +255,7 @@ func (w *World) p83Regen() {
 // regen applies one tick of regeneration to an endowment (internal/endowment.Regen)
 // and records the units kept.
 func (r *resourcesState) regen(cell, season int) {
-	res := cell % r.resources
+	res := int(r.resourceOf(cell))
 	m, ok := endowment.EffectiveScale(r.regenRow[cell], r.regenScale[cell])
 	if !ok {
 		invariant("the regeneration scale of an endowment does not fit after validation")
@@ -290,7 +290,7 @@ func (w *World) reportEndowment(cell int) {
 		ctx := context.Background()
 		if w.log.Enabled(ctx, slog.LevelWarn) {
 			w.log.LogAttrs(ctx, slog.LevelWarn, "endowment exhausted", slog.Int64(logkeys.Tick, w.Tick()),
-				slog.Int(logkeys.Region, cell/r.resources), slog.Int(logkeys.Resource, cell%r.resources),
+				slog.Int(logkeys.Region, int(r.regionOf(cell))), slog.Int(logkeys.Resource, int(r.resourceOf(cell))),
 				slog.Int64(logkeys.Stock, r.stock[cell]), slog.Int64(logkeys.Short, short))
 		}
 	}
@@ -298,7 +298,7 @@ func (w *World) reportEndowment(cell int) {
 		return
 	}
 	w.obs.deliver(EndowmentChanged{
-		Tick: w.Tick(), Region: RegionID(cell / r.resources), Resource: ResourceID(cell % r.resources),
+		Tick: w.Tick(), Region: r.regionOf(cell), Resource: r.resourceOf(cell),
 		Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.snapAbundance[cell],
 		Requested: r.requested[cell], Granted: r.granted[cell], Drawn: r.drawn[cell], Short: short,
 		Regenerated: r.regenerated[cell], Lost: r.lost[cell], AgentsDenied: r.denied[cell], AgentsReduced: r.reduced[cell],
@@ -367,7 +367,7 @@ func (w *World) deliverAdjusted(cell int, e EndowmentAdjusted) {
 		return
 	}
 	r := w.res
-	e.Tick, e.Region, e.Resource = w.Tick(), RegionID(cell/r.resources), ResourceID(cell%r.resources)
+	e.Tick, e.Region, e.Resource = w.Tick(), r.regionOf(cell), r.resourceOf(cell)
 	e.CapacityBP, e.RegenBP, e.StockAfter = r.capScale[cell], r.regenScale[cell], r.stock[cell]
 	w.obs.deliver(e)
 }
@@ -386,7 +386,7 @@ func (w *World) auditEndowments() error {
 		want := r.base[cell] - r.drawn[cell] + r.regenerated[cell] - r.lost[cell] + r.adjusted[cell]
 		if got != want || got < 0 || got > r.effectiveCapacity(cell) {
 			return auditFailure(w.Tick(), fmt.Errorf("endowment %q in %q: stock %d, want %d from %d at the last boundary, %d drawn, %d regenerated, %d lost and %d adjusted (difference %d), capacity %d",
-				w.cfg.Modules.Resources.Resources[cell%r.resources].ID, w.cfg.Regions[cell/r.resources].ID,
+				w.cfg.Modules.Resources.Resources[r.resourceOf(cell)].ID, w.cfg.Regions[r.regionOf(cell)].ID,
 				got, want, r.base[cell], r.drawn[cell], r.regenerated[cell], r.lost[cell], r.adjusted[cell], got-want, r.effectiveCapacity(cell)))
 		}
 	}
