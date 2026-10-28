@@ -3,6 +3,10 @@ package economysim
 import (
 	"cmp"
 	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/curve"
+	"github.com/Whealinghold/economy-sim/internal/endowment"
 )
 
 // This file is the resources module (spec-resources.md; architecture.md 2.10.1):
@@ -94,4 +98,205 @@ func resourceIndex(c *Config) map[string]*Resource {
 		}
 	}
 	return out
+}
+
+// resDraw is one draw of a recipe as the rules read it: the resource and the
+// units per execution.
+type resDraw struct {
+	resource ResourceID
+	quantity int64
+}
+
+// resRequest is the request of one agent on one endowment in a tick: recorded at
+// P2.5 with the executions the agent could start ignoring draws (spec-resources.md
+// 5.2 step 2), granted at P2.6 and read by the start at P2.7. cell is the dense
+// index of the endowment.
+type resRequest struct {
+	agent      AgentID
+	cell       int
+	executions int64
+	draw       int64
+	grant      int64
+}
+
+// resourcesState is the state of the module in a world, nil when the module is
+// off (spec-resources.md 3.2.2, 15). It holds what is derived from the
+// configuration (the capacity of each endowment, the abundance curves, the draws
+// of each recipe), the saved state (the stocks and the capacity scales) and the
+// scratch of a tick (the snapshot, the requests and the counts the events
+// report). Every array of endowments is dense, indexed region*resources+resource.
+type resourcesState struct {
+	regions, resources int
+	// capacity is the configured capacity of each endowment, the row's else the
+	// resource's; knots the abundance curve of each resource, nil for a flat one;
+	// drawsOf the draws of each recipe in ascending resource order; roleRes the
+	// resources the recipes of each role draw on, ascending. All are derived from
+	// the configuration and never saved.
+	capacity []int64
+	knots    [][]curve.Knot
+	drawsOf  [][]resDraw
+	roleRes  [][]ResourceID
+	// stock is the units in each endowment and capScale the capacity scale of its
+	// shock slot in basis points, 10 000 by default. Both are saved.
+	stock    []int64
+	capScale []int64
+	// snapStock and snapAbundance are the stock and the abundance of each
+	// endowment taken at P2.3: fixed for the tick (spec-resources.md 4.7.3, 5.2).
+	snapStock, snapAbundance []int64
+	// requested, granted, drawn, denied and reduced count the tick for the event of
+	// 14.1: the units asked, the units the ration granted, the units the starts took,
+	// and the requests granted 0 and granted less than asked. They are kept whether
+	// or not an observer is attached and cleared at P8.6.
+	requested, granted, drawn, denied, reduced []int64
+	// reqs are the requests of the tick in the order P2.5 made them, order the
+	// indexes of reqs sorted by endowment then agent, ration the requests of one
+	// endowment as internal/endowment takes them and grants its result by agent
+	// slot. All keep their capacity from tick to tick.
+	reqs   []resRequest
+	order  []int
+	ration []endowment.Request
+	grants []int64
+}
+
+// newResourcesState builds the state of the module for a canonical, validated
+// configuration, or returns nil when the module is off. Each stock starts at the
+// row's Initial, else the capacity times InitialBP over 10 000 truncated
+// (spec-resources.md 3.3, FR-RES-006); a pair with no capacity has none.
+func newResourcesState(c *Config) *resourcesState {
+	m := c.Modules.Resources
+	if m == nil {
+		return nil
+	}
+	regions, resources := len(c.Regions), len(m.Resources)
+	cells := regions * resources
+	r := &resourcesState{
+		regions: regions, resources: resources,
+		capacity: make([]int64, cells), stock: make([]int64, cells), capScale: make([]int64, cells),
+		snapStock: make([]int64, cells), snapAbundance: make([]int64, cells),
+		requested: make([]int64, cells), granted: make([]int64, cells), drawn: make([]int64, cells),
+		denied: make([]int64, cells), reduced: make([]int64, cells),
+		knots:   make([][]curve.Knot, resources),
+		drawsOf: make([][]resDraw, len(c.Recipes)),
+		roleRes: make([][]ResourceID, len(c.Roles)),
+	}
+	for i := range m.Resources {
+		r.knots[i] = curveKnots(m.Resources[i].Abundance)
+	}
+	rows := make(map[[2]string]*Endowment, len(m.Endowments))
+	for i := range m.Endowments {
+		rows[[2]string{m.Endowments[i].Region, m.Endowments[i].Resource}] = &m.Endowments[i]
+	}
+	for g := range regions {
+		for j := range m.Resources {
+			r.start(g*resources+j, &m.Resources[j], rows[[2]string{c.Regions[g].ID, m.Resources[j].ID}])
+		}
+	}
+	r.deriveDraws(c)
+	return r
+}
+
+// deriveDraws sets the draws of each recipe, in ascending resource order, and the
+// resources each role's recipes draw on.
+func (r *resourcesState) deriveDraws(c *Config) {
+	for i := range c.Recipes {
+		for _, d := range c.Recipes[i].Draws {
+			id, ok := c.resourceID(d.Resource)
+			if !ok {
+				invariant("a draw names the resource " + d.Resource + " after validation")
+			}
+			r.drawsOf[i] = append(r.drawsOf[i], resDraw{resource: id, quantity: int64(d.Quantity)})
+		}
+	}
+	for i := range c.Roles {
+		for _, id := range c.Roles[i].Recipes {
+			rc, _ := c.recipeID(id)
+			for _, d := range r.drawsOf[rc] {
+				if !slices.Contains(r.roleRes[i], d.resource) {
+					r.roleRes[i] = append(r.roleRes[i], d.resource)
+				}
+			}
+		}
+		slices.Sort(r.roleRes[i])
+	}
+}
+
+// start sets the capacity, the scale and the starting stock of one endowment from
+// its resource and its row, which is nil when it has none.
+func (r *resourcesState) start(cell int, res *Resource, row *Endowment) {
+	capacity, initial, hasInitial := res.Capacity, int64(0), false
+	if row != nil {
+		if row.HasCapacity {
+			capacity = row.Capacity
+		}
+		initial, hasInitial = row.Initial, row.HasInitial
+	}
+	r.capacity[cell], r.capScale[cell] = capacity, wholeBP
+	if !hasInitial {
+		var ok bool
+		if initial, ok = checked.MulDiv(capacity, res.InitialBP, wholeBP); !ok {
+			invariant("the starting stock of an endowment does not fit after validation")
+		}
+	}
+	r.stock[cell] = min(initial, r.effectiveCapacity(cell))
+}
+
+// effectiveCapacity is the capacity of an endowment after its capacity scale
+// (spec-resources.md 3.4); the facility layer is 0 while no module adds one.
+func (r *resourcesState) effectiveCapacity(cell int) int64 {
+	c, ok := endowment.EffectiveCapacity(r.capacity[cell], r.capScale[cell], 0, MaxEndowment)
+	if !ok {
+		invariant("the effective capacity of an endowment does not fit after validation")
+	}
+	return c
+}
+
+// abundanceOf is the abundance factor of an endowment holding stock units.
+func (r *resourcesState) abundanceOf(cell int, stock int64) int64 {
+	a, ok := endowment.Abundance(r.knots[cell%r.resources], stock, r.effectiveCapacity(cell))
+	if !ok {
+		invariant("the abundance of an endowment does not fit after validation")
+	}
+	return a
+}
+
+// cellOf is the dense index of an endowment.
+func (r *resourcesState) cellOf(region RegionID, resource ResourceID) int {
+	return int(region)*r.resources + int(resource)
+}
+
+// recipeAbundance is the abundance of a recipe in a region: the least over its
+// draws (spec-resources.md 4.7.4), 10 000 for a recipe with none. live reads the
+// stock now, as the cost anchors of P1.2 do; otherwise the snapshot of P2.3.
+func (r *resourcesState) recipeAbundance(region RegionID, recipe RecipeID, live bool) int64 {
+	least := int64(wholeBP)
+	for _, d := range r.drawsOf[recipe] {
+		cell := r.cellOf(region, d.resource)
+		a := r.snapAbundance[cell]
+		if live {
+			a = r.abundanceOf(cell, r.stock[cell])
+		}
+		least = min(least, a)
+	}
+	return least
+}
+
+// clearTick zeroes the counts of the tick (P8.6): the requests, the grants, the
+// units drawn and the requests cut. The saved state and the snapshot stay.
+func (r *resourcesState) clearTick() {
+	clear(r.requested)
+	clear(r.granted)
+	clear(r.drawn)
+	clear(r.denied)
+	clear(r.reduced)
+	r.reqs = r.reqs[:0]
+}
+
+// resourceID returns the typed ID of a resource, its index in the canonical
+// Resources (spec-resources.md 3.2.3). The receiver must already be canonical.
+func (c Config) resourceID(id string) (ResourceID, bool) {
+	if c.Modules.Resources == nil {
+		return 0, false
+	}
+	i, ok := slices.BinarySearchFunc(c.Modules.Resources.Resources, id, func(e Resource, t string) int { return cmp.Compare(e.ID, t) })
+	return ResourceID(i), ok
 }

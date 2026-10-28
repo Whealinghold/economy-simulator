@@ -210,6 +210,9 @@ const (
 	ReasonNoTool Reason = "no_tool"
 	// ReasonNoInput is a start for which an input is not available.
 	ReasonNoInput Reason = "no_input"
+	// ReasonNoEndowment is a start for which the ration granted no execution of
+	// a draw, or the live stock does not cover one (resources module).
+	ReasonNoEndowment Reason = "no_endowment"
 )
 
 // The reasons of the "work declined" Debug line that no start refusal covers
@@ -586,6 +589,9 @@ type RecipeRefused struct {
 	NoTool int64
 	// NoInput is the households for which an input was not available.
 	NoInput int64
+	// NoEndowment is the households for which the ration granted no execution of
+	// a draw (resources module).
+	NoEndowment int64
 }
 
 // RecipeAbandoned is emitted when a job ends without output.

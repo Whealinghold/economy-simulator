@@ -410,10 +410,27 @@ type AgentView struct {
 	// units of each want this tick; nil when the demand module is off or the
 	// role has no ladder (spec-demand.md 4.4).
 	Wants []WantView
+	// Endowments are the endowments of the agent's own region that its role's
+	// recipes draw on, sorted by resource; nil when the resources module is off or
+	// the role draws on none (spec-resources.md 5.5.1). No other region's endowment
+	// is in a view.
+	Endowments []EndowmentView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).
 	scratch *viewScratch
+}
+
+// EndowmentView is one endowment of the agent's region as the agent sees it
+// (spec-resources.md 5.5.1): local physical state, free like the local price.
+type EndowmentView struct {
+	// Resource is the resource.
+	Resource ResourceID
+	// Stock is the units available now, Capacity the effective capacity.
+	Stock, Capacity int64
+	// AbundanceBP is the yield factor of the stock at the start of the tick, in
+	// basis points.
+	AbundanceBP int64
 }
 
 // WantView is one want of the agent's ladder at this tick, computed by the

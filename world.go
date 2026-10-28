@@ -82,6 +82,9 @@ type World struct {
 	// money is the state of the money supply module, nil when it is off
 	// (moneyflow.go).
 	money *moneyFlows
+	// res is the state of the resources module, nil when it is off
+	// (resources.go).
+	res *resourcesState
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass
@@ -418,6 +421,9 @@ func (w *World) endStep(err error) error {
 		w.ledger.EndTick()
 		for slot := range w.welfare.slots {
 			w.welfare.reset(slot)
+		}
+		if w.res != nil {
+			w.res.clearTick()
 		}
 	}
 	w.stepping = false

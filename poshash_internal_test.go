@@ -355,6 +355,9 @@ type replayRow struct {
 // demandOn is the guard of the rows of the demand module (D177).
 func demandOn(w *World) bool { return w.demand != nil }
 
+// resourcesOn is the guard of the rows of the resources module (D177).
+func resourcesOn(w *World) bool { return w.res != nil }
+
 // moneyOn is the guard of the row of the money supply module: an off world
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
@@ -380,7 +383,9 @@ var replayRows = []replayRow{
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
+	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.5", run: (*World).p25Work},
+	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.2", run: (*World).p32Trade},

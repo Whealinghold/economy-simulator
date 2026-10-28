@@ -99,7 +99,6 @@ var notBuiltFields = []string{
 	"WorldCreated.Jurisdictions", // polity module, POL 10.7
 	"AgentSpawned.StoresLocked",  // storage module, STO 14.1
 	"EntryLimited.RoleCeiling",   // settlements module, SET 6.4
-	"RecipeRefused.NoEndowment",  // resources module, RES 14.1 (plan 2-9 phase 5 appends the count)
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
@@ -695,6 +694,7 @@ func TestConstants_Values(t *testing.T) {
 	for _, r := range productionReasons {
 		owner[string(r.got)] = "doc/specs/spec-production.md"
 	}
+	owner[string(economysim.ReasonNoEndowment)] = "doc/specs/spec-resources.md"
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
 	}
@@ -778,9 +778,13 @@ func TestConstants_Values(t *testing.T) {
 	if !slices.Equal(notInSlice, deferredProduction) {
 		t.Errorf("reasons marked no in spec-production.md 4.2.1 = %v, deferredProduction = %v", notInSlice, deferredProduction)
 	}
+	// A row marked no that a module has built is a constant of the root: the module's
+	// change names it here and the constant is checked below (no_endowment: RES 5.3).
+	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment}
 	for _, d := range deferredProduction {
-		if _, ok := owner[d]; ok {
-			t.Errorf("deferredProduction lists %q, which is declared: delete the stale entry", d)
+		_, declared := owner[d]
+		if built := slices.Contains(builtByModule, economysim.Reason(d)); declared != built {
+			t.Errorf("deferredProduction lists %q: declared = %v, built by a module = %v, want them equal (a stale entry, or a module's reason with no constant)", d, declared, built)
 		}
 	}
 	seen := map[string]bool{}

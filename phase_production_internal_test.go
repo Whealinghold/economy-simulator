@@ -172,10 +172,13 @@ func replayTo41(w *World) error {
 	}
 	w.p12Anchors()
 	w.p21Complete()
-	for _, f := range []func() error{w.p25Work, w.p27Start} {
-		if err := f(); err != nil {
-			return err
-		}
+	w.p23Snapshot()
+	if err := w.p25Work(); err != nil {
+		return err
+	}
+	w.p26Ration()
+	if err := w.p27Start(); err != nil {
+		return err
 	}
 	w.p28aHalted()
 	for _, f := range []func() error{w.p32Trade, w.p34Estates, w.p41Clear} {

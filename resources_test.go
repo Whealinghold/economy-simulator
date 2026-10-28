@@ -525,3 +525,24 @@ func FuzzValidateResources(f *testing.F) {
 		}
 	})
 }
+
+// TestWarnings_NoComparativeAdvantagePacks verifies the rule on the packs of
+// testdata/chains (spec-resources.md 7.4.1): the five-region pack passes it, with
+// the cross ratio of grow_staple and cut_fuel between north and centre of 1.46
+// (spec-reference-chain.md 4.4.4), and the packs of fewer than two regions or of
+// no sited pair raise nothing. A pack that raised it would be told to its author
+// as a table of scaled copies.
+//
+// Requirement: FR-RES-036
+func TestWarnings_NoComparativeAdvantagePacks(t *testing.T) {
+	t.Parallel()
+	for name, layers := range packLayers {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cfg := loadPack(t, layers...)
+			if got := warned(cfg.Warnings(), "no_comparative_advantage"); len(got) != 0 {
+				t.Errorf("Warnings(%s) raised no_comparative_advantage at %v, want none", name, got)
+			}
+		})
+	}
+}

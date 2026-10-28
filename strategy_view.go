@@ -28,6 +28,7 @@ type viewScratch struct {
 	inputs      []RecipeLine
 	outputs     []RecipeOutput
 	tools       []RecipeTool
+	endowments  []EndowmentView
 
 	// The copy of the agent's pending directive (D97).
 	dirJob      JobRequest
@@ -215,13 +216,15 @@ func (sc *viewScratch) fillRecipes(v *AgentView, row *roleRow, a *agent, c *view
 		// Untested: the yield, shock and profile bounds of validation keep the
 		// effective yield in range, and an unknown account is refused in fillCore
 		// before this loop, so neither error below is reachable from a built world.
-		e, has, ok := c.yields.effective(c.shocks, region, id, c.moment.Season, cr.Sited)
+		e, has, ok := c.yields.effectiveAt(c.shocks, region, id, c.moment.Season, cr.Sited, c.prod.abundance(region, id, false))
 		if !ok {
 			return fmt.Errorf("fill view of agent %d: effective yield of recipe %d does not fit", a.id, id)
 		}
-		k0, reason, err := c.prod.maxExecutions(c.l, &startReq{
-			recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has,
-		})
+		q := startReq{recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has}
+		if c.prod.res != nil {
+			q.drawCap, q.capped = c.prod.res.viewCap(region, id)
+		}
+		k0, reason, err := c.prod.maxExecutions(c.l, &q)
 		if err != nil {
 			return fmt.Errorf("fill view of agent %d: executions of recipe %d: %w", a.id, id, err)
 		}

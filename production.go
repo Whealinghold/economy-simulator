@@ -154,8 +154,16 @@ func (s *yieldShocks) ordered() []shockEntry { return s.entries }
 // which are neutral (10 000) in the slice. ok is false when a step does not
 // fit int64, which validation of the bounds makes unreachable.
 func (t *yieldTable) effective(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool) (e int64, has, ok bool) {
+	return t.effectiveAt(sh, region, recipe, season, sited, production.BP)
+}
+
+// effectiveAt is effective with the abundance term of a recipe that draws on an
+// endowment, in basis points (spec-resources.md 4.7, spec-production.md 6.3). The
+// callers that read a stock pass the abundance of their moment; effective is the
+// neutral term and is what the warm start and the solver read.
+func (t *yieldTable) effectiveAt(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance int64) (e int64, has, ok bool) {
 	site, has := t.site(region, recipe, season, sited)
-	e, ok = production.Effective(site, sh.factor(region, recipe), production.BP, production.BP, production.BP)
+	e, ok = production.Effective(site, sh.factor(region, recipe), production.BP, production.BP, abundance)
 	return e, has, ok
 }
 
@@ -237,6 +245,9 @@ func admit(roleRecipes []RecipeID, recipe RecipeID) Reason {
 type productionScratch struct {
 	cfg     *Config
 	recipes *recipeTable
+	// res is the resources module's state, nil when it is off: the abundance of a
+	// recipe that draws is read through it (abundance).
+	res *resourcesState
 
 	terms   []production.Term
 	wears   []production.Wear
@@ -283,8 +294,8 @@ func newProductionScratch(cfg *Config, rt *recipeTable) *productionScratch {
 		wears:   make([]production.Wear, 0, tools),
 		inputs:  make([]ledger.Line, 0, items),
 		outputs: make([]ledger.Line, 0, outs),
-		// The yield pair, a limit per tool and one per input.
-		limits: make([]production.Limit, 0, 1+tools+items),
+		// The yield pair, a limit per tool, one per input and the draws'.
+		limits: make([]production.Limit, 0, 2+tools+items),
 		anchor: make([]production.Recipe, 0, len(rt.rows)),
 		row:    make([]int64, len(cfg.Commodities)),
 		aTerms: make([]production.Term, 0, allItems),
@@ -309,6 +320,7 @@ const (
 	limitNoSite
 	limitNoTool
 	limitNoInput
+	limitNoEndowment
 )
 
 func limitReason(code int) Reason {
@@ -321,6 +333,8 @@ func limitReason(code int) Reason {
 		return ReasonNoTool
 	case limitNoInput:
 		return ReasonNoInput
+	case limitNoEndowment:
+		return ReasonNoEndowment
 	}
 	return ""
 }
@@ -338,6 +352,12 @@ type startReq struct {
 	maximum    int64
 	effective  int64
 	hasProfile bool
+	// capped says the recipe draws on an endowment and drawCap is the most
+	// executions the draws allow: the least over them of the grant of the ration
+	// and the live stock over the draw (spec-resources.md 5.2, 5.4). A request that
+	// admission or a view makes ignores the grant and leaves it false.
+	capped  bool
+	drawCap int64
 }
 
 // startResult is what a start tells the world. reason is set only when k is 0
@@ -390,7 +410,21 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 		}
 		s.limits = append(s.limits, production.Limit{Cap: production.Cap(held-reserved, int64(in.quantity)), Reason: limitNoInput})
 	}
+	if q.capped {
+		s.limits = append(s.limits, production.Limit{Cap: q.drawCap, Reason: limitNoEndowment})
+	}
 	return nil
+}
+
+// abundance is the abundance factor of a recipe in a region, in basis points: 10
+// 000 with the module off and for a recipe with no draw, else the least over its
+// draws (spec-resources.md 4.7.4), read from the live stock when live is set and
+// from the snapshot of the tick otherwise.
+func (s *productionScratch) abundance(region RegionID, recipe RecipeID, live bool) int64 {
+	if s.res == nil {
+		return production.BP
+	}
+	return s.res.recipeAbundance(region, recipe, live)
 }
 
 // maxExecutions is the read of the limit (spec-production.md 4.2): the

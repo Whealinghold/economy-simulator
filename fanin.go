@@ -19,6 +19,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 	if w.demand != nil {
 		w.fillWants(v, a)
 	}
+	if w.res != nil {
+		w.fillEndowments(v, a)
+	}
 	return nil
 }
 
