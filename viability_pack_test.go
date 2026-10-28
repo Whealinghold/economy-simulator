@@ -251,6 +251,11 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 	var notViable []string
 	loaded := 0
 	for _, f := range files {
+		// The five-region overlays of the resources module name regions that pack one
+		// lacks; TestOverlays_ResourcesSizedFromTheSolver validates them over five.
+		if strings.HasSuffix(f, "-five.toml") || strings.HasSuffix(f, "-five-binding.toml") {
+			continue
+		}
 		cfg, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml", f)
 		if err != nil {
 			continue // names a module that is not built yet
