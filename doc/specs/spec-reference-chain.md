@@ -1861,7 +1861,8 @@ pivots = 0
 unpriced = []               # UnpricedCommodities and UnpricedWages
 warnings = []               # [{ rule = "...", path = "..." }], in the order of FR-CFG-012
 income_bp = []              # per group, IncomeBP of spec-viability.md 5.2 (FR-VIA-060); a group
-                            # without one is listed with the reason (FR-REF-041)
+                            # without one is listed with the reason (FR-REF-041); pending: the
+                            # files carry no income_bp until the data is rebalanced (N-325)
 ```
 
 The prototype's values for the first rows are in 5; the Go run replaces them and the file
@@ -2089,8 +2090,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S83 of 7.6, 7.9 and 7.11, S91 to S165 of 7.12, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The configuration documents of `testdata/chains/` (not the files of `expected/`, `bands/` and `scripts/`) MUST be the seed corpus of the loader fuzz test. |
-| FR-REF-041 | Every group of every variant on the base except `second` (4.4.7, unbalanced by design) MUST have a static `IncomeBP` (FR-VIA-060) of at least 8 000, and the highest of a pack MUST be at most 1.5 times its lowest; a group without an `IncomeBP` (no labour share, as in `famine`; a recipe shared by several roles; a thin gatherer group named in `expected/<pack>.toml`) MUST be listed there with its reason, and a test over the solver MUST check every pack. |
-| FR-REF-042 | The variant `one-demand` (the pack that names the demand module) MUST pass the predicate of X4 (7.4) from its warm start over 1 095 ticks on seeds 1 to 4, with the invariants of 7.5 asserted every tick; the word "stable" is not used of the pack (`spec-stylised-facts.md` 7.3.2). `one` carries no such requirement: a closed upkeep-only pack with `lambda*` above 1 is a glut (`spec-viability.md` 4.7). **Status: not met.** `one-demand` ends at 0 households by tick 1 095 on seeds 1 to 4, unchanged and with the rebalanced yields of plan 2-8 M1 (N-325); a pack that survives is a new work package, and this requirement stays unmet until it lands. |
+| FR-REF-041 | Every group of every variant on the base except `second` (4.4.7, unbalanced by design) MUST have a static `IncomeBP` (FR-VIA-060) of at least 8 000, and the highest of a pack MUST be at most 1.5 times its lowest; a group without an `IncomeBP` (no labour share, as in `famine`; a recipe shared by several roles; a thin gatherer group named in `expected/<pack>.toml`) MUST be listed there with its reason, and a test over the solver MUST check every pack. **Status: not met.** The test `TestPacks_IncomeBalance` is skipped and the `expected/` files carry no `income_bp` yet, because the unchanged packs fail the gate (N-325); the requirement takes effect when the pack data is rebalanced. |
+| FR-REF-042 | The variant `one-demand` (the pack that names the demand module) MUST pass the predicate of X4 (7.4) from its warm start over 1 095 ticks on seeds 1 to 4, with the invariants of 7.5 asserted every tick; the word "stable" is not used of the pack (`spec-stylised-facts.md` 7.3.2). `one` carries no such requirement: a closed upkeep-only pack with `lambda*` above 1 is a glut (`spec-viability.md` 4.7). **Status: not met.** `one-demand` ends at 0 households by tick 1 095 on seeds 1 to 4, unchanged and with the rebalanced yields of plan 2-8 M1 (N-325); a pack that survives is a new work package, and this requirement stays unmet until it lands. No test runs `one-demand` against the predicate yet: `TestScenarioHelpers_StablePredicate` checks only the predicate helper. |
 
 ### Non-functional
 
