@@ -341,3 +341,93 @@ func TestPeakExceeds(t *testing.T) {
 		t.Errorf("PeakExceeds with a flat profile = true, want false: 3 * 365 * 8/10 = 876 against 1 000 + 20 * 1 000 / 365 = 1 054")
 	}
 }
+
+// TestPeakExceeds_Boundaries verifies the comparison and the window arithmetic at
+// their edges, on a year of 100 ticks.
+//
+// Arithmetic: refill, capacity 2 000, plan share 5 000 (S_p = 1 000), rate 10 000
+// a year. A flat profile over a window of 25 ticks regrows 1 000 * 25/100 = 250,
+// so 1 250 is held. One start of one a year drawing 12.5 a tick draws 12.5 * 100 =
+// 1 250: equal, so no peak; 12.51 draws 1 251: a peak. With a profile of 50 ticks
+// at 0 and 50 at 10 000, the window [25, 75) has 25 ticks at 0 and 25 at 10 000,
+// the same 250. A profile of 100 ticks at 20 000 gives a window of 25 ticks 500.
+//
+// Requirement: FR-RES-040
+func TestPeakExceeds_Boundaries(t *testing.T) {
+	t.Parallel()
+	base := steady.Endow{Shape: steady.Refill, Capacity: 2000, Rate: 10000, PlanShareBP: 5000, ScaleBP: 10000}
+	half := base
+	half.Seasons = []steady.Run{{Length: 50, FactorBP: 0}, {Length: 50, FactorBP: 10000}}
+	double := base
+	double.Seasons = []steady.Run{{Length: 100, FactorBP: 20000}}
+	tests := []struct {
+		name    string
+		e       steady.Endow
+		w       steady.Window
+		perTick steady.Frac
+		want    bool
+	}{
+		{"flat, equal to the stock held", base, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(25, 2), false},
+		{"flat, a hundredth above", base, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(1251, 100), true},
+		{"profile, equal", half, steady.Window{Start: 25, End: 75, Starts: 1}, steady.Rat(25, 2), false},
+		{"profile, above", half, steady.Window{Start: 25, End: 75, Starts: 1}, steady.Rat(1251, 100), true},
+		{"double profile, equal to 1 500", double, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(15, 1), false},
+		{"double profile, above 1 500", double, steady.Window{Start: 0, End: 25, Starts: 1}, steady.Rat(1501, 100), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tt.e.PeakExceeds(100, tt.w, 1, tt.perTick); got != tt.want {
+				t.Errorf("PeakExceeds(100, %+v, 1, %v) = %v, want %v", tt.w, tt.perTick, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestPhi_ConstantWithoutHorizon verifies that a constant stock with no horizon
+// adds no reserve term and does not divide by it: only its flow.
+//
+// Requirement: FR-RES-039
+func TestPhi_ConstantWithoutHorizon(t *testing.T) {
+	t.Parallel()
+	e := steady.Endow{Shape: steady.Constant, Rate: 100, Stock: 5000, ScaleBP: 10000}
+	if got := e.Phi(10); !ratIs(got, 10, 1) {
+		t.Errorf("Phi(10) of %+v = %v, want 10: 100 a year over 10 ticks", e, got)
+	}
+}
+
+// TestBuild_ResourceBoundaries verifies that the edges of a resource row are
+// accepted and one past them is not: zero quantities, a plan share of 10 000, a
+// horizon of 1 and a shape at either end.
+//
+// Requirement: FR-RES-039
+func TestBuild_ResourceBoundaries(t *testing.T) {
+	t.Parallel()
+	ok := steady.Endow{Shape: steady.Refill, Capacity: 100, Rate: 6000, PlanShareBP: 5000, ScaleBP: 10000}
+	tests := []struct {
+		name   string
+		mutate func(e *steady.Endow)
+		bad    bool
+	}{
+		{"all zero", func(e *steady.Endow) { *e = steady.Endow{Shape: steady.Refill} }, false},
+		{"plan share of one", func(e *steady.Endow) { e.PlanShareBP = 10000 }, false},
+		{"logistic with no horizon", func(e *steady.Endow) { e.Shape = steady.Logistic }, false},
+		{"constant with a horizon of 1", func(e *steady.Endow) { e.Shape, e.Horizon = steady.Constant, 1 }, false},
+		{"negative stock", func(e *steady.Endow) { e.Stock = -1 }, true},
+		{"negative rate", func(e *steady.Endow) { e.Rate = -1 }, true},
+		{"negative scale", func(e *steady.Endow) { e.ScaleBP = -1 }, true},
+		{"negative plan share", func(e *steady.Endow) { e.PlanShareBP = -1 }, true},
+		{"negative shape", func(e *steady.Endow) { e.Shape = -1 }, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := ok
+			tt.mutate(&e)
+			_, _, err := steady.Build(resourceModel(e))
+			if got := errors.Is(err, steady.ErrBadProgramme); got != tt.bad || (!tt.bad && err != nil) {
+				t.Errorf("Build(%+v) error = %v, want bad = %v", e, err, tt.bad)
+			}
+		})
+	}
+}
