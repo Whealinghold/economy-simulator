@@ -1,9 +1,13 @@
 package economysim
 
 import (
+	"cmp"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ordering"
 )
 
 // oreMill is millConfig with the resources module on: one finite stock "ore" in
@@ -46,8 +50,17 @@ func TestStart_GrantCapsExecutions(t *testing.T) {
 	t.Parallel()
 	obs := &evLog{}
 	w := newMill(t, oreMill(5, 10, 20), WithObserver(obs))
+	// The six agents with the smallest keys of the tick get the leftover executions
+	// (all remainders are equal): agents 1 to 10, the key of (tick 0, agent).
+	byKey := []AgentID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	slices.SortFunc(byKey, func(a, b AgentID) int { return cmp.Compare(ordering.Key(0, int64(a)), ordering.Key(0, int64(b))) })
 	tickInspecting(t, w, func() {
 		r := w.res
+		for _, q := range r.reqs {
+			if won := slices.Contains(byKey[:6], q.agent); (q.grant == 1) != won {
+				t.Errorf("agent %d: grant = %d, want %d (the six smallest keys win)", q.agent, q.grant, map[bool]int64{true: 1, false: 0}[won])
+			}
+		}
 		got := []int64{r.requested[0], r.granted[0], r.drawn[0], r.denied[0], r.reduced[0]}
 		want := []int64{30, 18, 18, 4, 0}
 		for i := range want {
@@ -59,6 +72,11 @@ func TestStart_GrantCapsExecutions(t *testing.T) {
 	})
 	if n := startedBy(w); n != 6 {
 		t.Errorf("agents with a job = %d, want 6 (the ration granted 6 executions)", n)
+	}
+	for _, id := range byKey[:6] {
+		if !w.agents[id].hasJob() {
+			t.Errorf("agent %d has no job, want one: the ration, not the rotation, decides who starts", id)
+		}
 	}
 	if got := w.Endowment(0, 0); got != 2 {
 		t.Errorf("Endowment(home, ore) = %d, want 2 (20 - 6 * 3)", got)
