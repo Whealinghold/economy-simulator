@@ -2,9 +2,11 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/curve"
 	"github.com/Whealinghold/economy-sim/internal/endowment"
 )
@@ -393,4 +395,92 @@ func (w *World) snapshotEndowments() []EndowmentRow {
 		}
 	}
 	return rows
+}
+
+// saveResources is tag 15 (spec-resources.md 15, spec-checkpoint.md 4.2): for each
+// endowment with a configured capacity above 0, in (RegionID, ResourceID) order, the
+// stock, the carry and the run of ticks with units short (a depleted stock is saved as
+// 0, not restored as the starting stock); then the shock scales that are not both
+// 10 000 as a count and (region, resource, capacity scale, regeneration scale)
+// in the same order. The effective values, the snapshot, the grants and the counts of
+// a tick are derived or cleared and are not saved.
+func (w *World) saveResources(cw *codec.Writer) error {
+	r := w.res
+	for cell, c := range r.capacity {
+		if c > 0 {
+			cw.U(uint64(r.stock[cell]))
+			cw.U(uint64(r.carry[cell]))
+			cw.U(uint64(r.exhaustedRun[cell]))
+		}
+	}
+	n := 0
+	for cell := range r.capScale {
+		if r.shocked(cell) {
+			n++
+		}
+	}
+	cw.Count(n)
+	for cell := range r.capScale {
+		if r.shocked(cell) {
+			cw.U(uint64(cell / r.resources))
+			cw.U(uint64(cell % r.resources))
+			cw.U(uint64(r.capScale[cell]))
+			cw.U(uint64(r.regenScale[cell]))
+		}
+	}
+	return nil
+}
+
+// shocked reports whether either shock scale of an endowment is not the default.
+func (r *resourcesState) shocked(cell int) bool {
+	return r.capScale[cell] != wholeBP || r.regenScale[cell] != wholeBP
+}
+
+// loadResources reads tag 15: each stock at most MaxEndowment, each carry below
+// D = 10^12 * TicksPerYear, each run at most the ticks elapsed, then the shock rows
+// with the key strictly ascending, each scale at most MaxShockBP and a row not both
+// default. That a stock lies inside its effective capacity, which the scales
+// decide, is the cross-check (resourcesCross). The base of the identity is the
+// stock restored.
+func (w *World) loadResources(_ *restoreCtx, r *codec.Reader) error {
+	s := w.res
+	d := 1_000_000_000_000 * s.ticksPerYear
+	for cell, c := range s.capacity {
+		if c > 0 {
+			s.stock[cell] = r.Bounded("endowment stock", MaxEndowment)
+			s.carry[cell] = r.Bounded("endowment carry", d-1)
+			s.exhaustedRun[cell] = r.Bounded("endowment run", w.Tick())
+		}
+	}
+	prev := -1
+	for i := range r.Count(4) {
+		region, resource := r.Index(uint64(s.regions)), r.Index(uint64(s.resources))
+		capacity, regen := r.Bounded("capacity scale", MaxShockBP), r.Bounded("regeneration scale", MaxShockBP)
+		cell := int(region)*s.resources + int(resource)
+		switch {
+		case r.Err() != nil:
+			return nil
+		case cell <= prev:
+			r.Failf("scale row %d names endowment %d after endowment %d, want strictly ascending", i, cell, prev)
+			return nil
+		case capacity == wholeBP && regen == wholeBP:
+			r.Failf("scale row %d names endowment %d with both scales at the default, which is not saved", i, cell)
+			return nil
+		}
+		prev, s.capScale[cell], s.regenScale[cell] = cell, capacity, regen
+	}
+	copy(s.base, s.stock)
+	return nil
+}
+
+// resourcesCross is the module's part of the cross-checks of a restore: every stock
+// lies in [0, effective capacity] under the scales just read.
+func (w *World) resourcesCross() error {
+	r := w.res
+	for cell, st := range r.stock {
+		if c := r.effectiveCapacity(cell); st > c {
+			return fmt.Errorf("%w: endowment %d holds %d units, above its effective capacity %d", ErrCheckpointCorrupt, cell, st, c)
+		}
+	}
+	return nil
 }
