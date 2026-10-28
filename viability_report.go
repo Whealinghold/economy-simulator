@@ -428,9 +428,7 @@ func (rc *regionCtx) census() {
 // says so; an overflow of int64 is an absent figure, never a wrapped one
 // (architecture.md 3.5).
 func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool) {
-	// No labour is an absent figure, not a group paid nothing.
-	if rc.wage < 1 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 ||
-		labour.Cmp(steady.Rat(0, 1)) <= 0 || rc.sharesRecipe(gc) {
+	if rc.noIncomeBase(gc, labour) {
 		return 0, false
 	}
 	upkeep, upOK := rc.upkeepCost(gc)
@@ -443,6 +441,14 @@ func (rc *regionCtx) income(gc *groupCtx, labour steady.Frac) (bp int64, ok bool
 		return 0, false
 	}
 	return labour.Mul(num, den).Round(0, maxInt64)
+}
+
+// noIncomeBase reports a group with no income figure by construction: no wage,
+// no labour share, no households, no active recipe, no labour (an absent
+// figure, not a group paid nothing) or a recipe shared with another role.
+func (rc *regionCtx) noIncomeBase(gc *groupCtx, labour steady.Frac) bool {
+	return rc.wage < 1 || !rc.p.out.HasLabourShare || gc.g.Households == 0 || len(gc.active) == 0 ||
+		labour.Cmp(steady.Rat(0, 1)) <= 0 || rc.sharesRecipe(gc)
 }
 
 // sharesRecipe reports an active recipe of the group on the lists of several
