@@ -205,18 +205,24 @@ func (v *validator) endowmentRows(base []string, m *Resources) {
 			v.rep.add(ErrDuplicateID, path(eb, "resource"), e.Resource, "")
 		}
 		seen[key] = true
-		if e.HasCapacity {
-			if v.inRange(path(eb, "capacity"), e.Capacity, 0, MaxEndowment) {
-				v.shockProduct(path(eb, "capacity"), e.Capacity)
-			}
+		v.endowmentValues(eb, e, res)
+	}
+}
+
+// endowmentValues checks the replaced values of one endowment row: its capacity,
+// its regeneration scale and its starting stock against the row's capacity.
+func (v *validator) endowmentValues(eb []string, e *Endowment, res *Resource) {
+	if e.HasCapacity {
+		if v.inRange(path(eb, "capacity"), e.Capacity, 0, MaxEndowment) {
+			v.shockProduct(path(eb, "capacity"), e.Capacity)
 		}
-		if e.HasRegenScale {
-			v.inRange(path(eb, "regen_scale_bp"), e.RegenScaleBP, 0, MaxRegenScaleBP)
-		}
-		if e.HasInitial && v.inRange(path(eb, "initial"), e.Initial, 0, MaxEndowment) {
-			if capacity := rowCapacity(e, res); e.Initial > capacity {
-				v.rep.add(ErrResourceShape, path(eb, "initial"), i64(e.Initial), i64(capacity))
-			}
+	}
+	if e.HasRegenScale {
+		v.inRange(path(eb, "regen_scale_bp"), e.RegenScaleBP, 0, MaxRegenScaleBP)
+	}
+	if e.HasInitial && v.inRange(path(eb, "initial"), e.Initial, 0, MaxEndowment) {
+		if capacity := rowCapacity(e, res); e.Initial > capacity {
+			v.rep.add(ErrResourceShape, path(eb, "initial"), i64(e.Initial), i64(capacity))
 		}
 	}
 }
@@ -328,9 +334,14 @@ func resourceShapeWarnings(c *Config, r *Resource, rows map[[2]string]*Endowment
 	if k := sortedKnots(r.Abundance); !curve.NonDecreasing(k) {
 		add("abundance_not_monotone", append(slices.Clone(rb), "abundance")...)
 	}
-	if r.Shape != ShapeRefill && r.Shape != ShapeLogistic {
-		return
+	if r.Shape == ShapeRefill || r.Shape == ShapeLogistic {
+		regenWarnings(c, r, rows, rb, add)
 	}
+}
+
+// regenWarnings raises resource_inert and regen_per_tick_high for a refill or
+// logistic resource (spec-resources.md 13.3).
+func regenWarnings(c *Config, r *Resource, rows map[[2]string]*Endowment, rb []string, add func(string, ...string)) {
 	if r.RateBP == 0 {
 		add("resource_inert", append(slices.Clone(rb), "rate_bp")...)
 		return
@@ -341,15 +352,21 @@ func resourceShapeWarnings(c *Config, r *Resource, rows map[[2]string]*Endowment
 	}
 	// RateBP * m / (10^4 * TPY) above 2 000 basis points a tick, with m the
 	// regeneration scale of the resource's row, else 10 000 (7.4.1).
-	scales := []int64{wholeBP}
-	for key, e := range rows {
-		if key[1] == r.ID && e.HasRegenScale && e.RegenScaleBP >= 0 && e.RegenScaleBP <= MaxRegenScaleBP {
-			scales = append(scales, e.RegenScaleBP)
-		}
-	}
-	if r.RateBP*slices.Max(scales) > regenPerTickHighBP*wholeBP*tpy {
+	if r.RateBP*maxRegenScale(rows, r.ID) > regenPerTickHighBP*wholeBP*tpy {
 		add("regen_per_tick_high", append(slices.Clone(rb), "rate_bp")...)
 	}
+}
+
+// maxRegenScale is the largest regeneration scale, in basis points, of the rows of
+// a resource that carry one in bound, and 10 000 when none is larger.
+func maxRegenScale(rows map[[2]string]*Endowment, resource string) int64 {
+	largest := int64(wholeBP)
+	for key, e := range rows {
+		if key[1] == resource && e.HasRegenScale && e.RegenScaleBP >= 0 && e.RegenScaleBP <= MaxRegenScaleBP {
+			largest = max(largest, e.RegenScaleBP)
+		}
+	}
+	return largest
 }
 
 // regenPerTickHighBP is the per-tick fraction, in basis points, above which a
@@ -369,7 +386,6 @@ func sortedKnots(knots []AbundanceKnot) []curve.Knot {
 // and a recipe that can run in a region whose endowment is below its draw
 // (spec-resources.md 13.3).
 func endowmentWarnings(c *Config, lk lookup, m *Resources, rows map[[2]string]*Endowment) []Warning {
-	var out []Warning
 	capacity := func(region, resource string) int64 {
 		res := lk.resource[resource]
 		if e := rows[[2]string{region, resource}]; e != nil {
@@ -380,8 +396,17 @@ func endowmentWarnings(c *Config, lk lookup, m *Resources, rows map[[2]string]*E
 		}
 		return 0
 	}
-	type pair struct{ region, resource string }
-	listed := map[pair]bool{} // a role with a group in the region lists a recipe that draws on it
+	out := unusedEndowments(c, lk, m, capacity)
+	return append(out, impossibleDraws(c, lk, capacity)...)
+}
+
+// regionResource names an endowment by its region and resource IDs.
+type regionResource struct{ region, resource string }
+
+// unusedEndowments raises endowment_unused, in (region, resource) order.
+func unusedEndowments(c *Config, lk lookup, m *Resources, capacity func(region, resource string) int64) []Warning {
+	var out []Warning
+	listed := map[regionResource]bool{} // a role with a group in the region lists a recipe that draws on it
 	for i := range c.Groups {
 		g := &c.Groups[i]
 		ro := lk.role[g.Role]
@@ -391,7 +416,7 @@ func endowmentWarnings(c *Config, lk lookup, m *Resources, rows map[[2]string]*E
 		for _, id := range ro.Recipes {
 			if rc := lk.recipe[id]; rc != nil {
 				for _, d := range rc.Draws {
-					listed[pair{g.Region, d.Resource}] = true
+					listed[regionResource{g.Region, d.Resource}] = true
 				}
 			}
 		}
@@ -400,11 +425,17 @@ func endowmentWarnings(c *Config, lk lookup, m *Resources, rows map[[2]string]*E
 		region := c.Regions[i].ID
 		for j := range m.Resources {
 			id := m.Resources[j].ID
-			if capacity(region, id) > 0 && !listed[pair{region, id}] {
+			if capacity(region, id) > 0 && !listed[regionResource{region, id}] {
 				out = append(out, Warning{Path: []string{"modules", "resources", "endowments", region, id}, Rule: "endowment_unused"})
 			}
 		}
 	}
+	return out
+}
+
+// impossibleDraws raises draw_impossible, once per recipe draw, in recipe order.
+func impossibleDraws(c *Config, lk lookup, capacity func(region, resource string) int64) []Warning {
+	var out []Warning
 	runs := siteRuns(c, lk)
 	for i := range c.Recipes {
 		rc := &c.Recipes[i]
@@ -487,12 +518,7 @@ func exhaustibleWarnings(c *Config, lk lookup) []Warning {
 // cross ratio, or its inverse, that reaches 11 000 basis points. It is false for
 // a configuration whose region graph or calendar is invalid.
 func noComparativeAdvantage(c *Config) bool {
-	var sited []*Recipe
-	for i := range c.Recipes {
-		if c.Recipes[i].Sited {
-			sited = append(sited, &c.Recipes[i])
-		}
-	}
+	sited := sitedRecipes(c)
 	if len(sited) < 2 || len(c.Regions) < 2 {
 		return false
 	}
@@ -507,25 +533,54 @@ func noComparativeAdvantage(c *Config) bool {
 	found := false
 	for i := range c.Regions {
 		for j := i + 1; j < len(c.Regions); j++ {
-			ri, okI := g.Lookup(c.Regions[i].ID)
-			rj, okJ := g.Lookup(c.Regions[j].ID)
-			ci, _ := g.Component(ri)
-			cj, _ := g.Component(rj)
-			if !okI || !okJ || ci != cj {
+			if !sameComponent(&g, c.Regions[i].ID, c.Regions[j].ID) {
 				continue
 			}
-			for a := range sited {
-				for b := a + 1; b < len(sited); b++ {
-					hit, advantage := crossRatio(mean(a, i), mean(b, j), mean(a, j), mean(b, i))
-					if advantage {
-						return false
-					}
-					found = found || hit
-				}
+			hit, advantage := recipePairsCross(mean, len(sited), i, j)
+			if advantage {
+				return false
 			}
+			found = found || hit
 		}
 	}
 	return found
+}
+
+// sitedRecipes returns the Sited recipes of the configuration, in recipe order.
+func sitedRecipes(c *Config) []*Recipe {
+	var sited []*Recipe
+	for i := range c.Recipes {
+		if c.Recipes[i].Sited {
+			sited = append(sited, &c.Recipes[i])
+		}
+	}
+	return sited
+}
+
+// sameComponent reports whether two regions exist and share a strongly connected
+// component of the region graph.
+func sameComponent(g *Graph, a, b string) bool {
+	ra, okA := g.Lookup(a)
+	rb, okB := g.Lookup(b)
+	ca, _ := g.Component(ra)
+	cb, _ := g.Component(rb)
+	return okA && okB && ca == cb
+}
+
+// recipePairsCross applies crossRatio to every pair of the n sited recipes over
+// the regions i and j: whether some pair has all four means positive, and
+// whether some pair reaches the advantage.
+func recipePairsCross(mean func(a, i int) int64, n, i, j int) (positive, advantage bool) {
+	for a := range n {
+		for b := a + 1; b < n; b++ {
+			hit, adv := crossRatio(mean(a, i), mean(b, j), mean(a, j), mean(b, i))
+			if adv {
+				return false, true
+			}
+			positive = positive || hit
+		}
+	}
+	return positive, false
 }
 
 // crossRatio returns whether the four mean site factors are all positive, and
