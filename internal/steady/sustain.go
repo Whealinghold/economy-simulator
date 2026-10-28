@@ -138,8 +138,14 @@ func (e Endow) PeakExceeds(year int64, w Window, starts int64, perTick Frac) boo
 	return draw.Cmp(open) > 0
 }
 
-// negative reports a negative quantity in the row, or a plan share above one.
+// negative reports a negative quantity in the row, a negative run length or
+// season factor, or a plan share above one.
 func (e Endow) negative() bool {
+	for _, r := range e.Seasons {
+		if r.Length < 0 || r.FactorBP < 0 {
+			return true
+		}
+	}
 	return e.Capacity < 0 || e.Stock < 0 || e.Rate < 0 || e.ScaleBP < 0 || e.PlanShareBP < 0 || e.PlanShareBP > wholeBP
 }
 

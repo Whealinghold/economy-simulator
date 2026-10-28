@@ -259,6 +259,8 @@ func TestBuild_ResourceRejections(t *testing.T) {
 	}{
 		{"negative capacity", func(m *steady.Model) { m.Resources[0].Capacity = -1 }, true},
 		{"plan share above one", func(m *steady.Model) { m.Resources[0].PlanShareBP = 10001 }, true},
+		{"negative season length", func(m *steady.Model) { m.Resources[0].Seasons = []steady.Run{{Length: -1, FactorBP: 10000}} }, true},
+		{"negative season factor", func(m *steady.Model) { m.Resources[0].Seasons = []steady.Run{{Length: 5, FactorBP: -1}} }, true},
 		{"unknown shape", func(m *steady.Model) { m.Resources[0].Shape = 9 }, true},
 		{"constant with no horizon", func(m *steady.Model) { m.Resources[0].Shape, m.Resources[0].Horizon = steady.Constant, 0 }, true},
 		{"draw of no units", func(m *steady.Model) { m.Activities[0].Draws[0].Qty = 0 }, true},
