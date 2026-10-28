@@ -470,10 +470,10 @@ func (w *World) loadResources(_ *restoreCtx, r *codec.Reader) error {
 		case r.Err() != nil:
 			return nil
 		case cell <= prev:
-			r.Failf("scale row %d names endowment %d after endowment %d, want strictly ascending", i, cell, prev)
+			r.Failf("scale row %d names endowment %s after endowment %d, want strictly ascending", i, w.endowmentName(cell), prev)
 			return nil
 		case capacity == wholeBP && regen == wholeBP:
-			r.Failf("scale row %d names endowment %d with both scales at the default, which is not saved", i, cell)
+			r.Failf("scale row %d names endowment %s with both scales at the default, which is not saved", i, w.endowmentName(cell))
 			return nil
 		}
 		prev, s.capScale[cell], s.regenScale[cell] = cell, capacity, regen
@@ -488,7 +488,7 @@ func (w *World) resourcesCross() error {
 	r := w.res
 	for cell, st := range r.stock {
 		if c := r.effectiveCapacity(cell); st > c {
-			return fmt.Errorf("%w: endowment %d holds %d units, above its effective capacity %d", ErrCheckpointCorrupt, cell, st, c)
+			return fmt.Errorf("%w: endowment %s holds %d units, above its effective capacity %d", ErrCheckpointCorrupt, w.endowmentName(cell), st, c)
 		}
 	}
 	return nil

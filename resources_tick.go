@@ -198,7 +198,7 @@ func (w *World) takeDraws(first, n int, k int64) {
 			invariant("the units drawn by a start do not fit after validation")
 		}
 		if err := r.takeEndowment(d.cell, units); err != nil {
-			invariant("a start took more than the endowment holds: " + err.Error())
+			invariant("a start took more than the endowment " + w.endowmentName(d.cell) + " holds: " + err.Error())
 		}
 	}
 }
@@ -372,6 +372,13 @@ func (w *World) deliverAdjusted(cell int, e EndowmentAdjusted) {
 	w.obs.deliver(e)
 }
 
+// endowmentName names an endowment by the IDs of its resource and region, for the
+// errors that would otherwise show the dense index of its cell.
+func (w *World) endowmentName(cell int) string {
+	r := w.res
+	return fmt.Sprintf("%q in %q", w.cfg.Modules.Resources.Resources[r.resourceOf(cell)].ID, w.cfg.Regions[r.regionOf(cell)].ID)
+}
+
 // auditEndowments is the endowment part of P8.4 (spec-resources.md 6.4, FR-RES-025,
 // FR-RES-005): every stock lies in [0, effective capacity] and equals the stock at
 // the last boundary less the units drawn plus those regenerated, less those lost
@@ -385,8 +392,8 @@ func (w *World) auditEndowments() error {
 	for cell, got := range r.stock {
 		want := r.base[cell] - r.drawn[cell] + r.regenerated[cell] - r.lost[cell] + r.adjusted[cell]
 		if got != want || got < 0 || got > r.effectiveCapacity(cell) {
-			return auditFailure(w.Tick(), fmt.Errorf("endowment %q in %q: stock %d, want %d from %d at the last boundary, %d drawn, %d regenerated, %d lost and %d adjusted (difference %d), capacity %d",
-				w.cfg.Modules.Resources.Resources[r.resourceOf(cell)].ID, w.cfg.Regions[r.regionOf(cell)].ID,
+			return auditFailure(w.Tick(), fmt.Errorf("endowment %s: stock %d, want %d from %d at the last boundary, %d drawn, %d regenerated, %d lost and %d adjusted (difference %d), capacity %d",
+				w.endowmentName(cell),
 				got, want, r.base[cell], r.drawn[cell], r.regenerated[cell], r.lost[cell], r.adjusted[cell], got-want, r.effectiveCapacity(cell)))
 		}
 	}
