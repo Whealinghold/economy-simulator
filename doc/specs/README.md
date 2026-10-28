@@ -102,7 +102,7 @@ Rules for the IDs:
 | `CFG` | `spec-config.md` | exists; Requirements section written (FR-CFG-001 to 097, NFR-CFG-001 to 003); the field catalogue is section 3.7 (3.7.1 for the fourteen later-stage modules) |
 | `OBS` | `spec-observability.md` | exists; Requirements section written (FR-OBS-001 to 091, NFR-OBS-001 to 005); core; no `Config` field (`warnRun` is a rule constant); all numbers are placeholders |
 | `GDS` | `spec-goods.md` | exists; Requirements section written (FR-GDS-001 to 023, NFR-GDS-001) |
-| `REF` | `spec-reference-chain.md` | exists; Requirements section written (FR-REF-001 to 040, NFR-REF-001 to 002); fixture; bands unset, all numbers are placeholders |
+| `REF` | `spec-reference-chain.md` | exists; Requirements section written (FR-REF-001 to 042, NFR-REF-001 to 002); fixture; bands unset, all numbers are placeholders |
 | `RES` | `spec-resources.md` | exists; Requirements section written (FR-RES-001 to 050, NFR-RES-001 to 004); module; the yield-table values are core data; all numbers are placeholders |
 | `CAL` | `spec-calendar.md` | exists; Requirements section written (FR-CAL-001 to 021, NFR-CAL-001 to 003); the structure of time, derived `TicksPerYear`, optional seasons |
 | `POP` | `spec-population.md` | exists; Requirements section written (FR-POP-001 to 041, NFR-POP-001 to 004); module; all numbers are placeholders |
@@ -135,7 +135,7 @@ Rules for the IDs:
 | `CLB` | `spec-calibration.md` | exists; Requirements section written (FR-CLB-001 to 091 and 100 to 109, NFR-CLB-001 to 005); core; no `Config` field; all procedure constants are placeholders |
 | `EXP` | `spec-experiments.md` | exists; Requirements section written (FR-EXP-001 to 072, NFR-EXP-001 to 006); core; no `Config` field; all bounds are placeholders |
 | `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 202 loops, 169 dampers and 165 scenarios (S01 to S165, S15 unused); all numbers are placeholders |
-| `VIA` | `spec-viability.md` | exists; Requirements section written (FR-VIA-001 to 059, NFR-VIA-001 to 004); all numbers are placeholders |
+| `VIA` | `spec-viability.md` | exists; Requirements section written (FR-VIA-001 to 060, NFR-VIA-001 to 004); all numbers are placeholders |
 | `SUB` | `spec-subsistence.md` | exists; Requirements section written (FR-SUB-001 to 051, NFR-SUB-001 to 003); module; all numbers are placeholders |
 
 A planned code is reserved. If a planned spec is merged with another or dropped,

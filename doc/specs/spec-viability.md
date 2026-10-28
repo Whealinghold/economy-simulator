@@ -432,6 +432,8 @@ population cannot meet until spending beyond upkeep or a money faucet exists, an
 whether the default should fall to 10 000 meanwhile is left open there. AGT accepts the
 glut and bounds it by the production halt (`spec-agents.md` 11.7). The money-supply module now exists (`spec-money-supply.md`): a balanced pair of grant and levy moves money between classes and leaves the mean ratio unchanged, and an unbalanced faucet raises it only while the money supply grows (`spec-money-supply.md` 8.2, 9.1); the finding is otherwise unchanged.
 
+**Consequence for the stability claim (owner ruling E1, 2026-10-28, N-325).** A pack whose only demand is upkeep and whose `lambda*` is above 1 is a glut whose dampers are demand, a faucet, a pool or the halt, not the census. The rebalance trial R1 of plan 2-8 (not adopted: the committed packs are unchanged; the result is recorded in N-325 and the scratch harness was not kept) made every group of `one` earn about 100% of its upkeep at the solved flows (`IncomeBP`, 5.2) and the run still ended at 0 households, so the claim that a reference pack passes the predicate of X4 (`spec-reference-chain.md` FR-REF-042) rides on `one-demand`, and `one` stays the upkeep-only control (C09, FR-REF-018). `one-demand` does not satisfy the claim yet; a pack that does is a new work package.
+
 **A steady state with employers is not a zero-profit state** (`spec-employment.md` 22 item 7). The programme prices every activity at cost with labour at the wage dual, as if every household worked for itself. With the employment module on, a hired household's output is shared by the worker share `phi` and the employer keeps `1 - phi` of the margin, so the prices of a pack with employers sit above the solver's by that margin. The programme is not changed for it, and the warm start has no hire in flight (8.1).
 
 ### 4.8 The open layer (EXT) and the resource rows (RES)
@@ -488,6 +490,20 @@ the report (`Report.Census`), which is a suggestion to the author: how many hous
 per recipe would clear every market.
 When a recipe belongs to more than one role of the region, the census is reported per
 recipe only, flagged ambiguous.
+
+**Income per group.** The report also gives, per group, `IncomeBP`: the income per
+household at the solved flows, in basis points of the group's upkeep cost per
+household-tick at the solved prices. With `labour(g)` the labour term of the group's
+recipes at lambda 1 (`sum over r of d(r) * x(r)`, not the larger term of the formula
+below and not multiplied by `lambda*`, because the wage `w` already carries it),
+`H(g)` the configured households and `U` the upkeep cost per household-tick,
+`IncomeBP(g) = w * labour(g) * 10 000 / (H(g) * U)`, rounded half to even with the
+overflow checked. It is absent, flagged, when the labour share is absent (a tight capacity row, FR-VIA-012),
+for a group with no active recipe and for a group flagged ambiguous. The
+households-weighted mean over the groups is `w * LabourShareBP / U` (about 10 000),
+so only the spread between groups is a design signal (`spec-reference-chain.md`
+FR-REF-041). The column is a report field: the census, the tables and the hash do not
+read it (FR-VIA-060).
 
 **The formula.** With `x` the executions per tick of lambda 1 (5.1), the **need** of a
 group `g` of a region, in households, is the larger of two figures: the labour of its
@@ -1613,6 +1629,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-057 | `Validate` MUST warn, and MUST NOT fail, with `wants_exceed_labour` when the demand module is on and the programme with the wants has `lambda* < 1` while the upkeep-only programme has `lambda* >= 1`, or when the programme with the wants is infeasible (3.2) while the upkeep-only one has `lambda* >= 1`, and with `raw_without_source` for a commodity marked `Raw` that nothing real supplies. |
 | FR-VIA-058 | For a region whose labour dual at full labour is 0 while a capacity row has a positive dual, the solver MUST build its seeds and wage from the nominal programme, MUST list the region in `NominalSeed`, and MUST leave a region whose nominal wage is also 0 unpriced (`UnpricedWages`). |
 | FR-VIA-059 | A commodity marked `Raw` MUST count as sourced in V1 as in the structural check of `spec-config.md` 7.5, so the two checks MUST agree on every configuration. |
+| FR-VIA-060 | The report MUST give, per group, the income per household at the solved flows in basis points of its upkeep cost (`IncomeBP`, 5.2), absent and flagged when the labour share is absent, for a group with no active recipe and for a group flagged ambiguous, with the arithmetic checked; the census, the tables and the configuration hash MUST NOT depend on it. |
 
 ### Non-functional
 

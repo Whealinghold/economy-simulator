@@ -112,7 +112,7 @@ the text) and checks each row (FR-REF-002).
 | C06 | A role with a **job longer than the base welfare window** (30) | `grower`: effective window 120 (`window_extended`) | S11 |
 | C07 | A **region that can lose its income**: an estate with a pool, relief and a failure ladder | variant `famine`, with the `estates` overlay | S14 |
 | C08 | A **warm start** | the `warm-*.toml` documents, solver output | A1, S18, S22 |
-| C09 | A world with **upkeep as the only demand** | every variant without the `demand` overlay | S19 |
+| C09 | A world with **upkeep as the only demand**: the control of S19, which carries no stability claim (FR-REF-018, FR-REF-042; `spec-viability.md` 4.7) | every variant without the `demand` overlay | S19 |
 | C10 | A **source** (no inputs), a **sited** recipe, a **discard** output | `cut_fuel`, `dig_mineral`, `gather_seed`; `refine` discards `waste` | A1, FR-PRO-030 |
 | C11 | **Several inputs, outputs and tools**, a recipe that needs a tool and one that does not | `prepare` (tool), `prepare_basic` (none); `refine` (two inputs, two outputs) | A1 |
 | C12 | **Climate as data**: yields that differ by region and season, 0 where a recipe cannot run | `two`, `three`, `five` | A3, A5, X1 to X3 |
@@ -1860,6 +1860,9 @@ labour_share_bp = 0
 pivots = 0
 unpriced = []               # UnpricedCommodities and UnpricedWages
 warnings = []               # [{ rule = "...", path = "..." }], in the order of FR-CFG-012
+income_bp = []              # per group, IncomeBP of spec-viability.md 5.2 (FR-VIA-060); a group
+                            # without one is listed with the reason (FR-REF-041); pending: the
+                            # files carry no income_bp until the data is rebalanced (N-325)
 ```
 
 The prototype's values for the first rows are in 5; the Go run replaces them and the file
@@ -1931,6 +1934,16 @@ checked back by FR-REF-007) and possibly the golden files. The PR says which of 
 behaviours of the register it changes (architecture.md 9.8). A change to a quantity of the
 base is a change to every pack; a change to a region document touches one.
 
+A change that adds or alters a commodity, recipe, role, upkeep line, yield or region of
+the base, of `lines.toml`, of a region document or of an overlay that a pack layers
+re-runs the rebalance (the runbook): (1) re-solve the table and read the census, the
+imbalance and `IncomeBP` of every group; (2) fix the data until the static income gate
+of FR-REF-041 holds; (3) run `one`, or the pack the change touches, warm from tick 0
+over the ticks and seeds of 8.2 and check the predicate of X4 (FR-REF-042 for `one`);
+(4) regenerate the warm-start documents and the `expected/` files with `-update`; (5)
+move the golden files once, in that change, with the explanation of testing.md 7.2; (6)
+record the run with the pack (FR-REF-039). A pack edit that skips the gate is a finding.
+
 ## 9. Observability needs of the scenarios
 
 The measures of 7 use only the events of observability-and-logging.md 4.3, the snapshot,
@@ -1953,6 +1966,7 @@ OBS (`spec-observability.md`):
 | A count of the production halt (an aggregate per region and role per tick) | S16, S19 | answered: `ProductionHalted` (`spec-observability.md` 4.4.6; N-067) |
 | The pool balance per region, the pending output, the number of agents with a job by recipe | S04, S11, S14, golden | `spec-estates.md` 2.4, `spec-production.md` FR-PRO-042 (done) |
 | Whether the construction bucket is a `BoundaryFlow` with `Tick` -1 | A7, golden | answered: yes, once, at the entry of the first step (`spec-observability.md` 4.4.2; N-072) |
+| The realised income of a role per window: gross sales from `TradeExecuted` and the recipe-input cost from `RecipeExecuted`, with the role of each agent from the snapshot at tick 0, `AgentSpawned` and `RoleChanged` | the rebalance runbook (8.7), FR-REF-042 | a recording observer in a `_test.go` file (FR-REF-027); no event of its own |
 | The measure of each scenario computable from the above, without unexported state | all | FR-STB-012 |
 
 The three rows that were requests are answered by `spec-observability.md`; everything else exists in a rule or a spec. The one remaining ask is the income fields behind `HouseholdIncome` (`spec-indicators.md` 7.5.1), not adopted for version 1. The test
@@ -2053,7 +2067,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-015 | The demand overlay MUST contain a self-employed luxury role, a want with two alternatives and a taste table for at least two roles, and with it the module MUST be on. |
 | FR-REF-016 | Each defect pack of 4.5 MUST be rejected with the rule named for it, `d3`, `d4` and `d5` with that rule only, and `d6` MUST load with the warning `cost_floor_at_full_cost`. |
 | FR-REF-017 | The second setting MUST build, validate and run from its documents alone, and a test MUST also build it as a Go `Config` and compare the hash (FR-CFG-004). |
-| FR-REF-018 | No variant except those that name them MUST contain a demand module, a money faucet or an external sector. |
+| FR-REF-018 | No variant except those that name them MUST contain a demand module, a money faucet or an external sector. `one` is the upkeep-only control that S19 needs and MUST stay free of them; it carries no claim to pass the predicate of X4, which rides on `one-demand` (FR-REF-042). |
 | FR-REF-019 | The seeds of every warm-start table MUST be at or above the resolution floor and inside the reference band, and the reference basket of every region MUST be within `BasketTolerance` of the cost of its baseline upkeep at the reference prices. |
 | FR-REF-020 | Each scenario of 7.2 to 7.4 that can run MUST have one test that runs the packs and setup stated for it, whose `Requirement:` line lists the IDs of its entry and whose failure message names the scenario, the pack, the seed and the measure. |
 | FR-REF-021 | A shock or an external agent in a scenario MUST be applied between steps through the integration calls of `spec-integration.md` (`SetYieldShocks`, `AddAgent`, `Direct`) from a script of `scripts/`, and MUST NOT be applied by editing state. In Stage 1 a shock is applied through the unexported yield-shock setter of 7.1.3, until `integration.go` exists. |
@@ -2076,6 +2090,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S83 of 7.6, 7.9 and 7.11, S91 to S165 of 7.12, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The configuration documents of `testdata/chains/` (not the files of `expected/`, `bands/` and `scripts/`) MUST be the seed corpus of the loader fuzz test. |
+| FR-REF-041 | Every group of every variant on the base except `second` (4.4.7, unbalanced by design) MUST have a static `IncomeBP` (FR-VIA-060) of at least 8 000, and the highest of a pack MUST be at most 1.5 times its lowest; a group without an `IncomeBP` (no labour share, as in `famine`; a recipe shared by several roles; a thin gatherer group named in `expected/<pack>.toml`) MUST be listed there with its reason, and a test over the solver MUST check every pack. **Status: not met.** The test `TestPacks_IncomeBalance` is skipped and the `expected/` files carry no `income_bp` yet, because the unchanged packs fail the gate (N-325); the requirement takes effect when the pack data is rebalanced. |
+| FR-REF-042 | The variant `one-demand` (the pack that names the demand module) MUST pass the predicate of X4 (7.4) from its warm start over 1 095 ticks on seeds 1 to 4, with the invariants of 7.5 asserted every tick; the word "stable" is not used of the pack (`spec-stylised-facts.md` 7.3.2). `one` carries no such requirement: a closed upkeep-only pack with `lambda*` above 1 is a glut (`spec-viability.md` 4.7). **Status: not met.** `one-demand` ends at 0 households by tick 1 095 on seeds 1 to 4, unchanged and with the rebalanced yields of plan 2-8 M1 (N-325); a pack that survives is a new work package, and this requirement stays unmet until it lands. No test runs `one-demand` against the predicate yet: `TestScenarioHelpers_StablePredicate` checks only the predicate helper. |
 
 ### Non-functional
 

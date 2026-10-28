@@ -317,7 +317,7 @@ func failing(crit []x4Criterion) string {
 // case breaks (b), (c) with no trade at all, (d), (e) and (f), and only the two
 // whose thresholds are set (the households, and (c) which always is) are named.
 //
-// Requirement: FR-REF-027, FR-REF-042 (proposed)
+// Requirement: FR-REF-027, FR-REF-042
 func TestScenarioHelpers_StablePredicate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -382,10 +382,11 @@ func TestScenarioHelpers_StablePredicate(t *testing.T) {
 }
 
 // stableOneSkip is the reason TestScenarioStable_OneWarm is skipped while `one`
-// collapses under its own rules (N-312, N-314); plan 2-8 Phase 4 empties it with
-// the accepted rebalance, or the supervisor re-points the issue ID on a stop
-// (D369).
-const stableOneSkip = "N-314: `one` collapses under its own rules; un-skipped when the rebalance lands"
+// collapses under its own rules (N-312, N-314); plan 2-8 stopped without an
+// accepted rebalance and the owner ruled E1 (N-325): the X4 claim rides on
+// `one-demand` (FR-REF-042), so this test of the control stays skipped until a
+// later work package decides otherwise.
+const stableOneSkip = "N-325: `one` is the upkeep-only control and collapses (owner ruling E1); the X4 claim rides on `one-demand`, a new work package"
 
 // TestScenarioStable_OneWarm records the run that a human reviews for pack `one`
 // (STY 8.4): `one` warm, 1 095 ticks, seeds 1 to 4, audit on, no shock, judged by
@@ -398,10 +399,11 @@ const stableOneSkip = "N-314: `one` collapses under its own rules; un-skipped wh
 // "stable state" are the predicate's name, not a claim: a pack passes the
 // predicate, it is not stable (STY 7.3.2).
 //
-// Requirement: FR-REF-042 (proposed), FR-REF-039, FR-STB-015
+// Requirement: FR-REF-039, FR-STB-015
 //
-// Fix: N-314. `one` fell from about 600 households to 20 to 100 by tick 600; this
-// test fails on the Stage 1 pack and passes on the rebalanced one.
+// Guard: N-325. `one` is the upkeep-only control (FR-REF-018) and falls from about
+// 600 households to 20 to 100 by tick 600; the test records that run for review
+// and would fail on it, which is why it is skipped.
 func TestScenarioStable_OneWarm(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

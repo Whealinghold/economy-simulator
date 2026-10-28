@@ -311,9 +311,9 @@ func TestPacks_FiveWithItsWarmStartValidates(t *testing.T) {
 }
 
 // incomeGateSkip is the reason TestPacks_IncomeBalance is skipped while the packs
-// are unbalanced; plan 2-8 Phase 4 empties it with the accepted rebalance, or the
-// supervisor re-points the issue ID on a stop (D369).
-const incomeGateSkip = "N-314: the unchanged packs fail the income gate (the grower of `one` earns 47% of its upkeep)"
+// are unbalanced; plan 2-8 stopped without an accepted rebalance (N-325), so it
+// stays skipped until a later work package rebalances the packs.
+const incomeGateSkip = "N-325: the unchanged packs fail the income gate (the grower of `one` earns 47% of its upkeep); no rebalance was accepted"
 
 // incomeGateMin and incomeGateSpread are the screening values of plan 2-8 D365,
 // which the owner confirms or replaces: the least IncomeBP of a pack is at least
@@ -346,12 +346,12 @@ var incomeExceptions = map[string]map[string]string{
 // incomeExceptions with its reason. The pack `one-demand` is its own balanced
 // census (D315 of plan 2-5).
 //
-// Requirement: FR-REF-041 (proposed)
+// A pack edit, a new good or a new role (the runbook of REF 8.7) that reopens the
+// grower gap is a test failure and not a memory; the gate is exact and cheap, the
+// run is not. It fails on the unchanged packs, so it is skipped with the issue ID
+// until the rebalance lands.
 //
-// Guard: a pack edit, a new good or a new role (the runbook of D370) that reopens
-// the grower gap is a test failure and not a memory; the gate is exact and cheap,
-// the run is not. It fails on the unchanged packs, so it is skipped with the issue
-// ID until the rebalance lands.
+// Requirement: FR-REF-041
 func TestPacks_IncomeBalance(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
