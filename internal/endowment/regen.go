@@ -42,8 +42,8 @@ func Regen(p Params, in Step) (Result, bool) {
 }
 
 // valid reports whether the parameters and the state are in range, the shape
-// included whatever the capacity. A carry
-// below d also rejects a d of 0 or less, that is a TicksPerYear below 1.
+// included whatever the capacity. A carry below d also rejects a d of 0 or
+// less, that is a TicksPerYear below 1.
 func valid(p Params, in Step, d int64) bool {
 	return p.Shape >= Constant && p.Shape <= Logistic && p.Capacity >= 0 && p.Rate >= 0 && p.Refuge >= 0 && p.ScaleBP >= 0 &&
 		in.SeasonBP >= 0 && in.Stock >= 0 && in.Stock <= p.Capacity &&
