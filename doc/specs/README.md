@@ -210,6 +210,8 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `CostShare` | Output | `spec-production.md` section 3.2 |
 | `Discard` | Output | `spec-production.md` section 7.2 |
 | `Draws` | Recipe | the field: `spec-production.md` section 3.1; the resources it names: `spec-resources.md` section 3 |
+| `Resource` | Draw | `spec-resources.md` section 3.1.3 (the resource a recipe draws on) |
+| `Quantity` | Draw | `spec-resources.md` section 3.1.3 (units per execution; `spec-production.md` section 3.1) |
 | `Yields` | Config (a section; the profiles of a region and a recipe) | values and authoring: `spec-resources.md` section 7; format and lookup: `spec-production.md` section 6.1 |
 | `BeliefStep` | WorldParams | `spec-beliefs.md` section 11 |
 | `BeliefAdjustProb` | WorldParams | `spec-beliefs.md` section 11 |

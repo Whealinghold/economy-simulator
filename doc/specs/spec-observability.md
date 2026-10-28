@@ -194,7 +194,7 @@ type Names struct {
 }
 ```
 
-The fields of `Names` are in build order: the order in which the modules are built (`architecture.md` 2.10.5), not the order of this sketch, so that adding a module appends a field and moves none. `Wants`, `Resources` and `Modes` are appended after `Seasons`.
+The fields of `Names` are in build order: the order in which the modules are built (`architecture.md` 2.10.5), not the order of this sketch, so that adding a module appends a field and moves none. `Wants`, `Resources` and `Modes` are appended after `Seasons`: `Resources` comes after `Wants` (plan 5 O8) and before `Modes`, the order the modules are built.
 
 The slice of a later module's kind is named by the plural of the ID type, one field
 for each kind (the settlement classes are not the commodity classes of IND, so the
@@ -344,7 +344,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | Event | Owner | Position | Class | Gate | Fields |
 |-------|-------|----------|-------|------|--------|
 | `RecipeExecuted` | PRO 14.1 | P2.1, P2.7 | E | core | `Agent`, `Region`+, `Recipe`, `StartTick int64`, `Executions`, `Outputs []Amount`, `Disposed []Amount`, `EffectiveYield` (bp), `Overflow []Amount` (the part of `Disposed` that is not a discard output) |
-| `RecipeRefused` | PRO 14.1; OBS 4.4.6a | P2.8a, after `ProductionHalted`, ascending (`RegionID`, `RecipeID`); once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, or was not made because the first recipe that could not run was blocked; never otherwise | A | core | `Region`, `Recipe`, `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput` (households refused for each reason of the master order of `spec-production.md` 4.2.1; a later module appends its reason's count) |
+| `RecipeRefused` | PRO 14.1; OBS 4.4.6a | P2.8a, after `ProductionHalted`, ascending (`RegionID`, `RecipeID`); once per region and recipe per tick in which the job request of at least one free household was refused with a count of 0, or was not made because the first recipe that could not run was blocked; never otherwise | A | core | `Region`, `Recipe`, `NotOnRole`, `ZeroYield`, `NoSite`, `NoTool`, `NoInput`, `NoEndowment` (households refused for each reason of the master order of `spec-production.md` 4.2.1; a later module appends its reason's count; `NoEndowment` is the resources module's) |
 | `RecipeAbandoned` | PRO 14.1 | P7.1, P7.2, a removal or a `Relocate` (`region_changed`) at a call | E | core | `Agent`, `Region`+, `Recipe`, `Executions`, `Reason` |
 | `ProductionHalted` + | OBS 4.4.6; AGT 7.1.5 | P2.8a (new) | A | core | `Region`, `Role`, `Free`, `Halted`, `Skipped []HaltRow` with `HaltRow{Recipe RecipeID; Households int64}`, `Rested`+ (free households whose work share was 0), `NoRecipe`+ (free households for which no recipe was worth running) |
 | `OwnUseChanged` | SUB 14.1 | P2.8 | A | subsistence | `Region`, `Role`, `Households`, `OnOwnUse`, `Entered`, `Left`, `Started`, `Blocked`, `Retried`, `Output []Amount` |

@@ -122,6 +122,7 @@ economy-sim/
   regions_relocate.go  regions_status.go                               (REG)
   demand_plan.go  demand_state.go                                      (DEM)
                          only if Lizard forces the split of demand.go
+  resources_check.go  resources_tick.go                                (RES)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -1047,4 +1048,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 1c35b22e3cc29662b4fc805a
+RULE-TAG: 4bae0bd8e7b46de59e16d220

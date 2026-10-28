@@ -787,4 +787,47 @@
 //     (spec-money-supply.md 13.1).
 //   - FlowRow: the snapshot row of one money flow: its ID, cumulative total, scale and
 //     whether it has ended (spec-observability.md 5.3).
+//   - Knot: a point (x, y) of a piecewise-linear curve; the curve is flat outside the
+//     first and last knot and truncates toward zero between two. The abundance curve and the
+//     population schedules share one evaluation (internal/curve; spec-resources.md 4.7.1).
+//   - Resource: a kind of regional endowment, defined as data. It is not a commodity: it has
+//     no price, no mass and no ledger account (spec-resources.md 3.1). The type is Resource
+//     and the module is Resources.
+//   - Endowment: a resource in one region, with a stock, a capacity and a carry; the row of a
+//     region and a resource is an Endowment (spec-resources.md 3.2, 3.3).
+//   - Stock (of an endowment): the units of a resource available now, from 0 to the
+//     effective capacity. The stock of a commodity is a different thing.
+//   - Capacity (of an endowment): the most the stock can hold; the effective capacity is the
+//     configured one times the capacity scale of the shock slot (spec-resources.md 3.4).
+//   - Shape: the rule by which an endowment regenerates, one of constant, refill or
+//     logistic (spec-resources.md 4.2).
+//   - Carry (of a regeneration): the fraction of a unit regenerated and not yet added, in
+//     units of 1/D, so a slow regeneration is exact over a run (spec-resources.md 4.3).
+//   - Refuge: the units of a logistic stock that regrow even when the stock is 0
+//     (spec-resources.md 4.3.3).
+//   - Abundance: the yield factor, in basis points, read from the stock share of an
+//     endowment; the abundance curve maps a share to a factor, and no knots mean flat
+//     10 000 (spec-resources.md 4.7). AbundanceKnot is one point of the curve.
+//   - Ration: the proportional share of a scarce stock among the requests on it, with the
+//     leftovers by largest remainder and then a stateless key (spec-resources.md 5.3).
+//   - Draw: the units of a resource a recipe takes from its region's endowment per
+//     execution; Draw is the entry of Recipe.Draws (spec-resources.md 3.1.3).
+//   - Plan share: the stock share of a resource that a steady state is assumed to hold
+//     (spec-resources.md 11.1).
+//   - Sustainable draw: the draw an endowment can supply for ever at its plan share
+//     (spec-resources.md 11.1).
+//   - Finite stock: a constant endowment with a rate of 0, whose depletion is permanent
+//     (spec-resources.md 4.2.1, 11).
+//   - SeasonRegen: the regeneration factor of one season of a resource, in basis points
+//     (spec-resources.md 4.5).
+//   - EndowmentChanged: the event emitted once per endowment per tick, after its
+//     regeneration, if any units were drawn, regenerated, short or lost
+//     (spec-resources.md 14.1).
+//   - EndowmentAdjusted: the event emitted when a shock slot or an adjustment changes an
+//     endowment between ticks (spec-resources.md 14.1).
+//   - EndowmentRow: the snapshot row of one endowment (spec-observability.md 5.3.6).
+//   - EndowmentView: the entry of the agent view for an endowment in the agent's own
+//     region (spec-resources.md 5.5.1).
+//   - ResourceID: the index of a resource in ascending order of its ID string
+//     (spec-resources.md 3.2.3).
 package economysim

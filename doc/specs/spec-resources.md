@@ -110,8 +110,8 @@ different namespaces (`spec-config.md` 3.3: unique within its kind), so a pack m
 call both `ice`; the validator does not forbid it and the file layout keeps them
 apart (section 12).
 
-3.1.3. **What a draw turns into.** A recipe's `Draws` lists (resource, quantity)
-pairs. At the start of a job of `k` executions the world takes `k` times each
+3.1.3. **What a draw turns into.** A recipe's `Draws` lists `Draw{Resource string; Quantity Quantity}`
+values (a resource ID and a quantity per execution). At the start of a job of `k` executions the world takes `k` times each
 quantity from the region's endowment of that resource (5). The job's outputs are
 commodities, as always, created at completion by the ledger reason `recipe_output`
 (`spec-production.md` 5.3). The relation between the two quantities is the pack's:
@@ -165,8 +165,8 @@ The module is `Config.Modules.Resources`, a pointer: nil is off, non-nil is on
 (`spec-config.md` 3.2). It needs the regions (always present) and production.
 
 ```go
-// ResourcesConfig is the resources module. Plain data.
-type ResourcesConfig struct {
+// Resources is the resources module. Plain data.
+type Resources struct {
 	Resources   []Resource  // sorted by ID
 	Endowments  []Endowment // sorted by (region, resource): the region-keyed table
 	HorizonYears int64      // viability horizon for a finite stock (11)
@@ -189,6 +189,13 @@ type Resource struct {
 
 // AbundanceKnot is a point of the abundance curve, both in basis points.
 type AbundanceKnot struct{ Share, Factor int64 }
+
+// Draw is one entry of Recipe.Draws: the units of a resource a recipe takes from its
+// region's endowment per execution (spec-production.md 3.1, 6.5).
+type Draw struct {
+	Resource string
+	Quantity Quantity
+}
 
 // SeasonRegen is the regeneration factor of one season, in basis points.
 type SeasonRegen struct {
@@ -485,7 +492,10 @@ other step of production.
    continuations and completions. A request with an effective yield of 0 (which
    includes an abundance of 0) is refused with `zero_yield` or `no_site`, and a
    request with `k0` of 0 for another reason is refused with that reason
-   (`spec-production.md` 4.2). The results of `Work` do not depend on the order of
+   (`spec-production.md` 4.2). Admission **ignores draws**: `k0` is not capped by any
+   endowment and the request is made for `k0`; the ration of step 3 and the live stock of
+   step 4 cap it at the start (a recorded request per draw is what the ration reads).
+   The results of `Work` do not depend on the order of
    the calls, because the only shared state they read, the endowment, is the
    snapshot (FR-RES-015).
 3. **Ration.** For each endowment that some request draws on, in order, the requests
@@ -611,7 +621,9 @@ the region the executor was in at the start.
 yield `E` and `MaxExecutions` with its reason. With this module `E` includes the
 abundance (the snapshot of 4.7.3) and `MaxExecutions` is the least of the existing
 limits and, for each draw, `floor(A / d)` of the snapshot (a bound that ignores the
-competition of the ration), with `no_endowment` as the reason when that is 0. With the tenure module on, each endowment that has tenure data also carries the fields of `spec-land.md` 4.6, and `MaxExecutions` takes the reason `no_title` or `rent_funds` after `no_endowment` (`spec-land.md` 4.5). The
+competition of the ration), with `no_endowment` as the reason when that is 0. This is the
+view only: admission ignores draws (5.2 step 2), so the strategy's request is capped by
+the ration and not by this figure. With the tenure module on, each endowment that has tenure data also carries the fields of `spec-land.md` 4.6, and `MaxExecutions` takes the reason `no_title` or `rent_funds` after `no_endowment` (`spec-land.md` 4.5). The
 view also gains a group `Endowments` (only with the module on), **for the agent's own
 region only**: the endowments that its role's recipes draw on, including the recipes of its effective own-use list (`spec-subsistence.md` 3.6), sorted by resource, each
 with `Resource`, `Stock`, `Capacity` and `AbundanceBP`. It is local physical state, free like the local price, and it is not a
@@ -960,7 +972,7 @@ to the floor (17.4).
 1. `spec-population.md` 5.2, row 3 of the table, changes from "RES is not written" to
    "provided by `spec-resources.md` 8"; the sentence "no pack can have a fixed factor
    today" goes (handoff h).
-2. The warning `no_fixed_factor` (`spec-population.md` 9.2) is POP's: it should now
+2. The warning `no_fixed_factor` (`spec-population.md` 9.2) is POP's, and plan 11 owns the edit of `spec-population.md` 5.2 and 9.2: it should now
    read "no recipe draws on an endowment whose maximum flow can bind (`N_bind` below
    the census's households times a stated margin) and no region has a `HouseholdCap`".
    VIA can report the households at which the draw equals the sustainable draw at the plan stock, `N_plan` (the census's households times `Headroom`, 11.3); `N_bind` of 8.2 uses the maximum flow at an empty stock and is larger for `refill` by 1 over (1 minus the plan share).
@@ -1683,7 +1695,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-RES-002 | A resource MUST be a plain struct with an ID and a shape from the closed set `constant`, `refill`, `logistic`; no code MUST branch on a resource ID; resource IDs and commodity IDs MUST be separate namespaces; and no resource MUST appear in an account, a lot, a price, a tradable set or any recipe list other than `Draws` (3.1). |
 | FR-RES-003 | Resources MUST be ordered by ID string bytewise to give `ResourceID`, and every iteration over endowments, in state, events, the snapshot and the checkpoint, MUST be in ascending `RegionID` then `ResourceID` (3.2.3). |
 | FR-RES-004 | `Endowments` MUST be a region-keyed table of the mechanism of `spec-regions.md` 5 with one row per (region, resource); `Capacity` and `Initial` MUST be replace and `RegenScaleBP` scale; absence MUST be the default without a warning; an unknown region or resource MUST be rejected with `ErrUnknownRegion` or `ErrUnknownResource` and a second row with `ErrDuplicateID` (3.3.1). |
-| FR-RES-005 | The stock of an endowment MUST be an integer from 0 to its effective capacity, `trunc(capacity * capacity scale / 10 000)`, at every observable point, and a pair with no capacity MUST have a stock of 0 (3.2, 3.4). |
+| FR-RES-005 | The stock of an endowment MUST be an integer from 0 to its effective capacity, `trunc(capacity * capacity scale * (10 000 + B) / 10^8)` with `B` 0 while no facility (3.4), at every observable point, and a pair with no capacity MUST have a stock of 0 (3.2, 3.4). |
 | FR-RES-006 | The starting stock MUST be the row's `Initial`, else `trunc(Capacity * InitialBP / 10 000)`, and MUST NOT exceed the capacity (3.3, 13.2). |
 | FR-RES-007 | Regeneration MUST run once per endowment per tick as the last step of phase 8 in ascending (`RegionID`, `ResourceID`) order, after the tick's draws, using the season of that tick (4.1). |
 | FR-RES-008 | The numerator of a `constant` stock MUST be `RatePerYear * m * s * 10^4`, of a `refill` stock `RateBP * (C - S) * m * s` (0 when `S >= C`), and of a `logistic` stock `RateBP * w * m * s`, over `D = 10^12 * TicksPerYear`, with `m` the effective scale and `s` the season factor, in checked 128-bit arithmetic (4.2). |
@@ -1808,7 +1820,7 @@ by labour only (`spec-production.md` 3.1.2). No default of this spec is set from
 
 | Concern | Home |
 |---------|------|
-| `ResourcesConfig`, `Resource`, `AbundanceKnot`, `SeasonRegen`, `Endowment`, `ResourceID`, `DefaultResource()` | root package, `resources.go`; defaults in `defaults.go`; bounds in `bounds.go` |
+| `Resources`, `Resource`, `Draw`, `AbundanceKnot`, `SeasonRegen`, `Endowment`, `ResourceID`, `DefaultResource()` | root package, `resources.go`; defaults in `defaults.go`; bounds in `bounds.go` |
 | Validation, the sentinels `ErrUnknownResource`, `ErrResourceShape`, `ErrCurve`, `ErrInsufficientEndowment`, and the warnings | root package, `validate.go`, `errors.go` |
 | The regeneration (the three numerators and the carry), the abundance, the ration, the key, the fixed-factor inequalities | `internal/endowment`: pure functions over primitive slices and indexes (architecture.md 2.9); stdlib only, `math/bits` for the 128-bit products |
 | Piecewise-linear evaluation of a knot list, shared with the population schedules | `internal/curve` (a new package with one purpose; `spec-population.md` 19 may use it) |
@@ -1819,26 +1831,27 @@ by labour only (`spec-production.md` 3.1.2). No default of this spec is set from
 | The sustainable-draw rows, `Headroom`, `Rent`, `resource_short`, `endowment_runway` | `internal/steady`, called through `SolveSteadyState` (`spec-viability.md` 6) |
 
 ```go
-// internal/endowment: stdlib only, no root types. A sketch, not final.
+// internal/endowment: stdlib only, no root types. The shapes of the built package.
 type Shape int // Constant, Refill, Logistic
 
-// Regen returns the new stock, the new carry and the units added for one tick.
-func Regen(shape Shape, stock, capacity, rate, refuge, scaleBP, seasonBP, carry, denom int64) (newStock, newCarry, added int64)
+// Params are the constants of one endowment for a tick; Step is its state and the
+// factors of the tick. Regen takes structs so that no signature passes the
+// parameter limit of N-243.
+func Regen(p Params, in Step) (Result, bool)
 
 // Abundance returns the yield factor, in basis points, for a stock and a capacity.
 func Abundance(knots []curve.Knot, stock, capacity int64) int64
 
 // Request is one agent's demand on one endowment: w executions of a draw of d units.
+// Key is ordering.Key(tick, agent): the finaliser of 5.3.3 is not repeated here.
 type Request struct {
-	Ref        int // index into the caller's slice, returned in the grant
+	Ref        int // index into the caller's grants slice, where the grant is written
 	Executions int64
 	Draw       int64
 	Key        uint64
 }
 
-// Ration fills grants[i] with the executions granted to reqs[i].
+// Ration sorts reqs in place and writes the executions granted to the slot of
+// req.Ref in grants; it allocates nothing.
 func Ration(available int64, reqs []Request, grants []int64)
-
-// Key is the stateless tie-break key of the ration (5.3.3).
-func Key(tick, agent int64) uint64
 ```

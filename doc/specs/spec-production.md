@@ -98,7 +98,7 @@ A `Recipe` is a plain struct in the root package, an entry of `Config.Recipes`
 | `Inputs` | list of (commodity, quantity) | consumed when a job starts, per execution |
 | `Outputs` | list of output items (3.2) | created when a job completes, per execution |
 | `Requires` | list of (commodity, `WearPerUse`) | tools: durables the executor must hold, each worn by use (section 4.4) |
-| `Draws` | list of (resource, quantity) | endowment the recipe takes from its region, per execution (section 6.5); the resource is a `Resource` of `spec-resources.md` 3; module RES |
+| `Draws` | list of `Draw{Resource string; Quantity Quantity}` | endowment the recipe takes from its region, per execution (section 6.5); the resource is a `Resource` of `spec-resources.md` 3; module RES |
 | `Needs` | list of site class IDs | facility classes of kind `site` the principal must hold a usable facility of in its region; at most `MaxRecipeNeeds` (module CAP, `spec-infrastructure.md` 4.1) |
 | `Builds` | clause (`Class`, `Toward`) | the completion creates facilities of the class (module CAP, `spec-infrastructure.md` 4.1) |
 | `Repairs` | clause (`Class`, `Units`) | the completion restores condition to facilities the principal owns (module CAP, `spec-infrastructure.md` 4.1) |

@@ -1097,7 +1097,7 @@ the entry of phase 6 of `Validate`: 8.7). A recipe
 that can start in a single season therefore has all its in-progress agents inside
 that season's window, which is what a real calendar would give at that tick.
 
-8.5.3. **The flow rule.** A job in progress at tick 0 was started before the run, so
+8.5.3. **The flow rule.** (With the resources module on, a warm job draws no endowment and its pending output reads the neutral abundance, because the warm stock is `InitialBP`: accepted, `spec-resources.md` 11.4, open question 13 of `spec-world.md`.) A job in progress at tick 0 was started before the run, so
 its inputs were consumed before the run. The world makes the books say so:
 construction grants the agent the job's inputs by `initial` and takes them at once
 by `recipe_input` in one construction step, wears the tools by `WearPerUse`, and
