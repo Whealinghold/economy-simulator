@@ -346,12 +346,12 @@ var incomeExceptions = map[string]map[string]string{
 // incomeExceptions with its reason. The pack `one-demand` is its own balanced
 // census (D315 of plan 2-5).
 //
-// Requirement: FR-REF-041 (proposed)
+// A pack edit, a new good or a new role (the runbook of REF 8.7) that reopens the
+// grower gap is a test failure and not a memory; the gate is exact and cheap, the
+// run is not. It fails on the unchanged packs, so it is skipped with the issue ID
+// until the rebalance lands.
 //
-// Guard: a pack edit, a new good or a new role (the runbook of D370) that reopens
-// the grower gap is a test failure and not a memory; the gate is exact and cheap,
-// the run is not. It fails on the unchanged packs, so it is skipped with the issue
-// ID until the rebalance lands.
+// Requirement: FR-REF-041
 func TestPacks_IncomeBalance(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

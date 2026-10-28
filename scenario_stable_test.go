@@ -317,7 +317,7 @@ func failing(crit []x4Criterion) string {
 // case breaks (b), (c) with no trade at all, (d), (e) and (f), and only the two
 // whose thresholds are set (the households, and (c) which always is) are named.
 //
-// Requirement: FR-REF-027, FR-REF-042 (proposed)
+// Requirement: FR-REF-027, FR-REF-042
 func TestScenarioHelpers_StablePredicate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -398,7 +398,7 @@ const stableOneSkip = "N-314: `one` collapses under its own rules; un-skipped wh
 // "stable state" are the predicate's name, not a claim: a pack passes the
 // predicate, it is not stable (STY 7.3.2).
 //
-// Requirement: FR-REF-042 (proposed), FR-REF-039, FR-STB-015
+// Requirement: FR-REF-042, FR-REF-039, FR-STB-015
 //
 // Fix: N-314. `one` fell from about 600 households to 20 to 100 by tick 600; this
 // test fails on the Stage 1 pack and passes on the rebalanced one.

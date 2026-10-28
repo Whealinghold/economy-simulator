@@ -508,7 +508,7 @@ func TestSolveSteadyState_RegionThatCannotFeedItself(t *testing.T) {
 // (spec-viability.md 5.2: the recipe row is the ambiguous one). Both group rows
 // carry no IncomeBP and the flag HasIncome false, not a zero.
 //
-// Requirement: FR-VIA-028, FR-VIA-060 (proposed)
+// Requirement: FR-VIA-028, FR-VIA-060
 func TestCensus_IncomeBP_SharedRecipeIsAbsent(t *testing.T) {
 	t.Parallel()
 	c := viaToy()
@@ -539,7 +539,7 @@ func TestCensus_IncomeBP_SharedRecipeIsAbsent(t *testing.T) {
 // unchecked product would wrap to 2 * 10^19 - 2^64 = 1.55 * 10^18, a positive
 // and wrong figure.
 //
-// Requirement: FR-VIA-060 (proposed)
+// Requirement: FR-VIA-060
 func TestCensus_IncomeBP_Overflow(t *testing.T) {
 	t.Parallel()
 	c := viaToy()
@@ -597,7 +597,7 @@ func TestUpkeepCost(t *testing.T) {
 // Wage 2 000, labour 3, 5 households, upkeep 1 at price 100: U = 100 and
 // IncomeBP = 2 000 * 3 * 10 000 / (5 * 100) = 120 000.
 //
-// Requirement: FR-VIA-060 (proposed)
+// Requirement: FR-VIA-060
 func TestIncome_Guards(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

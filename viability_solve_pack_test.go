@@ -401,7 +401,7 @@ func TestSolveSteadyState_SecondMatchesVIA15(t *testing.T) {
 // of N-314; every other group earns about 138% of its upkeep. The exact values
 // are the pin; the 47% and the 138% are the sanity check within 300 basis points.
 //
-// Requirement: FR-VIA-028, FR-VIA-060 (proposed)
+// Requirement: FR-VIA-028, FR-VIA-060
 func TestCensus_IncomeBP_One(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -441,7 +441,7 @@ func TestCensus_IncomeBP_One(t *testing.T) {
 // of each figure, under 5 basis points of the mean. A pack without a labour share
 // (`famine`) is skipped.
 //
-// Requirement: FR-VIA-060 (proposed)
+// Requirement: FR-VIA-060
 func TestCensus_IncomeBP_Identity(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -514,7 +514,7 @@ func TestCensus_IncomeBP_Identity(t *testing.T) {
 // read as a starving group. The same holds for a row on an ambiguous recipe
 // (TestCensus_IncomeBP_SharedRecipeIsAbsent, a hand-built chain).
 //
-// Requirement: FR-VIA-012, FR-VIA-060 (proposed)
+// Requirement: FR-VIA-012, FR-VIA-060
 func TestCensus_IncomeBP_AbsentWithoutLabourShare(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

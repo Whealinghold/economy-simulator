@@ -489,6 +489,20 @@ per recipe would clear every market.
 When a recipe belongs to more than one role of the region, the census is reported per
 recipe only, flagged ambiguous.
 
+**Income per group.** The report also gives, per group, `IncomeBP`: the income per
+household at the solved flows, in basis points of the group's upkeep cost per
+household-tick at the solved prices. With `labour(g)` the labour term of the group's
+recipes at lambda 1 (`sum over r of d(r) * x(r)`, not the larger term of the formula
+below and not multiplied by `lambda*`, because the wage `w` already carries it),
+`H(g)` the configured households and `U` the upkeep cost per household-tick,
+`IncomeBP(g) = w * labour(g) * 10 000 / (H(g) * U)`, rounded half to even with the
+overflow checked. It is absent, flagged, when the labour share is absent (a tight capacity row, FR-VIA-012),
+for a group with no active recipe and for a group flagged ambiguous. The
+households-weighted mean over the groups is `w * LabourShareBP / U` (about 10 000),
+so only the spread between groups is a design signal (`spec-reference-chain.md`
+FR-REF-041). The column is a report field: the census, the tables and the hash do not
+read it (FR-VIA-060).
+
 **The formula.** With `x` the executions per tick of lambda 1 (5.1), the **need** of a
 group `g` of a region, in households, is the larger of two figures: the labour of its
 recipes, `sum over r of d(r) * x(r)`, and the start capacity of any of them,
@@ -1613,6 +1627,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-057 | `Validate` MUST warn, and MUST NOT fail, with `wants_exceed_labour` when the demand module is on and the programme with the wants has `lambda* < 1` while the upkeep-only programme has `lambda* >= 1`, or when the programme with the wants is infeasible (3.2) while the upkeep-only one has `lambda* >= 1`, and with `raw_without_source` for a commodity marked `Raw` that nothing real supplies. |
 | FR-VIA-058 | For a region whose labour dual at full labour is 0 while a capacity row has a positive dual, the solver MUST build its seeds and wage from the nominal programme, MUST list the region in `NominalSeed`, and MUST leave a region whose nominal wage is also 0 unpriced (`UnpricedWages`). |
 | FR-VIA-059 | A commodity marked `Raw` MUST count as sourced in V1 as in the structural check of `spec-config.md` 7.5, so the two checks MUST agree on every configuration. |
+| FR-VIA-060 | The report MUST give, per group, the income per household at the solved flows in basis points of its upkeep cost (`IncomeBP`, 5.2), absent and flagged when the labour share is absent, for a group with no active recipe and for a group flagged ambiguous, with the arithmetic checked; the census, the tables and the configuration hash MUST NOT depend on it. |
 
 ### Non-functional
 
