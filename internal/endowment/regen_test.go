@@ -216,9 +216,12 @@ func TestRegen_ClampBanksNothing(t *testing.T) {
 func TestRegen_RefusesUnknownShape(t *testing.T) {
 	t.Parallel()
 	for _, shape := range []endowment.Shape{-1, 3, 7} {
-		p := endowment.Params{Shape: shape, Rate: 5, Capacity: 100, ScaleBP: 10_000, TicksPerYear: 1}
-		if got, ok := endowment.Regen(p, endowment.Step{Stock: 10, SeasonBP: 10_000}); ok {
-			t.Errorf("Regen(%+v) = %+v, true, want not ok", p, got)
+		// A capacity of 0 returns early, and must not let a corrupt Shape through.
+		for _, capacity := range []int64{100, 0} {
+			p := endowment.Params{Shape: shape, Rate: 5, Capacity: capacity, ScaleBP: 10_000, TicksPerYear: 1}
+			if got, ok := endowment.Regen(p, endowment.Step{SeasonBP: 10_000}); ok {
+				t.Errorf("Regen(%+v) = %+v, true, want not ok", p, got)
+			}
 		}
 	}
 }
