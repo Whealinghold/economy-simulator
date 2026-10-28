@@ -260,6 +260,10 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 			cfg.Modules.MoneySupply = l.moneySupply(ms)
 			ms.finish()
 		}
+		if rs := m.sub("resources"); rs != nil {
+			cfg.Modules.Resources = l.resources(rs)
+			rs.finish()
+		}
 		if es := m.sub("estates"); es != nil {
 			cfg.Modules.Estates = &economysim.Estates{}
 			es.finish()
@@ -352,6 +356,15 @@ func (l *loader) recipe(id string, t *tbl) economysim.Recipe {
 	r.ID = id
 	integer(t, "duration", &r.Duration)
 	t.items("inputs", &r.Inputs)
+	var draws []economysim.Draw
+	if t.rows("draws", func(e *tbl) {
+		var d economysim.Draw
+		e.need("resource", e.text("resource", &d.Resource))
+		e.need("quantity", integer(e, "quantity", &d.Quantity))
+		draws = append(draws, d)
+	}) {
+		r.Draws = draws
+	}
 	var outs []economysim.Output
 	var shared []bool // for each output, whether its cost share was written
 	t.need("outputs", t.rows("outputs", func(e *tbl) {
@@ -587,4 +600,53 @@ func (l *loader) moneySupply(t *tbl) *economysim.MoneySupply {
 		m.Flows = append(m.Flows, f)
 	})
 	return m
+}
+
+// resources reads [modules.resources] (spec-config.md 6.2, spec-resources.md
+// 3.3.2): the resources as [resource.<id>] over DefaultResource and the rows as
+// [endowment.<region>.<resource>], each key of a row setting its Has flag. The
+// table being present switches the module on, even with no key. The horizon
+// starts from its default. The lists come out in canonical order because every
+// level is read in ID order.
+func (l *loader) resources(t *tbl) *economysim.Resources {
+	m := economysim.DefaultResources()
+	integer(t, "horizon_years", &m.HorizonYears)
+	t.entities("resource", func(id string, e *tbl) { m.Resources = append(m.Resources, l.resource(id, e)) })
+	t.entities("endowment", func(region string, r *tbl) {
+		r.eachSub(func(resource string, e *tbl) {
+			row := economysim.Endowment{Region: region, Resource: resource}
+			row.HasCapacity = integer(e, "capacity", &row.Capacity)
+			row.HasInitial = integer(e, "initial", &row.Initial)
+			row.HasRegenScale = integer(e, "regen_scale_bp", &row.RegenScaleBP)
+			m.Endowments = append(m.Endowments, row)
+		})
+	})
+	return &m
+}
+
+// resource reads one [modules.resources.resource.<id>] table over
+// DefaultResource. The curve and the season profile are arrays of inline tables
+// in the order written; Validate checks them.
+func (l *loader) resource(id string, t *tbl) economysim.Resource {
+	r := economysim.DefaultResource()
+	r.ID = id
+	t.text("shape", &r.Shape)
+	readInts(t, []intField{
+		{"rate_per_year", &r.RatePerYear}, {"rate_bp", &r.RateBP}, {"refuge", &r.Refuge},
+		{"capacity", &r.Capacity}, {"initial_bp", &r.InitialBP}, {"plan_share_bp", &r.PlanShareBP},
+	})
+	t.rows("abundance", func(e *tbl) {
+		var k economysim.AbundanceKnot
+		e.need("share", integer(e, "share", &k.Share))
+		e.need("factor", integer(e, "factor", &k.Factor))
+		r.Abundance = append(r.Abundance, k)
+	})
+	t.rows("seasons", func(e *tbl) {
+		var s economysim.SeasonRegen
+		e.need("season", e.text("season", &s.Season))
+		e.need("bp", integer(e, "bp", &s.BP))
+		r.Seasons = append(r.Seasons, s)
+	})
+	t.text("label", &r.Label)
+	return r
 }

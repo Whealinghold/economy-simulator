@@ -205,6 +205,22 @@ var (
 	ErrWantDurable = errors.New("want item is durable")
 )
 
+// The sentinels of the resources module (spec-resources.md 13.2, 5.1): the
+// first three are rules of Validate, the last is the error of a take.
+var (
+	// ErrUnknownResource is a draw of a recipe or an endowment row that names a
+	// resource that is not defined, or a call on an unknown resource.
+	ErrUnknownResource = errors.New("unknown resource")
+	// ErrResourceShape is a resource whose shape or whose rate, refuge or starting
+	// stock does not fit it.
+	ErrResourceShape = errors.New("resource has an invalid shape")
+	// ErrCurve is an abundance curve whose shares do not strictly increase within
+	// 0 to 10 000 or whose factors are outside 0 to MaxYieldBP.
+	ErrCurve = errors.New("abundance curve is invalid")
+	// ErrInsufficientEndowment is a take of more units than an endowment holds.
+	ErrInsufficientEndowment = errors.New("insufficient endowment")
+)
+
 // The errors of the region graph and of the relocation of an account
 // (spec-regions.md 9.1). ErrSelfEdge is a rule of Validate and NewGraph; the
 // others are the errors of the world's calls. They are matched with errors.Is

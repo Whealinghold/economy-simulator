@@ -159,6 +159,19 @@ func DefaultRegionTaste() RegionTaste {
 	return RegionTaste{Scale: 10_000}
 }
 
+// DefaultResource returns a constant, finite stock of no capacity that starts
+// full and whose plan stock is 6 000 basis points of the capacity
+// (spec-resources.md 12). ID has no default and is required.
+func DefaultResource() Resource {
+	return Resource{Shape: ShapeConstant, InitialBP: 10_000, PlanShareBP: 6_000}
+}
+
+// DefaultResources returns the resources module with a viability horizon of 50
+// years and no resource (spec-resources.md 12).
+func DefaultResources() Resources {
+	return Resources{HorizonYears: 50}
+}
+
 // The defaults of the solve options (spec-viability.md 11), unexported for the
 // reason the bounds are: the options are not Config fields. Provisional
 // placeholders (N-015).

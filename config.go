@@ -74,12 +74,109 @@ type Modules struct {
 	// 6.2.4). Nil is off; non-nil is on, even though it has no field. Its hash id
 	// is 25, whatever its place in this struct.
 	Estates *Estates
+	// Resources is the resources module: endowments with a stock, a capacity and a
+	// regeneration, and the draws of recipes on them (spec-resources.md). Nil is
+	// off; non-nil is on, even when empty. Its hash id is 5, whatever its place in
+	// this struct.
+	Resources *Resources
 }
 
 // Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
 // no field: a non-nil pointer switches relief and the pool as a flow target on,
 // and the tunables are Region.PoolRelease and Region.ReliefBelow.
 type Estates struct{}
+
+// Resources is the configuration of the resources module (spec-resources.md
+// 3.3, 12). The zero value is a module that is on with no resource. Every list
+// is in canonical order after construction: resources by ID, rows by region then
+// resource (spec-config.md 3.4).
+type Resources struct {
+	// Resources are the resource definitions, by ID in canonical order, 0 to
+	// MaxResources.
+	Resources []Resource
+	// Endowments are the region-keyed rows, by region then resource in canonical
+	// order, 0 to MaxEndowments. A pair with no row has no capacity.
+	Endowments []Endowment
+	// HorizonYears is the years a finite stock must last in the viability check,
+	// 1 to MaxHorizonYears.
+	HorizonYears int64
+}
+
+// Resource defines a kind of regional endowment (spec-resources.md 3.3). Start
+// from DefaultResource; ID has no default and is required.
+type Resource struct {
+	// ID names the resource. Resource and commodity IDs are separate namespaces.
+	ID string
+	// Shape is the regeneration shape: "constant", "refill" or "logistic".
+	Shape string
+	// RatePerYear is the units a year of a constant stock, 0 to
+	// MaxRegenRatePerYear; 0 is a finite stock. It must be 0 for the other shapes.
+	RatePerYear int64
+	// RateBP is the annual rate of a refill or logistic stock in basis points, 0
+	// to MaxRegenBP. It must be 0 for a constant stock.
+	RateBP int64
+	// Refuge is the units a logistic stock regrows from even at 0, 0 to the
+	// capacity. It must be 0 for the other shapes.
+	Refuge int64
+	// Capacity is the default capacity of an endowment of the resource in units,
+	// 0 to MaxEndowment; 0 is none.
+	Capacity int64
+	// InitialBP is the default starting stock as a share of the capacity in basis
+	// points, 0 to 10 000.
+	InitialBP int64
+	// PlanShareBP is the stock share a steady state is assumed to hold in basis
+	// points, 1 to 10 000.
+	PlanShareBP int64
+	// Abundance are the knots of the abundance curve, by share in canonical
+	// order, 0 to MaxKnots; none is flat 10 000.
+	Abundance []AbundanceKnot
+	// Seasons are the regeneration factors by season, in the calendar's season
+	// order; none is 10 000 in every season.
+	Seasons []SeasonRegen
+	// Label is a display name. It is presentation only: it changes no result and
+	// is not hashed.
+	Label string
+}
+
+// AbundanceKnot is a point of the abundance curve, both in basis points
+// (spec-resources.md 4.7).
+type AbundanceKnot struct {
+	// Share is the stock share, 0 to 10 000, strictly increasing along the curve.
+	Share int64
+	// Factor is the yield factor at the share, 0 to MaxYieldBP.
+	Factor int64
+}
+
+// SeasonRegen is the regeneration factor of one season (spec-resources.md 4.5).
+type SeasonRegen struct {
+	// Season is the ID of a season of the calendar.
+	Season string
+	// BP is the factor in basis points, 0 to MaxSeasonRegenBP.
+	BP int64
+}
+
+// Endowment is the row of one region and one resource (spec-resources.md
+// 3.3.1). An absent row is the default: the resource's capacity, which is 0
+// unless the resource gives one.
+type Endowment struct {
+	// Region and Resource are the key of the row: an existing region and an
+	// existing resource.
+	Region, Resource string
+	// HasCapacity says Capacity applies; the file says it by writing the key.
+	HasCapacity bool
+	// Capacity replaces the resource's default capacity here, 0 to MaxEndowment.
+	Capacity int64
+	// HasInitial says Initial applies.
+	HasInitial bool
+	// Initial replaces the default starting stock here in units, 0 to the
+	// capacity.
+	Initial int64
+	// HasRegenScale says RegenScaleBP applies.
+	HasRegenScale bool
+	// RegenScaleBP scales the regeneration here in basis points, 0 to
+	// MaxRegenScaleBP; 10 000 is the resource as written.
+	RegenScaleBP int64
+}
 
 // Demand is the configuration of the demand module (spec-demand.md 3.2, 9). The
 // zero value is a module that is on with no want. Every list is in canonical
@@ -432,9 +529,23 @@ type Recipe struct {
 	// TraineeYield is a trainee's share of a full execution's output, in basis
 	// points.
 	TraineeYield int64
+	// Draws are the units of each resource the recipe takes from its region's
+	// endowment per execution, by resource in canonical order, 0 to MaxDraws. It
+	// needs the resources module (spec-resources.md 3.1.3). Its hash id is 9; it
+	// is written only while the module is on.
+	Draws []Draw
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
+}
+
+// Draw is one entry of Recipe.Draws: the units of a resource a recipe takes from
+// its region's endowment per execution (spec-resources.md 3.1.3).
+type Draw struct {
+	// Resource is the ID of a resource of the resources module.
+	Resource string
+	// Quantity is the units taken per execution, 1 to MaxQuantity.
+	Quantity Quantity
 }
 
 // YieldProfile is the yield of one recipe in one region (spec-production.md
@@ -674,6 +785,7 @@ func (c Config) canonical() Config {
 		r.Inputs = sortedBy(r.Inputs, func(a, b Item) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Outputs = sortedBy(r.Outputs, func(a, b Output) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Requires = sortedBy(r.Requires, func(a, b Tool) int { return cmp.Compare(a.Commodity, b.Commodity) })
+		r.Draws = sortedBy(r.Draws, func(a, b Draw) int { return cmp.Compare(a.Resource, b.Resource) })
 	}
 	out.Yields = sortedBy(c.Yields, func(a, b YieldProfile) int {
 		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Recipe, b.Recipe))
@@ -720,6 +832,7 @@ func (c Config) canonical() Config {
 	}
 	out.Modules.Demand = c.Modules.Demand.canonical()
 	out.Modules.MoneySupply = c.Modules.MoneySupply.canonical()
+	out.Modules.Resources = c.Modules.Resources.canonical(c.Calendar.Seasons)
 	return out
 }
 
