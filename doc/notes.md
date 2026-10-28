@@ -54,9 +54,9 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
-| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314 |
+| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310 |
 | EVD | N-018, N-133 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
 | SAV | N-145, N-156, N-195, N-197 |
@@ -86,13 +86,13 @@ PR description.
 | SET | N-140, N-192, N-268 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
 | SPN | N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
-| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314 |
+| STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314, N-325 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244 |
-| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207 |
+| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
 | WLD | N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
 
@@ -1944,6 +1944,8 @@ PR description.
 
 ### N-312 The engine collapses pack `one` under its own rules: findings of the row 12 scenarios
 
+> **2026-10-28:** plan 2-8 stopped without a rebalance; points (1) and (2) stay open, see N-325.
+
 - **Areas:** REF, STB, CODE
 - **Raised:** 2026-10-21, the audit fixes of `plan-phase-1-12.md` (git history, `2abbe62^`) (Phases 5, 7 and 8).
 - **Note:** None of this is row 12's code to fix; row 12 only adds tests, fixtures and docs, and the owner's ruling is needed on each point. (1) In the recorded golden `testdata/golden/off/one.txt` the households of `one` fall from about 600 to 81 by tick 400, and every S01, S04 and S16 run ends with 0 households. (2) The S01 O check (the mean fuel price over the shock, ticks 400 to 459, above P0, the mean over 300 to 399) fails for seeds 1, 2, 3 and 5: the shock mean is 22, 21, 94 and 104 against P0 of 39, 41, 102 and 116. (3) The price-bounds check of S01 and S04 uses the loosest maker interval (`marketInterval` in `scenario_helpers_test.go`) and exempts the ticks where an estate sold at the tick the published price was set (an estate's ask is priced by the markdown of EST 2.7.3, not by a belief); the strict per-maker violations are only reported (564 market-ticks on seed 1). Whether FR-STB-008 is the loose or the strict interval, and whether an estate sale may leave the interval, is the owner's ruling. (4) A rendering detail found on the way: the snapshot line of `events-one.txt` carries `Modules=[]` because the renderer omits a field only at `IsZero`, and a non-nil empty slice is not; treating an empty slice as zero (OBS 9.5.2) would move that one golden line, so it was not changed (testing.md 7.2).
@@ -1955,6 +1957,8 @@ PR description.
 - **Update (2026-10-21, anchor fix):** two defects of the cost anchor fed the staple and fuel crash and are fixed (`spec-production.md` 9.3, FR-PRO-054 and 055): (a) a seasonal recipe was costed at its factor of the current season, so `grow_staple` gave staple no anchor outside spring; it is now costed at its best season; (b) the anchor followed the observed wage down in a crash; `World.AnchorHold` (default 0, 5 000 in `base.toml`) holds it at a share of the starting wage. On `one`, seeds 1 to 3, households at ticks 100, 300 and 600: before 501, 196, 101 / 479, 217, 65 / 541, 148, 86; after 557, 193, 45 / 538, 182, 99 / 544, 311, 20. The floors hold (staple about 40 instead of 10 after tick 200, fuel about 65 instead of 16) and the collapse is not cured: see N-314. Points (1), (2) and (4) stay open. The probes of N-314 (2026-10-21, income and self-provisioning) qualify the trace of the grower collapse above: at the reference prices a grower earns 45% of its upkeep because the census gives it 253 households for a staple that is 19% of the basket, not only because of the spring gap.
 
 ### N-314 The slice's money has no way back from the cooks
+
+> **2026-10-28:** the data rungs and three module probes did not cure it; the log and ruling E1 are in N-325.
 
 - **Areas:** DEM, REF, STB, MON
 - **Raised:** 2026-10-21, the collapse investigation of pack `one` (seeds 1 to 3, with probes outside the repository).
@@ -2025,6 +2029,25 @@ PR description.
 - **Raised:** 2026-10-25, plan 2-3 Phase 8 (`TestWarnLines_FiveRules`).
 - **Note:** `Config.Warnings()` called on a configuration reports a path such as `edges[2]` against the lists as written, while a world logs the warnings of its own canonical configuration (`world.go` calls `w.cfg.Warnings()`), so the same warning reads `edges[1]` in the `Warn` line when the edge list was not already sorted. `spec-regions.md` 9.2 and `spec-observability.md` 7.3 say only that the line carries `rule` and `path`. CFG or OBS should say which list the path indexes in the logged line, or the world should log the warnings of the configuration as given; the test reads the world's.
 
+### N-325 Plan 2-8 stopped without a rebalance: the log, the finding and ruling E1
+
+- **Areas:** REF, VIA, STB, DEM, STY, CODE
+- **Raised:** 2026-10-28, plan 2-8 PR B (supersedes the open points of N-312 and N-314).
+- **Note:** The ladder of plan 2-8 D366 stopped by D369 after three consecutive non-improving data trials; no rung was accepted and no pack, warm document, `expected/` file, golden, pin or fixture moved. Screen: `one` warm, 600 ticks, seeds 1 to 3, score = X4 criteria holding over ticks 235 to 599 on all three seeds, then the median households at tick 599 (priors of D363, `x4.range_factor` as the ratio 2). Households at ticks 100/300/600, seeds 1, 2, 3:
+
+  | Trial | Change | Gate (bp) | Households | Score, median | Improves |
+  | --- | --- | --- | --- | --- | --- |
+  | R0 | none | 4727 to 13910, fails | 557/193/45; 538/182/99; 544/311/20 | 2 (a,c), 45 (7.5%) | baseline |
+  | R1 | `grow_staple` yield spring 10 000, summer and autumn 6 000, winter 3 000; census cook 166, digger 38, forester 110, grower 170, maker 71, refiner 45 | 9928 to 10060, passes | 527/303/94; 492/284/99; 506/336/117 | 2, 99 (16.5%) | no: +54 households, D367 wants 60 |
+  | R3 | R1 + `tool_b` durability 16, `start_money` grower 16 000, cook 20 000; census cook 188, digger 23, forester 123, grower 193, maker 45, refiner 28 | 9888 to 10032 | 525/467/93; 523/384/165; 531/345/92 | 2, 93 | no |
+  | R4 | R1 + `cut_fuel` in `role.grower.recipes` (forester and grower ambiguous, outside the gate) | 9928 to 10060 over 4 groups | 485/176/118; 464/278/49; 484/174/87 | 2, 87 | no: stop |
+
+  R2 was not needed (R1 passed the gate) and R5 was not reached. Stage C (1 095 ticks, seeds 1 to 4) of R1: 527/303/94/0, 492/284/99/0, 506/336/117/0, 527/332/77/0, extinct. Informational on R1, all extinct by tick 1 095: M1 `one-demand` with R1 yields (census comfort_maker 15, cook 153, digger 43, forester 102, grower 156, maker 65, refiner 51, treat_maker 15) 563/458/26/0 on seed 1; M2 with `overlay/estates.toml` 528/300/112/0; M3 with a balanced pair (grant 40 a tick to growers, `not_income`, fixed levy 41 on cooks) 511/255/45/0. Unchanged `five` (seeds 1, 2) 4344/1215/0/0 and 4337/1051/0/0; unchanged `one-demand` 597/335/0/0 and three more seeds, all extinct.
+- **Finding (realised income):** the static gate is met (every group of R1 is at about 100% of its upkeep at the solved flows) and does not carry into the run. Seed 1 of R1, margin in bp of the upkeep by window of 100 ticks: window 0 cook 13 214, digger 5 037, forester 4 783, grower 7 207, maker 4 512, refiner 4 510; window 1 cook 8 665, grower 2 282, maker -1 713; window 2 grower -79; from window 3 only cooks and foresters still trade. The gap is in prices and money circulation, not in the balance of census and yield that R1 and R3 fix; single data changes delay the collapse and none cures it (as N-314 (a) to (e) found).
+- **Ruling (owner, 2026-10-28, E1):** the stability claim rides on `one-demand`; `one` stays the upkeep-only control that S19 needs. Applied in `spec-reference-chain.md` C09, FR-REF-018 and FR-REF-042 and in `spec-viability.md` 4.7. Caveats: `one-demand` does not meet FR-REF-042 (unchanged or with R1 it ends at 0 households), so the requirement is stated and unmet; a pack that survives is a new work package. E0 has no consequence (no rung that moves C04 was accepted: C04, S04, S05, S11, S12, FR-REF-002 and `overlay/seasonal.toml` are untouched). `TestPacks_IncomeBalance` and `TestScenarioStable_OneWarm` stay skipped with this note's ID.
+- **Reading of D367 and what resumes the ladder:** "equal with the median households at least 10% of the start higher" was read as higher by 10% of the start (60 households). Under the relative reading R1 improves, the counter is 2 after R4, and the ladder resumes at R5 on R1: data as in the R1 row above, then `world.upkeep` staple 3 with every `reference_price` and `reference_basket` re-derived so FR-CUR-020 holds. D369 says it is not re-run without an owner ruling that names it; the harness was a scratch test (not kept). R1 needs E0 (the spring-only crop leaves the pack for `overlay/seasonal.toml`).
+- **Also open from the stop:** `expected/one.scenarios.txt` is stale (Stage 1 sign-off exception, `roadmap-v1.md`); the Stage 2 criterion "passes the version 1 bands of STY on `five.toml`" has no rebalanced `five` behind it (`five` collapses, `expected/five.toml` records it); plans 9 onward run on the unchanged packs. N-312 points (1) and (2) and N-314 stay open and point here.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2037,5 +2060,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 84a471e3546f00b7b30aebec
+NOTES-TAG: ea5d56a5959df1c075d3815b
 

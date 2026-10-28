@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 8: Reference pack rebalance
 
-**Status: plan written (2026-10-22), not started. Not a module: it changes pack data, one report column and test helpers. It is built after plans 5 (DEM), 6 (MON) and 7 (EST module part), as `plan-2-0.md` orders.**
+**Status: ladder stopped without an accepted rung (2026-10-28, D369; log table below, note N-325); Phases 4 to 6 skipped; owner ruling E1 applied to the specs. Plan written 2026-10-22. Not a module: it changes pack data, one report column and test helpers. It is built after plans 5 (DEM), 6 (MON) and 7 (EST module part), as `plan-2-0.md` orders.**
 This is the work package that N-312 and N-314 owe: pack `one` collapses under its own rules (about 600 households fall to 20 to 100 by tick 600), and the cause is not a single constant. This plan says what is measured, what is tried in what order, when the work stops, and how a later change that adds goods re-runs it. It decides no spec: where a spec must change, Phase 1 lists the edit and the supervisor applies it.
 
 Rule tags read (all three files, in full): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1 (the tags the file shows today; they equal the contract's).
