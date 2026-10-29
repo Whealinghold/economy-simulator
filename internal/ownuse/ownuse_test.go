@@ -25,6 +25,10 @@ func TestCover_MinOverGoods(t *testing.T) {
 		{"one good", []ownuse.Good{{Stock: 7, Upkeep: 3, Price: 1}}, 2, true},
 		// floor(10 / 2) = 5, floor(5 / 4) = 1: the scarcer good decides.
 		{"least of two", []ownuse.Good{{Stock: 10, Upkeep: 2, Price: 1}, {Stock: 5, Upkeep: 4, Price: 1}}, 1, true},
+		// The scarcer good first, the dearer cover second: the least is kept.
+		{"least of two, scarcer first", []ownuse.Good{{Stock: 5, Upkeep: 4, Price: 1}, {Stock: 10, Upkeep: 2, Price: 1}}, 1, true},
+		// An upkeep of exactly 1 is valid: floor(4 / 1) = 4.
+		{"upkeep of one", []ownuse.Good{{Stock: 4, Upkeep: 1, Price: 1}}, 4, true},
 		{"empty stock", []ownuse.Good{{Stock: 0, Upkeep: 3, Price: 1}}, 0, true},
 		{"truncates toward zero", []ownuse.Good{{Stock: 8, Upkeep: 3, Price: 1}}, 2, true},
 		{"no good", nil, 0, false},
@@ -62,6 +66,8 @@ func TestCost_Sum(t *testing.T) {
 		{"product overflows", []ownuse.Good{{Upkeep: math.MaxInt64, Price: 2}}, 0, false},
 		{"sum overflows", []ownuse.Good{{Upkeep: 1, Price: math.MaxInt64}, {Upkeep: 1, Price: 1}}, 0, false},
 		{"largest product fits", []ownuse.Good{{Upkeep: 3_037_000_499, Price: 3_037_000_499}}, 3_037_000_499 * 3_037_000_499, true},
+		// The smallest valid good: 1 * 1 = 1.
+		{"price and upkeep of one", []ownuse.Good{{Upkeep: 1, Price: 1}}, 1, true},
 		{"price below 1", []ownuse.Good{{Upkeep: 1, Price: 0}}, 0, false},
 		{"upkeep below 1", []ownuse.Good{{Upkeep: 0, Price: 1}}, 0, false},
 		{"no good", nil, 0, false},
@@ -124,6 +130,8 @@ func TestAfford_ZeroWhenHungry(t *testing.T) {
 		{"fed buys three", false, 900, 300, 3, true},
 		{"fed truncates", false, 1000, 300, 3, true},
 		{"hungry ignores a bad cost", true, 5, 0, 0, true},
+		{"fed with a cost of one", false, 5, 1, 5, true},
+		{"fed with no money and a cost of one", false, 0, 1, 0, true},
 		{"fed zero cost", false, 5, 0, 0, false},
 		{"fed negative money", false, -1, 300, 0, false},
 	}
@@ -316,6 +324,7 @@ func TestOverflow_ReturnsNotOK(t *testing.T) {
 		{"cost overflows", false, []ownuse.Good{{Stock: 1, Upkeep: math.MaxInt64, Price: 2}}},
 		{"cost overflows in the mode", true, []ownuse.Good{{Stock: 1, Upkeep: math.MaxInt64, Price: 2}}},
 		{"no good", false, nil},
+		{"price below 1", false, []ownuse.Good{{Stock: 1, Upkeep: 1, Price: 0}}},
 		{"negative stock", true, []ownuse.Good{{Stock: -5, Upkeep: 1, Price: 1}}},
 	}
 	for _, tt := range tests {
@@ -330,5 +339,10 @@ func TestOverflow_ReturnsNotOK(t *testing.T) {
 	}
 	if _, ok := ownuse.Step(p23, false, 0, one(7), false, -1); ok {
 		t.Errorf("Step with a negative money returned ok")
+	}
+	// A hungry agent's afford is 0 without a division, so only the cost check
+	// refuses an overflowing cost.
+	if _, ok := ownuse.Step(p23, false, 0, []ownuse.Good{{Stock: 1, Upkeep: math.MaxInt64, Price: 2}}, true, 100); ok {
+		t.Errorf("Step of a hungry agent with an overflowing cost returned ok")
 	}
 }

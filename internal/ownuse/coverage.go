@@ -6,9 +6,6 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/checked"
 )
 
-// BP is the denominator of a basis point.
-const BP = 10_000
-
 // Option is an own-use recipe a household may request: Ref is the caller's
 // opaque reference (the recipe ID, which gives the tie-break), Max the
 // executions the household could start (MaxExecutions of the view) and Cov the
@@ -64,7 +61,10 @@ func Pick(opts []Option, short []bool) (ref int, ok bool) {
 			continue
 		}
 		sum := shortSum(o.Cov, short)
-		if sum > best || (sum == best && sum > 0 && o.Ref < ref) {
+		if sum < 1 {
+			continue
+		}
+		if !ok || sum > best || (sum == best && o.Ref < ref) {
 			best, ref, ok = sum, o.Ref, true
 		}
 	}

@@ -100,6 +100,25 @@ func TestPick_GreatestSumTiesToLowerID(t *testing.T) {
 			{Ref: 5, Max: 1, Cov: []int64{12_500, 0}},
 			{Ref: 7, Max: 1, Cov: []int64{9000, 0}},
 		}, []bool{true, false}, 5},
+		// The better recipe comes first and has the higher reference; the weaker one
+		// after it has the lower reference but must not win on that.
+		{"a lower reference does not beat a greater sum", []ownuse.Option{
+			{Ref: 5, Max: 1, Cov: []int64{12_500, 0}},
+			{Ref: 3, Max: 1, Cov: []int64{4000, 0}},
+		}, []bool{true, false}, 5},
+		{"several executions can start", []ownuse.Option{
+			{Ref: 1, Max: 3, Cov: []int64{7000, 0}},
+		}, []bool{true, false}, 1},
+		{"tie goes to the lower reference, negative references", []ownuse.Option{
+			{Ref: 3, Max: 1, Cov: []int64{5000, 0}},
+			{Ref: -2, Max: 1, Cov: []int64{5000, 0}},
+		}, []bool{true, false}, -2},
+		// Fuel (the first good) is not short and grain (the second) is: a recipe is
+		// judged on the short goods wherever they sit in the covered set.
+		{"a good that is not short comes first", []ownuse.Option{
+			{Ref: 1, Max: 1, Cov: []int64{10_000, 3000}},
+			{Ref: 2, Max: 1, Cov: []int64{0, 2000}},
+		}, []bool{false, true}, 1},
 		{"tie goes to the lower reference", []ownuse.Option{
 			{Ref: 9, Max: 1, Cov: []int64{5000, 0}},
 			{Ref: 2, Max: 1, Cov: []int64{5000, 0}},
@@ -158,6 +177,8 @@ func TestPick_NeverZero(t *testing.T) {
 		{"no execution", []ownuse.Option{{Ref: 1, Max: 0, Cov: []int64{8000}}}, []bool{true}},
 		{"negative executions", []ownuse.Option{{Ref: 1, Max: -2, Cov: []int64{8000}}}, []bool{true}},
 		{"short shorter than cov", []ownuse.Option{{Ref: 1, Max: 1, Cov: []int64{0, 8000}}}, []bool{true}},
+		{"short much shorter than cov", []ownuse.Option{{Ref: 1, Max: 1, Cov: []int64{0, 0, 8000}}}, []bool{true}},
+		{"a zero-sum recipe with a negative reference", []ownuse.Option{{Ref: -1, Max: 1, Cov: []int64{0}}}, []bool{true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -190,6 +211,9 @@ func TestRamp_Formula(t *testing.T) {
 		{"cover at the exit still runs one", 40, 100, 3, 3, 1, true},
 		{"cover above the exit still runs one", 40, 100, 9, 3, 1, true},
 		{"weight bounds the executions", 3, 100, 0, 3, 3, true},
+		// ceil(5 * 1 / 1) = 5: an exit cover of 1 is valid.
+		{"exit of one", 5, 9, 0, 1, 5, true},
+		{"weight of one with an exit of one", 1, 9, 0, 1, 1, true},
 		{"zero weight", 0, 5, 0, 3, 0, false},
 		{"zero exit", 5, 5, 0, 0, 0, false},
 		{"overflow of the share", math.MaxInt64, math.MaxInt64, -1_000_000, 1, 0, false},
@@ -243,6 +267,7 @@ func TestRetryDue(t *testing.T) {
 		{"never when 0", 0, 1000, false},
 		{"one", 1, 1, true},
 		{"one with none started", 1, 0, false},
+		{"negative retry never fires", -1, 5, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
