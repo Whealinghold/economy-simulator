@@ -316,7 +316,9 @@ func TestAllocs_EventNoop(t *testing.T) {
 }
 
 // BenchmarkFlagStep reports the cost and the allocations of the flag step over 100
-// households (NFR-SUB-003).
+// households.
+//
+// Requirement: NFR-SUB-003
 func BenchmarkFlagStep(b *testing.B) {
 	c := forageConfig(100)
 	w, err := NewWorld(c)
