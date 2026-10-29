@@ -242,7 +242,7 @@ all-on from it).
 | `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | plan written |
 | Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | [2-8](plans/plan-2-8.md) | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; no pack or golden moved |
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | merged (PRs A, B, C) |
-| `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | plan written |
+| `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
 | `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | plan written |
 | `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
 | `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
