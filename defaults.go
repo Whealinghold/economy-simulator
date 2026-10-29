@@ -172,6 +172,14 @@ func DefaultResources() Resources {
 	return Resources{HorizonYears: 50}
 }
 
+// DefaultSubsistence returns the subsistence module with the placeholder
+// tunables of spec-subsistence.md 12: the mode starts below 2 secure ticks, ends
+// at a cover of 3 and retries a role job after 10 own-use jobs. It has no own-use
+// recipe, so a pack names its own.
+func DefaultSubsistence() SubsistenceConfig {
+	return SubsistenceConfig{EnterTicks: 2, ExitTicks: 3, RetryJobs: 10}
+}
+
 // The defaults of the solve options (spec-viability.md 11), unexported for the
 // reason the bounds are: the options are not Config fields. Provisional
 // placeholders (N-015).

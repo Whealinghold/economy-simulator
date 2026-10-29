@@ -386,3 +386,16 @@ const (
 	// MaxDraws is the most endowments one recipe draws on.
 	MaxDraws = 4
 )
+
+// Bounds of the subsistence module (spec-subsistence.md 13.1), provisional
+// placeholders (N-015, N-027).
+const (
+	// MaxOwnUseRecipes is the most entries in one own-use list; the default Work
+	// scans the list of a free household once a tick.
+	MaxOwnUseRecipes = 8
+	// MaxOwnUseTicks is the largest EnterTicks and ExitTicks and the saturation of
+	// the secure ticks; the bound of CoverTicks too.
+	MaxOwnUseTicks = 1_000
+	// MaxRetryJobs is the largest RetryJobs.
+	MaxRetryJobs = 1_000
+)

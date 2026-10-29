@@ -421,6 +421,11 @@ func pairsModules(e *encoder, m Modules) {
 		pairsResources(e, *m.Resources)
 		e.end()
 	}
+	if m.Subsistence != nil {
+		e.id(8)
+		pairsSubsistence(e, *m.Subsistence)
+		e.end()
+	}
 	if m.Estates != nil {
 		e.id(25)
 		e.end()
@@ -487,6 +492,19 @@ func pairsRegionTaste(e *encoder, t RegionTaste) {
 	e.text(1, t.Region)
 	e.text(2, t.Want)
 	e.num(3, t.Scale)
+}
+
+// pairsSubsistence writes the pairs of a SubsistenceConfig: Recipes 1, Roles 2
+// (Role 1, Recipes 2), EnterTicks 3, ExitTicks 4, RetryJobs 5.
+func pairsSubsistence(e *encoder, s SubsistenceConfig) {
+	e.texts(1, s.Recipes)
+	encodeList(e, 2, s.Roles, func(e *encoder, r RoleOwnUse) {
+		e.text(1, r.Role)
+		e.texts(2, r.Recipes)
+	})
+	e.num(3, s.EnterTicks)
+	e.num(4, s.ExitTicks)
+	e.num(5, s.RetryJobs)
 }
 
 // pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,

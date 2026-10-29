@@ -76,7 +76,7 @@ func TestHash_DemandOnEmptyDiffersFromNil(t *testing.T) {
 // moduleIDs are the field ids of the modules that are built, by field name: the
 // position of the module in the Modules row of spec-config.md 3.1 (8.2.2). Each
 // module's change appends its row.
-var moduleIDs = map[string]uint16{"Demand": 1, "MoneySupply": 2, "Resources": 5, "Estates": 25}
+var moduleIDs = map[string]uint16{"Demand": 1, "MoneySupply": 2, "Resources": 5, "Subsistence": 8, "Estates": 25}
 
 // TestHashConfig_ModulePairsAscending verifies, from the bytes, that the pairs of
 // Modules are written in ascending id order and under the id of the module's

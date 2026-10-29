@@ -264,6 +264,10 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 			cfg.Modules.Resources = l.resources(rs)
 			rs.finish()
 		}
+		if ss := m.sub("subsistence"); ss != nil {
+			cfg.Modules.Subsistence = l.subsistence(ss)
+			ss.finish()
+		}
 		if es := m.sub("estates"); es != nil {
 			cfg.Modules.Estates = &economysim.Estates{}
 			es.finish()
@@ -649,4 +653,24 @@ func (l *loader) resource(id string, t *tbl) economysim.Resource {
 	})
 	t.text("label", &r.Label)
 	return r
+}
+
+// subsistence reads [modules.subsistence] (spec-config.md 6.2.1,
+// spec-subsistence.md 3.2.2): the default list as recipes, the three tunables
+// over DefaultSubsistence, and the role rows as [role.<id>] with recipes. The
+// table being present switches the module on, even with no key; a row with no
+// key is an empty row, which says the role has none. The rows come out in role
+// order because every level is read in ID order.
+func (l *loader) subsistence(t *tbl) *economysim.SubsistenceConfig {
+	m := economysim.DefaultSubsistence()
+	t.strings("recipes", &m.Recipes)
+	readInts(t, []intField{
+		{"enter_ticks", &m.EnterTicks}, {"exit_ticks", &m.ExitTicks}, {"retry_jobs", &m.RetryJobs},
+	})
+	t.entities("role", func(id string, e *tbl) {
+		row := economysim.RoleOwnUse{Role: id}
+		e.strings("recipes", &row.Recipes)
+		m.Roles = append(m.Roles, row)
+	})
+	return &m
 }
