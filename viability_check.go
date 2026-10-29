@@ -464,10 +464,11 @@ func (m *viaModel) storage(o *viabilityOutcome, lk lookup) {
 func (m *viaModel) regions(o *viabilityOutcome) {
 	prod := steady.Producible(m.realm())
 	for _, r := range m.withHouseholds {
-		if m.noProgramme([]RegionID{r}) || m.imports(o, r, prod) {
-			continue
+		surplus, solved := int64(0), false
+		if !m.noProgramme([]RegionID{r}) && !m.imports(o, r, prod) {
+			surplus, solved = m.autarky(o, r)
 		}
-		m.autarky(o, r)
+		m.ownUse(o, r, surplus, solved)
 	}
 }
 
@@ -488,15 +489,17 @@ func (m *viaModel) imports(o *viabilityOutcome, r RegionID, prod steady.Producib
 // autarky solves a region alone at full labour and warns
 // region_not_self_sufficient when its surplus factor is below 1 and
 // subsistence_exceeds_expected_work when the labour share to subsist is above the
-// mean expected work share; it then runs the nominal programme.
-func (m *viaModel) autarky(o *viabilityOutcome, r RegionID) {
+// mean expected work share; it then runs the nominal programme. It returns the
+// autarky SurplusBP and whether the programme was solved, for the own-use check
+// (spec-subsistence.md 4.2).
+func (m *viaModel) autarky(o *viabilityOutcome, r RegionID) (surplus int64, solved bool) {
 	id := m.c.Regions[r].ID
 	md := m.model([]RegionID{r}, steady.Ratio{Num: 1, Den: 1})
 	res, skipped, err := m.solve(md)
 	switch {
 	case err != nil:
 		o.fail(err)
-		return
+		return 0, false
 	case skipped:
 		o.skipped("v3_region", id)
 	case res.SurplusBP < wholeBP:
@@ -506,13 +509,15 @@ func (m *viaModel) autarky(o *viabilityOutcome, r RegionID) {
 			o.warn("region_not_self_sufficient", "regions", id)
 		}
 	}
+	surplus, solved = res.SurplusBP, !skipped
 	if !m.sumsOK[r] {
-		return
+		return surplus, solved
 	}
 	if !skipped && res.HasLabourShare && shareAboveMean(res.LabourShareBP, m.expected[r], m.year, m.households[r]) {
 		o.warn("subsistence_exceeds_expected_work", "regions", id)
 	}
 	m.nominal(o, r)
+	return surplus, solved
 }
 
 // nominal solves the region alone at the work share its households expect and

@@ -42,7 +42,7 @@ var notBuilt = []string{
 	"Modules.Information", "Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
 	"Modules.Population", "Modules.Risk", "Modules.Saving",
-	"Modules.Settlements", "Modules.Storage", "Modules.Subsistence", "Modules.Technology",
+	"Modules.Settlements", "Modules.Storage", "Modules.Technology",
 	"Modules.Tenure", "Modules.Transport",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
@@ -60,9 +60,9 @@ var notBuilt = []string{
 	"OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "Population", "ProjectWorth", "Purchase",
 	"RateLimit", "Reaction", "RegionMove", "RegionPopulation", "RegionSettlement",
-	"Release", "Right", "Risk", "RoleOwnUse", "RoleRoom", "RouteRisk",
+	"Release", "Right", "Risk", "RoleRoom", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SettlementClass",
-	"Settlements", "Storage", "StoreClass", "StoreRisk", "Subsistence", "Tax", "TechField",
+	"Settlements", "Storage", "StoreClass", "StoreRisk", "Tax", "TechField",
 	"Technology", "Tenure", "TenureTerm", "Toll", "Transport", "Underwrite",
 	"Window",
 }
@@ -78,11 +78,17 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
 }
+
+// scopeAlias maps a scope of the owner table to the Go type that holds it, where
+// the table names the module and the type is called after its configuration
+// (spec-config.md 3.7.1: the scope Subsistence is the type SubsistenceConfig, as
+// Tenure is TenureConfig).
+var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig"}
 
 // readOwnerTable reads the parameter-owner table of doc/specs/README.md by a
 // plain text parse: the pipe rows under the heading "Parameter owners".
@@ -115,6 +121,9 @@ func readOwnerTable(t *testing.T) []registryRow {
 			}
 			row.scope, _, _ = strings.Cut(scope, " (")
 			row.scope = strings.TrimSpace(row.scope)
+			if alias, ok := scopeAlias[row.scope]; ok {
+				row.scope = alias
+			}
 			if row.param == "" || row.scope == "" {
 				t.Fatalf("owner table row %q has no parameter or no scope", line)
 			}
