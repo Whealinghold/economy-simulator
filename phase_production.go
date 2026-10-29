@@ -122,7 +122,7 @@ func (w *World) p21Complete() {
 				continue
 			}
 			done, working := a.job.advance()
-			w.welfare.markWorking(int(a.id), working, false)
+			w.welfare.markWorking(int(a.id), working, w.sub.ownJob(w, a))
 			if done {
 				w.finishJob(a, RegionID(g))
 			}
@@ -137,6 +137,9 @@ func (w *World) finishJob(a *agent, region RegionID) {
 	c := w.prod.complete(w.ledger, &a.job, a.account, MaxQuantity)
 	if w.obs.supplied {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
+	}
+	if w.sub != nil {
+		w.sub.completed(w, a, &c)
 	}
 	w.warnOverflow(&c)
 }
@@ -401,7 +404,7 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	for _, f := range w.prod.wear {
 		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)
 	}
-	w.welfare.markWorking(int(a.id), res.k, false)
+	w.welfare.markWorking(int(a.id), res.k, w.sub.ownJob(w, a))
 	if done, _ := a.job.advance(); done {
 		w.finishJob(a, region)
 	}

@@ -145,6 +145,17 @@ type subsistence struct {
 
 	// goods is the scratch of the covered goods of the agent being evaluated.
 	goods []ownuse.Good
+
+	// receipts are the units created at the completion of own-use jobs in the
+	// tick, valued and added to the welfare scratch at P6.3 (D410).
+	receipts []ownReceipt
+}
+
+// ownReceipt is the units of one commodity an own-use job of an agent created.
+type ownReceipt struct {
+	slot      int
+	commodity CommodityID
+	units     int64
 }
 
 // newSubsistence builds the state from a canonical configuration that passed
@@ -242,6 +253,12 @@ func (s *subsistence) on(a *agent) bool {
 func isOwn(row *roleRow, recipe RecipeID) bool {
 	_, ok := slices.BinarySearch(row.ownUse, recipe)
 	return ok
+}
+
+// ownJob reports whether the job of the agent runs an own-use recipe; it is
+// false for a nil module and for an agent with no job.
+func (s *subsistence) ownJob(w *World, a *agent) bool {
+	return s != nil && a.hasJob() && isOwn(w.roles.row(a.role), a.job.recipe)
 }
 
 // goodsOf fills the covered goods of an agent in region g (spec-subsistence.md
@@ -522,4 +539,47 @@ func (dst *workReportBuf) ownUseWork(v *AgentView) bool {
 	}
 	dst.share, dst.chosen, dst.executions = wholeBP, idx, k
 	return true
+}
+
+// completed records a finished job of agent a in region g: when it ran an
+// own-use recipe, the units it created of each non-discard output are an in-kind
+// receipt of the tick, valued at P6.3 (spec-subsistence.md 7.1, FR-SUB-028, 051).
+// The units are those actually created, after the carried remainder and the room
+// that was left. It is the module's call in finishJob.
+func (s *subsistence) completed(w *World, a *agent, c *completion) {
+	row := w.roles.row(a.role)
+	if !isOwn(row, c.recipe) {
+		return
+	}
+	for i, o := range w.recipes.row(c.recipe).outputs {
+		if units := c.created[i] - c.disposed[i]; !o.discard && units > 0 {
+			s.receipts = append(s.receipts, ownReceipt{slot: int(a.id), commodity: o.commodity, units: units})
+		}
+	}
+}
+
+// priceReceipts values the receipts of the tick at the prices of cost_t, the
+// published price of the commodity in the agent's region or the effective
+// reference price while it has never traded, and adds them to the welfare scratch
+// (spec-subsistence.md 7.2). It runs at P6.3 right after the prices are valued and
+// empties the list. A product beyond int64 is read as the largest value, as every
+// sum of the record is.
+func (s *subsistence) priceReceipts(w *World) {
+	nc := len(w.cfg.Commodities)
+	for _, r := range s.receipts {
+		g := w.regionOf(&w.agents[r.slot])
+		amount, ok := checked.Mul(r.units, w.oc.valued[int(g)*nc+int(r.commodity)])
+		if !ok {
+			amount = math.MaxInt64
+		}
+		w.welfare.addOwnReceipt(r.slot, amount)
+	}
+	s.receipts = s.receipts[:0]
+}
+
+// addOwnReceipt adds the value of the units an own-use job created to the income
+// of the tick (K^own_t).
+func (s *welfareScratch) addOwnReceipt(slot int, amount int64) {
+	f := s.at(slot)
+	f.ownReceipt = satAdd(f.ownReceipt, amount)
 }
