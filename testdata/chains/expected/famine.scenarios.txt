@@ -68,3 +68,18 @@ measure relief paid: 1=6058106 2=5897564 3=6033417 4=5884198 5=6131782 6=5981321
 measure unfed household-ticks: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
 check market series in tick order: 10/10 pass
 check price within belief bounds (FR-STB-008): 10/10 pass
+
+## S57 famine+own-use seeds 1-10, 300 ticks
+measure households removed, module off: 1=749 2=751 3=755 4=748 5=751 6=748 7=752 8=748 9=761 10=752 | median=751 n=10
+measure households removed, module on: 1=689 2=713 3=687 4=697 5=696 6=680 7=691 8=684 9=715 10=708 | median=694 n=10
+measure pool at the end, module off: 1=6000000 2=6000000 3=6000000 4=6000000 5=6000000 6=6000000 7=6000000 8=6000000 9=6000000 10=6000000 | median=6000000 n=10
+measure pool at the end, module on: 1=4650447 2=3763448 3=5031103 4=5176512 5=5124775 6=4137251 7=5147782 8=4552910 9=5199590 10=5060486 | median=5045794 n=10
+measure relief paid, module off: 1=6078506 2=5919942 3=6009586 4=5949415 5=6131782 6=6014175 7=6002425 8=5965094 9=6119195 10=6045583 | median=6011880 n=10
+measure relief paid, module on: 1=5917570 2=6354864 3=5449628 4=6032926 5=6106657 6=6755971 7=5863791 8=5839147 9=5703594 10=5855551 | median=5890680 n=10
+measure unfed household-ticks, module off: 1=65980 2=66321 3=66616 4=66009 5=66299 6=65895 7=66363 8=65988 9=67035 10=66209 | median=66254 n=10
+measure unfed household-ticks, module on: 1=55022 2=55296 3=54793 4=54924 5=55158 6=54870 7=54695 8=55079 9=55109 10=54893 | median=54973 n=10
+measure units output by own-use jobs: 1=54677 2=51683 3=53746 4=52282 5=54944 6=49609 7=51814 8=55415 9=50579 10=50365 | median=52048 n=10
+check a role in the mode reads a ratio above 0: 10/10 pass
+check pool at the end lower with the module on: 10/10 pass
+check removals fewer with the module on: 10/10 pass
+check unfed fewer with the module on: 10/10 pass

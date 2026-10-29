@@ -70,9 +70,9 @@ var emittedBy = []struct{ event, scenario string }{
 // ReliefPaid is emitted only with the estates module on (plan 2-7). EndowmentChanged
 // and EndowmentAdjusted are emitted only with the resources module on, by the
 // scenario "resources" that emittedTypes adds (plan 2-9 phase 9), so they are not
-// listed. OwnUseChanged is emitted only with the subsistence module on, by the scenarios
-// S56 to S60 of plan 2-10 phase 8, which delete the entry.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "OwnUseChanged"}
+// listed. OwnUseChanged is emitted only with the subsistence module on, by the scenario
+// "subsistence" that emittedTypes adds (plan 2-10 phase 8), so it is not listed.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.
@@ -88,7 +88,28 @@ func emittedTypes(t *testing.T, list []scenario) map[string]map[string]bool {
 	}
 	seen["restored"] = restoredTypes(t, scenarioNamed(t, list, "one"))
 	seen["resources"] = resourcesTypes(t)
+	seen["subsistence"] = subsistenceTypes(t)
 	return seen
+}
+
+// subsistenceTypes runs the forage world with the module on and a household with
+// no grain for four steps with an observer and returns the names of the event types
+// it emitted: the scenario "subsistence" of the staged emission test (plan 2-10
+// phase 8). The module is off in every other scenario of the slice, so this is
+// where OwnUseChanged is emitted.
+func subsistenceTypes(t *testing.T) map[string]bool {
+	t.Helper()
+	rec := &recorder{}
+	w, err := economysim.NewWorld(forageWorld(forageSpec{Households: 5, OwnUseBP: 10_000, Duration: 1, Module: true}), economysim.WithSeed(obsSeed), economysim.WithObserver(rec))
+	if err != nil {
+		t.Fatalf("scenario subsistence (seed %d): NewWorld() error = %v, want nil", obsSeed, err)
+	}
+	step(t, w, 4)
+	out := map[string]bool{}
+	for _, e := range rec.events {
+		out[typeName(e)] = true
+	}
+	return out
 }
 
 // resourcesTypes runs the field world of the resource scenarios (a refill stock

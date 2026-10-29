@@ -1,6 +1,9 @@
 package economysim_test
 
 import (
+	"log/slog"
+	"testing"
+
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
@@ -24,8 +27,14 @@ type forageSpec struct {
 	// ExitTicks are its tunables.
 	Module                          bool
 	RetryJobs, EnterTicks, ExitTick int64
-	// Weight is the households of one agent (0 means 1).
-	Weight int64
+	// Away adds a second region "yonder" with no household (it sorts after "home", so it
+	// is region 1), in which the own-use recipe has the same yield.
+	Away bool
+	// ChangePrivation sets the privation of rung 1 of the failure ladder (0 keeps
+	// the default).
+	ChangePrivation int64
+	// MinWork is the role's MinWorkShare in basis points.
+	MinWork int64
 }
 
 // forageWorld is one region "home" of foragers whose upkeep is 2 "grain" a tick.
@@ -42,7 +51,7 @@ func forageWorld(spec forageSpec) economysim.Config {
 	region := economysim.DefaultRegion()
 	region.ID, region.ReferenceBasket = "home", 2_000
 	role := economysim.DefaultRole()
-	role.ID, role.Recipes, role.StartMoney = "forager", []string{"tend"}, 0
+	role.ID, role.Recipes, role.StartMoney, role.MinWorkShare = "forager", []string{"tend"}, 0, spec.MinWork
 	if spec.StartGrain > 0 {
 		role.StartStock = []economysim.Item{{Commodity: "grain", Quantity: economysim.Quantity(spec.StartGrain)}}
 	}
@@ -57,6 +66,15 @@ func forageWorld(spec forageSpec) economysim.Config {
 		},
 		Yields: []economysim.YieldProfile{{Region: "home", Recipe: "gather", HasAll: true, All: spec.OwnUseBP}},
 	}
+	if spec.Away {
+		away := economysim.DefaultRegion()
+		away.ID, away.ReferenceBasket = "yonder", 2_000
+		cfg.Regions = append(cfg.Regions, away)
+		cfg.Yields = append(cfg.Yields, economysim.YieldProfile{Region: "yonder", Recipe: "gather", HasAll: true, All: spec.OwnUseBP})
+	}
+	if spec.ChangePrivation > 0 {
+		cfg.World.ChangePrivation = spec.ChangePrivation
+	}
 	if spec.Module {
 		m := economysim.DefaultSubsistence()
 		m.Recipes, m.RetryJobs = []string{"gather"}, spec.RetryJobs
@@ -69,4 +87,75 @@ func forageWorld(spec forageSpec) economysim.Config {
 		cfg.Modules.Subsistence = &m
 	}
 	return cfg
+}
+
+// outage is the script of a failure of the market recipe of forageWorld: its
+// yield is 0 from tick 10 to tick 49 and whole again at 50
+// (testdata/chains/scripts/s56.toml).
+func outage(t testing.TB) []shockStep { return loadScript(t, "s56.toml") }
+
+// forageStats is what the subsistence scenarios keep of a run of forageWorld.
+type forageStats struct {
+	// Unfed is the unfed household-ticks (the sum of UpkeepShortfall.Unfed),
+	// Removed the households removed, Units the units output by own-use jobs,
+	// Entered, Blocked and Retried the sums of the counts of OwnUseChanged, PeakOn
+	// the largest number of households in the mode at the end of a tick.
+	Unfed, Removed, Units, Entered, Blocked, Retried, PeakOn int64
+	// Abandoned is the executions abandoned, by recipe ID and reason.
+	Abandoned map[string]int64
+	// Mid is the snapshot after tick midTick (the zero Snapshot when midTick is
+	// negative or past the run), Final the one at the end.
+	Mid, Final economysim.Snapshot
+	Log        *captureHandler
+}
+
+// runForage runs cfg for ticks under the script with the audit on and keeps the
+// forageStats (midTick is the step after which Mid is taken, or -1); a failure of a step or of the audit fails t with the seed.
+func runForage(t testing.TB, cfg economysim.Config, seed uint64, ticks, midTick int64, script []shockStep, opts ...economysim.Option) forageStats {
+	t.Helper()
+	scenSem <- struct{}{}
+	defer func() { <-scenSem }()
+	rec, log := &recorder{}, newCaptureHandler()
+	w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithLogger(slog.New(log)), economysim.WithAudit()}, opts...)...)
+	if err != nil {
+		t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
+	}
+	s0, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	st := forageStats{Abandoned: map[string]int64{}, Log: log}
+	for i := range ticks {
+		applyScript(t, w, s0.Names, script)
+		if err := w.Step(); err != nil {
+			t.Fatalf("seed %d: Step() at tick %d error = %v, want nil", seed, w.Tick(), err)
+		}
+		if i == midTick {
+			if st.Mid, err = w.Snapshot(); err != nil {
+				t.Fatalf("Snapshot() error = %v, want nil", err)
+			}
+		}
+	}
+	for _, e := range rec.events {
+		switch e := e.(type) {
+		case economysim.UpkeepShortfall:
+			st.Unfed += e.Unfed
+		case economysim.AgentBankrupted:
+			st.Removed += e.Weight
+		case economysim.RecipeAbandoned:
+			st.Abandoned[s0.Names.Recipes[e.Recipe]+"/"+string(e.Reason)] += e.Executions
+		case economysim.OwnUseChanged:
+			st.Entered += e.Entered
+			st.Blocked += e.Blocked
+			st.Retried += e.Retried
+			st.PeakOn = max(st.PeakOn, e.OnOwnUse)
+			for _, a := range e.Output {
+				st.Units += int64(a.Quantity)
+			}
+		}
+	}
+	if st.Final, err = w.Snapshot(); err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	return st
 }
