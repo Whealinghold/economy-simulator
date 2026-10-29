@@ -387,6 +387,7 @@ func TestStart_CountsOwnUseJobs(t *testing.T) {
 	a := &w.agents[1]
 	gather, tend := RecipeID(0), RecipeID(1)
 	cell := int(w.regionOf(a))*len(w.cfg.Roles) + int(a.role)
+	w.sub.ownUse[a.id] = true
 	w.sub.noteStart(w, a, cell, gather, 1)
 	w.sub.noteStart(w, a, cell, gather, 2)
 	if w.sub.ownUseJobs[a.id] != 2 || w.sub.started[cell] != 3 {
@@ -395,6 +396,11 @@ func TestStart_CountsOwnUseJobs(t *testing.T) {
 	w.sub.noteStart(w, a, cell, tend, 1)
 	if w.sub.ownUseJobs[a.id] != 0 {
 		t.Errorf("after a start of the market recipe: counter %d, want 0", w.sub.ownUseJobs[a.id])
+	}
+	w.sub.ownUse[a.id] = false
+	w.sub.noteStart(w, a, cell, gather, 1)
+	if w.sub.ownUseJobs[a.id] != 0 {
+		t.Errorf("an own-use start by an agent out of the mode: counter %d, want 0", w.sub.ownUseJobs[a.id])
 	}
 }
 

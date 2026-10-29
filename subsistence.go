@@ -466,7 +466,9 @@ func (s *subsistence) countWork(w *World, cell int, a *agent, r *workReportBuf) 
 func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k int64) {
 	s.grow(int(a.id) + 1) // an agent created after P2.4 has no slot yet
 	if isOwn(w.roles.row(a.role), recipe) {
-		s.ownUseJobs[a.id]++
+		if s.ownUse[a.id] { // a counter without the flag is no state (recordBad)
+			s.ownUseJobs[a.id]++
+		}
 		s.started[cell] += k
 		return
 	}
