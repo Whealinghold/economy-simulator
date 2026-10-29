@@ -125,4 +125,7 @@ func tradableItems(c *Config, lk lookup, role *Role, set map[string]bool) {
 	if c.Modules.Demand != nil {
 		demandItems(lk, role, set)
 	}
+	if c.Modules.Subsistence != nil {
+		subsistenceItems(c, lk, role, set)
+	}
 }

@@ -119,7 +119,7 @@ func newAgent(p agentInit, row *roleRow, rt *recipeTable) agent {
 		id: p.id, account: p.account, role: p.role, weight: p.weight,
 		external: p.external, mortal: p.mortal, strategy: p.strategy,
 		beliefs:   make([]beliefs.Belief, 0, len(row.tradable)),
-		residues:  make([]int64, residueLen(row.recipes, rt)),
+		residues:  make([]int64, residueLen(row.jobs, rt)),
 		history:   newHistory(row),
 		roleSince: p.tick,
 	}

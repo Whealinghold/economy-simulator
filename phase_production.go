@@ -265,7 +265,7 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 // for the ration of P2.6, which ignores them here (spec-resources.md 5.2).
 func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 	row := w.roles.row(a.role)
-	if reason := admit(row.recipes, req.Recipe); reason != "" {
+	if reason := admit(row.jobs, req.Recipe); reason != "" {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
@@ -367,7 +367,7 @@ func (w *World) p27Start() error {
 // startJob starts the job of an admitted request.
 func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	row := w.roles.row(a.role)
-	off, _ := residueOffset(row.recipes, &w.recipes, ask.recipe)
+	off, _ := residueOffset(row.jobs, &w.recipes, ask.recipe)
 	q := w.startReq(a, region, ask.recipe, ask.maximum)
 	if w.res != nil {
 		w.capDraws(&q, ask.first, ask.draws)

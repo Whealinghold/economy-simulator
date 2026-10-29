@@ -791,7 +791,7 @@ func (w *World) loadJob(r *codec.Reader, a *agent) {
 	principal := r.Bounded("principal", math.MaxInt64)
 	j.principal = AgentID(principal)
 	j.yield = r.Bounded("yield", MaxYieldBP)
-	_, onList := slices.BinarySearch(w.roles.row(a.role).recipes, rec)
+	_, onList := slices.BinarySearch(w.roles.row(a.role).jobs, rec)
 	switch {
 	case r.Err() != nil:
 		return

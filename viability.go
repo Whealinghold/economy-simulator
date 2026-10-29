@@ -74,9 +74,13 @@ type viaModel struct {
 	// the only regions that have a programme or an activity (a region with no
 	// household has no labour).
 	withHouseholds []RegionID
-	households     []int64   // by region
-	upkeep         [][]int64 // by region, by commodity: D(c, rho)
-	acts           [][]viaActivity
+	// ownOnly[k] says that recipe k is on an own-use list and on no role's
+	// Recipes, so it is no activity (spec-viability.md 3.1, FR-SUB-037); nil while
+	// the subsistence module is off.
+	ownOnly    []bool
+	households []int64   // by region
+	upkeep     [][]int64 // by region, by commodity: D(c, rho)
+	acts       [][]viaActivity
 	// listed[r][k] says that a role with a group in region r lists recipe k.
 	listed [][]bool
 	// expected[r] and targets[r] are the sums over the groups of region r of
@@ -111,6 +115,9 @@ func newViaModel(c *Config) *viaModel {
 		sumsOK:     make([]bool, len(c.Regions)),
 	}
 	m.addGroups()
+	if c.Modules.Subsistence != nil {
+		m.ownOnly = m.ownUseOnly()
+	}
 	for r := range c.Regions {
 		if m.households[r] > 0 {
 			m.withHouseholds = append(m.withHouseholds, RegionID(r))
@@ -165,6 +172,9 @@ func (m *viaModel) addMeans(r RegionID, households int64, ro *Role) {
 func (m *viaModel) activitiesOf(region RegionID) []viaActivity {
 	var out []viaActivity
 	for k := range m.c.Recipes {
+		if m.ownOnly != nil && m.ownOnly[k] {
+			continue
+		}
 		if a, ok := m.activity(region, RecipeID(k)); ok {
 			out = append(out, a)
 		}

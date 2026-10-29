@@ -26,7 +26,13 @@ type regionUpkeep struct {
 // regionUpkeep is ascending by region and holds a row only for a region with
 // an ExtraUpkeep.
 type roleRow struct {
-	recipes      []RecipeID
+	recipes []RecipeID
+	// ownUse is the effective own-use list of the role, ascending, and jobs the
+	// ascending union of recipes and ownUse (spec-subsistence.md 3.3, plan 2-10
+	// D404): a job request is admitted against jobs, the view and the cost anchor
+	// read recipes. With the module off ownUse is nil and jobs is recipes itself.
+	ownUse       []RecipeID
+	jobs         []RecipeID
 	trades       []CommodityID
 	upkeep       []itemRow
 	tradable     []CommodityID
@@ -73,6 +79,7 @@ func newRoleTable(c *Config) roleTable {
 			row.recipes = append(row.recipes, rid)
 		}
 		slices.Sort(row.recipes)
+		row.ownUse, row.jobs = c.Modules.Subsistence.ownUseJobs(c, r.ID, row.recipes) // the module's join; off: nil and recipes
 		w, ok := effectiveWindow(c, lk, r)
 		if !ok {
 			// Not covered by a test, for the same reason: the validator refuses a

@@ -69,6 +69,11 @@ var skipFields = []string{
 	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
 	// has them empty until then (spec-resources.md 15).
 	"resourcesState.snapStock", "resourcesState.snapAbundance", "resourcesState.grants",
+	// roleRow.jobs is the union of roleRow.recipes and roleRow.ownUse, both walked,
+	// and is the same slice as recipes while the subsistence module is off: a derived
+	// list that existed after the golden was recorded must not move the off files
+	// (testing.md 7.1.1).
+	"roleRow.jobs",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",

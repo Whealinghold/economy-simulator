@@ -482,7 +482,7 @@ func (w *World) takeRole(a *agent, g RegionID, to RoleID) {
 	if err := a.history.Resize(newRow.window); err != nil {
 		invariant("the welfare window of a role is outside its bound after validation: " + err.Error())
 	}
-	a.residues = slices.Grow(a.residues[:0], residueLen(newRow.recipes, &w.recipes))[:residueLen(newRow.recipes, &w.recipes)]
+	a.residues = slices.Grow(a.residues[:0], residueLen(newRow.jobs, &w.recipes))[:residueLen(newRow.jobs, &w.recipes)]
 	setResidues(a.residues, 0)
 	w.fillSeeds(g, newRow)
 	reseedBeliefs(a, newRow, oldRow, w.ex.seeds, w.bp)
