@@ -758,7 +758,7 @@ world even if a strategy tries; the world does not rely on that (6.5). It holds:
 | Job | whether one is active, its recipe, `Remaining`, `Executions` |
 | Per commodity in the tradable set | `Stock` (the whole balance; no reservation exists yet), `Expiring` (units that spoil at the end of this tick), the belief and its bounds, the effective reference price, `UnitCost` (0 if the role cannot make it, or if the region has no observed wage yet; it counts labour, 7.3.6), and the market report: price, age, best unmatched bid and ask with flags, and the price window's mean, low, high and the position of the price in it (`spec-beliefs.md` 7) |
 | Per recipe of the role | the recipe's inputs, outputs, tools, duration, the effective yield `E` for this region and season (with the resources module on it includes the abundance of the tick's snapshot, `spec-resources.md` 4.7.3; the factors are site, shock, technology, the trainee or hired factor and abundance, `spec-production.md` 6.3), `MaxExecutions` (`spec-production.md` 4.2: `k0` of the world, the executions the inputs, the tools, the ration, the capacity and the limits of the facility classes the recipe needs, builds or repairs, and with the storage module on the free room allow; with the resources module on also bounded by `floor(stock / draw)` of the snapshot, reason `no_endowment`) and the reason if it is 0 (the master order of `spec-production.md` 4.2); with the modules on, also `Needs`, `Builds` and `Repairs` (`spec-infrastructure.md` 4.1.1), for a `Builds` or `Repairs` recipe `Standing` (the first refusal other than `no_input` and `no_tool` that would apply were the inputs and tools held), and for a recipe on an employer's hire list the hired yield (`spec-employment.md` 9.1) |
-| Own-use (only with the subsistence module on) | `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` (`spec-subsistence.md` 5.2, 5.4), and a mark on each own-use recipe in the per-recipe group, so that a consumer's strategy does not recompute them. The own-use recipes of the role's effective own-use list appear in the per-recipe group beside the role's recipes |
+| Own-use (only with the subsistence module on) | `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` (`spec-subsistence.md` 5.2, 5.4), the two tunables `ExitTicks` and `RetryJobs` that a pure `Work` needs for the ramp and the retry (7.1.9), all flat fields of `AgentView` (zero while the module is off), and a mark on each own-use recipe in the per-recipe group, so that a consumer's strategy does not recompute them. The own-use recipes of the role's effective own-use list appear in the per-recipe group beside the role's recipes, after them, in ascending recipe ID; an own-use recipe is not a recipe the role makes: it is not one of the "makes" of the output cover, it is not the planned recipe of 7.1.4 and it sets no cost anchor (`spec-subsistence.md` 5.4) |
 | Merchant (only in the view of an agent whose role has a merchant block) | `Params`, `Modes`, `Goods` (mass, bulk, shelf life, durability and the age of the oldest lot held) and `Outbound` (`spec-merchants.md` 4.1) |
 | Employment (only with the module on, and only for a role that is `Hireable` or has an employer block) | `Hireable`; for an employer the hire list, `MaxHires`, `WorkerShareBP`, `HireYieldBP`, the executions and number of hires it has open (`Hired`) and the hires open in its region (`Open`) (`spec-employment.md` 9.1) |
 | Credit (only in the view of an agent whose role has a credit block) | `Lend`, `Borrow`, `MinPrincipal`, `UpkeepCost`, `Debt`, `Owed`, `Overdue`, `NextDue`, `Room`, `Lent`, `Receivable`, `ScaleBP` (`spec-credit.md` 10.1) |
@@ -1188,8 +1188,10 @@ default applies this rule to an agent that is free (the rule and its reasons are
 2. **In the mode:** the work share is 10 000 (survival comes before the target, 7.1.3).
 3. **Which recipe.** Among the own-use recipes with `MaxExecutions >= 1` and a positive sum of
    coverage over the covered commodities whose cover is below the exit cover, the one with the
-   greatest sum, compared as exact fractions, ties to the lower recipe ID. The value uses no
-   price and no belief.
+   greatest sum, ties to the lower recipe ID. The sum is the sum of the coverages
+   `Cov(r, c)` of `spec-subsistence.md` 4.1, each an integer in basis points truncated as that
+   section says (FR-SUB-039), so two recipes are compared as integers; the exact fractions
+   `q * E / (Duration * u_c)` are not summed. The value uses no price and no belief.
 4. **How many.** `k = min( w, MaxExecutions, max(1, ceil( w * (ExitTicks - Cover) / ExitTicks )) )`:
    a weight-1 agent runs 1, a cohort puts in the share of its households short of cover. The other
    households rest during the job (one job per agent, `spec-production.md` 5.1.2).
@@ -1202,8 +1204,11 @@ default applies this rule to an agent that is free (the rule and its reasons are
    mode, the flag stays, and the household is counted in `Blocked` (`OwnUseChanged`).
 7. **The halt does not apply** (7.1.5).
 
-A consumer's strategy sees the same flag in its view (6.4.1); the `Directed` directive overrides
-`Work` as for any recipe (10.4).
+A consumer's strategy sees the same flag in its view (6.4.1), with `Cover`, `Secure`, `ExitTicks` and
+`RetryJobs`, the fields a pure `Work` needs for items 3 to 5; the own-use recipes it chooses among are
+marked in the per-recipe group, and an own-use recipe is not one of the recipes the role makes, so the
+planned recipe of 7.1.4, the output cover and the cost anchor read the unmarked recipes only. The
+`Directed` directive overrides `Work` as for any recipe (10.4).
 
 7.1.10. **Labour offers and vacancies** (employment module on, `spec-employment.md` 4.3). After
 the choice of 7.1.2 to 7.1.7 and using its results, the default fills the two fields that
@@ -2445,7 +2450,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-078 | An agent MUST carry a `DeathCarry` in `[0, 10 000 * TicksPerYear)`, started at `offset(ID)` of `spec-population.md` 3.8.3 without a draw, unchanged by a weight or role change, saved in the checkpoint in agent ID order. (new, `spec-population.md` FR-POP-010, 024, 035) |
 | FR-AGT-079 | The world MUST execute a `TradePlan` in the order discards, shipments (in plan order), then intents, MUST NOT call `Work` or `Trade` for an agent that is away or on a migration journey, and MUST pass no view to it; with the transport module off a shipment request MUST be refused `unknown_mode`. The default strategy MUST append no shipment. (new, `spec-transport.md` 5.3, 5.4; `spec-migration.md` 8.3) |
 | FR-AGT-080 | With the subsistence module on, the default `Work` MUST, for an agent in the own-use mode, set the work share to 10 000 and request the own-use recipe by 7.1.9 (the greatest coverage of the short covered commodities, ties to the lower recipe ID; the retry of `RetryJobs`; blocked when nothing is runnable), MUST NOT apply the production halt to an own-use recipe, and MUST NOT choose an own-use recipe outside the mode; a role with an empty `Recipes` list and an empty effective own-use list MUST request nothing. (new, `spec-subsistence.md` FR-SUB-019 to 025) |
-| FR-AGT-081 | The view MUST carry `OwnUse`, `OwnUseJobs`, `Cover` and `Secure` and a mark on each own-use recipe with the subsistence module on, and the group `Merchant` only for an agent whose role has a merchant block, and `Outbound` with the transport module on. (new, `spec-subsistence.md` FR-SUB-018, `spec-merchants.md` 4.1) |
+| FR-AGT-081 | The view MUST carry `OwnUse`, `OwnUseJobs`, `Cover`, `Secure`, `ExitTicks` and `RetryJobs` and a mark on each own-use recipe with the subsistence module on, and the group `Merchant` only for an agent whose role has a merchant block, and `Outbound` with the transport module on. (new, `spec-subsistence.md` FR-SUB-018, `spec-merchants.md` 4.1) |
 | FR-AGT-082 | `TradePlan` MUST carry `Offers`, `Takes` and `Notes` beside `Intents`, `Discards` and `Shipments`; the default strategy MUST append no offer and no take and leave `Notes` zero; offers and takes MUST be admitted and matched in the contract round after the last agent's plan and not by `Clearing`. (new, `spec-merchants.md` 9.2, 9.4) |
 | FR-AGT-083 | A strategy registered as `"merchant"` MUST be provided by `strategy.Merchant` in the package `strategy/`, registered by `strategy.Options()`; `NewWorld` MUST reject the name with `ErrUnknownStrategy` when it is not registered. (new, `spec-merchants.md` 3.1) |
 | FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |

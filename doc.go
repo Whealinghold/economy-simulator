@@ -832,4 +832,32 @@
 //     region (spec-resources.md 5.5.1).
 //   - ResourceID: the index of a resource in ascending order of its ID string
 //     (spec-resources.md 3.2.3).
+//   - Subsistence floor: the whole mechanism by which a household that the market does not
+//     feed makes its upkeep for itself: the own-use recipes, the own-use mode and the
+//     default Work that acts on it (spec-subsistence.md 1). SubsistenceConfig is the module
+//     and RoleOwnUse a role's row that replaces the default list (spec-subsistence.md 3.2).
+//   - Own-use recipe: an ordinary recipe named on the effective own-use list of a role. It is
+//     a source (no inputs, no tools) and sited (spec-subsistence.md 3.1, 3.4).
+//   - Own-use mode: the flag of a household that has taken up the own-use recipes, set and
+//     cleared by the world with a hysteresis from the household's own state
+//     (spec-subsistence.md 5.3).
+//   - Covered set: the upkeep commodities of a role that are a non-discard output of an
+//     own-use recipe of the role (spec-subsistence.md 3.3.2).
+//   - Own-use cover: the ticks of upkeep a household holds in stock, the least over the
+//     covered set; the mode ends when it reaches ExitTicks (spec-subsistence.md 5.2).
+//   - Afford: the ticks of the covered upkeep a household's money buys at the going price,
+//     0 after an unfed tick (spec-subsistence.md 5.2).
+//   - Secure ticks: the cover plus what the household can afford, at most MaxOwnUseTicks;
+//     the mode starts when it falls below EnterTicks (spec-subsistence.md 5.2).
+//   - Own-use retry: after RetryJobs own-use jobs in a row the default Work prefers a role
+//     recipe, to test the market (spec-subsistence.md 5.5 item 5).
+//   - Coverage: the basis points of one household's upkeep of a commodity that one tick of
+//     labour on an own-use recipe makes, truncated (spec-subsistence.md 4.1).
+//   - FloorBP: the greatest coverage of an own-use recipe over the covered commodities in a
+//     region, which must stay below the surplus factor of the market (spec-subsistence.md 4.2).
+//   - Own-use blocked: a household in the mode that can start no own-use job in a tick, counted
+//     in OwnUseChanged (spec-subsistence.md 5.5 item 6).
+//   - OwnUseChanged: the event emitted once per region and role per tick in which a household
+//     entered, left, started, was blocked or retried, or own-use output was created
+//     (spec-subsistence.md 14.1).
 package economysim
