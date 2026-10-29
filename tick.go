@@ -39,6 +39,7 @@ var positionList = [...]position{
 	{"P2.5", "AGT", line},
 	{"P2.6", "RES", line},
 	{"P2.7", "PRO", line},
+	{"P2.8", "SUB", line},
 	{"P2.8a", "OBS", line},
 	{"P3.2", "AGT", line},
 	{"P3.4", "EST", line},
@@ -67,7 +68,7 @@ var positionList = [...]position{
 var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3", "P1.3a", "P1.4", "P1.5", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
-	"P2.2", "P2.5a", "P2.8", "P2.8b",
+	"P2.2", "P2.5a", "P2.8b",
 	"P3.1", "P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
 	"P5.2",
@@ -107,6 +108,9 @@ func (w *World) positions() error {
 	w.p26Ration()
 	if err := w.p27Start(); err != nil {
 		return err
+	}
+	if w.sub != nil {
+		w.p28OwnUse()
 	}
 	w.p28aHalted()
 	if err := w.p32Trade(); err != nil {

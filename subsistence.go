@@ -2,10 +2,13 @@ package economysim
 
 import (
 	"cmp"
+	"context"
+	"log/slog"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/ownuse"
 )
 
@@ -122,6 +125,19 @@ func (m *viaModel) ownUseOnly() []bool {
 	return own
 }
 
+// blockReasons are the reasons a household in the mode is blocked, the last being
+// any other; the Warn "own use blocked" names the commonest (spec-subsistence.md
+// 14.2). A later module that adds a refusal appends its reason here (D418).
+var blockReasons = [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoEndowment, ReasonNoRecipe}
+
+// blockReasonAt is the index of a reason in blockReasons, the last for any other.
+func blockReasonAt(r Reason) int {
+	if i := slices.Index(blockReasons[:], r); i >= 0 {
+		return i
+	}
+	return len(blockReasons) - 1
+}
+
 // subsistence is the state of the module, nil in the world when it is off
 // (spec-subsistence.md 15, plan 2-10 D403). The flag and the counter of an agent
 // are in slices indexed by agent ID, never fields of the agent (architecture.md
@@ -142,6 +158,16 @@ type subsistence struct {
 	// The counts of the tick per (region, role) cell, in households: made always,
 	// because the Warns need them with no observer (D409).
 	entered, left, started, blocked, retried []int64
+	// inMode is the households with the flag at the end of the flag step, per cell;
+	// blockedBy splits blocked by the reason that blocked it (blockReasons); output
+	// is the units created at the completion of own-use jobs, per cell and
+	// commodity, kept only under an observer (observability-and-logging.md 4.5).
+	inMode    []int64
+	blockedBy [][len(blockReasons)]int64
+	output    []int64
+	// runOn and runBlocked are the consecutive ticks of the two Warns per cell:
+	// diagnostics that change no result and are saved in section 19.
+	runOn, runBlocked []int64
 
 	// goods is the scratch of the covered goods of the agent being evaluated.
 	goods []ownuse.Good
@@ -173,6 +199,8 @@ func newSubsistence(c *Config, rt *roleTable, rc *recipeTable) *subsistence {
 		goods:     make([]ownuse.Good, 0, MaxUpkeepItems),
 		entered:   make([]int64, cells), left: make([]int64, cells), started: make([]int64, cells),
 		blocked: make([]int64, cells), retried: make([]int64, cells),
+		inMode: make([]int64, cells), blockedBy: make([][len(blockReasons)]int64, cells),
+		output: make([]int64, cells*len(c.Commodities)), runOn: make([]int64, cells), runBlocked: make([]int64, cells),
 	}
 	for i := range s.covered {
 		row := rt.row(RoleID(i))
@@ -302,9 +330,17 @@ func (s *subsistence) goodsOf(w *World, a *agent, g RegionID) (goods []ownuse.Go
 func (w *World) p24OwnUse() {
 	s := w.sub
 	s.grow(len(w.agents))
+	clear(s.inMode)
 	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && !w.offStage(a) {
+		a := &w.agents[i]
+		if a.weight < 1 {
+			continue
+		}
+		if !w.offStage(a) {
 			s.evaluate(w, a)
+		}
+		if s.ownUse[i] {
+			s.inMode[int(w.regionOf(a))*len(w.cfg.Roles)+int(a.role)] += a.weight
 		}
 	}
 }
@@ -335,10 +371,35 @@ func (s *subsistence) evaluate(w *World, a *agent) {
 	s.ownUse[a.id], s.ownUseJobs[a.id] = r.On, r.Jobs
 	if r.Entered {
 		s.entered[cell] += a.weight
+		s.debug(w, "own use entered", a, enterReason(a.hunger))
 	}
 	if r.Left {
 		s.left[cell] += a.weight
+		s.debug(w, "own use left", a, "cover")
 	}
+}
+
+// enterReason is why a household entered the mode: unfed when its Hunger decided
+// it (it counts no money), short_cover otherwise (spec-subsistence.md 14.2).
+func enterReason(hunger int64) string {
+	if hunger > 0 {
+		return "unfed"
+	}
+	return "short_cover"
+}
+
+// debug logs a per-agent Debug line of the module behind Enabled; an empty reason
+// leaves the attribute out.
+func (s *subsistence) debug(w *World, msg string, a *agent, reason string) {
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	attrs := []slog.Attr{slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Role, int64(a.role))}
+	if reason != "" {
+		attrs = append(attrs, slog.String(logkeys.Reason, reason))
+	}
+	w.log.LogAttrs(ctx, slog.LevelDebug, msg, attrs...)
 }
 
 // fillView is the module's filler of the view (spec-subsistence.md 5.4,
@@ -384,12 +445,15 @@ func (s *subsistence) figures(goods []ownuse.Good, hungry bool, money int64) (co
 
 // countWork takes the blocked and retried households of the work report of an
 // agent into the counts of its cell (D409).
-func (s *subsistence) countWork(cell int, weight int64, r *workReportBuf) {
+func (s *subsistence) countWork(w *World, cell int, a *agent, r *workReportBuf) {
 	if r.ownBlocked {
-		s.blocked[cell] += weight
+		s.blocked[cell] += a.weight
+		s.blockedBy[cell][blockReasonAt(r.ownReason)] += a.weight
+		s.debug(w, "own use blocked", a, string(r.ownReason))
 	}
 	if r.ownRetried {
-		s.retried[cell] += weight
+		s.retried[cell] += a.weight
+		s.debug(w, "own use retry", a, "")
 	}
 }
 
@@ -411,6 +475,8 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 func (s *subsistence) blockedStart(w *World, a *agent, cell int, recipe RecipeID, reason Reason) {
 	if reason == ReasonNoEndowment && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
 		s.blocked[cell] += a.weight
+		s.blockedBy[cell][blockReasonAt(reason)] += a.weight
+		s.debug(w, "own use blocked", a, string(reason))
 	}
 }
 
@@ -516,6 +582,18 @@ func (v *AgentView) recipeAt(id RecipeID) int {
 	panic("economysim: invariant violated: Pick returned a recipe that is not in the view")
 }
 
+// ownBlockReason is why no own-use recipe can run: the production reason of the
+// first marked recipe the agent cannot start, no_recipe when every one could and
+// none makes a good that is short.
+func (v *AgentView) ownBlockReason() Reason {
+	for i := range v.Recipes {
+		if r := &v.Recipes[i]; r.OwnUse && r.MaxExecutions < 1 {
+			return r.Reason
+		}
+	}
+	return ReasonNoRecipe
+}
+
 // ownUseWork is the default Work in the own-use mode (spec-subsistence.md 5.5),
 // called for an agent in the mode before the normal decision. It reports whether
 // it filled the request. With no marked recipe it can run, the agent is blocked
@@ -526,7 +604,7 @@ func (v *AgentView) recipeAt(id RecipeID) int {
 func (dst *workReportBuf) ownUseWork(v *AgentView) bool {
 	idx, k, ok := v.ownChoice()
 	if !ok {
-		dst.ownBlocked = true
+		dst.ownBlocked, dst.ownReason = true, v.ownBlockReason()
 		return false
 	}
 	if ownuse.RetryDue(v.RetryJobs, v.OwnUseJobs) {
@@ -546,7 +624,7 @@ func (dst *workReportBuf) ownUseWork(v *AgentView) bool {
 // receipt of the tick, valued at P6.3 (spec-subsistence.md 7.1, FR-SUB-028, 051).
 // The units are those actually created, after the carried remainder and the room
 // that was left. It is the module's call in finishJob.
-func (s *subsistence) completed(w *World, a *agent, c *completion) {
+func (s *subsistence) completed(w *World, a *agent, cell int, c *completion) {
 	row := w.roles.row(a.role)
 	if !isOwn(row, c.recipe) {
 		return
@@ -554,6 +632,9 @@ func (s *subsistence) completed(w *World, a *agent, c *completion) {
 	for i, o := range w.recipes.row(c.recipe).outputs {
 		if units := c.created[i] - c.disposed[i]; !o.discard && units > 0 {
 			s.receipts = append(s.receipts, ownReceipt{slot: int(a.id), commodity: o.commodity, units: units})
+			if w.obs.supplied {
+				s.output[cell*len(w.cfg.Commodities)+int(o.commodity)] += units
+			}
 		}
 	}
 }
@@ -582,4 +663,77 @@ func (s *subsistence) priceReceipts(w *World) {
 func (s *welfareScratch) addOwnReceipt(slot int, amount int64) {
 	f := s.at(slot)
 	f.ownReceipt = satAdd(f.ownReceipt, amount)
+}
+
+// p28OwnUse is P2.8: the module's report of the tick, before P2.8a. For each
+// (region, role) cell in ascending order it advances the two runs of the Warns
+// and logs them at the tenth tick of a run and every tenth after (spec-subsistence.md
+// 14.2, FR-SUB-042), emits OwnUseChanged under the observer flag when any count
+// is non-zero (FR-SUB-040, 041), and clears the counts. The runs are
+// diagnostics and change no result.
+func (w *World) p28OwnUse() {
+	s := w.sub
+	for cell := range s.entered {
+		households := w.pr.cells[cell].households
+		var warnOn, warnBlocked bool
+		s.runOn[cell], warnOn = floorRun(s.runOn[cell], s.inMode[cell], households)
+		s.runBlocked[cell], warnBlocked = advanceRun(s.runBlocked[cell], s.blocked[cell] > 0, false)
+		if warnOn || warnBlocked {
+			s.warn(w, cell, households, warnOn, warnBlocked)
+		}
+		if w.obs.supplied {
+			s.emit(w, cell, households)
+		}
+	}
+	clear(s.entered)
+	clear(s.left)
+	clear(s.started)
+	clear(s.blocked)
+	clear(s.retried)
+	clear(s.blockedBy)
+	clear(s.output)
+}
+
+// warn logs the Warns "role on own use" and "own use blocked" of a cell, which
+// are bounded by regions times roles (observability-and-logging.md 3.2.2).
+func (s *subsistence) warn(w *World, cell int, households int64, on, blocked bool) {
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelWarn) {
+		return
+	}
+	roles := len(w.cfg.Roles)
+	region, role := slog.Int64(logkeys.Region, int64(cell/roles)), slog.Int64(logkeys.Role, int64(cell%roles))
+	if on {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "role on own use", region, role,
+			slog.Int64(logkeys.Households, households), slog.Int64(logkeys.OwnUse, s.inMode[cell]))
+	}
+	if blocked {
+		best := 0
+		for i, n := range s.blockedBy[cell] {
+			if n > s.blockedBy[cell][best] {
+				best = i
+			}
+		}
+		w.log.LogAttrs(ctx, slog.LevelWarn, "own use blocked", region, role,
+			slog.Int64(logkeys.Households, s.blocked[cell]), slog.String(logkeys.Reason, string(blockReasons[best])))
+	}
+}
+
+// emit delivers OwnUseChanged for a cell when any of its counts is non-zero.
+func (s *subsistence) emit(w *World, cell int, households int64) {
+	nc, roles := len(w.cfg.Commodities), len(w.cfg.Roles)
+	var out []Amount
+	for c, units := range s.output[cell*nc : (cell+1)*nc] {
+		if units > 0 {
+			out = append(out, Amount{Commodity: CommodityID(c), Quantity: Quantity(units)})
+		}
+	}
+	if s.entered[cell]|s.left[cell]|s.started[cell]|s.blocked[cell]|s.retried[cell] == 0 && len(out) == 0 {
+		return
+	}
+	w.obs.deliver(OwnUseChanged{
+		Tick: w.Tick(), Region: RegionID(cell / roles), Role: RoleID(cell % roles),
+		Households: households, OnOwnUse: s.inMode[cell], Entered: s.entered[cell], Left: s.left[cell],
+		Started: s.started[cell], Blocked: s.blocked[cell], Retried: s.retried[cell], Output: out,
+	})
 }

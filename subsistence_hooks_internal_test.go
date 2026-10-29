@@ -70,13 +70,13 @@ func TestWarnings_EndowmentUnusedCountsOwnUse(t *testing.T) {
 // Requirement: FR-SUB-023, FR-SUB-036
 func TestRation_OwnUseNoPriority_BlockedCounted(t *testing.T) {
 	t.Parallel()
-	w := newForage(t, 4, forageField(2))
+	obs := &evLog{}
+	w := newForage(t, 4, forageField(2), WithObserver(obs))
 	if err := w.Step(); err != nil {
 		t.Fatalf("Step error = %v, want nil", err)
 	}
-	cell := int(w.regionOf(&w.agents[1]))*len(w.cfg.Roles) + int(w.agents[1].role)
-	if w.sub.started[cell] != 2 || w.sub.blocked[cell] != 2 || w.sub.entered[cell] != 4 {
-		t.Errorf("counts = started %d, blocked %d, entered %d, want 2, 2 and 4", w.sub.started[cell], w.sub.blocked[cell], w.sub.entered[cell])
+	if got := of[OwnUseChanged](obs); len(got) != 1 || got[0].Started != 2 || got[0].Blocked != 2 || got[0].Entered != 4 {
+		t.Errorf("OwnUseChanged = %+v, want one event with started 2, blocked 2 and entered 4", got)
 	}
 	for i := 1; i <= 4; i++ {
 		if !w.sub.ownUse[i] {

@@ -400,6 +400,7 @@ var replayRows = []replayRow{
 	{id: "P2.5", run: (*World).p25Work},
 	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},
+	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.4", run: (*World).p34Estates},

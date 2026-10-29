@@ -70,8 +70,9 @@ var emittedBy = []struct{ event, scenario string }{
 // ReliefPaid is emitted only with the estates module on (plan 2-7). EndowmentChanged
 // and EndowmentAdjusted are emitted only with the resources module on, by the
 // scenario "resources" that emittedTypes adds (plan 2-9 phase 9), so they are not
-// listed.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid"}
+// listed. OwnUseChanged is emitted only with the subsistence module on, by the scenarios
+// S56 to S60 of plan 2-10 phase 8, which delete the entry.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "OwnUseChanged"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

@@ -183,6 +183,9 @@ func replayTo41(w *World) error {
 	if err := w.p27Start(); err != nil {
 		return err
 	}
+	if w.sub != nil {
+		w.p28OwnUse()
+	}
 	w.p28aHalted()
 	for _, f := range []func() error{w.p32Trade, w.p34Estates, w.p41Clear} {
 		if err := f(); err != nil {

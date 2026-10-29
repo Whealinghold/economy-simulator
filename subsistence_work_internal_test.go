@@ -408,7 +408,8 @@ func TestStart_CountsOwnUseJobs(t *testing.T) {
 // Requirement: FR-SUB-019, FR-SUB-022
 func TestWorld_HouseholdFeedsItselfOnTheFloor(t *testing.T) {
 	t.Parallel()
-	w := newForage(t, 1, nil)
+	obs := &evLog{}
+	w := newForage(t, 1, nil, WithObserver(obs))
 	if err := w.Step(); err != nil {
 		t.Fatalf("Step error = %v, want nil", err)
 	}
@@ -416,9 +417,8 @@ func TestWorld_HouseholdFeedsItselfOnTheFloor(t *testing.T) {
 	if !w.sub.ownUse[a.id] || w.sub.ownUseJobs[a.id] != 1 || a.unfed != 0 {
 		t.Errorf("after the first tick: flag %v, counter %d, unfed %d, want true, 1, 0", w.sub.ownUse[a.id], w.sub.ownUseJobs[a.id], a.unfed)
 	}
-	cell := int(w.regionOf(a)) * len(w.cfg.Roles)
-	if w.sub.entered[cell+int(a.role)] != 1 || w.sub.started[cell+int(a.role)] != 1 {
-		t.Errorf("counts = entered %d, started %d, want 1 and 1", w.sub.entered[cell+int(a.role)], w.sub.started[cell+int(a.role)])
+	if got := of[OwnUseChanged](obs); len(got) != 1 || got[0].Entered != 1 || got[0].Started != 1 || got[0].OnOwnUse != 1 {
+		t.Errorf("OwnUseChanged = %+v, want one event with entered 1, started 1 and 1 household on", got)
 	}
 }
 

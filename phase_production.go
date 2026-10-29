@@ -139,7 +139,7 @@ func (w *World) finishJob(a *agent, region RegionID) {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
 	}
 	if w.sub != nil {
-		w.sub.completed(w, a, &c)
+		w.sub.completed(w, a, int(region)*len(w.cfg.Roles)+int(a.role), &c)
 	}
 	w.warnOverflow(&c)
 }
@@ -240,7 +240,7 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 	c := &w.pr.cells[cell]
 	c.free += a.weight
 	if w.sub != nil {
-		w.sub.countWork(cell, a.weight, r)
+		w.sub.countWork(w, cell, a, r)
 	}
 	if r.floorChanged {
 		c.floorHeld += a.weight

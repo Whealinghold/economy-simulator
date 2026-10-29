@@ -53,6 +53,8 @@ type workReportBuf struct {
 	// spec-subsistence.md 5.5 item 6); ownRetried says the retry chose a role
 	// recipe over a runnable own-use recipe (FR-SUB-022).
 	ownBlocked, ownRetried bool
+	// ownReason is why no own-use recipe could run when ownBlocked is set.
+	ownReason Reason
 }
 
 // householdParams copies the tunables the rules of internal/household read.
