@@ -1,0 +1,35 @@
+# The subsistence module on pack one (spec-subsistence.md 16, plan 2-10 D416). A test double, not a design.
+# Three source recipes, one for each upkeep good of pack one, each made from nothing in region north at a
+# factor of 10 000; own_prepared stands in for baking (an own-use recipe has no inputs, spec-subsistence.md
+# 3.4.1, so a household cannot bake prepared from its own staple and fuel: plan 2-10 D401, Risks 1).
+# Coverage of one tick of work, q * E / (Duration * u) (4.1): own_staple 2 * 10 000 / (1 * 2) = 10 000,
+# own_prepared 1 * 10 000 / (1 * 1) = 10 000, own_fuel 1 * 10 000 / (1 * 1) = 10 000, so each covers exactly
+# one tick of its upkeep and the floor figure is 10 000, below the surplus factor of the pack (4.2).
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, this file. The tunables are the defaults.
+
+[recipe.own_staple]
+duration = 1
+sited = true
+outputs = [ { commodity = "staple", quantity = 2, cost_share = 10000 } ]
+[recipe.own_prepared]
+duration = 1
+sited = true
+outputs = [ { commodity = "prepared", quantity = 1, cost_share = 10000 } ]
+[recipe.own_fuel]
+duration = 1
+sited = true
+outputs = [ { commodity = "fuel", quantity = 1, cost_share = 10000 } ]
+
+[region.north.yield.own_staple]
+all = 10000
+[region.north.yield.own_prepared]
+all = 10000
+[region.north.yield.own_fuel]
+all = 10000
+
+[modules.subsistence]
+recipes = [ "own_fuel", "own_prepared", "own_staple" ]
+
+# The closed role that only external agents fill must not subsist (spec-subsistence.md 3.2.1).
+[modules.subsistence.role.visitor]
+recipes = []

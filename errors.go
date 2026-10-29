@@ -435,3 +435,16 @@ var (
 	// ErrUnknownFlow is a call that names a money flow that is not configured.
 	ErrUnknownFlow = errors.New("unknown money flow")
 )
+
+// The sentinels of the subsistence module (spec-subsistence.md 13.2).
+var (
+	// ErrOwnUseBand is an ExitTicks that is not above EnterTicks.
+	ErrOwnUseBand = errors.New("exit ticks are not above enter ticks")
+	// ErrOwnUseNotSource is an own-use recipe that has Inputs or Requires.
+	ErrOwnUseNotSource = errors.New("own-use recipe is not a source")
+	// ErrOwnUseNotSited is an own-use recipe that is not Sited.
+	ErrOwnUseNotSited = errors.New("own-use recipe is not sited")
+	// ErrOwnUseOverlap is a recipe on both the effective own-use list and the
+	// Recipes of one role.
+	ErrOwnUseOverlap = errors.New("recipe is both a role recipe and an own-use recipe")
+)

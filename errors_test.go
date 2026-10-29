@@ -213,6 +213,7 @@ func TestSentinels_AreDistinctAndMatch(t *testing.T) {
 		economysim.ErrSelfEdge, economysim.ErrUnknownEdge, economysim.ErrUnknownAgent, economysim.ErrClosedAccount,
 		economysim.ErrNotRelocatable, economysim.ErrSameRegion, economysim.ErrOpenReservation, economysim.ErrRegionBound,
 		economysim.ErrUnknownWant, economysim.ErrWantItems, economysim.ErrWantDurable,
+		economysim.ErrOwnUseBand, economysim.ErrOwnUseNotSource, economysim.ErrOwnUseNotSited, economysim.ErrOwnUseOverlap,
 	}
 	seen := map[string]bool{}
 	for _, s := range sentinels {

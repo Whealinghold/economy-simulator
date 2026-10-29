@@ -52,12 +52,12 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 	var com, rec, up, in, out, tl int
 	for i := range rt.rows {
 		row := &rt.rows[i]
-		com, rec, up = max(com, len(row.tradable)), max(rec, len(row.recipes)), max(up, len(row.upkeep))
+		com, rec, up = max(com, len(row.tradable)), max(rec, len(row.jobs)), max(up, len(row.upkeep))
 		for _, g := range row.regionUpkeep {
 			up = max(up, len(g.items))
 		}
 		var ni, no, nt int
-		for _, id := range row.recipes {
+		for _, id := range row.jobs {
 			rr := rc.row(id)
 			ni, no, nt = ni+len(rr.inputs), no+len(rr.outputs), nt+len(rr.tools)
 		}
@@ -202,46 +202,61 @@ func (sc *viewScratch) fillUpkeep(v *AgentView, per []itemRow, defaultBP int64, 
 func (sc *viewScratch) fillRecipes(v *AgentView, row *roleRow, a *agent, c *viewCtx, region RegionID) error {
 	sc.recipes, sc.inputs, sc.outputs, sc.tools = sc.recipes[:0], sc.inputs[:0], sc.outputs[:0], sc.tools[:0]
 	for _, id := range row.recipes {
-		rr, cr := c.recipes.row(id), &c.cfg.Recipes[id]
-		i0, o0, t0 := len(sc.inputs), len(sc.outputs), len(sc.tools)
-		for _, in := range rr.inputs {
-			sc.inputs = append(sc.inputs, RecipeLine{Commodity: in.commodity, Quantity: int64(in.quantity)})
+		if err := sc.appendRecipe(v, a, c, id, false); err != nil {
+			return err
 		}
-		for _, o := range rr.outputs {
-			sc.outputs = append(sc.outputs, RecipeOutput{Commodity: o.commodity, Quantity: int64(o.quantity), CostShare: o.costShare, Discard: o.discard})
-		}
-		for _, t := range rr.tools {
-			sc.tools = append(sc.tools, RecipeTool{Commodity: t.commodity, WearPerUse: t.wearPerUse, Durability: c.cfg.Commodities[t.commodity].Durability})
-		}
-		// Untested: the yield, shock and profile bounds of validation keep the
-		// effective yield in range, and an unknown account is refused in fillCore
-		// before this loop, so neither error below is reachable from a built world.
-		e, has, ok := c.yields.effectiveAt(c.shocks, region, id, c.moment.Season, cr.Sited, c.prod.abundance(region, id, false))
-		if !ok {
-			return fmt.Errorf("fill view of agent %d: effective yield of recipe %d does not fit", a.id, id)
-		}
-		q := startReq{recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has}
-		if c.prod.res != nil {
-			q.drawCap, q.capped = c.prod.res.viewCap(region, id)
-		}
-		k0, reason, err := c.prod.maxExecutions(c.l, &q)
-		if err != nil {
-			return fmt.Errorf("fill view of agent %d: executions of recipe %d: %w", a.id, id, err)
-		}
-		sc.recipes = append(sc.recipes, RecipeView{
-			Recipe: id, Duration: cr.Duration, Effective: e, MaxExecutions: k0, Reason: reason,
-			Inputs:  sc.inputs[i0:len(sc.inputs):len(sc.inputs)],
-			Outputs: sc.outputs[o0:len(sc.outputs):len(sc.outputs)],
-			Tools:   sc.tools[t0:len(sc.tools):len(sc.tools)],
-		})
 	}
 	v.Recipes = sc.recipes[:len(sc.recipes):len(sc.recipes)]
+	return nil
+}
+
+// appendRecipe appends the view of recipe id to the per-recipe scratch: its
+// lines, the effective yield of the region and the season, and the executions
+// the agent could start now with the reason if there are none. own marks a
+// recipe of the own-use list (spec-subsistence.md 5.4). It does not set v.Recipes.
+func (sc *viewScratch) appendRecipe(v *AgentView, a *agent, c *viewCtx, id RecipeID, own bool) error {
+	region := v.Region
+	rr, cr := c.recipes.row(id), &c.cfg.Recipes[id]
+	i0, o0, t0 := len(sc.inputs), len(sc.outputs), len(sc.tools)
+	for _, in := range rr.inputs {
+		sc.inputs = append(sc.inputs, RecipeLine{Commodity: in.commodity, Quantity: int64(in.quantity)})
+	}
+	for _, o := range rr.outputs {
+		sc.outputs = append(sc.outputs, RecipeOutput{Commodity: o.commodity, Quantity: int64(o.quantity), CostShare: o.costShare, Discard: o.discard})
+	}
+	for _, t := range rr.tools {
+		sc.tools = append(sc.tools, RecipeTool{Commodity: t.commodity, WearPerUse: t.wearPerUse, Durability: c.cfg.Commodities[t.commodity].Durability})
+	}
+	// Untested: the yield, shock and profile bounds of validation keep the
+	// effective yield in range, and an unknown account is refused in fillCore
+	// before this loop, so neither error below is reachable from a built world.
+	e, has, ok := c.yields.effectiveAt(c.shocks, region, id, c.moment.Season, cr.Sited, c.prod.abundance(region, id, false))
+	if !ok {
+		return fmt.Errorf("fill view of agent %d: effective yield of recipe %d does not fit", a.id, id)
+	}
+	q := startReq{recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has}
+	if c.prod.res != nil {
+		q.drawCap, q.capped = c.prod.res.viewCap(region, id)
+	}
+	k0, reason, err := c.prod.maxExecutions(c.l, &q)
+	if err != nil {
+		return fmt.Errorf("fill view of agent %d: executions of recipe %d: %w", a.id, id, err)
+	}
+	sc.recipes = append(sc.recipes, RecipeView{
+		Recipe: id, Duration: cr.Duration, Effective: e, MaxExecutions: k0, Reason: reason, OwnUse: own,
+		Inputs:  sc.inputs[i0:len(sc.inputs):len(sc.inputs)],
+		Outputs: sc.outputs[o0:len(sc.outputs):len(sc.outputs)],
+		Tools:   sc.tools[t0:len(sc.tools):len(sc.tools)],
+	})
 	return nil
 }
 
 // makesIn reports whether a recipe of the view makes c as a non-discard output.
 func makesIn(recipes []RecipeView, c CommodityID) bool {
 	for i := range recipes {
+		if recipes[i].OwnUse {
+			continue // an own-use recipe sets no anchor (spec-subsistence.md 5.4, FR-SUB-027)
+		}
 		for _, o := range recipes[i].Outputs {
 			if o.Commodity == c && !o.Discard {
 				return true

@@ -1748,6 +1748,15 @@ while the module is on, and `Draw` has `Resource` 1, `Quantity` 2. The pointer i
 even when the struct is zero, so `Modules.Resources: &Resources{}` is `0005 0000`; and the
 pair of id 5 goes between the pairs of ids 3 or 4 and those of ids 6 or 8.
 
+The subsistence module (`Modules.Subsistence`, id 8 in `Modules`; the type is `SubsistenceConfig`
+and the registry scope `Subsistence` resolves to it, as `Tenure` resolves to `TenureConfig`)
+adds: `SubsistenceConfig` has `Recipes` 1, `Roles` 2, `EnterTicks` 3, `ExitTicks` 4,
+`RetryJobs` 5; `RoleOwnUse` has `Role` 1, `Recipes` 2. The lists are written in ID order (the
+default list by recipe ID, the rows by role, each row's list by recipe ID), so two spellings
+of one configuration hash alike. The pointer is written even when the struct is zero, so
+`Modules.Subsistence: &SubsistenceConfig{}` is `0008 0000`, and its pair goes after the pairs
+of the ids below 8 and before those of the ids above it, whatever the order of building.
+
 8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
 three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer
 takes its position in the `Modules` row and nothing else moves; (2) a field added to a

@@ -1016,7 +1016,38 @@ type EndowmentAdjusted struct {
 	StockBefore, StockAfter, Lost int64
 }
 
-func (WorldCreated) isEvent()      {}
+func (WorldCreated) isEvent() {}
+
+// OwnUseChanged is emitted once per region and role per tick in phase 2, after the
+// starts, in ascending RegionID then role order, if any of Entered, Left, Started,
+// Blocked, Retried or Output is non-zero; it is never emitted otherwise
+// (spec-subsistence.md 14.1, FR-SUB-040, 041). It is emitted only when the
+// subsistence module is on. A change of OnOwnUse always carries Entered or Left.
+type OwnUseChanged struct {
+	Tick int64
+	// Region and Role are the cell.
+	Region RegionID
+	Role   RoleID
+	// Households is the sum of the weights of the role in the region and OnOwnUse
+	// the households with the flag at the end of the flag step.
+	Households, OnOwnUse int64
+	// Entered and Left are the households whose flag changed in the tick.
+	Entered, Left int64
+	// Started is the executions of own-use recipes started.
+	Started int64
+	// Blocked is the households in the mode that were free and could run no
+	// own-use recipe at P2.5, or whose own-use requests the ration or the check of
+	// the start refused at P2.6 or P2.7, and which started nothing; a household
+	// counts once.
+	Blocked int64
+	// Retried is the households for which the retry chose a role recipe over a
+	// runnable own-use recipe.
+	Retried int64
+	// Output is the units created at the completion of own-use jobs in the tick,
+	// in commodity order.
+	Output []Amount
+}
+
 func (RunStarted) isEvent()        {}
 func (RunEnded) isEvent()          {}
 func (TickStarted) isEvent()       {}
@@ -1049,3 +1080,4 @@ func (MoneyFlowEnded) isEvent()    {}
 func (MoneyFlowScaled) isEvent()   {}
 func (EndowmentChanged) isEvent()  {}
 func (EndowmentAdjusted) isEvent() {}
+func (OwnUseChanged) isEvent()     {}

@@ -219,3 +219,13 @@ measure stock max halt-on tool_b: 1=205 2=191 3=215 4=186 5=216 6=194 7=184 8=21
 check O check: halt-off end stock exceeds halt-on maximum for some good: 10/10 pass
 check price within belief bounds, halt off (FR-STB-008): 10/10 pass
 check price within belief bounds, halt on (FR-STB-008): 10/10 pass
+
+## S60 one+own-use invariants seeds 1-10, reasons seeds 1-2, 120 ticks
+measure households entered the mode: 1=1009 2=953 | median=981 n=2
+check households enter the mode: 2/2 pass
+check no ledger reason beyond the module off: 2/2 pass
+
+## S60 one+own-use seeds 1-10, 120 ticks
+measure households entered the mode: 1=1009 2=953 | median=981 n=2
+check households enter the mode: 2/2 pass
+check no ledger reason beyond the module off: 2/2 pass

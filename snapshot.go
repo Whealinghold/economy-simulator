@@ -169,8 +169,12 @@ type RoleRow struct {
 	Viable          bool
 	HasExpected     bool
 	// ClampedHouseholds is the households whose welfare ring holds a field at
-	// the clamp; appended last.
+	// the clamp; appended after the welfare fields.
 	ClampedHouseholds int64
+	// OnOwnUse is the households in the own-use mode of the subsistence module, the
+	// sum of the weights of the agents with the flag at the boundary; 0 while the
+	// module is off (spec-subsistence.md 14.4).
+	OnOwnUse int64
 }
 
 // MarketState is the report of one market and its price window: the type the
@@ -444,6 +448,9 @@ func (w *World) roleRow(row *RoleRow, g RegionID, v *RegionView, r int) {
 // addRoleAgent adds agent ra to the counts of its role row.
 func addRoleAgent(row *RoleRow, ra *RegionAgent) {
 	row.Agents++
+	if ra.OwnUse {
+		row.OnOwnUse = satAdd(row.OnOwnUse, ra.Weight)
+	}
 	row.Households = satAdd(row.Households, ra.Weight)
 	row.Unfed = satAdd(row.Unfed, ra.Unfed)
 	if ra.Unfed > 0 {

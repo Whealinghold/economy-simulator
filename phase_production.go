@@ -122,7 +122,7 @@ func (w *World) p21Complete() {
 				continue
 			}
 			done, working := a.job.advance()
-			w.welfare.markWorking(int(a.id), working, false)
+			w.welfare.markWorking(int(a.id), working, w.sub.ownJob(w, a))
 			if done {
 				w.finishJob(a, RegionID(g))
 			}
@@ -137,6 +137,9 @@ func (w *World) finishJob(a *agent, region RegionID) {
 	c := w.prod.complete(w.ledger, &a.job, a.account, MaxQuantity)
 	if w.obs.supplied {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
+	}
+	if w.sub != nil {
+		w.sub.completed(w, a, int(region)*len(w.cfg.Roles)+int(a.role), &c)
 	}
 	w.warnOverflow(&c)
 }
@@ -236,6 +239,9 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 	workReport(v, r)
 	c := &w.pr.cells[cell]
 	c.free += a.weight
+	if w.sub != nil {
+		w.sub.countWork(w, cell, a, r)
+	}
 	if r.floorChanged {
 		c.floorHeld += a.weight
 	}
@@ -265,7 +271,7 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 // for the ration of P2.6, which ignores them here (spec-resources.md 5.2).
 func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 	row := w.roles.row(a.role)
-	if reason := admit(row.recipes, req.Recipe); reason != "" {
+	if reason := admit(row.jobs, req.Recipe); reason != "" {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
@@ -367,7 +373,7 @@ func (w *World) p27Start() error {
 // startJob starts the job of an admitted request.
 func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	row := w.roles.row(a.role)
-	off, _ := residueOffset(row.recipes, &w.recipes, ask.recipe)
+	off, _ := residueOffset(row.jobs, &w.recipes, ask.recipe)
 	q := w.startReq(a, region, ask.recipe, ask.maximum)
 	if w.res != nil {
 		w.capDraws(&q, ask.first, ask.draws)
@@ -384,15 +390,21 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		// Reached only when the cap of a draw is 0: the ration granted nothing, or the
 		// live stock is below one execution (reason no_endowment).
 		w.refuse(a, region, ask.recipe, res.reason)
+		if w.sub != nil {
+			w.sub.blockedStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.reason)
+		}
 		return nil
 	}
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
 	}
+	if w.sub != nil {
+		w.sub.noteStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.k)
+	}
 	for _, f := range w.prod.wear {
 		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)
 	}
-	w.welfare.markWorking(int(a.id), res.k, false)
+	w.welfare.markWorking(int(a.id), res.k, w.sub.ownJob(w, a))
 	if done, _ := a.job.advance(); done {
 		w.finishJob(a, region)
 	}

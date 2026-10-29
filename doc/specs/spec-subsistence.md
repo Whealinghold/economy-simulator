@@ -245,11 +245,12 @@ FloorBP(r, region) = max over c in F of Cov(r, c)   <   SurplusBP of the region
 
 is the **bound**. It is per covered commodity: the recipes of a role that each cover one commodity are time-shared (an agent has one job, `spec-production.md` 5.1.2) and no figure combines them, so for a role whose covered set is smaller than its upkeep the bound is a statement about the covered goods only and the rest of the upkeep is still got from the market. It is checked at validation as the warning `own_use_beats_market` for every
 region where the recipe has a positive factor, against the surplus factor of the autarky
-programme of that region (`spec-viability.md` 4.4, 9.5) and, for a region that trades, the
-pooled one; the smaller is used. It is a warning and not an error because the check is
+programme of that region (`spec-viability.md` 4.4, 9.5). At validation the autarky figure is
+the only one there is (`SurplusBP` of the region's row of the report, 10.3 there); the pooled
+figure, for a region that trades, exists in the solver report alone (`Report.RegionSurplusBP`),
+and wherever the report holds both the smaller is used. It is a warning and not an error because the check is
 size-gated (`viability_check_skipped`) and optimistic (`spec-viability.md` 4.6), and because
-a setting may want a generous floor and say so by ignoring the warning. The solver is asked
-to expose the per-region figure in its report (handoff h, `spec-viability.md` 10.3).
+a setting may want a generous floor and say so by ignoring the warning. The solver exposes the per-region figure in its report (handoff h, `spec-viability.md` 10.3).
 
 4.2.1. **Why this inequality and not another.** A household chooses between a labour tick
 spent in the market chain and one spent on the floor. A tick in the chain makes
@@ -374,8 +375,11 @@ called for any agent. The flag step is a pure function of the state above (the p
 `internal/ownuse`, 22); it draws nothing and does not depend on the order of agents. It is
 computed for agents in the middle of a job too, so that the flag is current when the job
 ends. The view passed to `Work` and `Trade` carries `OwnUse`, `OwnUseJobs`, `Cover` and
-`Secure` (6.4.1 of `spec-agents.md`, handoff h) so that a consumer's strategy can use them
-and does not recompute them.
+`Secure`, and the two tunables `ExitTicks` and `RetryJobs` that a pure `Work` needs (6.4.1 of
+`spec-agents.md`, handoff h), so that a consumer's strategy can use them and does not
+recompute them. An own-use recipe in the per-recipe group is marked, and it is not a recipe the
+role "makes": the output cover, the planned recipe of `spec-agents.md` 7.1.4 and the cost
+anchor (3.6) read the unmarked recipes only.
 
 ### 5.5 What the default `Work` does in the mode
 
@@ -388,9 +392,12 @@ of 7.1.4 it applies this rule to an agent that is free.
    `spec-agents.md` 7.1.3).
 3. **Which recipe.** Let `F_short` be the covered commodities whose cover is below
    `ExitTicks`. Among the own-use recipes with `MaxExecutions >= 1` and a positive
-   `sum over c in F_short of Cov(r, c)`, the agent requests the one with the greatest sum (4.1), compared as exact fractions,
-   ties to the lower recipe ID. The value is a quantity of upkeep per labour tick and uses no
-   price and no belief. A recipe with value 0 is not requested.
+   `sum over c in F_short of Cov(r, c)`, the agent requests the one with the greatest sum (4.1), ties to the lower recipe ID. The sum is
+   the sum of the coverages `Cov(r, c)`, each an integer in basis points truncated as 4.1 says
+   (FR-SUB-039), compared as integers: the exact fractions `q * E / (Duration * u_c)` are not
+   summed, so that the figure the choice uses is the figure the validation and the tests use. The
+   value is a quantity of upkeep per labour tick and uses no price and no belief. A recipe with
+   value 0 is not requested.
 4. **How many.** `k = min( w, MaxExecutions, max(1, ceil( w * (ExitTicks - Cover) / ExitTicks )) )`.
    A weight-1 agent runs 1. A cohort puts in the mode's job the share of its households that
    is short of cover, so its labour moves in steps of `1 / w` and not all at once (the form
@@ -413,13 +420,15 @@ of 7.1.4 it applies this rule to an agent that is free.
    eligible), and the household is counted in `Blocked` at P2.5; (b) every request it made
    was granted no execution by the ration of `spec-resources.md` 5.3 at P2.6 (reason
    `no_endowment`), or was refused at P2.7 by the check of the start for one of the reasons
-   listed below: the household starts nothing at P2.7, is flagged blocked and counted in
+   listed below that the build has: the household starts nothing at P2.7, is flagged blocked and counted in
    `Blocked` there, and its next `Work` is the next tick's. It is **not** asked again in the
    same tick and does not fall back to a role recipe in it: the lost tick is the cost of a
    request that could not be known to fail (`spec-world.md` 22 question 12, ruling F7 of the
    integration).
    The reasons of a blocked own-use start are one list, in the master order of
-   `spec-production.md` 4.2: `not_permitted` (only when `OwnUseBound` is set, `spec-institutions.md`
+   `spec-production.md` 4.2, and each belongs to the module that adds the refusal: only
+   `no_endowment` (the resources module) exists before the later stages, and the module that
+   builds each of the others appends it to the one place that counts a refused own-use start: `not_permitted` (only when `OwnUseBound` is set, `spec-institutions.md`
    5.5.2; otherwise an own-use job is exempt from a `produce` right), `no_endowment`, `no_title`
    and `rent_funds` (`spec-land.md` 4.5.1; an own-use request pays rent like any other unless
    `OwnUseExempt` is set), and `no_room` (`spec-storage.md` 5.3.1: tested at P2.5 as the bound
@@ -437,8 +446,7 @@ The own-use mode bars a project of the saving module (`spec-saving-and-investmen
 
 The flag is evaluated for an agent that: is not an estate or other pseudo-agent; is not a
 trainee (its board comes from the trainer, `spec-skill-barriers.md` 4.2, as for the ladder,
-`spec-spawner.md` 5.2.3); is not away (on a transport trip, `spec-transport.md` 5.5.2, or on a migration journey,
-`spec-migration.md`): such an agent has no `Work` and no view; has an effective own-use list with a non-empty covered set; and has
+`spec-spawner.md` 5.2.3); is not away: such an agent has no `Work` and no view. "Away" is one predicate of the world, `offStage` (`spec-world.md` 6.1.3), which the transport module (a trip, `spec-transport.md` 5.5.2) and the migration module (a journey, `spec-migration.md`) extend, and which is false while neither is built; the trainee test waits for the skill barrier module; has an effective own-use list with a non-empty covered set; and has
 a positive effective upkeep. For an agent that is a pseudo-agent, a trainee, has an empty covered set or no upkeep, `OwnUse` is false and its counter 0; an agent that is away keeps its flag and counter frozen and is evaluated again on its return. An
 external agent is evaluated like any other (its fallback strategy is the default).
 
@@ -908,7 +916,7 @@ Provisional, in `bounds.go` (`spec-config.md` 4.1), placeholders until the slice
 | `ErrOwnUseOverlap` | a recipe on both the effective own-use list and `Role.Recipes` of one role (3.4.3); **new** |
 | `ErrModuleDependency` | (`spec-production.md` 10.2, unchanged) an own-use recipe with `Draws` while the resources module is off |
 
-The three new sentinels need a root mapping (N-075).
+The four new sentinels (`ErrOwnUseBand`, `ErrOwnUseNotSource`, `ErrOwnUseNotSited` and `ErrOwnUseOverlap`) need a root mapping (N-075).
 
 ### 13.3 Warnings
 
@@ -921,7 +929,7 @@ share of a drawn endowment). The one that needs the solver is marked.
 |---------|-----------|
 | `subsistence_empty` | the module is on and no role has a non-empty effective own-use list |
 | `own_use_no_upkeep` | a role has a non-empty list and an empty covered set (3.3.2): none of its own-use recipes makes an upkeep good |
-| `own_use_beats_market` | `FloorBP` of an own-use recipe in a region is at least the `SurplusBP` the solver reports for that region (4.2). Size-gated like V3 (`spec-viability.md` 4.6); never an error |
+| `own_use_beats_market` | `FloorBP` of an own-use recipe in a region is at least the `SurplusBP` the solver reports for that region (4.2): the autarky figure at validation, and the smaller of the autarky and the pooled figure where the report has both. Size-gated like V3 (`spec-viability.md` 4.6); never an error |
 | `own_use_partial` | `FloorBP` below 10 000 in some region: the floor feeds a household only in part (4.5). Informational |
 | `own_use_trap` | `RetryJobs` is 0 and `FloorBP` is below 10 000 in some region: a household on the floor cannot build its cover and has no way back to the market (11.2) |
 | `own_use_exit_unreachable` | `ExitTicks` above the `CoverTicks` of `spec-agents.md` 12: purchases cannot build the exit cover (5.3.3) |
@@ -1343,7 +1351,7 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-007 | Validation MUST reject, with `ErrOwnUseBand`, an `ExitTicks` not above `EnterTicks`, and with `ErrOutOfBounds` a tunable outside the numeric bounds of 12 or a list longer than `MaxOwnUseRecipes`. |
 | FR-SUB-008 | Validation MUST reject an unknown recipe in a list with `ErrUnknownRecipe` and an unknown role in a row with `ErrUnknownRole`. |
 | FR-SUB-009 | The module MUST have no region-keyed table and no per-region field; whether a region offers subsistence MUST be decided by the yield table and the endowment rows alone. |
-| FR-SUB-010 | The covered set of a role MUST be the upkeep commodities that are a non-discard output of an own-use recipe of the role, and an agent MUST be evaluated for the mode only if it is not a pseudo-agent, not a trainee, has a non-empty covered set and a positive effective upkeep; such an agent MUST NOT be evaluated while it is away (its flag and counter frozen), and any other agent MUST have `OwnUse` false and `OwnUseJobs` 0. |
+| FR-SUB-010 | The covered set of a role MUST be the upkeep commodities that are a non-discard output of an own-use recipe of the role, and an agent MUST be evaluated for the mode only if it is not a pseudo-agent, not a trainee, has a non-empty covered set and a positive effective upkeep; such an agent MUST NOT be evaluated while it is away, that is while the world's one `offStage` predicate holds (its flag and counter frozen; the trainee test waits for the skill barrier module), and any other agent MUST have `OwnUse` false and `OwnUseJobs` 0. |
 | FR-SUB-011 | `Cover`, `Cost`, `Afford` and `Secure` MUST be computed as in 5.2 with checked integer arithmetic, `Secure` saturating at `MaxOwnUseTicks`. |
 | FR-SUB-012 | `Afford` MUST be 0 for an agent with `Hunger` above 0. |
 | FR-SUB-013 | An agent not in the mode MUST enter it when its `Secure` is below `EnterTicks`, and `OwnUseJobs` MUST be 0 on entry. |
@@ -1351,12 +1359,12 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 | FR-SUB-015 | The flag MUST depend on nothing but the agent's own stock, money, `Hunger`, upkeep, counter and the prices of its own region; a test that changes every other agent, the regional wage and every other region MUST find it unchanged. |
 | FR-SUB-016 | A cohort of weight `w` and `w` agents of weight 1 in the same circumstances MUST have the same `Cover`, `Afford`, `Secure` and flag. |
 | FR-SUB-017 | The flag step MUST run in phase 2 after the continuations and completions and the snapshot of the endowments and before the first `Work`, in agent-ID order, and its result MUST NOT depend on the order of the agents. |
-| FR-SUB-018 | The view of an agent MUST carry `OwnUse`, `OwnUseJobs`, `Cover` and `Secure`, and mark each own-use recipe in the per-recipe group. |
+| FR-SUB-018 | The view of an agent MUST carry `OwnUse`, `OwnUseJobs`, `Cover`, `Secure`, `ExitTicks` and `RetryJobs`, and mark each own-use recipe in the per-recipe group; a marked recipe MUST NOT count as a recipe the role makes for the output cover, the planned recipe or the cost anchor. |
 | FR-SUB-019 | The default `Work` MUST use a work share of 10 000 for an agent in the mode. |
-| FR-SUB-020 | The default `Work` in the mode MUST request, among the own-use recipes with `MaxExecutions` of 1 or more and a positive sum, the one with the greatest sum of `Cov` over the covered commodities whose cover is below `ExitTicks`, compared as exact fractions, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
+| FR-SUB-020 | The default `Work` in the mode MUST request, among the own-use recipes with `MaxExecutions` of 1 or more and a positive sum, the one with the greatest sum of `Cov` (each truncated, FR-SUB-039) over the covered commodities whose cover is below `ExitTicks`, compared as integers, ties to the lower recipe ID, and MUST NOT request a recipe whose sum is 0. |
 | FR-SUB-021 | The executions of the request of FR-SUB-020 MUST be `min(w, MaxExecutions, max(1, ceil(w * (ExitTicks - Cover) / ExitTicks)))`. |
 | FR-SUB-022 | `OwnUseJobs` MUST increase by 1 when an own-use job starts and MUST reset to 0 when a job of another recipe starts or the mode changes; when `RetryJobs` is above 0, `OwnUseJobs` has reached it and a role recipe is eligible, the default `Work` MUST request the role recipe. |
-| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked` at P2.5; when the ration grants every own-use request of the agent 0 executions or the check of the start refuses it for a reason of the list of 5.5 item 6 (`not_permitted` only with `OwnUseBound`, `no_endowment`, `no_title`, `rent_funds`, `no_room`), the agent MUST start nothing at P2.7, the flag MUST stay, the agent MUST be counted in `Blocked` at P2.7, and its next `Work` MUST be the next tick's. |
+| FR-SUB-023 | When no own-use recipe has `MaxExecutions` of 1 or more and a positive sum, the default `Work` MUST act as if the agent were not in the mode, the flag MUST stay, and the agent MUST be counted in `Blocked` at P2.5; when the ration grants every own-use request of the agent 0 executions or the check of the start refuses it for a reason of the list of 5.5 item 6 (`not_permitted` only with `OwnUseBound`, `no_endowment`, `no_title`, `rent_funds`, `no_room`; each reason is counted from the build of the module that refuses with it), the agent MUST start nothing at P2.7, the flag MUST stay, the agent MUST be counted in `Blocked` at P2.7, and its next `Work` MUST be the next tick's. |
 | FR-SUB-024 | The production halt of `spec-agents.md` 7.1.5 MUST NOT apply to an own-use recipe. |
 | FR-SUB-025 | A role with an empty `Recipes` list and a non-empty effective own-use list MUST request an own-use job in the mode. |
 | FR-SUB-026 | Production MUST accept a request for a recipe on the role's effective own-use list, and MUST still refuse any other recipe not on `Role.Recipes` with `not_on_role` before any other check. |
@@ -1437,9 +1445,11 @@ IDs are stable and unique across the module (testing.md 4.1). Each is one testab
 
 Nothing is written. When it is, in the layout of architecture.md 2.6 and `AGENTS.md`:
 
-- `subsistence.go` in the root package: `SubsistenceConfig`, `RoleOwnUse`, the validation of
-  13, the effective lists and covered sets resolved at construction, the call of the flag step
-  and the field `OwnUse` of the agent;
+- `subsistence.go` in the root package: the effective lists and covered sets resolved at
+  construction, the state of the mode (in the module's slices by agent slot, not as fields of
+  the agent: architecture.md 2.10.1) and the call of the flag step; `SubsistenceConfig` and
+  `RoleOwnUse` are in `config.go` (architecture.md 2.6: every section struct is there), and the
+  validation of 13 is in `subsistence_validate.go`, a continuation file of SUB;
 - `internal/ownuse/`: the flag step (`Secure`, the enter and leave rules), `Cov`, the ramp, over
   primitive slices (a covered good is a stock, an upkeep total and a price; architecture.md
   2.9), standard library only, with the checked 128-bit helper of `spec-currency.md` 7. The

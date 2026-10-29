@@ -250,9 +250,19 @@ var stepSites = []site{
 	{"P1.7", noError((*World).p17Flows)},
 	{"P2.1", noError((*World).p21Complete)},
 	{"P2.3", noError((*World).p23Snapshot)},
+	{"P2.4", noError(func(w *World) {
+		if w.sub != nil {
+			w.p24OwnUse()
+		}
+	})},
 	{"P2.5", (*World).p25Work},
 	{"P2.6", noError((*World).p26Ration)},
 	{"P2.7", (*World).p27Start},
+	{"P2.8", noError(func(w *World) {
+		if w.sub != nil {
+			w.p28OwnUse()
+		}
+	})},
 	{"P2.8a", noError((*World).p28aHalted)},
 	{"P3.2", (*World).p32Trade},
 	{"P3.4", (*World).p34Estates},

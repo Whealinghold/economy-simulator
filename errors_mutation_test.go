@@ -88,6 +88,10 @@ func TestErrorsMutation_SentinelText(t *testing.T) {
 		{economysim.ErrUnknownWant, "unknown want"},
 		{economysim.ErrWantItems, "want has no usable item"},
 		{economysim.ErrWantDurable, "want item is durable"},
+		{economysim.ErrOwnUseBand, "exit ticks are not above enter ticks"},
+		{economysim.ErrOwnUseNotSource, "own-use recipe is not a source"},
+		{economysim.ErrOwnUseNotSited, "own-use recipe is not sited"},
+		{economysim.ErrOwnUseOverlap, "recipe is both a role recipe and an own-use recipe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

@@ -289,6 +289,9 @@ func (w *World) shortRows(cell int) []ShortRow {
 // ring holds a field at the clamp (pattern A, FR-WEL-042).
 func (w *World) p63Welfare() {
 	w.valuePrices()
+	if w.sub != nil {
+		w.sub.priceReceipts(w)
+	}
 	clear(w.oc.clamped)
 	roles, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
 	for i := len(w.cfg.Regions); i < len(w.agents); i++ {

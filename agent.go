@@ -119,7 +119,7 @@ func newAgent(p agentInit, row *roleRow, rt *recipeTable) agent {
 		id: p.id, account: p.account, role: p.role, weight: p.weight,
 		external: p.external, mortal: p.mortal, strategy: p.strategy,
 		beliefs:   make([]beliefs.Belief, 0, len(row.tradable)),
-		residues:  make([]int64, residueLen(row.recipes, rt)),
+		residues:  make([]int64, residueLen(row.jobs, rt)),
 		history:   newHistory(row),
 		roleSince: p.tick,
 	}
@@ -349,8 +349,9 @@ func (w *World) saveAgent(cw *codec.Writer, a *agent, names []string) {
 	cw.U(unsigned(a.privation))
 	cw.I(a.roleSince)
 	cw.I(w.deathCarry(a.id))
-	cw.U(0) // OwnUse: the subsistence module is off
-	cw.U(0) // OwnUseJobs
+	on, jobs := w.sub.recordFields(a.id)
+	cw.U(on) // OwnUse: 0 while the subsistence module is off
+	cw.U(jobs)
 	cw.B(false)
 	saveDirective(cw, a.directive)
 }
@@ -466,19 +467,20 @@ func readStrategyNames(r *codec.Reader) []string {
 // the world: the fields in the order of spec-checkpoint.md 4.2 tag 3. nameIdx is
 // the index into the table of strategy names.
 type agentRec struct {
-	id                          uint64
-	acct                        int
-	role                        uint64
-	weight, flags, nameIdx      int64
-	unfed, hunger, privation    int64
-	since, carry                int64
-	ownUse, ownUseJobs, journey bool
-	directive                   *Directive
+	id                       uint64
+	acct                     int
+	role                     uint64
+	weight, flags, nameIdx   int64
+	unfed, hunger, privation int64
+	since, carry             int64
+	ownUse, ownUseJobs       uint64
+	journey                  bool
+	directive                *Directive
 }
 
 // readAgentRec reads the 15 fields of an agent record, each against its own bound
-// (R6, R13). ownUse and ownUseJobs are read as the numbers they are and reported as
-// whether they are non-zero, since the module that owns them is off.
+// (R6, R13). ownUse is 0 or 1 and ownUseJobs at most the ticks elapsed, a start a
+// tick being the most the counter can have counted.
 func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) agentRec {
 	rec := agentRec{id: r.Strict(prev, started)}
 	rec.acct = int(r.Index(uint64(w.ledger.Len())))
@@ -490,7 +492,7 @@ func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, pr
 	rec.hunger = r.Bounded("hunger", rs.tick)
 	rec.privation = r.Bounded("privation", rs.tick)
 	rec.since, rec.carry = r.I(), r.I()
-	rec.ownUse, rec.ownUseJobs, rec.journey = r.U() != 0, r.U() != 0, r.B()
+	rec.ownUse, rec.ownUseJobs, rec.journey = r.Index(2), uint64(r.Bounded("own-use jobs", rs.tick)), r.B()
 	rec.directive = w.loadDirective(r)
 	return rec
 }
@@ -521,8 +523,8 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
 	case rec.carry != w.deathCarry(id):
 		return fmt.Errorf("agent %d has DeathCarry %d, not its start %d, while the population module is off", rec.id, rec.carry, w.deathCarry(id))
-	case rec.ownUse || rec.ownUseJobs || rec.journey:
-		return fmt.Errorf("agent %d has own-use or journey state while its module is off", rec.id)
+	case rec.journey || w.sub.recordBad(rec.ownUse, rec.ownUseJobs):
+		return fmt.Errorf("agent %d has own-use or journey state its module does not allow", rec.id)
 	}
 	return nil
 }
@@ -545,6 +547,9 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 		w.roles.row(RoleID(rec.role)), &w.recipes)
 	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
 	w.agents[rec.id] = a
+	if w.sub != nil {
+		w.sub.restoreAgent(a.id, rec.ownUse, rec.ownUseJobs)
+	}
 	w.live.agents++
 	w.live.households += rec.weight
 	w.live.inRole[v.Region*len(w.cfg.Roles)+int(rec.role)]++

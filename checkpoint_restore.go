@@ -347,6 +347,11 @@ func (w *World) checkpointCross() error {
 			return err
 		}
 	}
+	if w.sub != nil {
+		if err := w.subsistenceCross(); err != nil {
+			return err
+		}
+	}
 	if w.money != nil {
 		return w.moneyCross()
 	}

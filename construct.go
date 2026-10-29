@@ -129,6 +129,7 @@ func (w *World) allocate() {
 	w.demand = newDemandState(&w.cfg)
 	w.money = newMoneyFlows(&w.cfg, w.ledger)
 	w.res = newResourcesState(&w.cfg)
+	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
@@ -305,6 +306,9 @@ func modulesOn(c *Config) []string {
 	}
 	if c.Modules.Resources != nil {
 		on = append(on, "resources")
+	}
+	if c.Modules.Subsistence != nil {
+		on = append(on, "subsistence")
 	}
 	return on
 }

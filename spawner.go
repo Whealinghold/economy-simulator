@@ -141,6 +141,9 @@ type RegionAgent struct {
 	RoleSince int64
 	// Upkeep is one household's upkeep per tick.
 	Upkeep Money
+	// OwnUse says the agent is in the own-use mode of the subsistence module,
+	// read-only; false while the module is off (spec-subsistence.md FR-SUB-051).
+	OwnUse bool
 }
 
 // DecisionKind is the kind of a decision of a spawner.

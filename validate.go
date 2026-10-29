@@ -106,6 +106,7 @@ func (v *validator) structural() {
 	v.validateDemand()
 	v.validateMoneySupply()
 	v.validateResources()
+	v.validateSubsistence()
 	v.structure()
 	v.economics()
 	v.overflow()
@@ -835,13 +836,19 @@ func resolutionFloor(w WorldParams) (int64, bool) {
 	return (wholeBP + w.BeliefStep - 1) / w.BeliefStep, true
 }
 
-// longestDuration is the longest Duration among the declared recipes of a role,
-// and whether every declared recipe has a Duration inside its bound. A
-// Duration outside it is reported by its own rule and the rules that read a
-// window skip the role.
-func longestDuration(lk lookup, r *Role) (longest int64, ok bool) {
+// jobIDs are the recipes a role may run: its list and, with the subsistence
+// module on, its effective own-use list (spec-welfare-and-wages.md 2.3.3).
+func jobIDs(c *Config, r *Role) []string {
+	return slices.Concat(r.Recipes, c.Modules.Subsistence.ownUseList(r.ID))
+}
+
+// longestDuration is the longest Duration among the declared recipes of a role
+// (own-use recipes included), and whether every declared recipe has a Duration
+// inside its bound. A Duration outside it is reported by its own rule and the
+// rules that read a window skip the role.
+func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 	ok = true
-	for _, id := range r.Recipes {
+	for _, id := range jobIDs(c, r) {
 		rc := lk.recipe[id]
 		if rc == nil {
 			continue
@@ -864,7 +871,7 @@ func effectiveWindow(c *Config, lk lookup, r *Role) (t int64, ok bool) {
 	if w.WelfareWindow < 1 || w.WelfareWindow > 1_000 || w.WindowCycles < 1 || w.WindowCycles > 100 {
 		return 0, false
 	}
-	l, ok := longestDuration(lk, r)
+	l, ok := longestDuration(c, lk, r)
 	if !ok {
 		return 0, false
 	}
@@ -1861,7 +1868,7 @@ func warnings(c *Config) []Warning {
 	started := map[string]bool{} // a recipe some role with a group can run
 	required := map[string]bool{}
 	for i := range c.Roles {
-		for _, id := range c.Roles[i].Recipes {
+		for _, id := range jobIDs(c, &c.Roles[i]) {
 			listed[id] = true
 		}
 	}
@@ -2021,7 +2028,7 @@ func warnings(c *Config) []Warning {
 	for i := range c.Roles {
 		ro := &c.Roles[i]
 		base := []string{"roles", ro.ID}
-		l := longestDurationAny(lk, ro)
+		l := longestDurationAny(c, lk, ro)
 		if t, ok := checked.Mul(c.World.WindowCycles, l); ok && t > c.World.WelfareWindow {
 			// window_extended: the role's window is longer than the world's
 			// because of its longest job (spec-welfare-and-wages.md 11.4).
@@ -2045,6 +2052,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, demandWarnings(c, lk)...)
 	out = append(out, moneyWarnings(c, lk)...)
 	out = append(out, resourceWarnings(c, lk)...)
+	out = append(out, subsistenceWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }
@@ -2052,9 +2060,9 @@ func warnings(c *Config) []Warning {
 // longestDurationAny is longestDuration without the bound: the longest Duration
 // of the declared recipes on a role's list, whatever its value, for the
 // warnings, which read a configuration that may not validate.
-func longestDurationAny(lk lookup, r *Role) int64 {
+func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
 	var longest int64
-	for _, id := range r.Recipes {
+	for _, id := range jobIDs(c, r) {
 		if rc := lk.recipe[id]; rc != nil {
 			longest = max(longest, rc.Duration)
 		}

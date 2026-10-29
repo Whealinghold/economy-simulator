@@ -329,6 +329,11 @@ type RecipeView struct {
 	MaxExecutions int64
 	// Reason says why MaxExecutions is 0 (spec-production.md 4.2).
 	Reason Reason
+	// OwnUse marks a recipe of the role's own-use list (spec-subsistence.md 5.4):
+	// it is not a recipe the role makes, so the output cover, the planned recipe
+	// and the cost anchor read the unmarked recipes only. False while the
+	// subsistence module is off.
+	OwnUse bool
 }
 
 // BeliefTunables is the group of the fifteen belief parameters that
@@ -415,6 +420,16 @@ type AgentView struct {
 	// the role draws on none (spec-resources.md 5.5.1). No other region's endowment
 	// is in a view.
 	Endowments []EndowmentView
+	// OwnUse says the agent is in the own-use mode and OwnUseJobs is the own-use
+	// jobs it has started in a row; Cover and Secure are the ticks of upkeep it
+	// holds in stock and the ticks stock and money secure, at this moment;
+	// ExitTicks and RetryJobs are the two tunables a pure Work needs
+	// (spec-subsistence.md 5.4, FR-SUB-018). All are zero while the subsistence
+	// module is off.
+	OwnUse               bool
+	OwnUseJobs           int64
+	Cover, Secure        int64
+	ExitTicks, RetryJobs int64
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

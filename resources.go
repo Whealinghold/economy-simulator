@@ -264,7 +264,7 @@ func (r *resourcesState) deriveDraws(c *Config) {
 		}
 	}
 	for i := range c.Roles {
-		for _, id := range c.Roles[i].Recipes {
+		for _, id := range jobIDs(c, &c.Roles[i]) {
 			rc, ok := c.recipeID(id)
 			if !ok {
 				invariant("a role names the recipe " + id + " after validation")

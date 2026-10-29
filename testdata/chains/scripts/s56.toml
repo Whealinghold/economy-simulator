@@ -1,0 +1,15 @@
+# Scenario S56 (SUB-S1), spec-subsistence.md 11 and 19: an outage of the market recipe of the
+# forage world of subsistence_world_test.go (one region "home", one recipe "tend" that makes
+# the household's upkeep). The yield of tend is 0 from tick 10 and whole again at tick 50;
+# yield_bp 10000 clears the shock. Each [[shock]] is applied between steps, before the step
+# of its tick.
+[[shock]]
+tick = 10
+region = "home"
+recipe = "tend"
+yield_bp = 0
+[[shock]]
+tick = 50
+region = "home"
+recipe = "tend"
+yield_bp = 10000

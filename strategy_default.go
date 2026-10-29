@@ -155,7 +155,7 @@ func (t *tradeCtx) plannedRecipe() int {
 	best, bestNet, bestDur := -1, int64(0), int64(0)
 	for i := range t.v.Recipes {
 		r := &t.v.Recipes[i]
-		if r.Effective <= 0 || t.v.recipeHalted(r, t.par) {
+		if r.OwnUse || r.Effective <= 0 || t.v.recipeHalted(r, t.par) {
 			continue
 		}
 		net, ok := t.v.recipeNet(r)
@@ -244,6 +244,9 @@ func (t *tradeCtx) jobAndOutput(c CommodityID) (job, out int64, ok bool) {
 // recipes (7.3.5).
 func (t *tradeCtx) makes(c CommodityID) bool {
 	for i := range t.v.Recipes {
+		if t.v.Recipes[i].OwnUse {
+			continue
+		}
 		for _, o := range t.v.Recipes[i].Outputs {
 			if o.Commodity == c && !o.Discard {
 				return true

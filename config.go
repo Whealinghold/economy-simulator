@@ -79,12 +79,52 @@ type Modules struct {
 	// off; non-nil is on, even when empty. Its hash id is 5, whatever its place in
 	// this struct.
 	Resources *Resources
+	// Subsistence is the subsistence module: own-use recipes a household takes
+	// up when the market does not feed it (spec-subsistence.md). Nil is off;
+	// non-nil is on, even when empty. Its hash id is 8, whatever its place in
+	// this struct.
+	Subsistence *SubsistenceConfig
 }
 
 // Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
 // no field: a non-nil pointer switches relief and the pool as a flow target on,
 // and the tunables are Region.PoolRelease and Region.ReliefBelow.
 type Estates struct{}
+
+// SubsistenceConfig is the configuration of the subsistence module
+// (spec-subsistence.md 3.2, 12). The zero value is a module that is on with no
+// own-use recipe, which does nothing (the warning subsistence_empty); the
+// defaults of the three tunables are DefaultSubsistence. Every list is in
+// canonical order after construction: recipes by ID, rows by role. The module has
+// no region-keyed field: a region offers subsistence through its yield rows and
+// endowment rows (spec-subsistence.md 3.5).
+type SubsistenceConfig struct {
+	// Recipes are the default own-use recipes of every role, by recipe ID, 0 to
+	// MaxOwnUseRecipes.
+	Recipes []string
+	// Roles are the rows that replace the default list for one role, by role ID,
+	// one row per role. An empty row means the role has no own-use recipe.
+	Roles []RoleOwnUse
+	// EnterTicks is the secure ticks below which a household takes up the own-use
+	// mode, 1 to MaxOwnUseTicks (spec-subsistence.md 5.3).
+	EnterTicks int64
+	// ExitTicks is the stock cover at which a household leaves the mode, above
+	// EnterTicks and to MaxOwnUseTicks (spec-subsistence.md 5.3).
+	ExitTicks int64
+	// RetryJobs is the own-use jobs in a row after which the default Work tries a
+	// role recipe; 0 never retries, to MaxRetryJobs (spec-subsistence.md 5.5).
+	RetryJobs int64
+}
+
+// RoleOwnUse replaces, for one role, the default list of own-use recipes
+// (spec-subsistence.md 3.2.1).
+type RoleOwnUse struct {
+	// Role is the role the row is for. One row per role.
+	Role string
+	// Recipes are the role's own-use recipes, by recipe ID, 0 to MaxOwnUseRecipes.
+	// An empty list means the role has none.
+	Recipes []string
+}
 
 // Resources is the configuration of the resources module (spec-resources.md
 // 3.3, 12). The zero value is a module that is on with no resource. Every list
@@ -833,6 +873,7 @@ func (c Config) canonical() Config {
 	out.Modules.Demand = c.Modules.Demand.canonical()
 	out.Modules.MoneySupply = c.Modules.MoneySupply.canonical()
 	out.Modules.Resources = c.Modules.Resources.canonical(c.Calendar.Seasons)
+	out.Modules.Subsistence = c.Modules.Subsistence.canonical()
 	return out
 }
 

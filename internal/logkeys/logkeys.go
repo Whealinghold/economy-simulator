@@ -117,4 +117,7 @@ const (
 	Resource = "resource"
 	Stock    = "stock"
 	Short    = "short"
+	// OwnUse is the households in the own-use mode of the subsistence module, the
+	// sum of agent weights (int64).
+	OwnUse = "own_use"
 )
