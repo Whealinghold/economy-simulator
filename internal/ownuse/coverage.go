@@ -91,10 +91,11 @@ func shortSum(covs []int64, short []bool) int64 {
 // Ramp returns the executions an agent of weight w requests in the mode,
 // min(w, maxExec, max(1, ceil(w * (exit - cover) / exit))) (spec-subsistence.md
 // 5.5 item 4, FR-SUB-021): a weight-1 agent runs 1 and a cohort puts in the
-// share of its households that is short of cover. The caller passes maxExec of
-// at least 1. ok is false for a weight or an exit below 1.
+// share of its households that is short of cover. ok is false for a weight, an
+// exit or maxExec below 1: the caller passes the executions of a recipe it can
+// start, and a request of none is no request.
 func Ramp(w, maxExec, cover, exit int64) (k int64, ok bool) {
-	if w < 1 || exit < 1 {
+	if w < 1 || exit < 1 || maxExec < 1 {
 		return 0, false
 	}
 	short := max(exit-cover, 0)

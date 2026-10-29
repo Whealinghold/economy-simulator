@@ -192,9 +192,14 @@ func TestPick_NeverZero(t *testing.T) {
 
 // TestRamp_Formula verifies k = min(w, maxExec, max(1, ceil(w * (exit - cover)
 // / exit))): a weight-1 agent runs 1, the execution cap binds, a cover at or
-// above the exit still runs 1, and a bad weight or exit is refused.
+// above the exit still runs 1, and a bad weight, exit or execution cap is
+// refused.
 //
 // Requirement: FR-SUB-021
+//
+// Guard: Ramp is exported to the root package only, but a view built by hand can
+// hold a marked recipe with MaxExecutions below 1; without the refusal the
+// request would carry 0 or a negative number of executions.
 func TestRamp_Formula(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -216,6 +221,10 @@ func TestRamp_Formula(t *testing.T) {
 		{"weight of one with an exit of one", 1, 9, 0, 1, 1, true},
 		{"zero weight", 0, 5, 0, 3, 0, false},
 		{"zero exit", 5, 5, 0, 0, 0, false},
+		// The caller passes maxExec of at least 1; a hand-built view may not, and
+		// min(w, 0, ...) would answer 0 executions as if it were a request.
+		{"no executions possible", 5, 0, 0, 3, 0, false},
+		{"negative executions", 5, -2, 0, 3, 0, false},
 		{"overflow of the share", math.MaxInt64, math.MaxInt64, -1_000_000, 1, 0, false},
 	}
 	for _, tt := range tests {

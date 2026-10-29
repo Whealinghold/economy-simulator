@@ -45,7 +45,26 @@ func (v *validator) validateSubsistence() {
 		}
 		v.ownUseRefs(path(rb, "recipes"), row.Recipes)
 	}
-	v.ownUseRules(m, base)
+	if m.withinBounds() { // the rules sort and scan a list once per role
+		v.ownUseRules(m, base)
+	}
+}
+
+// withinBounds reports whether the role rows and every list are within their
+// bounds, MaxRoles and MaxOwnUseRecipes (spec-subsistence.md 3.4.4). The rules
+// over the effective lists and the warnings run only then, so an oversized list
+// of a file is reported once and not sorted and scanned for every role. A nil
+// module (off) reports false: it has no lists to read.
+func (s *SubsistenceConfig) withinBounds() bool {
+	if s == nil || len(s.Recipes) > MaxOwnUseRecipes || len(s.Roles) > MaxRoles {
+		return false
+	}
+	for i := range s.Roles {
+		if len(s.Roles[i].Recipes) > MaxOwnUseRecipes {
+			return false
+		}
+	}
+	return true
 }
 
 // ownUseRefs checks one list: at most MaxOwnUseRecipes, each recipe defined and
@@ -113,7 +132,7 @@ func (v *validator) ownUseKind(p []string, id string) {
 // read the activities of a region are the viability pass's (ownUse).
 func subsistenceWarnings(c *Config, lk lookup) []Warning {
 	m := c.Modules.Subsistence
-	if m == nil {
+	if !m.withinBounds() { // off, or out of bounds, which Validate reports
 		return nil
 	}
 	var out []Warning

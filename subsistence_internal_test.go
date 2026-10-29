@@ -1,7 +1,9 @@
 package economysim
 
 import (
+	"errors"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -200,5 +202,54 @@ func TestCanonical_SubsistenceOrder(t *testing.T) {
 	}
 	if empty := (Config{Modules: Modules{Subsistence: &SubsistenceConfig{}}}).canonical(); empty.Modules.Subsistence == nil {
 		t.Errorf("canonical of an empty module that is on = nil, want on")
+	}
+}
+
+// TestValidate_OversizedListSkipsTheRules verifies that a list past
+// MaxOwnUseRecipes, and a row count past MaxRoles, is reported as out of bounds
+// alone: the rules of the effective lists (source, sited, overlap) and the
+// warnings are not run over it, so a configuration file cannot make the
+// validator sort and scan the oversized list once per role.
+//
+// Guard: the early return for MaxRoles says "the rest is linear in the count it
+// just refused", and the lists did not keep that promise: the default list is
+// the effective list of every role, so ownUseRules sorted and scanned it once
+// per role. The unsorted smelt (it has inputs, so it is not a source) would be
+// reported as ErrOwnUseNotSource if the rules ran.
+func TestValidate_OversizedListSkipsTheRules(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		edit func(m *SubsistenceConfig)
+	}{
+		{"default list", func(m *SubsistenceConfig) {
+			m.Recipes = slices.Repeat([]string{"smelt"}, MaxOwnUseRecipes+1)
+		}},
+		{"role row", func(m *SubsistenceConfig) {
+			m.Roles = []RoleOwnUse{{Role: "smith", Recipes: slices.Repeat([]string{"smelt"}, MaxOwnUseRecipes+1)}}
+		}},
+		{"role rows", func(m *SubsistenceConfig) {
+			m.Recipes = []string{"smelt"}
+			m.Roles = make([]RoleOwnUse, MaxRoles+1)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := *subConfig()
+			tt.edit(c.Modules.Subsistence)
+			err := c.Validate()
+			if !errors.Is(err, ErrOutOfBounds) {
+				t.Fatalf("Validate() = %v, want ErrOutOfBounds", err)
+			}
+			if errors.Is(err, ErrOwnUseNotSource) {
+				t.Errorf("Validate() = %v, want the rules of the effective lists not run over a refused list", err)
+			}
+			for _, w := range c.Warnings() {
+				if strings.HasPrefix(w.Rule, "own_use") || w.Rule == "subsistence_empty" {
+					t.Errorf("Warnings() has %q at %v, want none of the module over a refused list", w.Rule, w.Path)
+				}
+			}
+		})
 	}
 }
