@@ -3,11 +3,13 @@ package economysim
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/ownuse"
 )
@@ -736,4 +738,71 @@ func (s *subsistence) emit(w *World, cell int, households int64) {
 		Households: households, OnOwnUse: s.inMode[cell], Entered: s.entered[cell], Left: s.left[cell],
 		Started: s.started[cell], Blocked: s.blocked[cell], Retried: s.retried[cell], Output: out,
 	})
+}
+
+// recordFields returns the two numbers of the agent record that the module hosts
+// (spec-checkpoint.md 4.2, tag 3): the flag as 0 or 1 and the counter. They are 0
+// while the module is off, which a nil module also answers.
+func (s *subsistence) recordFields(id AgentID) (on, jobs uint64) {
+	if s == nil || int(id) >= len(s.ownUse) {
+		return 0, 0
+	}
+	if s.ownUse[id] {
+		on = 1
+	}
+	return on, uint64(s.ownUseJobs[id])
+}
+
+// recordBad reports whether the flag and the counter read from an agent record are
+// not a state this world can hold: any non-zero value while the module is off
+// (R10), and a counter without the flag (the counter is reset to 0 whenever the
+// flag drops, FR-SUB-032). A flag on a role whose covered set is empty is lawful:
+// a role change keeps the flag and the next flag step drops it.
+func (s *subsistence) recordBad(on, jobs uint64) bool {
+	if s == nil {
+		return on|jobs != 0
+	}
+	return on == 0 && jobs != 0
+}
+
+// restoreAgent puts the flag and the counter read from an agent record in the
+// slots of the agent, growing them as the flag step does.
+func (s *subsistence) restoreAgent(id AgentID, on, jobs uint64) {
+	s.grow(int(id) + 1)
+	s.ownUse[id], s.ownUseJobs[id] = on == 1, int64(jobs)
+}
+
+// saveSubsistence is tag 19 (spec-subsistence.md 15, spec-checkpoint.md 4.2): the two
+// runs of consecutive ticks of the two Warns, each sparse by (region, role). They
+// are diagnostics that change no result and are saved so that a resumed run logs
+// as the original did. The flag and the counter are in the agent record (tag 3).
+func (w *World) saveSubsistence(cw *codec.Writer) error {
+	roles := len(w.cfg.Roles)
+	writeSparse(cw, w.sub.runOn, roles)
+	writeSparse(cw, w.sub.runBlocked, roles)
+	return nil
+}
+
+// loadSubsistence reads tag 19: each run from 1 to the ticks elapsed, a row at 0
+// being corrupt (R10). That a run belongs to a role with something to cover is
+// the cross-check (subsistenceCross).
+func (w *World) loadSubsistence(rs *restoreCtx, r *codec.Reader) error {
+	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	readSparse(r, w.sub.runOn, regions, roles, rs.tick)
+	readSparse(r, w.sub.runBlocked, regions, roles, rs.tick)
+	return nil
+}
+
+// subsistenceCross is the module's part of the cross-checks of a restore: a run of
+// either Warn needs households in the mode at P2.8 of the last tick, and the flag
+// step drops every household of a role whose covered set is empty before P2.8, so
+// a role with an empty covered set has no run.
+func (w *World) subsistenceCross() error {
+	s, roles := w.sub, len(w.cfg.Roles)
+	for cell := range s.runOn {
+		if len(s.covered[cell%roles]) == 0 && (s.runOn[cell] != 0 || s.runBlocked[cell] != 0) {
+			return fmt.Errorf("%w: region %d, role %d has a run of own-use warnings, but its covered set is empty", ErrCheckpointCorrupt, cell/roles, cell%roles)
+		}
+	}
+	return nil
 }

@@ -41,6 +41,7 @@ var checkpointSections = [...]section{
 	{tag: 12, name: "Demand", present: func(c *Config) bool { return c.Modules.Demand != nil }, save: (*World).saveDemand, load: (*World).loadDemand},
 	{tag: 13, name: "MoneySupply", present: func(c *Config) bool { return c.Modules.MoneySupply != nil }, save: (*World).saveMoneySupply, load: (*World).loadMoneySupply},
 	{tag: 15, name: "Resources", present: func(c *Config) bool { return c.Modules.Resources != nil }, save: (*World).saveResources, load: (*World).loadResources},
+	{tag: 19, name: "Subsistence", present: func(c *Config) bool { return c.Modules.Subsistence != nil }, save: (*World).saveSubsistence, load: (*World).loadSubsistence},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
 }
 
@@ -65,7 +66,7 @@ type notBuiltSection struct {
 var notBuiltSections = [...]notBuiltSection{
 	{14, "Population", "Population"},
 	{16, "Information", "Information"}, {17, "Transport", "Transport"},
-	{18, "External", "External"}, {19, "Subsistence", "Subsistence"}, {20, "Migration", "Migration"},
+	{18, "External", "External"}, {20, "Migration", "Migration"},
 	{21, "Merchants", "Merchants"}, {22, "Integration", "Information"}, {23, "Settlements", "Settlements"},
 	{24, "Employment", "Employment"}, {25, "Tenure", "Tenure"}, {26, "Credit", "Credit"},
 	{27, "Facilities", "Infrastructure"}, {28, "Risk", "Risk"}, {29, "Insurance", "Insurance"},
