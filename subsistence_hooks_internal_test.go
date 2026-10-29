@@ -1,6 +1,9 @@
 package economysim
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // forageField is the forage world with the resources module on: gather draws one
 // unit of the stock "field" an execution, the stock holds stock units, and only
@@ -135,5 +138,37 @@ func TestMode_DoesNotTouchHungerPrivation(t *testing.T) {
 	a, b := &w.agents[1], &w.agents[2]
 	if a.hunger != b.hunger || a.privation != b.privation {
 		t.Errorf("flagged (hunger %d, privation %d) and unflagged (hunger %d, privation %d), want equal", a.hunger, a.privation, b.hunger, b.privation)
+	}
+}
+
+// TestAnchors_OwnUseNeverSets verifies that an own-use recipe is not among the
+// recipes that can run in a region for the cost anchors of P1.2, and that the
+// anchor of a commodity only an own-use recipe makes stays 0.
+//
+// Requirement: FR-SUB-027
+func TestAnchors_OwnUseNeverSets(t *testing.T) {
+	t.Parallel()
+	w := newForage(t, 1, func(c *Config) {
+		c.Commodities = append(c.Commodities, Commodity{ID: "ore", ReferencePrice: 1_000, Raw: true})
+		c.Recipes = append(c.Recipes, Recipe{ID: "dig", Duration: 1, Sited: true, TraineeYield: 5_000, Outputs: []Output{{Commodity: "ore", Quantity: 1, CostShare: 10_000}}})
+		c.Yields = append(c.Yields, YieldProfile{Region: "home", Recipe: "dig", HasAll: true, All: 10_000})
+		c.Modules.Subsistence.Recipes = []string{"dig", "gather"}
+	})
+	for range 3 {
+		if err := w.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.setRunnable()
+	own := w.roles.row(0).ownUse
+	for g, list := range w.runnable {
+		for _, id := range list {
+			if slices.Contains(own, id) {
+				t.Errorf("region %d lists the own-use recipe %d as runnable", g, id)
+			}
+		}
+	}
+	if got := w.prod.unitCost(0, 1); got != 0 {
+		t.Errorf("unit cost of ore = %d, want 0: only an own-use recipe makes it", got)
 	}
 }
