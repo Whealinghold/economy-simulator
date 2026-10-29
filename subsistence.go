@@ -358,6 +358,7 @@ func (s *subsistence) evaluate(w *World, a *agent) {
 	if len(goods) == 0 {
 		if s.ownUse[a.id] {
 			s.left[cell] += a.weight
+			s.debug(w, "own use left", a, "cover")
 		}
 		s.ownUse[a.id], s.ownUseJobs[a.id] = false, 0
 		return
@@ -463,6 +464,7 @@ func (s *subsistence) countWork(w *World, cell int, a *agent, r *workReportBuf) 
 // the agent and k to the executions started of its cell, a start of any other
 // recipe resets the counter (FR-SUB-022).
 func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k int64) {
+	s.grow(int(a.id) + 1) // an agent created after P2.4 has no slot yet
 	if isOwn(w.roles.row(a.role), recipe) {
 		s.ownUseJobs[a.id]++
 		s.started[cell] += k
