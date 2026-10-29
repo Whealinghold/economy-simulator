@@ -251,6 +251,7 @@ var invariantTable = []invariantCase{
 	{"second", packSecond, 4, 0, ""},
 	{"one-demand", packOneDemand, 4, 0, ""},
 	{"one+faucet-sunk", packOneFaucetSunk, 4, 0, ""},
+	{"one+resources", packOneResources, scenarioSeeds, 0, ""},
 	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, ""},
 	{"two+trade", tradeWarm("two"), 4, 0, ""},
 	{"three+trade", tradeWarm("three"), 4, 0, ""},

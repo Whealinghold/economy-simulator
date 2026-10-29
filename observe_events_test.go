@@ -52,6 +52,7 @@ var emittedBy = []struct{ event, scenario string }{
 	{"RecipeAbandoned", "spawner script"}, {"WeightChanged", "spawner script"},
 	{"RoleChanged", "spawner script"}, {"EntryLimited", "spawner script"},
 	{"OrderRejected", "bad order"}, {"WorldRestored", "restored"},
+	{"EndowmentChanged", "resources"}, {"EndowmentAdjusted", "resources"},
 }
 
 // sliceNotEmitted names the declared events that no scenario of the slice emits:
@@ -67,10 +68,10 @@ var emittedBy = []struct{ event, scenario string }{
 // events are declared with the money supply module's configuration and are emitted
 // by its step and its scenarios, which the module's step change adds (plan 2-6).
 // ReliefPaid is emitted only with the estates module on (plan 2-7). EndowmentChanged
-// and EndowmentAdjusted are emitted only with the resources module on: the tests of
-// that module emit them, and its scenarios (S42 to S45, plan 2-9 phase 9) delete
-// these entries.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "EndowmentChanged", "EndowmentAdjusted"}
+// and EndowmentAdjusted are emitted only with the resources module on, by the
+// scenario "resources" that emittedTypes adds (plan 2-9 phase 9), so they are not
+// listed.
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.
@@ -85,7 +86,39 @@ func emittedTypes(t *testing.T, list []scenario) map[string]map[string]bool {
 		}
 	}
 	seen["restored"] = restoredTypes(t, scenarioNamed(t, list, "one"))
+	seen["resources"] = resourcesTypes(t)
 	return seen
+}
+
+// resourcesTypes runs the field world of the resource scenarios (a refill stock
+// that its five reapers draw) with an observer for four steps, and a blight and a
+// drought between the second and the third, and returns the names of the event
+// types it emitted: the scenario "resources" of the staged emission test (plan 2-9
+// phase 9). The module is off in every other scenario of the slice, so this is where
+// EndowmentChanged and EndowmentAdjusted are emitted.
+func resourcesTypes(t *testing.T) map[string]bool {
+	t.Helper()
+	res := economysim.DefaultResource()
+	res.Shape, res.RateBP = economysim.ShapeRefill, 20_000
+	rec := &recorder{}
+	w, err := economysim.NewWorld(fieldWorld(res, 10_000, 10_000, 5, 1_000, 1), economysim.WithSeed(obsSeed), economysim.WithObserver(rec))
+	if err != nil {
+		t.Fatalf("scenario resources (seed %d): NewWorld() error = %v, want nil", obsSeed, err)
+	}
+	for tick := range 4 {
+		if tick == 2 {
+			economysim.AdjustStock(w, 0, 0, -9_000)
+			economysim.ShockRegen(w, 0, 0, 3_000)
+		}
+		if err := w.Step(); err != nil {
+			t.Fatalf("scenario resources (seed %d): Step() error = %v, want nil", obsSeed, err)
+		}
+	}
+	out := map[string]bool{}
+	for _, e := range rec.events {
+		out[typeName(e)] = true
+	}
+	return out
 }
 
 // restoredTypes checkpoints the world of sc after its ticks and returns the names

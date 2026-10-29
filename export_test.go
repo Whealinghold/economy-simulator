@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"context"
 	"slices"
 	"testing"
 )
@@ -369,4 +370,41 @@ func ShockRegen(w *World, region RegionID, resource ResourceID, bp int64) {
 // AdjustStock changes the stock of an endowment by a signed delta (see ShockCapacity).
 func AdjustStock(w *World, region RegionID, resource ResourceID, delta int64) {
 	w.adjustEndowments(region, resource, delta)
+}
+
+// SteadyReportUnchecked solves the programmes of c and returns their report
+// without validating c first, so a pack that is not viable (resource_short) still
+// has a report to read. c must otherwise be valid.
+func SteadyReportUnchecked(c Config) (Report, error) {
+	o, err := newSolveOptions(nil)
+	if err != nil {
+		return Report{}, err
+	}
+	cc := c.canonical()
+	s := &viaSolve{m: newViaModel(&cc), o: o}
+	s.m.maxPivots = o.maxPivots
+	if err := s.solve(context.Background()); err != nil {
+		return Report{}, err
+	}
+	if err := s.build(); err != nil {
+		return Report{}, err
+	}
+	s.rep.normalise()
+	return s.rep, nil
+}
+
+// StepGrants steps w once through the position methods and, after the ration of
+// P2.6, calls grant with the agent, the executions it asked and the executions it
+// was granted for each request of the tick, in the order the requests were made. It
+// is the one place an external test can read a grant, which the world clears at
+// the end of the step (spec-resources.md 5.3).
+func StepGrants(w *World, grant func(agent AgentID, asked, granted int64)) error {
+	return replayStep(w, func(position string) {
+		if position != "P2.6" || w.res == nil {
+			return
+		}
+		for _, q := range w.res.reqs {
+			grant(q.agent, q.executions, q.grant)
+		}
+	})
 }

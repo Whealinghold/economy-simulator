@@ -32,6 +32,15 @@ type Outcome struct {
 	// Flow is the executions per tick of each activity at lambda = 1, x* over
 	// lambda* (D120); all 0 when lambda* is 0.
 	Flow []Frac
+	// ResRent is the dual of each resource row (Model.Resources order), in the
+	// unit of Wage: the value of one more unit of draw a tick, 0 when the row is
+	// slack (spec-resources.md 11.3). ResTight reports that the draw equals the
+	// sustainable draw ResPhi, and ResDraw is the draw a tick at lambda = 1, the
+	// executions of Flow times the quantities drawn.
+	ResRent  []Frac
+	ResTight []bool
+	ResPhi   []Frac
+	ResDraw  []Frac
 	// Active reports x > 0 for each activity: the regions in which each activity
 	// is active in a pooled solution (FR-VIA-045).
 	Active []bool
@@ -92,7 +101,38 @@ func read(m Model, p Programme, l Layout, res Result) (Outcome, error) {
 		o.Rent = append(o.Rent, rent)
 		o.CapTight = append(o.CapTight, tight)
 	}
+	o.readResources(m, l, res, lam)
 	return o, o.round()
+}
+
+// readResources fills the resource fields of the outcome. The draw of a row is
+// the sum over the activities that draw on it of the quantity times x; a row
+// written divided by its sustainable draw (Layout.ResPhi) has its dual divided by
+// it again to be the dual of the row as the spec writes it.
+func (o *Outcome) readResources(m Model, l Layout, res Result, lam *big.Rat) {
+	use := make([]*big.Rat, len(m.Resources))
+	for j := range use {
+		use[j] = new(big.Rat)
+	}
+	byPair := resRows(m.Resources)
+	for k, a := range m.Activities {
+		x := frat(res.Primal[k])
+		for _, d := range a.Draws {
+			j := byPair[[2]int{d.Resource, a.Region}]
+			use[j].Add(use[j], new(big.Rat).Mul(x, big.NewRat(d.Qty, 1)))
+		}
+	}
+	for j := range m.Resources {
+		phi := l.ResPhi[j]
+		y := frat(res.Dual[l.ResRow[j]])
+		if phi.Sign() > 0 {
+			y = new(big.Rat).Quo(y, phi)
+		}
+		o.ResRent = append(o.ResRent, fromRat(y))
+		o.ResTight = append(o.ResTight, use[j].Cmp(phi) == 0)
+		o.ResPhi = append(o.ResPhi, fromRat(phi))
+		o.ResDraw = append(o.ResDraw, flow(use[j], lam))
+	}
 }
 
 // flow returns x / lambda as a Frac, 0 when lambda is 0.

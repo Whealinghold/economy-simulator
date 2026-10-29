@@ -58,6 +58,7 @@ type viaActivity struct {
 // is built once per check and holds no state between calls.
 type viaModel struct {
 	c       *Config
+	sup     *resSupply // the endowments of the resources module, nil while it is off
 	rt      recipeTable
 	roles   roleTable
 	yt      yieldTable
@@ -92,6 +93,7 @@ type viaModel struct {
 func newViaModel(c *Config) *viaModel {
 	m := &viaModel{
 		c:          c,
+		sup:        newResSupply(c),
 		rt:         newRecipeTable(c),
 		roles:      newRoleTable(c),
 		yt:         newYieldTable(c),
@@ -195,7 +197,7 @@ func (m *viaModel) activity(region RegionID, recipe RecipeID) (viaActivity, bool
 	rc := &m.c.Recipes[recipe]
 	runs := m.runsFor(region, recipe)
 	count := steady.Starts(rc.Duration, runs)
-	if count.Starts < 1 {
+	if count.Starts < 1 || !m.sup.supplies(m.c.Regions[region].ID, rc.Draws) {
 		return viaActivity{}, false
 	}
 	row := m.rt.row(recipe)
@@ -208,6 +210,9 @@ func (m *viaModel) activity(region RegionID, recipe RecipeID) (viaActivity, bool
 	}
 	for _, t := range row.tools {
 		a.Tools = append(a.Tools, steady.Tool{Commodity: int(t.commodity), Wear: t.wearPerUse, Durability: m.c.Commodities[t.commodity].Durability})
+	}
+	if len(rc.Draws) > 0 && m.sup != nil {
+		m.sup.apply(&a, rc.Draws)
 	}
 	return viaActivity{region: region, recipe: recipe, runs: runs, count: count, act: a, allYear: allOpen(runs)}, true
 }

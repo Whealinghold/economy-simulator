@@ -1,0 +1,75 @@
+# The resources module on pack five, slack: 2.2 times the draw (spec-resources.md 18, spec-reference-chain.md 4.5).
+# Capacities are sized from the solver, not by hand (18.2): with a capacity of 1 000 000 000 on every
+# endowment SolveSteadyState reports the headroom (sustainable draw over the draw of the reference
+# programme at lambda = 1, Report.Headroom), which is linear in the capacity for all three shapes at a
+# fixed plan share; each capacity below is that capacity times 22000 over the headroom in basis points,
+# rounded up, so the headroom of every row is 22000 basis points (slack: 2.2 times the draw). The deposit's capacity is
+# its stock at the start: sustainable draw = stock / horizon_years. The amounts are placeholders (N-027).
+# Layer it after the pack: base.toml, lines.toml, five.toml, warm-five.toml, this file.
+
+[modules.resources]
+
+# Land of the staple: a refill of 100% of the gap a year, held at half its capacity by the plan
+# (plan_share_bp 5000), and started there (initial_bp equals plan_share_bp, spec-resources.md 11.4).
+[modules.resources.resource.arable]
+shape = "refill"
+rate_bp = 10000
+plan_share_bp = 5000
+initial_bp = 5000
+
+# A finite deposit: a constant stock with rate 0, drawn down over horizon_years (default 50).
+# It has no abundance curve, so a run keeps the yield of the plan (spec-resources.md 16.2).
+[modules.resources.resource.deposit]
+shape = "constant"
+
+# A stand that grows from itself: logistic, 30% a year, a refuge so that a collapse can end,
+# held at 60% of its capacity by the plan and started there.
+[modules.resources.resource.stand]
+shape = "logistic"
+rate_bp = 3000
+refuge = 1000
+plan_share_bp = 6000
+initial_bp = 6000
+
+[modules.resources.endowment.north.arable]
+capacity = 2464
+[modules.resources.endowment.north.deposit]
+capacity = 6090939
+[modules.resources.endowment.north.stand]
+capacity = 13332647
+
+[modules.resources.endowment.east.arable]
+capacity = 2164
+[modules.resources.endowment.east.deposit]
+capacity = 8139692
+[modules.resources.endowment.east.stand]
+capacity = 16667084
+
+[modules.resources.endowment.south.arable]
+capacity = 2054
+[modules.resources.endowment.south.deposit]
+capacity = 6767709
+[modules.resources.endowment.south.stand]
+capacity = 22221078
+
+[modules.resources.endowment.west.arable]
+capacity = 2370
+[modules.resources.endowment.west.deposit]
+capacity = 2206057
+[modules.resources.endowment.west.stand]
+capacity = 10672846
+
+[modules.resources.endowment.centre.arable]
+capacity = 2582
+[modules.resources.endowment.centre.deposit]
+capacity = 4104621
+[modules.resources.endowment.centre.stand]
+capacity = 9526808
+
+# The line gatherers and gather_seed stay unlimited (spec-resources.md 18.1).
+[recipe.grow_staple]
+draws = [ { resource = "arable", quantity = 1 } ]
+[recipe.dig_mineral]
+draws = [ { resource = "deposit", quantity = 3 } ]
+[recipe.cut_fuel]
+draws = [ { resource = "stand", quantity = 14 } ]

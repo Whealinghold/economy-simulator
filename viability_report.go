@@ -169,6 +169,36 @@ type RoleWage struct {
 	Target int64
 }
 
+// HeadroomRow is the sustainable draw of one endowment against the draw of the
+// reference programme (spec-resources.md 11.3).
+type HeadroomRow struct {
+	// Region and Resource name the endowment.
+	Region, Resource string
+	// BP is the sustainable draw over the draw at lambda 1, in basis points,
+	// rounded down: above 10 000 the endowment is slack, below it binds.
+	BP int64
+}
+
+// RentRow is the dual of the resource row of one endowment: the value of one
+// more unit of draw a tick (spec-resources.md 11.3).
+type RentRow struct {
+	// Region and Resource name the endowment.
+	Region, Resource string
+	// Rent is the dual at the starting prices, in minor units, rounded half to
+	// even; 0 when the row is slack.
+	Rent int64
+}
+
+// RunwayRow is the run-down time of a finite stock at the draw of the reference
+// programme (spec-resources.md 9.3, 11.3).
+type RunwayRow struct {
+	// Region and Resource name the endowment.
+	Region, Resource string
+	// Ticks is the starting stock over the draw a tick at lambda 1, rounded down;
+	// divide by the ticks of the year for years.
+	Ticks int64
+}
+
 // Report holds the diagnostics of a solve (spec-viability.md 10.3), every list
 // in ascending region then commodity or recipe order and no map. The fields a
 // module owns (Headroom, Rent, FacilityDecay, SurplusWantsBP) are appended with
@@ -216,6 +246,14 @@ type Report struct {
 	// (spec-viability.md 3.2, 10.3).
 	SurplusWantsBP  int64
 	HasSurplusWants bool
+	// Headroom, Rent and Runway are the rows of the resources module, one per
+	// endowment that an activity draws on and, for Headroom and Runway, only where
+	// the reference programme draws (spec-resources.md 11.3). Runway lists the
+	// finite stocks: a constant one with no rate, or a refill or logistic one with
+	// no RateBP. They are nil with the module off.
+	Headroom []HeadroomRow
+	Rent     []RentRow
+	Runway   []RunwayRow
 }
 
 // normalise puts every list of the report in ascending region then commodity or
@@ -238,6 +276,9 @@ func (r *Report) normalise() {
 	})
 	r.RegionSurplusBP = sortedUnique(r.RegionSurplusBP, func(a, b RegionSurplus) int { return cmpString(a.Region, b.Region) })
 	r.WageBelowTarget = sortedUnique(r.WageBelowTarget, func(a, b RoleWage) int { return cmpPair(a.Region, a.Role, b.Region, b.Role) })
+	r.Headroom = sortedUnique(r.Headroom, func(a, b HeadroomRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
+	r.Rent = sortedUnique(r.Rent, func(a, b RentRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
+	r.Runway = sortedUnique(r.Runway, func(a, b RunwayRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 }
 
 // cmpString orders two strings.
@@ -316,7 +357,7 @@ func (rc *regionCtx) unitCosts() []int64 {
 				continue
 			}
 			b := production.Basis{
-				Share: o.costShare, OutQty: int64(o.quantity), YieldBP: a.count.FactorSum / a.count.Starts,
+				Share: o.costShare, OutQty: int64(o.quantity), YieldBP: a.meanYieldBP(),
 				Duration: a.act.Duration, Wage: rc.wage,
 			}
 			if u := production.UnitCost(terms, wear, rc.price, b); u > 0 && (best[o.commodity] == 0 || u < best[o.commodity]) {
@@ -325,6 +366,17 @@ func (rc *regionCtx) unitCosts() []int64 {
 		}
 	}
 	return best
+}
+
+// meanYieldBP is the mean yield factor of an activity in basis points, truncated;
+// an activity with draws also has the abundance at the plan share (spec-resources.md
+// 11.2).
+func (a viaActivity) meanYieldBP() int64 {
+	y := a.count.FactorSum / a.count.Starts
+	if len(a.act.Draws) > 0 {
+		y, _ = checked.MulDiv(y, a.act.AbundanceBP, wholeBP) // y <= MaxYieldBP, the abundance too: cannot overflow
+	}
+	return y
 }
 
 // productionTerms converts the inputs and tools of an activity to the terms of
@@ -646,4 +698,44 @@ func ratioOf(o steady.Outcome, a, b int) (steady.Frac, bool) {
 		return steady.Frac{}, false
 	}
 	return o.Price[a].Quo(o.Price[b])
+}
+
+// endowments adds the rows of the resources module to the report for the
+// programme p: the headroom and the rent of each resource row and the run-down
+// time of each finite stock that the reference programme draws (spec-resources.md
+// 11.3). scale is the price scale of the programme, as for the wages.
+func (s *viaSolve) endowments(p *viaProgramme, scale steady.Frac) {
+	for j, e := range p.md.Resources {
+		region := s.m.c.Regions[p.regions[e.Region]].ID
+		res := &s.m.c.Modules.Resources.Resources[e.Resource]
+		rent, ok := p.out.ResRent[j].Times(scale).Round(0, MaxMoney)
+		if !ok {
+			rent = MaxMoney
+		}
+		s.rep.Rent = append(s.rep.Rent, RentRow{Region: region, Resource: res.ID, Rent: rent})
+		if draw := p.out.ResDraw[j]; draw.Sign() > 0 {
+			s.headroom(region, res, e, p.out.ResPhi[j], draw)
+		}
+	}
+}
+
+// headroom adds the headroom of a resource row that the reference programme
+// draws on, phi over the draw in basis points, and for a finite stock its
+// runway, the starting stock over the draw in ticks.
+func (s *viaSolve) headroom(region string, res *Resource, e steady.Endow, phi, draw steady.Frac) {
+	q, _ := phi.Quo(draw) // the draw is positive
+	bp, fits := q.Mul(wholeBP, 1).Floor(0, maxInt64)
+	if !fits {
+		bp = maxInt64
+	}
+	s.rep.Headroom = append(s.rep.Headroom, HeadroomRow{Region: region, Resource: res.ID, BP: bp})
+	if res.RatePerYear != 0 || res.RateBP != 0 {
+		return
+	}
+	runway, _ := steady.Rat(e.Stock, 1).Quo(draw)
+	ticks, fits := runway.Floor(0, maxInt64)
+	if !fits {
+		ticks = maxInt64
+	}
+	s.rep.Runway = append(s.rep.Runway, RunwayRow{Region: region, Resource: res.ID, Ticks: ticks})
 }

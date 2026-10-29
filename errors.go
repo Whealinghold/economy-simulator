@@ -371,7 +371,8 @@ func quoteSegment(s string) string {
 // ValidationErrors.
 type ViabilityError struct {
 	// Rule is the name of the rule: unproducible_in_realm, role_cannot_work,
-	// cycle_not_productive, labour_short or storage_gap.
+	// cycle_not_productive, labour_short, resource_short (in place of labour_short
+	// when a resource row binds, spec-resources.md 11.3) or storage_gap.
 	Rule string
 	// Path is the segments of the path of the entity the rule is about, as a
 	// ValidationError's Path is.

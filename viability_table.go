@@ -93,6 +93,7 @@ func (s *viaSolve) programmeTable(p *viaProgramme) error {
 		}
 		rc.report()
 	}
+	s.endowments(p, scale)
 	return nil
 }
 

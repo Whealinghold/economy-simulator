@@ -284,3 +284,90 @@ func (v *validator) drawProducts(rc *Recipe, weight int64, over func([]string, i
 		}
 	}
 }
+
+// resSupply reads the endowments of a configuration for the viability rules
+// (spec-resources.md 9.2, 11): which recipes can start where, the rows of the
+// programme and its abundance. It reads the configuration as written, so it is
+// safe on one that does not validate (Warnings), where a repeated ID keeps its
+// first definition. It is nil while the module is off.
+type resSupply struct {
+	c    *Config
+	idx  map[string]int
+	rows map[[2]string]*Endowment
+}
+
+// newResSupply indexes the resources and the rows of c, or returns nil when the
+// module is off.
+func newResSupply(c *Config) *resSupply {
+	m := c.Modules.Resources
+	if m == nil {
+		return nil
+	}
+	s := &resSupply{c: c, idx: make(map[string]int, len(m.Resources)), rows: make(map[[2]string]*Endowment, len(m.Endowments))}
+	for i := range m.Resources {
+		if _, seen := s.idx[m.Resources[i].ID]; !seen {
+			s.idx[m.Resources[i].ID] = i
+		}
+	}
+	for i := range m.Endowments {
+		key := [2]string{m.Endowments[i].Region, m.Endowments[i].Resource}
+		if s.rows[key] == nil {
+			s.rows[key] = &m.Endowments[i]
+		}
+	}
+	return s
+}
+
+// levels returns the capacity and the starting stock of the endowment of resource
+// r in a region at tick 0: the row's capacity, else the resource's, and the
+// row's starting stock, else the capacity times InitialBP over 10 000, at most the
+// capacity (spec-resources.md 3.3, 3.4; the shock scale and the facility layer
+// are neutral).
+func (s *resSupply) levels(region string, r *Resource) (capacity, stock int64) {
+	row := s.rows[[2]string{region, r.ID}]
+	capacity = r.Capacity
+	if row != nil && row.HasCapacity {
+		capacity = row.Capacity
+	}
+	if row != nil && row.HasInitial {
+		stock = row.Initial
+	} else {
+		stock, _ = checked.MulDiv(capacity, r.InitialBP, wholeBP) // in bounds: Validate passed
+	}
+	return capacity, min(stock, capacity)
+}
+
+// regrows reports that a resource with the starting stock gives units back: a
+// positive rate and, for a logistic stock, a stock or a refuge to grow from
+// (spec-resources.md 9.2).
+func (r *Resource) regrows(stock int64) bool {
+	switch r.Shape {
+	case ShapeRefill:
+		return r.RateBP > 0
+	case ShapeLogistic:
+		return r.RateBP > 0 && (stock > 0 || r.Refuge > 0)
+	}
+	return r.RatePerYear > 0
+}
+
+// supplies is the producibility predicate of spec-resources.md 9.2: in the
+// region every draw can start once, because the effective capacity is at least
+// the draw and the starting stock is positive or the shape regrows. A recipe with
+// no draw is supplied, and so is every recipe while the module is off.
+func (s *resSupply) supplies(region string, draws []Draw) bool {
+	if s == nil {
+		return true
+	}
+	for _, d := range draws {
+		i, ok := s.idx[d.Resource]
+		if !ok {
+			return false
+		}
+		r := &s.c.Modules.Resources.Resources[i]
+		capacity, stock := s.levels(region, r)
+		if capacity < int64(d.Quantity) || stock == 0 && !r.regrows(stock) {
+			return false
+		}
+	}
+	return true
+}

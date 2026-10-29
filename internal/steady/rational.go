@@ -133,19 +133,17 @@ func (a Activity) Uses(c int) Frac {
 
 // Yield returns the units of commodity c one execution outputs at the mean
 // yield factor: FactorSum * q / (10 000 * Starts) for each non-discard output of
-// it. Starts below 1 is a violated programmer invariant and panics.
+// it, times the abundance of an activity with draws. Starts below 1 is a violated
+// programmer invariant and panics.
 func (a Activity) Yield(c int) Frac {
-	if a.Starts < 1 {
-		panic("steady: invariant violated: activity with no start")
-	}
+	num, den := a.meanFactor()
 	var q int64
 	for _, o := range a.Outputs {
 		if o.Commodity == c && !o.Discard {
 			q += o.Qty
 		}
 	}
-	num := new(big.Int).Mul(big.NewInt(a.FactorSum), big.NewInt(q))
-	return fromRat(new(big.Rat).SetFrac(num, new(big.Int).Mul(big.NewInt(10000), big.NewInt(a.Starts))))
+	return fromRat(new(big.Rat).SetFrac(num.Mul(num, big.NewInt(q)), den))
 }
 
 // ValueAdded returns the value of one execution at the given prices: the sum

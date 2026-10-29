@@ -21,17 +21,48 @@ type Tool struct {
 	Durability int64
 }
 
+// Draw is the quantity an execution takes from a resource of its region
+// (spec-resources.md 3.1.3): Resource is the caller's index of the resource, the
+// one an Endow of the Model names.
+type Draw struct {
+	Resource int
+	Qty      int64
+}
+
 // Activity is a recipe in a region, one column of the reference programme. The
 // caller has already counted the starts (Starts) of one household in the year:
 // Starts is J and FactorSum the sum of the factors at them, in basis points.
+// An activity with Draws also has its mean factor multiplied by AbundanceBP over
+// 10 000, the abundance at the plan share, the least over its draws
+// (spec-resources.md 11.2); AbundanceBP is read only with Draws, since 0 is a
+// legal abundance.
 type Activity struct {
-	Region    int
-	Duration  int64
-	Starts    int64
-	FactorSum int64
-	Inputs    []Item
-	Outputs   []Item
-	Tools     []Tool
+	Region      int
+	Duration    int64
+	Starts      int64
+	FactorSum   int64
+	Inputs      []Item
+	Outputs     []Item
+	Tools       []Tool
+	Draws       []Draw
+	AbundanceBP int64
+}
+
+// meanFactor returns the mean yield factor of the activity as num/den, where the
+// factor is over 10 000: FactorSum / (10 000 * Starts), times AbundanceBP over
+// 10 000 for an activity with draws. Starts below 1 panics (a programmer
+// invariant).
+func (a Activity) meanFactor() (num, den *big.Int) {
+	if a.Starts < 1 {
+		panic("steady: invariant violated: activity with no start")
+	}
+	num = big.NewInt(a.FactorSum)
+	den = new(big.Int).Mul(big.NewInt(10000), big.NewInt(a.Starts))
+	if len(a.Draws) > 0 {
+		num.Mul(num, big.NewInt(a.AbundanceBP))
+		den.Mul(den, big.NewInt(10000))
+	}
+	return num, den
 }
 
 // NetEntry is the net units of one commodity per execution of an activity.
@@ -41,14 +72,13 @@ type NetEntry struct {
 }
 
 // Net returns the net vector of one execution, in commodity order and without
-// zero entries: E * q / 10 000 for each non-discard output, minus the input
-// quantities, minus Wear/Durability per tool (FR-VIA-001). The products are
-// formed in big, since FactorSum times a quantity can exceed int64. Starts below
-// 1 or a Durability below 1 is a violated programmer invariant and panics.
+// zero entries: E * q / 10 000 for each non-discard output (E also times the
+// abundance for an activity with draws), minus the input quantities, minus
+// Wear/Durability per tool (FR-VIA-001). The products are formed in big, since
+// FactorSum times a quantity can exceed int64. Starts below 1 or a Durability
+// below 1 is a violated programmer invariant and panics.
 func (a Activity) Net() []NetEntry {
-	if a.Starts < 1 {
-		panic("steady: invariant violated: activity with no start")
-	}
+	fnum, fden := a.meanFactor()
 	acc := map[int]*big.Rat{}
 	add := func(c int, v *big.Rat) {
 		if acc[c] == nil {
@@ -56,13 +86,12 @@ func (a Activity) Net() []NetEntry {
 		}
 		acc[c].Add(acc[c], v)
 	}
-	meanDen := new(big.Int).Mul(big.NewInt(10000), big.NewInt(a.Starts))
 	for _, o := range a.Outputs {
 		if o.Discard {
 			continue
 		}
-		num := new(big.Int).Mul(big.NewInt(a.FactorSum), big.NewInt(o.Qty))
-		add(o.Commodity, new(big.Rat).SetFrac(num, meanDen))
+		num := new(big.Int).Mul(fnum, big.NewInt(o.Qty))
+		add(o.Commodity, new(big.Rat).SetFrac(num, fden))
 	}
 	for _, in := range a.Inputs {
 		add(in.Commodity, new(big.Rat).SetInt64(-in.Qty))

@@ -1,8 +1,10 @@
 package economysim_test
 
 import (
+	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -198,5 +200,105 @@ func TestConfig_SecondFileAndGoAgree(t *testing.T) {
 	}
 	if err := secondConfig().Validate(); err != nil {
 		t.Errorf("secondConfig().Validate() = %v, want nil", err)
+	}
+}
+
+// secondResources is example B of spec-resources.md 16.2 as a document over pack
+// second, which is that example's colony: a deposit of ice that does not renew
+// (with a curve of poorer grades as it empties) behind cut_ice, and culture vats (a
+// refill of 200% a year held at half their capacity) behind grow_algae. The
+// capacities are the example's, the horizon is its 15 years.
+const secondResources = `
+[modules.resources]
+horizon_years = 15
+
+[modules.resources.resource.ice_field]
+abundance = [ { share = 0, factor = 2000 }, { share = 2000, factor = 8000 }, { share = 10000, factor = 10000 } ]
+
+[modules.resources.resource.vat_volume]
+shape = "refill"
+rate_bp = 20000
+plan_share_bp = 5000
+
+[modules.resources.endowment.crater_rim.ice_field]
+capacity = 3000000
+[modules.resources.endowment.crater_rim.vat_volume]
+capacity = 30000
+
+[recipe.cut_ice]
+draws = [ { resource = "ice_field", quantity = 30 } ]
+[recipe.grow_algae]
+draws = [ { resource = "vat_volume", quantity = 1 } ]
+`
+
+// TestConfigOnly_SecondSettingWithResources verifies that the second setting, the
+// crater colony, takes the resources module from a document alone (example B of
+// spec-resources.md 16.2, the same format as the farm of the first consumer with
+// other words): it loads, validates, warns raw_source_exhaustible (ice is raw and
+// cut_ice, which draws a finite deposit, is its only source), runs with the audit
+// on and holds the invariants of testing.md 6.3 on every seed, and the deposit is
+// drawn down.
+//
+// Requirement: FR-RES-049, FR-RES-033, FR-RES-001
+//
+// Guard: no Go code names ice, vats or the colony; a branch on a resource or
+// recipe identifier would make this fail or need a change here (architecture.md
+// 9.1, 9.4).
+func TestConfigOnly_SecondSettingWithResources(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadPackBytes(t, []byte(secondResources), packSecond...)
+	var warned bool
+	for _, w := range cfg.Warnings() {
+		warned = warned || (w.Rule == "raw_source_exhaustible" && len(w.Path) == 2 && w.Path[1] == "ice")
+	}
+	if !warned {
+		t.Errorf("Warnings() = %+v, want raw_source_exhaustible for the commodity ice (a raw good whose only source draws a finite stock)", cfg.Warnings())
+	}
+	for _, seed := range seedList(min(2, scenarioSeedCount())) {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			runInvariants(t, cfg, seed, 120, nil)
+			w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed))
+			if err != nil {
+				t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
+			}
+			start := w.Endowment(0, 0)
+			for range 60 {
+				if err := w.Step(); err != nil {
+					t.Fatalf("seed %d: Step() error = %v, want nil", seed, err)
+				}
+			}
+			if got := w.Endowment(0, 0); got >= start {
+				t.Errorf("seed %d: the ice deposit after 60 ticks = %d from %d, want it drawn down", seed, got, start)
+			}
+		})
+	}
+}
+
+// TestInvariants_ResourcesOn verifies the invariants of testing.md 6.3 over pack
+// one with the resources module on and the binding overlay (the stocks sized to
+// 1.1 times the draw of the reference programme), seeds 1 to scenarioSeedCount(),
+// 200 ticks: goods and money are conserved with exact
+// equality, since a draw is not a ledger flow, and no balance or stock is
+// negative.
+//
+// Requirement: FR-RES-024, FR-REF-028
+//
+// Guard: a draw that created goods or money from the ground would break
+// conservation; the table row of TestInvariants_Packs covers the slack overlay.
+func TestInvariants_ResourcesOn(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadValidPack(t, append(slices.Clone(packOne), "overlay/resources-binding.toml")...)
+	for _, seed := range seedList(invariantSeeds(scenarioSeeds)) {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			runInvariants(t, cfg, seed, 200, nil)
+		})
 	}
 }

@@ -16,20 +16,22 @@ import (
 // withResources switches the resources module on in c, a copy of referenceConfig,
 // with two resources and draws on both. The numbers are chosen so that none of the
 // warnings of the module is raised: arable (a refill of 10 000 bp a year, a
-// capacity of 1 000, doubled in spring) is drawn by grow_staple and has a row in
+// capacity of 20 000, doubled in spring) is drawn by grow_staple and has a row in
 // north, and stand (a logistic stock of 3 000 bp a year with a refuge of 20) is
-// drawn by cut_fuel and takes the default capacity of 500. Both recipes are on a
+// drawn by cut_fuel and takes the default capacity of 1 000 000, large enough that
+// the sustainable draw of both stocks covers the reference programme (the
+// viability rule resource_short, spec-resources.md 11.1). Both recipes are on a
 // role that has a group in north.
 func withResources(c *economysim.Config) {
 	arable, stand := economysim.DefaultResource(), economysim.DefaultResource()
-	arable.ID, arable.Shape, arable.RateBP, arable.Capacity = "arable", economysim.ShapeRefill, 10_000, 1_000
+	arable.ID, arable.Shape, arable.RateBP, arable.Capacity = "arable", economysim.ShapeRefill, 10_000, 20_000
 	arable.Seasons = []economysim.SeasonRegen{{Season: "spring", BP: 20_000}}
 	arable.Abundance = []economysim.AbundanceKnot{{Share: 0, Factor: 2_000}, {Share: 5_000, Factor: 9_000}, {Share: 10_000, Factor: 10_000}}
-	stand.ID, stand.Shape, stand.RateBP, stand.Refuge, stand.Capacity = "stand", economysim.ShapeLogistic, 3_000, 20, 500
+	stand.ID, stand.Shape, stand.RateBP, stand.Refuge, stand.Capacity = "stand", economysim.ShapeLogistic, 3_000, 20, 1_000_000
 	res := economysim.DefaultResources()
 	res.Resources = []economysim.Resource{arable, stand}
 	res.Endowments = []economysim.Endowment{
-		{Region: "north", Resource: "arable", HasCapacity: true, Capacity: 2_000, HasInitial: true, Initial: 1_000},
+		{Region: "north", Resource: "arable", HasCapacity: true, Capacity: 20_000, HasInitial: true, Initial: 10_000},
 	}
 	c.Modules.Resources = &res
 	recipeOf(c, "grow_staple").Draws = []economysim.Draw{{Resource: "arable", Quantity: 1}}
@@ -119,7 +121,7 @@ func resourcesFieldCases() []fieldCase {
 			func(c *economysim.Config) { resourceOf(c, "arable").Refuge = 1 },
 			"modules", "resources", "resources", "arable", "refuge"),
 		res("Resource.Refuge", "above the capacity", economysim.ErrResourceShape,
-			func(c *economysim.Config) { resourceOf(c, "stand").Refuge = 501 },
+			func(c *economysim.Config) { resourceOf(c, "stand").Refuge = 1_000_001 },
 			"modules", "resources", "resources", "stand", "refuge"),
 		bound("Resource.Capacity", "capacity", economysim.MaxEndowment+1, func(r *economysim.Resource, v int64) { r.Capacity = v }),
 		res("Resource.Capacity", "times the largest shock above MaxEndowment", economysim.ErrOverflow,
@@ -166,7 +168,7 @@ func resourcesFieldCases() []fieldCase {
 		row("Endowment.Capacity", "above MaxEndowment", economysim.ErrOutOfBounds,
 			func(e *economysim.Endowment) { e.Capacity = economysim.MaxEndowment + 1 }, "capacity"),
 		row("Endowment.Initial", "above the capacity", economysim.ErrResourceShape,
-			func(e *economysim.Endowment) { e.Initial = 2_001 }, "initial"),
+			func(e *economysim.Endowment) { e.Initial = 20_001 }, "initial"),
 		row("Endowment.RegenScaleBP", "above MaxRegenScaleBP", economysim.ErrOutOfBounds, func(e *economysim.Endowment) {
 			e.HasRegenScale, e.RegenScaleBP = true, economysim.MaxRegenScaleBP+1
 		}, "regen_scale_bp"),
@@ -374,48 +376,54 @@ func TestWarnings_ResourceRules(t *testing.T) {
 		mutate func(c *economysim.Config)
 		rule   string
 		path   []string
+		// notViable says the change leaves the pack without a recipe that can run or
+		// without a sustainable draw, so Validate may refuse it for that reason only.
+		notViable bool
 	}{
-		{"the reference overlay", func(*economysim.Config) {}, "", nil},
+		{"the reference overlay", func(*economysim.Config) {}, "", nil, false},
 		{"a resource no recipe draws", func(c *economysim.Config) {
 			recipeOf(c, "cut_fuel").Draws = nil
-		}, "resource_unused", []string{"modules", "resources", "resources", "stand"}},
+		}, "resource_unused", []string{"modules", "resources", "resources", "stand"}, false},
 		{"a capacity where no role draws on it", func(c *economysim.Config) {
 			c.Regions = append(c.Regions, economysim.DefaultRegion())
 			c.Regions[1].ID = "south"
 			c.Modules.Resources.Endowments = append(c.Modules.Resources.Endowments,
 				economysim.Endowment{Region: "south", Resource: "arable", HasCapacity: true, Capacity: 10})
-		}, "endowment_unused", []string{"modules", "resources", "endowments", "south", "arable"}},
+		}, "endowment_unused", []string{"modules", "resources", "endowments", "south", "arable"}, false},
 		{"a draw above the capacity", func(c *economysim.Config) {
-			recipeOf(c, "cut_fuel").Draws[0].Quantity = 501
-		}, "draw_impossible", []string{"recipes", "cut_fuel", "draws", "stand"}},
+			resourceOf(c, "stand").Capacity, resourceOf(c, "stand").Refuge = 1, 0
+		}, "draw_impossible", []string{"recipes", "cut_fuel", "draws", "stand"}, true},
 		{"a curve that falls", func(c *economysim.Config) {
 			resourceOf(c, "arable").Abundance = []economysim.AbundanceKnot{{Share: 0, Factor: 9_000}, {Share: 10_000, Factor: 1_000}}
-		}, "abundance_not_monotone", []string{"modules", "resources", "resources", "arable", "abundance"}},
+		}, "abundance_not_monotone", []string{"modules", "resources", "resources", "arable", "abundance"}, false},
 		{"a rate that is stiff against the tick", func(c *economysim.Config) {
 			// 100 000 bp a year over 365 ticks is 273 bp a tick; a scale of 10 times
 			// gives 2 739, above 2 000.
 			resourceOf(c, "arable").RateBP = economysim.MaxRegenBP
 			c.Modules.Resources.Endowments[0].HasRegenScale = true
 			c.Modules.Resources.Endowments[0].RegenScaleBP = economysim.MaxRegenScaleBP
-		}, "regen_per_tick_high", []string{"modules", "resources", "resources", "arable", "rate_bp"}},
+		}, "regen_per_tick_high", []string{"modules", "resources", "resources", "arable", "rate_bp"}, false},
 		{"a refill with no rate", func(c *economysim.Config) {
 			resourceOf(c, "arable").RateBP = 0
-		}, "resource_inert", []string{"modules", "resources", "resources", "arable", "rate_bp"}},
+		}, "resource_inert", []string{"modules", "resources", "resources", "arable", "rate_bp"}, true},
 		{"a raw good whose only source is a finite stock", func(c *economysim.Config) {
-			resourceOf(c, "stand").RateBP, resourceOf(c, "stand").Refuge = 0, 0
+			// A finite stock of ten billion units, which the horizon spreads over fifty
+			// years: enough for the reference programme, so the pack stays viable.
+			stand := resourceOf(c, "stand")
+			stand.Shape, stand.RateBP, stand.Refuge, stand.Capacity = economysim.ShapeConstant, 0, 0, 10_000_000_000
 			for i := range c.Commodities {
 				if c.Commodities[i].ID == "fuel" {
 					c.Commodities[i].Raw = true
 				}
 			}
-		}, "raw_source_exhaustible", []string{"commodities", "fuel"}},
+		}, "raw_source_exhaustible", []string{"commodities", "fuel"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := resourcesConfig()
 			tt.mutate(&c)
-			if err := c.Validate(); err != nil {
+			if err := c.Validate(); err != nil && !(tt.notViable && errors.Is(err, economysim.ErrNotViable)) {
 				t.Fatalf("Validate(%s) = %v, want nil: a warning never fails validation", tt.name, err)
 			}
 			var raised []string
