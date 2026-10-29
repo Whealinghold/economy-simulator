@@ -63,21 +63,29 @@ func Pick(opts []Option, short []bool) (ref int, ok bool) {
 		if o.Max < 1 {
 			continue
 		}
-		var sum int64
-		for i, c := range o.Cov {
-			if i < len(short) && short[i] {
-				s, added := checked.Add(sum, c)
-				if !added {
-					s = math.MaxInt64
-				}
-				sum = s
-			}
-		}
+		sum := shortSum(o.Cov, short)
 		if sum > best || (sum == best && sum > 0 && o.Ref < ref) {
 			best, ref, ok = sum, o.Ref, true
 		}
 	}
 	return ref, ok
+}
+
+// shortSum is the sum of the coverages of the goods that are short, saturating
+// at math.MaxInt64.
+func shortSum(covs []int64, short []bool) int64 {
+	var sum int64
+	for i, c := range covs {
+		if i >= len(short) || !short[i] {
+			continue
+		}
+		s, ok := checked.Add(sum, c)
+		if !ok {
+			return math.MaxInt64
+		}
+		sum = s
+	}
+	return sum
 }
 
 // Ramp returns the executions an agent of weight w requests in the mode,
