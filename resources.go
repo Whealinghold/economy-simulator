@@ -264,7 +264,7 @@ func (r *resourcesState) deriveDraws(c *Config) {
 		}
 	}
 	for i := range c.Roles {
-		for _, id := range c.Roles[i].Recipes {
+		for _, id := range append(slices.Clone(c.Roles[i].Recipes), c.Modules.Subsistence.ownUseList(c.Roles[i].ID)...) {
 			rc, ok := c.recipeID(id)
 			if !ok {
 				invariant("a role names the recipe " + id + " after validation")

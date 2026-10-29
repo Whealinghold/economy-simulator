@@ -135,7 +135,7 @@ func unusedEndowments(c *Config, lk lookup, m *Resources, capacity func(region, 
 		if ro == nil {
 			continue
 		}
-		for _, id := range ro.Recipes {
+		for _, id := range append(slices.Clone(ro.Recipes), c.Modules.Subsistence.ownUseList(ro.ID)...) { // a draw of the own-use list counts (D413)
 			if rc := lk.recipe[id]; rc != nil {
 				for _, d := range rc.Draws {
 					listed[regionResource{g.Region, d.Resource}] = true

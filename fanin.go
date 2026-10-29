@@ -22,6 +22,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 	if w.res != nil {
 		w.fillEndowments(v, a)
 	}
+	if w.sub != nil {
+		return w.sub.fillView(w, v, a, &w.tk.vctx)
+	}
 	return nil
 }
 
@@ -73,6 +76,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.money != nil {
 		w.money.dropAgent(a)
 	}
+	if w.sub != nil {
+		w.sub.drop(a.id)
+	}
 	w.logRemoval(a, cause)
 	w.forget(a, region)
 	return nil
@@ -94,6 +100,9 @@ func (w *World) agentJoined(a *agent, region RegionID) {
 func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	if w.demand != nil {
 		w.roleChangedDemand(a, from, region)
+	}
+	if w.sub != nil {
+		w.sub.roleChanged(a)
 	}
 }
 

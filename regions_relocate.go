@@ -196,6 +196,9 @@ func (w *World) moveAgent(a *agent, to RegionID, cause Cause) error {
 	w.live.inRole[int(from)*roles+int(a.role)]--
 	w.live.inRole[int(to)*roles+int(a.role)]++
 	w.state.hadAgent[int(to)*roles+int(a.role)] = true
+	if w.sub != nil {
+		w.sub.drop(a.id) // the floor, its yield and its endowment are the old region's (spec-subsistence.md 5.8)
+	}
 	// Units cannot overflow here: a commodity holds at most MaxQuantity, and
 	// there are at most MaxCommodities of them.
 	if w.obs.supplied {

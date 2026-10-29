@@ -364,6 +364,9 @@ type replayRow struct {
 // demandOn is the guard of the rows of the demand module (D177).
 func demandOn(w *World) bool { return w.demand != nil }
 
+// subsistenceOn is the guard of the rows of the subsistence module (plan 2-10).
+func subsistenceOn(w *World) bool { return w.sub != nil }
+
 // resourcesOn is the guard of the rows of the resources module (D177).
 func resourcesOn(w *World) bool { return w.res != nil }
 
@@ -393,6 +396,7 @@ var replayRows = []replayRow{
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
+	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},
 	{id: "P2.5", run: (*World).p25Work},
 	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},

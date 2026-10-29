@@ -173,6 +173,9 @@ func replayTo41(w *World) error {
 	w.p12Anchors()
 	w.p21Complete()
 	w.p23Snapshot()
+	if w.sub != nil {
+		w.p24OwnUse()
+	}
 	if err := w.p25Work(); err != nil {
 		return err
 	}

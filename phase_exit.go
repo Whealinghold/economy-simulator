@@ -162,7 +162,7 @@ func (w *World) addAgentRow(a *agent) {
 	x.view.Agents = append(x.view.Agents, RegionAgent{
 		Agent: a.id, Role: a.role, Weight: a.weight, External: a.external, Mortal: a.mortal,
 		Money: Money(acct.Balance), Unfed: a.unfed, Hunger: a.hunger, Privation: a.privation,
-		RoleSince: a.roleSince, Upkeep: x.upkeep[a.role],
+		RoleSince: a.roleSince, Upkeep: x.upkeep[a.role], OwnUse: w.sub.on(a),
 	})
 }
 

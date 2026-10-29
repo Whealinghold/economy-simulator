@@ -236,6 +236,9 @@ func (w *World) countWork(cell int, region RegionID, a *agent, v *AgentView) {
 	workReport(v, r)
 	c := &w.pr.cells[cell]
 	c.free += a.weight
+	if w.sub != nil {
+		w.sub.countWork(cell, a.weight, r)
+	}
 	if r.floorChanged {
 		c.floorHeld += a.weight
 	}
@@ -384,10 +387,16 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		// Reached only when the cap of a draw is 0: the ration granted nothing, or the
 		// live stock is below one execution (reason no_endowment).
 		w.refuse(a, region, ask.recipe, res.reason)
+		if w.sub != nil {
+			w.sub.blockedStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.reason)
+		}
 		return nil
 	}
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
+	}
+	if w.sub != nil {
+		w.sub.noteStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.k)
 	}
 	for _, f := range w.prod.wear {
 		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)

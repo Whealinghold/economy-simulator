@@ -2,13 +2,20 @@ package economysim
 
 import (
 	"cmp"
+	"math"
 	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/ownuse"
 )
 
 // This file is the subsistence module (spec-subsistence.md): the canonical copy
 // of its configuration, the effective own-use list of a role and its join into
-// the role table. The validator and the warnings are in subsistence_validate.go,
-// the types in config.go and the pure rules in internal/ownuse.
+// the role table, the state (the flag and the counter of each agent), the flag
+// step P2.4, the filler of the view, the choice of the default Work in the mode
+// and the hooks the world calls at a start, a drop and a role change. The
+// validator and the warnings are in subsistence_validate.go, the types in
+// config.go and the pure rules in internal/ownuse.
 
 // canonical returns a copy with the default list and every row's list sorted by
 // recipe ID and the rows sorted by role (spec-subsistence.md 3.2.3), so two
@@ -113,4 +120,406 @@ func (m *viaModel) ownUseOnly() []bool {
 		own[k] = own[k] && !market[k]
 	}
 	return own
+}
+
+// subsistence is the state of the module, nil in the world when it is off
+// (spec-subsistence.md 15, plan 2-10 D403). The flag and the counter of an agent
+// are in slices indexed by agent ID, never fields of the agent (architecture.md
+// 2.10.1), and grown like the welfare scratch. covered and the parameters are
+// derived from the configuration and never saved; the counts of the tick are
+// scratch that the event of P2.8 reads (D409).
+type subsistence struct {
+	params    ownuse.Params
+	retryJobs int64
+	// covered is, per role, the upkeep commodities of the role in any region that
+	// are a non-discard output of a recipe of its own-use list, in canonical order
+	// (spec-subsistence.md 3.3.2, D405).
+	covered [][]CommodityID
+
+	ownUse     []bool
+	ownUseJobs []int64
+
+	// The counts of the tick per (region, role) cell, in households: made always,
+	// because the Warns need them with no observer (D409).
+	entered, left, started, blocked, retried []int64
+
+	// goods is the scratch of the covered goods of the agent being evaluated.
+	goods []ownuse.Good
+}
+
+// newSubsistence builds the state from a canonical configuration that passed
+// Validate; it is nil while the module is off.
+func newSubsistence(c *Config, rt *roleTable, rc *recipeTable) *subsistence {
+	m := c.Modules.Subsistence
+	if m == nil {
+		return nil
+	}
+	cells := len(c.Regions) * len(c.Roles)
+	s := &subsistence{
+		params:    ownuse.Params{Enter: m.EnterTicks, Exit: m.ExitTicks, Max: MaxOwnUseTicks},
+		retryJobs: m.RetryJobs,
+		covered:   make([][]CommodityID, len(c.Roles)),
+		goods:     make([]ownuse.Good, 0, MaxUpkeepItems),
+		entered:   make([]int64, cells), left: make([]int64, cells), started: make([]int64, cells),
+		blocked: make([]int64, cells), retried: make([]int64, cells),
+	}
+	for i := range s.covered {
+		row := rt.row(RoleID(i))
+		makes := map[CommodityID]bool{}
+		for _, k := range row.ownUse {
+			for _, o := range rc.row(k).outputs {
+				if !o.discard {
+					makes[o.commodity] = true
+				}
+			}
+		}
+		for _, c := range upkeepCommodities(row) {
+			if makes[c] {
+				s.covered[i] = append(s.covered[i], c)
+			}
+		}
+	}
+	return s
+}
+
+// upkeepCommodities returns the commodities of the upkeep of a role in any
+// region, ascending.
+func upkeepCommodities(row *roleRow) []CommodityID {
+	var out []CommodityID
+	for _, it := range row.upkeep {
+		out = append(out, it.commodity)
+	}
+	for _, g := range row.regionUpkeep {
+		for _, it := range g.items {
+			out = append(out, it.commodity)
+		}
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+// grow makes the slices cover n agent slots, outside the hot path of a tick (an
+// agent entering).
+func (s *subsistence) grow(n int) {
+	for len(s.ownUse) < n {
+		s.ownUse, s.ownUseJobs = append(s.ownUse, false), append(s.ownUseJobs, 0)
+	}
+}
+
+// drop sets the flag and the counter of an agent to their defaults: a removal,
+// a relocation (spec-subsistence.md 5.8, FR-SUB-031, 032). Plans 14 and 17 call
+// it too.
+func (s *subsistence) drop(id AgentID) {
+	if int(id) < len(s.ownUse) {
+		s.ownUse[id], s.ownUseJobs[id] = false, 0
+	}
+}
+
+// roleChanged resets the counter and keeps the flag, which the next flag step
+// evaluates against the new role (FR-SUB-032). It is the module's call in the
+// fan-in agentRoleChanged.
+func (s *subsistence) roleChanged(a *agent) {
+	if int(a.id) < len(s.ownUseJobs) {
+		s.ownUseJobs[a.id] = 0
+	}
+}
+
+// agentFields returns the flag and the counter of an agent slot, for the
+// per-agent query of plan 17.
+func (s *subsistence) agentFields(slot int) (on bool, jobs int64) {
+	if slot < len(s.ownUse) {
+		return s.ownUse[slot], s.ownUseJobs[slot]
+	}
+	return false, 0
+}
+
+// on reports whether the agent is in the mode; it is false for a nil module.
+func (s *subsistence) on(a *agent) bool {
+	return s != nil && int(a.id) < len(s.ownUse) && s.ownUse[a.id]
+}
+
+// isOwn reports whether recipe is on the own-use list of role.
+func isOwn(row *roleRow, recipe RecipeID) bool {
+	_, ok := slices.BinarySearch(row.ownUse, recipe)
+	return ok
+}
+
+// goodsOf fills the covered goods of an agent in region g (spec-subsistence.md
+// 5.2): the covered commodities whose upkeep in the region is above 0, with the
+// whole stock, the upkeep of the whole agent and the published price. ok is
+// false when the upkeep of the weight overflows. The slice is the module's
+// scratch, valid until the next call.
+func (s *subsistence) goodsOf(w *World, a *agent, g RegionID) (goods []ownuse.Good, ok bool) {
+	items := w.roles.row(a.role).upkeepIn(g)
+	s.goods = s.goods[:0]
+	for _, c := range s.covered[a.role] {
+		var q Quantity
+		for _, it := range items {
+			if it.commodity == c {
+				q = it.quantity
+			}
+		}
+		if q < 1 {
+			continue
+		}
+		held, _, err := w.ledger.Holding(a.account, int(c))
+		if err != nil {
+			invariant("the stock of a covered commodity is unreadable: " + err.Error())
+		}
+		u, fits := checked.Mul(a.weight, int64(q))
+		if !fits {
+			return nil, false
+		}
+		s.goods = append(s.goods, ownuse.Good{Stock: held, Upkeep: u, Price: int64(w.markets.reports[w.markets.index(g, c)].Price)})
+	}
+	return s.goods, true
+}
+
+// p24OwnUse is P2.4: the flag step. For every household agent in ascending ID it
+// evaluates the mode from the agent's own stock, money, Hunger, upkeep, counter
+// and the prices of its own region, after the continuations, the completions and
+// the snapshot of the endowments and before the first Work (spec-subsistence.md
+// 5.3, 5.4, FR-SUB-017). It draws nothing and reads no other agent. An agent
+// away is skipped, its flag frozen; an agent with no covered good in its region
+// drops out of the mode, counted as having left.
+func (w *World) p24OwnUse() {
+	s := w.sub
+	s.grow(len(w.agents))
+	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+		if a := &w.agents[i]; a.weight >= 1 && !w.offStage(a) {
+			s.evaluate(w, a)
+		}
+	}
+}
+
+// evaluate is the flag step of one agent.
+func (s *subsistence) evaluate(w *World, a *agent) {
+	g := w.regionOf(a)
+	goods, ok := s.goodsOf(w, a, g)
+	if !ok {
+		return
+	}
+	cell := int(g)*len(w.cfg.Roles) + int(a.role)
+	if len(goods) == 0 {
+		if s.ownUse[a.id] {
+			s.left[cell] += a.weight
+		}
+		s.ownUse[a.id], s.ownUseJobs[a.id] = false, 0
+		return
+	}
+	acct, err := w.ledger.Account(a.account)
+	if err != nil {
+		invariant("the account of an agent is unreadable: " + err.Error())
+	}
+	r, ok := ownuse.Step(s.params, s.ownUse[a.id], s.ownUseJobs[a.id], goods, a.hunger > 0, acct.Balance-acct.Reserved)
+	if !ok {
+		return
+	}
+	s.ownUse[a.id], s.ownUseJobs[a.id] = r.On, r.Jobs
+	if r.Entered {
+		s.entered[cell] += a.weight
+	}
+	if r.Left {
+		s.left[cell] += a.weight
+	}
+}
+
+// fillView is the module's filler of the view (spec-subsistence.md 5.4,
+// FR-SUB-018): the flag and the counter from the state, Cover and Secure
+// recomputed from the stock and the prices at this moment, the two tunables a
+// pure Work needs, and the own-use recipes of the role appended to the per-recipe
+// group, marked, in ascending RecipeID. It is the module's call in the fan-in
+// fillAgentView.
+func (s *subsistence) fillView(w *World, v *AgentView, a *agent, c *viewCtx) error {
+	v.OwnUse, v.OwnUseJobs = s.agentFields(int(a.id))
+	v.ExitTicks, v.RetryJobs = s.params.Exit, s.retryJobs
+	if goods, ok := s.goodsOf(w, a, v.Region); ok && len(goods) > 0 {
+		v.Cover, v.Secure = s.figures(goods, a.hunger > 0, v.Money)
+	}
+	sc := v.scratch
+	for _, id := range w.roles.row(a.role).ownUse {
+		if err := sc.appendRecipe(v, a, c, id, true); err != nil {
+			return err
+		}
+	}
+	v.Recipes = sc.recipes[:len(sc.recipes):len(sc.recipes)]
+	return nil
+}
+
+// figures returns the cover and the secure ticks of the goods; a figure that
+// cannot be formed is saturated at the largest, as Step reads it.
+func (s *subsistence) figures(goods []ownuse.Good, hungry bool, money int64) (cover, secure int64) {
+	cover, secure = s.params.Max, s.params.Max
+	c, ok := ownuse.Cover(goods)
+	if !ok {
+		return cover, secure
+	}
+	cost, ok := ownuse.Cost(goods)
+	if !ok {
+		return c, secure
+	}
+	af, ok := ownuse.Afford(hungry, money, cost)
+	if !ok {
+		return c, secure
+	}
+	return c, ownuse.Secure(c, af, s.params.Max)
+}
+
+// countWork takes the blocked and retried households of the work report of an
+// agent into the counts of its cell (D409).
+func (s *subsistence) countWork(cell int, weight int64, r *workReportBuf) {
+	if r.ownBlocked {
+		s.blocked[cell] += weight
+	}
+	if r.ownRetried {
+		s.retried[cell] += weight
+	}
+}
+
+// noteStart records a start at P2.7: an own-use start adds 1 to the counter of
+// the agent and k to the executions started of its cell, a start of any other
+// recipe resets the counter (FR-SUB-022).
+func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k int64) {
+	if isOwn(w.roles.row(a.role), recipe) {
+		s.ownUseJobs[a.id]++
+		s.started[cell] += k
+		return
+	}
+	s.ownUseJobs[a.id] = 0
+}
+
+// blockedStart counts an own-use request that the start refused for want of an
+// endowment (FR-SUB-023, case b). The reasons that later modules add are
+// appended to the test here (D418).
+func (s *subsistence) blockedStart(w *World, a *agent, cell int, recipe RecipeID, reason Reason) {
+	if reason == ReasonNoEndowment && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
+		s.blocked[cell] += a.weight
+	}
+}
+
+// ownGoods lists the covered goods of the view in the order of its upkeep rows
+// (spec-subsistence.md 5.5 item 3): an upkeep row whose commodity is a
+// non-discard output of a marked recipe, and whether its cover is short of
+// ExitTicks. It appends to the two slices and returns them; an upkeep of the
+// weight that overflows reads as a cover that is not short.
+func (v *AgentView) ownGoods(rows []UpkeepRow, short []bool) ([]UpkeepRow, []bool) {
+	for _, row := range v.Upkeep {
+		if !v.ownMakes(row.Commodity) {
+			continue
+		}
+		u, fits := checked.Mul(v.Weight, row.Quantity)
+		rows = append(rows, row)
+		short = append(short, fits && u > 0 && v.stockOf(row.Commodity)/u < v.ExitTicks)
+	}
+	return rows, short
+}
+
+// ownMakes reports whether a marked recipe of the view makes c as a non-discard
+// output.
+func (v *AgentView) ownMakes(c CommodityID) bool {
+	for i := range v.Recipes {
+		if !v.Recipes[i].OwnUse {
+			continue
+		}
+		for _, o := range v.Recipes[i].Outputs {
+			if o.Commodity == c && !o.Discard {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ownChoice is the own-use recipe the default Work requests in the mode and the
+// executions to request of it (spec-subsistence.md 5.5 items 3 and 4,
+// FR-SUB-020, 021): the marked recipe with MaxExecutions of 1 or more and the
+// greatest sum of Cov over the goods short of ExitTicks, ties to the lower
+// RecipeID, and the ramp of the cohort. idx indexes v.Recipes. ok is false when
+// no marked recipe qualifies, which is the blocked case (a). It takes no random
+// word and, for the few goods and recipes a role has, allocates nothing.
+func (v *AgentView) ownChoice() (idx int, k int64, ok bool) {
+	var rowBuf [MaxUpkeepItems]UpkeepRow
+	var shortBuf [MaxUpkeepItems]bool
+	var optBuf [MaxOwnUseRecipes]ownuse.Option
+	var covBuf [MaxOwnUseRecipes * MaxUpkeepItems]int64
+	rows, short := v.ownGoods(rowBuf[:0], shortBuf[:0])
+	n, used := 0, 0
+	for i := range v.Recipes {
+		r := &v.Recipes[i]
+		// A role has at most MaxOwnUseRecipes of them (validation), so the arrays
+		// hold every option; a hand-built view with more is cut to the first.
+		if !r.OwnUse || n == len(optBuf) || used+len(rows) > len(covBuf) {
+			continue
+		}
+		covs := covBuf[used : used+len(rows) : used+len(rows)]
+		r.ownCovs(covs, rows)
+		optBuf[n] = ownuse.Option{Ref: int(r.Recipe), Max: r.MaxExecutions, Cov: covs}
+		n++
+		used += len(rows)
+	}
+	ref, ok := ownuse.Pick(optBuf[:n], short)
+	if !ok {
+		return 0, 0, false
+	}
+	i := v.recipeAt(RecipeID(ref))
+	k, ok = ownuse.Ramp(v.Weight, v.Recipes[i].MaxExecutions, v.Cover, v.ExitTicks)
+	return i, k, ok
+}
+
+// ownCovs fills dst, one entry per good of rows, with the coverage of the good
+// by the recipe (spec-subsistence.md 4.1, FR-SUB-039), the sum over its
+// non-discard outputs of the commodity, saturated at MaxInt64.
+func (r *RecipeView) ownCovs(dst []int64, rows []UpkeepRow) {
+	for j, row := range rows {
+		var cov int64
+		for _, o := range r.Outputs {
+			if o.Commodity != row.Commodity || o.Discard {
+				continue
+			}
+			c, _ := ownuse.Cov(o.Quantity, r.Effective, r.Duration, row.Quantity) // saturated at MaxInt64 when too large
+			if sum, fits := checked.Add(cov, c); fits {
+				cov = sum
+			} else {
+				cov = math.MaxInt64
+			}
+		}
+		dst[j] = cov
+	}
+}
+
+// recipeAt is the index into the view's Recipes of the marked recipe with the
+// ID; Pick returns an ID it was given, so it is there.
+func (v *AgentView) recipeAt(id RecipeID) int {
+	for i := range v.Recipes {
+		if v.Recipes[i].OwnUse && v.Recipes[i].Recipe == id {
+			return i
+		}
+	}
+	// Not covered by a test (testing.md 9.5): Pick returns a Ref it was given.
+	panic("economysim: invariant violated: Pick returned a recipe that is not in the view")
+}
+
+// ownUseWork is the default Work in the own-use mode (spec-subsistence.md 5.5),
+// called for an agent in the mode before the normal decision. It reports whether
+// it filled the request. With no marked recipe it can run, the agent is blocked
+// at P2.5 (case a) and the normal decision stands as if the agent were out of
+// the mode. With one, the work share is 10 000 and the halt does not apply; when
+// the retry is due the normal decision runs first and a role recipe it chooses
+// wins, the own-use recipe going on otherwise.
+func (dst *workReportBuf) ownUseWork(v *AgentView) bool {
+	idx, k, ok := v.ownChoice()
+	if !ok {
+		dst.ownBlocked = true
+		return false
+	}
+	if ownuse.RetryDue(v.RetryJobs, v.OwnUseJobs) {
+		dst.normal(v)
+		if dst.chosen >= 0 {
+			dst.ownRetried = true
+			return true
+		}
+		*dst = workReportBuf{skipped: dst.skipped[:0], noList: dst.noList, chosen: -1, blocked: -1}
+	}
+	dst.share, dst.chosen, dst.executions = wholeBP, idx, k
+	return true
 }

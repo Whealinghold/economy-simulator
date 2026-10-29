@@ -48,6 +48,11 @@ type workReportBuf struct {
 	// when none is; executions is the number to request.
 	chosen     int
 	executions int64
+	// ownBlocked says the agent is in the own-use mode and no own-use recipe can
+	// run, so the decision is the one out of the mode (case a of
+	// spec-subsistence.md 5.5 item 6); ownRetried says the retry chose a role
+	// recipe over a runnable own-use recipe (FR-SUB-022).
+	ownBlocked, ownRetried bool
 }
 
 // householdParams copies the tunables the rules of internal/household read.
@@ -213,6 +218,9 @@ type recipePick struct {
 // eligible one replaces the chosen when it is better (7.1.5 to 7.1.7).
 func (dst *workReportBuf) consider(v *AgentView, i int, p household.Params, pk *recipePick) {
 	r := &v.Recipes[i]
+	if r.OwnUse { // never chosen out of the mode, and no halt or reason of its own (FR-SUB-048)
+		return
+	}
 	if r.MaxExecutions < 1 && pk.cannotRun == "" {
 		pk.cannotRun, pk.cannotRunAt = r.Reason, i
 	}
@@ -260,8 +268,17 @@ func (dst *workReportBuf) declineReason(cannotRun Reason) Reason {
 // cannot run, then no_recipe. It reads no random number and allocates nothing
 // once dst.skipped has capacity.
 func workReport(v *AgentView, dst *workReportBuf) {
-	p := householdParams(&v.Tunables)
 	*dst = workReportBuf{skipped: dst.skipped[:0], noList: dst.noList, chosen: -1, blocked: -1}
+	if v.OwnUse && dst.ownUseWork(v) {
+		return
+	}
+	dst.normal(v)
+}
+
+// normal is the decision of 7.1.2 to 7.1.7 over the recipes the role makes: the
+// own-use recipes of the view are passed over.
+func (dst *workReportBuf) normal(v *AgentView) {
+	p := householdParams(&v.Tunables)
 	dst.share, dst.floorChanged = workShare(v, v.reserveMoney(p))
 	if dst.share == 0 {
 		dst.rest, dst.reason = true, ReasonRest
