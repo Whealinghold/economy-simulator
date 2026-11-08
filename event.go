@@ -159,6 +159,10 @@ const (
 	// ReasonRelief is the money the pool of a region pays a household below the
 	// relief line, with the estates module on (spec-estates.md 2.6).
 	ReasonRelief Reason = "relief"
+	// ReasonDeaths is the money and goods of households the population module
+	// removed from an agent that keeps others, moved to the estate (spec-population.md
+	// 4.7).
+	ReasonDeaths Reason = "deaths"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -309,6 +313,12 @@ const (
 	CauseLimit Cause = "limit"
 	// CauseCap is a money flow that ended at the cap of MaxFlowTotal.
 	CauseCap Cause = "cap"
+	// CausePopulation is a death of the population module: a reduction or a
+	// removal by the schedule (spec-population.md 4.7).
+	CausePopulation Cause = "population"
+	// CauseBirths is households born through the population module, entering a
+	// role (spec-population.md 4.3).
+	CauseBirths Cause = "births"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet

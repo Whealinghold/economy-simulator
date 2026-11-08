@@ -115,6 +115,10 @@ type RoleView struct {
 	// RenewalCarry is the world's carry of the renewal rule
 	// (spec-spawner.md 7.1), read by Decide.
 	RenewalCarry int64
+	// PopBirths is the households the population module adds to the role this
+	// tick, after its household cap; 0 while the module is off
+	// (spec-population.md 4.1).
+	PopBirths int64
 }
 
 // RegionAgent is one agent in a region as a spawner sees it. The name is not
@@ -144,6 +148,10 @@ type RegionAgent struct {
 	// OwnUse says the agent is in the own-use mode of the subsistence module,
 	// read-only; false while the module is off (spec-subsistence.md FR-SUB-051).
 	OwnUse bool
+	// PopDeaths is the households the population module removes from the agent
+	// this tick, after its floors; 0 while the module is off
+	// (spec-population.md 4.1).
+	PopDeaths int64
 }
 
 // DecisionKind is the kind of a decision of a spawner.
@@ -205,8 +213,9 @@ type DefaultSpawner struct{}
 var _ Spawner = DefaultSpawner{}
 
 // Decide appends the default's plan for v to d, in the order of
-// spec-spawner.md 10.2: rung-3 reductions and removals, then the switches of
-// rung 1 and of the review, then the renewal entries. It draws nothing and
+// spec-spawner.md 10.2: rung-3 reductions and removals, then the population
+// module's deaths, then the switches of rung 1 and of the review, then the
+// renewal entries, then the module's births (spec-population.md 4.8). It draws nothing and
 // reads nothing but v. The counts of d are added to, so the world resets d
 // before each region.
 func (DefaultSpawner) Decide(v *RegionView, _ *rand.Rand, d *Decisions) {
@@ -217,8 +226,10 @@ func (DefaultSpawner) Decide(v *RegionView, _ *rand.Rand, d *Decisions) {
 	c := decider{v: v, d: d, s: s}
 	c.prepare()
 	c.exits()
+	c.popDeaths()
 	c.switches()
 	c.renewals()
+	c.popBirths()
 }
 
 // roleSignal is the signal of one role: E, V, whether E exists and whether the

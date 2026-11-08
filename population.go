@@ -6,15 +6,104 @@ import (
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/endowment"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/population"
 )
 
+// ScaleKind names which of a region's two population scales a call sets.
+type ScaleKind string
+
+// The two scales of a region (spec-population.md 3.6).
+const (
+	// ScaleBirth is the multiplier of the birth schedule.
+	ScaleBirth ScaleKind = "birth"
+	// ScaleDeath is the multiplier of the death schedule.
+	ScaleDeath ScaleKind = "death"
+)
+
+// popCount is the counts of one (region, role) in the tick being stepped: the
+// fields of PopulationChanged (spec-population.md 10.1). BirthsCeiling is SET's
+// and has no counter here.
+type popCount struct {
+	exposed, unfed, noRatio                     int64
+	birthsDue, deathsDue, deathsCut, deathsHeld int64
+	birthsCapped, birthsUnfunded, clamped       int64
+	birthsDone, deathsDone                      int64
+}
+
+// popState is the state of the module, nil on the world when it is off (spec-
+// population.md 11). The death carry is indexed by AgentID and grown at the
+// step with the start of every id it has not seen (D423); the birth carry by
+// region * roles + role; the effective scales, the configured scales and the cap
+// by RegionID. The last four slices are scratch for the region being stepped.
+type popState struct {
+	denom          int64
+	birthK, deathK []population.Knot
+	minHouseholds  int64
+	stakeBP        int64
+	roles          int
+	deathCarry     []int64
+	birthCarry     []int64
+	effBirth       []int64
+	effDeath       []int64
+	rowBirth       []int64
+	rowDeath       []int64
+	cap            []int64
+	cnt            []popCount
+	num            []int64
+	group          []int64
+}
+
+// newPopulation builds the state from a canonical configuration that passed
+// validation, or returns nil when the module is off. Every scale starts at its
+// configured value (spec-population.md 6.6).
+func newPopulation(c *Config) *popState {
+	m := c.Modules.Population
+	if m == nil {
+		return nil
+	}
+	denom, ok := checked.Mul(wholeBP, c.Calendar.TicksPerYear())
+	if !ok {
+		invariant("the death carry bound overflows after validation")
+	}
+	regions, roles := len(c.Regions), len(c.Roles)
+	p := &popState{
+		denom: denom, birthK: popKnots(m.BirthSchedule), deathK: popKnots(m.DeathSchedule),
+		minHouseholds: m.MinHouseholds, stakeBP: m.BirthStake, roles: roles,
+		birthCarry: make([]int64, regions*roles),
+		rowBirth:   make([]int64, regions), rowDeath: make([]int64, regions), cap: make([]int64, regions),
+		cnt: make([]popCount, roles), num: make([]int64, roles), group: make([]int64, roles),
+	}
+	for g := range p.rowBirth {
+		p.rowBirth[g], p.rowDeath[g] = wholeBP, wholeBP
+	}
+	for _, r := range m.Regions {
+		if g, ok := c.regionID(r.Region); ok {
+			p.rowBirth[g], p.rowDeath[g], p.cap[g] = r.BirthScale, r.DeathScale, r.HouseholdCap
+		}
+	}
+	p.effBirth, p.effDeath = slices.Clone(p.rowBirth), slices.Clone(p.rowDeath)
+	return p
+}
+
+// populationReasons is the ledger reasons the module declares.
+func populationReasons() []ledger.Reason { return []ledger.Reason{ledger.Deaths} }
+
+// carryOf returns the death carry of agent id: the slice entry, or its start
+// while the step has not seen the id (spec-population.md 3.8.3).
+func (p *popState) carryOf(id AgentID) int64 {
+	if int(id) < len(p.deathCarry) {
+		return p.deathCarry[id]
+	}
+	return population.Offset(int64(id), p.denom)
+}
+
 // This file is the population module (spec-population.md): births and deaths as
 // the formation and dissolution of households, driven by the household's own
-// welfare ratio. The pure rules are in internal/population. This part of the
-// file is the configuration surface: the canonical form, the validator and the
-// warnings. The step, the executor hooks, the report, the checkpoint section and
-// the scale slot follow in the later phases of plan 2-11.
+// welfare ratio. The pure rules are in internal/population. The file holds, in
+// the order of architecture.md 2.10.1: the state, the configuration surface (the
+// canonical form, the validator and the warnings), the step of P7.1(b), the
+// hooks the executor calls and the scale slot.
 
 // canonical returns a copy of the module with the schedules cloned in knot order
 // and the region rows sorted by region (spec-population.md 8, spec-config.md
@@ -347,4 +436,223 @@ func meanSeasonBP(c *Config, r *Resource) int64 {
 		}
 	}
 	return sum / int64(len(c.Calendar.Seasons))
+}
+
+// popFill is P7.1(b) for region g (spec-population.md 4.1, D422): it computes the
+// module's deaths per agent and births per role from the state as it stands and
+// puts them in the view's PopDeaths and PopBirths. Deaths are taken per agent in
+// ID order under the group floor; the births of each role in role order under the
+// region's cap. It draws nothing and allocates nothing once the carry slice has
+// grown (NFR-POP-001).
+func (w *World) popFill(g RegionID, v *RegionView) {
+	p := w.pop
+	for id := len(p.deathCarry); id < len(w.agents); id++ {
+		p.deathCarry = append(p.deathCarry, population.Offset(int64(id), p.denom))
+	}
+	clear(p.cnt)
+	clear(p.num)
+	var households int64
+	for r := range v.Roles {
+		p.group[r] = v.Roles[r].Households
+		households += v.Roles[r].Households
+		v.Roles[r].PopBirths = 0
+	}
+	deaths := int64(0)
+	for i := range v.Agents {
+		deaths += w.popAgent(g, v, &v.Agents[i])
+	}
+	p.births(g, v, households-deaths)
+}
+
+// popAgent steps one agent of the view: its exposed households, its death carry
+// and the deaths it takes, and the numerator it adds to its role's birth carry.
+// It returns the households the agent loses.
+func (w *World) popAgent(g RegionID, v *RegionView, ra *RegionAgent) (taken int64) {
+	p := w.pop
+	ra.PopDeaths = 0
+	if ra.External {
+		return 0
+	}
+	c := &p.cnt[ra.Role]
+	a := &w.agents[ra.Agent]
+	u := w.reads.cost.tick(w.roles.row(ra.Role).upkeepIn(g), w.ex.prices, a.weight)
+	ratio, ok := a.history.Ratio(u, w.cfg.Roles[ra.Role].DefaultRatio)
+	if !ok {
+		c.noRatio += ra.Weight
+		return 0
+	}
+	fed := max(ra.Weight-ra.Unfed, 0)
+	c.exposed += fed
+	c.unfed += ra.Unfed
+	if fed == 0 {
+		return 0
+	}
+	rate, dclamp := p.rate(p.deathK, ratio, p.effDeath[g])
+	events := p.step(&p.deathCarry[ra.Agent], fed, rate)
+	c.deathsDue += events
+	take, cut, held := population.Cut(events, fed, p.group[ra.Role], p.minHouseholds)
+	p.group[ra.Role] -= take
+	c.deathsCut, c.deathsHeld = c.deathsCut+cut, c.deathsHeld+held
+	ra.PopDeaths = take
+	rate, bclamp := p.rate(p.birthK, ratio, p.effBirth[g])
+	if !v.Roles[ra.Role].Closed {
+		p.num[ra.Role] = satAdd(p.num[ra.Role], mustTerm(fed, rate))
+	}
+	if dclamp || bclamp {
+		c.clamped += fed
+	}
+	return take
+}
+
+// births advances the birth carry of every role of region g in role order and
+// sets PopBirths under the household cap, counting the births due, the births
+// dropped and the households the region holds after the tick's deaths
+// (spec-population.md 3.8.2, 4.4.2). Earlier roles' births count against the cap
+// of later ones.
+func (p *popState) births(g RegionID, v *RegionView, households int64) {
+	for r := range v.Roles {
+		cell := int(g)*p.roles + r
+		events := p.step(&p.birthCarry[cell], 1, p.num[r])
+		allowed, dropped := population.Allow(events, households, p.cap[g])
+		households += allowed
+		v.Roles[r].PopBirths = allowed
+		p.cnt[r].birthsDue, p.cnt[r].birthsCapped = events, dropped
+	}
+}
+
+// step adds exposed * rate to the carry at *carry and returns the whole events it
+// holds (spec-population.md 3.8). The births pass the numerator as the rate with
+// one exposed household.
+func (p *popState) step(carry *int64, exposed, rate int64) int64 {
+	events, next, ok := population.Step(*carry, mustTerm(exposed, rate), p.denom)
+	if !ok {
+		invariant("a population carry overflows after validation")
+	}
+	*carry = next
+	return events
+}
+
+// rate evaluates a schedule at a ratio under a scale; the rules cannot refuse a
+// validated schedule.
+func (p *popState) rate(knots []population.Knot, ratio, scale int64) (rate int64, clamped bool) {
+	rate, clamped, ok := population.Rate(knots, ratio, scale)
+	if !ok {
+		invariant("a population rate is unreadable after validation")
+	}
+	return rate, clamped
+}
+
+// mustTerm is population.Term for values the bounds keep far below int64.
+func mustTerm(exposed, rate int64) int64 {
+	t, ok := population.Term(exposed, rate)
+	if !ok {
+		invariant("a population numerator overflows after validation")
+	}
+	return t
+}
+
+// popDeaths appends the module's deaths after the ladder's reductions and
+// removals and before the switches (spec-population.md 4.8); an agent that loses
+// all its households is marked acted on, so no switch is planned for it.
+func (c *decider) popDeaths() {
+	for i := range c.v.Agents {
+		a := &c.v.Agents[i]
+		if a.PopDeaths < 1 {
+			continue
+		}
+		c.d.List = append(c.d.List, Decision{Kind: DecideReduce, Agent: a.Agent, Households: a.PopDeaths, Cause: CausePopulation})
+		if a.PopDeaths >= a.Weight {
+			c.s.acted[i] = true
+		}
+	}
+}
+
+// popBirths appends the module's births, the last operation of the plan, one
+// entry per role in role order, with no entry cap and no viability gate
+// (spec-population.md 4.3, 4.8).
+func (c *decider) popBirths() {
+	for r := range c.v.Roles {
+		if n := c.v.Roles[r].PopBirths; n > 0 {
+			c.d.List = append(c.d.List, Decision{Kind: DecideEnter, Role: c.v.Roles[r].Role, Households: n, Cause: CauseBirths})
+		}
+	}
+}
+
+// popCause reports whether the executor accepts a reduction with cause c: the
+// ladder's are always accepted, the module's only while it is on (N-290).
+func (w *World) popCause(c Cause) bool { return w.pop != nil && c == CausePopulation }
+
+// reductionReason is the ledger reason of a weight reduction: starvation for the
+// ladder, deaths for the module (spec-population.md 4.7).
+func (w *World) reductionReason(c Cause) ledger.Reason {
+	if c == CausePopulation {
+		return ledger.Deaths
+	}
+	return ledger.Starvation
+}
+
+// entryMoney is the money each household of an entry brings and the ledger reason
+// it is paid under (spec-population.md 4.3, D427): the stake for a birth, the
+// role's StartMoney for every other entry, by births into a host and by
+// start_money into a new agent unless the module's births, which are always
+// births. With the module off it is what Stage 1 does.
+func (w *World) entryMoney(role RoleID, cause Cause, host bool) (Money, ledger.Reason) {
+	start := w.cfg.Roles[role].StartMoney
+	switch {
+	case w.pop != nil && cause == CauseBirths:
+		stake, ok := checked.MulDiv(int64(start), w.pop.stakeBP, wholeBP)
+		if !ok {
+			invariant("the birth stake overflows after validation")
+		}
+		return Money(stake), ledger.Births
+	case host:
+		return start, ledger.Births
+	}
+	return start, ledger.StartMoney
+}
+
+// renewalBP is the effective Renewal: 0 while the module is on, whatever is
+// configured (spec-population.md 4.6, a rule constant).
+func (w *World) renewalBP() int64 {
+	if w.pop != nil {
+		return 0
+	}
+	return w.cfg.World.Renewal
+}
+
+// popNoteDeaths counts households removed with the module's cause from a role.
+func (w *World) popNoteDeaths(role RoleID, n int64, cause Cause) {
+	if w.pop != nil && cause == CausePopulation {
+		w.pop.cnt[role].deathsDone += n
+	}
+}
+
+// popNoteBirths counts the households an entry of births added and the ones the
+// pool could not fund.
+func (w *World) popNoteBirths(d Decision, funded, unfunded int64) {
+	if w.pop != nil && d.Cause == CauseBirths {
+		c := &w.pop.cnt[d.Role]
+		c.birthsDone += funded
+		c.birthsUnfunded += unfunded
+	}
+}
+
+// setPopulationScale sets the effective scale of a region and returns the value it
+// replaced; ok is false when the module is off, the region is unknown or the value
+// is outside 0 to MaxBasisPoints. It is state only: the integration module emits
+// PopulationScaled (D431). The next tick reads the new value (FR-POP-039).
+func (w *World) setPopulationScale(region RegionID, kind ScaleKind, bp int64) (before int64, ok bool) {
+	p := w.pop
+	if p == nil || int(region) >= len(p.effBirth) || region < 0 || bp < 0 || bp > MaxBasisPoints {
+		return 0, false
+	}
+	switch kind {
+	case ScaleBirth:
+		before, p.effBirth[region] = p.effBirth[region], bp
+	case ScaleDeath:
+		before, p.effDeath[region] = p.effDeath[region], bp
+	default:
+		return 0, false
+	}
+	return before, true
 }

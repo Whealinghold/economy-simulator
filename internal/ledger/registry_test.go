@@ -22,7 +22,7 @@ var byName = map[string]ledger.Reason{
 	"start_money": ledger.StartMoney, "split": ledger.Split, "merge": ledger.Merge,
 	"births": ledger.Births, "starvation": ledger.Starvation,
 	"loan_out": ledger.LoanOut, "loan_repay": ledger.LoanRepay, "loan_interest": ledger.LoanInterest,
-	"relief": ledger.Relief,
+	"relief": ledger.Relief, "deaths": ledger.Deaths,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -34,7 +34,7 @@ var notBuilt = []string{
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
 	"wage_refund", "rent",
 	"title_sale", "premium", "payout", "transit_out", "transit_in", "haul_use",
-	"transit_use", "loss", "deaths",
+	"transit_use", "loss",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.

@@ -48,6 +48,7 @@ var reasonNames = [...]Reason{
 	// The declared module rows with a name: the loan rows have none yet.
 	ledger.WantConsumption: ReasonWantConsumption,
 	ledger.Relief:          ReasonRelief,
+	ledger.Deaths:          ReasonDeaths,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -111,6 +112,9 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Estates != nil {
 		m = append(m, estatesReasons())
+	}
+	if c.Modules.Population != nil {
+		m = append(m, populationReasons())
 	}
 	return m
 }

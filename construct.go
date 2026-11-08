@@ -130,6 +130,7 @@ func (w *World) allocate() {
 	w.money = newMoneyFlows(&w.cfg, w.ledger)
 	w.res = newResourcesState(&w.cfg)
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
+	w.pop = newPopulation(&w.cfg)
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}

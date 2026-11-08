@@ -109,10 +109,13 @@ func (w *World) buildRegionView(g RegionID) *RegionView {
 	v.Budget = Money(satAllowance(int64(v.PoolMoney), p.EntryPoolShare))
 	v.ReviewTicks, v.EntryShare, v.RoleHysteresis, v.RoleCooldown = p.ReviewTicks, p.EntryShare, p.RoleHysteresis, p.RoleCooldown
 	v.EntryRatio, v.ChangePrivation, v.RemovePrivation = p.EntryRatio, p.ChangePrivation, p.RemovePrivation
-	v.DeathStep, v.ExitShare, v.Renewal, v.EntryPoolShare = p.DeathStep, p.ExitShare, p.Renewal, p.EntryPoolShare
+	v.DeathStep, v.ExitShare, v.Renewal, v.EntryPoolShare = p.DeathStep, p.ExitShare, w.renewalBP(), p.EntryPoolShare
 	w.pricesOf(g)
 	w.scanRegion(g)
 	w.fillRoles(g)
+	if w.pop != nil {
+		w.popFill(g, v)
+	}
 	return v
 }
 
@@ -313,7 +316,7 @@ func (w *World) refusal(g RegionID, d *Decision) Reason {
 	}
 	f := occupation.Facts{
 		RoleKnown: d.Role >= 0 && int(d.Role) < len(w.cfg.Roles), Households: d.Households,
-		CauseSupported: d.Kind != DecideReduce || d.Cause == CauseStarved || d.Cause == CauseInsolvent,
+		CauseSupported: d.Kind != DecideReduce || d.Cause == CauseStarved || d.Cause == CauseInsolvent || w.popCause(d.Cause),
 	}
 	if a := w.agentIn(g, d.Agent); a != nil {
 		f.AgentKnown, f.External, f.SameRole, f.Weight = true, a.external && !a.mortal, a.role == d.Role, a.weight
@@ -358,19 +361,21 @@ func (w *World) execRemove(g RegionID, a *agent, cause Cause) error {
 	}
 	w.ex.removed[role] = satAdd(w.ex.removed[role], weight)
 	w.tally.addExecuted(g, 0, 0, weight, 0, 0)
+	w.popNoteDeaths(role, weight, cause)
 	return nil
 }
 
 // execReduce lowers the weight of agent a by d.Households (spec-spawner.md 4.1,
 // spec-agents.md 3.7): the money and each good fall to floor(x * w' / w) and the
-// difference goes to the estate by starvation; the job is re-weighed. A
+// difference goes to the estate by starvation, or by deaths for the population
+// module's cause; the job is re-weighed. A
 // reduction by the whole weight is a removal and keeps the decision's cause.
 func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 	from, to := a.weight, a.weight-d.Households
 	if to == 0 {
 		return w.execRemove(g, a, d.Cause)
 	}
-	money, units, err := w.shed(g, a, to)
+	money, units, err := w.shed(g, a, to, w.reductionReason(d.Cause))
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
@@ -384,6 +389,7 @@ func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 	w.live.households -= d.Households
 	w.ex.removed[a.role] = satAdd(w.ex.removed[a.role], d.Households)
 	w.tally.addExecuted(g, 0, 0, d.Households, 0, 0)
+	w.popNoteDeaths(a.role, d.Households, d.Cause)
 	if w.obs.supplied {
 		w.obs.deliver(WeightChanged{Tick: w.Tick(), Agent: a.id, Region: g, Role: a.role, From: from, To: to, Cause: d.Cause, Money: -money, Units: units})
 	}
@@ -391,9 +397,9 @@ func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 }
 
 // shed sends to the estate of region g what agent a holds above floor(x * to /
-// weight), money then each commodity in canonical order, by the reason
-// starvation, and returns the money and the units sent.
-func (w *World) shed(g RegionID, a *agent, to int64) (money Money, units int64, err error) {
+// weight), money then each commodity in canonical order, by the given reason
+// (starvation or deaths), and returns the money and the units sent.
+func (w *World) shed(g RegionID, a *agent, to int64, reason ledger.Reason) (money Money, units int64, err error) {
 	acct, aerr := w.ledger.Account(a.account)
 	if aerr != nil {
 		invariant("the account of a reduced agent is unreadable: " + aerr.Error())
@@ -404,7 +410,7 @@ func (w *World) shed(g RegionID, a *agent, to int64) (money Money, units int64, 
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
-	if err = w.estates.acceptMoney(w.ledger, a.account, g, money, ledger.Starvation); err != nil {
+	if err = w.estates.acceptMoney(w.ledger, a.account, g, money, reason); err != nil {
 		return 0, 0, err
 	}
 	for c := range w.cfg.Commodities {
@@ -412,7 +418,7 @@ func (w *World) shed(g RegionID, a *agent, to int64) (money Money, units int64, 
 		if herr != nil {
 			invariant("the holding of a reduced agent is unreadable: " + herr.Error())
 		}
-		n, uerr := w.estates.acceptUnits(w.ledger, a.account, g, c, held-mustRemain(held, a.weight, to), ledger.Starvation)
+		n, uerr := w.estates.acceptUnits(w.ledger, a.account, g, c, held-mustRemain(held, a.weight, to), reason)
 		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns
@@ -513,11 +519,13 @@ func (w *World) fillSeeds(g RegionID, row *roleRow) {
 // smallest weight below the group's scale or in a new agent of weight 1. The
 // rest are neither created nor deferred, only counted (FR-SPN-008).
 func (w *World) execEnter(g RegionID, d Decision) error {
-	x, start := &w.ex, w.cfg.Roles[d.Role].StartMoney
-	funded := occupation.Funded(d.Households, int64(min(x.budget, w.estates.pool(w.ledger, g))), int64(start))
-	x.budget -= Money(funded) * start
+	x := &w.ex
+	stake, _ := w.entryMoney(d.Role, d.Cause, true)
+	funded := occupation.Funded(d.Households, int64(min(x.budget, w.estates.pool(w.ledger, g))), int64(stake))
+	x.budget -= Money(funded) * stake
 	unfunded := d.Households - funded
 	w.tally.addExecuted(g, 0, funded, 0, unfunded, 0)
+	w.popNoteBirths(d, funded, unfunded)
 	if unfunded > 0 {
 		w.logDropped(d.Role, ReasonUnfunded)
 	}
@@ -565,9 +573,11 @@ func (w *World) placeOne(g RegionID, d Decision, left int64) (int64, error) {
 }
 
 // enlarge raises the weight of an existing agent by take households, each
-// bringing the role's StartMoney from the pool by births, and opens no account.
+// bringing the entry's money (entryMoney) from the pool by births, and opens no
+// account.
 func (w *World) enlarge(g RegionID, a *agent, take int64, cause Cause) error {
-	given, err := w.estates.grant(w.ledger, g, a.account, Money(take)*w.cfg.Roles[a.role].StartMoney, ledger.Births)
+	each, reason := w.entryMoney(a.role, cause, true)
+	given, err := w.estates.grant(w.ledger, g, a.account, Money(take)*each, reason)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
@@ -598,7 +608,8 @@ func (w *World) spawnEntrant(g RegionID, d Decision) error {
 		invariant("the ledger refused the opening of an entrant's account: " + err.Error())
 	}
 	a := newAgent(agentInit{id: id, account: acct, role: d.Role, weight: 1, strategy: int(d.Role), tick: w.Tick()}, row, &w.recipes)
-	given, err := w.estates.grant(w.ledger, g, acct, role.StartMoney, ledger.StartMoney)
+	each, reason := w.entryMoney(d.Role, d.Cause, false)
+	given, err := w.estates.grant(w.ledger, g, acct, each, reason)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
@@ -633,7 +644,7 @@ func (w *World) advanceRenewal(g RegionID) {
 	roles := len(w.cfg.Roles)
 	for r, removed := range w.ex.removed {
 		cell := int(g)*roles + r
-		_, carry, ok := occupation.Renewal(w.state.renewalCarry[cell], removed, w.cfg.World.Renewal)
+		_, carry, ok := occupation.Renewal(w.state.renewalCarry[cell], removed, w.renewalBP())
 		if !ok {
 			invariant("the renewal carry overflows")
 		}
