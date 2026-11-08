@@ -891,4 +891,5 @@
 //     birth or death count is non-zero (spec-population.md 10.1).
 //   - PopulationScaled: the event emitted when the birth or death scale of a region is set
 //     between ticks (spec-population.md 10.2).
+//   - ScaleKind: which of the two population scales of a region, birth or death, a call sets.
 package economysim

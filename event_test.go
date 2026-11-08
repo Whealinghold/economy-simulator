@@ -60,6 +60,8 @@ var declaredEvents = []economysim.Event{
 	economysim.EndowmentChanged{},
 	economysim.EndowmentAdjusted{},
 	economysim.OwnUseChanged{},
+	economysim.PopulationChanged{},
+	economysim.PopulationScaled{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -68,14 +70,14 @@ var declaredEvents = []economysim.Event{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"RoomLimited",
-	"PopulationChanged", "TraineeshipStarted", "TraineeshipCompleted",
+	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
 	"ShipmentDispatched", "ShipmentArrived",
 	"ShipmentRejected", "TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
 	"MigrationReviewed",
 	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked",
-	"YieldShocked", "PopulationScaled", "RouteRiskScaled", "StoreRiskScaled",
+	"YieldShocked", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
 	"LoanPassed", "CreditRound", "CreditSettled", "CreditRateScaled",
 	"TechnologyAdvanced", "TechnologyAdjusted", "SettlementClassChanged",
@@ -99,9 +101,10 @@ var deferredCore = map[string]string{
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
-	"WorldCreated.Jurisdictions", // polity module, POL 10.7
-	"AgentSpawned.StoresLocked",  // storage module, STO 14.1
-	"EntryLimited.RoleCeiling",   // settlements module, SET 6.4
+	"WorldCreated.Jurisdictions",      // polity module, POL 10.7
+	"AgentSpawned.StoresLocked",       // storage module, STO 14.1
+	"EntryLimited.RoleCeiling",        // settlements module, SET 6.4
+	"PopulationChanged.BirthsCeiling", // settlements module, SET 6.4.2
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
@@ -439,7 +442,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {

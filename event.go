@@ -1058,6 +1058,62 @@ type OwnUseChanged struct {
 	Output []Amount
 }
 
+// ScaleKind names which of a region's two population scales a call sets, a member
+// of a closed set (spec-observability.md 4.1; spec-population.md 3.6).
+type ScaleKind string
+
+// The two scales of a region.
+const (
+	// ScaleBirth is the multiplier of the birth schedule.
+	ScaleBirth ScaleKind = "birth"
+	// ScaleDeath is the multiplier of the death schedule.
+	ScaleDeath ScaleKind = "death"
+)
+
+// PopulationChanged is the aggregate of the population module for one region and
+// role: emitted once per region and role per tick, in ascending role order, after
+// the region's plan and after EntryLimited, when any count other than Exposed,
+// Unfed and NoRatio is non-zero, and never otherwise (spec-population.md 10.1,
+// FR-POP-031). It is emitted only when the population module is on. The counts
+// are households. BirthsCeiling, the births a role ceiling cut, is appended with
+// the settlements module.
+type PopulationChanged struct {
+	Tick int64
+	// Region and Role are the cell.
+	Region RegionID
+	Role   RoleID
+	// Exposed is the households the schedule saw; Unfed those it did not because
+	// they were unfed, and NoRatio those whose agent has no welfare ratio.
+	Exposed, Unfed, NoRatio int64
+	// BirthsDue and DeathsDue are the whole households the carries produced,
+	// before the floors and the cap.
+	BirthsDue, DeathsDue int64
+	// DeathsCut is the deaths cut to an agent's fed households and DeathsHeld
+	// those dropped by MinHouseholds.
+	DeathsCut, DeathsHeld int64
+	// BirthsCapped is the births dropped by the region's HouseholdCap.
+	BirthsCapped int64
+	// BirthsUnfunded is the births the pool could not fund.
+	BirthsUnfunded int64
+	// RateClamped is the exposed households whose effective rate was clamped at
+	// 10 000.
+	RateClamped int64
+	// BirthsDone and DeathsDone are the households the module added and removed.
+	BirthsDone, DeathsDone int64
+}
+
+// PopulationScaled is emitted by a call that sets the birth or death scale of a
+// region, once per changed key, with the next step's Tick (spec-observability.md
+// 4.4.4). It is emitted only when the population module is on.
+type PopulationScaled struct {
+	Tick int64
+	// Region is the region and Which the scale set.
+	Region RegionID
+	Which  ScaleKind
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
 func (RunStarted) isEvent()        {}
 func (RunEnded) isEvent()          {}
 func (TickStarted) isEvent()       {}
@@ -1091,3 +1147,5 @@ func (MoneyFlowScaled) isEvent()   {}
 func (EndowmentChanged) isEvent()  {}
 func (EndowmentAdjusted) isEvent() {}
 func (OwnUseChanged) isEvent()     {}
+func (PopulationChanged) isEvent() {}
+func (PopulationScaled) isEvent()  {}

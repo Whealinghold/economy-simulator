@@ -37,8 +37,16 @@ func popWorld(t *testing.T, mod Population, opts ...Option) *World {
 	for id := 1; id <= 3; id++ {
 		setRatio(w, AgentID(id), 14_000)
 	}
-	w.buildRegionView(0)
+	popView(w, 0)
 	return w
+}
+
+// popView builds the view of region g and runs the step on it, as decideRegion
+// does; buildRegionView alone is what the snapshot reads and moves no carry.
+func popView(w *World, g RegionID) *RegionView {
+	v := w.buildRegionView(g)
+	w.popFill(g, v)
+	return v
 }
 
 // setRatio fills the welfare ring of agent id so that its ratio is exactly
@@ -80,7 +88,7 @@ func TestStep_CarryAndHooks(t *testing.T) {
 	w := popWorld(t, DefaultPopulation())
 	d := w.pop.denom
 	setCarries(w, map[AgentID]int64{1: d - 100, 2: 0, 3: d - 150}, map[RoleID]int64{0: d - 700, 1: 5})
-	v := w.buildRegionView(0)
+	v := popView(w, 0)
 	if got := []int64{v.Agents[0].PopDeaths, v.Agents[1].PopDeaths, v.Agents[2].PopDeaths}; !slices.Equal(got, []int64{1, 0, 0}) {
 		t.Errorf("seed %d: PopDeaths = %v, want [1 0 0]", popSeed, got)
 	}
@@ -118,7 +126,7 @@ func TestStep_Exposure(t *testing.T) {
 	start := w.pop.carryOf(1)
 	setCarries(w, map[AgentID]int64{1: start}, nil)
 	external := w.pop.deathCarry[3]
-	w.buildRegionView(0)
+	popView(w, 0)
 	if got := w.pop.deathCarry[1] - start; got != 150 {
 		t.Errorf("seed %d: carry of the agent with an unfed household moved by %d, want 150", popSeed, got)
 	}
@@ -139,7 +147,7 @@ func TestStep_Exposure(t *testing.T) {
 		}
 	}
 	before := slices.Clone(w.pop.deathCarry)
-	w.buildRegionView(0)
+	popView(w, 0)
 	if c := w.pop.cnt; c[0].noRatio != 3 || c[1].noRatio != 1 || c[0].exposed != 0 || !slices.Equal(before, w.pop.deathCarry) {
 		t.Errorf("seed %d: no-ratio counts = %+v, carries %v (was %v), want 3 and 1 households with no ratio and no carry moved", popSeed, c, w.pop.deathCarry, before)
 	}
@@ -163,7 +171,7 @@ func TestStep_FloorCapAndExtinct(t *testing.T) {
 	w := popWorld(t, mod)
 	d := w.pop.denom
 	setCarries(w, map[AgentID]int64{1: d - 300, 2: d - 150, 3: 0}, map[RoleID]int64{0: d - 1})
-	v := w.buildRegionView(0)
+	v := popView(w, 0)
 	if v.Agents[0].PopDeaths != 1 || v.Agents[1].PopDeaths != 0 || v.Roles[0].PopBirths != 0 {
 		t.Errorf("seed %d: PopDeaths = %d, %d and PopBirths = %d, want 1, 0 and 0", popSeed, v.Agents[0].PopDeaths, v.Agents[1].PopDeaths, v.Roles[0].PopBirths)
 	}
@@ -176,7 +184,7 @@ func TestStep_FloorCapAndExtinct(t *testing.T) {
 	for id := 1; id <= 3; id++ {
 		w.agents[id].weight = 0
 	}
-	if v := w.buildRegionView(0); v.Roles[0].PopBirths != 0 || v.Roles[1].PopBirths != 0 {
+	if v := popView(w, 0); v.Roles[0].PopBirths != 0 || v.Roles[1].PopBirths != 0 {
 		t.Errorf("seed %d: PopBirths = %d, %d in a region with no households, want 0, 0", popSeed, v.Roles[0].PopBirths, v.Roles[1].PopBirths)
 	}
 }
@@ -197,7 +205,7 @@ func TestScale_EffectiveReadEachTick(t *testing.T) {
 	setRatio(w, 1, 9_000)
 	moved := func() int64 {
 		setCarries(w, map[AgentID]int64{1: 0}, nil)
-		w.buildRegionView(0)
+		popView(w, 0)
 		return w.pop.deathCarry[1]
 	}
 	if got := moved(); got != 800 {
@@ -363,7 +371,7 @@ func TestPopulation_OffLeavesNoTrace(t *testing.T) {
 func TestRenewal_ZeroWhileOn(t *testing.T) {
 	t.Parallel()
 	w := popWorld(t, DefaultPopulation())
-	if v := w.buildRegionView(0); v.Renewal != 0 || w.renewalBP() != 0 || w.cfg.World.Renewal != 10_000 {
+	if v := popView(w, 0); v.Renewal != 0 || w.renewalBP() != 0 || w.cfg.World.Renewal != 10_000 {
 		t.Errorf("seed %d: view Renewal = %d, renewalBP = %d, configured %d, want 0, 0 and the configured 10000", popSeed, v.Renewal, w.renewalBP(), w.cfg.World.Renewal)
 	}
 }
@@ -380,7 +388,7 @@ func TestPopulation_DrawsNothing(t *testing.T) {
 		t.Fatalf("seed %d: MarshalBinary() error = %v, want nil", popSeed, err)
 	}
 	for range 3 {
-		w.buildRegionView(0)
+		popView(w, 0)
 	}
 	after, _ := w.rnd.pcg.MarshalBinary()
 	if !slices.Equal(before, after) {
@@ -394,7 +402,7 @@ func TestPopulation_DrawsNothing(t *testing.T) {
 // Requirement: NFR-POP-001
 func TestPopulation_NoAllocation(t *testing.T) {
 	w := popWorld(t, DefaultPopulation())
-	v := w.buildRegionView(0)
+	v := popView(w, 0)
 	if n := testing.AllocsPerRun(50, func() { w.popFill(0, v) }); n != 0 {
 		t.Errorf("seed %d: popFill allocated %v times per run, want 0", popSeed, n)
 	}
@@ -412,7 +420,7 @@ func BenchmarkPopulation_Fill(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewWorld() error = %v, want nil", err)
 	}
-	v := w.buildRegionView(0)
+	v := popView(w, 0)
 	b.ReportAllocs()
 	for b.Loop() {
 		w.popFill(0, v)
@@ -433,7 +441,7 @@ func TestStep_SignalIsOwnRatio(t *testing.T) {
 	setRatio(w, 2, 8_000)
 	a1, a2 := w.pop.carryOf(1), w.pop.carryOf(2)
 	setCarries(w, map[AgentID]int64{1: a1, 2: a2}, nil)
-	w.buildRegionView(0)
+	popView(w, 0)
 	if d1, d2 := w.pop.deathCarry[1]-a1, w.pop.deathCarry[2]-a2; d1 != 300 || d2 != 450 {
 		t.Errorf("seed %d: carries moved by %d and %d, want 300 and 450", popSeed, d1, d2)
 	}
@@ -541,8 +549,8 @@ func TestStep_OrderAndHook(t *testing.T) {
 	for id := 2; id <= 5; id++ {
 		setRatio(w, AgentID(id), 14_000)
 	}
-	w.buildRegionView(0)
-	w.buildRegionView(1)
+	popView(w, 0)
+	popView(w, 1)
 	setCarries(w, map[AgentID]int64{2: w.pop.denom - 150}, map[RoleID]int64{0: w.pop.denom - 1})
 	runEntry(t, w, rec)
 	if want := []RegionID{0, 1}; !slices.Equal(sp.regions, want) {

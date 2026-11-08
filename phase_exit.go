@@ -90,6 +90,9 @@ func newExitTick(c *Config, observed bool) exitTick {
 // word, so the world skips the reseed (D155).
 func (w *World) decideRegion(g RegionID) *Decisions {
 	v := w.buildRegionView(g)
+	if w.pop != nil {
+		w.popFill(g, v) // P7.1(b): the snapshot builds the same view and must not advance a carry
+	}
 	w.ex.plan.reset()
 	if _, builtin := w.ext.spawner.(DefaultSpawner); !builtin {
 		w.rnd.keyed(siteSpawner, w.Tick(), int64(g))
@@ -113,9 +116,6 @@ func (w *World) buildRegionView(g RegionID) *RegionView {
 	w.pricesOf(g)
 	w.scanRegion(g)
 	w.fillRoles(g)
-	if w.pop != nil {
-		w.popFill(g, v)
-	}
 	return v
 }
 
@@ -281,6 +281,9 @@ func (w *World) entryRegion(g RegionID) error {
 	w.entryWarns(g)
 	if lim, ok := w.tally.limited(w.Tick(), g); ok && w.obs.supplied {
 		w.obs.deliver(lim)
+	}
+	if w.pop != nil {
+		w.popReport(g, w.regionHouseholds())
 	}
 	return nil
 }
@@ -673,6 +676,15 @@ func (w *World) entryWarns(g RegionID) {
 	for r := range x.hh {
 		w.roleWarns(ctx, g, RoleID(r))
 	}
+}
+
+// regionHouseholds is the households of the region whose entry step just ran,
+// the sum of the per-role counts that entryWarns filled.
+func (w *World) regionHouseholds() (n int64) {
+	for _, h := range w.ex.hh {
+		n = satAdd(n, h)
+	}
+	return n
 }
 
 // roleWarns advances the runs of "role extinct" and "group below floor" of

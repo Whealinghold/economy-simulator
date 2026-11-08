@@ -108,6 +108,9 @@ const (
 	// for a recipient or region, and the amount actually applied.
 	Due     = "due"
 	Applied = "applied"
+	// Births and Deaths are counts of households born and of households that died.
+	Births = "births"
+	Deaths = "deaths"
 	// From and To are a value before and after a change, in basis points
 	// (FromRegion and ToRegion stay the keys of two regions).
 	From = "from"

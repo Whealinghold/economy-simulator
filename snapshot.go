@@ -65,6 +65,9 @@ type Snapshot struct {
 	// Endowments has one row per (region, resource), in that order (spec-resources.md
 	// 14.4); empty with the resources module off.
 	Endowments []EndowmentRow
+	// Population is the figures of the population module; the zero value while it
+	// is off (spec-population.md 10.4).
+	Population PopulationState
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -117,6 +120,23 @@ type RegionRow struct {
 	MoneyPool Money
 	// EntryBudget is MoneyPool * EntryPoolShare / 10 000: advisory.
 	EntryBudget Money
+	// HouseholdCap is the most households the region may hold, 0 for none; the
+	// population module's cap, 0 while the module is off (spec-population.md 4.4.2).
+	HouseholdCap int64
+}
+
+// PopulationState is the figures of the population module in the snapshot: the
+// replacement ratio r* of the two schedules, whether there is one, and the gain
+// of the fixed point in basis points a year (spec-population.md 5.4, 5.7, 10.4).
+// All are measures and nothing reads them; the zero value while the module is off.
+type PopulationState struct {
+	// ReplacementRatioBP is r* in basis points of the welfare ratio; HasReplacement
+	// is false when the schedules have none.
+	ReplacementRatioBP int64
+	HasReplacement     bool
+	// GainBP is trunc(r* * dRate / dRatio), the gain k of spec-population.md 5.4 at
+	// eta 1, in basis points a year.
+	GainBP int64
 }
 
 // BoundaryRow is the balance of one boundary account: how much has entered
@@ -175,6 +195,12 @@ type RoleRow struct {
 	// sum of the weights of the agents with the flag at the boundary; 0 while the
 	// module is off (spec-subsistence.md 14.4).
 	OnOwnUse int64
+	// BirthRateBP, DeathRateBP and NaturalIncreaseBP are the household-weighted mean
+	// annual birth rate, death rate and their difference, in basis points a year, at
+	// the agents' current ratios over the households whose ratio exists, truncated
+	// toward zero; BirthCarry is the role's birth carry. All 0 while the population
+	// module is off (spec-population.md 10.4).
+	BirthRateBP, DeathRateBP, NaturalIncreaseBP, BirthCarry int64
 }
 
 // MarketState is the report of one market and its price window: the type the
@@ -298,6 +324,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 		Boundary:   w.boundaryRows(),
 		Flows:      w.snapshotFlows(),
 		Endowments: w.snapshotEndowments(),
+		Population: w.popSnapshot(),
 	}
 	s.Edges, s.Components = w.edgeRows(), w.componentCount()
 	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false), w.moneyFlowList())
@@ -426,6 +453,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 		if w.estates.atFloor(g, l, floor) {
 			acc.atFloor[l.Commodity] = satAdd(acc.atFloor[l.Commodity], l.Quantity)
 		}
+	}
+	if w.pop != nil {
+		w.popSnapshotRegion(s, g, v)
 	}
 	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)

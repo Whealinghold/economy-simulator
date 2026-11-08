@@ -2,23 +2,15 @@ package economysim
 
 import (
 	"cmp"
+	"context"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/endowment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/population"
-)
-
-// ScaleKind names which of a region's two population scales a call sets.
-type ScaleKind string
-
-// The two scales of a region (spec-population.md 3.6).
-const (
-	// ScaleBirth is the multiplier of the birth schedule.
-	ScaleBirth ScaleKind = "birth"
-	// ScaleDeath is the multiplier of the death schedule.
-	ScaleDeath ScaleKind = "death"
 )
 
 // popCount is the counts of one (region, role) in the tick being stepped: the
@@ -52,6 +44,10 @@ type popState struct {
 	cnt            []popCount
 	num            []int64
 	group          []int64
+	// extinctRun and unfundedRun, by RegionID, and heldRun, by region * roles +
+	// role, are the runs of the three Warns of spec-population.md 10.3: diagnostics
+	// that change no result.
+	extinctRun, unfundedRun, heldRun []int64
 }
 
 // newPopulation builds the state from a canonical configuration that passed
@@ -73,6 +69,7 @@ func newPopulation(c *Config) *popState {
 		birthCarry: make([]int64, regions*roles),
 		rowBirth:   make([]int64, regions), rowDeath: make([]int64, regions), cap: make([]int64, regions),
 		cnt: make([]popCount, roles), num: make([]int64, roles), group: make([]int64, roles),
+		extinctRun: make([]int64, regions), unfundedRun: make([]int64, regions), heldRun: make([]int64, regions*roles),
 	}
 	for g := range p.rowBirth {
 		p.rowBirth[g], p.rowDeath[g] = wholeBP, wholeBP
@@ -655,4 +652,129 @@ func (w *World) setPopulationScale(region RegionID, kind ScaleKind, bp int64) (b
 		return 0, false
 	}
 	return before, true
+}
+
+// changed reports whether any count other than the exposed, unfed and no-ratio
+// households is non-zero: the rule of emission of PopulationChanged
+// (spec-population.md 10.1, FR-POP-031).
+func (c *popCount) changed() bool {
+	return c.birthsDue|c.deathsDue|c.deathsCut|c.deathsHeld|c.birthsCapped|c.birthsUnfunded|c.clamped|c.birthsDone|c.deathsDone != 0
+}
+
+// popReport is the module's report of region g, called after the region's plan and
+// its EntryLimited (spec-population.md 10.1, 10.3, D432): one PopulationChanged
+// per role in role order when an observer was supplied, the three bounded Warns
+// and the Debug line. households is the region's households after the plan.
+func (w *World) popReport(g RegionID, households int64) {
+	p := w.pop
+	var due, capped, births, deaths int64
+	for r := range p.cnt {
+		c := &p.cnt[r]
+		due, capped = due+c.birthsDue, capped+c.birthsCapped
+		births, deaths = births+c.birthsDone, deaths+c.deathsDone
+		if w.obs.supplied && c.changed() {
+			w.obs.deliver(PopulationChanged{
+				Tick: w.Tick(), Region: g, Role: RoleID(r), Exposed: c.exposed, Unfed: c.unfed, NoRatio: c.noRatio,
+				BirthsDue: c.birthsDue, DeathsDue: c.deathsDue, DeathsCut: c.deathsCut, DeathsHeld: c.deathsHeld,
+				BirthsCapped: c.birthsCapped, BirthsUnfunded: c.birthsUnfunded, RateClamped: c.clamped,
+				BirthsDone: c.birthsDone, DeathsDone: c.deathsDone,
+			})
+		}
+	}
+	w.popWarns(g, households, due, due-capped > 0 && births == 0)
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "population step", slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Births, births), slog.Int64(logkeys.Deaths, deaths))
+	}
+}
+
+// popWarns advances the runs of the three Warns of spec-population.md 10.3 for
+// region g and logs each on the first tick of its condition and every tenth after
+// (pattern A): "region extinct" per region, "births unfunded" per region (births
+// were handed to the executor and none was funded) and "deaths held" per role.
+func (w *World) popWarns(g RegionID, households, due int64, unfunded bool) {
+	p, ctx := w.pop, context.Background()
+	run, warn := advanceRun(p.extinctRun[g], households == 0, true)
+	p.extinctRun[g] = run
+	if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "region extinct", slog.Int64(logkeys.Region, int64(g)))
+	}
+	run, warn = advanceRun(p.unfundedRun[g], unfunded, true)
+	p.unfundedRun[g] = run
+	if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "births unfunded", slog.Int64(logkeys.Region, int64(g)), slog.Int64(logkeys.Births, due))
+	}
+	for r := range p.cnt {
+		cell := int(g)*p.roles + r
+		run, warn = advanceRun(p.heldRun[cell], p.cnt[r].deathsHeld > 0, true)
+		p.heldRun[cell] = run
+		if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+			w.log.LogAttrs(ctx, slog.LevelWarn, "deaths held", slog.Int64(logkeys.Region, int64(g)),
+				slog.Int64(logkeys.Role, int64(r)), slog.Int64(logkeys.Deaths, p.cnt[r].deathsHeld))
+		}
+	}
+}
+
+// popSnapshotRegion fills the module's rows of region g from the view the
+// snapshot built: per role the household-weighted mean birth and death rates and
+// the natural increase at the agents' ratios, and the birth carry; per region the
+// cap (spec-population.md 10.4). It reads the rings and moves no carry.
+func (w *World) popSnapshotRegion(s *Snapshot, g RegionID, v *RegionView) {
+	p := w.pop
+	s.Regions[g].HouseholdCap = p.cap[g]
+	var weights, birth, death []int64
+	var present []bool
+	for r := range p.roles {
+		weights, birth, death, present = weights[:0], birth[:0], death[:0], present[:0]
+		for i := range v.Agents {
+			if ra := &v.Agents[i]; int(ra.Role) == r {
+				b, d, ok := w.popRates(g, ra)
+				weights, birth, death, present = append(weights, ra.Weight), append(birth, b), append(death, d), append(present, ok)
+			}
+		}
+		row := &s.Roles[int(g)*p.roles+r]
+		mb, md, n, ok := population.Means(weights, birth, death, present)
+		if !ok {
+			invariant("the mean population rates overflow after validation")
+		}
+		row.BirthRateBP, row.DeathRateBP, row.NaturalIncreaseBP = mb, md, n
+		row.BirthCarry = p.birthCarry[int(g)*p.roles+r]
+	}
+}
+
+// popRates returns the effective birth and death rate of an agent at its ratio and
+// whether it has one; an external agent has none (it is not exposed).
+func (w *World) popRates(g RegionID, ra *RegionAgent) (birth, death int64, ok bool) {
+	if ra.External {
+		return 0, 0, false
+	}
+	a := &w.agents[ra.Agent]
+	u := w.reads.cost.tick(w.roles.row(ra.Role).upkeepIn(g), w.ex.prices, a.weight)
+	ratio, ok := a.history.Ratio(u, w.cfg.Roles[ra.Role].DefaultRatio)
+	if !ok {
+		return 0, 0, false
+	}
+	p := w.pop
+	birth, _ = p.rate(p.birthK, ratio, p.effBirth[g])
+	death, _ = p.rate(p.deathK, ratio, p.effDeath[g])
+	return birth, death, true
+}
+
+// popSnapshot returns the module's figures of the snapshot: the replacement
+// ratio and the gain, derived from the configuration (spec-population.md 5.7,
+// 10.4). The zero value while the module is off.
+func (w *World) popSnapshot() PopulationState {
+	if w.pop == nil {
+		return PopulationState{}
+	}
+	rstar, _, dR, dX, ok := w.cfg.Modules.Population.replacementOf()
+	if !ok {
+		return PopulationState{}
+	}
+	gain, gok := population.Gain(rstar, dR, dX)
+	if !gok {
+		gain = 0
+	}
+	return PopulationState{ReplacementRatioBP: rstar, HasReplacement: true, GainBP: gain}
 }
