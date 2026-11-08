@@ -180,6 +180,26 @@ func DefaultSubsistence() SubsistenceConfig {
 	return SubsistenceConfig{EnterTicks: 2, ExitTicks: 3, RetryJobs: 10}
 }
 
+// DefaultPopulation returns the population module with the placeholder defaults
+// of spec-population.md 8: a flat birth schedule of 250 basis points a year and a
+// death schedule that falls from 450 to 50 between the ratios 8 000 and 16 000,
+// which cross at 12 000; one household kept per group; a full StartMoney stake.
+// None is the rate of any society (N-015, N-027).
+func DefaultPopulation() Population {
+	return Population{
+		BirthSchedule: []Knot{{Ratio: 8_000, Rate: 250}, {Ratio: 16_000, Rate: 250}},
+		DeathSchedule: []Knot{{Ratio: 8_000, Rate: 450}, {Ratio: 16_000, Rate: 50}},
+		MinHouseholds: 1,
+		BirthStake:    10_000,
+	}
+}
+
+// DefaultRegionPopulation returns the row of a region that has none: both scales
+// 10 000 (the schedule as written) and no household cap.
+func DefaultRegionPopulation(region string) RegionPopulation {
+	return RegionPopulation{Region: region, BirthScale: 10_000, DeathScale: 10_000}
+}
+
 // The defaults of the solve options (spec-viability.md 11), unexported for the
 // reason the bounds are: the options are not Config fields. Provisional
 // placeholders (N-015).

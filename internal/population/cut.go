@@ -18,14 +18,14 @@ func Cut(due, fed, group, floor int64) (take, cut, held int64) {
 }
 
 // Allow applies the household cap of a region to the births due: households is
-// the region's count after the tick's deaths, and a cap of 0 means no cap
+// the region's count after the tick's deaths, and a limit of 0 means no cap
 // (spec-population.md 4.4.2). allowed + dropped = due. Negative inputs count as
 // 0.
-func Allow(due, households, cap int64) (allowed, dropped int64) {
+func Allow(due, households, limit int64) (allowed, dropped int64) {
 	due, households = max(due, 0), max(households, 0)
-	if cap <= 0 {
+	if limit <= 0 {
 		return due, 0
 	}
-	allowed = min(due, max(cap-households, 0))
+	allowed = min(due, max(limit-households, 0))
 	return allowed, due - allowed
 }

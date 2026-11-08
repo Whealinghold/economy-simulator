@@ -84,12 +84,65 @@ type Modules struct {
 	// non-nil is on, even when empty. Its hash id is 8, whatever its place in
 	// this struct.
 	Subsistence *SubsistenceConfig
+	// Population is the population module: births and deaths as the formation and
+	// dissolution of households, driven by the household's own welfare ratio
+	// (spec-population.md). Nil is off; non-nil is on. Its hash id is 3, whatever
+	// its place in this struct.
+	Population *Population
 }
 
 // Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
 // no field: a non-nil pointer switches relief and the pool as a flow target on,
 // and the tunables are Region.PoolRelease and Region.ReliefBelow.
 type Estates struct{}
+
+// Population is the configuration of the population module (spec-population.md
+// 8). Start from DefaultPopulation: the zero value has no knot and does not
+// validate. The schedules are in knot order, the rows by region.
+type Population struct {
+	// BirthSchedule is the annual birth rate of a household by its welfare
+	// ratio, 1 to MaxKnots knots with ratios strictly increasing (spec-population.md
+	// 3.5).
+	BirthSchedule []Knot
+	// DeathSchedule is the annual death rate by ratio, with the bounds of
+	// BirthSchedule.
+	DeathSchedule []Knot
+	// MinHouseholds is the households a (region, role) group keeps against the
+	// schedule's deaths, 0 to MaxHouseholds (spec-population.md 4.4.1).
+	MinHouseholds int64
+	// BirthStake is the share of Role.StartMoney each born household brings, in
+	// basis points, 0 to 10 000 (spec-population.md 4.3).
+	BirthStake int64
+	// Regions are the region-keyed rows, one per region, by region in canonical
+	// order, 0 to MaxRegions. A region with no row has DefaultRegionPopulation.
+	Regions []RegionPopulation
+}
+
+// Knot is a point of a rate schedule (spec-population.md 3.5): the rate applies
+// at the ratio, linearly between two knots and flat outside the first and last.
+type Knot struct {
+	// Ratio is the welfare ratio in basis points, 0 to MaxBasisPoints.
+	Ratio int64
+	// Rate is the annual rate of a household at the ratio in basis points, 0 to
+	// 10 000 (every household once a year).
+	Rate int64
+}
+
+// RegionPopulation is the row of one region (spec-population.md 8). Start from
+// DefaultRegionPopulation.
+type RegionPopulation struct {
+	// Region is the ID of the region the row is for. One row per region.
+	Region string
+	// BirthScale multiplies the birth schedule in basis points, 0 to
+	// MaxBasisPoints (spec-population.md 3.6).
+	BirthScale int64
+	// DeathScale multiplies the death schedule in basis points, 0 to
+	// MaxBasisPoints.
+	DeathScale int64
+	// HouseholdCap is the most households the region holds; births beyond are
+	// dropped. 0 is none, to MaxHouseholds (spec-population.md 4.4.2).
+	HouseholdCap int64
+}
 
 // SubsistenceConfig is the configuration of the subsistence module
 // (spec-subsistence.md 3.2, 12). The zero value is a module that is on with no
@@ -874,6 +927,7 @@ func (c Config) canonical() Config {
 	out.Modules.MoneySupply = c.Modules.MoneySupply.canonical()
 	out.Modules.Resources = c.Modules.Resources.canonical(c.Calendar.Seasons)
 	out.Modules.Subsistence = c.Modules.Subsistence.canonical()
+	out.Modules.Population = c.Modules.Population.canonical()
 	return out
 }
 

@@ -310,6 +310,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.Subsistence != nil {
 		on = append(on, "subsistence")
 	}
+	if c.Modules.Population != nil {
+		on = append(on, "population")
+	}
 	return on
 }
 
