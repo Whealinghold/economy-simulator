@@ -447,6 +447,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `MoveOutShare` | Migration | `spec-migration.md` sections 7.3, 11 |
 | `MoveInShare` | Migration | `spec-migration.md` sections 7.5, 11 |
 | `Regions` | Migration (the region-keyed rows) | `spec-migration.md` section 11.2 |
+| `Regions` | Population (the region-keyed rows) | `spec-population.md` section 8 |
 | `Region` | RegionMove | `spec-migration.md` section 11.2 |
 | `OutShare` | RegionMove (replace) | `spec-migration.md` section 11.2 |
 | `InShare` | RegionMove (replace) | `spec-migration.md` section 11.2 |

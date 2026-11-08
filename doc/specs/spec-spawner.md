@@ -680,7 +680,7 @@ Warnings (never fail validation):
 
 `GoodsListed` counts lots: one per distinct lot key (commodity, born, durability) of the holdings that moved to the estate, whatever the unit count; units travel separately in `WeightChanged.Units`.
 
-13.1.0. With the population module on, `PopulationChanged` (`spec-population.md` 10.1) follows `EntryLimited` in the order of the events of a region's entry step.
+13.1.0. With the population module on, `PopulationChanged` (`spec-population.md` 10.1) follows `EntryLimited` in the order of the events of a region's entry step. The households of a birth that the pool could not fund are counted in `EntryLimited.Unfunded` too, since a birth is an `Enter` (FR-SPN-008), and so enter the run of the "entry unfunded" `Warn`; `PopulationChanged.BirthsUnfunded` counts them again for the module.
 
 13.1.1. **`AgentBankrupted` is the only event that removes the agent.** Its name is
 historical: `Cause` says why (`insolvent`, `starved`, `consumer`, `population`), so

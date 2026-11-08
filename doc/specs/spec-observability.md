@@ -1263,8 +1263,10 @@ less `outside_unspent`, and `outside_receipts`), and per node it is the sum of
 #### 5.3.10 The population module
 
 `Population PopulationState`: `ReplacementRatioBP` (`r*`, the ratio where births
-equal deaths) and `GainBP` (the module's gain, in the unit of `spec-population.md`
-5), both functions of the configuration. Cost D. The region and role rows above
+equal deaths), `HasReplacement` (a bool: false when the schedules have no replacement
+ratio, so a `ReplacementRatioBP` of 0 is not read as one) and `GainBP` (the gain `k` of
+`spec-population.md` 5.4 at `eta` 1, `trunc(r* * dRate / dRatio)`, in basis points a year),
+all functions of the configuration. Cost D. The region and role rows above
 carry the rest (`BirthRateBP`, `DeathRateBP`, `NaturalIncreaseBP`, `BirthCarry`,
 `HouseholdCap`). Source POP 10.4.
 

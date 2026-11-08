@@ -309,7 +309,7 @@ the table of `spec-world.md` 6 (testing.md 6.8). It is staged as 9.7 is:
 call, one explicit list `notBuiltPositions` names the positions that have no
 call yet, and the test fails on a listed position that has a call and on a spec
 position that is neither called nor listed. A module's change deletes its
-entries and appends its guarded call. Each entry says `where` it runs, `line`
+entries and appends its guarded call. A sub-step of a position (P7.1(b) of the population module, `spec-world.md` 6) is a guarded call inside the position's method, not a position: `tick.go` and its tables do not change for it. Each entry says `where` it runs, `line`
 (a call in the straight line) or `bracket` (run inside `beginStep` or
 `endStep`), as testing.md 6.8 says.
 
@@ -350,6 +350,8 @@ appends its entries to `event.go`, `errors.go`, `Config.Modules`, the
 checkpoint tags and `tick.go`'s guarded calls, and a hook that is a list of calls
 is appended the same way; nothing is inserted or renumbered, because the configuration hash and the checkpoint format depend
 on the order (`spec-config.md` 3.2, `spec-checkpoint.md` 4.2).
+
+Where the order in which modules are built differs from the order of the `Modules` row, only the hash id follows the row (`spec-config.md` 8.2.2): the module's Go lines (its `Modules` field, `canonical`, `modulesOn`) are appended in Go order after what is already there, and nothing is renumbered or moved.
 
 An append **MUST** leave no trace while it is off. A module that is off, and a
 field appended to an existing struct, event or snapshot row at its off value,
@@ -1049,4 +1051,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 2f68b9222aaf650c4726aeb9
+RULE-TAG: c7d80e9005618253b7b94468
