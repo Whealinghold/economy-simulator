@@ -234,16 +234,16 @@ all-on from it).
 | Create | Specs | Plan | Status |
 | --- | --- | --- | --- |
 | Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | [2-1](plans/plan-2-1.md) | plan written |
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | [2-2](plans/plan-2-2.md) | plan written |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | [2-3](plans/plan-2-3.md) | plan written |
-| `scale.go` (weights, the census) | SCL | [2-4](plans/plan-2-4.md) | plan written |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | [2-5](plans/plan-2-5.md) | plan written |
-| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | [2-6](plans/plan-2-6.md) | plan written |
-| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | plan written |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | [2-2](plans/plan-2-2.md) | merged |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | [2-3](plans/plan-2-3.md) | merged |
+| `scale.go` (weights, the census) | SCL | [2-4](plans/plan-2-4.md) | merged |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | [2-5](plans/plan-2-5.md) | merged |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | [2-6](plans/plan-2-6.md) | merged |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | merged |
 | Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | [2-8](plans/plan-2-8.md) | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; no pack or golden moved |
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | merged (PRs A, B, C) |
 | `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
-| `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | plan written |
+| `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | in progress |
 | `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
 | `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
 | `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
