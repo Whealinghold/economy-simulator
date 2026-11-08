@@ -3,10 +3,12 @@ package economysim
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/endowment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -777,4 +779,105 @@ func (w *World) popSnapshot() PopulationState {
 		gain = 0
 	}
 	return PopulationState{ReplacementRatioBP: rstar, HasReplacement: true, GainBP: gain}
+}
+
+// restoreCarry puts the death carry read from the agent record of id in the slice,
+// growing it with the start of every id it has not seen (spec-population.md 11).
+func (p *popState) restoreCarry(id AgentID, carry int64) {
+	for i := len(p.deathCarry); i <= int(id); i++ {
+		p.deathCarry = append(p.deathCarry, population.Offset(int64(i), p.denom))
+	}
+	p.deathCarry[id] = carry
+}
+
+// badDeathCarry reports whether the DeathCarry of an agent record cannot be right:
+// with the module on any value in [0, D); with it off, the start of the id, which
+// nothing moves (spec-checkpoint.md R10).
+func (w *World) badDeathCarry(id AgentID, carry int64) bool {
+	if w.pop != nil {
+		return carry < 0 || carry >= w.pop.denom
+	}
+	return carry != w.deathCarry(id)
+}
+
+// savePopulation writes tag 14 (spec-checkpoint.md 4.2, spec-population.md 11), all
+// sparse and in a fixed order: the birth carry by (region, role); the effective
+// scales that differ from the configured row as (region, kind, value) with kind 0
+// for birth and 1 for death; then the runs of "births unfunded" by region, "deaths
+// held" by (region, role) and "region extinct" by region. The death carry is in the
+// agent record (tag 3) and is not written again.
+func (w *World) savePopulation(cw *codec.Writer) error {
+	p := w.pop
+	writeSparse(cw, p.birthCarry, p.roles)
+	n := 0
+	for g := range p.effBirth {
+		n += b2i(p.effBirth[g] != p.rowBirth[g]) + b2i(p.effDeath[g] != p.rowDeath[g])
+	}
+	cw.Count(n)
+	for g := range p.effBirth {
+		if p.effBirth[g] != p.rowBirth[g] {
+			cw.U(uint64(g))
+			cw.U(0)
+			cw.U(unsigned(p.effBirth[g]))
+		}
+		if p.effDeath[g] != p.rowDeath[g] {
+			cw.U(uint64(g))
+			cw.U(1)
+			cw.U(unsigned(p.effDeath[g]))
+		}
+	}
+	writeSparseByRegion(cw, p.unfundedRun)
+	writeSparse(cw, p.heldRun, p.roles)
+	writeSparseByRegion(cw, p.extinctRun)
+	return nil
+}
+
+// b2i is 1 for true and 0 for false.
+func b2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// loadPopulation reads tag 14: a birth carry from 1 to D - 1, a scale that is not
+// the configured one with its keys strictly ascending, and runs from 1 to the ticks
+// elapsed; a row at its default or out of order is corrupt (R10).
+func (w *World) loadPopulation(rs *restoreCtx, r *codec.Reader) error {
+	p, regions := w.pop, len(w.cfg.Regions)
+	readSparse(r, p.birthCarry, regions, p.roles, p.denom-1)
+	n, prev := r.Count(3), uint64(0)
+	for i := range n {
+		g, kind := r.Index(uint64(regions)), r.Index(2)
+		v := r.Bounded("scale", MaxBasisPoints)
+		key := g*2 + kind
+		eff, row := p.effBirth, p.rowBirth
+		if kind == 1 {
+			eff, row = p.effDeath, p.rowDeath
+		}
+		if r.Err() != nil {
+			return nil
+		}
+		if (i > 0 && key <= prev) || v == row[g] {
+			r.Failf("scale row (region %d, kind %d) is the configured value or out of order", g, kind)
+			return nil
+		}
+		eff[g], prev = v, key
+	}
+	readSparseByRegion(r, p.unfundedRun, rs.tick)
+	readSparse(r, p.heldRun, regions, p.roles, rs.tick)
+	readSparseByRegion(r, p.extinctRun, rs.tick)
+	return nil
+}
+
+// populationCross is the module's part of the cross-checks of a restore: a closed
+// role's birth carry never advances, so it is 0 (spec-population.md 3.7.3).
+func (w *World) populationCross() error {
+	p := w.pop
+	for cell, c := range p.birthCarry {
+		if c != 0 && w.cfg.Roles[cell%p.roles].Closed {
+			return fmt.Errorf("%w: region %d, role %d is closed and has a birth carry %d", ErrCheckpointCorrupt, cell/p.roles, cell%p.roles, c)
+		}
+	}
+	return nil
 }

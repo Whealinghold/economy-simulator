@@ -408,3 +408,10 @@ func StepGrants(w *World, grant func(agent AgentID, asked, granted int64)) error
 		}
 	})
 }
+
+// SetPopulationScale sets the effective birth or death scale of a region, state
+// only (population.go); false when the module is off or the call is refused.
+func SetPopulationScale(w *World, region RegionID, kind ScaleKind, bp int64) bool {
+	_, ok := w.setPopulationScale(region, kind, bp)
+	return ok
+}

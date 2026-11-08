@@ -521,8 +521,8 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 		return fmt.Errorf("agent %d has weight %d or a strategy %q that is not its role's", rec.id, rec.weight, names[rec.nameIdx])
 	case rec.since < 0 || rec.since > rs.tick:
 		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
-	case rec.carry != w.deathCarry(id):
-		return fmt.Errorf("agent %d has DeathCarry %d, not its start %d, while the population module is off", rec.id, rec.carry, w.deathCarry(id))
+	case w.badDeathCarry(id, rec.carry):
+		return fmt.Errorf("agent %d has DeathCarry %d, which is not its start while the population module is off and outside 0 to D with it on", rec.id, rec.carry)
 	case rec.journey || w.sub.recordBad(rec.ownUse, rec.ownUseJobs):
 		return fmt.Errorf("agent %d has own-use or journey state its module does not allow", rec.id)
 	}
@@ -549,6 +549,9 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 	w.agents[rec.id] = a
 	if w.sub != nil {
 		w.sub.restoreAgent(a.id, rec.ownUse, rec.ownUseJobs)
+	}
+	if w.pop != nil {
+		w.pop.restoreCarry(a.id, rec.carry)
 	}
 	w.live.agents++
 	w.live.households += rec.weight

@@ -52,8 +52,12 @@ func (w *World) strategyName(a *agent) string { return w.cfg.Roles[a.role].Strat
 // ticks of ten thousand years. The population module owns the field and is not
 // built; the agent record always carries its value, so that the bytes of tag 3 do
 // not change when the module lands (spec-checkpoint.md R10, N-217). With the
-// module off the carry never moves from it.
+// module off the carry never moves from it; with it on the module's slice is the
+// value (popState.carryOf).
 func (w *World) deathCarry(id AgentID) int64 {
+	if w.pop != nil {
+		return w.pop.carryOf(id) // the module moves it; its slice is the value source (plan 2-11 D423)
+	}
 	// Excluded from coverage (testing.md 9.5): validation bounds the calendar, so
 	// neither product overflows and the two checks only name a violated invariant.
 	d, ok := checked.Mul(wholeBP, w.cfg.Calendar.TicksPerYear())
