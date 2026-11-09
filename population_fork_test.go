@@ -7,23 +7,20 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// populationOne is pack one with the population module on at flat rates of 2 000 a
-// year (about a third of a birth and of a death per tick over its 600 households)
-// and a floor of 40 households, which holds every death of the digger group (30
-// households) at once, so a "deaths held" run is non-zero at a fork after the
-// first tick.
+// populationOne is pack one with overlay/population-low.toml (the module alone,
+// crossing at 9 500, a cap of 560) and a floor of 40 households, which holds every
+// death of the digger group (30 households) at once, so a "deaths held" run can be
+// non-zero at a fork.
 func populationOne(t testing.TB) economysim.Config {
-	cfg := loadValidPack(t, packOne...)
-	mod := economysim.DefaultPopulation()
-	mod.BirthSchedule = []economysim.Knot{{Ratio: 0, Rate: 2_000}}
-	mod.DeathSchedule = []economysim.Knot{{Ratio: 0, Rate: 2_000}}
+	cfg := loadValidPack(t, packOnePopulation...)
+	mod := *cfg.Modules.Population
 	mod.MinHouseholds = 40
 	cfg.Modules.Population = &mod
 	return cfg
 }
 
 // TestFork_Population verifies the fork-at-N of pack one with the population module
-// on: at N in {0, 37, 211} and after a call between ticks that sets a death scale,
+// on (the overlay with a floor of 40): at N in {0, 37, 211} and after a call between ticks that sets a death scale,
 // the original and two restores give the same events, snapshot, audit and
 // checkpoint bytes for 30 ticks. The checkpoint holds the death carries, the birth
 // carries, the shock scale and a non-zero run of "deaths held".

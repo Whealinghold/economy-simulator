@@ -42,6 +42,8 @@ func TestPacks_LoadValidateAndHash(t *testing.T) {
 	}{
 		{"pack one", []string{"base.toml", "one.toml", "warm-one.toml"}, 7, "9abf7b8fa64bc36b9f223f7d195b81e7934fa9d88c297085ca4128d0a98275a0"},
 		{"pack second", []string{"second/second.toml", "second/warm-second.toml"}, 5, "388a7d7e47361f9948027dd52d037baebd484fa4a99cdf26a07a010581d5ff8a"},
+		{"pack one with population-low", []string{"base.toml", "one.toml", "warm-one.toml", "overlay/population-low.toml"}, 7, "41ad13d266be7a9d79c9a17e65f181d736a6e9d5e638e58338d9fe65f85a8bf4"},
+		{"pack one with resources-binding and population", []string{"base.toml", "one.toml", "warm-one.toml", "overlay/resources-binding.toml", "overlay/population.toml"}, 7, "2a6950bedcaf08b4833034581413494d4aa4dbfaeb6196935413c27ea9f47542"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
