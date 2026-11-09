@@ -1,0 +1,18 @@
+# The population module alone on pack one, crossing at 9 500 (plan 2-11 D438, spec-reference-chain.md 7.1.5):
+# the birth rate is flat at 250 basis points a year and the death rate falls from 450 at a ratio of 8 000 to
+# 50 at 11 000, so the two meet at 8 000 + (450 - 250) * 3 000 / 400 = 9 500, below the closed ceiling
+# of pack one (no replacement_above_closed_ceiling). One region row caps north at 560 households (the pack
+# starts with 600 and shrinks), so births, deaths and a capped birth all occur. The world's renewal is 0. A test double.
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, this file.
+
+[world]
+renewal = 0
+
+[modules.population]
+birth_schedule = [ { ratio = 8000, rate = 250 }, { ratio = 16000, rate = 250 } ]
+death_schedule = [ { ratio = 8000, rate = 450 }, { ratio = 11000, rate = 50 } ]
+min_households = 1
+birth_stake = 10000
+
+[modules.population.region.north]
+household_cap = 560
