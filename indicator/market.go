@@ -93,7 +93,11 @@ func Pinned(w Window, sel CellSel) (PinnedResult, error) {
 		if b.Ticks == 0 && m.Stuck == 0 {
 			return nil
 		}
-		share, err := ratioWide("Pinned", "share", measure.FromInt64(b.AtFloor+b.AtCeiling), measure.FromInt64(b.Outcomes))
+		pinned, err := net("Pinned", "pinned", []int64{b.AtFloor, b.AtCeiling})
+		if err != nil {
+			return err
+		}
+		share, err := ratioWide("Pinned", "share", measure.FromInt64(pinned), measure.FromInt64(b.Outcomes))
 		res.Rows = append(res.Rows, PinnedRow{Region: r, Commodity: c, Share: share, Outcomes: b.Outcomes, AtFloor: b.AtFloor, AtCeiling: b.AtCeiling, Stuck: m.Stuck})
 		return err
 	})
@@ -129,7 +133,7 @@ func Dispersion(w Window, sel CellSel) (DispersionResult, error) {
 		}
 		row := DispersionRow{Region: r, Commodity: c, LowCentre: b.LowCentre, HighCentre: b.HighCentre, MeanCentre: b.MeanCentre}
 		var err error
-		row.Spread, err = ratioWide("Dispersion", "spread", measure.FromInt64(int64(b.HighCentre-b.LowCentre)), measure.FromInt64(int64(b.MeanCentre)))
+		row.Spread, err = ratioWide("Dispersion", "spread", mustSub(int64(b.HighCentre), int64(b.LowCentre)), measure.FromInt64(int64(b.MeanCentre)))
 		row.Lowest = Index{Value: b.Lowest, OK: b.HasLowest}
 		res.Rows = append(res.Rows, row)
 		return err
@@ -172,7 +176,7 @@ func Offset(w Window, p, ref Prices, sel CellSel) (OffsetResult, error) {
 	res := OffsetResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
 	err := forMarkets(w, sel, func(i int, r economysim.RegionID, c economysim.CommodityID) error {
 		pr, rf := p.At(r, c), ref.At(r, c)
-		diff, err := ratioWide("Offset", "diff", measure.FromInt64(int64(pr-rf)), measure.FromInt64(int64(rf)))
+		diff, err := ratioWide("Offset", "diff", mustSub(int64(pr), int64(rf)), measure.FromInt64(int64(rf)))
 		if rf <= 0 {
 			diff = Index{}
 		}
@@ -228,8 +232,8 @@ type CoverResult struct {
 // n ticks, and the unsold share rdiv(10 000 * Estate, Held), and the same for the
 // selection as a whole.
 func StockCover(w Window, closing economysim.Snapshot, sel CellSel) (CoverResult, error) {
-	if closing.ConfigHash != w.ConfigHash || closing.Tick != w.To {
-		return CoverResult{}, wrap("StockCover", "snapshot", ErrWindowOrder)
+	if err := w.checkClosing("StockCover", closing); err != nil {
+		return CoverResult{}, err
 	}
 	st, err := stocksOf(closing, w.Regions, w.Commodities)
 	if err != nil {

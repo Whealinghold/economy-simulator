@@ -41,7 +41,11 @@ func foldPending(rows *[]economysim.FlowTotal, p economysim.FlowTotal, sign int6
 	if !found {
 		*rows = slices.Insert(*rows, i, economysim.FlowTotal{Region: p.Region, Reason: p.Reason, Kind: p.Kind, Commodity: p.Commodity})
 	}
-	sum, ok := measure.FromInt64((*rows)[i].Total).Add(measure.FromInt64(sign * p.Total))
+	delta := measure.FromInt64(p.Total)
+	if sign < 0 {
+		delta = delta.Neg()
+	}
+	sum, ok := measure.FromInt64((*rows)[i].Total).Add(delta)
 	v, fits := measure.ToInt64(sum)
 	if !ok || !fits {
 		return wrap("Window.Corrected", string(p.Reason), ErrOverflow)

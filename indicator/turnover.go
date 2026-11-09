@@ -43,8 +43,8 @@ func Turnover(w Window, closing economysim.Snapshot, ticksPerYear int64, sel Cel
 	if ticksPerYear < 1 {
 		return TurnoverResult{}, wrap("Turnover", "ticks per year", ErrRange)
 	}
-	if closing.ConfigHash != w.ConfigHash || closing.Tick != w.To {
-		return TurnoverResult{}, wrap("Turnover", "snapshot", ErrWindowOrder)
+	if err := w.checkClosing("Turnover", closing); err != nil {
+		return TurnoverResult{}, err
 	}
 	if len(closing.Regions) != w.Regions {
 		return TurnoverResult{}, wrap("Turnover", "regions", ErrRange)
@@ -79,6 +79,7 @@ func Turnover(w Window, closing economysim.Snapshot, ticksPerYear int64, sel Cel
 	if thin {
 		res.Warnings = []Warning{WarnThin}
 	}
+	res.Warnings = clampWarning(res.Warnings, res.Velocity, res.Annualised)
 	return res, nil
 }
 

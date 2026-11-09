@@ -126,17 +126,22 @@ func commodityIDs(cfg economysim.Config) map[string]economysim.CommodityID {
 // classValues returns, for the all row and each class, the value of a dense
 // table of units at the prices of each region.
 func classValues(preset string, w Window, units []int64, p Prices, cl Classes) ([]ClassRow, error) {
-	names := append([]string{""}, cl.Names()...)
+	cs, err := classSetsOf(cl)
+	if err != nil {
+		return nil, err
+	}
+	names, sets := append([]string{""}, cs.names...), append([][]economysim.CommodityID{cl.All()}, cs.sets...)
+	for _, set := range sets {
+		for _, c := range set {
+			if c < 0 || int(c) >= w.Commodities {
+				return nil, wrap(preset, "class", ErrRange)
+			}
+		}
+	}
 	var out []ClassRow
 	for r := 0; r < w.Regions; r++ {
-		for _, name := range names {
-			set := cl.All()
-			if name != "" {
-				var err error
-				if set, err = cl.Of(name); err != nil {
-					return nil, err
-				}
-			}
+		for n, name := range names {
+			set := sets[n]
 			var a acc
 			for _, c := range set {
 				a.add(units[r*w.Commodities+int(c)], p.At(economysim.RegionID(r), c))

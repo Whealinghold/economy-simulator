@@ -253,3 +253,29 @@ func FuzzRank(f *testing.F) {
 		}
 	})
 }
+
+// TestQuantiles_MatchesQuantile verifies that Quantiles gives, in the order
+// asked, the value Quantile gives for each q, and the same errors, with one sort.
+func TestQuantiles_MatchesQuantile(t *testing.T) {
+	t.Parallel()
+	rows := []measure.Row{{1, 5}, {2, 8}, {1, 9}, {3, 3}} // values 5, 4, 9, 1; W = 7
+	qs := []int64{9000, 0, 5000, 1000, 10_000}
+	got, ok, err := measure.Quantiles(rows, qs...)
+	if err != nil || !ok || len(got) != len(qs) {
+		t.Fatalf("Quantiles(%v, %v) = %v, %v, %v, want one value per q", rows, qs, got, ok, err)
+	}
+	for i, q := range qs {
+		if want, _, _ := measure.Quantile(rows, q); got[i] != want {
+			t.Errorf("Quantiles(%v, %v)[%d] = %d, want Quantile(q=%d) = %d", rows, qs, i, got[i], q, want)
+		}
+	}
+	if _, ok, err := measure.Quantiles(nil, 5000); ok || err != nil {
+		t.Errorf("Quantiles(no rows) = %v, %v, want not ok, nil", ok, err)
+	}
+	if _, _, err := measure.Quantiles(rows, 5000, 10_001); !errors.Is(err, measure.ErrRange) {
+		t.Errorf("Quantiles(q above 10 000) error = %v, want ErrRange", err)
+	}
+	if _, _, err := measure.Quantiles(nil, -1); !errors.Is(err, measure.ErrRange) {
+		t.Errorf("Quantiles(no rows, q below 0) error = %v, want ErrRange", err)
+	}
+}

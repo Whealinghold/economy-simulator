@@ -52,6 +52,18 @@ func bindingWarning(w Window) []Warning {
 	return nil
 }
 
+// clampWarning adds WarnClamped to ws, in ascending order, when any of the
+// indices was held at MaxIndexBP.
+func clampWarning(ws []Warning, ixs ...Index) []Warning {
+	for _, ix := range ixs {
+		if ix.Clamped && !slices.Contains(ws, WarnClamped) {
+			ws = append(ws, WarnClamped)
+			slices.Sort(ws)
+		}
+	}
+	return ws
+}
+
 // withWarnings returns the base warnings plus the binding one, in ascending
 // order.
 func withWarnings(w Window, base ...Warning) []Warning {

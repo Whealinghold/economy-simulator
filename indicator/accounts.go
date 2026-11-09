@@ -119,6 +119,18 @@ func (w Window) checkSnapshots(preset string, open, closing economysim.Snapshot)
 	return nil
 }
 
+// checkClosing verifies that one snapshot closes the window: its configuration
+// (ErrConfigMismatch) and its tick (ErrWindowOrder).
+func (w Window) checkClosing(preset string, closing economysim.Snapshot) error {
+	if closing.ConfigHash != w.ConfigHash {
+		return wrap(preset, "snapshot", ErrConfigMismatch)
+	}
+	if closing.Tick != w.To {
+		return wrap(preset, "snapshot", ErrWindowOrder)
+	}
+	return nil
+}
+
 // unitTables is the corrected unit flows of a window by (region, commodity).
 type unitTables struct {
 	out, in, cons, want, spoil, disp, wear, haul, feed, loss []int64
@@ -352,6 +364,7 @@ func GDP(w Window, open, closing economysim.Snapshot, p Prices) (GDPResult, erro
 // accounts is what the three views of a window read: its unit flows and the
 // stocks of the two snapshots.
 type accounts struct {
+	f      flowSet
 	u      unitTables
 	st, op stockTable
 }
@@ -369,7 +382,7 @@ func loadAccounts(preset string, w Window, open, closing economysim.Snapshot, p 
 	if err != nil {
 		return accounts{}, err
 	}
-	var a accounts
+	a := accounts{f: f}
 	if a.u, err = loadUnits(w, f); err != nil {
 		return accounts{}, err
 	}

@@ -97,10 +97,7 @@ func Sectors(w Window, open, closing economysim.Snapshot, p Prices) (SectorsResu
 	if len(open.Regions) != w.Regions || len(closing.Regions) != w.Regions {
 		return SectorsResult{}, wrap("Sectors", "regions", ErrRange)
 	}
-	f, err := flowsOf(w)
-	if err != nil {
-		return SectorsResult{}, err
-	}
+	f := in.f
 	res := SectorsResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To, Warnings: withWarnings(w)}
 	var realm sectorAcc
 	for r := 0; r < w.Regions; r++ {

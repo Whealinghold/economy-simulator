@@ -2,6 +2,7 @@ package indicator_test
 
 import (
 	"errors"
+	"math"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -136,8 +137,13 @@ func TestUnfed_DenominatorIsTheRunningCount(t *testing.T) {
 	}
 	other := closing
 	other.Tick++
+	if _, err := indicator.Unfed(w, other); !errors.Is(err, indicator.ErrWindowOrder) {
+		t.Errorf("Unfed(snapshot of another tick) error = %v, want ErrWindowOrder", err)
+	}
+	other.Tick--
+	other.ConfigHash = [32]byte{1}
 	if _, err := indicator.Unfed(w, other); !errors.Is(err, indicator.ErrConfigMismatch) {
-		t.Errorf("Unfed(snapshot of another tick) error = %v, want ErrConfigMismatch", err)
+		t.Errorf("Unfed(snapshot of another world) error = %v, want ErrConfigMismatch", err)
 	}
 	other = valleySnap(12, [4]int64{})
 	other.Roles = append(other.Roles, economysim.RoleRow{Region: 0, Role: 9})
@@ -254,5 +260,17 @@ func TestRealWage_Misuse(t *testing.T) {
 	p, _ = indicator.PricesOfSnapshot(s)
 	if _, err := indicator.RealWage(cfg, s, p); !errors.Is(err, indicator.ErrRange) {
 		t.Errorf("RealWage(upkeep of an unknown commodity) error = %v, want ErrRange", err)
+	}
+}
+
+// TestSwing_SpanPastInt64IsUndefined verifies that a swing that does not fit
+// int64 is reported as undefined and never wrapped.
+//
+// Requirement: FR-IND-009
+func TestSwing_SpanPastInt64IsUndefined(t *testing.T) {
+	t.Parallel()
+	series := []indicator.Point{{Tick: 1, Value: math.MinInt64}, {Tick: 2, Value: math.MaxInt64}}
+	if s, ok := indicator.Swing(series); ok {
+		t.Errorf("Swing(MinInt64, MaxInt64) = %d, %v, want undefined", s, ok)
 	}
 }

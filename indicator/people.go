@@ -158,8 +158,8 @@ type UnfedResult struct {
 // are fed; a household is counted by its weight, so an agent of weight 6 unfed
 // is 6. closing supplies the share at the boundary.
 func Unfed(w Window, closing economysim.Snapshot) (UnfedResult, error) {
-	if closing.ConfigHash != w.ConfigHash || closing.Tick != w.To {
-		return UnfedResult{}, wrap("Unfed", "snapshot", ErrConfigMismatch)
+	if err := w.checkClosing("Unfed", closing); err != nil {
+		return UnfedResult{}, err
 	}
 	atClose, err := unfedAtClose(w, closing)
 	if err != nil {
@@ -299,7 +299,8 @@ func Swing(points []Point) (int64, bool) {
 		return 0, false
 	}
 	s := Stats(points)
-	return s.High.Value - s.Low.Value, true
+	d, fits := measure.ToInt64(mustSub(s.High.Value, s.Low.Value))
+	return d, fits // a span past int64 is undefined, not wrapped
 }
 
 // WageRow is the real wage of one (region, role): the observed wage per working

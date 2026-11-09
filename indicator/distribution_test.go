@@ -226,3 +226,18 @@ func TestHouseholdIncome_NotAvailableInVersion1(t *testing.T) {
 func TestHouseholdIncome_BookedFromRoleRowFields(t *testing.T) {
 	t.Skip("N-130 item 1: RoleRow has no IncomeLast, ReliefLast or CostLast yet; owner Stage 3 (D574)")
 }
+
+// TestRowsOf_AbsentRatioIsNotRead verifies that an agent with no upkeep (no
+// ratio) is counted as absent without its ratio field being multiplied by its
+// weight, so a garbage value there cannot fail the whole call.
+//
+// Guard: the product is checked and would return ErrOverflow for a row that is
+// meant to be skipped.
+func TestRowsOf_AbsentRatioIsNotRead(t *testing.T) {
+	t.Parallel()
+	st := []indicator.AgentRow{{Weight: 1 << 40, WelfareRatioBP: 1 << 40}, {Weight: 2, WelfareRatioBP: 5000, HasWelfareRatio: true}}
+	set, err := indicator.RowsOf(st, indicator.ColWelfareRatio, indicator.RowOpt{})
+	if err != nil || set.Absent != 1<<40 || len(set.Rows) != 1 {
+		t.Errorf("RowsOf(absent ratio, huge weight) = %+v, %v, want 1<<40 absent and one row", set, err)
+	}
+}

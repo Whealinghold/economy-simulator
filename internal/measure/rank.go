@@ -75,22 +75,41 @@ func rankOf(q int64, w uint64) uint64 {
 // negative. ok is false when there are no rows; err is ErrRange for a weight
 // below 1 or q outside the range and ErrOverflow for a weight sum past uint64.
 func Quantile(rows []Row, q int64) (value int64, ok bool, err error) {
-	w, err := weightSum(rows)
-	switch {
-	case err != nil:
+	vs, ok, err := Quantiles(rows, q)
+	if !ok || err != nil {
 		return 0, false, err
-	case q < 0 || q > bpScale:
-		return 0, false, ErrRange
 	}
-	k, cum := rankOf(q, w), uint64(0)
-	for _, i := range order(rows) {
-		if cum += uint64(rows[i].Weight); cum >= k {
-			v, _ := RoundDiv(FromInt64(rows[i].Total), FromInt64(rows[i].Weight))
-			n, _ := ToInt64(v)
-			return n, true, nil
+	return vs[0], true, nil
+}
+
+// Quantiles returns the quantile of each q, as Quantile does, sorting the rows
+// once for all of them. The values are in the order of qs.
+func Quantiles(rows []Row, qs ...int64) (values []int64, ok bool, err error) {
+	w, err := weightSum(rows)
+	if err != nil {
+		return nil, false, err
+	}
+	for _, q := range qs {
+		if q < 0 || q > bpScale {
+			return nil, false, ErrRange
 		}
 	}
-	return 0, false, nil // no rows: with rows the cumulative weight ends at W >= k
+	if len(rows) == 0 {
+		return nil, false, nil
+	}
+	idx := order(rows)
+	values = make([]int64, len(qs))
+	for n, q := range qs {
+		k, cum := rankOf(q, w), uint64(0)
+		for _, i := range idx {
+			if cum += uint64(rows[i].Weight); cum >= k {
+				v, _ := RoundDiv(FromInt64(rows[i].Total), FromInt64(rows[i].Weight))
+				values[n], _ = ToInt64(v)
+				break
+			}
+		}
+	}
+	return values, true, nil
 }
 
 // ShareBelow returns the share, in basis points and half to even, of the

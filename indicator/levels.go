@@ -79,9 +79,10 @@ func BasketLevel(cfg economysim.Config, s economysim.Snapshot) (BasketResult, er
 		if err != nil {
 			return BasketResult{}, err
 		}
-		if row.StaleOK && row.Stale > 0 {
-			res.Warnings = []Warning{WarnStale}
+		if row.StaleOK && row.Stale > 0 && !slices.Contains(res.Warnings, WarnStale) {
+			res.Warnings = append(res.Warnings, WarnStale)
 		}
+		res.Warnings = clampWarning(res.Warnings, row.Level)
 		res.Rows = append(res.Rows, row)
 	}
 	return res, nil
@@ -161,7 +162,9 @@ func DeliveredPrice(w Window, haul []economysim.CommodityID, p Prices) (Delivere
 			}
 			l := lane
 			l.Commodity = a.Commodity
-			l.Delivered = int64(p.At(d.Origin, a.Commodity)) + l.Freight
+			if l.Delivered, err = net("DeliveredPrice", "delivered", []int64{int64(p.At(d.Origin, a.Commodity)), l.Freight}); err != nil {
+				return DeliveredResult{}, err
+			}
 			res.Lanes = append(res.Lanes, l)
 		}
 	}
@@ -247,7 +250,10 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 	}
 	mean, err := ratioWide("PriceGap", "mean_spread", sum.v, measure.FromInt64(res.Pairs*10_000))
 	res.MeanSpread = mean
-	res.Warnings = withWarnings(w)
+	res.Warnings = clampWarning(withWarnings(w), mean)
+	for _, row := range res.Rows {
+		res.Warnings = clampWarning(res.Warnings, row.Spread, row.GapAfterFreightBP)
+	}
 	if res.Unconnected > 0 {
 		res.Warnings = append(res.Warnings, WarnNoRoute)
 		slices.Sort(res.Warnings)
@@ -286,21 +292,23 @@ func gapRow(p Prices, dl DeliveredResult, g economysim.Graph, o, d economysim.Re
 	}
 	co, cok := g.Component(o)
 	cd, dok := g.Component(d)
-	row := GapRow{Origin: o, Destination: d, Commodity: c, GapLocal: pd - po, Connected: cok && dok && co == cd}
+	row := GapRow{Origin: o, Destination: d, Commodity: c, Connected: cok && dok && co == cd}
 	var err error
-	if row.Spread, err = ratioWide("PriceGap", "spread", measure.FromInt64(2*abs64(pd-po)), measure.FromInt64(pd+po)); err != nil {
+	if row.GapLocal, err = net("PriceGap", "gap", []int64{pd}, po); err != nil {
+		return GapRow{}, false, err
+	}
+	// both prices are above 0, so the 128-bit difference and sum cannot overflow
+	diff, _ := measure.FromInt64(pd).Sub(measure.FromInt64(po))
+	if diff.Sign() < 0 {
+		diff = diff.Neg()
+	}
+	twice, _ := diff.Add(diff)
+	mean2, _ := measure.FromInt64(pd).Add(measure.FromInt64(po))
+	if row.Spread, err = ratioWide("PriceGap", "spread", twice, mean2); err != nil {
 		return GapRow{}, false, err
 	}
 	err = row.afterFreight(dl, pd)
 	return row, true, err
-}
-
-// abs64 is the magnitude of v; the prices it is given are far from the minimum.
-func abs64(v int64) int64 {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // afterFreight sets the gap against the delivered price of the lane, if any.
@@ -308,7 +316,10 @@ func (row *GapRow) afterFreight(dl DeliveredResult, pd int64) error {
 	for _, l := range dl.Lanes {
 		if l.Origin == row.Origin && l.Destination == row.Destination && l.Commodity == row.Commodity {
 			var err error
-			row.GapAfterFreight, row.AfterFreightOK = pd-l.Delivered, true
+			if row.GapAfterFreight, err = net("PriceGap", "after_freight", []int64{pd}, l.Delivered); err != nil {
+				return err
+			}
+			row.AfterFreightOK = true
 			row.GapAfterFreightBP, err = ratioWide("PriceGap", "after_freight", measure.FromInt64(row.GapAfterFreight), measure.FromInt64(l.Delivered))
 			return err
 		}

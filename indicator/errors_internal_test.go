@@ -2,6 +2,7 @@ package indicator
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -89,5 +90,18 @@ func TestNet_SumsAreCheckedNeverWrapped(t *testing.T) {
 				t.Errorf("net(%v, %v) = %d, %v, want %d, %v", tt.plus, tt.minus, got, err, tt.want, tt.err)
 			}
 		})
+	}
+}
+
+// TestClampWarning_AddsOnceInOrder verifies that WarnClamped is added when an
+// index was held at MaxIndexBP, once, and keeps the warnings in ascending order.
+func TestClampWarning_AddsOnceInOrder(t *testing.T) {
+	t.Parallel()
+	clamped, exact := Index{Clamped: true}, Index{}
+	if got := clampWarning([]Warning{WarnThin}, exact); !slices.Equal(got, []Warning{WarnThin}) {
+		t.Errorf("clampWarning(thin, exact) = %v, want [thin]", got)
+	}
+	if got := clampWarning([]Warning{WarnThin}, clamped, clamped); !slices.Equal(got, []Warning{WarnClamped, WarnThin}) {
+		t.Errorf("clampWarning(thin, clamped, clamped) = %v, want [clamped thin]", got)
 	}
 }

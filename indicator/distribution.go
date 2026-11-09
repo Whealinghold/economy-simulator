@@ -56,14 +56,11 @@ func ratioStats(set RowSet, target int64) (RatioStats, error) {
 	if out.Mean, _, err = mean(s, w); err != nil {
 		return RatioStats{}, wrap("WelfareDistribution", "mean", err)
 	}
-	for _, q := range []struct {
-		dst *int64
-		at  int64
-	}{{&out.P10, 1000}, {&out.P25, 2500}, {&out.P50, 5000}, {&out.P75, 7500}, {&out.P90, 9000}} {
-		if *q.dst, _, err = measure.Quantile(mr, q.at); err != nil {
-			return RatioStats{}, wrap("WelfareDistribution", "quantile", fromMeasure(err))
-		}
+	qs, _, err := measure.Quantiles(mr, 1000, 2500, 5000, 7500, 9000)
+	if err != nil {
+		return RatioStats{}, wrap("WelfareDistribution", "quantile", fromMeasure(err))
 	}
+	out.P10, out.P25, out.P50, out.P75, out.P90 = qs[0], qs[1], qs[2], qs[3], qs[4]
 	if out.Below, err = shareBelow(mr, 10_000); err != nil {
 		return RatioStats{}, err
 	}
@@ -125,14 +122,14 @@ func Inequality(set RowSet) (InequalityResult, error) {
 	if out.Bottom, err = bottomShare(mr, out); err != nil {
 		return InequalityResult{}, err
 	}
-	var ok1, ok2 bool
-	if out.P10, ok1, err = measure.Quantile(mr, 1000); err != nil {
-		return InequalityResult{}, wrap("Inequality", "p10", fromMeasure(err))
+	qs, ok, err := measure.Quantiles(mr, 1000, 9000)
+	if err != nil {
+		return InequalityResult{}, wrap("Inequality", "quantile", fromMeasure(err))
 	}
-	if out.P90, ok2, err = measure.Quantile(mr, 9000); err != nil {
-		return InequalityResult{}, wrap("Inequality", "p90", fromMeasure(err))
+	if ok {
+		out.P10, out.P90 = qs[0], qs[1]
 	}
-	if ok1 && ok2 && out.P10 > 0 {
+	if ok && out.P10 > 0 {
 		var q Index
 		if q, err = ratioWide("Inequality", "p90p10", measure.FromInt64(out.P90), measure.FromInt64(out.P10)); err != nil {
 			return InequalityResult{}, err

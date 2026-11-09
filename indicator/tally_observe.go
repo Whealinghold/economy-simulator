@@ -170,7 +170,12 @@ func (t *Tally) beliefsUpdated(e economysim.BeliefsUpdated) {
 	if e.MeanCentre <= 0 {
 		return
 	}
-	q, ok := measure.RoundDiv(measure.MulInt64(10_000, int64(e.HighCentre-e.LowCentre)), measure.FromInt64(int64(e.MeanCentre)))
+	span, fits := measure.ToInt64(mustSub(int64(e.HighCentre), int64(e.LowCentre)))
+	if !fits {
+		t.over = true // reported by Close as ErrOverflow
+		return
+	}
+	q, ok := measure.RoundDiv(measure.MulInt64(10_000, span), measure.FromInt64(int64(e.MeanCentre)))
 	if v, fits := measure.ToInt64(q); ok && fits && (!b.HasLowest || BP(v) < b.Lowest) {
 		b.Lowest, b.HasLowest = BP(v), true
 	}

@@ -254,11 +254,17 @@ func (a AgentRow) total(col Column, p Prices) (int64, bool, error) {
 	case ColMoney:
 		return int64(a.Money), true, nil
 	case ColWelfareRatio:
+		if !a.HasWelfareRatio { // absent: the value is not read, so it cannot overflow
+			return 0, false, nil
+		}
 		t, err := a.times(a.WelfareRatioBP)
-		return t, a.HasWelfareRatio, err
+		return t, true, err
 	case ColEarnedRatio:
+		if !a.HasEarnedRatio {
+			return 0, false, nil
+		}
 		t, err := a.times(a.EarnedRatioBP)
-		return t, a.HasEarnedRatio, err
+		return t, true, err
 	case ColHunger:
 		t, err := a.times(a.Hunger)
 		return t, true, err
