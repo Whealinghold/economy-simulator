@@ -209,6 +209,11 @@ func TestGrid_GuardsAndScratch(t *testing.T) {
 	if &got[0] != &room[:1][0] {
 		t.Errorf("GridCoords did not reuse a scratch slice with exactly enough capacity")
 	}
+	roomy := make([]int, 0, 5)
+	got, _ = design.GridCoords(3, []int{2, 2}, roomy)
+	if &got[0] != &roomy[:1][0] {
+		t.Errorf("GridCoords did not reuse a scratch slice with spare capacity")
+	}
 	small := make([]int, 0, 1)
 	got, _ = design.GridCoords(3, []int{2, 2}, small)
 	if len(got) != 2 || !slices.Equal(got, []int{1, 1}) {

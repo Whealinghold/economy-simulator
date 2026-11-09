@@ -226,8 +226,8 @@ func TestQuantile_SortedInputUnchanged(t *testing.T) {
 func TestMoments_StdBeyondInt64(t *testing.T) {
 	t.Parallel()
 	over := moments(t, 6521908912666391106, -6521908912666391106)
-	if got, ok := over.Std(); ok {
-		t.Errorf("Std() of ±6521908912666391106 = %d, true, want false: the root is 2^63", got)
+	if got, ok := over.Std(); ok || got != 0 {
+		t.Errorf("Std() of ±6521908912666391106 = %d, %v, want 0, false: the root is 2^63", got, ok)
 	}
 	fits := moments(t, 6521908912666391105, -6521908912666391105)
 	if got, ok := fits.Std(); !ok || got != 9223372036854775806 {
