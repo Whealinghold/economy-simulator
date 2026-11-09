@@ -510,3 +510,39 @@ func TestArrivals_ScratchWithoutObserver(t *testing.T) {
 		t.Errorf("arrivals with %v %v and without %v %v, want one record, equal", a1, l1, a2, l2)
 	}
 }
+
+// TestArrivals_CostFollowsArrivals verifies NFR-TRN-002 at the position: a tick
+// with no arrival costs the schedule one comparison, and the tick of two arrivals
+// costs the logarithm more with 500 more shipments in flight, because P1.3 asks the
+// schedule for what is due and never scans the shipments.
+//
+// Arithmetic: both trips of twoTrips are dispatched in tick 0 with k = 2, so tick 1
+// has nothing due and tick 2 has two arrivals (three Due calls, the last finding none).
+//
+// Requirement: NFR-TRN-002
+func TestArrivals_CostFollowsArrivals(t *testing.T) {
+	t.Parallel()
+	cost := func(extra int) (idle, busy int64) {
+		w, _ := newShipWorld(t, nil, twoTrips)
+		for i := range extra {
+			w.transport.due.Push(1_000+int64(i), 1_000+int64(i)) // in flight, far from due
+		}
+		step(t, w, 1)
+		before := w.transport.due.Steps()
+		w.transport.arrived = w.transport.arrived[:0]
+		w.p13Arrivals()
+		idle = w.transport.due.Steps() - before
+		step(t, w, 1)
+		before = w.transport.due.Steps()
+		w.p13Arrivals()
+		return idle, w.transport.due.Steps() - before
+	}
+	idle0, busy0 := cost(0)
+	idle1, busy1 := cost(500)
+	if idle0 != 1 || idle1 != 1 {
+		t.Errorf("P1.3 with nothing due cost %d and %d comparisons with 0 and 500 more in flight, want 1 and 1", idle0, idle1)
+	}
+	if busy1 > busy0+50 {
+		t.Errorf("P1.3 with two arrivals cost %d comparisons with 500 more in flight and %d without, want a difference of at most two pops sifting down log2(500) levels (50)", busy1, busy0)
+	}
+}

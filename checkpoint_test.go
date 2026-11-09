@@ -30,7 +30,7 @@ const hashVersionOfFormat1 = 1
 // uv reads one unsigned varint of b from off and returns it and the new offset.
 // It uses encoding/binary because it is the test's reader of canonical input;
 // the library's own decoder checks the minimal form (spec-checkpoint.md 5.2.1).
-func uv(t *testing.T, b []byte, off int) (uint64, int) {
+func uv(t testing.TB, b []byte, off int) (uint64, int) {
 	t.Helper()
 	v, n := binary.Uvarint(b[off:])
 	if n <= 0 {
@@ -55,7 +55,7 @@ type section struct {
 
 // decodeFrame reads the frame of b: the magic, the header, the sections and the
 // trailer, which it checks.
-func decodeFrame(t *testing.T, b []byte) header {
+func decodeFrame(t testing.TB, b []byte) header {
 	t.Helper()
 	if !bytes.HasPrefix(b, []byte("ESCK")) {
 		t.Fatalf("checkpoint starts %x, want the magic 45 53 43 4b", b[:min(4, len(b))])
