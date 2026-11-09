@@ -59,6 +59,9 @@ func TestRunUnit_PureFunction(t *testing.T) {
 	if !reflect.DeepEqual(a, b) {
 		t.Fatalf("two runs of one experiment gave different records:\n%+v\n%+v", a, b)
 	}
+	if ra, rb := experiment.Render(assemble(t, e, a...)), experiment.Render(assemble(t, e, b...)); ra != rb {
+		t.Fatalf("two runs of one experiment rendered differently:\n%s\n%s", ra, rb)
+	}
 	r := a[0]
 	if r.Status != experiment.StatusOK || r.FailTick != -1 || r.Digest == [32]byte{} || r.Hash == [32]byte{} {
 		t.Errorf("record = %+v, want ok, FailTick -1, a digest and a hash", r)

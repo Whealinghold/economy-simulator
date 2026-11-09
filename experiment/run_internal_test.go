@@ -75,7 +75,9 @@ func internalSpec(t testing.TB) Spec {
 // of the uninterrupted sweep exactly, runs only the missing units, and calls the
 // record function in plan order for the new records only.
 //
-// The Result-level form of this test (equal Render) is Phase 7's.
+// The Result-level form is the second half: Run of the cancelled sweep returns the
+// Result of its complete units with the keys not run missing, and Run with that
+// prior renders as the uninterrupted one (spec-experiments.md 5.2.3).
 //
 // Requirement: FR-EXP-020, FR-EXP-052
 func TestRun_PriorCompletesByteForByte(t *testing.T) {
@@ -99,6 +101,22 @@ func TestRun_PriorCompletesByteForByte(t *testing.T) {
 	}
 	if want := []Key{{Replica: 1}, {Replica: 2}}; !reflect.DeepEqual(fresh, want) {
 		t.Errorf("record function saw %v, want only the new keys %v", fresh, want)
+	}
+	wholeRes, err := Run(context.Background(), e)
+	if err != nil {
+		t.Fatalf("Run() error = %v, want nil", err)
+	}
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	partRes, err := Run(ctx2, e, WithRecordFunc(func(Record) { cancel2() }))
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled Run() error = %v, want context.Canceled", err)
+	}
+	if m := partRes.Points[0].Variants[0].Runs[1].Status; m != StatusMissing {
+		t.Errorf("cancelled Run() leaves replica 1 with status %q, want missing", m)
+	}
+	resumed, err := Run(context.Background(), e, WithPrior(part))
+	if err != nil || Render(resumed) != Render(wholeRes) {
+		t.Errorf("Run() with the prior renders\n%s\nwant the uninterrupted\n%s\n(error %v)", Render(resumed), Render(wholeRes), err)
 	}
 }
 

@@ -95,9 +95,20 @@ type Spec struct {
 	// Prepare, when not nil, changes the resolved configuration of a point
 	// before it is validated (spec-experiments.md 3.3.3).
 	Prepare func(ctx context.Context, cfg economysim.Config) (economysim.Config, error)
-	// Options returns fresh options and extensions for each world built. It
-	// must return neither WithSeed nor WithReseed, and a new instance of every
-	// stateful extension on each call (spec-experiments.md 5.5, N-129).
+	// Options returns the options and extensions of one world. It is called once
+	// for each world built, with the key of that world: the burn-in of a branched
+	// unit with the key of its variant 0 and continuation 0, and each restore with
+	// its own key. The harness appends the observers of the measures that have
+	// one, in measure order, after the options it returns, and WithSeed last on a
+	// build and not at all on a restore, so a seed it returns is overridden for an
+	// unbranched unit and is a world error for a branched one; WithReseed is the
+	// harness's alone. A nil Options gives no options.
+	//
+	// It must return a new instance of every extension that keeps state on each
+	// call: a stateful Strategy shared by two worlds corrupts both, silently, and
+	// the library cannot see it (N-129; spec-experiments.md 5.3.3, 5.5). It must
+	// be safe for concurrent calls when a consumer runs units on several
+	// goroutines.
 	Options func(Key) []economysim.Option
 }
 
