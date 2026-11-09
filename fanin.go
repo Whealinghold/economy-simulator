@@ -22,6 +22,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 	if w.res != nil {
 		w.fillEndowments(v, a)
 	}
+	if w.transport != nil {
+		w.fillTransport(v, a)
+	}
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}

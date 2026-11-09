@@ -1302,3 +1302,20 @@ type ArrivedLine struct {
 	Diverted  Quantity
 	Spoiled   Quantity
 }
+
+// TransitFactorChanged is emitted by a call that sets the transit factor of an
+// (origin, destination, mode), once per changed key, with the next step's Tick, or
+// by a policy actor at P0.3a (spec-observability.md 4.4.4). It is emitted only when
+// the transport module is on.
+type TransitFactorChanged struct {
+	Tick int64
+	// From and To are the regions and Mode the mode.
+	From, To RegionID
+	Mode     ModeID
+	// BeforeBP and AfterBP are the factor before and after, in basis points.
+	BeforeBP, AfterBP int64
+	// Cause is CauseConsumer; the policy cause joins with the policy module.
+	Cause Cause
+}
+
+func (TransitFactorChanged) isEvent() {}

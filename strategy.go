@@ -456,10 +456,49 @@ type AgentView struct {
 	OwnUseJobs           int64
 	Cover, Secure        int64
 	ExitTicks, RetryJobs int64
+	// Inbound is, per commodity in commodity order, the units on the way to this
+	// agent as consignee and the earliest arrival tick; Outbound is, per destination
+	// region and commodity, the units of the shipments the agent is the shipper of and
+	// the earliest arrival; Routes is, per region other than the agent's and per mode,
+	// whether there is a route and what it costs in time (spec-transport.md 9.1). The
+	// first two are fixed at P3.1 from the shipments dispatched before phase 3, so
+	// they do not depend on the order of agents; all three are empty while the
+	// transport module is off and in the views of phase 2.
+	Inbound  []InboundRow
+	Outbound []OutboundRow
+	Routes   []RouteRow
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).
 	scratch *viewScratch
+}
+
+// InboundRow is the units of one commodity on the way to an agent and the earliest
+// tick one of the shipments arrives.
+type InboundRow struct {
+	Commodity CommodityID
+	Quantity  Quantity
+	Earliest  int64
+}
+
+// OutboundRow is the units of one commodity on the way to a destination in
+// shipments the agent is the shipper of, and the earliest arrival tick.
+type OutboundRow struct {
+	To        RegionID
+	Commodity CommodityID
+	Quantity  Quantity
+	Earliest  int64
+}
+
+// RouteRow says whether a mode goes from the agent's region to a region and, if it
+// does, the travel time at the transit factor in force and, for a hired mode, the
+// haul units one carrying unit costs (0 for a self-carried mode).
+type RouteRow struct {
+	To          RegionID
+	Mode        ModeID
+	Has         bool
+	Ticks       int64
+	HaulPerUnit int64
 }
 
 // EndowmentView is one endowment of the agent's region as the agent sees it

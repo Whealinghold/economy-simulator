@@ -63,6 +63,8 @@ type transportState struct {
 	loaded []Quantity
 	// ctx is the context of the request being checked.
 	ctx shipCtx
+	// tables are what P3.1 fixes for the views of the tick.
+	tables viewTables
 	// arrived and arrivedLines are the arrivals of P1.3, kept for the later positions
 	// with or without an observer; key and skip build the guard query of an arrival.
 	arrived      []arrival

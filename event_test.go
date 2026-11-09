@@ -65,6 +65,7 @@ var declaredEvents = []economysim.Event{
 	economysim.ShipmentDispatched{},
 	economysim.ShipmentRejected{},
 	economysim.ShipmentArrived{},
+	economysim.TransitFactorChanged{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -75,7 +76,7 @@ var notBuiltEvents = []string{
 	"RoomLimited",
 	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
-	"TransitFactorChanged", "ContractFormed",
+	"ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
 	"MigrationReviewed",
 	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked",
