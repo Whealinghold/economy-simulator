@@ -1216,10 +1216,12 @@ type Lane struct {
 
 Each lane becomes an activity with net vector (`-1` at `From`, `+ (10 000 - LossBP) / 10 000`
 at `To`) and labour `Labour / 10 000` in `From`. Nothing else in the programme
-changes. Lanes are supplied by `transport.Lanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with the expected loss of `spec-risk.md` 8.3 as `LossBP` (0 with the risk module off) and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
+changes. Lanes are supplied by `Config.TransportLanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with the expected loss of `spec-risk.md` 8.3 as `LossBP` (0 with the risk module off) and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
 lanes: autarky. The option `WithFreeTrade()` adds a lane of labour 0 and loss 0
 between every pair of regions for every commodity. It is a bound for comparison and
 the case `Validate` checks (4.6); it is not a model of any world.
+
+**Lane validation (transport row, plan 2-12).** `WithLanes` refuses, before any work: a lane that names an unknown region or commodity, a lane with `From` equal to `To`, a duplicate (From, To, Commodity, Labour, LossBP), `Labour` below 0, `LossBP` outside 0 to 9 999, and more than `MaxLanes` lanes (`ErrOutOfBounds`; the first four `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrOutOfBounds`, `ErrDuplicateID`). **Open (VIA, phase 8 of plan 2-12 waits for it):** how the warm-start table derives per-region prices and flows from a lane programme, and whether a lane set is one programme or one per component. Until it is written the lane columns are not built and N-279 and N-281 stay open.
 
 **Stage 1 realises only the free-trade lane set.** `Lane`, `Lanes` (the option that
 carries a lane list) and `MaxLanes` are not published in Stage 1: they come with the

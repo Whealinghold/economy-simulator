@@ -1,0 +1,24 @@
+# The information overlay of the variant three (spec-information.md 12.1; spec-reference-chain.md 4.5, 7.6; plan 2-13 Phase 7). Layer it after the pack and overlay/trade-three.toml (it reads the edges): the module on, every role that has a group informed. A test double, not a design: every number is a placeholder (N-015, N-027). Distances are 100 or 130, so a speed of 50 gives lags of 3 and 4.
+
+[modules.information]
+info_speed = 50
+rumour_error_bp = 500
+rumour_max_age = 60
+
+[role.cook]
+informed = true
+
+[role.digger]
+informed = true
+
+[role.forester]
+informed = true
+
+[role.grower]
+informed = true
+
+[role.maker]
+informed = true
+
+[role.refiner]
+informed = true

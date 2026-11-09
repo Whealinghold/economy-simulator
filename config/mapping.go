@@ -279,6 +279,14 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Subsistence = l.subsistence(ss)
 		ss.finish()
 	}
+	if ts := m.sub("transport"); ts != nil {
+		cfg.Modules.Transport = l.transport(ts)
+		ts.finish()
+	}
+	if is := m.sub("information"); is != nil {
+		cfg.Modules.Information = l.information(is)
+		is.finish()
+	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
@@ -439,6 +447,7 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		{"teaching_load", &r.TeachingLoad},
 	})
 	t.flag("closed", &r.Closed)
+	t.flag("informed", &r.Informed)
 	t.text("label", &r.Label)
 	return r
 }
@@ -711,6 +720,45 @@ func (l *loader) subsistence(t *tbl) *economysim.SubsistenceConfig {
 		row := economysim.RoleOwnUse{Role: id}
 		e.strings("recipes", &row.Recipes)
 		m.Roles = append(m.Roles, row)
+	})
+	return &m
+}
+
+// transport reads [modules.transport] (spec-config.md 6.2.1, spec-transport.md
+// 3.1): the modes as [mode.<id>] tables, with feed an array of { commodity,
+// quantity } tables. The table being present switches the module on, even with
+// no mode. A mode without a haul commodity starts from DefaultCrew, so an absent
+// crew and an explicit 1 hash alike; a hired mode keeps a crew of 0, and one that
+// sets crew is refused by Validate (ErrModeShape). The modes come out in ID order
+// because every level is read in ID order.
+func (l *loader) transport(t *tbl) *economysim.Transport {
+	m := &economysim.Transport{}
+	t.entities("mode", func(id string, e *tbl) {
+		md := economysim.Mode{ID: id}
+		e.text("haul", &md.Haul)
+		if md.Haul == "" {
+			md.Crew = economysim.DefaultCrew
+		}
+		readInts(e, []intField{
+			{"speed", &md.Speed}, {"unit_mass", &md.UnitMass}, {"unit_bulk", &md.UnitBulk},
+			{"crew", &md.Crew}, {"wear_per_tick", &md.WearPerTick}, {"haul_span", &md.HaulSpan},
+		})
+		e.text("vehicle", &md.Vehicle)
+		e.items("feed", &md.Feed)
+		e.text("label", &md.Label)
+		m.Modes = append(m.Modes, md)
+	})
+	return m
+}
+
+// information reads [modules.information] over DefaultInformation
+// (spec-config.md 6.2.1, spec-information.md 8): info_speed, rumour_error_bp and
+// rumour_max_age. info_speed has no default, so a table that omits it is
+// ErrOutOfBounds at Validate. The table being present switches the module on.
+func (l *loader) information(t *tbl) *economysim.Information {
+	m := economysim.DefaultInformation()
+	readInts(t, []intField{
+		{"info_speed", &m.InfoSpeed}, {"rumour_error_bp", &m.RumourErrorBP}, {"rumour_max_age", &m.RumourMaxAge},
 	})
 	return &m
 }

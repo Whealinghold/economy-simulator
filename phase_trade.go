@@ -53,12 +53,15 @@ func (w *World) p32Trade() error {
 
 // tradeAgent is the P3.2 step of one agent.
 func (w *World) tradeAgent(a *agent) error {
+	if w.offStage(a) { // away: no view, no order (Revise still runs for the orders it has)
+		return nil
+	}
 	v := &w.tk.view
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
-	if err := w.fillAgentView(v, a); err != nil {
+	if err := w.fillAgentView(v, a, viewTrade); err != nil {
 		return fmt.Errorf("trade at tick %d: %w", w.Tick(), err)
 	}
 	p := w.views.tradePlan()
@@ -66,6 +69,7 @@ func (w *World) tradeAgent(a *agent) error {
 	w.ext.strategies[a.strategy].Trade(v, w.rnd.rnd, p)
 	w.checkTradePlan(a, p)
 	w.executeDiscards(a, p)
+	w.executeShipments(a, p)
 	region := w.regionOf(a)
 	for _, in := range p.Intents {
 		w.submit(a, region, in)
@@ -76,6 +80,9 @@ func (w *World) tradeAgent(a *agent) error {
 // p36Aggregates is P3.6: the per-region, per-role aggregates of the trade phase,
 // a fixed sequence of guarded calls into the module files (spec-world.md 6, D312).
 func (w *World) p36Aggregates() {
+	if w.info != nil {
+		w.p36Rumours()
+	}
 	if w.demand != nil {
 		w.p36Wants()
 	}

@@ -12,7 +12,7 @@ import "fmt"
 // at the start of the position that calls it, then the module fillers, none in
 // the slice. It is the same builder at every use: P2.5 and P3.2 each refresh the
 // context first. A module's filler is appended below the core call.
-func (w *World) fillAgentView(v *AgentView, a *agent) error {
+func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if err := w.views.fillCore(v, a, &w.tk.vctx); err != nil {
 		return err
 	}
@@ -22,11 +22,28 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 	if w.res != nil {
 		w.fillEndowments(v, a)
 	}
+	if w.transport != nil {
+		w.fillTransport(v, a)
+	}
+	if w.info != nil && kind == viewTrade {
+		w.fillRumours(v, a)
+	}
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
 	return nil
 }
+
+// viewKind says which call a view is built for: the rumours of the information
+// module are an input to Trade only (spec-information.md 6.2.1).
+type viewKind int
+
+const (
+	// viewWork is the view passed to Work.
+	viewWork viewKind = iota
+	// viewTrade is the view passed to Trade.
+	viewTrade
+)
 
 // checkTradePlan checks the plan a strategy returned for agent a, in place and
 // in a fixed order (spec-agents.md 6.5.2): the clamps of each intent's belief
@@ -56,6 +73,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	tick, region := w.Tick(), w.regionOf(a)
 	if a.hasJob() {
 		w.abandonJob(a, region, ReasonAgentRemoved)
+	}
+	if w.transport != nil {
+		w.dropTraveller(a) // step 2a: a trip to oneself is dropped before the money moves
 	}
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow

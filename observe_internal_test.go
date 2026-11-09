@@ -246,6 +246,11 @@ var stepSites = []site{
 	{"P0.2", noError((*World).p02)},
 	{"P1.1", (*World).p11Moment},
 	{"P1.2", noError((*World).p12Anchors)},
+	{"P1.3", noError(func(w *World) {
+		if w.transport != nil {
+			w.p13Arrivals()
+		}
+	})},
 	{"P1.6", (*World).p16Relief},
 	{"P1.7", noError((*World).p17Flows)},
 	{"P2.1", noError((*World).p21Complete)},
@@ -264,11 +269,21 @@ var stepSites = []site{
 		}
 	})},
 	{"P2.8a", noError((*World).p28aHalted)},
+	{"P3.1", noError(func(w *World) {
+		if w.transport != nil {
+			w.p31Fix()
+		}
+	})},
 	{"P3.2", (*World).p32Trade},
 	{"P3.4", (*World).p34Estates},
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},
 	{"P5.1", noError((*World).p51Window)},
+	{"P5.2", noError(func(w *World) {
+		if w.info != nil {
+			w.p52Record()
+		}
+	})},
 	{"P5.3", (*World).p53Markdown},
 	{"P5.4", noError((*World).p54Outcomes)},
 	{"P6.1", (*World).p61Upkeep},

@@ -211,8 +211,9 @@ func (s *welfareScratch) reset(slot int) { *s.at(slot) = flows{} }
 // recipes works by trading or travelling, workHH is the weight; when it ran an
 // own-use job and did not trade, workHH is k, so workHH less ownHH is 0; with
 // both, workHH is the weight and ownHH the own-use k, never negative while k is
-// at most the weight. inTransit is a commercial trip, which the merchant module
-// sets (none in the slice); migration travel, rest and idle are not working.
+// at most the weight. inTransit is a commercial trip, which the transport module
+// sets for an away traveller (the merchant module's own trips are later);
+// migration travel, rest and idle are not working.
 func workingTick(hasRecipes bool, k int64, ownUse, traded, inTransit bool, weight int64) (working bool, workHH, ownHH int64) {
 	k = max(k, 0) // a negative count of executions is none, never a negative household-tick
 	if ownUse {

@@ -92,6 +92,12 @@
 //     which a checkpoint stores and a restore compares.
 //   - Creditor: the account a claim is owed to, an agent or an estate account.
 //   - Debtor: the agent account that owes a claim.
+//   - Denomination: a name and a symbol for a multiple of the minor unit; a
+//     display concern only, never in the core's types, events, snapshots, logs or
+//     configuration.
+//   - Denomination ladder: the type Ladder of the denomination package, an
+//     ordered list of Units, largest first, with strictly decreasing sizes.
+//   - Denomination ladder preset: a ready-made Ladder (RPG, Single).
 //   - Default constructor: DefaultWorldParams, DefaultRole and the like, the one
 //     place a default is defined. The zero value of an entity is not a default.
 //   - Draw site: a place in the code where the world takes a random word, named
@@ -162,6 +168,9 @@
 //     the tick.
 //   - Fixed point: money, prices and quantities are whole numbers of their
 //     smallest unit; no floating point affects a result.
+//   - Formatter: a pure function from an int64 amount to text in the Units of a
+//     denomination.Ladder, built by denomination.NewFormatter with an Option
+//     such as WithPrecision.
 //   - Group: the households of one role in one region, with an optional scale.
 //   - Census: the configured households of the groups of a world
 //     (Group.Households), from which the agents and their weights are derived.
@@ -181,7 +190,8 @@
 //     remaining durability; equal lots are merged and an account's lots are
 //     kept sorted by commodity, born tick and durability (canonical form).
 //   - Minor unit: the smallest unit of money. Money and Price are counts of
-//     minor units; the library has no currency, denomination or decimal place.
+//     minor units; the core has no currency or decimal place; the optional
+//     denomination package names multiples of it.
 //   - Module: an optional mechanism that is off unless its entry in
 //     Config.Modules is non-nil.
 //   - Ledger: the single holder of all money and goods in a world, which
@@ -196,6 +206,8 @@
 //     bounded warning.
 //   - Pack: a set of configuration documents, layered in order, that defines a
 //     supply chain; later documents add to or override earlier ones.
+//   - Precision: the number of decimal places, 0 to 6, with which a Formatter
+//     writes the smallest Unit of its denomination.Ladder.
 //   - Presentation-only field: a field, such as a label, that changes no result
 //     and is not part of the configuration hash.
 //   - Price: money per unit of a commodity, an int64 count of minor units.
@@ -408,6 +420,8 @@
 //   - Effective factor: the site factor multiplied in turn by the yield shock,
 //     the technology gain, the trainee or hire factor and the resource
 //     abundance, each step truncated; it scales the output of a job.
+//   - Unit: one rung of a denomination.Ladder (not a unit of a commodity), with
+//     a name, a symbol and a size in minor units.
 //   - Unit cost: the cost of one unit of an output of a recipe, in minor units,
 //     rounded up: inputs, tool wear, labour at the regional wage and rent,
 //     times the output's cost share, over the output quantity and the
@@ -614,9 +628,10 @@
 //   - Virtual start offset: a tick before tick 0 at which a job in progress at
 //     construction is taken to have started, so the jobs of a group are
 //     staggered.
-//   - Lane: in the solver, a zero-cost route between regions of the free-trade
-//     set that merges their goods rows; not a lane of a credit round or of a
-//     merchant.
+//   - Lane: in the solver, a route between regions: the zero-cost lanes of the
+//     free-trade set merge their goods rows, and a lane of the transport module
+//     carries a labour charge and a loss (spec-transport.md 9.4); not a lane of a
+//     credit round or of a merchant.
 //   - Step: one call of Step: the entry of a tick and its eight phases, run in
 //     the order of spec-world.md 6, which on success advances the tick counter by
 //     one. In phase 7 the world carries out the spawner's plan itself, decision by
@@ -1039,4 +1054,63 @@
 //     presentation-only (spec-calibration.md 4.8, 6.3).
 //   - Scope token: the text of the scope cell of the parameter-owner table up to the first semicolon
 //     or parenthesis, used in a registry key (spec-calibration.md 4.7).
+//   - Mode: a way to carry goods between regions, configured as data: a speed, the
+//     capacity of one carrying unit and either a crew and a vehicle (self-carried) or a
+//     haul commodity (hired) (spec-transport.md 3.1).
+//   - ModeID: the typed index of a Mode in the canonical mode order.
+//   - Transport: the configuration of the transport module, the table of modes.
+//   - Self-carried mode: a mode in which the shipper's own household travels with the
+//     cargo; it is away from dispatch to arrival.
+//   - Hired mode: a mode in which the shipper redeems haul units that other households
+//     made and no agent of the shipper moves.
+//   - Carrying unit: the capacity of a mode, a mass and a bulk, that one crew (and one
+//     vehicle) fields or one haul span buys.
+//   - Crew: the households a carrying unit of a self-carried mode needs.
+//   - Haul unit: the ordinary commodity a hired mode redeems, one haul unit carrying
+//     one carrying unit over one haul span.
+//   - Haul span: the distance one haul unit carries one carrying unit.
+//   - Traveller: the agent that goes with the cargo of a self-carried shipment.
+//   - Shipper: the agent that requests a shipment and gives its goods.
+//   - Consignee: the agent that receives the cargo of a shipment.
+//   - Shipment: goods on the way between two regions, kept in a transit account from
+//     dispatch to arrival; ShipmentID names it and ShipmentRow is its public copy.
+//   - ShipmentRequest: what a strategy asks for in a plan: a mode, a destination, a
+//     consignee and lines.
+//   - Line: one commodity and quantity of a ShipmentRequest; the bare identifier is
+//     owned by the transport module.
+//   - Dispatch: the moment a world accepts a request and moves the cargo to a transit
+//     account; ShipmentDispatched reports it and ShipmentRejected a refusal.
+//   - Arrival: the first phase of the tick in which a shipment ends: the cargo is
+//     delivered to the consignee and ShipmentArrived reports it; ArrivedLine is its
+//     per-commodity row.
+//   - Transit account: the ledger account that holds the cargo of one shipment between
+//     dispatch and arrival.
+//   - Transit factor: the basis-point factor on the speed of a (from, to, mode), 10 000
+//     by default; 0 blocks new dispatches; TransitFactorRow is its snapshot row and
+//     TransitFactorChanged the event of a change.
+//   - Away: the state of a traveller from dispatch to arrival; an away agent is passed
+//     no view and places no order.
+//   - Inbound, Outbound: the view groups of units on the way to, or sent by, an agent;
+//     InboundRow, OutboundRow and RouteRow are their rows.
+//   - Diverted: cargo that could not go to its consignee and went to the estate of the
+//     destination instead.
+//   - Information: the module, a pointer of Config.Modules and the type of its
+//     configuration, that gives the agents of an informed role delayed, blurred
+//     rumours of the prices of other regions (spec-information.md); its event is
+//     RumoursServed.
+//   - Rumour: a remote price as an informed agent is told it: the price a source
+//     market published Lag ticks ago, multiplied by a drawn error; it carries the
+//     age of that price.
+//   - Rumour source: a (region, commodity) market that can be the subject of a
+//     rumour: the commodity is in the tradable set of a role that has a group in
+//     the region. It is not a recipe Source.
+//   - Informed role: a role whose agents are shown rumours, the flag Role.Informed.
+//   - Price record: a ring of the last RumourMaxAge prices each source market
+//     published, written once a tick and read for the vintage of a rumour.
+//   - Vintage: the tick whose entry of the price record a rumour is made from, the
+//     tick of the reading less the lag.
+//   - Lag: the age in ticks of a rumour, 1 + ceil(distance / information speed), at
+//     least 2.
+//   - Information speed: the distance units that news covers in one tick
+//     (Information.InfoSpeed).
 package economysim

@@ -171,7 +171,7 @@ reads it as `WorldParams`.
 | `Roles[]` | `ID`, `Recipes`, `Upkeep`, `Trades`, `StartMoney`, `StartStock`, `Strategy` (a name, hashed: `default`, `directed`, both built in, or a registered name, 7.1.4), `Label` (p) | `spec-agents.md` 3.3 |
 | `Roles[]` | `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind`, `ExpectedWorkTicks`, `MinWorkShare` | `spec-welfare-and-wages.md` 4.2 |
 | `Roles[]` | `TrainingTicks`, `MaxTrainees`, `TeachingLoad` | `spec-skill-barriers.md` |
-| `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 |
+| `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 (built with the merchant module, plan 2-15) |
 | `Regions[]` | `ID`, `ReferenceBasket`, `ExtraUpkeep` | `spec-currency.md` 5, `spec-agents.md` 5.2 |
 | `Regions[]` | `CapitalReturn` | `spec-skill-barriers.md` 2.5 |
 | `Regions[]` | `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | `spec-estates.md` 3 |
@@ -188,7 +188,7 @@ reads it as `WorldParams`.
 | `World` | `DistanceLabel` (p) | `spec-regions.md` 4.1.2 |
 | `Modules.MoneySupply` | `Flows[]` (`ID`, `Kind`, `Target` with `Kind`, `Region` and `Role`, and `Store` and `Jurisdiction` (owned by `spec-storage.md` and `spec-fiscal.md`, 3.7.1); `Amount`, `Level`, `RateBP`, `Exempt`, `Per`, `Start`, `Until`, `Limit`, `NotIncome`, `Label` (p)); present = the module is on | `spec-money-supply.md` 4.1, 11.1 |
 | `Modules.Population` | `BirthSchedule[]` and `DeathSchedule[]` (each knot `Ratio`, `Rate`), `MinHouseholds`, `BirthStake`, `Regions[]` (`Region`, `BirthScale`, `DeathScale`, `HouseholdCap`); present = the module is on | `spec-population.md` 3.5, 8 |
-| `Modules.Transport` | `Modes[]` (`ID`, `Speed`, `UnitMass`, `UnitBulk`, `Crew`, `Vehicle`, `WearPerTick`, `Feed[]` each with `Commodity` and `Quantity`, `Haul`, `HaulSpan`, `Label` (p)); present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
+| `Modules.Transport` | `Modes[]` (`ID` 1, `Speed` 2, `UnitMass` 3, `UnitBulk` 4, `Crew` 5, `Vehicle` 6, `WearPerTick` 7, `Feed[]` 8 each with `Commodity` and `Quantity` (the ids of `Item`), `Haul` 9, `HaulSpan` 10, `Label` (p), none); `Modes` is id 1 of the module, the module's id 4; the TOML keys are `[modules.transport.mode.<id>]` with `feed` an array of tables; present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
 | `Modules.Resources` | `Resources[]` (`ID`, `Shape`, `RatePerYear`, `RateBP`, `Refuge`, `Capacity`, `InitialBP`, `PlanShareBP`, `Abundance[]` each with `Share` and `Factor`, `Seasons[]` each with `Season` and `BP`, `Label` (p)), `Endowments[]` (`Region`, `Resource`, `Capacity`, `Initial`, `RegenScaleBP`), `HorizonYears`; present = the module is on; it needs production | `spec-resources.md` 3.3, 12 |
 | `Modules.Information` | `InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`; present = the module is on; it needs the region graph | `spec-information.md` 8 |
 | `Roles[]` | `Informed` (default false; needs `Modules.Information`) | `spec-information.md` 6.1, 8 |
@@ -1345,7 +1345,7 @@ with no logger sees them (`spec-integration.md` 6.4). `NewWorld` logs each once 
 is bounded by the size of the configuration and happens once at construction
 (observability-and-logging.md 3.2.2). The warnings that exist are listed with
 their conditions in 7.4.2; a rule is a warning or an error, never both, and the
-severity of every rule is stated in 7.4. `Warnings` appends the viability warnings (7.4.2) only when the structural phases (1 to 5 of 7.1.6) come back clean on a scratch report, and otherwise returns the others, so `Validate` and `Warnings` agree on when the check runs; both reach the one `checkViability`.
+severity of every rule is stated in 7.4. `Warnings` appends the viability warnings (7.4.2) only when the structural phases (1 to 5 of 7.1.6) come back clean on a scratch report, and otherwise returns the others, so `Validate` and `Warnings` agree on when the check runs; both reach the one `checkViability`. A warning that counts something (`rumour_horizon_short` of `spec-information.md` 9.3) carries the count in `Warning.Count` (an `int64`, appended to `Warning`, zero for a warning that counts nothing); the construction line logs it as `pairs`. `rumour_horizon_short` needs the shortest distances of the configured graph, so `Warnings` appends it after the structural phases come back clean, as it appends the viability warnings.
 
 ### 7.3 Structural rules
 
@@ -1363,6 +1363,7 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrOutOfBounds` | a value outside the bound of its field or of section 4.1 | architecture.md 3.5, 8.5 |
 | `ErrOverflow` | a derived product of 4.2 that does not fit | architecture.md 3.5 |
 | `ErrTooMany` | more entities of a kind than its bound; checked first, and it stops the other rules (7.1.6) | here |
+| `ErrVehicleNotDurable`, `ErrModeShape`, `ErrUnknownMode` | the transport rules of `spec-transport.md` 12.1 | `spec-transport.md` |
 | `ErrModuleDependency` | a module on while a module it needs is off (declared at Stage 0 with no returner yet: the first rule that returns it is a module's own, such as a recipe with `Draws` while resources is off) | here |
 | `ErrNoRegions` | a configuration with no region | `spec-regions.md` 9.1 |
 | `ErrSelfEdge` | an edge whose `From` equals its `To` | `spec-regions.md` 9.1 |
@@ -1708,7 +1709,7 @@ at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, 
 `Trades` 4, `StartMoney` 5, `StartStock` 6, `Strategy` 7, `Unskilled` 8,
 `TargetRatio` 9, `TargetSpread` 10, `DefaultRatio` 11, `InKind` 12,
 `ExpectedWorkTicks` 13, `MinWorkShare` 14, `TrainingTicks` 15, `MaxTrainees` 16,
-`TeachingLoad` 17, `Closed` 18. `Region` has `ID` 1, `ReferenceBasket` 2, `ExtraUpkeep`
+`TeachingLoad` 17, `Closed` 18; the information module adds `Informed` 19. `Region` has `ID` 1, `ReferenceBasket` 2, `ExtraUpkeep`
 3, `CapitalReturn` 4, `EstateMarkdown` 5, `PoolRelease` 6, `ReliefBelow` 7. `Group` has `Region` 1, `Role` 2,
 `Households` 3, `Scale` 4. `Edge` has `From` 1, `To` 2, `Distance` 3; `RegionPrice` has `Region` 1, `Commodity` 2, `Price` 3. `WarmStart` has `Prices` 1, `Wages` 2, `Groups` 3, `Pools` 4;
 `SeedPrice` has `Region` 1, `Commodity` 2, `Price` 3; `SeedWage` has `Region` 1,
@@ -1747,6 +1748,12 @@ The resources module (`Modules.Resources`, id 5 in `Modules`; the module type is
 while the module is on, and `Draw` has `Resource` 1, `Quantity` 2. The pointer is written
 even when the struct is zero, so `Modules.Resources: &Resources{}` is `0005 0000`; and the
 pair of id 5 goes between the pairs of ids 3 or 4 and those of ids 6 or 8.
+
+The information module (`Modules.Information`, id 6 in `Modules`) adds: `Information` has
+`InfoSpeed` 1, `RumourErrorBP` 2, `RumourMaxAge` 3; and `Role.Informed` 19, a pair only while
+the module is on and the flag is true. The pointer is written even when the struct is zero,
+so `Modules.Information: &Information{}` is `0006 0000`, and its pair goes after the pairs of
+the ids below 6 and before those of the ids above it, whatever the order of building.
 
 The subsistence module (`Modules.Subsistence`, id 8 in `Modules`; the type is `SubsistenceConfig`
 and the registry scope `Subsistence` resolves to it, as `Tenure` resolves to `TenureConfig`)

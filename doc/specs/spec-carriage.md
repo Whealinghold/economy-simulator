@@ -88,6 +88,8 @@ the price of haul units up until some carrier's ratio falls below target again.
 |-------|----------------|-------------------------------------------------------------|---------|
 | Role  | `MerchantFeeShare` | ceiling on the share of its expected margin a merchant bids per haul unit, in basis points (section 2.2) | 5 000 |
 
+`Role.MerchantFeeShare` (FR-CAR-012) and the bid ceiling (FR-CAR-004) are built by the merchant module (plan 2-15), not by the transport row (plan 2-12), which adds no `Role` field; FR-CAR-003, 009, 010, 011 and 013 are tests on a carrier role of the transport pack.
+
 `MerchantFeeShare` has the validation bound 0 to 10 000 (a share of a margin;
 0 means the merchant never hires; above 10 000 it would pay more than it
 expects to earn). The default and the bound are placeholders (N-015).

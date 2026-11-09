@@ -1124,8 +1124,9 @@ sites of the slice are:
 | `siteOutcome` | D8 | `0xD9CC0A517EB0D9F5` | `tick`, `id` = the agent, `sub` = the commodity |
 | `siteSpawner` | D9 | `0xBE0B1D169200E9FF` | `tick`, `id` = the region |
 | `siteCreation` | D10 | `0x9B8FFA303CB545DC` | `tick`, `id` = the new agent |
+| `siteInform` | D4 | `0x7B15D7AD592D7D8F` | `tick`, `id` = the agent |
 
-The rows D2, D4, D6, D11, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
+The rows D2, D6, D11, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
 constant yet**: each is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
@@ -1275,7 +1276,7 @@ open point 3 (a site with no natural entity: D2, D13) stays open for it.
 | D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | none yet: the line (open point 3) | EXT 5.1, 6.4 |
 | D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | `siteWork`, the tick, the agent | AGT 7.1 |
 | D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | none yet: the route row (open point 3) | RSK 4.2 |
-| D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | none yet: the agent | INF 5.5.2 |
+| D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | `siteInform`, the tick, the agent (keyed once per informed view, only when `RumourErrorBP` is above 0) | INF 5.5.2 |
 | D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | `siteTrade`, the tick, the agent | AGT 7.5.3 |
 | D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | none yet: the shipment | RSK 4.1 |
 | D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | none yet: the offer or take | MER 9.4.2 |

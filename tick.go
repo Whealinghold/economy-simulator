@@ -31,6 +31,7 @@ var positionList = [...]position{
 	{"P0.3", "OBS", bracket},  // TickStarted, in beginStep
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
+	{"P1.3", "TRN", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P2.1", "PRO", line},
@@ -41,11 +42,13 @@ var positionList = [...]position{
 	{"P2.7", "PRO", line},
 	{"P2.8", "SUB", line},
 	{"P2.8a", "OBS", line},
+	{"P3.1", "TRN", line},
 	{"P3.2", "AGT", line},
 	{"P3.4", "EST", line},
 	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
 	{"P5.1", "CLR", line},
+	{"P5.2", "INF", line},
 	{"P5.3", "EST", line},
 	{"P5.4", "CLR", line},
 	{"P6.1", "AGT", line},
@@ -67,11 +70,10 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3", "P1.3a", "P1.4", "P1.5", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3a", "P1.4", "P1.5", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
-	"P3.1", "P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
+	"P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
-	"P5.2",
 	"P7.2", "P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
@@ -93,6 +95,9 @@ func (w *World) positions() error {
 		return err
 	}
 	w.p12Anchors()
+	if w.transport != nil {
+		w.p13Arrivals()
+	}
 	if err := w.p16Relief(); err != nil {
 		return err
 	}
@@ -113,6 +118,9 @@ func (w *World) positions() error {
 		w.p28OwnUse()
 	}
 	w.p28aHalted()
+	if w.transport != nil {
+		w.p31Fix()
+	}
 	if err := w.p32Trade(); err != nil {
 		return err
 	}
@@ -131,6 +139,9 @@ func (w *World) positions() error {
 // it as part of the straight line, after positions and in source order.
 func (w *World) positionsTail() error {
 	w.p51Window()
+	if w.info != nil {
+		w.p52Record()
+	}
 	if err := w.p53Markdown(); err != nil {
 		return err
 	}

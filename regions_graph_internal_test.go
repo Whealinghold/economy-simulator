@@ -65,7 +65,7 @@ func TestReferencePrice_Override(t *testing.T) {
 	w.refreshViewCtx()
 	for _, id := range []AgentID{2, 4} {
 		var v AgentView
-		if err := w.fillAgentView(&v, &w.agents[id]); err != nil {
+		if err := w.fillAgentView(&v, &w.agents[id], viewTrade); err != nil {
 			t.Fatalf("fillAgentView(%d) error = %v, want nil", id, err)
 		}
 		if len(v.Commodities) == 0 {
