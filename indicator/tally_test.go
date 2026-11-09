@@ -640,3 +640,23 @@ func TestWeights_String(t *testing.T) {
 		t.Errorf("BindingCounts.Any() = wrong for the zero value or a counter")
 	}
 }
+
+// TestFlows_CorrectionOverflow verifies that a correction that leaves int64 is
+// ErrOverflow and not a wrapped total, and that no accounts are built from it.
+//
+// Requirement: FR-IND-009
+func TestFlows_CorrectionOverflow(t *testing.T) {
+	big := int64(1<<63 - 1)
+	w, open, closing := workedWindow(t)
+	w.Flows[0].Total = big
+	w.ClosePending = []economysim.FlowTotal{{Region: w.Flows[0].Region, Reason: w.Flows[0].Reason, Kind: w.Flows[0].Kind, Commodity: w.Flows[0].Commodity, Total: 1}}
+	if _, err := w.Corrected(); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("Corrected() error = %v, want ErrOverflow", err)
+	}
+	if _, err := indicator.GDP(w, open, closing, valleyTable(t, w, alphaP, betaP)); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("GDP() error = %v, want ErrOverflow", err)
+	}
+	if _, err := w.Quantities(indicator.WeightsProduced); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("Quantities() error = %v, want ErrOverflow", err)
+	}
+}
