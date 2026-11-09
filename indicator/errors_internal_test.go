@@ -59,3 +59,35 @@ func TestFromMeasure_MapsTheSentinels(t *testing.T) {
 		}
 	}
 }
+
+// TestNet_SumsAreCheckedNeverWrapped verifies that net returns the exact sum and
+// less of int64 terms, and ErrOverflow where an exact result does not fit,
+// including the negation of the smallest int64.
+//
+// Requirement: FR-IND-009
+func TestNet_SumsAreCheckedNeverWrapped(t *testing.T) {
+	t.Parallel()
+	const maxInt, minInt = int64(1<<63 - 1), int64(-1 << 63)
+	tests := []struct {
+		name  string
+		plus  []int64
+		minus []int64
+		want  int64
+		err   error
+	}{
+		{"empty sum is 0", nil, nil, 0, nil},
+		{"plus less minus", []int64{7, 5}, []int64{2}, 10, nil},
+		{"two maxima past int64", []int64{maxInt, maxInt}, nil, 0, ErrOverflow},
+		{"wide intermediate that fits", []int64{maxInt, maxInt}, []int64{maxInt}, maxInt, nil},
+		{"negated minimum past int64", nil, []int64{minInt}, 0, ErrOverflow},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := net("Test", "field", tt.plus, tt.minus...)
+			if got != tt.want || !errors.Is(err, tt.err) {
+				t.Errorf("net(%v, %v) = %d, %v, want %d, %v", tt.plus, tt.minus, got, err, tt.want, tt.err)
+			}
+		})
+	}
+}

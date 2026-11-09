@@ -70,6 +70,14 @@ func TestBasketLevel_ExactlyTenThousandAtReference(t *testing.T) {
 	if err != nil || !stale.Rows[0].StaleOK || stale.Rows[0].Stale != 5556 || stale.Rows[1].Stale != 0 {
 		t.Errorf("BasketLevel(aged loaf) stale = alpha %d (%v) beta %d, %v, want 5 556 (25/45), 0", stale.Rows[0].Stale, stale.Rows[0].StaleOK, stale.Rows[1].Stale, err)
 	}
+	if !slices.Equal(stale.Warnings, []indicator.Warning{indicator.WarnStale}) || len(got.Warnings) != 0 {
+		t.Errorf("BasketLevel() warnings = %v (aged loaf), %v (fresh), want [WarnStale], none", stale.Warnings, got.Warnings)
+	}
+	// A region with an empty basket (cost 0) has no price level against another.
+	empty := indicator.BasketResult{Rows: []indicator.BasketRow{{Region: alpha, RefCost: 40}, {Region: beta, Cost: 54, RefCost: 50}}}
+	if r, err := empty.Ratio(alpha, beta); err != nil || r.OK {
+		t.Errorf("BasketResult.Ratio(zero cost, beta) = %+v, %v, want undefined", r, err)
+	}
 
 	other := priced(cfg, 10, 25, 13, 28, 0)
 	other.ConfigHash = [32]byte{1}

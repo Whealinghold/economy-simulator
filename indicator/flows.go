@@ -103,6 +103,9 @@ type acc struct {
 // add adds q * p.
 func (a *acc) add(q int64, p economysim.Price) { a.addInt(measure.MulInt64(q, int64(p))) }
 
+// sub subtracts q * p.
+func (a *acc) sub(q int64, p economysim.Price) { a.addInt(measure.MulInt64(q, int64(p)).Neg()) }
+
 // addInt adds a wide value.
 func (a *acc) addInt(m measure.Int128) {
 	s, ok := a.v.Add(m)
@@ -122,6 +125,19 @@ func (a acc) int64(preset, field string) (int64, error) {
 		return 0, wrap(preset, field, ErrOverflow)
 	}
 	return v, nil
+}
+
+// net returns the sum of plus less the sum of minus, or ErrOverflow wrapped with
+// the preset and field: a sum of inputs never wraps (FR-IND-009).
+func net(preset, field string, plus []int64, minus ...int64) (int64, error) {
+	var a acc
+	for _, v := range plus {
+		a.addInt(measure.FromInt64(v))
+	}
+	for _, v := range minus {
+		a.addInt(measure.FromInt64(v).Neg())
+	}
+	return a.int64(preset, field)
 }
 
 // checkTable returns ErrConfigMismatch or ErrRange unless the price table is one

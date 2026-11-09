@@ -38,7 +38,7 @@ type BasketResult struct {
 func (r BasketResult) Ratio(of, against economysim.RegionID) (Index, error) {
 	a, aok := r.row(of)
 	b, bok := r.row(against)
-	if !aok || !bok {
+	if !aok || !bok || a.Cost == 0 || b.Cost == 0 {
 		return Index{}, nil
 	}
 	return ratioWide("BasketLevel", "ratio", measure.MulInt64(a.Cost, b.RefCost), measure.MulInt64(a.RefCost, b.Cost))
@@ -69,11 +69,18 @@ func BasketLevel(cfg economysim.Config, s economysim.Snapshot) (BasketResult, er
 		return BasketResult{}, err
 	}
 	ref, ids := PricesOfReference(cfg), commodityIDs(cfg)
-	res := BasketResult{ConfigHash: s.ConfigHash, Tick: s.Tick, Warnings: nil}
+	ages := make(map[[2]int64]int64, len(s.Markets)) // looked up, never iterated
+	for _, m := range s.Markets {
+		ages[[2]int64{int64(m.State.Region), int64(m.State.Commodity)}] = m.State.Age
+	}
+	res := BasketResult{ConfigHash: s.ConfigHash, Tick: s.Tick}
 	for g, region := range cfg.Regions {
-		row, err := basketRow(cfg, s, p, ref, ids, economysim.RegionID(g), region)
+		row, err := basketRow(cfg, ages, p, ref, ids, economysim.RegionID(g), region)
 		if err != nil {
 			return BasketResult{}, err
+		}
+		if row.StaleOK && row.Stale > 0 {
+			res.Warnings = []Warning{WarnStale}
 		}
 		res.Rows = append(res.Rows, row)
 	}
@@ -81,7 +88,7 @@ func BasketLevel(cfg economysim.Config, s economysim.Snapshot) (BasketResult, er
 }
 
 // basketRow prices the basket of one region.
-func basketRow(cfg economysim.Config, s economysim.Snapshot, p, ref Prices, ids map[string]economysim.CommodityID, g economysim.RegionID, region economysim.Region) (BasketRow, error) {
+func basketRow(cfg economysim.Config, ages map[[2]int64]int64, p, ref Prices, ids map[string]economysim.CommodityID, g economysim.RegionID, region economysim.Region) (BasketRow, error) {
 	var cost, refCost, stale acc
 	for _, it := range slices.Concat(cfg.World.Upkeep, region.ExtraUpkeep) {
 		c, ok := ids[it.Commodity]
@@ -90,7 +97,7 @@ func basketRow(cfg economysim.Config, s economysim.Snapshot, p, ref Prices, ids 
 		}
 		cost.add(int64(it.Quantity), p.At(g, c))
 		refCost.add(int64(it.Quantity), ref.At(g, c))
-		if marketAge(s, g, c) > 0 {
+		if ages[[2]int64{int64(g), int64(c)}] > 0 {
 			stale.add(int64(it.Quantity), p.At(g, c))
 		}
 	}
@@ -108,16 +115,6 @@ func basketRow(cfg economysim.Config, s economysim.Snapshot, p, ref Prices, ids 
 	st, err := ratioWide("BasketLevel", "stale", stale.v, cost.v)
 	row.Stale, row.StaleOK = st.Value, st.OK
 	return row, err
-}
-
-// marketAge returns the price age of a market of the snapshot, 0 if it has no row.
-func marketAge(s economysim.Snapshot, g economysim.RegionID, c economysim.CommodityID) int64 {
-	for _, m := range s.Markets {
-		if m.State.Region == g && m.State.Commodity == c {
-			return m.State.Age
-		}
-	}
-	return 0
 }
 
 // Lane is the delivered price of a commodity on a lane (spec-indicators.md 8.4

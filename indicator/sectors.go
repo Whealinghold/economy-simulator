@@ -13,8 +13,10 @@ import (
 // governed jurisdictions (spec-indicators.md 7.5.3).
 type SectorWorth struct{ Households, Pool, Contract, Treasury int64 }
 
-// total is the sum of the four sectors.
-func (s SectorWorth) total() int64 { return s.Households + s.Pool + s.Contract + s.Treasury }
+// total is the sum of the four sectors, or ErrOverflow.
+func (s SectorWorth) total() (int64, error) {
+	return net("Sectors", "net_worth", []int64{s.Households, s.Pool, s.Contract, s.Treasury})
+}
 
 // RegionMoney is the money account of a region over a window (spec-indicators.md
 // 8.2): its change closes exactly on the boundary flows, the money that moved
@@ -113,7 +115,10 @@ func Sectors(w Window, open, closing economysim.Snapshot, p Prices) (SectorsResu
 	if res.Realm, err = realm.row(w, open, closing, -1, f); err != nil {
 		return SectorsResult{}, err
 	}
-	res.Flows, res.Balances = reasonTotals(f), moneyBalances(closing)
+	if res.Flows, err = reasonTotals(f); err != nil {
+		return SectorsResult{}, err
+	}
+	res.Balances = moneyBalances(closing)
 	res.Closing, err = res.close(f, p, realm)
 	return res, err
 }
@@ -168,25 +173,53 @@ func (a sectorAcc) row(w Window, open, closing economysim.Snapshot, r economysim
 	if err != nil {
 		return SectorRow{}, err
 	}
+	var mh, mp, hh, dh, dp acc
 	for _, g := range regionsOf(w, r) {
 		cr, or := closing.Regions[g], open.Regions[g]
-		row.MoneyHouseholds += int64(cr.MoneyHouseholds)
-		row.MoneyPool += int64(cr.MoneyPool)
-		row.Households += cr.Households
-		row.DNW.Households += int64(cr.MoneyHouseholds) - int64(or.MoneyHouseholds)
-		row.DNW.Pool += int64(cr.MoneyPool) - int64(or.MoneyPool)
-		row.Binding = addBinding(row.Binding, w.Regional[g].Binding)
+		mh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
+		mp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		hh.addInt(measure.FromInt64(cr.Households))
+		dh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
+		dh.addInt(measure.FromInt64(int64(or.MoneyHouseholds)).Neg())
+		dp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		dp.addInt(measure.FromInt64(int64(or.MoneyPool)).Neg())
+		if row.Binding, err = addBinding(row.Binding, w.Regional[g].Binding); err != nil {
+			return SectorRow{}, err
+		}
+	}
+	if row.MoneyHouseholds, err = mh.int64("Sectors", "money_households"); err != nil {
+		return SectorRow{}, err
+	}
+	if row.MoneyPool, err = mp.int64("Sectors", "money_pool"); err != nil {
+		return SectorRow{}, err
+	}
+	if row.Households, err = hh.int64("Sectors", "households"); err != nil {
+		return SectorRow{}, err
 	}
 	// The contract and treasury money are not in the snapshot yet (plans 2-15, POL):
 	// MoneyContract and MoneyTreasury stay 0 and are read from RegionRow when it has them.
-	row.Money = row.MoneyHouseholds + row.MoneyPool + row.MoneyContract + row.MoneyTreasury
-	row.NW.Households += row.MoneyHouseholds
-	row.NW.Pool += row.MoneyPool
+	if row.Money, err = net("Sectors", "money", []int64{row.MoneyHouseholds, row.MoneyPool, row.MoneyContract, row.MoneyTreasury}); err != nil {
+		return SectorRow{}, err
+	}
+	dh.addInt(measure.FromInt64(row.DNW.Households))
+	dp.addInt(measure.FromInt64(row.DNW.Pool))
+	if row.DNW.Households, err = dh.int64("Sectors", "net_worth"); err != nil {
+		return SectorRow{}, err
+	}
+	if row.DNW.Pool, err = dp.int64("Sectors", "net_worth"); err != nil {
+		return SectorRow{}, err
+	}
+	if row.NW.Households, err = net("Sectors", "net_worth", []int64{row.NW.Households, row.MoneyHouseholds}); err != nil {
+		return SectorRow{}, err
+	}
+	if row.NW.Pool, err = net("Sectors", "net_worth", []int64{row.NW.Pool, row.MoneyPool}); err != nil {
+		return SectorRow{}, err
+	}
 	if q, ok := measure.RoundDiv(measure.FromInt64(row.MoneyHouseholds), measure.FromInt64(row.Households)); ok {
 		row.PerHousehold, row.PerHouseholdOK = measure.ToInt64(q)
 	}
-	row.Account = account(w, open, closing, r, f)
-	return row, nil
+	row.Account, err = account(w, open, closing, r, f)
+	return row, err
 }
 
 // firstErr returns the first non-nil error.
@@ -210,45 +243,68 @@ func regionsOf(w Window, r economysim.RegionID) []economysim.RegionID {
 	return all
 }
 
-// addBinding adds two sets of counters.
-func addBinding(a, b BindingCounts) BindingCounts {
+// addBinding adds two sets of counters, or ErrOverflow.
+func addBinding(a, b BindingCounts) (BindingCounts, error) {
 	for _, p := range [...][2]*int64{{&a.Unfunded, &b.Unfunded}, {&a.RegionCap, &b.RegionCap}, {&a.RoleCap, &b.RoleCap},
 		{&a.Cooldown, &b.Cooldown}, {&a.Hysteresis, &b.Hysteresis}, {&a.ExitCap, &b.ExitCap}, {&a.Refused, &b.Refused},
 		{&a.BirthsCapped, &b.BirthsCapped}, {&a.BirthsUnfunded, &b.BirthsUnfunded}, {&a.DeathsCut, &b.DeathsCut},
 		{&a.DeathsHeld, &b.DeathsHeld}, {&a.FlowShort, &b.FlowShort}, {&a.FlowLimit, &b.FlowLimit}} {
-		*p[0] += *p[1]
+		v, err := net("Sectors", "binding", []int64{*p[0], *p[1]})
+		if err != nil {
+			return BindingCounts{}, err
+		}
+		*p[0] = v
 	}
-	return a
+	return a, nil
 }
 
 // account builds the money account of a region (or the realm): the change of
-// its money against the boundary flows and the money that crossed it.
-func account(w Window, open, closing economysim.Snapshot, r economysim.RegionID, f flowSet) RegionMoney {
-	var m RegionMoney
+// its money against the boundary flows and the money that crossed it. Every sum
+// is checked (FR-IND-009).
+func account(w Window, open, closing economysim.Snapshot, r economysim.RegionID, f flowSet) (RegionMoney, error) {
+	var change, faucets, sinks, relocIn, relocOut, settledIn, settledOut, fiscalIn, fiscalOut acc
+	neg := func(v int64) measure.Int128 { return measure.FromInt64(v).Neg() }
 	for _, g := range regionsOf(w, r) {
 		cr, or := closing.Regions[g], open.Regions[g]
-		m.Change += int64(cr.MoneyHouseholds) + int64(cr.MoneyPool) - int64(or.MoneyHouseholds) - int64(or.MoneyPool)
+		change.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
+		change.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		change.addInt(neg(int64(or.MoneyHouseholds)))
+		change.addInt(neg(int64(or.MoneyPool)))
 		for _, x := range f.rows {
 			if x.Region != g || x.Commodity != economysim.NoCommodity {
 				continue
 			}
 			if x.Kind == economysim.KindFaucet {
-				m.Faucets += x.Total
+				faucets.addInt(measure.FromInt64(x.Total))
 			} else {
-				m.Sinks += x.Total
+				sinks.addInt(measure.FromInt64(x.Total))
 			}
 		}
-		m.FiscalIn += int64(w.Regional[g].FiscalIn)
-		m.FiscalOut += int64(w.Regional[g].FiscalOut)
+		fiscalIn.addInt(measure.FromInt64(int64(w.Regional[g].FiscalIn)))
+		fiscalOut.addInt(measure.FromInt64(int64(w.Regional[g].FiscalOut)))
 	}
 	for _, x := range w.Relocations {
-		m.RelocIn, m.RelocOut = m.RelocIn+inRegion(r, x.To, int64(x.Money)), m.RelocOut+inRegion(r, x.From, int64(x.Money))
+		relocIn.addInt(measure.FromInt64(inRegion(r, x.To, int64(x.Money))))
+		relocOut.addInt(measure.FromInt64(inRegion(r, x.From, int64(x.Money))))
 	}
 	for _, x := range w.Settlements {
-		m.SettledIn, m.SettledOut = m.SettledIn+inRegion(r, x.Region, int64(x.Paid)), m.SettledOut+inRegion(r, x.To, int64(x.Paid))
+		settledIn.addInt(measure.FromInt64(inRegion(r, x.Region, int64(x.Paid))))
+		settledOut.addInt(measure.FromInt64(inRegion(r, x.To, int64(x.Paid))))
 	}
-	m.Residual = m.Change - (m.Faucets - m.Sinks + m.RelocIn - m.RelocOut + m.SettledIn - m.SettledOut + m.FiscalIn - m.FiscalOut)
-	return m
+	var m RegionMoney
+	var err error
+	for _, t := range [...]struct {
+		dst *int64
+		src acc
+	}{{&m.Change, change}, {&m.Faucets, faucets}, {&m.Sinks, sinks}, {&m.RelocIn, relocIn}, {&m.RelocOut, relocOut},
+		{&m.SettledIn, settledIn}, {&m.SettledOut, settledOut}, {&m.FiscalIn, fiscalIn}, {&m.FiscalOut, fiscalOut}} {
+		if *t.dst, err = t.src.int64("Sectors", "account"); err != nil {
+			return RegionMoney{}, err
+		}
+	}
+	m.Residual, err = net("Sectors", "residual", []int64{m.Change, m.Sinks, m.RelocOut, m.SettledOut, m.FiscalOut},
+		m.Faucets, m.RelocIn, m.SettledIn, m.FiscalIn)
+	return m, err
 }
 
 // inRegion returns v when region g is the row's region r, or any region for the
@@ -262,7 +318,7 @@ func inRegion(r, g economysim.RegionID, v int64) int64 {
 
 // reasonTotals sums the money reasons of the corrected flows over the regions,
 // in reason order.
-func reasonTotals(f flowSet) []ReasonTotal {
+func reasonTotals(f flowSet) ([]ReasonTotal, error) {
 	var out []ReasonTotal
 	for _, x := range f.rows {
 		if x.Commodity != economysim.NoCommodity {
@@ -272,9 +328,13 @@ func reasonTotals(f flowSet) []ReasonTotal {
 		if !found {
 			out = slices.Insert(out, i, ReasonTotal{Reason: x.Reason, Kind: x.Kind})
 		}
-		out[i].Total += x.Total
+		t, err := net("Sectors", "flows", []int64{out[i].Total, x.Total})
+		if err != nil {
+			return nil, err
+		}
+		out[i].Total = t
 	}
-	return out
+	return out, nil
 }
 
 // moneyBalances returns the cumulative boundary balances of the money reasons.
@@ -297,22 +357,26 @@ func (res SectorsResult) close(f flowSet, p Prices, realm sectorAcc) (NetWorthCl
 		if x.Commodity == economysim.NoCommodity {
 			continue
 		}
-		sign := int64(1)
+		v := measure.MulInt64(x.Total, int64(p.At(x.Region, x.Commodity)))
 		if x.Kind != economysim.KindFaucet {
-			sign = -1
+			v = v.Neg()
 		}
-		goods.add(sign*x.Total, p.At(x.Region, x.Commodity))
+		goods.addInt(v)
 	}
 	var c NetWorthClosing
 	var err error
-	c.DNW = res.Realm.DNW.total()
-	c.Money = res.Realm.Account.Faucets - res.Realm.Account.Sinks
+	if c.DNW, err = res.Realm.DNW.total(); err != nil {
+		return c, err
+	}
+	if c.Money, err = net("Sectors", "money", []int64{res.Realm.Account.Faucets}, res.Realm.Account.Sinks); err != nil {
+		return c, err
+	}
 	if c.Goods, err = goods.int64("Sectors", "goods"); err != nil {
 		return c, err
 	}
 	if c.Pending, err = realm.pend.int64("Sectors", "pending"); err != nil {
 		return c, err
 	}
-	c.Residual = c.DNW - (c.Money + c.Goods + c.Pending)
-	return c, nil
+	c.Residual, err = net("Sectors", "residual", []int64{c.DNW}, c.Money, c.Goods, c.Pending)
+	return c, err
 }

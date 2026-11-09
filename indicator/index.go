@@ -1,6 +1,8 @@
 package indicator
 
 import (
+	"slices"
+
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/internal/measure"
 )
@@ -15,17 +17,7 @@ type CellSel struct {
 
 // has reports whether the cell is selected.
 func (s CellSel) has(r economysim.RegionID, c economysim.CommodityID) bool {
-	return (s.Regions == nil || containsID(s.Regions, r)) && (s.Commodities == nil || containsID(s.Commodities, c))
-}
-
-// containsID is slices.Contains for the two ID types.
-func containsID[T comparable](ids []T, id T) bool {
-	for _, x := range ids {
-		if x == id {
-			return true
-		}
-	}
-	return false
+	return (s.Regions == nil || slices.Contains(s.Regions, r)) && (s.Commodities == nil || slices.Contains(s.Commodities, c))
 }
 
 // Index is an index, a ratio or a growth in basis points. OK is false when it is

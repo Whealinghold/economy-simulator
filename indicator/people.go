@@ -57,44 +57,61 @@ func Households(w Window, open, closing economysim.Snapshot, ticksPerYear int64)
 		return HouseholdsResult{}, err
 	}
 	res := HouseholdsResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To, Total: HouseholdsRow{Region: -1, Role: -1}}
-	var ticks int64
+	var ticks acc
 	for i, p := range w.People {
-		row := householdsRow(w, i, p, oa[i], ca[i])
+		row, err := householdsRow(w, i, p, oa[i], ca[i])
+		if err != nil {
+			return HouseholdsResult{}, err
+		}
 		res.Rows = append(res.Rows, row)
-		res.Total.add(row)
-		ticks += p.HouseholdTicks
+		if err = res.Total.add(row); err != nil {
+			return HouseholdsResult{}, err
+		}
+		ticks.addInt(measure.FromInt64(p.HouseholdTicks))
 	}
-	res.Rate, err = ratioWide("Households", "rate", measure.MulInt64(res.Total.Births-res.Total.Deaths, ticksPerYear), measure.FromInt64(ticks))
+	growth, err := net("Households", "rate", []int64{res.Total.Births}, res.Total.Deaths)
+	if err != nil {
+		return HouseholdsResult{}, err
+	}
+	res.Rate, err = ratioWide("Households", "rate", measure.MulInt64(growth, ticksPerYear), ticks.v)
+	if ticks.over {
+		err = wrap("Households", "ticks", ErrOverflow)
+	}
 	return res, err
 }
 
 // householdsRow is the row of the people cell i.
-func householdsRow(w Window, i int, p PeopleTally, openAgents, closeAgents int64) HouseholdsRow {
+func householdsRow(w Window, i int, p PeopleTally, openAgents, closeAgents int64) (HouseholdsRow, error) {
 	r := HouseholdsRow{
 		Region: economysim.RegionID(i / w.Roles), Role: economysim.RoleID(i % w.Roles),
 		Open: w.OpenHouseholds[i], Close: w.CloseHouseholds[i], OpenAgents: openAgents, CloseAgents: closeAgents,
 		Spawned: p.Spawned, Bankrupted: p.Bankrupted, WeightChanges: p.WeightDelta,
-		RoleChanges: p.RoleIn - p.RoleOut, Relocated: p.RelocIn - p.RelocOut,
 		Births: p.BirthsDone, Deaths: p.DeathsDone,
 	}
-	r.Residual = r.Close - r.Open - (r.Spawned - r.Bankrupted + r.WeightChanges + r.RoleChanges + r.Relocated)
-	return r
+	var err error
+	if r.RoleChanges, err = net("Households", "role_changes", []int64{p.RoleIn}, p.RoleOut); err != nil {
+		return HouseholdsRow{}, err
+	}
+	if r.Relocated, err = net("Households", "relocated", []int64{p.RelocIn}, p.RelocOut); err != nil {
+		return HouseholdsRow{}, err
+	}
+	r.Residual, err = net("Households", "residual", []int64{r.Close, r.Bankrupted}, r.Open, r.Spawned, r.WeightChanges, r.RoleChanges, r.Relocated)
+	return r, err
 }
 
-// add adds the counts of another row.
-func (r *HouseholdsRow) add(o HouseholdsRow) {
-	r.Open += o.Open
-	r.Close += o.Close
-	r.OpenAgents += o.OpenAgents
-	r.CloseAgents += o.CloseAgents
-	r.Spawned += o.Spawned
-	r.Bankrupted += o.Bankrupted
-	r.WeightChanges += o.WeightChanges
-	r.RoleChanges += o.RoleChanges
-	r.Relocated += o.Relocated
-	r.Births += o.Births
-	r.Deaths += o.Deaths
-	r.Residual += o.Residual
+// add adds the counts of another row, or returns ErrOverflow.
+func (r *HouseholdsRow) add(o HouseholdsRow) error {
+	for _, p := range [...][2]*int64{{&r.Open, &o.Open}, {&r.Close, &o.Close}, {&r.OpenAgents, &o.OpenAgents},
+		{&r.CloseAgents, &o.CloseAgents}, {&r.Spawned, &o.Spawned}, {&r.Bankrupted, &o.Bankrupted},
+		{&r.WeightChanges, &o.WeightChanges}, {&r.RoleChanges, &o.RoleChanges}, {&r.Relocated, &o.Relocated},
+		{&r.Births, &o.Births}, {&r.Deaths, &o.Deaths}, {&r.Residual, &o.Residual}} {
+		v, err := net("Households", "total", []int64{*p[0], *p[1]})
+		if err != nil {
+			return err
+		}
+		*p[0] = v
+	}
+	return nil
 }
 
 // agentsOf returns the agents by (region, role) of a snapshot, at region * Roles
@@ -229,8 +246,22 @@ type RoleSharesResult struct {
 // swing over a series of windows is Swing of the series of one share.
 func RoleShares(w Window) (RoleSharesResult, error) {
 	res := RoleSharesResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
-	openReg, closeReg := byRegion(w, w.OpenHouseholds), byRegion(w, w.CloseHouseholds)
-	openAll, closeAll := sum64(w.OpenHouseholds), sum64(w.CloseHouseholds)
+	openReg, err := byRegion(w, w.OpenHouseholds)
+	if err != nil {
+		return RoleSharesResult{}, err
+	}
+	closeReg, err := byRegion(w, w.CloseHouseholds)
+	if err != nil {
+		return RoleSharesResult{}, err
+	}
+	openAll, err := net("RoleShares", "households", w.OpenHouseholds)
+	if err != nil {
+		return RoleSharesResult{}, err
+	}
+	closeAll, err := net("RoleShares", "households", w.CloseHouseholds)
+	if err != nil {
+		return RoleSharesResult{}, err
+	}
 	for i := range w.People {
 		g := i / w.Roles
 		row := ShareRow{Region: economysim.RegionID(g), Role: economysim.RoleID(i % w.Roles), Open: w.OpenHouseholds[i], Close: w.CloseHouseholds[i]}
@@ -248,22 +279,17 @@ func RoleShares(w Window) (RoleSharesResult, error) {
 	return res, nil
 }
 
-// byRegion sums a (region, role) table by region.
-func byRegion(w Window, t []int64) []int64 {
+// byRegion sums a (region, role) table by region, or returns ErrOverflow.
+func byRegion(w Window, t []int64) ([]int64, error) {
 	out := make([]int64, w.Regions)
 	for i, v := range t {
-		out[i/w.Roles] += v
+		sum, err := net("RoleShares", "households", []int64{out[i/w.Roles], v})
+		if err != nil {
+			return nil, err
+		}
+		out[i/w.Roles] = sum
 	}
-	return out
-}
-
-// sum64 sums a table; household counts cannot pass int64.
-func sum64(t []int64) int64 {
-	var s int64
-	for _, v := range t {
-		s += v
-	}
-	return s
+	return out, nil
 }
 
 // Swing returns the largest minus the smallest value of a series of shares, in

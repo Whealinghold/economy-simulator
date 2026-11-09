@@ -153,9 +153,16 @@ func loadUnits(w Window, f flowSet) (unitTables, error) {
 		if a.Origin < 0 || int(a.Origin) >= w.Regions || a.Destination < 0 || int(a.Destination) >= w.Regions || a.Commodity < 0 || int(a.Commodity) >= w.Commodities {
 			return unitTables{}, wrap("GDP", "arrivals", ErrRange)
 		}
-		moved := a.Delivered + a.Diverted
-		u.arrOut[o] += moved
-		u.arrIn[d] += moved
+		moved, err := net("GDP", "arrivals", []int64{a.Delivered, a.Diverted})
+		if err != nil {
+			return unitTables{}, err
+		}
+		if u.arrOut[o], err = net("GDP", "arrivals", []int64{u.arrOut[o], moved}); err != nil {
+			return unitTables{}, err
+		}
+		if u.arrIn[d], err = net("GDP", "arrivals", []int64{u.arrIn[d], moved}); err != nil {
+			return unitTables{}, err
+		}
 	}
 	return u, nil
 }
@@ -171,24 +178,46 @@ type regionAcc struct {
 func (a *regionAcc) addCell(u unitTables, st, op stockTable, i int, pr economysim.Price) {
 	a.output.add(u.out[i], pr)
 	a.interm.add(u.in[i], pr)
-	a.cons.add(u.cons[i]+u.want[i], pr)
-	dHeld, dTransit, dPend := st.held[i]-op.held[i], st.transit[i]-op.transit[i], st.pend[i]-op.pend[i]
-	a.pending.add(dPend, pr)
-	a.change.addInt(sum3(dHeld, dTransit, dPend, pr))
-	a.written.add(u.spoil[i]+u.disp[i]+u.wear[i]+u.loss[i], pr)
+	a.cons.add(u.cons[i], pr)
+	a.cons.add(u.want[i], pr)
+	// The sums and differences of units are added to the wide accumulators one
+	// term at a time: (x + y) * p is x * p + y * p, so nothing wraps (FR-IND-009).
+	a.pending.add(st.pend[i], pr)
+	a.pending.sub(op.pend[i], pr)
+	for _, t := range [...]struct {
+		q    int64
+		plus bool
+	}{{st.held[i], true}, {op.held[i], false}, {st.transit[i], true}, {op.transit[i], false}, {st.pend[i], true}, {op.pend[i], false}} {
+		if t.plus {
+			a.change.add(t.q, pr)
+		} else {
+			a.change.sub(t.q, pr)
+		}
+	}
+	for _, q := range [...]int64{u.spoil[i], u.disp[i], u.wear[i], u.loss[i]} {
+		a.written.add(q, pr)
+	}
 	a.wear.add(u.wear[i], pr)
-	a.carriage.add(u.haul[i]+u.feed[i], pr)
-	a.nx.add(u.purch[i]-u.offer[i]+u.unsold[i], pr)
+	a.carriage.add(u.haul[i], pr)
+	a.carriage.add(u.feed[i], pr)
+	a.nx.add(u.purch[i], pr)
+	a.nx.sub(u.offer[i], pr)
+	a.nx.add(u.unsold[i], pr)
 	a.arrIn.add(u.arrIn[i], pr)
 	a.arrOut.add(u.arrOut[i], pr)
 	a.endow.add(u.init[i], pr)
 	// The units of the relocation item: what the ledger's identity (7.1.3, 8.2)
 	// leaves after every flow and arrival.
-	res := measure.FromInt64(dHeld)
+	res, ok := measure.FromInt64(st.held[i]).Add(measure.FromInt64(op.held[i]).Neg())
+	dTransit, ok2 := measure.FromInt64(st.transit[i]).Add(measure.FromInt64(op.transit[i]).Neg())
+	res, ok3 := res.Add(dTransit)
+	if !ok || !ok2 || !ok3 {
+		a.relocOver = true
+	}
 	for _, t := range [...]struct {
 		v    int64
 		plus bool
-	}{{dTransit, true}, {u.out[i], false}, {u.in[i], true}, {u.cons[i], true}, {u.want[i], true}, {u.spoil[i], true},
+	}{{u.out[i], false}, {u.in[i], true}, {u.cons[i], true}, {u.want[i], true}, {u.spoil[i], true},
 		{u.disp[i], true}, {u.wear[i], true}, {u.haul[i], true}, {u.feed[i], true}, {u.loss[i], true}, {u.purch[i], true},
 		{u.offer[i], false}, {u.unsold[i], true}, {u.init[i], false}, {u.arrIn[i], false}, {u.arrOut[i], true}} {
 		v := measure.FromInt64(t.v)
@@ -205,19 +234,9 @@ func (a *regionAcc) addCell(u unitTables, st, op stockTable, i int, pr economysi
 	} else {
 		a.relocOver = true
 	}
-	var ok bool
 	if a.relocUnits, ok = a.relocUnits.Add(res); !ok {
 		a.relocOver = true
 	}
-}
-
-// sum3 is (a + b + c) * pr as a wide value.
-func sum3(a, b, c int64, pr economysim.Price) measure.Int128 {
-	var s acc
-	s.add(a, pr)
-	s.add(b, pr)
-	s.add(c, pr)
-	return s.v
 }
 
 // merge adds the terms of another region.
@@ -258,10 +277,14 @@ func (a regionAcc) row(region economysim.RegionID) (GDPRow, error) {
 	if err != nil {
 		return GDPRow{}, err
 	}
-	row.Cash = row.Output - row.Intermediate
-	row.ValueAdded = row.Cash + row.Pending
-	row.NetProduct = row.ValueAdded - wear
-	return row, nil
+	if row.Cash, err = net(name, "cash", []int64{row.Output}, row.Intermediate); err != nil {
+		return GDPRow{}, err
+	}
+	if row.ValueAdded, err = net(name, "value_added", []int64{row.Cash, row.Pending}); err != nil {
+		return GDPRow{}, err
+	}
+	row.NetProduct, err = net(name, "net_product", []int64{row.ValueAdded}, wear)
+	return row, err
 }
 
 // arrNet is the value of the units that left a region by shipment less that of
@@ -273,9 +296,10 @@ func arrNet(out, in acc) acc {
 	return r
 }
 
-// expenditure is C + StockChange + Written + Carriage + NX + Inter - Endow.
-func (r GDPRow) expenditure() int64 {
-	return r.C + r.StockChange + r.Written + r.Carriage + r.NX + r.Inter - r.Endow
+// expenditure is C + StockChange + Written + Carriage + NX + Inter - Endow, or
+// ErrOverflow.
+func (r GDPRow) expenditure() (int64, error) {
+	return net("GDP", "expenditure", []int64{r.C, r.StockChange, r.Written, r.Carriage, r.NX, r.Inter}, r.Endow)
 }
 
 // GDP returns the production and the expenditure views of a window for each
@@ -299,8 +323,16 @@ func GDP(w Window, open, closing economysim.Snapshot, p Prices) (GDPResult, erro
 		if err != nil {
 			return GDPResult{}, err
 		}
-		row.Residual = row.ValueAdded - (row.expenditure() - row.Reloc)
-		row.RelocEvents = relocEvents(w, economysim.RegionID(r))
+		exp, err := row.expenditure()
+		if err != nil {
+			return GDPResult{}, err
+		}
+		if row.Residual, err = net("GDP", "residual", []int64{row.ValueAdded, row.Reloc}, exp); err != nil {
+			return GDPResult{}, err
+		}
+		if row.RelocEvents, err = relocEvents(w, economysim.RegionID(r)); err != nil {
+			return GDPResult{}, err
+		}
 		row.Binding = w.Regional[r].Binding
 		res.Regions = append(res.Regions, row)
 		realm.merge(a)
@@ -309,8 +341,12 @@ func GDP(w Window, open, closing economysim.Snapshot, p Prices) (GDPResult, erro
 		return GDPResult{}, err
 	}
 	res.TradeValuation = res.Realm.Inter
-	res.Realm.Residual = res.Realm.ValueAdded - res.Realm.expenditure()
-	return res, nil
+	exp, err := res.Realm.expenditure()
+	if err != nil {
+		return GDPResult{}, err
+	}
+	res.Realm.Residual, err = net("GDP", "residual", []int64{res.Realm.ValueAdded}, exp)
+	return res, err
 }
 
 // accounts is what the three views of a window read: its unit flows and the
@@ -364,15 +400,15 @@ func addConstruction(a *regionAcc, w Window, r economysim.RegionID, p Prices) {
 }
 
 // relocEvents is the units of AgentRelocated into a region less out of it.
-func relocEvents(w Window, r economysim.RegionID) int64 {
-	var n int64
+func relocEvents(w Window, r economysim.RegionID) (int64, error) {
+	var n acc
 	for _, x := range w.Relocations {
 		if x.To == r {
-			n += x.Units
+			n.addInt(measure.FromInt64(x.Units))
 		}
 		if x.From == r {
-			n -= x.Units
+			n.addInt(measure.FromInt64(x.Units).Neg())
 		}
 	}
-	return n
+	return n.int64("GDP", "reloc_events")
 }

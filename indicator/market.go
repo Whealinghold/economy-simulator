@@ -243,20 +243,30 @@ func StockCover(w Window, closing economysim.Snapshot, sel CellSel) (CoverResult
 	if err != nil {
 		return CoverResult{}, err
 	}
-	res := CoverResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To, Total: CoverRow{Region: -1, Commodity: economysim.NoCommodity}}
+	res := CoverResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
+	var held, estate, used acc
 	err = forMarkets(w, sel, func(i int, r economysim.RegionID, c economysim.CommodityID) error {
 		row, err := coverRow(w.Steps, r, c, st.held[i], st.estate[i], consumed[i])
 		res.Rows = append(res.Rows, row)
-		res.Total.Held += st.held[i]
-		res.Total.Estate += st.estate[i]
-		res.Total.Consumed += consumed[i]
+		held.addInt(measure.FromInt64(st.held[i]))
+		estate.addInt(measure.FromInt64(st.estate[i]))
+		used.addInt(measure.FromInt64(consumed[i]))
 		return err
 	})
 	if err != nil {
 		return CoverResult{}, err
 	}
-	t, err := coverRow(w.Steps, -1, economysim.NoCommodity, res.Total.Held, res.Total.Estate, res.Total.Consumed)
-	res.Total = t
+	var h, e, u int64
+	if h, err = held.int64("StockCover", "held"); err != nil {
+		return CoverResult{}, err
+	}
+	if e, err = estate.int64("StockCover", "estate"); err != nil {
+		return CoverResult{}, err
+	}
+	if u, err = used.int64("StockCover", "consumed"); err != nil {
+		return CoverResult{}, err
+	}
+	res.Total, err = coverRow(w.Steps, -1, economysim.NoCommodity, h, e, u)
 	return res, err
 }
 

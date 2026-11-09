@@ -1,6 +1,8 @@
 package indicator
 
 import (
+	"slices"
+
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/internal/measure"
 )
@@ -91,8 +93,9 @@ func (res *TurnoverResult) velocity(w Window, closing economysim.Snapshot, ticks
 	}
 	var money acc
 	for g, r := range closing.Regions {
-		if sel.Regions == nil || containsID(sel.Regions, economysim.RegionID(g)) {
-			money.addInt(measure.FromInt64(int64(r.MoneyHouseholds) + int64(r.MoneyPool)))
+		if sel.Regions == nil || slices.Contains(sel.Regions, economysim.RegionID(g)) {
+			money.addInt(measure.FromInt64(int64(r.MoneyHouseholds)))
+			money.addInt(measure.FromInt64(int64(r.MoneyPool)))
 		}
 	}
 	if res.Money, err = money.int64("Turnover", "money"); err != nil {

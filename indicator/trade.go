@@ -65,9 +65,11 @@ func TradeBalance(w Window, p Prices, gdp GDPResult) (TradeBalanceResult, error)
 	if res.Lines, err = tradeLines(w, f, p); err != nil {
 		return TradeBalanceResult{}, err
 	}
-	res.gates(w, f)
-	res.openness(gdp)
-	return res, nil
+	if err = res.gates(w, f); err != nil {
+		return TradeBalanceResult{}, err
+	}
+	err = res.openness(gdp)
+	return res, err
 }
 
 // tradeLines returns the units imported and exported by gate and commodity.
@@ -81,7 +83,11 @@ func tradeLines(w Window, f flowSet, p Prices) ([]TradeLine, error) {
 	}
 	var lines []TradeLine
 	for i := range tables[0] {
-		imp, exp := tables[0][i]-tables[1][i], tables[2][i]
+		imp, err := net("TradeBalance", "imp", []int64{tables[0][i]}, tables[1][i])
+		if err != nil {
+			return nil, err
+		}
+		exp := tables[2][i]
 		if imp == 0 && exp == 0 {
 			continue
 		}
@@ -90,7 +96,6 @@ func tradeLines(w Window, f flowSet, p Prices) ([]TradeLine, error) {
 		iv.add(imp, p.At(r, c))
 		ev.add(exp, p.At(r, c))
 		line := TradeLine{Gate: r, Commodity: c, Imp: imp, Exp: exp}
-		var err error
 		if line.ImpValue, err = iv.int64("TradeBalance", "imp_value"); err != nil {
 			return nil, err
 		}
@@ -103,29 +108,49 @@ func tradeLines(w Window, f flowSet, p Prices) ([]TradeLine, error) {
 }
 
 // gates fills the money of each gate from the six outside reasons.
-func (res *TradeBalanceResult) gates(w Window, f flowSet) {
+func (res *TradeBalanceResult) gates(w Window, f flowSet) error {
 	budget, unspent, receipts := f.money(reasonOutsideBudget), f.money(reasonOutsideUnspent), f.money(reasonOutsideReceipts)
+	const name = "TradeBalance"
+	var imports, exports, nets []int64
 	for r := 0; r < w.Regions; r++ {
 		if budget[r] == 0 && unspent[r] == 0 && receipts[r] == 0 {
 			continue
 		}
-		g := TradeGate{Gate: economysim.RegionID(r), ImportValue: receipts[r], ExportValue: budget[r] - unspent[r], Binding: w.Regional[r].Binding}
-		g.Net = g.ExportValue - g.ImportValue
+		g := TradeGate{Gate: economysim.RegionID(r), ImportValue: receipts[r], Binding: w.Regional[r].Binding}
+		var err error
+		if g.ExportValue, err = net(name, "export_value", []int64{budget[r]}, unspent[r]); err != nil {
+			return err
+		}
+		if g.Net, err = net(name, "net", []int64{g.ExportValue}, g.ImportValue); err != nil {
+			return err
+		}
 		res.Gates = append(res.Gates, g)
-		res.Total.ImportValue += g.ImportValue
-		res.Total.ExportValue += g.ExportValue
-		res.Total.Net += g.Net
+		imports, exports, nets = append(imports, g.ImportValue), append(exports, g.ExportValue), append(nets, g.Net)
 	}
+	var err error
+	if res.Total.ImportValue, err = net(name, "import_value", imports); err != nil {
+		return err
+	}
+	if res.Total.ExportValue, err = net(name, "export_value", exports); err != nil {
+		return err
+	}
+	res.Total.Net, err = net(name, "net", nets)
+	return err
 }
 
-// openness sets (X + M) / GDP in basis points.
-func (res *TradeBalanceResult) openness(gdp GDPResult) {
+// openness sets (X + M) / GDP in basis points. A sum past int64 is ErrOverflow.
+func (res *TradeBalanceResult) openness(gdp GDPResult) error {
 	if gdp.Realm.ValueAdded <= 0 {
-		return
+		return nil
 	}
-	n := measure.MulInt64(10_000, res.Total.ExportValue+res.Total.ImportValue)
+	xm, err := net("TradeBalance", "openness", []int64{res.Total.ExportValue, res.Total.ImportValue})
+	if err != nil {
+		return err
+	}
+	n := measure.MulInt64(10_000, xm)
 	q, ok := measure.RoundDiv(n, measure.FromInt64(gdp.Realm.ValueAdded))
 	if v, fits := measure.ToInt64(q); ok && fits {
 		res.Openness, res.OpennessOK = BP(v), true
 	}
+	return nil
 }
