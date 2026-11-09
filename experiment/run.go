@@ -191,7 +191,7 @@ func (e Spec) fail(rec Record, f *failure, p progress) Record {
 // reading is defined and inside the band.
 func (e Spec) passes(c Criterion, final []Reading) bool {
 	i := slices.IndexFunc(e.Measures, func(m Measure) bool { return m.Name == c.Measure })
-	if i < 0 || !final[i].OK {
+	if i < 0 || i >= len(final) || !final[i].OK {
 		return false
 	}
 	v := final[i].Value
@@ -243,7 +243,9 @@ func (e Spec) worldOptions(k Key) []economysim.Option {
 func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	var rc runConfig
 	for _, o := range opts {
-		o(&rc)
+		if o != nil {
+			o(&rc)
+		}
 	}
 	units, err := Plan(e)
 	if err != nil {

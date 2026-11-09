@@ -43,9 +43,14 @@ func renderPoint(line func(...string), r Result, p PointResult) {
 			renderRun(line, r, run)
 		}
 		for i, red := range v.Reductions {
-			renderReduction(line, r.Measures[i], red)
+			if i < len(r.Measures) { // a hand-built Result may carry more rows than names
+				renderReduction(line, r.Measures[i], red)
+			}
 		}
 		for i, ps := range v.Pass {
+			if i >= len(r.Criteria) {
+				break
+			}
 			line("pass", oneLine(r.Criteria[i]), "passes", strconv.Itoa(ps.Passes), "planned", strconv.Itoa(ps.Planned),
 				"share", strconv.Itoa(ps.ShareBP))
 		}
