@@ -608,7 +608,7 @@ WithSeed(seed))` and the point's documents (FR-EXP-010).
 
 4.6.3. **Same or per point.** `SameSeeds` uses the same `R` seeds at every point:
 the comparison of two points is then seed-matched, and a pair of runs is a pair
-that the alignment check (7.3) can see. `PerPointSeeds` gives every point its
+(7.1), aligned in the draws by construction (7.2.1). `PerPointSeeds` gives every point its
 own seeds: the points are independent samples, which is what an estimate of the
 spread over the whole design wants and what a paired comparison cannot be.
 `SameSeeds` is the default because the cost of choosing it is nothing and the
