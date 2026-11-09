@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -49,23 +50,29 @@ func (t *transportState) holds(a *agent, skip []string) bool {
 func (w *World) arrivalSkips(*shipment, RegionID) []string { return nil }
 
 // p13Arrivals is P1.3: the shipments whose arrival tick has come, in ascending
-// shipment ID, each delivered completely before the next (spec-transport.md 5.7).
-// The arrivals are recorded in the scratch of the module for the later positions.
+// shipment ID, each delivered completely before the next (spec-transport.md 5.7). The
+// schedule gives them in that order, so the work of a tick follows the arrivals and
+// not the shipments in flight (NFR-TRN-002). The arrivals are recorded in the
+// scratch of the module for the later positions.
 func (w *World) p13Arrivals() {
 	t := w.transport
 	t.arrived, t.arrivedLines = t.arrived[:0], t.arrivedLines[:0]
 	tick := w.Tick()
-	for i := 0; i < len(t.ships); {
-		if t.ships[i].arrives > tick {
-			i++
-			continue
+	for {
+		id, ok := t.due.Due(tick)
+		if !ok {
+			return
+		}
+		i, found := slices.BinarySearchFunc(t.ships, ShipmentID(id), func(s shipment, id ShipmentID) int { return cmp.Compare(s.id, id) })
+		if !found {
+			continue // dropped with its traveller (dropTraveller)
 		}
 		if w.arrive(t.ships[i]) {
 			t.ships = slices.Delete(t.ships, i, i+1)
 			continue
 		}
 		t.ships[i].arrives = tick + 1 // held by a refusal of the move: retried next tick
-		i++
+		t.due.Push(tick+1, id)
 	}
 }
 

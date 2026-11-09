@@ -329,3 +329,80 @@ func TestFree_LowestFirst(t *testing.T) {
 		t.Errorf("Len after Rebuild(nil) = %d, want 0", f.Len())
 	}
 }
+
+// TestSchedule_DueInTickThenIDOrder verifies that the entries come out by tick and,
+// within a tick, by ascending ID whatever the order they were pushed in, that nothing
+// comes out before its tick, and that Reset empties the schedule.
+//
+// Requirement: FR-TRN-024
+func TestSchedule_DueInTickThenIDOrder(t *testing.T) {
+	t.Parallel()
+	var s transit.Schedule
+	if id, ok := s.Due(100); ok || id != 0 {
+		t.Fatalf("Due on an empty schedule = %d, %v, want 0, false", id, ok)
+	}
+	for _, e := range [][2]int64{{5, 9}, {3, 4}, {5, 2}, {7, 1}, {3, 8}, {5, 6}} {
+		s.Push(e[0], e[1])
+	}
+	if id, ok := s.Due(2); ok {
+		t.Fatalf("Due(2) = %d, true, want none before tick 3", id)
+	}
+	var got []int64
+	for tick := int64(3); tick <= 7; tick++ {
+		for {
+			id, ok := s.Due(tick)
+			if !ok {
+				break
+			}
+			got = append(got, id)
+		}
+	}
+	// Tick 3: IDs 4 and 8; tick 5: 2, 6 and 9; tick 7: 1.
+	if want := []int64{4, 8, 2, 6, 9, 1}; !slices.Equal(got, want) {
+		t.Errorf("Due order = %v, want %v", got, want)
+	}
+	s.Push(1, 1)
+	s.Reset()
+	if s.Len() != 0 {
+		t.Errorf("Len after Reset = %d, want 0", s.Len())
+	}
+}
+
+// TestSchedule_CostFollowsArrivals verifies NFR-TRN-002 on the structure: a tick
+// with nothing due costs one comparison however many shipments are in flight, and the
+// cost of the arrivals of a tick grows with their number and the logarithm of what
+// is in flight, not with what is in flight.
+//
+// Requirement: NFR-TRN-002
+func TestSchedule_CostFollowsArrivals(t *testing.T) {
+	t.Parallel()
+	cost := func(inFlight int) (idle, busy int64) {
+		var s transit.Schedule
+		for i := range inFlight {
+			s.Push(1_000+int64(i), int64(i)) // far in the future
+		}
+		for i := range 3 {
+			s.Push(10, int64(inFlight+i)) // three due at tick 10
+		}
+		before := s.Steps()
+		s.Due(9)
+		idle = s.Steps() - before
+		before = s.Steps()
+		for {
+			if _, ok := s.Due(10); !ok {
+				break
+			}
+		}
+		return idle, s.Steps() - before
+	}
+	smallIdle, smallBusy := cost(8)
+	largeIdle, largeBusy := cost(8_000)
+	if smallIdle != 1 || largeIdle != 1 {
+		t.Errorf("a tick with no arrival cost %d and %d comparisons for 8 and 8 000 in flight, want 1 and 1", smallIdle, largeIdle)
+	}
+	// 8 000 is 1 000 times 8 and its logarithm about 4 times: the cost of three
+	// arrivals may grow with the logarithm and must not grow with the count.
+	if largeBusy > 6*smallBusy {
+		t.Errorf("three arrivals cost %d comparisons among 8 000 in flight and %d among 8, want growth by the logarithm (at most 6 times)", largeBusy, smallBusy)
+	}
+}

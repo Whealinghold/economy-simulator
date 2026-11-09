@@ -535,6 +535,7 @@ func (w *World) send(c *shipCtx) shipment {
 	// 3a: the toll (FIS). 4a: the risk (RSK).
 	t.next++
 	t.ships = append(t.ships, s)
+	t.due.Push(s.arrives, int64(s.id))
 	if !s.hired {
 		t.setAway(a.id, true)
 	}

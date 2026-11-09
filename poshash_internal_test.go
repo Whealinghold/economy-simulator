@@ -68,6 +68,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// transportState.due is the arrival schedule, derived from the shipments (and
+	// holding the stale entry of a trip dropped with its traveller); a restore
+	// rebuilds it without that entry, and its comparison counter is a measure of cost.
+	"transportState.due",
 	// The resources module's snapshot of the tick and its grants by agent slot are
 	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
 	// has them empty until then (spec-resources.md 15).

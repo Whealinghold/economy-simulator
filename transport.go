@@ -51,6 +51,10 @@ type transportState struct {
 	modes   []modeRes
 	// free is, per origin region, the open Transit accounts no shipment uses.
 	free []transit.Free
+	// due is the arrival schedule: the shipments by (arrival tick, ID). It is derived
+	// from the shipments and not saved; the entry of a shipment dropped with its
+	// traveller stays until it is due and is skipped then.
+	due transit.Schedule
 	// away is, by agent ID, whether the agent is the traveller of a live
 	// self-carried shipment.
 	away []bool
