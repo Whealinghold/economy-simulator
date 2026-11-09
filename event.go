@@ -284,6 +284,30 @@ const (
 	ReasonEscrowRefund Reason = "escrow_refund"
 )
 
+// The declared ledger reasons of the external module, six rows declared while
+// it is on (spec-ledger.md 7.2, spec-external-sector.md 8.1). The first three move money
+// and the last three goods; ReasonOutsideBudget and ReasonOutsideOffer are
+// faucets, the other four sinks.
+const (
+	// ReasonOutsideBudget is the money a buyer counterparty's account receives
+	// from the boundary before its bid.
+	ReasonOutsideBudget Reason = "outside_budget"
+	// ReasonOutsideUnspent is the part of that budget the sweep gives back.
+	ReasonOutsideUnspent Reason = "outside_unspent"
+	// ReasonOutsideReceipts is the money a seller counterparty's account holds
+	// after the markets, swept to the boundary.
+	ReasonOutsideReceipts Reason = "outside_receipts"
+	// ReasonOutsideOffer is the goods a seller counterparty's account receives from
+	// the boundary before its ask, born in the tick at full durability.
+	ReasonOutsideOffer Reason = "outside_offer"
+	// ReasonOutsideUnsold is the goods of a seller's account that were not bought,
+	// swept to the boundary.
+	ReasonOutsideUnsold Reason = "outside_unsold"
+	// ReasonOutsidePurchases is the goods a buyer's account bought, swept to the
+	// boundary.
+	ReasonOutsidePurchases Reason = "outside_purchases"
+)
+
 // The refusals of the contract round, the reasons of a delivery offer or take that
 // the admission refuses and of a formation that fails (spec-merchants.md 9.3,
 // 9.5). An admission also uses the reasons of an order and of a shipment request.
