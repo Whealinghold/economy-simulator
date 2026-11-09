@@ -332,3 +332,21 @@ func TestGDP_RelocatedGoodsAreAReconcilingItem(t *testing.T) {
 		t.Errorf("GDP(one table) = residual %d reloc %d err %v, want 0, 0, nil: the moved goods cancel", one.Realm.Residual, one.Realm.Reloc, err)
 	}
 }
+
+// TestValueAdded_ConfigOfAnotherWorldIsRejected verifies that a configuration
+// with the right counts but another hash is ErrConfigMismatch, as BasketLevel
+// and RealWage reject it.
+//
+// Guard: review round 4. Only the counts were compared, so a pack with the same
+// shape read its cost shares and class sets from the wrong commodities.
+//
+// Requirement: FR-IND-031
+func TestValueAdded_ConfigOfAnotherWorldIsRejected(t *testing.T) {
+	t.Parallel()
+	w, open, closing := workedWindow(t)
+	cfg := valleyConfig()
+	cfg.Commodities[0].ReferencePrice++ // same shape, another hash
+	if _, err := indicator.ValueAdded(w, cfg, open, closing, valleyTable(t, w, alphaP, betaP), indicator.NewClasses(cfg)); !errors.Is(err, indicator.ErrConfigMismatch) {
+		t.Errorf("ValueAdded(config of another world) error = %v, want ErrConfigMismatch", err)
+	}
+}

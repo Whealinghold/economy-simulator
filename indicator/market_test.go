@@ -402,3 +402,34 @@ func TestStockCover_UndefinedWhereNothingIsConsumed(t *testing.T) {
 		t.Errorf("StockCover(snapshot at the wrong tick) error = %v, want ErrWindowOrder", err)
 	}
 }
+
+// TestPriceGap_AfterFreightUsesTheCheapestMode verifies that with two modes on
+// one pair and commodity the gap after freight is measured against the lower
+// delivered price, whatever the order of the lanes: p_d 13 less 11 is 2 against
+// the mode that delivers at 11, not 13 less 12 = 1 against mode 0.
+//
+// Guard: review round 4. The first lane in mode order was used, so the figure
+// depended on which mode had the lower number.
+//
+// Requirement: FR-IND-035
+func TestPriceGap_AfterFreightUsesTheCheapestMode(t *testing.T) {
+	t.Parallel()
+	w := indicator.Window{ConfigHash: valleyHash, Regions: 2, Commodities: 1, Regional: make([]indicator.RegionTally, 2)}
+	p, err := indicator.NewPrices(valleyHash, 0, 0, 2, 1, []economysim.Price{10, 13})
+	if err != nil {
+		t.Fatalf("NewPrices() error = %v, want nil", err)
+	}
+	g := graphOf(t, []string{"a", "b"}, economysim.Edge{From: "a", To: "b", Distance: 1}, economysim.Edge{From: "b", To: "a", Distance: 1})
+	dl := indicator.DeliveredResult{ConfigHash: valleyHash, Lanes: []indicator.Lane{
+		{Origin: 0, Destination: 1, Mode: 0, Delivered: 12}, {Origin: 0, Destination: 1, Mode: 1, Delivered: 11},
+	}}
+	got, err := indicator.PriceGap(w, p, dl, g)
+	if err != nil {
+		t.Fatalf("PriceGap() error = %v, want nil", err)
+	}
+	for _, r := range got.Rows {
+		if r.Origin == 0 && r.Destination == 1 && (!r.AfterFreightOK || r.GapAfterFreight != 2) {
+			t.Errorf("PriceGap() a->b = %+v, want gap after freight 2 against the delivered price 11", r)
+		}
+	}
+}

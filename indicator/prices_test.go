@@ -194,6 +194,7 @@ func TestNewPrices_ChecksTheShape(t *testing.T) {
 		{"long", 1, 1, []economysim.Price{1, 2}, 0, 0, false},
 		{"negative price", 1, 2, []economysim.Price{1, -2}, 0, 0, false},
 		{"negative count", -1, 2, nil, 0, 0, false},
+		{"count product wraps int", 1 << 32, 1 << 32, nil, 0, 0, false},
 		{"window reversed", 1, 1, []economysim.Price{1}, 10, 5, false},
 	}
 	for _, tt := range tests {

@@ -61,14 +61,15 @@ func (r BasketResult) row(g economysim.RegionID) (BasketRow, bool) {
 // returns it (ErrConfigMismatch otherwise); a region with an empty basket or a
 // zero reference cost has Level undefined.
 func BasketLevel(cfg economysim.Config, s economysim.Snapshot) (BasketResult, error) {
-	if s.ConfigHash != economysim.HashConfig(cfg) {
+	hash := economysim.HashConfig(cfg)
+	if s.ConfigHash != hash {
 		return BasketResult{}, wrap("BasketLevel", "snapshot", ErrConfigMismatch)
 	}
 	p, err := PricesOfSnapshot(s)
 	if err != nil {
 		return BasketResult{}, err
 	}
-	ref, ids := PricesOfReference(cfg), commodityIDs(cfg)
+	ref, ids := pricesOfReference(cfg, hash), commodityIDs(cfg)
 	ages := make(map[[2]int64]int64, len(s.Markets)) // looked up, never iterated
 	for _, m := range s.Markets {
 		ages[[2]int64{int64(m.State.Region), int64(m.State.Commodity)}] = m.State.Age
@@ -312,18 +313,24 @@ func gapRow(p Prices, dl DeliveredResult, g economysim.Graph, o, d economysim.Re
 	return row, true, err
 }
 
-// afterFreight sets the gap against the delivered price of the lane, if any.
+// afterFreight sets the gap against the lowest delivered price among the lanes
+// of the pair (the cheapest mode, the one an arbitrage would use; the first of
+// equal prices in lane order), if any.
 func (row *GapRow) afterFreight(dl DeliveredResult, pd int64) error {
+	best, found := int64(0), false
 	for _, l := range dl.Lanes {
-		if l.Origin == row.Origin && l.Destination == row.Destination && l.Commodity == row.Commodity {
-			var err error
-			if row.GapAfterFreight, err = net("PriceGap", "after_freight", []int64{pd}, l.Delivered); err != nil {
-				return err
-			}
-			row.AfterFreightOK = true
-			row.GapAfterFreightBP, err = ratioWide("PriceGap", "after_freight", measure.FromInt64(row.GapAfterFreight), measure.FromInt64(l.Delivered))
-			return err
+		if l.Origin == row.Origin && l.Destination == row.Destination && l.Commodity == row.Commodity && (!found || l.Delivered < best) {
+			best, found = l.Delivered, true
 		}
 	}
-	return nil
+	if !found {
+		return nil
+	}
+	var err error
+	if row.GapAfterFreight, err = net("PriceGap", "after_freight", []int64{pd}, best); err != nil {
+		return err
+	}
+	row.AfterFreightOK = true
+	row.GapAfterFreightBP, err = ratioWide("PriceGap", "after_freight", measure.FromInt64(row.GapAfterFreight), measure.FromInt64(best))
+	return err
 }

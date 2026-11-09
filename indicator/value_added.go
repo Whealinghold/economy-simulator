@@ -68,21 +68,21 @@ func ValueAdded(w Window, cfg economysim.Config, open, closing economysim.Snapsh
 	if err != nil {
 		return ValueAddedResult{}, err
 	}
-	if len(cfg.Recipes) != w.Recipes || len(cfg.Commodities) != w.Commodities {
+	if len(cfg.Recipes) != w.Recipes || len(cfg.Commodities) != w.Commodities || economysim.HashConfig(cfg) != w.ConfigHash {
 		return ValueAddedResult{}, wrap("ValueAdded", "config", ErrConfigMismatch)
 	}
-	res := ValueAddedResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
-	if res.Output, err = classValues("ValueAdded", w, in.u.out, p, cl); err != nil {
-		return ValueAddedResult{}, err
-	}
-	if res.Intermediate, err = classValues("ValueAdded", w, in.u.in, p, cl); err != nil {
-		return ValueAddedResult{}, err
-	}
-	ids := commodityIDs(cfg)
 	cs, err := classSetsOf(cl)
 	if err != nil {
 		return ValueAddedResult{}, err
 	}
+	res := ValueAddedResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
+	if res.Output, err = classValues("ValueAdded", w, in.u.out, p, cl, cs); err != nil {
+		return ValueAddedResult{}, err
+	}
+	if res.Intermediate, err = classValues("ValueAdded", w, in.u.in, p, cl, cs); err != nil {
+		return ValueAddedResult{}, err
+	}
+	ids := commodityIDs(cfg)
 	for r := 0; r < w.Regions; r++ {
 		if err := res.addRegion(in, w, cfg, ids, economysim.RegionID(r), p, cs); err != nil {
 			return ValueAddedResult{}, err
@@ -125,11 +125,7 @@ func commodityIDs(cfg economysim.Config) map[string]economysim.CommodityID {
 
 // classValues returns, for the all row and each class, the value of a dense
 // table of units at the prices of each region.
-func classValues(preset string, w Window, units []int64, p Prices, cl Classes) ([]ClassRow, error) {
-	cs, err := classSetsOf(cl)
-	if err != nil {
-		return nil, err
-	}
+func classValues(preset string, w Window, units []int64, p Prices, cl Classes, cs classSets) ([]ClassRow, error) {
 	names, sets := append([]string{""}, cs.names...), append([][]economysim.CommodityID{cl.All()}, cs.sets...)
 	for _, set := range sets {
 		for _, c := range set {

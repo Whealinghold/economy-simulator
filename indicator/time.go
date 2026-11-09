@@ -37,7 +37,8 @@ func firstTickOfYear(cal economysim.Calendar, y, perYear int64) (int64, error) {
 		return 0, wrap("YearWindow", "year", ErrOverflow)
 	}
 	var failed error
-	t := int64(sort.Search(int(min(hi, 1<<62)), func(i int) bool {
+	n := int(min(hi, 1<<62))
+	t := int64(sort.Search(n, func(i int) bool {
 		if failed != nil {
 			return true
 		}
@@ -45,6 +46,9 @@ func firstTickOfYear(cal economysim.Calendar, y, perYear int64) (int64, error) {
 		yr, failed = yearOf(cal, int64(i))
 		return yr >= y
 	}))
+	if failed == nil && hi > 1<<62 && int(t) == n { // no tick below the clamp reaches year y
+		return 0, wrap("YearWindow", "year", ErrOverflow)
+	}
 	return t, failed
 }
 

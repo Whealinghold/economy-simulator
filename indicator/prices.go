@@ -31,7 +31,7 @@ type Prices struct {
 // its shape: ErrRange for a negative count, a price below 0, or a length that is
 // not regions * commodities. The cells are copied.
 func NewPrices(hash [32]byte, from, to int64, regions, commodities int, cells []economysim.Price) (Prices, error) {
-	if regions < 0 || commodities < 0 || len(cells) != regions*commodities || to < from {
+	if regions < 0 || commodities < 0 || len(cells) != regions*commodities || (regions != 0 && len(cells)/regions != commodities) || to < from {
 		return Prices{}, wrap("NewPrices", "shape", ErrRange)
 	}
 	for _, c := range cells {
@@ -83,6 +83,11 @@ func PricesOfSnapshot(s economysim.Snapshot) (Prices, error) {
 // ReferencePrice, or the region's override in RegionPrices where it has one
 // (spec-indicators.md 4.3.4). It is the price of a commodity that never trades.
 func PricesOfReference(cfg economysim.Config) Prices {
+	return pricesOfReference(cfg, economysim.HashConfig(cfg))
+}
+
+// pricesOfReference is PricesOfReference for a caller that has the hash.
+func pricesOfReference(cfg economysim.Config, hash [32]byte) Prices {
 	regions, commodities := len(cfg.Regions), len(cfg.Commodities)
 	override := make(map[[2]string]economysim.Price, len(cfg.RegionPrices)) // looked up, never iterated
 	for _, rp := range cfg.RegionPrices {
@@ -98,7 +103,7 @@ func PricesOfReference(cfg economysim.Config) Prices {
 			cells[r*commodities+c] = p
 		}
 	}
-	return Prices{ConfigHash: economysim.HashConfig(cfg), Regions: regions, Commodities: commodities, Cells: cells}
+	return Prices{ConfigHash: hash, Regions: regions, Commodities: commodities, Cells: cells}
 }
 
 // PricesOfWindow returns the unit value of each market over a window: the

@@ -122,3 +122,16 @@ func TestYearWindow_LastYearIsOverflowNotWrapped(t *testing.T) {
 		t.Errorf("YearWindow(year MaxInt64) error = %v, want ErrOverflow", err)
 	}
 }
+
+// TestYearWindow_YearBeyondTheSearchBoundIsOverflow verifies that a year whose
+// first tick lies past the 2^62 search bound is ErrOverflow and not the bound
+// returned as a tick.
+//
+// Fix: review round 4. firstTickOfYear returned its clamp when no tick reached
+// the year, so YearWindow reported a bogus span.
+func TestYearWindow_YearBeyondTheSearchBoundIsOverflow(t *testing.T) {
+	t.Parallel()
+	if got, err := indicator.YearWindow(calendar365(), 1<<54); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("YearWindow(2^54) = %+v, %v, want ErrOverflow", got, err)
+	}
+}

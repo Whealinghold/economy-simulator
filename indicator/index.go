@@ -131,6 +131,9 @@ func PriceIndex(w Window, base Base, k Weights, cur Prices, sel CellSel) (IndexR
 // fill sets the three indices, the stale share and the warnings from the sums.
 func (res *IndexResult) fill(p1q0, p0q0, p1q1, p0q1, stale acc) error {
 	var err error
+	if p1q0.over || p0q0.over || p1q1.over || p0q1.over || stale.over {
+		return wrap("PriceIndex", "sums", ErrOverflow)
+	}
 	if res.Laspeyres, err = ratioWide("PriceIndex", "laspeyres", p1q0.v, p0q0.v); err != nil {
 		return err
 	}

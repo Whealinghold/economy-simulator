@@ -30,8 +30,8 @@ func valleyNames() economysim.Names {
 	}
 }
 
-// valleyHash is the configuration hash of every valley snapshot.
-var valleyHash = [32]byte{7}
+// valleyHash is the configuration hash of every valley snapshot: that of valleyConfig, which ValueAdded checks.
+var valleyHash = economysim.HashConfig(valleyConfig())
 
 // valleySnap returns a snapshot of the valley at a tick with the households of
 // each (region, role) in the order alpha grower, alpha baker, beta grower, beta
