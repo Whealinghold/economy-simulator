@@ -32,6 +32,12 @@ func TestRefuse_Cases(t *testing.T) {
 		{"external agent", occupation.KindSwitch, with(func(f *occupation.Facts) { f.External = true }), occupation.ExternalAgent},
 		{"enter ignores external", occupation.KindEnter, with(func(f *occupation.Facts) { f.External = true }), occupation.RefusalNone},
 		{"same role", occupation.KindSwitch, with(func(f *occupation.Facts) { f.SameRole = true }), occupation.SameRole},
+		{"on a journey", occupation.KindSwitch, with(func(f *occupation.Facts) { f.OnJourney = true }), occupation.OnJourney},
+		{"on a journey after same role", occupation.KindSwitch, with(func(f *occupation.Facts) { f.OnJourney, f.SameRole = true, true }), occupation.SameRole},
+		{"on a journey before bad households", occupation.KindSwitch, with(func(f *occupation.Facts) { f.OnJourney, f.Households = true, 0 }), occupation.OnJourney},
+		{"a journey does not refuse a remove", occupation.KindRemove, with(func(f *occupation.Facts) { f.OnJourney = true }), occupation.RefusalNone},
+		{"a journey does not refuse a reduce", occupation.KindReduce, with(func(f *occupation.Facts) { f.OnJourney = true }), occupation.RefusalNone},
+		{"a journey does not refuse an enter", occupation.KindEnter, with(func(f *occupation.Facts) { f.OnJourney = true }), occupation.RefusalNone},
 		{"same role on a remove is ignored", occupation.KindRemove, with(func(f *occupation.Facts) { f.SameRole = true }), occupation.RefusalNone},
 		{"unknown agent on a reduce", occupation.KindReduce, with(func(f *occupation.Facts) { f.AgentKnown = false }), occupation.UnknownAgent},
 		{"external agent on a reduce", occupation.KindReduce, with(func(f *occupation.Facts) { f.External = true }), occupation.ExternalAgent},
@@ -69,7 +75,8 @@ func TestRefuse_Cases(t *testing.T) {
 }
 
 // TestRefusal_UnsupportedCauseIsLast verifies that the order of the Refusal
-// values is the order of the checks of SPN 4, unsupported_cause appended last.
+// values is the order of the checks of SPN 4, unsupported_cause appended before
+// on_journey, which the migration module appends after it (nothing is inserted).
 //
 // Guard: the root maps each value to a Reason and the executor reports the
 // first failing check; a value inserted before the last would renumber
@@ -85,7 +92,7 @@ func TestRefusal_UnsupportedCauseIsLast(t *testing.T) {
 			t.Errorf("Refusal %d = %d, want %d", i, r, i+1)
 		}
 	}
-	if occupation.RefusalEnd != occupation.UnsupportedCause+1 {
-		t.Errorf("RefusalEnd = %d, want %d", occupation.RefusalEnd, occupation.UnsupportedCause+1)
+	if occupation.OnJourney != occupation.UnsupportedCause+1 || occupation.RefusalEnd != occupation.OnJourney+1 {
+		t.Errorf("OnJourney = %d, RefusalEnd = %d, want %d and %d", occupation.OnJourney, occupation.RefusalEnd, occupation.UnsupportedCause+1, occupation.UnsupportedCause+2)
 	}
 }

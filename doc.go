@@ -1113,4 +1113,32 @@
 //     least 2.
 //   - Information speed: the distance units that news covers in one tick
 //     (Information.InfoSpeed).
+//   - Migration: the module, a pointer of Config.Modules and the type of its
+//     configuration, that moves whole agents between regions by a journey
+//     (spec-migration.md); RegionMove is a region's row of caps, MigrationStarted
+//     and MigrationReviewed are its events and JourneyRow is its snapshot row.
+//   - Journey: the time between the departure and the arrival of a migrating agent,
+//     k ticks in which it does no work and places no order; the record of it is a
+//     destination and an arrival tick.
+//   - Migrant: an agent on a journey.
+//   - Pushed: said of a household whose earned ratio is below MoveBelow at its
+//     review; only a pushed household looks for a destination.
+//   - Settled: said of an agent whose last move or change of role is at least the
+//     longer of MoveCooldown and its welfare window ago.
+//   - Margin (of a move): the relative gain an agent needs to see before it moves,
+//     MoveGain plus its own share of MoveWidth.
+//   - Width (of the margins): MoveWidth, the spread of the margins over the agents
+//     by their IDs. It is not the width of a price belief.
+//   - Horizon: MoveHorizon, the ticks over which a household values a move; the
+//     estimate is discounted by the share of it left after the journey.
+//   - Outflow cap: the most households a region lets leave in one pass, a share of
+//     its households (MoveOutShare).
+//   - Pipeline cap: the most households on a journey to a region at once, a share of
+//     its households (MoveInShare).
+//   - Provisioning (of a journey): the stock of upkeep an agent holds for the k
+//     ticks of its journey; without it the agent does not leave.
+//   - Candidate (destination): a region other than the agent's own that the pass
+//     considers as a destination.
+//   - Estimate (of a destination): the ratio a household would reach there if it
+//     worked every tick, from rumoured prices (spec-migration.md 6.3).
 package economysim

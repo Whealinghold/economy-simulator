@@ -75,7 +75,7 @@ func TestHashConfig_RoleInformed(t *testing.T) {
 	id := func(n uint16) []byte { return binary.BigEndian.AppendUint16(nil, n) }
 	tail := func(on, informed bool) []byte {
 		e := &encoder{}
-		pairsRole(e, Role{ID: "a", Informed: informed}, on)
+		pairsRole(e, Role{ID: "a", Informed: informed}, on, false)
 		return e.buf
 	}
 	if !bytes.Equal(tail(false, true), tail(false, false)) {

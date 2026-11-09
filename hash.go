@@ -42,7 +42,7 @@ func encodeConfig(c Config) []byte {
 	})
 	encodeList(e, 5, c.Yields, pairsYield)
 	encodeList(e, 6, c.Roles, func(e *encoder, r Role) {
-		pairsRole(e, r, c.Modules.Information != nil)
+		pairsRole(e, r, c.Modules.Information != nil, c.Modules.Migration != nil)
 	})
 	encodeList(e, 7, c.Regions, func(e *encoder, r Region) {
 		pairsRegion(e, r, c.Modules.Estates != nil)
@@ -294,10 +294,11 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 19. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 20. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
-// while it is on (informationOn) and the flag is true.
-func pairsRole(e *encoder, r Role, informationOn bool) {
+// while it is on (informationOn) and the flag is true; Fixed 20 is the migration
+// module's, on the same terms (migrationOn).
+func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
 	encodeList(e, 3, r.Upkeep, pairsItem)
@@ -317,6 +318,7 @@ func pairsRole(e *encoder, r Role, informationOn bool) {
 	e.num(17, r.TeachingLoad)
 	e.flag(18, r.Closed)
 	e.flag(19, informationOn && r.Informed)
+	e.flag(20, migrationOn && r.Fixed)
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -443,6 +445,11 @@ func pairsModules(e *encoder, m Modules) {
 	if m.Subsistence != nil {
 		e.id(8)
 		pairsSubsistence(e, *m.Subsistence)
+		e.end()
+	}
+	if m.Migration != nil {
+		e.id(9)
+		pairsMigration(e, *m.Migration)
 		e.end()
 	}
 	if m.Estates != nil {
@@ -574,6 +581,27 @@ func pairsInformation(e *encoder, i Information) {
 	e.num(1, i.InfoSpeed)
 	e.num(2, i.RumourErrorBP)
 	e.num(3, i.RumourMaxAge)
+}
+
+// pairsMigration writes the pairs of a Migration: MoveSpeed 1, MoveReviewTicks
+// 2, MoveBelow 3, MoveGain 4, MoveWidth 5, MoveCooldown 6, MoveHorizon 7,
+// MoveOutShare 8, MoveInShare 9, Regions 10 (RegionMove: Region 1, OutShare 2,
+// InShare 3).
+func pairsMigration(e *encoder, m Migration) {
+	e.num(1, m.MoveSpeed)
+	e.num(2, m.MoveReviewTicks)
+	e.num(3, m.MoveBelow)
+	e.num(4, m.MoveGain)
+	e.num(5, m.MoveWidth)
+	e.num(6, m.MoveCooldown)
+	e.num(7, m.MoveHorizon)
+	e.num(8, m.MoveOutShare)
+	e.num(9, m.MoveInShare)
+	encodeList(e, 10, m.Regions, func(e *encoder, r RegionMove) {
+		e.text(1, r.Region)
+		e.num(2, r.OutShare)
+		e.num(3, r.InShare)
+	})
 }
 
 // pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,

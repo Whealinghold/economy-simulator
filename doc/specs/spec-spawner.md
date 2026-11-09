@@ -297,7 +297,7 @@ creation, at a role change (4.2), at the arrival of a migration journey
 (`spec-integration.md` 4.5.2 step 5), so the test `tick - RoleSince >= RemovePrivation` gives a migrant
 the grace it gives a role changer. The module that sets it for a move is MIG's; the ladder's
 rules are otherwise unchanged. The review clock `RoleCooldown` (6.2) reads it too, and the
-settling rule of `spec-migration.md` 5.2 reuses it.
+settling rule of `spec-migration.md` 5.2 reuses it. An initial agent of the construction has `RoleSince` 0, the creation tick, in a world with or without a warm start (`spec-world.md` 5.4.2).
 
 5.2.3. Trainees are exempt (their board comes from the trainer, `spec-skill-barriers.md`
 4.2) and so are external agents (9).

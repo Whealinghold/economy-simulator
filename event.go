@@ -162,6 +162,45 @@ const (
 	ReasonAgentRemoved Reason = "agent_removed"
 	// ReasonRoleChanged is a job abandoned because its agent changed role.
 	ReasonRoleChanged Reason = "role_changed"
+	// ReasonRegionChanged is a job abandoned because its agent left its region on
+	// a migration journey (spec-production.md 14.1, spec-migration.md 8.2).
+	ReasonRegionChanged Reason = "region_changed"
+)
+
+// The reasons of the migration module (spec-migration.md 7.6, 8.3, 13.2): a
+// spawner refusal and the name of a region-bound obligation, and the outcomes of
+// a pushed household. ReasonTooFar and ReasonUnprovisioned are the transport
+// module's strings and ReasonHeld the belief's, which the outcomes of the same
+// names consume (a repeated value is forbidden in one type). They are values of
+// the reason log key and of the limit attribute of the metrics.
+const (
+	// ReasonOnJourney is a switch of an agent on a migration journey, and the name
+	// of the region-bound obligation the module registers.
+	ReasonOnJourney Reason = "on_journey"
+	// ReasonStarted is a pushed household that started a journey.
+	ReasonStarted Reason = "started"
+	// ReasonNoEstimate is a pushed household whose role has no recipe to estimate.
+	ReasonNoEstimate Reason = "no_estimate"
+	// ReasonNoDestination is a pushed household with no candidate region.
+	ReasonNoDestination Reason = "no_destination"
+	// ReasonNoRumour is a pushed household with no candidate that has a complete
+	// set of rumoured prices.
+	ReasonNoRumour Reason = "no_rumour"
+	// ReasonNoViable is a pushed household with no candidate in which its role
+	// earns more than its upkeep costs.
+	ReasonNoViable Reason = "no_viable"
+	// ReasonNoGain is a pushed household whose best candidate does not clear the
+	// margin over its own measured figure.
+	ReasonNoGain Reason = "no_gain"
+	// ReasonBound is a pushed household refused by a region-bound obligation.
+	ReasonBound Reason = "bound"
+	// ReasonOutCap is a pushed household held back by the outflow cap of its region.
+	ReasonOutCap Reason = "out_cap"
+	// ReasonInCap is a pushed household held back by the pipeline cap of every
+	// destination it could reach.
+	ReasonInCap Reason = "in_cap"
+	// ReasonEnded is a journey that ended by a removal or a cancel.
+	ReasonEnded Reason = "ended"
 )
 
 // The ledger reasons of the flows that cross the boundary of the economy and
@@ -261,6 +300,8 @@ const (
 	// ReasonMoved is a belief whose centre changed and ended inside its bounds.
 	ReasonMoved Reason = "moved"
 	// ReasonHeld is a belief whose gate was open and whose centre did not change.
+	// It is also the outcome of a migration arrival held by a region-bound
+	// obligation (spec-migration.md 8.4, 13.2); the belief owns the constant.
 	ReasonHeld Reason = "held"
 	// ReasonAtFloor is a belief whose centre ended on its floor, moved or not.
 	ReasonAtFloor Reason = "at_floor"
@@ -1356,3 +1397,53 @@ type RumoursServed struct {
 }
 
 func (RumoursServed) isEvent() {}
+
+// MigrationStarted is emitted once per departure of the migration pass, in the
+// order of admission, after the last departure of the pass and after the
+// RecipeAbandoned events of the departures (spec-migration.md 8.2, 10.2, 13.1,
+// FR-MIG-035). It is per agent, like AgentRelocated; the arrival is that event
+// with the cause migration.
+type MigrationStarted struct {
+	Tick int64
+	// Agent and Role are the agent that left and its role.
+	Agent AgentID
+	Role  RoleID
+	// From and To are the region of departure and of arrival.
+	From, To RegionID
+	// Weight is the households the agent stands for.
+	Weight int64
+	// Arrives is the arrival tick, fixed now; Distance is the graph's distance and
+	// Journey the ticks of the journey.
+	Arrives, Distance, Journey int64
+	// EarnedRatio is the push (basis points, signed), Home the household's own
+	// measured figure and Estimate the figure of the destination (basis points).
+	EarnedRatio, Home, Estimate int64
+	// JobAbandoned is whether a job in progress was abandoned by the departure.
+	JobAbandoned bool
+}
+
+func (MigrationStarted) isEvent() {}
+
+// MigrationReviewed is emitted once per region per tick, in ascending RegionID
+// after the MigrationStarted events, in which any household was pushed or held
+// back by the settling rule, any arrival was held or any journey ended by a
+// removal or a cancel, and never otherwise (spec-migration.md 13.1, FR-MIG-036).
+// It counts households, attributed to the region of the account, and is the
+// counter of every silent limit of the module.
+type MigrationReviewed struct {
+	Tick   int64
+	Region RegionID
+	// Unsettled is the households whose turn came, that the push would have chosen
+	// and that were not settled; Reviewed those eligible and settled; Pushed those
+	// among them that were pushed.
+	Unsettled, Reviewed, Pushed int64
+	// The outcomes of the pushed households (spec-migration.md 7.6); they add up to
+	// Pushed.
+	Started, NoEstimate, NoDestination, NoRumour, TooFar, NoViable, NoGain int64
+	Bound, OutCap, Unprovisioned, InCap                                    int64
+	// Held is the arrivals held by an obligation and Ended the journeys ended by a
+	// removal or a cancel since the last pass.
+	Held, Ended int64
+}
+
+func (MigrationReviewed) isEvent() {}

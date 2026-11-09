@@ -87,6 +87,7 @@ func (c Config) Warnings() []Warning {
 	cc := c.canonical()
 	out = append(out, checkViability(&cc, newLookup(&cc)).warnings...)
 	out = append(out, horizonWarnings(&cc)...)
+	out = append(out, migrationRouteWarnings(&cc)...)
 	sortWarnings(out)
 	return out
 }
@@ -117,6 +118,7 @@ func (v *validator) structural() {
 	v.structure()
 	v.economics()
 	v.validateInformation()
+	v.validateMigration()
 	v.overflow()
 }
 
@@ -2064,6 +2066,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, populationWarnings(c, lk)...)
 	out = append(out, transportWarnings(c, lk)...)
 	out = append(out, informationWarnings(c, lk)...)
+	out = append(out, migrationWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

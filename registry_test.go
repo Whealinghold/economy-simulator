@@ -40,7 +40,7 @@ var notBuilt = []string{
 	// entry here.
 	"Modules.Credit", "Modules.Employment", "Modules.External", "Modules.Fiscal",
 	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
-	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
+	"Modules.Merchants", "Modules.Policy", "Modules.Polity",
 	"Modules.Risk", "Modules.Saving",
 	"Modules.Settlements", "Modules.Storage", "Modules.Technology",
 	"Modules.Tenure",
@@ -48,7 +48,7 @@ var notBuilt = []string{
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Recipe.Builds", "Recipe.Needs", "Recipe.Repairs",
-	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
+	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer",
 	"Role.Hireable", "Role.Merchant", "Role.MerchantFeeShare", "Role.Needs",
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
@@ -56,10 +56,10 @@ var notBuilt = []string{
 	"CreditTerms", "Duty", "Employer", "Employment", "External",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
-	"Jurisdiction", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration",
+	"Jurisdiction", "Lend", "Lever", "Member", "Merchant", "Merchants",
 	"OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "ProjectWorth", "Purchase",
-	"RateLimit", "Reaction", "RegionMove", "RegionSettlement",
+	"RateLimit", "Reaction", "RegionSettlement",
 	"Release", "Right", "Risk", "RoleRoom", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SettlementClass",
 	"Settlements", "Storage", "StoreClass", "StoreRisk", "Tax", "TechField",
@@ -78,7 +78,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
@@ -328,6 +328,7 @@ var noFailingCase = map[string]string{
 	"Role.Strategy":        "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
 	"Role.Unskilled":       "a bool: both values are valid",
 	"Role.Closed":          "a bool: both values are valid",
+	"Role.Fixed":           "a bool: both values are valid",
 	"Recipe.Sited":         "a bool: both values are valid",
 	"Output.Discard":       "a bool: both values are valid",
 	"Commodity.Raw":        "a bool: both values are valid",

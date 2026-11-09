@@ -323,6 +323,7 @@ func (w *World) refusal(g RegionID, d *Decision) Reason {
 	}
 	if a := w.agentIn(g, d.Agent); a != nil {
 		f.AgentKnown, f.External, f.SameRole, f.Weight = true, a.external && !a.mortal, a.role == d.Role, a.weight
+		f.OnJourney = d.Kind == DecideSwitch && w.onJourney(a) // only a switch reads it (spec-spawner.md 4)
 	}
 	return refusalReason(occupation.Refuse(occupation.Kind(d.Kind), f))
 }
@@ -553,7 +554,7 @@ func (w *World) gatherHosts(g RegionID, role RoleID) {
 	x := &w.ex
 	x.hosts, x.hostAt = x.hosts[:0], x.hostAt[:0]
 	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && a.role == role && w.regionOf(a) == g {
+		if a := &w.agents[i]; a.weight >= 1 && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
 			x.hosts = append(x.hosts, occupation.Host{Ref: len(x.hostAt), Weight: a.weight})
 			x.hostAt = append(x.hostAt, i)
 		}
