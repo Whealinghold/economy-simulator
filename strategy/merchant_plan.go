@@ -312,7 +312,7 @@ func (s *state) eval(t *trip) bool {
 		return false
 	}
 	g := &s.m.Goods[t.ci]
-	if g.ShelfLife > 0 && merchant.Perishable(g.ShelfLife, g.OldestAge, t.k) {
+	if merchant.Perishable(g.ShelfLife, g.OldestAge, t.k) {
 		n.Perishable++
 		return false
 	}

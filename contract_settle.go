@@ -274,9 +274,9 @@ func (w *World) snapshotContracts(s *Snapshot) {
 			Quantity: ct.qty, Price: ct.price, Escrowed: held, Shipment: ct.shipment, Formed: ct.formed,
 			Arrives: sh.arrives, TicksLeft: sh.arrives - w.Tick(),
 		})
-		s.Escrow += held
-		s.Regions[ct.to].MoneyContract += held
-		s.Money += held
+		s.Escrow = satMoney(s.Escrow, held, 0)
+		s.Regions[ct.to].MoneyContract = satMoney(s.Regions[ct.to].MoneyContract, held, 0)
+		s.Money = satMoney(s.Money, held, 0)
 	}
 }
 

@@ -419,10 +419,8 @@ func (rt merchantRoutes) neverFresh(r *Role) int64 {
 
 // cmdty returns the commodity of an ID, nil when none.
 func (rt merchantRoutes) cmdty(id string) *Commodity {
-	for i := range rt.c.Commodities {
-		if rt.c.Commodities[i].ID == id {
-			return &rt.c.Commodities[i]
-		}
+	if i, ok := rt.c.commodityID(id); ok {
+		return &rt.c.Commodities[i]
 	}
 	return nil
 }
