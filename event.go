@@ -1660,3 +1660,76 @@ const (
 	// no_route.
 	ReasonOutsideDestination Reason = "outside_destination"
 )
+
+// The causes that end a side of an outside node (spec-external-sector.md 7.3, D533).
+const (
+	// CauseUnits is a side whose cumulative units reached the cap TotalUnits.
+	CauseUnits Cause = "units"
+	// CauseValue is a side whose remaining list value fell below the limit price of
+	// the tick.
+	CauseValue Cause = "value"
+)
+
+// OutsideTraded is emitted once per (node, gate region, commodity, side) per tick
+// in which the side wanted any unit or any unit was cut, after the sweep of P4.2,
+// in ascending (Node, Region, Commodity, buy before sell); it is never emitted when
+// nothing was wanted or cut, and only while the external module is on
+// (spec-external-sector.md 15.1, FR-EXT-036). The counts are units: Wanted is what
+// the side wanted, Offered what it placed after the cuts, Traded what changed hands
+// (the sweep), and the three Cut fields the wanted units not offered, by cause.
+type OutsideTraded struct {
+	Tick int64
+	// Node is the outside node and Region the gate; Commodity and Side name the side
+	// (Bid for a buy side, Ask for a sell side).
+	Node, Region RegionID
+	Commodity    CommodityID
+	Side         Side
+	// Mid is the mid of the line this tick and Price the limit of the order, the
+	// quote at the gate; Price is 0 when no quote was made (a closed edge).
+	Mid, Price Price
+	// Wanted, Offered and Traded are units.
+	Wanted, Offered, Traded int64
+	// Value is the money paid or received in the trades and ListValue the units
+	// traded times the limit (7.4).
+	Value, ListValue Money
+	// CutClosed, CutCap and CutPrice are the wanted units not offered because the
+	// edge was closed, the caps cut them, or the bid fell below 1.
+	CutClosed, CutCap, CutPrice int64
+	// PriceClamped says a clamp of the factor or of the price acted (6.3).
+	PriceClamped bool
+}
+
+func (OutsideTraded) isEvent() {}
+
+// OutsideEnded is emitted once when a side row reaches its cumulative cap and ends,
+// after the OutsideTraded events of the sweep (spec-external-sector.md 7.3, 15.1,
+// FR-EXT-036). Units and ListValue are the cumulative totals.
+type OutsideEnded struct {
+	Tick int64
+	// Node is the outside node and Region the gate; Commodity and Side name the side.
+	Node, Region RegionID
+	Commodity    CommodityID
+	Side         Side
+	// Cause is CauseUnits or CauseValue.
+	Cause Cause
+	// Units and ListValue are the cumulative units and list value of the side row.
+	Units     int64
+	ListValue Money
+}
+
+func (OutsideEnded) isEvent() {}
+
+// OutsideShocked is emitted once per changed key of a call that sets the shock of an
+// outside line between ticks (spec-external-sector.md 6.5, 15.1, FR-EXT-037). From
+// and To are the factor before and after, in basis points. Its Tick is the tick the
+// next step runs.
+type OutsideShocked struct {
+	Tick int64
+	// Node is the outside node and Commodity the line.
+	Node      RegionID
+	Commodity CommodityID
+	// From and To are the shock before and after, in basis points.
+	From, To int64
+}
+
+func (OutsideShocked) isEvent() {}

@@ -272,6 +272,9 @@ func (w *World) clearOne(i int, tick int64) error {
 	}
 	w.markets.reports[i] = rep
 	w.feedWelfare(i, trades)
+	if w.external != nil {
+		w.external.record(w, trades)
+	}
 	return nil
 }
 

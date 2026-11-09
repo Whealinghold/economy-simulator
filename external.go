@@ -2,11 +2,14 @@ package economysim
 
 import (
 	"cmp"
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/outside"
 )
 
@@ -31,6 +34,8 @@ type external struct {
 	// rows are the side rows (3.3.4): the rows of counterparty i are
 	// rows[cps[i].first : cps[i].first+cps[i].n], by commodity.
 	rows []sideRow
+	// ticksPerYear is the length of the year in ticks, for the trend.
+	ticksPerYear int64
 }
 
 // outsideLine is the runtime state of one line, and the means to find its
@@ -42,6 +47,9 @@ type outsideLine struct {
 	// drift is the walk state, 0 without a walk (6.4); shock is the shock slot,
 	// 10 000 until set (6.5).
 	drift, shock int64
+	// mid and clamped are the mid of the tick and whether a clamp acted, set at P3.5.
+	mid     int64
+	clamped bool
 }
 
 // counterparty is a pseudo-agent bound to one Outside account: the buyer or the
@@ -61,11 +69,28 @@ type counterparty struct {
 }
 
 // sideRow is the state of one side at one gate (3.3.4): the carry of the wanted
-// units, and the units and the list value traded over the run. The ended flag
-// joins with the sweep, in the phase that builds it.
+// units, the units and the list value traded over the run, and whether it ended.
+// t is the scratch of the tick, written at P3.5 and read and cleared at P4.2.
 type sideRow struct {
 	line                    int
 	carry, units, listValue int64
+	ended                   bool
+	t                       rowTick
+}
+
+// rowTick is what a side row knows of the tick between its order and its sweep:
+// the quote, the units wanted and offered, the cuts, the money of its trades (from
+// the trades of P4.1), and what the sweep found.
+type rowTick struct {
+	mid, limit, wanted, offered int64
+	cutClosed, cutCap, cutPrice int64
+	clamped                     bool
+	// paid is the money of the row's trades, by the trades of the tick.
+	paid int64
+	// traded and value are set by the sweep; endCause is the cause when the row ended
+	// in this tick, 0 otherwise.
+	traded, value, listValue int64
+	endCause                 int
 }
 
 // newExternal builds the state of the module from the canonical configuration:
@@ -78,7 +103,7 @@ func newExternal(c *Config) *external {
 	if m == nil {
 		return nil
 	}
-	x := &external{}
+	x := &external{ticksPerYear: c.Calendar.TicksPerYear()}
 	for ni := range m.Nodes {
 		n := &m.Nodes[ni]
 		node, _ := c.regionID(n.Region)
@@ -302,11 +327,15 @@ func (x *external) audit(w *World) error {
 func (x *external) auditState(w *World) error {
 	for i := range x.lines {
 		l := &x.lines[i]
-		name := w.cfg.Regions[l.node].ID
 		if l.drift < -l.cfg.WalkBoundBP || l.drift > l.cfg.WalkBoundBP || l.shock < 1 || l.shock > MaxShockBP {
-			return fmt.Errorf("outside node %q, commodity %q: drift %d (bound %d) or shock %d is out of its bounds", name, l.cfg.Commodity, l.drift, l.cfg.WalkBoundBP, l.shock)
+			return fmt.Errorf("outside node %q, commodity %q: drift %d (bound %d) or shock %d is out of its bounds", w.cfg.Regions[l.node].ID, l.cfg.Commodity, l.drift, l.cfg.WalkBoundBP, l.shock)
 		}
 	}
+	return x.auditRows(w)
+}
+
+// auditRows checks the side rows of auditState.
+func (x *external) auditRows(w *World) error {
 	for i := range x.cps {
 		cp := &x.cps[i]
 		for j := cp.first; j < cp.first+cp.n; j++ {
@@ -997,4 +1026,395 @@ func upkeepNamed(c *Config) []string {
 		}
 	}
 	return out
+}
+
+// seasonBP returns the factor of a season table for the season id, or def when the
+// season has no row or the tick has no season (id is empty).
+func seasonBP(table []SeasonFactor, id string, def int64) int64 {
+	if i := slices.IndexFunc(table, func(f SeasonFactor) bool { return f.Season == id }); i >= 0 && id != "" {
+		return table[i].BP
+	}
+	return def
+}
+
+// seasonID returns the ID of the season of the tick's moment, empty when the
+// calendar has none.
+func (w *World) seasonID() string {
+	if s := w.tk.moment.Season; s >= 0 && s < len(w.cfg.Calendar.Seasons) {
+		return w.cfg.Calendar.Seasons[s].ID
+	}
+	return ""
+}
+
+// p18Walk is P1.8 (spec-external-sector.md 5.1.1, 6.4): for each line with a walk,
+// ascending by (node, commodity), one word of the keyed stream of (tick, node,
+// commodity) moves the drift. The count of words in a tick is the number of
+// walking lines, whatever the state, and none is drawn at construction.
+func (w *World) p18Walk() {
+	x := w.external
+	for i := range x.lines {
+		l := &x.lines[i]
+		step := l.cfg.WalkStepBP
+		if step < 1 {
+			continue
+		}
+		w.rnd.keyedPair(siteOutsideWalk, w.Tick(), int64(l.node), int64(l.commodity))
+		d := w.rnd.drawRange(-step, step)
+		l.drift = outside.Walk(l.drift, l.cfg.WalkRevertBP, d, l.cfg.WalkBoundBP)
+		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "outside drift", slog.Int64(logkeys.Tick, w.Tick()),
+				slog.Int64(logkeys.Node, int64(l.node)), slog.Int64(logkeys.Commodity, int64(l.commodity)),
+				slog.Int64(logkeys.Drift, l.drift))
+		}
+	}
+}
+
+// p35Orders is P3.5 (spec-external-sector.md 5.2): the counterparties place their
+// orders, in ascending agent ID, each for the lines of its node in commodity order
+// whose side is present. Every input is the tick, the state of the line and the
+// status of an edge; nothing of the realm is read (FR-EXT-023).
+func (w *World) p35Orders() error {
+	x := w.external
+	x.setMids(w)
+	for i := range x.cps {
+		cp := &x.cps[i]
+		for j := cp.first; j < cp.first+cp.n; j++ {
+			if err := w.lineOrder(cp, &x.rows[j]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// setMids computes the mid of every line for the tick, once (6.1).
+func (x *external) setMids(w *World) {
+	season := w.seasonID()
+	for i := range x.lines {
+		l := &x.lines[i]
+		mid, clamped, ok := outside.Mid(outside.MidIn{
+			Base: int64(l.cfg.Base), Season: seasonBP(l.cfg.PriceBySeason, season, wholeBP), TrendBP: l.cfg.TrendBP,
+			FloorBP: l.cfg.FloorBP, CeilBP: l.cfg.CeilingBP, MaxPrice: MaxPrice,
+			Tick: w.Tick(), TicksPerYear: x.ticksPerYear, Drift: l.drift, Shock: l.shock,
+		})
+		if !ok {
+			invariant("the mid of an outside line is out of its domain, which validation rules out")
+		}
+		l.mid, l.clamped = mid, clamped
+	}
+}
+
+// capOf returns what is left of the cumulative caps of a row: the list value is
+// always capped, by TotalValue or by MaxLineTotal (7.3).
+func (r *sideRow) capOf(s *OutsideSide) outside.Cap {
+	value := int64(MaxLineTotal)
+	if s.TotalValue > 0 {
+		value = min(value, s.TotalValue)
+	}
+	c := outside.Cap{ValueCap: true, ValueLeft: value - r.listValue}
+	if s.TotalUnits > 0 {
+		c.UnitCap, c.UnitsLeft = true, s.TotalUnits-r.units
+	}
+	return c
+}
+
+// lineOrder is the order of one side row at P3.5 (5.2.1): the wanted units and the
+// carry, whether the edge is open, the quote, the cut of the caps, the top-up from
+// the boundary and the ordinary order. A side that ended places nothing.
+func (w *World) lineOrder(cp *counterparty, row *sideRow) error {
+	x := w.external
+	l := &x.lines[row.line]
+	row.t = rowTick{}
+	if row.ended {
+		return nil
+	}
+	side := &l.cfg.Sell
+	if cp.buy {
+		side = &l.cfg.Buy
+	}
+	avail := seasonBP(side.Window, w.seasonID(), wholeBP)
+	wanted, carry := outside.Want(side.Capacity, avail, row.carry)
+	row.carry, row.t.wanted, row.t.mid, row.t.clamped = carry, wanted, l.mid, l.clamped
+	if wanted < 1 {
+		return nil
+	}
+	from, to := l.node, cp.gate
+	if cp.buy {
+		from, to = cp.gate, l.node
+	}
+	if e, ok := w.geo.edge(from, to); !ok {
+		invariant("a counterparty has no edge to its node")
+	} else if e.Closed {
+		row.t.cutClosed = wanted
+		return nil
+	}
+	limit, ok := outside.Quote(l.mid, side.MarginBP, cp.scaleBP, MaxPrice, !cp.buy)
+	if !ok {
+		invariant("the quote of an outside side is out of its domain, which validation rules out")
+	}
+	if row.t.limit = limit; limit < 1 {
+		row.t.cutPrice = wanted
+		return nil
+	}
+	row.t.offered, row.t.cutCap = outside.Offer(row.capOf(side), wanted, limit)
+	if row.t.offered < 1 {
+		return nil
+	}
+	return w.placeOutside(cp, l, row)
+}
+
+// placeOutside tops up the account of a counterparty for one row and places its
+// order through the ordinary path (spec-external-sector.md 5.2.1 steps 5 and 6, D530):
+// a buyer receives the budget limit * offered in money, a seller the offered units,
+// born in this tick, and the order is admitted like any other.
+func (w *World) placeOutside(cp *counterparty, l *outsideLine, row *sideRow) error {
+	limit, offered := row.t.limit, row.t.offered
+	o := Order{Agent: cp.agent, Commodity: l.commodity, Side: Ask, Price: Price(limit), Quantity: Quantity(offered)}
+	if cp.buy {
+		o.Side = Bid
+		budget, ok := checked.Mul(limit, offered)
+		src, open := w.ledger.Boundary(ledger.OutsideBudget, ledger.Money)
+		if !ok || !open {
+			invariant("the budget of an outside bid overflows or has no boundary account")
+		}
+		if err := w.ledger.Transfer(src, cp.account, budget, ledger.OutsideBudget); err != nil {
+			return fmt.Errorf("budget of counterparty %d at tick %d: %w", cp.agent, w.Tick(), err)
+		}
+	} else {
+		src, open := w.ledger.Boundary(ledger.OutsideOffer, int(l.commodity))
+		if !open {
+			invariant("an outside sell side has no boundary account for its commodity")
+		}
+		if err := w.ledger.Move(src, cp.account, int(l.commodity), offered, ledger.OutsideOffer); err != nil {
+			return fmt.Errorf("offer of counterparty %d at tick %d: %w", cp.agent, w.Tick(), err)
+		}
+	}
+	mi := w.markets.index(cp.gate, l.commodity)
+	b := w.markets.books[mi]
+	f := orderFacts{Account: cp.account, AgentKnown: true, SideAllowed: true, CommodityKnown: true, Tradable: true, Tally: &w.receipts}
+	if reason, ok := b.admit(w.ledger, f, o); !ok {
+		b.emitRejected(&w.obs, w.log, o, reason)
+		return nil
+	}
+	b.emitPlaced(&w.obs, o)
+	w.markets.record(mi, intentRec{})
+	return nil
+}
+
+// record adds the money of the trades of a market just cleared to the rows of the
+// counterparties in them, so the sweep can say what each row paid or received: the
+// account of a counterparty holds the money of all its commodities together.
+func (x *external) record(w *World, trades []Trade) {
+	regions := len(w.cfg.Regions)
+	for _, t := range trades {
+		for _, a := range [2]AgentID{t.Buyer, t.Seller} {
+			if int(a) < regions || int(a) >= w.firstHousehold {
+				continue
+			}
+			cp := &x.cps[int(a)-regions]
+			for j := cp.first; j < cp.first+cp.n; j++ {
+				if r := &x.rows[j]; x.lines[r.line].commodity == t.Commodity {
+					r.t.paid += int64(t.Price) * int64(t.Quantity) // the product fits: feedWelfare checked it
+				}
+			}
+		}
+	}
+}
+
+// p42Sweep is P4.2 (spec-external-sector.md 5.3): when every market has cleared and
+// every reservation is released, each counterparty in agent ID order is emptied to
+// its boundary, money then goods in commodity order; then the cumulative units, the
+// list value and the ended flags are updated and the events are emitted.
+func (w *World) p42Sweep() error {
+	x := w.external
+	for i := range x.cps {
+		if err := x.sweep(w, &x.cps[i]); err != nil {
+			return err
+		}
+	}
+	if w.obs.supplied {
+		x.emitTraded(w)
+	}
+	x.emitEnded(w)
+	return nil
+}
+
+// sweep empties one counterparty and settles its rows. A buyer returns its unspent
+// money and hands over what it bought; a seller hands over what it was paid and
+// returns what was not bought.
+func (x *external) sweep(w *World, cp *counterparty) error {
+	moneyReason, goodsReason := ledger.OutsideReceipts, ledger.OutsideUnsold
+	if cp.buy {
+		moneyReason, goodsReason = ledger.OutsideUnspent, ledger.OutsidePurchases
+	}
+	v, err := w.ledger.Account(cp.account)
+	if err != nil {
+		invariant("a counterparty account is unreadable: " + err.Error())
+	}
+	if v.Balance > 0 {
+		dst, ok := w.ledger.Boundary(moneyReason, ledger.Money)
+		if !ok {
+			invariant("an outside money reason has no boundary account")
+		}
+		if err := w.ledger.Transfer(cp.account, dst, v.Balance, moneyReason); err != nil {
+			return fmt.Errorf("sweep of the money of counterparty %d at tick %d: %w", cp.agent, w.Tick(), err)
+		}
+	}
+	for j := cp.first; j < cp.first+cp.n; j++ {
+		if err := x.sweepRow(w, cp, &x.rows[j], goodsReason); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// sweepRow moves the goods of one row to the boundary and updates its state.
+func (x *external) sweepRow(w *World, cp *counterparty, row *sideRow, reason ledger.Reason) error {
+	t := &row.t
+	l := &x.lines[row.line]
+	k := int(l.commodity)
+	held, _, err := w.ledger.Holding(cp.account, k)
+	if err != nil {
+		invariant("a counterparty account is unreadable: " + err.Error())
+	}
+	if held > 0 {
+		dst, ok := w.ledger.Boundary(reason, k)
+		if !ok {
+			invariant("an outside goods reason has no boundary account")
+		}
+		if err := w.ledger.Move(cp.account, dst, k, held, reason); err != nil {
+			return fmt.Errorf("sweep of the goods of counterparty %d at tick %d: %w", cp.agent, w.Tick(), err)
+		}
+	}
+	t.traded, t.value = held, t.paid
+	if !cp.buy {
+		t.traded = t.offered - held
+	}
+	return x.settleRow(w, cp, row, l)
+}
+
+// settleRow adds the units traded in the tick to the cumulative state of a row and
+// ends it when its cap is reached (7.3): the list value is the units times the limit,
+// not the money.
+func (x *external) settleRow(w *World, cp *counterparty, row *sideRow, l *outsideLine) error {
+	t := &row.t
+	if t.limit < 1 {
+		return nil // no quote was made: nothing was offered and nothing can end
+	}
+	side := &l.cfg.Sell
+	if cp.buy {
+		side = &l.cfg.Buy
+	}
+	next, listValue, ok := row.capOf(side).Settle(t.traded, t.limit)
+	if !ok {
+		invariant("a side traded more than its caps allowed")
+	}
+	row.units += t.traded
+	row.listValue += listValue
+	t.listValue = listValue
+	if cause, ended := next.Ended(t.limit); ended && !row.ended {
+		row.ended = true
+		t.endCause = cause
+	}
+	return nil
+}
+
+// sideOf is the Side of a counterparty: Bid for a buyer and Ask for a seller.
+func (cp *counterparty) sideOf() Side {
+	if cp.buy {
+		return Bid
+	}
+	return Ask
+}
+
+// gatePair returns the buyer and the seller of the gate that starts at
+// counterparty i (either may be missing, nil), and the index after them: a gate has
+// at most two counterparties, the buyer first (4.2.2).
+func (x *external) gatePair(i int) (buyer, seller *counterparty, next int) {
+	cp := &x.cps[i]
+	next = i + 1
+	if cp.buy {
+		buyer = cp
+		if next < len(x.cps) && x.cps[next].node == cp.node && x.cps[next].gate == cp.gate {
+			seller, next = &x.cps[next], next+1
+		}
+		return buyer, seller, next
+	}
+	return nil, cp, next
+}
+
+// eachRowOrdered calls f for every row of the counterparties in the order of the
+// events: by node, gate, commodity, buy before sell. A gate's two counterparties hold
+// their rows in commodity order, so the two lists are merged.
+func (x *external) eachRowOrdered(f func(cp *counterparty, row *sideRow)) {
+	for i := 0; i < len(x.cps); {
+		b, s, next := x.gatePair(i)
+		i = next
+		var bj, sj, bn, sn int
+		if b != nil {
+			bj, bn = b.first, b.first+b.n
+		}
+		if s != nil {
+			sj, sn = s.first, s.first+s.n
+		}
+		for bj < bn || sj < sn {
+			if sj >= sn || (bj < bn && x.rows[bj].line <= x.rows[sj].line) {
+				f(b, &x.rows[bj])
+				bj++
+				continue
+			}
+			f(s, &x.rows[sj])
+			sj++
+		}
+	}
+}
+
+// emitTraded delivers OutsideTraded for every row with a unit wanted or cut
+// (spec-external-sector.md 15.1). The caller checks that an observer was supplied.
+func (x *external) emitTraded(w *World) {
+	x.eachRowOrdered(func(cp *counterparty, row *sideRow) {
+		t := &row.t
+		if t.wanted < 1 && t.cutClosed+t.cutCap+t.cutPrice < 1 {
+			return
+		}
+		w.obs.deliver(OutsideTraded{
+			Tick: w.Tick(), Node: cp.node, Region: cp.gate, Commodity: x.lines[row.line].commodity, Side: cp.sideOf(),
+			Mid: Price(t.mid), Price: Price(t.limit), Wanted: t.wanted, Offered: t.offered, Traded: t.traded,
+			Value: Money(t.value), ListValue: Money(t.listValue),
+			CutClosed: t.cutClosed, CutCap: t.cutCap, CutPrice: t.cutPrice, PriceClamped: t.clamped,
+		})
+	})
+}
+
+// emitEnded delivers OutsideEnded and logs the Warn "outside side ended" for every
+// row that ended in this tick, and the Debug line of every side that was active.
+func (x *external) emitEnded(w *World) {
+	debug := w.log.Enabled(context.Background(), slog.LevelDebug)
+	x.eachRowOrdered(func(cp *counterparty, row *sideRow) {
+		t := &row.t
+		l := &x.lines[row.line]
+		if debug && (t.wanted > 0 || t.cutClosed+t.cutCap+t.cutPrice > 0) {
+			w.log.LogAttrs(context.Background(), slog.LevelDebug, "outside side", slog.Int64(logkeys.Tick, w.Tick()),
+				slog.Int64(logkeys.Node, int64(cp.node)), slog.Int64(logkeys.Region, int64(cp.gate)),
+				slog.Int64(logkeys.Commodity, int64(l.commodity)), slog.String(logkeys.Side, cp.sideOf().String()),
+				slog.Int64(logkeys.Price, t.limit), slog.Int64(logkeys.Quantity, t.traded), slog.Int64(logkeys.Value, t.value))
+		}
+		if t.endCause == 0 {
+			return
+		}
+		cause := CauseUnits
+		if t.endCause == outside.EndValue {
+			cause = CauseValue
+		}
+		if w.obs.supplied {
+			w.obs.deliver(OutsideEnded{
+				Tick: w.Tick(), Node: cp.node, Region: cp.gate, Commodity: l.commodity, Side: cp.sideOf(),
+				Cause: cause, Units: row.units, ListValue: Money(row.listValue),
+			})
+		}
+		w.log.LogAttrs(context.Background(), slog.LevelWarn, "outside side ended", slog.Int64(logkeys.Tick, w.Tick()),
+			slog.Int64(logkeys.Node, int64(cp.node)), slog.Int64(logkeys.Region, int64(cp.gate)),
+			slog.Int64(logkeys.Commodity, int64(l.commodity)), slog.String(logkeys.Side, cp.sideOf().String()),
+			slog.String(logkeys.Cause, string(cause)))
+	})
 }

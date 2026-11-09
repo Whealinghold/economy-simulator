@@ -421,6 +421,10 @@ func merchantRolesOn(w *World) bool { return w.mer != nil && w.mer.roles > 0 }
 // plan 2-14): an off world records no line for them.
 func migrationOn(w *World) bool { return w.migration != nil }
 
+// externalOn is the guard of the rows of the external module (P1.8, P3.5 and P4.2,
+// plan 2-16): an off world records no line for them.
+func externalOn(w *World) bool { return w.external != nil }
+
 // reliefOn is the guard of the row of the relief pass: a world with the estates
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
@@ -444,6 +448,7 @@ var replayRows = []replayRow{
 	{id: "P1.5", run: noErr((*World).p15Arrivals), on: migrationOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
+	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},
@@ -457,8 +462,10 @@ var replayRows = []replayRow{
 	{id: "P3.3", run: noErr((*World).p33Round), on: contractsOn},
 	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},
 	{id: "P3.4", run: (*World).p34Estates},
+	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P4.1", run: (*World).p41Clear},
+	{id: "P4.2", run: (*World).p42Sweep, on: externalOn},
 	{id: "P5.1", run: noErr((*World).p51Window)},
 	{id: "P5.2", run: noErr((*World).p52Record), on: informationOn},
 	{id: "P5.3", run: (*World).p53Markdown},
