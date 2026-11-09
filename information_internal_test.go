@@ -214,7 +214,7 @@ func TestRecord_OnlyP52Writes(t *testing.T) {
 					return true
 				}
 				sel, ok := call.Fun.(*ast.SelectorExpr)
-				if !ok || (sel.Sel.Name != "Put" && sel.Sel.Name != "Seal" && sel.Sel.Name != "Load") {
+				if !ok || (sel.Sel.Name != "Put" && sel.Sel.Name != "Seal" && sel.Sel.Name != "Load" && sel.Sel.Name != "Resume") {
 					return true
 				}
 				if x, ok := sel.X.(*ast.SelectorExpr); ok && x.Sel.Name == "rec" && !allowed[fn.Name.Name] {
@@ -515,8 +515,10 @@ func TestRumour_FloorAtMaxSpeed(t *testing.T) {
 	t.Parallel()
 	w, s := newInfoWorld(t, func(c *Config) { c.Modules.Information.InfoSpeed = MaxInfoSpeed })
 	step(t, w, 6)
+	n := 0
 	for _, v := range viewsAt(s, 5) {
 		for _, r := range v.rumours {
+			n++
 			if r.Lag != 2 {
 				t.Errorf("agent %d: lag from %d = %d, want 2", v.agent, r.Region, r.Lag)
 			}
@@ -524,6 +526,9 @@ func TestRumour_FloorAtMaxSpeed(t *testing.T) {
 				t.Errorf("agent %d: grain from %d = %d, want the price of tick 3, %d", v.agent, r.Region, r.Price, infoPrice(r.Region, 3))
 			}
 		}
+	}
+	if n == 0 {
+		t.Error("no rumour in the views of tick 5, want the lags to be checked")
 	}
 }
 
@@ -534,6 +539,10 @@ func TestRumour_FloorAtMaxSpeed(t *testing.T) {
 // Arithmetic: after one step the tick is 1. A view has asOf 1 and the lag 2 is
 // above it (NotYet); the migration pass reads as of 2, so the lag 2 is offered
 // with the vintage 2 - 2 = 0.
+//
+// Only the part of FR-INF-051 that the function can show is covered here (the same
+// lag, vintage and expiry as a view, with no view built); the phase-7 draw order
+// among pushed households is owed to MIG, whose pass is not built.
 //
 // Requirement: FR-INF-018, FR-INF-051
 func TestRumoursFor_AsOfNextTick(t *testing.T) {
@@ -704,7 +713,7 @@ func TestRumour_CohortNotMultiplied(t *testing.T) {
 
 // TestAgentView_Rumour verifies the lookup of a rumour in a view: found, and not
 // found for a region or commodity the view lacks, an empty view and keys beyond
-// both ends, with no allocation.
+// both ends (the allocation is TestRumour_Allocations).
 //
 // Requirement: FR-INF-024
 func TestAgentView_Rumour(t *testing.T) {

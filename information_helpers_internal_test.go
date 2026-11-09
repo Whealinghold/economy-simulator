@@ -39,7 +39,7 @@ type seenView struct {
 }
 
 // infoScript trades grain in pairs and records the views it is given: in each
-// region the first household of a role bids and the second asks, both at
+// region the first household of a role (the odd ID) asks and the second (the even ID) bids, both at
 // infoPrice, so the market publishes that price. Work records the views passed
 // to it.
 type infoScript struct {

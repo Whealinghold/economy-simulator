@@ -61,7 +61,7 @@ func s48Want(tick int64, reader, source string) (int64, bool) {
 //
 // Requirement: FR-INF-010, FR-INF-016, FR-INF-026
 //
-// Guard: a lag table that was not rebuilt, or a rumour built before a change that
+// Guard: a lag that was not derived from the current graph, or a rumour built before a change that
 // moved with it, would show a lag or a presence that the walk of the tick does not
 // give (STB-L95).
 func TestScenarioS48_ClosureAndReopening(t *testing.T) {
@@ -125,7 +125,7 @@ func TestScenarioS48_ClosureAndReopening(t *testing.T) {
 					wrongLag++
 				}
 				p := cleared[[3]int64{v.tick - ru.Lag, int64(ru.Region), int64(ru.Commodity)}]
-				slack := (p*s48Error+9_999)/10_000 + 1
+				slack := (p*s48Error + 9_999) / 10_000
 				if d := int64(ru.Price) - p; d > slack || -d > slack {
 					wrongPrice++
 				}

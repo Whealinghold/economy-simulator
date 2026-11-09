@@ -88,7 +88,13 @@ func TestScenarioS49_ForkAndStream(t *testing.T) {
 		// The rumours of the two module-on worlds are the same views at the same ticks;
 		// with an error they differ in the price and in nothing else.
 		var priceDiff, otherDiff int64
+		if len(quietS.seen) != len(noisyS.seen) {
+			t.Fatalf("seed %d: the module-on worlds saw %d and %d views, want equal", seed, len(quietS.seen), len(noisyS.seen))
+		}
 		for i := range quietS.seen {
+			if len(quietS.seen[i].rumours) != len(noisyS.seen[i].rumours) {
+				t.Fatalf("seed %d: view %d holds %d and %d rumours, want equal", seed, i, len(quietS.seen[i].rumours), len(noisyS.seen[i].rumours))
+			}
 			for j, q := range quietS.seen[i].rumours {
 				n := noisyS.seen[i].rumours[j]
 				if q.Price != n.Price || q.Mean != n.Mean {

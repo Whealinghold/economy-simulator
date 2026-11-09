@@ -1101,7 +1101,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-INF-035 | The warning `information_without_readers` MUST be raised when the module is on and no role is informed (9.3). |
 | FR-INF-036 | The warning `information_without_routes` MUST be raised when the module is on and there are fewer than two regions or no edge (9.3). |
 | FR-INF-037 | The warning `rumour_horizon_short`, carrying `pairs`, MUST be raised when an ordered pair of regions has a walk in the configured graph whose lag exceeds `RumourMaxAge`, with `pairs` the number of such pairs (9.3). |
-| FR-INF-038 | The warning `informed_without_sources` MUST be raised for an informed role none of whose tradable commodities is a source in a region other than where it has a group (9.3). |
+| FR-INF-038 | The warning `informed_without_sources` MUST be raised for an informed role that would never be shown a rumour: in no region where it can be (the regions of its groups, every region if it has none) is a commodity of its tradable set a source in another region (9.3). |
 | FR-INF-039 | The warnings of this spec MUST NOT fail validation, MUST each be logged once at `Warn` with `rule` and `path` at construction, and MUST NOT be logged inside the tick (9.3, 10.2). |
 | FR-INF-040 | `RumoursServed` MUST be emitted once per reader region per tick in which at least one informed agent was given a view there, in ascending `RegionID`, after the last plan of phase 3 and before phase 4, and never otherwise (10.1). |
 | FR-INF-041 | The counts `Offered`, `NoPath`, `TooOld` and `NotYet` of `RumoursServed` MUST add up to the candidates of the informed views of that region and tick, `Offered` MUST equal the rumours placed in them and `MaxLag` the largest of their lags (10.1). |

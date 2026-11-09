@@ -3,6 +3,8 @@ package economysim_test
 import (
 	"errors"
 	"log/slog"
+	"math"
+	"math/bits"
 	"slices"
 	"strconv"
 	"testing"
@@ -13,7 +15,7 @@ import (
 // The tests of the information module's configuration surface: its three
 // fields, the flag of a role, the bounds, the derived checks, the defaults and
 // the four warnings (spec-information.md 8, 9, FR-INF-001, 031 to 039, 044, 048,
-// FR-CFG-074, 076). The module has no world effect yet.
+// FR-CFG-074, 076). Its effect on a world is tested in information_internal_test.go.
 
 // informationConfig returns referenceConfig with a second region, a group of
 // cooks in each region, edges of 55 and 40, and the information module on at
@@ -206,8 +208,10 @@ func TestBounds_Information(t *testing.T) {
 		}
 	}
 	// 10^9 * (10 000 + 5 000) = 1.5 * 10^13, far below 9.2 * 10^18.
-	if p := int64(economysim.MaxPrice) * (10_000 + economysim.MaxRumourErrorBP); p <= 0 {
-		t.Errorf("MaxPrice * (10 000 + MaxRumourErrorBP) = %d, want a positive int64", p)
+	// Evaluated at run time (a constant product would fail to compile, not the test).
+	price, factor := uint64(economysim.MaxPrice), uint64(10_000+economysim.MaxRumourErrorBP)
+	if hi, lo := bits.Mul64(price, factor); hi != 0 || lo > math.MaxInt64 {
+		t.Errorf("MaxPrice * (10 000 + MaxRumourErrorBP) = %d (high word %d), want it to fit int64", lo, hi)
 	}
 }
 
@@ -283,10 +287,17 @@ func TestWarnings_Information(t *testing.T) {
 	if err := c.Validate(); err != nil {
 		t.Errorf("Validate(a config that draws a warning) = %v, want nil: a warning never fails validation", err)
 	}
+	found := false
 	for _, w := range c.Warnings() {
-		if w.Rule == "rumour_horizon_short" && w.Count != 1 {
-			t.Errorf("Warnings() rumour_horizon_short Count = %d, want 1 pair", w.Count)
+		if w.Rule == "rumour_horizon_short" {
+			found = true
+			if w.Count != 1 {
+				t.Errorf("Warnings() rumour_horizon_short Count = %d, want 1 pair", w.Count)
+			}
 		}
+	}
+	if !found {
+		t.Error("Warnings() has no rumour_horizon_short, want one with Count 1")
 	}
 	// A configuration that does not validate draws no horizon warning and does not panic.
 	bad := informationConfig()

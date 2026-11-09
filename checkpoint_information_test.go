@@ -180,8 +180,11 @@ func TestCheckpoint_InformationCorrupt(t *testing.T) {
 	t.Parallel()
 	raw, cfg, opts := informationCheckpoint(t, 6, 500, 4)
 	good, ok := infoRows(decodeFrame(t, raw).sectionOf(t, informationSectionTag))
-	if !ok || len(good) == 0 || len(good[0]) != 4 {
-		t.Fatalf("section 16 of a checkpoint at tick 6 with depth 4 = %d sources of %v entries, want sources of 4", len(good), len(good[0]))
+	if !ok || len(good) == 0 {
+		t.Fatalf("section 16 of a checkpoint at tick 6 with depth 4 = %d sources (parsed %v), want some", len(good), ok)
+	}
+	if len(good[0]) != 4 {
+		t.Fatalf("section 16 of a checkpoint at tick 6 with depth 4 = sources of %d entries, want 4", len(good[0]))
 	}
 	mutate := func(f func(rows [][][3]uint64) [][][3]uint64) []byte {
 		rows := make([][][3]uint64, len(good))

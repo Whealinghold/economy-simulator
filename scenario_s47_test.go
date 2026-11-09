@@ -64,7 +64,7 @@ func TestScenarioS47_ThinSourceAge(t *testing.T) {
 			}
 			last := v - v%s47Every
 			p, _ := s47Quote(last)
-			slack := (int64(p)*s47Error+9_999)/10_000 + 1
+			slack := (int64(p)*s47Error + 9_999) / 10_000
 			d := int64(ru.Price) - int64(p)
 			if ru.Lag != s47Lag || ru.SourceAge != v-last || d > slack || -d > slack {
 				bad++
