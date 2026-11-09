@@ -174,7 +174,9 @@ economy-sim/
                          first consumer's pack and a second, unrelated setting
   testdata/              fixtures shared across packages: chains/ (config
                          fixtures, including the reference chain), golden/
-                         (off/, one directory per module, all/: 10.4),
+                         (off/, one directory per module, all/: 10.4; and, for a
+                         harness or renderer that records no world state,
+                         indicator/, experiment/ and stylised/: testing.md 7.1.1),
                          checkpoints/ (one fixture of pack one and one all-modules-on
                          fixture per checkpoint format version; a module's
                          restore test builds its world from its overlay in the
@@ -1063,4 +1065,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 0e399c6710b7c6bd4491774b
+RULE-TAG: 4b2219daaafe7b43781a1737

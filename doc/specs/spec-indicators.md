@@ -89,7 +89,7 @@ Out of scope, with the owner:
 |---|----------|---------|
 | 1 | An indicator is a **pure function of a snapshot (or two) and of the events a recorder kept**, with a price table and a class table as plain arguments. It takes no `*World`, no callback into one and no random number, and it is deterministic across platforms | 3.1, 3.3 |
 | 2 | **Nothing in the world reads an indicator back.** This is a requirement with three tests: no package of the module imports `indicator` except through the consumer's own code; no exported function takes a world; a run with every preset computed every tick equals a run with none, byte for byte | 3.1, 20 |
-| 3 | The home is a public package `indicator/` (it imports the root; the root, `config/`, `strategy/` and `internal/` never import it) over `internal/measure` (primitive checked arithmetic, standard library, `math/bits` only). No layered name, no interface | 3.2 |
+| 3 | The home is a public package `indicator/` (it imports the root; the root, `config/`, `strategy/` and `internal/` never import it) over `internal/measure` (primitive checked arithmetic: the standard library, `math/bits` and `internal/checked`). No layered name, no interface | 3.2 |
 | 4 | The **generic aggregators** are three: a value of flows at a price table, a weighted statistic over household rows, and a window statistic over a series. Every standard indicator is a **preset**: a named call of these with fixed arguments, and a consumer writes its own the same way | 3.6, 9 |
 | 5 | Arithmetic is integer: sums in signed 128 bits, one rounding rule (half to even), indices in basis points against a base window of 10 000, the Fisher mean by an integer square root rounded to the nearest integer, the Gini coefficient exact in 128 bits and rounded once | 5 |
 | 6 | An overflow is an **error** where the result cannot mean anything (a value that does not fit `int64`), and a **clamp with a flag** where the measurement matters most when the world is worst (an index of 2 147 483 647 bp or more, a runaway inflation) | 5.6 |
@@ -147,8 +147,9 @@ root, `config/`, `strategy/` and `internal/` never import it, so the import
 graph has one direction (`indicator` to root to `internal/`; architecture.md
 2.7). Beneath it, **`internal/measure`** holds the checked arithmetic over
 primitive types (the 128-bit sums, the half-to-even division, the integer
-square root, the Gini accumulation, the nearest-rank quantile), stdlib only,
-with no knowledge of a commodity, a region or an agent (architecture.md 2.9).
+square root, the Gini accumulation, the nearest-rank quantile), importing the
+standard library and `internal/checked` (the one shared 128-bit helper, 5.2.1)
+and nothing else, with no knowledge of a commodity, a region or an agent (architecture.md 2.9).
 The root converts nothing: `indicator` converts at its own call into
 `internal/measure`, inline.
 
@@ -184,7 +185,7 @@ and no single primary type, and a constructor is named for what it builds
 | A class table | `indicator.Classes` from the commodity tags | `Config.Commodities[].Classes` (GDS 6.1), through the names table | every measure by class |
 | Household rows | `[]indicator.Household{Weight, Total int64}` | INT `Agents(r)` and `Agent(a)` (`AgentState`), 4.5 | inequality, quantiles, shares |
 | A series | `[]indicator.Point{Tick, Value int64}` | the consumer's own store (10.3) | window statistics, growth |
-| The calendar | `Calendar` (`TicksPerYear`, `At`) | `World.Calendar()` (CAL 4) | annualisation, years, seasons |
+| The calendar | `Calendar` (`TicksPerYear`, `At`) | `World.Config().Calendar` (CAL 4) | annualisation, years, seasons |
 | The region graph | `Graph` (components) | `World.Graph()` (REG 4.3) | `PriceGap.Connected` |
 | A base | `indicator.Base`: the base window's `Prices` **and** its quantities by (region, commodity) for each `Weights` choice, frozen from a closed tally (`BaseOf(t, p)`) | the consumer's own store | `PriceIndex`, real values |
 | Configuration data | `Config` fields named in the preset's row | `World.Config()` | basket, upkeep, mode haul commodity, durability |
@@ -374,7 +375,10 @@ the world the events came from, from `WorldCreated` or `WorldRestored`; two wind
 of different hashes are not combined, 3.3.2), the number of steps, the two
 snapshots' household counts by (region, role), `Open.Pending` and `Close.Pending`
 (7.1.5), and the rows of 4.2.2 in canonical order. A measure takes a `Window`
-and nothing else of the tally.
+and nothing else of the tally. A `Window` holds no stocks: a preset that needs
+them takes the two snapshots as arguments beside the window (plan 2-18 D566),
+so the snapshots stay with the caller and no market row is copied into every
+window.
 
 ### 4.3 What a price is for valuing
 
@@ -457,7 +461,9 @@ the households of a row below `x` when `Total < x * Weight`).
 
 4.5.2. **Source.** INT's `Agents(r)` lists the live agents of a region in
 ascending ID without pseudo-agents (INT 6.2), and `Agent(a)` returns an
-`AgentState` with `Weight`, `External`, `Money` and the welfare ratio and
+`AgentState`; `RowsOf` takes the `[]AgentState` a consumer already holds, never
+a world, so the dependency on INT is the type `AgentState` and its fields and
+not the methods. An `AgentState` has `Weight`, `External`, `Money` and the welfare ratio and
 whether it exists (INT 4.7.2). `indicator.RowsOf(states []AgentState, col Column,
 opt RowOpt)` builds rows from them; `Column` is a closed set (`Money`, `WelfareRatio`,
 `EarnedRatio`, `Hunger`, `Wealth`), and `RowOpt.ExcludeExternal` drops the agents with
@@ -518,10 +524,12 @@ Every result that depends on a table carries the `ConfigHash` of its inputs
 5.2.1. **Sums are 128 bits.** A sum of values is accumulated in a signed 128-bit
 integer (`internal/measure.Int128`, two words, built with `math/bits.Add64`,
 `Mul64` and `Sub64`), never in `int64`. The checked multiply and divide that
-`spec-currency.md` 7 places in `internal/` are the same primitives: when that
-package exists `internal/measure` uses its 128-bit helpers and adds only the
-statistics (Gini accumulation, nearest rank, integer square root); the two are
-one helper and not two (open question 11 if the package is not yet decided). The bound that makes this enough: a row
+`spec-currency.md` 7 places in `internal/` are the same primitives, and the one
+home is `internal/checked` (architecture.md 2.6): `internal/measure` uses its
+128-bit helpers (`Acc`, `MulDivHalfEven`) and adds only what `checked` lacks (a
+signed `Int128`, the 128-by-128 half-to-even quotient, the integer square root,
+the Gini accumulation, nearest rank); the two are one helper and not two (open
+question 11 is answered). The bound that makes this enough: a row
 value is at most `MaxMoney` (10^18) in magnitude for money and at most
 `MaxMoney * 10 000` for a ratio in basis points (a ratio of income to a cost of
 at least 1 minor unit), a weight is at most `MaxWeight` (10^6), the sum of
@@ -1462,7 +1470,8 @@ A **preset** is a named, fixed call of the aggregators (3.6) with a stated
 definition, input and unit. The list is closed for version 1: a later module's
 request for a preset is an ask of the module's spec (22), not a row, and the
 four rows 22 to 25 are the presets of the employment and risk modules that this
-spec accepted. Each row is a requirement on the preset (FR-IND-030 to FR-IND-050,
+spec accepted and that are built with those modules (EMP, RSK and STO, Stage 3),
+not before: version 1 of the code builds rows 1 to 21 (plan 2-18 D560). Each row is a requirement on the preset (FR-IND-030 to FR-IND-050,
 and FR-IND-056 to FR-IND-059 for rows 22 to 25). A consumer adds its own the same
 way (3.6); a preset is never *the* measure, only the one every consumer,
 scenario and band means by its name.
@@ -2104,6 +2113,13 @@ OBS, IND]; the wear of a tool-using recipe in `RecipeExecuted` [PRO, IND].
 
 Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
+FR-IND-056 to FR-IND-059 (rows 22 to 25 of 9.1) are built with the modules
+that make their inputs: 056 to 058 with EMP (`LabourRound`) and 059 with RSK
+and STO (`StoreLoss`, the `Lost` fields and the reason `loss`), each in the plan
+of that module, which adds the `Observe` case, the tally rows, the preset and
+its tests (plan 2-18 D560). Until then they have no test and the code does not
+declare the presets.
+
 ### Functional
 
 FR-IND-030 to FR-IND-050 and FR-IND-056 to FR-IND-059 are one requirement per preset whose clauses (the
@@ -2179,7 +2195,7 @@ checks of that preset's worked-example test.
 | NFR-IND-001 | The allocations of the class 1 and class 2 presets MUST be a function of the rows of the snapshot and the tally and MUST NOT depend on the number of agents, which a test over two scales of one configuration MUST show (3.4). |
 | NFR-IND-002 | A tally's `Observe` MUST allocate nothing for an event of an existing row once the rows exist (`testing.AllocsPerRun`) (4.2.2). |
 | NFR-IND-003 | The row statistics, the index functions and the accounts MUST have fuzz tests asserting that they never panic and that the properties of FR-IND-010, 014, 015, 020 and 024 hold for any input (13). |
-| NFR-IND-004 | `indicator` MUST import only the standard library, the root package and `internal/measure`, and `internal/measure` only the standard library (architecture.md 5.1). |
+| NFR-IND-004 | `indicator` MUST import only the standard library, the root package and `internal/measure`, and `internal/measure` only the standard library and `internal/checked` (architecture.md 5.1). |
 
 ## 21. Open questions
 
@@ -2226,9 +2242,8 @@ checks of that preset's worked-example test.
    with no `n / (n - 1)` correction, so a two-household world has at most 0.5.
    A consumer that wants the sample estimator multiplies by `n / (n - 1)`
    itself. Not offered: the households of the library are the population.
-11. **One checked 128-bit helper.** `spec-currency.md` 7 names `internal/`
-    checked-arithmetic helpers without a package; `internal/measure` must not
-    duplicate them. Next step: the first code decides the one home.
+11. **One checked 128-bit helper.** Answered (plan 2-18 D562): the one home is
+    `internal/checked`; `internal/measure` imports it and does not duplicate it.
 10. **A median of agents and a mean of agents.** Both are offered only as
     household-weighted measures. A measure over agents (the number of agents
     that hold less than a price) is a count of rows and is the consumer's.
