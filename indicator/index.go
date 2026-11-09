@@ -137,8 +137,9 @@ func (res *IndexResult) fill(p1q0, p0q0, p1q1, p0q1, stale acc) error {
 	if res.Paasche, err = ratioWide("PriceIndex", "paasche", p1q1.v, p0q1.v); err != nil {
 		return err
 	}
-	if res.Laspeyres.OK && res.Paasche.OK {
-		// Each factor is at most MaxIndexBP, so the product is below 2^62.
+	if res.Laspeyres.OK && res.Paasche.OK && res.Laspeyres.Value >= 0 && res.Paasche.Value >= 0 {
+		// Each factor is between 0 and MaxIndexBP, so the product is below 2^62; a
+		// negative index (negative corrected units) leaves Fisher undefined.
 		root := measure.IsqrtNearest(uint64(res.Laspeyres.Value) * uint64(res.Paasche.Value))
 		res.Fisher = Index{Value: BP(root), OK: true, Clamped: res.Laspeyres.Clamped || res.Paasche.Clamped}
 	}

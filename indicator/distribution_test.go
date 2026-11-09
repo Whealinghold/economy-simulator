@@ -3,6 +3,7 @@ package indicator_test
 import (
 	"errors"
 	"math"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -239,5 +240,23 @@ func TestRowsOf_AbsentRatioIsNotRead(t *testing.T) {
 	set, err := indicator.RowsOf(st, indicator.ColWelfareRatio, indicator.RowOpt{})
 	if err != nil || set.Absent != 1<<40 || len(set.Rows) != 1 {
 		t.Errorf("RowsOf(absent ratio, huge weight) = %+v, %v, want 1<<40 absent and one row", set, err)
+	}
+}
+
+// TestInequality_ClampedP90P10IsFlagged verifies that a P90 to P10 ratio held at
+// MaxIndexBP carries WarnClamped. Totals 1, 2 ... 8, then 3e10 twice, ten
+// households of weight 1: P10 is rank 1 = 1 and P90 rank 9 = 3e10, so the ratio
+// 10 000 * 3e10 / 1 is far past MaxIndexBP.
+//
+// Requirement: FR-IND-023
+func TestInequality_ClampedP90P10IsFlagged(t *testing.T) {
+	t.Parallel()
+	var set indicator.RowSet
+	for _, v := range []int64{1, 2, 3, 4, 5, 6, 7, 8, 3e10, 3e10} {
+		set.Rows = append(set.Rows, indicator.Household{Weight: 1, Total: v})
+	}
+	got, err := indicator.Inequality(set)
+	if err != nil || !got.P90P10OK || got.P90P10 != indicator.MaxIndexBP || !slices.Contains(got.Warnings, indicator.WarnClamped) {
+		t.Errorf("Inequality() P90P10 = %d (ok %v), warnings %v, %v, want MaxIndexBP and WarnClamped", got.P90P10, got.P90P10OK, got.Warnings, err)
 	}
 }

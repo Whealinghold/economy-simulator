@@ -135,6 +135,7 @@ func Inequality(set RowSet) (InequalityResult, error) {
 			return InequalityResult{}, err
 		}
 		out.P90P10, out.P90P10OK = q.Value, q.OK
+		out.Warnings = clampWarning(out.Warnings, q) // FR-IND-023: a clamped ratio is flagged
 	}
 	return out, nil
 }

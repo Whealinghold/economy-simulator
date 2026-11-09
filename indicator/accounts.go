@@ -102,7 +102,10 @@ func stocksOf(s economysim.Snapshot, regions, commodities int) (stockTable, erro
 			return stockTable{}, wrap("GDP", "market", ErrRange)
 		}
 		i := int(r)*commodities + int(c)
-		st.held[i] = int64(m.HeldByAgents) + int64(m.HeldByEstate)
+		var err error
+		if st.held[i], err = net("GDP", "held", []int64{int64(m.HeldByAgents), int64(m.HeldByEstate)}); err != nil {
+			return stockTable{}, err
+		}
 		st.estate[i], st.pend[i] = int64(m.HeldByEstate), int64(m.Pending)
 	}
 	return st, nil

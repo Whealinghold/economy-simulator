@@ -26,7 +26,8 @@ type RangeResult struct {
 	Warnings   []Warning
 }
 
-// forMarkets calls f for each market of the window in sel that saw a clearing.
+// forMarkets calls f for each market of the window in sel, in (region, commodity)
+// order; f decides what to do with a market that never cleared.
 func forMarkets(w Window, sel CellSel, f func(i int, r economysim.RegionID, c economysim.CommodityID) error) error {
 	for i := range w.Markets {
 		r, c := economysim.RegionID(i/w.Commodities), economysim.CommodityID(i%w.Commodities)

@@ -110,3 +110,15 @@ func TestSeasonWindows_WrapsTheYear(t *testing.T) {
 		t.Errorf("SeasonWindows of the zero calendar error = %v, want ErrRange", err)
 	}
 }
+
+// TestYearWindow_LastYearIsOverflowNotWrapped verifies that the year past which
+// the next year's first tick cannot be formed is ErrOverflow and not a wrapped
+// span.
+//
+// Requirement: FR-IND-009
+func TestYearWindow_LastYearIsOverflowNotWrapped(t *testing.T) {
+	t.Parallel()
+	if _, err := indicator.YearWindow(calendar365(), 1<<63-1); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("YearWindow(year MaxInt64) error = %v, want ErrOverflow", err)
+	}
+}

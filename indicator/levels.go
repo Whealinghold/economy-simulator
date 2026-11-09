@@ -81,6 +81,7 @@ func BasketLevel(cfg economysim.Config, s economysim.Snapshot) (BasketResult, er
 		}
 		if row.StaleOK && row.Stale > 0 && !slices.Contains(res.Warnings, WarnStale) {
 			res.Warnings = append(res.Warnings, WarnStale)
+			slices.Sort(res.Warnings) // a result lists its warnings in ascending order
 		}
 		res.Warnings = clampWarning(res.Warnings, row.Level)
 		res.Rows = append(res.Rows, row)

@@ -29,6 +29,9 @@ func yearOf(cal economysim.Calendar, tick int64) (int64, error) {
 // search over the monotone cal.At: tick (y+1) * TicksPerYear is already in a
 // later year, because StartDay is not negative.
 func firstTickOfYear(cal economysim.Calendar, y, perYear int64) (int64, error) {
+	if y == maxInt64 { // y+1 would wrap
+		return 0, wrap("YearWindow", "year", ErrOverflow)
+	}
 	hi, ok := measure.ToInt64(measure.MulInt64(y+1, perYear))
 	if !ok {
 		return 0, wrap("YearWindow", "year", ErrOverflow)

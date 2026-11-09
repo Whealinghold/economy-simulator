@@ -149,8 +149,11 @@ func (res *TradeBalanceResult) openness(gdp GDPResult) error {
 	}
 	n := measure.MulInt64(10_000, xm)
 	q, ok := measure.RoundDiv(n, measure.FromInt64(gdp.Realm.ValueAdded))
-	if v, fits := measure.ToInt64(q); ok && fits {
-		res.Openness, res.OpennessOK = BP(v), true
+	if !ok {
+		return nil
 	}
+	v, clamped := measure.ClampBP(q) // FR-IND-023: held at MaxIndexBP and flagged
+	res.Openness, res.OpennessOK = BP(v), true
+	res.Warnings = clampWarning(res.Warnings, Index{Clamped: clamped})
 	return nil
 }

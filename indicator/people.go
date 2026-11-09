@@ -334,6 +334,9 @@ func RealWage(cfg economysim.Config, s economysim.Snapshot, p Prices) (RealWageR
 	if err := p.Compatible(s.ConfigHash); err != nil {
 		return RealWageResult{}, err
 	}
+	if p.Regions != len(cfg.Regions) || p.Commodities != len(cfg.Commodities) || len(p.Cells) != p.Regions*p.Commodities {
+		return RealWageResult{}, wrap("RealWage", "prices", ErrRange)
+	}
 	res, ids := RealWageResult{ConfigHash: s.ConfigHash, Tick: s.Tick}, commodityIDs(cfg)
 	for _, r := range s.Roles {
 		if r.Role < 0 || int(r.Role) >= len(cfg.Roles) || r.Region < 0 || int(r.Region) >= len(cfg.Regions) {

@@ -142,14 +142,24 @@ func (in accounts) sectors(w Window, open, closing economysim.Snapshot, r econom
 	var a sectorAcc
 	for c := 0; c < w.Commodities; c++ {
 		i, pr := int(r)*w.Commodities+c, p.At(r, economysim.CommodityID(c))
-		agentsClose, agentsOpen := in.st.held[i]-in.st.estate[i], in.op.held[i]-in.op.estate[i]
-		a.nw[0].add(agentsClose+in.st.pend[i], pr)
-		a.dnw[0].add(agentsClose-agentsOpen+in.st.pend[i]-in.op.pend[i], pr)
+		// Term by term, so a difference of units never wraps (FR-IND-009).
+		a.nw[0].add(in.st.held[i], pr)
+		a.nw[0].sub(in.st.estate[i], pr)
+		a.nw[0].add(in.st.pend[i], pr)
+		a.dnw[0].add(in.st.held[i], pr)
+		a.dnw[0].sub(in.st.estate[i], pr)
+		a.dnw[0].sub(in.op.held[i], pr)
+		a.dnw[0].add(in.op.estate[i], pr)
+		a.dnw[0].add(in.st.pend[i], pr)
+		a.dnw[0].sub(in.op.pend[i], pr)
 		a.nw[1].add(in.st.estate[i], pr)
-		a.dnw[1].add(in.st.estate[i]-in.op.estate[i], pr)
+		a.dnw[1].add(in.st.estate[i], pr)
+		a.dnw[1].sub(in.op.estate[i], pr)
 		a.nw[2].add(in.st.transit[i], pr)
-		a.dnw[2].add(in.st.transit[i]-in.op.transit[i], pr)
-		a.pend.add(in.st.pend[i]-in.op.pend[i], pr)
+		a.dnw[2].add(in.st.transit[i], pr)
+		a.dnw[2].sub(in.op.transit[i], pr)
+		a.pend.add(in.st.pend[i], pr)
+		a.pend.sub(in.op.pend[i], pr)
 	}
 	return a
 }
