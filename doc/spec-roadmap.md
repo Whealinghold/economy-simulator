@@ -276,7 +276,8 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
    duties above in the specs that own them when each is written.
 4. When the first code is written, add the optional `denomination/` package to
    the layout in `rules/architecture.md` 2.6 and `AGENTS.md`
-   (`specs/spec-currency.md` section 7).
+   (`specs/spec-currency.md` section 7). Done by the stage 2-23 change (the 2.6 layout
+   and `AGENTS.md`).
 
 ## Decisions
 

@@ -440,7 +440,7 @@ checks each scope against the table.
 |-------|----------------------------|
 | Root package | 90% |
 | Each package under `internal/` | 90% |
-| `config/`, `strategy/`, `indicator/` and `experiment/` | 90% |
+| `config/`, `strategy/`, `indicator/`, `experiment/` and `denomination/` | 90% |
 
 Because `-coverpkg` credits integration tests too, coverage does not show that
 an `internal/` package has its own unit tests; 2.1 and 2.2 still apply.
@@ -568,4 +568,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: cb434ac287a78ec8e68eee2f
+RULE-TAG: e80596a2c048ffc0ab74e3c4

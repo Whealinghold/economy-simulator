@@ -92,6 +92,12 @@
 //     which a checkpoint stores and a restore compares.
 //   - Creditor: the account a claim is owed to, an agent or an estate account.
 //   - Debtor: the agent account that owes a claim.
+//   - Denomination: a name and a symbol for a multiple of the minor unit; a
+//     display concern only, never in the core's types, events, snapshots, logs or
+//     configuration.
+//   - Denomination ladder: the type Ladder of the denomination package, an
+//     ordered list of Units, largest first, with strictly decreasing sizes.
+//   - Denomination ladder preset: a ready-made Ladder (RPG, Single).
 //   - Default constructor: DefaultWorldParams, DefaultRole and the like, the one
 //     place a default is defined. The zero value of an entity is not a default.
 //   - Draw site: a place in the code where the world takes a random word, named
@@ -162,6 +168,9 @@
 //     the tick.
 //   - Fixed point: money, prices and quantities are whole numbers of their
 //     smallest unit; no floating point affects a result.
+//   - Formatter: a pure function from an int64 amount to text in the Units of a
+//     denomination.Ladder, built by denomination.NewFormatter with an Option
+//     such as WithPrecision.
 //   - Group: the households of one role in one region, with an optional scale.
 //   - Census: the configured households of the groups of a world
 //     (Group.Households), from which the agents and their weights are derived.
@@ -181,7 +190,8 @@
 //     remaining durability; equal lots are merged and an account's lots are
 //     kept sorted by commodity, born tick and durability (canonical form).
 //   - Minor unit: the smallest unit of money. Money and Price are counts of
-//     minor units; the library has no currency, denomination or decimal place.
+//     minor units; the core has no currency or decimal place; the optional
+//     denomination package names multiples of it.
 //   - Module: an optional mechanism that is off unless its entry in
 //     Config.Modules is non-nil.
 //   - Ledger: the single holder of all money and goods in a world, which
@@ -196,6 +206,8 @@
 //     bounded warning.
 //   - Pack: a set of configuration documents, layered in order, that defines a
 //     supply chain; later documents add to or override earlier ones.
+//   - Precision: the number of decimal places, 0 to 6, with which a Formatter
+//     writes the smallest Unit of its denomination.Ladder.
 //   - Presentation-only field: a field, such as a label, that changes no result
 //     and is not part of the configuration hash.
 //   - Price: money per unit of a commodity, an int64 count of minor units.
@@ -408,6 +420,8 @@
 //   - Effective factor: the site factor multiplied in turn by the yield shock,
 //     the technology gain, the trainee or hire factor and the resource
 //     abundance, each step truncated; it scales the output of a job.
+//   - Unit: one rung of a denomination.Ladder (not a unit of a commodity), with
+//     a name, a symbol and a size in minor units.
 //   - Unit cost: the cost of one unit of an output of a recipe, in minor units,
 //     rounded up: inputs, tool wear, labour at the regional wage and rent,
 //     times the output's cost share, over the output quantity and the

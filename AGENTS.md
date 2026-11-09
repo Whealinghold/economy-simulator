@@ -48,8 +48,9 @@ with a fresh random value in the same change.
   this one. The only exception is `examples/`, where each example is its own
   module.
 - **Standard library only in the core.** The root package, `indicator/`,
-  `experiment/` and `internal/` import the standard library only (and the
-  module's own packages that `doc/rules/architecture.md` 2.7 allows).
+  `experiment/`, `denomination/` and `internal/` import the standard library
+  only (and the module's own packages that `doc/rules/architecture.md` 2.7
+  allows).
   `config/` may import a file-format parser; `experiment/` reaches it only
   through `config/`. No OpenTelemetry, RPC, HTTP-framework or database
   dependencies in this module; OpenTelemetry support is the separate
@@ -65,6 +66,11 @@ with a fresh random value in the same change.
   might vary a configuration value or an extension point, not a constant.
   Setting-specific content (names, currencies, denominations, role and region
   lists) belongs in `examples/` or in configuration files, never in the core.
+  One exception: the `RPG` preset of `denomination/` (`spec-currency.md` 7,
+  FR-CUR-017; FR stands for functional requirement, see `doc/specs/README.md`)
+  is the one setting vocabulary allowed outside `examples/`, as a
+  display-only preset that nothing in the root, `internal/`, `config/` or
+  `strategy/` imports (FR-CUR-002).
   When a design choice is a trade-off between generic and convenient for the
   RPG, choose generic.
 - **Deterministic.** No `time.Now`, no global or `crypto` randomness, no
@@ -142,6 +148,11 @@ economy-sim/
 │                           #   imports the root, imported by nothing
 ├── experiment/             # sweeps, replicas and reductions of runs; imports the
 │                           #   root and config/, imported by nothing
+├── denomination/           # optional display of Money: the ladder, the formatter
+│                           #   and the RPG preset; stdlib only; imported by
+│                           #   consumers and examples, not by the root,
+│                           #   internal/, config/ or strategy/ (this ban changes
+│                           #   only by amending architecture.md 2.6 and this file)
 ├── internal/               # stdlib only; never imports the root, config/,
 │   │                       #   strategy/, indicator/ or experiment/
 │   ├── checked/ logkeys/ ordering/ codec/        # leaf helpers; import nothing of

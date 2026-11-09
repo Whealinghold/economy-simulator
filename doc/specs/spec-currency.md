@@ -113,8 +113,9 @@ step (floor 100) when the cheapest good costs one of them.
 ## 4. Denominations (optional display)
 
 A **ladder** is an ordered list of denominations, each with a name, a symbol
-and a size in minor units. A **formatter** is built from a ladder and writes a
-`Money` value in those denominations. Both are optional: a consumer that
+and a size in minor units. A **formatter** is built from a ladder and writes an
+`int64` count of minor units (a `Money` value, converted with `int64(m)`) in those
+denominations. Both are optional: a consumer that
 prints plain integers, or has its own formatting, never uses them.
 
 ### 4.1 The ladder
@@ -125,7 +126,10 @@ unique across the ladder, and a size in minor units of at least 1 and at most
 smallest. A size need not divide the next larger one (a ladder may be
 irregular); the formatter fills from the largest down and keeps the remainder.
 A ladder that breaks these conditions is rejected at construction with an
-error, never at format time.
+error, never at format time. The formatter copies the ladder's slice at
+construction, so a later change of the caller's slice changes nothing. It writes
+the symbols of the denominations, not their names; a name is for the consumer's
+own use.
 
 The ladder is a free choice of the consumer. A setting with 12 pence to a
 shilling and 20 shillings to a pound, a decimal currency, or a single unit
@@ -133,7 +137,9 @@ called "credits" changes only the ladder, never the simulation.
 
 ### 4.2 Formatting
 
-Formatting is a pure function from `Money` to text.
+Formatting is a pure function from an `int64` count of minor units (a `Money`
+value converted with `int64(m)`) to text, and a formatter is safe for concurrent
+use.
 
 1. A negative amount is formatted as `-` followed by the amount's magnitude.
    Compute the magnitude in `uint64`, so `math.MinInt64` does not overflow.
@@ -152,8 +158,12 @@ Formatting is a pure function from `Money` to text.
    `p <= 6`.
 5. If nothing was printed by steps 3 and 4 (a non-zero amount smaller than the
    smallest denomination, at precision 0), the formatter prints `0` of the
-   smallest denomination, and a negative sign is written only when some printed
-   count or fraction is non-zero, so the output is never empty and never `-0`.
+   smallest denomination, in the form of a zero amount at the same precision
+   (`0 cp` at precision 0, `0.00 cp` at precision 2), and a negative sign is
+   written only when some printed count or fraction is non-zero, so the output
+   is never empty and never `-0`. A non-zero amount whose printed counts and
+   fraction are all zero (for example -5 minor units at precision 1 on a
+   denomination of size 100) prints as `0.0 cp`, without a sign.
    This step closes a gap in the text above, where such an amount printed
    nothing; it is a labelled choice (see the handoff) and reversible.
 
@@ -181,6 +191,9 @@ are guidance for choosing prices, not rules the code enforces.
 | 1 460       | `1 sp 4 cp`        | `1 sp 4.60 cp`        |
 | 12 345      | `1 gp 2 sp 3 cp`   | `1 gp 2 sp 3.45 cp`   |
 | -2 920      | `-2 sp 9 cp`       | `-2 sp 9.20 cp`       |
+
+A ladder is written largest first, so the table above (copper first) is the same
+ladder reversed.
 
 A second preset, a single denomination of size 1 named for the consumer, shows
 that no ladder structure is required. A test builds an irregular ladder (for
@@ -272,12 +285,11 @@ The non-goals of the other topics are in their own specs.
 | `Money`, `Price`, minor unit | root package (architecture.md 3.3, 3.5) |
 | Checked multiply and divide, used by every spec | `internal/` checked-arithmetic helpers |
 | `ReferenceBasket` (`B_r`, section 5) | a plain struct field in the root package; parsed by `config/` |
-| Denomination ladder, formatter and the RPG preset | an optional package `denomination/` (name provisional), standard library only; imported by consumers and examples, never by the root, `internal/`, `config/` or `strategy/` |
+| Denomination ladder, formatter and the RPG preset | an optional package `denomination/`, standard library only; imported by consumers and examples, never by the root, `internal/`, `config/` or `strategy/` |
 
 The formatter is a library feature, so the PR that adds `denomination/` also adds
 it to the layout in architecture.md 2.6 and `AGENTS.md`, and the new terms to the
-glossary in `doc.go` (architecture.md 3.2, 14.2). Until then the rules' layout
-does not list it. A consumer that does not import it pays nothing and changes no
+glossary in `doc.go` (architecture.md 3.2, 14.2). A consumer that does not import it pays nothing and changes no
 result (2.2).
 
 ## 8. Requirements
@@ -301,12 +313,12 @@ the worked choice of `B_r` in 5.2 and 5.7 are explanation, not requirements.
 | FR-CUR-008 | A denomination ladder MUST have at least one denomination, each with a non-empty name and a non-empty symbol that are unique across the ladder, and a size in minor units from 1 to 10^12. |
 | FR-CUR-009 | The sizes of a ladder MUST be strictly decreasing from the largest denomination to the smallest, and a size MUST NOT be required to divide the next larger one. |
 | FR-CUR-010 | A ladder, or a precision outside 0 to 6, that breaks these conditions MUST be rejected with an error at construction of the formatter, and formatting MUST NOT return an error. |
-| FR-CUR-011 | Formatting MUST be a pure function of the ladder, the precision and the amount. |
-| FR-CUR-012 | A negative amount MUST be formatted as `-` followed by its magnitude, the magnitude being computed in `uint64`, so `math.MinInt64` MUST format without overflow. |
+| FR-CUR-011 | Formatting MUST be a pure function of the ladder, the precision and the amount (an `int64` count of minor units); the formatter MUST copy the ladder at construction and MUST be safe for concurrent use. |
+| FR-CUR-012 | A negative amount (an `int64` count of minor units) MUST be formatted as `-` followed by its magnitude, the magnitude being computed in `uint64`, so `math.MinInt64` MUST format without overflow. The formatter writes the symbols of the denominations, not their names. |
 | FR-CUR-013 | The formatter MUST fill denominations from the largest to the smallest with `count = r / size` and `r = r % size`, starting with `r` as the magnitude, and the largest denomination MUST be unbounded. |
 | FR-CUR-014 | A denomination whose count is zero MUST be omitted, except that a zero amount MUST print `0` of the smallest denomination. |
 | FR-CUR-015 | With a precision `p` from 0 to 6 (default 0), the smallest denomination MUST be printed with `p` decimal places, `frac = r * 10^p / size` truncated and zero-padded to `p` digits; with `p` of 0 the remainder left after the smallest denomination MUST be truncated; and `r * 10^p` MUST NOT overflow `uint64`. |
-| FR-CUR-016 | The smallest denomination MUST be printed when its count or fraction is non-zero or the whole amount is zero; if nothing else was printed, `0` of the smallest denomination MUST be printed, and the sign MUST be written only when a printed count or fraction is non-zero, so the output is never empty and never `-0`. |
+| FR-CUR-016 | The smallest denomination MUST be printed when its count or fraction is non-zero or the whole amount is zero; if nothing else was printed, `0` of the smallest denomination MUST be printed in the form of a zero amount at the same precision, and the sign MUST be written only when a printed count or fraction is non-zero, so the output is never empty and never `-0`. |
 | FR-CUR-017 | The RPG preset (denominations of 100, 1 000 and 10 000 minor units) MUST format 0, 100, 1 460, 12 345 and -2 920 as the table of 4.3 shows, at the default precision and at precision 2. |
 | FR-CUR-018 | A ladder of one denomination of size 1 MUST format every amount as that count of the denomination. |
 | FR-CUR-019 | An irregular ladder (for example 240 pence to the pound and 12 to the shilling) MUST format correctly, so the formatter MUST make no assumption of powers of ten. |
