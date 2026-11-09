@@ -223,3 +223,87 @@ func FuzzPermutation(f *testing.F) {
 		}
 	})
 }
+
+// TestSpread_SmallSizesAgainstTheModel verifies the cells of small N, where the
+// Feistel half-width w changes (w = 1 up to N = 4, 2 up to 16, 3 up to 64),
+// against doc/specs/models/exp/lhs.py perm() with the default design salt on
+// axes 0 and 1. Sizes 4 and 16 sit exactly on a width boundary, 5 and 17 just
+// past it.
+//
+// Requirement: FR-EXP-007, FR-EXP-008
+func TestSpread_SmallSizesAgainstTheModel(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		n    int
+		axes [2][]int
+	}{
+		{2, [2][]int{{0, 1}, {1, 0}}},
+		{3, [2][]int{{2, 1, 0}, {2, 1, 0}}},
+		{4, [2][]int{{1, 0, 3, 2}, {0, 1, 3, 2}}},
+		{5, [2][]int{{2, 4, 1, 3, 0}, {4, 3, 0, 1, 2}}},
+		{9, [2][]int{{2, 3, 5, 0, 8, 6, 1, 7, 4}, {0, 7, 2, 1, 4, 3, 6, 8, 5}}},
+		{16, [2][]int{{0, 10, 4, 11, 15, 6, 5, 7, 8, 12, 1, 3, 9, 13, 14, 2}, {6, 10, 15, 0, 3, 12, 9, 8, 13, 2, 4, 5, 11, 7, 14, 1}}},
+		{17, [2][]int{{5, 7, 0, 15, 11, 6, 9, 3, 4, 8, 2, 14, 13, 10, 16, 12, 1}, {4, 14, 7, 5, 1, 0, 15, 3, 16, 8, 6, 10, 12, 11, 13, 9, 2}}},
+	}
+	for _, tt := range cases {
+		for axis, want := range tt.axes {
+			var got []int
+			for i := range tt.n {
+				got = append(got, cell(t, 0, axis, tt.n, i))
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("N %d axis %d: cells = %v, want %v (lhs.py)", tt.n, axis, got, want)
+			}
+		}
+	}
+	if got := cell(t, 0, 0, 1, 0); got != 0 {
+		t.Errorf("N 1: cell = %d, want 0", got)
+	}
+}
+
+// TestSpread_GuardsAtTheEdges verifies each argument guard of the three value
+// functions on its own boundary, and that a refusal returns the zero value; and
+// that the largest accepted spread, 2^62, works without wrapping.
+//
+// Requirement: FR-EXP-007, FR-EXP-008
+func TestSpread_GuardsAtTheEdges(t *testing.T) {
+	t.Parallel()
+	const max = design.MaxSpread
+	for _, c := range []struct{ salt, axis, n, i int }{
+		{0, 0, 0, 0}, {0, 0, -1, 0}, {0, 0, 5, 6}, {0, 0, 5, 5}, {0, -1, 5, 0}, {0, 0, 5, -1}, {0, 0, max + 1, 0},
+	} {
+		if got, ok := design.SpreadCell(uint64(c.salt), c.axis, c.n, c.i); ok || got != 0 {
+			t.Errorf("SpreadCell%v = %d, %v, want 0, false", c, got, ok)
+		}
+	}
+	for _, c := range []struct{ cell, n, levels int }{
+		{0, 0, 3}, {0, -1, 3}, {0, 4, 0}, {0, 4, -1}, {-1, 4, 3}, {4, 4, 3}, {5, 4, 3}, {0, max + 1, 3},
+	} {
+		if got, ok := design.SpreadLevel(c.cell, c.n, c.levels); ok || got != 0 {
+			t.Errorf("SpreadLevel%v = %d, %v, want 0, false", c, got, ok)
+		}
+	}
+	for _, c := range []struct {
+		cell, n int
+		lo, hi  int64
+	}{
+		{0, 0, 0, 5}, {0, -1, 0, 5}, {-1, 4, 0, 5}, {4, 4, 0, 5}, {5, 4, 0, 5}, {0, 4, 6, 5}, {0, max + 1, 0, 5},
+	} {
+		if got, ok := design.SpreadValue(c.cell, c.n, c.lo, c.hi); ok || got != 0 {
+			t.Errorf("SpreadValue%v = %d, %v, want 0, false", c, got, ok)
+		}
+	}
+	// The edges that are valid: one level, one point, the last cell, the largest spread.
+	if got, ok := design.SpreadLevel(0, 1, 1); !ok || got != 0 {
+		t.Errorf("SpreadLevel(0, 1, 1) = %d, %v, want 0, true", got, ok)
+	}
+	if got, ok := design.SpreadLevel(max-1, max, 10); !ok || got != 9 {
+		t.Errorf("SpreadLevel(last, MaxSpread, 10) = %d, %v, want 9, true", got, ok)
+	}
+	if got, ok := design.SpreadValue(max-1, max, 0, 1_000_000); !ok || got != 1_000_000 {
+		t.Errorf("SpreadValue(last, MaxSpread, 0, 10^6) = %d, %v, want 10^6, true", got, ok)
+	}
+	if got, ok := design.SpreadCell(3, 1, max, max-1); !ok || got < 0 || got >= max {
+		t.Errorf("SpreadCell(…, MaxSpread, last) = %d, %v, want a cell in range", got, ok)
+	}
+}

@@ -37,6 +37,8 @@ func TestQuantile_NearestRank(t *testing.T) {
 		{"two readings at 1 000 is rank 1", []int64{4, 9}, 1000, 4},
 		{"one reading at any quantile", []int64{7}, 9000, 7},
 		{"zero basis points is rank 1", reduceOut, 0, 10100},
+		// 3 * 6667 = 20 001 = 2 * 10 000 + 1, so the rank is ceil = 3: the value at index 2.
+		{"a remainder of one rounds the rank up", ramp(6667), 3, 2},
 		{"above 10 000 is the last", reduceOut, 12000, 12100},
 		{"empty returns 0", nil, 5000, 0},
 	}
@@ -166,7 +168,7 @@ func TestMoments_AddReportsOverflow(t *testing.T) {
 // Requirement: FR-EXP-044
 func TestSignTail_ExactAgainstFractions(t *testing.T) {
 	t.Parallel()
-	for n := 1; n <= reduce.MaxSignN; n++ {
+	for n := 1; n <= 62; n++ { // the literal, not MaxSignN: a mutated cap must fail
 		for wins := 0; wins <= n; wins++ {
 			losses := n - wins
 			m := max(wins, losses)
@@ -187,10 +189,18 @@ func TestSignTail_ExactAgainstFractions(t *testing.T) {
 		t.Errorf("SignTailPPM(6, 1) = %d, %v, want 125000", got, ok)
 	}
 	for _, c := range [][2]int{{0, 0}, {32, 31}, {-1, 3}, {3, -1}} {
-		if got, ok := reduce.SignTailPPM(c[0], c[1]); ok {
-			t.Errorf("SignTailPPM(%d, %d) = %d, true, want false", c[0], c[1], got)
+		if got, ok := reduce.SignTailPPM(c[0], c[1]); ok || got != 0 {
+			t.Errorf("SignTailPPM(%d, %d) = %d, %v, want 0, false", c[0], c[1], got, ok)
 		}
 	}
+}
+
+func ramp(n int) []int64 {
+	s := make([]int64, n)
+	for i := range s {
+		s[i] = int64(i)
+	}
+	return s
 }
 
 // TestQuantile_SortedInputUnchanged documents that Quantile reads and never sorts
@@ -203,5 +213,71 @@ func TestQuantile_SortedInputUnchanged(t *testing.T) {
 	reduce.Quantile(in, 5000)
 	if !slices.Equal(in, reduceOut) {
 		t.Errorf("Quantile changed its input: %v, want %v", in, reduceOut)
+	}
+}
+
+// TestMoments_StdBeyondInt64 verifies the one place a standard deviation leaves
+// int64: two readings a and -a with a = 6 521 908 912 666 391 106 have variance
+// 2a^2 just under 2^126, whose nearest root is exactly 2^63. Std reports false
+// rather than wrapping; a = ...105 has the root 2^63 - 2 and fits.
+//
+// Requirement: FR-EXP-047
+// Guard: a root cast to int64 without a check would wrap to the minimum.
+func TestMoments_StdBeyondInt64(t *testing.T) {
+	t.Parallel()
+	over := moments(t, 6521908912666391106, -6521908912666391106)
+	if got, ok := over.Std(); ok {
+		t.Errorf("Std() of ±6521908912666391106 = %d, true, want false: the root is 2^63", got)
+	}
+	fits := moments(t, 6521908912666391105, -6521908912666391105)
+	if got, ok := fits.Std(); !ok || got != 9223372036854775806 {
+		t.Errorf("Std() of ±6521908912666391105 = %d, %v, want 9223372036854775806", got, ok)
+	}
+}
+
+// TestMoments_VarianceReportsOverflow verifies that Variance returns false when
+// n*SS or S^2 leaves 128 bits though every Add succeeded: 20 readings of ±2^60 in
+// equal halves have SS = 20*2^120 (fits) and n*SS = 400*2^120 (does not), with
+// S = 0; 20 readings of +2^60 overflow both products.
+//
+// Requirement: FR-EXP-047
+// Guard: a wrapped n*SS gives a small, plausible, wrong variance.
+func TestMoments_VarianceReportsOverflow(t *testing.T) {
+	t.Parallel()
+	var alt, same reduce.Moments
+	for i := range 20 {
+		v := int64(1) << 60
+		if !same.Add(v) {
+			t.Fatalf("Add(2^60) refused at reading %d", i)
+		}
+		if i%2 == 1 {
+			v = -v
+		}
+		if !alt.Add(v) {
+			t.Fatalf("Add(±2^60) refused at reading %d", i)
+		}
+	}
+	for name, m := range map[string]reduce.Moments{"alternating": alt, "all positive": same} {
+		if got, ok := m.Variance(); ok {
+			t.Errorf("%s: Variance() = %v, true, want false (128-bit overflow)", name, got)
+		}
+		if got, ok := m.Std(); ok {
+			t.Errorf("%s: Std() = %d, true, want false", name, got)
+		}
+	}
+}
+
+// TestMoments_MeanOfNothing verifies the empty accumulator: no mean and a zero
+// value alongside the false.
+//
+// Requirement: FR-EXP-040
+func TestMoments_MeanOfNothing(t *testing.T) {
+	t.Parallel()
+	var m reduce.Moments
+	if got, ok := m.Mean(); ok || got != 0 {
+		t.Errorf("Mean() of nothing = %d, %v, want 0, false", got, ok)
+	}
+	if got, ok := m.Variance(); ok || got.Sign() != 0 {
+		t.Errorf("Variance() of nothing = %v, %v, want 0, false", got, ok)
 	}
 }

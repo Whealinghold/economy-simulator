@@ -33,21 +33,19 @@ func IsqrtNearest(n Int128) uint64 {
 		return 0
 	}
 	m, _ := n.mag()
-	lo, hi := uint64(0), ^uint64(0)
-	for lo < hi {
-		mid := lo + (hi-lo)/2 + (hi-lo)%2
-		sh, sl := bits.Mul64(mid, mid)
+	var f uint64 // the floor root, built from its top bit down
+	for b := 63; b >= 0; b-- {
+		t := f | 1<<uint(b)
+		sh, sl := bits.Mul64(t, t)
 		if (u128{sh, sl}).cmp(m) <= 0 {
-			lo = mid
-		} else {
-			hi = mid - 1
+			f = t
 		}
 	}
-	sh, sl := bits.Mul64(lo, lo)
+	sh, sl := bits.Mul64(f, f)
 	rl, c := bits.Sub64(m.lo, sl, 0)
 	rh, _ := bits.Sub64(m.hi, sh, c)
-	if rh != 0 || rl > lo {
-		return lo + 1
+	if rh != 0 || rl > f {
+		return f + 1
 	}
-	return lo
+	return f
 }

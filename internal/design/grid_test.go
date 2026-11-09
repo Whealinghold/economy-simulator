@@ -161,3 +161,62 @@ func TestRangeValue_Grid(t *testing.T) {
 		}
 	}
 }
+
+// TestGrid_GuardsAndScratch verifies the argument guards at their edges and the
+// reuse of the scratch slice: a level count of exactly 1 is valid, an index just
+// past the last point is refused (not only the first one beyond), a refusal
+// returns nothing, a dirty scratch slice is cleared, and one with room is reused
+// rather than reallocated.
+//
+// Requirement: FR-EXP-005
+// Guard: a stale coordinate left in a reused slice would put a point on the wrong level.
+func TestGrid_GuardsAndScratch(t *testing.T) {
+	t.Parallel()
+	if n, ok := design.GridCount([]int{1, 3}); !ok || n != 3 {
+		t.Errorf("GridCount(1 3) = %d, %v, want 3: one level is a factor held fixed", n, ok)
+	}
+	if n, ok := design.GridCount([]int{0}); ok || n != 0 {
+		t.Errorf("GridCount(0) = %d, %v, want 0, false", n, ok)
+	}
+	if n, ok := design.OATCount([]int{1, 1}); !ok || n != 1 {
+		t.Errorf("OATCount(1 1) = %d, %v, want 1", n, ok)
+	}
+	if n, ok := design.OATCount([]int{math.MaxInt}); !ok || n != math.MaxInt {
+		t.Errorf("OATCount(MaxInt) = %d, %v, want MaxInt: 1 + (MaxInt - 1) fits", n, ok)
+	}
+	if n, ok := design.OATCount([]int{math.MaxInt, 2}); ok || n != 0 {
+		t.Errorf("OATCount(MaxInt 2) = %d, %v, want 0, false: one past MaxInt", n, ok)
+	}
+	for _, i := range []int{12, 13, 100} {
+		if got, ok := design.GridCoords(i, []int{4, 3}, nil); ok || got != nil {
+			t.Errorf("GridCoords(%d, 4 3) = %v, %v, want nil, false", i, got, ok)
+		}
+	}
+	for _, i := range []int{6, 7, 100} {
+		if got, ok := design.OATCoords(i, []int{4, 3}, nil); ok || got != nil {
+			t.Errorf("OATCoords(%d, 4 3) = %v, %v, want nil, false", i, got, ok)
+		}
+	}
+	dirty := []int{9, 9, 9}
+	if got, _ := design.OATCoords(0, []int{2, 2}, dirty); !slices.Equal(got, []int{0, 0}) {
+		t.Errorf("OATCoords(0, 2 2, dirty) = %v, want [0 0]: the baseline clears the scratch", got)
+	}
+	if got, _ := design.OATCoords(3, []int{3, 2}, dirty); !slices.Equal(got, []int{0, 1}) {
+		t.Errorf("OATCoords(3, 3 2, dirty) = %v, want [0 1]: a stale 9 must not survive", got)
+	}
+	room := make([]int, 0, 2)
+	got, _ := design.GridCoords(3, []int{2, 2}, room)
+	if &got[0] != &room[:1][0] {
+		t.Errorf("GridCoords did not reuse a scratch slice with exactly enough capacity")
+	}
+	small := make([]int, 0, 1)
+	got, _ = design.GridCoords(3, []int{2, 2}, small)
+	if len(got) != 2 || !slices.Equal(got, []int{1, 1}) {
+		t.Errorf("GridCoords(3, 2 2, small scratch) = %v, want [1 1]", got)
+	}
+	for _, bad := range []struct{ k, steps int }{{4, 4}, {5, 4}, {0, 1}, {0, 0}} {
+		if got, ok := design.RangeValue(bad.k, bad.steps, 0, 9); ok || got != 0 {
+			t.Errorf("RangeValue(%d, %d, 0, 9) = %d, %v, want 0, false", bad.k, bad.steps, got, ok)
+		}
+	}
+}

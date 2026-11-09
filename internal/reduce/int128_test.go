@@ -138,3 +138,61 @@ func TestInt128_String(t *testing.T) {
 		}
 	}
 }
+
+// TestInt128_MinimumByMultiplication verifies the one magnitude that fits only as
+// a negative number: -2^63 * 2^64 is exactly the minimum, and one more in
+// magnitude is refused: -3 * ((2^127 + 1) / 3) = -(2^127 + 1).
+//
+// Requirement: FR-EXP-040
+func TestInt128_MinimumByMultiplication(t *testing.T) {
+	t.Parallel()
+	pow64 := fromBig(new(big.Int).Lsh(big.NewInt(1), 64))
+	got, ok := reduce.FromInt64(math.MinInt64).Mul(pow64)
+	if !ok || bigOf(got).Cmp(min128) != 0 {
+		t.Errorf("(-2^63) * 2^64 = %v, %v, want %v", got, ok, min128)
+	}
+	third := new(big.Int).Div(new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 127), big.NewInt(1)), big.NewInt(3))
+	if p, ok := reduce.FromInt64(-3).Mul(fromBig(third)); ok {
+		t.Errorf("-3 * (2^127 + 1)/3 = %v, true, want false: -(2^127 + 1) is below the minimum", p)
+	}
+	if p, ok := reduce.FromInt64(3).Mul(fromBig(third)); ok {
+		t.Errorf("3 * (2^127 + 1)/3 = %v, true, want false: 2^127 + 1 is above the maximum", p)
+	}
+}
+
+// TestRDiv_WideDivisors verifies the two-word divisor path on the cases the
+// random test reaches rarely: exact multiples (the remainder equals the divisor
+// when the step is off by one), an exact half, the minimum numerator (whose
+// magnitude 2^127 uses the top bit of the loop), and a divisor of 2^127.
+//
+// Requirement: FR-EXP-040
+func TestRDiv_WideDivisors(t *testing.T) {
+	t.Parallel()
+	two64 := new(big.Int).Lsh(big.NewInt(1), 64)
+	d := new(big.Int).Add(two64, big.NewInt(1)) // 2^64 + 1: two words
+	cases := []struct {
+		name string
+		n, d *big.Int
+	}{
+		{"exact multiple", new(big.Int).Mul(d, big.NewInt(3)), d},
+		{"exact multiple, negative", new(big.Int).Mul(d, big.NewInt(-3)), d},
+		{"just under a multiple", new(big.Int).Sub(new(big.Int).Mul(d, big.NewInt(3)), big.NewInt(1)), d},
+		{"just over a multiple", new(big.Int).Add(new(big.Int).Mul(d, big.NewInt(3)), big.NewInt(1)), d},
+		// 2^64 * 5 + 2^63 over 2^65: 2.5 + 0.25 ... use d = 2^65 and n = 5 * 2^64 = 2.5 d: an exact half.
+		{"exact half, even neighbour below", new(big.Int).Mul(big.NewInt(5), two64), new(big.Int).Lsh(big.NewInt(1), 65)},
+		{"exact half, even neighbour above", new(big.Int).Mul(big.NewInt(7), two64), new(big.Int).Lsh(big.NewInt(1), 65)},
+		{"minimum over a wide divisor", min128, d},
+		{"minimum over minus a wide divisor", min128, new(big.Int).Neg(d)},
+		{"minimum over 2^127 magnitude", min128, min128},
+		{"maximum over the minimum", max128, min128},
+		{"wide over larger", d, new(big.Int).Lsh(big.NewInt(1), 100)},
+		{"numerator of one word, divisor of two", big.NewInt(12345), d},
+	}
+	for _, tt := range cases {
+		want := refRDiv(tt.n, tt.d)
+		got, ok := reduce.RDiv(fromBig(tt.n), fromBig(tt.d))
+		if ok != fits(want) || (ok && bigOf(got).Cmp(want) != 0) {
+			t.Errorf("%s: RDiv(%v, %v) = %v, %v, want %v", tt.name, tt.n, tt.d, got, ok, want)
+		}
+	}
+}

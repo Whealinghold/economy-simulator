@@ -131,12 +131,14 @@ func TestCheckedCount_Overflow(t *testing.T) {
 		{"zero", []int{math.MaxInt, 0}, 0, true},
 		{"largest", []int{math.MaxInt, 1}, math.MaxInt, true},
 		{"wraps 2^64", []int{1 << 32, 1 << 32}, 0, false},
+		{"negative alone", []int{-1}, 0, false},
+		{"negative then zero", []int{-1, 0}, 0, false},
 		{"just over int", []int{math.MaxInt/2 + 1, 2}, 0, false},
 		{"three that wrap", []int{1 << 30, 1 << 30, 1 << 30}, 0, false},
 		{"negative", []int{3, -1}, 0, false},
 	}
 	for _, tt := range cases {
-		if got, ok := design.CheckedCount(tt.in...); ok != tt.wantOK || (ok && got != tt.want) {
+		if got, ok := design.CheckedCount(tt.in...); ok != tt.wantOK || got != tt.want {
 			t.Errorf("%s: CheckedCount(%v) = %d, %v, want %d, %v", tt.name, tt.in, got, ok, tt.want, tt.wantOK)
 		}
 	}
@@ -168,4 +170,54 @@ func FuzzOverlay(f *testing.F) {
 			t.Fatalf("Overlay(%q, %d) = %q, want a header line and a key line", path, value, doc)
 		}
 	})
+}
+
+// TestValidPath_ByteBoundaries verifies every edge of the allowed character
+// classes in the first and in a later position of a segment: the first and last
+// of a-z, of 0-9 and the underscore are allowed after the first character, and
+// the characters just outside each range are not (the ASCII neighbours '@', '[',
+// '`', '{', '/', ':', '^' and DEL).
+//
+// Requirement: FR-EXP-004
+func TestValidPath_ByteBoundaries(t *testing.T) {
+	t.Parallel()
+	for _, c := range []byte("09_az") {
+		if c != 'a' && c != 'z' {
+			if !design.ValidPath("w.a" + string(c) + "b") {
+				t.Errorf("ValidPath with %q inside a segment = false, want true", c)
+			}
+		}
+		if !design.ValidPath("w." + string([]byte{'a', c})) {
+			t.Errorf("ValidPath with %q second in a segment = false, want true", c)
+		}
+	}
+	for _, c := range []byte("az") {
+		if !design.ValidPath("w." + string(c) + "x") {
+			t.Errorf("ValidPath with %q first in a segment = false, want true", c)
+		}
+	}
+	for _, c := range []byte{'@', '[', '`', '{', '/', ':', '^', 0x7f, '-', ' ', '0', '9', '_'} {
+		if design.ValidPath("w." + string(c) + "x") {
+			t.Errorf("ValidPath with %q first in a segment = true, want false", c)
+		}
+	}
+	for _, c := range []byte{'@', '[', '`', '{', '/', ':', '^', 0x7f, '-', 'A', 'Z', 0xc3} {
+		if design.ValidPath("w.a" + string([]byte{c}) + "x") {
+			t.Errorf("ValidPath with %q second in a segment = true, want false", c)
+		}
+		if design.ValidPath("w.ab" + string([]byte{c})) {
+			t.Errorf("ValidPath with %q last in a segment = true, want false", c)
+		}
+	}
+}
+
+// TestOverlay_ErrorText verifies the refusal is ErrPath with its message.
+//
+// Requirement: FR-EXP-004
+func TestOverlay_ErrorText(t *testing.T) {
+	t.Parallel()
+	_, err := design.Overlay("x", 1)
+	if err == nil || err.Error() != "not a valid configuration path" {
+		t.Errorf("Overlay(x) error = %v, want %q", err, "not a valid configuration path")
+	}
 }

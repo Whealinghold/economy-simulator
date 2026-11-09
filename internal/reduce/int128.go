@@ -197,11 +197,11 @@ func (a u128) divmod(b u128) (q, r u128) {
 		q, rem := a.divWord(b.lo)
 		return q, u128{0, rem}
 	}
+	// r < b <= 2^127 at the top of the loop, so the shift cannot lose a bit.
 	for i := 127; i >= 0; i-- {
-		carry := r.hi >> 63
 		r.hi = r.hi<<1 | r.lo>>63
 		r.lo = r.lo<<1 | a.bit(i)
-		if carry != 0 || r.cmp(b) >= 0 {
+		if r.cmp(b) >= 0 {
 			lo, c := bits.Sub64(r.lo, b.lo, 0)
 			hi, _ := bits.Sub64(r.hi, b.hi, c)
 			r = u128{hi, lo}

@@ -1,5 +1,7 @@
 package reduce
 
+import "math"
+
 // Moments accumulates the count, the sum and the sum of squares of int64
 // readings in 128 bits. The zero value is empty. Each Add that would overflow
 // 128 bits leaves the accumulator unchanged and returns false.
@@ -34,11 +36,8 @@ func (m Moments) Mean() (int64, bool) {
 	if m.n == 0 {
 		return 0, false
 	}
-	q, ok := RDiv(m.sum, FromInt64(m.n))
-	if !ok {
-		return 0, false
-	}
-	return q.Int64() // a mean of int64 values is an int64
+	q, _ := RDiv(m.sum, FromInt64(m.n)) // the divisor is positive: it cannot fail
+	return q.Int64()                    // a mean of int64 values is an int64
 }
 
 // Variance returns the sample variance, rounded half to even once:
@@ -67,6 +66,12 @@ func (m Moments) Std() (int64, bool) {
 	if !ok {
 		return 0, false
 	}
+	// The variance is below 2^126 (n*SS < 2^127 and it is at most SS/(n-1)), so the
+	// root is at most 2^63: it exceeds int64 only when the nearest root rounds up to
+	// exactly 2^63.
 	r := IsqrtNearest(v)
-	return int64(r), r <= 1<<63-1
+	if r > math.MaxInt64 {
+		return 0, false
+	}
+	return int64(r), true
 }
