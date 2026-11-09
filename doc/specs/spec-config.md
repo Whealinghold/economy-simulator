@@ -171,7 +171,7 @@ reads it as `WorldParams`.
 | `Roles[]` | `ID`, `Recipes`, `Upkeep`, `Trades`, `StartMoney`, `StartStock`, `Strategy` (a name, hashed: `default`, `directed`, both built in, or a registered name, 7.1.4), `Label` (p) | `spec-agents.md` 3.3 |
 | `Roles[]` | `Unskilled`, `TargetRatio`, `TargetSpread`, `DefaultRatio`, `InKind`, `ExpectedWorkTicks`, `MinWorkShare` | `spec-welfare-and-wages.md` 4.2 |
 | `Roles[]` | `TrainingTicks`, `MaxTrainees`, `TeachingLoad` | `spec-skill-barriers.md` |
-| `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 |
+| `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 (built with the merchant module, plan 2-15) |
 | `Regions[]` | `ID`, `ReferenceBasket`, `ExtraUpkeep` | `spec-currency.md` 5, `spec-agents.md` 5.2 |
 | `Regions[]` | `CapitalReturn` | `spec-skill-barriers.md` 2.5 |
 | `Regions[]` | `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | `spec-estates.md` 3 |
@@ -188,7 +188,7 @@ reads it as `WorldParams`.
 | `World` | `DistanceLabel` (p) | `spec-regions.md` 4.1.2 |
 | `Modules.MoneySupply` | `Flows[]` (`ID`, `Kind`, `Target` with `Kind`, `Region` and `Role`, and `Store` and `Jurisdiction` (owned by `spec-storage.md` and `spec-fiscal.md`, 3.7.1); `Amount`, `Level`, `RateBP`, `Exempt`, `Per`, `Start`, `Until`, `Limit`, `NotIncome`, `Label` (p)); present = the module is on | `spec-money-supply.md` 4.1, 11.1 |
 | `Modules.Population` | `BirthSchedule[]` and `DeathSchedule[]` (each knot `Ratio`, `Rate`), `MinHouseholds`, `BirthStake`, `Regions[]` (`Region`, `BirthScale`, `DeathScale`, `HouseholdCap`); present = the module is on | `spec-population.md` 3.5, 8 |
-| `Modules.Transport` | `Modes[]` (`ID`, `Speed`, `UnitMass`, `UnitBulk`, `Crew`, `Vehicle`, `WearPerTick`, `Feed[]` each with `Commodity` and `Quantity`, `Haul`, `HaulSpan`, `Label` (p)); present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
+| `Modules.Transport` | `Modes[]` (`ID` 1, `Speed` 2, `UnitMass` 3, `UnitBulk` 4, `Crew` 5, `Vehicle` 6, `WearPerTick` 7, `Feed[]` 8 each with `Commodity` and `Quantity` (the ids of `Item`), `Haul` 9, `HaulSpan` 10, `Label` (p), none); `Modes` is id 1 of the module, the module's id 4; the TOML keys are `[modules.transport.mode.<id>]` with `feed` an array of tables; present = the module is on; it needs the region graph | `spec-transport.md` 3.1, 11 |
 | `Modules.Resources` | `Resources[]` (`ID`, `Shape`, `RatePerYear`, `RateBP`, `Refuge`, `Capacity`, `InitialBP`, `PlanShareBP`, `Abundance[]` each with `Share` and `Factor`, `Seasons[]` each with `Season` and `BP`, `Label` (p)), `Endowments[]` (`Region`, `Resource`, `Capacity`, `Initial`, `RegenScaleBP`), `HorizonYears`; present = the module is on; it needs production | `spec-resources.md` 3.3, 12 |
 | `Modules.Information` | `InfoSpeed`, `RumourErrorBP`, `RumourMaxAge`; present = the module is on; it needs the region graph | `spec-information.md` 8 |
 | `Roles[]` | `Informed` (default false; needs `Modules.Information`) | `spec-information.md` 6.1, 8 |
@@ -1363,6 +1363,7 @@ These are owned here. Each has a sentinel and a failing-case test
 | `ErrOutOfBounds` | a value outside the bound of its field or of section 4.1 | architecture.md 3.5, 8.5 |
 | `ErrOverflow` | a derived product of 4.2 that does not fit | architecture.md 3.5 |
 | `ErrTooMany` | more entities of a kind than its bound; checked first, and it stops the other rules (7.1.6) | here |
+| `ErrVehicleNotDurable`, `ErrModeShape`, `ErrUnknownMode` | the transport rules of `spec-transport.md` 12.1 | `spec-transport.md` |
 | `ErrModuleDependency` | a module on while a module it needs is off (declared at Stage 0 with no returner yet: the first rule that returns it is a module's own, such as a recipe with `Draws` while resources is off) | here |
 | `ErrNoRegions` | a configuration with no region | `spec-regions.md` 9.1 |
 | `ErrSelfEdge` | an edge whose `From` equals its `To` | `spec-regions.md` 9.1 |

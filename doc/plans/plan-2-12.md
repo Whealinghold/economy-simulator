@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 12: TRN with CAR, `transport.go` and `internal/transit`
 
-**Status: written (2026-10-22), not started.** Sequences row 12 of Stage 2 of [roadmap-v1.md](../roadmap-v1.md) ("`transport.go` and `internal/transit`", TRN, CAR) under the contract of [plan-2-0.md](plan-2-0.md). A plan decides nothing: the specs, the ADRs and `doc/rules/` decide, and where this plan and they disagree they win and the plan is corrected.
+**Status: in progress (2026-11-09): Phase 1 done (E1 to E15 applied; E5 partly: Phase 8 waits for VIA, N-326).** Sequences row 12 of Stage 2 of [roadmap-v1.md](../roadmap-v1.md) ("`transport.go` and `internal/transit`", TRN, CAR) under the contract of [plan-2-0.md](plan-2-0.md). A plan decides nothing: the specs, the ADRs and `doc/rules/` decide, and where this plan and they disagree they win and the plan is corrected.
 
 Rule tags read (all three files in full; they equal the tags of plan-2-0): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1.
 

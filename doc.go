@@ -614,9 +614,10 @@
 //   - Virtual start offset: a tick before tick 0 at which a job in progress at
 //     construction is taken to have started, so the jobs of a group are
 //     staggered.
-//   - Lane: in the solver, a zero-cost route between regions of the free-trade
-//     set that merges their goods rows; not a lane of a credit round or of a
-//     merchant.
+//   - Lane: in the solver, a route between regions: the zero-cost lanes of the
+//     free-trade set merge their goods rows, and a lane of the transport module
+//     carries a labour charge and a loss (spec-transport.md 9.4); not a lane of a
+//     credit round or of a merchant.
 //   - Step: one call of Step: the entry of a tick and its eight phases, run in
 //     the order of spec-world.md 6, which on success advances the tick counter by
 //     one. In phase 7 the world carries out the spawner's plan itself, decision by
@@ -892,4 +893,44 @@
 //   - PopulationScaled: the event emitted when the birth or death scale of a region is set
 //     between ticks (spec-population.md 10.2).
 //   - ScaleKind: which of the two population scales of a region, birth or death, a call sets.
+//   - Mode: a way to carry goods between regions, configured as data: a speed, the
+//     capacity of one carrying unit and either a crew and a vehicle (self-carried) or a
+//     haul commodity (hired) (spec-transport.md 3.1).
+//   - ModeID: the typed index of a Mode in the canonical mode order.
+//   - Transport: the configuration of the transport module, the table of modes.
+//   - Self-carried mode: a mode in which the shipper's own household travels with the
+//     cargo; it is away from dispatch to arrival.
+//   - Hired mode: a mode in which the shipper redeems haul units that other households
+//     made and no agent of the shipper moves.
+//   - Carrying unit: the capacity of a mode, a mass and a bulk, that one crew (and one
+//     vehicle) fields or one haul span buys.
+//   - Crew: the households a carrying unit of a self-carried mode needs.
+//   - Haul unit: the ordinary commodity a hired mode redeems, one haul unit carrying
+//     one carrying unit over one haul span.
+//   - Haul span: the distance one haul unit carries one carrying unit.
+//   - Traveller: the agent that goes with the cargo of a self-carried shipment.
+//   - Shipper: the agent that requests a shipment and gives its goods.
+//   - Consignee: the agent that receives the cargo of a shipment.
+//   - Shipment: goods on the way between two regions, kept in a transit account from
+//     dispatch to arrival; ShipmentID names it and ShipmentRow is its public copy.
+//   - ShipmentRequest: what a strategy asks for in a plan: a mode, a destination, a
+//     consignee and lines.
+//   - Line: one commodity and quantity of a ShipmentRequest; the bare identifier is
+//     owned by the transport module.
+//   - Dispatch: the moment a world accepts a request and moves the cargo to a transit
+//     account; ShipmentDispatched reports it and ShipmentRejected a refusal.
+//   - Arrival: the first phase of the tick in which a shipment ends: the cargo is
+//     delivered to the consignee and ShipmentArrived reports it; ArrivedLine is its
+//     per-commodity row.
+//   - Transit account: the ledger account that holds the cargo of one shipment between
+//     dispatch and arrival.
+//   - Transit factor: the basis-point factor on the speed of a (from, to, mode), 10 000
+//     by default; 0 blocks new dispatches; TransitFactorRow is its snapshot row and
+//     TransitFactorChanged the event of a change.
+//   - Away: the state of a traveller from dispatch to arrival; an away agent is passed
+//     no view and places no order.
+//   - Inbound, Outbound: the view groups of units on the way to, or sent by, an agent;
+//     InboundRow, OutboundRow and RouteRow are their rows.
+//   - Diverted: cargo that could not go to its consignee and went to the estate of the
+//     destination instead.
 package economysim

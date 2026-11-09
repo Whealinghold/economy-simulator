@@ -91,8 +91,8 @@ PR description.
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
-| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325 |
+| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
 | WLD | N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
 
@@ -1642,6 +1642,7 @@ PR description.
 - **Note:** `spec-world.md` 5.2 had rows for the built-in reasons (1), the declared flows (2) and the `outside_*` reasons (3), and none for the other faucet and sink reasons that a module owns: `want_consumption` (DEM), `haul_use` and `transit_use` (TRN) and `loss` (RSK). Row 3a is added: after the `outside_*` accounts and before the estates, in the order of the `Modules` pointers, and within a module as the built-in group is ordered (money reasons first, then goods commodity-major). This is a proposal of the ledger row, because the account IDs of a world with such a module on depend on it and no module is built yet. Each of the three module specs confirms it, or says another place, in the change that builds its file (architecture.md 2.10.5: appended, never inserted); until then the position is not saved by any checkpoint. A reason that a module has in the goods form only creates one account per commodity, as the built-in group does.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). `Discard` uses only boundary accounts of the built-in group (`recipe_output` and `disposal`, created at construction in the order of `spec-ledger.md` 3.4.2); it adds no account and no module reason.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slice has no module reason: the world creates the accounts in the order of WLD 5.2 rows 1, 4 and 6 and leaves rows 2, 3, 3a, 5 and 5a to the modules.
+- **Update (2026-11-09, plan 2-12 Phase 1):** Applied for the transport module (D444): with the module on, the boundary accounts of `haul_use` and `transit_use` are opened at construction at row 3a, goods commodity-major, in `Modules` pointer order (Demand before Transport). The note stays open for RSK's `loss`.
 
 ### N-227 Edits to CRD from the ledger row: `MarkOverdue` and a `Settle` of 0
 
@@ -1860,6 +1861,7 @@ PR description.
 - **Raised:** 2026-10-17, `plan-phase-1-10.md` (git history, `2abbe62^`) (D127).
 - **Note:** Stage 1 supports only the free-trade lane set (a complete zero-cost set, collapsed to one goods row per commodity) through `WithFreeTrade`. `Lane` (`From`, `To`, `Commodity`, `Labour`, `LossBP`), `WithLanes` and `MaxLanes` are not published in Stage 1 (architecture.md 2.8); the transport module adds them with `transport.Lanes` (`spec-transport.md` 9.4, a lane of labour 0 and loss 0 being the free-trade case) in Stage 2 (ruled by the coordinator, reversible).
 - **Update (2026-10-17, viability edits):** applied in `spec-viability.md` 9.4 (Stage 1 supports only free trade). Left open for the transport module (Stage 2).
+- **Update (2026-11-09, plan 2-12 Phase 1):** Leave open. The names (`Lane`, `WithLanes`, `MaxLanes`, `Config.TransportLanes`) and the lane validation rules are written (`spec-transport.md` 9.4, `spec-viability.md` 9.4); the lane columns of `internal/steady` wait for N-326.
 
 ### N-281 Three bounds of FR-CFG-046 were not built at Stage 0
 
@@ -2048,6 +2050,13 @@ PR description.
 - **Reading of D367 and what resumes the ladder:** "equal with the median households at least 10% of the start higher" was read as higher by 10% of the start (60 households). Under the relative reading R1 improves, the counter is 2 after R4, and the ladder resumes at R5 on R1: data as in the R1 row above, then `world.upkeep` staple 3 with every `reference_price` and `reference_basket` re-derived so FR-CUR-020 holds. D369 says it is not re-run without an owner ruling that names it; the harness was a scratch test (not kept). R1 needs E0 (the spring-only crop leaves the pack for `overlay/seasonal.toml`).
 - **Also open from the stop:** `expected/one.scenarios.txt` is stale (Stage 1 sign-off exception, `roadmap-v1.md`); the Stage 2 criterion "passes the version 1 bands of STY on `five.toml`" has no rebalanced `five` behind it (`five` collapses, `expected/five.toml` records it); plans 9 onward run on the unchanged packs. N-312 points (1) and (2) and N-314 stay open and point here.
 
+
+### N-326 Lanes in the solver wait for a table that takes per-region prices
+
+- **Areas:** VIA, TRN
+- **Raised:** 2026-11-09, plan 2-12 Phase 1 (E5, risk O3).
+- **Note:** Phase 8 of plan 2-12 (the lane columns of `internal/steady`, `WithLanes`, `Config.TransportLanes`) needs `spec-viability.md` to say how the warm-start table derives per-region prices and flows from a lane programme, and whether a lane set is one programme or one per component. It does not, so Phase 8 is split out of the transport row and N-279 and N-281 stay open. Nothing else in the transport row depends on it.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2060,5 +2069,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ea5d56a5959df1c075d3815b
-
+NOTES-TAG: 878653ef804f766984bd36e6
