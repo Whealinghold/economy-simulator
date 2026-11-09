@@ -30,8 +30,12 @@ func Means(weights, birth, death []int64, present []bool) (b, d, n int64, ok boo
 	if total == 0 {
 		return 0, 0, 0, true
 	}
-	// sb and sd are sums of products of non-negative rates, so sb - sd is safe.
-	return sb / total, sd / total, (sb - sd) / total, true
+	// The rates are the caller's, so a negative one could overflow the difference.
+	diff, ok := checked.Sub(sb, sd)
+	if !ok {
+		return 0, 0, 0, false
+	}
+	return sb / total, sd / total, diff / total, true
 }
 
 // addProduct returns acc + w*rate, ok false on overflow.

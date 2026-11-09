@@ -23,14 +23,17 @@ func Replacement(birth, death []Knot) (ratio, lo, hi int64, ok bool) {
 		if g[i-1] >= 0 || g[i] < 0 {
 			continue
 		}
-		// Every operand is checked; the quotient is at most dx, so it cannot overflow.
+		// Every operand is checked; the quotient is at most dx, so the sum below fits.
 		dg, okg := checked.Sub(g[i], g[i-1])
 		dx, okx := checked.Sub(xs[i], xs[i-1])
 		neg, okn := checked.Sub(0, g[i-1])
 		if !okg || !okx || !okn {
 			return 0, 0, 0, false
 		}
-		step, _ := checked.MulDiv(neg, dx, dg)
+		step, oks := checked.MulDiv(neg, dx, dg)
+		if !oks {
+			return 0, 0, 0, false
+		}
 		return xs[i-1] + step, xs[i-1], xs[i], true
 	}
 	return 0, 0, 0, false
