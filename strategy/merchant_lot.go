@@ -1,6 +1,8 @@
 package strategy
 
 import (
+	"math"
+
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/merchant"
@@ -96,10 +98,12 @@ func (s *state) afterHoldings(t *trip, mass, bulk int64) (int64, int64) {
 		g, stock := &s.m.Goods[i], s.v.Commodities[i].Stock
 		dm, ok1 := checked.Mul(stock, g.Mass)
 		db, ok2 := checked.Mul(stock, g.Bulk)
-		if !ok1 || !ok2 {
-			return 0, 0
+		sm, ok3 := checked.Add(m, dm)
+		sb, ok4 := checked.Add(b, db)
+		if !ok1 || !ok2 || !ok3 || !ok4 {
+			return leave(mass, math.MaxInt64), leave(bulk, math.MaxInt64) // an overflowing load leaves no room, never unlimited
 		}
-		m, b = m+dm, b+db
+		m, b = sm, sb
 	}
 	return leave(mass, m), leave(bulk, b)
 }

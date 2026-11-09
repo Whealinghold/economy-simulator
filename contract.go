@@ -1207,6 +1207,7 @@ func (w *World) formPair(p merchant.Pair) bool {
 	id, reason := w.dispatch(deliverer, 0, &req, of.region)
 	if reason != "" {
 		c.dispatchRefused++
+		w.logContractRefused("offer refused", of.agent, reason)
 		return false
 	}
 	ct := contract{id: m.next, payer: tk.agent, deliverer: of.agent, shipment: id, commodity: of.o.Commodity,

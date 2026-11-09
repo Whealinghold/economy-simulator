@@ -79,14 +79,15 @@ func (w *World) p14Settle() error {
 		return nil
 	}
 	keep := m.open[:0]
-	for _, ct := range m.open {
+	for n, ct := range m.open {
 		i, ok := slices.BinarySearchFunc(t.arrived, ct.shipment, func(a arrival, id ShipmentID) int { return cmp.Compare(a.shipment, id) })
 		if !ok {
 			keep = append(keep, ct)
 			continue
 		}
 		if err := w.settleArrived(&ct, t.arrivedLines[t.arrived[i].first]); err != nil {
-			return err // the step fails, and a failed world is never observed or saved
+			m.open = append(keep, m.open[n:]...) // the unsettled tail stays, the list is never half-compacted
+			return err                           // the step fails
 		}
 	}
 	m.open = keep
@@ -167,12 +168,13 @@ func (w *World) dropContracts(a *agent) error {
 		return nil
 	}
 	keep := m.open[:0]
-	for _, ct := range m.open {
+	for n, ct := range m.open {
 		if ct.deliverer != a.id {
 			keep = append(keep, ct)
 			continue
 		}
 		if err := w.endContract(&ct, 0, 0, CauseDelivererRemoved); err != nil {
+			m.open = append(keep, m.open[n:]...)
 			return err
 		}
 	}
