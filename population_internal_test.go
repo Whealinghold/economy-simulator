@@ -409,8 +409,9 @@ func TestPopulation_NoAllocation(t *testing.T) {
 }
 
 // BenchmarkPopulation_Fill reports the cost of the step over a region of 1 000
-// agents of weight 1; the cost is proportional to the agents, not to the weights
-// (NFR-POP-002).
+// agents of weight 1; the cost is proportional to the agents, not to the weights.
+//
+// Requirement: NFR-POP-002
 func BenchmarkPopulation_Fill(b *testing.B) {
 	c := exitConfig()
 	c.Groups[0].Households, c.Groups[0].Scale = 1_000, 1
