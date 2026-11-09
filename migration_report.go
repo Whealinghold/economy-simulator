@@ -38,7 +38,10 @@ func migrationWarnings(c *Config, lk lookup) []Warning {
 	}
 	roles, longest := migrationRoleWarnings(c, lk)
 	out = append(out, roles...)
-	if p, ok := checked.Mul(m.MoveOutShare, longest); ok && p > migrationFlowFactor*m.MoveGain {
+	// Warnings runs on a configuration that may not validate: the product is checked, not wrapped.
+	p, pok := checked.Mul(m.MoveOutShare, longest)
+	limit, lok := checked.Mul(migrationFlowFactor, m.MoveGain)
+	if pok && lok && p > limit {
 		out = append(out, Warning{Path: []string{"modules", "migration", "move_out_share"}, Rule: "migration_flow_window"})
 	}
 	if m.MoveReviewTicks >= 1 && m.MoveOutShare >= wholeBP/m.MoveReviewTicks && m.MoveInShare >= wholeBP {

@@ -545,7 +545,7 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 // loadAgent reads the record of one agent, checks it and puts the agent in its
 // slot. It returns the agent's ID, the key the next record must exceed. The fields
 // a module hosts are read always (R10): while the module is off, OwnUse and
-// OwnUseJobs must be 0, there is no journey, and DeathCarry must be its start.
+// OwnUseJobs must be 0, there is no journey (and none for a Fixed role), and DeathCarry must be its start.
 func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
 	rec := w.readAgentRec(rs, r, names, prev, started)
 	if r.Err() != nil {
