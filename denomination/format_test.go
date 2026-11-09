@@ -176,3 +176,14 @@ func TestFormat_ConcurrentUse(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestNewFormatter_IgnoresNilOption(t *testing.T) {
+	t.Parallel()
+	f, err := denomination.NewFormatter(denomination.Single("Unit", "u"), nil)
+	if err != nil {
+		t.Fatalf("NewFormatter with a nil Option error = %v", err)
+	}
+	if got := f.Format(5); got != "5 u" {
+		t.Errorf("Format(5) = %q, want %q", got, "5 u")
+	}
+}
