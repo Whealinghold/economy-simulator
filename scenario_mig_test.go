@@ -420,8 +420,7 @@ func TestScenarioS66_InvariantsOverSeeds(t *testing.T) {
 	}
 }
 
-// TestDeterminism_Migration verifies, for the module pack as it is and with households
-// moving, that the final state does not depend on the way the run is driven or watched:
+// TestDeterminism_Migration verifies, for the module pack with households moving, that the final state does not depend on the way the run is driven or watched:
 // the cases of detCases(true), seed 1, end in the snapshot and state hash of a bare Step
 // run.
 //
@@ -434,13 +433,11 @@ func TestDeterminism_Migration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end test, skipped with -short")
 	}
-	for _, variant := range []string{"idle", "moving"} {
+	// One variant: the cold pack moves nobody, and the golden already runs it three ways.
+	for _, variant := range []string{"moving"} {
 		t.Run(variant, func(t *testing.T) {
 			t.Parallel()
-			cfg := loadValidPack(t, packMigration("two")...)
-			if variant == "moving" {
-				cfg = movingPack(t, packMigration("two"), nil)
-			}
+			cfg := movingPack(t, packMigration("two"), nil)
 			base := runPack(t, cfg, detStep(runSpec{Seed: 1, Ticks: detTicks}))
 			for _, tc := range detCases(true) {
 				spec := tc.spec()
