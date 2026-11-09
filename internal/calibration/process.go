@@ -104,12 +104,6 @@ func stageFamily(name string) string {
 	return strings.TrimRight(name, "abc")
 }
 
-// knobRef is a registry row with the ID it was found under.
-type knobRef struct {
-	ID string
-	KnobInfo
-}
-
 // packState is what CheckSequence remembers of the records of one pack.
 type packState struct {
 	prev      *Record
@@ -126,8 +120,7 @@ type checker struct {
 	rs         []Record
 	i          int
 	st         *packState
-	byKey      map[string]knobRef
-	byID       map[string]KnobInfo
+	idx        index
 	maxFactors int
 	out        *[]Problem
 }
@@ -141,37 +134,20 @@ type checker struct {
 func CheckSequence(rs []Record, k Known, maxFactors int) []Problem {
 	var out []Problem
 	states := map[string]*packState{}
-	byKey, byID := indexKnobs(k)
+	idx := newIndex(k)
 	for i := range rs {
 		st := states[rs[i].Pack]
 		if st == nil {
 			st = &packState{openExact: map[string]bool{}, blocks: map[int]bool{}, owners: map[string]string{}, retired: map[string]bool{}, current: map[string]bool{}}
 			states[rs[i].Pack] = st
 		}
-		c := checker{rs: rs, i: i, st: st, byKey: byKey, byID: byID, maxFactors: maxFactors, out: &out}
+		c := checker{rs: rs, i: i, st: st, idx: idx, maxFactors: maxFactors, out: &out}
 		c.run()
 	}
 	slices.SortFunc(out, func(a, b Problem) int {
 		return cmp.Or(cmp.Compare(a.Record, b.Record), cmp.Compare(a.Line, b.Line), cmp.Compare(a.Rule, b.Rule), cmp.Compare(a.Detail, b.Detail))
 	})
 	return out
-}
-
-// indexKnobs maps a registry key and an ID to its row. Two rows with one key keep
-// the lowest ID, so the result does not depend on map order.
-func indexKnobs(k Known) (map[string]knobRef, map[string]KnobInfo) {
-	ids := make([]string, 0, len(k.Knobs))
-	for id := range k.Knobs {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	byKey := make(map[string]knobRef, len(ids))
-	for _, id := range ids {
-		if _, dup := byKey[k.Knobs[id].Key]; !dup {
-			byKey[k.Knobs[id].Key] = knobRef{id, k.Knobs[id]}
-		}
-	}
-	return byKey, k.Knobs
 }
 
 func (c *checker) r() *Record { return &c.rs[c.i] }
@@ -371,7 +347,7 @@ func (c *checker) factors() {
 		keys = append(keys, s.Key)
 	}
 	for _, key := range keys {
-		ref, ok := c.byKey[key]
+		ref, ok := c.idx.find(key)
 		if !ok {
 			continue
 		}
@@ -454,7 +430,7 @@ func (c *checker) stopRecord() {
 		}
 	}
 	for _, s := range r.Sets {
-		if ref, ok := c.byKey[s.Key]; ok && ref.Class == 'D' && slices.Contains(r.Dormant, ref.ID) {
+		if ref, ok := c.idx.find(s.Key); ok && ref.Class == 'D' && slices.Contains(r.Dormant, ref.ID) {
 			c.add(RuleStopDormant, "dormant D knob %s is moved to %d", ref.ID, s.Value)
 		}
 	}
