@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -372,5 +373,37 @@ func TestOverlay_Migration(t *testing.T) {
 				t.Errorf("NewWorld(%v) error = %v, want nil", layers, err)
 			}
 		})
+	}
+}
+
+// TestPass_RunsOnTheOverlay verifies the exit check of plan 2-14 Phase 6: the pack
+// two with its trade, information and migration overlays runs 200 ticks with the audit
+// on, so every identity of the ledger holds at each tick, whatever the pass did, and
+// the pass is deterministic (two runs end in the same snapshot). With the defaults
+// the cold pack moves nobody (its households are unprovisioned for the journey or the
+// estimate is below the viability gate); the pass runs all the same, and the scenarios
+// of Phase 8 give it a cause to move.
+//
+// Requirement: FR-MIG-033, FR-MIG-042
+func TestPass_RunsOnTheOverlay(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadValidPack(t, append(packInformation("two"), "overlay/migration.toml")...)
+	cfg.Modules.Migration.MoveReviewTicks = 5 // a pass every few ticks, not every thirty
+	var last [2]economysim.Snapshot
+	for i := range last {
+		w, err := economysim.NewWorld(cfg, economysim.WithAudit(), economysim.WithSeed(7))
+		if err != nil {
+			t.Fatalf("NewWorld() error = %v, want nil", err)
+		}
+		step(t, w, 200)
+		if last[i], err = w.Snapshot(); err != nil {
+			t.Fatalf("Snapshot() error = %v, want nil", err)
+		}
+	}
+	if !reflect.DeepEqual(last[0], last[1]) {
+		t.Errorf("two runs of 200 ticks with seed 7 ended in different snapshots, want the same")
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	mig "github.com/Whealinghold/economy-sim/internal/migration"
 )
 
 // This file is the migration module (spec-migration.md, MIG): households that
@@ -215,6 +216,8 @@ type migration struct {
 	skip    []string
 	arrived []AgentID
 	held    []int64
+	// pass is the scratch and the tally of the pass at P7.2 (migration_pass.go).
+	pass passScratch
 }
 
 // newMigration builds the state from a canonical configuration that passed
@@ -245,6 +248,7 @@ func newMigration(c *Config) *migration {
 		g, _ := c.regionID(row.Region)
 		m.outShare[g], m.inShare[g] = row.OutShare, row.InShare
 	}
+	m.pass = newPassScratch(c, regions)
 	for i := range c.Roles {
 		r := &c.Roles[i]
 		if !r.mobile() {
@@ -363,4 +367,20 @@ func (w *World) arriveJourney(a *agent, to RegionID) {
 	w.reseedAtArrival(a, to)
 	a.roleSince = w.Tick()
 	m.finish(a.id)
+}
+
+// newPassScratch sizes the scratch of the pass: the per-region tables, the table of
+// rumoured prices, and the arenas of the lines of the recipes of one candidate.
+func newPassScratch(c *Config, regions int) passScratch {
+	lines, tools := 0, 0
+	for i := range c.Recipes {
+		lines += len(c.Recipes[i].Inputs) + len(c.Recipes[i].Outputs)
+		tools += len(c.Recipes[i].Requires)
+	}
+	return passScratch{
+		households: make([]int64, regions), pipeline: make([]int64, regions),
+		tally: make([]passTally, regions), price: make([]int64, regions*len(c.Commodities)),
+		caps:  mig.Caps{Out: make([]int64, regions), In: make([]int64, regions), Pipeline: make([]int64, regions)},
+		lines: make([]mig.Line, 0, lines+8), tools: make([]mig.Tool, 0, tools+1),
+	}
 }
