@@ -1084,7 +1084,7 @@ by the configuration.
 | `migration_cohort` | a mobile role has a group whose `Scale` is above 1: a cohort moves whole (3.2.2) |
 | `migration_provision` | the shortest journey between some pair of regions with a route has a journey time `k` above `CoverTicks` of AGT: a default household holds about that many ticks of upkeep and cannot be provisioned for it (7.4.1); carries `pairs`, the count |
 | `migration_far` | at least one ordered pair of regions has a route whose journey time is `H` or more: it is never a destination (6.4); carries `pairs` |
-| `migration_flow_window` | `MoveOutShare` times the longest effective welfare window of a mobile role exceeds 3 times `MoveGain` (placeholder, from the model of 16.6): the flow can reverse. Carries `rule` and `path` only: the product and `MoveGain` have no carrier in `Warning` (N-327) |
+| `migration_flow_window` | `MoveOutShare` times the longest effective welfare window of a mobile role exceeds 3 times `MoveGain` (placeholder, from the model of 16.6): the flow can reverse. Carries `rule` and `path` only: the product and `MoveGain` have no carrier in `Warning` (N-329) |
 | `migration_uncapped` | `MoveOutShare` is at least `10 000 / MoveReviewTicks` and `MoveInShare` is at least 10 000: no cap can bind, and only the rotation limits the flow |
 
 12.3.1. **The flow warning.** `migration_flow_window` is the analogue of
