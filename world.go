@@ -94,6 +94,9 @@ type World struct {
 	// transport is the state of the transport module, nil when it is off
 	// (transport.go).
 	transport *transportState
+	// info is the state of the information module, nil when it is off
+	// (information.go).
+	info *information
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass

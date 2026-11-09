@@ -430,3 +430,23 @@ const (
 	// pair of regions and commodity.
 	MaxLanes = MaxRegions * MaxRegions * MaxCommodities
 )
+
+// Bounds of the information module (spec-information.md 8), provisional
+// placeholders (N-015, N-027).
+const (
+	// MaxInfoSpeed is the largest InfoSpeed; a distance plus it stays far below
+	// int64.
+	MaxInfoSpeed = 1_000_000_000
+	// MaxRumourErrorBP is the largest RumourErrorBP: the factor (10 000 + e) /
+	// 10 000 is at least 0.5, so a rumoured price is never 0 or negative.
+	MaxRumourErrorBP = 5_000
+	// MaxRumourAge is the largest RumourMaxAge, and so the depth of a ring of the
+	// price record.
+	MaxRumourAge = 10_000
+	// MaxRumourCells is the most entries of the price record, sources times
+	// RumourMaxAge.
+	MaxRumourCells = 4_000_000
+	// MaxRumoursPerView is the most candidates of one informed agent; it bounds
+	// the loop of a view and the draws it takes.
+	MaxRumoursPerView = 4_096
+)

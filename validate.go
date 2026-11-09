@@ -26,6 +26,10 @@ type Warning struct {
 	Path []string
 	// Rule is the name of the warning.
 	Rule string
+	// Count is the number a warning counts, such as the pairs of regions of
+	// rumour_horizon_short (spec-config.md 7.2); 0 for a warning that counts
+	// nothing. It is appended after Rule.
+	Count int64
 }
 
 // Validate checks the configuration in full and returns every error it finds,
@@ -82,6 +86,7 @@ func (c Config) Warnings() []Warning {
 	}
 	cc := c.canonical()
 	out = append(out, checkViability(&cc, newLookup(&cc)).warnings...)
+	out = append(out, horizonWarnings(&cc)...)
 	sortWarnings(out)
 	return out
 }
@@ -111,6 +116,7 @@ func (v *validator) structural() {
 	v.validateTransport()
 	v.structure()
 	v.economics()
+	v.validateInformation()
 	v.overflow()
 }
 
@@ -2057,6 +2063,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, subsistenceWarnings(c, lk)...)
 	out = append(out, populationWarnings(c, lk)...)
 	out = append(out, transportWarnings(c, lk)...)
+	out = append(out, informationWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

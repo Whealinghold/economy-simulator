@@ -48,6 +48,7 @@ var positionList = [...]position{
 	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
 	{"P5.1", "CLR", line},
+	{"P5.2", "INF", line},
 	{"P5.3", "EST", line},
 	{"P5.4", "CLR", line},
 	{"P6.1", "AGT", line},
@@ -73,7 +74,6 @@ var notBuiltPositions = [...]string{
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
-	"P5.2",
 	"P7.2", "P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
@@ -139,6 +139,9 @@ func (w *World) positions() error {
 // it as part of the straight line, after positions and in source order.
 func (w *World) positionsTail() error {
 	w.p51Window()
+	if w.info != nil {
+		w.p52Record()
+	}
 	if err := w.p53Markdown(); err != nil {
 		return err
 	}

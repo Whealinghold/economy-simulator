@@ -93,6 +93,29 @@ type Modules struct {
 	// shipments and goods in transit (spec-transport.md). Nil is off; non-nil is
 	// on, even when empty. Its hash id is 4, whatever its place in this struct.
 	Transport *Transport
+	// Information is the information module: delayed, blurred rumours of the
+	// prices of other regions for the roles flagged Informed
+	// (spec-information.md). Nil is off; non-nil is on, even when zero (but
+	// InfoSpeed has no default, so a zero value does not validate). Its hash id
+	// is 6, whatever its place in this struct.
+	Information *Information
+}
+
+// Information is the configuration of the information module
+// (spec-information.md 8). Start from DefaultInformation and set InfoSpeed,
+// which has no default. Every default is a placeholder (N-015, N-027).
+type Information struct {
+	// InfoSpeed is the distance units that news covers in one tick, 1 to
+	// MaxInfoSpeed (spec-information.md 5.2). It is required: a pack chooses the
+	// unit of its distances.
+	InfoSpeed int64
+	// RumourErrorBP is the half-width E of the error of a rumour, in basis
+	// points, 0 to MaxRumourErrorBP; 0 draws nothing (spec-information.md 5.5).
+	RumourErrorBP int64
+	// RumourMaxAge is the horizon: the longest lag that is offered and the depth
+	// of the price record, in ticks, 2 to MaxRumourAge (spec-information.md 4.4,
+	// 5.3).
+	RumourMaxAge int64
 }
 
 // Transport is the configuration of the transport module (spec-transport.md
@@ -768,6 +791,11 @@ type Role struct {
 	// Closed says the default spawner places nobody in the role
 	// (spec-spawner.md 6.2).
 	Closed bool
+	// Informed says the agents of the role are shown rumours of the prices of
+	// other regions (spec-information.md 6.1). It needs Modules.Information (true
+	// with the module nil is ErrModuleDependency) and is hashed only while that
+	// module is on and only when true. Its hash id is 19.
+	Informed bool
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string

@@ -31,7 +31,7 @@ func TestEndowments_OwnUseDrawsInGroup(t *testing.T) {
 	w.refreshViewCtx()
 	w.p23Snapshot()
 	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[1]); err != nil {
+	if err := w.fillAgentView(&v, &w.agents[1], viewTrade); err != nil {
 		t.Fatalf("fillAgentView error = %v, want nil", err)
 	}
 	if len(v.Endowments) != 1 || v.Endowments[0].Stock != 100 {

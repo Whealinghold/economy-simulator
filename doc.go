@@ -947,4 +947,23 @@
 //     InboundRow, OutboundRow and RouteRow are their rows.
 //   - Diverted: cargo that could not go to its consignee and went to the estate of the
 //     destination instead.
+//   - Information: the module, a pointer of Config.Modules and the type of its
+//     configuration, that gives the agents of an informed role delayed, blurred
+//     rumours of the prices of other regions (spec-information.md); its event is
+//     RumoursServed.
+//   - Rumour: a remote price as an informed agent is told it: the price a source
+//     market published Lag ticks ago, multiplied by a drawn error; it carries the
+//     age of that price.
+//   - Rumour source: a (region, commodity) market that can be the subject of a
+//     rumour: the commodity is in the tradable set of a role that has a group in
+//     the region. It is not a recipe Source.
+//   - Informed role: a role whose agents are shown rumours, the flag Role.Informed.
+//   - Price record: a ring of the last RumourMaxAge prices each source market
+//     published, written once a tick and read for the vintage of a rumour.
+//   - Vintage: the tick whose entry of the price record a rumour is made from, the
+//     tick of the reading less the lag.
+//   - Lag: the age in ticks of a rumour, 1 + ceil(distance / information speed), at
+//     least 2.
+//   - Information speed: the distance units that news covers in one tick
+//     (Information.InfoSpeed).
 package economysim

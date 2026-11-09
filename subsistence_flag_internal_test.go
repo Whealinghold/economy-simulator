@@ -208,10 +208,10 @@ func TestFlag_CohortEqualsUnits(t *testing.T) {
 		w.p24OwnUse()
 		w.refreshViewCtx()
 	}
-	if err := cohort.fillAgentView(&v1, &cohort.agents[1]); err != nil {
+	if err := cohort.fillAgentView(&v1, &cohort.agents[1], viewTrade); err != nil {
 		t.Fatal(err)
 	}
-	if err := units.fillAgentView(&v2, &units.agents[1]); err != nil {
+	if err := units.fillAgentView(&v2, &units.agents[1], viewTrade); err != nil {
 		t.Fatal(err)
 	}
 	if v1.Cover != v2.Cover || v1.Secure != v2.Secure || v1.OwnUse != v2.OwnUse {

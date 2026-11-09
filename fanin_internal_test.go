@@ -85,7 +85,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		fn   string
 		want []string
 	}{
-		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillView"}},
+		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillRumours", "fillView"}},
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants"}},
 		{"removeAgent", []string{"Tick", "regionOf", "hasJob", "abandonJob", "dropTraveller", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropAgent", "dropAgent", "drop", "logRemoval", "forget"}},
 		{"relocationRefusal", []string{"refusal"}},

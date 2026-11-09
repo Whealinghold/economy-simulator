@@ -61,7 +61,7 @@ func (w *World) tradeAgent(a *agent) error {
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
-	if err := w.fillAgentView(v, a); err != nil {
+	if err := w.fillAgentView(v, a, viewTrade); err != nil {
 		return fmt.Errorf("trade at tick %d: %w", w.Tick(), err)
 	}
 	p := w.views.tradePlan()
@@ -80,6 +80,9 @@ func (w *World) tradeAgent(a *agent) error {
 // p36Aggregates is P3.6: the per-region, per-role aggregates of the trade phase,
 // a fixed sequence of guarded calls into the module files (spec-world.md 6, D312).
 func (w *World) p36Aggregates() {
+	if w.info != nil {
+		w.p36Rumours()
+	}
 	if w.demand != nil {
 		w.p36Wants()
 	}

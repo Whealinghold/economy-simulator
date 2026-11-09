@@ -283,6 +283,10 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Transport = l.transport(ts)
 		ts.finish()
 	}
+	if is := m.sub("information"); is != nil {
+		cfg.Modules.Information = l.information(is)
+		is.finish()
+	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
@@ -443,6 +447,7 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		{"teaching_load", &r.TeachingLoad},
 	})
 	t.flag("closed", &r.Closed)
+	t.flag("informed", &r.Informed)
 	t.text("label", &r.Label)
 	return r
 }
@@ -744,4 +749,16 @@ func (l *loader) transport(t *tbl) *economysim.Transport {
 		m.Modes = append(m.Modes, md)
 	})
 	return m
+}
+
+// information reads [modules.information] over DefaultInformation
+// (spec-config.md 6.2.1, spec-information.md 8): info_speed, rumour_error_bp and
+// rumour_max_age. info_speed has no default, so a table that omits it is
+// ErrOutOfBounds at Validate. The table being present switches the module on.
+func (l *loader) information(t *tbl) *economysim.Information {
+	m := economysim.DefaultInformation()
+	readInts(t, []intField{
+		{"info_speed", &m.InfoSpeed}, {"rumour_error_bp", &m.RumourErrorBP}, {"rumour_max_age", &m.RumourMaxAge},
+	})
+	return &m
 }
