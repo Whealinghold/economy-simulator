@@ -65,6 +65,17 @@ var _ Strategy = pairScript{}
 // by mut, and steps it warm ticks. Every agent is settled long ago.
 func passWorld(t *testing.T, warm int, mut func(c *Config), opts ...Option) (*World, *evLog) {
 	t.Helper()
+	rec := &evLog{}
+	w := newMill(t, passConfig(mut), append([]Option{WithStrategy("script", pairScript{}), WithAudit(), WithObserver(rec)}, opts...)...)
+	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+		w.agents[i].roleSince = -1_000
+	}
+	step(t, w, warm)
+	return w, rec
+}
+
+// passConfig is the configuration of passWorld, changed by mut.
+func passConfig(mut func(c *Config)) Config {
 	c := infoConfig()
 	m := DefaultMigration()
 	m.MoveSpeed, m.MoveReviewTicks, m.MoveBelow = infoSpeed, 1, 0
@@ -76,13 +87,7 @@ func passWorld(t *testing.T, warm int, mut func(c *Config), opts ...Option) (*Wo
 	if mut != nil {
 		mut(&c)
 	}
-	rec := &evLog{}
-	w := newMill(t, c, append([]Option{WithStrategy("script", pairScript{}), WithAudit(), WithObserver(rec)}, opts...)...)
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
-		w.agents[i].roleSince = -1_000
-	}
-	step(t, w, warm)
-	return w, rec
+	return c
 }
 
 // open raises the gate to its bound, so the earned ratio of any agent that has an

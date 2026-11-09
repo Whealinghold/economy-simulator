@@ -1397,3 +1397,53 @@ type RumoursServed struct {
 }
 
 func (RumoursServed) isEvent() {}
+
+// MigrationStarted is emitted once per departure of the migration pass, in the
+// order of admission, after the last departure of the pass and after the
+// RecipeAbandoned events of the departures (spec-migration.md 8.2, 10.2, 13.1,
+// FR-MIG-035). It is per agent, like AgentRelocated; the arrival is that event
+// with the cause migration.
+type MigrationStarted struct {
+	Tick int64
+	// Agent and Role are the agent that left and its role.
+	Agent AgentID
+	Role  RoleID
+	// From and To are the region of departure and of arrival.
+	From, To RegionID
+	// Weight is the households the agent stands for.
+	Weight int64
+	// Arrives is the arrival tick, fixed now; Distance is the graph's distance and
+	// Journey the ticks of the journey.
+	Arrives, Distance, Journey int64
+	// EarnedRatio is the push (basis points, signed), Home the household's own
+	// measured figure and Estimate the figure of the destination (basis points).
+	EarnedRatio, Home, Estimate int64
+	// JobAbandoned is whether a job in progress was abandoned by the departure.
+	JobAbandoned bool
+}
+
+func (MigrationStarted) isEvent() {}
+
+// MigrationReviewed is emitted once per region per tick, in ascending RegionID
+// after the MigrationStarted events, in which any household was pushed or held
+// back by the settling rule, any arrival was held or any journey ended by a
+// removal or a cancel, and never otherwise (spec-migration.md 13.1, FR-MIG-036).
+// It counts households, attributed to the region of the account, and is the
+// counter of every silent limit of the module.
+type MigrationReviewed struct {
+	Tick   int64
+	Region RegionID
+	// Unsettled is the households whose turn came, that the push would have chosen
+	// and that were not settled; Reviewed those eligible and settled; Pushed those
+	// among them that were pushed.
+	Unsettled, Reviewed, Pushed int64
+	// The outcomes of the pushed households (spec-migration.md 7.6); they add up to
+	// Pushed.
+	Started, NoEstimate, NoDestination, NoRumour, TooFar, NoViable, NoGain int64
+	Bound, OutCap, Unprovisioned, InCap                                    int64
+	// Held is the arrivals held by an obligation and Ended the journeys ended by a
+	// removal or a cancel since the last pass.
+	Held, Ended int64
+}
+
+func (MigrationReviewed) isEvent() {}

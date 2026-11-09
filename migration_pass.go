@@ -86,6 +86,7 @@ func (w *World) p72Migration() {
 		p.tally[g].held, p.tally[g].ended = m.held[g], m.ended[g]
 		m.held[g], m.ended[g] = 0, 0
 	}
+	w.reportMigration()
 }
 
 // passCounts is step 1: the households of each region (the journeys included,
@@ -145,6 +146,7 @@ func (w *World) review(a *agent, g RegionID) {
 	ranked, outcome := w.evaluate(a, g, row, home)
 	if len(ranked) == 0 {
 		t.outcome[outcome] += a.weight
+		w.declined(a, outcome)
 		return
 	}
 	first := len(p.arena)
@@ -346,6 +348,7 @@ func (w *World) admitAndDepart() {
 		a := &w.agents[e.id]
 		if r.Outcome != mig.Started {
 			p.tally[e.region].outcome[r.Outcome] += a.weight
+			w.declined(a, r.Outcome)
 			continue
 		}
 		p.tally[e.region].outcome[mig.Started] += a.weight
