@@ -107,8 +107,13 @@ func (w *World) arrive(s shipment) bool {
 // travellerLive reports whether the shipment is self-carried and its traveller still
 // exists.
 func (w *World) travellerLive(s *shipment) bool {
-	id := s.traveller
-	return !s.hired && id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
+	return !s.hired && w.liveAgent(s.traveller)
+}
+
+// liveAgent reports whether the ID is an agent that exists: not a region's estate
+// pseudo-agent, issued, and of weight 1 or more.
+func (w *World) liveAgent(id AgentID) bool {
+	return id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
 }
 
 // moveTraveller relocates the traveller to the destination: the guard query run
@@ -180,11 +185,10 @@ func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 // consigneeAccount returns the account of the consignee when the agent still
 // exists and is in the destination, else -1.
 func (w *World) consigneeAccount(s *shipment) int {
-	id := s.consignee
-	if id < AgentID(len(w.cfg.Regions)) || id >= w.state.nextAgent || w.agents[id].weight < 1 {
+	if !w.liveAgent(s.consignee) {
 		return -1
 	}
-	if a := &w.agents[id]; w.regionOf(a) == s.to {
+	if a := &w.agents[s.consignee]; w.regionOf(a) == s.to {
 		return a.account
 	}
 	return -1

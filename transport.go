@@ -126,6 +126,17 @@ func (t *transportState) isAway(id AgentID) bool {
 	return int(id) < len(t.away) && t.away[id]
 }
 
+// tripOf returns the self-carried shipment in flight whose traveller is the agent,
+// or nil.
+func (t *transportState) tripOf(id AgentID) *shipment {
+	for i := range t.ships {
+		if s := &t.ships[i]; !s.hired && s.traveller == id {
+			return s
+		}
+	}
+	return nil
+}
+
 // setAway sets the away flag of an agent, growing the table as agents join.
 func (t *transportState) setAway(id AgentID, away bool) {
 	for int(id) >= len(t.away) {
