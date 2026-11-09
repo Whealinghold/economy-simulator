@@ -1,0 +1,331 @@
+package transit_test
+
+import (
+	"math"
+	"math/big"
+	"slices"
+	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/transit"
+)
+
+// TestTicks_CeilingAndMinimum verifies k = max(1, ceil(D / v)) at the default
+// factor: the table of spec-transport.md 17.1, the asymmetry of 90 against 100
+// and the minimum of one tick.
+//
+// Requirement: FR-TRN-005
+func TestTicks_CeilingAndMinimum(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		distance, speed int64
+		want            int64
+	}{
+		{"foot north to mid", 40, 20, 2},
+		{"foot mid to south", 60, 20, 3},
+		{"foot north to south, the direct 90", 90, 20, 5}, // 4.5 rounds up
+		{"foot south to north, 100 through mid", 100, 20, 5},
+		{"wagon north to south", 90, 30, 3},
+		{"wagon south to north", 100, 30, 4}, // 3.33 rounds up
+		{"exact division", 60, 30, 2},
+		{"short hop is one tick", 1, 100, 1},
+		{"zero distance is one tick", 0, 5, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := transit.Ticks(tt.distance, tt.speed, 10_000)
+			if !ok || got != tt.want {
+				t.Errorf("Ticks(%d, %d, 10000) = %d, %v, want %d, true", tt.distance, tt.speed, got, ok, tt.want)
+			}
+		})
+	}
+}
+
+// TestTicks_FactorAndOverflow verifies the transit factor scales the speed
+// (5 000 halves it), that the product D * 10 000 is held in 128 bits, that the
+// largest speed times the largest factor fits, and that every rejected input is
+// reported with ok false.
+//
+// Requirement: FR-TRN-005
+func TestTicks_FactorAndOverflow(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                      string
+		distance, speed, factorBP int64
+		want                      int64
+		ok                        bool
+	}{
+		// 45 * 10000 / (10 * 5000) = 9: half the speed doubles 4.5 to 9.
+		{"half factor", 45, 10, 5_000, 9, true},
+		{"double factor", 45, 10, 20_000, 3, true}, // 450000/200000 = 2.25 up
+		// D * 10 000 = 10^19 > MaxInt64, the quotient 10^19 / 10^13 = 10^6.
+		{"128-bit product", 1_000_000_000_000_000, 1_000_000_000, 10_000, 1_000_000, true},
+		{"largest speed and factor", 5, 1_000_000_000, 100_000, 1, true},
+		{"blocked factor", 10, 5, 0, 0, false},
+		{"zero speed", 10, 0, 10_000, 0, false},
+		{"negative distance", -1, 5, 10_000, 0, false},
+		{"speed times factor overflows", 1, math.MaxInt64, 2, 0, false},
+		{"quotient overflows", math.MaxInt64, 1, 1, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := transit.Ticks(tt.distance, tt.speed, tt.factorBP)
+			if ok != tt.ok || got != tt.want {
+				t.Errorf("Ticks(%d, %d, %d) = %d, %v, want %d, %v", tt.distance, tt.speed, tt.factorBP, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+// TestUnitsNeeded_BindingFill verifies n = max(1, ceil(mass / unitMass),
+// ceil(bulk / unitBulk)): a capacity of 0 leaves its term out, the binding
+// dimension decides, and an empty load still needs one unit.
+//
+// Requirement: FR-TRN-010
+func TestUnitsNeeded_BindingFill(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                     string
+		mass, bulk, uMass, uBulk int64
+		want                     int64
+		ok                       bool
+	}{
+		// 36/30 = 2 against 40/30 = 2 (both ceil to 2): spec 17.2 reads a unit of
+		// (40, 30), where 36 over 40 and 30 over 30 both fit in one.
+		{"17.2 fits one unit", 36, 30, 40, 30, 1, true},
+		{"bulk binds", 36, 42, 40, 30, 2, true},  // ceil(42/30) = 2
+		{"mass binds", 100, 10, 40, 30, 3, true}, // ceil(100/40) = 3
+		{"coach: 17.4", 300, 200, 1_200, 900, 1, true},
+		{"mass term left out", 1_000, 31, 0, 30, 2, true},
+		{"bulk term left out", 41, 1_000, 40, 0, 2, true},
+		{"empty load needs one", 0, 0, 40, 30, 1, true},
+		{"both capacities zero", 1, 1, 0, 0, 0, false},
+		{"negative load", -1, 0, 40, 30, 0, false},
+		{"negative capacity", 1, 1, -1, 30, 0, false},
+		{"negative bulk", 1, -1, 40, 30, 0, false},
+		{"negative bulk capacity", 1, 1, 40, -1, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := transit.UnitsNeeded(tt.mass, tt.bulk, tt.uMass, tt.uBulk)
+			if ok != tt.ok || got != tt.want {
+				t.Errorf("UnitsNeeded(%d, %d, %d, %d) = %d, %v, want %d, %v", tt.mass, tt.bulk, tt.uMass, tt.uBulk, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+// TestFits_PairRule verifies that a load fits only when both sums are within the
+// pooled pair: the load (36, 30) of spec-transport.md 17.2 fits one unit of (40,
+// 30) with bulk exactly at its limit, (40, 42) does not, and pooling scales the
+// capacity with the units.
+//
+// Requirement: FR-TRN-009
+func TestFits_PairRule(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                            string
+		mass, bulk, units, uMass, uBulk int64
+		fits, ok                        bool
+	}{
+		{"17.2 fits at the bulk limit", 36, 30, 1, 40, 30, true, true},
+		{"mass fits, bulk 42 over 30", 40, 42, 1, 40, 30, false, true},
+		{"bulk fits, mass over", 41, 30, 1, 40, 30, false, true},
+		{"two units pool", 70, 50, 2, 40, 30, true, true},
+		{"no units fits nothing", 1, 1, 0, 40, 30, false, true},
+		{"no units fits an empty load", 0, 0, 0, 40, 30, true, true},
+		{"mass unlimited", 1_000_000, 30, 1, 0, 30, true, true},
+		{"bulk unlimited", 40, 1_000_000, 1, 40, 0, true, true},
+		{"both zero", 1, 1, 1, 0, 0, false, false},
+		{"pooled mass overflows", 1, 1, math.MaxInt64, 2, 1, false, false},
+		{"pooled bulk overflows", 1, 1, math.MaxInt64, 1, 2, false, false},
+		{"negative load", -1, 1, 1, 40, 30, false, false},
+		{"negative bulk", 1, -1, 1, 40, 30, false, false},
+		{"negative units", 1, 1, -1, 40, 30, false, false},
+		{"negative mass capacity", 1, 1, 1, -1, 30, false, false},
+		{"negative bulk capacity", 1, 1, 1, 40, -1, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			fits, ok := transit.Fits(tt.mass, tt.bulk, tt.units, tt.uMass, tt.uBulk)
+			if fits != tt.fits || ok != tt.ok {
+				t.Errorf("Fits(%d, %d, %d, %d, %d) = %v, %v, want %v, %v", tt.mass, tt.bulk, tt.units, tt.uMass, tt.uBulk, fits, ok, tt.fits, tt.ok)
+			}
+		})
+	}
+}
+
+// FuzzFitsAgreesWithUnits verifies that, for at least one unit, a load fits the
+// pooled capacity of u units exactly when UnitsNeeded is at most u, and that
+// neither function panics.
+//
+// Requirement: FR-TRN-009, FR-TRN-010
+func FuzzFitsAgreesWithUnits(f *testing.F) {
+	f.Add(int64(36), int64(30), int64(1), int64(40), int64(30))
+	f.Add(int64(40), int64(42), int64(1), int64(40), int64(30))
+	f.Add(int64(0), int64(0), int64(3), int64(0), int64(5))
+	f.Add(int64(1_000_000), int64(7), int64(9), int64(1_000), int64(0))
+	f.Fuzz(func(t *testing.T, mass, bulk, units, uMass, uBulk int64) {
+		n, nok := transit.UnitsNeeded(mass, bulk, uMass, uBulk)
+		fits, fok := transit.Fits(mass, bulk, units, uMass, uBulk)
+		if !nok || !fok || units < 1 {
+			return
+		}
+		if fits != (n <= units) {
+			t.Fatalf("Fits(%d, %d, %d, %d, %d) = %v but UnitsNeeded = %d", mass, bulk, units, uMass, uBulk, fits, n)
+		}
+	})
+}
+
+// TestHaulPerUnit_Steps verifies s = ceil(distance / span): the cost of carriage
+// grows in steps, 6 haul units for 60 over a span of 10 and 7 for 61.
+//
+// Requirement: FR-TRN-012
+func TestHaulPerUnit_Steps(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		distance, span int64
+		want           int64
+		ok             bool
+	}{
+		{"exact", 60, 10, 6, true},
+		{"one over", 61, 10, 7, true},
+		{"one under", 59, 10, 6, true},
+		{"zero distance", 0, 10, 0, true},
+		{"span of one", 5, 1, 5, true},
+		{"zero span", 5, 0, 0, false},
+		{"negative span", 5, -1, 0, false},
+		{"negative distance", -5, 1, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := transit.HaulPerUnit(tt.distance, tt.span)
+			if got != tt.want || ok != tt.ok {
+				t.Errorf("HaulPerUnit(%d, %d) = %d, %v, want %d, %v", tt.distance, tt.span, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+// TestLabour_Exact verifies the lane labour of spec-transport.md 9.4 against
+// hand figures: the mass term binding, the bulk term binding (the larger of the
+// two ceilings), a result rounded up, a fill of 0, a term left out, a numerator
+// past 64 bits, and the rejected inputs.
+//
+// Requirement: FR-TRN-041
+func TestLabour_Exact(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                                                       string
+		mass, bulk, uMass, uBulk, span, distance, duration, output int64
+		want                                                       int64
+		ok                                                         bool
+	}{
+		// f = max(3/1200, 2/900) = 3/1200 = 1/400; s = 6; 10000 * 6 * 4 / (400 * 4) = 150.
+		{"mass binds", 3, 2, 1_200, 900, 10, 60, 4, 4, 150, true},
+		// f = max(1/1200, 3/900) = 1/300; 10000 * 6 * 4 / (300 * 4) = 200.
+		{"bulk binds", 1, 3, 1_200, 900, 10, 60, 4, 4, 200, true},
+		// f = 7/1200 (bulk unlimited), s = 7, 10000 * 7 * 7 * 1 / (1200 * 5) = 81.67 up to 82.
+		{"rounds up", 7, 99, 1_200, 0, 10, 61, 1, 5, 82, true},
+		{"bulk only", 1, 3, 0, 900, 10, 60, 4, 4, 200, true}, // f = 3/900 = 1/300
+		{"nothing to carry", 0, 0, 1_200, 900, 10, 60, 4, 4, 0, true},
+		{"zero duration", 3, 2, 1_200, 900, 10, 60, 0, 4, 0, true},
+		{"output of one", 3, 2, 1_200, 900, 10, 60, 4, 1, 600, true}, // 10000 * 6 * 4 / 400 = 600
+		// f = 1, s = 10^9, k = 10^9 * 10^4 * 10^4 = 10^17, numerator 10^26 over 10^9 * 10^5.
+		{"numerator past 64 bits", 1_000_000_000, 1, 1_000_000_000, 1, 1, 1_000_000_000, 10_000, 100_000, 1_000_000_000_000, true},
+		{"both capacities zero", 1, 1, 0, 0, 10, 60, 4, 4, 0, false},
+		{"zero output", 1, 1, 1, 1, 10, 60, 4, 0, 0, false},
+		{"zero span", 1, 1, 1, 1, 0, 60, 4, 4, 0, false},
+		{"negative mass", -1, 1, 1, 1, 10, 60, 4, 4, 0, false},
+		{"negative duration", 1, 1, 1, 1, 10, 60, -4, 4, 0, false},
+		{"s times duration overflows", 1, 1, 1, 1, 1, math.MaxInt64, math.MaxInt64, 1, 0, false},
+		{"times 10 000 overflows", 1, 1, 1, 1, 1, math.MaxInt64 / 2, 1, 1, 0, false},
+		{"divisor overflows", 1, 0, math.MaxInt64, 1, 1, 10, 1, math.MaxInt64, 0, false},
+		{"quotient past 64 bits", math.MaxInt64, 1, 1, 1, 1, 1 << 40, 1 << 20, 1, 0, false},
+		{"quotient past int64", 1 << 40, 1, 1, 1, 1, 1 << 20, 1 << 10, 1, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := transit.Labour(tt.mass, tt.bulk, tt.uMass, tt.uBulk, tt.span, tt.distance, tt.duration, tt.output)
+			if got != tt.want || ok != tt.ok {
+				t.Errorf("Labour(%d, %d, %d, %d, %d, %d, %d, %d) = %d, %v, want %d, %v",
+					tt.mass, tt.bulk, tt.uMass, tt.uBulk, tt.span, tt.distance, tt.duration, tt.output, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+// FuzzLabourOracle verifies Labour against a math/big evaluation of the formula
+// whenever it reports a result, and that it never panics.
+//
+// Requirement: FR-TRN-041
+func FuzzLabourOracle(f *testing.F) {
+	f.Add(int64(3), int64(2), int64(1_200), int64(900), int64(10), int64(60), int64(4), int64(4))
+	f.Add(int64(7), int64(99), int64(1_200), int64(0), int64(10), int64(61), int64(1), int64(5))
+	f.Fuzz(func(t *testing.T, mass, bulk, uMass, uBulk, span, distance, duration, output int64) {
+		got, ok := transit.Labour(mass, bulk, uMass, uBulk, span, distance, duration, output)
+		if !ok {
+			return
+		}
+		s := new(big.Int).Div(new(big.Int).Add(big.NewInt(distance), big.NewInt(span-1)), big.NewInt(span))
+		// f as the larger of two fractions, compared exactly.
+		fn, fd := big.NewInt(mass), big.NewInt(uMass)
+		if uMass == 0 || (uBulk > 0 && new(big.Int).Mul(big.NewInt(bulk), big.NewInt(uMass)).Cmp(new(big.Int).Mul(big.NewInt(mass), big.NewInt(uBulk))) > 0) {
+			fn, fd = big.NewInt(bulk), big.NewInt(uBulk)
+		}
+		num := new(big.Int).Mul(fn, s)
+		num.Mul(num, big.NewInt(duration)).Mul(num, big.NewInt(10_000))
+		den := new(big.Int).Mul(fd, big.NewInt(output))
+		want := new(big.Int)
+		want.Add(num, den).Sub(want, big.NewInt(1)).Div(want, den)
+		if want.Cmp(big.NewInt(got)) != 0 {
+			t.Fatalf("Labour(%d, %d, %d, %d, %d, %d, %d, %d) = %d, want %s", mass, bulk, uMass, uBulk, span, distance, duration, output, got, want)
+		}
+	})
+}
+
+// TestFree_LowestFirst verifies that Take returns the lowest open account ID
+// first, that Put keeps the order and refuses a duplicate, that Rebuild sorts and
+// drops repeats and reuses its storage, and that an empty set takes nothing.
+//
+// Requirement: FR-TRN-020, FR-TRN-023
+func TestFree_LowestFirst(t *testing.T) {
+	t.Parallel()
+	var f transit.Free
+	if id, ok := f.Take(); ok || id != 0 {
+		t.Fatalf("Take on an empty set = %d, %v, want 0, false", id, ok)
+	}
+	f.Rebuild([]int{9, 3, 7, 3})
+	if f.Len() != 3 {
+		t.Fatalf("Len after Rebuild([9 3 7 3]) = %d, want 3 (the repeat dropped)", f.Len())
+	}
+	if f.Put(7) {
+		t.Errorf("Put(7) of a member = true, want false")
+	}
+	if !f.Put(5) || !f.Put(1) || !f.Put(12) {
+		t.Fatalf("Put of a new ID = false, want true")
+	}
+	var got []int
+	for {
+		id, ok := f.Take()
+		if !ok {
+			break
+		}
+		got = append(got, id)
+	}
+	if want := []int{1, 3, 5, 7, 9, 12}; !slices.Equal(got, want) {
+		t.Errorf("Take order = %v, want %v", got, want)
+	}
+	f.Rebuild([]int{4})
+	f.Rebuild(nil)
+	if f.Len() != 0 {
+		t.Errorf("Len after Rebuild(nil) = %d, want 0", f.Len())
+	}
+}
