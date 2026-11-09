@@ -177,6 +177,12 @@ func TestFormat_ConcurrentUse(t *testing.T) {
 	wg.Wait()
 }
 
+// TestNewFormatter_IgnoresNilOption verifies that a nil Option in the variadic
+// list is skipped instead of panicking, and the formatter keeps its defaults.
+//
+// Requirement: FR-CUR-010
+// Guard: a caller that builds its option slice conditionally can leave a nil
+// entry; without this test a call through a nil func would panic.
 func TestNewFormatter_IgnoresNilOption(t *testing.T) {
 	t.Parallel()
 	f, err := denomination.NewFormatter(denomination.Single("Unit", "u"), nil)
