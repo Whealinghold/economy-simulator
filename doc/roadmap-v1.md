@@ -250,7 +250,7 @@ all-on from it).
 | `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
 | `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | plan written |
 | `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | plan written |
-| `indicator/` and `internal/measure` | IND | [2-18](plans/plan-2-18.md) | plan written |
+| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | [2-18](plans/plan-2-18.md) | plan written |
 | `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | plan written |
 | `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | plan written |
 | `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
@@ -285,12 +285,12 @@ with the slice (`vision.md` section 4).
 |--------|-------|-------|
 | `skills.go` | SKL | PRO, WEL |
 | `settlements.go`, `internal/settlement` | SET | REG, SCL |
-| `storage.go`, `internal/room` | STO | LED, GDS |
-| `employment.go`, `internal/employment` | EMP | AGT, WEL, PRO |
+| `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS |
+| `employment.go`, `internal/employment` (and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058) | EMP | AGT, WEL, PRO |
 | `tenure.go`, `internal/tenure` | LND | RES, EST, MON |
 | `polity.go`, `internal/polity` | POL | REG, LED, EST |
 | `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
-| `risk.go`, `internal/risk` | RSK | TRN, STO |
+| `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, with STO) | RSK | TRN, STO |
 | `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
 | `insurance.go`, `internal/insure` | INS | CRD, RSK |
 | `fiscal.go`, `internal/fiscal` | FIS | POL, MON, CLR, TRN, EXT |

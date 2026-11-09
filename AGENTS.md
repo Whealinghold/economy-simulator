@@ -175,7 +175,9 @@ economy-sim/
 ├── examples/<name>/        # each example is its own module: the first consumer's
 │                           #   pack and a second, unrelated setting
 ├── testdata/               # shared fixtures: chains/ (config), golden/ (off/, one
-│                           #   directory per module, all/: testing.md 7.1.1),
+│                           #   directory per module, all/, and indicator/,
+│                           #   experiment/, stylised/ for a harness that records no
+│                           #   world state: testing.md 7.1.1),
 │                           #   checkpoints/ (one fixture of pack one and one
 │                           #   all-modules-on fixture per format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
