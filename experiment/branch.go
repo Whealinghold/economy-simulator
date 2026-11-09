@@ -125,11 +125,7 @@ func (e Spec) branch(ctx context.Context, cfg economysim.Config, cp economysim.C
 // restoreOptions are the options of a restored world: Options(k), the measures'
 // observers, and the reseed of the continuation when there are two or more.
 func (e Spec) restoreOptions(k Key, rec Record) []economysim.Option {
-	var opts []economysim.Option
-	if e.Options != nil {
-		opts = e.Options(k)
-	}
-	opts = append(slices.Clone(opts), e.observers(k)...)
+	opts := e.worldOptions(k)
 	if rec.HasSalt {
 		opts = append(opts, economysim.WithReseed(rec.Salt))
 	}

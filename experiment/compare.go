@@ -92,7 +92,8 @@ func Compare(r Result, a, b Group, measure string) (Comparison, error) {
 	sa, sb := newSide(ra, m), newSide(rb, m)
 	var c Comparison
 	c.MeanA, c.MeanB = readingOf(sa.mo.Mean()), readingOf(sb.mo.Mean())
-	for i, q := range quantiles {
+	for i := range nQuantiles {
+		q := Quantile(i)
 		c.Dist[i] = distOf(sa.vals, sb.vals, q)
 	}
 	diffs, d, base, ok := pairUp(ra, sb, m)

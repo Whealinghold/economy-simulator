@@ -113,8 +113,9 @@ func Assemble(e Spec, recs []Record) (Result, error) {
 		res.Criteria = append(res.Criteria, c.Name)
 	}
 	res.first = e.firstChanges()
+	firstOf := map[[32]byte]int{} // membership and lookup only: never ranged over
 	for p := range points {
-		res.Points[p] = e.assemblePoint(p, byKey, res.Points[:p])
+		res.Points[p] = e.assemblePoint(p, byKey, firstOf)
 	}
 	return res, nil
 }
@@ -161,8 +162,9 @@ func (e Spec) inPlan(k Key) bool {
 		k.Variant >= 0 && k.Variant < variants && k.Cont >= 0 && k.Cont < conts
 }
 
-// assemblePoint builds point p from the records; earlier are the points before it.
-func (e Spec) assemblePoint(p int, byKey map[Key]Record, earlier []PointResult) PointResult {
+// assemblePoint builds point p from the records; firstOf maps a hash to the first
+// earlier point that has it, and gains this point's hash.
+func (e Spec) assemblePoint(p int, byKey map[Key]Record, firstOf map[[32]byte]int) PointResult {
 	levels, values, _ := e.point(p) // Validate has checked it
 	pr := PointResult{Index: p, Levels: levels, Values: values, Status: StatusOK, SameAs: -1}
 	variants, conts := e.branchShape()
@@ -181,7 +183,7 @@ func (e Spec) assemblePoint(p int, byKey map[Key]Record, earlier []PointResult) 
 		}
 		pr.Variants = append(pr.Variants, vr)
 	}
-	pr.settle(earlier, conts)
+	pr.settle(firstOf, conts)
 	for v := range pr.Variants {
 		pr.Variants[v].Reductions, pr.Variants[v].Pass = e.reduceRuns(pr.Variants[v].Runs)
 	}
@@ -191,7 +193,7 @@ func (e Spec) assemblePoint(p int, byKey map[Key]Record, earlier []PointResult) 
 // settle sets the point's Hash, Status, SameAs and warnings from its runs, taken in
 // key order (replica, variant, continuation) so that the choice does not depend on
 // the order the records came in.
-func (pr *PointResult) settle(earlier []PointResult, conts int) {
+func (pr *PointResult) settle(firstOf map[[32]byte]int, conts int) {
 	for _, r := range pr.inKeyOrder(conts) {
 		if pr.Hash == ([32]byte{}) {
 			pr.Hash = r.Hash
@@ -203,13 +205,12 @@ func (pr *PointResult) settle(earlier []PointResult, conts int) {
 	if pr.Hash == ([32]byte{}) {
 		return
 	}
-	for _, q := range earlier {
-		if q.Hash == pr.Hash {
-			pr.SameAs = q.Index
-			pr.Warnings = append(pr.Warnings, Warning{Rule: "duplicate_point", Path: strconv.Itoa(pr.Index)})
-			return
-		}
+	if q, dup := firstOf[pr.Hash]; dup {
+		pr.SameAs = q
+		pr.Warnings = append(pr.Warnings, Warning{Rule: "duplicate_point", Path: strconv.Itoa(pr.Index)})
+		return
 	}
+	firstOf[pr.Hash] = pr.Index
 }
 
 // equalRecord reports whether two records are the same field for field. A

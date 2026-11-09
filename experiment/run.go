@@ -38,6 +38,11 @@ func RunUnit(ctx context.Context, e Spec, u Unit) ([]Record, error) {
 	if err := e.checkUnit(ctx, u); err != nil {
 		return nil, err
 	}
+	return e.resolvedUnit(ctx, u)
+}
+
+// resolvedUnit is RunUnit for a unit of a validated experiment's Plan.
+func (e Spec) resolvedUnit(ctx context.Context, u Unit) ([]Record, error) {
 	cfg, status, err := e.resolve(ctx, u.Point)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -218,12 +223,17 @@ func (e Spec) observers(k Key) []economysim.Option {
 // Options(key), then the measures' observers, then WithSeed last, so the seed is
 // the harness's whatever the options say (spec-experiments.md 5.1.3 step 2).
 func (e Spec) buildOptions(k Key, seed uint64) []economysim.Option {
+	return append(e.worldOptions(k), economysim.WithSeed(seed))
+}
+
+// worldOptions are the consumer's Options(k) and then the measures' observers, in a
+// slice of their own.
+func (e Spec) worldOptions(k Key) []economysim.Option {
 	var opts []economysim.Option
 	if e.Options != nil {
 		opts = e.Options(k)
 	}
-	opts = append(slices.Clone(opts), e.observers(k)...)
-	return append(opts, economysim.WithSeed(seed))
+	return append(slices.Clone(opts), e.observers(k)...)
 }
 
 // runAll runs the sweep sequentially on the caller's goroutine and returns the
@@ -247,16 +257,16 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	}
 	var out []Record
 	for _, u := range units {
-		if recs, ok := priorOf(prior, u); ok {
+		if recs, ok := priorOf(prior, u); len(prior) > 0 && ok {
 			out = append(out, recs...)
 			continue
 		}
 		if err := ctx.Err(); err != nil {
-			return out, fmt.Errorf("experiment: run: %w", err)
+			return append(out, e.priorAfter(prior, units, u)...), fmt.Errorf("experiment: run: %w", err)
 		}
-		recs, err := RunUnit(ctx, e, u)
+		recs, err := e.resolvedUnit(ctx, u) // Plan has validated the experiment and listed the unit
 		if err != nil {
-			return out, err
+			return append(out, e.priorAfter(prior, units, u)...), err
 		}
 		for _, r := range recs {
 			if rc.record != nil {
@@ -280,4 +290,16 @@ func priorOf(prior map[Key]Record, u Unit) ([]Record, bool) {
 		out = append(out, r)
 	}
 	return out, true
+}
+
+// priorAfter returns the prior records of the complete units after u, so that a
+// cancelled sweep does not drop work the caller already had.
+func (e Spec) priorAfter(prior map[Key]Record, units []Unit, u Unit) []Record {
+	var out []Record
+	for _, v := range units[u.Point*e.Replicas+u.Replica+1:] {
+		if recs, ok := priorOf(prior, v); ok {
+			out = append(out, recs...)
+		}
+	}
+	return out
 }

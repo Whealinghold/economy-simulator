@@ -1,14 +1,15 @@
 package experiment
 
 import (
+	"cmp"
 	"slices"
 )
 
 // steps returns the calls of one run in the order they are applied at an equal
 // tick: the script, then the steps of the levels in factor order, then the
-// variant's (spec-experiments.md 3.5.2); the merge by tick is stable. levels is
-// the level that applies to each explicit factor (the values of the point);
-// variant is -1 for none.
+// variant's (spec-experiments.md 3.5.2); the merge by tick is stable. values is
+// the Values of the point: for an explicit factor the level that applies (a range
+// factor's entry is a knob value and is ignored); variant is -1 for none.
 func (e Spec) steps(values []int64, variant int) []Step {
 	out := slices.Clone(e.Script)
 	for f, fac := range e.Factors {
@@ -19,18 +20,8 @@ func (e Spec) steps(values []int64, variant int) []Step {
 	if variant >= 0 {
 		out = append(out, e.Branch.Variants[variant].Steps...)
 	}
-	slices.SortStableFunc(out, func(a, b Step) int { return cmpInt64(a.Tick, b.Tick) })
+	slices.SortStableFunc(out, func(a, b Step) int { return cmp.Compare(a.Tick, b.Tick) })
 	return out
-}
-
-func cmpInt64(a, b int64) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
 }
 
 // boundaries returns the ticks a run stops at, ascending and distinct: 0, the

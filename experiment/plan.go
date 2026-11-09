@@ -32,16 +32,10 @@ func Plan(e Spec) ([]Unit, error) {
 		return nil, err
 	}
 	points, _ := e.pointCount() // Validate has checked it
-	variants, conts := e.branchShape()
 	units := make([]Unit, 0, points*e.Replicas)
 	for p := range points {
 		for r := range e.Replicas {
-			keys := make([]Key, 0, variants*conts)
-			for v := range variants {
-				for c := range conts {
-					keys = append(keys, Key{Point: p, Replica: r, Variant: v, Cont: c})
-				}
-			}
+			keys := e.unitKeys(p, r)
 			units = append(units, Unit{Point: p, Replica: r, Keys: keys})
 		}
 	}

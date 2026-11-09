@@ -135,7 +135,7 @@ type Level struct {
 	Label string
 	// Changes are a field path and an integer value each.
 	Changes []Change
-	// Docs are documents layered after the changes.
+	// Docs are documents layered before the level's changes, so a change wins.
 	Docs [][]byte
 	// Steps are calls added to the script of every run at this level.
 	Steps []Step
@@ -156,7 +156,9 @@ type Step struct {
 	Tick int64
 	// Label names the step for the consumer.
 	Label string
-	// Do makes the call; an error fails the run with the code script.
+	// Do makes the call; an error fails the run with the code script. It must not
+	// advance the world's clock (Step, Run): the harness counts the ticks itself and
+	// a call that does leaves every later boundary that many ticks late.
 	Do func(w *economysim.World) error
 }
 
