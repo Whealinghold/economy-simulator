@@ -994,4 +994,54 @@
 //     considers as a destination.
 //   - Estimate (of a destination): the ratio a household would reach there if it
 //     worked every tick, from rumoured prices (spec-migration.md 6.3).
+//   - Merchants: the module, a pointer of Config.Modules and the type of its
+//     configuration (MaxOpen), that adds the delivery contract (spec-merchants.md);
+//     Merchant is the block of a role, a pointer of Role that makes the role a
+//     merchant role.
+//   - Merchant: an agent whose role has a Merchant block; it plans a trip and
+//     sends a shipment or a delivery offer, and has weight 1 and no recipe.
+//   - Planned trip: the lane, the mode and the lot a merchant expects to send next,
+//     chosen afresh from the view every tick and never remembered; the merchant
+//     enters it into the default strategy as trip inputs (TripInput).
+//   - Candidate lane: a lane with a mode that has a route, which the merchant
+//     decides by the first rule that applies; the eleven decisions are the values
+//     of the Decision type.
+//   - Lane (of a merchant): a destination region and a cargo commodity; a lane of
+//     the round is the same pair; neither is the lane of the solver.
+//   - Merchant lot: the units of the cargo of one planned trip, at most the lot cap.
+//   - Lot cap: LotUnits carrying units of the cargo, the most a lot may be.
+//   - Cargo set: the commodities a merchant role trades less its trade inputs.
+//   - Trade inputs: the haul commodities, the vehicles and the feed of the modes of
+//     a merchant role.
+//   - Trip input: a commodity, a quantity and a purpose that a strategy lists to
+//     DefaultStrategy.TradeWith in place of a planned recipe (TripInput).
+//   - Fee share: the share of the expected gross margin that the cost of carriage
+//     may take, Role.MerchantFeeShare with the agent's fixed spread, in basis points.
+//   - Bar: ten thousand over the fee share, the multiple of its cost that a merchant
+//     needs the margin to be before it ships.
+//   - Cautious revenue: the lower of a rumour's price and its window mean, less the
+//     consignee's cut and the expected loss.
+//   - Break-even: the dearest price at which a lot still passes the test of the fee
+//     share; the ceiling of the merchant's bid for the cargo.
+//   - Lane lock: the rule that a merchant plans nothing for a lane it has units on
+//     the way to.
+//   - Delivery offer: a merchant's offer to deliver a quantity of a commodity to a
+//     region at no less than a limit price (DeliveryOffer).
+//   - Delivery take: an agent's order to be delivered a quantity at no more than a
+//     limit price (DeliveryTake).
+//   - Payer: the agent whose take is matched; it pays into escrow.
+//   - Deliverer: the agent whose offer is matched; it ships and is paid on arrival.
+//   - Round (of contracts): the matching of the admitted offers and takes of a
+//     tick, lane by lane, in phase 3.
+//   - Delivery contract: the record of a matched offer and take, with its shipment
+//     and its escrow, from formation to settlement; ContractFormed, ContractSettled
+//     and ContractRound are its events and ContractRow its snapshot row.
+//   - Escrow (of a contract): the account that holds the payer's money from
+//     formation to settlement.
+//   - Settlement (of a contract): the payment of the escrow to the deliverer for
+//     the units that arrived and the refund of the rest, in phase 1.
+//   - PlanNotes: the counts of the decisions a merchant took in one plan, which the
+//     world adds up into MerchantsPlanned.
+//   - MerchantView: the group of an AgentView that a merchant sees (MerchantMode and
+//     MerchantGood are its rows); MerchantsPlanned reports the decisions of a tick.
 package economysim

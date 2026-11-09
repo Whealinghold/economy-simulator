@@ -137,8 +137,7 @@ is it. Nothing that exists moves: `DefaultStrategy`, `Directed` and the contract
   standard names of the package (`"merchant"` today), so a consumer writes
   `economysim.NewWorld(cfg, strategy.Options()...)`;
 - `internal/merchant`: the pure rules over primitive slices (the margin, the fee share,
-  the spread, the sizing of a lot, the matching and the settlement arithmetic), which
-  imports the standard library and `internal/household` only (architecture.md 2.9);
+  the spread, the sizing of a lot, the matching and the settlement arithmetic), which imports the standard library, `internal/checked` and `internal/ordering` only (architecture.md 2.9; the strategy, not this package, computes the reserve with `internal/household`);
 - the root package keeps the world side: the contract round, the escrow, the plan
   fields and the view group (23).
 
@@ -192,7 +191,7 @@ it eats is the main case, and 3.4 handles it with no special rule.
 |--------|--------------------------|
 | `Work` | the default's: a role with no recipe requests no job (`spec-agents.md` 7.1.1), unless its effective own-use list is non-empty: then the default gives it an own-use job and its trips are refused while that job runs (6.4; `spec-subsistence.md` 3.3.3). A pure merchant role takes an empty row in the subsistence table. Nothing is overridden |
 | `Revise` | the default's: `DefaultStrategy.Revise`, one update per admitted order with the draw the world took (`spec-agents.md` 7.6). The merchant's beliefs about its own market are those of any agent |
-| `Trade` | the default's, with four changes: (1) the planned unit of work is a **planned trip** instead of a planned recipe (3.4); (2) the limit of a bid for the cargo and for haul units is lowered to a ceiling the trip can bear (5.6); (3) the plan gains at most one **shipment request** or one **delivery offer** when the trip is ready (6.3), and the **takes** of a consignee (8); (4) with the insurance module, it calls the exported `DefaultCover` (`spec-insurance.md` 10.4) for the lanes of its trips, which appends cover requests to the plan. The rules of 5 to 9 are unchanged: the margin of 5.2 stays net of the expected loss and does not include cover, and 9.7's table is unchanged (the payout is the shipper's, `spec-insurance.md`) |
+| `Trade` | the default's, with four changes: (1) the planned unit of work is a **planned trip** instead of a planned recipe (3.4), entered into the default's tiers through `DefaultStrategy.TradeWith(v, rng, p, trip)` with `TripInput{Commodity, Quantity, Purpose}` entries, and `Trade` is `TradeWith` with a nil trip (3.4.2); (2) the limit of a bid for the cargo and for haul units is lowered to a ceiling the trip can bear (5.6); (3) the plan gains at most one **shipment request** or one **delivery offer** when the trip is ready (6.3), and the **takes** of a consignee (8); (4) with the insurance module, it calls the exported `DefaultCover` (`spec-insurance.md` 10.4) for the lanes of its trips, which appends cover requests to the plan. The rules of 5 to 9 are unchanged: the margin of 5.2 stays net of the expected loss and does not include cover, and 9.7's table is unchanged (the payout is the shipper's, `spec-insurance.md`) |
 
 The tradable set, the targets, the three tiers, the saving rule, the favourability, the
 urgency of a hungry household, the limit-price draw and the affordability rule of
@@ -220,7 +219,9 @@ chosen afresh every tick from the view and nothing of it is remembered (3.5).
 | each upkeep commodity `c` (a self-carried mode) | `w * u_c * max(0, k - CoverTicks)`: the provisions that the check `unprovisioned` of `spec-transport.md` 5.4 asks for, less the `CoverTicks` of upkeep that the default already holds (`spec-agents.md` 7.3) |
 
 where a commodity that is on two lines (the staple that is cargo and upkeep) takes the
-sum. With these as `Job_c`, and `StartsIn` 1 (a merchant has no job), the default's
+sum. The default takes them through the seam `DefaultStrategy.TradeWith(v, rng, p, trip []TripInput)`, with
+`TripInput{Commodity CommodityID; Quantity Quantity; Purpose Purpose}` (`Trade` is `TradeWith(..., nil)`): with a non-nil `trip` the planned recipe is none, `Job_c` is the sum of the entries
+for the commodity, `StartsIn` is ignored, `OutTgt_c` is 0 and the intent's purpose is the entry's. With these as `Job_c`, and `StartsIn` 1 (a merchant has no job), the default's
 computation gives `Keep`, `Target`, the gap and the three tiers: the cargo and the haul
 units are tier 2, the inputs of the trip, **not subject to the saving rule**, because a
 merchant that could not buy its stock would be a poverty trap like a producer that could
@@ -288,14 +289,14 @@ price, its age, the best unmatched quotes, the window), the agent's money, upkee
 beliefs, `Inbound` and `Routes` with the transport module on (`spec-transport.md` 9.1, with `LossBP` and `Toll` when the risk and fiscal modules are on), `Stores` with the storage module (`spec-storage.md` 6.1) and
 `Rumours` for an informed role (`spec-information.md` 6.2). This spec adds one group, plain
 data, a scratch copy valid for the call only like the others, present only in the view of
-an agent whose role has a merchant block:
+an agent whose role has a merchant block (`AgentView.HasMerchant` and `AgentView.Merchant`, of type `MerchantView`, with `MerchantMode` and `MerchantGood` rows, in the shape of `HasDirective` and `Directive`):
 
 | Field | Content |
 |-------|---------|
 | `Params` | the role's block of 3.2 by value, and `MerchantFeeShare` |
 | `Modes` | for each mode of `Params.Modes`, in mode order: hired or self-carried, `UnitMass`, `UnitBulk`, `Crew`, `Vehicle`, `WearPerTick`, the `Feed` entries, `Haul`, `HaulSpan`: the definitions of `spec-transport.md` 3.1 by value |
 | `Goods` | for each commodity of the tradable set, in canonical order: `Mass`, `Bulk`, `ShelfLife`, `Durability` (the definitions of `spec-goods.md` 8), and `OldestAge`: the ticks since the born tick of the oldest lot the agent holds, or -1 when it holds none |
-| `Outbound` | for each destination region and commodity with units on the way: the total quantity of the shipments the agent is the **shipper** of (a hired shipment, or a trip it is not on) and the earliest arrival tick, from the shipments dispatched before the start of phase 3, so that it does not depend on the order in which agents are called, as `Inbound` does not |
+| `Outbound` | not a field of this group: it is `AgentView.Outbound`, the group of every agent that `spec-transport.md` 9.1 and FR-TRN-049 define (for each destination region and commodity with units on the way: the total quantity of the shipments the agent is the **shipper** of and the earliest arrival tick, from the shipments dispatched before the start of phase 3, so that it does not depend on the order in which agents are called, as `Inbound` does not) |
 
 `Outbound` is the mirror of `Inbound` and is TRN's data: the same shipment list, read for
 the other party. It is not an aggregate: it is the agent's own cargo, and an agent may
@@ -890,6 +891,8 @@ the root package, `event.go`; `internal/logkeys` holds the key strings only; a r
 | take | 9 | `overflow` | limit times quantity exceeds `MaxMoney` (the escrow could not hold it, `spec-ledger.md` 4.1) |
 | take | 10 | `insufficient_funds` | limit times quantity exceeds the agent's available cash |
 
+Rows 5a and 9.3.1 belong to the institutions module and are not built in version 1 of the code: admission keeps a marked position for the row in the order of the table. The reasons `too_many_requests`, `unknown_mode`, `unknown_region`, `same_region` and `outside_destination` are the transport module's constants (`outside_destination` is built with the outside gate, plan 2-16). `Warning.Count` exists, so a merchant warning carries `rule`, `path` and, for `lane_without_consignee` and `cargo_never_delivered`, `Count` (`pairs`).
+
 9.3.1. **The legal range.** With the institutions module, a take's bid limit above the cap in force for the
 commodity in the destination region is replaced by it after check 9 (`overflow`), and an offer's ask limit
 below the floor in force is raised to it after check 6 (`invalid_price`): the same place as in the book, so a
@@ -914,11 +917,12 @@ ascending (region, commodity) order. In a lane:
 - the offers are ordered by `Limit` ascending, equal limits by a key, then by admission position;
 - the takes are ordered by `Limit` descending, equal limits by a key, then by admission position.
 
-The **key** is one `uint64` drawn from the world's source for each admitted offer and then for each
-admitted take, in admission order, the way `spec-clearing.md` 4.2 draws the tie-break key of an order: no
-agent is favoured by its ID, the comparison is a total order (architecture.md 7.6), and the number of
-draws is the number of admitted offers and takes, a function of state. A world with no admitted offer or
-take takes none.
+The **key** is one `uint64` for each admitted offer and each admitted take: the first word of the
+stream keyed by (`siteContract`, tick, agent, `sub`), `sub` being `2*i` for the agent's `i`-th submitted
+offer and `2*i+1` for its `i`-th submitted take, `i` the index in the plan (not the admission index;
+`spec-world.md` 7.1.4, 7.3 D6, ADR 0008). No agent is favoured by its ID, the comparison is a total order
+(architecture.md 7.6), and the number of words is the number of admitted offers and takes, a function of
+state, each independent of every other. A world with no admitted offer or take takes none.
 
 9.4.3. **Matching.** For each offer in order, find the first take in order whose `Limit` is at least the
 offer's `Limit` and whose remaining quantity is at least the offer's quantity (an offer is indivisible, a take
@@ -974,7 +978,7 @@ deadline of a contract is its arrival tick**, known at formation; a closure afte
 `escrow_refund` (money, internal), owned by `spec-carriage.md`. This spec takes over the owner and fixes the
 accounts: `escrow_in` from an Agent account to an Escrow account; `escrow_out` from an Escrow account to the
 deliverer's Agent account; `escrow_refund` from an Escrow account to an Agent account or, when the payer no
-longer exists, to the Estate account of the payer's region. **The contract adds no faucet, no sink and no
+longer exists, to the Estate account of the destination region (the payer's region: a payer cannot leave it while the contract is open, 9.8.1). **The contract adds no faucet, no sink and no
 reason:** it moves money between non-boundary accounts only, so every identity of `spec-ledger.md` 9.1 holds
 and `BoundaryFlow` shows nothing of it (N-107: applied, not applicable).
 
@@ -1043,7 +1047,7 @@ for each open contract of the agent as **deliverer**, the escrow is returned in 
 and the contract ends; the shipment is not touched (it arrives as `spec-transport.md` 5.9 says and the payer receives
 the goods and its money back, the windfall of FR-CAR-002, whose price is borne by the deliverer's estate). For each open
 contract of the agent as **payer**, nothing happens: the escrow is a separate account, and the contract is settled
-on arrival with the estate of the payer's region standing in for it (9.7).
+on arrival with the estate of the destination region (the payer's region) standing in for it (9.7).
 
 9.8.3. A role change, a weight change or a relocation by transport of a party does not end a contract. A contract's
 parties are fixed at formation, and the only agent whose account changes region during one is a self-carried deliverer,
@@ -1166,7 +1170,7 @@ T = max( WelfareWindow, WindowCycles * max( longest Duration, Kmax ) )
 with `Kmax` the longest travel time over the configured graph, at construction, of the self-carried modes in `Params.Modes`.
 The merchant's trip is its job and `Kmax` is its duration, so the same derivation (D29) covers it. This is a change to WEL 2.3.3
 and to the warning `trip_longer_than_window` of TRN 12.2, which stays for roles with no block; it is WEL's to adopt, and until it
-does the warning is the only guard. The cost is the one WEL names for a long job: the merchant's ratio reacts slowly.
+does the warning is the only guard. The cost is the one WEL names for a long job: the merchant's ratio reacts slowly. **Not built by plan 2-15 (D512):** WEL has not adopted the window (decision taken, 2026-11-09: reject for now; `effectiveWindow` is unchanged and the warning is the only guard); the change is ten lines in `effectiveWindow`, guarded by the merchant block, and N-099 holds it.
 
 ### 12.4 MIG, SUB, SPN, EST and EXT
 
@@ -1714,7 +1718,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | FR-MER-030 | With `Modules.Merchants` absent every offer and take MUST be refused with `contracts_off`, and no contract, Escrow account or contract event MUST exist (9.3). |
 | FR-MER-031 | Admission MUST apply the checks of 9.3 in their order, refuse an offer or a take whole with the first reason that holds, change nothing, and count the refusal in `ContractRound`. |
 | FR-MER-032 | The round MUST run once per tick in phase 3 after the last agent's plan and before the estates' asks, MUST visit the lanes in ascending (destination region, commodity) order, and MUST do nothing when no offer was admitted (9.4.1, 9.4.2). |
-| FR-MER-033 | The round MUST draw one `uint64` key per admitted offer and then per admitted take in admission order, and no other random number, and a tick with no admitted offer or take MUST draw none (9.4.2). |
+| FR-MER-033 | The round MUST take one `uint64` key per admitted offer and per admitted take, the first word of the stream keyed by (`siteContract`, tick, agent, `sub`) (9.4.2), and no other random word, and a tick with no admitted offer or take MUST draw none (9.4.2). |
 | FR-MER-034 | Matching MUST visit the offers of a lane by limit ascending, then key, then admission position; for each it MUST take the first take, by limit descending then key then admission position, whose limit is at least the offer's and whose remaining quantity is at least the offer's quantity; an offer MUST be indivisible and a take divisible (9.4.3). |
 | FR-MER-035 | The price of a match MUST be the midpoint of the two limits rounded half to even, and it MUST lie between them (9.4.3). |
 | FR-MER-036 | Formation MUST apply the checks of 9.5 in order, `too_many_contracts` then `payer_funds` then the dispatch, a failure ending the attempt with its reason, dropping the offer, leaving the take unchanged and changing nothing else. |
@@ -1762,7 +1766,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 |----|-------------|
 | NFR-MER-001 | With the default logger and observer, the margin arithmetic of a candidate, the matching of a lane, the formation and the settlement MUST allocate nothing beyond scratch held by the world and reused across ticks. |
 | NFR-MER-002 | The cost of a merchant's `Trade` SHOULD be `O(R * C * M)` in the regions `R`, the cargo commodities `C` and the modes `M` of its block, and the round `O(O log O + T)` in the admitted offers `O` and takes `T`; the figures are counts and unmeasured (N-015). |
-| NFR-MER-003 | The margin, the fee share, the sizing and the matching MUST live in `internal/merchant` over primitive slices, import the standard library and `internal/household` only, and know no region, commodity, role or mode (architecture.md 2.9, 9.1). |
+| NFR-MER-003 | The margin, the fee share, the sizing and the matching MUST live in `internal/merchant` over primitive slices, import the standard library, `internal/checked` and `internal/ordering` only, and know no region, commodity, role or mode (architecture.md 2.9, 9.1). |
 | NFR-MER-004 | The events and the plan notes of the module MUST NOT be constructed when no observer was supplied, proved by an allocation test (observability-and-logging.md 4.5, 8.2). |
 | NFR-MER-005 | The fee share, the margin arithmetic, the matching and the settlement MUST have fuzz tests (testing.md 7.4) asserting that they never panic for any prices, quantities, shares or limits, that the price of a match lies between the limits, that `escrow_out` plus `escrow_refund` equals `price * quantity`, and that overflow is reported and not wrapped. |
 
@@ -1804,7 +1808,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs. Defaul
 | Concern | Home |
 |---------|------|
 | `Merchant` (the strategy type), `Options` | `strategy/merchant.go`, `strategy/options.go` (the package exists once a second strategy exists, architecture.md 2.6) |
-| The margin, the fee share and the Weyl spread, the cost of carriage, the sizing of a lot, the two-pass break-even, the matching and the midpoint, the settlement arithmetic | `internal/merchant` over primitives (architecture.md 2.9): `FeeShare(base, spread, id)`, `Margin(...)`, `Fit(...)`, `Match(offers, takes, keys)`, `Settle(price, quantity, reached)`; it imports `internal/household` for the shared tiers |
+| The margin, the fee share and the Weyl spread, the cost of carriage, the sizing of a lot, the two-pass break-even, the matching and the midpoint, the settlement arithmetic | `internal/merchant` over primitives (architecture.md 2.9): `FeeShare(base, spread, id)`, `Margin(...)`, `Fit(...)`, `Match(offers, takes, keys)`, `Settle(price, quantity, reached)`; it imports `internal/checked` and `internal/ordering` only (the strategy computes the reserve with `internal/household`) |
 | The Weyl offset `w(a)` of 5.7.1 | one helper, `Weyl32(id)`, in `internal/ordering` (deterministic helpers over primitives), shared with the death-carry offset of `spec-population.md` 3.8.3 and the spread of margins of MIG; `internal/merchant` imports it |
 | `DeliveryOffer`, `DeliveryTake`, `PlanNotes`, `Contract`, `ContractID`, the round, the formation, the settlement, the module's state and its steps in phases 1 and 3 | root package, `contract.go` |
 | The plan fields `Offers`, `Takes`, `Notes`; the view group `Merchant` and `Outbound` | root package, `strategy.go` (`spec-agents.md` 6.3, 6.4); `Outbound` beside `Inbound` in `transport.go` |
