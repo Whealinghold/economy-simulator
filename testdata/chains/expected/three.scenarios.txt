@@ -10,3 +10,29 @@ check s48.lag_follows_the_walk: 10/10 pass
 check s48.price_is_the_vintage: 10/10 pass
 check s48.rumours_return_after_reopening: 10/10 pass
 check s48.served_agrees_with_closure: 10/10 pass
+
+## S62 herding between equal destinations (MIG-S2)
+measure s62.arrivals_to_the_second_region: 1=48 2=35 | median=42 n=2
+measure s62.arrivals_to_the_third_region: 1=61 2=55 | median=58 n=2
+measure s62.sign_changes_of_the_difference: 1=13 2=3 | median=8 n=2
+measure s62.split_bp: 1=1192 2=2222 | median=1707 n=2
+check s62.arrivals_add_up: 2/2 pass
+check s62.pipeline_within_cap: 2/2 pass
+
+## S63 relief on and off (MIG-S3)
+measure s63.difference_bp: 1=3976 2=4342 | median=4159 n=2
+measure s63.started_with_relief: 1=239 2=218 | median=228 n=2
+measure s63.started_without_relief: 1=171 2=152 | median=162 n=2
+check s63.outcomes_add_to_pushed: 2/2 pass
+
+## S65 emptying a chain (MIG-S5)
+measure s65.households_started: 1=171 2=152 | median=162 n=2
+measure s65.least_share_of_its_start_bp: 1=1050 2=1033 | median=1042 n=2
+check s65.fixed_roles_never_leave: 2/2 pass
+
+## S66 the invariants of the migration module over seeds (MIG-S6)
+measure s66.households_started: 1=153 2=135 3=135 4=149 5=139 6=154 7=158 8=155 9=152 10=146 | median=150 n=10
+check s66.counts_rebuilt_from_events: 10/10 pass
+check s66.outcomes_add_to_pushed: 10/10 pass
+check s66.pipeline_within_cap: 10/10 pass
+check s66.reconciles: 10/10 pass

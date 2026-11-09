@@ -1,0 +1,16 @@
+# The bands of the migration scenarios S62, S63 and S65 on pack three (spec-reference-chain.md
+# 7.1.5; plan 2-14 Phase 8). Every key is unset: a key with no `value` line makes the test
+# report its measure and assert nothing on it. A value is set by a reviewed run (STY 8.4),
+# with a `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line (FR-REF-024).
+
+# S62: the most the arrivals of two equal destinations may differ, as a share of both
+# (basis points).
+[s62.split_band_bp]
+unit = "bp"
+# S63: the most the journeys started with and without relief may differ, as a share of
+# those without (basis points).
+[s63.journeys_band_bp]
+unit = "bp"
+# S65: the least share of its start that a role keeps in a region (basis points).
+[s65.role_share_bp]
+unit = "bp"
