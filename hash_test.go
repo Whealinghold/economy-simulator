@@ -255,7 +255,7 @@ func TestHashConfig_WarmStartPresence(t *testing.T) {
 // Requirement: FR-CFG-005
 func TestHashConfig_CanonicalOrder(t *testing.T) {
 	t.Parallel()
-	keep := map[string]bool{"Calendar.Months": true, "Calendar.Seasons": true}
+	keep := map[string]bool{"Calendar.Months": true, "Calendar.Seasons": true, "Population.BirthSchedule": true, "Population.DeathSchedule": true}
 	reversed := populatedConfig()
 	reverseLists(reflect.ValueOf(&reversed).Elem(), keep)
 	base := populatedConfig()

@@ -88,6 +88,9 @@ type World struct {
 	// sub is the state of the subsistence module, nil when it is off
 	// (subsistence.go).
 	sub *subsistence
+	// pop is the state of the population module, nil when it is off
+	// (population.go).
+	pop *popState
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass

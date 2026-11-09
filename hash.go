@@ -416,6 +416,11 @@ func pairsModules(e *encoder, m Modules) {
 		encodeList(e, 1, m.MoneySupply.Flows, pairsMoneyFlow)
 		e.end()
 	}
+	if m.Population != nil {
+		e.id(3)
+		pairsPopulation(e, *m.Population)
+		e.end()
+	}
 	if m.Resources != nil {
 		e.id(5)
 		pairsResources(e, *m.Resources)
@@ -492,6 +497,29 @@ func pairsRegionTaste(e *encoder, t RegionTaste) {
 	e.text(1, t.Region)
 	e.text(2, t.Want)
 	e.num(3, t.Scale)
+}
+
+// pairsPopulation writes the pairs of a Population: BirthSchedule 1,
+// DeathSchedule 2 (Knot: Ratio 1, Rate 2), MinHouseholds 3, BirthStake 4, Regions
+// 5 (RegionPopulation: Region 1, BirthScale 2, DeathScale 3, HouseholdCap 4). The
+// schedules are in knot order and the rows by region.
+func pairsPopulation(e *encoder, p Population) {
+	encodeList(e, 1, p.BirthSchedule, pairsKnot)
+	encodeList(e, 2, p.DeathSchedule, pairsKnot)
+	e.num(3, p.MinHouseholds)
+	e.num(4, p.BirthStake)
+	encodeList(e, 5, p.Regions, func(e *encoder, r RegionPopulation) {
+		e.text(1, r.Region)
+		e.num(2, r.BirthScale)
+		e.num(3, r.DeathScale)
+		e.num(4, r.HouseholdCap)
+	})
+}
+
+// pairsKnot writes the pairs of a Knot: Ratio 1, Rate 2.
+func pairsKnot(e *encoder, k Knot) {
+	e.num(1, k.Ratio)
+	e.num(2, k.Rate)
 }
 
 // pairsSubsistence writes the pairs of a SubsistenceConfig: Recipes 1, Roles 2

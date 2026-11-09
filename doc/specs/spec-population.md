@@ -524,6 +524,7 @@ author, each now with a cure in `spec-resources.md`:
 - the module is testable as a loop with a RES endowment that binds (`spec-resources.md` 8, scenarios RES-S1), or with a test double that makes
   the ratio a function of households (the models of section 13 do exactly this, and isolate the population rules from the resource's own timescale);
 - without a binding endowment the only bounds are the money of the region (5.5) and `HouseholdCap`;
+- when the resources module is on, the population module fills `endowment.Plan` (`r*`, `dR`, `dX`) from its schedules at validation and reports `resource_overshoot` and `resource_unstable_plan` (`spec-resources.md` 11.3, FR-RES-044); with the module off the two are silent;
 - validation reports `no_fixed_factor` (9.2) so the author knows; a pack cures it by a recipe with `Draws` on an endowment whose maximum flow can bind.
 
 ### 5.3 The ratio a closed economy can show
@@ -662,7 +663,7 @@ negative to positive as the ratio rises, found on the knots of the two schedules
 integer arithmetic: for the segment between two consecutive ratios of the union of the
 knots where `g` changes sign, `r* = x0 + trunc(-g0 * (x1 - x0) / (g1 - g0))`. If `g` is
 never negative, or never positive, over the knots, there is no replacement ratio
-(`no_replacement_ratio`, 9.2): the population always grows or always shrinks. The value
+(`no_replacement_ratio`, 9.2): the population always grows or always shrinks. The crossing is the first segment with `g(x0) < 0 <= g(x1)`, so a `g` that is exactly 0 at a knot is the ratio at that knot (`r* = x1` when `g(x1) = 0`); a `g` that crosses from positive to negative only has no replacement ratio and is reported as `no_replacement_ratio`. The value
 is reported once at validation as the informational `replacement_ratio` (like
 `window_extended`, `spec-welfare-and-wages.md` 11.4) and kept in the snapshot (10.4).
 
@@ -1361,7 +1362,7 @@ births or deaths (`evidence.md`), so it offers no precedent for the loop.
 
 | Concern | Home |
 |---------|------|
-| `PopulationConfig`, `Knot`, `RegionPopulation`, the `Modules.Population` pointer | root package, `config.go` (types) and `defaults.go`; bounds in `bounds.go` |
+| `Population`, `Knot`, `RegionPopulation`, the `Modules.Population` pointer | root package, `config.go` (types) and `defaults.go`; bounds in `bounds.go` |
 | Validation, the warnings and the diagnostic | root package, `validate.go`, `errors.go` |
 | Pure rules: the schedule interpolation, the effective rate, the carry, the offset, the replacement ratio and the gain test | `internal/population` (stdlib only, over primitive slices and indexes, converted inline at the call, architecture.md 2.9) |
 | The computation each tick, the views, the cap and the floor | root package, `world.go` and `spawner.go` (the view fields) |

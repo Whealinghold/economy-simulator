@@ -1757,6 +1757,14 @@ of one configuration hash alike. The pointer is written even when the struct is 
 `Modules.Subsistence: &SubsistenceConfig{}` is `0008 0000`, and its pair goes after the pairs
 of the ids below 8 and before those of the ids above it, whatever the order of building.
 
+The population module (`Modules.Population`, id 3 in `Modules`; the type is `Population`, not
+`PopulationConfig`) adds: `Population` has `BirthSchedule` 1, `DeathSchedule` 2,
+`MinHouseholds` 3, `BirthStake` 4, `Regions` 5; `Knot` has `Ratio` 1, `Rate` 2;
+`RegionPopulation` has `Region` 1, `BirthScale` 2, `DeathScale` 3, `HouseholdCap` 4. The
+schedules are written in knot order and the rows by region. The pointer is written even
+when the struct is zero, so `Modules.Population: &Population{}` is `0003 0000`, and its pair
+goes between the pairs of ids 2 and 4 whatever the order of building.
+
 8.2.3. **What an append must do.** A pull request that adds a module or a field obeys
 three rules, and the pinned hash of 8.2.5 fails if it does not: (1) a module's pointer
 takes its position in the `Modules` row and nothing else moves; (2) a field added to a

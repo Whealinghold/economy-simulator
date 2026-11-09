@@ -159,6 +159,10 @@ const (
 	// ReasonRelief is the money the pool of a region pays a household below the
 	// relief line, with the estates module on (spec-estates.md 2.6).
 	ReasonRelief Reason = "relief"
+	// ReasonDeaths is the money and goods of households the population module
+	// removed from an agent that keeps others, moved to the estate (spec-population.md
+	// 4.7).
+	ReasonDeaths Reason = "deaths"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -309,6 +313,12 @@ const (
 	CauseLimit Cause = "limit"
 	// CauseCap is a money flow that ended at the cap of MaxFlowTotal.
 	CauseCap Cause = "cap"
+	// CausePopulation is a death of the population module: a reduction or a
+	// removal by the schedule (spec-population.md 4.7).
+	CausePopulation Cause = "population"
+	// CauseBirths is households born through the population module, entering a
+	// role (spec-population.md 4.3).
+	CauseBirths Cause = "births"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -1048,6 +1058,62 @@ type OwnUseChanged struct {
 	Output []Amount
 }
 
+// ScaleKind names which of a region's two population scales a call sets, a member
+// of a closed set (spec-observability.md 4.1; spec-population.md 3.6).
+type ScaleKind string
+
+// The two scales of a region.
+const (
+	// ScaleBirth is the multiplier of the birth schedule.
+	ScaleBirth ScaleKind = "birth"
+	// ScaleDeath is the multiplier of the death schedule.
+	ScaleDeath ScaleKind = "death"
+)
+
+// PopulationChanged is the aggregate of the population module for one region and
+// role: emitted once per region and role per tick, in ascending role order, after
+// the region's plan and after EntryLimited, when any count other than Exposed,
+// Unfed and NoRatio is non-zero, and never otherwise (spec-population.md 10.1,
+// FR-POP-031). It is emitted only when the population module is on. The counts
+// are households. BirthsCeiling, the births a role ceiling cut, is appended with
+// the settlements module.
+type PopulationChanged struct {
+	Tick int64
+	// Region and Role are the cell.
+	Region RegionID
+	Role   RoleID
+	// Exposed is the households the schedule saw; Unfed those it did not because
+	// they were unfed, and NoRatio those whose agent has no welfare ratio.
+	Exposed, Unfed, NoRatio int64
+	// BirthsDue and DeathsDue are the whole households the carries produced,
+	// before the floors and the cap.
+	BirthsDue, DeathsDue int64
+	// DeathsCut is the deaths cut to an agent's fed households and DeathsHeld
+	// those dropped by MinHouseholds.
+	DeathsCut, DeathsHeld int64
+	// BirthsCapped is the births dropped by the region's HouseholdCap.
+	BirthsCapped int64
+	// BirthsUnfunded is the births the pool could not fund.
+	BirthsUnfunded int64
+	// RateClamped is the exposed households whose effective rate was clamped at
+	// 10 000.
+	RateClamped int64
+	// BirthsDone and DeathsDone are the households the module added and removed.
+	BirthsDone, DeathsDone int64
+}
+
+// PopulationScaled is emitted by a call that sets the birth or death scale of a
+// region, once per changed key, with the next step's Tick (spec-observability.md
+// 4.4.4). It is emitted only when the population module is on.
+type PopulationScaled struct {
+	Tick int64
+	// Region is the region and Which the scale set.
+	Region RegionID
+	Which  ScaleKind
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
 func (RunStarted) isEvent()        {}
 func (RunEnded) isEvent()          {}
 func (TickStarted) isEvent()       {}
@@ -1081,3 +1147,5 @@ func (MoneyFlowScaled) isEvent()   {}
 func (EndowmentChanged) isEvent()  {}
 func (EndowmentAdjusted) isEvent() {}
 func (OwnUseChanged) isEvent()     {}
+func (PopulationChanged) isEvent() {}
+func (PopulationScaled) isEvent()  {}

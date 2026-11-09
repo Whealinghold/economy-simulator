@@ -860,4 +860,36 @@
 //   - OwnUseChanged: the event emitted once per region and role per tick in which a household
 //     entered, left, started, was blocked or retried, or own-use output was created
 //     (spec-subsistence.md 14.1).
+//   - Birth, death (of a household): the formation and the dissolution of a household by the
+//     population module, driven by the household's own welfare ratio through a rate schedule
+//     (spec-population.md 3). A birth is an entry and a death a reduction of an agent's weight.
+//   - Rate schedule: the knots of a piecewise-linear map from a welfare ratio to a yearly rate
+//     in basis points, one for births and one for deaths (spec-population.md 3.5).
+//   - Replacement ratio: the welfare ratio at which births equal deaths, found on the knots of
+//     the two schedules (spec-population.md 5.7).
+//   - Exposed household: a household of an agent that is in the schedule's reach this tick:
+//     fed, with a ratio, not external (spec-population.md 3.7).
+//   - Natural increase: births less deaths of a window, per region and role, in the snapshot
+//     (spec-population.md 6.1, 10.4).
+//   - Birth stake: the share, in basis points, of StartMoney that a born household brings,
+//     drawn from the estate pool (spec-population.md 4.3).
+//   - Household cap: the most households a region holds, a cap on births; 0 means none
+//     (spec-population.md 4.4.2).
+//   - Death carry, birth carry: the exact remainder of the rate times the exposed households,
+//     in units of 1/D, kept for an agent and for a role in a region so a slow rate is exact
+//     over a run (spec-population.md 3.8).
+//   - Fixed factor: an endowment that a recipe's executions draw from, so the welfare ratio
+//     falls as households rise (spec-population.md 5.2).
+//   - Gain: the slope of natural increase against the ratio at the replacement ratio, the
+//     figure the warning population_gain tests (spec-population.md 5.4).
+//   - Population: the configuration of the population module (Modules.Population).
+//   - RegionPopulation: the row of the population module for one region: its birth and death
+//     scales and its household cap (spec-population.md 8).
+//   - PopulationState: the snapshot figures of the population module: the replacement ratio,
+//     whether there is one, and the gain (spec-observability.md 5.3.10).
+//   - PopulationChanged: the event emitted once per region and role per tick in which any
+//     birth or death count is non-zero (spec-population.md 10.1).
+//   - PopulationScaled: the event emitted when the birth or death scale of a region is set
+//     between ticks (spec-population.md 10.2).
+//   - ScaleKind: which of the two population scales of a region, birth or death, a call sets.
 package economysim

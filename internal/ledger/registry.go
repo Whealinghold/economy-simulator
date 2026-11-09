@@ -67,6 +67,10 @@ const (
 	// relief line (spec-estates.md 2.6): estate to agent. It is a declared row
 	// past the Stage 1 size; it opens no boundary account.
 	Relief
+	// Deaths is the money and goods the estate takes from an agent that keeps
+	// households after a death of the population module (spec-population.md
+	// 4.7): agent to estate. It is a declared row and opens no boundary account.
+	Deaths
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -153,6 +157,8 @@ var table = [NumReasons][2]row{
 	WantConsumption: {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 6}},
 	// relief runs from an estate to an agent (spec-ledger.md 7.2).
 	Relief: {thingMoney: {true, Internal, setEstate, setAgent, false, true, 12}},
+	// deaths runs from an agent to an estate (spec-ledger.md 7.2; rank 41 is its pinned code).
+	Deaths: {thingMoney: {true, Internal, setAgent, setEstate, false, true, 41}, thingGoods: {true, Internal, setAgent, setEstate, false, true, 41}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

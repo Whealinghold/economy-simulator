@@ -55,6 +55,9 @@ var skipFields = []string{
 	// lots of the account being read, exitTick.sets, sums and unskilled the role
 	// summaries it fills through fillRoles. All are rebuilt before each use.
 	"World.lotBuf", "estates.lots", "exitTick.sets", "exitTick.sums", "exitTick.unskilled",
+	// popState.snap is the snapshot's scratch, rebuilt before each use, and
+	// popState.figures is derived from cfg alone (population.go).
+	"popState.snap", "popState.figures",
 	// The region graph and the table of effective reference prices are tables derived
 	// from cfg and the edge statuses (regions.go): the world's value is in cfg and in
 	// regionState.status, which the walk does hash and which is nil while every status

@@ -1,0 +1,14 @@
+# The population module at the placeholders of spec-population.md 8 (plan 2-11 D438). A test double, not
+# a design: both schedules are the defaults written out, so the rates cross at 12 000 (250 basis points a
+# year), and the world's renewal is 0 (the module is the only source of new households, FR-POP-020).
+# The fixed factor is a separate layer: overlay/resources-binding.toml (S37, S39, S41).
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, the resources overlay, this file.
+
+[world]
+renewal = 0
+
+[modules.population]
+birth_schedule = [ { ratio = 8000, rate = 250 }, { ratio = 16000, rate = 250 } ]
+death_schedule = [ { ratio = 8000, rate = 450 }, { ratio = 16000, rate = 50 } ]
+min_households = 1
+birth_stake = 10000

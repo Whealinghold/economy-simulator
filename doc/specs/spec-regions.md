@@ -550,6 +550,7 @@ table of the subject's owner, combined with the default in one of three ways:**
 | yield | `Yields` | region, recipe | `spec-production.md` 6.1 | scale |
 | taste | `Modules.Demand.RegionTastes` | region, want | `spec-demand.md` 3.2 | scale |
 | migration shares | `Modules.Migration.Regions` | region | `spec-migration.md` 11.2 | replace (`OutShare`, `InShare`) |
+| population rows | `Modules.Population.Regions` | region | `spec-population.md` 8 | scale (`BirthScale`, `DeathScale`), replace (`HouseholdCap`) |
 | endowments | `Modules.Resources.Endowments` | region, resource | `spec-resources.md` 3.3 | replace (`Capacity`, `Initial`), scale (`RegenScaleBP`) |
 | outside lines | `Modules.External.Nodes[].Lines` | node region, commodity | `spec-external-sector.md` 3.3 | replace |
 | outside gate scale | `Modules.External.Nodes[].Gates` | node region, gate region | `spec-external-sector.md` 3.2.4 | scale |

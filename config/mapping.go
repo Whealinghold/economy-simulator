@@ -248,34 +248,42 @@ func (l *loader) config(tree map[string]any) economysim.Config {
 		ws.finish()
 	}
 	// The table of a module is [modules.<name>] and is present if and only if the
-	// module is on (spec-config.md 6.2.1). A module that is not built stays an
-	// unknown key; each module's change adds its table here, in the order of the
-	// Modules row.
+	// module is on (spec-config.md 6.2.1); see modules.
 	if m := root.sub("modules"); m != nil {
-		if d := m.sub("demand"); d != nil {
-			cfg.Modules.Demand = l.demand(d)
-			d.finish()
-		}
-		if ms := m.sub("money_supply"); ms != nil {
-			cfg.Modules.MoneySupply = l.moneySupply(ms)
-			ms.finish()
-		}
-		if rs := m.sub("resources"); rs != nil {
-			cfg.Modules.Resources = l.resources(rs)
-			rs.finish()
-		}
-		if ss := m.sub("subsistence"); ss != nil {
-			cfg.Modules.Subsistence = l.subsistence(ss)
-			ss.finish()
-		}
-		if es := m.sub("estates"); es != nil {
-			cfg.Modules.Estates = &economysim.Estates{}
-			es.finish()
-		}
-		m.finish()
+		l.modules(m, &cfg)
 	}
 	root.finish()
 	return cfg
+}
+
+// modules reads the [modules] table. A module that is not built stays an unknown
+// key; each module's change adds its table here, in the order of the Modules row.
+func (l *loader) modules(m *tbl, cfg *economysim.Config) {
+	if d := m.sub("demand"); d != nil {
+		cfg.Modules.Demand = l.demand(d)
+		d.finish()
+	}
+	if ms := m.sub("money_supply"); ms != nil {
+		cfg.Modules.MoneySupply = l.moneySupply(ms)
+		ms.finish()
+	}
+	if ps := m.sub("population"); ps != nil {
+		cfg.Modules.Population = l.population(ps)
+		ps.finish()
+	}
+	if rs := m.sub("resources"); rs != nil {
+		cfg.Modules.Resources = l.resources(rs)
+		rs.finish()
+	}
+	if ss := m.sub("subsistence"); ss != nil {
+		cfg.Modules.Subsistence = l.subsistence(ss)
+		ss.finish()
+	}
+	if es := m.sub("estates"); es != nil {
+		cfg.Modules.Estates = &economysim.Estates{}
+		es.finish()
+	}
+	m.finish()
 }
 
 // world reads the [world] table over DefaultWorldParams (spec-config.md 3.7.2).
@@ -653,6 +661,38 @@ func (l *loader) resource(id string, t *tbl) economysim.Resource {
 	})
 	t.text("label", &r.Label)
 	return r
+}
+
+// population reads [modules.population] (spec-config.md 6.2.1,
+// spec-population.md 8): the two schedules as arrays of { ratio, rate } over
+// DefaultPopulation, replaced whole by a later layer, the two tunables, and the
+// region rows as [region.<id>] over DefaultRegionPopulation. The table being
+// present switches the module on, even with no key. The rows come out in region
+// order because every level is read in ID order.
+func (l *loader) population(t *tbl) *economysim.Population {
+	m := economysim.DefaultPopulation()
+	knots := func(key string, dst *[]economysim.Knot) {
+		var ks []economysim.Knot
+		if t.rows(key, func(e *tbl) {
+			var k economysim.Knot
+			e.need("ratio", integer(e, "ratio", &k.Ratio))
+			e.need("rate", integer(e, "rate", &k.Rate))
+			ks = append(ks, k)
+		}) {
+			*dst = ks
+		}
+	}
+	knots("birth_schedule", &m.BirthSchedule)
+	knots("death_schedule", &m.DeathSchedule)
+	readInts(t, []intField{{"min_households", &m.MinHouseholds}, {"birth_stake", &m.BirthStake}})
+	t.entities("region", func(id string, e *tbl) {
+		row := economysim.DefaultRegionPopulation(id)
+		readInts(e, []intField{
+			{"birth_scale", &row.BirthScale}, {"death_scale", &row.DeathScale}, {"household_cap", &row.HouseholdCap},
+		})
+		m.Regions = append(m.Regions, row)
+	})
+	return &m
 }
 
 // subsistence reads [modules.subsistence] (spec-config.md 6.2.1,
