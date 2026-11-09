@@ -224,7 +224,7 @@ func (p *Population) replacementOf() (rstar, lo, dR, dX int64, ok bool) {
 // populationWarnings returns the warnings of spec-population.md 9.2 and the two
 // diagnostics (5.7, 4.6.1), in no particular order. They read a configuration
 // that may not validate, so each guards what it reads. None fails Validate.
-func populationWarnings(c *Config) []Warning {
+func populationWarnings(c *Config, lk lookup) []Warning {
 	m := c.Modules.Population
 	if m == nil {
 		return nil
@@ -240,7 +240,7 @@ func populationWarnings(c *Config) []Warning {
 		add("no_fixed_factor", base...)
 	}
 	if scheduleOK(m.BirthSchedule) && scheduleOK(m.DeathSchedule) {
-		popScheduleWarnings(c, m, base, add)
+		popScheduleWarnings(c, lk, m, base, add)
 	}
 	return out
 }
@@ -261,11 +261,11 @@ func popRenewalWarnings(c *Config, add func(string, ...string)) {
 // schedule_direction, no_replacement_ratio, replacement_ratio,
 // replacement_above_closed_ceiling, population_gain and the two plan warnings of
 // the resources module.
-func popScheduleWarnings(c *Config, m *Population, base []string, add func(string, ...string)) {
-	if fallsAnywhere(m.BirthSchedule) {
+func popScheduleWarnings(c *Config, lk lookup, m *Population, base []string, add func(string, ...string)) {
+	if steps(m.BirthSchedule, -1) {
 		add("schedule_direction", append(slices.Clone(base), "birth_schedule")...)
 	}
-	if risesAnywhere(m.DeathSchedule) {
+	if steps(m.DeathSchedule, 1) {
 		add("schedule_direction", append(slices.Clone(base), "death_schedule")...)
 	}
 	rstar, lo, dR, dX, ok := m.replacementOf()
@@ -280,7 +280,7 @@ func popScheduleWarnings(c *Config, m *Population, base []string, add func(strin
 	if rstar > wholeBP && c.Modules.Demand == nil {
 		add("replacement_above_closed_ceiling", base...)
 	}
-	if population.GainWarn(rstar, dR, dX, longestWindow(c), c.Calendar.TicksPerYear()) {
+	if population.GainWarn(rstar, dR, dX, longestWindow(c, lk), c.Calendar.TicksPerYear()) {
 		add("population_gain", base...)
 	}
 	popPlanWarnings(c, rstar, dR, dX, add)
@@ -293,20 +293,11 @@ func sortedSearchBelow(ks []Knot, x int64) int {
 	return i - 1
 }
 
-// fallsAnywhere reports whether a schedule's rate falls from one knot to the next.
-func fallsAnywhere(ks []Knot) bool {
+// steps reports whether a schedule's rate moves in the direction of sign (-1 falls,
+// 1 rises) from one knot to the next.
+func steps(ks []Knot, sign int) bool {
 	for i := 1; i < len(ks); i++ {
-		if ks[i].Rate < ks[i-1].Rate {
-			return true
-		}
-	}
-	return false
-}
-
-// risesAnywhere reports whether a schedule's rate rises from one knot to the next.
-func risesAnywhere(ks []Knot) bool {
-	for i := 1; i < len(ks); i++ {
-		if ks[i].Rate > ks[i-1].Rate {
+		if cmp.Compare(ks[i].Rate, ks[i-1].Rate) == sign {
 			return true
 		}
 	}
@@ -355,9 +346,8 @@ func hasCap(m *Population) bool {
 
 // longestWindow is the longest effective welfare window in ticks: the world's, or
 // a role's WindowCycles times its longest job (spec-welfare-and-wages.md 2.3.3).
-func longestWindow(c *Config) int64 {
+func longestWindow(c *Config, lk lookup) int64 {
 	t := c.World.WelfareWindow
-	lk := newLookup(c)
 	for i := range c.Roles {
 		if p, ok := checked.Mul(c.World.WindowCycles, longestDurationAny(c, lk, &c.Roles[i])); ok {
 			t = max(t, p)
@@ -811,7 +801,12 @@ func (w *World) savePopulation(cw *codec.Writer) error {
 	writeSparse(cw, p.birthCarry, p.roles)
 	n := 0
 	for g := range p.effBirth {
-		n += b2i(p.effBirth[g] != p.rowBirth[g]) + b2i(p.effDeath[g] != p.rowDeath[g])
+		if p.effBirth[g] != p.rowBirth[g] {
+			n++
+		}
+		if p.effDeath[g] != p.rowDeath[g] {
+			n++
+		}
 	}
 	cw.Count(n)
 	for g := range p.effBirth {
@@ -830,14 +825,6 @@ func (w *World) savePopulation(cw *codec.Writer) error {
 	writeSparse(cw, p.heldRun, p.roles)
 	writeSparseByRegion(cw, p.extinctRun)
 	return nil
-}
-
-// b2i is 1 for true and 0 for false.
-func b2i(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // loadPopulation reads tag 14: a birth carry from 1 to D - 1, a scale that is not

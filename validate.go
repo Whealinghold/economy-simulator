@@ -2054,7 +2054,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, moneyWarnings(c, lk)...)
 	out = append(out, resourceWarnings(c, lk)...)
 	out = append(out, subsistenceWarnings(c, lk)...)
-	out = append(out, populationWarnings(c)...)
+	out = append(out, populationWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }
