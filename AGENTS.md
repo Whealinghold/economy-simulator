@@ -67,7 +67,8 @@ with a fresh random value in the same change.
   Setting-specific content (names, currencies, denominations, role and region
   lists) belongs in `examples/` or in configuration files, never in the core.
   One exception: the `RPG` preset of `denomination/` (`spec-currency.md` 7,
-  FR-CUR-017, a functional requirement ID, see `doc/specs/README.md`) is the one setting vocabulary allowed outside `examples/`, as a
+  FR-CUR-017; FR stands for functional requirement, see `doc/specs/README.md`)
+  is the one setting vocabulary allowed outside `examples/`, as a
   display-only preset that nothing in the root, `internal/`, `config/` or
   `strategy/` imports (FR-CUR-002).
   When a design choice is a trade-off between generic and convenient for the
@@ -149,7 +150,7 @@ economy-sim/
 │                           #   root and config/, imported by nothing
 ├── denomination/           # optional display of Money: the ladder, the formatter
 │                           #   and the RPG preset; stdlib only; imported by
-│                           #   consumers and examples, never by the root,
+│                           #   consumers and examples, not by the root,
 │                           #   internal/, config/ or strategy/ (this ban changes
 │                           #   only by amending architecture.md 2.6 and this file)
 ├── internal/               # stdlib only; never imports the root, config/,
