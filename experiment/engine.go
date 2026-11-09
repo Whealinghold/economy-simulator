@@ -1,6 +1,7 @@
 package experiment
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -49,7 +50,7 @@ type engine struct {
 
 func newEngine(ctx context.Context, e *Spec, cfg economysim.Config, w *economysim.World, key Key, steps []Step, p progress) *engine {
 	g := &engine{e: e, ctx: ctx, cfg: cfg, w: w, key: key, steps: steps, bounds: e.boundaries(steps), progress: p}
-	g.next, _ = slices.BinarySearchFunc(steps, p.tick, func(s Step, t int64) int { return cmpInt64(s.Tick, t) })
+	g.next, _ = slices.BinarySearchFunc(steps, p.tick, func(s Step, t int64) int { return cmp.Compare(s.Tick, t) })
 	return g
 }
 

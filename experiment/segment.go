@@ -1,6 +1,7 @@
 package experiment
 
 import (
+	"cmp"
 	"slices"
 )
 
@@ -19,18 +20,8 @@ func (e Spec) steps(values []int64, variant int) []Step {
 	if variant >= 0 {
 		out = append(out, e.Branch.Variants[variant].Steps...)
 	}
-	slices.SortStableFunc(out, func(a, b Step) int { return cmpInt64(a.Tick, b.Tick) })
+	slices.SortStableFunc(out, func(a, b Step) int { return cmp.Compare(a.Tick, b.Tick) })
 	return out
-}
-
-func cmpInt64(a, b int64) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
 }
 
 // boundaries returns the ticks a run stops at, ascending and distinct: 0, the

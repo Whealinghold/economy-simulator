@@ -223,12 +223,17 @@ func (e Spec) observers(k Key) []economysim.Option {
 // Options(key), then the measures' observers, then WithSeed last, so the seed is
 // the harness's whatever the options say (spec-experiments.md 5.1.3 step 2).
 func (e Spec) buildOptions(k Key, seed uint64) []economysim.Option {
+	return append(e.worldOptions(k), economysim.WithSeed(seed))
+}
+
+// worldOptions are the consumer's Options(k) and then the measures' observers, in a
+// slice of their own.
+func (e Spec) worldOptions(k Key) []economysim.Option {
 	var opts []economysim.Option
 	if e.Options != nil {
 		opts = e.Options(k)
 	}
-	opts = append(slices.Clone(opts), e.observers(k)...)
-	return append(opts, economysim.WithSeed(seed))
+	return append(slices.Clone(opts), e.observers(k)...)
 }
 
 // runAll runs the sweep sequentially on the caller's goroutine and returns the
