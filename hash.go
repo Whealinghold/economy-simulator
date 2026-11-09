@@ -41,7 +41,9 @@ func encodeConfig(c Config) []byte {
 		pairsRecipe(e, r, c.Modules.Resources != nil)
 	})
 	encodeList(e, 5, c.Yields, pairsYield)
-	encodeList(e, 6, c.Roles, pairsRole)
+	encodeList(e, 6, c.Roles, func(e *encoder, r Role) {
+		pairsRole(e, r, c.Modules.Information != nil)
+	})
 	encodeList(e, 7, c.Regions, func(e *encoder, r Region) {
 		pairsRegion(e, r, c.Modules.Estates != nil)
 	})
@@ -292,9 +294,10 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 18. Label is presentation only
-// and has no id.
-func pairsRole(e *encoder, r Role) {
+// pairsRole writes the pairs of a Role: ids 1 to 19. Label is presentation only
+// and has no id. Informed 19 is the information module's and is a pair only
+// while it is on (informationOn) and the flag is true.
+func pairsRole(e *encoder, r Role, informationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
 	encodeList(e, 3, r.Upkeep, pairsItem)
@@ -313,6 +316,7 @@ func pairsRole(e *encoder, r Role) {
 	e.num(16, r.MaxTrainees)
 	e.num(17, r.TeachingLoad)
 	e.flag(18, r.Closed)
+	e.flag(19, informationOn && r.Informed)
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -421,9 +425,19 @@ func pairsModules(e *encoder, m Modules) {
 		pairsPopulation(e, *m.Population)
 		e.end()
 	}
+	if m.Transport != nil {
+		e.id(4)
+		pairsTransport(e, *m.Transport)
+		e.end()
+	}
 	if m.Resources != nil {
 		e.id(5)
 		pairsResources(e, *m.Resources)
+		e.end()
+	}
+	if m.Information != nil {
+		e.id(6)
+		pairsInformation(e, *m.Information)
 		e.end()
 	}
 	if m.Subsistence != nil {
@@ -533,6 +547,33 @@ func pairsSubsistence(e *encoder, s SubsistenceConfig) {
 	e.num(3, s.EnterTicks)
 	e.num(4, s.ExitTicks)
 	e.num(5, s.RetryJobs)
+}
+
+// pairsTransport writes the pairs of a Transport: Modes 1 (Mode: ID 1, Speed 2,
+// UnitMass 3, UnitBulk 4, Crew 5, Vehicle 6, WearPerTick 7, Feed 8 (an Item: the
+// ids of pairsItem), Haul 9, HaulSpan 10). Label is presentation only and has no
+// id. The modes are in ID order and the feed in commodity order.
+func pairsTransport(e *encoder, t Transport) {
+	encodeList(e, 1, t.Modes, func(e *encoder, m Mode) {
+		e.text(1, m.ID)
+		e.num(2, m.Speed)
+		e.num(3, m.UnitMass)
+		e.num(4, m.UnitBulk)
+		e.num(5, m.Crew)
+		e.text(6, m.Vehicle)
+		e.num(7, m.WearPerTick)
+		encodeList(e, 8, m.Feed, pairsItem)
+		e.text(9, m.Haul)
+		e.num(10, m.HaulSpan)
+	})
+}
+
+// pairsInformation writes the pairs of an Information: InfoSpeed 1,
+// RumourErrorBP 2, RumourMaxAge 3.
+func pairsInformation(e *encoder, i Information) {
+	e.num(1, i.InfoSpeed)
+	e.num(2, i.RumourErrorBP)
+	e.num(3, i.RumourMaxAge)
 }
 
 // pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,

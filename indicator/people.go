@@ -42,20 +42,7 @@ type HouseholdsResult struct {
 // journey is in its origin until it is relocated, and an estate is in neither
 // count (spec-indicators.md 6.1, 6.3). ticksPerYear is the calendar's.
 func Households(w Window, open, closing economysim.Snapshot, ticksPerYear int64) (HouseholdsResult, error) {
-	if err := w.checkSnapshots("Households", open, closing); err != nil {
-		return HouseholdsResult{}, err
-	}
-	if ticksPerYear < 1 {
-		return HouseholdsResult{}, wrap("Households", "ticks per year", ErrRange)
-	}
-	if err := w.checkPeople("Households"); err != nil {
-		return HouseholdsResult{}, err
-	}
-	oa, err := agentsOf(w, open)
-	if err != nil {
-		return HouseholdsResult{}, err
-	}
-	ca, err := agentsOf(w, closing)
+	oa, ca, err := householdsInputs(w, open, closing, ticksPerYear)
 	if err != nil {
 		return HouseholdsResult{}, err
 	}
@@ -81,6 +68,24 @@ func Households(w Window, open, closing economysim.Snapshot, ticksPerYear int64)
 		err = wrap("Households", "ticks", ErrOverflow)
 	}
 	return res, err
+}
+
+// householdsInputs checks the inputs of Households and returns the agent counts at both boundaries.
+func householdsInputs(w Window, open, closing economysim.Snapshot, ticksPerYear int64) (oa, ca []int64, err error) {
+	if err := w.checkSnapshots("Households", open, closing); err != nil {
+		return nil, nil, err
+	}
+	if ticksPerYear < 1 {
+		return nil, nil, wrap("Households", "ticks per year", ErrRange)
+	}
+	if err := w.checkPeople("Households"); err != nil {
+		return nil, nil, err
+	}
+	if oa, err = agentsOf(w, open); err != nil {
+		return nil, nil, err
+	}
+	ca, err = agentsOf(w, closing)
+	return oa, ca, err
 }
 
 // checkPeople returns ErrRange for a hand-built window whose people table cannot
@@ -269,22 +274,11 @@ func RoleShares(w Window) (RoleSharesResult, error) {
 	if len(w.OpenHouseholds) > len(w.People) || len(w.CloseHouseholds) > len(w.People) {
 		return RoleSharesResult{}, wrap("RoleShares", "people", ErrRange) // byRegion indexes by region * Roles + role
 	}
-	openReg, err := byRegion(w, w.OpenHouseholds)
+	t, err := shareTotalsOf(w)
 	if err != nil {
 		return RoleSharesResult{}, err
 	}
-	closeReg, err := byRegion(w, w.CloseHouseholds)
-	if err != nil {
-		return RoleSharesResult{}, err
-	}
-	openAll, err := net("RoleShares", "households", w.OpenHouseholds)
-	if err != nil {
-		return RoleSharesResult{}, err
-	}
-	closeAll, err := net("RoleShares", "households", w.CloseHouseholds)
-	if err != nil {
-		return RoleSharesResult{}, err
-	}
+	openReg, closeReg, openAll, closeAll := t.openReg, t.closeReg, t.openAll, t.closeAll
 	for i := range w.People {
 		g := i / w.Roles
 		row := ShareRow{Region: economysim.RegionID(g), Role: economysim.RoleID(i % w.Roles), Open: w.OpenHouseholds[i], Close: w.CloseHouseholds[i]}
@@ -300,6 +294,27 @@ func RoleShares(w Window) (RoleSharesResult, error) {
 		res.Rows = append(res.Rows, row)
 	}
 	return res, nil
+}
+
+// shareTotals are the region and realm household totals at both boundaries.
+type shareTotals struct {
+	openReg, closeReg []int64
+	openAll, closeAll int64
+}
+
+// shareTotalsOf sums the household tables by region and over the realm.
+func shareTotalsOf(w Window) (t shareTotals, err error) {
+	if t.openReg, err = byRegion(w, w.OpenHouseholds); err != nil {
+		return t, err
+	}
+	if t.closeReg, err = byRegion(w, w.CloseHouseholds); err != nil {
+		return t, err
+	}
+	if t.openAll, err = net("RoleShares", "households", w.OpenHouseholds); err != nil {
+		return t, err
+	}
+	t.closeAll, err = net("RoleShares", "households", w.CloseHouseholds)
+	return t, err
 }
 
 // byRegion sums a (region, role) table by region, or returns ErrOverflow.
@@ -346,19 +361,27 @@ type RealWageResult struct {
 	Rows       []WageRow
 }
 
+// checkWage checks the snapshot and the price table against the configuration.
+func checkWage(cfg economysim.Config, s economysim.Snapshot, p Prices) error {
+	if s.ConfigHash != economysim.HashConfig(cfg) {
+		return wrap("RealWage", "snapshot", ErrConfigMismatch)
+	}
+	if err := p.Compatible(s.ConfigHash); err != nil {
+		return err
+	}
+	if p.Regions != len(cfg.Regions) || p.Commodities != len(cfg.Commodities) || len(p.Cells) != p.Regions*p.Commodities {
+		return wrap("RealWage", "prices", ErrRange)
+	}
+	return nil
+}
+
 // RealWage returns, for each (region, role) of the snapshot, rdiv(10 000 * wage,
 // upkeep cost) with the upkeep of the role (its own list, else the world's) plus
 // the region's extra, at the prices of p (spec-indicators.md 9.1 row 14). cfg is
 // the configuration of the snapshot's world as World.Config returns it.
 func RealWage(cfg economysim.Config, s economysim.Snapshot, p Prices) (RealWageResult, error) {
-	if s.ConfigHash != economysim.HashConfig(cfg) {
-		return RealWageResult{}, wrap("RealWage", "snapshot", ErrConfigMismatch)
-	}
-	if err := p.Compatible(s.ConfigHash); err != nil {
+	if err := checkWage(cfg, s, p); err != nil {
 		return RealWageResult{}, err
-	}
-	if p.Regions != len(cfg.Regions) || p.Commodities != len(cfg.Commodities) || len(p.Cells) != p.Regions*p.Commodities {
-		return RealWageResult{}, wrap("RealWage", "prices", ErrRange)
 	}
 	res, ids := RealWageResult{ConfigHash: s.ConfigHash, Tick: s.Tick}, commodityIDs(cfg)
 	for _, r := range s.Roles {

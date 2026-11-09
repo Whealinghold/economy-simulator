@@ -244,7 +244,7 @@ all-on from it).
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | merged (PRs A, B, C) |
 | `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
 | `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | in progress |
-| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
+| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
 | `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
 | `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
 | `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
@@ -255,7 +255,7 @@ all-on from it).
 | `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | plan written |
 | `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
 | `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | plan written |
-| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | plan written |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | done on branch stage-2-23 (commit recorded at merge) |
 | `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
 

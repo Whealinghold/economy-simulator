@@ -701,7 +701,7 @@ func TestWork_FloorCountAndWarnRun(t *testing.T) {
 	w.buildRotation()
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, a); err != nil {
+	if err := w.fillAgentView(&v, a, viewWork); err != nil {
 		t.Fatalf("fillAgentView() error = %v, want nil", err)
 	}
 	v.HasRatio, v.Ratio, v.TargetRatio, v.WorkingTicks, v.Window, v.MinWorkShare = true, 20_000, 15_000, 0, 10, 4_000

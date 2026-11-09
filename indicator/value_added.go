@@ -68,11 +68,8 @@ func ValueAdded(w Window, cfg economysim.Config, open, closing economysim.Snapsh
 	if err != nil {
 		return ValueAddedResult{}, err
 	}
-	if len(cfg.Recipes) != w.Recipes || len(cfg.Commodities) != w.Commodities || economysim.HashConfig(cfg) != w.ConfigHash {
-		return ValueAddedResult{}, wrap("ValueAdded", "config", ErrConfigMismatch)
-	}
-	if len(w.Recipe) < w.Regions*w.Recipes { // a hand-built window; recipeRow indexes it by region * Recipes + recipe
-		return ValueAddedResult{}, wrap("ValueAdded", "recipe", ErrRange)
+	if err := checkConfig(w, cfg); err != nil {
+		return ValueAddedResult{}, err
 	}
 	cs, err := classSetsOf(cl)
 	if err != nil {
@@ -93,6 +90,17 @@ func ValueAdded(w Window, cfg economysim.Config, open, closing economysim.Snapsh
 	}
 	res.ByClass, err = collapseClasses(res.ByClass)
 	return res, err
+}
+
+// checkConfig checks that cfg is the window's configuration and that the window's recipe table is whole.
+func checkConfig(w Window, cfg economysim.Config) error {
+	if len(cfg.Recipes) != w.Recipes || len(cfg.Commodities) != w.Commodities || economysim.HashConfig(cfg) != w.ConfigHash {
+		return wrap("ValueAdded", "config", ErrConfigMismatch)
+	}
+	if len(w.Recipe) < w.Regions*w.Recipes { // a hand-built window; recipeRow indexes it by region * Recipes + recipe
+		return wrap("ValueAdded", "recipe", ErrRange)
+	}
+	return nil
 }
 
 // addRegion adds the by-recipe rows, the class rows and the WIP row of a region.

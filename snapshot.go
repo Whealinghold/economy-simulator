@@ -68,6 +68,13 @@ type Snapshot struct {
 	// Population is the figures of the population module; the zero value while it
 	// is off (spec-population.md 10.4).
 	Population PopulationState
+	// Shipments are the shipments in flight, by shipment ID; Away the agents away
+	// on a trip, ascending; TransitFactors the transit factors that are not 10 000,
+	// by (from, to, mode). All are empty with the transport module off
+	// (spec-observability.md 5.3.7, 5.3.8).
+	Shipments      []ShipmentRow
+	Away           []AgentID
+	TransitFactors []TransitFactorRow
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -325,6 +332,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 		Flows:      w.snapshotFlows(),
 		Endowments: w.snapshotEndowments(),
 		Population: w.popSnapshot(),
+		Shipments:  w.snapshotShipments(), Away: w.snapshotAway(), TransitFactors: w.snapshotFactors(),
 	}
 	s.Edges, s.Components = w.edgeRows(), w.componentCount()
 	s.Pending = flowTotals(w.ledger.AppendFlows(nil, false), w.moneyFlowList())

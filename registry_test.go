@@ -39,31 +39,31 @@ var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here.
 	"Modules.Credit", "Modules.Employment", "Modules.External", "Modules.Fiscal",
-	"Modules.Information", "Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
+	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Merchants", "Modules.Migration", "Modules.Policy", "Modules.Polity",
 	"Modules.Risk", "Modules.Saving",
 	"Modules.Settlements", "Modules.Storage", "Modules.Technology",
-	"Modules.Tenure", "Modules.Transport",
+	"Modules.Tenure",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Recipe.Builds", "Recipe.Needs", "Recipe.Repairs",
 	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer", "Role.Fixed",
-	"Role.Hireable", "Role.Informed", "Role.Merchant", "Role.MerchantFeeShare", "Role.Needs",
+	"Role.Hireable", "Role.Merchant", "Role.MerchantFeeShare", "Role.Needs",
 	"Role.Saver",
 	// Scopes (Go type names) of the modules that are not built.
 	"Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
 	"CreditTerms", "Duty", "Employer", "Employment", "External",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
-	"Information", "Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
-	"Jurisdiction", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration", "Mode",
+	"Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
+	"Jurisdiction", "Lend", "Lever", "Member", "Merchant", "Merchants", "Migration",
 	"OutsideGate", "OutsideLine", "OutsideNode", "OutsideSide",
 	"Payout", "Policy", "PolicyActor", "Polity", "ProjectWorth", "Purchase",
 	"RateLimit", "Reaction", "RegionMove", "RegionSettlement",
 	"Release", "Right", "Risk", "RoleRoom", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SeasonFactor", "SettlementClass",
 	"Settlements", "Storage", "StoreClass", "StoreRisk", "Tax", "TechField",
-	"Technology", "Tenure", "TenureTerm", "Toll", "Transport", "Underwrite",
+	"Technology", "Tenure", "TenureTerm", "Toll", "Underwrite",
 	"Window",
 }
 
@@ -78,7 +78,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,

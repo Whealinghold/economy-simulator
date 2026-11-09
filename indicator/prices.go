@@ -124,25 +124,33 @@ func PricesOfWindow(w Window) (Prices, error) {
 	}
 	cells := make([]economysim.Price, len(w.Markets))
 	for i, m := range w.Markets {
-		if m.SumV == 0 {
-			if m.Price < 0 {
-				return Prices{}, wrap("PricesOfWindow", "price", ErrRange)
-			}
-			cells[i] = m.Price
-			continue
+		p, err := m.unitValue()
+		if err != nil {
+			return Prices{}, err
 		}
-		if m.SumV < 0 { // a hand-built Window; a Tally never keeps a negative volume sum
-			return Prices{}, wrap("PricesOfWindow", "volume", ErrRange)
-		}
-		q, ok := measure.RoundDivU(m.SumPV.u(), measure.Uint128{Lo: uint64(m.SumV)})
-		wide, small := measure.FromUint128(q)
-		v, fits := measure.ToInt64(wide)
-		if !ok || !small || !fits {
-			return Prices{}, wrap("PricesOfWindow", "price", ErrOverflow)
-		}
-		cells[i] = economysim.Price(v)
+		cells[i] = p
 	}
 	return Prices{ConfigHash: w.ConfigHash, From: w.From, To: w.To, Regions: w.Regions, Commodities: w.Commodities, Cells: cells}, nil
+}
+
+// unitValue is the unit value of one market: the volume-weighted mean of its prices, or the carried price.
+func (m MarketTally) unitValue() (economysim.Price, error) {
+	if m.SumV == 0 {
+		if m.Price < 0 {
+			return 0, wrap("PricesOfWindow", "price", ErrRange)
+		}
+		return m.Price, nil
+	}
+	if m.SumV < 0 { // a hand-built Window; a Tally never keeps a negative volume sum
+		return 0, wrap("PricesOfWindow", "volume", ErrRange)
+	}
+	q, ok := measure.RoundDivU(m.SumPV.u(), measure.Uint128{Lo: uint64(m.SumV)})
+	wide, small := measure.FromUint128(q)
+	v, fits := measure.ToInt64(wide)
+	if !ok || !small || !fits {
+		return 0, wrap("PricesOfWindow", "price", ErrOverflow)
+	}
+	return economysim.Price(v), nil
 }
 
 // Weights selects the quantities an index is weighted by (spec-indicators.md

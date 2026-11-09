@@ -68,6 +68,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// transportState.due is the arrival schedule, derived from the shipments (and
+	// holding the stale entry of a trip dropped with its traveller); a restore
+	// rebuilds it without that entry, and its comparison counter is a measure of cost.
+	"transportState.due",
 	// The resources module's snapshot of the tick and its grants by agent slot are
 	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
 	// has them empty until then (spec-resources.md 15).
@@ -77,6 +81,12 @@ var skipFields = []string{
 	// list that existed after the golden was recorded must not move the off files
 	// (testing.md 7.1.1).
 	"roleRow.jobs",
+	// The information module's scratch: buf holds the rumours of the last view built
+	// (stale after the view), tally counts the views of a tick only when an observer
+	// is attached and is cleared at P3.6, and rumour.Record.restored says the record
+	// was loaded from a checkpoint, which is not state: a restored world and one that
+	// ran on hold the same ticks (information.go).
+	"information.buf", "information.tally", "Record.restored",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
@@ -377,6 +387,17 @@ func resourcesOn(w *World) bool { return w.res != nil }
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
 
+// wantsOrInformationOn is the guard of the P3.6 row, which two modules fill: the
+// demand module's WantShortfall and the information module's RumoursServed.
+func wantsOrInformationOn(w *World) bool { return w.demand != nil || w.info != nil }
+
+// informationOn is the guard of the row of the information module (P5.2).
+func informationOn(w *World) bool { return w.info != nil }
+
+// transportOn is the guard of the rows of the transport module (P1.3 and P3.1,
+// plan 2-12): an off world records no line for them.
+func transportOn(w *World) bool { return w.transport != nil }
+
 // reliefOn is the guard of the row of the relief pass: a world with the estates
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
@@ -395,6 +416,7 @@ var replayRows = []replayRow{
 	{id: "P0.2", run: noErr((*World).p02)},
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
+	{id: "P1.3", run: noErr((*World).p13Arrivals), on: transportOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
@@ -405,11 +427,13 @@ var replayRows = []replayRow{
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
+	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.4", run: (*World).p34Estates},
-	{id: "P3.6", run: noErr((*World).p36Aggregates), on: demandOn},
+	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P5.1", run: noErr((*World).p51Window)},
+	{id: "P5.2", run: noErr((*World).p52Record), on: informationOn},
 	{id: "P5.3", run: (*World).p53Markdown},
 	{id: "P5.4", run: noErr((*World).p54Outcomes)},
 	{id: "P6.1", run: (*World).p61Upkeep},

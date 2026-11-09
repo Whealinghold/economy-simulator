@@ -241,6 +241,11 @@ func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 			cohort.addInt(measure.FromInt64(a.Weight))
 		}
 	}
+	return set.finish(hh, cohort, absent)
+}
+
+// finish sets the counts and the cohort share from the sums.
+func (set *RowSet) finish(hh, cohort, absent acc) (RowSet, error) {
 	var err error
 	if set.Households, err = hh.int64("RowsOf", "households"); err != nil {
 		return RowSet{}, err
@@ -252,7 +257,7 @@ func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 		return RowSet{}, err
 	}
 	set.CohortShare, err = ratioWide("RowsOf", "cohort_share", cohort.v, hh.v)
-	return set, err
+	return *set, err
 }
 
 // total returns the row total of a column, and ok false where the value does not

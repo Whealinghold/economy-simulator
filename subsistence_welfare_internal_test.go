@@ -54,7 +54,7 @@ func TestWelfare_FedByFloorReadsTenThousand(t *testing.T) {
 		}
 		w.refreshViewCtx()
 		var v AgentView
-		if err := w.fillAgentView(&v, &w.agents[1]); err != nil {
+		if err := w.fillAgentView(&v, &w.agents[1], viewTrade); err != nil {
 			t.Fatal(err)
 		}
 		if !v.HasRatio || v.Ratio != 10_000 {

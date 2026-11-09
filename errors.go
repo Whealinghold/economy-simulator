@@ -448,3 +448,17 @@ var (
 	// Recipes of one role.
 	ErrOwnUseOverlap = errors.New("recipe is both a role recipe and an own-use recipe")
 )
+
+// The sentinels of the transport module (spec-transport.md 12.1).
+var (
+	// ErrVehicleNotDurable is a transport mode whose Vehicle commodity has no
+	// durability.
+	ErrVehicleNotDurable = errors.New("vehicle is not a durable commodity")
+	// ErrModeShape is a transport mode that mixes the fields of a self-carried and
+	// a hired mode, or a wear without a vehicle, or a haul span without a haul
+	// commodity.
+	ErrModeShape = errors.New("transport mode has the wrong shape")
+	// ErrUnknownMode is a transport mode that is not configured, in a request or a
+	// call.
+	ErrUnknownMode = errors.New("unknown transport mode")
+)

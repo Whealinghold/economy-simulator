@@ -200,25 +200,42 @@ func loadUnits(w Window, f flowSet) (unitTables, error) {
 		}
 		*t.dst = v
 	}
+	var err error
+	if u.arrIn, u.arrOut, err = loadArrivals(w); err != nil {
+		return unitTables{}, err
+	}
+	return u, nil
+}
+
+// arrivalCells returns the origin and destination cell indices of an arrival, and false when it is out of range.
+func (w Window) arrivalCells(a ArrivalTally) (o, d int, ok bool) {
+	if a.Origin < 0 || int(a.Origin) >= w.Regions || a.Destination < 0 || int(a.Destination) >= w.Regions || a.Commodity < 0 || int(a.Commodity) >= w.Commodities {
+		return 0, 0, false
+	}
+	return int(a.Origin)*w.Commodities + int(a.Commodity), int(a.Destination)*w.Commodities + int(a.Commodity), true
+}
+
+// loadArrivals sums the delivered and diverted units of the window's arrivals by origin and destination cell.
+func loadArrivals(w Window) (arrIn, arrOut []int64, err error) {
 	n := w.Regions * w.Commodities
-	u.arrIn, u.arrOut = make([]int64, n), make([]int64, n)
+	arrIn, arrOut = make([]int64, n), make([]int64, n)
 	for _, a := range w.Arrivals {
-		o, d := int(a.Origin)*w.Commodities+int(a.Commodity), int(a.Destination)*w.Commodities+int(a.Commodity)
-		if a.Origin < 0 || int(a.Origin) >= w.Regions || a.Destination < 0 || int(a.Destination) >= w.Regions || a.Commodity < 0 || int(a.Commodity) >= w.Commodities {
-			return unitTables{}, wrap("GDP", "arrivals", ErrRange)
+		o, d, ok := w.arrivalCells(a)
+		if !ok {
+			return nil, nil, wrap("GDP", "arrivals", ErrRange)
 		}
 		moved, err := net("GDP", "arrivals", []int64{a.Delivered, a.Diverted})
 		if err != nil {
-			return unitTables{}, err
+			return nil, nil, err
 		}
-		if u.arrOut[o], err = net("GDP", "arrivals", []int64{u.arrOut[o], moved}); err != nil {
-			return unitTables{}, err
+		if arrOut[o], err = net("GDP", "arrivals", []int64{arrOut[o], moved}); err != nil {
+			return nil, nil, err
 		}
-		if u.arrIn[d], err = net("GDP", "arrivals", []int64{u.arrIn[d], moved}); err != nil {
-			return unitTables{}, err
+		if arrIn[d], err = net("GDP", "arrivals", []int64{arrIn[d], moved}); err != nil {
+			return nil, nil, err
 		}
 	}
-	return u, nil
+	return arrIn, arrOut, nil
 }
 
 // regionAcc accumulates the terms of one region.
@@ -260,6 +277,11 @@ func (a *regionAcc) addCell(u unitTables, st, op stockTable, i int, pr economysi
 	a.arrIn.add(u.arrIn[i], pr)
 	a.arrOut.add(u.arrOut[i], pr)
 	a.endow.add(u.init[i], pr)
+	a.addReloc(u, st, op, i, pr)
+}
+
+// addReloc adds the relocation item of a cell at price pr.
+func (a *regionAcc) addReloc(u unitTables, st, op stockTable, i int, pr economysim.Price) {
 	// The units of the relocation item: what the ledger's identity (7.1.3, 8.2)
 	// leaves after every flow and arrival.
 	res, ok := measure.FromInt64(st.held[i]).Add(measure.FromInt64(op.held[i]).Neg())

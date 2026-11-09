@@ -357,6 +357,11 @@ func (w *World) checkpointCross() error {
 			return err
 		}
 	}
+	if w.transport != nil {
+		if err := w.transportCross(); err != nil {
+			return err
+		}
+	}
 	if w.money != nil {
 		return w.moneyCross()
 	}
@@ -369,6 +374,9 @@ func (w *World) coreCross() error {
 	first := w.estates.accounts[0]
 	for id := first + regions; id < w.ledger.Len(); id++ {
 		v, err := w.ledger.Account(id)
+		if err == nil && v.Kind == ledger.KindTransit && w.transport != nil {
+			continue // the transport module's cross-check and the audit read it (transport_state.go)
+		}
 		if err != nil || v.Kind != ledger.KindAgent {
 			return fmt.Errorf("%w: account %d is not an Agent account, the only kind after the estates in this configuration", ErrCheckpointCorrupt, id)
 		}

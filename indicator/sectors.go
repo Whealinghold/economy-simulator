@@ -180,32 +180,8 @@ func (a sectorAcc) row(w Window, open, closing economysim.Snapshot, r economysim
 	if err != nil {
 		return SectorRow{}, err
 	}
-	var mh, mp, hh, dh, dp acc
-	for _, g := range regionsOf(w, r) {
-		cr, or := closing.Regions[g], open.Regions[g]
-		mh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
-		mp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
-		hh.addInt(measure.FromInt64(cr.Households))
-		dh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
-		dh.addInt(measure.FromInt64(int64(or.MoneyHouseholds)).Neg())
-		dp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
-		dp.addInt(measure.FromInt64(int64(or.MoneyPool)).Neg())
-		if row.Binding, err = addBinding(row.Binding, w.Regional[g].Binding); err != nil {
-			return SectorRow{}, err
-		}
-	}
-	if row.MoneyHouseholds, err = mh.int64("Sectors", "money_households"); err != nil {
-		return SectorRow{}, err
-	}
-	if row.MoneyPool, err = mp.int64("Sectors", "money_pool"); err != nil {
-		return SectorRow{}, err
-	}
-	if row.Households, err = hh.int64("Sectors", "households"); err != nil {
-		return SectorRow{}, err
-	}
-	// The contract and treasury money are not in the snapshot yet (plans 2-15, POL):
-	// MoneyContract and MoneyTreasury stay 0 and are read from RegionRow when it has them.
-	if row.Money, err = net("Sectors", "money", []int64{row.MoneyHouseholds, row.MoneyPool, row.MoneyContract, row.MoneyTreasury}); err != nil {
+	dh, dp, err := row.fillMoney(w, open, closing, r)
+	if err != nil {
 		return SectorRow{}, err
 	}
 	dh.addInt(measure.FromInt64(row.DNW.Households))
@@ -227,6 +203,40 @@ func (a sectorAcc) row(w Window, open, closing economysim.Snapshot, r economysim
 	}
 	row.Account, err = account(w, open, closing, r, f)
 	return row, err
+}
+
+// fillMoney sums the money and households of the region's cells into row and returns the
+// open-to-close deltas of the household and pool money.
+func (row *SectorRow) fillMoney(w Window, open, closing economysim.Snapshot, r economysim.RegionID) (dh, dp acc, err error) {
+	var mh, mp, hh acc
+	for _, g := range regionsOf(w, r) {
+		cr, or := closing.Regions[g], open.Regions[g]
+		mh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
+		mp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		hh.addInt(measure.FromInt64(cr.Households))
+		dh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
+		dh.addInt(measure.FromInt64(int64(or.MoneyHouseholds)).Neg())
+		dp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		dp.addInt(measure.FromInt64(int64(or.MoneyPool)).Neg())
+		if row.Binding, err = addBinding(row.Binding, w.Regional[g].Binding); err != nil {
+			return dh, dp, err
+		}
+	}
+	if row.MoneyHouseholds, err = mh.int64("Sectors", "money_households"); err != nil {
+		return dh, dp, err
+	}
+	if row.MoneyPool, err = mp.int64("Sectors", "money_pool"); err != nil {
+		return dh, dp, err
+	}
+	if row.Households, err = hh.int64("Sectors", "households"); err != nil {
+		return dh, dp, err
+	}
+	// The contract and treasury money are not in the snapshot yet (plans 2-15, POL):
+	// MoneyContract and MoneyTreasury stay 0 and are read from RegionRow when it has them.
+	if row.Money, err = net("Sectors", "money", []int64{row.MoneyHouseholds, row.MoneyPool, row.MoneyContract, row.MoneyTreasury}); err != nil {
+		return dh, dp, err
+	}
+	return dh, dp, nil
 }
 
 // firstErr returns the first non-nil error.
