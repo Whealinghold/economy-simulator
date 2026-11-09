@@ -106,13 +106,17 @@ func PricesOfReference(cfg economysim.Config) Prices {
 // half to even, and where no unit traded the last published price carried
 // forward (spec-indicators.md 4.3.2, FR-IND-028). It carries the window's
 // configuration hash and ticks. A (region, commodity) the window saw no
-// clearing for has the price 0. err is ErrOverflow for a value past int64.
+// clearing for has the price 0. err is ErrOverflow for a value past int64 and
+// ErrRange for a negative volume sum.
 func PricesOfWindow(w Window) (Prices, error) {
 	cells := make([]economysim.Price, len(w.Markets))
 	for i, m := range w.Markets {
 		if m.SumV == 0 {
 			cells[i] = m.Price
 			continue
+		}
+		if m.SumV < 0 { // a hand-built Window; a Tally never keeps a negative volume sum
+			return Prices{}, wrap("PricesOfWindow", "volume", ErrRange)
 		}
 		q, ok := measure.RoundDivU(m.SumPV.u(), measure.Uint128{Lo: uint64(m.SumV)})
 		wide, small := measure.FromUint128(q)
