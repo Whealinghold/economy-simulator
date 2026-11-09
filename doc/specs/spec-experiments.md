@@ -82,7 +82,7 @@ Out of scope, with the owner:
 | 5 | Replica seeds are consecutive integers from `Seed0`: `Seed0 + r` (the same seeds at every point, the default) or `Seed0 + p * R + r` (distinct per point). A failing run is reproduced by one `WithSeed` call | 4.6 |
 | 6 | The library's runner is **sequential** and starts no goroutine. The unit of work, `RunUnit`, is a pure function that shares nothing with another unit, and `Assemble` builds the same `Result` from the records of any order, so a consumer's own goroutines (or machines) give the same bytes | 5 |
 | 7 | **Branching** restores one checkpoint of a burn-in many times, each with a different **variant** of calls and, optionally, its own reseed. A branch cannot change a configuration value: the configuration hash is part of the restore, so a parameter sweep never branches | 6 |
-| 8 | A **paired** comparison needs no alignment to be unbiased: seed-matched pairs are independent across seeds. What alignment (equal words drawn at every boundary) buys is exactness of the aligned prefix and a smaller variance of the difference. The harness checks alignment, when CHK offers the read (7.3.2), from a **stream fingerprint** at each sample and measures the variance reduction it got (**pairing gain**) | 7 |
+| 8 | A **paired** comparison needs no alignment to be unbiased: seed-matched pairs are independent across seeds. Runs of one seed are aligned by construction (ADR 0008: a draw is keyed by seed, site, tick and entity) and diverge through state only, so the harness has no alignment to check and no stream to fingerprint. It measures the variance reduction a pair got (**pairing gain**), always | 7 |
 | 9 | A result is plain data: no map, no float, no pointer. Reductions are integer: mean, standard deviation, nearest-rank quantiles, extremes and a pass share, with one rounding rule (half to even) taken from IND. A comparison of two points gives wins, losses and an exact sign-test tail. Sensitivity is the **range of the bin means** of a factor and its share of the total, and a one-at-a-time elasticity in basis points | 8 |
 | 10 | A run that fails is **recorded, not fatal**: it keeps what was measured until the failure, a closed code, the tick and the error text. Failed runs are never dropped from a reduction: they are counted, and a pass share is over the planned replicas | 9 |
 | 11 | A result is checkable: each run carries the digest of its final checkpoint, and `Render` gives a canonical text of its readings and verdicts, so "same experiment, same bytes" is a comparison of two strings | 8.2, 11 |
@@ -114,7 +114,6 @@ type Spec struct {
 	Measures   []Measure
 	Criteria   []Criterion
 	Keep       Keep     // what a run record holds beyond the final readings
-	Pair       bool     // record the stream fingerprint at each window, when the checkpoint offers one (7.3)
 	Branch     *Branch  // nil: every run starts at tick 0 (6)
 	Prepare    func(ctx context.Context, cfg economysim.Config) (economysim.Config, error) // 3.3.3
 	Options    func(Key) []economysim.Option // fresh options and extensions for each world built (5.5)
@@ -331,7 +330,7 @@ value per measure over the **whole span** `[Transient, Ticks)`: the harness call
 at `Ticks`), so that a measure of a "last two years after a transient"
 (`spec-reference-chain.md` 8.2) is one call and not a reduction of windows
 (FR-EXP-016). With `Every` 0 the series and the final reading coincide and are
-kept once. A measure that reads events keeps a second accumulator for the span;
+kept once: the record holds the final reading and `Series` and `Ticks` are nil (8.1.1), and the harness calls `Begin` and `Fn` once, with `Span` true. A measure that reads events keeps a second accumulator for the span;
 the events of a call made at an interior boundary (they carry the `Tick` of the
 step that follows, INT 3.3.3) are in the span's accumulator and in no sample
 window if the measure's accumulators follow IND 4.1.4 (no window is open while a
@@ -343,8 +342,7 @@ If no measure has an `Observer`, the harness registers none: a world with no
 observer constructs no event (observability-and-logging.md 4.5) and the sweep
 pays only for the snapshots. Each `Observer(key)` is called once for each world
 built (5.5.2) and its result is registered with `WithObserver`, in measure order,
-after the consumer's own. `Pair` needs no observer: the fingerprint comes from a
-checkpoint (7.3). The harness's own code observes no event.
+after the consumer's own. The harness's own code observes no event.
 
 3.4.5. **Criteria.** A **criterion** is a named band on one measure, as data:
 
@@ -416,13 +414,13 @@ the error's text (9.2).
 
 | Rule | Error |
 |------|-------|
-| `Replicas` at least 1 and at most `MaxReplicas`; `Ticks` at least 1; `0 <= Transient < Ticks`; `Every >= 0` and `Ticks / Every` at most `MaxWindows`; every step tick of the script, of a level and of a variant in `[0, Ticks)`; `Pair` while the checkpoint surface offers no read of the stream state (7.3.2) | `ErrBadSchedule` |
+| `Replicas` at least 1 and at most `MaxReplicas`; `Ticks` at least 1; `0 <= Transient < Ticks`; `Every >= 0` and `Ticks / Every` at most `MaxWindows`; every step tick of the script, of a level and of a variant in `[0, Ticks)` | `ErrBadSchedule` |
 | a factor has either at least 2 and at most `MaxLevels` levels or a path with `Min <= Max` (checked in 128 bits, 3.2.3), not both; a range factor in a grid has `Steps >= 2`; a path has the syntax of 3.2.1; at most `MaxFactors` factors | `ErrBadFactor` |
 | no path is set by two factors in a `Changes` list (a `Docs` level sets paths the harness does not read: 3.2.4) | `ErrFactorOverlap` |
 | `Design` is one of the three; a spread has `DesignN >= 1` | `ErrBadDesign` |
 | two measures or two criteria have one name; a criterion names a measure | `ErrDuplicateID`, `ErrUnknownMeasure` |
 | a branch has `1 <= At < Ticks`, at least one and at most `MaxVariants` variants, `Continuations` at most `MaxContinuations`, and no variant step below `At` (6.1) | `ErrBadBranch` |
-| `Measures` at most `MaxMeasures`; the size of the experiment is within the bounds of 13.2 (points, runs, cells), with products computed by a checked multiplication | `ErrOversize` |
+| `Measures` at most `MaxMeasures`; the size of the experiment is within the bounds of 13.2 (points, runs, cells), with products computed by a checked multiplication, and the documents of a point within `MaxDocuments` (13.2) | `ErrOversize` |
 
 3.6.1. **What validation does not do.** It does not resolve a path against a
 configuration (that needs the base and the loader: `Check`, 14.3), and it does not
@@ -687,7 +685,7 @@ resolution is identical.
    every step tick, and `Ticks`. From tick 0 to each boundary in order the harness
    calls `w.Run(ctx, n)` for the ticks to the next boundary. At a boundary `t`
    it does, in this order: (a) if `t` ends a window, take the closing snapshot,
-   call `Fn` of every measure (3.4); with `Pair` take the fingerprint (7.3); (b) apply the steps whose tick is `t`, in the order of
+   call `Fn` of every measure (3.4); (b) apply the steps whose tick is `t`, in the order of
    3.5.2; (c) if `t` opens a window (`t` is `Transient` or a window end), take the
    opening snapshot, **after** the steps, and call every `Begin`, so the window begins from the state the
    next step will see (the totals the calls added are `Pending` in a snapshot after the
@@ -824,8 +822,7 @@ placeholder, OBS 5.5) for each window and one checkpoint at the end (about 13
 ms, CHK 10.3, which is also the digest of every record). A measure with an
 `Observer` brings in the consumer's observer (a tally sums a few hundred rows and
 ignores the order and trade events that are about 99% of the stream, OBS 8.3), at
-a placeholder of 6% of a tick. `Pair` adds one checkpoint per window and no
-observer. With a
+a placeholder of 6% of a tick. With a
 branch every restore also builds `WorldRestored` with a full `Snapshot` when any
 observer was supplied (CHK 6.7.3) and logs the restore once (CHK 14.2). The sums
 are in section 10.
@@ -857,6 +854,7 @@ continuation), and carries the windows of the burn-in as the first part of its
 series. The harness calls `Observer(branchKey)` for the restored world and then
 `Fork(burnInKey, branchKey)` of each measure that has one, so the consumer copies
 what its observer of the burn-in accumulated (a tally is plain data, IND 10.5.1);
+for branch (0, 0), whose key is the burn-in's, `Fork(k, k)` is called with equal keys and means keep, and a consumer that keys state by `Key` treats a second `Observer(k)` as a new world (the burn-in's is dropped first, 5.5.2);
 the windows open at the branch point stay open. A branch's series is then the same
 as an uninterrupted run's would be. A restore emits `WorldRestored` first (CHK
 6.7.3) to the observers given to the restore; what a consumer's tally does with it
@@ -891,7 +889,7 @@ needs (S01, S04, S14, S28, S61).
 
 | `Continuations` | The restore | What the branches are |
 |-----------------|-------------|-----------------------|
-| 0 or 1 | no `WithReseed`: the stream continues from the checkpoint | the variants of a unit use the **same** words from the same position: the pairs are as aligned as the difference of their calls allows (7) |
+| 0 or 1 | no `WithReseed`: the stream continues from the checkpoint | the variants of a unit draw the **same** words for the same decisions (each draw is keyed by seed, site, tick and entity, ADR 0008): the pairs diverge through state only, as far as the difference of their calls moves it (7) |
 | `C >= 2` | `WithReseed(Salt0 + c)` (mod 2^64) for `c = 0 .. C-1`, the same salt for every variant | the continuations of one variant are independent of each other; the variants of one continuation are paired |
 
 6.3.1. **A reseed is deterministic** (CHK 6.8): a branch is reproduced from
@@ -940,78 +938,45 @@ variants of a unit (a shock against none), two continuations that share a salt,
 or one run observed and unobserved. The comparison is by replica index: replica
 `r` of A against replica `r` of B.
 
-### 7.2 Aligned, and what it is worth
+### 7.2 Aligned by construction, and what still breaks a pair
 
-7.2.1. **The stream is positional** (`spec-world.md` 7.6, WLD-A5): the word at
-position `k` of the stream goes to whatever consumes the `k`-th word in that run.
-Two runs of one seed use the same word at the same position. They **draw the
-same word for the same decision** only while they have drawn the same number of
-words since the start, because the count of words in a tick is a function of the
-configuration and the state (`spec-world.md` 7.4): the intents considered, the
-orders admitted, the agents created, the households pushed.
+7.2.1. **Runs of one seed are aligned by construction** (`spec-world.md` 7.6.1,
+ADR 0008 decision 6). A draw is a function of (seed, site, tick, entity): the
+one PCG is reseeded at every draw site from those four, so no draw depends on how
+many words another site or another entity took. Two runs of one seed draw the same
+word for the same decision whatever a parameter, a shock, a module or an observer
+adds or removes elsewhere. The harness therefore has no stream to fingerprint and
+no alignment to check or report; runs of one seed diverge **through state only**.
+(Under the earlier positional stream the word at position `k` went to whatever
+consumed the `k`-th word, and an offset in the count of words unaligned a pair;
+that rule is retired, N-214.)
 
-7.2.2. **Aligned through a boundary** means the two runs have drawn the same
-number of words at every earlier boundary of the run. Equal counts are a
-**necessary** condition of drawing the same word for the same decision and not a
-sufficient one: WLD 7.4.1 makes the count and also "the order of every one" of the
-draws functions of the configuration and the state, so a difference may add words
-at one position of a tick and remove as many at a later one, and the tick-end
-count is then equal while every word between goes to a different decision. The
-fingerprint (7.3) can therefore **show** that two runs have diverged and cannot
-**prove** that they have not; an aligned prefix as reported is an **upper bound**
-of the prefix in which the two runs consume identical randomness decision by
-decision (**common random numbers** in the exact sense). After the first boundary
-at which the counts differ a position is used by a different decision in the two
-runs, and from then on the pairing is only partial.
+7.2.2. **What still breaks a pair.** A pair is exact draw for draw while the state
+that feeds a decision is equal, and diverges from the first tick in which it is not:
+that is the effect being measured, not a defect. What changes **which entity a
+stream is keyed by** also changes the draws: an ID shift, such as the household IDs
+that a governed jurisdiction's seat shifts (`spec-polity.md` 5.2.3, POL-A1), keys
+every per-agent stream by a different ID, so a pair across a governed and an
+ungoverned polity is a comparison over seeds and not a pair (N-162). A change of
+scale (more agents) does the same. A binding right, a clamp, a fiscal flow, a
+policy actor and a discovery switched on or off draw their words from their own
+keys and are aligned in the draws (N-162, N-207).
 
-7.2.3. **What is aligned by construction.** The same configuration with other
+7.2.3. **What is exactly the same run.** The same configuration with other
 observers, a logger, `WithAudit`, a split of the run into `Run` calls, a
 checkpoint and restore (`spec-world.md` 7.4.1; FR-WLD-063, FR-WLD-064): the whole
-run. For a **different parameter** or a **shock**, the prefix lasts until some
-state that feeds a count first differs; nothing promises that is more than a few
-ticks, and the model of 18 shows a parameter that is aligned for the first
-sample only. That is a property of the world and not a defect of the harness.
+run, bit for bit. Two variants of one unit with no continuation reseed (6.3) share
+the checkpoint and the seed and so draw the same words from the branch point.
 
-Known to break alignment (one list; each is a property of its module, not a defect of the harness):
+### 7.3 What the harness records for a pair
 
-- **A binding right** (`spec-institutions.md` 7.3.4, ORG-N5): a run in which a right refuses an order is unaligned from the first refusal, because the refusal moves D6 to D8 and removes an order; a clamp by a legal price changes no count and keeps the pair aligned, and a declaration with nothing in force (the inert overlay, FR-ORG-017) is aligned from construction.
-- **A pair that turns discovery on or off** (`spec-technology.md` 6.3.2, TEC D16): a field with `DiscoveryBP` above 0 takes one word at construction, so the two worlds differ by one word at construction and are unaligned from the start; a pair that differs only in a rate of the module with `DiscoveryBP` unchanged takes no word in a tick and is aligned from construction.
-
-### 7.3 How the harness checks it
-
-7.3.1. **The fingerprint.** With `Pair`, the harness records at each window
-close (and at the branch point) the **stream fingerprint**: the 16 bytes of the
-state of the world's random source at that boundary. The state of a PCG is a
-bijection of the number of words drawn since the seeding, over a period of 2^128,
-so two worlds of one seed (and one reseed) have equal states **if and only if** they
-have drawn the same number of words. The fingerprint is not a measure of the economy and is
-never a measure's input.
-
-7.3.2. **Where it comes from, and what is asked.** The public surface has no read
-of the state of the source at a boundary: `CheckpointInfo` has five fields and
-`Info` "reads only the frame" (CHK 3.1.2, 5.4.3, FR-CHK-006), and the state is in
-section 1 of the body. CHK adds a separate accessor,
-`Checkpoint.Stream() ([16]byte, error)`, which decodes the first 20 bytes of
-section 1 and returns the 16 bytes that follow the `"pcg:"` prefix of the
-`MarshalBinary` of the source; `Info` stays frame-only, with five fields and no
-error result (CHK 3.1.2). The harness reads the stream state with it. A copy
-of the state in the header was considered and costs a format change and a
-validation. Parsing format 1 in the harness was rejected: it would tie the harness
-to a byte layout that CHK 9.1 allows to change before 1.0. **Without the accessor,
-`Pair` is refused at `Validate` with `ErrBadSchedule`**, the alignment is unknown,
-and the pairing gain of 7.4 is the whole measure (open question 4). The digest
-needs no field: it is the last 32 bytes of the `MarshalBinary` of the checkpoint
-(CHK 5.4).
-
-7.3.3. **The check.** Two runs are **aligned through sample `k`** if their
-fingerprints are equal at samples `1 .. k`; the **aligned horizon** is the end
-tick of the last such sample (`FirstDivergence` is the first sample at which they
-differ), an **upper bound** by 7.2.2. The resolution is a sample: a run that
-draws two words more in one tick and two fewer in the next has equal counts at the
-sample and different words in between, and the check does not see it. A window of
-one tick (`Every` 1) narrows the check to the counts of every tick and still does
-not prove the decisions equal. The check costs one checkpoint (placeholder 13 ms)
-per window (10).
+The harness records no stream state: `Record` has no fingerprint field, `Spec` no
+`Pair`, and `Comparison` no aligned count or horizon. The digest of a run is the last 32 bytes of the
+`MarshalBinary` of its final checkpoint (CHK 5.4) and needs no field of CHK. The
+comparison of a pair is by replica index (7.1) and its quality is the **pairing
+gain** of 7.4.2, which `Compare` always computes from the readings. ADR 0008 decision 6 ("`Pair` keeps
+measuring the gain") is read as that: the gain is measured, never assumed, and a consumer who wants to
+know where two paired series part reads their windows (`Keep.Series`).
 
 ### 7.4 What pairing is worth: the estimate and the gain
 
@@ -1025,7 +990,7 @@ draw count") and WLD-A5 ("valid only for a change that moves no draw count") are
 true of **exactness** and of the **variance reduction** and not of the estimate;
 CHK 11 item 3 and IND 11.2 ("is valid when the difference moves no draw count")
 state a sufficient condition and need no change but a word. The harness reports
-alignment and the gain and does not forbid the comparison. (CHK 11 item 3's "one
+the gain and does not forbid the comparison. (CHK 11 item 3's "one
 parameter ... differing" cannot occur between two restores of one checkpoint: a
 different configuration is `ErrCheckpointConfig`, 6.2.1.)
 
@@ -1049,8 +1014,9 @@ against 3 moves it by half), so a measure whose spread is a few units should be
 stated in a finer unit (basis points of a base, not whole units). The gain is
 **measured**, not claimed.
 
-7.4.3. **What the model shows** (`models/exp/pairing.py`, which implements 7.4.2;
-a toy world of placeholder dynamics, 200 seeds): with identical settings the paired
+7.4.3. **What the model shows** (`models/exp/pairing.py`, which implements 7.4.2 on a toy world with
+one positional stream, the rule before ADR 0008: it shows how the gain decays with an offset
+between two runs, not how the library draws; placeholder dynamics, 200 seeds): with identical settings the paired
 difference is exactly 0 (`sd` 0 against 10 for two independent runs; 200 of 200
 seeds aligned to the end); with a setting that moves the count of words rarely and
 by one word the gain is 50 000 bp (a `sd` of 2 against 10) although only 7 of 200
@@ -1091,11 +1057,10 @@ type Record struct {
 	Status   Status      // 9.2
 	FailTick int64       // the tick of the failure; -1 if none
 	Detail   string      // the error text of a failure, or the first measure error
-	Ticks    []int64     // the end tick of each window that closed
+	Ticks    []int64     // the end tick of each window that closed; nil with Every 0
 	Final    []Reading   // one per measure, over [Transient, Ticks)
 	Pass     []bool      // the verdict of each criterion on this run, in criterion order
-	Series   [][]Reading // [window][measure]; with Keep.Series
-	Stream   [][16]byte  // [window]; with Pair
+	Series   [][]Reading // [window][measure]; with Keep.Series, and nil with Every 0 (Final is the one reading)
 	Digest   [32]byte    // the digest of the checkpoint at the end; zero if failed
 	Snapshot economysim.Snapshot // with Keep.Snapshot (HasSnapshot says which)
 	HasSnapshot bool
@@ -1135,7 +1100,7 @@ type PointResult struct {
 	Levels   []int     // per factor: the level index, or the cell of a spread
 	Values   []int64   // per factor: the value of a range factor, else the level index
 	Hash     [32]byte  // of the first of its runs that built a world, else zero
-	Status   Status    // ok, unresolved or invalid_config (the point's resolution)
+	Status   Status    // ok, unresolved or invalid_config: that of the first record, in key order, whose status is unresolved or invalid_config, else ok
 	SameAs   int       // the first earlier point with the same hash, else -1
 	Warnings []Warning // the rules of 14.4 that applied to this point
 	Variants []VariantResult
@@ -1157,8 +1122,7 @@ type VariantResult struct {
 
 8.2.2. **`Render(r Result) string`** is the canonical text **of the readings and
 verdicts** of a result: UTF-8, LF, integers in decimal, a `hash` and a `digest` as
-the first 8 bytes (16 digits) in lower-case hex, a `stream` fingerprint as all its
-16 bytes (32 digits), the order of the tree, `-` where a value is undefined, no
+the first 8 bytes (16 digits) in lower-case hex, the order of the tree, `-` where a value is undefined, no
 float and no time. It omits `Snapshot` and the error text of a run beyond one
 `detail` line. It is **not** the event rendering of OBS 9.5.2 (one line per event);
 OBS 10.3's phrase "the format of a diff between two runs of a sweep" is to read as
@@ -1178,7 +1142,6 @@ detail <text with line breaks replaced by a space>   (only when non-empty)
 final <Measure>=<value|-> ...
 verdict <Criterion>=<pass|fail> ...
 window <end tick> <Measure>=<value|-> ...        (with Keep.Series)
-stream <end tick> <32 hex>                       (with Pair)
 reduce <Measure> planned <n> used <n> failed <n> undefined <n> missing <n> min <v|-> max <v|-> mean <v|-> std <v|-> q<bp>=<v|-> ...
 pass <Criterion> passes <n> planned <n> share <bp>
 ```
@@ -1262,9 +1225,7 @@ are matched by replica and continuation.
 | `Wins`, `Losses`, `Ties` | pairs with `d_r` above, below and equal to 0 |
 | `SignTailPPM` | the exact two-sided tail of the sign test, ties dropped: `min(10^6, rdiv(10^6 * 2 * sum_{j >= m} C(n, j), 2^n))` with `n = Wins + Losses`, `m = max(Wins, Losses)`; `OK` false for `n` 0 or above 62 (a cap of choice, 8.3.2; use the quantiles) |
 | `RelativeBP`, `Clamped` | growth, from the exact sums in one division as IND 5.2.3 asks: `rdiv(10 000 * sum d_r, sum A_r)` over the same pairs (for an unmatched comparison `rdiv(10 000 * DiffOfMeans-numerator, S_A * n_B)` likewise), clamped to `+-(2^31 - 1)` with `Clamped` set (IND 5.3.7), `OK` false for a base at or below 0 (IND 5.2.4) |
-| `Dist` | for each quantile of the closed list of 8.3, the nearest-rank value in each group and their difference: the comparison of **distributions over replicas**, offered for matched and unmatched groups alike (the form for a knob that moves a draw count, 7.4.1) |
-| `AlignedPairs` | with `Pair`: pairs whose fingerprints agree at every window and at the end (7.3) |
-| `Horizon` | with `Pair`: the median over pairs of the aligned horizon, in ticks, an upper bound (7.3.3) |
+| `Dist` | for each quantile of the closed list of 8.3, the nearest-rank value in each group and their difference: the comparison of **distributions over replicas**, offered for matched and unmatched groups alike (the form for a knob whose pairs are not alike, 7.2.2) |
 | `PairingGain`, `SdIndep`, `SdDiff`, `Identical` | 7.4.2, in basis points, `OK` false when `SdDiff` is 0 |
 
 8.4.3. **What it does not give.** A confidence interval of the mean difference
@@ -1313,8 +1274,7 @@ small step, and says so.
 8.6.1. **The formula.** A result holds `points * variants * replicas *
 continuations` records. Each holds `measures` final readings and, with
 `Keep.Series`, `windows * measures` more, each a `Reading` of 9 bytes packed (an
-`int64` and a flag) and 16 as a Go struct, a digest and, with `Pair`, 16 bytes a
-window. A result of 1 000 points, 10 replicas, 20 measures and 36 windows is 3.2 MB
+`int64` and a flag) and 16 as a Go struct, a digest. A result of 1 000 points, 10 replicas, 20 measures and 36 windows is 3.2 MB
 of final readings as structs and about 118 MB with the series (about 67 MB packed;
 cost.out). The snapshot of a record is bounded by the configuration and not by the
 agents, **except** the in-flight sets (shipments, journeys, contracts, OBS 5.6.1):
@@ -1427,8 +1387,7 @@ checkpoint 13 ms, a restore 25 ms) and OBS 8.3 (an observer, 6% of a tick).
 
 (At the placeholder sizes one run of the five-region pack of 1 095 ticks is about 0.017 runs a second and a run of `one` of 400 ticks about 0.6.)
 
-A run with an observer costs 6% more, a window one snapshot, `Pair` one
-checkpoint a window and the end one checkpoint. The resolution of a point is the
+A run with an observer costs 6% more, a window one snapshot and the end one checkpoint. The resolution of a point is the
 parse of the base and the overlays (`O(bytes)`) and a `Validate`, with the
 viability programmes when they are on (NFR-CFG-001); it is paid once for each
 unit and is unmeasured.
@@ -1476,7 +1435,7 @@ reductions, the comparison, the sensitivity and the rendering run in every
 |-------|------|----------|
 | Unit (the large majority; `internal/design` and the reductions) | pure functions of integers; table-driven; every one fast and run under `-short` | the Feistel permutation of every `N` from 1 to 300 and the larger ones of the model, the stratification of every axis, the mixed-radix index and its inverse, the OAT order, the range values, the overlay bytes, the seeds, `rdiv` half to even, `isqrt_nearest`, the nearest-rank quantile, the sign tail against exact fractions, the effect range, the elasticity, the bounds with overflowing products, `Render` of a hand-built `Result` |
 | Integration | a tiny experiment on a small pack built in Go in the test or a `testdata` fixture: two or three points, two or three seeds, tens of ticks; real worlds, the real loader. A test over several seeds names the failing seed and the point in its message (testing.md 6.2) | determinism (same bytes twice), failures recorded, cancellation and resume, parallel assembly, branching against the uninterrupted run, alignment, non-interference |
-| End to end | one sweep of the reference chain `one`, 400 ticks, a few points and ten seeds; its `Render` against `testdata/golden/experiment-one.txt`, on two architectures | the golden |
+| End to end | one sweep of the reference chain `one`, 400 ticks, a few points and ten seeds; its `Render` against `testdata/golden/experiment/one.txt`, on two architectures | the golden |
 | Fuzz | `FuzzOverlay` (any path and value: never panics, and a path that passes the syntax is accepted or rejected by the loader, never both), `FuzzPermutation` (any `N`, `i`, key: in range, and a bijection for small `N`), `FuzzReduce` (any readings: no panic, `Planned` identity holds) | testing.md 7.4 |
 
 ### 11.2 What is tested, and where
@@ -1508,7 +1467,6 @@ reductions, the comparison, the sensitivity and the rendering run in every
 | the sensitivity: the effect range, shares and the elasticity with their `OK` conditions | unit | FR-EXP-046 |
 | failure: each code, the sweep goes on, the partial series is kept, no checkpoint of a failed world, a measure error leaves a reading undefined | integration with a faulty `Clearing` fake (an invalid trade) and a failing step | FR-EXP-050 to FR-EXP-053 |
 | `Render`: the lines, the order, `-`, no float; a `Result` has no map, pointer or float (reflection) | unit | FR-EXP-060, FR-EXP-061 |
-| the fingerprint (when CHK offers the read): equal at every window for two runs of one configuration with different observers; different at the first window after a differing count; the aligned horizon is an upper bound; `Pair` without the read is `ErrBadSchedule` | integration | FR-EXP-062 |
 | `SameAs` flags equal hashes; `Check` resolves and validates every point and runs no tick; `ranged_narrower_than_design` | integration | FR-EXP-063, FR-EXP-070, FR-EXP-071 |
 | the bound is checked before any run, with a checked product | unit | FR-EXP-064 |
 | the paths of every shipped experiment are rows of the table (11.3.1) | unit, plain text parse | FR-EXP-072 |
@@ -1586,7 +1544,7 @@ of section 3 and nothing else is needed from this spec.
 |------|----------------|----------------------------------------|
 | **Replicate a pack** | no factors, `Replicas` 10 (nightly 50), `Ticks` and `Transient` of the scenario, measures over the final window, criteria as bands | S01 to S03, S05, S08, S09, S11, S12, S14, S16 to S22 |
 | **A grid over one or two scalars** | `Grid`, `SameSeeds`, range factors with `Steps` or explicit levels | S07 (`cost_floor` at four values), S10 (scale 1, 4, 10 by an overlay), S19 (the halt ratio on and off), S23 to S25 (elasticity by headroom by perturbation), S26 (`entry_share` on and off), S33 to S35, S37, S39, S40 |
-| **A shock response** | `Branch` with variants (none, the shock), `Continuations` 2 or more for a spread of response, `Pair` on when CHK offers the read (7.3.2); measures as the response window | S01, S04, S14, S28, S45, S52, S61 to S65 |
+| **A shock response** | `Branch` with variants (none, the shock), `Continuations` 2 or more for a spread of response; measures as the response window | S01, S04, S14, S28, S45, S52, S61 to S65 |
 | **A shock of several sizes** | a factor whose levels carry the step (a yield shock of 5 000 and 7 000 bp, a closure at tick `t`) | S45, S52, S54 |
 | **A module on and off** | a factor over two documents, `Docs` | S56, S57, S59, S24 |
 | **A warm and a cold start** | a factor over documents (`WarmStart` present and absent), or `Prepare` | S17, S18, S22 |
@@ -1609,7 +1567,7 @@ reports the reductions and asserts nothing.
 |------------------|---------|
 | a run of a pack and overlays over a seed set, the gate 1 to 10, the setting and the nightly 1 to 50, tier L 1 to 10 (STY 8.2), shocks as INT calls at ticks, the series and the events a verdict reads as plain data | a seed set is a `Seed0` and a `Replicas`: (1, 10), (1, 50), tier L (1, 10); shocks are steps (3.5); the series is `Keep.Series` and an event-level measure reads events through its own `Observer` and `Sample.Key` (3.4) |
 | a one-at-a-time sweep of a knob at the default and its two neighbours, with the verdict of each fact and detector as the response | `OneAtATime` with three levels (level 0 the default); a fact or a detector is a `Measure` whose value is its verdict code, and a band is a `Criterion` |
-| a comparison of two points as distributions over seeds, not as a pair, for a knob that moves a count | `PerPointSeeds` or `SameSeeds` with the `Dist` field of `Compare` (8.4.2), and the reductions of each group (8.3); a pair is used only for a knob that moves no count, and `AlignedPairs` and the gain say which (7) |
+| a comparison of two points as distributions over seeds, not as a pair, for a knob that moves a count | `PerPointSeeds` or `SameSeeds` with the `Dist` field of `Compare` (8.4.2), and the reductions of each group (8.3); a pair is used where the pairing gain says it pays (7.4.2) |
 | the verdict record keyed by the `ConfigHash` | `Record.Hash`, `Record.Pass` and `Result`; STY's text record (STY 8.5) is a rendering of them that STY writes: the class and the band are its own, the values per seed and the seeds outside are `Final` and `Pass` |
 | a failed world recorded and skipped | 9 |
 | a branch from a checkpoint for the shock facts | 6 |
@@ -1677,6 +1635,7 @@ N-015; every product is computed with a checked multiplication and an overflow i
 | `MaxCells` | 10^8 | runs times measures times (windows + 1) with the series; 1.6 GB as Go structs, 900 MB packed. At the limits of the other bounds `MaxRuns` times `MaxMeasures` is 2.56 * 10^8, so `MaxCells` binds first with a series and `MaxRuns` first without |
 | `MaxReading` | 2^40 | a reading's magnitude: keeps the sums below 2^126 for 10^6 used runs |
 | `MaxErrors` | 100 | of `Validate`, as `spec-config.md` 7.1.3 |
+| documents of a point | `MaxDocuments` (16, `spec-config.md` 4.1) | `config.Parse` takes at most that many documents and 3.3.2 makes one for each `Docs` and each `Change` of every level, so a point needs `len(Base)` plus, for each factor, the documents of its level: `Validate` returns `ErrOversize` when the largest such count of each factor, summed with the base, exceeds it (plan 2-20 D604; a rule owed to this section, N-015: raise `MaxDocuments`, let a level's changes share one document, or lower `MaxFactors`) |
 
 13.3. **Rule constants** (beside their code, architecture.md 9.6): the design constant
 `0x243F6A8885A308D3` (not a reseed constant, 4.4.2) and the gamma `0x9E3779B97F4A7C15` of 4.4.2; the SplitMix64
@@ -1782,8 +1741,7 @@ snapshots, checkpoints and the errors of `Run`.
 a record and a returned error of the sweep), no state transition of the simulation,
 no decision point of a strategy, clearing or spawner and no loop in a tick; its
 loops are over runs and are not logged. It uses the `Observer` interface as a
-consumer, registering the observers of the measures that have one (3.4.4); `Pair`
-needs no observer and the harness constructs no event of its own.
+consumer, registering the observers of the measures that have one (3.4.4); the harness constructs no event of its own.
 
 ## 16. State contributed to a checkpoint
 
@@ -1944,10 +1902,9 @@ documents.
 A unit of seed 1 runs 365 ticks, takes a checkpoint, and has three variants: none,
 `SetYieldShocks` of `north` and `grow_staple` at 5 000 bp at the branch point, and
 the same with a clearing step at tick 425. With `Continuations` 1 the three share
-the stream from the checkpoint and, when CHK offers the read (7.3.2), `Pair` records
-the fingerprint at each window;
-the aligned horizon of the second against the first is the first window at which
-the shock has moved a count. With `Continuations` 5 and `Salt0` 100 each variant
+the seed and the checkpoint and so draw the same words for the same decisions (7.2.1); with
+`Keep.Series` the first window at which the series of the second differs from the first is
+the first window at which the shock has moved a measure. With `Continuations` 5 and `Salt0` 100 each variant
 has five continuations with salts 100 to 104, and continuation 2 of the three
 variants is a paired set.
 
@@ -2067,7 +2024,7 @@ has no default of its own and one set of package bounds (13.2).
 | FR-EXP-014 | The steps of a run MUST be merged by tick, with equal ticks in the order script, levels in factor order, variant, and applied at the boundary before the tick they name, never inside a step (3.5). |
 | FR-EXP-015 | A criterion MUST be evaluated on the final reading of a run, MUST pass only when the run has status `ok`, the reading is defined and it is inside the band, and its verdict MUST be recorded in `Pass` of the record in criterion order (3.4.5). |
 | FR-EXP-016 | The windows MUST be `[Transient, Transient + Every)` and so on, the last shorter if needed, or one window with `Every` 0, and the final reading of each measure MUST be over the whole span `[Transient, Ticks)` (3.4.2, 3.4.3). |
-| FR-EXP-017 | When no measure has an `Observer` the harness MUST register no observer, so that no event is constructed, whether `Pair` is on or not (3.4.4). |
+| FR-EXP-017 | When no measure has an `Observer` the harness MUST register no observer, so that no event is constructed, (3.4.4). |
 | FR-EXP-018 | The harness MUST pass `WithSeed` last, so that its seed is the one in effect whatever `Options` gives, and MUST NOT pass `WithSeed` to a restore (5.1.3, 5.5.1). |
 | FR-EXP-019 | At a boundary the harness MUST close the window that ends there, then apply the steps of that tick, then open the next window with a snapshot taken after the steps (5.1.3). |
 | FR-EXP-020 | A cancelled `Run` MUST return the result of the complete units before the cancellation and the context's error wrapped, MUST discard the run in flight, and a `Run` with `WithPrior` of those records MUST give the same `Render` as an uninterrupted `Run` (5.2.3, 5.4). |
@@ -2094,10 +2051,10 @@ has no default of its own and one set of package bounds (13.2).
 | FR-EXP-053 | A measure that returns an error MUST leave that reading undefined, MUST keep the first error in `Detail` and MUST NOT stop the run (9.1.1). |
 | FR-EXP-060 | `Render` MUST be a pure function of a `Result`, in the lines and order of 8.2.2, with no float, map order or time, and the same on every platform. |
 | FR-EXP-061 | A `Result` and everything it holds MUST be plain data with no map, pointer, function or float (8.2.1). |
-| FR-EXP-062 | When the checkpoint surface offers a read of the stream state (7.3.2) and `Pair` is on, the harness MUST record the stream fingerprint at each window close and at the branch point, and two runs MUST be reported aligned through a window if and only if their fingerprints are equal at it and at every earlier one (7.3). |
+| FR-EXP-062 | **Retired** (plan 2-20 D602; ADR 0008): the stream fingerprint has nothing to read, and the ID is not reused (testing.md 4.1). |
 | FR-EXP-063 | A point whose hash equals an earlier point's MUST carry `SameAs` the index of the first (8.2.1). |
 | FR-EXP-064 | The size of an experiment (points, runs, cells) MUST be checked against 13.2 with a checked multiplication before anything is run, and an overflow or an excess MUST be `ErrOversize` (3.6, 8.6.2). |
-| FR-EXP-065 | A run with the measures' observers and a run with none MUST end at the same digest, and `Pair` MUST NOT change a digest (15.2). |
+| FR-EXP-065 | A run with the measures' observers and a run with none MUST end at the same digest (15.2). |
 | FR-EXP-070 | `Check` MUST resolve and validate every point without running a tick and return its status, error text and warnings (14.3). |
 | FR-EXP-071 | `Check` MUST report `ranged_narrower_than_design` for a spread over a range with fewer values than `N`, and `Assemble` MUST report `duplicate_point` with `SameAs` for points whose worlds have one hash (14.4). |
 | FR-EXP-072 | The paths of every experiment shipped in the repository MUST each resolve, by the table-prefix scope and the snake form of the row's parameter against the last segment, to a row of the parameter-owner table of `specs/README.md` read as text (11.3.1). |
@@ -2126,15 +2083,7 @@ has no default of its own and one set of package bounds (13.2).
 3. **No adaptive design (3.7).** Finding the gain at which a loop goes unstable is a
    bisection, which is a consumer's loop of experiments. *Next step:* CLB's first
    procedure that needs it.
-4. **A read of the stream state (7.3.2).** `Pair` needs one 16-byte read of the
-   source's state at a boundary from CHK: the accessor `Checkpoint.Stream`
-   decoding the first 20 bytes of section 1. The alternative was a
-   `Draws` field on `TickEnded` (words drawn in the step): OBS refused counts that
-   an observer can derive from events (4.4.3.1), and a draw count is **not**
-   derivable, so the refusal does not carry over; it would give the count exactly
-   at every tick. *Answered:* `Checkpoint.Stream() ([16]byte, error)`, an accessor of
-   CHK, with `Info` unchanged; a `Draws` field on `TickEnded` is not adopted.
-   Until CHK has it `Pair` is refused at `Validate` and the gain stays.
+4. **A read of the stream state.** Retired with the fingerprint (7.3, ADR 0008): there is no stream state to read, the question is closed and its number is kept so the others do not move.
 5. **Equal `(Hash, Seed)` could be run once (8.1.3).** A spread over a narrow
    integer range repeats configurations. *Next step:* the first sweep where it
    shows (a memo keyed by hash and seed inside `Run` cannot change a result).
@@ -2171,7 +2120,7 @@ has no default of its own and one set of package bounds (13.2).
 |---|---------|--------------|----------------|
 | X1 | IND FR-IND-001 and 3.4.0 here | the import-graph test forbids any package but `indicator`, its tests, `otelobserver` and `examples/` to import `indicator`, and any but `indicator` to import `internal/measure` | **resolved on EXP's side**: `experiment/` imports neither (measures are the consumer's closures; the reductions are `internal/reduce`); no IND row |
 | X2 | WLD 7.6.1 and WLD-A5 against 7.4 | "valid only between runs that differ in a parameter that changes no draw count" (7.6.1), "valid only for a change that moves no draw count" (WLD-A5); CHK 11 item 3 and IND 11.2 say "is valid when the difference moves no draw count", a sufficient condition | WLD: "**exact** draw for draw, and a variance reduction that the harness measures, only while aligned; the estimate of a difference of means from seed-matched runs is unbiased whether aligned or not"; CHK 11 item 3: "one parameter ... differing" cannot occur between two restores of one checkpoint (`ErrCheckpointConfig`) |
-| X3 | CHK 3.1.2, 5.4.3, FR-CHK-006 | `Info` "reads only the frame" and has five fields; the stream state is in section 1 | the read of 7.3.2, in one of two forms, or `Pair` stays unavailable |
+| X3 | CHK 3.1.2, 5.4.3, FR-CHK-006 | `Info` "reads only the frame" and has five fields; the stream state is in section 1 | none: no stream state is read (7.3); CHK rewrote 3.1.2 and 5.4.3 for ADR 0008 |
 | X4 | architecture.md 2.6, 2.7, 7.3 and `AGENTS.md` layout | the layout is closed and has no `experiment/` or `indicator/`; 7.3 binds the root and `internal/` | add both packages and the import rule; extend 7.3 to `experiment/` |
 | X5 | testing.md 9.1 | the coverage table has no row for `indicator/` or `experiment/` | add both at 90% |
 | X6 | IND 4.2.5 and 10.5.1, FR-IND-055 | a tally fed `WorldRestored` while open "starts a new window"; a restore "changes nothing" in a straddling window | IND picks one; EXP does not rely on either (6.1.1) |
@@ -2188,7 +2137,7 @@ is derived from this table.
 | `specs/README.md` | index, reading order | add `spec-experiments.md` (core): "The sweep harness: an experiment as plain data over a base pack by field path through the loader's own layering, three designs (grid, one at a time, a counter-based Latin hypercube), consecutive-integer replica seeds, a sequential runner with a contract for a consumer's own parallel one, branching from one burn-in, aligned and paired runs with a measured gain, integer reductions, a comparison and a sensitivity, failure as a result, the cost, `FR-EXP`/`NFR-EXP`"; reading order after `spec-indicators.md` |
 | `specs/README.md` | code table row `EXP` | "exists; Requirements section written (FR-EXP-001 to 072, NFR-EXP-001 to 006); core; no `Config` field; all bounds are placeholders" |
 | `specs/README.md` | decisions taken | rows: *Does the harness draw randomness?* No: counter-based and stateless (4.5). *How does a point differ from the base?* By overlay documents through the loader (3.3). *Can a branch change a parameter?* No: the hash (6.2). *When is a paired comparison valid?* Exact only while aligned; the estimate is unbiased always; the gain is measured (7). *How is a failed run counted?* Never dropped (8.3.1, 9) |
-| `specs/README.md` | glossary | experiment, factor, level, change, design (grid, one at a time, spread), point, replica, run key, unit (of work), plan, record, result, window (sample), transient, final reading, series, measure, criterion, pass share, reduction, branch, variant, continuation, aligned (prefix, horizon), stream fingerprint, pairing gain, effect range, elasticity, overlay |
+| `specs/README.md` | glossary | experiment, factor, level, change, design (grid, one at a time, spread), point, replica, run key, unit (of work), plan, record, result, window (sample), transient, final reading, series, measure, criterion, pass share, reduction, branch, variant, continuation, pairing gain, effect range, elasticity, overlay |
 | `spec-roadmap.md` | tier 3 table, existing specs table, "Suggested next specs" | EXP `planned` to `exists`; a row in the existing-specs table; remove EXP from the planned list |
 | `documentation_index.md` | rows | `specs/spec-experiments.md` and `specs/models/exp/` |
 | `specs/models/README.md` | contents | a row for `exp/`: the counter-based Latin hypercube, the rejected Kronecker sequence, the integer reductions, the pairing toy and the cost arithmetic |
@@ -2196,7 +2145,7 @@ is derived from this table.
 | `AGENTS.md` | layout | the same packages |
 | `rules/testing.md` | 9.1 | rows for `indicator/` and `experiment/` at 90%; a fresh tag (X5) |
 | `spec-indicators.md` | 4.2.5, 10.5.1, FR-IND-055; 11.2 | one rule for a tally fed `WorldRestored` (X6); the paired-comparison row reworded to "exact" (X2); `Window`'s fields defined, as EXP's measures are the consumer's and need them |
-| `spec-checkpoint.md` | 3.1.2, 5.4.3, FR-CHK-006, 11 | a read of the stream state (7.3.2; `Stream [16]byte`, the 16 bytes after `"pcg:"`; `Info` then needs an error result or section 1's first bytes in the frame) (X3); a named error for `Checkpoint` of a healthy world (9.1); the EXP row (3) reworded (X2) |
+| `spec-checkpoint.md` | 3.1.2, 5.4.3, FR-CHK-006, 11 | nothing for the stream (7.3: rewritten for ADR 0008 by plan 2-1); a named error for `Checkpoint` of a healthy world (9.1); the EXP row (3) reworded (X2) |
 | `spec-config.md` | 6.2, 6.5, 8, FR-CFG-021 | state the snake-case rule with acronyms; say the `schema` is checked on the merged tree; export a pure hash function of a `Config`; (X7) |
 | `spec-viability.md` | 11 | publish the list of paths the solver reads (3.3.3, open question 7) |
 | `spec-world.md` | 7.6.1, 13 (EXP row), 17 (WLD-A5 condition), 22 question 4 | the paired-comparison wording (X2); question 4 answered in part: the harness measures the pairing gain, per-purpose streams stay open |
@@ -2212,12 +2161,14 @@ is derived from this table.
 | `Spec`, `Factor`, `Level`, `Change`, `Step`, `Measure`, `Criterion`, `Branch`, `Variant`, `Validate`, the closed sets, the sentinels and the bounds | `experiment/experiment.go` |
 | `Plan`, `RunUnit`, `ExecuteUnit`, `Run`, `Check`, `RunOption` | `experiment/run.go` |
 | the branch procedure | `experiment/branch.go` |
-| `Record`, `Result`, `Assemble`, the reductions, `Compare`, the sensitivity | `experiment/result.go`, `experiment/reduce.go` |
+| `Record`, `Result`, `Assemble`, the reductions, `Compare`, the sensitivity | `experiment/record.go`, `experiment/result.go`, `experiment/reduce.go`, `experiment/compare.go`, `experiment/sensitivity.go` |
 | `Render` | `experiment/render.go` |
 | the grid, one at a time and spread index functions, the permutation, the seeds, the overlay text (primitive integers and strings) | `internal/design` |
 | 128-bit sums, half-to-even division, the 128-bit integer root, the nearest-rank quantile, the exact sign tail | `internal/reduce` (stdlib and `math/bits`; IND's `internal/measure` is IND's alone, FR-IND-001) |
 | the SplitMix64 finaliser | `internal/ordering` (WLD 7.1.2, N-019) |
 | the models | `doc/specs/models/exp/` |
+
+The concepts above are split across more files than this table names, because the Lizard limits (N-243) cap a file's functions: `plan.go`, `resolve.go`, `run.go`, `segment.go`, `classify.go`, `bounds.go`, `errors.go` and `validate.go` are continuation files of `experiment.go` and `run.go`, each maps to area EXP, and its `_test.go` carries the `Requirement:` lines (architecture.md 2.6).
 
 The primary type is `experiment.Spec`: architecture.md 2.5 forbids an exported name
 that repeats the package name (`experiment.Experiment` would stutter), so the type
