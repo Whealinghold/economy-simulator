@@ -44,7 +44,8 @@ type engine struct {
 	key    Key // the key of the world held, handed to the measures
 	steps  []Step
 	bounds []int64
-	next   int // index of the first step not yet applied
+	next   int                  // index of the first step not yet applied
+	last   *economysim.Snapshot // the closing snapshot at Ticks, kept for Keep.Snapshot
 	progress
 }
 
@@ -147,6 +148,7 @@ func (g *engine) closeAt(b int64) *failure {
 	}
 	if b == g.e.Ticks {
 		g.final = g.read(Sample{Open: g.spanOpen, Close: closing, From: g.e.Transient, To: b, Span: true})
+		g.last = &closing
 	}
 	return nil
 }
@@ -228,7 +230,9 @@ func (g *engine) finish() (digest [32]byte, snap economysim.Snapshot, f *failure
 		return digest, snap, fail(fmt.Errorf("checkpoint of %d bytes has no trailer", len(b)))
 	}
 	copy(digest[:], b[len(b)-len(digest):])
-	if g.e.Keep.Snapshot {
+	if g.e.Keep.Snapshot && g.last != nil {
+		snap = *g.last
+	} else if g.e.Keep.Snapshot {
 		if snap, f = g.snapshot(); f != nil {
 			return digest, snap, f
 		}

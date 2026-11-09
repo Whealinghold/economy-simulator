@@ -46,8 +46,8 @@ func MainEffects(r Result, measure string, bins int) ([]Effect, error) {
 	if m < 0 {
 		return nil, fmt.Errorf("main effects of %q: %w", measure, ErrUnknownMeasure)
 	}
-	// A spread with no factor has one point and nothing to bin.
-	if r.Design == Spread && len(r.Points) > 0 && len(r.Points[0].Levels) > 0 && (bins < 2 || bins > len(r.Points)) {
+	// A spread of one point, or with no factor, has nothing to bin.
+	if r.Design == Spread && len(r.Points) > 1 && len(r.Points[0].Levels) > 0 && (bins < 2 || bins > len(r.Points)) {
 		return nil, fmt.Errorf("main effects: %d bins of %d points: %w", bins, len(r.Points), ErrBadDesign)
 	}
 	if len(r.Points) == 0 {

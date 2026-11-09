@@ -13,8 +13,8 @@ import (
 // TestPackage_PurityAST verifies, over the non-test files of experiment/,
 // internal/design and internal/reduce, that none starts a goroutine, uses a
 // float type or literal, imports a source of time, randomness or the operating
-// system, or declares a package variable other than a sentinel error, a
-// compile-time assertion or the quantile table.
+// system, or declares a package variable other than a sentinel error or a
+// compile-time assertion.
 //
 // Requirement: NFR-EXP-002
 //

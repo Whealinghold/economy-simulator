@@ -170,13 +170,16 @@ func (f Factor) validateLevels(r *report, at []string) {
 		r.add(ErrBadFactor, itoa(len(f.Levels)), "2.."+itoa(MaxLevels), append(at, "Levels")...)
 	}
 	for l, lv := range f.Levels {
-		seen := map[string]bool{}
+		var seen map[string]bool // allocated on the first Change: Validate runs once per RunUnit
 		for c, ch := range lv.Changes {
 			cat := append(slices.Clone(at), idx("Levels", l), idx("Changes", c), "Path")
 			if !design.ValidPath(ch.Path) {
 				r.add(ErrBadFactor, ch.Path, "a path of 2 to 8 segments", cat...)
 			} else if seen[ch.Path] {
 				r.add(ErrFactorOverlap, ch.Path, "set once in a level", cat...)
+			}
+			if seen == nil {
+				seen = map[string]bool{}
 			}
 			seen[ch.Path] = true
 		}

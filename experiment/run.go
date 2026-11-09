@@ -257,7 +257,7 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	}
 	var out []Record
 	for _, u := range units {
-		if recs, ok := priorOf(prior, u); ok {
+		if recs, ok := priorOf(prior, u); len(prior) > 0 && ok {
 			out = append(out, recs...)
 			continue
 		}
