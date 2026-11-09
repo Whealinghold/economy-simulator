@@ -187,7 +187,11 @@ func (c *Comparison) growth(a, b side, d, base reduce.Moments) {
 	if gden.Sign() <= 0 {
 		return
 	}
-	c.RelativeBP, c.Clamped = clampedQuotient(k.mul(gnum, reduce.FromInt64(10_000)), gden)
+	scaled := k.mul(gnum, reduce.FromInt64(10_000))
+	if k.failed {
+		return
+	}
+	c.RelativeBP, c.Clamped = clampedQuotient(scaled, gden)
 }
 
 // gain sets SdIndep, SdDiff and PairingGain (spec-experiments.md 7.4.2).

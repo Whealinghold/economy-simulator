@@ -341,7 +341,10 @@ func (e Spec) runCount(points int) (int, bool) {
 func (e Spec) cellCount(runs int) (int, bool) {
 	perRun := max(1, len(e.Measures))
 	if e.Keep.Series && e.Every > 0 {
-		windows := (e.Ticks - e.Transient + e.Every - 1) / e.Every
+		windows := (e.Ticks - e.Transient) / e.Every // ceiling, without overflow for a huge Every
+		if (e.Ticks-e.Transient)%e.Every != 0 {
+			windows++
+		}
 		if windows < 0 || windows > MaxWindows+1 {
 			return 0, false
 		}

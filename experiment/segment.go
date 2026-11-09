@@ -39,7 +39,9 @@ func cmpInt64(a, b int64) int {
 func (e Spec) boundaries(steps []Step) []int64 {
 	out := []int64{0, e.Transient, e.Ticks}
 	if e.Every > 0 {
-		for t := e.Transient + e.Every; t < e.Ticks; t += e.Every {
+		// Ticks - t > Every is t + Every < Ticks without the overflow of a huge Every.
+		for t := e.Transient; e.Ticks-t > e.Every; {
+			t += e.Every
 			out = append(out, t)
 		}
 	}

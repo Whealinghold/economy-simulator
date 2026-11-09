@@ -30,6 +30,11 @@ type Result struct {
 	Criteria []string
 	// Points are the points of the design in point order.
 	Points []PointResult
+
+	// first is, per factor with explicit levels, the value of each level's first
+	// change (0 for a level with none), which Elasticity reads as x
+	// (spec-experiments.md 8.5.3); nil for a range factor.
+	first [][]int64
 }
 
 // A PointResult is one point of the design and the runs of every variant of it.
@@ -107,10 +112,28 @@ func Assemble(e Spec, recs []Record) (Result, error) {
 	for _, c := range e.Criteria {
 		res.Criteria = append(res.Criteria, c.Name)
 	}
+	res.first = e.firstChanges()
 	for p := range points {
 		res.Points[p] = e.assemblePoint(p, byKey, res.Points[:p])
 	}
 	return res, nil
+}
+
+// firstChanges is Result.first of the experiment.
+func (e Spec) firstChanges() [][]int64 {
+	out := make([][]int64, len(e.Factors))
+	for f, fac := range e.Factors {
+		if fac.Path != "" {
+			continue
+		}
+		out[f] = make([]int64, len(fac.Levels))
+		for l, lv := range fac.Levels {
+			if len(lv.Changes) > 0 {
+				out[f][l] = lv.Changes[0].Value
+			}
+		}
+	}
+	return out
 }
 
 // indexRecords maps the records by key, refusing a key outside the plan and a key
