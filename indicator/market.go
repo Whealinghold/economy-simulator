@@ -26,9 +26,29 @@ type RangeResult struct {
 	Warnings   []Warning
 }
 
+// checkMarkets returns ErrRange for a hand-built window whose market table
+// cannot be indexed by (region, commodity): rows but no commodity count.
+func (w Window) checkMarkets(preset string) error {
+	if len(w.Markets) > 0 && w.Commodities < 1 {
+		return wrap(preset, "markets", ErrRange)
+	}
+	return nil
+}
+
+// checkBeliefs returns ErrRange unless the belief table covers the markets.
+func (w Window) checkBeliefs(preset string) error {
+	if len(w.Beliefs) < len(w.Markets) {
+		return wrap(preset, "beliefs", ErrRange)
+	}
+	return nil
+}
+
 // forMarkets calls f for each market of the window in sel, in (region, commodity)
 // order; f decides what to do with a market that never cleared.
 func forMarkets(w Window, sel CellSel, f func(i int, r economysim.RegionID, c economysim.CommodityID) error) error {
+	if err := w.checkMarkets("Window"); err != nil {
+		return err
+	}
 	for i := range w.Markets {
 		r, c := economysim.RegionID(i/w.Commodities), economysim.CommodityID(i%w.Commodities)
 		if !sel.has(r, c) {
@@ -88,6 +108,9 @@ type PinnedResult struct {
 // ended on a bound and the stuck ticks (spec-indicators.md 9.1, row 18). A
 // pinned price is not a stable price.
 func Pinned(w Window, sel CellSel) (PinnedResult, error) {
+	if err := w.checkBeliefs("Pinned"); err != nil {
+		return PinnedResult{}, err
+	}
 	res := PinnedResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
 	err := forMarkets(w, sel, func(i int, r economysim.RegionID, c economysim.CommodityID) error {
 		b, m := w.Beliefs[i], w.Markets[i]
@@ -126,6 +149,9 @@ type DispersionResult struct {
 // (spec-indicators.md 9.1, row 19): synchronisation shows as a spread that falls
 // below a floor.
 func Dispersion(w Window, sel CellSel) (DispersionResult, error) {
+	if err := w.checkBeliefs("Dispersion"); err != nil {
+		return DispersionResult{}, err
+	}
 	res := DispersionResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
 	err := forMarkets(w, sel, func(i int, r economysim.RegionID, c economysim.CommodityID) error {
 		b := w.Beliefs[i]

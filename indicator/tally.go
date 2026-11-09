@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/internal/measure"
 )
 
 // maxInt64 is the largest int64; indicator imports no math (FR-IND-008).
@@ -122,6 +123,23 @@ func (t *Tally) add(dst *int64, v int64) {
 		return
 	}
 	*dst += v
+}
+
+// sub subtracts v from *dst, recording an overflow like add; the minimum int64
+// has no negation, so it is an overflow rather than a wrapped add.
+func (t *Tally) sub(dst *int64, v int64) {
+	if v == -maxInt64-1 {
+		t.over = true
+		return
+	}
+	t.add(dst, -v)
+}
+
+// diff returns to - from, or notes an overflow for Close and returns 0.
+func (t *Tally) diff(to, from int64) int64 {
+	d, ok := measure.ToInt64(mustSub(to, from))
+	t.over = t.over || !ok
+	return d
 }
 
 // step reports whether a step event at tick belongs after the window's start,

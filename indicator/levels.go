@@ -34,11 +34,11 @@ type BasketResult struct {
 // Ratio returns the price level of region of against region against, from the
 // exact sums in one division: rdiv(10 000 * cost_of * ref_against, ref_of *
 // cost_against). It is undefined if either region is not in the result or a
-// cost is 0.
+// cost or a reference cost is 0 (the level of that region is undefined).
 func (r BasketResult) Ratio(of, against economysim.RegionID) (Index, error) {
 	a, aok := r.row(of)
 	b, bok := r.row(against)
-	if !aok || !bok || a.Cost == 0 || b.Cost == 0 {
+	if !aok || !bok || a.Cost == 0 || b.Cost == 0 || a.RefCost == 0 || b.RefCost == 0 {
 		return Index{}, nil
 	}
 	return ratioWide("BasketLevel", "ratio", measure.MulInt64(a.Cost, b.RefCost), measure.MulInt64(a.RefCost, b.Cost))
@@ -240,6 +240,14 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 	}
 	if g.Len() != w.Regions {
 		return GapResult{}, wrap("PriceGap", "graph", ErrRange)
+	}
+	if len(dl.Lanes) > 0 {
+		if dl.ConfigHash != w.ConfigHash {
+			return GapResult{}, wrap("PriceGap", "delivered", ErrConfigMismatch)
+		}
+		if dl.From != w.From || dl.To != w.To {
+			return GapResult{}, wrap("PriceGap", "delivered", ErrWindowOrder)
+		}
 	}
 	res := GapResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
 	var sum acc

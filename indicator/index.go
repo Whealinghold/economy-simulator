@@ -98,6 +98,9 @@ func PriceIndex(w Window, base Base, k Weights, cur Prices, sel CellSel) (IndexR
 			return IndexResult{}, err
 		}
 	}
+	if err := w.checkMarkets("PriceIndex"); err != nil {
+		return IndexResult{}, err
+	}
 	q0 := base.Quantities(k)
 	if q0 == nil || len(q0) != len(w.Markets) {
 		return IndexResult{}, wrap("PriceIndex", "weights", ErrRange)

@@ -242,14 +242,15 @@ func (t *Tally) agentSpawned(e economysim.AgentSpawned) {
 func (t *Tally) agentBankrupted(e economysim.AgentBankrupted) {
 	if p := t.person(e.Region, e.Role, e.Tick, true); p != nil {
 		t.add(&p.Bankrupted, e.Weight)
-		t.add(&p.Households, -e.Weight)
+		t.sub(&p.Households, e.Weight)
 	}
 }
 
 func (t *Tally) weightChanged(e economysim.WeightChanged) {
 	if p := t.person(e.Region, e.Role, e.Tick, true); p != nil {
-		t.add(&p.WeightDelta, e.To-e.From)
-		t.add(&p.Households, e.To-e.From)
+		d := t.diff(e.To, e.From)
+		t.add(&p.WeightDelta, d)
+		t.add(&p.Households, d)
 	}
 }
 
@@ -259,7 +260,7 @@ func (t *Tally) roleChanged(e economysim.RoleChanged) {
 		return
 	}
 	t.add(&out.RoleOut, e.Weight)
-	t.add(&out.Households, -e.Weight)
+	t.sub(&out.Households, e.Weight)
 	t.add(&in.RoleIn, e.Weight)
 	t.add(&in.Households, e.Weight)
 }
@@ -275,7 +276,7 @@ func (t *Tally) agentRelocated(e economysim.AgentRelocated) {
 		return
 	}
 	t.add(&out.RelocOut, e.Weight)
-	t.add(&out.Households, -e.Weight)
+	t.sub(&out.Households, e.Weight)
 	t.add(&in.RelocIn, e.Weight)
 	t.add(&in.Households, e.Weight)
 	k := RelocTally{From: e.From, To: e.To}

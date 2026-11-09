@@ -213,7 +213,7 @@ type RowSet struct {
 // below 1 or an unknown column, and ErrOverflow for a total past int64.
 func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 	var set RowSet
-	var cohort, hh acc
+	var cohort, hh, absent acc
 	for _, a := range states {
 		if a.Weight < 1 {
 			return RowSet{}, wrap("RowsOf", "weight", ErrRange)
@@ -226,7 +226,7 @@ func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 			return RowSet{}, err
 		}
 		if !ok {
-			set.Absent += a.Weight
+			absent.addInt(measure.FromInt64(a.Weight))
 			continue
 		}
 		set.Rows = append(set.Rows, Household{Weight: a.Weight, Total: total})
@@ -241,6 +241,9 @@ func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 		return RowSet{}, err
 	}
 	if set.Cohort, err = cohort.int64("RowsOf", "cohort"); err != nil {
+		return RowSet{}, err
+	}
+	if set.Absent, err = absent.int64("RowsOf", "absent"); err != nil {
 		return RowSet{}, err
 	}
 	set.CohortShare, err = ratioWide("RowsOf", "cohort_share", cohort.v, hh.v)
