@@ -116,12 +116,12 @@ func panicSaysInvariant(call *ast.CallExpr) bool {
 
 // guardedFiles returns the non-test Go files of the module at dir that the
 // guards cover, relative to dir: the root package (not its subdirectories),
-// internal/**, config/**, and strategy/, indicator/ and experiment/ when they
-// exist. examples/ and otelobserver/ are separate modules and testdata holds
+// internal/**, config/**, and strategy/, indicator/, experiment/ and
+// denomination/ when they exist. examples/ and otelobserver/ are separate modules and testdata holds
 // no source of the module.
 func guardedFiles(dir string) ([]string, error) {
 	var files []string
-	for _, root := range []string{".", "internal", "config", "strategy", "indicator", "experiment"} {
+	for _, root := range []string{".", "internal", "config", "strategy", "indicator", "experiment", "denomination"} {
 		err := filepath.WalkDir(filepath.Join(dir, root), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				if root != "." && os.IsNotExist(err) {
@@ -153,7 +153,7 @@ func guardedFiles(dir string) ([]string, error) {
 
 // TestGuardedFiles_Scope verifies the scope function on a small tree.
 //
-// Guard: a walk that missed strategy/, indicator/ or experiment/, or that
+// Guard: a walk that missed strategy/, indicator/, experiment/ or denomination/, or that
 // descended into a separate module, would let a violation through or fail on
 // code the rules do not cover.
 func TestGuardedFiles_Scope(t *testing.T) {
@@ -163,7 +163,7 @@ func TestGuardedFiles_Scope(t *testing.T) {
 		"a.go", "a_test.go", "doc/x.go", "examples/e/e.go", "otelobserver/o.go",
 		"internal/p/p.go", "internal/p/p_test.go", "internal/p/q/q.go",
 		"internal/p/testdata/t.go", "config/c.go", "indicator/i.go",
-		"experiment/e/e.go", "testdata/t.go",
+		"experiment/e/e.go", "denomination/d.go", "testdata/t.go",
 	} {
 		path := filepath.Join(dir, name)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -179,7 +179,7 @@ func TestGuardedFiles_Scope(t *testing.T) {
 	}
 	want := []string{
 		"a.go", "internal/p/p.go", "internal/p/q/q.go", "config/c.go",
-		"indicator/i.go", "experiment/e/e.go",
+		"indicator/i.go", "experiment/e/e.go", "denomination/d.go",
 	}
 	slices.Sort(got)
 	slices.Sort(want)
@@ -241,7 +241,7 @@ var s = "rand.Intn(3) time.Now()"`, 0},
 }
 
 // TestNoBannedUses_InNonTestFiles verifies that no non-test file of the root
-// package, internal/, config/, strategy/, indicator/ or experiment/ uses the global math/rand functions,
+// package, internal/, config/, strategy/, indicator/, experiment/ or denomination/ uses the global math/rand functions,
 // crypto/rand, time.Now, time.Since, slog.Default, fmt.Print*, log.Print*,
 // the builtins print and println, os.Stdout or os.Stderr, that none
 // declares an init function, and that every panic says "invariant" (the scope
