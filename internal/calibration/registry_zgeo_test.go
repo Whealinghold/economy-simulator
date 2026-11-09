@@ -2,6 +2,7 @@ package calibration
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -265,4 +266,128 @@ func checkOut(r *registry) []string {
 		}
 	}
 	return out
+}
+
+// offValue resolves the off= flag of a row against the owner's bound: a number,
+// or off=min and off=max read from the bound and never copied into the row.
+func offValue(flags []string, lo, hi int) (Off, bool) {
+	for _, f := range flags {
+		v, ok := strings.CutPrefix(f, "off=")
+		if !ok {
+			continue
+		}
+		switch num, err := strconv.Atoi(v); {
+		case v == "min":
+			return Off{Has: true, Value: int64(lo)}, true
+		case v == "max":
+			return Off{Has: true, Value: int64(hi)}, true
+		case err == nil:
+			return Off{Has: true, Value: int64(num)}, true
+		}
+	}
+	return Off{}, false
+}
+
+// gridRule reads the Grid cell of a row: geo, or lin<s>.
+func gridRule(grid string) (Rule, bool) {
+	if grid == "geo" {
+		return Rule{Kind: Geo}, true
+	}
+	if s, ok := strings.CutPrefix(grid, "lin"); ok {
+		step, err := strconv.Atoi(s)
+		return Rule{Kind: Lin, Step: int64(step)}, err == nil
+	}
+	return Rule{}, false
+}
+
+// gridInputs reads what Build needs from a D row and the owner's default and
+// bound; ok is false for a row that is not searched on a numeric grid.
+func gridInputs(k []string, d ownerDefault) (rule Rule, base int64, b Bounds, off Off, ok bool) {
+	rule, okRule := gridRule(k[cGrid])
+	n, isNum := atoi(d.def)
+	lo, hi, loOK, hiOK := boundRange(d.bound)
+	off, hasOff := offValue(words(k[cFlags]), lo, hi)
+	ok = k[cClass] == "D" && okRule && isNum && loOK && hiOK && hasOff && inRange(n, lo, hi, rule.Kind == Geo)
+	return rule, int64(n), Bounds{int64(lo), int64(hi)}, off, ok
+}
+
+// inRange reports whether the owner's default is a base a grid can start from:
+// in bounds, not negative, and at least 1 for a geometric grid.
+func inRange(n, lo, hi int, geo bool) bool {
+	return n >= 0 && n >= lo && n <= hi && (!geo || n >= 1)
+}
+
+// offSurvives reports whether a level other than the base equals the off value.
+func offSurvives(g Grid, off Off) bool {
+	return off.Has && slices.ContainsFunc(g.Levels, func(v int64) bool { return v == off.Value && v != g.Levels[g.Base] })
+}
+
+// offAfterCutProblems builds the grid of one D row on the owner's default and
+// bound, as 5.2 builds it, and reports a level other than the base that equals
+// the off value (FR-CLB-108).
+func offAfterCutProblems(k []string, d ownerDefault) (problems []string, built bool) {
+	rule, base, b, off, ok := gridInputs(k, d)
+	if !ok {
+		return nil, false
+	}
+	g, err := Build(rule, base, b, off, nil)
+	if err != nil {
+		return []string{k[cID] + ": " + err.Error()}, true
+	}
+	if offSurvives(g, off) {
+		return []string{k[cID] + ": an off level survived the cut"}, true
+	}
+	return nil, true
+}
+
+// checkOffAfterCut is FR-CLB-108 for every D row whose owner default and bound
+// are found.
+func checkOffAfterCut(r *registry, files map[string]string, specText func(string) string) (problems []string, built int) {
+	for _, k := range r.knobs {
+		code, _, _ := strings.Cut(k[cOwner], " ")
+		scope, field := keyParts(k[cKey])
+		if d, ok := ownerRow(specText(files[code]), field, scope[strings.LastIndexByte(scope, '.')+1:]); ok && files[code] != "" {
+			p, b := offAfterCutProblems(k, d)
+			problems = append(problems, p...)
+			if b {
+				built++
+			}
+		}
+	}
+	return problems, built
+}
+
+// TestRegistry_OffAfterCut verifies that the grid of 5.2, built by Build on the
+// owner's default and cut at the off value, leaves no level equal to the off
+// value except the base, for every D row whose default and bound are found.
+//
+// Requirement: FR-CLB-108
+func TestRegistry_OffAfterCut(t *testing.T) {
+	t.Parallel()
+	s := loadSpecs(t)
+	r := parseRegistry(s.clb)
+	files := codeToFile(s.readme)
+	text := func(name string) string { return readDoc(t, "specs/"+name) }
+	got, built := checkOffAfterCut(r, files, text)
+	if len(got) > 0 {
+		t.Errorf("checkOffAfterCut(spec) = %v, want none", got)
+	}
+	if built < 10 { // 14 D rows have a numeric default, a numeric bound and an off value
+		t.Errorf("checkOffAfterCut built %d grids, want at least 10: the check would pass without reading the rows", built)
+	}
+	// Guard: a grid with the off value left in it is reported, so the check can fail.
+	g := Grid{Levels: []int64{1, 2, 3}, Base: 1}
+	if !offSurvives(g, Off{Has: true, Value: 3}) || offSurvives(g, Off{Has: true, Value: 2}) || offSurvives(g, Off{}) {
+		t.Errorf("offSurvives(%v) does not tell a surviving off level from the base or from none", g)
+	}
+	// A row whose off value is not cut: ReviewTicks-like geo row with off=1 and base 10 in 1..1000 passes.
+	row := []string{"K-X", "World.X", "D", "BEL 11", "ticks", "U", "geo", "C4", "off=1", "-", "-", "-"}
+	if got, built := offAfterCutProblems(row, ownerDefault{def: "10", bound: "1 to 1000"}); len(got) > 0 || !built {
+		t.Errorf("offAfterCutProblems(off=1 base 10) = %v, %v, want none and built", got, built)
+	}
+	// A base the grid cannot be built on is reported, not skipped silently: off=max, base outside.
+	bad := with(row, cGrid, "lin0")
+	if got, _ := offAfterCutProblems(bad, ownerDefault{def: "10", bound: "1 to 1000"}); len(got) == 0 {
+		t.Errorf("offAfterCutProblems(lin0) found nothing, want the grid error")
+	}
 }
