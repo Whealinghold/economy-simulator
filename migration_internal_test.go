@@ -75,7 +75,7 @@ func TestArrival_RelocatesAndReseeds(t *testing.T) {
 	t.Parallel()
 	w, _, rec := migWorld(t, nil)
 	a := &w.agents[3]
-	role, weight, strategy := a.role, a.weight, a.strategy
+	role, weight, strategy, target, residues := a.role, a.weight, a.strategy, a.target, slices.Clone(a.residues)
 	held, _ := balance(t, w, 3)
 	w.migration.depart(3, infoB, 2)
 	step(t, w, 2)
@@ -92,6 +92,9 @@ func TestArrival_RelocatesAndReseeds(t *testing.T) {
 	}
 	if a.roleSince != 2 || a.role != role || a.weight != weight || a.strategy != strategy {
 		t.Errorf("agent 3 roleSince %d role %d weight %d strategy %d, want 2 %d %d %d", a.roleSince, a.role, a.weight, a.strategy, role, weight, strategy)
+	}
+	if a.target != target || !slices.Equal(a.residues, residues) || a.hunger != 0 || a.privation != 0 {
+		t.Errorf("agent 3 target %d residues %v hunger %d privation %d, want %d %v 0 0: the arrival changes none of them", a.target, a.residues, a.hunger, a.privation, target, residues)
 	}
 	// The reseed is plan 12's reseedAtArrival: every belief has the width of a fresh seed.
 	row := w.roles.row(a.role)

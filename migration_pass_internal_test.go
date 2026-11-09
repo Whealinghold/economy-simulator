@@ -275,6 +275,15 @@ func TestPass_HomeFigure(t *testing.T) {
 	if got := w.homeFigure(a, infoA, row); got != 20_000 {
 		t.Errorf("homeFigure after 4 working ticks of income 2 000 = %d, want 20 000", got)
 	}
+	// Before any trade the window is empty and the published price (the seed 1 000) is read.
+	fresh, _ := passWorld(t, 0, nil)
+	b := &fresh.agents[3]
+	for range 4 {
+		b.history.Push(welfare.Record{Income: 2_000, Cost: 1_000, Working: true, WorkHH: 1})
+	}
+	if got := fresh.homeFigure(b, infoA, fresh.roles.row(b.role)); got != 20_000 {
+		t.Errorf("homeFigure with an empty price window = %d, want 20 000 at the seed price", got)
+	}
 }
 
 // TestPass_AdmissionAndOutcomes verifies spec-migration.md 7 and 7.6 on the fixture:
@@ -549,5 +558,58 @@ func TestPass_UnsettledCountedNotEvaluated(t *testing.T) {
 	w.p72Migration()
 	if p.tally[infoA].unsettled != 0 || p.tally[infoA].reviewed != 2 {
 		t.Errorf("settled: region a unsettled %d reviewed %d, want 0 and 2", p.tally[infoA].unsettled, p.tally[infoA].reviewed)
+	}
+}
+
+// TestPass_BoundByAnObligation verifies the guard of spec-migration.md 7.2: a household
+// that another region-bound obligation holds ends in bound, uses none of the outflow
+// cap, and the other miller of its region is admitted in its place.
+//
+// Requirement: FR-MIG-020, FR-MIG-024
+func TestPass_BoundByAnObligation(t *testing.T) {
+	t.Parallel()
+	w, _ := passWorld(t, 6, nil)
+	open(w)
+	w.bounds.add("open_shipment", func(a *agent, _ []string) bool { return a.id == 4 })
+	w.p72Migration()
+	tl := w.migration.pass.tally[infoA]
+	if tl.outcome[mig.Bound] != 1 || tl.outcome[mig.Started] != 1 || !w.migration.on(3) || w.migration.on(4) {
+		t.Errorf("region a: outcomes %v, journeys of 3 and 4 %v %v, want one bound (agent 4) and one started (agent 3)", tl.outcome, w.migration.on(3), w.migration.on(4))
+	}
+}
+
+// TestPass_WorkedExampleBJourneyTimes verifies the table of journey times of
+// spec-migration.md 15.2 on its three regions (belt a, orbital b, surface c) and its
+// edges, at a speed of 3 000: k = ceil(D / 3 000) is 1, 2 from the belt, 1, 1 from the
+// orbital and 5, 4 from the surface, and the candidates of a household are the other two
+// regions in ascending order.
+//
+// Requirement: FR-MIG-016, FR-MIG-046
+func TestPass_WorkedExampleBJourneyTimes(t *testing.T) {
+	t.Parallel()
+	w, _ := passWorld(t, 0, func(c *Config) {
+		c.Edges = []Edge{
+			{From: "a", To: "b", Distance: 3_000}, {From: "a", To: "c", Distance: 5_000},
+			{From: "b", To: "a", Distance: 3_000}, {From: "b", To: "c", Distance: 2_000},
+			{From: "c", To: "a", Distance: 12_400}, {From: "c", To: "b", Distance: 9_400},
+		}
+		c.Modules.Migration.MoveSpeed = 3_000
+	})
+	for _, tt := range []struct {
+		agent  AgentID
+		region RegionID
+		want   [2]int64
+	}{
+		{3, infoA, [2]int64{1, 2}}, // belt to orbital, belt to surface
+		{5, infoB, [2]int64{1, 1}}, // orbital to belt, orbital to surface
+		{7, infoC, [2]int64{5, 4}}, // surface to belt, surface to orbital
+	} {
+		a := &w.agents[tt.agent]
+		w.migration.pass.cands = w.migration.pass.cands[:0]
+		w.candidatesOf(a, tt.region, w.roles.row(a.role))
+		cands := w.migration.pass.cands
+		if len(cands) != 2 || cands[0].K != tt.want[0] || cands[1].K != tt.want[1] || cands[0].Ref >= cands[1].Ref {
+			t.Errorf("candidates of agent %d in region %d = %+v, want two in region order with journey times %v", tt.agent, tt.region, cands, tt.want)
+		}
 	}
 }

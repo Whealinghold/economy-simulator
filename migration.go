@@ -361,6 +361,7 @@ func (w *World) arriveJourney(a *agent, to RegionID) {
 		}
 		return
 	}
+	// Excluded from coverage (testing.md 9.5): the dry run just passed, so the ledger cannot refuse.
 	if err := w.moveAgent(a, to, CauseMigration); err != nil {
 		invariant("the ledger refused the relocation of an arriving migrant: " + err.Error())
 	}

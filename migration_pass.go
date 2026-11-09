@@ -208,6 +208,7 @@ func (w *World) evaluate(a *agent, g RegionID, row *roleRow, home int64) ([]mig.
 	m := w.migration
 	p := &m.pass
 	margin, ok := mig.Margin(int64(a.id), m.cfg.MoveGain, m.cfg.MoveWidth)
+	// Excluded from coverage (testing.md 9.5): the width is validated to 0 to MaxBasisPoints.
 	if !ok {
 		invariant("the margin of a validated migration module overflowed")
 	}
@@ -361,6 +362,8 @@ func (w *World) guarded(a *agent, head mig.Ranked) bool {
 	if err == nil {
 		return false
 	}
+	// Excluded from coverage (testing.md 9.5): the other refusals of 6.1.3 cannot occur for a
+	// live account in a region with no reservation, so the branch is a violated invariant.
 	if reason != ReasonRegionBound {
 		invariant("the guard of the migration pass refused with " + string(reason) + ", which a live account cannot meet")
 	}
@@ -375,6 +378,7 @@ func (w *World) holdTicks(a *agent, g RegionID) int64 {
 	ticks := int64(math.MaxInt64)
 	for _, it := range w.roles.row(a.role).upkeepIn(g) {
 		held, _, err := w.ledger.Holding(a.account, int(it.commodity))
+		// Excluded from coverage (testing.md 9.5): the holding of a live account is readable.
 		if err != nil {
 			invariant("the ledger refused the holding of a live agent: " + err.Error())
 		}
@@ -394,6 +398,7 @@ func (w *World) setCaps() {
 	for g := range p.households {
 		out, ok := mig.CapOf(p.households[g], m.outShare[g])
 		in, ok2 := mig.CapOf(p.households[g], m.inShare[g])
+		// Excluded from coverage (testing.md 9.5): validation (12.2) bounds households times share.
 		if !ok || !ok2 {
 			invariant("the caps of a validated migration module overflowed")
 		}
