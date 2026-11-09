@@ -242,3 +242,28 @@ func TestValueAdded_ShortRecipeTableIsRange(t *testing.T) {
 		t.Errorf("ValueAdded(no recipe table) error = %v, want ErrRange on recipe", err)
 	}
 }
+
+// Requirement: FR-IND-009 (a hand-built Window or row set returns an error or a
+// result, never a panic or a wrapped value).
+func TestNegativeDimsAndWideTotals(t *testing.T) {
+	bad := indicator.Window{Regions: -1, Commodities: 2, Roles: 2, To: 1}
+	if _, err := bad.Quantities(indicator.WeightsConsumed); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("Quantities: %v, want indicator.ErrRange", err)
+	}
+	if _, err := indicator.StockCover(bad, economysim.Snapshot{Tick: 1}, indicator.CellSel{}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("StockCover: %v, want indicator.ErrRange", err)
+	}
+	if _, err := indicator.Unfed(bad, economysim.Snapshot{Tick: 1}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("Unfed: %v, want indicator.ErrRange", err)
+	}
+	if _, err := indicator.Households(bad, economysim.Snapshot{}, economysim.Snapshot{Tick: 1}, 1); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("Households: %v, want indicator.ErrRange", err)
+	}
+	rows := []indicator.Household{{1, 1<<63 - 1}, {1, 1<<63 - 1}}
+	if r, err := indicator.Stat(rows, indicator.StatQuantile, 5000); err != nil || !r.OK || r.Value != 1<<63-1 {
+		t.Errorf("Quantile of totals past int64: %+v, %v", r, err)
+	}
+	if _, err := indicator.Stat(rows, indicator.StatSum, 0); !errors.Is(err, indicator.ErrOverflow) {
+		t.Errorf("Sum past int64: %v, want indicator.ErrOverflow", err)
+	}
+}

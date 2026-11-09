@@ -111,8 +111,32 @@ func stocksOf(s economysim.Snapshot, regions, commodities int) (stockTable, erro
 	return st, nil
 }
 
+// maxCells bounds the cells of a dense table, so that a hand-built window cannot
+// make a table of negative, wrapped or absurd length.
+const maxCells = 1 << 31
+
+// checkDims returns ErrRange for a hand-built window whose table counts are
+// negative or whose dense tables (region by commodity, role or recipe) would be
+// too long to allocate; the presets size their tables from these counts.
+func (w Window) checkDims(preset string) error {
+	for _, n := range [...]int{w.Regions, w.Commodities, w.Roles, w.Recipes} {
+		if n < 0 {
+			return wrap(preset, "dimensions", ErrRange)
+		}
+	}
+	for _, n := range [...]int{w.Commodities, w.Roles, w.Recipes} {
+		if v, ok := mulChecked(int64(w.Regions), int64(n)); !ok || v > maxCells {
+			return wrap(preset, "dimensions", ErrRange)
+		}
+	}
+	return nil
+}
+
 // checkSnapshots verifies that the two snapshots bound the window.
 func (w Window) checkSnapshots(preset string, open, closing economysim.Snapshot) error {
+	if err := w.checkDims(preset); err != nil {
+		return err
+	}
 	if open.ConfigHash != w.ConfigHash || closing.ConfigHash != w.ConfigHash {
 		return wrap(preset, "snapshots", ErrConfigMismatch)
 	}
@@ -134,6 +158,9 @@ func (w Window) checkRegional(preset string) error {
 // checkClosing verifies that one snapshot closes the window: its configuration
 // (ErrConfigMismatch) and its tick (ErrWindowOrder).
 func (w Window) checkClosing(preset string, closing economysim.Snapshot) error {
+	if err := w.checkDims(preset); err != nil {
+		return err
+	}
 	if closing.ConfigHash != w.ConfigHash {
 		return wrap(preset, "snapshot", ErrConfigMismatch)
 	}

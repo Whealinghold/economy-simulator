@@ -88,7 +88,11 @@ func Stat(rows []Household, op StatOp, arg int64) (StatResult, error) {
 	var ok bool
 	switch op {
 	case StatSum:
-		res.Value, ok = s, true
+		var fits bool
+		if res.Value, fits = measure.ToInt64(s); !fits { // only a sum is stated as int64
+			return fail(measure.ErrOverflow)
+		}
+		ok = true
 	case StatMean:
 		res.Value, ok, err = mean(s, w)
 	case StatQuantile:
@@ -108,30 +112,31 @@ func Stat(rows []Household, op StatOp, arg int64) (StatResult, error) {
 }
 
 // sums returns the sum of the weights W and of the totals S, checked: a weight
-// below 1 is ErrRange and a sum past int64 is ErrOverflow.
-func sums(rows []measure.Row) (w, s int64, err error) {
+// below 1 is ErrRange and a weight sum past int64 is ErrOverflow. S is 128 bits,
+// because only a sum or a mean states it, and a quantile or a Gini coefficient
+// of totals that sum past int64 is still defined.
+func sums(rows []measure.Row) (w int64, s measure.Int128, err error) {
 	ws, ss := measure.FromInt64(0), measure.FromInt64(0)
 	for _, r := range rows {
 		if r.Weight < 1 {
-			return 0, 0, measure.ErrRange
+			return 0, measure.Int128{}, measure.ErrRange
 		}
 		ws, _ = ws.Add(measure.FromInt64(r.Weight)) // 2^64 rows would be needed to pass 2^127
 		ss, _ = ss.Add(measure.FromInt64(r.Total))
 	}
 	w, wok := measure.ToInt64(ws)
-	s, sok := measure.ToInt64(ss)
-	if !wok || !sok {
-		return 0, 0, measure.ErrOverflow
+	if !wok {
+		return 0, measure.Int128{}, measure.ErrOverflow
 	}
-	return w, s, nil
+	return w, ss, nil
 }
 
 // mean returns rdiv(s, w), and ok false when there are no households.
-func mean(s, w int64) (int64, bool, error) {
+func mean(s measure.Int128, w int64) (int64, bool, error) {
 	if w == 0 {
 		return 0, false, nil
 	}
-	q, _ := measure.RoundDiv(measure.FromInt64(s), measure.FromInt64(w))
+	q, _ := measure.RoundDiv(s, measure.FromInt64(w))
 	v, _ := measure.ToInt64(q) // a mean lies between the least and greatest total
 	return v, true, nil
 }

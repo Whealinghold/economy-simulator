@@ -62,6 +62,9 @@ type flowSet struct {
 
 // flowsOf corrects the flows of w.
 func flowsOf(w Window) (flowSet, error) {
+	if err := w.checkDims("Window.Corrected"); err != nil {
+		return flowSet{}, err
+	}
 	rows, err := w.Corrected()
 	return flowSet{rows: rows, regions: w.Regions, commodities: w.Commodities}, err
 }
