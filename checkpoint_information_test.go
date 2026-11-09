@@ -168,7 +168,7 @@ func infoBody(rows [][][3]uint64) []byte {
 // TestCheckpoint_InformationCorrupt verifies that a restore refuses, as corrupt,
 // a section 16 with a count above the depth, unequal counts, a count that is not
 // the ticks run, a price of 0, a price or a mean above MaxPrice, an age below 0
-// (a value above the int64 range), trailing bytes and missing bytes, and a section
+// (a value above the int64 range) or above the tick (7 at tick 6), trailing bytes and missing bytes, and a section
 // 22 with a row (a count of 1 and one body byte, so the count itself is readable).
 //
 // Arithmetic: a horizon of 4 and 6 ticks run give every source 4 entries; 5 is
@@ -209,6 +209,7 @@ func TestCheckpoint_InformationCorrupt(t *testing.T) {
 		{"a price above the bound", mutate(func(r [][][3]uint64) [][][3]uint64 { r[0][2][0] = economysim.MaxPrice + 1; return r })},
 		{"a mean above the bound", mutate(func(r [][][3]uint64) [][][3]uint64 { r[0][2][1] = economysim.MaxPrice + 1; return r })},
 		{"a negative age", mutate(func(r [][][3]uint64) [][][3]uint64 { r[0][2][2] = 1<<64 - 1; return r })},
+		{"an age above the tick", mutate(func(r [][][3]uint64) [][][3]uint64 { r[0][2][2] = 7; return r })},
 		{"trailing bytes", append(mutate(func(r [][][3]uint64) [][][3]uint64 { return r }), 0)},
 		{"missing bytes", infoBody(good)[:len(infoBody(good))-1]},
 		{"empty", nil},

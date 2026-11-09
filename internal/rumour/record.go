@@ -140,10 +140,7 @@ func (r *Record) Resume(next int64) (ok bool) {
 // record: the arguments are in range, n is the ticks run capped at the depth, and
 // they agree with an earlier Load or the record has not run.
 func (r *Record) canLoad(source int, next, n int64) bool {
-	if source < 0 || source >= r.sources || next < 0 || n > r.depth || n > next {
-		return false
-	}
-	if n != min(next, r.depth) {
+	if source < 0 || source >= r.sources || next < 0 || n != min(next, r.depth) {
 		return false
 	}
 	if r.restored {

@@ -3,7 +3,6 @@ package economysim
 import (
 	"context"
 	"log/slog"
-	"math"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -527,7 +526,7 @@ func (w *World) saveInformation(cw *codec.Writer) error {
 // from the configuration. Every source holds the ticks run, at most the depth: a
 // count anywhere else (above the depth, unequal between sources, or not the number
 // of ticks written) is corrupt, as is a price below 1 or above MaxPrice, a mean
-// above MaxPrice or an age below 0. The entries are placed so that entry i of n is
+// above MaxPrice an age below 0 or above the tick. The entries are placed so that entry i of n is
 // the tick T - n + i of a checkpoint at T (rumour.Record.Load).
 //
 // Excluded from coverage (testing.md 9.5): the two refusals of the record (Resume and
@@ -548,7 +547,7 @@ func (w *World) loadInformation(rs *restoreCtx, r *codec.Reader) error {
 		}
 		entries = entries[:0]
 		for range n {
-			entries = append(entries, readObs(r, i))
+			entries = append(entries, readObs(r, i, rs.tick))
 		}
 		if r.Err() == nil && !in.rec.Load(i, rs.tick, entries) {
 			r.Failf("source %d: the record refuses %d observations as of tick %d", i, n, rs.tick)
@@ -558,9 +557,10 @@ func (w *World) loadInformation(rs *restoreCtx, r *codec.Reader) error {
 }
 
 // readObs reads one observation of source i of tag 16: a price from 1 to MaxPrice,
-// a mean from 0 to MaxPrice and an age of at least 0.
-func readObs(r *codec.Reader, i int) rumour.Obs {
-	o := rumour.Obs{Price: r.Bounded("price", MaxPrice), Mean: r.Bounded("mean", MaxPrice), Age: r.Bounded("age", math.MaxInt64)}
+// a mean from 0 to MaxPrice and an age from 0 to the checkpoint tick (a price cannot
+// be older than the run, as the restored report ages are bounded in market.go).
+func readObs(r *codec.Reader, i int, tick int64) rumour.Obs {
+	o := rumour.Obs{Price: r.Bounded("price", MaxPrice), Mean: r.Bounded("mean", MaxPrice), Age: r.Bounded("age", tick)}
 	if r.Err() == nil && !o.Valid(MaxPrice) {
 		r.Failf("source %d holds a price of %d, want 1 to %d", i, o.Price, int64(MaxPrice))
 	}
