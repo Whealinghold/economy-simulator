@@ -261,13 +261,13 @@ func DemandAgentIndex(w *World, id AgentID) int64 {
 func DemandPlanAllocs(w *World, id AgentID, runs int) float64 {
 	a := &w.agents[id]
 	w.refreshViewCtx()
-	if err := w.fillAgentView(&w.tk.view, a); err != nil {
+	if err := w.fillAgentView(&w.tk.view, a, viewTrade); err != nil {
 		panic(err)
 	}
 	p := w.views.tradePlan()
 	DefaultStrategy{}.Trade(&w.tk.view, w.rnd.rnd, p)
 	return testing.AllocsPerRun(runs, func() {
-		_ = w.fillAgentView(&w.tk.view, a)
+		_ = w.fillAgentView(&w.tk.view, a, viewTrade)
 		w.checkWants(a, p)
 		w.demand.use = w.demand.use[:0]
 	})
@@ -277,7 +277,7 @@ func DemandPlanAllocs(w *World, id AgentID, runs int) float64 {
 func PlannedWants(w *World, id AgentID) []Quantity {
 	a := &w.agents[id]
 	w.refreshViewCtx()
-	if err := w.fillAgentView(&w.tk.view, a); err != nil {
+	if err := w.fillAgentView(&w.tk.view, a, viewTrade); err != nil {
 		panic(err)
 	}
 	var out []Quantity

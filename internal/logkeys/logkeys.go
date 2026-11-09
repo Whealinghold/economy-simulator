@@ -133,4 +133,8 @@ const (
 	// Pairs is a count of ordered region pairs, carried by the warning
 	// rumour_horizon_short.
 	Pairs = "pairs"
+	// Rumours is the count of rumours offered to one agent, and Lag a lag in ticks
+	// (int64), in the "rumours served" line of the information module.
+	Rumours = "rumours"
+	Lag     = "lag"
 )

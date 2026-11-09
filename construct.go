@@ -132,6 +132,7 @@ func (w *World) allocate() {
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	w.pop = newPopulation(&w.cfg)
 	w.transport = newTransport(&w.cfg)
+	w.info = newInformation(&w.cfg, &w.roles)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
 	}
@@ -321,6 +322,9 @@ func modulesOn(c *Config) []string {
 	}
 	if c.Modules.Transport != nil {
 		on = append(on, "transport")
+	}
+	if c.Modules.Information != nil {
+		on = append(on, "information")
 	}
 	return on
 }

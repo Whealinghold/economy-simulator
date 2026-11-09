@@ -215,7 +215,7 @@ func (w *World) workAgent(a *agent, region RegionID) error {
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
-	if err := w.fillAgentView(v, a); err != nil {
+	if err := w.fillAgentView(v, a, viewWork); err != nil {
 		return fmt.Errorf("work at tick %d: %w", w.Tick(), err)
 	}
 	cell := int(region)*len(w.cfg.Roles) + int(a.role)

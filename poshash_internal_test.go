@@ -381,6 +381,9 @@ func resourcesOn(w *World) bool { return w.res != nil }
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
 
+// informationOn is the guard of the row of the information module (P5.2).
+func informationOn(w *World) bool { return w.info != nil }
+
 // transportOn is the guard of the rows of the transport module (P1.3 and P3.1,
 // plan 2-12): an off world records no line for them.
 func transportOn(w *World) bool { return w.transport != nil }
@@ -420,6 +423,7 @@ var replayRows = []replayRow{
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: demandOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P5.1", run: noErr((*World).p51Window)},
+	{id: "P5.2", run: noErr((*World).p52Record), on: informationOn},
 	{id: "P5.3", run: (*World).p53Markdown},
 	{id: "P5.4", run: noErr((*World).p54Outcomes)},
 	{id: "P6.1", run: (*World).p61Upkeep},

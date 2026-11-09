@@ -467,6 +467,11 @@ type AgentView struct {
 	Inbound  []InboundRow
 	Outbound []OutboundRow
 	Routes   []RouteRow
+	// Rumours are the rumours of remote markets an agent of an informed role is
+	// shown in the view passed to Trade, sorted by (Region, Commodity), a scratch
+	// copy valid for the call only; nil for every other agent and in every other
+	// view (spec-information.md 6.2). Look one up with Rumour.
+	Rumours []Rumour
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

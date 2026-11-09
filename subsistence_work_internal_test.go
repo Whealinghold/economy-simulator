@@ -325,7 +325,7 @@ func TestView_CarriesOwnUseGroup(t *testing.T) {
 	w.sub.ownUseJobs[a.id] = 3
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, a); err != nil {
+	if err := w.fillAgentView(&v, a, viewTrade); err != nil {
 		t.Fatalf("fillAgentView error = %v, want nil", err)
 	}
 	if !v.OwnUse || v.OwnUseJobs != 3 || v.Cover != 1 || v.ExitTicks != 3 || v.RetryJobs != 0 || v.Secure != 1 {
@@ -342,7 +342,7 @@ func TestView_CarriesOwnUseGroup(t *testing.T) {
 	off := newForage(t, 1, func(c *Config) { c.Modules.Subsistence = nil })
 	off.refreshViewCtx()
 	var vo AgentView
-	if err := off.fillAgentView(&vo, &off.agents[1]); err != nil {
+	if err := off.fillAgentView(&vo, &off.agents[1], viewTrade); err != nil {
 		t.Fatalf("fillAgentView (off) error = %v, want nil", err)
 	}
 	if vo.OwnUse || vo.OwnUseJobs != 0 || vo.Cover != 0 || vo.Secure != 0 || vo.ExitTicks != 0 || vo.RetryJobs != 0 || len(vo.Recipes) != 1 || vo.Recipes[0].OwnUse {
@@ -364,11 +364,11 @@ func TestView_TradeViewCoverRecomputed(t *testing.T) {
 	w.p24OwnUse()
 	w.refreshViewCtx()
 	var v1, v2 AgentView
-	if err := w.fillAgentView(&v1, a); err != nil {
+	if err := w.fillAgentView(&v1, a, viewTrade); err != nil {
 		t.Fatal(err)
 	}
 	takeGrain(t, w, a, 4)
-	if err := w.fillAgentView(&v2, a); err != nil {
+	if err := w.fillAgentView(&v2, a, viewTrade); err != nil {
 		t.Fatal(err)
 	}
 	if v1.Cover != 3 || v2.Cover != 1 {
@@ -503,13 +503,13 @@ func TestAllocs_FlagStep(t *testing.T) {
 	w.p24OwnUse()
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[1]); err != nil {
+	if err := w.fillAgentView(&v, &w.agents[1], viewTrade); err != nil {
 		t.Fatal(err)
 	}
 	if n := testing.AllocsPerRun(50, func() { w.p24OwnUse() }); n != 0 {
 		t.Errorf("allocations per flag step = %v, want 0", n)
 	}
-	if n := testing.AllocsPerRun(50, func() { _ = w.fillAgentView(&v, &w.agents[1]) }); n != 0 {
+	if n := testing.AllocsPerRun(50, func() { _ = w.fillAgentView(&v, &w.agents[1], viewTrade) }); n != 0 {
 		t.Errorf("allocations per fillAgentView in the mode = %v, want 0", n)
 	}
 }

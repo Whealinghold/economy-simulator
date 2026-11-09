@@ -61,7 +61,7 @@ func (w *World) tradeAgent(a *agent) error {
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
-	if err := w.fillAgentView(v, a); err != nil {
+	if err := w.fillAgentView(v, a, viewTrade); err != nil {
 		return fmt.Errorf("trade at tick %d: %w", w.Tick(), err)
 	}
 	p := w.views.tradePlan()

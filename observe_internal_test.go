@@ -279,6 +279,11 @@ var stepSites = []site{
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},
 	{"P5.1", noError((*World).p51Window)},
+	{"P5.2", noError(func(w *World) {
+		if w.info != nil {
+			w.p52Record()
+		}
+	})},
 	{"P5.3", (*World).p53Markdown},
 	{"P5.4", noError((*World).p54Outcomes)},
 	{"P6.1", (*World).p61Upkeep},

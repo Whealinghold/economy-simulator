@@ -5,10 +5,272 @@ import "github.com/Whealinghold/economy-sim/internal/rumour"
 // This file is the information module (spec-information.md): the price record
 // of every market, and the delayed, blurred rumours of remote prices that the
 // agents of an informed role are shown. The pure rules are in internal/rumour.
-// The file holds, in the order of architecture.md 2.10.1: the validator and the
-// warnings (the configuration surface). The state, the record's position, the
-// filler of the trade view and the checkpoint section follow in the later
-// phases of the plan that builds them.
+// The file holds, in the order of architecture.md 2.10.1: the state, the
+// validator and the warnings (the configuration surface), the construction of
+// the sources, the method of P5.2, the filler of the trade view and the
+// function that makes rumours. The checkpoint section follows in a later phase.
+
+// Rumour is what an informed agent has heard of a remote market: a reading of
+// the price that market published Lag ticks ago, blurred by a bounded error. It
+// is never the market's current price, and it carries no stock, volume or quote
+// (spec-information.md 5.1).
+type Rumour struct {
+	// Region is the region the news is about, never the agent's own.
+	Region RegionID
+	// Commodity is the commodity.
+	Commodity CommodityID
+	// Price is the market price at the vintage tick, with the error, from 1 to
+	// MaxPrice.
+	Price Price
+	// Mean is the price window mean at the vintage tick, with the same error; 0
+	// when there was none.
+	Mean Price
+	// Lag is the ticks from the vintage tick to the reading: at least 2.
+	Lag int64
+	// SourceAge is the source's price age at the vintage tick; 0 when units
+	// traded that tick. Lag and SourceAge are never changed by the error.
+	SourceAge int64
+}
+
+// Rumour returns the rumour about the commodity in the region, and false when
+// the view carries none (no path, too old, not yet, not a source, or an agent
+// that is not informed). It does not allocate (spec-information.md 6.7).
+func (v *AgentView) Rumour(region RegionID, c CommodityID) (Rumour, bool) {
+	lo, hi := 0, len(v.Rumours)
+	for lo < hi {
+		mid := int(uint(lo+hi) >> 1)
+		if r := &v.Rumours[mid]; r.Region < region || (r.Region == region && r.Commodity < c) {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	if lo < len(v.Rumours) && v.Rumours[lo].Region == region && v.Rumours[lo].Commodity == c {
+		return v.Rumours[lo], true
+	}
+	return Rumour{}, false
+}
+
+// information is the state of the information module (nil in the world while
+// the module is off): the sources, the price record, which roles are informed
+// and the scratch of a view. Per-agent state does not exist (spec-information.md
+// 4.6); the record is the only saved state.
+type information struct {
+	speed, errorBP, maxAge int64
+	// sources are the markets that can be the subject of a rumour, in ascending
+	// (region, commodity) order, and at the source of each market, as its index
+	// plus one (0 is not a source), at region * commodities + commodity.
+	sources []rumourSource
+	at      []int32
+	rec     *rumour.Record
+	// informed says, by RoleID, whether the agents of the role are shown rumours.
+	informed []bool
+	// buf is the scratch of the rumours of one view, sized to the largest informed
+	// role's candidates; tally the per-reader-region counts of the tick.
+	buf   []Rumour
+	tally []rumourTally
+}
+
+// rumourSource is a source: a market whose published price is recorded each tick.
+type rumourSource struct {
+	region    RegionID
+	commodity CommodityID
+	market    int
+}
+
+// rumourQuery asks rumoursFor for the rumours a reader would be offered. regions
+// are the source regions to consider, ascending; nil means every region but the
+// reader. commodities are the ascending commodities to consider. asOf is the
+// tick of the reading: the current tick for a view, the next for the migration
+// pass of phase 7 (spec-information.md 4.3.2).
+type rumourQuery struct {
+	reader      RegionID
+	regions     []RegionID
+	commodities []CommodityID
+	asOf        int64
+}
+
+// rumourTally counts the candidates of the views of one reader region in a tick
+// by their result (spec-information.md 5.3.1) for RumoursServed, with the
+// readers given a view and the largest lag offered. A nil tally counts nothing.
+type rumourTally struct {
+	Readers, Offered, NoPath, TooOld, NotYet, MaxLag int64
+}
+
+// count adds one candidate with its result and, if offered, its lag.
+func (t *rumourTally) count(o rumour.Outcome, lag int64) {
+	if t == nil {
+		return
+	}
+	switch o {
+	case rumour.NoPath:
+		t.NoPath++
+	case rumour.TooOld:
+		t.TooOld++
+	case rumour.NotYet:
+		t.NotYet++
+	default:
+		t.Offered++
+		t.MaxLag = max(t.MaxLag, lag)
+	}
+}
+
+// newInformation builds the state of the module, or nil while it is off. The
+// sources are the pairs (region, commodity) whose commodity is in the tradable
+// set of some role that has a group in the region (spec-information.md 4.1.1),
+// derived once and fixed. It reads a configuration that passed Validate and the
+// role table of the world.
+func newInformation(c *Config, rt *roleTable) *information {
+	m := c.Modules.Information
+	if m == nil {
+		return nil
+	}
+	commodities, regions := len(c.Commodities), len(c.Regions)
+	active := make([]bool, regions*commodities)
+	for _, g := range c.Groups {
+		r, _ := c.regionID(g.Region)
+		role, _ := c.roleID(g.Role)
+		for _, k := range rt.rows[role].tradable {
+			active[int(r)*commodities+int(k)] = true
+		}
+	}
+	in := &information{speed: m.InfoSpeed, errorBP: m.RumourErrorBP, maxAge: m.RumourMaxAge,
+		at: make([]int32, len(active)), informed: make([]bool, len(c.Roles)), tally: make([]rumourTally, regions)}
+	for i, on := range active {
+		if on {
+			in.sources = append(in.sources, rumourSource{RegionID(i / commodities), CommodityID(i % commodities), i})
+			in.at[i] = int32(len(in.sources))
+		}
+	}
+	in.rec = rumour.NewRecord(len(in.sources), int(m.RumourMaxAge))
+	most := 0
+	for i := range c.Roles {
+		if in.informed[i] = c.Roles[i].Informed; in.informed[i] {
+			most = max(most, len(rt.rows[i].tradable)*max(0, regions-1))
+		}
+	}
+	in.buf = make([]Rumour, 0, most)
+	return in
+}
+
+// p52Record is P5.2: after the price windows are pushed and before the first
+// outcome, one observation of tick t is appended to the record of every source,
+// in source order (spec-information.md 4.3.1): the published price and price age
+// of the market and the window mean after the push, 0 while the window is empty.
+// Every source is written every tick, a tick in which nothing traded included. It
+// emits no event, draws nothing and allocates nothing. Nothing else writes the
+// record (FR-INF-006).
+func (w *World) p52Record() {
+	in, tick := w.info, w.Tick()
+	for i := range in.sources {
+		m := in.sources[i].market
+		mean, _ := w.markets.windows[m].Mean()
+		rep := &w.markets.reports[m]
+		in.rec.Put(i, tick, rumour.Obs{Price: int64(rep.Price), Mean: mean, Age: rep.Age})
+	}
+	in.rec.Seal(tick)
+}
+
+// fillRumours is the filler of the trade view (spec-information.md 6.2): for an
+// agent of an informed role it keys the stream of (siteInform, tick, agent), once
+// and only when the error is above 0, and puts the agent's rumours in the view,
+// sorted. It runs for an agent that has a view, so an agent that is away, a
+// removed agent and the estates get none, and only in the view passed to Trade.
+// The draws of the view come before the agent's Trade, which keys its own site
+// after, so the two cannot interleave. v.Region is the reader's region.
+func (w *World) fillRumours(v *AgentView, a *agent) {
+	in := w.info
+	if !in.informed[a.role] {
+		return
+	}
+	if in.errorBP > 0 {
+		w.rnd.keyed(siteInform, w.Tick(), int64(a.id))
+	}
+	var tally *rumourTally
+	if w.obs.supplied {
+		tally = &in.tally[v.Region]
+		tally.Readers++
+	}
+	q := rumourQuery{reader: v.Region, commodities: w.roles.rows[a.role].tradable, asOf: w.Tick()}
+	in.buf = w.rumoursFor(in.buf[:0], q, tally)
+	if n := len(in.buf); n > 0 {
+		v.Rumours = in.buf[:n:n]
+	}
+}
+
+// rumoursFor appends to dst the rumours the reader is offered for the candidates
+// of q, in ascending (region, commodity) order, and returns it. A candidate is a
+// pair (region, commodity) that is a source, in a region other than the
+// reader's. For each, in order: the error is drawn when RumourErrorBP is above 0
+// (so the stream does not depend on the graph or the age of the run), then the
+// candidate is decided by the cases of spec-information.md 5.3.1, then the
+// observation of the vintage tick asOf - Lag is blurred by the error. It does
+// not key the stream: the caller keys it (the view with siteInform, the
+// migration pass with its own site), which keeps the draws of phases 3 and 7
+// apart. tally may be nil.
+func (w *World) rumoursFor(dst []Rumour, q rumourQuery, tally *rumourTally) []Rumour {
+	if q.regions != nil {
+		for _, r := range q.regions {
+			dst = w.rumoursFrom(dst, q, r, tally)
+		}
+		return dst
+	}
+	for r := range RegionID(len(w.cfg.Regions)) {
+		dst = w.rumoursFrom(dst, q, r, tally)
+	}
+	return dst
+}
+
+// rumoursFrom is rumoursFor for the commodities of q in one source region.
+func (w *World) rumoursFrom(dst []Rumour, q rumourQuery, r RegionID, tally *rumourTally) []Rumour {
+	if r == q.reader {
+		return dst
+	}
+	in := w.info
+	for _, c := range q.commodities {
+		if s := in.at[int(r)*len(w.cfg.Commodities)+int(c)]; s != 0 {
+			dst = w.candidate(dst, q, r, c, int(s)-1, tally)
+		}
+	}
+	return dst
+}
+
+// candidate decides one candidate and appends its rumour if it is offered.
+//
+// Excluded from coverage (testing.md 9.5): the three invariant calls are
+// violated programmer invariants. The bounds of a validated configuration make
+// the lag and the blur fit int64, and the Offered case guarantees that the record
+// holds the vintage, so no test can reach them from a valid world.
+func (w *World) candidate(dst []Rumour, q rumourQuery, r RegionID, c CommodityID, source int, tally *rumourTally) []Rumour {
+	in := w.info
+	e := int64(0)
+	if in.errorBP > 0 {
+		e = w.rnd.drawRange(-in.errorBP, in.errorBP)
+	}
+	var lag int64
+	d, path := w.geo.distance(r, q.reader)
+	if path {
+		var ok bool
+		if lag, ok = rumour.Lag(d, in.speed); !ok {
+			invariant("the lag of a validated information speed and distance overflowed")
+		}
+	}
+	out := rumour.Decide(path, lag, in.maxAge, q.asOf)
+	tally.count(out, lag)
+	if out != rumour.Offered {
+		return dst
+	}
+	o, ok := in.rec.At(source, q.asOf-lag)
+	if !ok {
+		invariant("the price record does not hold a vintage a rumour was offered for")
+	}
+	price, ok := rumour.Blur(o.Price, e, MaxPrice)
+	mean, okMean := rumour.BlurMean(o.Mean, e, MaxPrice)
+	if !ok || !okMean {
+		invariant("the error of a validated rumour overflowed")
+	}
+	return append(dst, Rumour{Region: r, Commodity: c, Price: Price(price), Mean: Price(mean), Lag: lag, SourceAge: o.Age})
+}
 
 // validateInformation checks the information module by spec-information.md 9.1
 // and 9.2: the bounds of its three fields, a role flagged Informed while the
@@ -30,9 +292,17 @@ func (v *validator) validateInformation() {
 	ok := v.inRange(path(base, "info_speed"), m.InfoSpeed, 1, MaxInfoSpeed)
 	ok = v.inRange(path(base, "rumour_error_bp"), m.RumourErrorBP, 0, MaxRumourErrorBP) && ok
 	ok = v.inRange(path(base, "rumour_max_age"), m.RumourMaxAge, 2, MaxRumourAge) && ok
-	if !ok {
-		return
+	if ok {
+		v.informationLimits(m)
 	}
+}
+
+// informationLimits is the derived checks of spec-information.md 9.2, run only
+// when the bounds of the module hold: the cells of the record and the candidates
+// of each informed role.
+func (v *validator) informationLimits(m *Information) {
+	c := &v.c
+	base := []string{"modules", "information"}
 	sets := tradableSets(c, v.lk)
 	cells := int64(0)
 	for _, set := range regionTradable(c, v.lk, sets) {
