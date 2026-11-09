@@ -399,3 +399,54 @@ const (
 	// MaxRetryJobs is the largest RetryJobs.
 	MaxRetryJobs = 1_000
 )
+
+// Bounds of the transport module (spec-transport.md 11), provisional
+// placeholders (N-015, N-027).
+const (
+	// MaxModes is the most transport modes; a request and a view loop over them.
+	MaxModes = 64
+	// MaxSpeed is the largest Mode.Speed; with MaxTransitFactorBP the product of
+	// the two fits int64.
+	MaxSpeed = 1_000_000_000
+	// MaxCapacity is the largest UnitMass and UnitBulk of one carrying unit; times
+	// MaxWeight it is 10^18, which fits int64.
+	MaxCapacity = 1_000_000_000_000
+	// MaxFeed is the most entries in the Feed of a mode.
+	MaxFeed = 4
+	// MaxHaulSpan is the largest Mode.HaulSpan.
+	MaxHaulSpan = 1_000_000_000_000
+	// MaxShipmentLines is the most lines in one shipment request; it bounds the
+	// loop and the size of an event.
+	MaxShipmentLines = 16
+	// MaxDispatchPerTick is the most shipment requests one agent's plan may carry.
+	MaxDispatchPerTick = 8
+	// MaxTravelTicks is the longest journey, a year of ticks; a duration times a
+	// count does not overflow.
+	MaxTravelTicks = MaxTicksPerYear
+	// MaxTransitFactorBP is the largest transit factor, and the cap of the
+	// effective factor (a road ten times faster).
+	MaxTransitFactorBP = 100_000
+	// MaxLanes is the most lanes a solve option may carry: one for each ordered
+	// pair of regions and commodity.
+	MaxLanes = MaxRegions * MaxRegions * MaxCommodities
+)
+
+// Bounds of the information module (spec-information.md 8), provisional
+// placeholders (N-015, N-027).
+const (
+	// MaxInfoSpeed is the largest InfoSpeed; a distance plus it stays far below
+	// int64.
+	MaxInfoSpeed = 1_000_000_000
+	// MaxRumourErrorBP is the largest RumourErrorBP: the factor (10 000 + e) /
+	// 10 000 is at least 0.5, so a rumoured price is never 0 or negative.
+	MaxRumourErrorBP = 5_000
+	// MaxRumourAge is the largest RumourMaxAge, and so the depth of a ring of the
+	// price record.
+	MaxRumourAge = 10_000
+	// MaxRumourCells is the most entries of the price record, sources times
+	// RumourMaxAge.
+	MaxRumourCells = 4_000_000
+	// MaxRumoursPerView is the most candidates of one informed agent; it bounds
+	// the loop of a view and the draws it takes.
+	MaxRumoursPerView = 4_096
+)

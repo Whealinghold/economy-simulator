@@ -131,6 +131,11 @@ func (w *World) allocate() {
 	w.res = newResourcesState(&w.cfg)
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	w.pop = newPopulation(&w.cfg)
+	w.transport = newTransport(&w.cfg)
+	w.info = newInformation(&w.cfg, &w.roles)
+	if w.transport != nil {
+		w.bounds.add(openShipment, w.transport.holds)
+	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
@@ -288,6 +293,7 @@ func namesOf(c *Config) Names {
 	}
 	n.Wants = demandNames(c)
 	n.Resources = resourceNames(c)
+	n.Modes = modeNames(c)
 	return n
 }
 
@@ -313,6 +319,12 @@ func modulesOn(c *Config) []string {
 	}
 	if c.Modules.Population != nil {
 		on = append(on, "population")
+	}
+	if c.Modules.Transport != nil {
+		on = append(on, "transport")
+	}
+	if c.Modules.Information != nil {
+		on = append(on, "information")
 	}
 	return on
 }
@@ -347,8 +359,11 @@ func (w *World) logWarnings(ctx context.Context, warnings []Warning) {
 		return
 	}
 	for _, wn := range warnings {
-		w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning",
-			slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, ".")))
+		attrs := []slog.Attr{slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, "."))}
+		if wn.Count > 0 {
+			attrs = append(attrs, slog.Int64(logkeys.Pairs, wn.Count))
+		}
+		w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning", attrs...)
 	}
 }
 
@@ -382,5 +397,8 @@ func (w *World) summary() []slog.Attr {
 		components = w.geo.components()
 	}
 	attrs = append(attrs, slog.Int(logkeys.Edges, len(w.cfg.Edges)), slog.Int(logkeys.Components, components))
+	if m := w.cfg.Modules.Transport; m != nil {
+		attrs = append(attrs, slog.Int(logkeys.Modes, len(m.Modes)))
+	}
 	return attrs
 }

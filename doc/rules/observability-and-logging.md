@@ -174,6 +174,7 @@ constants in an internal package and reused. The standard keys are:
 | `short` | units asked of an endowment and not granted (`int64`) |
 | `rumours` | a count of rumours offered to one agent |
 | `lag` | a lag in ticks, `int64` |
+| `pairs` | a count of ordered region pairs, `int64`, carried by the warning `rumour_horizon_short` |
 | `node` | region ID of an outside node (`region` stays the key for the gate region) |
 | `value` | money in minor units (`int64`), as the money paid or received in the trades of an outside side |
 | `nodes`, `counterparties` | counts of outside nodes and of counterparties, in the construction summary |
@@ -930,4 +931,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 6f33cecb115ff6341f485169
+RULE-TAG: f70528db0f61395cc20dc005

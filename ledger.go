@@ -49,6 +49,10 @@ var reasonNames = [...]Reason{
 	ledger.WantConsumption: ReasonWantConsumption,
 	ledger.Relief:          ReasonRelief,
 	ledger.Deaths:          ReasonDeaths,
+	ledger.TransitOut:      ReasonTransitOut,
+	ledger.TransitIn:       ReasonTransitIn,
+	ledger.HaulUse:         ReasonHaulUse,
+	ledger.TransitUse:      ReasonTransitUse,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -115,6 +119,9 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Population != nil {
 		m = append(m, populationReasons())
+	}
+	if c.Modules.Transport != nil {
+		m = append(m, transportReasons())
 	}
 	return m
 }

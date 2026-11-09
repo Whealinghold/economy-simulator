@@ -491,7 +491,7 @@ func TestView_OwnRegionEndowmentsOnly(t *testing.T) {
 	w.p23Snapshot()
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[2]); err != nil {
+	if err := w.fillAgentView(&v, &w.agents[2], viewTrade); err != nil {
 		t.Fatalf("fillAgentView() error = %v, want nil", err)
 	}
 	// Share 20 * 10 000 / 1 000 = 200; factor 2 000 + 8 000 * 200 / 10 000 = 2 160.
@@ -502,7 +502,7 @@ func TestView_OwnRegionEndowmentsOnly(t *testing.T) {
 	// A role whose recipes draw on nothing sees none.
 	w.roles.rows[0].recipes = nil
 	w.res.roleRes[0] = nil
-	if err := w.fillAgentView(&v, &w.agents[2]); err != nil || len(v.Endowments) != 0 {
+	if err := w.fillAgentView(&v, &w.agents[2], viewTrade); err != nil || len(v.Endowments) != 0 {
 		t.Errorf("view of a role with no draw: Endowments = %+v, error %v, want none", v.Endowments, err)
 	}
 }
@@ -536,7 +536,7 @@ func TestEffectiveYield_IncludesAbundance(t *testing.T) {
 	w.p23Snapshot()
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[1]); err != nil || v.Recipes[0].Effective != 6_000 {
+	if err := w.fillAgentView(&v, &w.agents[1], viewTrade); err != nil || v.Recipes[0].Effective != 6_000 {
 		t.Errorf("view yield = %d, error %v, want 6000", v.Recipes[0].Effective, err)
 	}
 	if err := w.p25Work(); err != nil {
@@ -631,7 +631,7 @@ func viewOfMiller(t *testing.T, c Config) (*World, AgentView) {
 	w.p23Snapshot()
 	w.refreshViewCtx()
 	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[2]); err != nil {
+	if err := w.fillAgentView(&v, &w.agents[2], viewTrade); err != nil {
 		t.Fatalf("fillAgentView() error = %v, want nil", err)
 	}
 	return w, v

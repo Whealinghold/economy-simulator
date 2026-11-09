@@ -194,7 +194,7 @@ type Names struct {
 }
 ```
 
-The fields of `Names` are in build order: the order in which the modules are built (`architecture.md` 2.10.5), not the order of this sketch, so that adding a module appends a field and moves none. `Wants`, `Resources` and `Modes` are appended after `Seasons`: `Resources` comes after `Wants` (plan 5 O8) and before `Modes`, the order the modules are built.
+The fields of `Names` are in build order: the order in which the modules are built (`architecture.md` 2.10.5), not the order of this sketch, so that adding a module appends a field and moves none. `Wants`, `Resources` and `Modes` are appended after `Seasons`, and `Modes` after `Resources` (build order, so the field list gains it at the end of the built fields): `Resources` comes after `Wants` (plan 5 O8) and before `Modes`, the order the modules are built.
 
 The slice of a later module's kind is named by the plural of the ID type, one field
 for each kind (the settlement classes are not the commodity classes of IND, so the

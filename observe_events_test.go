@@ -71,8 +71,8 @@ var emittedBy = []struct{ event, scenario string }{
 // and EndowmentAdjusted are emitted only with the resources module on, by the
 // scenario "resources" that emittedTypes adds (plan 2-9 phase 9), so they are not
 // listed. OwnUseChanged is emitted only with the subsistence module on, by the scenario
-// "subsistence" that emittedTypes adds (plan 2-10 phase 8), so it is not listed.
-var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "PopulationChanged", "PopulationScaled"}
+// "subsistence" that emittedTypes adds (plan 2-10 phase 8), so it is not listed. ShipmentDispatched and ShipmentRejected are emitted only with the transport module on and a strategy that ships (plan 2-12: the tests of transport_request_test.go emit them). RumoursServed is emitted only with the information module on and an informed role (plan 2-13: the tests of information_obs_internal_test.go emit it).
+var sliceNotEmitted = []string{"AgentRelocated", "EdgeStatusChanged", "WantShortfall", "MoneyFlowLimited", "MoneyFlowEnded", "MoneyFlowScaled", "ReliefPaid", "PopulationChanged", "PopulationScaled", "ShipmentDispatched", "ShipmentRejected", "ShipmentArrived", "TransitFactorChanged", "RumoursServed"}
 
 // emittedTypes runs the scenarios with an observer and returns, for each, the
 // names of the event types it emitted.

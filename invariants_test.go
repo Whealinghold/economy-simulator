@@ -256,6 +256,8 @@ var invariantTable = []invariantCase{
 	{"one+population", packOnePopulation, 4, 0, ""},
 	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, ""},
 	{"two+trade", tradeWarm("two"), 4, 0, ""},
+	{"two+transport", packTwoTransport, 4, 0, ""},
+	{"two+information", packInformation("two"), 4, 0, ""},
 	{"three+trade", tradeWarm("three"), 4, 0, ""},
 	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
 	{"famine", packLayers["famine"], 4, 800, "s14-0.toml"},
