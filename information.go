@@ -1,6 +1,12 @@
 package economysim
 
-import "github.com/Whealinghold/economy-sim/internal/rumour"
+import (
+	"context"
+	"log/slog"
+
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	"github.com/Whealinghold/economy-sim/internal/rumour"
+)
 
 // This file is the information module (spec-information.md): the price record
 // of every market, and the delayed, blurred rumours of remote prices that the
@@ -195,6 +201,44 @@ func (w *World) fillRumours(v *AgentView, a *agent) {
 	in.buf = w.rumoursFor(in.buf[:0], q, tally)
 	if n := len(in.buf); n > 0 {
 		v.Rumours = in.buf[:n:n]
+	}
+	w.logRumours(a.id, v.Region, in.buf)
+}
+
+// logRumours is the Debug line of an informed view (spec-information.md 10.2): the
+// agent, its region, the rumours it was offered and the largest lag among them. No
+// line is written per draw or per rumour, and the attributes are built only when
+// the level is enabled.
+func (w *World) logRumours(agent AgentID, region RegionID, rs []Rumour) {
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	var lag int64
+	for i := range rs {
+		lag = max(lag, rs[i].Lag)
+	}
+	w.log.LogAttrs(ctx, slog.LevelDebug, "rumours served",
+		slog.Int64(logkeys.Agent, int64(agent)), slog.Int64(logkeys.Region, int64(region)),
+		slog.Int64(logkeys.Rumours, int64(len(rs))), slog.Int64(logkeys.Lag, lag))
+}
+
+// p36Rumours is the information module's part of P3.6, run before the demand
+// module's: one RumoursServed per reader region in ascending RegionID for each
+// region in which an informed agent was given a view this tick, from the tally the
+// filler kept. It emits only when an observer was supplied, which is also the only
+// time the filler counts, and it clears the tally for the next tick.
+func (w *World) p36Rumours() {
+	if !w.obs.supplied {
+		return
+	}
+	for r := range w.info.tally {
+		t := &w.info.tally[r]
+		if t.Readers > 0 {
+			w.obs.deliver(RumoursServed{Tick: w.Tick(), Region: RegionID(r), Readers: t.Readers,
+				Offered: t.Offered, NoPath: t.NoPath, TooOld: t.TooOld, NotYet: t.NotYet, MaxLag: t.MaxLag})
+		}
+		*t = rumourTally{}
 	}
 }
 

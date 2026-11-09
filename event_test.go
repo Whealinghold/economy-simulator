@@ -66,6 +66,7 @@ var declaredEvents = []economysim.Event{
 	economysim.ShipmentRejected{},
 	economysim.ShipmentArrived{},
 	economysim.TransitFactorChanged{},
+	economysim.RumoursServed{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -79,7 +80,7 @@ var notBuiltEvents = []string{
 	"ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
 	"MigrationReviewed",
-	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked",
+	"OutsideTraded", "OutsideEnded", "OutsideShocked",
 	"YieldShocked", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
 	"LoanPassed", "CreditRound", "CreditSettled", "CreditRateScaled",
@@ -448,7 +449,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {

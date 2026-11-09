@@ -381,6 +381,10 @@ func resourcesOn(w *World) bool { return w.res != nil }
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
 
+// wantsOrInformationOn is the guard of the P3.6 row, which two modules fill: the
+// demand module's WantShortfall and the information module's RumoursServed.
+func wantsOrInformationOn(w *World) bool { return w.demand != nil || w.info != nil }
+
 // informationOn is the guard of the row of the information module (P5.2).
 func informationOn(w *World) bool { return w.info != nil }
 
@@ -420,7 +424,7 @@ var replayRows = []replayRow{
 	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.4", run: (*World).p34Estates},
-	{id: "P3.6", run: noErr((*World).p36Aggregates), on: demandOn},
+	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P5.1", run: noErr((*World).p51Window)},
 	{id: "P5.2", run: noErr((*World).p52Record), on: informationOn},

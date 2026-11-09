@@ -1319,3 +1319,40 @@ type TransitFactorChanged struct {
 }
 
 func (TransitFactorChanged) isEvent() {}
+
+// The results of a candidate rumour that is not offered, counted by RumoursServed
+// (spec-information.md 5.3.1, 8). The fourth result, Offered, is the field of that
+// name and the literal "offered" of the metric attribute, which the adapter
+// spells; so the four attribute values are these three and "offered".
+const (
+	// ReasonNoPath is a candidate with no walk over open edges from its source
+	// region to the reader's.
+	ReasonNoPath Reason = "no_path"
+	// ReasonTooOld is a candidate whose lag is above the horizon RumourMaxAge.
+	ReasonTooOld Reason = "too_old"
+	// ReasonNotYet is a candidate whose vintage tick would be before tick 0.
+	ReasonNotYet Reason = "not_yet"
+)
+
+// RumoursServed is emitted once per reader region per tick in which the
+// information module is on and at least one informed agent was given a view in
+// that region, in ascending RegionID, at P3.6, after the last plan of phase 3 and
+// before phase 4 (spec-information.md 10.1). It is the counter of the three
+// silent limits of the module: the closed road, the horizon and the young run.
+// The calls of the migration pass are not counted. It is bounded by the regions,
+// so it is not per agent.
+type RumoursServed struct {
+	Tick int64
+	// Region is the reader's region.
+	Region RegionID
+	// Readers is the informed agents given a view in the region.
+	Readers int64
+	// Offered, NoPath, TooOld and NotYet are the candidates of those views by
+	// their result; they add up to the candidates, and Offered is the rumours
+	// placed in the views.
+	Offered, NoPath, TooOld, NotYet int64
+	// MaxLag is the largest lag among the offered rumours, 0 if none.
+	MaxLag int64
+}
+
+func (RumoursServed) isEvent() {}

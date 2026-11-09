@@ -78,6 +78,7 @@ var _ Strategy = (*infoScript)(nil)
 // region are one odd ID and one even ID: the odd one asks and the even one bids.
 func infoConfig() Config {
 	c := tradeConfig(0)
+	c.World.MinAgents = 1 // two households make two agents; no Warn "group below floor"
 	c.Roles[0].ID = "miller"
 	c.Roles[0].Informed = true
 	carrier := c.Roles[0]

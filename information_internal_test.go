@@ -671,7 +671,6 @@ func TestRumour_CohortNotMultiplied(t *testing.T) {
 	t.Parallel()
 	heavy := func(c *Config) {
 		c.Groups[0] = Group{Region: "a", Role: "miller", Households: 4, Scale: 4}
-		c.World.MinAgents = 1 // else the group is split into agents of weight 1
 	}
 	w, s := newInfoWorld(t, heavy)
 	step(t, w, 6)
@@ -856,8 +855,8 @@ func TestRumours_RelocationChangesReader(t *testing.T) {
 
 // runOnOff runs two worlds of the default strategy for n ticks, the first with the
 // module on and its role informed, the second with it off, and returns their
-// events (without WorldCreated, which carries the hash and the module list) and
-// snapshots (without the hash and the module list).
+// events (without WorldCreated, which carries the hash and the module list, and
+// RumoursServed, which only the module on emits) and snapshots (without the hash and the module list).
 func runOnOff(t *testing.T, errorBP int64, n int) (on, off []Event, sOn, sOff Snapshot) {
 	t.Helper()
 	build := func(on bool) (*World, *evLog) {
@@ -877,7 +876,13 @@ func runOnOff(t *testing.T, errorBP int64, n int) (on, off []Event, sOn, sOff Sn
 	step(t, a, n)
 	step(t, b, n)
 	strip := func(es []Event) []Event {
-		return slices.DeleteFunc(slices.Clone(es), func(e Event) bool { _, ok := e.(WorldCreated); return ok })
+		return slices.DeleteFunc(slices.Clone(es), func(e Event) bool {
+			switch e.(type) {
+			case WorldCreated, RumoursServed:
+				return true
+			}
+			return false
+		})
 	}
 	var err error
 	if sOn, err = a.Snapshot(); err != nil {

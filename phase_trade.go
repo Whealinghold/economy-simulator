@@ -80,6 +80,9 @@ func (w *World) tradeAgent(a *agent) error {
 // p36Aggregates is P3.6: the per-region, per-role aggregates of the trade phase,
 // a fixed sequence of guarded calls into the module files (spec-world.md 6, D312).
 func (w *World) p36Aggregates() {
+	if w.info != nil {
+		w.p36Rumours()
+	}
 	if w.demand != nil {
 		w.p36Wants()
 	}
