@@ -274,6 +274,32 @@ const (
 	// ReasonTransitUse is the feed a self-carried trip consumes at dispatch, a
 	// goods sink (spec-transport.md 3.3.2, 7.2).
 	ReasonTransitUse Reason = "transit_use"
+	// ReasonEscrowIn is the money a payer puts into an Escrow account when a
+	// delivery contract is formed, ReasonEscrowOut the money the escrow pays the
+	// deliverer for the units that arrived, and ReasonEscrowRefund the money it
+	// gives back to the payer, or to the estate of the destination when the payer is
+	// gone (spec-merchants.md 9.6). All three are internal transfers of money.
+	ReasonEscrowIn     Reason = "escrow_in"
+	ReasonEscrowOut    Reason = "escrow_out"
+	ReasonEscrowRefund Reason = "escrow_refund"
+)
+
+// The refusals of the contract round, the reasons of a delivery offer or take that
+// the admission refuses and of a formation that fails (spec-merchants.md 9.3,
+// 9.5). An admission also uses the reasons of an order and of a shipment request.
+const (
+	// ReasonContractsOff is an offer or a take while the merchants module is absent.
+	ReasonContractsOff Reason = "contracts_off"
+	// ReasonDuplicateTake is a second take for a commodity by the same agent in a
+	// tick.
+	ReasonDuplicateTake Reason = "duplicate_take"
+	// ReasonTooManyContracts is a formation that finds MaxOpen contracts in flight.
+	ReasonTooManyContracts Reason = "too_many_contracts"
+	// ReasonPayerFunds is a formation whose payer no longer has the money its take
+	// was sized on.
+	ReasonPayerFunds Reason = "payer_funds"
+	// ReasonNoTaker is an offer that finds no take to match.
+	ReasonNoTaker Reason = "no_taker"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -1506,3 +1532,53 @@ type MerchantsPlanned struct {
 }
 
 func (MerchantsPlanned) isEvent() {}
+
+// ContractFormed is emitted when a delivery contract is formed, at P3.3 in
+// formation order, after the ShipmentDispatched of its shipment (spec-merchants.md
+// 9.5, 15.1.1). It is per contract, like ShipmentDispatched.
+type ContractFormed struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee that bought the goods and
+	// Deliverer the shipper that sells them.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region, the origin, and To the destination, where
+	// the payer's account is.
+	Region RegionID
+	To     RegionID
+	// Commodity, Quantity and Price are the goods and the price per unit.
+	Commodity CommodityID
+	Quantity  Quantity
+	Price     Price
+	// Escrowed is Price times Quantity, the money moved to the Escrow account.
+	Escrowed Money
+	// Shipment is the shipment that carries the goods, Mode its mode and Arrives
+	// the tick it arrives, which is the deadline of the contract.
+	Shipment ShipmentID
+	Mode     ModeID
+	Arrives  int64
+}
+
+func (ContractFormed) isEvent() {}
+
+// ContractRound is emitted once per destination region and tick in which an offer
+// or a take was submitted for it, in ascending RegionID at P3.3 after the last
+// ContractFormed of the round (spec-merchants.md 15.1.1). It is bounded by the
+// regions, not per contract.
+type ContractRound struct {
+	Tick int64
+	// Region is the destination.
+	Region RegionID
+	// Offers and Takes are the admitted, OffersRefused and TakesRefused the refused.
+	Offers, Takes, OffersRefused, TakesRefused int64
+	// Matched is the tentative matches, Formed the contracts formed, NoTaker the
+	// offers that found no take, and PayerFunds, TooMany and DispatchRefused the
+	// matches that failed in formation by that reason.
+	Matched, Formed, NoTaker, PayerFunds, TooMany, DispatchRefused int64
+	// Units and Value are the units and the money of the contracts formed.
+	Units int64
+	Value Money
+}
+
+func (ContractRound) isEvent() {}

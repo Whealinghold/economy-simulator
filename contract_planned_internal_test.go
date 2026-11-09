@@ -46,6 +46,9 @@ func TestView_MerchantGroup(t *testing.T) {
 			t.Errorf("agent %d: Modes = %+v, want the coach (hired, hauling %d, span 10, unit mass 1 200)", v.agent, m.Modes, haul)
 		}
 		grain, _ := w.cfg.commodityID("grain")
+		if !reflect.DeepEqual(m.Cargo, []CommodityID{grain}) {
+			t.Errorf("agent %d: Cargo = %v, want grain alone (the trade inputs, haul, are left out)", v.agent, m.Cargo)
+		}
 		if len(m.Goods) != 2 || m.Goods[0].Commodity != min(grain, haul) || m.Goods[1].Commodity != max(grain, haul) {
 			t.Fatalf("agent %d: Goods = %+v, want grain and haul in canonical order", v.agent, m.Goods)
 		}

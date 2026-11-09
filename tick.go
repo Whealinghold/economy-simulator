@@ -45,6 +45,7 @@ var positionList = [...]position{
 	{"P2.8a", "OBS", line},
 	{"P3.1", "TRN", line},
 	{"P3.2", "AGT", line},
+	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
 	{"P3.4", "EST", line},
 	{"P3.6", "INF", line},
@@ -75,7 +76,7 @@ var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3a", "P1.4", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
-	"P3.1a", "P3.3", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
+	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
 	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
@@ -145,6 +146,9 @@ func (w *World) positionsTrade() error {
 	}
 	if err := w.p32Trade(); err != nil {
 		return err
+	}
+	if w.mer != nil && w.mer.on {
+		w.p33Round()
 	}
 	if w.mer != nil && w.mer.roles > 0 {
 		w.p33aPlanned()

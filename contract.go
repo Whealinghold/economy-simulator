@@ -1,10 +1,16 @@
 package economysim
 
 import (
+	"cmp"
+	"context"
+	"log/slog"
 	"maps"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	"github.com/Whealinghold/economy-sim/internal/merchant"
 	"github.com/Whealinghold/economy-sim/internal/transit"
 )
 
@@ -609,12 +615,38 @@ type merchants struct {
 	// goods and lots are the scratch of the filler.
 	goods []MerchantGood
 	lots  []ledger.Lot
+	// The state of the contracts, set while the module is on (on): the next
+	// contract ID, the open contracts in ascending ID order, the cap MaxOpen and, per
+	// region, the open Escrow accounts no open contract uses.
+	on      bool
+	maxOpen int64
+	next    ContractID
+	open    []contract
+	free    []transit.Free
+	// The scratch of the round, cleared at its end: the entities the plans
+	// submitted, the admitted ones, their conversions for internal/merchant, the
+	// pairs it formed and the counts of ContractRound by destination region (dump
+	// takes the counts when no observer was supplied).
+	subOffers []submittedOffer
+	subTakes  []submittedTake
+	offers    []roundOffer
+	takes     []roundTake
+	rOffers   []merchant.Offer
+	rTakes    []merchant.Bid
+	pairs     []merchant.Pair
+	counts    []roundCount
+	dump      roundCount
+	line      [1]Line
 }
 
 // newMerchants builds the state for a canonical configuration that passed
 // Validate: nil when no role has a merchant block and the module is off.
 func newMerchants(c *Config, rt *roleTable, t *transportState) *merchants {
 	m := &merchants{rows: make([]merchantRoleRow, len(c.Roles)), tally: make([]plannedTally, len(c.Regions))}
+	if mod := c.Modules.Merchants; mod != nil {
+		m.on, m.maxOpen = true, mod.MaxOpen
+		m.free, m.counts = make([]transit.Free, len(c.Regions)), make([]roundCount, len(c.Regions))
+	}
 	for i := range c.Roles {
 		if c.Roles[i].Merchant == nil {
 			continue
@@ -623,7 +655,7 @@ func newMerchants(c *Config, rt *roleTable, t *transportState) *merchants {
 		m.rows[i] = newMerchantRow(c, &c.Roles[i], &rt.rows[i], t)
 		m.goods = slices.Grow(m.goods, len(m.rows[i].goods))
 	}
-	if m.roles == 0 && c.Modules.Merchants == nil {
+	if m.roles == 0 && !m.on {
 		return nil
 	}
 	return m
@@ -712,6 +744,9 @@ func oldestAges(goods []MerchantGood, lots []ledger.Lot, tick int64) {
 // notes are read for nothing else.
 func (w *World) checkMerchantPlan(a *agent, p *TradePlan) {
 	m := w.mer
+	if len(p.Offers) > 0 || len(p.Takes) > 0 {
+		w.collectContracts(a, p)
+	}
 	if !w.obs.supplied || !m.rows[a.role].has {
 		return
 	}
@@ -755,5 +790,499 @@ func (w *World) p33aPlanned() {
 			})
 		}
 		*t = plannedTally{}
+	}
+}
+
+// The delivery contract (spec-merchants.md 9). The plan check collects the offers
+// and takes of every plan; P3.3 admits them, draws their keys, matches them lane by
+// lane and forms the contracts: the shipment is dispatched by the deliverer, the
+// payer's money moves to an Escrow account and the record is kept. Settlement,
+// removal and the checkpoint are Phase 7.
+
+// contract is a delivery contract in flight (spec-merchants.md 16): its parties,
+// the shipment that carries the goods, the goods and the price, the Escrow account
+// that holds the money, the tick it was formed and the destination region.
+type contract struct {
+	id               ContractID
+	payer, deliverer AgentID
+	shipment         ShipmentID
+	commodity        CommodityID
+	qty              Quantity
+	price            Price
+	escrow           int
+	formed           int64
+	to               RegionID
+}
+
+// submittedOffer and submittedTake are an offer and a take as a plan returned them:
+// the agent, the index in the plan and, for an offer, the plan's shipment requests.
+type submittedOffer struct {
+	agent AgentID
+	idx   int
+	ships int
+	o     DeliveryOffer
+}
+
+type submittedTake struct {
+	agent AgentID
+	idx   int
+	t     DeliveryTake
+}
+
+// roundOffer and roundTake are an admitted offer and take with the key drawn for
+// it and the region of its agent (for an offer the deliverer's, for a take the
+// payer's, which is the destination of its contracts).
+type roundOffer struct {
+	agent  AgentID
+	region RegionID
+	o      DeliveryOffer
+	key    uint64
+}
+
+type roundTake struct {
+	agent  AgentID
+	region RegionID
+	t      DeliveryTake
+	key    uint64
+}
+
+// roundCount is what ContractRound reports for one destination region.
+type roundCount struct {
+	offers, takes, offersRefused, takesRefused                     int64
+	matched, formed, noTaker, payerFunds, tooMany, dispatchRefused int64
+	units                                                          int64
+	value                                                          Money
+}
+
+// cnt returns the counts of the region, or the dump when no observer was supplied
+// or the region is not a region (an offer to an unknown one): a counter that only
+// builds an event is kept only for an observer (observability-and-logging.md 4.5).
+func (m *merchants) cnt(supplied bool, r RegionID) *roundCount {
+	if !supplied || r < 0 || int(r) >= len(m.counts) {
+		return &m.dump
+	}
+	return &m.counts[r]
+}
+
+// collectContracts is the plan check's part for the offers and takes of agent a:
+// with the module absent each is refused at once as contracts_off (a Debug line,
+// no event); else it is kept, with its index in the plan, for the round of P3.3.
+func (w *World) collectContracts(a *agent, p *TradePlan) {
+	m := w.mer
+	if !m.on {
+		for range p.Offers {
+			w.logContractRefused("offer refused", a.id, ReasonContractsOff)
+		}
+		for range p.Takes {
+			w.logContractRefused("take refused", a.id, ReasonContractsOff)
+		}
+		return
+	}
+	for i, o := range p.Offers {
+		m.subOffers = append(m.subOffers, submittedOffer{agent: a.id, idx: i, ships: len(p.Shipments), o: o})
+	}
+	for i, t := range p.Takes {
+		m.subTakes = append(m.subTakes, submittedTake{agent: a.id, idx: i, t: t})
+	}
+}
+
+// logContractRefused writes the Debug line of a refused offer or take.
+func (w *World) logContractRefused(msg string, agent AgentID, reason Reason) {
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, msg,
+			slog.Int64(logkeys.Agent, int64(agent)), slog.String(logkeys.Reason, string(reason)))
+	}
+}
+
+// p33Round is P3.3 (spec-merchants.md 9.3 to 9.5): the admission of every offer and
+// take of the plans in agent and plan order, the keys, the lanes in ascending
+// (destination, commodity) order with the matching and the formation, and
+// ContractRound per destination region. Every scratch is cleared at its end.
+func (w *World) p33Round() {
+	m := w.mer
+	w.admitOffers()
+	w.admitTakes()
+	w.matchLanes()
+	w.emitRounds()
+	m.subOffers, m.subTakes, m.offers, m.takes = m.subOffers[:0], m.subTakes[:0], m.offers[:0], m.takes[:0]
+	m.rOffers, m.rTakes, m.pairs = m.rOffers[:0], m.rTakes[:0], m.pairs[:0]
+	m.dump = roundCount{}
+}
+
+// offerChecks are the checks of an offer in the order of the table of
+// spec-merchants.md 9.3 (rows 2 to 7). Rows 4 (outside_destination, plan 2-16) and
+// 5a (not_permitted, institutions) are marked positions with no check yet. The
+// table is never written.
+var offerChecks = [...]func(w *World, a *agent, s *submittedOffer, used int) Reason{
+	ckOfferCount,   // 2
+	ckOfferMode,    // 3
+	ckOfferRegion,  // 4: unknown_region, same_region
+	nil,            // 4: outside_destination (plan 2-16)
+	ckOfferGoods,   // 5
+	nil,            // 5a: not_permitted (institutions)
+	ckOfferAmounts, // 6
+	ckOfferStock,   // 7
+}
+
+// ckOfferCount is row 2: the offer would be request number MaxDispatchPerTick + 1
+// or later of the plan.
+func ckOfferCount(_ *World, _ *agent, s *submittedOffer, used int) Reason {
+	if s.ships+used >= MaxDispatchPerTick {
+		return ReasonTooManyRequests
+	}
+	return ""
+}
+
+// ckOfferMode is row 3: a mode of the configuration.
+func ckOfferMode(w *World, _ *agent, s *submittedOffer, _ int) Reason {
+	if s.o.Mode < 0 || int(s.o.Mode) >= len(w.transport.modes) {
+		return ReasonUnknownMode
+	}
+	return ""
+}
+
+// ckOfferRegion is row 4: the destination is a region and not the deliverer's own.
+func ckOfferRegion(w *World, a *agent, s *submittedOffer, _ int) Reason {
+	switch {
+	case s.o.To < 0 || int(s.o.To) >= len(w.cfg.Regions):
+		return ReasonUnknownRegion
+	case s.o.To == w.regionOf(a):
+		return ReasonSameRegion
+	}
+	return ""
+}
+
+// ckOfferGoods is row 5: a commodity of the configuration, in the deliverer's
+// tradable set.
+func ckOfferGoods(w *World, a *agent, s *submittedOffer, _ int) Reason {
+	return w.goodsRefusal(a, s.o.Commodity)
+}
+
+// goodsRefusal is the check unknown_commodity and not_tradable of an offer or a
+// take for the agent.
+func (w *World) goodsRefusal(a *agent, c CommodityID) Reason {
+	switch {
+	case c < 0 || int(c) >= len(w.cfg.Commodities):
+		return ReasonUnknownCommodity
+	case !w.roles.row(a.role).isTradable(c):
+		return ReasonNotTradable
+	}
+	return ""
+}
+
+// ckOfferAmounts is row 6: a quantity and a limit in range.
+func ckOfferAmounts(_ *World, _ *agent, s *submittedOffer, _ int) Reason {
+	return amountsRefusal(int64(s.o.Quantity), int64(s.o.Limit))
+}
+
+// amountsRefusal is the check invalid_quantity and invalid_price.
+func amountsRefusal(qty, limit int64) Reason {
+	switch {
+	case qty < 1 || qty > MaxQuantity:
+		return ReasonInvalidQuantity
+	case limit < 1 || limit > MaxPrice:
+		return ReasonInvalidPrice
+	}
+	return ""
+}
+
+// ckOfferStock is row 7: the units are available, held and not reserved.
+func ckOfferStock(w *World, a *agent, s *submittedOffer, _ int) Reason {
+	held, reserved, err := w.ledger.Holding(a.account, int(s.o.Commodity))
+	if err != nil {
+		invariant("the ledger refused the holding of a live agent: " + err.Error())
+	}
+	if int64(s.o.Quantity) > held-reserved {
+		return ReasonInsufficientStock
+	}
+	return ""
+}
+
+// admitOffers admits the submitted offers in agent and plan order (9.3): each is
+// refused whole with the first reason that applies, or kept with the key drawn for
+// it, the first word of the stream (siteContract, tick, agent, 2 * index).
+func (w *World) admitOffers() {
+	m, supplied, tick := w.mer, w.obs.supplied, w.Tick()
+	prev, used := AgentID(-1), 0
+	for i := range m.subOffers {
+		s := &m.subOffers[i]
+		if s.agent != prev {
+			prev, used = s.agent, 0
+		}
+		a := &w.agents[s.agent]
+		if reason := w.offerRefusal(a, s, used); reason != "" {
+			m.cnt(supplied, s.o.To).offersRefused++
+			w.logContractRefused("offer refused", s.agent, reason)
+			continue
+		}
+		used++
+		w.rnd.keyedPair(siteContract, tick, int64(s.agent), int64(2*s.idx))
+		m.offers = append(m.offers, roundOffer{agent: s.agent, region: w.regionOf(a), o: s.o, key: w.rnd.word()})
+		m.cnt(supplied, s.o.To).offers++
+	}
+}
+
+// offerRefusal returns the reason of the first check of the offer table that the
+// offer fails, or "". used is the offers of the same plan admitted before it.
+func (w *World) offerRefusal(a *agent, s *submittedOffer, used int) Reason {
+	for _, ck := range offerChecks {
+		if ck == nil {
+			continue
+		}
+		if r := ck(w, a, s, used); r != "" {
+			return r
+		}
+	}
+	return ""
+}
+
+// admitTakes admits the submitted takes in agent and plan order (9.3), drawing the
+// key of each from the stream (siteContract, tick, agent, 2 * index + 1).
+func (w *World) admitTakes() {
+	m, supplied, tick := w.mer, w.obs.supplied, w.Tick()
+	for i := range m.subTakes {
+		s := &m.subTakes[i]
+		a := &w.agents[s.agent]
+		region := w.regionOf(a)
+		if reason := w.takeRefusal(a, s); reason != "" {
+			m.cnt(supplied, region).takesRefused++
+			w.logContractRefused("take refused", s.agent, reason)
+			continue
+		}
+		w.rnd.keyedPair(siteContract, tick, int64(s.agent), int64(2*s.idx+1))
+		m.takes = append(m.takes, roundTake{agent: s.agent, region: region, t: s.t, key: w.rnd.word()})
+		m.cnt(supplied, region).takes++
+	}
+}
+
+// takeRefusal returns the reason of the first check of the take table that the
+// take fails, or "": the commodity, the amounts, a second take for the commodity,
+// a value that does not fit and a value above the available cash (rows 5, 6, 8, 9
+// and 10; row 5a is institutions').
+func (w *World) takeRefusal(a *agent, s *submittedTake) Reason {
+	t := &s.t
+	if r := w.goodsRefusal(a, t.Commodity); r != "" {
+		return r
+	}
+	if r := amountsRefusal(int64(t.Quantity), int64(t.Limit)); r != "" {
+		return r
+	}
+	for _, o := range slices.Backward(w.mer.takes) {
+		if o.agent != s.agent {
+			break
+		}
+		if o.t.Commodity == t.Commodity {
+			return ReasonDuplicateTake
+		}
+	}
+	value, ok := checked.Mul(int64(t.Limit), int64(t.Quantity))
+	if !ok || value > MaxMoney {
+		return ReasonOverflow
+	}
+	if value > w.cash(a) {
+		return ReasonInsufficientFunds
+	}
+	return ""
+}
+
+// cash is the agent's available money: its balance less what its orders reserve.
+func (w *World) cash(a *agent) int64 {
+	v, err := w.ledger.Account(a.account)
+	if err != nil {
+		invariant("the ledger refused the account of a live agent: " + err.Error())
+	}
+	return v.Balance - v.Reserved
+}
+
+// matchLanes runs the lanes in ascending (destination, commodity) order (9.4.2):
+// the offers of a lane by limit then key, the takes of the agents in the
+// destination by limit descending then key, first fit with the midpoint, and the
+// formation of each pair. An offer's lane with no take, or whose takes are all
+// taken, finds none.
+func (w *World) matchLanes() {
+	m := w.mer
+	if len(m.offers) == 0 {
+		return
+	}
+	m.sortLanes()
+	j := 0
+	for lo := 0; lo < len(m.rOffers); {
+		l := m.offerLane(m.rOffers[lo].Ref)
+		hi := lo + 1
+		for hi < len(m.rOffers) && m.offerLane(m.rOffers[hi].Ref) == l {
+			hi++
+		}
+		for j < len(m.rTakes) && laneBefore(m.takeLane(m.rTakes[j].Ref), l) {
+			j++
+		}
+		k := j
+		for k < len(m.rTakes) && m.takeLane(m.rTakes[k].Ref) == l {
+			k++
+		}
+		w.matchLane(m.rOffers[lo:hi], m.rTakes[j:k], l)
+		lo, j = hi, k
+	}
+}
+
+// sortLanes converts the admitted offers and takes for internal/merchant and
+// orders them so that the entities of a lane are together, lanes ascending, with
+// the admission index to end the comparison (architecture.md 7.6).
+func (m *merchants) sortLanes() {
+	for i, o := range m.offers {
+		m.rOffers = append(m.rOffers, merchant.Offer{Ref: i, Limit: int64(o.o.Limit), Qty: int64(o.o.Quantity), Key: o.key})
+	}
+	for i, t := range m.takes {
+		m.rTakes = append(m.rTakes, merchant.Bid{Ref: i, Limit: int64(t.t.Limit), Qty: int64(t.t.Quantity), Key: t.key})
+	}
+	slices.SortFunc(m.rOffers, func(a, b merchant.Offer) int {
+		return laneOrder(m.offerLane(a.Ref), m.offerLane(b.Ref), a.Ref, b.Ref)
+	})
+	slices.SortFunc(m.rTakes, func(a, b merchant.Bid) int {
+		return laneOrder(m.takeLane(a.Ref), m.takeLane(b.Ref), a.Ref, b.Ref)
+	})
+}
+
+// lane is a pair (destination region, commodity) of the round.
+type lane struct {
+	region    RegionID
+	commodity CommodityID
+}
+
+func (m *merchants) offerLane(ref int) lane {
+	return lane{m.offers[ref].o.To, m.offers[ref].o.Commodity}
+}
+
+func (m *merchants) takeLane(ref int) lane {
+	return lane{m.takes[ref].region, m.takes[ref].t.Commodity}
+}
+
+// laneBefore reports whether lane a comes before lane b in ascending (region,
+// commodity) order.
+func laneBefore(a, b lane) bool {
+	return a.region < b.region || (a.region == b.region && a.commodity < b.commodity)
+}
+
+// laneOrder is the total order that groups the entities of a lane: the lane, then
+// the admission index, which is unique (architecture.md 7.6).
+func laneOrder(a, b lane, ra, rb int) int {
+	return cmp.Or(cmp.Compare(a.region, b.region), cmp.Compare(a.commodity, b.commodity), cmp.Compare(ra, rb))
+}
+
+// matchLane sorts the offers and takes of one lane by the order of 9.4.2 and runs
+// the first-fit matching with the formation of each tentative pair. The offers that
+// were not matched are NoTaker.
+func (w *World) matchLane(offers []merchant.Offer, takes []merchant.Bid, l lane) {
+	m := w.mer
+	merchant.SortOffers(offers)
+	merchant.SortBids(takes)
+	c := m.cnt(w.obs.supplied, l.region)
+	before := c.matched
+	m.pairs = merchant.Match(m.pairs[:0], offers, takes, func(p merchant.Pair) bool { return w.formPair(p) })
+	c.noTaker += int64(len(offers)) - (c.matched - before)
+}
+
+// formPair is the formation of a tentative match (9.5): the checks in order
+// (MaxOpen, the payer's cash), the dispatch of the shipment by the deliverer, the
+// Escrow account and the move of the money, then the record and ContractFormed. The
+// first failure ends the attempt with its reason and changes nothing. It returns
+// whether the contract was formed.
+func (w *World) formPair(p merchant.Pair) bool {
+	m := w.mer
+	of, tk := &m.offers[p.Offer], &m.takes[p.Bid]
+	c := m.cnt(w.obs.supplied, of.o.To)
+	c.matched++
+	value, _ := merchant.Escrow(p.Price, p.Qty) // price <= MaxPrice and qty <= MaxQuantity: it fits MaxMoney
+	payer, deliverer := &w.agents[tk.agent], &w.agents[of.agent]
+	switch {
+	case int64(len(m.open)) >= m.maxOpen:
+		c.tooMany++
+		w.logContractRefused("offer refused", of.agent, ReasonTooManyContracts)
+		return false
+	case value > w.cash(payer):
+		c.payerFunds++
+		w.logContractRefused("offer refused", of.agent, ReasonPayerFunds)
+		return false
+	}
+	m.line[0] = Line{Commodity: of.o.Commodity, Quantity: Quantity(p.Qty)}
+	req := ShipmentRequest{Mode: of.o.Mode, To: of.o.To, Consignee: tk.agent, Lines: m.line[:1]}
+	id, reason := w.dispatch(deliverer, 0, &req, of.region)
+	if reason != "" {
+		c.dispatchRefused++
+		return false
+	}
+	ct := contract{id: m.next, payer: tk.agent, deliverer: of.agent, shipment: id, commodity: of.o.Commodity,
+		qty: Quantity(p.Qty), price: Price(p.Price), escrow: w.escrowAccount(of.o.To), formed: w.Tick(), to: of.o.To}
+	if err := w.ledger.Transfer(payer.account, ct.escrow, value, ledger.EscrowIn); err != nil {
+		invariant("the ledger refused the escrow of a checked contract: " + err.Error())
+	}
+	m.next++
+	m.open = append(m.open, ct)
+	c.formed++
+	c.units += p.Qty
+	c.value += Money(value)
+	w.announceContract(&ct, of.region)
+	return true
+}
+
+// escrowAccount takes the open Escrow account of the region with the lowest ID that
+// no open contract uses, or opens one (9.6.2). Accounts are reused and never closed.
+func (w *World) escrowAccount(region RegionID) int {
+	if id, ok := w.mer.free[region].Take(); ok {
+		return id
+	}
+	id, err := w.ledger.Open(ledger.KindEscrow, 0, int(region))
+	if err != nil {
+		invariant("the ledger refused an Escrow account: " + err.Error())
+	}
+	return id
+}
+
+// announceContract emits ContractFormed and writes the Debug line of a contract.
+func (w *World) announceContract(ct *contract, origin RegionID) {
+	if w.obs.supplied {
+		w.obs.deliver(ContractFormed{
+			Tick: w.Tick(), Contract: ct.id, Payer: ct.payer, Deliverer: ct.deliverer, Region: origin, To: ct.to,
+			Commodity: ct.commodity, Quantity: ct.qty, Price: ct.price, Escrowed: Money(int64(ct.price) * int64(ct.qty)),
+			Shipment: ct.shipment, Mode: w.shipmentOf(ct.shipment).mode, Arrives: w.shipmentOf(ct.shipment).arrives,
+		})
+	}
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "contract formed",
+			slog.Int64(logkeys.Contract, int64(ct.id)), slog.Int64(logkeys.Agent, int64(ct.deliverer)),
+			slog.Int64(logkeys.Region, int64(origin)), slog.Int64(logkeys.Dest, int64(ct.to)),
+			slog.Int64(logkeys.Commodity, int64(ct.commodity)), slog.Int64(logkeys.Quantity, int64(ct.qty)),
+			slog.Int64(logkeys.Price, int64(ct.price)))
+	}
+}
+
+// shipmentOf returns the shipment with the ID, which is in flight: the ships are in
+// ascending ID order.
+func (w *World) shipmentOf(id ShipmentID) *shipment {
+	i, ok := slices.BinarySearchFunc(w.transport.ships, id, func(s shipment, id ShipmentID) int { return cmp.Compare(s.id, id) })
+	if !ok {
+		invariant("a contract names a shipment that is not in flight")
+	}
+	return &w.transport.ships[i]
+}
+
+// emitRounds emits ContractRound per destination region in ascending RegionID for
+// each region in which an offer or a take was submitted, and clears the counts.
+func (w *World) emitRounds() {
+	if !w.obs.supplied {
+		return
+	}
+	for r := range w.mer.counts {
+		c := &w.mer.counts[r]
+		if c.offers+c.takes+c.offersRefused+c.takesRefused > 0 {
+			w.obs.deliver(ContractRound{
+				Tick: w.Tick(), Region: RegionID(r), Offers: c.offers, Takes: c.takes,
+				OffersRefused: c.offersRefused, TakesRefused: c.takesRefused, Matched: c.matched, Formed: c.formed,
+				NoTaker: c.noTaker, PayerFunds: c.payerFunds, TooMany: c.tooMany, DispatchRefused: c.dispatchRefused,
+				Units: c.units, Value: c.value,
+			})
+		}
+		*c = roundCount{}
 	}
 }

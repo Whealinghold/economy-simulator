@@ -87,6 +87,13 @@ var skipFields = []string{
 	// was loaded from a checkpoint, which is not state: a restored world and one that
 	// ran on hold the same ticks (information.go).
 	"information.buf", "information.tally", "Record.restored",
+	// The merchants module's tables are derived from the configuration (rows), or
+	// scratch cleared by the position that fills it (tally, goods, lots, and the
+	// round's submitted, admitted and sorted entities and its counts): none is
+	// state and none is saved (contract.go).
+	"merchants.rows", "merchants.tally", "merchants.goods", "merchants.lots", "merchants.subOffers",
+	"merchants.subTakes", "merchants.offers", "merchants.takes", "merchants.rOffers", "merchants.rTakes",
+	"merchants.pairs", "merchants.counts", "merchants.line", "merchants.dump",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
@@ -398,6 +405,9 @@ func informationOn(w *World) bool { return w.info != nil }
 // plan 2-12): an off world records no line for them.
 func transportOn(w *World) bool { return w.transport != nil }
 
+// contractsOn is the guard of the P3.3 row: the merchants module is on.
+func contractsOn(w *World) bool { return w.mer != nil && w.mer.on }
+
 // merchantRolesOn is the guard of the P3.3a row: a role has a merchant block.
 func merchantRolesOn(w *World) bool { return w.mer != nil && w.mer.roles > 0 }
 
@@ -437,6 +447,7 @@ var replayRows = []replayRow{
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
 	{id: "P3.2", run: (*World).p32Trade},
+	{id: "P3.3", run: noErr((*World).p33Round), on: contractsOn},
 	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},

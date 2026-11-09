@@ -52,6 +52,10 @@ type ModeID int
 // and are never reused within a world.
 type ShipmentID int64
 
+// ContractID identifies a delivery contract. IDs are assigned in order of
+// formation from 0 and never reused (spec-merchants.md 16).
+type ContractID int64
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64
