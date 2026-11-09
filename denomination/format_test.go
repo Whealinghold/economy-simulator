@@ -101,6 +101,9 @@ func TestFormat_SignAndNeverNegativeZero(t *testing.T) {
 	runFormatCases(t, []formatCase{
 		{"negative", denomination.RPG(), 0, -2_920, "-2 sp 9 cp"},
 		{"negative exact", denomination.RPG(), 0, -100, "-1 cp"},
+		// Only the largest unit is non-zero: the sign must still be written.
+		{"negative largest only", denomination.RPG(), 0, -10_000, "-1 gp"},
+		{"negative largest only p2", denomination.RPG(), 2, -10_000, "-1 gp"},
 		{"minus one p0", denomination.RPG(), 0, -1, "0 cp"},
 		{"minus 99 p0", denomination.RPG(), 0, -99, "0 cp"},
 		{"minus one p2", denomination.RPG(), 2, -1, "-0.01 cp"},

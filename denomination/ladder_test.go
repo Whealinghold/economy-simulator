@@ -120,3 +120,21 @@ func TestNewFormatter_ReportsTheFirstFaultWithItsIndex(t *testing.T) {
 		t.Errorf("NewFormatter(%v) error = %v, want ErrUnitName", l, err)
 	}
 }
+
+// TestBounds_MatchTheSpec verifies the two bounds are the spec's numbers.
+//
+// Requirement: FR-CUR-008, FR-CUR-010
+// Guard: the other tests read the constants, so a changed bound would move
+// them with it; this pins the values of spec-currency.md 4.1 and 4.2.
+func TestBounds_MatchTheSpec(t *testing.T) {
+	t.Parallel()
+	if denomination.MaxSize != 1_000_000_000_000 {
+		t.Errorf("MaxSize = %d, want 10^12", denomination.MaxSize)
+	}
+	if denomination.MaxPrecision != 6 {
+		t.Errorf("MaxPrecision = %d, want 6", denomination.MaxPrecision)
+	}
+	if _, err := denomination.NewFormatter(denomination.RPG(), denomination.WithPrecision(7)); !errors.Is(err, denomination.ErrPrecision) {
+		t.Errorf("NewFormatter(RPG, WithPrecision(7)) error = %v, want ErrPrecision", err)
+	}
+}
