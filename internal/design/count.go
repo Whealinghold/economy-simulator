@@ -15,7 +15,11 @@ import "math/bits"
 func CheckedCount(factors ...int) (int, bool) {
 	p := uint64(1)
 	for _, f := range factors {
-		// A negative f converts to a uint64 above 2^63, so it fails the range test below.
+		// Tested apart from the range test below: after a zero factor p is 0 and a
+		// negative f would otherwise multiply to 0 and pass.
+		if f < 0 {
+			return 0, false
+		}
 		hi, lo := bits.Mul64(p, uint64(f))
 		if hi != 0 || lo > maxInt {
 			return 0, false

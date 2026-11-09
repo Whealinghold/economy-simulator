@@ -197,3 +197,36 @@ func TestElasticity_Errors(t *testing.T) {
 		}
 	}
 }
+
+// TestElasticity_ExplicitFactor verifies that the knob value x of an explicit
+// factor is the value of its level's first change, not the level index (spec-experiments.md
+// 8.5.3): levels with changes 7 000 and 8 000 and readings 12 000 and 11 100 give
+// the -5 250 of the range factor of 19.7.
+//
+// Requirement: FR-EXP-046
+func TestElasticity_ExplicitFactor(t *testing.T) {
+	t.Parallel()
+	f := experiment.Factor{Name: "knob", Levels: []experiment.Level{
+		{Changes: []experiment.Change{{Path: "world.knob", Value: 7000}}},
+		{Changes: []experiment.Change{{Path: "world.knob", Value: 8000}}},
+	}}
+	res := column(t, toySpec(1, experiment.OneAtATime, f), [][]int64{{12000}, {11100}})
+	got, err := experiment.Elasticity(res, toyMeasure, 0, 1)
+	if err != nil || got != (experiment.Sensitivity{BP: -5250, OK: true}) {
+		t.Errorf("Elasticity(explicit levels 7 000, 8 000) = %+v, %v, want -5250 ok", got, err)
+	}
+}
+
+// TestMainEffects_SpreadWithoutFactors verifies that a spread with no factor, which
+// has one point and nothing to bin, accepts any bins.
+//
+// Guard: the bins check once refused it with ErrBadDesign.
+func TestMainEffects_SpreadWithoutFactors(t *testing.T) {
+	t.Parallel()
+	e := toySpec(1, experiment.Spread)
+	e.DesignN = 1
+	res := column(t, e, [][]int64{{5}})
+	if got, err := experiment.MainEffects(res, toyMeasure, 0); err != nil || len(got) != 0 {
+		t.Errorf("MainEffects(spread, no factors, 0 bins) = %v, %v, want no effects, nil", got, err)
+	}
+}

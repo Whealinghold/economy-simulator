@@ -177,7 +177,7 @@ func (e Spec) finishRecord(ctx context.Context, g *engine, run func() *failure, 
 func (e Spec) fail(rec Record, f *failure, p progress) Record {
 	rec.Status, rec.FailTick, rec.Detail = f.status, f.tick, f.detail
 	if e.Keep.Series {
-		rec.Ticks, rec.Series = p.ticks, p.series
+		rec.Ticks, rec.Series = slices.Clone(p.ticks), slices.Clone(p.series)
 	}
 	return rec
 }
@@ -239,9 +239,11 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	prior := make(map[Key]Record, len(rc.prior))
-	for _, r := range rc.prior {
-		prior[r.Key] = r
+	// Prior records are trusted as Assemble trusts them: a key outside the plan or
+	// twice with different contents is refused (spec-experiments.md 5.3.4).
+	prior, err := e.indexRecords(rc.prior)
+	if err != nil {
+		return nil, err
 	}
 	var out []Record
 	for _, u := range units {

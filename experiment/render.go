@@ -18,10 +18,10 @@ func Render(r Result) string {
 	var b strings.Builder
 	line := func(parts ...string) { b.WriteString(strings.Join(parts, " ")); b.WriteByte('\n') }
 	itoa := strconv.Itoa
-	line("experiment", r.Name, "format", itoa(r.Format), "points", itoa(len(r.Points)),
+	line("experiment", oneLine(r.Name), "format", itoa(r.Format), "points", itoa(len(r.Points)),
 		"measures", itoa(len(r.Measures)), "criteria", itoa(len(r.Criteria)))
 	for k, m := range r.Measures {
-		line("measure", itoa(k), m)
+		line("measure", itoa(k), oneLine(m))
 	}
 	for _, p := range r.Points {
 		renderPoint(line, r, p)
@@ -46,7 +46,7 @@ func renderPoint(line func(...string), r Result, p PointResult) {
 			renderReduction(line, r.Measures[i], red)
 		}
 		for i, ps := range v.Pass {
-			line("pass", r.Criteria[i], "passes", strconv.Itoa(ps.Passes), "planned", strconv.Itoa(ps.Planned),
+			line("pass", oneLine(r.Criteria[i]), "passes", strconv.Itoa(ps.Passes), "planned", strconv.Itoa(ps.Planned),
 				"share", strconv.Itoa(ps.ShareBP))
 		}
 	}
@@ -63,7 +63,7 @@ func renderRun(line func(...string), r Result, run Record) {
 		"seed", strconv.FormatUint(run.Seed, 10), "salt", salt, "status", string(run.Status),
 		"fail_tick", strconv.FormatInt(run.FailTick, 10), "digest", hexOf(run.Digest))
 	if run.Detail != "" {
-		line("detail", strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(run.Detail))
+		line("detail", oneLine(run.Detail))
 	}
 	if len(r.Measures) > 0 {
 		line(append([]string{"final"}, named(r.Measures, run.Final)...)...)
@@ -71,6 +71,7 @@ func renderRun(line func(...string), r Result, run Record) {
 	if len(r.Criteria) > 0 {
 		verdicts := make([]string, len(r.Criteria))
 		for i, c := range r.Criteria {
+			c = oneLine(c)
 			verdicts[i] = c + "=fail"
 			if i < len(run.Pass) && run.Pass[i] {
 				verdicts[i] = c + "=pass"
@@ -89,7 +90,7 @@ func renderRun(line func(...string), r Result, run Record) {
 
 // renderReduction writes the reduce line of one measure.
 func renderReduction(line func(...string), name string, red Reduction) {
-	parts := []string{"reduce", name, "planned", strconv.Itoa(red.Planned), "used", strconv.Itoa(red.Used),
+	parts := []string{"reduce", oneLine(name), "planned", strconv.Itoa(red.Planned), "used", strconv.Itoa(red.Used),
 		"failed", strconv.Itoa(red.Failed), "undefined", strconv.Itoa(red.Undefined),
 		"missing", strconv.Itoa(red.Missing), "min", dash(red.Min), "max", dash(red.Max),
 		"mean", dash(red.Mean), "std", dash(red.Std)}
@@ -107,7 +108,7 @@ func named(names []string, row []Reading) []string {
 		if i < len(row) {
 			rd = row[i]
 		}
-		out[i] = n + "=" + dash(rd)
+		out[i] = oneLine(n) + "=" + dash(rd)
 	}
 	return out
 }
@@ -138,4 +139,10 @@ func list[T any](xs []T, f func(T) string) string {
 		parts[i] = f(x)
 	}
 	return strings.Join(parts, ",")
+}
+
+// oneLine replaces line breaks with a space, so that a name or an error text
+// cannot start a line of the rendering.
+func oneLine(s string) string {
+	return strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(s)
 }

@@ -204,3 +204,31 @@ func BenchmarkRunUnit_HarnessShare(b *testing.B) {
 		}
 	}
 }
+
+// TestRunAll_RefusesBadPrior verifies that a prior record whose key is outside the
+// plan, or that repeats a key with different contents, is refused as Assemble
+// refuses it, not dropped or resolved to the last one.
+//
+// Requirement: FR-EXP-020
+func TestRunAll_RefusesBadPrior(t *testing.T) {
+	t.Parallel()
+	e := internalSpec(t)
+	a := Record{Key: Key{Replica: 0}, Seed: 1}
+	b := Record{Key: Key{Replica: 0}, Seed: 2}
+	tests := []struct {
+		name  string
+		prior []Record
+		want  error
+	}{
+		{"outside the plan", []Record{{Key: Key{Point: 9}}}, ErrUnknownRun},
+		{"twice, different", []Record{a, b}, ErrDuplicateRun},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := e.runAll(context.Background(), WithPrior(tt.prior)); !errors.Is(err, tt.want) {
+				t.Errorf("runAll(prior %s) error = %v, want %v", tt.name, err, tt.want)
+			}
+		})
+	}
+}

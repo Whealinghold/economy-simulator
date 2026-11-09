@@ -46,7 +46,8 @@ func MainEffects(r Result, measure string, bins int) ([]Effect, error) {
 	if m < 0 {
 		return nil, fmt.Errorf("main effects of %q: %w", measure, ErrUnknownMeasure)
 	}
-	if r.Design == Spread && (bins < 2 || bins > len(r.Points)) {
+	// A spread with no factor has one point and nothing to bin.
+	if r.Design == Spread && len(r.Points) > 0 && len(r.Points[0].Levels) > 0 && (bins < 2 || bins > len(r.Points)) {
 		return nil, fmt.Errorf("main effects: %d bins of %d points: %w", bins, len(r.Points), ErrBadDesign)
 	}
 	if len(r.Points) == 0 {
@@ -150,8 +151,9 @@ type Sensitivity struct {
 //
 //	rdiv(10 000 * (Y_l * n_0 - Y_0 * n_l) * x_0, Y_0 * n_l * (x_l - x_0))
 //
-// x is Values of the factor, which is the knob's value for a range factor (for an
-// explicit factor it is the level index). It is valid for a small step.
+// x is the knob's value: Values of a range factor, the value of the first change
+// of the level of an explicit factor (0 when the level has none). It is valid for a
+// small step.
 // A design other than OneAtATime is ErrBadDesign, an unknown measure
 // ErrUnknownMeasure and a factor or level outside the result ErrUnknownRun.
 func Elasticity(r Result, measure string, factor, level int) (Sensitivity, error) {
@@ -169,6 +171,10 @@ func Elasticity(r Result, measure string, factor, level int) (Sensitivity, error
 	y0, n0 := r.sum(base, m)
 	yl, nl := r.sum(at, m)
 	x0, xl := r.Points[base].Values[factor], r.Points[at].Values[factor]
+	if factor < len(r.first) && r.first[factor] != nil {
+		f := r.first[factor] // an explicit factor: Values is the level index
+		x0, xl = f[0], f[level]
+	}
 	return elasticity(y0, n0, yl, nl, x0, xl), nil
 }
 

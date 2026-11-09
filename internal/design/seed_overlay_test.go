@@ -133,6 +133,7 @@ func TestCheckedCount_Overflow(t *testing.T) {
 		{"wraps 2^64", []int{1 << 32, 1 << 32}, 0, false},
 		{"negative alone", []int{-1}, 0, false},
 		{"negative then zero", []int{-1, 0}, 0, false},
+		{"zero then negative", []int{0, -1}, 0, false},
 		{"just over int", []int{math.MaxInt/2 + 1, 2}, 0, false},
 		{"three that wrap", []int{1 << 30, 1 << 30, 1 << 30}, 0, false},
 		{"negative", []int{3, -1}, 0, false},
