@@ -38,6 +38,7 @@ func FuzzLoad(f *testing.F) {
 	f.Add([]byte(minimal), []byte("[world]\nscale = 2\n"), []byte("[world]\nscale = 3\n"))
 	f.Add([]byte(minimal+"[a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q]\n"), []byte("x = [[[[[[1]]]]]]\n"), []byte("y = { a = { b = 1 } }\n"))
 	f.Add([]byte(minimal+populationDoc[len(minimal):]), []byte("[modules.population]\nbirth_schedule = [ { ratio = 1 } ]\n"), []byte("[modules.population.region.a]\nhousehold_cap = -1\n"))
+	f.Add([]byte(transportDoc), []byte("[modules.transport.mode.foot]\nspeed = 0\ncrew = -1\nfeed = [ { commodity = \"x\" } ]\n"), []byte("[modules.transport.mode.coach]\nhaul = \"h\"\nhaul_span = 10\ncrew = 2\n"))
 	f.Add([]byte(minimal+"[modules.storage]\n"), []byte("[role.a]\ntarget_ratio = 1.5\n"), []byte("world = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 0\n"), []byte("[region.a.edge.a]\ndistance = 2\n"), []byte("[region.a.reference_price]\nx = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\n"), []byte("[region.a.edge.b]\ndistance = 1.5\n"), []byte("[region.a.reference_price]\nx = \"1\"\n"))

@@ -163,6 +163,20 @@ const (
 	// removed from an agent that keeps others, moved to the estate (spec-population.md
 	// 4.7).
 	ReasonDeaths Reason = "deaths"
+	// ReasonTransitOut is the cargo of a shipment moved from its shipper into a
+	// Transit account at dispatch, with the transport module on
+	// (spec-transport.md 7.2).
+	ReasonTransitOut Reason = "transit_out"
+	// ReasonTransitIn is the cargo of a shipment moved from its Transit account to
+	// the consignee at arrival, or to the estate of the destination when it is
+	// diverted (spec-transport.md 7.2).
+	ReasonTransitIn Reason = "transit_in"
+	// ReasonHaulUse is the haul units a hired shipment redeems at dispatch, a goods
+	// sink (spec-transport.md 3.3.3, 7.2).
+	ReasonHaulUse Reason = "haul_use"
+	// ReasonTransitUse is the feed a self-carried trip consumes at dispatch, a
+	// goods sink (spec-transport.md 3.3.2, 7.2).
+	ReasonTransitUse Reason = "transit_use"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module

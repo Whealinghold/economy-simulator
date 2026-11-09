@@ -43,6 +43,11 @@ type WantID int
 // is not stable across configurations; use the string ID to persist or exchange.
 type ResourceID int
 
+// ModeID is the index of a transport mode in ascending order of its ID string.
+// It is not stable across configurations; use the string ID to persist or
+// exchange.
+type ModeID int
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64

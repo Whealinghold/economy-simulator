@@ -279,6 +279,10 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Subsistence = l.subsistence(ss)
 		ss.finish()
 	}
+	if ts := m.sub("transport"); ts != nil {
+		cfg.Modules.Transport = l.transport(ts)
+		ts.finish()
+	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
@@ -713,4 +717,31 @@ func (l *loader) subsistence(t *tbl) *economysim.SubsistenceConfig {
 		m.Roles = append(m.Roles, row)
 	})
 	return &m
+}
+
+// transport reads [modules.transport] (spec-config.md 6.2.1, spec-transport.md
+// 3.1): the modes as [mode.<id>] tables, with feed an array of { commodity,
+// quantity } tables. The table being present switches the module on, even with
+// no mode. A mode without a haul commodity starts from DefaultCrew, so an absent
+// crew and an explicit 1 hash alike; a hired mode keeps a crew of 0, and one that
+// sets crew is refused by Validate (ErrModeShape). The modes come out in ID order
+// because every level is read in ID order.
+func (l *loader) transport(t *tbl) *economysim.Transport {
+	m := &economysim.Transport{}
+	t.entities("mode", func(id string, e *tbl) {
+		md := economysim.Mode{ID: id}
+		e.text("haul", &md.Haul)
+		if md.Haul == "" {
+			md.Crew = economysim.DefaultCrew
+		}
+		readInts(e, []intField{
+			{"speed", &md.Speed}, {"unit_mass", &md.UnitMass}, {"unit_bulk", &md.UnitBulk},
+			{"crew", &md.Crew}, {"wear_per_tick", &md.WearPerTick}, {"haul_span", &md.HaulSpan},
+		})
+		e.text("vehicle", &md.Vehicle)
+		e.items("feed", &md.Feed)
+		e.text("label", &md.Label)
+		m.Modes = append(m.Modes, md)
+	})
+	return m
 }

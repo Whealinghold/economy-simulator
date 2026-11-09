@@ -89,6 +89,57 @@ type Modules struct {
 	// (spec-population.md). Nil is off; non-nil is on. Its hash id is 3, whatever
 	// its place in this struct.
 	Population *Population
+	// Transport is the transport module: modes of carriage between regions,
+	// shipments and goods in transit (spec-transport.md). Nil is off; non-nil is
+	// on, even when empty. Its hash id is 4, whatever its place in this struct.
+	Transport *Transport
+}
+
+// Transport is the configuration of the transport module (spec-transport.md
+// 3.1, 11). The zero value is a module that is on with no mode, which does
+// nothing (the warning transport_without_routes). Modes are in ID order after
+// construction (spec-config.md 3.4).
+type Transport struct {
+	// Modes are the modes of carriage, by ID, 0 to MaxModes.
+	Modes []Mode
+}
+
+// Mode is a way to carry goods between regions (spec-transport.md 3.1). A mode
+// with an empty Haul is self-carried: the traveller goes with the cargo. A mode
+// with a Haul is hired: the shipper redeems haul units. Start from nothing but
+// the required fields: ID, Speed, UnitMass and UnitBulk (not both 0), and
+// HaulSpan with a Haul; Crew is 1 in a self-carried mode (DefaultCrew, which the
+// file loader applies when the key is absent).
+type Mode struct {
+	// ID identifies the mode; required.
+	ID string
+	// Speed is the distance units a carrying unit covers in a tick, 1 to MaxSpeed.
+	Speed int64
+	// UnitMass is the mass one carrying unit holds; 0 leaves mass unlimited, to
+	// MaxCapacity. UnitMass and UnitBulk are not both 0.
+	UnitMass int64
+	// UnitBulk is the bulk one carrying unit holds; 0 leaves bulk unlimited, to
+	// MaxCapacity.
+	UnitBulk int64
+	// Crew is the households a carrying unit needs, 1 to MaxWeight; self-carried
+	// modes only, and 0 in a hired mode.
+	Crew int64
+	// Vehicle is a durable commodity each carrying unit needs one item of;
+	// self-carried modes only. Empty means the households are the unit.
+	Vehicle string
+	// WearPerTick is the wear units a vehicle takes per tick of travel, 1 to the
+	// vehicle's Durability; 0 without a Vehicle.
+	WearPerTick int64
+	// Feed is the goods one carrying unit consumes per tick of travel; at most
+	// MaxFeed entries, each quantity 1 to MaxQuantity; self-carried modes only.
+	Feed []Item
+	// Haul is the commodity of haul units; setting it makes the mode hired.
+	Haul string
+	// HaulSpan is the distance one haul unit carries one carrying unit, 1 to
+	// MaxHaulSpan; required with Haul and 0 otherwise.
+	HaulSpan int64
+	// Label is a display name, presentation only, at most MaxLabelBytes.
+	Label string
 }
 
 // Estates is the configuration of the pool policy (spec-config.md 6.2.4). It has
@@ -928,6 +979,7 @@ func (c Config) canonical() Config {
 	out.Modules.Resources = c.Modules.Resources.canonical(c.Calendar.Seasons)
 	out.Modules.Subsistence = c.Modules.Subsistence.canonical()
 	out.Modules.Population = c.Modules.Population.canonical()
+	out.Modules.Transport = c.Modules.Transport.canonical()
 	return out
 }
 

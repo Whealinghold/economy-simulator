@@ -22,6 +22,7 @@ import (
 var presentationOnly = map[string]bool{
 	"Commodity.Label":           true,
 	"Commodity.UnitLabel":       true,
+	"Mode.Label":                true,
 	"Recipe.Label":              true,
 	"Resource.Label":            true,
 	"Role.Label":                true,

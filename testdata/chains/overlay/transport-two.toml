@@ -1,0 +1,37 @@
+# The transport overlay of the variant two (spec-transport.md 3.1, 17; spec-reference-chain.md 7.6; plan 2-12 D456). Layer it after the pack
+# and overlay/trade-two.toml (it needs the edges): base.toml, two.toml, overlay/trade-two.toml, this file. A test double, not a design: every number is a
+# placeholder (N-015, N-027). `foot` is self-carried, one household a unit; `coach` is hired and redeems `haul` units, one per 10 distance units
+# of one carrying unit; the carrier role makes them. The edges are 100 long, so a coach takes ceil(100 / 30) = 4 ticks and a shipment
+# redeems ceil(100 / 10) = 10 haul units for each carrying unit.
+
+[commodity.haul]
+reference_price = 400
+shelf_life = 2
+
+[recipe.run_haul]
+duration = 4
+inputs   = [ { commodity = "fuel", quantity = 2 } ]
+outputs  = [ { commodity = "haul", quantity = 4, cost_share = 10000 } ]
+requires = [ { commodity = "tool_a", wear_per_use = 1 } ]
+
+[role.carrier]
+recipes = [ "run_haul" ]
+start_stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 }, { commodity = "tool_a", quantity = 1 } ]
+
+[modules.transport.mode.foot]
+speed = 20
+unit_mass = 40
+unit_bulk = 30
+
+[modules.transport.mode.coach]
+speed = 30
+unit_mass = 1200
+unit_bulk = 900
+haul = "haul"
+haul_span = 10
+
+[region.north.group.carrier]
+households = 12
+
+[region.south.group.carrier]
+households = 12

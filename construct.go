@@ -314,6 +314,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.Population != nil {
 		on = append(on, "population")
 	}
+	if c.Modules.Transport != nil {
+		on = append(on, "transport")
+	}
 	return on
 }
 
