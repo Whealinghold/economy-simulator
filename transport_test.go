@@ -324,6 +324,8 @@ func TestPacks_TransportOverlaysLoad(t *testing.T) {
 // with the trade overlay and the transport overlay, is viable by SolveSteadyState
 // and loads into a world.
 //
+// Requirement: FR-TRN-001, FR-TRN-002, FR-CFG-070
+//
 // Guard: the module-alone golden of Phase 7 and the scenarios of Phase 9 run on
 // this pack; an overlay that stopped being viable would fail them far from the
 // cause.
