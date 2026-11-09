@@ -93,6 +93,7 @@ func transportFieldCases() []fieldCase {
 		hired("Mode.Crew", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.Crew = 1 }, "crew"),
 		vehicle("Mode.Vehicle", "unknown", economysim.ErrUnknownCommodity, func(m *economysim.Mode) { m.Vehicle = "nothing" }, "vehicle"),
 		vehicle("Mode.Vehicle", "not durable", economysim.ErrVehicleNotDurable, func(m *economysim.Mode) { m.Vehicle = "staple" }, "vehicle"),
+		hired("Mode.WearPerTick", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.WearPerTick = 1 }, "wear_per_tick"),
 		hired("Mode.Vehicle", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.Vehicle, m.WearPerTick = "tool_a", 0 }, "vehicle"),
 		vehicle("Mode.WearPerTick", "above the durability", bounds, func(m *economysim.Mode) { m.WearPerTick = 11 }, "wear_per_tick"),
 		vehicle("Mode.WearPerTick", "0 with a vehicle", economysim.ErrModeShape, func(m *economysim.Mode) { m.WearPerTick = 0 }, "wear_per_tick"),
@@ -323,6 +324,8 @@ func TestPacks_TransportOverlaysLoad(t *testing.T) {
 // TestOverlay_TransportOnly verifies the module-alone configuration, two regions
 // with the trade overlay and the transport overlay, is viable by SolveSteadyState
 // and loads into a world.
+//
+// Requirement: FR-TRN-001, FR-TRN-002, FR-CFG-070
 //
 // Guard: the module-alone golden of Phase 7 and the scenarios of Phase 9 run on
 // this pack; an overlay that stopped being viable would fail them far from the

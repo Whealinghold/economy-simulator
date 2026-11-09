@@ -142,6 +142,10 @@ economy-sim/
                          the root, and nothing in the module imports it
   experiment/            sweeps, replicas and reductions of runs; imports the
                          root and config/, and nothing in the module imports it
+  denomination/          optional display of Money: the ladder, the formatter and
+                         the RPG preset; stdlib only; imported by consumers and
+                         examples, never by the root, internal/, config/ or
+                         strategy/
   internal/              everything not meant to be public; stdlib only; never
                          imports the root (2.9)
     checked/  logkeys/  ordering/  codec/      leaf helpers that import nothing
@@ -214,7 +218,8 @@ the sub-module prefix (`otelobserver/v0.1.0`).
 `config` (to load a configuration); the root package **MUST NOT** import any of
 them. Nothing in the module imports `indicator` or `experiment` (its own tests,
 `otelobserver` and `examples/` aside), and `experiment` imports neither
-`indicator` nor `internal/measure`.
+`indicator` nor `internal/measure`. `denomination` imports nothing of the module,
+and the root, `internal/`, `config/` and `strategy/` **MUST NOT** import it.
 
 2.8. Code that is not part of the intended API **MUST** live under `internal/`.
 Keep as much as possible there: it lets the module refactor freely without
@@ -598,7 +603,7 @@ implementer. Events are passed by value. The detailed event rules are in
 
 ## 5. Dependencies
 
-5.1. The root package, `indicator/`, `experiment/` and `internal/` **MUST**
+5.1. The root package, `indicator/`, `experiment/`, `denomination/` and `internal/` **MUST**
 depend on the standard library only (and, within the module, on the packages 2.7
 allows). **[project]**
 
@@ -682,8 +687,8 @@ tables that are never mutated). Inject dependencies instead.
 
 7.2. `init()` functions **MUST NOT** be used.
 
-7.3. Code in the root package, `indicator/`, `experiment/` and `internal/`
-**MUST NOT** call `time.Now`, `time.Since`, the global `math/rand` or
+7.3. Code in the root package, `indicator/`, `experiment/`, `denomination/` and
+`internal/` **MUST NOT** call `time.Now`, `time.Since`, the global `math/rand` or
 `math/rand/v2` functions, or `crypto/rand`. Time is simulated ticks. Randomness
 comes from one seed per world (`WithSeed`) and keyed streams derived from it
 ([ADR 0008](../adr/0008-random-draws-are-keyed-streams.md)): the world holds one
@@ -810,6 +815,10 @@ changing the configuration hash of a checkpoint
 | Tunable (9.5) | `Scale`, `MinAgents`, belief step sizes | the configuration types, with defaults defined in one place |
 | Validation bound | maximum price, quantity and weight | one file, `bounds.go`, in the root package |
 | Rule constant | the rounding rule, rejection `reason` strings, log keys | next to the code that owns it |
+
+A validation bound of a package that validates its own input outside the root
+(`denomination.MaxSize` and `denomination.MaxPrecision`, and `experiment` for EXP
+13.2) stays with that package; the root `bounds.go` holds the bounds of `Config`.
 
 A rule constant is part of the definition of a behaviour, not a setting; do not
 move it into configuration to look flexible. Packages under `internal/` receive
@@ -1053,4 +1062,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 61e8ce9ff37019cc5c6bf293
+RULE-TAG: c0d633a77679206f9d8a4f06

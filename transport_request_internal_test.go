@@ -868,3 +868,28 @@ func TestEvents_NoObserverNoAlloc(t *testing.T) {
 		t.Errorf("allocations with an observer = %v, without = %v, want at least 2 more (the event and the copy of its lines)", with, without)
 	}
 }
+
+// TestRequest_HiredAfterTripKeepsProvision verifies that a hired request made after
+// a self-carried trip of the same plan is refused unprovisioned when it sends the
+// upkeep the traveller needs on the trip, and is not refused for it when the module
+// has no trip in flight (row 22).
+//
+// Arithmetic: the household holds 10 grain and the trip passes row 22 with all of it.
+// The hired line of 10 grain would leave none for the ticks the trip has left.
+//
+// Fix: review round 1 of plan 2-12. A later request of the plan took the stock that
+// row 22 had checked for the trip, so the traveller left with less than its upkeep.
+//
+// Requirement: FR-TRN-019
+func TestRequest_HiredAfterTripKeepsProvision(t *testing.T) {
+	t.Parallel()
+	w, _ := newShipWorld(t, nil, nil)
+	give(t, w, shipHome, commodityOf(t, w, "haul"), 4)
+	if _, got := ask(w, shipHome, 0, ShipmentRequest{Mode: modeFoot, To: regFar, ToSelf: true}); got != "" {
+		t.Fatalf("trip reason = %q, want none", got)
+	}
+	hired := ShipmentRequest{Mode: modeCoach, To: regFar, Consignee: shipFar, Lines: []Line{{Commodity: grain, Quantity: 10}}}
+	if _, got := ask(w, shipHome, 1, hired); got != ReasonUnprovisioned {
+		t.Errorf("dispatch(%+v) after a trip reason = %q, want %q", hired, got, ReasonUnprovisioned)
+	}
+}

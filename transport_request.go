@@ -157,8 +157,7 @@ func ckConsignee(c *shipCtx) Reason {
 	if c.r.ToSelf {
 		return ""
 	}
-	id, regions := c.r.Consignee, AgentID(len(c.w.cfg.Regions))
-	if id < regions || id >= c.w.state.nextAgent || c.w.agents[id].weight < 1 {
+	if !c.w.liveAgent(c.r.Consignee) {
 		return ReasonUnknownConsignee
 	}
 	return ""
@@ -402,10 +401,16 @@ func ckFeed(c *shipCtx) Reason {
 
 // ckProvisioned is row 22: after the moves of the dispatch a self-carried
 // traveller still holds the upkeep of its households for the k ticks away, because
-// it cannot buy while away.
+// it cannot buy while away. A hired request of a shipper already away on a trip of
+// the same plan keeps that guarantee for the ticks the trip has left.
 func ckProvisioned(c *shipCtx) Reason {
+	ticks := c.k
 	if c.md.hired() {
-		return ""
+		trip := c.t.tripOf(c.a.id)
+		if trip == nil {
+			return ""
+		}
+		ticks = trip.arrives - c.w.Tick()
 	}
 	for _, u := range c.w.roles.row(c.a.role).upkeepIn(c.region) {
 		left := c.available(u.commodity) - int64(c.t.qty[u.commodity])
@@ -414,9 +419,12 @@ func ckProvisioned(c *shipCtx) Reason {
 				left -= c.feedUse(f, c.n)
 			}
 		}
+		if c.md.hired() && u.commodity == c.res.haul {
+			left -= c.haul
+		}
 		need, ok := checked.Mul(int64(u.quantity), c.a.weight)
 		if ok {
-			need, ok = checked.Mul(need, c.k)
+			need, ok = checked.Mul(need, ticks)
 		}
 		if !ok || left < need {
 			return ReasonUnprovisioned
