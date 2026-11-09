@@ -406,3 +406,97 @@ func TestSchedule_CostFollowsArrivals(t *testing.T) {
 		t.Errorf("three arrivals cost %d comparisons among 8 000 in flight and %d among 8, want growth by the logarithm (at most 6 times)", largeBusy, smallBusy)
 	}
 }
+
+// TestSchedule_OrderOfManyEntries verifies the heap against a sort: 300 entries pushed in
+// a scrambled order (ticks that repeat, IDs that do not) come out in ascending (tick,
+// ID), whatever interleaving of pushes and pops precedes, and an entry due before the
+// tick asked for comes out first.
+//
+// Requirement: FR-TRN-024
+func TestSchedule_OrderOfManyEntries(t *testing.T) {
+	t.Parallel()
+	type pair struct{ at, id int64 }
+	var s transit.Schedule
+	var all []pair
+	x := uint64(88172645463325252) // xorshift: a fixed scramble, not a source of randomness for results
+	next := func(n uint64) int64 {
+		x ^= x << 13
+		x ^= x >> 7
+		x ^= x << 17
+		return int64(x % n)
+	}
+	for id := range int64(300) {
+		p := pair{at: 1 + next(40), id: id}
+		all = append(all, p)
+		s.Push(p.at, p.id)
+	}
+	slices.SortFunc(all, func(a, b pair) int {
+		if a.at != b.at {
+			return int(a.at - b.at)
+		}
+		return int(a.id - b.id)
+	})
+	var got []int64
+	for {
+		id, ok := s.Due(100)
+		if !ok {
+			break
+		}
+		got = append(got, id)
+	}
+	want := make([]int64, len(all))
+	for i, p := range all {
+		want[i] = p.id
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("Due order of 300 entries differs from the sorted order at %d places", countDiff(got, want))
+	}
+	s.Push(2, 7)
+	if id, ok := s.Due(5); !ok || id != 7 {
+		t.Errorf("Due(5) with an entry at tick 2 = %d, %v, want 7, true (an entry before the tick comes out)", id, ok)
+	}
+}
+
+func countDiff(a, b []int64) (n int) {
+	for i := range min(len(a), len(b)) {
+		if a[i] != b[i] {
+			n++
+		}
+	}
+	return n + max(len(a), len(b)) - min(len(a), len(b))
+}
+
+// TestSchedule_StepsCountComparisons verifies the counter on hand-counted cases: a first
+// Push compares nothing, a Push below its parent compares once and moves up, a Due on an
+// empty schedule or with nothing due is one look, and a Due that removes the only entry
+// is that look and the two comparisons of the sift (left and right child).
+//
+// Requirement: NFR-TRN-002
+func TestSchedule_StepsCountComparisons(t *testing.T) {
+	t.Parallel()
+	var s transit.Schedule
+	s.Push(5, 1)
+	if got := s.Steps(); got != 0 {
+		t.Errorf("Steps after the first Push = %d, want 0", got)
+	}
+	s.Push(3, 2) // one comparison with its parent, then at the root
+	if got := s.Steps(); got != 1 {
+		t.Errorf("Steps after a Push below its parent = %d, want 1", got)
+	}
+	s.Push(9, 3) // one comparison with the root, which is lower: stays
+	if got := s.Steps(); got != 2 {
+		t.Errorf("Steps after a Push above its parent = %d, want 2", got)
+	}
+	before := s.Steps()
+	s.Due(2) // nothing due: one look
+	if got := s.Steps() - before; got != 1 {
+		t.Errorf("Steps of a Due with nothing due = %d, want 1", got)
+	}
+	var one transit.Schedule
+	one.Push(1, 1)
+	before = one.Steps()
+	one.Due(1)
+	if got := one.Steps() - before; got != 3 { // the look and the sift of an empty heap, 2
+		t.Errorf("Steps of the Due of the only entry = %d, want 3", got)
+	}
+}
