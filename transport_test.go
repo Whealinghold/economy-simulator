@@ -93,6 +93,7 @@ func transportFieldCases() []fieldCase {
 		hired("Mode.Crew", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.Crew = 1 }, "crew"),
 		vehicle("Mode.Vehicle", "unknown", economysim.ErrUnknownCommodity, func(m *economysim.Mode) { m.Vehicle = "nothing" }, "vehicle"),
 		vehicle("Mode.Vehicle", "not durable", economysim.ErrVehicleNotDurable, func(m *economysim.Mode) { m.Vehicle = "staple" }, "vehicle"),
+		hired("Mode.WearPerTick", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.WearPerTick = 1 }, "wear_per_tick"),
 		hired("Mode.Vehicle", "set in a hired mode", economysim.ErrModeShape, func(m *economysim.Mode) { m.Vehicle, m.WearPerTick = "tool_a", 0 }, "vehicle"),
 		vehicle("Mode.WearPerTick", "above the durability", bounds, func(m *economysim.Mode) { m.WearPerTick = 11 }, "wear_per_tick"),
 		vehicle("Mode.WearPerTick", "0 with a vehicle", economysim.ErrModeShape, func(m *economysim.Mode) { m.WearPerTick = 0 }, "wear_per_tick"),
