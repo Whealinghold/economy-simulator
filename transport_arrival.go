@@ -36,7 +36,7 @@ type arrival struct {
 func (t *transportState) holds(a *agent, skip []string) bool {
 	for i := range t.ships {
 		s := &t.ships[i]
-		bound := s.shipper == a.id || s.consignee == a.id || (!s.hired && s.traveller == a.id && t.isAway(a.id))
+		bound := s.shipper == a.id || s.consignee == a.id // a traveller is its trip's shipper
 		if bound && !skipHas(skip, openShipment, int64(s.id)) {
 			return true
 		}

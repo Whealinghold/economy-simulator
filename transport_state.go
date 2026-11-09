@@ -244,6 +244,8 @@ func (w *World) checkShipmentShape(r *codec.Reader, s *shipment) {
 		{s.hired != md.hired(), "is hired, or not, against its mode"},
 		{s.hired && s.traveller != 0, "is hired and has a traveller"},
 		{!s.hired && s.traveller != s.shipper, "is self-carried and its traveller is not its shipper"},
+		{!s.hired && s.haulUnits != 0, "is self-carried and redeems haul units"},
+		{len(s.lines) == 0 && s.consignee != s.shipper, "is a trip to oneself and names another consignee"},
 		{(len(s.lines) == 0) != (s.account < 0), "has lines and no Transit account, or the converse"},
 		{s.hired && len(s.lines) == 0, "is hired and has no lines"},
 		{s.arrives <= s.dispatched || s.units < 1, "arrives at or before its dispatch, or carries no unit"},

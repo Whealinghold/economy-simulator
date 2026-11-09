@@ -200,6 +200,8 @@ func TestCheckpoint_TransportCorrupt(t *testing.T) {
 		{"shipper that was never created", func(w *World) { w.transport.ships[0].shipper = w.state.nextAgent }},
 		{"consignee that was never created", func(w *World) { w.transport.ships[0].consignee = w.state.nextAgent + 5 }},
 		{"traveller other than the shipper", func(w *World) { w.transport.ships[0].traveller = shipHome2 }},
+		{"haul units on a self-carried shipment", func(w *World) { w.transport.ships[0].haulUnits = 3 }},
+		{"trip to oneself with another consignee", func(w *World) { w.transport.ships[1].consignee = shipFar }},
 		{"dispatch in the future", func(w *World) { w.transport.ships[0].dispatched = w.Tick() }},
 		{"arrival not after the dispatch", func(w *World) { w.transport.ships[0].arrives = 0 }},
 		{"arrival too far ahead", func(w *World) { w.transport.ships[0].arrives = w.Tick() + MaxTravelTicks + 1 }},

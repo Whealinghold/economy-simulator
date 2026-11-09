@@ -311,6 +311,7 @@ func (c *shipCtx) hiredUnits() Reason {
 // n is found by bisection. It refuses when n is above the units fielded.
 func (c *shipCtx) carriedUnits() Reason {
 	q := c.t.loaded
+	defer clear(q)
 	for i := range q {
 		held, _, err := c.w.ledger.Holding(c.a.account, i)
 		if err != nil {
