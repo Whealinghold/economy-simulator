@@ -14,7 +14,7 @@ import (
 // "economy-sim/site/" and its Go name, as a record of origin only. No two
 // differ by less than 2^32, because the first fold step adds the site to the
 // seed (a Guard: test holds this). A later module appends its own site with
-// its change; the rows D2, D6, D12 to D15 and D17 have none yet.
+// its change; the rows D12 to D15 and D17 have none yet.
 const (
 	// siteConstruction keys D1: tick 0, id the agent.
 	siteConstruction uint64 = 0xC103123756D13F20
@@ -42,6 +42,11 @@ const (
 	// the plan; the key of the entity is the first word of that stream
 	// (spec-merchants.md 9.4.2, spec-world.md 7.1.4).
 	siteContract uint64 = 0xF0FF7DEE8E50504B
+	// siteOutsideWalk keys D2: tick, id the node RegionID, sub the CommodityID of
+	// the line; the walk of a line takes the first word of that stream (spec-world.md
+	// 7.1.4, spec-external-sector.md 6.4). A line is named by two IDs that a
+	// configuration change does not shift (ADR 0008 open point 3).
+	siteOutsideWalk uint64 = 0x46AE095E114979AB
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):
