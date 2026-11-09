@@ -288,7 +288,7 @@ and 2 with the width as well).
 
 5.2.2. A created agent is settled after a window (its ratio is padded until then,
 `spec-welfare-and-wages.md` 2.2). An initial agent of a world with a warm start
-may carry a negative `RoleSince` (`spec-spawner.md` 14); it is settled at once.
+has `RoleSince` equal to its creation tick, 0, with or without a warm start (`spec-spawner.md` 5.2.2a, `spec-world.md` 5.4.2): it is not settled before `max(MoveCooldown, T_a)` ticks, so the first migration pass of a run can move a household only at that tick or later (60 with the defaults; N-328).
 
 5.2.3. **Counted.** The settling rule acts silently, so it is counted (N-045). An agent
 whose turn comes and that meets items 1 to 4 of 3.3 but is not settled is tested against
@@ -410,7 +410,7 @@ carried forward). A candidate is dropped at stage 1 (`no_rumour`, 6.5, 7.6) when
 upkeep commodity of the household in `d` has no price, or when no recipe of its role has
 a price for every commodity in it (its inputs, required tools and non-discard outputs).
 
-6.2.1. **Draws.** They are taken in the migration pass of phase 7 (10.2 step 2), among the reviewed households in ascending agent ID, one per candidate, and never in the view of phase 3: INF's view draws precede `Trade` in phase 3, these follow the entry step in phase 7, so the two streams cannot interleave. When `RumourErrorBP` is above 0, one draw is taken for every
+6.2.1. **Draws.** They are taken in the migration pass of phase 7 (10.2 step 2), among the pushed households whose role has a recipe, in ascending agent ID, one per candidate, and never in the view of phase 3: INF's view draws precede `Trade` in phase 3, these follow the entry step in phase 7, so the two streams cannot interleave. When `RumourErrorBP` is above 0, one draw is taken for every
 `(d, c)` pair that is a source, in the order above, whether or not the case is 4,
 exactly as for a view (`spec-information.md` 5.5.2, 5.3.2). The agents are visited in
 ascending ID. The number of draws in a tick is therefore a function of the
@@ -441,8 +441,11 @@ belief centre, and `S` in place of the effective yield. The season of the arriva
 tick is that of `t + 1 + k` (8.2), `Calendar.At(t + 1 + k).Season`, or -1 when the
 calendar has none. A recipe is **eligible** at `d` if `S` is above 0 and either
 `net_r > 0` or it is a source (no inputs). The household's **rumoured income per
-working tick** at `d` is the greatest of `floor(net_r / Duration_r)` over the
-eligible recipes, and 0 if there is none. The household's upkeep at `d` is the
+working tick** at `d` is the greatest of `net_r / Duration_r` over the
+eligible recipes, and 0 if there is none; the quotient is truncated toward zero
+(architecture.md 3.5), which matters only for a source recipe whose tool wear makes
+`net_r` negative (it is eligible, and its negative income is then a ratio below
+`EntryRatio` at stage 3). The household's upkeep at `d` is the
 effective upkeep of its role in `d` (the role's or the world's list and the
 region's extra upkeep, `spec-agents.md` 5.2), per household, and its cost is
 
@@ -793,8 +796,8 @@ journey from the window as it considers a long trip (open question 8).
 
 ### 8.4 Arrival
 
-In the first phase of each tick, after the arrivals of the transport module
-(`spec-transport.md` 5.7) and before relief (phase 1 pays relief only, `spec-world.md`
+At position P1.5 of the first phase of each tick (`spec-world.md` 6.2), after the arrivals of the transport module
+(P1.3, `spec-transport.md` 5.7) and before relief (phase 1 pays relief only, `spec-world.md`
 ruling C1), for each agent whose `Journey.Arrives` is the tick or earlier, in ascending
 agent ID:
 
@@ -916,10 +919,10 @@ carriage. It is a stated bias (MIG-A9) and an open question (4).
 
 | Phase | What this module does |
 |-------|-----------------------|
-| 1, start | after the arrivals of the transport module and before relief (phase 1 pays relief only): the arrivals of 8.4, in ascending agent ID |
+| 1, start (P1.5) | after the arrivals of the transport module and before relief (phase 1 pays relief only): the arrivals of 8.4, in ascending agent ID |
 | 2, 3 | none; an agent on a journey is passed to neither `Work` nor `Trade` (AGT 4, as an away agent) |
 | 6, consumption | none; the upkeep of a migrant is consumed from its account and its record is pushed as for any agent |
-| 7, entry and exit | after the entry step (the spawner and the population module) of **every** region has run: the migration pass of 10.2 |
+| 7, entry and exit (P7.2) | after the entry step (the spawner and the population module) of **every** region has run, P7.1: the migration pass of 10.2 |
 
 The pass is after the whole entry step of all regions, so a household that the ladder
 removes or switches this tick is not moved, a household that was born this tick is
@@ -1081,7 +1084,7 @@ by the configuration.
 | `migration_cohort` | a mobile role has a group whose `Scale` is above 1: a cohort moves whole (3.2.2) |
 | `migration_provision` | the shortest journey between some pair of regions with a route has a journey time `k` above `CoverTicks` of AGT: a default household holds about that many ticks of upkeep and cannot be provisioned for it (7.4.1); carries `pairs`, the count |
 | `migration_far` | at least one ordered pair of regions has a route whose journey time is `H` or more: it is never a destination (6.4); carries `pairs` |
-| `migration_flow_window` | `MoveOutShare` times the longest effective welfare window of a mobile role exceeds 3 times `MoveGain` (placeholder, from the model of 16.6): the flow can reverse. Carries the product and `MoveGain` |
+| `migration_flow_window` | `MoveOutShare` times the longest effective welfare window of a mobile role exceeds 3 times `MoveGain` (placeholder, from the model of 16.6): the flow can reverse. Carries `rule` and `path` only: the product and `MoveGain` have no carrier in `Warning` (N-327) |
 | `migration_uncapped` | `MoveOutShare` is at least `10 000 / MoveReviewTicks` and `MoveInShare` is at least 10 000: no cap can bind, and only the rotation limits the flow |
 
 12.3.1. **The flow warning.** `migration_flow_window` is the analogue of
@@ -1256,7 +1259,7 @@ below `MoveBelow`: it is pushed. Its rumours, window means after the blur: `midd
 
 The agent's margin is `g_a = 1 000 + floor(u * 5 000)` with `Offset(1042)` =
 4 258 099 970, so `u` = 0.991 and `g_a` = 5 957; it needs `V_eff` at least
-`6 393 * 15 957 / 10 000` = 10 201. Both pass, both are viable (above `EntryRatio`
+`6 393 * 15 957 / 10 000` = 10 201.3, so by cross-multiplication at least 10 202. Both pass, both are viable (above `EntryRatio`
 8 000), and the ranking is `lower` (17 043), then `middle` (14 216).
 
 **Admission.** The guard finds no obligation. `upper` has 600 households, so its
@@ -1716,8 +1719,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-MIG-010 | The decision of an agent MUST NOT read another region's wage, welfare ratio, income, stock, endowment, abundance, count of households, count of migrants or pool, nor an average of any: a test that changes each of these leaves every estimate, gate and ranking unchanged (4.4). |
 | FR-MIG-011 | The candidates MUST be the regions other than the agent's that are not outside nodes and to which `Distance` is defined over the open edges, in ascending `RegionID`; and `K(role)` MUST be the upkeep commodities of the role in any region and the inputs, required tools and non-discard outputs of its recipes, in ascending commodity order (6.1). |
 | FR-MIG-012 | The module MUST obtain a rumour for each source `(d, c)` with `c` in `K(role)` by INF's function with INF's lag, vintage and error, for an agent of a role whether or not `Informed`, MUST use `Mean` only when it is above 0, and MUST drop a candidate at stage 1 as `no_rumour` when an upkeep commodity of the household in it has no price or no recipe of the role has a price for all its commodities (4.3.1, 6.2). |
-| FR-MIG-013 | With `RumourErrorBP` above 0 the module MUST take one draw per source pair for each pushed agent, in ascending agent ID and, within an agent, ascending destination and commodity, whether or not a rumour is offered, and with `RumourErrorBP` 0 or no pushed agent it MUST take none (6.2.1, 10.2.1). |
-| FR-MIG-014 | The estimate MUST be `floor(net_r / Duration_r) * 10 000 / U_d`, truncated toward zero with 128-bit intermediates, with `net_r` as in 6.3 from the rumoured means and the table's yield at the season of the arrival tick, the greatest over the eligible recipes, 0 if there is none, and `U_d` the cost of the household's effective upkeep in `d` at the rumoured means (6.3). |
+| FR-MIG-013 | With `RumourErrorBP` above 0 the module MUST take one draw per source pair for each pushed agent whose role has a recipe, in ascending agent ID and, within an agent, ascending destination and commodity, whether or not a rumour is offered, and with `RumourErrorBP` 0 or no pushed agent it MUST take none (6.2.1, 10.2.1). |
+| FR-MIG-014 | The estimate MUST be `(net_r / Duration_r) * 10 000 / U_d`, each quotient truncated toward zero with 128-bit intermediates, with `net_r` as in 6.3 from the rumoured means and the table's yield at the season of the arrival tick, the greatest over the eligible recipes, 0 if there is none, and `U_d` the cost of the household's effective upkeep in `d` at the rumoured means (6.3). |
 | FR-MIG-015 | The household's home figure MUST be its observed wage per working household-tick, without relief and grants, times 10 000 over the cost of its effective upkeep at the local report, and MUST be 0 when it had no working household-tick in its window (6.3.2). |
 | FR-MIG-016 | The journey time MUST be `max(1, ceil(D / MoveSpeed))`; a candidate with `k >= MoveHorizon` MUST be dropped as `too_far`; and the discounted estimate MUST be `Vhat * (H - k) / H` truncated toward zero (6.4). |
 | FR-MIG-017 | A candidate MUST be tested at stages 1 to 4 in that order (every price present; `k < H`; `Vhat >= EntryRatio`; `V_eff * 10 000 >= V_a * (10 000 + g_a)` by cross-multiplication), with the margin `g_a = MoveGain + floor(Offset(AgentID) * MoveWidth / 2^32)` and `Offset(id) = (id * 2 654 435 769) mod 2^32`, and the surviving candidates MUST be ranked by discounted estimate descending and, for equal values, by `RegionID` ascending (6.5). |
