@@ -3,6 +3,7 @@ package indicator_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"sync"
@@ -373,5 +374,46 @@ func TestRun_CostIndependentOfAgents(t *testing.T) {
 	}
 	if n1 != n4 {
 		t.Errorf("allocations of the presets = %v at %d agents and %v at %d agents, want equal: the cost is a function of the configuration", n1, a1, n4, a4)
+	}
+}
+
+// TestRun_PeoplePresetsOverRealWindows verifies the household presets against the
+// real worlds of the shared runs: the account of change closes (Residual 0) in
+// every row and for the realm, the unfed share is a share of household-ticks (at
+// most 10 000), and the households of each RoleShares row are the snapshot's.
+// Each is the integration of the tally with the preset; the worked-example tests
+// cover the same figures on literals.
+//
+// Requirement: FR-IND-038, FR-IND-041, FR-IND-045
+func TestRun_PeoplePresetsOverRealWindows(t *testing.T) {
+	for _, rc := range sharedRuns(t) {
+		for i, rw := range rc.wins {
+			where := func() string { return fmt.Sprintf("%s seed %d window %d", rc.pack, rc.seed, i) }
+			h, err := indicator.Households(rw.w, rw.open, rw.closing, rc.cfg.Calendar.TicksPerYear())
+			if err != nil {
+				t.Fatalf("%s: Households() error = %v, want nil", where(), err)
+			}
+			for _, r := range append([]indicator.HouseholdsRow{h.Total}, h.Rows...) {
+				if r.Residual != 0 {
+					t.Errorf("%s: Households row (%d, %d) residual = %d, want 0", where(), r.Region, r.Role, r.Residual)
+				}
+			}
+			u, err := indicator.Unfed(rw.w, rw.closing)
+			if err != nil {
+				t.Fatalf("%s: Unfed() error = %v, want nil", where(), err)
+			}
+			if u.Total.Share.OK && u.Total.Share.Value > 10_000 {
+				t.Errorf("%s: Unfed share = %d, want at most 10000", where(), u.Total.Share.Value)
+			}
+			s, err := indicator.RoleShares(rw.w)
+			if err != nil {
+				t.Fatalf("%s: RoleShares() error = %v, want nil", where(), err)
+			}
+			for _, r := range s.Rows {
+				if want := rw.w.CloseHouseholds[int(r.Region)*rw.w.Roles+int(r.Role)]; r.Close != want {
+					t.Errorf("%s: RoleShares row (%d, %d) Close = %d, want the window's %d", where(), r.Region, r.Role, r.Close, want)
+				}
+			}
+		}
 	}
 }
