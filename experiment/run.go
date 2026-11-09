@@ -38,6 +38,11 @@ func RunUnit(ctx context.Context, e Spec, u Unit) ([]Record, error) {
 	if err := e.checkUnit(ctx, u); err != nil {
 		return nil, err
 	}
+	return e.resolvedUnit(ctx, u)
+}
+
+// resolvedUnit is RunUnit for a unit of a validated experiment's Plan.
+func (e Spec) resolvedUnit(ctx context.Context, u Unit) ([]Record, error) {
 	cfg, status, err := e.resolve(ctx, u.Point)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -252,11 +257,11 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 			continue
 		}
 		if err := ctx.Err(); err != nil {
-			return out, fmt.Errorf("experiment: run: %w", err)
+			return append(out, e.priorAfter(prior, units, u)...), fmt.Errorf("experiment: run: %w", err)
 		}
-		recs, err := RunUnit(ctx, e, u)
+		recs, err := e.resolvedUnit(ctx, u) // Plan has validated the experiment and listed the unit
 		if err != nil {
-			return out, err
+			return append(out, e.priorAfter(prior, units, u)...), err
 		}
 		for _, r := range recs {
 			if rc.record != nil {
@@ -280,4 +285,16 @@ func priorOf(prior map[Key]Record, u Unit) ([]Record, bool) {
 		out = append(out, r)
 	}
 	return out, true
+}
+
+// priorAfter returns the prior records of the complete units after u, so that a
+// cancelled sweep does not drop work the caller already had.
+func (e Spec) priorAfter(prior map[Key]Record, units []Unit, u Unit) []Record {
+	var out []Record
+	for _, v := range units[u.Point*e.Replicas+u.Replica+1:] {
+		if recs, ok := priorOf(prior, v); ok {
+			out = append(out, recs...)
+		}
+	}
+	return out
 }

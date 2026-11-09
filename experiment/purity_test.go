@@ -62,7 +62,7 @@ func impurities(f *ast.File, banned map[string]bool) []string {
 		if g, ok := d.(*ast.GenDecl); ok && g.Tok == token.VAR {
 			for _, s := range g.Specs {
 				for _, n := range s.(*ast.ValueSpec).Names {
-					if n.Name != "_" && !strings.HasPrefix(n.Name, "Err") && n.Name != "quantiles" {
+					if n.Name != "_" && !strings.HasPrefix(n.Name, "Err") {
 						out = append(out, "package variable "+n.Name)
 					}
 				}
@@ -106,7 +106,7 @@ func TestPackage_PurityDetects(t *testing.T) {
 		name, src string
 		want      int
 	}{
-		{"clean", `package p; var ErrX = 1; var _ = 2; var quantiles = 3; func f() { x := 1; _ = x }`, 0},
+		{"clean", `package p; var ErrX = 1; var _ = 2; func f() { x := 1; _ = x }`, 0},
 		{"goroutine", `package p; func f() { go f() }`, 1},
 		{"float type", `package p; func f(x float64) {}`, 1},
 		{"math function", `package p; import "math"; var _ = math.Sqrt`, 1},

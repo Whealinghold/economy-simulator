@@ -232,3 +232,20 @@ func TestRunAll_RefusesBadPrior(t *testing.T) {
 		})
 	}
 }
+
+// TestRunAll_CancelKeepsLaterPrior verifies that a sweep cancelled before a unit
+// whose records the caller supplied still returns those records, so saving the
+// partial result as the next prior loses nothing.
+//
+// Requirement: FR-EXP-020
+func TestRunAll_CancelKeepsLaterPrior(t *testing.T) {
+	t.Parallel()
+	e := internalSpec(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	later := e.baseRecord(Key{Replica: 2})
+	got, err := e.runAll(ctx, WithPrior([]Record{later}))
+	if !errors.Is(err, context.Canceled) || len(got) != 1 || got[0].Key != later.Key {
+		t.Errorf("runAll(cancelled, prior of replica 2) = %v, %v, want that record and context.Canceled", got, err)
+	}
+}

@@ -234,6 +234,9 @@ func (e Spec) validateNames(r *report) {
 		if !names[c.Measure] {
 			r.add(ErrUnknownMeasure, c.Measure, "a Measure.Name", idx("Criteria", i), "Measure")
 		}
+		if c.Op != AtMost && c.Op != AtLeast && c.Op != Between || c.Op == Between && c.A > c.B {
+			r.add(ErrBadDesign, itoa(int(c.Op)), "AtMost, AtLeast or Between with A <= B", idx("Criteria", i), "Op")
+		}
 	}
 }
 

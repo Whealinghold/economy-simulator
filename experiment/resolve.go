@@ -3,6 +3,7 @@ package experiment
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/config"
@@ -96,11 +97,12 @@ func Check(ctx context.Context, e Spec) ([]PointCheck, error) {
 	}
 	n, _ := e.pointCount() // Validate has checked it
 	out := make([]PointCheck, 0, n)
+	warnings := e.designWarnings()
 	for p := range n {
 		if err := ctx.Err(); err != nil {
 			return nil, fmt.Errorf("check: %w", err)
 		}
-		pc := PointCheck{Point: p, Status: StatusOK, Warnings: e.designWarnings()}
+		pc := PointCheck{Point: p, Status: StatusOK, Warnings: slices.Clone(warnings)}
 		if _, status, err := e.resolve(ctx, p); err != nil {
 			pc.Status, pc.Detail = status, err.Error()
 		}

@@ -6,17 +6,26 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/reduce"
 )
 
-// quantiles is the closed list of quantiles of a Reduction, in basis points
-// (spec-experiments.md 8.3). It is never mutated.
-var quantiles = [5]int{1000, 2500, 5000, 7500, 9000}
+// nQuantiles is the length of the closed list of quantiles of a Reduction
+// (spec-experiments.md 8.3).
+const nQuantiles = 5
 
 // Quantile returns the i-th quantile of a Reduction in basis points, for i in
 // [0, 5): 1 000, 2 500, 5 000, 7 500 and 9 000. Any other i returns 0.
 func Quantile(i int) int {
-	if i < 0 || i >= len(quantiles) {
-		return 0
+	switch i {
+	case 0:
+		return 1000
+	case 1:
+		return 2500
+	case 2:
+		return 5000
+	case 3:
+		return 7500
+	case 4:
+		return 9000
 	}
-	return quantiles[i]
+	return 0
 }
 
 // A Reduction is one measure over the runs of one variant of one point
@@ -113,7 +122,8 @@ func reduceMeasure(runs []Record, m int) Reduction {
 	red.Min, red.Max = Reading{vals[0], true}, Reading{vals[len(vals)-1], true}
 	red.Mean = readingOf(mo.Mean())
 	red.Std = readingOf(mo.Std())
-	for i, q := range quantiles {
+	for i := range nQuantiles {
+		q := Quantile(i)
 		red.Q[i] = Reading{reduce.Quantile(vals, q), true}
 	}
 	return red
