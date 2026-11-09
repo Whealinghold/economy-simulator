@@ -474,3 +474,16 @@ var (
 	// has weight 1.
 	ErrMerchantWeight = errors.New("merchant role has a weight above 1")
 )
+
+// The sentinels of the external module (spec-external-sector.md 14.1).
+var (
+	// ErrOutsideNodeInhabited is an outside node named by a group, a warm-start
+	// row, a population region row, a taste row or a money-flow target.
+	ErrOutsideNodeInhabited = errors.New("outside node has agents")
+	// ErrCrossedQuotes is a line with both sides whose margins sum to less than
+	// MinQuoteSpreadBP.
+	ErrCrossedQuotes = errors.New("outside quotes cross")
+	// ErrNotAGate is a gate row naming a region with no direct edge to or from the
+	// node.
+	ErrNotAGate = errors.New("region is not a gate of the node")
+)

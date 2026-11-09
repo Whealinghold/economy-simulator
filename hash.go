@@ -449,6 +449,11 @@ func pairsModules(e *encoder, m Modules) {
 		pairsInformation(e, *m.Information)
 		e.end()
 	}
+	if m.External != nil {
+		e.id(7)
+		pairsExternal(e, *m.External)
+		e.end()
+	}
 	if m.Subsistence != nil {
 		e.id(8)
 		pairsSubsistence(e, *m.Subsistence)
@@ -679,4 +684,57 @@ func pairsEndowment(e *encoder, r Endowment) {
 	e.num(6, r.Initial)
 	e.flag(7, r.HasRegenScale)
 	e.num(8, r.RegenScaleBP)
+}
+
+// pairsExternal writes the pairs of an External: Nodes 1. A node's Label is
+// presentation only and has no id; the runtime state (drift, shock, carries,
+// totals) is not configuration and is not written (spec-config.md 8.2.1).
+func pairsExternal(e *encoder, x External) {
+	encodeList(e, 1, x.Nodes, pairsOutsideNode)
+}
+
+// pairsOutsideNode writes the pairs of an OutsideNode: Region 1, Lines 2, Gates 3.
+func pairsOutsideNode(e *encoder, n OutsideNode) {
+	e.text(1, n.Region)
+	encodeList(e, 2, n.Lines, pairsOutsideLine)
+	encodeList(e, 3, n.Gates, pairsOutsideGate)
+}
+
+// pairsOutsideLine writes the pairs of an OutsideLine: Commodity 1, Base 2,
+// PriceBySeason 3, TrendBP 4, FloorBP 5, CeilingBP 6, WalkStepBP 7, WalkRevertBP
+// 8, WalkBoundBP 9, Sell 10, Buy 11.
+func pairsOutsideLine(e *encoder, l OutsideLine) {
+	e.text(1, l.Commodity)
+	e.num(2, int64(l.Base))
+	encodeList(e, 3, l.PriceBySeason, pairsSeasonFactor)
+	e.num(4, l.TrendBP)
+	e.num(5, l.FloorBP)
+	e.num(6, l.CeilingBP)
+	e.num(7, l.WalkStepBP)
+	e.num(8, l.WalkRevertBP)
+	e.num(9, l.WalkBoundBP)
+	e.nested(10, func(e *encoder) { pairsOutsideSide(e, l.Sell) })
+	e.nested(11, func(e *encoder) { pairsOutsideSide(e, l.Buy) })
+}
+
+// pairsOutsideSide writes the pairs of an OutsideSide: MarginBP 1, Capacity 2,
+// Window 3, TotalUnits 4, TotalValue 5.
+func pairsOutsideSide(e *encoder, s OutsideSide) {
+	e.num(1, s.MarginBP)
+	e.num(2, s.Capacity)
+	encodeList(e, 3, s.Window, pairsSeasonFactor)
+	e.num(4, s.TotalUnits)
+	e.num(5, s.TotalValue)
+}
+
+// pairsSeasonFactor writes the pairs of a SeasonFactor: Season 1, BP 2.
+func pairsSeasonFactor(e *encoder, f SeasonFactor) {
+	e.text(1, f.Season)
+	e.num(2, f.BP)
+}
+
+// pairsOutsideGate writes the pairs of an OutsideGate: Region 1, ScaleBP 2.
+func pairsOutsideGate(e *encoder, g OutsideGate) {
+	e.text(1, g.Region)
+	e.num(2, g.ScaleBP)
 }

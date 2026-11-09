@@ -110,6 +110,12 @@ type Modules struct {
 	// (spec-merchants.md 9). Nil is off; non-nil is on. It needs Modules.Transport.
 	// Its hash id is 10, whatever its place in this struct.
 	Merchants *Merchants
+	// External is the external-sector module: outside nodes, their lines and
+	// sides, and the counterparties that trade with the realm in the market of a
+	// gate region (spec-external-sector.md 3). Nil is off; non-nil is on, even
+	// when empty. It needs Config.Edges. Its hash id is 7, whatever its place in
+	// this struct.
+	External *External
 }
 
 // Merchants is the configuration of the delivery contract (spec-merchants.md
@@ -1154,6 +1160,7 @@ func (c Config) canonical() Config {
 	out.Modules.Population = c.Modules.Population.canonical()
 	out.Modules.Transport = c.Modules.Transport.canonical()
 	out.Modules.Migration = c.Modules.Migration.canonical()
+	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
 	return out
 }
 
@@ -1273,4 +1280,104 @@ type FlowTarget struct {
 	Region string
 	// Role is the role of the households; a pool has none.
 	Role string
+}
+
+// External is the external-sector module (spec-external-sector.md 3.3): the
+// outside as data. Its presence switches it on.
+type External struct {
+	// Nodes are the regions marked as outside, by region in canonical order, at
+	// most MaxOutsideNodes.
+	Nodes []OutsideNode
+}
+
+// OutsideNode marks an existing region as the outside (spec-external-sector.md
+// 3.1): a region with no agents and no market, whose gates are the regions with
+// a direct edge to or from it.
+type OutsideNode struct {
+	// Region is the ID of an existing region that has no agents.
+	Region string
+	// Lines are the node's dealings, by commodity in canonical order, at most
+	// MaxOutsideLines.
+	Lines []OutsideLine
+	// Gates override the scale of a gate, by region in canonical order. Optional.
+	Gates []OutsideGate
+	// Label is a display name. It is presentation only and is not hashed.
+	Label string
+}
+
+// OutsideLine is the outside's dealing in one commodity at one node
+// (spec-external-sector.md 3.3): one price path and up to two sides. Start from
+// DefaultOutsideLine; Base has no default.
+type OutsideLine struct {
+	// Commodity is the ID of the commodity dealt in.
+	Commodity string
+	// Base is the mid at tick 0, 1 to MaxPrice. It is required.
+	Base Price
+	// PriceBySeason are the price factors by season, in basis points of Base 1 to
+	// MaxPriceFactorBP, by season in the calendar's order; an absent season is
+	// 10 000 (6.2).
+	PriceBySeason []SeasonFactor
+	// TrendBP is the linear drift of the mid in signed basis points of Base a
+	// year, -MaxTrendBP to MaxTrendBP (6.3). Default 0.
+	TrendBP int64
+	// FloorBP is the lower clamp of the trend and walk factor, 1 to 10 000
+	// (6.3). Default 1 000, a placeholder.
+	FloorBP int64
+	// CeilingBP is the upper clamp of the trend and walk factor, 10 000 to
+	// MaxFactorBP (6.3). Default 100 000, a placeholder.
+	CeilingBP int64
+	// WalkStepBP is the largest step of the walk per tick, 0 to MaxWalkStepBP; 0
+	// is no walk (6.4). Default 0.
+	WalkStepBP int64
+	// WalkRevertBP is the share of the drift undone per tick, 0 to 10 000 (6.4).
+	// Default 0.
+	WalkRevertBP int64
+	// WalkBoundBP is the largest drift either way: WalkStepBP to MaxDriftBP when
+	// a walk is on, else 0 (6.4). Default 0.
+	WalkBoundBP int64
+	// Sell is the side on which the outside sells to the realm (imports).
+	// Capacity 0 is an absent side.
+	Sell OutsideSide
+	// Buy is the side on which the outside buys from the realm (exports).
+	// Capacity 0 is an absent side.
+	Buy OutsideSide
+}
+
+// OutsideSide is one side of a line (spec-external-sector.md 3.3). Its state
+// (carry, cumulative totals, ended) is kept per gate (3.3.4). A side with
+// Capacity 0 is absent and every other field of it must be 0.
+type OutsideSide struct {
+	// MarginBP is the ask above the mid for a sell side and the bid below it for
+	// a buy side (6.6): sell 0 to MaxSellMarginBP, buy 0 to MaxBuyMarginBP.
+	MarginBP int64
+	// Capacity is the units offered or wanted per tick at full availability, 0 to
+	// MaxQuantity; 0 is an absent side (7.1).
+	Capacity int64
+	// Window is the availability by season in basis points, 0 to 10 000; an
+	// absent season is 10 000 (7.2).
+	Window []SeasonFactor
+	// TotalUnits caps the units traded over the run at each gate, 0 to
+	// MaxLineTotal; 0 is no cap beyond the bound (7.3).
+	TotalUnits int64
+	// TotalValue caps the list value traded over the run at each gate, 0 to
+	// MaxLineTotal; 0 is no cap beyond the bound (7.3, 7.4).
+	TotalValue int64
+}
+
+// SeasonFactor is a basis-point factor for one season of the calendar.
+type SeasonFactor struct {
+	// Season is the ID of a season of the calendar.
+	Season string
+	// BP is the factor in basis points.
+	BP int64
+}
+
+// OutsideGate overrides the scale of one gate of a node (spec-external-sector.md
+// 3.2.4).
+type OutsideGate struct {
+	// Region is the ID of a gate of the node.
+	Region string
+	// ScaleBP multiplies both quotes of the gate, 1 to MaxGateScaleBP. Default
+	// 10 000.
+	ScaleBP int64
 }

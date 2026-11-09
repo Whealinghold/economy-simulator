@@ -29,6 +29,7 @@ var presentationOnly = map[string]bool{
 	"Want.Label":                true,
 	"MoneyFlow.Label":           true,
 	"Region.Label":              true,
+	"OutsideNode.Label":         true,
 	"WorldParams.DistanceLabel": true,
 }
 

@@ -121,6 +121,7 @@ func (v *validator) structural() {
 	v.validateInformation()
 	v.validateMigration()
 	v.validateMerchants()
+	v.validateExternal()
 	v.overflow()
 }
 
@@ -639,7 +640,7 @@ func (v *validator) structure() {
 		}
 	}
 	for _, cm := range c.Commodities {
-		if cm.Raw {
+		if cm.Raw || importSourced(&c, cm.ID) {
 			mark(cm.ID)
 		}
 	}
@@ -1977,7 +1978,7 @@ func warnings(c *Config) []Warning {
 					sourced = sourced || (o.Commodity == cm.ID && !o.Discard)
 				}
 			}
-			if !sourced {
+			if !sourced && !importSourced(c, cm.ID) {
 				add("raw_without_source", "commodities", cm.ID)
 			}
 		}
@@ -2070,6 +2071,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, informationWarnings(c, lk)...)
 	out = append(out, migrationWarnings(c, lk)...)
 	out = append(out, merchantWarnings(c)...)
+	out = append(out, externalWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

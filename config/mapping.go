@@ -302,6 +302,10 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Merchants = l.merchants(ms)
 		ms.finish()
 	}
+	if xs := m.sub("external"); xs != nil {
+		cfg.Modules.External = l.external(xs)
+		xs.finish()
+	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
@@ -834,4 +838,74 @@ func (l *loader) merchant(t *tbl) economysim.Merchant {
 	t.flag("consigns", &m.Consigns)
 	integer(t, "take_units", &m.TakeUnits)
 	return m
+}
+
+// external reads [modules.external] (spec-config.md 6.2.3, spec-external-sector.md
+// 3.3.1): the nodes as [node.<region>] with lines [line.<commodity>] (keys base,
+// trend_bp, floor_bp, ceiling_bp, walk_step_bp, walk_revert_bp, walk_bound_bp and
+// the array price_by_season), their sides [sell] and [buy] (margin_bp, capacity,
+// total_units, total_value and the array window) and gates [gate.<region>]
+// (scale_bp). A key-less node table marks the node, and the table being present
+// switches the module on. The rows come out in ID order because every level is
+// read in ID order.
+func (l *loader) external(t *tbl) *economysim.External {
+	var m economysim.External
+	t.entities("node", func(region string, n *tbl) {
+		node := economysim.OutsideNode{Region: region}
+		n.text("label", &node.Label)
+		n.entities("line", func(commodity string, e *tbl) { node.Lines = append(node.Lines, l.outsideLine(commodity, e)) })
+		n.entities("gate", func(gate string, e *tbl) {
+			row := economysim.DefaultOutsideGate(gate)
+			integer(e, "scale_bp", &row.ScaleBP)
+			node.Gates = append(node.Gates, row)
+		})
+		m.Nodes = append(m.Nodes, node)
+	})
+	return &m
+}
+
+// outsideLine reads one [modules.external.node.<region>.line.<commodity>] table
+// over DefaultOutsideLine, with its two sides. A side is present when its table
+// is written with a capacity.
+func (l *loader) outsideLine(commodity string, t *tbl) economysim.OutsideLine {
+	line := economysim.DefaultOutsideLine(commodity, 0)
+	readInts(t, []intField{
+		{"trend_bp", &line.TrendBP}, {"floor_bp", &line.FloorBP},
+		{"ceiling_bp", &line.CeilingBP}, {"walk_step_bp", &line.WalkStepBP},
+		{"walk_revert_bp", &line.WalkRevertBP}, {"walk_bound_bp", &line.WalkBoundBP},
+	})
+	integer(t, "base", &line.Base)
+	line.PriceBySeason = seasonFactors(t, "price_by_season")
+	if s := t.sub("sell"); s != nil {
+		l.outsideSide(s, &line.Sell)
+		s.finish()
+	}
+	if b := t.sub("buy"); b != nil {
+		l.outsideSide(b, &line.Buy)
+		b.finish()
+	}
+	return line
+}
+
+// outsideSide reads the keys of one side: margin_bp, capacity, total_units,
+// total_value and the array window.
+func (l *loader) outsideSide(t *tbl, s *economysim.OutsideSide) {
+	readInts(t, []intField{
+		{"margin_bp", &s.MarginBP}, {"capacity", &s.Capacity},
+		{"total_units", &s.TotalUnits}, {"total_value", &s.TotalValue},
+	})
+	s.Window = seasonFactors(t, "window")
+}
+
+// seasonFactors reads an array of { season, bp } inline tables in the order
+// written; Validate checks the seasons.
+func seasonFactors(t *tbl, key string) []economysim.SeasonFactor {
+	var out []economysim.SeasonFactor
+	t.rows(key, func(e *tbl) {
+		var f economysim.SeasonFactor
+		e.need("season", e.text("season", &f.Season))
+		e.need("bp", integer(e, "bp", &f.BP))
+		out = append(out, f)
+	})
+	return out
 }

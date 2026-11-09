@@ -91,7 +91,7 @@ func (m *viaModel) realm() steady.Realm {
 	c := m.c
 	r := steady.Realm{Commodities: len(c.Commodities), Regions: len(c.Regions), Sourced: make([]bool, len(c.Commodities))}
 	for i := range c.Commodities {
-		r.Sourced[i] = c.Commodities[i].Raw
+		r.Sourced[i] = c.Commodities[i].Raw || importSourced(c, c.Commodities[i].ID)
 	}
 	for _, reg := range m.withHouseholds {
 		for _, a := range m.acts[reg] {
@@ -269,7 +269,7 @@ func (m *viaModel) solve(md steady.Model) (out steady.Outcome, skipped bool, err
 func (m *viaModel) noProgramme(regions []RegionID) bool {
 	for ci := range m.c.Commodities {
 		if slices.ContainsFunc(regions, func(r RegionID) bool { return m.upkeep[r][ci] > 0 }) {
-			if !m.c.Commodities[ci].Raw || m.hasSource(regions, ci) {
+			if !m.c.Commodities[ci].Raw || m.hasSource(regions, ci) || importSourced(m.c, m.c.Commodities[ci].ID) {
 				return false
 			}
 		}

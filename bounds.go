@@ -469,3 +469,42 @@ const (
 	// away, far beyond any use (spec-merchants.md 13).
 	MaxTimeCostBP = 100_000
 )
+
+const (
+	// MaxOutsideNodes is the most outside nodes of the external module: the
+	// counterparties and the loops of the module are bounded by it
+	// (spec-external-sector.md 13.2).
+	MaxOutsideNodes = 16
+	// MaxOutsideLines is the most lines of one outside node.
+	MaxOutsideLines = 64
+	// MaxCounterparties is the most counterparties of the module (one for each
+	// node, gate and side): agent IDs and boundary accounts are bounded by it.
+	MaxCounterparties = 256
+	// MaxSellMarginBP is the largest margin of a sell side: an ask of at most
+	// eleven times the mid.
+	MaxSellMarginBP = 100_000
+	// MaxBuyMarginBP is the largest margin of a buy side: a bid is at least a
+	// basis point of the mid.
+	MaxBuyMarginBP = 9_999
+	// MinQuoteSpreadBP is the smallest sum of the two margins of a line with both
+	// sides, so that no loop of trades with the outside earns money.
+	MinQuoteSpreadBP = 1
+	// MaxPriceFactorBP is the largest seasonal price factor: ten times.
+	MaxPriceFactorBP = 100_000
+	// MaxTrendBP is the largest TrendBP in either direction: ten times Base a year.
+	MaxTrendBP = 100_000
+	// MaxFactorBP is the largest CeilingBP: a hundred times Base.
+	MaxFactorBP = 1_000_000
+	// MaxWalkStepBP is the largest step of the walk: half the mid in one tick is
+	// already a jump, not a walk.
+	MaxWalkStepBP = 5_000
+	// MaxDriftBP is the largest WalkBoundBP: it keeps the walk factor positive.
+	MaxDriftBP = 9_999
+	// MaxGateScaleBP is the largest gate scale: ten times.
+	MaxGateScaleBP = 100_000
+	// MaxLineTotal is the largest TotalUnits and TotalValue of a side row. The cap
+	// is per side row (spec-external-sector.md 3.3.4) and there are at most
+	// MaxCounterparties counterparties of at most MaxOutsideLines rows each, so all
+	// the rows together move at most MaxMoney of list value.
+	MaxLineTotal = MaxMoney / (MaxCounterparties * MaxOutsideLines)
+)
