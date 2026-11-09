@@ -251,6 +251,11 @@ var stepSites = []site{
 			w.p13Arrivals()
 		}
 	})},
+	{"P1.5", noError(func(w *World) {
+		if w.migration != nil {
+			w.p15Arrivals()
+		}
+	})},
 	{"P1.6", (*World).p16Relief},
 	{"P1.7", noError((*World).p17Flows)},
 	{"P2.1", noError((*World).p21Complete)},
@@ -291,6 +296,11 @@ var stepSites = []site{
 	{"P6.3", noError((*World).p63Welfare)},
 	{"P6.4", noError((*World).p64Shortfall)},
 	{"P7.1", (*World).p71Entry},
+	{"P7.2", noError(func(w *World) {
+		if w.migration != nil {
+			w.p72Migration()
+		}
+	})},
 	{"P8.1", (*World).p81Age},
 	{"P8.2", noError((*World).p82Flows)},
 	{"P8.3", noError((*World).p83Regen)},

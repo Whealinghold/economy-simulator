@@ -398,6 +398,10 @@ func informationOn(w *World) bool { return w.info != nil }
 // plan 2-12): an off world records no line for them.
 func transportOn(w *World) bool { return w.transport != nil }
 
+// migrationOn is the guard of the rows of the migration module (P1.5 and P7.2,
+// plan 2-14): an off world records no line for them.
+func migrationOn(w *World) bool { return w.migration != nil }
+
 // reliefOn is the guard of the row of the relief pass: a world with the estates
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
@@ -417,6 +421,7 @@ var replayRows = []replayRow{
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
 	{id: "P1.3", run: noErr((*World).p13Arrivals), on: transportOn},
+	{id: "P1.5", run: noErr((*World).p15Arrivals), on: migrationOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
@@ -441,6 +446,7 @@ var replayRows = []replayRow{
 	{id: "P6.3", run: noErr((*World).p63Welfare)},
 	{id: "P6.4", run: noErr((*World).p64Shortfall)},
 	{id: "P7.1", run: (*World).p71Entry},
+	{id: "P7.2", run: noErr((*World).p72Migration), on: migrationOn},
 	{id: "P8.1", run: (*World).p81Age},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},

@@ -75,6 +75,9 @@ type Snapshot struct {
 	Shipments      []ShipmentRow
 	Away           []AgentID
 	TransitFactors []TransitFactorRow
+	// Journeys are the migration journeys in flight, by agent ID; empty with the
+	// module off (spec-observability.md 5.3.8).
+	Journeys []JourneyRow
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -130,6 +133,10 @@ type RegionRow struct {
 	// HouseholdCap is the most households the region may hold, 0 for none; the
 	// population module's cap, 0 while the module is off (spec-population.md 4.4.2).
 	HouseholdCap int64
+	// OnJourneyFrom and OnJourneyTo are the households on a migration journey that
+	// leave this region and that head for it; 0 with the module off
+	// (spec-migration.md 13.4).
+	OnJourneyFrom, OnJourneyTo int64
 }
 
 // PopulationState is the figures of the population module in the snapshot: the
@@ -350,6 +357,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 		}
 		s.Money = satMoney(s.Money, s.Regions[g].MoneyHouseholds, s.Regions[g].MoneyPool)
 	}
+	w.snapshotMigration(&s)
 	return s, nil
 }
 

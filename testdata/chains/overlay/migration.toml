@@ -1,0 +1,9 @@
+# The migration overlay (spec-migration.md 15.3; spec-reference-chain.md overlay/migration.toml; plan 2-14 Phase 4). Layer it after the pack and overlay/trade-<variant>.toml (it reads the edges); overlay/information-<variant>.toml sets the roles informed. The module needs the information module, so the table of [modules.information] is here too, with the three values of the information overlays (they are the same for every variant, so the layers agree in either order). A test double, not a design: every number is a placeholder (N-015, N-027). Distances of the trade overlays are 100, so a speed of 100 gives journeys of 1 tick (130 in the variant three gives 2), and the longest of a path of two edges is 2, under CoverTicks.
+
+[modules.information]
+info_speed = 50
+rumour_error_bp = 500
+rumour_max_age = 60
+
+[modules.migration]
+move_speed = 100

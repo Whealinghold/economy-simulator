@@ -26,6 +26,7 @@ const (
 	SameRole
 	BadHouseholds
 	UnsupportedCause // appended last (spec-spawner.md 4)
+	OnJourney        // appended with MIG; checked after SameRole for a switch
 
 	// RefusalEnd is one past the last refusal, for a test that enumerates them.
 	RefusalEnd
@@ -37,7 +38,9 @@ const (
 // neither starved nor insolvent. A field a kind does not use is ignored.
 type Facts struct {
 	AgentKnown, RoleKnown, External, SameRole, CauseSupported bool
-	Households, Weight                                        int64
+	// OnJourney is true for an agent on a migration journey; only a switch reads it.
+	OnJourney          bool
+	Households, Weight int64
 }
 
 // Refuse returns the first failing check for a decision of kind k in the order
@@ -56,6 +59,9 @@ func Refuse(k Kind, f Facts) Refusal {
 		}
 		if f.SameRole {
 			return SameRole
+		}
+		if f.OnJourney {
+			return OnJourney
 		}
 	case KindEnter:
 		if !f.RoleKnown {

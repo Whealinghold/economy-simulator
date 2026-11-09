@@ -481,7 +481,7 @@ start, which replaces both defaults: 5.6.1 item 3, so money and goods are create
 once**), beliefs at the seed price with width
 `BeliefWidthInit`, no job, an empty welfare record padded by `DefaultRatio`, hunger
 and unfed 0, a death carry `offset(ID)` of `spec-population.md` 3.8.3 (a function
-of the ID, no draw), its role's strategy. Its target ratio and its residues come
+of the ID, no draw), its role's strategy, and `RoleSince` 0 (the creation tick, with or without a warm start: `spec-spawner.md` 5.2.2a). Its target ratio and its residues come
 from the creation draws (5.7), after the warm start.
 
 5.4.3. **External agents** are not created by construction. A consumer adds them
@@ -1125,8 +1125,9 @@ sites of the slice are:
 | `siteSpawner` | D9 | `0xBE0B1D169200E9FF` | `tick`, `id` = the region |
 | `siteCreation` | D10 | `0x9B8FFA303CB545DC` | `tick`, `id` = the new agent |
 | `siteInform` | D4 | `0x7B15D7AD592D7D8F` | `tick`, `id` = the agent |
+| `siteMigration` | D11 | `0x53C434C7EFE6D523` | `tick`, `id` = the agent |
 
-The rows D2, D6, D11, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
+The rows D2, D6, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
 constant yet**: each is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
@@ -1284,7 +1285,7 @@ open point 3 (a site with no natural entity: D2, D13) stays open for it.
 | D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own in `Revise`; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | `siteOutcome`, the tick, the agent, the commodity: **one stream per order** | BEL 4.5, 5.1.1 |
 | D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | `siteSpawner`, the tick, the region | SPN 3.1.2, 10.2 |
 | D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | `siteCreation`, the tick, the new agent | AGT 3.5.3 |
-| D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | none yet: the agent | MIG 6.2.1, 10.2.1; INF 6.1.3 |
+| D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | `siteMigration`, the tick, the agent (keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0, as `siteInform` is; none for `no_estimate`) | MIG 6.2.1, 10.2.1; INF 6.1.3 |
 | D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | none yet: the row, or the agent and the store class | RSK 6.2 |
 | D12 | between ticks, at the call | the world, per agent that INT adds: D10's two creation words | 2 | in the order of the calls | none yet: the new agent, with the tick of the next step | AGT 10 |
 

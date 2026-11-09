@@ -450,3 +450,9 @@ const (
 	// the loop of a view and the draws it takes.
 	MaxRumoursPerView = 4_096
 )
+
+const (
+	// MaxMoveReviewTicks is the largest MoveReviewTicks of the migration module:
+	// a review period of at most a few years (spec-migration.md 11).
+	MaxMoveReviewTicks = 1_000
+)

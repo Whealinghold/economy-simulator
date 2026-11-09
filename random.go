@@ -14,7 +14,7 @@ import (
 // "economy-sim/site/" and its Go name, as a record of origin only. No two
 // differ by less than 2^32, because the first fold step adds the site to the
 // seed (a Guard: test holds this). A later module appends its own site with
-// its change; the rows D2, D6, D11 to D15 and D17 have none yet.
+// its change; the rows D2, D6, D12 to D15 and D17 have none yet.
 const (
 	// siteConstruction keys D1: tick 0, id the agent.
 	siteConstruction uint64 = 0xC103123756D13F20
@@ -33,6 +33,10 @@ const (
 	// siteInform keys D4: tick, id the agent. The view of an informed agent keys
 	// it once, before its rumours' error draws (spec-information.md 5.5.2).
 	siteInform uint64 = 0x7B15D7AD592D7D8F
+	// siteMigration keys D11: tick, id the agent. The migration pass keys it once
+	// for each pushed agent whose role has a recipe, when RumourErrorBP is above 0,
+	// before the error draws of its rumours (spec-migration.md 6.2.1, 10.2.1).
+	siteMigration uint64 = 0x53C434C7EFE6D523
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):
