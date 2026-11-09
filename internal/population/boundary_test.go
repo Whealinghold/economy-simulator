@@ -151,8 +151,8 @@ func TestReplacement_Edges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if r, lo, hi, ok := population.Replacement(tt.birth, tt.death); r != 0 || lo != 0 || hi != 0 || ok {
-				t.Errorf("Replacement(%v, %v) = %d, %d, %d, %v, want 0, 0, 0, false", tt.birth, tt.death, r, lo, hi, ok)
+			if r, lo, hi, dg, ok := population.Replacement(tt.birth, tt.death); r != 0 || lo != 0 || hi != 0 || dg != 0 || ok {
+				t.Errorf("Replacement(%v, %v) = %d, %d, %d, %d, %v, want 0, 0, 0, 0, false", tt.birth, tt.death, r, lo, hi, dg, ok)
 			}
 		})
 	}

@@ -44,7 +44,7 @@ func TestReplacement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, lo, hi, ok := population.Replacement(tt.birth, tt.death)
+			got, lo, hi, _, ok := population.Replacement(tt.birth, tt.death)
 			if ok != tt.wantOK || got != tt.want || lo != tt.lo || hi != tt.hi {
 				t.Errorf("Replacement(%v, %v) = %d, [%d, %d], %v, want %d, [%d, %d], %v",
 					tt.birth, tt.death, got, lo, hi, ok, tt.want, tt.lo, tt.hi, tt.wantOK)

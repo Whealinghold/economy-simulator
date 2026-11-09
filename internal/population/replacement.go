@@ -13,11 +13,12 @@ import (
 // two schedules, at r* = lo + trunc(-g(lo) * (hi - lo) / (g(hi) - g(lo))), so a
 // g of exactly 0 at a knot is the ratio at that knot. ok is false when there is
 // no such segment (g never negative, never non-negative above a negative, or a
-// crossing from positive to negative only) or on overflow.
-func Replacement(birth, death []Knot) (ratio, lo, hi int64, ok bool) {
+// crossing from positive to negative only) or on overflow. dg is the rise of g
+// on the segment, g(hi) - g(lo).
+func Replacement(birth, death []Knot) (ratio, lo, hi, dg int64, ok bool) {
 	xs, g, ok := differences(birth, death)
 	if !ok {
-		return 0, 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	for i := 1; i < len(xs); i++ {
 		if g[i-1] >= 0 || g[i] < 0 {
@@ -28,15 +29,15 @@ func Replacement(birth, death []Knot) (ratio, lo, hi int64, ok bool) {
 		dx, okx := checked.Sub(xs[i], xs[i-1])
 		neg, okn := checked.Sub(0, g[i-1])
 		if !okg || !okx || !okn {
-			return 0, 0, 0, false
+			return 0, 0, 0, 0, false
 		}
 		step, oks := checked.MulDiv(neg, dx, dg)
 		if !oks {
-			return 0, 0, 0, false
+			return 0, 0, 0, 0, false
 		}
-		return xs[i-1] + step, xs[i-1], xs[i], true
+		return xs[i-1] + step, xs[i-1], xs[i], dg, true
 	}
-	return 0, 0, 0, false
+	return 0, 0, 0, 0, false
 }
 
 // differences returns the ascending union of the two schedules' ratios and

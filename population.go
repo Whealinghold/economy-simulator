@@ -15,6 +15,13 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/population"
 )
 
+// This file is the population module (spec-population.md): births and deaths as
+// the formation and dissolution of households, driven by the household's own
+// welfare ratio. The pure rules are in internal/population. The file holds, in
+// the order of architecture.md 2.10.1: the state, the configuration surface (the
+// canonical form, the validator and the warnings), the step of P7.1(b), the
+// hooks the executor calls and the scale slot.
+
 // popCount is the counts of one (region, role) in the tick being stepped: the
 // fields of PopulationChanged (spec-population.md 10.1). BirthsCeiling is SET's
 // and has no counter here.
@@ -50,6 +57,9 @@ type popState struct {
 	// role, are the runs of the three Warns of spec-population.md 10.3: diagnostics
 	// that change no result.
 	extinctRun, unfundedRun, heldRun []int64
+	// figures is the snapshot's PopulationState, derived from the immutable
+	// configuration once.
+	figures PopulationState
 }
 
 // newPopulation builds the state from a canonical configuration that passed
@@ -82,6 +92,7 @@ func newPopulation(c *Config) *popState {
 		}
 	}
 	p.effBirth, p.effDeath = slices.Clone(p.rowBirth), slices.Clone(p.rowDeath)
+	p.figures = m.figures()
 	return p
 }
 
@@ -96,13 +107,6 @@ func (p *popState) carryOf(id AgentID) int64 {
 	}
 	return population.Offset(int64(id), p.denom)
 }
-
-// This file is the population module (spec-population.md): births and deaths as
-// the formation and dissolution of households, driven by the household's own
-// welfare ratio. The pure rules are in internal/population. The file holds, in
-// the order of architecture.md 2.10.1: the state, the configuration surface (the
-// canonical form, the validator and the warnings), the step of P7.1(b), the
-// hooks the executor calls and the scale slot.
 
 // canonical returns a copy of the module with the schedules cloned in knot order
 // and the region rows sorted by region (spec-population.md 8, spec-config.md
@@ -209,16 +213,11 @@ func (p *Population) replacementOf() (rstar, lo, dR, dX int64, ok bool) {
 		return 0, 0, 0, 0, false
 	}
 	b, d := popKnots(p.BirthSchedule), popKnots(p.DeathSchedule)
-	rstar, lo, hi, ok := population.Replacement(b, d)
+	rstar, lo, hi, dg, ok := population.Replacement(b, d)
 	if !ok {
 		return 0, 0, 0, 0, false
 	}
-	g := func(x int64) int64 {
-		br, _, _ := population.Rate(b, x, wholeBP)
-		dr, _, _ := population.Rate(d, x, wholeBP)
-		return br - dr
-	}
-	return rstar, lo, g(hi) - g(lo), hi - lo, true
+	return rstar, lo, dg, hi - lo, true
 }
 
 // populationWarnings returns the warnings of spec-population.md 9.2 and the two
@@ -630,7 +629,7 @@ func (w *World) popNoteBirths(d Decision, funded, unfunded int64) {
 // PopulationScaled (D431). The next tick reads the new value (FR-POP-039).
 func (w *World) setPopulationScale(region RegionID, kind ScaleKind, bp int64) (before int64, ok bool) {
 	p := w.pop
-	if p == nil || int(region) >= len(p.effBirth) || region < 0 || bp < 0 || bp > MaxBasisPoints {
+	if p == nil || uint(region) >= uint(len(p.effBirth)) || bp < 0 || bp > MaxBasisPoints {
 		return 0, false
 	}
 	switch kind {
@@ -713,22 +712,26 @@ func (w *World) popWarns(g RegionID, households, due int64, unfunded bool) {
 func (w *World) popSnapshotRegion(s *Snapshot, g RegionID, v *RegionView) {
 	p := w.pop
 	s.Regions[g].HouseholdCap = p.cap[g]
+	n := len(v.Agents)
+	rb, rd, rok := make([]int64, n), make([]int64, n), make([]bool, n)
+	for i := range v.Agents {
+		rb[i], rd[i], rok[i] = w.popRates(g, &v.Agents[i])
+	}
 	var weights, birth, death []int64
 	var present []bool
 	for r := range p.roles {
 		weights, birth, death, present = weights[:0], birth[:0], death[:0], present[:0]
 		for i := range v.Agents {
-			if ra := &v.Agents[i]; int(ra.Role) == r {
-				b, d, ok := w.popRates(g, ra)
-				weights, birth, death, present = append(weights, ra.Weight), append(birth, b), append(death, d), append(present, ok)
+			if int(v.Agents[i].Role) == r {
+				weights, birth, death, present = append(weights, v.Agents[i].Weight), append(birth, rb[i]), append(death, rd[i]), append(present, rok[i])
 			}
 		}
 		row := &s.Roles[int(g)*p.roles+r]
-		mb, md, n, ok := population.Means(weights, birth, death, present)
+		mb, md, nat, ok := population.Means(weights, birth, death, present)
 		if !ok {
 			invariant("the mean population rates overflow after validation")
 		}
-		row.BirthRateBP, row.DeathRateBP, row.NaturalIncreaseBP = mb, md, n
+		row.BirthRateBP, row.DeathRateBP, row.NaturalIncreaseBP = mb, md, nat
 		row.BirthCarry = p.birthCarry[int(g)*p.roles+r]
 	}
 }
@@ -757,14 +760,11 @@ func (w *World) popRates(g RegionID, ra *RegionAgent) (birth, death int64, ok bo
 	return birth, death, true
 }
 
-// popSnapshot returns the module's figures of the snapshot: the replacement
-// ratio and the gain, derived from the configuration (spec-population.md 5.7,
-// 10.4). The zero value while the module is off.
-func (w *World) popSnapshot() PopulationState {
-	if w.pop == nil {
-		return PopulationState{}
-	}
-	rstar, _, dR, dX, ok := w.cfg.Modules.Population.replacementOf()
+// figures returns the module's figures of the snapshot: the replacement ratio and
+// the gain, derived from the configuration (spec-population.md 5.7, 10.4). The
+// zero value when the schedules have no replacement ratio.
+func (p *Population) figures() PopulationState {
+	rstar, _, dR, dX, ok := p.replacementOf()
 	if !ok {
 		return PopulationState{}
 	}
@@ -773,6 +773,15 @@ func (w *World) popSnapshot() PopulationState {
 		gain = 0
 	}
 	return PopulationState{ReplacementRatioBP: rstar, HasReplacement: true, GainBP: gain}
+}
+
+// popSnapshot returns the module's figures of the snapshot, the zero value while
+// the module is off.
+func (w *World) popSnapshot() PopulationState {
+	if w.pop == nil {
+		return PopulationState{}
+	}
+	return w.pop.figures
 }
 
 // restoreCarry puts the death carry read from the agent record of id in the slice,
