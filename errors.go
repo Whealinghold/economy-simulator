@@ -462,3 +462,15 @@ var (
 	// call.
 	ErrUnknownMode = errors.New("unknown transport mode")
 )
+
+// The sentinels of the merchants module (spec-merchants.md 14.1).
+var (
+	// ErrMerchantShape is a merchant block that does not fit its role or its
+	// modes: recipes on the role, strategy "merchant" with no block, a block with
+	// Informed false, a trade input outside Trades, an empty cargo set, a
+	// self-carried mode of Crew above 1, or Consigns with no TakeUnits.
+	ErrMerchantShape = errors.New("merchant role has the wrong shape")
+	// ErrMerchantWeight is a merchant role with a group of scale above 1: a merchant
+	// has weight 1.
+	ErrMerchantWeight = errors.New("merchant role has a weight above 1")
+)

@@ -88,6 +88,7 @@ func (c Config) Warnings() []Warning {
 	out = append(out, checkViability(&cc, newLookup(&cc)).warnings...)
 	out = append(out, horizonWarnings(&cc)...)
 	out = append(out, migrationRouteWarnings(&cc)...)
+	out = append(out, merchantRouteWarnings(&cc)...)
 	sortWarnings(out)
 	return out
 }
@@ -119,6 +120,7 @@ func (v *validator) structural() {
 	v.economics()
 	v.validateInformation()
 	v.validateMigration()
+	v.validateMerchants()
 	v.overflow()
 }
 
@@ -2067,6 +2069,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, transportWarnings(c, lk)...)
 	out = append(out, informationWarnings(c, lk)...)
 	out = append(out, migrationWarnings(c, lk)...)
+	out = append(out, merchantWarnings(c)...)
 	sortWarnings(out)
 	return out
 }

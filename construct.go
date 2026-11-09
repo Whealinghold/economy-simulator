@@ -333,6 +333,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.Migration != nil {
 		on = append(on, "migration")
 	}
+	if c.Modules.Merchants != nil {
+		on = append(on, "merchants")
+	}
 	return on
 }
 
