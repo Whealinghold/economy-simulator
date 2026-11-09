@@ -86,13 +86,14 @@ type rumourSource struct {
 	market    int
 }
 
-// rumourQuery asks rumoursFor for the rumours a reader would be offered. regions
-// are the source regions to consider, ascending; nil means every region but the
-// reader. commodities are the ascending commodities to consider. asOf is the
+// rumourQuery asks rumoursFor for the rumours a reader would be offered. all
+// considers every region but the reader; otherwise regions are the source regions
+// to consider, ascending, and an empty list considers none. commodities are the ascending commodities to consider. asOf is the
 // tick of the reading: the current tick for a view, the next for the migration
 // pass of phase 7 (spec-information.md 4.3.2).
 type rumourQuery struct {
 	reader      RegionID
+	all         bool
 	regions     []RegionID
 	commodities []CommodityID
 	asOf        int64
@@ -199,7 +200,7 @@ func (w *World) fillRumours(v *AgentView, a *agent) {
 		tally = &in.tally[v.Region]
 		tally.Readers++
 	}
-	q := rumourQuery{reader: v.Region, commodities: w.roles.rows[a.role].tradable, asOf: w.Tick()}
+	q := rumourQuery{reader: v.Region, all: true, commodities: w.roles.rows[a.role].tradable, asOf: w.Tick()}
 	in.buf = w.rumoursFor(in.buf[:0], q, tally)
 	if n := len(in.buf); n > 0 {
 		v.Rumours = in.buf[:n:n]
@@ -255,7 +256,7 @@ func (w *World) p36Rumours() {
 // migration pass with its own site), which keeps the draws of phases 3 and 7
 // apart. tally may be nil.
 func (w *World) rumoursFor(dst []Rumour, q rumourQuery, tally *rumourTally) []Rumour {
-	if q.regions != nil {
+	if !q.all {
 		for _, r := range q.regions {
 			dst = w.rumoursFrom(dst, q, r, tally)
 		}
@@ -283,8 +284,8 @@ func (w *World) rumoursFrom(dst []Rumour, q rumourQuery, r RegionID, tally *rumo
 
 // candidate decides one candidate and appends its rumour if it is offered.
 //
-// Excluded from coverage (testing.md 9.5): the three invariant calls are
-// violated programmer invariants. The bounds of a validated configuration make
+// Only the three invariant calls are excluded from coverage (testing.md 9.5); the
+// rest of the function is covered. They are violated programmer invariants. The bounds of a validated configuration make
 // the lag and the blur fit int64, and the Offered case guarantees that the record
 // holds the vintage, so no test can reach them from a valid world.
 func (w *World) candidate(dst []Rumour, q rumourQuery, r RegionID, c CommodityID, source int, tally *rumourTally) []Rumour {

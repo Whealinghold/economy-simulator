@@ -357,7 +357,7 @@ func TestRumours_Cases(t *testing.T) {
 			w, _ := newInfoWorld(t, tt.mut)
 			step(t, w, tt.steps)
 			var got rumourTally
-			q := rumourQuery{reader: infoA, commodities: w.roles.rows[roleOf(t, w, "miller")].tradable, asOf: w.Tick()}
+			q := rumourQuery{reader: infoA, all: true, commodities: w.roles.rows[roleOf(t, w, "miller")].tradable, asOf: w.Tick()}
 			rs := w.rumoursFor(nil, q, &got)
 			if got != tt.want || int64(len(rs)) != got.Offered {
 				t.Errorf("rumoursFor(reader a, tick %d) tally = %+v with %d rumours, want %+v", w.Tick(), got, len(rs), tt.want)

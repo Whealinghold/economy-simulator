@@ -159,7 +159,7 @@ func TestRumoursServed_ExcludesMigrationCalls(t *testing.T) {
 	rec := &evLog{}
 	w, _ := newInfoWorld(t, nil, WithObserver(rec))
 	step(t, w, 2)
-	q := rumourQuery{reader: infoA, commodities: w.roles.rows[roleOf(t, w, "miller")].tradable, asOf: w.Tick() + 1}
+	q := rumourQuery{reader: infoA, all: true, commodities: w.roles.rows[roleOf(t, w, "miller")].tradable, asOf: w.Tick() + 1}
 	if rs := w.rumoursFor(nil, q, nil); len(rs) == 0 {
 		t.Fatal("rumoursFor gave nothing, want a call that would be counted if it were")
 	}
