@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -37,6 +38,7 @@ func importProblems(name string, src any) ([]string, error) {
 	}
 	// the packages of the module that the importer may not import
 	var banned []string
+	bansModule := false // every package of the module, the root included
 	switch top {
 	case ".":
 		banned = []string{"config", "strategy", "indicator", "experiment", "denomination"}
@@ -45,7 +47,7 @@ func importProblems(name string, src any) ([]string, error) {
 	case "config", "strategy":
 		banned = []string{"denomination"}
 	case "denomination":
-		banned = []string{"*"} // every package of the module, the root included
+		bansModule = true
 	}
 	var out []string
 	for _, imp := range f.Imports {
@@ -71,10 +73,8 @@ func importProblems(name string, src any) ([]string, error) {
 			if i := strings.Index(rel, "/"); i >= 0 {
 				rel = rel[:i]
 			}
-			for _, b := range banned {
-				if rel == b || b == "*" {
-					report("a package of the module that " + top + " may not import")
-				}
+			if bansModule || slices.Contains(banned, rel) {
+				report("a package of the module that " + top + " may not import")
 			}
 		case strings.Contains(first, "."):
 			report("not the standard library or the module")
