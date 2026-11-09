@@ -32,6 +32,7 @@ var positionList = [...]position{
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
 	{"P1.3", "TRN", line},
+	{"P1.4", "MER", line},
 	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
@@ -74,7 +75,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.4", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3a", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
@@ -101,6 +102,11 @@ func (w *World) positions() error {
 	w.p12Anchors()
 	if w.transport != nil {
 		w.p13Arrivals()
+	}
+	if w.mer != nil && w.mer.on {
+		if err := w.p14Settle(); err != nil {
+			return err
+		}
 	}
 	if w.migration != nil {
 		w.p15Arrivals()

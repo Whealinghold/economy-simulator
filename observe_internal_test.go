@@ -251,6 +251,12 @@ var stepSites = []site{
 			w.p13Arrivals()
 		}
 	})},
+	{"P1.4", func(w *World) error {
+		if w.mer != nil && w.mer.on {
+			return w.p14Settle()
+		}
+		return nil
+	}},
 	{"P1.5", noError(func(w *World) {
 		if w.migration != nil {
 			w.p15Arrivals()

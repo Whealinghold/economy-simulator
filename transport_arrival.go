@@ -44,11 +44,6 @@ func (t *transportState) holds(a *agent, skip []string) bool {
 	return false
 }
 
-// arrivalSkips returns the instance keys the guard query of an arrival skips besides
-// the arriving shipment's own: none now. It is the seam plan 15 fills with the
-// contract formed on the shipment (spec-transport.md 5.5.3, ruling C16).
-func (w *World) arrivalSkips(*shipment, RegionID) []string { return nil }
-
 // p13Arrivals is P1.3: the shipments whose arrival tick has come, in ascending
 // shipment ID, each delivered completely before the next (spec-transport.md 5.7). The
 // schedule gives them in that order, so the work of a tick follows the arrivals and

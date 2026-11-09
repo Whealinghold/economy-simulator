@@ -71,6 +71,7 @@ var declaredEvents = []economysim.Event{
 	economysim.MigrationReviewed{},
 	economysim.MerchantsPlanned{},
 	economysim.ContractFormed{},
+	economysim.ContractSettled{},
 	economysim.ContractRound{},
 }
 
@@ -82,7 +83,6 @@ var notBuiltEvents = []string{
 	"RoomLimited",
 	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
-	"ContractSettled",
 	"OutsideTraded", "OutsideEnded", "OutsideShocked",
 	"YieldShocked", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
