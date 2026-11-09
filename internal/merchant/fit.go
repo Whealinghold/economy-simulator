@@ -52,9 +52,9 @@ type FitInput struct {
 	High int64
 }
 
-// afford returns floor((money - reserve - other) / limit): the units the budget
+// Afford returns floor((money - reserve - other) / limit): the units the budget
 // buys at the limit, 0 for a budget that is not positive or a limit below 1.
-func (in FitInput) afford(limit int64) int64 {
+func (in FitInput) Afford(limit int64) int64 {
 	budget, ok := checked.Sub(in.Money, in.Reserve)
 	if ok {
 		budget, ok = checked.Sub(budget, in.Other)
@@ -76,7 +76,7 @@ func (in FitInput) afford(limit int64) int64 {
 // is below 1: the caller counts the case Unaffordable. The caller evaluates the
 // test and the prices at the returned lot once more. One call of breakEven.
 func Fit(in FitInput, breakEven func(q int64) (int64, bool)) int64 {
-	q := min(in.Cap, in.afford(in.High))
+	q := min(in.Cap, in.Afford(in.High))
 	if q < 1 {
 		return 0
 	}

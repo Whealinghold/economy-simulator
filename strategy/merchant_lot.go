@@ -1,6 +1,8 @@
 package strategy
 
 import (
+	"math"
+
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/merchant"
@@ -96,10 +98,12 @@ func (s *state) afterHoldings(t *trip, mass, bulk int64) (int64, int64) {
 		g, stock := &s.m.Goods[i], s.v.Commodities[i].Stock
 		dm, ok1 := checked.Mul(stock, g.Mass)
 		db, ok2 := checked.Mul(stock, g.Bulk)
-		if !ok1 || !ok2 {
-			return 0, 0
+		sm, ok3 := checked.Add(m, dm)
+		sb, ok4 := checked.Add(b, db)
+		if !ok1 || !ok2 || !ok3 || !ok4 {
+			return leave(mass, math.MaxInt64), leave(bulk, math.MaxInt64) // an overflowing load leaves no room, never unlimited
 		}
-		m, b = m+dm, b+db
+		m, b = sm, sb
 	}
 	return leave(mass, m), leave(bulk, b)
 }
@@ -145,17 +149,8 @@ func (s *state) size(t *trip) bool {
 	if q < 1 {
 		return false
 	}
-	t.q, t.capped = q, q == capQ && afford(in) > capQ
+	t.q, t.capped = q, q == capQ && in.Afford(in.High) > capQ
 	return true
-}
-
-// afford is the units the money affords at the dearest limit, before the cap.
-func afford(in merchant.FitInput) int64 {
-	free := in.Money - in.Reserve - in.Other
-	if free <= 0 || in.High < 1 {
-		return 0
-	}
-	return free / in.High
 }
 
 // line is one input of a trip: a commodity, the units the trip needs of it and the

@@ -11,6 +11,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	"github.com/Whealinghold/economy-sim/internal/merchant"
 )
 
 // This file is the second half of the merchants module (spec-merchants.md 9.7 to
@@ -56,7 +57,7 @@ func (m *merchants) holds(a *agent, skip []string) bool {
 // the arriving shipment's own: the contract formed on that shipment (spec-transport.md
 // 5.5.3, ruling C16), so a deliverer that arrives at P1.3 while its contract settles
 // at P1.4 is not held by it. Every other contract of the agent still refuses.
-func (w *World) arrivalSkips(s *shipment, _ RegionID) []string {
+func (w *World) arrivalSkips(s *shipment) []string {
 	if w.mer == nil {
 		return nil
 	}
@@ -78,14 +79,15 @@ func (w *World) p14Settle() error {
 		return nil
 	}
 	keep := m.open[:0]
-	for _, ct := range m.open {
+	for n, ct := range m.open {
 		i, ok := slices.BinarySearchFunc(t.arrived, ct.shipment, func(a arrival, id ShipmentID) int { return cmp.Compare(a.shipment, id) })
 		if !ok {
 			keep = append(keep, ct)
 			continue
 		}
 		if err := w.settleArrived(&ct, t.arrivedLines[t.arrived[i].first]); err != nil {
-			return err // the step fails, and a failed world is never observed or saved
+			m.open = append(keep, m.open[n:]...) // the unsettled tail stays, the list is never half-compacted
+			return err                           // the step fails
 		}
 	}
 	m.open = keep
@@ -114,7 +116,13 @@ func (w *World) settleArrived(ct *contract, ln ArrivedLine) error {
 // removal of its deliverer, before its account closes.
 func (w *World) endContract(ct *contract, reached, spoiled Quantity, cause Cause) error {
 	escrowed := int64(ct.price) * int64(ct.qty)
-	paid := int64(ct.price) * int64(reached)
+	paid := int64(0) // a removal of the deliverer refunds the whole escrow
+	if cause != CauseDelivererRemoved {
+		var ok bool
+		if paid, _, ok = merchant.Settle(int64(ct.price), int64(ct.qty), int64(reached), int64(spoiled), 0); !ok {
+			invariant("settle a contract: the units reached and spoiled do not add up to the quantity")
+		}
+	}
 	if paid > 0 {
 		if err := w.ledger.Transfer(ct.escrow, w.agents[ct.deliverer].account, paid, ledger.EscrowOut); err != nil {
 			return refused("pay a contract", ct.to, ct.escrow, err)
@@ -160,12 +168,13 @@ func (w *World) dropContracts(a *agent) error {
 		return nil
 	}
 	keep := m.open[:0]
-	for _, ct := range m.open {
+	for n, ct := range m.open {
 		if ct.deliverer != a.id {
 			keep = append(keep, ct)
 			continue
 		}
 		if err := w.endContract(&ct, 0, 0, CauseDelivererRemoved); err != nil {
+			m.open = append(keep, m.open[n:]...)
 			return err
 		}
 	}
@@ -267,9 +276,9 @@ func (w *World) snapshotContracts(s *Snapshot) {
 			Quantity: ct.qty, Price: ct.price, Escrowed: held, Shipment: ct.shipment, Formed: ct.formed,
 			Arrives: sh.arrives, TicksLeft: sh.arrives - w.Tick(),
 		})
-		s.Escrow += held
-		s.Regions[ct.to].MoneyContract += held
-		s.Money += held
+		s.Escrow = satMoney(s.Escrow, held, 0)
+		s.Regions[ct.to].MoneyContract = satMoney(s.Regions[ct.to].MoneyContract, held, 0)
+		s.Money = satMoney(s.Money, held, 0)
 	}
 }
 

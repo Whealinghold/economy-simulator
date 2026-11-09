@@ -15,10 +15,10 @@ import (
 )
 
 // This file is the merchants module (spec-merchants.md, MER): the delivery
-// contract and the data of a merchant role. It holds, so far, the validation of
-// the merchant block and of the module, the derived sets of a merchant role and
-// the warnings of the configuration; the round, the escrow and the settlement
-// come with the later phases of plan 2-15. The arithmetic is internal/merchant;
+// contract and the data of a merchant role. It holds the validation of the
+// merchant block and of the module, the derived sets of a merchant role, the
+// warnings of the configuration, the round and the escrow; the settlement is
+// contract_settle.go. The arithmetic is internal/merchant;
 // this file converts at the call (architecture.md 2.9, 2.10.1).
 
 // merchantStrategy is the registered name of the merchant strategy
@@ -419,10 +419,8 @@ func (rt merchantRoutes) neverFresh(r *Role) int64 {
 
 // cmdty returns the commodity of an ID, nil when none.
 func (rt merchantRoutes) cmdty(id string) *Commodity {
-	for i := range rt.c.Commodities {
-		if rt.c.Commodities[i].ID == id {
-			return &rt.c.Commodities[i]
-		}
+	if i, ok := rt.c.commodityID(id); ok {
+		return &rt.c.Commodities[i]
 	}
 	return nil
 }
@@ -797,7 +795,7 @@ func (w *World) p33aPlanned() {
 // and takes of every plan; P3.3 admits them, draws their keys, matches them lane by
 // lane and forms the contracts: the shipment is dispatched by the deliverer, the
 // payer's money moves to an Escrow account and the record is kept. Settlement,
-// removal and the checkpoint are Phase 7.
+// removal and the checkpoint are contract_settle.go.
 
 // contract is a delivery contract in flight (spec-merchants.md 16): its parties,
 // the shipment that carries the goods, the goods and the price, the Escrow account
@@ -1209,6 +1207,7 @@ func (w *World) formPair(p merchant.Pair) bool {
 	id, reason := w.dispatch(deliverer, 0, &req, of.region)
 	if reason != "" {
 		c.dispatchRefused++
+		w.logContractRefused("offer refused", of.agent, reason)
 		return false
 	}
 	ct := contract{id: m.next, payer: tk.agent, deliverer: of.agent, shipment: id, commodity: of.o.Commodity,
