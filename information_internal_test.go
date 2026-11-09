@@ -940,3 +940,29 @@ func TestInformation_Conservation(t *testing.T) {
 		t.Errorf("boundary flows with the module on = %d rows, with it off = %d, want equal and non-empty", len(a), len(b))
 	}
 }
+
+// TestInformation_ConfigReadersSurviveUnvalidatedConfig verifies that the reader
+// of the sources of a region skips a group of an unknown role or region, and that
+// the horizon warning returns nothing when the graph cannot be built, instead of
+// panicking or naming a source that cannot exist.
+//
+// Guard: validate runs these readers on a configuration that may not validate
+// (spec-information.md 9.3); an unguarded lookup would panic where a clean
+// validation error is owed.
+func TestInformation_ConfigReadersSurviveUnvalidatedConfig(t *testing.T) {
+	t.Parallel()
+	c := infoConfig()
+	c.Groups = append(c.Groups,
+		Group{Region: "a", Role: "no-such-role", Households: 1},
+		Group{Region: "no-such-region", Role: "miller", Households: 1})
+	lk := newLookup(&c)
+	got := regionTradable(&c, lk, tradableSets(&c, lk))
+	// Regions a and b hold millers, c a carrier; the two bad groups add nothing.
+	if len(got) != 3 || got["no-such-region"] != nil || !got["c"]["grain"] {
+		t.Errorf("regionTradable() = %v, want regions a, b and c only", got)
+	}
+	c.Edges = append(c.Edges, Edge{From: "a", To: "no-such-region", Distance: 10})
+	if ws := horizonWarnings(&c); ws != nil {
+		t.Errorf("horizonWarnings(edge to an unknown region) = %v, want nil", ws)
+	}
+}

@@ -526,6 +526,10 @@ func (w *World) saveInformation(cw *codec.Writer) error {
 // of ticks written) is corrupt, as is a price below 1 or above MaxPrice, a mean
 // above MaxPrice or an age below 0. The entries are placed so that entry i of n is
 // the tick T - n + i of a checkpoint at T (rumour.Record.Load).
+//
+// Excluded from coverage (testing.md 9.5): the two refusals of the record (Resume and
+// Load) are unreachable from a restore, which hands them a fresh record, a tick of at
+// least 0 and counts already checked here.
 func (w *World) loadInformation(rs *restoreCtx, r *codec.Reader) error {
 	in := w.info
 	want := int(min(rs.tick, int64(in.rec.Depth())))

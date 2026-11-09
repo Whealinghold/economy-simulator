@@ -8,6 +8,8 @@ import "testing"
 // scales to the 1 280 candidates of the reference world of NFR-INF-002 (40
 // informed agents of 8 commodities and 4 other regions). It reports; the figure
 // is a placeholder and no limit is asserted (testing.md 8.2).
+//
+// Requirement: NFR-INF-002
 func BenchmarkRumours_ReferenceView(b *testing.B) {
 	c := infoConfig()
 	c.Modules.Information.RumourErrorBP = 500

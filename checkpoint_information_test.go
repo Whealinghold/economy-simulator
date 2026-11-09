@@ -169,7 +169,7 @@ func infoBody(rows [][][3]uint64) []byte {
 // a section 16 with a count above the depth, unequal counts, a count that is not
 // the ticks run, a price of 0, a price or a mean above MaxPrice, an age below 0
 // (a value above the int64 range), trailing bytes and missing bytes, and a section
-// 22 with a row.
+// 22 with a row (a count of 1 and one body byte, so the count itself is readable).
 //
 // Arithmetic: a horizon of 4 and 6 ticks run give every source 4 entries; 5 is
 // above the depth, 3 is not the ticks run (6 capped at 4). The age of -1 is
@@ -224,7 +224,7 @@ func TestCheckpoint_InformationCorrupt(t *testing.T) {
 	t.Run("a row in the integration section", func(t *testing.T) {
 		t.Parallel()
 		c := reframe(t, raw, func(secs []section) []section {
-			return editSection(secs, rumoursSectionTag, func([]byte) []byte { return []byte{1} })
+			return editSection(secs, rumoursSectionTag, func([]byte) []byte { return []byte{1, 0} })
 		})
 		if _, err := economysim.RestoreWorld(cfg, c, opts...); !errors.Is(err, economysim.ErrCheckpointCorrupt) {
 			t.Errorf("RestoreWorld() error = %v, want ErrCheckpointCorrupt", err)
