@@ -244,7 +244,7 @@ all-on from it).
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | merged (PRs A, B, C) |
 | `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
 | `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | in progress |
-| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | plan written |
+| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
 | `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
 | `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
 | `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
