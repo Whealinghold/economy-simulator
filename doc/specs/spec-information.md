@@ -114,9 +114,15 @@ is also what the beliefs of the region start from and are compared with
 rumour. The set of sources is derived at construction and fixed for the run:
 
 - every pair (region, commodity) whose market is active, in a region that has at least
-  one group (`spec-regions.md` 3.1.1: which markets are active is derived from the
-  tradable sets of the roles that live there), and
-- every pair that the external sector declares (4.5).
+  one group: the commodity is in the tradable set of some role that has a `Group` in the
+  region, the set of the role table with the items of the modules before it
+  (`spec-regions.md` 3.1.1: "a market is active when some agent of the region can trade
+  it"). The sources of a world with a gate region (`spec-merchants.md` 11.3) are derived
+  the same way: a gate region is a source like any grouped region.
+
+A pair declared by the external sector (4.5) is **reserved**, not built in version 1: EXT
+declares none (`spec-external-sector.md` FR-EXT-033, N-112), and an interface with no
+caller is not built (architecture.md 4.2).
 
 It is kept in ascending (`RegionID`, `CommodityID`) order. The number of sources `S`
 is at most `MaxRegions * MaxCommodities`.
@@ -181,14 +187,18 @@ reference world of five regions with 17 active markets each and `D` = 60 it is 8
 
 4.5.1. `spec-regions.md` 3.5 and `spec-scale.md` 8 say that a region with supply and
 demand functions and no agents is the outside world, a node of the region graph. Such a
-region is a source only if EXT says so: EXT declares each (region, commodity) pair
-it wants told, by a function of the construction that adds the key to the set of 4.1.1
-(`Informs(region, commodity)`, internal, called once for each pair at construction). INF
-provides the key and the record; EXT decides which keys.
+region is a source only if EXT says so. **Reserved in version 1:** EXT declares no pair
+and has no outside-price field (FR-EXT-033, N-112), so the code builds no `Informs`
+function and the sources are those of 4.1.1 alone. If a setting needs it, EXT declares
+each (region, commodity) pair it wants told, by a function of the construction that adds
+the key to the set of 4.1.1 (`Informs(region, commodity)`, internal, called once for
+each pair at construction). INF would provide the key and the record; EXT would decide
+which keys.
 
-4.5.2. A declared key must name a defined region and a defined commodity
-(`ErrUnknownRegion`, `ErrUnknownCommodity`). A declaration for a pair that is already a
-source changes nothing.
+4.5.2. **Reserved with 4.5.1.** A declared key must name a defined region and a defined
+commodity (`ErrUnknownRegion`, `ErrUnknownCommodity`). A declaration for a pair that is
+already a source changes nothing. Nothing declares a key in version 1, so no code and no
+test serves this rule; its test is owed to EXT if N-112 is reversed.
 
 4.5.3. The record is written by the world from the **published market price of a
 market**, whoever's orders fill it. EXT does not write an entry, a rumour or a lag, and
@@ -480,11 +490,13 @@ entries are those of ticks `t - 1` and earlier (`spec-world.md` 6.12, C17).
 
 ### 7.2 A change of the graph
 
-7.2.1. The lag of each ordered pair of regions is a table of `R * R` `int32` values
-(`R` regions), derived from REG's distance table and `InfoSpeed` when the world is built
-and again, once, after each successful `SetEdgeStatuses` (`spec-regions.md` 7.3.2,
-4.4.4). A pair with no path holds a marker. The table is derived and is not saved
-(14).
+7.2.1. The lag of an ordered pair of regions is **derived at use** from REG's distance
+(the shortest open distance, `spec-regions.md` 4.4) and `InfoSpeed`: one distance read and
+one checked division per candidate (about 1 300 a tick for the first consumer's world, 12.3).
+No `R * R` table is built and none is rebuilt after a status change, so nothing in
+`regions.go` calls into this module (architecture.md 2.10.2) and a stale lag cannot
+exist. A pair with no path has no lag. Nothing is derived beyond the call and nothing is
+saved (14).
 
 7.2.2. A status change takes effect at the next view built, the next phase 3. A
 closed edge that removes the only walk from `r` to `h` turns every rumour from `r` to
@@ -543,7 +555,7 @@ Placeholder counts, not timings (N-015). Appends: `S` entries per tick (85 for t
 reference world). Views: an informed agent costs its candidates, at most
 `MaxRumoursPerView`; the reference world with 40 informed agents of 8 tradable
 commodities in 4 other regions has 1 280 candidates and, with `E` above 0, 1 280 draws
-a tick (12.3). The lag table is read, not computed. A world with the module on and no
+a tick (12.3). The lag is derived at the candidate (7.2.1), one division. A world with the module on and no
 informed role costs `S` appends and nothing else; with the module off the cost is
 zero.
 
@@ -587,7 +599,7 @@ of the draws (5.5.2); the half-even rounding; the order of the candidates (5.3, 
 the reason constants `no_path`, `too_old`, `not_yet` (counts of 5.3.1), exported
 constants of the root package (`event.go`).
 
-**Not parameters:** the lag table (7.2, derived), the vintage (derived), the sources
+**Not parameters:** the lag (7.2, derived at use), the vintage (derived), the sources
 (derived, 4.1), the record (state, section 14).
 
 The placeholders, so that none is mistaken for a result: the default of
@@ -607,7 +619,7 @@ Errors name the path, for example `modules.information.info_speed`. The framewor
 | `ErrOutOfBounds` | `InfoSpeed` below 1 (a missing key included) or above `MaxInfoSpeed`; `RumourErrorBP` above `MaxRumourErrorBP`; `RumourMaxAge` below 2 or above `MaxRumourAge` |
 | `ErrTooMany` | `S * RumourMaxAge` above `MaxRumourCells`; an informed role whose candidates could exceed `MaxRumoursPerView` (9.2) |
 | `ErrModuleDependency` | `Role.Informed` true while `Modules.Information` is nil |
-| `ErrUnknownRegion`, `ErrUnknownCommodity` | a source declared by EXT (4.5.2) that names an undefined region or commodity; the rule is stated here so that the key has one meaning, and EXT's validation raises it |
+| `ErrUnknownRegion`, `ErrUnknownCommodity` | reserved with 4.5.2: a source declared by EXT that names an undefined region or commodity; EXT declares none in version 1, so no code raises it here |
 
 No new sentinel. The module needs the region graph, which is core and always present,
 so there is no dependency to check beyond the flag.
@@ -666,7 +678,10 @@ strings come from the names table of `spec-observability.md` 3.2.
 - No `Error`.
 
 10.3. **New log keys** for observability-and-logging.md 3.3.2: `rumours` (a count of
-rumours offered to one agent) and `lag` (a lag in ticks). `region` and `agent` exist.
+rumours offered to one agent), `lag` (a lag in ticks) and `pairs` (a count of ordered
+region pairs, carried by the warning `rumour_horizon_short`, 9.3). `region` and `agent`
+exist. A warning that counts carries the count in `Warning.Count` (`spec-config.md`
+7.2).
 
 10.4. **Metric.** One instrument, fed by `RumoursServed`, proposed for the catalogue
 of observability-and-logging.md 5.3:
@@ -685,7 +700,7 @@ the metric names an agent, a region or a price.
 snapshot and in `MarketCleared`; the record is state for a checkpoint, not for
 observation (14). OBS may add the per-region count of sources if a consumer wants it.
 
-10.6. **No observer, no logger.** The record is written, the lag table read and the
+10.6. **No observer, no logger.** The record is written, the lag derived and the
 rumours made whether or not anyone watches; no event is constructed without an
 observer. No log, event or metric takes a draw, reads the clock or changes a rumour
 (observability-and-logging.md 1.4), and the draws of 5.5.2 do not depend on whether an
@@ -764,7 +779,7 @@ matters (1.99 at 5, 1.66 at 1 000, error 0.2 `f`). What the run says:
 
 ### 11.3 The arithmetic of the examples (`worked.py`, `worked.out`)
 
-The integer arithmetic of section 12: shortest distances, the lag tables, the vintages,
+The integer arithmetic of section 12: shortest distances, the lags, the vintages,
 the bounds of the error and its rounding, the sizes of the first consumer's record.
 
 ### 11.4 What they do not show
@@ -870,7 +885,7 @@ Five regions with 17 active markets each: 85 sources and, at `RumourMaxAge` 60, 
 entries, about 119 KiB at an upper figure of 24 bytes an entry. If 40 agents of
 informed roles each trade 8 commodities that are sources in the 4 other regions, there
 are 1 280 candidates a tick and, with `E` above 0, 1 280 draws, which is nothing beside
-the 5 000 agents' own work. The lag table is 25 values.
+the 5 000 agents' own work. The 25 lags are derived at use.
 
 ## 13. Entries for the stability register
 
@@ -978,7 +993,7 @@ needs the seasonal profile of prices, which no spec holds.
 | INF-S1 | Two regions with a route, an informed merchant role that ships on a rumoured gap, the dispatch cap on and off, a rumour lag `ell` of 1, 2 and 4 and several travel times, and with and without an error | the gap does not oscillate with growing amplitude for a gain under the limit of INF-A1; with a gain above it, the cap bounds the swing; with `E` large against the margin the swing falls as INF-A2 says. Waits for MER and TRN | INF-A1, INF-A2, L84 |
 | INF-S2 | A thin source market (its price age grows) and a dear remote region | the rumour carries the source's age; a merchant that ignores it ships and its goods arrive without moving the price; one that reads it does not. The first assertion is runnable now with a recording strategy | INF-A3 |
 | INF-S3 | A three-region chain; a closure for a stated number of ticks, then a reopening; a recording strategy that logs the rumours it is shown | the rumours from a cut-off region are absent while it is cut off and `NoPath` is counted; the vintage steps by the change of lag at the change; after the reopening the rumours return with the old lags; `EdgeStatusChanged` and `RumoursServed` agree. Runnable now | INF-A4, REG-A1 (STB-L66) |
-| INF-S4 | The reference world with an informed role and `E` = 500, run for 200 ticks, checkpointed at 80 and resumed | the resumed run is bit-identical; the draws taken equal the sum of the candidates of the informed views; with `E` = 0 no draw is taken and the stream equals the module-off stream. Runnable now | determinism, FR-INF-014, FR-INF-028 |
+| INF-S4 | The reference world with an informed role and `E` = 500, run for 200 ticks, checkpointed at 80 and resumed | the resumed run is bit-identical; the draws taken equal the sum of the candidates of the informed views; with `E` = 0 no draw is taken and the stream equals the module-off stream. Runnable now | determinism, FR-INF-014, FR-INF-029 |
 | INF-S5 | A seasonal price swing in the source region, a lag of an eighth, a quarter and half of the period | the phase of the rumoured gap against the true gap is shifted by the lag; at half a period the sign is reversed (a measurement of the signal, not of the economy). Runnable with a recording strategy | INF-A5, L23 |
 
 **Checklist 9.7 and 9.8.** The tunables of the dampers are `RumourErrorBP` and
@@ -1005,12 +1020,12 @@ derived from the configuration (and EXT's declarations), so it is not saved; a r
 whose derived set differs from the saved one is rejected as a configuration mismatch
 (the hash covers the configuration, `spec-config.md` 8.1).
 
-**Not saved** (derived): the lag table (7.2), the sources, the candidates and the
+**Not saved** (derived): the lags (7.2), the sources, the candidates and the
 rumours themselves, except the last rumours of an external agent (6.3.1), and the
 scratch slice of a view. The error needs no state: the draws
 come from the world's random source, whose state the world saves. A world restored
 between ticks makes the same rumours with the same errors as an uninterrupted one
-(FR-INF-028). The module's parameters and `Role.Informed` are configuration and are in
+(FR-INF-029). The module's parameters and `Role.Informed` are configuration and are in
 its hash.
 
 ## 15. Notes settled
@@ -1050,8 +1065,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | ID | Requirement |
 |----|-------------|
 | FR-INF-001 | With `Modules.Information` nil, the world MUST keep no record, make no rumour, take no draw for this module and emit no `RumoursServed`, and a configuration with `Role.Informed` true MUST be rejected with `ErrModuleDependency` (6.1.1, 9.1). |
-| FR-INF-002 | The sources MUST be the pairs (region, commodity) whose market is active in a region with at least one group, plus the pairs declared by EXT, in ascending (`RegionID`, `CommodityID`) order; a region with no group and no declaration MUST contribute none (4.1). |
-| FR-INF-003 | A declared source naming an undefined region or commodity MUST be rejected with `ErrUnknownRegion` or `ErrUnknownCommodity`, and a declaration of a pair that is already a source MUST change nothing (4.5.2). |
+| FR-INF-002 | The sources MUST be the pairs (region, commodity) whose market is active in a region with at least one group (the commodity is in the tradable set of some role that has a group there), in ascending (`RegionID`, `CommodityID`) order; a region with no group MUST contribute none (4.1). The half that adds the pairs declared by EXT is reserved (4.5.1). |
+| FR-INF-003 | Reserved, no declarer exists (4.5.1, N-112): a declared source naming an undefined region or commodity MUST be rejected with `ErrUnknownRegion` or `ErrUnknownCommodity`, and a declaration of a pair that is already a source MUST change nothing (4.5.2). It has no test in version 1; its test is owed to EXT if N-112 is reversed. |
 | FR-INF-004 | In phase 5, after the price windows are pushed and before the first outcome is processed, the world MUST append exactly one observation to the record of every source, in ascending (`RegionID`, `CommodityID`) order, including in a tick in which nothing traded (4.2.2, 4.3.1). |
 | FR-INF-005 | An observation MUST hold the market price published that tick, the price window's mean after the push (0 if the window was empty) and the published price age (4.2.1). |
 | FR-INF-006 | The record MUST be written only by the world from a market's published price: no exported function, option, strategy method or other module MUST be able to append to it or change it (4.5.3). |
@@ -1074,11 +1089,11 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-INF-023 | An agent of weight above 1 MUST get one view and one set of draws, and its rumoured prices MUST NOT be multiplied by its weight (6.4). |
 | FR-INF-024 | `AgentView.Rumour(region, commodity)` MUST return the view's rumour and `true`, or the zero value and `false` when there is none, and MUST NOT allocate (6.7). |
 | FR-INF-025 | With a strategy that ignores rumours, a world with the module on MUST give the same trades, prices and balances as one with it off, apart from the configuration hash and the saved record, and no belief update, limit-price draw or cost anchor MUST read a rumour (6.2.2, 7.4). |
-| FR-INF-026 | After a successful `SetEdgeStatuses` the lag table MUST be rebuilt once with the graph's tables, the next phase 3 MUST use the new lags, and a rumour already built MUST NOT change (7.2). |
+| FR-INF-026 | After a successful `SetEdgeStatuses` the next phase 3 MUST use the lags of the new graph (the lag is derived from REG's distance at use, 7.2.1), and a rumour already built MUST NOT change (7.2). |
 | FR-INF-027 | A relocation MUST change only the reader region of the rumours from the agent's next view, and move or reseed no state (7.3). |
 | FR-INF-028 | A trip, an arrival and a shipment MUST change no record entry and no rumour (7.5). |
 | FR-INF-029 | The checkpoint MUST contain, per source in ascending order, the number of observations held and the observations from the oldest to the newest, and nothing else of this spec; and a world restored between ticks MUST make the same rumours and take the same draws as an uninterrupted one (14). |
-| FR-INF-030 | The lag table, the set of sources, the candidates and the rumours MUST NOT be saved in a checkpoint (14). |
+| FR-INF-030 | The lags (derived at use), the set of sources, the candidates and the rumours MUST NOT be saved in a checkpoint (14). |
 | FR-INF-031 | An `InfoSpeed` outside `[1, MaxInfoSpeed]` (a missing key included), a `RumourErrorBP` above `MaxRumourErrorBP` and a `RumourMaxAge` outside `[2, MaxRumourAge]` MUST be rejected with `ErrOutOfBounds` naming their path (8, 9.1). |
 | FR-INF-032 | An absent `RumourErrorBP` MUST default to 500 and an absent `RumourMaxAge` to 60, and `Role.Informed` MUST default to false (8). |
 | FR-INF-033 | A configuration whose sources times `RumourMaxAge` exceed `MaxRumourCells` MUST be rejected with `ErrTooMany` (9.2). |
@@ -1157,11 +1172,15 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 10. **Measure the cost.** The cost figures (7.8, NFR-INF-002) are counts. Measure them
     in the slice with an informed role of the size of the reference world's merchants.
 
+11. **Sources declared by EXT.** Reserved in version 1 (4.5): EXT declares none
+    (FR-EXT-033, N-112). If a setting needs an outside node as a remote source, EXT adds
+    the declaration (4.5.1) and its test (FR-INF-003); INF's record and lag need no change.
+
 ## 18. Where this lives in the code
 
 | Concern | Home |
 |---------|------|
-| `Rumour`, `Observation` (unexported), the module's configuration (`Information` and its three fields), `Role.Informed`, the sources, the lag table, the append in phase 5, the building of a view's rumours in phase 3, `AgentView.Rumour` | root package, `information.go` |
+| `Rumour`, `Observation` (unexported), the module's configuration (`Information` and its three fields), `Role.Informed`, the sources, the lag derivation, the append in phase 5, the building of a view's rumours in phase 3, `AgentView.Rumour` | root package, `information.go` |
 | The view group `Rumours` | root package, `strategy.go` (`spec-agents.md` 6.4) |
 | The lag from a distance and a speed, the distortion with half-even rounding and the clamp, the ring of observations, over primitives | `internal/rumour` (standard library only, converted inline at the call, architecture.md 2.9) |
 | The event `RumoursServed` | root package, `event.go` |
