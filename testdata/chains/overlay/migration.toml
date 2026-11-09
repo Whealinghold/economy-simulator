@@ -1,0 +1,4 @@
+# The migration overlay (spec-migration.md 15.3; spec-reference-chain.md overlay/migration.toml; plan 2-14 Phase 4). Layer it after the pack, overlay/trade-<variant>.toml (it reads the edges) and overlay/information-<variant>.toml (the module needs it). A test double, not a design: every number is a placeholder (N-015, N-027). Distances of the trade overlays are 100 or 130, so a speed of 100 gives journeys of 1 or 2 ticks, and the longest of a path of two edges is 2, under CoverTicks.
+
+[modules.migration]
+move_speed = 100

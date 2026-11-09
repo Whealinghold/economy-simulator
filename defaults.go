@@ -226,3 +226,17 @@ const (
 func DefaultInformation() Information {
 	return Information{RumourErrorBP: 500, RumourMaxAge: 60}
 }
+
+// DefaultMigration returns the migration module with the placeholder tunables of
+// spec-migration.md 11 (N-015, N-027): a review every 30 ticks, a gate at a
+// ratio of 1.0, a margin of 1 000 basis points spread over 5 000, a cooldown of
+// 60 ticks, a horizon of 180 ticks and caps of 50 and 100 basis points.
+// MoveSpeed has no default because a speed in the unit of the pack's distances
+// has none that is right for every setting, so the value does not validate until
+// the caller sets it.
+func DefaultMigration() Migration {
+	return Migration{
+		MoveReviewTicks: 30, MoveBelow: wholeBP, MoveGain: 1_000, MoveWidth: 5_000,
+		MoveCooldown: 60, MoveHorizon: 180, MoveOutShare: 50, MoveInShare: 100,
+	}
+}

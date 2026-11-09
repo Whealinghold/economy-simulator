@@ -326,6 +326,9 @@ func modulesOn(c *Config) []string {
 	if c.Modules.Information != nil {
 		on = append(on, "information")
 	}
+	if c.Modules.Migration != nil {
+		on = append(on, "migration")
+	}
 	return on
 }
 

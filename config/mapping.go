@@ -287,6 +287,10 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Information = l.information(is)
 		is.finish()
 	}
+	if gs := m.sub("migration"); gs != nil {
+		cfg.Modules.Migration = l.migration(gs)
+		gs.finish()
+	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
@@ -448,6 +452,7 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	})
 	t.flag("closed", &r.Closed)
 	t.flag("informed", &r.Informed)
+	t.flag("fixed", &r.Fixed)
 	t.text("label", &r.Label)
 	return r
 }
@@ -759,6 +764,29 @@ func (l *loader) information(t *tbl) *economysim.Information {
 	m := economysim.DefaultInformation()
 	readInts(t, []intField{
 		{"info_speed", &m.InfoSpeed}, {"rumour_error_bp", &m.RumourErrorBP}, {"rumour_max_age", &m.RumourMaxAge},
+	})
+	return &m
+}
+
+// migration reads [modules.migration] over DefaultMigration (spec-config.md 6.2.1,
+// spec-migration.md 11, 15.3): move_speed, move_review_ticks, move_below,
+// move_gain, move_width, move_cooldown, move_horizon, move_out_share and
+// move_in_share, and the region rows as [modules.migration.region.<id>] with
+// out_share and in_share. move_speed has no default, so a table that omits it is
+// ErrOutOfBounds at Validate. A key a row omits is the world's value, as the
+// table of 11.2 says. The table being present switches the module on. The rows
+// come out in region order because every level is read in ID order.
+func (l *loader) migration(t *tbl) *economysim.Migration {
+	m := economysim.DefaultMigration()
+	readInts(t, []intField{
+		{"move_speed", &m.MoveSpeed}, {"move_review_ticks", &m.MoveReviewTicks}, {"move_below", &m.MoveBelow},
+		{"move_gain", &m.MoveGain}, {"move_width", &m.MoveWidth}, {"move_cooldown", &m.MoveCooldown},
+		{"move_horizon", &m.MoveHorizon}, {"move_out_share", &m.MoveOutShare}, {"move_in_share", &m.MoveInShare},
+	})
+	t.entities("region", func(id string, e *tbl) {
+		row := economysim.RegionMove{Region: id, OutShare: m.MoveOutShare, InShare: m.MoveInShare}
+		readInts(e, []intField{{"out_share", &row.OutShare}, {"in_share", &row.InShare}})
+		m.Regions = append(m.Regions, row)
 	})
 	return &m
 }
