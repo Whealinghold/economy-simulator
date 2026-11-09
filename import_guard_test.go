@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,7 +23,9 @@ const (
 // config/, a package of the module that the importing package may not import
 // (internal/ never imports the root, config/, strategy/, indicator/ or
 // experiment/; the root imports none of config/, strategy/, indicator/,
-// experiment/), and math/big outside the non-test files of internal/steady
+// experiment/; config/ and strategy/ import denomination no more than the root
+// or internal/ do; denomination/ imports the standard library alone, FR-CUR-002),
+// and math/big outside the non-test files of internal/steady
 // (architecture.md 3.5). It reads the imports only.
 func importProblems(name string, src any) ([]string, error) {
 	f, err := parser.ParseFile(token.NewFileSet(), name, src, parser.ImportsOnly)
@@ -35,11 +38,16 @@ func importProblems(name string, src any) ([]string, error) {
 	}
 	// the packages of the module that the importer may not import
 	var banned []string
+	bansModule := false // every package of the module, the root included
 	switch top {
 	case ".":
-		banned = []string{"config", "strategy", "indicator", "experiment"}
+		banned = []string{"config", "strategy", "indicator", "experiment", "denomination"}
 	case "internal":
-		banned = []string{"", "config", "strategy", "indicator", "experiment"}
+		banned = []string{"", "config", "strategy", "indicator", "experiment", "denomination"}
+	case "config", "strategy":
+		banned = []string{"denomination"}
+	case "denomination":
+		bansModule = true
 	}
 	var out []string
 	for _, imp := range f.Imports {
@@ -65,10 +73,8 @@ func importProblems(name string, src any) ([]string, error) {
 			if i := strings.Index(rel, "/"); i >= 0 {
 				rel = rel[:i]
 			}
-			for _, b := range banned {
-				if rel == b {
-					report("a package of the module that " + top + " may not import")
-				}
+			if bansModule || slices.Contains(banned, rel) {
+				report("a package of the module that " + top + " may not import")
 			}
 		case strings.Contains(first, "."):
 			report("not the standard library or the module")
@@ -80,9 +86,10 @@ func importProblems(name string, src any) ([]string, error) {
 // TestImportGuard_Detects verifies the checker on in-memory sources, so the
 // guard below cannot pass because it looks at nothing.
 //
-// Guard: a checker that missed a third-party import, a layer inversion or a
-// parser outside config/ would let the standard-library-only rule lapse with
-// every test green.
+// Requirement: FR-CUR-002
+// Guard: a checker that missed a third-party import, a layer inversion, a
+// parser outside config/ or an import of denomination/ by the core (or of the
+// core by denomination/) would let the rules lapse with every test green.
 func TestImportGuard_Detects(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -112,6 +119,16 @@ func TestImportGuard_Detects(t *testing.T) {
 		{"lookalike steady big", "internal/steadyx/s.go", `package p; import "math/big"`, 1},
 		{"config big", "config/c.go", `package p; import "math/big"`, 1},
 		{"big sub-package is not math/big", "a.go", `package p; import "math/bits"`, 0},
+		{"root imports denomination", "a.go", `package p; import "` + modulePath + `/denomination"`, 1},
+		{"internal imports denomination", "internal/x/x.go", `package p; import "` + modulePath + `/denomination"`, 1},
+		{"config imports denomination", "config/c.go", `package p; import "` + modulePath + `/denomination"`, 1},
+		{"strategy imports denomination", "strategy/s.go", `package p; import "` + modulePath + `/denomination"`, 1},
+		{"denomination imports root", "denomination/d.go", `package p; import "` + modulePath + `"`, 1},
+		{"denomination imports internal", "denomination/d.go", `package p; import "` + modulePath + `/internal/checked"`, 1},
+		{"denomination third party", "denomination/d.go", `package p; import "github.com/google/uuid"`, 1},
+		{"denomination parser", "denomination/d.go", `package p; import "` + tomlPath + `"`, 1},
+		{"denomination stdlib", "denomination/d.go", `package p; import "fmt"`, 0},
+		{"indicator imports denomination", "indicator/i.go", `package p; import "` + modulePath + `/denomination"`, 0},
 		{"lookalike module prefix", "a.go", `package p; import "` + modulePath + `-evil/x"`, 1},
 	}
 	for _, tt := range tests {
@@ -129,12 +146,13 @@ func TestImportGuard_Detects(t *testing.T) {
 }
 
 // TestImports_StdlibAndLayers verifies, for every non-test file in the scope
-// of guardedFiles, that the root package, internal/**, strategy/, indicator/
-// and experiment/ import the standard library and the module only, that
-// internal/ never imports a package above it, that the root imports none of
+// of guardedFiles, that the root package, internal/**, strategy/, indicator/,
+// experiment/ and denomination/ import the standard library and the module
+// only, that internal/ never imports a package above it, that the root imports none of
 // config/, strategy/, indicator/ and experiment/, and that only config/
 // imports the TOML parser.
 //
+// Requirement: FR-CUR-002
 // Guard: AGENTS.md "Standard library only in the core" and architecture.md
 // 2.7 and 2.9. A dependency or an inverted import breaks the consumer's
 // build graph, and no behavioural test would point at it.
