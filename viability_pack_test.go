@@ -256,6 +256,12 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 		if strings.HasSuffix(f, "-five.toml") || strings.HasSuffix(f, "-five-binding.toml") {
 			continue
 		}
+		// The merchants overlays name the transport and information modules, the haul
+		// commodity and the carrier chain that pack one does not carry;
+		// TestPacks_MerchantsOverlayLoads validates them over their own layers.
+		if strings.HasPrefix(f, "overlay/merchants") {
+			continue
+		}
 		cfg, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml", f)
 		if err != nil {
 			continue // names a module that is not built yet
