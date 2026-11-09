@@ -118,6 +118,32 @@ type TradePlan struct {
 	// WantFunded is, for each want the strategy funded, the units it placed in
 	// bids (spec-demand.md 11.1). A strategy that ignores wants leaves it empty.
 	WantFunded []WantFunding
+	// Shipments are the shipment requests, executed in plan order after the
+	// discards and before the intents, at most MaxDispatchPerTick of them
+	// (spec-transport.md 5.3); empty with the transport module off. The world
+	// clears the reused plan, and a request's Lines are read during the call only.
+	Shipments []ShipmentRequest
+}
+
+// ShipmentRequest asks the world to move goods, or the agent itself
+// (spec-transport.md 5.3.1).
+type ShipmentRequest struct {
+	// Mode is the mode of carriage and To the destination region.
+	Mode ModeID
+	To   RegionID
+	// Consignee is the receiving agent, ignored when ToSelf is set.
+	Consignee AgentID
+	// ToSelf makes the traveller itself the consignee; self-carried modes only.
+	ToSelf bool
+	// Lines are the goods to consign, empty when ToSelf.
+	Lines []Line
+}
+
+// Line is a commodity and a whole quantity of a shipment request.
+type Line struct {
+	// Commodity is the commodity and Quantity the number of units.
+	Commodity CommodityID
+	Quantity  Quantity
 }
 
 // WantFunding is the units of one want that a plan funded.

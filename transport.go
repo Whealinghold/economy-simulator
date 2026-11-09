@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -16,6 +17,139 @@ import (
 // transport_request.go, the arrival in transport_arrival.go, the view in
 // transport_view.go, the snapshot rows and the checkpoint section in
 // transport_state.go and the lanes in transport_lanes.go.
+
+// shipment is the record of one journey in flight (spec-transport.md 5.2). Plain
+// data; the lines are a buffer the state lends it and takes back at the arrival.
+type shipment struct {
+	id                  ShipmentID
+	mode                ModeID
+	from, to            RegionID
+	shipper, traveller  AgentID
+	consignee           AgentID
+	hired               bool
+	dispatched, arrives int64
+	account             int // the Transit ledger account; -1 for a trip to oneself
+	units, haulUnits    int64
+	lines               []Line
+}
+
+// modeRes is a mode with its commodities resolved to typed IDs, once, at
+// construction (the canonical configuration holds strings).
+type modeRes struct {
+	vehicle, haul CommodityID // NoCommodity when the mode has none
+	feed          []Line
+}
+
+// transportState is the state of the transport module, nil when it is off
+// (spec-transport.md 14): the next shipment ID, the shipments in flight in ID
+// order, and the transit factors. The away flags, the free lists of the Transit
+// accounts and the scratch are derived and never saved.
+type transportState struct {
+	next    ShipmentID
+	ships   []shipment
+	factors []factorRec
+	modes   []modeRes
+	// free is, per origin region, the open Transit accounts no shipment uses.
+	free []transit.Free
+	// away is, by agent ID, whether the agent is the traveller of a live
+	// self-carried shipment.
+	away []bool
+	// pool lends the line buffers of the shipments; qty and held are the scratch
+	// of one request, by commodity, and sorted the lines of the request in
+	// commodity order.
+	pool   [][]Line
+	qty    []Quantity
+	sorted []Line
+	loaded []Quantity
+	// ctx is the context of the request being checked.
+	ctx shipCtx
+}
+
+// factorRec is one transit factor that differs from 10 000 (spec-transport.md
+// 10.3).
+type factorRec struct {
+	from, to RegionID
+	mode     ModeID
+	bp       int64
+}
+
+// defaultTransitBP is the transit factor of a pair no one has set.
+const defaultTransitBP = 10_000
+
+// newTransport builds the state of the module for a canonical configuration, nil
+// when the module is off.
+func newTransport(c *Config) *transportState {
+	m := c.Modules.Transport
+	if m == nil {
+		return nil
+	}
+	t := &transportState{
+		modes:  make([]modeRes, len(m.Modes)),
+		free:   make([]transit.Free, len(c.Regions)),
+		qty:    make([]Quantity, len(c.Commodities)),
+		loaded: make([]Quantity, len(c.Commodities)),
+		sorted: make([]Line, 0, MaxShipmentLines),
+	}
+	for i := range m.Modes {
+		md := &m.Modes[i]
+		r := modeRes{vehicle: NoCommodity, haul: NoCommodity}
+		if id, ok := c.commodityID(md.Vehicle); ok {
+			r.vehicle = id
+		}
+		if id, ok := c.commodityID(md.Haul); ok {
+			r.haul = id
+		}
+		for _, f := range md.Feed {
+			id, _ := c.commodityID(f.Commodity)
+			r.feed = append(r.feed, Line{Commodity: id, Quantity: f.Quantity})
+		}
+		t.modes[i] = r
+	}
+	return t
+}
+
+// isAway reports whether the agent is the traveller of a live self-carried
+// shipment.
+func (t *transportState) isAway(id AgentID) bool {
+	return int(id) < len(t.away) && t.away[id]
+}
+
+// setAway sets the away flag of an agent, growing the table as agents join.
+func (t *transportState) setAway(id AgentID, away bool) {
+	for int(id) >= len(t.away) {
+		t.away = append(t.away, false)
+	}
+	t.away[id] = away
+}
+
+// factorOf returns the transit factor of (from, to, mode) in basis points: the
+// slot, or 10 000 for a pair no one has set (spec-transport.md 10.3). The slot
+// is sorted by (from, to, mode), so the search is binary.
+func (t *transportState) factorOf(from, to RegionID, mode ModeID) int64 {
+	i, ok := slices.BinarySearchFunc(t.factors, factorRec{from: from, to: to, mode: mode}, cmpFactorKey)
+	if !ok {
+		return defaultTransitBP
+	}
+	return t.factors[i].bp
+}
+
+// cmpFactorKey orders factor records by (from, to, mode).
+func cmpFactorKey(a, b factorRec) int {
+	return cmp.Or(cmp.Compare(a.from, b.from), cmp.Compare(a.to, b.to), cmp.Compare(a.mode, b.mode))
+}
+
+// lend returns an empty line buffer, from the pool when one is there.
+func (t *transportState) lend() []Line {
+	if n := len(t.pool); n > 0 {
+		b := t.pool[n-1]
+		t.pool = t.pool[:n-1]
+		return b[:0]
+	}
+	return make([]Line, 0, MaxShipmentLines)
+}
+
+// take returns a line buffer to the pool.
+func (t *transportState) take(b []Line) { t.pool = append(t.pool, b[:0]) }
 
 // transportReasons is the ledger reasons the module declares, in the order of
 // their rows in the table of spec-ledger.md 7.2. Only the two sinks open a
@@ -286,4 +420,18 @@ func tripExtremes(g Graph, speed int64) (minK, maxK int64, any bool) {
 		}
 	}
 	return minK, maxK, any
+}
+
+// modeNames returns the string ID of each mode, in ModeID order; nil with the
+// module off.
+func modeNames(c *Config) []string {
+	m := c.Modules.Transport
+	if m == nil {
+		return nil
+	}
+	out := make([]string, len(m.Modes))
+	for i := range m.Modes {
+		out[i] = m.Modes[i].ID
+	}
+	return out
 }

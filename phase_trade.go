@@ -66,6 +66,7 @@ func (w *World) tradeAgent(a *agent) error {
 	w.ext.strategies[a.strategy].Trade(v, w.rnd.rnd, p)
 	w.checkTradePlan(a, p)
 	w.executeDiscards(a, p)
+	w.executeShipments(a, p)
 	region := w.regionOf(a)
 	for _, in := range p.Intents {
 		w.submit(a, region, in)

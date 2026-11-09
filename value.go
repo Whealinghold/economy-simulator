@@ -48,6 +48,10 @@ type ResourceID int
 // exchange.
 type ModeID int
 
+// ShipmentID identifies a shipment. IDs are assigned in order of dispatch from 0
+// and are never reused within a world.
+type ShipmentID int64
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64

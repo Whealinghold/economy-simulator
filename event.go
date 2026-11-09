@@ -98,6 +98,64 @@ const (
 	ReasonInsufficientStock Reason = "insufficient_stock"
 )
 
+// The reasons a shipment request is refused, in the order of the checks
+// (spec-transport.md 5.4). ReasonUnknownRegion, ReasonSameRegion,
+// ReasonUnknownCommodity, ReasonInvalidQuantity, ReasonInsufficientStock and
+// ReasonOverflow, above, are the others of the table. The reasons of the modules
+// that are not built (has_store, outside_destination, consignee_full,
+// toll_unaffordable) join with their modules.
+const (
+	// ReasonTooManyRequests is the request number MaxDispatchPerTick + 1 or later of
+	// a plan.
+	ReasonTooManyRequests Reason = "too_many_requests"
+	// ReasonUnknownMode is a mode that is not in the configuration, and every
+	// request while the transport module is off.
+	ReasonUnknownMode Reason = "unknown_mode"
+	// ReasonTravellerAway is a self-carried request of an agent that is already
+	// away, also by an earlier request of the same plan.
+	ReasonTravellerAway Reason = "traveller_away"
+	// ReasonJobInProgress is a self-carried request of an agent with a job in
+	// progress.
+	ReasonJobInProgress Reason = "job_in_progress"
+	// ReasonNoRoute is a pair of regions with no path.
+	ReasonNoRoute Reason = "no_route"
+	// ReasonBlocked is a pair whose transit factor is 0.
+	ReasonBlocked Reason = "blocked"
+	// ReasonTooFar is a journey of more than MaxTravelTicks.
+	ReasonTooFar Reason = "too_far"
+	// ReasonUnknownConsignee is a consignee that is not an existing agent.
+	ReasonUnknownConsignee Reason = "unknown_consignee"
+	// ReasonConsigneeElsewhere is a consignee that is not in the destination.
+	ReasonConsigneeElsewhere Reason = "consignee_elsewhere"
+	// ReasonLinesWithSelf is a request to oneself that carries lines.
+	ReasonLinesWithSelf Reason = "lines_with_self"
+	// ReasonEmptyShipment is a request that ships nothing to another agent.
+	ReasonEmptyShipment Reason = "empty_shipment"
+	// ReasonTooManyLines is a request of more than MaxShipmentLines lines.
+	ReasonTooManyLines Reason = "too_many_lines"
+	// ReasonDuplicateLine is a request that names a commodity twice.
+	ReasonDuplicateLine Reason = "duplicate_line"
+	// ReasonVehicleInCargo is a line that names the mode's own vehicle.
+	ReasonVehicleInCargo Reason = "vehicle_in_cargo"
+	// ReasonCrewShort is a self-carried request of an agent with fewer households
+	// than the crew.
+	ReasonCrewShort Reason = "crew_short"
+	// ReasonNoVehicle is a self-carried request of an agent with no available
+	// vehicle.
+	ReasonNoVehicle Reason = "no_vehicle"
+	// ReasonCapacityExceeded is a load that does not fit the pooled capacity.
+	ReasonCapacityExceeded Reason = "capacity_exceeded"
+	// ReasonInsufficientHaul is a hired request of an agent with fewer haul units
+	// than the carriage needs.
+	ReasonInsufficientHaul Reason = "insufficient_haul"
+	// ReasonInsufficientFeed is a self-carried request of an agent that lacks the
+	// feed of the trip.
+	ReasonInsufficientFeed Reason = "insufficient_feed"
+	// ReasonUnprovisioned is a self-carried request after which the traveller would
+	// be unfed on the way.
+	ReasonUnprovisioned Reason = "unprovisioned"
+)
+
 // The reasons a job ends without output (spec-production.md 14.1).
 const (
 	// ReasonAgentRemoved is a job abandoned because its agent was removed.
@@ -368,6 +426,9 @@ type Names struct {
 	// Resources holds the string ID of each ResourceID; nil when the resources
 	// module is off.
 	Resources []string
+	// Modes holds the string ID of each ModeID; nil when the transport module is
+	// off.
+	Modes []string
 }
 
 // Amount is a quantity of one commodity.
@@ -1128,38 +1189,82 @@ type PopulationScaled struct {
 	BeforeBP, AfterBP int64
 }
 
-func (RunStarted) isEvent()        {}
-func (RunEnded) isEvent()          {}
-func (TickStarted) isEvent()       {}
-func (TickEnded) isEvent()         {}
-func (OrderPlaced) isEvent()       {}
-func (OrderRejected) isEvent()     {}
-func (TradeExecuted) isEvent()     {}
-func (MarketCleared) isEvent()     {}
-func (BeliefsUpdated) isEvent()    {}
-func (RecipeExecuted) isEvent()    {}
-func (RecipeRefused) isEvent()     {}
-func (RecipeAbandoned) isEvent()   {}
-func (ProductionHalted) isEvent()  {}
-func (UpkeepShortfall) isEvent()   {}
-func (WantShortfall) isEvent()     {}
-func (AgentSpawned) isEvent()      {}
-func (AgentBankrupted) isEvent()   {}
-func (EstateOpened) isEvent()      {}
-func (WeightChanged) isEvent()     {}
-func (RoleChanged) isEvent()       {}
-func (EntryLimited) isEvent()      {}
-func (BoundaryFlow) isEvent()      {}
-func (WearApplied) isEvent()       {}
-func (WorldRestored) isEvent()     {}
-func (AgentRelocated) isEvent()    {}
-func (EdgeStatusChanged) isEvent() {}
-func (ReliefPaid) isEvent()        {}
-func (MoneyFlowLimited) isEvent()  {}
-func (MoneyFlowEnded) isEvent()    {}
-func (MoneyFlowScaled) isEvent()   {}
-func (EndowmentChanged) isEvent()  {}
-func (EndowmentAdjusted) isEvent() {}
-func (OwnUseChanged) isEvent()     {}
-func (PopulationChanged) isEvent() {}
-func (PopulationScaled) isEvent()  {}
+// ShipmentDispatched is emitted when a shipment is dispatched, in phase 3 in the
+// plan order of the shipper, before its OrderPlaced events (spec-transport.md
+// 13.1). It is emitted only when the transport module is on. Lines is a copy in
+// commodity order, at most MaxShipmentLines rows; Toll and LossBP are appended
+// with the fiscal and risk modules.
+type ShipmentDispatched struct {
+	Tick int64
+	// Shipment is the ID of the shipment and Mode its mode.
+	Shipment ShipmentID
+	Mode     ModeID
+	// Region is the origin and To the destination.
+	Region, To RegionID
+	// Shipper is the agent that asked and Traveller the agent that goes (the
+	// shipper, for a self-carried trip; unused for a hired one).
+	Shipper, Traveller AgentID
+	// Hired says the trip is by a hired mode.
+	Hired bool
+	// Consignee receives the cargo.
+	Consignee AgentID
+	// Arrives is the tick of the arrival.
+	Arrives int64
+	// Units is the carrying units used and HaulUnits the haul units redeemed.
+	Units, HaulUnits int64
+	// Lines is what is shipped, by commodity.
+	Lines []Amount
+}
+
+// ShipmentRejected is emitted when a shipment request is refused, in the plan
+// order of the agent, before its OrderPlaced events (spec-transport.md 13.1). It
+// is emitted only when the transport module is on.
+type ShipmentRejected struct {
+	Tick int64
+	// Region is the origin region and Agent the shipper.
+	Region RegionID
+	Agent  AgentID
+	// Mode and To are the request's mode and destination as given.
+	Mode ModeID
+	To   RegionID
+	// Reason is why the request was refused.
+	Reason Reason
+}
+
+func (RunStarted) isEvent()         {}
+func (RunEnded) isEvent()           {}
+func (TickStarted) isEvent()        {}
+func (TickEnded) isEvent()          {}
+func (OrderPlaced) isEvent()        {}
+func (OrderRejected) isEvent()      {}
+func (TradeExecuted) isEvent()      {}
+func (MarketCleared) isEvent()      {}
+func (BeliefsUpdated) isEvent()     {}
+func (RecipeExecuted) isEvent()     {}
+func (RecipeRefused) isEvent()      {}
+func (RecipeAbandoned) isEvent()    {}
+func (ProductionHalted) isEvent()   {}
+func (UpkeepShortfall) isEvent()    {}
+func (WantShortfall) isEvent()      {}
+func (AgentSpawned) isEvent()       {}
+func (AgentBankrupted) isEvent()    {}
+func (EstateOpened) isEvent()       {}
+func (WeightChanged) isEvent()      {}
+func (RoleChanged) isEvent()        {}
+func (EntryLimited) isEvent()       {}
+func (BoundaryFlow) isEvent()       {}
+func (WearApplied) isEvent()        {}
+func (WorldRestored) isEvent()      {}
+func (AgentRelocated) isEvent()     {}
+func (EdgeStatusChanged) isEvent()  {}
+func (ReliefPaid) isEvent()         {}
+func (MoneyFlowLimited) isEvent()   {}
+func (MoneyFlowEnded) isEvent()     {}
+func (MoneyFlowScaled) isEvent()    {}
+func (EndowmentChanged) isEvent()   {}
+func (EndowmentAdjusted) isEvent()  {}
+func (OwnUseChanged) isEvent()      {}
+func (PopulationChanged) isEvent()  {}
+func (PopulationScaled) isEvent()   {}
+func (ShipmentDispatched) isEvent() {}
+func (ShipmentRejected) isEvent()   {}
