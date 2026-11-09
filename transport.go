@@ -63,6 +63,12 @@ type transportState struct {
 	loaded []Quantity
 	// ctx is the context of the request being checked.
 	ctx shipCtx
+	// arrived and arrivedLines are the arrivals of P1.3, kept for the later positions
+	// with or without an observer; key and skip build the guard query of an arrival.
+	arrived      []arrival
+	arrivedLines []ArrivedLine
+	key          []byte
+	skip         []string
 }
 
 // factorRec is one transit factor that differs from 10 000 (spec-transport.md
@@ -149,7 +155,11 @@ func (t *transportState) lend() []Line {
 }
 
 // take returns a line buffer to the pool.
-func (t *transportState) take(b []Line) { t.pool = append(t.pool, b[:0]) }
+func (t *transportState) take(b []Line) {
+	if cap(b) > 0 {
+		t.pool = append(t.pool, b[:0])
+	}
+}
 
 // transportReasons is the ledger reasons the module declares, in the order of
 // their rows in the table of spec-ledger.md 7.2. Only the two sinks open a

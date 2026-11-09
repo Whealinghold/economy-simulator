@@ -207,7 +207,7 @@ func (w *World) p25Work() error {
 // workAgent is the P2.5 step of one agent: the view, the report and its counts,
 // the call of Work and the admission of the request.
 func (w *World) workAgent(a *agent, region RegionID) error {
-	if a.hasJob() || w.welfare.at(int(a.id)).jobSet {
+	if a.hasJob() || w.welfare.at(int(a.id)).jobSet || w.offStage(a) {
 		return nil
 	}
 	v := &w.tk.view

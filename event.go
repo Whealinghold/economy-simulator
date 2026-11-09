@@ -1268,3 +1268,37 @@ func (PopulationChanged) isEvent()  {}
 func (PopulationScaled) isEvent()   {}
 func (ShipmentDispatched) isEvent() {}
 func (ShipmentRejected) isEvent()   {}
+func (ShipmentArrived) isEvent()    {}
+
+// ShipmentArrived is emitted when a shipment arrives, after its delivery and after
+// the AgentRelocated of a traveller, in shipment order in phase 1 (spec-transport.md
+// 13.1). It is emitted only when the transport module is on. Lines are copies in
+// commodity order; AccountLost is appended with the risk module.
+type ShipmentArrived struct {
+	Tick int64
+	// Shipment and Mode identify the shipment; Region is the origin and To the
+	// destination.
+	Shipment ShipmentID
+	Mode     ModeID
+	Region   RegionID
+	To       RegionID
+	// Receiver is the consignee, or the estate pseudo-agent of the destination
+	// when the cargo was diverted.
+	Receiver AgentID
+	// Diverted says some of the cargo went to the estate.
+	Diverted bool
+	// Lines are what each commodity did.
+	Lines []ArrivedLine
+}
+
+// ArrivedLine is what became of one line of a shipment: the units shipped, the
+// units delivered to the consignee, diverted to the estate of the destination and
+// spoiled in transit. They add up to Shipped. Lost is appended with the risk
+// module.
+type ArrivedLine struct {
+	Commodity CommodityID
+	Shipped   Quantity
+	Delivered Quantity
+	Diverted  Quantity
+	Spoiled   Quantity
+}

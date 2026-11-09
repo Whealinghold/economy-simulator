@@ -20,16 +20,15 @@ import (
 // fresh (1, 1, shelf life 3), a wagon (durability 400) and haul units.
 
 // shipScript is a Strategy that requests no job and asks for the shipments that
-// ship says, once, at the tick it names.
+// ship says (a function gates itself on the tick).
 type shipScript struct {
-	at   int64
 	ship func(v *AgentView) []ShipmentRequest
 }
 
 func (*shipScript) Work(*AgentView, *rand.Rand) JobRequest { return JobRequest{NoJob: true} }
 
 func (s *shipScript) Trade(v *AgentView, _ *rand.Rand, p *TradePlan) {
-	if s.ship != nil && v.Tick.Tick == s.at {
+	if s.ship != nil {
 		p.Shipments = append(p.Shipments, s.ship(v)...)
 	}
 }
@@ -559,7 +558,7 @@ func TestDispatch_MovesNoMoney(t *testing.T) {
 // shipLoad is a script that ships on tick 0 what the table says for each agent.
 func shipLoad(grain CommodityID, n int, hired bool) func(v *AgentView) []ShipmentRequest {
 	return func(v *AgentView) []ShipmentRequest {
-		if v.Agent != shipHome {
+		if v.Agent != shipHome || v.Tick.Tick != 0 {
 			return nil
 		}
 		mode := modeFoot
@@ -691,20 +690,25 @@ func TestDispatch_ModuleOffRefusesWithoutEvent(t *testing.T) {
 // Requirement: FR-TRN-044
 func TestDispatch_Deterministic(t *testing.T) {
 	t.Parallel()
-	run := func() ([]shipment, []Event) {
+	run := func() []Event {
 		w, rec := newShipWorld(t, nil, shipLoad(grain, 3, true))
 		give(t, w, shipHome, commodityOf(t, w, "haul"), 12)
 		give(t, w, shipHome, grain, 3)
 		step(t, w, 3)
-		return w.transport.ships, rec.events
+		return rec.events
 	}
-	s1, e1 := run()
-	s2, e2 := run()
-	if !reflect.DeepEqual(s1, s2) || !reflect.DeepEqual(e1, e2) {
-		t.Errorf("two runs differ: ships %+v and %+v", s1, s2)
+	e1, e2 := run(), run()
+	if !reflect.DeepEqual(e1, e2) {
+		t.Errorf("two runs differ: %d and %d events", len(e1), len(e2))
 	}
-	if len(s1) != 3 {
-		t.Errorf("ships = %d, want 3", len(s1))
+	var sent int
+	for _, e := range e1 {
+		if _, ok := e.(ShipmentDispatched); ok {
+			sent++
+		}
+	}
+	if sent != 3 {
+		t.Errorf("dispatched = %d, want 3", sent)
 	}
 }
 

@@ -132,6 +132,9 @@ func (w *World) allocate() {
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	w.pop = newPopulation(&w.cfg)
 	w.transport = newTransport(&w.cfg)
+	if w.transport != nil {
+		w.bounds.add(openShipment, w.transport.holds)
+	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}

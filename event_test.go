@@ -64,6 +64,7 @@ var declaredEvents = []economysim.Event{
 	economysim.PopulationScaled{},
 	economysim.ShipmentDispatched{},
 	economysim.ShipmentRejected{},
+	economysim.ShipmentArrived{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -74,7 +75,6 @@ var notBuiltEvents = []string{
 	"RoomLimited",
 	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
-	"ShipmentArrived",
 	"TransitFactorChanged", "ContractFormed",
 	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
 	"MigrationReviewed",
@@ -109,6 +109,7 @@ var notBuiltFields = []string{
 	"PopulationChanged.BirthsCeiling", // settlements module, SET 6.4.2
 	"ShipmentDispatched.Toll",         // fiscal module, FIS 16.1
 	"ShipmentDispatched.LossBP",       // risk module, RSK 14.1
+	"ShipmentArrived.AccountLost",     // risk module, RSK 14.1
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
