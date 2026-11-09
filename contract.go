@@ -539,8 +539,11 @@ type MerchantView struct {
 	FeeShare int64
 	// Modes are the modes of the block in mode order, by value.
 	Modes []MerchantMode
-	// Goods are the commodities of the tradable set in canonical order.
+	// Goods are the commodities of the tradable set in canonical order, and Cargo
+	// the cargo set (spec-merchants.md 3.2.2): the commodities the role trades less
+	// the trade inputs of its modes, ascending, shared by the agents of the role.
 	Goods []MerchantGood
+	Cargo []CommodityID
 }
 
 // MerchantMode is a mode of the block as the merchant plans with it: the
@@ -591,6 +594,7 @@ type merchantRoleRow struct {
 	share  int64
 	modes  []MerchantMode
 	goods  []MerchantGood
+	cargo  []CommodityID
 }
 
 // merchants is the state of the merchants module and of the merchant roles: the
@@ -644,6 +648,11 @@ func newMerchantRow(c *Config, r *Role, row *roleRow, t *transportState) merchan
 			Feed: slices.Clone(res.feed),
 		})
 	}
+	for _, id := range merchantCargo(r, merchantTradeInputs(r.Merchant, modeIndex(c))) {
+		cm, _ := c.commodityID(id)
+		out.cargo = append(out.cargo, cm)
+	}
+	slices.Sort(out.cargo)
 	for _, cm := range row.tradable {
 		d := &c.Commodities[cm]
 		out.goods = append(out.goods, MerchantGood{Commodity: cm, Mass: d.Mass, Bulk: d.Bulk, ShelfLife: d.ShelfLife, Durability: d.Durability})
@@ -673,7 +682,7 @@ func (w *World) fillMerchantView(v *AgentView, a *agent) {
 		m.tally[v.Region].merchants++
 	}
 	v.HasMerchant = true
-	v.Merchant = MerchantView{Params: row.params, FeeShare: row.share, Modes: row.modes[:len(row.modes):len(row.modes)], Goods: m.goods[:len(m.goods):len(m.goods)]}
+	v.Merchant = MerchantView{Params: row.params, FeeShare: row.share, Modes: row.modes[:len(row.modes):len(row.modes)], Goods: m.goods[:len(m.goods):len(m.goods)], Cargo: row.cargo[:len(row.cargo):len(row.cargo)]}
 }
 
 // oldestAges sets the OldestAge of each good from the lots of the account, which
