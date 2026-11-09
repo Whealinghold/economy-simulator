@@ -23,7 +23,7 @@ const (
 // config/, a package of the module that the importing package may not import
 // (internal/ never imports the root, config/, strategy/, indicator/ or
 // experiment/; the root imports none of config/, strategy/, indicator/,
-// experiment/; config/ and strategy/ import denomination no more than the root
+// experiment/; experiment/ imports no strategy/; config/ and strategy/ import denomination no more than the root
 // or internal/ do; denomination/ imports the standard library alone, FR-CUR-002),
 // and math/big outside the non-test files of internal/steady
 // (architecture.md 3.5). It reads the imports only.
@@ -111,6 +111,8 @@ func banned(top string) []string {
 		return []string{"", "config", "strategy", "indicator", "experiment", "denomination"}
 	case "config", "strategy":
 		return []string{"denomination"}
+	case "experiment":
+		return []string{"strategy"}
 	}
 	return nil
 }
@@ -155,6 +157,9 @@ func TestImportGuard_Detects(t *testing.T) {
 		{"config imports indicator", "config/c.go", `package p; import "` + modulePath + `/indicator"`, 1},
 		{"strategy imports indicator", "strategy/s.go", `package p; import "` + modulePath + `/indicator"`, 1},
 		{"experiment imports indicator", "experiment/e.go", `package p; import "` + modulePath + `/indicator"`, 1},
+		{"experiment imports strategy", "experiment/e.go", `package p; import "` + modulePath + `/strategy"`, 1},
+		{"experiment imports config", "experiment/e.go", `package p; import "` + modulePath + `/config"`, 0},
+		{"experiment imports its helpers", "experiment/e.go", `package p; import "` + modulePath + `/internal/design"; import "` + modulePath + `/internal/reduce"; import "` + modulePath + `/internal/checked"`, 0},
 		{"experiment imports measure", "experiment/e.go", `package p; import "` + modulePath + `/internal/measure"`, 1},
 		{"root imports measure", "a.go", `package p; import "` + modulePath + `/internal/measure"`, 1},
 		{"other internal imports measure", "internal/x/x.go", `package p; import "` + modulePath + `/internal/measure"`, 1},
