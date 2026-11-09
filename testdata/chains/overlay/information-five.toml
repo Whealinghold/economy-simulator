@@ -1,0 +1,66 @@
+# The information overlay of the variant five (spec-information.md 12.1; spec-reference-chain.md 4.5, 7.6; plan 2-13 Phase 7). Layer it after the pack and overlay/trade-five.toml (it reads the edges): the module on, every role that has a group informed. A test double, not a design: every number is a placeholder (N-015, N-027). Distances are 100 or 130, so a speed of 50 gives lags of 3 and 4.
+
+[modules.information]
+info_speed = 50
+rumour_error_bp = 500
+rumour_max_age = 60
+
+[role.cook]
+informed = true
+
+[role.crafter_a]
+informed = true
+
+[role.crafter_b]
+informed = true
+
+[role.crafter_c]
+informed = true
+
+[role.crafter_d]
+informed = true
+
+[role.crafter_e]
+informed = true
+
+[role.crafter_f]
+informed = true
+
+[role.crafter_g]
+informed = true
+
+[role.digger]
+informed = true
+
+[role.forester]
+informed = true
+
+[role.gatherer_a]
+informed = true
+
+[role.gatherer_b]
+informed = true
+
+[role.gatherer_c]
+informed = true
+
+[role.gatherer_d]
+informed = true
+
+[role.gatherer_e]
+informed = true
+
+[role.gatherer_f]
+informed = true
+
+[role.gatherer_g]
+informed = true
+
+[role.grower]
+informed = true
+
+[role.maker]
+informed = true
+
+[role.refiner]
+informed = true

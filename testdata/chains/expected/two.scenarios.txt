@@ -99,3 +99,31 @@ check s32.e16.lines_add_up: 10/10 pass
 check s32.e4.books: 10/10 pass
 check s32.e4.haul_use_is_the_flow: 10/10 pass
 check s32.e4.lines_add_up: 10/10 pass
+
+## S46 a shipper on a rumoured gap (INF-S1, waits for MER plan 15 and the dispatch cap of plan 12)
+measure s46.waits_for_mer_plan_15: 0=absent
+
+## S47 a thin source market (INF-S2, first assertion; the merchant assertion waits for plan 15)
+measure s47.aged_rumours: 1=11269 2=11269 3=11269 4=11269 5=11269 6=11269 7=11269 8=11269 9=11269 10=11269 | median=11269 n=10
+measure s47.max_source_age: 1=3 2=3 3=3 4=3 5=3 6=3 7=3 8=3 9=3 10=3 | median=3 n=10
+measure s47.rumours: 1=18541 2=18541 3=18541 4=18541 5=18541 6=18541 7=18541 8=18541 9=18541 10=18541 | median=18541 n=10
+measure s47.second_assertion_waits_for_mer_plan_15: 0=absent
+check s47.age_lag_price_of_the_vintage: 10/10 pass
+check s47.thin_market_is_aged: 10/10 pass
+
+## S49 the stream with the module on and the fork (INF-S4)
+measure s49.candidates_that_took_a_draw: 1=127859 2=127983 3=127859 4=127859 5=127859 6=127833 7=127859 8=127923 9=127791 10=127923 | median=127859 n=10
+measure s49.rumours_blurred: 1=108922 2=109164 3=109084 4=108995 5=108974 6=109017 7=109074 8=109102 9=109048 10=109164 | median=109061 n=10
+check s49.error_draws_and_blurs_only_the_price: 10/10 pass
+check s49.no_error_no_draw: 10/10 pass
+
+## S50 a seasonal swing at the source (INF-S5, a measurement of the signal)
+measure s50.eighth.correlation_bp: 1=6849 2=6849 3=6849 | median=6849 n=3
+measure s50.half.correlation_bp: 1=-10000 2=-10000 3=-10000 | median=-10000 n=3
+measure s50.quarter.correlation_bp: 1=0 2=0 3=0 | median=0 n=3
+check s50.eighth.phase_follows_lag: 3/3 pass
+check s50.eighth.rumour_is_the_price_a_lag_ago: 3/3 pass
+check s50.half.phase_follows_lag: 3/3 pass
+check s50.half.rumour_is_the_price_a_lag_ago: 3/3 pass
+check s50.quarter.phase_follows_lag: 3/3 pass
+check s50.quarter.rumour_is_the_price_a_lag_ago: 3/3 pass

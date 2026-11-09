@@ -1,0 +1,12 @@
+# Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
+# Read by the reviewer of STY 8.4; no test compares it.
+
+## S48 a closure and a reopening in a chain (INF-S3)
+measure s48.no_path_ticks_of_far_south: 1=20 2=20 3=20 4=20 5=20 6=20 7=20 8=20 9=20 10=20 | median=20 n=10
+measure s48.rumours_seen: 1=786577 2=792782 3=790306 4=786789 5=788285 6=788919 7=786675 8=789057 9=789514 10=789961 | median=788988 n=10
+check s48.cut_pairs_absent: 10/10 pass
+check s48.edge_status_events: 10/10 pass
+check s48.lag_follows_the_walk: 10/10 pass
+check s48.price_is_the_vintage: 10/10 pass
+check s48.rumours_return_after_reopening: 10/10 pass
+check s48.served_agrees_with_closure: 10/10 pass
