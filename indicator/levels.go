@@ -238,19 +238,8 @@ type GapResult struct {
 // which a pair is connected when its regions share one. ErrRange if the graph
 // has another number of regions than the window.
 func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapResult, error) {
-	if err := w.checkTable("PriceGap", p); err != nil {
+	if err := w.checkGap(p, dl, g); err != nil {
 		return GapResult{}, err
-	}
-	if g.Len() != w.Regions {
-		return GapResult{}, wrap("PriceGap", "graph", ErrRange)
-	}
-	if len(dl.Lanes) > 0 {
-		if dl.ConfigHash != w.ConfigHash {
-			return GapResult{}, wrap("PriceGap", "delivered", ErrConfigMismatch)
-		}
-		if dl.From != w.From || dl.To != w.To {
-			return GapResult{}, wrap("PriceGap", "delivered", ErrWindowOrder)
-		}
 	}
 	res := GapResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
 	var sum acc
@@ -266,7 +255,33 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 	if err != nil {
 		return GapResult{}, err
 	}
-	res.Warnings = clampWarning(withWarnings(w), mean)
+	res.warn(w)
+	return res, nil
+}
+
+// checkGap checks the table, the graph and the delivered result against the window.
+func (w Window) checkGap(p Prices, dl DeliveredResult, g economysim.Graph) error {
+	if err := w.checkTable("PriceGap", p); err != nil {
+		return err
+	}
+	if g.Len() != w.Regions {
+		return wrap("PriceGap", "graph", ErrRange)
+	}
+	if len(dl.Lanes) == 0 {
+		return nil
+	}
+	if dl.ConfigHash != w.ConfigHash {
+		return wrap("PriceGap", "delivered", ErrConfigMismatch)
+	}
+	if dl.From != w.From || dl.To != w.To {
+		return wrap("PriceGap", "delivered", ErrWindowOrder)
+	}
+	return nil
+}
+
+// warn sets the warnings of the result: the clamps of the mean and the rows, and no route.
+func (res *GapResult) warn(w Window) {
+	res.Warnings = clampWarning(withWarnings(w), res.MeanSpread)
 	for _, row := range res.Rows {
 		res.Warnings = clampWarning(res.Warnings, row.Spread, row.GapAfterFreightBP)
 	}
@@ -274,7 +289,6 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 		res.Warnings = append(res.Warnings, WarnNoRoute)
 		slices.Sort(res.Warnings)
 	}
-	return res, nil
 }
 
 // addPair adds the rows of every commodity between an ordered pair of regions.
