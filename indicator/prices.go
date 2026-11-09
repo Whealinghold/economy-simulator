@@ -1,7 +1,10 @@
 package indicator
 
 import (
+	"fmt"
+
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/internal/measure"
 )
 
 // Prices is a table of a price per (region, commodity), held region by region
@@ -96,4 +99,127 @@ func PricesOfReference(cfg economysim.Config) Prices {
 		}
 	}
 	return Prices{ConfigHash: economysim.HashConfig(cfg), Regions: regions, Commodities: commodities, Cells: cells}
+}
+
+// PricesOfWindow returns the unit value of each market over a window: the
+// volume-weighted mean of the published prices of its ticks, rdiv(SumPV, SumV)
+// half to even, and where no unit traded the last published price carried
+// forward (spec-indicators.md 4.3.2, FR-IND-028). It carries the window's
+// configuration hash and ticks. A (region, commodity) the window saw no
+// clearing for has the price 0. err is ErrOverflow for a value past int64.
+func PricesOfWindow(w Window) (Prices, error) {
+	cells := make([]economysim.Price, len(w.Markets))
+	for i, m := range w.Markets {
+		if m.SumV == 0 {
+			cells[i] = m.Price
+			continue
+		}
+		q, ok := measure.RoundDivU(m.SumPV.u(), measure.Uint128{Lo: uint64(m.SumV)})
+		wide, small := measure.FromUint128(q)
+		v, fits := measure.ToInt64(wide)
+		if !ok || !small || !fits {
+			return Prices{}, wrap("PricesOfWindow", "price", ErrOverflow)
+		}
+		cells[i] = economysim.Price(v)
+	}
+	return Prices{ConfigHash: w.ConfigHash, From: w.From, To: w.To, Regions: w.Regions, Commodities: w.Commodities, Cells: cells}, nil
+}
+
+// Weights selects the quantities an index is weighted by (spec-indicators.md
+// 5.3.2). The set is closed. A fixed basket (the basket of a region) is not a
+// choice of this type: BasketLevel takes it from the configuration.
+type Weights int
+
+// The weights of an index.
+const (
+	// WeightsTraded is the units traded, SumV of the window's markets.
+	WeightsTraded Weights = iota + 1
+	// WeightsConsumed is the units consumed: consumption plus want_consumption.
+	WeightsConsumed
+	// WeightsProduced is the units made: recipe_output.
+	WeightsProduced
+)
+
+// String returns the name of the weights.
+func (k Weights) String() string {
+	switch k {
+	case WeightsTraded:
+		return "traded"
+	case WeightsConsumed:
+		return "consumed"
+	case WeightsProduced:
+		return "produced"
+	}
+	return fmt.Sprintf("weights_%d", int(k))
+}
+
+// Base is the prices and the quantities of a base window, frozen from its closed
+// tally: Prices is the table (the constant prices of real measures) and each of
+// Traded, Consumed and Produced the units by (region, commodity), at region *
+// Commodities + commodity, for one choice of Weights (spec-indicators.md 4.3.5,
+// 10.4). It is a value the consumer stores.
+type Base struct {
+	Prices                     Prices
+	Traded, Consumed, Produced []int64
+}
+
+// Quantities returns the base quantities for a choice of weights, or nil.
+func (b Base) Quantities(k Weights) []int64 {
+	switch k {
+	case WeightsTraded:
+		return b.Traded
+	case WeightsConsumed:
+		return b.Consumed
+	case WeightsProduced:
+		return b.Produced
+	}
+	return nil
+}
+
+// BaseOf freezes the prices p and the quantities of a closed window as a base. p
+// must be a table of the window's world and shape (ErrConfigMismatch, ErrRange);
+// it is usually PricesOfWindow(w) (spec-indicators.md 4.3.5).
+func BaseOf(w Window, p Prices) (Base, error) {
+	if err := p.Compatible(w.ConfigHash); err != nil {
+		return Base{}, wrap("BaseOf", "prices", ErrConfigMismatch)
+	}
+	if p.Regions != w.Regions || p.Commodities != w.Commodities {
+		return Base{}, wrap("BaseOf", "prices", ErrRange)
+	}
+	f, err := flowsOf(w)
+	if err != nil {
+		return Base{}, err
+	}
+	b := Base{Prices: p, Traded: make([]int64, len(w.Markets))}
+	for i, m := range w.Markets {
+		b.Traded[i] = m.SumV
+	}
+	if b.Consumed, err = consumedUnits(f); err != nil {
+		return Base{}, err
+	}
+	if b.Produced, err = f.units(economysim.ReasonRecipeOutput); err != nil {
+		return Base{}, err
+	}
+	return b, nil
+}
+
+// consumedUnits is consumption plus want_consumption by (region, commodity).
+func consumedUnits(f flowSet) ([]int64, error) {
+	cons, err := f.units(economysim.ReasonConsumption)
+	if err != nil {
+		return nil, err
+	}
+	want, err := f.units(economysim.ReasonWantConsumption)
+	if err != nil {
+		return nil, err
+	}
+	for i := range cons {
+		sum, ok := measure.FromInt64(cons[i]).Add(measure.FromInt64(want[i]))
+		v, fits := measure.ToInt64(sum)
+		if !ok || !fits {
+			return nil, wrap("BaseOf", "consumed", ErrOverflow)
+		}
+		cons[i] = v
+	}
+	return cons, nil
 }
