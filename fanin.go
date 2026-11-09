@@ -22,6 +22,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent) error {
 	if w.res != nil {
 		w.fillEndowments(v, a)
 	}
+	if w.transport != nil {
+		w.fillTransport(v, a)
+	}
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
@@ -56,6 +59,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	tick, region := w.Tick(), w.regionOf(a)
 	if a.hasJob() {
 		w.abandonJob(a, region, ReasonAgentRemoved)
+	}
+	if w.transport != nil {
+		w.dropTraveller(a) // step 2a: a trip to oneself is dropped before the money moves
 	}
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow

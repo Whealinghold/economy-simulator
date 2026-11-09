@@ -123,4 +123,11 @@ const (
 	// OwnUse is the households in the own-use mode of the subsistence module, the
 	// sum of agent weights (int64).
 	OwnUse = "own_use"
+	// Shipment is a shipment ID and Mode a transport mode ID; Dest is the
+	// destination region ID of a shipment (Region is the origin), and Modes a count
+	// of transport modes in the construction summary.
+	Shipment = "shipment"
+	Mode     = "mode"
+	Dest     = "dest"
+	Modes    = "modes"
 )

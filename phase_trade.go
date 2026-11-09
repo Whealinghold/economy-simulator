@@ -53,6 +53,9 @@ func (w *World) p32Trade() error {
 
 // tradeAgent is the P3.2 step of one agent.
 func (w *World) tradeAgent(a *agent) error {
+	if w.offStage(a) { // away: no view, no order (Revise still runs for the orders it has)
+		return nil
+	}
 	v := &w.tk.view
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
@@ -66,6 +69,7 @@ func (w *World) tradeAgent(a *agent) error {
 	w.ext.strategies[a.strategy].Trade(v, w.rnd.rnd, p)
 	w.checkTradePlan(a, p)
 	w.executeDiscards(a, p)
+	w.executeShipments(a, p)
 	region := w.regionOf(a)
 	for _, in := range p.Intents {
 		w.submit(a, region, in)

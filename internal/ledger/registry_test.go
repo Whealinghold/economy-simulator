@@ -23,6 +23,7 @@ var byName = map[string]ledger.Reason{
 	"births": ledger.Births, "starvation": ledger.Starvation,
 	"loan_out": ledger.LoanOut, "loan_repay": ledger.LoanRepay, "loan_interest": ledger.LoanInterest,
 	"relief": ledger.Relief, "deaths": ledger.Deaths,
+	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -33,8 +34,7 @@ var notBuilt = []string{
 	"outside_receipts", "outside_offer", "outside_unsold", "outside_purchases",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
 	"wage_refund", "rent",
-	"title_sale", "premium", "payout", "transit_out", "transit_in", "haul_use",
-	"transit_use", "loss",
+	"title_sale", "premium", "payout", "loss",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.
@@ -141,8 +141,8 @@ func TestRegistry_AgreesWithSpec(t *testing.T) {
 				continue
 			}
 			built[name] = true
-			if name == "births" {
-				continue // checked against FR-LED-055 below
+			if name == "births" || name == "transit_out" || name == "transit_in" {
+				continue // checked against FR-LED-055 below: the cell has two clauses
 			}
 			from, to, back := pairing(row.between)
 			for _, goods := range []bool{false, true} {
@@ -184,6 +184,25 @@ func TestRegistry_AgreesWithSpec(t *testing.T) {
 	for _, name := range notBuilt {
 		if _, ok := byName[name]; ok {
 			t.Errorf("notBuilt lists %q, which is built: delete the stale entry", name)
+		}
+	}
+
+	// FR-LED-055: transit_out is goods from an agent to a Transit account and
+	// transit_in goods from a Transit account to an agent or an estate, nothing
+	// else; neither moves money.
+	for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
+		for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
+			out := a == ledger.KindAgent && b == ledger.KindTransit
+			in := a == ledger.KindTransit && (b == ledger.KindAgent || b == ledger.KindEstate)
+			if got := ledger.Allowed(ledger.TransitOut, true, a, b); got != out {
+				t.Errorf("Allowed(transit_out, goods, %d, %d) = %v, want %v", a, b, got, out)
+			}
+			if got := ledger.Allowed(ledger.TransitIn, true, a, b); got != in {
+				t.Errorf("Allowed(transit_in, goods, %d, %d) = %v, want %v", a, b, got, in)
+			}
+			if ledger.Allowed(ledger.TransitOut, false, a, b) || ledger.Allowed(ledger.TransitIn, false, a, b) {
+				t.Errorf("Allowed(transit, money, %d, %d) = true, want a refusal", a, b)
+			}
 		}
 	}
 

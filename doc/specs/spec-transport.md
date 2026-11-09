@@ -420,7 +420,7 @@ by `Step`.
 | 2 | `unknown_mode` | the mode is not in the configuration (also every request when the module is off) |
 | 3 | `traveller_away` | self-carried and the agent is already away (including by an earlier request of this plan) |
 | 3a | `has_store` | self-carried and the agent owns a store (`spec-storage.md` 9.3): a trip ends in a region change that the `region_bound` refusal `has_store` of `spec-regions.md` 6.5.2 would hold for ever (the refusal reason and the registered refusal are one meaning in two registries) |
-| 4 | `job_in_progress` | self-carried and the agent has a job in progress, started this tick or earlier (`spec-production.md` 5.2) |
+| 4 | `job_in_progress` | self-carried and the agent has a job in progress, started this tick or earlier (`spec-production.md` 5.2); a one-tick job started and finished this tick counts as in progress, as it counts as a working tick (`spec-production.md` 5.2.1) |
 | 5 | `same_region` | `To` is the shipper's own region |
 | 6 | `unknown_region` | `To` is not a region |
 | 6a | `outside_destination` | `To` is an outside node of the external module (`spec-external-sector.md` 3.1, 4.4); outside goods reach the realm through the gate region's market, not through a shipment |
@@ -582,7 +582,7 @@ Transit account and belong to the consignee on arrival.
 5.9.2. **The traveller is removed** (it starves, or the consumer removes an external
 agent with `RemoveAgent`, mortal or not, `spec-integration.md` 4.4.1): its holdings in its own account go to the
 estate of the account's region, `From`, as for any removal (`spec-agents.md` 3.6). A
-shipment to itself is dropped, with no loss. A shipment with lines continues without a
+shipment to itself is dropped, with no loss, and the away flag is cleared; this is part of step 2a of `spec-agents.md` 3.6, which runs before the money moves. A shipment with lines continues without a
 traveller: its cargo is in the Transit account, is struck there as any shipment is (5.7
 step 0; the traveller's own account is in the estate and is not) and arrives at
 `Arrives`, delivered to the consignee; only the traveller's region change is skipped.
@@ -681,7 +681,7 @@ quantity less what the Transit account held at arrival.
 non-boundary side (`spec-ledger.md` 3.5). A spoilage or loss from a Transit account is
 therefore attributed to the **origin** region. For `transit_out` and `transit_in`, both
 sides non-boundary, the attribution rule is the ledger's: this spec does not set it, and
-asks `spec-ledger.md` 7.4 to state it (unverified; open question 6). `BoundaryFlow`
+relies on `spec-ledger.md` 3.5 and 7.4: an internal flow is attributed to the region of the debited account (answered; open question 6). `BoundaryFlow`
 reports only faucets and sinks (`spec-ledger.md` 12.1), so `transit_out` and
 `transit_in` do not appear there.
 
@@ -828,6 +828,8 @@ configuration:
 | `Routes` | for each region other than the agent's and each mode: whether there is a route, the travel time `k` (section 4), and for a hired mode the haul units per carrying unit `s` (3.3.3); an outside node is reported with no route (`outside_destination`, 5.4). With the risk module it gains `LossBP`, the expected loss of the route (`spec-risk.md` 8.1: 0 with the module off), and with the fiscal module `Toll`, the money one carrying unit pays in tolls on the path (`spec-fiscal.md` 7.5) |
 | `Outbound` | per destination region and commodity with units on the way, the total quantity of the shipments the agent is the **shipper** of and the earliest arrival tick, from the shipments dispatched before the start of phase 3 of this tick (fixed at that moment, so that it does not depend on the order in which agents are called, as `Inbound` does not; `spec-merchants.md` 4.1) |
 
+The rows are `InboundRow{Commodity, Quantity, Earliest}`, `OutboundRow{To, Commodity, Quantity, Earliest}` and `RouteRow{To, Mode, Has, Ticks, HaulPerUnit}` (`Earliest` is the earliest arrival tick; `HaulPerUnit` is `s`, 0 for a self-carried mode); the plan field is `Shipments []ShipmentRequest` (`spec-agents.md` 6.3). Rows are copies into scratch the world reuses, in commodity order (`Inbound`), destination then commodity order (`Outbound`) and region then mode order (`Routes`).
+
 `Inbound` exists so that a consignee does not buy again what is already on its way: a
 buyer that ignores its pipeline orders twice (TRN-A2). Whether the default strategy's
 `Target` counts inbound units is AGT's (open question 7); the field is the means.
@@ -835,7 +837,7 @@ An agent that is away is never passed a view.
 
 ### 9.2 Queries
 
-Read-only functions of the world, available to a consumer and to later specs:
+Read-only functions of the world, available to a consumer and to later specs. The signatures are `World.Travel(from, to RegionID, mode ModeID) (ticks, haulPerUnit int64, ok bool)`, `World.InTransit(agent AgentID) []Amount`, `World.Away(agent AgentID) bool` and `World.RouteLoss(from, to RegionID, mode ModeID) (bp int64, ok bool)` (0 with `ok` true for a route while the risk module is off); a query with an error result follows the guards of `Snapshot` (`ErrInStep`):
 `Travel(from, to, mode)` returns the travel time, at the effective transit factor (4.1),
 and the haul units per carrying unit, or that there is no route;
 `RouteLoss(from, to, mode)` the expected loss in basis points of the route, or that
@@ -874,8 +876,8 @@ labour = ceil( 10_000 * f * s * Duration / Output )       Duration and Output of
 ```
 
 computed with exact integer arithmetic (the rational compared by cross-multiplication,
-128-bit intermediates). It is a pure function of the configuration, `transport.Lanes`,
-that a consumer passes to the solver as an option; the solver does not call it, so the
+128-bit intermediates). The recipe is the cheapest that makes the haul commodity: the lowest `Duration / Output` at E = 10 000, ties by recipe ID; a commodity with `Mass` and `Bulk` both 0 gives `f` = 0 and a lane of labour 0. It is a pure function of the configuration, `Config.TransportLanes() ([]Lane, error)` (the Go name of `transport.Lanes`),
+that a consumer passes to the solver as an option (`WithLanes([]Lane) SolveOption`, `MaxLanes` = `MaxRegions * MaxRegions * MaxCommodities`; `Lane` is declared once, in `viability.go`); the solver does not call it, so the
 viability check stays independent of this module. The lane charges labour only: the
 feed and the vehicle wear of the carriers' recipe are not in the programme, which is a
 stated limitation of the check (open question 8). Self-carried modes give no lanes in
@@ -1104,7 +1106,7 @@ about `pi / (2k + 1)`: 1.0 at `k` = 1, 0.62 at 2, 0.35 at 4, 0.18 at 8; with at 
 of the effect at dispatch (the purchase in the origin region moves its price at once) or
 with a shipper that counts `Inbound`, the limit is at least about 2 for any `k`. A cap on the
 shipment per tick bounds the swing of the gap to about `k` times the cap. *Test:* a new
-scenario (S28 proposed, below). *Status:* model (section 16). It does not show the
+scenario (S30 proposed, below). *Status:* model (section 16). It does not show the
 library: it has no inventory, no belief and no market, and the shares of the effect at
 dispatch and at arrival are not derived for any pack.
 INF-A1 (`spec-information.md` 13) adds the rumour's lag `ell` to the delay of a shipper that reads a rumour: the gap decays if `g < 2 sin(pi / (2 (2 (ell + k) + 1)))` (`spec-information.md` 11.1).
@@ -1118,7 +1120,7 @@ the delay `k`. *Owner:* TRN 9.1 (the `Inbound` field); AGT's `Target` (open ques
 *Damper:* the buffer cap and the production halt (D24) bound the overhang once it
 exists; `Inbound` is the means to avoid it. *Undamped:* a strategy that does not count
 `Inbound`. *Condition:* the stock a strategy sizes against includes `Inbound`. *Test:*
-S28 with a consignee that buys and receives. *Status:* hand.
+S30 with a consignee that buys and receives. *Status:* hand.
 
 **TRN-A3. The haul capacity cobweb.** *Kind:* loop (a case of STB-L21). *Loop:* the price
 of haul units (+) the expected price (+) carriers' starts of the haul recipe (delay: its
@@ -1131,7 +1133,7 @@ the same as L21: a response to price of the carriers' starts that is above the s
 demand elasticity. *Condition:* as L21. A shipper's demand for haul units is derived
 demand, inelastic in the haul price over the range where the goods' price gap exceeds the
 freight, so the condition is likelier to fail here than for a final good: the register
-should record the measured elasticity. *Test:* S05 with a haul recipe, S28. *Status:*
+should record the measured elasticity. *Test:* S05 with a haul recipe, S30. *Status:*
 hand (merges with L21).
 
 **TRN-A4. Freight and the delivered price.** *Kind:* loop (extends STB-L17 and replaces
@@ -1182,13 +1184,13 @@ removal. *Damper:* D37. *Status:* hand.
 | D39 (proposed) | The dispatch cap: a plan carries at most `MaxDispatchPerTick` requests and a traveller makes one trip at a time; its cost is that a large shipment must be one request | TRN 5.4, 6.2 | specified (a bound) |
 | D40 (proposed) | Freight as a floor on the gap: a good is shipped only if the gap exceeds the haul price, so shipping closes the gap to the freight and no further; its cost is a persistent gap | TRN 3.3.3, 8 | specified (emergent from the market price of haul units) |
 
-**Scenarios proposed:** S28, *two regions with a route and a merchant that ships on a
+**Scenarios proposed:** S30, *two regions with a route and a merchant that ships on a
 price gap, with the shipper counting `Inbound` and not*: the gap closes to within the
 freight plus a band and does not oscillate with a growing amplitude for `k` in a stated
-range (TRN-A1, A2); S29, *a perishable with `ShelfLife` equal to the travel time `k` and
+range (TRN-A1, A2); S31, *a perishable with `ShelfLife` equal to the travel time `k` and
 one tick inside it (`ShelfLife` = `k` + 1)*: the first is never delivered, the second
 always, since a fresh lot is delivered if and only if `k <= ShelfLife - 1` (5.6.2)
-(TRN-A5); S30, *a hired mode with
+(TRN-A5); S32, *a hired mode with
 a haul recipe whose `Duration` is the round trip, at three elasticities of the carriers'
 starts*: the price of haul units converges or is reported as F6 (TRN-A3).
 
@@ -1335,7 +1337,7 @@ conserved: shipped 100 = delivered 100 + diverted 0 + spoiled 0.
   (section 8), with the edits to CAR, LED and GDS listed in 8.5; close it when they land.
 - **N-084** (scenarios that wait for trade). Left open: TRN supplies the mechanism for
   the dynamic parts of X1 and X2 (modes, the shipment, `Inbound`); the shipper's decision
-  is MER's, rumours INF's. The static check of X1 can use the lanes of 9.4. S28 to S30 are
+  is MER's, rumours INF's. The static check of X1 can use the lanes of 9.4. S30 to S32 are
   new (15).
 - **N-016, N-017, N-027** (ALL). N-016: every field of 11 has a row proposed for the
   parameter-owner table, and there is no unnamed parameter. N-017: the new terms are in
@@ -1439,10 +1441,7 @@ bounds are placeholders (N-015, N-027).
 5. **Return to sender.** A diverted cargo goes to the destination estate (5.8). A
    return to the shipper would need the shipper to be reachable and a second journey.
    MER does not return a cargo: a diverted cargo counts as reached (`spec-merchants.md` 9.7).
-6. **Attribution of internal flows.** `transit_out` and `transit_in` have two
-   non-boundary sides; `spec-ledger.md` 7.4 attributes a flow to "the region of the
-   non-boundary side". The ledger should state which side an internal flow is attributed
-   to (the debited account's region is suggested). Unverified; asked of LED.
+6. **Attribution of internal flows.** Answered by `spec-ledger.md` 3.5 and 7.4: an internal flow is attributed to the region of the debited account, so `transit_out` is the origin's and `transit_in` the Transit account's, which is the origin's (7.1.2).
 7. **Does the default strategy count `Inbound`?** The field is provided (9.1). Whether
    `DefaultStrategy`'s `Target` of `spec-agents.md` 7.3 includes units arriving within
    `StartsIn` is AGT's; the default never ships but a consignee may be sent goods by
@@ -1470,13 +1469,13 @@ bounds are placeholders (N-015, N-027).
 
 | Concern | Home |
 |---------|------|
-| `Mode`, `ModeID`, `Shipment`, `ShipmentID`, `ShipmentRequest`, `Line`, the module's state and the world's phase steps (arrivals, dispatch) | root package, `transport.go` |
-| Travel time, units needed, the fit test, the lanes arithmetic | `internal/transit` over primitives (architecture.md 2.9): `Ticks(distance, speed, factorBP)`, `UnitsNeeded(mass, bulk, unitMass, unitBulk)`, `Fits(load, capacity)`, `Lane(...)` |
+| `Mode`, `ModeID`, the unexported record `shipment` (its public copy is `ShipmentRow`), `ShipmentID`, `ShipmentRequest`, `Line`, the module's state and the world's phase steps (arrivals, dispatch) | root package, `transport.go` |
+| Travel time, units needed, the fit test, the lanes arithmetic | `internal/transit` over primitives (architecture.md 2.9): `Ticks(distance, speed, factorBP)`, `UnitsNeeded(mass, bulk, unitMass, unitBulk)`, `Fits(load, capacity)`, `Labour(...)` (the lane arithmetic) |
 | Transit accounts, `Move`, `WearItems`, ageing, the audit | `internal/ledger` (`spec-ledger.md` 16); the root opens and reuses Transit accounts |
 | The events and their fields | root package, `event.go` (`spec-observability.md`) |
 | The fields of section 3.1 and their bounds | root package, `transport.go`; bounds in `bounds.go` (`spec-config.md` 4.1) |
 | Validation and the warnings of section 12 | root package, `validate.go` |
-| `transport.Lanes` | root package, `transport.go` (a pure function; the solver of `spec-viability.md` takes its result as an option) |
+| `Config.TransportLanes` | root package, `transport_lanes.go` (a pure function; the solver of `spec-viability.md` takes its result as an option) |
 | The plan field `Shipments` and the view groups `Inbound`, `Routes` | root package, `strategy.go` (`spec-agents.md` 6.3, 6.4) |
 | Reason constants (`unknown_mode`, `capacity_exceeded` and the rest of 5.4) | root package, `event.go` (exported constants) |
 | Log keys | `internal/logkeys` (key strings only) |

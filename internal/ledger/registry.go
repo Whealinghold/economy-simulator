@@ -71,6 +71,21 @@ const (
 	// households after a death of the population module (spec-population.md
 	// 4.7): agent to estate. It is a declared row and opens no boundary account.
 	Deaths
+	// TransitOut is the goods a shipment takes from its shipper into a Transit
+	// account at dispatch (spec-transport.md 7.2): agent to transit. It is a
+	// declared row and opens no boundary account.
+	TransitOut
+	// TransitIn is the goods a Transit account gives to the consignee at arrival,
+	// or to the estate of the destination for a diverted cargo (spec-transport.md
+	// 7.2): transit to agent or estate. It is a declared row and opens no
+	// boundary account.
+	TransitIn
+	// HaulUse is the goods sink of the haul units a hired shipment redeems at
+	// dispatch (spec-transport.md 3.3.3): agent to boundary. It is a declared row.
+	HaulUse
+	// TransitUse is the goods sink of the feed a self-carried trip consumes
+	// (spec-transport.md 3.3.2): agent to boundary. It is a declared row.
+	TransitUse
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -101,6 +116,7 @@ const (
 	setAgent    = kindSet(1 << KindAgent)
 	setEstate   = kindSet(1 << KindEstate)
 	setAE       = setAgent | setEstate
+	setTransit  = kindSet(1 << KindTransit)
 	// setHolder is every non-boundary kind: "any holder" of 7.2.
 	setHolder = kindSet(1<<KindBoundary - 1)
 )
@@ -159,6 +175,13 @@ var table = [NumReasons][2]row{
 	Relief: {thingMoney: {true, Internal, setEstate, setAgent, false, true, 12}},
 	// deaths runs from an agent to an estate (spec-ledger.md 7.2; rank 41 is its pinned code).
 	Deaths: {thingMoney: {true, Internal, setAgent, setEstate, false, true, 41}, thingGoods: {true, Internal, setAgent, setEstate, false, true, 41}},
+	// The transport rows (spec-ledger.md 7.2, spec-transport.md 7.2): the cargo
+	// goes from an agent into a Transit account and from it to an agent or an
+	// estate; the haul units and the feed of a trip are goods sinks of an agent.
+	TransitOut: {thingGoods: {true, Internal, setAgent, setTransit, false, true, 32}},
+	TransitIn:  {thingGoods: {true, Internal, setTransit, setAE, false, true, 33}},
+	HaulUse:    {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 34}},
+	TransitUse: {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 35}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

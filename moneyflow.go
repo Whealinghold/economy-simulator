@@ -844,6 +844,11 @@ func (w *World) setFlowScale(i int, bp int64, cause Cause) error {
 // the first flow that disagrees is named (FR-MON-026, 027). It is nil with no
 // module on.
 func (w *World) auditModules() error {
+	if w.transport != nil {
+		if err := w.auditTransport(); err != nil {
+			return err
+		}
+	}
 	if w.money == nil {
 		return nil
 	}

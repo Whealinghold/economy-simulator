@@ -108,6 +108,7 @@ func (v *validator) structural() {
 	v.validateResources()
 	v.validateSubsistence()
 	v.validatePopulation()
+	v.validateTransport()
 	v.structure()
 	v.economics()
 	v.overflow()
@@ -2055,6 +2056,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, resourceWarnings(c, lk)...)
 	out = append(out, subsistenceWarnings(c, lk)...)
 	out = append(out, populationWarnings(c, lk)...)
+	out = append(out, transportWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

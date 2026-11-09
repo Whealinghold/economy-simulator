@@ -68,6 +68,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// transportState.due is the arrival schedule, derived from the shipments (and
+	// holding the stale entry of a trip dropped with its traveller); a restore
+	// rebuilds it without that entry, and its comparison counter is a measure of cost.
+	"transportState.due",
 	// The resources module's snapshot of the tick and its grants by agent slot are
 	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
 	// has them empty until then (spec-resources.md 15).
@@ -377,6 +381,10 @@ func resourcesOn(w *World) bool { return w.res != nil }
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
 
+// transportOn is the guard of the rows of the transport module (P1.3 and P3.1,
+// plan 2-12): an off world records no line for them.
+func transportOn(w *World) bool { return w.transport != nil }
+
 // reliefOn is the guard of the row of the relief pass: a world with the estates
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
@@ -395,6 +403,7 @@ var replayRows = []replayRow{
 	{id: "P0.2", run: noErr((*World).p02)},
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
+	{id: "P1.3", run: noErr((*World).p13Arrivals), on: transportOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
@@ -405,6 +414,7 @@ var replayRows = []replayRow{
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
+	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: demandOn},

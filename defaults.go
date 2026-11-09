@@ -172,6 +172,12 @@ func DefaultResources() Resources {
 	return Resources{HorizonYears: 50}
 }
 
+// DefaultCrew is the households a carrying unit of a self-carried transport mode
+// needs when the file gives no crew (spec-transport.md 3.1). The file loader
+// applies it to a mode without a haul commodity; a Config built in Go sets
+// Mode.Crew itself.
+const DefaultCrew = 1
+
 // DefaultSubsistence returns the subsistence module with the placeholder
 // tunables of spec-subsistence.md 12: the mode starts below 2 secure ticks, ends
 // at a cover of 3 and retries a role job after 10 own-use jobs. It has no own-use
