@@ -334,3 +334,28 @@ func FuzzParse(f *testing.F) {
 		}
 	})
 }
+
+// TestRecord_ReadmeExample verifies that the example record in
+// testdata/calibration/README.md parses and renders to itself, so the README
+// cannot drift from the grammar.
+//
+// Requirement: FR-CLB-041
+func TestRecord_ReadmeExample(t *testing.T) {
+	t.Parallel()
+	md, err := os.ReadFile("../../testdata/calibration/README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(string(md), "```text\n")
+	if len(parts) < 3 {
+		t.Fatalf("README has %d text blocks, want a layout and an example record", len(parts)-1)
+	}
+	example, _, _ := strings.Cut(parts[2], "```")
+	r, err := Parse([]byte(example))
+	if err != nil {
+		t.Fatalf("Parse(README example) error = %v", err)
+	}
+	if out, err := Render(r); err != nil || string(out) != example {
+		t.Errorf("Render(Parse(README example)) = %q, %v, want the example", out, err)
+	}
+}
