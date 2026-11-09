@@ -114,12 +114,9 @@ func (g *engine) runAll() *failure {
 
 // stepsAt applies the steps whose tick is b, in the order of the merged list.
 func (g *engine) stepsAt(b int64) *failure {
-	for g.next < len(g.steps) && g.steps[g.next].Tick <= b {
+	for g.next < len(g.steps) && g.steps[g.next].Tick == b {
 		s := g.steps[g.next]
 		g.next++
-		if s.Tick < b {
-			continue // below the start of this engine: another world applied it
-		}
 		if err := s.Do(g.w); err != nil {
 			st, tick := classify(stageScript, err, b)
 			return &failure{status: st, tick: tick, detail: fmt.Sprintf("step %q at tick %d: %v", s.Label, b, err)}
