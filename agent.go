@@ -352,7 +352,12 @@ func (w *World) saveAgent(cw *codec.Writer, a *agent, names []string) {
 	on, jobs := w.sub.recordFields(a.id)
 	cw.U(on) // OwnUse: 0 while the subsistence module is off
 	cw.U(jobs)
-	cw.B(false)
+	to, arrives, journey := w.migration.journeyOf(a.id)
+	cw.B(journey)
+	if journey {
+		cw.U(uint64(to))
+		cw.U(unsigned(arrives))
+	}
 	saveDirective(cw, a.directive)
 }
 
@@ -475,6 +480,8 @@ type agentRec struct {
 	since, carry             int64
 	ownUse, ownUseJobs       uint64
 	journey                  bool
+	jto                      uint64
+	jarrives                 int64
 	directive                *Directive
 }
 
@@ -493,6 +500,10 @@ func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, pr
 	rec.privation = r.Bounded("privation", rs.tick)
 	rec.since, rec.carry = r.I(), r.I()
 	rec.ownUse, rec.ownUseJobs, rec.journey = r.Index(2), uint64(r.Bounded("own-use jobs", rs.tick)), r.B()
+	if rec.journey {
+		rec.jto = r.Index(uint64(len(w.cfg.Regions)))
+		rec.jarrives = r.Bounded("arrival", math.MaxInt64)
+	}
 	rec.directive = w.loadDirective(r)
 	return rec
 }
@@ -506,6 +517,8 @@ func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (le
 		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, len(w.cfg.Regions), w.state.nextAgent)
 	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(rec.id):
 		err = fmt.Errorf("agent %d names account %d, which is not its open Agent account", rec.id, rec.acct)
+	case rec.journey && w.badJourney(rs, rec, v.Region):
+		err = fmt.Errorf("agent %d has a journey to region %d arriving at %d, which its account in region %d cannot have", rec.id, rec.jto, rec.jarrives, v.Region)
 	default:
 		err = w.checkAgentFields(rs, rec, names)
 	}
@@ -523,7 +536,7 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
 	case w.badDeathCarry(id, rec.carry):
 		return fmt.Errorf("agent %d has DeathCarry %d, which is not its start while the population module is off and outside 0 to D with it on", rec.id, rec.carry)
-	case rec.journey || w.sub.recordBad(rec.ownUse, rec.ownUseJobs):
+	case w.sub.recordBad(rec.ownUse, rec.ownUseJobs) || (rec.journey && (w.migration == nil || w.cfg.Roles[rec.role].Fixed)):
 		return fmt.Errorf("agent %d has own-use or journey state its module does not allow", rec.id)
 	}
 	return nil
@@ -532,7 +545,7 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 // loadAgent reads the record of one agent, checks it and puts the agent in its
 // slot. It returns the agent's ID, the key the next record must exceed. The fields
 // a module hosts are read always (R10): while the module is off, OwnUse and
-// OwnUseJobs must be 0, there is no journey, and DeathCarry must be its start.
+// OwnUseJobs must be 0, there is no journey (and none for a Fixed role), and DeathCarry must be its start.
 func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev uint64, started bool) uint64 {
 	rec := w.readAgentRec(rs, r, names, prev, started)
 	if r.Err() != nil {
@@ -547,6 +560,9 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 		w.roles.row(RoleID(rec.role)), &w.recipes)
 	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
 	w.agents[rec.id] = a
+	if rec.journey {
+		w.migration.depart(a.id, RegionID(rec.jto), rec.jarrives)
+	}
 	if w.sub != nil {
 		w.sub.restoreAgent(a.id, rec.ownUse, rec.ownUseJobs)
 	}

@@ -32,6 +32,7 @@ var positionList = [...]position{
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
 	{"P1.3", "TRN", line},
+	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P2.1", "PRO", line},
@@ -56,6 +57,7 @@ var positionList = [...]position{
 	{"P6.3", "WEL", line},
 	{"P6.4", "AGT", line},
 	{"P7.1", "SPN", line},
+	{"P7.2", "MIG", line},
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
@@ -70,11 +72,11 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.4", "P1.5", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3a", "P1.4", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
-	"P7.2", "P7.2a", "P7.2b",
+	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
 
@@ -98,10 +100,21 @@ func (w *World) positions() error {
 	if w.transport != nil {
 		w.p13Arrivals()
 	}
+	if w.migration != nil {
+		w.p15Arrivals()
+	}
 	if err := w.p16Relief(); err != nil {
 		return err
 	}
 	w.p17Flows()
+	return w.positionsProduce()
+}
+
+// positionsProduce is the middle of the straight line, from phase 2 to the
+// clearing, split from positions to stay within the Lizard complexity limit
+// (N-243, plan 2-14 O7). The position test reads it as part of the straight line,
+// in source order between positions and positionsTail.
+func (w *World) positionsProduce() error {
 	w.p21Complete()
 	w.p23Snapshot()
 	if w.sub != nil {
@@ -134,9 +147,10 @@ func (w *World) positions() error {
 	return w.positionsTail()
 }
 
-// positionsTail is the second half of the straight line, split from positions
-// to stay within the Lizard complexity limit (N-243). The position test reads
-// it as part of the straight line, after positions and in source order.
+// positionsTail is the last part of the straight line, from phase 5, split from
+// positions to stay within the Lizard complexity limit (N-243). The position test
+// reads it as part of the straight line, after positionsProduce and in source
+// order.
 func (w *World) positionsTail() error {
 	w.p51Window()
 	if w.info != nil {
@@ -156,6 +170,9 @@ func (w *World) positionsTail() error {
 	w.p64Shortfall()
 	if err := w.p71Entry(); err != nil {
 		return err
+	}
+	if w.migration != nil {
+		w.p72Migration()
 	}
 	if err := w.p81Age(); err != nil {
 		return err

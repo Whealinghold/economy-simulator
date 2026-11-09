@@ -50,7 +50,7 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324, N-329 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
@@ -71,12 +71,12 @@ PR description.
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
-| MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322 |
+| MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310, N-324 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
-| POP | N-096, N-097, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
+| POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
@@ -85,7 +85,7 @@ PR description.
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
-| SPN | N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
+| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314, N-325 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
@@ -94,7 +94,7 @@ PR description.
 | TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
-| WLD | N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
+| WLD | N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
 
 ## Open notes
 
@@ -211,6 +211,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** applied. The terms of this row go to the `doc.go` glossary at the start of Phase 2, before use: viability, steady state, warm start (already there), surplus factor, activity, start capacity, mean factor, net vector, reference programme, labour share to subsist, available work share, nominal programme, census (balanced), certificate, seed price (as the solver's), drift, residual, supply gap, lean reserve, virtual start offset, lane. "Lane" is qualified (the lane of the solver is not the lane of a credit round or of a merchant's lane) and "census" is qualified (balanced census). The note stays open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the terms of the row (Step, Tick boundary, Phase, Position, Entry (of a tick), Failed world, In-step guard, Market record, Snapshot row, Fan-in) are in the `doc.go` glossary before the code uses them. "Run" and "Snapshot" stay in `notYetTerms` and are added in Phases 2 and 9; "World" gains `WorldParams` in Phase 2; "Executor" stays the job's. Standing; left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the terms of the checkpoint row (checkpoint, restore, format version, frame, header, section, trailer, digest, canonical encoding, one spelling, sparse row, pending totals, construction flag, extension state, `Stateful`, entry of an extension, salt, branch, fixture) and the event name `WorldRestored` are in the `doc.go` glossary before the code uses them; `Reseed` and `Effective seed` were already there and are not repeated. A standing note; left open.
+- **Update (2026-11-09, plan 2-14 Phase 1):** the terms of the migration row (Migration, Journey, Migrant, Pushed, Settled, Margin (of a move), Width (of the margins), Horizon, Outflow cap, Pipeline cap, Provisioning (of a journey), Candidate (destination), Estimate (of a destination)) are in the `doc.go` glossary before the code uses them. A standing note; left open.
 
 ### N-018 Unverified evidence
 
@@ -651,13 +652,6 @@ PR description.
 - **Update (2026-10-17, spawner edits):** read; not settled by them. Left open.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read: `grant` and `acceptMoney` are the one place the pool is drawn or paid by an entry, a birth or a weight reduction (`spec-estates.md` 2.3, 2.8.1); relief and a pool-targeted flow append to the same file in Stage 2. Left open for MON, POP and SPN.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The funding rule EntryPoolShare is the executor's; the row gives Funded and the advisory Budget, taken once after the module's deaths (C15).
-
-### N-097 Migration and the population loop
-
-- **Areas:** POP
-- **Raised:** 2026-10-10, `spec-population.md` 6.5.
-- **Note:** MIG is the other way households enter and leave. It must use the same stake rule for arrivals and not create money, say whether the replacement ratio is part of its signal, and share the pool budget `EntryPoolShare` with births. A closed region (no immigrant) is the behaviour tested before MIG. Relief raises the ratio and so births and lowers deaths (POP open question 4): the same effect as L40.
-- **Update (2026-10-10, MIG):** applied for MIG in `spec-migration.md` 5.5 and 9: a migrant carries its account, so no household is created, no money is created and no stake is paid; neither region's pool is touched and `EntryPoolShare` is not shared (births and entry keep the whole budget); the replacement ratio is NOT part of the signal (the trigger is the household's own earned ratio against `MoveBelow`; a pack with both modules may set `MoveBelow` near `r*` by hand); the closed-region behaviour is unchanged. The money a migrant carries moves the money-limited bound `M / stake` of each region by what it carries (9.3, MIG-A5, L76). Still open for POP: its section 7 (the MIG row) and 6.5.
 
 ### N-099 A trip is a gap in income
 
@@ -1534,6 +1528,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the world's sites (D155): D1, D7, D8 and D10 are called with the keys of WLD 7.3, D5 `siteTrade` before every `Trade` and D3 `siteWork` only for a consumer's `Work`; the draws of D2, D4, D6, D11 to D15 and D17 are modules'. Left open for the other owners.
 - **Update (2026-10-23, plan 2-1 Phase 1):** applied for CHK and WLD: every passage marked "stale under ADR 0008" in `spec-checkpoint.md` (header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4, 6.6.3, 6.7.1, 6.8, 8.1 item 4, 8.4, the EXP row of 11, CHK-A2, 16, 17.2 and 17.3, FR-CHK-006, 025, 051 and the edits-owed rows of 20) and of `spec-world.md` (7.x residue at the construction paragraph, 12, 13, 17 WLD-A5, the N-214 row of 20) is rewritten; the world section (tag 1) holds the next agent ID and the construction flag, the bucket and the pending totals are the ledger's (tag 2), and the header's seed is the effective seed, read back. `models/chk/worked.py`, `size.py` and their outputs are regenerated in Docker. Left open for EXP 7.3 and FR-EXP-062 (plan 2-20), CLB 4.2.1, 7.2.3 and FR-CLB-024 (plan 2-21), STB L120, L124, D88 and the D90 row, TEC 4.4.1 and 4.4.6, the `spec-stability.md` row of `spec-world.md` 22 (S63 and MIG-S3), and the sites and IDs of the module rows.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the CHK passages were rewritten by plan 2-1; the checkpoint row builds without `Stream` and with the header seed read back (plan 2-2 D241). EXP 7.3, FR-EXP-062, CLB 4.2.1, STB and TEC passages remain. Left open.
+- **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `siteMigration` `0x53C434C7EFE6D523` (the first eight bytes of SHA-256 of `economy-sim/site/siteMigration`, checked) is in `spec-world.md` 7.1.4 and the D11 row of 7.3, `id` the agent, keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0 (as `siteInform` is). The constant is appended to `random.go` in Phase 5. Left open for the other owners.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -1903,6 +1898,7 @@ PR description.
 - **Raised:** 2026-10-17, `plan-phase-1-9.md` (git history, `2abbe62^`) (D112).
 - **Note:** The slice view and decision hold only what the slice uses. Appended by their module, in module order: SET `Role.Needs` (folded into `Closed`), `Headroom`, `NoLimit` and `EntryLimited.RoleCeiling`; SUB `OwnUse` (read-only) and the reset of `OwnUseJobs`; POP `PopBirths`, `PopDeaths`, the births and deaths entries and the effective `Renewal` of 0; MIG the refusal `on_journey` and the `RoleSince` of an arrival; SKL as N-264. The `Cause` constants `population`, `births` and `traineeship` are appended after the existing six in `event.go`, and the reasons `in_traineeship`, `on_journey`, `needs_weight_one` after the six of the slice; nothing is inserted (architecture.md 2.10.5).
 - **Update (2026-10-18, plan 1-9 exit gate):** the slice view, decision, `Refusal` and `Facts` carry only slice fields; module fields are appended with their module. Left open.
+- **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `on_journey` (a `Refusal` after the existing values, a `region_bound` obligation) and the `RoleSince` of an arrival are built in plan 2-14 Phase 5; the tree has `offStage`, `regionBounds.add` and `reseedAtArrival` for it. Left open for SET, SUB, POP, SKL.
 
 ### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
 
@@ -2020,6 +2016,7 @@ PR description.
 - **Areas:** WLD, TRN, MIG
 - **Raised:** 2026-10-25, plan 2-3 (R3).
 - **Note:** `w.tk.rings`, `w.runnable`, the pooled wage and the cost anchors are built at P1.1 and P1.2, before the arrivals of P1.3 and P1.5, so an agent that arrives in a region works that tick on anchors that did not count it (`phase_start.go`). The spec defines the anchors from the previous tick, so the lag is allowed; TRN and MIG confirm it in their plans and tests.
+- **Update (2026-11-09, plan 2-14 Phase 1):** MIG reads the same tick scratch: an arrival of P1.5 works its first tick on anchors that did not count it (allowed, spec-world.md 6; a Phase 5 test pins it). Left open for TRN.
 
 ### N-323 A relocation whose pending totals would pass int64 has no row in the refusals of REG 6.1.3
 
@@ -2070,6 +2067,18 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-18 D562.
 - **Note:** `spec-indicators.md` 3.2.1, 5.2.1 and NFR-IND-004 said standard library only for `internal/measure`; they now say the standard library and `internal/checked`, the one shared 128-bit helper (N-019). `import_guard_test.go` enforces the two lists.
 
+### N-329 `migration_flow_window` has no carrier for its product
+
+- **Areas:** CFG, MIG
+- **Raised:** 2026-11-09, plan 2-14 Phase 1 (E5, risk O3).
+- **Note:** `spec-migration.md` 12.3 said the warning `migration_flow_window` carries the product `MoveOutShare` times the window and `MoveGain`; `Warning` has `Rule`, `Path` and `Count` only (`Count` is an `int64` for `pairs`, appended with `rumour_horizon_short`). The attribute is dropped: the warning carries `rule` and `path`. If a count is wanted later, the product in basis points can go in `Count`, which is a change to the warning's spec and to its test.
+
+### N-330 The `RoleSince` of an initial agent decides when the first household is settled
+
+- **Areas:** SPN, WLD, MIG
+- **Raised:** 2026-11-09, plan 2-14 Phase 1 (E8, risk O5).
+- **Note:** An initial agent has `RoleSince` 0, the creation tick, with or without a warm start (`agent.go`, `spec-world.md` 5.4.2), so no household is settled before `max(MoveCooldown, T_a)` ticks (60 with the defaults) and the first migration pass of a run can move nobody earlier. `spec-migration.md` 5.2.2 said a warm-start agent might carry a negative `RoleSince` and be settled at once; no code does that and the owner ruled (2026-11-09) not to change the Stage 1 behaviour. A scenario that wants earlier migration runs past that tick (S61 to S66) or sets `MoveCooldown` and the window low. If a pack ever needs a settled start, SPN and WLD own the rule for it.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2082,4 +2091,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 9302ba468a619bafc60aa013
+NOTES-TAG: 1da7f92524685990e1d72ac1

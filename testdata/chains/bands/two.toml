@@ -1,0 +1,9 @@
+# The bands of the migration scenario S61 on pack two (spec-reference-chain.md 7.1.5;
+# plan 2-14 Phase 8). The key is unset: a key with no `value` line makes the test report
+# its measure and assert nothing on it. A value is set by a reviewed run (STY 8.4), with
+# a `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line (FR-REF-024).
+
+# S61: the most journeys started over the minimum that the net change of households of
+# the shocked region needs, in thousandths (1000 is no more than the minimum).
+[s61.journeys_factor]
+unit = "ratio"

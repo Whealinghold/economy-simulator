@@ -97,6 +97,9 @@ type World struct {
 	// info is the state of the information module, nil when it is off
 	// (information.go).
 	info *information
+	// migration is the state of the migration module, nil when it is off
+	// (migration.go).
+	migration *migration
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass
@@ -531,9 +534,9 @@ func (w *World) loadWorld(rs *restoreCtx, r *codec.Reader) error {
 
 // offStage reports whether the agent is away and has no Work and no view: the
 // one predicate of spec-world.md 6.1.3. It is the transport half (a traveller on
-// a self-carried trip) while the migration module is not built; plan 14 extends
-// it with a journey, and the trainee test waits for the skill barrier module. The flag
-// step skips an agent for which it holds (spec-subsistence.md 5.6).
+// a self-carried trip) and the migration half (an agent on a journey,
+// spec-migration.md 8.3); the trainee test waits for the skill barrier module.
+// The flag step skips an agent for which it holds (spec-subsistence.md 5.6).
 func (w *World) offStage(a *agent) bool {
-	return w.transport != nil && w.transport.isAway(a.id)
+	return (w.transport != nil && w.transport.isAway(a.id)) || w.onJourney(a)
 }

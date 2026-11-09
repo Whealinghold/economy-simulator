@@ -67,6 +67,8 @@ var declaredEvents = []economysim.Event{
 	economysim.ShipmentArrived{},
 	economysim.TransitFactorChanged{},
 	economysim.RumoursServed{},
+	economysim.MigrationStarted{},
+	economysim.MigrationReviewed{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -78,8 +80,7 @@ var notBuiltEvents = []string{
 	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
 	"ContractFormed",
-	"ContractSettled", "ContractRound", "MerchantsPlanned", "MigrationStarted",
-	"MigrationReviewed",
+	"ContractSettled", "ContractRound", "MerchantsPlanned",
 	"OutsideTraded", "OutsideEnded", "OutsideShocked",
 	"YieldShocked", "RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
@@ -449,7 +450,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {
@@ -657,6 +658,25 @@ func TestConstants_Values(t *testing.T) {
 	// The reasons of a spawner decision the world refuses (spec-spawner.md 4)
 	// and the two "entry dropped" Debug reasons (13.3), in the order the
 	// constants are declared. unknown_agent is in the first slice.
+	// The reasons of the migration module (spec-migration.md 7.6, 8.2, 8.3): the
+	// abandon reason of a job left behind by a journey, the refusal and the outcomes.
+	migrationReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonRegionChanged, "region_changed"},
+		{economysim.ReasonOnJourney, "on_journey"},
+		{economysim.ReasonStarted, "started"},
+		{economysim.ReasonNoEstimate, "no_estimate"},
+		{economysim.ReasonNoDestination, "no_destination"},
+		{economysim.ReasonNoRumour, "no_rumour"},
+		{economysim.ReasonNoViable, "no_viable"},
+		{economysim.ReasonNoGain, "no_gain"},
+		{economysim.ReasonBound, "bound"},
+		{economysim.ReasonOutCap, "out_cap"},
+		{economysim.ReasonInCap, "in_cap"},
+		{economysim.ReasonEnded, "ended"},
+	}
 	spawnerReasons := []struct {
 		got  economysim.Reason
 		want string
@@ -714,6 +734,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range spawnerReasons {
 		owner[string(r.got)] = "doc/specs/spec-spawner.md"
+	}
+	for _, r := range migrationReasons {
+		owner[string(r.got)] = "doc/specs/spec-migration.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -826,6 +849,9 @@ func TestConstants_Values(t *testing.T) {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, r := range spawnerReasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range migrationReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

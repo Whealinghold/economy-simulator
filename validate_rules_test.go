@@ -666,6 +666,7 @@ func buildFieldCases() []fieldCase {
 	add(populationFieldCases()...)
 	add(transportFieldCases()...)
 	add(informationFieldCases()...)
+	add(migrationFieldCases()...)
 
 	// A case is named by its field, its description and the path it breaks, so
 	// two cases for one field are two subtests.

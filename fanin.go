@@ -77,6 +77,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.transport != nil {
 		w.dropTraveller(a) // step 2a: a trip to oneself is dropped before the money moves
 	}
+	if w.migration != nil {
+		w.dropJourney(a, region) // step 2a: the journey is deleted, its households counted as ended
+	}
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause

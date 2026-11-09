@@ -99,6 +99,76 @@ type Modules struct {
 	// InfoSpeed has no default, so a zero value does not validate). Its hash id
 	// is 6, whatever its place in this struct.
 	Information *Information
+	// Migration is the migration module: households that move between regions
+	// on a timed journey when their earned ratio is low and a rumoured estimate
+	// of another region is better (spec-migration.md). Nil is off; non-nil is
+	// on. It needs Modules.Information. Its hash id is 9, whatever its place in
+	// this struct.
+	Migration *Migration
+}
+
+// Migration is the configuration of the migration module (spec-migration.md 11).
+// Start from DefaultMigration and set MoveSpeed, which has no default. Every
+// default is a placeholder (N-015, N-027).
+type Migration struct {
+	// MoveSpeed is the distance units a household covers in one tick on a
+	// journey, 1 to MaxSpeed (spec-migration.md 6.4). It is required.
+	MoveSpeed int64
+	// MoveReviewTicks is the period of the review of an agent, in ticks, 1 to
+	// MaxMoveReviewTicks (spec-migration.md 5.1).
+	MoveReviewTicks int64
+	// MoveBelow is the gate: an agent is pushed when its earned ratio is below
+	// this, in basis points, 0 to MaxBasisPoints (spec-migration.md 5.3).
+	MoveBelow int64
+	// MoveGain is the least relative improvement of the estimate over the
+	// household's own measured figure that it needs, in basis points, 0 to
+	// MaxBasisPoints (spec-migration.md 6.5).
+	MoveGain int64
+	// MoveWidth is the width over which the margins of the agents are spread
+	// above MoveGain, in basis points, 0 to MaxBasisPoints (spec-migration.md 6.5).
+	MoveWidth int64
+	// MoveCooldown is the least ticks since RoleSince before an agent is
+	// settled, 0 to MaxWelfareWindow; the effective figure is the longer of this
+	// and the agent's window (spec-migration.md 5.2).
+	MoveCooldown int64
+	// MoveHorizon is the ticks over which a move is valued, 2 to MaxTravelTicks;
+	// a journey of this many ticks or more is not a destination (spec-migration.md
+	// 6.4).
+	MoveHorizon int64
+	// MoveOutShare is the most households that may start a journey from one
+	// region in one tick, in basis points of the region's households, 0 to 10 000;
+	// 0 means none (spec-migration.md 7.3).
+	MoveOutShare int64
+	// MoveInShare is the most households that may be on a journey to one region
+	// at once, in basis points of its households, 0 to 10 000; 0 means none
+	// (spec-migration.md 7.5).
+	MoveInShare int64
+	// Regions are the per-region replacements of the two shares, by region in
+	// canonical order, at most MaxRegions (spec-migration.md 11.2).
+	Regions []RegionMove
+}
+
+// RegionMove is a row of the per-region caps of the migration module
+// (spec-migration.md 11.2): it replaces MoveOutShare in the region as an origin
+// and MoveInShare in it as a destination.
+type RegionMove struct {
+	// Region is the ID of the region the row is for.
+	Region string
+	// OutShare replaces MoveOutShare in this region, 0 to 10 000.
+	OutShare int64
+	// InShare replaces MoveInShare in this region, 0 to 10 000.
+	InShare int64
+}
+
+// canonical returns a copy of the module with its rows by region
+// (spec-config.md 3.4), nil for nil.
+func (m *Migration) canonical() *Migration {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Regions = sortedBy(m.Regions, func(a, b RegionMove) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
 }
 
 // Information is the configuration of the information module
@@ -796,6 +866,10 @@ type Role struct {
 	// with the module nil is ErrModuleDependency) and is hashed only while that
 	// module is on and only when true. Its hash id is 19.
 	Informed bool
+	// Fixed says the households of the role are never moved by the migration
+	// module (spec-migration.md 3.3). It is hashed only while that module is on
+	// and only when true. Its hash id is 20.
+	Fixed bool
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1008,6 +1082,7 @@ func (c Config) canonical() Config {
 	out.Modules.Subsistence = c.Modules.Subsistence.canonical()
 	out.Modules.Population = c.Modules.Population.canonical()
 	out.Modules.Transport = c.Modules.Transport.canonical()
+	out.Modules.Migration = c.Modules.Migration.canonical()
 	return out
 }
 

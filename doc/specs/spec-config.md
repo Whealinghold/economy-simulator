@@ -622,6 +622,7 @@ simulation computes fit in `int64` (maximum `9 223 372 036 854 775 807`, about
 | `MaxRumourAge` | 10 000 | a tenth of `MaxTicksPerYear`; bounds the depth of the price record |
 | `MaxRumourCells` | 4 000 000 | sources times `RumourMaxAge`, the entries of the price record |
 | `MaxRumoursPerView` | 4 096 | the candidates of one informed agent: bounds the loop of a view and its draws |
+| `MaxMoveReviewTicks` | 1 000 | `MoveReviewTicks` of the migration module, 1 to it: a review period of at most a few years (`spec-migration.md` 11) |
 | `MaxOutsideNodes` | 16 | outside nodes of the external module; also a divisor of `MaxLineTotal` |
 | `MaxOutsideLines` | 64 | lines of one outside node (a placeholder, well below `MaxCommodities`) |
 | `MaxCounterparties` | 256 | counterparties of the external module: agent IDs, accounts and boundary accounts are bounded |
@@ -1345,7 +1346,7 @@ with no logger sees them (`spec-integration.md` 6.4). `NewWorld` logs each once 
 is bounded by the size of the configuration and happens once at construction
 (observability-and-logging.md 3.2.2). The warnings that exist are listed with
 their conditions in 7.4.2; a rule is a warning or an error, never both, and the
-severity of every rule is stated in 7.4. `Warnings` appends the viability warnings (7.4.2) only when the structural phases (1 to 5 of 7.1.6) come back clean on a scratch report, and otherwise returns the others, so `Validate` and `Warnings` agree on when the check runs; both reach the one `checkViability`. A warning that counts something (`rumour_horizon_short` of `spec-information.md` 9.3) carries the count in `Warning.Count` (an `int64`, appended to `Warning`, zero for a warning that counts nothing); the construction line logs it as `pairs`. `rumour_horizon_short` needs the shortest distances of the configured graph, so `Warnings` appends it after the structural phases come back clean, as it appends the viability warnings.
+severity of every rule is stated in 7.4. `Warnings` appends the viability warnings (7.4.2) only when the structural phases (1 to 5 of 7.1.6) come back clean on a scratch report, and otherwise returns the others, so `Validate` and `Warnings` agree on when the check runs; both reach the one `checkViability`. A warning that counts something (`rumour_horizon_short` of `spec-information.md` 9.3, and `migration_provision` and `migration_far` of `spec-migration.md` 12.3, which count ordered pairs of regions) carries the count in `Warning.Count` (an `int64`, appended to `Warning`, zero for a warning that counts nothing); the construction line logs it as `pairs`. `rumour_horizon_short` needs the shortest distances of the configured graph, so `Warnings` appends it after the structural phases come back clean, as it appends the viability warnings.
 
 ### 7.3 Structural rules
 
@@ -1754,6 +1755,17 @@ The information module (`Modules.Information`, id 6 in `Modules`) adds: `Informa
 the module is on and the flag is true. The pointer is written even when the struct is zero,
 so `Modules.Information: &Information{}` is `0006 0000`, and its pair goes after the pairs of
 the ids below 6 and before those of the ids above it, whatever the order of building.
+
+The migration module (`Modules.Migration`, id 9 in `Modules`; the type is `Migration`) adds: `Migration` has
+`MoveSpeed` 1, `MoveReviewTicks` 2, `MoveBelow` 3, `MoveGain` 4, `MoveWidth` 5, `MoveCooldown` 6,
+`MoveHorizon` 7, `MoveOutShare` 8, `MoveInShare` 9, `Regions` 10; `RegionMove` has `Region` 1,
+`OutShare` 2, `InShare` 3; and `Role.Fixed` 20 (plan 13 takes 19 for `Informed`, so the next module
+that adds a role field takes 21), a pair only while the module is on and the flag is true. The
+`Regions` rows are written by region. The pointer is written even when the struct is zero, so
+`Modules.Migration: &Migration{}` is `0009 0000`, and its pair goes after the pairs of the ids
+below 9 and before those of the ids above it, whatever the order of building (in Go the pointer
+is declared after `Information`, `Subsistence` having id 8 and `External` id 7 being built later:
+only the hash id follows the row, 2.10.5 of the architecture rules).
 
 The subsistence module (`Modules.Subsistence`, id 8 in `Modules`; the type is `SubsistenceConfig`
 and the registry scope `Subsistence` resolves to it, as `Tenure` resolves to `TenureConfig`)
