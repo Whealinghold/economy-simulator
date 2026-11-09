@@ -22,15 +22,13 @@ func TestLag_FloorAndCeiling(t *testing.T) {
 	}{
 		{"distance 1 at the largest speed", 1, 1_000_000_000, 2},
 		{"distance 1 at speed 1", 1, 1, 2},
-		{"exact division, 40 / 40 = 1", 40, 40, 2},
+		{"exact division, 1 + 40 / 40 = 2", 40, 40, 2},
 		{"one over, ceil(41 / 40) = 2", 41, 40, 3},
-		{"40 at speed 25, ceil(1.6) = 2", 40, 25, 3},
+		{"40 at speed 25, 1 + ceil(1.6) = 3", 40, 25, 3},
 		{"55 at speed 40, lower to middle", 55, 40, 3},
 		{"120 at speed 40, lower to upper", 120, 40, 4},
 		{"30 at speed 40, middle to lower", 30, 40, 2},
 		{"70 at speed 40, middle to upper", 70, 40, 3},
-		{"70 at speed 40, upper to lower", 70, 40, 3},
-		{"40 at speed 40, upper to middle", 40, 40, 2},
 		{"speed 1 is the distance plus 1", 99, 1, 100},
 	}
 	for _, tt := range tests {

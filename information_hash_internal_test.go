@@ -32,15 +32,10 @@ func TestHashConfig_Information(t *testing.T) {
 	// pointer is written even when the struct is zero (spec-config.md 8.2.1).
 	// Subsistence, Population and Resources write their own pairs after the id,
 	// which the empty value leaves out except for their ids and terminators.
-	got := e.buf
-	var ids []uint16
-	for i := 0; i+4 <= len(got); i += 2 {
-		if v := binary.BigEndian.Uint16(got[i:]); v == 3 || v == 5 || v == 6 || v == 8 {
-			ids = append(ids, v)
-		}
-	}
-	if len(ids) < 4 || ids[0] != 3 || ids[1] != 5 || ids[2] != 6 || ids[3] != 8 {
-		t.Errorf("pairsModules(Population, Resources, Information, Subsistence) ids = %v in % x, want 3, 5, 6, 8 in ascending order", ids, got)
+	// Each module is its id and the terminator 0 0, so the stream is exact.
+	want := bytes.Join([][]byte{id(3), {0, 0}, id(5), {0, 0}, id(6), {0, 0}, id(8), {0, 0}}, nil)
+	if !bytes.Equal(e.buf, want) {
+		t.Errorf("pairsModules(Population, Resources, Information, Subsistence) = % x, want % x (ids 3, 5, 6, 8 in ascending order)", e.buf, want)
 	}
 
 	base := Config{}

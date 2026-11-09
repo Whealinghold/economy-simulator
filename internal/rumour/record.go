@@ -109,9 +109,8 @@ func (r *Record) Entries(dst []Obs, source int) []Obs {
 // the tick next saved them: entry i of n is the observation of tick
 // next-n+i, so the newest is the tick before next (spec-information.md 14). ok
 // is false, changing nothing, when source is out of range, next is negative,
-// there are more entries than the depth or than next ticks have run, or the
-// count differs from the one an earlier Load set (every source holds the same
-// number). The caller validates each Obs with Valid.
+// the count is not next capped at the depth (every source holds the ticks run, at
+// most the depth), or next differs from the one an earlier Load set. The caller validates each Obs with Valid.
 func (r *Record) Load(source int, next int64, entries []Obs) (ok bool) {
 	n := int64(len(entries))
 	if !r.canLoad(source, next, n) {
@@ -138,14 +137,17 @@ func (r *Record) Resume(next int64) (ok bool) {
 }
 
 // canLoad reports whether n entries for source, as of tick next, fit the
-// record: the arguments are in range, and they agree with an earlier Load or
-// the record has not run.
+// record: the arguments are in range, n is the ticks run capped at the depth, and
+// they agree with an earlier Load or the record has not run.
 func (r *Record) canLoad(source int, next, n int64) bool {
 	if source < 0 || source >= r.sources || next < 0 || n > r.depth || n > next {
 		return false
 	}
+	if n != min(next, r.depth) {
+		return false
+	}
 	if r.restored {
-		return r.last == next-1 && r.held == n
+		return r.last == next-1
 	}
 	return r.last == -1
 }

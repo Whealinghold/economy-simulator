@@ -274,26 +274,6 @@ func (w *World) rumoursFrom(dst []Rumour, q rumourQuery, r RegionID, tally *rumo
 		return dst
 	}
 	in := w.info
-	for _, c := range q.commodities {
-		if s := in.at[int(r)*len(w.cfg.Commodities)+int(c)]; s != 0 {
-			dst = w.candidate(dst, q, r, c, int(s)-1, tally)
-		}
-	}
-	return dst
-}
-
-// candidate decides one candidate and appends its rumour if it is offered.
-//
-// Only the three invariant calls are excluded from coverage (testing.md 9.5); the
-// rest of the function is covered. They are violated programmer invariants. The bounds of a validated configuration make
-// the lag and the blur fit int64, and the Offered case guarantees that the record
-// holds the vintage, so no test can reach them from a valid world.
-func (w *World) candidate(dst []Rumour, q rumourQuery, r RegionID, c CommodityID, source int, tally *rumourTally) []Rumour {
-	in := w.info
-	e := int64(0)
-	if in.errorBP > 0 {
-		e = w.rnd.drawRange(-in.errorBP, in.errorBP)
-	}
 	var lag int64
 	d, path := w.geo.distance(r, q.reader)
 	if path {
@@ -301,6 +281,28 @@ func (w *World) candidate(dst []Rumour, q rumourQuery, r RegionID, c CommodityID
 		if lag, ok = rumour.Lag(d, in.speed); !ok {
 			invariant("the lag of a validated information speed and distance overflowed")
 		}
+	}
+	for _, c := range q.commodities {
+		if s := in.at[int(r)*len(w.cfg.Commodities)+int(c)]; s != 0 {
+			dst = w.candidate(dst, q, r, c, int(s)-1, lag, path, tally)
+		}
+	}
+	return dst
+}
+
+// candidate decides one candidate and appends its rumour if it is offered. lag and
+// path are those of the pair (source region, reader), which rumoursFrom computes once.
+//
+// Only the invariant calls are excluded from coverage (testing.md 9.5); the rest of
+// the function is covered. They are violated programmer invariants. The bounds of a
+// validated configuration make the lag and the blur fit int64, and the Offered case
+// guarantees that the record holds the vintage, so no test can reach them from a
+// valid world.
+func (w *World) candidate(dst []Rumour, q rumourQuery, r RegionID, c CommodityID, source int, lag int64, path bool, tally *rumourTally) []Rumour {
+	in := w.info
+	e := int64(0)
+	if in.errorBP > 0 {
+		e = w.rnd.drawRange(-in.errorBP, in.errorBP)
 	}
 	out := rumour.Decide(path, lag, in.maxAge, q.asOf)
 	tally.count(out, lag)

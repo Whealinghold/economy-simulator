@@ -224,6 +224,25 @@ func TestCheckpoint_InformationCorrupt(t *testing.T) {
 			}
 		})
 	}
+	t.Run("a count above the ticks run before the ring is full", func(t *testing.T) {
+		t.Parallel()
+		// A checkpoint at tick 2 with depth 4 holds 2 entries per source; 3 is within
+		// the depth but above the ticks run.
+		young, youngCfg, youngOpts := informationCheckpoint(t, 2, 500, 4)
+		rows, ok := infoRows(decodeFrame(t, young).sectionOf(t, informationSectionTag))
+		if !ok || len(rows) == 0 || len(rows[0]) != 2 {
+			t.Fatalf("section 16 of a checkpoint at tick 2 with depth 4 = %d sources (parsed %v), want some of 2 entries", len(rows), ok)
+		}
+		for i := range rows {
+			rows[i] = append(rows[i], rows[i][0])
+		}
+		c := reframe(t, young, func(secs []section) []section {
+			return editSection(secs, informationSectionTag, func([]byte) []byte { return infoBody(rows) })
+		})
+		if _, err := economysim.RestoreWorld(youngCfg, c, youngOpts...); !errors.Is(err, economysim.ErrCheckpointCorrupt) {
+			t.Errorf("RestoreWorld() error = %v, want ErrCheckpointCorrupt", err)
+		}
+	})
 	t.Run("a row in the integration section", func(t *testing.T) {
 		t.Parallel()
 		c := reframe(t, raw, func(secs []section) []section {

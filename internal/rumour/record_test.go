@@ -162,7 +162,7 @@ func TestRecord_RestoreOrder(t *testing.T) {
 // Requirement: FR-INF-007
 func TestRecord_LoadRefusals(t *testing.T) {
 	t.Parallel()
-	three := []rumour.Obs{obsOf(0, 1), obsOf(0, 2), obsOf(0, 3)}
+	four := []rumour.Obs{obsOf(0, 0), obsOf(0, 1), obsOf(0, 2), obsOf(0, 3)}
 	tests := []struct {
 		name    string
 		prepare func(r *rumour.Record)
@@ -170,17 +170,18 @@ func TestRecord_LoadRefusals(t *testing.T) {
 		next    int64
 		entries []rumour.Obs
 	}{
-		{"source out of range", func(*rumour.Record) {}, 2, 4, three},
-		{"negative source", func(*rumour.Record) {}, -1, 4, three},
-		{"more entries than the depth", func(*rumour.Record) {}, 0, 9, append(slices.Clone(three), obsOf(0, 4), obsOf(0, 5))},
-		{"more entries than ticks run", func(*rumour.Record) {}, 0, 2, three},
+		{"source out of range", func(*rumour.Record) {}, 2, 4, four},
+		{"negative source", func(*rumour.Record) {}, -1, 4, four},
+		{"more entries than the depth", func(*rumour.Record) {}, 0, 9, append(slices.Clone(four), obsOf(0, 4))},
+		{"more entries than ticks run", func(*rumour.Record) {}, 0, 2, four},
+		{"fewer entries than the ticks run", func(*rumour.Record) {}, 0, 10, four[:3]},
 		{"negative tick", func(*rumour.Record) {}, 0, -1, nil},
-		{"count differs from an earlier load", func(r *rumour.Record) { r.Load(0, 4, three) }, 1, 4, three[:2]},
-		{"tick differs from an earlier load", func(r *rumour.Record) { r.Load(0, 4, three) }, 1, 5, three},
-		{"record already ran", func(r *rumour.Record) { run(r, 3) }, 0, 4, three},
-		{"earlier tick than an earlier load, same count", func(r *rumour.Record) { r.Load(0, 4, three) }, 1, 3, three},
-		{"source far out of range", func(*rumour.Record) {}, 9, 4, three},
-		{"more entries than an earlier load", func(r *rumour.Record) { r.Load(0, 4, three) }, 1, 4, append(slices.Clone(three), obsOf(0, 0))},
+		{"count differs from an earlier load", func(r *rumour.Record) { r.Load(0, 4, four) }, 1, 4, four[:3]},
+		{"tick differs from an earlier load", func(r *rumour.Record) { r.Load(0, 4, four) }, 1, 5, four},
+		{"record already ran", func(r *rumour.Record) { run(r, 3) }, 0, 4, four},
+		{"earlier tick than an earlier load, same count", func(r *rumour.Record) { r.Load(0, 4, four) }, 1, 3, four[:3]},
+		{"source far out of range", func(*rumour.Record) {}, 9, 4, four},
+		{"more entries than an earlier load", func(r *rumour.Record) { r.Load(0, 4, four) }, 1, 4, append(slices.Clone(four), obsOf(0, 0))},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

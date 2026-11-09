@@ -30,7 +30,6 @@ func TestDecide_FirstCaseWins(t *testing.T) {
 		{"lag above the tick is not yet", true, 3, 60, 2, rumour.NotYet},
 		{"tick 0 is not yet for the least lag", true, 2, 60, 0, rumour.NotYet},
 		{"lag equal to the tick is offered", true, 3, 60, 3, rumour.Offered},
-		{"the migration pass reads as of the next tick", true, 3, 60, 3, rumour.Offered},
 		{"ordinary candidate", true, 4, 60, 100, rumour.Offered},
 	}
 	for _, tt := range tests {
