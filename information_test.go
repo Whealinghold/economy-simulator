@@ -256,6 +256,13 @@ func TestWarnings_Information(t *testing.T) {
 		{"an informed role with no source elsewhere", func(c *economysim.Config) { c.Groups = c.Groups[:1] },
 			"informed_without_sources", []string{"roles/cook/informed"}},
 		{"an informed role with a source elsewhere", func(c *economysim.Config) {}, "informed_without_sources", nil},
+		// The digger has no group: an agent of it may enter any region, and the world upkeep
+		// (staple, prepared, fuel) is traded in both regions by the cooks, so it has candidates.
+		{"an informed role with no group", func(c *economysim.Config) {
+			for i := range c.Roles {
+				c.Roles[i].Informed = c.Roles[i].ID == "digger"
+			}
+		}, "informed_without_sources", nil},
 		{"the module off", func(c *economysim.Config) {
 			c.Modules.Information = nil
 			c.Roles[0].Informed, c.Roles[1].Informed = false, false
