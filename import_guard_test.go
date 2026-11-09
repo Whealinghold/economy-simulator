@@ -147,8 +147,8 @@ func TestImportGuard_Detects(t *testing.T) {
 
 // TestImports_StdlibAndLayers verifies, for every non-test file in the scope
 // of guardedFiles, that the root package, internal/**, strategy/, indicator/,
-// experiment/ and denomination/ import the standard library and the module only, that
-// internal/ never imports a package above it, that the root imports none of
+// experiment/ and denomination/ import the standard library and the module
+// only, that internal/ never imports a package above it, that the root imports none of
 // config/, strategy/, indicator/ and experiment/, and that only config/
 // imports the TOML parser.
 //

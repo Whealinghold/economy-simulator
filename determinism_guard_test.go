@@ -117,8 +117,8 @@ func panicSaysInvariant(call *ast.CallExpr) bool {
 // guardedFiles returns the non-test Go files of the module at dir that the
 // guards cover, relative to dir: the root package (not its subdirectories),
 // internal/**, config/**, and strategy/, indicator/, experiment/ and
-// denomination/ when they exist. examples/ and otelobserver/ are separate modules and testdata holds
-// no source of the module.
+// denomination/ when they exist. examples/ and otelobserver/ are separate
+// modules and testdata holds no source of the module.
 func guardedFiles(dir string) ([]string, error) {
 	var files []string
 	for _, root := range []string{".", "internal", "config", "strategy", "indicator", "experiment", "denomination"} {
@@ -153,9 +153,9 @@ func guardedFiles(dir string) ([]string, error) {
 
 // TestGuardedFiles_Scope verifies the scope function on a small tree.
 //
-// Guard: a walk that missed strategy/, indicator/, experiment/ or denomination/, or that
-// descended into a separate module, would let a violation through or fail on
-// code the rules do not cover.
+// Guard: a walk that missed strategy/, indicator/, experiment/ or
+// denomination/, or that descended into a separate module, would let a
+// violation through or fail on code the rules do not cover.
 func TestGuardedFiles_Scope(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -241,8 +241,8 @@ var s = "rand.Intn(3) time.Now()"`, 0},
 }
 
 // TestNoBannedUses_InNonTestFiles verifies that no non-test file of the root
-// package, internal/, config/, strategy/, indicator/, experiment/ or denomination/ uses the global math/rand functions,
-// crypto/rand, time.Now, time.Since, slog.Default, fmt.Print*, log.Print*,
+// package, internal/, config/, strategy/, indicator/, experiment/ or
+// denomination/ uses the global math/rand functions, crypto/rand, time.Now, time.Since, slog.Default, fmt.Print*, log.Print*,
 // the builtins print and println, os.Stdout or os.Stderr, that none
 // declares an init function, and that every panic says "invariant" (the scope
 // is guardedFiles).

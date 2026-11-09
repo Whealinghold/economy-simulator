@@ -161,9 +161,6 @@
 //     from outside; its Kind is KindFaucet.
 //   - Field id: the position of a field in its struct, counted from 1, under
 //     which the configuration hash writes it. An id is never reused or moved.
-//   - Formatter: a pure function from an int64 amount to text in the Units of a
-//     Ladder, built by denomination.NewFormatter with an Option such as
-//     WithPrecision.
 //   - Finaliser: the SplitMix64 output function, a bijection of uint64 that mixes
 //     a word so that near inputs give unrelated outputs (ordering.Finalise).
 //   - Flow totals: the ledger's per-tick total moved for each region, reason
@@ -171,6 +168,9 @@
 //     the tick.
 //   - Fixed point: money, prices and quantities are whole numbers of their
 //     smallest unit; no floating point affects a result.
+//   - Formatter: a pure function from an int64 amount to text in the Units of a
+//     denomination.Ladder, built by denomination.NewFormatter with an Option
+//     such as WithPrecision.
 //   - Group: the households of one role in one region, with an optional scale.
 //   - Census: the configured households of the groups of a world
 //     (Group.Households), from which the agents and their weights are derived.
@@ -206,8 +206,8 @@
 //     bounded warning.
 //   - Pack: a set of configuration documents, layered in order, that defines a
 //     supply chain; later documents add to or override earlier ones.
-//   - Precision: the number of decimal places, 0 to 6, with which the smallest
-//     Unit of a Ladder is written.
+//   - Precision: the number of decimal places, 0 to 6, with which a Formatter
+//     writes the smallest Unit of its denomination.Ladder.
 //   - Presentation-only field: a field, such as a label, that changes no result
 //     and is not part of the configuration hash.
 //   - Price: money per unit of a commodity, an int64 count of minor units.
@@ -420,8 +420,8 @@
 //   - Effective factor: the site factor multiplied in turn by the yield shock,
 //     the technology gain, the trainee or hire factor and the resource
 //     abundance, each step truncated; it scales the output of a job.
-//   - Unit: one rung of a Ladder, with a name, a symbol and a size in minor
-//     units.
+//   - Unit: one rung of a denomination.Ladder (not a unit of a commodity), with
+//     a name, a symbol and a size in minor units.
 //   - Unit cost: the cost of one unit of an output of a recipe, in minor units,
 //     rounded up: inputs, tool wear, labour at the regional wage and rent,
 //     times the output's cost share, over the output quantity and the
