@@ -111,3 +111,41 @@ func TestPlan_Confirm(t *testing.T) {
 		t.Errorf("ConfirmPlan(tier L) = %+v, want seeds 1..10 and 10 replicas", l)
 	}
 }
+
+// TestPlan_EdgesOfTheSpan verifies the explore and its widening at the ends of a
+// grid: a base within two levels of the top ends the interval at the top, an
+// interval that starts at index 1 is not at an edge and widens to index 0.
+//
+// Requirement: FR-CLB-026, FR-CLB-023
+func TestPlan_EdgesOfTheSpan(t *testing.T) {
+	t.Parallel()
+	top := mustGrid(t, lin(250), 1000, bnds(0, 1000), noOff()) // 0 250 500 750 1000, base is the last
+	if got, want := ScreenLevels(top), []int64{750, 1000}; !slices.Equal(got, want) {
+		t.Errorf("ScreenLevels(base at the top) = %v, want %v", got, want)
+	}
+	if s := Explore(top); s != (Span{Lo: 2, Hi: 4}) {
+		t.Errorf("Explore(base at the top) = %v, want {2 4}", s)
+	}
+	if !AtEdge(top, Span{Lo: 2, Hi: 4}, true) || AtEdge(top, Span{Lo: 2, Hi: 3}, true) {
+		t.Errorf("AtEdge(upper) wrong at the last index and the one before it")
+	}
+	if AtEdge(top, Span{Lo: 1, Hi: 4}, false) || !AtEdge(top, Span{Lo: 0, Hi: 4}, false) {
+		t.Errorf("AtEdge(lower) wrong at index 1 and index 0")
+	}
+	w, ok := Widen(top, Span{Lo: 1, Hi: 4}, false)
+	if !ok || w.Lo != 0 {
+		t.Errorf("Widen(lower from index 1) = %v, %v, want Lo 0", w, ok)
+	}
+}
+
+// TestPlan_ExploreSizeErrors verifies that a failed ExploreSize returns 0.
+//
+// Requirement: FR-CLB-023
+func TestPlan_ExploreSizeErrors(t *testing.T) {
+	t.Parallel()
+	for _, k := range []int{-1, math.MaxInt} {
+		if n, err := ExploreSize(k); err == nil || n != 0 {
+			t.Errorf("ExploreSize(%d) = %d, %v, want 0 and an error", k, n, err)
+		}
+	}
+}

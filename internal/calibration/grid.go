@@ -121,7 +121,7 @@ func Build(r Rule, base int64, b Bounds, off Off, valid func(level int64) bool) 
 		return Grid{}, err
 	}
 	kept := cutOff(all, base, off, r.Kind == Set)
-	return neighbours(all, kept, base, off, valid), nil
+	return neighbours(all, kept, base, valid), nil
 }
 
 // levelsOf is step 1: the levels of the kind, in bounds, with the base among them.
@@ -162,13 +162,9 @@ func geoLevels(base int64, b Bounds) ([]int64, error) {
 			break
 		}
 		out = append(out, v)
-		if v == floor {
-			break
-		}
 	}
 	slices.Sort(out)
-	out = slices.Compact(out)
-	return slices.DeleteFunc(out, func(v int64) bool { return v < floor || v > b.Hi }), nil
+	return slices.Compact(out), nil // the halvings repeat the floor: rdiv(5, 8) = 1 = rdiv(5, 4)
 }
 
 // double is the checked multiply of the geometric grid: it reports ErrOverflow
@@ -200,10 +196,10 @@ func linLevels(base, step int64, b Bounds) ([]int64, error) {
 	s := uint64(step)
 	below := (uint64(base) - uint64(b.Lo)) / s
 	above := (uint64(b.Hi) - uint64(base)) / s
-	if below >= maxLevels || above >= maxLevels || below+above >= maxLevels {
+	if below+above >= maxLevels { // no wrap: below+above is at most (Hi-Lo)/s, below 2^64
 		return nil, ErrBase
 	}
-	out := make([]int64, 0, below+above+1)
+	var out []int64
 	for k := below; k > 0; k-- {
 		out = append(out, base-int64(k*s)) // k*s <= base-Lo: in int64, no wrap
 	}
@@ -263,16 +259,12 @@ func offIndex(all []int64, bi int, off int64, byPosition bool) int {
 	if off < all[bi] {
 		return slices.IndexFunc(all, func(v int64) bool { return v > off }) - 1
 	}
-	i := slices.IndexFunc(all, func(v int64) bool { return v >= off })
-	if i < 0 {
-		return len(all)
-	}
-	return i
+	return slices.IndexFunc(all, func(v int64) bool { return v >= off }) // -1: nothing is cut
 }
 
 // neighbours is steps 3 and 4: the kept levels that valid accepts, the base
 // always kept, and the nearest of them on each side of the base.
-func neighbours(all, kept []int64, base int64, off Off, valid func(int64) bool) Grid {
+func neighbours(all, kept []int64, base int64, valid func(int64) bool) Grid {
 	var g Grid
 	for _, v := range kept {
 		if v == base || valid == nil || valid(v) {
@@ -280,8 +272,8 @@ func neighbours(all, kept []int64, base int64, off Off, valid func(int64) bool) 
 		}
 	}
 	g.Base = slices.Index(g.Levels, base)
-	g.Lower = Side{Edge: sideEdge(all, kept, base, off, true)}
-	g.Upper = Side{Edge: sideEdge(all, kept, base, off, false)}
+	g.Lower = Side{Edge: sideEdge(all, kept, base, true)}
+	g.Upper = Side{Edge: sideEdge(all, kept, base, false)}
 	if g.Base > 0 {
 		g.Lower = Side{Present: true, Level: g.Levels[g.Base-1]}
 	}
@@ -292,9 +284,9 @@ func neighbours(all, kept []int64, base int64, off Off, valid func(int64) bool) 
 }
 
 // sideEdge says why a side has no neighbour, from the uncut levels: no level on
-// that side is a bound; the nearest being the off value, or cut, is an off edge;
-// the nearest kept but invalid is a rule edge.
-func sideEdge(all, kept []int64, base int64, off Off, below bool) Edge {
+// that side is a bound; the nearest cut (it is the off value or lies beyond it) is
+// an off edge; the nearest kept but invalid is a rule edge.
+func sideEdge(all, kept []int64, base int64, below bool) Edge {
 	bi := slices.Index(all, base)
 	var near int64
 	switch {
@@ -305,7 +297,7 @@ func sideEdge(all, kept []int64, base int64, off Off, below bool) Edge {
 	default:
 		return Bound
 	}
-	if (off.Has && near == off.Value) || !slices.Contains(kept, near) {
+	if !slices.Contains(kept, near) { // the off value, or a level beyond it, was cut
 		return OffEdge
 	}
 	return RuleEdge

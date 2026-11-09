@@ -87,3 +87,16 @@ func TestSeeds_Threshold(t *testing.T) {
 		}
 	}
 }
+
+// TestSeeds_ErrorValues verifies that a failed Block returns zero seeds, not a
+// partial block.
+//
+// Requirement: FR-CLB-020
+func TestSeeds_ErrorValues(t *testing.T) {
+	t.Parallel()
+	for _, b := range []int{0, math.MaxInt, (math.MaxInt64-100)/100 + 1} {
+		if first, last, err := Block(b); err == nil || first != 0 || last != 0 {
+			t.Errorf("Block(%d) = %d, %d, %v, want 0, 0 and an error", b, first, last, err)
+		}
+	}
+}
