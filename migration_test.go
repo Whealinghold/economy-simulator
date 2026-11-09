@@ -407,3 +407,34 @@ func TestPass_RunsOnTheOverlay(t *testing.T) {
 		t.Errorf("two runs of 200 ticks with seed 7 ended in different snapshots, want the same")
 	}
 }
+
+// TestValidate_MigrationTooManyRows verifies that more region rows than MaxRegions
+// are ErrTooMany at the rows, without the validator walking them.
+//
+// Requirement: FR-MIG-004
+func TestValidate_MigrationTooManyRows(t *testing.T) {
+	t.Parallel()
+	c := migrationConfig()
+	c.Modules.Migration.Regions = make([]economysim.RegionMove, economysim.MaxRegions+1)
+	var ve *economysim.ValidationError
+	err := c.Validate()
+	if !errors.Is(err, economysim.ErrTooMany) || !errors.As(err, &ve) || join(ve.Path) != "modules/migration/regions" {
+		t.Errorf("Validate(%d rows) = %v, want ErrTooMany at modules/migration/regions", len(c.Modules.Migration.Regions), err)
+	}
+}
+
+// TestWarnings_MigrationRouteNeedsAGraph verifies that the two route warnings are
+// left out, and nothing panics, when the edges do not build a graph (an edge to a
+// region that is not defined): that is the graph rules' error to report.
+//
+// Guard: the warnings build the graph on a configuration that may not validate.
+func TestWarnings_MigrationRouteNeedsAGraph(t *testing.T) {
+	t.Parallel()
+	c := migrationConfig()
+	c.Edges = append(c.Edges, economysim.Edge{From: "north", To: "nowhere", Distance: 10})
+	for _, rule := range []string{"migration_provision", "migration_far"} {
+		if got := warnPaths(c, rule); len(got) != 0 {
+			t.Errorf("Warnings(unbuildable graph) %s at %v, want none", rule, got)
+		}
+	}
+}

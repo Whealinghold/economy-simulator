@@ -360,3 +360,60 @@ func TestPositions_P15P72(t *testing.T) {
 		}
 	}
 }
+
+// TestNewMigration_RegionRowsOverrideShares verifies that a region row replaces
+// the world's two shares for that region only, and that a region without a row
+// keeps the world's: the resolved shares are what the caps of the pass read.
+//
+// Requirement: FR-MIG-004, FR-MIG-021
+func TestNewMigration_RegionRowsOverrideShares(t *testing.T) {
+	t.Parallel()
+	w, _, _ := migWorld(t, func(c *Config) {
+		c.Modules.Migration.MoveOutShare, c.Modules.Migration.MoveInShare = 50, 100
+		c.Modules.Migration.Regions = []RegionMove{{Region: "b", OutShare: 7, InShare: 9}}
+	})
+	m := w.migration
+	for g, want := range [][2]int64{infoA: {50, 100}, infoB: {7, 9}, infoC: {50, 100}} {
+		if m.outShare[g] != want[0] || m.inShare[g] != want[1] {
+			t.Errorf("shares of region %d = %d, %d, want %d, %d", g, m.outShare[g], m.inShare[g], want[0], want[1])
+		}
+	}
+}
+
+// TestMigrationCommodities_RegionExtraUpkeepJoinsK verifies that a commodity in
+// the extra upkeep of any region is in K(role), in ascending order, though the
+// role's own list and recipes do not name it.
+//
+// Requirement: FR-MIG-011, FR-MIG-046
+func TestMigrationCommodities_RegionExtraUpkeepJoinsK(t *testing.T) {
+	t.Parallel()
+	c := infoConfig()
+	r := &c.Roles[0]
+	before := migrationCommodities(&c, newLookup(&c), r)
+	c.Regions[1].ExtraUpkeep = []Item{{Commodity: "zz_extra", Quantity: 1}}
+	got := migrationCommodities(&c, newLookup(&c), r)
+	want := append(slices.Clone(before), "zz_extra")
+	if !slices.Equal(got, want) {
+		t.Errorf("migrationCommodities with an extra upkeep = %v, want %v", got, want)
+	}
+}
+
+// TestJourneyTable_ViolatedInvariants verifies that a second journey for one agent,
+// and a finish whose agent is on the table but missing from the ascending list,
+// are programmer-invariant panics and not silent corruption.
+//
+// Guard: the pass excludes agents on a journey and keeps both structures in step;
+// if either broke, an arrival would be lost or doubled with no signal.
+func TestJourneyTable_ViolatedInvariants(t *testing.T) {
+	t.Parallel()
+	w, _, _ := migWorld(t, nil)
+	m := w.migration
+	m.depart(3, infoB, 5)
+	if msg := invariantMessage(func() { m.depart(3, infoC, 6) }); msg == "" {
+		t.Errorf("depart of an agent already on a journey did not panic")
+	}
+	m.active = nil // the table says agent 3 is away, the list does not
+	if msg := invariantMessage(func() { m.finish(3) }); msg == "" {
+		t.Errorf("finish of an agent missing from the active list did not panic")
+	}
+}
