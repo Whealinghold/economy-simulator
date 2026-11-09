@@ -88,7 +88,7 @@ func TestRank_DeclaredRowsFollowTheTable(t *testing.T) {
 	t.Parallel()
 	got := DeclaredByRank(nil)
 	// want_consumption is row 6 of the table, relief row 12, the loan rows 25 to
-	// 27 and deaths row 35; the numbers of the first two are the highest, so the
+	// 27 and deaths rank 41 (its pinned code, registry.go); the numbers of the first two are the highest, so the
 	// two orders differ.
 	want := []Reason{WantConsumption, Relief, LoanOut, LoanRepay, LoanInterest, Deaths}
 	if !slices.Equal(got, want) {

@@ -523,7 +523,7 @@ func (w *World) fillSeeds(g RegionID, row *roleRow) {
 // rest are neither created nor deferred, only counted (FR-SPN-008).
 func (w *World) execEnter(g RegionID, d Decision) error {
 	x := &w.ex
-	stake, _ := w.entryMoney(d.Role, d.Cause, true) // host only picks the reason, not the amount
+	stake := w.entryStake(d.Role, d.Cause)
 	funded := occupation.Funded(d.Households, int64(min(x.budget, w.estates.pool(w.ledger, g))), int64(stake))
 	x.budget -= Money(funded) * stake
 	unfunded := d.Households - funded

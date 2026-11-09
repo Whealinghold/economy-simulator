@@ -590,24 +590,29 @@ func (w *World) reductionReason(c Cause) ledger.Reason {
 	return ledger.Starvation
 }
 
-// entryMoney is the money each household of an entry brings and the ledger reason
-// it is paid under (spec-population.md 4.3, D427): the stake for a birth, the
-// role's StartMoney for every other entry, by births into a host and by
-// start_money into a new agent unless the module's births, which are always
-// births. With the module off it is what Stage 1 does.
-func (w *World) entryMoney(role RoleID, cause Cause, host bool) (Money, ledger.Reason) {
+// entryStake is the money each household of an entry brings (spec-population.md
+// 4.3, D427): the stake for a birth, the role's StartMoney for every other entry.
+// With the module off it is what Stage 1 does.
+func (w *World) entryStake(role RoleID, cause Cause) Money {
 	start := w.cfg.Roles[role].StartMoney
-	switch {
-	case w.pop != nil && cause == CauseBirths:
-		stake, ok := checked.MulDiv(int64(start), w.pop.stakeBP, wholeBP)
-		if !ok {
-			invariant("the birth stake overflows after validation")
-		}
-		return Money(stake), ledger.Births
-	case host:
-		return start, ledger.Births
+	if w.pop == nil || cause != CauseBirths {
+		return start
 	}
-	return start, ledger.StartMoney
+	stake, ok := checked.MulDiv(int64(start), w.pop.stakeBP, wholeBP)
+	if !ok {
+		invariant("the birth stake overflows after validation")
+	}
+	return Money(stake)
+}
+
+// entryMoney is the money each household of an entry brings and the ledger reason
+// it is paid under: births for the module's births and for any entry into a host,
+// start_money for another entry into a new agent.
+func (w *World) entryMoney(role RoleID, cause Cause, host bool) (Money, ledger.Reason) {
+	if (w.pop != nil && cause == CauseBirths) || host {
+		return w.entryStake(role, cause), ledger.Births
+	}
+	return w.entryStake(role, cause), ledger.StartMoney
 }
 
 // renewalBP is the effective Renewal: 0 while the module is on, whatever is
