@@ -123,7 +123,7 @@ func newTransport(c *Config) *transportState {
 // isAway reports whether the agent is the traveller of a live self-carried
 // shipment.
 func (t *transportState) isAway(id AgentID) bool {
-	return int(id) < len(t.away) && t.away[id]
+	return id >= 0 && int(id) < len(t.away) && t.away[id] // Away is public: any ID may come in
 }
 
 // tripOf returns the self-carried shipment in flight whose traveller is the agent,

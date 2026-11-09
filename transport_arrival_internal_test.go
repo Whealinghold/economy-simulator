@@ -411,6 +411,21 @@ func TestAway_WorkAndTradeSkipped(t *testing.T) {
 	}
 }
 
+// TestAway_OutOfRangeIDIsNotAway verifies that the public Away answers false, and
+// does not panic, for an ID below 0 or past the issued agents.
+//
+// Guard: Away takes any AgentID from a consumer; a negative one indexed the away
+// table and panicked.
+func TestAway_OutOfRangeIDIsNotAway(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, shipConfig(), WithStrategy("script", &awayProbe{work: map[int64]int{}, trade: map[int64]int{}, probe: shipHome}))
+	for _, id := range []AgentID{-1, 1 << 40} {
+		if w.Away(id) {
+			t.Errorf("Away(%d) = true, want false", id)
+		}
+	}
+}
+
 // TestAudit_Transport verifies that each check of spec-transport.md 7.4.1 fails when
 // its state is corrupted and names the check, wrapping ErrAuditFailed.
 //

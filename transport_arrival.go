@@ -314,7 +314,10 @@ func (w *World) auditAccount(s *shipment, used map[int]bool) string {
 	}
 	used[s.account] = true
 	for c := range w.cfg.Commodities {
-		have, _, _ := w.ledger.Holding(s.account, c)
+		have, _, err := w.ledger.Holding(s.account, c)
+		if err != nil {
+			return fmt.Sprintf("account %d: the ledger refused the holding of commodity %d: %v", s.account, c, err)
+		}
 		if shipped := s.shippedOf(c); have > shipped {
 			return fmt.Sprintf("account %d holds %d of commodity %d, more than the %d shipped", s.account, have, c, shipped)
 		}
@@ -326,12 +329,19 @@ func (w *World) auditAccount(s *shipment, used map[int]bool) string {
 // empty.
 func (w *World) auditFreeAccounts(used map[int]bool, fail func(string, ...any) error) error {
 	for id := range w.ledger.Len() {
-		v, _ := w.ledger.Account(id)
+		v, err := w.ledger.Account(id)
+		if err != nil {
+			return fail("the ledger refused account %d: %v", id, err)
+		}
 		if v.Kind != ledger.KindTransit || v.Closed || used[id] {
 			continue
 		}
 		for c := range w.cfg.Commodities {
-			if have, _, _ := w.ledger.Holding(id, c); have != 0 {
+			have, _, err := w.ledger.Holding(id, c)
+			if err != nil {
+				return fail("the ledger refused the holding of commodity %d in account %d: %v", c, id, err)
+			}
+			if have != 0 {
 				return fail("free Transit account %d holds %d of commodity %d", id, have, c)
 			}
 		}
