@@ -335,3 +335,44 @@ func TestRecord_Edges(t *testing.T) {
 		}
 	}
 }
+
+// TestRecord_Resume verifies that a record with no source is resumed as of a
+// checkpoint tick: it then holds the ticks run up to the depth and goes on from
+// the next tick, and Resume refuses a record that has sources, one that has
+// already run or been restored, and a negative tick.
+//
+// Requirement: FR-INF-029
+func TestRecord_Resume(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		sources  int
+		prepare  func(r *rumour.Record)
+		next     int64
+		wantOK   bool
+		wantHeld int
+	}{
+		{"before the depth", 0, func(*rumour.Record) {}, 2, true, 2},
+		{"past the depth", 0, func(*rumour.Record) {}, 9, true, 4},
+		{"at tick zero", 0, func(*rumour.Record) {}, 0, true, 0},
+		{"negative tick", 0, func(*rumour.Record) {}, -1, false, 0},
+		{"has sources", 1, func(*rumour.Record) {}, 3, false, 0},
+		{"already run", 0, func(r *rumour.Record) { r.Seal(0) }, 3, false, 1},
+		{"already restored", 0, func(r *rumour.Record) { r.Resume(2) }, 3, false, 2},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := rumour.NewRecord(tt.sources, 4)
+			tt.prepare(r)
+			if ok := r.Resume(tt.next); ok != tt.wantOK || r.Held() != tt.wantHeld {
+				t.Errorf("Resume(%d) = %v with %d held, want %v with %d", tt.next, ok, r.Held(), tt.wantOK, tt.wantHeld)
+			}
+		})
+	}
+	r := rumour.NewRecord(0, 4)
+	r.Resume(6)
+	r.Seal(6) // goes on from the tick after the checkpoint's last
+	if r.Held() != 4 {
+		t.Errorf("after Resume(6) and Seal(6), Held() = %d, want 4", r.Held())
+	}
+}

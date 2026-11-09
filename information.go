@@ -3,7 +3,9 @@ package economysim
 import (
 	"context"
 	"log/slog"
+	"math"
 
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/rumour"
 )
@@ -14,7 +16,7 @@ import (
 // The file holds, in the order of architecture.md 2.10.1: the state, the
 // validator and the warnings (the configuration surface), the construction of
 // the sources, the method of P5.2, the filler of the trade view and the
-// function that makes rumours. The checkpoint section follows in a later phase.
+// function that makes rumours, and the checkpoint sections.
 
 // Rumour is what an informed agent has heard of a remote market: a reading of
 // the price that market published Lag ticks ago, blurred by a bounded error. It
@@ -496,4 +498,83 @@ func horizonWarnings(c *Config) []Warning {
 		return nil
 	}
 	return []Warning{{Path: []string{"modules", "information", "rumour_max_age"}, Rule: "rumour_horizon_short", Count: pairs}}
+}
+
+// saveInformation writes tag 16 (spec-checkpoint.md 4.2, spec-information.md 14):
+// for each source in ascending order, the number of observations held and the
+// observations from the oldest to the newest as Price, Mean and Age. The ring's
+// write position, the sources, the lags and the rumours are not saved: the
+// position is the tick modulo the depth, and the rest is derived.
+func (w *World) saveInformation(cw *codec.Writer) error {
+	in := w.info
+	var held []rumour.Obs
+	for i := range in.sources {
+		held = in.rec.Entries(held[:0], i)
+		cw.Count(len(held))
+		for _, o := range held {
+			cw.U(unsigned(o.Price))
+			cw.U(unsigned(o.Mean))
+			cw.U(unsigned(o.Age))
+		}
+	}
+	return nil
+}
+
+// loadInformation reads tag 16 into the record of the world, which was derived
+// from the configuration. Every source holds the ticks run, at most the depth: a
+// count anywhere else (above the depth, unequal between sources, or not the number
+// of ticks written) is corrupt, as is a price below 1 or above MaxPrice, a mean
+// above MaxPrice or an age below 0. The entries are placed so that entry i of n is
+// the tick T - n + i of a checkpoint at T (rumour.Record.Load).
+func (w *World) loadInformation(rs *restoreCtx, r *codec.Reader) error {
+	in := w.info
+	want := int(min(rs.tick, int64(in.rec.Depth())))
+	if len(in.sources) == 0 && !in.rec.Resume(rs.tick) {
+		r.Failf("the record with no source refuses tick %d", rs.tick)
+	}
+	var entries []rumour.Obs
+	for i := range in.sources {
+		n := r.Count(3)
+		if r.Err() == nil && n != want {
+			r.Failf("source %d holds %d observations, want %d (the ticks run, at most the depth %d)", i, n, want, in.rec.Depth())
+			return nil
+		}
+		entries = entries[:0]
+		for range n {
+			entries = append(entries, readObs(r, i))
+		}
+		if r.Err() == nil && !in.rec.Load(i, rs.tick, entries) {
+			r.Failf("source %d: the record refuses %d observations as of tick %d", i, n, rs.tick)
+		}
+	}
+	return nil
+}
+
+// readObs reads one observation of source i of tag 16: a price from 1 to MaxPrice,
+// a mean from 0 to MaxPrice and an age of at least 0.
+func readObs(r *codec.Reader, i int) rumour.Obs {
+	o := rumour.Obs{Price: r.Bounded("price", MaxPrice), Mean: r.Bounded("mean", MaxPrice), Age: r.Bounded("age", math.MaxInt64)}
+	if r.Err() == nil && !o.Valid(MaxPrice) {
+		r.Failf("source %d holds a price of %d, want 1 to %d", i, o.Price, int64(MaxPrice))
+	}
+	return o
+}
+
+// saveRumours writes tag 22, the integration section of the rumours kept for an
+// external agent (spec-information.md 6.3.1, 14). The integration module owns its
+// rows and is not built, so the section is present with the information module and
+// holds no row: one count, 0. It is registered now so that the bytes of a checkpoint
+// do not move when the module fills it.
+func (w *World) saveRumours(cw *codec.Writer) error {
+	cw.Count(0)
+	return nil
+}
+
+// loadRumours reads tag 22: a count that must be 0 until the integration module is
+// built.
+func (w *World) loadRumours(_ *restoreCtx, r *codec.Reader) error {
+	if r.Count(1) != 0 {
+		r.Failf("rows in the integration section, whose module is not built")
+	}
+	return nil
 }

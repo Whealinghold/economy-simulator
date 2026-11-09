@@ -124,6 +124,19 @@ func (r *Record) Load(source int, next int64, entries []Obs) (ok bool) {
 	return true
 }
 
+// Resume sets the ticks held of a record with no source, as a checkpoint taken
+// before tick next: the ticks run, at most the depth. It is Load for the record
+// that has no source to load, and it fails like Load: ok is false, changing
+// nothing, when next is negative, the record has sources (they are loaded one by
+// one) or it has already run or been restored.
+func (r *Record) Resume(next int64) (ok bool) {
+	if r.sources != 0 || next < 0 || r.restored || r.last != -1 {
+		return false
+	}
+	r.last, r.held, r.restored = next-1, min(next, r.depth), true
+	return true
+}
+
 // canLoad reports whether n entries for source, as of tick next, fit the
 // record: the arguments are in range, and they agree with an earlier Load or
 // the record has not run.

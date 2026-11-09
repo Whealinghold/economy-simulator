@@ -81,6 +81,12 @@ var skipFields = []string{
 	// list that existed after the golden was recorded must not move the off files
 	// (testing.md 7.1.1).
 	"roleRow.jobs",
+	// The information module's scratch: buf holds the rumours of the last view built
+	// (stale after the view), tally counts the views of a tick only when an observer
+	// is attached and is cleared at P3.6, and rumour.Record.restored says the record
+	// was loaded from a checkpoint, which is not state: a restored world and one that
+	// ran on hold the same ticks (information.go).
+	"information.buf", "information.tally", "Record.restored",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
