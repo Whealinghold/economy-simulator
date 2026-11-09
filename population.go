@@ -609,10 +609,11 @@ func (w *World) entryStake(role RoleID, cause Cause) Money {
 // it is paid under: births for the module's births and for any entry into a host,
 // start_money for another entry into a new agent.
 func (w *World) entryMoney(role RoleID, cause Cause, host bool) (Money, ledger.Reason) {
+	reason := ledger.StartMoney
 	if (w.pop != nil && cause == CauseBirths) || host {
-		return w.entryStake(role, cause), ledger.Births
+		reason = ledger.Births
 	}
-	return w.entryStake(role, cause), ledger.StartMoney
+	return w.entryStake(role, cause), reason
 }
 
 // renewalBP is the effective Renewal: 0 while the module is on, whatever is
