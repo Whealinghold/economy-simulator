@@ -54,17 +54,17 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325 |
+| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-327 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-326 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-214, N-220 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-326, N-327 |
 | INF | N-110, N-112, N-156, N-157, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
@@ -80,14 +80,14 @@ PR description.
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-326 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
 | SPN | N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314, N-325 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-326 |
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
@@ -941,7 +941,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read, both sides: `IncomeLast`, `ReliefLast` and `CostLast` are not adopted in version 1; the welfare summary returns the three sums as unexported values so the ask costs one snapshot field if adopted. OBS 5.3.4 gains `ClampedHouseholds` only and adopts none of the six asks. Item 2 (wear units) is the ledger's. Left open.
 - **Update (2026-10-17, observability review of plan 1-6):** read: the three gauges added for the welfare row (`welfare.ratio.households`, `welfare.floor_held`, `wage.observed`) read `RatioHouseholds`, `HeldByFloor` and `WageObserved`, fields that already exist; none of the six asks is adopted and the income, relief and cost sums stay declined. `economysim.wage.observed` is the per-role observed wage, not the pooled regional wage the cost anchor reads. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read: the row emits `WearApplied` at P8.2 (item 2) and adopts none of the other asks. Left open.
-
+- **Update (2026-11-09, plan 2-18 Phase 1):** read for IND; left open. Item (1) not adopted: `HouseholdIncome` returns `OK` false in version 1 (D574), the owner is the Stage 3 plan that adds `IncomeLast`, `ReliefLast`, `CostLast` to `RoleRow`. Item (2): `WearApplied` exists in `event.go` and no preset reads it; depreciation is the retirement basis (D575). Item (3): `BenchmarkRowsOf` measures a pass at 5 000 agents, no bulk read is asked. Items (4), (5), (6) not adopted.
 
 ### N-131 Not in version 1: reopen when a consumer asks
 
@@ -1461,6 +1461,7 @@ PR description.
 - **Areas:** IND, STY, EXP
 - **Raised:** 2026-10-13, `spec-policy.md` 17.3 item 1.
 - **Note:** IND 3.1 and FR-IND-001 hold: the built-in `rule` reads four gauges that are field reads, and a consumer's `Policy` imports `indicator/`. Whether to add a `policy/` package that imports it (amending `architecture.md` 2.7 and FR-IND-001) is PLC open question 1.
+- **Update (2026-11-09, plan 2-18 Phase 1):** enforced: `import_guard_test.go` fails any package of the module other than `indicator` (and its tests, `otelobserver` and `examples/`) that imports `indicator`, and any package other than `indicator` that imports `internal/measure`. Left open for PLC question 1.
 
 ### N-207 A policy actor is not an agent and shifts no ID
 
@@ -1473,6 +1474,7 @@ PR description.
 - **Areas:** IND, CLB
 - **Raised:** 2026-10-13, `spec-policy.md` 8.3.2, 17.2.
 - **Note:** Each gauge is stated with the preset it matches; IND is asked for a region-set selector and for `PriceLevelOf`, so that a consumer's policy and a built-in rule are the same function. The `mean_ratio` gauge differs from IND's mean by at most 1 bp of rounding.
+- **Update (2026-11-09, plan 2-18 Phase 1):** a region set is already `FlowSel.Regions`; `PriceLevelOf` and a jurisdiction selector are not adopted in version 1. Left open for PLC.
 
 ### N-209 A payout claim has an origin
 
@@ -2048,6 +2050,18 @@ PR description.
 - **Reading of D367 and what resumes the ladder:** "equal with the median households at least 10% of the start higher" was read as higher by 10% of the start (60 households). Under the relative reading R1 improves, the counter is 2 after R4, and the ladder resumes at R5 on R1: data as in the R1 row above, then `world.upkeep` staple 3 with every `reference_price` and `reference_basket` re-derived so FR-CUR-020 holds. D369 says it is not re-run without an owner ruling that names it; the harness was a scratch test (not kept). R1 needs E0 (the spring-only crop leaves the pack for `overlay/seasonal.toml`).
 - **Also open from the stop:** `expected/one.scenarios.txt` is stale (Stage 1 sign-off exception, `roadmap-v1.md`); the Stage 2 criterion "passes the version 1 bands of STY on `five.toml`" has no rebalanced `five` behind it (`five` collapses, `expected/five.toml` records it); plans 9 onward run on the unchanged packs. N-312 points (1) and (2) and N-314 stay open and point here.
 
+### N-326 Presets 22 to 25 of the indicators are built with EMP and RSK/STO
+
+- **Areas:** IND, EMP, RSK, STO
+- **Raised:** 2026-11-09, plan 2-18 D560.
+- **Note:** `Unemployment`, `WageBill`, `Employment` and `Losses` (rows 22 to 25 of `spec-indicators.md` 9.1, FR-IND-056 to FR-IND-059) need events and a reason that do not exist before Stage 3 (`LabourRound`, `StoreLoss`, the `Lost` fields, the reason `loss`). The plan of EMP and the plan of RSK/STO each add, in the same change, their `Observe` case in `indicator/tally_observe.go`, the tally rows, the preset and its tests; the roadmap rows name them.
+
+### N-327 `internal/measure` imports `internal/checked`
+
+- **Areas:** IND, CODE
+- **Raised:** 2026-11-09, plan 2-18 D562.
+- **Note:** `spec-indicators.md` 3.2.1, 5.2.1 and NFR-IND-004 said standard library only for `internal/measure`; they now say the standard library and `internal/checked`, the one shared 128-bit helper (N-019). `import_guard_test.go` enforces the two lists.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2060,5 +2074,5 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ea5d56a5959df1c075d3815b
+NOTES-TAG: 9acc86398caaf7412fe2e8bf
 

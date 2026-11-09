@@ -362,6 +362,12 @@ run in CI on at least two architectures (architecture.md 7.4). **[project]**
 - `all/`: every module on. The one set that may move when a module is added,
   with the explanation 7.2 requires.
 
+A golden outside the three sets is allowed for a harness or a renderer that
+records no world state: `golden/indicator/` (the rendering of the indicator
+presets over a window), `golden/experiment/` and `golden/stylised/`. Such a
+golden is not a module's and is not under `off/`, so the pinned hash and
+`golden/off/` do not move for it; 7.2 applies to it as to any golden.
+
 7.1.2. A test-only per-position state hash: a hash of the ledger, the agents
 and every module's state after each position of a step, recorded for one
 scripted run of each golden set. When a golden file fails, the hash test
@@ -568,4 +574,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: cb434ac287a78ec8e68eee2f
+RULE-TAG: 934a10b2390fbb1f76cfe751

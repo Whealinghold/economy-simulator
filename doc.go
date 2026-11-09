@@ -892,4 +892,48 @@
 //   - PopulationScaled: the event emitted when the birth or death scale of a region is set
 //     between ticks (spec-population.md 10.2).
 //   - ScaleKind: which of the two population scales of a region, birth or death, a call sets.
+//   - Indicator: a derived measure of a run, a pure function of snapshots and events with a
+//     price table and a class table as arguments; nothing in the world reads one
+//     (spec-indicators.md 3.1). An indicator preset is a named, fixed call of the aggregators
+//     (spec-indicators.md 9); the aggregators are the value of flows at a price table, a
+//     weighted statistic over household rows and a window statistic over a series.
+//   - Tally: the plain value an Observer folds the events of an indicator window into, the
+//     consumer's own (spec-indicators.md 4.2).
+//   - Indicator window: a span of ticks, from one boundary to a later one, over which a tally
+//     keeps its sums; it carries no stocks (spec-indicators.md 4.2.6).
+//   - Household row: a weight and a total, the input of the weighted statistics, built from the
+//     agent states a consumer holds (spec-indicators.md 4.5).
+//   - Price table: a price per region and commodity that a value measure takes as an argument,
+//     so that GDP at base prices and at today's are two calls (spec-indicators.md 4.3).
+//   - Base window: the prices and quantities of a closed window, frozen as the base of an index
+//     (spec-indicators.md 4.3.5).
+//   - Index: a ratio in basis points of a base window, 10 000 being the base; Laspeyres, Paasche
+//     and Fisher are the three weightings, and a chain index multiplies rounded links
+//     (spec-indicators.md 5.3).
+//   - Clamp (of an index): the cut of an index, ratio or growth at the largest basis-point value,
+//     flagged on the result and not an error (spec-indicators.md 5.3.7).
+//   - Stale share: the share of the price cells of a measure that carry a price forward from an
+//     earlier window (spec-indicators.md 5.3.8).
+//   - Cohort share: the share of households that sit in a row of weight above one, the part of
+//     inequality that scale hides (spec-indicators.md 6.2).
+//   - Value added (of a region): its production approach figure, the value of outputs less the
+//     intermediate inputs used; the expenditure approach (7.3) and the income view (7.5) measure
+//     the same product from the other side (spec-indicators.md 7.2).
+//   - Gross accumulation: the change of the stock of goods over a window, valued at a table
+//     (spec-indicators.md 7.3.2).
+//   - Written (goods): the goods that leave the stock without a sale or a use, valued at a table
+//     (spec-indicators.md 7.3.2).
+//   - Carriage: the use of goods in moving goods, the haul and the transit use
+//     (spec-indicators.md 8.4).
+//   - Delivered price, freight: the price at the origin plus the freight per unit of cargo, the
+//     price a buyer pays at the destination (spec-indicators.md 8.4).
+//   - Trade valuation: the reconciling item between regions that value a trade at their own
+//     prices (spec-indicators.md 7.3.3).
+//   - Retirement basis: depreciation counted when an item is retired and not as it wears
+//     (spec-indicators.md 7.6.2).
+//   - Binding counters: the counters of the caps and limits that acted in a window, carried on a
+//     regional comparison so a difference is not read as real until they are checked
+//     (spec-indicators.md 8.7).
+//   - Reconciling item: the residual that closes an identity of a window by name, such as the
+//     units that moved with a relocated account (spec-indicators.md 8.2).
 package economysim
