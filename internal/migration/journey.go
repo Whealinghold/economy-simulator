@@ -1,12 +1,11 @@
 package migration
 
 import (
+	"math/bits"
+
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ordering"
 )
-
-// weylSpan is 2^32, the span of Weyl32.
-const weylSpan = 1 << 32
 
 // wholeBP is 10 000 basis points, a ratio of 1.
 const wholeBP = 10_000
@@ -18,9 +17,9 @@ func Ticks(distance, speed int64) (k int64, ok bool) {
 	if distance < 0 || speed < 1 {
 		return 0, false
 	}
-	k, ok = checked.MulDivCeil(distance, 1, speed)
-	if !ok {
-		return 0, false
+	k = distance / speed
+	if distance%speed != 0 {
+		k++
 	}
 	return max(1, k), true
 }
@@ -67,13 +66,16 @@ func Pushed(earnedBP int64, present bool, below int64) bool {
 
 // Margin returns the agent's own margin gain + floor(Weyl32(id) * width / 2^32)
 // in basis points (spec-migration.md 6.5): at least gain, below gain + width,
-// spread over the agents by their IDs with no draw. ok is false on overflow.
+// spread over the agents by their IDs with no draw. ok is false when width is
+// negative or the sum overflows.
 func Margin(id, gain, width int64) (g int64, ok bool) {
-	spread, ok := checked.MulDivFloor(int64(ordering.Weyl32(id)), width, weylSpan)
-	if !ok {
+	if width < 0 {
 		return 0, false
 	}
-	return checked.Add(gain, spread)
+	// The product of a 32-bit Weyl value and a 63-bit width shifted right by 32
+	// is below width, so it fits.
+	hi, lo := bits.Mul64(uint64(ordering.Weyl32(id)), uint64(width))
+	return checked.Add(gain, int64(hi<<32|lo>>32))
 }
 
 // Clears reports the gain test of stage 4, veff * 10 000 >= home * (10 000 +

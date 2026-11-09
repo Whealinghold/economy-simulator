@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/migration"
+	"github.com/Whealinghold/economy-sim/internal/ordering"
 )
 
 // TestTicks_CeilingAndFloorOfOne verifies the journey time k = max(1, ceil(D /
@@ -36,7 +37,7 @@ func TestTicks_CeilingAndFloorOfOne(t *testing.T) {
 			t.Parallel()
 			got, ok := migration.Ticks(tt.distance, tt.speed)
 			if got != tt.want || ok != tt.wantOK {
-				t.Errorf("Ticks(%d, %d) = %d, %v, want %d, %v", tt.distance, tt.speed, got, ok, tt.want, tt.wantOK)
+				t.Errorf("Ticks(%d, %d) = %d, %v, want %d, %v (0 when refused)", tt.distance, tt.speed, got, ok, tt.want, tt.wantOK)
 			}
 		})
 	}
@@ -65,7 +66,12 @@ func TestDiscount_ShareOfHorizonLeft(t *testing.T) {
 		// -1 000 * 9 / 10 = -900 exactly; -7 * 9 / 10 = -6.3 truncates to -6, not -7.
 		{"negative estimate truncates toward zero", -7, 1, 10, -6, true},
 		{"zero horizon", 100, 1, 0, 0, false},
+		{"negative horizon", 100, 0, -5, 0, false},
 		{"negative k", 100, -1, 10, 0, false},
+		// A horizon of 1 with no journey keeps the whole estimate; a zero-tick journey
+		// keeps it at any horizon.
+		{"horizon of one", 100, 0, 1, 100, true},
+		{"zero-tick journey", 100, 0, 10, 100, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,6 +126,17 @@ func TestDue_OncePerPeriod(t *testing.T) {
 			}
 		}
 	}
+	// The turn is at the tick where tick + bucket is a multiple of the period, not
+	// tick - bucket: agent 1042 at period 30 has bucket 18 (Weyl2 2 622 213 950 * 30
+	// >> 32), so it is due at 12, 42 and 72 and not at 18, 48 or 78.
+	if b := ordering.Bucket(1042, 30); b != 18 {
+		t.Fatalf("Bucket(1042, 30) = %d, want 18", b)
+	}
+	for tick := int64(0); tick < 90; tick++ {
+		if got, want := migration.Due(tick, 1042, 30), tick%30 == 12; got != want {
+			t.Errorf("Due(%d, 1042, 30) = %v, want %v", tick, got, want)
+		}
+	}
 	if migration.Due(5, 7, 0) || migration.Due(5, 7, -3) {
 		t.Errorf("Due with a period below 1 = true, want false")
 	}
@@ -167,6 +184,8 @@ func TestSettled_LongerOfCooldownAndWindow(t *testing.T) {
 		{"window binds, one short", 89, 0, 10, 90, false},
 		{"window binds, at the boundary", 90, 0, 10, 90, true},
 		{"after an arrival at 100", 150, 100, 60, 30, false},
+		{"well past the boundary", 500, 0, 60, 30, true},
+		{"a positive role since past int64 below", math.MinInt64, 1, 60, 30, false},
 		{"negative role since is settled at once", 0, -60, 60, 30, true},
 		{"a difference past int64 is a distant past", math.MaxInt64, math.MinInt64, 60, 30, true},
 	}
@@ -197,6 +216,7 @@ func TestPushed_BelowGateAndAbsentRatio(t *testing.T) {
 		{"below", 5_100, true, 10_000, true},
 		{"at the gate is not pushed", 10_000, true, 10_000, false},
 		{"one below the gate", 9_999, true, 10_000, true},
+		{"above the gate", 15_000, true, 10_000, false},
 		{"negative ratio", -3_000, true, 0, true},
 		{"gate 0 pushes only a negative ratio", 0, true, 0, false},
 		{"absent ratio", -50, false, 10_000, false},
@@ -237,8 +257,16 @@ func TestMargin_OffsetSpread(t *testing.T) {
 	if lo > 1_050 || hi < 5_950 {
 		t.Errorf("margins of 5 000 agents span [%d, %d], want most of [1000, 6000)", lo, hi)
 	}
-	if g, ok := migration.Margin(1042, math.MaxInt64, 5_000); ok {
-		t.Errorf("Margin(1042, MaxInt64, 5000) = %d, true, want overflow", g)
+	if g, ok := migration.Margin(1042, math.MaxInt64, 5_000); ok || g != 0 {
+		t.Errorf("Margin(1042, MaxInt64, 5000) = %d, %v, want 0, false (overflow)", g, ok)
+	}
+	if g, ok := migration.Margin(1042, 1_000, -1); ok || g != 0 {
+		t.Errorf("Margin(1042, 1000, -1) = %d, %v, want 0, false (negative width)", g, ok)
+	}
+	// The largest width gives floor(4 258 099 970 * (2^63 - 1) / 2^32), still an int64.
+	want := new(big.Int).Rsh(new(big.Int).Mul(big.NewInt(4_258_099_970), big.NewInt(math.MaxInt64)), 32)
+	if g, ok := migration.Margin(1042, 0, math.MaxInt64); !ok || g != want.Int64() {
+		t.Errorf("Margin(1042, 0, MaxInt64) = %d, %v, want %v, true", g, ok, want)
 	}
 }
 
@@ -273,10 +301,16 @@ func TestClears_CrossMultiplication(t *testing.T) {
 			}
 		}
 	}
-	if got, ok := migration.Clears(1, 1, -1); ok || got {
-		t.Errorf("Clears with a negative margin = %v, %v, want false, false", got, ok)
-	}
-	if _, ok := migration.Clears(1, math.MaxInt64, math.MaxInt64); ok {
-		t.Errorf("Clears(1, MaxInt64, MaxInt64) ok = true, want overflow reported")
+	for _, c := range []struct {
+		name               string
+		veff, home, margin int64
+	}{
+		{"negative margin", 1, 1, -1},
+		{"10 000 plus the margin overflows", 1, 1, math.MaxInt64},
+		{"the product overflows", math.MaxInt64, math.MaxInt64, 1_000},
+	} {
+		if got, ok := migration.Clears(c.veff, c.home, c.margin); ok || got {
+			t.Errorf("Clears with %s = %v, %v, want false, false", c.name, got, ok)
+		}
 	}
 }

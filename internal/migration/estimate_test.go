@@ -96,6 +96,17 @@ func TestIncome_EligibleRules(t *testing.T) {
 		{"quotient truncates", []migration.Recipe{src(2, 7, 1)}, 3, true},
 		// The wear 100 * 10 / 1 = 1 000 exceeds the value 50: net -950 over 3 ticks is -316.67, truncated toward zero to -316 (not floor, -317).
 		{"source with a negative net truncates toward zero", []migration.Recipe{src(3, 5, 10, migration.Tool{Wear: 100, Durability: 1, Price: 10})}, -316, true},
+		// The negative source recipe first: a priced recipe of yield 0 is not eligible, so it
+		// does not lift the income to 0 and the later recipes still count.
+		{"yield 0 does not lift a negative income", []migration.Recipe{src(3, 5, 10, migration.Tool{Wear: 100, Durability: 1, Price: 10}), func() migration.Recipe { r := src(1, 5, 10); r.Yield = 0; return r }()}, -316, true},
+		{"yield 0 then an eligible recipe", []migration.Recipe{func() migration.Recipe { r := src(1, 5, 10); r.Yield = 0; return r }(), src(1, 2, 10)}, 20, true},
+		// Yield 1 is eligible: 10 000 * 1 * 10 / 10 000 = 10.
+		{"yield 1", []migration.Recipe{func() migration.Recipe { r := src(1, 10_000, 10); r.Yield = 1; return r }()}, 10, true},
+		// An input recipe at net 0 or below is skipped and the next one still counts; a net
+		// of 1 is eligible. Output 2 * 6 = 12 against inputs 12 is 0; against 11 is 1.
+		{"input recipe at net 0 does not lift a negative income", []migration.Recipe{src(3, 5, 10, migration.Tool{Wear: 100, Durability: 1, Price: 10}), {Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 2, Price: 6}}, Inputs: []migration.Line{{Qty: 1, Price: 12}}}}, -316, true},
+		{"input recipe at net 0 then a good one", []migration.Recipe{{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 2, Price: 6}}, Inputs: []migration.Line{{Qty: 1, Price: 12}}}, src(1, 2, 10)}, 20, true},
+		{"input recipe at net 1", []migration.Recipe{{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 2, Price: 6}}, Inputs: []migration.Line{{Qty: 1, Price: 11}}}}, 1, true},
 		{"greatest over several", []migration.Recipe{src(1, 3, 10), src(1, 9, 10), grow(10_000, 14, 80), src(1, 5, 10)}, 90, true},
 		{"an unpriced recipe among priced ones is skipped", []migration.Recipe{src(1, 9, 0), src(1, 2, 10)}, 20, true},
 	}
@@ -126,13 +137,15 @@ func TestIncome_BadInput(t *testing.T) {
 		{"quantity times yield overflows", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: big, Price: 1}}}},
 		{"value overflows", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 1 << 40, Price: big}}}},
 		{"inputs overflow", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 1, Price: 1}}, Inputs: []migration.Line{{Qty: big, Price: 8}}}},
+		{"the sum of values overflows", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 1, Price: math.MaxInt64/2 + 1}, {Qty: 1, Price: math.MaxInt64/2 + 1}}}},
+		{"the cost with the wear overflows", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 1, Price: 1}}, Inputs: []migration.Line{{Qty: 1, Price: math.MaxInt64 - 1}}, Tools: []migration.Tool{{Wear: 2, Durability: 1, Price: 1}}}},
 		{"net overflows", migration.Recipe{Duration: 1, Yield: 10_000, Outputs: []migration.Line{{Qty: 1, Price: 1}}, Inputs: []migration.Line{{Qty: 1, Price: math.MaxInt64}, {Qty: 1, Price: math.MaxInt64}}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if income, priced, ok := migration.Income([]migration.Recipe{tt.recipe}); ok {
-				t.Errorf("Income = %d, %v, true, want ok false", income, priced)
+			if income, priced, ok := migration.Income([]migration.Recipe{tt.recipe}); ok || income != 0 || priced {
+				t.Errorf("Income = %d, %v, %v, want 0, false, false", income, priced, ok)
 			}
 		})
 	}
@@ -148,8 +161,10 @@ func TestVhat_Overflow(t *testing.T) {
 	if v, ok := migration.Vhat(math.MaxInt64, 1); ok {
 		t.Errorf("Vhat(MaxInt64, 1) = %d, true, want overflow", v)
 	}
-	if v, ok := migration.Vhat(100, 0); ok {
-		t.Errorf("Vhat(100, 0) = %d, true, want a refused cost", v)
+	for _, cost := range []int64{0, -5} {
+		if v, ok := migration.Vhat(100, cost); ok || v != 0 {
+			t.Errorf("Vhat(100, %d) = %d, %v, want 0, false (a refused cost)", cost, v, ok)
+		}
 	}
 	// -1 * 10 000 / 3 = -3 333.3, truncated toward zero.
 	if v, ok := migration.Vhat(-1, 3); !ok || v != -3_333 {
@@ -159,10 +174,10 @@ func TestVhat_Overflow(t *testing.T) {
 		t.Errorf("Vhat at the largest exact income = %d, %v", v, ok)
 	}
 	lines := []migration.Line{{Qty: math.MaxInt64 / 2, Price: 1}, {Qty: math.MaxInt64 / 2, Price: 1}, {Qty: 2, Price: 1}}
-	if c, ok := migration.Cost(lines); ok {
-		t.Errorf("Cost of a sum past int64 = %d, true, want overflow", c)
+	if c, ok := migration.Cost(lines); ok || c != 0 {
+		t.Errorf("Cost of a sum past int64 = %d, %v, want 0, false", c, ok)
 	}
-	if c, ok := migration.Cost([]migration.Line{{Qty: math.MaxInt64, Price: 2}}); ok {
-		t.Errorf("Cost of a product past int64 = %d, true, want overflow", c)
+	if c, ok := migration.Cost([]migration.Line{{Qty: math.MaxInt64, Price: 2}}); ok || c != 0 {
+		t.Errorf("Cost of a product past int64 = %d, %v, want 0, false", c, ok)
 	}
 }
