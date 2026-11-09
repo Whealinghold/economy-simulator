@@ -60,6 +60,11 @@ type popState struct {
 	// figures is the snapshot's PopulationState, derived from the immutable
 	// configuration once.
 	figures PopulationState
+	// snap is the scratch of the snapshot rows, reused across regions.
+	snap struct {
+		rb, rd, w, b, d []int64
+		rok, present    []bool
+	}
 }
 
 // newPopulation builds the state from a canonical configuration that passed
@@ -473,18 +478,17 @@ func (w *World) popAgent(g RegionID, v *RegionView, ra *RegionAgent) (taken int6
 	if fed == 0 {
 		return 0
 	}
-	rate, dclamp := p.rate(p.deathK, ratio, p.effDeath[g])
-	events := p.step(&p.deathCarry[ra.Agent], fed, rate)
+	brate, drate, clamped := p.ratesAt(g, ratio)
+	events := p.step(&p.deathCarry[ra.Agent], fed, drate)
 	c.deathsDue += events
 	take, cut, held := population.Cut(events, fed, p.group[ra.Role], p.minHouseholds)
 	p.group[ra.Role] -= take
 	c.deathsCut, c.deathsHeld = c.deathsCut+cut, c.deathsHeld+held
 	ra.PopDeaths = take
-	rate, bclamp := p.rate(p.birthK, ratio, p.effBirth[g])
 	if !v.Roles[ra.Role].Closed {
-		p.num[ra.Role] = satAdd(p.num[ra.Role], mustTerm(fed, rate))
+		p.num[ra.Role] = satAdd(p.num[ra.Role], mustTerm(fed, brate))
 	}
-	if dclamp || bclamp {
+	if clamped {
 		c.clamped += fed
 	}
 	return take
@@ -516,6 +520,14 @@ func (p *popState) step(carry *int64, exposed, rate int64) int64 {
 	}
 	*carry = next
 	return events
+}
+
+// ratesAt returns the effective birth and death rate of region g at a ratio and
+// whether either sat on a bound; the step and the snapshot read it alike.
+func (p *popState) ratesAt(g RegionID, ratio int64) (birth, death int64, clamped bool) {
+	birth, bc := p.rate(p.birthK, ratio, p.effBirth[g])
+	death, dc := p.rate(p.deathK, ratio, p.effDeath[g])
+	return birth, death, bc || dc
 }
 
 // rate evaluates a schedule at a ratio under a scale; the rules cannot refuse a
@@ -712,22 +724,21 @@ func (w *World) popWarns(g RegionID, households, due int64, unfunded bool) {
 func (w *World) popSnapshotRegion(s *Snapshot, g RegionID, v *RegionView) {
 	p := w.pop
 	s.Regions[g].HouseholdCap = p.cap[g]
-	n := len(v.Agents)
-	rb, rd, rok := make([]int64, n), make([]int64, n), make([]bool, n)
+	sc := &p.snap
+	sc.rb, sc.rd, sc.rok = sc.rb[:0], sc.rd[:0], sc.rok[:0]
 	for i := range v.Agents {
-		rb[i], rd[i], rok[i] = w.popRates(g, &v.Agents[i])
+		b, d, ok := w.popRates(g, &v.Agents[i])
+		sc.rb, sc.rd, sc.rok = append(sc.rb, b), append(sc.rd, d), append(sc.rok, ok)
 	}
-	var weights, birth, death []int64
-	var present []bool
 	for r := range p.roles {
-		weights, birth, death, present = weights[:0], birth[:0], death[:0], present[:0]
+		sc.w, sc.b, sc.d, sc.present = sc.w[:0], sc.b[:0], sc.d[:0], sc.present[:0]
 		for i := range v.Agents {
 			if int(v.Agents[i].Role) == r {
-				weights, birth, death, present = append(weights, v.Agents[i].Weight), append(birth, rb[i]), append(death, rd[i]), append(present, rok[i])
+				sc.w, sc.b, sc.d, sc.present = append(sc.w, v.Agents[i].Weight), append(sc.b, sc.rb[i]), append(sc.d, sc.rd[i]), append(sc.present, sc.rok[i])
 			}
 		}
 		row := &s.Roles[int(g)*p.roles+r]
-		mb, md, nat, ok := population.Means(weights, birth, death, present)
+		mb, md, nat, ok := population.Means(sc.w, sc.b, sc.d, sc.present)
 		if !ok {
 			invariant("the mean population rates overflow after validation")
 		}
@@ -754,9 +765,7 @@ func (w *World) popRates(g RegionID, ra *RegionAgent) (birth, death int64, ok bo
 	if !ok {
 		return 0, 0, false
 	}
-	p := w.pop
-	birth, _ = p.rate(p.birthK, ratio, p.effBirth[g])
-	death, _ = p.rate(p.deathK, ratio, p.effDeath[g])
+	birth, death, _ = w.pop.ratesAt(g, ratio)
 	return birth, death, true
 }
 
