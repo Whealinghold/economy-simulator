@@ -123,7 +123,18 @@ func newTransport(c *Config) *transportState {
 // isAway reports whether the agent is the traveller of a live self-carried
 // shipment.
 func (t *transportState) isAway(id AgentID) bool {
-	return int(id) < len(t.away) && t.away[id]
+	return id >= 0 && int(id) < len(t.away) && t.away[id] // Away is public: any ID may come in
+}
+
+// tripOf returns the self-carried shipment in flight whose traveller is the agent,
+// or nil.
+func (t *transportState) tripOf(id AgentID) *shipment {
+	for i := range t.ships {
+		if s := &t.ships[i]; !s.hired && s.traveller == id {
+			return s
+		}
+	}
+	return nil
 }
 
 // setAway sets the away flag of an agent, growing the table as agents join.
@@ -235,6 +246,7 @@ func (v *validator) modeBounds(mb []string, md *Mode) {
 	if !md.hired() {
 		v.inRange(path(mb, "crew"), md.Crew, 1, MaxWeight)
 	}
+	// 0 is in range here: modeShape owns whether a mode needs it; only a value outside 0..Max is a bound error.
 	if md.HaulSpan < 0 || md.HaulSpan > MaxHaulSpan {
 		v.inRange(path(mb, "haul_span"), md.HaulSpan, 1, MaxHaulSpan)
 	}

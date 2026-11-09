@@ -66,6 +66,8 @@ func benchGive(b *testing.B, w *World, id AgentID, commodity CommodityID, qty in
 // BenchmarkDispatch measures a hired dispatch of 1 line and of MaxShipmentLines lines.
 // Every 256 dispatches the shipments are sent back to the shipper outside the timer, so
 // the books stay the size of one batch.
+//
+// Requirement: NFR-TRN-003
 func BenchmarkDispatch(b *testing.B) {
 	for _, n := range []int{1, MaxShipmentLines} {
 		b.Run(fmt.Sprintf("%d lines", n), func(b *testing.B) {
@@ -131,6 +133,8 @@ func (w *World) recycleShipments(b *testing.B) {
 // BenchmarkArrivals measures P1.3: a tick with nothing due among 10 000 shipments in
 // flight, which costs one look at the schedule, and a tick in which one trip to oneself
 // arrives (the dispatch is outside the timer).
+//
+// Requirement: NFR-TRN-003
 func BenchmarkArrivals(b *testing.B) {
 	b.Run("nothing due among 10000", func(b *testing.B) {
 		b.ReportAllocs()

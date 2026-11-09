@@ -463,7 +463,8 @@ type AgentView struct {
 	// whether there is a route and what it costs in time (spec-transport.md 9.1). The
 	// first two are fixed at P3.1 from the shipments dispatched before phase 3, so
 	// they do not depend on the order of agents; all three are empty while the
-	// transport module is off and in the views of phase 2.
+	// transport module is off and in the views of phase 2. Routes is shared by the
+	// agents of a region for the tick: a strategy must treat it as read-only.
 	Inbound  []InboundRow
 	Outbound []OutboundRow
 	Routes   []RouteRow

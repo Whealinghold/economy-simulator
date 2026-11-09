@@ -36,7 +36,7 @@ type arrival struct {
 func (t *transportState) holds(a *agent, skip []string) bool {
 	for i := range t.ships {
 		s := &t.ships[i]
-		bound := s.shipper == a.id || s.consignee == a.id || (!s.hired && s.traveller == a.id && t.isAway(a.id))
+		bound := s.shipper == a.id || s.consignee == a.id // a traveller is its trip's shipper
 		if bound && !skipHas(skip, openShipment, int64(s.id)) {
 			return true
 		}
@@ -107,8 +107,13 @@ func (w *World) arrive(s shipment) bool {
 // travellerLive reports whether the shipment is self-carried and its traveller still
 // exists.
 func (w *World) travellerLive(s *shipment) bool {
-	id := s.traveller
-	return !s.hired && id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
+	return !s.hired && w.liveAgent(s.traveller)
+}
+
+// liveAgent reports whether the ID is an agent that exists: not a region's estate
+// pseudo-agent, issued, and of weight 1 or more.
+func (w *World) liveAgent(id AgentID) bool {
+	return id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
 }
 
 // moveTraveller relocates the traveller to the destination: the guard query run
@@ -180,11 +185,10 @@ func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 // consigneeAccount returns the account of the consignee when the agent still
 // exists and is in the destination, else -1.
 func (w *World) consigneeAccount(s *shipment) int {
-	id := s.consignee
-	if id < AgentID(len(w.cfg.Regions)) || id >= w.state.nextAgent || w.agents[id].weight < 1 {
+	if !w.liveAgent(s.consignee) {
 		return -1
 	}
-	if a := &w.agents[id]; w.regionOf(a) == s.to {
+	if a := &w.agents[s.consignee]; w.regionOf(a) == s.to {
 		return a.account
 	}
 	return -1
@@ -310,7 +314,10 @@ func (w *World) auditAccount(s *shipment, used map[int]bool) string {
 	}
 	used[s.account] = true
 	for c := range w.cfg.Commodities {
-		have, _, _ := w.ledger.Holding(s.account, c)
+		have, _, err := w.ledger.Holding(s.account, c)
+		if err != nil {
+			return fmt.Sprintf("account %d: the ledger refused the holding of commodity %d: %v", s.account, c, err)
+		}
 		if shipped := s.shippedOf(c); have > shipped {
 			return fmt.Sprintf("account %d holds %d of commodity %d, more than the %d shipped", s.account, have, c, shipped)
 		}
@@ -322,12 +329,19 @@ func (w *World) auditAccount(s *shipment, used map[int]bool) string {
 // empty.
 func (w *World) auditFreeAccounts(used map[int]bool, fail func(string, ...any) error) error {
 	for id := range w.ledger.Len() {
-		v, _ := w.ledger.Account(id)
+		v, err := w.ledger.Account(id)
+		if err != nil {
+			return fail("the ledger refused account %d: %v", id, err)
+		}
 		if v.Kind != ledger.KindTransit || v.Closed || used[id] {
 			continue
 		}
 		for c := range w.cfg.Commodities {
-			if have, _, _ := w.ledger.Holding(id, c); have != 0 {
+			have, _, err := w.ledger.Holding(id, c)
+			if err != nil {
+				return fail("the ledger refused the holding of commodity %d in account %d: %v", c, id, err)
+			}
+			if have != 0 {
 				return fail("free Transit account %d holds %d of commodity %d", id, have, c)
 			}
 		}
