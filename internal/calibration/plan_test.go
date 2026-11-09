@@ -149,3 +149,15 @@ func TestPlan_ExploreSizeErrors(t *testing.T) {
 		}
 	}
 }
+
+// TestPlan_AtEdgePastTheEnd verifies that a span that reaches past either end of
+// the grid is at the edge and not beyond it.
+//
+// Requirement: FR-CLB-026
+func TestPlan_AtEdgePastTheEnd(t *testing.T) {
+	t.Parallel()
+	top := mustGrid(t, lin(250), 1000, bnds(0, 1000), noOff())
+	if !AtEdge(top, Span{Lo: 2, Hi: 9}, true) || !AtEdge(top, Span{Lo: -1, Hi: 4}, false) {
+		t.Errorf("AtEdge wrong for a span past the end of the grid")
+	}
+}

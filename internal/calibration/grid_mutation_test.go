@@ -251,7 +251,7 @@ func TestGrid_DistanceIndices(t *testing.T) {
 	for _, tt := range []struct {
 		i, j int
 		want int64
-	}{{0, 0, 0}, {5, 0, 5}, {0, 5, 5}, {10, 10, 0}, {10, 11, -1}, {11, 10, -1}, {3, -1, -1}} {
+	}{{0, 0, 0}, {5, 0, 5}, {0, 5, 5}, {10, 10, 0}, {10, 11, -1}, {11, 10, -1}, {12, 10, -1}, {10, 12, -1}, {3, -1, -1}} {
 		if got := Distance(g, tt.i, tt.j); got != tt.want {
 			t.Errorf("Distance(g, %d, %d) = %d, want %d", tt.i, tt.j, got, tt.want)
 		}
