@@ -27,13 +27,15 @@ type roundPlan struct {
 	offers map[AgentID][]DeliveryOffer
 	takes  map[AgentID][]DeliveryTake
 	ships  map[AgentID][]ShipmentRequest
+	// at is the tick the script plans on, 0 unless a test says so.
+	at int64
 }
 
 // script returns the hook of newMerchWorld that appends the plan of the agent at
-// tick 0 only.
+// tick r.at only.
 func (r roundPlan) script() func(v *AgentView, p *TradePlan) {
 	return func(v *AgentView, p *TradePlan) {
-		if v.Tick.Tick != 0 {
+		if v.Tick.Tick != r.at {
 			return
 		}
 		p.Offers = append(p.Offers, r.offers[v.Agent]...)

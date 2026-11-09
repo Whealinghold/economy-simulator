@@ -120,7 +120,7 @@ Rules for the IDs:
 | `LND` | `spec-land.md` | exists (draft); Requirements section written (FR-LND-001 to 046, NFR-LND-001 to 004); module; reviewed and re-verified (PASS, minors R1 to R6); all numbers are placeholders |
 | `EMP` | `spec-employment.md` | exists (draft); Requirements section written (FR-EMP-001 to 063, NFR-EMP-001 to 005); module; reviewed once, revisions pending; all numbers are placeholders |
 | `CHK` | `spec-checkpoint.md` | exists; Requirements section written (FR-CHK-001 to 082, NFR-CHK-001 to 005); core; no `Config` field; sizes and costs are counts of placeholders |
-| `IND` | `spec-indicators.md` | exists; Requirements section written (FR-IND-001 to 059, NFR-IND-001 to 004); core; the `indicator/` package; no `Config` field; all numbers are placeholders |
+| `IND` | `spec-indicators.md` | exists; Requirements section written (FR-IND-001 to 059, NFR-IND-001 to 004; presets 1 to 21 are built in Stage 2, presets 22 to 25 and FR-IND-056 to 059 in Stage 3 with EMP, RSK and STO); core; the `indicator/` package; no `Config` field; all numbers are placeholders |
 | `SET` | `spec-settlements.md` | exists; Requirements section written (FR-SET-001 to 033, NFR-SET-001 to 004); module; reviewed and re-verified (three minors left in the review file); all numbers are placeholders |
 | `POL` | `spec-polity.md` | exists (draft); Requirements section written (FR-POL-001 to 035, NFR-POL-001 to 004); module; reviewed and re-verified (PASS, minors R1, R2); the tree and the membership are configuration; all numbers are placeholders |
 | `ORG` | `spec-institutions.md` | exists (draft); Requirements section written (FR-ORG-001 to 055, NFR-ORG-001 to 004); module; reviewed and re-verified (PASS, minors R1 to R5); all numbers are placeholders |

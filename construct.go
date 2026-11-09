@@ -141,6 +141,9 @@ func (w *World) allocate() {
 	if w.migration != nil {
 		w.bounds.add(onJourneyName, w.migration.holds)
 	}
+	if w.mer != nil && w.mer.on {
+		w.bounds.add(openContract, w.mer.holds)
+	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}

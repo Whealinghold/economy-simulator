@@ -415,3 +415,10 @@ func SetPopulationScale(w *World, region RegionID, kind ScaleKind, bp int64) boo
 	_, ok := w.setPopulationScale(region, kind, bp)
 	return ok
 }
+
+// RemoveAgentForTest removes agent id by the world's one removal path
+// (fanin.go) with the cause, between ticks. The public removal is INT's (plan
+// 2-17); this seam goes with it.
+func RemoveAgentForTest(w *World, id AgentID, cause Cause) error {
+	return w.removeAgent(&w.agents[id], cause)
+}

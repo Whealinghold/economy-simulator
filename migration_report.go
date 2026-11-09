@@ -25,7 +25,7 @@ const migrationFlowFactor = 3
 // read the configuration alone; migration_provision and migration_far need the
 // shortest distances and are migrationRouteWarnings. They read a configuration
 // that may not validate, so each guards its inputs. Each carries rule and path
-// only (the product of migration_flow_window has no carrier, N-327).
+// only (the product of migration_flow_window has no carrier, N-329).
 func migrationWarnings(c *Config, lk lookup) []Warning {
 	m := c.Modules.Migration
 	if m == nil {

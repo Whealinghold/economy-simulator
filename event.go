@@ -1586,6 +1586,48 @@ type ContractFormed struct {
 
 func (ContractFormed) isEvent() {}
 
+// The causes of ContractSettled (spec-merchants.md 15.1.1), constants of Cause.
+const (
+	// CauseDelivered is a contract whose goods all arrived.
+	CauseDelivered Cause = "delivered"
+	// CauseShort is a contract of which units spoiled or were lost on the way.
+	CauseShort Cause = "short"
+	// CausePayerRemoved is a contract whose payer was removed before the arrival:
+	// the cargo went to the estate and so did the refund.
+	CausePayerRemoved Cause = "payer_removed"
+	// CauseDelivererRemoved is a contract that ended at the removal of its
+	// deliverer, the whole escrow returned.
+	CauseDelivererRemoved Cause = "deliverer_removed"
+)
+
+// ContractSettled is emitted when a delivery contract ends: in phase 1 at P1.4,
+// after the ShipmentArrived events, in contract ID order, or with the removal of
+// its deliverer in phase 7 (spec-merchants.md 9.7, 15.1.1). It is per contract.
+type ContractSettled struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee and Deliverer the shipper.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region at the event and To the destination.
+	Region RegionID
+	To     RegionID
+	// Commodity and Quantity are the goods the contract named.
+	Commodity CommodityID
+	Quantity  Quantity
+	// Reached is the units that reached the destination, delivered or diverted;
+	// Spoiled the units spoiled in transit and Lost the units lost (0 with the risk
+	// module off). Reached is Quantity less Spoiled and Lost.
+	Reached, Spoiled, Lost Quantity
+	// Paid is the money paid to the deliverer and Refunded the money returned to the
+	// payer, or to the estate of To when the payer was removed.
+	Paid, Refunded Money
+	// Cause says why the contract ended.
+	Cause Cause
+}
+
+func (ContractSettled) isEvent() {}
+
 // ContractRound is emitted once per destination region and tick in which an offer
 // or a take was submitted for it, in ascending RegionID at P3.3 after the last
 // ContractFormed of the round (spec-merchants.md 15.1.1). It is bounded by the
