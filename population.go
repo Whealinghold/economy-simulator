@@ -64,6 +64,7 @@ type popState struct {
 	snap struct {
 		rb, rd, w, b, d []int64
 		rok, present    []bool
+		off             []int
 	}
 }
 
@@ -730,15 +731,33 @@ func (w *World) popSnapshotRegion(s *Snapshot, g RegionID, v *RegionView) {
 		b, d, ok := w.popRates(g, &v.Agents[i])
 		sc.rb, sc.rd, sc.rok = append(sc.rb, b), append(sc.rd, d), append(sc.rok, ok)
 	}
+	// One counting pass puts each role's agents in a contiguous run, so the rows
+	// cost agents + roles and not agents * roles.
+	n := len(v.Agents)
+	sc.off = slices.Grow(sc.off[:0], p.roles+1)[:p.roles+1]
+	clear(sc.off)
+	for i := range v.Agents {
+		sc.off[int(v.Agents[i].Role)+1]++
+	}
 	for r := range p.roles {
-		sc.w, sc.b, sc.d, sc.present = sc.w[:0], sc.b[:0], sc.d[:0], sc.present[:0]
-		for i := range v.Agents {
-			if int(v.Agents[i].Role) == r {
-				sc.w, sc.b, sc.d, sc.present = append(sc.w, v.Agents[i].Weight), append(sc.b, sc.rb[i]), append(sc.d, sc.rd[i]), append(sc.present, sc.rok[i])
-			}
+		sc.off[r+1] += sc.off[r]
+	}
+	sc.w, sc.b, sc.d = slices.Grow(sc.w[:0], n)[:n], slices.Grow(sc.b[:0], n)[:n], slices.Grow(sc.d[:0], n)[:n]
+	sc.present = slices.Grow(sc.present[:0], n)[:n]
+	for i := range v.Agents {
+		at := sc.off[int(v.Agents[i].Role)]
+		sc.off[int(v.Agents[i].Role)]++
+		sc.w[at], sc.b[at], sc.d[at], sc.present[at] = v.Agents[i].Weight, sc.rb[i], sc.rd[i], sc.rok[i]
+	}
+	// off[r] now holds the end of role r's run, which is the start of r + 1's.
+	for r := range p.roles {
+		lo := 0
+		if r > 0 {
+			lo = sc.off[r-1]
 		}
+		hi := sc.off[r]
 		row := &s.Roles[int(g)*p.roles+r]
-		mb, md, nat, ok := population.Means(sc.w, sc.b, sc.d, sc.present)
+		mb, md, nat, ok := population.Means(sc.w[lo:hi], sc.b[lo:hi], sc.d[lo:hi], sc.present[lo:hi])
 		if !ok {
 			invariant("the mean population rates overflow after validation")
 		}

@@ -150,7 +150,9 @@ type RegionAgent struct {
 	OwnUse bool
 	// PopDeaths is the households the population module removes from the agent
 	// this tick, after its floors; 0 while the module is off
-	// (spec-population.md 4.1).
+	// (spec-population.md 4.1). A spawner that does not plan these deaths (and the
+	// births of RoleView.PopBirths) leaves the carry spent and the household count
+	// unmoved: DefaultSpawner plans both.
 	PopDeaths int64
 }
 
