@@ -142,7 +142,7 @@ func (w *World) scanRegion(g RegionID) {
 		s := &x.sets[r]
 		s.rings, s.weights, s.targets, s.free = s.rings[:0], s.weights[:0], s.targets[:0], s.free[:0]
 	}
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 && w.regionOf(a) == g {
 			w.addAgentRow(a)
 		}
@@ -249,6 +249,9 @@ const reasonUnknownKind Reason = "unknown_kind"
 func (w *World) p71Entry() error {
 	w.tally.reset()
 	for g := range w.cfg.Regions {
+		if w.isOutsideNode(RegionID(g)) {
+			continue // no spawner is called for an outside node (spec-world.md 6.1.11)
+		}
 		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns
@@ -331,7 +334,7 @@ func (w *World) refusal(g RegionID, d *Decision) Reason {
 // agentIn returns the household agent id when it exists and its account is in
 // region g, else nil. An estate pseudo-agent and a removed agent are not found.
 func (w *World) agentIn(g RegionID, id AgentID) *agent {
-	if id < AgentID(len(w.cfg.Regions)) || id >= AgentID(len(w.agents)) {
+	if id < AgentID(w.firstHousehold) || id >= AgentID(len(w.agents)) {
 		return nil
 	}
 	if a := &w.agents[id]; a.weight >= 1 && w.regionOf(a) == g {
@@ -553,7 +556,7 @@ func (w *World) execEnter(g RegionID, d Decision) error {
 func (w *World) gatherHosts(g RegionID, role RoleID) {
 	x := &w.ex
 	x.hosts, x.hostAt = x.hosts[:0], x.hostAt[:0]
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
 			x.hosts = append(x.hosts, occupation.Host{Ref: len(x.hostAt), Weight: a.weight})
 			x.hostAt = append(x.hostAt, i)
@@ -669,7 +672,7 @@ func (w *World) entryWarns(g RegionID) {
 		w.log.LogAttrs(ctx, slog.LevelWarn, "entry unfunded", slog.Int64(logkeys.Region, int64(g)), slog.Int64(logkeys.Households, row.unfunded))
 	}
 	clear(x.hh)
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 && w.regionOf(a) == g {
 			x.hh[a.role] += a.weight
 		}

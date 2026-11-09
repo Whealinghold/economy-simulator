@@ -269,7 +269,7 @@ func (m *viaModel) solve(md steady.Model) (out steady.Outcome, skipped bool, err
 func (m *viaModel) noProgramme(regions []RegionID) bool {
 	for ci := range m.c.Commodities {
 		if slices.ContainsFunc(regions, func(r RegionID) bool { return m.upkeep[r][ci] > 0 }) {
-			if !m.c.Commodities[ci].Raw || m.hasSource(regions, ci) || importSourced(m.c, m.c.Commodities[ci].ID) {
+			if !m.c.Commodities[ci].Raw || m.hasSource(regions, ci) {
 				return false
 			}
 		}

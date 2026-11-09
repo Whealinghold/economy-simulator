@@ -30,7 +30,7 @@ func (w *World) p32Trade() error {
 	w.refreshViewCtx()
 	w.receipts.reset()
 	w.markets.reset(w.Tick())
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue
@@ -244,6 +244,9 @@ func (w *World) submitEstate(region RegionID, o Order) {
 func (w *World) p41Clear() error {
 	tick := w.Tick()
 	for i := range w.markets.books {
+		if w.outsideMarket(i) {
+			continue // an outside node has no market in effect (spec-world.md 6.1.11)
+		}
 		if err := w.clearOne(i, tick); err != nil {
 			return err
 		}
@@ -277,7 +280,7 @@ func (w *World) clearOne(i int, tick int64) error {
 // bid of the purpose Input, and the working tick of both sides of a trade. A
 // pseudo-agent has no welfare slot.
 func (w *World) feedWelfare(mi int, trades []Trade) {
-	pseudo := AgentID(len(w.cfg.Regions))
+	pseudo := AgentID(w.firstHousehold)
 	for _, t := range trades {
 		pay, ok := checked.Mul(int64(t.Price), int64(t.Quantity))
 		if !ok {

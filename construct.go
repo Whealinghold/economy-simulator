@@ -87,6 +87,9 @@ func (w *World) beginConstruction() *builder {
 	mustBuild(err, "the opening of the estate accounts")
 	w.estates = e
 	w.allocate()
+	if w.external != nil {
+		mustBuild(w.external.openAccounts(w.ledger), "the opening of the counterparty accounts")
+	}
 	widest := 0
 	for i := range w.roles.rows {
 		widest = max(widest, len(w.roles.rows[i].tradable))
@@ -147,8 +150,14 @@ func (w *World) allocate() {
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
-	w.agents = make([]agent, regions) // the estate pseudo-agents have no household
-	w.state.nextAgent = AgentID(regions)
+	w.external = newExternal(&w.cfg)
+	w.outside = outsideMarks(&w.cfg)
+	w.firstHousehold = regions + w.external.counterpartyCount()
+	if w.external != nil {
+		w.external.assignAgents(regions)
+	}
+	w.agents = make([]agent, w.firstHousehold) // the estate pseudo-agents and the counterparties have no household
+	w.state.nextAgent = AgentID(w.firstHousehold)
 	w.live = liveCounts{inRole: make([]int64, regions*roles)}
 	w.bp = beliefParams(w.cfg.World)
 	w.clr = &clearScratch{}
@@ -265,7 +274,7 @@ func (b *builder) seedBeliefs(a *agent, region RegionID) {
 // takes (FR-WLD-062).
 func (b *builder) draws() {
 	w := b.w
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		role := &w.cfg.Roles[a.role]
 		w.rnd.keyed(siteConstruction, 0, int64(a.id))

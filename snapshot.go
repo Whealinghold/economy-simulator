@@ -367,6 +367,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
+	w.dropOutsideRows(&s)
 	return s, nil
 }
 
@@ -450,6 +451,10 @@ func (w *World) makesTable() [][]bool {
 // scans are the classes of spec-observability.md 5.5) and one pass over the
 // agents.
 func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool) error {
+	if w.isOutsideNode(g) {
+		s.Regions[g] = RegionRow{Region: g, Outside: true} // no agents, pool or market (spec-external-sector.md 3.1.2)
+		return nil
+	}
 	v := w.buildRegionView(g)
 	acc.reset()
 	nr := len(w.cfg.Roles)

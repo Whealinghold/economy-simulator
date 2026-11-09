@@ -52,6 +52,7 @@ var shipChecks = [...]func(c *shipCtx) Reason{
 	ckJob,         // 4
 	ckSame,        // 5
 	ckRegion,      // 6
+	ckOutside,     // 6a outside_destination: EXT
 	nil,           // 6a outside_destination: EXT
 	ckRoute,       // 7
 	ckBlocked,     // 8
@@ -119,6 +120,15 @@ func ckSame(c *shipCtx) Reason {
 func ckRegion(c *shipCtx) Reason {
 	if c.r.To < 0 || int(c.r.To) >= len(c.w.cfg.Regions) {
 		return ReasonUnknownRegion
+	}
+	return ""
+}
+
+// ckOutside is row 6a: the destination is an outside node, which is a place for
+// the outside's counterparties and not for a shipment.
+func ckOutside(c *shipCtx) Reason {
+	if c.w.isOutsideNode(c.r.To) {
+		return ReasonOutsideDestination
 	}
 	return ""
 }

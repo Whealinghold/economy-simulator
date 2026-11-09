@@ -118,7 +118,7 @@ func (w *World) relocateRefusal(id AgentID, to RegionID, skip []string) (Reason,
 		return ReasonUnknownRegion, ErrUnknownRegion
 	case id < 0 || id >= w.state.nextAgent:
 		return ReasonUnknownAgent, ErrUnknownAgent
-	case int(id) < len(w.cfg.Regions):
+	case int(id) < w.firstHousehold:
 		return ReasonNotRelocatable, ErrNotRelocatable
 	}
 	a := &w.agents[id]
@@ -126,9 +126,13 @@ func (w *World) relocateRefusal(id AgentID, to RegionID, skip []string) (Reason,
 		return ReasonClosedAccount, ErrClosedAccount
 	}
 	// The ledger answers rows 5 and 6 together. Row 5a, outside_node (the external
-	// module, spec-regions.md 6.1.3), goes between them: its change splits the
-	// answer at ReasonSameRegion and tests the destination there.
-	if reason, err := ledgerRefusal(w.ledger.CheckRelocate(a.account, int(to))); err != nil {
+	// module, spec-regions.md 6.1.3), goes between them: it replaces the answer of
+	// the ledger after same_region (a refusal of an earlier row stands).
+	reason, err := ledgerRefusal(w.ledger.CheckRelocate(a.account, int(to)))
+	if w.outsideNodeRow(to, reason) {
+		return ReasonOutsideNode, ErrOutsideNode
+	}
+	if err != nil {
 		return reason, err
 	}
 	if e, ok := w.relocationRefusal(a, skip); ok {

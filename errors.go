@@ -486,4 +486,7 @@ var (
 	// ErrNotAGate is a gate row naming a region with no direct edge to or from the
 	// node.
 	ErrNotAGate = errors.New("region is not a gate of the node")
+	// ErrOutsideNode is a relocation into an outside node (spec-regions.md 6.1.3,
+	// row outside_node). It is a refusal at run time, not a validation error.
+	ErrOutsideNode = errors.New("region is an outside node")
 )

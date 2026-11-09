@@ -1648,3 +1648,15 @@ type ContractRound struct {
 }
 
 func (ContractRound) isEvent() {}
+
+// The reasons the external module adds to the refusals of other modules
+// (spec-external-sector.md 4.4, D533).
+const (
+	// ReasonOutsideNode is a relocation into an outside node: row 5a of
+	// spec-regions.md 6.1.3, between same_region and open_reservation.
+	ReasonOutsideNode Reason = "outside_node"
+	// ReasonOutsideDestination is a shipment request whose destination is an
+	// outside node: row 6a of spec-transport.md 5.4, between unknown_region and
+	// no_route.
+	ReasonOutsideDestination Reason = "outside_destination"
+)

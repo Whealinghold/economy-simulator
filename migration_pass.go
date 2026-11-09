@@ -102,7 +102,7 @@ func (w *World) passCounts() {
 	clear(p.tally)
 	p.due, p.dueAt, p.started = p.due[:0], p.dueAt[:0], p.started[:0]
 	p.visited, p.evaluated = 0, 0
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue

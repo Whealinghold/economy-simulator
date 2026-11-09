@@ -314,6 +314,9 @@ func (w *World) loadLedger(rs *restoreCtx, r *codec.Reader) error {
 		return err
 	}
 	w.estates = e
+	if w.external != nil {
+		return w.external.attachAccounts(w.ledger, len(w.cfg.Regions))
+	}
 	return nil
 }
 
@@ -389,9 +392,9 @@ func (w *World) inFlightAccount(v ledger.View) bool {
 
 // coreCross is the checks of checkpointCross that the sections of the core need.
 func (w *World) coreCross() error {
-	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	roles := len(w.cfg.Roles)
 	first := w.estates.accounts[0]
-	for id := first + regions; id < w.ledger.Len(); id++ {
+	for id := first + w.firstHousehold; id < w.ledger.Len(); id++ {
 		v, err := w.ledger.Account(id)
 		if err == nil && w.inFlightAccount(v) {
 			continue
@@ -402,7 +405,7 @@ func (w *World) coreCross() error {
 		if v.Closed {
 			continue
 		}
-		if v.Owner < regions || v.Owner >= len(w.agents) || w.agents[v.Owner].weight < 1 || w.agents[v.Owner].account != id {
+		if v.Owner < w.firstHousehold || v.Owner >= len(w.agents) || w.agents[v.Owner].weight < 1 || w.agents[v.Owner].account != id {
 			return fmt.Errorf("%w: open account %d is the account of no live agent", ErrCheckpointCorrupt, id)
 		}
 	}

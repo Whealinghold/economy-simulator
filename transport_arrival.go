@@ -108,7 +108,7 @@ func (w *World) travellerLive(s *shipment) bool {
 // liveAgent reports whether the ID is an agent that exists: not a region's estate
 // pseudo-agent, issued, and of weight 1 or more.
 func (w *World) liveAgent(id AgentID) bool {
-	return id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
+	return id >= AgentID(w.firstHousehold) && id < w.state.nextAgent && w.agents[id].weight >= 1
 }
 
 // moveTraveller relocates the traveller to the destination: the guard query run

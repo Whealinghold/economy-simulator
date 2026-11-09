@@ -1200,7 +1200,7 @@ func (w *World) p62Wants() error {
 // (spec-demand.md 4.4, FR-DEM-013).
 func (w *World) agentIndex(a *agent, region RegionID) int64 {
 	var n int64
-	for i := len(w.cfg.Regions); i < int(a.id); i++ {
+	for i := w.firstHousehold; i < int(a.id); i++ {
 		if o := &w.agents[i]; o.weight >= 1 && w.regionOf(o) == region {
 			n++
 		}

@@ -94,6 +94,12 @@ var skipFields = []string{
 	"merchants.rows", "merchants.tally", "merchants.goods", "merchants.lots", "merchants.subOffers",
 	"merchants.subTakes", "merchants.offers", "merchants.takes", "merchants.rOffers", "merchants.rTakes",
 	"merchants.pairs", "merchants.counts", "merchants.line", "merchants.dump",
+	// World.firstHousehold and World.outside are derived from the configuration (the
+	// number of regions plus the counterparties; the marks of the outside nodes), and
+	// were appended after the off golden was recorded: the first would be non-zero and
+	// the second a slice of false values, and neither may move the off files
+	// (testing.md 7.1.1). The external module's own state is walked (World.external).
+	"World.firstHousehold", "World.outside",
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",

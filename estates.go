@@ -665,7 +665,7 @@ func (w *World) reliefNeeds() error {
 		rp.rows = make([]reliefRow, len(w.agents))
 	}
 	rp.rows = rp.rows[:len(w.agents)]
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		rp.rows[i] = reliefRow{}
 		if a.weight < 1 {
@@ -693,7 +693,7 @@ func (w *World) reliefNeeds() error {
 // agent ID.
 func (w *World) reliefPay() error {
 	rp := w.relief
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		row := rp.rows[i]
 		if row.need < 1 {
 			continue

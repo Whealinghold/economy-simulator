@@ -333,7 +333,7 @@ func (w *World) p24OwnUse() {
 	s := w.sub
 	s.grow(len(w.agents))
 	clear(s.inMode)
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue

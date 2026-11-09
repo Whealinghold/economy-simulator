@@ -2,9 +2,11 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/outside"
 )
 
@@ -14,6 +16,423 @@ import (
 // in internal/outside. Outside this file the module appears only in the
 // catalogue files (config.go, hash.go, bounds.go, defaults.go, errors.go,
 // validate.go) and at the named hooks of ADR 0010.
+
+// external is the state of the module, nil while it is off (spec-external-sector.md
+// 16). The shapes are flat slices in the canonical order of the configuration,
+// with no map (D529): the lines by (node, commodity), the counterparties by
+// (node, gate, side with buy before sell) and the side rows by counterparty and
+// then by line. The mid and the quotes are not stored: they are functions of the
+// tick, the drift and the shock.
+type external struct {
+	// lines are the lines of every node, ascending by node then commodity.
+	lines []outsideLine
+	// cps are the counterparties in agent ID order (spec-external-sector.md 4.2.2).
+	cps []counterparty
+	// rows are the side rows (3.3.4): the rows of counterparty i are
+	// rows[cps[i].first : cps[i].first+cps[i].n], by commodity.
+	rows []sideRow
+}
+
+// outsideLine is the runtime state of one line, and the means to find its
+// configuration.
+type outsideLine struct {
+	node      RegionID
+	commodity CommodityID
+	cfg       *OutsideLine
+	// drift is the walk state, 0 without a walk (6.4); shock is the shock slot,
+	// 10 000 until set (6.5).
+	drift, shock int64
+}
+
+// counterparty is a pseudo-agent bound to one Outside account: the buyer or the
+// seller of one gate of one node (4.2.1).
+type counterparty struct {
+	node, gate RegionID
+	// buy is true for the counterparty of a buy side, which places bids.
+	buy bool
+	// agent is its agent ID, in the range between the estates and the households.
+	agent AgentID
+	// account is its ledger account, 0 until openAccounts or attachAccounts.
+	account int
+	// scaleBP is the gate scale of its quotes (3.2.4).
+	scaleBP int64
+	// first and n are its rows.
+	first, n int
+}
+
+// sideRow is the state of one side at one gate (3.3.4): the carry of the wanted
+// units, and the units and the list value traded over the run. The ended flag
+// joins with the sweep, in the phase that builds it.
+type sideRow struct {
+	line                    int
+	carry, units, listValue int64
+}
+
+// newExternal builds the state of the module from the canonical configuration:
+// the lines, and the counterparties with their rows. It returns nil while the
+// module is off. Agent IDs are assigned after the estates, in ascending
+// (node, gate, side) with the buy side before the sell side of a gate. No draw is
+// taken and no account is opened (FR-EXT-044).
+func newExternal(c *Config) *external {
+	m := c.Modules.External
+	if m == nil {
+		return nil
+	}
+	x := &external{}
+	for ni := range m.Nodes {
+		n := &m.Nodes[ni]
+		node, _ := c.regionID(n.Region)
+		first := len(x.lines)
+		for li := range n.Lines {
+			commodity, _ := c.commodityID(n.Lines[li].Commodity)
+			x.lines = append(x.lines, outsideLine{node: node, commodity: commodity, cfg: &n.Lines[li], shock: wholeBP})
+		}
+		x.addCounterparties(c, n, node, first)
+	}
+	return x
+}
+
+// addCounterparties appends the counterparties of one node: for each gate in
+// ascending order, the buyer and then the seller, each only if some line has the
+// side present and the gate is a gate for it (4.2.1). first is the index of the
+// node's first line.
+func (x *external) addCounterparties(c *Config, n *OutsideNode, node RegionID, first int) {
+	sell, buy := edgeGates(c, n.Region)
+	hasSell, hasBuy := n.sides()
+	gates := slices.Compact(slices.Sorted(slices.Values(slices.Concat(sell, buy))))
+	for _, g := range gates {
+		gate, _ := c.regionID(g)
+		scale := int64(DefaultGateScaleBP)
+		if i := slices.IndexFunc(n.Gates, func(o OutsideGate) bool { return o.Region == g }); i >= 0 {
+			scale = n.Gates[i].ScaleBP
+		}
+		if hasBuy && slices.Contains(buy, g) {
+			x.addCounterparty(counterparty{node: node, gate: gate, buy: true, scaleBP: scale}, n, first)
+		}
+		if hasSell && slices.Contains(sell, g) {
+			x.addCounterparty(counterparty{node: node, gate: gate, scaleBP: scale}, n, first)
+		}
+	}
+}
+
+// addCounterparty appends a counterparty and its rows: one for each line of the
+// node whose side is present, in commodity order. The agent ID is set later, by
+// the number of regions.
+func (x *external) addCounterparty(cp counterparty, n *OutsideNode, firstLine int) {
+	cp.first = len(x.rows)
+	for li := range n.Lines {
+		s := &n.Lines[li].Sell
+		if cp.buy {
+			s = &n.Lines[li].Buy
+		}
+		if s.present() {
+			x.rows = append(x.rows, sideRow{line: firstLine + li})
+		}
+	}
+	cp.n = len(x.rows) - cp.first
+	x.cps = append(x.cps, cp)
+}
+
+// counterpartyCount is the number of counterparties, 0 for a nil module.
+func (x *external) counterpartyCount() int {
+	if x == nil {
+		return 0
+	}
+	return len(x.cps)
+}
+
+// assignAgents gives the counterparties the agent IDs from first on, in order.
+func (x *external) assignAgents(first int) {
+	for i := range x.cps {
+		x.cps[i].agent = AgentID(first + i)
+	}
+}
+
+// openAccounts opens the Outside account of each counterparty, in agent ID order,
+// right after the estate accounts and before any agent's (spec-external-sector.md
+// 4.2.3). The owner of the account is the agent ID and its region the gate.
+func (x *external) openAccounts(l *ledger.Ledger) error {
+	for i := range x.cps {
+		cp := &x.cps[i]
+		id, err := l.Open(ledger.KindOutside, int(cp.agent), int(cp.gate))
+		if err != nil {
+			return fmt.Errorf("open the account of counterparty %d: %w", cp.agent, err)
+		}
+		cp.account = id
+	}
+	return nil
+}
+
+// attachAccounts finds the Outside account of each counterparty in a ledger that a
+// restore has read: the accounts right after the estates, in agent ID order, each
+// open, of the kind, owned by the agent and in the gate region.
+func (x *external) attachAccounts(l *ledger.Ledger, regions int) error {
+	first := 0
+	for first < l.Len() {
+		if v, _ := l.Account(first); v.Kind != ledger.KindBoundary {
+			break
+		}
+		first++
+	}
+	for i := range x.cps {
+		cp := &x.cps[i]
+		id := first + regions + i
+		v, err := l.Account(id)
+		if err != nil || v.Kind != ledger.KindOutside || v.Closed || v.Owner != int(cp.agent) || v.Region != int(cp.gate) {
+			return fmt.Errorf("%w: account %d is not the open Outside account of counterparty %d", ErrCheckpointCorrupt, id, cp.agent)
+		}
+		cp.account = id
+	}
+	return nil
+}
+
+// outsideMarks returns the outside nodes by RegionID: all false while the module
+// is off (D526).
+func outsideMarks(c *Config) []bool {
+	marks := make([]bool, len(c.Regions))
+	if c.Modules.External == nil {
+		return marks
+	}
+	for i := range c.Modules.External.Nodes {
+		if r, ok := c.regionID(c.Modules.External.Nodes[i].Region); ok {
+			marks[r] = true
+		}
+	}
+	return marks
+}
+
+// isOutsideNode reports that the region is an outside node: a region that is not
+// a market (spec-external-sector.md 3.1). It is false for an ID that is no region.
+func (w *World) isOutsideNode(r RegionID) bool {
+	return r >= 0 && int(r) < len(w.outside) && w.outside[r]
+}
+
+// outsideReasons returns the six ledger reasons the module declares while it is on
+// (spec-external-sector.md 8.1), or nil while it is off. They are declared reasons:
+// a ledger has them only when Config.Declared names them (D522).
+func outsideReasons(c *Config) []ledger.Reason {
+	if c.Modules.External == nil {
+		return nil
+	}
+	return []ledger.Reason{
+		ledger.OutsideBudget, ledger.OutsideUnspent, ledger.OutsideReceipts,
+		ledger.OutsideOffer, ledger.OutsideUnsold, ledger.OutsidePurchases,
+	}
+}
+
+// outsideGroup is the plan of group 3 of the boundary accounts: the commodities
+// that some line has a side for, ascending (spec-external-sector.md 4.2.4).
+type outsideGroup struct{ goods []int }
+
+// outsideGroupOf returns the plan of group 3 for c, nil while the module is off.
+func outsideGroupOf(c *Config) *outsideGroup {
+	m := c.Modules.External
+	if m == nil {
+		return nil
+	}
+	has := make([]bool, len(c.Commodities))
+	for ni := range m.Nodes {
+		for li := range m.Nodes[ni].Lines {
+			l := &m.Nodes[ni].Lines[li]
+			if k, ok := c.commodityID(l.Commodity); ok && (l.Sell.present() || l.Buy.present()) {
+				has[k] = true
+			}
+		}
+	}
+	g := &outsideGroup{}
+	for k, h := range has {
+		if h {
+			g.goods = append(g.goods, k)
+		}
+	}
+	return g
+}
+
+// open opens the boundary accounts of group 3: the money reasons first, then the
+// goods reasons for each commodity that has a line side, in commodity order. It
+// opens nothing for a nil plan.
+func (g *outsideGroup) open(l *ledger.Ledger) error {
+	if g == nil {
+		return nil
+	}
+	money := []ledger.Reason{ledger.OutsideBudget, ledger.OutsideUnspent, ledger.OutsideReceipts}
+	goods := []ledger.Reason{ledger.OutsideOffer, ledger.OutsideUnsold, ledger.OutsidePurchases}
+	for _, r := range money {
+		if err := openBoundary(l, r, ledger.Money); err != nil {
+			return err
+		}
+	}
+	for _, k := range g.goods {
+		for _, r := range goods {
+			if err := openBoundary(l, r, k); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// audit is the module's check of World.Audit (spec-external-sector.md 8.5,
+// FR-EXT-050): every counterparty account is empty, the boundary balance of each
+// of the six reasons has the sign of its kind, and for each commodity the balance
+// of outside_purchases equals the units of the buy rows and that of outside_offer
+// less outside_unsold the units of the sell rows, exactly. A violation names the
+// node and the commodity.
+func (x *external) audit(w *World) error {
+	if err := x.auditEmpty(w); err != nil {
+		return err
+	}
+	if err := x.auditState(w); err != nil {
+		return err
+	}
+	if err := x.auditMoney(w); err != nil {
+		return err
+	}
+	for k := range w.cfg.Commodities {
+		if err := x.auditUnits(w, CommodityID(k)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// auditState checks the saved state of the module against its bounds: the drift of
+// a line within its bound, the shock in 1 to MaxShockBP, the carry of a side row in
+// [0, 10 000) and its totals not negative.
+func (x *external) auditState(w *World) error {
+	for i := range x.lines {
+		l := &x.lines[i]
+		name := w.cfg.Regions[l.node].ID
+		if l.drift < -l.cfg.WalkBoundBP || l.drift > l.cfg.WalkBoundBP || l.shock < 1 || l.shock > MaxShockBP {
+			return fmt.Errorf("outside node %q, commodity %q: drift %d (bound %d) or shock %d is out of its bounds", name, l.cfg.Commodity, l.drift, l.cfg.WalkBoundBP, l.shock)
+		}
+	}
+	for i := range x.cps {
+		cp := &x.cps[i]
+		for j := cp.first; j < cp.first+cp.n; j++ {
+			r := &x.rows[j]
+			if r.carry < 0 || r.carry >= wholeBP || r.units < 0 || r.listValue < 0 {
+				return fmt.Errorf("outside node %q, commodity %q: side row has carry %d, units %d, list value %d out of bounds",
+					w.cfg.Regions[cp.node].ID, x.lines[r.line].cfg.Commodity, r.carry, r.units, r.listValue)
+			}
+		}
+	}
+	return nil
+}
+
+// auditEmpty checks that no counterparty account holds money or goods.
+func (x *external) auditEmpty(w *World) error {
+	for i := range x.cps {
+		cp := &x.cps[i]
+		name := w.cfg.Regions[cp.node].ID
+		v, err := w.ledger.Account(cp.account)
+		if err != nil {
+			invariant("a counterparty account is unreadable: " + err.Error())
+		}
+		if v.Balance != 0 || v.Reserved != 0 {
+			return fmt.Errorf("outside node %q, gate %q: counterparty %d holds money %d (reserved %d), want an empty account", name, w.cfg.Regions[cp.gate].ID, cp.agent, v.Balance, v.Reserved)
+		}
+		for k := range w.cfg.Commodities {
+			if held, _, err := w.ledger.Holding(cp.account, k); err != nil || held != 0 {
+				return fmt.Errorf("outside node %q, gate %q: counterparty %d holds %d units of %q, want an empty account", name, w.cfg.Regions[cp.gate].ID, cp.agent, held, w.cfg.Commodities[k].ID)
+			}
+		}
+	}
+	return nil
+}
+
+// boundaryBalance returns the balance of the boundary account of a reason and a
+// thing, and 0 when the account is not open (no line deals in the commodity).
+func (w *World) boundaryBalance(r ledger.Reason, thing int) int64 {
+	id, ok := w.ledger.Boundary(r, thing)
+	if !ok {
+		return 0
+	}
+	v, err := w.ledger.Account(id)
+	if err != nil {
+		invariant("a boundary account is unreadable: " + err.Error())
+	}
+	return v.Balance
+}
+
+// auditMoney checks the signs of the three money reasons: a faucet's balance is
+// not positive and a sink's is not negative.
+func (x *external) auditMoney(w *World) error {
+	if w.boundaryBalance(ledger.OutsideBudget, ledger.Money) > 0 {
+		return fmt.Errorf("outside_budget: boundary balance %d is positive, want a faucet's balance (not positive)", w.boundaryBalance(ledger.OutsideBudget, ledger.Money))
+	}
+	for _, r := range []ledger.Reason{ledger.OutsideUnspent, ledger.OutsideReceipts} {
+		if b := w.boundaryBalance(r, ledger.Money); b < 0 {
+			return fmt.Errorf("reason %d (outside money sink): boundary balance %d is negative, want a sink's balance (not negative)", r, b)
+		}
+	}
+	return nil
+}
+
+// auditUnits checks the signs and the units of one commodity.
+func (x *external) auditUnits(w *World, k CommodityID) error {
+	offer, unsold, bought := w.boundaryBalance(ledger.OutsideOffer, int(k)), w.boundaryBalance(ledger.OutsideUnsold, int(k)), w.boundaryBalance(ledger.OutsidePurchases, int(k))
+	name := w.cfg.Commodities[k].ID
+	if offer > 0 || unsold < 0 || bought < 0 {
+		return fmt.Errorf("commodity %q: outside boundary balances offer %d, unsold %d, purchases %d have the wrong sign for their kinds", name, offer, unsold, bought)
+	}
+	var sellUnits, buyUnits int64
+	node := ""
+	for i := range x.cps {
+		cp := &x.cps[i]
+		for j := cp.first; j < cp.first+cp.n; j++ {
+			row := &x.rows[j]
+			if x.lines[row.line].commodity != k {
+				continue
+			}
+			node = w.cfg.Regions[cp.node].ID
+			if cp.buy {
+				buyUnits += row.units
+			} else {
+				sellUnits += row.units
+			}
+		}
+	}
+	if bought != buyUnits {
+		return fmt.Errorf("outside node %q, commodity %q: purchases balance %d, want the units of the buy sides %d", node, name, bought, buyUnits)
+	}
+	if -offer-unsold != sellUnits {
+		return fmt.Errorf("outside node %q, commodity %q: offer less unsold is %d, want the units of the sell sides %d", node, name, -offer-unsold, sellUnits)
+	}
+	return nil
+}
+
+// outsideNodeRow is row 5a of spec-regions.md 6.1.3: the destination is an outside
+// node, and no earlier row (closed_account, same_region) has refused the
+// relocation. reason is the ledger's answer for rows 5 and 6.
+func (w *World) outsideNodeRow(to RegionID, reason Reason) bool {
+	return w.isOutsideNode(to) && reason != ReasonClosedAccount && reason != ReasonSameRegion
+}
+
+// outsideMarket reports that the market at dense index i is the slot of an outside
+// node, which has a slot but no market in effect (D526).
+func (w *World) outsideMarket(i int) bool {
+	return w.external != nil && w.isOutsideNode(RegionID(i/w.markets.commodities))
+}
+
+// dropOutsideRows removes the Roles and Markets rows of the outside nodes from a
+// snapshot built densely by (region, role) and (region, commodity): a node has no
+// such row (spec-observability.md 5.3.4, 5.3.5). It keeps the order of the rest.
+func (w *World) dropOutsideRows(s *Snapshot) {
+	if w.external == nil {
+		return
+	}
+	nr, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
+	roles, markets := s.Roles[:0], s.Markets[:0]
+	for g := range w.cfg.Regions {
+		if w.isOutsideNode(RegionID(g)) {
+			continue
+		}
+		roles = append(roles, s.Roles[g*nr:(g+1)*nr]...)
+		markets = append(markets, s.Markets[g*nc:(g+1)*nc]...)
+	}
+	s.Roles, s.Markets = roles, markets
+}
 
 // canonical returns the module with nodes by region, gates by region, lines by
 // commodity and season factors by the order of the calendar's seasons (a season
