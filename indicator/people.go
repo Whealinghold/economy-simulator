@@ -48,6 +48,9 @@ func Households(w Window, open, closing economysim.Snapshot, ticksPerYear int64)
 	if ticksPerYear < 1 {
 		return HouseholdsResult{}, wrap("Households", "ticks per year", ErrRange)
 	}
+	if err := w.checkPeople("Households"); err != nil {
+		return HouseholdsResult{}, err
+	}
 	oa, err := agentsOf(w, open)
 	if err != nil {
 		return HouseholdsResult{}, err
@@ -78,6 +81,17 @@ func Households(w Window, open, closing economysim.Snapshot, ticksPerYear int64)
 		err = wrap("Households", "ticks", ErrOverflow)
 	}
 	return res, err
+}
+
+// checkPeople returns ErrRange for a hand-built window whose people table cannot
+// be indexed by (region, role) or whose household tables are shorter than it,
+// which the presets would otherwise index out of range or divide by Roles 0.
+func (w Window) checkPeople(preset string) error {
+	n := len(w.People)
+	if n > 0 && (w.Roles < 1 || n > w.Regions*w.Roles || len(w.OpenHouseholds) < n || len(w.CloseHouseholds) < n) {
+		return wrap(preset, "people", ErrRange)
+	}
+	return nil
 }
 
 // householdsRow is the row of the people cell i.
@@ -159,6 +173,9 @@ type UnfedResult struct {
 // is 6. closing supplies the share at the boundary.
 func Unfed(w Window, closing economysim.Snapshot) (UnfedResult, error) {
 	if err := w.checkClosing("Unfed", closing); err != nil {
+		return UnfedResult{}, err
+	}
+	if err := w.checkPeople("Unfed"); err != nil {
 		return UnfedResult{}, err
 	}
 	atClose, err := unfedAtClose(w, closing)
@@ -246,6 +263,12 @@ type RoleSharesResult struct {
 // swing over a series of windows is Swing of the series of one share.
 func RoleShares(w Window) (RoleSharesResult, error) {
 	res := RoleSharesResult{ConfigHash: w.ConfigHash, From: w.From, To: w.To}
+	if err := w.checkPeople("RoleShares"); err != nil {
+		return RoleSharesResult{}, err
+	}
+	if len(w.OpenHouseholds) > len(w.People) || len(w.CloseHouseholds) > len(w.People) {
+		return RoleSharesResult{}, wrap("RoleShares", "people", ErrRange) // byRegion indexes by region * Roles + role
+	}
 	openReg, err := byRegion(w, w.OpenHouseholds)
 	if err != nil {
 		return RoleSharesResult{}, err

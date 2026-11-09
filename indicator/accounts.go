@@ -122,6 +122,15 @@ func (w Window) checkSnapshots(preset string, open, closing economysim.Snapshot)
 	return nil
 }
 
+// checkRegional returns ErrRange for a hand-built window whose regional table is
+// shorter than its regions, which the presets index by region.
+func (w Window) checkRegional(preset string) error {
+	if len(w.Regional) < w.Regions {
+		return wrap(preset, "regional", ErrRange)
+	}
+	return nil
+}
+
 // checkClosing verifies that one snapshot closes the window: its configuration
 // (ErrConfigMismatch) and its tick (ErrWindowOrder).
 func (w Window) checkClosing(preset string, closing economysim.Snapshot) error {
@@ -379,6 +388,9 @@ func loadAccounts(preset string, w Window, open, closing economysim.Snapshot, p 
 		return accounts{}, err
 	}
 	if err := w.checkTable(preset, p); err != nil {
+		return accounts{}, err
+	}
+	if err := w.checkRegional(preset); err != nil {
 		return accounts{}, err
 	}
 	f, err := flowsOf(w)

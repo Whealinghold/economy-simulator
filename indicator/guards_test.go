@@ -3,6 +3,8 @@ package indicator_test
 import (
 	"errors"
 	"math"
+	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -127,5 +129,116 @@ func TestMarketPresets_HandBuiltWindowIsRangeNotPanic(t *testing.T) {
 	}
 	if _, err := indicator.Dispersion(noBeliefs, indicator.CellSel{}); !errors.Is(err, indicator.ErrRange) {
 		t.Errorf("Dispersion(no belief rows) error = %v, want ErrRange", err)
+	}
+}
+
+// TestHandBuiltWindow_ShortTablesAreRangeNotPanic verifies that a window whose
+// regional, people or recipe table is shorter than its names table is ErrRange
+// in every preset that indexes it, not an index panic or a division by Roles 0.
+//
+// Fix: review round 6. TradeBalance, GDP, Sectors, Households, Unfed,
+// RoleShares and ValueAdded indexed the tables of a hand-built window unchecked.
+//
+// Requirement: FR-IND-038, FR-IND-041, FR-IND-042, FR-IND-045
+func TestHandBuiltWindow_ShortTablesAreRangeNotPanic(t *testing.T) {
+	t.Parallel()
+	p, err := indicator.NewPrices([32]byte{}, 0, 0, 1, 1, []economysim.Price{1})
+	if err != nil {
+		t.Fatalf("NewPrices() error = %v, want nil", err)
+	}
+	noRegional := indicator.Window{Regions: 1, Commodities: 1}
+	noRoles := indicator.Window{People: make([]indicator.PeopleTally, 1)}
+	tests := map[string]error{}
+	_, tests["TradeBalance"] = indicator.TradeBalance(noRegional, p, indicator.GDPResult{})
+	_, tests["GDP"] = indicator.GDP(noRegional, economysim.Snapshot{}, economysim.Snapshot{}, p)
+	_, tests["RoleShares"] = indicator.RoleShares(noRoles)
+	_, tests["Unfed"] = indicator.Unfed(noRoles, economysim.Snapshot{})
+	_, tests["Households"] = indicator.Households(noRoles, economysim.Snapshot{}, economysim.Snapshot{}, 1)
+	for name, err := range tests {
+		if !errors.Is(err, indicator.ErrRange) {
+			t.Errorf("%s(short table) error = %v, want ErrRange", name, err)
+		}
+	}
+}
+
+// TestPriceRange_ClampedAndNonPositiveLow verifies that a clamped range is
+// flagged on the result and that a low at or below 0 has no range.
+//
+// Fix: review round 6. The range was clamped without WarnClamped, and a negative
+// low gave a signed range.
+//
+// Requirement: FR-IND-023, FR-IND-046
+func TestPriceRange_ClampedAndNonPositiveLow(t *testing.T) {
+	t.Parallel()
+	w := indicator.Window{Regions: 1, Commodities: 2, Markets: []indicator.MarketTally{
+		{Ticks: 1, Active: 1, Low: 1, High: 1 << 40}, {Ticks: 1, Active: 1, Low: -5, High: 7},
+	}}
+	got, err := indicator.PriceRange(w, indicator.CellSel{})
+	if err != nil {
+		t.Fatalf("PriceRange() error = %v, want nil", err)
+	}
+	if !slices.Contains(got.Warnings, indicator.WarnClamped) || !got.Rows[0].Range.Clamped {
+		t.Errorf("PriceRange(high 2^40, low 1) = %+v, want WarnClamped and a clamped row", got)
+	}
+	if got.Rows[1].Range.OK {
+		t.Errorf("PriceRange(low -5) range = %+v, want undefined", got.Rows[1].Range)
+	}
+}
+
+// TestRowsOf_WealthHoldingOutsideTheTableIsRange verifies that a holding the
+// price table does not cover is ErrRange, not valued at 0.
+//
+// Fix: review round 6. A missing table valued every holding at 0 silently.
+//
+// Requirement: FR-IND-026
+func TestRowsOf_WealthHoldingOutsideTheTableIsRange(t *testing.T) {
+	t.Parallel()
+	st := []indicator.AgentRow{{Weight: 1, Money: 5, Holdings: []indicator.Holding{{Commodity: 0, Quantity: 2}}}}
+	if _, err := indicator.RowsOf(st, indicator.ColWealth, indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("RowsOf(wealth, no table) error = %v, want ErrRange", err)
+	}
+}
+
+// TestPrices_MisshapenWindowOrTableIsRange verifies that PricesOfWindow refuses
+// a market table of another shape or a negative carried price, and BaseOf a table
+// whose cells do not fit its shape.
+//
+// Fix: review round 6. Both built a table that read as 0 everywhere.
+//
+// Requirement: FR-IND-028
+func TestPrices_MisshapenWindowOrTableIsRange(t *testing.T) {
+	t.Parallel()
+	if _, err := indicator.PricesOfWindow(indicator.Window{Regions: 2, Commodities: 1, Markets: make([]indicator.MarketTally, 1)}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("PricesOfWindow(1 market of 2 cells) error = %v, want ErrRange", err)
+	}
+	if _, err := indicator.PricesOfWindow(indicator.Window{Regions: 1, Commodities: 1, Markets: []indicator.MarketTally{{Price: -1}}}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("PricesOfWindow(negative carried price) error = %v, want ErrRange", err)
+	}
+	if _, err := indicator.BaseOf(indicator.Window{Regions: 1, Commodities: 1}, indicator.Prices{Regions: 1, Commodities: 1}); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("BaseOf(table with no cells) error = %v, want ErrRange", err)
+	}
+}
+
+// TestValueAdded_ShortRecipeTableIsRange verifies that a window whose recipe
+// table is shorter than regions * recipes is ErrRange, not an index panic.
+//
+// Fix: review round 6. recipeRow indexed Recipe unchecked.
+//
+// Requirement: FR-IND-031
+func TestValueAdded_ShortRecipeTableIsRange(t *testing.T) {
+	t.Parallel()
+	cfg := loadOne(t)
+	h := economysim.HashConfig(cfg)
+	snap := economysim.Snapshot{ConfigHash: h}
+	cells := make([]economysim.Price, len(cfg.Regions)*len(cfg.Commodities))
+	p, err := indicator.NewPrices(h, 0, 0, len(cfg.Regions), len(cfg.Commodities), cells)
+	if err != nil {
+		t.Fatalf("NewPrices() error = %v, want nil", err)
+	}
+	w := indicator.Window{ConfigHash: h, Regions: len(cfg.Regions), Commodities: len(cfg.Commodities), Recipes: len(cfg.Recipes),
+		Regional: make([]indicator.RegionTally, len(cfg.Regions))}
+	_, err = indicator.ValueAdded(w, cfg, snap, snap, p, indicator.NewClasses(cfg))
+	if !errors.Is(err, indicator.ErrRange) || !strings.Contains(err.Error(), "recipe") {
+		t.Errorf("ValueAdded(no recipe table) error = %v, want ErrRange on recipe", err)
 	}
 }

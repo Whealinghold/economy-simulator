@@ -71,6 +71,9 @@ func ValueAdded(w Window, cfg economysim.Config, open, closing economysim.Snapsh
 	if len(cfg.Recipes) != w.Recipes || len(cfg.Commodities) != w.Commodities || economysim.HashConfig(cfg) != w.ConfigHash {
 		return ValueAddedResult{}, wrap("ValueAdded", "config", ErrConfigMismatch)
 	}
+	if len(w.Recipe) < w.Regions*w.Recipes { // a hand-built window; recipeRow indexes it by region * Recipes + recipe
+		return ValueAddedResult{}, wrap("ValueAdded", "recipe", ErrRange)
+	}
 	cs, err := classSetsOf(cl)
 	if err != nil {
 		return ValueAddedResult{}, err

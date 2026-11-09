@@ -74,13 +74,20 @@ func PriceRange(w Window, sel CellSel) (RangeResult, error) {
 		if m.Ticks == 0 {
 			return nil
 		}
-		rng, err := ratioWide("PriceRange", "range", measure.FromInt64(int64(m.High)), measure.FromInt64(int64(m.Low)))
+		var rng Index
+		var err error
+		if m.Low > 0 { // a ratio against a price at or below 0 is undefined, not signed
+			rng, err = ratioWide("PriceRange", "range", measure.FromInt64(int64(m.High)), measure.FromInt64(int64(m.Low)))
+		}
 		res.Rows = append(res.Rows, RangeRow{Region: r, Commodity: c, Low: m.Low, High: m.High, Range: rng, Active: m.Active, Ticks: m.Ticks})
 		thin = thin || m.Active == 0
 		return err
 	})
 	if thin {
 		res.Warnings = []Warning{WarnThin}
+	}
+	for _, r := range res.Rows {
+		res.Warnings = clampWarning(res.Warnings, r.Range) // FR-IND-023
 	}
 	return res, err
 }

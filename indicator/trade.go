@@ -54,6 +54,9 @@ func TradeBalance(w Window, p Prices, gdp GDPResult) (TradeBalanceResult, error)
 	if err := w.checkTable("TradeBalance", p); err != nil {
 		return TradeBalanceResult{}, err
 	}
+	if err := w.checkRegional("TradeBalance"); err != nil {
+		return TradeBalanceResult{}, err
+	}
 	if gdp.ConfigHash != w.ConfigHash || gdp.From != w.From || gdp.To != w.To {
 		return TradeBalanceResult{}, wrap("TradeBalance", "gdp", ErrWindowOrder)
 	}

@@ -293,6 +293,9 @@ func (a AgentRow) wealth(p Prices) (int64, error) {
 	var sum acc
 	sum.addInt(measure.FromInt64(int64(a.Money)))
 	for _, h := range a.Holdings {
+		if h.Quantity != 0 && !p.has(a.Region, h.Commodity) { // a missing price would value the goods at 0, silently
+			return 0, wrap("RowsOf", "wealth", ErrRange)
+		}
 		sum.add(int64(h.Quantity), p.At(a.Region, h.Commodity))
 	}
 	return sum.int64("RowsOf", "wealth")

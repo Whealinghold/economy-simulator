@@ -45,10 +45,15 @@ func NewPrices(hash [32]byte, from, to int64, regions, commodities int, cells []
 // At returns the price of commodity c in region r, and 0 for a pair outside the
 // table.
 func (p Prices) At(r economysim.RegionID, c economysim.CommodityID) economysim.Price {
-	if r < 0 || int(r) >= p.Regions || c < 0 || int(c) >= p.Commodities || len(p.Cells) != p.Regions*p.Commodities {
+	if !p.has(r, c) {
 		return 0
 	}
 	return p.Cells[int(r)*p.Commodities+int(c)]
+}
+
+// has reports whether the cell is inside the table.
+func (p Prices) has(r economysim.RegionID, c economysim.CommodityID) bool {
+	return r >= 0 && int(r) < p.Regions && c >= 0 && int(c) < p.Commodities && len(p.Cells) == p.Regions*p.Commodities
 }
 
 // Compatible returns ErrConfigMismatch when the table was not taken from a world
@@ -112,11 +117,17 @@ func pricesOfReference(cfg economysim.Config, hash [32]byte) Prices {
 // forward (spec-indicators.md 4.3.2, FR-IND-028). It carries the window's
 // configuration hash and ticks. A (region, commodity) the window saw no
 // clearing for has the price 0. err is ErrOverflow for a value past int64 and
-// ErrRange for a negative volume sum.
+// ErrRange for a negative volume sum, a negative price or a market table that is not Regions * Commodities long.
 func PricesOfWindow(w Window) (Prices, error) {
+	if len(w.Markets) != w.Regions*w.Commodities { // a table of another shape would read as 0 everywhere
+		return Prices{}, wrap("PricesOfWindow", "markets", ErrRange)
+	}
 	cells := make([]economysim.Price, len(w.Markets))
 	for i, m := range w.Markets {
 		if m.SumV == 0 {
+			if m.Price < 0 {
+				return Prices{}, wrap("PricesOfWindow", "price", ErrRange)
+			}
 			cells[i] = m.Price
 			continue
 		}
@@ -189,11 +200,8 @@ func (b Base) Quantities(k Weights) []int64 {
 // must be a table of the window's world and shape (ErrConfigMismatch, ErrRange);
 // it is usually PricesOfWindow(w) (spec-indicators.md 4.3.5).
 func BaseOf(w Window, p Prices) (Base, error) {
-	if err := p.Compatible(w.ConfigHash); err != nil {
-		return Base{}, wrap("BaseOf", "prices", ErrConfigMismatch)
-	}
-	if p.Regions != w.Regions || p.Commodities != w.Commodities {
-		return Base{}, wrap("BaseOf", "prices", ErrRange)
+	if err := w.checkTable("BaseOf", p); err != nil {
+		return Base{}, err
 	}
 	f, err := flowsOf(w)
 	if err != nil {
