@@ -130,4 +130,7 @@ const (
 	Mode     = "mode"
 	Dest     = "dest"
 	Modes    = "modes"
+	// Pairs is a count of ordered region pairs, carried by the warning
+	// rumour_horizon_short.
+	Pairs = "pairs"
 )

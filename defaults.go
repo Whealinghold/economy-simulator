@@ -217,3 +217,12 @@ const (
 	// defaultResidualWarnBP is the residual above which an activity is listed.
 	defaultResidualWarnBP = 1_000
 )
+
+// DefaultInformation returns the information module with the placeholder
+// tunables of spec-information.md 8: an error of 500 basis points (5%) and a
+// horizon of 60 ticks. InfoSpeed has no default because a speed in a unit the
+// pack chooses has none that is right for every setting, so the value does not
+// validate until the caller sets it.
+func DefaultInformation() Information {
+	return Information{RumourErrorBP: 500, RumourMaxAge: 60}
+}

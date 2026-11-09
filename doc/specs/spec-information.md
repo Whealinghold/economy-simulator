@@ -645,7 +645,7 @@ by the configuration.
 | `information_without_readers` | the module is on and no role is `Informed`: records are written and no one reads them |
 | `information_without_routes` | the module is on and there are fewer than two regions or no edge: no pair of regions can have a rumour |
 | `rumour_horizon_short` | at least one ordered pair of regions has a walk in the configured graph (no edge status applied) whose `Lag` exceeds `RumourMaxAge`, so no rumour is ever offered for it; carries `pairs`, the count |
-| `informed_without_sources` | an informed role none of whose tradable commodities is a source in any region other than those where it has a group: it would never be shown a rumour |
+| `informed_without_sources` | an informed role that would never be shown a rumour: in no region where it can be (the regions of its groups, every region if it has none) is a commodity of its tradable set a source in another region |
 
 ## 10. Observability
 

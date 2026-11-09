@@ -355,8 +355,11 @@ func (w *World) logWarnings(ctx context.Context, warnings []Warning) {
 		return
 	}
 	for _, wn := range warnings {
-		w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning",
-			slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, ".")))
+		attrs := []slog.Attr{slog.String(logkeys.Rule, wn.Rule), slog.String(logkeys.Path, strings.Join(wn.Path, "."))}
+		if wn.Count > 0 {
+			attrs = append(attrs, slog.Int64(logkeys.Pairs, wn.Count))
+		}
+		w.log.LogAttrs(ctx, slog.LevelWarn, "configuration warning", attrs...)
 	}
 }
 
