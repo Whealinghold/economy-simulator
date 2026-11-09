@@ -630,6 +630,8 @@ func refusalReason(r occupation.Refusal) Reason {
 		return ReasonBadHouseholds
 	case occupation.UnsupportedCause:
 		return ReasonUnsupportedCause
+	case occupation.OnJourney:
+		return ReasonOnJourney
 	}
 	return ""
 }

@@ -1,9 +1,12 @@
 package economysim
 
 import (
+	"context"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the migration module (spec-migration.md, MIG): households that
@@ -164,4 +167,200 @@ func (v *validator) migrationLimits(m *Migration) {
 	if p > MaxQuantity {
 		v.rep.add(ErrOverflow, []string{"modules", "migration", "move_out_share"}, i64(p), i64(MaxQuantity))
 	}
+}
+
+// onJourneyName is the name of the region_bound refusal of the module
+// (spec-regions.md 6.5.2, spec-migration.md 7.2.2); it is also the Reason
+// ReasonOnJourney of a refused switch.
+const onJourneyName = string(ReasonOnJourney)
+
+// journeyRec is the journey of one agent (spec-migration.md 8.2, 14): live says
+// the agent has one, to is the destination and arrives the tick of the arrival,
+// fixed at the departure (t + 1 + k). The weight is the agent's own, read when it
+// arrives.
+type journeyRec struct {
+	to      RegionID
+	arrives int64
+	live    bool
+}
+
+// migration is the state of the migration module, nil in the world when it is
+// off (spec-migration.md 14, D481). journey is indexed by AgentID and grown on
+// demand; active holds the IDs of the agents with a journey in ascending order,
+// the iteration of P1.5, kept by binary search with no map. ended, blockedRun and
+// heldRun are per region: the households of journeys that ended by a removal or
+// a cancel since the last pass (reported once), and the two runs of consecutive
+// ticks of the diagnostic Warns. They are saved; everything below them is
+// derived at construction or scratch of the tick and is not.
+type migration struct {
+	cfg *Migration
+
+	journey    []journeyRec
+	active     []AgentID
+	ended      []int64
+	blockedRun []int64
+	heldRun    []int64
+
+	// kset is K(role) (spec-migration.md 6.1) by role in ascending commodity order,
+	// nil for a role that cannot move; outShare and inShare are the shares of each
+	// region once the rows replace the world's.
+	kset     [][]CommodityID
+	outShare []int64
+	inShare  []int64
+
+	// skip is the skip list of the arrival's guard query, held so that the query
+	// allocates nothing; arrived holds the due IDs of one P1.5; held counts the
+	// households of the arrivals a refusal held in the tick, per region, for the
+	// pass that reports them.
+	skip    []string
+	arrived []AgentID
+	held    []int64
+}
+
+// newMigration builds the state from a canonical configuration that passed
+// Validate, or returns nil when the module is off. K(role) is a function of the
+// role and the configuration alone (spec-migration.md 6.1).
+func newMigration(c *Config) *migration {
+	cfg := c.Modules.Migration
+	if cfg == nil {
+		return nil
+	}
+	lk := newLookup(c)
+	regions := len(c.Regions)
+	m := &migration{
+		cfg:        cfg,
+		ended:      make([]int64, regions),
+		blockedRun: make([]int64, regions),
+		heldRun:    make([]int64, regions),
+		held:       make([]int64, regions),
+		outShare:   make([]int64, regions),
+		inShare:    make([]int64, regions),
+		kset:       make([][]CommodityID, len(c.Roles)),
+		skip:       []string{onJourneyName},
+	}
+	for g := range regions {
+		m.outShare[g], m.inShare[g] = cfg.MoveOutShare, cfg.MoveInShare
+	}
+	for _, row := range cfg.Regions {
+		g, _ := c.regionID(row.Region)
+		m.outShare[g], m.inShare[g] = row.OutShare, row.InShare
+	}
+	for i := range c.Roles {
+		r := &c.Roles[i]
+		if !r.mobile() {
+			continue
+		}
+		for _, id := range migrationCommodities(c, lk, r) {
+			k, _ := c.commodityID(id)
+			m.kset[i] = append(m.kset[i], k)
+		}
+	}
+	return m
+}
+
+// on reports whether the agent has a journey.
+func (m *migration) on(id AgentID) bool {
+	return int(id) < len(m.journey) && m.journey[id].live
+}
+
+// holds is the test of the on_journey obligation (spec-regions.md 6.5.2): the
+// agent has a journey and skip does not name it, by name or by the instance key
+// "on_journey:<agent>". The arrival's own query skips the bare name.
+func (m *migration) holds(a *agent, skip []string) bool {
+	return m.on(a.id) && !skipHas(skip, onJourneyName, int64(a.id))
+}
+
+// depart records the journey of agent id to region to, arriving at the tick
+// given, and inserts the agent in the ascending list of those on a journey. It is
+// called by the departure of the pass; a second journey for one agent is a
+// violated invariant of the pass, which excludes agents on a journey.
+func (m *migration) depart(id AgentID, to RegionID, arrives int64) {
+	if m.on(id) {
+		invariant("an agent that is on a journey was given a second journey")
+	}
+	if int(id) >= len(m.journey) {
+		m.journey = slices.Grow(m.journey, int(id)+1-len(m.journey))[:int(id)+1]
+	}
+	m.journey[id] = journeyRec{to: to, arrives: arrives, live: true}
+	at, _ := slices.BinarySearch(m.active, id)
+	m.active = slices.Insert(m.active, at, id)
+}
+
+// finish deletes the journey of agent id, in the list of those on a journey and
+// in the table. It reports whether the agent had one.
+func (m *migration) finish(id AgentID) bool {
+	if !m.on(id) {
+		return false
+	}
+	m.journey[id] = journeyRec{}
+	at, found := slices.BinarySearch(m.active, id)
+	if !found {
+		invariant("an agent on a journey is missing from the list of those on a journey")
+	}
+	m.active = slices.Delete(m.active, at, at+1)
+	return true
+}
+
+// cancelJourney ends the journey of an agent that is still in its origin region
+// without arriving: the record is dropped, no balance and no region changes, and
+// the households are counted in ended for the next pass to report (spec-migration.md
+// 8.3, 8.4.1; FR-MIG-048). It is the removal's step 2a (dropJourney) and the
+// seam of INT's Relocate, and it emits nothing. It reports whether there was one.
+func (m *migration) cancelJourney(a *agent, region RegionID) bool {
+	if !m.finish(a.id) {
+		return false
+	}
+	m.ended[region] += a.weight
+	return true
+}
+
+// onJourney reports whether the agent has a migration journey: the migration half
+// of the one predicate offStage (spec-world.md 6.1.3).
+func (w *World) onJourney(a *agent) bool { return w.migration != nil && w.migration.on(a.id) }
+
+// dropJourney is the migration module's step of a removal (spec-agents.md 3.6
+// step 2a, FR-AGT-084): the journey is deleted and its households counted as
+// ended in the region the account is in, with no event. The money and the lots
+// follow to that region's estate in the steps after it.
+func (w *World) dropJourney(a *agent, region RegionID) {
+	w.migration.cancelJourney(a, region)
+}
+
+// p15Arrivals is P1.5: the journeys whose arrival tick has come, in ascending
+// agent ID, each completed before the next (spec-migration.md 8.4, FR-MIG-029).
+// The guard query is run skipping on_journey itself; another obligation holds
+// the arrival, which is counted and retried every tick until it releases.
+func (w *World) p15Arrivals() {
+	m, tick := w.migration, w.Tick()
+	m.arrived = m.arrived[:0]
+	for _, id := range m.active {
+		if m.journey[id].arrives <= tick {
+			m.arrived = append(m.arrived, id)
+		}
+	}
+	for _, id := range m.arrived {
+		w.arriveJourney(&w.agents[id], m.journey[id].to)
+	}
+}
+
+// arriveJourney completes the journey of agent a to region to, or holds it: the
+// relocation of the ledger with the cause migration, the beliefs reseeded at the
+// new market with no draw, RoleSince the tick, and the record dropped (spec-migration.md
+// 8.4, 8.5). A refusal changes nothing and is counted for the pass.
+func (w *World) arriveJourney(a *agent, to RegionID) {
+	m := w.migration
+	if reason, err := w.relocateRefusal(a.id, to, m.skip); err != nil {
+		m.held[w.regionOf(a)] += a.weight
+		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+			w.log.LogAttrs(ctx, slog.LevelDebug, "arrival held",
+				slog.Int64(logkeys.Agent, int64(a.id)), slog.String(logkeys.Reason, string(reason)))
+		}
+		return
+	}
+	if err := w.moveAgent(a, to, CauseMigration); err != nil {
+		invariant("the ledger refused the relocation of an arriving migrant: " + err.Error())
+	}
+	w.reseedAtArrival(a, to)
+	a.roleSince = w.Tick()
+	m.finish(a.id)
 }

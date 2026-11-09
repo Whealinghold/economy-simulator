@@ -657,6 +657,25 @@ func TestConstants_Values(t *testing.T) {
 	// The reasons of a spawner decision the world refuses (spec-spawner.md 4)
 	// and the two "entry dropped" Debug reasons (13.3), in the order the
 	// constants are declared. unknown_agent is in the first slice.
+	// The reasons of the migration module (spec-migration.md 7.6, 8.2, 8.3): the
+	// abandon reason of a job left behind by a journey, the refusal and the outcomes.
+	migrationReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonRegionChanged, "region_changed"},
+		{economysim.ReasonOnJourney, "on_journey"},
+		{economysim.ReasonStarted, "started"},
+		{economysim.ReasonNoEstimate, "no_estimate"},
+		{economysim.ReasonNoDestination, "no_destination"},
+		{economysim.ReasonNoRumour, "no_rumour"},
+		{economysim.ReasonNoViable, "no_viable"},
+		{economysim.ReasonNoGain, "no_gain"},
+		{economysim.ReasonBound, "bound"},
+		{economysim.ReasonOutCap, "out_cap"},
+		{economysim.ReasonInCap, "in_cap"},
+		{economysim.ReasonEnded, "ended"},
+	}
 	spawnerReasons := []struct {
 		got  economysim.Reason
 		want string
@@ -714,6 +733,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range spawnerReasons {
 		owner[string(r.got)] = "doc/specs/spec-spawner.md"
+	}
+	for _, r := range migrationReasons {
+		owner[string(r.got)] = "doc/specs/spec-migration.md"
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
@@ -826,6 +848,9 @@ func TestConstants_Values(t *testing.T) {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, r := range spawnerReasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range migrationReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

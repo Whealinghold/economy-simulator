@@ -669,6 +669,7 @@ var savedOrDerived = map[string]string{
 	"World.money":     "saved 13: the flows' totals, scales, ends and started carries (moneyflow.go); the scratch is derived and never saved",
 	"World.res":       "saved 15: the stocks, carries, runs of ticks short and the shock scales (resources.go); the capacities, curves, rules and draws are derived from cfg, the base is the stock at the boundary and the scratch is cleared at P8.6",
 	"World.pop":       "saved 3 and 14: the death carry of each agent in the agent record, once, and the birth carries, the scales and the three runs in section 14 (plan 2-11 Phase 6); the rule tables and the scratch are derived or cleared (population.go)",
+	"World.migration": "the journey of an agent is hosted in its record of section 3 and the runs and pending ends in section 20 (Phase 7); the kset, the shares and the scratch are derived (migration.go)",
 	"World.info":      "saved in section 16 (the price record of every source); the sources, the lag, the informed roles and the scratch are derived (information.go)",
 	"World.transport": "saved in section 17 (the next shipment ID, the shipments in flight and the transit factors); the away flags, the free lists, the line pool and the scratch are derived (transport.go)",
 	"World.sub":       "saved 3 and 19: the flag and the counter of each agent in the agent record, once, and the two runs of the Warns in section 19 (plan 2-10 Phase 7); the covered sets and the counts of the tick are derived or scratch (subsistence.go)",

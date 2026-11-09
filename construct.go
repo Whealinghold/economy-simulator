@@ -133,8 +133,12 @@ func (w *World) allocate() {
 	w.pop = newPopulation(&w.cfg)
 	w.transport = newTransport(&w.cfg)
 	w.info = newInformation(&w.cfg, &w.roles)
+	w.migration = newMigration(&w.cfg)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
+	}
+	if w.migration != nil {
+		w.bounds.add(onJourneyName, w.migration.holds)
 	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
