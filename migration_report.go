@@ -51,13 +51,13 @@ func migrationWarnings(c *Config, lk lookup) []Warning {
 // migration_no_mobile_role and migration_cohort, and the longest effective welfare
 // window of a mobile role (0 when none), which migration_flow_window reads.
 func migrationRoleWarnings(c *Config, lk lookup) (out []Warning, longest int64) {
-	any := false
+	mobile := false
 	for i := range c.Roles {
 		r := &c.Roles[i]
 		if !r.mobile() {
 			continue
 		}
-		any = true
+		mobile = true
 		if w, ok := effectiveWindow(c, lk, r); ok {
 			longest = max(longest, w)
 		}
@@ -65,7 +65,7 @@ func migrationRoleWarnings(c *Config, lk lookup) (out []Warning, longest int64) 
 			out = append(out, Warning{Path: []string{"roles", r.ID}, Rule: "migration_cohort"})
 		}
 	}
-	if !any {
+	if !mobile {
 		out = append(out, Warning{Path: []string{"modules", "migration"}, Rule: "migration_no_mobile_role"})
 	}
 	return out, longest

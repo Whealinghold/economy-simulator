@@ -114,8 +114,8 @@ func (w *World) passCounts() {
 			p.pipeline[m.journey[a.id].to] += a.weight
 			continue
 		}
-		if !a.external && !w.cfg.Roles[a.role].Fixed && !w.offStage(a) &&
-			mig.Due(tick, int64(a.id), m.cfg.MoveReviewTicks) {
+		if mig.Due(tick, int64(a.id), m.cfg.MoveReviewTicks) && !a.external &&
+			!w.cfg.Roles[a.role].Fixed && !w.offStage(a) {
 			p.due, p.dueAt = append(p.due, a.id), append(p.dueAt, g)
 		}
 	}
@@ -129,6 +129,8 @@ func (w *World) review(a *agent, g RegionID) {
 	p := &m.pass
 	t := &p.tally[g]
 	row := w.roles.row(a.role)
+	// The push test reads the earned ratio (relief excluded, spec-migration.md 5.3), not
+	// the view's Ratio: a household kept up by relief is still pushed.
 	earned, present := a.history.EarnedRatio(w.upkeepCost(a, g, row), w.cfg.Roles[a.role].DefaultRatio)
 	pushed := mig.Pushed(earned, present, m.cfg.MoveBelow)
 	if !mig.Settled(tick, a.roleSince, m.cfg.MoveCooldown, row.window) {
@@ -186,14 +188,14 @@ func (w *World) homeFigure(a *agent, g RegionID, row *roleRow) int64 {
 	if !present {
 		return 0
 	}
-	var cost int64
+	p := &w.migration.pass
+	p.lines = p.lines[:0]
 	for _, it := range row.upkeepIn(g) {
-		line := mig.Line{Qty: int64(it.quantity), Price: w.localPrice(g, it.commodity)}
-		c, ok := mig.Cost([]mig.Line{line})
-		if !ok {
-			return 0
-		}
-		cost += c
+		p.lines = append(p.lines, mig.Line{Qty: int64(it.quantity), Price: w.localPrice(g, it.commodity)})
+	}
+	cost, ok := mig.Cost(p.lines)
+	if !ok {
+		return 0
 	}
 	v, ok := mig.Vhat(wage, cost)
 	if !ok {
@@ -272,10 +274,11 @@ func (w *World) candidatesOf(a *agent, g RegionID, row *roleRow) {
 func (w *World) estimateAt(row *roleRow, d RegionID, arrival int64) (vhat int64, priced bool) {
 	p := &w.migration.pass
 	p.lines, p.tools, p.recipes = p.lines[:0], p.tools[:0], p.recipes[:0]
-	season := -1
-	if mo, err := w.cfg.Calendar.At(arrival); err == nil {
-		season = mo.Season
+	mo, err := w.cfg.Calendar.At(arrival)
+	if err != nil {
+		return 0, false // a tick the calendar cannot place (overflow) prices nothing
 	}
+	season := mo.Season
 	for _, it := range row.upkeepIn(d) {
 		p.lines = append(p.lines, mig.Line{Qty: int64(it.quantity), Price: w.rumoured(d, it.commodity)})
 	}
