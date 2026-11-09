@@ -18,8 +18,9 @@ type runConfig struct {
 }
 
 // WithRecordFunc sets f to be called synchronously, in plan order, after each
-// record, on the caller's goroutine. f must not call the runner
-// (spec-experiments.md 5.2.2).
+// record this run produces, on the caller's goroutine. A record taken from
+// WithPrior was produced by an earlier sweep and is not delivered again. f must
+// not call the runner (spec-experiments.md 5.2.2).
 func WithRecordFunc(f func(Record)) RunOption { return func(c *runConfig) { c.record = f } }
 
 // WithPrior gives records already produced by an earlier, cancelled or crashed
@@ -259,9 +260,11 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	}
 	var out []Record
 	for _, u := range units {
-		if recs, ok := priorOf(prior, u); len(prior) > 0 && ok {
-			out = append(out, recs...)
-			continue
+		if len(prior) > 0 {
+			if recs, ok := priorOf(prior, u); ok {
+				out = append(out, recs...)
+				continue
+			}
 		}
 		if err := ctx.Err(); err != nil {
 			return append(out, e.priorAfter(prior, units, u)...), fmt.Errorf("experiment: run: %w", err)

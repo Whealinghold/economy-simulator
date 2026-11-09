@@ -73,7 +73,7 @@ func (g *engine) advance(to int64) *failure {
 }
 
 // snapshot takes a snapshot of the healthy world. An error here has no row of
-// the table of 9.1; it is a step failure (decision D-S1 of the report).
+// the table of 9.1; it is a step failure.
 func (g *engine) snapshot() (economysim.Snapshot, *failure) {
 	s, err := g.w.Snapshot()
 	if err != nil {

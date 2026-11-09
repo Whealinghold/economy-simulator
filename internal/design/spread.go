@@ -81,7 +81,7 @@ func SpreadLevel(cell, n, levels int) (int, bool) {
 		return 0, false
 	}
 	hi, lo := bits.Mul64(uint64(2*cell+1), uint64(levels))
-	q, _ := bits.Div64(hi, lo, uint64(2*n)) // 2*cell+1 < 2*n, so hi < 2*n
+	q, _ := bits.Div64(hi, lo, 2*uint64(n)) // 2*cell+1 < 2*n, so hi < 2*n
 	return int(q), true
 }
 
@@ -99,6 +99,6 @@ func SpreadValue(cell, n int, lo, hi int64) (int64, bool) {
 	ph, pl := bits.Mul64(odd, width)
 	pl, c := bits.Add64(pl, odd, 0) // odd * (width + 1)
 	ph += c
-	q, _ := bits.Div64(ph, pl, uint64(2*n)) // odd < 2*n, so the quotient is below width + 1
+	q, _ := bits.Div64(ph, pl, 2*uint64(n)) // odd < 2*n, so the quotient is below width + 1
 	return int64(uint64(lo) + q), true
 }
