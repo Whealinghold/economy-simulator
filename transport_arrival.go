@@ -118,7 +118,7 @@ func (w *World) liveAgent(id AgentID) bool {
 func (w *World) moveTraveller(a *agent, s *shipment) bool {
 	t := w.transport
 	key := string(strconv.AppendInt(append(t.key[:0], openShipment+":"...), int64(s.id), 10))
-	t.skip = append(append(t.skip[:0], key), w.arrivalSkips(s, s.to)...)
+	t.skip = append(append(t.skip[:0], key), w.arrivalSkips(s)...)
 	if reason, err := w.relocateRefusal(a.id, s.to, t.skip); err != nil {
 		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 			w.log.LogAttrs(ctx, slog.LevelDebug, "arrival held",

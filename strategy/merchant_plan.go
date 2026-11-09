@@ -154,7 +154,10 @@ func (s *state) keep(i int) int64 {
 	var u int64
 	for _, row := range s.v.Upkeep {
 		if row.Commodity == s.v.Commodities[i].Commodity {
-			u, _ = checked.Mul(s.v.Weight, row.Quantity)
+			var ok bool
+			if u, ok = checked.Mul(s.v.Weight, row.Quantity); !ok {
+				return math.MaxInt64 // an overflowing upkeep keeps everything
+			}
 		}
 	}
 	t, ok := household.ComputeTargets(household.Need{Upkeep: u}, s.par)

@@ -57,7 +57,7 @@ func (m *merchants) holds(a *agent, skip []string) bool {
 // the arriving shipment's own: the contract formed on that shipment (spec-transport.md
 // 5.5.3, ruling C16), so a deliverer that arrives at P1.3 while its contract settles
 // at P1.4 is not held by it. Every other contract of the agent still refuses.
-func (w *World) arrivalSkips(s *shipment, _ RegionID) []string {
+func (w *World) arrivalSkips(s *shipment) []string {
 	if w.mer == nil {
 		return nil
 	}
