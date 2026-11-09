@@ -1044,4 +1044,7 @@
 //     world adds up into MerchantsPlanned.
 //   - MerchantView: the group of an AgentView that a merchant sees (MerchantMode and
 //     MerchantGood are its rows); MerchantsPlanned reports the decisions of a tick.
+//   - LaneDecision: the result of a merchant's decision about a candidate lane, a
+//     closed set of constants (DecisionNoRumour to DecisionLotCapped) that names
+//     the cases of PlanNotes.
 package economysim

@@ -63,7 +63,8 @@ type tradeRow struct {
 	t4, q4          int64 // the want tier and the units bought in it (spec-demand.md 4.6)
 }
 
-// tradeCtx is what the passes of Trade share.
+// tradeCtx is what the passes of Trade share. trip is the planned trip of a
+// strategy that replaces the planned recipe (TradeWith), nil for the default.
 type tradeCtx struct {
 	v     *AgentView
 	par   household.Params
@@ -71,6 +72,20 @@ type tradeCtx struct {
 	rows  []tradeRow
 	rstar int
 	ws    *wantScratch
+	trip  []TripInput
+}
+
+// TripInput is one input of a trip that a strategy hands to
+// DefaultStrategy.TradeWith: a commodity, the whole units the trip needs of it and
+// the purpose of the order that buys it (spec-merchants.md 3.4.2). Entries for the
+// same commodity add up; the purpose of the first entry with units is the order's.
+type TripInput struct {
+	// Commodity is the commodity the trip needs.
+	Commodity CommodityID
+	// Quantity is the units the trip needs of it.
+	Quantity Quantity
+	// Purpose is the purpose of the order that buys it.
+	Purpose Purpose
 }
 
 // beliefParamsOf converts the view's belief group to the parameters of the
@@ -124,13 +139,25 @@ func (DefaultStrategy) Revise(o *OutcomeView, _ *rand.Rand) Belief {
 // A view that makes a checked operation overflow, which a world's view cannot,
 // gives no order for the commodity (or none at all if the upkeep cost
 // overflows) and never a panic (D96).
-func (DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
+func (d DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
+	d.TradeWith(v, rng, p, nil)
+}
+
+// TradeWith is Trade with a planned trip in place of the planned recipe, the seam
+// by which a strategy that plans something other than a recipe has the default buy
+// its inputs (spec-merchants.md 3.4.2). With a nil trip it is Trade. With a
+// non-nil trip the planned recipe is none, Job_c of a commodity is the sum of the
+// entries for it, whatever StartsIn is, OutTgt_c is 0 and the purpose of its order
+// is the entry's, so the inputs of the trip are tier 2, not subject to the saving
+// rule. The draws are those of Trade: one word per order considered, in canonical
+// commodity order.
+func (DefaultStrategy) TradeWith(v *AgentView, rng *rand.Rand, p *TradePlan, trip []TripInput) {
 	var local viewScratch
 	sc := v.scratch
 	if sc == nil {
 		sc = &local
 	}
-	t := tradeCtx{v: v, par: householdParams(&v.Tunables), bp: beliefParamsOf(&v.Tunables.Beliefs), rows: sc.trade.reset(len(v.Commodities)), ws: &sc.trade.want}
+	t := tradeCtx{v: v, par: householdParams(&v.Tunables), bp: beliefParamsOf(&v.Tunables.Beliefs), rows: sc.trade.reset(len(v.Commodities)), ws: &sc.trade.want, trip: trip}
 	t.ws.funded = t.ws.funded[:0] // read by emit only with wants in the view
 	cost, ok := v.upkeepCost()
 	if !ok {
@@ -140,7 +167,10 @@ func (DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 	if !ok {
 		return
 	}
-	t.rstar = t.plannedRecipe()
+	t.rstar = -1
+	if trip == nil {
+		t.rstar = t.plannedRecipe()
+	}
 	for i := range v.Commodities {
 		t.consider(i, rng)
 	}
@@ -232,12 +262,40 @@ func (t *tradeCtx) outputTerm(c CommodityID) (int64, bool) {
 // jobAndOutput returns Job_c and OutTgt_c of the commodity for the planned
 // recipe (7.3); both are 0 when no recipe is planned. ok is false on overflow.
 func (t *tradeCtx) jobAndOutput(c CommodityID) (job, out int64, ok bool) {
+	if t.trip != nil {
+		job, ok = t.tripTerm(c)
+		return job, 0, ok
+	}
 	if t.rstar < 0 {
 		return 0, 0, true
 	}
 	job, ok1 := t.jobTerm(c)
 	out, ok2 := t.outputTerm(c)
 	return job, out, ok1 && ok2
+}
+
+// tripTerm returns Job_c of the commodity for a planned trip: the sum of the
+// entries for it (spec-merchants.md 3.4.2). An entry below 1 adds nothing. ok is
+// false on overflow.
+func (t *tradeCtx) tripTerm(c CommodityID) (int64, bool) {
+	var j sum
+	for _, in := range t.trip {
+		if in.Commodity == c && in.Quantity > 0 {
+			j.add(int64(in.Quantity), true)
+		}
+	}
+	return j.v, !j.bad
+}
+
+// tripPurpose returns the purpose of the first entry of the planned trip that
+// has units of c, and whether there is one.
+func (t *tradeCtx) tripPurpose(c CommodityID) (Purpose, bool) {
+	for _, in := range t.trip {
+		if in.Commodity == c && in.Quantity > 0 {
+			return in.Purpose, true
+		}
+	}
+	return PurposeOther, false
 }
 
 // makes reports whether the role makes c: a non-discard output of one of its
@@ -271,6 +329,9 @@ func (t *tradeCtx) upkeepUnits(c CommodityID) (u int64, isUpkeep, ok bool) {
 // purposeOf is the Purpose of an intent for c (7.3.6): an input of the planned
 // recipe with a job to buy for, a tool of it, an upkeep commodity, else other.
 func (t *tradeCtx) purposeOf(c CommodityID, job int64, isUpkeep bool) Purpose {
+	if p, ok := t.tripPurpose(c); ok {
+		return p
+	}
 	if t.rstar >= 0 {
 		r := &t.v.Recipes[t.rstar]
 		if job > 0 {

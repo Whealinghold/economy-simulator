@@ -28,6 +28,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.info != nil && kind == viewTrade {
 		w.fillRumours(v, a)
 	}
+	if w.mer != nil && kind == viewTrade {
+		w.fillMerchantView(v, a)
+	}
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
@@ -57,6 +60,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	w.checkDiscards(a, p)
 	if w.demand != nil {
 		w.checkWants(a, p)
+	}
+	if w.mer != nil {
+		w.checkMerchantPlan(a, p)
 	}
 }
 

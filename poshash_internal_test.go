@@ -398,6 +398,9 @@ func informationOn(w *World) bool { return w.info != nil }
 // plan 2-12): an off world records no line for them.
 func transportOn(w *World) bool { return w.transport != nil }
 
+// merchantRolesOn is the guard of the P3.3a row: a role has a merchant block.
+func merchantRolesOn(w *World) bool { return w.mer != nil && w.mer.roles > 0 }
+
 // migrationOn is the guard of the rows of the migration module (P1.5 and P7.2,
 // plan 2-14): an off world records no line for them.
 func migrationOn(w *World) bool { return w.migration != nil }
@@ -434,6 +437,7 @@ var replayRows = []replayRow{
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
 	{id: "P3.2", run: (*World).p32Trade},
+	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P4.1", run: (*World).p41Clear},

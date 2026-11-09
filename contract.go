@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/transit"
 )
 
@@ -485,4 +486,265 @@ func (rt merchantRoutes) reaches(m, consigning *Role) bool {
 		}
 	}
 	return false
+}
+
+// DeliveryOffer offers goods for delivery to another region (spec-merchants.md
+// 9.2). It is indivisible and lasts one tick. It names no consignee: the round
+// chooses the payer.
+type DeliveryOffer struct {
+	// Mode is the hired mode that carries the lot and To the destination region.
+	Mode ModeID
+	To   RegionID
+	// Commodity and Quantity are the goods, whole units, all or nothing.
+	Commodity CommodityID
+	Quantity  Quantity
+	// Limit is the least delivered price per unit the deliverer accepts.
+	Limit Price
+}
+
+// DeliveryTake asks for goods to be delivered to the taker's region (spec-merchants.md
+// 9.2). It names no origin, may be filled in parts and lasts one tick.
+type DeliveryTake struct {
+	// Commodity is the commodity wanted.
+	Commodity CommodityID
+	// Quantity is the most units wanted.
+	Quantity Quantity
+	// Limit is the most per unit the taker pays.
+	Limit Price
+}
+
+// PlanNotes is what a strategy reports of its decisions, as counts
+// (spec-merchants.md 15.1.2). A strategy that has nothing to report leaves it
+// zero; the world sums it per region into MerchantsPlanned and reads it for
+// nothing else, so it influences no result.
+type PlanNotes struct {
+	// Considered is the candidates and NoRumour to BelowShare the first case that
+	// decided each.
+	Considered, NoRumour, Stale, Locked, Perishable, NoMargin, Unaffordable, BelowShare int64
+	// Planned is the trips planned, Dispatched the shipment requests, Offered the
+	// delivery offers and Taken the delivery takes appended to the plan.
+	Planned, Dispatched, Offered, Taken int64
+	// Rested and Waiting count a rest and a stay, and LotCapped a lot cut by the
+	// cap of the block.
+	Rested, Waiting, LotCapped int64
+}
+
+// MerchantView is the merchant group of an AgentView (spec-merchants.md 4.1):
+// plain data, present only in the view passed to Trade for an agent whose role has
+// a merchant block. Outbound is not a field of it: it is AgentView.Outbound.
+type MerchantView struct {
+	// Params is the role's block by value, with Modes empty (the modes are in
+	// Modes), and FeeShare is the role's MerchantFeeShare.
+	Params   Merchant
+	FeeShare int64
+	// Modes are the modes of the block in mode order, by value.
+	Modes []MerchantMode
+	// Goods are the commodities of the tradable set in canonical order.
+	Goods []MerchantGood
+}
+
+// MerchantMode is a mode of the block as the merchant plans with it: the
+// definitions of spec-transport.md 3.1 by value, with the commodities resolved.
+type MerchantMode struct {
+	// Mode is the mode and Hired says it is carried by haul units.
+	Mode  ModeID
+	Hired bool
+	// UnitMass and UnitBulk are the capacity of a carrying unit; Crew the
+	// households it needs.
+	UnitMass, UnitBulk, Crew int64
+	// Vehicle and Haul are the commodities of the vehicle and of the haul unit,
+	// NoCommodity when the mode has none; WearPerTick is the vehicle's wear.
+	Vehicle     CommodityID
+	WearPerTick int64
+	Haul        CommodityID
+	// HaulSpan is the distance one haul unit carries one carrying unit.
+	HaulSpan int64
+	// Feed is the goods one carrying unit consumes per tick of travel.
+	Feed []Line
+}
+
+// MerchantGood is a commodity of the tradable set as the merchant sees it: the
+// definitions of spec-goods.md 8 and the age of the oldest lot it holds.
+type MerchantGood struct {
+	// Commodity is the commodity.
+	Commodity CommodityID
+	// Mass, Bulk, ShelfLife and Durability are its definitions.
+	Mass, Bulk, ShelfLife, Durability int64
+	// OldestAge is the ticks since the born tick of the oldest lot the agent holds,
+	// -1 when it holds none; it is 0 for a held commodity that never spoils, whose
+	// lots have no born tick to read.
+	OldestAge int64
+}
+
+// plannedTally is the sum of the plan notes of the plans of one region in a tick
+// and the agents with a merchant block given a view there, for MerchantsPlanned.
+type plannedTally struct {
+	merchants int64
+	notes     PlanNotes
+}
+
+// merchantRoleRow is what the filler copies into a view for a role with a block:
+// the tables built once at construction.
+type merchantRoleRow struct {
+	has    bool
+	params Merchant
+	share  int64
+	modes  []MerchantMode
+	goods  []MerchantGood
+}
+
+// merchants is the state of the merchants module and of the merchant roles: the
+// per-role view tables and the per-region tally of the plan notes. The tally is
+// kept only when an observer was supplied, and is cleared by P3.3a.
+type merchants struct {
+	// roles is the number of roles with a merchant block (MerchantsPlanned is gated
+	// by it, not by the module).
+	roles int
+	rows  []merchantRoleRow
+	tally []plannedTally
+	// goods and lots are the scratch of the filler.
+	goods []MerchantGood
+	lots  []ledger.Lot
+}
+
+// newMerchants builds the state for a canonical configuration that passed
+// Validate: nil when no role has a merchant block and the module is off.
+func newMerchants(c *Config, rt *roleTable, t *transportState) *merchants {
+	m := &merchants{rows: make([]merchantRoleRow, len(c.Roles)), tally: make([]plannedTally, len(c.Regions))}
+	for i := range c.Roles {
+		if c.Roles[i].Merchant == nil {
+			continue
+		}
+		m.roles++
+		m.rows[i] = newMerchantRow(c, &c.Roles[i], &rt.rows[i], t)
+		m.goods = slices.Grow(m.goods, len(m.rows[i].goods))
+	}
+	if m.roles == 0 && c.Modules.Merchants == nil {
+		return nil
+	}
+	return m
+}
+
+// newMerchantRow builds the view tables of one role with a block.
+func newMerchantRow(c *Config, r *Role, row *roleRow, t *transportState) merchantRoleRow {
+	b := *r.Merchant
+	b.Modes = nil
+	out := merchantRoleRow{has: true, params: b, share: r.MerchantFeeShare}
+	ids := make([]ModeID, 0, len(r.Merchant.Modes))
+	for i := range c.Modules.Transport.Modes {
+		if slices.Contains(r.Merchant.Modes, c.Modules.Transport.Modes[i].ID) {
+			ids = append(ids, ModeID(i))
+		}
+	}
+	for _, id := range ids {
+		md, res := &c.Modules.Transport.Modes[id], &t.modes[id]
+		out.modes = append(out.modes, MerchantMode{
+			Mode: id, Hired: md.hired(), UnitMass: md.UnitMass, UnitBulk: md.UnitBulk, Crew: md.Crew,
+			Vehicle: res.vehicle, WearPerTick: md.WearPerTick, Haul: res.haul, HaulSpan: md.HaulSpan,
+			Feed: slices.Clone(res.feed),
+		})
+	}
+	for _, cm := range row.tradable {
+		d := &c.Commodities[cm]
+		out.goods = append(out.goods, MerchantGood{Commodity: cm, Mass: d.Mass, Bulk: d.Bulk, ShelfLife: d.ShelfLife, Durability: d.Durability})
+	}
+	return out
+}
+
+// fillMerchantView sets the merchant group of the view passed to Trade for an
+// agent whose role has a block, and counts the agent for MerchantsPlanned when an
+// observer was supplied. It is the module's filler of the fillAgentView fan-in;
+// the goods are a scratch copy valid for the call (spec-merchants.md 4.1).
+func (w *World) fillMerchantView(v *AgentView, a *agent) {
+	m := w.mer
+	row := &m.rows[a.role]
+	if !row.has {
+		return
+	}
+	lots, err := w.ledger.AppendLots(m.lots[:0], a.account)
+	if err != nil {
+		// Excluded from coverage (testing.md 9.5): fillCore has read this account.
+		invariant("the ledger refused the lots of a live agent: " + err.Error())
+	}
+	m.lots = lots
+	m.goods = append(m.goods[:0], row.goods...)
+	oldestAges(m.goods, lots, w.Tick())
+	if w.obs.supplied {
+		m.tally[v.Region].merchants++
+	}
+	v.HasMerchant = true
+	v.Merchant = MerchantView{Params: row.params, FeeShare: row.share, Modes: row.modes[:len(row.modes):len(row.modes)], Goods: m.goods[:len(m.goods):len(m.goods)]}
+}
+
+// oldestAges sets the OldestAge of each good from the lots of the account, which
+// are in (commodity, born) order, so the first lot of a commodity is its oldest.
+// Both goods and lots are in ascending commodity order.
+func oldestAges(goods []MerchantGood, lots []ledger.Lot, tick int64) {
+	j := 0
+	for i := range goods {
+		g := &goods[i]
+		g.OldestAge = -1
+		for j < len(lots) && lots[j].Commodity < int(g.Commodity) {
+			j++
+		}
+		if j < len(lots) && lots[j].Commodity == int(g.Commodity) {
+			if g.ShelfLife > 0 {
+				g.OldestAge = tick - lots[j].Born
+			} else {
+				g.OldestAge = 0
+			}
+		}
+	}
+}
+
+// checkMerchantPlan is the module's check of the trade plan of agent a (the
+// checkTradePlan fan-in): for an agent with a merchant block it adds the plan
+// notes into the tally of the agent's region, when an observer was supplied. The
+// notes are read for nothing else.
+func (w *World) checkMerchantPlan(a *agent, p *TradePlan) {
+	m := w.mer
+	if !w.obs.supplied || !m.rows[a.role].has {
+		return
+	}
+	t := &m.tally[w.regionOf(a)].notes
+	n := &p.Notes
+	t.Considered += n.Considered
+	t.NoRumour += n.NoRumour
+	t.Stale += n.Stale
+	t.Locked += n.Locked
+	t.Perishable += n.Perishable
+	t.NoMargin += n.NoMargin
+	t.Unaffordable += n.Unaffordable
+	t.BelowShare += n.BelowShare
+	t.Planned += n.Planned
+	t.Dispatched += n.Dispatched
+	t.Offered += n.Offered
+	t.Taken += n.Taken
+	t.Rested += n.Rested
+	t.Waiting += n.Waiting
+	t.LotCapped += n.LotCapped
+}
+
+// p33aPlanned is P3.3a: one MerchantsPlanned per region in ascending RegionID in
+// which an agent with a merchant block was given a view, from the tally the filler
+// and the plan check kept. It emits only when an observer was supplied, which is
+// also the only time the tally is kept, and it clears the tally for the next tick.
+func (w *World) p33aPlanned() {
+	if !w.obs.supplied {
+		return
+	}
+	for r := range w.mer.tally {
+		t := &w.mer.tally[r]
+		if t.merchants > 0 {
+			n := &t.notes
+			w.obs.deliver(MerchantsPlanned{
+				Tick: w.Tick(), Region: RegionID(r), Merchants: t.merchants,
+				Considered: n.Considered, NoRumour: n.NoRumour, Stale: n.Stale, Locked: n.Locked,
+				Perishable: n.Perishable, NoMargin: n.NoMargin, Unaffordable: n.Unaffordable, BelowShare: n.BelowShare,
+				Planned: n.Planned, Dispatched: n.Dispatched, Offered: n.Offered, Taken: n.Taken,
+				Rested: n.Rested, Waiting: n.Waiting, LotCapped: n.LotCapped,
+			})
+		}
+		*t = plannedTally{}
+	}
 }

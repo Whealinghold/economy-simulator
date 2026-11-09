@@ -280,6 +280,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P3.2", (*World).p32Trade},
+	{"P3.3a", noError(func(w *World) {
+		if w.mer != nil && w.mer.roles > 0 {
+			w.p33aPlanned()
+		}
+	})},
 	{"P3.4", (*World).p34Estates},
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},

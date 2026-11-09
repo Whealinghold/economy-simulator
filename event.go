@@ -1447,3 +1447,62 @@ type MigrationReviewed struct {
 }
 
 func (MigrationReviewed) isEvent() {}
+
+// LaneDecision is the result of a merchant's lane decision, a closed set of the
+// attribute economysim.decision (spec-merchants.md 5.1.2, 15.3). It is a type of
+// its own, distinct from Reason, so that DecisionNoRumour does not repeat the
+// value of ReasonNoRumour.
+type LaneDecision string
+
+// The eleven decisions of a merchant's tick, the names of the counts of PlanNotes
+// and of MerchantsPlanned (spec-merchants.md 5.1.2, 6.4, 6.5, 7.1).
+const (
+	// DecisionNoRumour is a candidate with no rumour for its lane.
+	DecisionNoRumour LaneDecision = "no_rumour"
+	// DecisionStale is a candidate whose rumour is older at its source than the
+	// block allows.
+	DecisionStale LaneDecision = "stale"
+	// DecisionLocked is a candidate whose lane has units on the way already.
+	DecisionLocked LaneDecision = "locked"
+	// DecisionPerishable is a candidate whose cargo would spoil on the way.
+	DecisionPerishable LaneDecision = "perishable"
+	// DecisionNoMargin is a candidate whose cautious revenue is not above the local
+	// price.
+	DecisionNoMargin LaneDecision = "no_margin"
+	// DecisionUnaffordable is a candidate whose lot is 0.
+	DecisionUnaffordable LaneDecision = "unaffordable"
+	// DecisionBelowShare is a candidate whose carriage costs more than the fee
+	// share of its gross margin.
+	DecisionBelowShare LaneDecision = "below_share"
+	// DecisionPlanned is a passing candidate that was planned.
+	DecisionPlanned LaneDecision = "planned"
+	// DecisionRested is a merchant at its target income that planned nothing.
+	DecisionRested LaneDecision = "rested"
+	// DecisionWaiting is a merchant that stayed: goods inbound, a store, a job.
+	DecisionWaiting LaneDecision = "waiting"
+	// DecisionLotCapped is a lot cut by the cap of the block.
+	DecisionLotCapped LaneDecision = "lot_capped"
+)
+
+// MerchantsPlanned is emitted once per region per tick in which at least one
+// agent with a merchant block was given a view, in ascending RegionID at P3.3a,
+// after ContractRound and before RumoursServed, also with the module absent
+// (spec-merchants.md 15.1.1). It is the sum of the PlanNotes of the plans of the
+// region, a count of lanes and cases, and is bounded by the regions, not per
+// agent.
+type MerchantsPlanned struct {
+	Tick   int64
+	Region RegionID
+	// Merchants is the agents with a merchant block given a view in the region.
+	Merchants int64
+	// Considered is the candidates, and NoRumour to BelowShare how they were
+	// decided; they add up to Considered less the passing candidates.
+	Considered, NoRumour, Stale, Locked, Perishable, NoMargin, Unaffordable, BelowShare int64
+	// Planned is the trips planned, Dispatched the shipment requests, Offered the
+	// delivery offers and Taken the delivery takes posted.
+	Planned, Dispatched, Offered, Taken int64
+	// Rested, Waiting and LotCapped count a rest, a stay and a lot cut by the cap.
+	Rested, Waiting, LotCapped int64
+}
+
+func (MerchantsPlanned) isEvent() {}

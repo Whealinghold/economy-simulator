@@ -100,6 +100,9 @@ type World struct {
 	// migration is the state of the migration module, nil when it is off
 	// (migration.go).
 	migration *migration
+	// mer is the state of the merchant roles and of the merchants module, nil when
+	// no role has a merchant block and the module is off (contract.go).
+	mer *merchants
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass
