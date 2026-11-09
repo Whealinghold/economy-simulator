@@ -11,6 +11,9 @@ var (
 	reCatNested = regexp.MustCompile("`([A-Z][A-Za-z]+)(?:\\[\\])?` \\(((?:[^()]|\\([^()]*\\))*)\\)")
 	reCatField  = regexp.MustCompile("`([A-Z][A-Za-z]+)(?:\\[\\])?`")
 	reNotP      = regexp.MustCompile(`^\s*\(p\)`)
+	// reRemark is a remark inside a nested table that names a type, not a field: the
+	// catalogue writes `Feed[]` ... (the ids of `Item`) for the type of its fields.
+	reRemark = regexp.MustCompile(`\(the ids of [^()]*\)`)
 )
 
 // catalogue is what the catalogue of spec-config.md 3.7 names: the field names,
@@ -50,7 +53,7 @@ func readCatalogue(cfg string) catalogue {
 		var nested [][2]int
 		for _, loc := range reCatNested.FindAllStringSubmatchIndex(text, -1) {
 			nested = append(nested, [2]int{loc[0], loc[1]})
-			inner := text[loc[4]:loc[5]]
+			inner := reRemark.ReplaceAllString(text[loc[4]:loc[5]], "")
 			if strings.TrimSpace(inner) == "p" {
 				continue
 			}

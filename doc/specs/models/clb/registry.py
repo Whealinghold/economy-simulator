@@ -449,7 +449,7 @@ for line in cat37.splitlines():
     nested_spans = []
     for m in re.finditer(r"`([A-Z][A-Za-z]+)(?:\[\])?` \(((?:[^()]|\([^()]*\))*)\)", text):
         nested_spans.append((m.start(), m.end()))
-        inner = m.group(2)
+        inner = re.sub(r"\(the ids of [^()]*\)", "", m.group(2))   # a remark naming a type, not a field
         if inner.strip() == "p":
             continue
         for t in re.finditer(r"`([A-Z][A-Za-z]+)`(?!\s*\(p\))", inner):
