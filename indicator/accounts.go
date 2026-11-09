@@ -140,6 +140,9 @@ func (w Window) checkClosing(preset string, closing economysim.Snapshot) error {
 	if closing.Tick != w.To {
 		return wrap(preset, "snapshot", ErrWindowOrder)
 	}
+	if w.Steps < 0 { // a hand-built window; a rate over it would change sign
+		return wrap(preset, "steps", ErrRange)
+	}
 	return nil
 }
 

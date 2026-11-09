@@ -119,7 +119,7 @@ func pricesOfReference(cfg economysim.Config, hash [32]byte) Prices {
 // clearing for has the price 0. err is ErrOverflow for a value past int64 and
 // ErrRange for a negative volume sum, a negative price or a market table that is not Regions * Commodities long.
 func PricesOfWindow(w Window) (Prices, error) {
-	if len(w.Markets) != w.Regions*w.Commodities { // a table of another shape would read as 0 everywhere
+	if w.Regions < 0 || w.Commodities < 0 || len(w.Markets) != w.Regions*w.Commodities { // a table of another shape would read as 0 everywhere
 		return Prices{}, wrap("PricesOfWindow", "markets", ErrRange)
 	}
 	cells := make([]economysim.Price, len(w.Markets))

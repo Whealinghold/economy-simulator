@@ -182,6 +182,9 @@ func laneOf(d DispatchTally, haul []economysim.CommodityID, p Prices) (Lane, err
 	if d.Mode < 0 || d.Mode >= int64(len(haul)) || haul[d.Mode] == economysim.NoCommodity || d.Hired == 0 {
 		return lane, nil
 	}
+	if !p.has(d.Origin, haul[d.Mode]) { // an unpriced haul commodity would make the freight 0, silently
+		return Lane{}, wrap("DeliveredPrice", "haul", ErrRange)
+	}
 	lane.Hired = true
 	var value acc
 	value.add(d.HaulUnits, p.At(d.Origin, haul[d.Mode]))
@@ -260,6 +263,9 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 	}
 	mean, err := ratioWide("PriceGap", "mean_spread", sum.v, measure.FromInt64(res.Pairs*10_000))
 	res.MeanSpread = mean
+	if err != nil {
+		return GapResult{}, err
+	}
 	res.Warnings = clampWarning(withWarnings(w), mean)
 	for _, row := range res.Rows {
 		res.Warnings = clampWarning(res.Warnings, row.Spread, row.GapAfterFreightBP)
@@ -268,7 +274,7 @@ func PriceGap(w Window, p Prices, dl DeliveredResult, g economysim.Graph) (GapRe
 		res.Warnings = append(res.Warnings, WarnNoRoute)
 		slices.Sort(res.Warnings)
 	}
-	return res, err
+	return res, nil
 }
 
 // addPair adds the rows of every commodity between an ordered pair of regions.

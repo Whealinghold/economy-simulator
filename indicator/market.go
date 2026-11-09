@@ -27,9 +27,11 @@ type RangeResult struct {
 }
 
 // checkMarkets returns ErrRange for a hand-built window whose market table
-// cannot be indexed by (region, commodity): rows but no commodity count.
+// cannot be indexed by (region, commodity): rows but no commodity count, or a
+// table that is not Regions * Commodities long (the dense tables of the flows
+// and snapshots are, and a longer one would be indexed past them).
 func (w Window) checkMarkets(preset string) error {
-	if len(w.Markets) > 0 && w.Commodities < 1 {
+	if len(w.Markets) > 0 && (w.Commodities < 1 || len(w.Markets) != w.Regions*w.Commodities) {
 		return wrap(preset, "markets", ErrRange)
 	}
 	return nil

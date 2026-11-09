@@ -214,6 +214,11 @@ func Real(q []int64, base, cur Prices, sel CellSel) (RealResult, error) {
 	if base.ConfigHash != cur.ConfigHash || base.Regions != cur.Regions || base.Commodities != cur.Commodities {
 		return RealResult{}, wrap("Real", "prices", ErrConfigMismatch)
 	}
+	for _, p := range []Prices{base, cur} { // At reads a table of another shape as 0 everywhere
+		if p.Regions < 0 || p.Commodities < 0 || len(p.Cells) != p.Regions*p.Commodities {
+			return RealResult{}, wrap("Real", "prices", ErrRange)
+		}
+	}
 	if len(q) != base.Regions*base.Commodities {
 		return RealResult{}, wrap("Real", "quantities", ErrRange)
 	}
