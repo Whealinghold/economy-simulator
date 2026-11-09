@@ -3,6 +3,7 @@ package denomination_test
 import (
 	"math"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/denomination"
@@ -24,16 +25,14 @@ func TestRPG_FormatsTheSpecTable(t *testing.T) {
 		{12_345, "1 gp 2 sp 3 cp", "1 gp 2 sp 3.45 cp"},
 		{-2_920, "-2 sp 9 cp", "-2 sp 9.20 cp"},
 	}
-	f0 := mustFormatter(t, denomination.RPG(), 0)
-	f2 := mustFormatter(t, denomination.RPG(), 2)
+	var cases []formatCase
 	for _, tt := range tests {
-		if got := f0.Format(tt.amount); got != tt.p0 {
-			t.Errorf("RPG Format(%d) at precision 0 = %q, want %q", tt.amount, got, tt.p0)
-		}
-		if got := f2.Format(tt.amount); got != tt.p2 {
-			t.Errorf("RPG Format(%d) at precision 2 = %q, want %q", tt.amount, got, tt.p2)
-		}
+		a := strconv.FormatInt(tt.amount, 10)
+		cases = append(cases,
+			formatCase{a + " at precision 0", denomination.RPG(), 0, tt.amount, tt.p0},
+			formatCase{a + " at precision 2", denomination.RPG(), 2, tt.amount, tt.p2})
 	}
+	runFormatCases(t, cases)
 }
 
 // TestRPG_LadderIsLargestFirstWithTheSpecSizes verifies the sizes, the symbols
@@ -68,23 +67,15 @@ func TestRPG_LadderIsLargestFirstWithTheSpecSizes(t *testing.T) {
 // Requirement: FR-CUR-018, FR-CUR-012
 func TestSingle_FormatsEveryAmountAsACount(t *testing.T) {
 	t.Parallel()
-	f := mustFormatter(t, denomination.Single("credit", "cr"), 0)
-	tests := []struct {
-		amount int64
-		want   string
-	}{
-		{0, "0 cr"},
-		{1, "1 cr"},
-		{-7, "-7 cr"},
-		{123_456_789, "123456789 cr"},
-		{math.MaxInt64, "9223372036854775807 cr"},
-		{math.MinInt64, "-9223372036854775808 cr"},
-	}
-	for _, tt := range tests {
-		if got := f.Format(tt.amount); got != tt.want {
-			t.Errorf("Single Format(%d) = %q, want %q", tt.amount, got, tt.want)
-		}
-	}
+	l := denomination.Single("credit", "cr")
+	runFormatCases(t, []formatCase{
+		{"zero", l, 0, 0, "0 cr"},
+		{"one", l, 0, 1, "1 cr"},
+		{"negative", l, 0, -7, "-7 cr"},
+		{"large", l, 0, 123_456_789, "123456789 cr"},
+		{"max int64", l, 0, math.MaxInt64, "9223372036854775807 cr"},
+		{"min int64", l, 0, math.MinInt64, "-9223372036854775808 cr"},
+	})
 }
 
 // TestFormat_IrregularLadders verifies that no power of ten is assumed.

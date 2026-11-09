@@ -190,7 +190,8 @@
 //     remaining durability; equal lots are merged and an account's lots are
 //     kept sorted by commodity, born tick and durability (canonical form).
 //   - Minor unit: the smallest unit of money. Money and Price are counts of
-//     minor units; the core has no currency or decimal place; the optional denomination package names multiples of it.
+//     minor units; the core has no currency or decimal place; the optional
+//     denomination package names multiples of it.
 //   - Module: an optional mechanism that is off unless its entry in
 //     Config.Modules is non-nil.
 //   - Ledger: the single holder of all money and goods in a world, which
@@ -419,7 +420,8 @@
 //   - Effective factor: the site factor multiplied in turn by the yield shock,
 //     the technology gain, the trainee or hire factor and the resource
 //     abundance, each step truncated; it scales the output of a job.
-//   - Unit: one rung of a Ladder, with a name, a symbol and a size in minor units.
+//   - Unit: one rung of a Ladder, with a name, a symbol and a size in minor
+//     units.
 //   - Unit cost: the cost of one unit of an output of a recipe, in minor units,
 //     rounded up: inputs, tool wear, labour at the regional wage and rent,
 //     times the output's cost share, over the output quantity and the

@@ -80,16 +80,22 @@ func TestNewFormatter_AcceptsBoundaryLadders(t *testing.T) {
 func TestNewFormatter_RejectsPrecisionOutsideRange(t *testing.T) {
 	t.Parallel()
 	for _, p := range []int{-1, denomination.MaxPrecision + 1} {
-		f, err := denomination.NewFormatter(denomination.RPG(), denomination.WithPrecision(p))
-		if !errors.Is(err, denomination.ErrPrecision) || f != nil {
-			t.Errorf("NewFormatter(RPG, WithPrecision(%d)) = %v, %v, want nil, ErrPrecision", p, f, err)
-		}
+		t.Run("rejects "+strconv.Itoa(p), func(t *testing.T) {
+			t.Parallel()
+			f, err := denomination.NewFormatter(denomination.RPG(), denomination.WithPrecision(p))
+			if !errors.Is(err, denomination.ErrPrecision) || f != nil {
+				t.Errorf("NewFormatter(RPG, WithPrecision(%d)) = %v, %v, want nil, ErrPrecision", p, f, err)
+			}
+		})
 	}
 	for p := 0; p <= denomination.MaxPrecision; p++ {
-		f, err := denomination.NewFormatter(denomination.RPG(), denomination.WithPrecision(p))
-		if err != nil || f == nil {
-			t.Errorf("NewFormatter(RPG, WithPrecision(%d)) = %v, %v, want a formatter", p, f, err)
-		}
+		t.Run("accepts "+strconv.Itoa(p), func(t *testing.T) {
+			t.Parallel()
+			f, err := denomination.NewFormatter(denomination.RPG(), denomination.WithPrecision(p))
+			if err != nil || f == nil {
+				t.Errorf("NewFormatter(RPG, WithPrecision(%d)) = %v, %v, want a formatter", p, f, err)
+			}
+		})
 	}
 }
 
@@ -111,8 +117,8 @@ func TestNewFormatter_ReportsTheFirstFaultWithItsIndex(t *testing.T) {
 	if !errors.Is(err, denomination.ErrUnitSize) {
 		t.Fatalf("NewFormatter(%v) error = %v, want ErrUnitSize", l, err)
 	}
-	if !strings.Contains(err.Error(), strconv.Itoa(1)) {
-		t.Errorf("NewFormatter(%v) error = %q, want it to contain the index 1", l, err)
+	if !strings.HasPrefix(err.Error(), "unit 1:") {
+		t.Errorf("NewFormatter(%v) error = %q, want the prefix \"unit 1:\"", l, err)
 	}
 	// A name fault on unit 0 comes before the size fault of the same unit.
 	l = denomination.Ladder{{Name: "", Symbol: "a", Size: 0}}

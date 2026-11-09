@@ -152,11 +152,10 @@ func TestImportGuard_Detects(t *testing.T) {
 // config/, strategy/, indicator/ and experiment/, and that only config/
 // imports the TOML parser.
 //
+// Requirement: FR-CUR-002
 // Guard: AGENTS.md "Standard library only in the core" and architecture.md
 // 2.7 and 2.9. A dependency or an inverted import breaks the consumer's
 // build graph, and no behavioural test would point at it.
-//
-// Requirement: FR-CUR-002
 func TestImports_StdlibAndLayers(t *testing.T) {
 	t.Parallel()
 	files, err := guardedFiles(".")

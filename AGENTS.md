@@ -48,8 +48,9 @@ with a fresh random value in the same change.
   this one. The only exception is `examples/`, where each example is its own
   module.
 - **Standard library only in the core.** The root package, `indicator/`,
-  `experiment/`, `denomination/` and `internal/` import the standard library only (and the
-  module's own packages that `doc/rules/architecture.md` 2.7 allows).
+  `experiment/`, `denomination/` and `internal/` import the standard library
+  only (and the module's own packages that `doc/rules/architecture.md` 2.7
+  allows).
   `config/` may import a file-format parser; `experiment/` reaches it only
   through `config/`. No OpenTelemetry, RPC, HTTP-framework or database
   dependencies in this module; OpenTelemetry support is the separate

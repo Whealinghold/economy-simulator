@@ -29,11 +29,15 @@ func ExampleNewFormatter() {
 	})
 	fmt.Println(errors.Is(err, denomination.ErrUnitOrder))
 
-	f, _ := denomination.NewFormatter(denomination.Ladder{
+	f, err := denomination.NewFormatter(denomination.Ladder{
 		{Name: "Large", Symbol: "L", Size: 240},
 		{Name: "Medium", Symbol: "M", Size: 12},
 		{Name: "Small", Symbol: "S", Size: 1},
 	})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	fmt.Println(f.Format(500))
 	// Output:
 	// true

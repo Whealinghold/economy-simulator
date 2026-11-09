@@ -38,8 +38,9 @@ type Formatter struct {
 
 // NewFormatter validates the ladder and the options and returns a Formatter
 // over its own copy of the ladder, so a later change of the caller's slice
-// changes nothing. A nil Option is ignored. It returns the first fault found, as ErrNoUnits, ErrUnitName,
-// ErrUnitDuplicate, ErrUnitSize, ErrUnitOrder or ErrPrecision.
+// changes nothing. A nil Option is ignored. It returns the first fault found,
+// as ErrNoUnits, ErrUnitName, ErrUnitDuplicate, ErrUnitSize, ErrUnitOrder or
+// ErrPrecision.
 func NewFormatter(l Ladder, opts ...Option) (*Formatter, error) {
 	if err := l.validate(); err != nil {
 		return nil, err
