@@ -14,7 +14,7 @@ func (f *Free) Take() (id int, ok bool) {
 		return 0, false
 	}
 	id = f.ids[0]
-	f.ids = f.ids[1:]
+	f.ids = slices.Delete(f.ids, 0, 1) // keeps the front of the storage, so a take and put cycle does not reallocate
 	return id, true
 }
 

@@ -246,6 +246,7 @@ func (v *validator) modeBounds(mb []string, md *Mode) {
 	if !md.hired() {
 		v.inRange(path(mb, "crew"), md.Crew, 1, MaxWeight)
 	}
+	// 0 is in range here: modeShape owns whether a mode needs it; only a value outside 0..Max is a bound error.
 	if md.HaulSpan < 0 || md.HaulSpan > MaxHaulSpan {
 		v.inRange(path(mb, "haul_span"), md.HaulSpan, 1, MaxHaulSpan)
 	}
