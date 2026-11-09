@@ -11,6 +11,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	"github.com/Whealinghold/economy-sim/internal/merchant"
 )
 
 // This file is the second half of the merchants module (spec-merchants.md 9.7 to
@@ -114,7 +115,13 @@ func (w *World) settleArrived(ct *contract, ln ArrivedLine) error {
 // removal of its deliverer, before its account closes.
 func (w *World) endContract(ct *contract, reached, spoiled Quantity, cause Cause) error {
 	escrowed := int64(ct.price) * int64(ct.qty)
-	paid := int64(ct.price) * int64(reached)
+	paid := int64(0) // a removal of the deliverer refunds the whole escrow
+	if cause != CauseDelivererRemoved {
+		var ok bool
+		if paid, _, ok = merchant.Settle(int64(ct.price), int64(ct.qty), int64(reached), int64(spoiled), 0); !ok {
+			invariant("settle a contract: the units reached and spoiled do not add up to the quantity")
+		}
+	}
 	if paid > 0 {
 		if err := w.ledger.Transfer(ct.escrow, w.agents[ct.deliverer].account, paid, ledger.EscrowOut); err != nil {
 			return refused("pay a contract", ct.to, ct.escrow, err)

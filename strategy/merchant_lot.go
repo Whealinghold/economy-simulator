@@ -145,17 +145,8 @@ func (s *state) size(t *trip) bool {
 	if q < 1 {
 		return false
 	}
-	t.q, t.capped = q, q == capQ && afford(in) > capQ
+	t.q, t.capped = q, q == capQ && in.Afford(in.High) > capQ
 	return true
-}
-
-// afford is the units the money affords at the dearest limit, before the cap.
-func afford(in merchant.FitInput) int64 {
-	free := in.Money - in.Reserve - in.Other
-	if free <= 0 || in.High < 1 {
-		return 0
-	}
-	return free / in.High
 }
 
 // line is one input of a trip: a commodity, the units the trip needs of it and the
