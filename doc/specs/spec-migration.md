@@ -287,7 +287,7 @@ crossing between two equal regions (239 reversals against 99 with the rule alone
 and 2 with the width as well).
 
 5.2.2. A created agent is settled after a window (its ratio is padded until then,
-`spec-welfare-and-wages.md` 2.2). An initial agent of a world with a warm start
+`spec-welfare-and-wages.md` 2.2). An initial agent
 has `RoleSince` equal to its creation tick, 0, with or without a warm start (`spec-spawner.md` 5.2.2a, `spec-world.md` 5.4.2): it is not settled before `max(MoveCooldown, T_a)` ticks, so the first migration pass of a run can move a household only at that tick or later (60 with the defaults; N-328).
 
 5.2.3. **Counted.** The settling rule acts silently, so it is counted (N-045). An agent
