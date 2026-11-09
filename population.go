@@ -463,9 +463,7 @@ func (w *World) popAgent(g RegionID, v *RegionView, ra *RegionAgent) (taken int6
 		return 0
 	}
 	c := &p.cnt[ra.Role]
-	a := &w.agents[ra.Agent]
-	u := w.reads.cost.tick(w.roles.row(ra.Role).upkeepIn(g), w.ex.prices, a.weight)
-	ratio, ok := a.history.Ratio(u, w.cfg.Roles[ra.Role].DefaultRatio)
+	ratio, ok := w.popRatio(g, ra)
 	if !ok {
 		c.noRatio += ra.Weight
 		return 0
@@ -735,15 +733,21 @@ func (w *World) popSnapshotRegion(s *Snapshot, g RegionID, v *RegionView) {
 	}
 }
 
+// popRatio returns the welfare ratio an agent's rates read, shared by the step and
+// the snapshot so the two cannot drift.
+func (w *World) popRatio(g RegionID, ra *RegionAgent) (int64, bool) {
+	a := &w.agents[ra.Agent]
+	u := w.reads.cost.tick(w.roles.row(ra.Role).upkeepIn(g), w.ex.prices, a.weight)
+	return a.history.Ratio(u, w.cfg.Roles[ra.Role].DefaultRatio)
+}
+
 // popRates returns the effective birth and death rate of an agent at its ratio and
 // whether it has one; an external agent has none (it is not exposed).
 func (w *World) popRates(g RegionID, ra *RegionAgent) (birth, death int64, ok bool) {
 	if ra.External {
 		return 0, 0, false
 	}
-	a := &w.agents[ra.Agent]
-	u := w.reads.cost.tick(w.roles.row(ra.Role).upkeepIn(g), w.ex.prices, a.weight)
-	ratio, ok := a.history.Ratio(u, w.cfg.Roles[ra.Role].DefaultRatio)
+	ratio, ok := w.popRatio(g, ra)
 	if !ok {
 		return 0, 0, false
 	}
