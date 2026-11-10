@@ -34,8 +34,7 @@ var transcriptScript = []struct{ method, target, body string }{
 // testdata/transcript.golden. The checkpoint is recorded by its size and tick, as it
 // is binary.
 //
-// Requirement: FR-REF-032
-// Guard: the example is deterministic. A route that read the clock, iterated a map
+// Guard: the example is deterministic (architecture.md 7.4). A route that read the clock, iterated a map
 // into a response or leaked an address would show as a diff here. The file is
 // rewritten only with -update, after the cause of a difference is understood
 // (testing.md 7.2).

@@ -29,7 +29,7 @@ var fuzzServer = sync.OnceValues(func() (*Server, error) {
 // httptest.NewRequest, which panics on a method or target that is not valid HTTP:
 // the server must meet those too.
 //
-// Requirement: FR-INT-004, FR-CHK-016
+// Requirement: FR-INT-002, FR-CHK-016
 // Guard: the server takes untrusted input. The files of testdata/fuzz/ pin a step
 // count past the cap, a restore of bytes with a header and no checkpoint, and a JSON
 // body followed by more data; none crashed, they are the shapes a regression would

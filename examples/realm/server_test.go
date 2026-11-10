@@ -54,7 +54,7 @@ func price(t testing.TB, h http.Handler, region, commodity string) money {
 // the step runs (one tick of latency), and, not being sticky, buys nothing in the
 // step after it.
 //
-// Requirement: FR-INT-004
+// Requirement: FR-INT-027
 // Guard: architecture.md 1.3. The public API alone is enough to run a player; if a
 // call this test needs were missing, the example could not be written.
 func TestServer_PlayerRoundTrip(t *testing.T) {
@@ -143,7 +143,7 @@ func holdAll(t testing.TB) string {
 // moves the staple price against an unshocked twin of the same seed, that the world
 // lists the shock, and that setting the factor back to 10 000 empties the slot.
 //
-// Requirement: FR-INT-010
+// Requirement: FR-INT-040, FR-INT-048
 func TestServer_ShocksChangeThePriceAndTheClearSetsItBack(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -181,7 +181,7 @@ func TestServer_ShocksChangeThePriceAndTheClearSetsItBack(t *testing.T) {
 // TestServer_ClosedRoadReportsTheEdge verifies that a closed road appears in
 // /v1/world and that a checkpoint and a restore keep it.
 //
-// Requirement: FR-INT-013
+// Requirement: FR-INT-041, FR-INT-070
 func TestServer_ClosedRoadReportsTheEdge(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t, 3, "")
@@ -264,7 +264,6 @@ func TestServer_CheckpointMidRunResumesBitIdentical(t *testing.T) {
 // goroutines, while another steps the world, neither race nor panic and each get a
 // complete answer. It is meaningful under -race.
 //
-// Requirement: NFR-INT-003
 // Guard: architecture.md 12.1. The world is single-threaded; if the server called it
 // without the lock, the race detector would report it here.
 func TestServer_ConcurrentReadsAreSerialised(t *testing.T) {
@@ -299,7 +298,7 @@ func TestServer_ConcurrentReadsAreSerialised(t *testing.T) {
 // and a restore of garbage each get a 4xx with the name of the sentinel, and that
 // none of them changes the tick, the player or a byte of the checkpoint.
 //
-// Requirement: FR-INT-004, FR-CHK-016
+// Requirement: FR-INT-002, FR-CHK-016
 func TestServer_BadInputIsRefused(t *testing.T) {
 	t.Parallel()
 	s := sharedServer(t)
@@ -412,7 +411,8 @@ func TestServer_FormatsPricesWithThePreset(t *testing.T) {
 // no n runs one tick, and that a request whose context is already done runs none and
 // answers without a 4xx.
 //
-// Requirement: FR-INT-004
+// Guard: architecture.md 12.3. A step stops at a tick boundary when its context is done;
+// a server that ignored the client's cancellation would run a 1 000-tick request to the end.
 func TestServer_StepRunsTheTicksAskedAndStopsWhenCancelled(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -458,7 +458,8 @@ func (r *recorder) WriteHeader(code int)        { r.code = code }
 // over it resumes at that tick with the player, and a file that is no checkpoint
 // stops the start instead of being written over.
 //
-// Requirement: FR-CHK-057
+// Guard: the state file is the one thing the example writes. If a save wrote in place, a
+// crash mid-write would leave a truncated checkpoint that the next start refuses.
 func TestServer_StateFileSavesAndRestoresAtStart(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -494,7 +495,8 @@ func TestServer_StateFileSavesAndRestoresAtStart(t *testing.T) {
 // for each value of the clock it is given, and returns when its context is done. The
 // test is the clock, so it neither sleeps nor reads the time.
 //
-// Requirement: FR-INT-004
+// Guard: testing.md 10.2. The pacing loop is the one place the example meets time; it
+// must stay driven by a channel the test owns.
 func TestServer_PaceStepsOncePerTickOfTheClock(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -523,7 +525,8 @@ func TestServer_PaceStepsOncePerTickOfTheClock(t *testing.T) {
 // orders, rejections and trades of the watched agent only, from the tick asked, drops
 // the oldest past ringCap, and records nothing before it watches anyone.
 //
-// Requirement: FR-INT-004
+// Guard: the ring is the observer's side of the loop, called on the stepping goroutine;
+// an event of another agent in it would show the player other households' trades.
 func TestEventRing_KeepsTheLastEventsOfThePlayerOnly(t *testing.T) {
 	t.Parallel()
 	r := &eventRing{}
@@ -561,7 +564,7 @@ func TestEventRing_KeepsTheLastEventsOfThePlayerOnly(t *testing.T) {
 // round trip does not use: a job, a discard, a hold and a sticky flag are accepted
 // by name, and a name or a side the pack does not know is refused.
 //
-// Requirement: FR-INT-004
+// Requirement: FR-INT-025, FR-INT-026, FR-INT-028
 func TestServer_DirectiveByNameReachesTheWorld(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -595,7 +598,7 @@ func TestServer_DirectiveByNameReachesTheWorld(t *testing.T) {
 // region lists its households, roles and markets, and the market row of a commodity
 // agrees with the market route.
 //
-// Requirement: FR-INT-006
+// Requirement: FR-INT-053, FR-INT-054
 func TestServer_RegionAndMarketAreReadByName(t *testing.T) {
 	t.Parallel()
 	s := sharedServer(t)
