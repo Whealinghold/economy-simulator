@@ -501,6 +501,33 @@ func TestOrdering_EveryPair(t *testing.T) {
 	if len(pairs) != 18 {
 		t.Fatalf("OrderingPairs() has %d pairs, want the 18 of STY 6.5.2", len(pairs))
 	}
+	wantPairs := []verdict.Pair{
+		{Band: "s07.freeze_ticks", Threshold: "r5.freeze_ticks", Rel: verdict.AtMost},
+		{Band: "s03.pinned_ticks", Threshold: "r5.pinned_ticks", Rel: verdict.AtMost},
+		{Band: "s04.pinned_ticks", Threshold: "r5.pinned_ticks", Rel: verdict.AtMost},
+		{Band: "s05.range_factor", Threshold: "r6.factor", Rel: verdict.AtMost},
+		{Band: "s12.range_factor", Threshold: "r6.factor", Rel: verdict.AtMost},
+		{Band: "x4.range_factor", Threshold: "r6.factor", Rel: verdict.AtMost},
+		{Band: "s05.range_growth_bp", Threshold: "r6.growth_bp", Rel: verdict.AtMost},
+		{Band: "s06.swing_bp", Threshold: "r6.swing_bp", Rel: verdict.AtMost},
+		{Band: "s01.offset_bp", Threshold: "r8.offset_bp", Rel: verdict.AtMost},
+		{Band: "h02.offset_bp", Threshold: "r8.offset_bp", Rel: verdict.AtMost},
+		{Band: "s01.unmet_bp", Threshold: "r8.unmet_bp", Rel: verdict.AtMost},
+		{Band: "p07.drift_bp", Threshold: "r1.rise_bp", Rel: verdict.AtMost},
+		{Band: "p07.drift_bp", Threshold: "r9.fall_bp", Rel: verdict.AtMost},
+		{Band: "s10.dispersion_min_bp", Threshold: "r7.disp_bp", Rel: verdict.AtLeast},
+		{Band: "m05.pool_share_bp", Threshold: "r2.share_bp", Rel: verdict.AtMost},
+		{Band: "x4.households_bp", Threshold: "r3.fall_bp", Rel: verdict.AtLeastComplement},
+		{Band: "s16.pinned_share_bp", Threshold: "r5.pinned_ticks", Rel: verdict.PinnedRunShare},
+		{Band: "x4.pinned_share_bp", Threshold: "r5.pinned_ticks", Rel: verdict.PinnedRunShare},
+	}
+	if !slices.Equal(pairs, wantPairs) {
+		t.Errorf("OrderingPairs() = %v, want the pairs of STY 6.5.2 in the order of the spec %v", pairs, wantPairs)
+	}
+	// A pinned run of a whole year is the whole year (10 000 bp), not one less.
+	if err := verdict.CheckOrdering(map[string]int64{"r5.pinned_ticks": 365, "s16.pinned_share_bp": 10_000}, 0); err != nil {
+		t.Errorf("CheckOrdering(a pinned run of 365 ticks against 10000 bp) error = %v, want nil", err)
+	}
 	for _, p := range pairs {
 		th := specPriors[p.Threshold]
 		var at, past int64
@@ -539,6 +566,8 @@ func TestOrdering_EveryPair(t *testing.T) {
 		{"no t_min", map[string]int64{"s14.recover_ticks": 501, "r3.horizon_factor": 50000}, 0, false},
 		{"no factor", map[string]int64{"s14.recover_ticks": 501}, 100, false},
 		{"no recover ticks", map[string]int64{"r3.horizon_factor": 50000}, 100, false},
+		{"one part in ten thousand over", map[string]int64{"s14.recover_ticks": 100000, "r3.horizon_factor": 999_995_000}, 1, true},
+		{"at the limit", map[string]int64{"s14.recover_ticks": 100000, "r3.horizon_factor": 1_000_000_000}, 1, false},
 	} {
 		if err := verdict.CheckOrdering(tc.in, tc.tMin); (err != nil) != tc.bad {
 			t.Errorf("CheckOrdering(horizon, %s) error = %v, want an error: %v", tc.name, err, tc.bad)
