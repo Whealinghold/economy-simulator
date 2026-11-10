@@ -477,6 +477,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    up to 30 commodities costs more than the reference size of 8 (a merchant role), which
    the slice must measure. Still open: how often the consumer ticks. NFR-SCL-002 stays a
    placeholder until it is confirmed and measured.
+   Measured (plan 2-24 Phase 6f, 2026-11-10, i9-14900KF, GOMAXPROCS 4, a host under load
+   30 to 44, so an upper bound; the record is in `cost_five_test.go`): `five` with every
+   module off 50 ms a tick, the all-on `five` (5 339 agents) 107 ms in the first run and
+   70 ms in a later one, `examples/realm` 69 ms; `five` is at the 53 ms budget, the all-on
+   world is 1.3 to 2.0 times it. Not a pass by redefinition: the owner reads it against the
+   consumer's tick rate (R3 of plan 2-24).
 2. **The value of `K`.** 10 is a placeholder from an unrun example. It is set by
    the scale-consistency check (7.2) over a range of `K`.
 3. ~~**Chance events (4.6).**~~ **Settled for production and skill barriers

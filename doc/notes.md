@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-343, N-344 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
@@ -88,7 +88,7 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-296, N-267, N-312, N-314, N-325 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
-| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340 |
+| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
@@ -401,7 +401,7 @@ PR description.
 - **Update (2026-10-14, plan 1-2 Phase 6):** the calendar half is built: `calendar.go` holds `Moment`, `At`, `SeasonAt` (a floor modulus, any `int64`) and the day table; the climate itself stays data in the yield table (`production.go`, `resources.go`). Still open: the three-region scenarios (STY, REF) and the tick rate.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open, with what the row learned. PRO's part (the yield profile format, `Sited`, 0 for cannot run) was applied in spec; the row builds the lookup and the check that a recipe runs in a new region by a table change alone (FR-PRO-028). The values are RES's and REF's and the three-region scenario is REF's.
 - **Update (2026-10-16, plan 1-5 Phase 8):** the production half is built and gated: `internal/production` holds the site factor (`Site`, the lookup of the profile by season, 0 = cannot run) and `production.go` the yield table and the `no_site` reason; both are tested on a two-climate fixture and fuzzed (`FuzzSite`). Still open: the table values and endowments (RES), the three-region scenario (STY, REF) and the world row's end-to-end check that regions differing only in yield trade.
-
+- **Update (2026-11-10, plan 2-24 Phase 6f):** the first consumer's world is `examples/realm`, the rebalanced `five` renamed. Measured on an i9-14900KF (GOMAXPROCS 4, a host under load 30 to 44, so an upper bound): `five` with the modules off 50 ms a tick, the all-on `five` 107 ms in one run and 70 ms in a later one, `realm` 69 ms, against the 53 ms placeholder (`cost_five_test.go`, `spec-scale.md` 12 item 1). The consumer's tick rate is still unknown. Left open.
 
 ### N-032 Welfare window against recipe duration
 
@@ -1708,6 +1708,7 @@ PR description.
 - **Raised:** 2026-10-15, plan 1-3 as built (`book.admit`, the `shortcut:` comment).
 - **Note:** `book.admit` finds a duplicate (and the mixed ordinary and named-lot case, N-238) by scanning the entries of the book, once per admitted order, which is O(n^2) in the orders of one market. It is fine for the first consumer's world (about 1 000 households and 17 active markets per region, so at most about a thousand orders in a book and about 10^6 comparisons a book a tick, `spec-reference-chain.md` 4.4.4) and keeps the book allocation-free. **Upgrade trigger:** a book above a few thousand orders (a market of a larger world, or `Weight` 1 at the scale of `spec-scale.md` 6), or a benchmark of admission that shows it above the clearing itself; then index by (agent, lot, side) in the book's own storage (a sorted slice or an open-addressing table keyed by the agent), keeping the duplicate and mixed checks in one pass and the allocation test at zero. The plan's NFR-CLR-001 is about `Average`, not admission, so nothing is out of requirement today.
 - **Update (2026-10-15, observability review of plan 1-3):** the trigger is now readable: `economysim.market.orders` gains the attribute `economysim.region` (`rules/observability-and-logging.md` 5.3, 5.4.1; `spec-observability.md` 6.2), so a book that grows toward a few thousand orders shows as the per-tick rate of one (region, commodity) series. On `five` that is about 85 active markets by 2 sides, 170 series, against 30 commodities by 2 sides, 60 series, before. Nothing else changes here; the index is still the remedy.
+- **Update (2026-11-10, plan 2-24 Phase 6f):** the largest book of one (region, commodity) in a tick over the first 33 steps of the all-on `five`, seed 1, is 1 268 orders placed, below the "few thousand" trigger; `book.duplicate` is 8.4% and `book.admit` 11.6% of a `Step` in the CPU profile. Left open.
 
 ### N-243 Follow-up of the Codacy gate on plan 1-5
 
@@ -1847,6 +1848,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for row 12. This row's allocation test asserts the call sites only and its benchmark reports (Phase 10).
 - **Update (2026-10-21, plan 1-12 Phase 1):** Verified: raised empty, filled by Phases 8 and 9 ("to be measured"). Left open.
 - **Update (2026-10-21, plan 1-12 audit fixes, measured baseline):** a full `Step` of `one` with the default logger and observer allocates 113 allocations under `-race -covermode=atomic -coverpkg=./...` (`stepAllocBaseline` in `allocation_test.go`). Under those flags the cardinality test (`TestCardinality_EventAttributesTakeClosedValues`) took about 171 s and the allocation test about 29 s. Time per tick is not recorded here. Left open for the time per tick and the cost-model check.
+- **Update (2026-11-10, plan 2-24 Phase 6f):** the time per tick of `five`, the all-on pack and `realm` is recorded in `cost_five_test.go` (50, 107 and 69 ms a tick on a loaded host; 764 allocations a tick all-on). No `c_0` and `c_t` are fitted: the two worlds differ in the modules, not only in the tradable set. The reference machine of `spec-scale.md` 6.2 is still undefined, and the figures should be taken again on a quiet host before the owner reads them against a budget. Left open.
 
 ### N-276 `Validate`, `Warnings` and `NewWorld` each reach the programmes
 
@@ -2164,6 +2166,18 @@ PR description.
 - **Raised:** 2026-11-11, plan 2-24 Phase 3 (examples/realm).
 - **Note:** `examples/realm/pack/cold/` and `modules/` are the output of `pack/rename.sh` over `testdata/chains/` (`base`, `lines`, `five` and the all-on layers of `allLayers`). `TestExamples_PackCopiesAgree` guards the byte copies only (the warm document and the expected figures); a change to a root layer is not seen by the realm until someone runs the script, and a layer added to `allLayers` needs a line in the script. A root test that renames the layers in Go and compares bytes would close it (it would need the same drop of comments and the same schema-key rule as the script).
 
+### N-343 Criterion 2 of the Stage 2 exit (two architectures) has not been shown on any arm64 machine
+
+- **Areas:** REF, CODE
+- **Raised:** 2026-11-10, plan 2-24 Phase 6b.
+- **Note:** This host is amd64 with no `binfmt` handler for arm64 (`docker run --platform linux/arm64 alpine uname -m` gives `exec format error`), the repository has no CI workflow, and no arm64 machine was available. Only the free pre-check ran: `GOOS=linux GOARCH=arm64 go build ./...` and `go vet ./...` pass. The byte tests (golden, determinism, hash and fixture, invariants rows `one`, `second`, `five`, `all`) have never run on arm64, so `vision.md` 5 item 2 is not shown and the sign-off paragraph (D694) must say so. Installing the handler (`docker run --privileged --rm tonistiigi/binfmt --install arm64`) changes the host and is the owner's action (plan 1 Phase 5 owner action 4); with it, 6b step 2 of plan 2-24 gives the emulated run, a CI arm64 job or an arm64 machine gives it natively.
+
+### N-344 `expected/five.scenarios.txt` is written by the stable run of `five`, which is PR D
+
+- **Areas:** REF, STY
+- **Raised:** 2026-11-10, plan 2-24 Phase 6.
+- **Note:** The file is the recorded gate run of `five` (FR-STB-015, FR-REF-039). No test writes it today: `TestScenarioStable_FiveWarm` does not exist (it is 6a, PR D, and waits on plans 8 and 19), and the scenario tests that take a pack write to `one`, `two`, `famine`, `subsistence` and `three`. PR C therefore adds no `five.scenarios.txt`; 6a adds it as a new file with the testing.md 7.2 explanation when its run exists.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2176,4 +2190,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 8c1a762b23b8a7d0c8e8918e
+NOTES-TAG: ee085a9e3aea8e75a635ba2f
