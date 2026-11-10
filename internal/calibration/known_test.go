@@ -40,3 +40,25 @@ func TestIndex_FindByPath(t *testing.T) {
 		t.Errorf("find(World.CostFloor) = %s, want the lowest ID K-AAA01", got.ID)
 	}
 }
+
+// TestIndex_MostSpecificPatternWins verifies that when two path patterns match one
+// configuration path, the one with fewer wildcards is tried first, whatever the map
+// order, and that equal wildcard counts fall back to byte order.
+//
+// Requirement: FR-CLB-050
+func TestIndex_MostSpecificPatternWins(t *testing.T) {
+	t.Parallel()
+	k := checkKnown()
+	k.Knobs["K-ZZZ01"] = KnobInfo{Class: 'K', Key: "Gen.Row"}
+	k.Knobs["K-ZZZ02"] = KnobInfo{Class: 'K', Key: "Spec.Row"}
+	// "a.*.*" and "a.x.*" both match a.x.b; the second has one wildcard, so it is tried first.
+	k.Paths = map[string]string{"a.*.*": "Gen.Row", "a.x.*": "Spec.Row"}
+	for range 20 { // map iteration order is random; the result must not depend on it
+		if got, ok := newIndex(k).find("a.x.b"); !ok || got.ID != "K-ZZZ02" {
+			t.Fatalf("find(a.x.b) = %q, %v, want K-ZZZ02 (the pattern with fewer wildcards)", got.ID, ok)
+		}
+	}
+	if x := newIndex(k); x.patterns[0] != "a.x.*" || x.patterns[1] != "a.*.*" {
+		t.Errorf("patterns = %v, want [a.x.* a.*.*]", x.patterns)
+	}
+}

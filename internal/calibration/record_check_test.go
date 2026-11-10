@@ -56,7 +56,7 @@ func stab(point, set string, first, last uint64, inSample bool, v string, edge s
 // TestCheckRecord_Rules verifies each rule of 11.2 on the minimal record changed in
 // one way: the rule that fails, and the keyword of the line it points at.
 //
-// Requirement: FR-CLB-039, FR-CLB-060, FR-CLB-062, FR-CLB-063, FR-CLB-071, FR-CLB-100
+// Requirement: FR-CLB-039, FR-CLB-060, FR-CLB-062, FR-CLB-063, FR-CLB-071, FR-CLB-100, FR-STY-092
 func TestCheckRecord_Rules(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -246,7 +246,7 @@ func TestCheckRecord_StabilityAndClaim(t *testing.T) {
 // a missing token is never compared with the measured sign, and that 0 is: a
 // measured effect where the row expects none is a finding.
 //
-// Requirement: FR-CLB-060
+// Requirement: FR-CLB-060, FR-STY-092
 func TestCheckRecord_SignsThatStateNoDirection(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

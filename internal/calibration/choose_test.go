@@ -249,6 +249,8 @@ func TestSpreadLevel_TieLower(t *testing.T) {
 // means no feasible point, and that the Pareto set holds only exact-passing
 // points that no other such point dominates.
 //
+// Requirement: NFR-CLB-004
+//
 // #lizard forgives: one fuzz body, one property per block.
 func FuzzChoose(f *testing.F) {
 	f.Add([]byte{1, 0, 9, 10, 1, 1, 9, 10, 1, 2, 9, 9}, uint8(0), uint8(10))

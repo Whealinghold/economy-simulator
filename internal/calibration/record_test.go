@@ -310,6 +310,8 @@ func TestRecord_RenderErrors(t *testing.T) {
 // FuzzParse verifies that Parse never panics, that every input it accepts renders
 // back to the same bytes, and that every input it refuses is ErrRecord.
 //
+// Requirement: NFR-CLB-004
+//
 // #lizard forgives: one fuzz body, one property per block.
 func FuzzParse(f *testing.F) {
 	for _, name := range []string{"valid/minimal.txt", "invalid/unknown-keyword.txt", "invalid/float-ticks.txt", "invalid/out-of-order.txt", "invalid/no-decision.txt"} {

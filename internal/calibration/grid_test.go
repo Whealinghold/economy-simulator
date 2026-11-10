@@ -402,6 +402,8 @@ func TestGrid_WidenToTheEnd(t *testing.T) {
 // to the base, an edge for each missing neighbour and no off value except the
 // base.
 //
+// Requirement: NFR-CLB-004
+//
 // #lizard forgives: one fuzz body, one property per block; the seven inputs are the corpus format.
 func FuzzGrid(f *testing.F) {
 	f.Add(uint8(0), int64(7000), int64(1), int64(1_000_000), int64(0), int64(0), false)
