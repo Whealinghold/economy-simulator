@@ -191,6 +191,20 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.member("MoneyFlowScaled", e.Tick, "Cause", string(e.Cause))
 	case economysim.WearApplied:
 		c.commodity("WearApplied", e.Tick, e.Commodity)
+	case economysim.OutsideTraded:
+		c.region("OutsideTraded", e.Tick, e.Node)
+		c.region("OutsideTraded", e.Tick, e.Region)
+		c.commodity("OutsideTraded", e.Tick, e.Commodity)
+		c.side("OutsideTraded", e.Tick, e.Side)
+	case economysim.OutsideEnded:
+		c.region("OutsideEnded", e.Tick, e.Node)
+		c.region("OutsideEnded", e.Tick, e.Region)
+		c.commodity("OutsideEnded", e.Tick, e.Commodity)
+		c.side("OutsideEnded", e.Tick, e.Side)
+		c.member("OutsideEnded", e.Tick, "Cause", string(e.Cause))
+	case economysim.OutsideShocked:
+		c.region("OutsideShocked", e.Tick, e.Node)
+		c.commodity("OutsideShocked", e.Tick, e.Commodity)
 	}
 }
 
@@ -267,6 +281,36 @@ func TestCardinality_MoneyFlowAttributesTakeConfiguredValues(t *testing.T) {
 	}
 }
 
+// TestCardinality_ExternalAttributesTakeClosedValues runs pack one with the external
+// overlay for 60 ticks and checks that the node, gate and commodity of OutsideTraded
+// and OutsideEnded are IDs of the configuration, their side is Bid or Ask and their
+// cause is a constant of event.go: the metric attributes economysim.node, region,
+// commodity and side stay bounded by the configuration.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-EXT-036
+//
+// Guard: an ID out of range or a free-text cause in an outside event would be an
+// unbounded attribute value.
+func TestCardinality_ExternalAttributesTakeClosedValues(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end: 60 ticks of pack one with the external overlay; skipped under -short")
+	}
+	cfg := loadValidPack(t, packExternal()...)
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: 60, Observe: true})
+	c := &cardChecker{t: t, seed: 1, names: res.Final.Names, consts: eventConstants(t), seen: map[string]int{}}
+	traded := 0
+	for _, e := range res.Events {
+		c.check(e)
+		if _, ok := e.(economysim.OutsideTraded); ok {
+			traded++
+		}
+	}
+	if traded == 0 {
+		t.Error("no OutsideTraded in 60 ticks, want the module exercised")
+	}
+}
+
 // errCount counts the Errorf calls of a checker under test.
 type errCount struct{ n int }
 
@@ -296,6 +340,10 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"output commodity out of range", economysim.RecipeExecuted{Outputs: []economysim.Amount{{Commodity: 1}}}, true},
 		{"reason in set", economysim.OrderRejected{Reason: "ok"}, false},
 		{"reason outside set", economysim.OrderRejected{Reason: "nope"}, true},
+		{"outside side in set", economysim.OutsideTraded{Side: economysim.Ask}, false},
+		{"outside side out of set", economysim.OutsideTraded{Side: economysim.Side(2)}, true},
+		{"outside node out of range", economysim.OutsideShocked{Node: 1}, true},
+		{"outside cause outside set", economysim.OutsideEnded{Cause: economysim.CauseUnits}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

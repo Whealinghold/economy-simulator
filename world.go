@@ -67,8 +67,9 @@ type World struct {
 
 	// estates holds the estate pseudo-agent of every region (estates.go).
 	// agents is the agent table, indexed by AgentID: the first len(Regions)
-	// entries are the estate pseudo-agents, which are not households and hold
-	// the zero agent (weight 0), then the households in creation order. live
+	// entries are the estate pseudo-agents, then the counterparties of the
+	// external module; neither is a household and each holds the zero agent
+	// (weight 0). The households follow in creation order, from firstHousehold. live
 	// counts what is in it. markets is the record of every market. bp is
 	// beliefParams of the configuration. All but the tables derived from cfg
 	// are saved state (D145) or scratch.
@@ -103,6 +104,16 @@ type World struct {
 	// mer is the state of the merchant roles and of the merchants module, nil when
 	// no role has a merchant block and the module is off (contract.go).
 	mer *merchants
+	// external is the state of the external-sector module, nil when it is off
+	// (external.go).
+	external *external
+	// firstHousehold is the agent ID of the first household: the number of
+	// regions, plus the counterparties of the external module (spec-external-sector.md
+	// 4.2.2). It is len(Regions) while the module is off.
+	firstHousehold int
+	// outside marks the outside nodes by RegionID; all false while the module is
+	// off. Read it through isOutsideNode.
+	outside []bool
 	// relief is the scratch of the relief pass P1.6, nil when the estates module
 	// is off (estates.go).
 	relief *reliefPass
@@ -528,8 +539,8 @@ func (w *World) saveWorld(cw *codec.Writer) error {
 func (w *World) loadWorld(rs *restoreCtx, r *codec.Reader) error {
 	next := r.U()
 	rs.construction = r.B()
-	if r.Err() == nil && (next < uint64(len(w.cfg.Regions)) || next > math.MaxInt64) {
-		r.Failf("next agent ID %d outside %d to %d", next, len(w.cfg.Regions), int64(math.MaxInt64))
+	if r.Err() == nil && (next < uint64(w.firstHousehold) || next > math.MaxInt64) {
+		r.Failf("next agent ID %d outside %d to %d", next, w.firstHousehold, int64(math.MaxInt64))
 	}
 	w.state.nextAgent = AgentID(next)
 	return nil

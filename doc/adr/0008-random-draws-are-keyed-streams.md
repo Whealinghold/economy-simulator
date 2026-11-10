@@ -178,9 +178,12 @@ ration key (`spec-world.md` 10.1.1, `spec-resources.md` 5.3.3).
    it likes from the `Rand` it receives (7.2.2); `AverageClearing.Clear` still takes the
    words in the root and hands plain `uint64` keys to `internal/clearing`.
 3. Whether a stream of a site that has no natural entity (D2, a line; D13, a
-
-   route row) is keyed by the row index or by the row's IDs. The row index is
-   the proposal; the owner decides when it adds its `id`.
+   route row) is keyed by the row index or by the row's IDs. **Answered for D2
+   (2026-11-09, plan 2-16):** `siteOutsideWalk` is keyed by `(tick, id = the node
+   `RegionID`, sub = the `CommodityID`)`, because a line is named by two IDs that a
+   configuration change does not shift, where a row index would shift when a line
+   is added before it (`spec-world.md` 7.1.4). Still open for D13, whose owner
+   decides when it adds its `id`.
 
 ## Related
 

@@ -90,8 +90,9 @@ func (m *viaModel) check(lk lookup) viabilityOutcome {
 func (m *viaModel) realm() steady.Realm {
 	c := m.c
 	r := steady.Realm{Commodities: len(c.Commodities), Regions: len(c.Regions), Sourced: make([]bool, len(c.Commodities))}
+	imported := importSources(c)
 	for i := range c.Commodities {
-		r.Sourced[i] = c.Commodities[i].Raw
+		r.Sourced[i] = c.Commodities[i].Raw || imported[c.Commodities[i].ID]
 	}
 	for _, reg := range m.withHouseholds {
 		for _, a := range m.acts[reg] {

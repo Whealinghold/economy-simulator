@@ -46,16 +46,22 @@ var reasonNames = [...]Reason{
 	ledger.Births:       ReasonBirths,
 	ledger.Starvation:   ReasonStarvation,
 	// The declared module rows with a name: the loan rows have none yet.
-	ledger.WantConsumption: ReasonWantConsumption,
-	ledger.Relief:          ReasonRelief,
-	ledger.Deaths:          ReasonDeaths,
-	ledger.TransitOut:      ReasonTransitOut,
-	ledger.TransitIn:       ReasonTransitIn,
-	ledger.HaulUse:         ReasonHaulUse,
-	ledger.TransitUse:      ReasonTransitUse,
-	ledger.EscrowIn:        ReasonEscrowIn,
-	ledger.EscrowOut:       ReasonEscrowOut,
-	ledger.EscrowRefund:    ReasonEscrowRefund,
+	ledger.WantConsumption:  ReasonWantConsumption,
+	ledger.Relief:           ReasonRelief,
+	ledger.Deaths:           ReasonDeaths,
+	ledger.TransitOut:       ReasonTransitOut,
+	ledger.TransitIn:        ReasonTransitIn,
+	ledger.HaulUse:          ReasonHaulUse,
+	ledger.TransitUse:       ReasonTransitUse,
+	ledger.EscrowIn:         ReasonEscrowIn,
+	ledger.EscrowOut:        ReasonEscrowOut,
+	ledger.EscrowRefund:     ReasonEscrowRefund,
+	ledger.OutsideBudget:    ReasonOutsideBudget,
+	ledger.OutsideUnspent:   ReasonOutsideUnspent,
+	ledger.OutsideReceipts:  ReasonOutsideReceipts,
+	ledger.OutsideOffer:     ReasonOutsideOffer,
+	ledger.OutsideUnsold:    ReasonOutsideUnsold,
+	ledger.OutsidePurchases: ReasonOutsidePurchases,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -90,6 +96,7 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 		declared = append(declared, m...)
 	}
 	classes := flowClasses(&cfg)
+	declared = append(declared, outsideReasons(&cfg)...)
 	l, err := ledger.New(ledger.Config{
 		Commodities: comms,
 		Regions:     len(cfg.Regions),
@@ -101,7 +108,7 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
-	for _, g := range boundaryGroups(len(comms), modules, len(classes)) {
+	for _, g := range boundaryGroups(len(comms), modules, len(classes), outsideGroupOf(&cfg)) {
 		if err := g.open(l); err != nil {
 			return nil, fmt.Errorf("open the %s boundary accounts: %w", g.name, err)
 		}
@@ -141,14 +148,15 @@ type boundaryGroup struct {
 
 // boundaryGroups returns the four groups in the order the accounts are created:
 // (1) the built-in group; (2) the declared money-flow reasons, one money
-// boundary for each of the flows; (3) the six outside_* reasons; (4) the other
-// reasons of the modules that are on, in module order. Group 3 is an empty hook
-// until plan 16 fills it; each module's change fills its own group and no other.
-func boundaryGroups(commodities int, modules [][]ledger.Reason, flows int) [4]boundaryGroup {
+// boundary for each of the flows; (3) the six outside_* reasons of the external
+// module (outside is nil while it is off); (4) the other reasons of the modules
+// that are on, in module order. Each module's change fills its own group and no
+// other.
+func boundaryGroups(commodities int, modules [][]ledger.Reason, flows int, outside *outsideGroup) [4]boundaryGroup {
 	return [4]boundaryGroup{
 		{"built-in", func(l *ledger.Ledger) error { return openBuiltInBoundaries(l, commodities) }},
 		{"money-flow", func(l *ledger.Ledger) error { return openFlowBoundaries(l, flows) }},
-		{"outside", func(*ledger.Ledger) error { return nil }},
+		{"outside", func(l *ledger.Ledger) error { return outside.open(l) }},
 		{"module", func(l *ledger.Ledger) error { return openModuleBoundaries(l, commodities, modules) }},
 	}
 }

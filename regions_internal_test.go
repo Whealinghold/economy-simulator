@@ -2,7 +2,6 @@ package economysim
 
 import (
 	"encoding/binary"
-	"reflect"
 	"slices"
 	"testing"
 )
@@ -148,17 +147,27 @@ func TestReadGeometry_SkipsWhatIsInvalid(t *testing.T) {
 	}
 }
 
-// TestRegionWarnings_ExternalModuleNotBuilt verifies that the external module
-// has no entry in Modules yet.
+// TestRegionWarnings_OutsideNodeIsExempt verifies that a region marked as an
+// outside node by the external module draws no region_without_agents, and that a
+// region with no group and no mark still does (spec-regions.md 9.2,
+// spec-external-sector.md 3.1.2, FR-EXT-004).
 //
-// Guard: regionWarnings exempts no region from region_without_agents because
-// the outside node of the external module (spec-regions.md 9.2) does not exist.
-// When the module is built, this test fails and the exemption in regionWarnings
-// has to be filled in the same change; without it every pack with an outside
-// node would draw a spurious warning.
-func TestRegionWarnings_ExternalModuleNotBuilt(t *testing.T) {
+// Guard: without the exemption every pack with an outside node would draw a
+// spurious warning; with it applied to every region the warning would never fire.
+func TestRegionWarnings_OutsideNodeIsExempt(t *testing.T) {
 	t.Parallel()
-	if _, ok := reflect.TypeOf(Modules{}).FieldByName("External"); ok {
-		t.Fatal("Modules.External exists: fill the outside-node exemption of region_without_agents in regionWarnings")
+	c := &Config{
+		Regions: []Region{{ID: "coast"}, {ID: "far"}, {ID: "home"}},
+		Groups:  []Group{{Region: "home", Role: "r", Households: 1}},
+	}
+	c.Modules.External = &External{Nodes: []OutsideNode{{Region: "coast"}}}
+	var got []string
+	for _, w := range regionWarnings(c) {
+		if w.Rule == "region_without_agents" {
+			got = append(got, w.Path[len(w.Path)-1])
+		}
+	}
+	if want := []string{"far"}; !slices.Equal(got, want) {
+		t.Errorf("region_without_agents regions = %v, want %v (coast is a node, home has a group)", got, want)
 	}
 }

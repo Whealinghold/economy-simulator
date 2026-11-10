@@ -115,7 +115,7 @@ func TestNewLedger_BoundaryGroupOrder(t *testing.T) {
 	t.Parallel()
 	const c = 2
 	modules := moduleReasons(&Config{Modules: Modules{Demand: &Demand{}}})
-	groups := boundaryGroups(c, modules, 0)
+	groups := boundaryGroups(c, modules, 0, nil)
 	names := []string{groups[0].name, groups[1].name, groups[2].name, groups[3].name}
 	if want := []string{"built-in", "money-flow", "outside", "module"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("boundaryGroups names = %v, want %v", names, want)

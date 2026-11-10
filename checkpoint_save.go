@@ -34,7 +34,7 @@ func (w *World) saveSkills(cw *codec.Writer) error {
 // eachLive calls f for every live agent in ascending ID: the household agents
 // whose slot is not the zero agent of an estate or of a removed agent.
 func (w *World) eachLive(f func(a *agent)) {
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 {
 			f(a)
 		}

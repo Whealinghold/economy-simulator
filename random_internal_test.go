@@ -40,7 +40,7 @@ func TestStream_BareSeedVectors(t *testing.T) {
 	}
 }
 
-// TestStream_KeyedVectors verifies the keyed streams k1 to k9 of
+// TestStream_KeyedVectors verifies the keyed streams k1 to k10 of
 // spec-world.md 7.1.5 (b): the first two words, the draw of bound 1 on the
 // first word (0, which still consumes it) and the draw of bound 100 on the
 // second. Rows k6 to k8 pin the two's-complement conversion of a negative tick
@@ -70,6 +70,7 @@ func TestStream_KeyedVectors(t *testing.T) {
 		{"k7", 7, siteSpawner, 3, -1, 0, false, 0xeeeaa6fd69c7b339, 0x3355b2e3c0d174dd, 20},
 		{"k8", 7, siteSpawner, -1, -1, 0, false, 0xf5455bb2a283bc00, 0x85eba190e6f38b27, 52},
 		{"k9", 1 << 63, siteTrade, 1 << 40, 1<<40 + 1, 0, false, 0x3c277642ea207186, 0x510c6f3a642bcd9d, 31},
+		{"k10", 1, siteOutsideWalk, 0, 1, 2, true, 0xbf78f70da32a87a8, 0x178fb98ff48cc76d, 9},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -280,6 +281,7 @@ func TestSiteConstants_Guard(t *testing.T) {
 		{"siteInform", siteInform},
 		{"siteMigration", siteMigration},
 		{"siteContract", siteContract},
+		{"siteOutsideWalk", siteOutsideWalk},
 	}
 	for i, a := range sites {
 		sum := sha256.Sum256([]byte("economy-sim/site/" + a.name))

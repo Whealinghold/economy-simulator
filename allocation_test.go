@@ -40,6 +40,7 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 	}{
 		{"one", packOne, stepAllocBaseline},
 		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline},
+		{"one+external", packExternal(), stepAllocBaseline}, // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))

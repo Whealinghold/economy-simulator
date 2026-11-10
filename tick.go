@@ -36,6 +36,7 @@ var positionList = [...]position{
 	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
+	{"P1.8", "EXT", line},
 	{"P2.1", "PRO", line},
 	{"P2.3", "RES", line},
 	{"P2.4", "SUB", line},
@@ -49,8 +50,10 @@ var positionList = [...]position{
 	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
 	{"P3.4", "EST", line},
+	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
+	{"P4.2", "EXT", line},
 	{"P5.1", "CLR", line},
 	{"P5.2", "INF", line},
 	{"P5.3", "EST", line},
@@ -75,10 +78,10 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3a", "P1.7a", "P1.7b", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
-	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
-	"P4.1a", "P4.2",
+	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
+	"P4.1a",
 	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
@@ -115,11 +118,14 @@ func (w *World) positions() error {
 		return err
 	}
 	w.p17Flows()
+	if w.external != nil {
+		w.p18Walk()
+	}
 	return w.positionsProduce()
 }
 
 // positionsProduce is the middle of the straight line, from phase 2 to the
-// trade phase, split from positions to stay within the Lizard complexity limit
+// plans and the contract round of the trade phase (P3.3), split from positions to stay within the Lizard complexity limit
 // (N-243, plan 2-14 O7). The position test reads it as part of the straight line,
 // in source order between positions and positionsTail.
 func (w *World) positionsProduce() error {
@@ -139,14 +145,6 @@ func (w *World) positionsProduce() error {
 		w.p28OwnUse()
 	}
 	w.p28aHalted()
-	return w.positionsTrade()
-}
-
-// positionsTrade is the trade phase of the straight line, from P3.1 to the
-// clearing, split from positionsProduce to stay within the Lizard complexity
-// limit (N-243). The position test reads it as part of the straight line, between
-// positionsProduce and positionsTail.
-func (w *World) positionsTrade() error {
 	if w.transport != nil {
 		w.p31Fix()
 	}
@@ -156,15 +154,33 @@ func (w *World) positionsTrade() error {
 	if w.mer != nil && w.mer.on {
 		w.p33Round()
 	}
+	return w.positionsTrade()
+}
+
+// positionsTrade is the trade phase of the straight line, from P3.1 to the
+// clearing, split from positionsProduce to stay within the Lizard complexity
+// limit (N-243). The position test reads it as part of the straight line, between
+// positionsProduce and positionsTail.
+func (w *World) positionsTrade() error {
 	if w.mer != nil && w.mer.roles > 0 {
 		w.p33aPlanned()
 	}
 	if err := w.p34Estates(); err != nil {
 		return err
 	}
+	if w.external != nil {
+		if err := w.p35Orders(); err != nil {
+			return err
+		}
+	}
 	w.p36Aggregates()
 	if err := w.p41Clear(); err != nil {
 		return err
+	}
+	if w.external != nil {
+		if err := w.p42Sweep(); err != nil {
+			return err
+		}
 	}
 	return w.positionsTail()
 }

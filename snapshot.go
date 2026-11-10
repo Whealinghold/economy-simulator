@@ -83,6 +83,9 @@ type Snapshot struct {
 	// empty with the merchants module off (spec-merchants.md 15.4).
 	Contracts []ContractRow
 	Escrow    Money
+	// Outside is the state of the external module (spec-observability.md 5.3.9); the
+	// zero value with the module off.
+	Outside OutsideState
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -367,6 +370,8 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
+	w.snapshotOutside(&s)
+	w.dropOutsideRows(&s)
 	return s, nil
 }
 
@@ -450,6 +455,10 @@ func (w *World) makesTable() [][]bool {
 // scans are the classes of spec-observability.md 5.5) and one pass over the
 // agents.
 func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool) error {
+	if w.isOutsideNode(g) {
+		s.Regions[g] = RegionRow{Region: g, Outside: true} // no agents, pool or market (spec-external-sector.md 3.1.2)
+		return nil
+	}
 	v := w.buildRegionView(g)
 	acc.reset()
 	nr := len(w.cfg.Roles)

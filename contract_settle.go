@@ -342,7 +342,7 @@ func (w *World) contractShape(c *contract, i int) string {
 		return fmt.Sprintf("is not in strictly ascending order below the next contract %d", m.next)
 	case int64(i) >= m.maxOpen:
 		return fmt.Sprintf("is more than MaxOpen %d contracts", m.maxOpen)
-	case int(c.payer) < len(w.cfg.Regions) || int(c.deliverer) < len(w.cfg.Regions) || c.payer == c.deliverer || c.qty < 1 || c.price < 1:
+	case int(c.payer) < w.firstHousehold || int(c.deliverer) < w.firstHousehold || c.payer == c.deliverer || c.qty < 1 || c.price < 1:
 		return "has a party that is no agent, one agent for both, or no goods or price"
 	}
 	return ""

@@ -862,6 +862,11 @@ func (w *World) auditModules() error {
 	if err := w.auditInFlight(); err != nil {
 		return err
 	}
+	if w.external != nil {
+		if err := w.external.audit(w); err != nil {
+			return auditFailure(w.Tick(), err)
+		}
+	}
 	if w.money == nil {
 		return nil
 	}

@@ -128,6 +128,7 @@ economy-sim/
   transport_state.go  transport_lanes.go                            (TRN)
   migration_pass.go  migration_report.go                            (MIG)
   contract_settle.go                                                   (MER)
+  external_state.go                                                    (EXT)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -1066,4 +1067,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 0e959889ee64ebc47112e9b2
+RULE-TAG: dc774324ac322909a6249bc2

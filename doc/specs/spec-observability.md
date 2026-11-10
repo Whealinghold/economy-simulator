@@ -412,7 +412,7 @@ for the parser of the 4.1 tables; this paragraph is outside them.
 | `EndowmentAdjusted` | RES 14.1; CAP 14.1 | call; P8.3b for a facility's change (`Kind` `facility`) | C | resources | `Region`, `Resource`, `Kind` (`adjust`, `shock`, `facility`), `Delta` (signed), `CapacityBP`, `RegenBP`, `StockBefore`, `StockAfter`, `Lost` |
 | `RumoursServed` | INF 10.1 | P3.6, region ascending | A | information | `Region`, `Readers`, `Offered`, `NoPath`, `TooOld`, `NotYet`, `MaxLag` |
 | `OutsideTraded` | EXT 15.1 | P4.2, (`Node`, gate, `Commodity`, buy before sell) | A | external | `Node`, `Region` (the gate), `Commodity`, `Side`, `Mid Price`, `Price` (the limit), `Wanted`, `Offered`, `Traded`, `Value Money`, `ListValue Money`, `CutClosed`, `CutCap`, `CutPrice`, `PriceClamped bool` |
-| `OutsideEnded` | EXT 15.1 | P4.2, after `OutsideTraded` | E | external | `Node`, `Commodity`, `Side`, `Cause`, `Units`, `ListValue Money` |
+| `OutsideEnded` | EXT 15.1 | P4.2, after `OutsideTraded` | E | external | `Node`, `Region` (the gate), `Commodity`, `Side` (`Bid` for a buy side, `Ask` for a sell side), `Cause` (`units` or `value`), `Units`, `ListValue Money` |
 | `OutsideShocked` | EXT 15.1 | call | C | external | `Node`, `Commodity`, `From`, `To` (bp) |
 
 #### 4.1.8 Slots that had no event

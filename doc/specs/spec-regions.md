@@ -699,7 +699,7 @@ relocation changes nothing (`spec-ledger.md` 2.6) and returns the error shown:
 | 3 | `closed_account` | the agent's account is closed | `ErrClosedAccount` (`spec-ledger.md` 4.2) |
 | 4 | `not_relocatable` | the account is not of kind Agent: an estate, an escrow, a transit or a boundary account | `ErrNotRelocatable` |
 | 5 | `same_region` | the account is already in `to` | `ErrSameRegion` |
-| 5a | `outside_node` | `to` is an outside node of the external module (`spec-external-sector.md` 3.1) | `ErrOutsideNode` |
+| 5a | `outside_node` | `to` is an outside node of the external module (`spec-external-sector.md` 3.1), read through `isOutsideNode`; the row is built with the external module, as a guarded one-line | `ErrOutsideNode` |
 | 6 | `open_reservation` | the account has a reservation of money or goods | `ErrOpenReservation` |
 | 7 | `region_bound` | an obligation that a later spec registered is tied to the account's region (6.5) | `ErrRegionBound`, which names the obligation |
 

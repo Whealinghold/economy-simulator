@@ -24,14 +24,15 @@ var byName = map[string]ledger.Reason{
 	"loan_out": ledger.LoanOut, "loan_repay": ledger.LoanRepay, "loan_interest": ledger.LoanInterest,
 	"relief": ledger.Relief, "deaths": ledger.Deaths,
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
+	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
+	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
 // that the ledger does not have yet, in the staged form of architecture.md
 // 9.7. A module's change deletes its entries.
 var notBuilt = []string{
-	"want_consumption", "outside_budget", "outside_unspent",
-	"outside_receipts", "outside_offer", "outside_unsold", "outside_purchases",
+	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
 	"wage_refund", "rent",
 	"title_sale", "premium", "payout", "loss",
@@ -97,7 +98,7 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 				out = append(out, k)
 			}
 		}
-		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary} {
+		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside} {
 			if strings.Contains(s, w) {
 				out = append(out, k)
 			}
@@ -251,6 +252,16 @@ func TestTransfer_FollowsRegistry(t *testing.T) {
 						if err := f.l.Transfer(f.mint, id, 10, ledger.Initial); err != nil {
 							t.Fatalf("fund: %v", err)
 						}
+					}
+				}
+				// An Outside account is funded by its boundary under outside_budget.
+				if out, ok := acct[ledger.KindOutside]; ok {
+					b, err := f.l.OpenBoundary(ledger.OutsideBudget, ledger.Money)
+					if err != nil {
+						t.Fatalf("open the outside_budget boundary: %v", err)
+					}
+					if err := f.l.Transfer(b, out, 5, ledger.OutsideBudget); err != nil {
+						t.Fatalf("fund outside: %v", err)
 					}
 				}
 				// An Escrow account is funded by an agent under escrow_in.

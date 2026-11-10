@@ -102,7 +102,7 @@ func (w *World) passCounts() {
 	clear(p.tally)
 	p.due, p.dueAt, p.started = p.due[:0], p.dueAt[:0], p.started[:0]
 	p.visited, p.evaluated = 0, 0
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue
@@ -241,7 +241,7 @@ func (w *World) candidatesOf(a *agent, g RegionID, row *roleRow) {
 	p := &m.pass
 	p.dests = p.dests[:0]
 	for d := range RegionID(len(w.cfg.Regions)) {
-		if _, ok := w.geo.distance(g, d); ok && d != g {
+		if _, ok := w.geo.distance(g, d); ok && d != g && !w.isOutsideNode(d) {
 			p.dests = append(p.dests, d)
 		}
 	}

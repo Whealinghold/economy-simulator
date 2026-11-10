@@ -945,6 +945,8 @@ func ckOfferRegion(w *World, a *agent, s *submittedOffer, _ int) Reason {
 		return ReasonUnknownRegion
 	case s.o.To == w.regionOf(a):
 		return ReasonSameRegion
+	case w.isOutsideNode(s.o.To):
+		return ReasonOutsideDestination
 	}
 	return ""
 }

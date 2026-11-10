@@ -261,3 +261,27 @@ func DefaultMerchants() Merchants { return Merchants{MaxOpen: 1_000} }
 func DefaultMerchant() Merchant {
 	return Merchant{LotUnits: 1, FeeShareSpreadBP: 2_500, MaxSourceAge: 2, TimeCostBP: wholeBP, ConsigneeCutBP: 500, TakeMarginBP: 1_000}
 }
+
+// The placeholder defaults of the external module (spec-external-sector.md 13.1;
+// N-015, N-027): the clamps of the trend and walk factor, a tenth and ten times
+// Base, and the neutral gate scale.
+const (
+	// DefaultFloorBP is the default OutsideLine.FloorBP.
+	DefaultFloorBP = 1_000
+	// DefaultCeilingBP is the default OutsideLine.CeilingBP.
+	DefaultCeilingBP = 100_000
+	// DefaultGateScaleBP is the default OutsideGate.ScaleBP.
+	DefaultGateScaleBP = wholeBP
+)
+
+// DefaultOutsideLine returns a line of the commodity at the base price with the
+// placeholder clamps of spec-external-sector.md 13.1 and no side, no season, no
+// trend and no walk: a fixed price. A side is added by setting its Capacity.
+func DefaultOutsideLine(commodity string, base Price) OutsideLine {
+	return OutsideLine{Commodity: commodity, Base: base, FloorBP: DefaultFloorBP, CeilingBP: DefaultCeilingBP}
+}
+
+// DefaultOutsideGate returns a gate row at the neutral scale.
+func DefaultOutsideGate(region string) OutsideGate {
+	return OutsideGate{Region: region, ScaleBP: DefaultGateScaleBP}
+}

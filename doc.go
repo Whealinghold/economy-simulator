@@ -1144,4 +1144,51 @@
 //   - LaneDecision: the result of a merchant's decision about a candidate lane, a
 //     closed set of constants (DecisionNoRumour to DecisionLotCapped) that names
 //     the cases of PlanNotes.
+//   - Outside: everything that is not a region with agents: the party the external
+//     module trades with, whose money and goods the realm never holds (spec-external-sector.md).
+//   - Outside node: a region of the configuration marked as the outside; it has no
+//     agents and no market. External is the module (a pointer of Config.Modules) and
+//     OutsideNode the type of its node table.
+//   - Gate: a region with a direct edge to or from an outside node; the outside trades
+//     in its market through the gate. OutsideGate overrides the scale of one gate.
+//   - Outside line: the outside's dealing in one commodity at one node, with one mid
+//     and up to two sides (OutsideLine; OutsideLineRow in the snapshot).
+//   - Outside side: the sell side (imports) or the buy side (exports) of a line
+//     (OutsideSide; OutsideSideRow in the snapshot); its state is kept for each gate.
+//   - Mid: the outside's price of a line before the margin: the base, the season, the
+//     trend, the walk and the shock, rounded half to even once.
+//   - Quote: the limit price of a side at a gate: the mid with the quote margin and the
+//     gate scale, rounded up for an ask and down for a bid.
+//   - Quote margin: the share of the mid, in basis points, by which an ask exceeds it
+//     or a bid falls short of it.
+//   - Walk: the bounded, mean-reverting random drift of a line's mid, one draw a tick.
+//   - Walk drift: the state of the walk, in basis points of the mid; not the Drift of
+//     a seed price.
+//   - Shock: the factor, in basis points, a consumer sets between steps on the mid of a
+//     line (OutsideShocked reports a change).
+//   - Counterparty: the pseudo-agent that places the orders of one side of one node at
+//     one gate, bound to an Outside account; a buyer places bids and a seller asks.
+//     Counterparty is the type of its snapshot row; it is not a household.
+//   - Outside account: the account of a counterparty, of the kind Outside, topped up
+//     from the boundary before its order and swept back to it after the markets, so it
+//     holds nothing across a tick.
+//   - Outside sector: the Outside accounts together; its money and goods are zero at
+//     every tick boundary, so the sectoral identity of the ledger holds with it at zero.
+//   - Sweep: the position that empties each Outside account to the boundary after the
+//     markets have cleared.
+//   - Import: a trade in which the outside sells a commodity to the realm.
+//   - Export: a trade in which the outside buys a commodity from the realm.
+//   - List value: the units traded on a side times the limit price of its order, the
+//     amount the line cap counts; not the money that changed hands.
+//   - Availability window: the table of availability, in basis points, by season of a side.
+//   - Line capacity: the most units a side wants in a tick at full availability.
+//   - Line cap: the limit over the run on the units or the list value of a side; a side
+//     that reaches it ends (OutsideEnded).
+//   - Balance of trade: the money the outside paid the realm less the money the realm
+//     paid the outside; the indicator module reads it from the boundary flows.
+//   - OutsideState: the group of the snapshot that holds the outside's lines, sides,
+//     trade totals and counterparties; OutsideTradeRow is its row of totals per commodity.
+//   - SeasonFactor: a season of the calendar and a factor in basis points, the row of
+//     a price-by-season table or of an availability window.
+//   - OutsideTraded: the event of a side's tick: what it wanted, offered and traded.
 package economysim
