@@ -287,6 +287,7 @@ func TestRecord_RenderErrors(t *testing.T) {
 		"empty unmet values":         func(r *Record) { r.Unmet[0].Values = "" },
 		"no decision":                func(r *Record) { r.Decision = "" },
 		"factor key spelled as none": func(r *Record) { r.Factors[0].Key = "-" },
+		"unknown step":               func(r *Record) { r.Experiments[0].Step = "Screen" },
 		"bad grid step":              func(r *Record) { r.Factors[0].Grid = "lin" },
 		"grid step with a letter":    func(r *Record) { r.Factors[0].Grid = "lin5x" },
 	}

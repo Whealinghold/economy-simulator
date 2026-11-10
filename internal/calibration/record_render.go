@@ -19,6 +19,7 @@ const recordVersion = 1
 // The closed sets of the grammar of 8.2, each space-padded so a word is found by
 // " word " (rule constants of the check of 11.2).
 const (
+	wStep     = " " + stepScreen + " " + stepExplore + " " + stepConfirm + " "
 	wDesign   = " oat spread grid none "
 	wSeeding  = " same per_point "
 	wEdge     = " none below:bound below:rule below:off above:bound above:rule above:off "
@@ -203,7 +204,7 @@ func (w *writer) stage(s string) string {
 // plan writes the experiment, factor and unsearched lines.
 func (w *writer) plan(r Record) {
 	for _, e := range r.Experiments {
-		w.line("experiment", w.tok("step", e.Step), "design", w.one("design", e.Design, wDesign),
+		w.line("experiment", w.one("step", e.Step, wStep), "design", w.one("design", e.Design, wDesign),
 			"points", w.nat("points", int64(e.Points)), "replicas", w.nat("replicas", int64(e.Replicas)),
 			"seed0", u64(e.Seed0), "seeding", w.one("seeding", e.Seeding, wSeeding),
 			"ticks", w.nat("ticks", e.Ticks), "transient", w.nat("transient", e.Transient), "every", w.nat("every", e.Every),

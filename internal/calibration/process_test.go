@@ -352,6 +352,11 @@ func TestProcess_Lineage(t *testing.T) {
 		{"it carries a set", []Record{old, next(func(r *Record) { r.Sets = old.Sets })}, []string{RuleLineageSet}},
 		{"it carries the old overlay", []Record{old, next(func(r *Record) { r.Documents = append(r.Documents, old.Documents[2]) })}, []string{RuleLineageDoc}},
 		{"it carries the old warm table", []Record{old, next(func(r *Record) { r.Documents[1].Digest = old.Documents[1].Digest })}, []string{RuleLineageDoc}},
+		{"a document that only starts with warm may repeat", []Record{func() Record {
+			r := old
+			r.Documents = append(slices.Clone(old.Documents), Document{"warmup.toml", "bbbb000000000002"})
+			return r
+		}(), next(func(r *Record) { r.Documents = append(r.Documents, Document{"warmup.toml", "bbbb000000000002"}) })}, nil},
 		{"a structure document may repeat", []Record{old, next(func(r *Record) { r.Documents[0].Digest = old.Documents[0].Digest })}, nil},
 		{"a later record still may not carry it", []Record{old, next(func(*Record) {}), func() Record {
 			r := stageOnly("C2", 1, "stop")

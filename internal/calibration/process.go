@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"path"
 	"slices"
 	"strings"
 )
@@ -60,7 +61,7 @@ const (
 	// warm-start table are not part of the lineage (9.2) and cannot be carried to
 	// another one (FR-CLB-054).
 	overlayDir = "calibrated/"
-	warmPrefix = "warm"
+	warmPrefix = "warm-" // the warm-start tables are warm-<pack>.toml: a name such as warmup.toml is a structure document
 	// Results, verdicts and statuses of the lines the stop reads (8.2).
 	resPass, resNA, resFail = "pass", "na", "fail"
 	verdictNone             = "none"
@@ -410,7 +411,7 @@ func (c *checker) lineage(newLineage bool) {
 
 // derived reports whether a document is an overlay or a warm-start table.
 func derived(name string) bool {
-	return strings.HasPrefix(name, overlayDir) || strings.HasPrefix(name, warmPrefix)
+	return strings.HasPrefix(name, overlayDir) || strings.HasPrefix(path.Base(name), warmPrefix)
 }
 
 // stop checks the seven conditions of 7.4.1 for a record that ends `stop`
