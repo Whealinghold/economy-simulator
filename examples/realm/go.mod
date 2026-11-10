@@ -1,6 +1,6 @@
 module github.com/Whealinghold/economy-sim/examples/realm
 
-go 1.25
+go 1.26.10
 
 require github.com/Whealinghold/economy-sim v0.0.0
 
