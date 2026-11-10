@@ -1,6 +1,7 @@
 package calibration
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 )
@@ -68,7 +69,10 @@ func newIndex(k Known) index {
 	for p := range k.Paths {
 		x.patterns = append(x.patterns, p)
 	}
-	slices.Sort(x.patterns)
+	// the most specific pattern (fewest `*`) is tried first, then byte order
+	slices.SortFunc(x.patterns, func(a, b string) int {
+		return cmp.Or(cmp.Compare(strings.Count(a, "*"), strings.Count(b, "*")), cmp.Compare(a, b))
+	})
 	return x
 }
 
@@ -79,9 +83,11 @@ func (x index) find(key string) (knobRef, bool) {
 		return ref, true
 	}
 	for _, p := range x.patterns {
-		if matchPath(p, key) {
-			ref, ok := x.byKey[x.paths[p]]
-			return ref, ok
+		if !matchPath(p, key) {
+			continue
+		}
+		if ref, ok := x.byKey[x.paths[p]]; ok {
+			return ref, true
 		}
 	}
 	return knobRef{}, false

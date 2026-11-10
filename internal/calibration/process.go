@@ -348,7 +348,9 @@ func (c *checker) factors() {
 	}
 	keys := make([]string, 0, len(r.Factors)+len(r.Sets))
 	for _, f := range r.Factors {
-		keys = append(keys, f.Key)
+		if f.Key != "" { // a composite factor names no single registry key
+			keys = append(keys, f.Key)
+		}
 	}
 	for _, s := range r.Sets {
 		keys = append(keys, s.Key)
@@ -492,7 +494,8 @@ func (c *checker) fold() {
 			}
 		}
 	}
-	if r.Block >= 1 && c.searched() {
+	// a block is used by the same experiments searchBlock checks: those with seeds
+	if search, _ := seedRanges(r.Experiments); r.Block >= 1 && len(search) > 0 {
 		st.blocks[r.Block] = true
 	}
 	st.prev = r

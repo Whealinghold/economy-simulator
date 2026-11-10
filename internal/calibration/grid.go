@@ -219,8 +219,10 @@ func setLevels(listed []int64, base int64, b Bounds) ([]int64, error) {
 		return nil, ErrBase
 	}
 	var out []int64
+	seen := make(map[int64]bool, len(listed))
 	for _, v := range listed {
-		if v >= b.Lo && v <= b.Hi && !slices.Contains(out, v) {
+		if v >= b.Lo && v <= b.Hi && !seen[v] {
+			seen[v] = true
 			out = append(out, v)
 		}
 	}
