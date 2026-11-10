@@ -550,7 +550,11 @@ func (g *cutGate) cut(w *economysim.World) {
 					have = int64(h.Quantity)
 				}
 			}
-			if c := have / (u.Quantity * st.Weight); !any || c < cover {
+			per := u.Quantity * st.Weight
+			if per <= 0 {
+				continue // a forged zero weight: no cover to read
+			}
+			if c := have / per; !any || c < cover {
 				cover, any = c, true
 			}
 		}

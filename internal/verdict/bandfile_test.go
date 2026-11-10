@@ -149,6 +149,9 @@ func TestBandFile_ThresholdsOf(t *testing.T) {
 	if _, err := verdict.ThresholdsOf([]verdict.BandKey{{Name: "s01.band_bp"}}); err == nil {
 		t.Errorf("ThresholdsOf(s01.band_bp) error = nil, want a refusal")
 	}
+	if _, err := verdict.ThresholdsOf([]verdict.BandKey{{Name: "r3.horizon_factor", Value: -1, Set: true}}); err == nil {
+		t.Errorf("ThresholdsOf(r3.horizon_factor -1) error = nil, want a refusal: it could never fire")
+	}
 }
 
 // FuzzBandFile verifies that no input makes the parser panic and that what it

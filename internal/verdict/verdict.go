@@ -96,8 +96,10 @@ type Verdict struct {
 	// Onset is the tick of the window or tick at which the rule completed
 	// (Detected only); it is a tick of a point of the input.
 	Onset int64
-	// Value is the measured statistic at the onset and Threshold the key it
-	// was compared with (Detected only).
+	// Value is the measured statistic and Threshold the key it was compared
+	// with (Detected only). It is the value at the onset, except for R5a and
+	// R5b, where it is the longest run of ticks in the series (the separation
+	// statistic of STY 6.5.3).
 	Value, Threshold int64
 	// Reason is one of the Reason constants (Unknown only).
 	Reason string

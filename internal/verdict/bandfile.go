@@ -248,6 +248,9 @@ func ThresholdsOf(keys []BandKey) (Thresholds, error) {
 		if i < 0 {
 			return nil, fmt.Errorf("verdict: [%s] is not a regime threshold", k.Name)
 		}
+		if k.Set && k.Name == kR3Factor && k.Value < 0 {
+			return nil, fmt.Errorf("verdict: [%s] value %d is negative: the horizon could never be reached", k.Name, k.Value)
+		}
 		if k.Set {
 			t[i].Value, t[i].Set = k.Value, true
 		}

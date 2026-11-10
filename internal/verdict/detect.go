@@ -201,18 +201,21 @@ func detectR1(in Input, t Thresholds) Verdict {
 	if len(in.Links) == 0 {
 		return unknownV(ReasonWindows)
 	}
+	short := false
 	for _, c := range in.Links {
 		if int64(len(c.Points))+1 < minW {
-			return unknownV(ReasonWindows)
+			short = true // not evaluable, but it must not hide a rise on another series
+			continue
 		}
-	}
-	for _, c := range in.Links {
 		if v, hit := chainRise(c, rise, wins); hit {
 			return v
 		}
 	}
 	if v, hit := moneyRun(in.M, in.MInit, mFactor); hit {
 		return v
+	}
+	if short {
+		return unknownV(ReasonWindows)
 	}
 	if in.Stale > staleMax {
 		return unknownV(ReasonStale)

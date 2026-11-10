@@ -109,7 +109,7 @@ func renderRow(b *strings.Builder, f FactRow) {
 		if f.BandSet {
 			b.WriteString("  band " + strconv.FormatInt(f.Band, 10))
 		}
-		b.WriteString("  ok " + strconv.Itoa(max(f.N-len(f.Outside), 0)) + "/" + strconv.Itoa(f.N) + "\n")
+		b.WriteString("  ok " + strconv.Itoa(max(f.N, len(f.Outside))-len(f.Outside)) + "/" + strconv.Itoa(f.N) + "\n")
 	}
 	if f.HasValues {
 		b.WriteString(valuesIndent + "values min " + i64(f.Min) + " median " + i64(f.Median) + " max " + i64(f.Max) + outsideWord(f) + "\n")

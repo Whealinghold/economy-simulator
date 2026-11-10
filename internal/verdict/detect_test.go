@@ -36,6 +36,9 @@ func TestDetect_R1_RegimeAndHealthy(t *testing.T) {
 	check(t, "detectors.out:2 healthy seasonal", run(verdict.Input{Links: []verdict.Series{linksOf(healthy)}}), verdict.None, 0, "")
 	check(t, "detectors.out:5 inflation 40%", run(verdict.Input{Links: []verdict.Series{linksOf(inflating)}}), verdict.Detected, winTick(2), "")
 
+	short := verdict.Series{Points: linksOf(healthy).Points[:1]}
+	check(t, "a short class series does not hide a rise on another", run(verdict.Input{Links: []verdict.Series{short, linksOf(inflating)}}), verdict.Detected, winTick(2), "")
+
 	link := func(vals ...int64) verdict.Series {
 		s := verdict.Series{}
 		for i, v := range vals {
