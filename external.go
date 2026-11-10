@@ -1089,19 +1089,25 @@ func (w *World) p35Orders() error {
 
 // setMids computes the mid of every line for the tick, once (6.1).
 func (x *external) setMids(w *World) {
-	season := w.seasonID()
 	for i := range x.lines {
 		l := &x.lines[i]
-		mid, clamped, ok := outside.Mid(outside.MidIn{
-			Base: int64(l.cfg.Base), Season: seasonBP(l.cfg.PriceBySeason, season, wholeBP), TrendBP: l.cfg.TrendBP,
-			FloorBP: l.cfg.FloorBP, CeilBP: l.cfg.CeilingBP, MaxPrice: MaxPrice,
-			Tick: w.Tick(), TicksPerYear: x.ticksPerYear, Drift: l.drift, Shock: l.shock,
-		})
-		if !ok {
-			invariant("the mid of an outside line is out of its domain, which validation rules out")
-		}
-		l.mid, l.clamped = mid, clamped
+		l.mid, l.clamped = x.midOf(w, l)
 	}
+}
+
+// midOf is the mid of a line at the world's tick and whether a clamp acted: a
+// function of the tick, the season, the drift and the shock, with no state of its
+// own, so a snapshot can read it too.
+func (x *external) midOf(w *World, l *outsideLine) (mid int64, clamped bool) {
+	mid, clamped, ok := outside.Mid(outside.MidIn{
+		Base: int64(l.cfg.Base), Season: seasonBP(l.cfg.PriceBySeason, w.seasonID(), wholeBP), TrendBP: l.cfg.TrendBP,
+		FloorBP: l.cfg.FloorBP, CeilBP: l.cfg.CeilingBP, MaxPrice: MaxPrice,
+		Tick: w.Tick(), TicksPerYear: x.ticksPerYear, Drift: l.drift, Shock: l.shock,
+	})
+	if !ok {
+		invariant("the mid of an outside line is out of its domain, which validation rules out")
+	}
+	return mid, clamped
 }
 
 // capOf returns what is left of the cumulative caps of a row: the list value is

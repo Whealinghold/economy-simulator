@@ -318,36 +318,21 @@ func namesOf(c *Config) Names {
 // construction summary, in build order. It is empty and not nil when none is on;
 // a module's change appends its name.
 func modulesOn(c *Config) []string {
+	m := &c.Modules
+	table := []struct {
+		name string
+		on   bool
+	}{
+		{"demand", m.Demand != nil}, {"money_supply", m.MoneySupply != nil}, {"estates", m.Estates != nil},
+		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
+		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
+		{"merchants", m.Merchants != nil}, {"external", m.External != nil},
+	}
 	on := []string{}
-	if c.Modules.Demand != nil {
-		on = append(on, "demand")
-	}
-	if c.Modules.MoneySupply != nil {
-		on = append(on, "money_supply")
-	}
-	if c.Modules.Estates != nil {
-		on = append(on, "estates")
-	}
-	if c.Modules.Resources != nil {
-		on = append(on, "resources")
-	}
-	if c.Modules.Subsistence != nil {
-		on = append(on, "subsistence")
-	}
-	if c.Modules.Population != nil {
-		on = append(on, "population")
-	}
-	if c.Modules.Transport != nil {
-		on = append(on, "transport")
-	}
-	if c.Modules.Information != nil {
-		on = append(on, "information")
-	}
-	if c.Modules.Migration != nil {
-		on = append(on, "migration")
-	}
-	if c.Modules.Merchants != nil {
-		on = append(on, "merchants")
+	for _, t := range table {
+		if t.on {
+			on = append(on, t.name)
+		}
 	}
 	return on
 }
@@ -422,6 +407,9 @@ func (w *World) summary() []slog.Attr {
 	attrs = append(attrs, slog.Int(logkeys.Edges, len(w.cfg.Edges)), slog.Int(logkeys.Components, components))
 	if m := w.cfg.Modules.Transport; m != nil {
 		attrs = append(attrs, slog.Int(logkeys.Modes, len(m.Modes)))
+	}
+	if x := w.external; x != nil {
+		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
 	}
 	return attrs
 }

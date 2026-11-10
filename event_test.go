@@ -582,7 +582,7 @@ func TestRowFieldNames(t *testing.T) {
 // Guard: the table pins the strings of the golden output; the spec read keeps
 // a typo in both the table and the constant from passing.
 //
-// Requirement: FR-OBS-006
+// Requirement: FR-OBS-006, FR-REG-058, FR-TRN-047
 func TestConstants_Values(t *testing.T) {
 	t.Parallel()
 	// Sources: rejection reasons spec-clearing.md 3.2; abandon reasons
@@ -741,6 +741,19 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range migrationReasons {
 		owner[string(r.got)] = "doc/specs/spec-migration.md"
+	}
+	// The two refusals the external module declares (D533): a relocation into an outside
+	// node (REG 6.1.3 row 5a, with the sentinel ErrOutsideNode) and a shipment request
+	// toward one (TRN 5.4 row 6a).
+	owner[string(economysim.ReasonOutsideNode)] = "doc/specs/spec-regions.md"
+	owner[string(economysim.ReasonOutsideDestination)] = "doc/specs/spec-transport.md"
+	for got, want := range map[economysim.Reason]string{economysim.ReasonOutsideNode: "outside_node", economysim.ReasonOutsideDestination: "outside_destination"} {
+		if string(got) != want {
+			t.Errorf("Reason constant = %q, want %q", got, want)
+		}
+	}
+	if economysim.ErrOutsideNode == nil || economysim.ErrOutsideNode.Error() == "" {
+		t.Errorf("ErrOutsideNode = %v, want the sentinel of the REG 6.1.3 row", economysim.ErrOutsideNode)
 	}
 	for _, c := range causes {
 		owner[string(c.got)] = "doc/specs/spec-spawner.md"
