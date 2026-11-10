@@ -3,6 +3,7 @@ package verdict
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -238,18 +239,18 @@ func quoted(v string) (string, bool) {
 // (6.5.1).
 func ThresholdsOf(keys []BandKey) (Thresholds, error) {
 	t := NewThresholds()
+	seen := make(map[string]bool, len(keys))
 	for _, k := range keys {
-		i := -1
-		for j := range t {
-			if t[j].Name == k.Name {
-				i = j
-			}
-		}
+		i := slices.IndexFunc(t, func(x Key) bool { return x.Name == k.Name })
 		if i < 0 {
 			return nil, fmt.Errorf("verdict: [%s] is not a regime threshold", k.Name)
 		}
-		if k.Set && k.Name == kR3Factor && k.Value < 0 {
-			return nil, fmt.Errorf("verdict: [%s] value %d is negative: the horizon could never be reached", k.Name, k.Value)
+		if seen[k.Name] {
+			return nil, fmt.Errorf("verdict: [%s] appears twice", k.Name)
+		}
+		seen[k.Name] = true
+		if k.Set && k.Value < 0 {
+			return nil, fmt.Errorf("verdict: [%s] value %d is negative: a threshold is a count, a share or a factor", k.Name, k.Value)
 		}
 		if k.Set {
 			t[i].Value, t[i].Set = k.Value, true

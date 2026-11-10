@@ -198,15 +198,9 @@ func detectR1(in Input, t Thresholds) Verdict {
 		return unknownV(ReasonThresholdUnset)
 	}
 	rise, wins, mFactor, minW, staleMax := k[0], k[1], k[2], k[3], k[4]
-	if len(in.Links) == 0 {
-		return unknownV(ReasonWindows)
-	}
-	short := false
+	short := len(in.Links) == 0
 	for _, c := range in.Links {
-		if int64(len(c.Points))+1 < minW {
-			short = true // not evaluable, but it must not hide a rise on another series
-			continue
-		}
+		short = short || int64(len(c.Points))+1 < minW // not evaluable, but it must not hide a rise or a clamp
 		if v, hit := chainRise(c, rise, wins); hit {
 			return v
 		}
@@ -316,10 +310,8 @@ func detectR2(in Input, t Thresholds) Verdict {
 			return v
 		}
 	}
-	for _, p := range in.Top {
-		if p.Value >= top {
-			return detectedV(p.Tick, p.Value, top)
-		}
+	if v, hit := atOrAboveRun(in.Top, top, wins); hit {
+		return v
 	}
 	return Verdict{}
 }

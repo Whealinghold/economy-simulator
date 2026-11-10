@@ -174,3 +174,14 @@ func FuzzBandFile(f *testing.F) {
 		}
 	})
 }
+
+func TestBandFile_ThresholdsOf_Rejects(t *testing.T) {
+	for name, keys := range map[string][]verdict.BandKey{
+		"duplicate": {{Name: "r1.rise_bp", Set: true, Value: 1}, {Name: "r1.rise_bp"}},
+		"negative":  {{Name: "r1.windows", Set: true, Value: -1}},
+	} {
+		if _, err := verdict.ThresholdsOf(keys); err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+	}
+}

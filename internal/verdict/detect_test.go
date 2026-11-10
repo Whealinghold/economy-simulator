@@ -107,7 +107,8 @@ func TestDetect_R2_RegimeAndHealthy(t *testing.T) {
 		{"unsold at threshold and rising", verdict.Input{Volume: vol(10000, 100), Unsold: [][]verdict.Point{ticksOf([]int64{4000, 5000, 5001})}}, verdict.Detected, 2},
 		{"unsold above but flat is not rising", verdict.Input{Volume: vol(10000, 100), Unsold: [][]verdict.Point{ticksOf([]int64{6000, 6000, 6000})}}, verdict.None, 0},
 		{"unsold one below", verdict.Input{Volume: vol(10000, 100), Unsold: [][]verdict.Point{ticksOf([]int64{4000, 4500, 4999})}}, verdict.None, 0},
-		{"top decile at 7000", verdict.Input{Volume: vol(10000, 100), Top: ticksOf([]int64{6999, 7000})}, verdict.Detected, 1},
+		{"top decile at 7000 for two windows", verdict.Input{Volume: vol(10000, 100), Top: ticksOf([]int64{6999, 7000, 7000})}, verdict.Detected, 2},
+		{"top decile once is not enough", verdict.Input{Volume: vol(10000, 100), Top: ticksOf([]int64{6999, 7000, 6999})}, verdict.None, 0},
 		{"top decile one below", verdict.Input{Volume: vol(10000, 100), Top: ticksOf([]int64{6999, 6999})}, verdict.None, 0},
 		{"a first window of 0 never falls", verdict.Input{Volume: vol(0, 0), MoneyOut: ticksOf([]int64{9000, 9000})}, verdict.None, 0},
 	} {

@@ -59,6 +59,7 @@ type Record struct {
 // text holds no float, no wall-clock time and no map order (FR-STY-085,
 // NFR-STY-002).
 func RenderVerdict(r Record) string {
+	r = flatRecord(r)
 	var b strings.Builder
 	scs := slices.Clone(r.Scenarios)
 	slices.SortStableFunc(scs, func(x, y ScenarioRecord) int { return strings.Compare(x.Scenario, y.Scenario) })
@@ -109,7 +110,11 @@ func renderRow(b *strings.Builder, f FactRow) {
 		if f.BandSet {
 			b.WriteString("  band " + strconv.FormatInt(f.Band, 10))
 		}
-		b.WriteString("  ok " + strconv.Itoa(max(f.N, len(f.Outside))-len(f.Outside)) + "/" + strconv.Itoa(f.N) + "\n")
+		ok := "invalid" // more seeds outside than seeds: a caller bug the record must show
+		if len(f.Outside) <= f.N {
+			ok = strconv.Itoa(f.N - len(f.Outside))
+		}
+		b.WriteString("  ok " + ok + "/" + strconv.Itoa(f.N) + "\n")
 	}
 	if f.HasValues {
 		b.WriteString(valuesIndent + "values min " + i64(f.Min) + " median " + i64(f.Median) + " max " + i64(f.Max) + outsideWord(f) + "\n")
@@ -158,7 +163,13 @@ func renderRegimes(b *strings.Builder, vs []Verdict) {
 	}
 	order := Detectors()
 	vs = slices.Clone(vs)
-	slices.SortStableFunc(vs, func(x, y Verdict) int { return slices.Index(order, x.Detector) - slices.Index(order, y.Detector) })
+	rank := func(d Detector) int { // an unknown detector sorts last, not first
+		if i := slices.Index(order, d); i >= 0 {
+			return i
+		}
+		return len(order)
+	}
+	slices.SortStableFunc(vs, func(x, y Verdict) int { return rank(x.Detector) - rank(y.Detector) })
 	parts := make([]string, len(vs))
 	for i, v := range vs {
 		parts[i] = v.String()
@@ -240,4 +251,29 @@ func RenderStability(s Stability) string {
 	}
 	b.WriteString("claim " + ClaimOf(s.Points) + "\n")
 	return b.String()
+}
+
+// oneLine collapses every run of white space to one space, so a caller's string
+// cannot add a line or the double-space field separator to the record.
+func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// flatRecord returns r with every free-text field made one line.
+func flatRecord(r Record) Record {
+	r.Pack, r.Seeds, r.Commit, r.Config = oneLine(r.Pack), oneLine(r.Seeds), oneLine(r.Commit), oneLine(r.Config)
+	r.Scenarios = slices.Clone(r.Scenarios)
+	for i, sc := range r.Scenarios {
+		sc.Scenario = oneLine(sc.Scenario)
+		sc.Facts = slices.Clone(sc.Facts)
+		for j, f := range sc.Facts {
+			f.ID, f.Statistic, f.Region, f.Role, f.Reason = oneLine(f.ID), oneLine(f.Statistic), oneLine(f.Region), oneLine(f.Role), oneLine(f.Reason)
+			sc.Facts[j] = f
+		}
+		sc.Regimes = slices.Clone(sc.Regimes)
+		for j, v := range sc.Regimes {
+			v.Reason, v.Detector = oneLine(v.Reason), Detector(oneLine(string(v.Detector)))
+			sc.Regimes[j] = v
+		}
+		r.Scenarios[i] = sc
+	}
+	return r
 }

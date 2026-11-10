@@ -287,3 +287,39 @@ func TestSeedRules_Medians(t *testing.T) {
 		t.Errorf("SR1(0, none) = %+v, want need 0 and fail", got)
 	}
 }
+
+// TestDetect_R1_ShortOrEmptyLinks verifies that a short or missing link series
+// does not hide a clamp or the money clause; it is unknown only when nothing is
+// detected.
+//
+// Requirement: FR-STY-061
+func TestDetect_R1_ShortOrEmptyLinks(t *testing.T) {
+	t.Parallel()
+	th := priors()
+	run := func(in verdict.Input) verdict.Verdict { return verdict.Detect(verdict.R1, in, th) }
+	money := []verdict.Point{{Tick: 0, Value: 100}, {Tick: 365, Value: 300}, {Tick: 730, Value: 300}}
+	clamped := verdict.Series{Points: []verdict.Point{{Tick: winTick(1), Value: 10000}}, Clamped: []bool{true}}
+	check(t, "empty links, money runs away", run(verdict.Input{MInit: 100, M: money}), verdict.Detected, 730, "")
+	check(t, "empty links, nothing else", run(verdict.Input{}), verdict.Unknown, 0, verdict.ReasonWindows)
+	check(t, "a clamp on a short series", run(verdict.Input{Links: []verdict.Series{clamped}}), verdict.Detected, winTick(1), "")
+}
+
+// TestRenderVerdict_Hostile verifies that a caller's string cannot add a line
+// or a field separator, that an unknown detector sorts last and that more
+// seeds outside than planned is shown.
+//
+// Requirement: FR-STY-085
+func TestRenderVerdict_Hostile(t *testing.T) {
+	t.Parallel()
+	r := verdict.Record{Pack: "p\nq", Seeds: "1..2", Commit: "c  d", Config: "h", Scenarios: []verdict.ScenarioRecord{{
+		Scenario: "S\n01",
+		Facts:    []verdict.FactRow{{ID: "F", Class: verdict.ClassX, Statistic: "s", N: 1, Outside: []int64{1, 2}}},
+		Regimes:  []verdict.Verdict{{Detector: "Rx", Class: verdict.None}, {Detector: verdict.R9, Class: verdict.None}},
+	}}}
+	want := "pack p q  scenario S 01  seeds 1..2  commit c d  config h\n" +
+		"fact F  class X  s  ok invalid/1\n" +
+		"regime R9 none   Rx none\n"
+	if got := verdict.RenderVerdict(r); got != want {
+		t.Errorf("RenderVerdict(hostile) =\n%s\nwant\n%s", got, want)
+	}
+}
