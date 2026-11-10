@@ -50,17 +50,17 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324, N-329 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324, N-329, N-331 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
-| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318 |
+| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-331 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-331, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310 |
 | EVD | N-018, N-133 |
-| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-214, N-220 |
+| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-331 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
 | GDS | N-039 |
@@ -70,7 +70,7 @@ PR description.
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
-| MER | N-331, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310, N-324 |
@@ -91,7 +91,7 @@ PR description.
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
-| TRN | N-331, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
@@ -925,6 +925,7 @@ PR description.
 - **Raised:** 2026-10-11, `spec-checkpoint.md` 7.2 (item 6) and 11.
 - **Note:** A `Stateful` extension (architecture.md 4.3) must not be shared between worlds: `LoadState` into a shared instance changes the others. A harness that restores many worlds from one checkpoint (branching) registers a new instance of each stateful extension for every branch (`spec-experiments.md` 5.5), and a consumer that builds two worlds does the same. The library cannot detect a shared instance.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: `forkAtN` (plan 2-2 D258) takes the options as a function and builds a fresh set for each world, so a stateful extension is never shared. Left open.
+- **Update (2026-11-09, plan 2-20 Phase 1):** decided for `experiment/` (plan 2-20 D610; built in its Phase 5): `Options(key)` is called once for each world built (the burn-in and each restore). The library still cannot see a shared instance. Left open for INT and CHK.
 
 ### N-130 What IND cannot measure exactly until another spec adds a field
 
@@ -1507,7 +1508,7 @@ PR description.
 
 ### N-214 Keyed random streams (ADR 0008): the edits owed
 
-- **Areas:** WLD, CHK, EXP, CLB, STB, TEC, PLC, AGT, EXT, INF, MER, MIG, RSK, WEL, CODE
+- **Areas:** WLD, CHK, CLB, STB, TEC, PLC, AGT, EXT, INF, MER, MIG, RSK, WEL, CODE
 - **Raised:** 2026-10-12, `adr/0008-random-draws-are-keyed-streams.md`; `rules/architecture.md` 7.3 is already changed.
 - **Note:** Randomness is a function of (seed, site, tick, entity): the one PCG is reseeded by a SplitMix64 key at every draw site, no draw depends on how many others were taken, a checkpoint holds the seed and no stream state, and `WithReseed(salt)` gives `finalise(seed xor finalise(salt))`. The specs still describe one positional stream; apply the ADR in the next change that touches each:
   - WLD 7 (one seed; the keying rule with the exact constants and the test vectors, `models/wld/seed.py` regenerated; the draw table 7.3 gains a `site` constant and an `id` per row; 7.4.2 and 7.4.3 narrow to one stream; 7.4.4 reads the seed, not the PCG state; 7.6 is no longer a hazard between runs), 12 (no PCG state), 13 (the CHK row), 16.5, 17 (WLD-A5), 22 (questions 4 and 7: answered; P4.1 may clear markets concurrently once architecture.md 12.2 has an owner), 23 (`random.go` holds the seed, the PCG, the `Rand` and the site table).
@@ -1532,6 +1533,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply for the world's sites (D155): D1, D7, D8 and D10 are called with the keys of WLD 7.3, D5 `siteTrade` before every `Trade` and D3 `siteWork` only for a consumer's `Work`; the draws of D2, D4, D6, D11 to D15 and D17 are modules'. Left open for the other owners.
 - **Update (2026-10-23, plan 2-1 Phase 1):** applied for CHK and WLD: every passage marked "stale under ADR 0008" in `spec-checkpoint.md` (header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4, 6.6.3, 6.7.1, 6.8, 8.1 item 4, 8.4, the EXP row of 11, CHK-A2, 16, 17.2 and 17.3, FR-CHK-006, 025, 051 and the edits-owed rows of 20) and of `spec-world.md` (7.x residue at the construction paragraph, 12, 13, 17 WLD-A5, the N-214 row of 20) is rewritten; the world section (tag 1) holds the next agent ID and the construction flag, the bucket and the pending totals are the ledger's (tag 2), and the header's seed is the effective seed, read back. `models/chk/worked.py`, `size.py` and their outputs are regenerated in Docker. Left open for EXP 7.3 and FR-EXP-062 (plan 2-20), CLB 4.2.1, 7.2.3 and FR-CLB-024 (plan 2-21), STB L120, L124, D88 and the D90 row, TEC 4.4.1 and 4.4.6, the `spec-stability.md` row of `spec-world.md` 22 (S63 and MIG-S3), and the sites and IDs of the module rows.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the CHK passages were rewritten by plan 2-1; the checkpoint row builds without `Stream` and with the header seed read back (plan 2-2 D241). EXP 7.3, FR-EXP-062, CLB 4.2.1, STB and TEC passages remain. Left open.
+- **Update (2026-11-09, plan 2-20 Phase 1):** applied for EXP, which leaves the areas: `spec-experiments.md` 2 (position 8), 3.1, 3.6, 5.1.3, 6.3, 7.2 to 7.5, 8.1.1, 8.2.2, 8.4.2, 10, 11, 12, 14, 15, 19.6, 21, 22 and X3 no longer have `Pair`, `Record.Stream`, the stream fingerprint, `AlignedPairs` or `Horizon`; FR-EXP-062 is retired (its ID is not reused). The pairing gain is always computed. Open for CLB 4.2.1, STB and TEC.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `siteMigration` `0x53C434C7EFE6D523` (the first eight bytes of SHA-256 of `economy-sim/site/siteMigration`, checked) is in `spec-world.md` 7.1.4 and the D11 row of 7.3, `id` the agent, keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0 (as `siteInform` is). The constant is appended to `random.go` in Phase 5. Left open for the other owners.
 - **Update (2026-11-09, plan 2-15 Phase 1):** MER: `siteContract` `0xF0FF7DEE8E50504B` (the first eight bytes of SHA-256 of `economy-sim/site/siteContract`, checked) is in `spec-world.md` 7.1.4 and the D6 row of 7.3, `id` the agent and `sub` `2*i` for the `i`-th submitted offer and `2*i+1` for the `i`-th submitted take (the plan index, ADR 0008 open point 3 answered for D6); `spec-merchants.md` 9.4.2 and FR-MER-033 say the key is the first word of that stream. The constant is appended to `random.go` in Phase 6. MER leaves the areas of this note; left open for the other owners.
 
@@ -2084,7 +2086,13 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-14 Phase 1 (E8, risk O5).
 - **Note:** An initial agent has `RoleSince` 0, the creation tick, with or without a warm start (`agent.go`, `spec-world.md` 5.4.2), so no household is settled before `max(MoveCooldown, T_a)` ticks (60 with the defaults) and the first migration pass of a run can move nobody earlier. `spec-migration.md` 5.2.2 said a warm-start agent might carry a negative `RoleSince` and be settled at once; no code does that and the owner ruled (2026-11-09) not to change the Stage 1 behaviour. A scenario that wants earlier migration runs past that tick (S61 to S66) or sets `MoveCooldown` and the window low. If a pack ever needs a settled start, SPN and WLD own the rule for it.
 
-### N-331 `DefaultStrategy.TradeWith` is the seam for a strategy that plans something other than a recipe
+### N-331 A point that sets many paths exceeds the loader's document cap
+
+- **Areas:** EXP, CFG, CLB
+- **Raised:** 2026-11-09, plan 2-20 D604.
+- **Note:** `config.Parse` takes at most `MaxDocuments` (16) documents, and `spec-experiments.md` 3.3.2 makes one document for each change and each `Docs` of every level, so a point that sets more than `16 - len(Base)` paths is refused by the loader. `Validate` returns `ErrOversize` for it (13.2). A screen of every knob (one factor per knob, `spec-calibration.md`) cannot run until `MaxDocuments`, the document rule or `MaxFactors` changes; plan 2-21 must not assume the screen of EXP 12.4.2 runs at 16 knobs.
+
+### N-333 `DefaultStrategy.TradeWith` is the seam for a strategy that plans something other than a recipe
 
 - **Areas:** MER, TRN, CODE
 - **Raised:** 2026-11-09, plan 2-15 Phase 1 (D502).
@@ -2108,4 +2116,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c3acbccdf0aa4f1226c01363
+NOTES-TAG: fc64f05cce55e5c1339f3adb

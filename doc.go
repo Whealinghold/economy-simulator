@@ -559,7 +559,7 @@
 //     with the cause insolvent or starved; it is not a financial proceeding.
 //   - Reduction: the fall of an agent's weight by the unfed households of rung 3,
 //     which leave with their share of money and goods going to the estate; a
-//     reduction to 0 is a removal.
+//     reduction to 0 is a removal. In an experiment, a reduction is the summary of one measure's readings over the runs of a group: planned, used, failed, min, max, mean and nearest-rank quantiles (spec-experiments.md 8.3).
 //   - Role change: an agent taking up another role in its region, keeping its
 //     account and money; RoleSince is set to the tick.
 //   - Entry rule: the rule by which the default spawner chooses a role for a
@@ -921,7 +921,7 @@
 //   - Tally: the plain value an Observer folds the events of an indicator window into, the
 //     consumer's own (spec-indicators.md 4.2).
 //   - Indicator window: a span of ticks, from one boundary to a later one, over which a tally
-//     keeps its sums; it carries no stocks (spec-indicators.md 4.2.6).
+//     keeps its sums; it carries no stocks (spec-indicators.md 4.2.6). In an experiment, a window is also the span between two sample points of a run, [Transient, Transient + Every) and so on (spec-experiments.md 3.4.2).
 //   - Household row: a weight and a total, the input of the weighted statistics, built from the
 //     agent states a consumer holds (spec-indicators.md 4.5).
 //   - Price table: a price per region and commodity that a value measure takes as an argument,
@@ -957,6 +957,58 @@
 //     (spec-indicators.md 8.7).
 //   - Reconciling item: the residual that closes an identity of a window by name, such as the
 //     units that moved with a relocated account (spec-indicators.md 8.2).
+//   - Experiment: plain data and four function values that say a set of runs of a base pack: its
+//     factors, design, replicas, length, windows, script, measures and criteria; a run is a
+//     function of the experiment and a run key (spec-experiments.md 3). Its type is
+//     experiment.Spec.
+//   - Factor: one axis of an experiment's design, a finite list of levels or an integer range
+//     over a configuration path (spec-experiments.md 3.2).
+//   - Level (of a factor): one setting of a factor, a list of changes of configuration paths or
+//     of overlay documents, and optionally script steps (spec-experiments.md 3.2).
+//   - Change (of a path): the setting of one configuration path to one integer, written as a
+//     two-line overlay document the loader layers after the base (spec-experiments.md 3.3).
+//   - Design: how an experiment picks its points from the factors: Grid (all combinations),
+//     OneAtATime (the base and each other level of each factor in turn) or Spread (a Latin
+//     hypercube by a counter-based permutation); all three are pure functions of integers
+//     (spec-experiments.md 4).
+//   - Point: one choice of a level for each factor; the configuration it resolves to is the base
+//     pack with the overlays of its levels (spec-experiments.md 3.3).
+//   - Replica: one run of a point and a variant under one seed; the replica seeds are
+//     consecutive integers from Seed0 (spec-experiments.md 4.6).
+//   - Run key: the point, replica, variant and continuation that, with the experiment, determine
+//     one run (spec-experiments.md 3.1.1).
+//   - Unit of work: the runs that share a burn-in, or the one run of an unbranched experiment;
+//     it shares nothing with another unit, so units may run in any order or place
+//     (spec-experiments.md 5).
+//   - Plan (of an experiment): the list of its units and run keys, computed from the experiment
+//     alone (spec-experiments.md 5.3).
+//   - Record (of a run): what one run left: status, hash, digest of its final checkpoint, final
+//     readings, verdicts and, if kept, the series and a snapshot (spec-experiments.md 8.1).
+//   - Result (of an experiment): the tree of records in canonical order that Assemble builds from
+//     records in any order, plain data without map, pointer or float (spec-experiments.md 8.2).
+//   - Transient: the ticks of a run before the first window opens, so a reading excludes the
+//     approach to a steady state (spec-experiments.md 3.4.2).
+//   - Final reading: the reading of a measure over the whole span from the transient to the end
+//     of the run (spec-experiments.md 3.4.3).
+//   - Series: the readings of a measure at each window close, kept with Keep.Series; with one
+//     window it is the final reading, kept once (spec-experiments.md 3.4.3).
+//   - Measure: a named function of a window of the consumer's, with an optional observer, that
+//     gives one integer reading, defined or not (spec-experiments.md 3.4).
+//   - Criterion: a named band on one measure's final reading, as data; a run passes it only when
+//     the run is ok and the reading is defined and inside the band (spec-experiments.md 3.4.5).
+//   - Pass share: passes over planned replicas of a criterion, in basis points; failed and
+//     missing runs count as planned (spec-experiments.md 8.3).
+//   - Variant (of calls): one list of script steps a branch applies after the restore, such as a
+//     shock against none (spec-experiments.md 6).
+//   - Continuation: one reseeded run from the restore of a branch, with the salt Salt0 plus its
+//     index (spec-experiments.md 6.3).
+//   - Pairing gain: the spread of the difference of two independent groups over the spread of
+//     their paired difference, in basis points, measured from the readings; 10 000 is no gain
+//     (spec-experiments.md 7.4.2).
+//   - Effect range: the range of the means of a factor's bins of a measure and its share of the
+//     total, the sensitivity of a measure to a factor (spec-experiments.md 8.5).
+//   - Elasticity (in basis points): the change of a measure between two levels of a factor over
+//     the change of the factor, each relative to the first level (spec-experiments.md 8.5).
 //   - Mode: a way to carry goods between regions, configured as data: a speed, the
 //     capacity of one carrying unit and either a crew and a vehicle (self-carried) or a
 //     haul commodity (hired) (spec-transport.md 3.1).
