@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/indicator"
 	"github.com/Whealinghold/economy-sim/internal/verdict"
 )
 
@@ -146,7 +147,7 @@ func oneFacts(t testing.TB) *factSet {
 		f.banded("closed", b("STY-D01", "d01.unfed_bp", atMost, 100), packOne, seeds, bands, unfedStat, runs)
 		f.banded("closed", b("STY-D03", "s06.swing_bp", atMost, 300), packOne, seeds, bands, swingStat, runs)
 		f.banded("closed", b("STY-M05", "m05.pool_share_bp", atMost, 3000), packOne, seeds, bands, func(r *stylisedRun) stat { _, a := moneyStats(r); return a }, runs)
-		f.notApplicable("closed", "STY-D02", "R", "inequality", "waits for plan 2-17: the household rows need Agent(a)")
+		f.add("closed", inequalityRow(f, "one", seeds, runs))
 		f.notApplicable("closed", "STY-M03", "R", "s19.ratio_band_bp", "HouseholdIncome is not OK in version 1 (IND 9 row 21)")
 		f.finding("closed", reserveWarning(t))
 		return f
@@ -187,6 +188,7 @@ func secondFacts(t testing.TB) *factSet {
 		f.banded("X4", p08, packSecond, seeds, bands, tradeShare, runs)
 		f.banded("X4", b("STY-P02", "x4.pinned_share_bp", atMost, 1000), packSecond, seeds, bands, func(r *stylisedRun) stat { _, _, a := pinnedStats(r); return a }, runs)
 		f.banded("X4", b("STY-P03", "x4.range_factor", atMost, 20000), packSecond, seeds, bands, func(r *stylisedRun) stat { a, _ := rangeStats(r); return a }, runs)
+		f.add("X4", inequalityRow(f, "second", seeds, runs))
 		return f
 	})
 }
@@ -542,7 +544,7 @@ func warmFacts(t testing.TB) *factSet {
 		}
 		f.add("warm-start", judge(factDef{ID: "STY-H04", Statistic: "s17.control_gap_bp", Class: verdict.ClassB, Side: atLeast, Prior: 5000, HasPrior: true}, "one", seeds, gap, bands["s17.control_gap_bp"]))
 		f.add("warm-start", judgeExact(factDef{ID: "STY-H04", Statistic: "stagger of the first three ticks", Class: verdict.ClassX}, "one", seeds, stagger))
-		h02(f, seeds, loadRuns(t, packOne, seeds), bands)
+		h02(f, "one", seeds, loadRuns(t, packOne, seeds), bands)
 		h03(t, f, bands)
 		return f
 	})
@@ -593,7 +595,7 @@ func staggerErr(o *runObs, cfg economysim.Config) string {
 // h02 judges STY-H02 from the closed runs: the largest offset from the warm
 // table over the year windows, the money per household against its start, and
 // the least households.
-func h02(f *factSet, seeds []uint64, runs []*stylisedRun, bands map[string]verdict.BandKey) {
+func h02(f *factSet, pack string, seeds []uint64, runs []*stylisedRun, bands map[string]verdict.BandKey) {
 	off, money, hh := make([]stat, len(runs)), make([]stat, len(runs)), make([]stat, len(runs))
 	for i, r := range runs {
 		var top int64
@@ -608,9 +610,9 @@ func h02(f *factSet, seeds []uint64, runs []*stylisedRun, bands map[string]verdi
 		}
 		money[i], hh[i] = moneyDrift(r), minHouseholds(r)
 	}
-	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "h02.offset_bp", Class: verdict.ClassB, Prior: 2000, HasPrior: true}, "one", seeds, off, bands["h02.offset_bp"]))
-	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "h02.money_bp", Class: verdict.ClassB, Prior: 2000, HasPrior: true}, "one", seeds, money, bands["h02.money_bp"]))
-	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "x4.households_bp", Class: verdict.ClassB, Side: atLeast, Prior: 9000, HasPrior: true}, "one", seeds, hh, bands["x4.households_bp"]))
+	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "h02.offset_bp", Class: verdict.ClassB, Prior: 2000, HasPrior: true}, pack, seeds, off, bands["h02.offset_bp"]))
+	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "h02.money_bp", Class: verdict.ClassB, Prior: 2000, HasPrior: true}, pack, seeds, money, bands["h02.money_bp"]))
+	f.add("warm-start", judge(factDef{ID: "STY-H02", Statistic: "x4.households_bp", Class: verdict.ClassB, Side: atLeast, Prior: 9000, HasPrior: true}, pack, seeds, hh, bands["x4.households_bp"]))
 }
 
 // h03 records the two paths of the perturbed chain, started from its stale
@@ -643,10 +645,9 @@ func TestStylised_One_WarmStart(t *testing.T) {
 	warmFacts(t).report(t)
 }
 
-// TestStylised_Report_Rows logs the report rows of the skill packs (W04, W05):
-// the premium of the cook with the tool and without it, beside the prior, and
-// asserts nothing. W05's working share needs the per-household query of plan
-// 2-17.
+// TestStylised_Report_Rows logs the report row of the skill packs (W04): the
+// premium of the cook with the tool and without it, beside the prior, and asserts
+// nothing. W05 is TestStylised_W05_WorkingShare.
 //
 // Requirement: FR-STY-033, FR-STY-034, FR-STY-082
 func TestStylised_Report_Rows(t *testing.T) {
@@ -679,20 +680,150 @@ func TestStylised_Report_Rows(t *testing.T) {
 	}
 }
 
-// TestStylised_W05_WorkingShare is the working-tick share of STY-W05 and the
-// per-household query it needs.
-//
-// Requirement: FR-STY-034
-func TestStylised_W05_WorkingShare(t *testing.T) {
-	t.Skip("waits for plan 2-17: the working ticks of a household are read by Agent(a), which is not in the tree")
+// inequality is the Inequality of the money of the households of a run at its
+// end, with the external agents left out (IND 9 row 11).
+func inequality(r *stylisedRun) (indicator.InequalityResult, error) {
+	set, err := indicator.RowsOf(r.agentRows(), indicator.ColMoney, indicator.RowOpt{ExcludeExternal: true})
+	if err != nil {
+		return indicator.InequalityResult{}, err
+	}
+	return indicator.Inequality(set)
 }
 
-// TestStylised_D02_Inequality is the Gini, the top shares and the cohort
-// coverage of STY-D02, which need the household rows of plan 2-17.
+// inequalityRow is the row of STY-D02 (R: recorded, never asserted): the Gini of
+// money in basis points over the seeds; the other measures and the cohort
+// coverage are logged beside it as notes. A seed with no household has none.
+func inequalityRow(f *factSet, pack string, seeds []uint64, runs []*stylisedRun) judged {
+	gini := make([]stat, len(runs))
+	for i, r := range runs {
+		res, err := inequality(r)
+		switch {
+		case err != nil || !res.GiniOK:
+			gini[i] = stat{Why: "no household to measure"}
+		default:
+			gini[i] = stat{Value: res.Gini}
+			f.notes = append(f.notes, fmt.Sprintf("STY-D02 pack %s seed %d: Gini %d, Top(1000) %d, Bottom(4000) %d, P90/P10 %d (ok %v), %d households, cohort share %v (report only)",
+				pack, seeds[i], res.Gini, res.Top, res.Bottom, res.P90P10, res.P90P10OK, res.Households, res.CohortShare))
+		}
+	}
+	return judge(factDef{ID: "STY-D02", Statistic: "gini of money", Class: verdict.ClassR}, pack, seeds, gini, verdict.BandKey{})
+}
+
+// TestStylised_D02_Inequality records the distribution of money of the households
+// of `one` and `second` at the end of the gate run, with the cohort coverage of
+// its blind spot (STY-D02, class R: nothing is asserted but that the Gini is a
+// share). The agent rows come from Agent(a).
 //
 // Requirement: FR-STY-042
 func TestStylised_D02_Inequality(t *testing.T) {
-	t.Skip("waits for plan 2-17: indicator.RowsOf takes AgentRow states, which the world gives only through Agent(a)")
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("run-level test, skipped with -short")
+	}
+	for _, p := range []stylisedPack{packOne, packSecond} {
+		seeds := packSeeds(t, p)
+		f := newFactSet()
+		j := inequalityRow(f, p.name, seeds, loadRuns(t, p, seeds))
+		f.add("D02", j)
+		t.Logf("STY-D02 pack %s: gini %d..%d (median %d), seeds with none %v", p.name, j.Row.Min, j.Row.Max, j.Row.Median, j.Row.Outside)
+		if j.Row.HasValues && (j.Row.Min < 0 || j.Row.Max > 10_000) {
+			t.Errorf("Inequality(money of pack %s).Gini = %d..%d, want a share in 0 to 10000", p.name, j.Row.Min, j.Row.Max)
+		}
+		f.report(t)
+	}
+}
+
+// workingShare is the share of the ticks of their effective welfare window that
+// the households of the unskilled roles worked, in basis points, read once at the
+// end of the run; ok is false when there is no window.
+func workingShare(r *stylisedRun) (int64, bool) {
+	var worked, window int64
+	for _, a := range r.agents {
+		if r.cfg.Roles[a.Role].Unskilled && !a.External {
+			worked, window = worked+a.WorkingTicks*a.Weight, window+a.Window*a.Weight
+		}
+	}
+	if window == 0 {
+		return 0, false
+	}
+	return worked * 10_000 / window, true
+}
+
+// stapleElasticity is the arc elasticity of the staple's demand (STY-W05, REF S04)
+// between the ten-tick means of price and volume before the shock and during its
+// last ten ticks, in basis points, as an absolute value; ok is false when the
+// denominator is zero or a market is not read.
+func stapleElasticity(r *stylisedRun, steps []scriptStep) (int64, bool) {
+	from, to, region, recipe := shockSpan(steps)
+	out := outputOf(r.cfg, recipe)
+	if len(out) == 0 {
+		return 0, false
+	}
+	g, c := indexOf(r.names.Regions, region), indexOf(r.names.Commodities, out[0])
+	m := r.obs.markets[[2]int{g, c}]
+	if g < 0 || c < 0 || m == nil {
+		return 0, false
+	}
+	p0, ok0 := meanOver(m.Price, from-10, from)
+	q0, ok1 := meanOver(m.Volume, from-10, from)
+	p1, ok2 := meanOver(m.Price, to-10, to)
+	q1, ok3 := meanOver(m.Volume, to-10, to)
+	if !ok0 || !ok1 || !ok2 || !ok3 || (p1-p0)*(q1+q0) == 0 {
+		return 0, false
+	}
+	return abs(10_000 * (q1 - q0) * (p1 + p0) / ((p1 - p0) * (q1 + q0))), true
+}
+
+// w05Facts judges STY-W05 on `one` and `one` + overlay/nofloor with the half
+// harvest of S04: the arc elasticity of the staple (B, at most s04.elasticity_max_bp,
+// asserted on `one` only where the key has a value) and the working share of the
+// unskilled households (R: logged beside the reference points).
+func w05Facts(t testing.TB) *factSet {
+	seeds := packSeeds(t, packOne)
+	return memoFacts(seedKey("w05", seeds), func() *factSet {
+		f, bands, steps := newFactSet(), readBands(t, "one"), readScript(t, "s04.toml")
+		for _, c := range []struct {
+			name   string
+			layers []string
+			bands  map[string]verdict.BandKey
+		}{{"one", nil, bands}, {"one+nofloor", []string{"overlay/nofloor.toml"}, nil}} {
+			el, share := make([]stat, len(seeds)), make([]stat, len(seeds))
+			for i, s := range seeds {
+				r := scriptedRun(t, packOne, c.layers, "s04.toml", s, 1400, false)
+				el[i], share[i] = stat{Why: "no staple market to read"}, stat{Why: "no working household"}
+				if v, ok := stapleElasticity(r, steps); ok && !r.collapsed() {
+					el[i] = stat{Value: v}
+				}
+				if v, ok := workingShare(r); ok {
+					share[i] = stat{Value: v}
+				}
+			}
+			f.add("W05 "+c.name, judge(factDef{ID: "STY-W05", Statistic: "s04.elasticity_max_bp", Class: verdict.ClassB, Prior: 10_000, HasPrior: true}, c.name, seeds, el, c.bands["s04.elasticity_max_bp"]))
+			f.add("W05 "+c.name, judge(factDef{ID: "STY-W05", Statistic: "working share of ticks of the unskilled (reference 6850 and 4110)", Class: verdict.ClassR}, c.name, seeds, share, verdict.BandKey{}))
+		}
+		return f
+	})
+}
+
+// TestStylised_W05_WorkingShare judges STY-W05 with the half harvest of S04 on
+// `one` and `one` + overlay/nofloor: the arc elasticity of the staple is at most 1
+// (B), and the working-tick share of the unskilled households is recorded beside
+// its reference points (R). The share is read once at the close of the run, from the
+// working ticks of each agent's effective window that Agent(a) returns.
+//
+// Requirement: FR-STY-034, FR-STY-082
+func TestStylised_W05_WorkingShare(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("run-level test, skipped with -short")
+	}
+	f := w05Facts(t)
+	for sc, js := range f.scenarios {
+		for _, j := range js {
+			t.Logf("%s %s: %s outside %v values %d..%d (median %d)", sc, j.Row.ID, j.Row.Statistic, j.Row.Outside, j.Row.Min, j.Row.Max, j.Row.Median)
+		}
+	}
+	f.report(t)
 }
 
 // ---- the record ----------------------------------------------------------------
@@ -735,7 +866,9 @@ func TestStylised_Record_Golden(t *testing.T) {
 		p    stylisedPack
 		sets func() []*factSet
 	}{
-		{packOne, func() []*factSet { return []*factSet{oneFacts(t), g01Facts(t, packOne, "one"), warmFacts(t)} }},
+		{packOne, func() []*factSet {
+			return []*factSet{oneFacts(t), g01Facts(t, packOne, "one"), warmFacts(t), shockFacts(t)}
+		}},
 		{packSecond, func() []*factSet { return []*factSet{secondFacts(t), g01Facts(t, packSecond, "second")} }},
 	} {
 		got := recordOf(t, c.p, c.sets()...)

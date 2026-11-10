@@ -15,6 +15,7 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/indicator"
 	"github.com/Whealinghold/economy-sim/internal/verdict"
+	"github.com/Whealinghold/economy-sim/strategy"
 )
 
 // The helpers of the stylised fact tests (plan 2-19 D594, D595; STY 9). The
@@ -360,8 +361,8 @@ func (b *book) render(configHash string) string {
 
 // marketLog is what the facts keep of one market, indexed by tick.
 type marketLog struct {
-	Price, Anchor, Age []int64
-	EstateUnits        []int64 // units an estate sold in the tick
+	Price, Anchor, Age, Volume []int64
+	EstateUnits                []int64 // units an estate sold in the tick
 }
 
 func putAt(s *[]int64, i, v int64) {
@@ -381,11 +382,29 @@ type runObs struct {
 	complete   map[economysim.RecipeID][]int64
 	bids       map[economysim.CommodityID][]int64
 	badSeq     string
+	// The events of the famine and trade facts: households unfed and relief paid
+	// by tick, hunger removals, and the edge changes.
+	unfed   []int64
+	relief  []int64
+	removed []removal
+	edges   []economysim.EdgeStatusChanged
+	watch   *ladderWatch
+	// quote is the limit price of the outside's line by (gate region, commodity)
+	// and tick, 0 where the side was not present.
+	quote map[[2]int][]int64
+}
+
+// removal is an AgentBankrupted of the run.
+type removal struct {
+	Tick   int64
+	Agent  economysim.AgentID
+	Cause  economysim.Cause
+	Weight int64
 }
 
 func newRunObs() *runObs {
 	return &runObs{tick: indicator.NewTally(), year: indicator.NewTally(), markets: map[[2]int]*marketLog{},
-		complete: map[economysim.RecipeID][]int64{}, bids: map[economysim.CommodityID][]int64{}}
+		complete: map[economysim.RecipeID][]int64{}, bids: map[economysim.CommodityID][]int64{}, quote: map[[2]int][]int64{}}
 }
 
 func (o *runObs) market(r economysim.RegionID, c economysim.CommodityID) *marketLog {
@@ -415,6 +434,7 @@ func (o *runObs) Observe(e economysim.Event) {
 		putAt(&m.Price, e.Tick, int64(e.Price))
 		putAt(&m.Anchor, e.Tick, int64(e.CostAnchor))
 		putAt(&m.Age, e.Tick, e.PriceAge)
+		putAt(&m.Volume, e.Tick, int64(e.Volume))
 	case economysim.TradeExecuted:
 		if e.Seller < o.regions {
 			addAt(&o.market(e.Region, e.Commodity).EstateUnits, e.Tick, int64(e.Quantity))
@@ -423,6 +443,25 @@ func (o *runObs) Observe(e economysim.Event) {
 		c := o.complete[e.Recipe]
 		addAt(&c, e.Tick, e.Executions)
 		o.complete[e.Recipe] = c
+	case economysim.UpkeepShortfall:
+		addAt(&o.unfed, e.Tick, e.Unfed)
+		if o.watch != nil {
+			o.watch.unfedIn[e.Region] = true
+		}
+	case economysim.ReliefPaid:
+		addAt(&o.relief, e.Tick, int64(e.Paid))
+	case economysim.AgentBankrupted:
+		o.removed = append(o.removed, removal{e.Tick, e.Agent, e.Cause, e.Weight})
+		if o.watch != nil {
+			o.watch.removed = append(o.watch.removed, o.removed[len(o.removed)-1])
+		}
+	case economysim.EdgeStatusChanged:
+		o.edges = append(o.edges, e)
+	case economysim.OutsideTraded:
+		k := [2]int{int(e.Region), int(e.Commodity)}
+		q := o.quote[k]
+		putAt(&q, e.Tick, int64(e.Price))
+		o.quote[k] = q
 	case economysim.OrderPlaced:
 		if e.Side == economysim.Bid {
 			b := o.bids[e.Commodity]
@@ -453,6 +492,8 @@ type stylisedRun struct {
 	stepErr    error                   // the first error of a step (the audit)
 	final      economysim.Snapshot
 	hash       string
+	graph      economysim.Graph // the region graph at the start
+	agents     []agentRead      // every agent at the end, through Agent(a)
 }
 
 // collapsed reports whether the households at the end are under a tenth of the
@@ -472,15 +513,24 @@ type capture struct {
 	prev  economysim.Snapshot
 	yOpen economysim.Snapshot
 	opts  []economysim.Option
+	// before runs between steps, before the step of w.Tick() (a scripted call);
+	// after runs after the step, before the tick's windows close (a poll).
+	before, after func(*economysim.World)
 }
 
 // newCapture builds the world of cfg for seed with the audit on and the
 // recording observer attached.
-func newCapture(t testing.TB, p stylisedPack, files []string, seed uint64) *capture {
+func newCapture(t testing.TB, p stylisedPack, files []string, seed uint64, extra ...economysim.Option) *capture {
 	t.Helper()
-	cfg := loadPack(t, files...)
+	return newCaptureFrom(t, p, loadPack(t, files...), seed, extra...)
+}
+
+// newCaptureFrom is newCapture for a configuration already loaded (and, for a
+// provoked run, changed in Go: a halt switched off, a floor raised).
+func newCaptureFrom(t testing.TB, p stylisedPack, cfg economysim.Config, seed uint64, extra ...economysim.Option) *capture {
+	t.Helper()
 	obs := newRunObs()
-	c := &capture{t: t, cfg: cfg, seed: seed, opts: []economysim.Option{economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(obs)}}
+	c := &capture{t: t, cfg: cfg, seed: seed, opts: append([]economysim.Option{economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(obs)}, extra...)}
 	w, err := economysim.NewWorld(cfg, c.opts...)
 	if err != nil {
 		t.Fatalf("NewWorld(%s, seed %d) error = %v, want nil", p.name, seed, err)
@@ -491,7 +541,7 @@ func newCapture(t testing.TB, p stylisedPack, files []string, seed uint64) *capt
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
 	obs.regions = economysim.AgentID(len(s0.Names.Regions))
-	c.run = &stylisedRun{pack: p.name, seed: seed, cfg: w.Config(), names: s0.Names, start: s0, obs: obs,
+	c.run = &stylisedRun{pack: p.name, seed: seed, cfg: w.Config(), names: s0.Names, start: s0, obs: obs, graph: w.Graph(),
 		pinned: map[[2]int][]pinnedTick{}, hash: fmt.Sprintf("%x", w.ConfigHash())[:16]}
 	c.prev, c.yOpen = s0, s0
 	if err := obs.year.Open(s0); err != nil {
@@ -509,9 +559,15 @@ func (c *capture) advance(n int64) {
 		if err := obs.tick.Open(c.prev); err != nil {
 			c.t.Fatalf("Open() at tick %d error = %v, want nil", c.prev.Tick, err)
 		}
+		if c.before != nil {
+			c.before(c.w)
+		}
 		if err := c.w.Step(); err != nil {
 			c.run.stepErr = fmt.Errorf("step at tick %d: %w", c.prev.Tick, err)
 			return
+		}
+		if c.after != nil {
+			c.after(c.w)
 		}
 		cur, err := c.w.Snapshot()
 		if err != nil {
@@ -590,7 +646,50 @@ func (c *capture) finish() *stylisedRun {
 		c.t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
 	c.run.final = fin
+	c.run.agents = agentsOf(c.w)
 	return c.run
+}
+
+// agentRead is what the facts keep of one agent at the end of a run: the row the
+// presets of indicator take, its role, and the working ticks of its effective
+// welfare window (STY 4.7.2).
+type agentRead struct {
+	indicator.AgentRow
+	Role                 economysim.RoleID
+	WorkingTicks, Window int64
+}
+
+// agentsOf reads every agent of the world through Agent(a) (plan 2-17), in region
+// then ID order. A removed agent is not listed by Agents.
+func agentsOf(w *economysim.World) []agentRead {
+	var out []agentRead
+	for g := range w.Graph().Len() {
+		ids, err := w.Agents(economysim.RegionID(g))
+		if err != nil {
+			continue
+		}
+		for _, id := range ids {
+			st, err := w.Agent(id)
+			if err != nil {
+				continue
+			}
+			out = append(out, agentRead{
+				AgentRow: indicator.AgentRow{Region: st.Region, Weight: st.Weight, External: st.External, Money: st.Money, Hunger: st.Hunger,
+					WelfareRatioBP: st.Ratio, EarnedRatioBP: st.EarnedRatio, HasWelfareRatio: st.HasRatio, HasEarnedRatio: st.HasEarned},
+				Role: st.Role, WorkingTicks: st.WorkingTicks, Window: st.Window,
+			})
+		}
+	}
+	return out
+}
+
+// agentRows returns the rows of the agents, for RowsOf.
+func (r *stylisedRun) agentRows() []indicator.AgentRow {
+	rows := make([]indicator.AgentRow, len(r.agents))
+	for i, a := range r.agents {
+		rows[i] = a.AgentRow
+	}
+	return rows
 }
 
 // runKey names a memoised run.
@@ -612,24 +711,29 @@ var (
 	runsMemo   = map[runKey]*memoRun{}
 )
 
-// closedRun returns the run of a pack and seed over ticks, once per test
-// binary: the tests of the closed packs read the same runs.
-func closedRun(t testing.TB, p stylisedPack, seed uint64, ticks int64) *stylisedRun {
-	t.Helper()
+// cachedRun returns the run of key, built once per test binary: the first caller
+// builds it, the others wait for it.
+func cachedRun(k runKey, build func() *stylisedRun) *stylisedRun {
 	runsMemoMu.Lock()
-	k := runKey{p.name, seed, ticks}
 	m := runsMemo[k]
 	if m == nil {
 		m = &memoRun{}
 		runsMemo[k] = m
 	}
 	runsMemoMu.Unlock()
-	m.once.Do(func() {
+	m.once.Do(func() { m.run = build() })
+	return m.run
+}
+
+// closedRun returns the run of a pack and seed over ticks, once per test
+// binary: the tests of the closed packs read the same runs.
+func closedRun(t testing.TB, p stylisedPack, seed uint64, ticks int64) *stylisedRun {
+	t.Helper()
+	return cachedRun(runKey{p.name, seed, ticks}, func() *stylisedRun {
 		c := newCapture(t, p, p.files, seed)
 		c.advance(ticks)
-		m.run = c.finish()
+		return c.finish()
 	})
-	return m.run
 }
 
 // shortRun runs a pack with the given layers for ticks with the recording
@@ -652,4 +756,269 @@ func shortRun(t testing.TB, files []string, seed uint64, ticks int64) (*runObs, 
 		t.Fatalf("Run(%d) of %v seed %d error = %v, want nil", ticks, files, seed, err)
 	}
 	return obs, w.Config()
+}
+
+// ---- the larger packs ----------------------------------------------------------
+
+// The packs of groups B, C and D with the seeds of REF 7.5 and 8.2, and the seeds
+// run under -race (plan 1 D227). famine is the cold layer set of REF 4.5.
+var (
+	packTwo       = stylisedPack{"two", []string{"base.toml", "two.toml", "warm-two.toml"}, 4, 1}
+	packThree     = stylisedPack{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 1}
+	packOneDemand = stylisedPack{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 4, 1}
+	packFive      = stylisedPack{"five", []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 2, 1}
+	packFamine    = stylisedPack{"famine", []string{"base.toml", "famine.toml", "overlay/estates.toml"}, 10, 1}
+)
+
+// requireTierN skips a test of tier N unless -stylised.tier=n selects it (D595):
+// the trade and open-layer groups cost more than the gate pays.
+func requireTierN(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("run-level test, skipped with -short")
+	}
+	if *stylisedTier != "n" {
+		t.Skip("tier N (plan 2-19 D595, D596 group D): run with -stylised.tier=n")
+	}
+}
+
+// ---- scripts ------------------------------------------------------------------
+
+// scriptStep is one table of a script of testdata/chains/scripts, applied between
+// steps before the step of Tick: a [[shock]] sets the yield shock of (Region,
+// Recipe) to BP basis points (10 000 clears it); a [[buyer]] adds a visitor of
+// the role visitor with Money that bids for Commodity each tick for Ticks ticks,
+// ShareBP basis points of the market's mean volume over the 100 ticks before
+// (REF 7.1.3). The grammar is re-implemented here on purpose: the reader of the
+// root package is a _test.go symbol of another package (D594).
+type scriptStep struct {
+	Tick           int64
+	Region, Recipe string
+	BP             int64
+	Buyer          bool
+	Money          int64
+	Commodity      string
+	ShareBP, Ticks int64
+}
+
+// readScript reads scripts/<name>. Any other table, a missing key or a number
+// that is not an integer fails the test.
+func readScript(t testing.TB, name string) []scriptStep {
+	t.Helper()
+	b, err := os.ReadFile("../testdata/chains/scripts/" + name)
+	if err != nil {
+		t.Fatalf("read script %s: %v", name, err)
+	}
+	var out []scriptStep
+	var cur *scriptStep
+	num := func(line, v string) int64 {
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			t.Fatalf("script %s: %q is not an integer in %q", name, v, line)
+		}
+		return n
+	}
+	for _, raw := range strings.Split(string(b), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		switch line {
+		case "[[shock]]", "[[buyer]]":
+			out = append(out, scriptStep{Buyer: line == "[[buyer]]"})
+			cur = &out[len(out)-1]
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok || cur == nil {
+			t.Fatalf("script %s: unexpected line %q", name, line)
+		}
+		k, v = strings.TrimSpace(k), strings.Trim(strings.TrimSpace(v), `"`)
+		switch k {
+		case "tick":
+			cur.Tick = num(line, v)
+		case "region":
+			cur.Region = v
+		case "recipe":
+			cur.Recipe = v
+		case "yield_bp":
+			cur.BP = num(line, v)
+		case "money":
+			cur.Money = num(line, v)
+		case "buy":
+			for _, kv := range strings.Split(strings.Trim(v, "{} "), ",") {
+				ik, iv, _ := strings.Cut(kv, "=")
+				iv = strings.Trim(strings.TrimSpace(iv), `"`)
+				switch strings.TrimSpace(ik) {
+				case "commodity":
+					cur.Commodity = iv
+				case "quantity_share_bp":
+					cur.ShareBP = num(line, iv)
+				case "ticks":
+					cur.Ticks = num(line, iv)
+				}
+			}
+		default:
+			t.Fatalf("script %s: unknown key in %q", name, line)
+		}
+	}
+	return out
+}
+
+// shockSpan returns the ticks at which the first shock of a script is set below
+// 10 000 and the first later one clears it, with its region and recipe.
+func shockSpan(steps []scriptStep) (from, to int64, region, recipe string) {
+	for _, s := range steps {
+		switch {
+		case s.Buyer:
+		case s.BP < 10_000 && recipe == "":
+			from, region, recipe = s.Tick, s.Region, s.Recipe
+		case s.BP == 10_000 && recipe == s.Recipe && to == 0:
+			to = s.Tick
+		}
+	}
+	return from, to, region, recipe
+}
+
+type buyerRun struct {
+	id    economysim.AgentID
+	until int64
+}
+
+// scriptDriver applies a script between steps through the public calls of the
+// integration surface (SetYieldShocks, AddAgent, Direct): the harness empties a
+// buyer's directive after its ticks, since a directive is for one step only
+// unless sticky (FR-INT-026).
+type scriptDriver struct {
+	t      testing.TB
+	steps  []scriptStep
+	cfg    economysim.Config
+	names  economysim.Names
+	obs    *runObs
+	active []buyerRun
+}
+
+func indexOf(names []string, id string) int { return slices.Index(names, id) }
+
+// apply is the capture's before hook.
+func (d *scriptDriver) apply(w *economysim.World) {
+	d.t.Helper()
+	tick := w.Tick()
+	for _, b := range d.active {
+		if b.until == tick {
+			if err := w.Direct(b.id, economysim.Directive{}); err != nil {
+				d.t.Fatalf("Direct(%d, empty) at tick %d = %v, want nil", b.id, tick, err)
+			}
+		}
+	}
+	for _, s := range d.steps {
+		if s.Tick != tick {
+			continue
+		}
+		if s.Buyer {
+			d.active = append(d.active, buyerRun{id: d.addBuyer(w, s), until: s.Tick + s.Ticks})
+			continue
+		}
+		g, r := indexOf(d.names.Regions, s.Region), indexOf(d.names.Recipes, s.Recipe)
+		if g < 0 || r < 0 {
+			d.t.Fatalf("script shock %+v: region or recipe unknown", s)
+		}
+		if err := w.SetYieldShocks([]economysim.YieldShock{{Region: economysim.RegionID(g), Recipe: economysim.RecipeID(r), BP: s.BP}}); err != nil {
+			d.t.Fatalf("SetYieldShocks(%+v) error = %v, want nil", s, err)
+		}
+	}
+}
+
+// addBuyer adds the visitor of a [[buyer]] step with the sticky bid of REF 7.1.3: the
+// quantity is ShareBP of the mean volume of the 100 ticks before (at least 1), the
+// limit the ceiling of the commodity's reference band, and the visitor holds its
+// other tradable commodities so that the fallback adds nothing.
+func (d *scriptDriver) addBuyer(w *economysim.World, s scriptStep) economysim.AgentID {
+	d.t.Helper()
+	g, c, role := indexOf(d.names.Regions, s.Region), indexOf(d.names.Commodities, s.Commodity), indexOf(d.names.Roles, "visitor")
+	if g < 0 || c < 0 || role < 0 {
+		d.t.Fatalf("script buyer %+v: region, commodity or the role visitor unknown", s)
+	}
+	id, err := w.AddAgent(economysim.NewAgent{Region: economysim.RegionID(g), Role: economysim.RoleID(role), Money: economysim.Money(s.Money)})
+	if err != nil {
+		d.t.Fatalf("AddAgent(%+v) = %v, want nil", s, err)
+	}
+	var hold []economysim.CommodityID
+	for _, other := range w.Config().Roles[role].Trades {
+		if i := indexOf(d.names.Commodities, other); i >= 0 && i != c {
+			hold = append(hold, economysim.CommodityID(i))
+		}
+	}
+	_, ceiling := beliefInterval(d.cfg.World, int64(w.ReferencePrice(economysim.RegionID(g), economysim.CommodityID(c))), 0)
+	q := int64(1)
+	if v := d.obs.market(economysim.RegionID(g), economysim.CommodityID(c)).Volume; len(v) > 0 {
+		if mean, ok := meanOver(v, max(0, s.Tick-100), min(s.Tick, int64(len(v)))); ok {
+			q = max(1, (mean*s.ShareBP+5_000)/10_000)
+		}
+	}
+	dir := economysim.Directive{Sticky: true, Hold: hold, Intents: []economysim.Intent{{
+		Commodity: economysim.CommodityID(c), Side: economysim.Bid, Quantity: economysim.Quantity(q), Limit: economysim.Price(ceiling),
+	}}}
+	if err := w.Direct(id, dir); err != nil {
+		d.t.Fatalf("Direct(%d, %+v) at tick %d = %v, want nil", id, dir, s.Tick, err)
+	}
+	return id
+}
+
+// meanOver is the mean of s[from:to] rounded half up (the volumes and prices are
+// not negative); ok is false for an empty range.
+func meanOver(s []int64, from, to int64) (int64, bool) {
+	if from < 0 || to > int64(len(s)) || from >= to {
+		return 0, false
+	}
+	var sum int64
+	for _, v := range s[from:to] {
+		sum += v
+	}
+	n := to - from
+	return (2*sum + n) / (2 * n), true
+}
+
+// customRun runs a pack with the extra layers for ticks, once per test binary
+// under tag, after setup has attached the hooks of the run to the capture (a
+// scripted call, a poll). The standard strategies are registered, so a layer may
+// name the merchant.
+func customRun(t testing.TB, p stylisedPack, layers []string, tag string, seed uint64, ticks int64, setup func(*capture)) *stylisedRun {
+	t.Helper()
+	return mutatedRun(t, p, layers, tag, seed, ticks, nil, setup)
+}
+
+// mutatedRun is customRun with a change to the loaded configuration, for the
+// provoked runs that D594 builds as Go calls (O9).
+func mutatedRun(t testing.TB, p stylisedPack, layers []string, tag string, seed uint64, ticks int64, mutate func(*economysim.Config), setup func(*capture)) *stylisedRun {
+	t.Helper()
+	key := runKey{p.name + "+" + strings.Join(layers, ",") + "|" + tag, seed, ticks}
+	return cachedRun(key, func() *stylisedRun {
+		cfg := loadPack(t, append(slices.Clone(p.files), layers...)...)
+		if mutate != nil {
+			mutate(&cfg)
+		}
+		c := newCaptureFrom(t, p, cfg, seed, strategy.Options()...)
+		if setup != nil {
+			setup(c)
+		}
+		c.advance(ticks)
+		return c.finish()
+	})
+}
+
+// scriptedRun runs a pack with a script of shocks and buyers; watch attaches the
+// ladder watch of STY-S06.
+func scriptedRun(t testing.TB, p stylisedPack, layers []string, script string, seed uint64, ticks int64, watch bool) *stylisedRun {
+	t.Helper()
+	return customRun(t, p, layers, script+"|"+strconv.FormatBool(watch), seed, ticks, func(c *capture) {
+		if script != "" {
+			d := &scriptDriver{t: t, steps: readScript(t, script), cfg: c.run.cfg, names: c.run.names, obs: c.run.obs}
+			c.before = d.apply
+		}
+		if watch {
+			lw := newLadderWatch(c.run.cfg)
+			c.run.obs.watch, c.after = lw, lw.poll
+		}
+	})
 }
