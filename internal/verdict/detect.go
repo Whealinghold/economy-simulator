@@ -122,7 +122,7 @@ func detectSecond(d Detector, in Input, t Thresholds) Verdict {
 	case R9:
 		return detectR9(in, t)
 	}
-	panic("verdict: Detect called with a detector that is not in Detectors (programmer error)")
+	panic("verdict: programmer invariant violated: Detect called with a detector that is not in Detectors")
 }
 
 func unknownV(reason string) Verdict { return Verdict{Class: Unknown, Reason: reason} }
