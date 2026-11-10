@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -110,7 +111,8 @@ type Server struct {
 	mux     *http.ServeMux
 	stepper chan struct{} // one token: the step or restore in progress
 	hosts   map[string]bool
-	saveMu  sync.Mutex // orders the saves of the state file
+	saveMu  sync.Mutex   // orders the saves of the state file
+	tick    atomic.Int64 // last tick seen under mu: error replies read it and never wait on the game
 }
 
 var _ http.Handler = (*Server)(nil)
@@ -146,6 +148,7 @@ func newServer(cfg economysim.Config, seed uint64, state string, log *slog.Logge
 	if err := s.loadState(); err != nil {
 		return nil, err
 	}
+	s.tick.Store(g.Tick())
 	s.mux = s.routes()
 	return s, nil
 }
@@ -195,9 +198,9 @@ func (s *Server) routes() *http.ServeMux {
 // hostname is host without its port.
 func hostname(host string) string {
 	if h, _, err := net.SplitHostPort(host); err == nil {
-		return h
+		return strings.ToLower(h)
 	}
-	return strings.Trim(host, "[]")
+	return strings.ToLower(strings.Trim(host, "[]"))
 }
 
 // acquire takes the token of the one long operation (a step or a restore) without
@@ -229,7 +232,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if p := recover(); p != nil { // a library panic must not drop the connection with no status
 			s.log.LogAttrs(r.Context(), slog.LevelError, "handler panicked", slog.String("panic", clip(fmt.Sprint(p))))
-			s.reply(w, http.StatusInternalServerError, errorBody{tickBody{s.game.Tick()}, "ErrInternal", "internal error"})
+			s.reply(w, http.StatusInternalServerError, errorBody{tickBody{s.tick.Load()}, "ErrInternal", "internal error"})
 		}
 	}()
 	if s.hosts != nil && !s.hosts[hostname(r.Host)] {
@@ -238,7 +241,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		if o := r.Header.Get("Origin"); o != "" {
-			if u, err := url.Parse(o); err != nil || u.Host != r.Host {
+			if u, err := url.Parse(o); err != nil || !strings.EqualFold(u.Host, r.Host) {
 				s.fail(w, fmt.Errorf("origin %q: %w", clip(o), ErrForbidden))
 				return
 			}
@@ -260,9 +263,7 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 		if !s.acquire() {
 			continue // a step or restore runs: skip this tick of the clock
 		}
-		s.mu.Lock()
-		_, err := s.game.AdvanceContext(ctx, 1)
-		s.mu.Unlock()
+		_, err := s.advance(ctx, 1)
 		s.release()
 		if err != nil {
 			if ctx.Err() == nil {
@@ -273,13 +274,24 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 	}
 }
 
+// advance runs n ticks under the write lock, released even if the library panics, and
+// records the tick for error replies.
+func (s *Server) advance(ctx context.Context, n int64) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	defer func() { s.tick.Store(s.game.Tick()) }()
+	return s.game.AdvanceContext(ctx, n)
+}
+
 // read wraps a GET handler: it holds the read lock, so the tick passed in is the tick
 // of everything the handler reads.
 func (s *Server) read(f func(*http.Request, tickBody) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s.mu.RLock()
-		body, err := f(r, tickBody{s.game.Tick()})
-		s.mu.RUnlock() // the reply may block on a slow client: never under the lock
+		body, err := func() (any, error) { // deferred unlock: a panic must not leave the lock held
+			s.mu.RLock()
+			defer s.mu.RUnlock()
+			return f(r, tickBody{s.game.Tick()})
+		}() // the reply may block on a slow client: never under the lock
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -300,9 +312,11 @@ func (s *Server) write(status int, f func(http.ResponseWriter, *http.Request) (a
 			return
 		}
 		r.Body = io.NopCloser(bytes.NewReader(b))
-		s.mu.Lock()
-		body, err := f(w, r)
-		s.mu.Unlock()
+		body, err := func() (any, error) {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return f(w, r)
+		}()
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -337,7 +351,7 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		}
 	}
 	ctx := context.Background()
-	tick := s.game.Tick()
+	tick := s.tick.Load()
 	level := slog.LevelDebug
 	if status >= http.StatusInternalServerError {
 		level = slog.LevelError
@@ -655,10 +669,8 @@ func (s *Server) step(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.release()
-	s.mu.Lock()
-	done, err := s.game.AdvanceContext(r.Context(), n)
-	tick := s.game.Tick()
-	s.mu.Unlock()
+	done, err := s.advance(r.Context(), n)
+	tick := s.tick.Load()
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -680,10 +692,12 @@ func (s *Server) checkpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	// Encode under the lock, then write the file and the response without it, so a
 	// slow reader of the response cannot hold up a step.
-	s.mu.RLock()
-	b, err := s.game.Checkpoint()
-	tick := s.game.Tick()
-	s.mu.RUnlock()
+	b, tick, err := func() ([]byte, int64, error) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		b, err := s.game.Checkpoint()
+		return b, s.game.Tick(), err
+	}()
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -731,21 +745,27 @@ type restoredBody struct {
 // checkpoint is refused before anything changes (Game.Restore keeps the old world on
 // any error).
 func (s *Server) restore(w http.ResponseWriter, r *http.Request) {
-	b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRestoreBody))
-	if err != nil {
-		s.fail(w, bodyError(err))
-		return
-	}
+	// The token is taken before the read, so at most one 32 MiB body is in memory.
 	if !s.acquire() {
 		s.fail(w, ErrBusy)
 		return
 	}
 	defer s.release()
-	s.mu.Lock()
-	err = s.game.Restore(b)
-	_, perr := s.game.Player()
-	tick := s.game.Tick()
-	s.mu.Unlock()
+	b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRestoreBody))
+	if err != nil {
+		s.fail(w, bodyError(err))
+		return
+	}
+	var perr error
+	var tick int64
+	func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		err = s.game.Restore(b)
+		_, perr = s.game.Player()
+		tick = s.game.Tick()
+		s.tick.Store(tick)
+	}()
 	if err != nil {
 		s.fail(w, err)
 		return
