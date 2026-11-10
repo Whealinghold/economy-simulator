@@ -49,9 +49,7 @@ func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 	for _, m := range s.Markets {
 		o.recordMarket(n, m)
 	}
-	for _, j := range s.Jobs {
-		o.gauge(iRecipeInProgress, j.Executions, o.pair(keyRecipe, n.recipe, int(j.Recipe), n.region, int(j.Region))...)
-	}
+	o.recordJobs(n, s.Jobs)
 	for _, r := range s.Regions {
 		o.recordRegion(n, r)
 	}
@@ -64,6 +62,26 @@ func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 	if slices.Contains(s.Modules, "transport") {
 		o.recordTransport(n, s)
 	}
+}
+
+// recordJobs records the executions in progress by recipe and region, and 0 for
+// a pair that had a row in an earlier snapshot and has none now, so that an idle
+// producer does not keep its last count (FR-OBS-097). The pairs seen are bounded
+// by recipes and regions.
+func (o *Observer) recordJobs(n snapNames, jobs []economysim.JobRow) {
+	now := make(map[[2]int]int64, len(jobs))
+	for _, j := range jobs {
+		now[[2]int{int(j.Recipe), int(j.Region)}] += j.Executions
+	}
+	for k := range o.jobPairs {
+		if _, ok := now[k]; !ok {
+			now[k] = 0
+		}
+	}
+	for k, v := range now {
+		o.gauge(iRecipeInProgress, v, o.pair(keyRecipe, n.recipe, k[0], n.region, k[1])...)
+	}
+	o.jobPairs = now
 }
 
 // recordTransport records the shipments overdue by mode, 0 for a mode with none so

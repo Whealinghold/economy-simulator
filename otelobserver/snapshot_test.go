@@ -242,3 +242,33 @@ func runWorld(t *testing.T, h *harness, n int) economysim.Snapshot {
 	}
 	return s
 }
+
+// TestSnapshot_JobRowGoneRecordsZero verifies that a (recipe, region) pair that
+// had a Jobs row in one snapshot and has none in the next reads 0, not its last
+// count.
+//
+// Requirement: FR-OBS-097
+func TestSnapshot_JobRowGoneRecordsZero(t *testing.T) {
+	h := newHarness(t)
+	h.obs.RecordSnapshot(snapOf())
+	h.obs.RecordSnapshot(economysim.Snapshot{Names: snapOf().Names})
+	check(t, h.collect(), "recipe.in_progress", 0, "recipe", "p0", "region", "r2")
+}
+
+// TestTickStarted_AfterPanickedStepDoesNotLeakCounts verifies that the orders of
+// a step that panicked (no TickEnded) are not counted in the next step's span.
+//
+// Guard: the accumulators are flushed at TickEnded, so a dead step's counts would
+// otherwise be added to the next step's span attributes.
+func TestTickStarted_AfterPanickedStepDoesNotLeakCounts(t *testing.T) {
+	obs, rec := spanHarness(t)
+	obs.Observe(economysim.WorldCreated{Names: miniNames()})
+	obs.Observe(economysim.TickStarted{Tick: 1})
+	obs.Observe(economysim.OrderPlaced{Commodity: 0, Region: 0})
+	obs.Observe(economysim.TickStarted{Tick: 2})
+	obs.Observe(economysim.TickEnded{Tick: 2})
+	steps := byName(rec, "economysim.step")
+	if v, _ := attrOf(steps[len(steps)-1], "economysim.orders.placed"); v != 0 {
+		t.Errorf("orders.placed of the step after a panicked one = %d, want 0", v)
+	}
+}

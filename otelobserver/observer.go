@@ -62,6 +62,7 @@ type Observer struct {
 
 	sp        spans
 	inStep    bool
+	jobPairs  map[[2]int]int64 // (recipe, region) pairs RecordSnapshot has recorded in progress
 	stepStart time.Time
 }
 

@@ -41,6 +41,7 @@ func (o *Observer) runStarted(ev economysim.RunStarted) {
 func (o *Observer) runEnded(ev economysim.RunEnded) {
 	endSpan(o.sp.stp, true, "step did not end")
 	o.sp.stp = nil
+	o.inStep = false // settle then flushes the accumulators of a step that panicked
 	if o.sp.run != nil {
 		o.sp.run.SetAttributes(attribute.Int64("economysim.completed", ev.Completed),
 			attribute.Bool("economysim.cancelled", ev.Cancelled))

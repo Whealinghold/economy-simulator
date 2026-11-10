@@ -124,6 +124,7 @@ func (o *Observer) reset(n economysim.Names) {
 	}
 	o.flushCells(false) // levels back to 0; held gauges of the old world are not recorded again
 	o.names = newNames(n)
+	o.jobPairs = nil
 	o.hot = newHot(&o.names)
 	o.cells = map[cell]*state{}
 	o.unfed = newUnfed(len(n.Regions), len(n.Roles))
@@ -185,6 +186,11 @@ func (o *Observer) tradeExecuted(ev economysim.TradeExecuted) {
 }
 
 func (o *Observer) tickStarted(tick int64) {
+	if o.inStep { // the previous step panicked: its counts must not leak into this step's span
+		o.flushHot()
+		o.flushCells(false)
+		clear(o.unfed.seen)
+	}
 	o.stepStarted(tick)
 	o.inStep = true
 	o.stepStart = o.clock()
