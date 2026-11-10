@@ -10,6 +10,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/welfare"
 )
 
 // This file is the agent (spec-agents.md 3, 5; plan-phase-1-7.md Phase 4): the
@@ -624,4 +625,240 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 	}
 	d.Sticky = r.B()
 	return d
+}
+
+// AgentState is the state of one agent at the tick boundary (spec-integration.md
+// 4.7.2): a function of the saved state alone, a deep copy of plain data with no
+// pointer, function or map. It is not the AgentView of a strategy: it omits what
+// only a position of the next tick can say (the maximum executions and the refusal
+// reason of a recipe, the stock after the next completions). The groups of a module
+// that is off are at their zero value, and a later module appends its group.
+type AgentState struct {
+	// Identity.
+	ID        AgentID
+	Region    RegionID
+	Role      RoleID
+	Weight    int64
+	External  bool
+	Mortal    bool
+	Strategy  string
+	RoleSince int64
+
+	// Standing. Money is the available balance (no reservation exists). Ratio and
+	// EarnedRatio are the welfare ratio and the ratio without relief, each valid when
+	// its Has flag is set.
+	Money                    Money
+	Hunger, Unfed, Privation int64
+	Ratio, EarnedRatio       int64
+	HasRatio, HasEarned      bool
+	TargetRatio              int64
+	WorkingTicks, Window     int64
+
+	// Holdings are the commodities held, ascending.
+	Holdings []HoldingState
+
+	// Job: whether one is active, its recipe, the ticks it has left, its
+	// executions, and the output it will create (Pending, by commodity).
+	HasJob                bool
+	Recipe                RecipeID
+	Remaining, Executions int64
+	Pending               []Amount
+
+	// Beliefs and Markets hold one entry per commodity of the role's tradable set, in
+	// canonical order: the agent's belief with the bounds of its range, and the
+	// market report of its region.
+	Beliefs []BeliefState
+	Markets []MarketState
+
+	// Upkeep is the effective upkeep of one household in the agent's region.
+	Upkeep []UpkeepRow
+
+	// HasDirective says Directive is the mailbox: the directive pending, if any.
+	HasDirective bool
+	Directive    Directive
+
+	// Rumours are the rumours of the last view built for the agent and RumoursTick
+	// the tick of that view, or none and -1 (spec-integration.md 4.7.3).
+	Rumours     []Rumour
+	RumoursTick int64
+
+	// Wants are the carries of the agent's ladder, in rank order (demand module).
+	Wants []WantCarry
+	// OwnUse, OwnUseJobs, Cover and Secure are the own-use group (subsistence module).
+	OwnUse        bool
+	OwnUseJobs    int64
+	Cover, Secure int64
+	// Away says the agent is away on a trip (transport module); HasJourney, JourneyTo
+	// and JourneyArrives are its journey (migration module).
+	Away           bool
+	HasJourney     bool
+	JourneyTo      RegionID
+	JourneyArrives int64
+}
+
+// HoldingState is a commodity an agent holds: its units and the units of them that
+// spoil at the end of the tick the next step runs.
+type HoldingState struct {
+	Commodity CommodityID
+	Quantity  Quantity
+	Expiring  Quantity
+}
+
+// BeliefState is the price belief of an agent for a commodity: the centre and the
+// width, and the floor and ceiling of the range they sit in (spec-beliefs.md 3).
+type BeliefState struct {
+	Commodity      CommodityID
+	Centre         Price
+	Width          int64
+	Floor, Ceiling Price
+}
+
+// WantCarry is the carry of one want of an agent's ladder, in basis points of a
+// unit (spec-demand.md 4.4).
+type WantCarry struct {
+	Want  WantID
+	Carry int64
+}
+
+// Agent returns the state of one live agent at the tick boundary, for a player's
+// screen or a designer's tool (spec-integration.md 4.7). It returns ErrInStep from
+// inside a step, ErrWorldFailed on a failed world, ErrUnknownAgent for an ID never
+// issued or a pseudo-agent and ErrAgentRemoved for a removed agent. It draws no
+// random number, emits no event and changes no saved state. It derives the cost
+// anchors of the boundary as Snapshot does (shortcut: they are not saved, so it
+// reads every agent once; keep them in the saved state to make this O(entity)).
+func (w *World) Agent(id AgentID) (AgentState, error) {
+	if err := w.guard(); err != nil {
+		return AgentState{}, fmt.Errorf("Agent: %w", err)
+	}
+	a, err := w.queryAgent(id)
+	if err != nil {
+		return AgentState{}, fmt.Errorf("Agent: agent %d: %w", id, err)
+	}
+	if _, err := w.prepareAnchors(); err != nil {
+		return AgentState{}, err
+	}
+	st := AgentState{
+		ID: a.id, Region: w.regionOf(a), Role: a.role, Weight: a.weight, External: a.external, Mortal: a.mortal,
+		Strategy: w.strategyName(a), RoleSince: a.roleSince, RumoursTick: -1,
+		Hunger: a.hunger, Unfed: a.unfed, Privation: a.privation, TargetRatio: a.target,
+		WorkingTicks: a.history.WorkingTicks(), Window: w.roles.row(a.role).window,
+	}
+	if err := w.fillStanding(&st, a); err != nil {
+		return AgentState{}, fmt.Errorf("Agent: agent %d: %w", id, err)
+	}
+	w.fillJob(&st, a)
+	w.fillBeliefs(&st, a)
+	if a.directive != nil {
+		st.HasDirective, st.Directive = true, *a.directive.mailbox()
+	}
+	w.fillModuleGroups(&st, a)
+	return st, nil
+}
+
+// queryAgent finds a live agent of any kind: the lookup of Direct without the
+// external test (spec-integration.md 3.4.3).
+func (w *World) queryAgent(id AgentID) (*agent, error) {
+	switch {
+	case id < 0 || id >= w.state.nextAgent || int(id) < w.firstHousehold:
+		return nil, ErrUnknownAgent
+	case w.agents[id].weight < 1:
+		return nil, ErrAgentRemoved
+	}
+	return &w.agents[id], nil
+}
+
+// fillStanding sets the money, the welfare ratios, the holdings and the upkeep.
+func (w *World) fillStanding(st *AgentState, a *agent) error {
+	acct, err := w.ledger.Account(a.account)
+	if err != nil {
+		return fmt.Errorf("account %d: %w", a.account, err)
+	}
+	st.Money = Money(acct.Balance - acct.Reserved)
+	items := w.roles.row(a.role).upkeepIn(st.Region)
+	qty, price := make([]int64, len(items)), make([]int64, len(items))
+	st.Upkeep = make([]UpkeepRow, len(items))
+	for i, it := range items {
+		st.Upkeep[i] = UpkeepRow{Commodity: it.commodity, Quantity: int64(it.quantity)}
+		qty[i], price[i] = int64(it.quantity), int64(w.markets.reports[w.markets.index(st.Region, it.commodity)].Price)
+	}
+	cost, def := welfare.TickCost(qty, price, a.weight), w.cfg.Roles[a.role].DefaultRatio
+	st.Ratio, st.HasRatio = a.history.Ratio(cost, def)
+	st.EarnedRatio, st.HasEarned = a.history.EarnedRatio(cost, def)
+	for c := range w.cfg.Commodities {
+		held, _, err := w.ledger.Holding(a.account, c)
+		if err != nil {
+			return fmt.Errorf("stock of commodity %d: %w", c, err)
+		}
+		if held == 0 {
+			continue
+		}
+		exp, err := w.ledger.Expiring(a.account, c, w.Tick())
+		if err != nil {
+			return fmt.Errorf("expiring units of commodity %d: %w", c, err)
+		}
+		st.Holdings = append(st.Holdings, HoldingState{Commodity: CommodityID(c), Quantity: Quantity(held), Expiring: Quantity(exp)})
+	}
+	return nil
+}
+
+// fillJob sets the job group: the recipe in progress and the output it will create.
+func (w *World) fillJob(st *AgentState, a *agent) {
+	if !a.hasJob() {
+		return
+	}
+	st.HasJob, st.Recipe, st.Remaining, st.Executions = true, a.job.recipe, a.job.remaining, a.job.executions
+	for i, o := range w.recipes.row(a.job.recipe).outputs {
+		st.Pending = append(st.Pending, Amount{Commodity: o.commodity, Quantity: Quantity(a.job.pending[i])})
+	}
+}
+
+// fillBeliefs sets the beliefs and the market reports of the tradable set, with the
+// range of each belief: the reference band, or the cost band for a commodity the
+// role makes.
+func (w *World) fillBeliefs(st *AgentState, a *agent) {
+	row := w.roles.row(a.role)
+	for i, id := range row.tradable {
+		var unitCost int64
+		if w.roleMakes(row, id) {
+			unitCost = w.prod.unitCost(st.Region, id)
+		}
+		bd := beliefs.Limits(int64(w.refPrice(st.Region, id)), unitCost, w.bp)
+		b := a.beliefs[i]
+		st.Beliefs = append(st.Beliefs, BeliefState{Commodity: id, Centre: Price(b.Centre), Width: b.Width, Floor: Price(bd.Floor), Ceiling: Price(bd.Ceiling)})
+		st.Markets = append(st.Markets, w.marketState(w.markets.index(st.Region, id), st.Region, id))
+	}
+}
+
+// roleMakes says a recipe of the role makes c as a non-discard output: the rule
+// under which a belief's bounds use the cost anchor.
+func (w *World) roleMakes(row *roleRow, c CommodityID) bool {
+	for _, rid := range row.recipes {
+		for _, o := range w.recipes.row(rid).outputs {
+			if o.commodity == c && !o.discard {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// fillModuleGroups sets the groups of the modules that are on: the carries of the
+// wants, the own-use figures, and the trip and the journey.
+func (w *World) fillModuleGroups(st *AgentState, a *agent) {
+	if d := w.demand; d != nil && int(a.id) < len(d.carry) {
+		for i, rg := range d.ladder[a.role] {
+			st.Wants = append(st.Wants, WantCarry{Want: rg.want, Carry: d.carry[a.id][i]})
+		}
+	}
+	if s := w.sub; s != nil {
+		st.OwnUse, st.OwnUseJobs = s.agentFields(int(a.id))
+		if goods, ok := s.goodsOf(w, a, st.Region); ok && len(goods) > 0 {
+			st.Cover, st.Secure = s.figures(goods, a.hunger > 0, int64(st.Money))
+		}
+	}
+	st.Away = w.Away(a.id)
+	if m := w.migration; m != nil && m.on(a.id) {
+		st.HasJourney, st.JourneyTo, st.JourneyArrives = true, m.journey[a.id].to, m.journey[a.id].arrives
+	}
 }

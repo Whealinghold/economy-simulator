@@ -235,7 +235,8 @@ func NewWorld(cfg Config, opts ...Option) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := w.construct(w.cfg.Warnings()); err != nil {
+	w.integ.warnings = w.cfg.Warnings()
+	if err := w.construct(w.integ.warnings); err != nil {
 		return nil, err
 	}
 	return w, nil

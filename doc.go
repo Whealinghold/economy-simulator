@@ -550,6 +550,15 @@
 //     value (SetYieldShocks and the other Set calls); an entry names a key and
 //     gives its whole value, and a key set to its default is cleared. The slots that
 //     differ from their defaults are read back as SlotState (spec-integration.md 5).
+//   - Agent state: what is true of one agent at the tick boundary (AgentState, read
+//     by World.Agent): its identity and standing, its holdings (HoldingState), its job,
+//     its beliefs (BeliefState) with the range each sits in, the market reports of its
+//     region, its upkeep, its mailbox and the rumours of its last view; the carries of
+//     its wants (WantCarry) with the demand module on. It is a deep copy of plain data
+//     and a function of the saved state alone (spec-integration.md 4.7.2).
+//   - Region state: the snapshot restricted to one region (RegionState, read by
+//     World.Region): the rows of a Snapshot that have the region
+//     (spec-observability.md 5.3.5a).
 //   - Spawner: the extension interface (Spawner) that decides which agents leave,
 //     lose households or change role and how many households enter a region in
 //     a tick, as a plan of decisions the world checks and executes

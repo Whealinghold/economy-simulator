@@ -149,3 +149,27 @@ func TestKeyedOnce(t *testing.T) {
 		})
 	}
 }
+
+// TestQueries_FailedWorld verifies that the queries with an error result return
+// ErrWorldFailed on a failed world and that the readers with none return their value
+// (spec-integration.md 6.1.2).
+//
+// Requirement: FR-INT-060
+func TestQueries_FailedWorld(t *testing.T) {
+	t.Parallel()
+	w := internalShell(t)
+	cause := errors.New("boom")
+	w.failed = cause
+	_, agentErr := w.Agent(0)
+	_, agentsErr := w.Agents(0)
+	_, marketErr := w.Market(0, 0)
+	_, regionErr := w.Region(0)
+	for name, err := range map[string]error{"Agent": agentErr, "Agents": agentsErr, "Market": marketErr, "Region": regionErr} {
+		if !errors.Is(err, ErrWorldFailed) || !errors.Is(err, cause) {
+			t.Errorf("%s on a failed world = %v, want ErrWorldFailed wrapping the cause", name, err)
+		}
+	}
+	if w.Err() != cause || w.Calendar().HoursPerDay == 0 || w.Tick() != 0 {
+		t.Errorf("the readers on a failed world gave Err %v, Calendar %+v, Tick %d, want their values", w.Err(), w.Calendar(), w.Tick())
+	}
+}

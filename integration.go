@@ -305,6 +305,10 @@ type integrationState struct {
 	// visit says externals is not empty: the guard of the P1.9 call in tick.go,
 	// which may not call a function.
 	visit bool
+	// warnings are the warnings of the configuration, sorted by path then rule, as
+	// Config.Warnings returned them at construction or restore. They are derived
+	// from the configuration alone, so they are not saved.
+	warnings []Warning
 }
 
 // watch adds slot to the agents P1.9 visits, keeping the list ascending and free
@@ -1084,4 +1088,46 @@ func (w *World) Relocate(id AgentID, to RegionID) error {
 	w.reseedAtArrival(a, to)
 	a.roleSince = w.Tick()
 	return nil
+}
+
+// Warnings returns the warnings of the configuration the world was built from,
+// sorted by path then rule (spec-integration.md 6.4): what the construction logged,
+// for a consumer with no logger. A restored world holds the same list. The result is
+// a deep copy. It works from inside a step and on a failed world.
+func (w *World) Warnings() []Warning {
+	out := slices.Clone(w.integ.warnings)
+	for i := range out {
+		out[i].Path = slices.Clone(out[i].Path)
+	}
+	return out
+}
+
+// Calendar returns the calendar of the world: At(tick) gives the moment and
+// SeasonAt(tick) the periodic season (spec-integration.md 6.2). It is a deep copy
+// of the configuration's, so changing it changes nothing in the world, and it works
+// from inside a step and on a failed world.
+func (w *World) Calendar() Calendar {
+	c := w.cfg.Calendar
+	c.Months, c.Seasons = slices.Clone(c.Months), slices.Clone(c.Seasons)
+	return c
+}
+
+// Agents returns the live agents whose account is in region g, in ascending ID,
+// with no estate or counterparty pseudo-agent (spec-integration.md 6.2). It returns
+// ErrInStep from inside a step, ErrWorldFailed on a failed world and
+// ErrUnknownRegion. An outside node has no agent, so its list is empty.
+func (w *World) Agents(g RegionID) ([]AgentID, error) {
+	if err := w.guard(); err != nil {
+		return nil, fmt.Errorf("Agents: %w", err)
+	}
+	if g < 0 || int(g) >= len(w.cfg.Regions) {
+		return nil, fmt.Errorf("Agents: region %d: %w", g, ErrUnknownRegion)
+	}
+	out := []AgentID{}
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		if a := &w.agents[i]; a.weight >= 1 && w.regionOf(a) == g {
+			out = append(out, a.id)
+		}
+	}
+	return out, nil
 }

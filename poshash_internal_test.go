@@ -68,7 +68,7 @@ var skipFields = []string{
 	// agents (a restore rebuilds it, and it drops a removed agent only at the next
 	// P1.9), and agent.live is the directive of the tick that P1.9 derives from the
 	// mailbox: neither is saved, so a restored world must hash like its original.
-	"integrationState.externals", "integrationState.visit", "agent.live",
+	"integrationState.externals", "integrationState.visit", "integrationState.warnings", "agent.live",
 	// regionState.rebuilds counts the rebuilds of that table after construction, for
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.

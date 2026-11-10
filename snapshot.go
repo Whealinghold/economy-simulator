@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -323,20 +324,10 @@ func (w *World) Snapshot() (Snapshot, error) {
 	if err := w.guard(); err != nil {
 		return Snapshot{}, err
 	}
-	moment, err := w.cfg.Calendar.At(w.Tick())
-	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
-	// refusal of the world's own accounts, which a valid configuration cannot cause
-	// and no test can inject from the root (D190); the branch only wraps and returns
-	// it.
+	moment, err := w.prepareAnchors()
 	if err != nil {
-		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
+		return Snapshot{}, err
 	}
-	// The cost anchors are derived scratch and are not saved. Derive them from the
-	// saved state as P1.2 of the next step will, so that the range a belief is
-	// counted against is a function of the saved state and a restored world reports
-	// what the original does (FR-CHK-053).
-	w.tk.moment = moment
-	w.p12Anchors()
 	nr, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
 	s := Snapshot{
 		Tick: w.Tick(), Seed: w.state.seed, ConfigHash: w.hash, Moment: moment,
@@ -373,6 +364,92 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.snapshotOutside(&s)
 	w.dropOutsideRows(&s)
 	return s, nil
+}
+
+// prepareAnchors derives the cost anchors of the boundary, as P1.2 of the next step
+// will, and returns the moment of that step. The anchors are derived scratch and
+// are not saved, so a reader that shows a belief against its range derives them from
+// the saved state and a restored world reports what the original does (FR-CHK-053).
+func (w *World) prepareAnchors() (Moment, error) {
+	moment, err := w.cfg.Calendar.At(w.Tick())
+	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
+	// refusal of the world's own accounts, which a valid configuration cannot cause
+	// and no test can inject from the root (D190); the branch only wraps and returns
+	// it.
+	if err != nil {
+		return Moment{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
+	}
+	w.tk.moment = moment
+	w.p12Anchors()
+	return moment, nil
+}
+
+// RegionState is the snapshot restricted to one region (spec-observability.md
+// 5.3.5a, spec-integration.md 6.5): the region's row, its role rows by RoleID, its
+// markets by CommodityID, its jobs by RecipeID, its endowments by ResourceID, and
+// the shipments and journeys that leave or reach it. It equals the rows of a full
+// Snapshot with that region (FR-OBS-044). Plain data. The rows of a module that is
+// off are empty, and so are those of an outside node, which has no role or market.
+type RegionState struct {
+	Region     RegionRow
+	Roles      []RoleRow
+	Markets    []MarketRow
+	Jobs       []JobRow
+	Endowments []EndowmentRow
+	Shipments  []ShipmentRow
+	Journeys   []JourneyRow
+}
+
+// Region returns the state of region g at the tick boundary: the rows of a
+// Snapshot that have the region (spec-integration.md 6.5). It returns ErrInStep
+// from inside a step, ErrWorldFailed on a failed world and ErrUnknownRegion. It
+// scans the agents of the region only, but derives the cost anchors of the
+// boundary as Snapshot does, which reads every agent (shortcut: the anchors are
+// not saved; keep them in the saved state to make this O(region)). It draws no
+// random number and changes no saved state.
+func (w *World) Region(g RegionID) (RegionState, error) {
+	if err := w.guard(); err != nil {
+		return RegionState{}, fmt.Errorf("Region: %w", err)
+	}
+	if g < 0 || int(g) >= len(w.cfg.Regions) {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, ErrUnknownRegion)
+	}
+	if _, err := w.prepareAnchors(); err != nil {
+		return RegionState{}, err
+	}
+	nr, nc, n := len(w.cfg.Roles), len(w.cfg.Commodities), len(w.cfg.Regions)
+	s := Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr), Markets: make([]MarketRow, n*nc)}
+	acc := newSnapAcc(nc, len(w.cfg.Recipes))
+	// Excluded from coverage (testing.md 9.5): as in Snapshot, a ledger refusal of
+	// the world's own accounts that a valid configuration cannot cause.
+	if err := w.snapRegion(&s, g, &acc, w.makesTable()); err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
+	w.snapshotMigration(&s)
+	w.snapshotContracts(&s)
+	out := RegionState{Region: s.Regions[g], Jobs: s.Jobs}
+	if !w.isOutsideNode(g) {
+		out.Roles = slices.Clone(s.Roles[int(g)*nr : (int(g)+1)*nr])
+		out.Markets = slices.Clone(s.Markets[int(g)*nc : (int(g)+1)*nc])
+	}
+	out.Endowments = w.regionEndowments(g)
+	out.Shipments = slices.DeleteFunc(w.snapshotShipments(), func(r ShipmentRow) bool { return r.Region != g && r.To != g })
+	out.Journeys = slices.DeleteFunc(s.Journeys, func(r JourneyRow) bool { return r.From != g && r.To != g })
+	return out, nil
+}
+
+// regionEndowments returns the endowment rows of region g, by resource; nil with
+// the resources module off.
+func (w *World) regionEndowments(g RegionID) []EndowmentRow {
+	r := w.res
+	if r == nil {
+		return nil
+	}
+	rows := make([]EndowmentRow, r.resources)
+	for res := range rows {
+		rows[res] = r.row(r.cellOf(g, ResourceID(res)))
+	}
+	return rows
 }
 
 // satMoney adds two amounts to m, saturating.
