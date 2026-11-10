@@ -214,3 +214,75 @@ func TestGolden_AllPositions(t *testing.T) {
 	skipFiveSized(t)
 	allOn.goldenPositions(t, allPosLines)
 }
+
+// fiveDetCases are the cases of detCases(true) that TestDeterminism_FiveAndAll runs, by
+// name: the observed Step run (the bare and observed of REF 8.2), the single Run, the
+// split Run and the audit. The other cases of the list would be too slow on 5 000
+// agents (plan 2-24 D689).
+var fiveDetCases = []string{"(a) second observed run", "(b) Run(400) bare", "(b) Run(1)+Run(399) observed", "(d) audit on"}
+
+// TestDeterminism_FiveAndAll verifies, on the warm `five` and on the all-on pack, seeds 1
+// and 2, 400 ticks, the cases of fiveDetCases: a run split into Run calls, observed, or
+// with the audit on, ends in the snapshot, state hash and config hash of the bare Step
+// run, its events equal the reference's, and a second seed ends elsewhere.
+//
+// Requirement: FR-REF-030, FR-OBS-023, FR-WLD-063, NFR-WLD-004
+//
+// Guard: observation, the audit and the chunking of Run must not move a world that holds
+// every module; the cases are taken from detCases by name, so a rename fails here.
+func TestDeterminism_FiveAndAll(t *testing.T) {
+	t.Parallel()
+	skipFiveSized(t)
+	byName := map[string]detCase{}
+	for _, c := range detCases(true) {
+		byName[c.name] = c
+	}
+	for _, w := range []fiveWorld{fiveOff, allOn} {
+		t.Run(w.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := w.config(t)
+			var ends [2]economysim.Snapshot
+			// The "seeds" group returns when its parallel subtests have ended, so ends is complete after it.
+			t.Run("seeds", func(t *testing.T) {
+				for i, seed := range []uint64{1, 2} {
+					t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+						t.Parallel()
+						// The bare run takes only the snapshots of REF 8.5: a snapshot of 5 000 agents
+						// at every tick is the cost of this test.
+						base := runPack(t, cfg, runSpec{Seed: seed, Ticks: detTicks, Drive: driveStep, Snapshots: snapSample, Extra: w.opts})
+						ends[i] = base.Final
+						for _, name := range fiveDetCases {
+							tc, ok := byName[name]
+							if !ok {
+								t.Fatalf("detCases(true) has no case %q, want it (renamed?)", name)
+							}
+							spec := tc.spec()
+							spec.Seed, spec.Ticks, spec.Extra = seed, detTicks, append(spec.Extra, w.opts...)
+							if len(spec.Drive.chunks) == 0 {
+								spec.Snapshots = snapSample
+							}
+							got := runPack(t, cfg, spec)
+							if !reflect.DeepEqual(got.Final, base.Final) {
+								t.Errorf("%s seed %d, case %q: final snapshot differs from the bare run", w.name, seed, name)
+							}
+							if economysim.HashWorld(got.World) != economysim.HashWorld(base.World) {
+								t.Errorf("%s seed %d, case %q: state hash of the world differs from the bare run", w.name, seed, name)
+							}
+							if got.World.ConfigHash() != base.World.ConfigHash() {
+								t.Errorf("%s seed %d, case %q: ConfigHash differs from the bare run", w.name, seed, name)
+							}
+							if len(spec.Drive.chunks) == 0 {
+								if d := firstTickDiff(base.Samples, got.Samples); d != "" {
+									t.Errorf("%s seed %d, case %q: snapshot differs from the bare run at %s", w.name, seed, name, d)
+								}
+							}
+						}
+					})
+				}
+			})
+			if reflect.DeepEqual(ends[0], ends[1]) {
+				t.Errorf("%s: seeds 1 and 2 end in the same snapshot, want different", w.name)
+			}
+		})
+	}
+}

@@ -212,38 +212,50 @@ func (c *cardChecker) check(e economysim.Event) {
 }
 
 // TestCardinality_EventAttributesTakeClosedValues runs pack one for 400 ticks
-// on seeds 1 and 2 and checks that every event field that becomes a metric
-// attribute takes a value of the configuration (typed IDs below len of the
-// names table) or of a closed set (Side is Bid or Ask; Reason, Cause and Kind
-// are constants of event.go). The Reason check is weaker by design: Reason is
-// one Go type holding several closed sets, so a value need only be a member of
-// any Reason constant; a per-event partition is not attempted.
+// on seeds 1 and 2, and the warm five (every module off) on seed 1, and checks that
+// every event field that becomes a metric attribute takes a value of the
+// configuration (typed IDs below len of the names table) or of a closed set (Side is
+// Bid or Ask; Reason, Cause and Kind are constants of event.go). The Reason check is
+// weaker by design: Reason is one Go type holding several closed sets, so a value
+// need only be a member of any Reason constant; a per-event partition is not
+// attempted.
 //
-// Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034 (the configuration of five waits for Stage 2, N-295).
+// Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034
 // Guard: a RecipeExecuted with a recipe ID out of range, or a Reason outside event.go.
+// The five row is the configuration of five that N-295 left to Stage 2 (plan 2-24 Phase 2);
+// it is skipped under -race with the other 5 000-household runs.
 func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 	if testing.Short() {
-		t.Skip("end-to-end: 2 x 400 ticks of pack one; skipped under -short")
+		t.Skip("end-to-end: 400 ticks of pack one and five; skipped under -short")
 	}
 	consts := eventConstants(t)
-	cfg := loadValidPack(t, packOne...)
-	for _, seed := range []uint64{1, 2} {
-		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
-			res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true})
-			c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: consts, seen: map[string]int{}}
-			for _, e := range res.Events {
-				c.check(e)
-			}
-			for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Reason", "Cause", "Kind"} {
-				t.Logf("seed %d: %s checked %d times", seed, f, c.seen[f])
-			}
-			// Kind and Reason are always reachable; the others depend on collapse, so only these are required.
-			for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Kind"} {
-				if c.seen[f] == 0 {
-					t.Errorf("seed %d: no %s value was checked; the run exercised nothing", seed, f)
+	for _, row := range []struct {
+		pack   string
+		layers []string
+		seeds  []uint64
+	}{{"one", packOne, []uint64{1, 2}}, {"five", packFiveWarm, []uint64{1}}} {
+		if row.pack == "five" && raceEnabled {
+			continue
+		}
+		cfg := loadValidPack(t, row.layers...)
+		for _, seed := range row.seeds {
+			t.Run(row.pack+"/seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
+				res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true})
+				c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: consts, seen: map[string]int{}}
+				for _, e := range res.Events {
+					c.check(e)
 				}
-			}
-		})
+				for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Reason", "Cause", "Kind"} {
+					t.Logf("seed %d: %s checked %d times", seed, f, c.seen[f])
+				}
+				// Kind and Reason are always reachable; the others depend on collapse, so only these are required.
+				for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Kind"} {
+					if c.seen[f] == 0 {
+						t.Errorf("seed %d: no %s value was checked; the run exercised nothing", seed, f)
+					}
+				}
+			})
+		}
 	}
 }
 
