@@ -97,3 +97,41 @@ func TestRoundTicksUp(t *testing.T) {
 		}
 	}
 }
+
+// TestSaturating verifies that the saturating add and subtract clamp at the
+// limits of int64 and never wrap.
+//
+// Guard: a link read as "value minus 10 000" must not wrap for an extreme value
+// and turn a regime into none.
+func TestSaturating(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ a, b, add, sub int64 }{
+		{1, 2, 3, -1},
+		{maxInt64, 1, maxInt64, maxInt64 - 1},
+		{minInt64, -1, minInt64, minInt64 + 1},
+		{maxInt64, -1, maxInt64 - 1, maxInt64},
+		{minInt64, 1, minInt64 + 1, minInt64},
+		{0, minInt64, minInt64, maxInt64},
+		{-1, minInt64, minInt64, maxInt64 - 0},
+		{-5, minInt64, minInt64, maxInt64 - 4},
+	} {
+		if got := satAdd(tc.a, tc.b); got != tc.add {
+			t.Errorf("satAdd(%d, %d) = %d, want %d", tc.a, tc.b, got, tc.add)
+		}
+		if got := satSub(tc.a, tc.b); got != tc.sub {
+			t.Errorf("satSub(%d, %d) = %d, want %d", tc.a, tc.b, got, tc.sub)
+		}
+	}
+}
+
+// TestDetect_UnknownDetectorPanics verifies the programmer-error panic of
+// Detect for a detector that is not in Detectors.
+func TestDetect_UnknownDetectorPanics(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if recover() == nil {
+			t.Errorf("Detect(\"R0\") did not panic")
+		}
+	}()
+	Detect("R0", Input{}, NewThresholds())
+}

@@ -77,16 +77,10 @@ func SetBand(values []int64, side Side, m int, limit Limit) (int64, error) {
 
 // setBand finishes SetBand once the extremes and the headroom are known.
 func setBand(lo, hi int64, side Side, h int64, limit Limit) (int64, error) {
-	// The range check that replaces a checked multiply (no math import, O4 and
-	// D587): the span and span*h must fit an int64.
-	if lo < 0 && hi > maxInt64+lo {
+	add, ok := headroom(lo, hi, h)
+	if !ok {
 		return 0, ErrOverflow
 	}
-	span := hi - lo
-	if span > maxInt64/h {
-		return 0, ErrOverflow
-	}
-	add := rdiv(span*h, bpScale)
 	var b int64
 	if side == Upper {
 		if hi > maxInt64-add {
@@ -99,14 +93,33 @@ func setBand(lo, hi int64, side Side, h int64, limit Limit) (int64, error) {
 		}
 		b = lo - add
 	}
-	b, ok := roundOutward(b, side == Upper)
+	b, ok = roundOutward(b, side == Upper)
 	if !ok {
 		return 0, ErrOverflow
 	}
-	if limit.Set && (side == Upper && b > limit.Value || side == Lower && b < limit.Value) {
-		return b, ErrAboveThreshold
+	return b, limit.check(b, side)
+}
+
+// check reports ErrAboveThreshold when b is looser than the limit (8.4.4).
+func (l Limit) check(b int64, side Side) error {
+	if l.Set && (side == Upper && b > l.Value || side == Lower && b < l.Value) {
+		return ErrAboveThreshold
 	}
-	return b, nil
+	return nil
+}
+
+// headroom returns range*h/10 000 rounded half to even. The range check that
+// replaces a checked multiply (no math import, O4 and D587): the span and
+// span*h must fit an int64.
+func headroom(lo, hi, h int64) (int64, bool) {
+	if lo < 0 && hi > maxInt64+lo {
+		return 0, false
+	}
+	span := hi - lo
+	if span > maxInt64/h {
+		return 0, false
+	}
+	return rdiv(span*h, bpScale), true
 }
 
 // roundOutward rounds x to two significant digits, up when up is true and down

@@ -9,7 +9,7 @@ const maxRegrowYears = 1000
 
 // maxTicksPerYear keeps the iteration bound of RegrowTicks finite; no
 // calendar of the library has a year longer than this.
-const maxTicksPerYear = 1 << 16
+const maxTicksPerYear = 1 << 12
 
 // RegrowTicks returns the speed limit t_min of STY-S02: the ticks a count
 // needs to regrow from trough to level*(10 000 - bandBP)/10 000 (rounded
