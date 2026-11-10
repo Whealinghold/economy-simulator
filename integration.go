@@ -3,6 +3,7 @@ package economysim
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -1038,4 +1039,49 @@ func (w *World) outsideSlots(s *SlotState) {
 			s.OutsideShocks = append(s.OutsideShocks, OutsideShock{Node: l.node, Commodity: l.commodity, BP: l.shock})
 		}
 	}
+}
+
+// Relocate moves an agent, with all the households it stands for, to another region
+// at once: the forced move of spec-integration.md 4.5, the guarded relocation of
+// spec-regions.md 6 with the cause consumer. It is made for an external agent or a
+// household of the configuration, not a pseudo-agent. It returns ErrInStep,
+// ErrWorldFailed, then the first refusal of the dry run in REG's order:
+// ErrUnknownRegion, ErrUnknownAgent, ErrAgentRemoved (a removed agent),
+// ErrNotRelocatable (an estate or another pseudo-agent), ErrSameRegion,
+// ErrOutsideNode, ErrOpenReservation or ErrRegionBound (a *RegionBoundError naming
+// the obligation: open_shipment, open_contract and the others of the modules that
+// are on). A refused call changes nothing and the journey of a migrant is dropped
+// only by a call that moves it. After the dry run the call cannot fail: a migration
+// journey is cancelled (its households count in Ended of the next MigrationReviewed),
+// a job in progress is abandoned with the reason region_changed, the account moves
+// (AgentRelocated, cause consumer), the beliefs are reseeded by the arrival rule with
+// no draw and RoleSince becomes the tick the next step runs. Money, goods, role,
+// weight, strategy and the mailbox stay as they were.
+func (w *World) Relocate(id AgentID, to RegionID) error {
+	if err := w.enter("Relocate", "", false); err != nil {
+		return err
+	}
+	// The journey is the one obligation the call itself discharges (4.5.2 step 2).
+	if _, err := w.relocateRefusal(id, to, []string{onJourneyName}); err != nil {
+		if errors.Is(err, ErrClosedAccount) {
+			err = ErrAgentRemoved // the dry run's closed account is a removed agent here
+		}
+		return fmt.Errorf("Relocate: agent %d to region %d: %w", id, to, err)
+	}
+	a := &w.agents[id]
+	from := w.regionOf(a)
+	if w.onJourney(a) {
+		w.migration.cancelJourney(a, from)
+	}
+	if a.hasJob() {
+		w.abandonJob(a, from, ReasonRegionChanged)
+	}
+	// moveAgent drops the own-use floor of the old region itself, the second step a
+	// departing migrant takes (spec-migration.md 8.2).
+	if err := w.moveAgent(a, to, CauseConsumer); err != nil {
+		invariant("the ledger refused a relocation the dry run passed: " + err.Error())
+	}
+	w.reseedAtArrival(a, to)
+	a.roleSince = w.Tick()
+	return nil
 }

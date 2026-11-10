@@ -882,6 +882,7 @@ func inStepCalls(w *economysim.World) map[string]error {
 		"AddAgent":          addErr,
 		"RemoveAgent":       w.RemoveAgent(0),
 		"Direct":            w.Direct(0, economysim.Directive{}),
+		"Relocate":          w.Relocate(0, slotOther),
 		"SetYieldShocks":    w.SetYieldShocks([]economysim.YieldShock{{Region: slotNorth, BP: 1}}),
 		"SetEdgeStatuses":   w.SetEdgeStatuses([]economysim.EdgeStatus{{From: slotNorth, To: slotOther, FactorBP: 1}}),
 		"SetTransitFactors": w.SetTransitFactors(nil),
@@ -927,8 +928,8 @@ func TestInStep_Calls(t *testing.T) {
 			t.Fatalf("Step() = %v, want nil", err)
 		}
 	}
-	if len(called) != 14 {
-		t.Fatalf("the observer made %d calls, want 14", len(called))
+	if len(called) != 15 {
+		t.Fatalf("the observer made %d calls, want 15", len(called))
 	}
 	for name, err := range called {
 		if !errors.Is(err, economysim.ErrInStep) {
