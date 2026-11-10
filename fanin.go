@@ -27,6 +27,7 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	}
 	if w.info != nil && kind == viewTrade {
 		w.fillRumours(v, a)
+		w.recordRumours(v, a)
 	}
 	if w.mer != nil && kind == viewTrade {
 		w.fillMerchantView(v, a)

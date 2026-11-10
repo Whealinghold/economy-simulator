@@ -499,7 +499,7 @@ func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, pr
 	rec.acct = int(r.Index(uint64(w.ledger.Len())))
 	rec.role = r.Index(uint64(len(w.cfg.Roles)))
 	rec.weight = r.Bounded("weight", MaxWeight)
-	rec.flags = int64(r.Index(1)) // External and Mortal are the integration module's; no agent has one yet
+	rec.flags = int64(r.Index((flagExternal | flagMortal) + 1))
 	rec.nameIdx = int64(r.Index(uint64(len(names))))
 	rec.unfed = r.Bounded("unfed", rec.weight)
 	rec.hunger = r.Bounded("hunger", rs.tick)
@@ -536,8 +536,8 @@ func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (le
 // state of a module that is off.
 func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) error {
 	switch id := AgentID(rec.id); {
-	case rec.weight < 1 || rec.flags != 0 || names[rec.nameIdx] != w.cfg.Roles[rec.role].Strategy:
-		return fmt.Errorf("agent %d has weight %d or a strategy %q that is not its role's", rec.id, rec.weight, names[rec.nameIdx])
+	case rec.weight < 1 || w.badStrategy(rec, names[rec.nameIdx]):
+		return fmt.Errorf("agent %d has weight %d, flags %d or a strategy %q that is not its role's or an external agent's", rec.id, rec.weight, rec.flags, names[rec.nameIdx])
 	case rec.since < 0 || rec.since > rs.tick:
 		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
 	case w.badDeathCarry(id, rec.carry):
@@ -546,6 +546,19 @@ func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) 
 		return fmt.Errorf("agent %d has own-use or journey state its module does not allow", rec.id)
 	}
 	return nil
+}
+
+// badStrategy reports an agent record whose flags or strategy cannot be one: a
+// household has its role's strategy and neither flag; an external agent (the flag
+// word has External, and Mortal only with it) has a strategy that resolves, "default",
+// "directed" or a registered name (spec-checkpoint.md 4.2.4, spec-integration.md 4.8).
+func (w *World) badStrategy(rec *agentRec, name string) bool {
+	external, mortal := rec.flags&int64(flagExternal) != 0, rec.flags&int64(flagMortal) != 0
+	if !external {
+		return mortal || name != w.cfg.Roles[rec.role].Strategy
+	}
+	_, ok := w.strategyIndex(name)
+	return !ok
 }
 
 // loadAgent reads the record of one agent, checks it and puts the agent in its
@@ -562,8 +575,14 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 		r.Failf("%v", err)
 		return rec.id
 	}
-	a := newAgent(agentInit{id: AgentID(rec.id), account: rec.acct, role: RoleID(rec.role), weight: rec.weight, strategy: int(rec.role), tick: rec.since},
-		w.roles.row(RoleID(rec.role)), &w.recipes)
+	init := agentInit{
+		id: AgentID(rec.id), account: rec.acct, role: RoleID(rec.role), weight: rec.weight, strategy: int(rec.role), tick: rec.since,
+		external: rec.flags&int64(flagExternal) != 0, mortal: rec.flags&int64(flagMortal) != 0,
+	}
+	if init.external {
+		init.strategy, _ = w.strategyIndex(names[rec.nameIdx])
+	}
+	a := newAgent(init, w.roles.row(RoleID(rec.role)), &w.recipes)
 	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
 	w.agents[rec.id] = a
 	if rec.journey {
@@ -751,6 +770,9 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	w.fillBeliefs(&st, a)
 	if a.directive != nil {
 		st.HasDirective, st.Directive = true, *a.directive.mailbox()
+	}
+	if rv, ok := w.lastView(a); ok {
+		st.Rumours, st.RumoursTick = slices.Clone(rv.rumours), rv.tick
 	}
 	w.fillModuleGroups(&st, a)
 	return st, nil

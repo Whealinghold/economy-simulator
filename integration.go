@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
@@ -309,6 +310,18 @@ type integrationState struct {
 	// Config.Warnings returned them at construction or restore. They are derived
 	// from the configuration alone, so they are not saved.
 	warnings []Warning
+	// views holds, by agent slot, the rumours an external agent of an informed role
+	// was given at its last view (spec-integration.md 4.7.3, plan 2-17 D553). Saved
+	// in tag 22; it affects no result.
+	views []rumourView
+}
+
+// rumourView is the last view built for an external agent of an informed role: the
+// tick it was built at and a copy of its rumours, in the order of the view.
+type rumourView struct {
+	has     bool
+	tick    int64
+	rumours []Rumour
 }
 
 // watch adds slot to the agents P1.9 visits, keeping the list ascending and free
@@ -1130,4 +1143,127 @@ func (w *World) Agents(g RegionID) ([]AgentID, error) {
 		}
 	}
 	return out, nil
+}
+
+// recordRumours keeps the rumours of the trade view just built for an external agent
+// of an informed role (spec-integration.md 4.7.3): a Work view never reaches it, so
+// it cannot clear them. It is the one hook INT has in fillAgentView, runs for external
+// agents only and reuses the agent's slice once it has grown.
+func (w *World) recordRumours(v *AgentView, a *agent) {
+	if !a.external || !w.info.informed[a.role] {
+		return
+	}
+	for int(a.id) >= len(w.integ.views) {
+		w.integ.views = append(w.integ.views, rumourView{})
+	}
+	rv := &w.integ.views[a.id]
+	rv.has, rv.tick = true, w.Tick()
+	rv.rumours = append(rv.rumours[:0], v.Rumours...)
+}
+
+// lastView returns the view kept for agent a: none for an agent that has not had a
+// trade view, and none once it is not an external agent of an informed role (a role
+// change), so that a query and a checkpoint agree.
+func (w *World) lastView(a *agent) (*rumourView, bool) {
+	if w.info == nil || !a.external || !w.info.informed[a.role] || int(a.id) >= len(w.integ.views) || !w.integ.views[a.id].has {
+		return nil, false
+	}
+	return &w.integ.views[a.id], true
+}
+
+// saveRumours writes tag 22 (spec-checkpoint.md 4.2, spec-integration.md 13): for
+// each live external agent of an informed role that has had a view, in ascending
+// agent ID, the tick of the view and its rumours (region, commodity, price, mean, lag
+// and source age) in the order of the view. It is sparse: an agent that has had no
+// view has no row.
+func (w *World) saveRumours(cw *codec.Writer) error {
+	var rows []*agent
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		if a := &w.agents[i]; a.weight >= 1 {
+			if _, ok := w.lastView(a); ok {
+				rows = append(rows, a)
+			}
+		}
+	}
+	cw.Count(len(rows))
+	for _, a := range rows {
+		rv, _ := w.lastView(a)
+		cw.U(uint64(a.id))
+		cw.I(rv.tick)
+		cw.Count(len(rv.rumours))
+		for _, r := range rv.rumours {
+			cw.U(uint64(r.Region))
+			cw.U(uint64(r.Commodity))
+			cw.U(unsigned(int64(r.Price)))
+			cw.U(unsigned(int64(r.Mean)))
+			cw.U(unsigned(r.Lag))
+			cw.U(unsigned(r.SourceAge))
+		}
+	}
+	return nil
+}
+
+// loadRumours reads tag 22 into the views of a world whose agents are loaded. A row
+// is corrupt when its agent is not a live external agent of an informed role, when
+// the agents are not strictly ascending, when the tick is not a step the run has
+// made, when the count is above MaxRumoursPerView, or when a rumour is not one a view
+// can hold: a region and a commodity of the configuration, a price from 1 to
+// MaxPrice, a mean up to it, a lag from 2 to the module's maximum age, and the
+// rumours not strictly ascending by (region, commodity) (spec-information.md 6.2).
+func (w *World) loadRumours(rs *restoreCtx, r *codec.Reader) error {
+	n := r.Count(3)
+	var prev uint64
+	for i := range n {
+		id := r.Strict(prev, i > 0)
+		prev = id
+		if r.Err() != nil {
+			return nil
+		}
+		if id >= uint64(len(w.agents)) || int(id) < w.firstHousehold || !w.liveInformedExternal(&w.agents[id]) {
+			r.Failf("tag 22 row for agent %d, which is not a live external agent of an informed role", id)
+			return nil
+		}
+		w.loadView(rs, r, AgentID(id))
+	}
+	return nil
+}
+
+// liveInformedExternal says a is a live external agent whose role is informed.
+func (w *World) liveInformedExternal(a *agent) bool {
+	return a.weight >= 1 && a.external && w.info != nil && w.info.informed[a.role]
+}
+
+// loadView reads the view of one row of tag 22 and keeps it for agent id.
+func (w *World) loadView(rs *restoreCtx, r *codec.Reader, id AgentID) {
+	tick := r.I()
+	if r.Err() == nil && (tick < 0 || tick >= rs.tick) {
+		r.Failf("tag 22 row for agent %d: view tick %d, want 0 to %d", id, tick, rs.tick-1)
+		return
+	}
+	k := r.Count(6)
+	if r.Err() == nil && k > MaxRumoursPerView {
+		r.Failf("tag 22 row for agent %d holds %d rumours, want at most %d", id, k, MaxRumoursPerView)
+		return
+	}
+	rumours := make([]Rumour, 0, k)
+	for range k {
+		rm := Rumour{
+			Region: RegionID(r.Index(uint64(len(w.cfg.Regions)))), Commodity: CommodityID(r.Index(uint64(len(w.cfg.Commodities)))),
+			Price: Price(r.Bounded("price", MaxPrice)), Mean: Price(r.Bounded("mean", MaxPrice)),
+			Lag: r.Bounded("lag", w.info.maxAge), SourceAge: r.Bounded("source age", rs.tick),
+		}
+		if r.Err() != nil {
+			return
+		}
+		last := len(rumours) - 1
+		if rm.Price < 1 || rm.Lag < 2 || last >= 0 && (rumours[last].Region > rm.Region || rumours[last].Region == rm.Region && rumours[last].Commodity >= rm.Commodity) {
+			r.Failf("tag 22 row for agent %d holds an impossible rumour %+v", id, rm)
+			return
+		}
+		rumours = append(rumours, rm)
+	}
+	for int(id) >= len(w.integ.views) {
+		w.integ.views = append(w.integ.views, rumourView{})
+	}
+	w.integ.views[id] = rumourView{has: true, tick: tick, rumours: rumours}
 }

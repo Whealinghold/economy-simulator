@@ -425,3 +425,13 @@ func SetPopulationScale(w *World, region RegionID, kind ScaleKind, bp int64) boo
 func RemoveAgentForTest(w *World, id AgentID, cause Cause) error {
 	return w.removeAgent(&w.agents[id], cause)
 }
+
+// FillWorkView builds the view passed to Work for an agent, as P2.5 does, and drops
+// it: the test of the rumours kept for an external agent needs a Work view built
+// between two ticks (plan 2-17 Phase 8).
+func FillWorkView(w *World, id AgentID) {
+	w.refreshViewCtx()
+	if err := w.fillAgentView(&w.tk.view, &w.agents[id], viewWork); err != nil {
+		panic(err)
+	}
+}
