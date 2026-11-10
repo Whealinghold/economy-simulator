@@ -1,18 +1,62 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"flag"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"time"
 )
 
-// main loads the pack and reports the time of the start-up solve. The server and
-// its flags come with the next change (plan 2-24 Phase 4).
+// main parses the flags, builds the server and runs it until interrupted. It holds
+// no logic of the realm: that is server.go and game.go.
 func main() {
+	addr := flag.String("addr", "127.0.0.1:8080", "address to listen on")
+	seed := flag.Uint64("seed", 1, "seed of the world")
+	pace := flag.Duration("pace", 0, "step the world once every pace (0: only POST /v1/step steps it)")
+	state := flag.String("state", "", "checkpoint file: restored at start if it exists, written by POST /v1/checkpoint?save=true")
+	flag.Parse()
+
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	cfg, took, err := LoadTimed()
-	if err != nil {
-		logger.Error("load the realm pack", slog.Any("error", err))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	if err := serve(ctx, logger, *addr, *seed, *pace, *state); err != nil {
+		logger.Error("realm stopped", slog.Any("error", err))
+		stop()
 		os.Exit(1)
 	}
-	logger.Info("realm pack loaded", slog.Int("regions", len(cfg.Regions)), slog.Duration("solve", took))
+}
+
+// serve runs the server on addr until ctx is done. There is no write timeout: a
+// POST /v1/step of 1 000 ticks answers after about a minute.
+func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, pace time.Duration, state string) error {
+	s, err := NewServer(seed, state, logger)
+	if err != nil {
+		return err
+	}
+	if pace > 0 {
+		clock := time.NewTicker(pace)
+		defer clock.Stop()
+		go s.Pace(ctx, clock.C)
+	}
+	srv := &http.Server{
+		Addr: addr, Handler: s,
+		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute, IdleTimeout: time.Minute,
+	}
+	go func() {
+		<-ctx.Done()
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(sctx); err != nil {
+			logger.Error("shut the server down", slog.Any("error", err))
+		}
+	}()
+	logger.Info("realm listening", slog.String("addr", addr), slog.Uint64("seed", seed))
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
 }

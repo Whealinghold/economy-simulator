@@ -54,6 +54,9 @@ type Game struct {
 	regions   map[string]economysim.RegionID
 	roles     map[string]economysim.RoleID
 	goods     map[string]economysim.CommodityID
+	recipes   map[string]economysim.RecipeID
+	names     names
+	ring      *eventRing
 	player    economysim.AgentID
 	hasPlayer bool
 }
@@ -98,6 +101,11 @@ func (g *Game) index() {
 	for i, c := range c.Commodities {
 		g.goods[c.ID] = economysim.CommodityID(i)
 	}
+	g.recipes = make(map[string]economysim.RecipeID, len(c.Recipes))
+	for i, r := range c.Recipes {
+		g.recipes[r.ID] = economysim.RecipeID(i)
+	}
+	g.names = namesOf(c)
 }
 
 // Tick returns the world's tick.
@@ -111,12 +119,18 @@ func (g *Game) Tick() int64 {
 // the game has no clock, so the call takes no context (architecture.md 12.3 lets
 // short CPU-bound calls go without; the caller bounds n).
 func (g *Game) Advance(n int64) (int64, error) {
+	return g.AdvanceContext(context.Background(), n)
+}
+
+// AdvanceContext is Advance that stops at a tick boundary when ctx is done, with the
+// ticks completed and the wrapped context error (architecture.md 12.3).
+func (g *Game) AdvanceContext(ctx context.Context, n int64) (int64, error) {
 	if n < 0 {
 		return 0, fmt.Errorf("advance %d ticks: %w", n, ErrBadInput)
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	done, err := g.w.Run(context.Background(), n)
+	done, err := g.w.Run(ctx, n)
 	if err != nil {
 		return done, fmt.Errorf("advance: %w", err)
 	}
@@ -155,6 +169,7 @@ func (g *Game) AddPlayer(p PlayerSpec) (economysim.AgentID, error) {
 		return economysim.NoAgent, fmt.Errorf("add the player: %w", err)
 	}
 	g.player, g.hasPlayer = id, true
+	g.ring.watch(id, true)
 	return id, nil
 }
 
@@ -276,5 +291,7 @@ func (g *Game) Restore(b []byte) error {
 		s, err := w.Agent(player)
 		g.player, g.hasPlayer = player, err == nil && s.External
 	}
+	g.ring.reset()
+	g.ring.watch(g.player, g.hasPlayer)
 	return nil
 }
