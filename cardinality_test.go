@@ -211,38 +211,76 @@ func (c *cardChecker) check(e economysim.Event) {
 	}
 }
 
+// checkCardinality runs cfg for 400 ticks on one seed with the recorder and checks every
+// event against the closed sets (see TestCardinality_EventAttributesTakeClosedValues).
+func checkCardinality(t *testing.T, cfg economysim.Config, seed uint64, opts []economysim.Option) {
+	t.Helper()
+	res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true, Extra: opts})
+	flows := map[string]bool{}
+	if cfg.Modules.MoneySupply != nil {
+		for _, f := range cfg.Modules.MoneySupply.Flows {
+			flows[f.ID] = true
+		}
+	}
+	c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: eventConstants(t), flows: flows, seen: map[string]int{}}
+	for _, e := range res.Events {
+		c.check(e)
+	}
+	for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Reason", "Cause", "Kind"} {
+		t.Logf("seed %d: %s checked %d times", seed, f, c.seen[f])
+	}
+	// Kind and Reason are always reachable; the others depend on collapse, so only these are required.
+	for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Kind"} {
+		if c.seen[f] == 0 {
+			t.Errorf("seed %d: no %s value was checked; the run exercised nothing", seed, f)
+		}
+	}
+}
+
 // TestCardinality_EventAttributesTakeClosedValues runs pack one for 400 ticks
 // on seeds 1 and 2 and checks that every event field that becomes a metric
-// attribute takes a value of the configuration (typed IDs below len of the
-// names table) or of a closed set (Side is Bid or Ask; Reason, Cause and Kind
-// are constants of event.go). The Reason check is weaker by design: Reason is
-// one Go type holding several closed sets, so a value need only be a member of
-// any Reason constant; a per-event partition is not attempted.
+// attribute takes a value of the configuration (typed IDs below len of the names
+// table) or of a closed set (Side is Bid or Ask; Reason, Cause and Kind are
+// constants of event.go). The Reason check is weaker by design: Reason is one Go
+// type holding several closed sets, so a value need only be a member of any Reason
+// constant; a per-event partition is not attempted.
 //
-// Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034 (the configuration of five waits for Stage 2, N-295).
+// Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034
 // Guard: a RecipeExecuted with a recipe ID out of range, or a Reason outside event.go.
 func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end: 2 x 400 ticks of pack one; skipped under -short")
 	}
-	consts := eventConstants(t)
 	cfg := loadValidPack(t, packOne...)
 	for _, seed := range []uint64{1, 2} {
 		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
-			res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true})
-			c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: consts, seen: map[string]int{}}
-			for _, e := range res.Events {
-				c.check(e)
-			}
-			for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Reason", "Cause", "Kind"} {
-				t.Logf("seed %d: %s checked %d times", seed, f, c.seen[f])
-			}
-			// Kind and Reason are always reachable; the others depend on collapse, so only these are required.
-			for _, f := range []string{"Region", "Commodity", "Role", "Recipe", "Side", "Kind"} {
-				if c.seen[f] == 0 {
-					t.Errorf("seed %d: no %s value was checked; the run exercised nothing", seed, f)
-				}
-			}
+			checkCardinality(t, cfg, seed, nil)
+		})
+	}
+}
+
+// TestPacks_FiveAndAllEventAttributesTakeClosedValues is the check of
+// TestCardinality_EventAttributesTakeClosedValues on the warm five (every module off) and
+// on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
+// Stage 2 (plan 2-24 Phase 2). The all-on row is the one that emits the events of the
+// modules (transport, outside node, migration, merchants, demand). It skips under -race with
+// the other 5 000-household runs, and its name starts with a prefix of gateFPrefixes.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034
+// Guard: a Region, Commodity or Mode ID out of range, or a Reason outside event.go and the
+// flows of the configuration, on an event of a module.
+func TestPacks_FiveAndAllEventAttributesTakeClosedValues(t *testing.T) {
+	t.Parallel()
+	skipFiveSized(t)
+	for _, row := range []struct {
+		pack   string
+		layers []string
+		opts   []economysim.Option
+	}{{"five", packFiveWarm, nil}, {"all", allLayers, allOptions()}} {
+		cfg := loadValidPack(t, row.layers...)
+		t.Run(row.pack, func(t *testing.T) {
+			t.Parallel()
+			checkCardinality(t, cfg, 1, row.opts)
 		})
 	}
 }

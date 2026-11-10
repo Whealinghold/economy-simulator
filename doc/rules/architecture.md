@@ -173,8 +173,10 @@ economy-sim/
                          detectors and seed rules, the experiment designs and
                          reductions, the calibration grid and record
   otelobserver/          separate module (own go.mod): Observer backed by OpenTelemetry
-  examples/<name>/       each example is its own module with its own go.mod; the
-                         first consumer's pack and a second, unrelated setting
+  examples/<name>/       each example is its own module with its own go.mod:
+                         inspector (a developer tool over the fixtures), realm (the
+                         first consumer's pack and a server) and colony (a second,
+                         unrelated setting)
   testdata/              fixtures shared across packages: chains/ (config
                          fixtures, including the reference chain), golden/
                          (off/, one directory per module, all/: 10.4; and, for a
@@ -1071,4 +1073,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 4be28c49fd7f21529d2f1a11
+RULE-TAG: d79910c50d25a671f1afbe74

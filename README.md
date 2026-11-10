@@ -113,7 +113,9 @@ The views and their keys are also shown across the top of the screen.
 The packs are in `testdata/chains/`: `one`, `two`, `three`, `five`, `famine` and
 `one-demand`. The inspector's flags, the meaning of every column and counter, and
 recipes for the common questions are in
-[examples/inspector/README.md](examples/inspector/README.md).
+[examples/inspector/README.md](examples/inspector/README.md). The inspector reads the
+fixtures of the repository. For a consumer that carries its own pack, a player, shocks and
+save and resume, see `examples/realm` (plan 2-24, not built yet).
 
 ## Develop
 
@@ -149,6 +151,8 @@ economy-sim/
 ├── testdata/chains/     the reference supply chains (the packs) and their expected results
 ├── testdata/golden/     golden files
 ├── examples/inspector/  the CLI and terminal UI (its own module)
+├── examples/realm/      the first consumer: its pack, a server, save and resume (its own module; plan 2-24, not built yet)
+├── examples/colony/     a second, unrelated setting (its own module; plan 2-24, not built yet)
 └── doc/                 overview, vision, specs, ADRs, rules, roadmap, notes
 ```
 
