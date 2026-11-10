@@ -218,6 +218,11 @@ func (e Spec) validateDesign(r *report) {
 }
 
 func (e Spec) validateNames(r *report) {
+	e.validateCriteria(r, e.validateMeasureNames(r))
+}
+
+// validateMeasureNames checks the measures and returns the set of their names.
+func (e Spec) validateMeasureNames(r *report) map[string]bool {
 	names := map[string]bool{}
 	for i, m := range e.Measures {
 		if names[m.Name] {
@@ -228,6 +233,11 @@ func (e Spec) validateNames(r *report) {
 			r.add(ErrUnknownMeasure, "nil", "a function", idx("Measures", i), "Fn")
 		}
 	}
+	return names
+}
+
+// validateCriteria checks the criteria against the names of the measures.
+func (e Spec) validateCriteria(r *report, names map[string]bool) {
 	crit := map[string]bool{}
 	for i, c := range e.Criteria {
 		if crit[c.Name] {

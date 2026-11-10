@@ -173,16 +173,24 @@ func Elasticity(r Result, measure string, factor, level int) (Sensitivity, error
 	}
 	y0, n0 := r.sum(base, m)
 	yl, nl := r.sum(at, m)
-	var x0, xl int64
-	switch f := r.firstOf(factor); {
-	case f != nil && level >= 0 && level < len(f): // an explicit factor: Values is the level index
-		x0, xl = f[0], f[level]
-	case f == nil && factor < len(r.Points[base].Values) && factor < len(r.Points[at].Values):
-		x0, xl = r.Points[base].Values[factor], r.Points[at].Values[factor]
-	default: // a hand-built Result: the level or the values are not there
+	x0, xl, ok := r.knobValues(factor, level, base, at)
+	if !ok { // a hand-built Result: the level or the values are not there
 		return Sensitivity{}, fmt.Errorf("elasticity: factor %d level %d: %w", factor, level, ErrUnknownRun)
 	}
 	return elasticity(y0, n0, yl, nl, x0, xl), nil
+}
+
+// knobValues returns the knob's value at the baseline and at the level, and false
+// when the result does not have them.
+func (r Result) knobValues(factor, level, base, at int) (x0, xl int64, ok bool) {
+	f := r.firstOf(factor)
+	switch {
+	case f != nil && level >= 0 && level < len(f): // an explicit factor: Values is the level index
+		return f[0], f[level], true
+	case f == nil && factor < len(r.Points[base].Values) && factor < len(r.Points[at].Values):
+		return r.Points[base].Values[factor], r.Points[at].Values[factor], true
+	}
+	return 0, 0, false
 }
 
 // firstOf returns the first-change values of an explicit factor, or nil for a

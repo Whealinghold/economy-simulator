@@ -242,12 +242,7 @@ func (e Spec) worldOptions(k Key) []economysim.Option {
 // cancelled context it returns the records so far and the wrapped context
 // error (spec-experiments.md 5.2.1, 5.2.3).
 func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
-	var rc runConfig
-	for _, o := range opts {
-		if o != nil {
-			o(&rc)
-		}
-	}
+	rc := newRunConfig(opts)
 	units, err := Plan(e)
 	if err != nil {
 		return nil, err
@@ -273,14 +268,31 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 		if err != nil {
 			return append(out, e.priorAfter(prior, units, u)...), err
 		}
-		for _, r := range recs {
-			if rc.record != nil {
-				rc.record(r)
-			}
-		}
+		rc.emit(recs)
 		out = append(out, recs...)
 	}
 	return out, nil
+}
+
+// newRunConfig applies the non-nil options in order.
+func newRunConfig(opts []RunOption) runConfig {
+	var rc runConfig
+	for _, o := range opts {
+		if o != nil {
+			o(&rc)
+		}
+	}
+	return rc
+}
+
+// emit hands each record to the record callback, if there is one.
+func (rc runConfig) emit(recs []Record) {
+	if rc.record == nil {
+		return
+	}
+	for _, r := range recs {
+		rc.record(r)
+	}
 }
 
 // priorOf returns the prior records of the keys of u, in key order, and whether
