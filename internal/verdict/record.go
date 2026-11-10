@@ -203,7 +203,7 @@ func ClaimOf(points []StabilityPoint) string {
 	others := map[string]bool{}
 	for _, p := range points {
 		hasDefault = hasDefault || p.Name == "default"
-		if p.Name != "default" {
+		if p.Name == "lower" || p.Name == "upper" { // any other name is not a neighbour
 			others[p.Name] = true
 		}
 		for _, c := range p.Checks {

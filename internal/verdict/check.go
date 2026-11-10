@@ -153,7 +153,8 @@ func Check(check string, got []Conjunct) Report {
 		switch c.Outcome {
 		case Failed:
 			rep.Failed = append(rep.Failed, c)
-		case Open:
+		case Held:
+		default: // Open, or a value outside the three: nothing was asserted
 			rep.Open = append(rep.Open, c)
 		}
 	}
