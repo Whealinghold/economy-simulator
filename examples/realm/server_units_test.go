@@ -300,3 +300,59 @@ func TestServe_NegativePaceIsRefused(t *testing.T) {
 		t.Errorf("Accept() after serve refused = nil, want the listener closed")
 	}
 }
+
+// TestWriteAtomic_KeepsTheModeOfTheFileItReplaces verifies that replacing a state file
+// keeps its permission bits.
+//
+// Guard: os.CreateTemp makes the temporary file 0600, so without the chmod a file an
+// operator opened to a backup group would be closed again by the first save.
+func TestWriteAtomic_KeepsTheModeOfTheFileItReplaces(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "x.ckpt")
+	if err := os.WriteFile(path, []byte("old"), 0o640); err != nil {
+		t.Fatalf("WriteFile() = %v, want nil", err)
+	}
+	if err := os.Chmod(path, 0o640); err != nil { // the umask may have cleared bits
+		t.Fatalf("Chmod() = %v, want nil", err)
+	}
+	if err := writeAtomic(path, []byte("new")); err != nil {
+		t.Fatalf("writeAtomic() = %v, want nil", err)
+	}
+	if fi, err := os.Stat(path); err != nil || fi.Mode().Perm() != 0o640 {
+		t.Errorf("mode after writeAtomic = %v (error %v), want -rw-r-----", fi.Mode().Perm(), err)
+	}
+}
+
+// TestServer_PacedStepPanicIsAnError verifies that a library panic during a paced step
+// comes back as an error and gives the token back, not as a crash of the process.
+//
+// Guard: only ServeHTTP recovers; the Pace goroutine has no request to answer, so an
+// unrecovered panic there would end the server and lose its unsaved state.
+func TestServer_PacedStepPanicIsAnError(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.game = nil // the next advance dereferences it
+	if _, err := s.paced(context.Background()); err == nil {
+		t.Errorf("paced step over a broken game = nil, want an error")
+	}
+	if !s.mu.TryLock() {
+		t.Errorf("world lock still held after the panic, want it released")
+	}
+}
+
+// TestServer_WrongMethodOnAKnownPathIsJSON verifies that a wrong method on a known path
+// answers the JSON 404 like any unknown route, not the mux's plain-text 405.
+//
+// Guard: clients decode every refusal as errorBody; the catch-all route must keep
+// matching every method.
+func TestServer_WrongMethodOnAKnownPathIsJSON(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	for _, m := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+		var e errorBody
+		callJSON(t, s, m, "/v1/step", "", http.StatusNotFound, &e)
+		if e.Error != "ErrUnknownName" {
+			t.Errorf("%s /v1/step: error = %q, want ErrUnknownName", m, e.Error)
+		}
+	}
+}

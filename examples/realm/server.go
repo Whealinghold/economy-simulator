@@ -281,7 +281,7 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 		if !s.acquire() {
 			continue // a step or restore runs: skip this tick of the clock
 		}
-		_, err := s.advance(ctx, 1)
+		_, err := s.paced(ctx)
 		s.release()
 		if err != nil {
 			if ctx.Err() == nil {
@@ -290,6 +290,17 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 			return
 		}
 	}
+}
+
+// paced is one paced step; a library panic is an error here, not a crash of the process
+// (handlers get the same from ServeHTTP).
+func (s *Server) paced(ctx context.Context) (n int64, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("paced step panicked: %s", clip(fmt.Sprint(p)))
+		}
+	}()
+	return s.advance(ctx, 1)
 }
 
 // advance runs n ticks under the write lock, released even if the library panics, and
@@ -687,6 +698,9 @@ func (s *Server) step(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.release()
+	// ReadTimeout would expire the connection's background read during a long step and
+	// net/http then cancels the request context; the step has no body left to time out.
+	_ = http.NewResponseController(w).SetReadDeadline(time.Time{})
 	done, err := s.advance(r.Context(), n)
 	tick := s.tick.Load()
 	if err != nil {
@@ -739,10 +753,14 @@ func writeAtomic(path string, b []byte) error {
 	if err != nil {
 		return err
 	}
+	var merr error
+	if fi, err := os.Stat(path); err == nil { // keep the mode an operator gave the file (CreateTemp makes 0600)
+		merr = f.Chmod(fi.Mode().Perm())
+	}
 	_, werr := f.Write(b)
 	serr := f.Sync() // a crash after the rename must not leave an empty state file
 	cerr := f.Close()
-	if err := errors.Join(werr, serr, cerr); err != nil {
+	if err := errors.Join(merr, werr, serr, cerr); err != nil {
 		return errors.Join(err, os.Remove(f.Name()))
 	}
 	if err := os.Rename(f.Name(), path); err != nil {

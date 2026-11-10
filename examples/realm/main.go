@@ -54,14 +54,11 @@ func serve(ctx context.Context, logger *slog.Logger, l net.Listener, seed uint64
 		return errors.Join(err, l.Close())
 	}
 	addr := l.Addr().String()
-	// Bound to one host, only the names a local client uses and that host may reach the server.
-	hosts := []string{"localhost", "127.0.0.1", "::1"}
-	if h, _, err := net.SplitHostPort(addr); err == nil && h != "" {
-		hosts = append(hosts, h)
-	}
+	// Bound to one host, only the names a local client uses and that host may reach the
+	// server. -addr :8080 listens on every interface: any Host may be a name of this machine.
 	if h, _, err := net.SplitHostPort(addr); err != nil || (h != "" && h != "0.0.0.0" && h != "::") {
-		s.AllowHosts(hosts...)
-	} // -addr :8080 listens on every interface: any Host may be a legitimate name of this machine
+		s.AllowHosts("localhost", "127.0.0.1", "::1", h)
+	}
 	if pace > 0 {
 		clock := time.NewTicker(pace)
 		defer clock.Stop()
