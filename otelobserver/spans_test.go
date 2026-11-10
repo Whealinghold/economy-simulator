@@ -2,6 +2,7 @@ package otelobserver_test
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -92,6 +93,12 @@ func TestSpans_ErrorStatusOnFailed(t *testing.T) {
 	obs.Observe(economysim.RunStarted{})
 	obs.Observe(economysim.RunEnded{})
 	steps, runs := byName(rec, "economysim.step"), byName(rec, "economysim.run")
+	if d := steps[0].Status().Description; d != "step failed" {
+		t.Errorf("failed step status description = %q, want %q", d, "step failed")
+	}
+	if d := runs[0].Status().Description; d != "run failed" {
+		t.Errorf("failed run status description = %q, want %q", d, "run failed")
+	}
 	wantSteps := []codes.Code{codes.Error, codes.Error, codes.Unset}
 	for i, w := range wantSteps {
 		if g := steps[i].Status().Code; g != w {
@@ -223,4 +230,111 @@ func TestSpans_EveryEntityEventIsOneSpanEvent(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("span events = %v, want %v", got, want)
 	}
+}
+
+// TestSpans_OpenStepEndsWithRunBoundary verifies that a step left open when the
+// run ends, or when the next run starts, is ended with an error and is not
+// carried into the next run, and that the run span records how it ended.
+//
+// Requirement: FR-OBS-055
+func TestSpans_OpenStepEndsWithRunBoundary(t *testing.T) {
+	obs, rec := spanHarness(t)
+	obs.Observe(economysim.RunStarted{Ticks: 4})
+	obs.Observe(economysim.TickStarted{Tick: 1}) // a panic: no TickEnded
+	obs.Observe(economysim.RunEnded{Completed: 3, Cancelled: true})
+	obs.Observe(economysim.RunStarted{})
+	obs.Observe(economysim.TickStarted{Tick: 5})
+	obs.Observe(economysim.RunStarted{})
+	obs.Observe(economysim.TickStarted{Tick: 6})
+	obs.Observe(economysim.TickEnded{Tick: 6})
+	obs.Observe(economysim.RunEnded{})
+	steps, runs := byName(rec, "economysim.step"), byName(rec, "economysim.run")
+	if len(steps) != 3 || len(runs) != 3 {
+		t.Fatalf("spans = %d steps, %d runs, want 3, 3", len(steps), len(runs))
+	}
+	checkOpenBoundary(t, steps, runs)
+}
+
+// checkOpenBoundary checks the spans of TestSpans_OpenStepEndsWithRunBoundary.
+func checkOpenBoundary(t *testing.T, steps, runs []sdktrace.ReadOnlySpan) {
+	t.Helper()
+	for i, s := range steps[:2] {
+		if s.Status().Code != codes.Error || s.Status().Description != "step did not end" {
+			t.Errorf("open step %d status = %v, want an error", i, s.Status())
+		}
+	}
+	if steps[2].Parent().SpanID() != runs[2].SpanContext().SpanID() {
+		t.Errorf("step of the last run has parent %v, want that run %v", steps[2].Parent().SpanID(), runs[2].SpanContext().SpanID())
+	}
+	for key, want := range map[string]int64{"economysim.completed": 3, "economysim.ticks": 4} {
+		if c, ok := attrOf(runs[0], key); !ok || c != want {
+			t.Errorf("run %s = %d, %v, want %d, true", key, c, ok, want)
+		}
+	}
+	if runs[1].Status().Description != "run did not end" || len(runs[0].Attributes()) != 3 {
+		t.Errorf("open run status = %v, first run attributes = %v, want %q and 3 attributes", runs[1].Status(), runs[0].Attributes(), "run did not end")
+	}
+}
+
+// TestSpans_EventAttributeKeys verifies the attribute keys of each span event,
+// and that an index equal to the length of its table leaves its attribute out.
+func TestSpans_EventAttributeKeys(t *testing.T) {
+	want := map[string]string{
+		"AgentSpawned":       "region role weight",
+		"AgentBankrupted":    "cause region role weight",
+		"WeightChanged":      "cause from region role to",
+		"RoleChanged":        "cause region role.from role.to weight",
+		"AgentRelocated":     "cause region.from region.to weight",
+		"ShipmentDispatched": "mode region.from region.to units",
+		"ShipmentArrived":    "mode region.from region.to",
+		"ContractFormed":     "commodity quantity region.from region.to",
+		"ContractSettled":    "cause commodity quantity region.from region.to",
+		"MigrationStarted":   "region.from region.to weight",
+	}
+	for _, idx := range []int{1, 3} { // 3 is the length of the region table: out of range
+		obs, rec := spanHarness(t)
+		f := &filler{idx: idx}
+		obs.Observe(economysim.TickStarted{})
+		for _, e := range allEvents {
+			if _, ok := want[eventName(e)[len("economysim."):]]; ok {
+				obs.Observe(f.filled(e))
+			}
+		}
+		obs.Observe(economysim.TickEnded{})
+		for i, ev := range rec.Ended()[0].Events() {
+			var keys []string
+			for _, kv := range ev.Attributes {
+				keys = append(keys, strings.TrimPrefix(string(kv.Key), "economysim."))
+			}
+			slices.Sort(keys)
+			exp := want[camel(strings.TrimPrefix(ev.Name, "economysim."))]
+			if idx == 3 {
+				exp = dropIDKeys(exp)
+			}
+			if got := strings.Join(keys, " "); got != exp {
+				t.Errorf("idx %d event %d %s attributes = %q, want %q", idx, i, ev.Name, got, exp)
+			}
+		}
+	}
+}
+
+// camel turns a snake case event name into its type name.
+func camel(s string) string {
+	var b strings.Builder
+	for _, w := range strings.Split(s, "_") {
+		b.WriteString(strings.ToUpper(w[:1]) + w[1:])
+	}
+	return b.String()
+}
+
+// dropIDKeys removes the attributes read from a table when every ID is out of
+// range: regions, roles, modes and commodities.
+func dropIDKeys(keys string) string {
+	var kept []string
+	for _, k := range strings.Fields(keys) {
+		if !strings.HasPrefix(k, "region") && !strings.HasPrefix(k, "role") && k != "mode" && k != "commodity" {
+			kept = append(kept, k)
+		}
+	}
+	return strings.Join(kept, " ")
 }

@@ -101,11 +101,20 @@ func TestSnapshot_FloorHeldIsExact(t *testing.T) {
 	s := economysim.Snapshot{Names: miniNames(), Roles: []economysim.RoleRow{
 		{Region: 0, Role: 0, Households: math.MaxInt64, HeldByFloor: math.MaxInt64 / 2},
 		{Region: 1, Role: 0, Households: 10, HeldByFloor: -1},
+		{Region: 2, Role: 0, Households: 1, HeldByFloor: 1},
+		{Region: 2, Role: 1, Households: 5, HeldByFloor: 0, HasExpected: true},
+		{Region: 1, Role: 1, Households: -1, HeldByFloor: 3},
+		{Region: 0, Role: 1, Households: 0, HeldByFloor: 0},
 	}}
 	h.obs.RecordSnapshot(s)
 	got := h.collect()
 	check(t, got, "welfare.floor_held", 4_999, "role", "k0", "region", "r0")
 	absent(t, got, "welfare.floor_held", "role", "k0", "region", "r1")
+	check(t, got, "welfare.floor_held", 10_000, "role", "k0", "region", "r2")
+	check(t, got, "welfare.floor_held", 0, "role", "k1", "region", "r2")
+	check(t, got, "role.viable", 0, "role", "k1", "region", "r2")
+	absent(t, got, "welfare.floor_held", "role", "k1", "region", "r1")
+	absent(t, got, "welfare.floor_held", "role", "k1", "region", "r0")
 }
 
 // TestSnapshot_HoldsBetweenCalls verifies that a value stays until the next

@@ -12,12 +12,13 @@ type snapNames struct {
 	commodity, region, role, recipe []string
 }
 
-// at is the attribute of place i of a name list, and false outside it.
-func at(key string, ss []string, i int) (attribute.KeyValue, bool) {
+// at is the attribute of place i of a name list, or the zero attribute (which
+// gauge drops) outside it.
+func at(key string, ss []string, i int) attribute.KeyValue {
 	if i < 0 || i >= len(ss) {
-		return attribute.KeyValue{}, false
+		return attribute.KeyValue{}
 	}
-	return attribute.String(key, ss[i]), true
+	return attribute.String(key, ss[i])
 }
 
 // gauge records v for an instrument at the attributes of a row; a nil attribute
@@ -55,9 +56,7 @@ func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 
 // pair is the attributes of a name of one list and a region.
 func (o *Observer) pair(key string, names []string, id int, regions []string, region int) []attribute.KeyValue {
-	a, _ := at(key, names, id)
-	b, _ := at(keyRegion, regions, region)
-	return []attribute.KeyValue{a, b}
+	return []attribute.KeyValue{at(key, names, id), at(keyRegion, regions, region)}
 }
 
 func (o *Observer) recordMarket(n snapNames, m economysim.MarketRow) {
@@ -71,7 +70,7 @@ func (o *Observer) recordMarket(n snapNames, m economysim.MarketRow) {
 }
 
 func (o *Observer) recordRegion(n snapNames, r economysim.RegionRow) {
-	region, _ := at(keyRegion, n.region, int(r.Region))
+	region := at(keyRegion, n.region, int(r.Region))
 	sector := func(i int, v economysim.Money) {
 		o.gauge(iMoneySupply, int64(v), region, attribute.String(keySector, closed[keySector][i]))
 	}
