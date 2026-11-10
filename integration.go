@@ -249,6 +249,7 @@ func (w *World) RemoveAgent(id AgentID) error {
 	if err := w.removeAgent(a, CauseConsumer); err != nil {
 		invariant("a removal that fits the estate failed: " + err.Error())
 	}
+	w.integ.dropView(id)
 	w.integ.unwatch(int32(id)) // so a restore, which rebuilds the list from live agents, agrees
 	return nil
 }
@@ -271,16 +272,20 @@ func (w *World) estateFits(a *agent) bool {
 	// entry fits is read, so the map order decides nothing.
 	credit := map[int]int64{estate: mine.Balance}
 	refund := map[int]int64{}
+	toEstate := mine.Balance // what the estate of the agent's region gets by EstateMoney
 	if w.mer != nil && w.mer.on {
 		for _, ct := range w.mer.open {
 			if ct.deliverer != a.id {
 				continue
 			}
 			to := w.estates.account(ct.to)
-			if w.liveAgent(ct.payer) {
+			back := int64(ct.price) * int64(ct.qty)
+			if ct.payer == a.id {
+				to = estate // the refund passes through the agent's account to its estate
+				toEstate += back
+			} else if w.liveAgent(ct.payer) {
 				to = w.agents[ct.payer].account
 			}
-			back := int64(ct.price) * int64(ct.qty)
 			credit[to] += back
 			refund[int(ct.to)] += back
 		}
@@ -299,7 +304,7 @@ func (w *World) estateFits(a *agent) bool {
 			return false
 		}
 	}
-	if mine.Balance > 0 && !w.ledger.FlowFits(int(region), ledger.EstateMoney, ledger.Money, mine.Balance) {
+	if toEstate > 0 && !w.ledger.FlowFits(int(region), ledger.EstateMoney, ledger.Money, toEstate) {
 		return false
 	}
 	lots, err := w.ledger.AppendLots(nil, a.account)
@@ -440,7 +445,7 @@ func (w *World) Direct(id AgentID, d Directive) error {
 // mailbox is the directive as the agent keeps it: a deep copy, so the caller's
 // slices can change after the call, or nil for a directive with nothing in it.
 func (d *Directive) mailbox() *Directive {
-	if d.Job == nil && len(d.Intents) == 0 && len(d.Discards) == 0 && len(d.Hold) == 0 {
+	if d == nil || d.Job == nil && len(d.Intents) == 0 && len(d.Discards) == 0 && len(d.Hold) == 0 {
 		return nil
 	}
 	c := Directive{Sticky: d.Sticky}
@@ -1140,6 +1145,7 @@ func (w *World) Relocate(id AgentID, to RegionID) error {
 	}
 	w.reseedAtArrival(a, to)
 	a.roleSince = w.Tick()
+	w.integ.dropView(a.id) // the rumours were read in the old region
 	return nil
 }
 
@@ -1206,8 +1212,13 @@ func (w *World) recordRumours(v *AgentView, a *agent) {
 // and the last view is dropped, so neither comes back with a later role.
 func (w *World) externalRoleChanged(a *agent) {
 	a.directive = nil
-	if int(a.id) < len(w.integ.views) {
-		w.integ.views[a.id].has = false
+	w.integ.dropView(a.id)
+}
+
+// dropView forgets the last view of an agent and frees its rumours.
+func (s *integrationState) dropView(id AgentID) {
+	if int(id) < len(s.views) {
+		s.views[id] = rumourView{}
 	}
 }
 

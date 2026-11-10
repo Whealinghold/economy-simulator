@@ -318,3 +318,22 @@ func TestRead_RefusesUnorderedNamesAndTruncatedLists(t *testing.T) {
 		})
 	}
 }
+
+// TestRestore_RefusesMailboxOfUndirectedExternal verifies that a checkpoint giving a
+// mailbox to an external agent whose strategy is not directed is refused as
+// ErrCheckpointCorrupt, as Direct refuses it with ErrNotDirected.
+//
+// Guard: without it a forged checkpoint restores a directive nothing reads and a
+// later save keeps it.
+func TestRestore_RefusesMailboxOfUndirectedExternal(t *testing.T) {
+	t.Parallel()
+	w, _, _, scripted, _, _ := directWorld(t)
+	w.agents[scripted].directive = &Directive{Hold: []CommodityID{dcBread}}
+	c, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	if _, err := RestoreWorld(w.Config(), c, WithStrategy("script", &extScript{plan: map[AgentID][]Intent{}})); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("RestoreWorld(mailbox on a scripted agent) error = %v, want ErrCheckpointCorrupt", err)
+	}
+}

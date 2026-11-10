@@ -602,6 +602,10 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 	}
 	if init.external {
 		init.strategy, _ = w.strategyIndex(names[rec.nameIdx])
+		if rec.directive != nil && !isDirected(w.strategyOf(&agent{strategy: init.strategy})) {
+			r.Failf("agent %d holds a directive but its strategy %q is not directed", rec.id, names[rec.nameIdx])
+			return rec.id
+		}
 	}
 	a := newAgent(init, w.roles.row(RoleID(rec.role)), &w.recipes)
 	a.unfed, a.hunger, a.privation, a.directive = rec.unfed, rec.hunger, rec.privation, rec.directive
@@ -789,8 +793,8 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	}
 	w.fillJob(&st, a)
 	w.fillBeliefs(&st, a)
-	if a.directive != nil {
-		st.HasDirective, st.Directive = true, *a.directive.mailbox()
+	if d := a.directive.mailbox(); d != nil {
+		st.HasDirective, st.Directive = true, *d
 	}
 	if rv, ok := w.lastView(a); ok {
 		st.Rumours, st.RumoursTick = slices.Clone(rv.rumours), rv.tick

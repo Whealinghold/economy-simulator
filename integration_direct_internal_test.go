@@ -521,3 +521,22 @@ func TestExternalRoleChanged_DropsMailboxAndView(t *testing.T) {
 		t.Errorf("after externalRoleChanged: directive %v, view kept %v, strategy %d (was %d), want nil, false, unchanged", a.directive, w.integ.views[id].has, a.strategy, strategy)
 	}
 }
+
+// TestAgent_EmptyDirectiveDoesNotPanic verifies that Agent reports no directive
+// for a nil or empty mailbox (the test seam can plant one) instead of dereferencing
+// the nil copy mailbox gives.
+//
+// Guard: a query on consumer-reachable state must not panic.
+func TestAgent_EmptyDirectiveDoesNotPanic(t *testing.T) {
+	t.Parallel()
+	var d *Directive
+	if d.mailbox() != nil {
+		t.Errorf("(*Directive)(nil).mailbox() = non-nil, want nil")
+	}
+	w, _, id, _, _, _ := directWorld(t)
+	w.agents[id].directive = &Directive{Sticky: true}
+	st, err := w.Agent(id)
+	if err != nil || st.HasDirective {
+		t.Errorf("Agent(%d) with an empty directive = HasDirective %v, %v, want false, nil", id, st.HasDirective, err)
+	}
+}
