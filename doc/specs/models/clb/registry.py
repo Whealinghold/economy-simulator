@@ -67,7 +67,7 @@ print(f"     K and D rows {len(kd)}: search kinds {srch}")
 UNITS = {"bp", "ticks", "units", "minor", "count", "years", "share", "name", "flag", "list"}
 CLASSES = {"K", "D", "S", "P"}
 STAGES = {f"C{i}" for i in range(1, 10)} | {"-"}
-FLAGS = re.compile(r"^(in|chk|out|tbl|d|z|v1x|off=(min|max|flat|-|\d+))$")
+FLAGS = re.compile(r"^(in|chk|out|tbl|z|v1x|off=(min|max|flat|-|\d+))$")
 MOVE = re.compile(r"^([A-Z]\d\d)/([A-Za-z0-9_.]+):([+\-0~][SMHE]|\?)$")
 
 # ---- IND presets and the closed field spelling ------------------------------------
@@ -186,6 +186,7 @@ for m in re.finditer(r"^\| `([A-Z]{3})` \| `(spec-[a-z\-]+\.md)`", README, re.M)
 code_to_file["CUR"] = "spec-currency.md"
 code_to_file["CAR"] = "spec-carriage.md"
 
+SCOPE_ALIAS = {"WorldParams": "World"}
 # README owner table: (scope token, parameter) -> owner file and ALL its sections ("section 4.2" or
 # "sections 4.2, 11.1"); a row that parses no section FAILS (11.1 "owner")
 sect = README.split("## Parameter owners", 1)[1].split("## New domain terms", 1)[0]
@@ -196,6 +197,7 @@ for line in sect.splitlines():
     cs = [c.strip() for c in line.strip().strip("|").split("|")]
     param = re.sub(r" \(.*", "", re.match(r"`([^`]+)`", cs[0]).group(1))
     scope = re.split(r";| \(", cs[1])[0].strip()
+    scope = SCOPE_ALIAS.get(scope, scope)   # the owner table says WorldParams, the registry World (4.7)
     om = re.search(r"`(spec-[a-z\-]+\.md)` sections? ([0-9][0-9., and]*)", cs[2])
     if om:
         secs = re.findall(r"[0-9]+(?:\.[0-9]+)*", om.group(2))
@@ -206,7 +208,7 @@ for line in sect.splitlines():
     # a remark "(also <Scope>, ...)" names a second scope of the same row (4.7): its own pair
     am = re.search(r"\(also ([A-Z][A-Za-z ]*?)[,)]", cs[1])
     if am:
-        owner_pairs[(am.group(1).strip(), param)] = owner_pairs[(scope, param)]
+        owner_pairs[(SCOPE_ALIAS.get(am.group(1).strip(), am.group(1).strip()), param)] = owner_pairs[(scope, param)]
 check("every README owner row parses an owner file and a section", not no_section, str(no_section[:10]))
 
 
@@ -325,7 +327,7 @@ print(f"     the cut removed a level on {len(cut_rows)} rows of the owners' defa
 
 # `out` only where the solver writes (VIA 8, REF position 4)
 OUT_OK = {("Commodity", "ReferencePrice"), ("RegionPrice", "Price"), ("WarmStart", "Prices"), ("WarmStart", "Wages"),
-          ("WarmStart", "Groups"), ("Config section", "WarmStart")}      # not Pools: the table may seed it (VIA 8.3.3)
+          ("WarmStart", "Groups")}      # not Pools: the table may seed it (VIA 8.3.3)
 out_bad = []
 for r in knob_rows:
     key = r[1].rpartition(".")
@@ -349,22 +351,22 @@ for _ln in _via.splitlines():
 check("VIA 11 has a table of paths", len(via_rows) >= 10, str(len(via_rows)))
 STAR = "*"
 PATHMAP = {   # the table-prefix rule of EXP 11.3.1 and the snake form, written out for each path of the table
-    "world.upkeep": [("World", "Upkeep")], "role.<id>.upkeep": [("Role", "Upkeep")],
+    "world.upkeep": [("World", "Upkeep"), ("Item", STAR)], "role.<id>.upkeep": [("Role", "Upkeep"), ("Item", STAR)],
     "region.<id>.extra_upkeep": [("Region", "ExtraUpkeep")],
     "region.<id>.group.<role>.households": [("Group", "Households")],
-    "recipe.<id>.duration": [("Recipe", "Duration")], "recipe.<id>.inputs": [("Recipe", "Inputs")],
-    "recipe.<id>.outputs": [("Recipe", "Outputs"), ("Recipe output", STAR)],
-    "recipe.<id>.requires": [("Recipe", "Requires"), ("Recipe tool", STAR)],
-    "recipe.<id>.draws": [("Recipe", "Draws")], "recipe.<id>.sited": [("Recipe", "Sited")],
+    "recipe.<id>.duration": [("Recipe", "Duration")], "recipe.<id>.inputs": [("Recipe", "Inputs"), ("Item", STAR)],
+    "recipe.<id>.outputs": [("Recipe", "Outputs"), ("Output", STAR)],
+    "recipe.<id>.requires": [("Recipe", "Requires"), ("Tool", STAR)],
+    "recipe.<id>.draws": [("Recipe", "Draws"), ("Draw", STAR)], "recipe.<id>.sited": [("Recipe", "Sited")],
     "commodity.<id>.durability": [("Commodity", "Durability")], "commodity.<id>.shelf_life": [("Commodity", "ShelfLife")],
     "commodity.<id>.raw": [("Commodity", "Raw")],
-    "region.<id>.yield.<recipe>": [("Yield", "All"), ("Yield", "Seasons"), ("Region and recipe", "YieldProfile")],
-    "calendar.*": [("Calendar", STAR)],
+    "region.<id>.yield.<recipe>": [("YieldProfile", "All"), ("YieldProfile", "Seasons"), ("SeasonYield", STAR), ("Config", "Yields")],
+    "calendar.*": [("Calendar", STAR), ("Month", STAR), ("Season", STAR)],
     "role.<id>.expected_work_ticks": [("Role", "ExpectedWorkTicks")], "role.<id>.recipes": [("Role", "Recipes")],
     "modules.resources.resource.<id>.*": [("Resource", STAR), ("AbundanceKnot", STAR), ("SeasonRegen", STAR)],
     "modules.resources.endowment.<region>.<resource>.*": [("Endowment", STAR)],
     "modules.resources.horizon_years": [("Resources", "HorizonYears")],
-    "modules.demand.want.<id>.*": [("Want", STAR), ("Want item", STAR)],
+    "modules.demand.want.<id>.*": [("Want", STAR), ("WantItem", STAR)],
     "modules.demand.taste.<role>.<want>.*": [("Taste", STAR)], "modules.demand.region_taste.<region>.<want>.*": [("RegionTaste", STAR)],
     "modules.transport.mode.*": [("Mode", STAR)], "region.<id>.edge.<id>.distance": [("Edge", "Distance")],
     "modules.external.node.*": [("OutsideNode", STAR), ("OutsideGate", STAR), ("OutsideLine", STAR),
@@ -406,7 +408,7 @@ for tok, kind in via_paths:
         (exp_in if kind == "in" else exp_chk).update(pairs)
 KEYS = {"ID", "Region", "Role", "Recipe", "Resource", "Season", "Want", "From", "To", "Commodity"}
 CONTAINERS = {"Wants", "Flows", "Modes", "Nodes", "Lines", "Gates", "Buy", "Sell", "Resources", "Endowments",
-              "Edges", "RegionPrices", "Items", "Roles", "Regions", "WarmStart"}
+              "Edges", "RegionPrices", "Items", "Roles", "Regions", "WarmStart", "Yields", "Tastes", "RegionTastes"}
 flag_bad = []
 for (sc, fld), fl in sorted(reg_fields.items()):
     if fld in KEYS or fld in CONTAINERS or sc == "Solve option":
@@ -447,7 +449,7 @@ for line in cat37.splitlines():
     nested_spans = []
     for m in re.finditer(r"`([A-Z][A-Za-z]+)(?:\[\])?` \(((?:[^()]|\([^()]*\))*)\)", text):
         nested_spans.append((m.start(), m.end()))
-        inner = m.group(2)
+        inner = re.sub(r"\(the ids of [^()]*\)", "", m.group(2))   # a remark naming a type, not a field
         if inner.strip() == "p":
             continue
         for t in re.finditer(r"`([A-Z][A-Za-z]+)`(?!\s*\(p\))", inner):
@@ -470,7 +472,7 @@ def singular(n):
 
 # a table of the catalogue whose registry scopes are not named for it (the catalogue flattens deeper tables)
 ALIAS = {"DeathSchedule": ["knot"], "BirthSchedule": ["knot"], "Flows": ["moneyflow", "flowtarget"], "Nodes": ["outside", "seasonfactor"],
-         "Modes": ["mode"], "Resources": ["resource", "abundance", "seasonregen"], "Requires": ["recipe tool"],
+         "Modes": ["mode"], "Resources": ["resource", "abundance", "seasonregen"], "Requires": ["tool"], "Scale": ["group"],
          "Wants": ["want"], "Clearing": ["world"]}
 # tokens of a sub-structure that the catalogue flattens into its parent's parentheses: checked by name only
 FLATTENED = {"Region", "Role", "Kind", "Season", "BP", "Share", "Factor", "Commodity", "Quantity", "Buy", "Sell", "ID", "Window"}

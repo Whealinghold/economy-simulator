@@ -1,0 +1,70 @@
+calibration 1
+pack one  lineage <hex16>  stage C4a  attempt 1  block 1
+commit dry-run  parent -
+config base <hex16>  chosen same
+document base.toml <hex16>
+document one.toml <hex16>
+document warm-one.toml <hex16>
+experiment screen design oat points 5 replicas 3 seed0 101 seeding same ticks 400 transient 100 every 100 salt 0 render <hex16>
+factor cost_floor key World.CostFloor grid geo base 7000 lower 3500 upper 14000 edge none
+factor belief_evidence_share key World.BeliefEvidenceShare grid lin1000 base 5000 lower 4000 upper 6000 edge none
+measure ran fact none token - class R kind counter
+measure cost_floor fact none token - class R kind counter
+criterion all measure ran op AtLeast a 1 b 0 target report
+feasible 5 of 5
+chosen 0 distance 0
+fact P01 class X key - target none values min 0 median 0 max 0 outside - result pass
+fact P02 class B key - target set values min 0 median 0 max 0 outside - result pass
+fact P03 class B key - target working values min 0 median 0 max 0 outside - result pass
+detector R5a none working yes onset -
+decision stop
+# calibration C4a attempt 1 of lineage 5a1c0e44: see testdata/calibration/one/c4a-1.txt
+---
+calibration 1
+pack one  lineage <hex16>  stage C4a  attempt 1  block 1
+commit dry-run  parent -
+config base <hex16>  chosen same
+document base.toml <hex16>
+document one.toml <hex16>
+document warm-one.toml <hex16>
+experiment screen design oat points 5 replicas 3 seed0 101 seeding same ticks 400 transient 100 every 100 salt 0 render <hex16>
+factor cost_floor key World.CostFloor grid geo base 7000 lower 3500 upper 14000 edge none
+factor belief_evidence_share key World.BeliefEvidenceShare grid lin1000 base 5000 lower 4000 upper 6000 edge none
+measure ran fact none token - class R kind counter
+measure cost_floor fact none token - class R kind counter
+criterion none measure ran op AtLeast a 2 b 0 target report
+feasible 0 of 5
+chosen none distance 0
+fact P01 class X key - target none values min 0 median 0 max 0 outside - result pass
+fact P02 class B key - target set values min 0 median 0 max 0 outside - result pass
+fact P03 class B key - target working values min 0 median 0 max 0 outside - result pass
+detector R5a none working yes onset -
+decision revert
+# calibration C4a attempt 1 of lineage 5a1c0e44: see testdata/calibration/one/c4a-1.txt
+---
+calibration 1
+pack one  lineage <hex16>  stage C4a  attempt 1  block 1
+commit dry-run  parent -
+config base <hex16>  chosen <hex16>
+document base.toml <hex16>
+document one.toml <hex16>
+document warm-one.toml <hex16>
+experiment screen design oat points 5 replicas 3 seed0 101 seeding same ticks 400 transient 100 every 100 salt 0 render <hex16>
+experiment confirm design grid points 2 replicas 3 seed0 1 seeding same ticks 400 transient 100 every 100 salt 0 render <hex16>
+factor cost_floor key World.CostFloor grid geo base 7000 lower 3500 upper 14000 edge none
+factor belief_evidence_share key World.BeliefEvidenceShare grid lin1000 base 5000 lower 4000 upper 6000 edge none
+measure ran fact none token - class R kind counter
+measure cost_floor fact none token - class R kind counter
+criterion lower measure cost_floor op AtMost a 6999 b 0 target report
+feasible 1 of 5
+chosen 1 distance 1
+set World.CostFloor 3500
+confirm seeds 1..3 control yes
+fact P01 class X key - target none values min 0 median 0 max 0 outside - result pass
+fact P02 class B key - target set values min 0 median 0 max 0 outside - result pass
+fact P03 class B key - target working values min 0 median 0 max 0 outside - result pass
+detector R5a none working yes onset -
+decision stop
+# calibration C4a attempt 1 of lineage 5a1c0e44: see testdata/calibration/one/c4a-1.txt
+[world]
+cost_floor = 3500

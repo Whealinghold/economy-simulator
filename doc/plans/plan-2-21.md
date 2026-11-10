@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 21: CLB, the calibration registry test, the pure rules and the dry run (`internal/calibration`, `testdata/calibration/`)
 
-**Status: written (2026-10-22), not started.** Sequences the twenty-first plan of Stage 2 ([plan-2-0.md](plan-2-0.md)): the roadmap row "`internal/calibration` and `testdata/calibration/`" ([roadmap-v1.md](../roadmap-v1.md) Stage 2). A working document: the specs, the ADRs and `doc/rules/` decide, and where this plan disagrees with them they win.
+**Status: Phases 1 to 8 done (2026-11-09, branch stage-2-21; Phases 7 and 8 by impl-2-21c). The dry run is `experiment/calibration_dry_test.go` with `testdata/calibration/dryrun.shape.txt` (a new file; no golden moved). The plan stays until the stage's sign-off.** Written 2026-10-22. `stage-2-20` is merged into this branch (02c8aaa), so `experiment/` and `internal/design` exist; Phase 7 (the dry run) reads them as built, and the `maxFactors` of `CheckSequence` is still a parameter (D632). Sequences the twenty-first plan of Stage 2 ([plan-2-0.md](plan-2-0.md)): the roadmap row "`internal/calibration` and `testdata/calibration/`" ([roadmap-v1.md](../roadmap-v1.md) Stage 2). A working document: the specs, the ADRs and `doc/rules/` decide, and where this plan disagrees with them they win.
 
 Rule tags read (as the files end, 2026-10-22; they equal the contract's): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1. `architecture.md` 2, 3.5, 9 and 10, `testing.md` 3 to 7, 9 to 11 and `observability-and-logging.md` 2.3, 9 were read in full for what this row touches; the rest by section.
 
@@ -12,7 +12,7 @@ Notes read: the index of `doc/notes.md`, then N-015, N-124, N-134, N-135, N-158,
 
 **Builds.**
 
-- `internal/calibration/` (standard library and `internal/design` only): `grid.go`, `seeds.go`, `plan.go`, `choose.go`, `alias.go`, `process.go`, `record.go` (types and `Render`), `record_parse.go` (`Parse`), `record_check.go`, `overlay.go`, with unit tests, three fuzz targets and their corpora under `internal/calibration/testdata/fuzz/`.
+- `internal/calibration/` (standard library, `internal/checked` and `internal/design` only): `grid.go`, `seeds.go`, `plan.go`, `choose.go`, `alias.go`, `process.go`, `record.go` (types and `Render`), `record_parse.go` (`Parse`), `record_check.go`, `overlay.go`, with unit tests, three fuzz targets and their corpora under `internal/calibration/testdata/fuzz/`.
 - In the same package, `_test.go` files: the registry test of CLB 11.1 (`registry_test.go` and helpers), the record checks of 11.2 over files, the overlay purity test of 11.5.
 - `internal/calibration/testdata/records/{valid,invalid}/` (the inputs of the record tests) and `testdata/calibration/`: `README.md` (the grammar and the layout) and the fixture of the dry run (`dryrun.shape.txt`, outside every `<pack>/` directory). No stage record: nothing has run (N-027).
 - `experiment/calibration_dry_test.go` (package `experiment_test`): the dry run of 11.4, legs A and B, skipped with `-short`.
