@@ -234,10 +234,14 @@ func equalReadings(a, b Record) bool {
 }
 
 // reading is the final reading of measure m of a record; a record that is shorter
-// than the experiment says (a forged one) has an undefined reading.
+// than the experiment says, or whose value is beyond MaxReading (a forged one: a
+// run never produces it), has an undefined reading. The 128-bit sums and the int64
+// differences downstream rely on that bound.
 func reading(r Record, m int) Reading {
 	if m < len(r.Final) {
-		return r.Final[m]
+		if rd := r.Final[m]; rd.Value <= MaxReading && rd.Value >= -MaxReading {
+			return rd
+		}
 	}
 	return Reading{}
 }

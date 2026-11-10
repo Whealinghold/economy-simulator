@@ -1065,4 +1065,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 1ae3e86249332b2464f62c80
+RULE-TAG: 9cd2be6f79c0e577b384d1fb

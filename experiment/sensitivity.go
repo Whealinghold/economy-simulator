@@ -122,6 +122,9 @@ func (p PointResult) addUsed(mo *reduce.Moments, m int) {
 // binOf returns the bin of point p for factor f, and false when the design leaves
 // the point out of that factor's effect.
 func (r Result) binOf(p PointResult, f, bins int) (int, bool) {
+	if f >= len(p.Levels) || p.Levels[f] < 0 || p.Levels[f] > MaxPoints { // a hand-built Result
+		return 0, false
+	}
 	switch r.Design {
 	case Spread:
 		return p.Levels[f] * bins / len(r.Points), true // cell < points <= MaxPoints, bins <= points
@@ -170,12 +173,33 @@ func Elasticity(r Result, measure string, factor, level int) (Sensitivity, error
 	}
 	y0, n0 := r.sum(base, m)
 	yl, nl := r.sum(at, m)
-	x0, xl := r.Points[base].Values[factor], r.Points[at].Values[factor]
-	if factor < len(r.first) && r.first[factor] != nil {
-		f := r.first[factor] // an explicit factor: Values is the level index
-		x0, xl = f[0], f[level]
+	x0, xl, ok := r.knobValues(factor, level, base, at)
+	if !ok { // a hand-built Result: the level or the values are not there
+		return Sensitivity{}, fmt.Errorf("elasticity: factor %d level %d: %w", factor, level, ErrUnknownRun)
 	}
 	return elasticity(y0, n0, yl, nl, x0, xl), nil
+}
+
+// knobValues returns the knob's value at the baseline and at the level, and false
+// when the result does not have them.
+func (r Result) knobValues(factor, level, base, at int) (x0, xl int64, ok bool) {
+	f := r.firstOf(factor)
+	switch {
+	case f != nil && level >= 0 && level < len(f): // an explicit factor: Values is the level index
+		return f[0], f[level], true
+	case f == nil && factor < len(r.Points[base].Values) && factor < len(r.Points[at].Values):
+		return r.Points[base].Values[factor], r.Points[at].Values[factor], true
+	}
+	return 0, 0, false
+}
+
+// firstOf returns the first-change values of an explicit factor, or nil for a
+// range factor, a factor outside the result or a Result Assemble did not build.
+func (r Result) firstOf(factor int) []int64 {
+	if factor < 0 || factor >= len(r.first) || len(r.first[factor]) == 0 {
+		return nil
+	}
+	return r.first[factor]
 }
 
 // oatPoints returns the indexes of the baseline and of the point where only factor

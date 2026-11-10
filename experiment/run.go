@@ -18,8 +18,9 @@ type runConfig struct {
 }
 
 // WithRecordFunc sets f to be called synchronously, in plan order, after each
-// record, on the caller's goroutine. f must not call the runner
-// (spec-experiments.md 5.2.2).
+// record this run produces, on the caller's goroutine. A record taken from
+// WithPrior was produced by an earlier sweep and is not delivered again. f must
+// not call the runner (spec-experiments.md 5.2.2).
 func WithRecordFunc(f func(Record)) RunOption { return func(c *runConfig) { c.record = f } }
 
 // WithPrior gives records already produced by an earlier, cancelled or crashed
@@ -191,7 +192,7 @@ func (e Spec) fail(rec Record, f *failure, p progress) Record {
 // reading is defined and inside the band.
 func (e Spec) passes(c Criterion, final []Reading) bool {
 	i := slices.IndexFunc(e.Measures, func(m Measure) bool { return m.Name == c.Measure })
-	if i < 0 || !final[i].OK {
+	if i < 0 || i >= len(final) || !final[i].OK {
 		return false
 	}
 	v := final[i].Value
@@ -241,10 +242,7 @@ func (e Spec) worldOptions(k Key) []economysim.Option {
 // cancelled context it returns the records so far and the wrapped context
 // error (spec-experiments.md 5.2.1, 5.2.3).
 func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
-	var rc runConfig
-	for _, o := range opts {
-		o(&rc)
-	}
+	rc := newRunConfig(opts)
 	units, err := Plan(e)
 	if err != nil {
 		return nil, err
@@ -257,9 +255,11 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 	}
 	var out []Record
 	for _, u := range units {
-		if recs, ok := priorOf(prior, u); len(prior) > 0 && ok {
-			out = append(out, recs...)
-			continue
+		if len(prior) > 0 {
+			if recs, ok := priorOf(prior, u); ok {
+				out = append(out, recs...)
+				continue
+			}
 		}
 		if err := ctx.Err(); err != nil {
 			return append(out, e.priorAfter(prior, units, u)...), fmt.Errorf("experiment: run: %w", err)
@@ -268,14 +268,31 @@ func (e Spec) runAll(ctx context.Context, opts ...RunOption) ([]Record, error) {
 		if err != nil {
 			return append(out, e.priorAfter(prior, units, u)...), err
 		}
-		for _, r := range recs {
-			if rc.record != nil {
-				rc.record(r)
-			}
-		}
+		rc.emit(recs)
 		out = append(out, recs...)
 	}
 	return out, nil
+}
+
+// newRunConfig applies the non-nil options in order.
+func newRunConfig(opts []RunOption) runConfig {
+	var rc runConfig
+	for _, o := range opts {
+		if o != nil {
+			o(&rc)
+		}
+	}
+	return rc
+}
+
+// emit hands each record to the record callback, if there is one.
+func (rc runConfig) emit(recs []Record) {
+	if rc.record == nil {
+		return
+	}
+	for _, r := range recs {
+		rc.record(r)
+	}
 }
 
 // priorOf returns the prior records of the keys of u, in key order, and whether

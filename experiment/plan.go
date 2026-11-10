@@ -94,10 +94,9 @@ func (e Spec) point(p int) (levels []int, values []int64, ok bool) {
 	if e.Design == Spread {
 		return e.spreadPoint(p, counts)
 	}
-	switch e.Design {
-	case OneAtATime:
+	if e.Design == OneAtATime {
 		levels, ok = design.OATCoords(p, counts, nil)
-	default:
+	} else {
 		levels, ok = design.GridCoords(p, counts, nil)
 	}
 	if !ok {
