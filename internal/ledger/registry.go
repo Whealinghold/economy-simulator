@@ -86,6 +86,30 @@ const (
 	// TransitUse is the goods sink of the feed a self-carried trip consumes
 	// (spec-transport.md 3.3.2): agent to boundary. It is a declared row.
 	TransitUse
+	// EscrowIn is the money a payer puts into an Escrow account at the formation of a
+	// delivery contract (spec-merchants.md 9.6): agent to escrow. EscrowOut is the
+	// money the escrow pays the deliverer for the units that arrived: escrow to
+	// agent. EscrowRefund is the money it gives back for the units that did not, to
+	// the payer or, when the payer is gone, to the estate of the destination:
+	// escrow to agent or estate. All three are declared rows and open no boundary
+	// account; none is a faucet or a sink.
+	EscrowIn
+	EscrowOut
+	EscrowRefund
+	// The six reasons of the external module (spec-ledger.md 7.2, FR-LED-057;
+	// spec-external-sector.md 8.1). All are declared rows. OutsideBudget is the
+	// money a buyer counterparty's Outside account receives from the boundary
+	// before its bid (faucet), OutsideUnspent the part it gives back and
+	// OutsideReceipts the money a seller's account gives back (sinks).
+	// OutsideOffer is the goods a seller's account receives from the boundary,
+	// born in the tick at full durability (faucet), OutsideUnsold what it gives
+	// back and OutsidePurchases what a buyer's account bought (sinks).
+	OutsideBudget
+	OutsideUnspent
+	OutsideReceipts
+	OutsideOffer
+	OutsideUnsold
+	OutsidePurchases
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -117,6 +141,8 @@ const (
 	setEstate   = kindSet(1 << KindEstate)
 	setAE       = setAgent | setEstate
 	setTransit  = kindSet(1 << KindTransit)
+	setEscrow   = kindSet(1 << KindEscrow)
+	setOutside  = kindSet(1 << KindOutside)
 	// setHolder is every non-boundary kind: "any holder" of 7.2.
 	setHolder = kindSet(1<<KindBoundary - 1)
 )
@@ -148,7 +174,9 @@ func (rw row) fits(from, to Kind) bool {
 // 1-1 A4), indexed by reason then thing. It is never mutated (architecture.md
 // 7.1). A reason with no row for a thing cannot move that thing.
 var table = [NumReasons][2]row{
-	Trade:        {thingMoney: {true, Internal, setAE, setAE, false, false, 0}, thingGoods: {true, Internal, setAE, setAE, false, false, 0}},
+	// trade also runs to and from an Outside account (spec-ledger.md 7.2, FR-LED-057);
+	// no Outside account exists while the external module is off.
+	Trade:        {thingMoney: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}, thingGoods: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}},
 	Initial:      {thingMoney: {true, Faucet, setBoundary, setAE, false, false, 0}, thingGoods: {true, Faucet, setBoundary, setAE, false, false, 0}},
 	RecipeInput:  {thingGoods: {true, Sink, setAgent, setBoundary, false, false, 0}},
 	RecipeOutput: {thingGoods: {true, Faucet, setBoundary, setAgent, false, false, 0}},
@@ -182,6 +210,20 @@ var table = [NumReasons][2]row{
 	TransitIn:  {thingGoods: {true, Internal, setTransit, setAE, false, true, 33}},
 	HaulUse:    {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 34}},
 	TransitUse: {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 35}},
+	// The escrow rows of the delivery contract (spec-ledger.md 7.2, FR-LED-060):
+	// money only, between an agent and an Escrow account, and back to an agent or an
+	// estate.
+	EscrowIn:     {thingMoney: {true, Internal, setAgent, setEscrow, false, true, 19}},
+	EscrowOut:    {thingMoney: {true, Internal, setEscrow, setAgent, false, true, 20}},
+	EscrowRefund: {thingMoney: {true, Internal, setEscrow, setAE, false, true, 21}},
+	// The outside rows (spec-ledger.md 7.2, spec-external-sector.md 8.1): each
+	// runs between a boundary and an Outside account, for money or for goods.
+	OutsideBudget:    {thingMoney: {true, Faucet, setBoundary, setOutside, false, true, 13}},
+	OutsideUnspent:   {thingMoney: {true, Sink, setOutside, setBoundary, false, true, 14}},
+	OutsideReceipts:  {thingMoney: {true, Sink, setOutside, setBoundary, false, true, 15}},
+	OutsideOffer:     {thingGoods: {true, Faucet, setBoundary, setOutside, false, true, 16}},
+	OutsideUnsold:    {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 17}},
+	OutsidePurchases: {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 18}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

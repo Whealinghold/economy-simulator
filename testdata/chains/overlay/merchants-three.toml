@@ -1,0 +1,27 @@
+# The merchants overlay of the variant three (spec-merchants.md 13, 19.1; plan 2-15 Phase 8). Layer it after the pack three and overlay/trade-three.toml, overlay/transport-three.toml and overlay/information-three.toml. It is the two variant with the third region and a self-carried mode (`foot`) beside the hired one (`coach`), so a merchant compares the two on each lane (spec-merchants.md 6.1; S70). The role groups are region-keyed, which is why the variant has a file of its own; there is no `five` variant. A test double, not a design: every number is a placeholder (N-015, N-027).
+
+[modules.merchants]
+max_open = 200
+
+[role.broker]
+strategy = "merchant"
+informed = true
+trades = [ "fuel", "mineral", "haul" ]
+merchant_fee_share = 5000
+start_money = 5000
+start_stock = [ { commodity = "fuel", quantity = 30 }, { commodity = "haul", quantity = 20 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+
+[role.broker.merchant]
+modes = [ "coach", "foot" ]
+lot_units = 4
+consigns = true
+take_units = 100
+
+[region.north.group.broker]
+households = 4
+
+[region.south.group.broker]
+households = 4
+
+[region.far_south.group.broker]
+households = 4

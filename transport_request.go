@@ -40,7 +40,7 @@ type shipCtx struct {
 }
 
 // shipChecks are the checks of spec-transport.md 5.4 in the order of its table.
-// Rows 3a (has_store), 6a (outside_destination), 11a (consignee_full) and 22a
+// Rows 3a (has_store), 11a (consignee_full) and 22a
 // (toll_unaffordable) are the marked seams of their modules: each is an empty
 // position here, filled when its module is built, and none of their reasons is
 // declared yet (D446). The table is never written.
@@ -52,7 +52,7 @@ var shipChecks = [...]func(c *shipCtx) Reason{
 	ckJob,         // 4
 	ckSame,        // 5
 	ckRegion,      // 6
-	nil,           // 6a outside_destination: EXT
+	ckOutside,     // 6a outside_destination: EXT
 	ckRoute,       // 7
 	ckBlocked,     // 8
 	ckTooFar,      // 9
@@ -119,6 +119,15 @@ func ckSame(c *shipCtx) Reason {
 func ckRegion(c *shipCtx) Reason {
 	if c.r.To < 0 || int(c.r.To) >= len(c.w.cfg.Regions) {
 		return ReasonUnknownRegion
+	}
+	return ""
+}
+
+// ckOutside is row 6a: the destination is an outside node, which is a place for
+// the outside's counterparties and not for a shipment.
+func ckOutside(c *shipCtx) Reason {
+	if c.w.isOutsideNode(c.r.To) {
+		return ReasonOutsideDestination
 	}
 	return ""
 }

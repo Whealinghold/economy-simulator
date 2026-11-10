@@ -1141,4 +1141,105 @@
 //     considers as a destination.
 //   - Estimate (of a destination): the ratio a household would reach there if it
 //     worked every tick, from rumoured prices (spec-migration.md 6.3).
+//   - Merchants: the module, a pointer of Config.Modules and the type of its
+//     configuration (MaxOpen), that adds the delivery contract (spec-merchants.md);
+//     Merchant is the block of a role, a pointer of Role that makes the role a
+//     merchant role.
+//   - Merchant: an agent whose role has a Merchant block; it plans a trip and
+//     sends a shipment or a delivery offer, and has weight 1 and no recipe.
+//   - Planned trip: the lane, the mode and the lot a merchant expects to send next,
+//     chosen afresh from the view every tick and never remembered; the merchant
+//     enters it into the default strategy as trip inputs (TripInput).
+//   - Candidate lane: a lane with a mode that has a route, which the merchant
+//     decides by the first rule that applies; the eleven decisions are the values
+//     of the Decision type.
+//   - Lane (of a merchant): a destination region and a cargo commodity; a lane of
+//     the round is the same pair; neither is the lane of the solver.
+//   - Merchant lot: the units of the cargo of one planned trip, at most the lot cap.
+//   - Lot cap: LotUnits carrying units of the cargo, the most a lot may be.
+//   - Cargo set: the commodities a merchant role trades less its trade inputs.
+//   - Trade inputs: the haul commodities, the vehicles and the feed of the modes of
+//     a merchant role.
+//   - Trip input: a commodity, a quantity and a purpose that a strategy lists to
+//     DefaultStrategy.TradeWith in place of a planned recipe (TripInput).
+//   - Fee share: the share of the expected gross margin that the cost of carriage
+//     may take, Role.MerchantFeeShare with the agent's fixed spread, in basis points.
+//   - Bar: ten thousand over the fee share, the multiple of its cost that a merchant
+//     needs the margin to be before it ships.
+//   - Cautious revenue: the lower of a rumour's price and its window mean, less the
+//     consignee's cut and the expected loss.
+//   - Break-even: the dearest price at which a lot still passes the test of the fee
+//     share; the ceiling of the merchant's bid for the cargo.
+//   - Lane lock: the rule that a merchant plans nothing for a lane it has units on
+//     the way to.
+//   - Delivery offer: a merchant's offer to deliver a quantity of a commodity to a
+//     region at no less than a limit price (DeliveryOffer).
+//   - Delivery take: an agent's order to be delivered a quantity at no more than a
+//     limit price (DeliveryTake).
+//   - Payer: the agent whose take is matched; it pays into escrow.
+//   - Deliverer: the agent whose offer is matched; it ships and is paid on arrival.
+//   - Round (of contracts): the matching of the admitted offers and takes of a
+//     tick, lane by lane, in phase 3.
+//   - Delivery contract: the record of a matched offer and take, with its shipment
+//     and its escrow, from formation to settlement; ContractFormed, ContractSettled
+//     and ContractRound are its events and ContractRow its snapshot row.
+//   - Escrow (of a contract): the account that holds the payer's money from
+//     formation to settlement.
+//   - Settlement (of a contract): the payment of the escrow to the deliverer for
+//     the units that arrived and the refund of the rest, in phase 1.
+//   - PlanNotes: the counts of the decisions a merchant took in one plan, which the
+//     world adds up into MerchantsPlanned.
+//   - MerchantView: the group of an AgentView that a merchant sees (MerchantMode and
+//     MerchantGood are its rows); MerchantsPlanned reports the decisions of a tick.
+//   - ContractID: the ID of a delivery contract, issued in order of formation.
+//   - LaneDecision: the result of a merchant's decision about a candidate lane, a
+//     closed set of constants (DecisionNoRumour to DecisionLotCapped) that names
+//     the cases of PlanNotes.
+//   - Outside: everything that is not a region with agents: the party the external
+//     module trades with, whose money and goods the realm never holds (spec-external-sector.md).
+//   - Outside node: a region of the configuration marked as the outside; it has no
+//     agents and no market. External is the module (a pointer of Config.Modules) and
+//     OutsideNode the type of its node table.
+//   - Gate: a region with a direct edge to or from an outside node; the outside trades
+//     in its market through the gate. OutsideGate overrides the scale of one gate.
+//   - Outside line: the outside's dealing in one commodity at one node, with one mid
+//     and up to two sides (OutsideLine; OutsideLineRow in the snapshot).
+//   - Outside side: the sell side (imports) or the buy side (exports) of a line
+//     (OutsideSide; OutsideSideRow in the snapshot); its state is kept for each gate.
+//   - Mid: the outside's price of a line before the margin: the base, the season, the
+//     trend, the walk and the shock, rounded half to even once.
+//   - Quote: the limit price of a side at a gate: the mid with the quote margin and the
+//     gate scale, rounded up for an ask and down for a bid.
+//   - Quote margin: the share of the mid, in basis points, by which an ask exceeds it
+//     or a bid falls short of it.
+//   - Walk: the bounded, mean-reverting random drift of a line's mid, one draw a tick.
+//   - Walk drift: the state of the walk, in basis points of the mid; not the Drift of
+//     a seed price.
+//   - Shock: the factor, in basis points, a consumer sets between steps on the mid of a
+//     line (OutsideShocked reports a change).
+//   - Counterparty: the pseudo-agent that places the orders of one side of one node at
+//     one gate, bound to an Outside account; a buyer places bids and a seller asks.
+//     Counterparty is the type of its snapshot row; it is not a household.
+//   - Outside account: the account of a counterparty, of the kind Outside, topped up
+//     from the boundary before its order and swept back to it after the markets, so it
+//     holds nothing across a tick.
+//   - Outside sector: the Outside accounts together; its money and goods are zero at
+//     every tick boundary, so the sectoral identity of the ledger holds with it at zero.
+//   - Sweep: the position that empties each Outside account to the boundary after the
+//     markets have cleared.
+//   - Import: a trade in which the outside sells a commodity to the realm.
+//   - Export: a trade in which the outside buys a commodity from the realm.
+//   - List value: the units traded on a side times the limit price of its order, the
+//     amount the line cap counts; not the money that changed hands.
+//   - Availability window: the table of availability, in basis points, by season of a side.
+//   - Line capacity: the most units a side wants in a tick at full availability.
+//   - Line cap: the limit over the run on the units or the list value of a side; a side
+//     that reaches it ends (OutsideEnded).
+//   - Balance of trade: the money the outside paid the realm less the money the realm
+//     paid the outside; the indicator module reads it from the boundary flows.
+//   - OutsideState: the group of the snapshot that holds the outside's lines, sides,
+//     trade totals and counterparties; OutsideTradeRow is its row of totals per commodity.
+//   - SeasonFactor: a season of the calendar and a factor in basis points, the row of
+//     a price-by-season table or of an availability window.
+//   - OutsideTraded: the event of a side's tick: what it wanted, offered and traded.
 package economysim

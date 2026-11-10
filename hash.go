@@ -294,10 +294,11 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 20. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 22. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
-// module's, on the same terms (migrationOn).
+// module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
+// are the merchants', pairs only when the block is non-nil.
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -319,6 +320,12 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.flag(18, r.Closed)
 	e.flag(19, informationOn && r.Informed)
 	e.flag(20, migrationOn && r.Fixed)
+	if r.Merchant != nil {
+		e.num(21, r.MerchantFeeShare)
+		e.id(22) // written even when every field is zero: a non-nil block is a merchant role
+		pairsMerchant(e, *r.Merchant)
+		e.end()
+	}
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -442,14 +449,30 @@ func pairsModules(e *encoder, m Modules) {
 		pairsInformation(e, *m.Information)
 		e.end()
 	}
+	if m.External != nil {
+		e.id(7)
+		pairsExternal(e, *m.External)
+		e.end()
+	}
 	if m.Subsistence != nil {
 		e.id(8)
 		pairsSubsistence(e, *m.Subsistence)
 		e.end()
 	}
+	pairsLaterModules(e, m)
+}
+
+// pairsLaterModules writes the pairs of the modules of ids 9, 10 and 25 of
+// Modules, after those pairsModules writes (a continuation for the Lizard limit).
+func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
 		e.id(9)
 		pairsMigration(e, *m.Migration)
+		e.end()
+	}
+	if m.Merchants != nil {
+		e.id(10)
+		e.num(1, m.Merchants.MaxOpen)
 		e.end()
 	}
 	if m.Estates != nil {
@@ -604,6 +627,21 @@ func pairsMigration(e *encoder, m Migration) {
 	})
 }
 
+// pairsMerchant writes the pairs of a Merchant: Modes 1 (by ID), LotUnits 2,
+// FeeShareSpreadBP 3, MaxSourceAge 4, TimeCostBP 5, ConsigneeCutBP 6, Consigns 7,
+// TakeMarginBP 8, TakeUnits 9.
+func pairsMerchant(e *encoder, m Merchant) {
+	e.texts(1, m.Modes)
+	e.num(2, m.LotUnits)
+	e.num(3, m.FeeShareSpreadBP)
+	e.num(4, m.MaxSourceAge)
+	e.num(5, m.TimeCostBP)
+	e.num(6, m.ConsigneeCutBP)
+	e.flag(7, m.Consigns)
+	e.num(8, m.TakeMarginBP)
+	e.num(9, int64(m.TakeUnits))
+}
+
 // pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,
 // HorizonYears 3.
 func pairsResources(e *encoder, r Resources) {
@@ -646,4 +684,57 @@ func pairsEndowment(e *encoder, r Endowment) {
 	e.num(6, r.Initial)
 	e.flag(7, r.HasRegenScale)
 	e.num(8, r.RegenScaleBP)
+}
+
+// pairsExternal writes the pairs of an External: Nodes 1. A node's Label is
+// presentation only and has no id; the runtime state (drift, shock, carries,
+// totals) is not configuration and is not written (spec-config.md 8.2.1).
+func pairsExternal(e *encoder, x External) {
+	encodeList(e, 1, x.Nodes, pairsOutsideNode)
+}
+
+// pairsOutsideNode writes the pairs of an OutsideNode: Region 1, Lines 2, Gates 3.
+func pairsOutsideNode(e *encoder, n OutsideNode) {
+	e.text(1, n.Region)
+	encodeList(e, 2, n.Lines, pairsOutsideLine)
+	encodeList(e, 3, n.Gates, pairsOutsideGate)
+}
+
+// pairsOutsideLine writes the pairs of an OutsideLine: Commodity 1, Base 2,
+// PriceBySeason 3, TrendBP 4, FloorBP 5, CeilingBP 6, WalkStepBP 7, WalkRevertBP
+// 8, WalkBoundBP 9, Sell 10, Buy 11.
+func pairsOutsideLine(e *encoder, l OutsideLine) {
+	e.text(1, l.Commodity)
+	e.num(2, int64(l.Base))
+	encodeList(e, 3, l.PriceBySeason, pairsSeasonFactor)
+	e.num(4, l.TrendBP)
+	e.num(5, l.FloorBP)
+	e.num(6, l.CeilingBP)
+	e.num(7, l.WalkStepBP)
+	e.num(8, l.WalkRevertBP)
+	e.num(9, l.WalkBoundBP)
+	e.nested(10, func(e *encoder) { pairsOutsideSide(e, l.Sell) })
+	e.nested(11, func(e *encoder) { pairsOutsideSide(e, l.Buy) })
+}
+
+// pairsOutsideSide writes the pairs of an OutsideSide: MarginBP 1, Capacity 2,
+// Window 3, TotalUnits 4, TotalValue 5.
+func pairsOutsideSide(e *encoder, s OutsideSide) {
+	e.num(1, s.MarginBP)
+	e.num(2, s.Capacity)
+	encodeList(e, 3, s.Window, pairsSeasonFactor)
+	e.num(4, s.TotalUnits)
+	e.num(5, s.TotalValue)
+}
+
+// pairsSeasonFactor writes the pairs of a SeasonFactor: Season 1, BP 2.
+func pairsSeasonFactor(e *encoder, f SeasonFactor) {
+	e.text(1, f.Season)
+	e.num(2, f.BP)
+}
+
+// pairsOutsideGate writes the pairs of an OutsideGate: Region 1, ScaleBP 2.
+func pairsOutsideGate(e *encoder, g OutsideGate) {
+	e.text(1, g.Region)
+	e.num(2, g.ScaleBP)
 }

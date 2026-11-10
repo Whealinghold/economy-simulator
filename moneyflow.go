@@ -839,14 +839,32 @@ func (w *World) setFlowScale(i int, bp int64, cause Cause) error {
 	return nil
 }
 
+// auditInFlight is the audit of what is in flight between regions: the shipments of
+// the transport module, then the contracts of the merchants module, which refer to
+// them (spec-transport.md 7.4.1, spec-merchants.md FR-MER-045).
+func (w *World) auditInFlight() error {
+	if w.transport != nil {
+		if err := w.auditTransport(); err != nil {
+			return err
+		}
+	}
+	if w.mer != nil && w.mer.on {
+		return w.auditContracts()
+	}
+	return nil
+}
+
 // auditModules is the modules' part of the audit (plan 2-6 D333): for each flow
 // the boundary balance of its reason is the total with the sign of its kind, and
 // the first flow that disagrees is named (FR-MON-026, 027). It is nil with no
 // module on.
 func (w *World) auditModules() error {
-	if w.transport != nil {
-		if err := w.auditTransport(); err != nil {
-			return err
+	if err := w.auditInFlight(); err != nil {
+		return err
+	}
+	if w.external != nil {
+		if err := w.external.audit(w); err != nil {
+			return auditFailure(w.Tick(), err)
 		}
 	}
 	if w.money == nil {

@@ -251,6 +251,12 @@ var stepSites = []site{
 			w.p13Arrivals()
 		}
 	})},
+	{"P1.4", func(w *World) error {
+		if w.mer != nil && w.mer.on {
+			return w.p14Settle()
+		}
+		return nil
+	}},
 	{"P1.5", noError(func(w *World) {
 		if w.migration != nil {
 			w.p15Arrivals()
@@ -258,6 +264,11 @@ var stepSites = []site{
 	})},
 	{"P1.6", (*World).p16Relief},
 	{"P1.7", noError((*World).p17Flows)},
+	{"P1.8", noError(func(w *World) {
+		if w.external != nil {
+			w.p18Walk()
+		}
+	})},
 	{"P2.1", noError((*World).p21Complete)},
 	{"P2.3", noError((*World).p23Snapshot)},
 	{"P2.4", noError(func(w *World) {
@@ -280,9 +291,31 @@ var stepSites = []site{
 		}
 	})},
 	{"P3.2", (*World).p32Trade},
+	{"P3.3", noError(func(w *World) {
+		if w.mer != nil && w.mer.on {
+			w.p33Round()
+		}
+	})},
+	{"P3.3a", noError(func(w *World) {
+		if w.mer != nil && w.mer.roles > 0 {
+			w.p33aPlanned()
+		}
+	})},
 	{"P3.4", (*World).p34Estates},
+	{"P3.5", func(w *World) error {
+		if w.external != nil {
+			return w.p35Orders()
+		}
+		return nil
+	}},
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},
+	{"P4.2", func(w *World) error {
+		if w.external != nil {
+			return w.p42Sweep()
+		}
+		return nil
+	}},
 	{"P5.1", noError((*World).p51Window)},
 	{"P5.2", noError(func(w *World) {
 		if w.info != nil {

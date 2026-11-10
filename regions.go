@@ -206,6 +206,20 @@ func (g *geometry) shapeWarnings(add func(rule string, segs ...string)) {
 	}
 }
 
+// regionsWithAgents returns the regions region_without_agents does not name: those
+// with a group and the outside nodes of the external module, which have no agents
+// by rule (spec-external-sector.md 3.1.2).
+func regionsWithAgents(c *Config) map[string]bool {
+	out := outsideNodeSet(c)
+	if out == nil {
+		out = make(map[string]bool, len(c.Groups))
+	}
+	for _, gr := range c.Groups {
+		out[gr.Region] = true
+	}
+	return out
+}
+
 // regionWarnings returns the five warnings of spec-regions.md 9.2 for c read as
 // given. A world of one region and no edges draws none of the first three
 // (4.5.2). The exception of region_without_agents for an outside node of the
@@ -218,13 +232,10 @@ func regionWarnings(c *Config) []Warning {
 		g.shapeWarnings(add)
 	}
 
-	hasGroup := make(map[string]bool, len(c.Groups))
-	for _, gr := range c.Groups {
-		hasGroup[gr.Region] = true
-	}
+	hasGroup := regionsWithAgents(c)
 	for _, r := range c.Regions {
 		// The outside node of the external module is exempt here (spec-regions.md
-		// 9.2); the external module fills this line when it is built.
+		// 9.2).
 		if !hasGroup[r.ID] {
 			add("region_without_agents", "regions", r.ID)
 		}

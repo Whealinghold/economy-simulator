@@ -78,6 +78,14 @@ type Snapshot struct {
 	// Journeys are the migration journeys in flight, by agent ID; empty with the
 	// module off (spec-observability.md 5.3.8).
 	Journeys []JourneyRow
+	// Contracts are the delivery contracts in flight, by contract ID, and Escrow the
+	// money held for them in total, the contracts' part of MoneyContract; both are
+	// empty with the merchants module off (spec-merchants.md 15.4).
+	Contracts []ContractRow
+	Escrow    Money
+	// Outside is the state of the external module (spec-observability.md 5.3.9); the
+	// zero value with the module off.
+	Outside OutsideState
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -137,6 +145,9 @@ type RegionRow struct {
 	// leave this region and that head for it; 0 with the module off
 	// (spec-migration.md 13.4).
 	OnJourneyFrom, OnJourneyTo int64
+	// MoneyContract is the money in the Escrow accounts of the region, the contracts'
+	// escrow; 0 with the merchants module off (spec-observability.md 5.3.2).
+	MoneyContract Money
 }
 
 // PopulationState is the figures of the population module in the snapshot: the
@@ -358,6 +369,9 @@ func (w *World) Snapshot() (Snapshot, error) {
 		s.Money = satMoney(s.Money, s.Regions[g].MoneyHouseholds, s.Regions[g].MoneyPool)
 	}
 	w.snapshotMigration(&s)
+	w.snapshotContracts(&s)
+	w.snapshotOutside(&s)
+	w.dropOutsideRows(&s)
 	return s, nil
 }
 
@@ -441,6 +455,10 @@ func (w *World) makesTable() [][]bool {
 // scans are the classes of spec-observability.md 5.5) and one pass over the
 // agents.
 func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool) error {
+	if w.isOutsideNode(g) {
+		s.Regions[g] = RegionRow{Region: g, Outside: true} // no agents, pool or market (spec-external-sector.md 3.1.2)
+		return nil
+	}
 	v := w.buildRegionView(g)
 	acc.reset()
 	nr := len(w.cfg.Roles)

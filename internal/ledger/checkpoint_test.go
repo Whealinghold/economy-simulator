@@ -845,6 +845,9 @@ var reasonNames = map[Reason]string{
 	LoanOut: "loan_out", LoanRepay: "loan_repay", LoanInterest: "loan_interest",
 	WantConsumption: "want_consumption", Relief: "relief", Deaths: "deaths",
 	TransitOut: "transit_out", TransitIn: "transit_in", HaulUse: "haul_use", TransitUse: "transit_use",
+	EscrowIn: "escrow_in", EscrowOut: "escrow_out", EscrowRefund: "escrow_refund",
+	OutsideBudget: "outside_budget", OutsideUnspent: "outside_unspent", OutsideReceipts: "outside_receipts",
+	OutsideOffer: "outside_offer", OutsideUnsold: "outside_unsold", OutsidePurchases: "outside_purchases",
 }
 
 // TestReasonCode_Pinned verifies that the code of every reason is the position

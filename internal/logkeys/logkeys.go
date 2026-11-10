@@ -138,3 +138,26 @@ const (
 	Rumours = "rumours"
 	Lag     = "lag"
 )
+
+// Contract is a delivery contract ID, Offers and Takes the counts of admitted
+// delivery offers and takes of a round, and Merchants a count of agents with a
+// merchant block, in the lines of the merchants module.
+const (
+	Contract  = "contract"
+	Offers    = "offers"
+	Takes     = "takes"
+	Merchants = "merchants"
+)
+
+// Node is the region ID of an outside node (Region stays the key of the gate), Value
+// money in minor units (int64), as the money paid or received in the trades of an
+// outside side, Nodes and Counterparties counts in the construction summary, and
+// Drift the drift of an outside price walk in basis points, in the lines of the
+// external module.
+const (
+	Node           = "node"
+	Value          = "value"
+	Nodes          = "nodes"
+	Counterparties = "counterparties"
+	Drift          = "drift"
+)

@@ -240,3 +240,48 @@ func DefaultMigration() Migration {
 		MoveCooldown: 60, MoveHorizon: 180, MoveOutShare: 50, MoveInShare: 100,
 	}
 }
+
+// DefaultMerchantFeeShare is the default Role.MerchantFeeShare, in basis points:
+// a merchant lets the cost of carriage take half of the expected margin
+// (spec-carriage.md 2.2, FR-CAR-012). The Go zero value of the field is a share of
+// 0, which never ships (spec-merchants.md 13); the loader applies this default to
+// a role that has a merchant block and no key. A placeholder (N-015, N-027).
+const DefaultMerchantFeeShare = 5_000
+
+// DefaultMerchants returns the delivery contract module with the placeholder
+// tunable of spec-merchants.md 13: at most 1 000 contracts open (N-015, N-027).
+func DefaultMerchants() Merchants { return Merchants{MaxOpen: 1_000} }
+
+// DefaultMerchant returns a merchant block with the placeholder tunables of
+// spec-merchants.md 13 (N-015, N-027): a lot of one carrying unit, a fee share
+// spread of 2 500, a rumour acted on up to 2 ticks old, a tick away costing one
+// tick of upkeep, a consignee cut of 500 and a take margin of 1 000. Modes and
+// TakeUnits have no default, so the value does not validate until the caller
+// sets Modes.
+func DefaultMerchant() Merchant {
+	return Merchant{LotUnits: 1, FeeShareSpreadBP: 2_500, MaxSourceAge: 2, TimeCostBP: wholeBP, ConsigneeCutBP: 500, TakeMarginBP: 1_000}
+}
+
+// The placeholder defaults of the external module (spec-external-sector.md 13.1;
+// N-015, N-027): the clamps of the trend and walk factor, a tenth and ten times
+// Base, and the neutral gate scale.
+const (
+	// DefaultFloorBP is the default OutsideLine.FloorBP.
+	DefaultFloorBP = 1_000
+	// DefaultCeilingBP is the default OutsideLine.CeilingBP.
+	DefaultCeilingBP = 100_000
+	// DefaultGateScaleBP is the default OutsideGate.ScaleBP.
+	DefaultGateScaleBP = wholeBP
+)
+
+// DefaultOutsideLine returns a line of the commodity at the base price with the
+// placeholder clamps of spec-external-sector.md 13.1 and no side, no season, no
+// trend and no walk: a fixed price. A side is added by setting its Capacity.
+func DefaultOutsideLine(commodity string, base Price) OutsideLine {
+	return OutsideLine{Commodity: commodity, Base: base, FloorBP: DefaultFloorBP, CeilingBP: DefaultCeilingBP}
+}
+
+// DefaultOutsideGate returns a gate row at the neutral scale.
+func DefaultOutsideGate(region string) OutsideGate {
+	return OutsideGate{Region: region, ScaleBP: DefaultGateScaleBP}
+}

@@ -462,3 +462,31 @@ var (
 	// call.
 	ErrUnknownMode = errors.New("unknown transport mode")
 )
+
+// The sentinels of the merchants module (spec-merchants.md 14.1).
+var (
+	// ErrMerchantShape is a merchant block that does not fit its role or its
+	// modes: recipes on the role, strategy "merchant" with no block, a block with
+	// Informed false, a trade input outside Trades, an empty cargo set, a
+	// self-carried mode of Crew above 1, or Consigns with no TakeUnits.
+	ErrMerchantShape = errors.New("merchant role has the wrong shape")
+	// ErrMerchantWeight is a merchant role with a group of scale above 1: a merchant
+	// has weight 1.
+	ErrMerchantWeight = errors.New("merchant role has a weight above 1")
+)
+
+// The sentinels of the external module (spec-external-sector.md 14.1).
+var (
+	// ErrOutsideNodeInhabited is an outside node named by a group, a warm-start
+	// row, a population region row, a taste row or a money-flow target.
+	ErrOutsideNodeInhabited = errors.New("outside node has agents")
+	// ErrCrossedQuotes is a line with both sides whose margins sum to less than
+	// MinQuoteSpreadBP.
+	ErrCrossedQuotes = errors.New("outside quotes cross")
+	// ErrNotAGate is a gate row naming a region with no direct edge to or from the
+	// node.
+	ErrNotAGate = errors.New("region is not a gate of the node")
+	// ErrOutsideNode is a relocation into an outside node (spec-regions.md 6.1.3,
+	// row outside_node). It is a refusal at run time, not a validation error.
+	ErrOutsideNode = errors.New("region is an outside node")
+)

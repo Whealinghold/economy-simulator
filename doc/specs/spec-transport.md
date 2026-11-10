@@ -423,7 +423,7 @@ by `Step`.
 | 4 | `job_in_progress` | self-carried and the agent has a job in progress, started this tick or earlier (`spec-production.md` 5.2); a one-tick job started and finished this tick counts as in progress, as it counts as a working tick (`spec-production.md` 5.2.1) |
 | 5 | `same_region` | `To` is the shipper's own region |
 | 6 | `unknown_region` | `To` is not a region |
-| 6a | `outside_destination` | `To` is an outside node of the external module (`spec-external-sector.md` 3.1, 4.4); outside goods reach the realm through the gate region's market, not through a shipment |
+| 6a | `outside_destination` | `To` is an outside node of the external module (`spec-external-sector.md` 3.1, 4.4), read through `isOutsideNode`; the row is built with the external module; outside goods reach the realm through the gate region's market, not through a shipment |
 | 7 | `no_route` | REG has no path from the shipper's region to `To` |
 | 8 | `blocked` | the transit factor of (from, to, mode) is 0 |
 | 9 | `too_far` | `k` above `MaxTravelTicks` |

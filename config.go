@@ -105,6 +105,72 @@ type Modules struct {
 	// on. It needs Modules.Information. Its hash id is 9, whatever its place in
 	// this struct.
 	Migration *Migration
+	// Merchants is the merchants module: the delivery contract, an offer of a
+	// deliverer matched with a take of a payer in a round and settled on arrival
+	// (spec-merchants.md 9). Nil is off; non-nil is on. It needs Modules.Transport.
+	// Its hash id is 10, whatever its place in this struct.
+	Merchants *Merchants
+	// External is the external-sector module: outside nodes, their lines and
+	// sides, and the counterparties that trade with the realm in the market of a
+	// gate region (spec-external-sector.md 3). Nil is off; non-nil is on, even
+	// when empty. It needs Config.Edges. Its hash id is 7, whatever its place in
+	// this struct.
+	External *External
+}
+
+// Merchants is the configuration of the delivery contract (spec-merchants.md
+// 13). Start from DefaultMerchants. The merchant strategy itself is a block of
+// the role (Merchant) and needs no module switch unless a mode is hired or a role
+// consigns. Every default is a placeholder (N-015, N-027).
+type Merchants struct {
+	// MaxOpen is the most contracts open at once, 1 to MaxContracts
+	// (spec-merchants.md 9.5). Its hash id is 1.
+	MaxOpen int64
+}
+
+// Merchant is the block of a merchant role (spec-merchants.md 3.2), a pointer of
+// Role: nil means the role is not a merchant role. Start from DefaultMerchant and
+// set Modes. Its hash ids are the order of the fields, 1 to 9.
+type Merchant struct {
+	// Modes are the transport modes the merchant plans with, by ID, in canonical
+	// order: required, none twice, at most MaxModes, each defined by
+	// Modules.Transport.
+	Modes []string
+	// LotUnits is the carrying units a dispatch may use at most, 1 to MaxLotUnits.
+	LotUnits int64
+	// FeeShareSpreadBP is the half-width of the fixed spread of the fee share by
+	// agent, in basis points, 0 to 5 000, at most Role.MerchantFeeShare, and the
+	// share plus it at most 10 000 (spec-merchants.md 5.7).
+	FeeShareSpreadBP int64
+	// MaxSourceAge is the oldest SourceAge of a rumour the merchant acts on, 0 to
+	// MaxRumourAge (spec-merchants.md 5.2).
+	MaxSourceAge int64
+	// TimeCostBP is the cost of one tick away, in basis points of the merchant's
+	// own upkeep cost for a tick, 0 to MaxTimeCostBP (spec-merchants.md 5.4).
+	TimeCostBP int64
+	// ConsigneeCutBP is the share of the destination price the merchant expects to
+	// give up to a consignee under a contract, in basis points, 0 to 5 000.
+	ConsigneeCutBP int64
+	// Consigns says the merchant posts takes: it buys delivered goods as a
+	// consignee (spec-merchants.md 8). It needs TakeUnits.
+	Consigns bool
+	// TakeMarginBP is the discount to its local price at which a consignee takes,
+	// in basis points, 0 to 9 000.
+	TakeMarginBP int64
+	// TakeUnits is the units of a cargo commodity a consignee wants to hold or have
+	// on the way, 1 to MaxQuantity; required with Consigns.
+	TakeUnits Quantity
+}
+
+// canonical returns a copy of the block with its modes in ID order
+// (spec-config.md 3.4), nil for nil.
+func (m *Merchant) canonical() *Merchant {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Modes = sortedBy(m.Modes, cmp.Compare[string])
+	return &out
 }
 
 // Migration is the configuration of the migration module (spec-migration.md 11).
@@ -870,6 +936,16 @@ type Role struct {
 	// module (spec-migration.md 3.3). It is hashed only while that module is on
 	// and only when true. Its hash id is 20.
 	Fixed bool
+	// MerchantFeeShare is the centre of the fee share of a merchant, in basis
+	// points, 0 to 10 000: the most of its expected margin a merchant lets the cost
+	// of carriage take (spec-carriage.md 2.2, FR-CAR-012). The Go zero value is a
+	// share of 0, which never ships; DefaultMerchantFeeShare is the default. It is
+	// hashed only with Merchant. Its hash id is 21.
+	MerchantFeeShare int64
+	// Merchant is the merchant block: non-nil makes the role a merchant role
+	// (spec-merchants.md 3.2). It is hashed when non-nil, even when all its fields
+	// are zero. Its hash id is 22.
+	Merchant *Merchant
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1046,6 +1122,7 @@ func (c Config) canonical() Config {
 		r.Upkeep = sortedBy(r.Upkeep, byCommodity)
 		r.Trades = sortedBy(r.Trades, cmp.Compare[string])
 		r.StartStock = sortedBy(r.StartStock, byCommodity)
+		r.Merchant = r.Merchant.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {
@@ -1083,6 +1160,7 @@ func (c Config) canonical() Config {
 	out.Modules.Population = c.Modules.Population.canonical()
 	out.Modules.Transport = c.Modules.Transport.canonical()
 	out.Modules.Migration = c.Modules.Migration.canonical()
+	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
 	return out
 }
 
@@ -1202,4 +1280,104 @@ type FlowTarget struct {
 	Region string
 	// Role is the role of the households; a pool has none.
 	Role string
+}
+
+// External is the external-sector module (spec-external-sector.md 3.3): the
+// outside as data. Its presence switches it on.
+type External struct {
+	// Nodes are the regions marked as outside, by region in canonical order, at
+	// most MaxOutsideNodes.
+	Nodes []OutsideNode
+}
+
+// OutsideNode marks an existing region as the outside (spec-external-sector.md
+// 3.1): a region with no agents and no market, whose gates are the regions with
+// a direct edge to or from it.
+type OutsideNode struct {
+	// Region is the ID of an existing region that has no agents.
+	Region string
+	// Lines are the node's dealings, by commodity in canonical order, at most
+	// MaxOutsideLines.
+	Lines []OutsideLine
+	// Gates override the scale of a gate, by region in canonical order. Optional.
+	Gates []OutsideGate
+	// Label is a display name. It is presentation only and is not hashed.
+	Label string
+}
+
+// OutsideLine is the outside's dealing in one commodity at one node
+// (spec-external-sector.md 3.3): one price path and up to two sides. Start from
+// DefaultOutsideLine; Base has no default.
+type OutsideLine struct {
+	// Commodity is the ID of the commodity dealt in.
+	Commodity string
+	// Base is the mid at tick 0, 1 to MaxPrice. It is required.
+	Base Price
+	// PriceBySeason are the price factors by season, in basis points of Base 1 to
+	// MaxPriceFactorBP, by season in the calendar's order; an absent season is
+	// 10 000 (6.2).
+	PriceBySeason []SeasonFactor
+	// TrendBP is the linear drift of the mid in signed basis points of Base a
+	// year, -MaxTrendBP to MaxTrendBP (6.3). Default 0.
+	TrendBP int64
+	// FloorBP is the lower clamp of the trend and walk factor, 1 to 10 000
+	// (6.3). Default 1 000, a placeholder.
+	FloorBP int64
+	// CeilingBP is the upper clamp of the trend and walk factor, 10 000 to
+	// MaxFactorBP (6.3). Default 100 000, a placeholder.
+	CeilingBP int64
+	// WalkStepBP is the largest step of the walk per tick, 0 to MaxWalkStepBP; 0
+	// is no walk (6.4). Default 0.
+	WalkStepBP int64
+	// WalkRevertBP is the share of the drift undone per tick, 0 to 10 000 (6.4).
+	// Default 0.
+	WalkRevertBP int64
+	// WalkBoundBP is the largest drift either way: WalkStepBP to MaxDriftBP when
+	// a walk is on, else 0 (6.4). Default 0.
+	WalkBoundBP int64
+	// Sell is the side on which the outside sells to the realm (imports).
+	// Capacity 0 is an absent side.
+	Sell OutsideSide
+	// Buy is the side on which the outside buys from the realm (exports).
+	// Capacity 0 is an absent side.
+	Buy OutsideSide
+}
+
+// OutsideSide is one side of a line (spec-external-sector.md 3.3). Its state
+// (carry, cumulative totals, ended) is kept per gate (3.3.4). A side with
+// Capacity 0 is absent and every other field of it must be 0.
+type OutsideSide struct {
+	// MarginBP is the ask above the mid for a sell side and the bid below it for
+	// a buy side (6.6): sell 0 to MaxSellMarginBP, buy 0 to MaxBuyMarginBP.
+	MarginBP int64
+	// Capacity is the units offered or wanted per tick at full availability, 0 to
+	// MaxQuantity; 0 is an absent side (7.1).
+	Capacity int64
+	// Window is the availability by season in basis points, 0 to 10 000; an
+	// absent season is 10 000 (7.2).
+	Window []SeasonFactor
+	// TotalUnits caps the units traded over the run at each gate, 0 to
+	// MaxLineTotal; 0 is no cap beyond the bound (7.3).
+	TotalUnits int64
+	// TotalValue caps the list value traded over the run at each gate, 0 to
+	// MaxLineTotal; 0 is no cap beyond the bound (7.3, 7.4).
+	TotalValue int64
+}
+
+// SeasonFactor is a basis-point factor for one season of the calendar.
+type SeasonFactor struct {
+	// Season is the ID of a season of the calendar.
+	Season string
+	// BP is the factor in basis points.
+	BP int64
+}
+
+// OutsideGate overrides the scale of one gate of a node (spec-external-sector.md
+// 3.2.4).
+type OutsideGate struct {
+	// Region is the ID of a gate of the node.
+	Region string
+	// ScaleBP multiplies both quotes of the gate, 1 to MaxGateScaleBP. Default
+	// 10 000.
+	ScaleBP int64
 }

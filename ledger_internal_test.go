@@ -596,3 +596,38 @@ func TestWearApplied_RetirementIsNotTheRate(t *testing.T) {
 		}
 	}
 }
+
+// TestNewLedger_ModuleOffAddsNoAccount verifies that a configuration without
+// the external module opens exactly the built-in boundary accounts, a count that
+// is a function of the number of commodities alone, and none of them belongs to
+// one of the six outside_* reasons.
+//
+// Requirement: FR-EXT-001, FR-EXT-018, FR-LED-052
+func TestNewLedger_ModuleOffAddsNoAccount(t *testing.T) {
+	t.Parallel()
+	for _, n := range []int{1, 3, 9} {
+		cfg := Config{Commodities: packOneCommodities()[:n], Regions: []Region{{ID: "north"}}}
+		l := mustLedger(t, cfg)
+		want := 0
+		for thing := ledger.Money; thing < n; thing++ {
+			for r := ledger.Reason(0); int(r) < numBuiltInReasons; r++ {
+				if class, ok := ledger.ClassOf(r, thing != ledger.Money); ok && class != ledger.Internal {
+					want++
+				}
+			}
+		}
+		if got := l.Len(); got != want {
+			t.Errorf("accounts of a world with %d commodities and the module off = %d, want %d", n, got, want)
+		}
+		for _, r := range []ledger.Reason{ledger.OutsideBudget, ledger.OutsideUnspent, ledger.OutsideReceipts} {
+			if _, ok := l.Boundary(r, ledger.Money); ok {
+				t.Errorf("the module off has a boundary account for reason %d", r)
+			}
+		}
+		for _, r := range []ledger.Reason{ledger.OutsideOffer, ledger.OutsideUnsold, ledger.OutsidePurchases} {
+			if _, ok := l.Boundary(r, 0); ok {
+				t.Errorf("the module off has a goods boundary account for reason %d", r)
+			}
+		}
+	}
+}

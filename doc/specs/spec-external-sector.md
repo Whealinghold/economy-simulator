@@ -215,6 +215,8 @@ by key (`spec-config.md` 6.4); the layout is proposed for 6.2 of that spec.
 built or a hash is taken (`spec-config.md` 3.4; `spec-regions.md` 5.3.4). A second row for
 a key is `ErrDuplicateID`.
 
+3.3.4. **The state of a side is kept per gate (ruling R1 of plan 2-16, 2026-11-09).** `Capacity`, `Window`, `TotalUnits` and `TotalValue` of a side apply to each gate of the node for that side separately: each (node, gate, commodity, side) is a **side row** with its own carry, cumulative units, cumulative list value and ended flag, and it belongs to the counterparty of that (node, gate, side) (4.2.1). A node with two gates for a sell side therefore offers up to `Capacity` units at each of them. "A side" in 7.1, 7.3, 15 and 16 means such a row. This is the reading OBS 5.3.9 already has. Reverse by keying the state by (node, commodity, side) and sharing it among the gates in ascending gate order.
+
 3.3.3. **A side with `Capacity` 0 is absent**, and so are its other fields: any of them
 non-zero on an absent side is `ErrOutOfBounds` (a margin with no side is a mistake). A
 line with both sides absent draws the warning `line_without_side`.
@@ -331,7 +333,7 @@ The phase numbers are those of `spec-agents.md` 4, which `spec-world.md` will fi
 
 ### 5.1 Phase 1: the price state
 
-5.1.1. In phase 1, after the money flows (`spec-money-supply.md` 5.1) and before the
+5.1.1. In phase 1 at position P1.8 (`spec-world.md` 6), after the money flows (`spec-money-supply.md` 5.1) and before the
 directive, for each line with `WalkStepBP` above 0, in ascending (node `RegionID`,
 `CommodityID`), the world draws once from its source and advances the drift (6.4). No
 other draw is made by this module, at creation or later, so the count of draws in a tick
@@ -342,7 +344,7 @@ not change it.
 
 ### 5.2 Phase 3: the orders
 
-5.2.1. After the last agent's plan has been executed and the estate pseudo-agents have
+5.2.1. At position P3.5 (`spec-world.md` 6), after the last agent's plan has been executed and the estate pseudo-agents have
 placed their asks, the counterparties place their orders, in ascending agent ID
 (4.2.2). For one counterparty, for each line of its node in commodity order whose side
 is present, the following are computed from the tick's moment (season), the line's state
@@ -375,7 +377,7 @@ realm's ledger overnight. This is what makes the boundary flows gross (8.1). The
 
 ### 5.3 Phase 4: the sweep
 
-5.3.1. When every market has cleared and every reservation has been settled or released
+5.3.1. At position P4.2 (`spec-world.md` 6), when every market has cleared and every reservation has been settled or released
 (`spec-clearing.md` 6, 7.2), before phase 5, for each counterparty in agent-ID order, its
 account is emptied to the boundary, money then goods in commodity order:
 
@@ -551,7 +553,7 @@ ID range of 4.2.2.
 
 `Capacity` is the most units a side offers or wants in a tick at full availability. The
 wanted units of a tick are `floor((Capacity * Avail + carry) / 10 000)` with `Avail` the
-window factor (7.2) and `carry` an integer in `[0, 10 000)` kept per side, starting at 0
+window factor (7.2) and `carry` an integer in `[0, 10 000)` kept per side row (3.3.4), starting at 0
 and set to the remainder. A fraction of a unit is therefore not lost: a capacity of 3 at an
 availability of 2 500 wants 0, 1, 1, 1, 0, 1, 1, 1 ... units, 3 in 4 ticks. The carry
 advances by the wanted units whether or not they were offered, so a cut is forfeited, not
@@ -569,13 +571,13 @@ draws the warning `window_all_closed`.
 
 ### 7.3 Cumulative caps
 
-A side may carry `TotalUnits` and `TotalValue`, caps over the run on the units traded and on
+A side may carry `TotalUnits` and `TotalValue`, caps over the run, for each of its gates (3.3.4), on the units traded and on
 the **list value** traded (7.4). The effective list-value cap is the smaller of `TotalValue`
 (when set) and `MaxLineTotal`, a bound of 13.2 that makes all the lines together able to move
 at most `MaxMoney`; the effective unit cap is `TotalUnits` when set. Each tick the offer is
 cut to the remaining units and to `floor(remaining list value / limit price)`, and the units
 cut are counted as `CutCap`. When, after settlement, the remaining units are 0, or the
-remaining list value is below the limit price of the tick, the side **ends** for good:
+remaining list value is below the limit price of the tick, the side row **ends** for good:
 `OutsideEnded` is emitted once with the cause (`units` or `value`) and a `Warn` is logged
 once. An ended side places nothing and draws no counterparty top-up. A price that later falls
 does not revive it, so up to one quote price of the list value may stay unused. The cap is the
@@ -889,7 +891,7 @@ runs.
 
 | Constant | Value | Reason |
 |----------|-------|--------|
-| `MaxOutsideNodes` | 16 | counterparties and loops are bounded by the configuration; also a divisor of `MaxLineTotal` |
+| `MaxOutsideNodes` | 16 | counterparties and loops are bounded by the configuration |
 | `MaxOutsideLines` | 64 per node | the per-tick loop is nodes times gates times lines; 64 is a placeholder, well below `MaxCommodities` |
 | `MaxCounterparties` | 256 | agent IDs, accounts and boundary accounts of the module are bounded |
 | `MaxSellMarginBP` | 100 000 | an ask of at most eleven times the mid |
@@ -902,7 +904,7 @@ runs.
 | `MaxDriftBP` | 9 999 | keeps `F_walk` positive (6.4.1) |
 | `MaxShockBP` | 100 000 | the shock slot, ten times |
 | `MaxGateScaleBP` | 100 000 | ten times |
-| `MaxLineTotal` | `MaxMoney / (2 * MaxOutsideNodes * 64)` = 488 281 250 000 000 | all sides together can move at most `MaxMoney` of list value; with the initial money and the flows of `spec-money-supply.md` 6.4.2 the money supply stays below `3 * MaxMoney` = 3 * 10^18, inside `int64` |
+| `MaxLineTotal` | `MaxMoney / (MaxCounterparties * MaxOutsideLines)` = 61 035 156 250 000 | the cap is per side row (3.3.4) and there are at most `MaxCounterparties` counterparties of at most `MaxOutsideLines` rows each, so all side rows together can move at most `MaxMoney` of list value; with the initial money and the flows of `spec-money-supply.md` 6.4.2 the money supply stays below `3 * MaxMoney` = 3 * 10^18, inside `int64` |
 
 The products of the module are bounded by `MaxPrice * MaxQuantity` = 10^18 (a budget, a
 receipt), the 128-bit product of 6.1 (at most 10^25) and `Capacity * Avail` (at most 10^13)
@@ -956,7 +958,7 @@ plain struct with a `Tick`, no map, no pointer, fixed-point values (4.1 there).
 | Event | Emitted when | Fields |
 |-------|--------------|--------|
 | `OutsideTraded` | once per (node, gate, commodity, side) per tick in which the side wanted any unit or any unit was cut, after the sweep, in ascending (node, gate, commodity, buy before sell); never when nothing was wanted or cut | `Node`, `Region` (the gate), `Commodity`, `Side` (`bid` for a buy side, `ask` for a sell side), `Mid`, `Price` (the limit), `Wanted`, `Offered`, `Traded`, `Value` (money paid or received in the trades), `ListValue`, `CutClosed`, `CutCap`, `CutPrice`, `PriceClamped` |
-| `OutsideEnded` | a side reaches its cap and ends, once | `Node`, `Commodity`, `Side`, `Cause` (`units` or `value`), `Units`, `ListValue` (cumulative) |
+| `OutsideEnded` | a side row reaches its cap and ends, once | `Node`, `Region` (the gate), `Commodity`, `Side` (`bid` for a buy side, `ask` for a sell side), `Cause` (`units` or `value`), `Units`, `ListValue` (cumulative) |
 | `OutsideShocked` | the shock slot is set between steps, once per changed (node, commodity) of a call | `Node`, `Commodity`, `From`, `To` |
 
 `OutsideTraded` is an aggregate: it is bounded by nodes, gates and lines in the configuration
@@ -975,7 +977,7 @@ construction summary). The reason values are the six of 8.1.
 | Level | Where | Message | Attributes |
 |-------|-------|---------|------------|
 | `Info` | construction summary | "world created" | adds `nodes`, `counterparties` |
-| `Warn` | a side ends (7.3) | "outside side ended" | `node`, `commodity`, `side`, `cause` |
+| `Warn` | a side ends (7.3) | "outside side ended" | `node`, `region`, `commodity`, `side`, `cause` |
 | `Warn` | construction | the warnings of 14.2 | `rule`, `path` |
 | `Debug` | each side per tick, guarded by `Enabled` | "outside side" | `node`, `region`, `commodity`, `side`, `price`, `quantity`, `value` |
 | `Debug` | the walk step | "outside drift" | `node`, `commodity`, `drift` |
@@ -1025,7 +1027,7 @@ Metrics (for `rules/observability-and-logging.md` 5.3, built by `otelobserver`):
 |------|-----------|------|------------|--------|
 | `economysim.external.units` | Counter | `{unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Traded`) |
 | `economysim.external.value` | Counter | `{minor_unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Value`) |
-| `economysim.external.price` | Gauge | `{minor_unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Price`) |
+| `economysim.external.price` | Gauge | `{minor_unit}` | `economysim.node`, `economysim.region` (the gate), `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Price`) |
 
 The money crossing the boundary is also in `economysim.money.flow` through `BoundaryFlow`, by
 reason, so a dashboard of the balance of trade is `outside_budget` less `outside_unspent` less
@@ -1034,16 +1036,17 @@ reason, so a dashboard of the balance of trade is `outside_budget` less `outside
 ## 16. State contributed to a checkpoint
 
 ADR 0002 asks every spec for the state it adds. With the module on, in the order of the
-configuration (nodes by region, lines by commodity):
+configuration: first the line rows (nodes by region, lines by commodity), then the side rows in
+(node, gate, commodity, buy before sell) order, only for the sides present and the gates that are gates for them (3.2.1):
 
 | State | Per | Saved as |
 |-------|-----|----------|
 | `Drift` | line with a walk | `int64` |
 | `Shock` | line | `int64` (10 000 when never set) |
-| `carry` | side | `int64` in `[0, 10 000)` |
-| cumulative `Units` | side | `int64` |
-| cumulative list value | side | `int64` |
-| `Ended` | side | boolean |
+| `carry` | side row (3.3.4) | `int64` in `[0, 10 000)` |
+| cumulative `Units` | side row | `int64` |
+| cumulative list value | side row | `int64` |
+| `Ended` | side row | boolean |
 
 The state saved is therefore a few integers per line and no map. **Not saved:** the mid and
 the quotes (functions of the tick, the drift and the shock), the gates and the counterparty

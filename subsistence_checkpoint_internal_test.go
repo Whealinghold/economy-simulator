@@ -72,7 +72,7 @@ func TestCheckpoint_AgentRecordWritesFlagOnce(t *testing.T) {
 	step(t, w, 1)
 	clear(w.sub.runOn)
 	clear(w.sub.runBlocked)
-	if on, _ := w.sub.recordFields(w.firstHousehold()); on != 1 {
+	if on, _ := w.sub.recordFields(w.firstLiveHousehold()); on != 1 {
 		t.Fatalf("flag of the first household = %d, want 1 (it has no grain and no money)", on)
 	}
 	if got, want := section19(t, w), []byte{0, 0}; !bytes.Equal(got, want) {
@@ -80,8 +80,8 @@ func TestCheckpoint_AgentRecordWritesFlagOnce(t *testing.T) {
 	}
 }
 
-// firstHousehold returns the first household agent of w.
-func (w *World) firstHousehold() AgentID {
+// firstLiveHousehold returns the first household agent of w.
+func (w *World) firstLiveHousehold() AgentID {
 	var id AgentID
 	w.eachLive(func(a *agent) {
 		if id == 0 {
@@ -124,7 +124,7 @@ func TestCheckpoint_OwnUseNonZeroCorruptWhenOff(t *testing.T) {
 	// Through the check of a record: a valid record of the first household of a
 	// world with the module off is refused once its flag is set (R10).
 	w := newMill(t, off, WithSeed(2))
-	id := w.firstHousehold()
+	id := w.firstLiveHousehold()
 	rec := agentRec{id: uint64(id), weight: 1, carry: w.deathCarry(id)}
 	names := []string{w.cfg.Roles[0].Strategy}
 	if err := w.checkAgentFields(&restoreCtx{}, &rec, names); err != nil {

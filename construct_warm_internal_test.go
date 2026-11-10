@@ -336,7 +336,8 @@ func TestWarmStart_JobWithoutItsToolIsRefused(t *testing.T) {
 // (FR-VIA-021, FR-VIA-047): Config.WarmStart is read only by the files of the
 // configuration (config.go, hash.go, validate.go), of the viability row
 // (viability*.go), by welfare.go's seedWages, which the construction hands the
-// wages to, and by construct_warm.go, and SolveSteadyState is called only by the
+// wages to, by construct_warm.go and by external.go (its validator reads the
+// region of each row, to refuse a row that names an outside node), and SolveSteadyState is called only by the
 // viability files.
 //
 // Requirement: FR-VIA-021, FR-VIA-047
@@ -352,7 +353,7 @@ func TestWarmStart_TextGuards(t *testing.T) {
 	}
 	read := regexp.MustCompile(`\b(\w+)\.WarmStart\b`)
 	allowed := func(n string) bool {
-		return slices.Contains([]string{"config.go", "hash.go", "validate.go", "welfare.go", "construct_warm.go"}, n) || strings.HasPrefix(n, "viability")
+		return slices.Contains([]string{"config.go", "hash.go", "validate.go", "welfare.go", "construct_warm.go", "external.go"}, n) || strings.HasPrefix(n, "viability")
 	}
 	seen := false
 	for _, e := range entries {
@@ -367,7 +368,7 @@ func TestWarmStart_TextGuards(t *testing.T) {
 		src := string(b)
 		for _, m := range read.FindAllStringSubmatch(src, -1) {
 			if m[1] != "logkeys" && !allowed(n) {
-				t.Errorf("%s reads %s, want Config.WarmStart read only by the configuration, viability, welfare.go and construct_warm.go files", n, m[0])
+				t.Errorf("%s reads %s, want Config.WarmStart read only by the configuration, viability, welfare.go, construct_warm.go and external.go files", n, m[0])
 			}
 		}
 		if n == "construct_warm.go" && read.MatchString(src) {

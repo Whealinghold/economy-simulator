@@ -82,7 +82,9 @@ func (w *World) p53Markdown() error {
 // market is advanced, also for a market with no outcome (N-230).
 func (w *World) p54Outcomes() {
 	for i := range w.markets.books {
-		w.marketOutcomes(i)
+		if !w.outsideMarket(i) {
+			w.marketOutcomes(i)
+		}
 	}
 }
 
@@ -92,7 +94,7 @@ func (w *World) marketOutcomes(i int) {
 	b, t := w.markets.books[i], &w.oc.tallies[i]
 	*t = beliefs.Tally{}
 	region, commodity := RegionID(i/w.markets.commodities), CommodityID(i%w.markets.commodities)
-	fill, pseudo := b.filled(), AgentID(len(w.cfg.Regions))
+	fill, pseudo := b.filled(), AgentID(w.firstHousehold)
 	for j := range b.entries {
 		if b.entries[j].agent < pseudo {
 			continue
@@ -194,7 +196,7 @@ func (w *World) p61Upkeep() error {
 		clear(oc.short)
 	}
 	roles := len(w.cfg.Roles)
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue
@@ -294,7 +296,7 @@ func (w *World) p63Welfare() {
 	}
 	clear(w.oc.clamped)
 	roles, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue

@@ -274,6 +274,56 @@ const (
 	// ReasonTransitUse is the feed a self-carried trip consumes at dispatch, a
 	// goods sink (spec-transport.md 3.3.2, 7.2).
 	ReasonTransitUse Reason = "transit_use"
+	// ReasonEscrowIn is the money a payer puts into an Escrow account when a
+	// delivery contract is formed, ReasonEscrowOut the money the escrow pays the
+	// deliverer for the units that arrived, and ReasonEscrowRefund the money it
+	// gives back to the payer, or to the estate of the destination when the payer is
+	// gone (spec-merchants.md 9.6). All three are internal transfers of money.
+	ReasonEscrowIn     Reason = "escrow_in"
+	ReasonEscrowOut    Reason = "escrow_out"
+	ReasonEscrowRefund Reason = "escrow_refund"
+)
+
+// The declared ledger reasons of the external module, six rows declared while
+// it is on (spec-ledger.md 7.2, spec-external-sector.md 8.1). The first three move money
+// and the last three goods; ReasonOutsideBudget and ReasonOutsideOffer are
+// faucets, the other four sinks.
+const (
+	// ReasonOutsideBudget is the money a buyer counterparty's account receives
+	// from the boundary before its bid.
+	ReasonOutsideBudget Reason = "outside_budget"
+	// ReasonOutsideUnspent is the part of that budget the sweep gives back.
+	ReasonOutsideUnspent Reason = "outside_unspent"
+	// ReasonOutsideReceipts is the money a seller counterparty's account holds
+	// after the markets, swept to the boundary.
+	ReasonOutsideReceipts Reason = "outside_receipts"
+	// ReasonOutsideOffer is the goods a seller counterparty's account receives from
+	// the boundary before its ask, born in the tick at full durability.
+	ReasonOutsideOffer Reason = "outside_offer"
+	// ReasonOutsideUnsold is the goods of a seller's account that were not bought,
+	// swept to the boundary.
+	ReasonOutsideUnsold Reason = "outside_unsold"
+	// ReasonOutsidePurchases is the goods a buyer's account bought, swept to the
+	// boundary.
+	ReasonOutsidePurchases Reason = "outside_purchases"
+)
+
+// The refusals of the contract round, the reasons of a delivery offer or take that
+// the admission refuses and of a formation that fails (spec-merchants.md 9.3,
+// 9.5). An admission also uses the reasons of an order and of a shipment request.
+const (
+	// ReasonContractsOff is an offer or a take while the merchants module is absent.
+	ReasonContractsOff Reason = "contracts_off"
+	// ReasonDuplicateTake is a second take for a commodity by the same agent in a
+	// tick.
+	ReasonDuplicateTake Reason = "duplicate_take"
+	// ReasonTooManyContracts is a formation that finds MaxOpen contracts in flight.
+	ReasonTooManyContracts Reason = "too_many_contracts"
+	// ReasonPayerFunds is a formation whose payer no longer has the money its take
+	// was sized on.
+	ReasonPayerFunds Reason = "payer_funds"
+	// ReasonNoTaker is an offer that finds no take to match.
+	ReasonNoTaker Reason = "no_taker"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -1447,3 +1497,239 @@ type MigrationReviewed struct {
 }
 
 func (MigrationReviewed) isEvent() {}
+
+// LaneDecision is the result of a merchant's lane decision, a closed set of the
+// attribute economysim.decision (spec-merchants.md 5.1.2, 15.3). It is a type of
+// its own, distinct from Reason, so that DecisionNoRumour does not repeat the
+// value of ReasonNoRumour.
+type LaneDecision string
+
+// The eleven decisions of a merchant's tick, the names of the counts of PlanNotes
+// and of MerchantsPlanned (spec-merchants.md 5.1.2, 6.4, 6.5, 7.1).
+const (
+	// DecisionNoRumour is a candidate with no rumour for its lane.
+	DecisionNoRumour LaneDecision = "no_rumour"
+	// DecisionStale is a candidate whose rumour is older at its source than the
+	// block allows.
+	DecisionStale LaneDecision = "stale"
+	// DecisionLocked is a candidate whose lane has units on the way already.
+	DecisionLocked LaneDecision = "locked"
+	// DecisionPerishable is a candidate whose cargo would spoil on the way.
+	DecisionPerishable LaneDecision = "perishable"
+	// DecisionNoMargin is a candidate whose cautious revenue is not above the local
+	// price.
+	DecisionNoMargin LaneDecision = "no_margin"
+	// DecisionUnaffordable is a candidate whose lot is 0.
+	DecisionUnaffordable LaneDecision = "unaffordable"
+	// DecisionBelowShare is a candidate whose carriage costs more than the fee
+	// share of its gross margin.
+	DecisionBelowShare LaneDecision = "below_share"
+	// DecisionPlanned is a passing candidate that was planned.
+	DecisionPlanned LaneDecision = "planned"
+	// DecisionRested is a merchant at its target income that planned nothing.
+	DecisionRested LaneDecision = "rested"
+	// DecisionWaiting is a merchant that stayed: goods inbound, a store, a job.
+	DecisionWaiting LaneDecision = "waiting"
+	// DecisionLotCapped is a lot cut by the cap of the block.
+	DecisionLotCapped LaneDecision = "lot_capped"
+)
+
+// MerchantsPlanned is emitted once per region per tick in which at least one
+// agent with a merchant block was given a view, in ascending RegionID at P3.3a,
+// after ContractRound and before RumoursServed, also with the module absent
+// (spec-merchants.md 15.1.1). It is the sum of the PlanNotes of the plans of the
+// region, a count of lanes and cases, and is bounded by the regions, not per
+// agent.
+type MerchantsPlanned struct {
+	Tick   int64
+	Region RegionID
+	// Merchants is the agents with a merchant block given a view in the region.
+	Merchants int64
+	// Considered is the candidates, and NoRumour to BelowShare how they were
+	// decided; they add up to Considered less the passing candidates.
+	Considered, NoRumour, Stale, Locked, Perishable, NoMargin, Unaffordable, BelowShare int64
+	// Planned is the trips planned, Dispatched the shipment requests, Offered the
+	// delivery offers and Taken the delivery takes posted.
+	Planned, Dispatched, Offered, Taken int64
+	// Rested, Waiting and LotCapped count a rest, a stay and a lot cut by the cap.
+	Rested, Waiting, LotCapped int64
+}
+
+func (MerchantsPlanned) isEvent() {}
+
+// ContractFormed is emitted when a delivery contract is formed, at P3.3 in
+// formation order, after the ShipmentDispatched of its shipment (spec-merchants.md
+// 9.5, 15.1.1). It is per contract, like ShipmentDispatched.
+type ContractFormed struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee that bought the goods and
+	// Deliverer the shipper that sells them.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region, the origin, and To the destination, where
+	// the payer's account is.
+	Region RegionID
+	To     RegionID
+	// Commodity, Quantity and Price are the goods and the price per unit.
+	Commodity CommodityID
+	Quantity  Quantity
+	Price     Price
+	// Escrowed is Price times Quantity, the money moved to the Escrow account.
+	Escrowed Money
+	// Shipment is the shipment that carries the goods, Mode its mode and Arrives
+	// the tick it arrives, which is the deadline of the contract.
+	Shipment ShipmentID
+	Mode     ModeID
+	Arrives  int64
+}
+
+func (ContractFormed) isEvent() {}
+
+// The causes of ContractSettled (spec-merchants.md 15.1.1), constants of Cause.
+const (
+	// CauseDelivered is a contract whose goods all arrived.
+	CauseDelivered Cause = "delivered"
+	// CauseShort is a contract of which units spoiled or were lost on the way.
+	CauseShort Cause = "short"
+	// CausePayerRemoved is a contract whose payer was removed before the arrival:
+	// the cargo went to the estate and so did the refund.
+	CausePayerRemoved Cause = "payer_removed"
+	// CauseDelivererRemoved is a contract that ended at the removal of its
+	// deliverer, the whole escrow returned.
+	CauseDelivererRemoved Cause = "deliverer_removed"
+)
+
+// ContractSettled is emitted when a delivery contract ends: in phase 1 at P1.4,
+// after the ShipmentArrived events, in contract ID order, or with the removal of
+// its deliverer in phase 7 (spec-merchants.md 9.7, 15.1.1). It is per contract.
+type ContractSettled struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee and Deliverer the shipper.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region at the event and To the destination.
+	Region RegionID
+	To     RegionID
+	// Commodity and Quantity are the goods the contract named.
+	Commodity CommodityID
+	Quantity  Quantity
+	// Reached is the units that reached the destination, delivered or diverted;
+	// Spoiled the units spoiled in transit and Lost the units lost (0 with the risk
+	// module off). Reached is Quantity less Spoiled and Lost.
+	Reached, Spoiled, Lost Quantity
+	// Paid is the money paid to the deliverer and Refunded the money returned to the
+	// payer, or to the estate of To when the payer was removed.
+	Paid, Refunded Money
+	// Cause says why the contract ended.
+	Cause Cause
+}
+
+func (ContractSettled) isEvent() {}
+
+// ContractRound is emitted once per destination region and tick in which an offer
+// or a take was submitted for it, in ascending RegionID at P3.3 after the last
+// ContractFormed of the round (spec-merchants.md 15.1.1). It is bounded by the
+// regions, not per contract.
+type ContractRound struct {
+	Tick int64
+	// Region is the destination.
+	Region RegionID
+	// Offers and Takes are the admitted, OffersRefused and TakesRefused the refused.
+	Offers, Takes, OffersRefused, TakesRefused int64
+	// Matched is the tentative matches, Formed the contracts formed, NoTaker the
+	// offers that found no take, and PayerFunds, TooMany and DispatchRefused the
+	// matches that failed in formation by that reason.
+	Matched, Formed, NoTaker, PayerFunds, TooMany, DispatchRefused int64
+	// Units and Value are the units and the money of the contracts formed.
+	Units int64
+	Value Money
+}
+
+func (ContractRound) isEvent() {}
+
+// The reasons the external module adds to the refusals of other modules
+// (spec-external-sector.md 4.4, D533).
+const (
+	// ReasonOutsideNode is a relocation into an outside node: row 5a of
+	// spec-regions.md 6.1.3, between same_region and open_reservation.
+	ReasonOutsideNode Reason = "outside_node"
+	// ReasonOutsideDestination is a shipment request whose destination is an
+	// outside node: row 6a of spec-transport.md 5.4, between unknown_region and
+	// no_route.
+	ReasonOutsideDestination Reason = "outside_destination"
+)
+
+// The causes that end a side of an outside node (spec-external-sector.md 7.3, D533).
+const (
+	// CauseUnits is a side whose cumulative units reached the cap TotalUnits.
+	CauseUnits Cause = "units"
+	// CauseValue is a side whose remaining list value fell below the limit price of
+	// the tick.
+	CauseValue Cause = "value"
+)
+
+// OutsideTraded is emitted once per (node, gate region, commodity, side) per tick
+// in which the side wanted any unit or any unit was cut, after the sweep of P4.2,
+// in ascending (Node, Region, Commodity, buy before sell); it is never emitted when
+// nothing was wanted or cut, and only while the external module is on
+// (spec-external-sector.md 15.1, FR-EXT-036). The counts are units: Wanted is what
+// the side wanted, Offered what it placed after the cuts, Traded what changed hands
+// (the sweep), and the three Cut fields the wanted units not offered, by cause.
+type OutsideTraded struct {
+	Tick int64
+	// Node is the outside node and Region the gate; Commodity and Side name the side
+	// (Bid for a buy side, Ask for a sell side).
+	Node, Region RegionID
+	Commodity    CommodityID
+	Side         Side
+	// Mid is the mid of the line this tick and Price the limit of the order, the
+	// quote at the gate; Price is 0 when no quote was made (a closed edge).
+	Mid, Price Price
+	// Wanted, Offered and Traded are units.
+	Wanted, Offered, Traded int64
+	// Value is the money paid or received in the trades and ListValue the units
+	// traded times the limit (7.4).
+	Value, ListValue Money
+	// CutClosed, CutCap and CutPrice are the wanted units not offered because the
+	// edge was closed, the caps cut them, or the bid fell below 1.
+	CutClosed, CutCap, CutPrice int64
+	// PriceClamped says a clamp of the factor or of the price acted (6.3).
+	PriceClamped bool
+}
+
+func (OutsideTraded) isEvent() {}
+
+// OutsideEnded is emitted once when a side row reaches its cumulative cap and ends,
+// after the OutsideTraded events of the sweep (spec-external-sector.md 7.3, 15.1,
+// FR-EXT-036). Units and ListValue are the cumulative totals.
+type OutsideEnded struct {
+	Tick int64
+	// Node is the outside node and Region the gate; Commodity and Side name the side.
+	Node, Region RegionID
+	Commodity    CommodityID
+	Side         Side
+	// Cause is CauseUnits or CauseValue.
+	Cause Cause
+	// Units and ListValue are the cumulative units and list value of the side row.
+	Units     int64
+	ListValue Money
+}
+
+func (OutsideEnded) isEvent() {}
+
+// OutsideShocked is emitted once per changed key of a call that sets the shock of an
+// outside line between ticks (spec-external-sector.md 6.5, 15.1, FR-EXT-037). From
+// and To are the factor before and after, in basis points. Its Tick is the tick the
+// next step runs.
+type OutsideShocked struct {
+	Tick int64
+	// Node is the outside node and Commodity the line.
+	Node      RegionID
+	Commodity CommodityID
+	// From and To are the shock before and after, in basis points.
+	From, To int64
+}
+
+func (OutsideShocked) isEvent() {}

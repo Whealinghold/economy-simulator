@@ -44,11 +44,6 @@ func (t *transportState) holds(a *agent, skip []string) bool {
 	return false
 }
 
-// arrivalSkips returns the instance keys the guard query of an arrival skips besides
-// the arriving shipment's own: none now. It is the seam plan 15 fills with the
-// contract formed on the shipment (spec-transport.md 5.5.3, ruling C16).
-func (w *World) arrivalSkips(*shipment, RegionID) []string { return nil }
-
 // p13Arrivals is P1.3: the shipments whose arrival tick has come, in ascending
 // shipment ID, each delivered completely before the next (spec-transport.md 5.7). The
 // schedule gives them in that order, so the work of a tick follows the arrivals and
@@ -113,7 +108,7 @@ func (w *World) travellerLive(s *shipment) bool {
 // liveAgent reports whether the ID is an agent that exists: not a region's estate
 // pseudo-agent, issued, and of weight 1 or more.
 func (w *World) liveAgent(id AgentID) bool {
-	return id >= AgentID(len(w.cfg.Regions)) && id < w.state.nextAgent && w.agents[id].weight >= 1
+	return id >= AgentID(w.firstHousehold) && id < w.state.nextAgent && w.agents[id].weight >= 1
 }
 
 // moveTraveller relocates the traveller to the destination: the guard query run
@@ -123,7 +118,7 @@ func (w *World) liveAgent(id AgentID) bool {
 func (w *World) moveTraveller(a *agent, s *shipment) bool {
 	t := w.transport
 	key := string(strconv.AppendInt(append(t.key[:0], openShipment+":"...), int64(s.id), 10))
-	t.skip = append(append(t.skip[:0], key), w.arrivalSkips(s, s.to)...)
+	t.skip = append(append(t.skip[:0], key), w.arrivalSkips(s)...)
 	if reason, err := w.relocateRefusal(a.id, s.to, t.skip); err != nil {
 		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 			w.log.LogAttrs(ctx, slog.LevelDebug, "arrival held",

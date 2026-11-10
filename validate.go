@@ -88,6 +88,7 @@ func (c Config) Warnings() []Warning {
 	out = append(out, checkViability(&cc, newLookup(&cc)).warnings...)
 	out = append(out, horizonWarnings(&cc)...)
 	out = append(out, migrationRouteWarnings(&cc)...)
+	out = append(out, merchantRouteWarnings(&cc)...)
 	sortWarnings(out)
 	return out
 }
@@ -119,6 +120,8 @@ func (v *validator) structural() {
 	v.economics()
 	v.validateInformation()
 	v.validateMigration()
+	v.validateMerchants()
+	v.validateExternal()
 	v.overflow()
 }
 
@@ -241,6 +244,7 @@ type validator struct {
 	dearest                         map[string]Price // the highest in-bounds override of each commodity
 	lk                              lookup
 	cal                             calendarFacts
+	outsideNodes                    map[string]bool // outsideNodeSet, built on first use
 }
 
 // path returns a new slice of base followed by segs. It never shares base's
@@ -636,8 +640,9 @@ func (v *validator) structure() {
 			queue = append(queue, id)
 		}
 	}
+	imported := importSources(&c)
 	for _, cm := range c.Commodities {
-		if cm.Raw {
+		if cm.Raw || imported[cm.ID] {
 			mark(cm.ID)
 		}
 	}
@@ -1957,6 +1962,7 @@ func warnings(c *Config) []Warning {
 		}
 	}
 
+	imported := importSources(c)
 	for _, cm := range c.Commodities {
 		if cm.Durability > 0 && !required[cm.ID] {
 			add("durable_not_required", "commodities", cm.ID)
@@ -1975,7 +1981,7 @@ func warnings(c *Config) []Warning {
 					sourced = sourced || (o.Commodity == cm.ID && !o.Discard)
 				}
 			}
-			if !sourced {
+			if !sourced && !imported[cm.ID] {
 				add("raw_without_source", "commodities", cm.ID)
 			}
 		}
@@ -2067,6 +2073,8 @@ func warnings(c *Config) []Warning {
 	out = append(out, transportWarnings(c, lk)...)
 	out = append(out, informationWarnings(c, lk)...)
 	out = append(out, migrationWarnings(c, lk)...)
+	out = append(out, merchantWarnings(c)...)
+	out = append(out, externalWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

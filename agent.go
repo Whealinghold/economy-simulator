@@ -422,7 +422,7 @@ const agentRecordMin = 15
 func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
 	names := readStrategyNames(r)
-	if r.Err() == nil && int(w.state.nextAgent)-regions > w.ledger.Len() {
+	if r.Err() == nil && int(w.state.nextAgent)-w.firstHousehold > w.ledger.Len() {
 		r.Failf("next agent ID %d, but the ledger has %d accounts", w.state.nextAgent, w.ledger.Len())
 	}
 	if r.Err() != nil {
@@ -513,8 +513,8 @@ func (w *World) readAgentRec(rs *restoreCtx, r *codec.Reader, names []string, pr
 func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (ledger.View, error) {
 	v, err := w.ledger.Account(rec.acct)
 	switch {
-	case rec.id < uint64(len(w.cfg.Regions)) || rec.id >= uint64(w.state.nextAgent):
-		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, len(w.cfg.Regions), w.state.nextAgent)
+	case rec.id < uint64(w.firstHousehold) || rec.id >= uint64(w.state.nextAgent):
+		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, w.firstHousehold, w.state.nextAgent)
 	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(rec.id):
 		err = fmt.Errorf("agent %d names account %d, which is not its open Agent account", rec.id, rec.acct)
 	case rec.journey && w.badJourney(rs, rec, v.Region):

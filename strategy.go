@@ -123,6 +123,13 @@ type TradePlan struct {
 	// (spec-transport.md 5.3); empty with the transport module off. The world
 	// clears the reused plan, and a request's Lines are read during the call only.
 	Shipments []ShipmentRequest
+	// Offers and Takes are the delivery offers and takes of the contract round
+	// (spec-merchants.md 9.2), admitted in plan order at P3.3 after every agent's
+	// plan; Notes is what a strategy reports of its decisions as counts, summed per
+	// region into MerchantsPlanned. All three are empty or zero for the default.
+	Offers []DeliveryOffer
+	Takes  []DeliveryTake
+	Notes  PlanNotes
 }
 
 // ShipmentRequest asks the world to move goods, or the agent itself
@@ -473,6 +480,12 @@ type AgentView struct {
 	// copy valid for the call only; nil for every other agent and in every other
 	// view (spec-information.md 6.2). Look one up with Rumour.
 	Rumours []Rumour
+	// HasMerchant says Merchant is the merchant group of the view passed to Trade:
+	// the agent's role has a merchant block (spec-merchants.md 4.1). It is a scratch
+	// copy valid for the call only; Modes is shared by the agents of a role for the
+	// tick and a strategy must treat it as read-only.
+	HasMerchant bool
+	Merchant    MerchantView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

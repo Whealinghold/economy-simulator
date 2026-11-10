@@ -575,6 +575,21 @@ func writeFinal(b *strings.Builder, s economysim.Snapshot) {
 	for _, j := range s.Jobs {
 		fmt.Fprintf(b, "jobs %s %s agents=%d executions=%d households=%d\n", tableName(s.Names.Regions, int(j.Region)), tableName(s.Names.Recipes, int(j.Recipe)), j.Agents, j.Executions, j.Households)
 	}
+	writeOutside(b, s)
+}
+
+// writeOutside renders the outside state of the external module: nothing while it is
+// off, so the off set does not move (spec-observability.md 9.5.2).
+func writeOutside(b *strings.Builder, s economysim.Snapshot) {
+	for _, l := range s.Outside.Lines {
+		fmt.Fprintf(b, "outside line %s %s mid=%d drift=%d shock=%d\n", tableName(s.Names.Regions, int(l.Node)), tableName(s.Names.Commodities, int(l.Commodity)), l.Mid, l.DriftBP, l.ShockBP)
+	}
+	for _, r := range s.Outside.Sides {
+		fmt.Fprintf(b, "outside side %s %s %s %s quote=%d carry=%d units=%d list_value=%d ended=%t\n", tableName(s.Names.Regions, int(r.Node)), tableName(s.Names.Regions, int(r.Gate)), tableName(s.Names.Commodities, int(r.Commodity)), r.Side, r.Quote, r.Carry, r.Units, r.ListValue, r.Ended)
+	}
+	for _, t := range s.Outside.Trade {
+		fmt.Fprintf(b, "outside trade %s imports=%d exports=%d\n", tableName(s.Names.Commodities, int(t.Commodity)), t.Imports, t.Exports)
+	}
 }
 
 // testNames is the names table of the unit tests.

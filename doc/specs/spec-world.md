@@ -1126,8 +1126,10 @@ sites of the slice are:
 | `siteCreation` | D10 | `0x9B8FFA303CB545DC` | `tick`, `id` = the new agent |
 | `siteInform` | D4 | `0x7B15D7AD592D7D8F` | `tick`, `id` = the agent |
 | `siteMigration` | D11 | `0x53C434C7EFE6D523` | `tick`, `id` = the agent |
+| `siteContract` | D6 | `0xF0FF7DEE8E50504B` | `tick`, `id` = the agent, `sub` = `2*i` for the agent's `i`-th submitted offer and `2*i+1` for its `i`-th submitted take (the plan index) |
+| `siteOutsideWalk` | D2 | `0x46AE095E114979AB` | `tick`, `id` = the node `RegionID`, `sub` = the `CommodityID` of the line (ADR 0008 open point 3, answered for D2) |
 
-The rows D2, D6, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
+The rows D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
 constant yet**: each is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
@@ -1174,8 +1176,9 @@ first is 0 and **still consumes its word**, so the second draw sees the second w
 | k7 | 7 | `siteSpawner` | 3 | -1 | | `ef7edb14a4433105` | `11f3bdf788e5ffb9` | `4a115493bf1bf035` | `eeeaa6fd69c7b339` | `3355b2e3c0d174dd` | 0 | 20 |
 | k8 | 7 | `siteSpawner` | -1 | -1 | | `b4a503670dc250f1` | `cc1b665a6f86d8ba` | `6901bc968a06bc0f` | `f5455bb2a283bc00` | `85eba190e6f38b27` | 0 | 52 |
 | k9 | 2^63 | `siteTrade` | 2^40 | 2^40 + 1 | | `f01e597ee04203eb` | `87e7225b79ecaea7` | `ca410d7c919c53eb` | `3c277642ea207186` | `510c6f3a642bcd9d` | 0 | 31 |
+| k10 | 1 | `siteOutsideWalk` | 0 | 1 | 2 | `faffc62790210318` | `47397747171f6d6e` | `9110fbb38fe74199` | `bf78f70da32a87a8` | `178fb98ff48cc76d` | 0 | 9 |
 
-Rows k6 to k8 pin the signed conversion (a negative tick or ID never occurs in a run,
+Row k10 is the first word of D2's stream for node 1 and commodity 2: the bounded draw of `WalkStepBP` 100, `drawRange(-100, 100)`, is `draw(201) - 100` = 150 - 100 = 50. Rows k6 to k8 pin the signed conversion (a negative tick or ID never occurs in a run,
 `NoRegion` and `NoAgent` aside, and the conversion is pinned all the same); k9 pins
 values above 2^32 in both words.
 
@@ -1267,20 +1270,20 @@ draw appends a row with a new ID, its count and its stream (7.1.4). The last col
 names the stream: the site, then the `id` (and the `sub`) with the `tick` of 7.3.2.
 `none yet` means that the row has no site constant (7.1.4); the `id` after it is the
 proposal of N-214 that the owner confirms when it appends the constant, and ADR 0008's
-open point 3 (a site with no natural entity: D2, D13) stays open for it.
+open point 3 (a site with no natural entity: D13) stays open for it; D2 has its site, `siteOutsideWalk`.
 
 | ID | When and where | Taken by | How many | In what order | Stream | Owner |
 |----|----------------|----------|----------|---------------|--------|-------|
 | D1 | construction, after the warm start (5.7) | the world, per household agent | 2: the target ratio, then the residue | ascending agent ID | `siteConstruction`, tick 0, the agent | WEL 5.1; PRO 6.6.2 |
 | D16 | construction, step 8c (5.1.2), only when the technology module has a field with `DiscoveryBP` above 0 | **no word**: TEC derives its key from the effective seed (`spec-technology.md` 4.4.1, owed under N-214) | 0 | | none | TEC 4.4.1 |
 | D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | none yet: the actor | PLC 7.1.1 |
-| D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | none yet: the line (open point 3) | EXT 5.1, 6.4 |
+| D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | `siteOutsideWalk`, the tick, the node, `sub` = the commodity (a line is named by two IDs, so a line added before it moves no other line's word) | EXT 5.1, 6.4 |
 | D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | `siteWork`, the tick, the agent | AGT 7.1 |
 | D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | none yet: the route row (open point 3) | RSK 4.2 |
 | D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | `siteInform`, the tick, the agent (keyed once per informed view, only when `RumourErrorBP` is above 0) | INF 5.5.2 |
 | D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | `siteTrade`, the tick, the agent | AGT 7.5.3 |
 | D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | none yet: the shipment | RSK 4.1 |
-| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | none yet: the offer or take | MER 9.4.2 |
+| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | `siteContract`, the tick, the agent, `sub` = `2*i` (offer) or `2*i+1` (take), `i` the plan index (the key is that stream's first word) | MER 9.4.2 |
 | D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the `Rand` it receives (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | `siteClearing`, the tick, the region, the commodity | CLR 4.2 |
 | D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own in `Revise`; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | `siteOutcome`, the tick, the agent, the commodity: **one stream per order** | BEL 4.5, 5.1.1 |
 | D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | `siteSpawner`, the tick, the region | SPN 3.1.2, 10.2 |

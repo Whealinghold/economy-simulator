@@ -314,6 +314,9 @@ func (w *World) loadLedger(rs *restoreCtx, r *codec.Reader) error {
 		return err
 	}
 	w.estates = e
+	if w.external != nil {
+		return w.external.attachAccounts(w.ledger, w.estates)
+	}
 	return nil
 }
 
@@ -357,10 +360,8 @@ func (w *World) checkpointCross() error {
 			return err
 		}
 	}
-	if w.transport != nil {
-		if err := w.transportCross(); err != nil {
-			return err
-		}
+	if err := w.flightCross(); err != nil {
+		return err
 	}
 	if w.money != nil {
 		return w.moneyCross()
@@ -368,14 +369,35 @@ func (w *World) checkpointCross() error {
 	return nil
 }
 
+// flightCross is the cross-check of what is in flight between regions: the shipments
+// of the transport module, then the contracts of the merchants module.
+func (w *World) flightCross() error {
+	if w.transport != nil {
+		if err := w.transportCross(); err != nil {
+			return err
+		}
+	}
+	if w.mer != nil && w.mer.on {
+		return w.merchantsCross()
+	}
+	return nil
+}
+
+// inFlightAccount reports whether the account is one the modules in flight read: a
+// Transit account with the transport module on, an Escrow account with the merchants
+// module on (their cross-checks and the audit, transport_state.go, contract_settle.go).
+func (w *World) inFlightAccount(v ledger.View) bool {
+	return v.Kind == ledger.KindTransit && w.transport != nil || v.Kind == ledger.KindEscrow && w.mer != nil && w.mer.on
+}
+
 // coreCross is the checks of checkpointCross that the sections of the core need.
 func (w *World) coreCross() error {
-	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
+	roles := len(w.cfg.Roles)
 	first := w.estates.accounts[0]
-	for id := first + regions; id < w.ledger.Len(); id++ {
+	for id := first + w.firstHousehold; id < w.ledger.Len(); id++ {
 		v, err := w.ledger.Account(id)
-		if err == nil && v.Kind == ledger.KindTransit && w.transport != nil {
-			continue // the transport module's cross-check and the audit read it (transport_state.go)
+		if err == nil && w.inFlightAccount(v) {
+			continue
 		}
 		if err != nil || v.Kind != ledger.KindAgent {
 			return fmt.Errorf("%w: account %d is not an Agent account, the only kind after the estates in this configuration", ErrCheckpointCorrupt, id)
@@ -383,7 +405,7 @@ func (w *World) coreCross() error {
 		if v.Closed {
 			continue
 		}
-		if v.Owner < regions || v.Owner >= len(w.agents) || w.agents[v.Owner].weight < 1 || w.agents[v.Owner].account != id {
+		if v.Owner < w.firstHousehold || v.Owner >= len(w.agents) || w.agents[v.Owner].weight < 1 || w.agents[v.Owner].account != id {
 			return fmt.Errorf("%w: open account %d is the account of no live agent", ErrCheckpointCorrupt, id)
 		}
 	}

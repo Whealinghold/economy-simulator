@@ -329,7 +329,10 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml"} // the last two name the regions of `five`
+	// The last two of the five-region files name the regions of `five`; the merchants overlays
+	// name the transport and information modules and the haul chain, which `one` does not carry
+	// (TestOverlay_MerchantsValidatesAndSolves solves them over their own layers).
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

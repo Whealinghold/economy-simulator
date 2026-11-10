@@ -798,7 +798,7 @@ func (w *World) loadJob(r *codec.Reader, a *agent) {
 	case !onList || j.remaining < 1 || j.executions < 1:
 		r.Failf("agent %d has a job of recipe %d that is not on its role's list or has nothing left", a.id, rec)
 		return
-	case principal < int64(len(w.cfg.Regions)) || principal >= int64(len(w.agents)) || w.agents[principal].weight < 1:
+	case principal < int64(w.firstHousehold) || principal >= int64(len(w.agents)) || w.agents[principal].weight < 1:
 		r.Failf("agent %d has a job whose principal %d is not a live agent", a.id, principal)
 		return
 	}

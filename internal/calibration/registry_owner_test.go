@@ -28,7 +28,7 @@ var (
 
 // scopeAlias maps the owner table's spelling of a scope to the registry's: the
 // owner table says WorldParams, the Go type of Config.World, and the registry
-// says World, the key of [world] (spec-calibration.md 4.7, N-332).
+// says World, the key of [world] (spec-calibration.md 4.7, N-334).
 func scopeAlias(scope string) string {
 	if scope == "WorldParams" {
 		return "World"

@@ -24,14 +24,15 @@ var byName = map[string]ledger.Reason{
 	"loan_out": ledger.LoanOut, "loan_repay": ledger.LoanRepay, "loan_interest": ledger.LoanInterest,
 	"relief": ledger.Relief, "deaths": ledger.Deaths,
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
+	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
+	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
 // that the ledger does not have yet, in the staged form of architecture.md
 // 9.7. A module's change deletes its entries.
 var notBuilt = []string{
-	"want_consumption", "outside_budget", "outside_unspent",
-	"outside_receipts", "outside_offer", "outside_unsold", "outside_purchases",
+	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
 	"wage_refund", "rent",
 	"title_sale", "premium", "payout", "loss",
@@ -97,7 +98,7 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 				out = append(out, k)
 			}
 		}
-		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary} {
+		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside} {
 			if strings.Contains(s, w) {
 				out = append(out, k)
 			}
@@ -253,6 +254,22 @@ func TestTransfer_FollowsRegistry(t *testing.T) {
 						}
 					}
 				}
+				// An Outside account is funded by its boundary under outside_budget.
+				if out, ok := acct[ledger.KindOutside]; ok {
+					b, err := f.l.OpenBoundary(ledger.OutsideBudget, ledger.Money)
+					if err != nil {
+						t.Fatalf("open the outside_budget boundary: %v", err)
+					}
+					if err := f.l.Transfer(b, out, 5, ledger.OutsideBudget); err != nil {
+						t.Fatalf("fund outside: %v", err)
+					}
+				}
+				// An Escrow account is funded by an agent under escrow_in.
+				if esc, ok := acct[ledger.KindEscrow]; ok {
+					if err := f.l.Transfer(acct[ledger.KindAgent], esc, 5, ledger.EscrowIn); err != nil {
+						t.Fatalf("fund escrow: %v", err)
+					}
+				}
 				// The boundary of Initial is the only money boundary; for any
 				// other reason it does not fit, as the mismatch it should be.
 				from, to := acct[a], acct[b]
@@ -363,4 +380,47 @@ func TestRegistry_Relief(t *testing.T) {
 			t.Errorf("OpenBoundary(relief) = nil, want an error: an internal reason has no boundary account")
 		}
 	})
+}
+
+// TestEscrowReasons_Pairings verifies the three escrow reasons of the delivery
+// contract (FR-LED-060): money only, internal, and each runs between exactly the
+// kinds the table names: escrow_in from an Agent to an Escrow account, escrow_out
+// from an Escrow to an Agent, escrow_refund from an Escrow to an Agent or an
+// Estate. Every other pairing, and any movement of goods, is refused.
+//
+// Requirement: FR-LED-060
+func TestEscrowReasons_Pairings(t *testing.T) {
+	t.Parallel()
+	type pair struct{ from, to ledger.Kind }
+	tests := []struct {
+		reason ledger.Reason
+		name   string
+		ok     []pair
+	}{
+		{ledger.EscrowIn, "escrow_in", []pair{{ledger.KindAgent, ledger.KindEscrow}}},
+		{ledger.EscrowOut, "escrow_out", []pair{{ledger.KindEscrow, ledger.KindAgent}}},
+		{ledger.EscrowRefund, "escrow_refund", []pair{{ledger.KindEscrow, ledger.KindAgent}, {ledger.KindEscrow, ledger.KindEstate}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if class, ok := ledger.ClassOf(tt.reason, false); !ok || class != ledger.Internal {
+				t.Errorf("ClassOf(%s, money) = %v, %v, want an internal row", tt.name, class, ok)
+			}
+			if _, ok := ledger.ClassOf(tt.reason, true); ok {
+				t.Errorf("ClassOf(%s, goods) has a row, want money only", tt.name)
+			}
+			for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
+				for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
+					want := slices.Contains(tt.ok, pair{a, b})
+					if got := ledger.Allowed(tt.reason, false, a, b); got != want {
+						t.Errorf("Allowed(%s, money, %d, %d) = %v, want %v", tt.name, a, b, got, want)
+					}
+					if ledger.Allowed(tt.reason, true, a, b) {
+						t.Errorf("Allowed(%s, goods, %d, %d) = true, want a refusal", tt.name, a, b)
+					}
+				}
+			}
+		})
+	}
 }

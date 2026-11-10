@@ -1,0 +1,21 @@
+# The external-sector overlay of the variant one (spec-external-sector.md 18.2; spec-reference-chain.md 4.5; plan 2-16 D538). Layer it after the pack: base.toml, one.toml, this file. It adds an outside node `outer`, a region with no agents joined to `north` by an edge each way (the gate), one sell line of the raw input `fuel` (a walking price) and one buy line of the staple, each about a tenth of the region's volume. The pack has no seasons, so the window and season tables are built by the tests in Go. A test double, not a design: every number is a placeholder (N-015, N-027).
+[region.outer]
+[region.north.edge.outer]
+distance = 100
+[region.outer.edge.north]
+distance = 100
+
+[modules.external.node.outer.line.fuel]
+base = 179
+walk_step_bp = 100
+walk_revert_bp = 500
+walk_bound_bp = 1000
+[modules.external.node.outer.line.fuel.sell]
+margin_bp = 200
+capacity = 20
+
+[modules.external.node.outer.line.staple]
+base = 96
+[modules.external.node.outer.line.staple.buy]
+margin_bp = 1000
+capacity = 30

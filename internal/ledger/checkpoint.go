@@ -26,6 +26,8 @@ var reasonCodes = [NumReasons]uint64{
 	Spoilage: 7, Wear: 8, EstateMoney: 9, EstateGoods: 10, StartMoney: 11,
 	LoanOut: 25, LoanRepay: 26, LoanInterest: 27, WantConsumption: 6, Relief: 12, Deaths: 41,
 	TransitOut: 32, TransitIn: 33, HaulUse: 34, TransitUse: 35,
+	EscrowIn: 19, EscrowOut: 20, EscrowRefund: 21,
+	OutsideBudget: 13, OutsideUnspent: 14, OutsideReceipts: 15, OutsideOffer: 16, OutsideUnsold: 17, OutsidePurchases: 18,
 	Split: 37, Merge: 38, Births: 39, Starvation: 40,
 }
 

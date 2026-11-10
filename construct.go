@@ -87,6 +87,9 @@ func (w *World) beginConstruction() *builder {
 	mustBuild(err, "the opening of the estate accounts")
 	w.estates = e
 	w.allocate()
+	if w.external != nil {
+		mustBuild(w.external.openAccounts(w.ledger), "the opening of the counterparty accounts")
+	}
 	widest := 0
 	for i := range w.roles.rows {
 		widest = max(widest, len(w.roles.rows[i].tradable))
@@ -134,17 +137,27 @@ func (w *World) allocate() {
 	w.transport = newTransport(&w.cfg)
 	w.info = newInformation(&w.cfg, &w.roles)
 	w.migration = newMigration(&w.cfg)
+	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
 	}
 	if w.migration != nil {
 		w.bounds.add(onJourneyName, w.migration.holds)
 	}
+	if w.mer != nil && w.mer.on {
+		w.bounds.add(openContract, w.mer.holds)
+	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
-	w.agents = make([]agent, regions) // the estate pseudo-agents have no household
-	w.state.nextAgent = AgentID(regions)
+	w.external = newExternal(&w.cfg)
+	w.outside = outsideMarks(&w.cfg)
+	w.firstHousehold = regions + w.external.counterpartyCount()
+	if w.external != nil {
+		w.external.assignAgents(regions)
+	}
+	w.agents = make([]agent, w.firstHousehold) // the estate pseudo-agents and the counterparties have no household
+	w.state.nextAgent = AgentID(w.firstHousehold)
 	w.live = liveCounts{inRole: make([]int64, regions*roles)}
 	w.bp = beliefParams(w.cfg.World)
 	w.clr = &clearScratch{}
@@ -261,7 +274,7 @@ func (b *builder) seedBeliefs(a *agent, region RegionID) {
 // takes (FR-WLD-062).
 func (b *builder) draws() {
 	w := b.w
-	for i := len(w.cfg.Regions); i < len(w.agents); i++ {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		role := &w.cfg.Roles[a.role]
 		w.rnd.keyed(siteConstruction, 0, int64(a.id))
@@ -305,33 +318,21 @@ func namesOf(c *Config) Names {
 // construction summary, in build order. It is empty and not nil when none is on;
 // a module's change appends its name.
 func modulesOn(c *Config) []string {
+	m := &c.Modules
+	table := []struct {
+		name string
+		on   bool
+	}{
+		{"demand", m.Demand != nil}, {"money_supply", m.MoneySupply != nil}, {"estates", m.Estates != nil},
+		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
+		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
+		{"merchants", m.Merchants != nil}, {"external", m.External != nil},
+	}
 	on := []string{}
-	if c.Modules.Demand != nil {
-		on = append(on, "demand")
-	}
-	if c.Modules.MoneySupply != nil {
-		on = append(on, "money_supply")
-	}
-	if c.Modules.Estates != nil {
-		on = append(on, "estates")
-	}
-	if c.Modules.Resources != nil {
-		on = append(on, "resources")
-	}
-	if c.Modules.Subsistence != nil {
-		on = append(on, "subsistence")
-	}
-	if c.Modules.Population != nil {
-		on = append(on, "population")
-	}
-	if c.Modules.Transport != nil {
-		on = append(on, "transport")
-	}
-	if c.Modules.Information != nil {
-		on = append(on, "information")
-	}
-	if c.Modules.Migration != nil {
-		on = append(on, "migration")
+	for _, t := range table {
+		if t.on {
+			on = append(on, t.name)
+		}
 	}
 	return on
 }
@@ -406,6 +407,9 @@ func (w *World) summary() []slog.Attr {
 	attrs = append(attrs, slog.Int(logkeys.Edges, len(w.cfg.Edges)), slog.Int(logkeys.Components, components))
 	if m := w.cfg.Modules.Transport; m != nil {
 		attrs = append(attrs, slog.Int(logkeys.Modes, len(m.Modes)))
+	}
+	if x := w.external; x != nil {
+		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
 	}
 	return attrs
 }
