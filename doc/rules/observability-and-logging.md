@@ -483,32 +483,47 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.entry.limited`          | Counter         | `{case}`        | `economysim.entry_limit` |
 | `economysim.household.entries`      | Counter         | `{household}`   | `economysim.region` |
 | `economysim.want.unfunded`          | Counter         | `{unit}`        | `economysim.want`, `economysim.role` |
+| `economysim.want.choked`            | Counter         | `{household}`   | `economysim.want`, `economysim.role` |
 | `economysim.household.relocations`  | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to`, `economysim.cause` |
 | `economysim.money.flow`             | Counter         | `{minor_unit}`  | `economysim.reason`, `economysim.kind` (`faucet` or `sink`) |
 | `economysim.commodity.flow`         | Counter         | `{unit}`        | `economysim.reason`, `economysim.kind`, `economysim.commodity` |
 | `economysim.commodity.wear`         | Counter         | `{unit}`        | `economysim.commodity` |
 | `economysim.money.flow.unapplied`   | Counter         | `{minor_unit}`  | `economysim.reason` |
+| `economysim.money.flow.limited`     | Counter         | `{household}`   | `economysim.reason`, `economysim.flow_limit` |
 | `economysim.household.births`       | Counter         | `{household}`   | `economysim.role` |
 | `economysim.household.deaths`       | Counter         | `{household}`   | `economysim.role` |
+| `economysim.population.limited`     | Counter         | `{household}`   | `economysim.population_limit` |
 | `economysim.transport.shipments`    | Counter         | `{shipment}`    | `economysim.mode` |
 | `economysim.transport.in_transit`   | UpDownCounter   | `{unit}`        | `economysim.commodity` |
 | `economysim.transport.cargo.spoiled`| Counter         | `{unit}`        | `economysim.commodity` |
+| `economysim.transport.cargo.diverted` | Counter         | `{unit}`        | `economysim.commodity` |
+| `economysim.transport.rejected`     | Counter         | `{request}`     | `economysim.mode`, `economysim.reason` |
 | `economysim.endowment.drawn`        | Counter         | `{unit}`        | `economysim.resource`, `economysim.region` |
 | `economysim.endowment.regenerated`  | Counter         | `{unit}`        | `economysim.resource`, `economysim.region` |
 | `economysim.endowment.short`        | Counter         | `{unit}`        | `economysim.resource`, `economysim.region` |
 | `economysim.endowment.stock`        | Gauge           | `{unit}`        | `economysim.resource`, `economysim.region` |
-| `economysim.information.rumours`    | Counter         | `{rumour}`      | `economysim.outcome` |
+| `economysim.information.rumours`    | Counter         | `{rumour}`      | `economysim.outcome`, `economysim.region` |
+| `economysim.information.readers`    | Counter         | `{agent}`       | `economysim.region` |
 | `economysim.external.units`         | Counter         | `{unit}`        | `economysim.node`, `economysim.commodity`, `economysim.side` |
 | `economysim.external.value`         | Counter         | `{minor_unit}`  | `economysim.node`, `economysim.commodity`, `economysim.side` |
 | `economysim.external.price`         | Gauge           | `{minor_unit}`  | `economysim.node`, `economysim.region`, `economysim.commodity`, `economysim.side` |
+| `economysim.external.cut`           | Counter         | `{unit}`        | `economysim.node`, `economysim.commodity`, `economysim.side`, `economysim.external_cut` |
+| `economysim.external.unfilled`      | Counter         | `{unit}`        | `economysim.node`, `economysim.commodity`, `economysim.side` |
+| `economysim.external.clamped`       | Counter         | `{case}`        | `economysim.node`, `economysim.commodity` |
 | `economysim.household.own_use`      | Gauge           | `{household}`   | `economysim.role`, `economysim.region` |
 | `economysim.own_use.units`          | Counter         | `{unit}`        | `economysim.commodity` |
+| `economysim.own_use.blocked`        | Counter         | `{household}`   | `economysim.role` |
+| `economysim.household.own_use.changes` | Counter         | `{household}`   | `economysim.role`, `economysim.own_use_change` |
 | `economysim.migration.started`      | Counter         | `{household}`   | `economysim.region.from`, `economysim.region.to` |
-| `economysim.migration.limited`      | Counter         | `{household}`   | `economysim.limit` |
+| `economysim.migration.limited`      | Counter         | `{household}`   | `economysim.limit`, `economysim.region` |
+| `economysim.migration.unsettled`    | Counter         | `{household}`   | none |
 | `economysim.migration.on_journey`   | UpDownCounter   | `{household}`   | none |
 | `economysim.contract.formed`        | Counter         | `{contract}`    | `economysim.commodity` |
 | `economysim.contract.value`         | Counter         | `{minor_unit}`  | `economysim.commodity` |
 | `economysim.contract.escrow`        | UpDownCounter   | `{minor_unit}`  | none |
+| `economysim.contract.settled`       | Counter         | `{contract}`    | `economysim.cause` |
+| `economysim.contract.unformed`      | Counter         | `{match}`       | `economysim.contract_failure` |
+| `economysim.contract.refused`       | Counter         | `{request}`     | `economysim.contract_request` |
 | `economysim.merchant.decisions`     | Counter         | `{lane}`        | `economysim.decision` |
 | `economysim.production.pending`     | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region` |
 | `economysim.market.stock`           | Gauge           | `{unit}`        | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate` or `treasury`) |
@@ -525,6 +540,12 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.role.expected_ratio`    | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
 | `economysim.role.viable`            | Gauge           | `{flag}`        | `economysim.role`, `economysim.region` |
 | `economysim.role.agents`            | Gauge           | `{agent}`       | `economysim.role`, `economysim.region` |
+| `economysim.population.natural_increase` | Gauge           | `{basis_point}` | `economysim.role`, `economysim.region` |
+| `economysim.population.cap`         | Gauge           | `{household}`   | `economysim.region` |
+| `economysim.population.replacement_ratio` | Gauge           | `{basis_point}` | none |
+| `economysim.transport.overdue`      | Gauge           | `{shipment}`    | `economysim.mode` |
+| `economysim.transport.away`         | Gauge           | `{agent}`       | none |
+| `economysim.migration.pipeline`     | Gauge           | `{household}`   | `economysim.region`, `economysim.direction` |
 | `economysim.storage.limited`        | Counter         | `{case}`        | `economysim.region`, `economysim.role`, `economysim.room_limit` |
 | `economysim.store.count`            | Gauge           | `{store}`       | `economysim.region`, `economysim.store_class` |
 | `economysim.room.fill`              | Gauge           | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` |
@@ -626,32 +647,47 @@ The instruments fed by a snapshot, not by events, are the rows of the second tab
 | `economysim.entry.limited`           | `EntryLimited` (the counts of the limits and refusals that acted, by limit, with `Stranded` as `stranded`: the households at rung 1 that stayed because no role was open, viable, better and affordable) |
 | `economysim.household.entries`       | `EntryLimited` (`Entered`, by region: the gross entry, which `economysim.household.count` nets against `economysim.household.exits`) |
 | `economysim.want.unfunded`           | `WantShortfall` (`Planned` less `Funded`, by want and role) |
+| `economysim.want.choked` | `WantShortfall` (`Choked`, by want and role) |
 | `economysim.household.relocations`   | `AgentRelocated` (`Weight`, by `From`, `To` and `Cause`) |
 | `economysim.money.flow`              | `BoundaryFlow` (money, by the reason and whether it is a faucet or a sink; includes the construction bucket at `Tick` -1) |
 | `economysim.commodity.flow`          | `BoundaryFlow` (goods, by the reason, the kind and the commodity) |
 | `economysim.commodity.wear`          | `WearApplied` (`Units`, by commodity; includes the construction bucket at `Tick` -1) |
 | `economysim.money.flow.unapplied`    | `MoneyFlowLimited` (`Due` less `Applied`, by flow) |
+| `economysim.money.flow.limited` | `MoneyFlowLimited` (`Short`, `Headroom`, `Limit`, by flow and `flow_limit`) |
 | `economysim.household.births`        | `PopulationChanged` (`BirthsDone`, by role) |
 | `economysim.household.deaths`        | `PopulationChanged` (`DeathsDone`, by role) |
+| `economysim.population.limited` | `PopulationChanged` (the five counts, by `population_limit`) |
 | `economysim.transport.shipments`     | `ShipmentDispatched` |
 | `economysim.transport.in_transit`    | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line's units shipped) |
 | `economysim.transport.cargo.spoiled` | `ShipmentArrived` (units spoiled, by line) |
+| `economysim.transport.cargo.diverted` | `ShipmentArrived` (units diverted to the estate, by line) |
+| `economysim.transport.rejected` | `ShipmentRejected` (by mode and reason) |
 | `economysim.endowment.drawn` | `EndowmentChanged` (units drawn) |
 | `economysim.endowment.regenerated` | `EndowmentChanged` (units regenerated) |
 | `economysim.endowment.short` | `EndowmentChanged` (units short) |
 | `economysim.endowment.stock` | `EndowmentChanged` (stock after the tick) and `EndowmentAdjusted` (stock after); the adapter keeps the last value for a tick with no event |
-| `economysim.information.rumours` | `RumoursServed` (`Offered`, `NoPath`, `TooOld`, `NotYet`, by outcome) |
+| `economysim.information.rumours` | `RumoursServed` (`Offered`, `NoPath`, `TooOld`, `NotYet`, by outcome and by region) |
+| `economysim.information.readers` | `RumoursServed` (`Readers`, by region) |
 | `economysim.external.units` | `OutsideTraded` (units traded) |
 | `economysim.external.value` | `OutsideTraded` (money paid or received) |
-| `economysim.external.price` | `OutsideTraded` (the limit price, by node, gate region, commodity and side) |
+| `economysim.external.price` | `OutsideTraded` (the limit price, by node, gate region, commodity and side); not recorded when `Price` is 0 (no quote: a closed edge, which `economysim.external.cut` counts) |
+| `economysim.external.cut` | `OutsideTraded` (units cut, by `external_cut`) |
+| `economysim.external.unfilled` | `OutsideTraded` (`Offered` less `Traded`) |
+| `economysim.external.clamped` | `OutsideTraded` (events with `PriceClamped`) |
 | `economysim.household.own_use` | `OwnUseChanged` (households in the mode, by role and region); the adapter keeps the last value for a tick with no event |
 | `economysim.own_use.units` | `OwnUseChanged` (units output, per line) |
+| `economysim.own_use.blocked` | `OwnUseChanged` (`Blocked`, by role) |
+| `economysim.household.own_use.changes` | `OwnUseChanged` (`Entered`, `Left`, by role and `own_use_change`) |
 | `economysim.migration.started` | `MigrationStarted` (`Weight`, by `From` and `To`) |
-| `economysim.migration.limited` | `MigrationReviewed` (the counts other than started, pushed, reviewed and unsettled, by outcome: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) |
+| `economysim.migration.limited` | `MigrationReviewed` (the counts other than started, pushed, reviewed and unsettled, by outcome: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`), by region too |
+| `economysim.migration.unsettled` | `MigrationReviewed` (`Unsettled`) |
 | `economysim.migration.on_journey` | `MigrationStarted` (+`Weight`), `AgentRelocated` with the cause `migration` (-`Weight`) and `MigrationReviewed` (- `Ended`) |
 | `economysim.contract.formed` | `ContractFormed` |
 | `economysim.contract.value` | `ContractFormed` (money escrowed) |
 | `economysim.contract.escrow` | `ContractFormed` (+ money escrowed), `ContractSettled` (- money paid and refunded) |
+| `economysim.contract.settled` | `ContractSettled` (by `Cause`) |
+| `economysim.contract.unformed` | `ContractRound` (the four failures, by `contract_failure`) |
+| `economysim.contract.refused` | `ContractRound` (`OffersRefused`, `TakesRefused`, by `contract_request`) |
 | `economysim.merchant.decisions` | `MerchantsPlanned` (the case counts, by decision) |
 | `economysim.storage.limited` | `RoomLimited` (each of the five counts, by `room_limit`: `start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`) |
 | `economysim.hire.formed` | `HireFormed` (by the employer's role) |
@@ -737,6 +773,12 @@ snapshot the consumer passes to it, between two steps, from these fields:
 | `economysim.saving.goal`             | `Roles[].GoalMoney` |
 | `economysim.saving.buffer`           | `Roles[].BufferMoney` |
 | `economysim.saving.idle`             | `Roles[].IdleMoney` |
+| `economysim.population.natural_increase` | `Roles[].NaturalIncreaseBP`, only while `Modules` holds `population`: whether a role is growing or shrinking at its current ratio, which births and deaths counters between events cannot show |
+| `economysim.population.cap` | `Regions[].HouseholdCap`, only while `Modules` holds `population`, absent where 0: draws households against the cap and explains `births_capped` |
+| `economysim.population.replacement_ratio` | `Population.ReplacementRatioBP` where `HasReplacement`: the target r* that the welfare ratio should converge to; ratio less r* is the first thing to look at when a population drifts |
+| `economysim.transport.overdue` | `Shipments[]` with `TicksLeft` at most 0, by mode, 0 for a mode with none, only while `Modules` holds `transport`: a held arrival leaves the cargo in a transit account and the traveller away until the guard clears; it is visible otherwise only as a Debug line per shipment |
+| `economysim.transport.away` | `len(Away)`, only while `Modules` holds `transport`: agents on a self-carried trip are not trading or working: a household count that falls with no exits is explained by it |
+| `economysim.migration.pipeline` | `Regions[].OnJourneyFrom` and `OnJourneyTo` as `from` and `to`, only while `Modules` holds `migration`: the `in_cap` outcome compares a region's incoming pipeline with its cap, and `migration.on_journey` is one global number |
 
 An instrument fed by a snapshot is absent, not zero, until a snapshot is passed,
 and holds its last value between two snapshots.
@@ -759,7 +801,7 @@ the time spent in every observer during the step.
 
 5.4.1. Metric attributes **MUST** have a number of values bounded by the
 configuration: `economysim.commodity`, `economysim.role`, `economysim.recipe`,
-`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the fiscal flow IDs, which share one namespace, and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, the refusal reasons of a vacancy and of a rent request, the refusal reasons of a start and the abandon reasons of a job, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, of the relocation causes `transport`, `migration` and `consumer`, and, per instrument, the closed set of the event that feeds it: `removal` and `consumer` for `economysim.title.transfers`, `repaid`, `written_off`, `debtor_removed` and `forgiven` for `economysim.credit.lost`, `insolvent`, `starved` and `consumer` for `economysim.household.exits`), `economysim.bound` (`floor`, `ceiling`), `economysim.belief_limit` (`conflict`, `clamped`), `economysim.work_decline` (`rest`, `no_recipe`), `economysim.entry_limit` (the ten constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`, `stranded`), `economysim.holder` (`agents`, `estate`, `treasury`), `economysim.sector` (`households`, `pool`, `contract`, `treasury`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.market.orders`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). The attributes of the later modules are bounded in the same way: `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field` and `economysim.actor` by the entities of the configuration, and `economysim.dimension` (`mass`, `bulk`), `economysim.room_limit` (`start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`), `economysim.tier` (`own`, `commons`, `let`), `economysim.credit_limit` (`in_arrears`, `exposure`, `too_many_claims`, `overflow`), `economysim.facility_limit` (`cut`, `voided`), `economysim.risk_kind` (`route`, `store`), `economysim.clamp` (`cash`, `hold`, `stock`), `economysim.activity` (`produce`, `sell`, `buy`, `train`), `economysim.project` (`build`, `repair`), `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`, `duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`), `economysim.policy_hold` (`in_band`, `no_reading`), `economysim.cover_kind` (`route`, `store`), `economysim.cover_loss` (`dropped`, `cut`) and `economysim.cover_limit` (`in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`) by their closed sets. Metric attributes **MUST NOT** include agent IDs, order IDs,
+`economysim.side`, `economysim.want`, `economysim.region.from`, `economysim.region.to` (regions), `economysim.reason` and `economysim.kind` (the money flow IDs and the fiscal flow IDs, which share one namespace, and the built-in reasons, the goods boundary reasons, the rejection reasons of an order, the refusal reasons of a vacancy and of a rent request, the refusal reasons of a start and the abandon reasons of a job, the refusal reasons of a shipment request, and faucet or sink), `economysim.cause` (the closed sets of constants of the removal causes `insolvent`, `starved`, `consumer` and `population`, of the relocation causes `transport`, `migration` and `consumer`, and, per instrument, the closed set of the event that feeds it: `removal` and `consumer` for `economysim.title.transfers`, `repaid`, `written_off`, `debtor_removed` and `forgiven` for `economysim.credit.lost`, `insolvent`, `starved` and `consumer` for `economysim.household.exits`), `economysim.bound` (`floor`, `ceiling`), `economysim.belief_limit` (`conflict`, `clamped`), `economysim.work_decline` (`rest`, `no_recipe`), `economysim.entry_limit` (the ten constants `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`, `stranded`), `economysim.holder` (`agents`, `estate`, `treasury`), `economysim.sector` (`households`, `pool`, `contract`, `treasury`), `economysim.mode` (transport modes), `economysim.resource` and `economysim.region` (resources and regions of the configuration, also on `economysim.market.clearing_price`, `economysim.market.orders`, `economysim.belief.centre`, `economysim.external.price` and the snapshot gauges), `economysim.node` (outside nodes), `economysim.outcome` (the four constants `offered`, `no_path`, `too_old`, `not_yet`), `economysim.limit` (the twelve constants of the migration outcomes: `no_estimate`, `no_destination`, `no_rumour`, `too_far`, `no_viable`, `no_gain`, `bound`, `out_cap`, `unprovisioned`, `in_cap`, `held`, `ended`) and `economysim.decision` (the eleven constants of the merchant's lane decisions: `no_rumour`, `stale`, `locked`, `perishable`, `no_margin`, `unaffordable`, `below_share`, `planned`, `rested`, `waiting`, `lot_capped`). The attributes of the later modules are bounded in the same way: `economysim.store_class`, `economysim.facility_class`, `economysim.body`, `economysim.right`, `economysim.control`, `economysim.field` and `economysim.actor` by the entities of the configuration, and `economysim.dimension` (`mass`, `bulk`), `economysim.room_limit` (`start_cut`, `start_refused`, `bid_cut`, `bid_rejected`, `shipment_refused`), `economysim.tier` (`own`, `commons`, `let`), `economysim.credit_limit` (`in_arrears`, `exposure`, `too_many_claims`, `overflow`), `economysim.facility_limit` (`cut`, `voided`), `economysim.risk_kind` (`route`, `store`), `economysim.clamp` (`cash`, `hold`, `stock`), `economysim.activity` (`produce`, `sell`, `buy`, `train`), `economysim.project` (`build`, `repair`), `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`, `duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`), `economysim.policy_hold` (`in_band`, `no_reading`), `economysim.cover_kind` (`route`, `store`), `economysim.cover_loss` (`dropped`, `cut`) and `economysim.cover_limit` (`in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow`), `economysim.population_limit` (`deaths_cut`, `deaths_held`, `births_capped`, `births_unfunded`, `rate_clamped`), `economysim.flow_limit` (`short`, `headroom`, `limit`), `economysim.own_use_change` (`entered`, `left`), `economysim.external_cut` (`closed`, `cap`, `price`), `economysim.contract_failure` (`no_taker`, `payer_funds`, `too_many`, `dispatch_refused`), `economysim.contract_request` (`offer`, `take`) and `economysim.direction` (`from`, `to`) by their closed sets, and `economysim.cause` also takes `delivered`, `short`, `payer_removed` and `deliverer_removed` for `economysim.contract.settled`. Metric attributes **MUST NOT** include agent IDs, order IDs,
 ticks, prices, quantities or any other unbounded or per-entity value. Put those
 in logs, traces or events.
 
@@ -780,7 +822,9 @@ run's span; a `Step` called directly is a root span. A span closes at its
 attributes on the step span, not child spans. An event that is per order or per
 trade (a rejected order, a trade) is not a span event: the step span carries the
 counts of orders placed, orders rejected and trades, and the traded volume, as
-attributes.
+attributes (`economysim.orders.placed`, `economysim.orders.rejected`,
+`economysim.trades`, `economysim.volume`). A span event is named
+`economysim.<event>`.
 
 6.3. The `otelobserver` module uses the `TracerProvider` and `MeterProvider`
 given by the client, and **MUST NOT** call the global providers. Its
@@ -931,4 +975,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f70528db0f61395cc20dc005
+RULE-TAG: e7cfbd33b1620a09dc78dff7
