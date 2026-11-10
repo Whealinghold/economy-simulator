@@ -26,7 +26,7 @@ classes = [ "material" ]
 [commodity.ingot]
 reference_price = 3190
 classes = [ "material" ]
-[commodity.slag]
+[commodity.cinders]
 reference_price = 50
 [commodity.plough]
 reference_price = 13915
@@ -67,7 +67,7 @@ outputs  = [ { commodity = "ore", quantity = 3, cost_share = 10000 } ]
 [recipe.smelt]
 duration = 2
 inputs   = [ { commodity = "ore", quantity = 5 }, { commodity = "firewood", quantity = 2 } ]
-outputs  = [ { commodity = "ingot", quantity = 3, cost_share = 10000 }, { commodity = "slag", quantity = 1, cost_share = 0, discard = true } ]
+outputs  = [ { commodity = "ingot", quantity = 3, cost_share = 10000 }, { commodity = "cinders", quantity = 1, cost_share = 0, discard = true } ]
 
 [recipe.forge_plough]
 duration = 3
@@ -92,7 +92,7 @@ start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread",
 unskilled = true
 recipes = [ "dig_ore" ]
 start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
-[role.smelter]
+[role.founder]
 recipes = [ "smelt" ]
 start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "ore", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
 [role.smith]

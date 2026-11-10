@@ -52,7 +52,7 @@ households = 7
 households = 414
 [region.highmarch.group.smith]
 households = 110
-[region.highmarch.group.smelter]
+[region.highmarch.group.founder]
 households = 72
 
 [region.eastvale]
@@ -108,7 +108,7 @@ households = 6
 households = 196
 [region.eastvale.group.smith]
 households = 99
-[region.eastvale.group.smelter]
+[region.eastvale.group.founder]
 households = 65
 
 [region.southfen]
@@ -164,7 +164,7 @@ households = 9
 households = 306
 [region.southfen.group.smith]
 households = 81
-[region.southfen.group.smelter]
+[region.southfen.group.founder]
 households = 53
 
 [region.coastland]
@@ -224,7 +224,7 @@ households = 5
 households = 222
 [region.coastland.group.smith]
 households = 84
-[region.coastland.group.smelter]
+[region.coastland.group.founder]
 households = 54
 
 [region.crownlands]
@@ -288,6 +288,6 @@ households = 6
 households = 256
 [region.crownlands.group.smith]
 households = 110
-[region.crownlands.group.smelter]
+[region.crownlands.group.founder]
 households = 72
 

@@ -55,7 +55,7 @@ scale = 10000
 scale = 10000
 [modules.demand.taste.smith.ale]
 scale = 10000
-[modules.demand.taste.smelter.ale]
+[modules.demand.taste.founder.ale]
 scale = 10000
 [modules.demand.taste.confectioner.ale]
 scale = 10000

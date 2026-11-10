@@ -8,7 +8,7 @@ prepared bread
 fuel firewood
 mineral ore
 refined ingot
-waste slag
+waste cinders
 tool_a plough
 tool_b cauldron
 raw_a wool
@@ -94,7 +94,7 @@ grower farmer
 cook baker
 forester woodcutter
 digger miner
-refiner smelter
+refiner founder
 maker smith
 visitor traveller
 gatherer_a shepherd
