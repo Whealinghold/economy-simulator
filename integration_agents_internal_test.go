@@ -147,7 +147,7 @@ func TestAddAgent_Creates(t *testing.T) {
 		t.Errorf("agent = weight %d external %v mortal %v role %d since %d strategy %q, want 1 true true 0 %d directed",
 			a.weight, a.external, a.mortal, a.role, a.roleSince, w.strategyName(a), w.Tick())
 	}
-	if !isDirected(w.ext.strategies[a.strategy]) {
+	if !isDirected(w.strategyOf(a)) {
 		t.Errorf("the strategy of an agent added with no name is not directed")
 	}
 	v, err := w.ledger.Account(a.account)
@@ -340,7 +340,7 @@ func TestStrategyName_Directed(t *testing.T) {
 			if got := w.strategyName(a); got != tt.wantName {
 				t.Errorf("strategyName = %q, want %q", got, tt.wantName)
 			}
-			if got := isDirected(w.ext.strategies[a.strategy]); got != tt.directed {
+			if got := isDirected(w.strategyOf(a)); got != tt.directed {
 				t.Errorf("isDirected = %v, want %v", got, tt.directed)
 			}
 		})
@@ -364,8 +364,8 @@ func TestStrategyTable_RolesKeepTheirIndex(t *testing.T) {
 	if want := []string{"default", "directed", "script", "spare"}; !slices.Equal(w.ext.extraNames, want) {
 		t.Errorf("extraNames = %v, want %v", w.ext.extraNames, want)
 	}
-	if len(w.ext.strategies) != len(w.cfg.Roles)+len(w.ext.extraNames) {
-		t.Errorf("strategy table has %d entries, want %d", len(w.ext.strategies), len(w.cfg.Roles)+len(w.ext.extraNames))
+	if len(w.ext.strategies) != len(w.cfg.Roles) || len(w.ext.extras) != len(w.ext.extraNames) {
+		t.Errorf("strategy table has %d role entries and %d extra, want %d and %d", len(w.ext.strategies), len(w.ext.extras), len(w.cfg.Roles), len(w.ext.extraNames))
 	}
 }
 

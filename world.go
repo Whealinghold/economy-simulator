@@ -197,12 +197,14 @@ func newWorldState(seed uint64, regions, roles int) worldState {
 // strategy of each role indexed by RoleID, and the spawner.
 type extensions struct {
 	clearing Clearing
-	// strategies is the strategy table: the strategy of each role at its RoleID,
-	// then the built-in and registered strategies in the order of extraNames. An
-	// agent's strategy is an index into it (plan 2-17 D548).
+	// strategies is the strategy of each role, indexed by RoleID.
 	strategies []Strategy
-	// extraNames are the names of strategies[len(roles):], sorted: default,
-	// directed and every registered name.
+	// extras is the extra part of the strategy table, which an external agent's
+	// strategy indexes after the roles': default, directed and every registered
+	// strategy, in the order of extraNames (sorted). They are separate fields so
+	// that the walk of the position hash leaves the golden files where they were
+	// (plan 2-17 D548; the walk skips both).
+	extras     []Strategy
 	extraNames []string
 	spawner    Spawner
 }
@@ -329,7 +331,7 @@ func resolveExtensions(c *Config, o *options) (extensions, error) {
 		if err != nil {
 			return extensions{}, err
 		}
-		ext.strategies = append(ext.strategies, st)
+		ext.extras = append(ext.extras, st)
 	}
 	if ext.spawner, err = resolveSpawner(o, c.World.Spawner, []string{"world", "spawner"}); err != nil {
 		return extensions{}, err

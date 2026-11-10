@@ -51,6 +51,15 @@ func (w *World) strategyName(a *agent) string {
 	return w.cfg.Roles[a.role].Strategy
 }
 
+// strategyOf is the strategy an agent runs: its role's, or an entry of the extra
+// part of the table (an external agent's).
+func (w *World) strategyOf(a *agent) Strategy {
+	if n := len(w.ext.strategies); a.strategy >= n {
+		return w.ext.extras[a.strategy-n]
+	}
+	return w.ext.strategies[a.strategy]
+}
+
 // strategyIndex is the index in the strategy table of the strategy a name selects,
 // in the extra part of the table, and false for a name nothing registered.
 func (w *World) strategyIndex(name string) (int, bool) {

@@ -68,6 +68,10 @@ var skipFields = []string{
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
 	"regionState.rebuilds",
+	// extensions.extras and extraNames are the extra part of the strategy table,
+	// derived from the registrations (integration.go): a table appended after the
+	// golden was recorded must not move the off files (testing.md 7.1.1).
+	"extensions.extras", "extensions.extraNames",
 	// transportState.due is the arrival schedule, derived from the shipments (and
 	// holding the stale entry of a trip dropped with its traveller); a restore
 	// rebuilds it without that entry, and its comparison counter is a measure of cost.

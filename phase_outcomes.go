@@ -136,7 +136,7 @@ func (w *World) revise(i, j int, commodity CommodityID, filled int64, t *beliefs
 		Market: reportView(&w.markets.reports[i]), Stock: outcomeStock(held, int64(rec.reserve)),
 		Target: rec.target, UnitCost: rec.unitCost, Draw: draw, Params: o.Params,
 	}
-	got := w.ext.strategies[a.strategy].Revise(o, w.rnd.rnd)
+	got := w.strategyOf(a).Revise(o, w.rnd.rnd)
 	after, clamped := beliefs.Clamp(beliefs.Belief{Centre: int64(got.Centre), Width: got.Width}, bd, w.bp)
 	a.beliefs[ci] = after
 	c := beliefs.Change{Before: before, After: after, Bounds: bd, Open: beliefs.Gate(draw, w.bp.AdjustProb), Clamped: clamped}
