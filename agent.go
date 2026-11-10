@@ -370,8 +370,8 @@ func (w *World) saveAgent(cw *codec.Writer, a *agent, names []string) {
 // there is, whether it carries a job request (Job is a pointer) and the request,
 // the intents, the discards, the holds and Sticky. A negative amount a consumer
 // put in a directive is written as the unsigned number it converts to and refused
-// by the restore (shortcut: the integration change that sets a directive validates
-// it then, plan 2-17).
+// by the restore, which also holds the record to the rules Direct holds it to
+// (checkLoadedDirective).
 func saveDirective(cw *codec.Writer, d *Directive) {
 	cw.B(d != nil)
 	if d == nil {
@@ -561,6 +561,23 @@ func (w *World) badStrategy(rec *agentRec, name string) bool {
 	return !ok
 }
 
+// checkLoadedDirective holds a restored mailbox to the rules Direct holds a set one
+// to (spec-integration.md 4.3.2): a mailbox is never empty, and its job, intents,
+// discards and holds name what the agent's role and weight allow.
+func (w *World) checkLoadedDirective(rec *agentRec) error {
+	d := rec.directive
+	if d == nil {
+		return nil
+	}
+	if d.mailbox() == nil {
+		return fmt.Errorf("agent %d has an empty directive", rec.id)
+	}
+	if err := w.checkDirective(&agent{role: RoleID(rec.role), weight: rec.weight}, d); err != nil {
+		return fmt.Errorf("agent %d has an invalid directive: %w", rec.id, err)
+	}
+	return nil
+}
+
 // loadAgent reads the record of one agent, checks it and puts the agent in its
 // slot. It returns the agent's ID, the key the next record must exceed. The fields
 // a module hosts are read always (R10): while the module is off, OwnUse and
@@ -572,6 +589,10 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 	}
 	v, err := w.checkAgentRec(rs, &rec, names)
 	if err != nil {
+		r.Failf("%v", err)
+		return rec.id
+	}
+	if err := w.checkLoadedDirective(&rec); err != nil {
 		r.Failf("%v", err)
 		return rec.id
 	}
@@ -603,7 +624,7 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 // loadDirective reads saveDirective's bytes: whether there is a directive, its
 // optional job request, intents, discards, holds and Sticky. Every amount is
 // checked against its bound (R13), which also refuses the number a negative one
-// was written as (plan 2-17 validates a directive when it is set).
+// was written as; the rules of Direct are checked after the record is read.
 func (w *World) loadDirective(r *codec.Reader) *Directive {
 	if !r.B() {
 		return nil
@@ -755,7 +776,7 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 		return AgentState{}, fmt.Errorf("Agent: agent %d: %w", id, err)
 	}
 	if _, err := w.prepareAnchors(); err != nil {
-		return AgentState{}, err
+		return AgentState{}, fmt.Errorf("Agent: %w", err)
 	}
 	st := AgentState{
 		ID: a.id, Region: w.regionOf(a), Role: a.role, Weight: a.weight, External: a.external, Mortal: a.mortal,

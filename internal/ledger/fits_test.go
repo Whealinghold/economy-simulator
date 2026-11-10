@@ -78,3 +78,38 @@ func TestFundFits(t *testing.T) {
 		})
 	}
 }
+
+// TestFlowFits verifies that the probe refuses a flow total that would pass int64,
+// a region or a commodity out of range, and accepts the same amount where the
+// region has no flow yet.
+//
+// Requirement: FR-INT-020
+func TestFlowFits(t *testing.T) {
+	t.Parallel()
+	f := newFix(t, math.MaxInt64)
+	// Region 0 already has a money flow of 100 under Initial (the fixture funds a0),
+	// so 100 + (MaxInt64-99) is 2^63.
+	tests := []struct {
+		name      string
+		region    int
+		commodity int
+		amount    int64
+		want      bool
+	}{
+		{"total would pass int64", 0, ledger.Money, math.MaxInt64 - 99, false},
+		{"total at int64", 0, ledger.Money, math.MaxInt64 - 100, true},
+		{"region with no flow", 1, ledger.Money, math.MaxInt64 - 99, true},
+		{"region below range", -1, ledger.Money, 1, false},
+		{"region above range", 2, ledger.Money, 1, false},
+		{"commodity out of range", 0, 7, 1, false},
+		{"commodity below range", 0, -2, 1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := f.l.FlowFits(tt.region, ledger.Initial, tt.commodity, tt.amount); got != tt.want {
+				t.Errorf("FlowFits(%d, Initial, %d, %d) = %v, want %v", tt.region, tt.commodity, tt.amount, got, tt.want)
+			}
+		})
+	}
+}

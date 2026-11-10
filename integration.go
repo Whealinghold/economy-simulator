@@ -218,15 +218,14 @@ func (w *World) createExternal(n NewAgent, strategy int, stock []itemRow) AgentI
 // never issued or a pseudo-agent, ErrAgentRemoved for one that was removed,
 // ErrNotExternal for a household of the configuration or the spawner.
 func (w *World) externalAgent(id AgentID) (*agent, error) {
-	switch {
-	case id < 0 || id >= w.state.nextAgent || int(id) < w.firstHousehold:
-		return nil, ErrUnknownAgent
-	case w.agents[id].weight < 1:
-		return nil, ErrAgentRemoved
-	case !w.agents[id].external:
-		return nil, ErrNotExternal
+	a, err := w.queryAgent(id)
+	if err == nil && !a.external {
+		err = ErrNotExternal
 	}
-	return &w.agents[id], nil
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 // RemoveAgent removes an external agent the consumer no longer wants, mortal or
@@ -250,24 +249,57 @@ func (w *World) RemoveAgent(id AgentID) error {
 	if err := w.removeAgent(a, CauseConsumer); err != nil {
 		invariant("a removal that fits the estate failed: " + err.Error())
 	}
+	w.integ.unwatch(int32(id)) // so a restore, which rebuilds the list from live agents, agrees
 	return nil
 }
 
 // estateFits is the read-only probe of a removal (plan 2-17 D547): whether the
-// estate of the agent's region can take the agent's money and goods without
-// passing a balance bound. The ledger has no undo, and the removal changes the
-// job before the intake.
+// removal can pass no balance bound or flow total. The ledger has no undo, and the
+// removal changes the job before the intake. It covers what removeAgent moves: the
+// escrow of the contracts the agent delivers goes back to the payer or the estate
+// of the destination (dropContracts), then the agent's money and goods go to the
+// estate of its region (estates.receive).
 func (w *World) estateFits(a *agent) bool {
 	region := w.regionOf(a)
-	est, err := w.ledger.Account(w.estates.account(region))
-	if err != nil {
-		invariant("the estate account is unreadable: " + err.Error())
-	}
+	estate := w.estates.account(region)
 	mine, err := w.ledger.Account(a.account)
 	if err != nil {
 		invariant("the account of an agent being removed is unreadable: " + err.Error())
 	}
-	if mine.Balance > MaxMoney-est.Balance {
+	// credit is what each account receives and refund what each region's refund flow
+	// adds, so two contracts into one account are tested together. Only whether every
+	// entry fits is read, so the map order decides nothing.
+	credit := map[int]int64{estate: mine.Balance}
+	refund := map[int]int64{}
+	if w.mer != nil && w.mer.on {
+		for _, ct := range w.mer.open {
+			if ct.deliverer != a.id {
+				continue
+			}
+			to := w.estates.account(ct.to)
+			if w.liveAgent(ct.payer) {
+				to = w.agents[ct.payer].account
+			}
+			back := int64(ct.price) * int64(ct.qty)
+			credit[to] += back
+			refund[int(ct.to)] += back
+		}
+	}
+	for acct, sum := range credit {
+		v, err := w.ledger.Account(acct)
+		if err != nil {
+			invariant("an account a removal pays is unreadable: " + err.Error())
+		}
+		if sum > MaxMoney-v.Balance {
+			return false
+		}
+	}
+	for g, sum := range refund {
+		if !w.ledger.FlowFits(g, ledger.EscrowRefund, ledger.Money, sum) {
+			return false
+		}
+	}
+	if mine.Balance > 0 && !w.ledger.FlowFits(int(region), ledger.EstateMoney, ledger.Money, mine.Balance) {
 		return false
 	}
 	lots, err := w.ledger.AppendLots(nil, a.account)
@@ -282,11 +314,11 @@ func (w *World) estateFits(a *agent) bool {
 		if q == 0 {
 			continue
 		}
-		have, _, err := w.ledger.Holding(w.estates.account(region), c)
+		have, _, err := w.ledger.Holding(estate, c)
 		if err != nil {
 			invariant("the estate holding is unreadable: " + err.Error())
 		}
-		if q > MaxQuantity-have {
+		if q > MaxQuantity-have || !w.ledger.FlowFits(int(region), ledger.EstateGoods, c, q) {
 			return false
 		}
 	}
@@ -299,8 +331,8 @@ type integrationState struct {
 	// externals are the slots, ascending, of the agents P1.9 reads a mailbox of:
 	// the external agents and any agent that holds a directive (only the test seam
 	// gives a household one). It is derived from the agents, so it is not saved
-	// and a restore rebuilds it (rebuildExternals); a removed agent stays in it
-	// until the next P1.9, which drops it. tick.go calls P1.9 only while the list is
+	// and a restore rebuilds it (rebuildExternals); a removed external agent leaves it at RemoveAgent, any other
+	// removed agent at the next P1.9. tick.go calls P1.9 only while the list is
 	// not empty, so a world that never held one records no P1.9 line.
 	externals []int32
 	// visit says externals is not empty: the guard of the P1.9 call in tick.go,
@@ -332,6 +364,14 @@ func (s *integrationState) watch(slot int32) {
 		s.externals = slices.Insert(s.externals, i, slot)
 	}
 	s.visit = true
+}
+
+// unwatch drops slot from the agents P1.9 visits.
+func (s *integrationState) unwatch(slot int32) {
+	if i, found := slices.BinarySearch(s.externals, slot); found {
+		s.externals = slices.Delete(s.externals, i, i+1)
+	}
+	s.visit = len(s.externals) > 0
 }
 
 // rebuildExternals sets the agents P1.9 visits from the agents of a restored
@@ -1159,6 +1199,16 @@ func (w *World) recordRumours(v *AgentView, a *agent) {
 	rv := &w.integ.views[a.id]
 	rv.has, rv.tick = true, w.Tick()
 	rv.rumours = append(rv.rumours[:0], v.Rumours...)
+}
+
+// externalRoleChanged is the step of a role change for a mortal external agent the
+// spawner switched: the mailbox was checked against the old role, so it is emptied,
+// and the last view is dropped, so neither comes back with a later role.
+func (w *World) externalRoleChanged(a *agent) {
+	a.directive = nil
+	if int(a.id) < len(w.integ.views) {
+		w.integ.views[a.id].has = false
+	}
 }
 
 // lastView returns the view kept for agent a: none for an agent that has not had a

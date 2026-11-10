@@ -326,7 +326,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	moment, err := w.prepareAnchors()
 	if err != nil {
-		return Snapshot{}, err
+		return Snapshot{}, fmt.Errorf("Snapshot: %w", err)
 	}
 	nr, nc := len(w.cfg.Roles), len(w.cfg.Commodities)
 	s := Snapshot{
@@ -377,7 +377,7 @@ func (w *World) prepareAnchors() (Moment, error) {
 	// and no test can inject from the root (D190); the branch only wraps and returns
 	// it.
 	if err != nil {
-		return Moment{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
+		return Moment{}, fmt.Errorf("calendar at tick %d: %w", w.Tick(), err)
 	}
 	w.tk.moment = moment
 	w.p12Anchors()
@@ -415,7 +415,7 @@ func (w *World) Region(g RegionID) (RegionState, error) {
 		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, ErrUnknownRegion)
 	}
 	if _, err := w.prepareAnchors(); err != nil {
-		return RegionState{}, err
+		return RegionState{}, fmt.Errorf("Region: %w", err)
 	}
 	nr, nc, n := len(w.cfg.Roles), len(w.cfg.Commodities), len(w.cfg.Regions)
 	s := Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr), Markets: make([]MarketRow, n*nc)}

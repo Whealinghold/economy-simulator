@@ -137,6 +137,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	if w.sub != nil {
 		w.sub.roleChanged(a)
 	}
+	if a.external {
+		w.externalRoleChanged(a)
+	}
 }
 
 // relocationRefusal is the one entry point of the region_bound refusals that

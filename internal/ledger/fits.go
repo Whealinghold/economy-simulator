@@ -57,3 +57,27 @@ func (l *Ledger) fits(region, commodity int, amount, bound int64) bool {
 	_, ok = checked.Add(l.flows()[region*l.stride+off], amount)
 	return ok
 }
+
+// FlowFits reports whether adding amount to the flow total of reason in the region
+// (commodity Money for money, else a commodity) passes no bound, as Transfer and
+// Move check it. It reads and changes nothing. A region out of range, a commodity
+// out of range or a reason with no flow slot does not fit.
+func (l *Ledger) FlowFits(region int, r Reason, commodity int, amount int64) bool {
+	if region < 0 || region >= l.regions {
+		return false
+	}
+	off := l.offOf(r, thingMoney)
+	if commodity != Money {
+		if commodity < 0 || commodity >= len(l.comms) {
+			return false
+		}
+		if off = l.offOf(r, thingGoods); off >= 0 {
+			off += commodity
+		}
+	}
+	if off < 0 {
+		return false
+	}
+	_, ok := checked.Add(l.flows()[region*l.stride+off], amount)
+	return ok
+}

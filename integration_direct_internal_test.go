@@ -481,3 +481,43 @@ func TestP19Directives_AllocatesNothing(t *testing.T) {
 		t.Errorf("allocations of a P1.9 pass = %v, want 0", got)
 	}
 }
+
+// TestRemoveAgent_LeavesP19ListAtOnce verifies that removing the last external
+// agent empties the P1.9 list and its guard at the call, as a restore rebuilds
+// them, so a world and its restore record the same positions.
+//
+// Guard: a removed agent that stayed in the list until the next P1.9 made the
+// original world record a P1.9 line that its restore did not.
+func TestRemoveAgent_LeavesP19ListAtOnce(t *testing.T) {
+	t.Parallel()
+	w, _, id, scripted, _, _ := directWorld(t)
+	for _, x := range []AgentID{id, scripted} {
+		if err := w.RemoveAgent(x); err != nil {
+			t.Fatalf("RemoveAgent(%d) = %v, want nil", x, err)
+		}
+	}
+	if w.integ.visit || len(w.integ.externals) != 0 {
+		t.Errorf("after removing every external: visit %v, externals %v, want false, none", w.integ.visit, w.integ.externals)
+	}
+}
+
+// TestExternalRoleChanged_DropsMailboxAndView verifies that a role change of a
+// mortal external agent empties its mailbox (checked against the old role) and
+// forgets its last view, and that takeRole leaves its strategy as the consumer gave
+// it.
+//
+// Guard: a pending directive naming the old role's recipes would be refused by the
+// next step, and a kept view would come back when the role did.
+func TestExternalRoleChanged_DropsMailboxAndView(t *testing.T) {
+	t.Parallel()
+	w, _, id, _, _, _ := directWorld(t)
+	a := &w.agents[id]
+	a.directive = &Directive{Sticky: true, Hold: []CommodityID{dcBread}}
+	w.integ.views = append(w.integ.views[:0], make([]rumourView, int(id)+1)...)
+	w.integ.views[id].has = true
+	strategy := a.strategy
+	w.externalRoleChanged(a)
+	if a.directive != nil || w.integ.views[id].has || a.strategy != strategy {
+		t.Errorf("after externalRoleChanged: directive %v, view kept %v, strategy %d (was %d), want nil, false, unchanged", a.directive, w.integ.views[id].has, a.strategy, strategy)
+	}
+}

@@ -500,7 +500,10 @@ func (w *World) takeRole(a *agent, g RegionID, to RoleID) {
 	w.fillSeeds(g, newRow)
 	reseedBeliefs(a, newRow, oldRow, w.ex.seeds, w.bp)
 	from := a.role
-	a.role, a.strategy, a.roleSince = to, int(to), w.Tick()
+	a.role, a.roleSince = to, w.Tick()
+	if !a.external { // an external agent keeps the strategy the consumer gave it (spec-integration.md 4.8)
+		a.strategy = int(to)
+	}
 	w.agentRoleChanged(a, from, g)
 }
 

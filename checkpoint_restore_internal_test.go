@@ -29,7 +29,7 @@ func restoreOf(t *testing.T, w *World) (*World, error) {
 // fullDirective is a directive with every part set.
 func fullDirective() *Directive {
 	return &Directive{
-		Job:      &JobRequest{Recipe: 0, Executions: 2},
+		Job:      &JobRequest{Recipe: 0, Executions: 1},
 		Intents:  []Intent{{Commodity: 1, Side: Ask, Quantity: 3, Limit: 900, Target: 4, Reserve: 1, UnitCost: 800, Purpose: PurposeInput}},
 		Discards: []Discard{{Commodity: 0, Quantity: 1}},
 		Hold:     []CommodityID{0},
@@ -80,8 +80,8 @@ func TestRestore_SyntheticStateRoundTrips(t *testing.T) {
 // TestRestore_RefusesWhatAnInvalidDirectiveWrote verifies that a directive with a
 // negative amount, which Checkpoint writes as the unsigned number it converts to,
 // is refused by the restore as ErrCheckpointCorrupt, as is one with a commodity
-// or a purpose outside its set. The directive is validated when a consumer sets it
-// in plan 2-17; until then the reader is the only check.
+// or a purpose outside its set, and an empty directive or one Direct would refuse
+// (more executions than the agent's weight, a zero quantity).
 //
 // Requirement: FR-CHK-012, FR-CHK-014
 func TestRestore_RefusesWhatAnInvalidDirectiveWrote(t *testing.T) {
@@ -99,6 +99,9 @@ func TestRestore_RefusesWhatAnInvalidDirectiveWrote(t *testing.T) {
 		{"unknown recipe", func(d *Directive) { d.Job.Recipe = 9 }},
 		{"unknown purpose", func(d *Directive) { d.Intents[0].Purpose = 9 }},
 		{"unknown side", func(d *Directive) { d.Intents[0].Side = 5 }},
+		{"empty directive", func(d *Directive) { *d = Directive{} }},
+		{"executions above the weight", func(d *Directive) { d.Job.Executions = 2 }},
+		{"zero quantity", func(d *Directive) { d.Intents[0].Quantity = 0 }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
