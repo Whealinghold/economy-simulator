@@ -512,6 +512,8 @@ type stylisedRun struct {
 	graph      economysim.Graph // the region graph at the start
 	agents     []agentRead      // every agent at the end, through Agent(a)
 	ratio      []int64          // the household-weighted mean welfare ratio at each close, bp (0 where none)
+	roleHH     map[int][]int64  // the households of each role at each close, by role
+	tops       []verdict.Point  // the share of the money held by the top decile of the households at each year close (R2)
 }
 
 // collapsed reports whether the households at the end are under a tenth of the
@@ -603,12 +605,14 @@ func (c *capture) advance(n int64) {
 		c.run.households = append(c.run.households, cur.Households)
 		c.run.money = append(c.run.money, int64(cur.Money))
 		c.run.ratio = append(c.run.ratio, meanRatio(cur))
+		c.noteRoles(cur)
 		if cur.Tick%yearTicks == 0 {
 			yw, err := obs.year.Close(cur)
 			if err != nil {
 				c.t.Fatalf("Close() of the year ending at tick %d error = %v, want nil", cur.Tick, err)
 			}
 			c.run.years = append(c.run.years, runWin{w: yw, open: c.yOpen, closing: cur})
+			c.run.tops = append(c.run.tops, topShare(c.w, cur.Tick))
 			if err := obs.year.Open(cur); err != nil {
 				c.t.Fatalf("Open() error = %v, want nil", err)
 			}
@@ -703,13 +707,7 @@ func agentsOf(w *economysim.World) []agentRead {
 }
 
 // agentRows returns the rows of the agents, for RowsOf.
-func (r *stylisedRun) agentRows() []indicator.AgentRow {
-	rows := make([]indicator.AgentRow, len(r.agents))
-	for i, a := range r.agents {
-		rows[i] = a.AgentRow
-	}
-	return rows
-}
+func (r *stylisedRun) agentRows() []indicator.AgentRow { return agentRowsOf(r.agents) }
 
 // runKey names a memoised run.
 type runKey struct {
@@ -1055,4 +1053,42 @@ func meanRatio(s economysim.Snapshot) int64 {
 		return 0
 	}
 	return (2*sum + n) / (2 * n)
+}
+
+// noteRoles appends to each role the households it has at the close of a tick,
+// summed over the regions (the per-role series of R3).
+func (c *capture) noteRoles(cur economysim.Snapshot) {
+	if c.run.roleHH == nil {
+		c.run.roleHH = map[int][]int64{}
+	}
+	now := map[int]int64{}
+	for _, row := range cur.Roles {
+		now[int(row.Role)] += row.Households
+	}
+	for role := range c.run.names.Roles {
+		c.run.roleHH[role] = append(c.run.roleHH[role], now[role])
+	}
+}
+
+// topShare is the share of the money of the households held by the top decile
+// (Inequality.Top(1 000), IND 9 row 11) at a year close, read through Agent(a); a
+// close with no household has the point 0.
+func topShare(w *economysim.World, tick int64) verdict.Point {
+	set, err := indicator.RowsOf(agentRowsOf(agentsOf(w)), indicator.ColMoney, indicator.RowOpt{ExcludeExternal: true})
+	if err != nil {
+		return verdict.Point{Tick: tick}
+	}
+	res, err := indicator.Inequality(set)
+	if err != nil || !res.SharesOK {
+		return verdict.Point{Tick: tick}
+	}
+	return verdict.Point{Tick: tick, Value: res.Top}
+}
+
+func agentRowsOf(a []agentRead) []indicator.AgentRow {
+	rows := make([]indicator.AgentRow, len(a))
+	for i, x := range a {
+		rows[i] = x.AgentRow
+	}
+	return rows
 }

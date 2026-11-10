@@ -412,10 +412,9 @@ func moneyDrift(r *stylisedRun) stat {
 func point(tick, value int64) verdict.Point { return verdict.Point{Tick: tick, Value: value} }
 
 // detectorInput converts the windows and series of a run into the plain input of
-// internal/verdict, inline at the call (architecture.md 2.9). The parts that need
-// the agent rows of plan 2-17 (the top decile of R2) and the households per role
-// per tick (R3's role clause) are left out: the detector reads an absent series
-// as nothing to read.
+// internal/verdict, inline at the call (architecture.md 2.9). The top decile of R2
+// comes from the agent rows of Agent(a) at each year close, and the households of
+// each role from the role rows of each close (R3's role clause).
 func detectorInput(r *stylisedRun) (verdict.Input, error) {
 	var in verdict.Input
 	in.MInit = int64(r.start.Money)
@@ -605,6 +604,14 @@ func tickSeries(r *stylisedRun, in *verdict.Input) {
 		hh[i] = point(int64(i), h)
 	}
 	in.Households = [][]verdict.Point{hh}
+	for role := range r.names.Roles {
+		pts := make([]verdict.Point, len(r.roleHH[role]))
+		for i, h := range r.roleHH[role] {
+			pts[i] = point(int64(i), h)
+		}
+		in.Roles = append(in.Roles, pts)
+	}
+	in.Top = r.tops
 	for _, k := range marketKeys(r.pinned) {
 		var pin, frz []verdict.Point
 		for i, tk := range r.pinned[k] {

@@ -383,3 +383,32 @@ func TestStylisedLong_S02_Population(t *testing.T) {
 	f.add("S02 population", judgeExact(factDef{ID: "STY-S02", Statistic: "recovery no faster than the speed limit at g_max", Class: verdict.ClassO}, "famine", seeds, speed))
 	f.report(t)
 }
+
+// TestStylisedLong_Measures verifies the readings of W02 on built data, without a
+// run: the ratio at which the default schedules cross (12 000: birth 250 at every
+// ratio, death falling from 450 at 8 000 to 50 at 16 000), the crossings of a level
+// by a series and the end level.
+//
+// Requirement: FR-STY-030
+func TestStylisedLong_Measures(t *testing.T) {
+	t.Parallel()
+	birth := []economysim.Knot{{Ratio: 8000, Rate: 250}, {Ratio: 16000, Rate: 250}}
+	death := []economysim.Knot{{Ratio: 8000, Rate: 450}, {Ratio: 16000, Rate: 50}}
+	if got, ok := replacementRatio(birth, death); !ok || got != 12000 {
+		t.Errorf("replacementRatio(defaults) = %d, %v, want 12000, true", got, ok)
+	}
+	if _, ok := replacementRatio(birth, []economysim.Knot{{Ratio: 0, Rate: 10}}); ok {
+		t.Error("replacementRatio(birth always above death) ok = true, want false")
+	}
+	if got := crossings([]int64{1, 2, 4, 6, 5, 4, 2}, 3); got != 2 {
+		t.Errorf("crossings(up through 3 and down again) = %d, want 2", got)
+	}
+	if got := crossings([]int64{1, 2, 3, 3, 2, 1}, 3); got != 0 {
+		t.Errorf("crossings(touching 3 and leaving below) = %d, want 0: a tick on the level is not a crossing", got)
+	}
+	s := slices.Repeat([]int64{0}, int(yearTicks))
+	s = append(s, slices.Repeat([]int64{10}, int(yearTicks))...)
+	if got, ok := endLevel(s); !ok || got != 10 {
+		t.Errorf("endLevel(a year of 0 then a year of 10) = %d, %v, want 10, true", got, ok)
+	}
+}
