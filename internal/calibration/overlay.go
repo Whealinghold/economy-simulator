@@ -28,7 +28,8 @@ type Header struct {
 
 // Change is one key an overlay writes: the registry key, whose class decides
 // whether it may be written, the configuration path of EXP 3.2.1 (the caller
-// resolves the instance of a table keyed by an ID) and the value.
+// resolves the instance of a table keyed by an ID, and answers for the pair: the
+// path is the key's, as Known.Paths says) and the value.
 type Change struct {
 	Key   string
 	Path  string

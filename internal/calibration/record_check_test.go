@@ -70,7 +70,8 @@ func TestCheckRecord_Rules(t *testing.T) {
 		{"screened_in knob unknown", func(r *Record) { r.ScreenedIn[0] = "K-NOPE" }, RuleKnobUnknown, "screened_in"},
 		{"dormant knob unknown", func(r *Record) { r.Dormant[0] = "K-NOPE" }, RuleKnobUnknown, "dormant"},
 		{"finding knob unknown", func(r *Record) { r.Findings[0].Knob = "K-NOPE" }, RuleKnobUnknown, "finding"},
-		{"stability knob unknown", func(r *Record) { r.Stability[0].Knob = "K-NOPE" }, RuleKnobUnknown, "stability"},
+		{"stability knob unknown", func(r *Record) { r.Stability[1].Knob = "K-NOPE" }, RuleKnobUnknown, "stability"},
+		{"undetermined claim without a default line", func(r *Record) { r.Stability[0].Point = pointLower }, RuleClaim, "claim"},
 		{"claim knob unknown", func(r *Record) {
 			r.Claims[0].Knob = "K-NOPE"
 			r.Stability[0].Knob, r.Stability[1].Knob = "K-NOPE", "K-NOPE"

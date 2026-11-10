@@ -60,8 +60,8 @@ type mutation struct {
 	apply func(*registry)
 }
 
-// setKnob returns a mutation that writes a cell of the first knob row whose
-// class is cls ("" for any), and setGroup one of the first group row.
+// setKnob returns a mutation that writes a cell of the first knob row, setGroup
+// one of the first group row and setClassKnob one of the first row of a class.
 func setKnob(name string, cell int, v string) mutation {
 	return mutation{name, func(r *registry) { r.knobs[0][cell] = v }}
 }

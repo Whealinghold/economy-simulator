@@ -96,7 +96,15 @@ func Comparable(a, b Record) error {
 
 // stageRank is the position of a stage in the order C0 to C9, or -1.
 func stageRank(name string) int {
-	return slices.Index(strings.Fields(stages), name)
+	rank := 0
+	for rest := stages; rest != ""; rank++ {
+		var w string
+		w, rest, _ = strings.Cut(rest, " ")
+		if w == name {
+			return rank
+		}
+	}
+	return -1
 }
 
 // stageFamily is the stage without its sub-stage letter: C4a is C4.
@@ -434,7 +442,7 @@ func (c *checker) stopRecord() {
 			c.add(RuleStopDormant, "dormant D knob %s is moved to %d", ref.ID, s.Value)
 		}
 	}
-	if len(r.Factors) > 0 && (!r.Confirm.Has || !r.Confirm.Control) {
+	if (len(r.Factors) > 0 || len(r.Screens) > 0 || len(r.Sets) > 0 || c.searched()) && (!r.Confirm.Has || !r.Confirm.Control) {
 		c.add(RuleStopControl, "the stage searched and has no confirm with a control")
 	}
 }
@@ -465,6 +473,7 @@ func (st *packState) retire() {
 	}
 	st.current = map[string]bool{}
 	st.openExact = map[string]bool{}
+	st.owners = map[string]string{} // a new lineage may split a stage by owner afresh
 }
 
 // fold folds the record into the pack's state once it is checked.

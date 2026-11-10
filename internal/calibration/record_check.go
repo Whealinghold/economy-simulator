@@ -424,8 +424,13 @@ func oneNeighbourProblem(lines []Stability, t tally) string {
 	return ""
 }
 
-// undeterminedProblem checks that a default-only record has one line.
+// undeterminedProblem checks that an undetermined claim has a line at the default,
+// and exactly one line when the record is default-only (spec-calibration.md 11.2,
+// FR-CLB-039).
 func undeterminedProblem(lines []Stability, t tally) string {
+	if t.points[pointDefault] == 0 {
+		return "an undetermined claim has no line at the default"
+	}
 	if t.points[pointDefault] == len(lines) && len(lines) != 1 {
 		return fmt.Sprintf("a default-only record has %d lines, want 1", len(lines))
 	}

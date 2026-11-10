@@ -24,8 +24,10 @@ type calError string
 func (e calError) Error() string { return string(e) }
 
 const (
-	// ErrNoGrid is returned for a `z` knob whose base is 0: it has no grid, is not
-	// searched, and the record says `unsearched at_off` (spec-calibration.md 5.2).
+	// ErrNoGrid is returned for a `geo` knob whose base is 0 (a `z` row, whose owner
+	// default is 0): it has no grid, is not searched, and the record says
+	// `unsearched at_off` (spec-calibration.md 5.2, FR-CLB-108). A `lin` row at 0
+	// does get a grid.
 	ErrNoGrid = calError("calibration: the knob has no grid at a base of 0")
 	// ErrBase is returned for a base outside its bounds, a rule that cannot make
 	// a grid (a step below 1, an empty set) or bounds that are not ordered.
@@ -107,8 +109,8 @@ type Grid struct {
 // Build makes the grid of a knob in the four steps of spec-calibration.md 5.2:
 // the levels of the kind in bounds, the cut of the off value of a D row (the base
 // is never cut), the skip of the levels that valid rejects, and the neighbours.
-// valid may be nil, meaning every level is valid. A `geo` or `z` knob whose base
-// is 0 returns ErrNoGrid.
+// valid may be nil, meaning every level is valid. A `geo` knob whose base is 0
+// (the `z` rows) returns ErrNoGrid.
 func Build(r Rule, base int64, b Bounds, off Off, valid func(level int64) bool) (Grid, error) {
 	if b.Lo > b.Hi || base < b.Lo || base > b.Hi {
 		return Grid{}, ErrBase
