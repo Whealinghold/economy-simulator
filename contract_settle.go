@@ -361,9 +361,9 @@ func (w *World) readContract(rs *restoreCtx, r *codec.Reader) contract {
 
 // merchantsCross is the module's part of step 7: each contract's shipment is in
 // flight and is the one it was formed on, its Escrow account is an open Escrow
-// account of the destination that holds the price of the goods and no account serves
-// two contracts; and the free list of each region is every open Escrow account of the
-// region that no contract names.
+// account of the destination that holds the price of the goods, its deliverer is a
+// live agent, and no account serves two contracts; and the free list of each region
+// is every open Escrow account of the region that no contract names.
 func (w *World) merchantsCross() error {
 	used := make(map[int]bool, len(w.mer.open))
 	for i := range w.mer.open {
@@ -371,6 +371,9 @@ func (w *World) merchantsCross() error {
 		msg := w.contractFault(i, used)
 		if msg == "" {
 			msg = w.shipmentFault(ct)
+		}
+		if msg == "" && !w.liveAgent(ct.deliverer) { // a contract ends at the removal of its deliverer
+			msg = fmt.Sprintf("deliverer %d is not a live agent", ct.deliverer)
 		}
 		if msg != "" {
 			return fmt.Errorf("%w: contract %d: %s", ErrCheckpointCorrupt, ct.id, msg)
