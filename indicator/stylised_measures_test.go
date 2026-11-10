@@ -1,7 +1,9 @@
 package indicator_test
 
 import (
+	"os"
 	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -217,5 +219,45 @@ func TestStylised_TradeMeasures(t *testing.T) {
 	o.removed[0].Tick = 3
 	if got := ladderOrder(o); got != "" {
 		t.Errorf("ladderOrder(relief before removal) = %q, want none", got)
+	}
+}
+
+// TestTicks_GateConstants verifies the run lengths of the tiers (D595, REF 8.2): a
+// gate run is at most 1 800 ticks, the nightly run is the gate run, and the only
+// file that names the long run is the one behind the stylised_long tag, so the
+// default build cannot compile a run of a hundred years.
+//
+// Requirement: FR-STY-083, FR-STY-081
+//
+// Guard: a long run in an untagged file would put a 24-minute test in the merge
+// gate.
+func TestTicks_GateConstants(t *testing.T) {
+	t.Parallel()
+	if gateTicks > 1800 || nightlyTicks != gateTicks {
+		t.Errorf("gateTicks = %d, nightlyTicks = %d, want gateTicks at most 1800 and nightlyTicks equal to it", gateTicks, nightlyTicks)
+	}
+	files, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tagged []string
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(f.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		src := string(b)
+		switch {
+		case strings.HasPrefix(src, "//go:build stylised_long\n"):
+			tagged = append(tagged, f.Name())
+		case strings.Contains(src, "longTicks") && f.Name() != "stylised_measures_test.go":
+			t.Errorf("%s names longTicks and has no //go:build stylised_long line, want only the tagged file to", f.Name())
+		}
+	}
+	if !slices.Equal(tagged, []string{"stylised_long_test.go"}) {
+		t.Errorf("files with the stylised_long tag = %v, want [stylised_long_test.go]", tagged)
 	}
 }

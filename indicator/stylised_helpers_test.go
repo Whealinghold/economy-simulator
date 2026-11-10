@@ -384,11 +384,14 @@ type runObs struct {
 	badSeq     string
 	// The events of the famine and trade facts: households unfed and relief paid
 	// by tick, hunger removals, and the edge changes.
-	unfed   []int64
-	relief  []int64
-	removed []removal
-	edges   []economysim.EdgeStatusChanged
-	watch   *ladderWatch
+	unfed  []int64
+	relief []int64
+	// The population module's counts by tick (STY-W02, W06): births and deaths done
+	// and births the pool could not fund.
+	births, deaths, unfunded []int64
+	removed                  []removal
+	edges                    []economysim.EdgeStatusChanged
+	watch                    *ladderWatch
 	// quote is the limit price of the outside's line by (gate region, commodity)
 	// and tick, 0 where the side was not present.
 	quote map[[2]int][]int64
@@ -448,6 +451,10 @@ func (o *runObs) Observe(e economysim.Event) {
 		if o.watch != nil {
 			o.watch.unfedIn[e.Region] = true
 		}
+	case economysim.PopulationChanged:
+		addAt(&o.births, e.Tick, e.BirthsDone)
+		addAt(&o.deaths, e.Tick, e.DeathsDone)
+		addAt(&o.unfunded, e.Tick, e.BirthsUnfunded)
 	case economysim.ReliefPaid:
 		addAt(&o.relief, e.Tick, int64(e.Paid))
 	case economysim.AgentBankrupted:
@@ -494,6 +501,7 @@ type stylisedRun struct {
 	hash       string
 	graph      economysim.Graph // the region graph at the start
 	agents     []agentRead      // every agent at the end, through Agent(a)
+	ratio      []int64          // the household-weighted mean welfare ratio at each close, bp (0 where none)
 }
 
 // collapsed reports whether the households at the end are under a tenth of the
@@ -584,6 +592,7 @@ func (c *capture) advance(n int64) {
 		c.notePinned(win, pr)
 		c.run.households = append(c.run.households, cur.Households)
 		c.run.money = append(c.run.money, int64(cur.Money))
+		c.run.ratio = append(c.run.ratio, meanRatio(cur))
 		if cur.Tick%yearTicks == 0 {
 			yw, err := obs.year.Close(cur)
 			if err != nil {
@@ -1021,4 +1030,19 @@ func scriptedRun(t testing.TB, p stylisedPack, layers []string, script string, s
 			c.run.obs.watch, c.after = lw, lw.poll
 		}
 	})
+}
+
+// meanRatio is the household-weighted mean welfare ratio of the roles of a
+// snapshot that have one, in basis points, rounded half up; 0 where none has.
+func meanRatio(s economysim.Snapshot) int64 {
+	var sum, n int64
+	for _, row := range s.Roles {
+		if row.HasMeanRatio {
+			sum, n = sum+row.MeanRatioBP*row.RatioHouseholds, n+row.RatioHouseholds
+		}
+	}
+	if n == 0 {
+		return 0
+	}
+	return (2*sum + n) / (2 * n)
 }
