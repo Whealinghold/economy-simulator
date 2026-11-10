@@ -148,10 +148,14 @@ func TestAgents_CountsAndRemovals(t *testing.T) {
 	check(t, got, "household.count", 1, "role", "k0")
 	check(t, got, "household.count", 7, "role", "k1")
 	check(t, got, "role.changes", 1, "role", "k1")
+	check(t, got, "household.exits", 2, "role", "k0", "cause", "insolvent")
 	for _, c := range []economysim.Cause{economysim.CauseStarved, economysim.CauseConsumer, economysim.CausePopulation} {
 		tick(h, 1, economysim.AgentBankrupted{Role: 1, Weight: 1, Cause: c})
 	}
 	got = h.collect()
+	check(t, got, "household.exits", 1, "role", "k1", "cause", "starved")
+	check(t, got, "household.exits", 1, "role", "k1", "cause", "consumer")
+	absent(t, got, "household.exits", "role", "k1", "cause", "population")
 	if v := got.sum("agent.removals"); v != 4 {
 		t.Errorf("agent.removals = %d, want 4, the AgentBankrupted events", v)
 	}
@@ -243,4 +247,99 @@ func TestUpkeepShort_ByCommodityAndRole(t *testing.T) {
 	check(t, got, "upkeep.short", 6, "commodity", "c0", "role", "k1")
 	check(t, got, "upkeep.short", 8, "commodity", "c2", "role", "k1")
 	absent(t, got, "upkeep.short", "commodity", "c2", "role", "k0")
+}
+
+// TestBeliefs_NoOutcomesNoBoundShare verifies that a BeliefsUpdated with no
+// outcomes records the centre but no share on either bound, which is undefined.
+//
+// Requirement: FR-OBS-060
+func TestBeliefs_NoOutcomesNoBoundShare(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	tick(h, 0, economysim.BeliefsUpdated{Commodity: 1, Region: 1, MeanCentre: 9})
+	got := h.collect()
+	check(t, got, "belief.centre", 9, "commodity", "c1", "region", "r1")
+	if n := len(got["economysim.belief.at_bound"]); n != 0 {
+		t.Errorf("belief.at_bound series = %d, want 0 for an event with no outcomes", n)
+	}
+}
+
+// TestBoundaryFlow_OnlyNoCommodityIsMoney verifies that a commodity outside the
+// table is not taken for money: only NoCommodity is.
+//
+// Requirement: FR-OBS-050
+func TestBoundaryFlow_OnlyNoCommodityIsMoney(t *testing.T) {
+	h := newHarness(t)
+	h.send(created(), economysim.BoundaryFlow{Reason: "x", Kind: economysim.KindSink, Commodity: -2, Total: 4})
+	if v := h.collect().sum("money.flow"); v != 0 {
+		t.Errorf("money.flow = %d, want 0 for a commodity of -2", v)
+	}
+}
+
+// TestCells_EachCounterAndLevelIsSentOnlyWhenItMoved verifies that the SDK is not
+// called for a counter with nothing pending or a level that did not change, so a
+// quiet tick costs only the held gauges.
+//
+// Requirement: NFR-OBS-005
+func TestCells_EachCounterAndLevelIsSentOnlyWhenItMoved(t *testing.T) {
+	h := newHarness(t)
+	h.send(created(), economysim.AgentSpawned{Role: 0, Weight: 1})
+	tick(h, 0, economysim.BoundaryFlow{Reason: "r", Kind: economysim.KindFaucet, Commodity: economysim.NoCommodity, Total: 3})
+	tick(h, 1)
+	tick(h, 2)
+	for _, name := range []string{"economysim.money.flow", "economysim.agent.count", "economysim.household.count"} {
+		if n := h.calls[name]; n != 1 {
+			t.Errorf("SDK calls for %s = %d, want 1: one send, none for the quiet ticks", name, n)
+		}
+	}
+}
+
+// TestHot_OutsideAStepIsSentAtOnce verifies that an order, a rejection and a trade
+// that arrive between ticks reach the SDK without a TickEnded.
+//
+// Requirement: NFR-OBS-005
+func TestHot_OutsideAStepIsSentAtOnce(t *testing.T) {
+	h := newHarness(t)
+	h.send(created(), economysim.OrderPlaced{Commodity: 1, Region: 1}, economysim.OrderRejected{Commodity: 1, Reason: "x"},
+		economysim.TradeExecuted{Commodity: 1, Region: 1, Seller: 0, Quantity: 2})
+	got := h.collect()
+	for name, want := range map[string]int64{"market.orders": 1, "market.orders.rejected": 1, "market.trades": 1,
+		"market.volume": 2, "estate.sold": 2} {
+		if v := got.sum(name); v != want {
+			t.Errorf("%s = %d, want %d without a TickEnded", name, v, want)
+		}
+	}
+}
+
+// TestHot_IDsOnTheEdgeOfTheTablesAreDropped verifies the edges of the hot
+// accumulators: a negative side, a trade in a region equal to the region count
+// (which would land in the next commodity's cells), and a rejection reason beyond
+// the cap of a commodity that is not the first (which would land in the previous
+// commodity's last cell).
+//
+// Requirement: FR-OBS-052
+func TestHot_IDsOnTheEdgeOfTheTablesAreDropped(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	es := []economysim.Event{
+		economysim.OrderPlaced{Commodity: 0, Region: 0, Side: -1},
+		economysim.TradeExecuted{Commodity: 0, Region: 3, Seller: 0, Quantity: 4},
+		economysim.TradeExecuted{Commodity: 0, Region: 0, Seller: 3, Quantity: 4},
+	}
+	for i := 0; i < 32; i++ {
+		es = append(es, economysim.OrderRejected{Commodity: 0, Reason: economysim.Reason(string(rune('A' + i)))})
+	}
+	es = append(es, economysim.OrderRejected{Commodity: 1, Reason: "beyond the cap"})
+	tick(h, 0, es...)
+	got := h.collect()
+	if v := got.sum("market.orders"); v != 0 {
+		t.Errorf("market.orders = %d, want 0 for a side of -1", v)
+	}
+	if v := got.sum("estate.sold"); v != 0 {
+		t.Errorf("estate.sold = %d, want 0: region 3 is outside the table and seller 3 is an agent", v)
+	}
+	if v := got.sum("market.orders.rejected"); v != 32 {
+		t.Errorf("market.orders.rejected = %d, want 32: the reason beyond the cap is dropped", v)
+	}
+	absent(t, got, "market.orders.rejected", "commodity", "c0", "reason", "beyond the cap")
 }

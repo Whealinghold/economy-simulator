@@ -59,12 +59,14 @@ func (o *Observer) endUnfed() {
 func (o *Observer) seed(s economysim.Snapshot) {
 	for _, r := range s.Roles {
 		role := ix(r.Role)
+		i := o.unfed.cell(ix(r.Region), role)
+		if i < 0 { // a row outside the names table is a library defect: drop it whole
+			continue
+		}
 		o.count(m1(iAgentCount, role), r.Agents)
 		o.count(m1(iHouseholdCount, role), r.Households)
 		o.count(m1(iHouseholdUnfed, role), r.Unfed)
-		if i := o.unfed.cell(ix(r.Region), role); i >= 0 {
-			o.unfed.last[i] = r.Unfed
-		}
+		o.unfed.last[i] = r.Unfed
 	}
 	for _, m := range s.Markets {
 		o.set(m2(iMarketClearingPrice, ix(m.State.Commodity), ix(m.State.Region)), int64(m.State.Price))

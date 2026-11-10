@@ -32,6 +32,8 @@ func TestUnfed_Sequence16_4(t *testing.T) {
 		{"tick 8: 1 unfed", []economysim.Event{short(0, 1)}, 1},
 		{"tick 9: two regions", []economysim.Event{short(0, 3), short(1, 2)}, 5},
 		{"tick 10: one region fed again", []economysim.Event{short(1, 2)}, 2},
+		{"tick 11: one unfed household", []economysim.Event{short(1, 1)}, 1},
+		{"tick 12: it is fed again", nil, 0},
 	}
 	h := newHarness(t)
 	h.send(created())
@@ -91,8 +93,10 @@ func TestSeed_ByDifference(t *testing.T) {
 	check(t, got, "household.count", 8, "role", "k1")
 	check(t, got, "household.unfed", 3, "role", "k1")
 
+	// Role 1 is renamed: a series kept from the first table would carry the old name.
 	names2 := economysim.Names{Commodities: []string{"a"}, Regions: []string{"x"}, Roles: []string{"m0", "m1", "m2"}}
 	h.send(economysim.WorldRestored{Names: names2, Snapshot: rolesSnapshot(
+		economysim.RoleRow{Region: 0, Role: 1, Agents: 2, Households: 2},
 		economysim.RoleRow{Region: 0, Role: 2, Agents: 4, Households: 9, Unfed: 6})})
 	got = h.collect()
 	for _, name := range []string{"agent.count", "household.count"} {
@@ -101,6 +105,7 @@ func TestSeed_ByDifference(t *testing.T) {
 	for _, name := range []string{"agent.count", "household.count", "household.unfed"} {
 		check(t, got, name, 0, "role", "k1")
 	}
+	check(t, got, "agent.count", 2, "role", "m1")
 	check(t, got, "agent.count", 4, "role", "m2")
 	check(t, got, "household.count", 9, "role", "m2")
 	check(t, got, "household.unfed", 6, "role", "m2")
@@ -147,4 +152,31 @@ func TestSeed_ClearingPriceFromMarkets(t *testing.T) {
 	if n := len(got["economysim.market.clearing_price"]); n != 1 {
 		t.Errorf("market.clearing_price series = %d, want 1: the market of region 9 is outside the names", n)
 	}
+}
+
+// TestUnfed_IDsOutsideTheTableAreDropped verifies that an UpkeepShortfall or a
+// restored role row whose region or role is outside the names table moves no
+// level and does not panic, and that the last cell of the table still works.
+//
+// Region 2 and role 1 are the last cell of a 3 x 2 table. Role 2 with region 0 is
+// inside the flat array (index 2) but outside the role table, and region 3 with
+// role 0 is index 6, one past the array.
+//
+// Requirement: FR-OBS-052
+func TestUnfed_IDsOutsideTheTableAreDropped(t *testing.T) {
+	h := newHarness(t)
+	h.send(economysim.WorldRestored{Names: miniNames(), Snapshot: rolesSnapshot(
+		economysim.RoleRow{Region: 9, Role: 1, Agents: 1, Households: 1, Unfed: 5},
+		economysim.RoleRow{Region: 0, Role: 5, Agents: 1, Households: 1, Unfed: 5})})
+	bad := []economysim.UpkeepShortfall{{Region: -1, Role: 0, Unfed: 3}, {Region: 0, Role: -1, Unfed: 3},
+		{Region: 0, Role: 2, Unfed: 3}, {Region: 3, Role: 0, Unfed: 3}}
+	for _, ev := range bad {
+		tick(h, 0, ev)
+	}
+	tick(h, 1, economysim.UpkeepShortfall{Region: 2, Role: 1, Unfed: 2})
+	got := h.collect()
+	if v := got.sum("household.unfed"); v != 2 {
+		t.Errorf("household.unfed = %d, want 2: only the last cell of the table counts", v)
+	}
+	check(t, got, "household.unfed", 2, "role", "k1")
 }
