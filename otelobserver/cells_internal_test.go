@@ -85,6 +85,8 @@ func TestClosed_SetsAreThoseOfTheSpec(t *testing.T) {
 			"out_cap", "unprovisioned", "in_cap", "held", "ended"},
 		keyDecision: {"no_rumour", "stale", "locked", "perishable", "no_margin", "unaffordable", "below_share",
 			"planned", "rested", "waiting", "lot_capped"},
+		keyHolder: {"agents", "estate", "treasury"},
+		keySector: {"households", "pool", "contract", "treasury"},
 	}
 	for key, w := range want {
 		if !slices.Equal(closed[key], w) {

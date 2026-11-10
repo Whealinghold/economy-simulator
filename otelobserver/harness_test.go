@@ -213,3 +213,14 @@ func miniNames() economysim.Names {
 		Modes:       []string{"m0", "m1"},
 	}
 }
+
+// sumOf is the sum of the series of a metric whose attributes include
+// economysim.sector (or any key) with the value v.
+func (p points) sumOf(name, v string) (s int64) {
+	for set, n := range p["economysim."+name] {
+		if strings.Contains(set, "="+v) {
+			s += n
+		}
+	}
+	return s
+}

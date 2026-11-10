@@ -37,6 +37,8 @@ var closed = map[string][]string{
 	keyOutcome: {"offered", "no_path", "too_old", "not_yet"},
 	keyLimit: {"no_estimate", "no_destination", "no_rumour", "too_far", "no_viable", "no_gain",
 		"bound", "out_cap", "unprovisioned", "in_cap", "held", "ended"},
+	keyHolder: {"agents", "estate", "treasury"},
+	keySector: {"households", "pool", "contract", "treasury"},
 	keyDecision: {"no_rumour", "stale", "locked", "perishable", "no_margin", "unaffordable",
 		"below_share", "planned", "rested", "waiting", "lot_capped"},
 }
