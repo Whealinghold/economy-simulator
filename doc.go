@@ -1242,4 +1242,60 @@
 //   - SeasonFactor: a season of the calendar and a factor in basis points, the row of
 //     a price-by-season table or of an availability window.
 //   - OutsideTraded: the event of a side's tick: what it wanted, offered and traded.
+//   - Stylised fact: a testable macro property of a run, stated in integers with a
+//     class, a tier and a source (spec-stylised-facts.md 3); a fact is asserted, or
+//     reported, and is never a rule of the engine.
+//   - Band: the interval of values a banded fact must stay in, as data in
+//     testdata/chains/bands; a key with no value line is unset and its fact is reported.
+//   - Prior: the placeholder a spec gives a band or a threshold before any run has
+//     set it; a prior asserts nothing.
+//   - Setting seeds: the seeds a reviewed run sets a band or a threshold from, 1 to 50
+//     (1 to 10 for a long fact); a band is never set from fewer.
+//   - Gate seeds: the seeds 1 to 10 the merge gate asserts a set band on; they lie
+//     inside the setting seeds, so the gate sees a change of the code, not a
+//     generalisation.
+//   - Hold-out set: seeds that no band and no calibration choice is set from, kept to
+//     test one out of sample; a recommendation of the reference chain, not relied on.
+//   - Headroom: the share of the observed range added outside the extremes when a band
+//     is set from the setting seeds, 2 500 basis points for 40 seeds or more and 5 000
+//     for 10 to 39; the result is rounded outward.
+//   - Acceptance class: the kind of a fact, exact, ordinal, banded, report or
+//     pack-asserted, which decides whether and by what rule a test asserts it.
+//   - Exact fact: a fact that holds as an identity on every seed and is asserted
+//     with no band.
+//   - Ordinal fact: a fact that asserts an order or a sign, and a derived bound, not a
+//     value.
+//   - Banded fact: a fact asserted against a band once its key has a value; until then
+//     it is reported with its prior beside it.
+//   - Report fact: a fact that is rendered into the verdict record and never asserted.
+//   - Pack-asserted fact: a fact a pack asserts when it runs, because only that pack
+//     has the modules it needs.
+//   - Confidence (of a band): the level of the evidence under a band's prior, from a
+//     source to a model to a guess.
+//   - Blind-spot field: a field of an indicator result, such as the stale share or the
+//     clamped flag, that names where the measure cannot see; a result with the field
+//     outside its bound is undetermined, not passed.
+//   - Detector: a pure function of integer series and thresholds that returns a verdict
+//     on one failure regime; it reads no world and draws nothing.
+//   - Verdict: the result of a detector, none, detected or unknown, with an onset, the
+//     measured value and the threshold.
+//   - Unknown (verdict): a detector could not be evaluated, for a reason from a closed
+//     set; it is not none and a test that needs none fails on it.
+//   - Onset: the first window or tick at which a detector's rule fired.
+//   - Healthy start: a warm start with no shock, the runs a threshold must stay clear
+//     of.
+//   - Provoked run: a run built to cause a failure regime, whose statistic is recorded
+//     as data and never asserted.
+//   - Separation protocol: the rule that sets a regime threshold between the largest
+//     value over healthy runs and the smallest over provoked runs, and leaves it unset
+//     if they do not separate.
+//   - Stability check: a named conjunction of facts and detectors with one result,
+//     stable, not stable or undetermined; the three words are used nowhere else.
+//   - Stability record: the text file of the checks at a default and at its neighbours,
+//     with the commit, configuration hash and seeds; until a grid supplies neighbours
+//     its claim is undetermined.
+//   - Verdict record: the text file of the integer results of one pack's facts and
+//     detectors, per seed set, in a fixed order with no float and no clock.
+//   - Acceptance tier: where a fact runs: short (unit), gate, nightly or long (a build
+//     tag), by its run length and seeds.
 package economysim
