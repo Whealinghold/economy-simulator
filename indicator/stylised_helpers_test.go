@@ -783,7 +783,7 @@ var (
 	packTwo       = stylisedPack{"two", []string{"base.toml", "two.toml", "warm-two.toml"}, 4, 1}
 	packThree     = stylisedPack{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 1}
 	packOneDemand = stylisedPack{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 4, 1}
-	packFive      = stylisedPack{"five", []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 2, 1}
+	packFive      = stylisedPack{"five", []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 2, 0}
 	packFamine    = stylisedPack{"famine", []string{"base.toml", "famine.toml", "overlay/estates.toml"}, 10, 1}
 )
 

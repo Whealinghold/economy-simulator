@@ -787,6 +787,9 @@ func w05Facts(t testing.TB) *factSet {
 			layers []string
 			bands  map[string]verdict.BandKey
 		}{{"one", nil, bands}, {"one+nofloor", []string{"overlay/nofloor.toml"}, nil}} {
+			if raceEnabled && c.layers != nil {
+				continue // the variant costs as much again; -race gets the plain pack (gate F runs both)
+			}
 			el, share := make([]stat, len(seeds)), make([]stat, len(seeds))
 			for i, s := range seeds {
 				r := scriptedRun(t, packOne, c.layers, "s04.toml", s, 1400, false)

@@ -43,6 +43,9 @@ func TestStylised_Packs_G01_H02(t *testing.T) {
 	for _, p := range largerPacks {
 		t.Run(p.name, func(t *testing.T) {
 			t.Parallel()
+			if raceEnabled && p.raceSeeds == 0 {
+				t.Skip("plan 2-19 D595: the heaviest pack (5 000 households, about 14 s a seed, over 100 s under -race) is run by gate F only; -race gets the other three packs")
+			}
 			g := g01Facts(t, p, p.name)
 			for _, v := range g.regimes["G01"] {
 				t.Logf("pack %s: %s", p.name, v)
