@@ -210,6 +210,10 @@ func TestCheckRecord_StabilityAndClaim(t *testing.T) {
 	three := func(edge, verdict string) []Stability {
 		return []Stability{stab("default", "gate", 1, 10, true, "STABLE", "none"), stab("lower", "gate", 1, 10, true, "STABLE", "none"), stab("upper", "gate", 1, 10, true, verdict, edge)}
 	}
+	// hold re-runs the default and both neighbours on the hold-out seeds 51 to 60.
+	hold := func(verdict string) []Stability {
+		return []Stability{stab("default", "holdout", 51, 60, false, verdict, "none"), stab("lower", "holdout", 51, 60, false, "STABLE", "none"), stab("upper", "holdout", 51, 60, false, "STABLE", "none")}
+	}
 	tests := []struct {
 		name  string
 		lines []Stability
@@ -217,6 +221,9 @@ func TestCheckRecord_StabilityAndClaim(t *testing.T) {
 		bad   bool
 	}{
 		{"stable ok", three("none", "STABLE"), "stable", false},
+		{"stable with its hold-out lines", append(three("none", "STABLE"), hold("STABLE")...), "stable", false},
+		{"stable with a failing hold-out verdict", append(three("none", "STABLE"), hold("NOT_STABLE")...), "stable", true},
+		{"not_stable by the hold-out alone", append(three("none", "STABLE"), hold("NOT_STABLE")...), "not_stable", false},
 		{"stable with an edge", three("above:bound", "STABLE"), "stable", true},
 		{"stable with a verdict that is not STABLE", three("none", "UNDETERMINED"), "stable", true},
 		{"stable with a failing verdict", three("none", "NOT_STABLE"), "stable", true},
@@ -268,5 +275,42 @@ func TestCheckRecord_SignsThatStateNoDirection(t *testing.T) {
 		if got := slices.Equal(rules(CheckRecord(r, k)), []string{RuleScreenSign}); got != tt.bad {
 			t.Errorf("CheckRecord(registry %c, elasticity %d) screen_sign problem = %v, want %v", tt.sign, tt.el, got, tt.bad)
 		}
+	}
+}
+
+// TestCheckRecord_HoldoutReportsBothProblems verifies that a hold-out line with
+// the wrong seeds and in_sample yes gets both problems in one run, not one per run.
+//
+// Fix: review 2-21 round 5. The seed check and the in_sample check were one
+// switch, so the second problem showed only after the first was fixed.
+//
+// Requirement: FR-CLB-100
+func TestCheckRecord_HoldoutReportsBothProblems(t *testing.T) {
+	t.Parallel()
+	r := minimalRecord(t)
+	r.Stability[1].First, r.Stability[1].InSample = 50, true
+	got := rules(CheckRecord(r, checkKnown()))
+	if want := []string{RuleHoldout, RuleInSample}; !slices.Equal(got, want) {
+		t.Errorf("CheckRecord(hold-out on seeds 50..60, in sample) rules = %v, want %v", got, want)
+	}
+}
+
+// TestCheckRecord_FactorKeyUnknown verifies that a factor whose key is no registry
+// row is a problem, and a composite factor (no key) is not.
+//
+// Fix: review 2-21 round 5. A mistyped factor key passed every check, so the
+// stage and owner rules were skipped for it silently.
+//
+// Requirement: FR-CLB-035
+func TestCheckRecord_FactorKeyUnknown(t *testing.T) {
+	t.Parallel()
+	r := minimalRecord(t)
+	r.Factors[0].Key = "World.Nope"
+	if got, want := rules(CheckRecord(r, checkKnown())), []string{RuleKnobUnknown}; !slices.Equal(got, want) {
+		t.Errorf("CheckRecord(factor key World.Nope) rules = %v, want %v", got, want)
+	}
+	r.Factors[0].Key = ""
+	if got := rules(CheckRecord(r, checkKnown())); len(got) != 0 {
+		t.Errorf("CheckRecord(composite factor) rules = %v, want none", got)
 	}
 }

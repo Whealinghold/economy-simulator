@@ -347,12 +347,16 @@ func (o *dryOut) finish(t *testing.T, crit int) {
 var (
 	dryOnce sync.Once
 	dryRes  dryOut
+	dryDone bool
 )
 
 // dryFirst runs the procedure once for the tests of leg A and of leg B (d).
 func dryFirst(t *testing.T) dryOut {
 	t.Helper()
-	dryOnce.Do(func() { dryRes = dryProcedure(t) })
+	dryOnce.Do(func() { dryRes = dryProcedure(t); dryDone = true })
+	if !dryDone { // the first caller failed inside the Once: say so, not a panic on the zero value
+		t.Fatal("the dry procedure failed in an earlier test; see its failure")
+	}
 	return dryRes
 }
 

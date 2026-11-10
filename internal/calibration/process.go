@@ -48,9 +48,10 @@ const (
 	// confirmLast is the last confirm seed; tier L uses fewer, which only narrows it.
 	confirmLast = confirmSeeds
 	// Decisions (8.2).
-	decStop    = "stop"
-	decReview  = "review"
-	decReentry = "reentry "
+	decStop     = "stop"
+	decEscalate = "escalate"
+	decReview   = "review"
+	decReentry  = "reentry "
 	// Steps of an experiment that the seed rules read (7.2).
 	stepScreen  = "screen"
 	stepExplore = "explore"

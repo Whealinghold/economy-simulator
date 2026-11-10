@@ -34,7 +34,7 @@ const (
 	wSet      = " gate holdout "
 	wStab     = " STABLE NOT_STABLE UNDETERMINED "
 	wClaim    = " stable not_stable one_neighbour undetermined "
-	wDecision = " stop escalate review revert "
+	wDecision = " " + decStop + " " + decEscalate + " " + decReview + " " + decRevert + " "
 	classSet  = "XOBRP"
 	signSet   = "+-0~?"
 	hexDigits = "0123456789abcdef"
@@ -221,6 +221,9 @@ func (w *writer) plan(r Record) {
 
 // keyOrNone checks a key that may be empty (written `-`).
 func (w *writer) keyOrNone(what, s string) string {
+	if s == "-" { // the written form of empty: it would read back as no key
+		w.fail("%s %q is the word for none", what, s)
+	}
 	if s != "" {
 		w.tok(what, s)
 	}

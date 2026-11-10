@@ -148,6 +148,11 @@ func (c *recChecker) knobs() {
 	for i, cl := range c.r.Claims {
 		check("claim", i, cl.Knob)
 	}
+	for i, f := range c.r.Factors {
+		if _, ok := c.idx.find(f.Key); f.Key != "" && !ok { // a composite factor names no single key
+			c.add(RuleKnobUnknown, "factor", i, "%s is not a registry key", f.Key)
+		}
+	}
 }
 
 // unsearched checks the reason of an `unsearched` line against the row: `v1x` names
@@ -349,12 +354,14 @@ func (c *recChecker) hasFinding(knob, fact, token string) bool {
 // (FR-CLB-100).
 func (c *recChecker) stability() {
 	for i, s := range c.r.Stability {
-		switch {
-		case s.Set == setHoldout && (s.First != holdoutFirst || s.Last != holdoutLast):
+		hold := s.Set == setHoldout
+		if hold && (s.First != holdoutFirst || s.Last != holdoutLast) {
 			c.add(RuleHoldout, "stability", i, "a hold-out line names seeds %d..%d, want %d..%d", s.First, s.Last, holdoutFirst, holdoutLast)
-		case s.Set == setHoldout && s.InSample:
+		}
+		if hold && s.InSample {
 			c.add(RuleInSample, "stability", i, "a hold-out line says in_sample yes")
-		case s.Set != setHoldout && !s.InSample:
+		}
+		if !hold && !s.InSample {
 			c.add(RuleInSample, "stability", i, "a %s line says in_sample no", s.Set)
 		}
 	}
@@ -366,29 +373,34 @@ func (c *recChecker) stability() {
 // record has exactly one line.
 func (c *recChecker) claims() {
 	for i, cl := range c.r.Claims {
-		var lines []Stability
+		var lines []Stability // the gate lines: the hold-out repeats the points and is not counted
+		var holdout []Stability
 		for _, s := range c.r.Stability {
-			if s.Knob == cl.Knob && s.Pack == cl.Pack {
+			switch {
+			case s.Knob != cl.Knob || s.Pack != cl.Pack:
+			case s.Set == setHoldout:
+				holdout = append(holdout, s)
+			default:
 				lines = append(lines, s)
 			}
 		}
-		if msg := claimProblem(cl.Word, lines); msg != "" {
+		if msg := claimProblem(cl.Word, lines, holdout); msg != "" {
 			c.add(RuleClaim, "claim", i, "claim %s %s %s: %s", cl.Knob, cl.Pack, cl.Word, msg)
 		}
 	}
 }
 
 // claimProblem says what is wrong with a claim given its stability lines, or "".
-func claimProblem(word string, lines []Stability) string {
-	if len(lines) == 0 {
+func claimProblem(word string, lines, holdout []Stability) string {
+	if len(lines) == 0 && len(holdout) == 0 {
 		return "no stability line"
 	}
 	t := tallyOf(lines)
 	switch word {
 	case claimStable:
-		return stableProblem(lines, t)
+		return stableProblem(lines, holdout, t)
 	case claimNot:
-		return notStableProblem(t)
+		return notStableProblem(tallyOf(append(slices.Clone(lines), holdout...)))
 	case claimOne:
 		return oneNeighbourProblem(lines, t)
 	case claimUndetermined:
@@ -444,14 +456,14 @@ type tally struct {
 }
 
 // stableProblem checks the three lines of a stable claim.
-func stableProblem(lines []Stability, t tally) string {
+func stableProblem(lines, holdout []Stability, t tally) string {
 	if len(lines) != linesStable || t.points[pointDefault] != 1 || t.points[pointLower] != 1 || t.points[pointUpper] != 1 {
 		return "want one default, one lower and one upper line"
 	}
 	if t.edges > 0 {
 		return "a line has an edge"
 	}
-	for _, s := range lines {
+	for _, s := range append(slices.Clone(lines), holdout...) {
 		if s.CBP != stableWord || s.CNC != stableWord || s.CWS != stableWord {
 			return "a verdict is not STABLE"
 		}

@@ -23,7 +23,8 @@ const (
 const ErrCount = calError("calibration: knob count negative or too large")
 
 // ScreenLevels returns the levels of the screen of a knob: the base and the
-// neighbours it has, ascending (FR-CLB-022). A side that is an edge gives none.
+// neighbours it has: ascending for `geo` and `lin`, in the order the levels were
+// given for a `set` (FR-CLB-022). A side that is an edge gives none.
 func ScreenLevels(g Grid) []int64 {
 	if g.Base < 0 || g.Base >= len(g.Levels) { // the zero or a forged Grid: no base to screen around
 		return nil
