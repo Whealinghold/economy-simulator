@@ -244,6 +244,7 @@ type validator struct {
 	dearest                         map[string]Price // the highest in-bounds override of each commodity
 	lk                              lookup
 	cal                             calendarFacts
+	outsideNodes                    map[string]bool // outsideNodeSet, built on first use
 }
 
 // path returns a new slice of base followed by segs. It never shares base's

@@ -615,7 +615,7 @@ func (v *validator) outsideNode(base []string, n *OutsideNode, seen map[string]b
 	v.label(nb, "label", n.Label)
 	sell, buy := edgeGates(&v.c, n.Region)
 	v.outsideGates(nb, n, sell, buy)
-	outside := outsideNodeSet(&v.c)
+	outside := v.outsideSet()
 	for _, g := range slices.Concat(sell, buy) {
 		if outside[g] { // no market to clear in: the side would never trade
 			v.rep.add(ErrNotAGate, path(nb, "edge", g), g, n.Region)
@@ -638,6 +638,14 @@ func (v *validator) outsideNode(base []string, n *OutsideNode, seen map[string]b
 		count += len(buy)
 	}
 	return count
+}
+
+// outsideSet is outsideNodeSet(&v.c), built once per validation.
+func (v *validator) outsideSet() map[string]bool {
+	if v.outsideNodes == nil {
+		v.outsideNodes = outsideNodeSet(&v.c)
+	}
+	return v.outsideNodes
 }
 
 // outsideGates checks the gate rows of a node: a defined region, once, that is a
@@ -1220,7 +1228,12 @@ func (x *external) record(w *World, trades []Trade) {
 			cp := &x.cps[int(a)-regions]
 			for j := cp.first; j < cp.first+cp.n; j++ {
 				if r := &x.rows[j]; x.lines[r.line].commodity == t.Commodity {
-					r.t.paid += int64(t.Price) * int64(t.Quantity) // the product fits: feedWelfare checked it
+					v, ok := checked.Mul(int64(t.Price), int64(t.Quantity))
+					if sum, ok2 := checked.Add(r.t.paid, v); ok && ok2 {
+						r.t.paid = sum
+					} else {
+						invariant("a counterparty's paid sum overflowed")
+					}
 				}
 			}
 		}

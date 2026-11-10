@@ -75,9 +75,11 @@ func (w *World) snapshotOutside(s *Snapshot) {
 	}
 	o := &s.Outside
 	o.Lines = make([]OutsideLineRow, len(x.lines))
+	mids := make([]int64, len(x.lines))
 	for i := range x.lines {
 		l := &x.lines[i]
-		mid, _ := x.midOf(w, l)
+		mids[i], _ = x.midOf(w, l)
+		mid := mids[i]
 		o.Lines[i] = OutsideLineRow{Node: l.node, Commodity: l.commodity, Mid: Price(mid), DriftBP: l.drift, ShockBP: l.shock}
 	}
 	o.Sides = make([]OutsideSideRow, 0, len(x.rows))
@@ -88,8 +90,7 @@ func (w *World) snapshotOutside(s *Snapshot) {
 		if cp.buy {
 			side = &l.cfg.Buy
 		}
-		mid, _ := x.midOf(w, l)
-		quote, _ := outside.Quote(mid, side.MarginBP, cp.scaleBP, MaxPrice, !cp.buy)
+		quote, _ := outside.Quote(mids[row.line], side.MarginBP, cp.scaleBP, MaxPrice, !cp.buy)
 		o.Sides = append(o.Sides, OutsideSideRow{Node: cp.node, Gate: cp.gate, Commodity: l.commodity, Side: cp.sideOf(),
 			Quote: Price(quote), Carry: row.carry, Units: row.units, ListValue: Money(row.listValue), Ended: row.ended})
 		t := trade[l.commodity]
@@ -205,11 +206,8 @@ func (w *World) loadExternal(_ *restoreCtx, r *codec.Reader) error {
 		row.units = r.Bounded("units", units)
 		row.listValue = r.Bounded("list value", value)
 		row.ended = r.B()
-		if r.Err() == nil && !row.ended && side.TotalUnits > 0 && units == side.TotalUnits && row.units >= side.TotalUnits {
+		if r.Err() == nil && !row.ended && side.TotalUnits > 0 && row.units >= side.TotalUnits {
 			r.Failf("a side that has traded all its %d units has not ended", side.TotalUnits)
-		}
-		if r.Err() == nil && row.ended && side.TotalUnits == 0 && side.TotalValue == 0 {
-			r.Failf("a side with no cap has ended")
 		}
 	})
 	return nil

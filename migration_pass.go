@@ -241,7 +241,7 @@ func (w *World) candidatesOf(a *agent, g RegionID, row *roleRow) {
 	p := &m.pass
 	p.dests = p.dests[:0]
 	for d := range RegionID(len(w.cfg.Regions)) {
-		if _, ok := w.geo.distance(g, d); ok && d != g {
+		if _, ok := w.geo.distance(g, d); ok && d != g && !w.isOutsideNode(d) {
 			p.dests = append(p.dests, d)
 		}
 	}
