@@ -16,6 +16,7 @@ func (o *Observer) Observe(e economysim.Event) {
 	case economysim.TradeExecuted:
 		o.tradeExecuted(ev)
 	default:
+		o.spanEvent(e)
 		o.dispatch(e)
 		o.settle()
 	}
@@ -39,8 +40,12 @@ func (o *Observer) observeLifecycle(e economysim.Event) bool {
 	case economysim.WorldRestored:
 		o.reset(ev.Names)
 		o.seed(ev.Snapshot)
+	case economysim.RunStarted:
+		o.runStarted(ev)
+	case economysim.RunEnded:
+		o.runEnded(ev)
 	case economysim.TickStarted:
-		o.tickStarted()
+		o.tickStarted(ev.Tick)
 	case economysim.TickEnded:
 		o.tickEnded(ev)
 	default:
@@ -174,7 +179,8 @@ func (o *Observer) tradeExecuted(ev economysim.TradeExecuted) {
 	o.settle()
 }
 
-func (o *Observer) tickStarted() {
+func (o *Observer) tickStarted(tick int64) {
+	o.stepStarted(tick)
 	o.inStep = true
 	o.stepStart = o.clock()
 }
@@ -182,6 +188,7 @@ func (o *Observer) tickStarted() {
 // tickEnded flushes what the step accumulated. A failed step records no
 // duration and counts one failure; the other records its duration (FR-OBS-058).
 func (o *Observer) tickEnded(ev economysim.TickEnded) {
+	o.stepEnded(ev.Failed)
 	switch {
 	case ev.Failed:
 		o.inst[iWorldStepFailed].counter.Add(bg, 1)

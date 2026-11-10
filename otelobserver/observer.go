@@ -60,6 +60,7 @@ type Observer struct {
 	// touched is set when a series changed since the last flush.
 	touched bool
 
+	sp        spans
 	inStep    bool
 	stepStart time.Time
 }
