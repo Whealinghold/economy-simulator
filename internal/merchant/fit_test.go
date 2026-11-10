@@ -55,40 +55,13 @@ func TestFit_TwoPass(t *testing.T) {
 	}
 }
 
-// TestPerUnit_And_Units verifies the capacity of a carrying unit and the units a
-// lot needs (spec-merchants.md 5.4, 6.2.1): example A (1 200 mass, 900 bulk, fuel
-// of 2 and 6 holds 150, a lot of 150 needs 1), the porter (6 units), a mass
+// TestUnits verifies the carrying units a lot needs (spec-merchants.md 5.4):
+// example A (a lot of 150 of mass 2 and bulk 6 on 1 200 and 900 needs 1), a
 // capacity of 0 left out, and the overflow of a lot.
 //
 // Requirement: FR-MER-020, FR-MER-011
-func TestPerUnit_And_Units(t *testing.T) {
+func TestUnits(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []struct {
-		name                           string
-		unitMass, unitBulk, mass, bulk int64
-		want                           int64
-		ok                             bool
-	}{
-		{"example A, bulk binds", 1_200, 900, 2, 6, 150, true},
-		{"the porter", 60, 40, 2, 6, 6, true},
-		{"mass binds", 100, 900, 50, 6, 2, true},
-		{"mass capacity 0 left out", 0, 900, 2, 6, 150, true},
-		{"bulk capacity 0 left out", 100, 0, 2, 6, 50, true},
-		{"a good with no mass", 100, 900, 0, 6, 150, true},
-		{"too heavy for one unit", 1, 900, 2, 6, 0, true},
-		{"a capacity of 1 holds a good of 1", 1, 0, 1, 0, 1, true},
-		{"a bulk capacity of 1 holds a good of 1", 0, 1, 0, 1, 1, true},
-		{"a negative mass capacity is left out", -5, 900, 2, 6, 150, true},
-		{"a negative bulk capacity is left out", 100, -5, 2, 6, 50, true},
-		{"a negative mass is left out", 100, 900, -2, 6, 150, true},
-		{"a negative bulk is left out", 100, 900, 2, -6, 50, true},
-		{"both left out", 0, 0, 2, 6, 0, false},
-		{"both goods figures 0", 100, 900, 0, 0, 0, false},
-	} {
-		if got, ok := merchant.PerUnit(tt.unitMass, tt.unitBulk, tt.mass, tt.bulk); got != tt.want || ok != tt.ok {
-			t.Errorf("PerUnit(%s: %d, %d, %d, %d) = %d, %v, want %d, %v", tt.name, tt.unitMass, tt.unitBulk, tt.mass, tt.bulk, got, ok, tt.want, tt.ok)
-		}
-	}
 	for _, tt := range []struct {
 		name                              string
 		q, mass, bulk, unitMass, unitBulk int64

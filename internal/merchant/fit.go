@@ -2,23 +2,6 @@ package merchant
 
 import "github.com/Whealinghold/economy-sim/internal/checked"
 
-// PerUnit returns the units of a good that one carrying unit holds:
-// min(floor(unitMass / mass), floor(unitBulk / bulk)), a term whose capacity or
-// whose per-unit figure is 0 left out (spec-merchants.md 6.2.1). ok is false when
-// both terms are left out, which transport validation rules out.
-func PerUnit(unitMass, unitBulk, mass, bulk int64) (n int64, ok bool) {
-	n = -1
-	if unitMass > 0 && mass > 0 {
-		n = unitMass / mass
-	}
-	if unitBulk > 0 && bulk > 0 {
-		if b := unitBulk / bulk; n < 0 || b < n {
-			n = b
-		}
-	}
-	return max(n, 0), n >= 0
-}
-
 // Units returns the carrying units a lot of q units needs (spec-merchants.md 5.4):
 // max(1, ceil(q * mass / unitMass), ceil(q * bulk / unitBulk)), a term whose
 // capacity is 0 left out. ok is false on overflow.

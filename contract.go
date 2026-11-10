@@ -910,15 +910,13 @@ func (w *World) p33Round() {
 
 // offerChecks are the checks of an offer in the order of the table of
 // spec-merchants.md 9.3 (rows 2 to 7). Rows 4 (outside_destination, plan 2-16) and
-// 5a (not_permitted, institutions) are marked positions with no check yet. The
-// table is never written.
+// 5a (not_permitted, institutions) have no check yet and take their place in the
+// table when their module lands. The table is never written.
 var offerChecks = [...]func(w *World, a *agent, s *submittedOffer, used int) Reason{
 	ckOfferCount,   // 2
 	ckOfferMode,    // 3
 	ckOfferRegion,  // 4: unknown_region, same_region
-	nil,            // 4: outside_destination (plan 2-16)
 	ckOfferGoods,   // 5
-	nil,            // 5a: not_permitted (institutions)
 	ckOfferAmounts, // 6
 	ckOfferStock,   // 7
 }
@@ -1025,9 +1023,6 @@ func (w *World) admitOffers() {
 // offer fails, or "". used is the offers of the same plan admitted before it.
 func (w *World) offerRefusal(a *agent, s *submittedOffer, used int) Reason {
 	for _, ck := range offerChecks {
-		if ck == nil {
-			continue
-		}
 		if r := ck(w, a, s, used); r != "" {
 			return r
 		}

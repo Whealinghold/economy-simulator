@@ -167,8 +167,13 @@ func (w *World) dropContracts(a *agent) error {
 	if m == nil || !m.on {
 		return nil
 	}
-	keep := m.open[:0]
-	for n, ct := range m.open {
+	first := slices.IndexFunc(m.open, func(c contract) bool { return c.deliverer == a.id })
+	if first < 0 {
+		return nil // the common case: no scan-and-rewrite of the whole open list per removal
+	}
+	keep := m.open[:first]
+	for n := first; n < len(m.open); n++ {
+		ct := m.open[n]
 		if ct.deliverer != a.id {
 			keep = append(keep, ct)
 			continue
