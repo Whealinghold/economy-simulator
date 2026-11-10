@@ -1,10 +1,13 @@
 package otelobserver_test
 
 import (
+	"context"
 	"maps"
 	"testing"
+	"time"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func tick(h *harness, n int64, es ...economysim.Event) {
@@ -290,4 +293,48 @@ func cellEvents() (es []economysim.Event) {
 		}
 	}
 	return es
+}
+
+// TestRunStarted_AfterPanickedStepFlushesBetweenTickEvents verifies that a
+// RunStarted that follows a step with no TickEnded (a panic) clears the open
+// step, so an event between ticks is sent at once.
+//
+// Guard: with the step still marked open, the event would wait in the
+// accumulators for a TickEnded that may be far off.
+func TestRunStarted_AfterPanickedStepFlushesBetweenTickEvents(t *testing.T) {
+	h := newHarness(t)
+	h.send(created(), economysim.TickStarted{Tick: 1}, economysim.RunStarted{Ticks: 1},
+		economysim.OrderPlaced{Commodity: 0, Region: 0})
+	if v := h.collect().sum("market.orders"); v != 1 {
+		t.Errorf("market.orders after RunStarted and an order between ticks = %d, want 1", v)
+	}
+}
+
+// TestStepDuration_BackwardsClockRecordsZero verifies that a clock that goes
+// backwards between TickStarted and TickEnded records a duration of 0, not a
+// negative one.
+//
+// Guard: a negative sample would lower the histogram sum below the real time.
+func TestStepDuration_BackwardsClockRecordsZero(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	h.clock.now = h.clock.now.Add(10 * time.Second)
+	h.send(economysim.TickStarted{Tick: 1})
+	h.clock.now = h.clock.now.Add(-5 * time.Second)
+	h.send(economysim.TickEnded{Tick: 1})
+	var rm metricdata.ResourceMetrics
+	if err := h.read.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("Collect() error = %v, want nil", err)
+	}
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if d, ok := m.Data.(metricdata.Histogram[float64]); ok && m.Name == "economysim.world.step.duration" {
+				if got := d.DataPoints[0].Sum; got != 0 {
+					t.Errorf("world.step.duration sum = %v, want 0", got)
+				}
+				return
+			}
+		}
+	}
+	t.Error("world.step.duration not collected")
 }

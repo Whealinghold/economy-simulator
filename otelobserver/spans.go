@@ -33,6 +33,7 @@ func (o *Observer) runStarted(ev economysim.RunStarted) {
 	endSpan(o.sp.stp, true, "step did not end")
 	endSpan(o.sp.run, true, "run did not end")
 	o.sp.stp = nil
+	o.inStep = false // a step that panicked has no TickEnded; its accumulators must flush again
 	o.sp.runCtx, o.sp.run = o.tracer.Start(bg, "economysim.run",
 		trace.WithAttributes(attribute.Int64("economysim.ticks", ev.Ticks)))
 }

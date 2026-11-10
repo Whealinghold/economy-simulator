@@ -119,9 +119,10 @@ func (o *Observer) reset(n economysim.Names) {
 	for _, s := range o.cells {
 		if s.sent != 0 {
 			s.n = 0
+			o.touched = true
 		}
 	}
-	o.flushCells(true)
+	o.flushCells(false) // levels back to 0; held gauges of the old world are not recorded again
 	o.names = newNames(n)
 	o.hot = newHot(&o.names)
 	o.cells = map[cell]*state{}
@@ -197,7 +198,7 @@ func (o *Observer) tickEnded(ev economysim.TickEnded) {
 	case ev.Failed:
 		o.inst[iWorldStepFailed].counter.Add(bg, 1)
 	case o.inStep:
-		o.inst[iWorldStepDuration].histogram.Record(bg, o.clock().Sub(o.stepStart).Seconds())
+		o.inst[iWorldStepDuration].histogram.Record(bg, max(0, o.clock().Sub(o.stepStart).Seconds()))
 	}
 	o.inStep = false
 	if !ev.Failed {
