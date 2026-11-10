@@ -159,12 +159,21 @@ func (s *Server) loadState() error {
 	if s.state == "" {
 		return nil
 	}
-	b, err := os.ReadFile(s.state)
+	f, err := os.Open(s.state)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("read the state file: %w", err)
+	}
+	defer f.Close()
+	// The same cap as POST /v1/restore: a wrong -state path must not fill the memory.
+	b, err := io.ReadAll(io.LimitReader(f, maxRestoreBody+1))
+	if err != nil {
+		return fmt.Errorf("read the state file: %w", err)
+	}
+	if len(b) > maxRestoreBody {
+		return fmt.Errorf("the state file is over %d bytes: %w", maxRestoreBody, ErrBodyTooLarge)
 	}
 	if err := s.game.Restore(b); err != nil {
 		return fmt.Errorf("restore the state file: %w", err)

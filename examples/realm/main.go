@@ -21,6 +21,10 @@ func main() {
 	pace := flag.Duration("pace", 0, "step the world once every pace (0: only POST /v1/step steps it)")
 	state := flag.String("state", "", "checkpoint file: restored at start if it exists, written by POST /v1/checkpoint?save=true")
 	flag.Parse()
+	if flag.NArg() > 0 {
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

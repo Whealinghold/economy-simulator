@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -745,5 +746,24 @@ func TestServer_RestoreRefusedWhileAStepRuns(t *testing.T) {
 	callJSON(t, s, http.MethodPost, "/v1/restore", "x", http.StatusTooManyRequests, &e)
 	if e.Error != "ErrBusy" {
 		t.Errorf("POST /v1/restore while a step runs: error = %q, want ErrBusy", e.Error)
+	}
+}
+
+// TestServer_LoadStateRefusesAnOversizedFile verifies that a state file over the
+// restore cap is refused before it is decoded.
+//
+// Guard: a wrong -state path (a disk image) must not be read into memory.
+func TestServer_LoadStateRefusesAnOversizedFile(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "big")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Truncate(path, maxRestoreBody+1); err != nil { // sparse: no disk used
+		t.Fatal(err)
+	}
+	s := &Server{state: path}
+	if err := s.loadState(); !errors.Is(err, ErrBodyTooLarge) {
+		t.Errorf("loadState(%d-byte file) = %v, want ErrBodyTooLarge", maxRestoreBody+1, err)
 	}
 }

@@ -130,6 +130,9 @@ func TestExamples_PackCopiesAgree(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read %s: %v", p[0], err)
 			}
+			if len(got) == 0 {
+				t.Fatalf("%s is empty, want the copy of %s", p[0], p[1])
+			}
 			want, err := os.ReadFile(p[1])
 			if err != nil {
 				t.Fatalf("read %s: %v", p[1], err)

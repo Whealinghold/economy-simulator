@@ -44,6 +44,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	if err := fl.Parse(args); err != nil {
 		return 2
 	}
+	if fl.NArg() > 0 {
+		fmt.Fprintf(stderr, "colony: unexpected argument %q\n", fl.Arg(0))
+		return 2
+	}
 	if *ticks < 0 || *every < 1 {
 		fmt.Fprintf(stderr, "colony: -ticks %d and -every %d must be at least 0 and 1\n", *ticks, *every)
 		return 2
