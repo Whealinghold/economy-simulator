@@ -539,8 +539,8 @@ func (w *World) saveWorld(cw *codec.Writer) error {
 func (w *World) loadWorld(rs *restoreCtx, r *codec.Reader) error {
 	next := r.U()
 	rs.construction = r.B()
-	if r.Err() == nil && (next < uint64(len(w.cfg.Regions)) || next > math.MaxInt64) {
-		r.Failf("next agent ID %d outside %d to %d", next, len(w.cfg.Regions), int64(math.MaxInt64))
+	if r.Err() == nil && (next < uint64(w.firstHousehold) || next > math.MaxInt64) {
+		r.Failf("next agent ID %d outside %d to %d", next, w.firstHousehold, int64(math.MaxInt64))
 	}
 	w.state.nextAgent = AgentID(next)
 	return nil

@@ -233,6 +233,11 @@ func TestExternalValidate_Errors(t *testing.T) {
 		{"a gate row for a region with no edge", func(c *economysim.Config) {
 			c.Modules.External.Nodes[0].Gates = []economysim.OutsideGate{economysim.DefaultOutsideGate("far")}
 		}, economysim.ErrNotAGate, []string{"modules", "external", "node", "coast", "gate", "far", "region"}},
+		{"an edge between two outside nodes", func(c *economysim.Config) {
+			n := c.Modules.External.Nodes[0]
+			n.Region = "north"
+			c.Modules.External.Nodes = append(c.Modules.External.Nodes, n)
+		}, economysim.ErrNotAGate, []string{"modules", "external", "node", "coast", "edge", "north"}},
 		{"a margin on an absent side", func(c *economysim.Config) {
 			c.Modules.External.Nodes[0].Lines[0].Buy.MarginBP = 5
 		}, economysim.ErrOutOfBounds, append(slices.Clone(externalLine), "buy", "margin_bp")},

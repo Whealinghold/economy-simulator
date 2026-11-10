@@ -40,7 +40,7 @@ type shipCtx struct {
 }
 
 // shipChecks are the checks of spec-transport.md 5.4 in the order of its table.
-// Rows 3a (has_store), 6a (outside_destination), 11a (consignee_full) and 22a
+// Rows 3a (has_store), 11a (consignee_full) and 22a
 // (toll_unaffordable) are the marked seams of their modules: each is an empty
 // position here, filled when its module is built, and none of their reasons is
 // declared yet (D446). The table is never written.
@@ -53,7 +53,6 @@ var shipChecks = [...]func(c *shipCtx) Reason{
 	ckSame,        // 5
 	ckRegion,      // 6
 	ckOutside,     // 6a outside_destination: EXT
-	nil,           // 6a outside_destination: EXT
 	ckRoute,       // 7
 	ckBlocked,     // 8
 	ckTooFar,      // 9

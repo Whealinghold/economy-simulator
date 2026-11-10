@@ -191,17 +191,11 @@ func (x *external) openAccounts(l *ledger.Ledger) error {
 // attachAccounts finds the Outside account of each counterparty in a ledger that a
 // restore has read: the accounts right after the estates, in agent ID order, each
 // open, of the kind, owned by the agent and in the gate region.
-func (x *external) attachAccounts(l *ledger.Ledger, regions int) error {
-	first := 0
-	for first < l.Len() {
-		if v, _ := l.Account(first); v.Kind != ledger.KindBoundary {
-			break
-		}
-		first++
-	}
+func (x *external) attachAccounts(l *ledger.Ledger, estates *estates) error {
+	first := estates.accounts[0] + len(estates.accounts)
 	for i := range x.cps {
 		cp := &x.cps[i]
-		id := first + regions + i
+		id := first + i
 		v, err := l.Account(id)
 		if err != nil || v.Kind != ledger.KindOutside || v.Closed || v.Owner != int(cp.agent) || v.Region != int(cp.gate) {
 			return fmt.Errorf("%w: account %d is not the open Outside account of counterparty %d", ErrCheckpointCorrupt, id, cp.agent)
@@ -621,6 +615,12 @@ func (v *validator) outsideNode(base []string, n *OutsideNode, seen map[string]b
 	v.label(nb, "label", n.Label)
 	sell, buy := edgeGates(&v.c, n.Region)
 	v.outsideGates(nb, n, sell, buy)
+	outside := outsideNodeSet(&v.c)
+	for _, g := range slices.Concat(sell, buy) {
+		if outside[g] { // no market to clear in: the side would never trade
+			v.rep.add(ErrNotAGate, path(nb, "edge", g), g, n.Region)
+		}
+	}
 	if len(n.Lines) > MaxOutsideLines {
 		v.rep.add(ErrOutOfBounds, path(nb, "line"), itoa(len(n.Lines)), itoa(MaxOutsideLines))
 		return 0 // the rest is linear in the count it just refused

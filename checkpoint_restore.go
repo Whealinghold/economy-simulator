@@ -315,7 +315,7 @@ func (w *World) loadLedger(rs *restoreCtx, r *codec.Reader) error {
 	}
 	w.estates = e
 	if w.external != nil {
-		return w.external.attachAccounts(w.ledger, len(w.cfg.Regions))
+		return w.external.attachAccounts(w.ledger, w.estates)
 	}
 	return nil
 }

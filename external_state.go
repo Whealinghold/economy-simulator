@@ -205,6 +205,12 @@ func (w *World) loadExternal(_ *restoreCtx, r *codec.Reader) error {
 		row.units = r.Bounded("units", units)
 		row.listValue = r.Bounded("list value", value)
 		row.ended = r.B()
+		if r.Err() == nil && !row.ended && side.TotalUnits > 0 && units == side.TotalUnits && row.units >= side.TotalUnits {
+			r.Failf("a side that has traded all its %d units has not ended", side.TotalUnits)
+		}
+		if r.Err() == nil && row.ended && side.TotalUnits == 0 && side.TotalValue == 0 {
+			r.Failf("a side with no cap has ended")
+		}
 	})
 	return nil
 }
@@ -260,9 +266,9 @@ func readSide(c *Config, n *OutsideNode, l *OutsideLine, s *OutsideSide, gates [
 	if !s.present() {
 		return sideRead{}
 	}
-	var first string
-	if len(c.Calendar.Seasons) > 0 {
-		first = c.Calendar.Seasons[0].ID
+	var first string // the season of tick 0: StartDay and SeasonStart decide it, not the list order
+	if m, err := c.Calendar.At(0); err == nil && m.Season >= 0 && m.Season < len(c.Calendar.Seasons) {
+		first = c.Calendar.Seasons[m.Season].ID
 	}
 	mid, _, ok := outside.Mid(outside.MidIn{Base: int64(l.Base), Season: seasonBP(l.PriceBySeason, first, wholeBP),
 		FloorBP: l.FloorBP, CeilBP: l.CeilingBP, MaxPrice: MaxPrice, Tick: 0, TicksPerYear: c.Calendar.TicksPerYear(), Shock: wholeBP})
