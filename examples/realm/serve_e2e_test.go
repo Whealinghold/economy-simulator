@@ -177,17 +177,23 @@ func TestServe_ShutdownStopsAnInFlightStepAtATickBoundary(t *testing.T) {
 	}
 	got := make(chan result, 1)
 	go func() {
-		resp, err := client.Post(base+"/v1/step?n=1000", "application/json", nil)
-		if err != nil {
-			got <- result{-1, []byte(err.Error())}
-			return
+		for { // a probe below may hold the token for a moment: 429 means try again
+			resp, err := client.Post(base+"/v1/step?n=1000", "application/json", nil)
+			if err != nil {
+				got <- result{-1, []byte(err.Error())}
+				return
+			}
+			b, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if resp.StatusCode != http.StatusTooManyRequests {
+				got <- result{resp.StatusCode, b}
+				return
+			}
 		}
-		defer resp.Body.Close()
-		b, _ := io.ReadAll(resp.Body)
-		got <- result{resp.StatusCode, b}
 	}()
 	// A restore of garbage answers 429 only while the step holds the token (else 400,
-	// changing nothing): that is the signal the step has started. Each probe is a round
+	// changing nothing): that is the signal the step has started (the probes run one at a time, so a 429 is
+	// the step's). Each probe is a round
 	// trip, so the loop needs no sleep; it ends when the step is running or the
 	// client timeout of 3 minutes fails a probe.
 	for probing := true; probing; {
