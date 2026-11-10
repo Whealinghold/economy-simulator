@@ -632,6 +632,17 @@ func TestMerchant_EdgesOfTheLot(t *testing.T) {
 			t.Errorf("notes = %+v, want the lot capped by the pool and planned", p.Notes)
 		}
 	})
+	t.Run("a pool of no mass and no bulk is unlimited", func(t *testing.T) {
+		t.Parallel()
+		// A carrying unit of mass 0 and bulk 0 has no limit to fit under, so the lot is
+		// what the money affords (100 rations, as in example B) and the cap never binds.
+		v := colony()
+		v.Merchant.Modes[0].UnitMass, v.Merchant.Modes[0].UnitBulk = 0, 0
+		p, _ := trade(t, merchantStrategy, v)
+		if b, ok := bidFor(p, ration); !ok || b.Quantity < 100 || p.Notes.Planned != 1 || p.Notes.LotCapped != 0 {
+			t.Errorf("ration bid = %+v (found %v), notes %+v, want the 100-ration lot planned and uncapped", b, ok, p.Notes)
+		}
+	})
 	t.Run("overflow drops the candidate", func(t *testing.T) {
 		t.Parallel()
 		v := valley()
