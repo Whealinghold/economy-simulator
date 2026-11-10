@@ -117,6 +117,12 @@ func (w *World) AddAgent(n NewAgent) (AgentID, error) {
 	if !w.ledger.FundFits(int(n.Region), int64(n.Money), funds) {
 		return NoAgent, fmt.Errorf("AddAgent: creating the agent's money and goods: %w", ErrOverflow)
 	}
+	slices.SortFunc(stock, func(a, b itemRow) int { return cmp.Compare(a.commodity, b.commodity) }) // the order of the input changes no ledger order
+	// The belief seeds read the cost anchors, which are scratch and not saved: derive
+	// them from the saved state as Snapshot does, so a restored world agrees.
+	if _, err := w.prepareAnchors(); err != nil {
+		return NoAgent, fmt.Errorf("AddAgent: %w", err)
+	}
 	id := w.createExternal(n, strategy, stock)
 	return id, nil
 }
@@ -249,8 +255,6 @@ func (w *World) RemoveAgent(id AgentID) error {
 	if err := w.removeAgent(a, CauseConsumer); err != nil {
 		invariant("a removal that fits the estate failed: " + err.Error())
 	}
-	w.integ.dropView(id)
-	w.integ.unwatch(int32(id)) // so a restore, which rebuilds the list from live agents, agrees
 	return nil
 }
 
@@ -1130,6 +1134,11 @@ func (w *World) Relocate(id AgentID, to RegionID) error {
 		}
 		return fmt.Errorf("Relocate: agent %d to region %d: %w", id, to, err)
 	}
+	// reseedAtArrival reads the cost anchors, which are scratch: derive them from the
+	// saved state, so a restored world agrees (as in AddAgent).
+	if _, err := w.prepareAnchors(); err != nil {
+		return fmt.Errorf("Relocate: agent %d to region %d: %w", id, to, err)
+	}
 	a := &w.agents[id]
 	from := w.regionOf(a)
 	if w.onJourney(a) {
@@ -1213,6 +1222,16 @@ func (w *World) recordRumours(v *AgentView, a *agent) {
 func (w *World) externalRoleChanged(a *agent) {
 	a.directive = nil
 	w.integ.dropView(a.id)
+}
+
+// dropExternal is the step of a removal for an external agent, whatever the cause:
+// its view goes and P1.9 stops visiting it, so a restore, which rebuilds the list
+// from live agents, agrees with the original world.
+func (w *World) dropExternal(a *agent) {
+	if a.external {
+		w.integ.dropView(a.id)
+		w.integ.unwatch(int32(a.id))
+	}
 }
 
 // dropView forgets the last view of an agent and frees its rumours.

@@ -112,6 +112,7 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.sub != nil {
 		w.sub.drop(a.id)
 	}
+	w.dropExternal(a)
 	w.logRemoval(a, cause)
 	w.forget(a, region)
 	return nil
