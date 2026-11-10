@@ -86,7 +86,10 @@ paths, queries and bodies at the router.
 The world is single-threaded (`architecture.md` 12.1). The server holds a read-write
 lock: reads share it, a step, a restore, a shock and an added player take it alone,
 so a `POST /v1/step?n=1000` (about a minute) holds every other request until it is
-done. There is no write timeout for that reason.
+done. There is no write timeout for that reason. Steps do not queue: a step asked for
+while another runs is 429 `ErrBusy`. A POST whose `Origin` header names another host
+(a web page in a browser) is 403 `ErrForbidden`. SIGINT and SIGTERM stop a running
+step at a tick boundary and drain the requests before the process exits.
 
 ## The pack
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -620,4 +621,63 @@ func TestServer_RegionAndMarketAreReadByName(t *testing.T) {
 			t.Errorf("market row price %+v, GET /v1/market price %+v, want equal", row.Price, m)
 		}
 	}
+}
+
+// TestServer_RefusesAWriteFromAnotherOrigin verifies that a POST carrying an Origin
+// header of another host is refused with 403 ErrForbidden and changes nothing, while
+// the same Origin as the Host, no Origin and a GET from another origin go through.
+//
+// Guard: a web page in the user's browser can send a simple POST to a server on
+// localhost; without the check it could step the world or add the player.
+func TestServer_RefusesAWriteFromAnotherOrigin(t *testing.T) {
+	t.Parallel()
+	s := sharedServer(t)
+	for _, tt := range []struct {
+		name, method, origin string
+		status               int
+	}{
+		{"another host", "POST", "http://evil.example", http.StatusForbidden},
+		{"not a URL", "POST", "http://[::1", http.StatusForbidden},
+		{"the same host", "POST", "http://example.com", http.StatusOK},
+		{"no origin", "POST", "", http.StatusOK},
+		{"a read from another host", "GET", "http://evil.example", http.StatusOK},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// example.com is the Host httptest.NewRequest sets; an empty shock list is a
+			// write that changes nothing and, unlike a step, never answers 429.
+			target, body := "/v1/shock/harvest", `{"shocks":[]}`
+			if tt.method == "GET" {
+				target, body = "/v1/world", ""
+			}
+			req := httptest.NewRequest(tt.method, target, strings.NewReader(body))
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			rec := httptest.NewRecorder()
+			s.ServeHTTP(rec, req)
+			if rec.Code != tt.status {
+				t.Errorf("%s %s with Origin %q = status %d, want %d", tt.method, target, tt.origin, rec.Code, tt.status)
+			}
+		})
+	}
+}
+
+// TestServer_StepsDoNotQueue verifies that a step asked for while another one runs
+// is refused with 429 ErrBusy at once, and runs again when the first is done.
+//
+// Guard: each step holds the world for up to maxStepTicks ticks; queued steps would
+// starve every other route for the sum of their lengths.
+func TestServer_StepsDoNotQueue(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.stepper <- struct{}{} // a step in progress
+	var e errorBody
+	callJSON(t, s, http.MethodPost, "/v1/step?n=1", "", http.StatusTooManyRequests, &e)
+	if e.Error != "ErrBusy" {
+		t.Errorf("POST /v1/step while one runs: error = %q, want ErrBusy", e.Error)
+	}
+	<-s.stepper
+	var ok stepBody
+	callJSON(t, s, http.MethodPost, "/v1/step?n=0", "", http.StatusOK, &ok)
 }

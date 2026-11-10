@@ -5,9 +5,11 @@ import (
 	"errors"
 	"flag"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -21,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := serve(ctx, logger, *addr, *seed, *pace, *state); err != nil {
 		logger.Error("realm stopped", slog.Any("error", err))
@@ -44,9 +46,13 @@ func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, p
 	}
 	srv := &http.Server{
 		Addr: addr, Handler: s,
+		// In-flight steps stop at a tick boundary when the process is told to stop.
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute, IdleTimeout: time.Minute,
 	}
+	drained := make(chan struct{})
 	go func() {
+		defer close(drained)
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -58,5 +64,6 @@ func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, p
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	<-drained // ListenAndServe returns as soon as Shutdown starts; wait for it to finish
 	return nil
 }

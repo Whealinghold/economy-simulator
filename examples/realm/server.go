@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,6 +26,13 @@ var ErrBodyTooLarge = errors.New("request body too large")
 // ErrNoState is a checkpoint save asked for when the server has no -state path. The
 // path is a flag of the process, never a field of a request.
 var ErrNoState = errors.New("no state path")
+
+// ErrForbidden is a state-changing request that a web page of another origin sent.
+var ErrForbidden = errors.New("cross-origin request")
+
+// ErrBusy is a step asked for while another step runs: steps do not queue, because
+// each holds the world for up to maxStepTicks ticks.
+var ErrBusy = errors.New("a step is already running")
 
 const (
 	// maxStepTicks is the most ticks one POST /v1/step may run: a step is about 60 ms,
@@ -53,6 +62,8 @@ var refusals = []struct {
 	{ErrBadInput, "ErrBadInput", http.StatusBadRequest},
 	{ErrNoState, "ErrNoState", http.StatusBadRequest},
 	{ErrBodyTooLarge, "ErrBodyTooLarge", http.StatusRequestEntityTooLarge},
+	{ErrForbidden, "ErrForbidden", http.StatusForbidden},
+	{ErrBusy, "ErrBusy", http.StatusTooManyRequests},
 	{economysim.ErrCheckpointCorrupt, "ErrCheckpointCorrupt", http.StatusBadRequest},
 	{economysim.ErrCheckpointVersion, "ErrCheckpointVersion", http.StatusBadRequest},
 	{economysim.ErrCheckpointConfig, "ErrCheckpointConfig", http.StatusBadRequest},
@@ -95,6 +106,7 @@ type Server struct {
 	log     *slog.Logger
 	maxStep int64
 	mux     *http.ServeMux
+	stepper chan struct{} // one token: the step in progress
 }
 
 var _ http.Handler = (*Server)(nil)
@@ -126,7 +138,7 @@ func newServer(cfg economysim.Config, seed uint64, state string, log *slog.Logge
 		return nil, err
 	}
 	g.ring = ring
-	s := &Server{game: g, money: f, state: state, log: log, maxStep: maxStepTicks}
+	s := &Server{game: g, money: f, state: state, log: log, maxStep: maxStepTicks, stepper: make(chan struct{}, 1)}
 	if err := s.loadState(); err != nil {
 		return nil, err
 	}
@@ -176,8 +188,20 @@ func (s *Server) routes() *http.ServeMux {
 	return m
 }
 
-// ServeHTTP implements http.Handler.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
+// ServeHTTP implements http.Handler. It refuses a write whose Origin header names
+// another host (a web page driving the server from the user's browser, CSRF) before
+// any route runs.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		if o := r.Header.Get("Origin"); o != "" {
+			if u, err := url.Parse(o); err != nil || u.Host != r.Host {
+				s.fail(w, fmt.Errorf("origin %q: %w", clip(o), ErrForbidden))
+				return
+			}
+		}
+	}
+	s.mux.ServeHTTP(w, r)
+}
 
 // Pace steps the world once for every value that arrives on ticks, until ctx is done
 // or a step fails. The caller owns the clock (main passes a time.Ticker's channel;
@@ -220,6 +244,14 @@ func (s *Server) read(f func(*http.Request, tickBody) (any, error)) http.Handler
 // write lock.
 func (s *Server) write(status int, f func(http.ResponseWriter, *http.Request) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Read the body before taking the lock: a client that sends it slowly must
+		// not hold the world (and every read) for the length of the read timeout.
+		b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxJSONBody))
+		if err != nil {
+			s.fail(w, bodyError(err))
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(b))
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		body, err := f(w, r)
@@ -570,6 +602,13 @@ func (s *Server) step(w http.ResponseWriter, r *http.Request) {
 		}
 		n = v
 	}
+	select {
+	case s.stepper <- struct{}{}:
+		defer func() { <-s.stepper }()
+	default:
+		s.fail(w, ErrBusy)
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	done, err := s.game.AdvanceContext(r.Context(), n)
@@ -588,14 +627,16 @@ func (s *Server) checkpoint(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, fmt.Errorf("save=true: %w", ErrNoState))
 		return
 	}
+	// Encode under the lock, then write the file and the response without it, so a
+	// slow reader of the response cannot hold up a step.
 	s.mu.RLock()
-	defer s.mu.RUnlock()
 	b, err := s.game.Checkpoint()
+	tick := s.game.Tick()
+	s.mu.RUnlock()
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	tick := s.game.Tick()
 	if save {
 		if err := writeAtomic(s.state, b); err != nil {
 			s.fail(w, fmt.Errorf("save the checkpoint: %w", err))
@@ -615,12 +656,17 @@ func writeAtomic(path string, b []byte) error {
 		return err
 	}
 	_, werr := f.Write(b)
+	serr := f.Sync() // a crash after the rename must not leave an empty state file
 	cerr := f.Close()
-	if err := errors.Join(werr, cerr); err != nil {
+	if err := errors.Join(werr, serr, cerr); err != nil {
 		return errors.Join(err, os.Remove(f.Name()))
 	}
 	if err := os.Rename(f.Name(), path); err != nil {
 		return errors.Join(err, os.Remove(f.Name()))
+	}
+	if d, err := os.Open(filepath.Dir(path)); err == nil { // best effort: persist the rename
+		_ = d.Sync()
+		_ = d.Close()
 	}
 	return nil
 }
