@@ -95,6 +95,9 @@ func packSeeds(t testing.TB, p stylisedPack) []uint64 {
 		last = min(last, uint64(p.maxSeeds))
 	}
 	if raceEnabled {
+		if p.raceSeeds <= 0 {
+			return nil // a pack with no seed under -race
+		}
 		last = min(last, first+uint64(p.raceSeeds)-1)
 	}
 	var out []uint64

@@ -1,7 +1,6 @@
 package economysim_test
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -35,9 +34,6 @@ func TestPacks_BandFilesLoad(t *testing.T) {
 		t.Fatalf("glob bands: %v, %d files, want files", err, len(files))
 	}
 	for _, f := range files {
-		if _, err := os.Stat(f); err != nil {
-			t.Fatal(err)
-		}
 		if tb := plainTOML(t, f); len(tb) == 0 {
 			t.Errorf("%s: no table, want at least one", f)
 		}
