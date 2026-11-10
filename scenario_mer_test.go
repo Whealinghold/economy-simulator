@@ -115,8 +115,8 @@ func TestScenarioS68_ContractsFailAndEnd(t *testing.T) {
 		t.Fatalf("contracts formed in ticks 0 and 1 = %d (seed %d), want 8", len(formed), goldenSeed)
 	}
 	north, south := formed[0].Region, formed[0].To
-	if err := economysim.SetEdgeStatusesForTest(w, []economysim.EdgeStatus{{From: north, To: south, Closed: true, FactorBP: 10_000}}, economysim.CauseConsumer); err != nil {
-		t.Fatalf("SetEdgeStatusesForTest() = %v, want nil", err)
+	if err := w.SetEdgeStatuses([]economysim.EdgeStatus{{From: north, To: south, Closed: true, FactorBP: 10_000}}); err != nil {
+		t.Fatalf("SetEdgeStatuses() = %v, want nil", err)
 	}
 	deliverer, payer := formed[0].Deliverer, formed[1].Payer
 	if err := economysim.RemoveAgentForTest(w, deliverer, economysim.CauseInsolvent); err != nil {

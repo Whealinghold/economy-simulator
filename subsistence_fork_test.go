@@ -34,8 +34,8 @@ func TestFork_Subsistence(t *testing.T) {
 		{"inside a job", 1, nil},
 		{"inside a run of the Warn", 5, nil},
 		{"after a call between ticks", 12, func(w *economysim.World) {
-			if err := economysim.SetYieldShockForTest(w, 0, 1, 0); err != nil {
-				t.Fatalf("SetYieldShockForTest() error = %v, want nil", err)
+			if err := w.SetYieldShocks([]economysim.YieldShock{{Region: 0, Recipe: 1, BP: 0}}); err != nil {
+				t.Fatalf("SetYieldShocks() error = %v, want nil", err)
 			}
 		}},
 	} {

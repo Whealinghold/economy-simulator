@@ -38,7 +38,7 @@ func roleRecipes(t testing.TB, cfg economysim.Config, names economysim.Names, ro
 // TestScenarioS04_StapleShortage verifies scenario S04 of
 // spec-reference-chain.md 7.2: packs one and one + overlay/nofloor, 1 400 ticks,
 // seeds 1 to 10, grow_staple at 5 000 bp from tick 424 to 515 through the script
-// and the Stage 1 seam. Exact, both packs: no published price leaves its belief
+// and SetYieldShocks. Exact, both packs: no published price leaves its belief
 // interval (FR-STB-008). Recorded for both packs: the longest pinned run of the
 // staple (more than half of the outcomes at a bound), the grower role's share of
 // working ticks over the shock (the households with a grower job in the Jobs rows
@@ -86,7 +86,7 @@ func TestScenarioS04_StapleShortage(t *testing.T) {
 }
 
 // s04Seed runs one seed of S04 on one pack.
-func s04Seed(t *testing.T, cfg economysim.Config, script []shockStep, pack string, seed uint64, rep *scenReport, bands bool) {
+func s04Seed(t *testing.T, cfg economysim.Config, script []scriptStep, pack string, seed uint64, rep *scenReport, bands bool) {
 	const scenario = "S04"
 	var jobHH, roleHH int64
 	var growerRecipes []economysim.RecipeID

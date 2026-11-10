@@ -1733,3 +1733,18 @@ type OutsideShocked struct {
 }
 
 func (OutsideShocked) isEvent() {}
+
+// YieldShocked is emitted once per changed key of a call that sets the yield shock
+// of a recipe in a region between ticks (spec-integration.md 5.1, spec-production.md
+// 6.8). BeforeBP and AfterBP are the factor before and after, in basis points. Its
+// Tick is the tick the next step runs. It depends on no module.
+type YieldShocked struct {
+	Tick int64
+	// Region and Recipe are the key.
+	Region RegionID
+	Recipe RecipeID
+	// BeforeBP and AfterBP are the factor before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (YieldShocked) isEvent() {}

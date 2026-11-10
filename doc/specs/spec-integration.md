@@ -205,7 +205,7 @@ consumers that make the same calls in the same order between the same steps get
 the same run on every platform.
 
 3.5.2. **The draws.** Exactly one call draws: `AddAgent` takes the two creation
-draws of the new agent at the call, in call order (`spec-world.md` 7.3, D12). No
+draws of the new agent at the call, from the stream keyed `(siteAddAgent, Tick(), the new agent)`, so the order of calls does not change an agent's draws (`spec-world.md` 7.1.4, 7.3, D12; ADR 0008). No
 other call draws, and no query draws. A call that fails draws nothing.
 
 3.5.3. **Money and goods.** A call creates money or goods in one place only:
@@ -294,8 +294,9 @@ start with nothing. A consumer that wants the role's figure reads it from
    step this is the seed price, which is `spec-beliefs.md` 8.2); no job; an empty
    welfare record padded by `DefaultRatio`; `Hunger`, `Unfed` and `Privation` 0; a
    `DeathCarry` of `offset(ID)` (no draw); `RoleSince` the current tick;
-4. the world takes its two creation draws, the target ratio and then the residue
-   (`spec-world.md` 5.7.1, D12);
+4. the world takes its two creation draws, the target ratio and then the residue,
+   from the stream keyed `(siteAddAgent, Tick(), the new agent)` (`spec-world.md` 5.7.1,
+   7.1.4, D12);
 5. `AgentSpawned` is emitted with `External` true and `StartMoney` the money
    given, at the call, with the `Tick` the next step will run
    (`spec-world.md` 6.11).
@@ -306,9 +307,10 @@ region, not an agent). The **start rotation** of its region does change: it begi
 `t mod n_r` of the region's agent list and `n_r` grows by one, so who goes first at
 P2.1, P2.5 and P2.7 changes for every agent of the region (`spec-world.md` 6.1.4,
 8.3.1); a removal and a relocation do the same in the regions they leave and join.
-What else the call changes for the others is the stream (two
-words, then the words the new agent's own orders take in the steps that follow) and
-the orders in the markets it enters.
+What else the call changes for the others is the orders in the markets it enters. It
+changes no other agent's stream: every draw is keyed by its site, the tick and the
+entity (ADR 0008), so the new agent's two creation words and the words its own orders
+take in the steps that follow are its own, and the order of calls does not change them.
 
 4.1.4. **Its wealth is a named faucet** (`spec-agents.md` 3.5.4). The money and the
 goods appear in `BoundaryFlow` under the reason `initial`, by region and
@@ -448,7 +450,8 @@ estate or ruined (2g, `spec-infrastructure.md` 7.1); its money
 and goods go to the estate of its region (`estate_money`, `estate_goods`) and the
 estate lists the goods; its account is closed; its ID is never reused. The call
 never refuses for an obligation, because every obligation has a defined end on
-removal. It draws nothing.
+removal. It draws nothing. The one refusal is a balance: the estate's balance, or a total, would
+pass its bound (`ErrOverflow`); a probe finds it before any change, so the call then changes nothing.
 
 4.4.3. **Events**, at the call, with the `Tick` the next step will run, in the
 order of `spec-world.md` 6.11 item 8: `RecipeAbandoned` if it had a job,
@@ -767,7 +770,7 @@ entry in the order given):
 
 | Slot | Errors, in the order checked |
 |------|------------------------------|
-| yield shock | `ErrUnknownRegion` (a `RegionID` outside `[0, n)`, `NoRegion` included), `ErrUnknownRecipe`, `ErrOutOfBounds`, `ErrDuplicateID` |
+| yield shock | `ErrUnknownRegion` (a `RegionID` outside `[0, n)`, `NoRegion` included), `ErrOutsideNode` (an outside node has no recipes), `ErrUnknownRecipe`, `ErrOutOfBounds`, `ErrDuplicateID` |
 | edge status | `ErrUnknownEdge` (a pair that is not a configured edge), `ErrOutOfBounds`, `ErrDuplicateID` (REG FR-REG-050) |
 | transit factor | `ErrModuleOff`, `ErrUnknownRegion`, `ErrOutsideNode`, `ErrSameRegion` (from equals to), `ErrUnknownMode`, `ErrOutOfBounds`, `ErrDuplicateID` |
 | flow scale | `ErrModuleOff` (neither the money supply nor the fiscal module is on), `ErrUnknownFlow` (new: an ID that is neither a money flow nor a fiscal flow), `ErrOutOfBounds`, `ErrDuplicateID` |
@@ -1121,9 +1124,9 @@ return, and who defines each:
 | `ErrOutOfBounds` | a number is outside its bound; carries path, value, bound | CFG 7 |
 | `ErrDuplicateID` | a key appears twice in a call | CFG 7 |
 | `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrUnknownRole`, `ErrUnknownRecipe`, `ErrUnknownMode` (defined with the merchant block, MER; `SetTransitFactors` needs it with only transport on, so it is a root sentinel: edit row), `ErrUnknownResource`, `ErrUnknownEdge`, `ErrUnknownStrategy` | an ID names nothing | the specs that own the entity |
-| `ErrUnknownFlow` | a flow ID names no flow of the configuration | this spec (new) |
+| `ErrUnknownFlow` | a flow ID names no flow of the configuration | MON (declared with `setFlowScale`; this spec asks for it) |
 | `ErrUnknownLine` | no outside node has a line for the (node, commodity) | this spec (new) |
-| `ErrOutsideNode` | the region is an outside node: it has no agents and no market (`Region` is not refused: it returns the node's row, 6.5) | REG 6.1.3, EXT |
+| `ErrOutsideNode` | the region is an outside node: it has no agents and no market (`Region` is not refused: it returns the node's row, 6.5) | REG 6.1.3, EXT (declared by EXT) |
 | `ErrUnknownAgent` | the ID names no agent: never issued, or a pseudo-agent (but `Relocate` returns `ErrNotRelocatable` for a pseudo-agent, 7.1.1) | REG 6.1.3 (one sentinel, the same meaning, N-075) |
 | `ErrAgentRemoved` | the ID was an agent and has been removed; wraps `ErrUnknownAgent` | this spec (new) |
 | `ErrNotExternal` | the call needs an external agent and the agent is not | this spec (new) |
@@ -1231,7 +1234,7 @@ list it gives the same result on every platform (3.5.1). Two calls that touch
 different keys leave the same state in either order (their events come in the
 order of the calls); two calls to one key do not commute, nor do
 `AdjustEndowments` and `SetCapacityScales` on one endowment (the clamp), nor two
-calls of `AddAgent`, which take their draws in call order (D12).
+calls of `AddAgent`: each takes its draws from its own keyed stream, so the order does not change a draw, and what the order changes is the ID, which is the next one (D12).
 
 | A shock in a scenario | The call | Notes |
 |-----------------------|----------|-------|
@@ -1387,7 +1390,7 @@ of OBS.
 
 12.2. **Logs.** Constant lowercase messages, the keys of the rules' table 3.3.2 (no
 new key), all at `Debug` and guarded by `Enabled`: "agent added" (`agent`,
-`region`, `role`), "directive set" (`agent`), "agent removed" (`agent`, `cause`),
+`region`, `role`), "directive set" (`agent`), (a removal logs the existing "agent bankrupt" of `removeAgent`, with `agent` and `cause`),
 one constant message per setter, "yield shocks set", "edge statuses set" and so on, and likewise for each call of 4.9, 4.10 and 5.4 ("store added", "claims forgiven", "facilities added", "titles transferred", "policy directed") (`tick`, `cause` with the value `consumer`; the number of keys changed is the number of events, so no key is added). No `Info`: a
 consumer's calls are not a lifecycle of the library, and a server may make many. No
 `Warn` or `Error`: a refused call is a returned error, handled once by the caller
@@ -1474,7 +1477,7 @@ AddAgent(NewAgent{Region: 0, Role: baker, Strategy: "", Money: 2 000,
 | the strategy | `directed` | the empty name (4.2.2) |
 | the account | the next account ID after the agent accounts `B+11 .. B+17`, that is `B+18` | `spec-world.md` 5.2 |
 | money and goods | 2 000 and 10 `grain` by `initial`, in the construction bucket | before the first step (3.1.1) |
-| the draws | words 14 and 15 (the target ratio, then the residue) | D12; the first word of tick 0 is then word 16, not 14 |
+| the draws | the target ratio, then the residue, from the stream `(siteAddAgent, 0, 11)` | D12; keyed, so no other agent's draw moves |
 | the event | `AgentSpawned{Tick 0, Agent 11, Region 0, Role baker, Weight 1, StartMoney 2 000, External true}` | emitted at the call, after the 7 initial `AgentSpawned` events |
 | `Agent(11)` | `Money` 2 000, holdings `grain` 10 (`Expiring` as the shelf life says), no job, `Hunger` 0, beliefs at the seed prices, `Mortal` false, rumours empty (no view yet) | 4.7.2 |
 
@@ -1486,9 +1489,9 @@ replaced by this one at P3.2, and the order is admitted if the player holds 120
 units of money and rejected with `insufficient_funds` otherwise (3.2.1). With 2 000
 it is admitted and appears as `OrderPlaced{Agent 11, ...}` in tick 0.
 
-Without the call the first word of tick 0 is word 14: **adding an external agent
-changes the stream from the call onward**, which is why the call is part of the
-sequence that fixes a run (3.5.1).
+Without the call there is no agent 11 and so no stream `(siteAddAgent, 0, 11)`; **adding an
+external agent changes no other agent's draw**, and the call is still part of the
+sequence that fixes a run (3.5.1), because the agent trades.
 
 ### 14.2 Example B: an agent added mid-run
 
@@ -1616,7 +1619,7 @@ edge, then open; the price gap of the two regions opens and then closes to the
 freight (STY's band); also a consumer rule that scales a flow from a published
 price, to show the surface works as a controller input (INT-A1). **INT-S3** *The
 sequence of calls is the input*: two runs with the same seed, configuration and
-calls give the same state at every tick and the same events (golden); two orders
+calls give the same state at every tick and the same events (compared state for state and event for event; the testing rules have no directory for a call-script golden); two orders
 of calls that touch different keys give the same state; a run with `AddAgent` in
 its list shows `initial` in `BoundaryFlow` and passes the audit. **INT-S4** *A
 player, a checkpoint and a restore*: add a player and a directive and a shock,
@@ -1667,7 +1670,7 @@ spec has no default or bound of its own.
 | FR-INT-004 | A call MUST emit one event per key that changed, at the call, carrying the `Tick` the next step will run, before that step's `TickStarted`, in the canonical order of the key and not the order of the slice, and the cause of an event that carries one MUST be `consumer` (3.3.3); a policy actor's write is not a call and its events come at P0.3a with the cause `policy` (3.3.3). |
 | FR-INT-005 | An argument error MUST be a `*ValidationError` whose `Path` names the argument, matched by `errors.Is` with its sentinel; the checks of a call MUST run in the order of 3.2, the agent before the directive for `Direct`, and in the order of `spec-regions.md` 6.1.3 for `Relocate` (3.2, 3.2.2, 4.3.2). |
 | FR-INT-006 | A call that needs a module that is off MUST return `ErrModuleOff` before it reads an entry, and a call that cannot have an effect for its key MUST return the sentinel of 5.1.3 and not be accepted and ignored (5.1.3). |
-| FR-INT-007 | No call other than `AddAgent` MUST draw a random number, `AddAgent` MUST take the two creation draws at the call after its checks, in call order, and a refused call MUST draw none (3.5.2). |
+| FR-INT-007 | No call other than `AddAgent` MUST draw a random number, `AddAgent` MUST take the two creation draws at the call after its checks, from the stream keyed `(siteAddAgent, Tick(), the new agent)`, and a refused call MUST draw none (3.5.2). |
 | FR-INT-008 | A call MUST NOT be part of the configuration hash, and a run MUST be a function of the configuration, the seed and the sequence of calls: the same inputs MUST give a bit-identical run (3.5.1). |
 | FR-INT-009 | No call other than `AddAgent` MUST create or destroy money or goods, and the identities of `spec-ledger.md` 9 MUST hold after every call (3.5.3). |
 | FR-INT-010 | A call MUST accept a directive whose orders the agent cannot afford or whose discards it cannot cover, and the step MUST refuse them with the reason of the position, as it refuses any order (3.2.1). |

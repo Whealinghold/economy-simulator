@@ -267,7 +267,7 @@ var invariantTable = []invariantCase{
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
 // invariant of the first tick that breaks one (testing.md 6.2).
-func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []shockStep) {
+func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []scriptStep) {
 	t.Helper()
 	rec := &recorder{}
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())
@@ -342,7 +342,7 @@ func TestInvariants_Packs(t *testing.T) {
 	t.Parallel()
 	for _, tc := range invariantTable {
 		cfg := loadValidPack(t, tc.layers...)
-		ticks, script := invTicks, []shockStep(nil)
+		ticks, script := invTicks, []scriptStep(nil)
 		if tc.ticks > 0 {
 			ticks = tc.ticks
 		}
