@@ -126,6 +126,10 @@ func (o *Observer) reset(n economysim.Names) {
 	o.hot = newHot(&o.names)
 	o.cells = map[cell]*state{}
 	o.unfed = newUnfed(len(n.Regions), len(n.Roles))
+	if o.inStep {
+		endSpan(o.sp.stp, true, "step did not end") // a new world arrived mid-step
+		o.sp.stp = nil
+	}
 	o.inStep = false
 }
 
@@ -198,6 +202,8 @@ func (o *Observer) tickEnded(ev economysim.TickEnded) {
 	o.inStep = false
 	if !ev.Failed {
 		o.endUnfed()
+	} else {
+		clear(o.unfed.seen) // a partial tick's reports must not mask a role the next tick omits
 	}
 	o.flushHot()
 	o.flushCells(true)

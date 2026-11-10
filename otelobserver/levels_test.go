@@ -71,6 +71,22 @@ func TestUnfed_FailedStepNoReset(t *testing.T) {
 	}
 }
 
+// TestUnfed_FailedStepReportDoesNotMaskNextStep verifies that an
+// UpkeepShortfall reported in a step that then failed does not stop the next
+// complete step from zeroing the cell it does not report.
+//
+// Guard: a seen flag left set by the failed step would make the next
+// step skip the zeroing and household.unfed would stay too high.
+func TestUnfed_FailedStepReportDoesNotMaskNextStep(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	h.send(economysim.TickStarted{Tick: 1}, economysim.UpkeepShortfall{Region: 0, Role: 1, Unfed: 4}, economysim.TickEnded{Tick: 1, Failed: true})
+	tick(h, 2)
+	if got := unfedLevel(h); got != 0 {
+		t.Errorf("household.unfed{k1} after a silent step following a failed one = %d, want 0", got)
+	}
+}
+
 func rolesSnapshot(rows ...economysim.RoleRow) economysim.Snapshot {
 	return economysim.Snapshot{Roles: rows}
 }

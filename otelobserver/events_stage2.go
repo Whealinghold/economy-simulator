@@ -106,7 +106,7 @@ func (o *Observer) observeTransport(e economysim.Event) bool {
 		o.count(m1(iContractValue, ix(ev.Commodity)), int64(ev.Escrowed))
 		o.count(m0(iContractEscrow), int64(ev.Escrowed))
 	case economysim.ContractSettled:
-		o.count(m0(iContractEscrow), -int64(ev.Paid+ev.Refunded))
+		o.count(m0(iContractEscrow), -(int64(ev.Paid) + int64(ev.Refunded)))
 		o.count(m1(iContractSettled, closedIndex(keyCause, string(ev.Cause))), 1)
 	case economysim.ContractRound:
 		o.counts(m1(iContractUnformed, 0), 0, ev.NoTaker, ev.PayerFunds, ev.TooMany, ev.DispatchRefused)

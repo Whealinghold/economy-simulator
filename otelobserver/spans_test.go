@@ -338,3 +338,17 @@ func dropIDKeys(keys string) string {
 	}
 	return strings.Join(kept, " ")
 }
+
+// TestSpans_ResetMidStepEndsStepSpan verifies that a WorldCreated that arrives
+// while a step is open ends that step's span with an error status.
+//
+// Guard: the span would otherwise stay open until the next step began.
+func TestSpans_ResetMidStepEndsStepSpan(t *testing.T) {
+	obs, rec := spanHarness(t)
+	obs.Observe(economysim.TickStarted{Tick: 1})
+	obs.Observe(economysim.WorldCreated{})
+	steps := byName(rec, "economysim.step")
+	if len(steps) != 1 || steps[0].Status().Description != "step did not end" {
+		t.Errorf("spans after a reset mid-step = %d, want 1 ended with %q", len(steps), "step did not end")
+	}
+}
