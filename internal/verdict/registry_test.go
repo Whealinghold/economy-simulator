@@ -482,6 +482,16 @@ func TestOrdering_Pairs(t *testing.T) {
 	if err := verdict.CheckOrdering(v, 0); err != nil {
 		t.Errorf("CheckOrdering(r5.pinned_ticks 2^62) error = %v, want nil (the implication saturates)", err)
 	}
+	for _, th := range []int64{-5, -1 << 63} { // a forged threshold: no pass by overflow
+		for _, p := range verdict.OrderingPairs() {
+			if p.Rel != verdict.PinnedRunShare {
+				continue
+			}
+			if err := verdict.CheckOrdering(map[string]int64{p.Band: 1, p.Threshold: th}, 0); err == nil {
+				t.Errorf("CheckOrdering(%s = 1, %s = %d) error = nil, want a violation", p.Band, p.Threshold, th)
+			}
+		}
+	}
 	if err := verdict.CheckOrdering(map[string]int64{"s03.pinned_ticks": 99}, 0); err != nil {
 		t.Errorf("CheckOrdering(a band with no threshold) error = %v, want nil (an unset key asserts nothing)", err)
 	}

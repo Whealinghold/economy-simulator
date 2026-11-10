@@ -226,21 +226,10 @@ type judged struct {
 }
 
 // sortedMedian returns the min, median and max of the values. The median of an
-// even count is the half-to-even mean of the middle two (STY 8.3.4); the values
-// of the facts are not negative.
+// even count is the half-to-even mean of the middle two (STY 8.3.4).
 func sortedMedian(v []int64) (lo, med, hi int64) {
-	s := slices.Clone(v)
-	slices.Sort(s)
-	n := len(s)
-	if n%2 == 1 {
-		return s[0], s[n/2], s[n-1]
-	}
-	sum := s[n/2-1] + s[n/2]
-	med = sum / 2
-	if sum%2 != 0 && med%2 != 0 {
-		med++
-	}
-	return s[0], med, s[n-1]
+	r := verdict.SR3(len(v), v, 0, 0) // one median rule for the test and the record
+	return r.Min, r.Median, r.Max
 }
 
 // outside reports whether value v is outside the bound b on the side.
@@ -739,6 +728,10 @@ func cachedRun(k runKey, build func() *stylisedRun) *stylisedRun {
 	}
 	runsMemoMu.Unlock()
 	m.once.Do(func() { m.run = build() })
+	if m.run == nil {
+		// build ended its test (t.Fatalf) inside Do; Do never calls it again.
+		panic(fmt.Sprintf("stylised: the run %+v failed to build in an earlier test", k))
+	}
 	return m.run
 }
 

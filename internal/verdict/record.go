@@ -200,8 +200,12 @@ type Stability struct {
 func ClaimOf(points []StabilityPoint) string {
 	hasDefault := false
 	open := false
+	others := map[string]bool{}
 	for _, p := range points {
 		hasDefault = hasDefault || p.Name == "default"
+		if p.Name != "default" {
+			others[p.Name] = true
+		}
 		for _, c := range p.Checks {
 			if c == NotStable {
 				return ClaimNotStable
@@ -212,9 +216,9 @@ func ClaimOf(points []StabilityPoint) string {
 	switch {
 	case !hasDefault || open:
 		return ClaimUndetermined
-	case len(points) >= 3:
+	case len(others) >= 2:
 		return ClaimStable
-	case len(points) == 2:
+	case len(others) == 1:
 		return ClaimOneNeighbour
 	}
 	return ClaimUndetermined

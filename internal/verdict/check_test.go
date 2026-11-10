@@ -287,6 +287,7 @@ claim undetermined
 		{"a failure beats an open check", []verdict.StabilityPoint{{Name: "default", Checks: open}, {Name: "upper", Checks: failed}}, verdict.ClaimNotStable},
 		{"an open check", []verdict.StabilityPoint{{Name: "default", Checks: all}, {Name: "lower", Checks: open}, {Name: "upper", Checks: all}}, verdict.ClaimUndetermined},
 		{"no default point", []verdict.StabilityPoint{{Name: "lower", Checks: all}, {Name: "upper", Checks: all}}, verdict.ClaimUndetermined},
+		{"the same neighbour twice", []verdict.StabilityPoint{{Name: "default", Checks: all}, {Name: "lower", Checks: all}, {Name: "lower", Checks: all}}, verdict.ClaimOneNeighbour},
 		{"no point", nil, verdict.ClaimUndetermined},
 	} {
 		if got := verdict.ClaimOf(tc.points); got != tc.want {

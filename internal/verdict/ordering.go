@@ -108,10 +108,10 @@ func holds(rel Relation, b, th int64) bool {
 	case AtLeast:
 		return b >= th
 	case AtLeastComplement:
-		return b >= 10_000-th
+		return b >= 10_000-min(max(th, -1<<40), 1<<40) // clamped: no overflow on a forged th
 	case PinnedRunShare:
 		// th ticks of a year of ticksPerYearRef, in basis points.
-		return b <= satMul(th, 10_000)/ticksPerYearRef
+		return th >= 0 && b <= satMul(th, 10_000)/ticksPerYearRef
 	}
 	return b <= th
 }

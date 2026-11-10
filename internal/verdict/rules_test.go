@@ -269,6 +269,10 @@ func TestRegrowTicks_Edges(t *testing.T) {
 	if got, ok := verdict.RegrowTicks(10000, h+1, 0, 1, 1); ok || got != 0 {
 		t.Errorf("RegrowTicks(10000, %d, 0, 1, 1) = %d, %v, want 0, false", h+1, got, ok)
 	}
+	// a forged negative band must not turn the target into an overflow.
+	if got, ok := verdict.RegrowTicks(5, 1<<62, -5000, 100, 365); ok && got == 0 {
+		t.Errorf("RegrowTicks(5, 2^62, -5000, ...) = 0, true, want the level unreachable")
+	}
 	// the longest calendar accepted is 4 096 ticks a year.
 	if _, ok := verdict.RegrowTicks(820, 1000, 1000, 200, 4096); !ok {
 		t.Errorf("RegrowTicks(..., 4096) unreachable, want reachable")

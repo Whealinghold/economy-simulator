@@ -19,7 +19,7 @@ const maxTicksPerYear = 1 << 12
 // reachable: a rate or a trough of 0 or less, or more than maxRegrowYears
 // years. A trough already at the level takes 0 ticks.
 func RegrowTicks(trough, level, bandBP, ratePerYearBP, ticksPerYear int64) (int64, bool) {
-	m := max(bpScale-bandBP, 0)
+	m := min(max(bpScale-bandBP, 0), bpScale)
 	// Cannot fail: level >= 0 and 0 <= m <= bpScale, so the quotient is at most level.
 	target, _ := mulDivFloor(max(level, 0), m, bpScale)
 	if trough >= target {
