@@ -115,6 +115,8 @@ func TestSpans_ErrorStatusOnFailed(t *testing.T) {
 
 // TestSpans_StepAttributesAreCounts verifies the step span carries the counts of
 // orders placed, rejected, trades and volume, and 0 for an empty step.
+//
+// Requirement: FR-OBS-055
 func TestSpans_StepAttributesAreCounts(t *testing.T) {
 	obs, rec := spanHarness(t)
 	obs.Observe(economysim.TickStarted{Tick: 0})
@@ -278,6 +280,9 @@ func checkOpenBoundary(t *testing.T, steps, runs []sdktrace.ReadOnlySpan) {
 
 // TestSpans_EventAttributeKeys verifies the attribute keys of each span event,
 // and that an index equal to the length of its table leaves its attribute out.
+//
+// Guard: the keys are this module's own (spec 6.6.5 fixes the content, not the
+// names, plan 2-22 D653); a dashboard on a span event breaks if one is renamed.
 func TestSpans_EventAttributeKeys(t *testing.T) {
 	want := map[string]string{
 		"AgentSpawned":       "region role weight",

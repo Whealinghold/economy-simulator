@@ -65,8 +65,9 @@ func TestIx_RejectsNegativeAndHuge(t *testing.T) {
 }
 
 // TestClosed_SetsAreThoseOfTheSpec verifies the closed sets of attribute values
-// against spec-observability.md 6.5.1, in the order the handlers index them, and
-// that a constant outside a set has no place.
+// in the order the handlers index them (the sets are a hand copy of
+// spec-observability.md 6.5.1; no drift test reads that table), and that a
+// constant outside a set has no place.
 //
 // Guard: a handler writes a place by position, so a reorder or a typo here moves
 // a count under another label without any other test noticing.

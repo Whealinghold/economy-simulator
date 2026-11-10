@@ -38,7 +38,6 @@ func TestCatalogueOtelCopy_MatchesSpec(t *testing.T) {
 // TestAllEvents_MatchEventGo verifies that the list of event names kept by the
 // otelobserver module is the set of types of event.go that implement Event.
 //
-// Requirement: FR-OBS-052
 // Guard: otelobserver's exhaustiveness test sorts every event into handled or
 // ignored; a new event missing from its list would be in neither.
 func TestAllEvents_MatchEventGo(t *testing.T) {

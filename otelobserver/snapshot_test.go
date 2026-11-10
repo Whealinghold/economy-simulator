@@ -119,6 +119,9 @@ func TestSnapshot_FloorHeldIsExact(t *testing.T) {
 
 // TestSnapshot_HoldsBetweenCalls verifies that a value stays until the next
 // call replaces it, and that a call outside a step needs no TickEnded.
+//
+// Guard: the spec says a snapshot instrument holds its last value; a dashboard
+// would show gaps if a call reset it.
 func TestSnapshot_HoldsBetweenCalls(t *testing.T) {
 	h := newHarness(t)
 	h.obs.RecordSnapshot(snapOf())

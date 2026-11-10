@@ -6,4 +6,8 @@
 - `all_events.txt`: the type names of `event.go` that implement `Event`, sorted.
   The same root test fails when it differs from `event.go`.
 
+The closed attribute sets (6.5.1), the series bound (6.5.2) and the intern caps
+are not copied here; they are hand-typed in `cells_internal_test.go` and the
+cardinality tests.
+
 When the spec table or `event.go` changes, copy the new text here in the same change.

@@ -1417,7 +1417,7 @@ input because nothing reads one back.
 ## 6. Metrics
 
 Metrics are produced by the separate module `otelobserver` from the events of
-section 4 and, for thirty-one instruments, from a snapshot that the consumer passes to
+section 4 and, for the instruments of the table in 6.2.2, from a snapshot that the consumer passes to
 it (6.2.2). The core defines none and does not import OpenTelemetry
 (architecture.md 11.4). This section reconciles the catalogue of rules 5.3 with
 the events, resolves the five conflicts of N-088, and says what the adapter keeps.
@@ -1736,7 +1736,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 
 | Attribute | Values | Added for |
 |-----------|--------|-----------|
-| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, exits |
+| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); the contract causes `delivered`, `short`, `payer_removed`, `deliverer_removed` (`economysim.contract.settled`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, contract settlements, exits |
 | `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`, `stranded` (ten) | `economysim.entry.limited` |
 | `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
@@ -1771,7 +1771,7 @@ for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namesp
 of the money flow IDs) for `economysim.fiscal.*`, the refusal reasons of a vacancy
 (`employer_funds`, `no_input`, `no_tool`, `no_endowment`, `no_room`, `zero_yield`,
 `no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled`, the five refusal reasons of a start (`not_on_role`, `zero_yield`, `no_site`, `no_tool`, `no_input`) for `economysim.recipe.refused`, the abandon reasons (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) for `economysim.recipe.abandoned` and of a
-rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`, and the refusal reasons of a shipment request (`spec-transport.md` 5.4, 26 constants) for `economysim.transport.rejected`. The flow IDs of `economysim.reason` are bounded by `MaxMoneyFlows` (and `MaxFiscalFlows` for the fiscal flows) and by the adapter's intern cap; there is no `Names.Flows`,, because a flow ID is its own string (3.2.4, 3.2.5). rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
+rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`, and the refusal reasons of a shipment request (`spec-transport.md` 5.4, 26 constants) for `economysim.transport.rejected`. The flow IDs of `economysim.reason` are bounded by `MaxMoneyFlows` (and `MaxFiscalFlows` for the fiscal flows) and by the adapter's intern cap; there is no `Names.Flows`, because a flow ID is its own string (3.2.4, 3.2.5). `economysim.cause`
 also takes, per instrument, the closed set of the event that feeds it (`delivered`, `short`,
 `payer_removed` and `deliverer_removed` for `economysim.contract.settled`; `removal` and
 `consumer` for `economysim.title.transfers`; `repaid`, `written_off`,
@@ -1843,9 +1843,8 @@ attribute.
 `RunEnded` and one for each step from `TickStarted` to `TickEnded`, with
 `economysim.tick` as an attribute; a step span ends with an error status when
 `TickEnded.Failed`; a run span likewise when `RunEnded.Failed`. A class-E event emitted **between `TickStarted` and `TickEnded`**
-is a span event of the step span (`AgentBankrupted` of phase 7, `OutsideEnded`,
-and the others) with its small fields as attributes, since their number is the
-number of rare transitions. An event emitted **outside a step** (a class-C slot
+is a span event of the step span with its small fields as attributes, since their number is the
+number of rare transitions. The adapter marks the transitions of an agent (`AgentSpawned`, `AgentBankrupted`, `WeightChanged`, `RoleChanged`, `AgentRelocated`) and of a flow (`ShipmentDispatched`, `ShipmentArrived`, `ContractFormed`, `ContractSettled`, `MigrationStarted`); the other class-E events are counted by the metrics of 6.2.1 and are not span events (plan 2-22 D650, D653). An event emitted **outside a step** (a class-C slot
 event, a call's `AgentSpawned`, `AgentBankrupted`, `AgentRelocated` or
 `RecipeAbandoned`, the bucket at `Tick` -1, `WorldCreated`, `WorldRestored`) has
 no step span to attach to: it is counted or logged, not a span event, and an
