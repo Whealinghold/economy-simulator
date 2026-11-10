@@ -303,7 +303,8 @@ func TestProcess_BlocksAndSeeds(t *testing.T) {
 		// inside 1..50 and shares 45..49 with it.
 		{"confirm shares a search seed", []Record{mod(func(r *Record) { r.Experiments[0].Seed0, r.Experiments[2].Seed0, r.Experiments[2].Replicas = 40, 45, 6 })}, []string{RuleConfirmSeed, RuleSearchSeed, RuleSearchSeed}},
 		{"an experiment with no replicas has no seeds", []Record{mod(func(r *Record) { r.Experiments[0].Replicas = 0 })}, nil},
-		{"a seed range that leaves int64", []Record{mod(func(r *Record) { r.Experiments[0].Seed0 = 1<<63 - 1; r.Experiments[0].Replicas = 5 })}, nil},
+		{"a seed range that leaves int64 is outside the block", []Record{mod(func(r *Record) { r.Experiments[0].Seed0 = 1<<63 - 1; r.Experiments[0].Replicas = 5 })}, []string{RuleSearchSeed}},
+		{"a seed range that leaves uint64 is outside 1..50", []Record{mod(func(r *Record) { r.Experiments[2].Seed0 = 1<<64 - 2; r.Experiments[2].Replicas = 5 })}, []string{RuleConfirmSeed}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

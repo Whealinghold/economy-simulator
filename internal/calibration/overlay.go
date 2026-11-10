@@ -51,6 +51,9 @@ func Overlay(h Header, changes []Change, class func(key string) byte) ([]byte, e
 	seen := map[string]bool{}
 	for _, ch := range changes {
 		if c := class(ch.Key); c != 'K' && c != 'D' {
+			if c == 0 {
+				return nil, fmt.Errorf("%w: %s is not a registry key", ErrOverlay, ch.Key)
+			}
 			return nil, fmt.Errorf("%w: %s is class %q, not K or D", ErrOverlay, ch.Key, string(rune(c)))
 		}
 		if seen[ch.Path] {

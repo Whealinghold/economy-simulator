@@ -6,8 +6,6 @@ import (
 	"math"
 	"slices"
 	"strings"
-
-	"github.com/Whealinghold/economy-sim/internal/checked"
 )
 
 // The rule words of a Problem (spec-calibration.md 11.2, 14). A Problem names
@@ -327,16 +325,17 @@ func (c *checker) searchBlock(search [][2]uint64) {
 }
 
 // seedRange is the seeds an experiment draws: Seed0 for Replicas seeds. ok is
-// false for no replicas or a range that leaves int64.
+// false for no replicas. A range that would pass 2^64-1 ends at it, so that it
+// is outside every block and every confirm range and the rules flag it.
 func seedRange(e Experiment) (first, last uint64, ok bool) {
-	if e.Replicas < 1 || e.Seed0 > math.MaxInt64 {
+	if e.Replicas < 1 {
 		return 0, 0, false
 	}
-	end, ok := checked.Add(int64(e.Seed0), int64(e.Replicas)-1)
-	if !ok {
-		return 0, 0, false
+	last = e.Seed0 + uint64(e.Replicas) - 1
+	if last < e.Seed0 {
+		last = math.MaxUint64
 	}
-	return e.Seed0, uint64(end), true
+	return e.Seed0, last, true
 }
 
 // factors checks the number of factors against the cap, that each factor's knob
