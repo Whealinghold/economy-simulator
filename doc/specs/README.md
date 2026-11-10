@@ -132,7 +132,7 @@ Rules for the IDs:
 | `TEC` | `spec-technology.md` | exists (draft); Requirements section written (FR-TEC-001 to 037, NFR-TEC-001 to 005); module; reviewed and re-verified (PASS, minors N1 to N4); all numbers are placeholders |
 | `PLC` | `spec-policy.md` | exists (draft); Requirements section written (FR-PLC-001 to 013, 020 to 025, 030 to 035, 040 to 047, 050 to 055, 060 to 064, 070 to 074, 080 to 086 and 090 to 092, in groups; NFR-PLC-001 to 005); module, later stage; the fifth extension interface `Policy`; adds the position P0.3a and the call `DirectPolicy`; reviewed and re-verified (PASS, minor R1); all numbers are placeholders |
 | `STY` | `spec-stylised-facts.md` | exists; Requirements section written (FR-STY-001 to 098, NFR-STY-001 to 004); core; every band is a prior and no default is called stable |
-| `CLB` | `spec-calibration.md` | exists; Requirements section written (FR-CLB-001 to 091 and 100 to 109, NFR-CLB-001 to 005); core; no `Config` field; all procedure constants are placeholders |
+| `CLB` | `spec-calibration.md` | exists; Requirements section written (FR-CLB-001 to 091 and 100 to 109 (024 retired), NFR-CLB-001 to 005); core; no `Config` field; all procedure constants are placeholders |
 | `EXP` | `spec-experiments.md` | exists; Requirements section written (FR-EXP-001 to 072, NFR-EXP-001 to 006); core; no `Config` field; all bounds are placeholders |
 | `STB` | `spec-stability.md` | exists; Requirements section written (FR-STB-001 to 031, NFR-STB-001 to 002); the register has 202 loops, 169 dampers and 165 scenarios (S01 to S165, S15 unused); all numbers are placeholders |
 | `VIA` | `spec-viability.md` | exists; Requirements section written (FR-VIA-001 to 060, NFR-VIA-001 to 004); all numbers are placeholders |

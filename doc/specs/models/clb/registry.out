@@ -1,8 +1,8 @@
 ok   knob rows have 12 cells
 ok   group rows have 7 cells
 ok   ids are unique
-     192 knob rows (K 57, D 108, S 25, P 2), 140 groups
-     K and D rows 165: search kinds {'U': 155, 'I': 8, 'E': 2}
+     193 knob rows (K 57, D 109, S 25, P 2), 153 groups
+     K and D rows 166: search kinds {'U': 156, 'I': 8, 'E': 2}
      IND presets 25, facts 39, scenarios 62, loops 202, dampers 167, I 27, A 16, E 2
 ok   knob rows use the closed sets and known references
 ok   structure groups use the closed sets
@@ -18,13 +18,13 @@ ok   `out` only on a field the solver writes (WarmStart Prices, Wages, Groups; R
 ok   VIA 11 has a table of paths
 ok   every path of VIA 11's table is mapped to a registry (scope, field)
 ok   `in` and `chk` are on exactly the data fields VIA 11 lists (a key and a container are not checked)
-     VIA 11: 41 paths, 117 fields moving the table, 32 fields read by a check or a report
-FAIL every owner row is a knob row or in a group :: [('Config', 'Edges'), ('Config', 'RegionPrices'), ('Config', 'WarmStart'), ('Config', 'Yields'), ('Item', 'Commodity'), ('Item', 'Quantity'), ('JobSpec', 'InProgressBP'), ('JobSpec', 'Recipe'), ('Month', 'Days'), ('Month', 'ID'), ('Output', 'Commodity'), ('Output', 'CostShare'), ('Output', 'Discard'), ('Output', 'Quantity'), ('Season', 'Days'), ('Season', 'ID'), ('SeasonYield', 'BP'), ('SeasonYield', 'Season'), ('SeedPrice', 'Commodity'), ('SeedPrice', 'Price'), ('SeedPrice', 'Region'), ('SeedWage', 'Region'), ('SeedWage', 'Wage'), ('Tool', 'Commodity'), ('Tool', 'WearPerUse'), ('WantItem', 'Commodity'), ('WantItem', 'Weight'), ('WarmGroup', 'Jobs'), ('WarmGroup', 'Money'), ('WarmGroup', 'Region'), ('WarmGroup', 'Role'), ('WarmGroup', 'Stock'), ('WarmPool', 'Money'), ('WarmPool', 'Region'), ('World', 'Scale'), ('YieldProfile', 'All'), ('YieldProfile', 'Recipe'), ('YieldProfile', 'Region'), ('YieldProfile', 'Seasons')]
-FAIL registry-only pairs are the expected scopes :: [('Config section', 'Edges'), ('Config section', 'RegionPrices'), ('Config section', 'WarmStart'), ('Recipe output', 'CostShare'), ('Recipe output', 'Discard'), ('Recipe tool', 'WearPerUse'), ('Region and recipe', 'YieldProfile'), ('Want item', 'Commodity'), ('Want item', 'Weight'), ('Yield', 'All'), ('Yield', 'Recipe'), ('Yield', 'Region'), ('Yield', 'Seasons')]
-     576 owner pairs (243 with several owner sections), 21 registry-only
-FAIL every field name of CFG 3.7 is a registry key or a group field :: ['Days', 'InProgressBP']
-     nested fields checked by name only (the catalogue flattens them): 3
-FAIL every nested field of CFG 3.7 is under a scope named for its table :: [('Scale', 'Scale')]
+     VIA 11: 41 paths, 131 fields moving the table, 32 fields read by a check or a report
+ok   every owner row is a knob row or in a group
+ok   registry-only pairs are the expected scopes
+     584 owner pairs (243 with several owner sections), 8 registry-only
+ok   every field name of CFG 3.7 is a registry key or a group field
+     nested fields checked by name only (the catalogue flattens them): 2
+ok   every nested field of CFG 3.7 is under a scope named for its table
 ok   no Default or Bound column
 ok   group owner cells match the README owner sections
      back links missing (informational): 14
@@ -43,7 +43,7 @@ ok   group owner cells match the README owner sections
         ('K-FIS02', 'A16')
         ('K-FIS04', 'A16')
 
-notes (informational, to be read): 226
+notes (informational, to be read): 230
     ('K-SCL01', 'L13 entry does not name Scale')
     ('K-SCL01', 'L33 entry does not name Scale')
     ('K-SCL01', 'L34 entry does not name Scale')
@@ -104,6 +104,10 @@ notes (informational, to be read): 226
     ('K-SKL03', 'L37 entry does not name TeachingLoad')
     ('K-SKL04', 'L36 entry does not name CapitalReturn')
     ('K-PRO01', 'L37 entry does not name TraineeYield')
+    ('K-PRO02', 'L09 entry does not name AnchorHold')
+    ('K-PRO02', 'L10 entry does not name AnchorHold')
+    ('K-PRO02', 'L52 entry does not name AnchorHold')
+    ('K-PRO02', 'D04 row/table does not name AnchorHold')
     ('K-DEM02', 'L14 entry does not name Ceiling')
     ('K-MON01', 'L69 entry does not name Limit')
     ('K-MON01', 'L72 entry does not name Limit')
@@ -120,9 +124,5 @@ notes (informational, to be read): 226
     ('K-RES01', 'L87 entry does not name RateBP')
     ('K-RES01', 'L88 entry does not name RateBP')
     ('K-RES02', 'L88 entry does not name Refuge')
-    ('K-RES03', 'L87 entry does not name PlanShareBP')
-    ('K-RES03', 'L88 entry does not name PlanShareBP')
-    ('K-RES04', 'L87 entry does not name Abundance')
-    ('K-RES04', 'L91 entry does not name Abundance')
 
-FAILED: every owner row is a knob row or in a group, registry-only pairs are the expected scopes, every field name of CFG 3.7 is a registry key or a group field, every nested field of CFG 3.7 is under a scope named for its table
+all checks passed

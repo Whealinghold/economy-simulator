@@ -1,0 +1,35 @@
+calibration 1
+pack one  lineage 5a1c0e4477d3b210  stage C4a  attempt 1  block 1
+commit 4f2a9c1  parent -
+config base 91d3a7c2e05b4a18  chosen 0be4417f6a2d93c5
+document base.toml 3b9c11aa5e07f4d2
+document one.toml 77e0d2c9b3a1608e
+document calibrated/c4a-1.toml 0be4c0319d7a52f6
+experiment screen design oat points 5 replicas 10 seed0 101 seeding same ticks 1095 transient 365 every 365 salt 0 render c7f20b19a4e83d60
+experiment explore design spread points 20 replicas 10 seed0 101 seeding same ticks 1095 transient 365 every 365 salt 0 render 4e9d02b6f18c7a35
+experiment confirm design grid points 2 replicas 50 seed0 1 seeding same ticks 1095 transient 365 every 365 salt 0 render a07715fe62bd9c04
+factor cost_floor key World.CostFloor grid geo base 7000 lower 3500 upper 14000 edge none
+factor entry_window key - grid lin500 base 3 lower - upper 5 edge below:rule
+unsearched at_off K-MON01
+unsearched v1x K-OLD01
+measure pinned_share_bp fact STY-P02 token Pinned.Share class B kind fact
+measure offset_bp fact STY-P04 token Offset.abs class B kind fact
+measure regime fact R5a token - class O kind detector
+criterion p02 measure pinned_share_bp op AtMost a 1500 b 0 target set
+screen K-BEL12 measure pinned_share_bp el_lower 10000 el_upper 15000 range 1200 share_bp 7500
+screened_in K-BEL07 K-BEL12
+dormant K-BEL14 K-BEL15
+finding K-BEL12 P02/Pinned.Share expected + measured - status explained
+feasible 3 of 20
+chosen 1 distance 1
+pareto 0 1
+set World.CostFloor 3500
+confirm seeds 1..50 control yes
+fact STY-P02 class B key s16.pinned_share_bp target report values min 40 median 130 max 410 outside 23 result report
+fact P04 class B key s01.offset_bp target working values min -310 median 780 max 1210 outside 5,9 result pass
+detector R5a none working yes onset -
+stability K-BEL12 pack one point default value 7000 set gate seeds 1..10 in_sample yes c_bp STABLE c_nc STABLE c_ws UNDETERMINED edge none
+stability K-BEL12 pack one point lower value 3500 set holdout seeds 51..60 in_sample no c_bp STABLE c_nc STABLE c_ws UNDETERMINED edge none
+claim K-BEL12 pack one undetermined
+unmet P04 offset_bp min 310 median 780
+note CostFloor halved; the base missed P02 on 3 of 10 search seeds
