@@ -74,6 +74,31 @@ func closedIndex(key, s string) int32 {
 	return -1
 }
 
+// satAdd is a+b, held at the largest or smallest int64 instead of wrapping: a
+// forged or huge event must not turn a sum negative (architecture.md 3.5).
+func satAdd(a, b int64) int64 {
+	s := a + b
+	if (a^s)&(b^s) < 0 {
+		if a < 0 {
+			return math.MinInt64
+		}
+		return math.MaxInt64
+	}
+	return s
+}
+
+// satSub is a-b, held at the limits of int64.
+func satSub(a, b int64) int64 {
+	d := a - b
+	if (a^b)&(a^d) < 0 {
+		if a < 0 {
+			return math.MinInt64
+		}
+		return math.MaxInt64
+	}
+	return d
+}
+
 // ix converts the integer of an ID or a count to a dense index; a negative or
 // huge value is -1, which no table holds.
 func ix[T ~int | ~int32 | ~int64](v T) int32 {
@@ -180,7 +205,7 @@ func (o *Observer) count(c cell, v int64) {
 		return
 	}
 	if s := o.state(c); s != nil {
-		s.n += v
+		s.n = satAdd(s.n, v)
 		o.touched = true
 	}
 }
@@ -239,7 +264,7 @@ func (s *state) send(in *instrument, k kind, again bool) {
 			s.n = 0
 		}
 	case kUpDown:
-		if d := s.n - s.sent; d != 0 {
+		if d := satSub(s.n, s.sent); d != 0 {
 			in.upDown.Add(bg, d, s.opt)
 			s.sent = s.n
 		}

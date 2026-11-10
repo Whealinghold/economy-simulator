@@ -40,3 +40,26 @@ func TestIntern_CapOfRejectionReasons(t *testing.T) {
 		t.Errorf("reasons cap = %d, want %d", n.reasons.max, maxReasons)
 	}
 }
+
+// TestSaturate_NoWrap verifies that a sum or a difference at the limits of int64
+// is held there and does not wrap to the other sign, and that a job row whose
+// IDs are outside the names is not remembered between snapshots.
+//
+// Requirement: FR-OBS-052
+func TestSaturate_NoWrap(t *testing.T) {
+	const hi, lo = int64(1<<63 - 1), int64(-1 << 63)
+	for _, c := range []struct{ got, want int64 }{
+		{satAdd(hi, 1), hi}, {satAdd(lo, -1), lo}, {satAdd(hi, lo), -1}, {satAdd(2, 3), 5},
+		{satSub(lo, 1), lo}, {satSub(hi, -1), hi}, {satSub(0, lo), hi}, {satSub(5, 3), 2},
+	} {
+		if c.got != c.want {
+			t.Errorf("got %d, want %d", c.got, c.want)
+		}
+	}
+	o := &Observer{}
+	o.recordJobs(snapNames{recipe: []string{"r"}, region: []string{"g"}},
+		[]economysim.JobRow{{Recipe: 7, Region: 0, Executions: 1}, {Recipe: 0, Region: -1, Executions: 1}})
+	if len(o.jobPairs) != 0 {
+		t.Errorf("jobPairs = %v, want none", o.jobPairs)
+	}
+}

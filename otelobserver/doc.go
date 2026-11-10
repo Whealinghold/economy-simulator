@@ -11,6 +11,13 @@
 // world calls it on the goroutine that steps. It holds no World, never calls
 // back into one, logs nothing and returns no error after New.
 //
+// # Limitation: the intern caps
+//
+// A value of economysim.reason beyond the cap of 1024 distinct values (32 for the
+// reasons of a rejected order) is dropped, and nothing counts the drops: the
+// instrument set is fixed by the catalogue of spec-observability.md, so a drop
+// counter would be a change of the spec, not of the adapter.
+//
 // # Limitation: held gauges
 //
 // A held gauge (economysim.market.clearing_price, belief.centre, belief.at_bound,

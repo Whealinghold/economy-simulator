@@ -9,10 +9,10 @@ func (o *Observer) observeFlows(e economysim.Event) bool {
 	case economysim.AgentRelocated:
 		o.agentRelocated(ev)
 	case economysim.WantShortfall:
-		o.count(m2(iWantUnfunded, ix(ev.Want), ix(ev.Role)), ev.Planned-ev.Funded)
+		o.count(m2(iWantUnfunded, ix(ev.Want), ix(ev.Role)), satSub(ev.Planned, ev.Funded))
 		o.count(m2(iWantChoked, ix(ev.Want), ix(ev.Role)), ev.Choked)
 	case economysim.MoneyFlowLimited:
-		o.count(m1(iMoneyFlowUnapplied, o.reason(ev.Flow)), int64(ev.Due-ev.Applied))
+		o.count(m1(iMoneyFlowUnapplied, o.reason(ev.Flow)), satSub(int64(ev.Due), int64(ev.Applied)))
 		o.counts(m2(iMoneyFlowLimited, o.reason(ev.Flow), 0), 1, ev.Short, ev.Headroom, ev.Limit)
 	case economysim.PopulationChanged:
 		o.count(m1(iHouseholdBirths, ix(ev.Role)), ev.BirthsDone)
@@ -79,7 +79,7 @@ func (o *Observer) outsideTraded(ev economysim.OutsideTraded) {
 		o.set(m4(iExternalPrice, node, gate, c, side), int64(ev.Price))
 	}
 	o.counts(m4(iExternalCut, node, c, side, 0), 3, ev.CutClosed, ev.CutCap, ev.CutPrice)
-	o.count(m3(iExternalUnfilled, node, c, side), ev.Offered-ev.Traded)
+	o.count(m3(iExternalUnfilled, node, c, side), satSub(ev.Offered, ev.Traded))
 	if ev.PriceClamped {
 		o.count(m2(iExternalClamped, node, c), 1)
 	}
@@ -106,7 +106,7 @@ func (o *Observer) observeTransport(e economysim.Event) bool {
 		o.count(m1(iContractValue, ix(ev.Commodity)), int64(ev.Escrowed))
 		o.count(m0(iContractEscrow), int64(ev.Escrowed))
 	case economysim.ContractSettled:
-		o.count(m0(iContractEscrow), -(int64(ev.Paid) + int64(ev.Refunded)))
+		o.count(m0(iContractEscrow), satSub(satSub(0, int64(ev.Paid)), int64(ev.Refunded)))
 		o.count(m1(iContractSettled, closedIndex(keyCause, string(ev.Cause))), 1)
 	case economysim.ContractRound:
 		o.counts(m1(iContractUnformed, 0), 0, ev.NoTaker, ev.PayerFunds, ev.TooMany, ev.DispatchRefused)

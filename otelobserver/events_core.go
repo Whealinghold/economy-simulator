@@ -297,9 +297,9 @@ func (o *Observer) agentBankrupted(ev economysim.AgentBankrupted) {
 // weightChanged moves the household count, and counts a reduction as an exit.
 func (o *Observer) weightChanged(ev economysim.WeightChanged) {
 	role := ix(ev.Role)
-	o.count(m1(iHouseholdCount, role), ev.To-ev.From)
+	o.count(m1(iHouseholdCount, role), satSub(ev.To, ev.From))
 	if ev.To < ev.From {
-		o.exit(role, ev.Cause, ev.From-ev.To)
+		o.exit(role, ev.Cause, satSub(ev.From, ev.To))
 	}
 }
 

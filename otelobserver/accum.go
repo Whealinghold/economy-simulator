@@ -22,7 +22,7 @@ func newSeries(size int, attrs func(i int) []attribute.KeyValue) series {
 // add adds v to cell i; a cell outside the array drops the sample.
 func (s *series) add(i int, v int64) {
 	if i >= 0 && i < len(s.n) {
-		s.n[i] += v
+		s.n[i] = satAdd(s.n[i], v)
 	}
 }
 

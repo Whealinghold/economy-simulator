@@ -71,7 +71,11 @@ func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 func (o *Observer) recordJobs(n snapNames, jobs []economysim.JobRow) {
 	now := make(map[[2]int]int64, len(jobs))
 	for _, j := range jobs {
-		now[[2]int{int(j.Recipe), int(j.Region)}] += j.Executions
+		if j.Recipe < 0 || int(j.Recipe) >= len(n.recipe) || j.Region < 0 || int(j.Region) >= len(n.region) {
+			continue // an ID outside the names would be remembered for ever and never recorded
+		}
+		k := [2]int{int(j.Recipe), int(j.Region)}
+		now[k] = satAdd(now[k], j.Executions)
 	}
 	for k := range o.jobPairs {
 		if _, ok := now[k]; !ok {

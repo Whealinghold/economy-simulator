@@ -79,7 +79,7 @@ func (o *Observer) stepEnded(failed bool) {
 // total is the sum of the cells that have not been flushed.
 func (s *series) total() (t int64) {
 	for _, v := range s.n {
-		t += v
+		t = satAdd(t, v)
 	}
 	return t
 }

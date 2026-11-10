@@ -33,7 +33,7 @@ func (o *Observer) upkeepShortfall(ev economysim.UpkeepShortfall) {
 		o.count(m2(iUpkeepShort, ix(row.Commodity), role), row.Units)
 	}
 	if i := o.unfed.cell(ix(ev.Region), role); i >= 0 {
-		o.count(m1(iHouseholdUnfed, role), ev.Unfed-o.unfed.last[i])
+		o.count(m1(iHouseholdUnfed, role), satSub(ev.Unfed, o.unfed.last[i]))
 		o.unfed.last[i], o.unfed.seen[i] = ev.Unfed, true
 	}
 }
