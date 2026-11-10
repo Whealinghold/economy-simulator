@@ -25,7 +25,7 @@ const ErrCount = calError("calibration: knob count negative or too large")
 // ScreenLevels returns the levels of the screen of a knob: the base and the
 // neighbours it has, ascending (FR-CLB-022). A side that is an edge gives none.
 func ScreenLevels(g Grid) []int64 {
-	if len(g.Levels) == 0 { // the zero Grid: no base to screen around
+	if g.Base < 0 || g.Base >= len(g.Levels) { // the zero or a forged Grid: no base to screen around
 		return nil
 	}
 	var out []int64
@@ -82,6 +82,9 @@ type Span struct{ Lo, Hi int }
 // below the base to the second above, shorter where an edge is in the way
 // (5.3).
 func Explore(g Grid) Span {
+	if g.Base < 0 || g.Base >= len(g.Levels) { // the zero or a forged Grid: an empty interval
+		return Span{Lo: 0, Hi: -1}
+	}
 	return Span{Lo: max(0, g.Base-exploreSpan), Hi: min(len(g.Levels)-1, g.Base+exploreSpan)}
 }
 

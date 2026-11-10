@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+// maxRecordBytes bounds what Parse reads: a record is a few kilobytes, and the
+// checks over one are quadratic in its lists, so a forged megabyte stops here.
+const maxRecordBytes = 1 << 20
+
 // Parse reads a record. It is strict: it accepts exactly the bytes Render
 // produces, so Render(Parse(b)) equals b for every b it accepts (FR-CLB-043,
 // NFR-CLB-004). An unknown keyword, a wrong field count, a float, a sign on a
@@ -14,6 +18,9 @@ import (
 // out of order or repeated, a missing final line feed or a note with a line break
 // is ErrRecord. Parse never panics.
 func Parse(b []byte) (Record, error) {
+	if len(b) > maxRecordBytes {
+		return Record{}, fmt.Errorf("%w: the record is over %d bytes", ErrRecord, maxRecordBytes)
+	}
 	text, ok := strings.CutSuffix(string(b), "\n")
 	if !ok {
 		return Record{}, fmt.Errorf("%w: the record does not end with a line feed", ErrRecord)

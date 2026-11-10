@@ -47,6 +47,9 @@ func Overlay(h Header, changes []Change, class func(key string) byte) ([]byte, e
 	if err := checkHeader(h); err != nil {
 		return nil, err
 	}
+	if class == nil {
+		return nil, fmt.Errorf("%w: no registry class function", ErrOverlay)
+	}
 	tables := map[string][]string{}
 	seen := map[string]bool{}
 	for _, ch := range changes {

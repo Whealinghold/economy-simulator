@@ -228,6 +228,9 @@ func (c *checker) attempts(newLineage bool) {
 	want, n := 1, 1
 	if continuing {
 		want = prev.Attempt + 1
+		if prev.Attempt == math.MaxInt {
+			want = 0 // no attempt follows the last int, and 0 is never a valid attempt
+		}
 		n = c.st.attempts + 1
 		if prev.Decision == decReview {
 			n = 1
