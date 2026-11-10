@@ -290,5 +290,5 @@ repository's packs.
 ## Where a consumer starts
 
 This tool reads the fixtures of the repository. For a consumer that carries its own
-pack, a player, shocks and save and resume, see `examples/realm` (plan 2-24; it does not
-exist yet).
+pack, a player, shocks and save and resume, see `examples/realm` (plan 2-24: the pack and the game exist, the
+server is not built yet).

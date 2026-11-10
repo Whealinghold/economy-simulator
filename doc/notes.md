@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-338, N-339 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-339 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
@@ -2120,7 +2120,7 @@ PR description.
 
 - **Areas:** CODE, ALL
 - **Raised:** 2026-11-10, plan 2-24 D688 (proposal 1).
-- **Note:** Go lets a nested module whose import path lies under the parent's path import the parent's `internal/` packages, so `architecture.md` 1.3 ("a server can be built without importing anything under `internal/`") holds for `examples/` only through `TestExamples_NoInternalImports` (plan 2-24 Phase 5), not through the compiler.
+- **Note:** Go lets a nested module whose import path lies under the parent's path import the parent's `internal/` packages, so `architecture.md` 1.3 ("a server can be built without importing anything under `internal/`") holds for `examples/` only through `TestExamples_NoInternalImports` (plan 2-24 Phase 5, built in `examples_guard_test.go`, which also checks that no example imports another), not through the compiler.
 
 ### N-336 The module overlays of Stage 2 sit on `one`, `two` and `three`; `all` composes them on `five`
 
@@ -2134,6 +2134,18 @@ PR description.
 - **Raised:** 2026-11-10, plan 2-24 Phase 1.
 - **Note:** `TestScenarios_StageTwoAllHaveTests` (`scenario_owner_test.go`) holds them in `scenariosNotBuilt`: S35 (plan 7, the pool grant, MON-S3), S46 (a waiting report inside `TestScenarioS47_`), and S73 to S76 (WLD-S1 to S4, "built here as unit models" by plan 2-24 Phase 1 item 4, `spec-reference-chain.md` 7.11). Whoever writes one deletes its entry. S73 and S74 need no pack (`internal/ordering` and a world built in Go); S75's cold leg is S18's, which has no `TestScenarioS18_` either; S76 needs a test double of `Strategy` that draws once more.
 
+### N-338 The pivots of the solver follow the sort order of the identifiers
+
+- **Areas:** REF, CODE
+- **Raised:** 2026-11-11, plan 2-24 Phase 3 (examples/realm).
+- **Note:** `SolveSteadyState` gives the same surplus, labour share and balanced census for `five` renamed through `examples/realm/pack/names.txt`, but not the same `pivots` in three of the five regions (31, 26 and 23 for 25): the simplex follows the canonical (sorted) order of the identifiers, and a rename that does not preserve the order changes the pivot count and the vertex it stops at, so `TestPack_RenameIsIsomorphic` logs the pivots and asserts the rest. Any test that renames a pack and compares `pivots`, or the golden of a renamed pack against `five`'s, must preserve the sort order of each kind of identifier (an order-preserving table), or drop the pivots. It is also why the realm world is not the same trajectory as `five` (typed IDs follow the same order).
+
+### N-339 The realm pack is generated from the root fixtures and nothing compares them
+
+- **Areas:** REF, CODE
+- **Raised:** 2026-11-11, plan 2-24 Phase 3 (examples/realm).
+- **Note:** `examples/realm/pack/cold/` and `modules/` are the output of `pack/rename.sh` over `testdata/chains/` (`base`, `lines`, `five` and the all-on layers of `allLayers`). `TestExamples_PackCopiesAgree` guards the byte copies only (the warm document and the expected figures); a change to a root layer is not seen by the realm until someone runs the script, and a layer added to `allLayers` needs a line in the script. A root test that renames the layers in Go and compares bytes would close it (it would need the same drop of comments and the same schema-key rule as the script).
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2146,4 +2158,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a9f4fbdbfa1dc5fcae6b7b8d
+NOTES-TAG: b871a3795bc4009ca30437a3

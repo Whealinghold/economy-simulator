@@ -115,7 +115,7 @@ The packs are in `testdata/chains/`: `one`, `two`, `three`, `five`, `famine` and
 recipes for the common questions are in
 [examples/inspector/README.md](examples/inspector/README.md). The inspector reads the
 fixtures of the repository. For a consumer that carries its own pack, a player, shocks and
-save and resume, see `examples/realm` (plan 2-24, not built yet).
+save and resume, see `examples/realm` (plan 2-24: the pack and the game exist, the server is not built yet).
 
 ## Develop
 
@@ -151,8 +151,8 @@ economy-sim/
 ├── testdata/chains/     the reference supply chains (the packs) and their expected results
 ├── testdata/golden/     golden files
 ├── examples/inspector/  the CLI and terminal UI (its own module)
-├── examples/realm/      the first consumer: its pack, a server, save and resume (its own module; plan 2-24, not built yet)
-├── examples/colony/     a second, unrelated setting (its own module; plan 2-24, not built yet)
+├── examples/realm/      the first consumer: its pack and game, a server, save and resume (its own module; the server is plan 2-24 Phase 4, not built yet)
+├── examples/colony/     a second, unrelated setting: a command over an embedded pack (its own module)
 └── doc/                 overview, vision, specs, ADRs, rules, roadmap, notes
 ```
 
