@@ -1,0 +1,164 @@
+package economysim_test
+
+import (
+	"sync"
+	"testing"
+
+	economysim "github.com/Whealinghold/economy-sim"
+)
+
+// This file holds the cost benchmarks of the Stage 2 exit (plan 2-24 Phase 6f, D692,
+// criterion 6 of vision.md 5). Nothing here asserts a time (testing.md 8.2, 10.2):
+// the figures are a benchmark result on a named machine, recorded against
+// `x3.ms_per_tick` of bands/five.toml and read by the owner. The window and the
+// helpers (benchConfig, stepBench, warmUp) are those of scale_bench_test.go.
+
+// costScaleSteps are the worlds of BenchmarkStepFiveScale: the all-on pack with the
+// households of every group unchanged and the Scale of the world 4, 2 and 1, so the
+// agents are about a quarter, a half and all of the 5 000 (spec-scale.md 6.3,
+// FR-SCL-016). Households are never divided: that would change the economy.
+var costScaleSteps = []struct {
+	name  string
+	scale int64
+}{{"n=quarter", 4}, {"n=half", 2}, {"n=full", 1}}
+
+// scaled sets the Scale of the world and holds the groups of a merchant role at 1: a
+// merchant agent has a weight of 1 (ErrMerchantWeight), so those groups keep 1 household
+// per agent at every size.
+func scaled(k int64) func(*economysim.Config) {
+	return func(c *economysim.Config) {
+		c.World.Scale = k
+		for i := range c.Groups {
+			for _, r := range c.Roles {
+				if r.ID == c.Groups[i].Role && r.Merchant != nil {
+					c.Groups[i].Scale = 1
+				}
+			}
+		}
+	}
+}
+
+// bookObserver counts the orders placed in each (region, commodity) book in a tick
+// and keeps the largest count, to set against the "few thousand" trigger of N-241.
+type bookObserver struct {
+	cur  map[[2]int]int64
+	most int64
+}
+
+// Observe counts OrderPlaced and closes the tick at TickEnded.
+func (o *bookObserver) Observe(e economysim.Event) {
+	switch ev := e.(type) {
+	case economysim.TickStarted:
+		o.cur = map[[2]int]int64{}
+	case economysim.OrderPlaced:
+		k := [2]int{int(ev.Region), int(ev.Commodity)}
+		o.cur[k]++
+		o.most = max(o.most, o.cur[k])
+	}
+}
+
+var logBookOnce sync.Map
+
+// logBook logs once per name the largest number of orders placed in one (region,
+// commodity) book in a tick over the benchmark window, from a second world with the
+// counting observer (the timed world has none).
+func logBook(b *testing.B, name string, cfg economysim.Config, opts ...economysim.Option) {
+	b.Helper()
+	if _, done := logBookOnce.LoadOrStore(name, true); done {
+		return
+	}
+	var bo bookObserver
+	w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed), economysim.WithObserver(&bo)}, opts...)...)
+	if err != nil {
+		b.Fatalf("seed %d: NewWorld error = %v, want nil", scaleBenchSeed, err)
+	}
+	for range 3 + benchWindow {
+		if err := w.Step(); err != nil {
+			b.Fatalf("seed %d: Step() error = %v, want nil", scaleBenchSeed, err)
+		}
+	}
+	b.Logf("%s: largest book of one (region, commodity) in a tick over %d steps = %d orders placed (N-241 trigger: a few thousand)",
+		name, 3+benchWindow, bo.most)
+}
+
+// BenchmarkStepFiveAll reports a Step of the all-on `five` (5 000 agents, every
+// version 1 module on, the default logger and observer) and the largest book per
+// tick. It reports and asserts nothing; the figure is recorded against x3.ms_per_tick.
+//
+// Requirement: NFR-SCL-002, NFR-SCL-003, FR-REF-039
+func BenchmarkStepFiveAll(b *testing.B) {
+	cfg := benchConfig(b, allLayers, nil)
+	logBook(b, "five-all", cfg, allOptions()...)
+	stepBench(b, "five-all", cfg, 5000, allOptions()...)
+}
+
+// BenchmarkStepFiveScale reports a Step of the all-on `five` at the Scale of the
+// world 4, 2 and 1; each sub-benchmark reports ns/agent-tick over the agents it
+// has, so the ratio per doubling of agents (NFR-SCL-001) is read from the output
+// and recorded, not asserted.
+//
+// Requirement: NFR-SCL-001, NFR-SCL-003, FR-SCL-016
+func BenchmarkStepFiveScale(b *testing.B) {
+	for _, tt := range costScaleSteps {
+		b.Run(tt.name, func(b *testing.B) {
+			cfg := benchConfig(b, allLayers, scaled(tt.scale))
+			stepBench(b, "five-all "+tt.name, cfg, costAgents(b, cfg), allOptions()...)
+		})
+	}
+}
+
+// costAgents is the number of agents the all-on world of cfg builds.
+func costAgents(tb testing.TB, cfg economysim.Config) int64 {
+	tb.Helper()
+	w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed)}, allOptions()...)...)
+	if err != nil {
+		tb.Fatalf("seed %d: NewWorld error = %v, want nil", scaleBenchSeed, err)
+	}
+	s, err := w.Snapshot()
+	if err != nil {
+		tb.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	return s.Agents
+}
+
+// TestCost_FiveScaleBuildsTheWorlds builds the worlds of BenchmarkStepFiveScale once
+// and asserts that the households stay those of the pack and the agents rise from
+// quarter to full (the full world has one agent per household), so a broken fixture
+// fails CI and not only the benchmark.
+//
+// Requirement: NFR-SCL-003, FR-SCL-016
+//
+// Guard: the scaled worlds must change the agents and never the households; a
+// benchmark that divided households would time a different economy.
+func TestCost_FiveScaleBuildsTheWorlds(t *testing.T) {
+	t.Parallel()
+	skipFiveSized(t)
+	var want int64
+	for _, g := range benchConfig(t, allLayers, nil).Groups {
+		want += g.Households
+	}
+	agents := make([]int64, len(costScaleSteps))
+	t.Run("build", func(t *testing.T) {
+		for i, tt := range costScaleSteps {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+				cfg := benchConfig(t, allLayers, scaled(tt.scale))
+				w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed)}, allOptions()...)...)
+				if err != nil {
+					t.Fatalf("%s: NewWorld error = %v, want nil", tt.name, err)
+				}
+				s, err := w.Snapshot()
+				if err != nil {
+					t.Fatalf("%s: Snapshot() error = %v, want nil", tt.name, err)
+				}
+				if s.Households != want {
+					t.Errorf("%s: %d households, want %d", tt.name, s.Households, want)
+				}
+				agents[i] = s.Agents
+			})
+		}
+	})
+	if agents[0] >= agents[1] || agents[1] >= agents[2] || agents[2] != want {
+		t.Errorf("agents quarter, half, full = %v, want rising to %d (one agent per household at Scale 1)", agents, want)
+	}
+}

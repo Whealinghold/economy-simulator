@@ -184,13 +184,13 @@ var logOnce sync.Map
 // last step after the 3 warm-up steps and after the window, from a second world with
 // a counting observer (the timed world has none), so the reader can tell a working
 // market from a collapsed one.
-func logLive(b *testing.B, name string, cfg economysim.Config) {
+func logLive(b *testing.B, name string, cfg economysim.Config, opts ...economysim.Option) {
 	b.Helper()
 	if _, done := logOnce.LoadOrStore(name, true); done {
 		return
 	}
 	var tc tradeCounter
-	w, err := economysim.NewWorld(cfg, economysim.WithSeed(scaleBenchSeed), economysim.WithObserver(&tc))
+	w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed), economysim.WithObserver(&tc)}, opts...)...)
 	if err != nil {
 		b.Fatalf("seed %d: NewWorld error = %v, want nil", scaleBenchSeed, err)
 	}
@@ -221,16 +221,16 @@ func logLive(b *testing.B, name string, cfg economysim.Config) {
 }
 
 // stepBench times b.N steps of the world of cfg and reports the cost per agent-tick.
-func stepBench(b *testing.B, name string, cfg economysim.Config, agents int64) {
+func stepBench(b *testing.B, name string, cfg economysim.Config, agents int64, opts ...economysim.Option) {
 	b.Helper()
-	logLive(b, name, cfg)
-	w := warmUp(b, cfg)
+	logLive(b, name, cfg, opts...)
+	w := warmUp(b, cfg, opts...)
 	steps := 0
 	b.ReportAllocs()
 	for b.Loop() {
 		if steps == benchWindow {
 			b.StopTimer()
-			w, steps = warmUp(b, cfg), 0
+			w, steps = warmUp(b, cfg, opts...), 0
 			b.StartTimer()
 		}
 		steps++
