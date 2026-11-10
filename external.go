@@ -1211,6 +1211,14 @@ func (w *World) placeOutside(cp *counterparty, l *outsideLine, row *sideRow) err
 	f := orderFacts{Account: cp.account, AgentKnown: true, SideAllowed: true, CommodityKnown: true, Tradable: true, Tally: &w.receipts}
 	if reason, ok := b.admit(w.ledger, f, o); !ok {
 		b.emitRejected(&w.obs, w.log, o, reason)
+		if !cp.buy {
+			// The units stay in the account until the sweep, which would count them as
+			// unsold of an offer of 0 (traded = offered - held < 0): return them now.
+			dst, _ := w.ledger.Boundary(ledger.OutsideUnsold, int(l.commodity))
+			if err := w.ledger.Move(cp.account, dst, int(l.commodity), offered, ledger.OutsideUnsold); err != nil {
+				return fmt.Errorf("return of the rejected offer of counterparty %d at tick %d: %w", cp.agent, w.Tick(), err)
+			}
+		}
 		row.t.offered = 0 // nothing was placed
 		return nil
 	}
@@ -1238,6 +1246,7 @@ func (x *external) record(w *World, trades []Trade) {
 					} else {
 						invariant("a counterparty's paid sum overflowed")
 					}
+					break // a counterparty has one row for each commodity
 				}
 			}
 		}
