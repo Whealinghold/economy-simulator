@@ -1,0 +1,170 @@
+experiment pack_one_belief_step format 1 points 3 measures 4 criteria 1
+measure 0 households
+measure 1 money
+measure 2 agents
+measure 3 events
+point 0 hash 9abf7b8fa64bc36b status ok same_as -1 levels 0 values 0
+variant 0
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest 1fed368ebc0bfce1
+final households=511 money=24638321 agents=511 events=365673
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=96841
+window 60 households=596 money=24638321 agents=596 events=97088
+window 90 households=577 money=24638321 agents=577 events=95958
+window 120 households=511 money=24638321 agents=511 events=75786
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest 4bf5815cf467d056
+final households=485 money=24638321 agents=485 events=369116
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=97249
+window 60 households=595 money=24638321 agents=595 events=102278
+window 90 households=565 money=24638321 agents=565 events=94523
+window 120 households=485 money=24638321 agents=485 events=75066
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest 26a2b8009e0e98e1
+final households=520 money=24638321 agents=520 events=379696
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=99073
+window 60 households=591 money=24638321 agents=591 events=99000
+window 90 households=563 money=24638321 agents=563 events=98349
+window 120 households=520 money=24638321 agents=520 events=83274
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 485 max 520 mean 505 std 18 q1000=485 q2500=485 q5000=511 q7500=520 q9000=520
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 485 max 520 mean 505 std 18 q1000=485 q2500=485 q5000=511 q7500=520 q9000=520
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 365673 max 379696 mean 371495 std 7308 q1000=365673 q2500=365673 q5000=369116 q7500=379696 q9000=379696
+pass stays_small passes 3 planned 3 share 10000
+variant 1
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest ae2b4f70b5a0167c
+final households=511 money=24638321 agents=511 events=368912
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=96841
+window 60 households=596 money=24638321 agents=596 events=97088
+window 90 households=576 money=24638321 agents=576 events=96025
+window 120 households=511 money=24638321 agents=511 events=76018
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest 345a3d3f8858a4ed
+final households=482 money=24638321 agents=482 events=372235
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=97249
+window 60 households=595 money=24638321 agents=595 events=102278
+window 90 households=563 money=24638321 agents=563 events=94239
+window 120 households=482 money=24638321 agents=482 events=74898
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest abed9a70221df976
+final households=520 money=24638321 agents=520 events=382268
+verdict stays_small=pass
+window 30 households=599 money=24638321 agents=599 events=99073
+window 60 households=591 money=24638321 agents=591 events=99000
+window 90 households=563 money=24638321 agents=563 events=98153
+window 120 households=520 money=24638321 agents=520 events=82540
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 482 max 520 mean 504 std 20 q1000=482 q2500=482 q5000=511 q7500=520 q9000=520
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 482 max 520 mean 504 std 20 q1000=482 q2500=482 q5000=511 q7500=520 q9000=520
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 368912 max 382268 mean 374472 std 6953 q1000=368912 q2500=368912 q5000=372235 q7500=382268 q9000=382268
+pass stays_small passes 3 planned 3 share 10000
+point 1 hash cdca564a036e953a status ok same_as -1 levels 1 values 1
+variant 0
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest b52581b0c8715c3e
+final households=484 money=24638321 agents=484 events=365022
+verdict stays_small=pass
+window 30 households=597 money=24638321 agents=597 events=97823
+window 60 households=592 money=24638321 agents=592 events=96768
+window 90 households=571 money=24638321 agents=571 events=91847
+window 120 households=484 money=24638321 agents=484 events=78584
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest a3a53302b06bd243
+final households=485 money=24638321 agents=485 events=361561
+verdict stays_small=pass
+window 30 households=595 money=24638321 agents=595 events=95942
+window 60 households=587 money=24638321 agents=587 events=100636
+window 90 households=545 money=24638321 agents=545 events=86205
+window 120 households=485 money=24638321 agents=485 events=78778
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest 892dc11ef25da75f
+final households=470 money=24638321 agents=470 events=366978
+verdict stays_small=pass
+window 30 households=597 money=24638321 agents=597 events=96244
+window 60 households=578 money=24638321 agents=578 events=96205
+window 90 households=540 money=24638321 agents=540 events=94862
+window 120 households=470 money=24638321 agents=470 events=79667
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 470 max 485 mean 480 std 8 q1000=470 q2500=470 q5000=484 q7500=485 q9000=485
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 470 max 485 mean 480 std 8 q1000=470 q2500=470 q5000=484 q7500=485 q9000=485
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 361561 max 366978 mean 364520 std 2743 q1000=361561 q2500=361561 q5000=365022 q7500=366978 q9000=366978
+pass stays_small passes 3 planned 3 share 10000
+variant 1
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest 13845321d96f3a72
+final households=479 money=24638321 agents=479 events=368089
+verdict stays_small=pass
+window 30 households=597 money=24638321 agents=597 events=97823
+window 60 households=592 money=24638321 agents=592 events=96768
+window 90 households=571 money=24638321 agents=571 events=91122
+window 120 households=479 money=24638321 agents=479 events=78814
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest 3b4003545c2ec24e
+final households=484 money=24638321 agents=484 events=364631
+verdict stays_small=pass
+window 30 households=595 money=24638321 agents=595 events=95942
+window 60 households=587 money=24638321 agents=587 events=100636
+window 90 households=545 money=24638321 agents=545 events=86055
+window 120 households=484 money=24638321 agents=484 events=78609
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest 5e4e23307d81d266
+final households=468 money=24638321 agents=468 events=369927
+verdict stays_small=pass
+window 30 households=597 money=24638321 agents=597 events=96244
+window 60 households=578 money=24638321 agents=578 events=96205
+window 90 households=540 money=24638321 agents=540 events=94645
+window 120 households=468 money=24638321 agents=468 events=79421
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 468 max 484 mean 477 std 8 q1000=468 q2500=468 q5000=479 q7500=484 q9000=484
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 468 max 484 mean 477 std 8 q1000=468 q2500=468 q5000=479 q7500=484 q9000=484
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 364631 max 369927 mean 367549 std 2689 q1000=364631 q2500=364631 q5000=368089 q7500=369927 q9000=369927
+pass stays_small passes 3 planned 3 share 10000
+point 2 hash 304b615137e1f6a2 status ok same_as -1 levels 2 values 2
+variant 0
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest 5cadda02dc9fd65d
+final households=458 money=24638321 agents=458 events=351040
+verdict stays_small=pass
+window 30 households=595 money=24638321 agents=595 events=95381
+window 60 households=571 money=24638321 agents=571 events=94937
+window 90 households=545 money=24638321 agents=545 events=84239
+window 120 households=458 money=24638321 agents=458 events=76483
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest 43a244c3a6ef778c
+final households=464 money=24638321 agents=464 events=348924
+verdict stays_small=pass
+window 30 households=588 money=24638321 agents=588 events=93592
+window 60 households=573 money=24638321 agents=573 events=92644
+window 90 households=534 money=24638321 agents=534 events=86321
+window 120 households=464 money=24638321 agents=464 events=76367
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest 67d7f1e9eaf2463f
+final households=464 money=24638321 agents=464 events=353176
+verdict stays_small=pass
+window 30 households=592 money=24638321 agents=592 events=98695
+window 60 households=572 money=24638321 agents=572 events=92834
+window 90 households=532 money=24638321 agents=532 events=84530
+window 120 households=464 money=24638321 agents=464 events=77117
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 458 max 464 mean 462 std 3 q1000=458 q2500=458 q5000=464 q7500=464 q9000=464
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 458 max 464 mean 462 std 3 q1000=458 q2500=458 q5000=464 q7500=464 q9000=464
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 348924 max 353176 mean 351047 std 2126 q1000=348924 q2500=348924 q5000=351040 q7500=353176 q9000=353176
+pass stays_small passes 3 planned 3 share 10000
+variant 1
+run replica 0 cont 0 seed 1 salt - status ok fail_tick -1 digest 7f5054770bd366f8
+final households=453 money=24638321 agents=453 events=353866
+verdict stays_small=pass
+window 30 households=595 money=24638321 agents=595 events=95381
+window 60 households=571 money=24638321 agents=571 events=94937
+window 90 households=545 money=24638321 agents=545 events=83579
+window 120 households=453 money=24638321 agents=453 events=76605
+run replica 1 cont 0 seed 2 salt - status ok fail_tick -1 digest 5d35a14f00fce401
+final households=460 money=24638321 agents=460 events=351917
+verdict stays_small=pass
+window 30 households=588 money=24638321 agents=588 events=93592
+window 60 households=573 money=24638321 agents=573 events=92644
+window 90 households=534 money=24638321 agents=534 events=86209
+window 120 households=460 money=24638321 agents=460 events=76522
+run replica 2 cont 0 seed 3 salt - status ok fail_tick -1 digest b56949886209fd5a
+final households=463 money=24638321 agents=463 events=356097
+verdict stays_small=pass
+window 30 households=592 money=24638321 agents=592 events=98695
+window 60 households=572 money=24638321 agents=572 events=92834
+window 90 households=531 money=24638321 agents=531 events=85237
+window 120 households=463 money=24638321 agents=463 events=77837
+reduce households planned 3 used 3 failed 0 undefined 0 missing 0 min 453 max 463 mean 459 std 5 q1000=453 q2500=453 q5000=460 q7500=463 q9000=463
+reduce money planned 3 used 3 failed 0 undefined 0 missing 0 min 24638321 max 24638321 mean 24638321 std 0 q1000=24638321 q2500=24638321 q5000=24638321 q7500=24638321 q9000=24638321
+reduce agents planned 3 used 3 failed 0 undefined 0 missing 0 min 453 max 463 mean 459 std 5 q1000=453 q2500=453 q5000=460 q7500=463 q9000=463
+reduce events planned 3 used 3 failed 0 undefined 0 missing 0 min 351917 max 356097 mean 353960 std 2092 q1000=351917 q2500=351917 q5000=353866 q7500=356097 q9000=356097
+pass stays_small passes 3 planned 3 share 10000
