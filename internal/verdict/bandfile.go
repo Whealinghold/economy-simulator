@@ -2,6 +2,7 @@ package verdict
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -154,102 +155,72 @@ func checkKey(k *BandKey) error {
 // setByShape checks `commit=<id>;config=<hash>;seeds=<a>-<b>` and returns the
 // seed set. An id and a hash are non-empty words of letters and digits.
 func setByShape(s string) (string, error) {
-	parts := strings.Split(s, ";")
-	if len(parts) != 3 {
+	m := setByRe.FindStringSubmatch(s)
+	if m == nil {
 		return "", fmt.Errorf("%q is not commit=<id>;config=<hash>;seeds=<a>-<b>", s)
 	}
-	for i, name := range []string{"commit", "config", "seeds"} {
-		v, ok := strings.CutPrefix(parts[i], name+"=")
-		if !ok || v == "" {
-			return "", fmt.Errorf("%q: part %d is not %s=<value>", s, i+1, name)
-		}
-		if i < 2 && !isWord(v) {
-			return "", fmt.Errorf("%s %q is not letters and digits", name, v)
-		}
-		if i == 2 {
-			a, b, ok := strings.Cut(v, "-")
-			if _, e1 := strconv.ParseUint(a, 10, 31); !ok || e1 != nil {
-				return "", fmt.Errorf("seeds %q is not <a>-<b>", v)
-			}
-			if _, e2 := strconv.ParseUint(b, 10, 31); e2 != nil {
-				return "", fmt.Errorf("seeds %q is not <a>-<b>", v)
-			}
-			return v, nil
-		}
-	}
-	return "", nil
+	return m[3], nil
 }
 
-func isWord(s string) bool {
-	for _, r := range s {
-		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z') {
-			return false
-		}
-	}
-	return s != ""
-}
+var (
+	setByRe = regexp.MustCompile(`^commit=([A-Za-z0-9]+);config=([A-Za-z0-9]+);seeds=([0-9]{1,9}-[0-9]{1,9})$`)
+	// tableRe is a table name: lower-case words of letters, digits and
+	// underscores with at most one dot.
+	tableRe = regexp.MustCompile(`^\[([a-z0-9_]+(?:\.[a-z0-9_]+)?)\]$`)
+)
 
-// tableName reads `[a.b]` or `[name]`: lower-case words of letters, digits and
-// underscores, with at most one dot.
 func tableName(line string) (string, bool) {
-	if !strings.HasSuffix(line, "]") {
+	m := tableRe.FindStringSubmatch(line)
+	if m == nil {
 		return "", false
 	}
-	name := line[1 : len(line)-1]
-	if strings.Count(name, ".") > 1 {
-		return "", false
-	}
-	for _, part := range strings.Split(name, ".") {
-		if part == "" {
-			return "", false
-		}
-		for _, r := range part {
-			if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r == '_') {
-				return "", false
-			}
-		}
-	}
-	return name, true
+	return m[1], true
 }
 
 func setField(k *BandKey, field, v string) error {
 	switch field {
 	case "unit":
-		s, ok := quoted(v)
-		if !ok {
-			return fmt.Errorf("unit %q is not a string", v)
-		}
-		k.Unit = s
+		return setString(&k.Unit, field, v, false)
+	case "set_by":
+		return setString(&k.SetBy, field, v, true)
 	case "value":
 		x, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return fmt.Errorf("value %q is not an integer", v)
 		}
 		k.Value, k.Set = x, true
-	case "set_by":
-		s, ok := quoted(v)
-		if !ok || s == "" {
-			return fmt.Errorf("set_by %q is not a non-empty string", v)
-		}
-		k.SetBy = s
+		return nil
 	case "expects":
-		if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
-			return fmt.Errorf("expects %q is not a list", v)
+		return setExpects(k, v)
+	}
+	return fmt.Errorf("unknown key %q", field)
+}
+
+// setString reads a quoted string into dst; nonEmpty refuses "".
+func setString(dst *string, field, v string, nonEmpty bool) error {
+	s, ok := quoted(v)
+	if !ok || (nonEmpty && s == "") {
+		return fmt.Errorf("%s %q is not a string", field, v)
+	}
+	*dst = s
+	return nil
+}
+
+// setExpects reads `["r3", "r4"]`.
+func setExpects(k *BandKey, v string) error {
+	if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
+		return fmt.Errorf("expects %q is not a list", v)
+	}
+	inner := strings.TrimSpace(v[1 : len(v)-1])
+	if inner == "" {
+		return nil
+	}
+	for _, item := range strings.Split(inner, ",") {
+		s, ok := quoted(strings.TrimSpace(item))
+		if !ok || s == "" {
+			return fmt.Errorf("expects item %q is not a string", strings.TrimSpace(item))
 		}
-		inner := strings.TrimSpace(v[1 : len(v)-1])
-		for _, item := range strings.Split(inner, ",") {
-			item = strings.TrimSpace(item)
-			if inner == "" {
-				break
-			}
-			s, ok := quoted(item)
-			if !ok || s == "" {
-				return fmt.Errorf("expects item %q is not a string", item)
-			}
-			k.Expects = append(k.Expects, s)
-		}
-	default:
-		return fmt.Errorf("unknown key %q", field)
+		k.Expects = append(k.Expects, s)
 	}
 	return nil
 }

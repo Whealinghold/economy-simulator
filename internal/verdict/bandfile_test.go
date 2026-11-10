@@ -63,7 +63,7 @@ set_by = "commit=a;config=b;seeds=1-10"
 		{"seeds 1-10 on a tier G key", "[a.b]\nvalue = 1\nset_by = \"commit=a;config=b;seeds=1-10\"\n", "want 1-50"},
 		{"seeds 1-50 on a tier L key", "[w06.money_cap_bp]\nvalue = 1\nset_by = " + okSetBy + "\n", "want 1-10"},
 		{"set_by with no hash", "[a.b]\nvalue = 1\nset_by = \"commit=a;seeds=1-50\"\n", "not commit="},
-		{"set_by with empty commit", "[a.b]\nvalue = 1\nset_by = \"commit=;config=b;seeds=1-50\"\n", "part 1"},
+		{"set_by with empty commit", "[a.b]\nvalue = 1\nset_by = \"commit=;config=b;seeds=1-50\"\n", "not commit="},
 		{"set_by seeds not a range", "[a.b]\nvalue = 1\nset_by = \"commit=a;config=b;seeds=x\"\n", "seeds"},
 		{"line before table", "unit = \"bp\"\n", "line 1"},
 		{"not key = value", "[a.b]\nunit\n", "line 2"},
