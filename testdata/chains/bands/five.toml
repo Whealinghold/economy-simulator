@@ -16,3 +16,7 @@ unit = "bp"
 # X4(e) and G01: the least households at any tick as a share of the start (STY-G01).
 [x4.households_bp]
 unit = "bp"
+# X3: the most milliseconds per tick of the all-on world (REF X3, plan 2-24 D692). A
+# recorded figure, read by the owner and never asserted (testing.md 8.2, 10.2).
+[x3.ms_per_tick]
+unit = "ms"

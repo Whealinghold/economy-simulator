@@ -164,7 +164,7 @@ Reasons for the less obvious placements:
 - The first consumer confirms the needs in section 2 and the world size for the
   cost budget. Confirmed so far: five regions of varying size, richness and
   climate, about 1 000 households each (5 000 in all) and 30 commodities. Still
-  missing: the number of recipes and how often the consumer ticks.
+  missing: the number of recipes and how often the consumer ticks. Measured 2026-11-10 (plan 2-24 Phase 6f, a loaded host, `cost_five_test.go`): about 50 ms a tick for `five` with the modules off and 69 to 107 ms for the all-on `five` and `examples/realm`, against the 53 ms placeholder (no quiet-host run; `realm` is a different harness). Criterion 2 (two architectures) is not shown on any arm64 machine (N-343).
 - bazaarBot is run, so that "stable" has a reference (overview, section 8). The Doran and Parberry paper was read on 2026-10-10 and gives stability
   criteria (`spec-beliefs.md` section 19); the run is still missing.
 - The slice has run, since it may move specs between stages.
