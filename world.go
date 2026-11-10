@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -195,8 +196,14 @@ func newWorldState(seed uint64, regions, roles int) worldState {
 // extensions are the extensions the configured names select: the clearing, the
 // strategy of each role indexed by RoleID, and the spawner.
 type extensions struct {
-	clearing   Clearing
+	clearing Clearing
+	// strategies is the strategy table: the strategy of each role at its RoleID,
+	// then the built-in and registered strategies in the order of extraNames. An
+	// agent's strategy is an index into it (plan 2-17 D548).
 	strategies []Strategy
+	// extraNames are the names of strategies[len(roles):], sorted: default,
+	// directed and every registered name.
+	extraNames []string
 	spawner    Spawner
 }
 
@@ -314,6 +321,15 @@ func resolveExtensions(c *Config, o *options) (extensions, error) {
 		if ext.strategies[i], err = resolveStrategy(o, c.Roles[i].Strategy, path); err != nil {
 			return extensions{}, err
 		}
+	}
+	ext.extraNames = append([]string{defaultStrategyName, directedStrategyName}, o.strategies.names...)
+	slices.Sort(ext.extraNames)
+	for _, name := range ext.extraNames {
+		st, err := resolveStrategy(o, name, []string{"strategies", name})
+		if err != nil {
+			return extensions{}, err
+		}
+		ext.strategies = append(ext.strategies, st)
 	}
 	if ext.spawner, err = resolveSpawner(o, c.World.Spawner, []string{"world", "spawner"}); err != nil {
 		return extensions{}, err

@@ -540,6 +540,12 @@
 //     steps (Directive).
 //   - Directed strategy: the Strategy (Directed) that does what the agent's
 //     Directive says and leaves the rest to its Fallback (spec-agents.md 10).
+//   - External agent: an agent the consumer adds between steps with AddAgent
+//     (described by NewAgent) and removes with RemoveAgent; it has weight 1, takes
+//     its money and goods by the reason initial and is left alone by the spawner
+//     unless it is mortal (spec-integration.md 4).
+//   - Stock item: a quantity of one commodity an external agent starts with
+//     (StockItem).
 //   - Spawner: the extension interface (Spawner) that decides which agents leave,
 //     lose households or change role and how many households enter a region in
 //     a tick, as a plan of decisions the world checks and executes
