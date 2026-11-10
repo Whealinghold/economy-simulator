@@ -546,6 +546,10 @@
 //     unless it is mortal (spec-integration.md 4).
 //   - Stock item: a quantity of one commodity an external agent starts with
 //     (StockItem).
+//   - Slot: a piece of world state a consumer sets between steps over a configured
+//     value (SetYieldShocks and the other Set calls); an entry names a key and
+//     gives its whole value, and a key set to its default is cleared. The slots that
+//     differ from their defaults are read back as SlotState (spec-integration.md 5).
 //   - Spawner: the extension interface (Spawner) that decides which agents leave,
 //     lose households or change role and how many households enter a region in
 //     a tick, as a plan of decisions the world checks and executes
