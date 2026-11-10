@@ -1247,16 +1247,11 @@ func (w *World) loadView(rs *restoreCtx, r *codec.Reader, id AgentID) {
 	}
 	rumours := make([]Rumour, 0, k)
 	for range k {
-		rm := Rumour{
-			Region: RegionID(r.Index(uint64(len(w.cfg.Regions)))), Commodity: CommodityID(r.Index(uint64(len(w.cfg.Commodities)))),
-			Price: Price(r.Bounded("price", MaxPrice)), Mean: Price(r.Bounded("mean", MaxPrice)),
-			Lag: r.Bounded("lag", w.info.maxAge), SourceAge: r.Bounded("source age", rs.tick),
-		}
+		rm := w.readRumour(rs, r)
 		if r.Err() != nil {
 			return
 		}
-		last := len(rumours) - 1
-		if rm.Price < 1 || rm.Lag < 2 || last >= 0 && (rumours[last].Region > rm.Region || rumours[last].Region == rm.Region && rumours[last].Commodity >= rm.Commodity) {
+		if !validRumour(rm, rumours) {
 			r.Failf("tag 22 row for agent %d holds an impossible rumour %+v", id, rm)
 			return
 		}
@@ -1266,4 +1261,27 @@ func (w *World) loadView(rs *restoreCtx, r *codec.Reader, id AgentID) {
 		w.integ.views = append(w.integ.views, rumourView{})
 	}
 	w.integ.views[id] = rumourView{has: true, tick: tick, rumours: rumours}
+}
+
+// readRumour reads one rumour of tag 22 against its own bounds.
+func (w *World) readRumour(rs *restoreCtx, r *codec.Reader) Rumour {
+	return Rumour{
+		Region: RegionID(r.Index(uint64(len(w.cfg.Regions)))), Commodity: CommodityID(r.Index(uint64(len(w.cfg.Commodities)))),
+		Price: Price(r.Bounded("price", MaxPrice)), Mean: Price(r.Bounded("mean", MaxPrice)),
+		Lag: r.Bounded("lag", w.info.maxAge), SourceAge: r.Bounded("source age", rs.tick),
+	}
+}
+
+// validRumour says rm is a rumour a view can hold after the rumours before it: a
+// price of at least 1, a lag of at least 2, and strictly ascending by (region,
+// commodity), which is the order of a view.
+func validRumour(rm Rumour, before []Rumour) bool {
+	if rm.Price < 1 || rm.Lag < 2 {
+		return false
+	}
+	if len(before) == 0 {
+		return true
+	}
+	p := before[len(before)-1]
+	return p.Region < rm.Region || p.Region == rm.Region && p.Commodity < rm.Commodity
 }
