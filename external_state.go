@@ -292,8 +292,5 @@ func meanCapacity(s *OutsideSide, seasons []Season) int64 {
 		weighted += se.Days * seasonBP(s.Window, se.ID, wholeBP)
 		days += se.Days
 	}
-	if days < 1 {
-		return s.Capacity
-	}
-	return s.Capacity * weighted / (days * wholeBP)
+	return s.Capacity * weighted / (days * wholeBP) // a valid calendar's seasons sum to its days, at least 1
 }
