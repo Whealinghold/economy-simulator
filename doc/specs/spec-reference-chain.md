@@ -173,13 +173,14 @@ testdata/chains/
 | `famine` | `base`, `famine`, `overlay/estates`, `warm-famine` | 1 | 600 | 9 | 10 | 7 |
 | `one-demand` | `base`, `demand`, `one-demand`, `warm-one-demand` | 1 | 600 | 12 | 13 | 9 |
 | `second` | `second/second`, `second/warm-second` | 1 | 1 000 | 10 | 10 | 5 |
-| `all` | `five` (with its warm start), `overlay/trade-five`, then one layer for each version 1 module in the order of the `Modules` pointers (`allLayers`) | 5 (and an outside node) | 5 340 | 34 | 52 | 25 |
+| `all` | `five` (with its warm start), `overlay/trade-five`, then one layer for each version 1 module, each after what it needs (`allLayers`; not the field order of `Modules`) | 5 (and an outside node) | 5 340 | 34 | 52 | 25 |
 
 The `all` row is the all-on pack of plan 2-24 (D683): `five` with every version 1 module on, the
 variant that names demand, a money faucet and an external sector together (FR-REF-018). Its
 `expected/all.toml` is checked by `TestExpected_Packs`, its golden is `testdata/golden/all/` and its
-checkpoint fixture `testdata/checkpoints/format-1-all.bin`. It is not balanced by a solver run of its
-own: the warm start is that of the modules-off `five`, and the roles the layers add have none. A module
+checkpoint fixture `testdata/checkpoints/format-1-all.bin`. The solver runs on its cold layers (the report is
+in `expected/all.toml`), but the warm start is not rebalanced for the all-on pack: it is that of the
+modules-off `five`, and the roles the layers add have no row in it. A module
 added in Stage 3 appends a layer and moves the golden once (testing.md 7.2).
 
 The role count includes `visitor`, which has no group. A **cold** variant is the same

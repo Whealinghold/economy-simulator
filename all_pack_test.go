@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"encoding/hex"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -20,9 +21,10 @@ import (
 )
 
 // allLayers is the all-on pack of plan 2-24 D683: the warm `five` (base, lines,
-// five, warm-five), its edges, and one layer for each version 1 module in the order of the
-// `Modules` pointers (spec-config.md 3.1), each module after what it needs (the
-// merchants need transport and information, the migration needs information). A
+// five, warm-five), its edges, and one layer for each version 1 module, each module after
+// what it needs (the merchants need transport and information, the migration needs
+// information). The order is not the field order of `Modules` (estates and external come
+// later here than there). A
 // layer under all/ is a retarget of a module overlay to five; the others are the
 // overlays of the module plans as they are. A module added in Stage 3 appends a
 // layer here and moves testdata/golden/all/ once (testing.md 7.2).
@@ -101,12 +103,12 @@ func TestAllPack_LoadsAndValidates(t *testing.T) {
 	}
 	h := economysim.HashConfig(cfg)
 	if got, want := hex.EncodeToString(h[:]), strings.Trim(expectedLine(t, "warm_config_hash"), `"`); got != want {
-		t.Errorf("HashConfig(all-on pack) = %s, want %s of %s", got, want, allExpectedPath)
+		t.Errorf("HashConfig(all-on pack) = %s, want %s of %s (allLayers here and allWarm in config/expected_test.go must list the same layers)", got, want, allExpectedPath)
 	}
 	// The cold set is the one the solver reads; the config package derives it from its own copy.
 	hc := economysim.HashConfig(loadValidPack(t, allColdLayers()...))
 	if got, want := hex.EncodeToString(hc[:]), strings.Trim(expectedLine(t, "config_hash"), `"`); got != want {
-		t.Errorf("HashConfig(all-on pack, cold) = %s, want %s of %s", got, want, allExpectedPath)
+		t.Errorf("HashConfig(all-on pack, cold) = %s, want %s of %s (allLayers here and allCold in config/expected_test.go must list the same layers)", got, want, allExpectedPath)
 	}
 }
 
@@ -130,9 +132,11 @@ func TestAllPack_EveryModuleIsOn(t *testing.T) {
 
 // TestAllPack_OffGoldenUnmoved verifies that the warm five alone, every module off,
 // still has the configuration hash its expected file recorded, and that the all-on
-// pack differs from it. The files of the off set are pinned by TestGolden_OffUnchanged
-// and TestGolden_EventsAndPositionsUnchanged (sha256 and the list of names), which own
-// those hashes.
+// pack differs from it. The files of pack one in the off set are pinned by
+// TestGolden_OffUnchanged and TestGolden_EventsAndPositionsUnchanged (sha256, and the list
+// of names); the three files of the warm five are checked against themselves by
+// TestGolden_FiveOff and its siblings, so they move only with -update and the explanation
+// of testing.md 7.2.
 //
 // Requirement: FR-REF-029
 //
@@ -158,10 +162,37 @@ func TestAllPack_OffGoldenUnmoved(t *testing.T) {
 	}
 }
 
-// TestConfigOnly_AllPackHasNoGoSpecific verifies that the all-on world is built with
-// the registry of strategies and the seed alone, and that no string literal in a
-// non-test Go file of the module is an identifier of the pack (a commodity, recipe,
-// role, region, season, want, resource or mode): the pack is data.
+// collectIDs adds to ids every string held by a field named ID or Name anywhere in v: the
+// identifiers of the commodities, recipes, roles, regions, seasons, wants, resources and
+// modes of a configuration, without building a world to read its names table.
+func collectIDs(v reflect.Value, ids map[string]bool) {
+	switch v.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		if !v.IsNil() {
+			collectIDs(v.Elem(), ids)
+		}
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			collectIDs(v.Index(i), ids)
+		}
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			f := v.Type().Field(i)
+			if f.Type.Kind() == reflect.String && (f.Name == "ID" || f.Name == "Name") && f.IsExported() {
+				ids[v.Field(i).String()] = true
+				continue
+			}
+			if f.IsExported() {
+				collectIDs(v.Field(i), ids)
+			}
+		}
+	}
+}
+
+// TestConfigOnly_AllPackHasNoGoSpecific verifies that no string literal in a non-test Go
+// file of the module is an identifier of the all-on pack (a commodity, recipe, role,
+// region, season, want, resource or mode): the pack is data. It reads the identifiers
+// from the configuration, so it is cheap and runs in every gate.
 //
 // Requirement: FR-REF-002
 //
@@ -169,25 +200,16 @@ func TestAllPack_OffGoldenUnmoved(t *testing.T) {
 // library code would pass every test that does not look for it.
 func TestConfigOnly_AllPackHasNoGoSpecific(t *testing.T) {
 	t.Parallel()
-	skipFiveSized(t) // builds a 5 000-household world only to read its names table
-	w, err := economysim.NewWorld(loadValidPack(t, allLayers...), append(allOptions(), economysim.WithSeed(1))...)
-	if err != nil {
-		t.Fatalf("NewWorld(all-on pack, strategy.Options, WithSeed) error = %v, want nil", err)
-	}
-	s, err := w.Snapshot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg := loadValidPack(t, allLayers...)
 	ids := map[string]bool{}
-	for _, list := range [][]string{s.Names.Regions, s.Names.Commodities, s.Names.Roles, s.Names.Recipes, s.Names.Seasons, s.Names.Wants, s.Names.Resources, s.Names.Modes} {
-		for _, id := range list {
-			ids[id] = true
-		}
-	}
+	collectIDs(reflect.ValueOf(cfg), ids)
 	// Words that are an identifier of the pack and also a name the library owns: the
 	// field of a belief (centre), the key of a transport mode (haul), the log and
-	// rendering key (seed) and the seasons of the default calendar (defaults.go).
+	// rendering key (seed) and the seasons and months of the default calendar (defaults.go).
 	owned := map[string]bool{"centre": true, "haul": true, "seed": true, "spring": true, "summer": true, "autumn": true, "winter": true}
+	for m := 1; m <= 12; m++ {
+		owned[fmt.Sprintf("m%02d", m)] = true // the month names of the default calendar
+	}
 	var hits []string
 	for _, dir := range []string{".", "config", "strategy", "indicator", "experiment", "denomination", "internal"} {
 		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
