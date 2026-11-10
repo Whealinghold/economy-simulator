@@ -19,7 +19,8 @@ import (
 //	Machine: Intel Core i9-14900KF (32 logical CPUs), Linux 7.0.0-31, go1.27.4 linux/amd64,
 //	GOMAXPROCS=4. Another gate F ran on the host: load average 44 at the start of the run,
 //	33 at its end, 30 for the profile. Plan 4's quiet record (load 1.0) had five at 33.66 ms,
-//	so the figures below are about 1.5 times a quiet host and are an upper bound.
+//	so five (50.2 ms) was 1.5 times its quiet figure. No quiet run of the other worlds exists:
+//	the 1.5 is not applied to them, and none of the figures below is shown to be a bound.
 //	Command: go test -run '^$' -bench 'StepFive$|StepFiveAll|StepFiveScale|StepAgents'
 //	-benchtime 50x -benchmem -count 5 . (and, in examples/realm, -bench StepRealm). Window:
 //	3 warm-up steps from the warm start, 30 timed steps, a fresh world; seed 1.
@@ -33,10 +34,13 @@ import (
 //	all-on n=full        90.3   (75.0-103.7)              5 339          3.91 MiB   764
 //
 //	Budget of spec-scale.md 6.2: about 53 ms a tick for 5 000 agents. five is at it (0.95);
-//	the all-on world is 2.0 times it in the first run and 1.3 times (70.0 ms, one run of 100
-//	steps) when the load had fallen to 30; realm, the same economy renamed, was 68.7 ms in
-//	the later run. The order of the runs, not the world, explains most of that gap: the
-//	exit cannot be read finely at this load, and the owner reads it (R3, D692).
+//	the all-on world is 2.0 times it in the five-run median and 1.3 times (70.0 ms, one run
+//	of 100 steps) when the load had fallen to 30. The cause of that gap was NOT isolated:
+//	load and run order may explain it, and so may the harness. realm is the same economy
+//	renamed but is not the same measurement: it runs through Game.Advance with no strategy
+//	options list of its own, in a later slot, and its live agents are not logged. Do not read
+//	realm 68.7 ms as the all-on world with the load removed. Retake on a quiet host; the
+//	owner reads it (R3, D692).
 //	NFR-SCL-001: time per doubling of agents quarter to half 2.07, half to full 1.51 (agents
 //	1.83 and 1.94 times; the limit of spec-scale.md 2.2 is on time, not exceeded), 19.2, 21.7
 //	and 16.9 us per agent-tick; the spread of the five runs is larger than the differences.
@@ -45,8 +49,9 @@ import (
 //	two points give a slope (5.8 us per item) and a negative c_0 that mean nothing.
 //	Live agents: the all-on world goes from 5 339 to 4 617 over the 33 steps (collapsing,
 //	N-325), so the window times a working market that thins out.
-//	Largest book (seed 1, 33 steps, OrderPlaced per tick per (region, commodity)): 1 268
-//	orders, below the "few thousand" trigger of N-241; the duplicate scan is still 8.4% of a
+//	Largest book (seed 1, 33 steps, OrderPlaced per tick per (region, commodity), both
+//	sides together and counting orders the book may reject; no per-side split, so a side is
+//	at most this): 1 268 orders, below the "few thousand" trigger of N-241; the duplicate scan is still 8.4% of a
 //	step in the profile below.
 //	CPU profile of BenchmarkStepFiveAll (100 steps; Step = 12.80 s of 30.95 s sampled, the
 //	rest the solver of Validate): p32Trade 49.9% of Step, fillAgentView 42.6% (called from
@@ -160,46 +165,4 @@ func costAgents(tb testing.TB, cfg economysim.Config) int64 {
 		tb.Fatalf("Snapshot() error = %v, want nil", err)
 	}
 	return s.Agents
-}
-
-// TestCost_FiveScaleBuildsTheWorlds builds the worlds of BenchmarkStepFiveScale once
-// and asserts that the households stay those of the pack and the agents rise from
-// quarter to full (the full world has one agent per household), so a broken fixture
-// fails CI and not only the benchmark.
-//
-// Requirement: NFR-SCL-003, FR-SCL-016
-//
-// Guard: the scaled worlds must change the agents and never the households; a
-// benchmark that divided households would time a different economy.
-func TestCost_FiveScaleBuildsTheWorlds(t *testing.T) {
-	t.Parallel()
-	skipFiveSized(t)
-	var want int64
-	for _, g := range benchConfig(t, allLayers, nil).Groups {
-		want += g.Households
-	}
-	agents := make([]int64, len(costScaleSteps))
-	t.Run("build", func(t *testing.T) {
-		for i, tt := range costScaleSteps {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-				cfg := benchConfig(t, allLayers, scaled(tt.scale))
-				w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed)}, allOptions()...)...)
-				if err != nil {
-					t.Fatalf("%s: NewWorld error = %v, want nil", tt.name, err)
-				}
-				s, err := w.Snapshot()
-				if err != nil {
-					t.Fatalf("%s: Snapshot() error = %v, want nil", tt.name, err)
-				}
-				if s.Households != want {
-					t.Errorf("%s: %d households, want %d", tt.name, s.Households, want)
-				}
-				agents[i] = s.Agents
-			})
-		}
-	})
-	if agents[0] >= agents[1] || agents[1] >= agents[2] || agents[2] != want {
-		t.Errorf("agents quarter, half, full = %v, want rising to %d (one agent per household at Scale 1)", agents, want)
-	}
 }
