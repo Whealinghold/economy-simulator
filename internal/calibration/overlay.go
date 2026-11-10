@@ -50,6 +50,30 @@ func Overlay(h Header, changes []Change, class func(key string) byte) ([]byte, e
 	if class == nil {
 		return nil, fmt.Errorf("%w: no registry class function", ErrOverlay)
 	}
+	tables, err := groupChanges(changes, class)
+	if err != nil {
+		return nil, err
+	}
+	var out bytes.Buffer
+	fmt.Fprintf(&out, "# calibration %s attempt %d of lineage %s: see %s\n", h.Stage, h.Attempt, h.Lineage[:lineageShort], h.Record)
+	names := make([]string, 0, len(tables))
+	for t := range tables {
+		names = append(names, t)
+	}
+	slices.Sort(names)
+	for i, t := range names {
+		slices.Sort(tables[t])
+		if i > 0 {
+			out.WriteByte('\n') // a blank line between tables
+		}
+		out.WriteString(t + "\n" + strings.Join(tables[t], "\n") + "\n")
+	}
+	return out.Bytes(), nil
+}
+
+// groupChanges renders each change as its key line and groups the lines by table,
+// refusing a key of the wrong class and a path written twice.
+func groupChanges(changes []Change, class func(key string) byte) (map[string][]string, error) {
 	tables := map[string][]string{}
 	seen := map[string]bool{}
 	for _, ch := range changes {
@@ -70,21 +94,7 @@ func Overlay(h Header, changes []Change, class func(key string) byte) ([]byte, e
 		table, keyLine, _ := strings.Cut(strings.TrimSuffix(string(doc), "\n"), "\n")
 		tables[table] = append(tables[table], keyLine)
 	}
-	var out bytes.Buffer
-	fmt.Fprintf(&out, "# calibration %s attempt %d of lineage %s: see %s\n", h.Stage, h.Attempt, h.Lineage[:lineageShort], h.Record)
-	names := make([]string, 0, len(tables))
-	for t := range tables {
-		names = append(names, t)
-	}
-	slices.Sort(names)
-	for i, t := range names {
-		slices.Sort(tables[t])
-		if i > 0 {
-			out.WriteByte('\n') // a blank line between tables
-		}
-		out.WriteString(t + "\n" + strings.Join(tables[t], "\n") + "\n")
-	}
-	return out.Bytes(), nil
+	return tables, nil
 }
 
 // checkHeader refuses a header that names no stage, no attempt, no lineage or a

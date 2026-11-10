@@ -443,13 +443,19 @@ func (c *checker) stopRecord() {
 			c.add(RuleStopFinding, "finding %s %s/%s is open", f.Knob, f.Fact, f.Measure)
 		}
 	}
+	c.stopDormant()
+	if (len(r.Factors) > 0 || len(r.Screens) > 0 || len(r.Sets) > 0 || c.searched()) && (!r.Confirm.Has || !r.Confirm.Control) {
+		c.add(RuleStopControl, "the stage searched and has no confirm with a control")
+	}
+}
+
+// stopDormant checks condition 6: no moved D knob that stayed dormant.
+func (c *checker) stopDormant() {
+	r := c.r()
 	for _, s := range r.Sets {
 		if ref, ok := c.idx.find(s.Key); ok && ref.Class == 'D' && slices.Contains(r.Dormant, ref.ID) {
 			c.add(RuleStopDormant, "dormant D knob %s is moved to %d", ref.ID, s.Value)
 		}
-	}
-	if (len(r.Factors) > 0 || len(r.Screens) > 0 || len(r.Sets) > 0 || c.searched()) && (!r.Confirm.Has || !r.Confirm.Control) {
-		c.add(RuleStopControl, "the stage searched and has no confirm with a control")
 	}
 }
 

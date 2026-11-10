@@ -145,9 +145,19 @@ func (c *recChecker) knobs() {
 	for i, s := range c.r.Stability {
 		check("stability", i, s.Knob)
 	}
+	c.claimKnobs(check)
+	c.factorKeys()
+}
+
+// claimKnobs applies check to the knob of every claim.
+func (c *recChecker) claimKnobs(check func(kw string, i int, id string)) {
 	for i, cl := range c.r.Claims {
 		check("claim", i, cl.Knob)
 	}
+}
+
+// factorKeys checks that every factor key is a registry key.
+func (c *recChecker) factorKeys() {
 	for i, f := range c.r.Factors {
 		if _, ok := c.idx.find(f.Key); f.Key != "" && !ok { // a composite factor names no single key
 			c.add(RuleKnobUnknown, "factor", i, "%s is not a registry key", f.Key)
