@@ -269,6 +269,11 @@ var stepSites = []site{
 			w.p18Walk()
 		}
 	})},
+	{"P1.9", noError(func(w *World) {
+		if w.integ.visit {
+			w.p19Directives()
+		}
+	})},
 	{"P2.1", noError((*World).p21Complete)},
 	{"P2.3", noError((*World).p23Snapshot)},
 	{"P2.4", noError(func(w *World) {

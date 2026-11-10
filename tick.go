@@ -37,6 +37,7 @@ var positionList = [...]position{
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P1.8", "EXT", line},
+	{"P1.9", "AGT", line},
 	{"P2.1", "PRO", line},
 	{"P2.3", "RES", line},
 	{"P2.4", "SUB", line},
@@ -78,7 +79,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7a", "P1.7b", "P1.9", "P1.9a",
+	"P1.3a", "P1.7a", "P1.7b", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a",
@@ -120,6 +121,9 @@ func (w *World) positions() error {
 	w.p17Flows()
 	if w.external != nil {
 		w.p18Walk()
+	}
+	if w.integ.visit {
+		w.p19Directives()
 	}
 	return w.positionsProduce()
 }

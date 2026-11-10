@@ -1,0 +1,11 @@
+# Scenario S01 leg (b), spec-reference-chain.md 7.2 and 7.1.3: a demand shock. From
+# tick 400 for 60 ticks a visitor (an external agent of the role visitor, added by
+# AddAgent with the money below) buys fuel by a sticky directive, in the quantity
+# quantity_share_bp of the market's mean volume over the 100 ticks before, at the
+# ceiling of the commodity's reference band. The harness empties the directive after
+# `ticks` ticks. Leg (a), s01.toml, is run separately and does not hold this table.
+[[buyer]]
+tick = 400
+region = "north"
+money = 2000000
+buy = { commodity = "fuel", quantity_share_bp = 500, ticks = 60 }

@@ -566,22 +566,3 @@ func readObs(r *codec.Reader, i int, tick int64) rumour.Obs {
 	}
 	return o
 }
-
-// saveRumours writes tag 22, the integration section of the rumours kept for an
-// external agent (spec-information.md 6.3.1, 14). The integration module owns its
-// rows and is not built, so the section is present with the information module and
-// holds no row: one count, 0. It is registered now so that the bytes of a checkpoint
-// do not move when the module fills it.
-func (w *World) saveRumours(cw *codec.Writer) error {
-	cw.Count(0)
-	return nil
-}
-
-// loadRumours reads tag 22: a count that must be 0 until the integration module is
-// built.
-func (w *World) loadRumours(_ *restoreCtx, r *codec.Reader) error {
-	if r.Count(1) != 0 {
-		r.Failf("rows in the integration section, whose module is not built")
-	}
-	return nil
-}

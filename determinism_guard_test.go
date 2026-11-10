@@ -273,3 +273,22 @@ func TestNoBannedUses_InNonTestFiles(t *testing.T) {
 		t.Errorf("checked %d files, want at least 10: the walk is looking at the wrong place", checked)
 	}
 }
+
+// TestNoBannedUses_ScansIntegration verifies that the scan of the non-test files
+// includes integration.go, the file of the calls of spec-integration.md.
+//
+// Guard: the calls are the one place a consumer's goroutine meets the world; a
+// walk that skipped the file would let a goroutine, time.Now or package-level
+// state into a call with every test green.
+//
+// Requirement: NFR-INT-003
+func TestNoBannedUses_ScansIntegration(t *testing.T) {
+	t.Parallel()
+	files, err := guardedFiles(".")
+	if err != nil {
+		t.Fatalf("guardedFiles(\".\") error = %v", err)
+	}
+	if !slices.Contains(files, "integration.go") {
+		t.Errorf("guardedFiles(\".\") = %v, want it to hold integration.go", files)
+	}
+}

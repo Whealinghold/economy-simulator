@@ -47,6 +47,10 @@ const (
 	// 7.1.4, spec-external-sector.md 6.4). A line is named by two IDs that a
 	// configuration change does not shift (ADR 0008 open point 3).
 	siteOutsideWalk uint64 = 0x46AE095E114979AB
+	// siteAddAgent keys D12: tick the call runs in (Tick()), id the new agent. The
+	// two creation words of AddAgent are taken from this stream, so the order of
+	// calls changes no agent's draws (spec-world.md 7.1.4, ADR 0008).
+	siteAddAgent uint64 = 0xE00949043F800843
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):

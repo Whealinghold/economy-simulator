@@ -397,13 +397,18 @@ func (w *World) snapshotEndowments() []EndowmentRow {
 	}
 	rows := make([]EndowmentRow, len(r.stock))
 	for cell := range rows {
-		rows[cell] = EndowmentRow{
-			Region: r.regionOf(cell), Resource: r.resourceOf(cell),
-			Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.abundanceOf(cell, r.stock[cell]),
-			ExhaustedRun: r.exhaustedRun[cell], CapacityScaleBP: r.capScale[cell], RegenScaleBP: r.regenScale[cell],
-		}
+		rows[cell] = r.row(cell)
 	}
 	return rows
+}
+
+// row is the snapshot row of the endowment at a dense index.
+func (r *resourcesState) row(cell int) EndowmentRow {
+	return EndowmentRow{
+		Region: r.regionOf(cell), Resource: r.resourceOf(cell),
+		Stock: r.stock[cell], Capacity: r.effectiveCapacity(cell), AbundanceBP: r.abundanceOf(cell, r.stock[cell]),
+		ExhaustedRun: r.exhaustedRun[cell], CapacityScaleBP: r.capScale[cell], RegenScaleBP: r.regenScale[cell],
+	}
 }
 
 // saveResources is tag 15 (spec-resources.md 15, spec-checkpoint.md 4.2): for each

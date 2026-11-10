@@ -51,7 +51,7 @@ func s48Want(tick int64, reader, source string) (int64, bool) {
 // D478) on pack three with the information overlay, seeds 1 to scenarioSeedCount(),
 // with the default trading and a recording strategy that logs the rumours it is
 // shown. The edges between south and far_south are closed, stretched and restored
-// between steps with the unexported setter of plan 3. It asserts that during the
+// between steps with SetEdgeStatuses. It asserts that during the
 // closure no view of far_south holds a rumour and no view elsewhere holds one about
 // far_south, that RumoursServed counts the pairs as NoPath for exactly those ticks
 // and EdgeStatusChanged names the changes, that every rumour has the lag the
@@ -81,7 +81,7 @@ func TestScenarioS48_ClosureAndReopening(t *testing.T) {
 		set := func(factor int64, closed bool) {
 			t.Helper()
 			ch := []economysim.EdgeStatus{{From: south, To: far, Closed: closed, FactorBP: factor}, {From: far, To: south, Closed: closed, FactorBP: factor}}
-			if err := economysim.SetEdgeStatusesForTest(r.w, ch, economysim.CauseConsumer); err != nil {
+			if err := r.w.SetEdgeStatuses(ch); err != nil {
 				t.Fatalf("seed %d: setEdgeStatuses() at tick %d error = %v, want nil", seed, r.w.Tick(), err)
 			}
 		}

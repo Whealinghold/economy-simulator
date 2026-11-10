@@ -27,6 +27,7 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	}
 	if w.info != nil && kind == viewTrade {
 		w.fillRumours(v, a)
+		w.recordRumours(v, a)
 	}
 	if w.mer != nil && kind == viewTrade {
 		w.fillMerchantView(v, a)
@@ -111,6 +112,7 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.sub != nil {
 		w.sub.drop(a.id)
 	}
+	w.dropExternal(a)
 	w.logRemoval(a, cause)
 	w.forget(a, region)
 	return nil
@@ -135,6 +137,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	}
 	if w.sub != nil {
 		w.sub.roleChanged(a)
+	}
+	if a.external {
+		w.externalRoleChanged(a)
 	}
 }
 

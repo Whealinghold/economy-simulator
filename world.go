@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -107,6 +108,8 @@ type World struct {
 	// external is the state of the external-sector module, nil when it is off
 	// (external.go).
 	external *external
+	// integ is what INT keeps (integration.go).
+	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of
 	// regions, plus the counterparties of the external module (spec-external-sector.md
 	// 4.2.2). It is len(Regions) while the module is off.
@@ -195,8 +198,16 @@ func newWorldState(seed uint64, regions, roles int) worldState {
 // extensions are the extensions the configured names select: the clearing, the
 // strategy of each role indexed by RoleID, and the spawner.
 type extensions struct {
-	clearing   Clearing
+	clearing Clearing
+	// strategies is the strategy of each role, indexed by RoleID.
 	strategies []Strategy
+	// extras is the extra part of the strategy table, which an external agent's
+	// strategy indexes after the roles': default, directed and every registered
+	// strategy, in the order of extraNames (sorted). They are separate fields so
+	// that the walk of the position hash leaves the golden files where they were
+	// (plan 2-17 D548; the walk skips both).
+	extras     []Strategy
+	extraNames []string
 	spawner    Spawner
 }
 
@@ -224,7 +235,8 @@ func NewWorld(cfg Config, opts ...Option) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := w.construct(w.cfg.Warnings()); err != nil {
+	w.integ.warnings = w.cfg.Warnings()
+	if err := w.construct(w.integ.warnings); err != nil {
 		return nil, err
 	}
 	return w, nil
@@ -314,6 +326,15 @@ func resolveExtensions(c *Config, o *options) (extensions, error) {
 		if ext.strategies[i], err = resolveStrategy(o, c.Roles[i].Strategy, path); err != nil {
 			return extensions{}, err
 		}
+	}
+	ext.extraNames = append([]string{defaultStrategyName, directedStrategyName}, o.strategies.names...)
+	slices.Sort(ext.extraNames)
+	for _, name := range ext.extraNames {
+		st, err := resolveStrategy(o, name, []string{"strategies", name})
+		if err != nil {
+			return extensions{}, err
+		}
+		ext.extras = append(ext.extras, st)
 	}
 	if ext.spawner, err = resolveSpawner(o, c.World.Spawner, []string{"world", "spawner"}); err != nil {
 		return extensions{}, err

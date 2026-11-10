@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -93,6 +94,15 @@ func s45Recovers(t *testing.T, seed uint64, name string, run, control []int64, f
 // the stock the world starts with and blight the stock the call leaves.
 func s45Trace(t *testing.T, seed uint64, res economysim.Resource, stock0, blight int64, drought bool) []int64 {
 	t.Helper()
+	return s45Calls(t, seed, res, stock0, blight, drought, false)
+}
+
+// s45Calls is s45Trace with the calls of tick 1 made through the seam helpers or, when
+// public is set, through the public slots: the blight is a capacity scale of 5% set
+// and restored at once (the stock is clamped to the scaled capacity and stays
+// there), the drought a regeneration scale (FR-INT-045).
+func s45Calls(t *testing.T, seed uint64, res economysim.Resource, stock0, blight int64, drought, public bool) []int64 {
+	t.Helper()
 	cfg := fieldWorld(res, s45Capacity, stock0, 5, 1_000, 1)
 	cfg.Recipes[0].Draws = nil
 	r := newFieldRun(t, cfg, seed)
@@ -103,9 +113,13 @@ func s45Trace(t *testing.T, seed uint64, res economysim.Resource, stock0, blight
 		// events and those of the step are summed together.
 		mark := len(r.rec.events)
 		if tick == 1 {
-			economysim.AdjustStock(r.w, 0, 0, blight-r.stock())
-			if drought {
-				economysim.ShockRegen(r.w, 0, 0, s45Drought)
+			if public {
+				s45PublicCalls(t, r.w, blight, drought)
+			} else {
+				economysim.AdjustStock(r.w, 0, 0, blight-r.stock())
+				if drought {
+					economysim.ShockRegen(r.w, 0, 0, s45Drought)
+				}
 			}
 		}
 		r.step(t, seed)
@@ -189,5 +203,85 @@ func s45Emits(t *testing.T, seed uint64) {
 	if len(got) != 2 || got[0].Kind != economysim.AdjustKindAdjust || got[1].Kind != economysim.AdjustKindShock ||
 		got[0].Tick != r.w.Tick() || got[1].RegenBP != s45Drought || got[0].StockAfter != s45Blighted {
 		t.Errorf("seed %d: events of the blight and the drought = %+v, want an adjust to %d then a shock of %d bp, stamped tick %d", seed, got, s45Blighted, s45Drought, r.w.Tick())
+	}
+}
+
+// s45PublicCalls is the blight and the drought as the public calls make them: a capacity
+// scale that clamps the stock to blight, put back to 10 000 bp in the next call, and a
+// regeneration scale when drought is set.
+func s45PublicCalls(t *testing.T, w *economysim.World, blight int64, drought bool) {
+	t.Helper()
+	cut := []economysim.EndowmentScale{{Region: 0, Resource: 0, BP: blight * 10_000 / s45Capacity}}
+	if err := w.SetCapacityScales(cut); err != nil {
+		t.Fatalf("SetCapacityScales(%v) = %v, want nil", cut, err)
+	}
+	cut[0].BP = 10_000
+	if err := w.SetCapacityScales(cut); err != nil {
+		t.Fatalf("SetCapacityScales(%v) = %v, want nil", cut, err)
+	}
+	if drought {
+		if err := w.SetRegenScales([]economysim.EndowmentScale{{Region: 0, Resource: 0, BP: s45Drought}}); err != nil {
+			t.Fatalf("SetRegenScales() = %v, want nil", err)
+		}
+	}
+}
+
+// TestScenarioS45_PublicShocks verifies RES-S5 and INT-S3 through the public slots
+// (SetCapacityScales, SetRegenScales, SetYieldShocks) on the field world of the
+// resources overlay: on each shape the stock after the blight and the drought equals,
+// tick for tick, the run the seam helpers make; the identity of the endowment holds
+// every tick with the calls counted; SetYieldShocks on the reaping recipe is listed
+// by Slots and emits YieldShocked.
+//
+// Requirement: FR-INT-041, FR-INT-042, FR-INT-045, FR-RES-025
+//
+// Guard: a public call that scaled something else than the seam helper (the capacity
+// instead of the stock, a key off by one) would move the trace.
+func TestScenarioS45_PublicShocks(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end scenario, skipped with -short")
+	}
+	for _, seed := range seedList(scenarioSeedCount()) {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			for _, sh := range s45Shapes() {
+				want := s45Trace(t, seed, sh.res, s45Capacity, sh.stock, true)
+				got := s45Calls(t, seed, sh.res, s45Capacity, sh.stock, true, true)
+				if !slices.Equal(got, want) {
+					t.Errorf("seed %d: %s stock through the public calls = %v, want the trace of the seam helpers %v", seed, sh.name, got, want)
+				}
+			}
+			s45YieldShock(t, seed)
+		})
+	}
+}
+
+// s45YieldShock sets a yield shock on the reaping recipe of the field world and checks
+// that Slots lists it, that one YieldShocked is emitted and that setting 10 000 bp clears it.
+func s45YieldShock(t *testing.T, seed uint64) {
+	t.Helper()
+	res := economysim.DefaultResource()
+	res.Shape, res.RateBP = economysim.ShapeRefill, 20_000
+	r := newFieldRun(t, fieldWorld(res, s45Capacity, s45Capacity, 5, 1_000, 1), seed)
+	r.step(t, seed)
+	shock := []economysim.YieldShock{{Region: 0, Recipe: 0, BP: s45Drought}}
+	if err := r.w.SetYieldShocks(shock); err != nil {
+		t.Fatalf("seed %d: SetYieldShocks() = %v, want nil", seed, err)
+	}
+	slots, err := r.w.Slots()
+	if err != nil || !slices.Equal(slots.YieldShocks, shock) {
+		t.Errorf("seed %d: Slots().YieldShocks = %v (err %v), want %v", seed, slots.YieldShocks, err, shock)
+	}
+	if got := eventsAs[economysim.YieldShocked](r.rec.events); len(got) != 1 || got[0].Tick != r.w.Tick() {
+		t.Errorf("seed %d: YieldShocked = %+v, want one stamped tick %d", seed, got, r.w.Tick())
+	}
+	r.step(t, seed)
+	shock[0].BP = 10_000
+	if err := r.w.SetYieldShocks(shock); err != nil {
+		t.Fatalf("seed %d: SetYieldShocks(default) = %v, want nil", seed, err)
+	}
+	if slots, _ := r.w.Slots(); len(slots.YieldShocks) != 0 {
+		t.Errorf("seed %d: Slots().YieldShocks after the default = %v, want none", seed, slots.YieldShocks)
 	}
 }

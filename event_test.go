@@ -76,6 +76,7 @@ var declaredEvents = []economysim.Event{
 	economysim.OutsideTraded{},
 	economysim.OutsideEnded{},
 	economysim.OutsideShocked{},
+	economysim.YieldShocked{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -86,7 +87,7 @@ var notBuiltEvents = []string{
 	"RoomLimited",
 	"TraineeshipStarted", "TraineeshipCompleted",
 	"TraineeshipEnded", "StoreChanged", "StoreLoss",
-	"YieldShocked", "RouteRiskScaled", "StoreRiskScaled",
+	"RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
 	"LoanPassed", "CreditRound", "CreditSettled", "CreditRateScaled",
 	"TechnologyAdvanced", "TechnologyAdjusted", "SettlementClassChanged",
@@ -102,9 +103,7 @@ var notBuiltEvents = []string{
 // row that is neither declared nor here is a forgotten event; an entry that is
 // declared in the code is stale. The change that declares the event deletes
 // its entry here and in notBuiltEvents.
-var deferredCore = map[string]string{
-	"YieldShocked": "Stage 2, integration.go (INT, PRO 6.8, roadmap-v1.md)",
-}
+var deferredCore = map[string]string{}
 
 // notBuiltFields names the Event.Field entries of a row of 4.1 whose module
 // has not appended the field to its declared event yet (D3 of the plan of

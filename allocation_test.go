@@ -19,6 +19,13 @@ const stepAllocBaseline = 70
 // not traced further. Raising it is a reviewed change (rule 8.2).
 const moneyStepAllocBaseline = 71
 
+// externalAgentStepAllocBaseline is the same measure for pack one with one external
+// directed agent added before the first step (NFR-INT-002): P1.9 itself allocates
+// nothing, so the figure is the off world's 70 plus 2 for the run the agent makes (it trades
+// like a household of its role, with the fallback strategy). Measured under -race.
+// Raising it is a reviewed change (rule 8.2).
+const externalAgentStepAllocBaseline = 72
+
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
 // panics in a parallel test. Allocation counts differ under -race, so the test
@@ -37,15 +44,22 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		name     string
 		layers   []string
 		baseline float64
+		external bool // an external agent is added before the first step (NFR-INT-002)
 	}{
-		{"one", packOne, stepAllocBaseline},
-		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline},
-		{"one+external", packExternal(), stepAllocBaseline}, // NFR-EXT-001: no more than the off world (36 measured)
+		{"one", packOne, stepAllocBaseline, false},
+		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline, false},
+		{"one+external-agent", packOne, externalAgentStepAllocBaseline, true},
+		{"one+external", packExternal(), stepAllocBaseline, false}, // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
 		if err != nil {
 			t.Fatalf("%s: NewWorld error = %v, want nil", row.name, err)
+		}
+		if row.external {
+			if _, err := w.AddAgent(economysim.NewAgent{Region: 0, Role: 0, Money: 1_000}); err != nil {
+				t.Fatalf("%s: AddAgent error = %v, want nil", row.name, err)
+			}
 		}
 		for i := range 50 {
 			if err := w.Step(); err != nil {

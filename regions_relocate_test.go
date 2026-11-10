@@ -9,8 +9,8 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// TestRelocate_RegionBound verifies, through the public query and the test seam
-// of the relocation, that a registered obligation refuses with a
+// TestRelocate_RegionBound verifies, through the public query and the public Relocate call,
+// that a registered obligation refuses with a
 // *RegionBoundError that names it and matches ErrRegionBound, that skipping it
 // by name or by every instance key lifts the refusal, that skipping one of two
 // instances does not, and that no other refusal is skipped.
@@ -49,8 +49,8 @@ func TestRelocate_RegionBound(t *testing.T) {
 			t.Errorf("%s: RelocationRefusal(%d, %d, %v) = %q, %v, want a region_bound refusal naming open_contract: %v", tt.name, holder, to, tt.skip, reason, err, tt.want)
 		}
 	}
-	if err := economysim.RelocateForTest(w, holder, to, economysim.CauseConsumer); !errors.Is(err, economysim.ErrRegionBound) {
-		t.Errorf("RelocateForTest = %v, want ErrRegionBound: the guarded path takes no skip", err)
+	if err := w.Relocate(holder, to); !errors.Is(err, economysim.ErrRegionBound) {
+		t.Errorf("Relocate = %v, want ErrRegionBound: the guarded path takes no skip", err)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestRelocate_ThroughAPackRun(t *testing.T) {
 			if err != nil {
 				t.Fatalf("seed %d: Snapshot() = %v, want nil", seed, err)
 			}
-			if err := economysim.RelocateForTest(w, holder, to, economysim.CauseConsumer); err != nil {
+			if err := w.Relocate(holder, to); err != nil {
 				t.Fatalf("seed %d: relocate(%d, %d) = %v, want nil", seed, holder, to, err)
 			}
 			if len(moves) != 1 || moves[0].Agent != holder || moves[0].From != from || moves[0].To != to {

@@ -92,7 +92,7 @@ func forageWorld(spec forageSpec) economysim.Config {
 // outage is the script of a failure of the market recipe of forageWorld: its
 // yield is 0 from tick 10 to tick 49 and whole again at 50
 // (testdata/chains/scripts/s56.toml).
-func outage(t testing.TB) []shockStep { return loadScript(t, "s56.toml") }
+func outage(t testing.TB) []scriptStep { return loadScript(t, "s56.toml") }
 
 // forageStats is what the subsistence scenarios keep of a run of forageWorld.
 type forageStats struct {
@@ -111,7 +111,7 @@ type forageStats struct {
 
 // runForage runs cfg for ticks under the script with the audit on and keeps the
 // forageStats (midTick is the step after which Mid is taken, or -1); a failure of a step or of the audit fails t with the seed.
-func runForage(t testing.TB, cfg economysim.Config, seed uint64, ticks, midTick int64, script []shockStep, opts ...economysim.Option) forageStats {
+func runForage(t testing.TB, cfg economysim.Config, seed uint64, ticks, midTick int64, script []scriptStep, opts ...economysim.Option) forageStats {
 	t.Helper()
 	scenSem <- struct{}{}
 	defer func() { <-scenSem }()
