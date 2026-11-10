@@ -3,6 +3,7 @@ package economysim
 import (
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/outside"
 )
@@ -209,6 +210,18 @@ func (w *World) loadExternal(_ *restoreCtx, r *codec.Reader) error {
 		if r.Err() == nil && !row.ended && side.TotalUnits > 0 && row.units >= side.TotalUnits {
 			r.Failf("a side that has traded all its %d units has not ended", side.TotalUnits)
 		}
+		if r.Err() != nil {
+			return
+		}
+		// Every unit trades at a limit of at least 1 and at most MaxPrice, and a side
+		// whose list value reached its cap ended in that trade (7.3, 7.4).
+		if row.listValue < row.units {
+			r.Failf("list value %d is below the %d units traded", row.listValue, row.units)
+		} else if top, ok := checked.Mul(row.units, MaxPrice); ok && row.listValue > top {
+			r.Failf("list value %d is above %d units at the largest price", row.listValue, row.units)
+		} else if !row.ended && row.listValue >= value {
+			r.Failf("a side that has used all its list value %d has not ended", value)
+		}
 	})
 	return nil
 }
@@ -289,8 +302,16 @@ func meanCapacity(s *OutsideSide, seasons []Season) int64 {
 	}
 	var weighted, days int64
 	for _, se := range seasons {
-		weighted += se.Days * seasonBP(s.Window, se.ID, wholeBP)
-		days += se.Days
+		part, ok := checked.Mul(se.Days, seasonBP(s.Window, se.ID, wholeBP))
+		sum, ok2 := checked.Add(weighted, part)
+		if !ok || !ok2 {
+			invariant("the weighted window of a validated side overflows")
+		}
+		weighted, days = sum, days+se.Days
 	}
-	return s.Capacity * weighted / (days * wholeBP) // a valid calendar's seasons sum to its days, at least 1
+	mean, ok := checked.MulDiv(s.Capacity, weighted, days*wholeBP)
+	if !ok { // a valid calendar's seasons sum to its days, at least 1
+		invariant("the mean capacity of a validated side is out of its domain")
+	}
+	return mean
 }
