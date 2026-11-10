@@ -143,11 +143,7 @@ func (x *external) addCounterparties(c *Config, n *OutsideNode, node RegionID, f
 func (x *external) addCounterparty(cp counterparty, n *OutsideNode, firstLine int) {
 	cp.first = len(x.rows)
 	for li := range n.Lines {
-		s := &n.Lines[li].Sell
-		if cp.buy {
-			s = &n.Lines[li].Buy
-		}
-		if s.present() {
+		if n.Lines[li].side(cp.buy).present() {
 			x.rows = append(x.rows, sideRow{line: firstLine + li})
 		}
 	}
@@ -378,8 +374,8 @@ func (w *World) boundaryBalance(r ledger.Reason, thing int) int64 {
 // auditMoney checks the signs of the three money reasons: a faucet's balance is
 // not positive and a sink's is not negative.
 func (x *external) auditMoney(w *World) error {
-	if w.boundaryBalance(ledger.OutsideBudget, ledger.Money) > 0 {
-		return fmt.Errorf("outside_budget: boundary balance %d is positive, want a faucet's balance (not positive)", w.boundaryBalance(ledger.OutsideBudget, ledger.Money))
+	if b := w.boundaryBalance(ledger.OutsideBudget, ledger.Money); b > 0 {
+		return fmt.Errorf("outside_budget: boundary balance %d is positive, want a faucet's balance (not positive)", b)
 	}
 	for _, r := range []ledger.Reason{ledger.OutsideUnspent, ledger.OutsideReceipts} {
 		if b := w.boundaryBalance(r, ledger.Money); b < 0 {
@@ -498,6 +494,14 @@ func (n *OutsideNode) gateScale(g string) int64 {
 // present reports that a side exists: a Capacity of 0 is an absent side
 // (spec-external-sector.md 3.3.3).
 func (s *OutsideSide) present() bool { return s.Capacity > 0 }
+
+// side returns the buy side of a line when buy is set and the sell side otherwise.
+func (l *OutsideLine) side(buy bool) *OutsideSide {
+	if buy {
+		return &l.Buy
+	}
+	return &l.Sell
+}
 
 // edgeGates returns the gates of a node read from the edges as given
 // (spec-external-sector.md 3.2.1): sell are the regions the node has a direct
@@ -1145,10 +1149,7 @@ func (w *World) lineOrder(cp *counterparty, row *sideRow) error {
 	if row.ended {
 		return nil
 	}
-	side := &l.cfg.Sell
-	if cp.buy {
-		side = &l.cfg.Buy
-	}
+	side := l.cfg.side(cp.buy)
 	avail := seasonBP(side.Window, w.seasonID(), wholeBP)
 	wanted, carry := outside.Want(side.Capacity, avail, row.carry)
 	row.carry, row.t.wanted, row.t.mid, row.t.clamped = carry, wanted, l.mid, l.clamped
@@ -1333,10 +1334,7 @@ func (x *external) settleRow(w *World, cp *counterparty, row *sideRow, l *outsid
 	if t.limit < 1 {
 		return nil // no quote was made: nothing was offered and nothing can end
 	}
-	side := &l.cfg.Sell
-	if cp.buy {
-		side = &l.cfg.Buy
-	}
+	side := l.cfg.side(cp.buy)
 	next, listValue, ok := row.capOf(side).Settle(t.traded, t.limit)
 	if !ok {
 		invariant("a side traded more than its caps allowed")
