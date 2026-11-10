@@ -1,0 +1,293 @@
+# Generated from testdata/chains/five.toml by rename.sh; do not edit.
+[region.highmarch]
+reference_basket = 1318
+extra_upkeep = [ { commodity = "cloth", quantity = 1 }, { commodity = "pots", quantity = 1 }, { commodity = "chairs", quantity = 1 } ]
+[region.highmarch.yield.cut_firewood]
+all = 12000
+[region.highmarch.yield.dig_ore]
+all = 8000
+[region.highmarch.yield.shear_wool]
+all = 12000
+[region.highmarch.yield.shear_wool_deep]
+all = 12000
+[region.highmarch.yield.dig_clay]
+all = 8000
+[region.highmarch.yield.dig_clay_deep]
+all = 8000
+[region.highmarch.yield.fell_timber]
+all = 10000
+[region.highmarch.yield.fell_timber_deep]
+all = 10000
+[region.highmarch.yield.render_tallow]
+all = 6000
+[region.highmarch.yield.render_tallow_deep]
+all = 6000
+[region.highmarch.yield.knap_flint]
+all = 10000
+[region.highmarch.yield.knap_flint_deep]
+all = 10000
+[region.highmarch.yield.gather_seedcorn]
+all = 10000
+[region.highmarch.yield.grow_grain]
+seasons = { sowing = 10000 }
+[region.highmarch.group.baker]
+households = 222
+[region.highmarch.group.weaver]
+households = 53
+[region.highmarch.group.potter]
+households = 53
+[region.highmarch.group.joiner]
+households = 53
+[region.highmarch.group.miner]
+households = 75
+[region.highmarch.group.woodcutter]
+households = 126
+[region.highmarch.group.shepherd]
+households = 6
+[region.highmarch.group.claydigger]
+households = 9
+[region.highmarch.group.logger]
+households = 7
+[region.highmarch.group.farmer]
+households = 414
+[region.highmarch.group.smith]
+households = 110
+[region.highmarch.group.smelter]
+households = 72
+
+[region.eastvale]
+reference_basket = 1298
+extra_upkeep = [ { commodity = "boots", quantity = 1 }, { commodity = "nets", quantity = 1 }, { commodity = "candles", quantity = 1 } ]
+[region.eastvale.yield.cut_firewood]
+all = 8000
+[region.eastvale.yield.dig_ore]
+all = 5000
+[region.eastvale.yield.shear_wool]
+all = 6000
+[region.eastvale.yield.shear_wool_deep]
+all = 6000
+[region.eastvale.yield.hunt_hides]
+all = 10000
+[region.eastvale.yield.hunt_hides_deep]
+all = 10000
+[region.eastvale.yield.fell_timber]
+all = 8000
+[region.eastvale.yield.fell_timber_deep]
+all = 8000
+[region.eastvale.yield.cut_reeds]
+all = 12000
+[region.eastvale.yield.cut_reeds_deep]
+all = 12000
+[region.eastvale.yield.render_tallow]
+all = 10000
+[region.eastvale.yield.render_tallow_deep]
+all = 10000
+[region.eastvale.yield.gather_seedcorn]
+all = 10000
+[region.eastvale.yield.grow_grain]
+seasons = { sowing = 12000, harvest = 7000 }
+[region.eastvale.group.baker]
+households = 200
+[region.eastvale.group.tanner]
+households = 48
+[region.eastvale.group.ropemaker]
+households = 48
+[region.eastvale.group.chandler]
+households = 48
+[region.eastvale.group.miner]
+households = 108
+[region.eastvale.group.woodcutter]
+households = 171
+[region.eastvale.group.hunter]
+households = 6
+[region.eastvale.group.reedcutter]
+households = 5
+[region.eastvale.group.renderer]
+households = 6
+[region.eastvale.group.farmer]
+households = 196
+[region.eastvale.group.smith]
+households = 99
+[region.eastvale.group.smelter]
+households = 65
+
+[region.southfen]
+reference_basket = 1304
+extra_upkeep = [ { commodity = "pots", quantity = 1 }, { commodity = "candles", quantity = 1 }, { commodity = "knives", quantity = 1 } ]
+[region.southfen.yield.cut_firewood]
+all = 6000
+[region.southfen.yield.dig_ore]
+all = 6000
+[region.southfen.yield.hunt_hides]
+all = 12000
+[region.southfen.yield.hunt_hides_deep]
+all = 12000
+[region.southfen.yield.dig_clay]
+all = 10000
+[region.southfen.yield.dig_clay_deep]
+all = 10000
+[region.southfen.yield.cut_reeds]
+all = 8000
+[region.southfen.yield.cut_reeds_deep]
+all = 8000
+[region.southfen.yield.render_tallow]
+all = 12000
+[region.southfen.yield.render_tallow_deep]
+all = 12000
+[region.southfen.yield.knap_flint]
+all = 6000
+[region.southfen.yield.knap_flint_deep]
+all = 6000
+[region.southfen.yield.gather_seedcorn]
+all = 10000
+[region.southfen.yield.grow_grain]
+seasons = { harvest = 10000 }
+[region.southfen.group.baker]
+households = 164
+[region.southfen.group.potter]
+households = 39
+[region.southfen.group.chandler]
+households = 39
+[region.southfen.group.cutler]
+households = 39
+[region.southfen.group.miner]
+households = 74
+[region.southfen.group.woodcutter]
+households = 187
+[region.southfen.group.claydigger]
+households = 5
+[region.southfen.group.renderer]
+households = 4
+[region.southfen.group.knapper]
+households = 9
+[region.southfen.group.farmer]
+households = 306
+[region.southfen.group.smith]
+households = 81
+[region.southfen.group.smelter]
+households = 53
+
+[region.coastland]
+reference_basket = 1309
+extra_upkeep = [ { commodity = "cloth", quantity = 1 }, { commodity = "pots", quantity = 1 }, { commodity = "nets", quantity = 1 } ]
+[region.coastland.yield.cut_firewood]
+all = 10000
+[region.coastland.yield.dig_ore]
+all = 15000
+[region.coastland.yield.shear_wool]
+all = 10000
+[region.coastland.yield.shear_wool_deep]
+all = 10000
+[region.coastland.yield.hunt_hides]
+all = 8000
+[region.coastland.yield.hunt_hides_deep]
+all = 8000
+[region.coastland.yield.dig_clay]
+all = 12000
+[region.coastland.yield.dig_clay_deep]
+all = 12000
+[region.coastland.yield.fell_timber]
+all = 6000
+[region.coastland.yield.fell_timber_deep]
+all = 6000
+[region.coastland.yield.cut_reeds]
+all = 10000
+[region.coastland.yield.cut_reeds_deep]
+all = 10000
+[region.coastland.yield.knap_flint]
+all = 8000
+[region.coastland.yield.knap_flint_deep]
+all = 8000
+[region.coastland.yield.gather_seedcorn]
+all = 10000
+[region.coastland.yield.grow_grain]
+seasons = { sowing = 8000, growing = 6000 }
+[region.coastland.group.baker]
+households = 165
+[region.coastland.group.weaver]
+households = 40
+[region.coastland.group.potter]
+households = 40
+[region.coastland.group.ropemaker]
+households = 39
+[region.coastland.group.miner]
+households = 30
+[region.coastland.group.woodcutter]
+households = 112
+[region.coastland.group.shepherd]
+households = 5
+[region.coastland.group.claydigger]
+households = 4
+[region.coastland.group.reedcutter]
+households = 5
+[region.coastland.group.farmer]
+households = 222
+[region.coastland.group.smith]
+households = 84
+[region.coastland.group.smelter]
+households = 54
+
+[region.crownlands]
+reference_basket = 1319
+extra_upkeep = [ { commodity = "chairs", quantity = 1 }, { commodity = "knives", quantity = 1 }, { commodity = "cloth", quantity = 1 } ]
+[region.crownlands.yield.cut_firewood]
+all = 14000
+[region.crownlands.yield.dig_ore]
+all = 10000
+[region.crownlands.yield.shear_wool]
+all = 8000
+[region.crownlands.yield.shear_wool_deep]
+all = 8000
+[region.crownlands.yield.hunt_hides]
+all = 6000
+[region.crownlands.yield.hunt_hides_deep]
+all = 6000
+[region.crownlands.yield.dig_clay]
+all = 6000
+[region.crownlands.yield.dig_clay_deep]
+all = 6000
+[region.crownlands.yield.fell_timber]
+all = 12000
+[region.crownlands.yield.fell_timber_deep]
+all = 12000
+[region.crownlands.yield.cut_reeds]
+all = 6000
+[region.crownlands.yield.cut_reeds_deep]
+all = 6000
+[region.crownlands.yield.render_tallow]
+all = 8000
+[region.crownlands.yield.render_tallow_deep]
+all = 8000
+[region.crownlands.yield.knap_flint]
+all = 12000
+[region.crownlands.yield.knap_flint_deep]
+all = 12000
+[region.crownlands.yield.gather_seedcorn]
+all = 10000
+[region.crownlands.yield.grow_grain]
+seasons = { sowing = 8000, harvest = 8000 }
+[region.crownlands.group.baker]
+households = 218
+[region.crownlands.group.weaver]
+households = 52
+[region.crownlands.group.joiner]
+households = 52
+[region.crownlands.group.cutler]
+households = 52
+[region.crownlands.group.miner]
+households = 60
+[region.crownlands.group.woodcutter]
+households = 107
+[region.crownlands.group.shepherd]
+households = 9
+[region.crownlands.group.logger]
+households = 6
+[region.crownlands.group.knapper]
+households = 6
+[region.crownlands.group.farmer]
+households = 256
+[region.crownlands.group.smith]
+households = 110
+[region.crownlands.group.smelter]
+households = 72
+

@@ -1,0 +1,5 @@
+# The default calendar (defaults.go DefaultCalendar) with the seasons in the realm's
+# words: same lengths, same start day, so the yields of five mean what they meant.
+[calendar]
+seasons = [ { id = "sowing", days = 92 }, { id = "growing", days = 92 }, { id = "harvest", days = 91 }, { id = "fallow", days = 90 } ]
+season_start = 59

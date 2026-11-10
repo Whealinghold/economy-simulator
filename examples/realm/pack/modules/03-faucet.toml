@@ -1,0 +1,8 @@
+# Generated from testdata/chains/overlay/faucet.toml by rename.sh; do not edit.
+[modules.money_supply]
+
+[modules.money_supply.flow.stipend]
+kind = "grant"
+target = { kind = "households", role = "farmer", region = "highmarch" }
+amount = 20
+per = "tick"

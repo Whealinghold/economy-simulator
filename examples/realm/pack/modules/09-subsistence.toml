@@ -1,0 +1,49 @@
+# Generated from testdata/chains/all/subsistence.toml by rename.sh; do not edit.
+[recipe.own_grain]
+duration = 1
+sited = true
+outputs = [ { commodity = "grain", quantity = 2, cost_share = 10000 } ]
+[recipe.own_bread]
+duration = 1
+sited = true
+outputs = [ { commodity = "bread", quantity = 1, cost_share = 10000 } ]
+[recipe.own_firewood]
+duration = 1
+sited = true
+outputs = [ { commodity = "firewood", quantity = 1, cost_share = 10000 } ]
+[region.highmarch.yield.own_grain]
+all = 10000
+[region.highmarch.yield.own_bread]
+all = 10000
+[region.highmarch.yield.own_firewood]
+all = 10000
+[region.eastvale.yield.own_grain]
+all = 10000
+[region.eastvale.yield.own_bread]
+all = 10000
+[region.eastvale.yield.own_firewood]
+all = 10000
+[region.southfen.yield.own_grain]
+all = 10000
+[region.southfen.yield.own_bread]
+all = 10000
+[region.southfen.yield.own_firewood]
+all = 10000
+[region.coastland.yield.own_grain]
+all = 10000
+[region.coastland.yield.own_bread]
+all = 10000
+[region.coastland.yield.own_firewood]
+all = 10000
+[region.crownlands.yield.own_grain]
+all = 10000
+[region.crownlands.yield.own_bread]
+all = 10000
+[region.crownlands.yield.own_firewood]
+all = 10000
+
+[modules.subsistence]
+recipes = [ "own_firewood", "own_bread", "own_grain" ]
+
+[modules.subsistence.role.traveller]
+recipes = []

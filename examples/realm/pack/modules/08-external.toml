@@ -1,0 +1,21 @@
+# Generated from testdata/chains/overlay/external.toml by rename.sh; do not edit.
+[region.overseas]
+[region.highmarch.edge.overseas]
+distance = 100
+[region.overseas.edge.highmarch]
+distance = 100
+
+[modules.external.node.overseas.line.firewood]
+base = 179
+walk_step_bp = 100
+walk_revert_bp = 500
+walk_bound_bp = 1000
+[modules.external.node.overseas.line.firewood.sell]
+margin_bp = 200
+capacity = 20
+
+[modules.external.node.overseas.line.grain]
+base = 96
+[modules.external.node.overseas.line.grain.buy]
+margin_bp = 1000
+capacity = 30

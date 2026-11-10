@@ -1,0 +1,9 @@
+# Generated from testdata/chains/overlay/migration.toml by rename.sh; do not edit.
+
+[modules.information]
+info_speed = 50
+rumour_error_bp = 500
+rumour_max_age = 60
+
+[modules.migration]
+move_speed = 100

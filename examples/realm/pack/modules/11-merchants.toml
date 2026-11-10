@@ -1,0 +1,29 @@
+# Generated from testdata/chains/all/merchants.toml by rename.sh; do not edit.
+
+[modules.merchants]
+max_open = 200
+
+[role.trader]
+strategy = "merchant"
+informed = true
+trades = [ "firewood", "ore", "cartage" ]
+merchant_fee_share = 5000
+start_money = 5000
+start_stock = [ { commodity = "firewood", quantity = 30 }, { commodity = "cartage", quantity = 20 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
+
+[role.trader.merchant]
+modes = [ "coach" ]
+lot_units = 4
+consigns = true
+take_units = 100
+
+[region.highmarch.group.trader]
+households = 4
+[region.eastvale.group.trader]
+households = 4
+[region.southfen.group.trader]
+households = 4
+[region.coastland.group.trader]
+households = 4
+[region.crownlands.group.trader]
+households = 4

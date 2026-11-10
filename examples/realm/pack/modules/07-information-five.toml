@@ -1,0 +1,66 @@
+# Generated from testdata/chains/overlay/information-five.toml by rename.sh; do not edit.
+
+[modules.information]
+info_speed = 50
+rumour_error_bp = 500
+rumour_max_age = 60
+
+[role.baker]
+informed = true
+
+[role.weaver]
+informed = true
+
+[role.tanner]
+informed = true
+
+[role.potter]
+informed = true
+
+[role.joiner]
+informed = true
+
+[role.ropemaker]
+informed = true
+
+[role.chandler]
+informed = true
+
+[role.cutler]
+informed = true
+
+[role.miner]
+informed = true
+
+[role.woodcutter]
+informed = true
+
+[role.shepherd]
+informed = true
+
+[role.hunter]
+informed = true
+
+[role.claydigger]
+informed = true
+
+[role.logger]
+informed = true
+
+[role.reedcutter]
+informed = true
+
+[role.renderer]
+informed = true
+
+[role.knapper]
+informed = true
+
+[role.farmer]
+informed = true
+
+[role.smith]
+informed = true
+
+[role.smelter]
+informed = true

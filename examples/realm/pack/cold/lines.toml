@@ -1,0 +1,247 @@
+# Generated from testdata/chains/lines.toml by rename.sh; do not edit.
+[commodity.wool]
+reference_price = 127
+raw = true
+classes = [ "raw_line" ]
+[commodity.yarn]
+reference_price = 509
+classes = [ "semi_line" ]
+[commodity.cloth]
+reference_price = 107
+classes = [ "good_line" ]
+
+[commodity.hides]
+reference_price = 111
+raw = true
+classes = [ "raw_line" ]
+[commodity.leather]
+reference_price = 460
+classes = [ "semi_line" ]
+[commodity.boots]
+reference_price = 101
+classes = [ "good_line" ]
+
+[commodity.clay]
+reference_price = 121
+raw = true
+classes = [ "raw_line" ]
+[commodity.brick]
+reference_price = 486
+classes = [ "semi_line" ]
+[commodity.pots]
+reference_price = 103
+classes = [ "good_line" ]
+
+[commodity.timber]
+reference_price = 116
+raw = true
+classes = [ "raw_line" ]
+[commodity.planks]
+reference_price = 512
+classes = [ "semi_line" ]
+[commodity.chairs]
+reference_price = 109
+classes = [ "good_line" ]
+
+[commodity.reeds]
+reference_price = 104
+raw = true
+classes = [ "raw_line" ]
+[commodity.rope]
+reference_price = 465
+classes = [ "semi_line" ]
+[commodity.nets]
+reference_price = 100
+classes = [ "good_line" ]
+
+[commodity.tallow]
+reference_price = 100
+raw = true
+classes = [ "raw_line" ]
+[commodity.wax]
+reference_price = 446
+classes = [ "semi_line" ]
+[commodity.candles]
+reference_price = 98
+classes = [ "good_line" ]
+
+[commodity.flint]
+reference_price = 141
+raw = true
+classes = [ "raw_line" ]
+[commodity.blades]
+reference_price = 496
+classes = [ "semi_line" ]
+[commodity.knives]
+reference_price = 104
+classes = [ "good_line" ]
+
+[recipe.shear_wool]
+sited = true
+outputs  = [ { commodity = "wool", quantity = 20, cost_share = 10000 } ]
+[recipe.shear_wool_deep]
+sited = true
+outputs  = [ { commodity = "wool", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.spin_yarn]
+duration = 2
+inputs   = [ { commodity = "wool", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "yarn", quantity = 12, cost_share = 10000 } ]
+[recipe.weave_cloth]
+inputs   = [ { commodity = "yarn", quantity = 12 } ]
+outputs  = [ { commodity = "cloth", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.weave_cloth_plain]
+trainee_eligible = true
+trainee_yield = 3000
+inputs   = [ { commodity = "yarn", quantity = 12 } ]
+outputs  = [ { commodity = "cloth", quantity = 30, cost_share = 10000 } ]
+
+[recipe.hunt_hides]
+sited = true
+outputs  = [ { commodity = "hides", quantity = 20, cost_share = 10000 } ]
+[recipe.hunt_hides_deep]
+sited = true
+outputs  = [ { commodity = "hides", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.tan_leather]
+duration = 2
+inputs   = [ { commodity = "hides", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "leather", quantity = 12, cost_share = 10000 } ]
+[recipe.sew_boots]
+inputs   = [ { commodity = "leather", quantity = 12 } ]
+outputs  = [ { commodity = "boots", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.sew_boots_plain]
+inputs   = [ { commodity = "leather", quantity = 12 } ]
+outputs  = [ { commodity = "boots", quantity = 30, cost_share = 10000 } ]
+
+[recipe.dig_clay]
+sited = true
+outputs  = [ { commodity = "clay", quantity = 20, cost_share = 10000 } ]
+[recipe.dig_clay_deep]
+sited = true
+outputs  = [ { commodity = "clay", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.fire_brick]
+duration = 2
+inputs   = [ { commodity = "clay", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "brick", quantity = 12, cost_share = 10000 } ]
+[recipe.throw_pots]
+inputs   = [ { commodity = "brick", quantity = 12 } ]
+outputs  = [ { commodity = "pots", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.throw_pots_plain]
+inputs   = [ { commodity = "brick", quantity = 12 } ]
+outputs  = [ { commodity = "pots", quantity = 30, cost_share = 10000 } ]
+
+[recipe.fell_timber]
+sited = true
+outputs  = [ { commodity = "timber", quantity = 20, cost_share = 10000 } ]
+[recipe.fell_timber_deep]
+sited = true
+outputs  = [ { commodity = "timber", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.saw_planks]
+duration = 2
+inputs   = [ { commodity = "timber", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "planks", quantity = 12, cost_share = 10000 } ]
+[recipe.join_chairs]
+inputs   = [ { commodity = "planks", quantity = 12 } ]
+outputs  = [ { commodity = "chairs", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.join_chairs_plain]
+inputs   = [ { commodity = "planks", quantity = 12 } ]
+outputs  = [ { commodity = "chairs", quantity = 30, cost_share = 10000 } ]
+
+[recipe.cut_reeds]
+sited = true
+outputs  = [ { commodity = "reeds", quantity = 20, cost_share = 10000 } ]
+[recipe.cut_reeds_deep]
+sited = true
+outputs  = [ { commodity = "reeds", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.twist_rope]
+duration = 2
+inputs   = [ { commodity = "reeds", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "rope", quantity = 12, cost_share = 10000 } ]
+[recipe.knot_nets]
+inputs   = [ { commodity = "rope", quantity = 12 } ]
+outputs  = [ { commodity = "nets", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.knot_nets_plain]
+inputs   = [ { commodity = "rope", quantity = 12 } ]
+outputs  = [ { commodity = "nets", quantity = 30, cost_share = 10000 } ]
+
+[recipe.render_tallow]
+sited = true
+outputs  = [ { commodity = "tallow", quantity = 20, cost_share = 10000 } ]
+[recipe.render_tallow_deep]
+sited = true
+outputs  = [ { commodity = "tallow", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.refine_wax]
+duration = 2
+inputs   = [ { commodity = "tallow", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "wax", quantity = 12, cost_share = 10000 } ]
+[recipe.dip_candles]
+inputs   = [ { commodity = "wax", quantity = 12 } ]
+outputs  = [ { commodity = "candles", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.dip_candles_plain]
+inputs   = [ { commodity = "wax", quantity = 12 } ]
+outputs  = [ { commodity = "candles", quantity = 30, cost_share = 10000 } ]
+
+[recipe.knap_flint]
+sited = true
+outputs  = [ { commodity = "flint", quantity = 20, cost_share = 10000 } ]
+[recipe.knap_flint_deep]
+sited = true
+outputs  = [ { commodity = "flint", quantity = 28, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+[recipe.flake_blades]
+duration = 2
+inputs   = [ { commodity = "flint", quantity = 8 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "blades", quantity = 12, cost_share = 10000 } ]
+[recipe.grind_knives]
+inputs   = [ { commodity = "blades", quantity = 12 } ]
+outputs  = [ { commodity = "knives", quantity = 100, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.grind_knives_plain]
+inputs   = [ { commodity = "blades", quantity = 12 } ]
+outputs  = [ { commodity = "knives", quantity = 30, cost_share = 10000 } ]
+
+[role.shepherd]
+recipes = [ "shear_wool", "shear_wool_deep" ]
+[role.weaver]
+recipes = [ "spin_yarn", "weave_cloth", "weave_cloth_plain" ]
+
+[role.hunter]
+recipes = [ "hunt_hides", "hunt_hides_deep" ]
+[role.tanner]
+recipes = [ "tan_leather", "sew_boots", "sew_boots_plain" ]
+
+[role.claydigger]
+recipes = [ "dig_clay", "dig_clay_deep" ]
+[role.potter]
+recipes = [ "fire_brick", "throw_pots", "throw_pots_plain" ]
+
+[role.logger]
+recipes = [ "fell_timber", "fell_timber_deep" ]
+[role.joiner]
+recipes = [ "saw_planks", "join_chairs", "join_chairs_plain" ]
+
+[role.reedcutter]
+recipes = [ "cut_reeds", "cut_reeds_deep" ]
+[role.ropemaker]
+recipes = [ "twist_rope", "knot_nets", "knot_nets_plain" ]
+
+[role.renderer]
+recipes = [ "render_tallow", "render_tallow_deep" ]
+[role.chandler]
+recipes = [ "refine_wax", "dip_candles", "dip_candles_plain" ]
+
+[role.knapper]
+recipes = [ "knap_flint", "knap_flint_deep" ]
+[role.cutler]
+recipes = [ "flake_blades", "grind_knives", "grind_knives_plain" ]

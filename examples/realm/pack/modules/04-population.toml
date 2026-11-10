@@ -1,0 +1,10 @@
+# Generated from testdata/chains/overlay/population.toml by rename.sh; do not edit.
+
+[world]
+renewal = 0
+
+[modules.population]
+birth_schedule = [ { ratio = 8000, rate = 250 }, { ratio = 16000, rate = 250 } ]
+death_schedule = [ { ratio = 8000, rate = 450 }, { ratio = 16000, rate = 50 } ]
+min_households = 1
+birth_stake = 10000

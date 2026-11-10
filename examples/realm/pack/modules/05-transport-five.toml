@@ -1,0 +1,42 @@
+# Generated from testdata/chains/overlay/transport-five.toml by rename.sh; do not edit.
+
+[commodity.cartage]
+reference_price = 400
+shelf_life = 2
+
+[recipe.run_cart]
+duration = 4
+inputs   = [ { commodity = "firewood", quantity = 2 } ]
+outputs  = [ { commodity = "cartage", quantity = 4, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 1 } ]
+
+[role.carter]
+recipes = [ "run_cart" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 }, { commodity = "plough", quantity = 1 } ]
+
+[modules.transport.mode.foot]
+speed = 20
+unit_mass = 40
+unit_bulk = 30
+
+[modules.transport.mode.coach]
+speed = 30
+unit_mass = 1200
+unit_bulk = 900
+haul = "cartage"
+haul_span = 10
+
+[region.crownlands.group.carter]
+households = 12
+
+[region.eastvale.group.carter]
+households = 12
+
+[region.highmarch.group.carter]
+households = 12
+
+[region.southfen.group.carter]
+households = 12
+
+[region.coastland.group.carter]
+households = 12
