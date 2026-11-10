@@ -1,6 +1,7 @@
 package otelobserver_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
@@ -94,3 +96,26 @@ func TestNew_InstrumentErrorIsReturned(t *testing.T) {
 		t.Errorf("New(refusing meter) = %v, %v, want nil and %v", obs, err, errInstrument)
 	}
 }
+
+// TestNew_ScopeIsModulePath verifies that the meter's instrumentation scope is
+// the module path (rules 6.3).
+//
+// Requirement: FR-OBS-050
+func TestNew_ScopeIsModulePath(t *testing.T) {
+	h := newHarness(t)
+	h.send(allEvents[3], allEvents[4]) // TickStarted, TickEnded: one duration point
+	var rm = collectRaw(t, h)
+	if len(rm.ScopeMetrics) != 1 || rm.ScopeMetrics[0].Scope.Name != "github.com/Whealinghold/economy-sim/otelobserver" {
+		t.Errorf("scopes = %v, want one named after the module path", rm.ScopeMetrics)
+	}
+}
+
+func collectRaw(t *testing.T, h *harness) (rm resourceMetrics) {
+	t.Helper()
+	if err := h.read.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("Collect() error = %v, want nil", err)
+	}
+	return rm
+}
+
+type resourceMetrics = metricdata.ResourceMetrics

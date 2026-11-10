@@ -51,6 +51,12 @@ type Observer struct {
 	clock  func() time.Time
 	tracer trace.Tracer
 	inst   [nInstruments]instrument
+
+	names names
+	hot   hot
+
+	inStep    bool
+	stepStart time.Time
 }
 
 var _ economysim.Observer = (*Observer)(nil)
@@ -103,7 +109,3 @@ func build(m metric.Meter, s *spec) (in instrument, err error) {
 // bg is the context of every SDK call: the adapter has no context of its own
 // and the world's calls carry none.
 var bg = context.Background()
-
-// Observe implements economysim.Observer. It ignores every event until the
-// handlers of the following phases exist.
-func (o *Observer) Observe(economysim.Event) {}
