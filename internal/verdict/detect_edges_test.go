@@ -1,6 +1,7 @@
 package verdict_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/verdict"
@@ -321,5 +322,19 @@ func TestRenderVerdict_Hostile(t *testing.T) {
 		"regime R9 none   Rx none\n"
 	if got := verdict.RenderVerdict(r); got != want {
 		t.Errorf("RenderVerdict(hostile) =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestRenderStability_Hostile verifies that a caller's string cannot forge a
+// claim line.
+//
+// Requirement: FR-STY-085
+func TestRenderStability_Hostile(t *testing.T) {
+	t.Parallel()
+	s := verdict.Stability{Pack: "p\nclaim stable", Points: []verdict.StabilityPoint{{Name: "default\nclaim stable"}}}
+	for _, line := range strings.Split(verdict.RenderStability(s), "\n") {
+		if strings.HasPrefix(line, "claim stable") {
+			t.Errorf("forged line %q", line)
+		}
 	}
 }

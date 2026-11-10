@@ -241,9 +241,10 @@ func ClaimOf(points []StabilityPoint) string {
 // points are written in the order given.
 func RenderStability(s Stability) string {
 	var b strings.Builder
+	s.Pack, s.Seeds, s.Commit, s.Config = oneLine(s.Pack), oneLine(s.Seeds), oneLine(s.Commit), oneLine(s.Config)
 	b.WriteString("stability pack " + s.Pack + "  seeds " + s.Seeds + "  commit " + s.Commit + "  config " + s.Config + "\n")
 	for _, p := range s.Points {
-		b.WriteString("point " + p.Name)
+		b.WriteString("point " + oneLine(p.Name))
 		for i, name := range Checks() {
 			b.WriteString("  " + name + " " + p.Checks[i].String())
 		}
@@ -265,6 +266,7 @@ func flatRecord(r Record) Record {
 		sc.Scenario = oneLine(sc.Scenario)
 		sc.Facts = slices.Clone(sc.Facts)
 		for j, f := range sc.Facts {
+			f.Class = FactClass(oneLine(string(f.Class)))
 			f.ID, f.Statistic, f.Region, f.Role, f.Reason = oneLine(f.ID), oneLine(f.Statistic), oneLine(f.Region), oneLine(f.Role), oneLine(f.Reason)
 			sc.Facts[j] = f
 		}

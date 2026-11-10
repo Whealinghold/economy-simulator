@@ -286,7 +286,8 @@ func detectR9(in Input, t Thresholds) Verdict {
 
 // detectR2: the volume of the last window is below r2.vol_bp of the first and
 // one of the pool, escrow and treasury share, the unsold share or the top
-// decile share is at or above its threshold (STY 6.2, FR-STY-062; the top
+// decile share is at or above its threshold for r2.windows consecutive
+// windows, as the other two are (STY 6.2, FR-STY-062; the top
 // decile conjunct is open item O7). Low activity never makes it unknown: a
 // fall of activity is its subject.
 func detectR2(in Input, t Thresholds) Verdict {
