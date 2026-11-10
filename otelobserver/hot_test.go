@@ -227,3 +227,63 @@ func TestWorldCreated_ForgetsThePreviousWorld(t *testing.T) {
 		t.Errorf("market.orders{z, y, bid} = %d, %v, want 1, true", v, ok)
 	}
 }
+
+// TestSeries_EveryCellHasItsAttributes verifies that each cell of the dense
+// accumulators is recorded under its own commodity, region, side and reason: it
+// sends a different count to each of the 3 x 3 x 2 order series, the 3 x 3
+// rejection series and the 3 x 3 estate series, and reads each back by its
+// attributes.
+//
+// Guard: a cell is decoded back to attributes by mixed radix, and a wrong radix
+// moves a count to another series without changing any total.
+func TestSeries_EveryCellHasItsAttributes(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	tick(h, 0, cellEvents()...)
+	got := h.collect()
+	for c := 0; c < 3; c++ {
+		cn := "c" + string(rune('0'+c))
+		for r := 0; r < 3; r++ {
+			rn := "r" + string(rune('0'+r))
+			for s := 0; s < 2; s++ {
+				want := int64(1 + c*6 + r*2 + s)
+				if v, _ := got.get("market.orders", "commodity", cn, "region", rn, "side", cellSides[s]); v != want {
+					t.Errorf("market.orders{%s, %s, %s} = %d, want %d", cn, rn, cellSides[s], v, want)
+				}
+			}
+			want := int64(1 + c*3 + r)
+			if v, _ := got.get("market.orders.rejected", "commodity", cn, "reason", cellReasons[r]); v != want {
+				t.Errorf("market.orders.rejected{%s, %s} = %d, want %d", cn, cellReasons[r], v, want)
+			}
+			if v, _ := got.get("estate.sold", "commodity", cn, "region", rn); v != want {
+				t.Errorf("estate.sold{%s, %s} = %d, want %d", cn, rn, v, want)
+			}
+		}
+	}
+}
+
+var (
+	cellReasons = []string{"a", "b", "c"}
+	cellSides   = []string{"bid", "ask"}
+)
+
+// cellEvents sends a different count to each series: 1+6c+2r+s orders for
+// (c, r, side s), and 1+3c+r rejections and estate trades of quantity 1.
+func cellEvents() (es []economysim.Event) {
+	for c := 0; c < 3; c++ {
+		for r := 0; r < 3; r++ {
+			cid, rid := economysim.CommodityID(c), economysim.RegionID(r)
+			for s := 0; s < 2; s++ {
+				for n := 0; n < 1+c*6+r*2+s; n++ {
+					es = append(es, economysim.OrderPlaced{Commodity: cid, Region: rid, Side: economysim.Side(s)})
+				}
+			}
+			for n := 0; n < 1+c*3+r; n++ {
+				es = append(es,
+					economysim.OrderRejected{Commodity: cid, Reason: economysim.Reason(cellReasons[r])},
+					economysim.TradeExecuted{Commodity: cid, Region: rid, Seller: economysim.AgentID(r), Quantity: 1})
+			}
+		}
+	}
+	return es
+}
