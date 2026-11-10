@@ -523,6 +523,8 @@ func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (le
 		err = fmt.Errorf("agent ID %d outside %d to %d", rec.id, w.firstHousehold, w.state.nextAgent)
 	case err != nil || v.Kind != ledger.KindAgent || v.Closed || v.Owner != int(rec.id):
 		err = fmt.Errorf("agent %d names account %d, which is not its open Agent account", rec.id, rec.acct)
+	case w.isOutsideNode(RegionID(v.Region)): // no call puts an agent in an outside node (AddAgent, Relocate)
+		err = fmt.Errorf("agent %d has its account in region %d, which is an outside node", rec.id, v.Region)
 	case rec.journey && w.badJourney(rs, rec, v.Region):
 		err = fmt.Errorf("agent %d has a journey to region %d arriving at %d, which its account in region %d cannot have", rec.id, rec.jto, rec.jarrives, v.Region)
 	default:
