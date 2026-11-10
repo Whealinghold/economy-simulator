@@ -1827,7 +1827,7 @@ PR description.
 - **Update (2026-10-21, plan 1-12 Phase 1):** Verified: REF 7.5 carries the conditional paragraph (`three` only if the Phase 5 probe shows the Stage 1 world runs it). Left open for the probe.
 - **Update (2026-10-21, plan 1-12 audit fixes, J1 probe outcome):** `three` IS in the invariants table (`invariantTable` of `invariants_test.go`: `three` with `base.toml`, `three.toml`, `warm-three.toml`), 400 ticks (`invTicks`), seeds 1 to 4. `go test -run 'TestInvariants_Packs/three' .` passed when run for this update (about 2 s, without `-race`), so the Stage 1 world runs `three`; the determinism and golden rows for `three` are not added. `five`, `famine` and `one-demand` still wait. Left open.
 - **Update (2026-10-25, plan 2-3, REG):** `three` loads, validates and runs with no edge, and draws `region_isolated` for each region and `graph_not_strongly_connected` (`components` 3) until its trade overlay `testdata/chains/overlay/trade-three.toml` exists (plan 2-3 Phase 9; `trade-two.toml` and `trade-five.toml` come with it). The invariants row for `three` stands. Left open.
-- **Update (2026-11-10, plan 2-24 Phase 2):** the rows `five` and `all` (the all-on `five`, `testdata/chains/all/`) are added to `invariantTable`, to `TestCardinality_EventAttributesTakeClosedValues` (five) and to the golden, determinism and fork tests (`five_all_test.go`, `checkpoint_all_test.go`). `famine`, `one-demand` and `three` have rows already. Left open until plan 2-24 is signed off.
+- **Update (2026-11-10, plan 2-24 Phase 2):** the rows `five` and `all` (the all-on `five`, `testdata/chains/all/`) are added to `invariantTable`, to `TestPacks_FiveAndAllEventAttributesTakeClosedValues` (five and all) and to the golden, determinism and fork tests (`five_all_test.go`, `checkpoint_all_test.go`). `famine`, `one-demand` and `three` have rows already. Left open until plan 2-24 is signed off.
 
 ### N-296 S01 leg (b) and every visitor wait for `AddAgent` and `Direct`
 
@@ -2146,4 +2146,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f2078607795f29ab53c3f1ba
+NOTES-TAG: a9f4fbdbfa1dc5fcae6b7b8d
