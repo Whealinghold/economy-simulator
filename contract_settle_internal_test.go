@@ -519,6 +519,24 @@ func TestRestore_ContractEscrowCrossCheck(t *testing.T) {
 	}
 }
 
+// TestMerchantsCross_RemovedDeliverer verifies that the cross-check of a restore
+// refuses a contract whose deliverer is not a live agent (a contract ends at the
+// removal of its deliverer).
+//
+// Requirement: FR-CHK-023, FR-MER-061
+func TestMerchantsCross_RemovedDeliverer(t *testing.T) {
+	t.Parallel()
+	w, _, _ := roundWorld(t, trio, oneGrain(), d32)
+	step(t, w, 1)
+	if err := w.merchantsCross(); err != nil {
+		t.Fatalf("merchantsCross() = %v, want nil on a live deliverer", err)
+	}
+	w.agents[w.mer.open[0].deliverer].weight = 0
+	if err := w.merchantsCross(); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("merchantsCross() = %v, want ErrCheckpointCorrupt", err)
+	}
+}
+
 // TestFork_Merchants verifies FR-MER-061: a world restored between ticks with a
 // contract in flight settles the same contract at the same tick and gives the same
 // events and the same snapshot as the uninterrupted one.
