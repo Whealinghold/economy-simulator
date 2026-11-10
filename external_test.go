@@ -226,6 +226,26 @@ func TestExternalValidate_Errors(t *testing.T) {
 		{"a warm-start price in the node", func(c *economysim.Config) {
 			c.WarmStart = &economysim.WarmStart{Prices: []economysim.SeedPrice{{Region: "coast", Commodity: "staple", Price: 96}}}
 		}, economysim.ErrOutsideNodeInhabited, []string{"warm_start", "price", "coast", "staple"}},
+		{"a warm-start wage in the node", func(c *economysim.Config) {
+			c.WarmStart = &economysim.WarmStart{Wages: []economysim.SeedWage{{Region: "coast"}}}
+		}, economysim.ErrOutsideNodeInhabited, []string{"warm_start", "wage", "coast"}},
+		{"a warm-start group in the node", func(c *economysim.Config) {
+			c.WarmStart = &economysim.WarmStart{Groups: []economysim.WarmGroup{{Region: "coast", Role: c.Roles[0].ID}}}
+		}, economysim.ErrOutsideNodeInhabited, nil},
+		{"a warm-start pool in the node", func(c *economysim.Config) {
+			c.WarmStart = &economysim.WarmStart{Pools: []economysim.WarmPool{{Region: "coast"}}}
+		}, economysim.ErrOutsideNodeInhabited, []string{"warm_start", "pool", "coast"}},
+		{"a population region row in the node", func(c *economysim.Config) {
+			c.Modules.Population = &economysim.Population{Regions: []economysim.RegionPopulation{{Region: "coast"}}}
+		}, economysim.ErrOutsideNodeInhabited, []string{"modules", "population", "region", "coast"}},
+		{"a taste row in the node", func(c *economysim.Config) {
+			c.Modules.Demand = &economysim.Demand{RegionTastes: []economysim.RegionTaste{{Region: "coast", Want: "w"}}}
+		}, economysim.ErrOutsideNodeInhabited, []string{"modules", "demand", "region_taste", "coast", "w"}},
+		{"a money-flow target in the node", func(c *economysim.Config) {
+			c.Modules.MoneySupply = &economysim.MoneySupply{Flows: []economysim.MoneyFlow{{
+				ID: "f", Kind: economysim.FlowGrant, Target: economysim.FlowTarget{Kind: economysim.TargetHouseholds, Region: "coast"}, Amount: 1,
+			}}}
+		}, economysim.ErrOutsideNodeInhabited, []string{"modules", "money_supply", "flow", "f", "target", "region"}},
 		{"crossed quotes", func(c *economysim.Config) {
 			l := &c.Modules.External.Nodes[0].Lines[0]
 			l.Sell.MarginBP, l.Buy = 0, economysim.OutsideSide{Capacity: 3}

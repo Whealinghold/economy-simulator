@@ -590,3 +590,50 @@ func TestExternal_Identities(t *testing.T) {
 		}
 	}
 }
+
+// TestExternal_RejectedOfferReturnsItsUnits verifies that a sell order the book
+// refuses (here a duplicate of the counterparty's own ask) hands its units back to
+// the outside_unsold boundary at once and leaves the row with nothing offered, so
+// the sweep does not count them as unsold of an offer of 0.
+//
+// Fix: review round 4. A rejected sell offer left its units in the counterparty's
+// account until the sweep, which computed traded = offered - held < 0.
+func TestExternal_RejectedOfferReturnsItsUnits(t *testing.T) {
+	t.Parallel()
+	w, _, _ := extWorld(t, extConfig())
+	salt := commodityOf(t, w, "salt")
+	x := w.external
+	x.setMids(w)
+	var cp *counterparty
+	for i := range x.cps {
+		if !x.cps[i].buy {
+			cp = &x.cps[i]
+		}
+	}
+	if cp == nil {
+		t.Fatal("no selling counterparty in the fixture")
+	}
+	row := &x.rows[cp.first]
+	l := &x.lines[row.line]
+	row.t.limit, row.t.offered = 40, 5
+	// The first order is admitted; the second, of the same agent, side and book, is a duplicate.
+	for range 2 {
+		row.t.offered = 5
+		if err := w.placeOutside(cp, l, row); err != nil {
+			t.Fatalf("placeOutside() = %v, want nil", err)
+		}
+	}
+	held, _, err := w.ledger.Holding(cp.account, int(salt))
+	if err != nil {
+		t.Fatalf("Holding() = %v, want nil", err)
+	}
+	if held != 5 {
+		t.Errorf("units held after the duplicate = %d, want 5 (only the admitted order)", held)
+	}
+	if got := boundaryOf(t, w, ledger.OutsideUnsold, int(salt)); got != 5 {
+		t.Errorf("outside_unsold balance = %d, want 5 (the rejected 5 units)", got)
+	}
+	if row.t.offered != 0 {
+		t.Errorf("row offered after rejection = %d, want 0", row.t.offered)
+	}
+}
