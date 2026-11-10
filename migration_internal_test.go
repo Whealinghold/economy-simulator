@@ -17,6 +17,12 @@ import (
 // the events.
 func migWorld(t *testing.T, mut func(c *Config)) (*World, *infoScript, *evLog) {
 	t.Helper()
+	return migWorldSeed(t, 0, mut)
+}
+
+// migWorldSeed is migWorld with the seed of the world.
+func migWorldSeed(t *testing.T, seed uint64, mut func(c *Config)) (*World, *infoScript, *evLog) {
+	t.Helper()
 	c := infoConfig()
 	m := DefaultMigration()
 	m.MoveSpeed = 40
@@ -25,7 +31,7 @@ func migWorld(t *testing.T, mut func(c *Config)) (*World, *infoScript, *evLog) {
 		mut(&c)
 	}
 	s, rec := &infoScript{}, &evLog{}
-	w := newMill(t, c, WithStrategy("script", s), WithAudit(), WithObserver(rec))
+	w := newMill(t, c, WithSeed(seed), WithStrategy("script", s), WithAudit(), WithObserver(rec))
 	return w, s, rec
 }
 

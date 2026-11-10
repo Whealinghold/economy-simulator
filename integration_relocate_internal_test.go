@@ -206,9 +206,15 @@ func balance2(t *testing.T, w *World, id AgentID) (money, units int64) {
 // Requirement: FR-INT-031
 func TestRelocate_OnJourney(t *testing.T) {
 	t.Parallel()
+	relocateOnJourney(t, 0)
+}
+
+// relocateOnJourney is the body of TestRelocate_OnJourney and of INT-S5 (S83) for one seed.
+func relocateOnJourney(t *testing.T, seed uint64) {
+	t.Helper()
 	t.Run("the journey is dropped and the household moves", func(t *testing.T) {
 		t.Parallel()
-		w, _, rec := migWorld(t, nil)
+		w, _, rec := migWorldSeed(t, seed, nil)
 		w.migration.depart(3, infoB, 9)
 		weight := w.agents[3].weight
 		rec.events = nil
@@ -238,7 +244,7 @@ func TestRelocate_OnJourney(t *testing.T) {
 	})
 	t.Run("another obligation keeps the journey", func(t *testing.T) {
 		t.Parallel()
-		w, _, rec := migWorld(t, nil)
+		w, _, rec := migWorldSeed(t, seed, nil)
 		w.bounds.add("open_hire", func(a *agent, _ []string) bool { return a.id == 3 })
 		w.migration.depart(3, infoB, 9)
 		before, n := relocationState(t, w, rec)

@@ -339,10 +339,6 @@ func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason
 // P17Flows runs P1.7 alone, for the benchmark of the money supply module.
 func P17Flows(w *World) { w.p17Flows() }
 
-// SetFlowScale sets the scale of the money flow at index i in ID order, as the
-// public call of the integration module will (plan 17).
-func SetFlowScale(w *World, i int, bp int64) error { return w.setFlowScale(i, bp, CauseConsumer) }
-
 // ShockCapacity, ShockRegen and AdjustStock reach the helpers that the public shock and
 // adjustment calls of the integration stage will wrap (plan 2-9 D387), so the
 // external tests of the resources module can make a call between ticks. The caller
@@ -436,3 +432,6 @@ func RoleMoneyForTest(w *World, roles int) []int64 {
 	}
 	return out
 }
+
+// RelocateOnJourney runs the body of TestRelocate_OnJourney on one seed, for S83.
+func RelocateOnJourney(t *testing.T, seed uint64) { relocateOnJourney(t, seed) }
