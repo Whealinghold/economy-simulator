@@ -12,3 +12,6 @@ engines:
     exclude_paths:
       - "*_test.go"
       - "**/*_test.go"
+  markdownlint:
+    exclude_paths:
+      - "otelobserver/testdata/**"
