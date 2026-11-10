@@ -49,7 +49,8 @@ var closedSets = map[string][]string{
 	"economysim.bound":        {"floor", "ceiling"},
 	"economysim.belief_limit": {"conflict", "clamped"},
 	"economysim.work_decline": {"rest", "no_recipe"},
-	"economysim.cause":        {"insolvent", "starved", "consumer", "population", "transport", "migration"},
+	"economysim.cause": {"insolvent", "starved", "consumer", "population", "transport", "migration", "delivered", "short",
+		"payer_removed", "deliverer_removed"},
 	"economysim.entry_limit": {"unfunded", "no_viable_role", "region_cap", "role_cap", "role_ceiling", "cooldown",
 		"hysteresis", "exit_cap", "refused", "stranded"},
 	"economysim.kind":    {"faucet", "sink"},
@@ -59,8 +60,15 @@ var closedSets = map[string][]string{
 		"out_cap", "unprovisioned", "in_cap", "held", "ended"},
 	"economysim.decision": {"no_rumour", "stale", "locked", "perishable", "no_margin", "unaffordable", "below_share",
 		"planned", "rested", "waiting", "lot_capped"},
-	"economysim.holder": {"agents", "estate", "treasury"},
-	"economysim.sector": {"households", "pool", "contract", "treasury"},
+	"economysim.holder":           {"agents", "estate", "treasury"},
+	"economysim.sector":           {"households", "pool", "contract", "treasury"},
+	"economysim.population_limit": {"deaths_cut", "deaths_held", "births_capped", "births_unfunded", "rate_clamped"},
+	"economysim.flow_limit":       {"short", "headroom", "limit"},
+	"economysim.own_use_change":   {"entered", "left"},
+	"economysim.external_cut":     {"closed", "cap", "price"},
+	"economysim.contract_failure": {"no_taker", "payer_funds", "too_many", "dispatch_refused"},
+	"economysim.contract_request": {"offer", "take"},
+	"economysim.direction":        {"from", "to"},
 }
 
 // openReasonCap is the intern cap of spec-observability.md 6.5.1 for an open
@@ -109,6 +117,15 @@ func TestCardinality_AttributeSetsWithinBounds(t *testing.T) {
 		t.Fatalf("Snapshot() error = %v", err)
 	}
 	h.obs.RecordSnapshot(snap)
+	// The same snapshot with the modules of the deferred gauges on and rows for them.
+	on := snap
+	on.Names.Modes = []string{"m0", "m1"}
+	on.Modules = []string{"population", "transport", "migration"}
+	on.Population = economysim.PopulationState{HasReplacement: true, ReplacementRatioBP: 9_000}
+	on.Shipments = []economysim.ShipmentRow{{Mode: 1, TicksLeft: 0}, {Mode: 7, TicksLeft: 0}}
+	on.Away = []economysim.AgentID{3}
+	on.Regions = []economysim.RegionRow{{Region: 0, HouseholdCap: 5, OnJourneyFrom: 1, OnJourneyTo: 2}, {Region: 99}}
+	h.obs.RecordSnapshot(on)
 	f := &filler{}
 	for n, idx := range []int{0, 1, 2, 99, -1, 1, 0} {
 		f.idx = idx
@@ -120,7 +137,7 @@ func TestCardinality_AttributeSetsWithinBounds(t *testing.T) {
 		}
 		h.send(economysim.TickEnded{Tick: int64(1000 + n)})
 	}
-	total := checkSets(t, h.sets(), allowed(snap.Names))
+	total := checkSets(t, h.sets(), allowed(on.Names))
 	t.Logf("series after 200 ticks and the synthetic events: %d", total)
 }
 
@@ -255,9 +272,10 @@ var (
 		"AgentBankrupted", "WeightChanged", "RoleChanged", "EntryLimited", "BoundaryFlow", "WearApplied",
 		"AgentRelocated", "MoneyFlowLimited", "EndowmentChanged", "EndowmentAdjusted", "OwnUseChanged",
 		"PopulationChanged", "ShipmentDispatched", "ShipmentArrived", "RumoursServed", "MigrationStarted",
-		"MigrationReviewed", "MerchantsPlanned", "ContractFormed", "ContractSettled", "OutsideTraded"}
+		"MigrationReviewed", "MerchantsPlanned", "ContractFormed", "ContractSettled", "OutsideTraded", "ShipmentRejected",
+		"ContractRound"}
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
-		"PopulationScaled", "ShipmentRejected", "TransitFactorChanged", "ContractRound", "OutsideEnded", "OutsideShocked"}
+		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked"}
 )
 
 // TestAdapter_ExhaustiveOverEvents verifies that every event type is on the

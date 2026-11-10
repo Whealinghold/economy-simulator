@@ -29,7 +29,7 @@ var closed = map[string][]string{
 	keyBound:       {"floor", "ceiling"},
 	keyBeliefLimit: {"conflict", "clamped"},
 	keyWorkDecline: {"rest", "no_recipe"},
-	keyCause:       {"insolvent", "starved", "consumer", "population", "transport", "migration"},
+	keyCause:       {"insolvent", "starved", "consumer", "population", "transport", "migration", "delivered", "short", "payer_removed", "deliverer_removed"},
 	keyEntryLimit: {"unfunded", "no_viable_role", "region_cap", "role_cap", "role_ceiling",
 		"cooldown", "hysteresis", "exit_cap", "refused", "stranded"},
 	keyKind:    {"faucet", "sink"},
@@ -41,6 +41,13 @@ var closed = map[string][]string{
 	keySector: {"households", "pool", "contract", "treasury"},
 	keyDecision: {"no_rumour", "stale", "locked", "perishable", "no_margin", "unaffordable",
 		"below_share", "planned", "rested", "waiting", "lot_capped"},
+	keyPopulationLimit: {"deaths_cut", "deaths_held", "births_capped", "births_unfunded", "rate_clamped"},
+	keyFlowLimit:       {"short", "headroom", "limit"},
+	keyOwnUseChange:    {"entered", "left"},
+	keyExternalCut:     {"closed", "cap", "price"},
+	keyContractFailure: {"no_taker", "payer_funds", "too_many", "dispatch_refused"},
+	keyContractRequest: {"offer", "take"},
+	keyDirection:       {"from", "to"},
 }
 
 // The places of the causes that the instruments of the earlier modules use.

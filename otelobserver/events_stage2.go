@@ -10,13 +10,18 @@ func (o *Observer) observeFlows(e economysim.Event) bool {
 		o.agentRelocated(ev)
 	case economysim.WantShortfall:
 		o.count(m2(iWantUnfunded, ix(ev.Want), ix(ev.Role)), ev.Planned-ev.Funded)
+		o.count(m2(iWantChoked, ix(ev.Want), ix(ev.Role)), ev.Choked)
 	case economysim.MoneyFlowLimited:
 		o.count(m1(iMoneyFlowUnapplied, o.reason(ev.Flow)), int64(ev.Due-ev.Applied))
+		o.counts(m2(iMoneyFlowLimited, o.reason(ev.Flow), 0), 1, ev.Short, ev.Headroom, ev.Limit)
 	case economysim.PopulationChanged:
 		o.count(m1(iHouseholdBirths, ix(ev.Role)), ev.BirthsDone)
 		o.count(m1(iHouseholdDeaths, ix(ev.Role)), ev.DeathsDone)
+		o.counts(m1(iPopulationLimited, 0), 0, ev.DeathsCut, ev.DeathsHeld, ev.BirthsCapped, ev.BirthsUnfunded, ev.RateClamped)
 	case economysim.RumoursServed:
-		o.counts(m1(iInformationRumours, 0), 0, ev.Offered, ev.NoPath, ev.TooOld, ev.NotYet)
+		region := ix(ev.Region)
+		o.counts(m2(iInformationRumours, 0, region), 0, ev.Offered, ev.NoPath, ev.TooOld, ev.NotYet)
+		o.count(m1(iInformationReaders, region), ev.Readers)
 	default:
 		return false
 	}
@@ -43,6 +48,8 @@ func (o *Observer) observeResources(e economysim.Event) bool {
 		o.set(m2(iEndowmentStock, ix(ev.Resource), ix(ev.Region)), ev.StockAfter)
 	case economysim.OwnUseChanged:
 		o.set(m2(iHouseholdOwnUse, ix(ev.Role), ix(ev.Region)), ev.OnOwnUse)
+		o.count(m1(iOwnUseBlocked, ix(ev.Role)), ev.Blocked)
+		o.counts(m2(iHouseholdOwnUseChanges, ix(ev.Role), 0), 1, ev.Entered, ev.Left)
 		for _, a := range ev.Output {
 			o.count(m1(iOwnUseUnits, ix(a.Commodity)), int64(a.Quantity))
 		}
@@ -68,7 +75,14 @@ func (o *Observer) outsideTraded(ev economysim.OutsideTraded) {
 	node, gate, c, side := ix(ev.Node), ix(ev.Region), ix(ev.Commodity), ix(ev.Side)
 	o.count(m3(iExternalUnits, node, c, side), ev.Traded)
 	o.count(m3(iExternalValue, node, c, side), int64(ev.Value))
-	o.set(m4(iExternalPrice, node, gate, c, side), int64(ev.Price))
+	if ev.Price > 0 { // 0 is no quote (a closed edge), which external.cut counts
+		o.set(m4(iExternalPrice, node, gate, c, side), int64(ev.Price))
+	}
+	o.counts(m4(iExternalCut, node, c, side, 0), 3, ev.CutClosed, ev.CutCap, ev.CutPrice)
+	o.count(m3(iExternalUnfilled, node, c, side), ev.Offered-ev.Traded)
+	if ev.PriceClamped {
+		o.count(m2(iExternalClamped, node, c), 1)
+	}
 }
 
 // observeTransport handles the events of the shipments and the contracts.
@@ -83,13 +97,20 @@ func (o *Observer) observeTransport(e economysim.Event) bool {
 		for _, l := range ev.Lines {
 			o.count(m1(iTransportInTransit, ix(l.Commodity)), -int64(l.Shipped))
 			o.count(m1(iTransportCargoSpoiled, ix(l.Commodity)), int64(l.Spoiled))
+			o.count(m1(iTransportCargoDiverted, ix(l.Commodity)), int64(l.Diverted))
 		}
+	case economysim.ShipmentRejected:
+		o.count(m2(iTransportRejected, ix(ev.Mode), o.reason(string(ev.Reason))), 1)
 	case economysim.ContractFormed:
 		o.count(m1(iContractFormed, ix(ev.Commodity)), 1)
 		o.count(m1(iContractValue, ix(ev.Commodity)), int64(ev.Escrowed))
 		o.count(m0(iContractEscrow), int64(ev.Escrowed))
 	case economysim.ContractSettled:
 		o.count(m0(iContractEscrow), -int64(ev.Paid+ev.Refunded))
+		o.count(m1(iContractSettled, closedIndex(keyCause, string(ev.Cause))), 1)
+	case economysim.ContractRound:
+		o.counts(m1(iContractUnformed, 0), 0, ev.NoTaker, ev.PayerFunds, ev.TooMany, ev.DispatchRefused)
+		o.counts(m1(iContractRefused, 0), 0, ev.OffersRefused, ev.TakesRefused)
 	default:
 		return false
 	}
@@ -103,9 +124,10 @@ func (o *Observer) observeMigration(e economysim.Event) bool {
 		o.count(m2(iMigrationStarted, ix(ev.From), ix(ev.To)), ev.Weight)
 		o.count(m0(iMigrationOnJourney), ev.Weight)
 	case economysim.MigrationReviewed:
-		o.counts(m1(iMigrationLimited, 0), 0, ev.NoEstimate, ev.NoDestination, ev.NoRumour, ev.TooFar,
+		o.counts(m2(iMigrationLimited, 0, ix(ev.Region)), 0, ev.NoEstimate, ev.NoDestination, ev.NoRumour, ev.TooFar,
 			ev.NoViable, ev.NoGain, ev.Bound, ev.OutCap, ev.Unprovisioned, ev.InCap, ev.Held, ev.Ended)
 		o.count(m0(iMigrationOnJourney), -ev.Ended)
+		o.count(m0(iMigrationUnsettled), ev.Unsettled)
 	case economysim.MerchantsPlanned:
 		o.counts(m1(iMerchantDecisions, 0), 0, ev.NoRumour, ev.Stale, ev.Locked, ev.Perishable, ev.NoMargin,
 			ev.Unaffordable, ev.BelowShare, ev.Planned, ev.Rested, ev.Waiting, ev.LotCapped)

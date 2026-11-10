@@ -1,6 +1,8 @@
 package otelobserver
 
 import (
+	"slices"
+
 	economysim "github.com/Whealinghold/economy-sim"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -9,7 +11,10 @@ import (
 // snapNames is the names of a snapshot as attributes. A snapshot carries its own
 // names, so the method needs nothing of the world or of the adapter's table.
 type snapNames struct {
-	commodity, region, role, recipe []string
+	commodity, region, role, recipe, mode []string
+	// population and migration say the module is on in the snapshot (Modules): a
+	// gauge of a module that is off is absent, not zero.
+	population, migration bool
 }
 
 // at is the attribute of place i of a name list, or the zero attribute (which
@@ -39,7 +44,8 @@ func (o *Observer) gauge(inst int, v int64, kv ...attribute.KeyValue) {
 // last value between calls. An ID outside the snapshot's names, a negative count
 // where it makes no sense and a nil slice drop or skip the row; it never panics.
 func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
-	n := snapNames{s.Names.Commodities, s.Names.Regions, s.Names.Roles, s.Names.Recipes}
+	n := snapNames{commodity: s.Names.Commodities, region: s.Names.Regions, role: s.Names.Roles, recipe: s.Names.Recipes,
+		mode: s.Names.Modes, population: slices.Contains(s.Modules, "population"), migration: slices.Contains(s.Modules, "migration")}
 	for _, m := range s.Markets {
 		o.recordMarket(n, m)
 	}
@@ -52,6 +58,27 @@ func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 	for _, r := range s.Roles {
 		o.recordRole(n, r)
 	}
+	if n.population && s.Population.HasReplacement {
+		o.gauge(iPopulationReplacementRatio, s.Population.ReplacementRatioBP)
+	}
+	if slices.Contains(s.Modules, "transport") {
+		o.recordTransport(n, s)
+	}
+}
+
+// recordTransport records the shipments overdue by mode, 0 for a mode with none so
+// that a cleared guard reads 0 and not a stale count, and the agents away.
+func (o *Observer) recordTransport(n snapNames, s economysim.Snapshot) {
+	overdue := make([]int64, len(n.mode))
+	for _, sh := range s.Shipments {
+		if m := int(sh.Mode); sh.TicksLeft <= 0 && m >= 0 && m < len(overdue) {
+			overdue[m]++
+		}
+	}
+	for m, v := range overdue {
+		o.gauge(iTransportOverdue, v, at(keyMode, n.mode, m))
+	}
+	o.gauge(iTransportAway, int64(len(s.Away)))
 }
 
 // pair is the attributes of a name of one list and a region.
@@ -77,6 +104,13 @@ func (o *Observer) recordRegion(n snapNames, r economysim.RegionRow) {
 	sector(0, r.MoneyHouseholds)
 	sector(1, r.MoneyPool)
 	sector(2, r.MoneyContract)
+	if n.population && r.HouseholdCap > 0 {
+		o.gauge(iPopulationCap, r.HouseholdCap, region)
+	}
+	if n.migration {
+		o.gauge(iMigrationPipeline, r.OnJourneyFrom, region, attribute.String(keyDirection, closed[keyDirection][0]))
+		o.gauge(iMigrationPipeline, r.OnJourneyTo, region, attribute.String(keyDirection, closed[keyDirection][1]))
+	}
 }
 
 func (o *Observer) recordRole(n snapNames, r economysim.RoleRow) {
@@ -98,6 +132,9 @@ func (o *Observer) recordRole(n snapNames, r economysim.RoleRow) {
 			viable = 1
 		}
 		o.gauge(iRoleViable, viable, kv...)
+	}
+	if n.population {
+		o.gauge(iPopulationNaturalIncrease, r.NaturalIncreaseBP, kv...)
 	}
 	if r.Households > 0 && r.HeldByFloor >= 0 {
 		o.gauge(iWelfareFloorHeld, ratioBP(r.HeldByFloor, r.Households), kv...)

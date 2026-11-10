@@ -154,7 +154,7 @@ func TestInformation_Rumours(t *testing.T) {
 		economysim.RumoursServed{Offered: 1})
 	got := h.collect()
 	for outcome, want := range map[string]int64{"offered": 8, "no_path": 3, "too_old": 2, "not_yet": 1} {
-		check(t, got, "information.rumours", want, "outcome", outcome)
+		check(t, got, "information.rumours", want, "outcome", outcome, "region", "r0")
 	}
 }
 
@@ -181,7 +181,7 @@ func TestMigration_StartedLimitedOnJourney(t *testing.T) {
 		if l == "ended" {
 			want = 2
 		}
-		check(t, got, "migration.limited", want, "limit", l)
+		check(t, got, "migration.limited", want, "limit", l, "region", "r0")
 	}
 }
 

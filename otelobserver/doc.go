@@ -10,4 +10,15 @@
 // An Observer is not safe for concurrent use, like the world it observes: the
 // world calls it on the goroutine that steps. It holds no World, never calls
 // back into one, logs nothing and returns no error after New.
+//
+// # Limitation: held gauges
+//
+// A held gauge (economysim.market.clearing_price, belief.centre, belief.at_bound,
+// endowment.stock, household.own_use and external.price) keeps its last value and
+// is recorded again at every step. OpenTelemetry has no call that withdraws a
+// gauge point, so after a second WorldCreated or WorldRestored on the same
+// Observer the series of the old names table stay in the SDK at their last value,
+// while the up-down counters are brought back by their difference. Give each world
+// its own Observer (and its own reader or resource) if the series of an earlier
+// world must not remain.
 package otelobserver

@@ -75,7 +75,8 @@ func TestClosed_SetsAreThoseOfTheSpec(t *testing.T) {
 		keyBound:       {"floor", "ceiling"},
 		keyBeliefLimit: {"conflict", "clamped"},
 		keyWorkDecline: {"rest", "no_recipe"},
-		keyCause:       {"insolvent", "starved", "consumer", "population", "transport", "migration"},
+		keyCause: {"insolvent", "starved", "consumer", "population", "transport", "migration", "delivered", "short",
+			"payer_removed", "deliverer_removed"},
 		keyEntryLimit: {"unfunded", "no_viable_role", "region_cap", "role_cap", "role_ceiling", "cooldown",
 			"hysteresis", "exit_cap", "refused", "stranded"},
 		keyKind:    {"faucet", "sink"},
@@ -85,8 +86,15 @@ func TestClosed_SetsAreThoseOfTheSpec(t *testing.T) {
 			"out_cap", "unprovisioned", "in_cap", "held", "ended"},
 		keyDecision: {"no_rumour", "stale", "locked", "perishable", "no_margin", "unaffordable", "below_share",
 			"planned", "rested", "waiting", "lot_capped"},
-		keyHolder: {"agents", "estate", "treasury"},
-		keySector: {"households", "pool", "contract", "treasury"},
+		keyHolder:          {"agents", "estate", "treasury"},
+		keySector:          {"households", "pool", "contract", "treasury"},
+		keyPopulationLimit: {"deaths_cut", "deaths_held", "births_capped", "births_unfunded", "rate_clamped"},
+		keyFlowLimit:       {"short", "headroom", "limit"},
+		keyOwnUseChange:    {"entered", "left"},
+		keyExternalCut:     {"closed", "cap", "price"},
+		keyContractFailure: {"no_taker", "payer_funds", "too_many", "dispatch_refused"},
+		keyContractRequest: {"offer", "take"},
+		keyDirection:       {"from", "to"},
 	}
 	for key, w := range want {
 		if !slices.Equal(closed[key], w) {
