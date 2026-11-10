@@ -256,7 +256,8 @@ func TestUpkeepShort_ByCommodityAndRole(t *testing.T) {
 func TestBeliefs_NoOutcomesNoBoundShare(t *testing.T) {
 	h := newHarness(t)
 	h.send(created())
-	tick(h, 0, economysim.BeliefsUpdated{Commodity: 1, Region: 1, MeanCentre: 9})
+	tick(h, 0, economysim.BeliefsUpdated{Commodity: 1, Region: 1, MeanCentre: 9},
+		economysim.BeliefsUpdated{Commodity: 2, Region: 1, Outcomes: -3, AtFloor: 1})
 	got := h.collect()
 	check(t, got, "belief.centre", 9, "commodity", "c1", "region", "r1")
 	if n := len(got["economysim.belief.at_bound"]); n != 0 {
@@ -313,7 +314,7 @@ func TestHot_OutsideAStepIsSentAtOnce(t *testing.T) {
 
 // TestHot_IDsOnTheEdgeOfTheTablesAreDropped verifies the edges of the hot
 // accumulators: a negative side, a trade in a region equal to the region count
-// (which would land in the next commodity's cells), and a rejection reason beyond
+// or beyond it (which would land in the next commodity's cells), and a rejection reason beyond
 // the cap of a commodity that is not the first (which would land in the previous
 // commodity's last cell).
 //
@@ -324,6 +325,7 @@ func TestHot_IDsOnTheEdgeOfTheTablesAreDropped(t *testing.T) {
 	es := []economysim.Event{
 		economysim.OrderPlaced{Commodity: 0, Region: 0, Side: -1},
 		economysim.TradeExecuted{Commodity: 0, Region: 3, Seller: 0, Quantity: 4},
+		economysim.TradeExecuted{Commodity: 0, Region: 4, Seller: 0, Quantity: 4},
 		economysim.TradeExecuted{Commodity: 0, Region: 0, Seller: 3, Quantity: 4},
 	}
 	for i := 0; i < 32; i++ {

@@ -167,16 +167,19 @@ func TestUnfed_IDsOutsideTheTableAreDropped(t *testing.T) {
 	h := newHarness(t)
 	h.send(economysim.WorldRestored{Names: miniNames(), Snapshot: rolesSnapshot(
 		economysim.RoleRow{Region: 9, Role: 1, Agents: 1, Households: 1, Unfed: 5},
-		economysim.RoleRow{Region: 0, Role: 5, Agents: 1, Households: 1, Unfed: 5})})
+		economysim.RoleRow{Region: 0, Role: 5, Agents: 1, Households: 1, Unfed: 5},
+		economysim.RoleRow{Region: 0, Role: 1, Agents: 3, Households: 3})}) // a valid row after the two bad ones
 	bad := []economysim.UpkeepShortfall{{Region: -1, Role: 0, Unfed: 3}, {Region: 0, Role: -1, Unfed: 3},
 		{Region: 0, Role: 2, Unfed: 3}, {Region: 3, Role: 0, Unfed: 3}}
 	for _, ev := range bad {
 		tick(h, 0, ev)
 	}
-	tick(h, 1, economysim.UpkeepShortfall{Region: 2, Role: 1, Unfed: 2})
+	tick(h, 1, economysim.UpkeepShortfall{Region: 2, Role: 1, Unfed: 2}, economysim.UpkeepShortfall{Region: 0, Role: 0, Unfed: 4})
 	got := h.collect()
-	if v := got.sum("household.unfed"); v != 2 {
-		t.Errorf("household.unfed = %d, want 2: only the last cell of the table counts", v)
+	if v := got.sum("household.unfed"); v != 6 {
+		t.Errorf("household.unfed = %d, want 6: only the first and the last cell of the table count", v)
 	}
 	check(t, got, "household.unfed", 2, "role", "k1")
+	check(t, got, "household.unfed", 4, "role", "k0")
+	check(t, got, "agent.count", 3, "role", "k1")
 }
