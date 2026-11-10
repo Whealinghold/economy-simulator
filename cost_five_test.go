@@ -38,7 +38,7 @@ import (
 //	of 100 steps) when the load had fallen to 30. The cause of that gap was NOT isolated:
 //	load and run order may explain it, and so may the harness. realm is the same economy
 //	renamed but is not the same measurement: it runs through Game.Advance with no strategy
-//	options list of its own, in a later slot, and its live agents are not logged. Do not read
+//	options list of its own, with no observer, in a later slot, and its live agents are not logged. Do not read
 //	realm 68.7 ms as the all-on world with the load removed. Retake on a quiet host; the
 //	owner reads it (R3, D692).
 //	NFR-SCL-001: time per doubling of agents quarter to half 2.07, half to full 1.51 (agents
@@ -97,6 +97,9 @@ func (o *bookObserver) Observe(e economysim.Event) {
 	case economysim.TickStarted:
 		o.cur = map[[2]int]int64{}
 	case economysim.OrderPlaced:
+		if o.cur == nil {
+			o.cur = map[[2]int]int64{}
+		}
 		k := [2]int{int(ev.Region), int(ev.Commodity)}
 		o.cur[k]++
 		o.most = max(o.most, o.cur[k])
@@ -148,14 +151,20 @@ func BenchmarkStepFiveScale(b *testing.B) {
 	for _, tt := range costScaleSteps {
 		b.Run(tt.name, func(b *testing.B) {
 			cfg := benchConfig(b, allLayers, scaled(tt.scale))
-			stepBench(b, "five-all "+tt.name, cfg, costAgents(b, cfg), allOptions()...)
+			stepBench(b, "five-all "+tt.name, cfg, costAgents(b, tt.name, cfg), allOptions()...)
 		})
 	}
 }
 
-// costAgents is the number of agents the all-on world of cfg builds.
-func costAgents(tb testing.TB, cfg economysim.Config) int64 {
+var costAgentsMemo sync.Map
+
+// costAgents is the number of agents the all-on world of cfg builds, computed once per
+// name: the framework calls a sub-benchmark again while it ramps b.N.
+func costAgents(tb testing.TB, name string, cfg economysim.Config) int64 {
 	tb.Helper()
+	if n, ok := costAgentsMemo.Load(name); ok {
+		return n.(int64)
+	}
 	w, err := economysim.NewWorld(cfg, append([]economysim.Option{economysim.WithSeed(scaleBenchSeed)}, allOptions()...)...)
 	if err != nil {
 		tb.Fatalf("seed %d: NewWorld error = %v, want nil", scaleBenchSeed, err)
@@ -164,5 +173,6 @@ func costAgents(tb testing.TB, cfg economysim.Config) int64 {
 	if err != nil {
 		tb.Fatalf("Snapshot() error = %v, want nil", err)
 	}
+	costAgentsMemo.Store(name, s.Agents)
 	return s.Agents
 }
