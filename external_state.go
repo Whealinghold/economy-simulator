@@ -78,20 +78,17 @@ func (w *World) snapshotOutside(s *Snapshot) {
 	o := &s.Outside
 	o.Lines = make([]OutsideLineRow, len(x.lines))
 	mids := make([]int64, len(x.lines))
+	trade := map[CommodityID]*OutsideTradeRow{}
 	for i := range x.lines {
 		l := &x.lines[i]
 		mids[i], _ = x.midOf(w, l)
 		mid := mids[i]
 		o.Lines[i] = OutsideLineRow{Node: l.node, Commodity: l.commodity, Mid: Price(mid), DriftBP: l.drift, ShockBP: l.shock}
-	}
-	o.Sides = make([]OutsideSideRow, 0, len(x.rows))
-	trade := map[CommodityID]*OutsideTradeRow{}
-	for i := range x.lines {
-		c := x.lines[i].commodity
-		if trade[c] == nil {
-			trade[c] = &OutsideTradeRow{Commodity: c}
+		if trade[l.commodity] == nil {
+			trade[l.commodity] = &OutsideTradeRow{Commodity: l.commodity}
 		}
 	}
+	o.Sides = make([]OutsideSideRow, 0, len(x.rows))
 	x.eachRowOrdered(func(cp *counterparty, row *sideRow) {
 		l := &x.lines[row.line]
 		side := l.cfg.side(cp.buy)

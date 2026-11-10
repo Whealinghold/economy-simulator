@@ -300,12 +300,7 @@ func (x *external) audit(w *World) error {
 	if err := x.auditMoney(w); err != nil {
 		return err
 	}
-	for k := range w.cfg.Commodities {
-		if err := x.auditUnits(w, CommodityID(k)); err != nil {
-			return err
-		}
-	}
-	return nil
+	return x.auditUnits(w)
 }
 
 // auditState checks the saved state of the module against its bounds: the drift of
@@ -385,35 +380,37 @@ func (x *external) auditMoney(w *World) error {
 	return nil
 }
 
-// auditUnits checks the signs and the units of one commodity.
-func (x *external) auditUnits(w *World, k CommodityID) error {
-	offer, unsold, bought := w.boundaryBalance(ledger.OutsideOffer, int(k)), w.boundaryBalance(ledger.OutsideUnsold, int(k)), w.boundaryBalance(ledger.OutsidePurchases, int(k))
-	name := w.cfg.Commodities[k].ID
-	if offer > 0 || unsold < 0 || bought < 0 {
-		return fmt.Errorf("commodity %q: outside boundary balances offer %d, unsold %d, purchases %d have the wrong sign for their kinds", name, offer, unsold, bought)
-	}
-	var sellUnits, buyUnits int64
-	node := ""
+// auditUnits checks the signs and the units of every commodity, in one pass over the
+// side rows.
+func (x *external) auditUnits(w *World) error {
+	nc := len(w.cfg.Commodities)
+	sell, buy := make([]int64, nc), make([]int64, nc)
+	node := make([]string, nc)
 	for i := range x.cps {
 		cp := &x.cps[i]
 		for j := cp.first; j < cp.first+cp.n; j++ {
 			row := &x.rows[j]
-			if x.lines[row.line].commodity != k {
-				continue
-			}
-			node = w.cfg.Regions[cp.node].ID
+			k := x.lines[row.line].commodity
+			node[k] = w.cfg.Regions[cp.node].ID
 			if cp.buy {
-				buyUnits += row.units
+				buy[k] += row.units
 			} else {
-				sellUnits += row.units
+				sell[k] += row.units
 			}
 		}
 	}
-	if bought != buyUnits {
-		return fmt.Errorf("outside node %q, commodity %q: purchases balance %d, want the units of the buy sides %d", node, name, bought, buyUnits)
-	}
-	if -offer-unsold != sellUnits {
-		return fmt.Errorf("outside node %q, commodity %q: offer less unsold is %d, want the units of the sell sides %d", node, name, -offer-unsold, sellUnits)
+	for k := range nc {
+		offer, unsold, bought := w.boundaryBalance(ledger.OutsideOffer, k), w.boundaryBalance(ledger.OutsideUnsold, k), w.boundaryBalance(ledger.OutsidePurchases, k)
+		name := w.cfg.Commodities[k].ID
+		if offer > 0 || unsold < 0 || bought < 0 {
+			return fmt.Errorf("commodity %q: outside boundary balances offer %d, unsold %d, purchases %d have the wrong sign for their kinds", name, offer, unsold, bought)
+		}
+		if bought != buy[k] {
+			return fmt.Errorf("outside node %q, commodity %q: purchases balance %d, want the units of the buy sides %d", node[k], name, bought, buy[k])
+		}
+		if -offer-unsold != sell[k] {
+			return fmt.Errorf("outside node %q, commodity %q: offer less unsold is %d, want the units of the sell sides %d", node[k], name, -offer-unsold, sell[k])
+		}
 	}
 	return nil
 }
@@ -559,29 +556,29 @@ func windowAllClosed(w []SeasonFactor, seasons []Season) bool {
 	return true
 }
 
-// importSourced reports that the commodity is sourced by an import
+// importSources returns the commodities sourced by an import
 // (spec-external-sector.md 10.1.1, D536): some node has a line for it with a sell
 // side present, at least one gate of the node for the sell side, and a window
-// that is not 0 in every season. The cap does not matter. It reads c as given
-// and never fails.
-func importSourced(c *Config, commodity string) bool {
+// that is not 0 in every season. The cap does not matter. It reads c as given,
+// never fails, and is nil while the module is off.
+func importSources(c *Config) map[string]bool {
 	if c.Modules.External == nil {
-		return false
+		return nil
 	}
+	out := map[string]bool{}
 	for i := range c.Modules.External.Nodes {
 		n := &c.Modules.External.Nodes[i]
-		sell, _ := edgeGates(c, n.Region)
-		if len(sell) == 0 {
+		if sell, _ := edgeGates(c, n.Region); len(sell) == 0 {
 			continue
 		}
 		for j := range n.Lines {
 			l := &n.Lines[j]
-			if l.Commodity == commodity && l.Sell.present() && !windowAllClosed(l.Sell.Window, c.Calendar.Seasons) {
-				return true
+			if l.Sell.present() && !windowAllClosed(l.Sell.Window, c.Calendar.Seasons) {
+				out[l.Commodity] = true
 			}
 		}
 	}
-	return false
+	return out
 }
 
 // validateExternal checks the external module (spec-external-sector.md 14.1,
@@ -626,7 +623,7 @@ func (v *validator) outsideNode(base []string, n *OutsideNode, seen map[string]b
 	sell, buy := edgeGates(&v.c, n.Region)
 	v.outsideGates(nb, n, sell, buy)
 	outside := v.outsideSet()
-	for _, g := range slices.Concat(sell, buy) {
+	for _, g := range slices.Compact(slices.Sorted(slices.Values(slices.Concat(sell, buy)))) {
 		if outside[g] { // no market to clear in: the side would never trade
 			v.rep.add(ErrNotAGate, path(nb, "edge", g), g, n.Region)
 		}
@@ -861,6 +858,7 @@ type gateQuote struct {
 	price int64
 }
 
+// add records a warning of the rule at the path.
 func (w *outsideWarner) add(rule string, segs ...string) {
 	w.out = append(w.out, Warning{Path: segs, Rule: rule})
 }
@@ -977,11 +975,12 @@ func (w *outsideWarner) global() {
 		w.add("outside_drain_without_source", base...)
 	}
 	made, consumed := w.recipeUse()
+	imported := importSources(w.c)
 	for _, cm := range w.c.Commodities {
 		if w.arbitrage(cm.ID) {
 			w.add("outside_arbitrage", "commodities", cm.ID)
 		}
-		if consumed[cm.ID] && !made[cm.ID] && importSourced(w.c, cm.ID) {
+		if consumed[cm.ID] && !made[cm.ID] && imported[cm.ID] {
 			w.add("import_only_source", "commodities", cm.ID)
 		}
 	}
