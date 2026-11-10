@@ -48,3 +48,57 @@ unit = "bp"
 # placeholder is 100, spec-scale.md 7.2).
 [s10.dispersion_min_bp]
 unit = "bp"
+# S03: the longest run of ticks the staple price may sit at a bound (STY-P02).
+[s03.pinned_ticks]
+unit = "ticks"
+# S05: the most High over Low of a price in a window, in ten-thousandths (STY-P03).
+[s05.range_factor]
+unit = "ratio"
+# S05: the most a window range may grow over the previous one (STY-P03).
+[s05.range_growth_bp]
+unit = "bp"
+# S06: the end share of the cooks lies within this band of the balanced one (STY-D03).
+[s06.share_band_bp]
+unit = "bp"
+# S06: the most swing of a role share over the run (STY-D03).
+[s06.swing_bp]
+unit = "bp"
+# S06: with the tool off the premium is within this of 10 000 (STY-W04).
+[s06.free_tool_tol_bp]
+unit = "bp"
+# S08: the price of each series settles within this band of its earlier level (STY-P05).
+[s08.band_bp]
+unit = "bp"
+# S08: the most ticks after the shock until every price has settled (STY-P05).
+[s08.settle_ticks]
+unit = "ticks"
+# S12: the most High over Low of each calendar year after the first (STY-P03).
+[s12.range_factor]
+unit = "ratio"
+# S17: the most ratio of the largest replacement-bid count of a tick to the mean (STY-H04).
+[s17.spike_factor]
+unit = "ratio"
+# S17: the cold control exceeds the warm ratio by at least this (STY-H04).
+[s17.control_gap_bp]
+unit = "bp"
+# S20: the most ticks until a net earner reaches the reserve (STY-M06, tier N).
+[s20.ticks]
+unit = "ticks"
+# P07: the most drift of the price index link per year (STY-P07).
+[p07.drift_bp]
+unit = "bp"
+# A1: the price stays within this band of its start over the first 30 ticks (STY-H01).
+[a1.price_band_bp]
+unit = "bp"
+# D01: the most share of household-ticks unfed (STY-D01).
+[d01.unfed_bp]
+unit = "bp"
+# H02: the most absolute offset of a market from the warm table (STY-H02).
+[h02.offset_bp]
+unit = "bp"
+# H02: the most gap of the money of the households from its start (STY-H02).
+[h02.money_bp]
+unit = "bp"
+# X4(e) and G01: the least households at any tick as a share of the start (STY-G01).
+[x4.households_bp]
+unit = "bp"

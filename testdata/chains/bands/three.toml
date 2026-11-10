@@ -14,3 +14,33 @@ unit = "bp"
 # S65: the least share of its start that a role keeps in a region (basis points).
 [s65.role_share_bp]
 unit = "bp"
+# X1: the most gap of a lane after the warm-up, as a share of the delivered price (STY-P06).
+[x1.margin_bp]
+unit = "bp"
+# X1: the most gap of the worst lane, as a share of the delivered price (STY-P06).
+[x1.worst_bp]
+unit = "bp"
+# X1: the ticks before the margin is read (STY-P06).
+[x1.warmup]
+unit = "ticks"
+# X2: the most share of the start distance left at the end (STY-T02).
+[x2.share_band_bp]
+unit = "bp"
+# S28: the gap of the open lane returns within this band after the reopening (STY-S03).
+[s28.band_bp]
+unit = "bp"
+# S28: the most ticks after the reopening until the gap returns (STY-S03).
+[s28.reopen_ticks]
+unit = "ticks"
+# D01: the most share of household-ticks unfed (STY-D01).
+[d01.unfed_bp]
+unit = "bp"
+# H02: the most absolute offset of a market from the warm table (STY-H02).
+[h02.offset_bp]
+unit = "bp"
+# H02: the most gap of the money of the households from its start (STY-H02).
+[h02.money_bp]
+unit = "bp"
+# X4(e) and G01: the least households at any tick as a share of the start (STY-G01).
+[x4.households_bp]
+unit = "bp"
