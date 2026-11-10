@@ -76,3 +76,11 @@ func (o *Observer) flushHot() {
 	o.hot.volume.flush(o.inst[iMarketVolume].counter)
 	o.hot.estateSold.flush(o.inst[iEstateSold].counter)
 }
+
+// total is the sum of the cells that have not been flushed.
+func (s *series) total() (t int64) {
+	for _, v := range s.n {
+		t = satAdd(t, v)
+	}
+	return t
+}

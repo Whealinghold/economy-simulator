@@ -76,14 +76,6 @@ func (o *Observer) stepEnded(failed bool) {
 	o.sp.stp = nil
 }
 
-// total is the sum of the cells that have not been flushed.
-func (s *series) total() (t int64) {
-	for _, v := range s.n {
-		t = satAdd(t, v)
-	}
-	return t
-}
-
 // spanEvent adds a rare entity event to the step span, or to the run span if it
 // came outside a step, or drops it. Orders, trades and recipe executions are
 // never span events: they are too many (rules 6.2).

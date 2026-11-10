@@ -75,6 +75,9 @@ var _ economysim.Observer = (*Observer)(nil)
 func New(mp metric.MeterProvider, tp trace.TracerProvider, opts ...Option) (*Observer, error) {
 	cfg := options{clock: time.Now}
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		if err := opt(&cfg); err != nil {
 			return nil, fmt.Errorf("apply option: %w", err)
 		}

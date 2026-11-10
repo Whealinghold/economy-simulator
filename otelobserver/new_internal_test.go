@@ -19,3 +19,11 @@ func TestNew_OptionErrorIsReturned(t *testing.T) {
 		t.Errorf("New(failing option) = %v, %v, want nil and %v", obs, err, errOpt)
 	}
 }
+
+// TestNew_NilOptionSkipped
+//
+// Requirement: FR-OBS-050
+// Guard: a nil Option (a conditionally built slice) must not panic New.
+func TestNew_NilOptionSkipped(t *testing.T) {
+	New(nil, nil, nil) // reaching the end without a panic is the assertion
+}
