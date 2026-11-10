@@ -1003,6 +1003,57 @@
 //     total, the sensitivity of a measure to a factor (spec-experiments.md 8.5).
 //   - Elasticity (in basis points): the change of a measure between two levels of a factor over
 //     the change of the factor, each relative to the first level (spec-experiments.md 8.5).
+//   - Knob: a row of the registry of class K: a parameter a calibration may search inside its legal
+//     range, for the reason that a fact needs it (spec-calibration.md 4.3).
+//   - Damper strength: a row of class D: the parameter of a damper of the stability register, searched
+//     only where the damper acts and never down to its off value (spec-calibration.md 4.3).
+//   - Structural choice: a row of class S: a field that defines what the setting is (an identity, a
+//     list, a unit, a quantity of the setting); it is changed as a choice of the pack at its stage and
+//     is never a point of a grid (spec-calibration.md 4.3).
+//   - Registry (of knobs): the tables of spec-calibration.md 6: one row for each tunable and solve
+//     option, with its class, owner, kind of range, grid, stage, flags and expected effects (spec-
+//     calibration.md 4.1).
+//   - Base value: the pack's own value of a knob, from which its grid is built (spec-calibration.md
+//     5.2).
+//   - Grid (of a knob): the ordered levels of a knob built from its base value by a geometric, linear
+//     or listed rule, cut at its legal bounds and at its off value (spec-calibration.md 5.2).
+//   - Neighbour: the level next to the base value on one side of a grid, once the invalid levels are
+//     skipped (spec-calibration.md 5.2).
+//   - Grid edge: a side of a grid with no further level, and the reason: a bound, the off value or a
+//     rule (spec-calibration.md 5.2).
+//   - Screened in: said of a knob whose one-at-a-time screen moved a measure enough to be searched in
+//     the explore (spec-calibration.md 7.2).
+//   - Dormant: said of a D knob whose damper counter did not fire in any run of a point; no fact can
+//     calibrate it, so it is left at its default and recorded (spec-calibration.md 10.4).
+//   - Alias group: knobs whose effects on the measures cannot be told apart, so the facts see one
+//     lever (spec-calibration.md 10.2).
+//   - Composite (knob): one factor that moves several knobs together as one lever (spec-calibration.md
+//     6.4).
+//   - Search block: a block of 100 seeds above the stylised range, used once to search; block b is
+//     100b+1 to 100b+100 (spec-calibration.md 7.1).
+//   - Confirm seeds: the seeds on which a chosen point and its control are run to confirm a choice, 1
+//     to 50 (1 to 10 at tier L) (spec-calibration.md 7.1.3).
+//   - Feasible region: the points of an explore that pass every exact criterion and reach the pass-
+//     count threshold of the band criteria (spec-calibration.md 7.2.3).
+//   - Pareto set: when no point is feasible, the points that pass every exact criterion and whose
+//     vector of band pass counts no other such point dominates (spec-calibration.md 7.2.3).
+//   - Lineage: the first 8 bytes of the digest of the structure documents of a variant; records of one
+//     lineage are comparable and records of two are not (spec-calibration.md 9.2).
+//   - Calibration record: the text file of plain integers and closed keywords that one attempt of one
+//     stage of one pack leaves; the only durable output of a calibration besides its overlay (spec-
+//     calibration.md 8.1).
+//   - Calibration overlay: the configuration document of a chosen change, one key line for each knob
+//     moved and a header comment naming the record (spec-calibration.md 9.1).
+//   - Stage (of a calibration): one step of the procedure, from C0 to C9, that searches a set of knobs
+//     against a set of facts (spec-calibration.md 7.3).
+//   - Attempt: one run of a stage; a stage that fails three times is not searched again before a
+//     review (spec-calibration.md 7.1.4).
+//   - Off value: the value at which a damper is disabled, a number, the lowest or highest legal value,
+//     or none (spec-calibration.md 4.2.1).
+//   - Structure group: a row of the registry that covers fields of one scope that are structural or
+//     presentation-only (spec-calibration.md 4.8, 6.3).
+//   - Scope token: the text of the scope cell of the parameter-owner table up to the first semicolon
+//     or parenthesis, used in a registry key (spec-calibration.md 4.7).
 //   - Mode: a way to carry goods between regions, configured as data: a speed, the
 //     capacity of one carrying unit and either a crew and a vehicle (self-carried) or a
 //     haul commodity (hired) (spec-transport.md 3.1).

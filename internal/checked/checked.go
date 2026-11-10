@@ -208,3 +208,35 @@ func signed(mag uint64, neg bool) (int64, bool) {
 	}
 	return int64(mag), true
 }
+
+// Cmp3 compares the exact products a1*a2*a3 and b1*b2*b3 of non-negative
+// values and returns -1, 0 or +1. A product of three int64 values below 2^63
+// needs at most 189 bits, so the comparison is made in 192 bits and cannot
+// overflow. ok is false, and cmp 0, when an argument is negative.
+func Cmp3(a1, a2, a3, b1, b2, b3 int64) (cmp int, ok bool) {
+	if a1 < 0 || a2 < 0 || a3 < 0 || b1 < 0 || b2 < 0 || b3 < 0 {
+		return 0, false
+	}
+	a := prod3(uint64(a1), uint64(a2), uint64(a3))
+	b := prod3(uint64(b1), uint64(b2), uint64(b3))
+	for i := range a {
+		if a[i] != b[i] {
+			if a[i] < b[i] {
+				return -1, true
+			}
+			return 1, true
+		}
+	}
+	return 0, true
+}
+
+// prod3 returns the product of three values below 2^63 as three 64-bit words,
+// most significant first.
+func prod3(a, b, c uint64) [3]uint64 {
+	hi, lo := bits.Mul64(a, b)
+	h0, l0 := bits.Mul64(lo, c)
+	h1, l1 := bits.Mul64(hi, c)
+	mid, carry := bits.Add64(h0, l1, 0)
+	// hi < 2^62 and c < 2^63, so hi*c < 2^125: h1 is below 2^61 and the carry fits.
+	return [3]uint64{h1 + carry, mid, l0}
+}

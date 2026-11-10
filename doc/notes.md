@@ -52,7 +52,7 @@ PR description.
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324, N-329, N-331 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
-| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-331 |
+| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
@@ -60,7 +60,7 @@ PR description.
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310 |
 | EVD | N-018, N-133 |
-| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-331 |
+| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
 | GDS | N-039 |
@@ -126,6 +126,7 @@ PR description.
 - **Update (2026-10-13, CFG):** new placeholder: `MaxYields` = `MaxRegions * MaxRecipes` (10 000 000), the count bound of `Config.Yields` that FR-CFG-101 asks for (`spec-config.md` 4.1); derived and unmeasured. Both operands are placeholders, and a yield table of that size is not a realistic pack: lower the product when a real pack gives a size.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open, with a measurement owed. `StockCoverTicks` 5
 - **Update (2026-10-18, plan 1-10 Phase 7):** the first measurement of the Go solver. Measured on the development machine (one run, `go test -bench`, Go 1.25, 32 logical CPUs, one core used by the solver): `SolveSteadyState(five, WithFreeTrade)` takes 1.37 s with 202 pivots and allocates 474 MB in 10.2 million allocations per call (the prototype took 1.7 s); `Validate` of the cold `five` takes 0.59 s and `Warnings` 0.46 s after it. All five placeholders above stay as they are; the largest tableau entry in bits was not recorded. Left open., `MoneyBufferTicks` 10, `ResidualWarnBP` 1 000, `MaxViabilityPivots` 100 000 and `MaxViabilityCells` 4 000 000 stay placeholders; Phase 7 measures the Go speed of the solver (the first ever) and records the pivots and time of `five` here. No number is claimed stable.
+- **Update (2026-11-09, plan 2-21 Phase 1):** leave open. The procedure constants become named constants in `internal/calibration` with the spec section in a comment; they stay placeholders until a reviewed run.
 
 ### N-016 Keep the parameter registry true
 
@@ -849,6 +850,7 @@ PR description.
 - **Update (2026-10-12, Phase 1):** the WLD part is applied: WLD 7.6 says paired runs are aligned in the draws by construction (model: 98.00% of later draws differ under the positional stream, 0.01% under keyed streams). Open for EXP 7.3 and 7.4 (the pairing gain is measured on the divergence of state alone) and CLB 4.2.1 (the flag `d` goes).
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open for EXP, STB and CLB. The world adds no draw (FR-WLD-062); the draws are keyed (ADR 0008).
 - **Update (2026-10-23, plan 2-1 Phase 1):** the CHK part is applied: the EXP row of CHK 11 and CHK-S2 say that a paired comparison is aligned in the draws by construction (`spec-world.md` 7.6) and that the stream fingerprint of EXP 7.3 reads nothing; the WLD part was applied earlier and the 13 EXP row is now the same. Still open for EXP 7.3 and 7.4, STB and CLB 4.2.1.
+- **Update (2026-11-09, plan 2-21 Phase 1):** CLB side applied: the flag `d` is removed from `spec-calibration.md` (4.2, 4.2.1, 7.1.3, 7.2.3, 7.3, 11.4 leg B, 31 knob rows, 20 groups) and FR-CLB-024 is retired (the ID is not reused). Comparing paired or over seeds is the experiment's choice. Open for EXP.
 
 ### N-125 A snapshot is a function of saved state
 
@@ -1534,6 +1536,7 @@ PR description.
 - **Update (2026-10-23, plan 2-1 Phase 1):** applied for CHK and WLD: every passage marked "stale under ADR 0008" in `spec-checkpoint.md` (header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4, 6.6.3, 6.7.1, 6.8, 8.1 item 4, 8.4, the EXP row of 11, CHK-A2, 16, 17.2 and 17.3, FR-CHK-006, 025, 051 and the edits-owed rows of 20) and of `spec-world.md` (7.x residue at the construction paragraph, 12, 13, 17 WLD-A5, the N-214 row of 20) is rewritten; the world section (tag 1) holds the next agent ID and the construction flag, the bucket and the pending totals are the ledger's (tag 2), and the header's seed is the effective seed, read back. `models/chk/worked.py`, `size.py` and their outputs are regenerated in Docker. Left open for EXP 7.3 and FR-EXP-062 (plan 2-20), CLB 4.2.1, 7.2.3 and FR-CLB-024 (plan 2-21), STB L120, L124, D88 and the D90 row, TEC 4.4.1 and 4.4.6, the `spec-stability.md` row of `spec-world.md` 22 (S63 and MIG-S3), and the sites and IDs of the module rows.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the CHK passages were rewritten by plan 2-1; the checkpoint row builds without `Stream` and with the header seed read back (plan 2-2 D241). EXP 7.3, FR-EXP-062, CLB 4.2.1, STB and TEC passages remain. Left open.
 - **Update (2026-11-09, plan 2-20 Phase 1):** applied for EXP, which leaves the areas: `spec-experiments.md` 2 (position 8), 3.1, 3.6, 5.1.3, 6.3, 7.2 to 7.5, 8.1.1, 8.2.2, 8.4.2, 10, 11, 12, 14, 15, 19.6, 21, 22 and X3 no longer have `Pair`, `Record.Stream`, the stream fingerprint, `AlignedPairs` or `Horizon`; FR-EXP-062 is retired (its ID is not reused). The pairing gain is always computed. Open for CLB 4.2.1, STB and TEC.
+- **Update (2026-11-09, plan 2-21 Phase 1):** applied for CLB: the flag `d`, 4.2.1, 7.2.3 and FR-CLB-024 are gone (see N-124). Still open for EXP, STB and TEC.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `siteMigration` `0x53C434C7EFE6D523` (the first eight bytes of SHA-256 of `economy-sim/site/siteMigration`, checked) is in `spec-world.md` 7.1.4 and the D11 row of 7.3, `id` the agent, keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0 (as `siteInform` is). The constant is appended to `random.go` in Phase 5. Left open for the other owners.
 - **Update (2026-11-09, plan 2-15 Phase 1):** MER: `siteContract` `0xF0FF7DEE8E50504B` (the first eight bytes of SHA-256 of `economy-sim/site/siteContract`, checked) is in `spec-world.md` 7.1.4 and the D6 row of 7.3, `id` the agent and `sub` `2*i` for the `i`-th submitted offer and `2*i+1` for the `i`-th submitted take (the plan index, ADR 0008 open point 3 answered for D6); `spec-merchants.md` 9.4.2 and FR-MER-033 say the key is the first word of that stream. The constant is appended to `random.go` in Phase 6. MER leaves the areas of this note; left open for the other owners.
 
@@ -1591,6 +1594,7 @@ PR description.
 - **Raised:** 2026-10-12, `spec-config.md` 9.2 (Phase 1 of the Stage 0 plan).
 - **Note:** `spec-calibration.md`'s registry needs rows or groups for the new owner-table rows (`Scale` of `World` against `Scale` of `Group`, `Upkeep` of `Role`, `Yields`, the element-type rows) and a group for `Modules.Estates` (S-CFG01 lists 24 names). `doc/specs/models/clb/registry.py` still holds the old path spellings (`resources.*`, `demand.*`, `module.external.*`, `modules.transport.modes.*`) and is owed a respelling by the models' owner.
 - **Update (2026-10-13, minor gaps of the Stage 0 audit):** applied in part. `models/clb/registry.py` is respelled (`modules.resources.*`, `modules.demand.*`, `modules.transport.mode.*`, `modules.external.node.*`, `modules.tenure.term.*`) and re-run in Docker; the path and flag checks pass. `spec-calibration.md` S-CFG01 and 6.3 now list `Estates` as the last pointer (23 names: the owner table has no pointer row for `Demand` and `MoneySupply`, which are scopes of S-DEM01 and S-MON01), and FR-CLB-002 reads `RegionTaste` and `Taste.Role` as owner rows. **Still owed:** four coverage checks of the registry fail against the live owner table (`registry.out` records FAILED): the element-type, `Config.Edges`, `RegionPrices`, `WarmStart`, `Yields`, `World.Scale`, `JobSpec`, `Month`, `Season` rows each need a class, a stage, the flags `in` and `chk` and an owner section, which is a classification decision per field and not a respelling; the groups still use the old scope tokens; the CFG 3.7 names `Days` and `InProgressBP` and the nested `Scale` have no scope. Run the script as `docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v $PWD/doc:/d:ro -w /d/specs/models/clb python:3-slim python registry.py`.
+- **Update (2026-11-09, plan 2-21 Phase 1):** applied, to be confirmed by the supervisor: the owner pairs without a key or group field are classified (groups S-CAL02, S-CAL03, S-PRO03 to S-PRO09, S-RES01, S-RES07, S-SCL03, S-VIA04 to S-VIA08, S-POP03 and the rescoped S-REG01, S-PRO05, S-VIA01, S-DEM01 to S-DEM03, S-MON01, S-CFG01), the registry-only scope tokens now spell the owner table's (`Output`, `Tool`, `WantItem`, `YieldProfile`, `Config`, `MoneySupply`), and `models/clb/registry.py` prints no FAIL (`registry.out` regenerated). The owner table now says `WorldParams` where the registry says `World` (N-329). Close when the supervisor confirms the classes.
 
 ### N-221 STO confirms the file layout of its base room and role rows
 
@@ -2104,6 +2108,12 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-15 Phase 1 (D505).
 - **Note:** D6 is keyed `(siteContract, tick, agent, 2*i or 2*i+1)`, `i` the index of the offer or take in the agent's plan, so a refused entity does not move the key of another (`spec-world.md` 7.1.4, 7.3). ADR 0008 open point 3 (a site with no natural entity) is answered for D6 by the plan index; it stays open for D2's line and D13's route row.
 
+### N-334 The registry says `World`, the owner table says `WorldParams`
+
+- **Areas:** CLB, EXP
+- **Raised:** 2026-11-09, plan 2-21 Phase 1.
+- **Note:** The parameter-owner table spells the scope of the world-level parameters `WorldParams` (the Go type of `Config.World`); the registry keys, the records, the experiments and `[world]` spell it `World` (`World.CostFloor`). Plan 2-21 kept the registry's spelling and made the coverage check treat the two as one scope (`spec-calibration.md` 4.7; `registry.py` `SCOPE_ALIAS`, and the Go registry test). Reverse by respelling the `World.` keys of the registry (42 knob rows and the fields of five groups), or by changing the README rows to `World`; either removes the alias.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2116,4 +2126,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: fc64f05cce55e5c1339f3adb
+NOTES-TAG: 208fa9e36958ee10e29c3dd9
