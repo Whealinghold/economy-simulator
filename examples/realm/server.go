@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,9 +32,9 @@ var ErrNoState = errors.New("no state path")
 // ErrForbidden is a state-changing request that a web page of another origin sent.
 var ErrForbidden = errors.New("cross-origin request")
 
-// ErrBusy is a step asked for while another step runs: steps do not queue, because
+// ErrBusy is a step or restore asked for while another runs: steps do not queue, because
 // each holds the world for up to maxStepTicks ticks.
-var ErrBusy = errors.New("a step is already running")
+var ErrBusy = errors.New("a step or restore is already running")
 
 const (
 	// maxStepTicks is the most ticks one POST /v1/step may run: a step is about 60 ms,
@@ -106,7 +108,9 @@ type Server struct {
 	log     *slog.Logger
 	maxStep int64
 	mux     *http.ServeMux
-	stepper chan struct{} // one token: the step in progress
+	stepper chan struct{} // one token: the step or restore in progress
+	hosts   map[string]bool
+	saveMu  sync.Mutex // orders the saves of the state file
 }
 
 var _ http.Handler = (*Server)(nil)
@@ -188,10 +192,50 @@ func (s *Server) routes() *http.ServeMux {
 	return m
 }
 
+// hostname is host without its port.
+func hostname(host string) string {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	return strings.Trim(host, "[]")
+}
+
+// acquire takes the token of the one long operation (a step or a restore) without
+// waiting; release gives it back.
+func (s *Server) acquire() bool {
+	select {
+	case s.stepper <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *Server) release() { <-s.stepper }
+
+// AllowHosts limits the Host header of every request to hosts (host names without a
+// port), the defence against DNS rebinding. Without a call every Host is accepted.
+func (s *Server) AllowHosts(hosts ...string) {
+	s.hosts = map[string]bool{}
+	for _, h := range hosts {
+		s.hosts[h] = true
+	}
+}
+
 // ServeHTTP implements http.Handler. It refuses a write whose Origin header names
 // another host (a web page driving the server from the user's browser, CSRF) before
 // any route runs.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if p := recover(); p != nil { // a library panic must not drop the connection with no status
+			s.log.LogAttrs(r.Context(), slog.LevelError, "handler panicked", slog.String("panic", clip(fmt.Sprint(p))))
+			s.reply(w, http.StatusInternalServerError, errorBody{tickBody{s.game.Tick()}, "ErrInternal", "internal error"})
+		}
+	}()
+	if s.hosts != nil && !s.hosts[hostname(r.Host)] {
+		s.fail(w, fmt.Errorf("host %q: %w", clip(r.Host), ErrForbidden))
+		return
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		if o := r.Header.Get("Origin"); o != "" {
 			if u, err := url.Parse(o); err != nil || u.Host != r.Host {
@@ -213,9 +257,13 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 			return
 		case <-ticks:
 		}
+		if !s.acquire() {
+			continue // a step or restore runs: skip this tick of the clock
+		}
 		s.mu.Lock()
 		_, err := s.game.AdvanceContext(ctx, 1)
 		s.mu.Unlock()
+		s.release()
 		if err != nil {
 			if ctx.Err() == nil {
 				s.log.LogAttrs(ctx, slog.LevelError, "paced step failed", slog.Any("error", err))
@@ -230,8 +278,8 @@ func (s *Server) Pace(ctx context.Context, ticks <-chan time.Time) {
 func (s *Server) read(f func(*http.Request, tickBody) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.mu.RLock()
-		defer s.mu.RUnlock()
 		body, err := f(r, tickBody{s.game.Tick()})
+		s.mu.RUnlock() // the reply may block on a slow client: never under the lock
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -253,8 +301,8 @@ func (s *Server) write(status int, f func(http.ResponseWriter, *http.Request) (a
 		}
 		r.Body = io.NopCloser(bytes.NewReader(b))
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		body, err := f(w, r)
+		s.mu.Unlock()
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -294,7 +342,7 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 	if status >= http.StatusInternalServerError {
 		level = slog.LevelError
 	}
-	s.log.LogAttrs(ctx, level, "request refused", slog.Int64("tick", tick), slog.String("reason", name), slog.Any("error", err))
+	s.log.LogAttrs(ctx, level, "request refused", slog.Int64("tick", tick), slog.String("reason", name), slog.String("error", clip(err.Error())))
 	s.reply(w, status, errorBody{tickBody{tick}, name, clip(err.Error())})
 }
 
@@ -602,21 +650,20 @@ func (s *Server) step(w http.ResponseWriter, r *http.Request) {
 		}
 		n = v
 	}
-	select {
-	case s.stepper <- struct{}{}:
-		defer func() { <-s.stepper }()
-	default:
+	if !s.acquire() {
 		s.fail(w, ErrBusy)
 		return
 	}
+	defer s.release()
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	done, err := s.game.AdvanceContext(r.Context(), n)
+	tick := s.game.Tick()
+	s.mu.Unlock()
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	s.reply(w, http.StatusOK, stepBody{tickBody{s.game.Tick()}, done})
+	s.reply(w, http.StatusOK, stepBody{tickBody{tick}, done})
 }
 
 // checkpoint answers with the encoded checkpoint and, with save=true, also writes it
@@ -626,6 +673,10 @@ func (s *Server) checkpoint(w http.ResponseWriter, r *http.Request) {
 	if save && s.state == "" {
 		s.fail(w, fmt.Errorf("save=true: %w", ErrNoState))
 		return
+	}
+	if save {
+		s.saveMu.Lock() // saves run one at a time, so an older checkpoint never lands after a newer one
+		defer s.saveMu.Unlock()
 	}
 	// Encode under the lock, then write the file and the response without it, so a
 	// slow reader of the response cannot hold up a step.
@@ -685,13 +736,20 @@ func (s *Server) restore(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, bodyError(err))
 		return
 	}
+	if !s.acquire() {
+		s.fail(w, ErrBusy)
+		return
+	}
+	defer s.release()
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.game.Restore(b); err != nil {
+	err = s.game.Restore(b)
+	_, perr := s.game.Player()
+	tick := s.game.Tick()
+	s.mu.Unlock()
+	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	_, perr := s.game.Player()
-	s.log.LogAttrs(r.Context(), slog.LevelInfo, "state restored", slog.Int64("tick", s.game.Tick()), slog.Int("bytes", len(b)))
-	s.reply(w, http.StatusOK, restoredBody{tickBody{s.game.Tick()}, perr == nil})
+	s.log.LogAttrs(r.Context(), slog.LevelInfo, "state restored", slog.Int64("tick", tick), slog.Int("bytes", len(b)))
+	s.reply(w, http.StatusOK, restoredBody{tickBody{tick}, perr == nil})
 }

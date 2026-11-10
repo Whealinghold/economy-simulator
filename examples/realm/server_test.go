@@ -357,7 +357,9 @@ func TestServer_BadInputIsRefused(t *testing.T) {
 	t.Run("refusals", func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+				if tt.target != "/v1/restore" { // restores share one token: two at once would answer 429
+					t.Parallel()
+				}
 				var e errorBody
 				callJSON(t, s, tt.method, tt.target, tt.body, tt.status, &e)
 				if e.Error != tt.sentinel {
@@ -680,4 +682,68 @@ func TestServer_StepsDoNotQueue(t *testing.T) {
 	<-s.stepper
 	var ok stepBody
 	callJSON(t, s, http.MethodPost, "/v1/step?n=0", "", http.StatusOK, &ok)
+}
+
+// TestServer_AllowHostsRefusesOtherHosts verifies that once AllowHosts is called, a
+// request whose Host is not on the list gets 403 ErrForbidden whatever the method,
+// and a listed host (with or without a port, bracketed or not) goes through.
+//
+// Guard: a DNS-rebinding page sends an Origin equal to its Host, so the Origin check
+// alone does not stop it; the Host list does.
+func TestServer_AllowHostsRefusesOtherHosts(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.AllowHosts("localhost", "::1")
+	for _, tt := range []struct {
+		host   string
+		status int
+	}{
+		{"localhost:8080", http.StatusOK},
+		{"localhost", http.StatusOK},
+		{"[::1]:8080", http.StatusOK},
+		{"[::1]", http.StatusOK},
+		{"attacker.example:8080", http.StatusForbidden},
+		{"", http.StatusForbidden},
+	} {
+		req := httptest.NewRequest("GET", "/v1/world", nil)
+		req.Host = tt.host
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, req)
+		if rec.Code != tt.status {
+			t.Errorf("GET /v1/world with Host %q = status %d, want %d", tt.host, rec.Code, tt.status)
+		}
+	}
+}
+
+// TestServer_PanicIsAJSON500 verifies that a handler that panics answers 500 with a
+// JSON error and leaves the server usable.
+//
+// Guard: net/http would otherwise drop the connection with no status, and the
+// contract is that every failure is a status and a JSON body.
+func TestServer_PanicIsAJSON500(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("/boom", func(http.ResponseWriter, *http.Request) { panic("boom") })
+	var e errorBody
+	callJSON(t, s, http.MethodGet, "/boom", "", http.StatusInternalServerError, &e)
+	if e.Error != "ErrInternal" {
+		t.Errorf("GET /boom: error = %q, want ErrInternal", e.Error)
+	}
+}
+
+// TestServer_RestoreRefusedWhileAStepRuns verifies that a restore asked for while a
+// step runs is refused with 429 ErrBusy, like a second step.
+//
+// Guard: a restore rebuilds the world under the write lock; repeated ones would
+// starve every other route.
+func TestServer_RestoreRefusedWhileAStepRuns(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.stepper <- struct{}{}
+	var e errorBody
+	callJSON(t, s, http.MethodPost, "/v1/restore", "x", http.StatusTooManyRequests, &e)
+	if e.Error != "ErrBusy" {
+		t.Errorf("POST /v1/restore while a step runs: error = %q, want ErrBusy", e.Error)
+	}
 }

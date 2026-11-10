@@ -39,6 +39,12 @@ func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, p
 	if err != nil {
 		return err
 	}
+	// Only the names a local client uses, and the host of -addr, may reach the server.
+	hosts := []string{"localhost", "127.0.0.1", "::1"}
+	if h, _, err := net.SplitHostPort(addr); err == nil && h != "" {
+		hosts = append(hosts, h)
+	}
+	s.AllowHosts(hosts...)
 	if pace > 0 {
 		clock := time.NewTicker(pace)
 		defer clock.Stop()
