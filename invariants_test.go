@@ -224,8 +224,10 @@ func noMoneyFlowAfterConstruction(evs []economysim.Event) []string {
 // one way money may move after construction (FR-MON-002), and its accounting is
 // the module's own tests. The same holds for the money reasons of the external
 // module, whose counterparties' budgets, receipts and unspent money cross the
-// outside boundary by design (spec-external-sector.md 8.2, checked by
-// checkOutsideIdentities); conservation of the whole is still asserted by balances.
+// outside boundary by design (spec-external-sector.md 8.2). Their amounts are the
+// identities of checkOutsideIdentities, which the scenario tests of the module apply
+// over a whole run and this table does not; here conservation of the whole is asserted
+// by balances.
 func withoutConfiguredFlows(cfg economysim.Config, evs []economysim.Event) []economysim.Event {
 	if cfg.Modules.MoneySupply == nil && cfg.Modules.External == nil {
 		return evs
@@ -279,7 +281,8 @@ var invariantTable = []invariantCase{
 	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
 	{"famine", packLayers["famine"], 4, 800, "s14-0.toml"},
 	// REF 7.5, plan 2-24 D689: the five-sized rows, seeds 1 and 2. The packs hold 5 000
-	// households, so each runs a seed on its own world; gate F runs both, gate R one.
+	// households, so each runs a seed on its own world; gate F runs both seeds, gate R skips
+	// these rows (TestInvariants_Packs).
 	{"five", packFiveWarm, 2, 0, ""},
 	{"all", allLayers, 2, 0, ""},
 }

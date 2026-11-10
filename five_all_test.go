@@ -224,7 +224,10 @@ var fiveDetCases = []string{"(a) second observed run", "(b) Run(400) bare", "(b)
 // TestDeterminism_FiveAndAll verifies, on the warm `five` and on the all-on pack, seeds 1
 // and 2, 400 ticks, the cases of fiveDetCases: a run split into Run calls, observed, or
 // with the audit on, ends in the snapshot, state hash and config hash of the bare Step
-// run, its events equal the reference's, and a second seed ends elsewhere.
+// run (the sampled snapshots too, for the cases that are not chunked), and a second seed
+// ends elsewhere. Events are not compared: the bare run records none, a snapshot of 5 000
+// agents at every tick being the cost (the events of Run against a Step loop are
+// TestGolden_FiveEvents and TestGolden_AllEvents).
 //
 // Requirement: FR-REF-030, FR-OBS-023, FR-WLD-063, NFR-WLD-004
 //
@@ -280,7 +283,7 @@ func TestDeterminism_FiveAndAll(t *testing.T) {
 					})
 				}
 			})
-			if reflect.DeepEqual(ends[0], ends[1]) {
+			if !t.Failed() && reflect.DeepEqual(ends[0], ends[1]) {
 				t.Errorf("%s: seeds 1 and 2 end in the same snapshot, want different", w.name)
 			}
 		})

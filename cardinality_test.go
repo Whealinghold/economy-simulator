@@ -212,7 +212,7 @@ func (c *cardChecker) check(e economysim.Event) {
 }
 
 // TestCardinality_EventAttributesTakeClosedValues runs pack one for 400 ticks
-// on seeds 1 and 2, and the warm five (every module off) on seed 1, and checks that
+// on seeds 1 and 2, and the warm five (every module off) and the all-on pack on seed 1, and checks that
 // every event field that becomes a metric attribute takes a value of the
 // configuration (typed IDs below len of the names table) or of a closed set (Side is
 // Bid or Ask; Reason, Cause and Kind are constants of event.go). The Reason check is
@@ -222,8 +222,9 @@ func (c *cardChecker) check(e economysim.Event) {
 //
 // Requirement: FR-OBS-005, FR-OBS-006, FR-REF-034
 // Guard: a RecipeExecuted with a recipe ID out of range, or a Reason outside event.go.
-// The five row is the configuration of five that N-295 left to Stage 2 (plan 2-24 Phase 2);
-// it is skipped under -race with the other 5 000-household runs.
+// The five rows are the configuration of five that N-295 left to Stage 2 (plan 2-24 Phase 2):
+// the all-on row is the one that emits the events of the modules (transport, outside node,
+// migration, merchants, demand). They are skipped under -race with the other 5 000-household runs.
 func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end: 400 ticks of pack one and five; skipped under -short")
@@ -233,15 +234,22 @@ func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 		pack   string
 		layers []string
 		seeds  []uint64
-	}{{"one", packOne, []uint64{1, 2}}, {"five", packFiveWarm, []uint64{1}}} {
-		if row.pack == "five" && raceEnabled {
+		opts   []economysim.Option
+	}{{"one", packOne, []uint64{1, 2}, nil}, {"five", packFiveWarm, []uint64{1}, nil}, {"all", allLayers, []uint64{1}, allOptions()}} {
+		if row.pack != "one" && raceEnabled {
 			continue
 		}
 		cfg := loadValidPack(t, row.layers...)
 		for _, seed := range row.seeds {
 			t.Run(row.pack+"/seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
-				res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true})
-				c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: consts, seen: map[string]int{}}
+				res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 400, Observe: true, Extra: row.opts})
+				flows := map[string]bool{}
+				if cfg.Modules.MoneySupply != nil {
+					for _, f := range cfg.Modules.MoneySupply.Flows {
+						flows[f.ID] = true
+					}
+				}
+				c := &cardChecker{t: t, seed: seed, names: res.Final.Names, consts: consts, flows: flows, seen: map[string]int{}}
 				for _, e := range res.Events {
 					c.check(e)
 				}

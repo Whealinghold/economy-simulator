@@ -1845,7 +1845,7 @@ for `one` (600 agents of 6.5 us), so 16 seeds of 400 ticks take about 26 seconds
 about 53 ms a tick for `five`, so 400 ticks take about 21 seconds. Neither is a
 measurement (NFR-REF-002). The golden of `all` is `testdata/golden/all/` (testing.md 7.1.1); the
 golden of `five` with every module off is `testdata/golden/off/five.txt`, `events-five.txt` and
-`five.positions.txt`, and the positions of the two five-sized worlds cover ticks 0 to 9, not 0 to 29. A calibration's search blocks (`Seed0` 101 and up, `spec-calibration.md` 7.1) are its own, outside every set above, and the gate is never an input to its choices; the hold-out of 51 to 60 is run only if wanted (a SHOULD).
+`five.positions.txt`, and the positions of the two five-sized worlds cover ticks 0 to 9, not 0 to 29. Their determinism row runs four of the cases (the second observed run, one `Run(400)`, `Run(1)` then `Run(399)`, and the audit) against a bare Step run that takes the sample snapshots only, and compares no events; `TestGolden_FiveEvents` and `TestGolden_AllEvents` compare the events of a `Run` with a Step loop's final snapshot. A calibration's search blocks (`Seed0` 101 and up, `spec-calibration.md` 7.1) are its own, outside every set above, and the gate is never an input to its choices; the hold-out of 51 to 60 is run only if wanted (a SHOULD).
 
 ### 8.3 What a scenario test looks like
 

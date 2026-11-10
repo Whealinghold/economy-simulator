@@ -79,7 +79,7 @@ var warningPairRe = regexp.MustCompile(`rule = "([^"]*)", path = "([^"]*)"`)
 // warnings are the list recorded in expected/all.toml (a changed pack, default or
 // module shows as a diff, not as silent drift), and that its hash is the one the
 // config package recorded from its own copy of the layer list, so the two lists
-// cannot drift apart.
+// cannot drift apart (the cold set too).
 //
 // Requirement: FR-REF-001, FR-REF-039
 //
@@ -103,6 +103,11 @@ func TestAllPack_LoadsAndValidates(t *testing.T) {
 	if got, want := hex.EncodeToString(h[:]), strings.Trim(expectedLine(t, "warm_config_hash"), `"`); got != want {
 		t.Errorf("HashConfig(all-on pack) = %s, want %s of %s", got, want, allExpectedPath)
 	}
+	// The cold set is the one the solver reads; the config package derives it from its own copy.
+	hc := economysim.HashConfig(loadValidPack(t, allColdLayers()...))
+	if got, want := hex.EncodeToString(hc[:]), strings.Trim(expectedLine(t, "config_hash"), `"`); got != want {
+		t.Errorf("HashConfig(all-on pack, cold) = %s, want %s of %s", got, want, allExpectedPath)
+	}
 }
 
 // TestAllPack_EveryModuleIsOn verifies that every pointer of Config.Modules is
@@ -124,15 +129,15 @@ func TestAllPack_EveryModuleIsOn(t *testing.T) {
 }
 
 // TestAllPack_OffGoldenUnmoved verifies that the warm five alone, every module off,
-// still has the configuration hash its expected file recorded, that the all-on
-// pack differs from it, and that the three files of the off set of pack one are
-// the ones Stage 1 left (the sha256 of TestGolden_OffUnchanged and its siblings).
+// still has the configuration hash its expected file recorded, and that the all-on
+// pack differs from it. The files of the off set are pinned by TestGolden_OffUnchanged
+// and TestGolden_EventsAndPositionsUnchanged (sha256 and the list of names), which own
+// those hashes.
 //
 // Requirement: FR-REF-029
 //
 // Guard: architecture.md 2.10.5 and N-217. A module layer that moved the five
-// alone, or a regenerated off file, fails here; the hash of the all-on pack moves
-// only through the module layers.
+// alone fails here; the hash of the all-on pack moves only through the module layers.
 func TestAllPack_OffGoldenUnmoved(t *testing.T) {
 	t.Parallel()
 	b, err := os.ReadFile("testdata/chains/expected/five.toml")
@@ -151,15 +156,6 @@ func TestAllPack_OffGoldenUnmoved(t *testing.T) {
 	if five == all {
 		t.Error("HashConfig(warm five) = HashConfig(all-on pack), want the module layers to move the hash")
 	}
-	for name, want := range map[string]string{"one.txt": offOneTxtSha256, "events-one.txt": eventsOneSha256, "one.positions.txt": positionsOneSha256} {
-		b, err := os.ReadFile(goldenPath(name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := sha256Hex(b); got != want {
-			t.Errorf("sha256(golden/off/%s) = %s, want %s", name, got, want)
-		}
-	}
 }
 
 // TestConfigOnly_AllPackHasNoGoSpecific verifies that the all-on world is built with
@@ -173,6 +169,7 @@ func TestAllPack_OffGoldenUnmoved(t *testing.T) {
 // library code would pass every test that does not look for it.
 func TestConfigOnly_AllPackHasNoGoSpecific(t *testing.T) {
 	t.Parallel()
+	skipFiveSized(t) // builds a 5 000-household world only to read its names table
 	w, err := economysim.NewWorld(loadValidPack(t, allLayers...), append(allOptions(), economysim.WithSeed(1))...)
 	if err != nil {
 		t.Fatalf("NewWorld(all-on pack, strategy.Options, WithSeed) error = %v, want nil", err)
