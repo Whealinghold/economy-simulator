@@ -346,3 +346,28 @@ func TestRender_DoesNotChangeItsInput(t *testing.T) {
 		t.Errorf("claim words = %q %q %q %q, want the words of CLB 8.2", verdict.ClaimStable, verdict.ClaimNotStable, verdict.ClaimOneNeighbour, verdict.ClaimUndetermined)
 	}
 }
+
+// TestRenderVerdict_IdenticalRows verifies that rows equal in every sort key
+// are all kept and keep their input order (the sort is stable), so the
+// rendering is a function of the record's row order.
+//
+// Requirement: FR-STY-085
+//
+// Guard: the rendering is the golden of a record; a sort that merged equal
+// rows or reordered them would move the bytes with no change of the facts.
+func TestRenderVerdict_IdenticalRows(t *testing.T) {
+	t.Parallel()
+	row := func(min int64) verdict.FactRow {
+		return verdict.FactRow{ID: "STY-P02", Class: verdict.ClassB, Statistic: "s", N: 4, BandSet: true, Band: 1, HasValues: true, Min: min, Median: min, Max: min}
+	}
+	render := func(rows ...verdict.FactRow) string {
+		return verdict.RenderVerdict(verdict.Record{Pack: "one", Scenarios: []verdict.ScenarioRecord{{Scenario: "S", Facts: rows}}})
+	}
+	got := render(row(7), row(7), row(5))
+	if n := strings.Count(got, "\nfact STY-P02"); n != 3 {
+		t.Errorf("RenderVerdict(7, 7, 5) has %d rows, want 3:\n%s", n, got)
+	}
+	if i, j := strings.Index(got, "min 7"), strings.Index(got, "min 5"); i < 0 || j < i {
+		t.Errorf("RenderVerdict(7, 7, 5) =\n%s\nwant the rows in input order (min 7 before min 5)", got)
+	}
+}

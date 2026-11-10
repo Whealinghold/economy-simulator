@@ -802,3 +802,45 @@ func exportedSpec(s ast.Spec) bool {
 	}
 	return false
 }
+
+// TestRegimesFile_FeedsEveryDetector verifies the path from the shipped
+// regimes.toml through LoadBands and ThresholdsOf into Detect: the file yields
+// one threshold per key of STY 6.2 in order, and every detector runs over it
+// with an empty input without panicking and names itself. While no key has a
+// value, each answers `unknown` with the reason `threshold unset`.
+//
+// Requirement: FR-STY-060, FR-STY-070
+//
+// Guard: the unit tests build their thresholds by hand; a key renamed in the
+// file or in the registry would fail only at the first reviewed run.
+func TestRegimesFile_FeedsEveryDetector(t *testing.T) {
+	t.Parallel()
+	var keys []verdict.BandKey
+	for _, f := range loadBandFiles(t) {
+		if f.Name == strings.TrimSuffix(regimesFn, ".toml") {
+			keys = f.Keys
+		}
+	}
+	th, err := verdict.ThresholdsOf(keys)
+	if err != nil {
+		t.Fatalf("ThresholdsOf(%s) error = %v, want nil", regimesFn, err)
+	}
+	var names []string
+	anySet := false
+	for _, k := range th {
+		names = append(names, k.Name)
+		anySet = anySet || k.Set
+	}
+	if want := verdict.ThresholdNames(); !slices.Equal(names, want) {
+		t.Errorf("ThresholdsOf(%s) names = %v, want %v", regimesFn, names, want)
+	}
+	for _, d := range verdict.Detectors() {
+		v := verdict.Detect(d, verdict.Input{}, th)
+		if v.Detector != d {
+			t.Errorf("Detect(%s).Detector = %s, want %s", d, v.Detector, d)
+		}
+		if !anySet && (v.Class != verdict.Unknown || v.Reason != verdict.ReasonThresholdUnset) {
+			t.Errorf("Detect(%s) over the unset file = %v %q, want unknown %q", d, v.Class, v.Reason, verdict.ReasonThresholdUnset)
+		}
+	}
+}
