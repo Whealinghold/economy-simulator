@@ -175,8 +175,10 @@ economy-sim/
 │   │   policy/ insure/     # one package per module with arithmetic or matching
 │   └── measure/ verdict/ design/ reduce/ calibration/   # the platform
 ├── otelobserver/           # separate module: Observer backed by OpenTelemetry
-├── examples/<name>/        # each example is its own module: the first consumer's
-│                           #   pack and a second, unrelated setting
+├── examples/<name>/        # each example is its own module: inspector (a
+│                           #   developer tool over the fixtures), realm (the first
+│                           #   consumer's pack and a server) and colony (a second,
+│                           #   unrelated setting)
 ├── testdata/               # shared fixtures: chains/ (config), golden/ (off/, one
 │                           #   directory per module, all/, and indicator/,
 │                           #   experiment/, stylised/ for a harness that records no
