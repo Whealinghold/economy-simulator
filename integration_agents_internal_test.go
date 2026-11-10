@@ -274,7 +274,9 @@ func TestAddAgent_BoundaryFlow(t *testing.T) {
 		bucket bool
 		world  func(t *testing.T) *World
 	}{
-		{"before the first step", true, func(t *testing.T) *World { return newMill(t, extConfig(), WithAudit(), WithStrategy("script", &extScript{plan: map[AgentID][]Intent{}})) }},
+		{"before the first step", true, func(t *testing.T) *World {
+			return newMill(t, extConfig(), WithAudit(), WithStrategy("script", &extScript{plan: map[AgentID][]Intent{}}))
+		}},
 		{"after construction", false, func(t *testing.T) *World { w, _ := intWorld(t); return w }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

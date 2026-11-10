@@ -37,6 +37,13 @@ func TestFundFits(t *testing.T) {
 		{"commodity out of range", testMaxMoney, 0, 0, []ledger.Fund{{Commodity: 7, Qty: 1}}, false},
 		{"commodity with no boundary", testMaxMoney, 0, 0, []ledger.Fund{{Commodity: 1, Qty: 1}}, false},
 		{"amounts below 1 are skipped", testMaxMoney, 0, -3, []ledger.Fund{{Commodity: 7, Qty: 0}}, true},
+		{"a skipped line does not end the check", testMaxMoney, 0, 0, []ledger.Fund{{Commodity: 0, Qty: 0}, {Commodity: 0, Qty: testMaxQuantity + 1}}, false},
+		{"region far above range", testMaxMoney, 100, 1, nil, false},
+		{"commodity below range", testMaxMoney, 0, 0, []ledger.Fund{{Commodity: -1, Qty: 1}}, false},
+		// Region 0 already has a flow of 100 (the fixture funds a0), so 100 + (MaxInt64-99) is 2^63: the
+		// flow total passes int64 though the boundary (-100 - m = MinInt64) still fits.
+		{"flow total of the region would pass int64", math.MaxInt64, 0, math.MaxInt64 - 99, nil, false},
+		{"same amount in the region with no flow", math.MaxInt64, 1, math.MaxInt64 - 99, nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
