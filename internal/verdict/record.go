@@ -107,18 +107,24 @@ func renderRow(b *strings.Builder, f FactRow) {
 	case !f.BandSet && (f.Class == ClassB || f.Class == ClassP):
 		b.WriteString("  band unset  prior " + priorWord(f) + "\n")
 	default:
-		if f.BandSet {
-			b.WriteString("  band " + strconv.FormatInt(f.Band, 10))
-		}
-		ok := "invalid" // more seeds outside than seeds: a caller bug the record must show
-		if len(f.Outside) <= f.N {
-			ok = strconv.Itoa(f.N - len(f.Outside))
-		}
-		b.WriteString("  ok " + ok + "/" + strconv.Itoa(f.N) + "\n")
+		b.WriteString(bandOK(f))
 	}
 	if f.HasValues {
 		b.WriteString(valuesIndent + "values min " + i64(f.Min) + " median " + i64(f.Median) + " max " + i64(f.Max) + outsideWord(f) + "\n")
 	}
+}
+
+// bandOK renders the band and the seeds-in-band count of a row that has a verdict.
+func bandOK(f FactRow) string {
+	s := ""
+	if f.BandSet {
+		s = "  band " + strconv.FormatInt(f.Band, 10)
+	}
+	ok := "invalid" // more seeds outside than seeds: a caller bug the record must show
+	if len(f.Outside) <= f.N {
+		ok = strconv.Itoa(f.N - len(f.Outside))
+	}
+	return s + "  ok " + ok + "/" + strconv.Itoa(f.N) + "\n"
 }
 
 func i64(v int64) string { return strconv.FormatInt(v, 10) }
@@ -224,12 +230,18 @@ func ClaimOf(points []StabilityPoint) string {
 			open = open || c != Stable
 		}
 	}
+	return claimFromNeighbours(hasDefault && !open, len(others))
+}
+
+// claimFromNeighbours maps the neighbour count of a record whose checks are all
+// STABLE (settled) to its claim.
+func claimFromNeighbours(settled bool, neighbours int) string {
 	switch {
-	case !hasDefault || open:
+	case !settled:
 		return ClaimUndetermined
-	case len(others) >= 2:
+	case neighbours >= 2:
 		return ClaimStable
-	case len(others) == 1:
+	case neighbours == 1:
 		return ClaimOneNeighbour
 	}
 	return ClaimUndetermined
