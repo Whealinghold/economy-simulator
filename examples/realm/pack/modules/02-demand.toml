@@ -1,0 +1,88 @@
+# Generated from testdata/chains/all/demand.toml by rename.sh; do not edit.
+[commodity.sweets]
+reference_price = 664
+classes = [ "luxury" ]
+[commodity.pastry]
+reference_price = 1079
+classes = [ "luxury" ]
+[commodity.ale]
+reference_price = 1425
+classes = [ "luxury" ]
+
+[recipe.bake_sweets]
+inputs  = [ { commodity = "bread", quantity = 1 }, { commodity = "firewood", quantity = 1 } ]
+outputs = [ { commodity = "sweets", quantity = 5, cost_share = 10000 } ]
+[recipe.bake_pastry]
+duration = 2
+inputs  = [ { commodity = "grain", quantity = 2 }, { commodity = "firewood", quantity = 1 } ]
+outputs = [ { commodity = "pastry", quantity = 5, cost_share = 10000 } ]
+[recipe.brew_ale]
+inputs  = [ { commodity = "ingot", quantity = 1 } ]
+outputs = [ { commodity = "ale", quantity = 4, cost_share = 10000 } ]
+
+[role.confectioner]
+recipes = [ "bake_sweets", "bake_pastry" ]
+[role.brewer]
+recipes = [ "brew_ale" ]
+
+[modules.demand.want.ale]
+items = [ { commodity = "ale", weight = 10000 } ]
+quantity = 1
+period = 10
+rank = 1
+elasticity = 15000
+[modules.demand.want.treat]
+items = [ { commodity = "sweets", weight = 10000 }, { commodity = "pastry", weight = 10000 } ]
+quantity = 1
+period = 5
+rank = 2
+elasticity = 20000
+substitution = 2
+
+[modules.demand.taste.brewer.ale]
+scale = 10000
+[modules.demand.taste.baker.ale]
+scale = 10000
+[modules.demand.taste.baker.treat]
+scale = 5000
+[modules.demand.taste.miner.ale]
+scale = 10000
+[modules.demand.taste.woodcutter.ale]
+scale = 10000
+[modules.demand.taste.farmer.ale]
+scale = 10000
+[modules.demand.taste.farmer.treat]
+scale = 10000
+[modules.demand.taste.smith.ale]
+scale = 10000
+[modules.demand.taste.founder.ale]
+scale = 10000
+[modules.demand.taste.confectioner.ale]
+scale = 10000
+[modules.demand.taste.confectioner.treat]
+scale = 10000
+
+[region.highmarch.group.brewer]
+households = 23
+[region.highmarch.group.confectioner]
+households = 29
+
+[region.eastvale.group.brewer]
+households = 23
+[region.eastvale.group.confectioner]
+households = 29
+
+[region.southfen.group.brewer]
+households = 23
+[region.southfen.group.confectioner]
+households = 29
+
+[region.coastland.group.brewer]
+households = 23
+[region.coastland.group.confectioner]
+households = 29
+
+[region.crownlands.group.brewer]
+households = 23
+[region.crownlands.group.confectioner]
+households = 29

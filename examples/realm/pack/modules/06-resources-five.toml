@@ -1,0 +1,61 @@
+# Generated from testdata/chains/overlay/resources-five.toml by rename.sh; do not edit.
+
+[modules.resources]
+
+[modules.resources.resource.arable]
+shape = "refill"
+rate_bp = 10000
+plan_share_bp = 5000
+initial_bp = 5000
+
+[modules.resources.resource.deposit]
+shape = "constant"
+
+[modules.resources.resource.stand]
+shape = "logistic"
+rate_bp = 3000
+refuge = 1000
+plan_share_bp = 6000
+initial_bp = 6000
+
+[modules.resources.endowment.highmarch.arable]
+capacity = 2464
+[modules.resources.endowment.highmarch.deposit]
+capacity = 6090939
+[modules.resources.endowment.highmarch.stand]
+capacity = 13332647
+
+[modules.resources.endowment.eastvale.arable]
+capacity = 2164
+[modules.resources.endowment.eastvale.deposit]
+capacity = 8139692
+[modules.resources.endowment.eastvale.stand]
+capacity = 16667084
+
+[modules.resources.endowment.southfen.arable]
+capacity = 2054
+[modules.resources.endowment.southfen.deposit]
+capacity = 6767709
+[modules.resources.endowment.southfen.stand]
+capacity = 22221078
+
+[modules.resources.endowment.coastland.arable]
+capacity = 2370
+[modules.resources.endowment.coastland.deposit]
+capacity = 2206057
+[modules.resources.endowment.coastland.stand]
+capacity = 10672846
+
+[modules.resources.endowment.crownlands.arable]
+capacity = 2582
+[modules.resources.endowment.crownlands.deposit]
+capacity = 4104621
+[modules.resources.endowment.crownlands.stand]
+capacity = 9526808
+
+[recipe.grow_grain]
+draws = [ { resource = "arable", quantity = 1 } ]
+[recipe.dig_ore]
+draws = [ { resource = "deposit", quantity = 3 } ]
+[recipe.cut_firewood]
+draws = [ { resource = "stand", quantity = 14 } ]

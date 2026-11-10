@@ -1,0 +1,103 @@
+# Generated from testdata/chains/base.toml by rename.sh; do not edit.
+schema = 1
+
+[world]
+anchor_hold = 5000
+upkeep = [ { commodity = "grain", quantity = 2 }, { commodity = "bread", quantity = 1 }, { commodity = "firewood", quantity = 1 } ]
+
+[commodity.seedcorn]
+reference_price = 222
+[commodity.grain]
+reference_price = 96
+shelf_life = 700
+classes = [ "food" ]
+[commodity.bread]
+reference_price = 628
+shelf_life = 4
+classes = [ "food" ]
+[commodity.firewood]
+reference_price = 179
+raw = true
+classes = [ "firewood" ]
+[commodity.ore]
+reference_price = 837
+raw = true
+classes = [ "material" ]
+[commodity.ingot]
+reference_price = 3190
+classes = [ "material" ]
+[commodity.cinders]
+reference_price = 50
+[commodity.plough]
+reference_price = 13915
+durability = 10
+classes = [ "tool" ]
+[commodity.cauldron]
+reference_price = 17105
+durability = 8
+classes = [ "tool" ]
+
+[recipe.grow_grain]
+duration = 60
+sited = true
+inputs   = [ { commodity = "seedcorn", quantity = 40 } ]
+outputs  = [ { commodity = "grain", quantity = 1800, cost_share = 10000 } ]
+requires = [ { commodity = "plough", wear_per_use = 10 } ]
+[recipe.gather_seedcorn]
+sited = true
+outputs = [ { commodity = "seedcorn", quantity = 2, cost_share = 10000 } ]
+[recipe.save_seedcorn]
+inputs  = [ { commodity = "grain", quantity = 20 } ]
+outputs = [ { commodity = "seedcorn", quantity = 20, cost_share = 10000 } ]
+[recipe.bake]
+inputs   = [ { commodity = "grain", quantity = 2 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "bread", quantity = 8, cost_share = 10000 } ]
+requires = [ { commodity = "cauldron", wear_per_use = 1 } ]
+[recipe.bake_plain]
+trainee_eligible = true
+trainee_yield = 7000
+inputs   = [ { commodity = "grain", quantity = 2 }, { commodity = "firewood", quantity = 1 } ]
+outputs  = [ { commodity = "bread", quantity = 4, cost_share = 10000 } ]
+[recipe.cut_firewood]
+sited = true
+outputs  = [ { commodity = "firewood", quantity = 14, cost_share = 10000 } ]
+[recipe.dig_ore]
+sited = true
+outputs  = [ { commodity = "ore", quantity = 3, cost_share = 10000 } ]
+[recipe.smelt]
+duration = 2
+inputs   = [ { commodity = "ore", quantity = 5 }, { commodity = "firewood", quantity = 2 } ]
+outputs  = [ { commodity = "ingot", quantity = 3, cost_share = 10000 }, { commodity = "cinders", quantity = 1, cost_share = 0, discard = true } ]
+
+[recipe.forge_plough]
+duration = 3
+inputs  = [ { commodity = "ingot", quantity = 2 } ]
+outputs = [ { commodity = "plough", quantity = 1, cost_share = 10000 } ]
+[recipe.forge_cauldron]
+duration = 3
+inputs  = [ { commodity = "ingot", quantity = 3 } ]
+outputs = [ { commodity = "cauldron", quantity = 1, cost_share = 10000 } ]
+
+[role.farmer]
+recipes = [ "grow_grain", "save_seedcorn", "gather_seedcorn" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "seedcorn", quantity = 40 }, { commodity = "grain", quantity = 10 }, { commodity = "plough", quantity = 1 } ]
+[role.baker]
+recipes = [ "bake", "bake_plain" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 }, { commodity = "cauldron", quantity = 1 } ]
+[role.woodcutter]
+unskilled = true
+recipes = [ "cut_firewood" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
+[role.miner]
+unskilled = true
+recipes = [ "dig_ore" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
+[role.founder]
+recipes = [ "smelt" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "ore", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "grain", quantity = 10 } ]
+[role.smith]
+recipes = [ "forge_plough", "forge_cauldron" ]
+start_stock = [ { commodity = "firewood", quantity = 5 }, { commodity = "bread", quantity = 4 }, { commodity = "ingot", quantity = 5 }, { commodity = "grain", quantity = 10 } ]
+[role.traveller]
+closed = true       # the spawner places nobody in it (spec-spawner.md 6.2)
+trades = [ "firewood", "bread", "grain" ]

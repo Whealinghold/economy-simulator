@@ -1,0 +1,5 @@
+go test fuzz v1
+string("POST")
+string("/v1/restore")
+string("")
+[]byte("\x00\x00\x00\x00\x00\x00\x00\x01CKPT\xff\xff\xff\xff\xff\xff\xff\xff")

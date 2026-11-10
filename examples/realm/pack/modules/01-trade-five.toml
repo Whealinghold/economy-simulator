@@ -1,0 +1,25 @@
+# Generated from testdata/chains/overlay/trade-five.toml by rename.sh; do not edit.
+[region.crownlands.edge.eastvale]
+distance = 100
+[region.eastvale.edge.crownlands]
+distance = 100
+[region.crownlands.edge.highmarch]
+distance = 100
+[region.highmarch.edge.crownlands]
+distance = 100
+[region.crownlands.edge.southfen]
+distance = 100
+[region.southfen.edge.crownlands]
+distance = 100
+[region.crownlands.edge.coastland]
+distance = 100
+[region.coastland.edge.crownlands]
+distance = 100
+[region.highmarch.edge.eastvale]
+distance = 130
+[region.eastvale.edge.highmarch]
+distance = 130
+[region.southfen.edge.coastland]
+distance = 130
+[region.coastland.edge.southfen]
+distance = 130
