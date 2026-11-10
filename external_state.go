@@ -68,7 +68,8 @@ type CounterpartyRow struct {
 }
 
 // snapshotOutside fills the outside state of a snapshot from the module's state
-// and the mid of the tick about to run. Every slice is new (a deep copy).
+// as it stands at the boundary: the mid is of the world's tick with the drift now, which
+// the next P1.8 walk moves. Every slice is new (a deep copy).
 func (w *World) snapshotOutside(s *Snapshot) {
 	x := w.external
 	if x == nil {
@@ -77,28 +78,24 @@ func (w *World) snapshotOutside(s *Snapshot) {
 	o := &s.Outside
 	o.Lines = make([]OutsideLineRow, len(x.lines))
 	mids := make([]int64, len(x.lines))
+	trade := map[CommodityID]*OutsideTradeRow{}
 	for i := range x.lines {
 		l := &x.lines[i]
 		mids[i], _ = x.midOf(w, l)
 		mid := mids[i]
 		o.Lines[i] = OutsideLineRow{Node: l.node, Commodity: l.commodity, Mid: Price(mid), DriftBP: l.drift, ShockBP: l.shock}
+		if trade[l.commodity] == nil {
+			trade[l.commodity] = &OutsideTradeRow{Commodity: l.commodity}
+		}
 	}
 	o.Sides = make([]OutsideSideRow, 0, len(x.rows))
-	trade := map[CommodityID]*OutsideTradeRow{}
 	x.eachRowOrdered(func(cp *counterparty, row *sideRow) {
 		l := &x.lines[row.line]
-		side := &l.cfg.Sell
-		if cp.buy {
-			side = &l.cfg.Buy
-		}
+		side := l.cfg.side(cp.buy)
 		quote, _ := outside.Quote(mids[row.line], side.MarginBP, cp.scaleBP, MaxPrice, !cp.buy)
 		o.Sides = append(o.Sides, OutsideSideRow{Node: cp.node, Gate: cp.gate, Commodity: l.commodity, Side: cp.sideOf(),
 			Quote: Price(quote), Carry: row.carry, Units: row.units, ListValue: Money(row.listValue), Ended: row.ended})
 		t := trade[l.commodity]
-		if t == nil {
-			t = &OutsideTradeRow{Commodity: l.commodity}
-			trade[l.commodity] = t
-		}
 		if cp.buy {
 			t.Exports = Quantity(satAdd(int64(t.Exports), row.units))
 		} else {
@@ -191,10 +188,7 @@ func (w *World) loadExternal(_ *restoreCtx, r *codec.Reader) error {
 		if r.Err() != nil {
 			return
 		}
-		side := &x.lines[row.line].cfg.Sell
-		if cp.buy {
-			side = &x.lines[row.line].cfg.Buy
-		}
+		side := x.lines[row.line].cfg.side(cp.buy)
 		row.carry = r.Bounded("carry", wholeBP-1)
 		units := int64(MaxLineTotal)
 		if side.TotalUnits > 0 {

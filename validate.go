@@ -640,8 +640,9 @@ func (v *validator) structure() {
 			queue = append(queue, id)
 		}
 	}
+	imported := importSources(&c)
 	for _, cm := range c.Commodities {
-		if cm.Raw || importSourced(&c, cm.ID) {
+		if cm.Raw || imported[cm.ID] {
 			mark(cm.ID)
 		}
 	}
@@ -1961,6 +1962,7 @@ func warnings(c *Config) []Warning {
 		}
 	}
 
+	imported := importSources(c)
 	for _, cm := range c.Commodities {
 		if cm.Durability > 0 && !required[cm.ID] {
 			add("durable_not_required", "commodities", cm.ID)
@@ -1979,7 +1981,7 @@ func warnings(c *Config) []Warning {
 					sourced = sourced || (o.Commodity == cm.ID && !o.Discard)
 				}
 			}
-			if !sourced && !importSourced(c, cm.ID) {
+			if !sourced && !imported[cm.ID] {
 				add("raw_without_source", "commodities", cm.ID)
 			}
 		}

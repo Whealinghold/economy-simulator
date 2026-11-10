@@ -422,7 +422,7 @@ const agentRecordMin = 15
 func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 	regions, roles := len(w.cfg.Regions), len(w.cfg.Roles)
 	names := readStrategyNames(r)
-	if r.Err() == nil && int(w.state.nextAgent)-regions > w.ledger.Len() {
+	if r.Err() == nil && int(w.state.nextAgent)-w.firstHousehold > w.ledger.Len() {
 		r.Failf("next agent ID %d, but the ledger has %d accounts", w.state.nextAgent, w.ledger.Len())
 	}
 	if r.Err() != nil {
