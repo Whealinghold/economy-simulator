@@ -36,6 +36,7 @@ unit = "bp"
 expects = ["r3", "r4"]
 [min_windows]
 unit = "windows"
+expects = []
 [w02.n_band_bp]
 unit = "bp"
 value = -7
@@ -50,7 +51,7 @@ set_by = "commit=a;config=b;seeds=1-10"
 		{Name: "s01.recover_ticks", Unit: "ticks", Line: 7},
 		{Name: "s14.fall_bp", Unit: "bp", Expects: []string{"r3", "r4"}, Line: 9},
 		{Name: "min_windows", Unit: "windows", Line: 12},
-		{Name: "w02.n_band_bp", Unit: "bp", Value: -7, Set: true, SetBy: "commit=a;config=b;seeds=1-10", Line: 14},
+		{Name: "w02.n_band_bp", Unit: "bp", Value: -7, Set: true, SetBy: "commit=a;config=b;seeds=1-10", Line: 15},
 	}
 	if !reflect.DeepEqual(keys, want) {
 		t.Errorf("LoadBands(ok) = %+v, want %+v", keys, want)
@@ -72,6 +73,7 @@ set_by = "commit=a;config=b;seeds=1-10"
 		{"unit not a string", "[a.b]\nunit = bp\n", "not a string"},
 		{"expects not a list", "[a.b]\nexpects = \"r3\"\n", "not a list"},
 		{"expects item not a string", "[a.b]\nexpects = [r3]\n", "not a string"},
+		{"value without set_by before the next table", "[a.b]\nvalue = 1\n[c.d]\n", "no set_by"},
 		{"table twice", "[a.b]\n[a.b]\n", "twice"},
 		{"field twice", "[a.b]\nunit = \"bp\"\nunit = \"bp\"\n", "twice"},
 		{"two dots", "[a.b.c]\n", "not a table header"},

@@ -471,6 +471,17 @@ func TestOrdering_Pairs(t *testing.T) {
 			t.Errorf("CheckOrdering(%s: %s = %d) error = %v, want a violation naming %s", tc.name, tc.key, tc.v, err, tc.key)
 		}
 	}
+	// An error reads as the pair and the values; a huge pinned run saturates and holds.
+	v := maps(specPriors)
+	v["s03.pinned_ticks"] = 61
+	if err := verdict.CheckOrdering(v, 0); err == nil || !strings.Contains(err.Error(), "s03.pinned_ticks 61 against r5.pinned_ticks 60") {
+		t.Errorf("CheckOrdering(61 against 60) error = %v, want the pair and the values in the message", err)
+	}
+	v = maps(specPriors)
+	v["r5.pinned_ticks"] = 1 << 62
+	if err := verdict.CheckOrdering(v, 0); err != nil {
+		t.Errorf("CheckOrdering(r5.pinned_ticks 2^62) error = %v, want nil (the implication saturates)", err)
+	}
 	if err := verdict.CheckOrdering(map[string]int64{"s03.pinned_ticks": 99}, 0); err != nil {
 		t.Errorf("CheckOrdering(a band with no threshold) error = %v, want nil (an unset key asserts nothing)", err)
 	}
