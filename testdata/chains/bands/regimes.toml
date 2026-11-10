@@ -1,0 +1,103 @@
+# The thresholds of the failure regimes R1 to R9 (spec-stylised-facts.md 6.2, 6.5.1),
+# one table per key, one file for every pack. Every key is unset: a key with no
+# `value` line makes its detector say `unknown` (reason `threshold unset`) and
+# G01 report it. The priors are in the comments and in the spec; nothing asserts
+# a prior. A value is set by a reviewed run (STY 8.4) with a
+# `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line (FR-REF-024).
+
+# R1: the least rise of the price index link in each of `windows` windows; prior 3000 (P)
+[r1.rise_bp]
+unit = "bp"
+# R1: the consecutive windows the rise must hold; prior 2 (P)
+[r1.windows]
+unit = "windows"
+# R1: the money of the households as a multiple of its start, at two successive closes; prior 30000 (P)
+[r1.m_factor_bp]
+unit = "bp"
+# R2: the last window's volume is below this share of the first; prior 8000 (P)
+[r2.vol_bp]
+unit = "bp"
+# R2: the least share of money outside the households at `windows` closes; prior 5000 (P)
+[r2.share_bp]
+unit = "bp"
+# R2: the least unsold share of a commodity with consumption, and rising; prior 5000 (P)
+[r2.unsold_bp]
+unit = "bp"
+# R2: the least share of household money held by the top decile; prior 7000 (P)
+[r2.top_bp]
+unit = "bp"
+# R2: the consecutive windows the share must hold; prior 2 (P)
+[r2.windows]
+unit = "windows"
+# R3: the households fall to at most 10000 minus this of their start; prior 2000 (P)
+[r3.fall_bp]
+unit = "bp"
+# R3: not back within this of the start; equals s14.recover_band_bp; prior 1000 (P)
+[r3.recover_bp]
+unit = "bp"
+# R3: the horizon as a multiple of t_min, in ten-thousandths; prior 50000 (P)
+[r3.horizon_factor]
+unit = "ratio"
+# R3: the least horizon after the minimum; prior 730 (P)
+[r3.horizon]
+unit = "ticks"
+# R3: a role with positive start households has none for this many ticks; prior 365 (P)
+[r3.role_ticks]
+unit = "ticks"
+# R4: the volume is below this share of the first window; prior 5000 (P)
+[r4.vol_bp]
+unit = "bp"
+# R4: the consecutive windows the volume must stay low; prior 2 (P)
+[r4.windows]
+unit = "windows"
+# R5a: the least share of belief outcomes at a bound in one tick; prior 5000 (P)
+[r5.pinned_bp]
+unit = "bp"
+# R5a: the consecutive pinned ticks; prior 60 (P)
+[r5.pinned_ticks]
+unit = "ticks"
+# R5b: the consecutive ticks with unmatched units on both sides and no volume; prior 60 (P)
+[r5.freeze_ticks]
+unit = "ticks"
+# R6: the range ratio of a window must exceed this, in ten-thousandths; prior 30000 (P)
+[r6.factor]
+unit = "ratio"
+# R6: and exceed the previous window's by more than this; prior 2500 (P)
+[r6.growth_bp]
+unit = "bp"
+# R6: the successive windows; prior 2 (P)
+[r6.windows]
+unit = "windows"
+# R6: the swing of a role's share in two windows; prior 1000 (P)
+[r6.swing_bp]
+unit = "bp"
+# R7: the lowest dispersion of belief centres of a market is below this; prior 50 (P)
+[r7.disp_bp]
+unit = "bp"
+# R7: the completions of a recipe on one tick exceed this multiple of the mean, in ten-thousandths; prior 20000 (P)
+[r7.spike_factor]
+unit = "ratio"
+# R7: the first ticks of the run in which the completions are read; prior 60 (P)
+[r7.first_ticks]
+unit = "ticks"
+# R8: the least absolute offset of a market; prior 3000 (P)
+[r8.offset_bp]
+unit = "bp"
+# R8: and the least unfed share of household-ticks; prior 3000 (P)
+[r8.unmet_bp]
+unit = "bp"
+# R9: the index link is at most 10000 minus this; prior 3000 (P)
+[r9.fall_bp]
+unit = "bp"
+# R9: the consecutive windows; prior 2 (P)
+[r9.windows]
+unit = "windows"
+# shared: the most stale share of an index; prior 1000 (P)
+[stale_max_bp]
+unit = "bp"
+# shared: the least share of active ticks of a window; prior 5000 (P)
+[active_min_bp]
+unit = "bp"
+# shared: the year windows a detector needs; prior 3 (P)
+[min_windows]
+unit = "windows"
