@@ -1417,7 +1417,7 @@ input because nothing reads one back.
 ## 6. Metrics
 
 Metrics are produced by the separate module `otelobserver` from the events of
-section 4 and, for nineteen instruments, from a snapshot that the consumer passes to
+section 4 and, for twenty-five instruments, from a snapshot that the consumer passes to
 it (6.2.2). The core defines none and does not import OpenTelemetry
 (architecture.md 11.4). This section reconciles the catalogue of rules 5.3 with
 the events, resolves the five conflicts of N-088, and says what the adapter keeps.
@@ -1465,6 +1465,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.world.step.failed` | Counter | `{step}` | none | `TickEnded` with `Failed` true, one per failed step (6.3.1) | **new**: the duration is not recorded for a failed step and the span is a sampled trace, so without it a world that failed leaves only a flat line |
 | `economysim.market.trades` | Counter | `{trade}` | `economysim.commodity` | `TradeExecuted` | kept |
 | `economysim.market.volume` | Counter | `{unit}` | `economysim.commodity` | `TradeExecuted` (`Quantity`); equals the sum of `MarketCleared.Volume` (FR-OBS-045) | kept |
+| `economysim.estate.sold` | Counter | `{unit}` | `economysim.commodity`, `economysim.region` | `TradeExecuted` (`Quantity`, where `Seller` is below the region count) | **new**: the estate is a forced seller, so its sales are kept apart from producers' supply, and they are the pool's inflow from trade |
 | `economysim.market.clearing_price` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`Price`) | **changed**: gains `economysim.region`; a gauge of one commodity across regions has no meaningful last value |
 | `economysim.market.price_age` | Gauge | `{tick}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`PriceAge`) | **new**: `clearing_price` is a held gauge (6.3.6), so a market that stopped trading shows a flat, healthy price; the age is the direct signal, and `market.volume` has no `region` to show which market it is |
 | `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed** (the ask side includes the estate's unsold lots, asked again every tick): was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
@@ -1582,7 +1583,6 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
 | `economysim.recipe.in_progress` | Gauge | `{execution}` | `economysim.recipe`, `economysim.region` | `Jobs[].Executions` (5.3.5): the executions of the jobs in progress, 0 where a pair has none; with `recipe.refused` it tells a producer that is working from one that is idle, and it needs no new field |
 | `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
-| `economysim.estate.sold` | Counter | `{unit}` | `economysim.commodity`, `economysim.region` | `TradeExecuted` (`Quantity`, where `Seller` is below the region count) | **new**: the estate is a forced seller, so its sales are kept apart from producers' supply, and they are the pool's inflow from trade |
 | `economysim.estate.at_floor` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].EstateAtFloor` | **new**: separates a slow markdown from a good nobody wants at the lowest price; the listed price is saved state that no other row shows |
 | `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
@@ -1822,8 +1822,10 @@ event, a call's `AgentSpawned`, `AgentBankrupted`, `AgentRelocated` or
 no step span to attach to: it is counted or logged, not a span event, and an
 adapter that wants it in a trace attaches it to the run span if one is open. A class-O or
 class-R event is **not** a span event: the step span carries the *counts* of
-orders placed, rejected and trades and the traded volume as attributes, from the
-accumulators of 6.6.2. This refines rules 6.2, which names "a rejected order" as
+orders placed, rejected and trades and the traded volume as attributes, named
+`economysim.orders.placed`, `economysim.orders.rejected`, `economysim.trades` and
+`economysim.volume`, from the accumulators of 6.6.2. A span event is named
+`economysim.<event>` (the event's type name in snake case). This refines rules 6.2, which names "a rejected order" as
 a span event: a rejected order is class O and would be tens of thousands of span
 events a tick. `WorldCreated` and `WorldRestored` are not span events; they seed
 the adapter's state.
@@ -2222,6 +2224,7 @@ every level (so the guarded sites run).
 | defaults | a world with no logger and no observer builds, steps and runs, writes nothing to stdout or stderr, and does not panic; a nil logger and a nil observer behave the same | FR-OBS-090 |
 | non-interference | the same seed and configuration, with and without a logger, an observer and `WithAudit`, give identical snapshots at every tick, identical `ConfigHash`, identical random state, identical event streams between two observed runs, and identical draw counts (`spec-world.md` FR-WLD-064) | FR-OBS-023 |
 | a panic | an observer that panics marks the world failed and propagates the panic (architecture.md 12.5); a world that was observed by a recorder is unaffected | FR-OBS-024 |
+| event-only counters (a root test since Stage 1) | with no observer the counters that exist only for an event are not built (a scenario with a test hook on the flag in an internal test) | NFR-OBS-003 |
 
 ### 9.4 Cardinality
 
@@ -2394,6 +2397,7 @@ overlays, `spec-reference-chain.md` 4):
 | restore equality | the snapshot after a restore at tick `n` equals the snapshot of the uninterrupted world at `n`, field for field, for a range of seeds and each module on | FR-OBS-043 |
 | region state | `Region(r)`'s `RegionState` equals the rows of the full snapshot whose key has `r` | FR-OBS-044 |
 | consistency | the sum of `TradeExecuted.Quantity` of a market in a step equals `MarketCleared.Volume`; the `MarketState` of the query equals the snapshot's | FR-OBS-045 |
+| snapshot allocation (a root test since Stage 1) | the allocations of `Snapshot` at scale 1 and at scale 40 of one configuration are equal | NFR-OBS-004 |
 
 ### 9.9 The adapter's tests
 
@@ -2411,8 +2415,6 @@ In `otelobserver`, against the OpenTelemetry SDK's in-memory exporters (testing.
 | exits | the cohort of 40 with 7 unfed households of `spec-spawner.md` 5.3 raises the instrument by 4 a tick while `economysim.agent.removals` stays at 0, then by the weight left at its removal; a population death is in `economysim.household.deaths` and not here | FR-OBS-059 |
 | price age, beliefs at bound | a market with no trade for `k` ticks reads an age of `k`; beliefs all on the ceiling read 10 000 for `ceiling` and 0 for `floor`; a tick with no `BeliefsUpdated` holds the last value | FR-OBS-060 |
 | volume | the SDK is called at most once per series per tick (6.6.2), with a counting meter | NFR-OBS-005 |
-| event-only counters | with no observer the counters that exist only for an event are not built (a scenario with a test hook on the flag in an internal test) | NFR-OBS-003 |
-| snapshot allocation | the allocations of `Snapshot` at scale 1 and at scale 40 of one configuration are equal | NFR-OBS-004 |
 | no callback | the adapter holds no `World`, and a run with the adapter and one with a recorder give the same world state | FR-OBS-056 |
 | failed step | a step that fails at P4.1 and one that fails its audit at P8.4 record no duration, end their span with an error status, run no reset and leave the levels as the events seen put them | FR-OBS-055 |
 | the snapshot is validated | `FuzzRecordSnapshot`: for any `Snapshot` value (IDs out of range, negative counts, nil slices) `RecordSnapshot` neither panics nor records a series outside the bounds of 6.5 (testing.md 7.4) | FR-OBS-052 |

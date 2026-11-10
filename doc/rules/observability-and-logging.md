@@ -780,7 +780,9 @@ run's span; a `Step` called directly is a root span. A span closes at its
 attributes on the step span, not child spans. An event that is per order or per
 trade (a rejected order, a trade) is not a span event: the step span carries the
 counts of orders placed, orders rejected and trades, and the traded volume, as
-attributes.
+attributes (`economysim.orders.placed`, `economysim.orders.rejected`,
+`economysim.trades`, `economysim.volume`). A span event is named
+`economysim.<event>`.
 
 6.3. The `otelobserver` module uses the `TracerProvider` and `MeterProvider`
 given by the client, and **MUST NOT** call the global providers. Its
@@ -931,4 +933,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f70528db0f61395cc20dc005
+RULE-TAG: d357fb79e8c7f098201c591c
