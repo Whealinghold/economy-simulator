@@ -171,13 +171,9 @@ func EstateAccountIDs(c Config) (estates []int, next int, err error) {
 // SetAgentDirective sets the pending directive of an agent between ticks. The public
 // call is the integration change's (plan 2-17); until it lands the fork tests reach
 // the field here (architecture.md 10.2).
-func SetAgentDirective(w *World, id AgentID, d *Directive) { w.agents[id].directive = d }
-
-// RelocateForTest moves the account of agent a to region to with the cause, by
-// the world's one relocation path (regions_relocate.go). The public Relocate is
-// INT's; this seam goes with it.
-func RelocateForTest(w *World, a AgentID, to RegionID, cause Cause) error {
-	return w.relocate(a, to, cause)
+func SetAgentDirective(w *World, id AgentID, d *Directive) {
+	w.agents[id].directive = d
+	w.integ.watch(int32(id))
 }
 
 // RegisterBoundForTest registers a region-bound obligation of the given name,
@@ -191,13 +187,6 @@ func RegisterBoundForTest(w *World, name string, held func(a AgentID, skip []str
 // SkipHasForTest reports whether skip names the instance key of an obligation,
 // by name or as "name:key" (spec-regions.md 6.5.2).
 func SkipHasForTest(skip []string, name string, key int64) bool { return skipHas(skip, name, key) }
-
-// SetEdgeStatusesForTest applies a batch of edge statuses with the cause by the
-// world's one internal form (regions_status.go). The public SetEdgeStatuses is
-// INT's (plan 2-17); this seam goes with it.
-func SetEdgeStatusesForTest(w *World, changes []EdgeStatus, cause Cause) error {
-	return w.setEdgeStatuses(changes, cause)
-}
 
 // DemandLadders flattens the ladder of each role of a canonical, validated
 // configuration to the want IDs in funding order, indexed by RoleID. The second
@@ -350,10 +339,6 @@ func WantShortReason(intents []Intent, items []CommodityID, funded int64) Reason
 // P17Flows runs P1.7 alone, for the benchmark of the money supply module.
 func P17Flows(w *World) { w.p17Flows() }
 
-// SetFlowScale sets the scale of the money flow at index i in ID order, as the
-// public call of the integration module will (plan 17).
-func SetFlowScale(w *World, i int, bp int64) error { return w.setFlowScale(i, bp, CauseConsumer) }
-
 // ShockCapacity, ShockRegen and AdjustStock reach the helpers that the public shock and
 // adjustment calls of the integration stage will wrap (plan 2-9 D387), so the
 // external tests of the resources module can make a call between ticks. The caller
@@ -422,3 +407,31 @@ func SetPopulationScale(w *World, region RegionID, kind ScaleKind, bp int64) boo
 func RemoveAgentForTest(w *World, id AgentID, cause Cause) error {
 	return w.removeAgent(&w.agents[id], cause)
 }
+
+// FillWorkView builds the view passed to Work for an agent, as P2.5 does, and drops
+// it: the test of the rumours kept for an external agent needs a Work view built
+// between two ticks (plan 2-17 Phase 8).
+func FillWorkView(w *World, id AgentID) {
+	w.refreshViewCtx()
+	if err := w.fillAgentView(&w.tk.view, &w.agents[id], viewWork); err != nil {
+		panic(err)
+	}
+}
+
+// RoleMoneyForTest returns the money held by the agents of each role, by RoleID
+// (S04 with and without the demand module reads the cooks' share; the snapshot
+// has no per-role money). A removed agent keeps its slot with weight 0 and no
+// account of its own, so only agents of weight above 0 count.
+func RoleMoneyForTest(w *World, roles int) []int64 {
+	out := make([]int64, roles)
+	for i := range w.agents {
+		a := &w.agents[i]
+		if v, err := w.ledger.Account(a.account); err == nil && a.weight > 0 && int(a.role) < roles {
+			out[a.role] += int64(v.Balance)
+		}
+	}
+	return out
+}
+
+// RelocateOnJourney runs the body of TestRelocate_OnJourney on one seed, for S83.
+func RelocateOnJourney(t *testing.T, seed uint64) { relocateOnJourney(t, seed) }

@@ -205,6 +205,9 @@ func (c *cardChecker) check(e economysim.Event) {
 	case economysim.OutsideShocked:
 		c.region("OutsideShocked", e.Tick, e.Node)
 		c.commodity("OutsideShocked", e.Tick, e.Commodity)
+	case economysim.YieldShocked:
+		c.region("YieldShocked", e.Tick, e.Region)
+		c.recipe("YieldShocked", e.Tick, e.Recipe)
 	}
 }
 

@@ -18,7 +18,7 @@ const (
 
 // s57Script is the failure of S14 at depth 0, moved to ticks 100 to 189 so that
 // a run of 300 ticks covers it and the recovery.
-var s57Script = []shockStep{
+var s57Script = []scriptStep{
 	{Tick: 100, Region: "north", Recipe: "grow_staple", BP: 0},
 	{Tick: 190, Region: "north", Recipe: "grow_staple", BP: 10_000},
 }
@@ -127,7 +127,7 @@ func TestScenarioS57_ClosedUpkeepOnlyReadsTenThousand(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end scenario, skipped with -short")
 	}
-	script := []shockStep{{Tick: 0, Region: "home", Recipe: "tend", BP: 0}}
+	script := []scriptStep{{Tick: 0, Region: "home", Recipe: "tend", BP: 0}}
 	for _, seed := range seedList(min(3, scenarioSeedCount())) {
 		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 			t.Parallel()

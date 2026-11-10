@@ -25,6 +25,21 @@ check market series in tick order: 10/10 pass
 check price within belief bounds (FR-STB-008): 10/10 pass
 check unfed households never exceed the households at the start of the tick: 10/10 pass
 
+## S01 one leg-b seeds 1-10, 700 ticks
+measure P0 fuel mean 300-399: 1=89 2=92 3=70 4=78 5=78 6=72 7=80 8=89 9=91 10=76 | median=79 n=10
+measure fuel mean 400-459: 1=149 2=173 3=157 4=154 5=158 6=162 7=156 8=146 9=164 10=132 | median=156 n=10
+measure households at end: 1=1 2=8 3=1 4=1 5=19 6=1 7=29 8=5 9=1 10=4 | median=2 n=10
+measure market-ticks outside a maker's belief interval (reported): 1=185 2=185 3=636 4=189 5=299 6=213 7=236 8=204 9=205 10=204 | median=204 n=10
+measure market-ticks outside the band with an estate sale (exempt): 1=26 2=0 3=1 4=27 5=28 6=31 7=25 8=23 9=25 10=29 | median=26 n=10
+measure offset bp last 100 vs seed price: 1=-4860 2=-6536 3=-7095 4=-6760 5=-6816 6=-7095 7=-5587 8=-6760 9=-6927 10=-6816 | median=-6788 n=10
+measure recovery ticks after 460 (band 1000 bp): 1=202 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent | median=202 n=1
+measure unmet bp over 400-459: 1=1134 2=1608 3=8812 4=646 5=1290 6=1218 7=1119 8=646 9=1791 10=406 | median=1176 n=10
+check O check: shock mean fuel price > P0: 10/10 pass
+check market series in tick order: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+check the visitor's money enters by initial at tick 400: 10/10 pass
+check unfed households never exceed the households at the start of the tick: 10/10 pass
+
 
 
 

@@ -500,7 +500,10 @@ func (w *World) takeRole(a *agent, g RegionID, to RoleID) {
 	w.fillSeeds(g, newRow)
 	reseedBeliefs(a, newRow, oldRow, w.ex.seeds, w.bp)
 	from := a.role
-	a.role, a.strategy, a.roleSince = to, int(to), w.Tick()
+	a.role, a.roleSince = to, w.Tick()
+	if !a.external { // an external agent keeps the strategy the consumer gave it (spec-integration.md 4.8)
+		a.strategy = int(to)
+	}
 	w.agentRoleChanged(a, from, g)
 }
 
@@ -552,12 +555,13 @@ func (w *World) execEnter(g RegionID, d Decision) error {
 }
 
 // gatherHosts lists the agents of role in region g in ascending ID, the
-// candidates of Place, into the executor's scratch.
+// candidates of Place, into the executor's scratch. An external agent is never one:
+// its weight is 1 (spec-integration.md 4.1, 4.6).
 func (w *World) gatherHosts(g RegionID, role RoleID) {
 	x := &w.ex
 	x.hosts, x.hostAt = x.hosts[:0], x.hostAt[:0]
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
+		if a := &w.agents[i]; a.weight >= 1 && !a.external && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
 			x.hosts = append(x.hosts, occupation.Host{Ref: len(x.hostAt), Weight: a.weight})
 			x.hostAt = append(x.hostAt, i)
 		}

@@ -59,8 +59,8 @@ func regionsWorld(t *testing.T, statuses []economysim.EdgeStatus) *economysim.Wo
 		}
 	}
 	if statuses != nil {
-		if err := economysim.SetEdgeStatusesForTest(w, statuses, economysim.CauseConsumer); err != nil {
-			t.Fatalf("SetEdgeStatusesForTest() error = %v, want nil", err)
+		if err := w.SetEdgeStatuses(statuses); err != nil {
+			t.Fatalf("SetEdgeStatuses() error = %v, want nil", err)
 		}
 	}
 	return w
@@ -202,8 +202,8 @@ func TestFork_Regions(t *testing.T) {
 		a, _ := g.Lookup("south")
 		b, _ := g.Lookup("north")
 		changes := []economysim.EdgeStatus{{From: a, To: b, Closed: true, FactorBP: 10_000}, {From: b, To: a, FactorBP: 14_000}}
-		if err := economysim.SetEdgeStatusesForTest(w, changes, economysim.CauseConsumer); err != nil {
-			t.Fatalf("SetEdgeStatusesForTest() error = %v, want nil", err)
+		if err := w.SetEdgeStatuses(changes); err != nil {
+			t.Fatalf("SetEdgeStatuses() error = %v, want nil", err)
 		}
 	}
 	for seed := uint64(1); seed <= uint64(invariantSeeds(2)); seed++ {
@@ -262,8 +262,8 @@ func TestSnapshot_EdgesAndComponents(t *testing.T) {
 			a, _ := g.Lookup(tt.link[0])
 			b, _ := g.Lookup(tt.link[1])
 			changes := []economysim.EdgeStatus{{From: a, To: b, Closed: true, FactorBP: 10_000}, {From: b, To: a, Closed: true, FactorBP: 10_000}}
-			if err := economysim.SetEdgeStatusesForTest(w, changes, economysim.CauseConsumer); err != nil {
-				t.Fatalf("SetEdgeStatusesForTest() error = %v, want nil", err)
+			if err := w.SetEdgeStatuses(changes); err != nil {
+				t.Fatalf("SetEdgeStatuses() error = %v, want nil", err)
 			}
 			s := mustSnapshot(t, w)
 			if s.Components != tt.after || len(s.Edges) != 2 || !s.Edges[0].Closed || !s.Edges[1].Closed || s.Edges[0].FactorBP != 10_000 {

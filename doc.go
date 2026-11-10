@@ -540,6 +540,25 @@
 //     steps (Directive).
 //   - Directed strategy: the Strategy (Directed) that does what the agent's
 //     Directive says and leaves the rest to its Fallback (spec-agents.md 10).
+//   - External agent: an agent the consumer adds between steps with AddAgent
+//     (described by NewAgent) and removes with RemoveAgent; it has weight 1, takes
+//     its money and goods by the reason initial and is left alone by the spawner
+//     unless it is mortal (spec-integration.md 4).
+//   - Stock item: a quantity of one commodity an external agent starts with
+//     (StockItem).
+//   - Slot: a piece of world state a consumer sets between steps over a configured
+//     value (SetYieldShocks and the other Set calls); an entry names a key and
+//     gives its whole value, and a key set to its default is cleared. The slots that
+//     differ from their defaults are read back as SlotState (spec-integration.md 5).
+//   - Agent state: what is true of one agent at the tick boundary (AgentState, read
+//     by World.Agent): its identity and standing, its holdings (HoldingState), its job,
+//     its beliefs (BeliefState) with the range each sits in, the market reports of its
+//     region, its upkeep, its mailbox and the rumours of its last view; the carries of
+//     its wants (WantCarry) with the demand module on. It is a deep copy of plain data
+//     and a function of the saved state alone (spec-integration.md 4.7.2).
+//   - Region state: the snapshot restricted to one region (RegionState, read by
+//     World.Region): the rows of a Snapshot that have the region
+//     (spec-observability.md 5.3.5a).
 //   - Spawner: the extension interface (Spawner) that decides which agents leave,
 //     lose households or change role and how many households enter a region in
 //     a tick, as a plan of decisions the world checks and executes
@@ -835,6 +854,8 @@
 //     (spec-resources.md 4.2.1, 11).
 //   - SeasonRegen: the regeneration factor of one season of a resource, in basis points
 //     (spec-resources.md 4.5).
+//   - YieldShocked: the event emitted once per changed key of a call to SetYieldShocks,
+//     with the yield factor before and after (spec-integration.md 5.1).
 //   - EndowmentChanged: the event emitted once per endowment per tick, after its
 //     regeneration, if any units were drawn, regenerated, short or lost
 //     (spec-resources.md 14.1).

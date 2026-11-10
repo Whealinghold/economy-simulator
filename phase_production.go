@@ -220,7 +220,7 @@ func (w *World) workAgent(a *agent, region RegionID) error {
 	}
 	cell := int(region)*len(w.cfg.Roles) + int(a.role)
 	w.countWork(cell, region, a, v)
-	s := w.ext.strategies[a.strategy]
+	s := w.strategyOf(a)
 	if workDraws(s) {
 		w.rnd.keyed(siteWork, w.Tick(), int64(a.id))
 	}

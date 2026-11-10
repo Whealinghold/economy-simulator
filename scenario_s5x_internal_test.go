@@ -7,7 +7,7 @@ import (
 
 // This file holds the scenarios of the external module that are built in Go on small
 // worlds (spec-stability.md 8, S52 to S54; plan 2-16 Phase 7, D539): they need the
-// internal edge-status setter, which plan 17 makes public, and worlds with the shape
+// public edge-status setter and worlds with the shape
 // the cold packs lack (an import-only upkeep, a cap, a window). The packs' scenarios
 // (S51, S55, S71) are in scenario_s5x_test.go.
 
@@ -51,8 +51,8 @@ func TestScenarioS52_ImportOnlyUpkeep(t *testing.T) {
 		w, rec := importOnly(t)
 		for i := range ticks {
 			if closed && i == closeAt {
-				if err := w.setEdgeStatuses([]EdgeStatus{{From: 0, To: 1, Closed: true, FactorBP: 10_000}}, CauseConsumer); err != nil {
-					t.Fatalf("setEdgeStatuses() = %v, want nil", err)
+				if err := w.SetEdgeStatuses([]EdgeStatus{{From: 0, To: 1, Closed: true, FactorBP: 10_000}}); err != nil {
+					t.Fatalf("SetEdgeStatuses() = %v, want nil", err)
 				}
 			}
 			step(t, w, 1)

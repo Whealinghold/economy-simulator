@@ -430,7 +430,8 @@ func (w *World) coreCross() error {
 // snapshot at the restored boundary built only when an observer was supplied.
 func (w *World) announceRestore(info CheckpointInfo, o options) {
 	ctx := context.Background()
-	w.logWarnings(ctx, w.cfg.Warnings())
+	w.integ.warnings = w.cfg.Warnings()
+	w.logWarnings(ctx, w.integ.warnings)
 	if w.log.Enabled(ctx, slog.LevelInfo) {
 		w.log.LogAttrs(ctx, slog.LevelInfo, "world restored",
 			slog.Int64(logkeys.Tick, w.Tick()), slog.Uint64(logkeys.Seed, w.state.seed),

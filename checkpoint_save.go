@@ -42,10 +42,30 @@ func (w *World) eachLive(f func(a *agent)) {
 }
 
 // strategyName is the name an agent's strategy is saved under (spec-checkpoint.md
-// 4.2, tag 3). In the slice an agent's strategy is its role's, so the name is the
-// role's configured one; an external agent's own name replaces this one place
-// with the integration module.
-func (w *World) strategyName(a *agent) string { return w.cfg.Roles[a.role].Strategy }
+// 4.2, tag 3): the role's configured name for an index below the role count, else
+// the name of the extra table, which an external agent's strategy is.
+func (w *World) strategyName(a *agent) string {
+	if n := len(w.cfg.Roles); a.strategy >= n {
+		return w.ext.extraNames[a.strategy-n]
+	}
+	return w.cfg.Roles[a.role].Strategy
+}
+
+// strategyOf is the strategy an agent runs: its role's, or an entry of the extra
+// part of the table (an external agent's).
+func (w *World) strategyOf(a *agent) Strategy {
+	if n := len(w.ext.strategies); a.strategy >= n {
+		return w.ext.extras[a.strategy-n]
+	}
+	return w.ext.strategies[a.strategy]
+}
+
+// strategyIndex is the index in the strategy table of the strategy a name selects,
+// in the extra part of the table, and false for a name nothing registered.
+func (w *World) strategyIndex(name string) (int, bool) {
+	i, ok := slices.BinarySearch(w.ext.extraNames, name)
+	return len(w.cfg.Roles) + i, ok
+}
 
 // deathCarry is the start of the death carry of an agent, offset(id) of
 // spec-population.md 3.8.3: ((id * 2 654 435 769) mod 2^32) * D / 2^32, with D the

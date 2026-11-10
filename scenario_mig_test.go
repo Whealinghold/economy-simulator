@@ -219,8 +219,8 @@ func TestScenarioS61_MigrationCobweb(t *testing.T) {
 	for seed := uint64(1); seed <= migSeeds; seed++ {
 		tl := runMigration(t, cfg, seed, migTicks, func(w *economysim.World, tick int64) {
 			if tick == 40 {
-				if err := economysim.SetYieldShockForTest(w, north, economysim.RecipeID(grow), 5_000); err != nil {
-					t.Fatalf("seed %d: SetYieldShockForTest() = %v, want nil", seed, err)
+				if err := w.SetYieldShocks([]economysim.YieldShock{{Region: north, Recipe: economysim.RecipeID(grow), BP: 5_000}}); err != nil {
+					t.Fatalf("seed %d: SetYieldShocks() = %v, want nil", seed, err)
 				}
 			}
 		})
@@ -491,7 +491,7 @@ func TestFork_Migration(t *testing.T) {
 		{"just after a departure", int(first) + 1, true, nil},
 		{"after the arrival", int(first) + 4, false, nil},
 		{"after a shock between ticks", int(first) + 2, false, func(w *economysim.World) {
-			_ = economysim.SetYieldShockForTest(w, north, economysim.RecipeID(grow), 5_000)
+			_ = w.SetYieldShocks([]economysim.YieldShock{{Region: north, Recipe: economysim.RecipeID(grow), BP: 5_000}})
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

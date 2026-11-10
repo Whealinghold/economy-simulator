@@ -1128,9 +1128,10 @@ sites of the slice are:
 | `siteMigration` | D11 | `0x53C434C7EFE6D523` | `tick`, `id` = the agent |
 | `siteContract` | D6 | `0xF0FF7DEE8E50504B` | `tick`, `id` = the agent, `sub` = `2*i` for the agent's `i`-th submitted offer and `2*i+1` for its `i`-th submitted take (the plan index) |
 | `siteOutsideWalk` | D2 | `0x46AE095E114979AB` | `tick`, `id` = the node `RegionID`, `sub` = the `CommodityID` of the line (ADR 0008 open point 3, answered for D2) |
+| `siteAddAgent` | D12 | `0xE00949043F800843` | `tick` = `Tick()` at the call, `id` = the new agent |
 
-The rows D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
-constant yet**: each is appended by the change that builds its module, with its name,
+The rows D13, D14 and D15 (and D17, a consumer's policy) have **no
+constant yet** (D12 has `siteAddAgent`, appended by the integration change): each is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
 modules of those rows are off in the slice). D16 takes no word (7.3).
@@ -1290,7 +1291,7 @@ open point 3 (a site with no natural entity: D13) stays open for it; D2 has its 
 | D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | `siteCreation`, the tick, the new agent | AGT 3.5.3 |
 | D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | `siteMigration`, the tick, the agent (keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0, as `siteInform` is; none for `no_estimate`) | MIG 6.2.1, 10.2.1; INF 6.1.3 |
 | D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | none yet: the row, or the agent and the store class | RSK 6.2 |
-| D12 | between ticks, at the call | the world, per agent that INT adds: D10's two creation words | 2 | in the order of the calls | none yet: the new agent, with the tick of the next step | AGT 10 |
+| D12 | between ticks, at the call | the world, per agent that INT adds: D10's two creation words | 2 | in the order of the calls | `siteAddAgent`, the tick of the next step, the new agent | AGT 10; INT 4.1.2 |
 
 The rows are in the order of a run, not of the ID. The IDs D13 to D17 are the draw IDs
 of ruling C25 (6.12). D16 is not the damper D16 of the register (`spec-stability.md`

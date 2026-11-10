@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
@@ -245,4 +246,26 @@ func readOptionalPrice(r *codec.Reader) (bool, Price) {
 		r.Failf("best price %d is below 1", p)
 	}
 	return true, Price(p)
+}
+
+// Market returns the report of the market of region g and commodity c at the tick
+// boundary: what the last step published and the recent window
+// (spec-integration.md 6.3). It is the row the snapshot holds, so the two cannot
+// disagree (FR-OBS-045). Before the first step it is the seed price with age 0. It
+// returns ErrInStep from inside a step, ErrWorldFailed on a failed world,
+// ErrUnknownRegion, ErrUnknownCommodity and ErrOutsideNode (an outside node has no
+// market). It draws no random number and changes nothing.
+func (w *World) Market(g RegionID, c CommodityID) (MarketState, error) {
+	if err := w.guard(); err != nil {
+		return MarketState{}, fmt.Errorf("Market: %w", err)
+	}
+	switch {
+	case g < 0 || int(g) >= len(w.cfg.Regions):
+		return MarketState{}, fmt.Errorf("Market: region %d: %w", g, ErrUnknownRegion)
+	case c < 0 || int(c) >= len(w.cfg.Commodities):
+		return MarketState{}, fmt.Errorf("Market: commodity %d: %w", c, ErrUnknownCommodity)
+	case w.isOutsideNode(g):
+		return MarketState{}, fmt.Errorf("Market: region %d: %w", g, ErrOutsideNode)
+	}
+	return w.marketState(w.markets.index(g, c), g, c), nil
 }

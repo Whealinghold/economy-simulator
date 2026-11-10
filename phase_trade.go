@@ -66,7 +66,7 @@ func (w *World) tradeAgent(a *agent) error {
 	}
 	p := w.views.tradePlan()
 	w.rnd.keyed(siteTrade, w.Tick(), int64(a.id))
-	w.ext.strategies[a.strategy].Trade(v, w.rnd.rnd, p)
+	w.strategyOf(a).Trade(v, w.rnd.rnd, p)
 	w.checkTradePlan(a, p)
 	w.executeDiscards(a, p)
 	w.executeShipments(a, p)

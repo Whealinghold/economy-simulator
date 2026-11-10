@@ -121,8 +121,8 @@ func TestScenarioS60_InvariantsCheckpointRelocation(t *testing.T) {
 				t.Fatalf("households in the mode at home before the move = %d, want 4 (no grain, a job of 3 ticks, ExitTicks 40)", home)
 			}
 			// Agent 0 and 1 are the estates of the two regions; the first household is 2.
-			if err := economysim.RelocateForTest(w, 2, 1, economysim.CauseConsumer); err != nil {
-				t.Fatalf("RelocateForTest() error = %v, want nil", err)
+			if err := w.Relocate(2, 1); err != nil {
+				t.Fatalf("Relocate() error = %v, want nil", err)
 			}
 			if home, away := onOwnUse(0), onOwnUse(1); home != 3 || away != 0 {
 				t.Errorf("households in the mode after the move: home %d, away %d, want 3 and 0 (the flag is dropped with the relocation)", home, away)

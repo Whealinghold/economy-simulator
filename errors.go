@@ -490,3 +490,30 @@ var (
 	// row outside_node). It is a refusal at run time, not a validation error.
 	ErrOutsideNode = errors.New("region is an outside node")
 )
+
+// The sentinels of the integration calls (spec-integration.md 7.1). The others
+// the calls return are declared by the module that owns the entity: ErrUnknownFlow
+// by the money supply, ErrOutsideNode by the external module, ErrUnknownMode by
+// transport and ErrUnknownResource by resources.
+var (
+	// ErrModuleOff is a call that needs a module the configuration has not
+	// switched on.
+	ErrModuleOff = errors.New("module is off")
+	// ErrAgentRemoved is an agent ID that named an agent and has been removed. It
+	// wraps ErrUnknownAgent, so errors.Is matches both.
+	ErrAgentRemoved = fmt.Errorf("agent was removed: %w", ErrUnknownAgent)
+	// ErrNotExternal is a call that needs an external agent, made on one that is
+	// not.
+	ErrNotExternal = errors.New("agent is not external")
+	// ErrNotDirected is a directive for an agent whose strategy is not the
+	// library's Directed.
+	ErrNotDirected = errors.New("agent strategy is not directed")
+	// ErrNotOnRole is a directive that names a recipe the role does not list, or
+	// asks a credit block the role does not have.
+	ErrNotOnRole = errors.New("not on the role")
+	// ErrNotTradable is a directive that names a commodity outside the role's
+	// tradable set.
+	ErrNotTradable = errors.New("commodity is not tradable by the role")
+	// ErrUnknownLine is an outside shock for a (node, commodity) that has no line.
+	ErrUnknownLine = errors.New("unknown outside line")
+)

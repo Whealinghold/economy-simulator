@@ -675,6 +675,7 @@ var savedOrDerived = map[string]string{
 	"World.transport":      "saved in section 17 (the next shipment ID, the shipments in flight and the transit factors); the away flags, the free lists, the line pool and the scratch are derived (transport.go)",
 	"World.sub":            "saved 3 and 19: the flag and the counter of each agent in the agent record, once, and the two runs of the Warns in section 19 (plan 2-10 Phase 7); the covered sets and the counts of the tick are derived or scratch (subsistence.go)",
 	"World.external":       "the drift and the shock of each line and the carry, units, list value and ended flag of each side row are saved in section 18 (external.go, plan 2-16 Phase 7); the lines, counterparties and their accounts are derived from the configuration and the ledger",
+	"World.integ":          "derived: the agents P1.9 visits, rebuilt from the agents' external flag and mailbox at a restore (integration.go); the directive of an agent is saved 3",
 	"World.firstHousehold": "derived: the number of regions plus the counterparties, both fixed by the configuration (external.go)",
 	"World.outside":        "derived: the marks of the outside nodes, fixed by the configuration (external.go)",
 	"World.relief":         "derived: the scratch of the relief pass P1.6; relief keeps no state across ticks and adds no section (plan 2-7 D351)",
@@ -695,7 +696,7 @@ var savedOrDerived = map[string]string{
 	"agent.external": "saved 3", "agent.mortal": "saved 3", "agent.strategy": "saved 3", "agent.beliefs": "saved 5",
 	"agent.job": "saved 6", "agent.residues": "saved 6", "agent.history": "saved 7", "agent.target": "saved 7",
 	"agent.unfed": "saved 3", "agent.hunger": "saved 3", "agent.privation": "saved 3", "agent.roleSince": "saved 3",
-	"agent.directive": "saved 3",
+	"agent.directive": "saved 3", "agent.live": "derived: the directive of the tick, copied from the mailbox at P1.9 and never read across a boundary (integration.go)",
 
 	"job.recipe": "saved 6", "job.remaining": "saved 6", "job.executions": "saved 6", "job.principal": "saved 6",
 	"job.yield": "saved 6", "job.pending": "saved 6",

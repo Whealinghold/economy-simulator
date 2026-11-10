@@ -8,7 +8,7 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// TestScenarioS36_ScaleSeam verifies MON-S4 (spec-money-supply.md 16, 4.4.3) through
+// TestScenarioS36_PublicFlowScales verifies MON-S4 (spec-money-supply.md 16, 4.4.3) through
 // the internal setter, the only form that exists in this plan (the public
 // SetFlowScales is plan 17's, which adds the public leg of S36): two grants run 10
 // ticks with the audit on; between steps the scale of one is set to half, then to
@@ -17,11 +17,11 @@ import (
 // pays the same every tick; MoneyFlowScaled is emitted once per change and not for
 // an equal scale; the audit holds.
 //
-// Requirement: FR-MON-023, FR-MON-024, FR-MON-045, FR-MON-031
+// Requirement: FR-INT-043, FR-MON-023, FR-MON-024, FR-MON-045, FR-MON-031
 //
 // Guard: a scale that applied to the tick already run, or leaked into another
 // flow, would move a policy's lever by more than it asked.
-func TestScenarioS36_ScaleSeam(t *testing.T) {
+func TestScenarioS36_PublicFlowScales(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("end-to-end scenario, skipped with -short")
@@ -41,7 +41,7 @@ func TestScenarioS36_ScaleSeam(t *testing.T) {
 		}
 		wantA = append(wantA, economysim.Money(100*scale/10_000))
 	}
-	for _, seed := range seedList(min(3, scenarioSeedCount())) {
+	for _, seed := range seedList(scenarioSeedCount()) {
 		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 			t.Parallel()
 			rec := &recorder{}
@@ -51,11 +51,11 @@ func TestScenarioS36_ScaleSeam(t *testing.T) {
 			var prevA, prevB, prevRef economysim.Money
 			for tick := range 10 {
 				if s, ok := calls[tick]; ok {
-					if err := economysim.SetFlowScale(w, 0, s); err != nil {
+					if err := w.SetFlowScales([]economysim.FlowScale{{Flow: "a", BP: s}}); err != nil {
 						t.Fatalf("seed %d: SetFlowScale at tick %d error = %v, want nil", seed, tick, err)
 					}
-					if err := economysim.SetFlowScale(w, 0, s); err != nil { // the same scale again: no change
-						t.Fatalf("seed %d: second SetFlowScale error = %v, want nil", seed, err)
+					if err := w.SetFlowScales([]economysim.FlowScale{{Flow: "a", BP: s}}); err != nil { // the same scale again: no change
+						t.Fatalf("seed %d: second SetFlowScales error = %v, want nil", seed, err)
 					}
 				}
 				step(t, w, 1)

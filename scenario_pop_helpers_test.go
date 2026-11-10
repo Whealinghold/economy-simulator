@@ -68,7 +68,7 @@ func withHouseholds(cfg economysim.Config, num, den int64) economysim.Config {
 // the measures. It holds a slot of scenSem. Exact checks that hold for any run are
 // made here: no negative balance or stock at the end, and per PopulationChanged
 // event the identities of the counts.
-func runPopulation(t testing.TB, cfg economysim.Config, seed uint64, ticks int64, script []shockStep) popStats {
+func runPopulation(t testing.TB, cfg economysim.Config, seed uint64, ticks int64, script []scriptStep) popStats {
 	t.Helper()
 	scenSem <- struct{}{}
 	defer func() { <-scenSem }()
