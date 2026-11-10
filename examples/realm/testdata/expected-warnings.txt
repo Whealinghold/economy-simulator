@@ -29,6 +29,7 @@ start_stock_below_target roles/cutler/start_stock
 window_extended roles/farmer/recipes
 tool_unaffordable roles/farmer/start_money
 target_above_demand roles/farmer/target_ratio
+target_above_demand roles/founder/target_ratio
 tool_unaffordable roles/hunter/start_money
 start_stock_below_target roles/hunter/start_stock
 tool_unaffordable roles/joiner/start_money
@@ -48,7 +49,6 @@ tool_unaffordable roles/ropemaker/start_money
 start_stock_below_target roles/ropemaker/start_stock
 tool_unaffordable roles/shepherd/start_money
 start_stock_below_target roles/shepherd/start_stock
-target_above_demand roles/smelter/target_ratio
 target_above_demand roles/smith/target_ratio
 tool_unaffordable roles/tanner/start_money
 start_stock_below_target roles/tanner/start_stock
