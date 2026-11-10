@@ -540,3 +540,19 @@ func TestAgent_EmptyDirectiveDoesNotPanic(t *testing.T) {
 		t.Errorf("Agent(%d) with an empty directive = HasDirective %v, %v, want false, nil", id, st.HasDirective, err)
 	}
 }
+
+// TestGatherHosts_SkipsExternalAgents verifies that an entry of the spawner never
+// picks an external agent as the host of new households, so it stays at weight 1.
+//
+// Guard: enlarging a host moves its weight, which the consumer's Direct bounds and
+// Agent().Weight rely on (spec-integration.md 4.1).
+func TestGatherHosts_SkipsExternalAgents(t *testing.T) {
+	t.Parallel()
+	w, _, id, scripted, _, _ := directWorld(t)
+	w.gatherHosts(regLowland, 0)
+	for _, at := range w.ex.hostAt {
+		if x := AgentID(at); x == id || x == scripted {
+			t.Errorf("gatherHosts listed external agent %d as a host", x)
+		}
+	}
+}

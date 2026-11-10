@@ -536,7 +536,7 @@ func (w *World) checkAgentRec(rs *restoreCtx, rec *agentRec, names []string) (le
 // state of a module that is off.
 func (w *World) checkAgentFields(rs *restoreCtx, rec *agentRec, names []string) error {
 	switch id := AgentID(rec.id); {
-	case rec.weight < 1 || w.badStrategy(rec, names[rec.nameIdx]):
+	case rec.weight < 1 || (rec.flags&int64(flagExternal) != 0 && rec.weight != 1) || w.badStrategy(rec, names[rec.nameIdx]):
 		return fmt.Errorf("agent %d has weight %d, flags %d or a strategy %q that is not its role's or an external agent's", rec.id, rec.weight, rec.flags, names[rec.nameIdx])
 	case rec.since < 0 || rec.since > rs.tick:
 		return fmt.Errorf("agent %d has RoleSince %d outside 0 to %d", rec.id, rec.since, rs.tick)
