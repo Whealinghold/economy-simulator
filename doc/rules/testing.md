@@ -426,6 +426,7 @@ coverage falls below the thresholds. **[project]**
   All seeds and all cases run, and the thresholds below are read from its profile.
   Its timeout is 120m, not 60m: the root package needs about 60 minutes under atomic
   coverage, so 60m left no margin (owner ruling, stage 2-6).
+  The stylised fact tests (`TestStylised`) are in this pattern and run seeds 1 to 10 without `-race`.
 
 Coverage is not taken under `-race`: with atomic coverage of `-coverpkg=./...`
 the race run took 48 to 58 minutes, against 164 seconds without coverage and 15
@@ -574,4 +575,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 03b159f58d3bffdb1f9fe77d
+RULE-TAG: 120890253bd2f6c110a015d2

@@ -1,0 +1,14 @@
+# A sink with no faucet (spec-stylised-facts.md 6.5.3, R9's provoked run;
+# spec-reference-chain.md 4.5; spec-money-supply.md 17.6): a rate levy on the
+# growers of the north with no paired grant, so the money of the households falls
+# and the price with it while trade shrinks. Layer it after `one`. It is a test
+# double for a provoked run whose statistic is recorded and never asserted: the
+# rate is a placeholder (N-027).
+[modules.money_supply]
+
+[modules.money_supply.flow.charge]
+kind = "levy"
+target = { kind = "households", role = "grower", region = "north" }
+rate_bp = 3650
+per = "year"
+exempt = 0

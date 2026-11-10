@@ -379,6 +379,14 @@ and not 40 (8.2, 8.4.3). The figures are placeholders (N-015).
 `-short` like the others (testing.md 10.5, FR-STB-007). The library has no
 timer, and no test sleeps (testing.md 10.2).
 
+4.5.3. **Under `-race` a tier G test runs fewer seeds** (seeds 1 and 2: `raceSeeds`,
+plan 1 D227), as the scenario tests of REF do, and the full set runs in gate F
+without `-race` (testing.md 9.1, 10.5). The `n` of SR1 and SR2 (8.3) is then the
+number of seeds the run planned, 2, and `ceil(9n / 10)` is 2: the rule is applied
+to the seeds run, not to the nominal 10, and a verdict record is not written
+under `-race`. This is the listed exception that FR-REF-025 asks for; the seed
+sets of 8.2 are unchanged.
+
 ### 4.6 The modules a fact needs
 
 A fact is asserted **only where its modules are present**, because a module that
@@ -1613,7 +1621,9 @@ of their own over a window and claim nothing about a default.
 the default and at its two neighbours, the commit and configuration hash they
 were set from, and the seeds. It is a text file beside the golden file
 (`testdata/golden/stylised/<pack>.stability.txt`, beside the verdict record
-`<pack>.txt`, 8.5).
+`<pack>.txt`, 8.5). Until CLB's grid exists the record holds the
+default point only and its `claim` line says `undetermined` (`one_neighbour` means
+one neighbour was examined, FR-CLB-039); only the grid replaces it.
 
 ### 7.4 What the checks do not claim
 
@@ -1800,7 +1810,10 @@ It records, per fact, the class, the statistic, the band or `unset` with its
 prior, the minimum, median and maximum and the **seeds outside**; per detector
 the verdict, its onset and its `unknown` reason; and `not applicable` for a fact
 whose modules are absent (4.6). It carries no wall-clock time and no
-floating-point number. It is the **calibration data** CLB reads: a band that is
+floating-point number. The stability record of 7.3.3 has the same form; a record of
+a default point with no neighbour grid yet (CLB supplies the grid) has the claim
+line `undetermined`: an unexamined neighbour is UNDETERMINED (7.2), and no new
+claim word is added. It is the **calibration data** CLB reads: a band that is
 `unset` has its observed values there.
 
 ### 8.6 What closes N-027
@@ -1886,7 +1899,9 @@ seeds (8.3.2). The seed range is selected by a test flag of the package's test
 binary (a `flag` in a `_test.go` file; no environment variable and no file is
 read, testing.md 10.2). Tier L is the facts whose run is longer than 1 800
 ticks: ordinary Go tests with the build tag `stylised_long`, seeds 1 to
-10, run on a schedule. Neither is in the merge gate.
+10, run on a schedule. Neither is in the merge gate. Under `-race` a tier G test
+runs seeds 1 and 2 and the SR count `n` is the number run (4.5.3); no record is
+rewritten.
 
 ### 9.4 Golden
 
@@ -1927,7 +1942,7 @@ replication, running, results):
 |-----------|-----|
 | a **run** of a pack and overlays over a named seed set (gate 1 to 10, setting and nightly 1 to 50, tier L 1 to 10), with shocks as INT calls at ticks, returning the IND series and the events a verdict reads as plain data | 8.2, 9.2 |
 | a **one-at-a-time sweep** of a knob over a grid that CLB supplies, at the default and its two neighbours, on the gate seeds, with the **verdict of each fact and detector** as the response | 7.3.1, 10.2 |
-| a **comparison of two points as distributions over seeds**, not as a pair, for any knob that changes a draw count (`RumourErrorBP` from 0, a changed number of informed agents or intents, a changed number of admitted orders): `spec-world.md` 7.6 and WLD-A5 say the stream is positional and a change that moves a count makes the runs unpaired. A knob that moves no count (a threshold of a decision that still draws, WLD-D2) allows a paired run | 8.3 |
+| a **comparison of two points seed by seed and as distributions over seeds**: under keyed streams (ADR 0008, `spec-world.md` 7.1) a draw depends on the seed, the site, the tick and the entity, not on how many draws other sites took, so runs of one seed are aligned by construction and a change that moves a count (`RumourErrorBP` from 0, a changed number of informed agents or intents) moves only the later draws of its own stream; a paired difference per seed is always valid (EXP computes the pairing gain), and the distributions over the seeds are read beside it | 8.3 |
 | the **verdict record** (8.5) as the unit of a result, keyed by the `ConfigHash` it carries (IND 3.3.2) | 8.5 |
 | the **failed world** recorded and skipped, not fatal (WLD 3.5), so a sweep over a knob that breaks a point still gives the others | 7.2 |
 | a **branch from a checkpoint** for the shock facts: run to the boundary, restore many times and apply a different call at the branch (CHK) | STY-S01, S02, S03 |
@@ -2493,7 +2508,7 @@ separation protocol, stability check, stability record, verdict record, tier.
 
 | Concern | Home |
 |---------|------|
-| the detectors, the seed rules, the band-setting rule: pure functions over primitive series | `internal/verdict/` (`detect.go`, `seed.go`, `band.go`), standard library only; unit tests in the package, and the fact tests of `indicator`'s external test package that call it |
+| the detectors, the seed rules, the band-setting rule: pure functions over primitive series | `internal/verdict/` (`verdict.go`, `thresholds.go`, `detect.go`, `seed.go`, `band.go`, `separate.go`, `speed.go`, `bandfile.go`, `ordering.go`, `check.go`, `record.go`), standard library only; unit tests in the package, and the fact tests of `indicator`'s external test package that call it |
 | the fact tests of tiers G, N and L | **the external test package of `indicator`** (`indicator/stylised_*_test.go`, package `indicator_test`), the only place besides `examples/` and `otelobserver` allowed to import `indicator` (FR-IND-001); they import the root and `internal/verdict`; skipped with `-short`; tier L behind the build tag `stylised_long` |
 | the recording observer and the measure helpers | `_test.go` files (testing.md 3.6), shared with REF's |
 | the bands and the thresholds | `testdata/chains/bands/<pack>.toml` and `bands/regimes.toml` |

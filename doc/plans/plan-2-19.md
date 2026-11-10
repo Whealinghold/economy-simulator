@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 19: STY, `internal/verdict` and the `stylised_long` build tag
 
-**Status: written (2026-10-22), not started.** Sequences the STY row of [roadmap-v1.md](../roadmap-v1.md) Stage 2 against [plan-2-0.md](plan-2-0.md): the pure judging code (detectors, seed rules, the band-setting rule, the separation protocol, the stability checks, the records), the band and threshold files, the fact tests of the packs that exist, the tier L tag, and the procedure of the first reviewed setting run. It does not set a band by itself (D598).
+**Status: Phases 1 to 9 built (2026-11-10); the first setting run is not made: every band and threshold is unset (D598, O1 open).** Sequences the STY row of [roadmap-v1.md](../roadmap-v1.md) Stage 2 against [plan-2-0.md](plan-2-0.md): the pure judging code (detectors, seed rules, the band-setting rule, the separation protocol, the stability checks, the records), the band and threshold files, the fact tests of the packs that exist, the tier L tag, and the procedure of the first reviewed setting run. It does not set a band by itself (D598).
 
 Rule tags read: architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1 (equal to plan-2-0; sections that bind this row: architecture 2.1 to 2.10, 3.2, 3.5, 5.1, 7.4; observability 2.3, 8, 9; testing 2 to 7, 9 to 11).
 
@@ -140,6 +140,17 @@ Setting run (D598), only if plan 8 is accepted and plans 5 to 17 are merged; oth
 5. `-stylised.propose` writes the proposal; the owner reviews, edits the `value` and `set_by` lines in one commit, and the PR records which of the three (band, code, fact) each miss was.
 6. The first run also sets `s10.tolerance_bp` and `s10.dispersion_min_bp` from `TestScenarioS10_PricesAcrossScales` on plan 8's rebalanced pack (FR-SCL-017, FR-STY-028); if the run does not separate, the keys stay unset and the report line says `UNDETERMINED`. The gate then runs with the keys set; `-stylised.release` passes when the keys of 8.1.1 have values. The Stage 2 criterion "passes the version 1 STY bands" is claimed only when this holds on `five` (plan 24 runs it).
 Exit check: either the keys of 8.1.1 are set and gate and release pass, or the PR says which key is unset, why (a detector that does not separate, a pack that fails 8.4.1) and who owns the next step.
+
+### Phase 9 as built: the procedure of the first setting run (D598)
+
+This plan sets no band and no threshold: every key of `bands/` and `bands/regimes.toml` has no `value` line, and `TestRegistry_Spec` and `TestBandFiles_Order` keep it so until a reviewed commit adds them. The setting run waits on three conditions: O1 (who reviews: the repository owner, plan assumption, no ruling yet), plan 8's acceptance (`one` collapses today, N-312, N-314, so STY 8.4.1 forbids setting a band), and the merge of the module plans 5 to 17. The reviewer runs, from the repository root, in this order (STY 10.3):
+
+1. Step 0, the baseline (X and O facts pass on every seed; a failure stops the run and is a finding):
+   `go test ./indicator/ -run 'TestStylised' -count=1 -timeout 240m -stylised.tier=n`, and `go test -tags stylised_long -timeout 120m -run TestStylisedLong ./indicator/` for tier L. The log lines `FINDING N-314` say a pack has collapsed: 8.4.1 is then not met and the run ends here.
+2. Steps 1 and 2, the thresholds, and steps 3 to 9, the bands: `go test ./indicator/ -run TestStylised_Propose -v -count=1 -timeout 240m -stylised.tier=n -stylised.propose`. It prints, for each detector, `t_hi` over the healthy runs (`one`, `second`, `two`, `three`) and `t_lo` over the provoked runs of 6.5.3 (`TestStylised_Provoked_Runs` lists each), the key `verdict.Separate` proposes or why the detector does not separate; for each banded fact with a number for every setting seed the bound `verdict.SetBand` proposes, or the refusal (a failed seed, a threshold unset, a bound looser than its threshold); and the verdict record with min, median and max per key. It never writes a `value` line; `-stylised.seeds` is refused with it, and the hold-out 51 to 60 never reaches a band.
+3. The reviewer reads the proposal, decides for each miss whether the band, the code or the fact is wrong, and adds `value` and `set_by = "commit=<id>;config=<hash>;seeds=1-50"` lines (`1-10` for a tier L key) in one commit of their own, with the three-way decision in the pull request (testing.md 7.2). Nobody who wrote the code under test approves its own band.
+4. `s10.tolerance_bp` and `s10.dispersion_min_bp` are set from `TestScenarioS10_PricesAcrossScales` on plan 8's rebalanced pack in the same run; if it does not separate they stay unset and the report line says `UNDETERMINED`.
+5. `go test ./indicator/ ./internal/verdict/ -run 'TestRelease|TestStylised_G01' -stylised.release` then passes only when the keys of 8.1.1 have values and no detector is `unknown`. The claim "passes the version 1 bands" is made only when this holds on `five` (plan 24).
 
 ## Catalogue appends
 
