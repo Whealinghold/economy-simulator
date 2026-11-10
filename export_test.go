@@ -171,7 +171,10 @@ func EstateAccountIDs(c Config) (estates []int, next int, err error) {
 // SetAgentDirective sets the pending directive of an agent between ticks. The public
 // call is the integration change's (plan 2-17); until it lands the fork tests reach
 // the field here (architecture.md 10.2).
-func SetAgentDirective(w *World, id AgentID, d *Directive) { w.agents[id].directive = d }
+func SetAgentDirective(w *World, id AgentID, d *Directive) {
+	w.agents[id].directive = d
+	w.integ.watch(int32(id))
+}
 
 // RelocateForTest moves the account of agent a to region to with the cause, by
 // the world's one relocation path (regions_relocate.go). The public Relocate is

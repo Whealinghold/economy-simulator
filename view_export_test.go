@@ -163,7 +163,9 @@ func (h *ViewHarness) SetJob(t testing.TB, i int, recipe string, remaining, exec
 }
 
 // SetDirective sets the agent's pending directive.
-func (h *ViewHarness) SetDirective(i int, d *Directive) { h.agents[i].directive = d }
+func (h *ViewHarness) SetDirective(i int, d *Directive) {
+	h.agents[i].directive, h.agents[i].live = d, d
+}
 
 // SetReport sets the market report of a market.
 func (h *ViewHarness) SetReport(t testing.TB, region, commodity string, r MarketReport) {

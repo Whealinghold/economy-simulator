@@ -320,7 +320,7 @@ func (sc *viewScratch) fillCommodities(v *AgentView, row *roleRow, a *agent, c *
 // and its job into the scratch, so that nothing in the view points into the
 // agent (D97, spec-agents.md 6.4.2).
 func (sc *viewScratch) fillDirective(v *AgentView, a *agent) {
-	d := a.directive
+	d := a.live
 	if d == nil {
 		return
 	}

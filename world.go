@@ -108,6 +108,8 @@ type World struct {
 	// external is the state of the external-sector module, nil when it is off
 	// (external.go).
 	external *external
+	// integ is what INT keeps (integration.go).
+	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of
 	// regions, plus the counterparties of the external module (spec-external-sector.md
 	// 4.2.2). It is len(Regions) while the module is off.

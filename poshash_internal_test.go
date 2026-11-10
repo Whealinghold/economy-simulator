@@ -64,6 +64,11 @@ var skipFields = []string{
 	// is the default. A derived table that existed before the golden was recorded is in
 	// the walk; one appended after it must not move the off files (testing.md 7.1.1).
 	"World.refs", "regionState.g",
+	// integrationState.externals is the list of agents P1.9 visits, derived from the
+	// agents (a restore rebuilds it, and it drops a removed agent only at the next
+	// P1.9), and agent.live is the directive of the tick that P1.9 derives from the
+	// mailbox: neither is saved, so a restored world must hash like its original.
+	"integrationState.externals", "integrationState.visit", "agent.live",
 	// regionState.rebuilds counts the rebuilds of that table after construction, for
 	// the test of the one-rebuild rule; a restored world builds it once, so the count
 	// is not state and is not saved.
@@ -429,6 +434,10 @@ func migrationOn(w *World) bool { return w.migration != nil }
 // plan 2-16): an off world records no line for them.
 func externalOn(w *World) bool { return w.external != nil }
 
+// externalAgentOn is the guard of the P1.9 row (plan 2-17): a world that has never
+// held an external agent records no line for it.
+func externalAgentOn(w *World) bool { return w.integ.visit }
+
 // reliefOn is the guard of the row of the relief pass: a world with the estates
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
@@ -453,6 +462,7 @@ var replayRows = []replayRow{
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
+	{id: "P1.9", run: noErr((*World).p19Directives), on: externalAgentOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},

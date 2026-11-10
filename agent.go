@@ -67,6 +67,10 @@ type agent struct {
 	// directive is the pending directive of a directed agent, set between steps
 	// (spec-agents.md 10.3); nil when there is none.
 	directive *Directive
+	// live is the directive of the tick: P1.9 copies the mailbox into it
+	// (spec-integration.md 4.2.3) and the view reads it. It is scratch, derived at
+	// P1.9 from the mailbox, so it is not saved.
+	live *Directive
 }
 
 // Directive is what a consumer asks a directed agent to do in the next tick
@@ -436,6 +440,7 @@ func (w *World) loadAgents(rs *restoreCtx, r *codec.Reader) error {
 		}
 		prev = w.loadAgent(rs, r, names, prev, i > 0)
 	}
+	w.rebuildExternals()
 	// Every name in the table is a live agent's strategy (the table is the sorted
 	// set saveAgents writes), so an unused name is a non-canonical encoding (R10).
 	if r.Err() == nil {
