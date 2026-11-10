@@ -29,20 +29,27 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := serve(ctx, logger, *addr, *seed, *pace, *state); err != nil {
+	// Listening first fails a bad address before the start-up solve; connections made
+	// meanwhile wait in the backlog until serve accepts them.
+	l, err := net.Listen("tcp", *addr)
+	if err == nil {
+		err = serve(ctx, logger, l, *seed, *pace, *state)
+	}
+	if err != nil {
 		logger.Error("realm stopped", slog.Any("error", err))
 		stop()
 		os.Exit(1)
 	}
 }
 
-// serve runs the server on addr until ctx is done. There is no write timeout: a
-// POST /v1/step of 1 000 ticks answers after about a minute.
-func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, pace time.Duration, state string) error {
+// serve runs the server on l until ctx is done, and closes l. There is no write
+// timeout: a POST /v1/step of 1 000 ticks answers after about a minute.
+func serve(ctx context.Context, logger *slog.Logger, l net.Listener, seed uint64, pace time.Duration, state string) error {
 	s, err := NewServer(seed, state, logger)
 	if err != nil {
-		return err
+		return errors.Join(err, l.Close())
 	}
+	addr := l.Addr().String()
 	// Bound to one host, only the names a local client uses and that host may reach the server.
 	hosts := []string{"localhost", "127.0.0.1", "::1"}
 	if h, _, err := net.SplitHostPort(addr); err == nil && h != "" {
@@ -57,7 +64,7 @@ func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, p
 		go s.Pace(ctx, clock.C)
 	}
 	srv := &http.Server{
-		Addr: addr, Handler: s,
+		Handler: s,
 		// In-flight steps stop at a tick boundary when the process is told to stop.
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: time.Minute, IdleTimeout: time.Minute,
@@ -73,7 +80,7 @@ func serve(ctx context.Context, logger *slog.Logger, addr string, seed uint64, p
 		}
 	}()
 	logger.Info("realm listening", slog.String("addr", addr), slog.Uint64("seed", seed))
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+	if err := srv.Serve(l); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	<-drained // ListenAndServe returns as soon as Shutdown starts; wait for it to finish

@@ -15,23 +15,19 @@ import (
 	"time"
 )
 
-// liveServer runs serve on a free loopback port and returns the base URL, a function
-// that stops it and returns serve's result, and the state file path. The port is
-// found by listening on :0 and closing, so a rare clash fails the test loudly rather
-// than passing wrongly.
+// liveServer runs serve on a loopback listener the test opened itself on port 0, so
+// there is no port to guess and no clash, and returns the base URL and a function that
+// stops serve and returns its result. The kernel queues connections made while serve
+// still solves the world, so a request needs no start-up poll and the test no sleep.
 func liveServer(t *testing.T, seed uint64, state string) (base string, stop func() error) {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen() = %v, want nil", err)
 	}
-	addr := l.Addr().String()
-	if err := l.Close(); err != nil {
-		t.Fatalf("Close() = %v, want nil", err)
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- serve(ctx, discardLogger(), addr, seed, 0, state) }()
+	go func() { done <- serve(ctx, discardLogger(), l, seed, 0, state) }()
 	var stopped bool
 	stop = func() error {
 		cancel()
@@ -49,27 +45,14 @@ func liveServer(t *testing.T, seed uint64, state string) (base string, stop func
 			cancel()
 			<-done
 		}
+		client.CloseIdleConnections()
 	})
-	base = "http://" + addr
-	// The world is built before the listener opens (the start-up solve), so poll.
-	deadline := time.Now().Add(120 * time.Second)
-	for {
-		select {
-		case err := <-done:
-			t.Fatalf("serve returned %v before it listened", err)
-		default:
-		}
-		resp, err := http.Get(base + "/v1/world")
-		if err == nil {
-			_ = resp.Body.Close()
-			return base, stop
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("server not listening on %s after 120 s: %v", addr, err)
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	return "http://" + l.Addr().String(), stop
 }
+
+// client has a timeout, so a server that stops answering fails the test instead of
+// hanging it. The longest call is the 1 000-tick step, which is stopped long before.
+var client = &http.Client{Timeout: 3 * time.Minute}
 
 // do sends a request with the real client and returns the status and body.
 func do(t *testing.T, method, url, body string) (int, []byte) {
@@ -78,7 +61,7 @@ func do(t *testing.T, method, url, body string) (int, []byte) {
 	if err != nil {
 		t.Fatalf("NewRequest(%s %s) = %v, want nil", method, url, err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, url, err)
 	}
@@ -122,7 +105,7 @@ func TestServe_LoopbackAddPlayerStepCheckpointRestoreAndShutdown(t *testing.T) {
 
 	req, _ := http.NewRequest(http.MethodGet, base+"/v1/world", nil)
 	req.Host = "evil.example"
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("GET with a foreign Host: %v", err)
 	}
@@ -194,7 +177,7 @@ func TestServe_ShutdownStopsAnInFlightStepAtATickBoundary(t *testing.T) {
 	}
 	got := make(chan result, 1)
 	go func() {
-		resp, err := http.Post(base+"/v1/step?n=1000", "application/json", nil)
+		resp, err := client.Post(base+"/v1/step?n=1000", "application/json", nil)
 		if err != nil {
 			got <- result{-1, []byte(err.Error())}
 			return
@@ -204,16 +187,17 @@ func TestServe_ShutdownStopsAnInFlightStepAtATickBoundary(t *testing.T) {
 		got <- result{resp.StatusCode, b}
 	}()
 	// A restore of garbage answers 429 only while the step holds the token (else 400,
-	// changing nothing): that is the signal the step has started, with no sleep on a guess.
-	deadline := time.Now().Add(60 * time.Second)
-	for {
-		if code, _ := do(t, http.MethodPost, base+"/v1/restore", "x"); code == http.StatusTooManyRequests {
-			break
+	// changing nothing): that is the signal the step has started. Each probe is a round
+	// trip, so the loop needs no sleep; it ends when the step is running or the
+	// client timeout of 3 minutes fails a probe.
+	for probing := true; probing; {
+		select {
+		case r := <-got:
+			t.Fatalf("the long step answered %d %s before the stop", r.code, r.body)
+		default:
 		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the long step never held the token within 60 s")
-		}
-		time.Sleep(10 * time.Millisecond)
+		code, _ := do(t, http.MethodPost, base+"/v1/restore", "x")
+		probing = code != http.StatusTooManyRequests
 	}
 	start := time.Now()
 	if err := stop(); err != nil {
@@ -230,7 +214,7 @@ func TestServe_ShutdownStopsAnInFlightStepAtATickBoundary(t *testing.T) {
 }
 
 // TestServe_RefusesAnUnreadableStateFile verifies that serve returns the error and
-// opens no port when the -state file is not a checkpoint.
+// closes the listener it was given when the -state file is not a checkpoint.
 //
 // Guard: starting fresh over it would overwrite the file at the next save.
 func TestServe_RefusesAnUnreadableStateFile(t *testing.T) {
@@ -242,7 +226,11 @@ func TestServe_RefusesAnUnreadableStateFile(t *testing.T) {
 	if err := os.WriteFile(state, []byte("not a checkpoint"), 0o600); err != nil {
 		t.Fatalf("WriteFile() = %v, want nil", err)
 	}
-	err := serve(context.Background(), discardLogger(), "127.0.0.1:0", 1, 0, state)
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen() = %v, want nil", err)
+	}
+	err = serve(context.Background(), discardLogger(), l, 1, 0, state)
 	if err == nil || errors.Is(err, http.ErrServerClosed) {
 		t.Errorf("serve over a state file that is no checkpoint = %v, want an error", err)
 	}
