@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -273,7 +274,8 @@ func (w *World) estateFits(a *agent) bool {
 	}
 	// credit is what each account receives and refund what each region's refund flow
 	// adds, so two contracts into one account are tested together. Only whether every
-	// entry fits is read, so the map order decides nothing.
+	// entry fits is read, and the keys are walked in ascending order so that a ledger
+	// fault is the same one every run.
 	credit := map[int]int64{estate: mine.Balance}
 	refund := map[int]int64{}
 	toEstate := mine.Balance // what the estate of the agent's region gets by EstateMoney
@@ -294,7 +296,8 @@ func (w *World) estateFits(a *agent) bool {
 			refund[int(ct.to)] += back
 		}
 	}
-	for acct, sum := range credit {
+	for _, acct := range slices.Sorted(maps.Keys(credit)) {
+		sum := credit[acct]
 		v, err := w.ledger.Account(acct)
 		if err != nil {
 			invariant("an account a removal pays is unreadable: " + err.Error())
@@ -303,7 +306,8 @@ func (w *World) estateFits(a *agent) bool {
 			return false
 		}
 	}
-	for g, sum := range refund {
+	for _, g := range slices.Sorted(maps.Keys(refund)) {
+		sum := refund[g]
 		if !w.ledger.FlowFits(g, ledger.EscrowRefund, ledger.Money, sum) {
 			return false
 		}
