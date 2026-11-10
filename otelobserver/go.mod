@@ -1,6 +1,6 @@
 module github.com/Whealinghold/economy-sim/otelobserver
 
-go 1.25.0
+go 1.26.10
 
 require (
 	github.com/Whealinghold/economy-sim v0.0.0-00010101000000-000000000000
