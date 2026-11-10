@@ -1417,7 +1417,7 @@ input because nothing reads one back.
 ## 6. Metrics
 
 Metrics are produced by the separate module `otelobserver` from the events of
-section 4 and, for nineteen instruments, from a snapshot that the consumer passes to
+section 4 and, for the instruments of the table in 6.2.2, from a snapshot that the consumer passes to
 it (6.2.2). The core defines none and does not import OpenTelemetry
 (architecture.md 11.4). This section reconciles the catalogue of rules 5.3 with
 the events, resolves the five conflicts of N-088, and says what the adapter keeps.
@@ -1465,6 +1465,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.world.step.failed` | Counter | `{step}` | none | `TickEnded` with `Failed` true, one per failed step (6.3.1) | **new**: the duration is not recorded for a failed step and the span is a sampled trace, so without it a world that failed leaves only a flat line |
 | `economysim.market.trades` | Counter | `{trade}` | `economysim.commodity` | `TradeExecuted` | kept |
 | `economysim.market.volume` | Counter | `{unit}` | `economysim.commodity` | `TradeExecuted` (`Quantity`); equals the sum of `MarketCleared.Volume` (FR-OBS-045) | kept |
+| `economysim.estate.sold` | Counter | `{unit}` | `economysim.commodity`, `economysim.region` | `TradeExecuted` (`Quantity`, where `Seller` is below the region count) | **new**: the estate is a forced seller, so its sales are kept apart from producers' supply, and they are the pool's inflow from trade |
 | `economysim.market.clearing_price` | Gauge | `{minor_unit}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`Price`) | **changed**: gains `economysim.region`; a gauge of one commodity across regions has no meaningful last value |
 | `economysim.market.price_age` | Gauge | `{tick}` | `economysim.commodity`, `economysim.region` | `MarketCleared` (`PriceAge`) | **new**: `clearing_price` is a held gauge (6.3.6), so a market that stopped trading shows a flat, healthy price; the age is the direct signal, and `market.volume` has no `region` to show which market it is |
 | `economysim.market.unmatched` | Counter | `{unit}` | `economysim.commodity`, `economysim.side` | `MarketCleared` (`UnmatchedBid`, `UnmatchedAsk`) | **changed** (the ask side includes the estate's unsold lots, asked again every tick): was `economysim.market.orders.unmatched` in `{order}`; the event carries units, not orders |
@@ -1491,30 +1492,45 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.entry.limited` | Counter | `{case}` | `economysim.entry_limit` | `EntryLimited` (`Unfunded`, `NoViableRole`, `RegionCap`, `RoleCap`, `RoleCeiling`, `Cooldown`, `Hysteresis`, `ExitCap`, `Refused`, `Stranded`) | **new**; `Stranded` added: a household at rung 1 with no role to move to is counted by no cap, cooldown or band, and it leads `household.exits` of cause `starved` by up to `RemovePrivation` less `ChangePrivation` ticks (`spec-spawner.md` 13.1.2) |
 | `economysim.household.entries` | Counter | `{household}` | `economysim.region` | `EntryLimited` (`Entered`) | **new**: `household.count` is a net and `household.exits` is the outflow only, so exits matched by replacement leave the count flat and the churn invisible; with `entry.limited{entry_limit=unfunded}` the entry volume tells a region whose pool cannot refill from one that has no exits |
 | `economysim.want.unfunded` | Counter | `{unit}` | `economysim.want`, `economysim.role` | `WantShortfall` (`Planned` less `Funded`) | kept |
+| `economysim.want.choked` | Counter | `{household}` | `economysim.want`, `economysim.role` | `WantShortfall` (`Choked`: the households whose price ratio was at the choke price) | **new** (plan 2-22, deferred metrics): a want that no price can fund looks, in `want.unfunded`, like one that is short of money; the choke price is the first thing to look at when a want is priced out |
 | `economysim.household.relocations` | Counter | `{household}` | `economysim.region.from`, `economysim.region.to`, `economysim.cause` | `AgentRelocated` (`Weight`) | **changed**: gains `economysim.cause`, because a merchant's trips and a migrant's move are not one thing |
 | `economysim.money.flow` | Counter | `{minor_unit}` | `economysim.reason`, `economysim.kind` | `BoundaryFlow` (money); includes the bucket at `Tick` -1 (6.3.2) | kept |
 | `economysim.commodity.flow` | Counter | `{unit}` | `economysim.reason`, `economysim.kind`, `economysim.commodity` | `BoundaryFlow` (goods) | **new**: production, consumption, spoilage and wear, by commodity |
 | `economysim.commodity.wear` | Counter | `{unit}` | `economysim.commodity` | `WearApplied` (`Units`); includes the bucket at `Tick` -1 | **new**: the durability removed from the items of a commodity, a smooth measure of tool depreciation; `economysim.commodity.flow` under `wear` counts only the items retired |
 | `economysim.money.flow.unapplied` | Counter | `{minor_unit}` | `economysim.reason` | `MoneyFlowLimited` (`Due` less `Applied`) | kept |
+| `economysim.money.flow.limited` | Counter | `{household}` | `economysim.reason`, `economysim.flow_limit` | `MoneyFlowLimited` (`Short`, `Headroom`, `Limit` as `short`, `headroom`, `limit`) | **new** (plan 2-22, deferred metrics): `money.flow.unapplied` says how much money a flow did not apply, not why: a levy that found too little, a credit cut at `MaxMoney` and a limit are three different faults |
 | `economysim.household.births` | Counter | `{household}` | `economysim.role` | `PopulationChanged` (`BirthsDone`) | kept |
 | `economysim.household.deaths` | Counter | `{household}` | `economysim.role` | `PopulationChanged` (`DeathsDone`) | kept |
+| `economysim.population.limited` | Counter | `{household}` | `economysim.population_limit` | `PopulationChanged` (`DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsUnfunded`, `RateClamped` as `deaths_cut`, `deaths_held`, `births_capped`, `births_unfunded`, `rate_clamped`) | **new** (plan 2-22, deferred metrics): tells why births or deaths fell short of the schedule; `births_capped` and `rate_clamped` have no `Warn` (`spec-population.md` 10.2 leaves them to OBS) |
 | `economysim.transport.shipments` | Counter | `{shipment}` | `economysim.mode` | `ShipmentDispatched` | kept |
 | `economysim.transport.in_transit` | UpDownCounter | `{unit}` | `economysim.commodity` | `ShipmentDispatched` (+ each line), `ShipmentArrived` (- each line's `Shipped`) | kept |
 | `economysim.transport.cargo.spoiled` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (`Spoiled`) | kept |
+| `economysim.transport.cargo.diverted` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (each line's `Diverted`) | **new** (plan 2-22, deferred metrics): units that reached the destination and could not go to the consignee; delivered and spoiled are derivable, diverted is not |
+| `economysim.transport.rejected` | Counter | `{request}` | `economysim.mode`, `economysim.reason` | `ShipmentRejected` (one per event, by `Mode` and `Reason`) | **new** (plan 2-22, deferred metrics): the only signal for why shipments are not happening; the order path has `market.orders.rejected`, transport had no counterpart |
 | `economysim.endowment.drawn`, `.regenerated`, `.short` | Counter | `{unit}` | `economysim.resource`, `economysim.region` | `EndowmentChanged` (`Drawn`, `Regenerated`, `Short`) | kept |
 | `economysim.endowment.stock` | Gauge | `{unit}` | `economysim.resource`, `economysim.region` | `EndowmentChanged` (`Stock`), `EndowmentAdjusted` (`StockAfter`); last value held (6.3.6) | kept |
-| `economysim.information.rumours` | Counter | `{rumour}` | `economysim.outcome` | `RumoursServed` (`Offered`, `NoPath`, `TooOld`, `NotYet`) | kept |
+| `economysim.information.rumours` | Counter | `{rumour}` | `economysim.outcome`, `economysim.region` | `RumoursServed` (`Offered`, `NoPath`, `TooOld`, `NotYet`) | **changed**: gains `economysim.region` (the reader's); a closed road or a short horizon cuts one region off, and the outcome alone cannot say which |
+| `economysim.information.readers` | Counter | `{agent}` | `economysim.region` | `RumoursServed` (`Readers`) | **new** (plan 2-22, deferred metrics): the denominator of `information.rumours`: the event is absent when no informed agent has a view, so a falling `offered` is ambiguous between fewer readers and fewer rumours per reader |
 | `economysim.external.units` | Counter | `{unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Traded`) | kept |
 | `economysim.external.value` | Counter | `{minor_unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Value`) | kept |
-| `economysim.external.price` | Gauge | `{minor_unit}` | `economysim.node`, `economysim.region`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Price`) | **changed**: gains `economysim.region` (the gate), since the quote differs by gate scale |
+| `economysim.external.price` | Gauge | `{minor_unit}` | `economysim.node`, `economysim.region`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Price`), not recorded when `Price` is 0 (no quote was made, a closed edge: the fact is `external.cut` as `closed`, and a 0 would read as free) | **changed**: gains `economysim.region` (the gate), since the quote differs by gate scale |
+| `economysim.external.cut` | Counter | `{unit}` | `economysim.node`, `economysim.commodity`, `economysim.side`, `economysim.external_cut` | `OutsideTraded` (`CutClosed`, `CutCap`, `CutPrice` as `closed`, `cap`, `price`) | **new** (plan 2-22, deferred metrics): when `external.units` falls or flattens, a closed edge, an exhausted cap and a bid below 1 look the same without it |
+| `economysim.external.unfilled` | Counter | `{unit}` | `economysim.node`, `economysim.commodity`, `economysim.side` | `OutsideTraded` (`Offered` less `Traded`) | **new** (plan 2-22, deferred metrics): the fill gap of a side: units the outside offered at its quote that the realm did not take, the first thing to check when a configured outside price does nothing |
+| `economysim.external.clamped` | Counter | `{case}` | `economysim.node`, `economysim.commodity` | `OutsideTraded` (1 for each event with `PriceClamped`) | **new** (plan 2-22, deferred metrics): a clamp of the factor or the price acting on the quote is silent otherwise (no log, only an event bool): the configured factors are fighting their own bounds |
 | `economysim.household.own_use` | Gauge | `{household}` | `economysim.role`, `economysim.region` | `OwnUseChanged` (`OnOwnUse`); last value held (6.3.6) | kept |
 | `economysim.own_use.units` | Counter | `{unit}` | `economysim.commodity` | `OwnUseChanged` (`Output`, per line) | kept |
+| `economysim.own_use.blocked` | Counter | `{household}` | `economysim.role` | `OwnUseChanged` (`Blocked`) | **new** (plan 2-22, deferred metrics): households in the own-use mode that were free and started nothing; the level `household.own_use` does not show that the mode produces nothing |
+| `economysim.household.own_use.changes` | Counter | `{household}` | `economysim.role`, `economysim.own_use_change` | `OwnUseChanged` (`Entered`, `Left` as `entered`, `left`) | **new** (plan 2-22, deferred metrics): the level `household.own_use` nets entries against exits; the gross flow shows a flag that flaps at its threshold |
 | `economysim.migration.started` | Counter | `{household}` | `economysim.region.from`, `economysim.region.to` | `MigrationStarted` (`Weight`) | kept |
-| `economysim.migration.limited` | Counter | `{household}` | `economysim.limit` | `MigrationReviewed` (the counts other than `Started`, `Pushed`, `Reviewed`, `Unsettled`) | kept |
+| `economysim.migration.limited` | Counter | `{household}` | `economysim.limit`, `economysim.region` | `MigrationReviewed` (the counts other than `Started`, `Pushed`, `Reviewed`, `Unsettled`) | **changed**: gains `economysim.region`; `out_cap`, `in_cap`, `unprovisioned` and `bound` are per-region by nature, and the first operator question is which region is stuck |
+| `economysim.migration.unsettled` | Counter | `{household}` | none | `MigrationReviewed` (`Unsettled`) | **new** (plan 2-22, deferred metrics): the one silent limit of the module with no metric: "nobody migrates" is either the settling rule holding households back or the gates and caps, and `migration.limited` excludes it |
 | `economysim.migration.on_journey` | UpDownCounter | `{household}` | none | `MigrationStarted` (+`Weight`), `AgentRelocated` with the cause `migration` (-`Weight`), `MigrationReviewed` (-`Ended`) | kept |
 | `economysim.contract.formed` | Counter | `{contract}` | `economysim.commodity` | `ContractFormed` | kept |
 | `economysim.contract.value` | Counter | `{minor_unit}` | `economysim.commodity` | `ContractFormed` (`Escrowed`) | kept |
 | `economysim.contract.escrow` | UpDownCounter | `{minor_unit}` | none | `ContractFormed` (+`Escrowed`), `ContractSettled` (-`Paid`, -`Refunded`) | kept |
+| `economysim.contract.settled` | Counter | `{contract}` | `economysim.cause` | `ContractSettled` (by `Cause`: `delivered`, `short`, `payer_removed`, `deliverer_removed`) | **new** (plan 2-22, deferred metrics): how contracts end: the share of `short` is the health signal of a lane, `payer_removed` sends cargo and refund to the estate, `deliverer_removed` is a merchant dying mid-trip; the net of `contract.escrow` hides all of it |
+| `economysim.contract.unformed` | Counter | `{match}` | `economysim.contract_failure` | `ContractRound` (`NoTaker`, `PayerFunds`, `TooMany`, `DispatchRefused` as `no_taker`, `payer_funds`, `too_many`, `dispatch_refused`) | **new** (plan 2-22, deferred metrics): the silent dampers of the round: `too_many` is `MaxOpen` binding, `payer_funds` the race for one lot, `dispatch_refused` transport, `no_taker` supply with no demand; `contract.formed` cannot say why a lane is quiet |
+| `economysim.contract.refused` | Counter | `{request}` | `economysim.contract_request` | `ContractRound` (`OffersRefused`, `TakesRefused` as `offer`, `take`) | **new** (plan 2-22, deferred metrics): admission refusals are the plan checker rejecting what the strategy posted; a rising count is a strategy or configuration fault (the reason is in the Debug line, not in the event) |
 | `economysim.merchant.decisions` | Counter | `{lane}` | `economysim.decision` | `MerchantsPlanned` (the case counts) | kept |
 | `economysim.storage.limited` | Counter | `{case}` | `economysim.region`, `economysim.role`, `economysim.room_limit` | `RoomLimited` (`StartsCut` as `start_cut`, `StartsRefused` as `start_refused`, `BidsCut` as `bid_cut`, `BidsRejected` as `bid_rejected`, `ShipmentsRefused` as `shipment_refused`) | **new** (STO) |
 | `economysim.hire.formed` | Counter | `{hire}` | `economysim.role` (the employer's) | `HireFormed` | **new** (EMP) |
@@ -1582,7 +1598,6 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.production.pending` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].Pending`: the output of jobs in progress, the work in progress that no account holds (N-088 3) |
 | `economysim.recipe.in_progress` | Gauge | `{execution}` | `economysim.recipe`, `economysim.region` | `Jobs[].Executions` (5.3.5): the executions of the jobs in progress, 0 where a pair has none; with `recipe.refused` it tells a producer that is working from one that is idle, and it needs no new field |
 | `economysim.market.stock` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region`, `economysim.holder` (`agents`, `estate`, `treasury`) | `Markets[].HeldByAgents`, `HeldByEstate`, `HeldByTreasury` (N-081 2) |
-| `economysim.estate.sold` | Counter | `{unit}` | `economysim.commodity`, `economysim.region` | `TradeExecuted` (`Quantity`, where `Seller` is below the region count) | **new**: the estate is a forced seller, so its sales are kept apart from producers' supply, and they are the pool's inflow from trade |
 | `economysim.estate.at_floor` | Gauge | `{unit}` | `economysim.commodity`, `economysim.region` | `Markets[].EstateAtFloor` | **new**: separates a slow markdown from a good nobody wants at the lowest price; the listed price is saved state that no other row shows |
 | `economysim.ledger.lots` | Gauge | `{lot}` | `economysim.commodity`, `economysim.region` | `Markets[].Lots`: the lots of the commodity in the accounts counted by the three `HeldBy` fields. The sum over the series is the ledger's lot count, which the cost of ageing, of a move, of the audit and of the snapshot's `L` pass grows with (`spec-ledger.md` 5.1, 5.3, NFR-LED-002) |
 | `economysim.money.supply` | Gauge | `{minor_unit}` | `economysim.region`, `economysim.sector` (`households`, `pool`, `contract`, `treasury`) | `Regions[].MoneyHouseholds`, `MoneyPool`, `MoneyContract` (hires' escrow included), `MoneyTreasury` |
@@ -1595,6 +1610,12 @@ adapter records each instrument below once per call, from the rows named.
 | `economysim.role.expected_ratio` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].ExpectedRatioBP` where `HasExpected` (SPN 6.1): the expected ratio `E` that ranks the roles for every switch and every entry | **new**: the default spawner moves a household by comparing `E` of two roles, and `wage.observed` and `welfare.ratio` do not show it (it also reads the upkeep and the expected work ticks), so without it "why did nobody enter this role" is answered only by the per-agent `Debug` line |
 | `economysim.role.viable` | Gauge | `{flag}` | `economysim.role`, `economysim.region` | `Roles[].Viable` where `HasExpected`: 1 if the role is viable at `EntryRatio` (SPN 6.1), else 0 | **new**: the gate of every entrant, of rung 1 and of replacement; a 0 beside a high `expected_ratio` is the reason `EntryLimited.NoViableRole` and `Stranded` count, and a role that is never 1 can never be entered |
 | `economysim.role.agents` | Gauge | `{agent}` | `economysim.role`, `economysim.region` | `Roles[].Agents`: the counterpart of the `Warn`s "role extinct" (0) and "group below floor" (below `MinAgents`) of 7.3. `economysim.agent.count` is fed by events by role only, so a role that is extinct in one region while another has agents is visible only here |
+| `economysim.population.natural_increase` | Gauge | `{basis_point}` | `economysim.role`, `economysim.region` | `Roles[].NaturalIncreaseBP`, only while `Modules` holds `population`: whether a role is growing or shrinking at its current ratio, which births and deaths counters between events cannot show |
+| `economysim.population.cap` | Gauge | `{household}` | `economysim.region` | `Regions[].HouseholdCap`, only while `Modules` holds `population`, absent where 0: draws households against the cap and explains `births_capped` |
+| `economysim.population.replacement_ratio` | Gauge | `{basis_point}` | none | `Population.ReplacementRatioBP` where `HasReplacement`: the target r* that the welfare ratio should converge to; ratio less r* is the first thing to look at when a population drifts |
+| `economysim.transport.overdue` | Gauge | `{shipment}` | `economysim.mode` | `Shipments[]` with `TicksLeft` at most 0, by mode, 0 for a mode with none, only while `Modules` holds `transport`: a held arrival leaves the cargo in a transit account and the traveller away until the guard clears; it is visible otherwise only as a Debug line per shipment |
+| `economysim.transport.away` | Gauge | `{agent}` | none | `len(Away)`, only while `Modules` holds `transport`: agents on a self-carried trip are not trading or working: a household count that falls with no exits is explained by it |
+| `economysim.migration.pipeline` | Gauge | `{household}` | `economysim.region`, `economysim.direction` | `Regions[].OnJourneyFrom` and `OnJourneyTo` as `from` and `to`, only while `Modules` holds `migration`: the `in_cap` outcome compares a region's incoming pipeline with its cap, and `migration.on_journey` is one global number |
 | `economysim.store.count` | Gauge | `{store}` | `economysim.region`, `economysim.store_class` | `Stores[]` rows, by region and store class |
 | `economysim.room.fill` | Gauge | `{basis_point}` | `economysim.region`, `economysim.role`, `economysim.dimension` | `Roles[]` room and load, `Load * 10 000 / Room` of a dimension (`mass`, `bulk`), absent where the room is 0 |
 | `economysim.credit.arrears` | Gauge | `{minor_unit}` | `economysim.region` | `Claims[]` rows of origin `loan` that are overdue, `PrincipalOwed + InterestOwed`, by region (a level that changes with no `CreditSettled`: a debtor removed in phase 7, `ForgiveClaims`, a relocation) |
@@ -1715,7 +1736,7 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 
 | Attribute | Values | Added for |
 |-----------|--------|-----------|
-| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, exits |
+| `economysim.cause` | the removal causes `insolvent`, `starved`, `consumer`, `population` (`economysim.agent.removals`) and the relocation causes `transport`, `migration`, `consumer` (`economysim.household.relocations`); the contract causes `delivered`, `short`, `payer_removed`, `deliverer_removed` (`economysim.contract.settled`); and, for `economysim.household.exits`, `insolvent`, `starved` and `consumer`; a closed set of constants (4.2.3) | removals, relocations, contract settlements, exits |
 | `economysim.entry_limit` | `unfunded`, `no_viable_role`, `region_cap`, `role_cap`, `role_ceiling`, `cooldown`, `hysteresis`, `exit_cap`, `refused`, `stranded` (ten) | `economysim.entry.limited` |
 | `economysim.holder` | `agents`, `estate`, `treasury` | `economysim.market.stock` |
 | `economysim.sector` | `households`, `pool`, `contract`, `treasury` | `economysim.money.supply` |
@@ -1735,6 +1756,12 @@ name them in 5.4.1). Each is bounded by the configuration or by a constant set:
 | `economysim.project`, `economysim.bar` | `build`, `repair`; `no_return`, `standing`, `unreachable`, `survival` | `economysim.saving.requests`, `economysim.saving.barred` |
 | `economysim.entry_outcome`, `economysim.policy_cut`, `economysim.policy_hold` | `applied`, `unchanged`, `not_held`, `duplicate`, `no_close`; `clamped`, `stepped`; `in_band`, `no_reading` | `economysim.policy.entries`, `.cut`, `.held` |
 | `economysim.cover_kind`, `economysim.cover_loss`, `economysim.cover_limit` | `route`, `store`; `dropped`, `cut`; `in_arrears`, `exposure`, `no_risk`, `no_offer`, `below_minimum`, `funds`, `too_many`, `overflow` | `economysim.insurance.*` |
+| `economysim.population_limit` | `deaths_cut`, `deaths_held`, `births_capped`, `births_unfunded`, `rate_clamped` | `economysim.population.limited` |
+| `economysim.flow_limit` | `short`, `headroom`, `limit` | `economysim.money.flow.limited` |
+| `economysim.own_use_change` | `entered`, `left` | `economysim.household.own_use.changes` |
+| `economysim.external_cut` | `closed`, `cap`, `price` | `economysim.external.cut` |
+| `economysim.contract_failure`, `economysim.contract_request` | `no_taker`, `payer_funds`, `too_many`, `dispatch_refused`; `offer`, `take` | `economysim.contract.unformed`, `economysim.contract.refused` |
+| `economysim.direction` | `from`, `to` | `economysim.migration.pipeline` |
 
 `economysim.reason` takes, besides the money flow IDs and the built-in boundary
 reasons of rules 5.4.1, the **rejection reasons** of `OrderRejected` (twelve
@@ -1744,8 +1771,9 @@ for `economysim.commodity.flow`, the **fiscal flow IDs** (which share the namesp
 of the money flow IDs) for `economysim.fiscal.*`, the refusal reasons of a vacancy
 (`employer_funds`, `no_input`, `no_tool`, `no_endowment`, `no_room`, `zero_yield`,
 `no_site`, `too_many_hires`, `no_labour`) for `economysim.vacancy.unfilled`, the five refusal reasons of a start (`not_on_role`, `zero_yield`, `no_site`, `no_tool`, `no_input`) for `economysim.recipe.refused`, the abandon reasons (`agent_removed`, `role_changed`, `principal_left`, `region_changed`) for `economysim.recipe.abandoned` and of a
-rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. The flow IDs of `economysim.reason` are bounded by `MaxMoneyFlows` (and `MaxFiscalFlows` for the fiscal flows) and by the adapter's intern cap; there is no `Names.Flows`,, because a flow ID is its own string (3.2.4, 3.2.5). rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`. `economysim.cause`
-also takes, per instrument, the closed set of the event that feeds it (`removal` and
+rent request (`no_title`, `rent_funds`) for `economysim.rent.refusals`, and the refusal reasons of a shipment request (`spec-transport.md` 5.4, 26 constants) for `economysim.transport.rejected`. The flow IDs of `economysim.reason` are bounded by `MaxMoneyFlows` (and `MaxFiscalFlows` for the fiscal flows) and by the adapter's intern cap; there is no `Names.Flows`, because a flow ID is its own string (3.2.4, 3.2.5). `economysim.cause`
+also takes, per instrument, the closed set of the event that feeds it (`delivered`, `short`,
+`payer_removed` and `deliverer_removed` for `economysim.contract.settled`; `removal` and
 `consumer` for `economysim.title.transfers`; `repaid`, `written_off`,
 `debtor_removed` and `forgiven` for `economysim.credit.lost`). No attribute is an
 agent ID, an order ID, a tick, a price, a quantity, a contract or a shipment ID
@@ -1769,9 +1797,10 @@ the attribute sets, every cell that could occur:
 | endowment (4 x 15), own use (20 x 5 + 30), outside (units and value 30 x 2 each, price with 2 gates 120), information 4, migration (20 + 12 + 1) | 467 |
 | snapshot-fed (pending 150, in progress 5 x 45, stock 300, money supply 15, welfare ratio 100, welfare ratio households 100, floor held 100, welfare clamped 100, observed wage 100, privation 100, expected ratio 100, viable 100, role agents 100) | 1 590 |
 | estate (sold 30 commodities x 5 regions, at floor 30 x 5) | 300 |
+| the deferred metrics of plan 2-22 (population 5 + 100 + 5 + 1, transport rejected 3 x 26 + diverted 30 + overdue 3 + away 1, readers 5 and rumours by region +16, migration unsettled 1, limited by region +48 and pipeline 10, contracts 4 + 4 + 2, external cut 180 + unfilled 60 + clamped 30, flow limited 4 x 3, want choked 6 x 20, own use blocked 20 + changes 40) | 775 |
 | duration and failed steps | 2 |
 | the instruments of the later modules (6.2.1 from `economysim.storage.limited`, and 6.2.2 from `economysim.store.count`) | not counted: no reference pack has their sizes yet; the product rule applies to each, and each spec counts its series for its own placeholder sizes (LND 13.3: 90) |
-| **Total** | **about 7 700** (7 659), for the instruments of the earlier modules |
+| **Total** | **about 8 400** (8 434), for the instruments of the earlier modules |
 
 This is a ceiling of cells that could occur by the product rule: most pairs (a
 reason with a commodity, a role with a recipe it does not have) never occur, so
@@ -1814,16 +1843,17 @@ attribute.
 `RunEnded` and one for each step from `TickStarted` to `TickEnded`, with
 `economysim.tick` as an attribute; a step span ends with an error status when
 `TickEnded.Failed`; a run span likewise when `RunEnded.Failed`. A class-E event emitted **between `TickStarted` and `TickEnded`**
-is a span event of the step span (`AgentBankrupted` of phase 7, `OutsideEnded`,
-and the others) with its small fields as attributes, since their number is the
-number of rare transitions. An event emitted **outside a step** (a class-C slot
+is a span event of the step span with its small fields as attributes, since their number is the
+number of rare transitions. The adapter marks the transitions of an agent (`AgentSpawned`, `AgentBankrupted`, `WeightChanged`, `RoleChanged`, `AgentRelocated`) and of a flow (`ShipmentDispatched`, `ShipmentArrived`, `ContractFormed`, `ContractSettled`, `MigrationStarted`); the other class-E events are counted by the metrics of 6.2.1 and are not span events (plan 2-22 D650, D653). An event emitted **outside a step** (a class-C slot
 event, a call's `AgentSpawned`, `AgentBankrupted`, `AgentRelocated` or
 `RecipeAbandoned`, the bucket at `Tick` -1, `WorldCreated`, `WorldRestored`) has
 no step span to attach to: it is counted or logged, not a span event, and an
 adapter that wants it in a trace attaches it to the run span if one is open. A class-O or
 class-R event is **not** a span event: the step span carries the *counts* of
-orders placed, rejected and trades and the traded volume as attributes, from the
-accumulators of 6.6.2. This refines rules 6.2, which names "a rejected order" as
+orders placed, rejected and trades and the traded volume as attributes, named
+`economysim.orders.placed`, `economysim.orders.rejected`, `economysim.trades` and
+`economysim.volume`, from the accumulators of 6.6.2. A span event is named
+`economysim.<event>` (the event's type name in snake case). This refines rules 6.2, which names "a rejected order" as
 a span event: a rejected order is class O and would be tens of thousands of span
 events a tick. `WorldCreated` and `WorldRestored` are not span events; they seed
 the adapter's state.
@@ -2222,6 +2252,7 @@ every level (so the guarded sites run).
 | defaults | a world with no logger and no observer builds, steps and runs, writes nothing to stdout or stderr, and does not panic; a nil logger and a nil observer behave the same | FR-OBS-090 |
 | non-interference | the same seed and configuration, with and without a logger, an observer and `WithAudit`, give identical snapshots at every tick, identical `ConfigHash`, identical random state, identical event streams between two observed runs, and identical draw counts (`spec-world.md` FR-WLD-064) | FR-OBS-023 |
 | a panic | an observer that panics marks the world failed and propagates the panic (architecture.md 12.5); a world that was observed by a recorder is unaffected | FR-OBS-024 |
+| event-only counters (a root test since Stage 1) | with no observer the counters that exist only for an event are not built (a scenario with a test hook on the flag in an internal test) | NFR-OBS-003 |
 
 ### 9.4 Cardinality
 
@@ -2394,6 +2425,7 @@ overlays, `spec-reference-chain.md` 4):
 | restore equality | the snapshot after a restore at tick `n` equals the snapshot of the uninterrupted world at `n`, field for field, for a range of seeds and each module on | FR-OBS-043 |
 | region state | `Region(r)`'s `RegionState` equals the rows of the full snapshot whose key has `r` | FR-OBS-044 |
 | consistency | the sum of `TradeExecuted.Quantity` of a market in a step equals `MarketCleared.Volume`; the `MarketState` of the query equals the snapshot's | FR-OBS-045 |
+| snapshot allocation (a root test since Stage 1) | the allocations of `Snapshot` at scale 1 and at scale 40 of one configuration are equal | NFR-OBS-004 |
 
 ### 9.9 The adapter's tests
 
@@ -2411,8 +2443,6 @@ In `otelobserver`, against the OpenTelemetry SDK's in-memory exporters (testing.
 | exits | the cohort of 40 with 7 unfed households of `spec-spawner.md` 5.3 raises the instrument by 4 a tick while `economysim.agent.removals` stays at 0, then by the weight left at its removal; a population death is in `economysim.household.deaths` and not here | FR-OBS-059 |
 | price age, beliefs at bound | a market with no trade for `k` ticks reads an age of `k`; beliefs all on the ceiling read 10 000 for `ceiling` and 0 for `floor`; a tick with no `BeliefsUpdated` holds the last value | FR-OBS-060 |
 | volume | the SDK is called at most once per series per tick (6.6.2), with a counting meter | NFR-OBS-005 |
-| event-only counters | with no observer the counters that exist only for an event are not built (a scenario with a test hook on the flag in an internal test) | NFR-OBS-003 |
-| snapshot allocation | the allocations of `Snapshot` at scale 1 and at scale 40 of one configuration are equal | NFR-OBS-004 |
 | no callback | the adapter holds no `World`, and a run with the adapter and one with a recorder give the same world state | FR-OBS-056 |
 | failed step | a step that fails at P4.1 and one that fails its audit at P8.4 record no duration, end their span with an error status, run no reset and leave the levels as the events seen put them | FR-OBS-055 |
 | the snapshot is validated | `FuzzRecordSnapshot`: for any `Snapshot` value (IDs out of range, negative counts, nil slices) `RecordSnapshot` neither panics nor records a series outside the bounds of 6.5 (testing.md 7.4) | FR-OBS-052 |

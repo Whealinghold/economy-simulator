@@ -216,7 +216,9 @@ Update this section when the structure changes, in the same change as
 
 ## Commands
 
-Run the module's checks with the standard Go toolchain:
+Run the module's checks with the standard Go toolchain. The gates run per module:
+the commands below run from the root for the core, and again from `otelobserver/`
+(and from each `examples/<name>/`) for that module (`doc/rules/architecture.md` 2.6):
 
 ```sh
 gofmt -l .                     # must print nothing

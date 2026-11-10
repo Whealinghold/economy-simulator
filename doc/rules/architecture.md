@@ -217,7 +217,10 @@ in `testdata/fuzz/` of the package that owns the fuzz test (for example
 `otelobserver/` is the only sanctioned in-repo module besides examples. It
 depends on the OpenTelemetry API packages and on the root module, never the
 reverse. Use a `go.work` file for local development, and tag its releases with
-the sub-module prefix (`otelobserver/v0.1.0`).
+the sub-module prefix (`otelobserver/v0.1.0`). Until the first tag,
+`otelobserver/go.mod` carries `replace github.com/Whealinghold/economy-sim => ../`
+so that `go mod tidy` works on its own; the replace is removed in the commit that
+tags `otelobserver/v0.1.0`. The gates run per module (AGENTS.md, Commands).
 
 2.7. Import cycles are forbidden. `config`, `strategy`, `indicator` and
 `experiment` MAY import the root package, and `experiment` MAY also import
@@ -1068,4 +1071,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 77a647c57d4453afdb37a8b7
+RULE-TAG: 4be28c49fd7f21529d2f1a11
