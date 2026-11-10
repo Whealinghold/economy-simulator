@@ -217,6 +217,12 @@ type judged struct {
 	Row      verdict.FactRow
 	Failures []string
 	Notes    []string
+	// Values are the numbers of the seeds that have one, in seed order, and Seeds
+	// the seeds planned: the input of verdict.SetBand in the proposal of a setting
+	// run (D598). Side is the side of the band.
+	Values []int64
+	Seeds  int
+	Side   side
 }
 
 // sortedMedian returns the min, median and max of the values. The median of an
@@ -256,7 +262,11 @@ func judge(def factDef, pack string, seeds []uint64, vals []stat, band verdict.B
 	var out []int64
 	var res judged
 	why := map[string][]uint64{}
+	res.Seeds, res.Side = len(seeds), def.Side
 	for i, v := range vals {
+		if v.Why == "" {
+			res.Values = append(res.Values, v.Value)
+		}
 		bound, has := band.Value, band.Set
 		if !has {
 			bound, has = def.Prior, def.HasPrior

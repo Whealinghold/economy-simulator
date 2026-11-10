@@ -261,3 +261,41 @@ func TestTicks_GateConstants(t *testing.T) {
 		t.Errorf("files with the stylised_long tag = %v, want [stylised_long_test.go]", tagged)
 	}
 }
+
+// TestStylised_BandProposal verifies the line the proposal makes for a band key
+// (D598, STY 8.4): a refusal when a seed has no number or when the threshold the
+// band backs is unset, a refusal when the bound would be looser than the threshold,
+// and the rule's bound otherwise (10 seeds, headroom 5 000 bp: values 40 to 49 give
+// the range is 9 and 9 * 5 000 / 10 000 = 4.5 is 4 half to even, so 49 + 4 = 53).
+//
+// Requirement: FR-STY-077, FR-STY-078, FR-STY-091
+func TestStylised_BandProposal(t *testing.T) {
+	t.Parallel()
+	vals := make([]int64, 10)
+	for i := range vals {
+		vals[i] = int64(40 + i)
+	}
+	j := judged{Row: verdict.FactRow{ID: "STY-P02", Class: verdict.ClassB, Statistic: "s03.pinned_ticks", Min: 40, Median: 45, Max: 49}, Values: vals, Seeds: 10, Side: atMost}
+	unset := verdict.NewThresholds()
+	if got := bandProposal(unset, j); !strings.Contains(got, "threshold r5.pinned_ticks it backs is unset") {
+		t.Errorf("bandProposal(threshold unset) = %q, want a refusal naming r5.pinned_ticks", got)
+	}
+	set := verdict.NewThresholds()
+	set.Set("r5.pinned_ticks", 100)
+	if got := bandProposal(set, j); !strings.Contains(got, "propose 53") {
+		t.Errorf("bandProposal(threshold 100) = %q, want propose 53 (49 + 4.5 rounded half to even is 49 + 4)", got)
+	}
+	set.Set("r5.pinned_ticks", 50)
+	if got := bandProposal(set, j); !strings.Contains(got, "refused: the bound 53 is looser than the threshold 50") {
+		t.Errorf("bandProposal(threshold 50) = %q, want a refusal: 53 is above 50", got)
+	}
+	short := j
+	short.Values = vals[:9]
+	if got := bandProposal(set, short); !strings.Contains(got, "1 of 10 seeds have no number") {
+		t.Errorf("bandProposal(9 of 10 numbers) = %q, want a refusal for the failed seed", got)
+	}
+	few := judged{Row: verdict.FactRow{Class: verdict.ClassB, Statistic: "x.key"}, Values: vals[:4], Seeds: 4}
+	if got := bandProposal(set, few); !strings.Contains(got, "refused") {
+		t.Errorf("bandProposal(4 seeds) = %q, want a refusal (fewer than 10 seeds)", got)
+	}
+}

@@ -3,7 +3,9 @@ package indicator_test
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -248,6 +250,68 @@ func proposalOf(t testing.TB, seeds []uint64) []string {
 	return lines
 }
 
+// bandProposals applies the band rule of STY 8.4.3 (verdict.SetBand) to every
+// banded fact of the fact sets that has a number for every setting seed, in the
+// order of the rows. A band is refused, with the reason, when a seed has no number
+// (a failed seed: 8.4.1), when fewer than ten seeds ran, or when a threshold it
+// backs is unset (the thresholds come first: 10.3). A refusal is data, not an
+// error; nothing here sets a value.
+func bandProposals(t testing.TB, sets ...*factSet) []string {
+	t.Helper()
+	th := readThresholds(t)
+	var out []string
+	for _, f := range sets {
+		for _, sc := range slices.Sorted(maps.Keys(f.scenarios)) {
+			for _, j := range f.scenarios[sc] {
+				if j.Row.Class != verdict.ClassB || j.Seeds == 0 || strings.ContainsAny(j.Row.Statistic, " :") {
+					continue
+				}
+				out = append(out, bandProposal(th, j))
+			}
+		}
+	}
+	return out
+}
+
+// bandProposal is the line for one band key.
+func bandProposal(th verdict.Thresholds, j judged) string {
+	key := j.Row.Statistic
+	head := fmt.Sprintf("band %s (%s, %s): ", key, j.Row.ID, map[side]string{atMost: "upper", atLeast: "lower"}[j.Side])
+	if len(j.Values) != j.Seeds {
+		return head + fmt.Sprintf("no band: %d of %d seeds have no number (a failed seed, STY 8.4.1)", j.Seeds-len(j.Values), j.Seeds)
+	}
+	var limit verdict.Limit
+	for _, pr := range verdict.OrderingPairs() {
+		if pr.Band != key {
+			continue
+		}
+		v, ok := th.Get(pr.Threshold)
+		if !ok {
+			return head + fmt.Sprintf("no band: the threshold %s it backs is unset; thresholds are set first (STY 10.3)", pr.Threshold)
+		}
+		switch pr.Rel {
+		case verdict.AtMost:
+			limit = verdict.Limit{Set: true, Value: v}
+		case verdict.AtLeast:
+			limit = verdict.Limit{Set: true, Value: v}
+		case verdict.AtLeastComplement:
+			limit = verdict.Limit{Set: true, Value: 10_000 - v}
+		}
+	}
+	sd := verdict.Upper
+	if j.Side == atLeast {
+		sd = verdict.Lower
+	}
+	v, err := verdict.SetBand(j.Values, sd, j.Seeds, limit)
+	switch {
+	case errors.Is(err, verdict.ErrAboveThreshold):
+		return head + fmt.Sprintf("refused: the bound %d is looser than the threshold %d it backs", v, limit.Value)
+	case err != nil:
+		return head + "refused: " + err.Error()
+	}
+	return head + fmt.Sprintf("propose %d (min %d, median %d, max %d over %d seeds); a human reads it and sets the value in a commit of their own", v, j.Row.Min, j.Row.Median, j.Row.Max, j.Seeds)
+}
+
 // TestStylised_Propose renders the proposal of the first setting run (STY 8.4,
 // plan 2-19 D598) with -stylised.propose: the separation outcome of every detector
 // over the healthy and the provoked runs of the setting seeds, and the verdict
@@ -267,6 +331,9 @@ func TestStylised_Propose(t *testing.T) {
 	seeds := packSeeds(t, packOne)
 	t.Logf("proposal for the setting run: commit and configuration hash are the reviewer's to name; seeds %d..%d", seeds[0], seeds[len(seeds)-1])
 	for _, l := range proposalOf(t, seeds) {
+		t.Log(l)
+	}
+	for _, l := range bandProposals(t, oneFacts(t), warmFacts(t), shockFacts(t)) {
 		t.Log(l)
 	}
 	t.Log(recordOf(t, packOne, oneFacts(t), g01Facts(t, packOne, "one"), warmFacts(t), shockFacts(t)))
