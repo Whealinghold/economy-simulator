@@ -69,4 +69,5 @@ func (o *Observer) seed(s economysim.Snapshot) {
 	for _, m := range s.Markets {
 		o.set(m2(iMarketClearingPrice, ix(m.State.Commodity), ix(m.State.Region)), int64(m.State.Price))
 	}
+	o.seedStage2(s)
 }

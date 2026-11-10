@@ -200,12 +200,16 @@ func (p points) get(name string, kv ...string) (int64, bool) {
 	return v, ok
 }
 
-// miniNames is a names table of three commodities and three regions.
+// miniNames is a names table of three commodities and three regions, two roles,
+// two wants, two resources and two transport modes.
 func miniNames() economysim.Names {
 	return economysim.Names{
 		Commodities: []string{"c0", "c1", "c2"},
 		Regions:     []string{"r0", "r1", "r2"},
 		Roles:       []string{"k0", "k1"},
 		Recipes:     []string{"p0"},
+		Wants:       []string{"w0", "w1"},
+		Resources:   []string{"s0", "s1"},
+		Modes:       []string{"m0", "m1"},
 	}
 }

@@ -25,7 +25,8 @@ func (o *Observer) Observe(e economysim.Event) {
 // switch of at most ten cases, so no function passes the complexity limit.
 func (o *Observer) dispatch(e economysim.Event) {
 	switch {
-	case o.observeLifecycle(e), o.observeMarket(e), o.observeProduction(e), o.observeAgents(e):
+	case o.observeLifecycle(e), o.observeMarket(e), o.observeProduction(e), o.observeAgents(e),
+		o.observeFlows(e), o.observeResources(e), o.observeTransport(e), o.observeMigration(e):
 	}
 }
 

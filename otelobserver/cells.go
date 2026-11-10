@@ -80,10 +80,12 @@ const (
 	boundCeiling
 )
 
-// m1, m2 and m3 build the cell of an instrument with that many attributes.
-func m1(inst int, a int32) cell       { return mk(inst, a, 0, 0, 0) }
-func m2(inst int, a, b int32) cell    { return mk(inst, a, b, 0, 0) }
-func m3(inst int, a, b, c int32) cell { return mk(inst, a, b, c, 0) }
+// m0 to m4 build the cell of an instrument with that many attributes.
+func m0(inst int) cell                   { return mk(inst, 0, 0, 0, 0) }
+func m1(inst int, a int32) cell          { return mk(inst, a, 0, 0, 0) }
+func m2(inst int, a, b int32) cell       { return mk(inst, a, b, 0, 0) }
+func m3(inst int, a, b, c int32) cell    { return mk(inst, a, b, c, 0) }
+func m4(inst int, a, b, c, d int32) cell { return mk(inst, a, b, c, d) }
 
 // ratioBP is n * 10 000 / d, truncated toward zero, in 128 bits so that it cannot
 // wrap; 0 for a d that is not above 0 or a negative n, and the largest int64 if
@@ -165,7 +167,7 @@ func (o *Observer) state(c cell) *state {
 
 // count adds v to the counter or the level of a series.
 func (o *Observer) count(c cell, v int64) {
-	if v == 0 {
+	if v == 0 || (v < 0 && catalogue[c.inst].kind == kCounter) { // a counter only increases
 		return
 	}
 	if s := o.state(c); s != nil {
