@@ -141,6 +141,10 @@ testdata/chains/
                             warm-start documents: the solver's output, never hand-written
   demand.toml               the demand overlay (module on, a luxury chain, wants, tastes)
   one-demand.toml  warm-one-demand.toml
+  all/                      the layers that retarget a module overlay to `five` for the all-on
+                            pack: demand, subsistence and merchants (the other modules use their
+                            `five` overlay as it is); the list of layers is `allLayers` in
+                            `all_pack_test.go`
   overlay/                  estates, skill, a5, nofloor, notool, imbalance-cook, glut-prepared,
                             h200, long-grow, overhang, poor, perturbed, faucet, faucet-sunk,
                             sink, trade, resources, external, external-three, own-use, population, migration,
@@ -169,6 +173,15 @@ testdata/chains/
 | `famine` | `base`, `famine`, `overlay/estates`, `warm-famine` | 1 | 600 | 9 | 10 | 7 |
 | `one-demand` | `base`, `demand`, `one-demand`, `warm-one-demand` | 1 | 600 | 12 | 13 | 9 |
 | `second` | `second/second`, `second/warm-second` | 1 | 1 000 | 10 | 10 | 5 |
+| `all` | `five` (with its warm start), `overlay/trade-five`, then one layer for each version 1 module, each after what it needs (`allLayers`; not the field order of `Modules`) | 5 (and an outside node) | 5 340 | 34 | 52 | 25 |
+
+The `all` row is the all-on pack of plan 2-24 (D683): `five` with every version 1 module on, the
+variant that names demand, a money faucet and an external sector together (FR-REF-018). Its
+`expected/all.toml` is checked by `TestExpected_Packs`, its golden is `testdata/golden/all/` and its
+checkpoint fixture `testdata/checkpoints/format-1-all.bin`. The solver runs on its cold layers (the report is
+in `expected/all.toml`), but the warm start is not rebalanced for the all-on pack: it is that of the
+modules-off `five`, and the roles the layers add have no row in it. A module
+added in Stage 3 appends a layer and moves the golden once (testing.md 7.2).
 
 The role count includes `visitor`, which has no group. A **cold** variant is the same
 list without its warm-start document. The region document and the warm-start document of
@@ -723,7 +736,9 @@ roles, a two-season calendar. It is the recipe set of `spec-production.md` 12.2 
 rescaled by `spec-viability.md` 15, plus one recipe that closes a tool cycle (6.2). It
 shares no commodity, recipe or role ID with the reference chain; it is **setting-specific
 content**, kept in the fixture only to prove that a second, unrelated setting needs
-configuration alone (vision 5 item 3, architecture.md 9.4; scenarios A4 and X4).
+configuration alone (vision 5 item 3, architecture.md 9.4; scenarios A4 and X4). It is
+shipped as `examples/colony/`, where the files are byte copies of these
+(`TestExamples_PackCopiesAgree`, plan 2-24 D687).
 
 ```toml
 schema = 1
@@ -1484,8 +1499,8 @@ years. Skipped until the code exists (REG, TRN, INF and MER are written; it need
 **X3. The first consumer's world.** *Packs:* `five` (cold, and warm). *Setup:* 400 ticks,
 seeds 1 and 2; and `five` + `overlay/skill` for the second eligible recipe. *Pass:* the
 invariants of 7.5 hold; the per-tick cost is **reported** against the budget of
-`spec-scale.md` 6.3 (53 ms for 5 000 agents, a placeholder) and asserted below
-`x3.ms_per_tick`; the number of active markets is 85 and the mean tradable set 7.7
+`spec-scale.md` 6.3 (53 ms for 5 000 agents, a placeholder) and recorded as a benchmark figure
+against `x3.ms_per_tick`, read by the owner and never asserted (testing.md 8.2, 10.2; plan 2-24 D692); the number of active markets is 85 and the mean tradable set 7.7
 (computed from the configuration); `finish_a_basic` is refused to the trainers of
 `crafter_a` for `gain_negative` and `prepare_basic` is accepted (FR-SKL-016, 12). *Requirements:*
 FR-SCL-016, NFR-SCL-001, NFR-SCL-002, FR-SKL-016, FR-SKL-022. *Level:* end-to-end.
@@ -1544,6 +1559,7 @@ The six invariants of testing.md 6.3 are asserted after every tick:
 | `three` | 400 | 1 to 4 |
 | `famine` (with the shock of S14 at depth 0) | 800 | 1 to 4 |
 | `five` | 400 | 1 and 2 |
+| `all` (the all-on `five`, 4.1) | 400 | 1 and 2 |
 | `second` | 400 | 1 to 4 |
 | `one-demand` | 400 | 1 to 4 |
 
@@ -1554,7 +1570,7 @@ events as well as the totals. A failure reports the seed.
 The rows of `famine`, `five` and `one-demand` need the estates part, regions that
 trade and the demand module, so the first slice runs `one`, `second` and `three` (`three`
 only if the probe of the slice shows that the Stage 1 world runs it) and the other rows are
-added with the module that makes each buildable (N-295). The table is not renumbered, and
+added with the module that makes each buildable (N-295); the rows `five` and `all` were added by plan 2-24 (Stage 2). The table is not renumbered, and
 the invariant and determinism tests of 8.2 are table-driven so that a row is added and no
 test is rewritten.
 
@@ -1816,9 +1832,9 @@ documents by relative path (`../testdata/chains/...`, testing.md 10.4) through
 | Detector facts | `five` | 1 095 (about 58 s a seed) | 1 and 2 |
 | Hold-out (a recommendation, **no band and no calibration choice is set from it**) | as stated | as stated | 51 to 60 |
 | Invariants | 7.5 | 7.5 | 7.5 |
-| Golden | `one`; `five` | 400 | 1 |
-| Determinism (twice, same seed; once with another seed) | `one`, `five` | 400 | 1 and 2 |
-| Checkpoint X5 | `one`, `five` | 200 + 200 | 1 |
+| Golden | `one`; `five`; `all` | 400 | 1 |
+| Determinism (twice, same seed; once with another seed) | `one`, `five`, `all` | 400 | 1 and 2 |
+| Checkpoint X5 | `one`, `five`, `all` | 200 + 200 | 1 |
 | Configuration-only X4 | `second` | 1 095 | 1 to 4 |
 
 400 ticks cover a full Earth year plus the first harvest of every group (the first
@@ -1828,7 +1844,9 @@ two are the window. These lengths and seeds are test constants, not configuratio
 placeholders; the cost at the placeholder budget of `spec-scale.md` 6 is about 4 ms a tick
 for `one` (600 agents of 6.5 us), so 16 seeds of 400 ticks take about 26 seconds, and
 about 53 ms a tick for `five`, so 400 ticks take about 21 seconds. Neither is a
-measurement (NFR-REF-002). A calibration's search blocks (`Seed0` 101 and up, `spec-calibration.md` 7.1) are its own, outside every set above, and the gate is never an input to its choices; the hold-out of 51 to 60 is run only if wanted (a SHOULD).
+measurement (NFR-REF-002). The golden of `all` is `testdata/golden/all/` (testing.md 7.1.1); the
+golden of `five` with every module off is `testdata/golden/off/five.txt`, `events-five.txt` and
+`five.positions.txt`, and the positions of the two five-sized worlds cover ticks 0 to 9, not 0 to 29. Their determinism row runs four of the cases (the second observed run, one `Run(400)`, `Run(1)` then `Run(399)`, and the audit) against a bare Step run that takes the sample snapshots only, and compares no events; `TestGolden_FiveEvents` and `TestGolden_AllEvents` compare the events of a `Run` with a Step loop's final snapshot. A calibration's search blocks (`Seed0` 101 and up, `spec-calibration.md` 7.1) are its own, outside every set above, and the gate is never an input to its choices; the hold-out of 51 to 60 is run only if wanted (a SHOULD).
 
 ### 8.3 What a scenario test looks like
 

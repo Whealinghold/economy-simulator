@@ -297,7 +297,7 @@ const offOneTxtSha256 = "6ce2e8fd1d260688695234380ac93b8d1fdd30934fada60747224d1
 // module: the three files of the off set are byte-identical to the ones the
 // module found (one.txt by its full hash, the events and positions files by the
 // hashes of TestGolden_EventsAndPositionsUnchanged), and the set holds no other
-// file.
+// file than the three of pack one and the three of the warm five (plan 2-24).
 //
 // Requirement: FR-DEM-001, FR-REF-029
 //
@@ -321,7 +321,9 @@ func TestGolden_OffUnchanged(t *testing.T) {
 	for _, e := range entries {
 		names = append(names, e.Name())
 	}
-	if want := []string{"events-one.txt", "one.positions.txt", "one.txt"}; !slices.Equal(names, want) {
+	// The three files of pack one, and the three of the warm five with every module off
+	// (plan 2-24 D689; TestGolden_FiveOff and its siblings).
+	if want := []string{"events-five.txt", "events-one.txt", "five.positions.txt", "five.txt", "one.positions.txt", "one.txt"}; !slices.Equal(names, want) {
 		t.Errorf("files of golden/off = %v, want %v", names, want)
 	}
 }

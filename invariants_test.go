@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/strategy"
 )
 
 // This file is phase 5 of doc/plans/plan-phase-1-12.md: the invariants of
@@ -55,6 +56,11 @@ func newInvChecker(pre economysim.Snapshot) *invChecker {
 		k := invFlowKey{f.Reason, f.Commodity}
 		c.flows[k] += signedFlow(f.Kind, f.Total)
 		c.base[k] += signedFlow(f.Kind, f.Total)
+	}
+	// The counterparties of an outside node are pseudo-agents that trade without an AgentSpawned
+	// (spec-external-sector.md 4.2); they exist as long as the world does.
+	for _, cp := range pre.Outside.Counterparties {
+		c.live[cp.Agent] = true
 	}
 	return c
 }
@@ -216,14 +222,25 @@ func noMoneyFlowAfterConstruction(evs []economysim.Event) []string {
 // withoutConfiguredFlows drops the BoundaryFlow events of the money flows of the
 // configuration: a flow of the money supply module is a named faucet or sink, the
 // one way money may move after construction (FR-MON-002), and its accounting is
-// the module's own tests.
+// the module's own tests. The same holds for the money reasons of the external
+// module, whose counterparties' budgets, receipts and unspent money cross the
+// outside boundary by design (spec-external-sector.md 8.2). Their amounts are the
+// identities of checkOutsideIdentities, which the scenario tests of the module apply
+// over a whole run and this table does not; here conservation of the whole is asserted
+// by balances.
 func withoutConfiguredFlows(cfg economysim.Config, evs []economysim.Event) []economysim.Event {
-	if cfg.Modules.MoneySupply == nil {
+	if cfg.Modules.MoneySupply == nil && cfg.Modules.External == nil {
 		return evs
+	}
+	configured := func(r economysim.Reason) bool {
+		if cfg.Modules.External != nil && slices.Contains([]economysim.Reason{economysim.ReasonOutsideBudget, economysim.ReasonOutsideUnspent, economysim.ReasonOutsideReceipts}, r) {
+			return true
+		}
+		return cfg.Modules.MoneySupply != nil && slices.ContainsFunc(cfg.Modules.MoneySupply.Flows, func(m economysim.MoneyFlow) bool { return economysim.Reason(m.ID) == r })
 	}
 	var out []economysim.Event
 	for _, e := range evs {
-		if f, ok := e.(economysim.BoundaryFlow); ok && slices.ContainsFunc(cfg.Modules.MoneySupply.Flows, func(m economysim.MoneyFlow) bool { return economysim.Reason(m.ID) == f.Reason }) {
+		if f, ok := e.(economysim.BoundaryFlow); ok && configured(f.Reason) {
 			continue
 		}
 		out = append(out, e)
@@ -263,6 +280,11 @@ var invariantTable = []invariantCase{
 	{"three+trade", tradeWarm("three"), 4, 0, ""},
 	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
 	{"famine", packLayers["famine"], 4, 800, "s14-0.toml"},
+	// REF 7.5, plan 2-24 D689: the five-sized rows, seeds 1 and 2. The packs hold 5 000
+	// households, so each runs a seed on its own world; gate F runs both seeds, gate R skips
+	// these rows (TestInvariants_Packs).
+	{"five", packFiveWarm, 2, 0, ""},
+	{"all", allLayers, 2, 0, ""},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
@@ -270,7 +292,9 @@ var invariantTable = []invariantCase{
 func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []scriptStep) {
 	t.Helper()
 	rec := &recorder{}
-	w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())
+	// strategy.Options registers the strategies a pack may name (the merchants of the all-on pack);
+	// a pack that names none ignores them.
+	w, err := economysim.NewWorld(cfg, append(strategy.Options(), economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())...)
 	if err != nil {
 		t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
 	}
@@ -309,7 +333,7 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64
 		fail(i, "conservation", c.balances(s))
 		fail(i, "negative balance or stock", economysim.NegativeAccounts(w))
 		if i == 0 {
-			twin, err := economysim.NewWorld(cfg, economysim.WithSeed(seed))
+			twin, err := economysim.NewWorld(cfg, append(strategy.Options(), economysim.WithSeed(seed))...)
 			if err != nil || twin.Step() != nil {
 				t.Fatalf("seed %d: twin world: %v", seed, err)
 			}
@@ -341,6 +365,9 @@ func TestInvariants_Packs(t *testing.T) {
 	}
 	t.Parallel()
 	for _, tc := range invariantTable {
+		if raceEnabled && (tc.name == "five" || tc.name == "all") {
+			continue // 5 000 households: gate F runs these rows, never -race (plan 2-24 Phase 2)
+		}
 		cfg := loadValidPack(t, tc.layers...)
 		ticks, script := invTicks, []scriptStep(nil)
 		if tc.ticks > 0 {

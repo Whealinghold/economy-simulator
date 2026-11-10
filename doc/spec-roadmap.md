@@ -261,7 +261,7 @@ from pages 3 to 7 of the paper only; the other sources were read as summaries.
 
 | Deliverable | Status | Note |
 |-------------|--------|------|
-| The RPG kingdom data pack: commodities, roles, recipes, regions, settlements and prices, as a configuration, with the RPG denomination preset | planned | Lives in `examples/`, not in the core. It is content, kept separate from the reference chain, which is a test fixture (`spec-reference-chain.md`). It proves the engine is setting-agnostic |
+| The RPG kingdom data pack: commodities, roles, recipes, regions, settlements and prices, as a configuration, with the RPG denomination preset | planned | Lives in `examples/`, not in the core. It is content, kept separate from the reference chain, which is a test fixture (`spec-reference-chain.md`). It proves the engine is setting-agnostic. Plan 2-24 builds it as `examples/realm/`: the rebalanced `five` with every identifier renamed through one table (D682), so it inherits the viability evidence of `five` and adds nothing to the economy |
 | A `NOTICE` file for third-party attribution | planned | Needed before any bazaarBot code or text is copied (MIT) |
 
 ## Work on existing specs

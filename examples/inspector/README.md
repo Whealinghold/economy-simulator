@@ -286,3 +286,9 @@ go test -race ./...     # integration tests too, about 45 s with -race
 The tests read their own copy of the `one` pack in `testdata/chains/` (a test may
 not read outside its module), so they do not follow later changes to the
 repository's packs.
+
+## Where a consumer starts
+
+This tool reads the fixtures of the repository. For a consumer that carries its own
+pack, a player, shocks and save and resume, see `examples/realm` (plan 2-24; it does not
+exist yet).

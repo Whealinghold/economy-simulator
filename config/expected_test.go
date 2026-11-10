@@ -192,7 +192,7 @@ func wantsLine(e expectedPack) string {
 	return fmt.Sprintf("surplus_wants_bp = %d\n", e.SurplusWantsBP)
 }
 
-// TestExpected_Packs verifies, for the packs one, second, one-demand and five, the hash of the
+// TestExpected_Packs verifies, for the packs one, second, one-demand, five and all, the hash of the
 // effective configuration, the solver's report (surplus, labour share, pivots,
 // unpriced) and the warnings against testdata/chains/expected/<pack>.toml, for
 // the cold layer set and the warm one. The file is recorded with -update from the
@@ -223,6 +223,10 @@ func TestExpected_Packs(t *testing.T) {
 		// five: REF 7.3, centre, east, north, south, west (1.904, 1.704, 1.915, 1.642, 1.805).
 		{"five", []string{"base.toml", "lines.toml", "five.toml"}, []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 0, 0,
 			[]int64{19_038, 17_038, 19_145, 16_415, 18_054}},
+		// all: the all-on five (plan 2-24 D683), the layers of allLayers in all_pack_test.go. The
+		// regions are in the order of five, and each lambda* is below five's: the programme of the
+		// wants takes the luxury chain's inputs from the surplus (spec-demand.md).
+		{"all", allCold, allWarm, 0, 0, []int64{17_633, 15_663, 17_575, 15_013, 16_789}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,3 +306,25 @@ func rulePaths(rows []expectedWarning, rule string) []string {
 	}
 	return out
 }
+
+// allWarm is the layer list of the all-on pack, the one allLayers of all_pack_test.go in the
+// root package holds (plan 2-24 D683); TestAllPack_LoadsAndValidates compares the hash this
+// file records with the root list, so the two cannot drift. allCold is the same without the
+// warm start, the set the solver reads.
+var allWarm = []string{
+	"base.toml", "lines.toml", "five.toml", "warm-five.toml",
+	"overlay/trade-five.toml",
+	"all/demand.toml",
+	"overlay/faucet.toml",
+	"overlay/population.toml",
+	"overlay/transport-five.toml",
+	"overlay/resources-five.toml",
+	"overlay/information-five.toml",
+	"overlay/external.toml",
+	"all/subsistence.toml",
+	"overlay/migration.toml",
+	"all/merchants.toml",
+	"overlay/estates.toml",
+}
+
+var allCold = slices.DeleteFunc(slices.Clone(allWarm), func(l string) bool { return l == "warm-five.toml" })

@@ -45,7 +45,7 @@ PR description.
 
 | Area | Open notes |
 |------|-----------|
-| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315 |
+| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335 |
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-296, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
@@ -94,7 +94,7 @@ PR description.
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337 |
 
 ## Open notes
 
@@ -1827,6 +1827,7 @@ PR description.
 - **Update (2026-10-21, plan 1-12 Phase 1):** Verified: REF 7.5 carries the conditional paragraph (`three` only if the Phase 5 probe shows the Stage 1 world runs it). Left open for the probe.
 - **Update (2026-10-21, plan 1-12 audit fixes, J1 probe outcome):** `three` IS in the invariants table (`invariantTable` of `invariants_test.go`: `three` with `base.toml`, `three.toml`, `warm-three.toml`), 400 ticks (`invTicks`), seeds 1 to 4. `go test -run 'TestInvariants_Packs/three' .` passed when run for this update (about 2 s, without `-race`), so the Stage 1 world runs `three`; the determinism and golden rows for `three` are not added. `five`, `famine` and `one-demand` still wait. Left open.
 - **Update (2026-10-25, plan 2-3, REG):** `three` loads, validates and runs with no edge, and draws `region_isolated` for each region and `graph_not_strongly_connected` (`components` 3) until its trade overlay `testdata/chains/overlay/trade-three.toml` exists (plan 2-3 Phase 9; `trade-two.toml` and `trade-five.toml` come with it). The invariants row for `three` stands. Left open.
+- **Update (2026-11-10, plan 2-24 Phase 2):** the rows `five` and `all` (the all-on `five`, `testdata/chains/all/`) are added to `invariantTable`, to `TestPacks_FiveAndAllEventAttributesTakeClosedValues` (five and all) and to the golden, determinism and fork tests (`five_all_test.go`, `checkpoint_all_test.go`). `famine`, `one-demand` and `three` have rows already. Left open until plan 2-24 is signed off.
 
 ### N-296 S01 leg (b) and every visitor wait for `AddAgent` and `Direct`
 
@@ -2002,6 +2003,7 @@ PR description.
 - **Areas:** CHK, CLB, REF
 - **Raised:** 2026-10-23, plan 2-2 D257.
 - **Note:** `checkpoint_digest` in the golden file is the SHA-256 of the whole state at tick `T`, so any change of a pack's economy (a rebalance, a calibration) moves it. Each such change gives the testing.md 7.2 explanation for item 6 as well as for the rest of the file, and re-records `testdata/checkpoints/format-1-one.bin` and its sidecar (plan 8 owns the first).
+- **Update (2026-11-10, plan 2-24 Phase 2):** `testdata/checkpoints/format-1-all.bin` and its sidecar, `golden/off/five*.txt` and `golden/all/` are recorded from `five` as plan 8 left it (collapsing, N-325); a rebalance of `five` or a change of any module moves all of them once, each with the testing.md 7.2 explanation.
 
 ### N-319 What the ledger section leaves to the modules and to plan 3
 
@@ -2114,6 +2116,24 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-21 Phase 1.
 - **Note:** The parameter-owner table spells the scope of the world-level parameters `WorldParams` (the Go type of `Config.World`); the registry keys, the records, the experiments and `[world]` spell it `World` (`World.CostFloor`). Plan 2-21 kept the registry's spelling and made the coverage check treat the two as one scope (`spec-calibration.md` 4.7; `registry.py` `SCOPE_ALIAS`, and the Go registry test). Reverse by respelling the `World.` keys of the registry (42 knob rows and the fields of five groups), or by changing the README rows to `World`; either removes the alias.
 
+### N-335 `architecture.md` 1.3 is not enforced by the toolchain for the examples
+
+- **Areas:** CODE, ALL
+- **Raised:** 2026-11-10, plan 2-24 D688 (proposal 1).
+- **Note:** Go lets a nested module whose import path lies under the parent's path import the parent's `internal/` packages, so `architecture.md` 1.3 ("a server can be built without importing anything under `internal/`") holds for `examples/` only through `TestExamples_NoInternalImports` (plan 2-24 Phase 5), not through the compiler.
+
+### N-336 The module overlays of Stage 2 sit on `one`, `two` and `three`; `all` composes them on `five`
+
+- **Areas:** REF, CODE
+- **Raised:** 2026-11-10, plan 2-24 D683 (proposal 5).
+- **Note:** `testdata/chains/all/` and `allLayers` (`all_pack_test.go`) are the composition of the version 1 modules on `five`: the overlays of `trade-five`, `faucet`, `population`, `transport-five`, `resources-five`, `information-five`, `external`, `migration` and `estates` as they are, and `all/demand.toml`, `all/subsistence.toml` and `all/merchants.toml` retargeted to five regions. A module added later appends a layer to `allLayers` (and to `allWarm` in `config/expected_test.go`, which `TestAllPack_LoadsAndValidates` ties to it by the hash) and moves `golden/all/`, `expected/all.toml` and `format-1-all.*` once. The warm start is that of the modules-off `five`: the roles the layers add (`treat_maker`, `comfort_maker`, `carrier`, `broker`) have no warm row.
+
+### N-337 Scenarios S35 and S73 to S76 are assigned and have no test
+
+- **Areas:** REF, WLD, CODE
+- **Raised:** 2026-11-10, plan 2-24 Phase 1.
+- **Note:** `TestScenarios_StageTwoAllHaveTests` (`scenario_owner_test.go`) holds them in `scenariosNotBuilt`: S35 (plan 7, the pool grant, MON-S3), S46 (a waiting report inside `TestScenarioS47_`), and S73 to S76 (WLD-S1 to S4, "built here as unit models" by plan 2-24 Phase 1 item 4, `spec-reference-chain.md` 7.11). Whoever writes one deletes its entry. S73 and S74 need no pack (`internal/ordering` and a world built in Go); S75's cold leg is S18's, which has no `TestScenarioS18_` either; S76 needs a test double of `Strategy` that draws once more.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2126,4 +2146,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 208fa9e36958ee10e29c3dd9
+NOTES-TAG: a9f4fbdbfa1dc5fcae6b7b8d

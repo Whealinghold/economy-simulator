@@ -214,7 +214,13 @@ func sortedTypes(counts map[string]int) []string {
 // renderEvents renders events-one.txt (OBS 9.5.3): the construction block, the
 // full rendering of ticks 0 to 4, one line per tick with a digest, the count of
 // each event type over the run in the order of OBS 4.1, and the final snapshot.
-func renderEvents(res result) []byte {
+func renderEvents(res result) []byte { return renderEventsFull(res, 4) }
+
+// renderEventsFull is renderEvents with the full rendering of ticks 0 to fullTo; a negative
+// fullTo leaves the block out, which the five-sized worlds do: five thousand households
+// put 200 000 lines into ticks 0 to 4, and the digest of every tick still sees them
+// (plan 2-24 D689).
+func renderEventsFull(res result, fullTo int64) []byte {
 	names := res.Final.Names
 	var construction, body []economysim.Event
 	started := false
@@ -237,12 +243,14 @@ func renderEvents(res result) []byte {
 	for _, e := range construction {
 		b.WriteString(renderLine(names, e) + "\n")
 	}
-	b.WriteString("ticks 0 to 4\n")
+	if fullTo >= 0 {
+		fmt.Fprintf(&b, "ticks 0 to %d\n", fullTo)
+	}
 	byTick := map[int64][]string{}
 	for _, e := range body {
 		line := renderLine(names, e)
 		byTick[eventTick(e)] = append(byTick[eventTick(e)], line)
-		if t := eventTick(e); t >= 0 && t <= 4 {
+		if t := eventTick(e); t >= 0 && t <= fullTo {
 			b.WriteString(line + "\n")
 		}
 	}

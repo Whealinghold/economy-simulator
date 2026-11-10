@@ -170,8 +170,8 @@ use.
 ### 4.3 The RPG preset
 
 The preset is a ready-made ladder, not part of the simulation. It is the
-default for the example consumer and the setting this project was designed
-with.
+default for the example consumer, `examples/realm` (plan 2-24), and the setting
+this project was designed with.
 
 | Denomination | Symbol | Minor units | Relation    |
 |--------------|--------|-------------|-------------|

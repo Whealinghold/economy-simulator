@@ -1,0 +1,29 @@
+# The merchants module on the variant five (spec-merchants.md 13; plan 2-24 D683): overlay/merchants.toml with a group of brokers in every region instead of north and south. Layer it after overlay/trade-five.toml, overlay/transport-five.toml and overlay/information-five.toml. A test double, not a design (N-015, N-027).
+
+[modules.merchants]
+max_open = 200
+
+[role.broker]
+strategy = "merchant"
+informed = true
+trades = [ "fuel", "mineral", "haul" ]
+merchant_fee_share = 5000
+start_money = 5000
+start_stock = [ { commodity = "fuel", quantity = 30 }, { commodity = "haul", quantity = 20 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+
+[role.broker.merchant]
+modes = [ "coach" ]
+lot_units = 4
+consigns = true
+take_units = 100
+
+[region.north.group.broker]
+households = 4
+[region.east.group.broker]
+households = 4
+[region.south.group.broker]
+households = 4
+[region.west.group.broker]
+households = 4
+[region.centre.group.broker]
+households = 4
