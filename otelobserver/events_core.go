@@ -37,6 +37,7 @@ func (o *Observer) observeLifecycle(e economysim.Event) bool {
 		o.reset(ev.Names)
 	case economysim.WorldRestored:
 		o.reset(ev.Names)
+		o.seed(ev.Snapshot)
 	case economysim.TickStarted:
 		o.tickStarted()
 	case economysim.TickEnded:
@@ -118,6 +119,7 @@ func (o *Observer) reset(n economysim.Names) {
 	o.names = newNames(n)
 	o.hot = newHot(&o.names)
 	o.cells = map[cell]*state{}
+	o.unfed = newUnfed(len(n.Regions), len(n.Roles))
 	o.inStep = false
 }
 
@@ -186,6 +188,9 @@ func (o *Observer) tickEnded(ev economysim.TickEnded) {
 		o.inst[iWorldStepDuration].histogram.Record(bg, o.clock().Sub(o.stepStart).Seconds())
 	}
 	o.inStep = false
+	if !ev.Failed {
+		o.endUnfed()
+	}
 	o.flushHot()
 	o.flushCells(true)
 }
@@ -250,12 +255,6 @@ func (o *Observer) productionHalted(ev economysim.ProductionHalted) {
 		o.count(m2(iProductionHalted, role, ix(row.Recipe)), row.Households)
 	}
 	o.counts(m2(iWorkDeclined, role, 0), 1, ev.Rested, ev.NoRecipe)
-}
-
-func (o *Observer) upkeepShortfall(ev economysim.UpkeepShortfall) {
-	for _, row := range ev.Short {
-		o.count(m2(iUpkeepShort, ix(row.Commodity), ix(ev.Role)), row.Units)
-	}
 }
 
 func (o *Observer) agentSpawned(ev economysim.AgentSpawned) {

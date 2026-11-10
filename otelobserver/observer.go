@@ -55,6 +55,7 @@ type Observer struct {
 	names names
 	hot   hot
 	cells map[cell]*state
+	unfed unfed
 
 	// touched is set when a series changed since the last flush.
 	touched bool
