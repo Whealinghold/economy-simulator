@@ -503,3 +503,39 @@ func TestRemoveAgent_EstateOverflow(t *testing.T) {
 		t.Errorf("a refused RemoveAgent changed the world")
 	}
 }
+
+// TestRemoveAgent_EstateGoodsOverflow verifies the goods half of the removal probe:
+// when the estate of the region already holds so much of a commodity that the
+// agent's stock would pass MaxQuantity, the call is refused with ErrOverflow and
+// changes nothing, the agent staying in the world.
+//
+// Guard: estateFits has a branch for the goods and one for the money; only the
+// money branch had a test, so a probe that ignored the goods would pass every other
+// test and then fail in the ledger after the job was abandoned.
+//
+// Requirement: FR-INT-029, FR-INT-002
+func TestRemoveAgent_EstateGoodsOverflow(t *testing.T) {
+	t.Parallel()
+	w, _ := intWorld(t)
+	id, err := w.AddAgent(NewAgent{Region: regLowland, Role: 0, Stock: []StockItem{{Commodity: 1, Quantity: 3}}})
+	if err != nil {
+		t.Fatalf("AddAgent() = %v, want nil", err)
+	}
+	estate := w.estates.account(regLowland)
+	src, _ := w.ledger.Boundary(ledger.Initial, 1)
+	have, _, err := w.ledger.Holding(estate, 1)
+	if err != nil {
+		t.Fatalf("setup: Holding() = %v", err)
+	}
+	// MaxQuantity-have-2 more units leave room for 2, and the agent holds 3.
+	if err := w.ledger.Move(src, estate, 1, int64(MaxQuantity)-have-2, ledger.Initial); err != nil {
+		t.Fatalf("setup: filling the estate with goods: %v", err)
+	}
+	before := bytesOf(t, w)
+	if err := w.RemoveAgent(id); !errors.Is(err, ErrOverflow) {
+		t.Fatalf("RemoveAgent() = %v, want ErrOverflow", err)
+	}
+	if !bytes.Equal(bytesOf(t, w), before) || w.agents[id].weight != 1 {
+		t.Errorf("a refused RemoveAgent changed the world")
+	}
+}

@@ -940,3 +940,36 @@ func TestInStep_Calls(t *testing.T) {
 		t.Error("the checkpoint of the world called from inside the step differs from that of its twin")
 	}
 }
+
+// TestSetYieldShocks_EveryKey verifies that a call naming every (region, recipe) of
+// the configuration, the largest slice a consumer can send, applies each key once:
+// one event per key and one listed slot per key, no more.
+//
+// Requirement: NFR-INT-004
+func TestSetYieldShocks_EveryKey(t *testing.T) {
+	t.Parallel()
+	w, events := slotWorld(t, slotsNone)
+	cfg := w.Config()
+	var changes []economysim.YieldShock
+	for g := range cfg.Regions {
+		for r := range cfg.Recipes {
+			changes = append(changes, economysim.YieldShock{Region: economysim.RegionID(g), Recipe: economysim.RecipeID(r), BP: 5_000})
+		}
+	}
+	if err := w.SetYieldShocks(changes); err != nil {
+		t.Fatalf("SetYieldShocks(%d keys) = %v, want nil", len(changes), err)
+	}
+	n := 0
+	for _, e := range *events {
+		if _, ok := e.(economysim.YieldShocked); ok {
+			n++
+		}
+	}
+	slots, err := w.Slots()
+	if err != nil {
+		t.Fatalf("Slots() = %v, want nil", err)
+	}
+	if n != len(changes) || len(slots.YieldShocks) != len(changes) {
+		t.Errorf("SetYieldShocks(%d keys): %d events, %d slots listed, want %d of each", len(changes), n, len(slots.YieldShocks), len(changes))
+	}
+}
