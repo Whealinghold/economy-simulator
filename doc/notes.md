@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-331 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -70,7 +70,7 @@ PR description.
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-289, N-296, N-290 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
-| MER | N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-157, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-289, N-294, N-300, N-309, N-310, N-324 |
@@ -91,10 +91,10 @@ PR description.
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
-| TRN | N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214 |
-| WLD | N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322 |
 
 ## Open notes
 
@@ -212,6 +212,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: the terms of the row (Step, Tick boundary, Phase, Position, Entry (of a tick), Failed world, In-step guard, Market record, Snapshot row, Fan-in) are in the `doc.go` glossary before the code uses them. "Run" and "Snapshot" stay in `notYetTerms` and are added in Phases 2 and 9; "World" gains `WorldParams` in Phase 2; "Executor" stays the job's. Standing; left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the terms of the checkpoint row (checkpoint, restore, format version, frame, header, section, trailer, digest, canonical encoding, one spelling, sparse row, pending totals, construction flag, extension state, `Stateful`, entry of an extension, salt, branch, fixture) and the event name `WorldRestored` are in the `doc.go` glossary before the code uses them; `Reseed` and `Effective seed` were already there and are not repeated. A standing note; left open.
 - **Update (2026-11-09, plan 2-14 Phase 1):** the terms of the migration row (Migration, Journey, Migrant, Pushed, Settled, Margin (of a move), Width (of the margins), Horizon, Outflow cap, Pipeline cap, Provisioning (of a journey), Candidate (destination), Estimate (of a destination)) are in the `doc.go` glossary before the code uses them. A standing note; left open.
+- **Update (2026-11-09, plan 2-15 Phase 1):** the terms of the merchants row (Merchants, Merchant, Planned trip, Candidate lane, Lane (of a merchant), Merchant lot, Lot cap, Cargo set, Trade inputs, Trip input, Fee share, Bar, Cautious revenue, Break-even, Lane lock, Delivery offer, Delivery take, Payer, Deliverer, Round (of contracts), Delivery contract, Escrow (of a contract), Settlement (of a contract), PlanNotes, MerchantView) are in the `doc.go` glossary before the code uses them. A standing note; left open.
 
 ### N-018 Unverified evidence
 
@@ -567,6 +568,7 @@ PR description.
 - **Update (2026-10-10, MER):** MER exists. The dynamic parts of X1 and X2, S28 to S32, S46 and S47 can run with a merchant role: `overlay/trade.toml` needs `[modules.merchants]`, a role with `strategy = "merchant"`, `informed = true`, a `[role.<id>.merchant]` block and `consigns = true` for the consignee role (`spec-merchants.md` 19.1 shows the keys), plus the Go line `economysim.NewWorld(cfg, strategy.Options()...)`.
 - **Update (2026-10-11, STY):** S13 is STY-S05 (exact accounting, the drift report-only, with the reason); X1 and X2 dynamic have bands (STY-P06, STY-T02) that wait for the overlay; the coarse-tick leg of S12 stays open for CAL and REF (`spec-stylised-facts.md` 5.3, 5.6).
 - **Update (2026-10-11, CHK):** X5, S60 and S72 have their checkpoint legs defined (`spec-checkpoint.md` 8.2.3).
+- **Update (2026-11-09, plan 2-15 Phase 1):** X1 and X2 dynamic, S30 to S32, S46 and S47 run with the merchant overlay as reruns (plan 2-15 Phase 8); S28 and S29 are plan 3's. Left open.
 
 ### N-085 Nominal table against the full-labour table
 
@@ -663,6 +665,7 @@ PR description.
 - **Update (2026-10-10, wave 4 integration, X4):** ruled in the one combined edit of `spec-welfare-and-wages.md`: the effective window (2.3.3) lists the recipes on the role's list, the effective own-use list and the longest trip of the role's modes; a recipe-less role with an own-use job, and a journey or a trip, are handled in 4.3; a migrant's journey is zero-income ticks in the window. The note stays open until WEL's open question 9 is closed.
 - **Update (2026-10-13, EMP):** by contrast, a hired job is paid a tick at a time and is no gap in the worker's income (`spec-employment.md` 8.5).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the merchant block does not exist in the slice, so `L` is the recipes' only; the window function takes `L` as a parameter so the merchants file appends its trip term. Left open.
+- **Update (2026-11-09, plan 2-15 Phase 1):** MER proposes, WEL decides: the window is not adopted by WEL and plan 2-15 does not build it (D512, `spec-merchants.md` 12.3); the code is a ten-line change to `effectiveWindow` guarded by the merchant block. Left open.
 
 ### N-101 Does the default Target count Inbound?
 
@@ -826,6 +829,7 @@ PR description.
 - **Update (2026-10-13, STO, EMP, SET, LND, CRD, CAP, RSK, FIS, ORG, SAV, PLC, INS):** the places of `spec-world.md` 10.2 were five and are now seven: O9 is SET's `Role.Ceiling` (entrants in need, then ID order; counted by `RoleCeiling`; "a sixth first-come cap" in SET's own words) and O10 is ORG's places of a body (seniority, then the keyed tie), registered with O1 to O5 as one hazard, WLD-A2 = L118 (10.2.1); D87 is the rule for a new spec. No other module adds a place: EMP orders the labour round by value then the stateless key and caps it per region; CRD and INS settle pro rata with the largest remainder and order a round by limit then the stateless key; CAP's `MaxFacilities` is refused in the rotation of the starts; SAV adds no cap; FIS cuts the treasury's balance pro rata with the keyed tie and applies the taxes of one payer in flow ID order (a stated rule); LND breaks every tie by the stateless key; RSK serves nobody first (its draws are exchangeable); PLC orders actors and levers by ascending ID and refuses its one key conflict in the data; STO is first come inside one room and at one consignee (STO-A4, merged into L118).
 - **Update (2026-10-17, spawner edits):** read; not settled by them. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The caps of SPN 6.3 are first come in the order of need; WLD's D87 is not adopted for them and the ID is the last key. Scenario S73 measures it.
+- **Update (2026-11-09, plan 2-15 Phase 1):** MER: the contract round orders by limit and then a keyed tie, not by ID, and adds no first-come cap (`spec-merchants.md` 9.4.2); S73 measures it. Left open.
 
 ### N-123 A cold start is a lockstep
 
@@ -1531,6 +1535,7 @@ PR description.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the CHK passages were rewritten by plan 2-1; the checkpoint row builds without `Stream` and with the header seed read back (plan 2-2 D241). EXP 7.3, FR-EXP-062, CLB 4.2.1, STB and TEC passages remain. Left open.
 - **Update (2026-11-09, plan 2-20 Phase 1):** applied for EXP, which leaves the areas: `spec-experiments.md` 2 (position 8), 3.1, 3.6, 5.1.3, 6.3, 7.2 to 7.5, 8.1.1, 8.2.2, 8.4.2, 10, 11, 12, 14, 15, 19.6, 21, 22 and X3 no longer have `Pair`, `Record.Stream`, the stream fingerprint, `AlignedPairs` or `Horizon`; FR-EXP-062 is retired (its ID is not reused). The pairing gain is always computed. Open for CLB 4.2.1, STB and TEC.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `siteMigration` `0x53C434C7EFE6D523` (the first eight bytes of SHA-256 of `economy-sim/site/siteMigration`, checked) is in `spec-world.md` 7.1.4 and the D11 row of 7.3, `id` the agent, keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0 (as `siteInform` is). The constant is appended to `random.go` in Phase 5. Left open for the other owners.
+- **Update (2026-11-09, plan 2-15 Phase 1):** MER: `siteContract` `0xF0FF7DEE8E50504B` (the first eight bytes of SHA-256 of `economy-sim/site/siteContract`, checked) is in `spec-world.md` 7.1.4 and the D6 row of 7.3, `id` the agent and `sub` `2*i` for the `i`-th submitted offer and `2*i+1` for the `i`-th submitted take (the plan index, ADR 0008 open point 3 answered for D6); `spec-merchants.md` 9.4.2 and FR-MER-033 say the key is the first word of that stream. The constant is appended to `random.go` in Phase 6. MER leaves the areas of this note; left open for the other owners.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -2087,6 +2092,18 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-20 D604.
 - **Note:** `config.Parse` takes at most `MaxDocuments` (16) documents, and `spec-experiments.md` 3.3.2 makes one document for each change and each `Docs` of every level, so a point that sets more than `16 - len(Base)` paths is refused by the loader. `Validate` returns `ErrOversize` for it (13.2). A screen of every knob (one factor per knob, `spec-calibration.md`) cannot run until `MaxDocuments`, the document rule or `MaxFactors` changes; plan 2-21 must not assume the screen of EXP 12.4.2 runs at 16 knobs.
 
+### N-333 `DefaultStrategy.TradeWith` is the seam for a strategy that plans something other than a recipe
+
+- **Areas:** MER, TRN, CODE
+- **Raised:** 2026-11-09, plan 2-15 Phase 1 (D502).
+- **Note:** `DefaultStrategy.TradeWith(v, rng, p, trip)` replaces the planned recipe by a list of inputs (`TripInput{Commodity, Quantity, Purpose}`) and `Trade` is `TradeWith` with a nil trip (`spec-merchants.md` 3.4.2, `spec-agents.md` 6.2). A second strategy that plans a unit of work other than a recipe uses it. Revisit if a second user needs a different shape.
+
+### N-332 Draw D6 is keyed by the plan index
+
+- **Areas:** WLD, MER
+- **Raised:** 2026-11-09, plan 2-15 Phase 1 (D505).
+- **Note:** D6 is keyed `(siteContract, tick, agent, 2*i or 2*i+1)`, `i` the index of the offer or take in the agent's plan, so a refused entity does not move the key of another (`spec-world.md` 7.1.4, 7.3). ADR 0008 open point 3 (a site with no natural entity) is answered for D6 by the plan index; it stays open for D2's line and D13's route row.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2099,4 +2116,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 6ad421173c83d49549406b7e
+NOTES-TAG: fc64f05cce55e5c1339f3adb

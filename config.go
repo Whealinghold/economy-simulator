@@ -105,6 +105,66 @@ type Modules struct {
 	// on. It needs Modules.Information. Its hash id is 9, whatever its place in
 	// this struct.
 	Migration *Migration
+	// Merchants is the merchants module: the delivery contract, an offer of a
+	// deliverer matched with a take of a payer in a round and settled on arrival
+	// (spec-merchants.md 9). Nil is off; non-nil is on. It needs Modules.Transport.
+	// Its hash id is 10, whatever its place in this struct.
+	Merchants *Merchants
+}
+
+// Merchants is the configuration of the delivery contract (spec-merchants.md
+// 13). Start from DefaultMerchants. The merchant strategy itself is a block of
+// the role (Merchant) and needs no module switch unless a mode is hired or a role
+// consigns. Every default is a placeholder (N-015, N-027).
+type Merchants struct {
+	// MaxOpen is the most contracts open at once, 1 to MaxContracts
+	// (spec-merchants.md 9.5). Its hash id is 1.
+	MaxOpen int64
+}
+
+// Merchant is the block of a merchant role (spec-merchants.md 3.2), a pointer of
+// Role: nil means the role is not a merchant role. Start from DefaultMerchant and
+// set Modes. Its hash ids are the order of the fields, 1 to 9.
+type Merchant struct {
+	// Modes are the transport modes the merchant plans with, by ID, in canonical
+	// order: required, none twice, at most MaxModes, each defined by
+	// Modules.Transport.
+	Modes []string
+	// LotUnits is the carrying units a dispatch may use at most, 1 to MaxLotUnits.
+	LotUnits int64
+	// FeeShareSpreadBP is the half-width of the fixed spread of the fee share by
+	// agent, in basis points, 0 to 5 000, at most Role.MerchantFeeShare, and the
+	// share plus it at most 10 000 (spec-merchants.md 5.7).
+	FeeShareSpreadBP int64
+	// MaxSourceAge is the oldest SourceAge of a rumour the merchant acts on, 0 to
+	// MaxRumourAge (spec-merchants.md 5.2).
+	MaxSourceAge int64
+	// TimeCostBP is the cost of one tick away, in basis points of the merchant's
+	// own upkeep cost for a tick, 0 to MaxTimeCostBP (spec-merchants.md 5.4).
+	TimeCostBP int64
+	// ConsigneeCutBP is the share of the destination price the merchant expects to
+	// give up to a consignee under a contract, in basis points, 0 to 5 000.
+	ConsigneeCutBP int64
+	// Consigns says the merchant posts takes: it buys delivered goods as a
+	// consignee (spec-merchants.md 8). It needs TakeUnits.
+	Consigns bool
+	// TakeMarginBP is the discount to its local price at which a consignee takes,
+	// in basis points, 0 to 9 000.
+	TakeMarginBP int64
+	// TakeUnits is the units of a cargo commodity a consignee wants to hold or have
+	// on the way, 1 to MaxQuantity; required with Consigns.
+	TakeUnits Quantity
+}
+
+// canonical returns a copy of the block with its modes in ID order
+// (spec-config.md 3.4), nil for nil.
+func (m *Merchant) canonical() *Merchant {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Modes = sortedBy(m.Modes, cmp.Compare[string])
+	return &out
 }
 
 // Migration is the configuration of the migration module (spec-migration.md 11).
@@ -870,6 +930,16 @@ type Role struct {
 	// module (spec-migration.md 3.3). It is hashed only while that module is on
 	// and only when true. Its hash id is 20.
 	Fixed bool
+	// MerchantFeeShare is the centre of the fee share of a merchant, in basis
+	// points, 0 to 10 000: the most of its expected margin a merchant lets the cost
+	// of carriage take (spec-carriage.md 2.2, FR-CAR-012). The Go zero value is a
+	// share of 0, which never ships; DefaultMerchantFeeShare is the default. It is
+	// hashed only with Merchant. Its hash id is 21.
+	MerchantFeeShare int64
+	// Merchant is the merchant block: non-nil makes the role a merchant role
+	// (spec-merchants.md 3.2). It is hashed when non-nil, even when all its fields
+	// are zero. Its hash id is 22.
+	Merchant *Merchant
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1046,6 +1116,7 @@ func (c Config) canonical() Config {
 		r.Upkeep = sortedBy(r.Upkeep, byCommodity)
 		r.Trades = sortedBy(r.Trades, cmp.Compare[string])
 		r.StartStock = sortedBy(r.StartStock, byCommodity)
+		r.Merchant = r.Merchant.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {

@@ -1126,8 +1126,9 @@ sites of the slice are:
 | `siteCreation` | D10 | `0x9B8FFA303CB545DC` | `tick`, `id` = the new agent |
 | `siteInform` | D4 | `0x7B15D7AD592D7D8F` | `tick`, `id` = the agent |
 | `siteMigration` | D11 | `0x53C434C7EFE6D523` | `tick`, `id` = the agent |
+| `siteContract` | D6 | `0xF0FF7DEE8E50504B` | `tick`, `id` = the agent, `sub` = `2*i` for the agent's `i`-th submitted offer and `2*i+1` for its `i`-th submitted take (the plan index) |
 
-The rows D2, D6, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
+The rows D2, D12, D13, D14 and D15 (and D17, a consumer's policy) have **no
 constant yet**: each is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
@@ -1280,7 +1281,7 @@ open point 3 (a site with no natural entity: D2, D13) stays open for it.
 | D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | `siteInform`, the tick, the agent (keyed once per informed view, only when `RumourErrorBP` is above 0) | INF 5.5.2 |
 | D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | `siteTrade`, the tick, the agent | AGT 7.5.3 |
 | D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | none yet: the shipment | RSK 4.1 |
-| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | none yet: the offer or take | MER 9.4.2 |
+| D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | `siteContract`, the tick, the agent, `sub` = `2*i` (offer) or `2*i+1` (take), `i` the plan index (the key is that stream's first word) | MER 9.4.2 |
 | D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the `Rand` it receives (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | `siteClearing`, the tick, the region, the commodity | CLR 4.2 |
 | D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own in `Revise`; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | `siteOutcome`, the tick, the agent, the commodity: **one stream per order** | BEL 4.5, 5.1.1 |
 | D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | `siteSpawner`, the tick, the region | SPN 3.1.2, 10.2 |

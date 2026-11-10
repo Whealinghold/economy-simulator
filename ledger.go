@@ -53,6 +53,9 @@ var reasonNames = [...]Reason{
 	ledger.TransitIn:       ReasonTransitIn,
 	ledger.HaulUse:         ReasonHaulUse,
 	ledger.TransitUse:      ReasonTransitUse,
+	ledger.EscrowIn:        ReasonEscrowIn,
+	ledger.EscrowOut:       ReasonEscrowOut,
+	ledger.EscrowRefund:    ReasonEscrowRefund,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -122,6 +125,9 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Transport != nil {
 		m = append(m, transportReasons())
+	}
+	if c.Modules.Merchants != nil {
+		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
 	return m
 }

@@ -274,6 +274,32 @@ const (
 	// ReasonTransitUse is the feed a self-carried trip consumes at dispatch, a
 	// goods sink (spec-transport.md 3.3.2, 7.2).
 	ReasonTransitUse Reason = "transit_use"
+	// ReasonEscrowIn is the money a payer puts into an Escrow account when a
+	// delivery contract is formed, ReasonEscrowOut the money the escrow pays the
+	// deliverer for the units that arrived, and ReasonEscrowRefund the money it
+	// gives back to the payer, or to the estate of the destination when the payer is
+	// gone (spec-merchants.md 9.6). All three are internal transfers of money.
+	ReasonEscrowIn     Reason = "escrow_in"
+	ReasonEscrowOut    Reason = "escrow_out"
+	ReasonEscrowRefund Reason = "escrow_refund"
+)
+
+// The refusals of the contract round, the reasons of a delivery offer or take that
+// the admission refuses and of a formation that fails (spec-merchants.md 9.3,
+// 9.5). An admission also uses the reasons of an order and of a shipment request.
+const (
+	// ReasonContractsOff is an offer or a take while the merchants module is absent.
+	ReasonContractsOff Reason = "contracts_off"
+	// ReasonDuplicateTake is a second take for a commodity by the same agent in a
+	// tick.
+	ReasonDuplicateTake Reason = "duplicate_take"
+	// ReasonTooManyContracts is a formation that finds MaxOpen contracts in flight.
+	ReasonTooManyContracts Reason = "too_many_contracts"
+	// ReasonPayerFunds is a formation whose payer no longer has the money its take
+	// was sized on.
+	ReasonPayerFunds Reason = "payer_funds"
+	// ReasonNoTaker is an offer that finds no take to match.
+	ReasonNoTaker Reason = "no_taker"
 )
 
 // The reasons of the "want skipped" Debug line of the demand module
@@ -1447,3 +1473,154 @@ type MigrationReviewed struct {
 }
 
 func (MigrationReviewed) isEvent() {}
+
+// LaneDecision is the result of a merchant's lane decision, a closed set of the
+// attribute economysim.decision (spec-merchants.md 5.1.2, 15.3). It is a type of
+// its own, distinct from Reason, so that DecisionNoRumour does not repeat the
+// value of ReasonNoRumour.
+type LaneDecision string
+
+// The eleven decisions of a merchant's tick, the names of the counts of PlanNotes
+// and of MerchantsPlanned (spec-merchants.md 5.1.2, 6.4, 6.5, 7.1).
+const (
+	// DecisionNoRumour is a candidate with no rumour for its lane.
+	DecisionNoRumour LaneDecision = "no_rumour"
+	// DecisionStale is a candidate whose rumour is older at its source than the
+	// block allows.
+	DecisionStale LaneDecision = "stale"
+	// DecisionLocked is a candidate whose lane has units on the way already.
+	DecisionLocked LaneDecision = "locked"
+	// DecisionPerishable is a candidate whose cargo would spoil on the way.
+	DecisionPerishable LaneDecision = "perishable"
+	// DecisionNoMargin is a candidate whose cautious revenue is not above the local
+	// price.
+	DecisionNoMargin LaneDecision = "no_margin"
+	// DecisionUnaffordable is a candidate whose lot is 0.
+	DecisionUnaffordable LaneDecision = "unaffordable"
+	// DecisionBelowShare is a candidate whose carriage costs more than the fee
+	// share of its gross margin.
+	DecisionBelowShare LaneDecision = "below_share"
+	// DecisionPlanned is a passing candidate that was planned.
+	DecisionPlanned LaneDecision = "planned"
+	// DecisionRested is a merchant at its target income that planned nothing.
+	DecisionRested LaneDecision = "rested"
+	// DecisionWaiting is a merchant that stayed: goods inbound, a store, a job.
+	DecisionWaiting LaneDecision = "waiting"
+	// DecisionLotCapped is a lot cut by the cap of the block.
+	DecisionLotCapped LaneDecision = "lot_capped"
+)
+
+// MerchantsPlanned is emitted once per region per tick in which at least one
+// agent with a merchant block was given a view, in ascending RegionID at P3.3a,
+// after ContractRound and before RumoursServed, also with the module absent
+// (spec-merchants.md 15.1.1). It is the sum of the PlanNotes of the plans of the
+// region, a count of lanes and cases, and is bounded by the regions, not per
+// agent.
+type MerchantsPlanned struct {
+	Tick   int64
+	Region RegionID
+	// Merchants is the agents with a merchant block given a view in the region.
+	Merchants int64
+	// Considered is the candidates, and NoRumour to BelowShare how they were
+	// decided; they add up to Considered less the passing candidates.
+	Considered, NoRumour, Stale, Locked, Perishable, NoMargin, Unaffordable, BelowShare int64
+	// Planned is the trips planned, Dispatched the shipment requests, Offered the
+	// delivery offers and Taken the delivery takes posted.
+	Planned, Dispatched, Offered, Taken int64
+	// Rested, Waiting and LotCapped count a rest, a stay and a lot cut by the cap.
+	Rested, Waiting, LotCapped int64
+}
+
+func (MerchantsPlanned) isEvent() {}
+
+// ContractFormed is emitted when a delivery contract is formed, at P3.3 in
+// formation order, after the ShipmentDispatched of its shipment (spec-merchants.md
+// 9.5, 15.1.1). It is per contract, like ShipmentDispatched.
+type ContractFormed struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee that bought the goods and
+	// Deliverer the shipper that sells them.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region, the origin, and To the destination, where
+	// the payer's account is.
+	Region RegionID
+	To     RegionID
+	// Commodity, Quantity and Price are the goods and the price per unit.
+	Commodity CommodityID
+	Quantity  Quantity
+	Price     Price
+	// Escrowed is Price times Quantity, the money moved to the Escrow account.
+	Escrowed Money
+	// Shipment is the shipment that carries the goods, Mode its mode and Arrives
+	// the tick it arrives, which is the deadline of the contract.
+	Shipment ShipmentID
+	Mode     ModeID
+	Arrives  int64
+}
+
+func (ContractFormed) isEvent() {}
+
+// The causes of ContractSettled (spec-merchants.md 15.1.1), constants of Cause.
+const (
+	// CauseDelivered is a contract whose goods all arrived.
+	CauseDelivered Cause = "delivered"
+	// CauseShort is a contract of which units spoiled or were lost on the way.
+	CauseShort Cause = "short"
+	// CausePayerRemoved is a contract whose payer was removed before the arrival:
+	// the cargo went to the estate and so did the refund.
+	CausePayerRemoved Cause = "payer_removed"
+	// CauseDelivererRemoved is a contract that ended at the removal of its
+	// deliverer, the whole escrow returned.
+	CauseDelivererRemoved Cause = "deliverer_removed"
+)
+
+// ContractSettled is emitted when a delivery contract ends: in phase 1 at P1.4,
+// after the ShipmentArrived events, in contract ID order, or with the removal of
+// its deliverer in phase 7 (spec-merchants.md 9.7, 15.1.1). It is per contract.
+type ContractSettled struct {
+	Tick int64
+	// Contract is the contract, Payer the consignee and Deliverer the shipper.
+	Contract  ContractID
+	Payer     AgentID
+	Deliverer AgentID
+	// Region is the deliverer's region at the event and To the destination.
+	Region RegionID
+	To     RegionID
+	// Commodity and Quantity are the goods the contract named.
+	Commodity CommodityID
+	Quantity  Quantity
+	// Reached is the units that reached the destination, delivered or diverted;
+	// Spoiled the units spoiled in transit and Lost the units lost (0 with the risk
+	// module off). Reached is Quantity less Spoiled and Lost.
+	Reached, Spoiled, Lost Quantity
+	// Paid is the money paid to the deliverer and Refunded the money returned to the
+	// payer, or to the estate of To when the payer was removed.
+	Paid, Refunded Money
+	// Cause says why the contract ended.
+	Cause Cause
+}
+
+func (ContractSettled) isEvent() {}
+
+// ContractRound is emitted once per destination region and tick in which an offer
+// or a take was submitted for it, in ascending RegionID at P3.3 after the last
+// ContractFormed of the round (spec-merchants.md 15.1.1). It is bounded by the
+// regions, not per contract.
+type ContractRound struct {
+	Tick int64
+	// Region is the destination.
+	Region RegionID
+	// Offers and Takes are the admitted, OffersRefused and TakesRefused the refused.
+	Offers, Takes, OffersRefused, TakesRefused int64
+	// Matched is the tentative matches, Formed the contracts formed, NoTaker the
+	// offers that found no take, and PayerFunds, TooMany and DispatchRefused the
+	// matches that failed in formation by that reason.
+	Matched, Formed, NoTaker, PayerFunds, TooMany, DispatchRefused int64
+	// Units and Value are the units and the money of the contracts formed.
+	Units int64
+	Value Money
+}
+
+func (ContractRound) isEvent() {}

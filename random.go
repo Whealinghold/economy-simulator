@@ -37,6 +37,11 @@ const (
 	// for each pushed agent whose role has a recipe, when RumourErrorBP is above 0,
 	// before the error draws of its rumours (spec-migration.md 6.2.1, 10.2.1).
 	siteMigration uint64 = 0x53C434C7EFE6D523
+	// siteContract keys D6: tick, id the agent, sub 2*i for the agent's i-th
+	// submitted delivery offer and 2*i+1 for its i-th submitted take, i the index in
+	// the plan; the key of the entity is the first word of that stream
+	// (spec-merchants.md 9.4.2, spec-world.md 7.1.4).
+	siteContract uint64 = 0xF0FF7DEE8E50504B
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):

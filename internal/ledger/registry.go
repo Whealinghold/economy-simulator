@@ -86,6 +86,16 @@ const (
 	// TransitUse is the goods sink of the feed a self-carried trip consumes
 	// (spec-transport.md 3.3.2): agent to boundary. It is a declared row.
 	TransitUse
+	// EscrowIn is the money a payer puts into an Escrow account at the formation of a
+	// delivery contract (spec-merchants.md 9.6): agent to escrow. EscrowOut is the
+	// money the escrow pays the deliverer for the units that arrived: escrow to
+	// agent. EscrowRefund is the money it gives back for the units that did not, to
+	// the payer or, when the payer is gone, to the estate of the destination:
+	// escrow to agent or estate. All three are declared rows and open no boundary
+	// account; none is a faucet or a sink.
+	EscrowIn
+	EscrowOut
+	EscrowRefund
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -117,6 +127,7 @@ const (
 	setEstate   = kindSet(1 << KindEstate)
 	setAE       = setAgent | setEstate
 	setTransit  = kindSet(1 << KindTransit)
+	setEscrow   = kindSet(1 << KindEscrow)
 	// setHolder is every non-boundary kind: "any holder" of 7.2.
 	setHolder = kindSet(1<<KindBoundary - 1)
 )
@@ -182,6 +193,12 @@ var table = [NumReasons][2]row{
 	TransitIn:  {thingGoods: {true, Internal, setTransit, setAE, false, true, 33}},
 	HaulUse:    {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 34}},
 	TransitUse: {thingGoods: {true, Sink, setAgent, setBoundary, false, true, 35}},
+	// The escrow rows of the delivery contract (spec-ledger.md 7.2, FR-LED-060):
+	// money only, between an agent and an Escrow account, and back to an agent or an
+	// estate.
+	EscrowIn:     {thingMoney: {true, Internal, setAgent, setEscrow, false, true, 19}},
+	EscrowOut:    {thingMoney: {true, Internal, setEscrow, setAgent, false, true, 20}},
+	EscrowRefund: {thingMoney: {true, Internal, setEscrow, setAE, false, true, 21}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

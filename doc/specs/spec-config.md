@@ -1767,6 +1767,8 @@ below 9 and before those of the ids above it, whatever the order of building (in
 is declared after `Information`, `Subsistence` having id 8 and `External` id 7 being built later:
 only the hash id follows the row, 2.10.5 of the architecture rules).
 
+The merchants module (`Modules.Merchants`, id 10 in `Modules`; the type is `Merchants`) adds: `Merchants` has `MaxOpen` 1; `Merchant` (the block) has `Modes` 1, `LotUnits` 2, `FeeShareSpreadBP` 3, `MaxSourceAge` 4, `TimeCostBP` 5, `ConsigneeCutBP` 6, `Consigns` 7, `TakeMarginBP` 8, `TakeUnits` 9 (`Modes` is written in mode ID order); `Role.MerchantFeeShare` 21 and `Role.Merchant` 22 (plans 13 and 14 take 19 and 20), each a pair only while the role's `Merchant` pointer is non-nil, and a non-nil block is written even when all its fields are zero. The pointer of the module is written even when the struct is zero, so `Modules.Merchants: &Merchants{}` is `000A 0000`, and its pair goes after the pairs of the ids below 10 and before those of the ids above it, whatever the order of building (in Go the pointer is declared after `Migration`: only the hash id follows the row, 2.10.5 of the architecture rules).
+
 The subsistence module (`Modules.Subsistence`, id 8 in `Modules`; the type is `SubsistenceConfig`
 and the registry scope `Subsistence` resolves to it, as `Tenure` resolves to `TenureConfig`)
 adds: `SubsistenceConfig` has `Recipes` 1, `Roles` 2, `EnterTicks` 3, `ExitTicks` 4,

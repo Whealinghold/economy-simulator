@@ -287,15 +287,25 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Information = l.information(is)
 		is.finish()
 	}
+	l.laterModules(m, cfg)
+	m.finish()
+}
+
+// laterModules reads the tables of the modules of the later waves: migration,
+// merchants and estates (a continuation of modules for the Lizard limit).
+func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	if gs := m.sub("migration"); gs != nil {
 		cfg.Modules.Migration = l.migration(gs)
 		gs.finish()
+	}
+	if ms := m.sub("merchants"); ms != nil {
+		cfg.Modules.Merchants = l.merchants(ms)
+		ms.finish()
 	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
 		es.finish()
 	}
-	m.finish()
 }
 
 // world reads the [world] table over DefaultWorldParams (spec-config.md 3.7.2).
@@ -453,6 +463,16 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	t.flag("closed", &r.Closed)
 	t.flag("informed", &r.Informed)
 	t.flag("fixed", &r.Fixed)
+	ms := t.sub("merchant")
+	if ms != nil {
+		r.MerchantFeeShare = economysim.DefaultMerchantFeeShare // the default of FR-CAR-012 applies to a merchant role
+	}
+	integer(t, "merchant_fee_share", &r.MerchantFeeShare)
+	if ms != nil {
+		m := l.merchant(ms)
+		ms.finish()
+		r.Merchant = &m
+	}
 	t.text("label", &r.Label)
 	return r
 }
@@ -789,4 +809,29 @@ func (l *loader) migration(t *tbl) *economysim.Migration {
 		m.Regions = append(m.Regions, row)
 	})
 	return &m
+}
+
+// merchants reads [modules.merchants] over DefaultMerchants (spec-config.md 6.2.1,
+// spec-merchants.md 13): max_open. The table being present switches the module on.
+func (l *loader) merchants(t *tbl) *economysim.Merchants {
+	m := economysim.DefaultMerchants()
+	integer(t, "max_open", &m.MaxOpen)
+	return &m
+}
+
+// merchant reads [role.<id>.merchant] over DefaultMerchant (spec-merchants.md 3.2,
+// 13): modes, lot_units, fee_share_spread_bp, max_source_age, time_cost_bp,
+// consignee_cut_bp, consigns, take_margin_bp and take_units. modes and take_units
+// have no default, so a block that omits them is rejected at Validate. The table
+// being present makes the role a merchant role.
+func (l *loader) merchant(t *tbl) economysim.Merchant {
+	m := economysim.DefaultMerchant()
+	t.strings("modes", &m.Modes)
+	readInts(t, []intField{
+		{"lot_units", &m.LotUnits}, {"fee_share_spread_bp", &m.FeeShareSpreadBP}, {"max_source_age", &m.MaxSourceAge},
+		{"time_cost_bp", &m.TimeCostBP}, {"consignee_cut_bp", &m.ConsigneeCutBP}, {"take_margin_bp", &m.TakeMarginBP},
+	})
+	t.flag("consigns", &m.Consigns)
+	integer(t, "take_units", &m.TakeUnits)
+	return m
 }

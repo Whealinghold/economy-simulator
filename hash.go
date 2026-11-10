@@ -294,10 +294,11 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 20. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 22. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
-// module's, on the same terms (migrationOn).
+// module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
+// are the merchants', pairs only when the block is non-nil.
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -319,6 +320,12 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.flag(18, r.Closed)
 	e.flag(19, informationOn && r.Informed)
 	e.flag(20, migrationOn && r.Fixed)
+	if r.Merchant != nil {
+		e.num(21, r.MerchantFeeShare)
+		e.id(22) // written even when every field is zero: a non-nil block is a merchant role
+		pairsMerchant(e, *r.Merchant)
+		e.end()
+	}
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -447,9 +454,20 @@ func pairsModules(e *encoder, m Modules) {
 		pairsSubsistence(e, *m.Subsistence)
 		e.end()
 	}
+	pairsLaterModules(e, m)
+}
+
+// pairsLaterModules writes the pairs of the modules of ids 9, 10 and 25 of
+// Modules, after those pairsModules writes (a continuation for the Lizard limit).
+func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
 		e.id(9)
 		pairsMigration(e, *m.Migration)
+		e.end()
+	}
+	if m.Merchants != nil {
+		e.id(10)
+		e.num(1, m.Merchants.MaxOpen)
 		e.end()
 	}
 	if m.Estates != nil {
@@ -602,6 +620,21 @@ func pairsMigration(e *encoder, m Migration) {
 		e.num(2, r.OutShare)
 		e.num(3, r.InShare)
 	})
+}
+
+// pairsMerchant writes the pairs of a Merchant: Modes 1 (by ID), LotUnits 2,
+// FeeShareSpreadBP 3, MaxSourceAge 4, TimeCostBP 5, ConsigneeCutBP 6, Consigns 7,
+// TakeMarginBP 8, TakeUnits 9.
+func pairsMerchant(e *encoder, m Merchant) {
+	e.texts(1, m.Modes)
+	e.num(2, m.LotUnits)
+	e.num(3, m.FeeShareSpreadBP)
+	e.num(4, m.MaxSourceAge)
+	e.num(5, m.TimeCostBP)
+	e.num(6, m.ConsigneeCutBP)
+	e.flag(7, m.Consigns)
+	e.num(8, m.TakeMarginBP)
+	e.num(9, int64(m.TakeUnits))
 }
 
 // pairsResources writes the pairs of a Resources: Resources 1, Endowments 2,

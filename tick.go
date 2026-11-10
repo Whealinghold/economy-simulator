@@ -32,6 +32,7 @@ var positionList = [...]position{
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
 	{"P1.3", "TRN", line},
+	{"P1.4", "MER", line},
 	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
@@ -45,6 +46,8 @@ var positionList = [...]position{
 	{"P2.8a", "OBS", line},
 	{"P3.1", "TRN", line},
 	{"P3.2", "AGT", line},
+	{"P3.3", "MER", line},
+	{"P3.3a", "MER", line},
 	{"P3.4", "EST", line},
 	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
@@ -72,9 +75,9 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.4", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
+	"P1.3a", "P1.7a", "P1.7b", "P1.8", "P1.9", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
-	"P3.1a", "P3.3", "P3.3a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
+	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.5", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a", "P4.2",
 	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
@@ -100,6 +103,11 @@ func (w *World) positions() error {
 	if w.transport != nil {
 		w.p13Arrivals()
 	}
+	if w.mer != nil && w.mer.on {
+		if err := w.p14Settle(); err != nil {
+			return err
+		}
+	}
 	if w.migration != nil {
 		w.p15Arrivals()
 	}
@@ -111,7 +119,7 @@ func (w *World) positions() error {
 }
 
 // positionsProduce is the middle of the straight line, from phase 2 to the
-// clearing, split from positions to stay within the Lizard complexity limit
+// trade phase, split from positions to stay within the Lizard complexity limit
 // (N-243, plan 2-14 O7). The position test reads it as part of the straight line,
 // in source order between positions and positionsTail.
 func (w *World) positionsProduce() error {
@@ -131,11 +139,25 @@ func (w *World) positionsProduce() error {
 		w.p28OwnUse()
 	}
 	w.p28aHalted()
+	return w.positionsTrade()
+}
+
+// positionsTrade is the trade phase of the straight line, from P3.1 to the
+// clearing, split from positionsProduce to stay within the Lizard complexity
+// limit (N-243). The position test reads it as part of the straight line, between
+// positionsProduce and positionsTail.
+func (w *World) positionsTrade() error {
 	if w.transport != nil {
 		w.p31Fix()
 	}
 	if err := w.p32Trade(); err != nil {
 		return err
+	}
+	if w.mer != nil && w.mer.on {
+		w.p33Round()
+	}
+	if w.mer != nil && w.mer.roles > 0 {
+		w.p33aPlanned()
 	}
 	if err := w.p34Estates(); err != nil {
 		return err

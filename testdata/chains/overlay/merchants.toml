@@ -1,0 +1,24 @@
+# The merchants overlay of the variant two (spec-merchants.md 13, 19.1; spec-reference-chain.md 4.5, 7.9; plan 2-15 Phase 8). Layer it after the pack and overlay/trade-two.toml (the edges), overlay/transport-two.toml (the modes, the haul commodity and the carrier) and overlay/information-two.toml (the rumours the merchant reads): base.toml, two.toml, overlay/trade-two.toml, overlay/transport-two.toml, overlay/information-two.toml, this file. The role `broker` is a merchant and a consignee in one: it carries by coach (hired), plans a trip when a rumoured price gap pays, and posts a take for the cargo it does not carry. Its strategy is `merchant`, which a consumer registers with strategy.Options(). A test double, not a design: every number is a placeholder (N-015, N-027). The fuel yield is twice as high in the south as in the north, the mineral yield the other way round, so the two cargo commodities have a gap in each direction.
+
+[modules.merchants]
+max_open = 200
+
+[role.broker]
+strategy = "merchant"
+informed = true
+trades = [ "fuel", "mineral", "haul" ]
+merchant_fee_share = 5000
+start_money = 5000
+start_stock = [ { commodity = "fuel", quantity = 30 }, { commodity = "haul", quantity = 20 }, { commodity = "prepared", quantity = 4 }, { commodity = "staple", quantity = 10 } ]
+
+[role.broker.merchant]
+modes = [ "coach" ]
+lot_units = 4
+consigns = true
+take_units = 100
+
+[region.north.group.broker]
+households = 4
+
+[region.south.group.broker]
+households = 4

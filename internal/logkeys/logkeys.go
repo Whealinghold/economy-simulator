@@ -138,3 +138,13 @@ const (
 	Rumours = "rumours"
 	Lag     = "lag"
 )
+
+// Contract is a delivery contract ID, Offers and Takes the counts of admitted
+// delivery offers and takes of a round, and Merchants a count of agents with a
+// merchant block, in the lines of the merchants module.
+const (
+	Contract  = "contract"
+	Offers    = "offers"
+	Takes     = "takes"
+	Merchants = "merchants"
+)

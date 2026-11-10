@@ -251,6 +251,12 @@ var stepSites = []site{
 			w.p13Arrivals()
 		}
 	})},
+	{"P1.4", func(w *World) error {
+		if w.mer != nil && w.mer.on {
+			return w.p14Settle()
+		}
+		return nil
+	}},
 	{"P1.5", noError(func(w *World) {
 		if w.migration != nil {
 			w.p15Arrivals()
@@ -280,6 +286,16 @@ var stepSites = []site{
 		}
 	})},
 	{"P3.2", (*World).p32Trade},
+	{"P3.3", noError(func(w *World) {
+		if w.mer != nil && w.mer.on {
+			w.p33Round()
+		}
+	})},
+	{"P3.3a", noError(func(w *World) {
+		if w.mer != nil && w.mer.roles > 0 {
+			w.p33aPlanned()
+		}
+	})},
 	{"P3.4", (*World).p34Estates},
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},

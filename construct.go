@@ -134,11 +134,15 @@ func (w *World) allocate() {
 	w.transport = newTransport(&w.cfg)
 	w.info = newInformation(&w.cfg, &w.roles)
 	w.migration = newMigration(&w.cfg)
+	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
 	}
 	if w.migration != nil {
 		w.bounds.add(onJourneyName, w.migration.holds)
+	}
+	if w.mer != nil && w.mer.on {
+		w.bounds.add(openContract, w.mer.holds)
 	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -332,6 +336,9 @@ func modulesOn(c *Config) []string {
 	}
 	if c.Modules.Migration != nil {
 		on = append(on, "migration")
+	}
+	if c.Modules.Merchants != nil {
+		on = append(on, "merchants")
 	}
 	return on
 }

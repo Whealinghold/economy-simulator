@@ -28,6 +28,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.info != nil && kind == viewTrade {
 		w.fillRumours(v, a)
 	}
+	if w.mer != nil && kind == viewTrade {
+		w.fillMerchantView(v, a)
+	}
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
@@ -58,6 +61,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	if w.demand != nil {
 		w.checkWants(a, p)
 	}
+	if w.mer != nil {
+		w.checkMerchantPlan(a, p)
+	}
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
@@ -79,6 +85,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	}
 	if w.migration != nil {
 		w.dropJourney(a, region) // step 2a: the journey is deleted, its households counted as ended
+	}
+	if err := w.dropContracts(a); err != nil { // the contracts it delivers end, the escrow returned
+		return fmt.Errorf("remove agent %d at tick %d: %w", a.id, tick, err)
 	}
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow

@@ -456,3 +456,16 @@ const (
 	// a review period of at most a few years (spec-migration.md 11).
 	MaxMoveReviewTicks = 1_000
 )
+
+const (
+	// MaxLotUnits is the largest LotUnits of a merchant role: with MaxQuantity and
+	// MaxPrice a lot's product fits int64 through the 128-bit helper, and a lot of
+	// more than 64 carrying units is not a lot (spec-merchants.md 13).
+	MaxLotUnits = 64
+	// MaxContracts is the largest Merchants.MaxOpen: the contracts in flight, and
+	// so the Escrow accounts, are at most this many (spec-merchants.md 13).
+	MaxContracts = 1_000_000
+	// MaxTimeCostBP is the largest TimeCostBP: ten times the upkeep for each tick
+	// away, far beyond any use (spec-merchants.md 13).
+	MaxTimeCostBP = 100_000
+)
