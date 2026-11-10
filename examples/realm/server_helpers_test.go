@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -69,3 +70,6 @@ func callJSON(t testing.TB, h http.Handler, method, target, body string, want in
 		t.Fatalf("%s %s: decode %q: %v", method, target, b, err)
 	}
 }
+
+// discardLogger is a logger that drops everything.
+func discardLogger() *slog.Logger { return slog.New(slog.DiscardHandler) }
