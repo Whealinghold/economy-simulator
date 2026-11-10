@@ -845,6 +845,8 @@
 //     (spec-resources.md 4.2.1, 11).
 //   - SeasonRegen: the regeneration factor of one season of a resource, in basis points
 //     (spec-resources.md 4.5).
+//   - YieldShocked: the event emitted once per changed key of a call to SetYieldShocks,
+//     with the yield factor before and after (spec-integration.md 5.1).
 //   - EndowmentChanged: the event emitted once per endowment per tick, after its
 //     regeneration, if any units were drawn, regenerated, short or lost
 //     (spec-resources.md 14.1).
