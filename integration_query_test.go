@@ -413,7 +413,7 @@ func TestWarnings_SortedAndRestored(t *testing.T) {
 		}
 	}
 	if len(want) < 2 {
-		t.Skip("no pack of the suite raises two warnings") // testing.md 5.7: a pack set without warnings has nothing to sort
+		t.Fatal("no pack of the suite raises two warnings, so there is no order to check")
 	}
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(7))
 	if err != nil {

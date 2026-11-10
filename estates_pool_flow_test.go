@@ -408,8 +408,8 @@ func TestFork_Estates(t *testing.T) {
 		forkAtN(t, forkCase{Name: "famine+estates", Cfg: cfg, Seed: 1, N: n, M: forkM})
 	}
 	shock := func(w *economysim.World) {
-		if err := economysim.SetYieldShockForTest(w, 0, 0, 3_000); err != nil {
-			t.Fatalf("SetYieldShockForTest error = %v, want nil", err)
+		if err := w.SetYieldShocks([]economysim.YieldShock{{Region: 0, Recipe: 0, BP: 3_000}}); err != nil {
+			t.Fatalf("SetYieldShocks error = %v, want nil", err)
 		}
 	}
 	forkAtN(t, forkCase{Name: "famine+estates after a shock", Cfg: cfg, Seed: 1, N: 90, M: forkM, Before: shock})

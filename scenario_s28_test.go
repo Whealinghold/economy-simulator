@@ -15,8 +15,7 @@ type s28Link struct{ a, b string }
 // TestScenarioS28_MiddleLinkClosure verifies the graph leg of scenario S28 (REG-A1,
 // spec-reference-chain.md 7.6): on a pack with the edges of the trade overlay
 // (spec-regions.md 12.4) the middle link closes and then reopens, between ticks,
-// through the unexported status setter (the seam SetEdgeStatusesForTest: the public
-// call is plan 2-17's, as the Stage 1 yield seam is N-296's). At each of the three
+// through the public SetEdgeStatuses. At each of the three
 // steps (open, closed, reopened) the distances, the path, the components and the
 // answers of RelocationRefusal are checked, and after the reopening the graph
 // equals the one before the closure. The price leg waits for TRN and MER.
@@ -81,7 +80,7 @@ func s28Seed(t *testing.T, cfg economysim.Config, pack string, seed uint64, link
 		a, _ := g.Lookup(link.a)
 		b, _ := g.Lookup(link.b)
 		changes := []economysim.EdgeStatus{{From: a, To: b, Closed: closed, FactorBP: 10_000}, {From: b, To: a, Closed: closed, FactorBP: 10_000}}
-		if err := economysim.SetEdgeStatusesForTest(w, changes, economysim.CauseConsumer); err != nil {
+		if err := w.SetEdgeStatuses(changes); err != nil {
 			t.Fatalf("pack %s seed %d: set closed=%v: %v", pack, seed, closed, err)
 		}
 	}

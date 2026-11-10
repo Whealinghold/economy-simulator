@@ -127,16 +127,27 @@ func bandIn(t testing.TB, path, key string) (int64, bool) {
 
 // ---- scripts ---------------------------------------------------------------
 
-// shockStep is one [[shock]] of a script: before the step of Tick the yield
-// shock of (Region, Recipe) is set to BP basis points (10 000 clears it).
-type shockStep struct {
+// scriptStep is one table of a script, applied between steps before the step of
+// Tick. A step of Kind "" is a [[shock]]: the yield shock of (Region, Recipe) is set
+// to BP basis points (10 000 clears it). A step of Kind stepBuyer is a [[buyer]]
+// (REF 7.1.3): an external agent of the role visitor is added to Region with Money
+// and buys Commodity, each tick for Ticks ticks, in the quantity ShareBP basis points
+// of the market's mean volume over the 100 ticks before.
+type scriptStep struct {
 	Tick           int64
 	Region, Recipe string
 	BP             int64
+	Kind           string
+	Money          int64
+	Commodity      string
+	ShareBP, Ticks int64
 }
 
+// stepBuyer is the Kind of a [[buyer]] step.
+const stepBuyer = "buyer"
+
 // loadScript reads a script of testdata/chains/scripts.
-func loadScript(t testing.TB, name string) []shockStep {
+func loadScript(t testing.TB, name string) []scriptStep {
 	t.Helper()
 	out, err := scriptFrom(plainTOML(t, filepath.Join(scriptsDir, name)))
 	if err != nil {
@@ -145,50 +156,161 @@ func loadScript(t testing.TB, name string) []shockStep {
 	return out
 }
 
-// scriptFrom turns the tables of a script into its shocks, in file order. A
-// table other than [[shock]], a missing key or a non-numeric number is an error.
-func scriptFrom(tables []tomlTable) ([]shockStep, error) {
-	var out []shockStep
+// scriptFrom turns the tables of a script into its steps, in file order. A table
+// other than [[shock]] and [[buyer]], a missing key or a non-numeric number is an
+// error.
+func scriptFrom(tables []tomlTable) ([]scriptStep, error) {
+	var out []scriptStep
 	for _, tb := range tables {
-		if tb.name != "shock" || !tb.array {
-			return nil, fmt.Errorf("table [%s] is not [[shock]]", tb.name)
+		if !tb.array || (tb.name != "shock" && tb.name != "buyer") {
+			return nil, fmt.Errorf("table [%s] is not [[shock]] or [[buyer]]", tb.name)
 		}
-		var s shockStep
-		var err error
-		if s.Tick, err = strconv.ParseInt(tb.kv["tick"], 10, 64); err != nil {
-			return nil, fmt.Errorf("shock tick %q: %w", tb.kv["tick"], err)
-		}
-		if s.BP, err = strconv.ParseInt(tb.kv["yield_bp"], 10, 64); err != nil {
-			return nil, fmt.Errorf("shock yield_bp %q: %w", tb.kv["yield_bp"], err)
-		}
-		s.Region, s.Recipe = strings.Trim(tb.kv["region"], `"`), strings.Trim(tb.kv["recipe"], `"`)
-		if s.Region == "" || s.Recipe == "" {
-			return nil, fmt.Errorf("shock at tick %d needs a region and a recipe", s.Tick)
+		s, err := stepFrom(tb)
+		if err != nil {
+			return nil, err
 		}
 		out = append(out, s)
 	}
 	return out, nil
 }
 
+// stepFrom reads one [[shock]] or [[buyer]] table.
+func stepFrom(tb tomlTable) (scriptStep, error) {
+	var s scriptStep
+	var err error
+	if s.Tick, err = strconv.ParseInt(tb.kv["tick"], 10, 64); err != nil {
+		return s, fmt.Errorf("%s tick %q: %w", tb.name, tb.kv["tick"], err)
+	}
+	s.Region = strings.Trim(tb.kv["region"], `"`)
+	if tb.name == "shock" {
+		if s.BP, err = strconv.ParseInt(tb.kv["yield_bp"], 10, 64); err != nil {
+			return s, fmt.Errorf("shock yield_bp %q: %w", tb.kv["yield_bp"], err)
+		}
+		s.Recipe = strings.Trim(tb.kv["recipe"], `"`)
+		if s.Region == "" || s.Recipe == "" {
+			return s, fmt.Errorf("shock at tick %d needs a region and a recipe", s.Tick)
+		}
+		return s, nil
+	}
+	s.Kind = stepBuyer
+	if s.Money, err = strconv.ParseInt(tb.kv["money"], 10, 64); err != nil {
+		return s, fmt.Errorf("buyer money %q: %w", tb.kv["money"], err)
+	}
+	buy, ok := tb.kv["buy"], strings.HasPrefix(tb.kv["buy"], "{")
+	if !ok {
+		return s, fmt.Errorf("buyer at tick %d needs buy = { commodity, quantity_share_bp, ticks }", s.Tick)
+	}
+	kv := inlineTable(buy)
+	s.Commodity = kv["commodity"]
+	if s.ShareBP, err = strconv.ParseInt(kv["quantity_share_bp"], 10, 64); err != nil {
+		return s, fmt.Errorf("buyer quantity_share_bp %q: %w", kv["quantity_share_bp"], err)
+	}
+	if s.Ticks, err = strconv.ParseInt(kv["ticks"], 10, 64); err != nil {
+		return s, fmt.Errorf("buyer ticks %q: %w", kv["ticks"], err)
+	}
+	if s.Region == "" || s.Commodity == "" || s.ShareBP < 1 || s.Ticks < 1 {
+		return s, fmt.Errorf("buyer at tick %d needs a region, a commodity, a share of at least 1 and ticks of at least 1", s.Tick)
+	}
+	return s, nil
+}
+
 // indexOf returns the position of id in names, or -1.
 func indexOf(names []string, id string) int { return slices.Index(names, id) }
 
-// applyScript sets, before the step of tick w.Tick(), the shocks the script
-// lists for that tick, through the Stage 1 seam (plan 1-12 O3).
-func applyScript(t testing.TB, w *economysim.World, names economysim.Names, script []shockStep) {
+// applyScript sets, before the step of tick w.Tick(), the shocks the script lists for
+// that tick, through SetYieldShocks. A [[buyer]] is the buyerDriver's, not this
+// function's: a script run by a caller that has no driver must not hold one.
+func applyScript(t testing.TB, w *economysim.World, names economysim.Names, script []scriptStep) {
 	t.Helper()
 	for _, s := range script {
-		if s.Tick != w.Tick() {
+		if s.Tick != w.Tick() || s.Kind != "" {
 			continue
 		}
 		g, r := indexOf(names.Regions, s.Region), indexOf(names.Recipes, s.Recipe)
 		if g < 0 || r < 0 {
 			t.Fatalf("script shock %+v: region or recipe unknown", s)
 		}
-		if err := economysim.SetYieldShockForTest(w, economysim.RegionID(g), economysim.RecipeID(r), s.BP); err != nil {
-			t.Fatalf("SetYieldShockForTest(%+v) error = %v, want nil", s, err)
+		if err := w.SetYieldShocks([]economysim.YieldShock{{Region: economysim.RegionID(g), Recipe: economysim.RecipeID(r), BP: s.BP}}); err != nil {
+			t.Fatalf("SetYieldShocks(%+v) error = %v, want nil", s, err)
 		}
 	}
+}
+
+// buyerWindow is the ticks of market volume a [[buyer]]'s quantity is a share of
+// (REF 7.1.3).
+const buyerWindow = 100
+
+// buyerQuantity is the units a buyer asks each tick: ShareBP basis points of the mean
+// volume over the buyerWindow ticks before tick (half to even), and at least 1. A
+// series shorter than the window is read as it is; with no tick before it is 1.
+func buyerQuantity(volume []int64, tick, shareBP int64) int64 {
+	mean, ok := windowMean(volume, max(0, tick-buyerWindow), min(tick, int64(len(volume))))
+	if !ok {
+		return 1
+	}
+	q, _ := checked.MulDivHalfEven(mean, shareBP, 10_000)
+	return max(1, q)
+}
+
+// buyerRun is a scripted buyer in the world: its ID and the tick its directive is
+// emptied.
+type buyerRun struct {
+	id    economysim.AgentID
+	until int64
+}
+
+// buyerDriver adds the [[buyer]] steps of a script when their tick comes and empties
+// their directive after their ticks (a directive applies to one step only unless it
+// is Sticky, FR-INT-027, so the harness ends the buying itself, FR-INT-026).
+type buyerDriver struct{ active []buyerRun }
+
+// apply is called between steps, before the step of w.Tick().
+func (d *buyerDriver) apply(t testing.TB, w *economysim.World, cfg economysim.Config, names economysim.Names, obs *scenarioObs, script []scriptStep) {
+	t.Helper()
+	for _, b := range d.active {
+		if b.until == w.Tick() {
+			if err := w.Direct(b.id, economysim.Directive{}); err != nil {
+				t.Fatalf("Direct(%d, empty) at tick %d = %v, want nil", b.id, w.Tick(), err)
+			}
+		}
+	}
+	for _, s := range script {
+		if s.Kind == stepBuyer && s.Tick == w.Tick() {
+			d.active = append(d.active, buyerRun{id: addBuyer(t, w, cfg, names, obs, s), until: s.Tick + s.Ticks})
+		}
+	}
+}
+
+// addBuyer adds the visitor of a [[buyer]] step and gives it the sticky directive of
+// REF 7.1.3: a bid for its commodity at the quantity of buyerQuantity and at the
+// ceiling of the commodity's reference band (the value is the harness's, so the
+// published price stays inside the band, FR-STB-008), and a Hold of the visitor's
+// other tradable commodities so that the fallback adds nothing.
+func addBuyer(t testing.TB, w *economysim.World, cfg economysim.Config, names economysim.Names, obs *scenarioObs, s scriptStep) economysim.AgentID {
+	t.Helper()
+	g, c, role := indexOf(names.Regions, s.Region), indexOf(names.Commodities, s.Commodity), indexOf(names.Roles, "visitor")
+	if g < 0 || c < 0 || role < 0 {
+		t.Fatalf("script buyer %+v: region, commodity or the role visitor unknown", s)
+	}
+	id, err := w.AddAgent(economysim.NewAgent{Region: economysim.RegionID(g), Role: economysim.RoleID(role), Money: economysim.Money(s.Money)})
+	if err != nil {
+		t.Fatalf("AddAgent(%+v) = %v, want nil", s, err)
+	}
+	var hold []economysim.CommodityID
+	for _, other := range w.Config().Roles[role].Trades {
+		if i := indexOf(names.Commodities, other); i >= 0 && i != c {
+			hold = append(hold, economysim.CommodityID(i))
+		}
+	}
+	_, ceiling := beliefInterval(cfg.World, int64(w.ReferencePrice(economysim.RegionID(g), economysim.CommodityID(c))), 0)
+	q := buyerQuantity(obs.market(economysim.RegionID(g), economysim.CommodityID(c)).Volume, s.Tick, s.ShareBP)
+	d := economysim.Directive{Sticky: true, Hold: hold, Intents: []economysim.Intent{{
+		Commodity: economysim.CommodityID(c), Side: economysim.Bid, Quantity: economysim.Quantity(q), Limit: economysim.Price(ceiling),
+	}}}
+	if err := w.Direct(id, d); err != nil {
+		t.Fatalf("Direct(%d, %+v) at tick %d = %v, want nil", id, d, s.Tick, err)
+	}
+	return id
 }
 
 // ---- the observer and the runner ---------------------------------------------
@@ -218,7 +340,10 @@ type scenarioObs struct {
 	spoiled map[economysim.CommodityID]int64 // BoundaryFlow reason spoilage
 	halted  int64                            // households the halt declined, summed (ProductionHalted)
 	haltEv  int64                            // ProductionHalted events
-	badSeq  string                           // first MarketCleared out of order
+	// initialMoney is the money created by the reason initial in each tick (BoundaryFlow
+	// at Tick -1, the construction bucket, is not in it): the calls of AddAgent.
+	initialMoney []int64
+	badSeq       string // first MarketCleared out of order
 	// wantPlanned and wantFunded are the units of WantShortfall (Planned, Funded)
 	// summed per tick; a tick with no event reads as 0 for both.
 	wantPlanned, wantFunded []int64
@@ -277,6 +402,12 @@ func (o *scenarioObs) Observe(e economysim.Event) {
 			o.made[a.Commodity] += int64(a.Quantity)
 		}
 	case economysim.BoundaryFlow:
+		if e.Reason == economysim.ReasonInitial && e.Commodity == economysim.NoCommodity && e.Tick >= 0 {
+			for int64(len(o.initialMoney)) <= e.Tick {
+				o.initialMoney = append(o.initialMoney, 0)
+			}
+			o.initialMoney[e.Tick] += e.Total
+		}
 		if e.Reason == economysim.ReasonSpoilage && e.Commodity != economysim.NoCommodity {
 			o.spoiled[e.Commodity] += e.Total
 		}
@@ -296,7 +427,7 @@ func (o *scenarioObs) Observe(e economysim.Event) {
 type scenarioSpec struct {
 	Seed   uint64
 	Ticks  int64
-	Script []shockStep
+	Script []scriptStep
 	// Snap, when set, says after which step tick OnSnap gets a Snapshot.
 	Snap   func(tick int64) bool
 	OnSnap func(tick int64, s economysim.Snapshot)
@@ -331,8 +462,10 @@ func runScenario(t testing.TB, cfg economysim.Config, spec scenarioSpec) scenari
 		t.Fatalf("Snapshot error = %v, want nil", err)
 	}
 	obs.regions = economysim.AgentID(len(s0.Names.Regions))
+	var buyers buyerDriver
 	for i := int64(0); i < spec.Ticks; i++ {
 		applyScript(t, w, s0.Names, spec.Script)
+		buyers.apply(t, w, cfg, s0.Names, obs, spec.Script)
 		if err := w.Step(); err != nil {
 			t.Fatalf("Step at tick %d (seed %d) error = %v, want nil", i, spec.Seed, err)
 		}
@@ -961,24 +1094,37 @@ func TestScenarioHelpers_BandFor(t *testing.T) {
 	}
 }
 
-// TestScenarioHelpers_Script verifies the script reader on the shipped scripts
-// and on a table that is not [[shock]].
+// TestScenarioHelpers_Script verifies the script reader on the shipped scripts.
 //
 // Requirement: FR-REF-021, FR-REF-039
 func TestScenarioHelpers_Script(t *testing.T) {
 	t.Parallel()
-	want := map[string][]shockStep{
-		"s01.toml": {{400, "north", "cut_fuel", 5000}, {460, "north", "cut_fuel", 10000}},
-		"s04.toml": {{424, "north", "grow_staple", 5000}, {516, "north", "grow_staple", 10000}},
+	want := map[string][]scriptStep{
+		"s01.toml":  {{Tick: 400, Region: "north", Recipe: "cut_fuel", BP: 5000}, {Tick: 460, Region: "north", Recipe: "cut_fuel", BP: 10000}},
+		"s04.toml":  {{Tick: 424, Region: "north", Recipe: "grow_staple", BP: 5000}, {Tick: 516, Region: "north", Recipe: "grow_staple", BP: 10000}},
+		"s01b.toml": {{Tick: 400, Region: "north", Kind: stepBuyer, Money: 2_000_000, Commodity: "fuel", ShareBP: 500, Ticks: 60}},
 	}
 	for name, w := range want {
 		if got := loadScript(t, name); !slices.Equal(got, w) {
 			t.Errorf("loadScript(%s) = %+v, want %+v", name, got, w)
 		}
 	}
-	// Each bad input must parse (the parser accepts it) and then be refused by
-	// scriptFrom; a parse error here would hide a script check that never ran.
-	for _, bad := range []string{"[x]\na = 1\n", "[[shock]]\ntick = 1\nyield_bp = 5\n", "[[shock]]\ntick = \"a\"\nyield_bp = 5\n"} {
+}
+
+// TestScript_RejectsUnknownTable verifies that a table that is neither [[shock]] nor
+// [[buyer]], a missing key and a non-numeric number are each refused by scriptFrom
+// after the parser accepted them (a parse error here would hide a check that never
+// ran).
+//
+// Requirement: FR-REF-021
+func TestScript_RejectsUnknownTable(t *testing.T) {
+	t.Parallel()
+	for _, bad := range []string{
+		"[x]\na = 1\n", "[[shock]]\ntick = 1\nyield_bp = 5\n", "[[shock]]\ntick = \"a\"\nyield_bp = 5\n",
+		"[[buyer]]\ntick = 1\nregion = \"north\"\nmoney = 5\n",
+		"[[buyer]]\ntick = 1\nregion = \"north\"\nmoney = 5\nbuy = { commodity = \"fuel\", quantity_share_bp = 0, ticks = 60 }\n",
+		"[[buyer]]\ntick = 1\nregion = \"north\"\nmoney = 5\nbuy = { commodity = \"fuel\", quantity_share_bp = 5, ticks = \"a\" }\n",
+	} {
 		tables, err := parsePlainTOML(bad)
 		if err != nil {
 			t.Errorf("parsePlainTOML(%q) error = %v, want nil: the input exists to test scriptFrom", bad, err)
@@ -987,6 +1133,41 @@ func TestScenarioHelpers_Script(t *testing.T) {
 		if _, err := scriptFrom(tables); err == nil {
 			t.Errorf("scriptFrom(%q) error = nil, want an error", bad)
 		}
+	}
+}
+
+// TestScript_Buyer verifies the quantity rule of a [[buyer]]: the share, in basis
+// points, of the mean of the 100 ticks of volume before its tick, half to even, and
+// at least 1; a short series is read as it is and no series is 1.
+//
+// Requirement: FR-REF-021, FR-AGT-053
+func TestScript_Buyer(t *testing.T) {
+	t.Parallel()
+	series := make([]int64, 400)
+	for i := range series {
+		series[i] = 10 // ticks 300 to 399 average 10 units
+	}
+	series[399], series[398] = 110, 110 // the mean of 300 to 399 is (98*10 + 220) / 100 = 12
+	tests := []struct {
+		name         string
+		volume       []int64
+		tick, shareB int64
+		want         int64
+	}{
+		{"five per cent of 12 is 0.6, half to even 1", series, 400, 500, 1},
+		{"fifty per cent of 12 is 6", series, 400, 5_000, 6},
+		{"a share that rounds to 0 is raised to 1", series, 400, 100, 1},
+		{"a window of 100 ticks, not the whole series", append(slices.Repeat([]int64{1_000}, 300), series[300:]...), 400, 5_000, 6},
+		{"a series shorter than the window", []int64{4, 6}, 2, 10_000, 5},
+		{"no tick before", nil, 0, 5_000, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := buyerQuantity(tt.volume, tt.tick, tt.shareB); got != tt.want {
+				t.Errorf("buyerQuantity(%d ticks, %d, %d) = %d, want %d", len(tt.volume), tt.tick, tt.shareB, got, tt.want)
+			}
+		})
 	}
 }
 

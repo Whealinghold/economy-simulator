@@ -16,20 +16,25 @@ const (
 	s01ReportBandBP int64 = 1000
 )
 
-// TestScenarioS01_FuelSupplyShock verifies scenario S01 leg (a) of
-// spec-reference-chain.md 7.2: pack one, 700 ticks, seeds 1 to 10, the yield of
-// cut_fuel at 5 000 bp from tick 400 to 459 through the script and the Stage 1
-// seam. Exact: no published price leaves its belief interval (FR-STB-008). O
-// check (STY-S01 "S01 sign", FR-REF-023), asserted with or without a band: the
-// mean fuel price over the shock exceeds P0, the mean over ticks 300 to 399.
-// Reported, and asserted only when the key has a value: the recovery time, the
-// long-run offset against the seed price and the unmet need. Leg (b), a visitor
-// buying, waits for AddAgent and Direct (N-296). The outcomes are written to
-// testdata/chains/expected/one.scenarios.txt with -update (D181).
+// TestScenarioS01_FuelSupplyShock verifies scenario S01 of spec-reference-chain.md
+// 7.2: pack one, 700 ticks, seeds 1 to 10, in two legs run separately. Leg (a) cuts
+// the yield of cut_fuel to 5 000 bp from tick 400 to 459 through SetYieldShocks.
+// Leg (b) adds a visitor at tick 400 that buys fuel for 60 ticks (AddAgent, then
+// Direct with a sticky bid, REF 7.1.3). Exact in both: no published price leaves its
+// belief interval (FR-STB-008). O check (STY-S01 "S01 sign", FR-REF-023), asserted
+// with or without a band: the mean fuel price over ticks 400 to 459 exceeds P0, the
+// mean over ticks 300 to 399 (in leg (b) this sign is a prior of the demand shock,
+// asserted from the first reviewed run, plan 2-17 Risks). Reported, and asserted only
+// when the key has a value: the recovery time, the long-run offset against the seed
+// price and the unmet need. Leg (b) also checks the calls: the visitor's money enters
+// by initial in the BoundaryFlow of tick 400 and the audit passes at every tick. The
+// outcomes are written to testdata/chains/expected/one.scenarios.txt with -update
+// (D181), one block per leg.
 //
 // Requirement: FR-STB-018, FR-STB-008, FR-BEL-014, FR-BEL-036, FR-BEL-034,
-// FR-CLR-019, FR-CLR-020, FR-REF-020, FR-REF-022, FR-REF-023, FR-REF-024,
-// FR-REF-026, FR-REF-027
+// FR-CLR-019, FR-CLR-020, FR-REF-020, FR-REF-021, FR-REF-022, FR-REF-023, FR-REF-024,
+// FR-REF-026, FR-REF-027, FR-AGT-053, FR-AGT-054, FR-AGT-055, FR-INT-025, FR-INT-026,
+// FR-INT-027
 //
 // Guard: a belief interval that lets a price out, or a supply cut that does not
 // raise the price of its product, fails here.
@@ -39,20 +44,45 @@ func TestScenarioS01_FuelSupplyShock(t *testing.T) {
 		t.Skip("integration scenario, skipped with -short")
 	}
 	cfg := loadValidPack(t, packOne...)
-	script := loadScript(t, "s01.toml")
-	rep := newScenReport(fmt.Sprintf("S01 one leg-a seeds 1-%d, 700 ticks", scenarioSeedCount()))
-	t.Run("leg a supply", func(t *testing.T) {
-		for _, seed := range seedList(scenarioSeedCount()) {
-			t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
-				t.Parallel()
-				s01Seed(t, cfg, script, seed, rep)
+	legs := []struct {
+		name, title, script string
+		opts                []economysim.Option
+		extra               func(t *testing.T, run scenarioRun, seed uint64, rep *scenReport)
+	}{
+		{"leg a supply", "S01 one leg-a seeds 1-%d, 700 ticks", "s01.toml", nil, nil},
+		{"leg b demand", "S01 one leg-b seeds 1-%d, 700 ticks", "s01b.toml", []economysim.Option{economysim.WithAudit()}, s01bCalls},
+	}
+	for _, leg := range legs {
+		t.Run(leg.name, func(t *testing.T) {
+			script := loadScript(t, leg.script)
+			rep := newScenReport(fmt.Sprintf(leg.title, scenarioSeedCount()))
+			t.Run("seeds", func(t *testing.T) {
+				for _, seed := range seedList(scenarioSeedCount()) {
+					t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+						t.Parallel()
+						run := s01Seed(t, cfg, script, seed, rep, leg.opts...)
+						if leg.extra != nil {
+							leg.extra(t, run, seed, rep)
+						}
+					})
+				}
 			})
-		}
-	})
-	rep.flush(t)
-	t.Run("leg b demand", func(t *testing.T) {
-		t.Skip("waits for AddAgent and Direct (integration.go, Stage 2), N-296")
-	})
+			rep.flush(t)
+		})
+	}
+}
+
+// s01bCalls is the check of the calls of leg (b): the money of the visitor, 2 000 000,
+// is created by the reason initial at tick 400, the tick AddAgent was called in (the
+// audit has passed at every tick, the world ran with WithAudit).
+func s01bCalls(t *testing.T, run scenarioRun, seed uint64, rep *scenReport) {
+	t.Helper()
+	var got int64
+	if s01ShockFrom < int64(len(run.Obs.initialMoney)) {
+		got = run.Obs.initialMoney[s01ShockFrom]
+	}
+	checkExact(t, rep, "S01", "one", seed, "the visitor's money enters by initial at tick 400", got == 2_000_000,
+		"BoundaryFlow of reason initial at tick %d = %d, want 2000000", s01ShockFrom, got)
 }
 
 // unmetCounts returns the numerator and the denominator of the unmet share of
@@ -82,14 +112,15 @@ func unmetCounts(unfed []int64, from int64, startHouseholds []int64) (num, den i
 	return num, den, within
 }
 
-// s01Seed runs one seed of S01 leg (a) and records and asserts its checks.
-func s01Seed(t *testing.T, cfg economysim.Config, script []shockStep, seed uint64, rep *scenReport) {
+// s01Seed runs one seed of S01, either leg, and records and asserts its checks; it
+// returns the run for the checks of a leg.
+func s01Seed(t *testing.T, cfg economysim.Config, script []scriptStep, seed uint64, rep *scenReport, opts ...economysim.Option) scenarioRun {
 	const scenario, pack = "S01", "one"
 	// startHouseholds[i] is the households at the start of tick s01ShockFrom+i,
 	// which is the snapshot after the step of the tick before (see unmetCounts).
 	startHouseholds := make([]int64, s01ShockTo-s01ShockFrom)
 	run := runScenario(t, cfg, scenarioSpec{
-		Seed: seed, Ticks: s01Ticks, Script: script,
+		Seed: seed, Ticks: s01Ticks, Script: script, Options: opts,
 		Snap:   func(tick int64) bool { return tick >= s01ShockFrom-1 && tick < s01ShockTo-1 },
 		OnSnap: func(tick int64, s economysim.Snapshot) { startHouseholds[tick+1-s01ShockFrom] = s.Households },
 	})
@@ -147,4 +178,5 @@ func s01Seed(t *testing.T, cfg economysim.Config, script []shockStep, seed uint6
 		rep.absent(seed, "unmet bp over 400-459")
 	}
 	rep.num(seed, "households at end", run.Final.Households)
+	return run
 }

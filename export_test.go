@@ -176,13 +176,6 @@ func SetAgentDirective(w *World, id AgentID, d *Directive) {
 	w.integ.watch(int32(id))
 }
 
-// RelocateForTest moves the account of agent a to region to with the cause, by
-// the world's one relocation path (regions_relocate.go). The public Relocate is
-// INT's; this seam goes with it.
-func RelocateForTest(w *World, a AgentID, to RegionID, cause Cause) error {
-	return w.relocate(a, to, cause)
-}
-
 // RegisterBoundForTest registers a region-bound obligation of the given name,
 // held by the agent when held returns true. held names each instance it holds
 // through SkipHasForTest, as a module does. No module is on in Stage 2, so the
@@ -194,13 +187,6 @@ func RegisterBoundForTest(w *World, name string, held func(a AgentID, skip []str
 // SkipHasForTest reports whether skip names the instance key of an obligation,
 // by name or as "name:key" (spec-regions.md 6.5.2).
 func SkipHasForTest(skip []string, name string, key int64) bool { return skipHas(skip, name, key) }
-
-// SetEdgeStatusesForTest applies a batch of edge statuses with the cause by the
-// world's one internal form (regions_status.go). The public SetEdgeStatuses is
-// INT's (plan 2-17); this seam goes with it.
-func SetEdgeStatusesForTest(w *World, changes []EdgeStatus, cause Cause) error {
-	return w.setEdgeStatuses(changes, cause)
-}
 
 // DemandLadders flattens the ladder of each role of a canonical, validated
 // configuration to the want IDs in funding order, indexed by RoleID. The second
@@ -434,4 +420,19 @@ func FillWorkView(w *World, id AgentID) {
 	if err := w.fillAgentView(&w.tk.view, &w.agents[id], viewWork); err != nil {
 		panic(err)
 	}
+}
+
+// RoleMoneyForTest returns the money held by the agents of each role, by RoleID
+// (S04 with and without the demand module reads the cooks' share; the snapshot
+// has no per-role money). A removed agent keeps its slot with weight 0 and no
+// account of its own, so only agents of weight above 0 count.
+func RoleMoneyForTest(w *World, roles int) []int64 {
+	out := make([]int64, roles)
+	for i := range w.agents {
+		a := &w.agents[i]
+		if v, err := w.ledger.Account(a.account); err == nil && a.weight > 0 && int(a.role) < roles {
+			out[a.role] += int64(v.Balance)
+		}
+	}
+	return out
 }

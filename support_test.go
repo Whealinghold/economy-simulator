@@ -271,9 +271,13 @@ func parsePlainTOML(src string) ([]tomlTable, error) {
 	return tables, nil
 }
 
-// checkPlainValue accepts a number, a double-quoted string without an escape, or
-// a [list] of those with no nesting.
+// checkPlainValue accepts a number, a double-quoted string without an escape, a
+// [list] of those with no nesting, or a flat inline {table} of key = value pairs
+// of the first two kinds (the form of the buy key of a [[buyer]], REF 7.1.3).
 func checkPlainValue(v string) error {
+	if strings.HasPrefix(v, "{") {
+		return checkInlineTable(v)
+	}
 	if strings.HasPrefix(v, "[") {
 		if !strings.HasSuffix(v, "]") {
 			return fmt.Errorf("list %q is not closed", v)
@@ -300,6 +304,34 @@ func checkPlainValue(v string) error {
 		return nil
 	}
 	return fmt.Errorf("value %q is not a number, a string or a list", v)
+}
+
+// checkInlineTable accepts {k = v, ...} where each v is a number or a string.
+func checkInlineTable(v string) error {
+	if !strings.HasSuffix(v, "}") {
+		return fmt.Errorf("inline table %q is not closed", v)
+	}
+	for _, item := range splitPlainList(strings.TrimSpace(v[1 : len(v)-1])) {
+		k, val, ok := strings.Cut(item, "=")
+		val = strings.TrimSpace(val)
+		if !ok || !tomlKeyRe.MatchString(strings.TrimSpace(k)) || strings.HasPrefix(val, "{") || strings.HasPrefix(val, "[") {
+			return fmt.Errorf("inline table %q: %q is not key = number or string", v, item)
+		}
+		if err := checkPlainValue(val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// inlineTable returns the pairs of an inline table that checkPlainValue accepted.
+func inlineTable(v string) map[string]string {
+	out := map[string]string{}
+	for _, item := range splitPlainList(strings.TrimSpace(v[1 : len(v)-1])) {
+		k, val, _ := strings.Cut(item, "=")
+		out[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(val), `"`)
+	}
+	return out
 }
 
 // splitPlainList splits on the commas outside a string.

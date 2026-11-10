@@ -79,7 +79,7 @@ func TestScenarioS14_RegionLosesItsIncome(t *testing.T) {
 }
 
 // s14Seed runs one seed of one depth of S14.
-func s14Seed(t *testing.T, cfg economysim.Config, script []shockStep, seed uint64, rep *scenReport) {
+func s14Seed(t *testing.T, cfg economysim.Config, script []scriptStep, seed uint64, rep *scenReport) {
 	const scenario, pack = "S14", "famine"
 	extra := &s14Obs{removed: map[economysim.Cause]int64{}}
 	shares := map[int64]int64{}
