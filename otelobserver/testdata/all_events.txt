@@ -48,3 +48,4 @@ WearApplied
 WeightChanged
 WorldCreated
 WorldRestored
+YieldShocked

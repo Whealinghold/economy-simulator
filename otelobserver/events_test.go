@@ -8,9 +8,8 @@ import (
 )
 
 // allEvents is one zero value of every event type of the core's event.go
-// (50), kept by hand because Go cannot list the types of a package. The root
-// test of plan 2-22 Phase 9 compares its names with event.go. YieldShocked
-// (plan 2-17) joins the list when that plan merges.
+// (51), kept by hand because Go cannot list the types of a package. The root
+// test of plan 2-22 Phase 9 compares its names with event.go.
 var allEvents = []economysim.Event{
 	economysim.WorldCreated{},
 	economysim.RunStarted{},
@@ -62,6 +61,7 @@ var allEvents = []economysim.Event{
 	economysim.OutsideTraded{},
 	economysim.OutsideEnded{},
 	economysim.OutsideShocked{},
+	economysim.YieldShocked{},
 }
 
 // TestObserve_EveryEventTypeNoPanic sends the zero value of every event type to

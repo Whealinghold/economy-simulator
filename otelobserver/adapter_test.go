@@ -275,7 +275,7 @@ var (
 		"MigrationReviewed", "MerchantsPlanned", "ContractFormed", "ContractSettled", "OutsideTraded", "ShipmentRejected",
 		"ContractRound"}
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
-		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked"}
+		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked"}
 )
 
 // TestAdapter_ExhaustiveOverEvents verifies that every event type is on the
