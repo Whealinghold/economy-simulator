@@ -127,10 +127,7 @@ func (x *external) addCounterparties(c *Config, n *OutsideNode, node RegionID, f
 	gates := slices.Compact(slices.Sorted(slices.Values(slices.Concat(sell, buy))))
 	for _, g := range gates {
 		gate, _ := c.regionID(g)
-		scale := int64(DefaultGateScaleBP)
-		if i := slices.IndexFunc(n.Gates, func(o OutsideGate) bool { return o.Region == g }); i >= 0 {
-			scale = n.Gates[i].ScaleBP
-		}
+		scale := n.gateScale(g)
 		if hasBuy && slices.Contains(buy, g) {
 			x.addCounterparty(counterparty{node: node, gate: gate, buy: true, scaleBP: scale}, n, first)
 		}
@@ -489,6 +486,15 @@ func (m *External) canonical(calendar []Season) *External {
 	return out
 }
 
+// gateScale returns the scale of the gate region g of the node: its row, else the
+// neutral default (spec-external-sector.md 3.2.4).
+func (n *OutsideNode) gateScale(g string) int64 {
+	if i := slices.IndexFunc(n.Gates, func(o OutsideGate) bool { return o.Region == g }); i >= 0 {
+		return n.Gates[i].ScaleBP
+	}
+	return DefaultGateScaleBP
+}
+
 // present reports that a side exists: a Capacity of 0 is an absent side
 // (spec-external-sector.md 3.3.3).
 func (s *OutsideSide) present() bool { return s.Capacity > 0 }
@@ -765,7 +771,7 @@ func (v *validator) seasonTable(p []string, rows []SeasonFactor, lo, hi int64) {
 // population region row, a taste row or a money-flow target. A later module that
 // adds a table of rows by region adds its check here.
 func (v *validator) outsideInhabited(m *External) {
-	nodes := outsideNodeSet(&v.c)
+	nodes := v.outsideSet()
 	if len(nodes) == 0 {
 		return
 	}
@@ -906,10 +912,7 @@ func (w *outsideWarner) side(lb []string, n *OutsideNode, l *OutsideLine, name s
 	}
 	sellSide := name == "sell"
 	for _, g := range gates {
-		scale := int64(DefaultGateScaleBP)
-		if i := slices.IndexFunc(n.Gates, func(o OutsideGate) bool { return o.Region == g }); i >= 0 {
-			scale = n.Gates[i].ScaleBP
-		}
+		scale := n.gateScale(g)
 		q, ok := outside.Quote(int64(l.Base), s.MarginBP, scale, MaxPrice, sellSide)
 		if !ok {
 			continue
@@ -1208,6 +1211,7 @@ func (w *World) placeOutside(cp *counterparty, l *outsideLine, row *sideRow) err
 	f := orderFacts{Account: cp.account, AgentKnown: true, SideAllowed: true, CommodityKnown: true, Tradable: true, Tally: &w.receipts}
 	if reason, ok := b.admit(w.ledger, f, o); !ok {
 		b.emitRejected(&w.obs, w.log, o, reason)
+		row.t.offered = 0 // nothing was placed
 		return nil
 	}
 	b.emitPlaced(&w.obs, o)

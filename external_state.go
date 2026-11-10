@@ -275,11 +275,7 @@ func readSide(c *Config, n *OutsideNode, l *OutsideLine, s *OutsideSide, gates [
 	}
 	r := sideRead{Present: true, MeanCapacity: meanCapacity(s, c.Calendar.Seasons)}
 	for _, g := range gates {
-		scale := int64(DefaultGateScaleBP)
-		if i := slices.IndexFunc(n.Gates, func(o OutsideGate) bool { return o.Region == g }); i >= 0 {
-			scale = n.Gates[i].ScaleBP
-		}
-		q, _ := outside.Quote(mid, s.MarginBP, scale, MaxPrice, sell)
+		q, _ := outside.Quote(mid, s.MarginBP, n.gateScale(g), MaxPrice, sell)
 		r.Gates = append(r.Gates, gateRead{Gate: g, Quote: q})
 	}
 	return r
