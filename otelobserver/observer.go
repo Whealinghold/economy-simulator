@@ -54,6 +54,10 @@ type Observer struct {
 
 	names names
 	hot   hot
+	cells map[cell]*state
+
+	// touched is set when a series changed since the last flush.
+	touched bool
 
 	inStep    bool
 	stepStart time.Time
@@ -78,7 +82,7 @@ func New(mp metric.MeterProvider, tp trace.TracerProvider, opts ...Option) (*Obs
 	if tp == nil {
 		tp = tracenoop.NewTracerProvider()
 	}
-	o := &Observer{clock: cfg.clock, tracer: tp.Tracer(scope)}
+	o := &Observer{clock: cfg.clock, tracer: tp.Tracer(scope), cells: map[cell]*state{}}
 	meter := mp.Meter(scope)
 	for i := range catalogue {
 		in, err := build(meter, &catalogue[i])

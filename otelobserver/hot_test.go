@@ -99,8 +99,12 @@ func TestVolume_OncePerSeriesPerTick(t *testing.T) {
 	}
 	before := maps.Clone(h.calls)
 	tick(h, 1)
-	delete(before, "economysim.world.step.duration") // an empty step still has a duration
-	delete(h.calls, "economysim.world.step.duration")
+	// An empty step still has a duration, and a held gauge is recorded again at
+	// every TickEnded (spec-observability.md 6.3.6): one call per series, 2 here.
+	for _, held := range []string{"economysim.world.step.duration", "economysim.market.clearing_price"} {
+		delete(before, held)
+		delete(h.calls, held)
+	}
 	if !maps.Equal(before, h.calls) {
 		t.Errorf("SDK calls after an empty tick = %v, want %v: none", h.calls, before)
 	}

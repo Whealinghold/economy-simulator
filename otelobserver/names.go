@@ -21,11 +21,18 @@ type names struct {
 	resource  []attribute.KeyValue
 	mode      []attribute.KeyValue
 	reasons   intern
+
+	// tab is the attribute of every place of each key except economysim.reason,
+	// whose open values are in other (cells.go).
+	tab   map[string][]attribute.KeyValue
+	other intern
 }
 
 // newNames builds the attribute table of the names of an event.
 func newNames(n economysim.Names) names {
-	return names{
+	strs := map[string][]string{keyCommodity: n.Commodities, keyRegion: n.Regions, keyRole: n.Roles,
+		keyRecipe: n.Recipes, keyWant: n.Wants, keyResource: n.Resources, keyMode: n.Modes}
+	nm := names{
 		commodity: kvs(keyCommodity, n.Commodities),
 		region:    kvs(keyRegion, n.Regions),
 		role:      kvs(keyRole, n.Roles),
@@ -34,7 +41,17 @@ func newNames(n economysim.Names) names {
 		resource:  kvs(keyResource, n.Resources),
 		mode:      kvs(keyMode, n.Modes),
 		reasons:   newIntern(keyReason, maxReasons),
+		tab:       map[string][]attribute.KeyValue{},
+		other:     newIntern(keyReason, maxInterned),
 	}
+	for i := range catalogue {
+		for _, key := range catalogue[i].attrs {
+			if _, ok := nm.tab[key]; !ok && key != keyReason {
+				nm.tab[key] = attrTable(key, strs)
+			}
+		}
+	}
+	return nm
 }
 
 func kvs(key string, ss []string) []attribute.KeyValue {
