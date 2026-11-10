@@ -45,7 +45,7 @@ func (o *Observer) endUnfed() {
 	u := &o.unfed
 	for i, last := range u.last {
 		if !u.seen[i] && last != 0 {
-			o.count(m1(iHouseholdUnfed, int32(i%u.roles)), -last)
+			o.count(m1(iHouseholdUnfed, int32(i%u.roles)), satSub(0, last))
 			u.last[i] = 0
 		}
 		u.seen[i] = false

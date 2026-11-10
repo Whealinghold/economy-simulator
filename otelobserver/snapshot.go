@@ -1,6 +1,7 @@
 package otelobserver
 
 import (
+	"cmp"
 	"slices"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -82,7 +83,13 @@ func (o *Observer) recordJobs(n snapNames, jobs []economysim.JobRow) {
 			now[k] = 0
 		}
 	}
-	for k, v := range now {
+	keys := make([][2]int, 0, len(now))
+	for k := range now {
+		keys = append(keys, k)
+	}
+	slices.SortFunc(keys, func(a, b [2]int) int { return cmp.Or(cmp.Compare(a[0], b[0]), cmp.Compare(a[1], b[1])) })
+	for _, k := range keys {
+		v := now[k]
 		o.gauge(iRecipeInProgress, v, o.pair(keyRecipe, n.recipe, k[0], n.region, k[1])...)
 	}
 	o.jobPairs = now
