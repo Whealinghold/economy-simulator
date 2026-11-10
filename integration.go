@@ -781,19 +781,12 @@ func (w *World) SetTransitFactors(changes []TransitFactor) error {
 	}
 	modes := int64(len(w.transport.modes))
 	keys, err := slotKeys(changes, func(i int, c TransitFactor) (int64, error) {
-		for _, r := range [...]struct {
-			id    RegionID
-			field string
-		}{{c.From, "from"}, {c.To, "to"}} {
-			if err := w.slotRegion(i, r.id, r.field, false); err != nil {
+		// Both regions are known before either is checked for an outside node.
+		for _, ordinary := range [...]bool{false, true} {
+			if err := w.slotRegion(i, c.From, "from", ordinary); err != nil {
 				return 0, err
 			}
-		}
-		for _, r := range [...]struct {
-			id    RegionID
-			field string
-		}{{c.From, "from"}, {c.To, "to"}} {
-			if err := w.slotRegion(i, r.id, r.field, true); err != nil {
+			if err := w.slotRegion(i, c.To, "to", ordinary); err != nil {
 				return 0, err
 			}
 		}
