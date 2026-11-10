@@ -225,3 +225,65 @@ func TestScanRuns_WindowsKeyOfZero(t *testing.T) {
 	in.MoneyOut = ticksOf([]int64{0, 0})
 	check(t, "windows 0 is not always", verdict.Detect(verdict.R2, in, th), verdict.None, 0, "")
 }
+
+// TestDetect_EdgeCases2 verifies the remaining corners found by mutation
+// testing: an overflowing R3 horizon from a long speed limit, a quiet role
+// beside a collapse, a start of 1, a frozen flag of -1, a first_ticks of 1 and
+// an offset key of 1.
+//
+// Guard: each case changes a verdict if the guard it exercises is dropped.
+func TestDetect_EdgeCases2(t *testing.T) {
+	t.Parallel()
+	th := priors()
+	// 200 -> 540 at 100 bp a year takes about 36 000 ticks: times the largest
+	// factor the product does not fit, and the horizon is the largest int64.
+	long := []verdict.Point{{Tick: 0, Value: 600}, {Tick: 100, Value: 200}, {Tick: 1 << 40, Value: 200}}
+	in := verdict.Input{Households: [][]verdict.Point{long}, Rate: 100, TicksPerYear: tpy}
+	check(t, "overflowing horizon is never reached", verdict.Detect(verdict.R3, in, with(th, "r3.horizon_factor", 1<<63-1)), verdict.Unknown, 0, verdict.ReasonNeedsLongerRun)
+	check(t, "the same run with a factor of 5", verdict.Detect(verdict.R3, in, th), verdict.Detected, 100, "")
+
+	// a quiet role does not hide a collapse (the role is judged first).
+	quiet := verdict.Input{Roles: [][]verdict.Point{ticksOf([]int64{3, 3, 3})}, Households: [][]verdict.Point{hh600(6, false)}, Rate: 20000, TicksPerYear: tpy}
+	check(t, "quiet role, collapse", verdict.Detect(verdict.R3, quiet, th), verdict.Detected, 365, "")
+	check(t, "a role with a negative start", verdict.Detect(verdict.R3, verdict.Input{Roles: [][]verdict.Point{ticksOf(append([]int64{-1}, make([]int64, 400)...))}}, th), verdict.None, 0, "")
+
+	// a start of 1 is a start: it falls to 0, so R4 yields to R3.
+	vol := []verdict.Point{{Tick: 0, Value: 1000}, {Tick: 365, Value: 100}, {Tick: 730, Value: 100}}
+	check(t, "start of 1 falling to 0", verdict.Detect(verdict.R4, verdict.Input{Volume: vol, Households: [][]verdict.Point{{{Value: 1}, {Tick: 10, Value: 0}}}}, th), verdict.None, 0, "")
+
+	// the frozen flag is any non-zero value.
+	neg := ticksOf(make([]int64, 70))
+	for i := range neg {
+		neg[i].Value = -1
+	}
+	check(t, "frozen flag of -1", verdict.Detect(verdict.R5b, verdict.Input{Frozen: [][]verdict.Point{neg}}, th), verdict.Detected, 59, "")
+
+	// first_ticks of 1: one tick is its own mean, so never above twice it.
+	one := with(th, "r7.first_ticks", 1)
+	check(t, "first_ticks 1", verdict.Detect(verdict.R7, verdict.Input{Completions: [][]verdict.Point{ticksOf([]int64{5, 50})}}, one), verdict.None, 0, "")
+
+	// an offset key of 1: an offset of 0 does not reach it.
+	k1 := with(th, "r8.offset_bp", 1)
+	in8 := verdict.Input{
+		Offsets: []verdict.Series{{Points: ticksOf([]int64{0, 0, 0})}}, Unmet: ticksOf([]int64{9000, 9000, 9000}),
+		Active: 10000, HasReference: true,
+	}
+	check(t, "offset 0 against a key of 1", verdict.Detect(verdict.R8, in8, k1), verdict.None, 0, "")
+}
+
+// TestSeedRules_Medians verifies the median of five and of seven values, and
+// the Need of SR1 for n of 0.
+//
+// Requirement: FR-STY-076
+func TestSeedRules_Medians(t *testing.T) {
+	t.Parallel()
+	if got := verdict.SR3(5, []int64{9, 1, 7, 3, 5}, 0, 99).Median; got != 5 {
+		t.Errorf("SR3 median of five values = %d, want 5", got)
+	}
+	if got := verdict.SR3(7, []int64{70, 10, 40, 20, 60, 30, 50}, 0, 99).Median; got != 40 {
+		t.Errorf("SR3 median of seven values = %d, want 40", got)
+	}
+	if got := verdict.SR1(0, nil); got.Need != 0 || got.Pass {
+		t.Errorf("SR1(0, none) = %+v, want need 0 and fail", got)
+	}
+}
