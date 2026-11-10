@@ -295,25 +295,41 @@ func (g *Game) Info() (WorldInfo, error) {
 	if err != nil {
 		return WorldInfo{}, fmt.Errorf("snapshot: %w", err)
 	}
-	slots, err := g.w.Slots()
-	if err != nil {
-		return WorldInfo{}, fmt.Errorf("slots: %w", err)
-	}
 	hash := g.w.ConfigHash()
-	info := WorldInfo{ConfigHash: hex.EncodeToString(hash[:]), Warnings: []WarningInfo{}, Regions: []RegionInfo{}, Harvest: []HarvestSpec{}, Roads: []RoadSpec{}}
+	info := WorldInfo{ConfigHash: hex.EncodeToString(hash[:]), Warnings: []WarningInfo{}, Regions: []RegionInfo{}}
 	for _, w := range g.w.Warnings() {
 		info.Warnings = append(info.Warnings, WarningInfo{Rule: w.Rule, Path: w.Path, Count: w.Count})
 	}
 	for _, r := range snap.Regions {
 		info.Regions = append(info.Regions, RegionInfo{Name: g.names.region(r.Region), Households: r.Households, Agents: r.Agents, Outside: r.Outside})
 	}
-	for _, y := range slots.YieldShocks {
-		info.Harvest = append(info.Harvest, HarvestSpec{Region: g.names.region(y.Region), Recipe: g.names.recipe(y.Recipe), BP: y.BP})
-	}
-	for _, e := range slots.EdgeStatuses {
-		info.Roads = append(info.Roads, RoadSpec{From: g.names.region(e.From), To: g.names.region(e.To), Closed: e.Closed, FactorBP: e.FactorBP})
+	if info.Harvest, info.Roads, err = g.slots(); err != nil {
+		return WorldInfo{}, err
 	}
 	return info, nil
+}
+
+// Slots returns the harvest factors and the roads in force, by name.
+func (g *Game) Slots() ([]HarvestSpec, []RoadSpec, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.slots()
+}
+
+// slots is Slots with g.mu held.
+func (g *Game) slots() ([]HarvestSpec, []RoadSpec, error) {
+	slots, err := g.w.Slots()
+	if err != nil {
+		return nil, nil, fmt.Errorf("slots: %w", err)
+	}
+	harvest, roads := []HarvestSpec{}, []RoadSpec{}
+	for _, y := range slots.YieldShocks {
+		harvest = append(harvest, HarvestSpec{Region: g.names.region(y.Region), Recipe: g.names.recipe(y.Recipe), BP: y.BP})
+	}
+	for _, e := range slots.EdgeStatuses {
+		roads = append(roads, RoadSpec{From: g.names.region(e.From), To: g.names.region(e.To), Closed: e.Closed, FactorBP: e.FactorBP})
+	}
+	return harvest, roads, nil
 }
 
 // RegionState returns the state of a region by name.

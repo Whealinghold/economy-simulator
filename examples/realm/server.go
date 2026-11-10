@@ -33,6 +33,10 @@ var ErrNoState = errors.New("no state path")
 // ErrForbidden is a state-changing request that a web page of another origin sent.
 var ErrForbidden = errors.New("cross-origin request")
 
+// ErrSaveFailed is a checkpoint that could not be written to the -state file: a fault
+// of the server's disk, not of the request.
+var ErrSaveFailed = errors.New("cannot write the state file")
+
 // ErrBusy is a step or restore asked for while another runs: steps do not queue, because
 // each holds the world for up to maxStepTicks ticks.
 var ErrBusy = errors.New("a step or restore is already running")
@@ -79,6 +83,7 @@ var refusals = []struct {
 	{economysim.ErrNotOnRole, "ErrNotOnRole", http.StatusBadRequest},
 	{economysim.ErrNotDirected, "ErrNotDirected", http.StatusBadRequest},
 	{economysim.ErrDuplicateID, "ErrDuplicateID", http.StatusBadRequest},
+	{ErrSaveFailed, "ErrSaveFailed", http.StatusInternalServerError},
 	{economysim.ErrWorldFailed, "ErrWorldFailed", http.StatusInternalServerError},
 	{economysim.ErrInStep, "ErrInStep", http.StatusInternalServerError},
 	{context.Canceled, "ErrCancelled", http.StatusServiceUnavailable},
@@ -230,7 +235,7 @@ func (s *Server) release() { <-s.stepper }
 func (s *Server) AllowHosts(hosts ...string) {
 	s.hosts = map[string]bool{}
 	for _, h := range hosts {
-		s.hosts[h] = true
+		s.hosts[strings.ToLower(h)] = true // hostname lowercases the request side
 	}
 }
 
@@ -239,7 +244,11 @@ func (s *Server) AllowHosts(hosts ...string) {
 // any route runs.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
-		if p := recover(); p != nil { // a library panic must not drop the connection with no status
+		if p := recover(); p != nil {
+			if p == http.ErrAbortHandler {
+				panic(p) // net/http's own signal to drop the connection: not ours to answer
+			}
+			// a library panic must not drop the connection with no status
 			s.log.LogAttrs(r.Context(), slog.LevelError, "handler panicked", slog.String("panic", clip(fmt.Sprint(p))))
 			s.reply(w, http.StatusInternalServerError, errorBody{tickBody{s.tick.Load()}, "ErrInternal", "internal error"})
 		}
@@ -585,11 +594,11 @@ type slotsView struct {
 
 // slots answers a shock with the slots the world holds after it.
 func (s *Server) slots() (any, error) {
-	info, err := s.game.Info()
+	h, r, err := s.game.Slots()
 	if err != nil {
 		return nil, err
 	}
-	return slotsView{tickBody{s.game.Tick()}, info.Harvest, info.Roads}, nil
+	return slotsView{tickBody{s.game.Tick()}, h, r}, nil
 }
 
 func (s *Server) harvest(w http.ResponseWriter, r *http.Request) (any, error) {
@@ -713,7 +722,8 @@ func (s *Server) checkpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	if save {
 		if err := writeAtomic(s.state, b); err != nil {
-			s.fail(w, fmt.Errorf("save the checkpoint: %w", err))
+			s.log.LogAttrs(r.Context(), slog.LevelError, "checkpoint not saved", slog.Int64("tick", tick), slog.Any("error", err))
+			s.fail(w, fmt.Errorf("save the checkpoint: %w", ErrSaveFailed)) // the path stays in the log
 			return
 		}
 		s.log.LogAttrs(r.Context(), slog.LevelInfo, "checkpoint saved", slog.Int64("tick", tick), slog.Int("bytes", len(b)))

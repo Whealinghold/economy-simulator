@@ -2,14 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	economysim "github.com/Whealinghold/economy-sim"
 )
@@ -212,3 +216,87 @@ func TestRestoreOptions_AddsObserverAndAuditOnlyWhenAsked(t *testing.T) {
 }
 
 var _ economysim.Observer = (*eventRing)(nil)
+
+// TestServer_FailedSaveIs500AndKeepsThePathOut verifies that a checkpoint that cannot
+// be written answers 500 ErrSaveFailed without the state path in the body.
+//
+// Guard: a full or unwritable disk is the server's fault, not a refused request (422),
+// and the path is the operator's business, so it goes to the log only.
+func TestServer_FailedSaveIs500AndKeepsThePathOut(t *testing.T) {
+	t.Parallel()
+	dir := filepath.Join(t.TempDir(), "missing-dir")
+	s := newTestServer(t, 1, filepath.Join(dir, "x.ckpt"))
+	var e errorBody
+	callJSON(t, s, http.MethodPost, "/v1/checkpoint?save=true", "", http.StatusInternalServerError, &e)
+	if e.Error != "ErrSaveFailed" || strings.Contains(e.Message, dir) {
+		t.Errorf("save into a missing directory: error %q message %q, want ErrSaveFailed without %q", e.Error, e.Message, dir)
+	}
+}
+
+// TestServer_AllowHostsIsCaseInsensitive verifies that a mixed-case allowed host
+// matches a request in any case.
+//
+// Guard: hostname lowercases the request side, so the list must too.
+func TestServer_AllowHostsIsCaseInsensitive(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.AllowHosts("MyHost")
+	req := httptest.NewRequest("GET", "/v1/world", nil)
+	req.Host = "myhost:80"
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /v1/world with Host myhost after AllowHosts(MyHost) = %d, want 200", rec.Code)
+	}
+}
+
+// TestServer_AbortHandlerPanicPropagates verifies that http.ErrAbortHandler is not
+// turned into a 500 reply.
+//
+// Guard: net/http uses that panic to drop a connection; answering it would write a
+// second status onto a half-sent response.
+func TestServer_AbortHandlerPanicPropagates(t *testing.T) {
+	t.Parallel()
+	s := newTestServer(t, 1, "")
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("/abort", func(http.ResponseWriter, *http.Request) { panic(http.ErrAbortHandler) })
+	defer func() {
+		if p := recover(); p != http.ErrAbortHandler {
+			t.Errorf("GET /abort recovered %v, want http.ErrAbortHandler", p)
+		}
+	}()
+	s.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/abort", nil))
+}
+
+// TestGame_SlotsListsShocksByName verifies that Slots returns the harvest factors and
+// roads in force by name, the same rows Info carries.
+func TestGame_SlotsListsShocksByName(t *testing.T) {
+	t.Parallel()
+	g := newTestGame(t, 1)
+	h, r, err := g.Slots()
+	info, ierr := g.Info()
+	if err != nil || ierr != nil {
+		t.Fatalf("Slots() error %v, Info() error %v, want nil", err, ierr)
+	}
+	if !reflect.DeepEqual(h, info.Harvest) || !reflect.DeepEqual(r, info.Roads) {
+		t.Errorf("Slots() = %v, %v, want Info's %v, %v", h, r, info.Harvest, info.Roads)
+	}
+}
+
+// TestServe_NegativePaceIsRefused verifies that serve refuses a negative pace and
+// closes the listener.
+//
+// Guard: a negative pace used to mean "off" silently, which hides a typo.
+func TestServe_NegativePaceIsRefused(t *testing.T) {
+	t.Parallel()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen() = %v, want nil", err)
+	}
+	if err := serve(context.Background(), discardLogger(), l, 1, -time.Second, ""); !errors.Is(err, ErrBadInput) {
+		t.Errorf("serve with pace -1s = %v, want ErrBadInput", err)
+	}
+	if _, err := l.Accept(); err == nil {
+		t.Errorf("Accept() after serve refused = nil, want the listener closed")
+	}
+}

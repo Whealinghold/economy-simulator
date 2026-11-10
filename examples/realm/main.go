@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -45,6 +46,9 @@ func main() {
 // serve runs the server on l until ctx is done, and closes l. There is no write
 // timeout: a POST /v1/step of 1 000 ticks answers after about a minute.
 func serve(ctx context.Context, logger *slog.Logger, l net.Listener, seed uint64, pace time.Duration, state string) error {
+	if pace < 0 { // 0 is "off"; a negative value is a typo, not a request
+		return errors.Join(fmt.Errorf("pace %v: %w", pace, ErrBadInput), l.Close())
+	}
 	s, err := NewServer(seed, state, logger)
 	if err != nil {
 		return errors.Join(err, l.Close())
