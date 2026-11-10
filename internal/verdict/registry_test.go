@@ -490,6 +490,92 @@ func TestOrdering_Pairs(t *testing.T) {
 	}
 }
 
+// TestOrdering_EveryPair verifies each pair of OrderingPairs on its own: the
+// band at the threshold holds, one past it is rejected naming the pair, and a
+// pair with a side missing is skipped.
+//
+// Requirement: FR-STY-072
+func TestOrdering_EveryPair(t *testing.T) {
+	t.Parallel()
+	pairs := verdict.OrderingPairs()
+	if len(pairs) != 18 {
+		t.Fatalf("OrderingPairs() has %d pairs, want the 18 of STY 6.5.2", len(pairs))
+	}
+	for _, p := range pairs {
+		th := specPriors[p.Threshold]
+		var at, past int64
+		switch p.Rel {
+		case verdict.AtMost:
+			at, past = th, th+1
+		case verdict.AtLeast:
+			at, past = th, th-1
+		case verdict.AtLeastComplement:
+			at, past = 10_000-th, 10_000-th-1
+		case verdict.PinnedRunShare:
+			at = th * 10_000 / 365
+			past = at + 1
+		}
+		if err := verdict.CheckOrdering(map[string]int64{p.Band: at, p.Threshold: th}, 0); err != nil {
+			t.Errorf("CheckOrdering(%s = %d at %s = %d) error = %v, want nil", p.Band, at, p.Threshold, th, err)
+		}
+		err := verdict.CheckOrdering(map[string]int64{p.Band: past, p.Threshold: th}, 0)
+		var oe *verdict.OrderingError
+		if !errors.As(err, &oe) || oe.Pair != p || oe.Band != past || oe.Threshold != th {
+			t.Errorf("CheckOrdering(%s = %d past %s = %d) error = %v, want a violation of that pair with its values", p.Band, past, p.Threshold, th, err)
+		}
+		if err := verdict.CheckOrdering(map[string]int64{p.Threshold: th}, 0); err != nil {
+			t.Errorf("CheckOrdering(%s unset) error = %v, want nil", p.Band, err)
+		}
+	}
+	// The horizon pair: only with t_min, and only with both keys.
+	for _, tc := range []struct {
+		name string
+		in   map[string]int64
+		tMin int64
+		bad  bool
+	}{
+		{"4 against 5", map[string]int64{"s14.recover_ticks": 500, "r3.horizon_factor": 50000}, 100, false},
+		{"just over", map[string]int64{"s14.recover_ticks": 501, "r3.horizon_factor": 50000}, 100, true},
+		{"no t_min", map[string]int64{"s14.recover_ticks": 501, "r3.horizon_factor": 50000}, 0, false},
+		{"no factor", map[string]int64{"s14.recover_ticks": 501}, 100, false},
+		{"no recover ticks", map[string]int64{"r3.horizon_factor": 50000}, 100, false},
+	} {
+		if err := verdict.CheckOrdering(tc.in, tc.tMin); (err != nil) != tc.bad {
+			t.Errorf("CheckOrdering(horizon, %s) error = %v, want an error: %v", tc.name, err, tc.bad)
+		}
+	}
+}
+
+// TestSteps_EveryStep verifies the order of STY 10.3 step by step: a key of
+// each step set while a key of the step before is unset is rejected, and the
+// same with a key of an earlier step set is not.
+//
+// Requirement: FR-STY-091
+func TestSteps_EveryStep(t *testing.T) {
+	t.Parallel()
+	first := map[int]string{}
+	for _, s := range verdict.StepOrder() {
+		if _, ok := first[s.Step]; !ok {
+			first[s.Step] = s.Key
+		}
+	}
+	for step := 3; step <= 9; step++ {
+		prev, cur := first[step-1], first[step]
+		if prev == "" || cur == "" {
+			t.Fatalf("steps %d or %d have no key, want keys at every step from 2 to 9", step-1, step)
+		}
+		if err := verdict.CheckSteps(map[string]bool{prev: false, cur: true}); !errors.Is(err, verdict.ErrStepOrder) {
+			t.Errorf("CheckSteps(%s unset, %s set) error = %v, want ErrStepOrder", prev, cur, err)
+		}
+		if err := verdict.CheckSteps(map[string]bool{prev: true, cur: false}); err != nil {
+			t.Errorf("CheckSteps(%s set, %s unset) error = %v, want nil (the later step may wait)", prev, cur, err)
+		}
+	}
+	if err := verdict.CheckSteps(nil); err != nil {
+		t.Errorf("CheckSteps(nil) error = %v, want nil", err)
+	}
+}
+
 // TestBandFiles_Order verifies the unit order of STY 10.3 over the files and
 // on built cases.
 //

@@ -299,3 +299,49 @@ claim undetermined
 		t.Errorf("RenderStability(three points) =\n%s\nwant the lower point's checks and claim not_stable", got)
 	}
 }
+
+// TestCheck_RequiredConjuncts verifies the conjuncts of the three checks as
+// STY 7.1 lists them, and the names of the checks.
+//
+// Requirement: FR-STY-095
+func TestCheck_RequiredConjuncts(t *testing.T) {
+	t.Parallel()
+	want := map[string][]string{
+		"C-BP": {"STY-P01", "STY-P02", "R5a", "R5b"},
+		"C-NC": {"STY-P03", "STY-D03", "R6"},
+		"C-WS": {"STY-H01", "STY-H02", "STY-H03", "STY-H04", "STY-P04", "R7", "R8"},
+	}
+	if got := verdict.Checks(); len(got) != 3 || got[0] != "C-BP" || got[1] != "C-NC" || got[2] != "C-WS" {
+		t.Errorf("Checks() = %v, want [C-BP C-NC C-WS]", got)
+	}
+	for check, names := range want {
+		got := verdict.Required(check)
+		if strings.Join(got, ",") != strings.Join(names, ",") {
+			t.Errorf("Required(%s) = %v, want %v", check, got, names)
+		}
+		got[0] = "changed"
+		if verdict.Required(check)[0] == "changed" {
+			t.Errorf("Required(%s) returned its own slice, want a copy", check)
+		}
+	}
+}
+
+// TestRender_DoesNotChangeItsInput verifies that rendering sorts a copy: the
+// scenarios, rows and regimes of the caller keep their order.
+//
+// Requirement: NFR-STY-002
+func TestRender_DoesNotChangeItsInput(t *testing.T) {
+	t.Parallel()
+	r := verdict.Record{Pack: "p", Seeds: "1..2", Commit: "c", Config: "h", Scenarios: []verdict.ScenarioRecord{
+		{Scenario: "S2", Facts: []verdict.FactRow{{ID: "B", Class: verdict.ClassX}, {ID: "A", Class: verdict.ClassX}},
+			Regimes: []verdict.Verdict{{Detector: verdict.R9}, {Detector: verdict.R1}}},
+		{Scenario: "S1"},
+	}}
+	verdict.RenderVerdict(r)
+	if r.Scenarios[0].Scenario != "S2" || r.Scenarios[0].Facts[0].ID != "B" || r.Scenarios[0].Regimes[0].Detector != verdict.R9 {
+		t.Errorf("RenderVerdict sorted its input: %+v", r)
+	}
+	if verdict.ClaimStable != "stable" || verdict.ClaimOneNeighbour != "one_neighbour" || verdict.ClaimNotStable != "not_stable" || verdict.ClaimUndetermined != "undetermined" {
+		t.Errorf("claim words = %q %q %q %q, want the words of CLB 8.2", verdict.ClaimStable, verdict.ClaimNotStable, verdict.ClaimOneNeighbour, verdict.ClaimUndetermined)
+	}
+}

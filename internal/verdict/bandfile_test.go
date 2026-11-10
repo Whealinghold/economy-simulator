@@ -3,6 +3,7 @@ package verdict_test
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -87,6 +88,31 @@ set_by = "commit=a;config=b;seeds=1-10"
 		if !errors.As(err, &pe) || !strings.Contains(err.Error(), tc.msg) {
 			t.Errorf("LoadBands(%s) error = %v, want a ParseError containing %q", tc.name, err, tc.msg)
 		}
+	}
+}
+
+// TestBandFile_Values verifies that a value is read in base 10 over the whole
+// int64 range and that a header after a half-set table names that table.
+//
+// Requirement: FR-STY-070
+func TestBandFile_Values(t *testing.T) {
+	t.Parallel()
+	for _, v := range []int64{0, 7, 8, 9, 10, 98765, -98765, 1<<63 - 1, -1 << 63} {
+		src := "[a.b]\nvalue = " + strconv.FormatInt(v, 10) + "\nset_by = " + okSetBy + "\n"
+		keys, err := verdict.LoadBands(src)
+		if err != nil || len(keys) != 1 || keys[0].Value != v || !keys[0].Set {
+			t.Errorf("LoadBands(value = %d) = %+v, %v, want the value read", v, keys, err)
+		}
+	}
+	// A header after a table without its set_by names that table's line.
+	_, err := verdict.LoadBands("[a.b]\nvalue = 1\n[c.d]\nunit = \"bp\"\n")
+	var pe *verdict.ParseError
+	if !errors.As(err, &pe) || pe.Line != 1 {
+		t.Errorf("LoadBands(two tables, first without set_by) error = %v, want a ParseError at line 1", err)
+	}
+	// The error reads line and message.
+	if got := (&verdict.ParseError{Line: 3, Msg: "bad"}).Error(); got != "verdict: band file line 3: bad" {
+		t.Errorf("ParseError.Error() = %q, want the line and the message", got)
 	}
 }
 
