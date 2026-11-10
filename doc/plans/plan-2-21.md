@@ -12,7 +12,7 @@ Notes read: the index of `doc/notes.md`, then N-015, N-124, N-134, N-135, N-158,
 
 **Builds.**
 
-- `internal/calibration/` (standard library and `internal/design` only): `grid.go`, `seeds.go`, `plan.go`, `choose.go`, `alias.go`, `process.go`, `record.go` (types and `Render`), `record_parse.go` (`Parse`), `record_check.go`, `overlay.go`, with unit tests, three fuzz targets and their corpora under `internal/calibration/testdata/fuzz/`.
+- `internal/calibration/` (standard library, `internal/checked` and `internal/design` only): `grid.go`, `seeds.go`, `plan.go`, `choose.go`, `alias.go`, `process.go`, `record.go` (types and `Render`), `record_parse.go` (`Parse`), `record_check.go`, `overlay.go`, with unit tests, three fuzz targets and their corpora under `internal/calibration/testdata/fuzz/`.
 - In the same package, `_test.go` files: the registry test of CLB 11.1 (`registry_test.go` and helpers), the record checks of 11.2 over files, the overlay purity test of 11.5.
 - `internal/calibration/testdata/records/{valid,invalid}/` (the inputs of the record tests) and `testdata/calibration/`: `README.md` (the grammar and the layout) and the fixture of the dry run (`dryrun.shape.txt`, outside every `<pack>/` directory). No stage record: nothing has run (N-027).
 - `experiment/calibration_dry_test.go` (package `experiment_test`): the dry run of 11.4, legs A and B, skipped with `-short`.

@@ -1023,8 +1023,8 @@
 //     rule (spec-calibration.md 5.2).
 //   - Screened in: said of a knob whose one-at-a-time screen moved a measure enough to be searched in
 //     the explore (spec-calibration.md 7.2).
-//   - Dormant: said of a knob whose screen moved no measure; it is not searched in that stage (spec-
-//     calibration.md 10.4).
+//   - Dormant: said of a D knob whose damper counter did not fire in any run of a point; no fact can
+//     calibrate it, so it is left at its default and recorded (spec-calibration.md 10.4).
 //   - Alias group: knobs whose effects on the measures cannot be told apart, so the facts see one
 //     lever (spec-calibration.md 10.2).
 //   - Composite (knob): one factor that moves several knobs together as one lever (spec-calibration.md

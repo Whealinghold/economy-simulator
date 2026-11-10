@@ -2095,7 +2095,7 @@ PR description.
 
 - **Areas:** CLB, EXP
 - **Raised:** 2026-11-09, plan 2-21 Phase 1.
-- **Note:** The parameter-owner table spells the scope of the world-level parameters `WorldParams` (the Go type of `Config.World`); the registry keys, the records, the experiments and `[world]` spell it `World` (`World.CostFloor`). Plan 2-21 kept the registry's spelling and made the coverage check treat the two as one scope (`spec-calibration.md` 4.7; `registry.py` `SCOPE_ALIAS`, and the Go registry test). Reverse by respelling the 60 `World.` keys of the registry, or by changing the README rows to `World`; either removes the alias.
+- **Note:** The parameter-owner table spells the scope of the world-level parameters `WorldParams` (the Go type of `Config.World`); the registry keys, the records, the experiments and `[world]` spell it `World` (`World.CostFloor`). Plan 2-21 kept the registry's spelling and made the coverage check treat the two as one scope (`spec-calibration.md` 4.7; `registry.py` `SCOPE_ALIAS`, and the Go registry test). Reverse by respelling the `World.` keys of the registry (42 knob rows and the fields of five groups), or by changing the README rows to `World`; either removes the alias.
 
 ## Read receipt
 
@@ -2109,4 +2109,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 6eb4d123b82cb15818aae75f
+NOTES-TAG: 43f27f98815aaa7125bac6ab

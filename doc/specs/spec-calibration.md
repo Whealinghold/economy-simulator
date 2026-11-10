@@ -102,7 +102,7 @@ Out of scope, with the owner:
 | 10 | The product of a calibration is an **overlay document** that holds only K and D keys, layered after the pack, and a plain-text **record** with the hash, the experiment, the results and the bands met | 8, 9 |
 | 11 | What transfers between settings is the procedure, the classes, the conditions of the specs and the regime thresholds. Defaults and the priors of STY transfer as **starting points**. A band value, a stability record, a warm start and a calibration overlay **do not** | 9.3 |
 | 12 | Sensitivity is **measured** by one-at-a-time elasticities against the signs of the registry; a mismatch is a **finding**. Aliases and gauges are declared; a knob whose damper never acted is **dormant** and is left alone | 10 |
-| 13 | CLB adds **no public package** in version 1: the pure helpers live in `internal/calibration`, which imports the standard library only (and `internal/design` for the overlay text); the loop is the consumer's, with `experiment` and `indicator`. Promoting `internal/verdict` and `internal/calibration` is open question 1 | 12, 22 |
+| 13 | CLB adds **no public package** in version 1: the pure helpers live in `internal/calibration`, which imports the standard library, `internal/checked` (the checked arithmetic) and `internal/design` (the overlay text); the loop is the consumer's, with `experiment` and `indicator`. Promoting `internal/verdict` and `internal/calibration` is open question 1 | 12, 22 |
 
 ## 3. What calibration is and is not
 
@@ -2765,7 +2765,7 @@ search blocks, 7.3.1 `in sample`, 10.2 working thresholds; REF 4.1 `calibrated/`
 | `doc/documentation_index.md` | rows | `specs/spec-calibration.md` and `specs/models/clb/` |
 | `doc/specs/models/README.md` | contents | a `clb/` row: `registry.py`, `refs.py`, `grid.py`, `stop.py`, `cost.py`, `choose.py`, `worked.py` with outputs |
 | `doc/notes.md` | open notes, index | N-015 updated (20); the new notes of 20; the index; a fresh tag |
-| `doc/rules/architecture.md` | 2.6 | add `internal/calibration/` (the grid, the choice, the alias test, the record and the overlay over primitive values; standard library and `internal/design`), created at the first code that needs it (2.1); a fresh read-receipt tag |
+| `doc/rules/architecture.md` | 2.6 | add `internal/calibration/` (the grid, the choice, the alias test, the record and the overlay over primitive values; standard library, `internal/checked` and `internal/design`), created at the first code that needs it (2.1); a fresh read-receipt tag |
 | `AGENTS.md` | Layout | the same line |
 | `doc.go` (glossary) | | the terms above |
 | `doc/specs/spec-config.md` | 9.2, 9.3 | 9.2: the registry has a second reader (CLB 11.1); the solve options are rows of CLB's registry (FR-CFG-047 stays); 9.3: a line "the solve options are CLB registry rows" |
@@ -2786,7 +2786,7 @@ search blocks, 7.3.1 `in sample`, 10.2 working thresholds; REF 4.1 `calibrated/`
 
 | Concern | Home |
 |---------|------|
-| the grid and neighbours, the seed blocks, the choice, the Pareto set, the alias test, the record's render and parse, the overlay renderer: pure functions over primitive values | `internal/calibration/` (`grid.go`, `choose.go`, `alias.go`, `record.go`), standard library and `internal/design` only; unit tests in the package |
+| the grid and neighbours, the seed blocks, the choice, the Pareto set, the alias test, the record's render and parse, the overlay renderer: pure functions over primitive values | `internal/calibration/` (`grid.go`, `choose.go`, `alias.go`, `record.go`), standard library, `internal/checked` and `internal/design` only; unit tests in the package |
 | the registry test, the record checks and the overlay purity test | the package `internal/calibration` (`registry_test.go`, `record_test.go`), reading `../../doc/specs/spec-calibration.md`, `README.md` and `spec-config.md`, and `../../testdata/chains/calibrated/`, by relative path (testing.md 10.4) |
 | the fuzz corpora of the parser, the grid and the choose function | `internal/calibration/testdata/fuzz/` (testing.md 7.5) |
 | the dry run | `experiment`'s external test package (`experiment/calibration_dry_test.go`, package `experiment_test`), skipped with `-short` |
