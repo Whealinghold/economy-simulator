@@ -22,15 +22,16 @@ type Outcome struct {
 	// (FR-VIA-012).
 	LabourShareBP  int64
 	HasLabourShare bool
-	// Price is the dual of each goods row, in units of the basket: the
+	// Price is the dual of each goods row (by commodity, or by region and
+	// commodity, row r*Commodities+c, with lanes), in units of the basket: the
 	// normalisation sum p D = 1 holds when lambda* is positive.
 	Price []Frac
 	// Wage is the dual of each region's labour row.
 	Wage []Frac
 	// Rent is the dual of each activity's capacity row, 0 without one.
 	Rent []Frac
-	// Flow is the executions per tick of each activity at lambda = 1, x* over
-	// lambda* (D120); all 0 when lambda* is 0.
+	// Flow is the executions per tick of each activity, then of each lane, at
+	// lambda = 1, x* over lambda* (D120); all 0 when lambda* is 0.
 	Flow []Frac
 	// ResRent is the dual of each resource row (Model.Resources order), in the
 	// unit of Wage: the value of one more unit of draw a tick, 0 when the row is
@@ -46,7 +47,7 @@ type Outcome struct {
 	Active []bool
 	// CapTight reports that an activity's capacity row holds with equality.
 	CapTight []bool
-	// ZeroPriced lists, ascending, the commodities whose price is 0 (FR-VIA-019).
+	// ZeroPriced lists, ascending, the goods rows whose price is 0 (FR-VIA-019).
 	ZeroPriced []int
 	// Degenerate and Alternative are the diagnostics of the final basis
 	// (FR-VIA-019).
@@ -76,8 +77,8 @@ func SolveModel(ctx context.Context, m Model, maxPivots int64) (Outcome, error) 
 func read(m Model, p Programme, l Layout, res Result) (Outcome, error) {
 	o := Outcome{
 		Lambda:      res.Primal[l.Lambda],
-		Price:       res.Dual[:l.Commodities],
-		Wage:        res.Dual[l.Commodities : l.Commodities+l.Regions],
+		Price:       res.Dual[:l.GoodsRows],
+		Wage:        res.Dual[l.GoodsRows : l.GoodsRows+l.Regions],
 		Degenerate:  res.Degenerate,
 		Alternative: res.Alternative,
 		Pivots:      res.Pivots,
@@ -100,6 +101,9 @@ func read(m Model, p Programme, l Layout, res Result) (Outcome, error) {
 		}
 		o.Rent = append(o.Rent, rent)
 		o.CapTight = append(o.CapTight, tight)
+	}
+	for i := range m.Lanes {
+		o.Flow = append(o.Flow, flow(frat(res.Primal[len(m.Activities)+i]), lam))
 	}
 	o.readResources(m, l, res, lam)
 	return o, o.round()

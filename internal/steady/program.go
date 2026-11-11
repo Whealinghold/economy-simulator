@@ -39,14 +39,23 @@ type Model struct {
 	// activity draws on, in the order given (spec-resources.md 11.1). With none the
 	// programme is the one without the module.
 	Resources []Endow
+	// Lanes are the routes between regions (spec-viability.md 9.4). With none the
+	// programme is the autarky or the collapsed free-trade form; with some, the goods
+	// rows are one for each (region, commodity), the row r*Commodities+c, Fixed is
+	// indexed the same way and Upkeep stays per region.
+	Lanes []Lane
 }
 
-// Layout tells where the rows and columns of a built programme are: goods rows
-// 0..Commodities-1, then one labour row per region, then the capacity rows, then
-// the resource rows.
+// Layout tells where the rows and columns of a built programme are: the goods
+// rows (Commodities of them, or Regions*Commodities with lanes), then one labour
+// row per region, then the capacity rows, then the resource rows.
 type Layout struct {
 	Commodities int
-	Regions     int
+	// GoodsRows is the number of goods rows; Lanes the number of lane columns, which
+	// sit between the activities and lambda.
+	GoodsRows int
+	Lanes     int
+	Regions   int
 	// ResRow is the row of each Model.Resources entry and ResPhi its sustainable
 	// draw. A row with a positive draw is written divided by it (coefficients d /
 	// Phi, right-hand side 1), so a right-hand side never has to fit int64; its dual
@@ -61,7 +70,24 @@ type Layout struct {
 }
 
 // LabourRow returns the labour row of region r.
-func (l Layout) LabourRow(r int) int { return l.Commodities + r }
+func (l Layout) LabourRow(r int) int { return l.GoodsRows + r }
+
+// GoodsRow returns the goods row of commodity c in region r: c in the collapsed
+// and autarky forms, r*Commodities+c in the lane form.
+func (l Layout) GoodsRow(r, c int) int {
+	if l.Lanes > 0 {
+		return r*l.Commodities + c
+	}
+	return c
+}
+
+// goodsRows returns the number of goods rows of m.
+func (m Model) goodsRows() int {
+	if len(m.Lanes) > 0 {
+		return len(m.Regions) * m.Commodities
+	}
+	return m.Commodities
+}
 
 // hasCap reports whether the activity has a capacity row: J * d < TicksPerYear.
 func hasCap(a Activity, year int64) bool {
@@ -72,13 +98,13 @@ func hasCap(a Activity, year int64) bool {
 // rows are the goods, the regions, the capacity rows and the resource rows;
 // columns the activities, lambda and one slack per row (D126).
 func Size(m Model) (rows, cols int) {
-	rows = m.Commodities + len(m.Regions) + len(m.Resources)
+	rows = m.goodsRows() + len(m.Regions) + len(m.Resources)
 	for _, a := range m.Activities {
 		if hasCap(a, m.Year) {
 			rows++
 		}
 	}
-	return rows, len(m.Activities) + 1 + rows
+	return rows, len(m.Activities) + len(m.Lanes) + 1 + rows
 }
 
 // ratio reduces num/den and reports whether both parts fit int64.
@@ -102,6 +128,9 @@ func checkModel(m Model) error {
 	if err := checkActivities(m); err != nil {
 		return err
 	}
+	if err := checkLanes(m); err != nil {
+		return err
+	}
 	if m.Phi.Den <= 0 || m.Phi.Num < 0 || m.Year < 1 {
 		return ErrBadProgramme
 	}
@@ -111,7 +140,7 @@ func checkModel(m Model) error {
 // checkFixed returns ErrBadProgramme for a fixed term with no goods row or a bad
 // denominator, or a negative household count.
 func checkFixed(m Model) error {
-	if len(m.Fixed) > m.Commodities {
+	if len(m.Fixed) > m.goodsRows() {
 		return ErrBadProgramme
 	}
 	for _, f := range m.Fixed {
@@ -205,7 +234,7 @@ func Build(m Model) (Programme, Layout, error) {
 	if err := checkModel(m); err != nil {
 		return Programme{}, Layout{}, err
 	}
-	l := Layout{Commodities: m.Commodities, Regions: len(m.Regions), Lambda: len(m.Activities)}
+	l := Layout{Commodities: m.Commodities, GoodsRows: m.goodsRows(), Lanes: len(m.Lanes), Regions: len(m.Regions), Lambda: len(m.Activities) + len(m.Lanes)}
 	rows, _ := Size(m)
 	p := Programme{Rows: rows, RHS: make([]Ratio, rows)}
 	for i := range p.RHS {
@@ -214,7 +243,7 @@ func Build(m Model) (Programme, Layout, error) {
 	if err := writeFixed(p.RHS, m.Fixed); err != nil {
 		return Programme{}, Layout{}, err
 	}
-	nextCap := m.Commodities + len(m.Regions)
+	nextCap := l.GoodsRows + len(m.Regions)
 	if err := writeLabour(p.RHS, m, l); err != nil {
 		return Programme{}, Layout{}, err
 	}
@@ -237,6 +266,9 @@ func Build(m Model) (Programme, Layout, error) {
 			col.Entries = append(col.Entries, Entry{Row: row, Val: Ratio{Num: 1, Den: 1}})
 		}
 		p.Cols = append(p.Cols, col)
+	}
+	for _, ln := range m.Lanes {
+		p.Cols = append(p.Cols, laneColumn(ln, l))
 	}
 	lam, err := lambdaColumn(m)
 	if err != nil {
@@ -302,10 +334,20 @@ func writeFixed(rhs, fixed []Ratio) error {
 }
 
 // lambdaColumn builds the column of the surplus factor: cost 1 and the total
-// upkeep D(c, P) in each goods row.
+// upkeep D(c, P) in each goods row, or D(c, r) in the row of each region with
+// lanes.
 func lambdaColumn(m Model) (Column, error) {
+	l := Layout{Commodities: m.Commodities, Lanes: len(m.Lanes)}
 	col := Column{Cost: Ratio{Num: 1, Den: 1}}
 	for c := 0; c < m.Commodities; c++ {
+		if l.Lanes > 0 {
+			for r, rg := range m.Regions {
+				if c < len(rg.Upkeep) && rg.Upkeep[c] != 0 {
+					col.Entries = append(col.Entries, Entry{Row: l.GoodsRow(r, c), Val: Ratio{Num: rg.Upkeep[c], Den: 1}})
+				}
+			}
+			continue
+		}
 		total := new(big.Int)
 		for _, rg := range m.Regions {
 			if c < len(rg.Upkeep) {
@@ -328,7 +370,7 @@ func lambdaColumn(m Model) (Column, error) {
 func activityColumn(a Activity, l Layout) Column {
 	col := Column{Cost: Ratio{Num: 0, Den: 1}}
 	for _, n := range a.Net() {
-		col.Entries = append(col.Entries, Entry{Row: n.Commodity, Wide: new(big.Rat).Neg(n.Val)})
+		col.Entries = append(col.Entries, Entry{Row: l.GoodsRow(a.Region, n.Commodity), Wide: new(big.Rat).Neg(n.Val)})
 	}
 	col.Entries = append(col.Entries, Entry{Row: l.LabourRow(a.Region), Val: Ratio{Num: a.Duration, Den: 1}})
 	return col
