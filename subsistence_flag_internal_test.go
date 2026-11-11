@@ -357,7 +357,7 @@ func TestDrops_Relocation(t *testing.T) {
 	t.Parallel()
 	w := newForage(t, 1, func(c *Config) {
 		r := DefaultRegion()
-		r.ID, r.ReferenceBasket = "away", 3_000
+		r.ID, r.ReferenceBasket = "away", 2_000
 		c.Regions = append(c.Regions, r)
 	})
 	w.sub.grow(len(w.agents))
