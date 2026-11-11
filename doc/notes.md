@@ -771,7 +771,7 @@ PR description.
 
 - **Areas:** VIA, REF
 - **Raised:** 2026-10-10, `spec-external-sector.md` 12.1.
-- **Note:** VIA adds optional import and export columns per gate and side (bounded by `Capacity` times the mean window), priced at the quotes at tick 0 with the gate scale, and a trade row (imports at the quotes not above exports at the quotes); EXT supplies `Lines()` as a pure read of the configuration. An import counts as a source in the gate regions for V1. REF builds an external overlay (EXT-S5, S55; N-084).
+- **Note:** VIA adds optional import and export columns per gate and side (bounded by `Capacity` times the mean window), priced at the quotes at tick 0 with the gate scale, and a trade row (imports at the quotes not above exports at the quotes); EXT supplies `Lines()` as a pure read of the configuration. An import counts as a source in the gate regions for V1. REF builds an external overlay (EXT-S5, S55).
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for EXT. The programme is closed; the type keeps no import column.
 
 ### N-118 One job per agent limits the subsistence floor
@@ -2235,4 +2235,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c0969fdb3a03c37be6273297
+NOTES-TAG: e09397561f658dc677eb38a6

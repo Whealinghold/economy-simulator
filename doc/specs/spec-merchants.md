@@ -1169,7 +1169,7 @@ T = max( WelfareWindow, WindowCycles * max( longest Duration, Kmax ) )
 
 with `Kmax` the longest travel time over the configured graph, at construction, of the self-carried modes in `Params.Modes`.
 The merchant's trip is its job and `Kmax` is its duration, so the same derivation (D29) covers it. This is a change to WEL 2.3.3
-and to the warning `trip_longer_than_window` of TRN 12.2, which stays for roles with no block; WEL adopted it (`spec-welfare-and-wages.md` 2.3.3, FR-WEL-009). The cost is the one WEL names for a long job: the merchant's ratio reacts slowly. **Built (plan 2-26 D704):** `merchantTripTicks` in `contract.go`, called by one guarded line of `longestDuration` in `validate.go`; a hired-only mode is not counted, and an invalid graph gives 0 (FR-WEL-009).
+and to the warning `trip_longer_than_window` of TRN 12.2, which stays for roles with no block; WEL adopted it (`spec-welfare-and-wages.md` 2.3.3, FR-WEL-009). The cost is the one WEL names for a long job: the merchant's ratio reacts slowly. **Built (plan 2-26 D704):** `merchantTripTicks` in `contract.go`, called by `longestDuration` and `longestDurationAny` in `validate.go` (one hook each, so the window and the warnings agree); a hired-only mode is not counted, and an invalid graph gives 0 (FR-WEL-009).
 
 ### 12.4 MIG, SUB, SPN, EST and EXT
 
