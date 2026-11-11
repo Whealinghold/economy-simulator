@@ -77,7 +77,7 @@ func TestMerchantTripTicks_Cases(t *testing.T) {
 			if tt.mut != nil {
 				tt.mut(&c)
 			}
-			if got := merchantTripTicks(&c, brokerOf(t, &c)); got != tt.want {
+			if got := merchantTripTicks(&c, newLookup(&c), brokerOf(t, &c)); got != tt.want {
 				t.Errorf("merchantTripTicks(broker) = %d, want %d", got, tt.want)
 			}
 		})
@@ -85,7 +85,7 @@ func TestMerchantTripTicks_Cases(t *testing.T) {
 	t.Run("role without a block", func(t *testing.T) {
 		t.Parallel()
 		c := windowConfig(40, 1, "foot")
-		if got := merchantTripTicks(&c, &c.Roles[0]); got != 0 {
+		if got := merchantTripTicks(&c, newLookup(&c), &c.Roles[0]); got != 0 {
 			t.Errorf("merchantTripTicks(miller) = %d, want 0 (no merchant block)", got)
 		}
 	})
@@ -190,7 +190,7 @@ func TestMerchantTripTicks_Overflow(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := windowConfig(tt.dist, tt.speed, "foot")
-			got := merchantTripTicks(&c, brokerOf(t, &c))
+			got := merchantTripTicks(&c, newLookup(&c), brokerOf(t, &c))
 			if got < 1 || got > MaxTravelTicks {
 				t.Errorf("merchantTripTicks(distance %d, speed %d) = %d, want 1 to %d", tt.dist, tt.speed, got, int64(MaxTravelTicks))
 			}
@@ -223,5 +223,30 @@ func TestWindow_MerchantRoleOnSnapshot(t *testing.T) {
 	}
 	if got["broker"] != 80 || got["miller"] != 30 {
 		t.Errorf("Snapshot().Roles windows = %v, want broker 80 and miller 30", got)
+	}
+}
+
+// TestMerchantTripTicks_ZeroLookupAndCache verifies that a zero lookup (no cache) still
+// answers, and that a lookup built once answers every role of the configuration from one
+// pass over the graph: the second answer is the first, even after the edges change.
+//
+// Guard: the cache is the defence against MaxRoles merchant roles each rebuilding a graph
+// of MaxRegions regions in the validator; a role asked twice must not walk the graph twice.
+//
+// Requirement: FR-WEL-009
+func TestMerchantTripTicks_ZeroLookupAndCache(t *testing.T) {
+	t.Parallel()
+	c := windowConfig(40, 1, "foot")
+	b := brokerOf(t, &c)
+	if got := merchantTripTicks(&c, lookup{}, b); got != 40 {
+		t.Errorf("merchantTripTicks(zero lookup) = %d, want 40", got)
+	}
+	lk := newLookup(&c)
+	if got := merchantTripTicks(&c, lk, b); got != 40 {
+		t.Fatalf("merchantTripTicks = %d, want 40", got)
+	}
+	c.Edges = nil // the lookup is valid while c is unchanged: the cached answer stands
+	if got := merchantTripTicks(&c, lk, b); got != 40 {
+		t.Errorf("merchantTripTicks (second ask) = %d, want the cached 40", got)
 	}
 }

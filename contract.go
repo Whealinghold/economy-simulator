@@ -49,25 +49,53 @@ func modeIndex(c *Config) map[string]*Mode {
 // (FR-MER-003), and a speed outside its bound has no travel time (tripWarnings does the
 // same). It is 0 for a role with no block, with the transport module off, with no path or
 // when the graph does not build: the rules that blame those causes run first.
-func merchantTripTicks(c *Config, r *Role) int64 {
+func merchantTripTicks(c *Config, lk lookup, r *Role) int64 {
 	if r.Merchant == nil || c.Modules.Transport == nil {
 		return 0
 	}
-	g, err := NewGraph(*c)
-	if err != nil {
-		return 0
-	}
+	kmax := lk.trips.byMode(c)
 	var longest int64
 	for i := range c.Modules.Transport.Modes {
-		md := &c.Modules.Transport.Modes[i]
-		if !md.carriedBy(r.Merchant) {
-			continue
-		}
-		if _, k, ok := tripExtremes(g, md.Speed); ok {
-			longest = max(longest, k)
+		if md := &c.Modules.Transport.Modes[i]; md.carriedBy(r.Merchant) {
+			longest = max(longest, kmax[i])
 		}
 	}
 	return min(longest, MaxTravelTicks)
+}
+
+// tripCache holds the longest travel time of each mode of a configuration, built on first
+// use: the validator asks once per merchant role and several times per rule, and each
+// answer is a pass over the region graph (up to MaxRoles * MaxRegions^2 pairs unmemoised).
+// A lookup copies the pointer, so every copy shares the answer; the validator is single-
+// threaded, so no lock.
+type tripCache struct {
+	built bool
+	kmax  []int64
+}
+
+// byMode returns the longest travel time of each mode of c.Modules.Transport, 0 for a mode
+// with no travel time (a speed outside its bound, no path) or when the graph does not
+// build; indexed like Modes. c.Modules.Transport must not be nil.
+func (tc *tripCache) byMode(c *Config) []int64 {
+	if tc == nil { // a zero lookup: compute, do not keep
+		tc = &tripCache{}
+	}
+	if tc.built {
+		return tc.kmax
+	}
+	tc.built = true
+	modes := c.Modules.Transport.Modes
+	tc.kmax = make([]int64, len(modes))
+	g, err := NewGraph(*c)
+	if err != nil {
+		return tc.kmax
+	}
+	for i := range modes {
+		if modes[i].Speed >= 1 && modes[i].Speed <= MaxSpeed {
+			_, tc.kmax[i], _ = tripExtremes(g, modes[i].Speed)
+		}
+	}
+	return tc.kmax
 }
 
 // carriedBy reports whether the merchant of the block carries on this mode itself and the

@@ -742,6 +742,7 @@ type lookup struct {
 	override  map[[2]string]Price  // reference-price overrides by (region, commodity)
 	demand    *demandIndex         // the demand module's tables by ID, nil when it is off
 	resource  map[string]*Resource // the resources module's definitions by ID, nil when it is off
+	trips     *tripCache           // the longest travel time of each transport mode (merchantTripTicks)
 }
 
 // price returns the effective reference price of a declared commodity in a
@@ -763,6 +764,7 @@ func newLookup(c *Config) lookup {
 		override:  overrides(c.RegionPrices),
 		demand:    newDemandIndex(c),
 		resource:  resourceIndex(c),
+		trips:     &tripCache{},
 	}
 	for i := range c.Commodities {
 		if e := &c.Commodities[i]; l.commodity[e.ID] == nil {
@@ -875,7 +877,7 @@ func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 		longest = max(longest, rc.Duration)
 	}
 	if r.Merchant != nil { // a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009)
-		longest = max(longest, merchantTripTicks(c, r))
+		longest = max(longest, merchantTripTicks(c, lk, r))
 	}
 	return longest, ok
 }
@@ -1234,7 +1236,7 @@ func windowField(c *Config, lk lookup, r *Role) string {
 			recipes = max(recipes, rc.Duration)
 		}
 	}
-	if merchantTripTicks(c, r) > recipes {
+	if merchantTripTicks(c, lk, r) > recipes {
 		return "merchant"
 	}
 	return "recipes"
@@ -2111,7 +2113,7 @@ func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
 		}
 	}
 	if r.Merchant != nil { // the same hook as longestDuration, so the warnings agree with the window
-		longest = max(longest, merchantTripTicks(c, r))
+		longest = max(longest, merchantTripTicks(c, lk, r))
 	}
 	return longest
 }
