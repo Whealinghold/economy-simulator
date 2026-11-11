@@ -320,6 +320,33 @@ func TestBuild_RejectsBrokenInput(t *testing.T) {
 	}
 }
 
+// TestBuild_RefusesOversizedInputBeforeAllocating verifies that a hostile
+// region count or edge list is refused before any table is allocated.
+//
+// Requirement: FR-REG-029
+//
+// Guard: the tables take n*n values, so a check made after the allocation
+// would let a caller exhaust memory with one call.
+func TestBuild_RefusesOversizedInputBeforeAllocating(t *testing.T) {
+	for name, c := range map[string]struct {
+		n    int
+		open []Edge
+	}{
+		"count beyond the bound": {MaxRegions + 1, nil},
+		"count beyond int32":     {math.MaxInt32 + 1, nil},
+		"more edges than pairs":  {2, []Edge{{0, 1, 1}, {1, 0, 1}, {1, 0, 1}}},
+	} {
+		allocs := testing.AllocsPerRun(20, func() {
+			if _, err := Build(c.n, c.open); !errors.Is(err, ErrInvalid) {
+				t.Errorf("%s: err = %v, want ErrInvalid", name, err)
+			}
+		})
+		if allocs > 4 { // the error text only; a table is 7 slices
+			t.Errorf("%s: %v allocations, want only the error", name, allocs)
+		}
+	}
+}
+
 // TestBuild_AcceptsMaxRegions verifies that a graph of exactly MaxRegions
 // regions is built, with one component for each (no edge), and the last region
 // is addressable.
