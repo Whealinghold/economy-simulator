@@ -197,16 +197,17 @@ func TestBranch_ConfigCannotChange(t *testing.T) {
 	}
 }
 
-// TestBranch_VariantDiffersFromNone verifies that a variant that does something
-// reaches another digest than the none variant, which equals the uninterrupted
-// run. The variant's call is one extra Step of the world: a state change that
-// needs no INT call (SetYieldShocks is plan 2-17's; this test then uses it).
+// TestBranch_ShockVariantDiffersFromNone verifies that a variant that applies a
+// yield shock at the branch point reaches another digest than the none variant,
+// which equals the uninterrupted run.
 //
 // Requirement: FR-EXP-030, FR-EXP-031
-func TestBranch_VariantDiffersFromNone(t *testing.T) {
+func TestBranch_ShockVariantDiffersFromNone(t *testing.T) {
 	short(t)
 	e := branched(t, 2, 0)
-	e.Branch.Variants[1].Steps = []experiment.Step{{Tick: 2, Label: "extra tick", Do: func(w *economysim.World) error { return w.Step() }}}
+	e.Branch.Variants[1].Steps = []experiment.Step{{Tick: 2, Label: "shock", Do: func(w *economysim.World) error {
+		return w.SetYieldShocks([]economysim.YieldShock{{Region: 0, Recipe: 0, BP: 3_000}})
+	}}}
 	recs := runSweep(t, e)
 	want := runSweep(t, unbranched(e))[0]
 	if recs[0].Digest != want.Digest || recs[1].Digest == want.Digest || recs[1].Status != experiment.StatusOK {
