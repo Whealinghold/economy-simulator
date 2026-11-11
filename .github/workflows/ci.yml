@@ -18,7 +18,7 @@ permissions:
 # the label event get their own groups so neither cancels, nor is dropped for, an ordinary run.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || github.event.action == 'labeled' && 'label' || 'run' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
 
 env:
   GOTOOLCHAIN: local
@@ -53,7 +53,8 @@ jobs:
       - run: scripts/ci/arm64.sh
 
   full:
-    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full'))
+    # `opened` is left out: a PR opened with the label also fires `labeled`, which starts it once.
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full') && github.event.action != 'opened')
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:
