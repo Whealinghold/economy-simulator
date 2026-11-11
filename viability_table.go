@@ -104,10 +104,10 @@ func (s *viaSolve) programmeTable(p *viaProgramme) error {
 // upkeep costs nothing.
 func (s *viaSolve) scale(p *viaProgramme) (steady.Frac, bool) {
 	num, den := steady.Rat(0, 1), steady.Rat(0, 1)
-	for _, r := range p.regions {
+	for k, r := range p.regions {
 		num = num.Add(steady.Rat(int64(s.m.c.Regions[r].ReferenceBasket), 1).Mul(s.m.households[r], 1))
 		for ci, d := range s.m.upkeep[r] {
-			den = den.Add(p.pr.Price[ci].Mul(d, 1))
+			den = den.Add(p.price(k, ci).Mul(d, 1))
 		}
 	}
 	return num.Quo(den)
@@ -256,7 +256,7 @@ func (rc *regionCtx) prices() error {
 	rep := &rc.s.rep
 	for _, c := range rc.table {
 		cm := &rc.s.m.c.Commodities[c]
-		dual := rc.p.pr.Price[c]
+		dual := rc.p.price(rc.k, c)
 		ref := int64(rc.s.m.c.refPrice(rc.r, CommodityID(c)))
 		seed, p1, lifted, err := rc.s.seedPrice(dual, rc.scale, ref)
 		if err != nil {

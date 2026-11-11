@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/steady"
 )
 
 // This file is the test-only seam of the root package (architecture.md 10.2):
@@ -435,3 +437,12 @@ func RoleMoneyForTest(w *World, roles int) []int64 {
 
 // RelocateOnJourney runs the body of TestRelocate_OnJourney on one seed, for S83.
 func RelocateOnJourney(t *testing.T, seed uint64) { relocateOnJourney(t, seed) }
+
+// WantsTerm and LaneWantsTerm expose the fixed term of the wants of a programme
+// over some regions, in the collapsed and in the lane form (viability_lanes.go).
+func WantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) { return wantsTerm(c, regions) }
+
+// LaneWantsTerm is the lane form of WantsTerm.
+func LaneWantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) {
+	return laneWantsTerm(c, regions)
+}

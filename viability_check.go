@@ -247,6 +247,7 @@ func (m *viaModel) model(regions []RegionID, phi steady.Ratio) steady.Model {
 			md.Activities = append(md.Activities, act)
 		}
 	}
+	md.Lanes = m.lanesIn(regions)
 	md.Resources = m.sup.endows(regions, m.acts, m.seasons)
 	return md
 }

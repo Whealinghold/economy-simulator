@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/steady"
@@ -66,6 +67,7 @@ func TestBuild_LaneColumn(t *testing.T) {
 		{"no loss no labour", steady.Lane{From: 0, To: 1}, "-1", ""},
 		{"half lost", steady.Lane{From: 0, To: 1, LossBP: 5000, Labour: 2500}, "-1/2", "1/4"},
 		{"reverse direction", steady.Lane{From: 1, To: 0, LossBP: 9999, Labour: 10000}, "-1/10000", "1"},
+		{"smallest labour", steady.Lane{From: 0, To: 1, LossBP: 1, Labour: 1}, "-9999/10000", "1/10000"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -191,6 +193,7 @@ func TestBuild_LaneErrors(t *testing.T) {
 		{"negative labour", steady.Lane{From: 0, To: 1, Labour: -1}},
 		{"negative loss", steady.Lane{From: 0, To: 1, LossBP: -1}},
 		{"loss of everything", steady.Lane{From: 0, To: 1, LossBP: 10000}},
+		{"loss past everything", steady.Lane{From: 0, To: 1, LossBP: 10001}},
 	}
 	for _, tt := range bad {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,12 +214,15 @@ func TestBuild_LaneErrors(t *testing.T) {
 			t.Errorf("Build(3 fixed terms, 2 rows) error = %v, want ErrBadProgramme", err)
 		}
 	})
-	for _, ln := range []steady.Lane{{From: 0, To: 2}, {From: -1, To: 1}, {From: 0, To: 1, Commodity: 1}} {
+	// 2 regions and 1 commodity: an index equal to the count is out of range too.
+	outside := []steady.Lane{{From: 0, To: 2}, {From: 2, To: 0}, {From: -1, To: 1}, {From: 0, To: -1}, {From: 0, To: 5}, {From: 5, To: 0},
+		{From: 0, To: 1, Commodity: 1}, {From: 0, To: 1, Commodity: 4}, {From: 0, To: 1, Commodity: -1}}
+	for _, ln := range outside {
 		t.Run(fmt.Sprintf("out of range %+v", ln), func(t *testing.T) {
 			t.Parallel()
 			defer func() {
-				if recover() == nil {
-					t.Errorf("Build(%+v) did not panic, want a panic for a lane out of range", ln)
+				if got := fmt.Sprint(recover()); !strings.Contains(got, "lane") {
+					t.Errorf("Build(%+v) panic = %q, want the lane invariant message", ln, got)
 				}
 			}()
 			_, _, _ = steady.Build(carrier(ln))
@@ -299,5 +305,42 @@ func TestSolve_LanesOracleModel(t *testing.T) {
 	}
 	if solved < 50 {
 		t.Errorf("only %d of 200 generated models solved, want at least 50 so the oracle is exercised", solved)
+	}
+}
+
+// TestSolve_LaneDualsWithinCost verifies, in exact arithmetic over 200 generated
+// models with lossy lanes that cost labour, that the duals price every lane
+// within its cost, p[To] * (10 000 - loss) / 10 000 <= p[From] + w[From] * labour
+// / 10 000, with equality for a lane that carries a flow (complementary
+// slackness), which is the property of spec-viability.md 9.6.
+//
+// Requirement: FR-VIA-062
+func TestSolve_LaneDualsWithinCost(t *testing.T) {
+	t.Parallel()
+	checked := 0
+	for seed := uint64(1); seed <= 200; seed++ {
+		_, m := randomChain(seed)
+		r := laneRNG(seed * 7919)
+		for i := range m.Lanes {
+			m.Lanes[i].Labour, m.Lanes[i].LossBP = r.next(5000), r.next(5000)
+		}
+		o, err := steady.SolveModel(context.Background(), m, 100_000)
+		if err != nil || fracRat(o.Lambda).Sign() == 0 {
+			continue
+		}
+		for i, ln := range m.Lanes {
+			to := new(big.Rat).Mul(fracRat(o.Price[ln.To*m.Commodities+ln.Commodity]), big.NewRat(10000-ln.LossBP, 10000))
+			from := new(big.Rat).Add(fracRat(o.Price[ln.From*m.Commodities+ln.Commodity]),
+				new(big.Rat).Mul(fracRat(o.Wage[ln.From]), big.NewRat(ln.Labour, 10000)))
+			c := to.Cmp(from)
+			active := fracRat(o.Flow[len(m.Activities)+i]).Sign() > 0
+			if c > 0 || (c < 0 && active) {
+				t.Errorf("seed %d lane %+v: p[To] * (1 - loss) = %v, p[From] + w * labour = %v, flow active %v, want <= and equal when active", seed, ln, to, from, active)
+			}
+			checked++
+		}
+	}
+	if checked < 200 {
+		t.Errorf("only %d lanes checked, want at least 200 so the property is exercised", checked)
 	}
 }
