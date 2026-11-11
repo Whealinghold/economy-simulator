@@ -466,7 +466,7 @@ func enterPlan(n int64) Decision {
 // is 25 000 - 21 000 = 4 000, flows births 14 000 and start_money 7 000, the
 // households rise from 4 to 7 and the agents from 3 to 4.
 //
-// Requirement: FR-SPN-007, FR-SPN-008, FR-SPN-027, FR-SPN-034, FR-SPN-044, FR-SPN-045, FR-AGT-005, FR-AGT-007, FR-LED-036
+// Requirement: FR-SPN-007, FR-SPN-008, FR-SPN-027, FR-SPN-034, FR-SPN-044, FR-SPN-045, FR-AGT-005, FR-AGT-007, FR-LED-036, FR-SCL-014
 func TestExecute_EnterIntoAnExistingAgentAndIntoANewAgent(t *testing.T) {
 	t.Parallel()
 	t.Run("into an existing agent", func(t *testing.T) {
