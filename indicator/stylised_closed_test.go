@@ -336,7 +336,7 @@ func TestStylised_Judge(t *testing.T) {
 // has collapsed (N-312, N-314) is a finding in the log, never an edit to a
 // test.
 //
-// Requirement: FR-STY-020, FR-STY-021, FR-STY-022, FR-STY-023, FR-STY-026, FR-STY-027, FR-STY-028, FR-STY-032, FR-STY-033, FR-STY-041, FR-STY-042, FR-STY-043, FR-STY-044, FR-STY-048, FR-STY-049, FR-STY-082, FR-STB-007, FR-REF-026, FR-REF-027
+// Requirement: FR-STY-020, FR-STY-021, FR-STY-022, FR-STY-023, FR-STY-026, FR-STY-027, FR-STY-028, FR-STY-032, FR-STY-033, FR-STY-041, FR-STY-042, FR-STY-043, FR-STY-044, FR-STY-045, FR-STY-048, FR-STY-049, FR-STY-082, FR-STB-007, FR-REF-026, FR-REF-027
 func TestStylised_One_Closed(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

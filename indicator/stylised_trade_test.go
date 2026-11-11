@@ -456,7 +456,7 @@ func t02Facts(t testing.TB) *factSet {
 // TestStylised_Trade_T02 judges STY-T02 on `three` over four years with the trade
 // overlays: the occupation shares move toward the pooled census of free trade.
 //
-// Requirement: FR-STY-047, FR-STY-082
+// Requirement: FR-STY-051, FR-STY-082
 func TestStylised_Trade_T02(t *testing.T) {
 	t.Parallel()
 	requireTierN(t)
@@ -639,7 +639,7 @@ func quoteShare(r *stylisedRun) stat {
 // STY-T03 (the pull of a quote, a report row with no band: the decision input of
 // N-113).
 //
-// Requirement: FR-STY-038, FR-STY-039, FR-STY-082, FR-STY-009
+// Requirement: FR-STY-038, FR-STY-039, FR-STY-050, FR-STY-052, FR-STY-082, FR-STY-009
 func TestStylised_Open_S04T01T03(t *testing.T) {
 	t.Parallel()
 	requireTierN(t)
