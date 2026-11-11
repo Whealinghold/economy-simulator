@@ -250,3 +250,52 @@ func TestMerchantTripTicks_ZeroLookupAndCache(t *testing.T) {
 		t.Errorf("merchantTripTicks (second ask) = %d, want the cached 40", got)
 	}
 }
+
+// TestWindowFieldNamesTheTrip verifies that the out-of-bounds error and the window_extended
+// warning of a merchant whose trip sets the window blame the "merchant" block, and that a
+// role whose recipe sets it still blames "recipes".
+//
+// Arithmetic: WindowCycles 2, so a trip of 1 826 gives a window of 3 652 above
+// MaxWelfareWindow (3 650); a trip of 40 gives 80 against the base 30, a recipe of 25 gives 50.
+//
+// Requirement: FR-WEL-009
+func TestWindowFieldNamesTheTrip(t *testing.T) {
+	t.Parallel()
+	last := func(p []string) string { return p[len(p)-1] }
+	t.Run("error blames the merchant block", func(t *testing.T) {
+		t.Parallel()
+		c := windowConfig(1_826, 1, "foot")
+		var ve *ValidationError
+		if err := c.Validate(); !errors.As(err, &ve) || last(ve.Path) != "merchant" {
+			t.Errorf("Validate() = %v, want a ValidationError on the merchant field", err)
+		}
+	})
+	for _, tt := range []struct {
+		name   string
+		dist   int64
+		recipe int64
+		want   string
+	}{
+		{"warning blames the trip", 40, 0, "merchant"},
+		{"warning blames the recipe", 20, 25, "recipes"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := windowConfig(tt.dist, 1, "foot")
+			if tt.recipe > 0 {
+				c.Recipes[0].Duration = tt.recipe
+				b := brokerOf(t, &c)
+				b.Recipes = []string{"mill"}
+			}
+			for _, w := range c.Warnings() {
+				if w.Rule == "window_extended" && len(w.Path) > 1 && w.Path[1] == "broker" {
+					if last(w.Path) != tt.want {
+						t.Errorf("window_extended path = %v, want last segment %q", w.Path, tt.want)
+					}
+					return
+				}
+			}
+			t.Errorf("no window_extended warning for the broker in %v", c.Warnings())
+		})
+	}
+}
