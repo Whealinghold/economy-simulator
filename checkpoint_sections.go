@@ -67,7 +67,7 @@ type notBuiltSection struct {
 	gate string
 }
 
-// notBuiltSections names the sections 13 to 33, which the modules that own them
+// notBuiltSections names the sections 23 to 33, which the modules that own them
 // append. The test fails on a listed tag that has a row in checkpointSections and
 // on a tag of the spec that is neither built nor listed.
 var notBuiltSections = [...]notBuiltSection{
