@@ -15,7 +15,7 @@ fi
 
 arm_module() {
 	local m=$1
-	run_in "$m" go build ./... || return 1
+	run_in "$m" go build -o /dev/null ./... || return 1
 	run_in "$m" go vet ./... || return 1
 	if [ "$m" = . ]; then
 		run_in "$m" go test "${test_exec[@]}" -timeout 60m -run "$QUICK_PATTERN" ./...
