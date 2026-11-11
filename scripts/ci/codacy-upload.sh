@@ -48,7 +48,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 reporter=$work/codacy-coverage-reporter
 
-retry curl --fail --silent --show-error --proto =https --proto-redir =https --tlsv1.2 --max-time 120 --location --output "$reporter" "$REPORTER_URL"
+retry curl --fail --silent --show-error --proto =https --tlsv1.2 --max-time 120 --location --output "$reporter" "$REPORTER_URL"
 echo "$REPORTER_SHA512  $reporter" | sha512sum --check --quiet - || {
 	echo "codacy-upload: checksum of the downloaded reporter does not match the pinned one" >&2
 	exit 1
