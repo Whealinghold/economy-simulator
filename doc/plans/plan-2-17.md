@@ -122,7 +122,7 @@ Goal: one place for checks 1 to 4 of 3.2. Files: `errors.go`, `integration.go`, 
 2. `enter`, the typed `moduleOn` check (a closure per module name over `w.cfg.Modules`), `keyedOnce` (duplicate detection by sorted copy, no map), and the `argError` constructor (D544).
 3. Phase 2 adds no public call. The conformance harness `slotCase` (name, setter, module, entries, expected error per row of 5.1.3) is written here, empty, and Phases 5 appends its rows.
 
-Tests: `TestEnter_Order` (a step running beats a failed world beats a module off; FR-INT-001, 006; the case "inside a step" is an observer that calls the setter); `TestSentinels_Distinct` (the new texts differ from each other and from the ledger's; `errors_test.go` list); `TestArgError_Path` (renders `changes[2].bp`; FR-INT-005); `TestKeyedOnce` (FR-INT-003).
+Tests: `TestEnter_Order` (a step running beats a failed world beats a module off; FR-INT-001, 006; the case "inside a step" is an observer that calls the setter); `TestSentinels_IntegrationDistinct` (the new texts differ from each other and from the ledger's; `errors_test.go` list); `TestArgError_Path` (renders `changes[2].bp`; FR-INT-005); `TestKeyedOnce` (FR-INT-003).
 Exit check: Lizard on `integration.go`, coverage of the new functions.
 
 ### Phase 3: strategy table, `AddAgent`, `RemoveAgent`
@@ -161,7 +161,7 @@ Tests:
 - `TestDirect_AffordableNotChecked` (a bid the agent cannot pay is accepted by the call and rejected by the step with `insufficient_funds`) - FR-INT-010.
 - `TestDirect_NoJobLeavesWork` (intents without `Job`: the fallback's `Work` runs) - FR-INT-028.
 - `TestPositions_P19` (the position test of `tick_internal_test.go` and `checkRows` pass with the new entry; a world with no external agent records no P1.9 line, one with an external agent records `t=N P1.9` every tick) - testing.md 6.8.
-- `TestStep_AllocationsWithExternalAgent` (the baseline of `allocation_test.go` plus a constant measured in this phase) - NFR-INT-002.
+- `TestP19Directives_AllocatesNothing` (`integration_direct_internal_test.go`; the position allocates nothing with a sticky and a one-tick directive; built in place of `TestStep_AllocationsWithExternalAgent`) - NFR-INT-002.
 - `FuzzDirect` - NFR-INT-005.
 
 ### Phase 5: the slots
@@ -178,7 +178,7 @@ Tests:
 - `TestSlots_EventsCanonicalOrder` (a slice in reverse key order gives events in ascending key order; `Tick()` of the next step; before `TickStarted`) - FR-INT-004, FR-OBS-017.
 - `TestSlots_DefaultClears` (set then set to default: `Slots()` empty and `Checkpoint()` bytes equal a never-shocked world's) - FR-INT-048, 032.
 - `TestSetYieldShocks` (a job started afterwards reads it at P2.7; a running job keeps its pending output; event fields) - FR-INT-040.
-- `TestSetEdgeStatuses_Public`, `TestSetTransitFactors`, `TestSetFlowScales`, `TestSetBirthDeathScales` (default is the configured value), `TestSetCapacityRegenScales`, `TestAdjustEndowments`, `TestSetOutsideShocks` (each through the public call; the mechanism is the owner's, tested in its plan) - FR-INT-041 to 047.
+- `TestSetEdgeStatuses_Public`, `TestSetTransitFactors_Public`, `TestSetFlowScales_Public`, `TestSetBirthDeathScales` (default is the configured value), `TestSetCapacityRegenScales_Public`, `TestAdjustEndowments_Public`, `TestSetOutsideShocks_Public` (each through the public call; the mechanism is the owner's, tested in its plan) - FR-INT-041 to 047.
 - `TestSlots_RestoredEqualsOriginal` (set several, `Checkpoint`, `RestoreWorld`, `Slots()` equal) - FR-INT-032, 070.
 - `TestInStep_Calls` (every public mutating call from an observer returns `ErrInStep`, state unchanged) - FR-INT-001.
 - `FuzzSetters` (the nine setters and the adjustment, random entries) - NFR-INT-005.
@@ -233,7 +233,7 @@ Tests:
 
 Goal: the scenario helpers use the public calls and leg (b) runs. Files: `export_scenarios_test.go` (deleted), `scenario_helpers_test.go`, `scenario_s01_test.go`, `scenario_s04_test.go` (only if it calls the seam), `scenario_s28_test.go`, `scenario_s29_test.go`, `scenario_s48_test.go`, `scenario_s52_test.go` (each only where it calls the edge-status seam), `testdata/chains/scripts/s01b.toml` (new), `testdata/chains/expected/one.scenarios.txt`. Plan 1 has already changed these files for the race-aware seed count (`scenarioSeedCount`, `updateAllowed`); this phase edits after it and after plan 8's pack.
 
-1. `applyScript` calls `World.SetYieldShocks` (by the ID-to-index lookups it already has) and no longer imports the seam; `SetYieldShockForTest` and its file are deleted. `TestScenarioS01` and `TestScenarioS04` must produce the same series as before (the shock is the same state).
+1. `applyScript` calls `World.SetYieldShocks` (by the ID-to-index lookups it already has) and no longer imports the seam; `SetYieldShockForTest` and its file are deleted. `TestScenarioS01_FuelSupplyShock` and `TestScenarioS04_StapleShortage` must produce the same series as before (the shock is the same state).
 2. `scriptFrom` accepts `[[buyer]]` beside `[[shock]]` (tick, region, money, `buy = {commodity, quantity_share_bp, ticks}`) as REF 7.1.3 writes it. A `scriptStep` has a kind. A script with a table of neither kind is still an error.
 3. A new `s01b.toml` holds the leg (b) buyer: tick 400, region `north`, role `visitor`, money 2 000 000, `buy = { commodity = "fuel", quantity_share_bp = 500, ticks = 60 }`. `s01.toml` (leg (a)) is not changed: it keeps its `[[shock]]` tables only, so leg (a)'s series are unchanged (item 1). The legs run separately (REF S01).
 4. The harness applies a buyer at its tick: reads the mean volume of the market in the 100 ticks before (the observer already keeps `Volume`), computes the quantity as the share of it (at least 1), calls `AddAgent`, then `Direct` with a sticky directive `[{Commodity: fuel, Side: Bid, Quantity: q, Limit: the ceiling of the commodity's reference band}]` and a `Hold` of the visitor's other tradable commodities so that the fallback adds nothing; after `ticks` steps it calls `Direct` with an empty directive. The limit is the ceiling that `marketInterval` already restates, so the published price stays inside the band (FR-STB-008); the value is the harness's, not the library's (Phase 1 asks REF to say so).
@@ -267,7 +267,7 @@ Goal: the row is done. With the other agents' trees quiet:
 - Coverage at least 90% for the root and for `internal/ledger`.
 - `lizard -l go -C 10 -a 8 -L 100 -w integration.go agent.go market.go snapshot.go internal/ledger/<file with FundFits>`. The validator is table-driven so no function exceeds CCN 10; `integration.go` splits into continuation files (built: `integration_slots.go`, `integration_directive.go`, `integration_estate.go`) if it passes about 500 lines of code (N-243) or fails Lizard, after the supervisor has added them to `architecture.md` 2.6 and `AGENTS.md` (Phase 1); run Lizard on every one of them.
 - `gomu` for `internal/ledger` only, in Docker with `--cpus=4 --memory=16g --memory-swap=16g` and `GOMAXPROCS=4` (see `~/.claude/CLAUDE.md`); the root is not mutation-tested (not an `internal/` package).
-- `testdata/golden/off/` byte-equal to `HEAD` and `TestHashConfig_Reference` unchanged; `git diff --stat -- testdata/golden/off` empty.
+- `testdata/golden/off/` byte-equal to `HEAD` and `TestHashConfig_ReferencePinned` unchanged; `git diff --stat -- testdata/golden/off` empty.
 - The registry and catalogue tests with `YieldShocked` deleted from `notBuilt*` (tag 22 left `notBuiltSections` in plan 13).
 - Fuzz: `go test -fuzz=FuzzAddAgent -fuzztime=30s` and the same for `FuzzDirect`, `FuzzSetters`.
 - The fork-at-N tests run in the matrix of plan 2 D258.
@@ -381,7 +381,7 @@ Requirement-to-test table (testing.md 11). A requirement whose parts wait for a 
 | FR-INT-060, 061, 062 | `TestQueries_NoDrawNoStateNoEvent`, `TestQueries_Guards`, `TestAgents_Region`, `TestWarnings_SortedAndRestored` |
 | FR-INT-070 | `TestFork_ExternalAgent`, `TestScenarioS82_PlayerAndRestore`, `TestSlots_RestoredEqualsOriginal` |
 | NFR-INT-001 | `TestQueryAllocations` |
-| NFR-INT-002 | `TestStep_AllocationsWithExternalAgent` |
+| NFR-INT-002 | `TestP19Directives_AllocatesNothing` |
 | NFR-INT-003 | `import_guard_test.go` and `determinism_guard_test.go` (no goroutine, no `time.Now`, no package state) already scan every non-test file; `integration.go` is covered by them |
 | NFR-INT-004 | the conformance table includes a call at the configured maximum of keys; work is bounded by the slice |
 | NFR-INT-005 | `FuzzAddAgent`, `FuzzDirect`, `FuzzSetters` |
@@ -437,3 +437,5 @@ Differs from the plan:
 Behaviour added by the review rounds and not in the plan (each has its commit; the spec text is `spec-integration.md`, not this plan): `AddAgent` and `Relocate` derive the cost anchors first; `AddAgent` funds stock in commodity order; an external agent keeps its strategy but drops its mailbox and view on a role change; every removal cause drops the external agent's view and its P1.9 entry; `RemoveAgent` and `Relocate` drop the kept rumour view; the restore checks the mailbox, refuses a mailbox on an undirected external agent, holds an external agent to weight 1 and refuses one whose account is in an outside node; the spawner never uses an external agent as host of an entrant.
 
 Open after the build, for the owner (not decided by this plan): (a) `doc/roadmap-v1.md` row 17 still reads "plan written"; (b) no cap is stated on the number of external agents `AddAgent` may create or on the length of a setter slice beyond the owners' bounds (NFR-INT-004 bounds work by the slice); a consumer that loops `AddAgent` grows every later tick, so say whether INT needs a bound or leaves it to the consumer; (c) Risks 8 and 9 describe the same tag 22 sequencing and can be read as one; (d) Risk 5 (a call-script golden under `testdata/golden/`) still needs a rule edit before anyone creates one; (e) the notes N-296, N-289 (close) and N-290 (INT part settled) are for the supervisor to close in `doc/notes.md`.
+
+Audit 2026-11-11 (plan-audit against branch audit-2-17): every requirement FR-INT-001 to 070 and NFR-INT-001 to 005 has source and a named test; the plan's test names for the setter wrappers, the sentinel test, the P1.9 allocation test, `TestHashConfig_ReferencePinned` and the S01/S04 tests were corrected to the built names. No code or test change was needed.
