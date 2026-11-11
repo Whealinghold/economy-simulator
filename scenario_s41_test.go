@@ -19,7 +19,7 @@ const s41Ticks = 400
 // of the first endowment as a share of its capacity and the mean ratio; the
 // comparison with the plan of endowment.Plan and the bands are STY's.
 //
-// Requirement: FR-POP-022, FR-POP-037, FR-RES-024
+// Requirement: FR-POP-022, FR-POP-037, FR-RES-024, FR-REF-023
 //
 // Guard: a household removed or added without its draw following breaks the
 // identity of the endowment the audit checks.
