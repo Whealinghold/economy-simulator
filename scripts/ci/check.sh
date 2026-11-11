@@ -51,6 +51,7 @@ failed=()
 for m in $mods; do
 	check_fast "$m" || failed+=("$m")
 done
+# (The short run is a subset of R and so runs twice: that is the fail-fast order of testing.md 10.5.)
 # Gate R runs only when every module passed the fast stage, so a cheap failure never waits for it.
 if [ "${#failed[@]}" -eq 0 ]; then
 	for m in $mods; do
