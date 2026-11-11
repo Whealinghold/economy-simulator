@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 12b: transport lanes in the viability solver
 
-**Status: Proposed (2026-11-11).** Builds Phase 8 of plan 2-12, which was split out and left open (plan 2-12 is in git history: `git show 31e3a05^:doc/plans/plan-2-12.md`). Sequences [spec-viability.md](../specs/spec-viability.md) 7.1, 9.4, 9.6, FR-VIA-043, 044 and [spec-transport.md](../specs/spec-transport.md) 9.4, FR-TRN-041, under the contract of the stage plans: a plan decides nothing; the specs, the ADRs and `doc/rules/` decide, and where this plan and they disagree they win and the plan is corrected. Closes notes N-279, N-281 and N-326. The decisions below (L1 to L7) are the picks of the decision memo of the worker (`DEC-lanes.md`, in the supervisor scratchpad); Phase 1 writes them into the spec before any code, because N-326 says the spec lacks them.
+**Status: Built (2026-11-11), see the closing record at the end.** Builds Phase 8 of plan 2-12, which was split out and left open (plan 2-12 is in git history: `git show 31e3a05^:doc/plans/plan-2-12.md`). Sequences [spec-viability.md](../specs/spec-viability.md) 7.1, 9.4, 9.6, FR-VIA-043, 044 and [spec-transport.md](../specs/spec-transport.md) 9.4, FR-TRN-041, under the contract of the stage plans: a plan decides nothing; the specs, the ADRs and `doc/rules/` decide, and where this plan and they disagree they win and the plan is corrected. Closes notes N-279, N-281 and N-326. The decisions below (L1 to L7) are the picks of the decision memo of the worker (`DEC-lanes.md`, in the supervisor scratchpad); Phase 1 writes them into the spec before any code, because N-326 says the spec lacks them.
 
 Rule tags read for this plan: architecture=0052d4050fd8b5aa5325ae2e, observability=e7cfbd33b1620a09dc78dff7, testing=120890253bd2f6c110a015d2.
 
@@ -154,3 +154,14 @@ Additive: `Lane`, `WithLanes`, `Config.TransportLanes` are new exported names (a
 | new FR (components, Phase 1) | `TestSolve_LaneComponents`, `TestSolve_LaneGrouplessRegion` |
 | lane validation (spec-viability 9.4) | `TestSolve_LaneValidation`, `FuzzSolveLanes` |
 | FR-TRN-041 | `TestLabour_Exact` (built), `TestTransportLanes`, `TestTransportLanes_Errors`, `TestTransportLanes_FeedsSolver` |
+
+## Closing record (2026-11-11)
+
+Built in `stage-2-done-lanes`: Phase 1 `0d96f3e`; Phase 2 `bc2ff62`; Phase 3 `5d26555`, `102b636`; Phase 4 `Config.TransportLanes` in `transport_lanes.go` (`7cdc2ec`); Phase 5 the pack test `TestTransportLanes_PackTwoWorld`; Phase 6 this closure.
+
+- **Notes:** N-279, N-281 and N-326 are applied and removed: `spec-viability.md` 7.1, 9.4, 9.6 (FR-VIA-061 to 063), `spec-transport.md` 9.4, code in `internal/steady/lane.go`, `viability_lanes.go`, `transport_lanes.go`. N-180 (the risk loss) stays open at the seam `routeLossBP`.
+- **Roadmap:** the row of `transport.go` and `internal/transit` reads built.
+- **Dropped (L6):** `RelocateForTest` and `SetEdgeStatusesForTest`; nothing referenced them.
+- **Goldens:** no golden file or pinned hash was touched or regenerated.
+- **Tests added in Phase 4 and 5:** `TestTransportLanes`, `TestTransportLanes_Deterministic`, `TestTransportLanes_Errors`, `TestTransportLanes_FeedsSolver`, `TestTransportLanes_PackTwoWorld`, `TestCheapestHaulRecipe`, `TestTooManyLanes` (FR-TRN-041, FR-VIA-043, FR-VIA-061). The `MaxLanes` bound is tested through `tooManyLanes(n, limit)`.
+- **Mutation:** `gomu` runs only on `internal/*`; `transport_lanes.go` is in the root and was not mutated.

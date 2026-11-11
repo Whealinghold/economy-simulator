@@ -50,7 +50,7 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-281, N-324, N-329, N-331, N-345, N-349 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-324, N-329, N-331, N-345, N-349 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
@@ -91,8 +91,8 @@ PR description.
 | STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-279, N-281, N-306, N-311, N-325, N-326 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337 |
 
@@ -1843,22 +1843,7 @@ PR description.
 - **Note:** With the demand module the goods rows are `>= lambda * D + W` and the right-hand side is negative, so the slice's simplex (every right-hand side non-negative) has no basic feasible start. `internal/steady` takes the fixed term per goods row and rejects a non-zero one until the demand row adds the first phase in its own PR. `one-demand` is DEM's pack.
 - **Update (2026-10-17, viability edits):** read; unchanged. Left open for the demand row.
 
-### N-279 `Lane` and `WithLanes` wait for the transport module
 
-- **Areas:** VIA, TRN
-- **Raised:** 2026-10-17, `plan-phase-1-10.md` (git history, `2abbe62^`) (D127).
-- **Note:** Stage 1 supports only the free-trade lane set (a complete zero-cost set, collapsed to one goods row per commodity) through `WithFreeTrade`. `Lane` (`From`, `To`, `Commodity`, `Labour`, `LossBP`), `WithLanes` and `MaxLanes` are not published in Stage 1 (architecture.md 2.8); the transport module adds them with `transport.Lanes` (`spec-transport.md` 9.4, a lane of labour 0 and loss 0 being the free-trade case) in Stage 2 (ruled by the coordinator, reversible).
-- **Update (2026-10-17, viability edits):** applied in `spec-viability.md` 9.4 (Stage 1 supports only free trade). Left open for the transport module (Stage 2).
-- **Update (2026-11-09, plan 2-12 Phase 1):** Leave open. The names (`Lane`, `WithLanes`, `MaxLanes`, `Config.TransportLanes`) and the lane validation rules are written (`spec-transport.md` 9.4, `spec-viability.md` 9.4); the lane columns of `internal/steady` wait for N-326.
-- **Update (2026-11-11, plan 2-12b Phase 1):** applied in `spec-viability.md` 9.4 (the lane form, components FR-VIA-061, prices FR-VIA-062, validation FR-VIA-063) and `spec-transport.md` 9.4. Settled in Phase 6 of the plan, when the code lands; removed then.
-
-### N-281 Three bounds of FR-CFG-046 were not built at Stage 0
-
-- **Areas:** VIA, CFG
-- **Raised:** 2026-10-17, `plan-phase-1-10.md` (git history, `2abbe62^`) (Phase 5).
-- **Note:** `bounds.go` has `MaxSeedPrices` but not `MaxViabilityPivots`, `MaxViabilityCells` and `MaxLanes`. The solver row adds the first two (CFG 4.1 gives the values); `MaxLanes` bounds `WithLanes`, which Stage 1 does not publish, so it waits for the transport module (Stage 2). The Stage 0 plan's table that lists the viability rows as deferred also lists "group shares exceed 10 000" as deferred, but `warmRules` has it: correct the table.
-- **Update (2026-10-18, plan 1-10 Phase 1):** `spec-config.md` 4.1 already gives `MaxViabilityPivots` 100 000 and `MaxViabilityCells` 4 000 000; Phase 5 adds the two constants and their tests. The Stage 0 table is corrected here, not in the plan: the sub-rule "shares of a group above 10 000" is built in `warmRules`. Left open.
-- **Update (2026-11-11, plan 2-12b Phase 1):** `spec-viability.md` 11 now says `WithLanes` is bounded by `MaxLanes`. The constant exists in `bounds.go`; it is used by `WithLanes` in Phase 3. Removed in Phase 6.
 
 ### N-264 Stage 3 `skills.go` appends the queue rule and the `Apply` emission
 
@@ -2047,12 +2032,6 @@ PR description.
 - **Reading of D367 and what resumes the ladder:** "equal with the median households at least 10% of the start higher" was read as higher by 10% of the start (60 households). Under the relative reading R1 improves, the counter is 2 after R4, and the ladder resumes at R5 on R1: data as in the R1 row above, then `world.upkeep` staple 3 with every `reference_price` and `reference_basket` re-derived so FR-CUR-020 holds. D369 says it is not re-run without an owner ruling that names it; the harness was a scratch test (not kept). R1 needs E0 (the spring-only crop leaves the pack for `overlay/seasonal.toml`).
 - **Also open from the stop:** `expected/one.scenarios.txt` is stale (Stage 1 sign-off exception, `roadmap-v1.md`); the Stage 2 criterion "passes the version 1 bands of STY on `five.toml`" has no rebalanced `five` behind it (`five` collapses, `expected/five.toml` records it); plans 9 onward run on the unchanged packs. N-312 points (1) and (2) and N-314 stay open and point here.
 
-### N-326 Lanes in the solver wait for a table that takes per-region prices
-
-- **Areas:** VIA, TRN
-- **Raised:** 2026-11-09, plan 2-12 Phase 1 (E5, risk O3).
-- **Note:** Phase 8 of plan 2-12 (the lane columns of `internal/steady`, `WithLanes`, `Config.TransportLanes`) needs `spec-viability.md` to say how the warm-start table derives per-region prices and flows from a lane programme, and whether a lane set is one programme or one per component. It does not, so Phase 8 is split out of the transport row and N-279 and N-281 stay open. Nothing else in the transport row depends on it.
-- **Update (2026-11-11, plan 2-12b Phase 1):** applied in `spec-viability.md` 9.4 and 9.6 (one programme for each weak component, the price of a region from its own row, one scale for the component, no exported flow). Removed in Phase 6 with the code.
 
 ### N-327 Presets 22 to 25 of the indicators are built with EMP and RSK/STO
 
@@ -2217,4 +2196,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: cb0c1d88b512eecf78336727
+NOTES-TAG: b564644a04b109cd00abe828
