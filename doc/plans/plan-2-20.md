@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 20: EXP, `experiment/`, `internal/design`, `internal/reduce`
 
-**Status: plan written (2026-10-22), not audited. Contract: [plan-2-0.md](plan-2-0.md).** Builds the sweep harness: sweeps, replicas, branches from a checkpoint, integer reductions, a comparison, a sensitivity measure and the canonical rendering. It is the "run again" of the tuning loop; it changes no world, no configuration field and no hash.
+**Status: built and merged (stage-2-20); audited 2026-11-11 against the code, see "Audit" at the end. Contract: [plan-2-0.md](plan-2-0.md).** Builds the sweep harness: sweeps, replicas, branches from a checkpoint, integer reductions, a comparison, a sensitivity measure and the canonical rendering. It is the "run again" of the tuning loop; it changes no world, no configuration field and no hash.
 
 Rule tags read (the files show the tags of the contract, no difference): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1.
 Notes read (index, then the entries tagged EXP or ALL with their updates): EXP N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-214, N-220; ALL N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217. The disposition of each is in "Risks and open items".
@@ -108,7 +108,7 @@ Goal: D600, D601, D603, D604 (count rule), D617. Files: `experiment/{experiment,
 - `TestPlan_PointMajorOrder`, `TestPlan_BranchKeysByVariantThenContinuation`, `TestPlan_FactorFreeOneUnit`. Requirement: FR-EXP-005.
 - `TestPlan_OversizeBeforeAnything` (a design whose product overflows `int`; `MaxRuns`, `MaxCells` with the series). Requirement: FR-EXP-064.
 - `TestPackage_PurityAST` (go/parser over `experiment/*.go` non-test and `internal/design`, `internal/reduce`: no `go` statement, no `float32`/`float64`, no float literal, no `time.Now`, no `math/rand`, no `os` write, no package-level `var` except sentinels and the quantile table). Requirement: NFR-EXP-002. Guard: the existing guards cover imports and `time.Now` but not goroutines or floats.
-- `TestImportGuard_Experiment` (extends `TestImportGuard_Detects`: `experiment/x.go` importing `indicator` or `strategy` is a problem; `config` and `internal/design` are not). Requirement: NFR-EXP-002. Guard: architecture.md 2.7.
+- `TestImportGuard_Detects` gains the cases (built as cases of the existing test, no `TestImportGuard_Experiment`): `experiment/x.go` importing `indicator` or `strategy` is a problem; `config` and `internal/design` are not). Requirement: NFR-EXP-002. Guard: architecture.md 2.7.
 Exit check: `go vet`, `staticcheck`, coverage of what exists, `TestImports_StdlibAndLayers` and `TestNoBannedUses_InNonTestFiles` pass on the new files.
 
 ### Phase 5: resolving and running one key (no branch)
@@ -131,9 +131,9 @@ Goal: D604 to D608, D610, D616. Files: `experiment/{resolve,run,segment,classify
 - `TestRun_MeasureErrorAndRange` (an error leaves the reading undefined, `Detail` holds the first, the run goes on; 2^40 + 1 is undefined with `ErrRange`). Requirement: FR-EXP-053, FR-EXP-047.
 - `TestRun_CancelDiscardsTheRunInFlight` (cancel from a `Fn`; no record for the unit; not in `Failed`), `TestRun_PriorCompletesByteForByte` (`Render` of cancel-then-`WithPrior` equals the uninterrupted run). Requirement: FR-EXP-020, FR-EXP-052.
 - `TestRun_OptionsOncePerWorld` (a counter keyed by `Key`; an `Options` that returns a fresh stateful extension per call is never seen twice). Requirement: FR-EXP-024. N-129.
-- `TestRunUnit_ParallelEqualsRun` (eight goroutines in the test over the units of `Plan`, `Assemble`; under `-race`), `TestRun_DoesNotWriteTheSpec` (deep copy before and after). Requirement: FR-EXP-021, FR-EXP-023.
+- `TestRunUnit_ParallelEqualsRun` (eight goroutines in the test over the units of `Plan`, `Assemble`; under `-race`), the no-write check (a deep copy before and after) is the last assertion of `TestRunUnit_ParallelEqualsRun`, no separate `TestRun_DoesNotWriteTheSpec`. Requirement: FR-EXP-021, FR-EXP-023.
 - `TestExecuteUnit_SkipsBaseAndPrepare`. Requirement: FR-EXP-001.
-- `TestCheck_ResolvesWithoutTicks` (no `Options` call, no world; one failing point is `unresolved`), `TestCheck_RangedNarrowerThanDesign`. Requirement: FR-EXP-070, FR-EXP-071.
+- `TestCheck_ResolvesWithoutTicks` (no `Options` call, no world; one failing point is `unresolved`), the `ranged_narrower_than_design` warning is asserted inside `TestCheck_ResolvesWithoutTicks`. Requirement: FR-EXP-070, FR-EXP-071.
 - `TestRun_HarnessWorkDoesNotGrowWithAgentsOrTicks` (counted calls of `Begin`, `Fn`, `Options`, `Observer`: equal for `Config.Scale` 1 and 4 (set by an overlay on the existing field) and for 20 and 40 ticks at fixed windows; a counted operation, testing.md 8.2), `BenchmarkRunUnit_HarnessShare` (`b.ReportAllocs()`, no tolerance: N-015). Requirement: NFR-EXP-003.
 - `FuzzOverlayThroughTheLoader` (any path and value: never panics; `ValidPath` true means the loader accepts or rejects the document, never both). Requirement: NFR-EXP-005.
 Exit check: the package passes under `go test -short -race ./experiment/...` and without `-short`.
@@ -273,3 +273,11 @@ Observability entry (observability-and-logging.md 9): **None, because** the harn
     - Proposed N-NEW (areas EXP, CFG, CLB; CLB is kept): "A point that sets more than `16 - len(Base)` documents is refused by the loader (`MaxDocuments`): EXP 3.3.2 makes one document for each change, so a screen of every knob cannot run until the bound, the document rule or `MaxFactors` changes. Raised 2026-10-22, plan-2-20 D604."
     - Update to N-214: "EXP 7.3 and FR-EXP-062 applied by plan 2-20 D602; open for CLB 4.2.1, STB and TEC."
     - Update to N-129: "built in `experiment/` (plan-2-20 D610): `Options(key)` is called once for each world built; the library still cannot see a shared instance."
+
+## Audit
+
+Audited 2026-11-11 on branch audit-2-20 (`plan-audit`). `experiment/`, `internal/design` and `internal/reduce` pass (coverage 96.8%, 100%, 100%); every test name of the phases exists except as noted. Deviations from the text above, none changing an outcome:
+- `experiment/engine.go` exists beside the files of D600 (the run engine split out under the Lizard limits).
+- Four test names differ or were folded: see Phase 4 (`TestImportGuard_Experiment`), Phase 5 (`TestRun_DoesNotWriteTheSpec`, `TestCheck_RangedNarrowerThanDesign`) and Phase 6 (`TestBranch_ShockVariantDiffersFromNone`, which now uses plan 17's `SetYieldShocks`; before the audit it used one extra `Step`).
+- `TestSweep_StylisedVerdictAsResponse` (FR-STY-090) was missing and is added in `indicator/experiment_measure_test.go`.
+- The roadmap row of `experiment/` still says "plan written": the supervisor moves it at sign-off. The golden `testdata/golden/experiment/one.txt` still uses the extra-tick variant (re-recording is plan 8's acceptance and was not done here).
