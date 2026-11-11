@@ -256,7 +256,7 @@ all-on from it).
 | `internal/calibration` and `testdata/calibration/` | CLB | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
 | `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
 | `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | done on branch stage-2-23 (commit recorded at merge) |
-| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
+| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | `doc/plans/plan-2-ci.md` | built, pending first run (Phase 6: a green arm64 run, the F wall time, the Codacy figure) |
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
@@ -313,11 +313,10 @@ the explanation testing.md 7.2 requires.
   architecture.md 12.2 still needs an owner and a lifecycle; not before a
   consumer asks with a measurement.
 - The not-in-version-1 list of note N-131.
-- The CI workflow file itself, until its row in the Stage 2 table is built. The
-  owner decided on 2026-10-23 that CI is wanted, with an arm64 job (open item O3
-  of `plan-phase-0-foundation.md`, git history, `2abbe62^`); until the workflow
-  exists the commands of `AGENTS.md`, the coverage reading of testing.md 9.1 and
-  the timed fuzz runs are done by hand in each change.
+- Timed fuzz runs in CI (no fuzz time is decided) and the coverage threshold of
+  the `examples/` modules (reported, not gated). The CI workflow is built
+  (`plan-2-ci.md`) but has not run on GitHub yet; until it has, and for the
+  timed fuzz runs, the commands of `AGENTS.md` are run by hand in each change.
 
 ## Updating this file
 

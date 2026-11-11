@@ -440,8 +440,14 @@ it; `TestRaceSkips_HaveAnFPrefix` enforces it. `-update` is refused under `-race
 `-coverpkg=./...` counts a statement as covered when any test in the module
 executes it. Without it, `go test` counts only the package under test, so code
 in `internal/` that is exercised through the root package's tests is reported
-as uncovered. A CI script reads `coverage.out` (`go tool cover -func`) and
+as uncovered. A CI script reads `coverage.out` (`scripts/ci/coverage-check.sh`) and
 checks each scope against the table.
+
+CI (`.github/workflows/ci.yml`): R and the quick run (on arm64 too) run on every
+pull request and push to `main`; F and the coverage check run on `main`, nightly, on
+demand and on a pull request that carries the label `full`. A pull request that
+touches code or tests **MUST** carry the label `full`; its run answers item 8 of
+section 11.
 
 | Scope | Minimum statement coverage |
 |-------|----------------------------|
@@ -575,4 +581,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 120890253bd2f6c110a015d2
+RULE-TAG: a30dcaf3151e22bf092cbeec

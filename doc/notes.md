@@ -263,6 +263,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read: the layout of this row's files is already in architecture.md 2.6 and `AGENTS.md` (N-287); nothing to add. Left open.
 - **Update (2026-10-23, plan 2-1 Phase 3):** the owner accepted ADR 0002 and ADR 0009 (status, `doc/adr/README.md` and `documentation_index.md` agree; ADR 0009 Open point 3 carries a dated note that its condition is met); "accept ADR 0002 before Stage 2" of the update of 2026-10-12 is closed. Still open: the CI that runs the commands and the timed fuzz runs (plan O3, now decided in the roadmap).
 - **Update (2026-10-23, plan 2-1 Phase 5):** CI decided by the owner: yes, with an arm64 job; `roadmap-v1.md` carries a planned CI row and the owner's rulings, `vision.md` item 2 the decision. The workflow is not written yet. arm64 shown by hand: binfmt installed, `TestGolden_OneOff` passes under emulation (7 s), `BenchmarkStep_OneNoObserver` 15.8 ms a tick emulated against 1.76 ms native. Open until the workflow row is built.
+- **Update (2026-11-11, plan 2-ci Phase 5):** applied for the CI: `.github/` and `scripts/ci/` are in architecture.md 2.6 and `AGENTS.md` (same entries), testing.md 9.1 states when each job runs, and 14.1 points to the scripts. Candidate not built: `govulncheck` in CI (no rule requires it). The rest of this note is unchanged. Left open.
 
 ### N-021 Anything that creates or destroys money or goods
 
@@ -1717,6 +1718,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: each file of the row passes `lizard -l go -C 10 -a 8 -L 100 -w`; the Markdown tables of the row use the spaced separator row; the files are in the layout (N-287).
 - **Update (2026-10-23, plan 2-1 Phase 6):** Lizard baseline recorded: 20 warnings over the non-test files (`validate.go` 16, `config/guard.go` 2, `config/config.go` 1, `internal/checked.muldiv` CCN 13), not only `muldiv` as expected; Codacy's enabled patterns are CCN 10, function NLOC 50, 8 parameters and file NLOC 500, and `-L 100` is the function length. `muldiv` stays open. Markdownlint is enabled in Codacy and uses the repository config; its version is not exposed by the API. Coverage upload is the `full` job of the planned CI row (owner's decision of 2026-10-23: CI yes).
 - **Update (2026-11-11, plan 2-14 audit):** Lizard does not cover `*_test.go` (Codacy excludes them, as this note already says), so long table tests, for example five in `internal/migration`, need no split. Left open.
+- **Update (2026-11-11, plan 2-ci Phase 5):** the coverage upload is built: the `full` job of `.github/workflows/ci.yml` uploads `coverage.out` as an artifact and then runs `scripts/ci/codacy-upload.sh` (reporter 14.1.3, `--force-coverage-parser go`, token from the secret `CODACY_PROJECT_TOKEN`, only for code of this repository). Finding on the reporter's integrity: Codacy publishes a SHA512 per release asset, but only beside the asset on its release page (no signature, no independent channel), so the script pins the sum copied on 2026-11-11; it guards a later change of the download, not a compromised release. The reporter has not been run yet and the Go path mapping of the profile lines is unverified: both are Phase 6. The Lizard and markdownlint items stay open. Left open until Codacy shows a coverage figure for a commit.
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
 
@@ -2153,6 +2155,7 @@ PR description.
 - **Areas:** REF, CODE
 - **Raised:** 2026-11-10, plan 2-24 Phase 6b.
 - **Note:** This host is amd64 with no `binfmt` handler for arm64 (`docker run --platform linux/arm64 alpine uname -m` gives `exec format error`), the repository has no CI workflow, and no arm64 machine was available. Only the free pre-check ran: `GOOS=linux GOARCH=arm64 go build ./...` and `go vet ./...` pass. The byte tests (golden, determinism, hash and fixture, invariants rows `one`, `second`, `five`, `all`) have never run on arm64, so `vision.md` 5 item 2 is not shown and the sign-off paragraph (D694) must say so. Installing the handler (`docker run --privileged --rm tonistiigi/binfmt --install arm64`) changes the host and is the owner's action (plan 1 Phase 5 owner action 4); with it, 6b step 2 of plan 2-24 gives the emulated run, a CI arm64 job or an arm64 machine gives it natively.
+- **Update (2026-11-11, plan 2-ci Phase 5):** the CI arm64 job exists (`.github/workflows/ci.yml`, job `arm64`, native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) but has not run on GitHub. Stays open: close it with the URL of the first green `arm64` run (plan 2-ci Phase 6), which also shows `vision.md` 5 item 2.
 
 ### N-344 `expected/five.scenarios.txt` is written by the stable run of `five`, which is PR D
 
@@ -2214,4 +2217,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bb1aecc236a36f9a48ffd6a2
+NOTES-TAG: b5eb2cf598bd52808b6f51e8
