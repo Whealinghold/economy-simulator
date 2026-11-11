@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Job `check`: per module gofmt, vet, staticcheck, short race tests, go mod tidy and, in R_MODE=full, gate R.
+# Job `check`: per module gofmt, vet, staticcheck, short race tests, go mod tidy and, in R_MODE=full or race, gate R.
 # Runs the fast stage on every module, then gate R only if all passed (fail fast, testing.md 10.5);
 # exits non-zero naming the modules that failed.
 # R_MODE=short (pull-request CI): the fast stage's `go test -short -race` is the race run; gate R is not run,

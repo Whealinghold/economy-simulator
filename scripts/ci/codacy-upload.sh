@@ -9,7 +9,7 @@
 # GitHub release, so the pinned sum below is the check against a later change of the download, not
 # against a compromised release. It was copied from the release page of REPORTER_VERSION on
 # 2026-11-11, and the reporter was not run when the script was written (first use: plan-2-ci Phase 6).
-# Only linux amd64 is pinned: the upload runs in the `full` job on ubuntu-24.04.
+# Only linux amd64 is pinned: the upload runs in the `full` job, whose runner (`vars.FULL_RUNNER`) must be linux amd64.
 set -euo pipefail
 
 REPORTER_VERSION=14.1.3

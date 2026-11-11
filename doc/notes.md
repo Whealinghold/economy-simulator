@@ -2226,8 +2226,6 @@ PR description.
 - **Levers tried (f1 base, `one-demand`):** `estate_list_share` 1 000 with `estate_markdown` 0 and `ask_floor_bp` 5 000 kept 224 to 290 households at tick 1 095 on seeds 101 to 104 (none at 540, the 90% bar); then `role_keep` 10 with `halt_idle_ticks` 60 gave no extinct role and households within 20% of the tick-600 value over 600 to 1 095 on seeds 101 to 104 and 1 to 10 (level 235 to 312 of 600, 39% to 52%). But 85% to 90% of non-cook household-ticks stay unfed (staple at 50 against 96), cooks hold 49% to 90% of the money, `role_keep` is a floor (it holds the last 10 households of a role against exits, so a role may be alive by the floor and not by its income), X4 (b), (e) and (f) fail, and the R3 and R6 detectors cannot run because every threshold of `bands/regimes.toml` is unset. The spec's own unfed prior (STY D01) is 1% of household-ticks. This is survival of the count, not a stable economy. Claim pack `all` with the engine keys only: 5 092 households constant at ticks 235, 600 and 1 095 (the baseline reaches 0 by tick 600), every role 100% unfed, staple price x96; the pack's 16 documents are the `MaxDocuments` limit of `Parse`, so a 17th layer is refused.
 - **Next owner decision (not settled here):** either (a) a money-circulation redesign of the reference chain (cooks capture the surplus; demand is cash limited), or (b) a rewording of criterion 1. Until then PR D, any band on a collapsing run and any "stable" claim stay off (N-027). Not tried: `halt_idle_ticks` alone.
 
-## Read receipt
-
 ### N-353 Gate R and gate F do not fit a hosted runner: `full` is opt-in, the owner chooses how CI runs F
 
 - **Areas:** CODE, ALL
@@ -2235,6 +2233,8 @@ PR description.
 - **Note:** Evidence: gate R (`go test -race -timeout 60m ./...`) timed out at 1h0m on the root package on a 4-vCPU hosted runner twice, on a pull request (run 43019781252) and on main (run 43038922592, merge commit 3330f14); `examples/realm` alone took 597 s. Gate F never ran in CI: it needs 2 to 3 hours for the root package on the dev host (about 24 cores), so on a hosted runner it is **estimated, not measured**, to be a multiple of that, beyond the 330-minute job cap. Hosted CI therefore proves `check` (short race) and `arm64`; gates R and F are dev-host gates. Built: `full` runs only on manual dispatch and on a pull request labelled `full` (no push to main, no schedule); its runner is `vars.FULL_RUNNER` (default `ubuntu-24.04`), its timeout `vars.FULL_TIMEOUT_MIN` (default 330); gate R (`check.sh`, `R_MODE=race`, which runs R alone) and gate F (`full.sh`) are separate steps with `if: !cancelled()`.
 - **Owner decision (open):** `testing.md` 9.1 says CI MUST run F and fail below the thresholds, which hosted CI does not do. Choose one: (a) provide a self-hosted or larger runner and set `FULL_RUNNER` (and `FULL_TIMEOUT_MIN`, and `F_TIMEOUT` beyond 120m: the dev host uses 200m); (b) shard the root package across hosted runners with a coverage-profile merge script (plan 2-ci D-CI-4 contingency; new code, not built); (c) amend `testing.md` 9.1 so that R and F are dev-host gates and CI proves `check` and `arm64` only.
 - **Repository variables to set for (a):** `FULL_RUNNER`, `FULL_TIMEOUT_MIN`; the secret `CODACY_PROJECT_TOKEN` is needed only where `full` runs.
+
+## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
@@ -2246,4 +2246,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 0db1bbe062cea34257728079
+NOTES-TAG: 0c9dc7f3260a9f65e5d4e58f

@@ -417,7 +417,8 @@ observability-and-logging.md 8.2), is enforced by an ordinary test using
 ## 9. Coverage
 
 9.1. CI **MUST** run two commands and fail the build when either fails or when
-coverage falls below the thresholds. **[project]**
+coverage falls below the thresholds. **[project]** Hosted CI does not do this today: owner
+decision N-353 is open (see "What CI runs" below).
 
 - **R**, the race run: `go test -race -timeout 60m ./...`. Under `-race` the
   scenario and determinism tests run a reduced seed set (`raceSeeds`, one).
@@ -596,4 +597,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 2ca26fca3aadd87e8671aaac
+RULE-TAG: 0a6346d6f7eb9c0d2b53d29a

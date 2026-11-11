@@ -78,10 +78,13 @@ if [ -x "$here/check.sh" ]; then
 	expect r-mode-case-sensitive 1 "R_MODE must be short, full or race" env R_MODE=Short "$here/check.sh"
 fi
 
-# R_MODE=race skips the fast stage: with no toolchain on PATH it reaches modules() (staticcheck would fail first otherwise).
+# With no toolchain on PATH: race skips the fast stage and reaches modules() (staticcheck would fail first otherwise).
 if [ -x "$here/check.sh" ]; then
 	nogo=$(mktemp -d) && ln -s "$(command -v dirname)" "$nogo/dirname" # a PATH with no go and no staticcheck
 	expect r-mode-race-skips-fast-stage 1 "go list -m failed" env PATH="$nogo" R_MODE=race "$BASH" "$here/check.sh"
+	# short and full start with the fast stage, so they stop at the staticcheck install.
+	expect r-mode-short-runs-fast-stage 1 "installing staticcheck" env PATH="$nogo" R_MODE=short "$BASH" "$here/check.sh"
+	expect r-mode-full-runs-fast-stage 1 "installing staticcheck" env PATH="$nogo" R_MODE=full "$BASH" "$here/check.sh"
 	rm -rf "$nogo"
 fi
 
