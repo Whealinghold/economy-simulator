@@ -258,6 +258,28 @@ func TestFlag_Eligibility(t *testing.T) {
 	}
 }
 
+// TestFlag_SkipsOffStage verifies that the flag step skips an agent that is off
+// stage (here on a journey): its flag stays as it was while an agent on stage
+// with the same state enters.
+//
+// Requirement: FR-SUB-010
+func TestFlag_SkipsOffStage(t *testing.T) {
+	t.Parallel()
+	w := newForage(t, 2, func(c *Config) {
+		m := DefaultMigration()
+		m.MoveSpeed = 40
+		c.Modules.Migration = &m
+		c.Modules.Information = &Information{InfoSpeed: 40, RumourMaxAge: 20}
+	})
+	away, home := &w.agents[1], &w.agents[2]
+	w.migration.depart(away.id, w.regionOf(away), 99)
+	w.sub.grow(len(w.agents))
+	w.p24OwnUse()
+	if w.sub.ownUse[away.id] || !w.sub.ownUse[home.id] {
+		t.Errorf("flags (on a journey, at home) = %v, %v, want false and true", w.sub.ownUse[away.id], w.sub.ownUse[home.id])
+	}
+}
+
 // TestFlag_CoveredSetIsUpkeepAndOutputs verifies that the covered set of a
 // role is the intersection of its upkeep and the outputs of its own-use list: an
 // own-use recipe of a commodity the role does not eat covers nothing.
