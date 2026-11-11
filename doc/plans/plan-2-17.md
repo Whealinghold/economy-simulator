@@ -225,7 +225,7 @@ Tests:
 - `TestFork_RumoursKept` (with `Modules.Information` and an `Informed` external role: `Agent(a).Rumours` and its tick survive a restore; a later Work view at P2.5 leaves the stored rumours and tick unchanged) - FR-INT-049.
 - `TestRestore_Tag22Corrupt` (unsorted agent, a role not `Informed`, a count above the cap, a default row) - FR-CHK-022 family, FR-INT-049.
 - `TestFork_BeforeFirstStep` (a call made in construction, checkpoint, restore, the call's money is in the bucket) - FR-INT-011; INT 13.3.
-- `TestScenarioS81_CallSequence` (INT-S3, `scenarioSeedCount()` seeds; the body of `TestDeterminism_CallSequence`: one call script run twice, in two worlds, equal state and events at every tick; two orders of calls on different keys leave equal state; a script with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit) - FR-INT-008, 009, 050; INT-S3.
+- `TestScenarioS81_CallSequence` (INT-S3, `scenarioSeedCount()` seeds; there is no separate `TestDeterminism_CallSequence`, this test is the body: one call script run twice, in two worlds, equal state and events at every tick; two orders of calls on different keys leave equal state; a script with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit) - FR-INT-008, 009, 050; INT-S3.
 - `TestScenarioS79_YieldShockCalls` (three `SetYieldShocks` calls, 3 000 for 60 and 120 ticks, exact checks only; INT-S1 bands are plan 19's) - FR-INT-040.
 - `TestObservers_DoNotChangeCalls` (a recording observer and a capturing logger give the same state and snapshots as neither) - FR-INT-050, 051, 052.
 
