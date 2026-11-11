@@ -335,7 +335,7 @@ func (l *loader) world(t *tbl, w *economysim.WorldParams) {
 		{"entry_ratio", &w.EntryRatio}, {"change_privation", &w.ChangePrivation},
 		{"remove_privation", &w.RemovePrivation}, {"death_step", &w.DeathStep},
 		{"exit_share", &w.ExitShare}, {"renewal", &w.Renewal},
-		{"entry_pool_share", &w.EntryPoolShare}, {"anchor_hold", &w.AnchorHold},
+		{"entry_pool_share", &w.EntryPoolShare}, {"anchor_hold", &w.AnchorHold}, {"ask_floor_bp", &w.AskFloorBP},
 	})
 	t.items("upkeep", &w.Upkeep)
 	t.text("spawner", &w.Spawner)

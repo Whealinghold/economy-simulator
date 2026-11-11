@@ -259,6 +259,7 @@ func worldRanges(w WorldParams) []fieldRange {
 		{"renewal", w.Renewal, 0, wholeBP},
 		{"entry_pool_share", w.EntryPoolShare, 0, wholeBP},
 		{"anchor_hold", w.AnchorHold, 0, wholeBP},
+		{"ask_floor_bp", w.AskFloorBP, 0, wholeBP},
 	}
 }
 

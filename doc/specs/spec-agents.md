@@ -1351,7 +1351,7 @@ exactly one word of the stream (7.5.3) whatever the money. A *bid candidate* is 
 `Expiring_c - Reserve > 0`); "no bid is placed" above means `Gap_c == 0`, that is, not a bid
 candidate. The ask is `max(Surplus_c, max(0, Expiring_c - Reserve))`: the expiring units are part of
 the stock, so the two are not added. A bid candidate whose limit cannot buy one unit spends its word
-and forms no ask. A tool that the role does not make is not a candidate and takes no word. `Tool`
+and forms no ask. With `World.AskFloorBP` above 0, the limit of an ask for an upkeep commodity (a commodity of the agent's effective upkeep, 5.2) is raised to at least `trunc(Ref_c * AskFloorBP / 10 000)`, `Ref_c` the effective reference price, through the checked helper and never above `MaxPrice`; the draw of the word is unchanged, and a bid is never changed (FR-AGT-087). It is generic: it names no commodity, and with 0 (the default, off) the limit is as drawn. A tool that the role does not make is not a candidate and takes no word. `Tool`
 (6.4.1) is derived from the whole configuration, not from the role. With the
 storage module on, a limited agent first discards, before it forms the asks, the surplus units
 that its tier 1 bids need room for, the minimum that lets them fit (`spec-storage.md` 6.3.2,
@@ -2457,6 +2457,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |
 | FR-AGT-085 | An order for a commodity under a `sell` or a `buy` right in force of a body that the agent is not a member of MUST be rejected by the world while it builds the orders, with the reason `not_permitted`, after `not_tradable` and before the market's checks, MUST NOT reach clearing and MUST have no outcome; the check MUST NOT apply to a pseudo-agent. (new, `spec-institutions.md` 5.6.2, FR-ORG-024) |
 | FR-AGT-086 | When the default `Work` requests no job, the work report MUST name the first recipe of the role that the view reports as unable to run (`MaxExecutions` 0), with the view's reason, if and only if the share is above 0 and the production halt skipped none of the role's recipes; the world MUST count that household once as refused for that recipe and reason in `RecipeRefused` (`spec-observability.md` 4.4.6a), and a household that rests, was halted, or has no eligible recipe and no blocked one MUST NOT be so counted. |
+| FR-AGT-087 | With `World.AskFloorBP` above 0, the default `Trade` MUST NOT form an ask for an upkeep commodity with a limit below `trunc(Ref * AskFloorBP / 10 000)`, never above `MaxPrice`, and MUST NOT change a bid, the words drawn or any ask of a commodity that is not upkeep; with 0 it MUST change nothing (7.3.5). |
 
 ### Non-functional
 

@@ -391,6 +391,9 @@ type Tunables struct {
 	FavourFloor, ReserveTicks, SpendMaxShare, SpendHalfTicks int64
 	// RestBand and ProduceHaltRatio shape the work decision (7.1).
 	RestBand, ProduceHaltRatio int64
+	// AskFloorBP is the floor of the limit of an ask for an upkeep commodity, in
+	// basis points of the reference price; 0 is off (7.3.5).
+	AskFloorBP int64
 	// Beliefs are the belief parameters.
 	Beliefs BeliefTunables
 }

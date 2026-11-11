@@ -431,3 +431,53 @@ func TestDefaultStrategyTrade_JobKeepsTheNextTicksUpkeep(t *testing.T) {
 		})
 	}
 }
+
+// TestDefaultStrategyTrade_AskFloor verifies World.AskFloorBP: the ask for an
+// upkeep commodity is raised to trunc(Ref * bp / 10 000) and nothing else moves.
+//
+// Arithmetic: staple (upkeep, 3 a tick) holds 50, a surplus, and its limit draws
+// 310 (270 to 330). Ref 400 with 9000 gives a floor of 360, so the ask is 360;
+// Ref 200 gives 180, under the draw, so it stays 310; 0 is off. The item ask
+// (not upkeep) stays 900 in all, and the number of words taken is the same.
+//
+// Requirement: FR-AGT-087
+func TestDefaultStrategyTrade_AskFloor(t *testing.T) {
+	t.Parallel()
+	ask := func(p TradePlan, c CommodityID) int64 {
+		for _, in := range p.Intents {
+			if in.Commodity == c && in.Side == Ask {
+				return int64(in.Limit)
+			}
+		}
+		return -1
+	}
+	tests := []struct {
+		name string
+		bp   int64
+		ref  Price
+		want int64
+	}{
+		{"off", 0, 400, 310},
+		{"floor above the draw", 9000, 400, 360},
+		{"floor below the draw", 9000, 200, 310},
+	}
+	var words int
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := exampleView(10_000_000)
+			v.Commodities[1].Stock, v.Commodities[1].Ref = 50, tt.ref
+			v.Tunables.AskFloorBP = tt.bp
+			got, n := runTrade(v, exampleWords())
+			if g := ask(got, xStaple); g != tt.want {
+				t.Errorf("staple ask limit = %d, want %d (intents %+v)", g, tt.want, got.Intents)
+			}
+			if g := ask(got, xItem); g != 900 {
+				t.Errorf("item ask limit = %d, want 900", g)
+			}
+			if words != 0 && n != words {
+				t.Errorf("words taken = %d, want %d as with the floor off", n, words)
+			}
+			words = n
+		})
+	}
+}

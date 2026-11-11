@@ -308,6 +308,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Spawner` | WorldParams | `spec-spawner.md` section 3.1.3 |
 | `Clearing` | WorldParams | `spec-clearing.md` section 8 |
 | `AnchorHold` | WorldParams | `spec-production.md` section 9.3 |
+| `AskFloorBP` | WorldParams | `spec-agents.md` section 7.3.5 |
 | `Closed` | Role | `spec-spawner.md` section 11 |
 | `ID` | Want | `spec-demand.md` section 9 |
 | `Wants` | Demand | `spec-demand.md` section 9 |

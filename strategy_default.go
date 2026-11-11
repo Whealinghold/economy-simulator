@@ -366,6 +366,16 @@ func (t *tradeCtx) candidate(c *CommodityView, gap, surplus, expiring int64) (ki
 	return noOrder, 0
 }
 
+// askLimit is the limit of the order after World.AskFloorBP: the limit of an ask
+// for an upkeep commodity is raised to the floor, any other is as drawn (7.3.5,
+// FR-AGT-087).
+func (t *tradeCtx) askLimit(c *CommodityView, kind uint8, isUpkeep bool, limit int64) int64 {
+	if kind != askOrder || !isUpkeep {
+		return limit
+	}
+	return household.AskFloor(limit, int64(c.Ref), t.v.Tunables.AskFloorBP)
+}
+
 // consider is the first pass for the commodity at index i: its targets, its
 // tiers and the order it is a candidate for, and, for a candidate, the one
 // random word and the limit drawn with it (7.3.5, 7.5.3). The candidate is
@@ -398,6 +408,7 @@ func (t *tradeCtx) consider(i int, rng *rand.Rand) {
 	limit := beliefs.Draw(
 		beliefs.Belief{Centre: int64(c.Belief.Centre), Width: c.Belief.Width},
 		beliefs.Bounds{Floor: int64(c.Bounds.Floor), Ceiling: int64(c.Bounds.Ceiling)}, t.bp, word)
+	limit = t.askLimit(c, kind, isUpkeep, limit)
 	r.commodity, r.purpose, r.reserve, r.target = c.Commodity, t.purposeOf(c.Commodity, job, isUpkeep), tg.Reserve, tg.Target
 	r.t1, r.t2, r.t3, r.t4, r.limit, r.unitCost = t1, t2, t3, t4, min(limit, MaxPrice), int64(c.UnitCost)
 	r.windowPos = household.EmptyPos

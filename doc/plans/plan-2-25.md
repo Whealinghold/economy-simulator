@@ -200,3 +200,49 @@ Evidence (seed 101 unless stated):
 4. `estate_markdown` 0 is the only data knob that kept any population to tick 1 095 (P3); more cash (P2, P4) kills growers earlier, because the role review moves households out of the lowest earner and SPN-A8 makes an empty role final.
 
 Branch: the data and knob ladder is exhausted (D708 stop rule). The engine-rule proposal is in the worker report (Stage 2 supervisor ruling): R2.
+
+## Amendment: Phase 3a, the engine rules (2026-11-11)
+
+The supervisor ruled (Stage 2 decisions, "Stability Phase 2 outcome") that the cure may be an engine rule, each behind its own config key that leaves today's behaviour at its zero value (architecture 2.10.5). Two rules are built, spec text first, as separate small pieces:
+
+| Rule | Key | Seam | Spec |
+|------|-----|------|------|
+| Estate disposal rate | `Region.EstateListShare` / `estate_list_share`, bp 0 to 10 000, hash id 8 | `estates.asks` and `listAllowance` in `estates.go` | spec-estates 2.7.3, FR-EST-025 |
+| Ask floor | `World.AskFloorBP` / `ask_floor_bp`, bp 0 to 10 000, hash id 47 | `household.AskFloor` (`internal/household/askfloor.go`), one guarded line in `consider` | spec-agents 7.3.5, FR-AGT-087, FR-CFG-108 |
+
+Decisions:
+- **Default.** The brief said `EstateListShare` defaults to 10 000. `spec-config.md` 8.2.3 rule (2) makes the default of a core field its zero value ("a cap of 10 000 that means no cap is declared so that zero is off"), or the pinned hash moves. So 0 is off and means every lot is listed in full, as 10 000 does; the screens below use 10 000 as a value, which differs from 0 only in the hash. Recorded as an update to N-345.
+- **Allowance.** Per commodity, `ceil(held * share / 10 000)` units (at least one while any are held), lots in key order (oldest born first), a lot in part when the allowance ends inside it; an unlisted lot keeps its price and is not marked down (FR-EST-025).
+- **Ask floor.** Generic over the agent's effective upkeep; the limit of an ask for an upkeep commodity is at least `trunc(Ref * AskFloorBP / 10 000)`; bids, words and other asks do not move (FR-AGT-087).
+- **Registry.** K-AGT11 and K-EST04 (class D, off=0) are added to `spec-calibration.md` 6; `registry.out` regenerated with the model (`registry.py` in Docker).
+
+### Screen (one-demand, seeds 101 to 104, base = trial f1, households at tick 235 / 1 095, start 600)
+
+Share only (default markdown 500 unless stated; `m` is `estate_markdown`):
+
+| share | m | 235 (101..104) | 1 095 |
+|-------|---|----------------|-------|
+| 10 000 | 500 | 583 595 596 588 | 0 0 0 0 |
+| 10 000 | 0 | 488 533 572 595 | 280 266 172 0 (reproduces P3) |
+| 10 000 | 5 | 503 536 538 598 | 171 110 219 0 |
+| 1 000 | 500 | 596 588 591 598 | 0 0 0 0 |
+| 1 000 | 0 | 500 533 568 594 | 0 269 213 211 |
+| 1 000 | 5 | 520 536 584 597 | 0 272 158 206 |
+| 200 | 500 | 587 585 597 591 | 0 0 0 0 |
+| 200 | 0 | 499 481 531 535 | 269 210 136 0 |
+| 200 | 5 | 489 489 534 533 | 0 0 292 134 |
+
+The disposal rate alone does not hold households at 90% (540) at tick 235 to 1 095 and does not cure extinction at markdown 500. Step 2 therefore applies.
+
+Share plus ask floor (`ask_floor_bp` over f1, 1 095 column; the best rows):
+
+| floor | share | m | 235 (101..104) | 1 095 |
+|-------|-------|---|----------------|-------|
+| 5 000 | 1 000 | 0 | 600 594 529 547 | 279 238 224 290 |
+| 5 000 | 1 000 | 5 | 600 597 549 540 | 246 282 262 0 |
+| 7 000 | 1 000 | 5 | 478 532 562 533 | 263 166 306 265 |
+| 9 000 | 1 000 | 0 | 407 433 394 395 | 15 23 220 229 |
+
+A grid of floors 2 000 to 6 000 against shares 200 and 1 000 and markdowns 0 and 5 gave 1 095 counts of 0 to 307 and none at 540. With the floor, no role is extinct at tick 1 095 on seeds 101 and 104 (best row: households settle at 37% to 47% of the start and stay), but X4 (e) fails (about 40% against 90%), (b) trade share and (f) prepared price range fail as well.
+
+**Outcome.** The objective is not met (households under 90% of start at 1 095). By the brief, no `testdata/chains/overlay/stable.toml` is written, the claim pack `all` is not checked, and no warm start, expected file or golden is regenerated. The rules stay in the engine, off by default, for a supervisor decision on the next step (candidates: a higher-level cause for the plateau at 40%-47%, such as cook money hoarding, which both rules leave untouched, or accepting a lower household band for the claim).

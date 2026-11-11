@@ -649,6 +649,7 @@ carries no flag. **K-WEL06** is read by the nominal programme (VIA 3.2, phi) and
 | K-AGT07 | World.SpendHalfTicks | D | AGT 12 | ticks | U | geo | C6 | off=- | M04/HouseholdIncome:+H | L45 L57 D27 | I18 A04 |
 | K-AGT08 | World.RestBand | D | AGT 12 | bp | U | lin250 | C4 | off=0 | P03/PriceRange:? | L14 L15 D09 | - |
 | K-AGT09 | World.ProduceHaltRatio | D | AGT 12 | bp | U | geo | C4 | off=max | M05/StockCover:+S; P02/Pinned.Share:? | L05 L06 L44 D24=ProductionHalted | I10 |
+| K-AGT11 | World.AskFloorBP | D | AGT 7.3.5 | bp | U | lin1000 | C4 | off=0 | S02/Households:? | - | - |
 | K-AGT10 | Role.StartMoney | S | AGT 3.3 | minor | - | - | C2 | - | M06/s20.ticks:-H | L11 L45 | I09 A03 A08 |
 
 Notes. **K-AGT09**: the halt's threshold decides which bound a pinned price reaches
@@ -713,6 +714,7 @@ freeze). It is "the most consequential default" of BEL (open question 1 there).
 | K-EST01 | Region.EstateMarkdown | K | EST 3 | bp | U | lin250 | C5 | - | S02/Households:? | L38 | - |
 | K-EST02 | Region.PoolRelease | D | EST 2.6 | bp | U | geo | C5 | off=0 | S02/Unfed:-H | L39 L63 D11 D12 | I21 A14 |
 | K-EST03 | Region.ReliefBelow | D | EST 2.6 | bp | U | lin1000 | C5 | off=0 | S02/Unfed:-H | L39 L40 D11 | A14 |
+| K-EST04 | Region.EstateListShare | D | EST 2.7.3 | bp | U | lin1000 | C5 | off=0 | S02/Households:? | - | - |
 | K-SKL01 | Role.TrainingTicks | S | SKL 4.1 | ticks | - | - | C1 | - | D03/RoleShares.Swing:? | L36 L41 | I20 I23 |
 | K-SKL02 | Role.MaxTrainees | D | SKL 4.4 | count | U | lin1 | C6 | off=max | D03/RoleShares.Swing:? | L36 L41 D20 | I23 |
 | K-SKL03 | Role.TeachingLoad | K | SKL 4.2 | bp | U | lin500 | C6 | - | D03/RoleShares.Swing:? | L37 | I23 |

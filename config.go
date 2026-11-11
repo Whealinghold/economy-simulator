@@ -708,6 +708,11 @@ type WorldParams struct {
 	// bounds how far a measured wage pulls the anchor and sets no wage (FR-WEL-015).
 	// It is the 46th field, appended after the presentation-only DistanceLabel.
 	AnchorHold int64
+	// AskFloorBP raises the limit of the default strategy's ask for an upkeep
+	// commodity to at least this share of the effective reference price, in
+	// basis points; 0 turns it off, which is the default (spec-agents.md 7.3.5,
+	// FR-AGT-087). It is the 47th field, appended after AnchorHold.
+	AskFloorBP int64
 }
 
 // Calendar is the structure of time: one section, not an entity
