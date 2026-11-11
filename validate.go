@@ -865,10 +865,8 @@ func jobIDs(c *Config, r *Role) []string {
 // rules that read a window skip the role.
 func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 	longest, ok = longestRecipe(c, lk, r)
-	if r.Merchant != nil { // a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009)
-		longest = max(longest, merchantTripTicks(c, lk, r))
-	}
-	return longest, ok
+	// a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009); 0 for a role with no block
+	return max(longest, merchantTripTicks(c, lk, r)), ok
 }
 
 // longestRecipe is longestDuration over the recipes alone, without the merchant trip.
@@ -2118,11 +2116,8 @@ func longestRecipeAny(c *Config, lk lookup, r *Role) int64 {
 // of the declared recipes on a role's list, whatever its value, for the
 // warnings, which read a configuration that may not validate.
 func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
-	longest := longestRecipeAny(c, lk, r)
-	if r.Merchant != nil { // the same hook as longestDuration, so the warnings agree with the window
-		longest = max(longest, merchantTripTicks(c, lk, r))
-	}
-	return longest
+	// the same hook as longestDuration, so the warnings agree with the window
+	return max(longestRecipeAny(c, lk, r), merchantTripTicks(c, lk, r))
 }
 
 // roleWarnings raises the warnings that read a role that has households: the
