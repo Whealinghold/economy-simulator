@@ -1,6 +1,8 @@
 package economysim_test
 
 import (
+	"cmp"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -34,6 +36,8 @@ var (
 	screenSeeds  = flag.String("screen.seeds", "1-1", "seed range a-b")
 	screenTicks  = flag.Int64("screen.ticks", 0, "ticks to run; 0 is the last of -screen.at")
 	screenAt     = flag.String("screen.at", "100,300,600,1100", "comma list of ticks at which the table is printed")
+	screenReseed = flag.String("screen.reseed", "", "read-only H4 experiment role:count:money: when the role has no household, add count external agents of weight 1 to region 0 (AddAgent), with the role's start stock and that money each")
+	screenCensus = flag.Bool("screen.census", false, "also print the census of the solver for the layers without the warm start: households, balanced households and static income per role (FR-VIA-060)")
 	screenX4     = flag.Bool("screen.x4", false, "also print the X4 criteria (needs -screen.ticks 1095 or more; keeps a snapshot of every tick)")
 )
 
@@ -171,10 +175,44 @@ type screenWatch struct {
 	inc     *incomeObs
 	seen    map[economysim.RoleID]bool
 	extinct map[economysim.RoleID]int64
+	// moves counts households by (window, role, label): "to <role>" and "from <role>"
+	// for a role change, "exit <cause>" for a removal or a cut of weight, "entry" for
+	// a household that joined after the start.
+	moves map[screenMove]int64
+	names []string // role names, to spell the labels
+}
+
+// screenMove is the key of screenWatch.moves.
+type screenMove struct {
+	Window int64
+	Role   economysim.RoleID
+	Label  string
+}
+
+// move adds households to the ledger of the window of tick.
+func (o *screenWatch) move(tick int64, role economysim.RoleID, households int64, label string) {
+	o.moves[screenMove{tick / incomeWindow, role, label}] += households
 }
 
 func (o *screenWatch) Observe(e economysim.Event) {
 	o.inc.Observe(e)
+	switch e := e.(type) {
+	case economysim.RoleChanged:
+		o.move(e.Tick, e.From, e.Weight, fmt.Sprintf("to %s (%v)", o.names[e.To], e.Cause))
+		o.move(e.Tick, e.To, e.Weight, fmt.Sprintf("from %s (%v)", o.names[e.From], e.Cause))
+	case economysim.AgentBankrupted:
+		o.move(e.Tick, e.Role, e.Weight, fmt.Sprintf("exit %v", e.Cause))
+	case economysim.WeightChanged:
+		if e.To < e.From {
+			o.move(e.Tick, e.Role, e.From-e.To, fmt.Sprintf("exit %v", e.Cause))
+		} else {
+			o.move(e.Tick, e.Role, e.To-e.From, fmt.Sprintf("grew %v", e.Cause))
+		}
+	case economysim.AgentSpawned:
+		if e.Tick > 0 && !e.External { // the initial households carry tick 0
+			o.move(e.Tick, e.Role, e.Weight, "entry")
+		}
+	}
 	if e, ok := e.(economysim.TickEnded); ok {
 		for role, hh := range o.inc.live {
 			switch {
@@ -202,12 +240,40 @@ type screenPoint struct {
 type screenOutcome struct {
 	Points  []screenPoint
 	Names   economysim.Names
+	Recipes []string
 	Watch   *screenWatch
 	Samples map[int64]economysim.Snapshot // every tick, only with x4
 }
 
+// reseedPlan is the H4 experiment of plan 2-25 D703: it undoes the absorbing
+// extinction of SPN-A8 from test code, through the public AddAgent, to see whether
+// the economy lives on once the role exists. It is a probe, never a fix: the
+// agents are external and immortal.
+type reseedPlan struct {
+	Role         string
+	Count, Money int64
+}
+
+// screenReseedSpec reads role:count:money.
+func screenReseedSpec(spec string) (*reseedPlan, error) {
+	if spec == "" {
+		return nil, nil
+	}
+	f := strings.Split(spec, ":")
+	if len(f) != 3 {
+		return nil, fmt.Errorf("screen.reseed %q: want role:count:money", spec)
+	}
+	n, err1 := strconv.ParseInt(f[1], 10, 64)
+	m, err2 := strconv.ParseInt(f[2], 10, 64)
+	if err1 != nil || err2 != nil || n < 1 || m < 0 {
+		return nil, fmt.Errorf("screen.reseed %q: want a count of at least 1 and money of at least 0", spec)
+	}
+	return &reseedPlan{f[0], n, m}, nil
+}
+
 // screenRun runs cfg for ticks steps on seed and takes a table at each tick of at.
-func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, seed uint64, ticks int64, at []int64, x4 bool) screenOutcome {
+// A non-nil re adds agents of its role whenever the role has none.
+func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, seed uint64, ticks int64, at []int64, x4 bool, re *reseedPlan) screenOutcome {
 	t.Helper()
 	probe, err := economysim.NewWorld(cfg, opts...)
 	if err != nil {
@@ -218,9 +284,12 @@ func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, se
 		t.Fatalf("Snapshot error = %v, want nil", err)
 	}
 	out := screenOutcome{Names: s0.Names, Samples: map[int64]economysim.Snapshot{}, Watch: &screenWatch{
-		inc: newIncomeObs(cfg, s0.Names), seen: map[economysim.RoleID]bool{}, extinct: map[economysim.RoleID]int64{}}}
+		inc: newIncomeObs(cfg, s0.Names), seen: map[economysim.RoleID]bool{}, extinct: map[economysim.RoleID]int64{}, moves: map[screenMove]int64{}, names: s0.Names.Roles}}
 	spec := scenarioSpec{Seed: seed, Ticks: ticks, Options: append(slices.Clone(opts), economysim.WithObserver(out.Watch)),
 		Probe: func(tick int64, w *economysim.World) {
+			if re != nil {
+				screenAddAgents(t, cfg, s0.Names, out.Watch, w, tick, re)
+			}
 			if !slices.Contains(at, tick+1) {
 				return
 			}
@@ -236,7 +305,7 @@ func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, se
 				if v, ok := shareBP(int64(m.State.Price), ref); ok {
 					bp = strconv.FormatInt(v, 10)
 				}
-				p.Prices = append(p.Prices, fmt.Sprintf("%s/%s %d (%s bp of %d)", s.Names.Regions[m.State.Region], s.Names.Commodities[m.State.Commodity], m.State.Price, bp, ref))
+				p.Prices = append(p.Prices, fmt.Sprintf("%s/%s %d (%s bp of %d), volume %d, held by agents %d and estate %d", s.Names.Regions[m.State.Region], s.Names.Commodities[m.State.Commodity], m.State.Price, bp, ref, m.State.Volume, m.HeldByAgents, m.HeldByEstate))
 			}
 			out.Points = append(out.Points, p)
 		}}
@@ -246,7 +315,66 @@ func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, se
 	}
 	run := runScenario(t, cfg, spec)
 	out.Names = run.Names
+	out.Recipes = run.Names.Recipes
 	return out
+}
+
+// screenAddAgents is the body of the reseed probe: when the role has no household,
+// it adds re.Count agents of weight 1 to region 0 with the role's start stock.
+func screenAddAgents(t testing.TB, cfg economysim.Config, names economysim.Names, watch *screenWatch, w *economysim.World, tick int64, re *reseedPlan) {
+	t.Helper()
+	role := indexOf(names.Roles, re.Role)
+	if role < 0 {
+		t.Fatalf("screen.reseed: role %q is not in the names of the world", re.Role)
+	}
+	if !watch.seen[economysim.RoleID(role)] || watch.inc.live[economysim.RoleID(role)] > 0 {
+		return
+	}
+	var stock []economysim.StockItem
+	for _, it := range cfg.Roles[role].StartStock {
+		stock = append(stock, economysim.StockItem{Commodity: economysim.CommodityID(indexOf(names.Commodities, it.Commodity)), Quantity: it.Quantity})
+	}
+	for range re.Count {
+		if _, err := w.AddAgent(economysim.NewAgent{Region: 0, Role: economysim.RoleID(role), Strategy: "default", Money: economysim.Money(re.Money), Stock: stock}); err != nil {
+			t.Fatalf("AddAgent(%s) after tick %d error = %v, want nil", re.Role, tick, err)
+		}
+	}
+	t.Logf("reseed: %d agents of %s added after tick %d", re.Count, re.Role, tick)
+}
+
+// screenCensusLog prints the static view of the solver for the cold layers: the census
+// rows with their households, the balanced households and the income as basis points of
+// the upkeep, the figure that TestPacks_IncomeBalance gates (plan 2-8 D365).
+func screenCensusLog(t *testing.T, cold []string) {
+	t.Helper()
+	st, err := economysim.SolveSteadyState(context.Background(), screenConfig(t, cold))
+	if err != nil {
+		t.Fatalf("SolveSteadyState(%q) error = %v, want nil", cold, err)
+	}
+	for _, r := range st.Report.Census {
+		if r.Role == "" {
+			continue
+		}
+		income := "no income figure"
+		if r.HasIncome {
+			income = fmt.Sprintf("income %d bp of the upkeep", r.IncomeBP)
+		}
+		t.Logf("census %s/%s (%s): households %d, balanced %d, imbalance %d, short %v, %s", r.Region, r.Role, r.Recipe, r.Households, r.Balanced, r.Imbalance, r.Short, income)
+	}
+}
+
+// screenExecutions spells the executions of a cell by recipe name, in recipe order.
+func screenExecutions(ex map[economysim.RecipeID]int64, names []string) string {
+	ids := make([]economysim.RecipeID, 0, len(ex))
+	for id := range ex {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = fmt.Sprintf("%s=%d", names[id], ex[id])
+	}
+	return strings.Join(parts, " ")
 }
 
 // screenReport logs the tables of one seed and, if given, the waterfall and the X4
@@ -275,6 +403,16 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 	for role, tick := range o.Watch.extinct {
 		t.Logf("seed %d: role %s extinct from tick %d", seed, o.Names.Roles[role], tick)
 	}
+	keys := make([]screenMove, 0, len(o.Watch.moves))
+	for k := range o.Watch.moves {
+		keys = append(keys, k)
+	}
+	slices.SortFunc(keys, func(a, b screenMove) int {
+		return cmp.Or(cmp.Compare(a.Window, b.Window), cmp.Compare(a.Role, b.Role), strings.Compare(a.Label, b.Label))
+	})
+	for _, k := range keys {
+		t.Logf("seed %d window %d role %s: %s %d households", seed, k.Window, o.Names.Roles[k.Role], k.Label, o.Watch.moves[k])
+	}
 	// shortcut: region 0's basket for every role and window, right for the single-region packs; key it by region before reading it for five.
 	upkeep := int64(cfg.Regions[0].ReferenceBasket)
 	for window := int64(0); window < ticks/incomeWindow+1; window++ {
@@ -283,8 +421,9 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 			if !row.OK {
 				continue
 			}
-			t.Logf("seed %d window %d role %s: sales %d and recipe inputs %d per household-tick, margin %d bp of the upkeep %d",
-				seed, window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep)
+			c := o.Watch.inc.cells[[2]int64{window, int64(role)}]
+			t.Logf("seed %d window %d role %s: sales %d and recipe inputs %d per household-tick, margin %d bp of the upkeep %d, household-ticks %d, unfed %d, executions %s",
+				seed, window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep, c.HouseholdTicks, c.Unfed, screenExecutions(c.Executions, o.Recipes))
 		}
 	}
 	if x4 {
@@ -335,11 +474,18 @@ func TestScreen_Packs(t *testing.T) {
 	if pk.options != nil {
 		opts = pk.options()
 	}
+	re, err := screenReseedSpec(*screenReseed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *screenCensus {
+		screenCensusLog(t, slices.DeleteFunc(slices.Clone(layers), func(l string) bool { return strings.HasPrefix(filepath.Base(l), "warm-") }))
+	}
 	t.Logf("screen pack %v, %d seeds, %d ticks, at %v", layers, len(seeds), ticks, at)
 	for _, seed := range seeds {
 		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
 			t.Parallel()
-			screenReport(t, cfg, seed, screenRun(t, cfg, opts, seed, ticks, at, *screenX4), ticks, *screenX4)
+			screenReport(t, cfg, seed, screenRun(t, cfg, opts, seed, ticks, at, *screenX4, re), ticks, *screenX4)
 		})
 	}
 }
@@ -371,7 +517,7 @@ func TestScreen_Reproduces(t *testing.T) {
 	for _, seed := range []uint64{1, 2, 3} {
 		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
 			t.Parallel()
-			o := screenRun(t, cfg, nil, seed, 600, reproduceTicks, false)
+			o := screenRun(t, cfg, nil, seed, 600, reproduceTicks, false, nil)
 			if len(o.Points) != len(reproduceTicks) {
 				t.Fatalf("screenRun(pack one, seed %d) kept %d tables, want %d", seed, len(o.Points), len(reproduceTicks))
 			}
@@ -442,6 +588,17 @@ func TestScreen_Helpers(t *testing.T) {
 	rec := "measure households at tick 100, wants off (pack one): 1=557 2=538 | median=547 n=2\nmeasure other: 1=1"
 	if got := screenRecorded(rec, "measure households at tick 100, wants off (pack one)"); got[1] != 557 || got[2] != 538 || len(got) != 2 {
 		t.Errorf("screenRecorded(record) = %v, want map[1:557 2:538]", got)
+	}
+	if re, err := screenReseedSpec("grower:3:500"); err != nil || *re != (reseedPlan{"grower", 3, 500}) {
+		t.Errorf("screenReseedSpec(grower:3:500) = %v, %v, want {grower 3 500}, nil", re, err)
+	}
+	if re, err := screenReseedSpec(""); err != nil || re != nil {
+		t.Errorf("screenReseedSpec(empty) = %v, %v, want nil, nil", re, err)
+	}
+	for _, bad := range []string{"grower", "grower:0:5", "grower:2:-1", "grower:x:1"} {
+		if re, err := screenReseedSpec(bad); err == nil {
+			t.Errorf("screenReseedSpec(%q) = %v, nil, want an error", bad, re)
+		}
 	}
 	if got := screenRecorded(rec, "absent"); got != nil {
 		t.Errorf("screenRecorded(record, absent) = %v, want nil", got)
