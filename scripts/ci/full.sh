@@ -34,6 +34,7 @@ for m in $mods; do
 	case $m in . | otelobserver) gated_rows_present "$m" || { failed+=("$m thresholds"); continue; } ;; esac
 	rm -f "$REPO_ROOT/$m/coverage.out" # a stale profile must never be checked or uploaded
 	if ! run_in "$m" go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout "$F_TIMEOUT" ./...; then
+		rm -f "$REPO_ROOT/$m/coverage.out" # a partial profile of a failed run is never uploaded
 		failed+=("$m")
 		continue
 	fi

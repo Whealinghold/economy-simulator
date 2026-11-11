@@ -2,8 +2,8 @@
 # Shared by the CI job scripts; sourced, not run. Every job is one script call from the workflow,
 # and each script also runs on a developer machine from any directory.
 
-CI_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "$CI_DIR/../.." && pwd)
+CI_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+REPO_ROOT=$(cd "$CI_DIR/../.." && pwd -P)
 
 # Pinned: installed with go install when the one on PATH differs (checked by the module proxy).
 STATICCHECK_VERSION=2026.2.2
@@ -17,6 +17,7 @@ modules() {
 	local dirs dir
 	dirs=$(cd "$REPO_ROOT" && go list -m -f '{{.Dir}}') && [ -n "$dirs" ] || { echo "modules: go list -m failed or found no module" >&2; return 1; }
 	while IFS= read -r dir; do
+		case $dir in *[[:space:]]*) echo "modules: directory with whitespace is not supported: $dir" >&2; return 1 ;; esac
 		if [ "$dir" = "$REPO_ROOT" ]; then echo .; else echo "${dir#"$REPO_ROOT"/}"; fi
 	done <<<"$dirs"
 }
