@@ -7,7 +7,7 @@ Rule tags read (all three files, in full): architecture=5b7049ed1de0fd413fa50e33
 
 Specs and requirement IDs implemented or touched: `spec-reference-chain.md` (REF) 3 (C04, only on ruling E0), 4.4.1 to 4.4.5, 5, 7.2 (S01, S04, S19), 7.4 (X4), 8.4, 8.5, 8.7, FR-REF-005, 006, 007, 009, 010, 011, 012, 013, 019, 029, 039; `spec-viability.md` (VIA) 4.7, 5.2 (worked case), 8.3.1, 8.4.1, 8.5, FR-VIA-012, 028, 030; `spec-stability.md` (STB) 8 (S01, S04, S19), FR-STB-008, 009, 015, 021; `spec-currency.md` (CUR) FR-CUR-005, 006, 020, 023 (tests owed since Stage 1, plan 2-23 raised them); `spec-stylised-facts.md` (STY) 5.7 (STY-H01, H02), 5.8 (STY-G01, FR-STY-057), 7.3.1 and 7.3.2 (the word "stable"), 8.2, 8.4. The decision-ID block of this plan is D360 to D379 (D360 to D372 used).
 
-**Outcome as built (read this before the phases).** Owner answers of 2026-10-23 (roadmap-v1.md, Stage 2 answers 5 and 7): E0 yes; FR-VIA-060, FR-REF-041, FR-REF-042 and the two gate figures of D365 approved, and now in the specs. Owner ruling E1 of 2026-10-28 re-aimed FR-REF-042 at `one-demand` (stated and unmet) and made `one` the upkeep-only control, so no test of `one` cites FR-REF-042; `TestScenarioStable_OneWarm` carries `FR-REF-039, FR-STB-015` and stays skipped with N-325. Phases 1 (edits), 2 and 3 were done; Phases 4 to 6 and 5b were skipped (D369); the log table is the deliverable and is copied to N-325. Where a phase or test below says `(proposed)`, `one` or `FR-REF-042`, read it with this paragraph.
+**Outcome as built (read this before the phases).** Owner answers of 2026-10-23 (roadmap-v1.md, Stage 2 answers 5 and 7): E0 yes; FR-VIA-060, FR-REF-041, FR-REF-042 and the two gate figures of D365 approved, and now in the specs. Owner ruling E1 of 2026-10-28 re-aimed FR-REF-042 at `one-demand` (stated and unmet) and made `one` the upkeep-only control, so no test of `one` cites FR-REF-042; `TestScenarioStable_OneWarm` carries `FR-REF-039, FR-STB-015` and stays skipped with N-325. Phases 1 (edits), 2 and 3 were done; Phases 4 to 6 and 5b were skipped (D369); the log table is the deliverable and is copied to N-325. FR-VIA-060, FR-REF-041 and FR-REF-042 are in the specs (FR-REF-041 and 042 with status "not met"), and the tests cite them without the marker (`TestScenarioHelpers_StablePredicate` cites FR-REF-042 for the helper only; `TestBasket_IsUpkeepTimesReferencePrices` also cites FR-CUR-022). Where a phase or test below says `(proposed)`, `one` or `FR-REF-042`, read it with this paragraph.
 
 Notes read: the index of `doc/notes.md`, and in full with every update N-312 and N-314 (the two this plan exists for). Read as entries: N-027, N-030, N-045, N-067, N-085, N-123, N-134, N-146, N-165, N-217, N-267, N-277, N-294, N-295, N-296, N-306, N-311, and the STB notes N-028, N-032, N-039, N-042, N-043 (areas REF, VIA, STB, ALL). The other ALL notes (N-016, N-017, N-103, N-126, N-128, N-163) are standing rules and are not touched. The notes file was not read in full and no spec or note is edited here, so the Notes tag is not quoted (`plan-2-0.md`: notes are read by index). Dispositions are in Risks and open items.
 
@@ -185,7 +185,7 @@ Provides:
 
 | Requirement | Test |
 | --- | --- |
-| FR-VIA-028, FR-VIA-012, FR-VIA-060 (proposed) | `TestCensus_IncomeBP_One`, `_Identity`, `_AbsentWithoutLabourShare`, `_Overflow`; `TestSolveSteadyState_One` (census and 664 replaced by the accepted values) |
+| FR-VIA-028, FR-VIA-012, FR-VIA-060 | `TestCensus_IncomeBP_One`, `_Identity`, `_AbsentWithoutLabourShare`, `_Overflow`; `TestSolveSteadyState_One` (census and 664 replaced by the accepted values) |
 | FR-REF-007 | `TestSolveSteadyState_Packs` (every warm document equals the solver's table), `TestWarmDocuments_Bytes` |
 | FR-REF-009, 010, 011, 012, 013, 019 | `viability_agree_pack_test.go`, `TestSolveSteadyState_Five`, `_Famine`, the seed-band checks of `TestExpected_Packs` |
 | FR-REF-005, 006 | `TestExpected_Packs` (warnings, report, hash re-recorded) |
@@ -194,7 +194,7 @@ Provides:
 | FR-REF-041 | `TestPacks_IncomeBalance` (skipped with N-325, status "not met" in the spec). FR-REF-042 is aimed at `one-demand` by ruling E1 and has no test of its own yet; `TestScenarioHelpers_StablePredicate` covers the helper only |
 | FR-STB-008, 009, 021 | `TestScenarioS01_FuelSupplyShock`, `TestScenarioS04_StapleShortage`, `TestScenarioS19_HaltOnAndOff` (run on the new pack; assertions unchanged) |
 | FR-CFG-105 | `TestHashConfig_ReferencePinned`, `TestHashConfig_AnchorHoldOffLeavesNoTrace` (new values, explained) |
-| FR-CUR-005, 006, 020, 023 | `TestConfig_NoWageField`, `TestResolutionFloor_FollowsBeliefStep`, `TestBasket_IsUpkeepTimesReferencePrices`, `TestBasket_WithinToleranceChangesNothing` |
+| FR-CUR-005, 006, 020, 022, 023 | `TestConfig_NoWageField`, `TestResolutionFloor_FollowsBeliefStep`, `TestBasket_IsUpkeepTimesReferencePrices`, `TestBasket_WithinToleranceChangesNothing` |
 | FR-REF-027 | `TestScenarioHelpers_Income`, `TestScenarioHelpers_StablePredicate`, `TestConfigOnly_SecondRunsToTheStablePredicate` (on the extracted predicate) |
 | FR-CHK-062, FR-CHK-064 | `TestFixture_Format1` re-recorded with `-update` in the Phase 6 commit (config_hash and digest moved because the pack moved, not the format), `TestGolden_OneOffMovedOnlyByItem6` re-pinned |
 
