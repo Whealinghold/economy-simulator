@@ -87,7 +87,7 @@ Tests added or moved (all in `scale_internal_test.go`):
 - `TestGroupShape_AgreesWithGroupWeights` (D294). Requirement: FR-SCL-002, FR-SCL-003. Guard: two copies of the formula drifting apart.
 - `TestGroupWeights_RejectsWhatValidationRejects` (households 0, scale 0 return nil, as `groupWeights` does today). Requirement: FR-SCL-001.
 - `TestGroupWeights_DrawsNothing` (the function takes no `*stream`; the test builds two worlds of the same config with seeds 1 and 2 and compares the weight vectors). Requirement: FR-SCL-004.
-- `FuzzGroupWeights` (`testdata/fuzz/FuzzGroupWeights/` corpus; inputs bounded to at most 100 000 agents so the fuzzer cannot allocate the 10^9 of Risks item 1): sum equals households, spread at most 1, count equals `agentCount`, every weight at least 1, no panic. Requirement: FR-SCL-001, 002, 003.
+- `FuzzGroupWeights` (as built the seeds are `f.Add` calls, including the `MaxUint64` edge, and no `testdata/fuzz/FuzzGroupWeights/` corpus directory exists; inputs bounded to at most 100 000 agents so the fuzzer cannot allocate the 10^9 of Risks item 1): sum equals households, spread at most 1, count equals `agentCount`, every weight at least 1, no panic. Requirement: FR-SCL-001, 002, 003.
 - `TestValidate_GroupShapeBounds` gains the rows households 0 and scale below 1 rejected by `Validate` (`validate_mutation_test.go:295`; Requirement adds FR-SCL-001). As built, the edges of `groupShape` itself are also in `TestGroupShape_Bounds` (`scale_internal_test.go`, FR-SCL-002, 011). Existing, FR-SCL-020 and `TestValidate_GroupWeightIsCeilOfHouseholdsOverAgents` (line 350) must pass unchanged.
 Exit check: `go test -short -race ./...` passes; `TestHashConfig_ReferencePinned` and the golden tests pass with no file changed; `git diff --stat` shows `construct.go` and `validate.go` only losing the moved code.
 
@@ -195,7 +195,7 @@ Testing entry (testing.md 11):
 | FR-SCL-011 | `TestValidate` rules at `validate_rules_test.go:751` unchanged |
 | FR-SCL-012 | not this plan (plan 11) |
 | FR-SCL-013 | not this plan (plan 17) |
-| FR-SCL-014 | `TestExecute_RemoveAndReductionToTheWholeWeight` (reduction), the entry half (a rise by entry brings money from the pool) by `TestSpawner_EntryAndReduction` in the Stage 1 spawner tests if it asserts it, else a new `TestScale_EntryBringsMoneyFromThePool` in `scale_internal_test.go`; both read in Phase 3, `TestScalePack_HouseholdCountIsTheSumOfWeights` (conservation under `WithAudit`); split and merge are not in version 1 |
+| FR-SCL-014 | `TestExecute_RemoveAndReductionToTheWholeWeight` (reduction), the entry half (a rise by entry brings money from the pool and no goods) by `TestExecute_EnterIntoAnExistingAgentAndIntoANewAgent` (`phase_exit_exec_internal_test.go`; as built it asserts births 7 000 from the pool, no account and no goods, and carries FR-SCL-014; the new `TestScale_EntryBringsMoneyFromThePool` was not needed), `TestScalePack_HouseholdCountIsTheSumOfWeights` (conservation under `WithAudit`); split and merge are not in version 1 |
 | FR-SCL-015 | `TestSnapshot_CountsAndScale`, `TestScalePack_HouseholdCountIsTheSumOfWeights` |
 | FR-SCL-016 | `TestScalePack_ConstructionStateDoesNotDependOnTheWeights` (exact), `BenchmarkStepWeights` (reported) |
 | FR-SCL-017 | `TestScenarioS10_PricesAcrossScales` (report; no pass claimed, D288) |
