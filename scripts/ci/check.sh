@@ -40,10 +40,10 @@ check_fast() {
 	local m=$1
 	echo "==> [$m] gofmt -l ."
 	gofmt_clean "$m" || return 1
+	tidy_clean "$m" || return 1
 	run_in "$m" go vet ./... || return 1
 	run_in "$m" staticcheck ./... || return 1
 	run_in "$m" go test -short -race ./... || return 1
-	tidy_clean "$m" || return 1
 }
 
 mods=$(modules) || exit 1

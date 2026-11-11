@@ -15,11 +15,13 @@ set -euo pipefail
 
 awk -v thr="$2" -v srcroot="${3:-.}" '
 function bad(msg) { print "coverage-check: " msg > "/dev/stderr"; broken = 1; exit 2 }
-function excluded(src,    line, gen, main) {
+function excluded(src,    line, gen, main, incomment) {
 	if (src in skip) return skip[src]
 	gen = 0; main = 0
 	if ((getline line < src) < 0) bad("cannot read source " src)
 	do {
+		if (incomment) { if (line ~ /\*\//) incomment = 0; continue }
+		if (line ~ /^[ \t]*\/\*/ && line !~ /\*\//) { incomment = 1; continue }
 		if (line ~ /^\/\/ Code generated .* DO NOT EDIT\.$/) gen = 1
 		if (line ~ /^package /) { main = (line ~ /^package main([ \t]|$)/); break }
 	} while ((getline line < src) > 0)

@@ -14,11 +14,11 @@ on:
 permissions:
   contents: read
 
-# Per ref; only PR runs are cancelled by a newer push, never main or the nightly. The nightly gets
-# its own group, and a label event is unique so a pending one is never replaced. `full` has its
-# own group below.
+# Only PR runs share a group per ref, and a newer push cancels the older one. Every other run (main,
+# nightly, dispatch, a label event) is unique, so a long `full` never queues or displaces another
+# run (GitHub keeps one pending run per group). `full` has its own group below.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || github.event.action == 'labeled' && github.run_id || 'run' }}
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.action != 'labeled' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
 
 env:
@@ -70,7 +70,8 @@ jobs:
           go-version-file: go.work
           cache: false
       - run: scripts/ci/full.sh
-      # Kept before the upload to Codacy, so a flake there never loses a multi-hour run.
+      # Kept before the upload to Codacy, so a flake there never loses a multi-hour run. Codacy also gets
+      # the profile of a run whose coverage check failed, so its status shows the shortfall.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
@@ -82,7 +83,7 @@ jobs:
       # Only code of this repository sees the token: never a fork's pull request (plan-2-ci D7).
       - run: scripts/ci/codacy-upload.sh coverage.out otelobserver/coverage.out
         # Dependabot runs get no secrets, so they would only fail on the empty token.
-        if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: ${{ !cancelled() && hashFiles('coverage.out') != '' && hashFiles('otelobserver/coverage.out') != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
           CODACY_COMMIT_UUID: ${{ github.event.pull_request.head.sha || github.sha }}

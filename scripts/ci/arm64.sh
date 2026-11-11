@@ -7,10 +7,12 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 test_exec=()
+arm_timeout=60m
 if [ "${ARM_EMULATE:-}" = 1 ]; then
 	command -v qemu-aarch64-static >/dev/null || { sudo apt-get install -y qemu-user-static || exit 1; }
 	export GOARCH=arm64
 	test_exec=(-exec qemu-aarch64-static)
+	arm_timeout=360m # qemu is several times slower than native
 fi
 
 arm_module() {
@@ -18,7 +20,7 @@ arm_module() {
 	run_in "$m" go build -o /dev/null ./... || return 1
 	run_in "$m" go vet ./... || return 1
 	if [ "$m" = . ]; then
-		run_in "$m" go test ${test_exec[@]+"${test_exec[@]}"} -timeout 60m -run "$QUICK_PATTERN" ./...
+		run_in "$m" go test ${test_exec[@]+"${test_exec[@]}"} -timeout "${ARM_TIMEOUT:-$arm_timeout}" -run "$QUICK_PATTERN" ./...
 	else
 		run_in "$m" go test ${test_exec[@]+"${test_exec[@]}"} -short ./...
 	fi
