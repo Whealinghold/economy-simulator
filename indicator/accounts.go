@@ -117,7 +117,7 @@ func stocksOf(preset string, s economysim.Snapshot, regions, commodities int) (s
 func (st *stockTable) addTransit(preset string, ships []economysim.ShipmentRow, regions, commodities int) error {
 	for _, sh := range ships {
 		for _, l := range sh.Lines {
-			if sh.Region < 0 || int(sh.Region) >= regions || l.Commodity < 0 || int(l.Commodity) >= commodities {
+			if sh.Region < 0 || int(sh.Region) >= regions || l.Commodity < 0 || int(l.Commodity) >= commodities || l.Quantity < 0 {
 				return wrap(preset, "shipment", ErrRange)
 			}
 			i := int(sh.Region)*commodities + int(l.Commodity)

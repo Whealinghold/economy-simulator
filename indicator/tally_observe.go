@@ -397,6 +397,15 @@ func (t *Tally) known(n int, commodity func(i int) economysim.CommodityID) bool 
 	return true
 }
 
+// upsert returns the row of k in the sorted rows, inserting it first when absent.
+func upsert[T any](rows *[]T, k T, key func(a, b T) int) *T {
+	i, found := slices.BinarySearchFunc(*rows, k, key)
+	if !found {
+		*rows = slices.Insert(*rows, i, k)
+	}
+	return &(*rows)[i]
+}
+
 func dispatchKey(r DispatchTally, k DispatchTally) int {
 	return cmp.Or(cmp.Compare(r.Origin, k.Origin), cmp.Compare(r.Destination, k.Destination), cmp.Compare(r.Mode, k.Mode))
 }
@@ -406,11 +415,7 @@ func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
 		return
 	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
-	i, found := slices.BinarySearchFunc(t.w.Dispatches, k, dispatchKey)
-	if !found {
-		t.w.Dispatches = slices.Insert(t.w.Dispatches, i, k)
-	}
-	d := &t.w.Dispatches[i]
+	d := upsert(&t.w.Dispatches, k, dispatchKey)
 	t.add(&d.Shipments, 1)
 	if e.Hired {
 		t.add(&d.Hired, 1)
@@ -433,11 +438,10 @@ func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
 	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
 	for _, l := range e.Lines {
 		k := ArrivalTally{Origin: e.Region, Destination: e.To, Commodity: l.Commodity}
-		i, found := slices.BinarySearchFunc(t.w.Arrivals, k, arrivalKey)
-		if !found {
-			t.w.Arrivals = slices.Insert(t.w.Arrivals, i, k)
+		if l.Shipped == 0 && l.Delivered == 0 && l.Diverted == 0 && l.Spoiled == 0 {
+			continue // a row means the lane was used
 		}
-		a := &t.w.Arrivals[i]
+		a := upsert(&t.w.Arrivals, k, arrivalKey)
 		t.add(&a.Shipped, int64(l.Shipped))
 		t.add(&a.Delivered, int64(l.Delivered))
 		t.add(&a.Diverted, int64(l.Diverted))
@@ -457,9 +461,5 @@ func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool
 		return nil
 	}
 	k := SettlementTally{Region: from, To: to}
-	i, found := slices.BinarySearchFunc(t.w.Settlements, k, settlementKey)
-	if !found {
-		t.w.Settlements = slices.Insert(t.w.Settlements, i, k)
-	}
-	return &t.w.Settlements[i]
+	return upsert(&t.w.Settlements, k, settlementKey)
 }
