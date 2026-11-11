@@ -423,3 +423,47 @@ func TestJourneyTable_ViolatedInvariants(t *testing.T) {
 		t.Errorf("finish of an agent missing from the active list did not panic")
 	}
 }
+
+// TestJourney_SkippedByOwnUseFlagStep verifies that the flag step of the subsistence
+// module skips an agent on a journey (spec-subsistence.md 5.6, FR-SUB-010,
+// FR-TRN-050): a household that entered the own-use mode keeps the flag, and is still
+// counted in the mode of its origin, while it is on the way, even when its stock
+// would take it out; once the journey is over the same stock takes it out.
+//
+// Arithmetic as TestFlag_EnterLeaveHysteresis: upkeep 2 a tick, ExitTicks 3, so a
+// stock of 6 grain (Cover 3) leaves the mode.
+//
+// Requirement: FR-SUB-010, FR-TRN-050
+func TestJourney_SkippedByOwnUseFlagStep(t *testing.T) {
+	t.Parallel()
+	c := forageConfig(1)
+	far := DefaultRegion()
+	far.ID, far.ReferenceBasket = "far", 2_000
+	c.Regions = append(c.Regions, far)
+	c.Edges = []Edge{{From: "home", To: "far", Distance: 40}, {From: "far", To: "home", Distance: 40}}
+	c.Modules.Information = &Information{InfoSpeed: infoSpeed, RumourMaxAge: 20}
+	m := DefaultMigration()
+	m.MoveSpeed = infoSpeed
+	c.Modules.Migration = &m
+	w := newMill(t, c)
+	a := &w.agents[w.firstHousehold]
+	w.sub.grow(len(w.agents))
+	w.p24OwnUse()
+	if !w.sub.ownUse[a.id] {
+		t.Fatalf("flag of agent %d with nothing held = false, want true (enters)", a.id)
+	}
+	w.migration.depart(a.id, 1, 1_000)
+	holdGrain(t, w, a, 6)
+	w.p24OwnUse()
+	if !w.sub.ownUse[a.id] {
+		t.Errorf("flag of agent %d on a journey with the exit cover = false, want true (frozen)", a.id)
+	}
+	if got := w.sub.inMode[int(w.regionOf(a))*len(w.cfg.Roles)+int(a.role)]; got != a.weight {
+		t.Errorf("households in the mode of the origin on a journey = %d, want %d", got, a.weight)
+	}
+	w.migration.finish(a.id)
+	w.p24OwnUse()
+	if w.sub.ownUse[a.id] {
+		t.Errorf("flag of agent %d after the journey with the exit cover = true, want false (leaves)", a.id)
+	}
+}
