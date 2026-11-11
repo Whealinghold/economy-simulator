@@ -1236,8 +1236,7 @@ func windowField(c *Config, lk lookup, r *Role) string {
 	if r.Merchant == nil {
 		return "recipes"
 	}
-	recipes, _ := longestRecipe(c, lk, r)
-	if merchantTripTicks(c, lk, r) > recipes {
+	if merchantTripTicks(c, lk, r) > longestRecipeAny(c, lk, r) {
 		return "merchant"
 	}
 	return "recipes"
@@ -2103,16 +2102,23 @@ func warnings(c *Config) []Warning {
 	return out
 }
 
-// longestDurationAny is longestDuration without the bound: the longest Duration
-// of the declared recipes on a role's list, whatever its value, for the
-// warnings, which read a configuration that may not validate.
-func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
+// longestRecipeAny is the longest Duration of the declared recipes on a role's list,
+// whatever its value and without the merchant trip.
+func longestRecipeAny(c *Config, lk lookup, r *Role) int64 {
 	var longest int64
 	for _, id := range jobIDs(c, r) {
 		if rc := lk.recipe[id]; rc != nil {
 			longest = max(longest, rc.Duration)
 		}
 	}
+	return longest
+}
+
+// longestDurationAny is longestDuration without the bound: the longest Duration
+// of the declared recipes on a role's list, whatever its value, for the
+// warnings, which read a configuration that may not validate.
+func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
+	longest := longestRecipeAny(c, lk, r)
 	if r.Merchant != nil { // the same hook as longestDuration, so the warnings agree with the window
 		longest = max(longest, merchantTripTicks(c, lk, r))
 	}
