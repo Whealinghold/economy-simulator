@@ -80,11 +80,11 @@ func (t *Tally) foldTransport(e economysim.Event) bool {
 	case economysim.ShipmentArrived:
 		t.shipmentArrived(e)
 	case economysim.ContractFormed:
-		if r := t.settlement(e.Tick, e.Region, e.To, e.Escrowed != 0, int64(e.Escrowed)); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, int64(e.Escrowed)); r != nil {
 			t.add((*int64)(&r.Escrowed), int64(e.Escrowed))
 		}
 	case economysim.ContractSettled:
-		if r := t.settlement(e.Tick, e.Region, e.To, e.Paid != 0 || e.Refunded != 0, int64(e.Paid), int64(e.Refunded)); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, int64(e.Paid), int64(e.Refunded)); r != nil {
 			t.add((*int64)(&r.Paid), int64(e.Paid))
 			t.add((*int64)(&r.Refunded), int64(e.Refunded))
 		}
@@ -482,10 +482,10 @@ func settlementKey(r SettlementTally, k SettlementTally) int {
 }
 
 // settlement returns the row of a contract lane, or nil for a stray event or
-// when nothing moved (active false), so that a row means the lane was used. A
+// when every amount is zero, so that a row means the lane was used. A
 // quiet event is still checked and still counts as activity of the window.
-func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool, amounts ...int64) *SettlementTally {
-	if !t.nonneg(amounts...) || !t.lane(tick, from, to) || !active {
+func (t *Tally) settlement(tick int64, from, to economysim.RegionID, amounts ...int64) *SettlementTally {
+	if !t.nonneg(amounts...) || !t.lane(tick, from, to) || !slices.ContainsFunc(amounts, func(v int64) bool { return v != 0 }) {
 		return nil
 	}
 	k := SettlementTally{Region: from, To: to}
