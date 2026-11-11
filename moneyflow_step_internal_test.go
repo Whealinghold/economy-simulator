@@ -401,3 +401,45 @@ func TestFlow_LevyIgnoresReservedMoney(t *testing.T) {
 		t.Errorf("balance after a levy on fully reserved money = %d, want %d unchanged", got, held)
 	}
 }
+
+// TestEvents_MoneyFlowOrderAndShape verifies that a step with two flows that hit
+// their limit in the same tick emits, per flow in ascending ID order, the
+// MoneyFlowLimited of the region and then the MoneyFlowEnded with the cause
+// limit, and that none of them is emitted before the tick's transfers: the totals
+// they carry are the amounts already moved.
+//
+// Requirement: FR-MON-031, FR-MON-011, FR-MON-030, FR-MON-045
+func TestEvents_MoneyFlowOrderAndShape(t *testing.T) {
+	t.Parallel()
+	// 4 households, 10 each: due 40 per flow, limit 25, so each flow applies
+	// 25 and ends on its limit in its first tick.
+	a, b := millerFlow("a", FlowGrant, 10), millerFlow("b", FlowGrant, 10)
+	a.Limit, b.Limit = 25, 25
+	w, rec := moneyMill(t, 4, b, a)
+	w.p17Flows()
+	var got []string
+	for _, e := range rec.events {
+		switch e := e.(type) {
+		case MoneyFlowLimited:
+			if e.Due != 40 || e.Applied != 25 {
+				t.Errorf("MoneyFlowLimited %s = %+v, want Due 40 and Applied 25", e.Flow, e)
+			}
+			got = append(got, "limited:"+e.Flow)
+		case MoneyFlowEnded:
+			if e.Cause != CauseLimit || e.Total != 25 {
+				t.Errorf("MoneyFlowEnded %s = %+v, want cause limit and Total 25", e.Flow, e)
+			}
+			got = append(got, "ended:"+e.Flow)
+		}
+	}
+	if want := []string{"limited:a", "ended:a", "limited:b", "ended:b"}; !slices.Equal(got, want) {
+		t.Errorf("flow events = %v, want %v", got, want)
+	}
+	// An ended flow applies nothing and says nothing (FR-MON-045).
+	n := len(rec.events)
+	w.p17Flows()
+	if len(rec.events) != n || w.money.flows[0].total != 25 || w.money.flows[1].total != 25 {
+		t.Errorf("second P1.7 after both flows ended: %d new events, totals %d and %d, want none, 25 and 25",
+			len(rec.events)-n, w.money.flows[0].total, w.money.flows[1].total)
+	}
+}
