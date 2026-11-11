@@ -52,6 +52,16 @@ Notes read: the index of `doc/notes.md`, then N-015, N-124, N-134, N-135, N-158,
 - **D638.** Fuzz: `FuzzGrid` (any base, bounds, step, rule: levels ascending, unique, in bounds, containing the base, no panic, neighbours adjacent to the base), `FuzzChoose` (any result set: the chosen point is feasible, the Pareto set is non-dominated, the base wins when feasible, no panic), `FuzzParse` (never panics, `Render(Parse(b)) == b` when `Parse` succeeds, an unknown keyword errors). A crash input, if one is found, is pinned in `internal/calibration/testdata/fuzz/<Name>/` with a `Fix:` comment (testing.md 7.5); none is pinned as built. Seeds via `f.Add` include the rows of 11.3 and the record of Phase 5. Source: CLB 11.2, 11.3, NFR-CLB-004; testing.md 7.4, 7.5.
 - **D639.** Tests are table-driven, parallel where they share nothing, no assertion library (testing.md 3), `Requirement:` lines as 4.2 asks. Every registry, grid, choice, alias, process, record and overlay test runs under `-short` (FR-CLB-090); only the dry run skips. The record bytes are identical on `amd64` and `arm64` by construction (integers and `math/bits`); the two-architecture run is the nightly of plan 24 and this plan only names its test (`TestRecord_RenderIsStable`). Source: CLB 11, NFR-CLB-002; testing.md 7.1.
 
+## Audit of 2026-11-11 (as built; the text above is the plan as written)
+
+Every requirement traces to source and a passing test (`go test -short ./internal/calibration/` 100% of statements; `go test ./experiment/ -run CalibrationDry` passes). Where the build differs from the plan's names, the build stands:
+
+- Files added beyond the list: `known.go` (D626), `record_render.go` (`Render`), and test files `registry_known_test.go`, `registry_zgeo_test.go`, `registry_cfg_test.go`, `rulewords_test.go`, `grid_mutation_test.go`, `defensive_test.go`, `known_test.go`. `TestRegistry_OffAfterCut` lives in `registry_zgeo_test.go`; `TestRegistry_SolverFlags` in `registry_via_test.go`.
+- Test names: leg B is `TestCalibrationDry_LegBTable`, `_LegBInvalidLevel`, `_LegBWiden`, `_LegBProcess` (plus `_Shape`, `_ChosenOverlay`); the stability and claim check is `TestCheckRecord_StabilityAndClaim`; FR-STY-092 is covered by `TestCheckRecord_Rules` (the `screen_sign` case) and `TestCheckRecord_SignsThatStateNoDirection`; there is no `TestRecord_StabilityAndClaim`. `TestRegistry_NoFloat...` is `TestNoFloatClockGoroutine`.
+- D631 / Risks 5: the 128-bit comparison is `checked.Cmp3` (`internal/checked/checked.go`), used by `alias.go`.
+- Risks 2 and 3 are resolved in the spec (E5, E6: 8.2 states the two-space rule and the instance path; 19.5 is a format example). E12 (roadmap row "done") is still the supervisor's, at sign-off.
+- Not verified by this audit: the Phase 8 gates (gate R/F, `gomu`, `lizard`), the dry run's time under `-race` (Risks 7; 29 s without it).
+
 ## Phases
 
 ### Phase 1: documents (no code)
