@@ -14,10 +14,10 @@ on:
 permissions:
   contents: read
 
-# Per ref; only PR runs are cancelled by a newer push, never main or the nightly. The nightly and
-# the label event get their own groups so neither cancels, nor is dropped for, an ordinary run.
+# Per ref; only PR runs are cancelled by a newer push, never main or the nightly. The nightly gets
+# its own group. `full` has its own group below, so a label event never cancels check or arm64.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || github.event.action == 'labeled' && 'label' || 'run' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
 
 env:
@@ -53,8 +53,11 @@ jobs:
       - run: scripts/ci/arm64.sh
 
   full:
-    # `opened` is left out: a PR opened with the label also fires `labeled`, which starts it once.
-    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full') && github.event.action != 'opened')
+    # A PR can start it twice (opened and labeled, or labeled and a push); the newer run cancels the older.
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full'))
+    concurrency:
+      group: full-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:

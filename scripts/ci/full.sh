@@ -12,8 +12,23 @@ set -uo pipefail
 # shellcheck disable=SC2086 # FULL_MODULES is a space-separated list
 mods=${FULL_MODULES:-$(modules)} || exit 1
 
+# gated_rows_present fails before the hours-long run when a package of a gated module has no row
+# in the thresholds file, which coverage-check.sh would only report afterwards.
+gated_rows_present() {
+	local m=$1 base ip name nfiles rel rc=0
+	base=$(awk '$1 == "base" { print $2 }' "$CI_DIR/coverage-thresholds.txt")
+	while read -r ip name nfiles; do
+		[ "$name" != main ] && [ "$nfiles" -gt 0 ] || continue
+		rel=${ip#"$base"}
+		rel=${rel#/}
+		grep -q "^${rel:-.} " "$CI_DIR/coverage-thresholds.txt" || { echo "FAIL: [$m] package ${rel:-.} has no row in coverage-thresholds.txt" >&2; rc=1; }
+	done < <(cd "$REPO_ROOT/$m" && go list -f '{{.ImportPath}} {{.Name}} {{len .GoFiles}}' ./...)
+	return "$rc"
+}
+
 failed=()
 for m in $mods; do
+	case $m in . | otelobserver) gated_rows_present "$m" || { failed+=("$m thresholds"); continue; } ;; esac
 	rm -f "$REPO_ROOT/$m/coverage.out" # a stale profile must never be checked or uploaded
 	if ! run_in "$m" go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout "$F_TIMEOUT" ./...; then
 		failed+=("$m")

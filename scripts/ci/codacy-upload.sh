@@ -26,7 +26,9 @@ for profile in "$@"; do
 	[ -s "$profile" ] || { echo "codacy-upload: $profile is missing or empty" >&2; exit 1; }
 done
 case ${CODACY_COMMIT_UUID:-} in
-	*[!0-9a-f]* | ?????????????????????????????????????????*) echo "codacy-upload: CODACY_COMMIT_UUID is not a 40-character lowercase hex sha" >&2; exit 1 ;;
+	'') ;;
+	*[!0-9a-f]*) echo "codacy-upload: CODACY_COMMIT_UUID is not a 40-character lowercase hex sha" >&2; exit 1 ;;
+	*) [ "${#CODACY_COMMIT_UUID}" -eq 40 ] || { echo "codacy-upload: CODACY_COMMIT_UUID is not a 40-character lowercase hex sha" >&2; exit 1; } ;;
 esac
 profiles=$(IFS=,; echo "$*")
 [ "$(uname -sm)" = "Linux x86_64" ] || { echo "codacy-upload: only linux amd64 is pinned, this is $(uname -sm)" >&2; exit 1; }

@@ -34,22 +34,28 @@ tidy_clean() {
 	return "$rc"
 }
 
-check_module() {
+# check_fast is the fail-fast stage (testing.md 10.5): static checks, tidy and the short race run.
+check_fast() {
 	local m=$1
 	echo "==> [$m] gofmt -l ."
 	gofmt_clean "$m" || return 1
 	run_in "$m" go vet ./... || return 1
 	run_in "$m" staticcheck ./... || return 1
 	run_in "$m" go test -short -race ./... || return 1
-	run_in "$m" go test -race -timeout 60m ./... || return 1
 	tidy_clean "$m" || return 1
 }
 
 mods=$(modules) || exit 1
 failed=()
 for m in $mods; do
-	check_module "$m" || failed+=("$m")
+	check_fast "$m" || failed+=("$m")
 done
+# Gate R runs only when every module passed the fast stage, so a cheap failure never waits for it.
+if [ "${#failed[@]}" -eq 0 ]; then
+	for m in $mods; do
+		run_in "$m" go test -race -timeout 60m ./... || failed+=("$m")
+	done
+fi
 if [ "${#failed[@]}" -ne 0 ]; then
 	echo "check: failed modules: ${failed[*]}" >&2
 	exit 1
