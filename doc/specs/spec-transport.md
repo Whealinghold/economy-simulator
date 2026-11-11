@@ -1401,7 +1401,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-038 | Validation MUST emit the warnings of 12.2 without failing the configuration, and MUST reject the errors of 12.1 each with its sentinel. |
 | FR-TRN-039 | The transit factor slot MUST default to 10 000 for every (from, to, mode), MUST affect new dispatches only, a value above `MaxTransitFactorBP` MUST be refused, a key whose `from` equals `to` MUST be refused with `ErrSameRegion`, and a changed key MUST emit `TransitFactorChanged` (10.3). |
 | FR-TRN-040 | A shipment's Transit account and its cargo MUST be attributed, for spoilage, to the origin region. |
-| FR-TRN-041 | `transport.Lanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with the loss of `spec-risk.md` 8.3 (0 with the risk module off) and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
+| FR-TRN-041 | `Config.TransportLanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with the loss of `spec-risk.md` 8.3 (0 with the risk module off) and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
 | FR-TRN-042 | The module MUST log nothing above `Debug` per shipment, MUST have no `Info` line in the tick, and the keys `shipment`, `mode`, `dest` and `modes` MUST be used as in 13.3. |
 | FR-TRN-043 | Hired capacity MUST be an ordinary commodity made by ordinary recipes and traded by ordinary orders: no market, admission or settlement rule of `spec-clearing.md` MUST depend on a mode, and a world with the module on MUST pass the clearing invariants unchanged. |
 | FR-TRN-044 | Two requests with the same arguments from the same state MUST give the same result, shipment ID, Transit account and events: no iteration order of a map MUST influence a result. |
@@ -1446,7 +1446,7 @@ bounds are placeholders (N-015, N-027).
    `DefaultStrategy`'s `Target` of `spec-agents.md` 7.3 includes units arriving within
    `StartsIn` is AGT's; the default never ships but a consignee may be sent goods by
    others.
-8. **The lanes ignore the carriers' inputs.** `transport.Lanes` charges labour only
+8. **The lanes ignore the carriers' inputs.** `Config.TransportLanes` charges labour only
    (9.4), so the steady-state check does not count the feed and vehicle wear of the
    carriers' recipe, and a pack could pass the check yet be short of fodder. VIA could
    take a lane with inputs.
