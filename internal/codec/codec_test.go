@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"math"
 	"math/rand/v2"
+	"runtime"
 	"slices"
 	"strconv"
 	"testing"
@@ -470,24 +471,32 @@ func TestWriterReader_RoundTrip(t *testing.T) {
 //
 // Requirement: FR-CHK-016
 func TestAlloc_CountBoundsTheSlice(t *testing.T) {
-	// Not parallel: AllocsPerRun measures the whole process.
+	// Not parallel: TotalAlloc measures the whole process.
 	w := codec.NewWriter(nil)
 	w.U(1 << 40)
 	in := append(w.Out(), 1, 2, 3)
 	got := 0
-	allocs := testing.AllocsPerRun(100, func() {
+	// The smallest of several runs: a concurrent allocation only adds.
+	least := uint64(math.MaxUint64)
+	for range 20 {
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
 		r := codec.NewReader(in)
 		n := r.Count(1)
 		s := make([]uint64, 0, n)
 		got = cap(s)
-	})
+		runtime.ReadMemStats(&after)
+		least = min(least, after.TotalAlloc-before.TotalAlloc)
+	}
 	if got != 0 {
 		t.Errorf("Count of 2^40 in a 9-byte input sized a slice of capacity %d, want 0", got)
 	}
 	// The reader, the error and the zero-length slice: a constant, not a
-	// function of the count.
-	if allocs > 4 {
-		t.Errorf("refusing a count of 2^40 allocated %v times, want a small constant", allocs)
+	// function of the count. Bytes, not a count of allocations, which varies by
+	// one under -race (fmt's sync.Pool is randomly bypassed). A slice sized
+	// from the count would take 2^40*8 bytes = 8 TiB; the bound is 4 KiB.
+	if least > 4<<10 {
+		t.Errorf("refusing a count of 2^40 allocated %d bytes, want at most %d", least, 4<<10)
 	}
 }
 

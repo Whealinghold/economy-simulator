@@ -7,15 +7,13 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-  schedule:
-    - cron: "17 3 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 # Only PR runs share a group per ref, and a newer push cancels the older one. Every other run (main,
-# nightly, dispatch, a label event) is unique, so a long `full` never queues or displaces another
+# dispatch, a label event) is unique, so a long `full` never queues or displaces another
 # run (GitHub keeps one pending run per group). `full` has its own group below.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.action != 'labeled' && github.ref || github.run_id }}
@@ -37,7 +35,7 @@ jobs:
         with:
           go-version-file: go.work
           cache-dependency-path: "**/go.sum"
-      # Short race only: gate R does not fit a hosted 4-vCPU runner in 60m (run 43019781252); it runs in `full`.
+      # Short race only: gate R does not fit a hosted 4-vCPU runner in 60m (runs 43019781252, 43038922592).
       - run: scripts/ci/check.sh
         env:
           R_MODE: short
@@ -57,13 +55,15 @@ jobs:
       - run: scripts/ci/arm64.sh
 
   full:
+    # Opt-in only: manual dispatch, or a PR labelled `full`. Gates R and F do not fit a hosted 4-vCPU runner
+    # (testing.md 9.1), so no push or schedule starts it. Point FULL_RUNNER at a self-hosted or larger runner.
     # A PR can start it twice (opened and labeled, or labeled and a push); the newer run cancels the older.
-    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full'))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full'))
     concurrency:
       group: full-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 330
+    runs-on: ${{ vars.FULL_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: ${{ fromJSON(vars.FULL_TIMEOUT_MIN || '330') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,12 +72,14 @@ jobs:
         with:
           go-version-file: go.work
           cache: false
-      # Gate R (non-short race) before F, with its own timeout; the fast stage repeats here, which is cheap.
+      # Gate R and gate F are separate steps: a failing R does not hide F, and the job fails if either does.
       - run: scripts/ci/check.sh
+        if: ${{ !cancelled() }}
         env:
-          R_MODE: full
+          R_MODE: race
           R_TIMEOUT: 60m
       - run: scripts/ci/full.sh
+        if: ${{ !cancelled() }}
       # Kept before the upload to Codacy, so a flake there never loses a multi-hour run. Codacy also gets
       # the profile of a run whose coverage check failed, so its status shows the shortfall.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
