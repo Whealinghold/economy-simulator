@@ -82,37 +82,36 @@ func resolveLanes(cfg *Config, lanes []Lane) ([]viaLane, error) {
 // ordered by their first region. A region with no lane is a component of one, and
 // a lane with an end outside have is ignored (FR-VIA-061).
 func laneGroups(have []RegionID, lanes []viaLane) [][]RegionID {
-	label := make(map[RegionID]RegionID, len(have)) // region -> the least region of its component
+	parent := make(map[RegionID]RegionID, len(have)) // a lookup only; no order reaches a result
 	for _, r := range have {
-		label[r] = r
+		parent[r] = r
 	}
-	for changed := true; changed; {
-		changed = false
-		for _, ln := range lanes {
-			a, okA := label[ln.from]
-			b, okB := label[ln.to]
-			if okA && okB && a != b {
-				label[ln.from], label[ln.to] = min(a, b), min(a, b)
-				changed = true
-			}
+	find := func(r RegionID) RegionID {
+		for parent[r] != r {
+			parent[r] = parent[parent[r]]
+			r = parent[r]
 		}
-		for _, r := range have { // follow the labels down to the least
-			for label[label[r]] != label[r] {
-				label[r] = label[label[r]]
-				changed = true
-			}
+		return r
+	}
+	for _, ln := range lanes {
+		if _, ok := parent[ln.from]; !ok {
+			continue
 		}
+		if _, ok := parent[ln.to]; !ok {
+			continue
+		}
+		a, b := find(ln.from), find(ln.to)
+		parent[max(a, b)] = min(a, b) // the least region of a component is its root
 	}
 	var groups [][]RegionID
-	at := map[RegionID]int{} // component label -> index in groups
+	at := map[RegionID]int{}
 	for _, r := range have {
-		g, ok := at[label[r]]
-		if !ok {
-			g = len(groups)
-			at[label[r]] = g
+		root := find(r)
+		if _, seen := at[root]; !seen {
+			at[root] = len(groups)
 			groups = append(groups, nil)
 		}
-		groups[g] = append(groups[g], r)
+		groups[at[root]] = append(groups[at[root]], r)
 	}
 	return groups
 }

@@ -26,8 +26,8 @@ func TestCheckLaneList_Limit(t *testing.T) {
 }
 
 // TestLaneGroups verifies the components by hand over regions 0 to 5 with lanes
-// 4-1 (the order of the ends is the direction), 1-3 and 5-9, where 9 has no
-// group: {1, 3, 4} are one component, 0 and 2 stand alone, 5 stands alone because
+// 4-1 (the order of the ends is the direction), 1-3, 5-9, 9-2 and 9-0, where 9
+// has no group, so it joins nothing: {1, 3, 4} are one component, 0 and 2 stand alone, 5 stands alone because
 // its only lane ends in a region outside the set; the components are ordered by
 // their first region and each lists its regions ascending, and a chain of lanes
 // listed against the order of the regions still joins.
@@ -36,7 +36,7 @@ func TestCheckLaneList_Limit(t *testing.T) {
 func TestLaneGroups(t *testing.T) {
 	t.Parallel()
 	have := []RegionID{0, 1, 2, 3, 4, 5}
-	lanes := []viaLane{{from: 4, to: 1}, {from: 1, to: 3}, {from: 5, to: 9}}
+	lanes := []viaLane{{from: 4, to: 1}, {from: 1, to: 3}, {from: 5, to: 9}, {from: 9, to: 2}, {from: 9, to: 0}}
 	want := [][]RegionID{{0}, {1, 3, 4}, {2}, {5}}
 	if got := laneGroups(have, lanes); !equalGroups(got, want) {
 		t.Errorf("laneGroups(%v, %v) = %v, want %v", have, lanes, got, want)

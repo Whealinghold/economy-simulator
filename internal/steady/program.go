@@ -267,9 +267,7 @@ func Build(m Model) (Programme, Layout, error) {
 		}
 		p.Cols = append(p.Cols, col)
 	}
-	for _, ln := range m.Lanes {
-		p.Cols = append(p.Cols, laneColumn(ln, l))
-	}
+	p.Cols = append(p.Cols, laneColumns(m.Lanes, l)...)
 	lam, err := lambdaColumn(m)
 	if err != nil {
 		return Programme{}, Layout{}, err

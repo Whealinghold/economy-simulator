@@ -14,8 +14,7 @@ type Lane struct {
 // labour or a loss outside 0 to 9 999.
 func checkLanes(m Model) error {
 	for _, ln := range m.Lanes {
-		if ln.From < 0 || ln.From >= len(m.Regions) || ln.To < 0 || ln.To >= len(m.Regions) ||
-			ln.Commodity < 0 || ln.Commodity >= m.Commodities {
+		if !ln.inRange(len(m.Regions), m.Commodities) {
 			panic("steady: invariant violated: lane region or commodity out of range")
 		}
 		if ln.From == ln.To || ln.Labour < 0 || ln.LossBP < 0 || ln.LossBP >= 10000 {
@@ -23,6 +22,22 @@ func checkLanes(m Model) error {
 		}
 	}
 	return nil
+}
+
+// inRange reports whether the lane names regions below regions and a commodity
+// below commodities.
+func (ln Lane) inRange(regions, commodities int) bool {
+	return ln.From >= 0 && ln.From < regions && ln.To >= 0 && ln.To < regions &&
+		ln.Commodity >= 0 && ln.Commodity < commodities
+}
+
+// laneColumns builds the columns of the lanes, in order.
+func laneColumns(lanes []Lane, l Layout) []Column {
+	cols := make([]Column, len(lanes))
+	for i, ln := range lanes {
+		cols[i] = laneColumn(ln, l)
+	}
+	return cols
 }
 
 // laneColumn builds the column of a lane: it takes one unit from the goods row of
