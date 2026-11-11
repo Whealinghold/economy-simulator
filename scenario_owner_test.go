@@ -37,7 +37,6 @@ var stageTwoScenarios = []struct {
 // its entry.
 var scenariosNotBuilt = map[int]string{
 	35: "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
-	46: "plan 13: S46 (a shipper on a rumoured gap) is a waiting report inside TestScenarioS47_, with no test of its own",
 	75: "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
 }
 

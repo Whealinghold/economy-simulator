@@ -169,7 +169,9 @@ func TestScenarioS68_ContractsFailAndEnd(t *testing.T) {
 // TestScenarioS69_SourceAge (MER-S3) runs the merchant strategy for 40 ticks with
 // MaxSourceAge at 0 and at its bound: at 0 every rumour that is not from this tick is
 // stale, so no trip is planned and the stale are counted; at the bound none is stale
-// (FR-MER-009).
+// (FR-MER-009). At the bound the planned trips are logged, and the stale count of 0 is
+// asserted only when a trip was planned: on the cold pack none is, and the log says so
+// (plan 2-26 D700, no band invented).
 //
 // Requirement: FR-MER-009, FR-MER-007
 func TestScenarioS69_SourceAge(t *testing.T) {
@@ -189,6 +191,13 @@ func TestScenarioS69_SourceAge(t *testing.T) {
 		var stale, planned int64
 		for _, p := range kinds[economysim.MerchantsPlanned](rec) {
 			stale, planned = stale+p.Stale, planned+p.Planned
+		}
+		if tt.age != 0 {
+			t.Logf("%s (seed %d): planned %d, stale %d", tt.name, goldenSeed, planned, stale)
+			if planned == 0 {
+				t.Logf("%s (seed %d): cold pack, no trip planned in 40 ticks, so the stale count is not asserted", tt.name, goldenSeed)
+				continue
+			}
 		}
 		if (stale > 0) != tt.stale || (tt.age == 0 && planned != 0) {
 			t.Errorf("%s (seed %d): stale %d, planned %d, want stale above 0: %t and, at age 0, no trip", tt.name, goldenSeed, stale, planned, tt.stale)

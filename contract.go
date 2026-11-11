@@ -41,6 +41,70 @@ func modeIndex(c *Config) map[string]*Mode {
 	return out
 }
 
+// merchantTripTicks is Kmax of FR-WEL-009 (spec-merchants.md 12.3): the longest travel
+// time, at the factor 10 000, over the region graph and the self-carried modes of the
+// role's merchant block, capped at MaxTravelTicks so that WindowCycles times it cannot
+// overflow and still passes MaxWelfareWindow to be refused there. A hired mode is not the
+// merchant's own trip, a mode with a crew above 1 is one it cannot carry itself
+// (FR-MER-003), and a speed outside its bound has no travel time (tripWarnings does the
+// same). It is 0 for a role with no block, with the transport module off, with no path or
+// when the graph does not build: the rules that blame those causes run first.
+func merchantTripTicks(c *Config, lk lookup, r *Role) int64 {
+	if r.Merchant == nil || c.Modules.Transport == nil {
+		return 0
+	}
+	kmax := lk.trips.byMode(c)
+	var longest int64
+	for i := range c.Modules.Transport.Modes {
+		if md := &c.Modules.Transport.Modes[i]; md.carriedBy(r.Merchant) {
+			longest = max(longest, kmax[i])
+		}
+	}
+	return min(longest, MaxTravelTicks)
+}
+
+// tripCache holds the longest travel time of each mode of a configuration, built on first
+// use: the validator asks once per merchant role and several times per rule, and each
+// answer is a pass over the region graph (up to MaxRoles * MaxRegions^2 pairs unmemoised).
+// A lookup copies the pointer, so every copy shares the answer; the validator is single-
+// threaded, so no lock.
+type tripCache struct {
+	built bool
+	kmax  []int64
+}
+
+// byMode returns the longest travel time of each mode of c.Modules.Transport, 0 for a mode
+// with no travel time (a speed outside its bound, no path) or when the graph does not
+// build; indexed like Modes. c.Modules.Transport must not be nil.
+func (tc *tripCache) byMode(c *Config) []int64 {
+	if tc == nil { // a zero lookup: compute, do not keep
+		tc = &tripCache{}
+	}
+	if tc.built {
+		return tc.kmax
+	}
+	tc.built = true
+	modes := c.Modules.Transport.Modes
+	tc.kmax = make([]int64, len(modes))
+	g, err := NewGraph(*c)
+	if err != nil {
+		return tc.kmax
+	}
+	for i := range modes {
+		if modes[i].Speed >= 1 && modes[i].Speed <= MaxSpeed {
+			_, tc.kmax[i], _ = tripExtremes(g, modes[i].Speed)
+		}
+	}
+	return tc.kmax
+}
+
+// carriedBy reports whether the merchant of the block carries on this mode itself and the
+// mode has a travel time: listed in the block, not hired, a crew of at most 1 (FR-MER-003)
+// and a speed inside its bound.
+func (m *Mode) carriedBy(b *Merchant) bool {
+	return !m.hired() && m.Crew <= 1 && m.Speed >= 1 && m.Speed <= MaxSpeed && slices.Contains(b.Modes, m.ID)
+}
+
 // merchantTradeInputs returns the trade inputs of spec-merchants.md 3.2.2: the
 // haul commodity of each hired mode of the block and the vehicle and the feed
 // commodities of each self-carried mode. A mode that is not defined adds nothing.
