@@ -335,8 +335,11 @@ func screenAddAgents(t testing.TB, cfg economysim.Config, names economysim.Names
 	for _, it := range cfg.Roles[role].StartStock {
 		stock = append(stock, economysim.StockItem{Commodity: economysim.CommodityID(indexOf(names.Commodities, it.Commodity)), Quantity: it.Quantity})
 	}
+	if len(cfg.Regions) != 1 {
+		t.Fatalf("screen.reseed adds to region 0 only: the pack has %d regions, want 1", len(cfg.Regions))
+	}
 	for range re.Count {
-		if _, err := w.AddAgent(economysim.NewAgent{Region: 0, Role: economysim.RoleID(role), Strategy: "default", Money: economysim.Money(re.Money), Stock: stock}); err != nil {
+		if _, err := w.AddAgent(economysim.NewAgent{Region: 0, Role: economysim.RoleID(role), Strategy: "default", Money: economysim.Money(re.Money), Stock: slices.Clone(stock)}); err != nil {
 			t.Fatalf("AddAgent(%s) after tick %d error = %v, want nil", re.Role, tick, err)
 		}
 	}
@@ -404,8 +407,10 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 		}
 		t.Log(b.String())
 	}
-	for role, tick := range o.Watch.extinct {
-		t.Logf("seed %d: role %s extinct from tick %d", seed, o.Names.Roles[role], tick)
+	for role := range o.Names.Roles { // role order, not map order, so two runs print the same text
+		if tick, ok := o.Watch.extinct[economysim.RoleID(role)]; ok {
+			t.Logf("seed %d: role %s extinct from tick %d", seed, o.Names.Roles[role], tick)
+		}
 	}
 	keys := make([]screenMove, 0, len(o.Watch.moves))
 	for k := range o.Watch.moves {
@@ -419,6 +424,9 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 	}
 	// shortcut: region 0's basket for every role and window, right for the single-region packs; key it by region before reading it for five.
 	upkeep := int64(cfg.Regions[0].ReferenceBasket)
+	if len(cfg.Regions) > 1 {
+		t.Logf("seed %d WARNING: %d regions, the margins below use the basket of region 0 for every role", seed, len(cfg.Regions))
+	}
 	for window := int64(0); window < ticks/incomeWindow+1; window++ {
 		for role, id := range o.Names.Roles {
 			row := o.Watch.inc.Row(window, economysim.RoleID(role), upkeep)
@@ -475,6 +483,9 @@ func TestScreen_Packs(t *testing.T) {
 	if *screenX4 && ticks < x4Ticks {
 		t.Fatalf("-screen.x4 needs -screen.ticks >= %d, got %d", x4Ticks, ticks)
 	}
+	if last := at[len(at)-1]; last > ticks {
+		t.Fatalf("-screen.at has tick %d after the last tick run (-screen.ticks %d)", last, ticks)
+	}
 	cfg := screenConfig(t, layers)
 	var opts []economysim.Option
 	if pk.options != nil {
@@ -490,7 +501,9 @@ func TestScreen_Packs(t *testing.T) {
 	t.Logf("screen pack %v, %d seeds, %d ticks, at %v", layers, len(seeds), ticks, at)
 	for _, seed := range seeds {
 		t.Run("seed"+strconv.FormatUint(seed, 10), func(t *testing.T) {
-			t.Parallel()
+			if !*screenX4 { // x4 keeps a snapshot of every tick: one seed at a time bounds the memory
+				t.Parallel()
+			}
 			screenReport(t, cfg, seed, screenRun(t, cfg, opts, seed, ticks, at, *screenX4, re), ticks, *screenX4)
 		})
 	}
