@@ -153,11 +153,19 @@ func (v *AgentView) recipeHalted(r *RecipeView, p household.Params) bool {
 			continue
 		}
 		tgt, ok := household.OutputTarget(v.Weight, o.Quantity, r.Effective, p.OutputCoverTicks, r.Duration)
-		if ok && household.Halted(v.stockOf(o.Commodity), tgt, p.ProduceHaltRatio) {
+		if ok && (household.Halted(v.stockOf(o.Commodity), tgt, p.ProduceHaltRatio) || v.idleHalt(o.Commodity, tgt)) {
 			return true
 		}
 	}
 	return false
+}
+
+// idleHalt is whether c is at its one-tick target and its market has not traded
+// for HaltIdleTicks ticks; 0 is off.
+func (v *AgentView) idleHalt(c CommodityID, target int64) bool {
+	i := v.commodityAt(c)
+	return v.Tunables.HaltIdleTicks > 0 && i >= 0 && target >= 1 &&
+		v.Commodities[i].Stock >= target && v.Commodities[i].Market.Age >= v.Tunables.HaltIdleTicks
 }
 
 // foodCap is the most executions of r the view allows: its MaxExecutions cut by

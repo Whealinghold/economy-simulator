@@ -713,6 +713,15 @@ type WorldParams struct {
 	// basis points; 0 turns it off, which is the default (spec-agents.md 7.3.5,
 	// FR-AGT-087). It is the 47th field, appended after AnchorHold.
 	AskFloorBP int64
+	// RoleKeep is the households a role keeps against the role review: an agent
+	// whose move would leave its role with fewer is not a candidate to change
+	// role; 0 turns it off, which is the default. It is the 48th field, appended
+	// after AskFloorBP.
+	RoleKeep int64
+	// HaltIdleTicks halts a recipe whose output stock has reached its one-tick
+	// target while the output market has not traded for this many ticks; 0 turns
+	// it off, which is the default. It is the 49th field, appended after RoleKeep.
+	HaltIdleTicks int64
 }
 
 // Calendar is the structure of time: one section, not an entity

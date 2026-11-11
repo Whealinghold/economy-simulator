@@ -650,6 +650,7 @@ carries no flag. **K-WEL06** is read by the nominal programme (VIA 3.2, phi) and
 | K-AGT08 | World.RestBand | D | AGT 12 | bp | U | lin250 | C4 | off=0 | P03/PriceRange:? | L14 L15 D09 | - |
 | K-AGT09 | World.ProduceHaltRatio | D | AGT 12 | bp | U | geo | C4 | off=max | M05/StockCover:+S; P02/Pinned.Share:? | L05 L06 L44 D24=ProductionHalted | I10 |
 | K-AGT11 | World.AskFloorBP | D | AGT 7.3.5 | bp | U | lin1000 | C4 | off=0 | S02/Households:? | - | - |
+| K-AGT12 | World.HaltIdleTicks | D | AGT 7.1.5 | ticks | U | geo | C4 | off=0 | S02/Households:? | - | - |
 | K-AGT10 | Role.StartMoney | S | AGT 3.3 | minor | - | - | C2 | - | M06/s20.ticks:-H | L11 L45 | I09 A03 A08 |
 
 Notes. **K-AGT09**: the halt's threshold decides which bound a pinned price reaches
@@ -710,6 +711,7 @@ freeze). It is "the most consequential default" of BEL (open question 1 there).
 | K-SPN08 | World.DeathStep | D | SPN 11 | bp | U | geo | C5 | off=max | S02/Households:? | L35 D35=EntryLimited | - |
 | K-SPN09 | World.ExitShare | D | SPN 11 | bp | U | geo | C5 | off=max | S02/s14.recover_ticks:? | L35 L83 D35=EntryLimited | - |
 | K-SPN10 | World.Renewal | K | SPN 11 | bp | U | lin2500 | C5 | - | S02/Households:+H | L61 L79 D48 | - |
+| K-SPN12 | World.RoleKeep | D | SPN 6.6 | count | U | lin1 | C5 | off=0 | S02/Households:? | - | - |
 | K-SPN11 | World.EntryPoolShare | D | SPN 11 | bp | U | lin1000 | C5 | off=max | S02/Unfed:+H | L39 L63 D37=EntryLimited | I21 |
 | K-EST01 | Region.EstateMarkdown | K | EST 3 | bp | U | lin250 | C5 | - | S02/Households:? | L38 | - |
 | K-EST02 | Region.PoolRelease | D | EST 2.6 | bp | U | geo | C5 | off=0 | S02/Unfed:-H | L39 L63 D11 D12 | I21 A14 |

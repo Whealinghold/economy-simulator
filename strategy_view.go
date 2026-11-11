@@ -142,8 +142,8 @@ func (c *viewCtx) tunablesOf() Tunables {
 		CoverTicks: w.CoverTicks, InputJobs: w.InputJobs, OutputCoverTicks: w.OutputCoverTicks,
 		FavourFloor: w.FavourFloor, ReserveTicks: w.ReserveTicks, SpendMaxShare: w.SpendMaxShare,
 		SpendHalfTicks: w.SpendHalfTicks, RestBand: w.RestBand, ProduceHaltRatio: w.ProduceHaltRatio,
-		AskFloorBP: w.AskFloorBP,
-		Beliefs:    beliefTunablesOf(c.bp),
+		AskFloorBP: w.AskFloorBP, HaltIdleTicks: w.HaltIdleTicks,
+		Beliefs: beliefTunablesOf(c.bp),
 	}
 }
 

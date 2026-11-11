@@ -394,6 +394,9 @@ type Tunables struct {
 	// AskFloorBP is the floor of the limit of an ask for an upkeep commodity, in
 	// basis points of the reference price; 0 is off (7.3.5).
 	AskFloorBP int64
+	// HaltIdleTicks halts a recipe whose output has reached its one-tick target
+	// while the output market is idle for this many ticks; 0 is off (7.1.5).
+	HaltIdleTicks int64
 	// Beliefs are the belief parameters.
 	Beliefs BeliefTunables
 }

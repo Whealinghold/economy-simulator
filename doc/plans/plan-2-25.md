@@ -246,3 +246,26 @@ Share plus ask floor (`ask_floor_bp` over f1, 1 095 column; the best rows):
 A grid of floors 2 000 to 6 000 against shares 200 and 1 000 and markdowns 0 and 5 gave 1 095 counts of 0 to 307 and none at 540. With the floor, no role is extinct at tick 1 095 on seeds 101 and 104 (best row: households settle at 37% to 47% of the start and stay), but X4 (e) fails (about 40% against 90%), (b) trade share and (f) prepared price range fail as well.
 
 **Outcome.** The objective is not met (households under 90% of start at 1 095). By the brief, no `testdata/chains/overlay/stable.toml` is written, the claim pack `all` is not checked, and no warm start, expected file or golden is regenerated. The rules stay in the engine, off by default, for a supervisor decision on the next step (candidates: a higher-level cause for the plateau at 40%-47%, such as cook money hoarding, which both rules leave untouched, or accepting a lower household band for the claim).
+
+## Amendment: Phase 3c, the role floor and the idle halt (2026-11-11)
+
+Evidence (seed 101..104, f1 + floor 5 000 + share 1 000 + markdown 0): producers do not produce into the staple glut (grow_staple 17 to 69 executions a window; the 11 000+ units are the warm start stock and the estate); the existing production halt (stock over 3 ticks of own output) already stops them. What empties a role is churn: in the settled phase 85% to 90% of non-cook household-ticks are unfed, households rotate between the poor roles by rung-1 distress switches, and the last holders leave by switch or by insolvent exit (maker from 770 on seed 102, treat_maker 660 and digger 1 075 on seed 103). Money stays with the cooks (35% to 90%).
+
+Two default-off keys, separate small pieces: `World.RoleKeep` / `role_keep` (households; `spawner.go` `mayLeave` and the clamp in `emitExit`; spec-spawner 6.6, FR-SPN-062/063; hash id 48) and `World.HaltIdleTicks` / `halt_idle_ticks` (ticks; `strategy_work.go` `idleHalt`; spec-agents 7.1.5, FR-AGT-088; hash id 49). Both default 0 (off): hash, goldens and warm starts unchanged.
+
+Trials (one-demand, households at tick 600 / 800 / 1 095, extinct roles; all on the f1 base with the Phase 3a settings):
+
+| # | Setting | 101 | 102 | 103 | 104 | Verdict |
+|---|---------|-----|-----|-----|-----|---------|
+| 1 | keep 10 (switches only) | 135 at 1 095 | 138 | 155 | 135 | maker 530, treat_maker 863 extinct; worse |
+| 2 | keep 3 (switches only) | 272 | 230 | 260 | 273 | treat_maker 630, maker 545 extinct |
+| 3 | keep 3 (switches and exits) | 293/293/289 | 255/255/168 | 277/276/276 | 291/289/211 | no extinct; 102, 104 drift over 20% |
+| 4 | keep 10 | 297/272/272 | 291/276/276 | 299/286/208 | 300/300/299 | no extinct; 103 drifts -30% |
+| 5 | keep 10, idle 20 | 316/316/316 | 271/247/217 | 296/294/285 | 289/244/187 | 104 -35% |
+| 6 | keep 10, idle 60 | 265/250/246 | 275/275/275 | 301/301/301 | 306/306/306 | **pass** |
+| 7 | keep 10, idle 5 | 296/293/190 | 326 | 321 | 298/283/231 | worse |
+| 8 | trial 6 on seeds 1 to 10 | | | | | **pass**: 292, 299, 256 (-16%), 292 (-3%), 255 (-5%), 235 (-15%), 308, 297, 312, 307; no extinct role |
+
+Trial 6 holds every 25-tick sample of seeds 101 to 104 from 600 to 1 095 within 7% of the tick-600 value. X4 (e) still fails (41% to 51% of the start), as do (b) and (f). The R3 and R6 detectors cannot run: every threshold of `bands/regimes.toml` is unset (Unknown, "threshold unset"); extinct roles and the household drift stand in. Not tried: `halt_idle_ticks` alone (the ablation).
+
+Claim pack `all`: the layer list is at the 16 document limit of `Parse`, and the f1 data is one-demand's. With the engine keys only, `all` no longer dies out (baseline: 0 households at tick 600) but every role is unfed and the staple price range is x96: not a pass. The overlay `testdata/chains/overlay/stable.toml` holds the one-demand winning layer and is wired into no pack.

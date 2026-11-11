@@ -1128,7 +1128,7 @@ OutputTarget_o(r) = ceil(w * q_o * E_r * OutputCoverTicks / (10 000 * Duration_r
 A byproduct (`CostShare` 0) never halts a recipe, or a pile of waste would stop the
 main product. An `OutputTarget` of 0 never halts a recipe: `OutputCoverTicks` may be 0 (`bounds.go`), and the
 literal inequality `Stock * 10 000 >= Ratio * 0` is then always true, which would halt every such
-recipe, so the rule is read only for an output whose target is above 0. The world's counts and the
+recipe, so the rule is read only for an output whose target is above 0. With `World.HaltIdleTicks` above 0 a recipe is also skipped if any such output has `Stock_o >= OutputTarget_o(r)` (a target of at least 1) while the market of `o` in the agent's region has not traded for `HaltIdleTicks` ticks (`Market.Age`): an overstocked producer into an idle market stops, and the halt ends when a unit trades or the stock falls under the target (FR-AGT-088). The world's counts and the
 default `Work` read the one work report of 7.1.3 for the halt as for the floor. The halt does not apply to an own-use recipe: its stop is the exit cover of
 the mode (7.1.9). This is the inventory-driven part of production (a firm with too much
 inventory hires fewer, in Lengnick's model): a negative feedback from stock to supply,
@@ -2457,6 +2457,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-AGT-084 | The removal of an agent MUST drop a migration journey in progress and end each open delivery contract of which it is the deliverer, returning the escrow in full to the payer, before its money moves to the estate. (new, 3.6 step 2a; `spec-migration.md` 8.3, `spec-merchants.md` 9.8.2) |
 | FR-AGT-085 | An order for a commodity under a `sell` or a `buy` right in force of a body that the agent is not a member of MUST be rejected by the world while it builds the orders, with the reason `not_permitted`, after `not_tradable` and before the market's checks, MUST NOT reach clearing and MUST have no outcome; the check MUST NOT apply to a pseudo-agent. (new, `spec-institutions.md` 5.6.2, FR-ORG-024) |
 | FR-AGT-086 | When the default `Work` requests no job, the work report MUST name the first recipe of the role that the view reports as unable to run (`MaxExecutions` 0), with the view's reason, if and only if the share is above 0 and the production halt skipped none of the role's recipes; the world MUST count that household once as refused for that recipe and reason in `RecipeRefused` (`spec-observability.md` 4.4.6a), and a household that rests, was halted, or has no eligible recipe and no blocked one MUST NOT be so counted. |
+| FR-AGT-088 | With `World.HaltIdleTicks` above 0 the default `Work` MUST skip, as the production halt does, a recipe with an output of positive `CostShare` whose `OutputTarget` is at least 1, whose stock is at least the target and whose market `Age` is at least `HaltIdleTicks`; with 0 it MUST change nothing (7.1.5). |
 | FR-AGT-087 | With `World.AskFloorBP` above 0, the default `Trade` MUST NOT form an ask for an upkeep commodity with a limit below `trunc(Ref * AskFloorBP / 10 000)`, never above `MaxPrice`, and MUST NOT change a bid, the words drawn or any ask of a commodity that is not upkeep; with 0 it MUST change nothing (7.3.5). |
 
 ### Non-functional

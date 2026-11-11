@@ -61,7 +61,7 @@ func boundCase(scope, field string, path []string, mutate func(c *economysim.Con
 // worldBounds are the integer fields of the world that have a range of their own
 // and a value outside it that breaks no other rule: the ranges of
 // spec-agents.md 12, spec-beliefs.md 11, spec-spawner.md 11, spec-scale.md and
-// spec-welfare-and-wages.md 12.1, and AnchorHold of spec-production.md 9.3 (FR-CFG-107) and AskFloorBP of spec-agents.md 7.3.5 (FR-CFG-108).
+// spec-welfare-and-wages.md 12.1, and AnchorHold of spec-production.md 9.3 (FR-CFG-107) AskFloorBP of spec-agents.md 7.3.5 (FR-CFG-108), RoleKeep (FR-CFG-109) and HaltIdleTicks (FR-CFG-110).
 var worldBounds = []struct {
 	field string
 	bad   int64
@@ -76,7 +76,7 @@ var worldBounds = []struct {
 	{"CostCeiling", 0}, {"RefBandLow", 0}, {"RefBandHigh", 9_999}, {"PriceWindow", 0},
 	{"ReviewTicks", 0}, {"EntryShare", 10_001}, {"RoleHysteresis", -1}, {"RoleCooldown", 3_651},
 	{"EntryRatio", -1}, {"ChangePrivation", 0}, {"RemovePrivation", 0}, {"DeathStep", 0},
-	{"ExitShare", 10_001}, {"Renewal", 10_001}, {"EntryPoolShare", 10_001}, {"AnchorHold", 10_001}, {"AskFloorBP", 10_001},
+	{"ExitShare", 10_001}, {"Renewal", 10_001}, {"EntryPoolShare", 10_001}, {"AnchorHold", 10_001}, {"AskFloorBP", 10_001}, {"RoleKeep", 1_000_000_001}, {"HaltIdleTicks", 3_651},
 }
 
 // fieldCases is every failing case by field. It is data: the registry test of

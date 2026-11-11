@@ -46,7 +46,7 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-352 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
@@ -78,17 +78,17 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-343, N-344 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-343, N-344, N-352 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305 |
+| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
-| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344 |
+| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
@@ -2203,6 +2203,13 @@ PR description.
 - **Raised:** 2026-11-11, plan 2-23.
 - **Note:** A leaf package that is not a module (`denomination/`) touches no catalogue file; its guards are the import guard and `guardedFiles`. A later optional package outside the simulation follows the same form.
 
+### N-352 The reference chain's household level is set by money circulation, not by the engine rules
+
+- **Areas:** STY, REF, SPN, AGT
+- **Raised:** 2026-11-11, plan 2-25 Phase 3c.
+- **Note:** On `one-demand` (f1 data, `ask_floor_bp` 5 000, `estate_list_share` 1 000, `estate_markdown` 0) plus `World.RoleKeep` 10 and `World.HaltIdleTicks` 60 (both default off), seeds 1 to 10 and 101 to 104 show no extinct role and households within 20% of their tick-600 value to tick 1 095, at 41% to 54% of the start (the original census is about 2 times what the circulation sustains; cooks hold 50% to 65% of the money and most households of the other roles are unfed throughout). Two cautions: `RoleKeep` holds the last households of a role against switches and rung-3 exits, so a role "alive" at 10 households may be sustained by the floor and not by its own income (do not read it as a role that earns); the X4 (b), (e) and (f) criteria still fail. On the 5-region `all` pack the keys stop the total extinction but every role stays unfed and the households count is held (apparently by the population module), so it is not a stability signal there. The `internal/verdict` thresholds (`regimes.toml`) are all unset, so R3 and R6 return Unknown: the screen used extinct roles and the household drift as stand-ins.
+- **Update:** the claim pack's layer list is at the 16 document limit of `Parse`; an overlay needs a document slot (fold two layers).
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2215,4 +2222,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 6d6e33327eb294d1edbc2759
+NOTES-TAG: e12101ce8c10d016614a8b59

@@ -485,6 +485,20 @@ re-seeds an extinct role. A role that never had a group and has no agent (the re
 consumer who wants a role back adds agents through the integration interface or writes a
 spawner.
 
+### 6.6 The role floor (`RoleKeep`)
+
+With `World.RoleKeep` above 0 the default spawner keeps each role at no fewer than `RoleKeep`
+households against its own decisions: it does not make a Switch candidate of an agent, and it
+cuts a rung-3 reduction or removal (5.3), when the role's households, less the households
+already removed from it this tick and the households of the candidates already taken, would fall
+below `RoleKeep` (the agents are taken in ascending ID order; a candidate the caps later refuse
+still used its share, so the role is left larger, never smaller). The cut reduction keeps its
+cause; a reduction cut to 0 is not emitted, and one cut short of the agent's weight is a
+reduction, not a removal. The rule never adds a household and never re-seeds a role (6.5): it
+holds the last households of a role that has one. Households of the floor that cannot
+feed themselves are kept as they are, with their privation. With 0 (the default) nothing changes.
+It is a default-spawner rule: a custom `Spawner` is not floored (FR-SPN-062, FR-SPN-063).
+
 ## 7. Replacement
 
 ### 7.1 Renewal
@@ -635,6 +649,7 @@ not from any source.
 | World | `ExitShare` | most households that may leave a region per tick by rung 3, in basis points of its households; 0 turns the rung off (5.3) | 100 | 0 to 10 000 |
 | World | `Renewal` | share of the households lost by rung 3 that are replaced, in basis points (7.1) | 10 000 | 0 to 10 000 |
 | World | `EntryPoolShare` | share of the pool that may fund entrants in one tick, in basis points (7.3) | 5 000 | 0 to 10 000 |
+| World | `RoleKeep` | households a role keeps against the default spawner's switches and rung-3 exits (6.6); 0 is off | 0 | 0 to `MaxHouseholds` |
 | Role | `Closed` | the default spawner places no entrant or switcher in this role (6.2) | false | boolean |
 | Role | `Needs` | a settlement flag the region's class must carry for the role to be open (6.2; SET owns it, `spec-settlements.md` 6.4.1) | empty | a flag ID |
 | Role | `Ceiling` | a settlement limit on the households of the role in a region (6.3.1; SET owns it, `spec-settlements.md` 6.4.2) | empty | a limit ID |
@@ -1027,6 +1042,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 
 | ID | Requirement |
 |----|-------------|
+| FR-SPN-062 | With `World.RoleKeep` above 0 the default spawner MUST NOT emit a Switch for an agent, and MUST cut a rung-3 reduction or removal, so that the households of its role, less those removed from it this tick and those of the candidates already taken in ascending agent ID, fall below `RoleKeep`; a reduction cut to 0 MUST NOT be emitted and one cut short of the weight MUST be a Reduce (6.6). |
+| FR-SPN-063 | With `World.RoleKeep` 0 the decisions of the default spawner MUST be those of a world without the field (6.6). |
 | NFR-SPN-001 | With the default logger and observer, the view, the plan, the caps and the executions of a step of the reference chain MUST allocate nothing beyond scratch held by the world (observability-and-logging.md 4.5, 8.2). |
 | NFR-SPN-002 | The cost of `Decide` for a region SHOULD be proportional to the agents of the region and not to the weights, and the sort of candidates SHOULD cost `O(k log k)` in the candidates `k`. |
 | NFR-SPN-003 | Observation MUST NOT change results: a run with a logger and an observer attached MUST make the same decisions as one without. |

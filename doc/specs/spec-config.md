@@ -165,6 +165,7 @@ reads it as `WorldParams`.
 | `World` | `BeliefStep`, `BeliefAdjustProb`, `BeliefSignificance`, `BeliefStockLow`, `BeliefStockHigh`, `BeliefMaxAge`, `BeliefWidthInit`, `BeliefWidthMin`, `BeliefWidthMax`, `BeliefWidthStep`, `BeliefEvidenceShare` (default 5 000, the sixteenth), `CostFloor` (default 7 000), `CostCeiling`, `RefBandLow`, `RefBandHigh`, `PriceWindow` | `spec-beliefs.md` 11 |
 | `World` | `AnchorHold` (basis points of the starting wage, 0 to 10 000, default 0 which is off; appended, the 46th field with an id) | `spec-production.md` 9.3 |
 | `World` | `AskFloorBP` (basis points of the reference price, 0 to 10 000, default 0 which is off; appended, the 47th field with an id) | `spec-agents.md` 7.3.5 |
+| `World` | `RoleKeep` (households, default 0 which is off; the 48th field with an id), `HaltIdleTicks` (ticks, default 0 which is off; the 49th) | `spec-spawner.md` 6.6, `spec-agents.md` 7.1.5 |
 | `Calendar` | `HoursPerDay`, `DaysPerWeek`, `Months`, `TicksPerDay`, `DaysPerTick`, `StartDay`, `Seasons`, `SeasonStart` | `spec-calendar.md` 3.1 |
 | `Commodities[]` | `ID`, `Mass`, `Bulk`, `ShelfLife`, `Durability`, `Classes`, `Raw`, `ReferencePrice`, `Label` (p), `UnitLabel` (p) | `spec-goods.md` 8 |
 | `Recipes[]` | `ID`, `Duration`, `Inputs`, `Outputs` (each with `CostShare`, `Discard`), `Requires` (each with `WearPerUse`), `Draws`, `Sited`, `TraineeEligible`, `TraineeYield`, `Label` (p) | `spec-production.md` 3.1, 11 |
@@ -1699,7 +1700,7 @@ later module adds takes the next free id of its struct, in the pull request that
 and that pull request adds a row to this paragraph; an id is never reused or moved. So
 at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, `Yields`
 5, `Roles` 6, `Regions` 7, `Edges` 8, `RegionPrices` 9, `Groups` 10, `WarmStart` 11 and
-`Modules` 12. `WorldParams` (the type of `Config.World`) has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45, `AnchorHold` 46 (appended after the presentation-only `DistanceLabel`, which has no id) and `AskFloorBP` 47.
+`Modules` 12. `WorldParams` (the type of `Config.World`) has its 45 fields as 3.7.2 lists them, `Scale` 1 to `Clearing` 45, `AnchorHold` 46 (appended after the presentation-only `DistanceLabel`, which has no id) `AskFloorBP` 47, `RoleKeep` 48 and `HaltIdleTicks` 49.
 `Calendar` has `HoursPerDay` 1 to `SeasonStart` 8; `Month` and `Season` have `ID` 1,
 `Days` 2. `Commodity` has `ID` 1, `Mass` 2, `Bulk` 3, `ShelfLife` 4, `Durability` 5,
 `Classes` 6, `Raw` 7, `ReferencePrice` 8. `Item` has `Commodity` 1, `Quantity` 2;
@@ -2124,6 +2125,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-CFG-105 | The hash of the reference configuration MUST be pinned by a constant in a test (8.2.5), and the examples of 8.2.4 MUST be tests of the encoder. |
 | FR-CFG-107 | `World.AnchorHold` MUST be a configuration field with default 0 (off) and bound 0 to 10 000, an out-of-bound value MUST be rejected with `ErrOutOfBounds` at `world.anchor_hold`, and it MUST be written to the hash as field 46 only when not zero, so that the pinned hash of the all-off reference configuration does not move (FR-CFG-105). |
 | FR-CFG-108 | `World.AskFloorBP` MUST be a configuration field with default 0 (off) and bound 0 to 10 000, an out-of-bound value MUST be rejected with `ErrOutOfBounds` at `world.ask_floor_bp`, and it MUST be written to the hash as field 47 only when not zero, so that the pinned hash of the all-off reference configuration does not move (FR-CFG-105). |
+| FR-CFG-109 | `World.RoleKeep` MUST be a configuration field with default 0 (off) and bound 0 to `MaxHouseholds`, an out-of-bound value MUST be rejected with `ErrOutOfBounds` at `world.role_keep`, and it MUST be written to the hash as field 48 only when not zero (FR-CFG-105). |
+| FR-CFG-110 | `World.HaltIdleTicks` MUST be a configuration field with default 0 (off) and bound 0 to `MaxWelfareWindow`, an out-of-bound value MUST be rejected with `ErrOutOfBounds` at `world.halt_idle_ticks`, and it MUST be written to the hash as field 49 only when not zero (FR-CFG-105). |
 | FR-CFG-106 | `HashConfig` MUST be the exported name of the pure hash function of 8.5 and MUST return a `[32]byte`. |
 
 ### Non-functional

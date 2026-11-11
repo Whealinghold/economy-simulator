@@ -113,6 +113,7 @@ func (w *World) buildRegionView(g RegionID) *RegionView {
 	v.ReviewTicks, v.EntryShare, v.RoleHysteresis, v.RoleCooldown = p.ReviewTicks, p.EntryShare, p.RoleHysteresis, p.RoleCooldown
 	v.EntryRatio, v.ChangePrivation, v.RemovePrivation = p.EntryRatio, p.ChangePrivation, p.RemovePrivation
 	v.DeathStep, v.ExitShare, v.Renewal, v.EntryPoolShare = p.DeathStep, p.ExitShare, w.renewalBP(), p.EntryPoolShare
+	v.RoleKeep = p.RoleKeep
 	w.pricesOf(g)
 	w.scanRegion(g)
 	w.fillRoles(g)

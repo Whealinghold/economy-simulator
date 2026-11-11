@@ -260,6 +260,8 @@ func worldRanges(w WorldParams) []fieldRange {
 		{"entry_pool_share", w.EntryPoolShare, 0, wholeBP},
 		{"anchor_hold", w.AnchorHold, 0, wholeBP},
 		{"ask_floor_bp", w.AskFloorBP, 0, wholeBP},
+		{"role_keep", w.RoleKeep, 0, MaxHouseholds},
+		{"halt_idle_ticks", w.HaltIdleTicks, 0, MaxWelfareWindow},
 	}
 }
 

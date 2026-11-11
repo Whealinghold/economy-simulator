@@ -37,6 +37,7 @@ var (
 	screenTicks  = flag.Int64("screen.ticks", 0, "ticks to run; 0 is the last of -screen.at")
 	screenAt     = flag.String("screen.at", "100,300,600,1100", "comma list of ticks at which the table is printed")
 	screenReseed = flag.String("screen.reseed", "", "read-only H4 experiment role:count:money: when the role has no household, add count external agents of weight 1 to region 0 (AddAgent), with the role's start stock and that money each")
+	screenDrop   = flag.String("screen.drop", "", "comma list of layers of the pack left out (a pack at the 16 document limit takes an overlay in place of one)")
 	screenCensus = flag.Bool("screen.census", false, "also print the census of the solver for the layers without the warm start: households, balanced households and static income per role (FR-VIA-060)")
 	screenX4     = flag.Bool("screen.x4", false, "also print the X4 criteria (needs -screen.ticks 1095 or more; keeps a snapshot of every tick)")
 )
@@ -453,7 +454,9 @@ func TestScreen_Packs(t *testing.T) {
 	if !ok {
 		pk.layers = strings.Split(*screenPack, ",")
 	}
-	layers := slices.Clone(pk.layers)
+	layers := slices.DeleteFunc(slices.Clone(pk.layers), func(l string) bool {
+		return *screenDrop != "" && slices.Contains(strings.Split(*screenDrop, ","), l)
+	})
 	if *screenLayers != "" {
 		layers = append(layers, strings.Split(*screenLayers, ",")...)
 	}

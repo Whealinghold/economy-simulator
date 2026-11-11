@@ -744,3 +744,30 @@ func TestLoad_EstateListShare(t *testing.T) {
 		})
 	}
 }
+
+// TestLoad_RoleKeepHaltIdle verifies the world keys role_keep and halt_idle_ticks:
+// absent they are 0 (off), set they load.
+//
+// Requirement: FR-CFG-109, FR-CFG-110
+func TestLoad_RoleKeepHaltIdle(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name       string
+		doc        string
+		keep, idle int64
+	}{
+		{"absent is off", minimal, 0, 0},
+		{"set", minimal + "[world]\nrole_keep = 10\nhalt_idle_ticks = 60\n", 10, 60},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := parseStrings(tt.doc)
+			if err != nil {
+				t.Fatalf("Parse(%s) error = %v, want nil", tt.name, err)
+			}
+			if got.World.RoleKeep != tt.keep || got.World.HaltIdleTicks != tt.idle {
+				t.Errorf("Parse(%s) RoleKeep, HaltIdleTicks = %d, %d, want %d, %d", tt.name, got.World.RoleKeep, got.World.HaltIdleTicks, tt.keep, tt.idle)
+			}
+		})
+	}
+}

@@ -708,3 +708,37 @@ func TestEmit_SkipsOrdersOutOfRange(t *testing.T) {
 		t.Errorf("emit() intents = %+v, want %+v", p.Intents, want)
 	}
 }
+
+// TestRecipeHalted_IdleMarket verifies HaltIdleTicks (spec-agents.md 7.1.5): with it
+// above 0 a stock at the one-tick target (1) halts the recipe when the market has
+// been idle for that many ticks, and not before, not below the target, and not with
+// 0. The stock 2 is under the halt ratio of 3 targets, so only the idle rule can halt.
+//
+// Requirement: FR-AGT-088
+func TestRecipeHalted_IdleMarket(t *testing.T) {
+	t.Parallel()
+	r := RecipeView{Duration: 1, Effective: 10000, Outputs: []RecipeOutput{{Commodity: cItem, Quantity: 1, CostShare: 10000}}}
+	tests := []struct {
+		name        string
+		idle, stock int64
+		age         int64
+		want        bool
+	}{
+		{"off", 0, 2, 50, false},
+		{"idle long enough", 20, 2, 20, true},
+		{"not idle long enough", 20, 2, 19, false},
+		{"stock under the target", 20, 0, 50, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			v := workView()
+			v.Tunables.HaltIdleTicks = tt.idle
+			v.Commodities[1].Stock = tt.stock
+			v.Commodities[1].Market.Age = tt.age
+			if got := v.recipeHalted(&r, householdParams(&v.Tunables)); got != tt.want {
+				t.Errorf("recipeHalted = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

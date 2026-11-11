@@ -68,6 +68,8 @@ type RegionView struct {
 	ReviewTicks, EntryShare, RoleHysteresis, RoleCooldown, EntryRatio int64
 	ChangePrivation, RemovePrivation, DeathStep, ExitShare            int64
 	Renewal, EntryPoolShare                                           int64
+	// RoleKeep is the households a role keeps against the role review; 0 is off.
+	RoleKeep int64
 	// Roles is the per-role group, in canonical role order.
 	Roles []RoleView
 	// Agents is the per-agent group, in ascending ID order.
@@ -251,6 +253,7 @@ type decideScratch struct {
 	byID       []int
 	acted      []bool
 	removed    []int64
+	leaving    []int64
 	lfl        []int64
 	cands      []occupation.Candidate
 	dests      []occupation.Dest
@@ -312,6 +315,7 @@ func (c *decider) prepare() {
 	s.sig = regrow(s.sig, nr)
 	s.acted = regrow(s.acted, na)
 	s.removed = regrow(s.removed, nr)
+	s.leaving = regrow(s.leaving, nr)
 	s.lfl = regrow(s.lfl, nr)
 	s.used = regrow(s.used, nr)
 	s.roleCap = regrow(s.roleCap, nr)
@@ -391,6 +395,15 @@ func (c *decider) emitExit(e occupation.Exit) {
 	v, s := c.v, c.s
 	pos, _ := slices.BinarySearchFunc(s.byID, e.Ref, func(i, ref int) int { return cmp.Compare(int(v.Agents[i].Agent), ref) })
 	i := s.byID[pos]
+	ri := c.roleIdx(v.Agents[i].Role)
+	if ri >= 0 && v.RoleKeep > 0 {
+		// RoleKeep: the role keeps its last households from the rung-3 exits too
+		e.Households = min(e.Households, max(0, v.Roles[ri].Households-s.removed[ri]-v.RoleKeep))
+		if e.Households == 0 {
+			return
+		}
+		e.Remove = e.Households == v.Agents[i].Weight
+	}
 	s.acted[i] = true
 	cause, kind := CauseStarved, DecideReduce
 	if e.Insolvent {
@@ -400,7 +413,7 @@ func (c *decider) emitExit(e occupation.Exit) {
 		kind = DecideRemove
 	}
 	c.d.List = append(c.d.List, Decision{Kind: kind, Agent: v.Agents[i].Agent, Households: e.Households, Cause: cause})
-	if ri := c.roleIdx(v.Agents[i].Role); ri >= 0 {
+	if ri >= 0 {
 		s.removed[ri] = satAdd(s.removed[ri], e.Households)
 	}
 }
@@ -455,7 +468,24 @@ func (c *decider) eligible(i int) (ri int, ok bool) {
 		c.d.cooldown = satAdd(c.d.cooldown, a.Weight)
 		return 0, false
 	}
-	return ri, true
+	return ri, c.mayLeave(ri, a.Weight)
+}
+
+// mayLeave is whether weight households may leave role ri this tick: with
+// RoleKeep above 0 the role keeps at least that many after the exits and the
+// candidates already taken (an admission cap may refuse a candidate, which
+// leaves the role larger, never smaller).
+func (c *decider) mayLeave(ri int, weight int64) bool {
+	k := c.v.RoleKeep
+	if k <= 0 {
+		return true
+	}
+	s := c.s
+	if c.v.Roles[ri].Households-s.removed[ri]-s.leaving[ri]-weight < k {
+		return false
+	}
+	s.leaving[ri] = satAdd(s.leaving[ri], weight)
+	return true
 }
 
 // consider makes agent i a candidate if it is eligible and has a destination.

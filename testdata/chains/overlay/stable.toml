@@ -1,0 +1,32 @@
+# Stage 2 stability overlay (plan 2-25 Phase 3c). Winning screen: one-demand, seeds 1-10 and 101-104,
+# no extinct role, households within 20% of tick 600 to tick 1095. Written for the one-demand pack
+# (census, warm start); NOT wired into any pack list (the claim pack all is at the 16 document limit).
+[region.north.yield.grow_staple]
+all = 10000
+[region.north.group.comfort_maker]
+households = 15
+[region.north.group.cook]
+households = 172
+[region.north.group.digger]
+households = 46
+[region.north.group.forester]
+households = 115
+[region.north.group.grower]
+households = 109
+[region.north.group.maker]
+households = 70
+[region.north.group.refiner]
+households = 55
+[region.north.group.treat_maker]
+households = 18
+[warm_start.region.north.group.grower]
+stock = [ { commodity = "fuel", quantity = 5 }, { commodity = "prepared", quantity = 4 }, { commodity = "seed", quantity = 40 }, { commodity = "staple", quantity = 1400 }, { commodity = "tool_a", quantity = 1 } ]
+[world]
+halt_idle_ticks = 60
+role_keep = 10
+remove_privation = 40
+change_privation = 12
+ask_floor_bp = 5000
+[region.north]
+estate_list_share = 1000
+estate_markdown = 0

@@ -1,8 +1,8 @@
 ok   knob rows have 12 cells
 ok   group rows have 7 cells
 ok   ids are unique
-     195 knob rows (K 57, D 111, S 25, P 2), 153 groups
-     K and D rows 168: search kinds {'U': 158, 'I': 8, 'E': 2}
+     197 knob rows (K 57, D 113, S 25, P 2), 153 groups
+     K and D rows 170: search kinds {'U': 160, 'I': 8, 'E': 2}
      IND presets 25, facts 39, scenarios 62, loops 202, dampers 167, I 27, A 16, E 2
 ok   knob rows use the closed sets and known references
 ok   structure groups use the closed sets
@@ -21,7 +21,7 @@ ok   `in` and `chk` are on exactly the data fields VIA 11 lists (a key and a con
      VIA 11: 41 paths, 131 fields moving the table, 32 fields read by a check or a report
 ok   every owner row is a knob row or in a group
 ok   registry-only pairs are the expected scopes
-     586 owner pairs (243 with several owner sections), 8 registry-only
+     588 owner pairs (243 with several owner sections), 8 registry-only
 ok   every field name of CFG 3.7 is a registry key or a group field
      nested fields checked by name only (the catalogue flattens them): 2
 ok   every nested field of CFG 3.7 is under a scope named for its table
@@ -43,7 +43,7 @@ ok   group owner cells match the README owner sections
         ('K-FIS02', 'A16')
         ('K-FIS04', 'A16')
 
-notes (informational, to be read): 230
+notes (informational, to be read): 231
     ('K-SCL01', 'L13 entry does not name Scale')
     ('K-SCL01', 'L33 entry does not name Scale')
     ('K-SCL01', 'L34 entry does not name Scale')
