@@ -216,7 +216,7 @@ part of EST for the same reason. Plans 1 and 8 are rows of the table.
 them). CI: yes, with an arm64 job; the workflow (`.github/workflows/ci.yml`, three
 jobs: check, full, arm64) is not written by plan 2-1 and has its own row below.
 The gate is two runs (`rules/testing.md` 9.1): R, `go test -race -timeout 60m ./...`
-with reduced seeds, and F, the non-race atomic-coverage run with all seeds.
+with reduced seeds (in CI only in the `full` job; PR CI runs `-short -race`, see testing.md 9.1), and F, the non-race atomic-coverage run with all seeds.
 Answers to the questions asked at the start of Stage 2: (5) plan 8 E0: yes, the
 seasonal-crop feature C04 may move from the pack to an overlay; (6) plan 24 R2(a):
 the realm pack is `five` renamed, and R3: the reference machine for the SCL time is
@@ -256,7 +256,7 @@ all-on from it).
 | `internal/calibration` and `testdata/calibration/` | CLB | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
 | `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
 | `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | done on branch stage-2-23 (commit recorded at merge) |
-| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
+| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | `doc/plans/plan-2-ci.md` | built; first run 2026-11-11 (run 43019781252): arm64 green in 16m50s on a native runner; PR CI runs `-short -race`, not gate R (root package timed out at 1h0m on a 4-vCPU runner, `examples/realm` 597 s), gate R runs in `full` before F (`R_MODE`); pending: the F wall time, the Codacy figure |
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
@@ -313,11 +313,10 @@ the explanation testing.md 7.2 requires.
   architecture.md 12.2 still needs an owner and a lifecycle; not before a
   consumer asks with a measurement.
 - The not-in-version-1 list of note N-131.
-- The CI workflow file itself, until its row in the Stage 2 table is built. The
-  owner decided on 2026-10-23 that CI is wanted, with an arm64 job (open item O3
-  of `plan-phase-0-foundation.md`, git history, `2abbe62^`); until the workflow
-  exists the commands of `AGENTS.md`, the coverage reading of testing.md 9.1 and
-  the timed fuzz runs are done by hand in each change.
+- Timed fuzz runs in CI (no fuzz time is decided) and the coverage threshold of
+  the `examples/` modules (reported, not gated). The CI workflow is built
+  (`plan-2-ci.md`) but has not run on GitHub yet; until it has, and for the
+  timed fuzz runs, the commands of `AGENTS.md` are run by hand in each change.
 
 ## Updating this file
 

@@ -187,6 +187,11 @@ economy-sim/
                          restore test builds its world from its overlay in the
                          test),
                          calibration/ (the records of a calibration, per pack)
+  .github/               workflows/ci.yml (jobs check, arm64, full: thin calls to
+                         scripts/ci/) and dependabot.yml (github-actions)
+  scripts/ci/            the CI logic, runnable by hand: common.sh check.sh arm64.sh
+                         full.sh coverage-check.sh coverage-thresholds.txt
+                         codacy-upload.sh selftest.sh testdata/
   doc/specs/             design specs; their Requirements sections carry the
                          FR-/NFR- IDs that tests cite
   doc/rules/             this directory
@@ -1019,7 +1024,8 @@ Reject a change that contains any of the following:
 
 14.1. `gofmt`, `go vet` and `staticcheck` run clean in CI.
 `go test -race ./...` passes. `go mod tidy` produces no diff. The exact
-commands are in [AGENTS.md](../../AGENTS.md) and testing.md 9.1. **[project]**
+commands are in [AGENTS.md](../../AGENTS.md) and testing.md 9.1; the CI jobs
+`check` and `arm64` run them through `scripts/ci/` (2.6). **[project]**
 
 14.2. A change to architecture **MUST** update this document in the same PR.
 **[project]**
@@ -1068,4 +1074,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 0052d4050fd8b5aa5325ae2e
+RULE-TAG: 7f6bf295cf4542a8cc3a2691

@@ -1,0 +1,97 @@
+# Thin on purpose: triggers, runners, the `full` condition and one script call per job.
+# The logic lives in scripts/ci/ (plan-2-ci D5) and runs the same on a developer machine.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only PR runs share a group per ref, and a newer push cancels the older one. Every other run (main,
+# nightly, dispatch, a label event) is unique, so a long `full` never queues or displaces another
+# run (GitHub keeps one pending run per group). `full` has its own group below.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.action != 'labeled' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
+
+env:
+  GOTOOLCHAIN: local
+
+jobs:
+  check:
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.work
+          cache-dependency-path: "**/go.sum"
+      # Short race only: gate R does not fit a hosted 4-vCPU runner in 60m (run 43019781252); it runs in `full`.
+      - run: scripts/ci/check.sh
+        env:
+          R_MODE: short
+
+  arm64:
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.work
+          cache-dependency-path: "**/go.sum"
+      - run: scripts/ci/arm64.sh
+
+  full:
+    # A PR can start it twice (opened and labeled, or labeled and a push); the newer run cancels the older.
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'full') && (github.event.action != 'labeled' || github.event.label.name == 'full'))
+    concurrency:
+      group: full-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.work
+          cache: false
+      # Gate R (non-short race) before F, with its own timeout; the fast stage repeats here, which is cheap.
+      - run: scripts/ci/check.sh
+        env:
+          R_MODE: full
+          R_TIMEOUT: 60m
+      - run: scripts/ci/full.sh
+      # Kept before the upload to Codacy, so a flake there never loses a multi-hour run. Codacy also gets
+      # the profile of a run whose coverage check failed, so its status shows the shortfall.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            otelobserver/coverage.out
+          if-no-files-found: warn
+      # Only code of this repository sees the token: never a fork's pull request (plan-2-ci D7).
+      - run: scripts/ci/codacy-upload.sh coverage.out otelobserver/coverage.out
+        # Dependabot runs get no secrets, so they would only fail on the empty token.
+        if: ${{ !cancelled() && hashFiles('coverage.out') != '' && hashFiles('otelobserver/coverage.out') != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          CODACY_COMMIT_UUID: ${{ github.event.pull_request.head.sha || github.sha }}

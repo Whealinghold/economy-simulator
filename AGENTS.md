@@ -186,6 +186,11 @@ economy-sim/
 │                           #   checkpoints/ (one fixture of pack one and one
 │                           #   all-modules-on fixture per format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
+├── .github/                # workflows/ci.yml (jobs check, arm64, full: thin calls to
+│                           #   scripts/ci/) and dependabot.yml (github-actions)
+├── scripts/ci/             # the CI logic, runnable by hand: common.sh check.sh arm64.sh
+│                           #   full.sh coverage-check.sh coverage-thresholds.txt
+│                           #   codacy-upload.sh selftest.sh testdata/
 ├── doc/specs/              # design specs, one area per file (README.md indexes
 │                           #   them and assigns area codes; evidence.md holds
 │                           #   the sources); each spec's Requirements section
@@ -224,10 +229,17 @@ gofmt -l .                     # must print nothing
 go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
-go test -race -timeout 60m ./...   # gate R: reduced seeds under -race
+go test -race -timeout 60m ./...   # gate R: reduced seeds under -race (dev host and the `full` job; PR CI runs only the -short -race line above)
 go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (the root package needs about 60 min under coverage)
 go mod tidy                    # must produce no diff
 ```
+
+CI runs these gates through `scripts/ci/check.sh` (every command above except gate F,
+per module of `go.work`; `R_MODE=short`, which PR CI sets, skips gate R, `R_MODE=full` runs it, and the `full` job
+does), `scripts/ci/arm64.sh` (build, vet and the quick
+run on a native arm64 runner) and `scripts/ci/full.sh` (gate F per module, then
+`scripts/ci/coverage-check.sh` against `scripts/ci/coverage-thresholds.txt`); the scripts
+run on a developer machine too, and `scripts/ci/selftest.sh` tests the checker.
 
 Coverage thresholds and the use of mutation testing (`gomu` runs only inside
 Docker with a CPU cap) are in `doc/rules/testing.md` section 9.
