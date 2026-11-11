@@ -77,6 +77,46 @@ func TestTally_IgnoresWhatItDoesNotUse(t *testing.T) {
 	}
 }
 
+// TestTally_FoldsShipmentsAndContracts verifies that the events of the transport
+// and merchant modules are summed by lane into the window's rows.
+//
+// Requirement: FR-IND-034, FR-IND-019
+func TestTally_FoldsShipmentsAndContracts(t *testing.T) {
+	tl := indicator.NewTally()
+	openValley(t, tl, 10, [4]int64{})
+	line := func(c economysim.CommodityID, shipped, delivered, diverted, spoiled economysim.Quantity) economysim.ArrivedLine {
+		return economysim.ArrivedLine{Commodity: c, Shipped: shipped, Delivered: delivered, Diverted: diverted, Spoiled: spoiled}
+	}
+	step(tl, 10,
+		economysim.ShipmentDispatched{Tick: 10, Region: alpha, To: beta, Mode: 1, Hired: true, Units: 8, HaulUnits: 3,
+			Lines: []economysim.Amount{{Commodity: grain, Quantity: 5}, {Commodity: 1, Quantity: 3}}},
+		economysim.ShipmentDispatched{Tick: 10, Region: alpha, To: beta, Mode: 1, Units: 2, Lines: []economysim.Amount{{Commodity: grain, Quantity: 2}}},
+		economysim.ShipmentArrived{Tick: 10, Region: alpha, To: beta, Lines: []economysim.ArrivedLine{line(grain, 5, 3, 1, 1), line(1, 3, 3, 0, 0)}},
+		economysim.ShipmentArrived{Tick: 10, Region: alpha, To: beta, Lines: []economysim.ArrivedLine{line(grain, 2, 2, 0, 0)}},
+		economysim.ContractFormed{Tick: 10, Region: alpha, To: beta, Escrowed: 60},
+		economysim.ContractSettled{Tick: 10, Region: alpha, To: beta, Paid: 45, Refunded: 15},
+	)
+	w, err := tl.Close(valleySnap(11, [4]int64{}))
+	if err != nil {
+		t.Fatalf("Close() error = %v, want nil", err)
+	}
+	wantD := []indicator.DispatchTally{{Origin: alpha, Destination: beta, Mode: 1, Shipments: 2, Hired: 1, HaulUnits: 3, Units: 10}}
+	if !reflect.DeepEqual(w.Dispatches, wantD) {
+		t.Errorf("Dispatches = %+v, want %+v", w.Dispatches, wantD)
+	}
+	wantA := []indicator.ArrivalTally{
+		{Origin: alpha, Destination: beta, Commodity: grain, Shipped: 7, Delivered: 5, Diverted: 1, Spoiled: 1},
+		{Origin: alpha, Destination: beta, Commodity: 1, Shipped: 3, Delivered: 3},
+	}
+	if !reflect.DeepEqual(w.Arrivals, wantA) {
+		t.Errorf("Arrivals = %+v, want %+v", w.Arrivals, wantA)
+	}
+	wantS := []indicator.SettlementTally{{Region: alpha, To: beta, Paid: 45, Refunded: 15, Escrowed: 60}}
+	if !reflect.DeepEqual(w.Settlements, wantS) {
+		t.Errorf("Settlements = %+v, want %+v", w.Settlements, wantS)
+	}
+}
+
 // rowCounts is the number of rows a window holds in every table.
 func rowCounts(w indicator.Window) [11]int {
 	return [11]int{len(w.Flows), len(w.Construction), len(w.Markets), len(w.Beliefs), len(w.Recipe), len(w.Outputs),
@@ -615,6 +655,11 @@ func TestClose_StrayEvents(t *testing.T) {
 		{"relief of an unknown region", economysim.ReliefPaid{Tick: 10, Region: 5}},
 		{"entry limit of an unknown region", economysim.EntryLimited{Tick: 10, Region: 5}},
 		{"population of an unknown role", economysim.PopulationChanged{Tick: 10, Role: 9}},
+		{"dispatch to an unknown region", economysim.ShipmentDispatched{Tick: 10, Region: alpha, To: 5}},
+		{"arrival before the window", economysim.ShipmentArrived{Tick: 9, Region: alpha, To: beta}},
+		{"arrival of an unknown commodity", economysim.ShipmentArrived{Tick: 10, Region: alpha, To: beta, Lines: []economysim.ArrivedLine{{Commodity: 9}}}},
+		{"contract of an unknown region", economysim.ContractFormed{Tick: 10, Region: 5, To: beta}},
+		{"settlement before the window", economysim.ContractSettled{Tick: 9, Region: alpha, To: beta}},
 		{"money flow of an unknown region", economysim.MoneyFlowLimited{Tick: 10, Region: 5}},
 	}
 	for _, tt := range tests {

@@ -24,8 +24,7 @@ func (a Wide) u() measure.Uint128 { return measure.Uint128{Hi: a.Hi, Lo: a.Lo} }
 //
 // The rows of Dispatches, Arrivals and Settlements are filled by the events of
 // the transport and merchant modules (ShipmentDispatched, ShipmentArrived,
-// ContractSettled and ContractFormed), which the Tally does not read until those
-// modules are in the tree; a consumer may build them itself.
+// ContractFormed and ContractSettled); they stay empty with those modules off.
 type Window struct {
 	// From and To are the ticks of the window, Steps the steps it ran (To - From).
 	From, To, Steps int64
