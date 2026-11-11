@@ -1217,15 +1217,24 @@ func (v *validator) roleRules() {
 		}
 
 		if t, ok := effectiveWindow(&v.c, v.lk, ro); ok && t > MaxWelfareWindow {
-			v.rep.add(ErrOutOfBounds, path(base, windowField(&v.c, ro)), i64(t), i64(MaxWelfareWindow))
+			v.rep.add(ErrOutOfBounds, path(base, windowField(&v.c, v.lk, ro)), i64(t), i64(MaxWelfareWindow))
 		}
 	}
 }
 
-// windowField names the field that sets a role's window: the trip, not a recipe, for a
-// merchant with no recipes.
-func windowField(c *Config, r *Role) string {
-	if r.Merchant != nil && len(jobIDs(c, r)) == 0 {
+// windowField names the field that sets a role's window: "merchant" when the trip is
+// longer than every recipe, else "recipes".
+func windowField(c *Config, lk lookup, r *Role) string {
+	if r.Merchant == nil {
+		return "recipes"
+	}
+	var recipes int64
+	for _, id := range jobIDs(c, r) {
+		if rc := lk.recipe[id]; rc != nil {
+			recipes = max(recipes, rc.Duration)
+		}
+	}
+	if merchantTripTicks(c, r) > recipes {
 		return "merchant"
 	}
 	return "recipes"
