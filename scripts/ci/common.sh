@@ -40,7 +40,7 @@ ensure_staticcheck() {
 	if ! staticcheck -version 2>/dev/null | grep -qF "staticcheck $STATICCHECK_VERSION "; then
 		echo "==> installing staticcheck $STATICCHECK_VERSION"
 		go install "honnef.co/go/tools/cmd/staticcheck@$STATICCHECK_VERSION" || return 1
-		PATH="$(go env GOPATH)/bin:$PATH"
+		PATH="$(go env GOBIN):$(go env GOPATH)/bin:$PATH"
 		export PATH
 	fi
 }
