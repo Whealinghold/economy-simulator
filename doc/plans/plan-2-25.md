@@ -147,3 +147,19 @@ None, because no failure path, state transition, strategy decision, loop or metr
 - **Equivalence.** A rung that only freezes the head count (`entry_share = exit_share = 0`, D701 (e)) is not an acceptance: the ladder is switched off, so the objective also requires the failure ladder and entry to be on (D704).
 - **Source quality.** The outside references of D707 were read through search summaries only; they justify the form of a column, not a number.
 - **Note proposals (text; the supervisor edits `doc/notes.md`).** (1) REF, STY, STB: the diagnosis (D700, D701) as the successor of N-325. (2) STY: the claim pack is the all-on pack (D702). (3) REF, ALL: adding goods re-runs the rebalance (plan 2-8 D370 stands).
+
+## Audit: Phase 1 diagnosis (2026-11-11, harness `scenario_screen_test.go`, search seeds 101 to 104, `one-demand` unless stated)
+
+Harness reproduces D700: one 553/168/80/0, five 4344/1152/0/0, all 2262/90/0/0 (households at ticks 100/300/600/1100, seed 101). `TestScreen_Reproduces` pins pack one to the S04 record.
+
+| Hyp. | Test (one cause removed) | Result |
+|------|--------------------------|--------|
+| H1 census | grower households 219 to 160/120/80 | Rejected as sole cause: extinct by tick 270 to 440 anyway; fewer growers kill makers and refiners earlier. |
+| H1b stock | grower start staple 768 to 100/20 (166 188 units at tick 1 is about 138 ticks of demand) | Worse (collapse by tick 100 to 150): the overhang is a buffer, not the cause. |
+| H2 lockstep | `all = 10000` yield (growers start at once); a warm job row is refused (ErrWarmStartJob, season-only recipe) | Not a cure: extinct by tick 450 to 590. In the base run growers start no `grow_staple` in ticks 0 to 99 (spring only). |
+| H3 money | levy on cooks plus top-up of the 7 other roles to 20 000 (rate 100 and 1000 bp) | Households held to tick 300, collapse by 500 to 600; growers still extinct at tick 191 to 204. Not the cause of the grower loss. |
+| H4 absorbing | AddAgent 40 immortal growers when the role is extinct | Alone not a cure: the other roles die by tick 400 to 600. |
+
+Mechanism (evidence): the solver's own census of the committed `one-demand` pack gives static income of grower 5 485 bp of the upkeep, comfort_maker 7 191, treat_maker 6 993, against cook 16 191, forester 16 027, maker 16 010 (gate of FR-REF-041: lowest at least 8 000, highest at most 1.5 times the lowest). Dynamically growers net about -75% of the upkeep per tick, burn their warm money (78 810) by tick 70 to 250 (insolvent exits 75/105/35 households in windows 0/1/2, plus "distress" role changes), and cooks end with 95% of the money. Cutting grower households raises their static income (150: 7 083; 120: 8 351; 90: 10 464) but lowers comfort_maker and treat_maker further, so the fix is a multi-role census and price rebalance, not one knob.
+
+Branch (item 4): the ladder (D704), starting with the static income gate as the screen, then the dynamic screen. No engine rule is indicated yet (H4 shows re-seeding alone fails). Commands: `-screen.pack=one-demand -screen.census` and `-screen.layers=<scratch.toml>`.
