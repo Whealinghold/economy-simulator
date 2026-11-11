@@ -1,6 +1,6 @@
 # Plan: Stage 2, overview and the contract between the plans
 
-**Status: contract written (2026-10-22). Every plan `plan-2-1.md` to `plan-2-24.md` is written against this file and checked against it and against the other plans.**
+**Status: contract written (2026-10-22); the build state of each plan is its row in the roadmap Stage 2 table and the Status line of the plan, not this file (the tables below are the 2026-10-22 snapshot except where the owner-decisions list names a decision as made). Every plan `plan-2-1.md` to `plan-2-24.md` is written against this file and checked against it and against the other plans.**
 This file sequences [roadmap-v1.md](../roadmap-v1.md) Stage 2 into 24 plans: the roadmap Stage 2 table has 24 plan rows (plans 1 and 8 are now rows) and one planned CI row without a plan (owner decision of 2026-10-23). It fixes what the plans must agree on. A plan decides nothing: the specs, the ADRs and `doc/rules/` decide, and where a plan and they disagree they win and the plan is corrected. Stage 1 is signed off ([roadmap-v1.md](../roadmap-v1.md), commit `6dd4f86`).
 
 Rule tags read for this contract (the tags at the time of writing): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1. Every plan quotes the tags it read; each plan, when implemented, quotes the tags in the files then. A mismatch is a finding only if the file was not edited by an earlier plan's Phase 1 (the supervisor replaces a tag once per file per change). When the supervisor applies Phase 1 spec edits it follows `AGENTS.md` "Before writing or changing a spec": it reads `doc/notes.md` in full, quotes the Notes tag, and replaces it when it edits the notes.
@@ -102,7 +102,7 @@ No Stage 2 plan builds these. A plan cites such an ID only as "see plan-2-0 defe
 
 ## Owner decisions the plans depend on
 
-Collected from the plans by a synthesis on 2026-10-22 (before the last two fix passes, so a wording may have moved; the plans are the source of truth). **None of these is decided.** A plan may rely on the recommended answer if it marks the dependency; it must not assume a spec or rule has already changed. "Blocks" says what waits on the answer.
+Collected from the plans by a synthesis on 2026-10-22 (before the last two fix passes, so a wording may have moved; the plans are the source of truth). **A row is open unless the list below names it.** Decided so far, from the owner rulings of 2026-10-23 and 2026-10-26 on record in `roadmap-v1.md` Stage 2 and in the ADR status lines: OD-01 (CI with an arm64 job), OD-02 (ADR 0010 accepted, 2026-10-26), OD-06 (E0 yes, gate figures confirmed; the ladder then stopped and ruling E1 was applied, plan 8 D369), OD-08 (reference machine is the one of plan 4's record), OD-17 (realm pack is `five` renamed; the exit wording stays open), OD-20 (a) only (the other parts of OD-20 are not on record here), and the acceptance of ADR 0002 and 0009 in OD-21 (D225 and `raceSeeds` are not on record here). The other rows are not on record in this file, so check the plan's own Status line before relying on one. A plan may rely on the recommended answer if it marks the dependency; it must not assume a spec or rule has already changed. "Blocks" says what waits on the answer.
 
 | ID | Question | Plans | Recommendation | Blocks |
 | --- | --- | --- | --- | --- |
