@@ -16,10 +16,10 @@ func BenchmarkRowsOf(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewPrices() error = %v, want nil", err)
 	}
-	st := make([]indicator.AgentRow, 5000)
+	st := make([]economysim.AgentState, 5000)
 	for i := range st {
-		st[i] = indicator.AgentRow{Weight: 1, Money: economysim.Money(100 + i), WelfareRatioBP: int64(8000 + i), HasWelfareRatio: true,
-			Holdings: []indicator.Holding{{Commodity: 0, Quantity: 3}, {Commodity: 1, Quantity: 1}, {Commodity: 2, Quantity: 2}}}
+		st[i] = economysim.AgentState{Weight: 1, Money: economysim.Money(100 + i), Ratio: int64(8000 + i), HasRatio: true,
+			Holdings: []economysim.HoldingState{{Commodity: 0, Quantity: 3}, {Commodity: 1, Quantity: 1}, {Commodity: 2, Quantity: 2}}}
 	}
 	b.ReportAllocs()
 	for b.Loop() {

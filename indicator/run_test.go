@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"reflect"
+	"slices"
 	"sync"
 	"testing"
 
@@ -415,5 +417,125 @@ func TestRun_PeoplePresetsOverRealWindows(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// shipper is the default strategy plus, every 7 ticks, one unit of staple sent on
+// foot by each carrier that holds the upkeep of the whole trip to the first
+// household of the other region (the scripted shipper of the transport goldens).
+// The default strategy never ships, so a run needs it for transport to move goods.
+type shipper struct {
+	economysim.DefaultStrategy
+	first  []economysim.AgentID
+	role   economysim.RoleID
+	staple economysim.CommodityID
+	foot   economysim.ModeID
+}
+
+func (s shipper) Trade(v *economysim.AgentView, rng *rand.Rand, p *economysim.TradePlan) {
+	economysim.DefaultStrategy{}.Trade(v, rng, p)
+	if v.Role != s.role || v.Tick.Tick%7 != 1 || int(v.Region) >= len(s.first) {
+		return
+	}
+	to := economysim.RegionID(1 - int(v.Region))
+	var ticks int64
+	for _, r := range v.Routes {
+		if r.To == to && r.Mode == s.foot && r.Has {
+			ticks = r.Ticks
+		}
+	}
+	if ticks == 0 {
+		return
+	}
+	for _, u := range v.Upkeep {
+		var stock int64
+		for _, c := range v.Commodities {
+			if c.Commodity == u.Commodity {
+				stock = c.Stock
+			}
+		}
+		if u.Commodity == s.staple {
+			stock--
+		}
+		if stock < u.Quantity*v.Weight*ticks {
+			return
+		}
+	}
+	p.Shipments = append(p.Shipments, economysim.ShipmentRequest{
+		Mode: s.foot, To: to, Consignee: s.first[to], Lines: []economysim.Line{{Commodity: s.staple, Quantity: 1}},
+	})
+}
+
+// TestRun_TransportFoldsMatchEvents verifies, over a real run of the two-region
+// pack with trade and transport on (plan 2-12) and a scripted shipper, that the
+// shipments the tally folds equal the ShipmentDispatched and ShipmentArrived
+// events of the run and that some window closes with units in transit, which
+// GDP reads from Snapshot.Shipments.
+//
+// Requirement: FR-IND-034, FR-IND-016
+func TestRun_TransportFoldsMatchEvents(t *testing.T) {
+	cfg := loadPack(t, "base.toml", "two.toml", "overlay/trade-two.toml", "overlay/transport-two.toml")
+	carrier := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == "carrier" })
+	staple := slices.IndexFunc(cfg.Commodities, func(c economysim.Commodity) bool { return c.ID == "staple" })
+	const foot = economysim.ModeID(1) // "foot" follows "coach" in the canonical order of the overlay
+	if carrier < 0 || staple < 0 || cfg.Modules.Transport.Modes[foot].ID != "foot" {
+		t.Fatal("pack two has no carrier, no staple or no foot mode")
+	}
+	// A trip of 100 takes 2 ticks at speed 50, so a household can hold its upkeep.
+	cfg.Modules.Transport.Modes[foot].Speed = 50
+	// The consignee of a region never ships: two carriers consigning to each
+	// other would hold each other's arrival for ever.
+	first := make([]economysim.AgentID, len(cfg.Regions))
+	seen := make([]bool, len(cfg.Regions))
+	probe := &recorder{tl: indicator.NewTally(), keep: true}
+	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(probe)); err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	for _, e := range probe.events {
+		if a, ok := e.(economysim.AgentSpawned); ok && !seen[a.Region] && a.Role != economysim.RoleID(carrier) {
+			seen[a.Region], first[a.Region] = true, a.Agent
+		}
+	}
+	for i := range cfg.Roles {
+		cfg.Roles[i].Strategy = "ship"
+	}
+	rec := &recorder{tl: indicator.NewTally(), keep: true}
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithObserver(rec),
+		economysim.WithStrategy("ship", shipper{first: first, role: economysim.RoleID(carrier), staple: economysim.CommodityID(staple), foot: foot}))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	wins := stepWindows(t, w, rec, 2, 30, nil) // short windows: a trip lasts 2 ticks
+	var shipments, units, shipped int64
+	for _, e := range rec.events {
+		switch e := e.(type) {
+		case economysim.ShipmentDispatched:
+			shipments++
+			units += e.Units
+		case economysim.ShipmentArrived:
+			for _, l := range e.Lines {
+				shipped += int64(l.Shipped)
+			}
+		}
+	}
+	var gotS, gotU, gotShipped, inFlight int64
+	for _, rw := range wins {
+		for _, d := range rw.w.Dispatches {
+			gotS += d.Shipments
+			gotU += d.Units
+		}
+		for _, a := range rw.w.Arrivals {
+			gotShipped += int64(a.Shipped)
+		}
+		inFlight += int64(len(rw.closing.Shipments))
+	}
+	if shipments == 0 {
+		t.Fatal("run dispatched no shipment, want transport to be exercised")
+	}
+	if gotS != shipments || gotU != units || gotShipped != shipped {
+		t.Errorf("folded (shipments, units, shipped) = (%d, %d, %d), events = (%d, %d, %d), want equal", gotS, gotU, gotShipped, shipments, units, shipped)
+	}
+	if inFlight == 0 {
+		t.Errorf("no window closed with a shipment in flight, want Snapshot.Shipments read")
 	}
 }

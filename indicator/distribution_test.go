@@ -12,25 +12,25 @@ import (
 
 // moneyAgents are the cohorts of 18.8: weights 1, 2, 4, 1 holding 0, 40, 160, 60
 // in all (so 20 and 40 each in the two cohorts).
-func moneyAgents() []indicator.AgentRow {
-	return []indicator.AgentRow{
+func moneyAgents() []economysim.AgentState {
+	return []economysim.AgentState{
 		{Weight: 1, Money: 0}, {Weight: 2, Money: 40}, {Weight: 4, Money: 160}, {Weight: 1, Money: 60},
 	}
 }
 
 // ratioAgents are the welfare ratios of 18.8: weights 1, 2, 4, 1 at -5 000,
 // 8 000, 10 000 and 25 000 per household.
-func ratioAgents() []indicator.AgentRow {
+func ratioAgents() []economysim.AgentState {
 	r := []int64{-5000, 8000, 10_000, 25_000}
 	w := []int64{1, 2, 4, 1}
-	var out []indicator.AgentRow
+	var out []economysim.AgentState
 	for i := range r {
-		out = append(out, indicator.AgentRow{Weight: w[i], WelfareRatioBP: r[i], HasWelfareRatio: true, EarnedRatioBP: r[i] - 1000, HasEarnedRatio: true})
+		out = append(out, economysim.AgentState{Weight: w[i], Ratio: r[i], HasRatio: true, EarnedRatio: r[i] - 1000, HasEarned: true})
 	}
 	return out
 }
 
-func rowsOf(t *testing.T, st []indicator.AgentRow, col indicator.Column, opt indicator.RowOpt) indicator.RowSet {
+func rowsOf(t *testing.T, st []economysim.AgentState, col indicator.Column, opt indicator.RowOpt) indicator.RowSet {
 	t.Helper()
 	set, err := indicator.RowsOf(st, col, opt)
 	if err != nil {
@@ -46,8 +46,8 @@ func rowsOf(t *testing.T, st []indicator.AgentRow, col indicator.Column, opt ind
 //
 // Requirement: FR-IND-026, FR-IND-027
 func TestRowsOf_ExcludesPseudoAgentsAndAbsent(t *testing.T) {
-	st := append(ratioAgents(), indicator.AgentRow{Weight: 3, External: true, WelfareRatioBP: 100, HasWelfareRatio: true},
-		indicator.AgentRow{Weight: 5}, indicator.AgentRow{Weight: 2, Hunger: 4})
+	st := append(ratioAgents(), economysim.AgentState{Weight: 3, External: true, Ratio: 100, HasRatio: true},
+		economysim.AgentState{Weight: 5}, economysim.AgentState{Weight: 2, Hunger: 4})
 	all := rowsOf(t, st, indicator.ColWelfareRatio, indicator.RowOpt{})
 	if all.Agents != 5 || all.Households != 11 || all.Absent != 7 || all.Cohort != 9 {
 		t.Errorf("RowsOf(all) = agents %d households %d absent %d cohort %d, want 5, 11 (the external agent is a household), 7 (weights 5 + 2 without a ratio), 9", all.Agents, all.Households, all.Absent, all.Cohort)
@@ -77,9 +77,9 @@ func TestRowsOf_ExcludesPseudoAgentsAndAbsent(t *testing.T) {
 func TestRowsOf_Wealth(t *testing.T) {
 	w, _, _ := workedWindow(t)
 	p := valleyTable(t, w, alphaP, betaP)
-	st := []indicator.AgentRow{
-		{Region: alpha, Weight: 1, Money: 100, Holdings: []indicator.Holding{{Commodity: grain, Quantity: 3}, {Commodity: loaf, Quantity: 1}}},
-		{Region: beta, Weight: 2, Money: 10, Holdings: []indicator.Holding{{Commodity: grain, Quantity: 3}}},
+	st := []economysim.AgentState{
+		{Region: alpha, Weight: 1, Money: 100, Holdings: []economysim.HoldingState{{Commodity: grain, Quantity: 3}, {Commodity: loaf, Quantity: 1}}},
+		{Region: beta, Weight: 2, Money: 10, Holdings: []economysim.HoldingState{{Commodity: grain, Quantity: 3}}},
 	}
 	got := rowsOf(t, st, indicator.ColWealth, indicator.RowOpt{Prices: p})
 	if got.Rows[0].Total != 155 || got.Rows[1].Total != 49 {
@@ -95,22 +95,22 @@ func TestRowsOf_Wealth(t *testing.T) {
 //
 // Requirement: FR-IND-026
 func TestRowsOf_Misuse(t *testing.T) {
-	if _, err := indicator.RowsOf([]indicator.AgentRow{{Weight: 0}}, indicator.ColMoney, indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
+	if _, err := indicator.RowsOf([]economysim.AgentState{{Weight: 0}}, indicator.ColMoney, indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
 		t.Errorf("RowsOf(weight 0) error = %v, want ErrRange", err)
 	}
-	if _, err := indicator.RowsOf([]indicator.AgentRow{{Weight: 1}}, indicator.Column(0), indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
+	if _, err := indicator.RowsOf([]economysim.AgentState{{Weight: 1}}, indicator.Column(0), indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
 		t.Errorf("RowsOf(column 0) error = %v, want ErrRange", err)
 	}
-	big := []indicator.AgentRow{{Weight: 4, WelfareRatioBP: math.MaxInt64 / 2, HasWelfareRatio: true}}
+	big := []economysim.AgentState{{Weight: 4, Ratio: math.MaxInt64 / 2, HasRatio: true}}
 	if _, err := indicator.RowsOf(big, indicator.ColWelfareRatio, indicator.RowOpt{}); !errors.Is(err, indicator.ErrOverflow) {
 		t.Errorf("RowsOf(weight * ratio past int64) error = %v, want ErrOverflow", err)
 	}
-	huge := []indicator.AgentRow{{Weight: 1, Money: math.MaxInt64, Holdings: []indicator.Holding{{Quantity: 5}}}}
+	huge := []economysim.AgentState{{Weight: 1, Money: math.MaxInt64, Holdings: []economysim.HoldingState{{Quantity: 5}}}}
 	p, _ := indicator.NewPrices([32]byte{}, 0, 0, 1, 1, []economysim.Price{9})
 	if _, err := indicator.RowsOf(huge, indicator.ColWealth, indicator.RowOpt{Prices: p}); !errors.Is(err, indicator.ErrOverflow) {
 		t.Errorf("RowsOf(wealth past int64) error = %v, want ErrOverflow", err)
 	}
-	if _, err := indicator.RowsOf([]indicator.AgentRow{{Weight: math.MaxInt64}, {Weight: math.MaxInt64}}, indicator.ColMoney, indicator.RowOpt{}); !errors.Is(err, indicator.ErrOverflow) {
+	if _, err := indicator.RowsOf([]economysim.AgentState{{Weight: math.MaxInt64}, {Weight: math.MaxInt64}}, indicator.ColMoney, indicator.RowOpt{}); !errors.Is(err, indicator.ErrOverflow) {
 		t.Errorf("RowsOf(households past int64) error = %v, want ErrOverflow", err)
 	}
 	if got := rowsOf(t, nil, indicator.ColMoney, indicator.RowOpt{}); got.Households != 0 || got.CohortShare.OK {
@@ -126,7 +126,7 @@ func TestRowsOf_Misuse(t *testing.T) {
 //
 // Requirement: FR-IND-039
 func TestWelfareDistribution_NoGini(t *testing.T) {
-	st := append(ratioAgents(), indicator.AgentRow{Weight: 2})
+	st := append(ratioAgents(), economysim.AgentState{Weight: 2})
 	welfare, earned := rowsOf(t, st, indicator.ColWelfareRatio, indicator.RowOpt{}), rowsOf(t, st, indicator.ColEarnedRatio, indicator.RowOpt{})
 	got, err := indicator.WelfareDistribution(welfare, earned, 9000)
 	if err != nil {
@@ -150,7 +150,7 @@ func TestWelfareDistribution_NoGini(t *testing.T) {
 	}
 
 	// 18.9: ratios 20 000 and 5 000 for (income, cost) (20, 10) and (20, 40).
-	pair := rowsOf(t, []indicator.AgentRow{{Weight: 1, WelfareRatioBP: 20_000, HasWelfareRatio: true}, {Weight: 1, WelfareRatioBP: 5000, HasWelfareRatio: true}}, indicator.ColWelfareRatio, indicator.RowOpt{})
+	pair := rowsOf(t, []economysim.AgentState{{Weight: 1, Ratio: 20_000, HasRatio: true}, {Weight: 1, Ratio: 5000, HasRatio: true}}, indicator.ColWelfareRatio, indicator.RowOpt{})
 	d, err := indicator.WelfareDistribution(pair, indicator.RowSet{}, 10_000)
 	agg, ok, _ := indicator.Quotient(10_000*40, 50)
 	if err != nil || d.Welfare.Mean != 12_500 || !ok || agg != 8000 || d.Welfare.Mean == agg {
@@ -181,25 +181,25 @@ func TestInequality_CohortShare(t *testing.T) {
 	}
 
 	// The same four agents at scale 1 (weights 1): no cohort, so CohortShare is 0.
-	one := []indicator.AgentRow{{Weight: 1, Money: 0}, {Weight: 1, Money: 40}, {Weight: 1, Money: 160}, {Weight: 1, Money: 60}}
+	one := []economysim.AgentState{{Weight: 1, Money: 0}, {Weight: 1, Money: 40}, {Weight: 1, Money: 160}, {Weight: 1, Money: 60}}
 	g1, err := indicator.Inequality(rowsOf(t, one, indicator.ColMoney, indicator.RowOpt{}))
 	if err != nil || g1.Cohort != 0 || !g1.CohortShare.OK || g1.CohortShare.Value != 0 || len(g1.Warnings) != 0 {
 		t.Errorf("Inequality(scale 1) = %+v, %v, want no cohort and no warning", g1, err)
 	}
 
 	// A P10 above 0 gives the ratio: rows 10, 20, 30 of weight 1: P10 10, P90 30, 30 000.
-	r, err := indicator.Inequality(rowsOf(t, []indicator.AgentRow{{Weight: 1, Money: 10}, {Weight: 1, Money: 20}, {Weight: 1, Money: 30}}, indicator.ColMoney, indicator.RowOpt{}))
+	r, err := indicator.Inequality(rowsOf(t, []economysim.AgentState{{Weight: 1, Money: 10}, {Weight: 1, Money: 20}, {Weight: 1, Money: 30}}, indicator.ColMoney, indicator.RowOpt{}))
 	if err != nil || !r.P90P10OK || r.P90P10 != 30_000 {
 		t.Errorf("Inequality(10, 20, 30) = %+v, %v, want P90 / P10 = 30 000", r, err)
 	}
 
-	if _, err := indicator.Inequality(rowsOf(t, []indicator.AgentRow{{Weight: 1, Money: -5}, {Weight: 1, Money: 9}}, indicator.ColMoney, indicator.RowOpt{})); !errors.Is(err, indicator.ErrNegativeValue) {
+	if _, err := indicator.Inequality(rowsOf(t, []economysim.AgentState{{Weight: 1, Money: -5}, {Weight: 1, Money: 9}}, indicator.ColMoney, indicator.RowOpt{})); !errors.Is(err, indicator.ErrNegativeValue) {
 		t.Errorf("Inequality(a negative balance) error = %v, want ErrNegativeValue", err)
 	}
 	if e, err := indicator.Inequality(indicator.RowSet{}); err != nil || e.GiniOK || e.SharesOK || e.P90P10OK {
 		t.Errorf("Inequality(nothing) = %+v, %v, want everything undefined and no error", e, err)
 	}
-	if z, err := indicator.Inequality(rowsOf(t, []indicator.AgentRow{{Weight: 2, Money: 0}}, indicator.ColMoney, indicator.RowOpt{})); err != nil || z.GiniOK || z.SharesOK {
+	if z, err := indicator.Inequality(rowsOf(t, []economysim.AgentState{{Weight: 2, Money: 0}}, indicator.ColMoney, indicator.RowOpt{})); err != nil || z.GiniOK || z.SharesOK {
 		t.Errorf("Inequality(all zero) = %+v, %v, want undefined: nobody holds anything", z, err)
 	}
 }
@@ -236,7 +236,7 @@ func TestHouseholdIncome_BookedFromRoleRowFields(t *testing.T) {
 // meant to be skipped.
 func TestRowsOf_AbsentRatioIsNotRead(t *testing.T) {
 	t.Parallel()
-	st := []indicator.AgentRow{{Weight: 1 << 40, WelfareRatioBP: 1 << 40}, {Weight: 2, WelfareRatioBP: 5000, HasWelfareRatio: true}}
+	st := []economysim.AgentState{{Weight: 1 << 40, Ratio: 1 << 40}, {Weight: 2, Ratio: 5000, HasRatio: true}}
 	set, err := indicator.RowsOf(st, indicator.ColWelfareRatio, indicator.RowOpt{})
 	if err != nil || set.Absent != 1<<40 || len(set.Rows) != 1 {
 		t.Errorf("RowsOf(absent ratio, huge weight) = %+v, %v, want 1<<40 absent and one row", set, err)
