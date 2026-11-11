@@ -37,8 +37,8 @@ func s47Quote(tick int64) (economysim.Price, bool) {
 // the lag is the one the distance gives whatever the age, and that the price is the
 // last trade's within the error (the age and the lag are never blurred). The
 // second assertion of S47 (a merchant that ignores SourceAge ships, one that
-// reads it does not) waits for the merchants module (plan 15) and is recorded as
-// waiting.
+// reads it does not) is closed by tightening S69 (plan 2-26 D700); it is recorded as
+// waiting here until then.
 //
 // Requirement: FR-INF-016, FR-INF-017, FR-INF-050
 //

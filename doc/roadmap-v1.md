@@ -247,7 +247,7 @@ all-on from it).
 | `transport.go` and `internal/transit` | TRN, CAR | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
 | `information.go` and `internal/rumour` | INF | built (stage-2-13; audited 2026-11-11) |
 | `migration.go` and `internal/migration` | MIG | built (Phases 1 to 8; audited 2026-11-11) |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | built except the merchant reruns, X1 and X2 dynamic, `TestDeterminism_Merchants` and the `invariantTable` row (audited 2026-11-11) |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | built except the merchant reruns, X1 and X2 dynamic, `TestDeterminism_Merchants` and the `invariantTable` row (audited 2026-11-11; closed by plan 2-26) |
 | `external.go` and `internal/outside` | EXT | built (audited 2026-11-11; gates at the exit gate) |
 | `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | merged (PR #42, 2026-11-10) |
 | `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | built (audited 2026-11-11) |

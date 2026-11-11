@@ -1486,15 +1486,15 @@ the staple to fuel ratio differs by a factor of at least 2 between the regions (
 3.2); pooled it lies between them or is flagged. *Dynamic part (needs the code; REG, TRN, INF and MER are written):*
 with an edge, a carrier and a merchant role (an overlay `overlay/trade.toml`: its edge part is `spec-regions.md` 12.4, its modes, haul recipe and consignee follow `spec-transport.md` 3, 17.4, the merchant and the consignee are MER's (`spec-merchants.md` 19.1 shows the keys: `[modules.merchants]`, a role with `strategy = "merchant"` and a `[role.<id>.merchant]` block, a consignee role with `consigns`) and the rumours are INF's (`spec-information.md` 12.1)), the fuel price in the two regions converges: after `x1.warmup` ticks the
 gap between the two is at most the transport cost of the edge plus `x1.margin_bp`, and the worst lane at most `x1.worst_bp`, in each of two
-successive years, in the last year. Until then it is a skipped test with the issue ID of the missing specs
-(FR-REF-038). *Requirements:* FR-VIA-043 to FR-VIA-045, FR-CAR-003 (hired carriage is an ordinary market of the haul unit, `spec-transport.md` 8), FR-TRN-005 (travel time) and FR-REG-* for the edge.
+successive years, in the last year. It runs report-only: it asserts the exact checks (the invariants every tick, the books)
+and a band only where `bandIn` finds a `value` (FR-REF-038, FR-REF-024). *Requirements:* FR-VIA-043 to FR-VIA-045, FR-CAR-003 (hired carriage is an ordinary market of the haul unit, `spec-transport.md` 8), FR-TRN-005 (travel time) and FR-REG-* for the edge.
 *Level:* integration (static), end-to-end (dynamic).
 
 **X2. Three regions, comparative advantage.** *Packs:* `three`. *Static:* A3. *Dynamic
 (needs trade and the spawner):* with trade on, the households of the region with the best
 yield move toward the activities the pooled solution assigns to it; each region's
 occupation shares move toward the pooled census within `x2.share_band_bp` over four
-years. Skipped until the code exists (REG, TRN, INF and MER are written; it needs `overlay/trade.toml` with the merchant role of `spec-merchants.md` 19.1). *Level:* end-to-end.
+years. It runs report-only until `x2.share_band_bp` has a `value`, asserting the exact checks (FR-REF-038; it uses `overlay/trade.toml` with the merchant role of `spec-merchants.md` 19.1). *Level:* end-to-end.
 
 **X3. The first consumer's world.** *Packs:* `five` (cold, and warm). *Setup:* 400 ticks,
 seeds 1 and 2; and `five` + `overlay/skill` for the second eligible recipe. *Pass:* the
@@ -1578,7 +1578,7 @@ test is rewritten.
 
 | Item | Waits for | Next step |
 |------|-----------|-----------|
-| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | the code; REG, TRN, INF and MER are written | the edge part of `overlay/trade.toml` is `spec-regions.md` 12.4 and the mode and haul recipe follow `spec-transport.md` 17.4; add the merchant and consignee roles of `spec-merchants.md` 19.1 and INF's `[modules.information]` for the rumours; add the two tests |
+| X1 dynamic, X2 dynamic: price convergence and specialisation between regions | built report-only (plan 2-26); bands unset | the edge part of `overlay/trade.toml` is `spec-regions.md` 12.4 and the mode and haul recipe follow `spec-transport.md` 17.4; add the merchant and consignee roles of `spec-merchants.md` 19.1 and INF's `[modules.information]` for the rumours; add the two tests |
 | S28: a closure of the middle link and its reopening (REG-A1) | the code; INT (the public call that sets an edge status); TRN and MER are written | the REG row (Stage 2 row 3) builds the graph leg on the edge part of the trade overlay, the closure set through the unexported status setter (the public call is S80's): distances, components and relocation refusals at each step; the price leg waits for TRN and MER: assert the cut region's households fall no faster than the closed-region variant and the price gap returns inside a band |
 | S29: a town as one region against a town and two hamlets (REG-A2) | the code (TRN and MER are written) | the REG row (Stage 2 row 3) builds the graph leg on the edge part of the trade overlay (a town as one region against a town and two hamlets); the leg that asserts thin markets are reported waits for TRN and MER |
 | S30, S31, S32: price-gap shipping with and without `Inbound`, a perishable at the travel time, a haul recipe at three elasticities (TRN-A1, A2, A5, A3) | the code; the shipper is MER's (written) and the mechanism `spec-transport.md` | need the merchant strategy (`strategy.Merchant`) and `overlay/trade.toml` |
@@ -2109,7 +2109,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-REF-035 | Every scenario S01 to S22 of `spec-stability.md` 8 except S15 MUST be covered by a test, or listed in 7.6 with the spec it waits for, so that FR-STB-005 can be checked. |
 | FR-REF-036 | Every scenario A1 to A10 of `spec-viability.md` 13.2 MUST be covered by a test, or listed with the reason it needs no pack (A6). |
 | FR-REF-037 | A scenario that waits for an unwritten spec MUST be a test skipped with the reason and an issue ID (testing.md 5.7), and MUST NOT be left out. |
-| FR-REF-038 | The dynamic parts of X1 and X2, the scenarios S28 to S83 of 7.6, 7.9 and 7.11, S91 to S165 of 7.12, and the coarse-tick leg of S12 MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
+| FR-REF-038 | The dynamic parts of X1 and X2 and the scenarios whose specs exist MUST run, report-only (exact checks asserted, a band asserted only where it has a `value`) until their bands are set; the scenarios S28 to S83 of 7.6, 7.9 and 7.11, S91 to S165 of 7.12 and the coarse-tick leg of S12 whose spec is unwritten MUST be skipped tests with the issue ID of the spec they wait for until it exists. |
 | FR-REF-039 | Each pack that ships MUST be run through the scenarios that its content allows and the result recorded with it (FR-STB-015), as its `expected/` file and the report of the run. |
 | FR-REF-040 | The configuration documents of `testdata/chains/` (not the files of `expected/`, `bands/` and `scripts/`) MUST be the seed corpus of the loader fuzz test. |
 | FR-REF-041 | Every group of every variant on the base except `second` (4.4.7, unbalanced by design) MUST have a static `IncomeBP` (FR-VIA-060) of at least 8 000, and the highest of a pack MUST be at most 1.5 times its lowest; a group without an `IncomeBP` (no labour share, as in `famine`; a recipe shared by several roles; a thin gatherer group named in `expected/<pack>.toml`) MUST be listed there with its reason, and a test over the solver MUST check every pack. **Status: not met.** The test `TestPacks_IncomeBalance` is skipped and the `expected/` files carry no `income_bp` yet, because the unchanged packs fail the gate (N-325); the requirement takes effect when the pack data is rebalanced. |
