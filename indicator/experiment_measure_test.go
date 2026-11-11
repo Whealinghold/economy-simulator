@@ -10,6 +10,7 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/experiment"
 	"github.com/Whealinghold/economy-sim/indicator"
+	"github.com/Whealinghold/economy-sim/internal/verdict"
 )
 
 // tallyState is what a tally measure keeps for one world: its tally, the snapshot
@@ -152,6 +153,55 @@ func TestExperiment_TallyMeasureEqualsDirectRun(t *testing.T) {
 		r := vr.Runs[0]
 		if r.Status != experiment.StatusOK || r.Final[0] != got.Final[0] || r.Digest != got.Digest {
 			t.Errorf("variant %d: status %s (%s), reading %+v, digest %x; want the uninterrupted run's reading %+v and digest %x", v, r.Status, r.Detail, r.Final[0], r.Digest[:4], got.Final[0], got.Digest[:4])
+		}
+	}
+}
+
+// TestSweep_StylisedVerdictAsResponse verifies FR-STY-090 on the harness: a
+// one-at-a-time sweep of one knob at its default and two neighbours runs with a
+// verdict (internal/verdict.Check) as the measure's reading, so the response of
+// each point is STABLE (1) when every conjunct held and NOT STABLE (2) when one
+// failed. The conjuncts are stand-ins: this checks the seam, not a band.
+//
+// Requirement: FR-STY-090
+func TestSweep_StylisedVerdictAsResponse(t *testing.T) {
+	if testing.Short() {
+		t.Skip("run-level test, skipped with -short")
+	}
+	response := experiment.Measure{
+		Name: "verdict",
+		Fn: func(s experiment.Sample) (int64, bool, error) {
+			outcome := verdict.Held
+			if s.Close.Households <= 0 {
+				outcome = verdict.Failed
+			}
+			var got []verdict.Conjunct
+			for _, n := range verdict.Required(verdict.CheckBP) {
+				got = append(got, verdict.Conjunct{Name: n, Outcome: outcome})
+			}
+			return int64(verdict.Check(verdict.CheckBP, got).Result), true, nil
+		},
+	}
+	level := func(v int64) experiment.Level {
+		return experiment.Level{Changes: []experiment.Change{{Path: "world.belief_step", Value: v}}}
+	}
+	e := experiment.Spec{
+		Name: "verdict", Base: onePackDocs(t), Replicas: 1, Seed0: 1, Ticks: 4,
+		Design:   experiment.OneAtATime,
+		Factors:  []experiment.Factor{{Levels: []experiment.Level{level(150), level(200), level(250)}}},
+		Measures: []experiment.Measure{response},
+	}
+	res, err := experiment.Run(context.Background(), e)
+	if err != nil {
+		t.Fatalf("Run() error = %v, want nil", err)
+	}
+	if len(res.Points) != 3 {
+		t.Fatalf("points = %d, want 3 (the default and its two neighbours)", len(res.Points))
+	}
+	for _, p := range res.Points {
+		r := p.Variants[0].Runs[0]
+		if r.Status != experiment.StatusOK || r.Final[0] != (experiment.Reading{Value: int64(verdict.Stable), OK: true}) {
+			t.Errorf("point %d: status %s (%s), reading %+v, want ok and the verdict STABLE", p.Index, r.Status, r.Detail, r.Final[0])
 		}
 	}
 }

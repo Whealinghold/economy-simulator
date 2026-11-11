@@ -89,10 +89,10 @@ func presetsOf(t testing.TB, cfg economysim.Config, g economysim.Graph, base ind
 // the households whose ratio exists, at the role's mean.
 func roleRatios(t testing.TB, s economysim.Snapshot) indicator.RowSet {
 	t.Helper()
-	var st []indicator.AgentRow
+	var st []economysim.AgentState
 	for _, r := range s.Roles {
 		if r.HasMeanRatio && r.RatioHouseholds > 0 {
-			st = append(st, indicator.AgentRow{Region: r.Region, Weight: r.RatioHouseholds, WelfareRatioBP: r.MeanRatioBP, HasWelfareRatio: true})
+			st = append(st, economysim.AgentState{Region: r.Region, Weight: r.RatioHouseholds, Ratio: r.MeanRatioBP, HasRatio: true})
 		}
 	}
 	set, err := indicator.RowsOf(st, indicator.ColWelfareRatio, indicator.RowOpt{})

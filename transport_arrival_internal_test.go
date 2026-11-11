@@ -561,3 +561,32 @@ func TestArrivals_CostFollowsArrivals(t *testing.T) {
 		t.Errorf("P1.3 with two arrivals cost %d comparisons with 500 more in flight and %d without, want a difference of at most two pops sifting down log2(500) levels (50)", busy1, busy0)
 	}
 }
+
+// TestArrival_AnchorsLagOneTick verifies N-322 for the arrivals of P1.3: the
+// region-keyed tick scratch (rings, runnable) is built at P1.1 and P1.2, before the
+// arrival, so the arriving household works its arrival tick on anchors that did not
+// count it, and the next tick's P1.2 does.
+//
+// Arithmetic: two households live in each region; the traveller leaves in tick 0 and
+// arrives in tick 2. The far ring has 2 entries in tick 2 (after the move there are
+// 3 live in the region) and 3 in tick 3; the home ring has 2 in tick 2 (the traveller
+// is gone) and, since it is rebuilt, 1 in tick 3.
+//
+// Requirement: FR-TRN-024
+func TestArrival_AnchorsLagOneTick(t *testing.T) {
+	t.Parallel()
+	s := &awayProbe{work: map[int64]int{}, trade: map[int64]int{}, probe: shipHome,
+		ship: onTick(0, ShipmentRequest{Mode: modeFoot, To: regFar, ToSelf: true})}
+	w := newMill(t, shipConfig(), WithStrategy("script", s), WithAudit())
+	step(t, w, 3) // ticks 0 to 2: the arrival is at P1.3 of tick 2
+	if got := w.regionOf(&w.agents[shipHome]); got != regFar {
+		t.Fatalf("region of the traveller after tick 2 = %d, want %d", got, regFar)
+	}
+	if got := len(w.tk.rings[regFar]); got != 2 {
+		t.Errorf("far ring in the arrival tick = %d, want 2 (built before the arrival)", got)
+	}
+	step(t, w, 1)
+	if got := len(w.tk.rings[regFar]); got != 3 {
+		t.Errorf("far ring the tick after = %d, want 3", got)
+	}
+}

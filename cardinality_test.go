@@ -208,6 +208,11 @@ func (c *cardChecker) check(e economysim.Event) {
 	case economysim.YieldShocked:
 		c.region("YieldShocked", e.Tick, e.Region)
 		c.recipe("YieldShocked", e.Tick, e.Recipe)
+	case economysim.PopulationChanged:
+		c.region("PopulationChanged", e.Tick, e.Region)
+		c.role("PopulationChanged", e.Tick, e.Role)
+	case economysim.PopulationScaled:
+		c.region("PopulationScaled", e.Tick, e.Region)
 	}
 }
 

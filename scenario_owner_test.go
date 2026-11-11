@@ -38,10 +38,7 @@ var stageTwoScenarios = []struct {
 var scenariosNotBuilt = map[int]string{
 	35: "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
 	46: "plan 13: S46 (a shipper on a rumoured gap) is a waiting report inside TestScenarioS47_, with no test of its own",
-	73: "plan 24: the unit model of the ordering device, WLD-S1 (spec-world.md 17)",
-	74: "plan 24: the unit model of the review rule, WLD-S2",
 	75: "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
-	76: "plan 24: the unit model of the stream and the two runs, WLD-S4",
 }
 
 var scenarioTestRe = regexp.MustCompile(`(?m)^func TestScenarioS(\d+)_`)

@@ -301,7 +301,7 @@ func excursionOrder(first map[string]int64, depths map[string]int) string {
 // value and else reported beside the prior. The shocks are set through
 // SetYieldShocks and AddAgent with Direct, between steps.
 //
-// Requirement: FR-STY-024, FR-STY-030, FR-STY-082, FR-REF-026, FR-REF-027
+// Requirement: FR-STY-024, FR-STY-035, FR-STY-082, FR-REF-026, FR-REF-027
 func TestStylised_One_Shocks(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -537,7 +537,7 @@ func expectedRegime(r *stylisedRun, th verdict.Thresholds, d verdict.Detector, f
 // Agent(a), and relief before removal). X and O parts are asserted on every seed;
 // B parts only where their key has a value.
 //
-// Requirement: FR-STY-031, FR-STY-036, FR-STY-073, FR-STY-082, FR-SPN-013, FR-SPN-014, FR-SPN-015, FR-REF-026
+// Requirement: FR-STY-036, FR-STY-040, FR-STY-073, FR-STY-082, FR-SPN-013, FR-SPN-014, FR-SPN-015, FR-REF-026
 func TestStylised_Famine_Depths(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

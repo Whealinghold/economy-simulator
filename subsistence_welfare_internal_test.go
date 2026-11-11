@@ -109,6 +109,28 @@ func TestWelfare_OwnUseTickIsWorking(t *testing.T) {
 	}
 }
 
+// TestWelfare_OneTickJobFromP27 verifies that a one-tick own-use job started at
+// P2.7 completes in its start tick: the household has no job left at the end of
+// the tick, and its receipt is on the list at P4.1, before P6.3 prices it.
+//
+// Requirement: FR-SUB-028, FR-SUB-030
+func TestWelfare_OneTickJobFromP27(t *testing.T) {
+	t.Parallel()
+	w := newForage(t, 1, nil)
+	a := &w.agents[1]
+	if a.hasJob() {
+		t.Fatalf("hasJob before the tick = true, want false")
+	}
+	tickInspecting(t, w, func() {
+		if got := w.sub.receipts; len(got) != 1 || got[0].units != 2 {
+			t.Errorf("receipts at P4.1 = %+v, want one of 2 units", got)
+		}
+	})
+	if a.hasJob() || w.sub.ownUseJobs[a.id] != 1 {
+		t.Errorf("after the tick: hasJob = %v, counter = %d, want false and 1", a.hasJob(), w.sub.ownUseJobs[a.id])
+	}
+}
+
 // TestWelfare_NoReceiptForMarketJob verifies that a job of a recipe off the
 // own-use list leaves no receipt, and with the module off nothing is kept.
 //

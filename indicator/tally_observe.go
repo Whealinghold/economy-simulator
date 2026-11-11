@@ -12,7 +12,7 @@ import (
 // window is open (but a WorldRestored opens one at the event's snapshot,
 // spec-indicators.md 10.5.2) and every event type no preset reads, among them
 // the per-order and per-trade classes. A Stage 3 event adds one case to one of
-// the three folds below. Observe allocates nothing for an event of an existing
+// the folds below. Observe allocates nothing for an event of an existing
 // row (NFR-IND-002).
 func (t *Tally) Observe(e economysim.Event) {
 	if !t.open {
@@ -21,7 +21,7 @@ func (t *Tally) Observe(e economysim.Event) {
 		}
 		return
 	}
-	if t.foldStep(e) || t.foldPeople(e) {
+	if t.foldStep(e) || t.foldPeople(e) || t.foldTransport(e) {
 		return
 	}
 	t.foldLimits(e)
@@ -65,6 +65,29 @@ func (t *Tally) foldPeople(e economysim.Event) bool {
 		t.agentRelocated(e)
 	case economysim.UpkeepShortfall:
 		t.upkeepShortfall(e)
+	default:
+		return false
+	}
+	return true
+}
+
+// foldTransport folds the shipments of the transport module and the contracts of
+// the merchant module (the rows of Dispatches, Arrivals and Settlements).
+func (t *Tally) foldTransport(e economysim.Event) bool {
+	switch e := e.(type) {
+	case economysim.ShipmentDispatched:
+		t.shipmentDispatched(e)
+	case economysim.ShipmentArrived:
+		t.shipmentArrived(e)
+	case economysim.ContractFormed:
+		if r := t.settlement(e.Tick, e.Region, e.To, int64(e.Escrowed)); r != nil {
+			t.add((*int64)(&r.Escrowed), int64(e.Escrowed))
+		}
+	case economysim.ContractSettled:
+		if r := t.settlement(e.Tick, e.Region, e.To, int64(e.Paid), int64(e.Refunded)); r != nil {
+			t.add((*int64)(&r.Paid), int64(e.Paid))
+			t.add((*int64)(&r.Refunded), int64(e.Refunded))
+		}
 	default:
 		return false
 	}
@@ -350,4 +373,121 @@ func (t *Tally) reliefPaid(e economysim.ReliefPaid) {
 		t.add(&rt.ReliefRecipients, e.Recipients)
 		t.add(&rt.ReliefHouseholds, e.Households)
 	}
+}
+
+// lane reports whether both regions are in the names table and the tick is in
+// the window; a stray event is never added to a row.
+func (t *Tally) lane(tick int64, from, to economysim.RegionID) bool {
+	if from < 0 || int(from) >= t.w.Regions || to < 0 || int(to) >= t.w.Regions || !t.step(tick) {
+		t.stray = true
+		return false
+	}
+	return true
+}
+
+// known reports whether every commodity names a commodity of the table; a bad
+// line drops the whole event before it can advance the window's last step.
+func (t *Tally) known(n int, commodity func(i int) economysim.CommodityID) bool {
+	for i := range n {
+		if c := commodity(i); c < 0 || int(c) >= t.w.Commodities {
+			t.stray = true
+			return false
+		}
+	}
+	return true
+}
+
+// upsert returns the row of k in the sorted rows, inserting it first when absent.
+func upsert[T any](rows *[]T, k T, key func(a, b T) int) *T {
+	i, found := slices.BinarySearchFunc(*rows, k, key)
+	if !found {
+		*rows = slices.Insert(*rows, i, k)
+	}
+	return &(*rows)[i]
+}
+
+// nonneg reports whether no amount is negative; a negative one marks the event
+// stray, as a bad commodity does.
+func (t *Tally) nonneg(vs ...int64) bool {
+	for _, v := range vs {
+		if v < 0 {
+			t.stray = true
+			return false
+		}
+	}
+	return true
+}
+
+func dispatchKey(r DispatchTally, k DispatchTally) int {
+	return cmp.Or(cmp.Compare(r.Origin, k.Origin), cmp.Compare(r.Destination, k.Destination), cmp.Compare(r.Mode, k.Mode))
+}
+
+func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.nonneg(e.HaulUnits) {
+		return
+	}
+	for _, l := range e.Lines {
+		if !t.nonneg(int64(l.Quantity)) {
+			return
+		}
+	}
+	if !t.lane(e.Tick, e.Region, e.To) {
+		return
+	}
+	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
+	d := upsert(&t.w.Dispatches, k, dispatchKey)
+	t.add(&d.Shipments, 1)
+	if e.Hired {
+		t.add(&d.Hired, 1)
+	}
+	t.add(&d.HaulUnits, e.HaulUnits)
+	for _, l := range e.Lines {
+		t.add(&d.Units, int64(l.Quantity))
+	}
+	// Struck stays 0 until the risk module appends the loss to the event.
+}
+
+func arrivalKey(r ArrivalTally, k ArrivalTally) int {
+	return cmp.Or(cmp.Compare(r.Origin, k.Origin), cmp.Compare(r.Destination, k.Destination), cmp.Compare(r.Commodity, k.Commodity))
+}
+
+func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) {
+		return
+	}
+	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
+	for _, l := range e.Lines {
+		if !t.nonneg(int64(l.Shipped), int64(l.Delivered), int64(l.Diverted), int64(l.Spoiled)) {
+			return
+		}
+	}
+	if !t.lane(e.Tick, e.Region, e.To) {
+		return
+	}
+	for _, l := range e.Lines {
+		k := ArrivalTally{Origin: e.Region, Destination: e.To, Commodity: l.Commodity}
+		if l.Shipped == 0 && l.Delivered == 0 && l.Diverted == 0 && l.Spoiled == 0 {
+			continue // a row means the lane was used
+		}
+		a := upsert(&t.w.Arrivals, k, arrivalKey)
+		t.add(&a.Shipped, int64(l.Shipped))
+		t.add(&a.Delivered, int64(l.Delivered))
+		t.add(&a.Diverted, int64(l.Diverted))
+		t.add(&a.Spoiled, int64(l.Spoiled))
+	}
+}
+
+func settlementKey(r SettlementTally, k SettlementTally) int {
+	return cmp.Or(cmp.Compare(r.Region, k.Region), cmp.Compare(r.To, k.To))
+}
+
+// settlement returns the row of a contract lane, or nil for a stray event or
+// when every amount is zero, so that a row means the lane was used. A
+// quiet event is still checked and still counts as activity of the window.
+func (t *Tally) settlement(tick int64, from, to economysim.RegionID, amounts ...int64) *SettlementTally {
+	if !t.nonneg(amounts...) || !t.lane(tick, from, to) || !slices.ContainsFunc(amounts, func(v int64) bool { return v != 0 }) {
+		return nil
+	}
+	k := SettlementTally{Region: from, To: to}
+	return upsert(&t.w.Settlements, k, settlementKey)
 }

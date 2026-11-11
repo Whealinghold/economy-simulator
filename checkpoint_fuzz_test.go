@@ -72,19 +72,10 @@ func FuzzUnmarshalCheckpoint(f *testing.F) {
 	})
 }
 
-// FuzzRestoreWorld fuzzes the restore of the mill from bytes whose trailer is
-// recomputed, so a mutation of a section reaches the section readers instead of
-// stopping at the digest. No input panics; a refusal is ErrCheckpointCorrupt,
-// ErrCheckpointVersion, ErrCheckpointConfig or ErrCheckpointExtension; and an accepted
-// input is a fixed point of restore-then-save with a world that passes its audit.
-//
-// Requirement: FR-CHK-005, FR-CHK-016, NFR-CHK-003
-func FuzzRestoreWorld(f *testing.F) {
-	for _, s := range fuzzSeeds(f) {
-		f.Add(s)
-	}
-	cfg := directiveMill()
-	f.Fuzz(func(t *testing.T, data []byte) {
+// fuzzRestore is the body of the restore fuzz tests: the input's trailer is
+// recomputed, so a mutation of a section reaches the section readers.
+func fuzzRestore(cfg economysim.Config) func(*testing.T, []byte) {
+	return func(t *testing.T, data []byte) {
 		if len(data) >= 32 {
 			data = redigest(data[:len(data)-32])
 		}
@@ -106,7 +97,60 @@ func FuzzRestoreWorld(f *testing.F) {
 		if again := mustMarshal(t, mustCheckpoint(t, w)); !bytes.Equal(again, data) {
 			t.Fatalf("restore then save of %x gave %x, want the same bytes", data, again)
 		}
-	})
+	}
+}
+
+// FuzzRestoreWorld fuzzes the restore of the mill from bytes whose trailer is
+// recomputed, so a mutation of a section reaches the section readers instead of
+// stopping at the digest. No input panics; a refusal is ErrCheckpointCorrupt,
+// ErrCheckpointVersion, ErrCheckpointConfig or ErrCheckpointExtension; and an accepted
+// input is a fixed point of restore-then-save with a world that passes its audit.
+//
+// Requirement: FR-CHK-005, FR-CHK-016, NFR-CHK-003
+func FuzzRestoreWorld(f *testing.F) {
+	for _, s := range fuzzSeeds(f) {
+		f.Add(s)
+	}
+	f.Fuzz(fuzzRestore(directiveMill()))
+}
+
+// populationMill is the mill with the population module on at its defaults.
+func populationMill() economysim.Config {
+	cfg := directiveMill()
+	pop := economysim.DefaultPopulation()
+	cfg.Modules.Population = &pop
+	return cfg
+}
+
+// FuzzRestoreWorldPopulation is FuzzRestoreWorld on the mill with the population
+// module on, seeded with its checkpoints at ticks 0 and 20, so a mutation reaches
+// section 14 (the carries, the scales, the three runs) and the death carry of the
+// agent record (tag 3).
+//
+// Requirement: FR-POP-035, FR-CHK-016, NFR-CHK-003
+func FuzzRestoreWorldPopulation(f *testing.F) {
+	cfg := populationMill()
+	for _, ticks := range []int{0, 20} {
+		w, err := economysim.NewWorld(cfg, economysim.WithSeed(5))
+		if err != nil {
+			f.Fatalf("NewWorld() error = %v, want nil", err)
+		}
+		for range ticks {
+			if err := w.Step(); err != nil {
+				f.Fatalf("Step() error = %v, want nil", err)
+			}
+		}
+		c, err := w.Checkpoint()
+		if err != nil {
+			f.Fatalf("Checkpoint() error = %v, want nil", err)
+		}
+		b, err := c.MarshalBinary()
+		if err != nil {
+			f.Fatalf("MarshalBinary() error = %v, want nil", err)
+		}
+		f.Add(b)
+	}
+	f.Fuzz(fuzzRestore(cfg))
 }
 
 // TestRestore_CraftedCountsAllocateLittle verifies that a count or an agent ID the

@@ -23,7 +23,7 @@ const s37Ticks = 400
 // cold-run collapse of the Stage 1 economy, see the recorded outcomes), so N*
 // is not defined here and the two starts are scaled from the pack's own 600.
 //
-// Requirement: FR-POP-022, FR-POP-037, FR-POP-006
+// Requirement: FR-POP-022, FR-POP-037, FR-POP-006, FR-REF-023
 //
 // Guard: a birth or death the executor did not carry out, or one that created a
 // unit from nothing, fails the identities or the audit.

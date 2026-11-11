@@ -20,7 +20,7 @@ import (
 // Requirement: FR-IND-009
 func TestRowsOf_AbsentWeightPastInt64IsOverflow(t *testing.T) {
 	t.Parallel()
-	st := []indicator.AgentRow{{Weight: math.MaxInt64}, {Weight: math.MaxInt64}} // no welfare ratio: both are absent
+	st := []economysim.AgentState{{Weight: math.MaxInt64}, {Weight: math.MaxInt64}} // no welfare ratio: both are absent
 	if _, err := indicator.RowsOf(st, indicator.ColWelfareRatio, indicator.RowOpt{}); !errors.Is(err, indicator.ErrOverflow) {
 		t.Errorf("RowsOf(two absent agents of weight MaxInt64) error = %v, want ErrOverflow", err)
 	}
@@ -193,7 +193,7 @@ func TestPriceRange_ClampedAndNonPositiveLow(t *testing.T) {
 // Requirement: FR-IND-026
 func TestRowsOf_WealthHoldingOutsideTheTableIsRange(t *testing.T) {
 	t.Parallel()
-	st := []indicator.AgentRow{{Weight: 1, Money: 5, Holdings: []indicator.Holding{{Commodity: 0, Quantity: 2}}}}
+	st := []economysim.AgentState{{Weight: 1, Money: 5, Holdings: []economysim.HoldingState{{Commodity: 0, Quantity: 2}}}}
 	if _, err := indicator.RowsOf(st, indicator.ColWealth, indicator.RowOpt{}); !errors.Is(err, indicator.ErrRange) {
 		t.Errorf("RowsOf(wealth, no table) error = %v, want ErrRange", err)
 	}

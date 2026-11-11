@@ -2,6 +2,7 @@ package indicator_test
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -330,6 +331,33 @@ func TestGDP_RelocatedGoodsAreAReconcilingItem(t *testing.T) {
 	one, err := indicator.GDP(w, open, closing, valleyTable(t, w, alphaP, alphaP))
 	if err != nil || one.Realm.Residual != 0 || one.Realm.Reloc != 0 {
 		t.Errorf("GDP(one table) = residual %d reloc %d err %v, want 0, 0, nil: the moved goods cancel", one.Realm.Residual, one.Realm.Reloc, err)
+	}
+}
+
+// TestGDP_UnitsInTransitAreAStockOfTheOrigin verifies that the lines of the
+// shipments in flight at the close count in the origin's system stock
+// (spec-indicators.md 7.1.2): moving six units from Held into a Transit account
+// changes no figure, and a line outside the names table is ErrRange.
+//
+// Requirement: FR-IND-016, FR-IND-017
+func TestGDP_UnitsInTransitAreAStockOfTheOrigin(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	base, err := indicator.GDP(w, open, closing, valleyTable(t, w, alphaP, betaP))
+	if err != nil {
+		t.Fatalf("GDP() error = %v, want nil", err)
+	}
+	closing.Markets[int(alpha)*4+int(grain)].HeldByAgents -= 6
+	closing.Shipments = []economysim.ShipmentRow{{Region: alpha, To: beta, Lines: []economysim.Amount{{Commodity: grain, Quantity: 6}}}}
+	got, err := indicator.GDP(w, open, closing, valleyTable(t, w, alphaP, betaP))
+	if err != nil {
+		t.Fatalf("GDP(in transit) error = %v, want nil", err)
+	}
+	if !reflect.DeepEqual(got.Regions, base.Regions) {
+		t.Errorf("GDP(in transit).Regions = %+v, want %+v: Held less 6 plus Transit 6 is the same system stock", got.Regions, base.Regions)
+	}
+	closing.Shipments[0].Lines[0].Commodity = 99
+	if _, err := indicator.GDP(w, open, closing, valleyTable(t, w, alphaP, betaP)); !errors.Is(err, indicator.ErrRange) {
+		t.Errorf("GDP(line of an unknown commodity) error = %v, want ErrRange", err)
 	}
 }
 

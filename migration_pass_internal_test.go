@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"context"
 	"math/rand/v2"
 	"reflect"
 	"slices"
@@ -616,5 +617,26 @@ func TestPass_WorkedExampleBJourneyTimes(t *testing.T) {
 		if len(cands) != 2 || cands[0].K != tt.want[0] || cands[1].K != tt.want[1] || cands[0].Ref >= cands[1].Ref {
 			t.Errorf("candidates of agent %d in region %d = %+v, want two in region order with journey times %v", tt.agent, tt.region, cands, tt.want)
 		}
+	}
+}
+
+// BenchmarkPass reports the cost and the allocations of the pass of P7.2 with a
+// review every tick and the gate open. It only reports:
+// TestPass_WorkIsCounted enforces the limit of NFR-MIG-002.
+//
+// Requirement: NFR-MIG-002
+func BenchmarkPass(b *testing.B) {
+	c := passConfig(func(c *Config) { c.Modules.Migration.MoveReviewTicks = 1 })
+	w, err := NewWorld(c, WithStrategy("script", pairScript{}))
+	if err != nil {
+		b.Fatal(err)
+	}
+	if _, err := w.Run(context.Background(), 6); err != nil {
+		b.Fatal(err)
+	}
+	open(w)
+	b.ReportAllocs()
+	for b.Loop() {
+		w.p72Migration()
 	}
 }

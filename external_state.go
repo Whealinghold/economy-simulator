@@ -185,39 +185,50 @@ func (w *World) loadExternal(_ *restoreCtx, r *codec.Reader) error {
 		}
 	}
 	x.eachRowOrdered(func(cp *counterparty, row *sideRow) {
-		if r.Err() != nil {
-			return
-		}
-		side := x.lines[row.line].cfg.side(cp.buy)
-		row.carry = r.Bounded("carry", wholeBP-1)
-		units := int64(MaxLineTotal)
-		if side.TotalUnits > 0 {
-			units = min(units, side.TotalUnits)
-		}
-		value := int64(MaxLineTotal)
-		if side.TotalValue > 0 {
-			value = min(value, side.TotalValue)
-		}
-		row.units = r.Bounded("units", units)
-		row.listValue = r.Bounded("list value", value)
-		row.ended = r.B()
-		if r.Err() == nil && !row.ended && side.TotalUnits > 0 && row.units >= side.TotalUnits {
-			r.Failf("a side that has traded all its %d units has not ended", side.TotalUnits)
-		}
-		if r.Err() != nil {
-			return
-		}
-		// Every unit trades at a limit of at least 1 and at most MaxPrice, and a side
-		// whose list value reached its cap ended in that trade (7.3, 7.4).
-		if row.listValue < row.units {
-			r.Failf("list value %d is below the %d units traded", row.listValue, row.units)
-		} else if top, ok := checked.Mul(row.units, MaxPrice); ok && row.listValue > top {
-			r.Failf("list value %d is above %d units at the largest price", row.listValue, row.units)
-		} else if !row.ended && row.listValue >= value {
-			r.Failf("a side that has used all its list value %d has not ended", value)
+		if r.Err() == nil {
+			loadSideRow(r, x.lines[row.line].cfg.side(cp.buy), row)
 		}
 	})
 	return nil
+}
+
+// sideCaps are the largest cumulative units and list value a side may have traded:
+// its own caps when set, else MaxLineTotal.
+func sideCaps(side *OutsideSide) (units, value int64) {
+	units, value = int64(MaxLineTotal), int64(MaxLineTotal)
+	if side.TotalUnits > 0 {
+		units = min(units, side.TotalUnits)
+	}
+	if side.TotalValue > 0 {
+		value = min(value, side.TotalValue)
+	}
+	return units, value
+}
+
+// loadSideRow reads one side row of tag 18 and checks it against the caps of its
+// side: units and list value within them, an ended flag consistent with both.
+func loadSideRow(r *codec.Reader, side *OutsideSide, row *sideRow) {
+	row.carry = r.Bounded("carry", wholeBP-1)
+	units, value := sideCaps(side)
+	row.units = r.Bounded("units", units)
+	row.listValue = r.Bounded("list value", value)
+	row.ended = r.B()
+	if r.Err() != nil {
+		return
+	}
+	if !row.ended && side.TotalUnits > 0 && row.units >= side.TotalUnits {
+		r.Failf("a side that has traded all its %d units has not ended", side.TotalUnits)
+		return
+	}
+	// Every unit trades at a limit of at least 1 and at most MaxPrice, and a side
+	// whose list value reached its cap ended in that trade (7.3, 7.4).
+	if row.listValue < row.units {
+		r.Failf("list value %d is below the %d units traded", row.listValue, row.units)
+	} else if top, ok := checked.Mul(row.units, MaxPrice); ok && row.listValue > top {
+		r.Failf("list value %d is above %d units at the largest price", row.listValue, row.units)
+	} else if !row.ended && row.listValue >= value {
+		r.Failf("a side that has used all its list value %d has not ended", value)
+	}
 }
 
 // lineRead is one line of the configuration as the pure read of FR-EXT-047 gives it,

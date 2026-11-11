@@ -89,26 +89,45 @@ type GDPResult struct {
 // stockTable is the stocks of a snapshot at region * commodities + commodity.
 type stockTable struct{ held, pend, estate, transit []int64 }
 
-// stocksOf reads the units a snapshot holds. The units in transit are not in the
-// snapshot yet: shortcut: Snapshot.Shipments (plan 2-12) is not in the tree, so
-// transit is 0 and a cargo in flight must be counted in Held by the caller's
-// fixture; read it from the snapshot when the field exists, in this function.
-func stocksOf(s economysim.Snapshot, regions, commodities int) (stockTable, error) {
+// stocksOf reads the units a snapshot holds. The units in transit are the lines
+// of the shipments in flight, attributed to the origin region (spec-indicators.md
+// 7.1.2).
+func stocksOf(preset string, s economysim.Snapshot, regions, commodities int) (stockTable, error) {
 	n := regions * commodities
 	st := stockTable{make([]int64, n), make([]int64, n), make([]int64, n), make([]int64, n)}
 	for _, m := range s.Markets {
 		r, c := m.State.Region, m.State.Commodity
 		if r < 0 || int(r) >= regions || c < 0 || int(c) >= commodities {
-			return stockTable{}, wrap("GDP", "market", ErrRange)
+			return stockTable{}, wrap(preset, "market", ErrRange)
 		}
 		i := int(r)*commodities + int(c)
 		var err error
-		if st.held[i], err = net("GDP", "held", []int64{int64(m.HeldByAgents), int64(m.HeldByEstate)}); err != nil {
+		if st.held[i], err = net(preset, "held", []int64{int64(m.HeldByAgents), int64(m.HeldByEstate)}); err != nil {
 			return stockTable{}, err
 		}
 		st.estate[i], st.pend[i] = int64(m.HeldByEstate), int64(m.Pending)
 	}
+	if err := st.addTransit(preset, s.Shipments, regions, commodities); err != nil {
+		return stockTable{}, err
+	}
 	return st, nil
+}
+
+// addTransit adds the lines of the shipments in flight to the origin's cells.
+func (st *stockTable) addTransit(preset string, ships []economysim.ShipmentRow, regions, commodities int) error {
+	for _, sh := range ships {
+		for _, l := range sh.Lines {
+			if sh.Region < 0 || int(sh.Region) >= regions || l.Commodity < 0 || int(l.Commodity) >= commodities || l.Quantity < 0 {
+				return wrap(preset, "shipment", ErrRange)
+			}
+			i := int(sh.Region)*commodities + int(l.Commodity)
+			var err error
+			if st.transit[i], err = net(preset, "transit", []int64{st.transit[i], int64(l.Quantity)}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // maxCells bounds the cells of a dense table, so that a hand-built window cannot
@@ -453,10 +472,10 @@ func loadAccounts(preset string, w Window, open, closing economysim.Snapshot, p 
 	if a.u, err = loadUnits(w, f); err != nil {
 		return accounts{}, err
 	}
-	if a.st, err = stocksOf(closing, w.Regions, w.Commodities); err != nil {
+	if a.st, err = stocksOf(preset, closing, w.Regions, w.Commodities); err != nil {
 		return accounts{}, err
 	}
-	a.op, err = stocksOf(open, w.Regions, w.Commodities)
+	a.op, err = stocksOf(preset, open, w.Regions, w.Commodities)
 	return a, err
 }
 

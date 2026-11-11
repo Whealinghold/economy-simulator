@@ -1,9 +1,9 @@
 # Plan: Stage 2, row 17: INT, `integration.go` (external agents, `Direct`, the slot setters, the queries)
 
-**Status: plan written (2026-10-22), not started. Written against plan-2-0.md; nothing here is built.**
+**Status: built and merged (PR #42, 2026-11-10, branch stage-2-17). Written 2026-10-22 against plan-2-0.md; the sections below are the plan as written, corrected where the code or the rules differ (see "Implementation record" at the end). Where the record and a decision disagree, the record and the code win.**
 Sequences the roadmap-v1.md Stage 2 row "`integration.go` (external agents, `Direct`, the slot setters, the queries) | INT (minimal: shocks and a player)" into eleven phases. It implements [spec-integration.md](../specs/spec-integration.md) (INT) sections 3 to 7, 12 and 13 for the modules that exist at this point, and the requirements FR-INT-001 to 011, 020 to 033, 040 to 054, 060 to 062, 070 and NFR-INT-001 to 005. It replaces the Stage 1 test seam of N-296 and un-skips S01 leg (b). Where this plan and the specs or rules disagree, they win and this plan is corrected.
 
-Rule tags read for this plan (all three files read, tags equal those of plan-2-0.md): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1.
+Rule tags read for this plan when it was written (tags of plan-2-0.md at that date): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1. The rule files have since been edited; the tags read for the 2026-11-11 plan review are architecture=5b7049ed1de0fd413fa50e33, observability=e7cfbd33b1620a09dc78dff7, testing=120890253bd2f6c110a015d2.
 Specs read: spec-integration.md (in full), spec-world.md (3.5, 3.6, 5.3, 5.5, 6 positions P1.9, 7.1.4, 7.3, 8, 12), spec-regions.md (6, 7.3), spec-checkpoint.md (4.2 tags 3, 22, 34), spec-reference-chain.md (4.2 role `visitor`, 7.1.3, S01), spec-observability.md (4.1 rows, 5.3.5a), spec-information.md (6, 6.2).
 Code read (every claim below was checked against it): `world.go`, `agent.go`, `fanin.go`, `phase_exit.go` (`spawnEntrant`, `fillSeeds`, `forget`), `phase_start.go`, `tick.go`, `strategy.go` (`Directed`), `strategy_view.go` (`fillDirective`), `option.go` (`resolveStrategy`, `isDirected`), `event.go`, `errors.go`, `snapshot.go` (`marketState`, `snapRegion`), `construct.go`, `random.go`, `export_scenarios_test.go`, `scenario_helpers_test.go`, `scenario_s01_test.go`, `testdata/chains/scripts/s01.toml`, `testdata/chains/base.toml` (role `visitor`).
 Plans read for the names they provide (their Provides lines and the decisions behind them): plans 2, 3, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, with plans 18 and 19 read for what they expect of this plan. The setter forms differ per owner (D542) and are taken from those plans as written on 2026-10-22.
@@ -19,15 +19,15 @@ Notes read (index, then the entries tagged INT or ALL; the notes file is not edi
 - N-136, N-143, N-161, N-164, N-177, N-194, N-205 (heading and first lines only): Stage 3 calls and slots (stores, credit, risk, legal, policy); leave open for their modules.
 - ALL: N-016 apply (no `Config` field, no registry row), N-017 apply (Phase 1 lists the terms), N-027 apply (no default), N-103 apply (this plan edits one file), N-126 apply (one new event, `YieldShocked`, has its row), N-128 and N-244 apply (the rumours of 4.7.3 are INT's own slice indexed by agent slot, not a field of `agent`), N-163 apply (the word "pool" only), N-217 apply (`testdata/golden/off/` and the pinned hash do not move).
 
-Ships in three PRs without renumbering: PR A = Phases 1 to 4 (record, errors, AddAgent/RemoveAgent, Direct); PR B = Phases 5 to 8 (slots, Relocate, queries, tag 22 and fork); PR C = Phases 9 to 11 (seam replacement, public legs, gate). The golden and catalogue appends of each PR are final for that PR.
+Planned to ship in three PRs without renumbering: PR A = Phases 1 to 4 (record, errors, AddAgent/RemoveAgent, Direct); PR B = Phases 5 to 8 (slots, Relocate, queries, tag 22 and fork); PR C = Phases 9 to 11 (seam replacement, public legs, gate). The golden and catalogue appends of each PR are final for that PR. (It shipped as one PR, #42, on branch stage-2-17.)
 
 Decision block: D540 to D559 (all used).
 
 ## Scope
 
 **Builds (root package).**
-- `integration.go`: `NewAgent`, `StockItem`, `AddAgent`, `RemoveAgent`, `Direct`, `Relocate`; the call frame; the slot setters `SetYieldShocks`, `SetEdgeStatuses`, `SetTransitFactors`, `SetFlowScales`, `SetBirthScales`, `SetDeathScales`, `SetCapacityScales`, `SetRegenScales`, `SetOutsideShocks` and the adjustment `AdjustEndowments`; `YieldShock`, `SlotState`, `Slots`; the position P1.9 (`p19Directives`); the rumour store and the checkpoint section of tag 22; `Calendar()`.
-- Queries in the files spec-integration.md 20 names: `AgentState`, `Agent`, `Agents` (`agent.go`), `Market` (`market.go`), `RegionState`, `Region` (`snapshot.go`), `Warnings` (`world.go`).
+- `integration.go` (and, after the Lizard split, `integration_slots.go`, `integration_directive.go` and `integration_estate.go`, which `architecture.md` 2.6 and `AGENTS.md` list for INT): `NewAgent`, `StockItem`, `AddAgent`, `RemoveAgent`, `Direct`, `Relocate`; the call frame; the slot setters `SetYieldShocks`, `SetEdgeStatuses`, `SetTransitFactors`, `SetFlowScales`, `SetBirthScales`, `SetDeathScales`, `SetCapacityScales`, `SetRegenScales`, `SetOutsideShocks` and the adjustment `AdjustEndowments`; `YieldShock`, `SlotState`, `Slots`; the position P1.9 (`p19Directives`); the rumour store and the checkpoint section of tag 22; `Calendar()`.
+- Queries in the files spec-integration.md 20 names: `AgentState`, `Agent`, `Agents` (`agent.go`), `Market` (`market.go`), `RegionState`, `Region` (`snapshot.go`), `Warnings` (`integration.go`, over `integrationState.warnings`).
 - Catalogue: `errors.go`, `event.go` (`YieldShocked`), `tick.go` (P1.9), `checkpoint_sections.go` (tag 22), `fanin.go` (one appended call each in `fillAgentView`, `removeAgent` and `relocationRefusal` only if a rule below needs it).
 - Test code: the conformance table for every setter, the fork-at-N and restore tests, the fuzz targets, the scripted call scenarios, the replacement of the seam, S01 leg (b).
 
@@ -75,7 +75,7 @@ Decision block: D540 to D559 (all used).
 - **D552. `Slots`.** One reader per slot returns the non-default list in the owner's saved order, from the same accessor the owner's checkpoint writer uses (so FR-INT-032 holds by construction). The birth and death lists differ from the configured value of the region, not from 10 000. The `SlotState` fields are in the order of INT 5.3; this plan has nine of fifteen, and a later module appends its field at the end of the struct. Source: INT 5.2.1, 5.3.
 - **D553. The rumour store and tag 22.** `integrationState.views` is a slice indexed by agent slot holding, for an external agent of an `Informed` role with `Modules.Information` on, the tick of its last view and a copy of the view's rumours (at most `MaxRumoursPerView`). It is filled by one appended call in the `kind == viewTrade` branch of `fillAgentView` (plan 13 D466), after `fillRumours` (`recordRumours(v, a)`); a Work view never calls it, so it cannot clear the stored rumours, saved in tag 22 in ascending agent ID with rows only for an agent that has had a view, and reported by `AgentState` with tick -1 and an empty list when there is none. Its `present` is `Modules.Information != nil`. It affects no result (FR-INT-049). Source: INT 4.7.3, 13; CHK 4.2 tag 22; N-244.
 - **D554. `AgentState` at this point.** The groups Identity, Standing, Holdings (with `Expiring` from `Ledger.Expiring`), Job, Beliefs, Markets, Upkeep, Mailbox and Rumours always; Wants (DEM on), Own use (SUB on), Away and Journey (TRN, MIG on) when their module is on. A later module appends its group; every appended field is a count, an amount, a bool or a slice, never a typed ID, so the off value contributes nothing (architecture.md 2.10.5). It is a deep copy of plain data, a function of the saved state alone, and omits `MaxExecutions`, refusal reasons and the stock after the next completions (FR-INT-033). Source: INT 4.7.2.
-- **D555. `Market`, `Region`, `Agents`, `Warnings`, `Calendar`.** `Market(r, c)` returns `w.marketState(i, r, c)`; errors `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrOutsideNode`. `Region(r)` builds the one region through `snapRegion` on a one-region scratch and returns `RegionState` (OBS 5.3.5a): the core rows now, and for a module that is on the owner's rows for that region (Endowments, Shipments, Journeys) through the owner's per-region appender if it has one, else by filtering that owner's rows of a full snapshot (the cost class then rises to 3 for that module, recorded in Risks). `Agents(r)` lists live agents of the region in ascending ID with no pseudo-agent. `Warnings()` returns the construction warnings sorted by path then rule from a new `World.warnings` field set in `construct`. `Calendar()` returns `w.cfg.Calendar` as a deep copy. Source: INT 6; OBS 5.3.5a; N-289.
+- **D555. `Market`, `Region`, `Agents`, `Warnings`, `Calendar`.** `Market(r, c)` returns `w.marketState(i, r, c)`; errors `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrOutsideNode`. `Region(r)` builds the one region through `snapRegion` on a one-region scratch and returns `RegionState` (OBS 5.3.5a): the core rows now, and for a module that is on the owner's rows for that region (Endowments, Shipments, Journeys) through the owner's per-region appender if it has one, else by filtering that owner's rows of a full snapshot (the cost class then rises to 3 for that module, recorded in Risks). `Agents(r)` lists live agents of the region in ascending ID with no pseudo-agent. `Warnings()` returns the construction warnings sorted by path then rule from `integrationState.warnings` (a new field of the INT state, not of `World`), set in `construct` and again at a restore. `Calendar()` returns `w.cfg.Calendar` as a deep copy. Source: INT 6; OBS 5.3.5a; N-289.
 - **D556. Events.** One new event, `YieldShocked{Tick, Region, Recipe, BeforeBP, AfterBP}` (core gate, OBS 4.1 row), appended to `event.go` with its `isEvent`, deleted from `notBuiltEvents` and `deferredCore` in `event_test.go`. Every call's events carry `Tick()` (the tick the next step runs) and come before the next `TickStarted` because a call is between steps. Per call: `AgentSpawned`; `RemoveAgent` the fan-in's; `Relocate` `RecipeAbandoned` and `AgentRelocated`; each setter the owner's event. All are constructed only when an observer was supplied. Source: INT 12.1; OBS 4.1.
 - **D557. Logs.** Debug only, guarded by `Enabled`, constant lowercase messages, keys `tick`, `agent`, `region`, `role`, `cause` from `logkeys` (no new key): "agent added", "directive set", and one per setter ("yield shocks set", "edge statuses set", "flow scales set", "birth scales set", "death scales set", "capacity scales set", "regen scales set", "endowments adjusted", "transit factors set", "outside shocks set"). No `Info`, `Warn` or `Error`. The setter lines are guarded and carry no per-key data (the event does). Source: INT 12.2; observability-and-logging.md 2.2, 3.1.3.
 - **D558. "Changes nothing" is tested by bytes.** For a refused call the test takes `Checkpoint()` before and after and requires equal bytes, and counts events and stream use (no new `siteAddAgent` key). The fuzz targets `FuzzAddAgent`, `FuzzDirect` and `FuzzSetters` assert no panic and that. Source: INT 3.3.1; FR-INT-002; NFR-INT-005; plan-2-2 (`Checkpoint` is byte-stable).
@@ -101,7 +101,7 @@ Edits owed:
 | `spec-checkpoint.md` | 4.2 tag 3 and tag 22 | the strategy-name table lists the names of external agents (D548); tag 22 `present` is `Modules.Information` and rows are sparse |
 | `spec-agents.md` | 10.3 (`Directive.Job`), 14.6 | `Job *JobRequest` is built (Stage 1); `Agent(a)` returns `AgentState` |
 | `doc.go` glossary | new terms, before any code uses them (architecture.md 3.2, `glossary_test.go`) | the terms agent state, forced move, market state, slot state, query class, entry (of a setter call), key (of a setter entry) (INT handoff list), and every exported type of `agent.go`, `snapshot.go` and `event.go` this plan adds, named so that `TestGlossary_DeclaredTypesNamed` passes: `YieldShocked`, `AgentState` and its group types, `SlotState`, `RegionState`, and the entry types `YieldShock`, `FlowScale`, `RegionScale`, `EndowmentScale`, `EndowmentAdjustment`, `TransitFactor`, `OutsideShock` |
-| `architecture.md` 2.6 and `AGENTS.md` layout (and a fresh read-receipt tag on `architecture.md`) | `integration_slots.go`, `integration_agents.go` (INT), only if `integration.go` passes about 500 lines of code (N-243) or fails Lizard | the supervisor adds the two lines to both lists before the split is made; otherwise no new file (`integration.go` is listed) |
+| `architecture.md` 2.6 and `AGENTS.md` layout (and a fresh read-receipt tag on `architecture.md`) | continuation files of INT, only if `integration.go` passes about 500 lines of code (N-243) or fails Lizard | the supervisor adds the lines to both lists before the split is made, with the same files in both (AGENTS.md says so); otherwise no new file (`integration.go` is listed). Done as `integration_slots.go`, `integration_directive.go`, `integration_estate.go`; there is no `integration_agents.go` |
 | `spec-integration.md` | "Edits owed to other specs" table | grep each row; apply the unapplied ones that this plan's code relies on (the rows for `spec-world.md` 3.5.1, 3.6.1, 8.3, 6.11 and `spec-regions.md` 7.3) before Phase 3 |
 
 Reconcile (the setter forms, D542): each owner's form is different and none needs a change; three gaps are raised. Plan 9 gives no signatures for its three helpers (the entry type of `setCapacityScales` and the result of the adjustment are needed); plan 10's Provides line for `(*subsistence).drop(slot)` names plan 14 only and plan 17 uses it too; no plan declares the entry types `FlowScale`, `RegionScale`, `EndowmentScale`, `EndowmentAdjustment`, `TransitFactor` (Risks 1). A name that differs after the plans are audited is a one-line change here.
@@ -122,7 +122,7 @@ Goal: one place for checks 1 to 4 of 3.2. Files: `errors.go`, `integration.go`, 
 2. `enter`, the typed `moduleOn` check (a closure per module name over `w.cfg.Modules`), `keyedOnce` (duplicate detection by sorted copy, no map), and the `argError` constructor (D544).
 3. Phase 2 adds no public call. The conformance harness `slotCase` (name, setter, module, entries, expected error per row of 5.1.3) is written here, empty, and Phases 5 appends its rows.
 
-Tests: `TestEnter_Order` (a step running beats a failed world beats a module off; FR-INT-001, 006; the case "inside a step" is an observer that calls the setter); `TestSentinels_Distinct` (the new texts differ from each other and from the ledger's; `errors_test.go` list); `TestArgError_Path` (renders `changes[2].bp`; FR-INT-005); `TestKeyedOnce` (FR-INT-003).
+Tests: `TestEnter_Order` (a step running beats a failed world beats a module off; FR-INT-001, 006; the case "inside a step" is an observer that calls the setter); `TestSentinels_IntegrationDistinct` (the new texts differ from each other and from the ledger's; `errors_test.go` list); `TestArgError_Path` (renders `changes[2].bp`; FR-INT-005); `TestKeyedOnce` (FR-INT-003).
 Exit check: Lizard on `integration.go`, coverage of the new functions.
 
 ### Phase 3: strategy table, `AddAgent`, `RemoveAgent`
@@ -161,7 +161,7 @@ Tests:
 - `TestDirect_AffordableNotChecked` (a bid the agent cannot pay is accepted by the call and rejected by the step with `insufficient_funds`) - FR-INT-010.
 - `TestDirect_NoJobLeavesWork` (intents without `Job`: the fallback's `Work` runs) - FR-INT-028.
 - `TestPositions_P19` (the position test of `tick_internal_test.go` and `checkRows` pass with the new entry; a world with no external agent records no P1.9 line, one with an external agent records `t=N P1.9` every tick) - testing.md 6.8.
-- `TestStep_AllocationsWithExternalAgent` (the baseline of `allocation_test.go` plus a constant measured in this phase) - NFR-INT-002.
+- `TestP19Directives_AllocatesNothing` (`integration_direct_internal_test.go`; the position allocates nothing with a sticky and a one-tick directive; built in place of `TestStep_AllocationsWithExternalAgent`) - NFR-INT-002.
 - `FuzzDirect` - NFR-INT-005.
 
 ### Phase 5: the slots
@@ -178,7 +178,7 @@ Tests:
 - `TestSlots_EventsCanonicalOrder` (a slice in reverse key order gives events in ascending key order; `Tick()` of the next step; before `TickStarted`) - FR-INT-004, FR-OBS-017.
 - `TestSlots_DefaultClears` (set then set to default: `Slots()` empty and `Checkpoint()` bytes equal a never-shocked world's) - FR-INT-048, 032.
 - `TestSetYieldShocks` (a job started afterwards reads it at P2.7; a running job keeps its pending output; event fields) - FR-INT-040.
-- `TestSetEdgeStatuses_Public`, `TestSetTransitFactors`, `TestSetFlowScales`, `TestSetBirthDeathScales` (default is the configured value), `TestSetCapacityRegenScales`, `TestAdjustEndowments`, `TestSetOutsideShocks` (each through the public call; the mechanism is the owner's, tested in its plan) - FR-INT-041 to 047.
+- `TestSetEdgeStatuses_Public`, `TestSetTransitFactors_Public`, `TestSetFlowScales_Public`, `TestSetBirthDeathScales` (default is the configured value), `TestSetCapacityRegenScales_Public`, `TestAdjustEndowments_Public`, `TestSetOutsideShocks_Public` (each through the public call; the mechanism is the owner's, tested in its plan) - FR-INT-041 to 047.
 - `TestSlots_RestoredEqualsOriginal` (set several, `Checkpoint`, `RestoreWorld`, `Slots()` equal) - FR-INT-032, 070.
 - `TestInStep_Calls` (every public mutating call from an observer returns `ErrInStep`, state unchanged) - FR-INT-001.
 - `FuzzSetters` (the nine setters and the adjustment, random entries) - NFR-INT-005.
@@ -199,7 +199,7 @@ Exit check: coverage, Lizard.
 
 ### Phase 7: the queries
 
-Goal: the readers of INT 6. Files: `agent.go`, `market.go`, `snapshot.go`, `world.go`, `construct.go` (the `warnings` field), `integration.go` (`Calendar`, `Agents`), `integration_query_test.go`.
+Goal: the readers of INT 6. Files: `agent.go`, `market.go`, `snapshot.go`, `integration.go` (`Warnings` over `integrationState.warnings`, `Calendar`, `Agents`), and `construct.go` where the warnings are stored, `integration_query_test.go`.
 
 1. `AgentState`, `Agent`, `Agents` (D554), `Market`, `RegionState`, `Region`, `Warnings`, `Calendar` (D555).
 
@@ -225,7 +225,7 @@ Tests:
 - `TestFork_RumoursKept` (with `Modules.Information` and an `Informed` external role: `Agent(a).Rumours` and its tick survive a restore; a later Work view at P2.5 leaves the stored rumours and tick unchanged) - FR-INT-049.
 - `TestRestore_Tag22Corrupt` (unsorted agent, a role not `Informed`, a count above the cap, a default row) - FR-CHK-022 family, FR-INT-049.
 - `TestFork_BeforeFirstStep` (a call made in construction, checkpoint, restore, the call's money is in the bucket) - FR-INT-011; INT 13.3.
-- `TestScenarioS81_CallSequence` (INT-S3, `scenarioSeedCount()` seeds; the body of `TestDeterminism_CallSequence`: one call script run twice, in two worlds, equal state and events at every tick; two orders of calls on different keys leave equal state; a script with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit) - FR-INT-008, 009, 050; INT-S3.
+- `TestScenarioS81_CallSequence` (INT-S3, `scenarioSeedCount()` seeds; there is no separate `TestDeterminism_CallSequence`, this test is the body: one call script run twice, in two worlds, equal state and events at every tick; two orders of calls on different keys leave equal state; a script with `AddAgent` shows `initial` in `BoundaryFlow` and passes the audit) - FR-INT-008, 009, 050; INT-S3.
 - `TestScenarioS79_YieldShockCalls` (three `SetYieldShocks` calls, 3 000 for 60 and 120 ticks, exact checks only; INT-S1 bands are plan 19's) - FR-INT-040.
 - `TestObservers_DoNotChangeCalls` (a recording observer and a capturing logger give the same state and snapshots as neither) - FR-INT-050, 051, 052.
 
@@ -233,7 +233,7 @@ Tests:
 
 Goal: the scenario helpers use the public calls and leg (b) runs. Files: `export_scenarios_test.go` (deleted), `scenario_helpers_test.go`, `scenario_s01_test.go`, `scenario_s04_test.go` (only if it calls the seam), `scenario_s28_test.go`, `scenario_s29_test.go`, `scenario_s48_test.go`, `scenario_s52_test.go` (each only where it calls the edge-status seam), `testdata/chains/scripts/s01b.toml` (new), `testdata/chains/expected/one.scenarios.txt`. Plan 1 has already changed these files for the race-aware seed count (`scenarioSeedCount`, `updateAllowed`); this phase edits after it and after plan 8's pack.
 
-1. `applyScript` calls `World.SetYieldShocks` (by the ID-to-index lookups it already has) and no longer imports the seam; `SetYieldShockForTest` and its file are deleted. `TestScenarioS01` and `TestScenarioS04` must produce the same series as before (the shock is the same state).
+1. `applyScript` calls `World.SetYieldShocks` (by the ID-to-index lookups it already has) and no longer imports the seam; `SetYieldShockForTest` and its file are deleted. `TestScenarioS01_FuelSupplyShock` and `TestScenarioS04_StapleShortage` must produce the same series as before (the shock is the same state).
 2. `scriptFrom` accepts `[[buyer]]` beside `[[shock]]` (tick, region, money, `buy = {commodity, quantity_share_bp, ticks}`) as REF 7.1.3 writes it. A `scriptStep` has a kind. A script with a table of neither kind is still an error.
 3. A new `s01b.toml` holds the leg (b) buyer: tick 400, region `north`, role `visitor`, money 2 000 000, `buy = { commodity = "fuel", quantity_share_bp = 500, ticks = 60 }`. `s01.toml` (leg (a)) is not changed: it keeps its `[[shock]]` tables only, so leg (a)'s series are unchanged (item 1). The legs run separately (REF S01).
 4. The harness applies a buyer at its tick: reads the mean volume of the market in the 100 ticks before (the observer already keeps `Volume`), computes the quantity as the share of it (at least 1), calls `AddAgent`, then `Direct` with a sticky directive `[{Commodity: fuel, Side: Bid, Quantity: q, Limit: the ceiling of the commodity's reference band}]` and a `Hold` of the visitor's other tradable commodities so that the fallback adds nothing; after `ticks` steps it calls `Direct` with an empty directive. The limit is the ceiling that `marketInterval` already restates, so the published price stays inside the band (FR-STB-008); the value is the harness's, not the library's (Phase 1 asks REF to say so).
@@ -265,9 +265,9 @@ Goal: the row is done. With the other agents' trees quiet:
 - `gofmt -l .` empty; `go vet ./...`; `staticcheck ./...`; `go mod tidy` no diff.
 - `go test -short -race ./...`; then gates R and F exactly as plan-2-1 D229 states them (F is the wide pattern over `./...`).
 - Coverage at least 90% for the root and for `internal/ledger`.
-- `lizard -l go -C 10 -a 8 -L 100 -w integration.go agent.go market.go snapshot.go internal/ledger/<file with FundFits>`. The validator is table-driven so no function exceeds CCN 10; `integration.go` splits into `integration_slots.go` and `integration_agents.go` if it passes about 500 lines of code (N-243) or fails Lizard, after the supervisor has added them to `architecture.md` 2.6 and `AGENTS.md` (Phase 1).
+- `lizard -l go -C 10 -a 8 -L 100 -w integration.go agent.go market.go snapshot.go internal/ledger/<file with FundFits>`. The validator is table-driven so no function exceeds CCN 10; `integration.go` splits into continuation files (built: `integration_slots.go`, `integration_directive.go`, `integration_estate.go`) if it passes about 500 lines of code (N-243) or fails Lizard, after the supervisor has added them to `architecture.md` 2.6 and `AGENTS.md` (Phase 1); run Lizard on every one of them.
 - `gomu` for `internal/ledger` only, in Docker with `--cpus=4 --memory=16g --memory-swap=16g` and `GOMAXPROCS=4` (see `~/.claude/CLAUDE.md`); the root is not mutation-tested (not an `internal/` package).
-- `testdata/golden/off/` byte-equal to `HEAD` and `TestHashConfig_Reference` unchanged; `git diff --stat -- testdata/golden/off` empty.
+- `testdata/golden/off/` byte-equal to `HEAD` and `TestHashConfig_ReferencePinned` unchanged; `git diff --stat -- testdata/golden/off` empty.
 - The registry and catalogue tests with `YieldShocked` deleted from `notBuilt*` (tag 22 left `notBuiltSections` in plan 13).
 - Fuzz: `go test -fuzz=FuzzAddAgent -fuzztime=30s` and the same for `FuzzDirect`, `FuzzSetters`.
 - The fork-at-N tests run in the matrix of plan 2 D258.
@@ -320,7 +320,7 @@ Consumes:
 - `ErrUnknownMode` (errors.go) <- plan-2-12
 - `AgentView.Rumours`, `Rumour`, `Role.Informed`, `MaxRumoursPerView`, `viewKind` with `viewWork`, `viewTrade`, `fillRumours` (strategy.go, fanin.go, information.go, config.go, bounds.go) <- plan-2-13
 - `(*migration).onJourney`, `(*migration).cancelJourney`, `ReasonRegionChanged` (migration.go, event.go) <- plan-2-14
-- `ReasonOpenContract` through `relocationRefusal` (fanin.go, contract.go) <- plan-2-15
+- the `open_contract` refusal (the string constant `openContract`, `contract_settle.go`) through `relocationRefusal` (fanin.go) <- plan-2-15; there is no `ReasonOpenContract`
 - `applyShocks`, `OutsideShocked`, `ErrOutsideNode`, `ReasonOutsideNode`, `World.isOutsideNode`, `Modules.External` (external.go, event.go, errors.go, world.go, config.go) <- plan-2-16
 - `Snapshot.Endowments`, `EndowmentRow` <- plan-2-9
 - `Snapshot.Shipments`, `ShipmentRow` <- plan-2-12
@@ -344,7 +344,7 @@ Provides:
 - `Agent`, `Direct`, `SetYieldShocks`, `SetFlowScales`, `SetEdgeStatuses` (integration.go, agent.go) -> plan-2-19
 - `AddAgent` (integration.go) -> plan-2-18
 - `AgentState`, `Agent`, `Agents` (agent.go) -> plan-2-24
-- `Warnings` (world.go) -> plan-2-24
+- `Warnings` (integration.go) -> plan-2-24
 - `YieldShocked` (event.go) -> plan-2-22
 - the scripted-call loader with `[[buyer]]`, the public-call `applyScript` (scenario_helpers_test.go) and `scripts/s01b.toml` -> plan-2-19
 - the tag 22 section (integration.go, checkpoint_sections.go) -> none (named by the checkpoint matrix of plan-2-2 only)
@@ -381,7 +381,7 @@ Requirement-to-test table (testing.md 11). A requirement whose parts wait for a 
 | FR-INT-060, 061, 062 | `TestQueries_NoDrawNoStateNoEvent`, `TestQueries_Guards`, `TestAgents_Region`, `TestWarnings_SortedAndRestored` |
 | FR-INT-070 | `TestFork_ExternalAgent`, `TestScenarioS82_PlayerAndRestore`, `TestSlots_RestoredEqualsOriginal` |
 | NFR-INT-001 | `TestQueryAllocations` |
-| NFR-INT-002 | `TestStep_AllocationsWithExternalAgent` |
+| NFR-INT-002 | `TestP19Directives_AllocatesNothing` |
 | NFR-INT-003 | `import_guard_test.go` and `determinism_guard_test.go` (no goroutine, no `time.Now`, no package state) already scan every non-test file; `integration.go` is covered by them |
 | NFR-INT-004 | the conformance table includes a call at the configured maximum of keys; work is bounded by the slice |
 | NFR-INT-005 | `FuzzAddAgent`, `FuzzDirect`, `FuzzSetters` |
@@ -404,7 +404,7 @@ Entry for the Reporting section (observability-and-logging.md 9): one new state 
 | 6 | `RemoveAgent` can fail on the estate's balance bound after changing the job (D547); INT 4.4 says it never refuses. The probe returns `ErrOverflow` before any change. The spec should name the case. | INT |
 | 7 | An outside node has no recipes, so a yield shock on one is meaningless; INT 5.1.3 lists no `ErrOutsideNode` for it (Phase 1 edit). | INT |
 | 8 | Tag 22 is registered empty by plan 13 when `Information` is on and filled by this plan, so between them a world with `Information` on writes tag 22 with zero rows, and the checkpoint matrix of plans 13 to 16 expects 22 in its tag list (plan-2-13 D476). | plans 13 to 16 |
-| 9 | Plan 13 registers tag 22 empty (zero rows) when it turns `Information` on, so the checkpoint bytes and the checkpoint digest of the module-alone goldens of INF, MIG and MER do not move when this plan fills it with rows. A world with no external agent of an `Informed` role that has had a view still writes zero rows. | plans 13, 14, 15 |
+| 9 | (Merged into Risk 8: the same tag 22 sequencing; the module-alone goldens of INF, MIG and MER do not move because a world with no external `Informed` agent that has had a view still writes zero rows.) | plans 13, 14, 15 |
 | 10 | `agent.live` is a field on the agent type; N-244 puts a module's state in the module's own slices. It is core AGT state (a `Directive` is core), not a module's; if the rule is read strictly, the field becomes `w.tk.live[slot]`. | supervisor |
 | 11 | Unspecified: a `Direct` on an external agent of a role with no tradable commodity; every intent is `ErrNotTradable`, which is the right answer and needs no change. A directive for a recipe with the own-use list needs SUB's effective list (plan 10): `ErrNotOnRole` uses the role's list until then. | plan 10 |
 | 12 | The matrix cost of `TestFork_ExternalAgent` under `-race` is not measured; the focused run is the gate until plan 1's gate exists. | plan 1 |
@@ -416,3 +416,26 @@ Note proposals (text only; the supervisor is the only editor of `doc/notes.md`, 
 - **N-new-c (areas INT, OBS).** "`Region(r)` is the filter of the snapshot; every module that adds rows to `RegionState` should expose a per-region appender so that the query stays class 2 (INT 6.1.3)."
 - **N-new-d (areas INT, LED, AGT).** "`AddAgent` and `RemoveAgent` need a no-effect probe for the bound they can hit (`Ledger.FundFits`, `estatefits`) because the ledger has no undo; a later call that moves money between accounts at the call (`TransferTitles` with a price, CAP/LND) needs the same."
 - Close on merge: N-296 and N-289; N-290 INT part settled as above.
+
+## Implementation record
+
+Written 2026-11-11 from the code on this branch (merge commit 27788df, PR #42) and its commit messages. The decisions above stay as the plan wrote them; where the built code differs, this section says how. It is a record, not a decision (the specs, ADRs and rules decide).
+
+Built as planned: the nine setters and the adjustment, `YieldShocked`, `AddAgent` with `siteAddAgent` and `Ledger.FundFits`, `RemoveAgent`, `Direct`, P1.9, `Relocate`, the queries, tag 22, S01 leg (b) with `s01b.toml`, the deletion of `export_scenarios_test.go`, and the scenarios S36, S45, S52, S66, S80 and S83.
+
+Differs from the plan:
+
+| Plan | Built |
+| --- | --- |
+| D548: the strategy table grows to `len(Roles)` plus the sorted names | The role part is unchanged. An external agent's strategy is an entry of an extra part, `ext.extras` with the sorted `ext.extraNames` (`world.go`); an index at or above the role count selects it, and `strategyName` and `strategyIndex` (`checkpoint_save.go`) read it. |
+| D549: `externals` is the ascending list of external slots; the call is guarded by `len(externals) > 0` | `integrationState.externals` also holds any agent that holds a directive (the test seam gives a household one). `tick.go` guards the call with the bool `integ.visit`, kept equal to `len(externals) > 0`, because a guard may not call a function. A removed external agent leaves the list at `RemoveAgent`, any other at the next P1.9; a restore rebuilds it (`rebuildExternals`). |
+| D555: `World.warnings` set in `construct` | `integrationState.warnings`, rebuilt at restore, not saved. |
+| D547: the probe is `estatefits` | `estateFits` in `integration_estate.go`. After review rounds 2 to 6 it also covers the flows and escrow of the removal and the payer-deliverer refund, and walks its credit and refund keys in ascending order. |
+| Files | `integration_slots.go`, `integration_directive.go` and `integration_estate.go` split off `integration.go` for Lizard (Codacy review); see Phase 1 and Phase 11. |
+| Risk 10: `agent.live` on the agent type | Built so (`agent.go`), as the plan's fallback: it is core AGT state. |
+
+Behaviour added by the review rounds and not in the plan (each has its commit; the spec text is `spec-integration.md`, not this plan): `AddAgent` and `Relocate` derive the cost anchors first; `AddAgent` funds stock in commodity order; an external agent keeps its strategy but drops its mailbox and view on a role change; every removal cause drops the external agent's view and its P1.9 entry; `RemoveAgent` and `Relocate` drop the kept rumour view; the restore checks the mailbox, refuses a mailbox on an undirected external agent, holds an external agent to weight 1 and refuses one whose account is in an outside node; the spawner never uses an external agent as host of an entrant.
+
+Open after the build, for the owner (not decided by this plan): (a) `doc/roadmap-v1.md` row 17 still reads "plan written"; (b) no cap is stated on the number of external agents `AddAgent` may create or on the length of a setter slice beyond the owners' bounds (NFR-INT-004 bounds work by the slice); a consumer that loops `AddAgent` grows every later tick, so say whether INT needs a bound or leaves it to the consumer; (c) Risks 8 and 9 describe the same tag 22 sequencing; Risk 9 now points to Risk 8 (done in the 2026-11-11 audit); (d) Risk 5 (a call-script golden under `testdata/golden/`) still needs a rule edit before anyone creates one; (e) the notes N-296, N-289 (close) and N-290 (INT part settled) are for the supervisor to close in `doc/notes.md`.
+
+Audit 2026-11-11 (plan-audit against branch audit-2-17): every requirement FR-INT-001 to 070 and NFR-INT-001 to 005 has source and a named test; the plan's test names for the setter wrappers, the sentinel test, the P1.9 allocation test, `TestHashConfig_ReferencePinned` and the S01/S04 tests were corrected to the built names. No code or test change was needed.

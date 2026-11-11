@@ -501,11 +501,11 @@ type stylisedRun struct {
 	stepErr    error                   // the first error of a step (the audit)
 	final      economysim.Snapshot
 	hash       string
-	graph      economysim.Graph // the region graph at the start
-	agents     []agentRead      // every agent at the end, through Agent(a)
-	ratio      []int64          // the household-weighted mean welfare ratio at each close, bp (0 where none)
-	roleHH     map[int][]int64  // the households of each role at each close, by role
-	tops       []verdict.Point  // the share of the money held by the top decile of the households at each year close (R2)
+	graph      economysim.Graph        // the region graph at the start
+	agents     []economysim.AgentState // every agent at the end, through Agent(a)
+	ratio      []int64                 // the household-weighted mean welfare ratio at each close, bp (0 where none)
+	roleHH     map[int][]int64         // the households of each role at each close, by role
+	tops       []verdict.Point         // the share of the money held by the top decile of the households at each year close (R2)
 }
 
 // collapsed reports whether the households at the end are under a tenth of the
@@ -665,19 +665,10 @@ func (c *capture) finish() *stylisedRun {
 	return c.run
 }
 
-// agentRead is what the facts keep of one agent at the end of a run: the row the
-// presets of indicator take, its role, and the working ticks of its effective
-// welfare window (STY 4.7.2).
-type agentRead struct {
-	indicator.AgentRow
-	Role                 economysim.RoleID
-	WorkingTicks, Window int64
-}
-
 // agentsOf reads every agent of the world through Agent(a) (plan 2-17), in region
 // then ID order. A removed agent is not listed by Agents.
-func agentsOf(w *economysim.World) []agentRead {
-	var out []agentRead
+func agentsOf(w *economysim.World) []economysim.AgentState {
+	var out []economysim.AgentState
 	for g := range w.Graph().Len() {
 		ids, err := w.Agents(economysim.RegionID(g))
 		if err != nil {
@@ -688,18 +679,14 @@ func agentsOf(w *economysim.World) []agentRead {
 			if err != nil {
 				continue
 			}
-			out = append(out, agentRead{
-				AgentRow: indicator.AgentRow{Region: st.Region, Weight: st.Weight, External: st.External, Money: st.Money, Hunger: st.Hunger,
-					WelfareRatioBP: st.Ratio, EarnedRatioBP: st.EarnedRatio, HasWelfareRatio: st.HasRatio, HasEarnedRatio: st.HasEarned},
-				Role: st.Role, WorkingTicks: st.WorkingTicks, Window: st.Window,
-			})
+			out = append(out, st)
 		}
 	}
 	return out
 }
 
 // agentRows returns the rows of the agents, for RowsOf.
-func (r *stylisedRun) agentRows() []indicator.AgentRow { return agentRowsOf(r.agents) }
+func (r *stylisedRun) agentRows() []economysim.AgentState { return r.agents }
 
 // runKey names a memoised run.
 type runKey struct {
@@ -1070,7 +1057,7 @@ func (c *capture) noteRoles(cur economysim.Snapshot) {
 // (Inequality.Top(1 000), IND 9 row 11) at a year close, read through Agent(a); a
 // close with no household has the point 0.
 func topShare(w *economysim.World, tick int64) verdict.Point {
-	set, err := indicator.RowsOf(agentRowsOf(agentsOf(w)), indicator.ColMoney, indicator.RowOpt{ExcludeExternal: true})
+	set, err := indicator.RowsOf(agentsOf(w), indicator.ColMoney, indicator.RowOpt{ExcludeExternal: true})
 	if err != nil {
 		return verdict.Point{Tick: tick}
 	}
@@ -1079,12 +1066,4 @@ func topShare(w *economysim.World, tick int64) verdict.Point {
 		return verdict.Point{Tick: tick}
 	}
 	return verdict.Point{Tick: tick, Value: res.Top}
-}
-
-func agentRowsOf(a []agentRead) []indicator.AgentRow {
-	rows := make([]indicator.AgentRow, len(a))
-	for i, x := range a {
-		rows[i] = x.AgentRow
-	}
-	return rows
 }
