@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -326,8 +327,18 @@ func TestBuild_RejectsBrokenInput(t *testing.T) {
 // Requirement: FR-REG-029
 //
 // Guard: the tables take n*n values, so a check made after the allocation
-// would let a caller exhaust memory with one call.
+// would let a caller exhaust memory with one call. The test bounds the bytes a
+// refusal allocates, not the allocation count: the count of the error text
+// varies by one under -race, where fmt's sync.Pool is randomly bypassed.
 func TestBuild_RefusesOversizedInputBeforeAllocating(t *testing.T) {
+	// A refusal allocates its error text, under 1 KiB. A Build that allocated
+	// before checking would take dist and next: for MaxRegions+1 = 4097 regions
+	// 4097*4097*12 bytes = 201 MB, and for 2^31 regions 2^62*12 bytes (a panic
+	// or an out-of-memory). The bound is 4 KiB, 50 000 times below the first.
+	// The edge-list case has two regions, so its tables would be under 200
+	// bytes and the bound cannot tell them from the error: it guards only that
+	// the refusal stays cheap, and the error assertion guards the refusal.
+	const bound = 4 << 10
 	for name, c := range map[string]struct {
 		n    int
 		open []Edge
@@ -336,13 +347,20 @@ func TestBuild_RefusesOversizedInputBeforeAllocating(t *testing.T) {
 		"count beyond int32":     {math.MaxInt32 + 1, nil},
 		"more edges than pairs":  {2, []Edge{{0, 1, 1}, {1, 0, 1}, {1, 0, 1}}},
 	} {
-		allocs := testing.AllocsPerRun(20, func() {
-			if _, err := Build(c.n, c.open); !errors.Is(err, ErrInvalid) {
+		// The smallest of several runs: a concurrent allocation only adds.
+		least := uint64(math.MaxUint64)
+		for range 20 {
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			_, err := Build(c.n, c.open)
+			runtime.ReadMemStats(&after)
+			if !errors.Is(err, ErrInvalid) {
 				t.Errorf("%s: err = %v, want ErrInvalid", name, err)
 			}
-		})
-		if allocs > 4 { // the error text only; a table is 7 slices
-			t.Errorf("%s: %v allocations, want only the error", name, allocs)
+			least = min(least, after.TotalAlloc-before.TotalAlloc)
+		}
+		if least > bound {
+			t.Errorf("%s: %d bytes allocated, want at most %d (the error only)", name, least, bound)
 		}
 	}
 }
