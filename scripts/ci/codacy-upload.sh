@@ -22,8 +22,12 @@ if [ -z "${CODACY_PROJECT_TOKEN:-}" ]; then
 fi
 [ "$#" -gt 0 ] || set -- "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/coverage.out"
 for profile in "$@"; do
+	case $profile in *,*) echo "codacy-upload: profile path contains a comma: $profile" >&2; exit 1 ;; esac
 	[ -s "$profile" ] || { echo "codacy-upload: $profile is missing or empty" >&2; exit 1; }
 done
+case ${CODACY_COMMIT_UUID:-} in
+	*[!0-9a-f]* | ?????????????????????????????????????????*) echo "codacy-upload: CODACY_COMMIT_UUID is not a 40-character lowercase hex sha" >&2; exit 1 ;;
+esac
 profiles=$(IFS=,; echo "$*")
 [ "$(uname -sm)" = "Linux x86_64" ] || { echo "codacy-upload: only linux amd64 is pinned, this is $(uname -sm)" >&2; exit 1; }
 
@@ -42,7 +46,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 reporter=$work/codacy-coverage-reporter
 
-retry curl --fail --silent --show-error --location --output "$reporter" "$REPORTER_URL"
+retry curl --fail --silent --show-error --proto =https --tlsv1.2 --max-time 120 --location --output "$reporter" "$REPORTER_URL"
 echo "$REPORTER_SHA512  $reporter" | sha512sum --check --quiet - || {
 	echo "codacy-upload: checksum of the downloaded reporter does not match the pinned one" >&2
 	exit 1

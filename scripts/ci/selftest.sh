@@ -55,7 +55,13 @@ fi
 if [ -x "$here/codacy-upload.sh" ]; then
 	expect codacy-empty-token 1 "CODACY_PROJECT_TOKEN is empty" env -u CODACY_PROJECT_TOKEN "$here/codacy-upload.sh" "$td/pass.out"
 	expect codacy-blank-token 1 "CODACY_PROJECT_TOKEN is empty" env CODACY_PROJECT_TOKEN= "$here/codacy-upload.sh" "$td/pass.out"
+	expect codacy-comma-path 1 "contains a comma" env CODACY_PROJECT_TOKEN=x "$here/codacy-upload.sh" "$td/a,b.out"
+	expect codacy-bad-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID='abc; id' "$here/codacy-upload.sh" "$td/pass.out"
+	expect codacy-long-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID=0123456789abcdef0123456789abcdef012345678 "$here/codacy-upload.sh" "$td/pass.out"
 fi
+
+# A failing go list must not read as "no modules, all passed".
+expect modules-fail-closed 1 "go list -m failed" bash -c ". '$here/common.sh'; PATH=/nonexistent; modules"
 
 if [ "$fails" -ne 0 ]; then echo "selftest: $fails case(s) failed"; exit 1; fi
 echo "selftest: all cases passed"
