@@ -1,0 +1,4 @@
+mode: atomic
+github.com/Whealinghold/economy-sim/value.go:1.1,2.2 89 1
+github.com/Whealinghold/economy-sim/value.go:3.1,4.2 11 0
+github.com/Whealinghold/economy-sim/internal/a/a.go:1.1,2.2 10 1

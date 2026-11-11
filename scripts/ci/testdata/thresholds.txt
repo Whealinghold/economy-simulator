@@ -1,0 +1,6 @@
+# Fixture thresholds for selftest.sh: <package dir under base> <minimum percent>.
+base github.com/Whealinghold/economy-sim
+. 90
+internal/a 90
+config 90
+otelobserver 80
