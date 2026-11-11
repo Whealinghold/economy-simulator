@@ -45,8 +45,9 @@ check_module() {
 	tidy_clean "$m" || return 1
 }
 
+mods=$(modules) || exit 1
 failed=()
-for m in $(modules); do
+for m in $mods; do
 	check_module "$m" || failed+=("$m")
 done
 if [ "${#failed[@]}" -ne 0 ]; then

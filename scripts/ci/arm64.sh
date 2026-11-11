@@ -25,8 +25,9 @@ arm_module() {
 }
 
 echo "arm64: $(go env GOOS)/$(go env GOARCH)"
+mods=$(modules) || exit 1
 failed=()
-for m in $(modules); do
+for m in $mods; do
 	arm_module "$m" || failed+=("$m")
 done
 if [ "${#failed[@]}" -ne 0 ]; then

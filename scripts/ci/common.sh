@@ -12,11 +12,13 @@ STATICCHECK_VERSION=2026.2.2
 export QUICK_PATTERN='TestScenario|TestDeterminism|TestGolden|TestInvariants|TestCheckpoint|TestFork|TestConfigOnly|TestFixture|TestPacks|TestCensus|TestExpected|TestStylised|TestCost|TestStable'
 
 # modules prints the directory of every module of go.work, relative to the repository root.
+# It fails when go list fails or lists nothing: a loop over no modules would pass every gate.
 modules() {
-	local dir
+	local dirs dir
+	dirs=$(cd "$REPO_ROOT" && go list -m -f '{{.Dir}}') && [ -n "$dirs" ] || { echo "modules: go list -m failed or found no module" >&2; return 1; }
 	while IFS= read -r dir; do
 		if [ "$dir" = "$REPO_ROOT" ]; then echo .; else echo "${dir#"$REPO_ROOT"/}"; fi
-	done < <(cd "$REPO_ROOT" && go list -m -f '{{.Dir}}')
+	done <<<"$dirs"
 }
 
 # run_in <module> <command...> prints the module and the command, then runs it there.
@@ -34,7 +36,7 @@ fail_in() { echo "FAIL: $*" >&2; return 1; }
 ensure_staticcheck() {
 	if ! staticcheck -version 2>/dev/null | grep -qF "staticcheck $STATICCHECK_VERSION "; then
 		echo "==> installing staticcheck $STATICCHECK_VERSION"
-		go install "honnef.co/go/tools/cmd/staticcheck@$STATICCHECK_VERSION"
+		go install "honnef.co/go/tools/cmd/staticcheck@$STATICCHECK_VERSION" || return 1
 		PATH="$(go env GOPATH)/bin:$PATH"
 		export PATH
 	fi

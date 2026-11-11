@@ -10,10 +10,11 @@ set -uo pipefail
 
 : "${F_TIMEOUT:=120m}"
 # shellcheck disable=SC2086 # FULL_MODULES is a space-separated list
-mods=${FULL_MODULES:-$(modules)}
+mods=${FULL_MODULES:-$(modules)} || exit 1
 
 failed=()
 for m in $mods; do
+	rm -f "$REPO_ROOT/$m/coverage.out" # a stale profile must never be checked or uploaded
 	if ! run_in "$m" go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout "$F_TIMEOUT" ./...; then
 		failed+=("$m")
 		continue
