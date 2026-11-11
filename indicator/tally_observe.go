@@ -80,11 +80,11 @@ func (t *Tally) foldTransport(e economysim.Event) bool {
 	case economysim.ShipmentArrived:
 		t.shipmentArrived(e)
 	case economysim.ContractFormed:
-		if r := t.settlement(e.Tick, e.Region, e.To); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, e.Escrowed != 0); r != nil {
 			t.add((*int64)(&r.Escrowed), int64(e.Escrowed))
 		}
 	case economysim.ContractSettled:
-		if r := t.settlement(e.Tick, e.Region, e.To); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, e.Paid != 0 || e.Refunded != 0); r != nil {
 			t.add((*int64)(&r.Paid), int64(e.Paid))
 			t.add((*int64)(&r.Refunded), int64(e.Refunded))
 		}
@@ -393,6 +393,12 @@ func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
 	if !t.lane(e.Tick, e.Region, e.To) {
 		return
 	}
+	for _, l := range e.Lines {
+		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
+			t.stray = true
+			return
+		}
+	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
 	i, found := slices.BinarySearchFunc(t.w.Dispatches, k, dispatchKey)
 	if !found {
@@ -421,8 +427,11 @@ func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
 	for _, l := range e.Lines {
 		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
 			t.stray = true
-			continue
+			return // an event with a bad line is dropped whole, as the dispatch is
 		}
+	}
+	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
+	for _, l := range e.Lines {
 		k := ArrivalTally{Origin: e.Region, Destination: e.To, Commodity: l.Commodity}
 		i, found := slices.BinarySearchFunc(t.w.Arrivals, k, arrivalKey)
 		if !found {
@@ -440,9 +449,10 @@ func settlementKey(r SettlementTally, k SettlementTally) int {
 	return cmp.Or(cmp.Compare(r.Region, k.Region), cmp.Compare(r.To, k.To))
 }
 
-// settlement returns the row of a contract lane, or nil for a stray event.
-func (t *Tally) settlement(tick int64, from, to economysim.RegionID) *SettlementTally {
-	if !t.lane(tick, from, to) {
+// settlement returns the row of a contract lane, or nil for a stray event or
+// when nothing moved (active false), so that a row means the lane was used.
+func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool) *SettlementTally {
+	if !t.lane(tick, from, to) || !active {
 		return nil
 	}
 	k := SettlementTally{Region: from, To: to}
