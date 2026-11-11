@@ -159,6 +159,13 @@ func (c *invChecker) balances(s economysim.Snapshot) []string {
 	for _, m := range s.Markets {
 		held[m.State.Commodity] += int64(m.HeldByAgents) + int64(m.HeldByEstate)
 	}
+	// Goods on the way are in a transit account, which no market row holds: the lines of
+	// the shipments in flight (a pack that ships, plan 2-26 D703).
+	for _, sh := range s.Shipments {
+		for _, l := range sh.Lines {
+			held[l.Commodity] += int64(l.Quantity)
+		}
+	}
 	sum := map[economysim.CommodityID]int64{economysim.NoCommodity: int64(s.Money)}
 	pending := map[invFlowKey]int64{}
 	for _, f := range s.Pending {
@@ -415,6 +422,59 @@ func TestInvariantTable_RowsHaveNilOptsByDefault(t *testing.T) {
 		if tc.opts != nil {
 			t.Errorf("invariantTable row %q has opts set, want nil (strategy.Options())", tc.name)
 		}
+	}
+}
+
+// TestInvariants_MerchantsScripted runs the invariants of testing.md 6.3 over the scripted
+// merchants world (scriptedMerchants: the only world that forms contracts), 40 ticks, seeds
+// 1 to 4, and after every tick of a second run of each seed the escrow identity: the
+// snapshot's Escrow equals the money escrowed in the contracts in flight and the sum of the
+// regions' MoneyContract, so a contract in flight moves no money into or out of the world.
+//
+// Requirement: FR-MER-044, FR-LED-035, FR-CAR-001
+//
+// Guard: with no contract in flight the escrow is 0 and every other identity passes; the
+// test fails if the script formed no contract, so it cannot pass on an empty world.
+func TestInvariants_MerchantsScripted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("end-to-end: 40 ticks per seed; run without -short")
+	}
+	t.Parallel()
+	cfg, _ := scriptedMerchants(t)
+	opts := func() []economysim.Option { _, o := scriptedMerchants(t); return o }
+	for seed := uint64(1); seed <= uint64(invariantSeeds(4)); seed++ {
+		t.Run(fmt.Sprintf("seed%d", seed), func(t *testing.T) {
+			t.Parallel()
+			runInvariantsWith(t, cfg, seed, 40, nil, opts)
+			w, err := economysim.NewWorld(cfg, append(opts(), economysim.WithSeed(seed), economysim.WithAudit())...)
+			if err != nil {
+				t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
+			}
+			held := false
+			for i := int64(0); i < 40; i++ {
+				if err := w.Step(); err != nil {
+					t.Fatalf("seed %d tick %d: Step error = %v, want nil", seed, i, err)
+				}
+				s, err := w.Snapshot()
+				if err != nil {
+					t.Fatalf("seed %d tick %d: Snapshot error = %v", seed, i, err)
+				}
+				var inContracts, inRegions economysim.Money
+				for _, c := range s.Contracts {
+					inContracts += c.Escrowed
+				}
+				for _, r := range s.Regions {
+					inRegions += r.MoneyContract
+				}
+				if s.Escrow != inContracts || s.Escrow != inRegions {
+					t.Fatalf("seed %d tick %d: Escrow = %d, contracts hold %d, regions hold %d, want all equal", seed, i, s.Escrow, inContracts, inRegions)
+				}
+				held = held || s.Escrow > 0
+			}
+			if !held {
+				t.Errorf("seed %d: no money was ever in escrow in 40 ticks, want a contract in flight (the test would check nothing)", seed)
+			}
+		})
 	}
 }
 
