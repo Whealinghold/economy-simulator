@@ -21,7 +21,7 @@ import (
 )
 
 // This file is the helper layer of the stability scenarios S01, S04, S07, S16
-// and S19 (doc/plans/plan-phase-1-12.md, phase 7; spec-reference-chain.md 7.1
+// and S19 (plan-phase-1-12, removed; see git history, phase 7; spec-reference-chain.md 7.1
 // and 7.2): the streaming observer that keeps the series the measures need, the
 // measures of REF 7.1.4 on plain slices, the band reader, the script reader, the
 // belief interval of FR-BEL-004 and the outcome report of D181. A measure is

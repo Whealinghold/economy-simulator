@@ -157,5 +157,5 @@ the `AGENTS.md` layout). It enumerates the cases later plans cite.
 
 - `doc/rules/architecture.md` 2.6, 2.10.1 to 2.10.6, 13
 - [ADR 0007](0007-a-module-is-one-file-that-owns-its-touch-points.md) decisions 1, 2, 3
-- `doc/plans/plan-2-5.md` D300, D301, D307, E1, E11, O5
+- plan 2-5 (removed; see git history) D300, D301, D307, E1, E11, O5
 - `spec-demand.md` 20, `spec-world.md` 6, `spec-agents.md` 3.6

@@ -14,7 +14,7 @@ stage ends with a golden file that runs; no stage starts a module file before
 the slice's golden runs (architecture.md 2.10.6).
 
 Status values, in the order a row moves through them: **not started** (no plan),
-**plan written** (a plan exists in `plans/`, not yet audited ready), **plan audited**
+**plan written** (a plan exists, not yet audited ready), **plan audited**
 (the plan passed its audit with no blocking issue, ready to implement), **in
 progress**, **done** (with the commit). Stages 0, 2 and 3 still use **planned** for
 a row that has no plan. Update the status in the change that moves it.
@@ -200,12 +200,12 @@ every later file adds state to it; then the region graph, because every module
 is per region; then the modules in a dependency order (the table below). The
 hash field id and the checkpoint tag of a module follow the `Modules` row of
 `spec-config.md` 3.1 and `spec-checkpoint.md` 4.2, not the build order
-(`plans/plan-2-0.md`). The one exception to the order of the pointers is
+(plan 2-0, removed; see git history). The one exception to the order of the pointers is
 `Modules.Estates` (the 25th pointer): it is a version 1 part that the money
 flows need, so it is built with MON; its field id in the hash is 25 whatever its
 build order (CFG 8.2.2).
 
-The order of the work is [plans/plan-2-0.md](plans/plan-2-0.md): plan 1 (work
+The order of the work (plan 2-0, removed; see git history): plan 1 (work
 before any row), then CHK, REG, SCL, **DEM as the first module**, MON, EST, then
 plan 8 (the reference-pack rebalance, N-314, after the pool part of EST), then
 the other modules in the order of the table. DEM is first because money has to
@@ -231,33 +231,33 @@ the committed files (7 s wall), and `BenchmarkStep_OneNoObserver` costs 15.8 ms 
 tick emulated against 1.76 ms native (about 9 times; plan 24 estimates `five` and
 all-on from it).
 
-| Create | Specs | Plan | Status |
-| --- | --- | --- | --- |
-| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | [2-1](plans/plan-2-1.md) | built (Phases 1 to 4 and 6; the CI workflow is the `ci.yml` row below) |
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | [2-2](plans/plan-2-2.md) | merged |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | [2-3](plans/plan-2-3.md) | merged |
-| `scale.go` (weights, the census) | SCL | [2-4](plans/plan-2-4.md) | merged |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | [2-5](plans/plan-2-5.md) | merged |
-| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | [2-6](plans/plan-2-6.md) | merged |
-| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | [2-7](plans/plan-2-7.md) | merged |
-| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | [2-8](plans/plan-2-8.md) | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; no pack or golden moved |
-| `resources.go` and `internal/endowment`, `internal/curve` | RES | [2-9](plans/plan-2-9.md) | merged (PRs A, B, C) |
-| `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
-| `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | in progress |
-| `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
-| `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | built (stage-2-13; audited 2026-11-11) |
-| `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | built (Phases 1 to 8; audited 2026-11-11) |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | built except the merchant reruns, X1 and X2 dynamic, `TestDeterminism_Merchants` and the `invariantTable` row (audited 2026-11-11) |
-| `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | built (audited 2026-11-11; gates at the exit gate) |
-| `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | merged (PR #42, 2026-11-10) |
-| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | [2-18](plans/plan-2-18.md) | built (audited 2026-11-11) |
-| `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | built (Phases 1 to 9, 2026-11-10; audited 2026-11-11); no band or threshold set, the first setting run waits on O1 and plan 8 |
-| `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | merged (stage-2-20; audited 2026-11-11) |
-| `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
-| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
-| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | done on branch stage-2-23 (commit recorded at merge) |
+| Create | Specs | Status |
+| --- | --- | --- |
+| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | built (Phases 1 to 4 and 6; the CI workflow is the `ci.yml` row below) |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | merged |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | merged |
+| `scale.go` (weights, the census) | SCL | merged |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | merged |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | merged |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; no pack or golden moved |
+| `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs A, B, C) |
+| `subsistence.go` and `internal/ownuse` | SUB | merged |
+| `population.go` and `internal/population` | POP | in progress |
+| `transport.go` and `internal/transit` | TRN, CAR | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
+| `information.go` and `internal/rumour` | INF | built (stage-2-13; audited 2026-11-11) |
+| `migration.go` and `internal/migration` | MIG | built (Phases 1 to 8; audited 2026-11-11) |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | built except the merchant reruns, X1 and X2 dynamic, `TestDeterminism_Merchants` and the `invariantTable` row (audited 2026-11-11) |
+| `external.go` and `internal/outside` | EXT | built (audited 2026-11-11; gates at the exit gate) |
+| `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | merged (PR #42, 2026-11-10) |
+| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | built (audited 2026-11-11) |
+| `internal/verdict` and the `stylised_long` build tag | STY | built (Phases 1 to 9, 2026-11-10; audited 2026-11-11); no band or threshold set, the first setting run waits on O1 and plan 8 |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | merged (stage-2-20; audited 2026-11-11) |
+| `internal/calibration` and `testdata/calibration/` | CLB | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | done on branch stage-2-23 (commit recorded at merge) |
 | `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
-| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
 its overlay under `testdata/chains/overlay/` (the demand module's is `testdata/chains/demand.toml`, where `spec-reference-chain.md` 4.4.6 puts it), its module-alone golden under

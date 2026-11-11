@@ -12,7 +12,7 @@ import (
 	"github.com/Whealinghold/economy-sim/strategy"
 )
 
-// This file is phase 5 of doc/plans/plan-phase-1-12.md: the invariants of
+// This file is phase 5 of plan-phase-1-12 (removed; see git history): the invariants of
 // testing.md 6.3 over the packs and seeds of REF 7.5, checked with exact
 // equality after every tick (D179, D180). The checker is a plain struct fed
 // events and snapshots, so its unit tests need no world.

@@ -10,7 +10,7 @@ import (
 )
 
 // This file is the X4 stable-state predicate of spec-reference-chain.md 7.4 as a
-// function over a run (doc/plans/plan-2-8.md, D362): the six criteria (a) to (f)
+// function over a run (plan 2-8, removed; see git history, D362): the six criteria (a) to (f)
 // over the last x4Window of x4Ticks snapshots, with the thresholds passed in. It
 // was extracted from config_chain_test.go, where X4 first ran on pack second, so
 // the test of the second pack and the recorded run of one share one definition

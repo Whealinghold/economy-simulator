@@ -9,7 +9,7 @@ import (
 )
 
 // This file is the one place the invariants test (phase 5 of
-// doc/plans/plan-phase-1-12.md, D179) reads unexported state: the snapshot holds
+// plan-phase-1-12, removed; see git history, D179) reads unexported state: the snapshot holds
 // sums, not accounts, so the scan for a negative balance or stock needs the
 // ledger's accessors.
 

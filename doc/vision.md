@@ -121,7 +121,7 @@ Reasons for the less obvious placements:
   is measured, and tuning needs the measure, compare, adjust and run loop
   (`spec-roadmap.md`, "Macro is measured, never set").
 - **Version 1 is built in the order of `roadmap-v1.md` Stage 2 and
-  `plans/plan-2-0.md`**: checkpoint, the region graph and scale first, then DEM
+  plan 2-0 (removed; see git history)**: checkpoint, the region graph and scale first, then DEM
   as the first module (money has to return to the non-farm roles, N-314), then
   MON and the pool part of EST, then the rebalance of the reference pack, then
   the other modules.
