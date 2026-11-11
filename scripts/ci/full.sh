@@ -10,8 +10,7 @@ set -uo pipefail
 
 : "${F_TIMEOUT:=120m}"
 # shellcheck disable=SC2086 # FULL_MODULES is a space-separated list
-mods=${FULL_MODULES:-}
-[ -n "$mods" ] || mods=$(modules) || exit 1
+mods=${FULL_MODULES:-$(modules)} || exit 1
 
 failed=()
 for m in $mods; do
