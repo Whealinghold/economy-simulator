@@ -141,35 +141,6 @@ func mean(s measure.Int128, w int64) (int64, bool, error) {
 	return v, true, nil
 }
 
-// Holding is the units of one commodity an agent holds.
-type Holding struct {
-	Commodity economysim.CommodityID
-	Quantity  economysim.Quantity
-}
-
-// AgentRow is the part of an agent's state at a boundary that the household rows
-// read: the fields of AgentState named in spec-integration.md 4.7.2 (identity,
-// standing, holdings). It is plain data. A pseudo-agent (an estate, an outside
-// counterparty) has no AgentRow, because the world lists none in Agents(r), so
-// no row set holds one (FR-IND-027).
-//
-// shortcut: AgentState (plan 2-17) is not in the tree yet; when it merges, replace
-// this type by it, field for field, in RowsOf.
-type AgentRow struct {
-	Region economysim.RegionID
-	// Weight is the households the agent stands for, at least 1.
-	Weight int64
-	// External is true for an agent a consumer drives (a player).
-	External bool
-	Money    economysim.Money
-	Hunger   int64
-	// WelfareRatioBP and EarnedRatioBP are the ratios in basis points; they exist
-	// only where the Has field is true (the agent has an upkeep).
-	WelfareRatioBP, EarnedRatioBP   int64
-	HasWelfareRatio, HasEarnedRatio bool
-	Holdings                        []Holding
-}
-
 // Column selects the quantity of a household row. The set is closed.
 type Column int
 
@@ -216,7 +187,9 @@ type RowSet struct {
 // already holds (spec-indicators.md 4.5.2). A row whose value does not exist is
 // left out and counted in Absent with its weight. err is ErrRange for a weight
 // below 1 or an unknown column, and ErrOverflow for a total past int64.
-func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
+// A pseudo-agent (an estate, an outside counterparty) has no AgentState, because
+// the world lists none in Agents(r), so no row set holds one (FR-IND-027).
+func RowsOf(states []economysim.AgentState, col Column, opt RowOpt) (RowSet, error) {
 	var set RowSet
 	var cohort, hh, absent acc
 	for _, a := range states {
@@ -226,7 +199,7 @@ func RowsOf(states []AgentRow, col Column, opt RowOpt) (RowSet, error) {
 		if opt.ExcludeExternal && a.External {
 			continue
 		}
-		total, ok, err := a.total(col, opt.Prices)
+		total, ok, err := rowTotal(a, col, opt.Prices)
 		if err != nil {
 			return RowSet{}, err
 		}
@@ -260,36 +233,36 @@ func (set *RowSet) finish(hh, cohort, absent acc) (RowSet, error) {
 	return *set, err
 }
 
-// total returns the row total of a column, and ok false where the value does not
+// rowTotal returns the row total of a column, and ok false where the value does not
 // exist.
-func (a AgentRow) total(col Column, p Prices) (int64, bool, error) {
+func rowTotal(a economysim.AgentState, col Column, p Prices) (int64, bool, error) {
 	switch col {
 	case ColMoney:
 		return int64(a.Money), true, nil
 	case ColWelfareRatio:
-		if !a.HasWelfareRatio { // absent: the value is not read, so it cannot overflow
+		if !a.HasRatio { // absent: the value is not read, so it cannot overflow
 			return 0, false, nil
 		}
-		t, err := a.times(a.WelfareRatioBP)
+		t, err := rowTimes(a, a.Ratio)
 		return t, true, err
 	case ColEarnedRatio:
-		if !a.HasEarnedRatio {
+		if !a.HasEarned {
 			return 0, false, nil
 		}
-		t, err := a.times(a.EarnedRatioBP)
+		t, err := rowTimes(a, a.EarnedRatio)
 		return t, true, err
 	case ColHunger:
-		t, err := a.times(a.Hunger)
+		t, err := rowTimes(a, a.Hunger)
 		return t, true, err
 	case ColWealth:
-		t, err := a.wealth(p)
+		t, err := rowWealth(a, p)
 		return t, true, err
 	}
 	return 0, false, wrap("RowsOf", "column", ErrRange)
 }
 
-// times returns Weight * v, checked.
-func (a AgentRow) times(v int64) (int64, error) {
+// rowTimes returns Weight * v, checked.
+func rowTimes(a economysim.AgentState, v int64) (int64, error) {
 	t, ok := measure.ToInt64(measure.MulInt64(a.Weight, v))
 	if !ok {
 		return 0, wrap("RowsOf", "total", ErrOverflow)
@@ -297,9 +270,9 @@ func (a AgentRow) times(v int64) (int64, error) {
 	return t, nil
 }
 
-// wealth returns the money plus the holdings at the prices of the agent's region,
+// rowWealth returns the money plus the holdings at the prices of the agent's region,
 // checked.
-func (a AgentRow) wealth(p Prices) (int64, error) {
+func rowWealth(a economysim.AgentState, p Prices) (int64, error) {
 	var sum acc
 	sum.addInt(measure.FromInt64(int64(a.Money)))
 	for _, h := range a.Holdings {
