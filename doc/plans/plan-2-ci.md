@@ -124,5 +124,5 @@ Adds files; changes no API. Rollout: merge the scripts and the workflow in one P
 2. **R2.** PRs without the label `full` have no coverage in Codacy (MissingRequirements, N-243). Owner decision recorded in D3: opt-in by label; alternative is F on every PR.
 3. **R3.** The arm64 runner is free only while the repository is public (2 vCPU and billed minutes if private).
 4. **R4.** Codacy's Go path mapping from import-path profile lines is not verified; Phase 6 checks it.
-6. **R6.** The CI toolchain is Go 1.26.10 (from `go.work`) while the core module declares `go 1.25` and the pinned vectors were computed on 1.25; Phase 6 must show the byte tests green on that toolchain on both architectures, and a failure there is a behaviour change to explain (architecture.md 7.4), not a CI fix.
 5. **R5.** No threshold exists for `examples/` coverage (testing.md 9.1): reported, not gated.
+6. **R6.** The CI toolchain is Go 1.26.10 (from `go.work`) while the core module declares `go 1.25` and the pinned vectors were computed on 1.25; Phase 6 must show the byte tests green on that toolchain on both architectures, and a failure there is a behaviour change to explain (architecture.md 7.4), not a CI fix.
