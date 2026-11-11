@@ -4,6 +4,8 @@
 
 Rule tags read in full: architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1 (the same as the contract's; at the plan-review of 2026-11-11 the files carry architecture=5b7049ed1de0fd413fa50e33, observability=e7cfbd33b1620a09dc78dff7, testing=120890253bd2f6c110a015d2, because later plans edited the rules; a mismatch with plan-2-0's tags is not a finding for this plan). Specs implemented: [spec-money-supply.md](../specs/spec-money-supply.md) (MON) FR-MON-001 to 046 and NFR-MON-001 to 003, less the parts listed in Scope as owned elsewhere; read for the base: [spec-ledger.md](../specs/spec-ledger.md) 3.4, 7.2, 7.4, 9.1 to 9.3 and [spec-currency.md](../specs/spec-currency.md) FR-CUR-001, 003, 004. Also read: spec-config.md 3.1, 8.2, 6.2.1 to 6.2.4; spec-checkpoint.md 4.2 tag 13; spec-observability.md 4.1, 4.4.1, 5.3.3; spec-world.md 5.2, 6 (P1.7), 8.2.2; spec-welfare-and-wages.md 2.1.9. Notes read (index, then each open entry tagged MON or ALL, with updates): N-096, 107, 122, 163, 181, 183, 204, 314 (MON) and N-016, 017, 027, 103, 126, 128, 217 (ALL), and N-226 (the creation position of boundary accounts). Disposition of each is in Risks and open items. The plan edits no note. **Decision block: D320 to D339.**
 
+**Audit of 2026-11-11 (plan-audit against the merged code).** Every requirement FR-MON-001 to 046 and NFR-MON-001 to 003 has source and at least one citing test; the code surface of every phase exists. Findings corrected here: the Testing table named ten tests that were built under other names (now mapped), and no test asserted the order and the cause of `MoneyFlowLimited`/`MoneyFlowEnded` for two flows ending in one tick or that an ended flow stays silent (`TestEvents_MoneyFlowOrderAndShape` added). Since the merge, plan 7 built the `pool` target (the "left out" row of Scope was true at the merge), plan 17 the public `SetFlowScales` (`TestScenarioS36_PublicFlowScales`), and S35 is `scenario_mons3_test.go`; the text below stays the plan as written.
+
 ## Scope
 
 Builds (all in the core module, standard library only):
@@ -187,22 +189,22 @@ Per testing.md 11. Lowest level first: arithmetic in `internal/moneyflow` and `i
 | Requirement | Tests (lowest level) |
 |-------------|----------------------|
 | FR-MON-001, 028 | `TestInvariants_ClosedEconomyMoneyConstant` (root, seeds, `WithAudit`); `TestNew_NoFlowsLeavesLayoutUnchanged` (ledger) |
-| FR-MON-002, 026, 027 | `TestAudit_FlowTotalEqualsBoundary`, `TestAudit_NamesTheFirstFlowThatDisagrees` (internal test corrupts `Total`); `TestAudit_CoversFlowReasons` (ledger) |
-| FR-MON-003, 029 | `TestRegistry_OneRowPerFlow`, `TestBoundaryFlow_ReasonIsTheFlowID` |
+| FR-MON-002, 026, 027 | `TestAudit_NamesTheFirstFlowThatDisagrees` (internal test: passes, then corrupts `Total`; built as one test, not a separate `TestAudit_FlowTotalEqualsBoundary`); `TestAudit_CoversFlowReasons` (ledger) |
+| FR-MON-003, 029 | `TestNew_FlowReasonsOpenBoundariesInOrder`, `TestAppendFlows_FlowBlockBeforeDeclared` (ledger); `TestSnapshot_FlowRowsAndBoundaryOrder`; `TestCardinality_MoneyFlowAttributesTakeConfiguredValues` (the reason is the flow ID); built in place of `TestRegistry_OneRowPerFlow` and `TestBoundaryFlow_ReasonIsTheFlowID` |
 | FR-MON-004, 043 | `TestTransfer_FlowReasonFaucetAndSinkKinds` (ledger) |
 | FR-MON-005, 034 to 037 | `TestValidate_MoneySupply*` |
-| FR-MON-038 (households-era part), 039 (five of the seven warnings; `grant_to_pool_no_outlet` is plan 7, `store_levy_below_upkeep` see the plan-2-0 deferred table) | `TestValidate_MoneySupplyModuleDependency`, `TestWarnings_MoneySupply` |
+| FR-MON-038 (households-era part), 039 (five of the seven warnings; `grant_to_pool_no_outlet` is plan 7, `store_levy_below_upkeep` see the plan-2-0 deferred table) | the `pool target` and `stores target` cases of `TestValidate_MoneySupply` (`ErrModuleDependency`), `TestWarnings_MoneySupply` |
 | FR-MON-006 | `TestPlanFlow_DueIgnoresEverythingElse` (varies other accounts, prices, totals; asserts the due) |
 | FR-MON-007, 009 | `TestFlow_ClassIsRoleRegionAndWeight`, `TestFlow_MembershipFollowsRelocate` (uses `moveAgent`) |
-| FR-MON-010, 044, 045 | `TestFlow_WindowAndStart`, `TestFlow_ConstructionBucketHoldsInitialOnly`, `TestFlow_ScaleZeroAndEndedApplyNothing` |
-| FR-MON-011, 022 | `TestFlow_LimitEndsOnceWithCause`, `TestClamp_FirstBoundWins` |
-| FR-MON-012 to 017 | `TestSpread_*`, `TestRateLevy_*`, `TestTopUp_*`, `TestSpread_SaturatesAtMaxMoney`, `TestFlow_PerYearUsesCalendar`, `TestFlow_PerTickIgnoresCalendar` (FR-CUR-004: a calendar change leaves a `tick` amount unchanged) |
-| FR-MON-018, 019 | `TestFlow_GrantsBeforeLevies`, `TestFlow_GrantIsSpendableInTheSameTick` (replay seam, balance after P1.7) |
-| FR-MON-020, 021, 030 | `TestFlow_ShortHeadroomLimitCounts`, `TestEvents_MoneyFlowLimitedOnlyWhenUnapplied` |
+| FR-MON-010, 044, 045 | `TestFlow_WindowAndStart`, `TestFlow_ConstructionBucketHoldsInitialOnly`; scale 0 in `TestSetFlowScale_BoundsAndEvent`, an ended flow in `TestEvents_MoneyFlowOrderAndShape` (in place of `TestFlow_ScaleZeroAndEndedApplyNothing`) |
+| FR-MON-011, 022 | `TestFlow_HeadroomAndCap` (cause `cap`), `TestEvents_MoneyFlowOrderAndShape` (cause `limit`, once), `TestClamp_FirstBoundWins` (in place of `TestFlow_LimitEndsOnceWithCause`) |
+| FR-MON-012 to 017 | `TestSpread_*`, `TestRateLevy_*`, `TestTopUp_*`, `TestSpread_SaturatesAtMaxMoney`, `TestFlow_PerYearUsesCalendar` (also the `tick` leg: FR-CUR-004, a calendar change leaves a `tick` amount unchanged; no separate `TestFlow_PerTickIgnoresCalendar`) |
+| FR-MON-018, 019 | `TestFlow_GrantsBeforeLevies` (also the same-tick spendability; no separate `TestFlow_GrantIsSpendableInTheSameTick`), `TestPositionHash_OneMoneySupplyGolden` |
+| FR-MON-020, 021, 030 | `TestFlow_ShortHeadroomLimitCounts` (asserts the events of a tick, so no `MoneyFlowLimited` for an applied flow), `TestFlow_HeadroomAndCap` (in place of `TestEvents_MoneyFlowLimitedOnlyWhenUnapplied`) |
 | FR-MON-023 | `TestSetFlowScale_BoundsAndEvent` (internal; the public call is plan 17's) |
 | FR-MON-024 | `TestFlow_NoRuleChangesAFlowItself` (Guard: reflect over a run, only `Total`, `Scale` by the setter, `Ended`, carries move) |
 | FR-MON-025 | `TestWelfare_GrantIsUnearnedIncome` (grant, `NotIncome`, levy; observed wage excludes) |
-| FR-MON-031 to 033, NFR-MON-001 | `TestEvents_MoneyFlowOrderAndShape`, `TestLogs_MoneyFlowDebugOnly`, `TestStep_AllocationsStayAtTheBaseline` (module-alone row) |
+| FR-MON-031 to 033, NFR-MON-001 | `TestEvents_MoneyFlowOrderAndShape` (added by the audit of 2026-11-11), `TestCardinality_MoneyFlowAttributesTakeConfiguredValues`, `TestLogs_MoneyFlowDebugOnly`, `TestP17Flows_AllocatesNothing` (and the module-alone row of the step allocation test) |
 | FR-MON-040 | `TestFork_MoneySupply`, `TestCheckpoint_MoneySupplyCorrupt` |
 | FR-MON-041 | `TestFlow_CreationDrawsIndependentOfTheModule` (two worlds, module on and off: equal targets drawn at creation) |
 | FR-MON-042 | `TestSnapshot_FlowRowsAndBoundaryOrder` (M_c and M_t parts are Stage 3) |
