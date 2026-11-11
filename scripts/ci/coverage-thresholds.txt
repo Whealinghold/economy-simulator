@@ -1,0 +1,40 @@
+# Coverage thresholds of doc/rules/testing.md 9.1, as data: <package dir under base> <minimum percent>.
+# The checker fails a package that is not listed, so a new package needs a row here.
+# A listed package absent from the profile is not an error: the core and otelobserver
+# profiles are checked against this one file.
+base github.com/Whealinghold/economy-sim
+. 90
+config 90
+strategy 90
+indicator 90
+experiment 90
+denomination 90
+internal/beliefs 90
+internal/calibration 90
+internal/checked 90
+internal/clearing 90
+internal/codec 90
+internal/curve 90
+internal/design 90
+internal/endowment 90
+internal/graph 90
+internal/household 90
+internal/ledger 90
+internal/logkeys 90
+internal/measure 90
+internal/merchant 90
+internal/migration 90
+internal/moneyflow 90
+internal/occupation 90
+internal/ordering 90
+internal/outside 90
+internal/ownuse 90
+internal/population 90
+internal/production 90
+internal/reduce 90
+internal/rumour 90
+internal/steady 90
+internal/transit 90
+internal/verdict 90
+internal/welfare 90
+otelobserver 80
