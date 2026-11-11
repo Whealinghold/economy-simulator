@@ -335,17 +335,17 @@ func TestBuild_RefusesOversizedInputBeforeAllocating(t *testing.T) {
 	// before checking would take dist and next: for MaxRegions+1 = 4097 regions
 	// 4097*4097*12 bytes = 201 MB, and for 2^31 regions 2^62*12 bytes (a panic
 	// or an out-of-memory). The bound is 4 KiB, 50 000 times below the first.
-	// The edge-list case has two regions, so its tables would be under 200
-	// bytes and the bound cannot tell them from the error: it guards only that
-	// the refusal stays cheap, and the error assertion guards the refusal.
+	// The edge-list case has 64 regions and one edge more than there are
+	// pairs: its tables would take 64*64*12 = 48 KiB, above the bound.
 	const bound = 4 << 10
+	tooMany := make([]Edge, 64*63+1)
 	for name, c := range map[string]struct {
 		n    int
 		open []Edge
 	}{
 		"count beyond the bound": {MaxRegions + 1, nil},
 		"count beyond int32":     {math.MaxInt32 + 1, nil},
-		"more edges than pairs":  {2, []Edge{{0, 1, 1}, {1, 0, 1}, {1, 0, 1}}},
+		"more edges than pairs":  {64, tooMany},
 	} {
 		// The smallest of several runs: a concurrent allocation only adds.
 		least := uint64(math.MaxUint64)
