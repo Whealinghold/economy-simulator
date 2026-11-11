@@ -192,13 +192,10 @@ func TestScenarioS69_SourceAge(t *testing.T) {
 		for _, p := range kinds[economysim.MerchantsPlanned](rec) {
 			stale, planned = stale+p.Stale, planned+p.Planned
 		}
-		if tt.age != 0 && planned == 0 {
-			t.Logf("%s (seed %d): cold pack, no trip planned in 40 ticks, so only the stale count is asserted", tt.name, goldenSeed)
-		}
 		if tt.age != 0 {
 			t.Logf("%s (seed %d): planned %d, stale %d", tt.name, goldenSeed, planned, stale)
 			if planned == 0 {
-				t.Logf("%s (seed %d): cold pack, no trip", tt.name, goldenSeed)
+				t.Logf("%s (seed %d): cold pack, no trip planned in 40 ticks, so the stale count is not asserted", tt.name, goldenSeed)
 				continue
 			}
 		}

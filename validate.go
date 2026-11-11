@@ -864,6 +864,15 @@ func jobIDs(c *Config, r *Role) []string {
 // inside its bound. A Duration outside it is reported by its own rule and the
 // rules that read a window skip the role.
 func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
+	longest, ok = longestRecipe(c, lk, r)
+	if r.Merchant != nil { // a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009)
+		longest = max(longest, merchantTripTicks(c, lk, r))
+	}
+	return longest, ok
+}
+
+// longestRecipe is longestDuration over the recipes alone, without the merchant trip.
+func longestRecipe(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 	ok = true
 	for _, id := range jobIDs(c, r) {
 		rc := lk.recipe[id]
@@ -875,9 +884,6 @@ func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 			continue
 		}
 		longest = max(longest, rc.Duration)
-	}
-	if r.Merchant != nil { // a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009)
-		longest = max(longest, merchantTripTicks(c, lk, r))
 	}
 	return longest, ok
 }
@@ -1230,12 +1236,7 @@ func windowField(c *Config, lk lookup, r *Role) string {
 	if r.Merchant == nil {
 		return "recipes"
 	}
-	var recipes int64
-	for _, id := range jobIDs(c, r) {
-		if rc := lk.recipe[id]; rc != nil {
-			recipes = max(recipes, rc.Duration)
-		}
-	}
+	recipes, _ := longestRecipe(c, lk, r)
 	if merchantTripTicks(c, lk, r) > recipes {
 		return "merchant"
 	}
@@ -2071,7 +2072,7 @@ func warnings(c *Config) []Warning {
 		if t, ok := checked.Mul(c.World.WindowCycles, l); ok && t > c.World.WelfareWindow {
 			// window_extended: the role's window is longer than the world's
 			// because of its longest job (spec-welfare-and-wages.md 11.4).
-			add("window_extended", "roles", ro.ID, "recipes")
+			add("window_extended", "roles", ro.ID, windowField(c, lk, ro))
 			longestWindow = max(longestWindow, t)
 		}
 		gs := groups[ro.ID]
