@@ -41,6 +41,35 @@ func modeIndex(c *Config) map[string]*Mode {
 	return out
 }
 
+// merchantTripTicks is Kmax of FR-WEL-009 (spec-merchants.md 12.3): the longest travel
+// time, at the factor 10 000, over the region graph and the self-carried modes of the
+// role's merchant block, capped at MaxTravelTicks so that WindowCycles times it cannot
+// overflow and still passes MaxWelfareWindow to be refused there. A hired mode is not the
+// merchant's own trip, a mode with a crew above 1 is one it cannot carry itself
+// (FR-MER-003), and a speed outside its bound has no travel time (tripWarnings does the
+// same). It is 0 for a role with no block, with the transport module off, with no path or
+// when the graph does not build: the rules that blame those causes run first.
+func merchantTripTicks(c *Config, r *Role) int64 {
+	if r.Merchant == nil || c.Modules.Transport == nil {
+		return 0
+	}
+	g, err := NewGraph(*c)
+	if err != nil {
+		return 0
+	}
+	var longest int64
+	for i := range c.Modules.Transport.Modes {
+		md := &c.Modules.Transport.Modes[i]
+		if md.hired() || md.Crew > 1 || md.Speed < 1 || md.Speed > MaxSpeed || !slices.Contains(r.Merchant.Modes, md.ID) {
+			continue
+		}
+		if _, k, any := tripExtremes(g, md.Speed); any {
+			longest = max(longest, k)
+		}
+	}
+	return min(longest, MaxTravelTicks)
+}
+
 // merchantTradeInputs returns the trade inputs of spec-merchants.md 3.2.2: the
 // haul commodity of each hired mode of the block and the vehicle and the feed
 // commodities of each self-carried mode. A mode that is not defined adds nothing.

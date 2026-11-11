@@ -874,6 +874,9 @@ func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 		}
 		longest = max(longest, rc.Duration)
 	}
+	if r.Merchant != nil { // a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009)
+		longest = max(longest, merchantTripTicks(c, r))
+	}
 	return longest, ok
 }
 
