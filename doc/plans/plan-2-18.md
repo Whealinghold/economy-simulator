@@ -1,6 +1,6 @@
 # Plan: Stage 2, row 18: IND, `indicator/` and `internal/measure`
 
-**Status: written (2026-10-22), not audited. Contract: [plan-2-0.md](plan-2-0.md).**
+**Status: built on this branch and audited against the code (2026-11-11); the sections below are the plan as written, corrected where the code differs (see "Implementation record" at the end); where the record and a decision disagree, the record and the code win. Contract: [plan-2-0.md](plan-2-0.md).**
 This plan builds the public package `indicator/` (derived measures as pure functions of snapshots and events: a tally, price tables, index numbers, the national-accounts-style presets, household-row statistics) and `internal/measure` (the checked 128-bit arithmetic under it). It is the measure step of "macro is measured, never set" (ADR 0001 decision 7). Nothing in the world reads an indicator; the plan adds no event, no configuration field, no state and no checkpoint section.
 
 Rule tags read (all three files re-read in full at the plan review of 2026-11-11): architecture=5b7049ed1de0fd413fa50e33, observability=e7cfbd33b1620a09dc78dff7, testing=120890253bd2f6c110a015d2. The tags of `plan-2-0.md` (403404277d5a40376fd91790, e70199779a159d4cb303d273, 8d141d87287fe0130681bbe1) are out of date: the rule files were edited since.
@@ -97,7 +97,7 @@ Tests (`Requirement:` in brackets):
 - `FuzzGini`, `FuzzRank`, `FuzzRoundDiv` (never panic; the properties above hold) [NFR-IND-003].
 - `TestMeasure_NoFloatNoMath` (AST scan, D578) [FR-IND-008, NFR-IND-004].
 
-Exit check: `go test -short -race ./internal/measure/` passes; coverage of the package at least 90%; `lizard -l go -C 10 -a 8 -L 100 -w internal/measure/*.go` clean; the first gomu pass (D579) has no surviving mutant that is not an equivalent one, each equivalent one named in the PR.
+Exit check: `go test -short -race ./internal/measure/` passes; coverage of the package at least 90%; `lizard -l go -C 10 -a 8 -L 100 -w` over the non-test files of `internal/measure/` clean; the first gomu pass (D579) has no surviving mutant that is not an equivalent one, each equivalent one named in the PR.
 
 ### Phase 3: foundations of `indicator/`
 
@@ -201,7 +201,7 @@ Exit check: the tests pass under `-race` (reduced seeds as the mirrored `raceEna
 
 ### Phase 9: exit gate
 
-Goal: the gates of plan-2-0. Run (read-only, then the gate commands): `gofmt -l .` empty; `go vet ./...`; `staticcheck ./...`; `go test -short -race ./...`; `go mod tidy` no diff; `lizard -l go -C 10 -a 8 -L 100 -w indicator/*.go internal/measure/*.go`; coverage at least 90% for `indicator/` and `internal/measure` from the R run, and F also passes, R and F exactly as plan-2-1 D229 states them (until plan 1's Phase 2 is done, the fallback of plan-2-0: `go test -race -covermode=atomic -coverpkg=./... ./indicator/ ./internal/measure/`, stated in the PR); gomu on `internal/measure` (D579); markdownlint on the owed spec edits. No row is deleted from `notBuilt` (no configuration field).
+Goal: the gates of plan-2-0. Run (read-only, then the gate commands): `gofmt -l .` empty; `go vet ./...`; `staticcheck ./...`; `go test -short -race ./...`; `go mod tidy` no diff; `lizard -l go -C 10 -a 8 -L 100 -w` over the non-test files of `indicator/` and `internal/measure/` (test files are not held to the limits); coverage at least 90% for `indicator/` and `internal/measure` from the R run, and F also passes, R and F exactly as plan-2-1 D229 states them (until plan 1's Phase 2 is done, the fallback of plan-2-0: `go test -race -covermode=atomic -coverpkg=./... ./indicator/ ./internal/measure/`, stated in the PR); gomu on `internal/measure` (D579); markdownlint on the owed spec edits. No row is deleted from `notBuilt` (no configuration field).
 Exit check: all of the above pass; the PR carries the Testing and Observability entries below; the supervisor has applied owed edits 1 to 6 and 8.
 
 ## Catalogue appends
@@ -285,7 +285,7 @@ Testing entry (testing.md 11). Requirement IDs touched and the tests that cover 
 - **Golden files:** `testdata/golden/off/` does not move and no module-alone golden exists (IND is core, not a module, architecture.md 2.10). One new golden, `testdata/golden/indicator/one.txt` (D577). A diff in `golden/off/` or the pinned hash is a defect of this plan.
 - **Fork-at-N:** not applicable (no world state, no section). `TestTally_RestoredWindow` is the nearest test: a tally across a restore.
 - **Registry and catalogue rows:** none added, none deleted from `notBuilt`; no event is added to the catalogue test.
-- **Fuzz:** `FuzzGini`, `FuzzRank`, `FuzzRoundDiv`, `FuzzIndexFunctions`, `FuzzRowStatistics`, `FuzzAccounts` (corpora in each package's `testdata/fuzz/`).
+- **Fuzz:** `FuzzGini`, `FuzzRank`, `FuzzRoundDiv`, `FuzzIndexFunctions`, `FuzzRowStatistics`, `FuzzAccounts` (seeded by `f.Add`; the only committed corpus is `indicator/testdata/fuzz/FuzzIndexFunctions`).
 - **Coverage and mutation:** at least 90% for `indicator/` and `internal/measure`; gomu on `internal/measure` (D579).
 - **Bug-fix tests:** none (new code). `Guard:` tests: the import rows, `TestRoundDiv_AgreesWithChecked`.
 
@@ -311,3 +311,15 @@ Observability entry (observability-and-logging.md 9): **None, because** indicato
 - N-208 update: "(plan 2-18) A region set is already `FlowSel.Regions`; `PriceLevelOf` and a jurisdiction selector are not adopted in version 1. Left open for PLC."
 - New note (areas IND, EMP, RSK, STO): "Presets 22 to 25 of `spec-indicators.md` 9.1 (FR-IND-056 to 059) are built with EMP and RSK/STO: each of those plans adds its `Observe` case, its tally rows, its preset and its tests (`indicator/`)."
 - New note (areas IND, CODE): "`internal/measure` imports `internal/checked` (plan 2-18 D562); `spec-indicators.md` 3.2.1, 5.2.1 and NFR-IND-004 say standard library only and are corrected."
+
+## Implementation record
+
+Audit of 2026-11-11 against the code on this branch (every test named above exists; every FR-IND-001 to 055 and NFR-IND-001 to 004 is cited by a test; `go test -short -race` of `indicator/` and `internal/measure/` passes; coverage 91.4% and 100.0%; `lizard` clean on the non-test files). Where the code differs from the decisions above:
+
+- **D570, owed edit 2.** `RowsOf` first took a local `AgentRow` with a `shortcut:` comment (plan 2-17 was not in the tree). It now takes `[]economysim.AgentState` as the decision says; `Holding` and `AgentRow` are gone. A pseudo-agent still has no row, because `Agents(r)` lists none.
+- **D564.** `Observe` first folded only the Stage 1 events and those of plans 3, 6, 7, 11 and 2; the `Dispatches`, `Arrivals` and `Settlements` rows of the `Window` stayed empty and `GDP` read no units in transit. `Observe` now folds `ShipmentDispatched`, `ShipmentArrived`, `ContractFormed` and `ContractSettled` (`foldTransport`), and `stocksOf` reads the lines of `Snapshot.Shipments` as the origin's Transit stock (spec 7.1.2). Not folded, because no preset of rows 1 to 21 reads them: `ContractRound`, `MigrationReviewed`, `OutsideTraded` (the outside brings goods through the `outside_*` reasons of `BoundaryFlow`). `DispatchTally.Struck` stays 0 until RSK appends the loss to the event. `EntryLimited` is a case that D564 does not list (the binding counters of 8.7).
+- **D560.** `HouseholdIncome(w Window)` takes the window only and returns `OK` false (D574).
+- **Files.** Added: `indicator/warnings.go`, `internal/measure/wide.go` (an overflow-sticky multiply helper). The `indicator` test files are more numerous than Phase 8 lists (`stylised_*_test.go` are plan 19's, `reduce_equivalence_test.go` and `experiment_measure_test.go` are plan 20's).
+- **Fuzz.** Only `FuzzIndexFunctions` has a committed corpus (see Testing).
+
+Open, not done by the audit: the first `gomu` pass on `internal/measure` (D579) and the F gate (coverage under `-coverpkg=./...`) were not re-run; the roadmap row of Stage 2 IND still reads "plan written" (the supervisor moves it).
