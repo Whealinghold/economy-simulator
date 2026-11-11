@@ -423,16 +423,16 @@ func dispatchKey(r DispatchTally, k DispatchTally) int {
 }
 
 func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
-	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.lane(e.Tick, e.Region, e.To) {
-		return
-	}
-	if !t.nonneg(e.HaulUnits) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.nonneg(e.HaulUnits) {
 		return
 	}
 	for _, l := range e.Lines {
 		if !t.nonneg(int64(l.Quantity)) {
 			return
 		}
+	}
+	if !t.lane(e.Tick, e.Region, e.To) {
+		return
 	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
 	d := upsert(&t.w.Dispatches, k, dispatchKey)
@@ -452,7 +452,7 @@ func arrivalKey(r ArrivalTally, k ArrivalTally) int {
 }
 
 func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
-	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.lane(e.Tick, e.Region, e.To) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) {
 		return
 	}
 	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
@@ -460,6 +460,9 @@ func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
 		if !t.nonneg(int64(l.Shipped), int64(l.Delivered), int64(l.Diverted), int64(l.Spoiled)) {
 			return
 		}
+	}
+	if !t.lane(e.Tick, e.Region, e.To) {
+		return
 	}
 	for _, l := range e.Lines {
 		k := ArrivalTally{Origin: e.Region, Destination: e.To, Commodity: l.Commodity}
@@ -482,7 +485,7 @@ func settlementKey(r SettlementTally, k SettlementTally) int {
 // when nothing moved (active false), so that a row means the lane was used. A
 // quiet event is still checked and still counts as activity of the window.
 func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool, amounts ...int64) *SettlementTally {
-	if !t.lane(tick, from, to) || !active || !t.nonneg(amounts...) {
+	if !t.nonneg(amounts...) || !t.lane(tick, from, to) || !active {
 		return nil
 	}
 	k := SettlementTally{Region: from, To: to}
