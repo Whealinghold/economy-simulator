@@ -80,11 +80,11 @@ func (t *Tally) foldTransport(e economysim.Event) bool {
 	case economysim.ShipmentArrived:
 		t.shipmentArrived(e)
 	case economysim.ContractFormed:
-		if r := t.settlement(e.Tick, e.Region, e.To, e.Escrowed != 0); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, e.Escrowed != 0, int64(e.Escrowed)); r != nil {
 			t.add((*int64)(&r.Escrowed), int64(e.Escrowed))
 		}
 	case economysim.ContractSettled:
-		if r := t.settlement(e.Tick, e.Region, e.To, e.Paid != 0 || e.Refunded != 0); r != nil {
+		if r := t.settlement(e.Tick, e.Region, e.To, e.Paid != 0 || e.Refunded != 0, int64(e.Paid), int64(e.Refunded)); r != nil {
 			t.add((*int64)(&r.Paid), int64(e.Paid))
 			t.add((*int64)(&r.Refunded), int64(e.Refunded))
 		}
@@ -406,6 +406,18 @@ func upsert[T any](rows *[]T, k T, key func(a, b T) int) *T {
 	return &(*rows)[i]
 }
 
+// nonneg reports whether no amount is negative; a negative one marks the event
+// stray, as a bad commodity does.
+func (t *Tally) nonneg(vs ...int64) bool {
+	for _, v := range vs {
+		if v < 0 {
+			t.stray = true
+			return false
+		}
+	}
+	return true
+}
+
 func dispatchKey(r DispatchTally, k DispatchTally) int {
 	return cmp.Or(cmp.Compare(r.Origin, k.Origin), cmp.Compare(r.Destination, k.Destination), cmp.Compare(r.Mode, k.Mode))
 }
@@ -413,6 +425,14 @@ func dispatchKey(r DispatchTally, k DispatchTally) int {
 func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
 	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.lane(e.Tick, e.Region, e.To) {
 		return
+	}
+	if !t.nonneg(e.HaulUnits) {
+		return
+	}
+	for _, l := range e.Lines {
+		if !t.nonneg(int64(l.Quantity)) {
+			return
+		}
 	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
 	d := upsert(&t.w.Dispatches, k, dispatchKey)
@@ -437,6 +457,11 @@ func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
 	}
 	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
 	for _, l := range e.Lines {
+		if !t.nonneg(int64(l.Shipped), int64(l.Delivered), int64(l.Diverted), int64(l.Spoiled)) {
+			return
+		}
+	}
+	for _, l := range e.Lines {
 		k := ArrivalTally{Origin: e.Region, Destination: e.To, Commodity: l.Commodity}
 		if l.Shipped == 0 && l.Delivered == 0 && l.Diverted == 0 && l.Spoiled == 0 {
 			continue // a row means the lane was used
@@ -456,8 +481,8 @@ func settlementKey(r SettlementTally, k SettlementTally) int {
 // settlement returns the row of a contract lane, or nil for a stray event or
 // when nothing moved (active false), so that a row means the lane was used. A
 // quiet event is still checked and still counts as activity of the window.
-func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool) *SettlementTally {
-	if !t.lane(tick, from, to) || !active {
+func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool, amounts ...int64) *SettlementTally {
+	if !t.lane(tick, from, to) || !active || !t.nonneg(amounts...) {
 		return nil
 	}
 	k := SettlementTally{Region: from, To: to}
