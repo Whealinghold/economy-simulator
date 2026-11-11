@@ -1,8 +1,8 @@
 # Plan: Stage 2, row 2: CHK, `internal/codec` and `checkpoint.go`
 
-**Status: plan written (2026-10-22), not built. Needs plan 1 (the N-214 passages of the CHK and WLD specs rewritten, the plans convention, ADR 0002 accepted, the race-aware gate). Plans 3 to 24 append to what this plan builds.**
+**Status: built and merged (stage-2-2; roadmap-v1.md Stage 2 row says merged). The plan is kept as written for the record; where the code differs, the notes below say so. Needed plan 1 (the N-214 passages of the CHK and WLD specs rewritten, the plans convention, ADR 0002 accepted, the race-aware gate). Plans 3 to 24 append to what this plan builds.**
 
-Rule tags read (the files show the tags of the contract, no difference): architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1.
+Rule tags read when the plan was written: architecture=403404277d5a40376fd91790, observability=e70199779a159d4cb303d273, testing=8d141d87287fe0130681bbe1. These are historical: the rule files have been edited since and carry new tags (read the files, never copy a tag from a plan).
 Notes read (entries with their updates, not the whole file): the open notes tagged CHK (N-125, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-244, N-247, N-254, N-256, N-265, N-288, N-294, N-309) and ALL (N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217). The disposition of each is in "Risks and open items".
 Specs implemented: [spec-checkpoint.md](../specs/spec-checkpoint.md) (CHK) sections 3 to 8, 14, 21 and FR-CHK-001 to 038, 040 to 057, 060, 062 to 064, 070 to 072, 080 to 082 (039, 058 and 059 do not exist; FR-CHK-061 is excluded: a release rule from 1.0 with no Stage 2 owner, nothing to test before it), NFR-CHK-001 to 005 for the sections the slice saves (tags 1 to 11 and 34). Also read: spec-world.md 5, 7, 8.4, 12, ADR 0002, ADR 0008, spec-observability.md 4.4.5, and the state sections of ledger, clearing, beliefs, production, welfare, estates and spawner.
 Decision block: **D240 to D259**.
@@ -121,7 +121,7 @@ Tests:
 - `TestExtensions_EntriesSortedAndCopied` (a registered stateful strategy, spawner and clearing; the entry order is kind then name; `SaveState` is called once; the returned slice is copied) - FR-CHK-031, 032, 033.
 - `TestSave_Sections` (one per section, over a fixed pack-one world at tick 20): the layout of D244 to D250 against a hand-computed prefix, with the arithmetic in the comment (testing.md 5.5) - FR-CHK-040, 041, 042, 043, 044.
 - `TestSave_SparseRowsSkipDefaults` (a run at zero is not a row) - FR-CHK-014.
-- `TestSave_HostedFieldsAlwaysWritten`: the bytes of tag 3 hold `DeathCarry`, `OwnUse`, `OwnUseJobs` and the journey flag with every module off, and a restore refuses a non-zero `OwnUse` or a present journey - R10; N-217.
+- `TestSave_HostedFieldsAlwaysWritten` (built as `TestSave_AgentsAndHostedFields`, checkpoint_internal_test.go): the bytes of tag 3 hold `DeathCarry`, `OwnUse`, `OwnUseJobs` and the journey flag with every module off, and a restore refuses a non-zero `OwnUse` or a present journey - R10; N-217.
 - `TestSave_SizeIndependentOfWeights`: two worlds of one configuration with different household weights have checkpoints of equal length - NFR-CHK-002.
 - `TestCheckpoint_StatefulContractFlags`: `Stateful` is optional (a plain strategy gives no entry), is never required of `Observer`, and the version read is passed to `LoadState` unchanged - FR-CHK-030, 034.
 - `TestKeys_AreRowsOfTheTable` (rewritten, `internal/logkeys/logkeys_test.go`): no equality of counts; see the Log keys row of the Catalogue appends - observability-and-logging.md 3.3.2.
@@ -170,7 +170,7 @@ Tests:
 - `TestGolden_OneOff` extended: the rendering ends with `checkpoint_digest`; a one-time guard test `TestGolden_OneOffMovedOnlyByItem6` (plan 8 re-pins or retires it when it moves `one.txt`) compares the sha256 of the previous file (embedded in the test) with the sha256 of the new file with its final line removed, the line and its newline both (the remainder ends with the newline of the line before) - FR-CHK-064, FR-REF-029.
 - `TestGolden_EventsAndPositionsUnchanged` (their files byte-identical to the committed ones) - testing.md 7.1.1, N-217.
 - `TestFixture_Format1`: restore the fixture with `warm-one` seed 1, check its sidecar, continue 20 ticks and compare the digest; `-update` rewrites both with the testing.md 7.2 note - FR-CHK-062, 060.
-- `TestDigest_TwoArchitectures`: the digest of the golden run is compared by the file on amd64 and arm64; the arm64 run is manual (D259): the method of plan 2-1 Phase 5: `GOARCH=arm64 go test -c -o <scratch>/ec.arm64.test .`, then `docker run --rm --platform linux/arm64 --cpus=4 --memory=16g --memory-swap=16g -v "$PWD":/w -v "<scratch>":/s -w /w golang:1.25 /s/ec.arm64.test -test.run 'TestGolden_OneOff|TestFixture_Format1'` without `-race`; it needs the binfmt handler (plan 2-1 Phase 5 owner action 4); run once when plan 2-1 Phase 5 has made arm64 available; if it is not available at merge the PR records the item as open and carries it to plan 24, it is not dropped - FR-CHK-015, 056.
+- `TestDigest_TwoArchitectures` (not a Go test: it is the manual arm64 run of the golden and fixture tests below, and `golden_test.go` carries the FR-CHK-056 comment; no function of this name exists): the digest of the golden run is compared by the file on amd64 and arm64; the arm64 run is manual (D259): the method of plan 2-1 Phase 5: `GOARCH=arm64 go test -c -o <scratch>/ec.arm64.test .`, then `docker run --rm --platform linux/arm64 --cpus=4 --memory=16g --memory-swap=16g -v "$PWD":/w -v "<scratch>":/s -w /w golang:1.25 /s/ec.arm64.test -test.run 'TestGolden_OneOff|TestFixture_Format1'` without `-race`; it needs the binfmt handler (plan 2-1 Phase 5 owner action 4); run once when plan 2-1 Phase 5 has made arm64 available; if it is not available at merge the PR records the item as open and carries it to plan 24, it is not dropped - FR-CHK-015, 056.
 - `TestCheckpoint_NoFloatsNoMapsNoTime` (`go/parser` over `checkpoint*.go` and `internal/codec`: no `float`, `map`, `time.`, `rand.`, goroutine) - FR-CHK-015, NFR-CHK-005.
 Exit: the PR carries the testing.md 7.2 explanation; the digest is the first move of `testdata/golden/off/` since Stage 1.
 
@@ -253,7 +253,7 @@ Provides:
 | FR-CHK-027, 028, 081 | `TestFork_WithObserversAndLogger`, the log assertions of Phase 4 (4, 6) |
 | FR-CHK-041, 042, 044 to 048 | `TestSave_*`, `TestState_*`, `TestFields_EveryLiveFieldSavedOrDerived` (3, 4, 6) |
 | FR-CHK-050 to 055 | `TestFork_*`, `TestSnapshot_FunctionOfSavedState` (6) |
-| FR-CHK-056, 062, 064 | `TestDigest_TwoArchitectures`, `TestFixture_Format1`, the golden tests (7) |
+| FR-CHK-056, 062, 064 | the manual arm64 run of `TestGolden_OneOff` and `TestFixture_Format1` (Phase 7; no test function), `TestFixture_Format1`, the golden tests (7) |
 | FR-CHK-063 | hash version in the header: `TestCheckpoint_FrameLayout` (4) |
 | FR-CHK-070 to 072 | `TestRestore_Reseed` (5) |
 | NFR-CHK-001 to 005 | allocation test, `TestSave_SizeIndependentOfWeights` (NFR-CHK-002; the 5 MB figure is reported by the benchmark, a placeholder in the spec), fuzz, benchmark, `TestImports_StdlibOnly`, the no-float test |
@@ -296,6 +296,7 @@ Provides:
 | 11 | The slice has no `Policy` registry, so extension kind 3 has no entry; PLC adds it with its registry (kind 3 stays reserved). | PLC (Stage 3) |
 | 12 | Under `-race` the matrix is slow; the focused run is the gate . If the matrix does not fit, N is reduced to {0, 1, in-job, season change} and 3 seeds; the PR says so. | this plan, plan 1 |
 | 13 | New file names `checkpoint_save.go`, `checkpoint_restore.go`, `checkpoint_sections.go` are not in architecture.md 2.6 yet (Phase 1 item 8). The change must not land before they are. | supervisor |
+| 16 | `format-1-all.bin` and `.txt` now exist beside `format-1-one.bin` (a later plan added them); D259 and Phase 7 describe only the slice fixture. The plan is not rewritten for that. | plan 24 |
 | 15 | Plan 2-1 D223 already places the bucket and the pending totals in tag 2 (CHK 4.2, 4.4), as D244 and D245 do; no conflict remains. | plan 1 |
 | 14 | A decoder that reads a number the input chose and allocates by it is the main memory-safety risk; D252 bounds the agent table by the ledger's account count and R8 bounds every count. The fuzz seeds include a crafted next ID and a crafted count. | this plan |
 
