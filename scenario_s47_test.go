@@ -49,7 +49,7 @@ func TestScenarioS47_ThinSourceAge(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end test, skipped with -short")
 	}
-	rep := newPackScenReport("two", "S47 a thin source market (INF-S2, first assertion; the merchant assertion waits for plan 15)")
+	rep := newPackScenReport("two", "S47 a thin source market (INF-S2, first assertion; the merchant assertion is S69, plan 2-26)")
 	for seed := uint64(1); seed <= uint64(scenarioSeedCount()); seed++ {
 		r, staple := thinWorld(t, seed, s47Error, s47Quote)
 		r.run(t, s47Ticks)
@@ -80,10 +80,7 @@ func TestScenarioS47_ThinSourceAge(t *testing.T) {
 		infoCheck(t, rep, seed, "s47.age_lag_price_of_the_vintage", bad == 0 && len(rumours) > 0, fmt.Sprintf("%d of %d rumours do not carry the age, lag and price of their vintage", bad, len(rumours)))
 		infoCheck(t, rep, seed, "s47.thin_market_is_aged", aged > 0 && maxAge == s47Every-1, fmt.Sprintf("%d aged rumours, largest age %d, want some and %d", aged, maxAge, s47Every-1))
 	}
-	// The second assertion needs a merchant that ships: recorded as waiting (plan 2-13 D478).
-	rep.absent(0, "s47.second_assertion_waits_for_mer_plan_15")
+	// The second assertion is closed by S69 (plan 2-26 D700); S46 is TestScenarioS46_MerchantRumouredGap.
+	rep.absent(0, "s47.second_assertion_is_s69")
 	rep.flush(t)
-	waiting := newPackScenReport("two", "S46 a shipper on a rumoured gap (INF-S1, waits for MER plan 15 and the dispatch cap of plan 12)")
-	waiting.absent(0, "s46.waits_for_mer_plan_15")
-	waiting.flush(t)
 }
