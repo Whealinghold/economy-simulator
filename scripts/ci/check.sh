@@ -4,16 +4,19 @@
 # exits non-zero naming the modules that failed.
 # R_MODE=short (pull-request CI): the fast stage's `go test -short -race` is the race run; gate R is not run,
 # because the root package does not finish it in 60m on a 4-vCPU hosted runner (testing.md 9.1).
-# R_MODE=full (default, a developer host and the `full` job): gate R, `go test -race -timeout $R_TIMEOUT`.
+# R_MODE=full (default, a developer host): the fast stage, then gate R, `go test -race -timeout $R_TIMEOUT`.
+# R_MODE=race (the `full` job): gate R only, no fast stage (`check` already ran it), so R and F are separate steps.
 set -uo pipefail
 # shellcheck source=common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 : "${R_MODE:=full}" "${R_TIMEOUT:=60m}"
-case $R_MODE in short | full) ;; *) echo "FAIL: R_MODE must be short or full, got '$R_MODE'" >&2; exit 1 ;; esac
+case $R_MODE in short | full | race) ;; *) echo "FAIL: R_MODE must be short, full or race, got '$R_MODE'" >&2; exit 1 ;; esac
 
-ensure_staticcheck || exit 1
-"$CI_DIR/selftest.sh" || exit 1
+if [ "$R_MODE" != race ]; then
+	ensure_staticcheck || exit 1
+	"$CI_DIR/selftest.sh" || exit 1
+fi
 
 gofmt_clean() {
 	local out
@@ -54,12 +57,14 @@ check_fast() {
 
 mods=$(modules) || exit 1
 failed=()
-for m in $mods; do
-	check_fast "$m" || failed+=("$m")
-done
+if [ "$R_MODE" != race ]; then
+	for m in $mods; do
+		check_fast "$m" || failed+=("$m")
+	done
+fi
 # (The short run is a subset of R and so runs twice: that is the fail-fast order of testing.md 10.5.)
 # Gate R runs only when every module passed the fast stage, so a cheap failure never waits for it.
-if [ "${#failed[@]}" -eq 0 ] && [ "$R_MODE" = full ]; then
+if [ "${#failed[@]}" -eq 0 ] && [ "$R_MODE" != short ]; then
 	for m in $mods; do
 		run_in "$m" go test -race -timeout "$R_TIMEOUT" ./... || failed+=("$m")
 	done

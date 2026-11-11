@@ -74,8 +74,15 @@ fi
 
 # R_MODE is validated before anything runs.
 if [ -x "$here/check.sh" ]; then
-	expect r-mode-bogus 1 "R_MODE must be short or full" env R_MODE=bogus "$here/check.sh"
-	expect r-mode-case-sensitive 1 "R_MODE must be short or full" env R_MODE=Short "$here/check.sh"
+	expect r-mode-bogus 1 "R_MODE must be short, full or race" env R_MODE=bogus "$here/check.sh"
+	expect r-mode-case-sensitive 1 "R_MODE must be short, full or race" env R_MODE=Short "$here/check.sh"
+fi
+
+# R_MODE=race skips the fast stage: with no toolchain on PATH it reaches modules() (staticcheck would fail first otherwise).
+if [ -x "$here/check.sh" ]; then
+	nogo=$(mktemp -d) && ln -s "$(command -v dirname)" "$nogo/dirname" # a PATH with no go and no staticcheck
+	expect r-mode-race-skips-fast-stage 1 "go list -m failed" env PATH="$nogo" R_MODE=race "$BASH" "$here/check.sh"
+	rm -rf "$nogo"
 fi
 
 # A failing go list must not read as "no modules, all passed".
