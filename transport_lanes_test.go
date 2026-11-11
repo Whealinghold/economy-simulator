@@ -2,7 +2,9 @@ package economysim_test
 
 import (
 	"cmp"
+	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -137,5 +139,40 @@ func TestTransportLanes_FeedsSolver(t *testing.T) {
 	cfg.WarmStart = &st.Table
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("Validate(with the lane table) = %v, want nil", err)
+	}
+}
+
+// TestTransportLanes_PackTwoWorld verifies, on `two` with the transport overlay
+// and the lanes derived from it, that the table validates, that a world builds
+// from it and runs a short scripted run (seed 7, 30 ticks), and that the table
+// does not depend on the order of the lanes or on a second call.
+//
+// Requirement: FR-TRN-041, FR-VIA-043, FR-VIA-061
+func TestTransportLanes_PackTwoWorld(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := withLoad(loadPack(t, transportTwo...), "staple", 300, 90)
+	lanes, err := cfg.TransportLanes()
+	if err != nil {
+		t.Fatalf("TransportLanes() error = %v, want nil", err)
+	}
+	st := solveLanes(t, cfg, economysim.WithLanes(lanes))
+	rev := slices.Clone(lanes)
+	slices.Reverse(rev)
+	if again := solveLanes(t, cfg, economysim.WithLanes(rev)); !reflect.DeepEqual(st, again) {
+		t.Errorf("solve with the lanes reversed = %+v, want %+v (the lane order must not matter)", again, st)
+	}
+	cfg.WarmStart = &st.Table
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate(with the lane table) = %v, want nil", err)
+	}
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(7))
+	if err != nil {
+		t.Fatalf("NewWorld(seed 7) error = %v, want nil", err)
+	}
+	if done, err := w.Run(context.Background(), 30); err != nil || done != 30 {
+		t.Errorf("Run(30) = %d, %v, want 30, nil (seed 7)", done, err)
 	}
 }
