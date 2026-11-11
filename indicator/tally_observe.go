@@ -385,19 +385,35 @@ func (t *Tally) lane(tick int64, from, to economysim.RegionID) bool {
 	return true
 }
 
+// linesKnown reports whether every line names a commodity of the table; a bad
+// line drops the whole event before it can advance the window's last step.
+func (t *Tally) linesKnown(ls []economysim.Amount) bool {
+	for _, l := range ls {
+		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
+			t.stray = true
+			return false
+		}
+	}
+	return true
+}
+
+func (t *Tally) arrivedKnown(ls []economysim.ArrivedLine) bool {
+	for _, l := range ls {
+		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
+			t.stray = true
+			return false
+		}
+	}
+	return true
+}
+
 func dispatchKey(r DispatchTally, k DispatchTally) int {
 	return cmp.Or(cmp.Compare(r.Origin, k.Origin), cmp.Compare(r.Destination, k.Destination), cmp.Compare(r.Mode, k.Mode))
 }
 
 func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
-	if !t.lane(e.Tick, e.Region, e.To) {
+	if !t.linesKnown(e.Lines) || !t.lane(e.Tick, e.Region, e.To) {
 		return
-	}
-	for _, l := range e.Lines {
-		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
-			t.stray = true
-			return
-		}
 	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
 	i, found := slices.BinarySearchFunc(t.w.Dispatches, k, dispatchKey)
@@ -421,14 +437,8 @@ func arrivalKey(r ArrivalTally, k ArrivalTally) int {
 }
 
 func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
-	if !t.lane(e.Tick, e.Region, e.To) {
+	if !t.arrivedKnown(e.Lines) || !t.lane(e.Tick, e.Region, e.To) {
 		return
-	}
-	for _, l := range e.Lines {
-		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
-			t.stray = true
-			return // an event with a bad line is dropped whole, as the dispatch is
-		}
 	}
 	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
 	for _, l := range e.Lines {

@@ -271,7 +271,7 @@ func StockCover(w Window, closing economysim.Snapshot, sel CellSel) (CoverResult
 	if err := w.checkClosing("StockCover", closing); err != nil {
 		return CoverResult{}, err
 	}
-	st, err := stocksOf(closing, w.Regions, w.Commodities)
+	st, err := stocksOf("StockCover", closing, w.Regions, w.Commodities)
 	if err != nil {
 		return CoverResult{}, err
 	}
