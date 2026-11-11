@@ -45,7 +45,7 @@ PR description.
 
 | Area | Open notes |
 |------|-----------|
-| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351 |
+| ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351, N-353 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -1718,6 +1718,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Apply: each file of the row passes `lizard -l go -C 10 -a 8 -L 100 -w`; the Markdown tables of the row use the spaced separator row; the files are in the layout (N-287).
 - **Update (2026-10-23, plan 2-1 Phase 6):** Lizard baseline recorded: 20 warnings over the non-test files (`validate.go` 16, `config/guard.go` 2, `config/config.go` 1, `internal/checked.muldiv` CCN 13), not only `muldiv` as expected; Codacy's enabled patterns are CCN 10, function NLOC 50, 8 parameters and file NLOC 500, and `-L 100` is the function length. `muldiv` stays open. Markdownlint is enabled in Codacy and uses the repository config; its version is not exposed by the API. Coverage upload is the `full` job of the planned CI row (owner's decision of 2026-10-23: CI yes).
 - **Update (2026-11-11, plan 2-14 audit):** Lizard does not cover `*_test.go` (Codacy excludes them, as this note already says), so long table tests, for example five in `internal/migration`, need no split. Left open.
+- **Update (2026-11-11, `stage-2-done-ci-fix`):** the `full` job is now opt-in (dispatch or label `full`), so the Codacy coverage upload no longer runs on main or nightly; it runs only where `full` is run (N-353).
 - **Update (2026-11-11, plan 2-ci Phase 5):** the coverage upload is built: the `full` job of `.github/workflows/ci.yml` uploads `coverage.out` as an artifact and then runs `scripts/ci/codacy-upload.sh` (reporter 14.1.3, `--force-coverage-parser go`, token from the secret `CODACY_PROJECT_TOKEN`, only for code of this repository). Finding on the reporter's integrity: Codacy publishes a SHA512 per release asset, but only beside the asset on its release page (no signature, no independent channel), so the script pins the sum copied on 2026-11-11; it guards a later change of the download, not a compromised release. The reporter has not been run yet and the Go path mapping of the profile lines is unverified: both are Phase 6. The Lizard and markdownlint items stay open. Left open until Codacy shows a coverage figure for a commit.
 
 ### N-244 A module's per-agent state is in the module's slices, not in the agent type
@@ -2161,6 +2162,7 @@ PR description.
 - **Areas:** REF, CODE
 - **Raised:** 2026-11-10, plan 2-24 Phase 6b.
 - **Note:** This host is amd64 with no `binfmt` handler for arm64 (`docker run --platform linux/arm64 alpine uname -m` gives `exec format error`), the repository has no CI workflow, and no arm64 machine was available. Only the free pre-check ran: `GOOS=linux GOARCH=arm64 go build ./...` and `go vet ./...` pass. The byte tests (golden, determinism, hash and fixture, invariants rows `one`, `second`, `five`, `all`) have never run on arm64, so `vision.md` 5 item 2 is not shown and the sign-off paragraph (D694) must say so. Installing the handler (`docker run --privileged --rm tonistiigi/binfmt --install arm64`) changes the host and is the owner's action (plan 1 Phase 5 owner action 4); with it, 6b step 2 of plan 2-24 gives the emulated run, a CI arm64 job or an arm64 machine gives it natively.
+- **Update (2026-11-11, `stage-2-done-ci-fix`):** `arm64` stays on every PR and push to main (not part of the `full` change); only its first green run is needed to close this note.
 - **Update (2026-11-11, plan 2-ci Phase 5):** the CI arm64 job exists (`.github/workflows/ci.yml`, job `arm64`, native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) but has not run on GitHub. Stays open: close it with the URL of the first green `arm64` run (plan 2-ci Phase 6), which also shows `vision.md` 5 item 2.
 
 ### N-344 `expected/five.scenarios.txt` is written by the stable run of `five`, which is PR D
@@ -2224,6 +2226,14 @@ PR description.
 - **Levers tried (f1 base, `one-demand`):** `estate_list_share` 1 000 with `estate_markdown` 0 and `ask_floor_bp` 5 000 kept 224 to 290 households at tick 1 095 on seeds 101 to 104 (none at 540, the 90% bar); then `role_keep` 10 with `halt_idle_ticks` 60 gave no extinct role and households within 20% of the tick-600 value over 600 to 1 095 on seeds 101 to 104 and 1 to 10 (level 235 to 312 of 600, 39% to 52%). But 85% to 90% of non-cook household-ticks stay unfed (staple at 50 against 96), cooks hold 49% to 90% of the money, `role_keep` is a floor (it holds the last 10 households of a role against exits, so a role may be alive by the floor and not by its income), X4 (b), (e) and (f) fail, and the R3 and R6 detectors cannot run because every threshold of `bands/regimes.toml` is unset. The spec's own unfed prior (STY D01) is 1% of household-ticks. This is survival of the count, not a stable economy. Claim pack `all` with the engine keys only: 5 092 households constant at ticks 235, 600 and 1 095 (the baseline reaches 0 by tick 600), every role 100% unfed, staple price x96; the pack's 16 documents are the `MaxDocuments` limit of `Parse`, so a 17th layer is refused.
 - **Next owner decision (not settled here):** either (a) a money-circulation redesign of the reference chain (cooks capture the surplus; demand is cash limited), or (b) a rewording of criterion 1. Until then PR D, any band on a collapsing run and any "stable" claim stay off (N-027). Not tried: `halt_idle_ticks` alone.
 
+### N-353 Gate R and gate F do not fit a hosted runner: `full` is opt-in, the owner chooses how CI runs F
+
+- **Areas:** CODE, ALL
+- **Raised:** 2026-11-11, `stage-2-done-ci-fix` (supervisor ruling "CI full is infeasible on a hosted runner").
+- **Note:** Evidence: gate R (`go test -race -timeout 60m ./...`) timed out at 1h0m on the root package on a 4-vCPU hosted runner twice, on a pull request (run 43019781252) and on main (run 43038922592, merge commit 3330f14); `examples/realm` alone took 597 s. Gate F never ran in CI: it needs 2 to 3 hours for the root package on the dev host (about 24 cores), so on a hosted runner it is **estimated, not measured**, to be a multiple of that, beyond the 330-minute job cap. Hosted CI therefore proves `check` (short race) and `arm64`; gates R and F are dev-host gates. Built: `full` runs only on manual dispatch and on a pull request labelled `full` (no push to main, no schedule); its runner is `vars.FULL_RUNNER` (default `ubuntu-24.04`), its timeout `vars.FULL_TIMEOUT_MIN` (default 330); gate R (`check.sh`, `R_MODE=race`, which runs R alone) and gate F (`full.sh`) are separate steps with `if: !cancelled()`.
+- **Owner decision (open):** `testing.md` 9.1 says CI MUST run F and fail below the thresholds, which hosted CI does not do. Choose one: (a) provide a self-hosted or larger runner and set `FULL_RUNNER` (and `FULL_TIMEOUT_MIN`, and `F_TIMEOUT` beyond 120m: the dev host uses 200m); (b) shard the root package across hosted runners with a coverage-profile merge script (plan 2-ci D-CI-4 contingency; new code, not built); (c) amend `testing.md` 9.1 so that R and F are dev-host gates and CI proves `check` and `arm64` only.
+- **Repository variables to set for (a):** `FULL_RUNNER`, `FULL_TIMEOUT_MIN`; the secret `CODACY_PROJECT_TOKEN` is needed only where `full` runs.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2236,4 +2246,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 64430c45154dd6171b8eb355
+NOTES-TAG: 0c9dc7f3260a9f65e5d4e58f
