@@ -375,6 +375,8 @@ func buildFieldCases() []fieldCase {
 			[]string{"regions", "north", "capital_return"}),
 		reg("Region.EstateMarkdown", func(r *economysim.Region) { r.EstateMarkdown = 10_001 }, economysim.ErrOutOfBounds,
 			[]string{"regions", "north", "estate_markdown"}),
+		reg("Region.EstateListShare", func(r *economysim.Region) { r.EstateListShare = 10_001 }, economysim.ErrOutOfBounds,
+			[]string{"regions", "north", "estate_list_share"}),
 		// The pool fields are ranged only while the estates module is on.
 		fieldCase{field: "Region.PoolRelease", name: "region north, estates on", rules: []error{economysim.ErrOutOfBounds},
 			mutate: func(c *economysim.Config) {

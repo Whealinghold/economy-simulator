@@ -178,6 +178,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `MaxTrainees` | Role | `spec-skill-barriers.md` section 4.4 |
 | `TeachingLoad` | Role | `spec-skill-barriers.md` section 4.2 |
 | `EstateMarkdown` | Region | `spec-estates.md` section 3 |
+| `EstateListShare` | Region | `spec-estates.md` section 2.7.3 |
 | `PoolRelease` | Region | `spec-estates.md` section 2.6 |
 | `ReliefBelow` | Region | `spec-estates.md` section 2.6 |
 | `MerchantFeeShare` | Role | `spec-carriage.md` section 2.2 |

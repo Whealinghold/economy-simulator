@@ -174,7 +174,7 @@ reads it as `WorldParams`.
 | `Roles[]` | `MerchantFeeShare` | `spec-carriage.md` 2.2 (built with the merchant module, plan 2-15) |
 | `Regions[]` | `ID`, `ReferenceBasket`, `ExtraUpkeep` | `spec-currency.md` 5, `spec-agents.md` 5.2 |
 | `Regions[]` | `CapitalReturn` | `spec-skill-barriers.md` 2.5 |
-| `Regions[]` | `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | `spec-estates.md` 3 |
+| `Regions[]` | `EstateMarkdown`, `EstateListShare`, `PoolRelease`, `ReliefBelow` | `spec-estates.md` 3 |
 | `Modules.Estates` | no field; present = the pool policy is on (relief, and the pool as a flow target). `PoolRelease` and `ReliefBelow` above are written only when it is on (8.2.1) | `spec-estates.md` 2.6, 6.2.4 here |
 | `Groups[]` | `Region`, `Role`, `Households`, `Scale` | `spec-scale.md` 3.1 |
 | `WarmStart` | `Prices`, `Wages` (the starting wage per region), `Groups`, `Pools` | `spec-viability.md` 8.1 |
@@ -1711,7 +1711,7 @@ at Stage 0: `Config` has `World` 1, `Calendar` 2, `Commodities` 3, `Recipes` 4, 
 `TargetRatio` 9, `TargetSpread` 10, `DefaultRatio` 11, `InKind` 12,
 `ExpectedWorkTicks` 13, `MinWorkShare` 14, `TrainingTicks` 15, `MaxTrainees` 16,
 `TeachingLoad` 17, `Closed` 18; the information module adds `Informed` 19. `Region` has `ID` 1, `ReferenceBasket` 2, `ExtraUpkeep`
-3, `CapitalReturn` 4, `EstateMarkdown` 5, `PoolRelease` 6, `ReliefBelow` 7. `Group` has `Region` 1, `Role` 2,
+3, `CapitalReturn` 4, `EstateMarkdown` 5, `PoolRelease` 6, `ReliefBelow` 7, `EstateListShare` 8 (a core field with the zero default 0, off; written when not zero). `Group` has `Region` 1, `Role` 2,
 `Households` 3, `Scale` 4. `Edge` has `From` 1, `To` 2, `Distance` 3; `RegionPrice` has `Region` 1, `Commodity` 2, `Price` 3. `WarmStart` has `Prices` 1, `Wages` 2, `Groups` 3, `Pools` 4;
 `SeedPrice` has `Region` 1, `Commodity` 2, `Price` 3; `SeedWage` has `Region` 1,
 `Wage` 2; `WarmGroup` has `Region` 1, `Role` 2, `Money` 3, `Stock` 4, `Jobs` 5;

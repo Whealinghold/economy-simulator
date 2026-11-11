@@ -145,6 +145,9 @@
 //   - Estate markdown: the fall of a listed price, in basis points of the last
 //     price with the reduction truncated, for a lot that had an ask and was not
 //     wholly sold; it never goes below the resolution floor.
+//   - Estate listing share: the share, in basis points, of the units of each
+//     commodity an estate lists per tick, oldest lot first and at least one
+//     unit while it holds any; 0 (off) and 10 000 list every lot in full.
 //   - Intake: the move of an agent's money and lots to the estate of its region
 //     on a removal or a role change.
 //   - Pool draw: the money the estate pool gives a new agent, at most the pool;

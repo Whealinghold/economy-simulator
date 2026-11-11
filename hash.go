@@ -328,7 +328,7 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	}
 }
 
-// pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
+// pairsRegion writes the pairs of a Region: ids 1 to 8 (EstateListShare 8, appended after the module fields, is a core field and zero when off). Label is presentation
 // only and has no id. PoolRelease 6 and ReliefBelow 7 are the estates module's
 // and are pairs only while it is on (estatesOn) and not zero.
 func pairsRegion(e *encoder, r Region, estatesOn bool) {
@@ -341,6 +341,7 @@ func pairsRegion(e *encoder, r Region, estatesOn bool) {
 		e.num(6, r.PoolRelease)
 		e.num(7, r.ReliefBelow)
 	}
+	e.num(8, r.EstateListShare)
 }
 
 // pairsEdge writes the pairs of an Edge: From 1, To 2, Distance 3.

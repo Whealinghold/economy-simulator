@@ -157,6 +157,7 @@ func TestDefaults_Values(t *testing.T) {
 		{"region reference basket", economysim.DefaultRegion().ReferenceBasket, economysim.Money(1_000)},
 		{"region capital return", economysim.DefaultRegion().CapitalReturn, int64(1_000)},
 		{"region estate markdown", economysim.DefaultRegion().EstateMarkdown, int64(500)},
+		{"region estate list share", economysim.DefaultRegion().EstateListShare, int64(0)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

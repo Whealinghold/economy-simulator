@@ -717,3 +717,30 @@ func TestLoad_EstatesTable(t *testing.T) {
 		})
 	}
 }
+
+// TestLoad_EstateListShare verifies the core key estate_list_share: absent it is
+// 0 (off), set it loads whatever the estates module.
+//
+// Requirement: FR-EST-025
+func TestLoad_EstateListShare(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name string
+		doc  string
+		want int64
+	}{
+		{"absent is off", minimal + "[region.north]\n", 0},
+		{"set", minimal + "[region.north]\nestate_list_share = 200\n", 200},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := parseStrings(tt.doc)
+			if err != nil {
+				t.Fatalf("Parse(%s) error = %v, want nil", tt.name, err)
+			}
+			if r := got.Regions[0]; r.EstateListShare != tt.want {
+				t.Errorf("Parse(%s) EstateListShare = %d, want %d", tt.name, r.EstateListShare, tt.want)
+			}
+		})
+	}
+}

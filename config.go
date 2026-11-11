@@ -976,6 +976,10 @@ type Region struct {
 	// household draws relief, 0 to MaxBasisPoints (spec-estates.md 2.6, 3). It is
 	// read, hashed and validated only while Modules.Estates is on.
 	ReliefBelow int64
+	// EstateListShare is the share, in basis points, of the units of each
+	// commodity the region's estate lists per tick, 0 to 10 000; 0 (off) and
+	// 10 000 list every lot in full (spec-estates.md 2.7.3, FR-EST-025).
+	EstateListShare int64
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string

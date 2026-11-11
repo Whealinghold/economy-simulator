@@ -336,8 +336,9 @@ func (e *estates) heldLots(l *ledger.Ledger, r RegionID) []ledger.Lot {
 }
 
 // asks appends to dst one named-lot ask per lot the estate of region r holds,
-// in key order, at the lot's listed price, for all its units (spec-estates.md
-// 2.7.3, D103), refs being the world's table of effective reference prices. A held lot with no listing gets one at the first price. The
+// in key order, at the lot's listed price, for all its units, or for the
+// EstateListShare allowance of its commodity, oldest lot first (spec-estates.md
+// 2.7.3, D103, FR-EST-025), refs being the world's table of effective reference prices. A held lot with no listing gets one at the first price. The
 // marks of the last tick are cleared. It allocates only when dst has no room.
 func (e *estates) asks(l *ledger.Ledger, cfg *Config, refs []Price, r RegionID, dst []Order) ([]Order, error) {
 	floor, ok := resolutionFloor(cfg.World)
@@ -355,15 +356,49 @@ func (e *estates) asks(l *ledger.Ledger, cfg *Config, refs []Price, r RegionID, 
 	}
 	rows := reconcile(e.scratch, e.listed[r], lots, first)
 	e.scratch, e.listed[r] = e.listed[r], rows
+	share := cfg.Regions[r].EstateListShare
+	var left int64 // units still to list of the commodity being walked
 	for i, lt := range lots {
 		rows[i].asked = false
+		qty := lt.Quantity
+		if share > 0 && share < wholeBP {
+			if i == 0 || lots[i-1].Commodity != lt.Commodity {
+				left = listAllowance(lots[i:], lt.Commodity, share)
+			}
+			qty = min(qty, left)
+			left -= qty
+			if qty == 0 {
+				continue
+			}
+		}
 		dst = append(dst, Order{
 			Agent: e.agentID(r), Commodity: CommodityID(lt.Commodity), Side: Ask,
-			Price: rows[i].price, Quantity: Quantity(lt.Quantity),
+			Price: rows[i].price, Quantity: Quantity(qty),
 			Lot: LotKey{Named: true, Born: lt.Born, Durability: lt.Durability},
 		})
 	}
 	return dst, nil
+}
+
+// listAllowance is the units of commodity c the estate lists in a tick under
+// share (1 to 9 999 basis points): ceil(held * share / 10 000), at least one.
+// lots starts at the first lot of c and is in key order (FR-EST-025).
+func listAllowance(lots []ledger.Lot, c int, share int64) int64 {
+	var held int64
+	for _, lt := range lots {
+		if lt.Commodity != c {
+			break
+		}
+		var ok bool
+		if held, ok = checked.Add(held, lt.Quantity); !ok {
+			invariant("the units the estate holds of a commodity overflow")
+		}
+	}
+	n, ok := checked.MulDivCeil(held, share, wholeBP)
+	if !ok {
+		invariant("the listing allowance of the estate overflows")
+	}
+	return max(n, 1)
 }
 
 // facts is what the world resolves for an order of the estate of region r: a

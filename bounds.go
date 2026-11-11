@@ -315,6 +315,7 @@ func regionRanges(r Region, estatesOn bool) []fieldRange {
 		{"reference_basket", int64(r.ReferenceBasket), 0, MaxMoney},
 		{"capital_return", r.CapitalReturn, 0, MaxBasisPoints},
 		{"estate_markdown", r.EstateMarkdown, 0, wholeBP},
+		{"estate_list_share", r.EstateListShare, 0, wholeBP},
 	}
 	if estatesOn {
 		rs = append(rs,

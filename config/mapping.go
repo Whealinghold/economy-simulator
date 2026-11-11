@@ -493,6 +493,7 @@ func (l *loader) region(id string, t *tbl, cfg *economysim.Config) economysim.Re
 	t.items("extra_upkeep", &r.ExtraUpkeep)
 	integer(t, "capital_return", &r.CapitalReturn)
 	integer(t, "estate_markdown", &r.EstateMarkdown)
+	integer(t, "estate_list_share", &r.EstateListShare)
 	integer(t, "pool_release", &r.PoolRelease)
 	integer(t, "relief_below", &r.ReliefBelow)
 	t.text("label", &r.Label)

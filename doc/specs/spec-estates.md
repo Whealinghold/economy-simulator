@@ -188,7 +188,17 @@ different asks. The price of an ask is
   of its market, and the published price of a tick in which an estate sold is bounded below by the
   resolution floor only (`spec-stability.md` FR-STB-008).
 
-The ask is for all units of the lot. A row of the listing state (2.7.5) is created at the first
+The ask is for all units of the lot, unless `EstateListShare` (below) is set to a share under 10 000. Each tick, for each
+commodity, the estate lists at most `ceil(held * EstateListShare / 10 000)` units of the `held` units of that
+commodity it holds, and at least one unit while it holds any, taking the lots oldest first (the ledger's key
+order: by born tick, then durability) and a lot in part when the allowance ends inside it; the product is
+through the 128-bit helper. A lot that is not listed, or listed in part, keeps its price and is neither asked
+nor marked down by that part (the markdown reads the lots with an admitted ask). With `EstateListShare` 0 (off, the
+default) or 10 000 every lot is listed in full, as before: the rule changes nothing until it is set between 1 and 9 999. It is the estate's
+disposal rate: a pool of goods inherited from many exits is not put on the market of the living producers in
+one tick (plan 2-25 Phase 2, N-345).
+
+A row of the listing state (2.7.5) is created at the first
 walk that sees the lot held with no row, and dropped when the lot is gone, at the P3.4 walk and
 at P5.3. A lot that receives units keeps its price, and the joining units are listed at it. An
 ask that the clearing rejects is not an ask, so its lot is not marked down.
@@ -238,10 +248,11 @@ role, relief, partial reduction of the weight, removal). Relief is the estate's 
 | Scope  | Field          | Meaning                                                     | Default | Bound |
 |--------|----------------|-------------------------------------------------------------|---------|-------|
 | Region | `EstateMarkdown` | per-tick price reduction of an unsold estate listing, in basis points (used in `spec-skill-barriers.md` section 2.7 and section 2.7.3 above) | 500 | 0 to 10 000 |
+| Region | `EstateListShare` | share of the units of each commodity the estate lists per tick, in basis points; 0 is off and lists every lot in full, as 10 000 does (section 2.7.3 above) | 0 | 0 to 10 000 |
 | Region | `PoolRelease` | share of the estate pool released as relief each tick, in basis points (section 2.6) | 100 | 0 to 10 000 |
 | Region | `ReliefBelow` | welfare ratio below which an agent receives relief, in basis points (section 2.6) | 10 000 | 0 to `MaxBasisPoints` |
 
-`EstateMarkdown` is built with the core; `PoolRelease` and `ReliefBelow` are appended to `Region` with the module.
+`EstateMarkdown` is built with the core; `EstateListShare` is a core field too, appended after `ReliefBelow` in Go and with hash id 8, and its default is its zero value, which is off, as `spec-config.md` 8.2.3 rule (2) requires of a core field whose natural off would otherwise be 10 000; `PoolRelease` and `ReliefBelow` are appended to `Region` with the module.
 
 All are plain data in the root package's config structs, and the owners are in the
 parameter-owner table of `README.md`. **The defaults and the bounds are placeholders**
@@ -288,6 +299,7 @@ derived from the section named.
 | FR-EST-022 | A draw from the pool for a weight change MUST NOT exceed the pool's balance, and a weight reduction MUST send the money and the difference `x - floor(x * w' / w)` of each commodity to the estate (2.8.1). |
 | FR-EST-023 | `EstateMarkdown`, `PoolRelease` and `ReliefBelow` MUST be region fields with the defaults and bounds of section 3, and a value outside its bound MUST be rejected at construction with `ErrOutOfBounds` (3). |
 | FR-EST-024 | The state this spec contributes to a checkpoint MUST be the list of (lot key, current ask price) per region in canonical order for the held lots that have a row, a restore MUST refuse rows out of order or repeated, a price outside 1 to `MaxPrice` and a key that is not a held lot, and a restored world MUST list and price the same lots as an uninterrupted one (2.7.5). |
+| FR-EST-025 | Each tick the estate MUST list, per commodity, at most `ceil(held * EstateListShare / 10 000)` of the units it holds and at least one while it holds any, oldest lot first, a lot in part when the allowance ends inside it; a lot not listed keeps its price and is not marked down; with `EstateListShare` 0 or 10 000 every lot MUST be listed in full (2.7.3). |
 
 ### Non-functional
 

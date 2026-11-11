@@ -1610,7 +1610,7 @@ are the owners' placeholders (N-015, N-027); none is repeated as a claim here.
 | News | `InfoSpeed`, `RumourMaxAge` | INF 4, 5 | speed required; 60 | P3.2(a), P5.2, P7.2 | the lag `ceil(distance / speed)` ticks; a ring of records |
 | A shipment | `Speed` | TRN 4 | required | P1.3 | `Arrives = dispatched + k`, delivered at the first position of that tick |
 | A migration journey | `MoveSpeed` | MIG 6.4, 8.2 | required | P1.5 | `Arrives = tick + 1 + k` for a departure at P7.2 of `tick` (FR-MIG-026), arriving at the first position of that tick |
-| Relief and listing | `PoolRelease`, `EstateMarkdown`, basis points a tick | EST 2.6, 2.7.3 | 100; 500 | P1.6, P5.3 | every tick, no cadence |
+| Relief and listing | `PoolRelease`, `EstateMarkdown`, basis points a tick; `EstateListShare`, basis points of the held units | EST 2.6, 2.7.3 | 100; 500; 0 (off) | P1.6, P5.3 | every tick, no cadence |
 | The own-use mode | `EnterTicks`, `ExitTicks`, `RetryJobs` | SUB 5.3, 5.5 | 2; 3; 10 | P2.4 | thresholds on the household's own state, flag stepped every tick |
 | A traineeship | `TrainingTicks`, `TeachingLoad` | SKL 4.1, 4.2 | per role | P2.2, P7.1(a) | a per-trainer accumulator and the ticks served |
 | Ageing | `ShelfLife`, `Durability` | GDS 4, LED 5.3 | per commodity | P8.1 | `Born + ShelfLife - 1 <= t` |

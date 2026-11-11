@@ -2165,6 +2165,7 @@ PR description.
 - **Areas:** EST, CFG, ALL
 - **Raised:** 2026-11-11, plan 2-7.
 - **Note:** A module's field may default to a non-zero value because it is hashed only while the module is on; the zero-default rule of `architecture.md` 2.10.5 binds core fields. The first case is `Region.PoolRelease` (100) and `Region.ReliefBelow` (10 000).
+- **Update (2026-11-11, plan 2-25 Phase 3a):** read, left open. `Region.EstateListShare` is a core field whose natural off is 10 000 ("list everything"), so it follows the core rule instead: default 0 means off, 0 and 10 000 both list every lot, and it is hashed (id 8) only when not 0 (`spec-config.md` 8.2.3 rule 2; `spec-estates.md` 2.7.3, FR-EST-025). The supervisor's brief said default 10 000; that would move every hash.
 
 ### N-346 Relief reads the total ratio
 
@@ -2214,4 +2215,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bb1aecc236a36f9a48ffd6a2
+NOTES-TAG: 6d6e33327eb294d1edbc2759

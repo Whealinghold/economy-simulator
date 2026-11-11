@@ -472,3 +472,69 @@ func FuzzRestore(f *testing.F) {
 		}
 	})
 }
+
+// TestEstateAsks_ListShare verifies the disposal rate of FR-EST-025 on the
+// three-lot estate (5 staple; 2 tool at durability 3 and 4 at durability 6).
+//
+// Arithmetic: tools held 6. Share 5000 lists ceil(6 * 5000 / 10 000) = 3, oldest
+// (lowest key) first: the lot of 2 whole, then 1 of the 4. Share 1000 lists
+// ceil(0.6) = 1: 1 of the first lot and nothing of the second. Share 1 lists
+// ceil(6 / 10 000) = 1 (at least one). The staple, 5 held, lists ceil(5 * 1000 /
+// 10 000) = 1. Shares 0 and 10 000 list every lot in full, as the default does.
+//
+// Requirement: FR-EST-025
+func TestEstateAsks_ListShare(t *testing.T) {
+	t.Parallel()
+	full := []int64{5, 2, 4}
+	tests := []struct {
+		name  string
+		share int64
+		want  []int64 // units asked of staple, tool 3, tool 6; 0 is no ask
+	}{
+		{"off", 0, full},
+		{"whole", 10_000, full},
+		{"half", 5_000, []int64{3, 2, 1}},
+		{"a tenth", 1_000, []int64{1, 1, 0}},
+		{"one basis point lists one unit", 1, []int64{1, 1, 0}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			f := newListFixture(t, 1)
+			f.threeLots(t)
+			f.cfg.Regions[0].EstateListShare = tc.share
+			var got []int64
+			byLot := map[LotKey]int64{}
+			for _, o := range ordersOf(t, f) {
+				byLot[o.Lot] += int64(o.Quantity)
+			}
+			got = append(got, byLot[LotKey{Named: true}], byLot[LotKey{Named: true, Durability: 3}], byLot[LotKey{Named: true, Durability: 6}])
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("units asked = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestEstateRound_UnlistedLotKeepsPrice verifies that a lot with no allowance is
+// not asked, so it is not marked down, while a listed lot falls as usual.
+//
+// Arithmetic: share 1000 lists the tool lot of 2 (1 unit, price 30 -> 29) and
+// not the lot of 4 (price stays 60); the staple lists 1 unit, 100 -> 95.
+//
+// Requirement: FR-EST-025, FR-EST-009
+func TestEstateRound_UnlistedLotKeepsPrice(t *testing.T) {
+	t.Parallel()
+	f := newListFixture(t, 1)
+	f.threeLots(t)
+	f.cfg.Regions[0].EstateListShare = 1_000
+	f.round(t, 0, 0, 0)
+	want := map[ledger.Key]Price{k(lstStaple, 0, 0): 95, k(lstTool, 0, 3): 29, k(lstTool, 0, 6): 60}
+	got := f.prices()
+	for key, p := range want {
+		if got[key] != p {
+			t.Errorf("price of %v = %d, want %d (all %v)", key, got[key], p, got)
+		}
+	}
+	f.audit(t, "list share")
+}

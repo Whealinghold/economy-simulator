@@ -124,7 +124,7 @@ owned elsewhere is not restated: its meaning, default and bound are there.
 | `ReferenceBasket` | the cost of one household's baseline upkeep for one tick, at the region's effective reference prices | `spec-currency.md` 5 |
 | `ExtraUpkeep` | goods added to every household's upkeep in the region | `spec-agents.md` 5.2 |
 | `CapitalReturn` | the return a tool or training must beat to attract an entrant | `spec-skill-barriers.md` 2.5 |
-| `EstateMarkdown`, `PoolRelease`, `ReliefBelow` | the estate's markdown, release rate and relief threshold | `spec-estates.md` 3 |
+| `EstateMarkdown`, `EstateListShare`, `PoolRelease`, `ReliefBelow` | the estate's markdown, release rate and relief threshold | `spec-estates.md` 3 |
 | reference-price overrides | `RegionPrices` rows for the region (section 5) | REG (values); the commodity's default is `spec-goods.md` 6.3 |
 | yield profiles | `Yields` rows for the region | `spec-production.md` 6 (format); the values are `spec-resources.md` 7 |
 | taste multipliers | `Modules.Demand.RegionTastes` rows for the region | `spec-demand.md` 3.2 |
