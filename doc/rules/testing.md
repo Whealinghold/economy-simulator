@@ -428,6 +428,14 @@ coverage falls below the thresholds. **[project]**
   coverage, so 60m left no margin (owner ruling, stage 2-6).
   The stylised fact tests (`TestStylised`) are in this pattern and run seeds 1 to 10 without `-race`.
 
+**What CI runs.** Pull-request CI (job `check`, `R_MODE=short` of `scripts/ci/check.sh`) runs the
+short race run, `go test -short -race ./...` per module, and **not** gate R: on a hosted 4-vCPU
+runner the root package did not finish R in 60 minutes (`panic: test timed out after 1h0m0s`,
+run 43019781252; `examples/realm` alone took 597 s). The non-short gate R (`R_MODE=full`,
+`R_TIMEOUT`, default 60m) runs in the `full` job before F (push to main, nightly, manual dispatch,
+label `full`), and before a merge on the developer or worker host. If the first `full` run shows
+the root needs more than 60m on the runner, amending this section is the owner's decision.
+
 Coverage is not taken under `-race`: with atomic coverage of `-coverpkg=./...`
 the race run took 48 to 58 minutes, against 164 seconds without coverage and 15
 minutes for F. A quick run before a push is
@@ -581,4 +589,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: a30dcaf3151e22bf092cbeec
+RULE-TAG: 18183c48f7aed3d25b1972a7

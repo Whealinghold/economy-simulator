@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Job `check`: per module gofmt, vet, staticcheck, short race tests, gate R and go mod tidy.
+# Job `check`: per module gofmt, vet, staticcheck, short race tests, go mod tidy and, in R_MODE=full, gate R.
 # Runs the fast stage on every module, then gate R only if all passed (fail fast, testing.md 10.5);
 # exits non-zero naming the modules that failed.
+# R_MODE=short (pull-request CI): the fast stage's `go test -short -race` is the race run; gate R is not run,
+# because the root package does not finish it in 60m on a 4-vCPU hosted runner (testing.md 9.1).
+# R_MODE=full (default, a developer host and the `full` job): gate R, `go test -race -timeout $R_TIMEOUT`.
 set -uo pipefail
 # shellcheck source=common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+
+: "${R_MODE:=full}" "${R_TIMEOUT:=60m}"
+case $R_MODE in short | full) ;; *) echo "FAIL: R_MODE must be short or full, got '$R_MODE'" >&2; exit 1 ;; esac
 
 ensure_staticcheck || exit 1
 "$CI_DIR/selftest.sh" || exit 1
@@ -53,13 +59,13 @@ for m in $mods; do
 done
 # (The short run is a subset of R and so runs twice: that is the fail-fast order of testing.md 10.5.)
 # Gate R runs only when every module passed the fast stage, so a cheap failure never waits for it.
-if [ "${#failed[@]}" -eq 0 ]; then
+if [ "${#failed[@]}" -eq 0 ] && [ "$R_MODE" = full ]; then
 	for m in $mods; do
-		run_in "$m" go test -race -timeout 60m ./... || failed+=("$m")
+		run_in "$m" go test -race -timeout "$R_TIMEOUT" ./... || failed+=("$m")
 	done
 fi
 if [ "${#failed[@]}" -ne 0 ]; then
 	echo "check: failed modules: ${failed[*]}" >&2
 	exit 1
 fi
-echo "check: all modules passed"
+echo "check: all modules passed (R_MODE=$R_MODE)"

@@ -72,6 +72,12 @@ if [ -x "$here/codacy-upload.sh" ]; then
 	expect codacy-long-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID=0123456789abcdef0123456789abcdef012345678 "$here/codacy-upload.sh" "$td/pass.out"
 fi
 
+# R_MODE is validated before anything runs.
+if [ -x "$here/check.sh" ]; then
+	expect r-mode-bogus 1 "R_MODE must be short or full" env R_MODE=bogus "$here/check.sh"
+	expect r-mode-case-sensitive 1 "R_MODE must be short or full" env R_MODE=Short "$here/check.sh"
+fi
+
 # A failing go list must not read as "no modules, all passed".
 expect modules-fail-closed 1 "go list -m failed" bash -c ". '$here/common.sh'; PATH=/nonexistent; modules"
 

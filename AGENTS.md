@@ -229,13 +229,14 @@ gofmt -l .                     # must print nothing
 go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
-go test -race -timeout 60m ./...   # gate R: reduced seeds under -race
+go test -race -timeout 60m ./...   # gate R: reduced seeds under -race (dev host and the `full` job; PR CI runs only the -short -race line above)
 go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (the root package needs about 60 min under coverage)
 go mod tidy                    # must produce no diff
 ```
 
 CI runs these gates through `scripts/ci/check.sh` (every command above except gate F,
-per module of `go.work`), `scripts/ci/arm64.sh` (build, vet and the quick
+per module of `go.work`; `R_MODE=short`, which PR CI sets, skips gate R, `R_MODE=full` runs it, and the `full` job
+does), `scripts/ci/arm64.sh` (build, vet and the quick
 run on a native arm64 runner) and `scripts/ci/full.sh` (gate F per module, then
 `scripts/ci/coverage-check.sh` against `scripts/ci/coverage-thresholds.txt`); the scripts
 run on a developer machine too, and `scripts/ci/selftest.sh` tests the checker.

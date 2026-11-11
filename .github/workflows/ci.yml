@@ -28,7 +28,7 @@ jobs:
   check:
     if: github.event.action != 'labeled'
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,7 +37,10 @@ jobs:
         with:
           go-version-file: go.work
           cache-dependency-path: "**/go.sum"
+      # Short race only: gate R does not fit a hosted 4-vCPU runner in 60m (run 43019781252); it runs in `full`.
       - run: scripts/ci/check.sh
+        env:
+          R_MODE: short
 
   arm64:
     if: github.event.action != 'labeled'
@@ -69,6 +72,11 @@ jobs:
         with:
           go-version-file: go.work
           cache: false
+      # Gate R (non-short race) before F, with its own timeout; the fast stage repeats here, which is cheap.
+      - run: scripts/ci/check.sh
+        env:
+          R_MODE: full
+          R_TIMEOUT: 60m
       - run: scripts/ci/full.sh
       # Kept before the upload to Codacy, so a flake there never loses a multi-hour run. Codacy also gets
       # the profile of a run whose coverage check failed, so its status shows the shortfall.
