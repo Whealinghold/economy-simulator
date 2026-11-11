@@ -472,10 +472,10 @@ func loadAccounts(preset string, w Window, open, closing economysim.Snapshot, p 
 	if a.u, err = loadUnits(w, f); err != nil {
 		return accounts{}, err
 	}
-	if a.st, err = stocksOf("GDP", closing, w.Regions, w.Commodities); err != nil {
+	if a.st, err = stocksOf(preset, closing, w.Regions, w.Commodities); err != nil {
 		return accounts{}, err
 	}
-	a.op, err = stocksOf("GDP", open, w.Regions, w.Commodities)
+	a.op, err = stocksOf(preset, open, w.Regions, w.Commodities)
 	return a, err
 }
 

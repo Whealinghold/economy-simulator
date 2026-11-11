@@ -385,21 +385,11 @@ func (t *Tally) lane(tick int64, from, to economysim.RegionID) bool {
 	return true
 }
 
-// linesKnown reports whether every line names a commodity of the table; a bad
+// known reports whether every commodity names a commodity of the table; a bad
 // line drops the whole event before it can advance the window's last step.
-func (t *Tally) linesKnown(ls []economysim.Amount) bool {
-	for _, l := range ls {
-		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
-			t.stray = true
-			return false
-		}
-	}
-	return true
-}
-
-func (t *Tally) arrivedKnown(ls []economysim.ArrivedLine) bool {
-	for _, l := range ls {
-		if l.Commodity < 0 || int(l.Commodity) >= t.w.Commodities {
+func (t *Tally) known(n int, commodity func(i int) economysim.CommodityID) bool {
+	for i := range n {
+		if c := commodity(i); c < 0 || int(c) >= t.w.Commodities {
 			t.stray = true
 			return false
 		}
@@ -412,7 +402,7 @@ func dispatchKey(r DispatchTally, k DispatchTally) int {
 }
 
 func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
-	if !t.linesKnown(e.Lines) || !t.lane(e.Tick, e.Region, e.To) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.lane(e.Tick, e.Region, e.To) {
 		return
 	}
 	k := DispatchTally{Origin: e.Region, Destination: e.To, Mode: int64(e.Mode)}
@@ -437,7 +427,7 @@ func arrivalKey(r ArrivalTally, k ArrivalTally) int {
 }
 
 func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
-	if !t.arrivedKnown(e.Lines) || !t.lane(e.Tick, e.Region, e.To) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.lane(e.Tick, e.Region, e.To) {
 		return
 	}
 	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
@@ -460,7 +450,8 @@ func settlementKey(r SettlementTally, k SettlementTally) int {
 }
 
 // settlement returns the row of a contract lane, or nil for a stray event or
-// when nothing moved (active false), so that a row means the lane was used.
+// when nothing moved (active false), so that a row means the lane was used. A
+// quiet event is still checked and still counts as activity of the window.
 func (t *Tally) settlement(tick int64, from, to economysim.RegionID, active bool) *SettlementTally {
 	if !t.lane(tick, from, to) || !active {
 		return nil
