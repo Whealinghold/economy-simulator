@@ -159,6 +159,13 @@ func (c *invChecker) balances(s economysim.Snapshot) []string {
 	for _, m := range s.Markets {
 		held[m.State.Commodity] += int64(m.HeldByAgents) + int64(m.HeldByEstate)
 	}
+	// Goods on the way are in a transit account, which no market row holds: the lines of
+	// the shipments in flight (a pack that ships, plan 2-26 D703).
+	for _, sh := range s.Shipments {
+		for _, l := range sh.Lines {
+			held[l.Commodity] += int64(l.Quantity)
+		}
+	}
 	sum := map[economysim.CommodityID]int64{economysim.NoCommodity: int64(s.Money)}
 	pending := map[invFlowKey]int64{}
 	for _, f := range s.Pending {
@@ -257,6 +264,9 @@ type invariantCase struct {
 	// testdata/chains/scripts applied between steps.
 	ticks  int64
 	script string
+	// opts, when set, builds the registration options of the row's worlds in place of
+	// strategy.Options() (plan 2-26 D703); nil, the zero value, is every row but a scripted one.
+	opts func() []economysim.Option
 }
 
 // invariantTable is the Stage 1 table: N-295 lists the rows that wait. The
@@ -264,37 +274,52 @@ type invariantCase struct {
 // (REF 16.2); the two +trade rows are the packs with the edge part of their trade
 // overlay (plan 2-3 Phase 9; the edges do not change a run until TRN reads them).
 var invariantTable = []invariantCase{
-	{"one", packOne, 16, 0, ""},
-	{"second", packSecond, 4, 0, ""},
-	{"one-demand", packOneDemand, 4, 0, ""},
-	{"one+faucet-sunk", packOneFaucetSunk, 4, 0, ""},
-	{"one+resources", packOneResources, scenarioSeeds, 0, ""},
-	{"one+subsistence", packOneSubsistence, 4, 0, ""},
-	{"one+population", packOnePopulation, 4, 0, ""},
-	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, ""},
-	{"two+trade", tradeWarm("two"), 4, 0, ""},
-	{"two+transport", packTwoTransport, 4, 0, ""},
-	{"two+information", packInformation("two"), 4, 0, ""},
-	{"two+migration", packMigration("two"), 2, 0, ""},
-	{"three+migration", packMigration("three"), 2, 0, ""},
-	{"three+trade", tradeWarm("three"), 4, 0, ""},
+	{"one", packOne, 16, 0, "", nil},
+	{"second", packSecond, 4, 0, "", nil},
+	{"one-demand", packOneDemand, 4, 0, "", nil},
+	{"one+faucet-sunk", packOneFaucetSunk, 4, 0, "", nil},
+	{"one+resources", packOneResources, scenarioSeeds, 0, "", nil},
+	{"one+subsistence", packOneSubsistence, 4, 0, "", nil},
+	{"one+population", packOnePopulation, 4, 0, "", nil},
+	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, "", nil},
+	{"two+trade", tradeWarm("two"), 4, 0, "", nil},
+	{"two+transport", packTwoTransport, 4, 0, "", nil},
+	{"two+information", packInformation("two"), 4, 0, "", nil},
+	{"two+migration", packMigration("two"), 2, 0, "", nil},
+	{"three+migration", packMigration("three"), 2, 0, "", nil},
+	{"three+trade", tradeWarm("three"), 4, 0, "", nil},
 	// REF 7.5: famine runs 800 ticks with the shock of S14 at depth 0.
-	{"famine", packLayers["famine"], 4, 800, "s14-0.toml"},
+	{"famine", packLayers["famine"], 4, 800, "s14-0.toml", nil},
 	// REF 7.5, plan 2-24 D689: the five-sized rows, seeds 1 and 2. The packs hold 5 000
 	// households, so each runs a seed on its own world; gate F runs both seeds, gate R skips
 	// these rows (TestInvariants_Packs).
-	{"five", packFiveWarm, 2, 0, ""},
-	{"all", allLayers, 2, 0, ""},
+	{"five", packFiveWarm, 2, 0, "", nil},
+	{"all", allLayers, 2, 0, "", nil},
+	// Plan 2-26 D703: the merchants pack with the real strategy (the cold pack finds no trip that pays).
+	{"two+merchants", packMerchants("two"), 4, 0, "", nil},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
 // invariant of the first tick that breaks one (testing.md 6.2).
 func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []scriptStep) {
 	t.Helper()
+	runInvariantsWith(t, cfg, seed, ticks, script, nil)
+}
+
+// runInvariantsWith is runInvariants with the registration options of a row that has its
+// own (invariantCase.opts); nil registers strategy.Options().
+func runInvariantsWith(t *testing.T, cfg economysim.Config, seed uint64, ticks int64, script []scriptStep, opts func() []economysim.Option) {
+	t.Helper()
 	rec := &recorder{}
 	// strategy.Options registers the strategies a pack may name (the merchants of the all-on pack);
 	// a pack that names none ignores them.
-	w, err := economysim.NewWorld(cfg, append(strategy.Options(), economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())...)
+	reg := func() []economysim.Option {
+		if opts != nil {
+			return opts()
+		}
+		return strategy.Options()
+	}
+	w, err := economysim.NewWorld(cfg, append(reg(), economysim.WithSeed(seed), economysim.WithObserver(rec), economysim.WithAudit())...)
 	if err != nil {
 		t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
 	}
@@ -333,7 +358,7 @@ func runInvariants(t *testing.T, cfg economysim.Config, seed uint64, ticks int64
 		fail(i, "conservation", c.balances(s))
 		fail(i, "negative balance or stock", economysim.NegativeAccounts(w))
 		if i == 0 {
-			twin, err := economysim.NewWorld(cfg, append(strategy.Options(), economysim.WithSeed(seed))...)
+			twin, err := economysim.NewWorld(cfg, append(reg(), economysim.WithSeed(seed))...)
 			if err != nil || twin.Step() != nil {
 				t.Fatalf("seed %d: twin world: %v", seed, err)
 			}
@@ -379,9 +404,77 @@ func TestInvariants_Packs(t *testing.T) {
 		for seed := uint64(1); seed <= uint64(invariantSeeds(tc.seeds)); seed++ {
 			t.Run(fmt.Sprintf("%s/seed%d", tc.name, seed), func(t *testing.T) {
 				t.Parallel()
-				runInvariants(t, cfg, seed, ticks, script)
+				runInvariantsWith(t, cfg, seed, ticks, script, tc.opts)
 			})
 		}
+	}
+}
+
+// TestInvariantTable_RowsHaveNilOptsByDefault verifies that no row of invariantTable sets
+// its own registration options: they are the strategy.Options() rows, and a scripted world
+// has its own test (TestInvariants_MerchantsScripted).
+//
+// Guard: the opts field of invariantCase (plan 2-26 D703) must not change an existing row; a
+// row that set it would silently stop registering the strategies of strategy.Options().
+func TestInvariantTable_RowsHaveNilOptsByDefault(t *testing.T) {
+	t.Parallel()
+	for _, tc := range invariantTable {
+		if tc.opts != nil {
+			t.Errorf("invariantTable row %q has opts set, want nil (strategy.Options())", tc.name)
+		}
+	}
+}
+
+// TestInvariants_MerchantsScripted runs the invariants of testing.md 6.3 over the scripted
+// merchants world (scriptedMerchants: the only world that forms contracts), 40 ticks, seeds
+// 1 to 4, and after every tick of a second run of each seed the escrow identity: the
+// snapshot's Escrow equals the money escrowed in the contracts in flight and the sum of the
+// regions' MoneyContract, so a contract in flight moves no money into or out of the world.
+//
+// Requirement: FR-MER-044, FR-LED-035, FR-CAR-001
+//
+// Guard: with no contract in flight the escrow is 0 and every other identity passes; the
+// test fails if the script formed no contract, so it cannot pass on an empty world.
+func TestInvariants_MerchantsScripted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("end-to-end: 40 ticks per seed; run without -short")
+	}
+	t.Parallel()
+	cfg, _ := scriptedMerchants(t)
+	opts := func() []economysim.Option { _, o := scriptedMerchants(t); return o }
+	for seed := uint64(1); seed <= uint64(invariantSeeds(4)); seed++ {
+		t.Run(fmt.Sprintf("seed%d", seed), func(t *testing.T) {
+			t.Parallel()
+			runInvariantsWith(t, cfg, seed, 40, nil, opts)
+			w, err := economysim.NewWorld(cfg, append(opts(), economysim.WithSeed(seed), economysim.WithAudit())...)
+			if err != nil {
+				t.Fatalf("NewWorld(seed %d) error = %v, want nil", seed, err)
+			}
+			held := false
+			for i := int64(0); i < 40; i++ {
+				if err := w.Step(); err != nil {
+					t.Fatalf("seed %d tick %d: Step error = %v, want nil", seed, i, err)
+				}
+				s, err := w.Snapshot()
+				if err != nil {
+					t.Fatalf("seed %d tick %d: Snapshot error = %v", seed, i, err)
+				}
+				var inContracts, inRegions economysim.Money
+				for _, c := range s.Contracts {
+					inContracts += c.Escrowed
+				}
+				for _, r := range s.Regions {
+					inRegions += r.MoneyContract
+				}
+				if s.Escrow != inContracts || s.Escrow != inRegions {
+					t.Fatalf("seed %d tick %d: Escrow = %d, contracts hold %d, regions hold %d, want all equal", seed, i, s.Escrow, inContracts, inRegions)
+				}
+				held = held || s.Escrow > 0
+			}
+			if !held {
+				t.Errorf("seed %d: no money was ever in escrow in 40 ticks, want a contract in flight (the test would check nothing)", seed)
+			}
+		})
 	}
 }
 

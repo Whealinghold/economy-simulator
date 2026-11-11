@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351, N-353 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -67,7 +67,7 @@ PR description.
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350 |
 | INF | N-110, N-112, N-156, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
-| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290 |
+| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
@@ -88,7 +88,7 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
-| STY | N-015, N-027, N-030, N-084, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-279, N-321, N-322, N-326 |
@@ -554,23 +554,6 @@ PR description.
 - **Update (2026-10-18, plan 1-8 Phase 1):** read for the estate row: relief is the Stage 2 module's; the entry draw of this row (`grant`) is the only P7.1 draw on the pool, and P1.6 relief then P7.1 entry stay in the world row's order. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. The order (relief at P1.6, entry at P7.1) is WLD's; the row reads only the pool balance for the advisory budget.
 
-### N-084 Scenarios that wait for trade, money and the coarse tick
-
-- **Areas:** STY
-- **Raised:** 2026-10-10, `spec-reference-chain.md` 7.6.
-- **Note:** S13 (the faucet overlay), the dynamic parts of X1 and X2 (the trade overlay) and the coarse-tick leg of S12 wait for these specs.
-- **Update (2026-10-10, REG):** REG supplies the edge format and a proposal for the edge part of `overlay/trade.toml` (`spec-regions.md` 12.4), and two scenarios, S28 and S29 (in the register S28 and S29). X1 and X2 (dynamic) still wait for MER and INF.
-- **Update (2026-10-10, MON):** S13 is defined: `overlay/faucet.toml` (and `overlay/faucet-sunk.toml`) are in `spec-money-supply.md` 17.6, and the pass is exact for the accounting (boundary balance = `-Total`, `M = M_init + issued`) and report-only for the price drift until STY sets a band. Still open: the dynamic parts of X1 and X2, the coarse-tick leg of S12.
-- **Update (2026-10-10, TRN):** the transport mechanism for the dynamic parts of X1 and X2 exists (modes, the shipment, `Inbound` and `Routes`: `spec-transport.md` 3 to 9). An `overlay/trade.toml` needs a `modules.transport.mode` table (respelled 2026-10-12, N-102), a hired mode's haul commodity and a carrier recipe (17.4 is a model), a consignee in the destination, MER's shipper and INF's rumours. The static check can use `transport.Lanes` (9.4). Scenarios S30 to S32 are proposed in the register (TRN 15 called them S28 to S30).
-- **Update (2026-10-10, wave 2 integration):** REG, MON and TRN now exist, so only EXT, MER, INF and STY are left in the areas. The overlays are N-092.
-- **Update (2026-10-10, INF):** INF now supplies the rumours (`spec-information.md` 5). The overlay `overlay/trade.toml` needs a `[modules.information]` table (`info_speed`, `rumour_error_bp`, `rumour_max_age`) and an informed merchant role (`informed = true`); 12.1 there shows the keys.
-- **Update (2026-10-10, EXT):** EXT exists (`spec-external-sector.md`). Its invariant scenario EXT-S5 (S55) runs the reference chain with an external overlay (an outside node on a gate region, 18.2 is a model of the file layout) over a range of seeds with `WithAudit`; REF builds the pack. EXT gives the dynamic parts of X1 and X2 the gate as the place where imports appear and the counterparty's ask as the price a shipper reads there.
-- **Update (2026-10-10, wave 3 integration):** INF and EXT now exist, so only MER and STY are left in the areas. The dynamic parts of X1 and X2 wait for MER (the shipper); the overlays are N-092.
-- **Update (2026-10-10, MER):** MER exists. The dynamic parts of X1 and X2, S28 to S32, S46 and S47 can run with a merchant role: `overlay/trade.toml` needs `[modules.merchants]`, a role with `strategy = "merchant"`, `informed = true`, a `[role.<id>.merchant]` block and `consigns = true` for the consignee role (`spec-merchants.md` 19.1 shows the keys), plus the Go line `economysim.NewWorld(cfg, strategy.Options()...)`.
-- **Update (2026-10-11, STY):** S13 is STY-S05 (exact accounting, the drift report-only, with the reason); X1 and X2 dynamic have bands (STY-P06, STY-T02) that wait for the overlay; the coarse-tick leg of S12 stays open for CAL and REF (`spec-stylised-facts.md` 5.3, 5.6).
-- **Update (2026-10-11, CHK):** X5, S60 and S72 have their checkpoint legs defined (`spec-checkpoint.md` 8.2.3).
-- **Update (2026-11-09, plan 2-15 Phase 1):** X1 and X2 dynamic, S30 to S32, S46 and S47 run with the merchant overlay as reruns (plan 2-15 Phase 8); S28 and S29 are plan 3's. Left open.
-
 ### N-085 Nominal table against the full-labour table
 
 - **Areas:** VIA, STY
@@ -666,7 +649,7 @@ PR description.
 - **Update (2026-10-10, wave 4 integration, X4):** ruled in the one combined edit of `spec-welfare-and-wages.md`: the effective window (2.3.3) lists the recipes on the role's list, the effective own-use list and the longest trip of the role's modes; a recipe-less role with an own-use job, and a journey or a trip, are handled in 4.3; a migrant's journey is zero-income ticks in the window. The note stays open until WEL's open question 9 is closed.
 - **Update (2026-10-13, EMP):** by contrast, a hired job is paid a tick at a time and is no gap in the worker's income (`spec-employment.md` 8.5).
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the merchant block does not exist in the slice, so `L` is the recipes' only; the window function takes `L` as a parameter so the merchants file appends its trip term. Left open.
-- **Update (2026-11-09, plan 2-15 Phase 1):** MER proposes, WEL decides: the window is not adopted by WEL and plan 2-15 does not build it (D512, `spec-merchants.md` 12.3); the code is a ten-line change to `effectiveWindow` guarded by the merchant block. Left open.
+- **Update (2026-11-11, plan 2-26 Phase 1):** applied for a merchant role: WEL adopted the trip term (`spec-welfare-and-wages.md` 2.3.3, FR-WEL-009) and `merchantTripTicks` in `contract.go` builds it (plan 2-26 D704, reversing plan 2-15 D512). Left open only for a migration journey, which the window still counts as zero-income ticks (WEL open question 6).
 
 ### N-101 Does the default Target count Inbound?
 
@@ -788,7 +771,7 @@ PR description.
 
 - **Areas:** VIA, REF
 - **Raised:** 2026-10-10, `spec-external-sector.md` 12.1.
-- **Note:** VIA adds optional import and export columns per gate and side (bounded by `Capacity` times the mean window), priced at the quotes at tick 0 with the gate scale, and a trade row (imports at the quotes not above exports at the quotes); EXT supplies `Lines()` as a pure read of the configuration. An import counts as a source in the gate regions for V1. REF builds an external overlay (EXT-S5, S55; N-084).
+- **Note:** VIA adds optional import and export columns per gate and side (bounded by `Capacity` times the mean window), priced at the quotes at tick 0 with the gate scale, and a trade row (imports at the quotes not above exports at the quotes); EXT supplies `Lines()` as a pure read of the configuration. An import counts as a source in the gate regions for V1. REF builds an external overlay (EXT-S5, S55).
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for EXT. The programme is closed; the type keeps no import column.
 
 ### N-118 One job per agent limits the subsistence floor
@@ -2234,6 +2217,12 @@ PR description.
 - **Owner decision (open):** `testing.md` 9.1 says CI MUST run F and fail below the thresholds, which hosted CI does not do. Choose one: (a) provide a self-hosted or larger runner and set `FULL_RUNNER` (and `FULL_TIMEOUT_MIN`, and `F_TIMEOUT` beyond 120m: the dev host uses 200m); (b) shard the root package across hosted runners with a coverage-profile merge script (plan 2-ci D-CI-4 contingency; new code, not built); (c) amend `testing.md` 9.1 so that R and F are dev-host gates and CI proves `check` and `arm64` only.
 - **Repository variables to set for (a):** `FULL_RUNNER`, `FULL_TIMEOUT_MIN`; the secret `CODACY_PROJECT_TOKEN` is needed only where `full` runs.
 
+### N-354 A consumer bounds its own AddAgent calls
+
+- **Areas:** INT, CODE
+- **Raised:** 2026-11-11, plan 2-26.
+- **Note:** `AddAgent` has no cap: a consumer that adds external agents bounds its own calls. A future `Integration.MaxExternal` key (default off, hashed with the integration block) would be the seam if a cap becomes a requirement; nothing builds it now.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2246,4 +2235,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 0c9dc7f3260a9f65e5d4e58f
+NOTES-TAG: e09397561f658dc677eb38a6

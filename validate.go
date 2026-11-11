@@ -742,6 +742,7 @@ type lookup struct {
 	override  map[[2]string]Price  // reference-price overrides by (region, commodity)
 	demand    *demandIndex         // the demand module's tables by ID, nil when it is off
 	resource  map[string]*Resource // the resources module's definitions by ID, nil when it is off
+	trips     *tripCache           // the longest travel time of each transport mode (merchantTripTicks)
 }
 
 // price returns the effective reference price of a declared commodity in a
@@ -763,6 +764,7 @@ func newLookup(c *Config) lookup {
 		override:  overrides(c.RegionPrices),
 		demand:    newDemandIndex(c),
 		resource:  resourceIndex(c),
+		trips:     &tripCache{},
 	}
 	for i := range c.Commodities {
 		if e := &c.Commodities[i]; l.commodity[e.ID] == nil {
@@ -862,6 +864,13 @@ func jobIDs(c *Config, r *Role) []string {
 // inside its bound. A Duration outside it is reported by its own rule and the
 // rules that read a window skip the role.
 func longestDuration(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
+	longest, ok = longestRecipe(c, lk, r)
+	// a hook of ADR 0010 (a): the trip is the merchant's job (FR-WEL-009); 0 for a role with no block
+	return max(longest, merchantTripTicks(c, lk, r)), ok
+}
+
+// longestRecipe is longestDuration over the recipes alone, without the merchant trip.
+func longestRecipe(c *Config, lk lookup, r *Role) (longest int64, ok bool) {
 	ok = true
 	for _, id := range jobIDs(c, r) {
 		rc := lk.recipe[id]
@@ -1214,9 +1223,21 @@ func (v *validator) roleRules() {
 		}
 
 		if t, ok := effectiveWindow(&v.c, v.lk, ro); ok && t > MaxWelfareWindow {
-			v.rep.add(ErrOutOfBounds, path(base, "recipes"), i64(t), i64(MaxWelfareWindow))
+			v.rep.add(ErrOutOfBounds, path(base, windowField(&v.c, v.lk, ro)), i64(t), i64(MaxWelfareWindow))
 		}
 	}
+}
+
+// windowField names the field that sets a role's window: "merchant" when the trip is
+// longer than every recipe, else "recipes".
+func windowField(c *Config, lk lookup, r *Role) string {
+	if r.Merchant == nil {
+		return "recipes"
+	}
+	if merchantTripTicks(c, lk, r) > longestRecipeAny(c, lk, r) {
+		return "merchant"
+	}
+	return "recipes"
 }
 
 // regionRules checks the ranges, the extra upkeep and the label of each region.
@@ -2048,7 +2069,7 @@ func warnings(c *Config) []Warning {
 		if t, ok := checked.Mul(c.World.WindowCycles, l); ok && t > c.World.WelfareWindow {
 			// window_extended: the role's window is longer than the world's
 			// because of its longest job (spec-welfare-and-wages.md 11.4).
-			add("window_extended", "roles", ro.ID, "recipes")
+			add("window_extended", "roles", ro.ID, windowField(c, lk, ro))
 			longestWindow = max(longestWindow, t)
 		}
 		gs := groups[ro.ID]
@@ -2079,10 +2100,9 @@ func warnings(c *Config) []Warning {
 	return out
 }
 
-// longestDurationAny is longestDuration without the bound: the longest Duration
-// of the declared recipes on a role's list, whatever its value, for the
-// warnings, which read a configuration that may not validate.
-func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
+// longestRecipeAny is the longest Duration of the declared recipes on a role's list,
+// whatever its value and without the merchant trip.
+func longestRecipeAny(c *Config, lk lookup, r *Role) int64 {
 	var longest int64
 	for _, id := range jobIDs(c, r) {
 		if rc := lk.recipe[id]; rc != nil {
@@ -2090,6 +2110,14 @@ func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
 		}
 	}
 	return longest
+}
+
+// longestDurationAny is longestDuration without the bound: the longest Duration
+// of the declared recipes on a role's list, whatever its value, for the
+// warnings, which read a configuration that may not validate.
+func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
+	// the same hook as longestDuration, so the warnings agree with the window
+	return max(longestRecipeAny(c, lk, r), merchantTripTicks(c, lk, r))
 }
 
 // roleWarnings raises the warnings that read a role that has households: the

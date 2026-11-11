@@ -37,6 +37,44 @@ func packMerchants(variant string) []string {
 		"overlay/transport-"+variant+".toml", "overlay/information-"+variant+".toml", overlay)
 }
 
+// packMerchantsWarm is the warm pack of the variant with the same overlays as packMerchants:
+// tradeWarm, then the transport, information and merchants overlays (plan 2-26 D702). X1 and
+// X2 run on it, since the cold pack loses its households before a gap can form.
+func packMerchantsWarm(variant string) []string {
+	overlay := "overlay/merchants.toml"
+	if variant == "three" {
+		overlay = "overlay/merchants-three.toml"
+	}
+	return append(tradeWarm(variant), "overlay/transport-"+variant+".toml", "overlay/information-"+variant+".toml", overlay)
+}
+
+// TestPacks_MerchantsWarmLoads verifies that the warm merchants pack of each variant loads,
+// validates, has the module on and a broker role with a merchant block, and raises none of
+// the module's route or share warnings.
+//
+// Requirement: FR-MER-052, FR-REF-025
+//
+// Guard: X1 and X2 read these layers; a pack that stopped validating (an overlay order that
+// the warm file breaks) would fail them with a message about the scenario, not the pack.
+func TestPacks_MerchantsWarmLoads(t *testing.T) {
+	t.Parallel()
+	for _, variant := range []string{"two", "three"} {
+		t.Run(variant, func(t *testing.T) {
+			t.Parallel()
+			cfg := loadValidPack(t, packMerchantsWarm(variant)...)
+			i := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == "broker" })
+			if cfg.Modules.Merchants == nil || i < 0 || cfg.Roles[i].Merchant == nil {
+				t.Fatalf("pack %s warm: module %+v, broker role at %d, want the module on and a broker with a merchant block", variant, cfg.Modules.Merchants, i)
+			}
+			for _, w := range cfg.Warnings() {
+				if strings.HasPrefix(w.Rule, "merchant") || w.Rule == "lane_without_consignee" || w.Rule == "cargo_never_delivered" || w.Rule == "consigns_without_cargo" {
+					t.Errorf("pack %s warm: warning %+v, want none of the module's", variant, w)
+				}
+			}
+		})
+	}
+}
+
 // TestPacks_MerchantsOverlayLoads verifies that the merchants overlay loads over the
 // variants two and three with their trade, transport and information overlays,
 // validates, puts the module and the role on, and raises none of the module's route

@@ -111,7 +111,7 @@ Out of scope, with the owner:
 | 17 | The gate of the outside is not a special case. A gate region is an ordinary region with an ordinary market that is a rumour source; an outside node is never a destination; a merchant buys imports in the book and ships them inland like any good | 11 |
 | 18 | A traveller reseeds its beliefs on arrival, the default of MIG for a migrant, which TRN 9.3 left to this spec | 12.2 |
 | 19 | A merchant has weight 1 and no recipe. It relocates when a trip ends, and it lives where it is: there is no home region | 3.6, 12.4 |
-| 20 | This spec asks WEL to count the longest trip of a merchant's modes in the derived window of 2.3.3, which answers N-099 for merchants | 12.3 |
+| 20 | WEL counts the longest trip of a merchant's modes in the derived window of 2.3.3 (FR-WEL-009), which answers N-099 for merchants; built in `contract.go` | 12.3 |
 | 21 | The merchant closes loops, and each has a register entry: the price-gap loop with its three delays (L84, L85, L93, L94, L95), the importers' take loop, the derived demand for haul units with a choke price, the escrow, and the drift of merchants between regions | 17 |
 
 ## 3. The merchant strategy
@@ -1169,8 +1169,7 @@ T = max( WelfareWindow, WindowCycles * max( longest Duration, Kmax ) )
 
 with `Kmax` the longest travel time over the configured graph, at construction, of the self-carried modes in `Params.Modes`.
 The merchant's trip is its job and `Kmax` is its duration, so the same derivation (D29) covers it. This is a change to WEL 2.3.3
-and to the warning `trip_longer_than_window` of TRN 12.2, which stays for roles with no block; it is WEL's to adopt, and until it
-does the warning is the only guard. The cost is the one WEL names for a long job: the merchant's ratio reacts slowly. **Not built by plan 2-15 (D512):** WEL has not adopted the window (decision taken, 2026-11-09: reject for now; `effectiveWindow` is unchanged and the warning is the only guard); the change is ten lines in `effectiveWindow`, guarded by the merchant block, and N-099 holds it.
+and to the warning `trip_longer_than_window` of TRN 12.2, which stays for roles with no block; WEL adopted it (`spec-welfare-and-wages.md` 2.3.3, FR-WEL-009). The cost is the one WEL names for a long job: the merchant's ratio reacts slowly. **Built (plan 2-26 D704):** `merchantTripTicks` in `contract.go`, called by `longestDuration` and `longestDurationAny` in `validate.go` (one hook each, so the window and the warnings agree); a hired-only mode is not counted, and an invalid graph gives 0 (FR-WEL-009).
 
 ### 12.4 MIG, SUB, SPN, EST and EXT
 
