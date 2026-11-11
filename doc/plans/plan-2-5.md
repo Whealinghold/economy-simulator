@@ -175,7 +175,7 @@ Observability entry (observability-and-logging.md 9). **Events:** one, `WantShor
 
 ## Risks and open items
 
-Audit (2026-11-11): the named tests `TestDemand_NoHunger`, `TestDemand_CostIndependentOfWeight`, `TestNewWorld_OneViabilitySolve` do not exist (the first two are folded into other tests, now named above; the third was never written); `TestDemand_EntryIntoCohort` was named but missing and has been added. No solve-count test exists for N-276: open, minor.
+Audit (2026-11-11): the named tests `TestDemand_NoHunger`, `TestDemand_CostIndependentOfWeight` do not exist (folded into other tests, now named above); `TestDemand_EntryIntoCohort` was named but missing and has been added.
 
 Review findings (2026-11-11), all corrected above except where noted: the status line said "not started" for merged work; the rule tags quoted are stale; `agentRoleChanged` gained a `region` argument; `wantsTerm` lives in `viability.go` with a `regions` slice and an error return. Not changed, owner's call: the pack's collapse (N-314) and the O1 to O4 spec edits remain as the notes and E-rows record them.
 
@@ -190,7 +190,7 @@ Notes read, with the verdict (a plan edits no note):
 - N-236 part 3 (AGT): apply (D301, `TestTradableItems_WantItemsJoinTheSet`). Parts 1 and 2 were applied in Stage 1.
 - N-277 (VIA, DEM, CODE): apply (D313). Propose closing at the Phase 10 gate.
 - N-314 (DEM, REF, STB, MON): leave open. D317 says what DEM does; Phase 9 adds the measurement.
-- N-276 (VIA): apply. `Validate` makes one `checkViability` call (`validate.go`) with the wants term on; `NewWorld` calls no solver (FR-VIA-021, pinned by `construct_internal_test.go`). As built there is no `TestNewWorld_OneViabilitySolve`; the plan named it and it was never written.
+- N-276 (VIA): apply. `Validate` calls `checkViability` once (`validate.go`) with the wants term on; `NewWorld` calls no solver (FR-VIA-021, pinned by `construct_internal_test.go`). The plan's "one solve" count test was dropped: it needs a counter hook in production code for no gain over that structure.
 - N-061 (VIA): apply. Phase 8 re-runs `BenchmarkValidateFive` and `BenchmarkSolveFive` with the wants phase on `one-demand`, reports against NFR-VIA-002 and NFR-CFG-001, and says what the size gate does.
 - N-311, N-093, N-071: leave open; learned: the wants term does not touch them (N-311 is plan 8's, N-093 and N-071 concern checks this plan leaves as they are).
 - N-016: apply (E9, rows for the two container lists); N-017: apply (E9); N-027: every number is a placeholder and no default is claimed stable; N-103: not applicable, this plan edits one file; N-126: the event and the `Warn` already have rows, `notBuiltEvents` entry deleted; N-128: the carries are saved once, in tag 12, and no agent record field is added; N-163: the word "treasury" is not used; N-217: D316; N-243: Lizard in Phase 10; N-244: D307; N-295: `one-demand` rows added in Phase 9; N-312: not touched.
