@@ -21,6 +21,7 @@ function excluded(src,    line, gen, main, incomment) {
 	if ((getline line < src) < 0) bad("cannot read source " src)
 	do {
 		if (incomment) { if (line !~ /\*\//) continue; sub(/^.*\*\//, "", line); incomment = 0 }
+		sub(/^[ \t]*\/\*.*\*\/[ \t]*/, "", line)
 		if (line ~ /^[ \t]*\/\*/ && line !~ /\*\//) { incomment = 1; continue }
 		if (line ~ /^\/\/ Code generated .* DO NOT EDIT\.$/) gen = 1
 		if (line ~ /^package /) { main = (line ~ /^package main([ \t]|$)/); break }

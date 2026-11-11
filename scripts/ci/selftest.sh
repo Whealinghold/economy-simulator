@@ -35,6 +35,7 @@ expect malformed-line          2 "malformed profile line 3" check malformed.out
 expect malformed-count         2 "malformed profile line 2" check badcount.out
 expect block-comment-package   0 "ok   .: 100.0%"           check blockcomment.out
 expect block-comment-then-main  0 ""          check blockcomment_main.out
+expect oneline-comment-main     0 "ok   .: 100.0%"           check oneline_main.out
 expect missing-source           2 "cannot read source"       check nosrc.out
 expect empty-profile           2 "empty profile"            check empty.out
 expect zero-byte-profile       2 "empty profile"            check zero.out

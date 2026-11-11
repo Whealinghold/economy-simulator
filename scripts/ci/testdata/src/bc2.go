@@ -1,2 +1,2 @@
 /* x
- */ package main
+ */package main
