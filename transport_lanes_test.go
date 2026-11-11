@@ -101,9 +101,9 @@ func TestTransportLanes_Deterministic(t *testing.T) {
 	}
 }
 
-// TestTransportLanes_Errors verifies the two refusals that return no partial
-// list: a haul commodity no recipe makes (ErrUnproducible) and a labour that does
-// not fit in int64 (ErrOverflow).
+// TestTransportLanes_Errors verifies the three refusals that return no partial
+// list: an invalid region graph (ErrDuplicateID), a haul commodity no recipe makes
+// (ErrUnproducible) and a labour that does not fit in int64 (ErrOverflow).
 //
 // Requirement: FR-TRN-041
 func TestTransportLanes_Errors(t *testing.T) {
@@ -113,11 +113,14 @@ func TestTransportLanes_Errors(t *testing.T) {
 	noRecipe := base
 	noRecipe.Recipes = slices.DeleteFunc(slices.Clone(base.Recipes), func(r economysim.Recipe) bool { return r.ID == "run_haul" })
 	overflow := withLoad(base, "staple", 1<<60, 0)
+	badGraph := base
+	badGraph.Regions = append(slices.Clone(base.Regions), base.Regions[0])
 	for _, tc := range []struct {
 		name string
 		cfg  economysim.Config
 		want error
 	}{
+		{"invalid region graph", badGraph, economysim.ErrDuplicateID},
 		{"no recipe makes the haul commodity", noRecipe, economysim.ErrUnproducible},
 		{"labour overflows int64", overflow, economysim.ErrOverflow},
 	} {
