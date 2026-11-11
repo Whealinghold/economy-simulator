@@ -65,7 +65,11 @@ func laneKey(a, b Lane) int {
 // an error with no partial list when the region graph is invalid, a hired mode's
 // haul commodity has no recipe that makes it (ErrUnproducible) or the arithmetic
 // overflows (ErrOverflow). Self-carried modes give no lanes in version 1.
-func (cfg Config) TransportLanes() ([]Lane, error) {
+func (cfg Config) TransportLanes() ([]Lane, error) { return cfg.transportLanes(MaxLanes) }
+
+// transportLanes is TransportLanes with the bound a parameter, so a test can reach
+// it with a short list.
+func (cfg Config) transportLanes(limit int) ([]Lane, error) {
 	if cfg.Modules.Transport == nil {
 		return nil, nil
 	}
@@ -80,7 +84,7 @@ func (cfg Config) TransportLanes() ([]Lane, error) {
 		if !md.hired() {
 			continue
 		}
-		if out, err = appendModeLanes(out, &c, g, md); err != nil {
+		if out, err = appendModeLanes(out, &c, g, md, limit); err != nil {
 			return nil, err
 		}
 	}
@@ -89,7 +93,7 @@ func (cfg Config) TransportLanes() ([]Lane, error) {
 }
 
 // appendModeLanes adds the lanes of one hired mode.
-func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode) ([]Lane, error) {
+func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode, limit int) ([]Lane, error) {
 	hr := cheapest(c, md.Haul)
 	if !hr.ok {
 		return nil, fmt.Errorf("economysim: mode %q: no recipe makes the haul commodity %q: %w", md.ID, md.Haul, ErrUnproducible)
@@ -100,6 +104,9 @@ func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode) ([]Lane, error) {
 			if !ok {
 				continue
 			}
+			if err := tooManyLanes(len(out)+len(c.Commodities), limit); err != nil { // before the pair's lanes are allocated
+				return nil, err
+			}
 			loss := routeLossBP(c, RegionID(from), RegionID(to), md)
 			for ci := range c.Commodities {
 				labour, lok := transit.Labour(c.Commodities[ci].Mass, c.Commodities[ci].Bulk, md.UnitMass, md.UnitBulk, md.HaulSpan, d, hr.duration, hr.output)
@@ -108,17 +115,14 @@ func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode) ([]Lane, error) {
 				}
 				out = append(out, Lane{From: c.Regions[from].ID, To: c.Regions[to].ID, Commodity: c.Commodities[ci].ID, Labour: labour, LossBP: loss})
 			}
-			if err := tooManyLanes(len(out), MaxLanes); err != nil {
-				return nil, err
-			}
 		}
 	}
 	return out, nil
 }
 
 // tooManyLanes refuses a list of n lanes above the limit (counted before the final
-// dedup, as a memory guard), a parameter so a test can
-// reach the bound with a short list.
+// dedup, as a memory guard), a parameter so a test can reach the bound with a
+// short list.
 func tooManyLanes(n, limit int) error {
 	if n <= limit {
 		return nil

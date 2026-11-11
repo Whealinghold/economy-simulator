@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"reflect"
 	"slices"
@@ -384,5 +385,28 @@ func TestPacks_LanesOracleWants(t *testing.T) {
 		t.Errorf("complete zero-cost lanes on five with wants: surplus %d, with wants %d; WithFreeTrade: %d and %d (prices equal %v, wages equal %v)",
 			lanes.Programmes[0].SurplusBP, lanes.Report.SurplusWantsBP, free.Programmes[0].SurplusBP, free.Report.SurplusWantsBP,
 			reflect.DeepEqual(free.Table.Prices, lanes.Table.Prices), reflect.DeepEqual(free.Table.Wages, lanes.Table.Wages))
+	}
+}
+
+// TestSolve_LaneExtremeValues verifies that lanes at the edge of int64 labour and
+// of the loss range solve or fail with a sentinel, never panic or wrap: the labour
+// of 2^63-1 household-ticks per 10 000 units and the largest loss, 9 999.
+//
+// Requirement: NFR-VIA-004, FR-VIA-063
+func TestSolve_LaneExtremeValues(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadPack(t, packLayers["two"]...)
+	for _, ln := range []economysim.Lane{
+		{From: "north", To: "south", Commodity: "staple", Labour: math.MaxInt64},
+		{From: "north", To: "south", Commodity: "staple", Labour: math.MaxInt64, LossBP: 9999},
+		{From: "south", To: "north", Commodity: "staple", Labour: 1 << 62, LossBP: 9999},
+	} {
+		if _, err := economysim.SolveSteadyState(context.Background(), cfg, economysim.WithLanes([]economysim.Lane{ln})); err != nil &&
+			!errors.Is(err, economysim.ErrOverflow) && !errors.Is(err, economysim.ErrSolveLimit) {
+			t.Errorf("SolveSteadyState(two, lane %+v) error = %v, want nil, ErrOverflow or ErrSolveLimit", ln, err)
+		}
 	}
 }

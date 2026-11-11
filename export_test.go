@@ -446,3 +446,6 @@ func WantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) { return w
 func LaneWantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) {
 	return laneWantsTerm(c, regions)
 }
+
+// TransportLanesLimit is TransportLanes with the bound MaxLanes lowered to limit.
+func TransportLanesLimit(cfg Config, limit int) ([]Lane, error) { return cfg.transportLanes(limit) }

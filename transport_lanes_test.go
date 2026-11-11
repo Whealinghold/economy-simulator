@@ -184,3 +184,23 @@ func TestTransportLanes_PackTwoWorld(t *testing.T) {
 		t.Errorf("Run(30) = %d, %v, want 30, nil (seed 7)", done, err)
 	}
 }
+
+// TestTransportLanes_Limit verifies that the bound MaxLanes is checked before the
+// lanes of a pair are built: `two` gives 2 ordered pairs and so 2*commodities lanes
+// for the hired mode; a limit at that count passes, and one lane below it is
+// ErrOutOfBounds at modules.transport.lanes with no partial list.
+//
+// Requirement: FR-TRN-041
+func TestTransportLanes_Limit(t *testing.T) {
+	t.Parallel()
+	cfg := loadPack(t, transportTwo...)
+	n := 2 * len(cfg.Commodities)
+	if got, err := economysim.TransportLanesLimit(cfg, n); err != nil || len(got) != n {
+		t.Errorf("TransportLanesLimit(limit %d) = %d lanes, %v, want %d and nil", n, len(got), err, n)
+	}
+	got, err := economysim.TransportLanesLimit(cfg, n-1)
+	var ve *economysim.ValidationError
+	if !errors.Is(err, economysim.ErrOutOfBounds) || !errors.As(err, &ve) || ve.Path[len(ve.Path)-1] != "lanes" || got != nil {
+		t.Errorf("TransportLanesLimit(limit %d) = %v, %v, want nil list and ErrOutOfBounds at modules.transport.lanes", n-1, got, err)
+	}
+}

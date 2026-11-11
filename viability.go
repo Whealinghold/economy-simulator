@@ -378,7 +378,7 @@ type Lane struct {
 // MaxLanes lanes, and it cannot be combined with WithFreeTrade (ErrOptionContext);
 // a lane that names an unknown region or commodity is refused by SolveSteadyState.
 func WithLanes(lanes []Lane) SolveOption {
-	list := slices.Clone(lanes)
+	list := copyLanes(lanes, MaxLanes)
 	return func(o *solveOptions) error {
 		if err := checkLaneList(list, MaxLanes); err != nil {
 			return err

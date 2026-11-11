@@ -19,6 +19,16 @@ func laneErr(i int, rule error, value, bound string) error {
 	return &ValidationError{Path: []string{"solve_options", fmt.Sprintf("lanes[%d]", i)}, Rule: rule, Value: value, Bound: bound}
 }
 
+// copyLanes returns a copy of lanes, or lanes itself when it is over the limit:
+// checkLaneList refuses it, so the bound is enforced before a copy that size is
+// allocated.
+func copyLanes(lanes []Lane, limit int) []Lane {
+	if len(lanes) > limit {
+		return lanes
+	}
+	return slices.Clone(lanes)
+}
+
 // checkLaneList applies the rules that need no configuration (FR-VIA-063). limit
 // is MaxLanes, a parameter so a test can reach the bound with a short list.
 func checkLaneList(lanes []Lane, limit int) error {

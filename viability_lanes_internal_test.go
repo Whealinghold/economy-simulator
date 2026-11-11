@@ -51,3 +51,22 @@ func TestLaneGroups(t *testing.T) {
 func equalGroups(a, b [][]RegionID) bool {
 	return slices.EqualFunc(a, b, func(x, y []RegionID) bool { return slices.Equal(x, y) })
 }
+
+// TestCopyLanes verifies that a list within the limit is copied (a later change
+// to the caller's list does not reach it) and that one over the limit is not
+// copied, so the bound is enforced before a copy of that size is allocated.
+//
+// Requirement: FR-VIA-063
+func TestCopyLanes(t *testing.T) {
+	t.Parallel()
+	in := []Lane{{From: "a", To: "b", Commodity: "c"}, {From: "b", To: "a", Commodity: "c"}}
+	if got := copyLanes(in, 2); &got[0] == &in[0] || !slices.Equal(got, in) {
+		t.Errorf("copyLanes(2 lanes, limit 2) shares memory or differs: %v", got)
+	}
+	if got := copyLanes(in, 1); &got[0] != &in[0] {
+		t.Errorf("copyLanes(2 lanes, limit 1) copied the list, want it left as is for checkLaneList to refuse")
+	}
+	if got := copyLanes(nil, 0); len(got) != 0 {
+		t.Errorf("copyLanes(nil, 0) = %v, want empty", got)
+	}
+}
