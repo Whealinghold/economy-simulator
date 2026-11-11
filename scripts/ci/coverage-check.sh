@@ -56,7 +56,7 @@ END {
 	for (p in total) {
 		rel = (p == base) ? "." : substr(p, length(base) + 2)
 		if (!(rel in min)) { printf "FAIL %s: no threshold row for this package\n", rel; fails++; continue }
-		if (total[p] == 0) continue
+		if (total[p] == 0) { printf "skip %s: no statements to cover\n", rel; continue }
 		c = covered[p] + 0
 		ok = (c * 100 >= min[rel] * total[p])
 		pc = int(c * 1000 / total[p])

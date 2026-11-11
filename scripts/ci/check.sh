@@ -6,6 +6,7 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 ensure_staticcheck || exit 1
+"$CI_DIR/selftest.sh" || exit 1
 
 gofmt_clean() {
 	local out

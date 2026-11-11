@@ -14,9 +14,10 @@ on:
 permissions:
   contents: read
 
-# Per ref; only PR runs are cancelled by a newer push, never main or the nightly.
+# Per ref; only PR runs are cancelled by a newer push, never main or the nightly. The nightly and
+# the label event get their own groups so neither cancels, nor is dropped for, an ordinary run.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || github.event.action == 'labeled' && 'label' || 'run' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -74,7 +75,7 @@ jobs:
             otelobserver/coverage.out
           if-no-files-found: warn
       # Only code of this repository sees the token: never a fork's pull request (plan-2-ci D7).
-      - run: scripts/ci/codacy-upload.sh
+      - run: scripts/ci/codacy-upload.sh coverage.out otelobserver/coverage.out
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# codacy-upload.sh [profile]   (default: coverage.out in the repository root)
+# codacy-upload.sh [profile...]   (default: coverage.out in the repository root)
 #
 # Uploads a Go coverage profile to Codacy with the coverage reporter, pinned below. The token is
 # read from the environment (CODACY_PROJECT_TOKEN) and never put on a command line. Optional:
@@ -20,8 +20,11 @@ if [ -z "${CODACY_PROJECT_TOKEN:-}" ]; then
 	echo "codacy-upload: CODACY_PROJECT_TOKEN is empty; refusing to upload" >&2
 	exit 1
 fi
-profile=${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/coverage.out}
-[ -s "$profile" ] || { echo "codacy-upload: $profile is missing or empty" >&2; exit 1; }
+[ "$#" -gt 0 ] || set -- "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/coverage.out"
+for profile in "$@"; do
+	[ -s "$profile" ] || { echo "codacy-upload: $profile is missing or empty" >&2; exit 1; }
+done
+profiles=$(IFS=,; echo "$*")
 [ "$(uname -sm)" = "Linux x86_64" ] || { echo "codacy-upload: only linux amd64 is pinned, this is $(uname -sm)" >&2; exit 1; }
 
 # retry <command...> runs a command up to three times, ten seconds apart.
@@ -46,6 +49,6 @@ echo "$REPORTER_SHA512  $reporter" | sha512sum --check --quiet - || {
 }
 chmod +x "$reporter"
 
-args=(report --force-coverage-parser go -r "$profile")
+args=(report --force-coverage-parser go -r "$profiles")
 [ -z "${CODACY_COMMIT_UUID:-}" ] || args+=(--commit-uuid "$CODACY_COMMIT_UUID")
 retry "$reporter" "${args[@]}"
