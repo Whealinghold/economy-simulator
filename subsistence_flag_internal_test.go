@@ -280,6 +280,28 @@ func TestFlag_SkipsOffStage(t *testing.T) {
 	}
 }
 
+// TestFlag_UpkeepOnlyThroughExtraUpkeepLeftOut verifies the region-upkeep filter
+// of the flag step: a region whose extra upkeep merges in a good the role does
+// not otherwise eat adds a row to upkeepIn there and nowhere else, and the
+// good enters the terms of the flag step only in that region (5.3.2).
+//
+// Requirement: FR-SUB-010
+func TestFlag_UpkeepOnlyThroughExtraUpkeepLeftOut(t *testing.T) {
+	t.Parallel()
+	w := newForage(t, 1, func(c *Config) {
+		c.Commodities = append(c.Commodities, Commodity{ID: "salt", ReferencePrice: 1_000, Raw: true})
+		r := DefaultRegion()
+		r.ID, r.ReferenceBasket = "away", 3_000
+		r.ExtraUpkeep = []Item{{Commodity: "salt", Quantity: 1}}
+		c.Regions = append(c.Regions, r)
+	})
+	row := w.roles.row(w.agents[1].role)
+	// Regions sort by ID, so "away" is region 0 and the default region is 1.
+	if away, home := len(row.upkeepIn(0)), len(row.upkeepIn(1)); home != 1 || away != 2 {
+		t.Errorf("upkeep rows (home, away) = %d, %d, want 1 and 2", home, away)
+	}
+}
+
 // TestFlag_CoveredSetIsUpkeepAndOutputs verifies that the covered set of a
 // role is the intersection of its upkeep and the outputs of its own-use list: an
 // own-use recipe of a commodity the role does not eat covers nothing.
@@ -335,7 +357,7 @@ func TestDrops_Relocation(t *testing.T) {
 	t.Parallel()
 	w := newForage(t, 1, func(c *Config) {
 		r := DefaultRegion()
-		r.ID, r.ReferenceBasket = "away", 2_000
+		r.ID, r.ReferenceBasket = "away", 3_000
 		c.Regions = append(c.Regions, r)
 	})
 	w.sub.grow(len(w.agents))
