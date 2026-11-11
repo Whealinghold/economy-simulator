@@ -241,7 +241,6 @@ type screenPoint struct {
 type screenOutcome struct {
 	Points  []screenPoint
 	Names   economysim.Names
-	Recipes []string
 	Watch   *screenWatch
 	Samples map[int64]economysim.Snapshot // every tick, only with x4
 }
@@ -314,9 +313,7 @@ func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, se
 		spec.Snap = func(int64) bool { return true }
 		spec.OnSnap = func(tick int64, s economysim.Snapshot) { out.Samples[tick] = s }
 	}
-	run := runScenario(t, cfg, spec)
-	out.Names = run.Names
-	out.Recipes = run.Names.Recipes
+	runScenario(t, cfg, spec)
 	return out
 }
 
@@ -435,7 +432,7 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 			}
 			c := o.Watch.inc.cells[[2]int64{window, int64(role)}]
 			t.Logf("seed %d window %d role %s: sales %d and recipe inputs %d per household-tick, margin %d bp of the upkeep %d, household-ticks %d, unfed %d, executions %s",
-				seed, window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep, c.HouseholdTicks, c.Unfed, screenExecutions(c.Executions, o.Recipes))
+				seed, window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep, c.HouseholdTicks, c.Unfed, screenExecutions(c.Executions, o.Names.Recipes))
 		}
 	}
 	if x4 {
