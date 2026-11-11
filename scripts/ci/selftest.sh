@@ -48,6 +48,13 @@ for d in "$root"/internal/*/; do
 	expect "threshold-row-$(basename "$d")" 0 "internal/$(basename "$d") " grep -F "internal/$(basename "$d") " "$here/coverage-thresholds.txt"
 done
 
+# Every package of the gated modules has a threshold row, so gate F cannot fail on it afterwards.
+if [ -r "$here/common.sh" ]; then
+	# shellcheck source=common.sh
+	. "$here/common.sh"
+	for m in . otelobserver; do expect "threshold-rows-of-$m" 0 "" gated_rows_present "$m"; done
+fi
+
 # The quick pattern of the arm64 job equals the one in doc/rules/testing.md 9.1.
 if [ -r "$here/common.sh" ]; then
 	# shellcheck source=common.sh
