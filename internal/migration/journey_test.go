@@ -314,3 +314,44 @@ func TestClears_CrossMultiplication(t *testing.T) {
 		}
 	}
 }
+
+// TestDecision_WorkedExampleB verifies the two decisions of spec-migration.md 15.2
+// (horizon 6, gain 1 500, width 3 000, home figure 9 000). Technician 2203 comes down
+// (k 1): V_eff = 15 000 * 5 / 6 = 12 500 against a margin of 3 086, which needs
+// 9 000 * 13 086 / 10 000 = 11 777.4: it goes. Technician 2204 goes up (k 4 and 5):
+// V_eff = 21 000 * 2 / 6 = 7 000 and 30 000 * 1 / 6 = 5 000 against a margin of
+// 1 940, which needs 10 746: both fail the gain test, although the estimates are
+// more than twice its own figure, because the journey spends the horizon.
+//
+// Requirement: FR-MIG-016, FR-MIG-017
+func TestDecision_WorkedExampleB(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		id, vhat   int64
+		k          int64
+		wantVEff   int64
+		wantMargin int64
+		wantGo     bool
+	}{
+		{"2203 comes down", 2203, 15_000, 1, 12_500, 3_086, true},
+		{"2204 goes up to the orbital", 2204, 21_000, 4, 7_000, 1_940, false},
+		{"2204 goes up to the belt", 2204, 30_000, 5, 5_000, 1_940, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			veff, ok := migration.Discount(tt.vhat, tt.k, 6)
+			if !ok || veff != tt.wantVEff {
+				t.Fatalf("Discount(%d, %d, 6) = %d, %v, want %d, true", tt.vhat, tt.k, veff, ok, tt.wantVEff)
+			}
+			g, ok := migration.Margin(tt.id, 1_500, 3_000)
+			if !ok || g != tt.wantMargin {
+				t.Fatalf("Margin(%d, 1500, 3000) = %d, %v, want %d, true", tt.id, g, ok, tt.wantMargin)
+			}
+			if got, ok := migration.Clears(veff, 9_000, g); !ok || got != tt.wantGo {
+				t.Errorf("Clears(%d, 9000, %d) = %v, %v, want %v, true", veff, g, got, ok, tt.wantGo)
+			}
+		})
+	}
+}
