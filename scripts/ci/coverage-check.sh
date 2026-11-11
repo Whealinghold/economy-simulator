@@ -18,10 +18,11 @@ function bad(msg) { print "coverage-check: " msg > "/dev/stderr"; broken = 1; ex
 function excluded(src,    line, gen, main) {
 	if (src in skip) return skip[src]
 	gen = 0; main = 0
-	while ((getline line < src) > 0) {
+	if ((getline line < src) < 0) bad("cannot read source " src)
+	do {
 		if (line ~ /^\/\/ Code generated .* DO NOT EDIT\.$/) gen = 1
 		if (line ~ /^package /) { main = (line ~ /^package main([ \t]|$)/); break }
-	}
+	} while ((getline line < src) > 0)
 	close(src)
 	return skip[src] = (gen || main)
 }
@@ -43,7 +44,7 @@ FNR == 1 {
 	    !match($1, /:[0-9]+\.[0-9]+,[0-9]+\.[0-9]+$/))
 		bad("malformed profile line " FNR ": " $0)
 	file = substr($1, 1, RSTART - 1)
-	if (file !~ ("^" base "/")) bad("profile line " FNR " is outside " base ": " $0)
+	if (index(file, base "/") != 1) bad("profile line " FNR " is outside " base ": " $0)
 	blocks++
 	if (excluded(srcroot "/" substr(file, length(base) + 2))) next
 	if (!($1 in stmts)) { stmts[$1] = $2; sub(/\/[^\/]*$/, "", file); pkg[$1] = file }

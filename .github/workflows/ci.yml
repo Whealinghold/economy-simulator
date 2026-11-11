@@ -15,9 +15,10 @@ permissions:
   contents: read
 
 # Per ref; only PR runs are cancelled by a newer push, never main or the nightly. The nightly gets
-# its own group. `full` has its own group below, so a label event never cancels check or arm64.
+# its own group, and a label event is unique so a pending one is never replaced. `full` has its
+# own group below.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || github.event.action == 'labeled' && github.run_id || 'run' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'labeled' }}
 
 env:

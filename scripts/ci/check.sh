@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Job `check`: per module gofmt, vet, staticcheck, short race tests, gate R and go mod tidy.
-# Runs every module and exits non-zero naming the modules that failed.
+# Runs the fast stage on every module, then gate R only if all passed (fail fast, testing.md 10.5);
+# exits non-zero naming the modules that failed.
 set -uo pipefail
 # shellcheck source=common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"

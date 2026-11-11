@@ -15,14 +15,15 @@ mods=${FULL_MODULES:-$(modules)} || exit 1
 # gated_rows_present fails before the hours-long run when a package of a gated module has no row
 # in the thresholds file, which coverage-check.sh would only report afterwards.
 gated_rows_present() {
-	local m=$1 base ip name nfiles rel rc=0
+	local m=$1 base ip name nfiles rel rc=0 pkgs
 	base=$(awk '$1 == "base" { print $2 }' "$CI_DIR/coverage-thresholds.txt")
+	pkgs=$(cd "$REPO_ROOT/$m" && go list -f '{{.ImportPath}} {{.Name}} {{len .GoFiles}}' ./...) || { echo "FAIL: [$m] go list failed" >&2; return 1; }
 	while read -r ip name nfiles; do
 		[ "$name" != main ] && [ "$nfiles" -gt 0 ] || continue
 		rel=${ip#"$base"}
 		rel=${rel#/}
-		grep -q "^${rel:-.} " "$CI_DIR/coverage-thresholds.txt" || { echo "FAIL: [$m] package ${rel:-.} has no row in coverage-thresholds.txt" >&2; rc=1; }
-	done < <(cd "$REPO_ROOT/$m" && go list -f '{{.ImportPath}} {{.Name}} {{len .GoFiles}}' ./...)
+		awk -v r="${rel:-.}" '$1 == r { f = 1 } END { exit !f }' "$CI_DIR/coverage-thresholds.txt" || { echo "FAIL: [$m] package ${rel:-.} has no row in coverage-thresholds.txt" >&2; rc=1; }
+	done <<<"$pkgs"
 	return "$rc"
 }
 
