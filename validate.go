@@ -1217,9 +1217,18 @@ func (v *validator) roleRules() {
 		}
 
 		if t, ok := effectiveWindow(&v.c, v.lk, ro); ok && t > MaxWelfareWindow {
-			v.rep.add(ErrOutOfBounds, path(base, "recipes"), i64(t), i64(MaxWelfareWindow))
+			v.rep.add(ErrOutOfBounds, path(base, windowField(&v.c, ro)), i64(t), i64(MaxWelfareWindow))
 		}
 	}
+}
+
+// windowField names the field that sets a role's window: the trip, not a recipe, for a
+// merchant with no recipes.
+func windowField(c *Config, r *Role) string {
+	if r.Merchant != nil && len(jobIDs(c, r)) == 0 {
+		return "merchant"
+	}
+	return "recipes"
 }
 
 // regionRules checks the ranges, the extra upkeep and the label of each region.
@@ -2091,6 +2100,9 @@ func longestDurationAny(c *Config, lk lookup, r *Role) int64 {
 		if rc := lk.recipe[id]; rc != nil {
 			longest = max(longest, rc.Duration)
 		}
+	}
+	if r.Merchant != nil { // the same hook as longestDuration, so the warnings agree with the window
+		longest = max(longest, merchantTripTicks(c, r))
 	}
 	return longest
 }

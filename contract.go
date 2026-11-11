@@ -63,7 +63,7 @@ func merchantTripTicks(c *Config, r *Role) int64 {
 		if !md.carriedBy(r.Merchant) {
 			continue
 		}
-		if _, k, any := tripExtremes(g, md.Speed); any {
+		if _, k, ok := tripExtremes(g, md.Speed); ok {
 			longest = max(longest, k)
 		}
 	}
