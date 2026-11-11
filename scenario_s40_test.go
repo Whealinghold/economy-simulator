@@ -25,7 +25,7 @@ const s40Ticks = 400
 // count and the same births and deaths as the run with Renewal 0, because the
 // module reads an effective renewal of 0 (FR-POP-020).
 //
-// Requirement: FR-POP-020, FR-POP-028
+// Requirement: FR-POP-020, FR-POP-028, FR-REF-023
 //
 // Guard: a Renewal that still fed the spawner while the module was on would move
 // the second run away from the first.

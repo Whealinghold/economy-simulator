@@ -22,7 +22,7 @@ const s38Ticks = 300
 // value, the end mean ratio, the births and deaths and the relief-fed pool are
 // reported for the F3 regime; the bands are STY's.
 //
-// Requirement: FR-POP-022, FR-POP-033, FR-POP-037
+// Requirement: FR-POP-022, FR-POP-033, FR-POP-037, FR-REF-023
 //
 // Guard: a ladder that emptied the region under the shock, or a death that left
 // the books unbalanced, fails here.

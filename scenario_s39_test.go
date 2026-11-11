@@ -24,7 +24,7 @@ const s39Ticks = 400
 // reported for each stake; the stop of the population against M / stake is read
 // from them.
 //
-// Requirement: FR-POP-017, FR-POP-022
+// Requirement: FR-POP-017, FR-POP-022, FR-REF-023
 //
 // Guard: a birth funded from nothing breaks the audit; a stake of 0 that still
 // asked the pool leaves births unfunded.
