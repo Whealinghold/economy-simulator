@@ -351,6 +351,9 @@ func screenCensusLog(t *testing.T, cold []string) {
 	if err != nil {
 		t.Fatalf("SolveSteadyState(%q) error = %v, want nil", cold, err)
 	}
+	for _, rs := range st.Report.RegionSurplusBP {
+		t.Logf("census surplus %s: autarky %d bp (the labour share to subsist is 10000 * 10000 / this)", rs.Region, rs.AutarkyBP)
+	}
 	for _, r := range st.Report.Census {
 		if r.Role == "" {
 			continue

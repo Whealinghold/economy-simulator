@@ -163,3 +163,40 @@ Harness reproduces D700: one 553/168/80/0, five 4344/1152/0/0, all 2262/90/0/0 (
 Mechanism (evidence): the solver's own census of the committed `one-demand` pack gives static income of grower 5 485 bp of the upkeep, comfort_maker 7 191, treat_maker 6 993, against cook 16 191, forester 16 027, maker 16 010 (gate of FR-REF-041: lowest at least 8 000, highest at most 1.5 times the lowest). Dynamically growers net about -75% of the upkeep per tick, burn their warm money (78 810) by tick 70 to 250 (insolvent exits 75/105/35 households in windows 0/1/2, plus "distress" role changes), and cooks end with 95% of the money. Cutting grower households raises their static income (150: 7 083; 120: 8 351; 90: 10 464) but lowers comfort_maker and treat_maker further, so the fix is a multi-role census and price rebalance, not one knob.
 
 Branch (item 4): the ladder (D704), starting with the static income gate as the screen, then the dynamic screen. No engine rule is indicated yet (H4 shows re-seeding alone fails). Commands: `-screen.pack=one-demand -screen.census` and `-screen.layers=<scratch.toml>`.
+
+## Audit: Phase 2 trial ladder (2026-11-11, `one-demand`, search seeds 101 to 104, no overlay accepted)
+
+Screen: static income first (`-screen.census`, now also the surplus of the region), then dynamic (`-screen.at=100,235,300,600,1095`). Score: households at tick 235 (x4 needs at least 90% of the start), the last tick any role is extinct. Baseline: 331 to 384 of 600 at tick 235, every role extinct by tick 600. Trial layers and raw output: `trials-b/` next to the worker report.
+
+| # | Change (layer) | Static (census) | Dynamic (235 / first role gone / total extinction) | Verdict |
+|---|----------------|-----------------|---------------------------------------------------|---------|
+| s1 to s5 | probes: yield all seasons; staple reference 150 (invalid: warm price); staple per job 3 000 / 1 100; comfort and treat makers 14 and 18 | grower 5 485 to 7 962 bp at 1 100; others fall | not run | screens only |
+| 1 | b3: staple per job 1 100, growers 200, comfort 14, treat 18 | all at least 8 150 bp, spread 1.69 | 331 to 384 / 65 / extinct 590 | worse |
+| 2 | c1: job of 10 ticks, 300 staple, yield all seasons | grower 5 044 | 305 to 357 / 63 / extinct 600 | no change |
+| 3 | d1: yield all seasons, census set to the balanced figures | all 10 900 to 11 050 bp (treat_maker 7 737) | 280 / 66 / total 590 to 630 | better (later) |
+| 4 | e1: d1 with a 10-tick job | all 10 900 to 11 030 | 208 to 313 / 66 / total 420 | worse |
+| 5 | d2: d1 plus grower start staple 1 400 | as d1 | 295 to 311 / 80 / total 600 | no change |
+| 6 | f1: d2 plus `remove_privation` 40, `change_privation` 12 | as d1 | 583 to 596 / 181 / total 780 | better (households kept to tick 235) |
+| 7 | g1: f1 plus comfort period 2, treat period 1, census rebalanced (75/105/65/75/67/43/78/92), grower stock 2 000 | surplus 22 803 unchanged | 516 to 578 / 274 / total 560 to 780 | worse than f1 |
+| 8 | h0: upkeep doubled (basket 1 998) | surplus 11 401 | 64 to 118 / 72 / total 500 | worse |
+| 9 | h1: h0 with warm wage doubled | as h0 | 52 to 86 / 65 / total 450 | worse |
+
+Rule hit at trial 9: three consecutive non-improving (7, 8, 9). The ladder stops; no overlay is written, no pack file moves.
+
+Post-stop probes (evidence for the engine-rule proposal, not trials; same harness, same seeds):
+
+| Probe | Change | Result |
+|-------|--------|--------|
+| P1 | f1 plus Modules.Estates, `pool_release` 1 000, `estate_markdown` 500 | worse: 444 to 481 at 235, total 640 |
+| P2 | f1 plus levy on cooks and level top-ups to the seven other roles | growers extinct from tick 132 (cash given, role still leaves), total 520 to 600 |
+| P3 | f1 plus `estate_markdown` 0 (the estate does not undercut) | seeds 101 to 103 keep households to tick 1 095 at 172 to 280 of 600 (29 to 47%), seed 102 with no extinct role; seed 104 total 1 075. Not a pass of x4 (90%). |
+| P4 | P3 plus the P2 flows | worse: growers extinct from tick 138, total 600 |
+| P5 | f1 plus 40 immortal growers when the role is extinct (H4) | the rest still dies, 40 left at 1 095 |
+
+Evidence (seed 101 unless stated):
+1. Static surplus of the pack is 22 803 bp (labour share to subsist 4 386 bp): the chain needs 44% of the households' time. Balancing the census (d1) equalises the static income (about 11 000 bp) and moves the grower collapse from tick 190 to 590, no further.
+2. Realised incomes do not equalise: window 0 margins of the upkeep, cook 11 452 to 23 071 bp, grower 5 506, forester 5 742, digger 4 577, maker 1 107; cooks hold 56% of the money at tick 100 and 90% at tick 235. Foresters sell about 40% of their capacity: demand is cash limited.
+3. The staple trades at 37 to 55 against a reference of 96 in every trial, while the estate holds 20 000 to 85 000 units of it (the stock of the households that exited) and agents hold 600 to 8 000.
+4. `estate_markdown` 0 is the only data knob that kept any population to tick 1 095 (P3); more cash (P2, P4) kills growers earlier, because the role review moves households out of the lowest earner and SPN-A8 makes an empty role final.
+
+Branch: the data and knob ladder is exhausted (D708 stop rule). The engine-rule proposal is in the worker report (Stage 2 supervisor ruling): R2.
