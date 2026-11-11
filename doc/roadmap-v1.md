@@ -245,19 +245,19 @@ all-on from it).
 | `subsistence.go` and `internal/ownuse` | SUB | [2-10](plans/plan-2-10.md) | merged |
 | `population.go` and `internal/population` | POP | [2-11](plans/plan-2-11.md) | in progress |
 | `transport.go` and `internal/transit` | TRN, CAR | [2-12](plans/plan-2-12.md) | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
-| `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | plan written |
-| `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | plan written |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | plan written |
-| `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | plan written |
-| `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | plan written |
-| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | [2-18](plans/plan-2-18.md) | plan written |
-| `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | plan written |
-| `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | plan written |
-| `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | plan written |
-| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | plan written |
+| `information.go` and `internal/rumour` | INF | [2-13](plans/plan-2-13.md) | built (stage-2-13; audited 2026-11-11) |
+| `migration.go` and `internal/migration` | MIG | [2-14](plans/plan-2-14.md) | built (Phases 1 to 8; audited 2026-11-11) |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | [2-15](plans/plan-2-15.md) | built except the merchant reruns, X1 and X2 dynamic, `TestDeterminism_Merchants` and the `invariantTable` row (audited 2026-11-11) |
+| `external.go` and `internal/outside` | EXT | [2-16](plans/plan-2-16.md) | built (audited 2026-11-11; gates at the exit gate) |
+| `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | [2-17](plans/plan-2-17.md) | merged (PR #42, 2026-11-10) |
+| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | [2-18](plans/plan-2-18.md) | built (audited 2026-11-11) |
+| `internal/verdict` and the `stylised_long` build tag | STY | [2-19](plans/plan-2-19.md) | built (Phases 1 to 9, 2026-11-10; audited 2026-11-11); no band or threshold set, the first setting run waits on O1 and plan 8 |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | [2-20](plans/plan-2-20.md) | merged (stage-2-20; audited 2026-11-11) |
+| `internal/calibration` and `testdata/calibration/` | CLB | [2-21](plans/plan-2-21.md) | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | [2-22](plans/plan-2-22.md) | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
 | `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | [2-23](plans/plan-2-23.md) | done on branch stage-2-23 (commit recorded at merge) |
 | `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23, to be written in a later plan) | testing.md 9.1; architecture.md 7.4; N-019 | none yet | planned |
-| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | plan written |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | [2-24](plans/plan-2-24.md) | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
 its overlay under `testdata/chains/overlay/` (the demand module's is `testdata/chains/demand.toml`, where `spec-reference-chain.md` 4.4.6 puts it), its module-alone golden under
