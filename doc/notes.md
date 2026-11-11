@@ -54,7 +54,7 @@ PR description.
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351 |
+| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-343, N-347, N-351, N-352 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327 |
@@ -67,7 +67,7 @@ PR description.
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350 |
 | INF | N-110, N-112, N-156, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
-| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290 |
+| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-352 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
@@ -2185,6 +2185,12 @@ PR description.
 - **Raised:** 2026-11-11, plan 2-23.
 - **Note:** A leaf package that is not a module (`denomination/`) touches no catalogue file; its guards are the import guard and `guardedFiles`. A later optional package outside the simulation follows the same form.
 
+### N-352 A consumer bounds its own AddAgent calls
+
+- **Areas:** INT, CODE
+- **Raised:** 2026-11-11, plan 2-26.
+- **Note:** `AddAgent` has no cap: a consumer that adds external agents bounds its own calls. A future `Integration.MaxExternal` key (default off, hashed with the integration block) would be the seam if a cap becomes a requirement; nothing builds it now.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2197,4 +2203,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 518a19aad35049583281e7f3
+NOTES-TAG: 3bfd023127b33d585eff5df6
