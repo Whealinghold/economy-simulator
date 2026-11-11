@@ -1723,7 +1723,7 @@ spec is written):
 4. **More than one recipe per role.** The solver lets households pick any recipe of
    the region; AGT's rule picks by expected net value. If the two disagree the warm
    start's jobs are not what the strategy would start. Check once AGT exists.
-5. **Lanes.** Answered for transport: `transport.Lanes` supplies them (`spec-transport.md` 9.4; labour only, with the expected loss of `spec-risk.md` 8.3: 0 with the risk module off). Who uses them for a merchant's decision belongs to MER.
+5. **Lanes.** Answered for transport: `Config.TransportLanes` supplies them (`spec-transport.md` 9.4; labour only, with the expected loss of `spec-risk.md` 8.3: 0 with the risk module off). Who uses them for a merchant's decision belongs to MER.
 6. **A default pool.** Whether the warm start seeds the estate pool by default
    (8.3.3) so the first replacements have money.
 7. **Exact arithmetic in Go.** `math/big` is standard library and exact; whether its

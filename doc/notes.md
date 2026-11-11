@@ -561,7 +561,7 @@ PR description.
 - **Note:** S13 (the faucet overlay), the dynamic parts of X1 and X2 (the trade overlay) and the coarse-tick leg of S12 wait for these specs.
 - **Update (2026-10-10, REG):** REG supplies the edge format and a proposal for the edge part of `overlay/trade.toml` (`spec-regions.md` 12.4), and two scenarios, S28 and S29 (in the register S28 and S29). X1 and X2 (dynamic) still wait for MER and INF.
 - **Update (2026-10-10, MON):** S13 is defined: `overlay/faucet.toml` (and `overlay/faucet-sunk.toml`) are in `spec-money-supply.md` 17.6, and the pass is exact for the accounting (boundary balance = `-Total`, `M = M_init + issued`) and report-only for the price drift until STY sets a band. Still open: the dynamic parts of X1 and X2, the coarse-tick leg of S12.
-- **Update (2026-10-10, TRN):** the transport mechanism for the dynamic parts of X1 and X2 exists (modes, the shipment, `Inbound` and `Routes`: `spec-transport.md` 3 to 9). An `overlay/trade.toml` needs a `modules.transport.mode` table (respelled 2026-10-12, N-102), a hired mode's haul commodity and a carrier recipe (17.4 is a model), a consignee in the destination, MER's shipper and INF's rumours. The static check can use `transport.Lanes` (9.4). Scenarios S30 to S32 are proposed in the register (TRN 15 called them S28 to S30).
+- **Update (2026-10-10, TRN):** the transport mechanism for the dynamic parts of X1 and X2 exists (modes, the shipment, `Inbound` and `Routes`: `spec-transport.md` 3 to 9). An `overlay/trade.toml` needs a `modules.transport.mode` table (respelled 2026-10-12, N-102), a hired mode's haul commodity and a carrier recipe (17.4 is a model), a consignee in the destination, MER's shipper and INF's rumours. The static check can use `Config.TransportLanes` (9.4). Scenarios S30 to S32 are proposed in the register (TRN 15 called them S28 to S30).
 - **Update (2026-10-10, wave 2 integration):** REG, MON and TRN now exist, so only EXT, MER, INF and STY are left in the areas. The overlays are N-092.
 - **Update (2026-10-10, INF):** INF now supplies the rumours (`spec-information.md` 5). The overlay `overlay/trade.toml` needs a `[modules.information]` table (`info_speed`, `rumour_error_bp`, `rumour_max_age`) and an informed merchant role (`informed = true`); 12.1 there shows the keys.
 - **Update (2026-10-10, EXT):** EXT exists (`spec-external-sector.md`). Its invariant scenario EXT-S5 (S55) runs the reference chain with an external overlay (an outside node on a gate region, 18.2 is a model of the file layout) over a range of seeds with `WithAudit`; REF builds the pack. EXT gives the dynamic parts of X1 and X2 the gate as the place where imports appear and the counterparty's ask as the price a shipper reads there.
@@ -639,7 +639,7 @@ PR description.
 
 - **Areas:** VIA, CFG
 - **Raised:** 2026-10-10, `spec-regions.md` 4.5.3, `spec-transport.md` 9.4, `spec-money-supply.md` 15.4.
-- **Note:** (1) `WithFreeTrade` links every pair of regions; with edges only regions in one strongly connected component can trade (`Graph.Components`), so the pooled check may use it (REG open question 2). (2) `transport.Lanes` derives lanes from hired modes with labour only; the carriers' feed and vehicle wear are not in the programme (TRN 9.4, 20.8), and VIA may want a lane with inputs. (3) With a rate levy a class's holdings are bounded by `m* = E + g/rho` (MON 9.3); VIA may seed a hoarder class at `min(Money, m*)` (MON 15.4), optional.
+- **Note:** (1) `WithFreeTrade` links every pair of regions; with edges only regions in one strongly connected component can trade (`Graph.Components`), so the pooled check may use it (REG open question 2). (2) `Config.TransportLanes` derives lanes from hired modes with labour only; the carriers' feed and vehicle wear are not in the programme (TRN 9.4, 20.8), and VIA may want a lane with inputs. (3) With a rate levy a class's holdings are bounded by `m* = E + g/rho` (MON 9.3); VIA may seed a hoarder class at `min(Money, m*)` (MON 15.4), optional.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for TRN, REG and MON. Item (1): the pooled check uses free trade across all regions; strongly connected components wait for the region graph. Items (2) and (3), lanes and a hoarder class, are module inputs.
 
 ### N-096 The regional pool serves births, entry, relief and money flows
@@ -1274,7 +1274,7 @@ PR description.
 
 - **Areas:** VIA, TRN, MER
 - **Raised:** 2026-10-13, `spec-risk.md` 8.
-- **Note:** `transport.Lanes` has a loss that is no longer 0 once a pack has route rows; VIA reads it as the share of a lane's output that never arrives.
+- **Note:** `Config.TransportLanes` has a loss that is no longer 0 once a pack has route rows; VIA reads it as the share of a lane's output that never arrives.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for TRN and RSK. `Lane` and its `LossBP` are not published in Stage 1 (D127); the programme reads a loss only when TRN adds them.
 
 ### N-181 Not exposed in version 1: a household's base room, a migration journey, money
@@ -2228,4 +2228,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 770e463e118c17d099d694db
+NOTES-TAG: 64fedc58087210b4814e839f
