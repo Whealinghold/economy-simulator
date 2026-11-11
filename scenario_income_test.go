@@ -8,7 +8,7 @@ import (
 )
 
 // This file is the realised income per household per role per window of
-// doc/plans/plan-2-8.md D364 (1), (3), (4) and (5), built from events only
+// plan 2-8 (removed; see git history) D364 (1), (3), (4) and (5), built from events only
 // (FR-REF-027): a recording observer joins the TradeExecuted and RecipeExecuted
 // events to the role the agent held at the time, which AgentSpawned,
 // RoleChanged, WeightChanged and AgentBankrupted keep. It is the static income

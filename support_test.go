@@ -21,7 +21,7 @@ import (
 )
 
 // This file is the support layer of the pack-run tests of stage 1-12
-// (doc/plans/plan-phase-1-12.md, phase 2): the pack loader, the pack runner,
+// (plan-phase-1-12, removed; see git history, phase 2): the pack loader, the pack runner,
 // the plain-text reader of the bands and scripts, and the golden comparison. It
 // is test code only. The recorder and the captureHandler are those of
 // observe_helpers_test.go.
