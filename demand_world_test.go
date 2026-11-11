@@ -494,3 +494,42 @@ func TestDemand_ConsumptionAfterUpkeep(t *testing.T) {
 		t.Errorf("Audit() = %v, want nil", err)
 	}
 }
+
+// TestDemand_EntryIntoCohort verifies that an agent created after construction (a
+// spawner entrant) gets one carry per want of its role's ladder, each below 10 000,
+// and none when the role has no ladder.
+//
+// Requirement: FR-DEM-013, FR-DEM-042
+func TestDemand_EntryIntoCohort(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	w, _ := onWorld(t, &recStrategy{wants: true}, 1)
+	built := economysim.AgentCount(w)
+	step(t, w, 60)
+	if economysim.AgentCount(w) == built {
+		t.Skip("no entrant in 60 ticks on this pack")
+	}
+	live := 0
+	for id := built; id < economysim.AgentCount(w); id++ {
+		a := economysim.AgentID(id)
+		role, weight := economysim.AgentRole(w, a)
+		if weight < 1 {
+			continue // removed: its carries went with it (dropAgent)
+		}
+		live++
+		carries := economysim.WantCarries(w, a)
+		if want := len(economysim.LadderOf(w, role)); len(carries) != want {
+			t.Errorf("entrant %d has %d carries, want %d (its role's ladder)", a, len(carries), want)
+		}
+		for _, c := range carries {
+			if c < 0 || c > 9_999 {
+				t.Errorf("entrant %d carry %d, want in [0, 9999]", a, c)
+			}
+		}
+	}
+	if live == 0 {
+		t.Skip("every entrant was removed within 60 ticks")
+	}
+}
