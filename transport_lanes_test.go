@@ -67,7 +67,15 @@ func TestTransportLanes(t *testing.T) {
 			t.Errorf("lane %+v: Labour, LossBP = %d, %d, want %d, 0", ln, ln.Labour, ln.LossBP, want)
 		}
 	}
+}
 
+// TestTransportLanes_NoLanes verifies that the transport module off, and a module
+// with self-carried modes only, give no lane and no error.
+//
+// Requirement: FR-TRN-041
+func TestTransportLanes_NoLanes(t *testing.T) {
+	t.Parallel()
+	cfg := loadPack(t, transportTwo...)
 	off := cfg
 	off.Modules.Transport = nil
 	if got, err := off.TransportLanes(); got != nil || err != nil {
