@@ -120,9 +120,14 @@ func laneGroups(have []RegionID, lanes []viaLane) [][]RegionID {
 // being its index in regions; nil when there are none.
 func (m *viaModel) lanesIn(regions []RegionID) []steady.Lane {
 	var out []steady.Lane
+	idx := make(map[RegionID]int, len(regions))
+	for i, r := range regions {
+		idx[r] = i
+	}
 	for _, ln := range m.lanes {
-		from, to := slices.Index(regions, ln.from), slices.Index(regions, ln.to)
-		if from >= 0 && to >= 0 {
+		from, fok := idx[ln.from]
+		to, tok := idx[ln.to]
+		if fok && tok {
 			out = append(out, steady.Lane{From: from, To: to, Commodity: int(ln.commodity), Labour: ln.labour, LossBP: ln.lossBP})
 		}
 	}

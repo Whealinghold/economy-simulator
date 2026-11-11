@@ -116,7 +116,8 @@ func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode) ([]Lane, error) {
 	return out, nil
 }
 
-// tooManyLanes refuses a list of n lanes above the limit, a parameter so a test can
+// tooManyLanes refuses a list of n lanes above the limit (counted before the final
+// dedup, as a memory guard), a parameter so a test can
 // reach the bound with a short list.
 func tooManyLanes(n, limit int) error {
 	if n <= limit {
