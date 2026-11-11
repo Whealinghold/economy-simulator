@@ -60,7 +60,7 @@ func merchantTripTicks(c *Config, r *Role) int64 {
 	var longest int64
 	for i := range c.Modules.Transport.Modes {
 		md := &c.Modules.Transport.Modes[i]
-		if md.hired() || md.Crew > 1 || md.Speed < 1 || md.Speed > MaxSpeed || !slices.Contains(r.Merchant.Modes, md.ID) {
+		if !md.carriedBy(r.Merchant) {
 			continue
 		}
 		if _, k, any := tripExtremes(g, md.Speed); any {
@@ -68,6 +68,13 @@ func merchantTripTicks(c *Config, r *Role) int64 {
 		}
 	}
 	return min(longest, MaxTravelTicks)
+}
+
+// carriedBy reports whether the merchant of the block carries on this mode itself and the
+// mode has a travel time: listed in the block, not hired, a crew of at most 1 (FR-MER-003)
+// and a speed inside its bound.
+func (m *Mode) carriedBy(b *Merchant) bool {
+	return !m.hired() && m.Crew <= 1 && m.Speed >= 1 && m.Speed <= MaxSpeed && slices.Contains(b.Modes, m.ID)
 }
 
 // merchantTradeInputs returns the trade inputs of spec-merchants.md 3.2.2: the
