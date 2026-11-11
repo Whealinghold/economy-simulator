@@ -1850,6 +1850,7 @@ PR description.
 - **Note:** Stage 1 supports only the free-trade lane set (a complete zero-cost set, collapsed to one goods row per commodity) through `WithFreeTrade`. `Lane` (`From`, `To`, `Commodity`, `Labour`, `LossBP`), `WithLanes` and `MaxLanes` are not published in Stage 1 (architecture.md 2.8); the transport module adds them with `transport.Lanes` (`spec-transport.md` 9.4, a lane of labour 0 and loss 0 being the free-trade case) in Stage 2 (ruled by the coordinator, reversible).
 - **Update (2026-10-17, viability edits):** applied in `spec-viability.md` 9.4 (Stage 1 supports only free trade). Left open for the transport module (Stage 2).
 - **Update (2026-11-09, plan 2-12 Phase 1):** Leave open. The names (`Lane`, `WithLanes`, `MaxLanes`, `Config.TransportLanes`) and the lane validation rules are written (`spec-transport.md` 9.4, `spec-viability.md` 9.4); the lane columns of `internal/steady` wait for N-326.
+- **Update (2026-11-11, plan 2-12b Phase 1):** applied in `spec-viability.md` 9.4 (the lane form, components FR-VIA-061, prices FR-VIA-062, validation FR-VIA-063) and `spec-transport.md` 9.4. Settled in Phase 6 of the plan, when the code lands; removed then.
 
 ### N-281 Three bounds of FR-CFG-046 were not built at Stage 0
 
@@ -1857,6 +1858,7 @@ PR description.
 - **Raised:** 2026-10-17, `plan-phase-1-10.md` (git history, `2abbe62^`) (Phase 5).
 - **Note:** `bounds.go` has `MaxSeedPrices` but not `MaxViabilityPivots`, `MaxViabilityCells` and `MaxLanes`. The solver row adds the first two (CFG 4.1 gives the values); `MaxLanes` bounds `WithLanes`, which Stage 1 does not publish, so it waits for the transport module (Stage 2). The Stage 0 plan's table that lists the viability rows as deferred also lists "group shares exceed 10 000" as deferred, but `warmRules` has it: correct the table.
 - **Update (2026-10-18, plan 1-10 Phase 1):** `spec-config.md` 4.1 already gives `MaxViabilityPivots` 100 000 and `MaxViabilityCells` 4 000 000; Phase 5 adds the two constants and their tests. The Stage 0 table is corrected here, not in the plan: the sub-rule "shares of a group above 10 000" is built in `warmRules`. Left open.
+- **Update (2026-11-11, plan 2-12b Phase 1):** `spec-viability.md` 11 now says `WithLanes` is bounded by `MaxLanes`. The constant exists in `bounds.go`; it is used by `WithLanes` in Phase 3. Removed in Phase 6.
 
 ### N-264 Stage 3 `skills.go` appends the queue rule and the `Apply` emission
 
@@ -2050,6 +2052,7 @@ PR description.
 - **Areas:** VIA, TRN
 - **Raised:** 2026-11-09, plan 2-12 Phase 1 (E5, risk O3).
 - **Note:** Phase 8 of plan 2-12 (the lane columns of `internal/steady`, `WithLanes`, `Config.TransportLanes`) needs `spec-viability.md` to say how the warm-start table derives per-region prices and flows from a lane programme, and whether a lane set is one programme or one per component. It does not, so Phase 8 is split out of the transport row and N-279 and N-281 stay open. Nothing else in the transport row depends on it.
+- **Update (2026-11-11, plan 2-12b Phase 1):** applied in `spec-viability.md` 9.4 and 9.6 (one programme for each weak component, the price of a region from its own row, one scale for the component, no exported flow). Removed in Phase 6 with the code.
 
 ### N-327 Presets 22 to 25 of the indicators are built with EMP and RSK/STO
 
@@ -2214,4 +2217,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bb1aecc236a36f9a48ffd6a2
+NOTES-TAG: cb0c1d88b512eecf78336727

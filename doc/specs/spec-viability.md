@@ -727,14 +727,15 @@ are appended with their module and are empty while it is off.
 **Autarky is the default.** With no `WithFreeTrade`, each region with a group is solved
 alone: its own programme, its own numeraire `B_ref(rho)` (6.3), and the rows of the
 table for the region come from it. With `WithFreeTrade`, all the regions with a group
-are one pooled programme with one scale: the free-trade set only, the complete set of
-zero-cost lanes, collapsed to one goods row per commodity (the labour and capacity rows
-stay per region). A region with no group has no programme and no table row. There is
-no partial pooling in Stage 1 (9.4).
+are one pooled programme with one scale: the complete set of zero-cost lanes, collapsed
+to one goods row per commodity (the labour and capacity rows stay per region). With
+`WithLanes`, the regions with a group and a lane are solved as one programme for each
+connected component of the lane graph, and a region with no lane in autarky (9.4). A
+region with no group has no programme and no table row.
 
 **The options** are functional, of the type `SolveOption` (not the world's `Option`),
-and five: `WithStockCoverTicks`, `WithMoneyBufferTicks`, `WithResidualWarnBP`,
-`WithMaxPivots` and `WithFreeTrade`, with the bounds of 11. A value outside its bound
+and six: `WithStockCoverTicks`, `WithMoneyBufferTicks`, `WithResidualWarnBP`,
+`WithMaxPivots`, `WithFreeTrade` and `WithLanes`, with the bounds of 11. A value outside its bound
 returns `ErrOutOfBounds` from `SolveSteadyState` before any work; a nil option is
 ignored; the last option of a kind wins.
 
@@ -1215,24 +1216,20 @@ type Lane struct {
 ```
 
 Each lane becomes an activity with net vector (`-1` at `From`, `+ (10 000 - LossBP) / 10 000`
-at `To`) and labour `Labour / 10 000` in `From`. Nothing else in the programme
-changes. Lanes are supplied by `Config.TransportLanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with the expected loss of `spec-risk.md` 8.3 as `LossBP` (0 with the risk module off) and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
+at `To`) and labour `Labour / 10 000` in `From`; the goods rows of the lane form are below. Lanes are supplied by `Config.TransportLanes` (`spec-transport.md` 9.4, a pure function of the configuration that a consumer passes as an option): one per hired mode, ordered pair of regions with a route and commodity, with the expected loss of `spec-risk.md` 8.3 as `LossBP` (0 with the risk module off) and labour only (the carriers' feed and vehicle wear are not in the programme). Self-carried modes give no lanes in version 1. The default is no
 lanes: autarky. The option `WithFreeTrade()` adds a lane of labour 0 and loss 0
 between every pair of regions for every commodity. It is a bound for comparison and
 the case `Validate` checks (4.6); it is not a model of any world.
 
-**Lane validation (transport row, plan 2-12).** `WithLanes` refuses, before any work: a lane that names an unknown region or commodity, a lane with `From` equal to `To`, a duplicate (From, To, Commodity, Labour, LossBP), `Labour` below 0, `LossBP` outside 0 to 9 999, and more than `MaxLanes` lanes (`ErrOutOfBounds`; the first four `ErrUnknownRegion`, `ErrUnknownCommodity`, `ErrOutOfBounds`, `ErrDuplicateID`). **Open (VIA, phase 8 of plan 2-12 waits for it):** how the warm-start table derives per-region prices and flows from a lane programme, and whether a lane set is one programme or one per component. Until it is written the lane columns are not built and N-279 and N-281 stay open.
+**The lane form.** With `WithLanes`, a region has one goods row for each commodity (the rows are `(region, commodity)`, not one per commodity as in the collapsed free-trade form of 7.1), the labour and capacity rows stay per region, and each lane is a column with `+1` at `(From, c)`, `-(10 000 - LossBP) / 10 000` at `(To, c)` and `Labour / 10 000` in the labour row of `From`, at cost 0 and with no capacity row. The goods row of region `r` is the region's own market: the households' upkeep `D(c, r)` and the fixed term of the wants of the groups of `r` (3.2) are in the row `(r, c)`. Lanes are exact rationals like every other column (6.2). A programme with no lane has the collapsed rows of Stage 1 or the autarky rows, built as before (FR-VIA-043).
 
-**Stage 1 realises only the free-trade lane set.** `Lane`, `Lanes` (the option that
-carries a lane list) and `MaxLanes` are not published in Stage 1: they come with the
-transport module, which defines `transport.Lanes` and adds the three together. The
-free-trade set is the complete set of zero-cost lanes, and the programme realises it as
-a **collapsed single goods row** per commodity (the labour and capacity rows stay per
-region): that row is the complete free-trade set of FR-VIA-043 and FR-VIA-044, and the
-lane columns, which a partial set needs, are TRN's. With no `WithFreeTrade` each region
-is solved alone (autarky, 7.1). When transport adds `WithLanes`, its lane validation is
-an error and not a warning (a configuration that cannot be honoured is rejected with a
-sentinel).
+**Components (FR-VIA-061).** A lane set is solved as one programme for each weakly connected component of the graph whose nodes are the regions with a group and whose edges are the lanes, taken as undirected, between two such regions: a one-way lane couples the programme, because the importer's surplus depends on what the exporter produces. A region with a group and no lane is a component of one and is solved in autarky, exactly as without lanes. A lane with an end in a region that has no group is ignored: that region has no programme and no table row (7.1), and the lane carries nothing. The components are ordered by their first region in the realm's region order, and the lanes of a component are in canonical order (`From`, `To`, `Commodity`, `Labour`, `LossBP`, by the region order of the realm and the commodity order), so the lane order the caller gave changes no result.
+
+**Prices, scale and flows (FR-VIA-062).** The seed price of commodity `c` in region `r` is the dual of the row `(r, c)`, scaled and rounded as 6.3 and 6.4 say; the wage of `r` is the dual of its labour row, as 8.2.5 says. The scale `s` of a component is the pooled rule of 6.3, with each region's basket priced at that region's own duals: one `s` such that the household-weighted sum of the baskets, `sum over r of H(r) * sum over c of u(c, r) * p(r, c)`, equals the household-weighted sum of the `B_ref(r)`. The normalisation `sum over (r, c) of p(r, c) * D(r, c) = 1` of the programme is the one the prices already have. The lane flows are in the exact outcome and are not exported: the table and the census are the only flow-derived outputs (7.1). The report's `Pivots`, `Degenerate` and `Alternative` accumulate over the programmes as for any programme, and `PairRatio` and `Advantage` (9.2) read the prices of each region in its own row.
+
+**Lane validation (FR-VIA-063).** `WithLanes` copies the list and refuses, before any work and with no configuration: a lane with `From` equal to `To` (`ErrOutOfBounds`), a duplicate (From, To, Commodity, Labour, LossBP) (`ErrDuplicateID`), `Labour` below 0 or `LossBP` outside 0 to 9 999 (`ErrOutOfBounds`), and more than `MaxLanes` lanes (`ErrOutOfBounds`), each a `ValidationError` with the path `solve_options.lanes[i]`. `WithLanes` together with `WithFreeTrade`, in either order, is `ErrOptionContext`, returned before any work: the free-trade set is itself a lane set and the two together say nothing the caller can mean. A lane that names a region or a commodity the configuration does not have (`ErrUnknownRegion`, `ErrUnknownCommodity`) needs the configuration, so `SolveSteadyState` refuses it after the configuration is validated and before any programme is built. The refusals are errors and not warnings: a configuration that cannot be honoured is rejected with a sentinel.
+
+**What the lanes are not.** The default is no lane: autarky. `WithFreeTrade` keeps its collapsed single goods row per commodity, which is the complete zero-cost lane set (FR-VIA-044); it is not routed through the lane form, because the collapsed form is smaller and `Validate` uses it for the pooled check. The two forms agree on every complete zero-cost set (FR-VIA-044), and the test of that agreement is the oracle of the lane form.
 
 With the infrastructure module on, a route facility at full condition raises the transit factor of the lanes of its edge by its `BoostBP` and a ground facility raises the capacity of its endowment (`spec-infrastructure.md` 13.4; `spec-resources.md` 11): a gain at full condition, a constant, so the programme stays linear. A facility with `Decay` above 0 and no repair has no steady state with it (4.2.2).
 
@@ -1246,7 +1243,13 @@ warning is the author's cue. With edges (`spec-regions.md` 4), free trade is mea
 9.6. **Prices across regions.** With lanes, a seed price differs between regions by
 no more than the lane cost in value; without lanes there is no relation, and each
 region has its own level (anchored by its own `B_ref`). Law-of-one-price tests are
-STY's.
+STY's. The bound is a property of the duals (FR-VIA-062): for every lane, in the
+solver's prices before rounding, `p(To, c) * (10 000 - LossBP) / 10 000 <= p(From, c) +
+w(From) * Labour / 10 000`, with `w(From)` the wage of the labour row of `From`, which
+the optimality of the programme gives. In the table the prices are rounded half to
+even to integers (6.3), so the table satisfies the bound within the rounding of the
+two prices and the wage; the test states the tolerance and does not weaken the exact
+bound.
 
 ## 10. Rules added to `spec-config.md` 7
 
@@ -1337,16 +1340,15 @@ testing.md 6.7 requires a field behind every row (`spec-config.md` 9.2, FR-CFG-0
 | Solve option | `MoneyBufferTicks` | ticks of upkeep of money held beyond the job (8.3) | 10 | 0 to 10 000 |
 | Solve option | `ResidualWarnBP` | residual above which the report lists an activity (6.5) | 1 000 | 0 to 100 000 |
 | Solve option | `MaxPivots` | pivots allowed before `ErrSolveLimit` (5.4) | `MaxViabilityPivots` | 1 to `MaxViabilityPivots` |
-| Solve option | `Lanes` | routes between regions (9.4); **not in Stage 1**, with the transport module | none | at most `MaxRegions * MaxRegions * MaxCommodities` |
+| Solve option | `Lanes` | routes between regions (9.4) | none | at most `MaxLanes`, that is `MaxRegions * MaxRegions * MaxCommodities` |
 
 `HorizonYears` (years a finite stock must last) is not a solve option: it is a field of the resources module (`spec-resources.md` 12), read from the configuration, and has its row there. The inputs of the open layer (4.8) are the pure function `Lines()` of the external module and add no solve option.
 
-**The option names (Stage 1).** The options are functions of the type `SolveOption`,
-unexported state, and five: `WithStockCoverTicks` (`StockCoverTicks`), `WithMoneyBufferTicks`
+**The option names.** The options are functions of the type `SolveOption`,
+unexported state, and six: `WithStockCoverTicks` (`StockCoverTicks`), `WithMoneyBufferTicks`
 (`MoneyBufferTicks`), `WithResidualWarnBP` (`ResidualWarnBP`), `WithMaxPivots`
-(`MaxPivots`) and `WithFreeTrade` (9.4, no value). A value outside the bound of the table
-returns `ErrOutOfBounds` from `SolveSteadyState` before any work. The `Lanes` row is
-realised by `WithLanes` with the transport module (9.4).
+(`MaxPivots`), `WithFreeTrade` (9.4, no value) and `WithLanes` (`Lanes`, 9.4). A value outside the bound of the table
+returns `ErrOutOfBounds` from `SolveSteadyState` before any work.
 
 Bounds, provisional, in `bounds.go` (`spec-config.md` 4.1):
 
@@ -1354,7 +1356,7 @@ Bounds, provisional, in `bounds.go` (`spec-config.md` 4.1):
 |----------|-------|--------|
 | `MaxViabilityPivots` | 100 000 | a cap on the work of a solve; with Bland's rule larger instances are possible but not at load |
 | `MaxViabilityCells` | 4 000 000 | rows times columns of the tableau `Validate` will build; above it V2, V3 are skipped with a warning |
-| `MaxLanes` | `MaxRegions * MaxRegions * MaxCommodities` | the largest lane list; added with the transport module, not in Stage 1 |
+| `MaxLanes` | `MaxRegions * MaxRegions * MaxCommodities` | the largest lane list, the bound of `WithLanes` |
 
 The placeholders, listed so that none is mistaken for a result: `StockCoverTicks` 5,
 `MoneyBufferTicks` 10, `ResidualWarnBP` 1 000, `MaxViabilityPivots` 100 000,
@@ -1632,6 +1634,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-058 | For a region whose labour dual at full labour is 0 while a capacity row has a positive dual, the solver MUST build its seeds and wage from the nominal programme, MUST list the region in `NominalSeed`, and MUST leave a region whose nominal wage is also 0 unpriced (`UnpricedWages`). |
 | FR-VIA-059 | A commodity marked `Raw` MUST count as sourced in V1 as in the structural check of `spec-config.md` 7.5, so the two checks MUST agree on every configuration. |
 | FR-VIA-060 | The report MUST give, per group, the income per household at the solved flows in basis points of its upkeep cost (`IncomeBP`, 5.2), absent and flagged when the labour share is absent, for a group with no active recipe and for a group flagged ambiguous, with the arithmetic checked; the census, the tables and the configuration hash MUST NOT depend on it. |
+| FR-VIA-061 | With `WithLanes`, the solver MUST solve one programme for each weakly connected component of the lane graph over the regions with a group, MUST solve a region with no lane in autarky as without lanes, MUST ignore a lane with an end in a region that has no group, and MUST give the same result whatever the order of the lanes. |
+| FR-VIA-062 | In a lane programme the seed price of a commodity in a region MUST be the dual of that region's own goods row, scaled by the pooled rule of 6.3 over the component with each region's basket priced at its own prices, and for every lane the exact duals MUST satisfy `p(To, c) * (10 000 - LossBP) / 10 000 <= p(From, c) + w(From) * Labour / 10 000`. |
+| FR-VIA-063 | `WithLanes` MUST refuse, before any work, a lane with `From` equal to `To`, a duplicate, a negative `Labour`, a `LossBP` outside 0 to 9 999 and more than `MaxLanes` lanes, and `WithLanes` with `WithFreeTrade` MUST be `ErrOptionContext`; `SolveSteadyState` MUST refuse a lane that names an unknown region or commodity (`ErrUnknownRegion`, `ErrUnknownCommodity`) after validating the configuration and before building any programme. |
 
 ### Non-functional
 
@@ -1756,7 +1761,8 @@ spec is written):
 | Concern | Home |
 |---------|------|
 | `WarmStart`, `SeedPrice`, `SeedWage`, `WarmGroup`, `JobSpec`, `WarmPool` | root package, `config.go`, with `Config` (architecture.md 2.6: `config.go` holds "Config and every section struct"; an earlier draft said `viability.go`) |
-| `SteadyState`, `ProgrammeResult`, `Report`, `SolveOption` and the five `With*` options | root package, `viability.go`. Stage 1 publishes no `Lane`, `Lanes` or `MaxLanes`: they come with the transport module (9.4) |
+| `SteadyState`, `ProgrammeResult`, `Report`, `SolveOption`, the six `With*` options and `Lane` | root package, `viability.go` |
+| The components of a lane set, the validation of a lane against the configuration | root package, `viability_lanes.go` (a continuation file, 9.4) |
 | `SolveSteadyState` | root package, `viability.go`, converting inline to `internal/steady` |
 | The checks of V1 to V4 | one unexported `checkViability`, in `viability_check.go`; `Validate` and `Warnings` both call it (`spec-config.md` 7.1.6), and it is not exported (architecture.md 2.8) |
 | The table from the solved programme | root package, `viability_table.go` |

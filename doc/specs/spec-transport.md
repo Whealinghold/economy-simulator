@@ -878,7 +878,7 @@ labour = ceil( 10_000 * f * s * Duration / Output )       Duration and Output of
 computed with exact integer arithmetic (the rational compared by cross-multiplication,
 128-bit intermediates). The recipe is the cheapest that makes the haul commodity: the lowest `Duration / Output` at E = 10 000, ties by recipe ID; a commodity with `Mass` and `Bulk` both 0 gives `f` = 0 and a lane of labour 0. It is a pure function of the configuration, `Config.TransportLanes() ([]Lane, error)` (the Go name of `transport.Lanes`),
 that a consumer passes to the solver as an option (`WithLanes([]Lane) SolveOption`, `MaxLanes` = `MaxRegions * MaxRegions * MaxCommodities`; `Lane` is declared once, in `viability.go`); the solver does not call it, so the
-viability check stays independent of this module. The lane charges labour only: the
+viability check stays independent of this module. The result is sorted by (`From`, `To`, `Commodity`, `Labour`) in the order of the realm, and at most `MaxLanes` long (`ErrOutOfBounds` otherwise). It returns an error and no partial list when a hired mode's haul commodity has no recipe that makes it, or when the arithmetic overflows. The loss comes from one seam, which is 0 until the risk module exists. The lane charges labour only: the
 feed and the vehicle wear of the carriers' recipe are not in the programme, which is a
 stated limitation of the check (open question 8). Self-carried modes give no lanes in
 version 1.
