@@ -286,3 +286,18 @@ func TestRestore_Stage2Levels(t *testing.T) {
 	check(t, got, "household.own_use", 9, "role", "k1", "region", "r2")
 	check(t, got, "external.price", 44, "node", "r2", "region", "r0", "commodity", "c1", "side", "bid")
 }
+
+// TestPayroll_CutByRoleAndRegion verifies that the wage due and not paid is
+// counted by the payers' role and the region, from the Cut field only.
+//
+// Requirement: FR-EMP-077
+func TestPayroll_CutByRoleAndRegion(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	tick(h, 0, economysim.PayrollPaid{Region: 1, Role: 1, Due: 80, Paid: 60, Cut: 20},
+		economysim.PayrollPaid{Region: 1, Role: 1, Due: 10, Paid: 10},
+		economysim.PayrollPaid{Region: 0, Role: 1, Due: 5, Paid: 0, Cut: 5})
+	got := h.collect()
+	check(t, got, "payroll.cut", 20, "role", "k1", "region", "r1")
+	check(t, got, "payroll.cut", 5, "role", "k1", "region", "r0")
+}

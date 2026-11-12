@@ -1539,6 +1539,7 @@ metric name or unit that changes here is not a breaking change: no code exists
 | `economysim.labour.unmatched` | Counter | `{household}` | `economysim.role` (the worker's) | `LabourRound` (`Workers[].NoVacancy`) | **new** |
 | `economysim.vacancy.unfilled` | Counter | `{position}` | `economysim.role` (the employer's), `economysim.reason` | `LabourRound` (`Employers[].Unfilled`, and the refusal fields by reason) | **new** |
 | `economysim.payroll.paid` | Counter | `{minor_unit}` | `economysim.role` (the payers'), `economysim.region` | `PayrollPaid` (`Paid`) | **new** |
+| `economysim.payroll.cut` | Counter | `{minor_unit}` | `economysim.role` (the payers'), `economysim.region` | `PayrollPaid` (`Cut`) | **new** |
 | `economysim.hire.escrow` | UpDownCounter | `{minor_unit}` | none | `HireFormed` (+`Escrowed`), `LabourRound` (-`Paid`, -`Refunded`), `HireEnded` (-`Refunded`); the sector `contract` of `economysim.money.supply` includes it | **new** |
 | `economysim.settlement.class` | Gauge | `{class}` | `economysim.region` | `SettlementClassChanged` (`To`); the adapter keeps the last value, which the events of construction set | **new** (SET) |
 | `economysim.settlement.changes` | Counter | `{change}` | `economysim.region` | `SettlementClassChanged`, except the cause `founded` | **new** |

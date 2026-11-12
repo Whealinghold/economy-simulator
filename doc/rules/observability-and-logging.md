@@ -555,6 +555,7 @@ prices are recorded in minor units, unconverted (architecture.md 3.5).
 | `economysim.labour.unmatched`       | Counter         | `{household}`   | `economysim.role` (the worker's) |
 | `economysim.vacancy.unfilled`       | Counter         | `{position}`    | `economysim.role` (the employer's), `economysim.reason` |
 | `economysim.payroll.paid`           | Counter         | `{minor_unit}`  | `economysim.role` (the payers'), `economysim.region` |
+| `economysim.payroll.cut`            | Counter         | `{minor_unit}`  | `economysim.role` (the payers'), `economysim.region` |
 | `economysim.hire.escrow`            | UpDownCounter   | `{minor_unit}`  | none |
 | `economysim.settlement.class`       | Gauge           | `{class}`       | `economysim.region` |
 | `economysim.settlement.changes`     | Counter         | `{change}`      | `economysim.region` |
@@ -697,6 +698,7 @@ The instruments fed by a snapshot, not by events, are the rows of the second tab
 | `economysim.labour.unmatched` | `LabourRound` (households offered and not hired, by the worker's role) |
 | `economysim.vacancy.unfilled` | `LabourRound` (positions unfilled and the formation refusals, by the employer's role and the reason) |
 | `economysim.payroll.paid` | `PayrollPaid` (money paid, by the payers' role and the region) |
+| `economysim.payroll.cut` | `PayrollPaid` (`Cut`: money due and not paid, by the payers' role and the region) |
 | `economysim.hire.escrow` | `HireFormed` (+ money escrowed), `LabourRound` (- money paid, - money refunded), `HireEnded` (- remainder refunded); the sector `contract` of `economysim.money.supply` includes it |
 | `economysim.settlement.class` | `SettlementClassChanged` (`To`); the adapter keeps the last value, which the events of construction set |
 | `economysim.settlement.changes` | `SettlementClassChanged`, except the cause `founded` |
@@ -978,4 +980,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: d2e43b7b59c4abb43966a8c9
+RULE-TAG: f215753306fac0bc7607c4c4

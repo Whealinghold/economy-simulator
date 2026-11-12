@@ -1644,7 +1644,7 @@ derived from text of sections 1 to 17.
 | FR-EMP-074 | The form MUST keep no state and write no checkpoint section, and the checkpoint format version MUST NOT change because of it. |
 | FR-EMP-075 | The stream of a world with the module on MUST equal that of the module off, and a run with a logger and observer MUST give results identical to a run without. |
 | FR-EMP-076 | `PayrollPaid` MUST be emitted once per region and employer role at P4.1b in ascending (`RegionID`, role) when `Due` or `Paid` is non-zero, with the fields of 24.6.1 and no map, and never with the module off. |
-| FR-EMP-077 | The metric `economysim.payroll.paid` MUST be derivable from `PayrollPaid` and its attributes MUST be bounded by the configuration. |
+| FR-EMP-077 | The metrics `economysim.payroll.paid` and `economysim.payroll.cut` MUST be derivable from `PayrollPaid` and their attributes MUST be bounded by the configuration. |
 | FR-EMP-078 | A payer cut at its balance MUST be logged at `Debug` only, guarded by `Enabled`, with a constant message and the attributes of 24.6.3. |
 | FR-EMP-079 | The module off MUST leave the configuration hash of the all-off reference, and every file of `testdata/golden/off/`, byte-equal; the module on MUST hash `Modules.Employment`, `Role.Hireable` and `Role.Employer` with `PayrollBP` as 24.5.1 says. |
 | FR-EMP-080 | The file MUST read `[modules.employment]`, `hireable` and `[role.<id>.employer]` with `payroll_bp` over the default, and a key the loader does not know MUST be rejected. |
@@ -1893,9 +1893,11 @@ of the role paid), `Due`, `Paid` and `Cut` (`Due` less `Paid`: the part cut at a
 `Due` when the region has no worker to pay), in money; no map and no typed ID appended to an existing
 event. Its rows are in `spec-observability.md` 4.1 and `rules/observability-and-logging.md` 4.3.
 
-24.6.2. **Metric** `economysim.payroll.paid`, a counter of unit `{minor_unit}` with the attributes
-`economysim.role` and `economysim.region`, fed by `PayrollPaid` (`Paid`): bounded by the roles and
-regions of the configuration.
+24.6.2. **Metrics** `economysim.payroll.paid` and `economysim.payroll.cut`, counters of unit
+`{minor_unit}` with the attributes `economysim.role` and `economysim.region`, fed by `PayrollPaid`
+(`Paid` and `Cut`): bounded by the roles and regions of the configuration. `cut` over `paid` plus
+`cut` is the share of the due wage that did not reach a worker, the sign of payers short of money or
+of a region with no worker, which `paid` alone does not show.
 
 24.6.3. **Log.** A payer cut at its balance is a `Debug` line, guarded by `Enabled`, with a constant
 message and the attributes `agent`, `role`, `due` and `applied`; there is no `Warn` and no `Info`.

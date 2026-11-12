@@ -16,6 +16,7 @@ func (o *Observer) observeFlows(e economysim.Event) bool {
 		o.counts(m2(iMoneyFlowLimited, o.reason(ev.Flow), 0), 1, ev.Short, ev.Headroom, ev.Limit)
 	case economysim.PayrollPaid:
 		o.count(m2(iPayrollPaid, ix(ev.Role), ix(ev.Region)), int64(ev.Paid))
+		o.count(m2(iPayrollCut, ix(ev.Role), ix(ev.Region)), int64(ev.Cut))
 	case economysim.PopulationChanged:
 		o.count(m1(iHouseholdBirths, ix(ev.Role)), ev.BirthsDone)
 		o.count(m1(iHouseholdDeaths, ix(ev.Role)), ev.DeathsDone)
