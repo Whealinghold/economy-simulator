@@ -14,6 +14,7 @@ import (
 
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/config"
+	"github.com/Whealinghold/economy-sim/internal/checked"
 )
 
 // This file is the survival-screen harness of plan 2-25 Phase 1 (D700 to D703). It
@@ -39,6 +40,7 @@ var (
 	screenReseed = flag.String("screen.reseed", "", "read-only H4 experiment role:count:money: when the role has no household, add count external agents of weight 1 to region 0 (AddAgent), with the role's start stock and that money each")
 	screenDrop   = flag.String("screen.drop", "", "comma list of layers of the pack left out (a pack at the 16 document limit takes an overlay in place of one)")
 	screenCensus = flag.Bool("screen.census", false, "also print the census of the solver for the layers without the warm start: households, balanced households and static income per role (FR-VIA-060)")
+	screenFlows  = flag.Bool("screen.flows", false, "also print, per 100-tick window, the money paid by buyer role to seller role and commodity, the units short per upkeep commodity and role, and the NoInput and NoTool refusals per recipe (plan 2-27 Phase 1)")
 	screenX4     = flag.Bool("screen.x4", false, "also print the X4 criteria (needs -screen.ticks 1095 or more; keeps a snapshot of every tick)")
 )
 
@@ -180,7 +182,137 @@ type screenWatch struct {
 	// for a role change, "exit <cause>" for a removal or a cut of weight, "entry" for
 	// a household that joined after the start.
 	moves map[screenMove]int64
-	names []string // role names, to spell the labels
+	names []string         // role names, to spell the labels
+	flows *screenFlowTally // nil unless -screen.flows
+}
+
+// screenEstate is the role of a seller that is no agent of a role: the estate.
+const screenEstate = economysim.RoleID(-1)
+
+// screenFlowKey is a money flow of one window: the buyer role paid the seller role
+// (screenEstate for an estate) for the commodity.
+type screenFlowKey struct {
+	Window        int64
+	Buyer, Seller economysim.RoleID
+	Commodity     economysim.CommodityID
+}
+
+// screenShortKey is the units short of one role in one window for one upkeep commodity.
+type screenShortKey struct {
+	Window    int64
+	Role      economysim.RoleID
+	Commodity economysim.CommodityID
+}
+
+// screenRefusal is the households refused by a recipe in one window, by cause.
+type screenRefusal struct{ NoInput, NoTool int64 }
+
+// screenFlowTally is what -screen.flows keeps (plan 2-27 Phase 1): the evidence of
+// memo 1.1 to 1.4 that a trial is read against.
+type screenFlowTally struct {
+	money    map[screenFlowKey]int64
+	short    map[screenShortKey]int64
+	refused  map[[2]int64]screenRefusal // (window, recipe)
+	overflow bool                       // a sum did not fit int64: the money rows are then incomplete
+}
+
+func newScreenFlowTally() *screenFlowTally {
+	return &screenFlowTally{money: map[screenFlowKey]int64{}, short: map[screenShortKey]int64{}, refused: map[[2]int64]screenRefusal{}}
+}
+
+// observe adds the flow events of e. roleOf is the role of a live agent; a seller or
+// buyer it does not know is the estate (an estate is not an agent of a role).
+func (f *screenFlowTally) observe(e economysim.Event, roleOf func(economysim.AgentID) (economysim.RoleID, bool)) {
+	switch e := e.(type) {
+	case economysim.TradeExecuted:
+		buyer, ok := roleOf(e.Buyer)
+		if !ok {
+			buyer = screenEstate
+		}
+		seller, ok := roleOf(e.Seller)
+		if !ok {
+			seller = screenEstate
+		}
+		k := screenFlowKey{e.Tick / incomeWindow, buyer, seller, e.Commodity}
+		v, ok1 := checked.Mul(int64(e.Price), int64(e.Quantity))
+		sum, ok2 := checked.Add(f.money[k], v)
+		if !ok1 || !ok2 {
+			f.overflow = true
+			return
+		}
+		f.money[k] = sum
+	case economysim.UpkeepShortfall:
+		for _, r := range e.Short {
+			f.short[screenShortKey{e.Tick / incomeWindow, e.Role, r.Commodity}] += r.Units
+		}
+	case economysim.RecipeRefused:
+		k := [2]int64{e.Tick / incomeWindow, int64(e.Recipe)}
+		c := f.refused[k]
+		c.NoInput += e.NoInput
+		c.NoTool += e.NoTool
+		f.refused[k] = c
+	}
+}
+
+// screenRoleName spells a role of a flow, the estate included.
+func screenRoleName(names []string, r economysim.RoleID) string {
+	if r == screenEstate {
+		return "estate"
+	}
+	return names[r]
+}
+
+// report logs the tally of one seed in window, role and commodity order, integers only.
+func (f *screenFlowTally) report(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
+	if f.overflow {
+		t.Logf("seed %d flows: a sum overflowed int64, the money rows are incomplete", seed)
+	}
+	f.reportMoney(t, seed, n)
+	f.reportShort(t, seed, n)
+	f.reportRefused(t, seed, n)
+}
+
+func (f *screenFlowTally) reportMoney(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
+	mk := make([]screenFlowKey, 0, len(f.money))
+	for k := range f.money {
+		mk = append(mk, k)
+	}
+	slices.SortFunc(mk, func(a, b screenFlowKey) int {
+		return cmp.Or(cmp.Compare(a.Window, b.Window), cmp.Compare(a.Buyer, b.Buyer), cmp.Compare(a.Seller, b.Seller), cmp.Compare(a.Commodity, b.Commodity))
+	})
+	for _, k := range mk {
+		v := f.money[k]
+		t.Logf("seed %d window %d flow %s -> %s on %s: money %d (%d a tick)", seed, k.Window, screenRoleName(n.Roles, k.Buyer), screenRoleName(n.Roles, k.Seller), n.Commodities[k.Commodity], v, v/incomeWindow)
+	}
+}
+
+func (f *screenFlowTally) reportShort(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
+	sk := make([]screenShortKey, 0, len(f.short))
+	for k := range f.short {
+		sk = append(sk, k)
+	}
+	slices.SortFunc(sk, func(a, b screenShortKey) int {
+		return cmp.Or(cmp.Compare(a.Window, b.Window), cmp.Compare(a.Role, b.Role), cmp.Compare(a.Commodity, b.Commodity))
+	})
+	for _, k := range sk {
+		t.Logf("seed %d window %d short role %s on %s: %d units", seed, k.Window, n.Roles[k.Role], n.Commodities[k.Commodity], f.short[k])
+	}
+}
+
+func (f *screenFlowTally) reportRefused(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
+	rk := make([][2]int64, 0, len(f.refused))
+	for k := range f.refused {
+		rk = append(rk, k)
+	}
+	slices.SortFunc(rk, func(a, b [2]int64) int { return cmp.Or(cmp.Compare(a[0], b[0]), cmp.Compare(a[1], b[1])) })
+	for _, k := range rk {
+		c := f.refused[k]
+		t.Logf("seed %d window %d refused recipe %s: no input %d, no tool %d household-ticks", seed, k[0], n.Recipes[k[1]], c.NoInput, c.NoTool)
+	}
 }
 
 // screenMove is the key of screenWatch.moves.
@@ -197,6 +329,12 @@ func (o *screenWatch) move(tick int64, role economysim.RoleID, households int64,
 
 func (o *screenWatch) Observe(e economysim.Event) {
 	o.inc.Observe(e)
+	if o.flows != nil {
+		o.flows.observe(e, func(a economysim.AgentID) (economysim.RoleID, bool) {
+			ag, ok := o.inc.agents[a]
+			return ag.role, ok
+		})
+	}
 	switch e := e.(type) {
 	case economysim.RoleChanged:
 		o.move(e.Tick, e.From, e.Weight, fmt.Sprintf("to %s (%v)", o.names[e.To], e.Cause))
@@ -285,6 +423,9 @@ func screenRun(t testing.TB, cfg economysim.Config, opts []economysim.Option, se
 	}
 	out := screenOutcome{Names: s0.Names, Samples: map[int64]economysim.Snapshot{}, Watch: &screenWatch{
 		inc: newIncomeObs(cfg, s0.Names), seen: map[economysim.RoleID]bool{}, extinct: map[economysim.RoleID]int64{}, moves: map[screenMove]int64{}, names: s0.Names.Roles}}
+	if *screenFlows {
+		out.Watch.flows = newScreenFlowTally()
+	}
 	spec := scenarioSpec{Seed: seed, Ticks: ticks, Options: append(slices.Clone(opts), economysim.WithObserver(out.Watch)),
 		Probe: func(tick int64, w *economysim.World) {
 			if re != nil {
@@ -434,6 +575,9 @@ func screenReport(t *testing.T, cfg economysim.Config, seed uint64, o screenOutc
 			t.Logf("seed %d window %d role %s: sales %d and recipe inputs %d per household-tick, margin %d bp of the upkeep %d, household-ticks %d, unfed %d, executions %s",
 				seed, window, id, row.SalesPerHousehold, row.InputCostPerHousehold, row.MarginBP, upkeep, c.HouseholdTicks, c.Unfed, screenExecutions(c.Executions, o.Names.Recipes))
 		}
+	}
+	if o.Watch.flows != nil {
+		o.Watch.flows.report(t, seed, o.Names)
 	}
 	if x4 {
 		res := result{Samples: o.Samples, Ticks: ticks}
@@ -618,5 +762,67 @@ func TestScreen_Helpers(t *testing.T) {
 	}
 	if got := screenRecorded(rec, "absent"); got != nil {
 		t.Errorf("screenRecorded(record, absent) = %v, want nil", got)
+	}
+}
+
+// TestScreen_FlowTally verifies the arithmetic of -screen.flows: the window bucketing,
+// the estate rule, and the sums of the shortfall and of the refusals.
+//
+// Hand-built events, window 100 ticks, roles 0 (cook) and 1 (maker), agent 1 a cook and
+// agent 2 a maker, agent 9 unknown (the estate): a trade of 3 units at 20 from 2 to 1 at
+// tick 99 is 60 in window 0, and the same trade at tick 100 is 60 in window 1; a trade of
+// 2 at 5 from 9 (estate) to 1 is 10; one from 1 to 2 of 4 at 10 is 40 and, added to a
+// second of 1 at 10, 50. Short rows 7 + 5 = 12 units of commodity 0 for role 1 in window 0
+// (two events) and 4 of commodity 1. Refusals no input 2 + 3 = 5 and no tool 1 + 0 = 1.
+//
+// Requirement: FR-REF-039
+func TestScreen_FlowTally(t *testing.T) {
+	t.Parallel()
+	roleOf := func(a economysim.AgentID) (economysim.RoleID, bool) {
+		switch a {
+		case 1:
+			return 0, true
+		case 2:
+			return 1, true
+		}
+		return 0, false
+	}
+	f := newScreenFlowTally()
+	for _, e := range []economysim.Event{
+		economysim.TradeExecuted{Tick: 99, Buyer: 1, Seller: 2, Commodity: 0, Price: 20, Quantity: 3},
+		economysim.TradeExecuted{Tick: 100, Buyer: 1, Seller: 2, Commodity: 0, Price: 20, Quantity: 3},
+		economysim.TradeExecuted{Tick: 5, Buyer: 1, Seller: 9, Commodity: 1, Price: 5, Quantity: 2},
+		economysim.TradeExecuted{Tick: 6, Buyer: 2, Seller: 1, Commodity: 0, Price: 10, Quantity: 4},
+		economysim.TradeExecuted{Tick: 7, Buyer: 2, Seller: 1, Commodity: 0, Price: 10, Quantity: 1},
+		economysim.UpkeepShortfall{Tick: 10, Role: 1, Short: []economysim.ShortRow{{Commodity: 0, Units: 7}, {Commodity: 1, Units: 4}}},
+		economysim.UpkeepShortfall{Tick: 11, Role: 1, Short: []economysim.ShortRow{{Commodity: 0, Units: 5}}},
+		economysim.RecipeRefused{Tick: 3, Recipe: 2, NoInput: 2, NoTool: 1},
+		economysim.RecipeRefused{Tick: 4, Recipe: 2, NoInput: 3},
+	} {
+		f.observe(e, roleOf)
+	}
+	for _, tt := range []struct {
+		name      string
+		got, want int64
+	}{
+		{"window 0 maker to cook", f.money[screenFlowKey{0, 0, 1, 0}], 60},
+		{"window 1 maker to cook", f.money[screenFlowKey{1, 0, 1, 0}], 60},
+		{"estate to cook", f.money[screenFlowKey{0, 0, screenEstate, 1}], 10},
+		{"cook to maker, two trades", f.money[screenFlowKey{0, 1, 0, 0}], 50},
+		{"short role 1 commodity 0", f.short[screenShortKey{0, 1, 0}], 12},
+		{"short role 1 commodity 1", f.short[screenShortKey{0, 1, 1}], 4},
+		{"no input", f.refused[[2]int64{0, 2}].NoInput, 5},
+		{"no tool", f.refused[[2]int64{0, 2}].NoTool, 1},
+	} {
+		if tt.got != tt.want {
+			t.Errorf("%s = %d, want %d", tt.name, tt.got, tt.want)
+		}
+	}
+	if f.overflow {
+		t.Error("overflow = true after small trades, want false")
+	}
+	f.observe(economysim.TradeExecuted{Tick: 6, Buyer: 2, Seller: 1, Commodity: 0, Price: 1 << 62, Quantity: 4}, roleOf)
+	if !f.overflow {
+		t.Error("overflow = false after a product beyond int64, want true")
 	}
 }
