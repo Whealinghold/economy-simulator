@@ -1,6 +1,6 @@
 # 0012. The solver reads the payroll from the configuration
 
-- Status: Accepted (human review pending)
+- Status: Accepted (human review pending); the hypothesis it was taken on is falsified (see Outcome)
 - Date: 2026-11-12
 - Supersedes: none
 
@@ -11,13 +11,16 @@ roles to the `Hireable` roles. `SolveSteadyState` knows nothing of it: its price
 and wage are the duals of a programme with the goods and labour rows alone
 (`spec-viability.md` 3.2, 5.2), which equalise value added per working tick
 before payroll. Trial E2 of N-352 re-solved the census and the warm start of a
-payroll world with that solver and got 0 of 4 seeds: the seeded prices paid a
-payer less than a worker and the role review moved the cooks out (211 households
-to 44 to 48).
+payroll world with that solver and got 0 of 4 seeds, with the cooks falling from 211
+households to 44 to 48. The cause named at the time was that the seeded prices paid a
+payer less than a worker; that is H-P below, which did not survive its test.
 
 The primal does not change (payroll moves money, not goods), so the census, the
-flows and the jobs are as before. What must change is the duals: the net wage per
-working tick must be equal across roles (`spec-viability.md` 5.6).
+flows and the jobs are as before. What changes is the duals: the net wage per
+working tick is equal across roles in the static balance (`spec-viability.md` 5.6).
+The hypothesis this decision was taken on, **H-P** (with payroll-aware prices and
+census the cooks keep at least 90% of the solver's census at tick 600), was
+**falsified** (see Outcome). The decision stands for a narrower reason.
 
 ## Decision
 
@@ -38,6 +41,27 @@ working tick must be equal across roles (`spec-viability.md` 5.6).
    fixture is unchanged. A differential test over every pack proves it.
 4. **No new `Config` field, hash id, event, position, ledger reason or checkpoint
    section.** `Report` and `CensusRow` gain fields at their zero value.
+
+## Outcome (plan 2-29, 2026-11-12)
+
+- **H-P was falsified in every trial of the ladder (T1 to T6).** The cooks sit at 30% to
+  45% of the solver's census at tick 600 on every seed (T1: 78 to 81 of 210; T6: 64 to 83
+  of 223), mostly gone in the first 100 ticks. The solver's census is the static
+  payroll-aware balance, not the simulation's equilibrium. The measured payroll was 97.5%
+  of the static receipts (FR-VIA-066), so the receipts model was not the failure.
+- **What the payroll-aware solve and the module did achieve is a household count.** In the
+  pack `payroll` (T6) the households stay within 10% of the tick-600 value to tick 2 200
+  on seeds 101 to 104 (FR-REF-045), and on 25 of the 30 seeds 1 to 30 (failures are late step
+  losses of about 19% between tick 1 600 and 2 200, with the cooks holding 57% to 74% of
+  the money). With the module off the same pack collapses, so the payroll module, not the
+  solver, carries the count. The mineral yield that distinguishes T6 from T5 is not
+  distinguishable from T5 on seeds 1 to 10 (8 of 10 against 7 of 10).
+- **Acceptance criterion 4 is not met** (non-cook households unfed 36% to 39% against a
+  prior of 1%, prices about 40% of the reference, cooks four to five times their money
+  share, X4 (b), (d) and (f) fail), and criterion 1 of `vision.md` 5.1 stays not met.
+- **Why the decision is kept:** it makes the pack's census, prices and warm start follow
+  the one configuration the world runs (the E2 mismatch cannot recur), and the module-off
+  path is byte-equal. It is not kept because the static balance predicts the simulation.
 
 ## Consequences
 
@@ -63,6 +87,7 @@ working tick must be equal across roles (`spec-viability.md` 5.6).
 
 ## Open points
 
-- Whether the receipts model (net sales less own consumption) is within 10% of the
-  measured `PayrollPaid.Due` is tested by plan 2-29 Phase 4 (FR-VIA-066).
+- The receipts model (net sales less own consumption) was within 10% of the measured
+  `PayrollPaid.Due` (97.5%, FR-VIA-066); the occupation review leaves the static census
+  anyway, which this decision does not explain (N-356).
 - The scope exclusions may be lifted later if a pack needs them.

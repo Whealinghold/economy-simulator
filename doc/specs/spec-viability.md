@@ -655,13 +655,32 @@ the primal of 3.2 is unchanged: `lambda*`, the executions `x*` (and the flows `x
 of 5.1), the capacity rows and the balanced census of 5.2 are those of the programme without
 it. What payroll changes is the **net wage per working tick** that each role is paid. With
 free choice of role (the spawner reads the observed wage including the pay,
-`spec-employment.md` 24.2.2) a steady state is a state in which that net wage is equal across
+`spec-employment.md` 24.2.2) a steady state would be a state in which that net wage is equal across
 the active activities of a region, and the duals of 5.2 equalise value added **before**
 payroll. At those prices a payer earns less than a worker, and the occupation review moves
-payers out (N-352, trial E2). `SolveSteadyState` therefore **re-solves the duals** from the
+payers out (N-352, trial E2; that the payroll-aware prices cure it is H-P, falsified, see below). `SolveSteadyState` therefore **re-solves the duals** from the
 unchanged primal when the module is on (D2 of plan 2-29, ADR 0012). It reads the payroll from
 the `Config` it is given (`Modules.Employment` non-nil, `Role.Employer.PayrollBP`,
 `Role.Hireable`); it takes no option.
+
+**What this section does and does not establish (plan 2-29, Phases 4 to 6; N-352, N-356).** The
+equations below define the **static payroll-aware balance** of the programme: the census, prices and
+wage at which the net wage per working tick is equal across the active activities, at the fixed flows.
+That is all `SolveSteadyState` claims. The hypothesis behind the re-solve, **H-P** ("with the
+payroll-aware census and prices the cooks keep at least 90% of the solver's census at tick 600"), was
+**falsified in every trial run**: the cooks sit at 30% to 45% of the solver's census at tick 600 on
+every seed of every trial (trial T1: 38%, 78 to 81 of 210; trial T6, the pack `payroll`: 64 to 83 of
+223), and most of the exodus is in the first 100 ticks. The solver's census is therefore the static
+balance and **not** the simulation's equilibrium: the simulated economy does not sit at it. What was
+established is narrower. (a) The receipts model of FR-VIA-066 holds: the measured `PayrollPaid.Due` is
+97.5% of the static receipts over ticks 1 to 10. (b) The payroll module is what carries the household
+count: the pack `payroll` with the module off (same knobs, same warm start) collapses (three of four
+seeds reach zero households, the fourth falls from 585 to 444), and with it on the households stay
+within 10% from tick 600 to tick 2 200 on seeds 101 to 104 (FR-REF-045). (c) That is a count and
+nothing more: 36% to 39% of non-cook household-ticks stay unfed, prices stay near 40% of the reference,
+the cooks hold four to five times their share of the money, and 5 of 30 seeds lose about 19% of the
+households late (N-352). The re-solve is kept because it makes the pack's census and warm start follow
+one configuration (ADR 0012), not because the static balance predicts the simulation.
 
 **Symbols (one region `rho` of a programme, at the flows of lambda 1).** A group is a
 (region, role) row of `Config.Groups`. `beta(g)` is `PayrollBP / 10 000` of a payer group
@@ -1732,9 +1751,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-061 | With `WithLanes`, the solver MUST solve one programme for each weakly connected component of the lane graph over the regions with a group, MUST solve a region with no lane in autarky as without lanes, MUST ignore a lane with an end in a region that has no group, and MUST give the same result whatever the order of the lanes. |
 | FR-VIA-062 | In a lane programme the seed price of a commodity in a region MUST be the dual of that region's own goods row, scaled by the pooled rule of 6.3 over the component with each region's basket priced at its own prices, and for every lane the exact duals MUST satisfy `p(To, c) * (10 000 - LossBP) / 10 000 <= p(From, c) + w(From) * Labour / 10 000`. |
 | FR-VIA-063 | `WithLanes` MUST refuse, before any work, a lane with `From` equal to `To`, a duplicate, a negative `Labour`, a `LossBP` outside 0 to 9 999 and more than `MaxLanes` lanes, and `WithLanes` with `WithFreeTrade` MUST be `ErrOptionContext`; `SolveSteadyState` MUST refuse a lane that names an unknown region or commodity (`ErrUnknownRegion`, `ErrUnknownCommodity`) after validating the configuration and before building any programme. |
-| FR-VIA-064 | With `Modules.Employment` non-nil, `SolveSteadyState` MUST re-solve the duals of a programme in the scope of 5.6 so that the equations of 5.6 hold exactly, and MUST leave `lambda*`, `SurplusBP`, the labour share, the flows, the jobs' executions and the balanced census unchanged. It MUST read the payroll from the `Config` and take no option. |
+| FR-VIA-064 | With `Modules.Employment` non-nil, `SolveSteadyState` MUST re-solve the duals of a programme in the scope of 5.6 so that the equations of 5.6 hold exactly, and MUST leave `lambda*`, `SurplusBP`, the labour share, the flows, the jobs' executions and the balanced census unchanged. It MUST read the payroll from the `Config` and take no option. The requirement fixes the arithmetic of the static balance; it does not say that the simulation sits at that balance (H-P was falsified, 5.6). |
 | FR-VIA-065 | The payroll-aware duals MUST be the unique solution of the linear system of 5.6 (a square system of full rank, consistent, with the duals that are 0 in the payroll-free outcome held at 0), computed in exact rationals, and MUST leave the solver as fixed point at its boundary by the rules of 6.3 and 6.4. |
-| FR-VIA-066 | The receipts of a payer group in the static model MUST be the value at the duals of its net sales a tick (net output of its activities at lambda 1 less its own households' upkeep, floored at 0 for each commodity), and the pay per working household-tick MUST be the payers' total over the labour of the `Hireable` groups. Over the pack `payroll` the static receipts MUST be within 10% of the measured `PayrollPaid.Due` per tick (a report, tested at the integration level). |
+| FR-VIA-066 | The receipts of a payer group in the static model MUST be the value at the duals of its net sales a tick (net output of its activities at lambda 1 less its own households' upkeep, floored at 0 for each commodity), and the pay per working household-tick MUST be the payers' total over the labour of the `Hireable` groups. Over the pack `payroll` the static receipts MUST be within 10% of the measured `PayrollPaid.Due` per tick (a report, tested at the integration level). **Measured:** 97.5% over ticks 1 to 10 (`TestScenarioChain_PayrollReceiptsMatchStatic`), so assumption A1 held; the receipts were not what failed. |
 | FR-VIA-067 | In the exact outcome the payroll paid by the payers of a region MUST equal the payroll received by its workers exactly, and every active group MUST be paid the same net wage per working tick (`w`). A solution with a negative price, wage or rent, or in which an inactive activity pays more than the net wage, MUST NOT be used: the payroll-free duals stay and the report names the reason. |
 | FR-VIA-068 | With `Modules.Employment` nil, or with no payer group or no `Hireable` group in a programme, or at `PayrollBP` 0, the solver's table, report and warm start MUST be byte-equal to those it produced before the payroll form existed (the module-off identity), and the pinned hash and `testdata/golden/off/` MUST NOT move. |
 | FR-VIA-069 | `Report.PayrollInfeasible` MUST list, in region order, each region whose programme kept its payroll-free duals and the reason (`unsupported`, `no_unique_solution`, `negative_dual`, `inactive_profit`); a payroll diagnostic MUST NOT be an error and MUST NOT change a census or a table. `CensusRow.PayrollOutBP` and `PayrollInBP` MUST be 0 with the module off. |

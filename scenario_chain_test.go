@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -106,4 +107,92 @@ func TestScenarioChain_PayrollReceiptsMatchStatic(t *testing.T) {
 	}
 	t.Logf("static payroll per tick %d, measured Due per tick %d (paid %d, cut %d) over %d ticks: measured/static = %d bp",
 		perTick, due/ticks, paid/ticks, cut/ticks, ticks, due*10000/(perTick*ticks))
+}
+
+// chainClaimSeeds and chainClaimTicks are the seeds and the length of the count
+// claim of FR-REF-045 (acceptance criterion 2 of plan 2-29).
+const (
+	chainClaimFirstSeed, chainClaimLastSeed = 101, 104
+	chainClaimTicks                         = 2200
+)
+
+// TestScenarioChain_Claim runs the pack `payroll` warm from its start on seeds 101
+// to 104 for 2 200 ticks and asserts the household-count claim of FR-REF-045 on
+// each: the households after tick 1 100 and after tick 2 200 are within 10% of the
+// households after tick 600, and no role of the eight that the pack staffs has zero households after any
+// tick (no `role_keep`-type floor is set). It is a claim about the count of the pack
+// `payroll` in these four seeds, not about criterion 1 of `vision.md` 5.1 and not
+// about the word "stable" (N-027, N-339): the households are flat, but 36% to 39%
+// of the non-cook household-ticks are unfed (the prior is 1%), prices are about 40%
+// of the reference and the cooks hold four to five times their share of the money,
+// so acceptance criterion 4 is not met (N-352). On seeds 1 to 30 the same claim
+// held on 25 of 30 (seeds 3, 8, 17, 22 and 27 lose about 19% of the households
+// between tick 1 600 and 2 200, with the cooks holding 57% to 74% of the money), so
+// the claim is partial and this test does not cover those seeds. Gate F test: it
+// is skipped under -short (a 2 200 tick run is an integration test) and under
+// -race (gate F runs it without -race, plan 2-1 D229).
+//
+// Requirement: FR-REF-045
+func TestScenarioChain_Claim(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test (2 200 ticks, four seeds), skipped with -short")
+	}
+	if raceEnabled {
+		t.Skip("gate F runs it without -race (plan 2-1 D229)")
+	}
+	cfg := loadValidPack(t, payrollWarm...)
+	// The eight roles of the claim are those the pack gives households; the visitor role is closed and filled
+	// only by external agents, so it has no household at the start and is not a role that can go extinct.
+	staffed := map[string]bool{}
+	for _, g := range cfg.Groups {
+		if g.Households > 0 {
+			staffed[g.Role] = true
+		}
+	}
+	if len(staffed) != 8 {
+		t.Fatalf("roles with households in the pack payroll = %d, want 8", len(staffed))
+	}
+	for seed := uint64(chainClaimFirstSeed); seed <= chainClaimLastSeed; seed++ {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			var at600, at1100, at2200 int64
+			extinct := map[string]int64{}
+			runScenario(t, cfg, scenarioSpec{
+				Seed: seed, Ticks: chainClaimTicks,
+				Snap: func(int64) bool { return true },
+				OnSnap: func(tick int64, s economysim.Snapshot) {
+					// The harness names a tick by the number of steps taken: after tick index i, At = i+1.
+					switch tick + 1 {
+					case 600:
+						at600 = s.Households
+					case 1100:
+						at1100 = s.Households
+					case chainClaimTicks:
+						at2200 = s.Households
+					}
+					for role, r := range screenRoles(s, len(s.Names.Roles)) {
+						if _, done := extinct[s.Names.Roles[role]]; !done && staffed[s.Names.Roles[role]] && r.Households == 0 {
+							extinct[s.Names.Roles[role]] = tick + 1
+						}
+					}
+				},
+			})
+			if at600 == 0 {
+				t.Fatalf("seed %d: households after tick 600 = 0, want a population", seed)
+			}
+			for _, p := range []struct {
+				tick, got int64
+			}{{1100, at1100}, {chainClaimTicks, at2200}} {
+				// within 10%: |got - at600| * 10 <= at600 (integers, no tolerance on money).
+				if d := p.got - at600; d*10 > at600 || -d*10 > at600 {
+					t.Errorf("seed %d: households after tick %d = %d, after tick 600 = %d, want within 10%%", seed, p.tick, p.got, at600)
+				}
+			}
+			for role, tick := range extinct {
+				t.Errorf("seed %d: role %s has zero households after tick %d, want none extinct", seed, role, tick)
+			}
+			t.Logf("seed %d: households %d after 600, %d after 1100, %d after 2200; extinct roles %v", seed, at600, at1100, at2200, extinct)
+		})
+	}
 }
