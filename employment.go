@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -173,7 +174,7 @@ func (e *employment) collectAgent(w *World, i int) {
 // payRegion applies the rule to one region: the budgets, the split, the transfers
 // under wage_pay and the welfare feeds, then the report.
 //
-// Excluded from coverage (testing.md 9.5): the `return` of the overflow of Split and
+// Excluded from coverage (testing.md 9.5): the `return` of the overflow of the Due tally, of Split and
 // of a refused transfer of payRow. The budgets are bounded by the payers' balances,
 // which the ledger bounds, and a transfer within a budget cannot be refused, so no
 // test can inject either from the root.
@@ -185,10 +186,16 @@ func (w *World) payRegion(g RegionID) error {
 		if !ok {
 			invariant("the budget of a payer does not fit in int64")
 		}
-		t := &e.byRole[w.agents[p.Ref].role].ev
-		t.Due += Money(due)
-		if budget >= 1 {
-			t.Payers++
+		if w.obs.supplied {
+			t := &e.byRole[w.agents[p.Ref].role].ev
+			sum, ok := checked.Add(int64(t.Due), due)
+			if !ok {
+				return fmt.Errorf("payroll of region %d: %w", g, ErrOverflow)
+			}
+			t.Due = Money(sum)
+			if budget >= 1 {
+				t.Payers++
+			}
 		}
 		if budget < due {
 			w.payrollCut(p.Ref, due, budget)

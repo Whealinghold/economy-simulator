@@ -1766,8 +1766,9 @@ type PayrollPaid struct {
 	Role   RoleID
 	// Payers is the payers of the role with a budget of at least 1.
 	Payers int64
-	// Workers is the households paid by the payers of the role: the sum of the
-	// executions of the workers that at least one payer of the role paid.
+	// Workers is the households paid by the payers of the role, counted once per
+	// execution (spec-employment.md 24.6.1): the sum of the executions of the
+	// workers that at least one payer of the role paid, not a head count.
 	Workers int64
 	// Due is the share of the payers' receipts the rule asked for, Paid what was
 	// paid by the reason wage_pay, and Cut Due less Paid: the part cut at a
